@@ -1,0 +1,72 @@
+#ifndef STRING_UTIL_H
+#define STRING_UTIL_H
+
+#include <string>
+#include <vector>
+#include <algorithm>
+
+namespace apex {
+class StringUtil {
+public:
+    static bool StartsWith(const std::string &text, const std::string &token)
+    {
+        if (text.length() < token.length()) {
+            return false;
+        }
+        return (text.compare(0, token.length(), token) == 0);
+    }
+
+    static bool EndsWith(const std::string &text, const std::string &token)
+    {
+        if (text.length() < token.length()) {
+            return false;
+        }
+        return std::equal(text.begin() + text.size() - token.size(),
+            text.end(), token.begin());
+    }
+
+    static bool Contains(const std::string &text, const std::string &token)
+    {
+        return text.find(token) != std::string::npos;
+    }
+
+    static std::vector<std::string> Split(const std::string &text, const char sep)
+    {
+        std::vector<std::string> tokens;
+        size_t start = 0, end = 0;
+        while ((end = text.find(sep, start)) != std::string::npos) {
+            tokens.push_back(text.substr(start, end - start));
+            start = end + 1;
+        }
+        tokens.push_back(text.substr(start));
+        return tokens;
+    }
+
+    static std::vector<std::string> RemoveEmpty(const std::vector<std::string> &strings)
+    {
+        std::vector<std::string> res;
+        for (auto &&str : strings) {
+            if (!str.empty()) {
+                res.push_back(str);
+            }
+        }
+        return res;
+    }
+
+    static std::string ReplaceAll(const std::string &text, const std::string &from, const std::string &to)
+    {
+        std::string result(text);
+        if (from.empty()) {
+            return result;
+        }
+        size_t start_pos = 0;
+        while ((start_pos = text.find(from, start_pos)) != std::string::npos) {
+            result.replace(start_pos, from.length(), to);
+            start_pos += to.length();
+        }
+        return result;
+    }
+};
+}
+
+#endif
