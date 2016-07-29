@@ -1,6 +1,5 @@
 ﻿  main.cpp
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\rendering\shader.h(87): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(100): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(104): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(107): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\rendering\shader.h(94): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(113): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(122): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
   ApexEngineV2.vcxproj -> C:\Users\User\Documents\Visual Studio 2015\Projects\ApexEngineV2\Debug\ApexEngineV2.exe

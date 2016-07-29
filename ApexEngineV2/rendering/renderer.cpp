@@ -29,12 +29,15 @@ void Renderer::FindRenderables(Entity *top)
 void Renderer::RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Transform>> &bucket)
 {
     for (auto it : bucket) {
-        if (it.first->shader != nullptr) {
-            it.first->shader->ApplyTransforms(it.second.GetMatrix(),
+        auto renderable = it.first;
+        auto transform = it.second;
+        if (renderable->shader != nullptr) {
+            renderable->shader->ApplyMaterial(renderable->GetMaterial());
+            renderable->shader->ApplyTransforms(transform.GetMatrix(),
                 cam->GetViewMatrix(), cam->GetProjectionMatrix());
-            it.first->shader->Use();
-            it.first->Render();
-            it.first->shader->End();
+            renderable->shader->Use();
+            renderable->Render();
+            renderable->shader->End();
         }
     }
 }

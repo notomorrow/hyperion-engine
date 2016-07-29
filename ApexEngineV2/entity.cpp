@@ -2,12 +2,12 @@
 
 namespace apex {
 Entity::Entity(const std::string &name)
-    : name(name), 
-      flags(0), 
-      parent(nullptr),
-      local_translation(Vector3::Zero()),
-      local_scale(Vector3::One()),
-      local_rotation(Quaternion::Identity())
+    : name(name),
+    flags(0),
+    parent(nullptr),
+    local_translation(Vector3::Zero()),
+    local_scale(Vector3::One()),
+    local_rotation(Quaternion::Identity())
 {
 }
 
@@ -84,7 +84,18 @@ void Entity::Rotate(const Quaternion &rot)
     SetLocalRotation(local_rotation * rot);
 }
 
-void Entity::AddChild(const std::shared_ptr<Entity> &entity)
+void Entity::UpdateTransform()
+{
+    if (parent != nullptr) {
+        global_transform.SetTranslation(local_translation + parent->GetGlobalTransform().GetTranslation());
+        global_transform.SetScale(local_scale * parent->GetGlobalTransform().GetScale());
+        global_transform.SetRotation(local_rotation * parent->GetGlobalTransform().GetRotation());
+    } else {
+        global_transform = Transform(local_translation, local_scale, local_rotation);
+    }
+}
+
+void Entity::AddChild(std::shared_ptr<Entity> entity)
 {
     children.push_back(entity);
     entity->parent = this;
@@ -105,8 +116,8 @@ std::shared_ptr<Entity> Entity::GetChild(size_t index) const
 
 std::shared_ptr<Entity> Entity::GetChild(const std::string &name) const
 {
-    auto it = std::find_if(children.begin(), children.end(), 
-    [&](const std::shared_ptr<Entity> &elt) 
+    auto it = std::find_if(children.begin(), children.end(),
+        [&](const std::shared_ptr<Entity> &elt)
     {
         return elt->GetName() == name;
     });
@@ -123,7 +134,7 @@ size_t Entity::NumChildren() const
     return children.size();
 }
 
-void Entity::AddControl(const std::shared_ptr<EntityControl> &control)
+void Entity::AddControl(std::shared_ptr<EntityControl> control)
 {
     controls.push_back(control);
     control->parent = this;
@@ -160,17 +171,15 @@ void Entity::SetRenderable(const std::shared_ptr<Renderable> &ren)
 void Entity::Update(double dt)
 {
     for (auto &&control : controls) {
-        control->OnUpdate(dt);
+        control->tick += dt * 1000;
+        if ((control->tick / 1000 * control->tps) >= 1) {
+            control->OnUpdate(dt);
+            control->tick = 0;
+        }
     }
 
     if (flags & UPDATE_TRANSFORM) {
-        if (parent != nullptr) {
-            global_transform.SetTranslation(local_translation + parent->GetGlobalTransform().GetTranslation());
-            global_transform.SetScale(local_scale * parent->GetGlobalTransform().GetScale());
-            global_transform.SetRotation(local_rotation * parent->GetGlobalTransform().GetRotation());
-        } else {
-            global_transform = Transform(local_translation, local_scale, local_rotation);
-        }
+        UpdateTransform();
         flags &= ~UPDATE_TRANSFORM;
     }
 

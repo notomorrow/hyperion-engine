@@ -8,6 +8,7 @@
 #include "matrix4.h"
 
 namespace apex {
+class Quaternion;
 class Vector3 {
 public:
     float x, y, z;
@@ -26,6 +27,8 @@ public:
     Vector3 &operator*=(const Vector3 &other);
     Vector3 operator*(const Matrix4 &mat) const;
     Vector3 &operator*=(const Matrix4 &mat);
+    Vector3 operator*(const Quaternion &quat) const;
+    Vector3 &operator*=(const Quaternion &quat);
     Vector3 operator/(const Vector3 &other) const;
     Vector3 &operator/=(const Vector3 &other);
     bool operator==(const Vector3 &other) const;

@@ -3,7 +3,7 @@
 
 namespace apex {
 AudioControl::AudioControl(std::shared_ptr<AudioSource> source)
-    : source(source)
+    : EntityControl(10), source(source)
 {
 }
 

@@ -1,5 +1,7 @@
 #include "asset_manager.h"
 #include "objloader/obj_loader.h"
+#include "ogreloader/ogre_loader.h"
+#include "ogreloader/ogre_skeleton_loader.h"
 #include "text_loader.h"
 #include "texture_loader.h"
 #include "../audio/wav_loader.h"
@@ -29,6 +31,9 @@ AssetManager::AssetManager()
     RegisterLoader<TextLoader>(".geom");
 
     RegisterLoader<ObjLoader>(".obj");
+
+    RegisterLoader<OgreLoader>(".mesh.xml");
+    RegisterLoader<OgreSkeletonLoader>(".skeleton.xml");
 
     RegisterLoader<TextureLoader>(".jpg");
     RegisterLoader<TextureLoader>(".png");

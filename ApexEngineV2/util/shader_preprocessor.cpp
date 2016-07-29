@@ -26,7 +26,8 @@ std::string ShaderPreprocessor::ProcessShader(const std::string &code,
 }
 
 std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss, 
-    std::streampos &pos, const std::map<std::string, float> &defines,
+    std::streampos &pos,
+    const std::map<std::string, float> &defines,
     const std::string &local_path)
 {
     std::string res;
@@ -34,21 +35,38 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
     int if_layer = 0;
     bool state = true;
     while (std::getline(ss, line)) {
-        if (StringUtil::StartsWith(line, "#if ")) {
-            ++if_layer;
+        line = StringUtil::Trim(line);
+
+        if (StringUtil::StartsWith(line, "#if !")) {
+            if (state) {
+                std::string val = line.substr(5);
+                auto it = defines.find(val);
+                if (it != defines.end() && it->second) {
+                    ++if_layer;
+                    state = false;
+                } else {
+                    res += ProcessInner(ss, pos, defines, local_path) + "\n";
+                }
+            }
+        } else if (StringUtil::StartsWith(line, "#if ")) {
             if (state) {
                 std::string val = line.substr(4);
                 auto it = defines.find(val);
                 if (it != defines.end() && it->second) {
                     res += ProcessInner(ss, pos, defines, local_path) + "\n";
                 } else {
+                    ++if_layer;
                     state = false;
                 }
             }
         } else if (StringUtil::StartsWith(line, "#endif")) {
             --if_layer;
             if (if_layer == 0) {
-                break;
+                // exit #if branches, return to normal state
+                state = true;
+            } else if (if_layer == -1) {
+                // we aren't in first recursion, #if part already read
+                return res; // exit current recursion
             }
         } else if (StringUtil::StartsWith(line, "#include ")) {
             if (state) {
@@ -61,6 +79,7 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
                         ++idx;
                     }
                 }
+
                 auto loaded = AssetManager::GetInstance()->
                     LoadFromFile<TextLoader::LoadedText>(local_path + "/" + path);
 
@@ -79,9 +98,19 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
             }
         }
     }
+    
+    // replace %define with value
     for (auto &&def : defines) {
-        res = StringUtil::ReplaceAll(res, "%" + def.first, std::to_string(def.second));
+        std::string str;
+        // check if it has decimal
+        if (def.second == (int)def.second) {
+            str = std::to_string((int)def.second);
+        } else {
+            str = std::to_string(def.second);
+        }
+        res = StringUtil::ReplaceAll(res, "%" + def.first, str);
     }
+
     return res;
 }
 }

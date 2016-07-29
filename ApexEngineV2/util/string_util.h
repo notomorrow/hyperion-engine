@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <functional>
+#include <cctype>
 
 namespace apex {
 class StringUtil {
@@ -51,6 +53,27 @@ public:
             }
         }
         return res;
+    }
+
+    static std::string TrimLeft(const std::string &s)
+    {
+        std::string res(s);
+        res.erase(res.begin(), std::find_if(res.begin(), res.end(), 
+            std::not1(std::ptr_fun<int, int>(std::isspace))));
+        return res;
+    }
+
+    static std::string TrimRight(const std::string &s)
+    {
+        std::string res(s);
+        res.erase(std::find_if(res.rbegin(), res.rend(), 
+            std::not1(std::ptr_fun<int, int>(std::isspace))).base(), res.end());
+        return res;
+    }
+
+    static std::string Trim(const std::string &s)
+    {
+        return TrimLeft(TrimRight(s));
     }
 
     static std::string ReplaceAll(const std::string &text, const std::string &from, const std::string &to)

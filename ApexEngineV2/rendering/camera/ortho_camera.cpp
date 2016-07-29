@@ -73,6 +73,9 @@ void OrthoCamera::UpdateLogic(double dt)
 
 void OrthoCamera::UpdateMatrices()
 {
+    Vector3 target = translation + direction;
+
+    MatrixUtil::ToLookAt(view_mat, translation, target, up);
     MatrixUtil::ToOrtho(proj_mat,
         left, right,
         bottom, top,

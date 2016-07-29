@@ -20,7 +20,7 @@ void ObjModel::AddMesh(const std::string &name)
 std::vector<ObjModel::ObjIndex> &ObjModel::CurrentList()
 {
     if (indices.empty()) {
-        AddMesh("child");
+        AddMesh("mesh");
     }
     return indices.back();
 }

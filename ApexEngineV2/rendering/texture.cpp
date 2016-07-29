@@ -32,4 +32,9 @@ void Texture::SetInternalFormat(int type)
 {
     ifmt = type;
 }
+
+void Texture::ActiveTexture(int i)
+{
+    CoreEngine::GetInstance()->ActiveTexture(CoreEngine::TEXTURE0 + i);
+}
 }

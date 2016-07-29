@@ -1,5 +1,6 @@
 #include "vector3.h"
 #include "matrix_util.h"
+#include "quaternion.h"
 
 namespace apex {
 Vector3::Vector3()
@@ -82,6 +83,42 @@ Vector3 &Vector3::operator*=(const Matrix4 &mat)
         x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + 1.0 * mat(1, 3),
         x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + 1.0 * mat(2, 3)));
     return *this;
+}
+
+Vector3 Vector3::operator*(const Quaternion &quat) const
+{
+    Vector3 result;
+    result.x = quat.w * quat.w * x + 2 * 
+        quat.y * quat.w * z - 2 * 
+        quat.z * quat.w * y + 
+        quat.x * quat.x * x + 2 * 
+        quat.y * quat.x * y + 2 * 
+        quat.z * quat.x * z - 
+        quat.z * quat.z * x - quat.y * quat.y * x;
+
+    result.y = 2 * quat.x * quat.y * x + 
+        quat.y * quat.y * y + 2 * 
+        quat.z * quat.y * z + 2 * 
+        quat.w * quat.z * x - 
+        quat.z * quat.z * y + 
+        quat.w * quat.w * y - 2 * 
+        quat.x * quat.w * z - 
+        quat.x * quat.x * y;
+
+    result.z = 2 * quat.x * quat.z * x + 2 * 
+        quat.y * quat.z * y + 
+        quat.z * quat.z * z - 2 * 
+        quat.w * quat.y * x - 
+        quat.y * quat.y * z + 2 * 
+        quat.w * quat.x * y - 
+        quat.x * quat.x * z + 
+        quat.w * quat.w * z;
+    return result;
+}
+
+Vector3 &Vector3::operator*=(const Quaternion &quat)
+{
+    return operator=((*this) * quat);
 }
 
 Vector3 Vector3::operator/(const Vector3 &other) const

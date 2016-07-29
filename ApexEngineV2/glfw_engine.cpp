@@ -53,7 +53,7 @@ bool GlfwEngine::InitializeGame(Game *game)
         throw std::exception("error initializing glew");
     }
 
-    glfwSwapInterval(1);
+   // glfwSwapInterval(1);
 
     glEnable(GL_DEPTH_TEST);
     glClearColor(1, 0, 0, 1);
@@ -170,6 +170,11 @@ void GlfwEngine::TexImage2D(int target, int level, int ifmt, size_t width, size_
 void GlfwEngine::BindTexture(int target, unsigned int texture)
 {
     glBindTexture(target, texture);
+}
+
+void GlfwEngine::ActiveTexture(int i)
+{
+    glActiveTexture(i);
 }
 
 void GlfwEngine::GenerateMipmap(int target)

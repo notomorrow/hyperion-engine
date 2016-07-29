@@ -14,13 +14,17 @@
 #include <string>
 
 namespace apex {
+typedef std::map<std::string, float> ShaderProperties;
+
 class Shader {
 public:
-    Shader(const std::string &vscode, const std::string &fscode);
+    Shader(const ShaderProperties &properties);
+    Shader(const ShaderProperties &properties,
+        const std::string &vscode, const std::string &fscode);
     ~Shader();
 
-    void ApplyMaterial(const Material &mat);
-    void ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj);
+    virtual void ApplyMaterial(const Material &mat);
+    virtual void ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj);
 
     void SetUniform(const std::string &name, float);
     void SetUniform(const std::string &name, int);
@@ -32,10 +36,7 @@ public:
     void Use();
     void End();
 
-private:
-    bool is_uploaded, is_created, uniform_changed;
-    unsigned int progid;
-
+protected:
     struct SubShader {
         int type;
         std::string code;
@@ -56,6 +57,12 @@ private:
         {
         }
     };
+
+    void AddSubShader(const SubShader &);
+
+private:
+    bool is_uploaded, is_created, uniform_changed;
+    unsigned int progid;
 
     struct Uniform {
         enum {

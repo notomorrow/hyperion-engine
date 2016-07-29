@@ -138,6 +138,54 @@
     <ClInclude Include="rendering\framebuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="util\xml\sax_parser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="asset\apxloader\apx_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="animation\animation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="animation\animation_track.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="animation\bone.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="animation\keyframe.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="asset\byte_reader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="asset\ogreloader\ogre_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="asset\ogreloader\ogre_skeleton_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="animation\skeleton.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\shader_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\shaders\lighting_shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="animation\skeleton_control.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\bounding_box.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\shadow\shadow_mapping.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\environment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -243,6 +291,54 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="rendering\framebuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="control.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="util\xml\sax_parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="animation\animation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="animation\bone.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="animation\keyframe.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="animation\animation_track.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="asset\apxloader\apx_loader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="asset\ogreloader\ogre_loader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="animation\skeleton.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="asset\ogreloader\ogre_skeleton_loader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rendering\shader_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rendering\shaders\lighting_shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="animation\skeleton_control.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\bounding_box.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rendering\shadow\shadow_mapping.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rendering\environment.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

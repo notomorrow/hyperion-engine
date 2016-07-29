@@ -49,6 +49,7 @@ public:
         TEXTURE_CUBE_MAP_NEGATIVE_Z = 0x851A,
         MAX_CUBE_MAP_TEXTURE_SIZE = 0x851C,
 
+        TEXTURE0 = 0x84C0,
         ACTIVE_TEXTURE = 0x84E0,
         REPEAT = 0x2901,
         CLAMP_TO_EDGE = 0x812F,
@@ -73,7 +74,6 @@ public:
         LINK_STATUS = 0x8B82,
         VALIDATE_STATUS = 0x8B83,
         INFO_LOG_LENGTH = 0x8B84,
-
 
         FRAMEBUFFER = 0x8D40,
         RENDERBUFFER = 0x8D41,
@@ -102,6 +102,7 @@ public:
     virtual void TexImage2D(int target, int level, int ifmt, size_t width, size_t height,
         int border, int fmt, int type, const void *data) = 0;
     virtual void BindTexture(int target, unsigned int texture) = 0;
+    virtual void ActiveTexture(int i) = 0;
     virtual void GenerateMipmap(int target) = 0;
     virtual void GenFramebuffers(size_t n, unsigned int *ids) = 0;
     virtual void DeleteFramebuffers(size_t n, const unsigned int *ids) = 0;

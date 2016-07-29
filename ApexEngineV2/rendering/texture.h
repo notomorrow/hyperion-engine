@@ -16,6 +16,8 @@ public:
     void SetFormat(int type);
     void SetInternalFormat(int type);
 
+    static void ActiveTexture(int i);
+
     virtual void GenerateMipMap() = 0;
     virtual void Use() = 0;
     virtual void End() = 0;

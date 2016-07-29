@@ -13,7 +13,6 @@ public:
 
 protected:
     float fov, near_clip, far_clip;
-    Vector3 target;
 };
 }
 

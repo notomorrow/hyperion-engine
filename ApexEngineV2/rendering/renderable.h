@@ -10,6 +10,7 @@ namespace apex {
 class CoreEngine;
 
 class Renderable {
+    friend class Renderer;
 public:
     enum RenderBucket {
         RB_OPAQUE,
@@ -31,9 +32,6 @@ public:
     void SetMaterial(const Material &mat);
 
     virtual void Render() = 0;
-
-protected:
-    friend class Renderer;
 
 private:
     RenderBucket bucket = RB_OPAQUE;

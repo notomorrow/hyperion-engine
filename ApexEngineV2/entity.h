@@ -35,16 +35,42 @@ public:
     void Scale(const Vector3 &vec);
     void Rotate(const Quaternion &rot);
 
-    void AddChild(const std::shared_ptr<Entity> &entity);
+    virtual void UpdateTransform();
+
+    void AddChild(std::shared_ptr<Entity> entity);
     void RemoveChild(const std::shared_ptr<Entity> &entity);
     std::shared_ptr<Entity> GetChild(size_t index) const;
     std::shared_ptr<Entity> GetChild(const std::string &name) const;
     size_t NumChildren() const;
 
-    void AddControl(const std::shared_ptr<EntityControl> &control);
+    template <typename T>
+    std::shared_ptr<T> GetChild(size_t index) const
+    {
+        static_assert(std::is_base_of<Entity, T>::value,
+            "T must be a derived class of Entity");
+        return std::dynamic_pointer_cast<T>(GetChild(index));
+    }
+
+    template <typename T>
+    std::shared_ptr<T> GetChild(const std::string &name) const
+    {
+        static_assert(std::is_base_of<Entity, T>::value,
+            "T must be a derived class of Entity");
+        return std::dynamic_pointer_cast<T>(GetChild(name));
+    }
+
+    void AddControl(std::shared_ptr<EntityControl> control);
     void RemoveControl(const std::shared_ptr<EntityControl> &control);
     std::shared_ptr<EntityControl> GetControl(size_t index) const;
     size_t NumControls() const;
+
+    template <typename T>
+    std::shared_ptr<T> GetControl(size_t index) const
+    {
+        static_assert(std::is_base_of<EntityControl, T>::value,
+            "T must be a derived class of EntityControl");
+        return std::dynamic_pointer_cast<T>(GetControl(index));
+    }
 
     std::shared_ptr<Renderable> GetRenderable() const;
     void SetRenderable(const std::shared_ptr<Renderable> &ren);

@@ -27,6 +27,7 @@ public:
     void TexImage2D(int target, int level, int ifmt, size_t width, size_t height,
         int border, int fmt, int type, const void *data);
     void BindTexture(int target, unsigned int texture);
+    void ActiveTexture(int i);
     void GenerateMipmap(int target);
     void GenFramebuffers(size_t n, unsigned int *ids);
     void DeleteFramebuffers(size_t n, const unsigned int *ids);

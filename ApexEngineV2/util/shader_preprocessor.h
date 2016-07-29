@@ -14,7 +14,8 @@ public:
 
 private:
     static std::string ProcessInner(std::istringstream &is, 
-        std::streampos &pos, const std::map<std::string, float> &defines,
+        std::streampos &pos, 
+        const std::map<std::string, float> &defines,
         const std::string &local_path);
 };
 }

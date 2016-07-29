@@ -5,10 +5,10 @@ namespace apex {
 class Entity;
 
 class EntityControl {
+    friend class Entity;
 public:
-    virtual ~EntityControl()
-    {
-    }
+    EntityControl(const double tps = 30.0);
+    virtual ~EntityControl();
 
     virtual void OnAdded() = 0;
     virtual void OnRemoved() = 0;
@@ -16,7 +16,10 @@ public:
 
 protected:
     Entity *parent;
-    friend class Entity;
+
+private:
+    const double tps;
+    double tick;
 };
 }
 
