@@ -25,6 +25,10 @@
 #include "animation/bone.h"
 #include "animation/skeleton_control.h"
 #include "math/bounding_box.h"
+
+/* Extra */
+#include "rendering/skydome/skydome.h"
+
 using namespace apex;
 
 class MyGame : public Game {
@@ -44,7 +48,7 @@ public:
     MyGame(const RenderWindow &window)
         : Game(window)
     {
-        timer = 0;
+        timer = 10;
         scene_fbo_rendered = false;
 
         renderer = new Renderer();
@@ -63,7 +67,9 @@ public:
 
     void Initialize()
     {
-        Environment::GetInstance()->SetShadowsEnabled(true);
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(-0.3, -0.4, 1).Normalize());
+
+        Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetShadowMap(0, shadows->GetShadowMap());
 
         AudioManager::GetInstance()->Initialize();
@@ -90,19 +96,27 @@ public:
         auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
         dragger->Move(Vector3(3, 0, 3));
         dragger->Scale(0.5);
+        dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
+        dragger->GetControl<SkeletonControl>(0)->PlayAnimation(1, 3.0);
         top->AddChild(dragger);
 
 
+        /*auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
+        cube->GetChild(0)->GetRenderable()->SetShader(shader);
+        cube->Scale(0.5);
+        cube->SetName("cube");
+        dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
+        */
+
+        pbr_tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/noise.png");
 
         auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
         cube->GetChild(0)->GetRenderable()->SetShader(shader);
         cube->Scale(0.5);
         cube->SetName("cube");
-        dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
-        dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
-        dragger->GetControl<SkeletonControl>(0)->PlayAnimation(1, 3.0);
+        top->AddChild(cube);
 
-        pbr_tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/pbr_6.png");
+        top->AddControl(std::make_shared<SkydomeControl>(cam));
     }
 
     void Logic(double dt)
@@ -111,10 +125,16 @@ public:
         AudioManager::GetInstance()->SetListenerOrientation(cam->GetDirection(), cam->GetUpVector());
 
         timer += dt;
+
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer*0.05), cos(timer*0.05), 0).Normalize());
+
         cam->Update(dt);
-        shadows->GetShadowCamera()->Update(dt);
-        Environment::GetInstance()->SetShadowMatrix(0, 
-            shadows->GetShadowCamera()->GetViewProjectionMatrix());
+
+        if (Environment::GetInstance()->ShadowsEnabled()) {
+            shadows->GetShadowCamera()->Update(dt);
+            Environment::GetInstance()->SetShadowMatrix(0,
+                shadows->GetShadowCamera()->GetViewProjectionMatrix());
+        }
 
         top->Update(dt);
 
@@ -145,20 +165,22 @@ public:
 
         renderer->FindRenderables(top.get());
 
-        shadows->Begin(); 
-        glClear(GL_DEPTH_BUFFER_BIT);
-        renderer->RenderAll(shadows->GetShadowCamera());
-        shadows->End();
+        if (Environment::GetInstance()->ShadowsEnabled()) {
+            shadows->Begin();
+            glClear(GL_DEPTH_BUFFER_BIT);
+            renderer->RenderAll(shadows->GetShadowCamera());
+            shadows->End();
+        }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
         shader->SetUniform("u_diffuseTexture", 0);
-        //pbr_tex->Use();
-        shadows->GetShadowMap()->Use();
+        pbr_tex->Use();
+       // shadows->GetShadowMap()->Use();
         renderer->RenderAll(cam);
-        shadows->GetShadowMap()->End();
-       // pbr_tex->End();
+       // shadows->GetShadowMap()->End();
+        pbr_tex->End();
 
         renderer->ClearRenderables();
     }

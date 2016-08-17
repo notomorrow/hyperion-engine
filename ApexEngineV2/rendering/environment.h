@@ -3,6 +3,7 @@
 
 #include "../math/matrix4.h"
 #include "../rendering/texture.h"
+#include "lights/directional_light.h"
 
 #include <memory>
 #include <array>
@@ -13,6 +14,9 @@ public:
     static Environment *GetInstance();
 
     Environment();
+
+    const DirectionalLight &GetSun() const;
+    DirectionalLight &GetSun();
 
     bool ShadowsEnabled() const;
     void SetShadowsEnabled(bool);
@@ -25,6 +29,8 @@ public:
 
 private:
     static Environment *instance;
+
+    DirectionalLight sun;
 
     bool shadows_enabled;
     int num_cascades;

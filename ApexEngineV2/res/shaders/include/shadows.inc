@@ -2,7 +2,7 @@ uniform sampler2D u_shadowMap;
 uniform mat4 u_shadowMatrix;
 
 float getShadow(vec3 coord) {
-    float bias = 0.005;
+    float bias = 0.0025;
     float depth = texture2D(u_shadowMap, coord.xy).r;
     return max(step(coord.z-bias, depth), 0.0);
 }

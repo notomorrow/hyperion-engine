@@ -189,6 +189,8 @@
     <ClInclude Include="rendering\camera\perspective_camera.h" />
     <ClInclude Include="rendering\environment.h" />
     <ClInclude Include="rendering\framebuffer.h" />
+    <ClInclude Include="rendering\lightsource.h" />
+    <ClInclude Include="rendering\lights\directional_light.h" />
     <ClInclude Include="rendering\material.h" />
     <ClInclude Include="rendering\mesh.h" />
     <ClInclude Include="rendering\renderable.h" />
@@ -197,6 +199,9 @@
     <ClInclude Include="rendering\shaders\lighting_shader.h" />
     <ClInclude Include="rendering\shader_manager.h" />
     <ClInclude Include="rendering\shadow\shadow_mapping.h" />
+    <ClInclude Include="rendering\skydome\clouds_shader.h" />
+    <ClInclude Include="rendering\skydome\skydome.h" />
+    <ClInclude Include="rendering\skydome\skydome_shader.h" />
     <ClInclude Include="rendering\texture.h" />
     <ClInclude Include="rendering\texture_2D.h" />
     <ClInclude Include="rendering\vertex.h" />
@@ -206,6 +211,7 @@
     <ClInclude Include="math\vector3.h" />
     <ClInclude Include="math\vector4.h" />
     <ClInclude Include="util\img\stb_image.h" />
+    <ClInclude Include="util\mesh_factory.h" />
     <ClInclude Include="util\shader_preprocessor.h" />
     <ClInclude Include="util\string_util.h" />
     <ClInclude Include="util\xml\sax_parser.h" />
@@ -250,6 +256,7 @@
     <ClCompile Include="rendering\camera\perspective_camera.cpp" />
     <ClCompile Include="rendering\environment.cpp" />
     <ClCompile Include="rendering\framebuffer.cpp" />
+    <ClCompile Include="rendering\lights\directional_light.cpp" />
     <ClCompile Include="rendering\material.cpp" />
     <ClCompile Include="rendering\mesh.cpp" />
     <ClCompile Include="rendering\renderable.cpp" />
@@ -258,8 +265,12 @@
     <ClCompile Include="rendering\shaders\lighting_shader.cpp" />
     <ClCompile Include="rendering\shader_manager.cpp" />
     <ClCompile Include="rendering\shadow\shadow_mapping.cpp" />
+    <ClCompile Include="rendering\skydome\clouds_shader.cpp" />
+    <ClCompile Include="rendering\skydome\skydome.cpp" />
+    <ClCompile Include="rendering\skydome\skydome_shader.cpp" />
     <ClCompile Include="rendering\texture.cpp" />
     <ClCompile Include="rendering\texture_2D.cpp" />
+    <ClCompile Include="util\mesh_factory.cpp" />
     <ClCompile Include="util\shader_preprocessor.cpp" />
     <ClCompile Include="util\xml\sax_parser.cpp" />
   </ItemGroup>

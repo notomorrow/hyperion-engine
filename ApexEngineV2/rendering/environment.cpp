@@ -21,6 +21,16 @@ Environment::Environment()
     }
 }
 
+const DirectionalLight &Environment::GetSun() const
+{
+    return sun;
+}
+
+DirectionalLight &Environment::GetSun()
+{
+    return sun;
+}
+
 bool Environment::ShadowsEnabled() const
 {
     return shadows_enabled;

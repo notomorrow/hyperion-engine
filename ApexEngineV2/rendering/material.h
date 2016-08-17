@@ -14,7 +14,7 @@
 namespace apex {
 class MaterialParameter {
 public:
-    enum Type {
+    enum MaterialParameterType {
         MATPARAM_NONE,
         MATPARAM_FLOAT,
         MATPARAM_INT,
@@ -25,12 +25,12 @@ public:
     };
 
     MaterialParameter();
-    MaterialParameter(const float *data, size_t nvalues, Type paramtype);
+    MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype);
     MaterialParameter(const MaterialParameter &other);
 
     bool IsEmpty() const;
     size_t NumValues() const;
-    Type GetType() const;
+    MaterialParameterType GetType() const;
     
     float &operator[](size_t idx);
     float operator[](size_t idx) const;
@@ -38,7 +38,7 @@ public:
 private:
     size_t size;
     std::array<float, 8> values;
-    Type type;
+    MaterialParameterType type;
 };
 
 class Material {
@@ -49,7 +49,7 @@ public:
     bool HasParameter(const std::string &name) const;
     
     std::map<std::string, MaterialParameter> &GetParameters();
-    MaterialParameter &GetParameter(const std::string &name);
+    const MaterialParameter &GetParameter(const std::string &name) const;
     
     void SetParameter(const std::string &name, float);
     void SetParameter(const std::string &name, int);

@@ -11,7 +11,7 @@ Framebuffer::Framebuffer(int width, int height)
     color_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)NULL);
 
     depth_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)NULL);
-    depth_texture->SetInternalFormat(CoreEngine::DEPTH_COMPONENT16);
+    depth_texture->SetInternalFormat(CoreEngine::DEPTH_COMPONENT32F);
     depth_texture->SetFormat(CoreEngine::DEPTH_COMPONENT);
 }
 

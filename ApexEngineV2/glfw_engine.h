@@ -12,6 +12,8 @@ public:
     bool InitializeGame(Game *game);
     void Viewport(int x, int y, size_t width, size_t height);
     void SetMousePosition(double x, double y);
+    void Enable(int cap);
+    void BlendFunc(int src, int dst);
     void GenBuffers(size_t count, unsigned int *buffers);
     void DeleteBuffers(size_t count, unsigned int *buffers);
     void BindBuffer(int target, unsigned int buffer);

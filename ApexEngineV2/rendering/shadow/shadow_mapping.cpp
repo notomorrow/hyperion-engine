@@ -3,7 +3,7 @@
 namespace apex {
 ShadowMapping::ShadowMapping()
 {
-    shadow_cam = new OrthoCamera(-15, 15, -15, 15, -25, 25);
+    shadow_cam = new OrthoCamera(-12, 12, -12, 12, -25, 25);
     fbo = new Framebuffer(512, 512);
     shadow_cam->SetTranslation(Vector3(-11, 11, -1));
     shadow_cam->SetDirection(Vector3(0.5, -0.5, 0.5));

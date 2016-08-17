@@ -2,11 +2,11 @@
 
 namespace apex {
 MaterialParameter::MaterialParameter()
-    : size(0), type(Type::MATPARAM_NONE)
+    : size(0), type(MaterialParameterType::MATPARAM_NONE)
 {
 }
 
-MaterialParameter::MaterialParameter(const float *data, size_t nvalues, Type paramtype)
+MaterialParameter::MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype)
 {
     for (size_t i = 0; i < nvalues; i++) {
         values[i] = data[i];
@@ -32,7 +32,7 @@ size_t MaterialParameter::NumValues() const
     return size;
 }
 
-MaterialParameter::Type MaterialParameter::GetType() const
+MaterialParameter::MaterialParameterType MaterialParameter::GetType() const
 {
     return type;
 }
@@ -71,12 +71,11 @@ std::map<std::string, MaterialParameter> &Material::GetParameters()
     return params;
 }
 
-MaterialParameter &Material::GetParameter(const std::string &name)
+const MaterialParameter &Material::GetParameter(const std::string &name) const
 {
     auto it = params.find(name);
     if (it == params.end()) {
-        params.insert(std::make_pair(name, MaterialParameter()));
-        return params[name];
+        throw std::out_of_range("parameter not found");
     }
     return it->second;
 }

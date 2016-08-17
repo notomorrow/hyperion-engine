@@ -12,5 +12,8 @@ void main()
 {
   vec3 shadowCoord = getShadowCoord(v_position.xyz);
   float shadowness = getShadow(shadowCoord);
-  gl_FragColor = vec4(vec3(shadowness, shadowness, shadowness), 1.0); 
+  
+  vec4 diffuse = texture2D(u_diffuseTexture, v_texcoord0);
+  
+  gl_FragColor = diffuse * shadowness; 
 }

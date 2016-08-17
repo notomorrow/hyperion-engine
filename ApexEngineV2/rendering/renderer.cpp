@@ -1,10 +1,18 @@
 #include "renderer.h"
 
 namespace apex {
+Renderer::Renderer()
+{
+    opaque_bucket.reserve(30);
+    transparent_bucket.reserve(30);
+    sky_bucket.reserve(30);
+}
+
 void Renderer::ClearRenderables()
 {
     opaque_bucket.clear();
     transparent_bucket.clear();
+    sky_bucket.clear();
 }
 
 void Renderer::FindRenderables(Entity *top)
@@ -16,6 +24,9 @@ void Renderer::FindRenderables(Entity *top)
             break;
         case Renderable::RB_TRANSPARENT:
             transparent_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+            break;
+        case Renderable::RB_SKY:
+            sky_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
             break;
         }
     }
@@ -32,10 +43,10 @@ void Renderer::RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Tran
         auto renderable = it.first;
         auto transform = it.second;
         if (renderable->shader != nullptr) {
+            renderable->shader->Use();
             renderable->shader->ApplyMaterial(renderable->GetMaterial());
             renderable->shader->ApplyTransforms(transform.GetMatrix(),
                 cam->GetViewMatrix(), cam->GetProjectionMatrix());
-            renderable->shader->Use();
             renderable->Render();
             renderable->shader->End();
         }
@@ -47,5 +58,6 @@ void Renderer::RenderAll(Camera *cam)
     CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
     RenderBucket(cam, opaque_bucket);
     RenderBucket(cam, transparent_bucket);
+    RenderBucket(cam, sky_bucket);
 }
 }

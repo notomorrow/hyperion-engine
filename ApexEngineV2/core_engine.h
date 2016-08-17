@@ -10,6 +10,20 @@ public:
     static void SetInstance(CoreEngine *ptr);
 
     enum GLEnums {
+        ZERO = 0,
+        ONE = 1,
+        SRC_COLOR = 0x0300,
+        ONE_MINUS_SRC_COLOR = 0x0301,
+        SRC_ALPHA = 0x0302,
+        ONE_MINUS_SRC_ALPHA = 0x0303,
+        DST_ALPHA = 0x0304,
+        ONE_MINUS_DST_ALPHA = 0x0305,
+        DST_COLOR = 0x0306,
+        ONE_MINUS_DST_COLOR = 0x0307,
+        SRC_ALPHA_SATURATE = 0x0308,
+
+        BLEND = 0x0BE2,
+
         BYTE = 0x1400,
         UNSIGNED_BYTE = 0x1401,
         SHORT = 0x1402,
@@ -27,6 +41,8 @@ public:
         RGB5_A1 = 0x8057,
         RGB565 = 0x8D62,
         DEPTH_COMPONENT16 = 0x81A5,
+        DEPTH_COMPONENT24 = 0x81A6,
+        DEPTH_COMPONENT32F = 0x8CAC,
 
         NEAREST = 0x2600,
         LINEAR = 0x2601,
@@ -87,6 +103,8 @@ public:
     virtual bool InitializeGame(Game *game) = 0;
     virtual void Viewport(int x, int y, size_t width, size_t height) = 0;
     virtual void SetMousePosition(double x, double y) = 0;
+    virtual void Enable(int cap) = 0;
+    virtual void BlendFunc(int src, int dst) = 0;
     virtual void GenBuffers(size_t count, unsigned int *buffers) = 0;
     virtual void DeleteBuffers(size_t count, unsigned int *buffers) = 0;
     virtual void BindBuffer(int target, unsigned int buffer) = 0;

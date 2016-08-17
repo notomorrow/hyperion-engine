@@ -10,6 +10,8 @@
 namespace apex {
 class Renderer {
 public:
+    Renderer();
+
     void ClearRenderables();
     void FindRenderables(Entity *top);
     void RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Transform>> &bucket);
@@ -18,6 +20,7 @@ public:
 private:
     std::vector<std::pair<Renderable*, Transform>> opaque_bucket;
     std::vector<std::pair<Renderable*, Transform>> transparent_bucket;
+    std::vector<std::pair<Renderable*, Transform>> sky_bucket;
 };
 }
 

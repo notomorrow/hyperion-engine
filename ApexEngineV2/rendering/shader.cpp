@@ -47,37 +47,49 @@ void Shader::ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Ma
 void Shader::SetUniform(const std::string &name, float value)
 {
     uniforms[name] = Uniform(value);
-    uniform_changed = true;
+    //uniform_changed = true;
+    int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
+    CoreEngine::GetInstance()->Uniform1f(loc, value);
 }
 
 void Shader::SetUniform(const std::string &name, int value)
 {
     uniforms[name] = Uniform(value);
-    uniform_changed = true;
+    //uniform_changed = true;
+    int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
+    CoreEngine::GetInstance()->Uniform1i(loc, value);
 }
 
 void Shader::SetUniform(const std::string &name, const Vector2 &value)
 {
     uniforms[name] = Uniform(value);
-    uniform_changed = true;
+    //uniform_changed = true;
+    int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
+    CoreEngine::GetInstance()->Uniform2f(loc, value.x, value.y);
 }
 
 void Shader::SetUniform(const std::string &name, const Vector3 &value)
 {
     uniforms[name] = Uniform(value);
-    uniform_changed = true;
+    //uniform_changed = true;
+    int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
+    CoreEngine::GetInstance()->Uniform3f(loc, value.x, value.y, value.z);
 }
 
 void Shader::SetUniform(const std::string &name, const Vector4 &value)
 {
     uniforms[name] = Uniform(value);
-    uniform_changed = true;
+    //uniform_changed = true;
+    int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
+    CoreEngine::GetInstance()->Uniform4f(loc, value.x, value.y, value.z, value.w);
 }
 
 void Shader::SetUniform(const std::string &name, const Matrix4 &value)
 {
     uniforms[name] = Uniform(value);
-    uniform_changed = true;
+    //uniform_changed = true;
+    int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
+    CoreEngine::GetInstance()->UniformMatrix4fv(loc, 1, true, &value.values[0]);
 }
 
 void Shader::Use()
@@ -147,7 +159,7 @@ void Shader::Use()
 
     engine->UseProgram(progid);
 
-    if (uniform_changed) {
+    /*if (uniform_changed) {
         uniform_changed = false;
         for (auto &&uniform : uniforms) {
             int loc = engine->GetUniformLocation(progid, uniform.first.c_str());
@@ -171,22 +183,20 @@ void Shader::Use()
                         uniform.second.data[2], uniform.second.data[2]);
                     break;
                 case Uniform::UF_MAT4:
-                {
                     engine->UniformMatrix4fv(loc, 1, true, &uniform.second.data[0]);
                     break;
-                }
                 default:
                     std::cout << "invalid uniform: " << uniform.first << "\n";
                     break;
                 }
             }
         }
-    }
+    }*/
 }
 
 void Shader::End()
 {
-    CoreEngine::GetInstance()->UseProgram(NULL);
+    CoreEngine::GetInstance()->UseProgram(0);
 }
 
 void Shader::AddSubShader(const SubShader &shader)

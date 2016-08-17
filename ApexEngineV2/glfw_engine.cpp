@@ -54,9 +54,9 @@ bool GlfwEngine::InitializeGame(Game *game)
     }
 
    // glfwSwapInterval(1);
-
+    glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
-    glClearColor(1, 0, 0, 1);
+    glClearColor(0.0, 0.0, 0.0, 1);
 
     game->Initialize();
     inputmgr = game->GetInputManager();
@@ -99,6 +99,16 @@ void GlfwEngine::SetMousePosition(double x, double y)
     int window_x, window_y;
     glfwGetWindowPos(window, &window_x, &window_y);
     glfwSetCursorPos(window, x, y);
+}
+
+void GlfwEngine::Enable(int cap)
+{
+    glEnable(cap);
+}
+
+void GlfwEngine::BlendFunc(int src, int dst)
+{
+    glBlendFunc(src, dst);
 }
 
 void GlfwEngine::GenBuffers(size_t count, unsigned int *buffers)

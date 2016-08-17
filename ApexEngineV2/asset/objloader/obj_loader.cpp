@@ -62,6 +62,9 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
 
     std::string line;
     std::ifstream fs(path);
+    if (!fs.is_open()) {
+        return nullptr;
+    }
     while (std::getline(fs, line)) {
         auto tokens = StringUtil::Split(line, ' ');
         tokens = StringUtil::RemoveEmpty(tokens);
