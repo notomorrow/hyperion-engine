@@ -132,7 +132,7 @@ private:
             return *this;
         }
     };
-    
+
     std::vector<SubShader> subshaders;
     std::map<std::string, Uniform> uniforms;
 };

@@ -20,6 +20,8 @@ public:
     BoundingBox &operator*=(double scalar);
     BoundingBox &operator*=(const Matrix4 &mat);
 
+    BoundingBox &Clear();
+
     BoundingBox &Extend(const Vector3 &vec);
     BoundingBox &Extend(const BoundingBox &bb);
 

@@ -43,10 +43,10 @@ void Renderer::RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Tran
         auto renderable = it.first;
         auto transform = it.second;
         if (renderable->shader != nullptr) {
-            renderable->shader->Use();
             renderable->shader->ApplyMaterial(renderable->GetMaterial());
             renderable->shader->ApplyTransforms(transform.GetMatrix(),
                 cam->GetViewMatrix(), cam->GetProjectionMatrix());
+            renderable->shader->Use();
             renderable->Render();
             renderable->shader->End();
         }
@@ -56,8 +56,8 @@ void Renderer::RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Tran
 void Renderer::RenderAll(Camera *cam)
 {
     CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
+    RenderBucket(cam, sky_bucket);
     RenderBucket(cam, opaque_bucket);
     RenderBucket(cam, transparent_bucket);
-    RenderBucket(cam, sky_bucket);
 }
 }

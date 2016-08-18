@@ -2,6 +2,7 @@
 #define ENVIRONMENT_H
 
 #include "../math/matrix4.h"
+#include "../math/vector2.h"
 #include "../rendering/texture.h"
 #include "lights/directional_light.h"
 
@@ -12,6 +13,7 @@ namespace apex {
 class Environment {
 public:
     static Environment *GetInstance();
+    static const Vector2 possion_disk[16];
 
     Environment();
 

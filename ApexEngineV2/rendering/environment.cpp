@@ -2,6 +2,24 @@
 
 namespace apex {
 Environment *Environment::instance = nullptr;
+const Vector2 Environment::possion_disk[16] = {
+    Vector2(-0.94201624f, -0.39906216f),
+    Vector2(0.94558609f, -0.76890725f),
+    Vector2(-0.094184101f, -0.92938870f),
+    Vector2(0.34495938f, 0.29387760f),
+    Vector2(-0.91588581f, 0.45771432f),
+    Vector2(-0.81544232f, -0.87912464f),
+    Vector2(-0.38277543f, 0.27676845f),
+    Vector2(0.97484398f, 0.75648379f),
+    Vector2(0.44323325f, -0.97511554f),
+    Vector2(0.53742981f, -0.47373420f),
+    Vector2(-0.26496911f, -0.41893023f),
+    Vector2(0.79197514f, 0.19090188f),
+    Vector2(-0.24188840f, 0.99706507f),
+    Vector2(-0.81409955f, 0.91437590f),
+    Vector2(0.19984126f, 0.78641367f),
+    Vector2(0.14383161f, -0.14100790f)
+};
 
 Environment *Environment::GetInstance()
 {

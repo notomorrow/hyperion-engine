@@ -13,6 +13,8 @@ public:
     void Viewport(int x, int y, size_t width, size_t height);
     void SetMousePosition(double x, double y);
     void Enable(int cap);
+    void Disable(int cap);
+    void DepthMask(bool mask);
     void BlendFunc(int src, int dst);
     void GenBuffers(size_t count, unsigned int *buffers);
     void DeleteBuffers(size_t count, unsigned int *buffers);

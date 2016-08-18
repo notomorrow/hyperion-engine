@@ -58,6 +58,6 @@ void Texture2D::Use()
 
 void Texture2D::End()
 {
-    CoreEngine::GetInstance()->BindTexture(CoreEngine::TEXTURE_2D, NULL);
+    CoreEngine::GetInstance()->BindTexture(CoreEngine::TEXTURE_2D, 0);
 }
 }

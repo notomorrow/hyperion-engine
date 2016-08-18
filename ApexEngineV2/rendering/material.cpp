@@ -52,14 +52,19 @@ Material::Material()
 }
 
 Material::Material(const Material &other)
+    : params(other.params),
+      alpha_blended(other.alpha_blended),
+      depth_test(other.depth_test),
+      depth_write(other.depth_write),
+      diffuse_texture(other.diffuse_texture),
+      normals_texture(other.normals_texture)
 {
-    params = other.params;
 }
 
 bool Material::HasParameter(const std::string &name) const
 {
     auto it = params.find(name);
-    if (it != params.end() && 
+    if (it != params.end() &&
         it->second.GetType() != MaterialParameter::MATPARAM_NONE) {
         return true;
     }

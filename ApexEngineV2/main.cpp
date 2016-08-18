@@ -16,9 +16,12 @@
 #include "rendering/texture.h"
 #include "rendering/framebuffer.h"
 #include "rendering/shaders/lighting_shader.h"
+#include "rendering/shaders/post_shader.h"
+#include "rendering/shaders/post/gamma_correct.h"
 #include "rendering/shader_manager.h"
 #include "rendering/shadow/shadow_mapping.h"
 #include "util/shader_preprocessor.h"
+#include "util/mesh_factory.h"
 #include "audio/audio_manager.h"
 #include "audio/audio_source.h"
 #include "audio/audio_control.h"
@@ -31,6 +34,38 @@
 
 using namespace apex;
 
+void DrawBoundingBox(const BoundingBox &bb)
+{
+    glBegin(GL_LINES);
+    glVertex3f(bb.GetMin().x, bb.GetMin().y, bb.GetMin().z);
+    glVertex3f(bb.GetMax().x, bb.GetMin().y, bb.GetMin().z);
+    glVertex3f(bb.GetMin().x, bb.GetMin().y, bb.GetMin().z);
+    glVertex3f(bb.GetMin().x, bb.GetMax().y, bb.GetMin().z);
+    glVertex3f(bb.GetMax().x, bb.GetMax().y, bb.GetMin().z);
+    glVertex3f(bb.GetMax().x, bb.GetMin().y, bb.GetMin().z);
+    glVertex3f(bb.GetMax().x, bb.GetMax().y, bb.GetMin().z);
+    glVertex3f(bb.GetMin().x, bb.GetMax().y, bb.GetMin().z);
+
+    glVertex3f(bb.GetMin().x, bb.GetMin().y, bb.GetMin().z);
+    glVertex3f(bb.GetMin().x, bb.GetMin().y, bb.GetMax().z);
+    glVertex3f(bb.GetMin().x, bb.GetMax().y, bb.GetMin().z);
+    glVertex3f(bb.GetMin().x, bb.GetMax().y, bb.GetMax().z);
+    glVertex3f(bb.GetMax().x, bb.GetMin().y, bb.GetMin().z);
+    glVertex3f(bb.GetMax().x, bb.GetMin().y, bb.GetMax().z);
+    glVertex3f(bb.GetMax().x, bb.GetMax().y, bb.GetMin().z);
+    glVertex3f(bb.GetMax().x, bb.GetMax().y, bb.GetMax().z);
+
+    glVertex3f(bb.GetMin().x, bb.GetMin().y, bb.GetMax().z);
+    glVertex3f(bb.GetMax().x, bb.GetMin().y, bb.GetMax().z);
+    glVertex3f(bb.GetMin().x, bb.GetMin().y, bb.GetMax().z);
+    glVertex3f(bb.GetMin().x, bb.GetMax().y, bb.GetMax().z);
+    glVertex3f(bb.GetMax().x, bb.GetMax().y, bb.GetMax().z);
+    glVertex3f(bb.GetMax().x, bb.GetMin().y, bb.GetMax().z);
+    glVertex3f(bb.GetMax().x, bb.GetMax().y, bb.GetMax().z);
+    glVertex3f(bb.GetMin().x, bb.GetMax().y, bb.GetMax().z);
+    glEnd();
+}
+
 class MyGame : public Game {
 public:
     Renderer *renderer;
@@ -41,20 +76,28 @@ public:
     std::shared_ptr<Entity> top;
     std::shared_ptr<Shader> shader;
     std::shared_ptr<Texture> pbr_tex;
+    std::shared_ptr<Mesh> debug_quad;
 
-    float timer;
+    double timer;
+    double shadow_timer;
     bool scene_fbo_rendered;
 
     MyGame(const RenderWindow &window)
         : Game(window)
     {
-        timer = 10;
+        shadow_timer = 0.0f;
+        timer = 0.15;
         scene_fbo_rendered = false;
+
+        ShaderProperties defines;
+        debug_quad = MeshFactory::CreateQuad();
+        debug_quad->GetMaterial().alpha_blended = true;
+        debug_quad->SetShader(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(defines));
 
         renderer = new Renderer();
         cam = new FpsCamera(inputmgr, &this->window, 65, 0.5, 150);
-        fbo = new Framebuffer(512, 512);
-        shadows = new ShadowMapping();
+        fbo = new Framebuffer(window.width, window.height);
+        shadows = new ShadowMapping(cam);
     }
 
     ~MyGame()
@@ -67,9 +110,12 @@ public:
 
     void Initialize()
     {
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(-0.3, -0.4, 1).Normalize());
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
 
-        Environment::GetInstance()->SetShadowsEnabled(false);
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(-0.3f, -0.4f, 1.0f).Normalize());
+
+        Environment::GetInstance()->SetShadowsEnabled(true);
         Environment::GetInstance()->SetShadowMap(0, shadows->GetShadowMap());
 
         AudioManager::GetInstance()->Initialize();
@@ -93,13 +139,12 @@ public:
         audio_ctrl->GetSource()->Play();
         top->AddChild(torus);
 
-        auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
-        dragger->Move(Vector3(3, 0, 3));
+        /*auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
+        dragger->Move(Vector3(3, -1.8f, 3));
         dragger->Scale(0.5);
         dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
         dragger->GetControl<SkeletonControl>(0)->PlayAnimation(1, 3.0);
-        top->AddChild(dragger);
-
+        top->AddChild(dragger);*/
 
         /*auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
         cube->GetChild(0)->GetRenderable()->SetShader(shader);
@@ -108,13 +153,30 @@ public:
         dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
         */
 
-        pbr_tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/noise.png");
+        pbr_tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/pbr_6.png");
 
         auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
-        cube->GetChild(0)->GetRenderable()->SetShader(shader);
+        cube->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({ {"DIFFUSE_MAP", true} }));
+        cube->GetChild(0)->GetRenderable()->GetMaterial().diffuse_texture = pbr_tex;
         cube->Scale(0.5);
         cube->SetName("cube");
         top->AddChild(cube);
+
+        auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
+        monkey->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({ { "DIFFUSE_MAP", true } }));
+        monkey->GetChild(0)->GetRenderable()->GetMaterial().diffuse_texture = pbr_tex;
+        monkey->Move(Vector3(-3, 0, -3));
+        monkey->SetName("monkey");
+        top->AddChild(monkey);
+
+        auto quad_node = std::make_shared<Entity>("quad");
+        auto quad_mesh = MeshFactory::CreateQuad();
+        quad_mesh->SetShader(shader);
+        quad_node->SetRenderable(quad_mesh);
+        quad_node->Scale(15);
+        quad_node->Move(Vector3::UnitY() * -2);
+        quad_node->Rotate(Quaternion(Vector3::UnitX(), MathUtil::PI / 2));
+        top->AddChild(quad_node);
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
     }
@@ -125,64 +187,61 @@ public:
         AudioManager::GetInstance()->SetListenerOrientation(cam->GetDirection(), cam->GetUpVector());
 
         timer += dt;
+        shadow_timer += dt;
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer*0.05), cos(timer*0.05), 0).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(sinf(timer * 0.005), cosf(timer * 0.005), 0.0f).Normalize());
 
         cam->Update(dt);
-
-        if (Environment::GetInstance()->ShadowsEnabled()) {
-            shadows->GetShadowCamera()->Update(dt);
-            Environment::GetInstance()->SetShadowMatrix(0,
-                shadows->GetShadowCamera()->GetViewProjectionMatrix());
-        }
 
         top->Update(dt);
 
         top->GetChild(0)->SetLocalRotation(Quaternion(Vector3(1, 0, 0), timer));
-        top->GetChild(0)->SetLocalTranslation(Vector3(0, 0, (std::sin(timer) + 1.0) * 5));
+        top->GetChild(0)->SetLocalTranslation(Vector3(0, 0, (std::sin(timer) + 1.0f) * 5));
     }
 
     void Render()
     {
-       /* if (!scene_fbo_rendered) {
-            fbo->Use();
-            glClearColor(0, 1, 0, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            glActiveTexture(GL_TEXTURE0);
-            shader->SetUniform("u_diffuseTexture", 0);
-            pbr_tex->Use();
-            renderer->FindRenderables(top.get());
-            renderer->RenderAll(cam);
-            renderer->ClearRenderables();
-            pbr_tex->End();
-
-            fbo->End();
-
-            scene_fbo_rendered = true;
-        }
-        glClearColor(1, 0, 0, 1);*/
-
         renderer->FindRenderables(top.get());
 
         if (Environment::GetInstance()->ShadowsEnabled()) {
-            shadows->Begin();
-            glClear(GL_DEPTH_BUFFER_BIT);
-            renderer->RenderAll(shadows->GetShadowCamera());
-            shadows->End();
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_FRONT);
+            if (shadow_timer >= 0.04) {
+                Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
+                shadow_dir.y = -1.0f;
+                shadows->SetLightDirection(shadow_dir.Normalize());
+                shadows->Begin();
+
+                Environment::GetInstance()->SetShadowMatrix(0,
+                    shadows->GetShadowCamera()->GetViewProjectionMatrix());
+
+                glClear(GL_DEPTH_BUFFER_BIT);
+                renderer->RenderBucket(shadows->GetShadowCamera(), renderer->opaque_bucket);
+                shadows->End();
+
+                shadow_timer = 0.0;
+            }
         }
+
+        glDisable(GL_CULL_FACE);
+
+        fbo->Use();
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glActiveTexture(GL_TEXTURE0);
-        shader->SetUniform("u_diffuseTexture", 0);
-        pbr_tex->Use();
-       // shadows->GetShadowMap()->Use();
         renderer->RenderAll(cam);
-       // shadows->GetShadowMap()->End();
-        pbr_tex->End();
-
         renderer->ClearRenderables();
+
+        /*debug_quad->GetMaterial().diffuse_texture = shadows->GetShadowMap();
+        */
+
+        fbo->End();
+
+        debug_quad->GetMaterial().diffuse_texture = fbo->GetColorTexture();
+        debug_quad->GetShader()->ApplyMaterial(debug_quad->GetMaterial());
+        debug_quad->GetShader()->Use();
+        debug_quad->Render();
+        debug_quad->GetShader()->End();
     }
 };
 
@@ -198,6 +257,5 @@ int main()
     delete game;
     delete engine;
 
-    system("pause");
     return 0;
 }

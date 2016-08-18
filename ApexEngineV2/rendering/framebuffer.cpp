@@ -11,7 +11,7 @@ Framebuffer::Framebuffer(int width, int height)
     color_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)NULL);
 
     depth_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)NULL);
-    depth_texture->SetInternalFormat(CoreEngine::DEPTH_COMPONENT32F);
+    depth_texture->SetInternalFormat(CoreEngine::DEPTH_COMPONENT24);
     depth_texture->SetFormat(CoreEngine::DEPTH_COMPONENT);
 }
 
@@ -75,6 +75,6 @@ void Framebuffer::Use()
 
 void Framebuffer::End()
 {
-    CoreEngine::GetInstance()->BindFramebuffer(CoreEngine::FRAMEBUFFER, NULL);
+    CoreEngine::GetInstance()->BindFramebuffer(CoreEngine::FRAMEBUFFER, 0);
 }
 }

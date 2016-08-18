@@ -17,7 +17,6 @@ public:
     void RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Transform>> &bucket);
     void RenderAll(Camera *cam);
 
-private:
     std::vector<std::pair<Renderable*, Transform>> opaque_bucket;
     std::vector<std::pair<Renderable*, Transform>> transparent_bucket;
     std::vector<std::pair<Renderable*, Transform>> sky_bucket;

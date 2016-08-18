@@ -1,6 +1,7 @@
 #ifndef SKYDOME_SHADER_H
 #define SKYDOME_SHADER_H
 
+#include "../camera/camera.h"
 #include "../shader.h"
 #include "../texture_2D.h"
 #include "../../math/transform.h"
@@ -15,15 +16,13 @@ public:
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj);
 
-    void SetCameraPosition(const Vector3 &camera_pos);
-    void SetCameraHeight(int camera_height);
     void SetGlobalTime(float global_time);
+    void SetCamera(Camera *camera);
 
 private:
     std::shared_ptr<Texture2D> noise_map;
 
-    Vector3 _camera_pos;
-    int _camera_height;
+    Camera *_camera;
     float _global_time;
 
     Vector4 sun_color;

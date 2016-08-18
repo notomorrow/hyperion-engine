@@ -1,6 +1,3 @@
-﻿  shader.cpp
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\rendering\shader.h(94): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
-  renderer.cpp
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\rendering\shader.h(94): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
-  Generating Code...
+﻿  shadow_mapping.cpp
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\rendering\shadow\shadow_mapping.cpp(45): warning C4244: 'argument': conversion from 'std::array<apex::Vector3,8>::size_type' to 'float', possible loss of data
   ApexEngineV2.vcxproj -> C:\Users\User\Documents\Visual Studio 2015\Projects\ApexEngineV2\Debug\ApexEngineV2.exe

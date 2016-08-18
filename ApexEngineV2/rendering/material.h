@@ -58,6 +58,12 @@ public:
     void SetParameter(const std::string &name, const Vector3 &);
     void SetParameter(const std::string &name, const Vector4 &);
 
+    bool alpha_blended = false;
+    bool depth_test = true;
+    bool depth_write = true;
+    std::shared_ptr<Texture> diffuse_texture = nullptr;
+    std::shared_ptr<Texture> normals_texture = nullptr;
+
 private:
     std::map<std::string, MaterialParameter> params;
 };

@@ -8,7 +8,7 @@
 namespace apex {
 class FpsCamera : public PerspectiveCamera {
 public:
-    FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, float n, float f);
+    FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, float near_clip, float far_clip);
 
     void UpdateLogic(double dt);
 

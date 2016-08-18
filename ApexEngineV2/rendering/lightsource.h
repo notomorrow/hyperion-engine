@@ -6,7 +6,7 @@ class Shader;
 class LightSource {
 public:
     virtual ~LightSource() = default;
-    virtual void BindLight(int index, Shader *shader) = 0;
+    virtual void Bind(int index, Shader *shader) = 0;
 };
 }
 

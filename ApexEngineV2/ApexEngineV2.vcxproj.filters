@@ -204,6 +204,15 @@
     <ClInclude Include="rendering\skydome\clouds_shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="rendering\shaders\post_shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\frustum.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\shaders\post\gamma_correct.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -372,6 +381,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="rendering\skydome\clouds_shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rendering\shaders\post_shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\frustum.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rendering\shaders\post\gamma_correct.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

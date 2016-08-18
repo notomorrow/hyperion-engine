@@ -16,7 +16,7 @@ public:
     const Vector4 &GetColor() const;
     void SetColor(const Vector4 &col);
 
-    void BindLight(int index, Shader *shader);
+    void Bind(int index, Shader *shader);
 
 private:
     Vector3 direction;

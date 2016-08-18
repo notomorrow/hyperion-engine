@@ -22,6 +22,11 @@ LightingShader::LightingShader(const ShaderProperties &properties)
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
         ));
+
+    for (int i = 0; i < 16; i++) {
+        SetUniform("poissonDisk[" + std::to_string(i) + "]", 
+            Environment::possion_disk[i]);
+    }
 }
 
 void LightingShader::ApplyMaterial(const Material &mat)
@@ -30,10 +35,18 @@ void LightingShader::ApplyMaterial(const Material &mat)
     if (env->ShadowsEnabled()) {
         if (env->NumCascades() == 1) {
             Texture::ActiveTexture(5);
-            SetUniform("u_shadowMap", 5);
             env->GetShadowMap(0)->Use();
+            SetUniform("u_shadowMap", 5);
             SetUniform("u_shadowMatrix", env->GetShadowMatrix(0));
         }
+    }
+
+    env->GetSun().Bind(0, this);
+
+    if (mat.diffuse_texture != nullptr) {
+        Texture::ActiveTexture(0);
+        mat.diffuse_texture->Use();
+        SetUniform("u_diffuseTexture", 0);
     }
 }
 

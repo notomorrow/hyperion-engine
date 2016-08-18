@@ -55,6 +55,13 @@ BoundingBox &BoundingBox::operator*=(const Matrix4 &mat)
     return *this;
 }
 
+BoundingBox &BoundingBox::Clear()
+{
+    min = Vector3(FLT_MAX);
+    max = Vector3(FLT_MIN);
+    return *this;
+}
+
 BoundingBox &BoundingBox::Extend(const Vector3 &vec)
 {
     min = Vector3::Min(min, vec);
@@ -82,7 +89,7 @@ bool BoundingBox::Contains(const Vector3 &vec) const
 
 double BoundingBox::Area() const
 {
-    Vector3 dimensions = max - min;
+    Vector3 dimensions(max - min);
     return dimensions.x * dimensions.y * dimensions.z;
 }
 }

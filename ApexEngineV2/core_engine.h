@@ -22,7 +22,10 @@ public:
         ONE_MINUS_DST_COLOR = 0x0307,
         SRC_ALPHA_SATURATE = 0x0308,
 
-        BLEND = 0x0BE2,
+        BLEND = 0x0BE2, 
+        DITHER = 0x0BD0,
+        STENCIL_TEST = 0x0B90,
+        DEPTH_TEST = 0x0B71,
 
         BYTE = 0x1400,
         UNSIGNED_BYTE = 0x1401,
@@ -104,6 +107,8 @@ public:
     virtual void Viewport(int x, int y, size_t width, size_t height) = 0;
     virtual void SetMousePosition(double x, double y) = 0;
     virtual void Enable(int cap) = 0;
+    virtual void Disable(int cap) = 0;
+    virtual void DepthMask(bool mask) = 0;
     virtual void BlendFunc(int src, int dst) = 0;
     virtual void GenBuffers(size_t count, unsigned int *buffers) = 0;
     virtual void DeleteBuffers(size_t count, unsigned int *buffers) = 0;

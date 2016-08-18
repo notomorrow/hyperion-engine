@@ -1,8 +1,10 @@
 uniform sampler2D u_shadowMap;
 uniform mat4 u_shadowMatrix;
 
+uniform vec2 poissonDisk[16];
+
 float getShadow(vec3 coord) {
-    float bias = 0.0025;
+    float bias = 0.0015;
     float depth = texture2D(u_shadowMap, coord.xy).r;
     return max(step(coord.z-bias, depth), 0.0);
 }

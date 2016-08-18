@@ -3,7 +3,7 @@
 
 namespace apex {
 DirectionalLight::DirectionalLight()
-    : direction(0.57735), color(1.0)
+    : direction(0.57735f), color(1.0f)
 {
 }
 
@@ -32,9 +32,9 @@ void DirectionalLight::SetColor(const Vector4 &col)
     color = col;
 }
 
-void DirectionalLight::BindLight(int index, Shader *shader)
+void DirectionalLight::Bind(int index, Shader *shader)
 {
-    shader->SetUniform("Env_DirectionalLight.direction", direction);
-    shader->SetUniform("Env_DirectionalLight.color", color);
+    shader->SetUniform("env_DirectionalLight.direction", direction);
+    shader->SetUniform("env_DirectionalLight.color", color);
 }
 }

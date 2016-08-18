@@ -8,11 +8,11 @@ uniform float m_GlobalTime;
 uniform sampler2D m_CloudMap;
 uniform vec4 m_CloudColor;
 
-const float timeScale = 1.0;
+const float timeScale = 0.3;
 const float cloudScale = 0.0005;
-const float skyCover = 0.5;
+const float skyCover = 0.45;
 const float softness = 0.4;
-const float brightness = 1.7;
+const float brightness = 1.3;
 const int noiseOctaves = 4;
 
 float saturate(float num)
@@ -83,7 +83,7 @@ void main()
             
   float dist = gl_FragCoord.z / gl_FragCoord.w; 
   vec4 fogColor = vec4(1.0, 1.0, 1.0, 0.0);
-  float fogFactor = (20.0 - dist) / (20.0 - 5.0);
+  float fogFactor = (30.0 - dist) / (30.0 - 18.0);
   fogFactor = saturate(fogFactor);
   
   gl_FragColor = mix(fogColor, cloudColComb, fogFactor);          

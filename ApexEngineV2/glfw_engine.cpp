@@ -56,7 +56,7 @@ bool GlfwEngine::InitializeGame(Game *game)
    // glfwSwapInterval(1);
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
-    glClearColor(0.0, 0.0, 0.0, 1);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     game->Initialize();
     inputmgr = game->GetInputManager();
@@ -104,6 +104,16 @@ void GlfwEngine::SetMousePosition(double x, double y)
 void GlfwEngine::Enable(int cap)
 {
     glEnable(cap);
+}
+
+void GlfwEngine::Disable(int cap)
+{
+    glDisable(cap);
+}
+
+void GlfwEngine::DepthMask(bool mask)
+{
+    glDepthMask(mask);
 }
 
 void GlfwEngine::BlendFunc(int src, int dst)

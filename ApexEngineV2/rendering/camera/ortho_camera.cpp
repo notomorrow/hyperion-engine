@@ -2,8 +2,8 @@
 #include "../../math/matrix_util.h"
 
 namespace apex {
-OrthoCamera::OrthoCamera(float left, float right, float bottom, float top, float n, float f)
-    : Camera(512, 512), left(left), right(right), bottom(bottom), top(top), near_clip(n), far_clip(f)
+OrthoCamera::OrthoCamera(float left, float right, float bottom, float top, float near_clip, float far_clip)
+    : Camera(512, 512, near_clip, near_clip), left(left), right(right), bottom(bottom), top(top)
 {
 }
 
@@ -27,16 +27,6 @@ float OrthoCamera::GetTop() const
     return top;
 }
 
-float OrthoCamera::GetNear() const
-{
-    return near_clip;
-}
-
-float OrthoCamera::GetFar() const
-{
-    return far_clip;
-}
-
 void OrthoCamera::SetLeft(float f)
 {
     left = f;
@@ -55,16 +45,6 @@ void OrthoCamera::SetBottom(float f)
 void OrthoCamera::SetTop(float f)
 {
     top = f;
-}
-
-void OrthoCamera::SetNear(float f)
-{
-    near_clip = f;
-}
-
-void OrthoCamera::SetFar(float f)
-{
-    far_clip = f;
 }
 
 void OrthoCamera::UpdateLogic(double dt)

@@ -1,18 +1,28 @@
 #include "shadow_mapping.h"
+#include "../../math/frustum.h"
 
 namespace apex {
-ShadowMapping::ShadowMapping()
+ShadowMapping::ShadowMapping(Camera *view_cam)
+    : view_cam(view_cam)
 {
-    shadow_cam = new OrthoCamera(-12, 12, -12, 12, -25, 25);
+    shadow_cam = new OrthoCamera(-10, 10, -10, 10, -10, 10);
     fbo = new Framebuffer(512, 512);
-    shadow_cam->SetTranslation(Vector3(-11, 11, -1));
-    shadow_cam->SetDirection(Vector3(0.5, -0.5, 0.5));
 }
 
 ShadowMapping::~ShadowMapping()
 {
     delete fbo;
     delete shadow_cam;
+}
+
+const Vector3 &ShadowMapping::GetLightDirection() const
+{
+    return light_direction;
+}
+
+void ShadowMapping::SetLightDirection(const Vector3 &dir)
+{
+    light_direction = dir;
 }
 
 OrthoCamera *ShadowMapping::GetShadowCamera()
@@ -27,11 +37,74 @@ std::shared_ptr<Texture> ShadowMapping::GetShadowMap()
 
 void ShadowMapping::Begin()
 {
+    UpdateFrustumPoints(frustum_corners_ws);
+    Vector3 center_pos;
+    for (size_t i = 0; i < frustum_corners_ws.size(); i++) {
+        center_pos += frustum_corners_ws[i];
+    }
+    center_pos /= frustum_corners_ws.size();
+
+    Matrix4 new_view, new_proj;
+    MatrixUtil::ToLookAt(new_view, center_pos - light_direction, center_pos, Vector3::UnitY());
+
+    TransformPoints(frustum_corners_ws, frustum_corners_ls, new_view);
+
+    maxes = Vector3(FLT_MIN);
+    mins = Vector3(FLT_MAX);
+
+    for (size_t i = 0; i < frustum_corners_ls.size(); i++) {
+        auto &corner = frustum_corners_ls[i];
+        if (corner.x > maxes.x) {
+            maxes.x = corner.x;
+        } else if (corner.x < mins.x) {
+            mins.x = corner.x;
+        }
+        if (corner.y > maxes.y) {
+            maxes.y = corner.y;
+        } else if (corner.y < mins.y) {
+            mins.y = corner.y;
+        }
+        if (corner.z > maxes.z) {
+            maxes.z = corner.z;
+        } else if (corner.z < mins.z) {
+            mins.z = corner.z;
+        }
+    }
+
+    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, mins.z, maxes.z);
+    shadow_cam->SetViewMatrix(new_view);
+    shadow_cam->SetProjectionMatrix(new_proj);
+    shadow_cam->SetViewProjectionMatrix(new_view * new_proj);
+
     fbo->Use();
 }
 
 void ShadowMapping::End()
 {
     fbo->End();
+}
+
+void ShadowMapping::TransformPoints(const std::array<Vector3, 8> &in_vec,
+    std::array<Vector3, 8> &out_vec, const Matrix4 &mat) const
+{
+    for (size_t i = 0; i < in_vec.size(); i++) {
+        out_vec[i] = in_vec[i] * mat;
+    }
+}
+
+void ShadowMapping::UpdateFrustumPoints(std::array<Vector3, 8> &points)
+{
+    const float dist = 10;
+    bb = BoundingBox(Vector3::Round(view_cam->GetTranslation() -dist),
+        Vector3::Round(view_cam->GetTranslation() + dist));
+
+    points[0] = bb.GetMin();
+    points[1] = bb.GetMax();
+    points[2] = Vector3(points[0].x, points[0].y, points[1].z);
+    points[3] = Vector3(points[0].x, points[1].y, points[0].z);
+    points[4] = Vector3(points[1].x, points[0].y, points[0].z);
+    points[5] = Vector3(points[0].x, points[1].y, points[1].z);
+    points[6] = Vector3(points[1].x, points[0].y, points[1].z);
+    points[7] = Vector3(points[1].x, points[1].y, points[0].z);
 }
 }

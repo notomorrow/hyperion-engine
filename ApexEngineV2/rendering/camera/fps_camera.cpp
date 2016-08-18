@@ -1,8 +1,8 @@
 #include "fps_camera.h"
 
 namespace apex {
-FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, float n, float f)
-    : PerspectiveCamera(fov, 512, 512, n, f), inputmgr(inputmgr), window(window)
+FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, float near_clip, float far_clip)
+    : PerspectiveCamera(fov, 512, 512, near_clip, far_clip), inputmgr(inputmgr), window(window)
 {
     mag_x = 0.0;
     mag_y = 0.0;
@@ -71,7 +71,7 @@ void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
 
 void FpsCamera::HandleKeyboardInput(double dt)
 {
-    const double speed = dt * 6.0;
+    const double speed = dt * 3.0;
 
     if (inputmgr->IsKeyDown(KEY_W)) {
         next_translation += direction * speed;
@@ -83,6 +83,6 @@ void FpsCamera::HandleKeyboardInput(double dt)
     } else if (inputmgr->IsKeyDown(KEY_D)) {
         next_translation += dir_cross_y * speed;
     }
-    translation.Lerp(next_translation, MathUtil::Clamp(8.0 * dt, 0.0, 1.0));
+    translation.Lerp(next_translation, MathUtil::Clamp(3.0 * dt, 0.0, 1.0));
 }
 }

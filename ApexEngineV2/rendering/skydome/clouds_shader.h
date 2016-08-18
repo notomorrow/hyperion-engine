@@ -1,6 +1,7 @@
 #ifndef CLOUDS_SHADER_H
 #define CLOUDS_SHADER_H
 
+#include "../camera/camera.h"
 #include "../shader.h"
 #include "../texture_2D.h"
 
@@ -14,12 +15,14 @@ public:
 
     void SetCloudColor(const Vector4 &cloud_color);
     void SetGlobalTime(float global_time);
+    void SetCamera(Camera *camera);
 
 private:
     std::shared_ptr<Texture2D> cloud_map;
 
     Vector4 _cloud_color;
     float _global_time;
+    Camera *_camera;
 };
 }
 

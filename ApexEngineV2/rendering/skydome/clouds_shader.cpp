@@ -31,26 +31,39 @@ CloudsShader::CloudsShader(const ShaderProperties &properties)
 
     _global_time = 0.0f;
     _cloud_color = Vector4(1.0);
+    _camera = nullptr;
 }
 
 void CloudsShader::ApplyMaterial(const Material &mat)
 {
-    CoreEngine::GetInstance()->ActiveTexture(0);
-    SetUniform("m_CloudMap", 0);
+    Texture::ActiveTexture(0);
     cloud_map->Use();
+    SetUniform("m_CloudMap", 0);
 
     SetUniform("m_GlobalTime", _global_time);
     SetUniform("m_CloudColor", _cloud_color);
 
-    if (mat.HasParameter("BlendMode") && mat.GetParameter("BlendMode")[0] == 1) {
+    if (mat.alpha_blended) {
         CoreEngine::GetInstance()->Enable(CoreEngine::BLEND);
         CoreEngine::GetInstance()->BlendFunc(CoreEngine::SRC_ALPHA, CoreEngine::ONE_MINUS_SRC_ALPHA);
+    }
+    if (!mat.depth_test) {
+        CoreEngine::GetInstance()->Disable(CoreEngine::DEPTH_TEST);
+    }
+    if (!mat.depth_write) {
+        CoreEngine::GetInstance()->DepthMask(false);
     }
 }
 
 void CloudsShader::ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj)
 {
-    Shader::ApplyTransforms(model, view, proj);
+    // Cloud layer should follow the camera
+    Matrix4 clouds_model_mat = model;
+    clouds_model_mat(0, 3) = _camera->GetTranslation().x;
+    clouds_model_mat(1, 3) = _camera->GetTranslation().y + 18.0f;
+    clouds_model_mat(2, 3) = _camera->GetTranslation().z;
+
+    Shader::ApplyTransforms(clouds_model_mat, view, proj);
 }
 
 void CloudsShader::SetCloudColor(const Vector4 &cloud_color)
@@ -61,5 +74,10 @@ void CloudsShader::SetCloudColor(const Vector4 &cloud_color)
 void CloudsShader::SetGlobalTime(float global_time)
 {
     _global_time = global_time;
+}
+
+void CloudsShader::SetCamera(Camera *camera)
+{
+    _camera = camera;
 }
 }
