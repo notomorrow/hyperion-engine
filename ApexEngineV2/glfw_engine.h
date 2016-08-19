@@ -11,6 +11,7 @@ class GlfwEngine : public CoreEngine {
 public:
     bool InitializeGame(Game *game);
     void Viewport(int x, int y, size_t width, size_t height);
+    void Clear(int mask);
     void SetMousePosition(double x, double y);
     void Enable(int cap);
     void Disable(int cap);

@@ -10,7 +10,6 @@ public:
     Texture2D(int width, int height, unsigned char *bytes);
     ~Texture2D();
 
-    void GenerateMipMap();
     void Use();
     void End();
 

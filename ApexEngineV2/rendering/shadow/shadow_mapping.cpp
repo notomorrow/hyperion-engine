@@ -2,11 +2,11 @@
 #include "../../math/frustum.h"
 
 namespace apex {
-ShadowMapping::ShadowMapping(Camera *view_cam)
-    : view_cam(view_cam)
+ShadowMapping::ShadowMapping(Camera *view_cam, int max_dist)
+    : view_cam(view_cam), max_dist(max_dist)
 {
     shadow_cam = new OrthoCamera(-10, 10, -10, 10, -10, 10);
-    fbo = new Framebuffer(512, 512);
+    fbo = new Framebuffer(1024, 1024);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -71,7 +71,7 @@ void ShadowMapping::Begin()
         }
     }
 
-    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, mins.z, maxes.z);
+    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
     shadow_cam->SetViewMatrix(new_view);
     shadow_cam->SetProjectionMatrix(new_proj);
     shadow_cam->SetViewProjectionMatrix(new_view * new_proj);
@@ -94,9 +94,8 @@ void ShadowMapping::TransformPoints(const std::array<Vector3, 8> &in_vec,
 
 void ShadowMapping::UpdateFrustumPoints(std::array<Vector3, 8> &points)
 {
-    const float dist = 10;
-    bb = BoundingBox(Vector3::Round(view_cam->GetTranslation() -dist),
-        Vector3::Round(view_cam->GetTranslation() + dist));
+    bb = BoundingBox(Vector3::Round(view_cam->GetTranslation() - max_dist),
+        Vector3::Round(view_cam->GetTranslation() + max_dist));
 
     points[0] = bb.GetMin();
     points[1] = bb.GetMax();

@@ -37,7 +37,6 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
         }
     }
     _global_time = 0.0f;
-    _camera = nullptr;
 
     sun_color = Vector4(0.05f, 0.02f, 0.01f, 1.0f);
 
@@ -85,7 +84,6 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
         SetUniform("u_noiseMap", 0);
     }
 
-    SetUniform("v3CameraPos", _camera->GetTranslation());
     SetUniform("u_globalTime", _global_time);
     SetUniform("v3LightPos", env->GetSun().GetDirection());
     SetUniform("u_sunColor", sun_color);
@@ -102,24 +100,21 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
     }
 }
 
-void SkydomeShader::ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj)
+void SkydomeShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
 {
     // Sky dome should follow the camera
-    Matrix4 dome_model_mat = model;
-    dome_model_mat(0, 3) = _camera->GetTranslation().x;
-    dome_model_mat(1, 3) = _camera->GetTranslation().y;
-    dome_model_mat(2, 3) = _camera->GetTranslation().z;
+    Matrix4 dome_model_mat = transform;
+    dome_model_mat(0, 3) = camera->GetTranslation().x;
+    dome_model_mat(1, 3) = camera->GetTranslation().y;
+    dome_model_mat(2, 3) = camera->GetTranslation().z;
 
-    Shader::ApplyTransforms(dome_model_mat, view, proj);
+    Shader::ApplyTransforms(dome_model_mat, camera);
+
+    SetUniform("v3CameraPos", camera->GetTranslation());
 }
 
 void SkydomeShader::SetGlobalTime(float global_time)
 {
     _global_time = global_time;
-}
-
-void SkydomeShader::SetCamera(Camera *camera)
-{
-    _camera = camera;
 }
 }

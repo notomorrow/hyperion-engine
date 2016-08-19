@@ -10,6 +10,10 @@ public:
     static void SetInstance(CoreEngine *ptr);
 
     enum GLEnums {
+        DEPTH_BUFFER_BIT = 0x00000100,
+        STENCIL_BUFFER_BIT = 0x00000400,
+        COLOR_BUFFER_BIT = 0x00004000,
+
         ZERO = 0,
         ONE = 1,
         SRC_COLOR = 0x0300,
@@ -43,6 +47,9 @@ public:
         RGBA4 = 0x8056,
         RGB5_A1 = 0x8057,
         RGB565 = 0x8D62,
+        RGB8 = 0x8051,
+        RGBA8 = 0x8058,
+        RGB10_A2 = 0x8059,
         DEPTH_COMPONENT16 = 0x81A5,
         DEPTH_COMPONENT24 = 0x81A6,
         DEPTH_COMPONENT32F = 0x8CAC,
@@ -105,6 +112,7 @@ public:
 
     virtual bool InitializeGame(Game *game) = 0;
     virtual void Viewport(int x, int y, size_t width, size_t height) = 0;
+    virtual void Clear(int mask) = 0;
     virtual void SetMousePosition(double x, double y) = 0;
     virtual void Enable(int cap) = 0;
     virtual void Disable(int cap) = 0;

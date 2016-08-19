@@ -8,7 +8,7 @@ class GammaCorrectShader : public PostShader {
 public:
     GammaCorrectShader::GammaCorrectShader(const ShaderProperties &properties);
 
-    virtual void ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj);
+    virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
 };
 }
 

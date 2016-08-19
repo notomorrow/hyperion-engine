@@ -14,15 +14,13 @@ public:
     SkydomeShader(const ShaderProperties &properties);
 
     virtual void ApplyMaterial(const Material &mat);
-    virtual void ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj);
+    virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
 
     void SetGlobalTime(float global_time);
-    void SetCamera(Camera *camera);
 
 private:
     std::shared_ptr<Texture2D> noise_map;
 
-    Camera *_camera;
     float _global_time;
 
     Vector4 sun_color;

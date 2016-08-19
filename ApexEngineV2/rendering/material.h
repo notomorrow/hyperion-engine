@@ -61,6 +61,7 @@ public:
     bool alpha_blended = false;
     bool depth_test = true;
     bool depth_write = true;
+    Vector4 diffuse_color = Vector4(1.0);
     std::shared_ptr<Texture> diffuse_texture = nullptr;
     std::shared_ptr<Texture> normals_texture = nullptr;
 

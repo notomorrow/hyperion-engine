@@ -37,11 +37,11 @@ void Shader::ApplyMaterial(const Material &mat)
 {
 }
 
-void Shader::ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj)
+void Shader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
 {
-    SetUniform("u_modelMatrix", model);
-    SetUniform("u_viewMatrix", view);
-    SetUniform("u_projMatrix", proj);
+    SetUniform("u_modelMatrix", transform);
+    SetUniform("u_viewMatrix", camera->GetViewMatrix());
+    SetUniform("u_projMatrix", camera->GetProjectionMatrix());
 }
 
 void Shader::SetUniform(const std::string &name, float value)

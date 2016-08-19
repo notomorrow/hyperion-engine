@@ -1,7 +1,7 @@
 attribute vec4 a_boneweights;
 attribute vec4 a_boneindices;
 
-uniform mat4 Bone[%NUM_BONES];
+uniform mat4 Bone[$NUM_BONES];
 
 mat4 createSkinningMatrix()
 {

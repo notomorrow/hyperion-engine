@@ -201,6 +201,7 @@
     <ClInclude Include="rendering\shaders\post\gamma_correct.h" />
     <ClInclude Include="rendering\shaders\post_shader.h" />
     <ClInclude Include="rendering\shader_manager.h" />
+    <ClInclude Include="rendering\shadow\pssm_shadow_mapping.h" />
     <ClInclude Include="rendering\shadow\shadow_mapping.h" />
     <ClInclude Include="rendering\skydome\clouds_shader.h" />
     <ClInclude Include="rendering\skydome\skydome.h" />
@@ -270,6 +271,7 @@
     <ClCompile Include="rendering\shaders\post\gamma_correct.cpp" />
     <ClCompile Include="rendering\shaders\post_shader.cpp" />
     <ClCompile Include="rendering\shader_manager.cpp" />
+    <ClCompile Include="rendering\shadow\pssm_shadow_mapping.cpp" />
     <ClCompile Include="rendering\shadow\shadow_mapping.cpp" />
     <ClCompile Include="rendering\skydome\clouds_shader.cpp" />
     <ClCompile Include="rendering\skydome\skydome.cpp" />

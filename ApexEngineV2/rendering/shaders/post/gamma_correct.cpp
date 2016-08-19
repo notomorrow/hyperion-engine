@@ -16,8 +16,8 @@ GammaCorrectShader::GammaCorrectShader(const ShaderProperties &properties)
         ));
 }
 
-void GammaCorrectShader::ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj)
+void GammaCorrectShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
 {
-    Shader::ApplyTransforms(model, view, proj);
+    Shader::ApplyTransforms(transform, camera);
 }
 }

@@ -54,6 +54,7 @@ bool GlfwEngine::InitializeGame(Game *game)
     }
 
    // glfwSwapInterval(1);
+    glEnable(GL_FRAMEBUFFER_SRGB);
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -92,6 +93,11 @@ bool GlfwEngine::InitializeGame(Game *game)
 void GlfwEngine::Viewport(int x, int y, size_t width, size_t height)
 {
     glViewport(x, y, width, height);
+}
+
+void GlfwEngine::Clear(int mask)
+{
+    glClear(mask);
 }
 
 void GlfwEngine::SetMousePosition(double x, double y)

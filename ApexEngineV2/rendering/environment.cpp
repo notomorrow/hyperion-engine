@@ -69,6 +69,16 @@ void Environment::SetNumCascades(int i)
     num_cascades = i;
 }
 
+int Environment::GetShadowSplit(int i) const
+{
+    return shadow_splits[i];
+}
+
+void Environment::SetShadowSplit(int i, int split)
+{
+    shadow_splits[i] = split;
+}
+
 std::shared_ptr<Texture> Environment::GetShadowMap(int i) const
 {
     return shadow_maps[i];

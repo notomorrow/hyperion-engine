@@ -33,15 +33,18 @@ void LightingShader::ApplyMaterial(const Material &mat)
 {
     auto *env = Environment::GetInstance();
     if (env->ShadowsEnabled()) {
-        if (env->NumCascades() == 1) {
-            Texture::ActiveTexture(5);
-            env->GetShadowMap(0)->Use();
-            SetUniform("u_shadowMap", 5);
-            SetUniform("u_shadowMatrix", env->GetShadowMatrix(0));
+        for (int i = 0; i < env->NumCascades(); i++) {
+            std::string i_str = std::to_string(i);
+            Texture::ActiveTexture(5 + i);
+            env->GetShadowMap(i)->Use();
+            SetUniform("u_shadowMap[" + i_str + "]", 5 + i);
+            SetUniform("u_shadowMatrix[" + i_str + "]", env->GetShadowMatrix(i));
         }
     }
 
     env->GetSun().Bind(0, this);
+
+    SetUniform("u_diffuseColor", mat.diffuse_color);
 
     if (mat.diffuse_texture != nullptr) {
         Texture::ActiveTexture(0);
@@ -50,8 +53,9 @@ void LightingShader::ApplyMaterial(const Material &mat)
     }
 }
 
-void LightingShader::ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj)
+void LightingShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
 {
-    Shader::ApplyTransforms(model, view, proj);
+    Shader::ApplyTransforms(transform, camera);
+    SetUniform("u_camerapos", camera->GetTranslation());
 }
 }

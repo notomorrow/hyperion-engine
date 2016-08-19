@@ -1,6 +1,7 @@
 #ifndef SHADER_H
 #define SHADER_H
 
+#include "camera/camera.h"
 #include "../core_engine.h"
 #include "../math/vector2.h"
 #include "../math/vector3.h"
@@ -24,7 +25,7 @@ public:
     ~Shader();
 
     virtual void ApplyMaterial(const Material &mat);
-    virtual void ApplyTransforms(const Matrix4 &model, const Matrix4 &view, const Matrix4 &proj);
+    virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
 
     void SetUniform(const std::string &name, float);
     void SetUniform(const std::string &name, int);

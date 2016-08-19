@@ -42,16 +42,15 @@ void main(void)
   
   float sunPosition = abs(v3LightPos.y);
   
-  vec4 horizon = mix(twilight, blue*1.5, clamp(sunPosition, 0.0, 1.0));
-  vec4 zenith = blue;
+  vec4 horizon = mix(twilight, blue*1.5, clamp(sunPosition, 0.0, 1.0)) * clamp(v3LightPos.y, 0.3, 1.0);
+  vec4 zenith = blue * clamp(v3LightPos.y, 0.08, 1.0);
   
   float sun = 1.0 + 6.50 * exp(-fHeight * fHeight / fOuterRadius * fOuterRadius);
   
   // Finally, scale the Mie and Rayleigh colors and set up the varying variables for the pixel shader        
   v4MieColor = vec4(fKmESun, fKmESun, fKmESun, 1.0);
   
-  v4RayleighColor = vec4(mix(zenith.rgb, horizon.rgb, pow(1.0 - abs(a_position.y*1.5), 2.0)), 1.0);
-  v4RayleighColor *= clamp(v3LightPos.y * 0.5 + 0.5, 0.2, 1.0);
+  v4RayleighColor = vec4(mix(zenith.rgb, horizon.rgb, pow(1.0 - abs(a_position.y), 2.0)), clamp(v3LightPos.y, 0.05, 1.0));
   
   v3Direction = v3CameraPos - v3Pos;
 }

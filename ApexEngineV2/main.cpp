@@ -20,6 +20,7 @@
 #include "rendering/shaders/post/gamma_correct.h"
 #include "rendering/shader_manager.h"
 #include "rendering/shadow/shadow_mapping.h"
+#include "rendering/shadow/pssm_shadow_mapping.h"
 #include "util/shader_preprocessor.h"
 #include "util/mesh_factory.h"
 #include "audio/audio_manager.h"
@@ -71,7 +72,7 @@ public:
     Renderer *renderer;
     Camera *cam;
     Framebuffer *fbo;
-    ShadowMapping *shadows;
+    PssmShadowMapping *shadows;
 
     std::shared_ptr<Entity> top;
     std::shared_ptr<Shader> shader;
@@ -95,9 +96,9 @@ public:
         debug_quad->SetShader(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(defines));
 
         renderer = new Renderer();
-        cam = new FpsCamera(inputmgr, &this->window, 65, 0.5, 150);
+        cam = new FpsCamera(inputmgr, &this->window, 70, 0.5, 50);
         fbo = new Framebuffer(window.width, window.height);
-        shadows = new ShadowMapping(cam);
+        shadows = new PssmShadowMapping(cam, 1, 20);
     }
 
     ~MyGame()
@@ -110,27 +111,22 @@ public:
 
     void Initialize()
     {
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(-0.3f, -0.4f, 1.0f).Normalize());
-
         Environment::GetInstance()->SetShadowsEnabled(true);
-        Environment::GetInstance()->SetShadowMap(0, shadows->GetShadowMap());
 
         AudioManager::GetInstance()->Initialize();
 
-        std::string vs_shader_path("res/shaders/default.vert");
-        std::string fs_shader_path("res/shaders/default.frag");
-
-        ShaderProperties defines;
+        ShaderProperties defines = {
+            { "SHADOWS", true },
+            { "NUM_SPLITS", 1 },
+        };
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
 
         top = std::make_shared<Entity>("top");
 
         auto torus = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/torus.obj");
+        torus->Scale(1.5f);
         torus->GetChild(0)->GetRenderable()->SetShader(shader);
-        torus->GetChild(0)->GetRenderable()->GetMaterial().SetParameter("lighting", true);
+        torus->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 
         auto audio_ctrl = std::make_shared<AudioControl>(
             AssetManager::GetInstance()->LoadFromFile<AudioSource>("res/sounds/cartoon001.wav"));
@@ -153,18 +149,23 @@ public:
         dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
         */
 
-        pbr_tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/pbr_6.png");
+        pbr_tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg");
 
-        auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
-        cube->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({ {"DIFFUSE_MAP", true} }));
-        cube->GetChild(0)->GetRenderable()->GetMaterial().diffuse_texture = pbr_tex;
+        auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/round_cube.obj");
+        cube->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0, 0.0, 1.0, 1.0);
+        cube->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
+           // {"DIFFUSE_MAP", true},
+            {"SHADOWS", Environment::GetInstance()->ShadowsEnabled()},
+            {"NUM_SPLITS", Environment::GetInstance()->NumCascades()},
+        }));
+        //cube->GetChild(0)->GetRenderable()->GetMaterial().diffuse_texture = pbr_tex;
         cube->Scale(0.5);
         cube->SetName("cube");
         top->AddChild(cube);
 
         auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
-        monkey->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({ { "DIFFUSE_MAP", true } }));
-        monkey->GetChild(0)->GetRenderable()->GetMaterial().diffuse_texture = pbr_tex;
+        monkey->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
+        monkey->GetChild(0)->GetRenderable()->SetShader(shader);
         monkey->Move(Vector3(-3, 0, -3));
         monkey->SetName("monkey");
         top->AddChild(monkey);
@@ -192,7 +193,6 @@ public:
         Environment::GetInstance()->GetSun().SetDirection(Vector3(sinf(timer * 0.005), cosf(timer * 0.005), 0.0f).Normalize());
 
         cam->Update(dt);
-
         top->Update(dt);
 
         top->GetChild(0)->SetLocalRotation(Quaternion(Vector3(1, 0, 0), timer));
@@ -210,22 +210,14 @@ public:
                 Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
                 shadow_dir.y = -1.0f;
                 shadows->SetLightDirection(shadow_dir.Normalize());
-                shadows->Begin();
-
-                Environment::GetInstance()->SetShadowMatrix(0,
-                    shadows->GetShadowCamera()->GetViewProjectionMatrix());
-
-                glClear(GL_DEPTH_BUFFER_BIT);
-                renderer->RenderBucket(shadows->GetShadowCamera(), renderer->opaque_bucket);
-                shadows->End();
-
+                shadows->Render(renderer);
                 shadow_timer = 0.0;
             }
+
+            glDisable(GL_CULL_FACE);
         }
 
-        glDisable(GL_CULL_FACE);
-
-        fbo->Use();
+        //fbo->Use();
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -235,13 +227,13 @@ public:
         /*debug_quad->GetMaterial().diffuse_texture = shadows->GetShadowMap();
         */
 
-        fbo->End();
+        /*fbo->End();
 
         debug_quad->GetMaterial().diffuse_texture = fbo->GetColorTexture();
         debug_quad->GetShader()->ApplyMaterial(debug_quad->GetMaterial());
         debug_quad->GetShader()->Use();
         debug_quad->Render();
-        debug_quad->GetShader()->End();
+        debug_quad->GetShader()->End();*/
     }
 };
 

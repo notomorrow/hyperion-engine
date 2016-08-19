@@ -24,6 +24,8 @@ public:
     void SetShadowsEnabled(bool);
     int NumCascades() const;
     void SetNumCascades(int);
+    int GetShadowSplit(int i) const;
+    void SetShadowSplit(int i, int split);
     std::shared_ptr<Texture> GetShadowMap(int i) const;
     void SetShadowMap(int i, std::shared_ptr<Texture>);
     const Matrix4 &GetShadowMatrix(int i) const;
@@ -36,6 +38,7 @@ private:
 
     bool shadows_enabled;
     int num_cascades;
+    std::array<int, 4> shadow_splits;
     std::array<std::shared_ptr<Texture>, 4> shadow_maps;
     std::array<Matrix4, 4> shadow_matrices;
 };

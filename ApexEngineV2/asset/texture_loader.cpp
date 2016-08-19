@@ -10,7 +10,7 @@ namespace apex {
 std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
 {
     int w, h, comp;
-    unsigned char *bytes = stbi_load(path.c_str(), &w, &h, &comp, STBI_rgb_alpha);
+    unsigned char *bytes = stbi_load(path.c_str(), &w, &h, &comp, 3);
 
     if (bytes == nullptr) {
         return nullptr;
@@ -21,18 +21,17 @@ std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
     tex->height = h;
     tex->bytes = bytes;
 
-    if (comp == 4) {
-        tex->SetFormat(CoreEngine::RGBA);
-    } else {
+   // if (comp == 4) {
+   //     tex->SetFormat(CoreEngine::RGBA);
+   // } else {
         tex->SetFormat(CoreEngine::RGB);
-    }
+   // }
 
     tex->Use(); // upload data
 
     stbi_image_free(bytes);
     tex->bytes = nullptr;
 
-    tex->GenerateMipMap();
     tex->End();
 
     return tex;

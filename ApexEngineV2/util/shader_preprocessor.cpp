@@ -98,17 +98,32 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
             }
         }
     }
-    
-    // replace %define with value
-    for (auto &&def : defines) {
-        std::string str;
-        // check if it has decimal
-        if (def.second == (int)def.second) {
-            str = std::to_string((int)def.second);
-        } else {
-            str = std::to_string(def.second);
+
+    std::string str;
+    for (size_t i = 0; i < res.length(); i++) {
+        char ch = res[i];
+        if (ch == '$') {
+            size_t start_pos = i;
+            str = "";
+            ch = res[++i];
+
+            while (std::isalnum(ch) || ch == '_') {
+                str += ch;
+                ch = res[++i];
+            }
+
+            size_t len = i - start_pos;
+            auto it = defines.find(str);
+            if (it != defines.end()) {
+                std::string val;
+                if (it->second == (int)it->second) {
+                    val = std::to_string((int)it->second);
+                } else {
+                    val = std::to_string(it->second);
+                }
+                res = res.replace(start_pos, len, val);
+            }
         }
-        res = StringUtil::ReplaceAll(res, "%" + def.first, str);
     }
 
     return res;

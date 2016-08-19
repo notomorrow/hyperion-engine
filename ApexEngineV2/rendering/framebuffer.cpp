@@ -8,11 +8,14 @@ Framebuffer::Framebuffer(int width, int height)
     is_uploaded = false;
     is_created = false;
 
-    color_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)NULL);
+    color_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
+    color_texture->SetInternalFormat(CoreEngine::RGB8);
+    color_texture->SetFilter(CoreEngine::NEAREST, CoreEngine::NEAREST);
 
-    depth_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)NULL);
+    depth_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
     depth_texture->SetInternalFormat(CoreEngine::DEPTH_COMPONENT24);
     depth_texture->SetFormat(CoreEngine::DEPTH_COMPONENT);
+    depth_texture->SetFilter(CoreEngine::NEAREST, CoreEngine::NEAREST);
 }
 
 Framebuffer::~Framebuffer()

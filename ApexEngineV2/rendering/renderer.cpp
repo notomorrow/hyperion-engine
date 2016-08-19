@@ -44,8 +44,7 @@ void Renderer::RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Tran
         auto transform = it.second;
         if (renderable->shader != nullptr) {
             renderable->shader->ApplyMaterial(renderable->GetMaterial());
-            renderable->shader->ApplyTransforms(transform.GetMatrix(),
-                cam->GetViewMatrix(), cam->GetProjectionMatrix());
+            renderable->shader->ApplyTransforms(transform.GetMatrix(), cam);
             renderable->shader->Use();
             renderable->Render();
             renderable->shader->End();

@@ -1,3 +1,24 @@
-﻿  shadow_mapping.cpp
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\rendering\shadow\shadow_mapping.cpp(45): warning C4244: 'argument': conversion from 'std::array<apex::Vector3,8>::size_type' to 'float', possible loss of data
+﻿  main.cpp
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\rendering\shader.h(95): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(179): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(193): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(198): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(199): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\program files (x86)\microsoft visual studio 14.0\vc\include\utility(145): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+  c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(121): note: see reference to function template instantiation 'std::pair<const _Kty,_Ty>::pair<const char(&)[11],int,void>(_Other1,_Other2 &&) noexcept(false)' being compiled
+          with
+          [
+              _Kty=std::string,
+              _Ty=float,
+              _Other1=const char (&)[11],
+              _Other2=int
+          ]
+  c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(118): note: see reference to function template instantiation 'std::pair<const _Kty,_Ty>::pair<const char(&)[11],int,void>(_Other1,_Other2 &&) noexcept(false)' being compiled
+          with
+          [
+              _Kty=std::string,
+              _Ty=float,
+              _Other1=const char (&)[11],
+              _Other2=int
+          ]
   ApexEngineV2.vcxproj -> C:\Users\User\Documents\Visual Studio 2015\Projects\ApexEngineV2\Debug\ApexEngineV2.exe
