@@ -41,7 +41,7 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts)
     is_uploaded = false;
 }
 
-void Mesh::SetVertices(const std::vector<Vertex> &verts, const std::vector<size_t> &ind)
+void Mesh::SetVertices(const std::vector<Vertex> &verts, const std::vector<uint32_t> &ind)
 {
     vertices = verts;
     indices = ind;

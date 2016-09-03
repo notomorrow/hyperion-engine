@@ -168,6 +168,11 @@ float Vector4::Distance(const Vector4 &other) const
     return sqrt(DistanceSquared(other));
 }
 
+Vector4 Vector4::Abs(const Vector4 &vec)
+{
+    return Vector4(vec.x, vec.y, vec.z, vec.w);
+}
+
 Vector4 Vector4::Round(const Vector4 &vec)
 {
     return Vector4(std::round(vec.x), std::round(vec.y), std::round(vec.z), std::round(vec.w));

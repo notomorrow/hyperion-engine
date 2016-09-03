@@ -33,6 +33,8 @@
 /* Extra */
 #include "rendering/skydome/skydome.h"
 
+#include "terrain/noise_terrain/noise_terrain_control.h"
+
 using namespace apex;
 
 void DrawBoundingBox(const BoundingBox &bb)
@@ -96,7 +98,7 @@ public:
         debug_quad->SetShader(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(defines));
 
         renderer = new Renderer();
-        cam = new FpsCamera(inputmgr, &this->window, 70, 0.5, 50);
+        cam = new FpsCamera(inputmgr, &this->window, 70, 2.0, 250);
         fbo = new Framebuffer(window.width, window.height);
         shadows = new PssmShadowMapping(cam, 1, 20);
     }
@@ -116,8 +118,8 @@ public:
         AudioManager::GetInstance()->Initialize();
 
         ShaderProperties defines = {
-            { "SHADOWS", true },
-            { "NUM_SPLITS", 1 },
+            { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
+            { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
         };
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
 
@@ -151,12 +153,12 @@ public:
 
         pbr_tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg");
 
-        auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/round_cube.obj");
+        /*auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/round_cube.obj");
         cube->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0, 0.0, 1.0, 1.0);
         cube->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
            // {"DIFFUSE_MAP", true},
             {"SHADOWS", Environment::GetInstance()->ShadowsEnabled()},
-            {"NUM_SPLITS", Environment::GetInstance()->NumCascades()},
+            {"NUM_SPLITS", Environment::GetInstance()->NumCascades()}
         }));
         //cube->GetChild(0)->GetRenderable()->GetMaterial().diffuse_texture = pbr_tex;
         cube->Scale(0.5);
@@ -177,13 +179,37 @@ public:
         quad_node->Scale(15);
         quad_node->Move(Vector3::UnitY() * -2);
         quad_node->Rotate(Quaternion(Vector3::UnitX(), MathUtil::PI / 2));
-        top->AddChild(quad_node);
+        top->AddChild(quad_node);*/
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, -74));
     }
 
     void Logic(double dt)
     {
+        // offset root node if camera is out of bounds
+        const int bounds = 15;
+        Vector3 campos(cam->GetTranslation());
+
+        if (campos.x >= bounds) {
+            campos.x = 0;
+            top->SetLocalTranslation(top->GetLocalTranslation() - Vector3(bounds, 0, 0));
+            cam->SetTranslation(campos);
+        } else if (campos.x <= -bounds) {
+            campos.x = 0;
+            top->SetLocalTranslation(top->GetLocalTranslation() + Vector3(bounds, 0, 0));
+            cam->SetTranslation(campos);
+        }
+        if (campos.z >= bounds) {
+            campos.z = 0;
+            top->SetLocalTranslation(top->GetLocalTranslation() - Vector3(0, 0, bounds));
+            cam->SetTranslation(campos);
+        } else if (campos.z <= -bounds) {
+            campos.z = 0;
+            top->SetLocalTranslation(top->GetLocalTranslation() + Vector3(0, 0, bounds));
+            cam->SetTranslation(campos);
+        }
+
         AudioManager::GetInstance()->SetListenerPosition(cam->GetTranslation());
         AudioManager::GetInstance()->SetListenerOrientation(cam->GetDirection(), cam->GetUpVector());
 
@@ -195,7 +221,7 @@ public:
         cam->Update(dt);
         top->Update(dt);
 
-        top->GetChild(0)->SetLocalRotation(Quaternion(Vector3(1, 0, 0), timer));
+        top->GetChild(0)->Rotate(Quaternion(Vector3(1, 0, 0), dt));
         top->GetChild(0)->SetLocalTranslation(Vector3(0, 0, (std::sin(timer) + 1.0f) * 5));
     }
 

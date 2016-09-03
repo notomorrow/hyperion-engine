@@ -40,6 +40,7 @@ public:
     float DistanceSquared(const Vector4 &other) const;
     float Distance(const Vector4 &other) const;
 
+    static Vector4 Abs(const Vector4 &);
     static Vector4 Round(const Vector4 &);
     static Vector4 Clamp(const Vector4 &, float min, float max);
     static Vector4 Min(const Vector4 &a, const Vector4 &b);

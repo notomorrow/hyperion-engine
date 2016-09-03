@@ -122,6 +122,11 @@ float Vector2::Distance(const Vector2 &other) const
     return sqrt(DistanceSquared(other));
 }
 
+Vector2 Vector2::Abs(const Vector2 &vec)
+{
+    return Vector2(abs(vec.x), abs(vec.y));
+}
+
 Vector2 Vector2::Round(const Vector2 &vec)
 {
     return Vector2(std::round(vec.x), std::round(vec.y));

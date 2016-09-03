@@ -95,6 +95,11 @@ void Entity::UpdateTransform()
     }
 }
 
+Entity *Entity::GetParent() const
+{
+    return parent;
+}
+
 void Entity::AddChild(std::shared_ptr<Entity> entity)
 {
     children.push_back(entity);

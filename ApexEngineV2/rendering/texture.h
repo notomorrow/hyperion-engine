@@ -16,6 +16,7 @@ public:
     void SetFormat(int type);
     void SetInternalFormat(int type);
     void SetFilter(int mag, int min);
+    void SetWrapMode(int s, int t);
 
     static void ActiveTexture(int i);
 
@@ -28,6 +29,7 @@ protected:
     unsigned char *bytes;
 
     int mag_filter, min_filter;
+    int wrap_s, wrap_t;
 };
 }
 

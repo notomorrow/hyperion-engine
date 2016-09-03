@@ -10,6 +10,8 @@ class FpsCamera : public PerspectiveCamera {
 public:
     FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, float near_clip, float far_clip);
 
+    virtual void SetTranslation(const Vector3 &vec);
+
     void UpdateLogic(double dt);
 
 private:

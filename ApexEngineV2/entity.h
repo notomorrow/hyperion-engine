@@ -37,6 +37,8 @@ public:
 
     virtual void UpdateTransform();
 
+    Entity *GetParent() const;
+
     void AddChild(std::shared_ptr<Entity> entity);
     void RemoveChild(const std::shared_ptr<Entity> &entity);
     std::shared_ptr<Entity> GetChild(size_t index) const;

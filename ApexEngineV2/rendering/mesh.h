@@ -63,7 +63,7 @@ public:
     ~Mesh();
 
     void SetVertices(const std::vector<Vertex> &verts);
-    void SetVertices(const std::vector<Vertex> &verts, const std::vector<size_t> &ind);
+    void SetVertices(const std::vector<Vertex> &verts, const std::vector<uint32_t> &ind);
 
     void SetAttribute(MeshAttributeType, const MeshAttribute &);
     void SetPrimitiveType(PrimitiveType);
@@ -75,7 +75,7 @@ private:
     bool is_uploaded, is_created;
     unsigned int vbo, ibo, vertex_size;
     std::vector<Vertex> vertices;
-    std::vector<size_t> indices;
+    std::vector<uint32_t> indices;
     PrimitiveType primitive_type;
 
     // map attribute to offset

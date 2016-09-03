@@ -216,6 +216,27 @@
     <ClInclude Include="rendering\shadow\pssm_shadow_mapping.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="terrain\terrain_control.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="terrain\height_info.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="terrain\terrain_chunk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="terrain\noise_terrain\noise_terrain_control.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="terrain\noise_terrain\noise_terrain_chunk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="terrain\noise_terrain\worley_noise.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="terrain\noise_terrain\open_simplex_noise.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -396,6 +417,24 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="rendering\shadow\pssm_shadow_mapping.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="terrain\terrain_control.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="terrain\terrain_chunk.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="terrain\noise_terrain\noise_terrain_control.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="terrain\noise_terrain\noise_terrain_chunk.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="terrain\noise_terrain\worley_noise.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="terrain\noise_terrain\open_simplex_noise.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -34,6 +34,7 @@ public:
     float DistanceSquared(const Vector2 &other) const;
     float Distance(const Vector2 &other) const;
 
+    static Vector2 Abs(const Vector2 &);
     static Vector2 Round(const Vector2 &);
     static Vector2 Clamp(const Vector2 &, float min, float max);
     static Vector2 Min(const Vector2 &a, const Vector2 &b);

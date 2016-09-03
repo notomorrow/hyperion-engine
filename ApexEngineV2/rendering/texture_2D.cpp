@@ -40,9 +40,9 @@ void Texture2D::Use()
         CoreEngine::GetInstance()->TexParameteri(CoreEngine::TEXTURE_2D, 
             CoreEngine::TEXTURE_MIN_FILTER, min_filter);
         CoreEngine::GetInstance()->TexParameteri(CoreEngine::TEXTURE_2D, 
-            CoreEngine::TEXTURE_WRAP_S, CoreEngine::REPEAT);
+            CoreEngine::TEXTURE_WRAP_S, wrap_s);
         CoreEngine::GetInstance()->TexParameteri(CoreEngine::TEXTURE_2D, 
-            CoreEngine::TEXTURE_WRAP_T, CoreEngine::REPEAT);
+            CoreEngine::TEXTURE_WRAP_T, wrap_t);
 
         CoreEngine::GetInstance()->TexImage2D(CoreEngine::TEXTURE_2D, 0, ifmt,
             width, height, 0, fmt, CoreEngine::UNSIGNED_BYTE, bytes);

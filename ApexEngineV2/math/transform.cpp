@@ -66,7 +66,7 @@ const Matrix4 &Transform::GetMatrix() const
 
 void Transform::UpdateMatrix()
 {
-    Matrix4 T, R, S;
+    Matrix4 S, R, T;
 
     MatrixUtil::ToTranslation(T, translation);
     MatrixUtil::ToRotation(R, rotation);

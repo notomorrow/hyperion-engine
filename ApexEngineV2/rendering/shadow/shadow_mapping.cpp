@@ -1,4 +1,5 @@
 #include "shadow_mapping.h"
+#include "../../core_engine.h"
 #include "../../math/frustum.h"
 
 namespace apex {
@@ -7,6 +8,8 @@ ShadowMapping::ShadowMapping(Camera *view_cam, int max_dist)
 {
     shadow_cam = new OrthoCamera(-10, 10, -10, 10, -10, 10);
     fbo = new Framebuffer(1024, 1024);
+    fbo->GetDepthTexture()->SetFilter(CoreEngine::LINEAR, CoreEngine::LINEAR);
+    fbo->GetDepthTexture()->SetWrapMode(CoreEngine::CLAMP_TO_EDGE, CoreEngine::CLAMP_TO_EDGE);
 }
 
 ShadowMapping::~ShadowMapping()

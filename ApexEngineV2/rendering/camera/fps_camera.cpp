@@ -22,6 +22,12 @@ FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, fl
     }));
 }
 
+void FpsCamera::SetTranslation(const Vector3 &vec)
+{
+    translation = vec;
+    next_translation = vec;
+}
+
 void FpsCamera::UpdateLogic(double dt)
 {
     width = window->width;

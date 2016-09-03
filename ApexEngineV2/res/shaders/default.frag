@@ -17,26 +17,26 @@ uniform vec3 u_camerapos;
 void main() 
 {
   const float roughness = 0.4;
-  const float shininess = 0.4;
+  const float shininess = 0.3;
   
   vec3 n = normalize(v_normal.xyz);
   vec3 v = normalize(u_camerapos - v_position.xyz);
   
   float ndotl = max(min(dot(n, env_DirectionalLight.direction), 1.0), 0.0);
-  vec4 lighting = vec4(vec3(ndotl * (1.0 - shininess)), 1.0);
+  vec4 lighting = vec4(vec3(ndotl), 1.0);
   
-  float specular = SpecularDirectional(n, v, env_DirectionalLight.direction, roughness);
+  float specular = max(min(SpecularDirectional(n, v, env_DirectionalLight.direction, roughness), 1.0), 0.0);
     
   float fresnel;
   fresnel = max(1.0 - dot(n, v), 0.0);
   fresnel = pow(fresnel, 2.0);
   specular += fresnel;
   
-  specular = clamp(specular * shininess, 0.0, 1.0);
+  specular *= shininess;
   
 #if SHADOWS
   float shadowness = 0.0;
-  const float radius = 0.075;
+  const float radius = 0.05;
   for (int x = 0; x < 4; x++) {
     for (int y = 0; y < 4; y++) {
       vec2 offset = poissonDisk[x * 4 + y] * radius;
@@ -45,7 +45,7 @@ void main()
     }
   }
   shadowness /= 16.0;
-  shadowness = mix(0.8, shadowness, ndotl);
+  shadowness = mix(0.6, shadowness, ndotl);
 #endif
 
 #if !SHADOWS
@@ -62,6 +62,7 @@ void main()
 #endif
 
   vec4 diffuse = clamp(lighting + ambient, vec4(0.0), vec4(1.0)) * diffuseTexture * u_diffuseColor;
+  diffuse.rgb *= (1.0 - shininess);
   
   gl_FragColor = vec4((diffuse + vec4(specular)) * vec4(vec3(max(shadowness, 0.5)), 1.0));
 }

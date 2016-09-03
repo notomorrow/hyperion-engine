@@ -48,54 +48,36 @@ void Shader::SetUniform(const std::string &name, float value)
 {
     uniforms[name] = Uniform(value);
     uniform_changed = true;
-
-    //int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
-    //CoreEngine::GetInstance()->Uniform1f(loc, value);
 }
 
 void Shader::SetUniform(const std::string &name, int value)
 {
     uniforms[name] = Uniform(value);
     uniform_changed = true;
-
-    //int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
-    //CoreEngine::GetInstance()->Uniform1i(loc, value);
 }
 
 void Shader::SetUniform(const std::string &name, const Vector2 &value)
 {
     uniforms[name] = Uniform(value);
     uniform_changed = true;
-
-    //int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
-    //CoreEngine::GetInstance()->Uniform2f(loc, value.x, value.y);
 }
 
 void Shader::SetUniform(const std::string &name, const Vector3 &value)
 {
     uniforms[name] = Uniform(value);
     uniform_changed = true;
-
-    //int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
-    //CoreEngine::GetInstance()->Uniform3f(loc, value.x, value.y, value.z);
 }
 
 void Shader::SetUniform(const std::string &name, const Vector4 &value)
 {
     uniforms[name] = Uniform(value);
     uniform_changed = true;
-
-    //int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
-    //CoreEngine::GetInstance()->Uniform4f(loc, value.x, value.y, value.z, value.w);
 }
 
 void Shader::SetUniform(const std::string &name, const Matrix4 &value)
 {
     uniforms[name] = Uniform(value);
     uniform_changed = true;
-
-    //int loc = CoreEngine::GetInstance()->GetUniformLocation(progid, name.c_str());
-    //CoreEngine::GetInstance()->UniformMatrix4fv(loc, 1, true, &value.values[0]);
 }
 
 void Shader::Use()

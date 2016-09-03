@@ -20,11 +20,11 @@ public:
     void SetFar(float f);
 
     const Vector3 &GetTranslation() const;
-    void SetTranslation(const Vector3 &vec);
+    virtual void SetTranslation(const Vector3 &vec);
     const Vector3 &GetDirection() const;
-    void SetDirection(const Vector3 &vec);
+    virtual void SetDirection(const Vector3 &vec);
     const Vector3 &GetUpVector() const;
-    void SetUpVector(const Vector3 &vec);
+    virtual void SetUpVector(const Vector3 &vec);
 
     Matrix4 &GetViewMatrix();
     void SetViewMatrix(const Matrix4 &mat);

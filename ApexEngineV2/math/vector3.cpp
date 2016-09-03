@@ -204,6 +204,11 @@ float Vector3::Distance(const Vector3 &other) const
     return sqrt(DistanceSquared(other));
 }
 
+Vector3 Vector3::Abs(const Vector3 &vec)
+{
+    return Vector3(abs(vec.x), abs(vec.y), abs(vec.z));
+}
+
 Vector3 Vector3::Round(const Vector3 &vec)
 {
     return Vector3(std::round(vec.x), std::round(vec.y), std::round(vec.z));

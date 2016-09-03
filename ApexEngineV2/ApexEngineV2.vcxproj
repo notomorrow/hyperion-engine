@@ -97,7 +97,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32.lib;OpenAL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32.lib;OpenAL32.lib;libnoise.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -130,7 +130,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32.lib;OpenAL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32.lib;OpenAL32.lib;libnoise.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -214,6 +214,13 @@
     <ClInclude Include="math\vector2.h" />
     <ClInclude Include="math\vector3.h" />
     <ClInclude Include="math\vector4.h" />
+    <ClInclude Include="terrain\height_info.h" />
+    <ClInclude Include="terrain\noise_terrain\noise_terrain_chunk.h" />
+    <ClInclude Include="terrain\noise_terrain\noise_terrain_control.h" />
+    <ClInclude Include="terrain\noise_terrain\open_simplex_noise.h" />
+    <ClInclude Include="terrain\noise_terrain\worley_noise.h" />
+    <ClInclude Include="terrain\terrain_chunk.h" />
+    <ClInclude Include="terrain\terrain_control.h" />
     <ClInclude Include="util\img\stb_image.h" />
     <ClInclude Include="util\mesh_factory.h" />
     <ClInclude Include="util\shader_preprocessor.h" />
@@ -278,6 +285,12 @@
     <ClCompile Include="rendering\skydome\skydome_shader.cpp" />
     <ClCompile Include="rendering\texture.cpp" />
     <ClCompile Include="rendering\texture_2D.cpp" />
+    <ClCompile Include="terrain\noise_terrain\noise_terrain_chunk.cpp" />
+    <ClCompile Include="terrain\noise_terrain\noise_terrain_control.cpp" />
+    <ClCompile Include="terrain\noise_terrain\open_simplex_noise.c" />
+    <ClCompile Include="terrain\noise_terrain\worley_noise.cpp" />
+    <ClCompile Include="terrain\terrain_chunk.cpp" />
+    <ClCompile Include="terrain\terrain_control.cpp" />
     <ClCompile Include="util\mesh_factory.cpp" />
     <ClCompile Include="util\shader_preprocessor.cpp" />
     <ClCompile Include="util\xml\sax_parser.cpp" />

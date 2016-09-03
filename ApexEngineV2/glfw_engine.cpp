@@ -9,7 +9,7 @@ namespace apex {
 
 static apex::InputManager *inputmgr;
 
-static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
+static void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
@@ -20,19 +20,14 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
     }
 }
 
-static void cursor_position_callback(GLFWwindow *window, double xpos, double ypos)
-{
-    inputmgr->MouseMove(xpos, ypos);
-}
-
-static void error_callback(int error, const char *description)
+static void ErrorCallback(int error, const char *description)
 {
     std::cout << "Error: " << description << "\n";
 }
 
 bool GlfwEngine::InitializeGame(Game *game)
 {
-    glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(ErrorCallback);
 
     if (!glfwInit()) {
         return false;
@@ -46,14 +41,14 @@ bool GlfwEngine::InitializeGame(Game *game)
         return false;
     }
 
-    glfwSetKeyCallback(window, key_callback);
+    glfwSetKeyCallback(window, KeyCallback);
     glfwMakeContextCurrent(window);
 
     if (glewInit() != GLEW_OK) {
         throw std::exception("error initializing glew");
     }
 
-   // glfwSwapInterval(1);
+    glfwSwapInterval(1);
     glEnable(GL_FRAMEBUFFER_SRGB);
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
