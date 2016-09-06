@@ -3,6 +3,9 @@
 
 #include "vector3.h"
 #include "matrix4.h"
+#include "transform.h"
+#include "ray.h"
+#include <array>
 
 namespace apex {
 class BoundingBox {
@@ -16,16 +19,18 @@ public:
     const Vector3 &GetMax() const;
     void SetMax(const Vector3 &);
     Vector3 GetDimensions() const;
+    std::array<Vector3, 8> GetCorners() const;
 
     BoundingBox &operator*=(double scalar);
-    BoundingBox &operator*=(const Matrix4 &mat);
+    BoundingBox &operator*=(const Transform &transform);
 
     BoundingBox &Clear();
 
     BoundingBox &Extend(const Vector3 &vec);
     BoundingBox &Extend(const BoundingBox &bb);
 
-    bool Contains(const Vector3 &vec) const;
+    bool IntersectRay(const Ray &ray, Vector3 &out) const;
+    bool ContainsPoint(const Vector3 &vec) const;
     double Area() const;
 
 private:

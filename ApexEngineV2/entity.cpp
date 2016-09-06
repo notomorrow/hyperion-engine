@@ -175,17 +175,17 @@ void Entity::SetRenderable(const std::shared_ptr<Renderable> &ren)
 
 void Entity::Update(double dt)
 {
+    if (flags & UPDATE_TRANSFORM) {
+        UpdateTransform();
+        flags &= ~UPDATE_TRANSFORM;
+    }
+
     for (auto &&control : controls) {
         control->tick += dt * 1000;
         if ((control->tick / 1000 * control->tps) >= 1) {
             control->OnUpdate(dt);
             control->tick = 0;
         }
-    }
-
-    if (flags & UPDATE_TRANSFORM) {
-        UpdateTransform();
-        flags &= ~UPDATE_TRANSFORM;
     }
 
     for (auto &&child : children) {

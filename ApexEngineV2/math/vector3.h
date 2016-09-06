@@ -18,6 +18,17 @@ public:
     Vector3(float xyz);
     Vector3(const Vector3 &other);
 
+    float GetX() const;
+    float &GetX();
+    float GetY() const;
+    float &GetY();
+    float GetZ() const;
+    float &GetZ();
+
+    Vector3 &SetX(float x);
+    Vector3 &SetY(float y);
+    Vector3 &SetZ(float z);
+
     Vector3 &operator=(const Vector3 &other);
     Vector3 operator+(const Vector3 &other) const;
     Vector3 &operator+=(const Vector3 &other);
@@ -35,14 +46,16 @@ public:
     bool operator!=(const Vector3 &other) const;
 
     float Length() const;
+    float LengthSquared() const;
+
+    float DistanceSquared(const Vector3 &other) const;
+    float Distance(const Vector3 &other) const;
+
     Vector3 &Normalize();
     Vector3 &Cross(const Vector3 &other);
     Vector3 &Rotate(const Vector3 &axis, float radians);
     Vector3 &Lerp(const Vector3 &to, const float amt);
-
     float Dot(const Vector3 &other) const;
-    float DistanceSquared(const Vector3 &other) const;
-    float Distance(const Vector3 &other) const;
 
     static Vector3 Abs(const Vector3 &);
     static Vector3 Round(const Vector3 &);

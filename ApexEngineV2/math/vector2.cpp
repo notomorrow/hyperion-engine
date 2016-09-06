@@ -21,6 +21,38 @@ Vector2::Vector2(const Vector2 &other)
 {
 }
 
+float Vector2::GetX() const
+{
+    return x;
+}
+
+float &Vector2::GetX()
+{
+    return x;
+}
+
+float Vector2::GetY() const
+{
+    return y;
+}
+
+float &Vector2::GetY()
+{
+    return y;
+}
+
+Vector2 &Vector2::SetX(float x)
+{
+    this->x = x;
+    return *this;
+}
+
+Vector2 &Vector2::Vector2::SetY(float y)
+{
+    this->y = y;
+    return *this;
+}
+
 Vector2 &Vector2::operator=(const Vector2 &other)
 {
     x = other.x;
@@ -88,7 +120,24 @@ bool Vector2::operator!=(const Vector2 &other) const
 
 float Vector2::Length() const
 {
-    return sqrt(x * x + y * y);
+    return sqrt(LengthSquared());
+}
+
+float Vector2::LengthSquared() const
+{
+    return x * x + y * y;
+}
+
+float Vector2::Distance(const Vector2 &other) const
+{
+    return sqrt(DistanceSquared(other));
+}
+
+float Vector2::DistanceSquared(const Vector2 &other) const
+{
+    float dx = x - other.x;
+    float dy = y - other.y;
+    return dx * dx + dy * dy;
 }
 
 Vector2 &Vector2::Normalize()
@@ -108,18 +157,6 @@ Vector2 &Vector2::Lerp(const Vector2 &to, const float amt)
     x = MathUtil::Lerp(x, to.x, amt);
     y = MathUtil::Lerp(y, to.y, amt);
     return *this;
-}
-
-float Vector2::DistanceSquared(const Vector2 &other) const
-{
-    float dx = x - other.x;
-    float dy = y - other.y;
-    return dx * dx + dy * dy;
-}
-
-float Vector2::Distance(const Vector2 &other) const
-{
-    return sqrt(DistanceSquared(other));
 }
 
 Vector2 Vector2::Abs(const Vector2 &vec)

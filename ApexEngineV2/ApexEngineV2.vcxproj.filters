@@ -237,6 +237,24 @@
     <ClInclude Include="terrain\noise_terrain\open_simplex_noise.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="physics\physics_control.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\physics_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="util\aabb_factory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\physics_object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\shapes\aabb_physics_object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\ray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -435,6 +453,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="terrain\noise_terrain\open_simplex_noise.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\physics_control.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\physics_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="util\aabb_factory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\physics_object.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\shapes\aabb_physics_object.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -19,6 +19,20 @@ public:
     Quaternion(const Vector3 &axis, float radians);
     Quaternion(const Quaternion &other);
 
+    float GetX() const;
+    float &GetX();
+    float GetY() const;
+    float &GetY();
+    float GetZ() const;
+    float &GetZ();
+    float GetW() const;
+    float &GetW();
+
+    Quaternion &SetX(float x);
+    Quaternion &SetY(float y);
+    Quaternion &SetZ(float z);
+    Quaternion &SetW(float w);
+
     Quaternion &operator=(const Quaternion &other);
     Quaternion operator*(const Quaternion &other) const;
     Quaternion &operator*=(const Quaternion &other);

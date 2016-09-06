@@ -64,6 +64,8 @@ public:
 
     void SetVertices(const std::vector<Vertex> &verts);
     void SetVertices(const std::vector<Vertex> &verts, const std::vector<uint32_t> &ind);
+    std::vector<Vertex> GetVertices() const;
+    std::vector<uint32_t> GetIndices() const;
 
     void SetAttribute(MeshAttributeType, const MeshAttribute &);
     void SetPrimitiveType(PrimitiveType);

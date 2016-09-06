@@ -23,6 +23,70 @@ Vector4::Vector4(const Vector4 &other)
 {
 }
 
+float Vector4::GetX() const
+{
+    return x;
+}
+
+float &Vector4::GetX()
+{
+    return x;
+}
+
+float Vector4::GetY() const
+{
+    return y;
+}
+
+float &Vector4::GetY()
+{
+    return y;
+}
+
+float Vector4::GetZ() const
+{
+    return z;
+}
+
+float &Vector4::GetZ()
+{
+    return z;
+}
+
+float Vector4::GetW() const
+{
+    return w;
+}
+
+float &Vector4::GetW()
+{
+    return w;
+}
+
+Vector4 &Vector4::SetX(float x)
+{
+    this->x = x;
+    return *this;
+}
+
+Vector4 &Vector4::SetY(float y)
+{
+    this->y = y;
+    return *this;
+}
+
+Vector4 &Vector4::SetZ(float z)
+{
+    this->z = z;
+    return *this;
+}
+
+Vector4 &Vector4::SetW(float w)
+{
+    this->w = w;
+    return *this;
+}
+
 Vector4 &Vector4::operator=(const Vector4 &other)
 {
     x = other.x;
@@ -117,7 +181,26 @@ bool Vector4::operator!=(const Vector4 &other) const
 
 float Vector4::Length() const
 {
-    return sqrt(x * x + y * y + z * z + w * w);
+    return sqrt(LengthSquared());
+}
+
+float Vector4::LengthSquared() const
+{
+    return x * x + y * y + z * z + w * w;
+}
+
+float Vector4::DistanceSquared(const Vector4 &other) const
+{
+    float dx = x - other.x;
+    float dy = y - other.y;
+    float dz = z - other.z;
+    float dw = w - other.w;
+    return dx * dx + dy * dy + dz * dz + dw * dw;
+}
+
+float Vector4::Distance(const Vector4 &other) const
+{
+    return sqrt(DistanceSquared(other));
 }
 
 Vector4 &Vector4::Normalize()
@@ -152,20 +235,6 @@ Vector4 &Vector4::Lerp(const Vector4 &to, const float amt)
 float Vector4::Dot(const Vector4 &other) const
 {
     return x * other.x + y * other.y + z * other.z + w * other.w;
-}
-
-float Vector4::DistanceSquared(const Vector4 &other) const
-{
-    float dx = x - other.x;
-    float dy = y - other.y;
-    float dz = z - other.z;
-    float dw = w - other.w;
-    return dx * dx + dy * dy + dz * dz + dw * dw;
-}
-
-float Vector4::Distance(const Vector4 &other) const
-{
-    return sqrt(DistanceSquared(other));
 }
 
 Vector4 Vector4::Abs(const Vector4 &vec)

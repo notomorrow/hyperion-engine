@@ -184,6 +184,11 @@
     <ClInclude Include="game.h" />
     <ClInclude Include="math\matrix_util.h" />
     <ClInclude Include="math\quaternion.h" />
+    <ClInclude Include="math\ray.h" />
+    <ClInclude Include="physics\physics_control.h" />
+    <ClInclude Include="physics\physics_manager.h" />
+    <ClInclude Include="physics\physics_object.h" />
+    <ClInclude Include="physics\shapes\aabb_physics_object.h" />
     <ClInclude Include="rendering\camera\camera.h" />
     <ClInclude Include="rendering\camera\fps_camera.h" />
     <ClInclude Include="rendering\camera\ortho_camera.h" />
@@ -221,6 +226,7 @@
     <ClInclude Include="terrain\noise_terrain\worley_noise.h" />
     <ClInclude Include="terrain\terrain_chunk.h" />
     <ClInclude Include="terrain\terrain_control.h" />
+    <ClInclude Include="util\aabb_factory.h" />
     <ClInclude Include="util\img\stb_image.h" />
     <ClInclude Include="util\mesh_factory.h" />
     <ClInclude Include="util\shader_preprocessor.h" />
@@ -261,6 +267,10 @@
     <ClCompile Include="math\vector2.cpp" />
     <ClCompile Include="math\vector3.cpp" />
     <ClCompile Include="math\vector4.cpp" />
+    <ClCompile Include="physics\physics_control.cpp" />
+    <ClCompile Include="physics\physics_manager.cpp" />
+    <ClCompile Include="physics\physics_object.cpp" />
+    <ClCompile Include="physics\shapes\aabb_physics_object.cpp" />
     <ClCompile Include="rendering\camera\camera.cpp" />
     <ClCompile Include="core_engine.cpp" />
     <ClCompile Include="rendering\camera\fps_camera.cpp" />
@@ -291,6 +301,7 @@
     <ClCompile Include="terrain\noise_terrain\worley_noise.cpp" />
     <ClCompile Include="terrain\terrain_chunk.cpp" />
     <ClCompile Include="terrain\terrain_control.cpp" />
+    <ClCompile Include="util\aabb_factory.cpp" />
     <ClCompile Include="util\mesh_factory.cpp" />
     <ClCompile Include="util\shader_preprocessor.cpp" />
     <ClCompile Include="util\xml\sax_parser.cpp" />

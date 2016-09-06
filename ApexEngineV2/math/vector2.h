@@ -15,6 +15,14 @@ public:
     Vector2(float xy);
     Vector2(const Vector2 &other);
 
+    float GetX() const;
+    float &GetX();
+    float GetY() const;
+    float &GetY();
+
+    Vector2 &SetX(float x);
+    Vector2 &SetY(float y);
+
     Vector2 &operator=(const Vector2 &other);
     Vector2 operator+(const Vector2 &other) const;
     Vector2 &operator+=(const Vector2 &other);
@@ -28,11 +36,13 @@ public:
     bool operator!=(const Vector2 &other) const;
 
     float Length() const;
+    float LengthSquared() const;
+
+    float Distance(const Vector2 &other) const;
+    float DistanceSquared(const Vector2 &other) const;
+
     Vector2 &Normalize();
     Vector2 &Lerp(const Vector2 &to, const float amt);
-
-    float DistanceSquared(const Vector2 &other) const;
-    float Distance(const Vector2 &other) const;
 
     static Vector2 Abs(const Vector2 &);
     static Vector2 Round(const Vector2 &);

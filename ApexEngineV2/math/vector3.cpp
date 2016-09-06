@@ -23,6 +23,54 @@ Vector3::Vector3(const Vector3 &other)
 {
 }
 
+float Vector3::GetX() const
+{
+    return x;
+}
+
+float &Vector3::GetX()
+{
+    return x;
+}
+
+float Vector3::GetY() const
+{
+    return y;
+}
+
+float &Vector3::GetY()
+{
+    return y;
+}
+
+float Vector3::GetZ() const
+{
+    return z;
+}
+
+float &Vector3::GetZ()
+{
+    return z;
+}
+
+Vector3 &Vector3::SetX(float x)
+{
+    this->x = x;
+    return *this;
+}
+
+Vector3 &Vector3::SetY(float y)
+{
+    this->y = y;
+    return *this;
+}
+
+Vector3 &Vector3::SetZ(float z)
+{
+    this->z = z;
+    return *this;
+}
+
 Vector3 &Vector3::operator=(const Vector3 &other)
 {
     x = other.x;
@@ -146,7 +194,25 @@ bool Vector3::operator!=(const Vector3 &other) const
 
 float Vector3::Length() const
 {
-    return sqrt(x * x + y * y + z * z);
+    return sqrt(LengthSquared());
+}
+
+float Vector3::LengthSquared() const
+{
+    return x * x + y * y + z * z;
+}
+
+float Vector3::DistanceSquared(const Vector3 &other) const
+{
+    float dx = x - other.x;
+    float dy = y - other.y;
+    float dz = z - other.z;
+    return dx * dx + dy * dy + dz * dz;
+}
+
+float Vector3::Distance(const Vector3 &other) const
+{
+    return sqrt(DistanceSquared(other));
 }
 
 Vector3 &Vector3::Normalize()
@@ -189,19 +255,6 @@ Vector3 &Vector3::Lerp(const Vector3 &to, const float amt)
 float Vector3::Dot(const Vector3 &other) const
 {
     return x * other.x + y * other.y + z * other.z;
-}
-
-float Vector3::DistanceSquared(const Vector3 &other) const
-{
-    float dx = x - other.x;
-    float dy = y - other.y;
-    float dz = z - other.z;
-    return dx * dx + dy * dy + dz * dz;
-}
-
-float Vector3::Distance(const Vector3 &other) const
-{
-    return sqrt(DistanceSquared(other));
 }
 
 Vector3 Vector3::Abs(const Vector3 &vec)
