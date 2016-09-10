@@ -174,6 +174,17 @@ Quaternion &Quaternion::operator*=(const Quaternion &other)
     return *this;
 }
 
+Quaternion &Quaternion::operator+=(const Vector3 &vec)
+{
+    Quaternion q(MathUtil::DegToRad(vec.x), MathUtil::DegToRad(vec.y), MathUtil::DegToRad(vec.z), 0.0);
+    q *= *this;
+    x += q.x * 0.5f;
+    y += q.y * 0.5f;
+    z += q.z * 0.5f;
+    w += q.w * 0.5f;
+    return *this;
+}
+
 Vector3 Quaternion::operator*(const Vector3 &vec) const
 {
     Vector3 result;
@@ -188,20 +199,36 @@ Vector3 Quaternion::operator*(const Vector3 &vec) const
     return result;
 }
 
-float Quaternion::Length() const
+float Quaternion::LengthSquared() const
 {
     return w * w + x * x + y * y + z * z;
 }
 
+Quaternion &Quaternion::Normalize()
+{
+    float d = LengthSquared();
+    if (d < FLT_EPSILON) {
+        w = 1.0;
+        return *this;
+    }
+    d = 1.0f / sqrt(d);
+    w *= d;
+    x *= d;
+    y *= d;
+    z *= d;
+
+    return *this;
+}
+
 Quaternion &Quaternion::Invert()
 {
-    float len = Length();
-    if (len > 0.0) {
-        float inv_len = 1.0f / len;
-        w = w * inv_len;
-        x = -x * inv_len;
-        y = -y * inv_len;
-        z = -z * inv_len;
+    float len2 = LengthSquared();
+    if (len2 > 0.0) {
+        float inv_len2 = 1.0f / len2;
+        w = w * inv_len2;
+        x = -x * inv_len2;
+        y = -y * inv_len2;
+        z = -z * inv_len2;
     }
     return *this;
 }

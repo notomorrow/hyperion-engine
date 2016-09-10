@@ -4,7 +4,9 @@
 #include <iostream>
 
 namespace apex {
-struct Matrix4 {
+class Matrix4 {
+    friend std::ostream &operator<<(std::ostream &os, const Matrix4 &mat);
+public:
     float values[16];
 
     Matrix4();
@@ -16,8 +18,12 @@ struct Matrix4 {
     Matrix4 &Invert();
 
     Matrix4 &operator=(const Matrix4 &other);
+    Matrix4 operator+(const Matrix4 &other) const;
+    Matrix4 &operator+=(const Matrix4 &other);
     Matrix4 operator*(const Matrix4 &other) const;
     Matrix4 &operator*=(const Matrix4 &other);
+    Matrix4 operator*(float scalar) const;
+    Matrix4 &operator*=(float scalar);
     bool operator==(const Matrix4 &other) const;
     float operator()(int i, int j) const;
     float &operator()(int i, int j);
@@ -25,8 +31,6 @@ struct Matrix4 {
     static Matrix4 Zeroes();
     static Matrix4 Ones();
     static Matrix4 Identity();
-
-    friend std::ostream &operator<<(std::ostream &os, const Matrix4 &mat);
 };
 } // namespace apex
 

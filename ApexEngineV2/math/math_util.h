@@ -5,6 +5,7 @@ namespace apex {
 class MathUtil {
 public:
     const static double PI;
+    const static double epsilon;
 
     template <typename T>
     static inline T RadToDeg(const T rad)

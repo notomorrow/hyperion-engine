@@ -15,6 +15,7 @@ const Vector3 &PhysicsObject::GetForce() const
 {
     return force;
 }
+
 void PhysicsObject::SetForce(const Vector3 &vec)
 {
     force = vec;
@@ -54,4 +55,4 @@ void PhysicsObject::ApplyForce(const Vector3 &vec)
 {
     force += vec;
 }
-}
+} // namespace apex

@@ -36,9 +36,12 @@ public:
     Quaternion &operator=(const Quaternion &other);
     Quaternion operator*(const Quaternion &other) const;
     Quaternion &operator*=(const Quaternion &other);
+    Quaternion &operator+=(const Vector3 &vec);
     Vector3 operator*(const Vector3 &vec) const;
 
     float Length() const;
+    float LengthSquared() const;
+    Quaternion &Normalize();
     Quaternion &Invert();
     Quaternion &Slerp(const Quaternion &to, float amt);
 

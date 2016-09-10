@@ -26,8 +26,8 @@ using namespace noise;
 #define MASK_SCALE_LENGTH 0.02
 
 namespace apex {
-NoiseTerrainChunk::NoiseTerrainChunk(const HeightInfo &height_info, int seed)
-    : TerrainChunk(height_info)
+NoiseTerrainChunk::NoiseTerrainChunk(const ChunkInfo &chunk_info, int seed)
+    : TerrainChunk(chunk_info)
 {
     module::RidgedMulti multi;
     multi.SetSeed(seed);
@@ -45,12 +45,12 @@ NoiseTerrainChunk::NoiseTerrainChunk(const HeightInfo &height_info, int seed)
     struct osn_context *ctx;
     open_simplex_noise(seed, &ctx);
 
-    heights.resize((height_info.width) * (height_info.length));
+    heights.resize((chunk_info.m_width) * (chunk_info.m_length));
 
-    for (int z = 0; z < height_info.length; z++) {
-        for (int x = 0; x < height_info.width; x++) {
-            int x_offset = x + (height_info.position.x * (height_info.width - 1));
-            int z_offset = z + (height_info.position.y * (height_info.length - 1));
+    for (int z = 0; z < chunk_info.m_length; z++) {
+        for (int x = 0; x < chunk_info.m_width; x++) {
+            int x_offset = x + (chunk_info.m_position.x * (chunk_info.m_width - 1));
+            int z_offset = z + (chunk_info.m_position.y * (chunk_info.m_length - 1));
 
             //double smooth = (open_simplex_noise2(ctx, x_offset * SMOOTH_SCALE_WIDTH, 
             //    z_offset * SMOOTH_SCALE_HEIGHT) * 2.0 - 1.0) * SMOOTH_SCALE_HEIGHT;
@@ -75,13 +75,13 @@ NoiseTerrainChunk::NoiseTerrainChunk(const HeightInfo &height_info, int seed)
         { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
         { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
     }));
-    entity = std::make_shared<Entity>("terrain_node");
-    entity->SetRenderable(mesh);
+    m_entity = std::make_shared<Entity>("terrain_node");
+    m_entity->SetRenderable(mesh);
 }
 
 int NoiseTerrainChunk::HeightIndexAt(int x, int z)
 {
-    int size = height_info.width;
+    int size = m_chunk_info.m_width;
     return ((x + size) % size) + ((z + size) % size) * size;
 }
 

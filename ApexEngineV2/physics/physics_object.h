@@ -63,6 +63,6 @@ protected:
 private:
     std::function<void(PhysicsShape *other)> collision_callback;
 };
-}
+} // namespace apex
 
 #endif

@@ -79,6 +79,34 @@ Vector3 &Vector3::operator=(const Vector3 &other)
     return *this;
 }
 
+float Vector3::operator[](size_t index) const
+{
+    switch (index) {
+    case 0:
+        return x;
+    case 1:
+        return y;
+    case 2:
+        return z;
+    default:
+        throw std::out_of_range("out of range!");
+    }
+}
+
+float &Vector3::operator[](size_t index)
+{
+    switch (index) {
+    case 0:
+        return x;
+    case 1:
+        return y;
+    case 2:
+        return z;
+    default:
+        throw std::out_of_range("out of range!");
+    }
+}
+
 Vector3 Vector3::operator+(const Vector3 &other) const
 {
     return Vector3(x + other.x, y + other.y, z + other.z);
@@ -115,6 +143,21 @@ Vector3 &Vector3::operator*=(const Vector3 &other)
     x *= other.x;
     y *= other.y;
     z *= other.z;
+    return *this;
+}
+
+Vector3 Vector3::operator*(const Matrix3 &mat) const
+{
+    return Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + 1.0 * mat(0, 3),
+        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + 1.0 * mat(1, 3),
+        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + 1.0 * mat(2, 3));
+}
+
+Vector3 &Vector3::operator*=(const Matrix3 &mat)
+{
+    operator=(Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + 1.0 * mat(0, 3),
+        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + 1.0 * mat(1, 3),
+        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + 1.0 * mat(2, 3)));
     return *this;
 }
 

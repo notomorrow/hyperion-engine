@@ -5,11 +5,13 @@
 #include <iostream>
 
 #include "math_util.h"
+#include "matrix3.h"
 #include "matrix4.h"
 
 namespace apex {
 class Quaternion;
 class Vector3 {
+    friend std::ostream &operator<<(std::ostream &out, const Vector3 &vec);
 public:
     float x, y, z;
 
@@ -30,12 +32,16 @@ public:
     Vector3 &SetZ(float z);
 
     Vector3 &operator=(const Vector3 &other);
+    float operator[](size_t index) const;
+    float &operator[](size_t index);
     Vector3 operator+(const Vector3 &other) const;
     Vector3 &operator+=(const Vector3 &other);
     Vector3 operator-(const Vector3 &other) const;
     Vector3 &operator-=(const Vector3 &other);
     Vector3 operator*(const Vector3 &other) const;
     Vector3 &operator*=(const Vector3 &other);
+    Vector3 operator*(const Matrix3 &mat) const;
+    Vector3 &operator*=(const Matrix3 &mat);
     Vector3 operator*(const Matrix4 &mat) const;
     Vector3 &operator*=(const Matrix4 &mat);
     Vector3 operator*(const Quaternion &quat) const;
@@ -68,8 +74,6 @@ public:
     static Vector3 UnitX();
     static Vector3 UnitY();
     static Vector3 UnitZ();
-
-    friend std::ostream &operator<<(std::ostream &out, const Vector3 &vec);
 };
 }
 #endif

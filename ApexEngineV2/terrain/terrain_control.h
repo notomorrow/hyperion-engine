@@ -24,21 +24,23 @@ public:
     virtual void OnUpdate(double dt);
 
 protected:
-    Camera *camera;
-    Vector3 scale;
-    int chunk_size = 64;
-    std::queue<NeighborChunkInfo*> _queue;
-    std::vector<TerrainChunk*> chunks;
+    Camera *m_camera;
+    Vector3 m_scale;
+    int m_chunk_size = 64;
+    std::queue<NeighborChunkInfo*> m_queue;
+    std::vector<TerrainChunk*> m_chunks;
 
-    virtual TerrainChunk *NewChunk(const HeightInfo &height_info) = 0;
+    virtual TerrainChunk *NewChunk(const ChunkInfo &chunk_info) = 0;
 
 private:
     void AddChunk(int x, int z);
     TerrainChunk *GetChunk(int x, int z);
     std::array<NeighborChunkInfo, 8> GetNeighbors(int x, int z);
 
-    int tick, queuetick, chunk_index = 0;
-    double maxdist;
+    int m_tick;
+    int m_queuetick;
+    int m_chunk_index = 0;
+    double m_max_distance;
 };
 }
 

@@ -158,4 +158,14 @@ void MatrixUtil::ToOrtho(Matrix4 &mat,
     mat(3, 2) = 0;
     mat(3, 3) = 1;
 }
+
+Matrix3 MatrixUtil::CreateInertiaTensor(const Vector3 &half_size, double mass)
+{
+    Matrix3 res = Matrix3::Zeroes();
+    Vector3 sqr = half_size * half_size;
+    res.values[0] = 0.3 * mass * (sqr.GetY() + sqr.GetZ());
+    res.values[4] = 0.3 * mass * (sqr.GetX() + sqr.GetZ());
+    res.values[8] = 0.3 * mass * (sqr.GetX() + sqr.GetY());
+    return res;
 }
+} // namespace apex

@@ -12,7 +12,7 @@ public:
 protected:
     int seed;
 
-    TerrainChunk *NewChunk(const HeightInfo &height_info);
+    TerrainChunk *NewChunk(const ChunkInfo &height_info);
 };
 }
 

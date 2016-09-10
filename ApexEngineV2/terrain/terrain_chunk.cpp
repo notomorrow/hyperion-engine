@@ -1,8 +1,8 @@
 #include "terrain_chunk.h"
 
 namespace apex {
-TerrainChunk::TerrainChunk(const HeightInfo &height_info)
-    : height_info(height_info)
+TerrainChunk::TerrainChunk(const ChunkInfo &chunk_info)
+    : m_chunk_info(chunk_info)
 {
 }
 
@@ -63,16 +63,16 @@ void TerrainChunk::CalculateNormals(std::vector<Vertex> &vertices, const std::ve
 std::vector<Vertex> TerrainChunk::BuildVertices(const std::vector<double> &heights)
 {
     std::vector<Vertex> vertices;
-    vertices.resize(height_info.width * height_info.length);
+    vertices.resize(m_chunk_info.m_width * m_chunk_info.m_length);
 
     int i = 0;
-    for (int z = 0; z < height_info.length; z++) {
-        for (int x = 0; x < height_info.width; x++) {
-            Vector3 position(x - height_info.width / 2, heights[i], z - height_info.length / 2);
-            position *= height_info.scale;
+    for (int z = 0; z < m_chunk_info.m_length; z++) {
+        for (int x = 0; x < m_chunk_info.m_width; x++) {
+            Vector3 position(x - m_chunk_info.m_width / 2, heights[i], z - m_chunk_info.m_length / 2);
+            position *= m_chunk_info.m_scale;
 
-            Vector2 texcoord(-x / float(height_info.width), 
-                -z / float(height_info.length));
+            Vector2 texcoord(-x / float(m_chunk_info.m_width),
+                -z / float(m_chunk_info.m_length));
 
             vertices[i++] = Vertex(position, texcoord);
         }
@@ -83,9 +83,9 @@ std::vector<Vertex> TerrainChunk::BuildVertices(const std::vector<double> &heigh
 std::vector<size_t> TerrainChunk::BuildIndices()
 {
     std::vector<size_t> indices;
-    indices.resize(6 * (height_info.width - 1) * (height_info.length - 1));
+    indices.resize(6 * (m_chunk_info.m_width - 1) * (m_chunk_info.m_length - 1));
 
-    int pitch = height_info.width;
+    int pitch = m_chunk_info.m_width;
     int row = 0;
 
     int i0 = row;
@@ -94,8 +94,8 @@ std::vector<size_t> TerrainChunk::BuildIndices()
     int i3 = pitch + row;
 
     int i = 0;
-    for (int z = 0; z < height_info.length - 1; z++) {
-        for (int x = 0; x < height_info.width - 1; x++) {
+    for (int z = 0; z < m_chunk_info.m_length - 1; z++) {
+        for (int x = 0; x < m_chunk_info.m_width - 1; x++) {
             indices[i++] = i0;
             indices[i++] = i2;
             indices[i++] = i1;

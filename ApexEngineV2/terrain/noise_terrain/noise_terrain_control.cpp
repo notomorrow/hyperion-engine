@@ -6,8 +6,8 @@ NoiseTerrainControl::NoiseTerrainControl(Camera *camera, int seed)
 {
 }
 
-TerrainChunk *NoiseTerrainControl::NewChunk(const HeightInfo &height_info)
+TerrainChunk *NoiseTerrainControl::NewChunk(const ChunkInfo &chunk_info)
 {
-    return new NoiseTerrainChunk(height_info, seed);
+    return new NoiseTerrainChunk(chunk_info, seed);
 }
 }

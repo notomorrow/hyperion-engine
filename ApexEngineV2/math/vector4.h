@@ -9,6 +9,7 @@
 namespace apex {
 class Vector3;
 class Vector4 {
+    friend std::ostream &operator<<(std::ostream &out, const Vector4 &vec);
 public:
     float x, y, z, w;
 
@@ -68,8 +69,6 @@ public:
     static Vector4 UnitY();
     static Vector4 UnitZ();
     static Vector4 UnitW();
-
-    friend std::ostream &operator<<(std::ostream &out, const Vector4 &vec);
 };
 }
 #endif

@@ -8,7 +8,7 @@
 namespace apex {
 class NoiseTerrainChunk : public TerrainChunk {
 public:
-    NoiseTerrainChunk(const HeightInfo &height_info, int seed);
+    NoiseTerrainChunk(const ChunkInfo &chunk_info, int seed);
 
     int HeightIndexAt(int x, int z);
 

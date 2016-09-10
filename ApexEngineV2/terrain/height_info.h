@@ -14,48 +14,48 @@ enum PageState {
 };
 
 struct NeighborChunkInfo {
-    Vector2 position;
-    bool in_queue = false;
+    Vector2 m_position;
+    bool m_in_queue = false;
 
     NeighborChunkInfo()
     {
     }
 
     NeighborChunkInfo(const Vector2 &position)
-        : position(position)
+        : m_position(position)
     {
     }
 
     NeighborChunkInfo(const NeighborChunkInfo &other)
-        : position(other.position), in_queue(other.in_queue)
+        : m_position(other.m_position), m_in_queue(other.m_in_queue)
     {
     }
 };
 
-struct HeightInfo {
-    int width = 64;
-    int length = 64;
-    int height = 7;
-    Vector2 position;
-    Vector3 scale;
-    PageState pagestate = PageState_unloaded;
-    int unload_time = 0;
-    std::array<NeighborChunkInfo, 8> neighboring_chunks;
+struct ChunkInfo {
+    int m_width = 64;
+    int m_length = 64;
+    int m_height = 7;
+    Vector2 m_position;
+    Vector3 m_scale;
+    PageState m_page_state = PageState_unloaded;
+    int m_unload_time = 0;
+    std::array<NeighborChunkInfo, 8> m_neighboring_chunks;
 
-    HeightInfo()
-        : position(0), scale(1)
+    ChunkInfo()
+        : m_position(0), m_scale(1)
     {
     }
 
-    HeightInfo(const Vector2 &position, const Vector3 &scale)
-        : position(position), scale(scale)
+    ChunkInfo(const Vector2 &position, const Vector3 &scale)
+        : m_position(position), m_scale(scale)
     {
     }
 
-    HeightInfo(const HeightInfo &other)
-        : width(other.width), length(other.length),
-        position(other.position), scale(other.scale), 
-        pagestate(other.pagestate), neighboring_chunks(other.neighboring_chunks)
+    ChunkInfo(const ChunkInfo &other)
+        : m_width(other.m_width), m_length(other.m_length),
+        m_position(other.m_position), m_scale(other.m_scale), 
+        m_page_state(other.m_page_state), m_neighboring_chunks(other.m_neighboring_chunks)
     {
     }
 };

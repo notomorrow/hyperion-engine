@@ -16,11 +16,60 @@ PhysicsManager *PhysicsManager::GetInstance()
 
 PhysicsManager::PhysicsManager()
 {
-    // reserve space for 25 PhysicsObjects by default
-    objects.reserve(25);
+    resolver = new ContactResolver(0);
 }
 
-void PhysicsManager::AddPhysicsObject(PhysicsObject *object)
+PhysicsManager::~PhysicsManager()
+{
+    delete resolver;
+}
+
+void PhysicsManager::RegisterBody(std::shared_ptr<RigidBody> body)
+{
+    m_bodies.push_back(body);
+}
+
+void PhysicsManager::Begin()
+{
+    for (auto &&body : m_bodies) {
+        body->ClearAccumulators();
+        body->CalculateDerivedData();
+    }
+}
+
+unsigned int PhysicsManager::GenerateContacts()
+{
+    unsigned int index = contact_index;
+    unsigned int limit = contacts.size();
+
+    for (auto &&gen : m_contact_generators) {
+        unsigned int used = gen->AddContact(contacts[index], limit);
+        limit -= used;
+        index += used;
+
+        // We've run out of contacts to fill
+        if (limit <= 0) {
+            break;
+        }
+    }
+    
+    return contacts.size() - limit;
+}
+
+void PhysicsManager::RunPhysics(double dt)
+{
+    for (auto &&body : m_bodies) {
+        body->Integrate(dt);
+    }
+
+    /*unsigned int used_contacts = GenerateContacts();
+
+    // calculate number of iterations
+    resolver->SetNumIterations(used_contacts * 4);
+    resolver->ResolveContacts(contacts, used_contacts, dt);*/
+}
+
+/*void PhysicsManager::AddPhysicsObject(PhysicsObject *object)
 {
     objects.push_back(object);
 }
@@ -126,5 +175,5 @@ void PhysicsManager::CheckCollisions()
             }
         }
     }
-}
-}
+}*/
+} // namespace apex

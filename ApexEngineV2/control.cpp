@@ -9,4 +9,4 @@ EntityControl::EntityControl(const double tps)
 EntityControl::~EntityControl()
 {
 }
-}
+} // namespace apex
