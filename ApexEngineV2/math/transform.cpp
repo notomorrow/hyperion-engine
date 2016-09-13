@@ -26,44 +26,6 @@ Transform::Transform(const Transform &other)
     UpdateMatrix();
 }
 
-const Vector3 &Transform::GetTranslation() const
-{
-    return translation;
-}
-
-void Transform::SetTranslation(const Vector3 &vec)
-{
-    translation = vec;
-    UpdateMatrix();
-}
-
-const Vector3 &Transform::GetScale() const
-{
-    return scale;
-}
-
-void Transform::SetScale(const Vector3 &vec)
-{
-    scale = vec;
-    UpdateMatrix();
-}
-
-const Quaternion &Transform::GetRotation() const
-{
-    return rotation;
-}
-
-void Transform::SetRotation(const Quaternion &rot)
-{
-    rotation = rot;
-    UpdateMatrix();
-}
-
-const Matrix4 &Transform::GetMatrix() const
-{
-    return matrix;
-}
-
 void Transform::UpdateMatrix()
 {
     Matrix4 S, R, T;
@@ -74,4 +36,4 @@ void Transform::UpdateMatrix()
 
     matrix = S * R * T;
 }
-}
+} // namespace apex

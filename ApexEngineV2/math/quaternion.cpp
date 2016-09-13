@@ -53,6 +53,21 @@ Quaternion::Quaternion(const Matrix4 &mat)
     }
 }
 
+Quaternion::Quaternion(const Vector3 &euler)
+{
+    float c1 = cos(euler[2] * 0.5f);
+    float c2 = cos(euler[1] * 0.5f);
+    float c3 = cos(euler[0] * 0.5f);
+    float s1 = sin(euler[2] * 0.5f);
+    float s2 = sin(euler[1] * 0.5f);
+    float s3 = sin(euler[0] * 0.5f);
+
+    x = c1 * c2 * s3 - s1 * s2 * c3;
+    y = c1 * s2 * c3 + s1 * c2 * s3;
+    z = s1 * c2 * c3 - c1 * s2 * s3;
+    w = c1 * c2 * c3 + s1 * s2 * s3;
+}
+
 Quaternion::Quaternion(const Vector3 &axis, float radians)
 {
     Vector3 tmp(axis);
@@ -176,7 +191,7 @@ Quaternion &Quaternion::operator*=(const Quaternion &other)
 
 Quaternion &Quaternion::operator+=(const Vector3 &vec)
 {
-    Quaternion q(MathUtil::DegToRad(vec.x), MathUtil::DegToRad(vec.y), MathUtil::DegToRad(vec.z), 0.0);
+    Quaternion q(vec.x, vec.y, vec.z, 0.0);
     q *= *this;
     x += q.x * 0.5f;
     y += q.y * 0.5f;
@@ -277,8 +292,8 @@ float Quaternion::Roll() const
 float Quaternion::Pitch() const
 {
     int pole = GimbalPole();
-    return pole == 0 ? 
-        asin(MathUtil::Clamp(2.0f * (w * x - z * y), -1.0f, 1.0f)) : 
+    return pole == 0 ?
+        asin(MathUtil::Clamp(2.0f * (w * x - z * y), -1.0f, 1.0f)) :
         pole * MathUtil::PI * 0.5f;
 }
 

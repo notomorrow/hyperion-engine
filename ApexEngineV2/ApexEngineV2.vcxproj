@@ -188,7 +188,6 @@
     <ClInclude Include="math\ray.h" />
     <ClInclude Include="physics\bounding_sphere.h" />
     <ClInclude Include="physics\bvh_node.h" />
-    <ClInclude Include="physics\collide_coarse.h" />
     <ClInclude Include="physics\collision_box.h" />
     <ClInclude Include="physics\collision_data.h" />
     <ClInclude Include="physics\collision_plane.h" />
@@ -289,6 +288,7 @@
     <ClCompile Include="physics\collision_box.cpp" />
     <ClCompile Include="physics\collision_data.cpp" />
     <ClCompile Include="physics\collision_shape.cpp" />
+    <ClCompile Include="physics\collision_sphere.cpp" />
     <ClCompile Include="physics\complex_collision_detector.cpp" />
     <ClCompile Include="physics\contact.cpp" />
     <ClCompile Include="physics\contact_resolver.cpp" />

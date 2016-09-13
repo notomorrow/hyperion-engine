@@ -4,8 +4,10 @@ namespace apex {
 CollisionData::CollisionData()
     : m_contact_index(0), m_contact_count(0), m_contacts_left(MAX_CONTACTS)
 {
-    // initialize contacts to nullptr
-    m_contacts = { nullptr };
+}
+
+CollisionData::~CollisionData()
+{
 }
 
 void CollisionData::Reset()

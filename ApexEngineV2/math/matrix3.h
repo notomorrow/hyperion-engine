@@ -10,7 +10,7 @@ public:
     float values[9];
 
     Matrix3();
-    Matrix3(const float * const v);
+    Matrix3(float *v);
     Matrix3(const Matrix3 &other);
 
     float Determinant() const;
@@ -27,6 +27,9 @@ public:
     bool operator==(const Matrix3 &other) const;
     float operator()(int i, int j) const;
     float &operator()(int i, int j);
+
+    float At(int i, int j) const;
+    float &At(int i, int j);
 
     static Matrix3 Zeroes();
     static Matrix3 Ones();

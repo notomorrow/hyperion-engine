@@ -1,4 +1,5 @@
 #include "matrix3.h"
+#include <cassert>
 
 namespace apex {
 Matrix3::Matrix3()
@@ -11,14 +12,9 @@ Matrix3::Matrix3()
     }
 }
 
-Matrix3::Matrix3(const float * const v)
+Matrix3::Matrix3(float *v)
 {
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            int index = i * 3 + j;
-            values[index] = v[index];
-        }
-    }
+    memcpy(values, v, sizeof(float) * 9);
 }
 
 Matrix3::Matrix3(const Matrix3 &other)
@@ -28,10 +24,10 @@ Matrix3::Matrix3(const Matrix3 &other)
 
 float Matrix3::Determinant() const
 {
-    float a = (0, 0) * ((1, 1) * (2, 2) - (1, 2) * (2, 1));
-    float b = (0, 1) * ((1, 0) * (2, 2) - (1, 2) * (2, 0));
-    float c = (0, 2) * ((1, 0) * (2, 1) - (1, 1) * (2, 0));
-    return a - b + c;
+     float a = At(0, 0) * (At(1, 1) * At(2, 2) - At(1, 2) * At(2, 1));
+     float b = At(0, 1) * (At(1, 0) * At(2, 2) - At(1, 2) * At(2, 0));
+     float c = At(0, 2) * (At(1, 0) * At(2, 1) - At(1, 1) * At(2, 0));
+     return a - b + c; 
 }
 
 Matrix3 &Matrix3::Transpose()
@@ -40,7 +36,7 @@ Matrix3 &Matrix3::Transpose()
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            transposed(j, i) = (i, j);
+            transposed(j, i) = At(i, j);
         }
     }
 
@@ -49,28 +45,27 @@ Matrix3 &Matrix3::Transpose()
 
 Matrix3 &Matrix3::Invert()
 {
-    float inv_det = 1.0 / Determinant();
+    float det = Determinant();
+    assert(det != 0.0);
+    float inv_det = 1.0 / det;
 
     Matrix3 result;
-    result(0, 0) = ((1, 1) * (2, 2) - (2, 1) * (1, 2)) * inv_det;
-    result(0, 1) = ((0, 2) * (2, 1) - (0, 1) * (2, 2)) * inv_det;
-    result(0, 2) = ((0, 1) * (1, 2) - (0, 2) * (1, 1)) * inv_det;
-    result(1, 0) = ((1, 2) * (2, 0) - (1, 0) * (2, 2)) * inv_det;
-    result(1, 1) = ((0, 0) * (2, 2) - (0, 2) * (2, 0)) * inv_det;
-    result(1, 2) = ((1, 0) * (0, 2) - (0, 0) * (1, 2)) * inv_det;
-    result(2, 0) = ((1, 0) * (2, 1) - (2, 0) * (1, 1)) * inv_det;
-    result(2, 1) = ((2, 0) * (0, 1) - (0, 0) * (2, 1)) * inv_det;
-    result(2, 2) = ((0, 0) * (1, 1) - (1, 0) * (0, 1)) * inv_det;
+    result(0, 0) = (At(1, 1) * At(2, 2) - At(2, 1) * At(1, 2)) * inv_det;
+    result(0, 1) = (At(0, 2) * At(2, 1) - At(0, 1) * At(2, 2)) * inv_det;
+    result(0, 2) = (At(0, 1) * At(1, 2) - At(0, 2) * At(1, 1)) * inv_det;
+    result(1, 0) = (At(1, 2) * At(2, 0) - At(1, 0) * At(2, 2)) * inv_det;
+    result(1, 1) = (At(0, 0) * At(2, 2) - At(0, 2) * At(2, 0)) * inv_det;
+    result(1, 2) = (At(1, 0) * At(0, 2) - At(0, 0) * At(1, 2)) * inv_det;
+    result(2, 0) = (At(1, 0) * At(2, 1) - At(2, 0) * At(1, 1)) * inv_det;
+    result(2, 1) = (At(2, 0) * At(0, 1) - At(0, 0) * At(2, 1)) * inv_det;
+    result(2, 2) = (At(0, 0) * At(1, 1) - At(1, 0) * At(0, 1)) * inv_det;
 
     return operator=(result);
 }
 
 Matrix3 &Matrix3::operator=(const Matrix3 &other)
 {
-    //for (int i = 0; i < 9; i++) {
-    //    values[i] = other.values[i];
-    //}
-    memcpy(values, other.values, 9 * sizeof(float));
+    memcpy(values, other.values, sizeof(float) * 9);
     return *this;
 }
 
@@ -93,7 +88,7 @@ Matrix3 &Matrix3::operator+=(const Matrix3 &other)
 
 Matrix3 Matrix3::operator*(const Matrix3 &other) const
 {
-    Matrix3 result(Matrix3::Zeroes());
+    /*Matrix3 result(Matrix3::Zeroes());
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
@@ -102,7 +97,22 @@ Matrix3 Matrix3::operator*(const Matrix3 &other) const
             }
         }
     }
-    return result;
+    return result;*/
+
+    float fv[] = {
+        values[0] * other.values[0] + values[1] * other.values[3] + values[2] * other.values[6],
+        values[0] * other.values[1] + values[1] * other.values[4] + values[2] * other.values[7],
+        values[0] * other.values[2] + values[1] * other.values[5] + values[2] * other.values[8],
+
+        values[3] * other.values[0] + values[4] * other.values[3] + values[5] * other.values[6],
+        values[3] * other.values[1] + values[4] * other.values[4] + values[5] * other.values[7],
+        values[3] * other.values[2] + values[4] * other.values[5] + values[5] * other.values[8],
+
+        values[6] * other.values[0] + values[7] * other.values[3] + values[8] * other.values[6],
+        values[6] * other.values[1] + values[7] * other.values[4] + values[8] * other.values[7],
+        values[6] * other.values[2] + values[7] * other.values[5] + values[8] * other.values[8]
+    };
+    return Matrix3(fv);
 }
 
 Matrix3 &Matrix3::operator*=(const Matrix3 &other)
@@ -146,6 +156,16 @@ float Matrix3::operator()(int i, int j) const
 float &Matrix3::operator()(int i, int j)
 {
     return values[i * 3 + j];
+}
+
+float Matrix3::At(int i, int j) const
+{
+    return operator()(i, j);
+}
+
+float &Matrix3::At(int i, int j)
+{
+    return operator()(i, j);
 }
 
 Matrix3 Matrix3::Zeroes()

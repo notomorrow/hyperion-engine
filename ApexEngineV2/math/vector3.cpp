@@ -148,16 +148,16 @@ Vector3 &Vector3::operator*=(const Vector3 &other)
 
 Vector3 Vector3::operator*(const Matrix3 &mat) const
 {
-    return Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + 1.0 * mat(0, 3),
-        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + 1.0 * mat(1, 3),
-        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + 1.0 * mat(2, 3));
+    return Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2),
+        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2),
+        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2));
 }
 
 Vector3 &Vector3::operator*=(const Matrix3 &mat)
 {
-    operator=(Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + 1.0 * mat(0, 3),
-        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + 1.0 * mat(1, 3),
-        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + 1.0 * mat(2, 3)));
+    operator=(Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2),
+        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2),
+        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2)));
     return *this;
 }
 

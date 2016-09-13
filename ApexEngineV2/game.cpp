@@ -25,4 +25,4 @@ RenderWindow &Game::GetWindow()
 {
     return window;
 }
-}
+} // namespace apex

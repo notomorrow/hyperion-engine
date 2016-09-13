@@ -68,4 +68,4 @@ const Vector4 &Frustum::GetPlane(size_t index) const
 {
     return planes[index];
 }
-}
+} // namespace apex

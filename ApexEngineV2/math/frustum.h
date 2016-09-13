@@ -17,7 +17,7 @@ public:
 private:
     std::array<Vector4, 6> planes;
 };
-}
+} // namespace apex
 
 #endif
 

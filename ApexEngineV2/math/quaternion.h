@@ -16,6 +16,7 @@ public:
     Quaternion();
     Quaternion(float x, float y, float z, float w);
     Quaternion(const Matrix4 &mat);
+    Quaternion(const Vector3 &euler);
     Quaternion(const Vector3 &axis, float radians);
     Quaternion(const Quaternion &other);
 

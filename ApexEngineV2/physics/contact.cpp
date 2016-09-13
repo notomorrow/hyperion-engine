@@ -9,6 +9,12 @@ Contact::Contact()
     m_bodies = { nullptr, nullptr };
 }
 
+Contact::Contact(RigidBody *a, RigidBody *b)
+    : m_contact_penetration(0.0)
+{
+    m_bodies = { a, b };
+}
+
 void Contact::SetBodyData(RigidBody *one, RigidBody *two,
     double friction, double restitution)
 {
@@ -28,9 +34,9 @@ void Contact::CalculateInternals(double dt)
 
     CalculateContactBasis();
 
-    m_relative_contact_position[0] = m_contact_point - m_bodies[0]->position;
+    m_relative_contact_position[0] = m_contact_point - m_bodies[0]->m_position;
     if (m_bodies[1] != nullptr) {
-        m_relative_contact_position[1] = m_contact_point - m_bodies[1]->position;
+        m_relative_contact_position[1] = m_contact_point - m_bodies[1]->m_position;
     }
 
     m_contact_velocity = CalculateLocalVelocity(0, dt);
@@ -71,11 +77,11 @@ void Contact::CalculateDesiredDeltaVelocity(double dt)
     double velocity_accumulate = 0.0;
 
     if (m_bodies[0]->IsAwake()) {
-        velocity_accumulate += (m_bodies[0]->last_acceleration * dt).Dot(m_contact_normal);
+        velocity_accumulate += (m_bodies[0]->m_last_acceleration * dt).Dot(m_contact_normal);
     }
 
     if (m_bodies[1] != nullptr && m_bodies[1]->IsAwake()) {
-        velocity_accumulate -= (m_bodies[1]->last_acceleration * dt).Dot(m_contact_normal);
+        velocity_accumulate -= (m_bodies[1]->m_last_acceleration * dt).Dot(m_contact_normal);
     }
 
     // limit restitution
@@ -84,28 +90,28 @@ void Contact::CalculateDesiredDeltaVelocity(double dt)
         res = 0.0;
     }
 
-    m_desired_delta_velocity = -m_contact_velocity.x - res * (m_contact_velocity.x - velocity_accumulate);
+    m_desired_delta_velocity = -m_contact_velocity.x - res * 
+        (m_contact_velocity.x - velocity_accumulate);
 }
 
 Vector3 Contact::CalculateLocalVelocity(unsigned int body_index, double dt)
 {
     RigidBody *body = m_bodies[body_index];
 
-    Vector3 rot = body->rotation;
-    Vector3 velocity = rot.Cross(m_relative_contact_position[body_index]);
-    velocity += body->velocity;
+    Vector3 velocity = body->m_rotation;
+    velocity.Cross(m_relative_contact_position[body_index]);
+    velocity += body->m_velocity;
 
     Matrix3 contact_to_world_transpose = m_contact_to_world;
     contact_to_world_transpose.Transpose();
     
     Vector3 contact_velocity = velocity * contact_to_world_transpose;
     
-    Vector3 accumulate_velocity = body->last_acceleration * dt;
+    Vector3 accumulate_velocity = body->m_last_acceleration * dt;
     accumulate_velocity *= contact_to_world_transpose;
     accumulate_velocity.SetX(0);
 
     contact_velocity += accumulate_velocity;
-
     return contact_velocity;
 }
 
@@ -113,7 +119,7 @@ void Contact::CalculateContactBasis()
 {
     std::array<Vector3, 2> contact_tangent;
 
-    if (abs(m_contact_normal.x) > abs(m_contact_normal.y)) {
+    if (fabs(m_contact_normal.x) > fabs(m_contact_normal.y)) {
         const double s = 1.0 / sqrt(m_contact_normal.z * m_contact_normal.z + 
             m_contact_normal.x * m_contact_normal.x);
 
@@ -136,7 +142,7 @@ void Contact::CalculateContactBasis()
         m_contact_normal.y, contact_tangent[0].y, contact_tangent[1].y,
         m_contact_normal.z, contact_tangent[0].z, contact_tangent[1].z
     };
-    m_contact_to_world = fv;
+    m_contact_to_world = Matrix3(fv);
 }
 
 void Contact::ApplyImpulse(const Vector3 &impulse, RigidBody *body,
@@ -154,7 +160,6 @@ void Contact::ApplyVelocityChange(std::array<Vector3, 2> &velocity_change, std::
     }
 
     Vector3 impulse_contact;
-
     if (m_friction == 0.0) {
         impulse_contact = CalculateFrictionlessImpulse(inverse_inertia_tensor);
     } else {
@@ -163,25 +168,24 @@ void Contact::ApplyVelocityChange(std::array<Vector3, 2> &velocity_change, std::
 
     Vector3 impulse = impulse_contact * m_contact_to_world;
 
-    auto relative_contact_position = m_relative_contact_position;
-    Vector3 impulsive_torque = relative_contact_position[0].Cross(impulse);
-    rotation_change[0] = impulsive_torque * inverse_inertia_tensor[0];
-    velocity_change[0] = Vector3::Zero();
-    velocity_change[0] += impulse * m_bodies[0]->GetInverseMass();
+    Vector3 impulsive_torque = m_relative_contact_position[0];
+    impulsive_torque.Cross(impulse);
 
-    m_bodies[0]->velocity += velocity_change[0];
-    m_bodies[0]->rotation += rotation_change[0];
+    rotation_change[0] = impulsive_torque * inverse_inertia_tensor[0];
+    velocity_change[0] = impulse * m_bodies[0]->GetInverseMass();
+
+    m_bodies[0]->m_velocity += velocity_change[0];
+    m_bodies[0]->m_rotation += rotation_change[0];
 
     if (m_bodies[1] != nullptr) {
         impulsive_torque = impulse;
-        impulsive_torque.Cross(relative_contact_position[1]);
+        impulsive_torque.Cross(m_relative_contact_position[1]);
 
         rotation_change[1] = impulsive_torque * inverse_inertia_tensor[1];
-        velocity_change[1] = Vector3::Zero();
-        velocity_change[1] += impulse * -m_bodies[1]->GetInverseMass();
+        velocity_change[1] = impulse * -m_bodies[1]->GetInverseMass();
 
-        m_bodies[1]->velocity += velocity_change[1];
-        m_bodies[1]->rotation += rotation_change[1];
+        m_bodies[1]->m_velocity += velocity_change[1];
+        m_bodies[1]->m_rotation += rotation_change[1];
     }
 }
 
@@ -218,7 +222,7 @@ void Contact::ApplyPositionChange(std::array<Vector3, 2> &linear_change,
             linear_move[i] = sign * penetration * (linear_inertia[i] / total_inertia);
 
             Vector3 proj = m_relative_contact_position[i] +
-                (m_contact_normal * -m_relative_contact_position[i].Dot(m_contact_normal));
+                (m_contact_normal * (-m_relative_contact_position[i].Dot(m_contact_normal)));
 
             double max_magnitude = CONTACT_ANGULAR_LIMIT * proj.Length();
 
@@ -235,7 +239,8 @@ void Contact::ApplyPositionChange(std::array<Vector3, 2> &linear_change,
             if (angular_move[i] == 0) {
                 angular_change[i] = Vector3::Zero();
             } else {
-                Vector3 target_angular_direction = m_relative_contact_position[i] * m_contact_normal;
+                Vector3 target_angular_direction = m_relative_contact_position[i];
+                target_angular_direction.Cross(m_contact_normal);
                 Matrix3 inverse_inertia_tensor = m_bodies[i]->GetInverseInertiaTensorWorld();
 
                 angular_change[i] = (target_angular_direction * inverse_inertia_tensor) *
@@ -245,13 +250,15 @@ void Contact::ApplyPositionChange(std::array<Vector3, 2> &linear_change,
             linear_change[i] = m_contact_normal * linear_move[i];
 
             if (m_bodies[i]->HasFiniteMass()) {
-                Vector3 &pos = m_bodies[i]->position;
+                Vector3 &pos = m_bodies[i]->m_position;
                 pos += m_contact_normal * linear_move[i];
 
-                Quaternion &rot = m_bodies[i]->orientation;
+                Quaternion &rot = m_bodies[i]->m_orientation;
                 rot += angular_change[i];
+                rot.Normalize();
 
                 if (!m_bodies[i]->IsAwake()) {
+                    // reflect changes on sleeping object
                     m_bodies[i]->CalculateDerivedData();
                 }
             }
@@ -286,14 +293,12 @@ Vector3 Contact::CalculateFrictionImpulse(const std::array<Matrix3, 2> &inverse_
 {
     Vector3 impulse_contact;
     double inverse_mass = m_bodies[0]->GetInverseMass();
-
     float skew_symmetric[] = {
         0, -m_relative_contact_position[0].z, m_relative_contact_position[0].y,
         m_relative_contact_position[0].z, 0, -m_relative_contact_position[0].x,
         -m_relative_contact_position[0].y, m_relative_contact_position[0].x, 0
     };
-    Matrix3 impulse_to_torque = skew_symmetric;
-
+    Matrix3 impulse_to_torque(skew_symmetric);
     Matrix3 delta_velocity_world_1 = impulse_to_torque;
     delta_velocity_world_1 *= inverse_inertia_tensor[0];
     delta_velocity_world_1 *= impulse_to_torque;
@@ -305,7 +310,7 @@ Vector3 Contact::CalculateFrictionImpulse(const std::array<Matrix3, 2> &inverse_
             m_relative_contact_position[1].z, 0, -m_relative_contact_position[1].x,
             -m_relative_contact_position[1].y, m_relative_contact_position[1].x, 0
         };
-        impulse_to_torque = skew_symmetric;
+        impulse_to_torque = Matrix3(skew_symmetric);
 
         Matrix3 delta_velocity_world_2 = impulse_to_torque;
         delta_velocity_world_2 *= inverse_inertia_tensor[1];
@@ -323,8 +328,8 @@ Vector3 Contact::CalculateFrictionImpulse(const std::array<Matrix3, 2> &inverse_
     delta_velocity *= m_contact_to_world;
 
     delta_velocity(0, 0) += inverse_mass;
-    delta_velocity(1, 0) += inverse_mass;
-    delta_velocity(2, 0) += inverse_mass;
+    delta_velocity(1, 1) += inverse_mass;
+    delta_velocity(2, 2) += inverse_mass;
 
     Matrix3 impulse_matrix = delta_velocity;
     impulse_matrix.Invert();
@@ -339,7 +344,8 @@ Vector3 Contact::CalculateFrictionImpulse(const std::array<Matrix3, 2> &inverse_
         impulse_contact.y /= planar_impulse;
         impulse_contact.z /= planar_impulse;
 
-        impulse_contact.x = delta_velocity(0, 0) +
+        impulse_contact.x = 
+            delta_velocity(0, 0) +
             delta_velocity(0, 1) * m_friction * impulse_contact.y +
             delta_velocity(0, 2) * m_friction * impulse_contact.z;
         

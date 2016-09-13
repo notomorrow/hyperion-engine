@@ -6,17 +6,21 @@
 
 namespace apex {
 class CollisionShape {
-    friend class SimpleCollisionDetector;
-    friend class ComplexCollisionDetector;
 public:
-    RigidBody *m_body;
-    Matrix4 m_offset;
+    CollisionShape(RigidBody *body);
+    CollisionShape(RigidBody *body, const Matrix4 &transform);
+    CollisionShape(RigidBody *body, const Matrix4 &transform, const Matrix4 &offset);
+
+    inline RigidBody *GetBody() const { return m_body; }
+    inline const Matrix4 &GetTransform() const { return m_transform; }
+
+    Vector3 GetAxis(unsigned int index) const;
 
     void CalculateInternals();
-    Vector3 GetAxis(unsigned int index) const;
-    const Matrix4 &GetTransform() const;
 
 protected:
+    RigidBody *m_body;
+    Matrix4 m_offset;
     Matrix4 m_transform;
 };
 } // namespace apex

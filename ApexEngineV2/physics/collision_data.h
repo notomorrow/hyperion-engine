@@ -7,7 +7,7 @@
 
 namespace apex {
 struct CollisionData {
-    std::array<Contact*, MAX_CONTACTS> m_contacts;
+    std::array<Contact, MAX_CONTACTS> m_contacts;
 
     unsigned int m_contact_index;
     unsigned int m_contact_count;
@@ -18,6 +18,7 @@ struct CollisionData {
     double m_tolerance;
 
     CollisionData();
+    ~CollisionData();
 
     void Reset();
     void AddContacts(unsigned int count);

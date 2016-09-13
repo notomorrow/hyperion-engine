@@ -5,7 +5,7 @@ namespace apex {
 class MathUtil {
 public:
     const static double PI;
-    const static double epsilon;
+    const static double EPSILON;
 
     template <typename T>
     static inline T RadToDeg(const T rad)
@@ -22,9 +22,13 @@ public:
     template <typename T>
     static inline T Clamp(const T val, const T min, const T max)
     {
-        if (val > max) return max;
-        else if (val < min) return min;
-        else return val;
+        if (val > max) { 
+            return max; 
+        } else if (val < min) { 
+            return min; 
+        } else { 
+            return val; 
+        }
     }
 
     template <typename T>
@@ -36,16 +40,23 @@ public:
     template <typename T>
     static inline T Min(const T a, const T b)
     {
-        if (a < b) return a;
-        else return b;
+        if (a < b) { 
+            return a; 
+        } else { 
+            return b; 
+        }
     }
 
     template <typename T>
     static inline T Max(const T a, const T b)
     {
-        if (a > b) return a;
-        else return b;
+        if (a > b) { 
+            return a; 
+        } else {
+            return b;
+        }
     }
 };
-}
+} // namespace apex
+
 #endif

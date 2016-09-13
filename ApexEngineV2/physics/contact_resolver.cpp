@@ -13,7 +13,7 @@ void ContactResolver::SetNumIterations(unsigned int num_iterations)
 
 void ContactResolver::ResolveContacts(std::array<Contact, MAX_CONTACTS> &contacts, unsigned int num_contacts, double dt)
 {
-    if (contacts.empty() || m_num_iterations <= 0) {
+    if (num_contacts == 0 || m_num_iterations == 0) {
         return;
     }
 
@@ -59,13 +59,15 @@ void ContactResolver::AdjustVelocities(std::array<Contact, MAX_CONTACTS> &contac
                 if (contacts[i].m_bodies[b] != nullptr) {
                     for (unsigned int d = 0; d < 2; d++) {
                         if (contacts[i].m_bodies[b] == contacts[index].m_bodies[d]) {
-                            delta_velocity = velocity_change[d] +
-                                (rotation_change[d] * contacts[i].m_relative_contact_position[b]);
+                            delta_velocity = velocity_change[d];
+                            Vector3 cross_product = rotation_change[d];
+                            cross_product.Cross(contacts[i].m_relative_contact_position[b]);
+                            delta_velocity += cross_product;
 
                             Matrix3 contact_transpose = contacts[i].m_contact_to_world;
                             contact_transpose.Transpose();
 
-                            contacts[i].m_contact_velocity += delta_velocity * contact_transpose * (b ? -1 : 1);
+                            contacts[i].m_contact_velocity += (delta_velocity * contact_transpose) * (b ? -1 : 1);
                             contacts[i].CalculateDesiredDeltaVelocity(dt);
                         }
                     }
@@ -107,8 +109,10 @@ void ContactResolver::AdjustPositions(std::array<Contact, MAX_CONTACTS> &contact
                 if (contacts[i].m_bodies[b] != nullptr) {
                     for (unsigned int d = 0; d < 2; d++) {
                         if (contacts[i].m_bodies[b] == contacts[index].m_bodies[d]) {
-                            delta_position = linear_change[d] +
-                                (angular_change[d] * contacts[i].m_relative_contact_position[b]);
+                            delta_position = linear_change[d];
+                            Vector3 cross_product = angular_change[d];
+                            cross_product.Cross(contacts[i].m_relative_contact_position[b]);
+                            delta_position += cross_product;
 
                             contacts[i].m_contact_penetration += delta_position.Dot(contacts[i].m_contact_normal) *
                                 (b ? 1 : -1);

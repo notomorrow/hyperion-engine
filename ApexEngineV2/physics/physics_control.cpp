@@ -53,4 +53,4 @@ const PhysicsObject *PhysicsControl::GetPhysicsObject() const
 {
     return object;
 }
-}
+} // namespace apex

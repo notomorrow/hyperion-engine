@@ -21,6 +21,6 @@ protected:
     InputManager *inputmgr;
     RenderWindow window;
 };
-}
+} // namespace apex
 
 #endif

@@ -4,6 +4,9 @@
 #include "math/math_util.h"
 
 #include <iostream>
+#include <chrono>
+
+#define USE_CHRONO 1
 
 namespace apex {
 
@@ -55,11 +58,22 @@ bool GlfwEngine::InitializeGame(Game *game)
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     game->Initialize();
+
     inputmgr = game->GetInputManager();
 
-    double last_time = 0;
+#if USE_CHRONO
+    auto last = std::chrono::high_resolution_clock::now();
+#else
+    double last = 0.0;
+#endif
     while (!glfwWindowShouldClose(window)) {
-        double current_time = glfwGetTime();
+#if USE_CHRONO
+        auto current = std::chrono::high_resolution_clock::now();
+        auto delta = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(current - last).count();
+#else
+        double current = glfwGetTime();
+        double delta = current_time - last;
+#endif
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -71,13 +85,13 @@ bool GlfwEngine::InitializeGame(Game *game)
             MathUtil::Clamp<double>(mouse_x, 0, game->GetWindow().width),
             MathUtil::Clamp<double>(mouse_y, 0, game->GetWindow().height));
 
-        game->Logic(current_time - last_time);
+        game->Logic(delta);
         game->Render();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
 
-        last_time = current_time;
+        last = current;
     }
 
     glfwDestroyWindow(window);

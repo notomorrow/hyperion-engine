@@ -14,7 +14,7 @@ static bool OverlapOnAxis(const CollisionBox &a, const CollisionBox &b,
 
 bool SimpleCollisionDetector::SphereAndHalfSpace(const CollisionSphere &sphere, const CollisionPlane &plane)
 {
-    double distance = plane.m_direction.Dot(sphere.GetAxis(3)) - sphere.m_radius;
+    double distance = plane.m_direction.Dot(sphere.GetAxis(3)) - sphere.GetRadius();
     return bool(distance <= plane.m_offset);
 }
 
@@ -22,7 +22,7 @@ bool SimpleCollisionDetector::SphereAndSphere(const CollisionSphere &a, const Co
 {
     Vector3 mid = a.GetAxis(3) - b.GetAxis(3);
     return bool(mid.LengthSquared() <
-        (a.m_radius + b.m_radius) * (a.m_radius + b.m_radius));
+        (a.GetRadius() + b.GetRadius()) * (a.GetRadius() + b.GetRadius()));
 }
 
 bool SimpleCollisionDetector::BoxAndHalfSpace(const CollisionBox &box, const CollisionPlane &plane)

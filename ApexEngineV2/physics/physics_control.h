@@ -20,6 +20,6 @@ public:
 protected:
     PhysicsObject *object;
 };
-}
+} // namespace apex
 
 #endif

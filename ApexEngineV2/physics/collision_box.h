@@ -7,9 +7,16 @@
 namespace apex {
 class CollisionBox : public CollisionShape {
 public:
-    Vector3 m_half_size;
+    CollisionBox(RigidBody *body, const Vector3 &dimensions);
+    CollisionBox(const CollisionBox &other);
+
+    inline const Vector3 &GetDimensions() const { return m_dimensions; }
+    inline void SetDimensions(const Vector3 &dimensions) { m_dimensions = dimensions; }
 
     double TransformToAxis(const Vector3 &axis) const;
+
+protected:
+    Vector3 m_dimensions;
 };
 } // namespace apex
 

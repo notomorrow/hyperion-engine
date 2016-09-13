@@ -7,7 +7,7 @@
 #include <array>
 
 #define VELOCITY_EPSILON 0.01
-#define POSITION_EPSILON 0.01
+#define POSITION_EPSILON 0.003
 
 namespace apex {
 class ContactResolver {
@@ -26,9 +26,6 @@ protected:
     void PrepareContacts(std::array<Contact, MAX_CONTACTS> &contacts, unsigned int num_contacts, double dt);
     void AdjustVelocities(std::array<Contact, MAX_CONTACTS> &contacts, unsigned int num_contacts, double dt);
     void AdjustPositions(std::array<Contact, MAX_CONTACTS> &contacts, unsigned int num_contacts, double dt);
-
-private:
-    bool m_valid_settings;
 };
 } // namespace apex
 

@@ -10,7 +10,7 @@ public:
     float values[16];
 
     Matrix4();
-    Matrix4(const float * const v);
+    Matrix4(float *v);
     Matrix4(const Matrix4 &other);
 
     float Determinant() const;
@@ -27,6 +27,9 @@ public:
     bool operator==(const Matrix4 &other) const;
     float operator()(int i, int j) const;
     float &operator()(int i, int j);
+
+    float At(int i, int j) const;
+    float &At(int i, int j);
 
     static Matrix4 Zeroes();
     static Matrix4 Ones();

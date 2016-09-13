@@ -54,20 +54,50 @@ public:
     PssmShadowMapping *shadows;
 
     std::shared_ptr<Entity> top;
-    std::shared_ptr<Entity> cube, torus, torus3;
+    std::shared_ptr<Entity> test_object, test_object_1, torus3;
     std::shared_ptr<Shader> shader;
     std::shared_ptr<Texture> pbr_tex;
     std::shared_ptr<Mesh> debug_quad;
+
     std::shared_ptr<RigidBody> test_body, test_body2, test_body3;
+    apex::CollisionSphere *sphere;
+    apex::CollisionBox *box2, *box3;
 
     double timer;
     double shadow_timer;
+    double physics_update_timer;
     bool scene_fbo_rendered;
 
     MyGame(const RenderWindow &window)
         : Game(window)
     {
+        /*float fv[] = {
+            0, 4, 3, 2,
+            9, 8, 7, 1,
+            6, 5, 4, 3,
+            0, 0, 0, 1
+        };
+        Matrix4 m(fv);
+        std::cout << "m = " << m << "\n\n";
+        std::cout << "det(m) = " << m.Determinant() << "\n\n";
+        m.Invert();
+        std::cout << "inv(m) = " << m << "\n\n";
+
+
+        float m3fv[] = {
+            4, 8, 6, 7, 8, 9, 10, 14, 4
+        };
+        Matrix3 m3(m3fv);
+        std::cout << "m3 = " << m3 << "\n\n";
+        m3.Invert();
+        std::cout << "inv(m3) = " << m3 << "\n\n";*/
+        Vector3 rot(1, 0, 0.3);
+        Quaternion quat;
+        quat += rot * 0.3;
+        std::cout << "quat = " << quat << "\n";
+
         shadow_timer = 0.0f;
+        physics_update_timer = 0.0;
         timer = 0.15;
         scene_fbo_rendered = false;
 
@@ -88,6 +118,10 @@ public:
         delete fbo;
         delete cam;
         delete renderer;
+
+        delete sphere;
+        delete box2;
+        delete box3;
     }
 
     void Initialize()
@@ -104,47 +138,32 @@ public:
 
         top = std::make_shared<Entity>("top");
 
-        torus = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/torus.obj");
+        test_object_1 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/box.obj");
         //torus->Scale(1.5f);
         //torus->Move({ 0, 3, 5 });
-        torus->GetChild(0)->GetRenderable()->SetShader(shader);
-        torus->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
-
-        auto torus_shape = new AABBPhysicsObject("red torus", 1.0, 1.0,
-            AABBFactory::CreateEntityBoundingBox(torus));
-        //PhysicsManager::GetInstance()->AddPhysicsObject(torus_shape);
-        //torus->AddControl(std::make_shared<PhysicsControl>(torus_shape));
+        test_object_1->GetChild(0)->GetRenderable()->SetShader(shader);
+        test_object_1->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
 
         auto audio_ctrl = std::make_shared<AudioControl>(
             AssetManager::GetInstance()->LoadFromFile<AudioSource>("res/sounds/cartoon001.wav"));
-        torus->AddControl(audio_ctrl);
+        test_object_1->AddControl(audio_ctrl);
         audio_ctrl->GetSource()->SetLoop(true);
         audio_ctrl->GetSource()->Play();
-        top->AddChild(torus);
+        top->AddChild(test_object_1);
 
 
 
 
-        auto torus2 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/torus2.obj");
+        auto test_object_2 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/box.obj");
         //torus2->Scale(1.5f);
-        torus2->Move({ 0, 4, 5 });
-        torus2->GetChild(0)->GetRenderable()->SetShader(shader);
-        torus2->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 0.0f, 1.0f, 0.0f, 1.0f };
-
-        auto torus2_shape = new AABBPhysicsObject("green torus", 0.6, 1.0,
-            AABBFactory::CreateEntityBoundingBox(torus2));
-        //PhysicsManager::GetInstance()->AddPhysicsObject(torus2_shape);
-        //torus2->AddControl(std::make_shared<PhysicsControl>(torus2_shape));
-        top->AddChild(torus2);
+        test_object_2->Move({ 0, 4, 5 });
+        test_object_2->GetChild(0)->GetRenderable()->SetShader(shader);
+        test_object_2->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 0.0f, 1.0f, 0.0f, 1.0f };
+        top->AddChild(test_object_2);
 
         torus3 = std::make_shared<Entity>();
-        torus3->SetRenderable(torus2->GetChild(0)->GetRenderable());
+        torus3->SetRenderable(test_object_2->GetChild(0)->GetRenderable());
         torus3->Move({ 0, 25, 15 });
-        auto torus3_shape = new AABBPhysicsObject("small torus", 8.0, 1.0,
-            AABBFactory::CreateEntityBoundingBox(torus3));
-        torus3_shape->SetVelocity({ 0, -1, -6 });
-        //PhysicsManager::GetInstance()->AddPhysicsObject(torus3_shape);
-        //torus3->AddControl(std::make_shared<PhysicsControl>(torus3_shape));
         top->AddChild(torus3);
 
 
@@ -168,9 +187,9 @@ public:
 
         //pbr_tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg");
 
-        cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/round_cube.obj");
-        cube->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 0.15f, 0.3f, 1.0f, 1.0f };
-        cube->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
+        test_object = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere.obj");
+        test_object->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 0.15f, 0.3f, 1.0f, 1.0f };
+        test_object->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
            // {"DIFFUSE_MAP", true},
             {"SHADOWS", Environment::GetInstance()->ShadowsEnabled()},
             {"NUM_SPLITS", Environment::GetInstance()->NumCascades()}
@@ -178,51 +197,53 @@ public:
         //cube->GetChild(0)->GetRenderable()->GetMaterial().diffuse_texture = pbr_tex;
        // cube->Scale({ 5, 1, 5 });
        // cube->Move({ 0, 0, 6 });
-        cube->SetName("cube");
+        test_object->SetName("sphere");
+        top->AddChild(test_object);
 
-        auto cube_shape = new AABBPhysicsObject("cube", 0.0, 1.0,
-            AABBFactory::CreateEntityBoundingBox(cube));
-        //PhysicsManager::GetInstance()->AddPhysicsObject(cube_shape);
-        //cube->AddControl(std::make_shared<PhysicsControl>(cube_shape));
-
-        top->AddChild(cube);
 
         // add a test RigidBody.
-        test_body = std::make_shared<RigidBody>(0.5);
-        test_body->position = Vector3(0, 0, 0);
-        test_body->SetLinearDamping(0.02);
-        test_body->SetAngularDamping(0.02);
-        test_body->can_sleep = false;
+        test_body = std::make_shared<RigidBody>(1.0);
+        test_body->m_position = Vector3(2, 40, 0);
+        test_body->m_acceleration = Vector3(-0.3, 0, 0);
+        test_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, test_body->GetMass()));
+        test_body->SetLinearDamping(0.6);
+        test_body->SetAngularDamping(0.4);
+        test_body->m_can_sleep = false;
         test_body->SetAwake(true);
         //test_body->acceleration = GravityForce::GRAVITY;
         test_body->ClearAccumulators();
         test_body->CalculateDerivedData();
         PhysicsManager::GetInstance()->RegisterBody(test_body);
+        sphere = new CollisionSphere(test_body.get(), 1.0/2);
+        sphere->CalculateInternals();
 
         // add another
-        test_body2 = std::make_shared<RigidBody>(2.0);
-        test_body2->position = Vector3(2, 20, 0);
-        test_body2->acceleration = GravityForce::GRAVITY;
-       // test_body2->SetInverseInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1), 2.0));
-        test_body2->SetLinearDamping(0.2);
-        test_body2->SetAngularDamping(0.2);
-        test_body2->can_sleep = false;
+        test_body2 = std::make_shared<RigidBody>(1.0);
+        test_body2->m_position = Vector3(0, 25, 0);
+        test_body2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0)/2, test_body2->GetMass()));
+        test_body2->SetLinearDamping(0.6);
+        test_body2->SetAngularDamping(0.4);
+        test_body2->m_can_sleep = false;
         test_body2->SetAwake(true);
         test_body2->ClearAccumulators();
         test_body2->CalculateDerivedData();
         PhysicsManager::GetInstance()->RegisterBody(test_body2);
+        box2 = new CollisionBox(test_body2.get(), Vector3(1.0));
+        box2->CalculateInternals();
 
         // add another
-        test_body3 = std::make_shared<RigidBody>(8.0);
-        test_body3->position = Vector3(1.2,-10, 0);
-        test_body3->acceleration = Vector3(0, 10, 0);
-        test_body3->SetLinearDamping(0.3);
-        test_body3->SetAngularDamping(0.3);
-        test_body3->can_sleep = false;
+        test_body3 = std::make_shared<RigidBody>(1.0);
+        test_body3->m_position = Vector3(0, 35, 0);
+        test_body3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) /2, test_body3->GetMass()));
+        test_body3->SetLinearDamping(0.6);
+        test_body3->SetAngularDamping(0.4);
+        test_body3->m_can_sleep = false;
         test_body3->SetAwake(true);
         test_body3->ClearAccumulators();
         test_body3->CalculateDerivedData();
         PhysicsManager::GetInstance()->RegisterBody(test_body3);
+        box3 = new CollisionBox(test_body3.get(), Vector3(1.0));
+        box3->CalculateInternals();
 
 
         /*auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
@@ -281,78 +302,72 @@ public:
         cam->Update(dt);
 
 
-        const double theta = 0.25f;
+        const double theta = 0.03;
+        if (physics_update_timer >= theta) {
 
-        // test collision
-        apex::CollisionBox box;
-        box.m_half_size = 1.0;
-        box.m_body = test_body.get();
-        box.m_body->Integrate(dt * theta);
-        box.CalculateInternals();
+            CollisionPlane plane;
+            plane.m_direction = Vector3(0, 1, 0);
+            plane.m_offset = 0;
 
-        apex::CollisionBox box2;
-        box2.m_half_size = 1.0;
-        box2.m_body = test_body2.get();
-        box2.m_body->Integrate(dt * theta);
-        box2.CalculateInternals();
+            // test contacts and fill data
+            CollisionData data;
+            data.m_friction = 0.8;
+            data.m_restitution = 0.2;
+            data.m_tolerance = 0.1;
+            data.Reset();
 
-        apex::CollisionBox box3;
-        box3.m_half_size = 1.0;
-        box3.m_body = test_body3.get();
-        box3.m_body->Integrate(dt * theta);
-        box3.CalculateInternals();
+            apex::ComplexCollisionDetector::BoxAndSphere(*box2, *sphere, data);
+            apex::ComplexCollisionDetector::BoxAndSphere(*box3, *sphere, data);
+            apex::ComplexCollisionDetector::BoxAndBox(*box2, *box3, data);
+            apex::ComplexCollisionDetector::SphereAndHalfSpace(*sphere, plane, data);
+            apex::ComplexCollisionDetector::BoxAndHalfSpace(*box2, plane, data);
+            apex::ComplexCollisionDetector::BoxAndHalfSpace(*box3, plane, data);
 
-        Contact contact;
-        contact.m_bodies = { box.m_body, box2.m_body };
+            //PhysicsManager::GetInstance()->Begin();
+            //PhysicsManager::GetInstance()->RunPhysics(dt * theta);
 
-        Contact contact2;
-        contact2.m_bodies = { box.m_body, box3.m_body };
+            // resolve contacts
+            //std::array<Contact, MAX_CONTACTS> contact_array {  };//{ contact, contact2, contact3 };
+            PhysicsManager::GetInstance()->resolver->SetNumIterations(MAX_CONTACTS * 8);
+            PhysicsManager::GetInstance()->resolver->ResolveContacts(data.m_contacts, data.m_contact_count, theta);
 
-        Contact contact3;
-        contact3.m_bodies = { box2.m_body, box3.m_body };
-
-        // test contacts and fill data
-        CollisionData data; 
-        data.m_friction = 0.9;
-        data.m_restitution = 0.9;
-        data.m_tolerance = 0.9;
-        data.m_contacts = { &contact, &contact2, &contact3 };
-        data.m_contact_index = 0;
-        data.m_contact_count = 3;
-        data.m_contacts_left = 3;
-
-        apex::ComplexCollisionDetector::SphereAndSphere(box, box2, data);
-        apex::ComplexCollisionDetector::SphereAndSphere(box, box3, data);
-        apex::ComplexCollisionDetector::SphereAndSphere(box2, box3, data);
-        
-        //PhysicsManager::GetInstance()->Begin();
-        //PhysicsManager::GetInstance()->RunPhysics(dt * theta);
-
-        // resolve contacts
-        std::array<Contact, MAX_CONTACTS> contact_array = { contact, contact2, contact3 };
-        PhysicsManager::GetInstance()->resolver->SetNumIterations(3*4);
-        PhysicsManager::GetInstance()->resolver->ResolveContacts(contact_array, 3, dt * theta);
-
-        /*if (shadow_timer > 0.05) {
-            std::cout << "test_body->position = " << test_body->position << "\n";
-            std::cout << "test_body2->position = " << test_body2->position << "\n\n";
-            shadow_timer = 0.0;
-        }*/
-
-        cube->SetLocalTranslation(test_body->position);
-        cube->SetLocalRotation(test_body->orientation);
-        torus->SetLocalTranslation(test_body2->position);
-        torus->SetLocalRotation(test_body2->orientation);
-        torus3->SetLocalTranslation(test_body3->position);
-        torus3->SetLocalRotation(test_body3->orientation);
-       // std::cout << "test_body->rotation = " << test_body->rotation << "\n";
+            /*if (shadow_timer > 0.05) {
+                std::cout << "test_body->position = " << test_body->position << "\n";
+                std::cout << "test_body2->position = " << test_body2->position << "\n\n";
+                shadow_timer = 0.0;
+            }*/
 
 
-        //PhysicsManager::GetInstance()->CheckCollisions();
+            // update objects
+            sphere->GetBody()->ApplyForce(Vector3(0, -10, 0) * sphere->GetBody()->GetMass());
+            sphere->GetBody()->Integrate(theta);
+            sphere->CalculateInternals();
 
-        //top->GetChild(0)->Rotate(Quaternion(Vector3(1, 0, 0), dt));
-        //top->GetChild(0)->SetLocalTranslation(Vector3(0, 0, (std::sin(timer) + 1.0f) * 5));
-    
+
+            box2->GetBody()->ApplyForce(Vector3(0, -10, 0) * box2->GetBody()->GetMass());
+            box2->GetBody()->Integrate(theta);
+            box2->CalculateInternals();
+
+            box3->GetBody()->ApplyForce(Vector3(0, -10, 0) * box3->GetBody()->GetMass());
+            box3->GetBody()->Integrate(theta);
+            box3->CalculateInternals();
+
+            Quaternion q1 = test_body->m_orientation;
+            q1.Invert();
+            Quaternion q2 = test_body2->m_orientation;
+            q2.Invert();
+            Quaternion q3 = test_body3->m_orientation;
+            q3.Invert();
+            test_object->SetLocalTranslation(test_body->m_position);
+            test_object->SetLocalRotation(q1);
+            test_object_1->SetLocalTranslation(test_body2->m_position);
+            test_object_1->SetLocalRotation(q2);
+            torus3->SetLocalTranslation(test_body3->m_position);
+            torus3->SetLocalRotation(q3);
+
+            physics_update_timer = 0.0;
+        }
+        physics_update_timer += dt;
 
         top->Update(dt);
     }
