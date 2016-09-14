@@ -16,7 +16,7 @@ public:
 
     Vector3 GetAxis(unsigned int index) const;
 
-    void CalculateInternals();
+    void UpdateTransform();
 
 protected:
     RigidBody *m_body;

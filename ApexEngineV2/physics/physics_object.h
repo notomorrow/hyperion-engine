@@ -59,9 +59,6 @@ protected:
     Vector3 last_acceleration;
     Vector3 velocity;
     Vector3 gravity;
-
-private:
-    std::function<void(PhysicsShape *other)> collision_callback;
 };
 } // namespace apex
 

@@ -82,7 +82,6 @@ static void TransformInertiaTensor(Matrix3 &iit_world, const Quaternion &q,
 RigidBody::RigidBody(double mass)
     : m_is_awake(true), m_motion(0.0)
 {
-    assert(mass >= 1.0); // things seem to behave strangely if mass is < 1.0
     SetMass(mass);
 }
 
@@ -95,31 +94,9 @@ void RigidBody::SetAwake(bool awake)
         m_velocity = Vector3::Zero();
         m_rotation = Vector3::Zero();
     }
-
-    Vector3 testvec(1, 2, 4);
-    Quaternion testrot(Vector3(7, 7, 1), 0.3);
-    Matrix4 transform1;
-    CalculateTransformMatrix(transform1, testvec, testrot);
-    std::cout << "Transform1 = " << transform1 << "\n\n";
-
-    Matrix4 transform2, T, R, S;
-
-    MatrixUtil::ToTranslation(T, testvec);
-    testrot.Invert();
-    MatrixUtil::ToRotation(R, testrot);
-    MatrixUtil::ToScaling(S, Vector3(1, 1, 1));
-
-    transform2 = R * T;
-    std::cout << "Transform2 = " << transform2 << "\n\n";
 }
 
-void RigidBody::ClearAccumulators()
-{
-    m_force_accum = Vector3::Zero();
-    m_torque_accum = Vector3::Zero();
-}
-
-void RigidBody::CalculateDerivedData()
+void RigidBody::UpdateTransform()
 {
     m_orientation.Normalize();
 
@@ -139,16 +116,17 @@ void RigidBody::Integrate(double dt)
     Vector3 angular_acceleration = m_torque_accum * m_inverse_inertia_tensor_world;
 
     m_velocity += m_last_acceleration * dt;
-    m_rotation += angular_acceleration * dt;
-
     m_velocity *= pow(m_linear_damping, dt);
-    m_rotation *= pow(m_angular_damping, dt);
-
     m_position += m_velocity * dt;
+
+    m_rotation += angular_acceleration * dt;
+    m_rotation *= pow(m_angular_damping, dt);
     m_orientation += m_rotation * dt;
 
-    CalculateDerivedData();
-    ClearAccumulators();
+    UpdateTransform();
+
+    m_force_accum = Vector3::Zero();
+    m_torque_accum = Vector3::Zero();
 
     if (m_can_sleep) {
         // check if we can sleep

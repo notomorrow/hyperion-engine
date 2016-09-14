@@ -25,7 +25,7 @@ Vector3 CollisionShape::GetAxis(unsigned int index) const
         m_transform.values[index + 8 /*2*/]);
 }
 
-void CollisionShape::CalculateInternals()
+void CollisionShape::UpdateTransform()
 {
     m_transform = m_body->m_transform * m_offset;
 }

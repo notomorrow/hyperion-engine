@@ -17,6 +17,11 @@ PhysicsManager *PhysicsManager::GetInstance()
 PhysicsManager::PhysicsManager()
 {
     resolver = new ContactResolver(0);
+
+    collision_data.m_friction = 0.8;
+    collision_data.m_restitution = 0.2;
+    collision_data.m_tolerance = 0.1;
+    collision_data.Reset();
 }
 
 PhysicsManager::~PhysicsManager()
@@ -29,44 +34,21 @@ void PhysicsManager::RegisterBody(std::shared_ptr<RigidBody> body)
     m_bodies.push_back(body);
 }
 
-void PhysicsManager::Begin()
+void PhysicsManager::ResetCollisions()
 {
-    for (auto &&body : m_bodies) {
-        body->ClearAccumulators();
-        body->CalculateDerivedData();
-    }
-}
-
-unsigned int PhysicsManager::GenerateContacts()
-{
-    unsigned int index = contact_index;
-    unsigned int limit = contacts.size();
-
-    for (auto &&gen : m_contact_generators) {
-        unsigned int used = gen->AddContact(contacts[index], limit);
-        limit -= used;
-        index += used;
-
-        // We've run out of contacts to fill
-        if (limit <= 0) {
-            break;
-        }
-    }
-    
-    return contacts.size() - limit;
+    collision_data.Reset();
 }
 
 void PhysicsManager::RunPhysics(double dt)
 {
+    resolver->SetNumIterations(MAX_CONTACTS * 8);
+    resolver->ResolveContacts(collision_data.m_contacts, collision_data.m_contact_count, dt);
+
     for (auto &&body : m_bodies) {
+        // apply gravity to body
+        body->ApplyForce(Vector3(0, -10, 0) * body->GetMass());
         body->Integrate(dt);
     }
-
-    /*unsigned int used_contacts = GenerateContacts();
-
-    // calculate number of iterations
-    resolver->SetNumIterations(used_contacts * 4);
-    resolver->ResolveContacts(contacts, used_contacts, dt);*/
 }
 
 /*void PhysicsManager::AddPhysicsObject(PhysicsObject *object)

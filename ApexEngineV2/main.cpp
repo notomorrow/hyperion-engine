@@ -43,6 +43,7 @@
 #include "physics/gravity_force.h"
 #include "physics/physics_control.h"
 #include "physics/shapes/aabb_physics_object.h"
+#include "physics/rigid_body_control.h"
 
 using namespace apex;
 
@@ -91,10 +92,6 @@ public:
         std::cout << "m3 = " << m3 << "\n\n";
         m3.Invert();
         std::cout << "inv(m3) = " << m3 << "\n\n";*/
-        Vector3 rot(1, 0, 0.3);
-        Quaternion quat;
-        quat += rot * 0.3;
-        std::cout << "quat = " << quat << "\n";
 
         shadow_timer = 0.0f;
         physics_update_timer = 0.0;
@@ -210,12 +207,12 @@ public:
         test_body->SetAngularDamping(0.4);
         test_body->m_can_sleep = false;
         test_body->SetAwake(true);
-        //test_body->acceleration = GravityForce::GRAVITY;
-        test_body->ClearAccumulators();
-        test_body->CalculateDerivedData();
+        test_body->UpdateTransform();
         PhysicsManager::GetInstance()->RegisterBody(test_body);
         sphere = new CollisionSphere(test_body.get(), 1.0/2);
-        sphere->CalculateInternals();
+        sphere->UpdateTransform();
+
+        test_object->AddControl(std::make_shared<RigidBodyControl>(test_body));
 
         // add another
         test_body2 = std::make_shared<RigidBody>(1.0);
@@ -225,11 +222,11 @@ public:
         test_body2->SetAngularDamping(0.4);
         test_body2->m_can_sleep = false;
         test_body2->SetAwake(true);
-        test_body2->ClearAccumulators();
-        test_body2->CalculateDerivedData();
+        test_body2->UpdateTransform();
         PhysicsManager::GetInstance()->RegisterBody(test_body2);
         box2 = new CollisionBox(test_body2.get(), Vector3(1.0));
-        box2->CalculateInternals();
+        box2->UpdateTransform();
+        test_object_1->AddControl(std::make_shared<RigidBodyControl>(test_body2));
 
         // add another
         test_body3 = std::make_shared<RigidBody>(1.0);
@@ -239,11 +236,11 @@ public:
         test_body3->SetAngularDamping(0.4);
         test_body3->m_can_sleep = false;
         test_body3->SetAwake(true);
-        test_body3->ClearAccumulators();
-        test_body3->CalculateDerivedData();
+        test_body3->UpdateTransform();
         PhysicsManager::GetInstance()->RegisterBody(test_body3);
         box3 = new CollisionBox(test_body3.get(), Vector3(1.0));
-        box3->CalculateInternals();
+        box3->UpdateTransform();
+        torus3->AddControl(std::make_shared<RigidBodyControl>(test_body3));
 
 
         /*auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
@@ -302,68 +299,28 @@ public:
         cam->Update(dt);
 
 
-        const double theta = 0.03;
+        const double theta = 0.02;
         if (physics_update_timer >= theta) {
 
             CollisionPlane plane;
             plane.m_direction = Vector3(0, 1, 0);
             plane.m_offset = 0;
 
-            // test contacts and fill data
-            CollisionData data;
-            data.m_friction = 0.8;
-            data.m_restitution = 0.2;
-            data.m_tolerance = 0.1;
-            data.Reset();
+            PhysicsManager::GetInstance()->ResetCollisions();
+            CollisionData &data = PhysicsManager::GetInstance()->collision_data;
+            ComplexCollisionDetector::BoxAndSphere(*box2, *sphere, data);
+            ComplexCollisionDetector::BoxAndSphere(*box3, *sphere, data);
+            ComplexCollisionDetector::BoxAndBox(*box2, *box3, data);
+            ComplexCollisionDetector::SphereAndHalfSpace(*sphere, plane, data);
+            ComplexCollisionDetector::BoxAndHalfSpace(*box2, plane, data);
+            ComplexCollisionDetector::BoxAndHalfSpace(*box3, plane, data);
 
-            apex::ComplexCollisionDetector::BoxAndSphere(*box2, *sphere, data);
-            apex::ComplexCollisionDetector::BoxAndSphere(*box3, *sphere, data);
-            apex::ComplexCollisionDetector::BoxAndBox(*box2, *box3, data);
-            apex::ComplexCollisionDetector::SphereAndHalfSpace(*sphere, plane, data);
-            apex::ComplexCollisionDetector::BoxAndHalfSpace(*box2, plane, data);
-            apex::ComplexCollisionDetector::BoxAndHalfSpace(*box3, plane, data);
-
-            //PhysicsManager::GetInstance()->Begin();
-            //PhysicsManager::GetInstance()->RunPhysics(dt * theta);
-
-            // resolve contacts
-            //std::array<Contact, MAX_CONTACTS> contact_array {  };//{ contact, contact2, contact3 };
-            PhysicsManager::GetInstance()->resolver->SetNumIterations(MAX_CONTACTS * 8);
-            PhysicsManager::GetInstance()->resolver->ResolveContacts(data.m_contacts, data.m_contact_count, theta);
-
-            /*if (shadow_timer > 0.05) {
-                std::cout << "test_body->position = " << test_body->position << "\n";
-                std::cout << "test_body2->position = " << test_body2->position << "\n\n";
-                shadow_timer = 0.0;
-            }*/
-
+            PhysicsManager::GetInstance()->RunPhysics(theta);
 
             // update objects
-            sphere->GetBody()->ApplyForce(Vector3(0, -10, 0) * sphere->GetBody()->GetMass());
-            sphere->GetBody()->Integrate(theta);
-            sphere->CalculateInternals();
-
-
-            box2->GetBody()->ApplyForce(Vector3(0, -10, 0) * box2->GetBody()->GetMass());
-            box2->GetBody()->Integrate(theta);
-            box2->CalculateInternals();
-
-            box3->GetBody()->ApplyForce(Vector3(0, -10, 0) * box3->GetBody()->GetMass());
-            box3->GetBody()->Integrate(theta);
-            box3->CalculateInternals();
-
-            Quaternion q1 = test_body->m_orientation;
-            q1.Invert();
-            Quaternion q2 = test_body2->m_orientation;
-            q2.Invert();
-            Quaternion q3 = test_body3->m_orientation;
-            q3.Invert();
-            test_object->SetLocalTranslation(test_body->m_position);
-            test_object->SetLocalRotation(q1);
-            test_object_1->SetLocalTranslation(test_body2->m_position);
-            test_object_1->SetLocalRotation(q2);
-            torus3->SetLocalTranslation(test_body3->m_position);
-            torus3->SetLocalRotation(q3);
+            sphere->UpdateTransform();
+            box2->UpdateTransform();
+            box3->UpdateTransform();
 
             physics_update_timer = 0.0;
         }

@@ -45,9 +45,7 @@ public:
     inline bool IsAwake() const { return m_is_awake; }
     void SetAwake(bool awake);
 
-    void ClearAccumulators();
-
-    void CalculateDerivedData();
+    void UpdateTransform();
     void Integrate(double dt);
 
 public://protected:

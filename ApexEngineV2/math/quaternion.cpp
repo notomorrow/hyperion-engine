@@ -214,6 +214,11 @@ Vector3 Quaternion::operator*(const Vector3 &vec) const
     return result;
 }
 
+float Quaternion::Length() const
+{
+    return sqrt(LengthSquared());
+}
+
 float Quaternion::LengthSquared() const
 {
     return w * w + x * x + y * y + z * z;
@@ -307,4 +312,10 @@ Quaternion Quaternion::Identity()
 {
     return Quaternion(0.0, 0.0, 0.0, 1.0);
 }
+
+std::ostream &operator<<(std::ostream &out, const Quaternion &rot) // output
+{
+    out << "[" << rot.x << ", " << rot.y << ", " << rot.z << ", " << rot.w << "]";
+    return out;
 }
+} // namespace apex

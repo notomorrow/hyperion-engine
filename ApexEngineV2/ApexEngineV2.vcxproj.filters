@@ -303,6 +303,18 @@
     <ClInclude Include="physics\force.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="physics\physics2\rigid_body.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\physics2\physics_shape.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\physics2\rigid_body_material.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\rigid_body_control.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -552,6 +564,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="physics\collision_sphere.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\rigid_body_control.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

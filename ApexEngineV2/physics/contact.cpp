@@ -259,7 +259,7 @@ void Contact::ApplyPositionChange(std::array<Vector3, 2> &linear_change,
 
                 if (!m_bodies[i]->IsAwake()) {
                     // reflect changes on sleeping object
-                    m_bodies[i]->CalculateDerivedData();
+                    m_bodies[i]->UpdateTransform();
                 }
             }
         }

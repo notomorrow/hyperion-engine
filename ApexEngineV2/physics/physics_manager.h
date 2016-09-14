@@ -6,6 +6,7 @@
 #include "contact.h"
 #include "contact_generator.h"
 #include "contact_resolver.h"
+#include "collision_data.h"
 
 #include <vector>
 #include <memory>
@@ -19,9 +20,7 @@ public:
     ~PhysicsManager();
 
     void RegisterBody(std::shared_ptr<RigidBody> body);
-
-    void Begin();
-    unsigned int GenerateContacts();
+    void ResetCollisions();
     void RunPhysics(double dt);
 
     ContactResolver *resolver;
@@ -33,16 +32,13 @@ public:
 
     // test collisions between all colliders
     void CheckCollisions();*/
+    CollisionData collision_data;
 
 private:
     static PhysicsManager *instance;
 
     std::vector<std::shared_ptr<RigidBody>> m_bodies;
-    std::vector<std::shared_ptr<ContactGenerator>> m_contact_generators;
 
-    std::array<Contact, MAX_CONTACTS> contacts;
-    unsigned int contact_index = 0;
-    //std::vector<PhysicsObject*> objects;
 };
 }
 

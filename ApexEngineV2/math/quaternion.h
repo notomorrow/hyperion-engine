@@ -10,6 +10,7 @@ using std::abs;
 
 namespace apex {
 class Quaternion {
+    friend std::ostream &operator<<(std::ostream &out, const Quaternion &rot);
 public:
     float x, y, z, w;
 
@@ -52,13 +53,7 @@ public:
     float Yaw() const;
 
     static Quaternion Identity();
-
-    friend std::ostream &operator<<(std::ostream &out, const Quaternion &rot) // output
-    {
-        out << "[" << rot.x << ", " << rot.y << ", " << rot.z << ", " << rot.w << "]";
-        return out;
-    }
 };
-}
+} // namespace apex
 
 #endif

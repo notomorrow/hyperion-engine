@@ -6,7 +6,7 @@
 #include <vector>
 #include <array>
 
-#define VELOCITY_EPSILON 0.01
+#define VELOCITY_EPSILON 0.001
 #define POSITION_EPSILON 0.003
 
 namespace apex {

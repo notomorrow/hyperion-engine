@@ -1,30 +1,15 @@
-﻿  rigid_body.cpp
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\physics\rigid_body.cpp(100): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\physics\rigid_body.cpp(137): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\physics\rigid_body.cpp(141): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\physics\rigid_body.cpp(142): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\physics\rigid_body.cpp(144): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\physics\rigid_body.cpp(145): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\physics\rigid_body.cpp(147): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\physics\rigid_body.cpp(148): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-  collision_shape.cpp
-  matrix3.cpp
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\math\matrix3.cpp(50): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+﻿  rigid_body_control.cpp
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\rendering\shader.h(95): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
   main.cpp
 c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\rendering\shader.h(95): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(94): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(96): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(207): warning C4305: 'argument': truncation from 'double' to 'float'
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(277): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(281): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(286): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(290): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(300): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(342): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(347): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(351): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(204): warning C4305: 'argument': truncation from 'double' to 'float'
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(274): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(278): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(283): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(287): warning C4244: 'argument': conversion from 'const int' to 'float', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(297): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
 c:\program files (x86)\microsoft visual studio 14.0\vc\include\utility(145): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-  c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(136): note: see reference to function template instantiation 'std::pair<const _Kty,_Ty>::pair<const char(&)[11],int,void>(_Other1,_Other2 &&) noexcept(false)' being compiled
+  c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(133): note: see reference to function template instantiation 'std::pair<const _Kty,_Ty>::pair<const char(&)[11],int,void>(_Other1,_Other2 &&) noexcept(false)' being compiled
           with
           [
               _Kty=std::string,
@@ -32,7 +17,7 @@ c:\program files (x86)\microsoft visual studio 14.0\vc\include\utility(145): war
               _Other1=const char (&)[11],
               _Other2=int
           ]
-  c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(133): note: see reference to function template instantiation 'std::pair<const _Kty,_Ty>::pair<const char(&)[11],int,void>(_Other1,_Other2 &&) noexcept(false)' being compiled
+  c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(130): note: see reference to function template instantiation 'std::pair<const _Kty,_Ty>::pair<const char(&)[11],int,void>(_Other1,_Other2 &&) noexcept(false)' being compiled
           with
           [
               _Kty=std::string,
