@@ -16,6 +16,6 @@ public:
 private:
     bool is_created, is_uploaded;
 };
-}
+} // namespace apex
 
 #endif

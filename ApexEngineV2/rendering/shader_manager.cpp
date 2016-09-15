@@ -10,4 +10,4 @@ ShaderManager *ShaderManager::GetInstance()
     }
     return instance;
 }
-}
+} // namespace apex

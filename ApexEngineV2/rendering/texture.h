@@ -31,6 +31,6 @@ protected:
     int mag_filter, min_filter;
     int wrap_s, wrap_t;
 };
-}
+} // namespace apex
 
 #endif

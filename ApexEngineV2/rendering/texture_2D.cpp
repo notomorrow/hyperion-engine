@@ -57,4 +57,4 @@ void Texture2D::End()
 {
     CoreEngine::GetInstance()->BindTexture(CoreEngine::TEXTURE_2D, 0);
 }
-}
+} // namespace apex

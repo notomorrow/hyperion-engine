@@ -7,6 +7,8 @@
 #include "../math/vector2.h"
 #include "../math/vector3.h"
 
+#include <array>
+
 namespace apex {
 class Vertex {
 public:
@@ -64,123 +66,42 @@ public:
           tangent(other.tangent),
           bitangent(other.bitangent),
           nboneindices(other.nboneindices),
-          nboneweights(other.nboneweights)
+          nboneweights(other.nboneweights),
+          bone_weights(other.bone_weights),
+          bone_indices(other.bone_indices)
     {
-        for (int i = 0; i < 4; i++) {
-            bone_weights[i] = other.bone_weights[i];
-            bone_indices[i] = other.bone_indices[i];
-        }
     }
 
-    void SetPosition(const Vector3 &vec)
-    {
-        position = vec;
-    }
+    inline void SetPosition(const Vector3 &vec) { position = vec; }
+    inline const Vector3 &GetPosition() const { return position; }
+    inline void SetNormal(const Vector3 &vec) { normal = vec; }
+    inline const Vector3 &GetNormal() const { return normal; }
+    inline void SetTexCoord0(const Vector2 &vec) { texcoord0 = vec; }
+    inline const Vector2 &GetTexCoord0() const { return texcoord0; }
+    inline void SetTexCoord1(const Vector2 &vec) { texcoord1 = vec; }
+    inline const Vector2 &GetTexCoord1() const { return texcoord1; }
+    inline void SetTangent(const Vector3 &vec) { tangent = vec; }
+    inline const Vector3 &GetTangent() const { return tangent; }
+    inline void SetBitangent(const Vector3 &vec) { bitangent = vec; }
+    inline const Vector3 &GetBitangent() const { return bitangent; }
 
-    const Vector3 &GetPosition() const
-    {
-        return position;
-    }
-
-    void SetNormal(const Vector3 &vec)
-    {
-        normal = vec;
-    }
-
-    const Vector3 &GetNormal() const
-    {
-        return normal;
-    }
-
-    void SetTexCoord0(const Vector2 &vec)
-    {
-        texcoord0 = vec;
-    }
-
-    const Vector2 &GetTexCoord0() const
-    {
-        return texcoord0;
-    }
-
-    void SetTexCoord1(const Vector2 &vec)
-    {
-        texcoord1 = vec;
-    }
-
-    const Vector2 &GetTexCoord1() const
-    {
-        return texcoord1;
-    }
-
-    void SetTangent(const Vector3 &vec)
-    {
-        tangent = vec;
-    }
-
-    const Vector3 &GetTangent() const
-    {
-        return tangent;
-    }
-
-    void SetBitangent(const Vector3 &vec)
-    {
-        bitangent = vec;
-    }
-
-    const Vector3 &GetBitangent() const
-    {
-        return bitangent;
-    }
-
-    void SetBoneWeight(size_t i, float val)
-    {
-        bone_weights[i] = val;
-    }
-
-    float GetBoneWeight(size_t i) const
-    {
-        return bone_weights[i];
-    }
-
-    void SetBoneIndex(size_t i, size_t val)
-    {
-        bone_indices[i] = val;
-    }
-
-    size_t GetBoneIndex(size_t i) const
-    {
-        return bone_indices[i];
-    }
-
-    void AddBoneWeight(float weight)
-    {
-        if (nboneweights < MAX_BONE_WEIGHTS) {
-            bone_weights[nboneweights++] = weight;
-        }
-    }
-
-    void AddBoneIndex(size_t index)
-    {
-        if (nboneindices < MAX_BONE_INDICES) {
-            bone_indices[nboneindices++] = index;
-        }
-    }
+    inline void SetBoneWeight(int i, float val) { bone_weights[i] = val; }
+    inline float GetBoneWeight(int i) const { return bone_weights[i]; }
+    inline void SetBoneIndex(int i, int val) { bone_indices[i] = val; }
+    inline int GetBoneIndex(int i) const { return bone_indices[i]; }
+    inline void AddBoneWeight(float val) { if (nboneweights < MAX_BONE_WEIGHTS) bone_weights[nboneweights++] = val; }
+    inline void AddBoneIndex(int val) { if (nboneindices < MAX_BONE_INDICES) bone_indices[nboneindices++] = val; }
 
 private:
-    size_t nboneindices,
+    int nboneindices,
         nboneweights;
 
-    Vector3 position,
-        normal,
-        tangent,
-        bitangent;
+    Vector3 position, normal, tangent, bitangent;
+    Vector2 texcoord0, texcoord1;
 
-    Vector2 texcoord0,
-        texcoord1;
-
-    float bone_weights[4];
-    size_t bone_indices[4];
+    std::array<float, MAX_BONE_WEIGHTS> bone_weights;
+    std::array<int, MAX_BONE_INDICES> bone_indices;
 };
-}
+} // namespace apex
 
 #endif

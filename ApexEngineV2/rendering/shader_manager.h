@@ -33,7 +33,7 @@ public:
         auto new_ins = std::make_shared<T>(properties);
         instances.push_back(std::make_pair(new_ins, properties));
 
-        std::cout << "Create shader instance\n";
+        std::cout << "New shader instance, type: " << typeid(T).name() << "\n";
         return new_ins;
     }
 
@@ -45,6 +45,6 @@ private:
         >
     > instances;
 };
-}
+} // namespace apex
 
 #endif

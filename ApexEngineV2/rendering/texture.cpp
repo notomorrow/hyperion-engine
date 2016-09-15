@@ -53,4 +53,4 @@ void Texture::ActiveTexture(int i)
 {
     CoreEngine::GetInstance()->ActiveTexture(CoreEngine::TEXTURE0 + i);
 }
-}
+} // namespace apex

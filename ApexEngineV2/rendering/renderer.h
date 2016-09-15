@@ -21,6 +21,6 @@ public:
     std::vector<std::pair<Renderable*, Transform>> transparent_bucket;
     std::vector<std::pair<Renderable*, Transform>> sky_bucket;
 };
-}
+} // namespace apex
 
 #endif

@@ -137,6 +137,6 @@ private:
     std::vector<SubShader> subshaders;
     std::map<std::string, Uniform> uniforms;
 };
-}
+} // namespace apex
 
 #endif

@@ -30,4 +30,4 @@ void Renderable::SetMaterial(const Material &mat)
 {
     material = mat;
 }
-}
+} // namespace apex

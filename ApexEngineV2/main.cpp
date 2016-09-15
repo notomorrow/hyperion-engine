@@ -35,14 +35,21 @@
 #include "rendering/skydome/skydome.h"
 #include "terrain/noise_terrain/noise_terrain_control.h"
 
+
 /* Physics */
 #include "physics/physics_manager.h"
+#if EXPERIMENTAL_PHYSICS
+#include "physics/physics2/rigid_body2.h"
+#include "physics/physics2/box_physics_shape.h"
+#include "physics/physics2/sphere_physics_shape.h"
+#else
 #include "physics/collision_box.h"
 #include "physics/collision_sphere.h"
 #include "physics/complex_collision_detector.h"
 #include "physics/gravity_force.h"
 #include "physics/physics_control.h"
 #include "physics/shapes/aabb_physics_object.h"
+#endif
 #include "physics/rigid_body_control.h"
 
 using namespace apex;
@@ -60,9 +67,13 @@ public:
     std::shared_ptr<Texture> pbr_tex;
     std::shared_ptr<Mesh> debug_quad;
 
+#if EXPERIMENTAL_PHYSICS
+    std::shared_ptr<physics::Rigidbody> rb1, rb2, rb3;
+#else
     std::shared_ptr<RigidBody> test_body, test_body2, test_body3;
     apex::CollisionSphere *sphere;
     apex::CollisionBox *box2, *box3;
+#endif
 
     double timer;
     double shadow_timer;
@@ -72,27 +83,6 @@ public:
     MyGame(const RenderWindow &window)
         : Game(window)
     {
-        /*float fv[] = {
-            0, 4, 3, 2,
-            9, 8, 7, 1,
-            6, 5, 4, 3,
-            0, 0, 0, 1
-        };
-        Matrix4 m(fv);
-        std::cout << "m = " << m << "\n\n";
-        std::cout << "det(m) = " << m.Determinant() << "\n\n";
-        m.Invert();
-        std::cout << "inv(m) = " << m << "\n\n";
-
-
-        float m3fv[] = {
-            4, 8, 6, 7, 8, 9, 10, 14, 4
-        };
-        Matrix3 m3(m3fv);
-        std::cout << "m3 = " << m3 << "\n\n";
-        m3.Invert();
-        std::cout << "inv(m3) = " << m3 << "\n\n";*/
-
         shadow_timer = 0.0f;
         physics_update_timer = 0.0;
         timer = 0.15;
@@ -116,9 +106,11 @@ public:
         delete cam;
         delete renderer;
 
+#if !EXPERIMENTAL_PHYSICS
         delete sphere;
         delete box2;
         delete box3;
+#endif
     }
 
     void Initialize()
@@ -143,7 +135,7 @@ public:
 
         auto audio_ctrl = std::make_shared<AudioControl>(
             AssetManager::GetInstance()->LoadFromFile<AudioSource>("res/sounds/cartoon001.wav"));
-        test_object_1->AddControl(audio_ctrl);
+        //test_object_1->AddControl(audio_ctrl);
         audio_ctrl->GetSource()->SetLoop(true);
         audio_ctrl->GetSource()->Play();
         top->AddChild(test_object_1);
@@ -197,7 +189,7 @@ public:
         test_object->SetName("sphere");
         top->AddChild(test_object);
 
-
+#if !EXPERIMENTAL_PHYSICS
         // add a test RigidBody.
         test_body = std::make_shared<RigidBody>(1.0);
         test_body->m_position = Vector3(2, 40, 0);
@@ -241,7 +233,30 @@ public:
         box3 = new CollisionBox(test_body3.get(), Vector3(1.0));
         box3->UpdateTransform();
         torus3->AddControl(std::make_shared<RigidBodyControl>(test_body3));
+#else
+        rb1 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::SpherePhysicsShape>(1), 1.0);
+        rb1->SetPosition(Vector3(2, 40, 0));
+        rb1->SetAcceleration(Vector3(-0.3, 0, 0));
+        rb1->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0), 1.0));
+        test_object->AddControl(std::make_shared<RigidBodyControl>(rb1));
 
+        rb2 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
+        rb2->SetPosition(Vector3(-2, 5, 0));
+        rb2->SetVelocity(Vector3(2, 2, 0.4));
+        rb2->GetPhysicsMaterial().SetRestitution(0.8);
+        rb2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+        test_object_1->AddControl(std::make_shared<RigidBodyControl>(rb2));
+
+        rb3 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
+        rb3->SetPosition(Vector3(0, 10, 0));
+        rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+        rb3->GetPhysicsMaterial().SetRestitution(0.8);
+        torus3->AddControl(std::make_shared<RigidBodyControl>(rb3));
+
+        PhysicsManager::GetInstance()->RegisterBody(rb1);
+        PhysicsManager::GetInstance()->RegisterBody(rb2);
+        PhysicsManager::GetInstance()->RegisterBody(rb3);
+#endif
 
         /*auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
         monkey->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
@@ -258,7 +273,7 @@ public:
         quad_node->Move(Vector3::UnitY() * -2);
         quad_node->Rotate(Quaternion(Vector3::UnitX(), MathUtil::PI / 2));
         top->AddChild(quad_node);*/
-
+        
         top->AddControl(std::make_shared<SkydomeControl>(cam));
         //top->AddControl(std::make_shared<NoiseTerrainControl>(cam, -74));
     }
@@ -301,7 +316,13 @@ public:
 
         const double theta = 0.02;
         if (physics_update_timer >= theta) {
+#if EXPERIMENTAL_PHYSICS
+            PhysicsManager::GetInstance()->RunPhysics(theta);
 
+            rb1->ApplyForce(Vector3(0, -10, 0) * rb1->GetPhysicsMaterial().GetMass());
+            //rb2->ApplyForce(Vector3(0, -10, 0) * rb2->GetPhysicsMaterial().GetMass());
+            rb3->ApplyForce(Vector3(0, -10, 0) * rb3->GetPhysicsMaterial().GetMass());
+#else
             CollisionPlane plane;
             plane.m_direction = Vector3(0, 1, 0);
             plane.m_offset = 0;
@@ -321,6 +342,7 @@ public:
             sphere->UpdateTransform();
             box2->UpdateTransform();
             box3->UpdateTransform();
+#endif
 
             physics_update_timer = 0.0;
         }

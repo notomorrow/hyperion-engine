@@ -12,28 +12,28 @@
 #include <memory>
 
 namespace apex {
+enum MaterialParameterType {
+    MaterialParameter_None,
+    MaterialParameter_Float,
+    MaterialParameter_Int,
+    MaterialParameter_Texture,
+    MaterialParameter_Vector2,
+    MaterialParameter_Vector3,
+    MaterialParameter_Vector4
+};
+
 class MaterialParameter {
 public:
-    enum MaterialParameterType {
-        MATPARAM_NONE,
-        MATPARAM_FLOAT,
-        MATPARAM_INT,
-        MATPARAM_TEXHANDLE,
-        MATPARAM_VEC2,
-        MATPARAM_VEC3,
-        MATPARAM_VEC4
-    };
-
     MaterialParameter();
     MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype);
     MaterialParameter(const MaterialParameter &other);
 
-    bool IsEmpty() const;
-    size_t NumValues() const;
-    MaterialParameterType GetType() const;
-    
-    float &operator[](size_t idx);
-    float operator[](size_t idx) const;
+    inline bool IsEmpty() const { return size == 0; }
+    inline size_t NumValues() const { return size; }
+    inline MaterialParameterType GetType() const { return type; }
+
+    inline float &MaterialParameter::operator[](size_t idx) { return values[idx]; }
+    inline float MaterialParameter::operator[](size_t idx) const { return values[idx]; }
 
 private:
     size_t size;
@@ -68,6 +68,6 @@ public:
 private:
     std::map<std::string, MaterialParameter> params;
 };
-}
+} // namespace apex
 
 #endif

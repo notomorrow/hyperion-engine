@@ -59,4 +59,4 @@ void Renderer::RenderAll(Camera *cam)
     RenderBucket(cam, opaque_bucket);
     RenderBucket(cam, transparent_bucket);
 }
-}
+} // namespace apex

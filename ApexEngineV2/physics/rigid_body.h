@@ -28,6 +28,7 @@ public:
     inline void SetVelocity(const Vector3 &velocity) { m_velocity = velocity; }
     inline const Vector3 &GetRotation() const { return m_rotation; }
     inline void SetRotation(const Vector3 &rotation) { m_rotation = rotation; }
+    inline const Quaternion &GetOrientation() const { return m_orientation; }
     
     inline Matrix3 GetInertiaTensor() const { Matrix3 result(m_inverse_inertia_tensor); result.Invert(); return result; }
     inline void SetInertiaTensor(const Matrix3 &inertia_tensor) { m_inverse_inertia_tensor = inertia_tensor; m_inverse_inertia_tensor.Invert(); }

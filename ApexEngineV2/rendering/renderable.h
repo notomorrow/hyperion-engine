@@ -38,6 +38,6 @@ private:
     std::shared_ptr<Shader> shader;
     Material material;
 };
-}
+} // namespace apex
 
 #endif

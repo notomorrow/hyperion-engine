@@ -11,7 +11,7 @@ namespace apex {
 template <typename BoundingVolumeClass>
 class BVHNode {
 public:
-    BVHNode(BVHNode *parent, const BoundingVolumeClass &volume, RigidBody *body)
+    BVHNode(BVHNode *parent, const BoundingVolumeClass &volume, RigidBodyControl *body)
         : m_parent(parent), m_volume(volume), m_body(body)
     {
         m_children = { nullptr, nullptr };
@@ -108,7 +108,7 @@ public:
 protected:
     std::array<BVHNode*, 2> m_children;
     BoundingVolumeClass m_volume;
-    RigidBody *m_body;
+    RigidBodyControl *m_body;
     BVHNode *m_parent;
 };
 }

@@ -85,6 +85,6 @@ private:
 
     std::vector<float> CreateBuffer();
 };
-}
+} // namespace apex
 
 #endif

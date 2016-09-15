@@ -184,4 +184,4 @@ void Mesh::Render()
     engine->BindBuffer(CoreEngine::ARRAY_BUFFER, 0);
     engine->BindBuffer(CoreEngine::ELEMENT_ARRAY_BUFFER, 0);
 }
-}
+} // namespace apex

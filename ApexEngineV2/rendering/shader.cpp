@@ -5,19 +5,18 @@
 
 namespace apex {
 Shader::Shader(const ShaderProperties &properties)
+    : is_uploaded(false),
+      is_created(false),
+      uniform_changed(false)
 {
-    is_uploaded = false;
-    is_created = false;
-    uniform_changed = false;
 }
 
 Shader::Shader(const ShaderProperties &properties, 
-    const std::string &vscode, const std::string &fscode)
+    const std::string &vscode, const std::string &fscode) 
+    : is_uploaded(false),
+      is_created(false),
+      uniform_changed(false)
 {
-    is_uploaded = false;
-    is_created = false;
-    uniform_changed = false;
-
     subshaders.push_back(SubShader(CoreEngine::VERTEX_SHADER, vscode));
     subshaders.push_back(SubShader(CoreEngine::FRAGMENT_SHADER, fscode));
 }
@@ -197,4 +196,4 @@ void Shader::AddSubShader(const SubShader &shader)
 {
     subshaders.push_back(shader);
 }
-}
+} // namespace apex

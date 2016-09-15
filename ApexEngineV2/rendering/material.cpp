@@ -2,7 +2,7 @@
 
 namespace apex {
 MaterialParameter::MaterialParameter()
-    : size(0), type(MaterialParameterType::MATPARAM_NONE)
+    : size(0), type(MaterialParameter_None)
 {
 }
 
@@ -22,31 +22,6 @@ MaterialParameter::MaterialParameter(const MaterialParameter &other)
     type = other.type;
 }
 
-bool MaterialParameter::IsEmpty() const
-{
-    return size == 0;
-}
-
-size_t MaterialParameter::NumValues() const
-{
-    return size;
-}
-
-MaterialParameter::MaterialParameterType MaterialParameter::GetType() const
-{
-    return type;
-}
-
-float &MaterialParameter::operator[](size_t idx)
-{
-    return values[idx];
-}
-
-float MaterialParameter::operator[](size_t idx) const
-{
-    return values[idx];
-}
-
 Material::Material()
 {
 }
@@ -64,8 +39,7 @@ Material::Material(const Material &other)
 bool Material::HasParameter(const std::string &name) const
 {
     auto it = params.find(name);
-    if (it != params.end() &&
-        it->second.GetType() != MaterialParameter::MATPARAM_NONE) {
+    if (it != params.end() && it->second.GetType() != MaterialParameter_None) {
         return true;
     }
     return false;
@@ -88,36 +62,36 @@ const MaterialParameter &Material::GetParameter(const std::string &name) const
 void Material::SetParameter(const std::string &name, float value)
 {
     float values[] = { value };
-    params[name] = MaterialParameter(values, 1, MaterialParameter::MATPARAM_FLOAT);
+    params[name] = MaterialParameter(values, 1, MaterialParameter_Float);
 }
 
 void Material::SetParameter(const std::string &name, int value)
 {
     float values[] = { (float)value };
-    params[name] = MaterialParameter(values, 1, MaterialParameter::MATPARAM_INT);
+    params[name] = MaterialParameter(values, 1, MaterialParameter_Int);
 }
 
 void Material::SetParameter(const std::string &name, const std::shared_ptr<Texture> &value)
 {
     float values[] = { (float)value->GetId() };
-    params[name] = MaterialParameter(values, 1, MaterialParameter::MATPARAM_TEXHANDLE);
+    params[name] = MaterialParameter(values, 1, MaterialParameter_Texture);
 }
 
 void Material::SetParameter(const std::string &name, const Vector2 &value)
 {
     float values[] = { value.x, value.y };
-    params[name] = MaterialParameter(values, 2, MaterialParameter::MATPARAM_VEC2);
+    params[name] = MaterialParameter(values, 2, MaterialParameter_Vector2);
 }
 
 void Material::SetParameter(const std::string &name, const Vector3 &value)
 {
     float values[] = { value.x, value.y, value.z };
-    params[name] = MaterialParameter(values, 3, MaterialParameter::MATPARAM_VEC3);
+    params[name] = MaterialParameter(values, 3, MaterialParameter_Vector3);
 }
 
 void Material::SetParameter(const std::string &name, const Vector4 &value)
 {
     float values[] = { value.x, value.y, value.z, value.w };
-    params[name] = MaterialParameter(values, 4, MaterialParameter::MATPARAM_VEC4);
+    params[name] = MaterialParameter(values, 4, MaterialParameter_Vector4);
 }
-}
+} // namespace apex

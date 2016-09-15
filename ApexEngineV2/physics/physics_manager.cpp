@@ -1,5 +1,4 @@
 #include "physics_manager.h"
-#include "shapes/aabb_physics_object.h"
 
 #include <algorithm>
 
@@ -16,31 +15,88 @@ PhysicsManager *PhysicsManager::GetInstance()
 
 PhysicsManager::PhysicsManager()
 {
+#if !EXPERIMENTAL_PHYSICS
     resolver = new ContactResolver(0);
 
     collision_data.m_friction = 0.8;
     collision_data.m_restitution = 0.2;
     collision_data.m_tolerance = 0.1;
     collision_data.Reset();
+#endif
 }
 
 PhysicsManager::~PhysicsManager()
 {
+#if !EXPERIMENTAL_PHYSICS
     delete resolver;
+#endif
 }
 
-void PhysicsManager::RegisterBody(std::shared_ptr<RigidBody> body)
+void PhysicsManager::RegisterBody(std::shared_ptr<RIGID_BODY> body)
 {
     m_bodies.push_back(body);
 }
 
 void PhysicsManager::ResetCollisions()
 {
+#if !EXPERIMENTAL_PHYSICS
     collision_data.Reset();
+#endif
+}
+
+void PhysicsManager::DetectCollisions()
+{
 }
 
 void PhysicsManager::RunPhysics(double dt)
 {
+#if EXPERIMENTAL_PHYSICS
+    // gather collisions
+    std::vector<physics::CollisionInfo> collisions;
+
+    for (size_t i = 0; i < m_bodies.size(); i++) {
+        auto &a = m_bodies[i];
+        a->Integrate(dt);
+
+        for (size_t j = i + 1; j < m_bodies.size(); j++) {
+            auto &b = m_bodies[j];
+            auto *b_shape = b->GetPhysicsShape().get();
+
+            // collision info for these two bodies will be stored in this object
+            physics::CollisionInfo info;
+
+            switch (b->GetPhysicsShape()->GetType()) {
+            case physics::PhysicsShape_box:
+                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::BoxPhysicsShape*>(b_shape), info)) {
+                    // add more info (bodies involved)
+                    info.m_bodies = { a.get(), b.get() };
+                    // combine materials of each object
+                    info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
+                    info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
+                    collisions.push_back(info);
+                }
+                break;
+            case physics::PhysicsShape_sphere:
+                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::SpherePhysicsShape*>(b_shape), info)) {
+                    // add more info (bodies involved)
+                    info.m_bodies = { a.get(), b.get() };
+                    // combine materials of each object
+                    info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
+                    info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
+                    collisions.push_back(info);
+                }
+                break;
+            }
+        }
+    }
+
+    // update internal data of collisions
+    UpdateInternals(collisions, dt);
+    // update velocities of collisions
+    UpdateVelocities(collisions, dt);
+    // update positions of collisions
+    UpdatePositions(collisions, dt);
+#else
     resolver->SetNumIterations(MAX_CONTACTS * 8);
     resolver->ResolveContacts(collision_data.m_contacts, collision_data.m_contact_count, dt);
 
@@ -49,113 +105,113 @@ void PhysicsManager::RunPhysics(double dt)
         body->ApplyForce(Vector3(0, -10, 0) * body->GetMass());
         body->Integrate(dt);
     }
+#endif
 }
 
-/*void PhysicsManager::AddPhysicsObject(PhysicsObject *object)
+#if EXPERIMENTAL_PHYSICS
+void PhysicsManager::UpdateInternals(std::vector<physics::CollisionInfo> &collisions, double dt)
 {
-    objects.push_back(object);
+    for (physics::CollisionInfo &item : collisions) {
+        physics::Collision::CalculateInternals(item, dt);
+    }
 }
 
-void PhysicsManager::RemovePhysicsObject(PhysicsObject *object)
+void PhysicsManager::UpdateVelocities(std::vector<physics::CollisionInfo> &collisions, double dt)
 {
-    objects.erase(std::remove(objects.begin(), objects.end(), object), objects.end());
-}
+    Vector3 delta_velocity;
+    std::array<Vector3, 2> velocity_change;
+    std::array<Vector3, 2> rotation_change;
 
-void PhysicsManager::CheckCollisions()
-{
-    for (size_t i = 0; i < objects.size(); i++) {
-        PhysicsObject *a = objects[i];
-        if (a == nullptr) {
-            throw "a was nullptr";
+    const unsigned int num_collisions = collisions.size();
+    const unsigned int num_velocity_iterations = num_collisions * 4;
+
+    for (unsigned int iteration = 0; iteration < num_velocity_iterations; iteration++) {
+        double max = VELOCITY_EPSILON;
+
+        unsigned int index = num_collisions;
+        for (unsigned int i = 0; i < num_collisions; i++) {
+            auto &collision = collisions[i];
+            if (collision.m_desired_delta_velocity > max) {
+                max = collision.m_desired_delta_velocity;
+                index = i;
+            }
         }
 
-        a->grounded = false; // set flag to false, will be detected in loop
+        if (index == num_collisions) {
+            break;
+        }
 
-        // Use rays to check to see if grounded
-        Ray ray;
-        ray.position = a->position;
-        ray.direction = Vector3(0, -1, 0);
-        ray.direction.Normalize();
+        physics::Collision::MatchAwakeState(collisions[index]);
+        physics::Collision::ApplyVelocityChange(collisions[index], velocity_change, rotation_change);
 
-        Vector3 ray_hitpoint;
+        for (unsigned int i = 0; i < num_collisions; i++) {
+            for (unsigned int b = 0; b < 2; b++) {
+                if (collisions[i].m_bodies[b] != nullptr) {
+                    for (unsigned int d = 0; d < 2; d++) {
+                        if (collisions[i].m_bodies[b] == collisions[index].m_bodies[d]) {
+                            delta_velocity = velocity_change[d];
+                            Vector3 cross_product = rotation_change[d];
+                            cross_product.Cross(collisions[i].m_relative_contact_position[b]);
+                            delta_velocity += cross_product;
 
-        for (size_t j = 0; j < objects.size(); j++) {
-            PhysicsObject *b = objects[j];
+                            Matrix3 contact_transpose = collisions[i].m_contact_to_world;
+                            contact_transpose.Transpose();
 
-            if (b == nullptr) {
-                throw "b was nullptr";
-            }
-
-            if (a != b) {
-
-                // Check to see if 'b' is below 'a'
-                if (b->velocity.Length() <= 0.4 && b->RayTest(ray, ray_hitpoint)) {
-                    Vector3 diff = a->position - ray_hitpoint;
-                    // if within a threshold, ground 'a'
-                    if (diff.y <= 0.3) {
-                        a->grounded = true;
-                        a->velocity = 0;
-                        a->acceleration = 0;
-                        a->force = 0;
-                        continue;
-                    } else {
-                        //if (diff.Length() < a->ground_diff.Length()) {
-                        //    a->grounded = false;
-                        //}
-                    }
-                }
-
-                // check collision between a and b
-                Vector3 contact_normal;
-                float contact_distance = 0.0;
-
-                switch (b->shape) {
-                case (PhysicsShape::AABB_physics_shape):
-                    if (a->CheckCollision(static_cast<AABBPhysicsObject*>(b),
-                        contact_normal, contact_distance)) {
-                        Vector3 relative_velocity = b->velocity - a->velocity;
-                        float contact_velocity = relative_velocity.Dot(contact_normal);
-
-                        if (contact_velocity > 0.0) {
-                            continue;
+                            collisions[i].m_contact_velocity += (delta_velocity * contact_transpose) * (b ? -1 : 1);
+                            physics::Collision::CalculateDesiredDeltaVelocity(collisions[i], dt);
                         }
-
-                        double a_inv_mass = a->mass == 0.0 ? 0.0 : 1.0 / a->mass;
-                        double b_inv_mass = b->mass == 0.0 ? 0.0 : 1.0 / b->mass;
-
-                        // Calculate restitution
-                        double e = std::min(a->restitution, b->restitution);
-
-                        // Calculate impulse
-                        double j = -(1.0f + e) * contact_velocity;
-                        j /= a_inv_mass + b_inv_mass;
-
-                        // Apply impulse
-                        float mass_sum = a->mass + b->mass;
-                        if (mass_sum == 0.0) {
-                            mass_sum = 1.0;
-                        }
-
-                        Vector3 impulse = contact_normal * j;
-                        a->velocity -= impulse * a_inv_mass;
-                        b->velocity += impulse * b_inv_mass;
-
-                        a->force -= contact_normal * 2;
-                        b->force += contact_normal * 2;
-
-                        std::cout << "\"" << a->tag << "\" collided with \"" << b->tag << "\"\n";
-                        std::cout << "impulse = " << impulse << "\n";
-                        std::cout << "contact normal = " << contact_normal << "\n";
-                        std::cout << "contact distance = " << contact_distance << "\n\n";
-
-
                     }
-                                                       break;
-                default:
-                    throw "Unknown physics shape";
                 }
             }
         }
     }
-}*/
+}
+
+void PhysicsManager::UpdatePositions(std::vector<physics::CollisionInfo> &collisions, double dt)
+{
+    Vector3 delta_position;
+    std::array<Vector3, 2> linear_change;
+    std::array<Vector3, 2> angular_change;
+
+    const unsigned int num_collisions = collisions.size();
+    const unsigned int num_velocity_iterations = num_collisions * 4;
+
+    for (unsigned int iteration = 0; iteration < num_velocity_iterations; iteration++) {
+        double max = POSITION_EPSILON;
+
+        unsigned int index = num_collisions;
+        for (unsigned int i = 0; i < num_collisions; i++) {
+            if (collisions[i].m_contact_penetration > max) {
+                max = collisions[i].m_contact_penetration;
+                index = i;
+            }
+        }
+
+        if (index == num_collisions) {
+            break;
+        }
+
+        physics::Collision::MatchAwakeState(collisions[index]);
+        physics::Collision::ApplyPositionChange(collisions[index], linear_change, angular_change, max);
+
+        for (unsigned int i = 0; i < num_collisions; i++) {
+            for (unsigned int b = 0; b < 2; b++) {
+                if (collisions[i].m_bodies[b] != nullptr) {
+                    for (unsigned int d = 0; d < 2; d++) {
+                        if (collisions[i].m_bodies[b] == collisions[index].m_bodies[d]) {
+                            delta_position = linear_change[d];
+                            Vector3 cross_product = angular_change[d];
+                            cross_product.Cross(collisions[i].m_relative_contact_position[b]);
+                            delta_position += cross_product;
+
+                            collisions[i].m_contact_penetration += delta_position.Dot(collisions[i].m_contact_normal) *
+                                (b ? 1 : -1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+#endif
 } // namespace apex
