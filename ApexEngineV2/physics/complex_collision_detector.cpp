@@ -229,7 +229,7 @@ unsigned int ComplexCollisionDetector::BoxAndHalfSpace(const CollisionBox &box, 
             }
         }
     }
-    
+    std::cout << "there were " << contacts_used << " collisions\n";
     data.AddContacts(contacts_used);
     return contacts_used;
 }

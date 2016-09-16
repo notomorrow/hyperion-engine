@@ -8,8 +8,8 @@ namespace apex {
 namespace physics {
 class PhysicsMaterial {
 public:
-    PhysicsMaterial(double mass = 1.0, double friction = 0.9, double restitution = 0.5,
-        double linear_damping = 0.9, double angular_damping = 0.8);
+    PhysicsMaterial(double mass = 1.0, double friction = 0.8, double restitution = 0.2,
+        double linear_damping = 0.6, double angular_damping = 0.4);
     PhysicsMaterial(const PhysicsMaterial &other);
 
     inline double GetMass() const { return m_mass; }

@@ -333,6 +333,12 @@
     <ClInclude Include="physics\physics2\physics_material.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="physics\physics2\plane_physics_shape.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\physics2\collision_list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -609,6 +615,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="physics\physics2\physics_material.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\physics2\plane_physics_shape.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\physics2\collision_list.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

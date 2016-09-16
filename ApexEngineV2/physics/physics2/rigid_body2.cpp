@@ -101,13 +101,13 @@ void Rigidbody::Integrate(double dt)
 
         Vector3 angular_acceleration = m_torque_accum * m_inv_inertia_tensor_world;
 
-        m_velocity += m_last_acceleration * dt;
-        m_velocity *= pow(m_material.GetLinearDamping(), dt);
-        m_position += m_velocity * dt;
+        m_linear_velocity += m_last_acceleration * dt;
+        m_linear_velocity *= pow(m_material.GetLinearDamping(), dt);
+        m_position += m_linear_velocity * dt;
 
-        m_rotation += angular_acceleration * dt;
-        m_rotation *= pow(m_material.GetAngularDamping(), dt);
-        m_orientation += m_rotation * dt;
+        m_angular_velocity += angular_acceleration * dt;
+        m_angular_velocity *= pow(m_material.GetAngularDamping(), dt);
+        m_orientation += m_angular_velocity * dt;
 
         UpdateTransform();
 

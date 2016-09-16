@@ -6,7 +6,7 @@
 namespace apex {
 namespace physics {
 void Collision::ApplyVelocityChange(CollisionInfo &collision,
-    std::array<Vector3, 2> &velocity_change, std::array<Vector3, 2> &rotation_change)
+    std::array<Vector3, 2> &linear_change, std::array<Vector3, 2> &angular_change)
 {
     std::array<Matrix3, 2> inverse_inertia_tensor;
     inverse_inertia_tensor[0] = collision.m_bodies[0]->GetInverseInertiaTensorWorld();
@@ -26,21 +26,21 @@ void Collision::ApplyVelocityChange(CollisionInfo &collision,
     Vector3 impulsive_torque = collision.m_relative_contact_position[0];
     impulsive_torque.Cross(impulse);
 
-    rotation_change[0] = impulsive_torque * inverse_inertia_tensor[0];
-    velocity_change[0] = impulse * collision.m_bodies[0]->GetPhysicsMaterial().GetInverseMass();
+    angular_change[0] = impulsive_torque * inverse_inertia_tensor[0];
+    linear_change[0] = impulse * collision.m_bodies[0]->GetPhysicsMaterial().GetInverseMass();
 
-    collision.m_bodies[0]->AddVelocity(velocity_change[0]);
-    collision.m_bodies[0]->AddRotation(rotation_change[0]);
+    collision.m_bodies[0]->AddLinearVelocity(linear_change[0]);
+    collision.m_bodies[0]->AddAngularVelocity(angular_change[0]);
 
     if (collision.m_bodies[1] != nullptr) {
         impulsive_torque = impulse;
         impulsive_torque.Cross(collision.m_relative_contact_position[1]);
 
-        rotation_change[1] = impulsive_torque * inverse_inertia_tensor[1];
-        velocity_change[1] = impulse * -collision.m_bodies[1]->GetPhysicsMaterial().GetInverseMass();
+        angular_change[1] = impulsive_torque * inverse_inertia_tensor[1];
+        linear_change[1] = impulse * -collision.m_bodies[1]->GetPhysicsMaterial().GetInverseMass();
 
-        collision.m_bodies[1]->AddVelocity(velocity_change[1]);
-        collision.m_bodies[1]->AddRotation(rotation_change[1]);
+        collision.m_bodies[1]->AddLinearVelocity(linear_change[1]);
+        collision.m_bodies[1]->AddAngularVelocity(angular_change[1]);
     }
 }
 
@@ -105,14 +105,12 @@ void Collision::ApplyPositionChange(CollisionInfo &collision,
             linear_change[i] = collision.m_contact_normal * linear_move[i];
 
             if (!collision.m_bodies[i]->IsStatic()) {
-                Vector3 pos = collision.m_bodies[i]->GetPosition();
+                Vector3 &pos = collision.m_bodies[i]->GetPosition();
                 pos += collision.m_contact_normal * linear_move[i];
-                collision.m_bodies[i]->SetPosition(pos);
 
-                Quaternion rot = collision.m_bodies[i]->GetOrientation();
+                Quaternion &rot = collision.m_bodies[i]->GetOrientation();
                 rot += angular_change[i];
                 rot.Normalize();
-                collision.m_bodies[i]->SetOrientation(rot);
 
                 if (!collision.m_bodies[i]->IsAwake()) {
                     // reflect changes on sleeping object
@@ -148,7 +146,7 @@ void Collision::CalculateInternals(CollisionInfo &collision, double dt)
 
 void Collision::SwapBodies(CollisionInfo &collision)
 {
-    collision.m_contact_normal *= -1;
+    collision.m_contact_normal *= -1.0f;
     std::swap(collision.m_bodies[0], collision.m_bodies[1]);
 }
 
@@ -176,9 +174,9 @@ Vector3 Collision::CalculateLocalVelocity(CollisionInfo &collision,
 {
     Rigidbody *body = collision.m_bodies[body_index];
 
-    Vector3 velocity(body->GetRotation());
+    Vector3 velocity(body->GetAngularVelocity());
     velocity.Cross(collision.m_relative_contact_position[body_index]);
-    velocity += body->GetVelocity();
+    velocity += body->GetLinearVelocity();
 
     Matrix3 contact_to_world_transpose = collision.m_contact_to_world;
     contact_to_world_transpose.Transpose();
@@ -196,7 +194,7 @@ Vector3 Collision::CalculateLocalVelocity(CollisionInfo &collision,
 void Collision::CalculateContactBasis(CollisionInfo &collision)
 {
     std::array<Vector3, 2> contact_tangent;
-    Vector3 &contact_normal = collision.m_contact_normal;
+    Vector3 contact_normal = collision.m_contact_normal;
 
     if (fabs(contact_normal.x) > fabs(contact_normal.y)) {
         const double s = 1.0 / sqrt(contact_normal.z * contact_normal.z +
@@ -317,7 +315,8 @@ Vector3 Collision::CalculateFrictionImpulse(CollisionInfo &collision,
     Matrix3 impulse_matrix = delta_velocity;
     impulse_matrix.Invert();
 
-    Vector3 kill_velocity(collision.m_desired_delta_velocity, -collision.m_contact_velocity.y, -collision.m_contact_velocity.z);
+    Vector3 kill_velocity(collision.m_desired_delta_velocity, 
+        -collision.m_contact_velocity.y, -collision.m_contact_velocity.z);
     Vector3 impulse_contact = kill_velocity * impulse_matrix;
 
     double planar_impulse = sqrt(impulse_contact.y * impulse_contact.y +

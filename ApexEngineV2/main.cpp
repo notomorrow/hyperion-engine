@@ -42,6 +42,7 @@
 #include "physics/physics2/rigid_body2.h"
 #include "physics/physics2/box_physics_shape.h"
 #include "physics/physics2/sphere_physics_shape.h"
+#include "physics/physics2/plane_physics_shape.h"
 #else
 #include "physics/collision_box.h"
 #include "physics/collision_sphere.h"
@@ -68,7 +69,7 @@ public:
     std::shared_ptr<Mesh> debug_quad;
 
 #if EXPERIMENTAL_PHYSICS
-    std::shared_ptr<physics::Rigidbody> rb1, rb2, rb3;
+    std::shared_ptr<physics::Rigidbody> rb1, rb2, rb3, rb4;
 #else
     std::shared_ptr<RigidBody> test_body, test_body2, test_body3;
     apex::CollisionSphere *sphere;
@@ -236,26 +237,30 @@ public:
 #else
         rb1 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::SpherePhysicsShape>(1), 1.0);
         rb1->SetPosition(Vector3(2, 40, 0));
-        rb1->SetAcceleration(Vector3(-0.3, 0, 0));
+        rb1->SetLinearVelocity(Vector3(1, 0, 0));
         rb1->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0), 1.0));
+        rb1->GetPhysicsMaterial().SetRestitution(0.8);
         test_object->AddControl(std::make_shared<RigidBodyControl>(rb1));
 
         rb2 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
         rb2->SetPosition(Vector3(-2, 5, 0));
-        rb2->SetVelocity(Vector3(2, 2, 0.4));
-        rb2->GetPhysicsMaterial().SetRestitution(0.8);
+        rb2->SetLinearVelocity(Vector3(2, -1, 0.4));
+        rb2->SetAngularVelocity(Vector3(-20));
         rb2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
         test_object_1->AddControl(std::make_shared<RigidBodyControl>(rb2));
 
         rb3 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
         rb3->SetPosition(Vector3(0, 10, 0));
         rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-        rb3->GetPhysicsMaterial().SetRestitution(0.8);
         torus3->AddControl(std::make_shared<RigidBodyControl>(rb3));
+
+        rb4 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 1.0);
+        rb4->SetAwake(false);
 
         PhysicsManager::GetInstance()->RegisterBody(rb1);
         PhysicsManager::GetInstance()->RegisterBody(rb2);
         PhysicsManager::GetInstance()->RegisterBody(rb3);
+        PhysicsManager::GetInstance()->RegisterBody(rb4);
 #endif
 
         /*auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
@@ -317,11 +322,12 @@ public:
         const double theta = 0.02;
         if (physics_update_timer >= theta) {
 #if EXPERIMENTAL_PHYSICS
-            PhysicsManager::GetInstance()->RunPhysics(theta);
 
             rb1->ApplyForce(Vector3(0, -10, 0) * rb1->GetPhysicsMaterial().GetMass());
             //rb2->ApplyForce(Vector3(0, -10, 0) * rb2->GetPhysicsMaterial().GetMass());
             rb3->ApplyForce(Vector3(0, -10, 0) * rb3->GetPhysicsMaterial().GetMass());
+
+            PhysicsManager::GetInstance()->RunPhysics(theta);
 #else
             CollisionPlane plane;
             plane.m_direction = Vector3(0, 1, 0);

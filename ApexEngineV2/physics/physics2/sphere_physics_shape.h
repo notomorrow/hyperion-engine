@@ -12,9 +12,9 @@ public:
     inline double GetRadius() const { return m_radius; }
     inline void SetRadius(double radius) { m_radius = radius; }
 
-    bool CollidesWith(BoxPhysicsShape *shape, CollisionInfo &out);
-    bool CollidesWith(SpherePhysicsShape *shape, CollisionInfo &out);
-    bool CollidesWith(PlanePhysicsShape *shape, CollisionInfo &out);
+    bool CollidesWith(BoxPhysicsShape *shape, CollisionList &out);
+    bool CollidesWith(SpherePhysicsShape *shape, CollisionList &out);
+    bool CollidesWith(PlanePhysicsShape *shape, CollisionList &out);
 
 private:
     double m_radius;

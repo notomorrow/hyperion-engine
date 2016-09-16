@@ -12,6 +12,7 @@
 #include "physics2/collision.h"
 #include "physics2/box_physics_shape.h"
 #include "physics2/sphere_physics_shape.h"
+#include "physics2/plane_physics_shape.h"
 #else
 #include "rigid_body.h"
 #include "contact.h"

@@ -1,4 +1,5 @@
 #include "physics_manager.h"
+#include "physics2/collision_list.h"
 
 #include <algorithm>
 
@@ -63,27 +64,48 @@ void PhysicsManager::RunPhysics(double dt)
             auto *b_shape = b->GetPhysicsShape().get();
 
             // collision info for these two bodies will be stored in this object
-            physics::CollisionInfo info;
+            physics::CollisionList list;
 
             switch (b->GetPhysicsShape()->GetType()) {
             case physics::PhysicsShape_box:
-                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::BoxPhysicsShape*>(b_shape), info)) {
-                    // add more info (bodies involved)
-                    info.m_bodies = { a.get(), b.get() };
-                    // combine materials of each object
-                    info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
-                    info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
-                    collisions.push_back(info);
+                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::BoxPhysicsShape*>(b_shape), list)) {
+                    for (physics::CollisionInfo &info : list.m_collisions) {
+                        // add more info (bodies involved)
+                        info.m_bodies = { a.get(), b.get() };
+                        // combine materials of each object
+                        info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
+                        info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
+                        collisions.push_back(info);
+                    }
                 }
                 break;
             case physics::PhysicsShape_sphere:
-                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::SpherePhysicsShape*>(b_shape), info)) {
-                    // add more info (bodies involved)
-                    info.m_bodies = { a.get(), b.get() };
-                    // combine materials of each object
-                    info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
-                    info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
-                    collisions.push_back(info);
+                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::SpherePhysicsShape*>(b_shape), list)) {
+                    for (physics::CollisionInfo &info : list.m_collisions) {
+                        // add more info (bodies involved)
+                        info.m_bodies = { a.get(), b.get() };
+                        // combine materials of each object
+                        info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
+                        info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
+                        collisions.push_back(info);
+                    }
+                }
+                break;
+            case physics::PhysicsShape_plane:
+                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::PlanePhysicsShape*>(b_shape), list)) {
+                    for (physics::CollisionInfo &info : list.m_collisions) {
+                        // add more info (bodies involved)
+                        info.m_bodies = { a.get(), b.get() };
+                        for (int i = 0; i < 2; i++) {
+                            if (info.m_bodies[i]->GetPhysicsShape()->GetType() == physics::PhysicsShape_plane) {
+                                info.m_bodies[i] = nullptr;
+                            }
+                        }
+                        // combine materials of each object
+                        info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
+                        info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
+                        collisions.push_back(info);
+                    }
                 }
                 break;
             }
@@ -97,7 +119,7 @@ void PhysicsManager::RunPhysics(double dt)
     // update positions of collisions
     UpdatePositions(collisions, dt);
 #else
-    resolver->SetNumIterations(MAX_CONTACTS * 8);
+    resolver->SetNumIterations(MAX_CONTACTS * 4);
     resolver->ResolveContacts(collision_data.m_contacts, collision_data.m_contact_count, dt);
 
     for (auto &&body : m_bodies) {
@@ -119,13 +141,13 @@ void PhysicsManager::UpdateInternals(std::vector<physics::CollisionInfo> &collis
 void PhysicsManager::UpdateVelocities(std::vector<physics::CollisionInfo> &collisions, double dt)
 {
     Vector3 delta_velocity;
-    std::array<Vector3, 2> velocity_change;
-    std::array<Vector3, 2> rotation_change;
+    std::array<Vector3, 2> linear_change;
+    std::array<Vector3, 2> angular_change;
 
     const unsigned int num_collisions = collisions.size();
-    const unsigned int num_velocity_iterations = num_collisions * 4;
+    const unsigned int num_iterations = num_collisions * 4;
 
-    for (unsigned int iteration = 0; iteration < num_velocity_iterations; iteration++) {
+    for (unsigned int iteration = 0; iteration < num_iterations; iteration++) {
         double max = VELOCITY_EPSILON;
 
         unsigned int index = num_collisions;
@@ -142,15 +164,15 @@ void PhysicsManager::UpdateVelocities(std::vector<physics::CollisionInfo> &colli
         }
 
         physics::Collision::MatchAwakeState(collisions[index]);
-        physics::Collision::ApplyVelocityChange(collisions[index], velocity_change, rotation_change);
+        physics::Collision::ApplyVelocityChange(collisions[index], linear_change, angular_change);
 
         for (unsigned int i = 0; i < num_collisions; i++) {
             for (unsigned int b = 0; b < 2; b++) {
                 if (collisions[i].m_bodies[b] != nullptr) {
                     for (unsigned int d = 0; d < 2; d++) {
                         if (collisions[i].m_bodies[b] == collisions[index].m_bodies[d]) {
-                            delta_velocity = velocity_change[d];
-                            Vector3 cross_product = rotation_change[d];
+                            delta_velocity = linear_change[d];
+                            Vector3 cross_product = angular_change[d];
                             cross_product.Cross(collisions[i].m_relative_contact_position[b]);
                             delta_velocity += cross_product;
 
@@ -174,9 +196,9 @@ void PhysicsManager::UpdatePositions(std::vector<physics::CollisionInfo> &collis
     std::array<Vector3, 2> angular_change;
 
     const unsigned int num_collisions = collisions.size();
-    const unsigned int num_velocity_iterations = num_collisions * 4;
+    const unsigned int num_iterations = num_collisions * 4;
 
-    for (unsigned int iteration = 0; iteration < num_velocity_iterations; iteration++) {
+    for (unsigned int iteration = 0; iteration < num_iterations; iteration++) {
         double max = POSITION_EPSILON;
 
         unsigned int index = num_collisions;

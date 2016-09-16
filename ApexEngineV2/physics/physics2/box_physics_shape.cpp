@@ -1,6 +1,7 @@
 #include "box_physics_shape.h"
 #include "box_collision.h"
 #include "sphere_physics_shape.h"
+#include "plane_physics_shape.h"
 #include <cassert>
 
 namespace apex {
@@ -10,7 +11,7 @@ BoxPhysicsShape::BoxPhysicsShape(const Vector3 &dimensions)
 {
 }
 
-bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionInfo &out)
+bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
 {
     Vector3 to_center = other->GetAxis(3) - GetAxis(3);
 
@@ -50,11 +51,14 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionInfo &out)
     // check to make sure there was a result
     assert(best != std::numeric_limits<decltype(best)>::max());
 
+    CollisionInfo collision;
     if (best < 3) {
-        BoxCollision::FillPointFaceBoxBox(*this, *other, to_center, out, best, penetration);
+        BoxCollision::FillPointFaceBoxBox(*this, *other, to_center, collision, best, penetration);
+        out.m_collisions.push_back(collision);
         return true;
     } else if (best < 6) {
-        BoxCollision::FillPointFaceBoxBox(*other, *this, to_center * -1.0f, out, best - 3, penetration);
+        BoxCollision::FillPointFaceBoxBox(*other, *this, to_center * -1.0f, collision, best - 3, penetration);
+        out.m_collisions.push_back(collision);
         return true;
     } else {
         best -= 6;
@@ -96,16 +100,18 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionInfo &out)
             b_point_on_edge, b_axis, other->m_dimensions[b_axis_index] * 0.5f,
             best_single_axis > 2);
 
-        out.m_contact_point = vertex;
-        out.m_contact_normal = axis;
-        out.m_contact_penetration = penetration;
+        collision.m_contact_point = vertex;
+        collision.m_contact_normal = axis;
+        collision.m_contact_penetration = penetration;
+        out.m_collisions.push_back(collision);
+
         return true;
     }
 
     return false;
 }
 
-bool BoxPhysicsShape::CollidesWith(SpherePhysicsShape *sphere, CollisionInfo &out)
+bool BoxPhysicsShape::CollidesWith(SpherePhysicsShape *sphere, CollisionList &out)
 {
     Matrix4 transform = m_transform;
     Matrix4 inverse = transform;
@@ -144,8 +150,8 @@ bool BoxPhysicsShape::CollidesWith(SpherePhysicsShape *sphere, CollisionInfo &ou
     if (distance > m_dimensions.GetZ() * 0.5f) {
         distance = m_dimensions.GetZ() * 0.5f;
     }
-    if (distance < -(m_dimensions.GetZ()* 0.5f)) {
-        distance = -(m_dimensions.GetZ()* 0.5f);
+    if (distance < -(m_dimensions.GetZ() * 0.5f)) {
+        distance = -(m_dimensions.GetZ() * 0.5f);
     }
     closest.SetZ(distance);
 
@@ -159,11 +165,51 @@ bool BoxPhysicsShape::CollidesWith(SpherePhysicsShape *sphere, CollisionInfo &ou
     Vector3 contact_normal = closest_transformed - center;
     contact_normal.Normalize();
 
+    CollisionInfo collision;
+    collision.m_contact_point = closest_transformed;
+    collision.m_contact_normal = contact_normal;
+    collision.m_contact_penetration = sphere->GetRadius() - sqrt(distance);
+    out.m_collisions.push_back(collision);
 
-    out.m_contact_point = closest_transformed;
-    out.m_contact_normal = contact_normal;
-    out.m_contact_penetration = sphere->GetRadius() - sqrt(distance);
     return true;
+}
+
+bool BoxPhysicsShape::CollidesWith(PlanePhysicsShape *shape, CollisionList &out)
+{
+    // try a simple intersection test first.
+    double proj_rad = BoxCollision::TransformToAxis(*this, shape->GetDirection());
+    double dist = shape->GetDirection().Dot(GetAxis(3)) - proj_rad;
+    if (dist > shape->GetOffset()) {
+        return false;
+    }
+
+    static const double pts[8][3] = {
+        { 1, 1, 1 }, { -1, 1, 1 }, { 1, -1, 1 }, { -1, -1, 1 },
+        { 1, 1, -1 }, { -1, 1, -1 }, { 1, -1, -1 }, { -1, -1, -1 }
+    };
+
+    unsigned int num_collisions = 0;
+    // check each vertex of the box
+    for (int i = 0; i < 8; i++) {
+        // calculate vertex position
+        auto vertex = Vector3(pts[i][0], pts[i][1], pts[i][2]);
+        vertex *= m_dimensions * 0.5f;
+        vertex *= m_transform;
+
+        double dist = vertex.Dot(shape->GetDirection());
+        if (dist <= shape->GetOffset()) {
+            CollisionInfo collision;
+            collision.m_contact_normal = shape->GetDirection();
+            collision.m_contact_penetration = shape->GetOffset() - dist;
+            collision.m_contact_point = shape->GetDirection() *
+                (dist - shape->GetOffset()) + vertex;
+
+            num_collisions++;
+            out.m_collisions.push_back(collision);
+        }
+    }
+
+    return bool(num_collisions > 0);
 }
 } // namespace physics
 } // namespace apex

@@ -203,7 +203,9 @@
     <ClInclude Include="physics\physics2\box_physics_shape.h" />
     <ClInclude Include="physics\physics2\collision.h" />
     <ClInclude Include="physics\physics2\collision_info.h" />
+    <ClInclude Include="physics\physics2\collision_list.h" />
     <ClInclude Include="physics\physics2\physics_shape.h" />
+    <ClInclude Include="physics\physics2\plane_physics_shape.h" />
     <ClInclude Include="physics\physics2\rigid_body2.h" />
     <ClInclude Include="physics\physics2\physics_material.h" />
     <ClInclude Include="physics\physics2\sphere_physics_shape.h" />
@@ -307,7 +309,9 @@
     <ClCompile Include="physics\physics2\box_physics_shape.cpp" />
     <ClCompile Include="physics\physics2\collision.cpp" />
     <ClCompile Include="physics\physics2\collision_info.cpp" />
+    <ClCompile Include="physics\physics2\collision_list.cpp" />
     <ClCompile Include="physics\physics2\physics_shape.cpp" />
+    <ClCompile Include="physics\physics2\plane_physics_shape.cpp" />
     <ClCompile Include="physics\physics2\rigid_body2.cpp" />
     <ClCompile Include="physics\physics2\physics_material.cpp" />
     <ClCompile Include="physics\physics2\sphere_physics_shape.cpp" />

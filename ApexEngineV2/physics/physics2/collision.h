@@ -16,7 +16,7 @@ class Collision {
 public:
     // apply a velocity change to a collision
     static void ApplyVelocityChange(CollisionInfo &collision, 
-        std::array<Vector3, 2> &velocity_change, std::array<Vector3, 2> &rotation_change);
+        std::array<Vector3, 2> &linear_change, std::array<Vector3, 2> &angular_change);
 
     // apply a position change to a collision
     static void ApplyPositionChange(CollisionInfo &collision,
