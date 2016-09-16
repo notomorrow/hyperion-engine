@@ -95,7 +95,7 @@ public:
         debug_quad->SetShader(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(defines));
 
         renderer = new Renderer();
-        cam = new FpsCamera(inputmgr, &this->window, 70, 2.0, 250);
+        cam = new FpsCamera(inputmgr, &this->window, 70, 0.3, 250);
         fbo = new Framebuffer(window.width, window.height);
         shadows = new PssmShadowMapping(cam, 1, 20);
     }
@@ -235,17 +235,17 @@ public:
         box3->UpdateTransform();
         torus3->AddControl(std::make_shared<RigidBodyControl>(test_body3));
 #else
-        rb1 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::SpherePhysicsShape>(1), 1.0);
-        rb1->SetPosition(Vector3(2, 40, 0));
-        rb1->SetLinearVelocity(Vector3(1, 0, 0));
-        rb1->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0), 1.0));
+        rb1 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::SpherePhysicsShape>(0.5), 1.0);
+        rb1->SetPosition(Vector3(0, 40, 0));
+        //rb1->SetLinearVelocity(Vector3(1, 0, 0));
+        rb1->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(0.5), 1.0));
         rb1->GetPhysicsMaterial().SetRestitution(0.8);
         test_object->AddControl(std::make_shared<RigidBodyControl>(rb1));
 
         rb2 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
-        rb2->SetPosition(Vector3(-2, 5, 0));
-        rb2->SetLinearVelocity(Vector3(2, -1, 0.4));
-        rb2->SetAngularVelocity(Vector3(-20));
+        rb2->SetPosition(Vector3(0, 5, 0));
+       // rb2->SetLinearVelocity(Vector3(2, -1, 0.4));
+        //rb2->SetAngularVelocity(Vector3(-20));
         rb2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
         test_object_1->AddControl(std::make_shared<RigidBodyControl>(rb2));
 
@@ -324,7 +324,7 @@ public:
 #if EXPERIMENTAL_PHYSICS
 
             rb1->ApplyForce(Vector3(0, -10, 0) * rb1->GetPhysicsMaterial().GetMass());
-            //rb2->ApplyForce(Vector3(0, -10, 0) * rb2->GetPhysicsMaterial().GetMass());
+            rb2->ApplyForce(Vector3(0, -10, 0) * rb2->GetPhysicsMaterial().GetMass());
             rb3->ApplyForce(Vector3(0, -10, 0) * rb3->GetPhysicsMaterial().GetMass());
 
             PhysicsManager::GetInstance()->RunPhysics(theta);

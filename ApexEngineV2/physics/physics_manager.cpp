@@ -57,10 +57,13 @@ void PhysicsManager::RunPhysics(double dt)
 
     for (size_t i = 0; i < m_bodies.size(); i++) {
         auto &a = m_bodies[i];
-        a->Integrate(dt);
 
         for (size_t j = i + 1; j < m_bodies.size(); j++) {
             auto &b = m_bodies[j];
+            if (b == a) {
+                continue;
+            }
+
             auto *b_shape = b->GetPhysicsShape().get();
 
             // collision info for these two bodies will be stored in this object
@@ -73,8 +76,8 @@ void PhysicsManager::RunPhysics(double dt)
                         // add more info (bodies involved)
                         info.m_bodies = { a.get(), b.get() };
                         // combine materials of each object
-                        info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
-                        info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
+                        info.m_combined_material.SetFriction(a->GetPhysicsMaterial().GetFriction() * b->GetPhysicsMaterial().GetFriction());
+                        info.m_combined_material.SetRestitution(a->GetPhysicsMaterial().GetRestitution() * b->GetPhysicsMaterial().GetRestitution());
                         collisions.push_back(info);
                     }
                 }
@@ -85,8 +88,8 @@ void PhysicsManager::RunPhysics(double dt)
                         // add more info (bodies involved)
                         info.m_bodies = { a.get(), b.get() };
                         // combine materials of each object
-                        info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
-                        info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
+                        info.m_combined_material.SetFriction(a->GetPhysicsMaterial().GetFriction() * b->GetPhysicsMaterial().GetFriction());
+                        info.m_combined_material.SetRestitution(a->GetPhysicsMaterial().GetRestitution() * b->GetPhysicsMaterial().GetRestitution());
                         collisions.push_back(info);
                     }
                 }
@@ -102,8 +105,8 @@ void PhysicsManager::RunPhysics(double dt)
                             }
                         }
                         // combine materials of each object
-                        info.m_combined_material.SetFriction(std::min(a->GetPhysicsMaterial().GetFriction(), b->GetPhysicsMaterial().GetFriction()));
-                        info.m_combined_material.SetRestitution(std::min(a->GetPhysicsMaterial().GetRestitution(), b->GetPhysicsMaterial().GetRestitution()));
+                        info.m_combined_material.SetFriction(a->GetPhysicsMaterial().GetFriction() * b->GetPhysicsMaterial().GetFriction());
+                        info.m_combined_material.SetRestitution(a->GetPhysicsMaterial().GetRestitution() * b->GetPhysicsMaterial().GetRestitution());
                         collisions.push_back(info);
                     }
                 }
@@ -118,6 +121,14 @@ void PhysicsManager::RunPhysics(double dt)
     UpdateVelocities(collisions, dt);
     // update positions of collisions
     UpdatePositions(collisions, dt);
+
+    for (auto &body : m_bodies) {
+        if (!body->IsStatic()) {
+
+            body->Integrate(dt);
+
+        }
+    }
 #else
     resolver->SetNumIterations(MAX_CONTACTS * 4);
     resolver->ResolveContacts(collision_data.m_contacts, collision_data.m_contact_count, dt);

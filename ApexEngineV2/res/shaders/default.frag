@@ -16,7 +16,7 @@ uniform vec3 u_camerapos;
 
 void main() 
 {
-  const float roughness = 0.4;
+  const float roughness = 0.3;
   const float shininess = 0.3;
   
   vec3 n = normalize(v_normal.xyz);
