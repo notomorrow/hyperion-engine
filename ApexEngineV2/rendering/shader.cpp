@@ -151,24 +151,24 @@ void Shader::Use()
             int loc = engine->GetUniformLocation(progid, uniform.first.c_str());
             if (loc != -1) {
                 switch (uniform.second.type) {
-                case Uniform::UF_FLOAT:
+                case Uniform::Uniform_Float:
                     engine->Uniform1f(loc, uniform.second.data[0]);
                     break;
-                case Uniform::UF_INT:
+                case Uniform::Uniform_Int:
                     engine->Uniform1i(loc, (int)uniform.second.data[0]);
                     break;
-                case Uniform::UF_VEC2:
+                case Uniform::Uniform_Vector2:
                     engine->Uniform2f(loc, uniform.second.data[0], uniform.second.data[1]);
                     break;
-                case Uniform::UF_VEC3:
+                case Uniform::Uniform_Vector3:
                     engine->Uniform3f(loc, uniform.second.data[0], uniform.second.data[1],
                         uniform.second.data[2]);
                     break;
-                case Uniform::UF_VEC4:
+                case Uniform::Uniform_Vector4:
                     engine->Uniform4f(loc, uniform.second.data[0], uniform.second.data[1],
                         uniform.second.data[2], uniform.second.data[2]);
                     break;
-                case Uniform::UF_MAT4:
+                case Uniform::Uniform_Matrix4:
                     engine->UniformMatrix4fv(loc, 1, true, &uniform.second.data[0]);
                     break;
                 default:

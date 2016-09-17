@@ -18,19 +18,18 @@ public:
     Vector4(float xyzw);
     Vector4(const Vector4 &other);
 
-    float GetX() const;
-    float &GetX();
-    float GetY() const;
-    float &GetY();
-    float GetZ() const;
-    float &GetZ();
-    float GetW() const;
-    float &GetW();
-
-    Vector4 &SetX(float x);
-    Vector4 &SetY(float y);
-    Vector4 &SetZ(float z);
-    Vector4 &SetW(float w);
+    inline float GetX() const { return x; }
+    inline float &GetX() { return x; }
+    inline void SetX(float x) { this->x = x; }
+    inline float GetY() const { return y; }
+    inline float &GetY() { return y; }
+    inline void SetY(float y) { this->y = y; }
+    inline float GetZ() const { return z; }
+    inline float &GetZ() { return z; }
+    inline void SetZ(float z) { this->z = z; }
+    inline float GetW() const { return w; }
+    inline float &GetW() { return w; }
+    inline void SetW(float w) { this->w = w; }
 
     Vector4 &operator=(const Vector4 &other);
     Vector4 operator+(const Vector4 &other) const;

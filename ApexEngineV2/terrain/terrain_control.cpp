@@ -34,7 +34,7 @@ void TerrainControl::OnUpdate(double dt)
 {
     Vector3 campos(m_camera->GetTranslation());
     campos -= parent->GetGlobalTransform().GetTranslation();
-    campos *= Vector3::One() / (m_scale * (m_chunk_size - 1));
+    campos *= Vector3::One() / (m_scale * float(m_chunk_size - 1));
     Vector2 v2cam(campos.x, campos.z);
 
     if (m_queuetick >= TERRAIN_MAX_QUEUE_TICK) {

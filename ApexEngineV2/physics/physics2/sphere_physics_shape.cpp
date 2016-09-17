@@ -5,7 +5,14 @@
 namespace apex {
 namespace physics {
 SpherePhysicsShape::SpherePhysicsShape(double radius)
-    : PhysicsShape(PhysicsShape_sphere), m_radius(radius)
+    : PhysicsShape(PhysicsShape_sphere), 
+      m_radius(radius)
+{
+}
+
+SpherePhysicsShape::SpherePhysicsShape(const SpherePhysicsShape &other)
+    : PhysicsShape(PhysicsShape_sphere),
+      m_radius(other.m_radius)
 {
 }
 

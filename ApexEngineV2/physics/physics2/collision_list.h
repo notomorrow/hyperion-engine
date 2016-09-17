@@ -11,6 +11,7 @@ struct CollisionList {
     std::vector<CollisionInfo> m_collisions;
 
     CollisionList();
+    CollisionList(const CollisionList &other);
 };
 } // namespace physics
 } // namespace apex

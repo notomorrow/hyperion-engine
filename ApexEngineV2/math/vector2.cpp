@@ -21,38 +21,6 @@ Vector2::Vector2(const Vector2 &other)
 {
 }
 
-float Vector2::GetX() const
-{
-    return x;
-}
-
-float &Vector2::GetX()
-{
-    return x;
-}
-
-float Vector2::GetY() const
-{
-    return y;
-}
-
-float &Vector2::GetY()
-{
-    return y;
-}
-
-Vector2 &Vector2::SetX(float x)
-{
-    this->x = x;
-    return *this;
-}
-
-Vector2 &Vector2::Vector2::SetY(float y)
-{
-    this->y = y;
-    return *this;
-}
-
 Vector2 &Vector2::operator=(const Vector2 &other)
 {
     x = other.x;

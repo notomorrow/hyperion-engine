@@ -8,6 +8,7 @@ namespace physics {
 class PlanePhysicsShape : public PhysicsShape {
 public:
     PlanePhysicsShape(const Vector3 &direction, double offset);
+    PlanePhysicsShape(const PlanePhysicsShape &other);
 
     inline const Vector3 &GetDirection() const { return m_direction; }
     inline Vector3 &GetDirection() { return m_direction; }

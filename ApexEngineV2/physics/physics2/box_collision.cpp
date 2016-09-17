@@ -4,9 +4,9 @@ namespace apex {
 namespace physics {
 double BoxCollision::TransformToAxis(const BoxPhysicsShape &box, const Vector3 &axis)
 {
-    return (box.GetDimensions().GetX() / 2.0) * fabs(axis.Dot(box.GetAxis(0))) +
-        (box.GetDimensions().GetY() / 2.0) * fabs(axis.Dot(box.GetAxis(1))) +
-        (box.GetDimensions().GetZ() / 2.0) * fabs(axis.Dot(box.GetAxis(2)));
+    return (box.GetDimensions().GetX() * 0.5f) * fabs(axis.Dot(box.GetAxis(0))) +
+        (box.GetDimensions().GetY() * 0.5f) * fabs(axis.Dot(box.GetAxis(1))) +
+        (box.GetDimensions().GetZ() * 0.5f) * fabs(axis.Dot(box.GetAxis(2)));
 }
 
 void BoxCollision::FillPointFaceBoxBox(const BoxPhysicsShape &a, const BoxPhysicsShape &b,

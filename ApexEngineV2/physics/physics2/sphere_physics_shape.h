@@ -8,6 +8,7 @@ namespace physics {
 class SpherePhysicsShape : public PhysicsShape {
 public:
     SpherePhysicsShape(double radius);
+    SpherePhysicsShape(const SpherePhysicsShape &other);
 
     inline double GetRadius() const { return m_radius; }
     inline void SetRadius(double radius) { m_radius = radius; }

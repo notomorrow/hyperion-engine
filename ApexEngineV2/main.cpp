@@ -95,7 +95,7 @@ public:
         debug_quad->SetShader(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(defines));
 
         renderer = new Renderer();
-        cam = new FpsCamera(inputmgr, &this->window, 70, 0.3, 250);
+        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.3f, 250.0f);
         fbo = new Framebuffer(window.width, window.height);
         shadows = new PssmShadowMapping(cam, 1, 20);
     }
@@ -209,7 +209,7 @@ public:
 
         // add another
         test_body2 = std::make_shared<RigidBody>(1.0);
-        test_body2->m_position = Vector3(0, 25, 0);
+        test_body2->m_position = Vector3(0, 5, 0);
         test_body2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0)/2, test_body2->GetMass()));
         test_body2->SetLinearDamping(0.6);
         test_body2->SetAngularDamping(0.4);
@@ -223,7 +223,7 @@ public:
 
         // add another
         test_body3 = std::make_shared<RigidBody>(1.0);
-        test_body3->m_position = Vector3(0, 35, 0);
+        test_body3->m_position = Vector3(0, 10, 0);
         test_body3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) /2, test_body3->GetMass()));
         test_body3->SetLinearDamping(0.6);
         test_body3->SetAngularDamping(0.4);
@@ -236,16 +236,14 @@ public:
         torus3->AddControl(std::make_shared<RigidBodyControl>(test_body3));
 #else
         rb1 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::SpherePhysicsShape>(0.5), 1.0);
-        rb1->SetPosition(Vector3(0, 40, 0));
-        //rb1->SetLinearVelocity(Vector3(1, 0, 0));
+        rb1->SetPosition(Vector3(2, 40, 0));
+        rb1->SetLinearVelocity(Vector3(-1, 10, 0));
         rb1->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(0.5), 1.0));
-        rb1->GetPhysicsMaterial().SetRestitution(0.8);
         test_object->AddControl(std::make_shared<RigidBodyControl>(rb1));
 
         rb2 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
         rb2->SetPosition(Vector3(0, 5, 0));
        // rb2->SetLinearVelocity(Vector3(2, -1, 0.4));
-        //rb2->SetAngularVelocity(Vector3(-20));
         rb2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
         test_object_1->AddControl(std::make_shared<RigidBodyControl>(rb2));
 
@@ -280,13 +278,13 @@ public:
         top->AddChild(quad_node);*/
         
         top->AddControl(std::make_shared<SkydomeControl>(cam));
-        //top->AddControl(std::make_shared<NoiseTerrainControl>(cam, -74));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1332));
     }
 
     void Logic(double dt)
     {
         // offset root node if camera is out of bounds
-        const int bounds = 15;
+        const float bounds = 15.0f;
         Vector3 campos(cam->GetTranslation());
 
         if (campos.GetX() >= bounds) {
@@ -314,7 +312,7 @@ public:
         timer += dt;
         shadow_timer += dt;
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(sinf(timer * 0.005), cosf(timer * 0.005), 0.0f).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(sinf(timer * 0.005f), cosf(timer * 0.005f), 0.0f).Normalize());
 
         cam->Update(dt);
 
@@ -323,9 +321,9 @@ public:
         if (physics_update_timer >= theta) {
 #if EXPERIMENTAL_PHYSICS
 
-            rb1->ApplyForce(Vector3(0, -10, 0) * rb1->GetPhysicsMaterial().GetMass());
-            rb2->ApplyForce(Vector3(0, -10, 0) * rb2->GetPhysicsMaterial().GetMass());
-            rb3->ApplyForce(Vector3(0, -10, 0) * rb3->GetPhysicsMaterial().GetMass());
+          //  rb1->ApplyForce(Vector3(0, -10, 0) * rb1->GetPhysicsMaterial().GetMass());
+          //  rb2->ApplyForce(Vector3(0, -10, 0) * rb2->GetPhysicsMaterial().GetMass());
+          //  rb3->ApplyForce(Vector3(0, -10, 0) * rb3->GetPhysicsMaterial().GetMass());
 
             PhysicsManager::GetInstance()->RunPhysics(theta);
 #else

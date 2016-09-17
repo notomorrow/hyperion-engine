@@ -11,6 +11,7 @@
 #include "material.h"
 
 #include <vector>
+#include <array>
 #include <map>
 #include <string>
 
@@ -40,21 +41,26 @@ public:
 protected:
     struct SubShader {
         int type;
-        std::string code;
         int id;
+        std::string code;
 
         SubShader()
-            : type(0), code(""), id(0)
+            : type(0),
+              id(0)
         {
         }
 
         SubShader(int type, const std::string &code)
-            : type(type), code(code), id(0)
+            : type(type),
+              id(0),
+              code(code)
         {
         }
 
         SubShader(const SubShader &other)
-            : type(other.type), code(other.code), id(other.id)
+            : type(other.type),
+              id(other.id),
+              code(other.code)
         {
         }
     };
@@ -67,40 +73,40 @@ private:
 
     struct Uniform {
         enum {
-            UF_NONE = -1,
-            UF_FLOAT,
-            UF_INT,
-            UF_VEC2,
-            UF_VEC3,
-            UF_VEC4,
-            UF_MAT4
+            Uniform_None = -1,
+            Uniform_Float,
+            Uniform_Int,
+            Uniform_Vector2,
+            Uniform_Vector3,
+            Uniform_Vector4,
+            Uniform_Matrix4
         } type;
 
-        float data[16];
+        std::array<float, 16> data;
 
         Uniform()
         {
-            std::memset(data, 0, sizeof(data));
-            type = UF_NONE;
+            data = { 0.0f };
+            type = Uniform_None;
         }
 
         Uniform(float value)
         {
             data[0] = value;
-            type = UF_FLOAT;
+            type = Uniform_Float;
         }
 
         Uniform(int value)
         {
-            data[0] = value;
-            type = UF_INT;
+            data[0] = (float)value;
+            type = Uniform_Int;
         }
 
         Uniform(const Vector2 &value)
         {
             data[0] = value.x;
             data[1] = value.y;
-            type = UF_VEC2;
+            type = Uniform_Vector2;
         }
 
         Uniform(const Vector3 &value)
@@ -108,7 +114,7 @@ private:
             data[0] = value.x;
             data[1] = value.y;
             data[2] = value.z;
-            type = UF_VEC3;
+            type = Uniform_Vector3;
         }
 
         Uniform(const Vector4 &value)
@@ -117,19 +123,19 @@ private:
             data[1] = value.y;
             data[2] = value.z;
             data[3] = value.w;
-            type = UF_VEC4;
+            type = Uniform_Vector4;
         }
 
         Uniform(const Matrix4 &value)
         {
-            std::memcpy(data, value.values, sizeof(data));
-            type = UF_MAT4;
+            std::memcpy(&data[0], value.values, 16 * sizeof(float));
+            type = Uniform_Matrix4;
         }
 
         Uniform &operator=(const Uniform &other)
         {
             type = other.type;
-            std::memcpy(data, other.data, sizeof(data));
+            data = other.data;
             return *this;
         }
     };

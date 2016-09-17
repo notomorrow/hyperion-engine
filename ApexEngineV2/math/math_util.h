@@ -10,13 +10,13 @@ public:
     template <typename T>
     static inline T RadToDeg(const T rad)
     {
-        return rad * 180.0f / PI;
+        return rad * (T)180 / (T)PI;
     }
 
     template <typename T>
     static inline T DegToRad(const T deg)
     {
-        return deg * PI / 180.0f;
+        return deg * (T)PI / (T)180;
     }
 
     template <typename T>

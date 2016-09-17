@@ -49,8 +49,8 @@ NoiseTerrainChunk::NoiseTerrainChunk(const ChunkInfo &chunk_info, int seed)
 
     for (int z = 0; z < chunk_info.m_length; z++) {
         for (int x = 0; x < chunk_info.m_width; x++) {
-            int x_offset = x + (chunk_info.m_position.x * (chunk_info.m_width - 1));
-            int z_offset = z + (chunk_info.m_position.y * (chunk_info.m_length - 1));
+            int x_offset = x + ((int)chunk_info.m_position.x * (chunk_info.m_width - 1));
+            int z_offset = z + ((int)chunk_info.m_position.y * (chunk_info.m_length - 1));
 
             //double smooth = (open_simplex_noise2(ctx, x_offset * SMOOTH_SCALE_WIDTH, 
             //    z_offset * SMOOTH_SCALE_HEIGHT) * 2.0 - 1.0) * SMOOTH_SCALE_HEIGHT;

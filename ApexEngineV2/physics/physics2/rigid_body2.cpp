@@ -99,12 +99,11 @@ void Rigidbody::Integrate(double dt)
     if (m_awake) {
         m_last_acceleration = m_acceleration + (m_force_accum * m_material.GetInverseMass());
 
-        Vector3 angular_acceleration = m_torque_accum * m_inv_inertia_tensor_world;
-
         m_linear_velocity += m_last_acceleration * dt;
         m_linear_velocity *= pow(m_material.GetLinearDamping(), dt);
         m_position += m_linear_velocity * dt;
 
+        Vector3 angular_acceleration = m_torque_accum * m_inv_inertia_tensor_world;
         m_angular_velocity += angular_acceleration * dt;
         m_angular_velocity *= pow(m_material.GetAngularDamping(), dt);
         m_orientation += m_angular_velocity * dt;

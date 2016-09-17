@@ -16,13 +16,12 @@ public:
     Vector2(float xy);
     Vector2(const Vector2 &other);
 
-    float GetX() const;
-    float &GetX();
-    float GetY() const;
-    float &GetY();
-
-    Vector2 &SetX(float x);
-    Vector2 &SetY(float y);
+    inline float GetX() const { return x; }
+    inline float &GetX() { return x; }
+    inline void SetX(float x) { this->x = x; }
+    inline float GetY() const { return y; }
+    inline float &GetY() { return y; }
+    inline void SetY(float y) { this->y = y; }
 
     Vector2 &operator=(const Vector2 &other);
     Vector2 operator+(const Vector2 &other) const;

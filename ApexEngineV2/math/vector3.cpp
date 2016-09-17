@@ -23,54 +23,6 @@ Vector3::Vector3(const Vector3 &other)
 {
 }
 
-float Vector3::GetX() const
-{
-    return x;
-}
-
-float &Vector3::GetX()
-{
-    return x;
-}
-
-float Vector3::GetY() const
-{
-    return y;
-}
-
-float &Vector3::GetY()
-{
-    return y;
-}
-
-float Vector3::GetZ() const
-{
-    return z;
-}
-
-float &Vector3::GetZ()
-{
-    return z;
-}
-
-Vector3 &Vector3::SetX(float x)
-{
-    this->x = x;
-    return *this;
-}
-
-Vector3 &Vector3::SetY(float y)
-{
-    this->y = y;
-    return *this;
-}
-
-Vector3 &Vector3::SetZ(float z)
-{
-    this->z = z;
-    return *this;
-}
-
 Vector3 &Vector3::operator=(const Vector3 &other)
 {
     x = other.x;

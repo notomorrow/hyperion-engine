@@ -9,6 +9,7 @@ namespace physics {
 class BoxPhysicsShape : public PhysicsShape {
 public:
     BoxPhysicsShape(const Vector3 &dimensions);
+    BoxPhysicsShape(const BoxPhysicsShape &other);
 
     inline const Vector3 &GetDimensions() const { return m_dimensions; }
     inline Vector3 &GetDimensions() { return m_dimensions; }

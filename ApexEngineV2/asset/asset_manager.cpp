@@ -51,22 +51,23 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
         }
     }
 
-    auto &loader = GetLoader(path);
-    if (!loader) {
-        std::cout << "no suitable loader found for file: " << path << "\n";
-        return nullptr;
-    }
-    auto loaded = loader->LoadFromFile(path);
-    if (!loaded) {
-        std::cout << "error while loading file: " << path << "\n";
-        return nullptr;
-    } else {
-        loaded->SetFilePath(path);
-        if (use_caching) {
-            loaded_assets[path] = loaded;
+    try {
+        auto &loader = GetLoader(path);
+        auto loaded = loader->LoadFromFile(path);
+        if (!loaded) {
+            std::cout << "error while loading file: " << path << "\n";
+            return nullptr;
+        } else {
+            loaded->SetFilePath(path);
+            if (use_caching) {
+                loaded_assets[path] = loaded;
+            }
         }
+        return loaded;
+    } catch (std::string err) {
+        std::cout << "File load error: " << err << "\n";
+        return nullptr;
     }
-    return loaded;
 }
 
 const std::unique_ptr<AssetLoader> &AssetManager::GetLoader(const std::string &path)
@@ -82,6 +83,6 @@ const std::unique_ptr<AssetLoader> &AssetManager::GetLoader(const std::string &p
             return loader;
         }
     }
-    return nullptr;
+    throw std::string("No suitable loader found for requested file");
 }
-}
+} // namespace apex

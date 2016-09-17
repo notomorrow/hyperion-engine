@@ -20,16 +20,15 @@ public:
     Vector3(float xyz);
     Vector3(const Vector3 &other);
 
-    float GetX() const;
-    float &GetX();
-    float GetY() const;
-    float &GetY();
-    float GetZ() const;
-    float &GetZ();
-
-    Vector3 &SetX(float x);
-    Vector3 &SetY(float y);
-    Vector3 &SetZ(float z);
+    inline float GetX() const { return x; }
+    inline float &GetX() { return x; }
+    inline void SetX(float x) { this->x = x; }
+    inline float GetY() const { return y; }
+    inline float &GetY() { return y; }
+    inline void SetY(float y) { this->y = y; }
+    inline float GetZ() const { return z; }
+    inline float &GetZ() { return z; }
+    inline void SetZ(float z) { this->z = z; }
 
     Vector3 &operator=(const Vector3 &other);
     float operator[](size_t index) const;

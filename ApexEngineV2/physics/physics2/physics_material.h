@@ -9,10 +9,10 @@ namespace physics {
 class PhysicsMaterial {
 public:
     PhysicsMaterial(double mass = 1.0, double friction = 0.8, double restitution = 0.2,
-        double linear_damping = 0.6, double angular_damping = 0.4);
+        double linear_damping = 0.85, double angular_damping = 0.7);
     PhysicsMaterial(const PhysicsMaterial &other);
 
-    inline double GetMass() const { return m_mass; }
+    inline double GetMass() const { return m_mass == 0.0 ? DBL_MAX : m_mass; }
     inline void SetMass(double mass) { m_mass = mass; }
     inline double GetInverseMass() const { return m_mass == 0.0 ? 0.0 : 1.0 / m_mass; }
     inline double GetFriction() const { return m_friction; }

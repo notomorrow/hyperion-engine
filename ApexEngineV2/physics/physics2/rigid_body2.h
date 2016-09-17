@@ -40,15 +40,16 @@ public:
     inline const Vector3 &GetAcceleration() const { return m_acceleration; }
     inline void SetAcceleration(const Vector3 &acceleration) { m_acceleration = acceleration; }
     inline const Vector3 &GetLastAcceleration() const { return m_last_acceleration; }
+
+    inline void ApplyForce(const Vector3 &force) { m_force_accum += force; m_awake = true; }
+    inline void ApplyTorque(const Vector3 &torque) { m_torque_accum += torque; m_awake = true; }
+
     inline const Vector3 &GetPosition() const { return m_position; }
     inline Vector3 &GetPosition() { return m_position; }
     inline void SetPosition(const Vector3 &position) { m_position = position; }
     inline const Quaternion &GetOrientation() const { return m_orientation; }
     inline Quaternion &GetOrientation() { return m_orientation; }
     inline void SetOrientation(const Quaternion &orientation) { m_orientation = orientation; }
-
-    inline void ApplyForce(const Vector3 &force) { m_force_accum += force; m_awake = true; }
-    inline void ApplyTorque(const Vector3 &torque) { m_torque_accum += torque; m_awake = true; }
 
     // updates the transform of the PhysicsShape within this object
     void UpdateTransform();
@@ -59,17 +60,17 @@ private:
     std::shared_ptr<PhysicsShape> m_shape;
     PhysicsMaterial m_material;
     bool m_awake;
+    Matrix3 m_inv_inertia_tensor;
+    Matrix3 m_inv_inertia_tensor_world;
     Matrix4 m_transform;
     Vector3 m_linear_velocity;
     Vector3 m_angular_velocity;
     Vector3 m_acceleration;
     Vector3 m_last_acceleration;
-    Vector3 m_position;
-    Quaternion m_orientation;
     Vector3 m_force_accum;
     Vector3 m_torque_accum;
-    Matrix3 m_inv_inertia_tensor;
-    Matrix3 m_inv_inertia_tensor_world;
+    Vector3 m_position;
+    Quaternion m_orientation;
 };
 } // namespace physics
 } // namespace apex

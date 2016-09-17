@@ -7,7 +7,14 @@
 namespace apex {
 namespace physics {
 BoxPhysicsShape::BoxPhysicsShape(const Vector3 &dimensions)
-    : PhysicsShape(PhysicsShape_box), m_dimensions(dimensions)
+    : PhysicsShape(PhysicsShape_box), 
+      m_dimensions(dimensions)
+{
+}
+
+BoxPhysicsShape::BoxPhysicsShape(const BoxPhysicsShape &other)
+    : PhysicsShape(PhysicsShape_box), 
+      m_dimensions(other.m_dimensions)
 {
 }
 
@@ -15,7 +22,7 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
 {
     Vector3 to_center = other->GetAxis(3) - GetAxis(3);
 
-    double penetration = std::numeric_limits<double>::max();
+    double penetration = DBL_MAX;
     unsigned int best = std::numeric_limits<unsigned int>::max();
 
     for (int i = 0; i < 3; i++) {
@@ -58,6 +65,8 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
         return true;
     } else if (best < 6) {
         BoxCollision::FillPointFaceBoxBox(*other, *this, to_center * -1.0f, collision, best - 3, penetration);
+        // reverse the normal because we checked the opposite order
+        collision.m_contact_normal *= -1.0f;
         out.m_collisions.push_back(collision);
         return true;
     } else {
@@ -77,7 +86,7 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
         }
 
         Vector3 a_point_on_edge = m_dimensions * 0.5f;
-        Vector3 b_point_on_edge = other->m_dimensions * 0.5f;
+        Vector3 b_point_on_edge = other->GetDimensions() * 0.5f;
 
         for (unsigned int i = 0; i < 3; i++) {
             if (i == a_axis_index) {
@@ -94,10 +103,10 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
         }
 
         a_point_on_edge *= m_transform;
-        b_point_on_edge *= other->m_transform;
+        b_point_on_edge *= other->GetTransform();
 
         Vector3 vertex = BoxCollision::ContactPoint(a_point_on_edge, a_axis, m_dimensions[a_axis_index] * 0.5f,
-            b_point_on_edge, b_axis, other->m_dimensions[b_axis_index] * 0.5f,
+            b_point_on_edge, b_axis, other->GetDimensions()[b_axis_index] * 0.5f,
             best_single_axis > 2);
 
         collision.m_contact_point = vertex;
