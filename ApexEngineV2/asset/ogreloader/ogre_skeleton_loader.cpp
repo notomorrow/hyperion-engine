@@ -2,7 +2,7 @@
 #include "../../math/vector3.h"
 
 namespace apex {
-class OgreSkeletonHandler : public SaxHandler {
+class OgreSkeletonHandler : public xml::SaxHandler {
 public:
     OgreSkeletonHandler()
     {
@@ -19,7 +19,7 @@ public:
         return skeleton;
     }
 
-    void Begin(const std::string &name, const AttributeMap &attributes) override
+    void Begin(const std::string &name, const xml::AttributeMap &attributes) override
     {
         if (name == "bone") {
             std::string bone_name = attributes.at("name");
@@ -117,7 +117,7 @@ private:
 std::shared_ptr<Loadable> OgreSkeletonLoader::LoadFromFile(const std::string &path)
 {
     OgreSkeletonHandler handler;
-    SaxParser parser(&handler);
+    xml::SaxParser parser(&handler);
     parser.Parse(path.c_str());
 
     return handler.GetSkeleton();

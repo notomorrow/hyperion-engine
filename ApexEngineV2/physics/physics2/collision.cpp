@@ -1,5 +1,5 @@
 #include "collision.h"
-#include "rigid_body2.h"
+#include "rigid_body.h"
 #include "../../math/matrix3.h"
 #include <cassert>
 

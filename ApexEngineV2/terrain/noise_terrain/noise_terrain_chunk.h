@@ -15,6 +15,6 @@ public:
 private:
     std::vector<double> heights;
 };
-}
+} // namespace apex
 
 #endif

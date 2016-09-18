@@ -94,6 +94,6 @@ protected:
 
     void SetTransformUpdateFlag();
 };
-}
+} // namespace apex
 
 #endif

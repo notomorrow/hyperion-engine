@@ -14,11 +14,11 @@ public:
     BoundingBox(const Vector3 &min, const Vector3 &max);
     BoundingBox(const BoundingBox &other);
 
-    const Vector3 &GetMin() const;
-    void SetMin(const Vector3 &);
-    const Vector3 &GetMax() const;
-    void SetMax(const Vector3 &);
-    Vector3 GetDimensions() const;
+    inline const Vector3 &GetMin() const { return m_min; }
+    inline void SetMin(const Vector3 &min) { m_min = min; }
+    inline const Vector3 &GetMax() const { return m_max; }
+    inline void SetMax(const Vector3 &max) { m_max = max; }
+    inline Vector3 GetDimensions() const { return m_max - m_min; }
     std::array<Vector3, 8> GetCorners() const;
 
     BoundingBox &operator*=(double scalar);
@@ -34,9 +34,9 @@ public:
     double Area() const;
 
 private:
-    Vector3 min;
-    Vector3 max;
+    Vector3 m_min;
+    Vector3 m_max;
 };
-}
+} // namespace apex
 
 #endif

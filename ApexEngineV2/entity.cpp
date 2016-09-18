@@ -200,4 +200,4 @@ void Entity::SetTransformUpdateFlag()
         child->SetTransformUpdateFlag();
     }
 }
-}
+} // namespace apex

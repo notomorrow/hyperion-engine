@@ -21,6 +21,6 @@ private:
     const int num_splits;
     std::vector<std::shared_ptr<ShadowMapping>> shadow_renderers;
 };
-}
+} // namespace apex
 
 #endif

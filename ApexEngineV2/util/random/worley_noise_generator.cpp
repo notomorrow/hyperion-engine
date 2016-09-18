@@ -1,15 +1,15 @@
-#include "worley_noise.h"
+#include "worley_noise_generator.h"
 
 #include <algorithm>
 #include <cmath>
 
 namespace apex {
-WorleyNoise::WorleyNoise(int seed)
-    : seed(seed)
+WorleyNoiseGenerator::WorleyNoiseGenerator(int seed)
+    : m_seed(seed)
 {
 }
 
-double WorleyNoise::Noise(double x, double y, double z)
+double WorleyNoiseGenerator::Noise(double x, double y, double z)
 {
     Vector3 input_point(x, y, z);
     Vector3 random_diff;
@@ -33,7 +33,7 @@ double WorleyNoise::Noise(double x, double y, double z)
                 cubey = eval_cubey + j;
                 cubez = eval_cubez + k;
 
-                last_random = WORLEY_LCG_RANDOM(WORLEY_HASH(cubex + seed, cubey, cubez));
+                last_random = WORLEY_LCG_RANDOM(WORLEY_HASH(cubex + m_seed, cubey, cubez));
                 num_feature_points = ProbLookup(last_random);
 
                 for (unsigned int l = 0; l < num_feature_points; l++) {
@@ -57,37 +57,37 @@ double WorleyNoise::Noise(double x, double y, double z)
     return std::min(std::max(CombinerFunc1(distance_array.data()), 0.0), 1.0);
 }
 
-double WorleyNoise::CombinerFunc1(double *data)
+double WorleyNoiseGenerator::CombinerFunc1(double *data)
 {
     return data[0];
 }
 
-double WorleyNoise::CombinerFunc2(double *data)
+double WorleyNoiseGenerator::CombinerFunc2(double *data)
 {
     return data[1] - data[0];
 }
 
-double WorleyNoise::CombinerFunc3(double *data)
+double WorleyNoiseGenerator::CombinerFunc3(double *data)
 {
     return data[2] - data[0];
 }
 
-double WorleyNoise::EuclidianDistance(const Vector3 &v1, const Vector3 &v2)
+double WorleyNoiseGenerator::EuclidianDistance(const Vector3 &v1, const Vector3 &v2)
 {
     return v1.DistanceSquared(v2);
 }
-double WorleyNoise::ManhattanDistance(const Vector3 &v1, const Vector3 &v2)
+double WorleyNoiseGenerator::ManhattanDistance(const Vector3 &v1, const Vector3 &v2)
 {
     return abs(v1.x - v2.x) + abs(v1.y - v2.y) + abs(v1.z - v2.z);
 }
 
-double WorleyNoise::ChebyshevDistance(const Vector3 &v1, const Vector3 &v2)
+double WorleyNoiseGenerator::ChebyshevDistance(const Vector3 &v1, const Vector3 &v2)
 {
     Vector3 d = v1 - v2;
     return std::max(std::max(std::abs(d.x), std::abs(d.y)), std::abs(d.z));
 }
 
-unsigned char WorleyNoise::ProbLookup(unsigned int value)
+unsigned char WorleyNoiseGenerator::ProbLookup(unsigned int value)
 {
     if (value < 393325350) return 1;
     if (value < 1022645910) return 2;
@@ -100,7 +100,7 @@ unsigned char WorleyNoise::ProbLookup(unsigned int value)
     return 9;
 }
 
-void WorleyNoise::Insert(std::vector<double> &data, double value)
+void WorleyNoiseGenerator::Insert(std::vector<double> &data, double value)
 {
     double temp;
     for (long i = data.size() - 1; i >= 0; i--) {
@@ -114,4 +114,4 @@ void WorleyNoise::Insert(std::vector<double> &data, double value)
         }
     }
 }
-}
+} // namespace apex

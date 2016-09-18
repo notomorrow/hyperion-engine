@@ -9,7 +9,7 @@ GammaCorrectShader::GammaCorrectShader(const ShaderProperties &properties)
 {
     const std::string fs_path("res/shaders/filters/gammacorrect.frag");
 
-    AddSubShader(SubShader(CoreEngine::FRAGMENT_SHADER,
+    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
@@ -20,4 +20,4 @@ void GammaCorrectShader::ApplyTransforms(const Matrix4 &transform, Camera *camer
 {
     Shader::ApplyTransforms(transform, camera);
 }
-}
+} // namespace apex

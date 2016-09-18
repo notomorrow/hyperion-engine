@@ -119,4 +119,4 @@ std::vector<size_t> TerrainChunk::BuildIndices()
 
     return indices;
 }
-}
+} // namespace apex

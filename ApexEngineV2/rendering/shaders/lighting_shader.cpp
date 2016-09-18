@@ -11,13 +11,13 @@ LightingShader::LightingShader(const ShaderProperties &properties)
     const std::string vs_path("res/shaders/default.vert");
     const std::string fs_path("res/shaders/default.frag");
 
-    AddSubShader(SubShader(CoreEngine::VERTEX_SHADER,
+    AddSubShader(SubShader(GL_VERTEX_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
         ));
 
-    AddSubShader(SubShader(CoreEngine::FRAGMENT_SHADER,
+    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
@@ -58,4 +58,4 @@ void LightingShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
     Shader::ApplyTransforms(transform, camera);
     SetUniform("u_camerapos", camera->GetTranslation());
 }
-}
+} // namespace apex

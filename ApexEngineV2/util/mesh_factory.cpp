@@ -35,4 +35,4 @@ std::shared_ptr<Mesh> MeshFactory::CreateQuad()
     mesh->SetPrimitiveType(Mesh::PrimitiveType::PRIM_TRIANGLE_FAN);
     return mesh;
 }
-}
+} // namespace apex

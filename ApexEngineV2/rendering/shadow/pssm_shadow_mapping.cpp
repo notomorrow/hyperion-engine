@@ -34,7 +34,7 @@ void PssmShadowMapping::Render(Renderer *renderer)
 {
     for (int i = 0; i < num_splits; i++) {
         shadow_renderers[i]->Begin();
-        CoreEngine::GetInstance()->Clear(CoreEngine::DEPTH_BUFFER_BIT);
+        CoreEngine::GetInstance()->Clear(GL_DEPTH_BUFFER_BIT);
 
         Environment::GetInstance()->SetShadowMatrix(i, shadow_renderers[i]->
             GetShadowCamera()->GetViewProjectionMatrix());
@@ -44,4 +44,4 @@ void PssmShadowMapping::Render(Renderer *renderer)
         shadow_renderers[i]->End();
     }
 }
-}
+} // namespace apex

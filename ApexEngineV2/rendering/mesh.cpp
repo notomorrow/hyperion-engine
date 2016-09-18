@@ -1,5 +1,5 @@
 #include "mesh.h"
-#include "../core_engine.h"
+#include "../opengl.h"
 
 namespace apex {
 
@@ -23,8 +23,8 @@ Mesh::Mesh()
 Mesh::~Mesh()
 {
     if (is_created) {
-        CoreEngine::GetInstance()->DeleteBuffers(1, &vbo);
-        CoreEngine::GetInstance()->DeleteBuffers(1, &ibo);
+        glDeleteBuffers(1, &vbo);
+        glDeleteBuffers(1, &ibo);
     }
 
     is_uploaded = false;
@@ -147,41 +147,39 @@ std::vector<float> Mesh::CreateBuffer()
 
 void Mesh::Render()
 {
-    auto *engine = CoreEngine::GetInstance();
-
     if (!is_created) {
-        engine->GenBuffers(1, &vbo);
-        engine->GenBuffers(1, &ibo);
+        glGenBuffers(1, &vbo);
+        glGenBuffers(1, &ibo);
         is_created = true;
     }
     if (!is_uploaded) {
         std::vector<float> buffer = CreateBuffer();
-        engine->BindBuffer(CoreEngine::ARRAY_BUFFER, vbo);
-        engine->BufferData(CoreEngine::ARRAY_BUFFER, buffer.size() * sizeof(float), &buffer[0], CoreEngine::STATIC_DRAW);
-        engine->BindBuffer(CoreEngine::ELEMENT_ARRAY_BUFFER, ibo);
-        engine->BufferData(CoreEngine::ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], CoreEngine::STATIC_DRAW);
-        engine->BindBuffer(CoreEngine::ARRAY_BUFFER, 0);
-        engine->BindBuffer(CoreEngine::ELEMENT_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(float), &buffer[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         is_uploaded = true;
     }
 
-    engine->BindBuffer(CoreEngine::ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
     for (auto &&attr : attribs) {
-        engine->EnableVertexAttribArray(attr.second.index);
-        engine->VertexAttribPointer(attr.second.index, attr.second.size, CoreEngine::FLOAT,
+        glEnableVertexAttribArray(attr.second.index);
+        glVertexAttribPointer(attr.second.index, attr.second.size, GL_FLOAT,
             false, vertex_size * sizeof(float), (void*)(attr.second.offset * sizeof(float)));
     }
 
-    engine->BindBuffer(CoreEngine::ELEMENT_ARRAY_BUFFER, ibo);
-    engine->DrawElements(primitive_type, indices.size(), CoreEngine::UNSIGNED_INT, 0);
-
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glDrawElements(primitive_type, indices.size(), GL_UNSIGNED_INT, 0);
+    
     for (auto &&attr : attribs) {
-        engine->DisableVertexAttribArray(attr.second.index);
+        glDisableVertexAttribArray(attr.second.index);
     }
 
     // Unbind the buffers
-    engine->BindBuffer(CoreEngine::ARRAY_BUFFER, 0);
-    engine->BindBuffer(CoreEngine::ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 } // namespace apex

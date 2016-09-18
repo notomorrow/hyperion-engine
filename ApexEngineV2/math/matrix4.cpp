@@ -14,7 +14,7 @@ Matrix4::Matrix4()
 
 Matrix4::Matrix4(float *v)
 {
-    memcpy(values, v, sizeof(float) * 16);
+    memcpy(&values[0], v, sizeof(float) * values.size());
 }
 
 Matrix4::Matrix4(const Matrix4 &other)
@@ -118,7 +118,7 @@ Matrix4 &Matrix4::Invert()
 
 Matrix4 &Matrix4::operator=(const Matrix4 &other)
 {
-    memcpy(values, other.values, 16 * sizeof(float));
+    values = other.values;
     return *this;
 }
 

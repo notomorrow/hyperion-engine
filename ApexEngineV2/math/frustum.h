@@ -11,11 +11,11 @@ class Frustum {
 public:
     Frustum(const Matrix4 &view_proj);
 
-    Vector4 &GetPlane(size_t index);
-    const Vector4 &GetPlane(size_t index) const;
+    inline Vector4 &GetPlane(size_t index) { return m_planes[index]; }
+    inline const Vector4 &GetPlane(size_t index) const { return m_planes[index]; }
 
 private:
-    std::array<Vector4, 6> planes;
+    std::array<Vector4, 6> m_planes;
 };
 } // namespace apex
 

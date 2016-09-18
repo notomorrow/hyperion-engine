@@ -63,4 +63,4 @@ void SkydomeControl::OnUpdate(double dt)
         shader->SetGlobalTime(global_time);
     }
 }
-}
+} // namespace apex

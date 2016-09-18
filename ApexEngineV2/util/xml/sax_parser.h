@@ -8,6 +8,7 @@
 #include <map>
 
 namespace apex {
+namespace xml {
 typedef std::map<std::string, std::string> AttributeMap;
 
 class SaxHandler {
@@ -24,11 +25,13 @@ public:
 class SaxParser {
 public:
     SaxParser(SaxHandler *handler);
-    void Parse(const char *filepath);
+    void Parse(const std::string &filepath);
 
 private:
     std::ifstream file;
     SaxHandler *handler;
 };
-}
+} // namespace xml
+} // namespace apex
+
 #endif

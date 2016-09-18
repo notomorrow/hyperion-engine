@@ -38,20 +38,14 @@
 
 /* Physics */
 #include "physics/physics_manager.h"
-#if EXPERIMENTAL_PHYSICS
-#include "physics/physics2/rigid_body2.h"
+#include "physics/physics2/rigid_body.h"
 #include "physics/physics2/box_physics_shape.h"
 #include "physics/physics2/sphere_physics_shape.h"
 #include "physics/physics2/plane_physics_shape.h"
-#else
-#include "physics/collision_box.h"
-#include "physics/collision_sphere.h"
-#include "physics/complex_collision_detector.h"
-#include "physics/gravity_force.h"
-#include "physics/physics_control.h"
-#include "physics/shapes/aabb_physics_object.h"
-#endif
 #include "physics/rigid_body_control.h"
+
+/* Particles */
+#include "particles/particle_generator.h"
 
 using namespace apex;
 
@@ -61,6 +55,7 @@ public:
     Camera *cam;
     Framebuffer *fbo;
     PssmShadowMapping *shadows;
+    ParticleGenerator *particle_generator;
 
     std::shared_ptr<Entity> top;
     std::shared_ptr<Entity> test_object, test_object_1, torus3;
@@ -68,13 +63,7 @@ public:
     std::shared_ptr<Texture> pbr_tex;
     std::shared_ptr<Mesh> debug_quad;
 
-#if EXPERIMENTAL_PHYSICS
     std::shared_ptr<physics::Rigidbody> rb1, rb2, rb3, rb4;
-#else
-    std::shared_ptr<RigidBody> test_body, test_body2, test_body3;
-    apex::CollisionSphere *sphere;
-    apex::CollisionBox *box2, *box3;
-#endif
 
     double timer;
     double shadow_timer;
@@ -98,26 +87,39 @@ public:
         cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.3f, 250.0f);
         fbo = new Framebuffer(window.width, window.height);
         shadows = new PssmShadowMapping(cam, 1, 20);
+
+        particle_generator = new ParticleGenerator(ParticleConstructionInfo(
+            [](const Particle &particle)
+        {
+            const Vector3 base(0, 8, 0);
+            const Vector3 random(MathUtil::Random(-15.0f, 15.0f), MathUtil::Random(-15.0f, 15.0f), MathUtil::Random(-15.0f, 15.0f));
+            return base;// +random;
+        },
+            [](const Particle &particle)
+        {
+            static int counter = 0;
+            counter++;
+            float radius = 3.0f;
+            const Vector3 gravity = Environment::GetInstance()->GetGravity() * 0.2f;
+            const Vector3 rotation(std::sinf(counter * 0.2f) * radius, 0.0f, std::cosf(counter * 0.2f) * radius);
+            const float random = MathUtil::Random(0.3f, 1.3f);
+            return (gravity * random) + rotation;
+        }
+        ));
     }
 
     ~MyGame()
     {
+        delete particle_generator;
         delete shadows;
         delete fbo;
         delete cam;
         delete renderer;
-
-#if !EXPERIMENTAL_PHYSICS
-        delete sphere;
-        delete box2;
-        delete box3;
-#endif
     }
 
     void Initialize()
     {
         Environment::GetInstance()->SetShadowsEnabled(true);
-
         AudioManager::GetInstance()->Initialize();
 
         ShaderProperties defines = {
@@ -140,9 +142,6 @@ public:
         audio_ctrl->GetSource()->SetLoop(true);
         audio_ctrl->GetSource()->Play();
         top->AddChild(test_object_1);
-
-
-
 
         auto test_object_2 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/box.obj");
         //torus2->Scale(1.5f);
@@ -190,51 +189,6 @@ public:
         test_object->SetName("sphere");
         top->AddChild(test_object);
 
-#if !EXPERIMENTAL_PHYSICS
-        // add a test RigidBody.
-        test_body = std::make_shared<RigidBody>(1.0);
-        test_body->m_position = Vector3(2, 40, 0);
-        test_body->m_acceleration = Vector3(-0.3, 0, 0);
-        test_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, test_body->GetMass()));
-        test_body->SetLinearDamping(0.6);
-        test_body->SetAngularDamping(0.4);
-        test_body->m_can_sleep = false;
-        test_body->SetAwake(true);
-        test_body->UpdateTransform();
-        PhysicsManager::GetInstance()->RegisterBody(test_body);
-        sphere = new CollisionSphere(test_body.get(), 1.0/2);
-        sphere->UpdateTransform();
-
-        test_object->AddControl(std::make_shared<RigidBodyControl>(test_body));
-
-        // add another
-        test_body2 = std::make_shared<RigidBody>(1.0);
-        test_body2->m_position = Vector3(0, 5, 0);
-        test_body2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0)/2, test_body2->GetMass()));
-        test_body2->SetLinearDamping(0.6);
-        test_body2->SetAngularDamping(0.4);
-        test_body2->m_can_sleep = false;
-        test_body2->SetAwake(true);
-        test_body2->UpdateTransform();
-        PhysicsManager::GetInstance()->RegisterBody(test_body2);
-        box2 = new CollisionBox(test_body2.get(), Vector3(1.0));
-        box2->UpdateTransform();
-        test_object_1->AddControl(std::make_shared<RigidBodyControl>(test_body2));
-
-        // add another
-        test_body3 = std::make_shared<RigidBody>(1.0);
-        test_body3->m_position = Vector3(0, 10, 0);
-        test_body3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) /2, test_body3->GetMass()));
-        test_body3->SetLinearDamping(0.6);
-        test_body3->SetAngularDamping(0.4);
-        test_body3->m_can_sleep = false;
-        test_body3->SetAwake(true);
-        test_body3->UpdateTransform();
-        PhysicsManager::GetInstance()->RegisterBody(test_body3);
-        box3 = new CollisionBox(test_body3.get(), Vector3(1.0));
-        box3->UpdateTransform();
-        torus3->AddControl(std::make_shared<RigidBodyControl>(test_body3));
-#else
         rb1 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::SpherePhysicsShape>(0.5), 1.0);
         rb1->SetPosition(Vector3(2, 40, 0));
         rb1->SetLinearVelocity(Vector3(-1, 10, 0));
@@ -252,14 +206,13 @@ public:
         rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
         torus3->AddControl(std::make_shared<RigidBodyControl>(rb3));
 
-        rb4 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 1.0);
+        rb4 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
         rb4->SetAwake(false);
 
         PhysicsManager::GetInstance()->RegisterBody(rb1);
         PhysicsManager::GetInstance()->RegisterBody(rb2);
         PhysicsManager::GetInstance()->RegisterBody(rb3);
         PhysicsManager::GetInstance()->RegisterBody(rb4);
-#endif
 
         /*auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
         monkey->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
@@ -278,7 +231,7 @@ public:
         top->AddChild(quad_node);*/
         
         top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1332));
+        //top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1332));
     }
 
     void Logic(double dt)
@@ -319,38 +272,12 @@ public:
 
         const double theta = 0.02;
         if (physics_update_timer >= theta) {
-#if EXPERIMENTAL_PHYSICS
-
-          //  rb1->ApplyForce(Vector3(0, -10, 0) * rb1->GetPhysicsMaterial().GetMass());
-          //  rb2->ApplyForce(Vector3(0, -10, 0) * rb2->GetPhysicsMaterial().GetMass());
-          //  rb3->ApplyForce(Vector3(0, -10, 0) * rb3->GetPhysicsMaterial().GetMass());
-
             PhysicsManager::GetInstance()->RunPhysics(theta);
-#else
-            CollisionPlane plane;
-            plane.m_direction = Vector3(0, 1, 0);
-            plane.m_offset = 0;
-
-            PhysicsManager::GetInstance()->ResetCollisions();
-            CollisionData &data = PhysicsManager::GetInstance()->collision_data;
-            ComplexCollisionDetector::BoxAndSphere(*box2, *sphere, data);
-            ComplexCollisionDetector::BoxAndSphere(*box3, *sphere, data);
-            ComplexCollisionDetector::BoxAndBox(*box2, *box3, data);
-            ComplexCollisionDetector::SphereAndHalfSpace(*sphere, plane, data);
-            ComplexCollisionDetector::BoxAndHalfSpace(*box2, plane, data);
-            ComplexCollisionDetector::BoxAndHalfSpace(*box3, plane, data);
-
-            PhysicsManager::GetInstance()->RunPhysics(theta);
-
-            // update objects
-            sphere->UpdateTransform();
-            box2->UpdateTransform();
-            box3->UpdateTransform();
-#endif
-
             physics_update_timer = 0.0;
         }
         physics_update_timer += dt;
+
+        particle_generator->UpdateParticles(dt);
 
         top->Update(dt);
     }
@@ -378,10 +305,9 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         renderer->RenderAll(cam);
-
-        //DrawBoundingBox(cam, bb1);
-
         renderer->ClearRenderables();
+
+        particle_generator->DrawParticles(cam);
 
         /*debug_quad->GetMaterial().diffuse_texture = shadows->GetShadowMap();
         */

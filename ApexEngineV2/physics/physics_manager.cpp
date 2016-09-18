@@ -1,5 +1,6 @@
 #include "physics_manager.h"
 #include "physics2/collision_list.h"
+#include "../rendering/environment.h"
 
 #include <algorithm>
 
@@ -16,33 +17,19 @@ PhysicsManager *PhysicsManager::GetInstance()
 
 PhysicsManager::PhysicsManager()
 {
-#if !EXPERIMENTAL_PHYSICS
-    resolver = new ContactResolver(0);
-
-    collision_data.m_friction = 0.8;
-    collision_data.m_restitution = 0.2;
-    collision_data.m_tolerance = 0.1;
-    collision_data.Reset();
-#endif
 }
 
 PhysicsManager::~PhysicsManager()
 {
-#if !EXPERIMENTAL_PHYSICS
-    delete resolver;
-#endif
 }
 
-void PhysicsManager::RegisterBody(std::shared_ptr<RIGID_BODY> body)
+void PhysicsManager::RegisterBody(std::shared_ptr<physics::Rigidbody> body)
 {
     m_bodies.push_back(body);
 }
 
 void PhysicsManager::ResetCollisions()
 {
-#if !EXPERIMENTAL_PHYSICS
-    collision_data.Reset();
-#endif
 }
 
 void PhysicsManager::DetectCollisions()
@@ -51,7 +38,6 @@ void PhysicsManager::DetectCollisions()
 
 void PhysicsManager::RunPhysics(double dt)
 {
-#if EXPERIMENTAL_PHYSICS
     // gather collisions
     std::vector<physics::CollisionInfo> collisions;
 
@@ -119,24 +105,12 @@ void PhysicsManager::RunPhysics(double dt)
 
     for (auto &body : m_bodies) {
         if (body->IsAwake() && !body->IsStatic()) {
-            body->ApplyForce(Vector3(0, -10, 0) * body->GetPhysicsMaterial().GetMass());
+            body->ApplyForce(Environment::GetInstance()->GetGravity() * body->GetPhysicsMaterial().GetMass());
             body->Integrate(dt);
-
         }
     }
-#else
-    resolver->SetNumIterations(MAX_CONTACTS * 4);
-    resolver->ResolveContacts(collision_data.m_contacts, collision_data.m_contact_count, dt);
-
-    for (auto &&body : m_bodies) {
-        // apply gravity to body
-        body->ApplyForce(Vector3(0, -10, 0) * body->GetMass());
-        body->Integrate(dt);
-    }
-#endif
 }
 
-#if EXPERIMENTAL_PHYSICS
 void PhysicsManager::UpdateInternals(std::vector<physics::CollisionInfo> &collisions, double dt)
 {
     for (physics::CollisionInfo &item : collisions) {
@@ -241,5 +215,4 @@ void PhysicsManager::UpdatePositions(std::vector<physics::CollisionInfo> &collis
         }
     }
 }
-#endif
 } // namespace apex

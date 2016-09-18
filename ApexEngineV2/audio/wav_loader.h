@@ -8,6 +8,6 @@ class WavLoader : public AssetLoader {
 public:
     std::shared_ptr<Loadable> LoadFromFile(const std::string &);
 };
-}
+} // namespace apex
 
 #endif

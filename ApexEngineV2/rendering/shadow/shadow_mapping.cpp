@@ -1,6 +1,7 @@
 #include "shadow_mapping.h"
 #include "../../core_engine.h"
 #include "../../math/frustum.h"
+#include "../../opengl.h"
 
 namespace apex {
 ShadowMapping::ShadowMapping(Camera *view_cam, int max_dist)
@@ -8,8 +9,8 @@ ShadowMapping::ShadowMapping(Camera *view_cam, int max_dist)
 {
     shadow_cam = new OrthoCamera(-10, 10, -10, 10, -10, 10);
     fbo = new Framebuffer(1024, 1024);
-    fbo->GetDepthTexture()->SetFilter(CoreEngine::LINEAR, CoreEngine::LINEAR);
-    fbo->GetDepthTexture()->SetWrapMode(CoreEngine::CLAMP_TO_EDGE, CoreEngine::CLAMP_TO_EDGE);
+    fbo->GetDepthTexture()->SetFilter(GL_LINEAR, GL_LINEAR);
+    fbo->GetDepthTexture()->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -52,8 +53,8 @@ void ShadowMapping::Begin()
 
     TransformPoints(frustum_corners_ws, frustum_corners_ls, new_view);
 
-    maxes = Vector3(FLT_MIN);
-    mins = Vector3(FLT_MAX);
+    maxes = Vector3(std::numeric_limits<float>::min());
+    mins = Vector3(std::numeric_limits<float>::max());
 
     for (size_t i = 0; i < frustum_corners_ls.size(); i++) {
         auto &corner = frustum_corners_ls[i];
@@ -109,4 +110,4 @@ void ShadowMapping::UpdateFrustumPoints(std::array<Vector3, 8> &points)
     points[6] = Vector3(points[1].x, points[0].y, points[1].z);
     points[7] = Vector3(points[1].x, points[1].y, points[0].z);
 }
-}
+} // namespace apex

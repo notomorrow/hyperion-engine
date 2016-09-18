@@ -30,7 +30,7 @@ struct OgreSubmesh {
     std::vector<Vertex> vertices;
 };
 
-class OgreHandler : public SaxHandler {
+class OgreHandler : public xml::SaxHandler {
 public:
     OgreHandler(const std::string &filepath)
         : filepath(filepath), submeshes_enabled(true),
@@ -88,7 +88,7 @@ public:
         }
     }
 
-    void Begin(const std::string &name, const AttributeMap &attributes)
+    void Begin(const std::string &name, const xml::AttributeMap &attributes)
     {
         if (name == "position") {
             float x = std::stof(attributes.at("x"));
@@ -172,8 +172,8 @@ private:
 std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
 {
     OgreHandler handler(path);
-    SaxParser parser(&handler);
-    parser.Parse(path.c_str());
+    xml::SaxParser parser(&handler);
+    parser.Parse(path);
 
     auto final_node = std::make_shared<Entity>();
 
@@ -278,4 +278,4 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
 
     return final_node;
 }
-}
+} // namespace apex

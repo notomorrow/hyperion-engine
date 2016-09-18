@@ -19,9 +19,9 @@ public:
 private:
     std::shared_ptr<Texture2D> cloud_map;
 
-    Vector4 _cloud_color;
-    float _global_time;
+    Vector4 m_cloud_color;
+    float m_global_time;
 };
-}
+} // namespace apex
 
 #endif

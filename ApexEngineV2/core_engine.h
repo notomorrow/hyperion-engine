@@ -11,7 +11,7 @@ public:
     static CoreEngine *GetInstance();
     static void SetInstance(CoreEngine *ptr);
 
-    enum GLEnums {
+    /*enum GLEnums {
         DEPTH_BUFFER_BIT = 0x00000100,
         STENCIL_BUFFER_BIT = 0x00000400,
         COLOR_BUFFER_BIT = 0x00004000,
@@ -110,7 +110,7 @@ public:
         STENCIL_ATTACHMENT = 0x8D20,
         NONE = 0,
         FRAMEBUFFER_COMPLETE = 0x8CD5,
-    };
+    };*/
 
     virtual bool InitializeGame(Game *game) = 0;
     virtual void Viewport(int x, int y, size_t width, size_t height) = 0;
@@ -172,6 +172,6 @@ public:
 private:
     static CoreEngine *instance;
 };
-}
+} // namespace apex
 
 #endif

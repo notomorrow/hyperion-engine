@@ -160,4 +160,4 @@ bool InputManager::RegisterClickEvent(int btn, const InputEvent &evt)
     }
     return false;
 }
-}
+} // namespace apex

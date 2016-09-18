@@ -1,8 +1,8 @@
 #ifndef SHADER_H
 #define SHADER_H
 
+#include "../opengl.h"
 #include "camera/camera.h"
-#include "../core_engine.h"
 #include "../math/vector2.h"
 #include "../math/vector3.h"
 #include "../math/vector4.h"
@@ -128,7 +128,7 @@ private:
 
         Uniform(const Matrix4 &value)
         {
-            std::memcpy(&data[0], value.values, 16 * sizeof(float));
+            std::memcpy(&data[0], &value.values[0], value.values.size() * sizeof(float));
             type = Uniform_Matrix4;
         }
 

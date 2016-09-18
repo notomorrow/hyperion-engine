@@ -1,3 +1,5 @@
+#if 0
+
 #include "simple_collision_detector.h"
 
 namespace apex {
@@ -63,3 +65,5 @@ bool SimpleCollisionDetector::BoxAndBox(const CollisionBox &a, const CollisionBo
     return true;
 }
 } // namespace apex
+
+#endif

@@ -16,14 +16,14 @@
     ((1103515245ULL * last + 12345ULL) % 0x100000000ULL)
 
 namespace apex {
-class WorleyNoise {
+class WorleyNoiseGenerator {
 public:
-    WorleyNoise(int seed);
+    WorleyNoiseGenerator(int seed);
 
     double Noise(double x, double y, double z);
 
 private:
-    int seed;
+    int m_seed;
 
     double CombinerFunc1(double *data);
     double CombinerFunc2(double *data);
@@ -37,6 +37,6 @@ private:
 
     void Insert(std::vector<double> &data, double value);
 };
-}
+} // namespace apex
 
 #endif

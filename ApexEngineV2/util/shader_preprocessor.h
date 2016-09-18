@@ -18,6 +18,6 @@ private:
         const std::map<std::string, float> &defines,
         const std::string &local_path);
 };
-}
+} // namespace apex
 
 #endif

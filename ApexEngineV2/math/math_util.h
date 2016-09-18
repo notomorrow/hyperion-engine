@@ -1,11 +1,22 @@
 #ifndef MATHUTIL_H
 #define MATHUTIL_H
 
+#include <cstdlib>
+
 namespace apex {
 class MathUtil {
 public:
     const static double PI;
     const static double EPSILON;
+
+    template <typename T>
+    static inline T Random(T a, T b)
+    {
+        T random = ((T)rand()) / (T)RAND_MAX;
+        T diff = b - a;
+        T r = random * diff;
+        return a + r;
+    }
 
     template <typename T>
     static inline T RadToDeg(const T rad)

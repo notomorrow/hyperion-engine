@@ -10,6 +10,6 @@ class MeshFactory {
 public:
     static std::shared_ptr<Mesh> CreateQuad();
 };
-}
+} // namespace apex
 
 #endif

@@ -21,6 +21,6 @@ private:
     const double tps;
     double tick;
 };
-}
+} // namespace apex
 
 #endif

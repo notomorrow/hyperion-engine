@@ -10,6 +10,6 @@ public:
 
     virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
 };
-}
+} // namespace apex
 
 #endif

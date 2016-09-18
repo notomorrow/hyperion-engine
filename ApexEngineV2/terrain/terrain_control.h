@@ -8,8 +8,8 @@
 
 #include <queue>
 
-#define TERRAIN_MAX_QUEUE_TICK 5
-#define TERRAIN_MAX_UPDATE_TICK 2
+#define TERRAIN_MAX_QUEUE_TICK 10
+#define TERRAIN_MAX_UPDATE_TICK 4
 #define TERRAIN_MAX_UNLOAD_TICK 1
 #define TERRAIN_UPDATE_STEP 1
 
@@ -42,6 +42,6 @@ private:
     int m_chunk_index = 0;
     double m_max_distance;
 };
-}
+} // namespace apex
 
 #endif

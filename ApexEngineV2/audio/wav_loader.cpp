@@ -114,4 +114,4 @@ std::shared_ptr<Loadable> WavLoader::LoadFromFile(const std::string &path)
         return nullptr;
     }
 }
-}
+} // namespace apex

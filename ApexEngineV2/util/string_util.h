@@ -90,6 +90,6 @@ public:
         return result;
     }
 };
-}
+} // namespace apex
 
 #endif

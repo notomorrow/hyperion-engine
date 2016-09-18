@@ -128,4 +128,4 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
 
     return res;
 }
-}
+} // namespace apex

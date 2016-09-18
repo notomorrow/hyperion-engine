@@ -20,9 +20,7 @@ public:
         RB_SCREEN,
     };
 
-    virtual ~Renderable()
-    {
-    }
+    virtual ~Renderable() = default;
 
     RenderBucket GetRenderBucket() const;
     void SetRenderBucket(RenderBucket rb);

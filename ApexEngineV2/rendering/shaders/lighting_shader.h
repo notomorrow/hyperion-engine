@@ -11,6 +11,6 @@ public:
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
 };
-}
+} // namespace apex
 
 #endif

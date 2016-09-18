@@ -35,4 +35,4 @@ BoundingBox AABBFactory::CreateEntityBoundingBox(const std::shared_ptr<Entity> &
 
     return aabb;
 }
-}
+} // namespace apex

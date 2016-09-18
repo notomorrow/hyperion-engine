@@ -30,6 +30,7 @@ Environment *Environment::GetInstance()
 }
 
 Environment::Environment()
+    : m_gravity(0.0f, -9.81f, 0.0f)
 {
     shadows_enabled = false;
     num_cascades = 1;
@@ -98,4 +99,4 @@ void Environment::SetShadowMatrix(int i, const Matrix4 &mat)
 {
     shadow_matrices[i] = mat;
 }
-}
+} // namespace apex

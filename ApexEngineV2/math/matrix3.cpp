@@ -14,7 +14,7 @@ Matrix3::Matrix3()
 
 Matrix3::Matrix3(float *v)
 {
-    memcpy(values, v, sizeof(float) * 9);
+    memcpy(&values[0], v, sizeof(float) * values.size());
 }
 
 Matrix3::Matrix3(const Matrix3 &other)
@@ -65,7 +65,7 @@ Matrix3 &Matrix3::Invert()
 
 Matrix3 &Matrix3::operator=(const Matrix3 &other)
 {
-    memcpy(values, other.values, sizeof(float) * 9);
+    values = other.values;
     return *this;
 }
 

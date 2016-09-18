@@ -15,22 +15,22 @@ public:
     ~AudioManager();
 
     bool Initialize();
-    bool IsInitialized() const;
+    inline bool IsInitialized() const { return m_is_initialized; }
     void ListDevices();
-    ALCdevice *GetDevice();
-    ALCcontext *GetContext();
+    inline ALCdevice *GetDevice() const { return m_device; }
+    inline ALCcontext *GetContext() const { return m_context; }
 
-    void SetListenerPosition(const Vector3 &vec);
+    void SetListenerPosition(const Vector3 &position);
     void SetListenerOrientation(const Vector3 &forward, const Vector3 &up);
 
 private:
     static AudioManager *instance;
 
-    bool is_initialized;
+    bool m_is_initialized;
 
-    ALCdevice *dev;
-    ALCcontext *ctx;
+    ALCdevice *m_device;
+    ALCcontext *m_context;
 };
-}
+} // namespace apex
 
 #endif

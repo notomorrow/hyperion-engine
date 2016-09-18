@@ -21,7 +21,7 @@ public:
 private:
     std::shared_ptr<Texture2D> noise_map;
 
-    float _global_time;
+    float m_global_time;
 
     Vector4 sun_color;
     Vector3 wavelength;
@@ -43,6 +43,6 @@ private:
     float scale_over_scale_depth;
     float exposure;
 };
-}
+} // namespace apex
 
 #endif

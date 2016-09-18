@@ -2,12 +2,13 @@
 #define MATRIX3_H
 
 #include <iostream>
+#include <array>
 
 namespace apex {
 class Matrix3 {
     friend std::ostream &operator<<(std::ostream &os, const Matrix3 &mat);
 public:
-    float values[9];
+    std::array<float, 9> values;
 
     Matrix3();
     Matrix3(float *v);

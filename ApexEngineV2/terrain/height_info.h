@@ -59,6 +59,6 @@ struct ChunkInfo {
     {
     }
 };
-}
+} // namespace apex
 
 #endif

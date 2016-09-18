@@ -21,8 +21,9 @@ public:
     void Stop();
     
 private:
-    unsigned int buffer, source;
+    unsigned int m_buffer_id;
+    unsigned int m_source_id;
 };
-}
+} // namespace apex
 
 #endif

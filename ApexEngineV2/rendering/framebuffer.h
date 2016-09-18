@@ -26,6 +26,6 @@ private:
 
     std::shared_ptr<Texture2D> color_texture, depth_texture;
 };
-}
+} // namespace apex
 
 #endif

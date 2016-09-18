@@ -6,7 +6,7 @@ namespace apex {
 static int num_threads = 0;
 TerrainControl::TerrainControl(Camera *camera)
     : m_camera(camera), m_scale(3.0, 2.0, 3.0),
-    m_tick(TERRAIN_MAX_UPDATE_TICK), m_queuetick(0), 
+    m_tick(0), m_queuetick(0), 
     m_max_distance(1.0)
 {
 }
@@ -160,4 +160,4 @@ std::array<NeighborChunkInfo, 8> TerrainControl::GetNeighbors(int x, int z)
     };
     return neighbors;
 }
-}
+} // namespace apex

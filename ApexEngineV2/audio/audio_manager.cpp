@@ -15,32 +15,32 @@ AudioManager *AudioManager::GetInstance()
 
 AudioManager::AudioManager()
 {
-    is_initialized = false;
+    m_is_initialized = false;
 }
 
 AudioManager::~AudioManager()
 {
-    if (is_initialized) {
-        alcCloseDevice(dev);
-        alcDestroyContext(ctx);
+    if (m_is_initialized) {
+        alcCloseDevice(m_device);
+        alcDestroyContext(m_context);
     }
-    is_initialized = false;
+    m_is_initialized = false;
 }
 
 bool AudioManager::Initialize()
 {
-    dev = alcOpenDevice(NULL);
-    if (!dev) {
+    m_device = alcOpenDevice(NULL);
+    if (!m_device) {
         std::cout << "Failed to open OpenAL device\n";
-        is_initialized = false;
+        m_is_initialized = false;
         return false;
     }
 
-    ctx = alcCreateContext(dev, NULL);
-    alcMakeContextCurrent(ctx);
-    if (!ctx) {
+    m_context = alcCreateContext(m_device, NULL);
+    alcMakeContextCurrent(m_context);
+    if (!m_context) {
         std::cout << "Failed to open OpenAL context\n";
-        is_initialized = false;
+        m_is_initialized = false;
         return false;
     }
 
@@ -49,13 +49,8 @@ bool AudioManager::Initialize()
     alListener3f(AL_VELOCITY, 0, 0, 0);
     alListenerfv(AL_ORIENTATION, orientation);
 
-    is_initialized = true;
+    m_is_initialized = true;
     return true;
-}
-
-bool AudioManager::IsInitialized() const
-{
-    return is_initialized;
 }
 
 void AudioManager::ListDevices()
@@ -75,19 +70,9 @@ void AudioManager::ListDevices()
     std::cout << "----------\n";
 }
 
-ALCdevice *AudioManager::GetDevice()
+void AudioManager::SetListenerPosition(const Vector3 &position)
 {
-    return dev;
-}
-
-ALCcontext *AudioManager::GetContext()
-{
-    return ctx;
-}
-
-void AudioManager::SetListenerPosition(const Vector3 &vec)
-{
-    alListener3f(AL_POSITION, vec.x, vec.y, vec.z);
+    alListener3f(AL_POSITION, position.x, position.y, position.z);
 }
 
 void AudioManager::SetListenerOrientation(const Vector3 &forward, const Vector3 &up)
@@ -95,4 +80,4 @@ void AudioManager::SetListenerOrientation(const Vector3 &forward, const Vector3 
     const float values[] = { forward.x, forward.y, forward.z, up.x, up.y, up.z };
     alListenerfv(AL_ORIENTATION, values);
 }
-}
+} // namespace apex

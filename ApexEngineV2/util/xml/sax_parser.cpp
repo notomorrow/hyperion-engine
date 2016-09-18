@@ -1,12 +1,13 @@
 #include "sax_parser.h"
 
 namespace apex {
+namespace xml {
 SaxParser::SaxParser(SaxHandler *handler)
     : handler(handler)
 {
 }
 
-void SaxParser::Parse(const char *filepath)
+void SaxParser::Parse(const std::string &filepath)
 {
     file.open(filepath);
     if (!file.is_open()) {
@@ -127,4 +128,5 @@ void SaxParser::Parse(const char *filepath)
         last_char = ch;
     }
 }
-}
+} // namespace xml
+} // namespace apex

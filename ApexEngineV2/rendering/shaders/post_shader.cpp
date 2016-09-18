@@ -9,7 +9,7 @@ PostShader::PostShader(const ShaderProperties &properties)
 {
     const std::string vs_path("res/shaders/post.vert");
 
-    AddSubShader(SubShader(CoreEngine::VERTEX_SHADER,
+    AddSubShader(SubShader(GL_VERTEX_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
@@ -24,8 +24,8 @@ void PostShader::ApplyMaterial(const Material &mat)
         SetUniform("u_texture", 0);
     }
     if (mat.alpha_blended) {
-        CoreEngine::GetInstance()->Enable(CoreEngine::BLEND);
-        CoreEngine::GetInstance()->BlendFunc(CoreEngine::SRC_ALPHA, CoreEngine::ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 }
-}
+} // namespace apex

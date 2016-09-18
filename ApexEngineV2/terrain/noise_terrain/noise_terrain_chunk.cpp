@@ -2,13 +2,13 @@
 #include "../../rendering/shader_manager.h"
 #include "../../rendering/shaders/lighting_shader.h"
 #include "../../rendering/environment.h"
-#include "worley_noise.h"
+#include "../../util/random/worley_noise_generator.h"
 
 #include <noise/noise.h>
 #include <noise/module/ridgedmulti.h>
 using namespace noise;
 
-#include "open_simplex_noise.h"
+#include "../../util/random/open_simplex_noise.h"
 
 #define MOUNTAIN_SCALE_WIDTH 0.02
 #define MOUNTAIN_SCALE_LENGTH 0.02
@@ -36,7 +36,7 @@ NoiseTerrainChunk::NoiseTerrainChunk(const ChunkInfo &chunk_info, int seed)
     multi.SetOctaveCount(11);
     multi.SetLacunarity(2.0);
 
-    WorleyNoise worley(seed);
+    WorleyNoiseGenerator worley(seed);
 
     module::Perlin maskgen;
     maskgen.SetFrequency(0.05);
@@ -84,41 +84,4 @@ int NoiseTerrainChunk::HeightIndexAt(int x, int z)
     int size = m_chunk_info.m_width;
     return ((x + size) % size) + ((z + size) % size) * size;
 }
-
-/*double fbm(Vector3 point, double H, double lacunarity, double octaves)
-{
-    double value, frequency, remainder, Noise3(Vector3);
-    int i;
-    static bool first = true;
-    static double *exponent_array;
-
-    if (first) {
-        exponent_array = new double[octaves + 1];
-        frequency = 1.0;
-
-        for (i = 0; i < octaves; i++) {
-            exponent_array[i] = pow(frequency, -H);
-            frequency *= lacunarity;
-        }
-        first = false;
-    }
-
-    value = 0.0;
-    frequency = 1.0;
-
-    for (i = 0; i < octaves; i++) {
-        value += Noise3(point) * exponent_array[i];
-        point *= lacunarity;
-    }
-
-    remainder = octaves - (int)octaves;
-    if (remainder) {
-        value += remainder * Noise3(point) * exponent_array[i];
-    }
-    return value;
-}
-
-double multifractal(Vector3 point, double H, double lacunarity, double octaves, double offset)
-{
-}*/
-}
+} // namespace apex

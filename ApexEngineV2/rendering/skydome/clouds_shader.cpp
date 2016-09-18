@@ -11,13 +11,13 @@ CloudsShader::CloudsShader(const ShaderProperties &properties)
     const std::string vs_path("res/shaders/clouds.vert");
     const std::string fs_path("res/shaders/clouds.frag");
 
-    AddSubShader(SubShader(CoreEngine::VERTEX_SHADER,
+    AddSubShader(SubShader(GL_VERTEX_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
         ));
 
-    AddSubShader(SubShader(CoreEngine::FRAGMENT_SHADER,
+    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
@@ -29,8 +29,8 @@ CloudsShader::CloudsShader(const ShaderProperties &properties)
         throw std::runtime_error("Could not load cloud map!");
     }
 
-    _global_time = 0.0f;
-    _cloud_color = Vector4(1.0);
+    m_global_time = 0.0f;
+    m_cloud_color = Vector4(1.0);
 }
 
 void CloudsShader::ApplyMaterial(const Material &mat)
@@ -39,18 +39,18 @@ void CloudsShader::ApplyMaterial(const Material &mat)
     cloud_map->Use();
     SetUniform("m_CloudMap", 0);
 
-    SetUniform("m_GlobalTime", _global_time);
-    SetUniform("m_CloudColor", _cloud_color);
+    SetUniform("m_GlobalTime", m_global_time);
+    SetUniform("m_CloudColor", m_cloud_color);
 
     if (mat.alpha_blended) {
-        CoreEngine::GetInstance()->Enable(CoreEngine::BLEND);
-        CoreEngine::GetInstance()->BlendFunc(CoreEngine::SRC_ALPHA, CoreEngine::ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
     if (!mat.depth_test) {
-        CoreEngine::GetInstance()->Disable(CoreEngine::DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST);
     }
     if (!mat.depth_write) {
-        CoreEngine::GetInstance()->DepthMask(false);
+        glDepthMask(false);
     }
 }
 
@@ -67,11 +67,11 @@ void CloudsShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
 
 void CloudsShader::SetCloudColor(const Vector4 &cloud_color)
 {
-    _cloud_color = cloud_color;
+    m_cloud_color = cloud_color;
 }
 
 void CloudsShader::SetGlobalTime(float global_time)
 {
-    _global_time = global_time;
+    m_global_time = global_time;
 }
-}
+} // namespace apex

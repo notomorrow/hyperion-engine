@@ -1,20 +1,20 @@
 #include "texture.h"
-#include "../core_engine.h"
+#include "../opengl.h"
 
 namespace apex {
 Texture::Texture()
     : width(0), height(0), bytes(NULL), 
-      ifmt(CoreEngine::RGB), fmt(CoreEngine::RGB),
-      mag_filter(CoreEngine::LINEAR), min_filter(CoreEngine::LINEAR_MIPMAP_LINEAR),
-      wrap_s(CoreEngine::REPEAT), wrap_t(CoreEngine::REPEAT)
+      ifmt(GL_RGB), fmt(GL_RGB),
+      mag_filter(GL_LINEAR), min_filter(GL_LINEAR_MIPMAP_LINEAR),
+      wrap_s(GL_REPEAT), wrap_t(GL_REPEAT)
 {
 }
 
 Texture::Texture(int width, int height, unsigned char *bytes)
     : width(width), height(height), bytes(bytes), 
-      ifmt(CoreEngine::RGB), fmt(CoreEngine::RGB),
-      mag_filter(CoreEngine::LINEAR), min_filter(CoreEngine::LINEAR_MIPMAP_LINEAR),
-      wrap_s(CoreEngine::REPEAT), wrap_t(CoreEngine::REPEAT)
+      ifmt(GL_RGB), fmt(GL_RGB),
+      mag_filter(GL_LINEAR), min_filter(GL_LINEAR_MIPMAP_LINEAR),
+      wrap_s(GL_REPEAT), wrap_t(GL_REPEAT)
 {
 }
 
@@ -51,6 +51,6 @@ void Texture::SetWrapMode(int s, int t)
 
 void Texture::ActiveTexture(int i)
 {
-    CoreEngine::GetInstance()->ActiveTexture(CoreEngine::TEXTURE0 + i);
+    glActiveTexture(GL_TEXTURE0 + i);
 }
 } // namespace apex

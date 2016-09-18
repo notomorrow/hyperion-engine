@@ -10,4 +10,4 @@ TerrainChunk *NoiseTerrainControl::NewChunk(const ChunkInfo &chunk_info)
 {
     return new NoiseTerrainChunk(chunk_info, seed);
 }
-}
+} // namespace apex

@@ -133,6 +133,6 @@ private:
     InputEvent *mouse_events;
     double mouse_x, mouse_y;
 };
-}
+} // namespace apex
 
 #endif

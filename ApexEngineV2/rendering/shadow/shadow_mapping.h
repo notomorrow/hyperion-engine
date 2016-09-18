@@ -41,6 +41,6 @@ private:
         std::array<Vector3, 8> &out_vec, const Matrix4 &mat) const;
     void UpdateFrustumPoints(std::array<Vector3, 8> &points);
 };
-}
+} // namespace apex
 
 #endif

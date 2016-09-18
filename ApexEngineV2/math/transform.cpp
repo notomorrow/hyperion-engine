@@ -2,26 +2,26 @@
 
 namespace apex {
 Transform::Transform()
-    : translation(Vector3::Zero()),
-      scale(Vector3::One()),
-      rotation(Quaternion::Identity())
+    : m_translation(Vector3::Zero()),
+      m_scale(Vector3::One()),
+      m_rotation(Quaternion::Identity())
 {
     UpdateMatrix();
 }
 
 Transform::Transform(const Vector3 &translation, const Vector3 &scale, const Quaternion &rotation)
-    : translation(translation),
-      scale(scale),
-      rotation(rotation)
+    : m_translation(translation),
+      m_scale(scale),
+      m_rotation(rotation)
 {
     UpdateMatrix();
 }
 
 Transform::Transform(const Transform &other)
-    : translation(other.translation),
-      scale(other.scale),
-      rotation(other.rotation),
-      matrix(other.matrix)
+    : m_translation(other.m_translation),
+      m_scale(other.m_scale),
+      m_rotation(other.m_rotation),
+      m_matrix(other.m_matrix)
 {
     UpdateMatrix();
 }
@@ -30,10 +30,10 @@ void Transform::UpdateMatrix()
 {
     Matrix4 S, R, T;
 
-    MatrixUtil::ToTranslation(T, translation);
-    MatrixUtil::ToRotation(R, rotation);
-    MatrixUtil::ToScaling(S, scale);
+    MatrixUtil::ToTranslation(T, m_translation);
+    MatrixUtil::ToRotation(R, m_rotation);
+    MatrixUtil::ToScaling(S, m_scale);
 
-    matrix = S * R * T;
+    m_matrix = S * R * T;
 }
 } // namespace apex

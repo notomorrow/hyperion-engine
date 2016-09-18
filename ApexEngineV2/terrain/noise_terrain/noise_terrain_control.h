@@ -14,6 +14,6 @@ protected:
 
     TerrainChunk *NewChunk(const ChunkInfo &height_info);
 };
-}
+} // namespace apex
 
 #endif

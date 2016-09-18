@@ -28,6 +28,6 @@ protected:
     std::vector<Vertex> BuildVertices(const std::vector<double> &heights);
     std::vector<size_t> BuildIndices();
 };
-}
+} // namespace apex
 
 #endif

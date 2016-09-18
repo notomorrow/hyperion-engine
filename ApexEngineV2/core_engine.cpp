@@ -16,4 +16,4 @@ void CoreEngine::SetInstance(CoreEngine *ptr)
 {
     instance = ptr;
 }
-}
+} // namespace apex

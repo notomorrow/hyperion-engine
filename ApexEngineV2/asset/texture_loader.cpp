@@ -4,7 +4,7 @@
 #include "../util/img/stb_image.h"
 
 #include "../rendering/texture_2D.h"
-#include "../core_engine.h"
+#include "../opengl.h"
 
 namespace apex {
 std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
@@ -24,7 +24,7 @@ std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
    // if (comp == 4) {
    //     tex->SetFormat(CoreEngine::RGBA);
    // } else {
-        tex->SetFormat(CoreEngine::RGB);
+        tex->SetFormat(GL_RGB);
    // }
 
     tex->Use(); // upload data
@@ -36,4 +36,4 @@ std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
 
     return tex;
 }
-}
+} // namespace apex

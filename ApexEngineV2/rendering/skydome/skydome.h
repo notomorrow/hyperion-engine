@@ -30,6 +30,6 @@ private:
     Camera *camera;
     double global_time;
 };
-}
+} // namespace apex
 
 #endif

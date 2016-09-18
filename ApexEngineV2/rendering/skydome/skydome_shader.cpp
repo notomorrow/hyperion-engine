@@ -12,13 +12,13 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
     const std::string vs_path("res/shaders/skydome.vert");
     const std::string fs_path("res/shaders/skydome.frag");
 
-    AddSubShader(SubShader(CoreEngine::VERTEX_SHADER,
+    AddSubShader(SubShader(GL_VERTEX_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
         ));
 
-    AddSubShader(SubShader(CoreEngine::FRAGMENT_SHADER,
+    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
@@ -36,7 +36,7 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
             throw std::runtime_error("Could not load noise map!");
         }
     }
-    _global_time = 0.0f;
+    m_global_time = 0.0f;
 
     sun_color = Vector4(0.05f, 0.02f, 0.01f, 1.0f);
 
@@ -84,19 +84,19 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
         SetUniform("u_noiseMap", 0);
     }
 
-    SetUniform("u_globalTime", _global_time);
+    SetUniform("u_globalTime", m_global_time);
     SetUniform("v3LightPos", env->GetSun().GetDirection());
     SetUniform("u_sunColor", sun_color);
 
     if (mat.alpha_blended) {
-        CoreEngine::GetInstance()->Enable(CoreEngine::BLEND);
-        CoreEngine::GetInstance()->BlendFunc(CoreEngine::SRC_ALPHA, CoreEngine::ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
     if (!mat.depth_test) {
-        CoreEngine::GetInstance()->Disable(CoreEngine::DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST);
     }
     if (!mat.depth_write) {
-        CoreEngine::GetInstance()->DepthMask(false);
+        glDepthMask(false);
     }
 }
 
@@ -115,6 +115,6 @@ void SkydomeShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
 
 void SkydomeShader::SetGlobalTime(float global_time)
 {
-    _global_time = global_time;
+    m_global_time = global_time;
 }
-}
+} // namespace apex
