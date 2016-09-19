@@ -1,5 +1,6 @@
 #include "texture_2D.h"
 #include "../opengl.h"
+#include <cassert>
 
 namespace apex {
 Texture2D::Texture2D()

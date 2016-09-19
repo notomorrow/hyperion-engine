@@ -188,6 +188,7 @@
     <ClInclude Include="math\ray.h" />
     <ClInclude Include="particles\particle.h" />
     <ClInclude Include="particles\particle_construction_info.h" />
+    <ClInclude Include="particles\particle_emitter_control.h" />
     <ClInclude Include="particles\particle_generator.h" />
     <ClInclude Include="particles\particle_shader.h" />
     <ClInclude Include="physics\physics2\box_collision.h" />
@@ -287,6 +288,7 @@
     <ClCompile Include="math\vector4.cpp" />
     <ClCompile Include="particles\particle.cpp" />
     <ClCompile Include="particles\particle_construction_info.cpp" />
+    <ClCompile Include="particles\particle_emitter_control.cpp" />
     <ClCompile Include="particles\particle_generator.cpp" />
     <ClCompile Include="particles\particle_shader.cpp" />
     <ClCompile Include="physics\physics2\box_collision.cpp" />

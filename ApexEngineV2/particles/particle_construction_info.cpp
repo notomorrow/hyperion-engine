@@ -19,7 +19,9 @@ ParticleConstructionInfo::ParticleConstructionInfo(const ParticleConstructionInf
       m_velocity_generator(other.m_velocity_generator),
       m_max_particles(other.m_max_particles),
       m_lifespan(other.m_lifespan),
-      m_lifespan_randomness(other.m_lifespan_randomness)
+      m_lifespan_randomness(other.m_lifespan_randomness),
+      m_gravity(other.m_gravity),
+      m_material(other.m_material)
 {
     assert(m_lifespan > 0.0);
 }

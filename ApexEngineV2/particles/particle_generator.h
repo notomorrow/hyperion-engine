@@ -4,36 +4,34 @@
 #include "particle.h"
 #include "particle_construction_info.h"
 #include "particle_shader.h"
+#include "../rendering/renderable.h"
 #include "../rendering/camera/camera.h"
 
 #include <vector>
 #include <memory>
 
 namespace apex {
-class ParticleGenerator {
+class ParticleRenderer : public Renderable {
 public:
-    ParticleGenerator(const ParticleConstructionInfo &info);
-    ~ParticleGenerator();
+    ParticleRenderer(const ParticleConstructionInfo &info);
+    ~ParticleRenderer();
 
     void ResetParticle(Particle &particle);
-    Particle *FindUnusedParticle();
-    void UpdateParticles(double dt);
-    void DrawParticles(Camera *camera);
+    void UpdateParticles(Camera *camera, double dt);
+    void DrawParticles(std::vector<Particle> &particles, 
+        const ParticleConstructionInfo &info, Camera *camera);
 
-private:
     ParticleConstructionInfo m_info;
 
+private:
     std::shared_ptr<ParticleShader> m_shader;
-
-    std::vector<Particle> m_particles;
+   // std::vector<Particle> m_particles;
 
     bool m_is_created;
-    bool m_is_uploaded;
 
     unsigned int m_vertex_buffer;
     unsigned int m_position_buffer;
     unsigned int m_lifespan_buffer;
-    unsigned int m_lookat_buffer;
 };
 } // namespace apex
 

@@ -31,6 +31,7 @@ Material::Material(const Material &other)
       alpha_blended(other.alpha_blended),
       depth_test(other.depth_test),
       depth_write(other.depth_write),
+      diffuse_color(other.diffuse_color),
       diffuse_texture(other.diffuse_texture),
       normals_texture(other.normals_texture)
 {

@@ -1,8 +1,22 @@
 ﻿C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(936,5): warning MSB8027: Two or more files with the name of rigid_body.cpp will produce outputs to the same location. This can lead to an incorrect build result.  The files involved are physics\physics2\rigid_body.cpp, physics\rigid_body.cpp.
-  particle_generator.cpp
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\particles\particle_generator.cpp(19): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\particles\particle_generator.cpp(20): warning C4018: '<': signed/unsigned mismatch
-c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\particles\particle_generator.cpp(66): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
-Debug\rigid_body.obj : warning LNK4042: object specified more than once; extras ignored
-LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+  main.cpp
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(83): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(280): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+c:\program files (x86)\microsoft visual studio 14.0\vc\include\utility(145): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+  c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(187): note: see reference to function template instantiation 'std::pair<const _Kty,_Ty>::pair<const char(&)[11],int,void>(_Other1,_Other2 &&) noexcept(false)' being compiled
+          with
+          [
+              _Kty=std::string,
+              _Ty=float,
+              _Other1=const char (&)[11],
+              _Other2=int
+          ]
+  c:\users\user\documents\visual studio 2015\projects\apexenginev2\apexenginev2\main.cpp(183): note: see reference to function template instantiation 'std::pair<const _Kty,_Ty>::pair<const char(&)[11],int,void>(_Other1,_Other2 &&) noexcept(false)' being compiled
+          with
+          [
+              _Kty=std::string,
+              _Ty=float,
+              _Other1=const char (&)[11],
+              _Other2=int
+          ]
   ApexEngineV2.vcxproj -> C:\Users\User\Documents\Visual Studio 2015\Projects\ApexEngineV2\Debug\ApexEngineV2.exe

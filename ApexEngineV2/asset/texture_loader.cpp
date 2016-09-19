@@ -9,25 +9,26 @@
 namespace apex {
 std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
 {
-    int w, h, comp;
-    unsigned char *bytes = stbi_load(path.c_str(), &w, &h, &comp, 3);
+    int width, height, comp;
+    unsigned char *bytes = stbi_load(path.c_str(), &width, &height, &comp, 0);
 
     if (bytes == nullptr) {
         return nullptr;
     }
 
-    auto tex = std::make_shared<Texture2D>();
-    tex->width = w;
-    tex->height = h;
-    tex->bytes = bytes;
+    auto tex = std::make_shared<Texture2D>(width, height, bytes);
 
-   // if (comp == 4) {
-   //     tex->SetFormat(CoreEngine::RGBA);
-   // } else {
+    if (comp == STBI_rgb_alpha) {
+        tex->SetFormat(GL_RGBA);
+        tex->SetInternalFormat(GL_RGBA8);
+    } else if (comp == STBI_rgb) {
         tex->SetFormat(GL_RGB);
-   // }
+        tex->SetInternalFormat(GL_RGB8);
+    } else {
+        throw "Unknown image format";
+    }
 
-    tex->Use(); // upload data
+    tex->Use(); // uploads data
 
     stbi_image_free(bytes);
     tex->bytes = nullptr;
