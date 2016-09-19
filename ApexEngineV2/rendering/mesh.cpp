@@ -2,7 +2,6 @@
 #include "../opengl.h"
 
 namespace apex {
-
 const Mesh::MeshAttribute Mesh::MeshAttribute::Positions = {0, 3, 0};
 const Mesh::MeshAttribute Mesh::MeshAttribute::Normals = { 0, 3, 1 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::TexCoords0 = { 0, 2, 2 };

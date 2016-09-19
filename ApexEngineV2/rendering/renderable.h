@@ -20,21 +20,23 @@ public:
         RB_SCREEN,
     };
 
+    Renderable(RenderBucket bucket = RB_OPAQUE);
     virtual ~Renderable() = default;
 
-    RenderBucket GetRenderBucket() const;
-    void SetRenderBucket(RenderBucket rb);
-    std::shared_ptr<Shader> GetShader();
-    void SetShader(std::shared_ptr<Shader> ptr);
-    Material &GetMaterial();
-    void SetMaterial(const Material &mat);
+    inline RenderBucket GetRenderBucket() const { return m_bucket; }
+    inline void SetRenderBucket(RenderBucket bucket) { m_bucket = bucket; }
+    inline std::shared_ptr<Shader> GetShader() { return m_shader; }
+    inline void SetShader(const std::shared_ptr<Shader> &shader) { m_shader = shader; }
+    inline Material &GetMaterial() { return m_material; }
+    inline const Material &GetMaterial() const { return m_material; }
+    inline void SetMaterial(const Material &material) { m_material = material; }
 
     virtual void Render() = 0;
 
-private:
-    RenderBucket bucket = RB_OPAQUE;
-    std::shared_ptr<Shader> shader;
-    Material material;
+protected:
+    RenderBucket m_bucket;
+    std::shared_ptr<Shader> m_shader;
+    Material m_material;
 };
 } // namespace apex
 

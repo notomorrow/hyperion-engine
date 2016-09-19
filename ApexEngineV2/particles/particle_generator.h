@@ -12,20 +12,18 @@
 
 namespace apex {
 class ParticleRenderer : public Renderable {
+    friend class ParticleEmitterControl;
 public:
     ParticleRenderer(const ParticleConstructionInfo &info);
     ~ParticleRenderer();
 
-    void ResetParticle(Particle &particle);
-    void UpdateParticles(Camera *camera, double dt);
-    void DrawParticles(std::vector<Particle> &particles, 
-        const ParticleConstructionInfo &info, Camera *camera);
-
-    ParticleConstructionInfo m_info;
+    void Render();
 
 private:
-    std::shared_ptr<ParticleShader> m_shader;
-   // std::vector<Particle> m_particles;
+    // pointer to particle vector (set by ParticleEmitterControl)
+    std::vector<Particle> *m_particles;
+
+    ParticleConstructionInfo m_info;
 
     bool m_is_created;
 

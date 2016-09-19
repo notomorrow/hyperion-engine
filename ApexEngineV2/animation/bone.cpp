@@ -39,8 +39,8 @@ void Bone::StoreBindingPose()
 
 void Bone::SetToBindingPose()
 {
-    local_rotation = Quaternion::Identity();
-    local_translation = Vector3::Zero();
+    m_local_rotation = Quaternion::Identity();
+    m_local_translation = Vector3::Zero();
 
     pose_pos = bind_pos;
     pose_rot = bind_rot;
@@ -53,12 +53,12 @@ const Vector3 &Bone::CalcBindingTranslation()
     global_bone_pos = bind_pos;
 
     Bone *parent_bone;
-    if (parent && (parent_bone = dynamic_cast<Bone*>(parent))) {
+    if (m_parent && (parent_bone = dynamic_cast<Bone*>(m_parent))) {
         global_bone_pos = parent_bone->global_bone_rot * bind_pos;
         global_bone_pos += parent_bone->global_bone_pos;
     }
 
-    for (auto &&child : children) {
+    for (auto &&child : m_children) {
         auto child_bone = std::dynamic_pointer_cast<Bone>(child);
         if (child_bone) {
             child_bone->CalcBindingTranslation();
@@ -73,11 +73,11 @@ const Quaternion &Bone::CalcBindingRotation()
     global_bone_rot = bind_rot;
 
     Bone *parent_bone;
-    if (parent && (parent_bone = dynamic_cast<Bone*>(parent))) {
+    if (m_parent && (parent_bone = dynamic_cast<Bone*>(m_parent))) {
         global_bone_rot = parent_bone->global_bone_rot * bind_rot;
     }
 
-    for (auto &&child : children) {
+    for (auto &&child : m_children) {
         auto child_bone = std::dynamic_pointer_cast<Bone>(child);
         if (child_bone) {
             child_bone->CalcBindingRotation();
@@ -118,15 +118,15 @@ void Bone::UpdateTransform()
     bone_matrix = rot_matrix;
 
     Bone *parent_bone;
-    if (parent != nullptr) {
-        parent_bone = dynamic_cast<Bone*>(parent);
+    if (m_parent != nullptr) {
+        parent_bone = dynamic_cast<Bone*>(m_parent);
         if (parent_bone != nullptr) {
             bone_matrix *= parent_bone->bone_matrix;
         }
     }
 
-    local_rotation = bind_rot * pose_rot * user_rot;
-    local_translation = bind_pos + pose_pos + user_pos;
+    m_local_rotation = bind_rot * pose_rot * user_rot;
+    m_local_translation = bind_pos + pose_pos + user_pos;
 
     Entity::UpdateTransform();
 }

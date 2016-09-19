@@ -2,7 +2,7 @@
 #define RIGID_BODY_CONTROL_H
 
 #include "../control.h"
-#include "physics2/rigid_body.h"
+#include "rigid_body.h"
 
 #include <memory>
 

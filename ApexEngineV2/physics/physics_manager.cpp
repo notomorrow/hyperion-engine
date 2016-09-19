@@ -1,5 +1,5 @@
 #include "physics_manager.h"
-#include "physics2/collision_list.h"
+#include "collision_list.h"
 #include "../rendering/environment.h"
 
 #include <algorithm>

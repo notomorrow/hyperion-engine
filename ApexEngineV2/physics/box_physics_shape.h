@@ -2,7 +2,7 @@
 #define APEX_PHYSICS_BOX_PHYSICS_SHAPE_H
 
 #include "physics_shape.h"
-#include "../../math/vector3.h"
+#include "../math/vector3.h"
 
 namespace apex {
 namespace physics {

@@ -3,30 +3,35 @@
 namespace apex {
 Renderer::Renderer()
 {
+    sky_bucket.reserve(5);
     opaque_bucket.reserve(30);
-    transparent_bucket.reserve(30);
-    sky_bucket.reserve(30);
+    transparent_bucket.reserve(20);
+    particle_bucket.reserve(5);
 }
 
 void Renderer::ClearRenderables()
 {
+    sky_bucket.clear();
     opaque_bucket.clear();
     transparent_bucket.clear();
-    sky_bucket.clear();
+    particle_bucket.clear();
 }
 
 void Renderer::FindRenderables(Entity *top)
 {
     if (top->GetRenderable() != nullptr) {
         switch (top->GetRenderable()->GetRenderBucket()) {
+        case Renderable::RB_SKY:
+            sky_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+            break;
         case Renderable::RB_OPAQUE:
             opaque_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
             break;
         case Renderable::RB_TRANSPARENT:
             transparent_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
             break;
-        case Renderable::RB_SKY:
-            sky_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+        case Renderable::RB_PARTICLE:
+            particle_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
             break;
         }
     }
@@ -42,12 +47,12 @@ void Renderer::RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Tran
     for (auto it : bucket) {
         auto renderable = it.first;
         auto transform = it.second;
-        if (renderable->shader != nullptr) {
-            renderable->shader->ApplyMaterial(renderable->GetMaterial());
-            renderable->shader->ApplyTransforms(transform.GetMatrix(), cam);
-            renderable->shader->Use();
+        if (renderable->m_shader != nullptr) {
+            renderable->m_shader->ApplyMaterial(renderable->GetMaterial());
+            renderable->m_shader->ApplyTransforms(transform.GetMatrix(), cam);
+            renderable->m_shader->Use();
             renderable->Render();
-            renderable->shader->End();
+            renderable->m_shader->End();
         }
     }
 }
@@ -58,5 +63,6 @@ void Renderer::RenderAll(Camera *cam)
     RenderBucket(cam, sky_bucket);
     RenderBucket(cam, opaque_bucket);
     RenderBucket(cam, transparent_bucket);
+    RenderBucket(cam, particle_bucket);
 }
 } // namespace apex

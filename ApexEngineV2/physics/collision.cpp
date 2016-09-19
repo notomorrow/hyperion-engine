@@ -1,6 +1,5 @@
 #include "collision.h"
 #include "rigid_body.h"
-#include "../../math/matrix3.h"
 #include <cassert>
 
 namespace apex {

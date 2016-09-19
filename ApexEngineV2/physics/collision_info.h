@@ -2,7 +2,7 @@
 #define APEX_PHYSICS_COLLISION_INFO_H
 
 #include "physics_material.h"
-#include "../../math/vector3.h"
+#include "../math/vector3.h"
 
 #include <array>
 

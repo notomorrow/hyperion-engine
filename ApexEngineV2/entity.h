@@ -21,14 +21,14 @@ public:
     virtual ~Entity();
 
     const std::string &GetName() const;
-    void SetName(const std::string &str);
+    void SetName(const std::string &name);
 
     const Vector3 &GetLocalTranslation() const;
-    void SetLocalTranslation(const Vector3 &vec);
+    void SetLocalTranslation(const Vector3 &translation);
     const Vector3 &GetLocalScale() const;
-    void SetLocalScale(const Vector3 &vec);
+    void SetLocalScale(const Vector3 &scale);
     const Quaternion &GetLocalRotation() const;
-    void SetLocalRotation(const Quaternion &rot);
+    void SetLocalRotation(const Quaternion &rotation);
     const Transform &GetGlobalTransform() const;
 
     void Move(const Vector3 &vec);
@@ -75,22 +75,22 @@ public:
     }
 
     std::shared_ptr<Renderable> GetRenderable() const;
-    void SetRenderable(const std::shared_ptr<Renderable> &ren);
+    void SetRenderable(const std::shared_ptr<Renderable> &renderable);
 
     virtual void Update(double dt);
 
 protected:
-    std::string name;
-    std::shared_ptr<Renderable> renderable;
-    std::vector<std::shared_ptr<Entity>> children;
-    std::vector<std::shared_ptr<EntityControl>> controls;
+    std::string m_name;
+    std::shared_ptr<Renderable> m_renderable;
+    std::vector<std::shared_ptr<Entity>> m_children;
+    std::vector<std::shared_ptr<EntityControl>> m_controls;
 
-    int flags;
-    Vector3 local_translation;
-    Vector3 local_scale;
-    Quaternion local_rotation;
-    Transform global_transform;
-    Entity *parent;
+    int m_flags;
+    Vector3 m_local_translation;
+    Vector3 m_local_scale;
+    Quaternion m_local_rotation;
+    Transform m_global_transform;
+    Entity *m_parent;
 
     void SetTransformUpdateFlag();
 };

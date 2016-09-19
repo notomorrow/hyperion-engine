@@ -34,14 +34,15 @@
 
 /* Physics */
 #include "physics/physics_manager.h"
-#include "physics/physics2/rigid_body.h"
-#include "physics/physics2/box_physics_shape.h"
-#include "physics/physics2/sphere_physics_shape.h"
-#include "physics/physics2/plane_physics_shape.h"
+#include "physics/rigid_body.h"
+#include "physics/box_physics_shape.h"
+#include "physics/sphere_physics_shape.h"
+#include "physics/plane_physics_shape.h"
 #include "physics/rigid_body_control.h"
 
 /* Particles */
 #include "particles/particle_generator.h"
+#include "particles/particle_emitter_control.h"
 
 /* Standard library */
 #include <cstdlib>
@@ -57,7 +58,6 @@ public:
     Camera *cam;
     Framebuffer *fbo;
     PssmShadowMapping *shadows;
-    ParticleRenderer *particle_generator;
 
     std::shared_ptr<Entity> top;
     std::shared_ptr<Entity> test_object_0, test_object_1, test_object_2;
@@ -95,7 +95,6 @@ public:
 
     ~MyGame()
     {
-        delete particle_generator;
         delete shadows;
         delete fbo;
         delete cam;
@@ -127,10 +126,15 @@ public:
         particle_generator_info.m_max_particles = 200;
         particle_generator_info.m_lifespan = 1.0;
         particle_generator_info.m_lifespan_randomness = 1.0;
-        particle_generator_info.m_material.diffuse_texture =
-            AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/smoke.png");
 
-        particle_generator = new ParticleRenderer(particle_generator_info);
+        auto particle_node = std::make_shared<Entity>();
+        particle_node->SetName("particles");
+        particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
+        particle_node->GetRenderable()->GetMaterial().diffuse_texture =
+            AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/smoke.png");
+        particle_node->AddControl(std::make_shared<ParticleEmitterControl>(cam));
+
+        top->AddChild(particle_node);
     }
 
     void InitPhysicsTests()
@@ -195,6 +199,9 @@ public:
         Environment::GetInstance()->SetShadowsEnabled(true);
         AudioManager::GetInstance()->Initialize();
 
+        // Initialize root node
+        top = std::make_shared<Entity>("top");
+
         // Initialize particle system
         InitParticleSystem();
 
@@ -203,8 +210,6 @@ public:
             { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
         };
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
-
-        top = std::make_shared<Entity>("top");
 
         tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg");
 
@@ -243,7 +248,7 @@ public:
         top->AddChild(quad_node);*/
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
-        //top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1332));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1332));
     }
 
     void Logic(double dt)
@@ -288,8 +293,6 @@ public:
         }
         physics_update_timer += dt;
 
-        particle_generator->UpdateParticles(cam, dt);
-
         top->Update(dt);
     }
 
@@ -317,8 +320,6 @@ public:
 
         renderer->RenderAll(cam);
         renderer->ClearRenderables();
-
-        particle_generator->DrawParticles(cam);
 
         /*debug_quad->GetMaterial().diffuse_texture = shadows->GetShadowMap();
         */

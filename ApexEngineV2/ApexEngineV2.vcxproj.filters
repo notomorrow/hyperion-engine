@@ -246,49 +246,16 @@
     <ClInclude Include="math\ray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="physics\rigid_body.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="math\matrix3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="physics\physics2\physics_shape.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="physics\rigid_body_control.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="physics\physics2\collision_info.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="physics\physics2\box_physics_shape.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="physics\physics2\sphere_physics_shape.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="physics\physics2\box_collision.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="physics\physics2\collision.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="physics\physics2\physics_material.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="physics\physics2\plane_physics_shape.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="physics\physics2\collision_list.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="util\random\open_simplex_noise.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="util\random\worley_noise_generator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="physics\physics2\rigid_body.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="opengl.h">
@@ -304,6 +271,39 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="particles\particle_construction_info.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="particles\particle_emitter_control.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\sphere_physics_shape.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\box_collision.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\box_physics_shape.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\collision.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\collision_info.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\collision_list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\physics_material.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\physics_shape.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\plane_physics_shape.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\rigid_body.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -512,9 +512,6 @@
     <ClCompile Include="physics\shapes\aabb_physics_object.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="physics\rigid_body.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="math\matrix3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -524,40 +521,10 @@
     <ClCompile Include="physics\rigid_body_control.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="physics\physics2\box_physics_shape.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="physics\physics2\physics_shape.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="physics\physics2\sphere_physics_shape.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="physics\physics2\box_collision.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="physics\physics2\collision_info.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="physics\physics2\collision.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="physics\physics2\physics_material.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="physics\physics2\plane_physics_shape.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="physics\physics2\collision_list.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="util\random\open_simplex_noise.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="util\random\worley_noise_generator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="physics\physics2\rigid_body.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="particles\particle_generator.cpp">
@@ -570,6 +537,39 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="particles\particle_construction_info.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="particles\particle_emitter_control.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\box_collision.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\box_physics_shape.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\collision.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\collision_info.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\collision_list.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\physics_material.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\physics_shape.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\plane_physics_shape.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\rigid_body.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\sphere_physics_shape.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -11,10 +11,9 @@ public:
     Framebuffer(int width, int height);
     ~Framebuffer();
 
-    std::shared_ptr<Texture2D> GetColorTexture() const;
-    std::shared_ptr<Texture2D> GetDepthTexture() const;
-
-    unsigned int GetId() const;
+    inline const std::shared_ptr<Texture2D> &GetColorTexture() const { return color_texture; }
+    inline const std::shared_ptr<Texture2D> &GetDepthTexture() const { return depth_texture; }
+    inline unsigned int GetId() const { return id; }
 
     void Use();
     void End();

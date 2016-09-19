@@ -4,11 +4,11 @@
 #define VELOCITY_EPSILON 0.001
 #define POSITION_EPSILON 0.003
 
-#include "physics2/rigid_body.h"
-#include "physics2/collision.h"
-#include "physics2/box_physics_shape.h"
-#include "physics2/sphere_physics_shape.h"
-#include "physics2/plane_physics_shape.h"
+#include "rigid_body.h"
+#include "collision.h"
+#include "box_physics_shape.h"
+#include "sphere_physics_shape.h"
+#include "plane_physics_shape.h"
 
 #include <vector>
 #include <memory>

@@ -1,12 +1,9 @@
 #include "rigid_body.h"
-#include "../math/math_util.h"
-#include <cassert>
+#include "../math/matrix_util.h"
 
 namespace apex {
-const double RigidBody::SLEEP_EPSILON = 0.3;
-
-static void CalculateTransformMatrix(Matrix4 &transform, const Vector3 &position,
-    Quaternion orientation)
+namespace physics {
+static Matrix4 CalculateTransformMatrix(const Vector3 &position, Quaternion orientation)
 {
     orientation.Invert();
 
@@ -15,130 +12,108 @@ static void CalculateTransformMatrix(Matrix4 &transform, const Vector3 &position
     MatrixUtil::ToRotation(R, orientation);
     MatrixUtil::ToTranslation(T, position);
 
-    transform = R * T;
+    return R * T;
 }
 
-static void TransformInertiaTensor(Matrix3 &iit_world, const Quaternion &q,
-    const Matrix3 &iit_body, Matrix4 rotmat)
+static Matrix3 CalculateInverseInertiaWorldMatrix(const Matrix3 &iit_body, const Matrix4 &transform)
 {
-    //rotmat.Transpose();
-    auto t4 = rotmat(0, 0) * iit_body.values[0] +
-        rotmat(0, 1) * iit_body.values[3] +
-        rotmat(0, 2) * iit_body.values[6];
-    auto t9 = rotmat(0, 0) * iit_body.values[1] +
-        rotmat(0, 1) * iit_body.values[4] +
-        rotmat(0, 2) * iit_body.values[7];
-    auto t14 = rotmat(0, 0) * iit_body.values[2] +
-        rotmat(0, 1)* iit_body.values[5] +
-        rotmat(0, 2) * iit_body.values[8];
-    auto t28 = rotmat(1, 0) * iit_body.values[0] +
-        rotmat(1, 1) * iit_body.values[3] +
-        rotmat(1, 2) * iit_body.values[6];
-    auto t33 = rotmat(1, 0) * iit_body.values[1] +
-        rotmat(1, 1) * iit_body.values[4] +
-        rotmat(1, 2) * iit_body.values[7];
-    auto t38 = rotmat(1, 0) * iit_body.values[2] +
-        rotmat(1, 1) * iit_body.values[5] +
-        rotmat(1, 2) * iit_body.values[8];
-    auto t52 = rotmat(2, 0) * iit_body.values[0] +
-        rotmat(2, 1) * iit_body.values[3] +
-        rotmat(2, 2) * iit_body.values[6];
-    auto t57 = rotmat(2, 0) * iit_body.values[1] +
-        rotmat(2, 1) * iit_body.values[4] +
-        rotmat(2, 2) * iit_body.values[7];
-    auto t62 = rotmat(2, 0) * iit_body.values[2] +
-        rotmat(2, 1) * iit_body.values[5] +
-        rotmat(2, 2) * iit_body.values[8];
+    auto t4 = transform(0, 0) * iit_body(0, 0) +
+        transform(0, 1) * iit_body(1, 0) +
+        transform(0, 2) * iit_body(2, 0);
+    auto t9 = transform(0, 0) * iit_body(0, 1) +
+        transform(0, 1) * iit_body(1, 1) +
+        transform(0, 2) * iit_body(2, 1);
+    auto t14 = transform(0, 0) * iit_body(0, 2) +
+        transform(0, 1)* iit_body(1, 2) +
+        transform(0, 2) * iit_body(2, 2);
+    auto t28 = transform(1, 0) * iit_body(0, 0) +
+        transform(1, 1) * iit_body(1, 0) +
+        transform(1, 2) * iit_body(2, 0);
+    auto t33 = transform(1, 0) * iit_body(0, 1) +
+        transform(1, 1) * iit_body(1, 1) +
+        transform(1, 2) * iit_body(2, 1);
+    auto t38 = transform(1, 0) * iit_body(0, 2) +
+        transform(1, 1) * iit_body(1, 2) +
+        transform(1, 2) * iit_body(2, 2);
+    auto t52 = transform(2, 0) * iit_body(0, 0) +
+        transform(2, 1) * iit_body(1, 0) +
+        transform(2, 2) * iit_body(2, 0);
+    auto t57 = transform(2, 0) * iit_body(0, 1) +
+        transform(2, 1) * iit_body(1, 1) +
+        transform(2, 2) * iit_body(2, 1);
+    auto t62 = transform(2, 0) * iit_body(0, 2) +
+        transform(2, 1) * iit_body(1, 2) +
+        transform(2, 2) * iit_body(2, 2);
 
-    iit_world.values[0] = t4 * rotmat(0, 0) +
-        t9 * rotmat(0, 1) +
-        t14 * rotmat(0, 2);
-    iit_world.values[1] = t4 * rotmat(1, 0) +
-        t9 * rotmat(1, 1) +
-        t14 * rotmat(1, 2);
-    iit_world.values[2] = t4 * rotmat(2, 0) +
-        t9 * rotmat(2, 1) +
-        t14 * rotmat(2, 2);
-    iit_world.values[3] = t28*rotmat(0, 0) +
-        t33 * rotmat(0, 1) +
-        t38 * rotmat(0, 2);
-    iit_world.values[4] = t28 * rotmat(1, 0) +
-        t33 * rotmat(1, 1) +
-        t38 * rotmat(1, 2);
-    iit_world.values[5] = t28 * rotmat(2, 0) +
-        t33 * rotmat(2, 1) +
-        t38 * rotmat(2, 2);
-    iit_world.values[6] = t52*rotmat(0, 0) +
-        t57 * rotmat(0, 1) +
-        t62 * rotmat(0, 2);
-    iit_world.values[7] = t52 * rotmat(1, 0) +
-        t57 * rotmat(1, 1) +
-        t62 * rotmat(1, 2);
-    iit_world.values[8] = t52 * rotmat(2, 0) +
-        t57 * rotmat(2, 1) +
-        t62 * rotmat(2, 2);
+    Matrix3 iit_world;
+
+    iit_world.values[0] = t4 * transform(0, 0) +
+        t9 * transform(0, 1) +
+        t14 * transform(0, 2);
+    iit_world.values[1] = t4 * transform(1, 0) +
+        t9 * transform(1, 1) +
+        t14 * transform(1, 2);
+    iit_world.values[2] = t4 * transform(2, 0) +
+        t9 * transform(2, 1) +
+        t14 * transform(2, 2);
+    iit_world.values[3] = t28 * transform(0, 0) +
+        t33 * transform(0, 1) +
+        t38 * transform(0, 2);
+    iit_world.values[4] = t28 * transform(1, 0) +
+        t33 * transform(1, 1) +
+        t38 * transform(1, 2);
+    iit_world.values[5] = t28 * transform(2, 0) +
+        t33 * transform(2, 1) +
+        t38 * transform(2, 2);
+    iit_world.values[6] = t52*transform(0, 0) +
+        t57 * transform(0, 1) +
+        t62 * transform(0, 2);
+    iit_world.values[7] = t52 * transform(1, 0) +
+        t57 * transform(1, 1) +
+        t62 * transform(1, 2);
+    iit_world.values[8] = t52 * transform(2, 0) +
+        t57 * transform(2, 1) +
+        t62 * transform(2, 2);
+
+    return iit_world;
 }
 
-RigidBody::RigidBody(double mass)
-    : m_is_awake(true), m_motion(0.0)
+Rigidbody::Rigidbody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material)
+    : m_shape(shape), 
+      m_material(material), 
+      m_awake(true)
 {
-    SetMass(mass);
 }
 
-void RigidBody::SetAwake(bool awake)
-{
-    m_is_awake = awake;
-    if (m_is_awake) {
-        m_motion = SLEEP_EPSILON * 2.0;
-    } else {
-        m_velocity = Vector3::Zero();
-        m_rotation = Vector3::Zero();
-    }
-}
-
-void RigidBody::UpdateTransform()
+void Rigidbody::UpdateTransform()
 {
     m_orientation.Normalize();
+    m_transform = CalculateTransformMatrix(m_position, m_orientation);
+    m_inv_inertia_tensor_world = CalculateInverseInertiaWorldMatrix(m_inv_inertia_tensor, m_transform);
 
-    CalculateTransformMatrix(m_transform, m_position, m_orientation);
-    TransformInertiaTensor(m_inverse_inertia_tensor_world, m_orientation,
-        m_inverse_inertia_tensor, m_transform);
+    m_shape->m_transform = m_transform;
 }
 
-void RigidBody::Integrate(double dt)
+void Rigidbody::Integrate(double dt)
 {
-    if (!m_is_awake) {
-        return;
-    }
+    if (m_awake) {
+        m_last_acceleration = m_acceleration + (m_force_accum * m_material.GetInverseMass());
 
-    m_last_acceleration = m_acceleration + (m_force_accum * m_inverse_mass);
+        m_linear_velocity += m_last_acceleration * dt;
+        m_linear_velocity *= pow(m_material.GetLinearDamping(), dt);
+        m_position += m_linear_velocity * dt;
 
-    Vector3 angular_acceleration = m_torque_accum * m_inverse_inertia_tensor_world;
+        Vector3 angular_acceleration = m_torque_accum * m_inv_inertia_tensor_world;
+        m_angular_velocity += angular_acceleration * dt;
+        m_angular_velocity *= pow(m_material.GetAngularDamping(), dt);
+        m_orientation += m_angular_velocity * dt;
 
-    m_velocity += m_last_acceleration * dt;
-    m_velocity *= pow(m_linear_damping, dt);
-    m_position += m_velocity * dt;
+        UpdateTransform();
 
-    m_rotation += angular_acceleration * dt;
-    m_rotation *= pow(m_angular_damping, dt);
-    m_orientation += m_rotation * dt;
-
-    UpdateTransform();
-
-    m_force_accum = Vector3::Zero();
-    m_torque_accum = Vector3::Zero();
-
-    if (m_can_sleep) {
-        // check if we can sleep
-        double current_motion = m_velocity.Dot(m_velocity) + m_rotation.Dot(m_rotation);
-        double bias = pow(0.5, dt);
-        m_motion = bias * m_motion + (1.0 - bias) * current_motion;
-
-        if (m_motion < SLEEP_EPSILON) {
-            SetAwake(false);
-        } else if (m_motion > 10.0 * SLEEP_EPSILON) {
-            m_motion = 10.0 * SLEEP_EPSILON;
-        }
+        // reset accumulators
+        m_force_accum = Vector3::Zero();
+        m_torque_accum = Vector3::Zero();
     }
 }
+} // namespace physics
 } // namespace apex

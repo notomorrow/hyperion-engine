@@ -16,6 +16,7 @@ void ParticleEmitterControl::ResetParticle(Particle &particle)
         MathUtil::Random(0.0, fabs(m_renderer->m_info.m_lifespan_randomness));
 
     particle.m_position = m_renderer->m_info.m_origin_generator(particle);
+    particle.m_global_position = parent->GetGlobalTransform().GetTranslation() + particle.m_position;
     particle.m_velocity = m_renderer->m_info.m_velocity_generator(particle);
     particle.m_camera_distance = 0.0;
     particle.m_mass = 0.01 + MathUtil::Random(0.0f, 0.1f);
@@ -31,6 +32,8 @@ void ParticleEmitterControl::OnAdded()
         throw "parent->GetRenderable() must be a pointer to ParticleRenderer!";
     }
 
+    m_renderer->m_particles = &m_particles;
+
     // add all particles
     m_particles.resize(m_renderer->m_info.m_max_particles);
     for (Particle &particle : m_particles) {
@@ -40,6 +43,7 @@ void ParticleEmitterControl::OnAdded()
 
 void ParticleEmitterControl::OnRemoved()
 {
+    m_renderer->m_particles = nullptr;
 }
 
 void ParticleEmitterControl::OnUpdate(double dt)
@@ -51,9 +55,8 @@ void ParticleEmitterControl::OnUpdate(double dt)
             particle.m_life += dt;
             particle.m_velocity += m_renderer->m_info.m_gravity * particle.m_mass * dt;
             particle.m_position += particle.m_velocity * dt;
-
-            Vector3 global_translation = particle.m_position + parent->GetGlobalTransform().GetTranslation();
-            particle.m_camera_distance = global_translation.Distance(m_camera->GetTranslation());
+            particle.m_global_position = parent->GetGlobalTransform().GetTranslation() + particle.m_position;
+            particle.m_camera_distance = particle.m_global_position.Distance(m_camera->GetTranslation());
         } else {
             // reset the particle if it is passed it's lifespan.
             ResetParticle(particle);

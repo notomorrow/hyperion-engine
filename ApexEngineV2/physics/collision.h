@@ -2,7 +2,8 @@
 #define APEX_PHYSICS_COLLISION_H
 
 #include "collision_info.h"
-#include "../../math/vector3.h"
+#include "../math/vector3.h"
+#include "../math/matrix3.h"
 
 #include <array>
 

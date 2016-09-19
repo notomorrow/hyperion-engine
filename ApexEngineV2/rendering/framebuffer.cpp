@@ -27,21 +27,6 @@ Framebuffer::~Framebuffer()
     is_created = false;
 }
 
-unsigned int Framebuffer::GetId() const
-{
-    return id;
-}
-
-std::shared_ptr<Texture2D> Framebuffer::GetColorTexture() const
-{
-    return color_texture;
-}
-
-std::shared_ptr<Texture2D> Framebuffer::GetDepthTexture() const
-{
-    return depth_texture;
-}
-
 void Framebuffer::Use()
 {
     if (!is_created) {

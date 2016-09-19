@@ -3,7 +3,7 @@
 
 #include "collision_info.h"
 #include "box_physics_shape.h"
-#include "../../math/vector3.h"
+#include "../math/vector3.h"
 
 namespace apex {
 namespace physics {
