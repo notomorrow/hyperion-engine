@@ -21,7 +21,7 @@ enum PhysicsShapeType {
 
 // abstract physics shape
 class PhysicsShape {
-    friend class Rigidbody;
+    friend class RigidBody;
 public:
     PhysicsShape(PhysicsShapeType type) : m_type(type) {}
     virtual ~PhysicsShape() = default;

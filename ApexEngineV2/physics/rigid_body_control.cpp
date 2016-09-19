@@ -2,7 +2,7 @@
 #include "../entity.h"
 
 namespace apex {
-RigidBodyControl::RigidBodyControl(std::shared_ptr<physics::Rigidbody> body)
+RigidBodyControl::RigidBodyControl(std::shared_ptr<physics::RigidBody> body)
     : EntityControl(60.0), body(body)
 {
 }

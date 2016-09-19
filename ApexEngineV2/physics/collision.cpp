@@ -171,7 +171,7 @@ void Collision::MatchAwakeState(CollisionInfo &collision)
 Vector3 Collision::CalculateLocalVelocity(CollisionInfo &collision, 
     unsigned int body_index, double dt)
 {
-    Rigidbody *body = collision.m_bodies[body_index];
+    RigidBody *body = collision.m_bodies[body_index];
 
     Vector3 velocity(body->GetAngularVelocity());
     velocity.Cross(collision.m_relative_contact_position[body_index]);

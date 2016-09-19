@@ -23,17 +23,9 @@ PhysicsManager::~PhysicsManager()
 {
 }
 
-void PhysicsManager::RegisterBody(std::shared_ptr<physics::Rigidbody> body)
+void PhysicsManager::RegisterBody(std::shared_ptr<physics::RigidBody> body)
 {
     m_bodies.push_back(body);
-}
-
-void PhysicsManager::ResetCollisions()
-{
-}
-
-void PhysicsManager::DetectCollisions()
-{
 }
 
 void PhysicsManager::RunPhysics(double dt)

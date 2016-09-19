@@ -65,7 +65,7 @@ public:
     std::shared_ptr<Texture> tex;
     std::shared_ptr<Mesh> debug_quad;
 
-    std::shared_ptr<physics::Rigidbody> rb1, rb2, rb3, rb4;
+    std::shared_ptr<physics::RigidBody> rb1, rb2, rb3, rb4;
 
     double timer;
     double shadow_timer;
@@ -139,24 +139,24 @@ public:
 
     void InitPhysicsTests()
     {
-        rb1 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::SpherePhysicsShape>(0.5), 1.0);
+        rb1 = std::make_shared<physics::RigidBody>(std::make_shared<physics::SpherePhysicsShape>(0.5), 1.0);
         rb1->SetPosition(Vector3(2, 40, 0));
         rb1->SetLinearVelocity(Vector3(-1, 10, 0));
         rb1->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(0.5), 1.0));
         test_object_0->AddControl(std::make_shared<RigidBodyControl>(rb1));
 
-        rb2 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
+        rb2 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
         rb2->SetPosition(Vector3(0, 5, 0));
         // rb2->SetLinearVelocity(Vector3(2, -1, 0.4));
         rb2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
         test_object_1->AddControl(std::make_shared<RigidBodyControl>(rb2));
 
-        rb3 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
+        rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
         rb3->SetPosition(Vector3(0, 10, 0));
         rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
         test_object_2->AddControl(std::make_shared<RigidBodyControl>(rb3));
 
-        rb4 = std::make_shared<physics::Rigidbody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
+        rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
         rb4->SetAwake(false);
 
         PhysicsManager::GetInstance()->RegisterBody(rb1);
@@ -248,7 +248,7 @@ public:
         top->AddChild(quad_node);*/
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1332));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1147));
     }
 
     void Logic(double dt)

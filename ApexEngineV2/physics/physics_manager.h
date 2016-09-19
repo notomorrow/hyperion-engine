@@ -21,17 +21,16 @@ public:
     PhysicsManager();
     ~PhysicsManager();
 
-    void RegisterBody(std::shared_ptr<physics::Rigidbody> body);
-    void ResetCollisions();
-    void DetectCollisions();
+    void RegisterBody(std::shared_ptr<physics::RigidBody> body);
     void RunPhysics(double dt);
-    void UpdateInternals(std::vector<physics::CollisionInfo> &collisions, double dt);
-    void UpdateVelocities(std::vector<physics::CollisionInfo> &collisions, double dt);
-    void UpdatePositions(std::vector<physics::CollisionInfo> &collisions, double dt);
 
 private:
     static PhysicsManager *instance;
-    std::vector<std::shared_ptr<physics::Rigidbody>> m_bodies;
+    std::vector<std::shared_ptr<physics::RigidBody>> m_bodies;
+
+    void UpdateInternals(std::vector<physics::CollisionInfo> &collisions, double dt);
+    void UpdateVelocities(std::vector<physics::CollisionInfo> &collisions, double dt);
+    void UpdatePositions(std::vector<physics::CollisionInfo> &collisions, double dt);
 };
 }
 

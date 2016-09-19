@@ -78,14 +78,14 @@ static Matrix3 CalculateInverseInertiaWorldMatrix(const Matrix3 &iit_body, const
     return iit_world;
 }
 
-Rigidbody::Rigidbody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material)
+RigidBody::RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material)
     : m_shape(shape), 
       m_material(material), 
       m_awake(true)
 {
 }
 
-void Rigidbody::UpdateTransform()
+void RigidBody::UpdateTransform()
 {
     m_orientation.Normalize();
     m_transform = CalculateTransformMatrix(m_position, m_orientation);
@@ -94,7 +94,7 @@ void Rigidbody::UpdateTransform()
     m_shape->m_transform = m_transform;
 }
 
-void Rigidbody::Integrate(double dt)
+void RigidBody::Integrate(double dt)
 {
     if (m_awake) {
         m_last_acceleration = m_acceleration + (m_force_accum * m_material.GetInverseMass());

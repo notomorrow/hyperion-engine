@@ -11,9 +11,9 @@
 
 namespace apex {
 namespace physics {
-class Rigidbody {
+class RigidBody {
 public:
-    Rigidbody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material);
+    RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material);
 
     inline std::shared_ptr<PhysicsShape> GetPhysicsShape() const { return m_shape; }
 

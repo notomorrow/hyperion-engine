@@ -21,15 +21,13 @@ PlanePhysicsShape::PlanePhysicsShape(const PlanePhysicsShape &other)
 bool PlanePhysicsShape::CollidesWith(BoxPhysicsShape *shape, CollisionList &out)
 {
     // implementation is in BoxPhysicsShape
-    bool collides = shape->CollidesWith(this, out);
-    return collides;
+    return shape->CollidesWith(this, out);
 }
 
 bool PlanePhysicsShape::CollidesWith(SpherePhysicsShape *shape, CollisionList &out)
 {
     // implementation is in SpherePhysicsShape
-    bool collides = shape->CollidesWith(this, out);
-    return collides;
+    return shape->CollidesWith(this, out);
 }
 
 bool PlanePhysicsShape::CollidesWith(PlanePhysicsShape *shape, CollisionList &out)

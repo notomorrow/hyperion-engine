@@ -9,7 +9,7 @@
 namespace apex {
 namespace physics {
 // forward declaration
-class Rigidbody;
+class RigidBody;
 struct CollisionInfo {
     Vector3 m_contact_point;
     Vector3 m_contact_normal;
@@ -21,7 +21,7 @@ struct CollisionInfo {
     std::array<Vector3, 2> m_relative_contact_position;
 
     PhysicsMaterial m_combined_material;
-    std::array<Rigidbody*, 2> m_bodies;
+    std::array<RigidBody*, 2> m_bodies;
 
     CollisionInfo();
     CollisionInfo(const CollisionInfo &other);

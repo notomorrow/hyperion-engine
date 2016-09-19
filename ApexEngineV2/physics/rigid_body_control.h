@@ -9,14 +9,14 @@
 namespace apex {
 class RigidBodyControl : public EntityControl {
 public:
-    RigidBodyControl(std::shared_ptr<physics::Rigidbody> body);
+    RigidBodyControl(std::shared_ptr<physics::RigidBody> body);
 
     void OnAdded();
     void OnRemoved();
     void OnUpdate(double dt);
 
 private:
-    std::shared_ptr<physics::Rigidbody> body;
+    std::shared_ptr<physics::RigidBody> body;
 };
 } // namespace apex
 
