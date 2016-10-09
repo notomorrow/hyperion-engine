@@ -12,5 +12,6 @@ CollisionList::CollisionList(const CollisionList &other)
     : m_collisions(other.m_collisions)
 {
 }
+
 } // namespace physics
 } // namespace apex

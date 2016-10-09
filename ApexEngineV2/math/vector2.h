@@ -1,11 +1,13 @@
 #ifndef VECTOR2_H
 #define VECTOR2_H
 
-#include <cmath>
-#include <iostream>
 #include "math_util.h"
 
+#include <ostream>
+#include <cmath>
+
 namespace apex {
+
 class Vector2 {
     friend std::ostream &operator<<(std::ostream &out, const Vector2 &vec);
 public:
@@ -55,5 +57,7 @@ public:
     static Vector2 UnitX();
     static Vector2 UnitY();
 };
-}
+
+} // namespace apex
+
 #endif

@@ -1,5 +1,5 @@
-#ifndef PARTICLE_GENERATOR_H
-#define PARTICLE_GENERATOR_H
+#ifndef PARTICLE_RENDERER_H
+#define PARTICLE_RENDERER_H
 
 #include "particle.h"
 #include "particle_construction_info.h"
@@ -17,7 +17,7 @@ public:
     ParticleRenderer(const ParticleConstructionInfo &info);
     ~ParticleRenderer();
 
-    void Render();
+    virtual void Render() override;
 
 private:
     // pointer to particle vector (set by ParticleEmitterControl)

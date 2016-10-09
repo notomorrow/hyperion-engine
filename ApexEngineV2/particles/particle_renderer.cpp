@@ -1,4 +1,4 @@
-#include "particle_generator.h"
+#include "particle_renderer.h"
 #include "../opengl.h"
 #include "../rendering/shader_manager.h"
 #include "../rendering/environment.h"

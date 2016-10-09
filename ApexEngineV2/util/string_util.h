@@ -10,7 +10,7 @@
 namespace apex {
 class StringUtil {
 public:
-    static bool StartsWith(const std::string &text, const std::string &token)
+    static inline bool StartsWith(const std::string &text, const std::string &token)
     {
         if (text.length() < token.length()) {
             return false;
@@ -18,7 +18,7 @@ public:
         return (text.compare(0, token.length(), token) == 0);
     }
 
-    static bool EndsWith(const std::string &text, const std::string &token)
+    static inline bool EndsWith(const std::string &text, const std::string &token)
     {
         if (text.length() < token.length()) {
             return false;
@@ -27,12 +27,12 @@ public:
             text.end(), token.begin());
     }
 
-    static bool Contains(const std::string &text, const std::string &token)
+    static inline bool Contains(const std::string &text, const std::string &token)
     {
         return text.find(token) != std::string::npos;
     }
 
-    static std::vector<std::string> Split(const std::string &text, const char sep)
+    static inline std::vector<std::string> Split(const std::string &text, const char sep)
     {
         std::vector<std::string> tokens;
         size_t start = 0, end = 0;
@@ -44,7 +44,7 @@ public:
         return tokens;
     }
 
-    static std::vector<std::string> RemoveEmpty(const std::vector<std::string> &strings)
+    static inline std::vector<std::string> RemoveEmpty(const std::vector<std::string> &strings)
     {
         std::vector<std::string> res;
         for (auto &&str : strings) {
@@ -55,7 +55,7 @@ public:
         return res;
     }
 
-    static std::string TrimLeft(const std::string &s)
+    static inline std::string TrimLeft(const std::string &s)
     {
         std::string res(s);
         res.erase(res.begin(), std::find_if(res.begin(), res.end(), 
@@ -63,7 +63,7 @@ public:
         return res;
     }
 
-    static std::string TrimRight(const std::string &s)
+    static inline std::string TrimRight(const std::string &s)
     {
         std::string res(s);
         res.erase(std::find_if(res.rbegin(), res.rend(), 
@@ -71,12 +71,13 @@ public:
         return res;
     }
 
-    static std::string Trim(const std::string &s)
+    static inline std::string Trim(const std::string &s)
     {
         return TrimLeft(TrimRight(s));
     }
 
-    static std::string ReplaceAll(const std::string &text, const std::string &from, const std::string &to)
+    static inline std::string ReplaceAll(const std::string &text, 
+        const std::string &from, const std::string &to)
     {
         std::string result(text);
         if (from.empty()) {

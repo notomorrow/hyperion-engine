@@ -12,6 +12,7 @@
 #define TERRAIN_MAX_UPDATE_TICK 4
 #define TERRAIN_MAX_UNLOAD_TICK 1
 #define TERRAIN_UPDATE_STEP 1
+#define TERRAIN_MULTITHREADED 1
 
 namespace apex {
 class TerrainControl : public EntityControl {

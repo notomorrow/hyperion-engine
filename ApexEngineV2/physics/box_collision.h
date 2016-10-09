@@ -7,6 +7,7 @@
 
 namespace apex {
 namespace physics {
+
 class BoxCollision {
 public:
     static double TransformToAxis(const BoxPhysicsShape &box, const Vector3 &axis);
@@ -26,6 +27,7 @@ public:
         Vector3 axis, const Vector3 &to_center, unsigned int index,
         double &out_smallest_penetration, unsigned int &out_smallest_case);
 };
+
 } // namespace physics
 } // namespace apex
 

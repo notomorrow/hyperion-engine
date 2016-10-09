@@ -28,12 +28,12 @@ public:
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
 
-    void SetUniform(const std::string &name, float);
-    void SetUniform(const std::string &name, int);
-    void SetUniform(const std::string &name, const Vector2 &);
-    void SetUniform(const std::string &name, const Vector3 &);
-    void SetUniform(const std::string &name, const Vector4 &);
-    void SetUniform(const std::string &name, const Matrix4 &);
+    inline void SetUniform(const std::string &name, float value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, int value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, const Vector2 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, const Vector3 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, const Vector4 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, const Matrix4 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
 
     void Use();
     void End();
@@ -65,7 +65,7 @@ protected:
         }
     };
 
-    void AddSubShader(const SubShader &);
+    inline void AddSubShader(const SubShader &sub_shader) { subshaders.push_back(sub_shader); }
 
 private:
     bool is_uploaded, is_created, uniform_changed;

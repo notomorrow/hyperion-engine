@@ -2,24 +2,35 @@
 #include "matrix_util.h"
 #include "quaternion.h"
 
+#include <cmath>
+
 namespace apex {
+
 Vector3::Vector3()
-    : x(0.0), y(0.0), z(0.0)
+    : x(0.0f), 
+      y(0.0f), 
+      z(0.0f)
 {
 }
 
 Vector3::Vector3(float x, float y, float z)
-    : x(x), y(y), z(z)
+    : x(x), 
+      y(y), 
+      z(z)
 {
 }
 
 Vector3::Vector3(float xyz)
-    : x(xyz), y(xyz), z(xyz)
+    : x(xyz), 
+      y(xyz), 
+      z(xyz)
 {
 }
 
 Vector3::Vector3(const Vector3 &other)
-    : x(other.x), y(other.y), z(other.z)
+    : x(other.x), 
+      y(other.y), 
+      z(other.z)
 {
 }
 
@@ -254,7 +265,7 @@ float Vector3::Dot(const Vector3 &other) const
 
 Vector3 Vector3::Abs(const Vector3 &vec)
 {
-    return Vector3(abs(vec.x), abs(vec.y), abs(vec.z));
+    return Vector3(std::fabs(vec.x), std::fabs(vec.y), std::fabs(vec.z));
 }
 
 Vector3 Vector3::Round(const Vector3 &vec)
@@ -311,4 +322,5 @@ std::ostream &operator<<(std::ostream &out, const Vector3 &vec) // output
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
     return out;
 }
-}
+
+} // namespace apex

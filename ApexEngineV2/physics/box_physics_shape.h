@@ -6,6 +6,7 @@
 
 namespace apex {
 namespace physics {
+
 class BoxPhysicsShape : public PhysicsShape {
 public:
     BoxPhysicsShape(const Vector3 &dimensions);
@@ -22,6 +23,7 @@ public:
 private:
     Vector3 m_dimensions;
 };
+
 } // namespace physics
 } // namespace apex
 

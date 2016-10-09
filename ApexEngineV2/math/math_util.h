@@ -4,13 +4,14 @@
 #include <cstdlib>
 
 namespace apex {
+
 class MathUtil {
 public:
     const static double PI;
     const static double EPSILON;
 
     template <typename T>
-    static inline T Random(T a, T b)
+    static inline T Random(const T &a, const T &b)
     {
         T random = ((T)rand()) / (T)RAND_MAX;
         T diff = b - a;
@@ -19,19 +20,19 @@ public:
     }
 
     template <typename T>
-    static inline T RadToDeg(const T rad)
+    static inline T RadToDeg(const T &rad)
     {
         return rad * (T)180 / (T)PI;
     }
 
     template <typename T>
-    static inline T DegToRad(const T deg)
+    static inline T DegToRad(const T &deg)
     {
         return deg * (T)PI / (T)180;
     }
 
     template <typename T>
-    static inline T Clamp(const T val, const T min, const T max)
+    static inline T Clamp(const T &val, const T &min, const T &max)
     {
         if (val > max) { 
             return max; 
@@ -43,13 +44,13 @@ public:
     }
 
     template <typename T>
-    static inline T Lerp(const T from, const T to, const T amt)
+    static inline T Lerp(const T &from, const T &to, const T &amt)
     {
         return from + amt * (to - from);
     }
 
     template <typename T>
-    static inline T Min(const T a, const T b)
+    static inline T Min(const T &a, const T &b)
     {
         if (a < b) { 
             return a; 
@@ -59,7 +60,7 @@ public:
     }
 
     template <typename T>
-    static inline T Max(const T a, const T b)
+    static inline T Max(const T &a, const T &b)
     {
         if (a > b) { 
             return a; 
@@ -68,6 +69,7 @@ public:
         }
     }
 };
+
 } // namespace apex
 
 #endif

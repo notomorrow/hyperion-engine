@@ -1,6 +1,7 @@
 #include "transform.h"
 
 namespace apex {
+
 Transform::Transform()
     : m_translation(Vector3::Zero()),
       m_scale(Vector3::One()),
@@ -36,4 +37,5 @@ void Transform::UpdateMatrix()
 
     m_matrix = S * R * T;
 }
+
 } // namespace apex

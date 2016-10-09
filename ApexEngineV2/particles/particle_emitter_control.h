@@ -5,7 +5,7 @@
 #include "../rendering/camera/camera.h"
 #include "particle.h"
 #include "particle_construction_info.h"
-#include "particle_generator.h"
+#include "particle_renderer.h"
 
 #include <vector>
 #include <memory>

@@ -3,6 +3,7 @@
 
 namespace apex {
 namespace physics {
+
 Vector3 PhysicsShape::GetAxis(unsigned int index) const
 {
     assert(index < 8);
@@ -10,5 +11,6 @@ Vector3 PhysicsShape::GetAxis(unsigned int index) const
         m_transform.values[index + 4],
         m_transform.values[index + 8]);
 }
+
 } // namespace physics
 } // namespace apex

@@ -192,7 +192,7 @@
     <ClInclude Include="particles\particle.h" />
     <ClInclude Include="particles\particle_construction_info.h" />
     <ClInclude Include="particles\particle_emitter_control.h" />
-    <ClInclude Include="particles\particle_generator.h" />
+    <ClInclude Include="particles\particle_renderer.h" />
     <ClInclude Include="particles\particle_shader.h" />
     <ClInclude Include="physics\box_collision.h" />
     <ClInclude Include="physics\box_physics_shape.h" />
@@ -202,13 +202,15 @@
     <ClInclude Include="opengl.h" />
     <ClInclude Include="physics\physics_shape.h" />
     <ClInclude Include="physics\plane_physics_shape.h" />
+    <ClInclude Include="physics\raytest.h" />
     <ClInclude Include="physics\rigid_body.h" />
     <ClInclude Include="physics\physics_material.h" />
+    <ClInclude Include="physics\shapes\sphere.h" />
     <ClInclude Include="physics\sphere_physics_shape.h" />
     <ClInclude Include="physics\physics_manager.h" />
     <ClInclude Include="physics\physics_object.h" />
-    <ClInclude Include="physics\rigid_body_control.h" />
     <ClInclude Include="physics\shapes\aabb_physics_object.h" />
+    <ClInclude Include="rendering\bounding_box_renderer.h" />
     <ClInclude Include="rendering\camera\camera.h" />
     <ClInclude Include="rendering\camera\fps_camera.h" />
     <ClInclude Include="rendering\camera\ortho_camera.h" />
@@ -225,6 +227,7 @@
     <ClInclude Include="rendering\shaders\lighting_shader.h" />
     <ClInclude Include="rendering\shaders\post\gamma_correct.h" />
     <ClInclude Include="rendering\shaders\post_shader.h" />
+    <ClInclude Include="rendering\shaders\shader_code.h" />
     <ClInclude Include="rendering\shader_manager.h" />
     <ClInclude Include="rendering\shadow\pssm_shadow_mapping.h" />
     <ClInclude Include="rendering\shadow\shadow_mapping.h" />
@@ -291,7 +294,7 @@
     <ClCompile Include="particles\particle.cpp" />
     <ClCompile Include="particles\particle_construction_info.cpp" />
     <ClCompile Include="particles\particle_emitter_control.cpp" />
-    <ClCompile Include="particles\particle_generator.cpp" />
+    <ClCompile Include="particles\particle_renderer.cpp" />
     <ClCompile Include="particles\particle_shader.cpp" />
     <ClCompile Include="physics\box_collision.cpp" />
     <ClCompile Include="physics\box_physics_shape.cpp" />
@@ -300,14 +303,15 @@
     <ClCompile Include="physics\collision_list.cpp" />
     <ClCompile Include="physics\physics_shape.cpp" />
     <ClCompile Include="physics\plane_physics_shape.cpp" />
+    <ClCompile Include="physics\raytest.cpp" />
     <ClCompile Include="physics\rigid_body.cpp" />
     <ClCompile Include="physics\physics_material.cpp" />
     <ClCompile Include="physics\sphere_physics_shape.cpp" />
     <ClCompile Include="physics\physics_manager.cpp" />
     <ClCompile Include="physics\physics_object.cpp" />
-    <ClCompile Include="physics\rigid_body_control.cpp" />
     <ClCompile Include="physics\shapes\aabb_physics_object.cpp" />
     <ClCompile Include="physics\simple_collision_detector.cpp" />
+    <ClCompile Include="rendering\bounding_box_renderer.cpp" />
     <ClCompile Include="rendering\camera\camera.cpp" />
     <ClCompile Include="core_engine.cpp" />
     <ClCompile Include="rendering\camera\fps_camera.cpp" />
@@ -324,6 +328,7 @@
     <ClCompile Include="rendering\shaders\lighting_shader.cpp" />
     <ClCompile Include="rendering\shaders\post\gamma_correct.cpp" />
     <ClCompile Include="rendering\shaders\post_shader.cpp" />
+    <ClCompile Include="rendering\shaders\shader_code.cpp" />
     <ClCompile Include="rendering\shader_manager.cpp" />
     <ClCompile Include="rendering\shadow\pssm_shadow_mapping.cpp" />
     <ClCompile Include="rendering\shadow\shadow_mapping.cpp" />

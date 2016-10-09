@@ -249,9 +249,6 @@
     <ClInclude Include="math\matrix3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="physics\rigid_body_control.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="util\random\open_simplex_noise.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -259,9 +256,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="opengl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="particles\particle_generator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="particles\particle.h">
@@ -304,6 +298,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="physics\rigid_body.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\raytest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="physics\shapes\sphere.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="particles\particle_renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\bounding_box_renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\shaders\shader_code.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -518,16 +527,10 @@
     <ClCompile Include="physics\simple_collision_detector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="physics\rigid_body_control.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="util\random\open_simplex_noise.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="util\random\worley_noise_generator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="particles\particle_generator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="particles\particle_shader.cpp">
@@ -570,6 +573,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="physics\sphere_physics_shape.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="physics\raytest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="particles\particle_renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rendering\bounding_box_renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rendering\shaders\shader_code.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

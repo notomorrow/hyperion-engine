@@ -8,6 +8,7 @@
 #include <array>
 
 namespace apex {
+
 class BoundingBox {
 public:
     BoundingBox();
@@ -37,6 +38,7 @@ private:
     Vector3 m_min;
     Vector3 m_max;
 };
+
 } // namespace apex
 
 #endif

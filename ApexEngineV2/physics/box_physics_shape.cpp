@@ -2,10 +2,13 @@
 #include "box_collision.h"
 #include "sphere_physics_shape.h"
 #include "plane_physics_shape.h"
+#include "../math/bounding_box.h"
+
 #include <cassert>
 
 namespace apex {
 namespace physics {
+
 BoxPhysicsShape::BoxPhysicsShape(const Vector3 &dimensions)
     : PhysicsShape(PhysicsShape_box), 
       m_dimensions(dimensions)
@@ -22,7 +25,7 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
 {
     Vector3 to_center = other->GetAxis(3) - GetAxis(3);
 
-    double penetration = DBL_MAX;
+    double penetration = std::numeric_limits<double>::max();
     unsigned int best = std::numeric_limits<unsigned int>::max();
 
     for (int i = 0; i < 3; i++) {
@@ -220,5 +223,6 @@ bool BoxPhysicsShape::CollidesWith(PlanePhysicsShape *shape, CollisionList &out)
 
     return bool(num_collisions > 0);
 }
+
 } // namespace physics
 } // namespace apex

@@ -1,0 +1,26 @@
+#ifndef BOUNDING_BOX_RENDERER_H
+#define BOUNDING_BOX_RENDERER_H
+
+#include "renderable.h"
+#include "../math/bounding_box.h"
+#include "mesh.h"
+
+#include <memory>
+
+namespace apex {
+
+class BoundingBoxRenderer : public Renderable {
+public:
+    BoundingBoxRenderer(BoundingBox *bounding_box);
+    ~BoundingBoxRenderer();
+
+    virtual void Render() override;
+
+private:
+    BoundingBox *m_bounding_box;
+    Mesh *m_mesh;
+};
+
+} // namespace apex
+
+#endif

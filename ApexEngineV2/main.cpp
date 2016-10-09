@@ -38,10 +38,9 @@
 #include "physics/box_physics_shape.h"
 #include "physics/sphere_physics_shape.h"
 #include "physics/plane_physics_shape.h"
-#include "physics/rigid_body_control.h"
 
 /* Particles */
-#include "particles/particle_generator.h"
+#include "particles/particle_renderer.h"
 #include "particles/particle_emitter_control.h"
 
 /* Standard library */
@@ -77,7 +76,7 @@ public:
     {
         shadow_timer = 0.0f;
         physics_update_timer = 0.0;
-        timer = 0.15;
+        timer = 0.2;
         scene_fbo_rendered = false;
 
         std::srand(std::time(nullptr));
@@ -139,35 +138,60 @@ public:
 
     void InitPhysicsTests()
     {
-        rb1 = std::make_shared<physics::RigidBody>(std::make_shared<physics::SpherePhysicsShape>(0.5), 1.0);
-        rb1->SetPosition(Vector3(2, 40, 0));
-        rb1->SetLinearVelocity(Vector3(-1, 10, 0));
+        /*rb1 = std::make_shared<physics::RigidBody>(std::make_shared<physics::SpherePhysicsShape>(0.5), 1.0);
+        rb1->SetPosition(Vector3(2, 8, 0));
+        //rb1->SetLinearVelocity(Vector3(-1, 10, 0));
         rb1->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(0.5), 1.0));
-        test_object_0->AddControl(std::make_shared<RigidBodyControl>(rb1));
+        test_object_0->AddControl(rb1);
 
         rb2 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
-        rb2->SetPosition(Vector3(0, 5, 0));
+        rb2->SetPosition(Vector3(0, 7, 0));
         // rb2->SetLinearVelocity(Vector3(2, -1, 0.4));
         rb2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-        test_object_1->AddControl(std::make_shared<RigidBodyControl>(rb2));
+        test_object_1->AddControl(rb2);
 
         rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
-        rb3->SetPosition(Vector3(0, 10, 0));
+        rb3->SetPosition(Vector3(0, 4, 0));
         rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-        test_object_2->AddControl(std::make_shared<RigidBodyControl>(rb3));
+        test_object_2->AddControl(rb3);*/
 
         rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
         rb4->SetAwake(false);
 
-        PhysicsManager::GetInstance()->RegisterBody(rb1);
+        /*PhysicsManager::GetInstance()->RegisterBody(rb1);
         PhysicsManager::GetInstance()->RegisterBody(rb2);
-        PhysicsManager::GetInstance()->RegisterBody(rb3);
+        PhysicsManager::GetInstance()->RegisterBody(rb3);*/
         PhysicsManager::GetInstance()->RegisterBody(rb4);
     }
 
     void InitTestObjects()
     {
-        test_object_0 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere.obj");
+        for (int x = -2; x < 2; x++) {
+            for (int z = -2; z < 2; z++) {
+
+                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/box.obj", false);
+                box->GetChild(0)->GetRenderable()->SetShader(shader);
+                box->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
+                Mesh *mesh = dynamic_cast<Mesh*>(box->GetChild(0)->GetRenderable().get());
+                mesh->SetPrimitiveType(Mesh::PRIM_LINES);
+                top->AddChild(box);
+                
+                box->SetLocalTranslation(Vector3(x * 3, 12, z * 3));
+                box->Update(1.0);
+               
+                box->GetChild(0)->UpdateAABB();
+                std::cout << "box->GetChild(0)->GetAABB() = {min: " << box->GetChild(0)->GetAABB().GetMin() 
+                    << ", max: " << box->GetChild(0)->GetAABB().GetMax() << "}\n";
+
+                auto rb = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
+                rb->SetPosition(box->GetLocalTranslation());
+                rb->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(0.5), 1.0));
+                box->AddControl(rb);
+                PhysicsManager::GetInstance()->RegisterBody(rb);
+            }
+        }
+
+        /*test_object_0 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere.obj");
         test_object_0->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 0.15f, 0.3f, 1.0f, 1.0f };
         test_object_0->GetChild(0)->GetRenderable()->SetShader(shader);
         top->AddChild(test_object_0);
@@ -191,7 +215,9 @@ public:
         }));
         test_object_2->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
         test_object_2->GetChild(0)->GetRenderable()->GetMaterial().diffuse_texture = tex;
-        top->AddChild(test_object_2);
+        top->AddChild(test_object_2);*/
+
+
     }
 
     void Initialize()

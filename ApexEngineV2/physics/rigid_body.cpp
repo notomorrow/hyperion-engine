@@ -79,7 +79,8 @@ static Matrix3 CalculateInverseInertiaWorldMatrix(const Matrix3 &iit_body, const
 }
 
 RigidBody::RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material)
-    : m_shape(shape), 
+    : EntityControl(60.0),
+      m_shape(shape), 
       m_material(material), 
       m_awake(true)
 {
@@ -115,5 +116,22 @@ void RigidBody::Integrate(double dt)
         m_torque_accum = Vector3::Zero();
     }
 }
+
+void RigidBody::OnAdded()
+{
+}
+
+void RigidBody::OnRemoved()
+{
+}
+
+void RigidBody::OnUpdate(double dt)
+{
+    Quaternion tmp(m_orientation);
+    tmp.Invert();
+    parent->SetLocalRotation(tmp);
+    parent->SetLocalTranslation(m_position);
+}
+
 } // namespace physics
 } // namespace apex

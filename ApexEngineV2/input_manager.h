@@ -4,6 +4,8 @@
 #define NUM_KEYBOARD_KEYS 350
 #define NUM_MOUSE_BUTTONS 3
 
+#include "core_engine.h"
+
 #include <functional>
 
 namespace apex {
@@ -94,9 +96,9 @@ public:
     InputEvent(std::function<void()> handler, bool is_up_evt = false);
     InputEvent(const InputEvent &other);
 
-    bool IsEmpty() const;
-    bool IsUpEvent() const;
-    void Trigger();
+    inline bool IsEmpty() const { return is_empty; }
+    inline bool IsUpEvent() const { return is_up_evt; }
+    inline void Trigger() { handler(); }
 
 private:
     bool is_up_evt, is_empty;
@@ -108,20 +110,20 @@ public:
     InputManager();
     ~InputManager();
 
-    double GetMouseX() const;
-    double GetMouseY() const;
-    void SetMousePosition(double x, double y);
+    inline double GetMouseX() const { return mouse_x; }
+    inline double GetMouseY() const { return mouse_y; }
+    inline void SetMousePosition(double x, double y) { CoreEngine::GetInstance()->SetMousePosition(x, y); }
 
     void KeyDown(int key);
     void KeyUp(int key);
     void MouseButtonDown(int btn);
     void MouseButtonUp(int btn);
-    void MouseMove(double x, double y);
+    inline void MouseMove(double x, double y) { mouse_x = x; mouse_y = y; }
 
     bool IsKeyDown(int key) const;
-    bool IsKeyUp(int key) const;
+    inline bool IsKeyUp(int key) const { return !IsKeyDown(key); }
     bool IsButtonDown(int btn) const;
-    bool IsButtonUp(int btn) const;
+    inline bool IsButtonUp(int btn) const { return !IsButtonDown(btn); }
 
     bool RegisterKeyEvent(int key, const InputEvent &evt);
     bool RegisterClickEvent(int btn, const InputEvent &evt);

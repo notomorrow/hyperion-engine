@@ -4,6 +4,7 @@
 
 namespace apex {
 namespace physics {
+
 PlanePhysicsShape::PlanePhysicsShape(const Vector3 &direction, double offset)
     : PhysicsShape(PhysicsShape_plane), 
       m_direction(direction), 
@@ -34,5 +35,6 @@ bool PlanePhysicsShape::CollidesWith(PlanePhysicsShape *shape, CollisionList &ou
 {
     return false;
 }
+
 } // namespace physics
 } // namespace apex

@@ -5,9 +5,11 @@
 #include "collision_list.h"
 #include "../math/vector3.h"
 #include "../math/matrix4.h"
+#include "../math/ray.h"
 
 namespace apex {
 namespace physics {
+
 // forward declarations
 class BoxPhysicsShape;
 class SpherePhysicsShape;
@@ -43,6 +45,7 @@ protected:
 private:
     const PhysicsShapeType m_type;
 };
+
 } // namespace physics
 } // namespace apex
 

@@ -5,6 +5,7 @@
 #include "../../math/bounding_box.h"
 
 namespace apex {
+
 class AABBPhysicsObject final : public PhysicsObject {
 public:
     AABBPhysicsObject(const std::string &tag, 
@@ -18,6 +19,7 @@ public:
 protected:
     BoundingBox aabb;
 };
-}
+
+} // namespace apex
 
 #endif

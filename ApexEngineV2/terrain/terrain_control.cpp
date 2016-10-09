@@ -13,9 +13,9 @@ TerrainControl::TerrainControl(Camera *camera)
 
 TerrainControl::~TerrainControl()
 {
-    for (auto &&it : m_chunks) {
-        if (it != nullptr) {
-            delete it;
+    for (TerrainChunk *chunk : m_chunks) {
+        if (chunk != nullptr) {
+            delete chunk;
         }
     }
 }
@@ -123,7 +123,7 @@ void TerrainControl::AddChunk(int x, int z)
             num_threads--;
         };
 
-#if APEX_MULTITHREADING
+#if TERRAIN_MULTITHREADED
         // start thread to create terrain chunk
         std::thread th(lambda);
         th.detach();
@@ -135,7 +135,7 @@ void TerrainControl::AddChunk(int x, int z)
 
 TerrainChunk *TerrainControl::GetChunk(int x, int z)
 {
-    for (auto &&chunk : m_chunks) {
+    for (TerrainChunk *chunk : m_chunks) {
         if (chunk != nullptr) {
             if ((int)chunk->m_chunk_info.m_position.x == x &&
                 (int)chunk->m_chunk_info.m_position.y == z) {

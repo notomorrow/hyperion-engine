@@ -70,7 +70,9 @@ void Collision::ApplyPositionChange(CollisionInfo &collision,
     }
 
     for (int i = 0; i < 2; i++) {
-        if (collision.m_bodies[i] != nullptr) {
+        RigidBody *body = collision.m_bodies[i];
+
+        if (body != nullptr) {
             double sign = (i == 0) ? 1 : -1;
             angular_move[i] = sign * penetration * (angular_inertia[i] / total_inertia);
             linear_move[i] = sign * penetration * (linear_inertia[i] / total_inertia);
@@ -95,7 +97,7 @@ void Collision::ApplyPositionChange(CollisionInfo &collision,
             } else {
                 Vector3 target_angular_direction = collision.m_relative_contact_position[i];
                 target_angular_direction.Cross(collision.m_contact_normal);
-                Matrix3 inverse_inertia_tensor = collision.m_bodies[i]->GetInverseInertiaTensorWorld();
+                Matrix3 inverse_inertia_tensor = body->GetInverseInertiaTensorWorld();
 
                 angular_change[i] = (target_angular_direction * inverse_inertia_tensor) *
                     (angular_move[i] / angular_inertia[i]);
@@ -103,17 +105,19 @@ void Collision::ApplyPositionChange(CollisionInfo &collision,
 
             linear_change[i] = collision.m_contact_normal * linear_move[i];
 
-            if (!collision.m_bodies[i]->IsStatic()) {
-                Vector3 &pos = collision.m_bodies[i]->GetPosition();
-                pos += collision.m_contact_normal * linear_move[i];
+            if (!body->IsStatic()) {
+                Vector3 position = body->GetPosition();
+                position += collision.m_contact_normal * linear_move[i];
+                body->SetPosition(position);
 
-                Quaternion &rot = collision.m_bodies[i]->GetOrientation();
-                rot += angular_change[i];
-                rot.Normalize();
+                Quaternion rotation = body->GetOrientation();
+                rotation += angular_change[i];
+                rotation.Normalize();
+                body->SetOrientation(rotation);
 
-                if (!collision.m_bodies[i]->IsAwake()) {
-                    // reflect changes on sleeping object
-                    collision.m_bodies[i]->UpdateTransform();
+                // reflect changes on sleeping object
+                if (!body->IsAwake()) {
+                    body->UpdateTransform();
                 }
             }
         }
@@ -274,28 +278,28 @@ Vector3 Collision::CalculateFrictionImpulse(CollisionInfo &collision,
     double inverse_mass = collision.m_bodies[0]->GetPhysicsMaterial().GetInverseMass();
 
     float skew_symmetric[] = {
-        0, -collision.m_relative_contact_position[0].z, collision.m_relative_contact_position[0].y,
-        collision.m_relative_contact_position[0].z, 0, -collision.m_relative_contact_position[0].x,
-        -collision.m_relative_contact_position[0].y, collision.m_relative_contact_position[0].x, 0
+        0.0f, -collision.m_relative_contact_position[0].z, collision.m_relative_contact_position[0].y,
+        collision.m_relative_contact_position[0].z, 0.0f, -collision.m_relative_contact_position[0].x,
+        -collision.m_relative_contact_position[0].y, collision.m_relative_contact_position[0].x, 0.0f
     };
     Matrix3 impulse_to_torque(skew_symmetric);
     Matrix3 delta_velocity_world_1 = impulse_to_torque;
     delta_velocity_world_1 *= inverse_inertia_tensor[0];
     delta_velocity_world_1 *= impulse_to_torque;
-    delta_velocity_world_1 *= -1;
+    delta_velocity_world_1 *= -1.0f;
 
     if (collision.m_bodies[1] != nullptr) {
         float skew_symmetric[] = {
-            0, -collision.m_relative_contact_position[1].z, collision.m_relative_contact_position[1].y,
-            collision.m_relative_contact_position[1].z, 0, -collision.m_relative_contact_position[1].x,
-            -collision.m_relative_contact_position[1].y, collision.m_relative_contact_position[1].x, 0
+            0.0f, -collision.m_relative_contact_position[1].z, collision.m_relative_contact_position[1].y,
+            collision.m_relative_contact_position[1].z, 0.0f, -collision.m_relative_contact_position[1].x,
+            -collision.m_relative_contact_position[1].y, collision.m_relative_contact_position[1].x, 0.0f
         };
         impulse_to_torque = Matrix3(skew_symmetric);
 
         Matrix3 delta_velocity_world_2 = impulse_to_torque;
         delta_velocity_world_2 *= inverse_inertia_tensor[1];
         delta_velocity_world_2 *= impulse_to_torque;
-        delta_velocity_world_2 *= -1;
+        delta_velocity_world_2 *= -1.0f;
 
         delta_velocity_world_1 += delta_velocity_world_2;
 
@@ -337,5 +341,6 @@ Vector3 Collision::CalculateFrictionImpulse(CollisionInfo &collision,
 
     return impulse_contact;
 }
+
 } // namespace physics
 } // namespace apex

@@ -7,8 +7,8 @@
 
 #include <array>
 
-#define COLLISION_VELOCITY_LIMIT 0.25
-#define COLLISION_ANGULAR_LIMIT 0.2
+#define COLLISION_VELOCITY_LIMIT 0.025
+#define COLLISION_ANGULAR_LIMIT 0.02
 
 namespace apex {
 namespace physics {
@@ -42,6 +42,7 @@ public:
     static Vector3 CalculateFrictionlessImpulse(CollisionInfo &collision,
         const std::array<Matrix3, 2> &inverse_inertia_tensor);
 };
+
 } // namespace physics
 } // namespace apex
 

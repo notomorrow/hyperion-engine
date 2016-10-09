@@ -3,23 +3,36 @@
 #include "vector3.h"
 
 namespace apex {
+
 Vector4::Vector4()
-    : x(0.0), y(0.0), z(0.0), w(0.0)
+    : x(0.0f), 
+      y(0.0f), 
+      z(0.0f), 
+      w(0.0f)
 {
 }
 
 Vector4::Vector4(float x, float y, float z, float w)
-    : x(x), y(y), z(z), w(w)
+    : x(x), 
+      y(y),
+      z(z), 
+      w(w)
 {
 }
 
 Vector4::Vector4(float xyzw)
-    : x(xyzw), y(xyzw), z(xyzw), w(xyzw)
+    : x(xyzw), 
+      y(xyzw), 
+      z(xyzw), 
+      w(xyzw)
 {
 }
 
 Vector4::Vector4(const Vector4 &other)
-    : x(other.x), y(other.y), z(other.z), w(other.w)
+    : x(other.x), 
+      y(other.y), 
+      z(other.z), 
+      w(other.w)
 {
 }
 
@@ -239,4 +252,5 @@ std::ostream &operator<<(std::ostream &out, const Vector4 &vec) // output
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << "]";
     return out;
 }
-}
+
+} // namespace apex

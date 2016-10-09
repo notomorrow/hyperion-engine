@@ -55,7 +55,9 @@ public:
 
         bool operator==(const MeshAttribute &other) const
         {
-            return offset == other.offset && size == other.size && index == other.index;
+            return offset == other.offset && 
+                size == other.size && 
+                index == other.index;
         }
     };
 
@@ -64,12 +66,12 @@ public:
 
     void SetVertices(const std::vector<Vertex> &verts);
     void SetVertices(const std::vector<Vertex> &verts, const std::vector<uint32_t> &ind);
-    std::vector<Vertex> GetVertices() const;
-    std::vector<uint32_t> GetIndices() const;
+    inline const std::vector<Vertex> &GetVertices() const { return vertices; }
+    inline const std::vector<uint32_t> &GetIndices() const { return indices; }
 
     void SetAttribute(MeshAttributeType, const MeshAttribute &);
-    void SetPrimitiveType(PrimitiveType);
-    PrimitiveType GetPrimitiveType() const;
+    inline void SetPrimitiveType(PrimitiveType prim_type) { primitive_type = prim_type; }
+    inline PrimitiveType GetPrimitiveType() const { return primitive_type; }
 
     void Render();
 

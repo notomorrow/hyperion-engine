@@ -5,6 +5,7 @@
 
 namespace apex {
 namespace physics {
+
 class PlanePhysicsShape : public PhysicsShape {
 public:
     PlanePhysicsShape(const Vector3 &direction, double offset);
@@ -24,6 +25,7 @@ private:
     Vector3 m_direction;
     double m_offset;
 };
+
 } // namespace physics
 } // namespace apex
 

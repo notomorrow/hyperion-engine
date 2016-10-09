@@ -1,23 +1,28 @@
 #include "vector2.h"
 
 namespace apex {
+
 Vector2::Vector2()
-    : x(0.0), y(0.0)
+    : x(0.0f), 
+      y(0.0f)
 {
 }
 
 Vector2::Vector2(float x, float y)
-    : x(x), y(y)
+    : x(x), 
+      y(y)
 {
 }
 
 Vector2::Vector2(float xy)
-    : x(xy), y(xy)
+    : x(xy), 
+      y(xy)
 {
 }
 
 Vector2::Vector2(const Vector2 &other)
-    : x(other.x), y(other.y)
+    : x(other.x), 
+      y(other.y)
 {
 }
 
@@ -177,4 +182,5 @@ std::ostream &operator<<(std::ostream &out, const Vector2 &vec) // output
     out << "[" << vec.x << ", " << vec.y << "]";
     return out;
 }
-}
+
+} // namespace apex

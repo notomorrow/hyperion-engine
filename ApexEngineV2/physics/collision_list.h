@@ -13,6 +13,7 @@ struct CollisionList {
     CollisionList();
     CollisionList(const CollisionList &other);
 };
+
 } // namespace physics
 } // namespace apex
 

@@ -7,7 +7,9 @@
 #include "matrix4.h"
 
 namespace apex {
+
 class Vector3;
+
 class Vector4 {
     friend std::ostream &operator<<(std::ostream &out, const Vector4 &vec);
 public:
@@ -69,5 +71,7 @@ public:
     static Vector4 UnitZ();
     static Vector4 UnitW();
 };
-}
+
+} // namespace apex
+
 #endif

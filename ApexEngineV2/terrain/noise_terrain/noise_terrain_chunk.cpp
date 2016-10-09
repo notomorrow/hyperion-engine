@@ -10,9 +10,9 @@ using namespace noise;
 
 #include "../../util/random/open_simplex_noise.h"
 
-#define MOUNTAIN_SCALE_WIDTH 0.02
-#define MOUNTAIN_SCALE_LENGTH 0.02
-#define MOUNTAIN_SCALE_HEIGHT 6.0
+#define MOUNTAIN_SCALE_WIDTH 0.04
+#define MOUNTAIN_SCALE_LENGTH 0.04
+#define MOUNTAIN_SCALE_HEIGHT 8.0
 
 #define ROUGH_SCALE_WIDTH 0.8
 #define ROUGH_SCALE_LENGTH 0.8

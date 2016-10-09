@@ -10,7 +10,7 @@ class NoiseTerrainChunk : public TerrainChunk {
 public:
     NoiseTerrainChunk(const ChunkInfo &chunk_info, int seed);
 
-    int HeightIndexAt(int x, int z);
+    virtual int HeightIndexAt(int x, int z) override;
 
 private:
     std::vector<double> heights;

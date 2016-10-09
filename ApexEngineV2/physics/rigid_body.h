@@ -1,6 +1,8 @@
 #ifndef APEX_PHYSICS_RIGID_BODY_H
 #define APEX_PHYSICS_RIGID_BODY_H
 
+#include "../control.h"
+#include "../entity.h"
 #include "physics_shape.h"
 #include "physics_material.h"
 #include "../math/vector3.h"
@@ -11,7 +13,7 @@
 
 namespace apex {
 namespace physics {
-class RigidBody {
+class RigidBody : public EntityControl {
 public:
     RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material);
 
@@ -55,6 +57,10 @@ public:
     void UpdateTransform();
     // perform physics calculations on this rigidbody
     void Integrate(double dt);
+
+    virtual void OnAdded() override;
+    virtual void OnRemoved() override;
+    virtual void OnUpdate(double dt) override;
 
 private:
     std::shared_ptr<PhysicsShape> m_shape;

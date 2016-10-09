@@ -15,20 +15,19 @@ void SaxParser::Parse(const std::string &filepath)
         return;
     }
 
-    char last_char;
-
     bool is_reading = false,
-        is_opening = false,
-        is_closing = false,
-        in_element = false,
-        in_comment = false,
-        in_characters = false,
-        in_header = false,
-        in_attributes = false,
-        in_attribute_value = false,
-        in_attribute_name = false;
+         is_opening = false,
+         is_closing = false,
+         in_element = false,
+         in_comment = false,
+         in_characters = false,
+         in_header = false,
+         in_attributes = false,
+         in_attribute_value = false,
+         in_attribute_name = false;
 
-    std::string element_str = "", comment_str = "", value_str = "";
+    char last_char;
+    std::string element_str, comment_str, value_str;
     std::vector<std::pair<std::string, std::string>> attribs;
 
     // shield your eyes
@@ -67,7 +66,7 @@ void SaxParser::Parse(const std::string &filepath)
                     if (is_opening || last_char == '/') {
                         AttributeMap locals;
 
-                        for (auto &&attr : attribs) {
+                        for (auto &attr : attribs) {
                             if (!attr.first.empty()) {
                                 locals[attr.first] = attr.second;
                             }
@@ -115,7 +114,7 @@ void SaxParser::Parse(const std::string &filepath)
                         }
                     } else {
                         if (in_characters) {
-                            if ((ch != ' ' || (last_char != ' ' && last_char != '\n' &&last_char != '<'))) {
+                            if (ch != ' ' || (last_char != ' ' && (last_char != '\n' && last_char != '<'))) {
                                 value_str += ch;
                             }
                         }

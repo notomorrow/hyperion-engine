@@ -4,6 +4,7 @@
 #include <iostream>
 
 namespace apex {
+
 Shader::Shader(const ShaderProperties &properties)
     : is_uploaded(false),
       is_created(false),
@@ -40,42 +41,6 @@ void Shader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
     SetUniform("u_modelMatrix", transform);
     SetUniform("u_viewMatrix", camera->GetViewMatrix());
     SetUniform("u_projMatrix", camera->GetProjectionMatrix());
-}
-
-void Shader::SetUniform(const std::string &name, float value)
-{
-    uniforms[name] = Uniform(value);
-    uniform_changed = true;
-}
-
-void Shader::SetUniform(const std::string &name, int value)
-{
-    uniforms[name] = Uniform(value);
-    uniform_changed = true;
-}
-
-void Shader::SetUniform(const std::string &name, const Vector2 &value)
-{
-    uniforms[name] = Uniform(value);
-    uniform_changed = true;
-}
-
-void Shader::SetUniform(const std::string &name, const Vector3 &value)
-{
-    uniforms[name] = Uniform(value);
-    uniform_changed = true;
-}
-
-void Shader::SetUniform(const std::string &name, const Vector4 &value)
-{
-    uniforms[name] = Uniform(value);
-    uniform_changed = true;
-}
-
-void Shader::SetUniform(const std::string &name, const Matrix4 &value)
-{
-    uniforms[name] = Uniform(value);
-    uniform_changed = true;
 }
 
 void Shader::Use()
@@ -189,8 +154,4 @@ void Shader::End()
     glUseProgram(0);
 }
 
-void Shader::AddSubShader(const SubShader &shader)
-{
-    subshaders.push_back(shader);
-}
 } // namespace apex

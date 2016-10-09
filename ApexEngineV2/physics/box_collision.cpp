@@ -2,6 +2,7 @@
 
 namespace apex {
 namespace physics {
+
 double BoxCollision::TransformToAxis(const BoxPhysicsShape &box, const Vector3 &axis)
 {
     return (box.GetDimensions().GetX() * 0.5f) * fabs(axis.Dot(box.GetAxis(0))) +
@@ -14,13 +15,13 @@ void BoxCollision::FillPointFaceBoxBox(const BoxPhysicsShape &a, const BoxPhysic
     unsigned int best, double penetration)
 {
     Vector3 normal = a.GetAxis(best);
-    if (a.GetAxis(best).Dot(to_center) > 0) {
+    if (a.GetAxis(best).Dot(to_center) > 0.0f) {
         normal *= -1.0f;
     }
 
     Vector3 vertex = b.GetDimensions() * 0.5f;
     for (int i = 0; i < 3; i++) {
-        if (b.GetAxis(i).Dot(normal) < 0) {
+        if (b.GetAxis(i).Dot(normal) < 0.0f) {
             vertex[i] *= -1.0f;
         }
     }
@@ -80,7 +81,7 @@ bool BoxCollision::TryAxis(const BoxPhysicsShape &a, const BoxPhysicsShape &b,
     axis.Normalize();
 
     double penetration = PenetrationOnAxis(a, b, axis, to_center);
-    if (penetration < 0) {
+    if (penetration < 0.0) {
         return false;
     }
 
@@ -91,5 +92,6 @@ bool BoxCollision::TryAxis(const BoxPhysicsShape &a, const BoxPhysicsShape &b,
 
     return true;
 }
+
 } // namespace physics
 } // namespace apex

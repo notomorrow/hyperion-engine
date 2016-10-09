@@ -1,8 +1,8 @@
 #ifndef PHYSICS_MANAGER_H
 #define PHYSICS_MANAGER_H
 
-#define VELOCITY_EPSILON 0.001
-#define POSITION_EPSILON 0.003
+#define VELOCITY_EPSILON 0.0005
+#define POSITION_EPSILON 0.0005
 
 #include "rigid_body.h"
 #include "collision.h"

@@ -2,6 +2,7 @@
 #include "../opengl.h"
 
 namespace apex {
+
 const Mesh::MeshAttribute Mesh::MeshAttribute::Positions = {0, 3, 0};
 const Mesh::MeshAttribute Mesh::MeshAttribute::Normals = { 0, 3, 1 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::TexCoords0 = { 0, 2, 2 };
@@ -37,6 +38,13 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts)
     for (size_t i = 0; i < verts.size(); i++) {
         indices.push_back(i);
     }
+
+    // update the aabb
+    m_aabb.Clear();
+    for (Vertex &vertex : vertices) {
+        m_aabb.Extend(vertex.GetPosition());
+    }
+
     is_uploaded = false;
 }
 
@@ -44,33 +52,20 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts, const std::vector<uint3
 {
     vertices = verts;
     indices = ind;
+
+    // update the aabb
+    m_aabb.Clear();
+    for (Vertex &vertex : vertices) {
+        m_aabb.Extend(vertex.GetPosition());
+    }
+
     is_uploaded = false;
-}
-
-std::vector<Vertex> Mesh::GetVertices() const
-{
-    return vertices;
-}
-
-std::vector<uint32_t> Mesh::GetIndices() const
-{
-    return indices;
 }
 
 void Mesh::SetAttribute(MeshAttributeType type, const MeshAttribute &attr)
 {
     attribs[type] = attr;
     is_uploaded = false;
-}
-
-void Mesh::SetPrimitiveType(Mesh::PrimitiveType type)
-{
-    primitive_type = type;
-}
-
-Mesh::PrimitiveType Mesh::GetPrimitiveType() const
-{
-    return primitive_type;
 }
 
 std::vector<float> Mesh::CreateBuffer()
@@ -151,6 +146,7 @@ void Mesh::Render()
         glGenBuffers(1, &ibo);
         is_created = true;
     }
+
     if (!is_uploaded) {
         std::vector<float> buffer = CreateBuffer();
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -181,4 +177,5 @@ void Mesh::Render()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
+
 } // namespace apex
