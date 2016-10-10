@@ -17,22 +17,22 @@ public:
 
     Environment();
 
-    const DirectionalLight &GetSun() const;
-    DirectionalLight &GetSun();
+    inline DirectionalLight &GetSun() { return sun; }
+    inline const DirectionalLight &GetSun() const { return sun; }
 
     inline const Vector3 &GetGravity() const { return m_gravity; }
     inline void SetGravity(const Vector3 &gravity) { m_gravity = gravity; }
 
-    bool ShadowsEnabled() const;
-    void SetShadowsEnabled(bool);
-    int NumCascades() const;
-    void SetNumCascades(int);
-    int GetShadowSplit(int i) const;
-    void SetShadowSplit(int i, int split);
-    std::shared_ptr<Texture> GetShadowMap(int i) const;
-    void SetShadowMap(int i, std::shared_ptr<Texture>);
-    const Matrix4 &GetShadowMatrix(int i) const;
-    void SetShadowMatrix(int i, const Matrix4 &);
+    inline bool ShadowsEnabled() const { return m_shadows_enabled; }
+    inline void SetShadowsEnabled(bool shadows_enabled) { m_shadows_enabled = shadows_enabled; }
+    inline int NumCascades() const { return m_num_cascades; }
+    inline void SetNumCascades(int num_cascades) { m_num_cascades = num_cascades; }
+    inline int GetShadowSplit(int i) const { return m_shadow_splits[i]; }
+    inline void SetShadowSplit(int i, int split) { m_shadow_splits[i] = split; }
+    inline std::shared_ptr<Texture> GetShadowMap(int i) const { return m_shadow_maps[i]; }
+    inline void SetShadowMap(int i, const std::shared_ptr<Texture> &shadow_map) { m_shadow_maps[i] = shadow_map; }
+    inline const Matrix4 &GetShadowMatrix(int i) const { return m_shadow_matrices[i]; }
+    inline void SetShadowMatrix(int i, const Matrix4 &shadow_matrix) { m_shadow_matrices[i] = shadow_matrix; }
 
 private:
     static Environment *instance;
@@ -41,11 +41,11 @@ private:
 
     Vector3 m_gravity;
 
-    bool shadows_enabled;
-    int num_cascades;
-    std::array<int, 4> shadow_splits;
-    std::array<std::shared_ptr<Texture>, 4> shadow_maps;
-    std::array<Matrix4, 4> shadow_matrices;
+    bool m_shadows_enabled;
+    int m_num_cascades;
+    std::array<int, 4> m_shadow_splits;
+    std::array<std::shared_ptr<Texture>, 4> m_shadow_maps;
+    std::array<Matrix4, 4> m_shadow_matrices;
 };
 } // namespace apex
 

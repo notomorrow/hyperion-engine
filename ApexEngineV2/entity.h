@@ -118,7 +118,7 @@ protected:
     Entity *m_parent;
 
     void SetTransformUpdateFlag();
-    inline void SetAABBUpdateFlag() { m_flags |= UPDATE_AABB; }
+    void SetAABBUpdateFlag();
 };
 
 } // namespace apex

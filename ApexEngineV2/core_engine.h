@@ -4,6 +4,7 @@
 #define APEX_MULTITHREADING 1
 
 namespace apex {
+
 class Game;
 
 class CoreEngine {
@@ -172,6 +173,7 @@ public:
 private:
     static CoreEngine *instance;
 };
+
 } // namespace apex
 
 #endif

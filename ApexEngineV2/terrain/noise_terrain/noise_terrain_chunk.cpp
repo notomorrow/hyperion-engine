@@ -3,6 +3,7 @@
 #include "../../rendering/shaders/lighting_shader.h"
 #include "../../rendering/environment.h"
 #include "../../util/random/worley_noise_generator.h"
+#include "../../rendering/bounding_box_renderer.h"
 
 #include <noise/noise.h>
 #include <noise/module/ridgedmulti.h>
@@ -26,6 +27,7 @@ using namespace noise;
 #define MASK_SCALE_LENGTH 0.02
 
 namespace apex {
+
 NoiseTerrainChunk::NoiseTerrainChunk(const ChunkInfo &chunk_info, int seed)
     : TerrainChunk(chunk_info)
 {
@@ -77,6 +79,12 @@ NoiseTerrainChunk::NoiseTerrainChunk(const ChunkInfo &chunk_info, int seed)
     }));
     m_entity = std::make_shared<Entity>("terrain_node");
     m_entity->SetRenderable(mesh);
+
+
+    auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&m_entity->GetAABB());
+    auto bb_renderer_node = std::make_shared<Entity>();
+    bb_renderer_node->SetRenderable(bb_renderer);
+    m_entity->AddChild(bb_renderer_node);
 }
 
 int NoiseTerrainChunk::HeightIndexAt(int x, int z)
@@ -84,4 +92,5 @@ int NoiseTerrainChunk::HeightIndexAt(int x, int z)
     int size = m_chunk_info.m_width;
     return ((x + size) % size) + ((z + size) % size) * size;
 }
+
 } // namespace apex

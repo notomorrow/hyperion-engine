@@ -5,6 +5,7 @@
 #include "opengl.h"
 
 namespace apex {
+
 class GlfwEngine : public CoreEngine {
 public:
     bool InitializeGame(Game *game);
@@ -67,6 +68,7 @@ public:
 private:
     GLFWwindow *window;
 };
-}
+
+} // namespace apex
 
 #endif

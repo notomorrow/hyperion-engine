@@ -2,6 +2,7 @@
 #include <exception>
 
 namespace apex {
+
 CoreEngine *CoreEngine::instance = nullptr;
 
 CoreEngine *CoreEngine::GetInstance()
@@ -16,4 +17,5 @@ void CoreEngine::SetInstance(CoreEngine *ptr)
 {
     instance = ptr;
 }
+
 } // namespace apex

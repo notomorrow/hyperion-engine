@@ -6,9 +6,9 @@
 namespace apex {
 
 Game::Game(const RenderWindow &window) 
-    : window(window)
+    : inputmgr(new InputManager), 
+      window(window)
 {
-    inputmgr = new InputManager();
 }
 
 Game::~Game()
@@ -16,13 +16,4 @@ Game::~Game()
     delete inputmgr;
 }
 
-InputManager *Game::GetInputManager() const
-{
-    return inputmgr;
-}
-
-RenderWindow &Game::GetWindow()
-{
-    return window;
-}
 } // namespace apex

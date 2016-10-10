@@ -40,11 +40,16 @@ void Entity::UpdateAABB()
     // retrieve renderable's aabb
     if (m_renderable != nullptr) {
         BoundingBox renderable_aabb = m_renderable->GetAABB();
-        // multiply by transform
-        std::array<Vector3, 8> corners = renderable_aabb.GetCorners();
-        for (Vector3 &corner : corners) {
-            corner *= m_global_transform.GetMatrix();
-            m_aabb.Extend(corner);
+
+        if (!renderable_aabb.Empty()) {
+            BoundingBox renderable_aabb_transformed;
+            // multiply by transform
+            std::array<Vector3, 8> corners = renderable_aabb.GetCorners();
+            for (Vector3 &corner : corners) {
+                corner *= m_global_transform.GetMatrix();
+                renderable_aabb_transformed.Extend(corner);
+            }
+            m_aabb.Extend(renderable_aabb_transformed);
         }
     }
 
@@ -127,6 +132,14 @@ void Entity::SetTransformUpdateFlag()
     m_flags |= UPDATE_TRANSFORM;
     for (auto &child : m_children) {
         child->SetTransformUpdateFlag();
+    }
+}
+
+void Entity::SetAABBUpdateFlag()
+{
+    m_flags |= UPDATE_AABB;
+    for (auto &child : m_children) {
+        child->SetAABBUpdateFlag();
     }
 }
 

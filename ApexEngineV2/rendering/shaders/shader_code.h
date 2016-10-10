@@ -5,8 +5,8 @@ namespace apex {
 
 class ShaderCode {
 public:
-    static const char *basic_vs;
-    static const char *basic_fs;
+    static const char *aabb_debug_vs;
+    static const char *aabb_debug_fs;
 };
 
 } // namespace apex

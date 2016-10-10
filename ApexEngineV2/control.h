@@ -2,6 +2,7 @@
 #define CONTROL_H
 
 namespace apex {
+
 class Entity;
 
 class EntityControl {
@@ -21,6 +22,7 @@ private:
     const double tps;
     double tick;
 };
+
 } // namespace apex
 
 #endif

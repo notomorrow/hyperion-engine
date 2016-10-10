@@ -4,6 +4,7 @@
 #include "../asset/loadable.h"
 
 namespace apex {
+
 class Texture : public Loadable {
     friend class TextureLoader;
 public:
@@ -31,6 +32,7 @@ protected:
     int mag_filter, min_filter;
     int wrap_s, wrap_t;
 };
+
 } // namespace apex
 
 #endif

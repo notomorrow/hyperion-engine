@@ -8,6 +8,7 @@
 #include <cctype>
 
 namespace apex {
+
 class StringUtil {
 public:
     static inline bool StartsWith(const std::string &text, const std::string &token)
@@ -91,6 +92,7 @@ public:
         return result;
     }
 };
+
 } // namespace apex
 
 #endif

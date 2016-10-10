@@ -1,6 +1,7 @@
 #include "terrain_chunk.h"
 
 namespace apex {
+
 TerrainChunk::TerrainChunk(const ChunkInfo &chunk_info)
     : m_chunk_info(chunk_info)
 {
@@ -66,12 +67,12 @@ std::vector<Vertex> TerrainChunk::BuildVertices(const std::vector<double> &heigh
             Vector3 position(x - m_chunk_info.m_width / 2, heights[i], z - m_chunk_info.m_length / 2);
             position *= m_chunk_info.m_scale;
 
-            Vector2 texcoord(-x / float(m_chunk_info.m_width),
-                -z / float(m_chunk_info.m_length));
+            Vector2 texcoord(-x / float(m_chunk_info.m_width), -z / float(m_chunk_info.m_length));
 
             vertices[i++] = Vertex(position, texcoord);
         }
     }
+
     return vertices;
 }
 
@@ -114,4 +115,5 @@ std::vector<size_t> TerrainChunk::BuildIndices()
 
     return indices;
 }
+
 } // namespace apex

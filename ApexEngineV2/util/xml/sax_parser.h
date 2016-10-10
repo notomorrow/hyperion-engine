@@ -9,6 +9,7 @@
 
 namespace apex {
 namespace xml {
+
 typedef std::map<std::string, std::string> AttributeMap;
 
 class SaxHandler {
@@ -31,6 +32,7 @@ private:
     std::ifstream file;
     SaxHandler *handler;
 };
+
 } // namespace xml
 } // namespace apex
 

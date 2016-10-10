@@ -16,6 +16,7 @@
 #include <string>
 
 namespace apex {
+
 typedef std::map<std::string, float> ShaderProperties;
 
 class Shader {
@@ -143,6 +144,7 @@ private:
     std::vector<SubShader> subshaders;
     std::map<std::string, Uniform> uniforms;
 };
+
 } // namespace apex
 
 #endif

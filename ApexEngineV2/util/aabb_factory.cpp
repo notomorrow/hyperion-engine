@@ -1,6 +1,7 @@
 #include "aabb_factory.h"
 
 namespace apex {
+
 BoundingBox AABBFactory::CreateMeshBoundingBox(const std::shared_ptr<Mesh> &mesh)
 {
     BoundingBox aabb;
@@ -35,4 +36,5 @@ BoundingBox AABBFactory::CreateEntityBoundingBox(const std::shared_ptr<Entity> &
 
     return aabb;
 }
+
 } // namespace apex

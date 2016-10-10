@@ -9,6 +9,7 @@
 #include <memory>
 
 namespace apex {
+
 class TerrainChunk {
 public:
     ChunkInfo m_chunk_info;
@@ -27,6 +28,7 @@ protected:
     std::vector<Vertex> BuildVertices(const std::vector<double> &heights);
     std::vector<size_t> BuildIndices();
 };
+
 } // namespace apex
 
 #endif

@@ -1,9 +1,12 @@
 #include "terrain_control.h"
+#include "../rendering/bounding_box_renderer.h"
 
 #include <thread>
 
 namespace apex {
+
 static int num_threads = 0;
+
 TerrainControl::TerrainControl(Camera *camera)
     : m_camera(camera), m_scale(3.0, 2.0, 3.0),
     m_tick(0), m_queuetick(0), 
@@ -57,9 +60,9 @@ void TerrainControl::OnUpdate(double dt)
             TerrainChunk *chunk = m_chunks[m_chunk_index];
             if (chunk != nullptr) {
                 switch (chunk->m_chunk_info.m_page_state) {
-                case PageState_loaded:
+                case PageState::LOADED:
                     if (chunk->m_chunk_info.m_position.Distance(v2cam) >= m_max_distance) {
-                        chunk->m_chunk_info.m_page_state = PageState_unloading;
+                        chunk->m_chunk_info.m_page_state = PageState::UNLOADING;
                     } else {
                         if (chunk->m_entity->GetParent() == nullptr) {
                             parent->AddChild(chunk->m_entity);
@@ -75,13 +78,13 @@ void TerrainControl::OnUpdate(double dt)
                     }
                     m_chunk_index++;
                     break;
-                case PageState_unloading:
+                case PageState::UNLOADING:
                     chunk->m_chunk_info.m_unload_time += TERRAIN_UPDATE_STEP;
                     if (chunk->m_chunk_info.m_unload_time >= TERRAIN_MAX_UNLOAD_TICK) {
-                        chunk->m_chunk_info.m_page_state = PageState_unloaded;
+                        chunk->m_chunk_info.m_page_state = PageState::UNLOADED;
                     }
                     break;
-                case PageState_unloaded:
+                case PageState::UNLOADED:
                     if (chunk->m_entity != nullptr && chunk->m_entity->GetParent() == parent) {
                         parent->RemoveChild(chunk->m_entity);
                     }
@@ -106,7 +109,7 @@ void TerrainControl::AddChunk(int x, int z)
             ChunkInfo height_info(Vector2(x, z), m_scale);
             height_info.m_length = m_chunk_size;
             height_info.m_width = m_chunk_size;
-            height_info.m_page_state = PageState_loaded;
+            height_info.m_page_state = PageState::LOADED;
             height_info.m_neighboring_chunks = GetNeighbors(x, z);
 
             TerrainChunk *chunk = NewChunk(height_info);
@@ -139,10 +142,12 @@ TerrainChunk *TerrainControl::GetChunk(int x, int z)
         if (chunk != nullptr) {
             if ((int)chunk->m_chunk_info.m_position.x == x &&
                 (int)chunk->m_chunk_info.m_position.y == z) {
+                
                 return chunk;
             }
         }
     }
+
     return nullptr;
 }
 
@@ -160,4 +165,5 @@ std::array<NeighborChunkInfo, 8> TerrainControl::GetNeighbors(int x, int z)
     };
     return neighbors;
 }
+
 } // namespace apex

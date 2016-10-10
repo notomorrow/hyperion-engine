@@ -2,6 +2,7 @@
 
 namespace apex {
 namespace xml {
+
 SaxParser::SaxParser(SaxHandler *handler)
     : handler(handler)
 {
@@ -127,5 +128,6 @@ void SaxParser::Parse(const std::string &filepath)
         last_char = ch;
     }
 }
+
 } // namespace xml
 } // namespace apex

@@ -4,6 +4,7 @@
 #include <string>
 
 namespace apex {
+
 struct RenderWindow {
     RenderWindow() 
         : width(0), 
@@ -29,6 +30,7 @@ struct RenderWindow {
     int width, height;
     std::string title;
 };
+
 } // namespace apex
 
 #endif

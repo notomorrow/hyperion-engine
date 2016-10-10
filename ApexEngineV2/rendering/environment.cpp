@@ -30,73 +30,12 @@ Environment *Environment::GetInstance()
 }
 
 Environment::Environment()
-    : m_gravity(0.0f, -9.81f, 0.0f)
+    : m_gravity(0.0f, -9.81f, 0.0f),
+      m_shadows_enabled(false),
+      m_num_cascades(1),
+      m_shadow_maps({ nullptr }),
+      m_shadow_matrices({ Matrix4::Identity() })
 {
-    shadows_enabled = false;
-    num_cascades = 1;
-    for (int i = 0; i < 4; i++) {
-        shadow_maps[i] = nullptr;
-        shadow_matrices[i] = Matrix4::Identity();
-    }
 }
 
-const DirectionalLight &Environment::GetSun() const
-{
-    return sun;
-}
-
-DirectionalLight &Environment::GetSun()
-{
-    return sun;
-}
-
-bool Environment::ShadowsEnabled() const
-{
-    return shadows_enabled;
-}
-
-void Environment::SetShadowsEnabled(bool b)
-{
-    shadows_enabled = b;
-}
-
-int Environment::NumCascades() const
-{
-    return num_cascades;
-}
-
-void Environment::SetNumCascades(int i)
-{
-    num_cascades = i;
-}
-
-int Environment::GetShadowSplit(int i) const
-{
-    return shadow_splits[i];
-}
-
-void Environment::SetShadowSplit(int i, int split)
-{
-    shadow_splits[i] = split;
-}
-
-std::shared_ptr<Texture> Environment::GetShadowMap(int i) const
-{
-    return shadow_maps[i];
-}
-
-void Environment::SetShadowMap(int i, std::shared_ptr<Texture> tex)
-{
-    shadow_maps[i] = tex;
-}
-
-const Matrix4 &Environment::GetShadowMatrix(int i) const
-{
-    return shadow_matrices[i];
-}
-
-void Environment::SetShadowMatrix(int i, const Matrix4 &mat)
-{
-    shadow_matrices[i] = mat;
-}
 } // namespace apex

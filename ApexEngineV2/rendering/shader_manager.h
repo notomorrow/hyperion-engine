@@ -9,6 +9,7 @@
 #include <string>
 
 namespace apex {
+
 class ShaderManager {
 public:
     static ShaderManager *instance;
@@ -45,6 +46,7 @@ private:
         >
     > instances;
 };
+
 } // namespace apex
 
 #endif

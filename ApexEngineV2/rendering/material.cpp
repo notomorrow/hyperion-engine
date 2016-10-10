@@ -1,25 +1,27 @@
 #include "material.h"
 
 namespace apex {
+
 MaterialParameter::MaterialParameter()
-    : size(0), type(MaterialParameter_None)
+    : size(0), 
+      type(MaterialParameter_None)
 {
 }
 
 MaterialParameter::MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype)
+    : size(nvalues),
+      type(paramtype)
 {
     for (size_t i = 0; i < nvalues; i++) {
         values[i] = data[i];
     }
-    size = nvalues;
-    type = paramtype;
 }
 
 MaterialParameter::MaterialParameter(const MaterialParameter &other)
+    : values(other.values),
+      size(other.size),
+      type(other.type)
 {
-    values = other.values;
-    size = other.size;
-    type = other.type;
 }
 
 Material::Material()
@@ -95,4 +97,5 @@ void Material::SetParameter(const std::string &name, const Vector4 &value)
     float values[] = { value.x, value.y, value.z, value.w };
     params[name] = MaterialParameter(values, 4, MaterialParameter_Vector4);
 }
+
 } // namespace apex

@@ -6,11 +6,13 @@
 #include "../entity.h"
 
 namespace apex {
+
 class AABBFactory {
 public:
     static BoundingBox CreateMeshBoundingBox(const std::shared_ptr<Mesh> &mesh);
     static BoundingBox CreateEntityBoundingBox(const std::shared_ptr<Entity> &entity);
 };
+
 } // namespace apex
 
 #endif

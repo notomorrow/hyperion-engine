@@ -28,11 +28,11 @@ InputManager::InputManager()
     key_events = new InputEvent[NUM_KEYBOARD_KEYS];
     mouse_events = new InputEvent[NUM_MOUSE_BUTTONS];
 
-    memset(key_states, false, NUM_KEYBOARD_KEYS);
-    memset(mouse_states, false, NUM_MOUSE_BUTTONS);
+    memset(key_states, false, NUM_KEYBOARD_KEYS * sizeof(bool));
+    memset(mouse_states, false, NUM_MOUSE_BUTTONS * sizeof(bool));
 
-    mouse_x = 0;
-    mouse_y = 0;
+    mouse_x = 0.0;
+    mouse_y = 0.0;
 }
 
 InputManager::~InputManager()
@@ -43,7 +43,7 @@ InputManager::~InputManager()
 
 void InputManager::KeyDown(int key)
 {
-    if (key > 0 && key < NUM_KEYBOARD_KEYS) {
+    if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
         InputEvent &handler = key_events[key];
         if (!handler.IsEmpty() && !handler.IsUpEvent()) {
             handler.Trigger();
@@ -54,7 +54,7 @@ void InputManager::KeyDown(int key)
 
 void InputManager::KeyUp(int key)
 {
-    if (key > 0 && key < NUM_KEYBOARD_KEYS) {
+    if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
         InputEvent &handler = key_events[key];
         if (!handler.IsEmpty() && handler.IsUpEvent()) {
             handler.Trigger();
@@ -65,7 +65,7 @@ void InputManager::KeyUp(int key)
 
 void InputManager::MouseButtonDown(int btn)
 {
-    if (btn > 0 && btn < NUM_MOUSE_BUTTONS) {
+    if (btn >= 0 && btn < NUM_MOUSE_BUTTONS) {
         InputEvent &handler = mouse_events[btn];
         if (!handler.IsEmpty() && !handler.IsUpEvent()) {
             handler.Trigger();
@@ -76,7 +76,7 @@ void InputManager::MouseButtonDown(int btn)
 
 void InputManager::MouseButtonUp(int btn)
 {
-    if (btn > 0 && btn < NUM_MOUSE_BUTTONS) {
+    if (btn >= 0 && btn < NUM_MOUSE_BUTTONS) {
         InputEvent &handler = mouse_events[btn];
         if (!handler.IsEmpty() && handler.IsUpEvent()) {
             handler.Trigger();
@@ -87,7 +87,7 @@ void InputManager::MouseButtonUp(int btn)
 
 bool InputManager::IsKeyDown(int key) const
 {
-    if (key > 0 && key < NUM_KEYBOARD_KEYS) {
+    if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
         return key_states[key];
     }
     return false;
@@ -95,7 +95,7 @@ bool InputManager::IsKeyDown(int key) const
 
 bool InputManager::IsButtonDown(int btn) const
 {
-    if (btn > 0 && btn < NUM_MOUSE_BUTTONS) {
+    if (btn >= 0 && btn < NUM_MOUSE_BUTTONS) {
         return mouse_states[btn];
     }
     return false;
@@ -103,7 +103,7 @@ bool InputManager::IsButtonDown(int btn) const
 
 bool InputManager::RegisterKeyEvent(int key, const InputEvent &evt)
 {
-    if (key > 0 && key < NUM_KEYBOARD_KEYS) {
+    if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
         key_events[key] = evt;
         return true;
     }
@@ -112,10 +112,11 @@ bool InputManager::RegisterKeyEvent(int key, const InputEvent &evt)
 
 bool InputManager::RegisterClickEvent(int btn, const InputEvent &evt)
 {
-    if (btn > 0 && btn < NUM_MOUSE_BUTTONS) {
+    if (btn >= 0 && btn < NUM_MOUSE_BUTTONS) {
         mouse_events[btn] = evt;
         return true;
     }
     return false;
 }
+
 } // namespace apex

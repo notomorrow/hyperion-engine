@@ -6,6 +6,7 @@
 #include <map>
 
 namespace apex {
+
 class ShaderPreprocessor {
 public:
     static std::string ProcessShader(const std::string &code, 
@@ -18,6 +19,7 @@ private:
         const std::map<std::string, float> &defines,
         const std::string &local_path);
 };
+
 } // namespace apex
 
 #endif

@@ -62,9 +62,9 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts, const std::vector<uint3
     is_uploaded = false;
 }
 
-void Mesh::SetAttribute(MeshAttributeType type, const MeshAttribute &attr)
+void Mesh::SetAttribute(MeshAttributeType type, const MeshAttribute &attribute)
 {
-    attribs[type] = attr;
+    attribs[type] = attribute;
     is_uploaded = false;
 }
 

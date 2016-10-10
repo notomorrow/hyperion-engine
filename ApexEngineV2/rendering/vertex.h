@@ -10,6 +10,7 @@
 #include <array>
 
 namespace apex {
+
 class Vertex {
 public:
     Vertex()
@@ -102,6 +103,7 @@ private:
     std::array<float, MAX_BONE_WEIGHTS> bone_weights;
     std::array<int, MAX_BONE_INDICES> bone_indices;
 };
+
 } // namespace apex
 
 #endif

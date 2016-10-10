@@ -3,6 +3,7 @@
 #include <cassert>
 
 namespace apex {
+
 Texture2D::Texture2D()
     : Texture()
 {
@@ -58,4 +59,5 @@ void Texture2D::End()
 {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
+
 } // namespace apex

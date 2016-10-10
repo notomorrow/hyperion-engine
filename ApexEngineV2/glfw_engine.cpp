@@ -371,4 +371,5 @@ void GlfwEngine::UniformMatrix4fv(int location, int count, bool transpose, const
 {
     glUniformMatrix4fv(location, count, transpose, value);
 }
-}
+
+} // namespace apex

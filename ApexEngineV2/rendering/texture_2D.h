@@ -4,6 +4,7 @@
 #include "texture.h"
 
 namespace apex {
+
 class Texture2D : public Texture {
 public:
     Texture2D();
@@ -16,6 +17,7 @@ public:
 private:
     bool is_created, is_uploaded;
 };
+
 } // namespace apex
 
 #endif

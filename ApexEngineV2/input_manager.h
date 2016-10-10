@@ -9,6 +9,7 @@
 #include <functional>
 
 namespace apex {
+
 enum MouseButton {
     MOUSE_BTN_UNKNOWN = -1,
     MOUSE_BTN_LEFT,
@@ -135,6 +136,7 @@ private:
     InputEvent *mouse_events;
     double mouse_x, mouse_y;
 };
+
 } // namespace apex
 
 #endif

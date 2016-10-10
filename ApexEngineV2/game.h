@@ -10,8 +10,8 @@ public:
     Game(const RenderWindow &window);
     virtual ~Game();
 
-    InputManager *GetInputManager() const;
-    RenderWindow &GetWindow();
+    inline InputManager *GetInputManager() const { return inputmgr; }
+    inline RenderWindow &GetWindow() { return window; }
 
     virtual void Initialize() = 0;
     virtual void Logic(double dt) = 0;

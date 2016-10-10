@@ -1,6 +1,7 @@
 #include "shader_manager.h"
 
 namespace apex {
+
 ShaderManager *ShaderManager::instance = nullptr;
 
 ShaderManager *ShaderManager::GetInstance()
@@ -10,4 +11,5 @@ ShaderManager *ShaderManager::GetInstance()
     }
     return instance;
 }
+
 } // namespace apex

@@ -26,6 +26,12 @@ public:
     BoundingBox &operator*=(const Transform &transform);
 
     BoundingBox &Clear();
+    
+    inline bool Empty() const 
+    { 
+        return m_min == Vector3(std::numeric_limits<float>::max()) && 
+               m_max == Vector3(std::numeric_limits<float>::lowest());
+    }
 
     BoundingBox &Extend(const Vector3 &vec);
     BoundingBox &Extend(const BoundingBox &bb);

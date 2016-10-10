@@ -5,6 +5,7 @@
 #include "noise_terrain_chunk.h"
 
 namespace apex {
+
 class NoiseTerrainControl : public TerrainControl {
 public:
     NoiseTerrainControl(Camera *camera, int seed=123);
@@ -12,8 +13,9 @@ public:
 protected:
     int seed;
 
-    TerrainChunk *NewChunk(const ChunkInfo &height_info);
+    virtual TerrainChunk *NewChunk(const ChunkInfo &height_info) override;
 };
+
 } // namespace apex
 
 #endif

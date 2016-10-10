@@ -15,6 +15,7 @@
 #define TERRAIN_MULTITHREADED 1
 
 namespace apex {
+
 class TerrainControl : public EntityControl {
 public:
     TerrainControl(Camera *camera);
@@ -43,6 +44,7 @@ private:
     int m_chunk_index = 0;
     double m_max_distance;
 };
+
 } // namespace apex
 
 #endif

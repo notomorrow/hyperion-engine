@@ -43,6 +43,8 @@
 #include "particles/particle_renderer.h"
 #include "particles/particle_emitter_control.h"
 
+#include "rendering/bounding_box_renderer.h"
+
 /* Standard library */
 #include <cstdlib>
 #include <ctime>
@@ -173,21 +175,21 @@ public:
                 box->GetChild(0)->GetRenderable()->SetShader(shader);
                 box->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
                 Mesh *mesh = dynamic_cast<Mesh*>(box->GetChild(0)->GetRenderable().get());
-                mesh->SetPrimitiveType(Mesh::PRIM_LINES);
-                top->AddChild(box);
+
+                auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&box->GetChild(0)->GetAABB());
+                auto bb_renderer_node = std::make_shared<Entity>();
+                bb_renderer_node->SetRenderable(bb_renderer);
+                box->AddChild(bb_renderer_node);
                 
                 box->SetLocalTranslation(Vector3(x * 3, 12, z * 3));
-                box->Update(1.0);
-               
-                box->GetChild(0)->UpdateAABB();
-                std::cout << "box->GetChild(0)->GetAABB() = {min: " << box->GetChild(0)->GetAABB().GetMin() 
-                    << ", max: " << box->GetChild(0)->GetAABB().GetMax() << "}\n";
 
                 auto rb = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
                 rb->SetPosition(box->GetLocalTranslation());
                 rb->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(0.5), 1.0));
                 box->AddControl(rb);
                 PhysicsManager::GetInstance()->RegisterBody(rb);
+
+                top->AddChild(box);
             }
         }
 
@@ -229,7 +231,7 @@ public:
         top = std::make_shared<Entity>("top");
 
         // Initialize particle system
-        InitParticleSystem();
+        //InitParticleSystem();
 
         ShaderProperties defines = {
             { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
@@ -240,6 +242,43 @@ public:
         tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg");
 
         InitTestObjects();
+
+        InputEvent raytest_event([=]()
+            {
+                Ray ray;
+                ray.m_direction = cam->GetDirection();
+                ray.m_position = cam->GetTranslation();
+
+                Vector3 intersection;
+
+                std::vector<Entity*> intersections = { top.get() };
+
+                while (true) {
+                    std::vector<Entity*> new_intersections;
+                    for (Entity *ent : intersections) {
+                        for (size_t i = 0; i < ent->NumChildren(); i++) {
+                            BoundingBox aabb = ent->GetChild(i)->GetAABB();
+                            if (aabb.IntersectRay(ray, intersection)) {
+                                std::cout << "intersection: { name: " << ent->GetChild(i)->GetName() << 
+                                             ", point: " << intersection << " }\n";
+
+                                new_intersections.push_back(ent->GetChild(i).get());
+                            }
+                        }
+                    }
+
+                    intersections = new_intersections;
+
+                    if (intersections.empty()) {
+                        break;
+                    }
+                }
+
+                std::cout << std::endl;
+
+            }, true);
+
+        inputmgr->RegisterKeyEvent(KeyboardKey::KEY_6, raytest_event);
 
          /*auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.GetX()ml");
          dragger->Move(Vector3(3, -1.8f, 3));

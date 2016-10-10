@@ -6,6 +6,7 @@
 #include <vector>
 
 namespace apex {
+
 class NoiseTerrainChunk : public TerrainChunk {
 public:
     NoiseTerrainChunk(const ChunkInfo &chunk_info, int seed);
@@ -15,6 +16,7 @@ public:
 private:
     std::vector<double> heights;
 };
+
 } // namespace apex
 
 #endif

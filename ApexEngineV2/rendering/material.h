@@ -12,6 +12,7 @@
 #include <memory>
 
 namespace apex {
+
 enum MaterialParameterType {
     MaterialParameter_None,
     MaterialParameter_Float,
@@ -68,6 +69,7 @@ public:
 private:
     std::map<std::string, MaterialParameter> params;
 };
+
 } // namespace apex
 
 #endif

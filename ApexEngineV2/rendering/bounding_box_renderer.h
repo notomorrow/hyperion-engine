@@ -11,13 +11,13 @@ namespace apex {
 
 class BoundingBoxRenderer : public Renderable {
 public:
-    BoundingBoxRenderer(BoundingBox *bounding_box);
+    BoundingBoxRenderer(const BoundingBox *bounding_box);
     ~BoundingBoxRenderer();
 
     virtual void Render() override;
 
 private:
-    BoundingBox *m_bounding_box;
+    const BoundingBox *m_bounding_box;
     Mesh *m_mesh;
 };
 

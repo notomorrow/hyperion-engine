@@ -6,6 +6,7 @@
 #include <iostream>
 
 namespace apex {
+
 std::string ShaderPreprocessor::ProcessShader(const std::string &code, 
     const std::map<std::string, float> &defines, 
     const std::string &path)
@@ -15,8 +16,8 @@ std::string ShaderPreprocessor::ProcessShader(const std::string &code,
     std::streampos pos;
     std::string line;
 
-    std::string local_path(path.substr(0,
-        path.find_last_of("\\/")));
+    std::string local_path(path.substr(0, path.find_last_of("\\/")));
+
     if (!(StringUtil::Contains(local_path, "/") ||
         StringUtil::Contains(local_path, "\\"))) {
         local_path.clear();
@@ -128,4 +129,5 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
 
     return res;
 }
+
 } // namespace apex

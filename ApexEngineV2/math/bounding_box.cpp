@@ -25,18 +25,16 @@ BoundingBox::BoundingBox(const BoundingBox &other)
 
 std::array<Vector3, 8> BoundingBox::GetCorners() const
 {
-    std::array<Vector3, 8> corners {
-        Vector3(m_max.x, m_max.y, m_max.z),
-        Vector3(m_min.x, m_max.y, m_max.z),
-        Vector3(m_min.x, m_max.y, m_min.z),
-        Vector3(m_max.x, m_max.y, m_min.z),
-        Vector3(m_max.x, m_min.y, m_max.z),
-        Vector3(m_min.x, m_min.y, m_max.z),
+    return std::array<Vector3, 8> {
         Vector3(m_min.x, m_min.y, m_min.z),
-        Vector3(m_max.x, m_min.y, m_min.z)
+            Vector3(m_max.x, m_min.y, m_min.z),
+            Vector3(m_max.x, m_max.y, m_min.z),
+            Vector3(m_min.x, m_max.y, m_min.z),
+            Vector3(m_min.x, m_min.y, m_max.z),
+            Vector3(m_min.x, m_max.y, m_max.z),
+            Vector3(m_max.x, m_max.y, m_max.z),
+            Vector3(m_max.x, m_min.y, m_max.z)
     };
-
-    return corners;
 }
 
 BoundingBox &BoundingBox::operator*=(double scalar)
@@ -77,8 +75,8 @@ BoundingBox &BoundingBox::Extend(const Vector3 &vec)
 
 BoundingBox &BoundingBox::Extend(const BoundingBox &bb)
 {
-    Extend(bb.m_min);
-    Extend(bb.m_max);
+    m_min = Vector3::Min(m_min, bb.m_min);
+    m_max = Vector3::Max(m_max, bb.m_max);
     return *this;
 }
 
@@ -86,38 +84,41 @@ bool BoundingBox::IntersectRay(const Ray &ray, Vector3 &out) const
 {
     const float epsilon = 1e-6f;
 
+    if (m_max == Vector3(std::numeric_limits<float>::lowest()) && 
+        m_min == Vector3(std::numeric_limits<float>::max())) {
+        // early detect if box is empty
+        return false;
+    }
+
     Vector3 hit_min(std::numeric_limits<float>::min());
     Vector3 hit_max(std::numeric_limits<float>::max());
 
-    if (std::fabs(ray.direction.x) < epsilon) {
-        if (ray.position.x < m_min.x || ray.position.x > m_max.x) {
-            out = Vector3::Zero();
-            return false; // invalid. Doesnt collide
+    if (std::fabs(ray.m_direction.x) < epsilon) {
+        if (ray.m_position.x < m_min.x || ray.m_position.x > m_max.x) {
+            return false; // no collision
         }
     } else {
-        hit_min.x = (m_min.x - ray.position.x) / ray.direction.x;
-        hit_max.x = (m_max.x - ray.position.x) / ray.direction.x;
+        hit_min.x = (m_min.x - ray.m_position.x) / ray.m_direction.x;
+        hit_max.x = (m_max.x - ray.m_position.x) / ray.m_direction.x;
         if (hit_min.x > hit_max.x) {
             std::swap(hit_min.x, hit_max.x);
         }
     }
 
-    if (std::fabs(ray.direction.y) < epsilon) {
-        if (ray.position.y < m_min.y ||
-            ray.position.y > m_max.y) {
-            out = Vector3::Zero();
+    if (std::fabs(ray.m_direction.y) < epsilon) {
+        if (ray.m_position.y < m_min.y ||
+            ray.m_position.y > m_max.y) {
             return false; // no collision
         }
     } else {
-        hit_min.y = (m_min.y - ray.position.y) / ray.direction.y;
-        hit_max.y = (m_max.y - ray.position.y) / ray.direction.y;
+        hit_min.y = (m_min.y - ray.m_position.y) / ray.m_direction.y;
+        hit_max.y = (m_max.y - ray.m_position.y) / ray.m_direction.y;
 
         if (hit_min.y > hit_max.y) {
             std::swap(hit_min.y, hit_max.y);
         }
 
         if (hit_min.x > hit_max.y || hit_min.y > hit_max.x) {
-            out = Vector3::Zero();
             return false; // no collision
         }
 
@@ -125,21 +126,19 @@ bool BoundingBox::IntersectRay(const Ray &ray, Vector3 &out) const
         if (hit_max.y < hit_max.x) hit_max.x = hit_max.y;
     }
 
-    if (std::fabs(ray.direction.z) < epsilon) {
-        if (ray.position.z < m_min.z || ray.position.z > m_max.z) {
-            out = Vector3::Zero();
+    if (std::fabs(ray.m_direction.z) < epsilon) {
+        if (ray.m_position.z < m_min.z || ray.m_position.z > m_max.z) {
             return false; // no collision
         }
     } else {
-        hit_min.z = (m_min.z - ray.position.z) / ray.direction.z;
-        hit_max.z = (m_max.z - ray.position.z) / ray.direction.z;
+        hit_min.z = (m_min.z - ray.m_position.z) / ray.m_direction.z;
+        hit_max.z = (m_max.z - ray.m_position.z) / ray.m_direction.z;
 
         if (hit_min.z > hit_max.z) {
             std::swap(hit_min.z, hit_max.z);
         }
 
         if (hit_min.x > hit_max.z || hit_min.z > hit_max.x) {
-            out = Vector3::Zero();
             return false; // no collision
         }
 
@@ -147,7 +146,7 @@ bool BoundingBox::IntersectRay(const Ray &ray, Vector3 &out) const
         if (hit_max.z < hit_max.x) hit_max.x = hit_max.z;
     }
 
-    out = ray.position + (ray.direction * hit_min.x);
+    out = ray.m_position + (ray.m_direction * hit_min.x);
     return true;
 }
 
