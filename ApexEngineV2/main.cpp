@@ -106,21 +106,19 @@ public:
     {
         ParticleConstructionInfo particle_generator_info(
             // the lambda function for setting a particle's origin
-            [](const Particle &particle)
-        {
-            return Vector3(0, 2, 0);
-        },
-            // the lambda function for setting a particle's velocity
-            [](const Particle &particle)
-        {
-            static int counter = 0;
-            counter++;
+            [](const Particle &particle) {
+                return Vector3(0, 2, 0);
+            },
+                // the lambda function for setting a particle's velocity
+                [](const Particle &particle) {
+                static int counter = 0;
+                counter++;
 
-            float radius = 1.0f;
-            const Vector3 rotation(std::sinf(counter * 0.2f) * radius, 0.0f, std::cosf(counter * 0.2f) * radius);
-            Vector3 random(MathUtil::Random(-0.3f, 0.3f), 0.0f, MathUtil::Random(-0.3f, 0.3f));
-            return rotation + random;
-        }
+                float radius = 1.0f;
+                const Vector3 rotation(std::sinf(counter * 0.2f) * radius, 0.0f, std::cosf(counter * 0.2f) * radius);
+                Vector3 random(MathUtil::Random(-0.3f, 0.3f), 0.0f, MathUtil::Random(-0.3f, 0.3f));
+                return rotation + random;
+            }
         );
 
         particle_generator_info.m_gravity = Vector3(0, 5, 0);
@@ -231,7 +229,7 @@ public:
         top = std::make_shared<Entity>("top");
 
         // Initialize particle system
-        //InitParticleSystem();
+        InitParticleSystem();
 
         ShaderProperties defines = {
             { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
