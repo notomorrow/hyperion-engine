@@ -9,6 +9,7 @@ namespace apex {
 class FpsCamera : public PerspectiveCamera {
 public:
     FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, float near_clip, float far_clip);
+    virtual ~FpsCamera() = default;
 
     virtual void SetTranslation(const Vector3 &vec);
 

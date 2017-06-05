@@ -9,6 +9,7 @@ namespace apex {
 class NoiseTerrainControl : public TerrainControl {
 public:
     NoiseTerrainControl(Camera *camera, int seed=123);
+    virtual ~NoiseTerrainControl() = default;
 
 protected:
     int seed;

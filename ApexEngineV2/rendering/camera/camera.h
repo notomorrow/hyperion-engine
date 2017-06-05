@@ -8,6 +8,7 @@ namespace apex {
 class Camera {
 public:
     Camera(int width, int height, float near_clip, float far_clip);
+    virtual ~Camera() = default;
 
     int GetWidth() const;
     void SetWidth(int w);

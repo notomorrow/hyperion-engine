@@ -34,8 +34,14 @@ Material::Material(const Material &other)
       depth_test(other.depth_test),
       depth_write(other.depth_write),
       diffuse_color(other.diffuse_color),
-      diffuse_texture(other.diffuse_texture),
-      normals_texture(other.normals_texture)
+      texture0(other.texture0),
+      texture1(other.texture1),
+      texture2(other.texture2),
+      texture3(other.texture3),
+      normals0(other.normals0),
+      normals1(other.normals1),
+      normals2(other.normals2),
+      normals3(other.normals3)
 {
 }
 

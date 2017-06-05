@@ -315,6 +315,9 @@
     <ClInclude Include="rendering\shaders\shader_code.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="terrain\terrain_shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -524,9 +527,6 @@
     <ClCompile Include="math\matrix3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="physics\simple_collision_detector.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="util\random\open_simplex_noise.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -587,5 +587,12 @@
     <ClCompile Include="rendering\shaders\shader_code.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="terrain\terrain_shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\shaders\terrain.frag" />
+    <None Include="res\shaders\terrain.vert" />
   </ItemGroup>
 </Project>

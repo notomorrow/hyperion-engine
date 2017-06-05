@@ -5,7 +5,7 @@
 #include "../../math/math_util.h"
 
 namespace apex {
-const bool SkydomeControl::clouds_in_dome = false;
+const bool SkydomeControl::clouds_in_dome = true;
 
 SkydomeControl::SkydomeControl(Camera *camera)
     : EntityControl(50.0), camera(camera), global_time(0.0)
@@ -17,10 +17,11 @@ void SkydomeControl::OnAdded()
     ShaderProperties defines { {"CLOUDS", clouds_in_dome} };
     shader = ShaderManager::GetInstance()->GetShader<SkydomeShader>(defines);
 
-    dome = AssetManager::GetInstance()->LoadFromFile<Entity>("res\\models\\skydome\\dome.obj");
+    dome = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/skydome/dome.obj");
     if (dome == nullptr) {
         throw std::runtime_error("Could not load skydome model!");
     }
+
     dome->SetLocalScale(50);
     dome->GetChild(0)->GetRenderable()->SetShader(shader);
     dome->GetChild(0)->GetRenderable()->SetRenderBucket(Renderable::RB_SKY);

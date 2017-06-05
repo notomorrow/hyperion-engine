@@ -110,7 +110,7 @@ public:
                 return Vector3(0, 2, 0);
             },
                 // the lambda function for setting a particle's velocity
-                [](const Particle &particle) {
+            [](const Particle &particle) {
                 static int counter = 0;
                 counter++;
 
@@ -129,7 +129,7 @@ public:
         auto particle_node = std::make_shared<Entity>();
         particle_node->SetName("particles");
         particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
-        particle_node->GetRenderable()->GetMaterial().diffuse_texture =
+        particle_node->GetRenderable()->GetMaterial().texture0 =
             AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/smoke.png");
         particle_node->AddControl(std::make_shared<ParticleEmitterControl>(cam));
 
@@ -169,15 +169,15 @@ public:
         for (int x = -2; x < 2; x++) {
             for (int z = -2; z < 2; z++) {
 
-                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/box.obj", false);
+                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj", false);
                 box->GetChild(0)->GetRenderable()->SetShader(shader);
                 box->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
                 Mesh *mesh = dynamic_cast<Mesh*>(box->GetChild(0)->GetRenderable().get());
 
-                auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&box->GetChild(0)->GetAABB());
+                /*auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&box->GetChild(0)->GetAABB());
                 auto bb_renderer_node = std::make_shared<Entity>();
                 bb_renderer_node->SetRenderable(bb_renderer);
-                box->AddChild(bb_renderer_node);
+                box->AddChild(bb_renderer_node);*/
                 
                 box->SetLocalTranslation(Vector3(x * 3, 12, z * 3));
 
@@ -237,7 +237,7 @@ public:
         };
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
 
-        tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg");
+        tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass.jpg");
 
         InitTestObjects();
 
@@ -294,14 +294,14 @@ public:
 
         InitPhysicsTests();
 
-        /*auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
+        auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
         monkey->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
         monkey->GetChild(0)->GetRenderable()->SetShader(shader);
         monkey->Move(Vector3(-3, 0, -3));
         monkey->SetName("monkey");
         top->AddChild(monkey);
 
-        auto quad_node = std::make_shared<Entity>("quad");
+        /*auto quad_node = std::make_shared<Entity>("quad");
         auto quad_mesh = MeshFactory::CreateQuad();
         quad_mesh->SetShader(shader);
         quad_node->SetRenderable(quad_mesh);
@@ -311,7 +311,7 @@ public:
         top->AddChild(quad_node);*/
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1147));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 52321));
     }
 
     void Logic(double dt)
@@ -345,7 +345,7 @@ public:
         timer += dt;
         shadow_timer += dt;
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(sinf(timer * 0.005f), cosf(timer * 0.005f), 0.0f).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(sinf(timer * 0.05f), cosf(timer * 0.05f), 0.0f).Normalize());
 
         cam->Update(dt);
 

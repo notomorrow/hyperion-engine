@@ -9,12 +9,17 @@ namespace apex {
 
 class NoiseTerrainChunk : public TerrainChunk {
 public:
-    NoiseTerrainChunk(const ChunkInfo &chunk_info, int seed);
+    static std::vector<double> GenerateHeights(int seed, const ChunkInfo &chunk_info);
 
+public:
+    NoiseTerrainChunk(const std::vector<double> &heights, const ChunkInfo &chunk_info);
+    virtual ~NoiseTerrainChunk() = default;
+
+    virtual void OnAdded() override;
     virtual int HeightIndexAt(int x, int z) override;
 
 private:
-    std::vector<double> heights;
+    std::vector<double> m_heights;
 };
 
 } // namespace apex

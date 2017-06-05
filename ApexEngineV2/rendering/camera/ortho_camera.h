@@ -7,6 +7,7 @@ namespace apex {
 class OrthoCamera : public Camera {
 public:
     OrthoCamera(float left, float right, float bottom, float top, float near_clip, float far_clip);
+    virtual ~OrthoCamera() = default;
 
     float GetLeft() const;
     float GetRight() const;

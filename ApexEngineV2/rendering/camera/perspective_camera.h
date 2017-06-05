@@ -7,6 +7,7 @@ namespace apex {
 class PerspectiveCamera : public Camera {
 public:
     PerspectiveCamera(float fov, int width, int height, float near_clip, float far_clip);
+    virtual ~PerspectiveCamera() = default;
 
     virtual void UpdateLogic(double dt);
     void UpdateMatrices();

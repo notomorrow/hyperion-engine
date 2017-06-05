@@ -9,6 +9,7 @@ namespace apex {
 class CloudsShader : public Shader {
 public:
     CloudsShader(const ShaderProperties &properties);
+    virtual ~CloudsShader() = default;
 
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);

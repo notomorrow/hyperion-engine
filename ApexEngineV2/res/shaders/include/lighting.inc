@@ -32,7 +32,7 @@ float CookTorranceG(float NdotL, float NdotV, float LdotH, float NdotH)
 
 float SpecularDirectional(vec3 n, vec3 v, vec3 lightDir, float roughness)
 {
-  vec3 vHalfVector = normalize(lightDir + v);
+    vec3 vHalfVector = normalize(lightDir + v);
 
 	float NdotH = dot(n, vHalfVector);
 	float LdotH = dot(lightDir, vHalfVector);
@@ -41,4 +41,24 @@ float SpecularDirectional(vec3 n, vec3 v, vec3 lightDir, float roughness)
 	float F = SchlickFresnel(0.2, 1.0, LdotH);
 
 	return F * D;
+}
+
+vec4 CalculateFogExp(vec4 inColor, vec4 toColor, vec3 worldPos, vec3 camPos, float fogStart, float fogEnd)
+{
+	float dist = distance(worldPos, camPos);
+
+	float density = 0.003;
+	float fogFactor = 1.0 / exp(dist * density);
+	vec4 color = mix(inColor, toColor, 1.0-fogFactor);
+	color.a = inColor.a;
+	return color;
+}
+
+vec4 CalculateFogLinear(vec4 inColor, vec4 toColor, vec3 worldPos, vec3 camPos, float fogStart, float fogEnd)
+{
+	float dist = distance(worldPos, camPos);
+
+	float fogFactor = (fogEnd - dist)/(fogEnd - fogStart);
+	fogFactor = clamp(fogFactor, 0.0, 1.0);
+	return mix(inColor, toColor, 1.0-fogFactor);
 }

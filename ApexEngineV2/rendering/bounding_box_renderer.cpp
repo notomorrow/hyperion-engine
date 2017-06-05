@@ -39,40 +39,6 @@ void BoundingBoxRenderer::Render()
         4, 7, 7, 1, 6, 2
     };
 
-    /*std::vector<Vector3> new_vecs;
-    std::vector<int> new_idc;
-    int idc_counter = 0;
-    for (int i = 0; i < vecs.size(); i++) {
-        Vector3 vec = vecs[i];
-        int dup_idx = -1;
-        // find duplicate
-        for (int j = 0; j < new_vecs.size(); j++) {
-            if (vec == new_vecs[j]) {
-                // duplicate found
-                dup_idx = j;
-                break;
-            }
-        }
-
-        if (dup_idx == -1) {
-            new_idc.push_back(new_vecs.size());
-            new_vecs.push_back(vec);
-        } else {
-            new_idc.push_back(dup_idx);
-        }
-    }
-
-    std::cout << "new_vecs: {\n";
-    for (auto i : new_vecs) {
-        std::cout << i << ", ";
-    }
-    std::cout << "}\n\n";
-    std::cout << "new_idc: {\n";
-    for (auto i : new_idc) {
-        std::cout << i << ", ";
-    }
-    std::cout << "}\n\n";*/
-
     glLineWidth(2.0f);
     m_mesh->SetVertices(vertices, indices);
     m_mesh->Render();

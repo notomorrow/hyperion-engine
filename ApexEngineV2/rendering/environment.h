@@ -17,8 +17,8 @@ public:
 
     Environment();
 
-    inline DirectionalLight &GetSun() { return sun; }
-    inline const DirectionalLight &GetSun() const { return sun; }
+    inline DirectionalLight &GetSun() { return m_sun; }
+    inline const DirectionalLight &GetSun() const { return m_sun; }
 
     inline const Vector3 &GetGravity() const { return m_gravity; }
     inline void SetGravity(const Vector3 &gravity) { m_gravity = gravity; }
@@ -37,7 +37,7 @@ public:
 private:
     static Environment *instance;
 
-    DirectionalLight sun;
+    DirectionalLight m_sun;
 
     Vector3 m_gravity;
 

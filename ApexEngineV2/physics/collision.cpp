@@ -5,7 +5,8 @@
 namespace apex {
 namespace physics {
 void Collision::ApplyVelocityChange(CollisionInfo &collision,
-    std::array<Vector3, 2> &linear_change, std::array<Vector3, 2> &angular_change)
+    std::array<Vector3, 2> &linear_change,
+    std::array<Vector3, 2> &angular_change)
 {
     std::array<Matrix3, 2> inverse_inertia_tensor;
     inverse_inertia_tensor[0] = collision.m_bodies[0]->GetInverseInertiaTensorWorld();
@@ -44,7 +45,9 @@ void Collision::ApplyVelocityChange(CollisionInfo &collision,
 }
 
 void Collision::ApplyPositionChange(CollisionInfo &collision,
-    std::array<Vector3, 2> &linear_change, std::array<Vector3, 2> &angular_change, double penetration)
+    std::array<Vector3, 2> &linear_change,
+    std::array<Vector3, 2> &angular_change,
+    double penetration)
 {
     double total_inertia = 0.0;
     std::array<double, 2> linear_inertia;

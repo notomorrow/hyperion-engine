@@ -12,8 +12,9 @@ GammaCorrectShader::GammaCorrectShader(const ShaderProperties &properties)
     AddSubShader(SubShader(GL_FRAGMENT_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
-            properties, fs_path)
-        ));
+            properties, fs_path
+        )
+    ));
 }
 
 void GammaCorrectShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)

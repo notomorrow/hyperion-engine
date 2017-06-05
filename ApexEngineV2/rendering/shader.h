@@ -24,7 +24,7 @@ public:
     Shader(const ShaderProperties &properties);
     Shader(const ShaderProperties &properties,
         const std::string &vscode, const std::string &fscode);
-    ~Shader();
+    virtual ~Shader();
 
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);

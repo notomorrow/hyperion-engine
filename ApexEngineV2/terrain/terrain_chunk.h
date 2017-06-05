@@ -12,11 +12,13 @@ namespace apex {
 
 class TerrainChunk {
 public:
-    ChunkInfo m_chunk_info;
-    std::shared_ptr<Entity> m_entity = nullptr;
-
     TerrainChunk(const ChunkInfo &chunk_info);
     virtual ~TerrainChunk() = default;
+
+    virtual void OnAdded() = 0;
+
+    ChunkInfo m_chunk_info;
+    std::shared_ptr<Entity> m_entity = nullptr;
 
 protected:
     // to be implemented by derived class, as the way of generating heights

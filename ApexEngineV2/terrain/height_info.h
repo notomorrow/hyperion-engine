@@ -9,6 +9,7 @@
 namespace apex {
 
 enum class PageState {
+    WAITING,
     UNLOADED,
     UNLOADING,
     LOADED

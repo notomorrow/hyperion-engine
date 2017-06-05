@@ -12,7 +12,7 @@ namespace apex {
 class BoundingBoxRenderer : public Renderable {
 public:
     BoundingBoxRenderer(const BoundingBox *bounding_box);
-    ~BoundingBoxRenderer();
+    virtual ~BoundingBoxRenderer();
 
     virtual void Render() override;
 

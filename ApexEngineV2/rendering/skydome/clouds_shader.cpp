@@ -15,16 +15,18 @@ CloudsShader::CloudsShader(const ShaderProperties &properties)
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
-        ));
+        )
+    );
 
     AddSubShader(SubShader(GL_FRAGMENT_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
-        ));
+        )
+    );
 
 
-    cloud_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res\\textures\\clouds2.png");
+    cloud_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/clouds2.png");
     if (cloud_map == nullptr) {
         throw std::runtime_error("Could not load cloud map!");
     }

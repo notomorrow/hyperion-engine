@@ -53,21 +53,24 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
 
     try {
         auto &loader = GetLoader(path);
-        auto loaded = loader->LoadFromFile(path);
-        if (!loaded) {
-            std::cout << "error while loading file: " << path << "\n";
-            return nullptr;
-        } else {
-            loaded->SetFilePath(path);
-            if (use_caching) {
-                loaded_assets[path] = loaded;
+        if (loader != nullptr) {
+            auto loaded = loader->LoadFromFile(path);
+            if (!loaded) {
+                std::cout << "error while loading file: " << path << "\n";
+                return nullptr;
+            } else {
+                loaded->SetFilePath(path);
+                if (use_caching) {
+                    loaded_assets[path] = loaded;
+                }
             }
+            return loaded;
         }
-        return loaded;
     } catch (std::string err) {
         std::cout << "File load error: " << err << "\n";
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 const std::unique_ptr<AssetLoader> &AssetManager::GetLoader(const std::string &path)

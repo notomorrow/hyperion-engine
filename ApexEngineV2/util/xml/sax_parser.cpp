@@ -113,11 +113,9 @@ void SaxParser::Parse(const std::string &filepath)
                                 }
                             }
                         }
-                    } else {
-                        if (in_characters) {
-                            if (ch != ' ' || (last_char != ' ' && (last_char != '\n' && last_char != '<'))) {
-                                value_str += ch;
-                            }
+                    } else if (in_characters) {
+                        if (ch != ' ' || (last_char != ' ' && (last_char != '\n' && last_char != '<'))) {
+                            value_str += ch;
                         }
                     }
                 } else if (in_comment && ch != '-') {

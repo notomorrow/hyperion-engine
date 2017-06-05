@@ -63,8 +63,14 @@ public:
     bool depth_test = true;
     bool depth_write = true;
     Vector4 diffuse_color = Vector4(1.0);
-    std::shared_ptr<Texture> diffuse_texture = nullptr;
-    std::shared_ptr<Texture> normals_texture = nullptr;
+    std::shared_ptr<Texture> texture0 = nullptr;
+    std::shared_ptr<Texture> texture1 = nullptr;
+    std::shared_ptr<Texture> texture2 = nullptr;
+    std::shared_ptr<Texture> texture3 = nullptr;
+    std::shared_ptr<Texture> normals0 = nullptr;
+    std::shared_ptr<Texture> normals1 = nullptr;
+    std::shared_ptr<Texture> normals2 = nullptr;
+    std::shared_ptr<Texture> normals3 = nullptr;
 
 private:
     std::map<std::string, MaterialParameter> params;

@@ -13,7 +13,8 @@ Shader::Shader(const ShaderProperties &properties)
 }
 
 Shader::Shader(const ShaderProperties &properties, 
-    const std::string &vscode, const std::string &fscode) 
+    const std::string &vscode,
+    const std::string &fscode) 
     : is_uploaded(false),
       is_created(false),
       uniform_changed(false)
@@ -52,6 +53,7 @@ void Shader::Use()
         }
         is_created = true;
     }
+
     if (!is_uploaded) {
         for (auto &&sub : subshaders) {
             const char *code_str = sub.code.c_str();

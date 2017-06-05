@@ -21,18 +21,18 @@ void Renderer::FindRenderables(Entity *top)
 {
     if (top->GetRenderable() != nullptr) {
         switch (top->GetRenderable()->GetRenderBucket()) {
-        case Renderable::RB_SKY:
-            sky_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
-            break;
-        case Renderable::RB_OPAQUE:
-            opaque_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
-            break;
-        case Renderable::RB_TRANSPARENT:
-            transparent_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
-            break;
-        case Renderable::RB_PARTICLE:
-            particle_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
-            break;
+            case Renderable::RB_SKY:
+                sky_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+                break;
+            case Renderable::RB_OPAQUE:
+                opaque_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+                break;
+            case Renderable::RB_TRANSPARENT:
+                transparent_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+                break;
+            case Renderable::RB_PARTICLE:
+                particle_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+                break;
         }
     }
 

@@ -50,22 +50,29 @@ void FpsCamera::CenterMouse()
 void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
 {
     const double sensitivity = 0.1;
-    const double smoothing = 8.0;
+    const double smoothing = 15.0;
 
     mag_x = mouse_x - half_width;
     mag_y = mouse_y - half_height;
 
-    mag_x = MathUtil::Lerp(old_mag_x, mag_x,
-        MathUtil::Clamp(smoothing * dt, 0.0, 1.0));
+    mag_x = MathUtil::Lerp(
+        old_mag_x,
+        mag_x,
+        MathUtil::Clamp(smoothing * dt, 0.0, 1.0)
+    );
 
-    mag_y = MathUtil::Lerp(old_mag_y, mag_y,
-        MathUtil::Clamp(smoothing * dt, 0.0, 1.0));
+    mag_y = MathUtil::Lerp(
+        old_mag_y,
+        mag_y,
+        MathUtil::Clamp(smoothing * dt, 0.0, 1.0)
+    );
 
     old_mag_x = mag_x;
     old_mag_y = mag_y;
 
     dir_cross_y = direction;
     dir_cross_y.Cross(up);
+
     Rotate(up, MathUtil::DegToRad(mag_x * sensitivity));
     Rotate(dir_cross_y, MathUtil::DegToRad(mag_y * sensitivity));
 

@@ -16,14 +16,15 @@ uniform vec3 u_camerapos;
 
 void main() 
 {
-  const float roughness = 0.3;
-  const float shininess = 0.3;
+  const float roughness = 0.8;
+  const float shininess = 0.1;
   
   vec3 n = normalize(v_normal.xyz);
   vec3 v = normalize(u_camerapos - v_position.xyz);
   
   float ndotl = max(min(dot(n, env_DirectionalLight.direction), 1.0), 0.0);
   vec4 lighting = vec4(vec3(ndotl), 1.0);
+  lighting *= env_DirectionalLight.color;
   
   float specular = max(min(SpecularDirectional(n, v, env_DirectionalLight.direction, roughness), 1.0), 0.0);
     
@@ -46,10 +47,14 @@ void main()
   }
   shadowness /= 16.0;
   shadowness = mix(0.6, shadowness, ndotl);
+
+  vec4 shadowColor = vec4(vec3(max(shadowness, 0.5)), 1.0);
+  shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), v_position.xyz, u_camerapos, 0.0, 10.0);
 #endif
 
 #if !SHADOWS
   float shadowness = 1.0;
+  vec4 shadowColor = vec4(1.0);
 #endif
    
   vec4 ambient = vec4(vec3(0.3), 1.0);
@@ -64,5 +69,5 @@ void main()
   vec4 diffuse = clamp(lighting + ambient, vec4(0.0), vec4(1.0)) * diffuseTexture * u_diffuseColor;
   diffuse.rgb *= (1.0 - shininess);
   
-  gl_FragColor = vec4((diffuse + vec4(specular)) * vec4(vec3(max(shadowness, 0.5)), 1.0));
+  gl_FragColor = vec4((diffuse + vec4(specular)) * shadowColor);
 }

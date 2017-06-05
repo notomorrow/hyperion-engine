@@ -31,7 +31,7 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
     }
 
     if (has_clouds) {
-        noise_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res\\textures\\clouds.png");
+        noise_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/clouds.png");
         if (noise_map == nullptr) {
             throw std::runtime_error("Could not load noise map!");
         }

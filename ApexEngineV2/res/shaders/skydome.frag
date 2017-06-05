@@ -19,12 +19,12 @@ uniform sampler2D u_noiseMap;
 #if CLOUDS
 
 const float timeScale = 0.5;
-const float cloudScale = 0.0008;
-const float skyCover = 0.4;
+const float cloudScale = 0.008;
+const float skyCover = 0.2;
 const float softness = 5.0;
 const float brightness = 2.0;
 const int noiseOctaves = 8;
-const float curlStrain = 0.3;
+const float curlStrain = 0.7;
 
 float saturate(float num)
 {
@@ -93,10 +93,10 @@ float getRayleighPhase(float fCos2)
 
 void main (void)
 {
-  float fCos = dot(v3LightPos, v3Direction) / length(v3Direction);
-  float fCos2 = fCos*fCos;
-  vec4 skyColor = v4RayleighColor;
-  gl_FragColor = skyColor + getMiePhase(fCos, fCos2, fg, fg2) * v4MieColor * u_sunColor;
+    float fCos = dot(v3LightPos, v3Direction) / length(v3Direction);
+    float fCos2 = fCos*fCos;
+    vec4 skyColor = v4RayleighColor;
+    gl_FragColor = skyColor + getMiePhase(fCos, fCos2, fg, fg2) * v4MieColor * u_sunColor;
   //gl_FragColor.a = max(max(gl_FragColor.r, gl_FragColor.g), gl_FragColor.b);
 	
 	
@@ -118,11 +118,11 @@ void main (void)
     vec4 clouds1Color = vec4(cloudCol,cloudCol,cloudCol,1.0);
     vec4 clouds2Color = mix(clouds1Color,vec4(1.4, 1.4, 1.4, 0.6),0.4);
     vec4 cloudColComb = mix(clouds1Color,clouds2Color,saturate(clouds2-clouds1));
-  gl_FragColor = mix(vec4(1.0, 1.0, 1.0, 0.0),cloudColComb,cloudsFormComb);*/
+    gl_FragColor = mix(vec4(1.0, 1.0, 1.0, 0.0),cloudColComb,cloudsFormComb);*/
 	
 	
 #if CLOUDS
-  const float cloud_scale = 0.03;
+    const float cloud_scale = 0.03;
   
 	vec3 blend = getTriPlanarBlend(v_normal);
 	

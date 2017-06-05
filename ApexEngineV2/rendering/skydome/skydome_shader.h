@@ -12,6 +12,7 @@ namespace apex {
 class SkydomeShader : public Shader {
 public:
     SkydomeShader(const ShaderProperties &properties);
+    virtual ~SkydomeShader() = default;
 
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);

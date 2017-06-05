@@ -34,7 +34,8 @@ Environment::Environment()
       m_shadows_enabled(false),
       m_num_cascades(1),
       m_shadow_maps({ nullptr }),
-      m_shadow_matrices({ Matrix4::Identity() })
+      m_shadow_matrices({ Matrix4::Identity() }),
+      m_sun(Vector3(-1, -1, -1).Normalize(), Vector4(0.9, 0.8, 0.7, 1.0))
 {
 }
 

@@ -9,6 +9,8 @@
 namespace apex {
 class AssetLoader {
 public:
+    virtual ~AssetLoader() = default;
+
     virtual std::shared_ptr<Loadable> LoadFromFile(const std::string &) = 0;
 
     template <typename T>

@@ -15,6 +15,7 @@ namespace apex {
 class SkydomeControl : public EntityControl {
 public:
     SkydomeControl(Camera *camera);
+    virtual ~SkydomeControl() = default;
 
     void OnAdded();
     void OnRemoved();

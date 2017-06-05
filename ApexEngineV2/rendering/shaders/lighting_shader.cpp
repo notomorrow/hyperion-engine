@@ -15,13 +15,15 @@ LightingShader::LightingShader(const ShaderProperties &properties)
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
-        ));
+        )
+    );
 
     AddSubShader(SubShader(GL_FRAGMENT_SHADER,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
-        ));
+        )
+    );
 
     for (int i = 0; i < 16; i++) {
         SetUniform("poissonDisk[" + std::to_string(i) + "]", 
@@ -46,9 +48,9 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     SetUniform("u_diffuseColor", mat.diffuse_color);
 
-    if (mat.diffuse_texture != nullptr) {
+    if (mat.texture0 != nullptr) {
         Texture::ActiveTexture(0);
-        mat.diffuse_texture->Use();
+        mat.texture0->Use();
         SetUniform("u_diffuseTexture", 0);
     }
 }

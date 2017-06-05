@@ -7,7 +7,8 @@ namespace apex {
 
 class GammaCorrectShader : public PostShader {
 public:
-    GammaCorrectShader::GammaCorrectShader(const ShaderProperties &properties);
+    GammaCorrectShader(const ShaderProperties &properties);
+    virtual ~GammaCorrectShader() = default;
 
     virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
 };

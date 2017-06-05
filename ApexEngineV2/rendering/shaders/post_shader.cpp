@@ -18,9 +18,9 @@ PostShader::PostShader(const ShaderProperties &properties)
 
 void PostShader::ApplyMaterial(const Material &mat)
 {
-    if (mat.diffuse_texture != nullptr) {
+    if (mat.texture0 != nullptr) {
         Texture::ActiveTexture(0);
-        mat.diffuse_texture->Use();
+        mat.texture0->Use();
         SetUniform("u_texture", 0);
     }
     if (mat.alpha_blended) {

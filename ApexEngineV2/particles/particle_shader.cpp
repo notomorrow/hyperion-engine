@@ -25,9 +25,9 @@ ParticleShader::ParticleShader(const ShaderProperties &properties)
 
 void ParticleShader::ApplyMaterial(const Material &mat)
 {
-    if (mat.diffuse_texture != nullptr) {
+    if (mat.texture0 != nullptr) {
         Texture::ActiveTexture(0);
-        mat.diffuse_texture->Use();
+        mat.texture0->Use();
         SetUniform("u_diffuseTexture", 0);
     }
 }

@@ -10,7 +10,8 @@ NoiseTerrainControl::NoiseTerrainControl(Camera *camera, int seed)
 
 TerrainChunk *NoiseTerrainControl::NewChunk(const ChunkInfo &chunk_info)
 {
-    return new NoiseTerrainChunk(chunk_info, seed);
+    const std::vector<double> heights = NoiseTerrainChunk::GenerateHeights(seed, chunk_info);
+    return new NoiseTerrainChunk(heights, chunk_info);
 }
 
 } // namespace apex

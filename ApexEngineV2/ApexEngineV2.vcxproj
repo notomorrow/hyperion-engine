@@ -79,8 +79,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\User\Documents\Visual Studio 2015\Projects\ApexEngineV2\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\User\Documents\Visual Studio 2015\Projects\ApexEngineV2\lib\windows\32;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\andre\apex-engine\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\andre\apex-engine\lib\windows\32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -245,6 +245,7 @@
     <ClInclude Include="terrain\height_info.h" />
     <ClInclude Include="terrain\noise_terrain\noise_terrain_chunk.h" />
     <ClInclude Include="terrain\noise_terrain\noise_terrain_control.h" />
+    <ClInclude Include="terrain\terrain_shader.h" />
     <ClInclude Include="util\random\open_simplex_noise.h" />
     <ClInclude Include="util\random\worley_noise_generator.h" />
     <ClInclude Include="terrain\terrain_chunk.h" />
@@ -310,7 +311,6 @@
     <ClCompile Include="physics\physics_manager.cpp" />
     <ClCompile Include="physics\physics_object.cpp" />
     <ClCompile Include="physics\shapes\aabb_physics_object.cpp" />
-    <ClCompile Include="physics\simple_collision_detector.cpp" />
     <ClCompile Include="rendering\bounding_box_renderer.cpp" />
     <ClCompile Include="rendering\camera\camera.cpp" />
     <ClCompile Include="core_engine.cpp" />
@@ -339,6 +339,7 @@
     <ClCompile Include="rendering\texture_2D.cpp" />
     <ClCompile Include="terrain\noise_terrain\noise_terrain_chunk.cpp" />
     <ClCompile Include="terrain\noise_terrain\noise_terrain_control.cpp" />
+    <ClCompile Include="terrain\terrain_shader.cpp" />
     <ClCompile Include="util\random\open_simplex_noise.c" />
     <ClCompile Include="util\random\worley_noise_generator.cpp" />
     <ClCompile Include="terrain\terrain_chunk.cpp" />
@@ -347,6 +348,10 @@
     <ClCompile Include="util\mesh_factory.cpp" />
     <ClCompile Include="util\shader_preprocessor.cpp" />
     <ClCompile Include="util\xml\sax_parser.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\shaders\terrain.frag" />
+    <None Include="res\shaders\terrain.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
