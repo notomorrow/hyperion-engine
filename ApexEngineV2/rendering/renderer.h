@@ -5,22 +5,31 @@
 
 #include "../core_engine.h"
 #include "../entity.h"
+#include "material.h"
 #include "camera/camera.h"
 
 namespace apex {
+struct BucketItem {
+    Renderable *renderable;
+    Material *material;
+    Transform transform;
+};
+
+using Bucket_t = std::vector<BucketItem>;
+
 class Renderer {
 public:
     Renderer();
 
     void ClearRenderables();
     void FindRenderables(Entity *top);
-    void RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Transform>> &bucket);
+    void RenderBucket(Camera *cam, Bucket_t &bucket);
     void RenderAll(Camera *cam);
 
-    std::vector<std::pair<Renderable*, Transform>> sky_bucket;
-    std::vector<std::pair<Renderable*, Transform>> opaque_bucket;
-    std::vector<std::pair<Renderable*, Transform>> transparent_bucket;
-    std::vector<std::pair<Renderable*, Transform>> particle_bucket;
+    Bucket_t sky_bucket;
+    Bucket_t opaque_bucket;
+    Bucket_t transparent_bucket;
+    Bucket_t particle_bucket;
 };
 } // namespace apex
 

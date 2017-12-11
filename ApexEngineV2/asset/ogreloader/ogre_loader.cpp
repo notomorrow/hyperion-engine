@@ -33,8 +33,11 @@ struct OgreSubmesh {
 class OgreHandler : public xml::SaxHandler {
 public:
     OgreHandler(const std::string &filepath)
-        : filepath(filepath), submeshes_enabled(true),
-        has_submeshes(false), has_normals(false), has_texcoords(false)
+        : filepath(filepath),
+          submeshes_enabled(true),
+          has_submeshes(false),
+          has_normals(false),
+          has_texcoords(false)
     {
     }
 
@@ -59,7 +62,7 @@ public:
     void AddBoneAssign(size_t idx, const BoneAssign &assign)
     {
         if (bone_assigns.find(idx) != bone_assigns.end()) {
-            auto &vec = bone_assigns[idx];
+            std::vector<BoneAssign> &vec = bone_assigns[idx];
             if (vec.size() < 4) {
                 vec.push_back(assign);
             }
@@ -78,7 +81,7 @@ public:
                 !normals.empty() ? normals[faces[i]] : Vector3());
 
             if (bone_assigns.find(faces[i]) != bone_assigns.end()) {
-                auto &vec = bone_assigns[faces[i]];
+                std::vector<BoneAssign> &vec = bone_assigns[faces[i]];
                 for (size_t j = 0; j < vec.size(); j++) {
                     vert.AddBoneIndex(vec[j].bone_idx);
                     vert.AddBoneWeight(vec[j].bone_weight);
@@ -124,12 +127,13 @@ public:
             }
             current += "/" + skel_name + ".xml";
 
-            auto skeleton = AssetManager::GetInstance()->LoadFromFile<Skeleton>(current);
-            for (auto &&bone : skeleton->bones) {
-                bones.push_back(bone);
-            }
-            for (auto &&anim : skeleton->animations) {
-                animations.push_back(anim);
+            if (auto skeleton = AssetManager::GetInstance()->LoadFromFile<Skeleton>(current)) {
+                for (auto &&bone : skeleton->bones) {
+                    bones.push_back(bone);
+                }
+                for (auto &&anim : skeleton->animations) {
+                    animations.push_back(anim);
+                }
             }
         } else if (name == "vertexboneassignment") {
             size_t vidx = (size_t)std::stol(attributes.at("vertexindex"));

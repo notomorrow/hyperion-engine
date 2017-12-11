@@ -20,18 +20,23 @@ void Renderer::ClearRenderables()
 void Renderer::FindRenderables(Entity *top)
 {
     if (top->GetRenderable() != nullptr) {
+        BucketItem bucket_item;
+        bucket_item.renderable = top->GetRenderable().get();
+        bucket_item.material = &top->GetMaterial();
+        bucket_item.transform = top->GetGlobalTransform();
+
         switch (top->GetRenderable()->GetRenderBucket()) {
             case Renderable::RB_SKY:
-                sky_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+                sky_bucket.push_back(bucket_item);
                 break;
             case Renderable::RB_OPAQUE:
-                opaque_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+                opaque_bucket.push_back(bucket_item);
                 break;
             case Renderable::RB_TRANSPARENT:
-                transparent_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+                transparent_bucket.push_back(bucket_item);
                 break;
             case Renderable::RB_PARTICLE:
-                particle_bucket.push_back(std::make_pair(top->GetRenderable().get(), top->GetGlobalTransform()));
+                particle_bucket.push_back(bucket_item);
                 break;
         }
     }
@@ -42,17 +47,15 @@ void Renderer::FindRenderables(Entity *top)
     }
 }
 
-void Renderer::RenderBucket(Camera *cam, std::vector<std::pair<Renderable*, Transform>> &bucket)
+void Renderer::RenderBucket(Camera *cam, Bucket_t &bucket)
 {
-    for (auto it : bucket) {
-        auto renderable = it.first;
-        auto transform = it.second;
-        if (renderable->m_shader != nullptr) {
-            renderable->m_shader->ApplyMaterial(renderable->GetMaterial());
-            renderable->m_shader->ApplyTransforms(transform.GetMatrix(), cam);
-            renderable->m_shader->Use();
-            renderable->Render();
-            renderable->m_shader->End();
+    for (BucketItem &it : bucket) {
+        if (it.renderable->m_shader != nullptr) {
+            it.renderable->m_shader->ApplyMaterial(*it.material);
+            it.renderable->m_shader->ApplyTransforms(it.transform.GetMatrix(), cam);
+            it.renderable->m_shader->Use();
+            it.renderable->Render();
+            it.renderable->m_shader->End();
         }
     }
 }

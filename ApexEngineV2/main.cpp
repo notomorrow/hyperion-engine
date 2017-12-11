@@ -85,13 +85,12 @@ public:
 
         ShaderProperties defines;
         debug_quad = MeshFactory::CreateQuad();
-        debug_quad->GetMaterial().alpha_blended = true;
         debug_quad->SetShader(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(defines));
 
         renderer = new Renderer();
-        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.3f, 250.0f);
+        cam = new FpsCamera(inputmgr, &this->window, 60.0f, 0.3f, 500.0f);
         fbo = new Framebuffer(window.width, window.height);
-        shadows = new PssmShadowMapping(cam, 1, 20);
+        shadows = new PssmShadowMapping(cam, 1, 50);
     }
 
     ~MyGame()
@@ -129,7 +128,7 @@ public:
         auto particle_node = std::make_shared<Entity>();
         particle_node->SetName("particles");
         particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
-        particle_node->GetRenderable()->GetMaterial().texture0 =
+        particle_node->GetMaterial().texture0 =
             AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/smoke.png");
         particle_node->AddControl(std::make_shared<ParticleEmitterControl>(cam));
 
@@ -169,9 +168,9 @@ public:
         for (int x = -2; x < 2; x++) {
             for (int z = -2; z < 2; z++) {
 
-                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj", false);
+                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj", true);
                 box->GetChild(0)->GetRenderable()->SetShader(shader);
-                box->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
+                box->GetChild(0)->GetMaterial().diffuse_color = { 0.0f, 0.0f, 1.0f, 1.0f };
                 Mesh *mesh = dynamic_cast<Mesh*>(box->GetChild(0)->GetRenderable().get());
 
                 /*auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&box->GetChild(0)->GetAABB());
@@ -181,7 +180,7 @@ public:
                 
                 box->SetLocalTranslation(Vector3(x * 3, 12, z * 3));
 
-                auto rb = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
+                auto rb = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 1.0);
                 rb->SetPosition(box->GetLocalTranslation());
                 rb->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(0.5), 1.0));
                 box->AddControl(rb);
@@ -224,6 +223,8 @@ public:
     {
         Environment::GetInstance()->SetShadowsEnabled(true);
         AudioManager::GetInstance()->Initialize();
+
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.9, 0.9, 0.9).Normalize());
 
         // Initialize root node
         top = std::make_shared<Entity>("top");
@@ -278,12 +279,12 @@ public:
 
         inputmgr->RegisterKeyEvent(KeyboardKey::KEY_6, raytest_event);
 
-         /*auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.GetX()ml");
-         dragger->Move(Vector3(3, -1.8f, 3));
-         dragger->Scale(0.5);
-         dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
-         dragger->GetControl<SkeletonControl>(0)->PlayAnimation(1, 3.0);
-         top->AddChild(dragger);*/
+        auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
+        dragger->Move(Vector3(3, -1.8f, 3));
+        dragger->Scale(0.5);
+        dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
+        dragger->GetControl<SkeletonControl>(0)->PlayAnimation(1, 3.0);
+        top->AddChild(dragger);
 
          /*auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
          cube->GetChild(0)->GetRenderable()->SetShader(shader);
@@ -294,12 +295,15 @@ public:
 
         InitPhysicsTests();
 
-        auto monkey = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
-        monkey->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
-        monkey->GetChild(0)->GetRenderable()->SetShader(shader);
-        monkey->Move(Vector3(-3, 0, -3));
-        monkey->SetName("monkey");
-        top->AddChild(monkey);
+        auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
+        for (size_t i = 0; i < house->NumChildren(); i++) {
+            //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
+            house->GetChild(i)->GetRenderable()->SetShader(shader);
+        }
+        
+        house->Move(Vector3(-3, 0, -3));
+        house->SetName("house");
+        top->AddChild(house);
 
         /*auto quad_node = std::make_shared<Entity>("quad");
         auto quad_mesh = MeshFactory::CreateQuad();
@@ -311,7 +315,7 @@ public:
         top->AddChild(quad_node);*/
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 52321));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1234));
     }
 
     void Logic(double dt)
@@ -345,7 +349,17 @@ public:
         timer += dt;
         shadow_timer += dt;
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(sinf(timer * 0.05f), cosf(timer * 0.05f), 0.0f).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.05), cos(timer * 0.05), 0.0f).Normalize());
+
+        Vector4 sun_color = Vector4(1.0, 0.95, 0.9, 1.0);
+        const float sun_to_horizon = std::max(Environment::GetInstance()->GetSun().GetDirection().y, 0.0f);
+        
+        sun_color.Lerp(Vector4(0.9, 0.8, 0.7, 1.0), 1.0 - sun_to_horizon);
+        const float sun_to_end = std::min(std::max(-Environment::GetInstance()->GetSun().GetDirection().y * 5.0f, 0.0f), 1.0f);
+        sun_color.Lerp(Vector4(0.2, 0.2, 0.2, 1.0), sun_to_end);
+
+
+        Environment::GetInstance()->GetSun().SetColor(sun_color);
 
         cam->Update(dt);
 
@@ -402,7 +416,7 @@ int main()
     CoreEngine *engine = new GlfwEngine();
     CoreEngine::SetInstance(engine);
 
-    auto *game = new MyGame(RenderWindow(1080, 720, "Apex Engine 5.0"));
+    auto *game = new MyGame(RenderWindow(1480, 1200, "Apex Engine 5.0"));
 
     engine->InitializeGame(game);
 

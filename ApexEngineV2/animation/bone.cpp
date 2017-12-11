@@ -58,7 +58,7 @@ const Vector3 &Bone::CalcBindingTranslation()
         global_bone_pos += parent_bone->global_bone_pos;
     }
 
-    for (auto &&child : m_children) {
+    for (auto &child : m_children) {
         auto child_bone = std::dynamic_pointer_cast<Bone>(child);
         if (child_bone) {
             child_bone->CalcBindingTranslation();
@@ -129,5 +129,32 @@ void Bone::UpdateTransform()
     m_local_translation = bind_pos + pose_pos + user_pos;
 
     Entity::UpdateTransform();
+}
+
+std::shared_ptr<Loadable> Bone::Clone()
+{
+    return CloneImpl();
+}
+
+std::shared_ptr<Bone> Bone::CloneImpl()
+{
+    std::shared_ptr<Bone> new_bone = std::make_shared<Bone>(m_name);
+
+    new_bone->global_bone_pos = global_bone_pos;
+    new_bone->bind_pos = bind_pos;
+    new_bone->inv_bind_pos = inv_bind_pos;
+    new_bone->pose_pos = pose_pos;
+    new_bone->user_pos = user_pos;
+
+    new_bone->global_bone_rot = global_bone_rot;
+    new_bone->bind_rot = bind_rot;
+    new_bone->inv_bind_rot = inv_bind_rot;
+    new_bone->pose_rot = pose_rot;
+    new_bone->user_rot = user_rot;
+
+    new_bone->bone_matrix = bone_matrix;
+    new_bone->current_pose = current_pose;
+
+    return new_bone;
 }
 }

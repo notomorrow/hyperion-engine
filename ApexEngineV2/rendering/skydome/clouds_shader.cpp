@@ -25,7 +25,6 @@ CloudsShader::CloudsShader(const ShaderProperties &properties)
         )
     );
 
-
     cloud_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/clouds2.png");
     if (cloud_map == nullptr) {
         throw std::runtime_error("Could not load cloud map!");
@@ -61,7 +60,7 @@ void CloudsShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
     // Cloud layer should follow the camera
     Matrix4 clouds_model_mat = transform;
     clouds_model_mat(0, 3) = camera->GetTranslation().x;
-    clouds_model_mat(1, 3) = camera->GetTranslation().y + 6.0f;
+    clouds_model_mat(1, 3) = camera->GetTranslation().y + 10.0f;
     clouds_model_mat(2, 3) = camera->GetTranslation().z;
 
     Shader::ApplyTransforms(clouds_model_mat, camera);

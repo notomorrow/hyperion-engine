@@ -86,6 +86,7 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
 
     SetUniform("u_globalTime", m_global_time);
     SetUniform("v3LightPos", env->GetSun().GetDirection());
+    SetUniform("u_skyColor", env->GetSun().GetColor());
     SetUniform("u_sunColor", sun_color);
 
     if (mat.alpha_blended) {
@@ -105,7 +106,7 @@ void SkydomeShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
     // Sky dome should follow the camera
     Matrix4 dome_model_mat = transform;
     dome_model_mat(0, 3) = camera->GetTranslation().x;
-    dome_model_mat(1, 3) = camera->GetTranslation().y;
+    dome_model_mat(1, 3) = camera->GetTranslation().y - 5;
     dome_model_mat(2, 3) = camera->GetTranslation().z;
 
     Shader::ApplyTransforms(dome_model_mat, camera);

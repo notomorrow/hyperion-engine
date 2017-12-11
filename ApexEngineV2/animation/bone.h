@@ -8,8 +8,10 @@
 
 namespace apex {
 class Bone : public Entity {
+    friend class Skeleton;
 public:
     Bone(const std::string &name = "");
+    virtual ~Bone() = default;
 
     void ClearPose();
     void ApplyPose(const Keyframe &pose);
@@ -23,6 +25,8 @@ public:
     const Matrix4 &GetBoneMatrix() const;
 
     void UpdateTransform() override;
+
+    virtual std::shared_ptr<Loadable> Clone() override;
 
     Vector3 global_bone_pos,
         bind_pos,
@@ -38,8 +42,9 @@ public:
 
 private:
     Matrix4 bone_matrix;
-
     Keyframe current_pose;
+
+    std::shared_ptr<Bone> CloneImpl();
 };
 }
 

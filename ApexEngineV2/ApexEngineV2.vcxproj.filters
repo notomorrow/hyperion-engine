@@ -318,6 +318,9 @@
     <ClInclude Include="terrain\terrain_shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="asset\objloader\mtl_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -588,6 +591,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="terrain\terrain_shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="asset\objloader\mtl_loader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

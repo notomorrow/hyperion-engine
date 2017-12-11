@@ -26,6 +26,7 @@ Environment *Environment::GetInstance()
     if (instance == nullptr) {
         instance = new Environment();
     }
+
     return instance;
 }
 

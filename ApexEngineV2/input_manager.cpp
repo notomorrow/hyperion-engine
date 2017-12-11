@@ -41,47 +41,29 @@ InputManager::~InputManager()
     delete[] mouse_events;
 }
 
-void InputManager::KeyDown(int key)
+void InputManager::SetKey(int key, bool pressed)
 {
     if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
         InputEvent &handler = key_events[key];
-        if (!handler.IsEmpty() && !handler.IsUpEvent()) {
+
+        if (!handler.IsEmpty() && (pressed ? handler.IsUpEvent() : !handler.IsUpEvent())) {
             handler.Trigger();
         }
-        key_states[key] = true;
+
+        key_states[key] = pressed;
     }
 }
 
-void InputManager::KeyUp(int key)
-{
-    if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
-        InputEvent &handler = key_events[key];
-        if (!handler.IsEmpty() && handler.IsUpEvent()) {
-            handler.Trigger();
-        }
-        key_states[key] = false;
-    }
-}
-
-void InputManager::MouseButtonDown(int btn)
+void InputManager::SetMouseButton(int btn, bool pressed)
 {
     if (btn >= 0 && btn < NUM_MOUSE_BUTTONS) {
         InputEvent &handler = mouse_events[btn];
-        if (!handler.IsEmpty() && !handler.IsUpEvent()) {
-            handler.Trigger();
-        }
-        mouse_states[btn] = true;
-    }
-}
 
-void InputManager::MouseButtonUp(int btn)
-{
-    if (btn >= 0 && btn < NUM_MOUSE_BUTTONS) {
-        InputEvent &handler = mouse_events[btn];
-        if (!handler.IsEmpty() && handler.IsUpEvent()) {
+        if (!handler.IsEmpty() && (pressed ? handler.IsUpEvent() : !handler.IsUpEvent())) {
             handler.Trigger();
         }
-        mouse_states[btn] = true;
+
+        mouse_states[btn] = pressed;
     }
 }
 

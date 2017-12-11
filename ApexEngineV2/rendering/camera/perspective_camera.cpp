@@ -3,7 +3,8 @@
 
 namespace apex {
 PerspectiveCamera::PerspectiveCamera(float fov, int width, int height, float near_clip, float far_clip)
-    : Camera(width, height, near_clip, far_clip), fov(fov)
+    : Camera(width, height, near_clip, far_clip),
+      fov(fov)
 {
 }
 

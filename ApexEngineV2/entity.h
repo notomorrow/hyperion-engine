@@ -10,6 +10,7 @@
 #include "math/transform.h"
 #include "math/bounding_box.h"
 #include "rendering/renderable.h"
+#include "rendering/material.h"
 
 namespace apex {
 
@@ -63,6 +64,10 @@ public:
 
     inline Entity *GetParent() const { return m_parent; }
 
+    inline Material &GetMaterial() { return m_material; }
+    inline const Material &GetMaterial() const { return m_material; }
+    inline void SetMaterial(const Material &material) { m_material = material; }
+
     void AddChild(std::shared_ptr<Entity> entity);
     void RemoveChild(const std::shared_ptr<Entity> &entity);
     std::shared_ptr<Entity> GetChild(size_t index) const;
@@ -103,6 +108,8 @@ public:
 
     virtual void Update(double dt);
 
+    virtual std::shared_ptr<Loadable> Clone();
+
 protected:
     std::string m_name;
     std::shared_ptr<Renderable> m_renderable;
@@ -116,9 +123,12 @@ protected:
     Transform m_global_transform;
     BoundingBox m_aabb;
     Entity *m_parent;
+    Material m_material;
 
     void SetTransformUpdateFlag();
     void SetAABBUpdateFlag();
+
+    std::shared_ptr<Entity> CloneImpl();
 };
 
 } // namespace apex

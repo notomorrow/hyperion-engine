@@ -16,22 +16,24 @@ uniform vec3 u_camerapos;
 
 void main() 
 {
-  const float roughness = 0.8;
-  const float shininess = 0.1;
+  const float roughness = 0.2;
+  const float shininess = 0.4;
   
   vec3 n = normalize(v_normal.xyz);
   vec3 v = normalize(u_camerapos - v_position.xyz);
   
-  float ndotl = max(min(dot(n, env_DirectionalLight.direction), 1.0), 0.0);
-  vec4 lighting = vec4(vec3(ndotl), 1.0);
-  lighting *= env_DirectionalLight.color;
+  vec3 dir = env_DirectionalLight.direction;
+  dir.y = abs(dir.y);
   
-  float specular = max(min(SpecularDirectional(n, v, env_DirectionalLight.direction, roughness), 1.0), 0.0);
+  float ndotl = max(min(dot(n, dir), 1.0), 0.0);
+  vec4 lighting = vec4(vec3(ndotl), 1.0);
+  
+  vec4 specular = vec4(max(min(SpecularDirectional(n, v, dir, roughness), 1.0), 0.0));
     
   float fresnel;
   fresnel = max(1.0 - dot(n, v), 0.0);
   fresnel = pow(fresnel, 2.0);
-  specular += fresnel;
+  specular += vec4(fresnel);
   
   specular *= shininess;
   
@@ -46,10 +48,9 @@ void main()
     }
   }
   shadowness /= 16.0;
-  shadowness = mix(0.6, shadowness, ndotl);
 
   vec4 shadowColor = vec4(vec3(max(shadowness, 0.5)), 1.0);
-  shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), v_position.xyz, u_camerapos, 0.0, 10.0);
+  shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), v_position.xyz, u_camerapos, 0.0, 50.0);
 #endif
 
 #if !SHADOWS
@@ -66,8 +67,10 @@ void main()
   vec4 diffuseTexture = vec4(1.0);
 #endif
 
-  vec4 diffuse = clamp(lighting + ambient, vec4(0.0), vec4(1.0)) * diffuseTexture * u_diffuseColor;
+  vec4 diffuse = clamp(lighting + ambient, vec4(0.0), vec4(1.0)) * diffuseTexture * u_diffuseColor * env_DirectionalLight.color;
   diffuse.rgb *= (1.0 - shininess);
+
+  vec4 fogColor = env_DirectionalLight.color * env_DirectionalLight.color * env_DirectionalLight.color;
   
-  gl_FragColor = vec4((diffuse + vec4(specular)) * shadowColor);
+  gl_FragColor = CalculateFogExp((diffuse + (specular * env_DirectionalLight.color)) * shadowColor, fogColor, v_position.xyz, u_camerapos, 180.0, 200.0);
 }

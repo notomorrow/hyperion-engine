@@ -115,10 +115,11 @@ public:
     inline double GetMouseY() const { return mouse_y; }
     inline void SetMousePosition(double x, double y) { CoreEngine::GetInstance()->SetMousePosition(x, y); }
 
-    void KeyDown(int key);
-    void KeyUp(int key);
-    void MouseButtonDown(int btn);
-    void MouseButtonUp(int btn);
+    inline void KeyDown(int key) { SetKey(key, true); }
+    inline void KeyUp(int key) { SetKey(key, false); }
+
+    inline void MouseButtonDown(int btn) { SetMouseButton(btn, true); }
+    inline void MouseButtonUp(int btn) { SetMouseButton(btn, false); }
     inline void MouseMove(double x, double y) { mouse_x = x; mouse_y = y; }
 
     bool IsKeyDown(int key) const;
@@ -135,6 +136,9 @@ private:
     InputEvent *key_events;
     InputEvent *mouse_events;
     double mouse_x, mouse_y;
+
+    void SetKey(int key, bool pressed);
+    void SetMouseButton(int btn, bool pressed);
 };
 
 } // namespace apex

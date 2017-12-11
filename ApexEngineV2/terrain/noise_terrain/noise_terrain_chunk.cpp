@@ -89,11 +89,6 @@ void NoiseTerrainChunk::OnAdded()
 {
     std::shared_ptr<Mesh> mesh = BuildMesh(m_heights);
 
-    mesh->GetMaterial().texture0 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass.jpg");
-    mesh->GetMaterial().normals0 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass_nrm.jpg");
-    mesh->GetMaterial().texture1 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirt.jpg");
-    mesh->GetMaterial().normals1 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirt_nrm.jpg");
-
     mesh->SetShader(ShaderManager::GetInstance()->GetShader<TerrainShader>({
         { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
         { "NUM_SPLITS", Environment::GetInstance()->NumCascades() },
@@ -101,6 +96,11 @@ void NoiseTerrainChunk::OnAdded()
     }));
     m_entity = std::make_shared<Entity>("terrain_node");
     m_entity->SetRenderable(mesh);
+
+    m_entity->GetMaterial().texture0 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass.jpg");
+    m_entity->GetMaterial().normals0 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass_nrm.jpg");
+    m_entity->GetMaterial().texture1 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirt.jpg");
+    m_entity->GetMaterial().normals1 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirt_nrm.jpg");
 }
 
 int NoiseTerrainChunk::HeightIndexAt(int x, int z)

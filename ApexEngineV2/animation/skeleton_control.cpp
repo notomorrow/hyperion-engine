@@ -2,7 +2,7 @@
 
 namespace apex {
 SkeletonControl::SkeletonControl(std::shared_ptr<Shader> skinning_shader)
-    : EntityControl(25.0), skinning_shader(skinning_shader),
+    : EntityControl(60.0), skinning_shader(skinning_shader),
     play_state(STOPPED), loop_mode(PLAY_ONCE),
     current_anim(nullptr), time(0.0)
 {

@@ -8,8 +8,8 @@ uniform float m_GlobalTime;
 uniform sampler2D m_CloudMap;
 uniform vec4 m_CloudColor;
 
-const float timeScale = 0.3;
-const float cloudScale = 0.0005;
+const float timeScale = 0.03;
+const float cloudScale = 5.0;
 const float skyCover = 0.45;
 const float softness = 0.4;
 const float brightness = 1.3;
@@ -67,8 +67,8 @@ float fbm (vec2 uv)
 
 void main() 
 {
-  float color1 =  fbm(v_texcoord0 - vec2(0.5 + m_GlobalTime * 0.04 * timeScale));
-  float color2 = fbm(v_texcoord0 - vec2(10.5 + m_GlobalTime * 0.02 * timeScale));
+  float color1 =  fbm((v_texcoord0 - vec2(0.5 + m_GlobalTime * 0.04 * timeScale)) * cloudScale);
+  float color2 = fbm((v_texcoord0 - vec2(10.5 + m_GlobalTime * 0.02 * timeScale)) * cloudScale);
             
   float clouds1 = smoothstep(1.0 - skyCover, min((1.0 - skyCover) + softness * 2.0, 1.0), color1);
   float clouds2 = smoothstep(1.0 - skyCover, min((1.0 - skyCover) + softness, 1.0), color2);
@@ -82,10 +82,10 @@ void main()
   cloudColComb = mix(vec4(1.0, 1.0, 1.0, 0.0), cloudColComb, cloudsFormComb);// * m_CloudColor;
             
   float dist = gl_FragCoord.z / gl_FragCoord.w; 
-  vec4 fogColor = vec4(1.0, 1.0, 1.0, 0.0);
-  float fogFactor = (30.0 - dist) / (30.0 - 18.0);
+  vec4 fogColor = vec4(m_CloudColor.rgb, 0.0);
+  float fogFactor = (40.0 - dist) / (40.0 - 15.0);
   fogFactor = saturate(fogFactor);
   
-  gl_FragColor = mix(fogColor, cloudColComb, fogFactor);          
+  gl_FragColor = mix(fogColor, cloudColComb, fogFactor) * m_CloudColor;          
 }
 

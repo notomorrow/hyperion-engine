@@ -48,9 +48,11 @@ void Shader::Use()
 {
     if (!is_created) {
         progid = glCreateProgram();
+
         for (auto &&sub : subshaders) {
             sub.id = glCreateShader(sub.type);
         }
+
         is_created = true;
     }
 
@@ -64,7 +66,7 @@ void Shader::Use()
             int status = -1;
             glGetShaderiv(sub.id, GL_COMPILE_STATUS, &status);
 
-            if (status == false) {
+            if (!status) {
                 int maxlen;
                 glGetShaderiv(sub.id, GL_INFO_LOG_LENGTH, &maxlen);
 
@@ -92,6 +94,7 @@ void Shader::Use()
 
         int linked = 0;
         glGetProgramiv(progid, GL_LINK_STATUS, &linked);
+
         if (linked == false) {
             int maxlen = 0;
             glGetProgramiv(progid, GL_INFO_LOG_LENGTH, &maxlen);
@@ -113,6 +116,7 @@ void Shader::Use()
     if (uniform_changed) {
         for (auto &&uniform : uniforms) {
             int loc = glGetUniformLocation(progid, uniform.first.c_str());
+
             if (loc != -1) {
                 switch (uniform.second.type) {
                 case Uniform::Uniform_Float:
@@ -141,6 +145,7 @@ void Shader::Use()
                 }
             }
         }
+
         uniform_changed = false;
     }
 }

@@ -1,8 +1,10 @@
 #include "obj_loader.h"
+#include "../../asset/asset_manager.h"
 #include "../../rendering/mesh.h"
 #include "../../rendering/vertex.h"
 #include "../../util/string_util.h"
 #include "../../entity.h"
+#include "mtl_loader.h"
 
 #include <fstream>
 
@@ -13,8 +15,10 @@ void ObjModel::AddMesh(const std::string &name)
     while (std::find(mesh_names.begin(), mesh_names.end(), name) != mesh_names.end()) {
         ++counter;
     }
+
     mesh_names.push_back((counter == 0 ? name : name + std::to_string(counter)));
     indices.push_back(std::vector<ObjIndex>());
+
 }
 
 std::vector<ObjModel::ObjIndex> &ObjModel::CurrentList()
@@ -99,7 +103,9 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
                     dir.clear();
                 }
                 dir += "/" + loc;
-                // todo: load material file
+
+                // load material library
+                model.mtl_lib = AssetManager::GetInstance()->LoadFromFile<MtlLib>(dir);
             } else if (tokens[0] == "usemtl") {
                 model.AddMesh(tokens[1]);
             }
@@ -110,7 +116,7 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
         auto &list = model.indices[i];
         std::vector<Vertex> vertices;
 
-        for (auto &&idc : list) {
+        for (auto &idc : list) {
             vertices.push_back(Vertex(
                 (model.positions[idc.vertex_idx]),
                 (model.has_texcoords ? model.texcoords[idc.texcoord_idx] : Vector2()),

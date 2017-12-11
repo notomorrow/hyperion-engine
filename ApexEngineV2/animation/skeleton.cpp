@@ -2,12 +2,13 @@
 
 namespace apex {
 Skeleton::Skeleton(const std::string &name)
+    : m_name(name)
 {
 }
 
 std::shared_ptr<Animation> Skeleton::GetAnimation(const std::string &name)
 {
-    for (auto &&anim : animations) {
+    for (auto &anim : animations) {
         if (anim->GetName() == name) {
             return anim;
         }
@@ -43,5 +44,16 @@ std::shared_ptr<Bone> Skeleton::GetBone(size_t index)
 void Skeleton::AddBone(const std::shared_ptr<Bone> bone)
 {
     bones.push_back(bone);
+}
+
+std::shared_ptr<Loadable> Skeleton::Clone()
+{
+    std::shared_ptr<Skeleton> new_skeleton = std::make_shared<Skeleton>(m_name);
+
+    for (auto &bone : bones) {
+        new_skeleton->bones.push_back(bone->CloneImpl());
+    }
+
+    return new_skeleton;
 }
 }

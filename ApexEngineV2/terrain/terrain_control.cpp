@@ -8,9 +8,11 @@ namespace apex {
 static int num_threads = 0;
 
 TerrainControl::TerrainControl(Camera *camera)
-    : m_camera(camera), m_scale(3.0, 2.0, 3.0),
-    m_tick(0), m_queuetick(0), 
-    m_max_distance(1.0)
+    : m_camera(camera),
+      m_scale(4.0, 2.0, 4.0),
+      m_tick(0),
+      m_queuetick(0), 
+      m_max_distance(5.0)
 {
 }
 
@@ -47,8 +49,10 @@ void TerrainControl::OnUpdate(double dt)
             info->m_in_queue = false;
             m_queue.pop();
         }
+
         m_queuetick = 0;
     }
+
     m_queuetick += TERRAIN_UPDATE_STEP;
 
     if (m_tick >= TERRAIN_MAX_UPDATE_TICK) {
@@ -82,6 +86,7 @@ void TerrainControl::OnUpdate(double dt)
                             if (chunk->m_entity->GetParent() == nullptr) {
                                 parent->AddChild(chunk->m_entity);
                             }
+
                             for (auto &it : chunk->m_chunk_info.m_neighboring_chunks) {
                                 if (!it.m_in_queue) {
                                     if (it.m_position.Distance(v2cam) < m_max_distance) {
@@ -97,6 +102,7 @@ void TerrainControl::OnUpdate(double dt)
                         break;
                     case PageState::UNLOADING:
                         chunk->m_chunk_info.m_unload_time += TERRAIN_UPDATE_STEP;
+
                         if (chunk->m_chunk_info.m_unload_time >= TERRAIN_MAX_UNLOAD_TICK) {
                             chunk->m_chunk_info.m_page_state = PageState::UNLOADED;
                         }
@@ -106,6 +112,7 @@ void TerrainControl::OnUpdate(double dt)
                         if (chunk->m_entity != nullptr && chunk->m_entity->GetParent() == parent) {
                             parent->RemoveChild(chunk->m_entity);
                         }
+
                         m_chunks.erase(m_chunks.begin() + m_chunk_index);
                         delete chunk;
 
@@ -113,8 +120,10 @@ void TerrainControl::OnUpdate(double dt)
                 }
             }
         }
+
         m_tick = 0;
     }
+
     m_tick += TERRAIN_UPDATE_STEP;
 }
 
@@ -123,8 +132,7 @@ void TerrainControl::AddChunk(int x, int z)
     TerrainChunk *chunk = GetChunk(x, z);
 
     if (chunk == nullptr) {
-        auto lambda = [this, x, z]()
-        {
+        auto lambda = [this, x, z]() {
             num_threads++;
 
             ChunkInfo height_info(Vector2(x, z), m_scale);
@@ -139,7 +147,9 @@ void TerrainControl::AddChunk(int x, int z)
                 throw "chunk was nullptr";
             }
 
+            terrain_mtx.lock();
             m_chunks.push_back(new_chunk);
+            terrain_mtx.unlock();
 
             num_threads--;
         };

@@ -9,6 +9,8 @@
 #include <string>
 
 namespace apex {
+class MtlLib;
+
 struct ObjModel {
     struct ObjIndex {
         int vertex_idx, normal_idx, texcoord_idx;
@@ -19,11 +21,13 @@ struct ObjModel {
     std::vector<Vector3> normals;
     std::vector<Vector2> texcoords;
     std::vector<std::vector<ObjIndex>> indices;
+    std::shared_ptr<MtlLib> mtl_lib;
 
     bool has_normals, has_texcoords;
 
     ObjModel()
-        : has_normals(false), has_texcoords(false)
+        : has_normals(false),
+          has_texcoords(false)
     {
     }
 
@@ -34,6 +38,8 @@ struct ObjModel {
 
 class ObjLoader : public AssetLoader {
 public:
+    virtual ~ObjLoader() = default;
+
     std::shared_ptr<Loadable> LoadFromFile(const std::string &);
 };
 }

@@ -2,7 +2,9 @@
 
 namespace apex {
 FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, float near_clip, float far_clip)
-    : PerspectiveCamera(fov, 512, 512, near_clip, far_clip), inputmgr(inputmgr), window(window)
+    : PerspectiveCamera(fov, 512, 512, near_clip, far_clip),
+      inputmgr(inputmgr),
+      window(window)
 {
     mag_x = 0.0;
     mag_y = 0.0;

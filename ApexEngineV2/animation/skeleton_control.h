@@ -15,6 +15,7 @@ namespace apex {
 class SkeletonControl : public EntityControl {
 public:
     SkeletonControl(std::shared_ptr<Shader> skinning_shader);
+    virtual ~SkeletonControl() = default;
 
     Bone *GetBone(size_t index);
     Bone *GetBone(const std::string &name);

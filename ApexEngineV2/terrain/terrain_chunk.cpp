@@ -63,6 +63,7 @@ std::vector<Vertex> TerrainChunk::BuildVertices(const std::vector<double> &heigh
     vertices.resize(m_chunk_info.m_width * m_chunk_info.m_length);
 
     int i = 0;
+
     for (int z = 0; z < m_chunk_info.m_length; z++) {
         for (int x = 0; x < m_chunk_info.m_width; x++) {
             Vector3 position(x - m_chunk_info.m_width / 2, heights[i], z - m_chunk_info.m_length / 2);
@@ -91,6 +92,7 @@ std::vector<size_t> TerrainChunk::BuildIndices()
     int i3 = pitch + row;
 
     int i = 0;
+
     for (int z = 0; z < m_chunk_info.m_length - 1; z++) {
         for (int x = 0; x < m_chunk_info.m_width - 1; x++) {
             indices[i++] = i0;

@@ -8,7 +8,8 @@ Animation::Animation(const std::string &name)
 }
 
 Animation::Animation(const Animation &other)
-    : name(name), tracks(other.tracks)
+    : name(name),
+      tracks(other.tracks)
 {
 }
 

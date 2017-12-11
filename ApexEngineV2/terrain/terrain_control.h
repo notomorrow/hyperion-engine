@@ -14,6 +14,10 @@
 #define TERRAIN_UPDATE_STEP 1
 #define TERRAIN_MULTITHREADED 1
 
+#if TERRAIN_MULTITHREADED
+#include <mutex>
+#endif
+
 namespace apex {
 
 class TerrainControl : public EntityControl {
@@ -43,6 +47,10 @@ private:
     int m_queuetick;
     int m_chunk_index = 0;
     double m_max_distance;
+
+#if TERRAIN_MULTITHREADED
+    std::mutex terrain_mtx;
+#endif
 };
 
 } // namespace apex

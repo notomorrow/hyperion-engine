@@ -27,6 +27,9 @@ void main()
 {
   const float roughness = 0.6;
   const float shininess = 0.1;
+
+  vec3 dir = env_DirectionalLight.direction;
+  dir.y = abs(dir.y);
   
   vec3 up = vec3(0.0, 1.0, 0.0);
   float ang = max(abs(v_normal.x), 0.0);
@@ -55,7 +58,7 @@ void main()
   n = mix(n, normalize((v_tangent * normalsTexture.x) + (v_bitangent * normalsTexture.y) + (n * normalsTexture.z)), 1.0 - tex0Strength);
 #endif
   
-  float ndotl = max(min(dot(n, env_DirectionalLight.direction), 1.0), 0.0);
+  float ndotl = max(min(dot(n, dir), 1.0), 0.0);
   
 #if SHADOWS
   float shadowness = 0.0;
@@ -68,10 +71,9 @@ void main()
     }
   }
   shadowness /= 16.0;
-  shadowness = mix(0.6, shadowness, ndotl);
 
   vec4 shadowColor = vec4(vec3(max(shadowness, 0.5)), 1.0);
-  shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), v_position.xyz, u_camerapos, 0.0, 10.0);
+  shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), v_position.xyz, u_camerapos, 0.0, 50.0);
 #endif
 
 #if !SHADOWS
@@ -79,9 +81,9 @@ void main()
   vec4 shadowColor = vec4(1.0);
 #endif
 
-  vec4 lighting = vec4(vec3(ndotl * shadowness), 1.0) * env_DirectionalLight.color;
+  vec4 lighting = vec4(vec3(ndotl), 1.0) * env_DirectionalLight.color;
   
-  vec4 specular = vec4(max(min(SpecularDirectional(n, v, env_DirectionalLight.direction, roughness), 1.0), 0.0));
+  vec4 specular = vec4(max(min(SpecularDirectional(n, v, dir, roughness), 1.0), 0.0));
 
   float fresnel;
   fresnel = max(1.0 - dot(n, v), 0.0);
@@ -90,12 +92,18 @@ void main()
   
   specular *= env_DirectionalLight.color;
   specular *= shininess;
+  specular *= ndotl;
+  specular *= shadowness;
    
-  vec4 ambient = vec4(vec3(0.3), 1.0) * diffuseTexture;
+  vec4 ambient = vec4(vec3(0.3), 1.0) * diffuseTexture * env_DirectionalLight.color;
   ambient.rgb *= (1.0 - shininess);
+  ambient *= shadowColor;
   
-  vec4 diffuse = clamp(lighting, vec4(0.0), vec4(1.0)) * diffuseTexture;
+  vec4 diffuse = clamp(lighting, vec4(0.0), vec4(1.0)) * diffuseTexture * env_DirectionalLight.color;
   diffuse.rgb *= (1.0 - shininess);
+  diffuse *= shadowColor;
   
-  gl_FragColor = vec4((diffuse + ambient + specular) * shadowColor);
+  vec4 fogColor = env_DirectionalLight.color * env_DirectionalLight.color * env_DirectionalLight.color;
+
+  gl_FragColor = CalculateFogExp(vec4((diffuse + ambient + specular)), fogColor, v_position.xyz, u_camerapos, 180.0, 200.0);
 }

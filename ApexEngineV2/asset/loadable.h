@@ -2,26 +2,20 @@
 #define LOADABLE_H
 
 #include <string>
+#include <memory>
 
 namespace apex {
 class Loadable {
 public:
-    virtual ~Loadable()
-    {
-    }
+    virtual ~Loadable() = default;
 
-    const std::string &GetFilePath() const
-    {
-        return filepath;
-    }
+    inline const std::string &GetFilePath() const { return m_filepath; }
+    inline void SetFilePath(const std::string &filepath) { m_filepath = filepath; }
 
-    void SetFilePath(const std::string &path)
-    {
-        filepath = path;
-    }
+    virtual std::shared_ptr<Loadable> Clone() { return nullptr; };// = 0;
 
 private:
-    std::string filepath;
+    std::string m_filepath;
 };
 }
 

@@ -6,6 +6,7 @@
 #include "../mesh.h"
 #include "../texture.h"
 #include "../camera/camera.h"
+#include "../../math/vector4.h"
 #include "skydome_shader.h"
 #include "clouds_shader.h"
 
@@ -30,6 +31,7 @@ private:
     std::shared_ptr<CloudsShader> clouds_shader;
     Camera *camera;
     double global_time;
+    Vector4 sky_color;
 };
 } // namespace apex
 

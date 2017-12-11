@@ -11,6 +11,7 @@ namespace apex {
 class Skeleton : public Loadable {
 public:
     Skeleton(const std::string &name = "");
+    virtual ~Skeleton() = default;
 
     std::shared_ptr<Animation> GetAnimation(const std::string &name);
     std::shared_ptr<Animation> GetAnimation(size_t index);
@@ -22,6 +23,11 @@ public:
 
     std::vector<std::shared_ptr<Animation>> animations;
     std::vector<std::shared_ptr<Bone>> bones;
+
+    virtual std::shared_ptr<Loadable> Clone() override;
+
+private:
+    std::string m_name;
 };
 }
 

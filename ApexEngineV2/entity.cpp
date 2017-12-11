@@ -143,4 +143,30 @@ void Entity::SetAABBUpdateFlag()
     }
 }
 
+std::shared_ptr<Loadable> Entity::Clone()
+{
+    return CloneImpl();
+}
+
+std::shared_ptr<Entity> Entity::CloneImpl()
+{
+    auto new_entity = std::make_shared<Entity>(m_name);
+    
+    new_entity->m_material = m_material;
+
+    // reference copy
+    new_entity->m_renderable = m_renderable;
+
+    new_entity->m_local_translation = m_local_translation;
+    new_entity->m_local_scale = m_local_scale;
+    new_entity->m_local_rotation = m_local_rotation;
+
+    // clone all child entities
+    for (auto &child : m_children) {
+        new_entity->m_children.push_back(child->CloneImpl());
+    }
+
+    return new_entity;
+}
+
 } // namespace apex

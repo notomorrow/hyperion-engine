@@ -165,6 +165,7 @@
     <ClInclude Include="asset\asset_manager.h" />
     <ClInclude Include="asset\byte_reader.h" />
     <ClInclude Include="asset\loadable.h" />
+    <ClInclude Include="asset\objloader\mtl_loader.h" />
     <ClInclude Include="asset\objloader\obj_loader.h" />
     <ClInclude Include="asset\ogreloader\ogre_loader.h" />
     <ClInclude Include="asset\ogreloader\ogre_skeleton_loader.h" />
@@ -266,6 +267,7 @@
     <ClCompile Include="animation\skeleton_control.cpp" />
     <ClCompile Include="asset\apxloader\apx_loader.cpp" />
     <ClCompile Include="asset\asset_manager.cpp" />
+    <ClCompile Include="asset\objloader\mtl_loader.cpp" />
     <ClCompile Include="asset\objloader\obj_loader.cpp" />
     <ClCompile Include="asset\ogreloader\ogre_loader.cpp" />
     <ClCompile Include="asset\ogreloader\ogre_skeleton_loader.cpp" />
