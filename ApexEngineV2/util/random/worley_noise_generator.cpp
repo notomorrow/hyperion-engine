@@ -15,16 +15,15 @@ double WorleyNoiseGenerator::Noise(double x, double y, double z)
     Vector3 random_diff;
     Vector3 feature_point;
 
-    unsigned int last_random = 0;
-    unsigned int num_feature_points = 0;
+    size_t last_random = 0;
+    size_t num_feature_points = 0;
 
-    int cubex = 0, cubey = 0, cubez = 0;
-    int eval_cubex = std::floor(x);
-    int eval_cubey = std::floor(y);
-    int eval_cubez = std::floor(z);
+    long long int cubex = 0, cubey = 0, cubez = 0;
+    long long int eval_cubex = std::floor((int)x);
+    long long int eval_cubey = std::floor((int)y);
+    long long int eval_cubez = std::floor((int)z);
 
-    std::vector<double> distance_array;
-    distance_array.resize(3, 6666);
+    std::vector<double> distance_array { 6666, 6666, 6666 };
 
     for (int i = -1; i < 2; i++) {
         for (int j = -1; j < 2; j++) {
@@ -33,18 +32,19 @@ double WorleyNoiseGenerator::Noise(double x, double y, double z)
                 cubey = eval_cubey + j;
                 cubez = eval_cubez + k;
 
-                last_random = WORLEY_LCG_RANDOM(WORLEY_HASH(cubex + m_seed, cubey, cubez));
+                last_random = LCGRandom(WorleyHash(cubex + m_seed, cubey, cubez));
                 num_feature_points = ProbLookup(last_random);
 
                 for (unsigned int l = 0; l < num_feature_points; l++) {
-                    last_random = WORLEY_LCG_RANDOM(last_random);
-                    random_diff.x = float(last_random / 0x100000000);
-                    
-                    last_random = WORLEY_LCG_RANDOM(last_random);
-                    random_diff.y = float(last_random / 0x100000000);
-                    
-                    last_random = WORLEY_LCG_RANDOM(last_random);
-                    random_diff.z = float(last_random / 0x100000000);
+                    last_random = LCGRandom(last_random);
+                    random_diff.x = double(last_random) / 0x100000000;
+
+                    last_random = LCGRandom(last_random);
+                    random_diff.y = double(last_random) / 0x100000000;
+
+                    last_random = LCGRandom(last_random);
+                    random_diff.z = double(last_random) / 0x100000000;
+
 
                     feature_point = Vector3(random_diff.x + cubex, random_diff.y + cubey, random_diff.z + cubez);
 
@@ -87,7 +87,7 @@ double WorleyNoiseGenerator::ChebyshevDistance(const Vector3 &v1, const Vector3 
     return std::max(std::max(std::abs(d.x), std::abs(d.y)), std::abs(d.z));
 }
 
-unsigned char WorleyNoiseGenerator::ProbLookup(unsigned int value)
+unsigned char WorleyNoiseGenerator::ProbLookup(unsigned long long value)
 {
     if (value < 393325350) return 1;
     if (value < 1022645910) return 2;

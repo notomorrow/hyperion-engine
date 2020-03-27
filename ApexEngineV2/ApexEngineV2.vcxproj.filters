@@ -321,6 +321,9 @@
     <ClInclude Include="asset\objloader\mtl_loader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="paging\paging.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

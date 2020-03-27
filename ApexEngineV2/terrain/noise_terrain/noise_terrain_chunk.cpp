@@ -12,8 +12,8 @@
 
 #include "../../util/random/open_simplex_noise.h"
 
-#define MOUNTAIN_SCALE_WIDTH 0.04
-#define MOUNTAIN_SCALE_LENGTH 0.04
+#define MOUNTAIN_SCALE_WIDTH 0.05
+#define MOUNTAIN_SCALE_LENGTH 0.05
 #define MOUNTAIN_SCALE_HEIGHT 8.0
 
 #define ROUGH_SCALE_WIDTH 0.8
@@ -40,41 +40,65 @@ std::vector<double> NoiseTerrainChunk::GenerateHeights(int seed, const ChunkInfo
     multi.SetOctaveCount(11);
     multi.SetLacunarity(2.0);
 
+    module::Voronoi voronoi;
+    voronoi.SetFrequency(0.05);
+    voronoi.SetSeed(seed);
+
     WorleyNoiseGenerator worley(seed);
 
     noise::module::Perlin maskgen;
     maskgen.SetFrequency(0.05);
     maskgen.SetPersistence(0.25);
 
-    //struct osn_context *ctx;
-    //open_simplex_noise(seed, &ctx);
+    SimplexNoiseData data;
+    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
+        open_simplex_noise(seed, &data.octaves[i]);
+        data.frequencies[i] = pow(2.0, double(i));
+        data.amplitudes[i] = pow(0.5, OSN_OCTAVE_COUNT - i);
+    }
 
     heights.resize(chunk_info.m_width * chunk_info.m_length);
 
     for (int z = 0; z < chunk_info.m_length; z++) {
         for (int x = 0; x < chunk_info.m_width; x++) {
-            const size_t x_offset = x + ((int)chunk_info.m_position.x * (chunk_info.m_width - 1));
-            const size_t z_offset = z + ((int)chunk_info.m_position.y * (chunk_info.m_length - 1));
+            const double x_offset = x + (chunk_info.m_position.x * (chunk_info.m_width - 1));
+            const double z_offset = z + (chunk_info.m_position.y * (chunk_info.m_length - 1));
 
-            //double smooth = (open_simplex_noise2(ctx, x_offset * SMOOTH_SCALE_WIDTH, 
+            //double smooth = (open_simplex_noise2(ctx, x_offset * SMOOTH_SCALE_WIDTH,
             //    z_offset * SMOOTH_SCALE_HEIGHT) * 2.0 - 1.0) * SMOOTH_SCALE_HEIGHT;
 
             //double mask = maskgen.GetValue(x_offset * MASK_SCALE_WIDTH,
             //    z_offset * MASK_SCALE_LENGTH, 0.0);
 
-            const double rough = (multi.GetValue(x_offset * ROUGH_SCALE_WIDTH,
-                z_offset * ROUGH_SCALE_LENGTH, 0.0) * 2.0 - 1.0) * ROUGH_SCALE_HEIGHT;
 
-            const double mountain = (worley.Noise(x_offset * MOUNTAIN_SCALE_WIDTH,
-                z_offset * MOUNTAIN_SCALE_LENGTH, 0.0) * 2.0 - 1.0) * MOUNTAIN_SCALE_HEIGHT;
 
+            // const double rough = (multi.GetValue(x_offset * ROUGH_SCALE_WIDTH,
+            //     z_offset * ROUGH_SCALE_LENGTH, 0.0) * 2.0 - 1.0) * ROUGH_SCALE_HEIGHT;
+
+            // const double mountain = (worley.Noise(x_offset * MOUNTAIN_SCALE_WIDTH,
+            //     z_offset * MOUNTAIN_SCALE_LENGTH, 0.0) * 2.0 - 1.0) * MOUNTAIN_SCALE_HEIGHT;
+
+            // const double biome_height = (open_simplex_noise2(ctx, x_offset * 0.6,
+            //     z_offset * 0.6));
+            const double biome_height = (GetSimplexNoise(&data, x_offset * 0.6, z_offset * 0.6) + 1) * 0.5;
+
+            const double height = (GetSimplexNoise(&data, x_offset,
+                z_offset)) * 30;
+
+            // const double mountain = ((multi.GetValue(x_offset * 0.05,
+            //     z_offset * 0.05, 0.0) * 2.0 - 1.0) * (worley.Noise(x_offset * 0.008,
+            //     z_offset * 0.008, 0.0) * 2.0 - 1.0)) * 150;
+
+            const double mountain = ((worley.Noise((double)x_offset * 0.017, (double)z_offset * 0.017, 0))) * 80.0;
 
             const size_t index = ((x + chunk_info.m_width) % chunk_info.m_width) + ((z + chunk_info.m_length) % chunk_info.m_length) * chunk_info.m_width;
-            heights[index] = rough + mountain;
+            heights[index] = MathUtil::Lerp(height, mountain, MathUtil::Clamp(biome_height, 0.0, 1.0));
         }
     }
 
-    //open_simplex_noise_free(ctx);
+    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
+        open_simplex_noise_free(data.octaves[i]);
+    }
 
     return heights;
 }
@@ -107,6 +131,18 @@ int NoiseTerrainChunk::HeightIndexAt(int x, int z)
 {
     const int size = m_chunk_info.m_width;
     return ((x + size) % size) + ((z + size) % size) * size;
+}
+
+
+double NoiseTerrainChunk::GetSimplexNoise(SimplexNoiseData *data, int x, int z)
+{
+    double result = 0.0;
+
+    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
+        result += open_simplex_noise2(data->octaves[i], x / data->frequencies[i], z / data->frequencies[i]) * data->amplitudes[i];
+    }
+
+    return result;
 }
 
 } // namespace apex

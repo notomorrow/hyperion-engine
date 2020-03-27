@@ -56,7 +56,7 @@ void TerrainShader::ApplyMaterial(const Material &mat)
     if (mat.normals0 != nullptr) {
         Texture::ActiveTexture(1);
         mat.normals0->Use();
-        SetUniform("terrainTexture0Normal", 1);
+        SetUniform("terrainTexture0Normal", 20.0f);
     }
 
     if (mat.texture1 != nullptr) {
@@ -69,7 +69,7 @@ void TerrainShader::ApplyMaterial(const Material &mat)
     if (mat.normals1 != nullptr) {
         Texture::ActiveTexture(3);
         mat.normals1->Use();
-        SetUniform("slopeTextureNormal", 3);
+        SetUniform("slopeTextureNormal", 20.0f);
     }
 }
 

@@ -9,12 +9,6 @@
 
 #define FNV_PRIME 16777619
 
-#define WORLEY_HASH(i, j, k) \
-    ((((((OFFSET_BASIS ^ i) * FNV_PRIME) ^ j) * FNV_PRIME) ^ k) * FNV_PRIME)
-
-#define WORLEY_LCG_RANDOM(last) \
-    ((1103515245ULL * last + 12345ULL) % 0x100000000ULL)
-
 namespace apex {
 class WorleyNoiseGenerator {
 public:
@@ -33,9 +27,19 @@ private:
     double ManhattanDistance(const Vector3 &v1, const Vector3 &v2);
     double ChebyshevDistance(const Vector3 &v1, const Vector3 &v2);
 
-    static unsigned char ProbLookup(unsigned int value);
+    static unsigned char ProbLookup(unsigned long long value);
 
     void Insert(std::vector<double> &data, double value);
+
+    inline size_t LCGRandom(size_t last) const
+    {
+        return (1103515245ULL * last + 12345ULL) % 0x100000000ULL;
+    }
+
+    inline size_t WorleyHash(size_t i, size_t j, size_t k) const
+    {
+        return ((((((OFFSET_BASIS ^ i) * FNV_PRIME) ^ j) * FNV_PRIME) ^ k) * FNV_PRIME);
+    }
 };
 } // namespace apex
 

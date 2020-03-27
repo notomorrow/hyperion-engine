@@ -9,9 +9,9 @@ static int num_threads = 0;
 
 TerrainControl::TerrainControl(Camera *camera)
     : m_camera(camera),
-      m_scale(4.0, 2.0, 4.0),
+      m_scale(2.0, 1.5, 2.0),
       m_tick(0),
-      m_queuetick(0), 
+      m_queuetick(0),
       m_max_distance(5.0)
 {
 }
@@ -43,7 +43,7 @@ void TerrainControl::OnUpdate(double dt)
     Vector2 v2cam(campos.x, campos.z);
 
     if (m_queuetick >= TERRAIN_MAX_QUEUE_TICK) {
-        if (!m_queue.empty()) {
+        while (!m_queue.empty()) {
             NeighborChunkInfo *info = m_queue.front();
             AddChunk((int)info->m_position.x, (int)info->m_position.y);
             info->m_in_queue = false;
@@ -56,12 +56,9 @@ void TerrainControl::OnUpdate(double dt)
     m_queuetick += TERRAIN_UPDATE_STEP;
 
     if (m_tick >= TERRAIN_MAX_UPDATE_TICK) {
-        if (m_chunk_index >= m_chunks.size()) {
-            m_chunk_index = 0;
-        }
 
-        if (!m_chunks.empty()) {
-            TerrainChunk *chunk = m_chunks[m_chunk_index];
+        for (size_t chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
+            TerrainChunk *chunk = m_chunks[chunk_index];
             if (chunk != nullptr) {
                 switch (chunk->m_chunk_info.m_page_state) {
                     case PageState::WAITING:
@@ -80,7 +77,7 @@ void TerrainControl::OnUpdate(double dt)
 
                         // fallthrough
                     case PageState::LOADED:
-                        if (chunk->m_chunk_info.m_position.Distance(v2cam) >= m_max_distance) {
+                        if (chunk->m_chunk_info.Center().Distance(v2cam) >= m_max_distance) {
                             chunk->m_chunk_info.m_page_state = PageState::UNLOADING;
                         } else {
                             if (chunk->m_entity->GetParent() == nullptr) {
@@ -89,15 +86,13 @@ void TerrainControl::OnUpdate(double dt)
 
                             for (auto &it : chunk->m_chunk_info.m_neighboring_chunks) {
                                 if (!it.m_in_queue) {
-                                    if (it.m_position.Distance(v2cam) < m_max_distance) {
+                                    if (it.Center().Distance(v2cam) < m_max_distance) {
                                         it.m_in_queue = true;
                                         m_queue.push(&it);
                                     }
                                 }
                             }
                         }
-
-                        m_chunk_index++;
 
                         break;
                     case PageState::UNLOADING:
@@ -113,7 +108,7 @@ void TerrainControl::OnUpdate(double dt)
                             parent->RemoveChild(chunk->m_entity);
                         }
 
-                        m_chunks.erase(m_chunks.begin() + m_chunk_index);
+                        m_chunks.erase(m_chunks.begin() + chunk_index);
                         delete chunk;
 
                         break;
@@ -170,7 +165,7 @@ TerrainChunk *TerrainControl::GetChunk(int x, int z)
         if (chunk != nullptr) {
             if ((int)chunk->m_chunk_info.m_position.x == x &&
                 (int)chunk->m_chunk_info.m_position.y == z) {
-                
+
                 return chunk;
             }
         }

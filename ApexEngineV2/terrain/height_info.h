@@ -32,9 +32,14 @@ struct NeighborChunkInfo {
     }
 
     NeighborChunkInfo(const NeighborChunkInfo &other)
-        : m_position(other.m_position), 
+        : m_position(other.m_position),
           m_in_queue(other.m_in_queue)
     {
+    }
+
+    Vector2 Center() const
+    {
+      return m_position - Vector2(0.5, 0.5);
     }
 };
 
@@ -49,27 +54,32 @@ struct ChunkInfo {
     std::array<NeighborChunkInfo, 8> m_neighboring_chunks;
 
     ChunkInfo()
-        : m_position(Vector2::Zero()), 
+        : m_position(Vector2::Zero()),
           m_scale(Vector3::One()),
           m_page_state(PageState::UNLOADED)
     {
     }
 
     ChunkInfo(const Vector2 &position, const Vector3 &scale)
-        : m_position(position), 
+        : m_position(position),
           m_scale(scale),
           m_page_state(PageState::UNLOADED)
     {
     }
 
     ChunkInfo(const ChunkInfo &other)
-        : m_width(other.m_width), 
+        : m_width(other.m_width),
           m_length(other.m_length),
-          m_position(other.m_position), 
-          m_scale(other.m_scale), 
-          m_page_state(other.m_page_state), 
+          m_position(other.m_position),
+          m_scale(other.m_scale),
+          m_page_state(other.m_page_state),
           m_neighboring_chunks(other.m_neighboring_chunks)
     {
+    }
+
+    Vector2 Center() const
+    {
+      return m_position - Vector2(0.5, 0.5);
     }
 };
 

@@ -89,7 +89,7 @@ public:
         debug_quad->SetShader(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(defines));
 
         renderer = new Renderer();
-        cam = new FpsCamera(inputmgr, &this->window, 60.0f, 0.3f, 500.0f);
+        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.3f, 2500.0f);
         fbo = new Framebuffer(window.width, window.height);
         shadows = new PssmShadowMapping(cam, 1, 50);
     }
@@ -178,7 +178,7 @@ public:
                 auto bb_renderer_node = std::make_shared<Entity>();
                 bb_renderer_node->SetRenderable(bb_renderer);
                 box->AddChild(bb_renderer_node);*/
-                
+
                 box->SetLocalTranslation(Vector3(x * 3, 12, z * 3));
 
                 auto rb = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 1.0);
@@ -243,6 +243,11 @@ public:
 
         //InitTestObjects();
 
+        // TODO: terrain raycasting
+        // Ray top_ray;
+        // top_ray.m_direction = Vector3(0, -1, 0);
+        // top_ray.m_position = Vector3(0, 15000, 0);
+
         InputEvent raytest_event([=]()
             {
                 Ray ray;
@@ -259,7 +264,7 @@ public:
                         for (size_t i = 0; i < ent->NumChildren(); i++) {
                             BoundingBox aabb = ent->GetChild(i)->GetAABB();
                             if (aabb.IntersectRay(ray, intersection)) {
-                                std::cout << "intersection: { name: " << ent->GetChild(i)->GetName() << 
+                                std::cout << "intersection: { name: " << ent->GetChild(i)->GetName() <<
                                              ", point: " << intersection << " }\n";
 
                                 new_intersections.push_back(ent->GetChild(i).get());
@@ -301,7 +306,7 @@ public:
             //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
             house->GetChild(i)->GetRenderable()->SetShader(shader);
         }
-        
+
         house->Move(Vector3(-3, 0, -3));
         house->SetName("house");
         top->AddChild(house);*/
@@ -315,8 +320,8 @@ public:
         quad_node->Rotate(Quaternion(Vector3::UnitX(), MathUtil::PI / 2));
         top->AddChild(quad_node);*/
 
-        //top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1234));
+        top->AddControl(std::make_shared<SkydomeControl>(cam));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 54));
     }
 
     void Logic(double dt)
@@ -350,11 +355,11 @@ public:
         timer += dt;
         shadow_timer += dt;
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.05), cos(timer * 0.05), 0.0f).Normalize());
+        // Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.05), cos(timer * 0.05), 0.0f).Normalize());
 
         Vector4 sun_color = Vector4(1.0, 0.95, 0.9, 1.0);
         const float sun_to_horizon = std::max(Environment::GetInstance()->GetSun().GetDirection().y, 0.0f);
-        
+
         sun_color.Lerp(Vector4(0.9, 0.8, 0.7, 1.0), 1.0 - sun_to_horizon);
         const float sun_to_end = std::min(std::max(-Environment::GetInstance()->GetSun().GetDirection().y * 5.0f, 0.0f), 1.0f);
         sun_color.Lerp(Vector4(0.2, 0.2, 0.2, 1.0), sun_to_end);

@@ -71,11 +71,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\User\Documents\Visual Studio 2015\Projects\ApexEngineV2\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\User\Documents\Visual Studio 2015\Projects\ApexEngineV2\lib\windows\32;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\andre\apex-engine\ApexEngineV2\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\andre\apex-engine\ApexEngineV2\lib\windows\32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\Users\andre\apex-engine\ApexEngineV2\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\andre\apex-engine\ApexEngineV2\lib\windows\32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -84,6 +86,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>C:\Users\andre\apex-engine\ApexEngineV2\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\andre\apex-engine\ApexEngineV2\lib\windows\32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -190,6 +194,7 @@
     <ClInclude Include="math\matrix_util.h" />
     <ClInclude Include="math\quaternion.h" />
     <ClInclude Include="math\ray.h" />
+    <ClInclude Include="paging\paging.h" />
     <ClInclude Include="particles\particle.h" />
     <ClInclude Include="particles\particle_construction_info.h" />
     <ClInclude Include="particles\particle_emitter_control.h" />
