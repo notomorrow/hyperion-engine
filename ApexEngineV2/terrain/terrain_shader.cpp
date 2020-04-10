@@ -41,6 +41,7 @@ void TerrainShader::ApplyMaterial(const Material &mat)
             env->GetShadowMap(i)->Use();
             SetUniform("u_shadowMap[" + i_str + "]", 5 + i);
             SetUniform("u_shadowMatrix[" + i_str + "]", env->GetShadowMatrix(i));
+            SetUniform("u_shadowSplit[" + i_str + "]", (float)env->GetShadowSplit(i));
         }
     }
 

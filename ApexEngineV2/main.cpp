@@ -91,7 +91,7 @@ public:
         renderer = new Renderer();
         cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.3f, 2500.0f);
         fbo = new Framebuffer(window.width, window.height);
-        shadows = new PssmShadowMapping(cam, 1, 50);
+        shadows = new PssmShadowMapping(cam, 4, 100);
     }
 
     ~MyGame()
@@ -230,6 +230,8 @@ public:
         // Initialize root node
         top = std::make_shared<Entity>("top");
 
+        cam->SetTranslation(Vector3(0, 20, 0));
+
         // Initialize particle system
         InitParticleSystem();
 
@@ -310,6 +312,18 @@ public:
         house->Move(Vector3(-3, 0, -3));
         house->SetName("house");
         top->AddChild(house);*/
+
+
+
+        auto mitsuba = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
+        for (size_t i = 0; i < mitsuba->NumChildren(); i++) {
+            mitsuba->GetChild(i)->GetRenderable()->SetShader(shader);
+        }
+
+        mitsuba->Move(Vector3(0, 18, 0));
+        mitsuba->SetName("mitsuba");
+        top->AddChild(mitsuba);
+
 
         /*auto quad_node = std::make_shared<Entity>("quad");
         auto quad_mesh = MeshFactory::CreateQuad();

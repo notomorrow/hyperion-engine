@@ -8,7 +8,7 @@ ShadowMapping::ShadowMapping(Camera *view_cam, int max_dist)
     : view_cam(view_cam), max_dist(max_dist)
 {
     shadow_cam = new OrthoCamera(-10, 10, -10, 10, -10, 10);
-    fbo = new Framebuffer(1024, 1024);
+    fbo = new Framebuffer(2048, 2048);
     fbo->GetDepthTexture()->SetFilter(GL_LINEAR, GL_LINEAR);
     fbo->GetDepthTexture()->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 }

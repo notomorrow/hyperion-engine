@@ -61,11 +61,12 @@ void main()
 #if SHADOWS
   float shadowness = 0.0;
   const float radius = 0.05;
+  int shadowSplit = getShadowMapSplit(u_camerapos, v_position.xyz);
   for (int x = 0; x < 4; x++) {
     for (int y = 0; y < 4; y++) {
       vec2 offset = poissonDisk[x * 4 + y] * radius;
-      vec3 shadowCoord = getShadowCoord(0, v_position.xyz + vec3(offset.x, offset.y, -offset.x));
-      shadowness += getShadow(0, shadowCoord);
+      vec3 shadowCoord = getShadowCoord(shadowSplit, v_position.xyz + vec3(offset.x, offset.y, -offset.x));
+      shadowness += getShadow(shadowSplit, shadowCoord);
     }
   }
   shadowness /= 16.0;

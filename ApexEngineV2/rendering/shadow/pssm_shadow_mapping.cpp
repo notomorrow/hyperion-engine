@@ -8,13 +8,16 @@ PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, int max_d
 
     Environment::GetInstance()->SetNumCascades(num_splits);
 
+    double max_distance = (double)max_dist;
+    const double min_dist = max_distance / (double)num_splits;
+
     for (int i = num_splits - 1; i >= 0; i--) {
-        Environment::GetInstance()->SetShadowSplit(i, max_dist);
-        shadow_renderers[i] = std::make_shared<ShadowMapping>(view_cam, max_dist);
+        const double distance = MathUtil::Lerp(min_dist, max_distance, (double)(i) / ((double)num_splits - 1));
+        std::cout << "distance[" << i << "] =  " << distance << "\n";
+        Environment::GetInstance()->SetShadowSplit(i, distance);
+        shadow_renderers[i] = std::make_shared<ShadowMapping>(view_cam, distance);
 
         Environment::GetInstance()->SetShadowMap(i, shadow_renderers[i]->GetShadowMap());
-
-        max_dist /= 2;
     }
 }
 
