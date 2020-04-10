@@ -1,5 +1,7 @@
 #include "entity.h"
 
+#include <algorithm>
+
 namespace apex {
 
 Entity::Entity(const std::string &name)

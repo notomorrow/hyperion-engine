@@ -65,7 +65,7 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
     SetUniform("fKmESun", KmESun);
     SetUniform("fOuterRadius", inner_radius * 1.025f);
     SetUniform("fInnerRadius", inner_radius);
-    SetUniform("fOuterRadius2", pow(inner_radius * 1.025f, 2.0f));
+    SetUniform("fOuterRadius2", (float)pow(inner_radius * 1.025f, 2.0f));
     SetUniform("fInnerRadius2", inner_radius * inner_radius);
     SetUniform("fKr4PI", Kr4PI);
     SetUniform("fKm4PI", Km4PI);

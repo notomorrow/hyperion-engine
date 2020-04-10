@@ -50,6 +50,7 @@
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <math.h>
 
 using namespace apex;
 
@@ -114,7 +115,7 @@ public:
                 counter++;
 
                 float radius = 1.0f;
-                const Vector3 rotation(std::sinf(counter * 0.2f) * radius, 0.0f, std::cosf(counter * 0.2f) * radius);
+                const Vector3 rotation(sinf(counter * 0.2f) * radius, 0.0f, cosf(counter * 0.2f) * radius);
                 Vector3 random(MathUtil::Random(-0.3f, 0.3f), 0.0f, MathUtil::Random(-0.3f, 0.3f));
                 return rotation + random;
             }
@@ -240,7 +241,7 @@ public:
 
         tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass.jpg");
 
-        InitTestObjects();
+        //InitTestObjects();
 
         InputEvent raytest_event([=]()
             {
@@ -294,7 +295,7 @@ public:
          */
 
         InitPhysicsTests();
-
+        /*
         auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
         for (size_t i = 0; i < house->NumChildren(); i++) {
             //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
@@ -303,7 +304,7 @@ public:
         
         house->Move(Vector3(-3, 0, -3));
         house->SetName("house");
-        top->AddChild(house);
+        top->AddChild(house);*/
 
         /*auto quad_node = std::make_shared<Entity>("quad");
         auto quad_mesh = MeshFactory::CreateQuad();
@@ -314,7 +315,7 @@ public:
         quad_node->Rotate(Quaternion(Vector3::UnitX(), MathUtil::PI / 2));
         top->AddChild(quad_node);*/
 
-        top->AddControl(std::make_shared<SkydomeControl>(cam));
+        //top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 1234));
     }
 

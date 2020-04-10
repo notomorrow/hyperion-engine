@@ -1,5 +1,6 @@
 #include "matrix3.h"
 #include <cassert>
+#include <string.h>
 
 namespace apex {
 Matrix3::Matrix3()

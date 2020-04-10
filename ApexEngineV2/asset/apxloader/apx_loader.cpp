@@ -19,7 +19,7 @@ std::shared_ptr<Loadable> ApxLoader::LoadFromFile(const std::string &path)
 
     while (reader->Position() < reader->Max()) {
         int32_t ins;
-        reader->Read(&ins, sizeof int32_t);
+        reader->Read(&ins, sizeof(int32_t));
         Handle(model, reader, (ApxCommand)ins);
     }
 

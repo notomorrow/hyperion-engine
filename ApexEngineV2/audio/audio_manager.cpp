@@ -1,6 +1,7 @@
 #include "audio_manager.h"
 
 #include <iostream>
+#include <cstring>
 
 namespace apex {
 AudioManager *AudioManager::instance = nullptr;
@@ -63,7 +64,7 @@ void AudioManager::ListDevices()
     std::cout << "----------\n";
     while (device && *device != '\0' && next && *next != '\0') {
         std::cout << device << "\n";
-        len = strlen(device);
+        len = std::strlen(device);
         device += (len + 1);
         next += (len + 2);
     }

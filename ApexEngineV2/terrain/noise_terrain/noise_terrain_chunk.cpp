@@ -8,7 +8,7 @@
 
 #include <noise/noise.h>
 #include <noise/module/ridgedmulti.h>
-using namespace noise;
+//using namespace noise;
 
 #include "../../util/random/open_simplex_noise.h"
 
@@ -33,21 +33,21 @@ std::vector<double> NoiseTerrainChunk::GenerateHeights(int seed, const ChunkInfo
 {
     std::vector<double> heights;
 
-    module::RidgedMulti multi;
+    noise::module::RidgedMulti multi;
     multi.SetSeed(seed);
     multi.SetFrequency(0.03);
-    multi.SetNoiseQuality(NoiseQuality::QUALITY_FAST);
+    multi.SetNoiseQuality(noise::NoiseQuality::QUALITY_FAST);
     multi.SetOctaveCount(11);
     multi.SetLacunarity(2.0);
 
     WorleyNoiseGenerator worley(seed);
 
-    module::Perlin maskgen;
+    noise::module::Perlin maskgen;
     maskgen.SetFrequency(0.05);
     maskgen.SetPersistence(0.25);
 
-    struct osn_context *ctx;
-    open_simplex_noise(seed, &ctx);
+    //struct osn_context *ctx;
+    //open_simplex_noise(seed, &ctx);
 
     heights.resize(chunk_info.m_width * chunk_info.m_length);
 
@@ -74,7 +74,7 @@ std::vector<double> NoiseTerrainChunk::GenerateHeights(int seed, const ChunkInfo
         }
     }
 
-    open_simplex_noise_free(ctx);
+    //open_simplex_noise_free(ctx);
 
     return heights;
 }

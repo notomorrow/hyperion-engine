@@ -4,6 +4,8 @@
 #include "../math/vector3.h"
 #include "../math/matrix4.h"
 
+#include <float.h>
+
 namespace apex {
 namespace physics {
 class PhysicsMaterial {

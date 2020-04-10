@@ -1,6 +1,8 @@
 #ifndef CORE_ENGINE_H
 #define CORE_ENGINE_H
 
+#include <stddef.h>
+
 #define APEX_MULTITHREADING 1
 
 namespace apex {

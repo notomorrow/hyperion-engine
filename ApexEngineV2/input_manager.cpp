@@ -1,5 +1,6 @@
 #include "input_manager.h"
 #include <iostream>
+#include <string.h>
 
 namespace apex {
 

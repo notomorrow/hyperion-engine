@@ -3,6 +3,8 @@
 
 #include <vector>
 
+#include <stddef.h>
+
 namespace apex {
 BoundingBoxRenderer::BoundingBoxRenderer(const BoundingBox *bounding_box)
     : Renderable(RenderBucket::RB_TRANSPARENT),
@@ -32,7 +34,7 @@ void BoundingBoxRenderer::Render()
         vertices[i].SetPosition(corners[i]);
     }
 
-    std::vector<uint32_t> indices = {
+    std::vector<size_t> indices = {
         0, 1, 1, 2, 2, 3,
         3, 0, 0, 4, 4, 5,
         5, 3, 5, 6, 6, 7,

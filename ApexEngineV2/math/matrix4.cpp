@@ -1,5 +1,6 @@
 #include "matrix4.h"
 #include <cassert>
+#include <string.h>
 
 namespace apex {
 Matrix4::Matrix4()

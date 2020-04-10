@@ -6,6 +6,7 @@
 #include "transform.h"
 #include "ray.h"
 #include <array>
+#include <limits>
 
 namespace apex {
 

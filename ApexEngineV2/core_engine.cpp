@@ -8,7 +8,7 @@ CoreEngine *CoreEngine::instance = nullptr;
 CoreEngine *CoreEngine::GetInstance()
 {
     if (instance == nullptr) {
-        throw std::exception("no engine instance created");
+        //throw std::exception("no engine instance created");
     }
     return instance;
 }

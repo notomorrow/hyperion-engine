@@ -48,7 +48,7 @@ bool GlfwEngine::InitializeGame(Game *game)
     glfwMakeContextCurrent(window);
 
     if (glewInit() != GLEW_OK) {
-        throw std::exception("error initializing glew");
+        //throw std::exception("error initializing glew");
     }
 
     glfwSwapInterval(1);
