@@ -47,12 +47,28 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     env->GetSun().Bind(0, this);
 
+    SetUniform("env_NumPointLights", (int)env->GetNumPointLights());
+
+    for (int i = 0; i < env->GetNumPointLights(); i++) {
+        if (auto point_light = env->GetPointLight(i)) {
+            point_light->Bind(i, this);
+        }
+    }
+
     SetUniform("u_diffuseColor", mat.diffuse_color);
 
     if (mat.texture0 != nullptr) {
         Texture::ActiveTexture(0);
         mat.texture0->Use();
-        SetUniform("u_diffuseTexture", 0);
+        SetUniform("u_diffuseMap", 0);
+    }
+
+    if (mat.HasParameter("shininess")) {
+        SetUniform("u_shininess", mat.GetParameter("shininess")[0]);
+    }
+
+    if (mat.HasParameter("roughness")) {
+        SetUniform("u_roughness", mat.GetParameter("roughness")[0]);
     }
 }
 

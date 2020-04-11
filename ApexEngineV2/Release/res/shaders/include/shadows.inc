@@ -4,13 +4,24 @@ uniform float u_shadowSplit[$NUM_SPLITS];
 
 uniform vec2 poissonDisk[16];
 
+bool inRadius(vec3 cam, vec3 world, float radius) {
+  if (cam.x >= (world.x - (radius)) && cam.x <= (world.x + (radius))) {
+    if (cam.y >= (world.y - (radius)) && cam.y <= (world.y + (radius))) {
+      //if (cam.z >= (world.z - (radius)) && cam.z <= (world.z + (radius))) {
+        return true;
+      //}
+    }
+  }
+
+  return false;
+}
+
 int getShadowMapSplit(vec3 cam, vec3 world) {
-  float len = length(cam - world);
-  if (len <= u_shadowSplit[0]) {
+  if (inRadius(cam, world, u_shadowSplit[0])) {
     return 0;
-  } else if (len <= u_shadowSplit[1]) {
+  } else if (inRadius(cam, world, u_shadowSplit[1])) {
     return 1;
-  } else if (len <= u_shadowSplit[2]) {
+  } else if (inRadius(cam, world, u_shadowSplit[2])) {
     return 2;
   } else {
     return 3;
@@ -18,7 +29,7 @@ int getShadowMapSplit(vec3 cam, vec3 world) {
 }
 
 float getShadow(int index, vec3 coord) {
-  float bias = 0.0015;
+  float bias = 0.005;
   float depth = texture2D(u_shadowMap[index], coord.xy).r;
   return max(step(coord.z-bias, depth), 0.0);
 }

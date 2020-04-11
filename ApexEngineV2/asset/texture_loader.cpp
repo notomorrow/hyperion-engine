@@ -6,6 +6,8 @@
 #include "../rendering/texture_2D.h"
 #include "../opengl.h"
 
+#include <iostream>
+
 namespace apex {
 std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
 {

@@ -1,6 +1,7 @@
 #include "texture_2D.h"
 #include "../opengl.h"
 #include <cassert>
+#include <iostream>
 
 namespace apex {
 
@@ -37,13 +38,15 @@ void Texture2D::Use()
     glBindTexture(GL_TEXTURE_2D, id);
 
     if (!is_uploaded) {
+        //glEnable(GL_TEXTURE_2D);
+
         glTexParameteri(GL_TEXTURE_2D,
             GL_TEXTURE_MAG_FILTER, mag_filter);
-        glTexParameteri(GL_TEXTURE_2D, 
+        glTexParameteri(GL_TEXTURE_2D,
             GL_TEXTURE_MIN_FILTER, min_filter);
-        glTexParameteri(GL_TEXTURE_2D, 
+        glTexParameteri(GL_TEXTURE_2D,
             GL_TEXTURE_WRAP_S, wrap_s);
-        glTexParameteri(GL_TEXTURE_2D, 
+        glTexParameteri(GL_TEXTURE_2D,
             GL_TEXTURE_WRAP_T, wrap_t);
 
         glTexImage2D(GL_TEXTURE_2D, 0, ifmt,

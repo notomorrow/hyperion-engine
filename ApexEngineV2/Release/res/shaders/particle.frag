@@ -16,5 +16,5 @@ void main()
 #endif
   vec4 color = diffuseTexture;
   color.a *= v_lifespan;
-  gl_FragColor = color;
+  gl_FragData[0] = color;
 }

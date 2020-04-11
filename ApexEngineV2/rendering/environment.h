@@ -1,13 +1,17 @@
 #ifndef ENVIRONMENT_H
 #define ENVIRONMENT_H
 
+#define ENVIRONMENT_MAX_POINT_LIGHTS 4
+
 #include "../math/matrix4.h"
 #include "../math/vector2.h"
 #include "../rendering/texture.h"
-#include "lights/directional_light.h"
+#include "./lights/directional_light.h"
+#include "./lights/point_light.h"
 
 #include <memory>
 #include <array>
+#include <vector>
 
 namespace apex {
 class Environment {
@@ -34,10 +38,17 @@ public:
     inline const Matrix4 &GetShadowMatrix(int i) const { return m_shadow_matrices[i]; }
     inline void SetShadowMatrix(int i, const Matrix4 &shadow_matrix) { m_shadow_matrices[i] = shadow_matrix; }
 
+    inline size_t GetMaxPointLights() const { return ENVIRONMENT_MAX_POINT_LIGHTS; }
+    inline size_t GetNumPointLights() const { return m_point_lights.size(); }
+    inline std::shared_ptr<PointLight> &GetPointLight(size_t index) { return m_point_lights[index]; }
+    inline const std::shared_ptr<PointLight> &GetPointLight(size_t index) const { return m_point_lights[index]; }
+    inline void AddPointLight(const std::shared_ptr<PointLight> &point_light) { m_point_lights.push_back(point_light); }
+
 private:
     static Environment *instance;
 
     DirectionalLight m_sun;
+    std::vector<std::shared_ptr<PointLight>> m_point_lights;
 
     Vector3 m_gravity;
 

@@ -14,7 +14,6 @@
 #include "rendering/framebuffer.h"
 #include "rendering/shaders/lighting_shader.h"
 #include "rendering/shaders/post_shader.h"
-#include "rendering/shaders/post/gamma_correct.h"
 #include "rendering/shader_manager.h"
 #include "rendering/shadow/shadow_mapping.h"
 #include "rendering/shadow/pssm_shadow_mapping.h"
@@ -27,6 +26,10 @@
 #include "animation/bone.h"
 #include "animation/skeleton_control.h"
 #include "math/bounding_box.h"
+
+/* Post */
+#include "rendering/postprocess/filters/gamma_correction_filter.h"
+#include "rendering/postprocess/filters/ssao_filter.h"
 
 /* Extra */
 #include "rendering/skydome/skydome.h"
@@ -65,7 +68,7 @@ public:
     std::shared_ptr<Entity> test_object_0, test_object_1, test_object_2;
     std::shared_ptr<Shader> shader;
     std::shared_ptr<Texture> tex;
-    std::shared_ptr<Mesh> debug_quad;
+    std::shared_ptr<Entity> debug_quad;
 
     std::shared_ptr<physics::RigidBody> rb1, rb2, rb3, rb4;
 
@@ -85,11 +88,14 @@ public:
         std::srand(std::time(nullptr));
 
         ShaderProperties defines;
-        debug_quad = MeshFactory::CreateQuad();
-        debug_quad->SetShader(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(defines));
 
         renderer = new Renderer();
-        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.3f, 2500.0f);
+
+        //renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
+
+        renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
+
+        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.1f, 100.0f);
         fbo = new Framebuffer(window.width, window.height);
         shadows = new PssmShadowMapping(cam, 4, 100);
     }
@@ -107,7 +113,7 @@ public:
         ParticleConstructionInfo particle_generator_info(
             // the lambda function for setting a particle's origin
             [](const Particle &particle) {
-                return Vector3(0, 2, 0);
+                return Vector3(0, 20, 0);
             },
                 // the lambda function for setting a particle's velocity
             [](const Particle &particle) {
@@ -227,13 +233,18 @@ public:
 
         Environment::GetInstance()->GetSun().SetDirection(Vector3(0.9, 0.9, 0.9).Normalize());
 
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 21, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(6.0f, 21, 0), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 21, 6.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 21, -6.0f), Vector4(1.0f, 0.4f, 0.7f, 1.0f), 10.0f));
+
         // Initialize root node
         top = std::make_shared<Entity>("top");
 
         cam->SetTranslation(Vector3(0, 20, 0));
 
         // Initialize particle system
-        InitParticleSystem();
+        //InitParticleSystem();
 
         ShaderProperties defines = {
             { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
@@ -302,37 +313,82 @@ public:
          */
 
         InitPhysicsTests();
-        /*
-        auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
-        for (size_t i = 0; i < house->NumChildren(); i++) {
-            //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
-            house->GetChild(i)->GetRenderable()->SetShader(shader);
+
+        // { // house
+        //     auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
+        //     for (size_t i = 0; i < house->NumChildren(); i++) {
+        //         //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
+        //         house->GetChild(i)->GetRenderable()->SetShader(shader);
+        //     }
+
+        //     house->Move(Vector3(-3, 0, -3));
+        //     house->SetName("house");
+        //     top->AddChild(house);
+        // }
+
+
+        { // mitsuba
+            auto mitsuba = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
+            for (size_t i = 0; i < mitsuba->NumChildren(); i++) {
+                mitsuba->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
+
+            mitsuba->Move(Vector3(6.0f, 20.2f, 0));
+            mitsuba->SetName("mitsuba");
+            top->AddChild(mitsuba);
         }
 
-        house->Move(Vector3(-3, 0, -3));
-        house->SetName("house");
-        top->AddChild(house);*/
+        /*{ // sponza
+            auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
+            // std::function<void(Entity*)> scan_nodes;
+            // scan_nodes = [this, &scan_nodes](Entity *root) {
 
+            //     for (size_t i = 0; i < root->NumChildren(); i++) {
+            //         root->GetChild(i)->GetRenderable()->SetShader(shader);
 
+            //         scan_nodes(root->GetChild(i).get());
+            //     }
+            // };
+            // scan_nodes(sponza.get());
+            for (size_t i = 0; i < sponza->NumChildren(); i++) {
+                std::cout << " child [" << i << "] material shininess = " << sponza->GetChild(i)->GetMaterial().GetParameter("shininess")[0] << "\n";
+                sponza->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
 
-        auto mitsuba = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
-        for (size_t i = 0; i < mitsuba->NumChildren(); i++) {
-            mitsuba->GetChild(i)->GetRenderable()->SetShader(shader);
+            sponza->Move(Vector3(5, 18, 0));
+            sponza->SetName("sponza");
+            top->AddChild(sponza);
+
+            //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+            sponza->Scale(2.0f);
+        }*/
+
+        { // cloister
+            auto cloister = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cloister/cloister.obj");
+            // std::function<void(Entity*)> scan_nodes;
+            // scan_nodes = [this, &scan_nodes](Entity *root) {
+
+            //     for (size_t i = 0; i < root->NumChildren(); i++) {
+            //         root->GetChild(i)->GetRenderable()->SetShader(shader);
+
+            //         scan_nodes(root->GetChild(i).get());
+            //     }
+            // };
+            // scan_nodes(cloister.get());
+            for (size_t i = 0; i < cloister->NumChildren(); i++) {
+                cloister->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
+
+            cloister->Move(Vector3(5, 18, 0));
+            cloister->SetName("cloister");
+            top->AddChild(cloister);
+
+            //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+            cloister->Scale(2.0f);
         }
 
-        mitsuba->Move(Vector3(0, 18, 0));
-        mitsuba->SetName("mitsuba");
-        top->AddChild(mitsuba);
 
 
-        /*auto quad_node = std::make_shared<Entity>("quad");
-        auto quad_mesh = MeshFactory::CreateQuad();
-        quad_mesh->SetShader(shader);
-        quad_node->SetRenderable(quad_mesh);
-        quad_node->Scale(15);
-        quad_node->Move(Vector3::UnitY() * -2);
-        quad_node->Rotate(Quaternion(Vector3::UnitX(), MathUtil::PI / 2));
-        top->AddChild(quad_node);*/
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 54));
@@ -341,7 +397,7 @@ public:
     void Logic(double dt)
     {
         // offset root node if camera is out of bounds
-        const float bounds = 15.0f;
+        /*const float bounds = 15.0f;
         Vector3 campos(cam->GetTranslation());
 
         if (campos.GetX() >= bounds) {
@@ -361,7 +417,7 @@ public:
             campos.SetZ(0);
             top->SetLocalTranslation(top->GetLocalTranslation() + Vector3(0, 0, bounds));
             cam->SetTranslation(campos);
-        }
+        }*/
 
         AudioManager::GetInstance()->SetListenerPosition(cam->GetTranslation());
         AudioManager::GetInstance()->SetListenerOrientation(cam->GetDirection(), cam->GetUpVector());
@@ -398,8 +454,6 @@ public:
         renderer->FindRenderables(top.get());
 
         if (Environment::GetInstance()->ShadowsEnabled()) {
-            glEnable(GL_CULL_FACE);
-            glCullFace(GL_FRONT);
             if (shadow_timer >= 0.04) {
                 Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
                 shadow_dir.SetY(-1.0f);
@@ -407,27 +461,11 @@ public:
                 shadows->Render(renderer);
                 shadow_timer = 0.0;
             }
-
-            glDisable(GL_CULL_FACE);
         }
 
-        //fbo->Use();
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        renderer->RenderAll(cam);
+        renderer->RenderAll(cam, fbo);
         renderer->ClearRenderables();
-
-        /*debug_quad->GetMaterial().diffuse_texture = shadows->GetShadowMap();
-        */
-
-        /*fbo->End();
-
-        debug_quad->GetMaterial().diffuse_texture = fbo->GetColorTexture();
-        debug_quad->GetShader()->ApplyMaterial(debug_quad->GetMaterial());
-        debug_quad->GetShader()->Use();
-        debug_quad->Render();
-        debug_quad->GetShader()->End();*/
+        renderer->RenderPost(cam, fbo);
     }
 };
 

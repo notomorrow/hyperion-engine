@@ -3,10 +3,17 @@
 namespace apex {
 Renderer::Renderer()
 {
+    m_post_processing = new PostProcessing();
+
     sky_bucket.reserve(5);
     opaque_bucket.reserve(30);
     transparent_bucket.reserve(20);
     particle_bucket.reserve(5);
+}
+
+Renderer::~Renderer()
+{
+    delete m_post_processing;
 }
 
 void Renderer::ClearRenderables()
@@ -60,12 +67,38 @@ void Renderer::RenderBucket(Camera *cam, Bucket_t &bucket)
     }
 }
 
-void Renderer::RenderAll(Camera *cam)
+void Renderer::RenderAll(Camera *cam, Framebuffer *fbo)
 {
-    CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
+    if (fbo) {
+        fbo->Use();
+    } else {
+        CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
+    }
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glDisable(GL_CULL_FACE);
     RenderBucket(cam, sky_bucket);
+    glEnable(GL_CULL_FACE);
     RenderBucket(cam, opaque_bucket);
     RenderBucket(cam, transparent_bucket);
     RenderBucket(cam, particle_bucket);
+
+    if (fbo) {
+        fbo->End();
+    }
+}
+
+void Renderer::RenderPost(Camera *cam, Framebuffer *fbo)
+{
+    if (m_post_processing->GetFilters().empty()) {
+        return;
+    }
+
+    glDisable(GL_CULL_FACE);
+
+    m_post_processing->Render(cam, fbo);
+
+    glEnable(GL_CULL_FACE);
 }
 } // namespace apex

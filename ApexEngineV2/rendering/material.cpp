@@ -2,10 +2,22 @@
 
 namespace apex {
 
+const std::map<std::string, MaterialParameter> Material::default_parameters = {
+    { "roughness", MaterialParameter(0.5f) },
+    { "shininess", MaterialParameter(0.5f) }
+};
+
 MaterialParameter::MaterialParameter()
-    : size(0), 
+    : size(0),
       type(MaterialParameter_None)
 {
+}
+
+MaterialParameter::MaterialParameter(const float value)
+    : size(1),
+      type(MaterialParameter_Float)
+{
+    values[0] = value;
 }
 
 MaterialParameter::MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype)
@@ -26,6 +38,9 @@ MaterialParameter::MaterialParameter(const MaterialParameter &other)
 
 Material::Material()
 {
+    for (auto it : default_parameters) {
+        params[it.first] = it.second;
+    }
 }
 
 Material::Material(const Material &other)

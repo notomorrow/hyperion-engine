@@ -1,3 +1,6 @@
+uniform float u_shininess;
+uniform float u_roughness;
+
 struct DirectionalLight 
 {
 	vec3 direction;
@@ -6,6 +9,15 @@ struct DirectionalLight
 
 uniform DirectionalLight env_DirectionalLight;
 
+struct PointLight
+{
+    vec3 position;
+    vec4 color;
+    float radius;
+};
+
+uniform PointLight env_PointLights[4]; // @TODO: add default shader properties so this can be passed
+uniform int env_NumPointLights;
 
 float sqr(float x)
 {

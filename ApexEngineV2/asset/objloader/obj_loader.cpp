@@ -11,14 +11,19 @@
 namespace apex {
 void ObjModel::AddMesh(const std::string &name)
 {
+    std::string mesh_name = name;
+
     int counter = 0;
-    while (std::find(mesh_names.begin(), mesh_names.end(), name) != mesh_names.end()) {
+
+    while (std::find(mesh_names.begin(), mesh_names.end(), mesh_name) != mesh_names.end()) {
         ++counter;
+        mesh_name = name + std::to_string(counter);
     }
 
-    mesh_names.push_back((counter == 0 ? name : name + std::to_string(counter)));
-    indices.push_back(std::vector<ObjIndex>());
+    mesh_names.push_back(mesh_name);
+    mesh_material_names[mesh_name] = name;
 
+    indices.push_back(std::vector<ObjIndex>());
 }
 
 std::vector<ObjModel::ObjIndex> &ObjModel::CurrentList()
@@ -26,6 +31,7 @@ std::vector<ObjModel::ObjIndex> &ObjModel::CurrentList()
     if (indices.empty()) {
         AddMesh("mesh");
     }
+
     return indices.back();
 }
 
@@ -69,7 +75,11 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
     if (!fs.is_open()) {
         return nullptr;
     }
+
+    int line_no = 0;
+
     while (std::getline(fs, line)) {
+        // std::cout << "line [" << line_no << "] = " << line << "\n";
         auto tokens = StringUtil::Split(line, ' ');
         tokens = StringUtil::RemoveEmpty(tokens);
 
@@ -90,6 +100,7 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
                 model.texcoords.push_back(Vector2(x, y));
             } else if (tokens[0] == "f") {
                 auto &list = model.CurrentList();
+                // std::cout << path << "\t" << "f " << tokens[1] << "\t" << tokens[2] << "\t" << tokens[3] << "\n";
                 for (int i = 0; i < tokens.size() - 3; i++) {
                     list.push_back(model.ParseObjIndex(tokens[1]));
                     list.push_back(model.ParseObjIndex(tokens[2 + i]));
@@ -104,12 +115,13 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
                 }
                 dir += "/" + loc;
 
-                // load material library
                 model.mtl_lib = AssetManager::GetInstance()->LoadFromFile<MtlLib>(dir);
             } else if (tokens[0] == "usemtl") {
                 model.AddMesh(tokens[1]);
             }
         }
+
+        line_no++;
     }
 
     for (size_t i = 0; i < model.indices.size(); i++) {
@@ -136,6 +148,17 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
         auto geom = std::make_shared<Entity>();
         geom->SetName(model.mesh_names[i]);
         geom->SetRenderable(mesh);
+
+        if (model.mtl_lib) {
+            auto it = model.mesh_material_names.find(model.mesh_names[i]);
+
+            if (it != model.mesh_material_names.end()) {
+                if (auto material_ptr = model.mtl_lib->GetMaterial(it->second)) {
+                    geom->SetMaterial(*material_ptr);
+                }
+            }
+        }
+
         res->AddChild(geom);
     }
 

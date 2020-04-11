@@ -21,11 +21,33 @@ void PostShader::ApplyMaterial(const Material &mat)
     if (mat.texture0 != nullptr) {
         Texture::ActiveTexture(0);
         mat.texture0->Use();
-        SetUniform("u_texture", 0);
+        SetUniform("u_colorMap", 0);
     }
-    if (mat.alpha_blended) {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    if (mat.texture1 != nullptr) {
+        Texture::ActiveTexture(1);
+        mat.texture1->Use();
+        SetUniform("u_depthMap", 1);
     }
+
+    if (mat.texture2 != nullptr) {
+        Texture::ActiveTexture(2);
+        mat.texture2->Use();
+        SetUniform("u_positionMap", 2);
+    }
+
+    if (mat.normals0 != nullptr) {
+        Texture::ActiveTexture(3);
+        mat.normals0->Use();
+        SetUniform("u_normalMap", 3);
+    }
+
+    // if (mat.alpha_blended) {
+    //     glEnable(GL_BLEND);
+    //     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // }
+
+    glDepthMask(false);
+    glDisable(GL_DEPTH_TEST);
 }
 } // namespace apex

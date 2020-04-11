@@ -51,13 +51,13 @@ void TerrainShader::ApplyMaterial(const Material &mat)
         Texture::ActiveTexture(0);
         mat.texture0->Use();
         SetUniform("terrainTexture0", 0);
-        SetUniform("terrainTexture0Scale", 20.0f);
+        SetUniform("terrainTexture0Scale", 40.0f);
     }
 
     if (mat.normals0 != nullptr) {
         Texture::ActiveTexture(1);
         mat.normals0->Use();
-        SetUniform("terrainTexture0Normal", 20.0f);
+        SetUniform("terrainTexture0Normal", 1);
     }
 
     if (mat.texture1 != nullptr) {
@@ -71,6 +71,14 @@ void TerrainShader::ApplyMaterial(const Material &mat)
         Texture::ActiveTexture(3);
         mat.normals1->Use();
         SetUniform("slopeTextureNormal", 20.0f);
+    }
+
+    if (mat.HasParameter("shininess")) {
+        SetUniform("u_shininess", mat.GetParameter("shininess")[0]);
+    }
+
+    if (mat.HasParameter("roughness")) {
+        SetUniform("u_roughness", mat.GetParameter("roughness")[0]);
     }
 }
 

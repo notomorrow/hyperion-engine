@@ -59,7 +59,7 @@ public:
     static inline std::string TrimLeft(const std::string &s)
     {
         std::string res(s);
-        res.erase(res.begin(), std::find_if(res.begin(), res.end(), 
+        res.erase(res.begin(), std::find_if(res.begin(), res.end(),
             std::not1(std::ptr_fun<int, int>(std::isspace))));
         return res;
     }
@@ -67,7 +67,7 @@ public:
     static inline std::string TrimRight(const std::string &s)
     {
         std::string res(s);
-        res.erase(std::find_if(res.rbegin(), res.rend(), 
+        res.erase(std::find_if(res.rbegin(), res.rend(),
             std::not1(std::ptr_fun<int, int>(std::isspace))).base(), res.end());
         return res;
     }
@@ -77,7 +77,7 @@ public:
         return TrimLeft(TrimRight(s));
     }
 
-    static inline std::string ReplaceAll(const std::string &text, 
+    static inline std::string ReplaceAll(const std::string &text,
         const std::string &from, const std::string &to)
     {
         std::string result(text);

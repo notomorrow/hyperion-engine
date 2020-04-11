@@ -2,6 +2,7 @@
 #include "../../asset/asset_manager.h"
 #include "../../rendering/shader_manager.h"
 #include "../terrain_shader.h"
+#include "../../rendering/shaders/lighting_shader.h"
 #include "../../rendering/environment.h"
 #include "../../util/random/worley_noise_generator.h"
 #include "../../rendering/bounding_box_renderer.h"
@@ -121,6 +122,8 @@ void NoiseTerrainChunk::OnAdded()
     m_entity = std::make_shared<Entity>("terrain_node");
     m_entity->SetRenderable(mesh);
 
+    m_entity->GetMaterial().SetParameter("shininess", 0.0f);
+    m_entity->GetMaterial().SetParameter("roughness", 0.8f);
     m_entity->GetMaterial().texture0 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass.jpg");
     m_entity->GetMaterial().normals0 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass_nrm.jpg");
     m_entity->GetMaterial().texture1 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirt.jpg");

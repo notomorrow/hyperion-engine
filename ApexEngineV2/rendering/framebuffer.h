@@ -13,8 +13,13 @@ public:
     ~Framebuffer();
 
     inline const std::shared_ptr<Texture2D> &GetColorTexture() const { return color_texture; }
+    inline const std::shared_ptr<Texture2D> &GetNormalTexture() const { return normal_texture; }
+    inline const std::shared_ptr<Texture2D> &GetPositionTexture() const { return position_texture; }
     inline const std::shared_ptr<Texture2D> &GetDepthTexture() const { return depth_texture; }
     inline unsigned int GetId() const { return id; }
+
+    void StoreColor();
+    void StoreDepth();
 
     void Use();
     void End();
@@ -24,7 +29,7 @@ private:
     int width, height;
     bool is_created, is_uploaded;
 
-    std::shared_ptr<Texture2D> color_texture, depth_texture;
+    std::shared_ptr<Texture2D> color_texture, normal_texture, depth_texture, position_texture;
 };
 
 } // namespace apex

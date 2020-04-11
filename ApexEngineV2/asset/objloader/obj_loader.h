@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 namespace apex {
 class MtlLib;
@@ -17,6 +18,7 @@ struct ObjModel {
     };
 
     std::vector<std::string> mesh_names;
+    std::map<std::string, std::string> mesh_material_names;
     std::vector<Vector3> positions;
     std::vector<Vector3> normals;
     std::vector<Vector2> texcoords;

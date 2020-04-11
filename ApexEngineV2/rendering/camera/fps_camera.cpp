@@ -52,7 +52,7 @@ void FpsCamera::CenterMouse()
 void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
 {
     const double sensitivity = 0.1;
-    const double smoothing = 15.0;
+    const double smoothing = 10.0;
 
     mag_x = mouse_x - half_width;
     mag_y = mouse_y - half_height;
@@ -86,7 +86,7 @@ void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
 
 void FpsCamera::HandleKeyboardInput(double dt)
 {
-    const double speed = dt * 3.0;
+    const double speed = dt * 8.0;
 
     if (inputmgr->IsKeyDown(KEY_W)) {
         next_translation += direction * speed;
@@ -98,6 +98,6 @@ void FpsCamera::HandleKeyboardInput(double dt)
     } else if (inputmgr->IsKeyDown(KEY_D)) {
         next_translation += dir_cross_y * speed;
     }
-    translation.Lerp(next_translation, MathUtil::Clamp(3.0 * dt, 0.0, 1.0));
+    translation.Lerp(next_translation, MathUtil::Clamp(2.0 * dt, 0.0, 1.0));
 }
 }

@@ -1,0 +1,138 @@
+# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
+# File Created: 19.09.2015 13:50:30
+
+newmtl CloisterDecoRidge01
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.9412 0.8902 0.8392
+	Kd 0.9412 0.8902 0.8392
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\spnza_bricks_a_diff.jpg
+	map_Kd maps\spnza_bricks_a_diff.jpg
+
+newmtl CloiserWall
+	Ns 16.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.9686 0.9529 0.9216
+	Kd 0.9686 0.9529 0.9216
+	Ks 0.0784 0.0784 0.0784
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\MedievalWall1_t.jpg
+	map_Kd maps\MedievalWall1_t.jpg
+	map_bump maps\MedievalWall1_b.jpg
+	bump maps\MedievalWall1_b.jpg
+
+newmtl RoofTiles1_Red
+	Ns 14.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0110 0.0110 0.0110
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\RoofTiles2_t.jpg
+	map_Kd maps\RoofTiles2_t.jpg
+	map_bump maps\RoofTiles1_b.jpg
+	bump maps\RoofTiles1_b.jpg
+
+newmtl RoofTilesFront1_Red
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1080 0.1080 0.1080
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\RoofTilesFront2_t.jpg
+	map_Kd maps\RoofTilesFront2_t.jpg
+	map_bump maps\RoofTilesFront1_b.jpg
+	bump maps\RoofTilesFront1_b.jpg
+
+newmtl RoofPlanks
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0990 0.0990 0.0990
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\boards2.jpg
+	map_Kd maps\boards2.jpg
+	map_bump maps\boards2.jpg
+	bump maps\boards2.jpg
+
+newmtl DecoMarbles
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.9059 0.8941 0.8824
+	Kd 0.9059 0.8941 0.8824
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\concrete_openfoundation.jpg
+	map_Kd maps\concrete_openfoundation.jpg
+
+newmtl pezuli
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.7373 0.7098 0.6706
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\dwestonefloor02.jpg
+	map_Kd maps\dwestonefloor02.jpg
+
+newmtl floor
+	Ns 16.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\stoneblocks01.jpg
+	map_Kd maps\stoneblocks01.jpg
+	map_bump maps\stoneblocks01n.jpg
+	bump maps\stoneblocks01n.jpg
+
+newmtl CloisterGrounds
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0165 0.0165 0.0165
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\CloisterGrounds.tif
+	map_Kd maps\CloisterGrounds.tif

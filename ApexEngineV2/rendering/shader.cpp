@@ -12,9 +12,9 @@ Shader::Shader(const ShaderProperties &properties)
 {
 }
 
-Shader::Shader(const ShaderProperties &properties, 
+Shader::Shader(const ShaderProperties &properties,
     const std::string &vscode,
-    const std::string &fscode) 
+    const std::string &fscode)
     : is_uploaded(false),
       is_created(false),
       uniform_changed(false)
@@ -134,7 +134,7 @@ void Shader::Use()
                     break;
                 case Uniform::Uniform_Vector4:
                     glUniform4f(loc, uniform.second.data[0], uniform.second.data[1],
-                        uniform.second.data[2], uniform.second.data[2]);
+                        uniform.second.data[2], uniform.second.data[3]);
                     break;
                 case Uniform::Uniform_Matrix4:
                     glUniformMatrix4fv(loc, 1, true, &uniform.second.data[0]);

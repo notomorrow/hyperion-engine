@@ -26,6 +26,7 @@ enum MaterialParameterType {
 class MaterialParameter {
 public:
     MaterialParameter();
+    MaterialParameter(const float value);
     MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype);
     MaterialParameter(const MaterialParameter &other);
 
@@ -44,14 +45,16 @@ private:
 
 class Material {
 public:
+    static const std::map<std::string, MaterialParameter> default_parameters;
+
     Material();
     Material(const Material &other);
 
     bool HasParameter(const std::string &name) const;
-    
+
     std::map<std::string, MaterialParameter> &GetParameters();
     const MaterialParameter &GetParameter(const std::string &name) const;
-    
+
     void SetParameter(const std::string &name, float);
     void SetParameter(const std::string &name, int);
     void SetParameter(const std::string &name, const std::shared_ptr<Texture> &);

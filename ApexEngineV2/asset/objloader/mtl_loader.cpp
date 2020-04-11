@@ -23,6 +23,8 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
     }
 
     while (std::getline(fs, line)) {
+        line = StringUtil::Trim(line);
+
         auto tokens = StringUtil::Split(line, ' ');
         tokens = StringUtil::RemoveEmpty(tokens);
 
@@ -70,8 +72,11 @@ std::shared_ptr<Texture> MtlLoader::LoadTexture(const std::string &name, const s
     }
     dir += "/" + name;
 
+    std::cout << "load texture : " << dir << "\n";
+
     if (!(tex = AssetManager::GetInstance()->LoadFromFile<Texture>(dir))) {
         // load relatively
+    std::cout << "load texture #2 : " << name << "\n";
         tex = AssetManager::GetInstance()->LoadFromFile<Texture>(name);
     }
 
