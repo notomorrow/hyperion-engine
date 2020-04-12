@@ -407,29 +407,29 @@ public:
         //     sponza->Scale(2.0f);
         // }
 
-        // { // cloister
-        //     auto cloister = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cloister/cloister.obj");
-        //     // std::function<void(Entity*)> scan_nodes;
-        //     // scan_nodes = [this, &scan_nodes](Entity *root) {
+        { // cloister
+            auto cloister = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cloister/cloister.obj");
+            // std::function<void(Entity*)> scan_nodes;
+            // scan_nodes = [this, &scan_nodes](Entity *root) {
 
-        //     //     for (size_t i = 0; i < root->NumChildren(); i++) {
-        //     //         root->GetChild(i)->GetRenderable()->SetShader(shader);
+            //     for (size_t i = 0; i < root->NumChildren(); i++) {
+            //         root->GetChild(i)->GetRenderable()->SetShader(shader);
 
-        //     //         scan_nodes(root->GetChild(i).get());
-        //     //     }
-        //     // };
-        //     // scan_nodes(cloister.get());
-        //     for (size_t i = 0; i < cloister->NumChildren(); i++) {
-        //         cloister->GetChild(i)->GetRenderable()->SetShader(shader);
-        //     }
+            //         scan_nodes(root->GetChild(i).get());
+            //     }
+            // };
+            // scan_nodes(cloister.get());
+            for (size_t i = 0; i < cloister->NumChildren(); i++) {
+                cloister->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
 
-        //     cloister->Move(Vector3(5, 18, 0));
-        //     cloister->SetName("cloister");
-        //     top->AddChild(cloister);
+            cloister->Move(Vector3(0, 18, 0));
+            cloister->SetName("cloister");
+            top->AddChild(cloister);
 
-        //     //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-        //     cloister->Scale(2.0f);
-        // }
+            //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+            cloister->Scale(2.0f);
+        }
 
 
 

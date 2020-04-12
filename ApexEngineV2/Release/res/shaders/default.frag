@@ -82,7 +82,7 @@ void main()
   }
   
   
-  vec3 color = Lo;
+  vec3 color = ambient + Lo;
   //specular += pl_specular;
   //specular *= u_shininess;
 
