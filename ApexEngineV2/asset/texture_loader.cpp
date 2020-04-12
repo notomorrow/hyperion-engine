@@ -30,12 +30,12 @@ std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
         throw "Unknown image format";
     }
 
-    tex->Use(); // uploads data
+    /*tex->Use(); // uploads data
 
     stbi_image_free(bytes);
     tex->bytes = nullptr;
 
-    tex->End();
+    tex->End();*/
 
     return tex;
 }

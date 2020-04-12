@@ -42,6 +42,8 @@ void main()
   
   vec3 n = normalize(v_normal.xyz);
   vec3 v = normalize(u_camerapos - v_position.xyz);
+  
+  //mat3 TBN = mat3(v_tangent, v_bitangent, n)
 
 #if NORMAL_MAP
   vec4 flatNormals = texture2D(terrainTexture0Normal, v_texcoord0 * terrainTexture0Scale);
@@ -50,6 +52,7 @@ void main()
 
   normalsTexture.xy = (2.0 * (vec2(1.0) - normalsTexture.rg) - 1.0);
   normalsTexture.z = sqrt(1.0 - dot(normalsTexture.xy, normalsTexture.xy));
+  //normalsTexture = 2.0 * normalsTexture - vec3(1.0);
   n = normalize((v_tangent * normalsTexture.x) + (v_bitangent * normalsTexture.y) + (n * normalsTexture.z));
 #endif
   
@@ -79,31 +82,43 @@ void main()
 
   vec4 lighting = vec4(vec3(ndotl), 1.0) * env_DirectionalLight.color;
   
+  vec3 albedo = diffuseTexture.rgb;
+  vec3 diffuse = albedo;
+
+  // specular
+  vec3 Lo = vec3(0.0);
+
+  //Lo += //ComputeDirectionalLight(env_DirectionalLight, n, normalize(u_camerapos.xyz - v_position.xyz), v_position.xyz, albedo, u_roughness, u_shininess);
+  
+  for (int i = 0; i < env_NumPointLights; i++) {
+    Lo += ComputePointLight(env_PointLights[i], n, normalize(u_camerapos.xyz - v_position.xyz), v_position.xyz, albedo, shadowness, u_roughness, u_shininess);
+  }
+  
   vec4 specular = vec4(max(min(SpecularDirectional(n, v, dir, u_roughness), 1.0), 0.0));
 
-  float fresnel;
+  /*float fresnel;
   fresnel = max(1.0 - dot(n, v), 0.0);
   fresnel = pow(fresnel, 2.0);
-  specular += vec4(fresnel);
+  specular += vec4(fresnel);*/
   
   specular *= env_DirectionalLight.color;
   specular *= u_shininess;
-  //specular *= ndotl;
   specular *= shadowness;
    
   vec4 ambient = vec4(vec3(0.1), 1.0) * env_DirectionalLight.color;
   ambient.rgb *= (1.0 - u_shininess);
   ambient *= shadowColor;
   
-  vec3 diffuse = clamp(lighting.rgb, vec3(0.0), vec3(1.0)) * diffuseTexture.rgb;
+  diffuse = clamp(lighting.rgb, vec3(0.0), vec3(1.0)) * diffuseTexture.rgb;
   diffuse.rgb *= (1.0 - u_shininess);
   diffuse *= shadowColor.rgb;
   
   vec4 fogColor = env_DirectionalLight.color * env_DirectionalLight.color * env_DirectionalLight.color;
+  fogColor.a = 1.0;
 
 
   gl_FragData[1] = vec4(n.xyz, 1.0);
   gl_FragData[2] = vec4(v_position.xyz, 1.0);
  
-  gl_FragData[0] = CalculateFogExp(vec4((vec4(diffuse, 1.0) + ambient + specular)), fogColor, v_position.xyz, u_camerapos, 180.0, 200.0);
+  gl_FragData[0] = CalculateFogExp(vec4(diffuse + specular.rgb, 1.0), fogColor, v_position.xyz, u_camerapos, 320.0, 600.0);
 }

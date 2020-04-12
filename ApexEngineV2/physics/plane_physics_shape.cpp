@@ -6,8 +6,8 @@ namespace apex {
 namespace physics {
 
 PlanePhysicsShape::PlanePhysicsShape(const Vector3 &direction, double offset)
-    : PhysicsShape(PhysicsShape_plane), 
-      m_direction(direction), 
+    : PhysicsShape(PhysicsShape_plane),
+      m_direction(direction),
       m_offset(offset)
 {
 }
@@ -17,6 +17,15 @@ PlanePhysicsShape::PlanePhysicsShape(const PlanePhysicsShape &other)
       m_direction(other.m_direction),
       m_offset(other.m_offset)
 {
+}
+
+BoundingBox PlanePhysicsShape::GetBoundingBox()
+{
+    BoundingBox bounding_box;
+
+    // @TODO
+
+    return bounding_box;
 }
 
 bool PlanePhysicsShape::CollidesWith(BoxPhysicsShape *shape, CollisionList &out)

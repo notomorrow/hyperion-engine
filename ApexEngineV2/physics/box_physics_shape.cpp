@@ -2,7 +2,6 @@
 #include "box_collision.h"
 #include "sphere_physics_shape.h"
 #include "plane_physics_shape.h"
-#include "../math/bounding_box.h"
 
 #include <cassert>
 
@@ -10,15 +9,28 @@ namespace apex {
 namespace physics {
 
 BoxPhysicsShape::BoxPhysicsShape(const Vector3 &dimensions)
-    : PhysicsShape(PhysicsShape_box), 
+    : PhysicsShape(PhysicsShape_box),
       m_dimensions(dimensions)
 {
 }
 
 BoxPhysicsShape::BoxPhysicsShape(const BoxPhysicsShape &other)
-    : PhysicsShape(PhysicsShape_box), 
+    : PhysicsShape(PhysicsShape_box),
       m_dimensions(other.m_dimensions)
 {
+}
+
+BoundingBox BoxPhysicsShape::GetBoundingBox()
+{
+    BoundingBox bounds(m_dimensions * -0.5, m_dimensions * 0.5);
+
+    BoundingBox bounding_box;
+
+    for (const auto &corner : bounds.GetCorners()) {
+        bounding_box.Extend(corner * m_transform);
+    }
+
+    return bounding_box;
 }
 
 bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)

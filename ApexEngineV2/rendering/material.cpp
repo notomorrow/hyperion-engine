@@ -3,8 +3,8 @@
 namespace apex {
 
 const std::map<std::string, MaterialParameter> Material::default_parameters = {
-    { "roughness", MaterialParameter(0.5f) },
-    { "shininess", MaterialParameter(0.5f) }
+    { "roughness", MaterialParameter(0.6f) },
+    { "shininess", MaterialParameter(0.1f) }
 };
 
 MaterialParameter::MaterialParameter()

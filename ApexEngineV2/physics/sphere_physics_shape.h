@@ -13,6 +13,8 @@ public:
     inline double GetRadius() const { return m_radius; }
     inline void SetRadius(double radius) { m_radius = radius; }
 
+    virtual BoundingBox GetBoundingBox() override;
+
     bool CollidesWith(BoxPhysicsShape *shape, CollisionList &out);
     bool CollidesWith(SpherePhysicsShape *shape, CollisionList &out);
     bool CollidesWith(PlanePhysicsShape *shape, CollisionList &out);

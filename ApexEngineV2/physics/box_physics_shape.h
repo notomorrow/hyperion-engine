@@ -16,6 +16,8 @@ public:
     inline Vector3 &GetDimensions() { return m_dimensions; }
     inline void SetDimensions(const Vector3 &dimensions) { m_dimensions = dimensions; }
 
+    virtual BoundingBox GetBoundingBox() override;
+
     bool CollidesWith(BoxPhysicsShape *shape, CollisionList &out);
     bool CollidesWith(SpherePhysicsShape *shape, CollisionList &out);
     bool CollidesWith(PlanePhysicsShape *shape, CollisionList &out);

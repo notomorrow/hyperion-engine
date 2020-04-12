@@ -16,42 +16,11 @@ uniform vec3 u_camerapos;
 
 void main() 
 {
-  vec4 ambient = vec4(vec3(0.3), 1.0);  
+  float metallic = u_shininess;
   vec4 diffuseTexture = texture2D(u_diffuseMap, v_texcoord0);
 
   vec3 n = normalize(v_normal.xyz);
   vec3 v = normalize(u_camerapos - v_position.xyz);
-  
-  float ndotl = max(min(dot(n, env_DirectionalLight.direction), 1.0), 0.0);
-  vec4 lighting = vec4(vec3(ndotl), 1.0);
-  
-  vec3 specular = vec3(max(min(SpecularDirectional(n, u_camerapos.xyz, env_DirectionalLight.direction, u_roughness), 1.0), 0.0));
-    
-  float fresnel;
-  fresnel = max(1.0 - dot(n, v), 0.0);
-  fresnel = pow(fresnel, 2.0);
-  specular += vec3(fresnel);
-  
-  vec3 pl_specular = vec3(0.0);
-  
-  /*for (int i = 0; i < env_NumPointLights; i++) {
-    PointLight pl = env_PointLights[i];
-
-    float dist = distance(pl.position, v_position.xyz);
-
-    if (dist < pl.radius) { // TODO: don't even send the PointLight to the shader if this is the case
-      vec3 p_direction = normalize(pl.position - v_position.xyz);
-      
-      float attenuation = 1.0 / (1.0 + 1.0 * pow(dist, 2.0));
-
-      float p_ndotl = max(min(dot(n, p_direction), 1.0), 0.0);
-      lighting.rgb += (vec3(p_ndotl) * pl.color.xyz) * (1.0 - (dist / pl.radius)) * attenuation;
-
-      float pl_spec = max(min(SpecularDirectional(n, u_camerapos, p_direction, u_roughness), 1.0), 0.0);
-
-      pl_specular += (vec3(pl_spec) * pl.color.xyz) * (1.0 - (dist / pl.radius)) * attenuation;
-    }
-  }*/
   
   
 #if SHADOWS
@@ -67,22 +36,61 @@ void main()
   }
   shadowness /= 16.0;
   //shadowness -= length(pl_specular);
-  shadowness = mix(0.6, shadowness, ndotl);
+  //shadowness = mix(0.6, shadowness, ndotl);
 #endif
 
 #if !SHADOWS
   float shadowness = 1.0;
 #endif
-
-  //specular += pl_specular;
-  specular *= u_shininess;
-
-
-  vec4 diffuse = clamp(lighting + ambient, vec4(0.0), vec4(1.0)) * diffuseTexture;
-  //diffuse *= clamp(shadowness, 0.0, 0.5);
-  diffuse.rgb *= (1.0 - u_shininess);
   
-  gl_FragData[0] = vec4((diffuse + vec4(specular, 1.0)) * vec4(vec3(max(shadowness, 0.5)), 1.0));
+  
+  float fresnel;
+  fresnel = max(1.0 - dot(n, v), 0.0);
+  fresnel = pow(fresnel, 2.0);
+ 
+  
+  vec3 lightDir = normalize(env_DirectionalLight.direction);
+  float ndotl = max(min(dot(n, lightDir), 1.0), 0.0);
+  vec4 lighting = vec4(0.0, 0.0, 0.0, 1.0);//vec4(vec3(1.0 - fresnel) * vec3(1.0 / PI) * vec3(ndotl), 1.0);
+  
+  vec3 albedo = diffuseTexture.rgb;
+  vec3 diffuse = albedo;
+
+  // specular
+  vec3 Lo = vec3(0.0);
+  
+  float NdotL = dot(n, lightDir);
+	float NdotV = dot(n, v);
+	vec3 H = normalize(lightDir + v);
+	float NdotH = dot(n, H);
+	float LdotH = dot(lightDir, H);
+  
+  vec3 F0 = vec3(0.04);
+  F0 = mix(albedo, F0, metallic);
+
+  Lo += ComputeDirectionalLight(env_DirectionalLight, n, v,  v_position.xyz, albedo, shadowness, u_roughness, u_shininess);
+  float mipLevel = u_roughness * 11.0;
+	vec3 cubeMap = texture(env_GlobalCubemap, ReflectionVector(n, normalize(u_camerapos.xyz - v_position.xyz), u_camerapos.xyz), mipLevel).rgb;
+  vec3 ambientSpecF = SchlickFresnelRoughness(F0, LdotH);
+  vec3 ambientDiffuse = vec3(1.0) - ambientSpecF;
+  ambientDiffuse *= 1.0 - metallic;
+  //vec3 specular = cubeMap * fresnel;
+  vec3 ambient = vec3(1.0 - metallic) * (cubeMap * ambientSpecF);//vec3(0.1) * (specular);
+  
+  for (int i = 0; i < env_NumPointLights; i++) {
+    Lo += ComputePointLight(env_PointLights[i], n, normalize(u_camerapos.xyz - v_position.xyz), v_position.xyz, albedo, shadowness, u_roughness, u_shininess);
+  }
+  
+  
+  vec3 color = Lo;
+  //specular += pl_specular;
+  //specular *= u_shininess;
+
+
+  //diffuse *= clamp(shadowness, 0.0, 0.5);
+  //diffuse.rgb *= (1.0 - u_shininess);
+  
+  gl_FragData[0] = vec4(color, 1.0);
   gl_FragData[1] = vec4(n.xyz, 1.0);
   gl_FragData[2] = vec4(v_position.xyz, 1.0);
 }

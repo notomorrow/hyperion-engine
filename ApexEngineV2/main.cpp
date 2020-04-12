@@ -46,7 +46,7 @@
 #include "particles/particle_renderer.h"
 #include "particles/particle_emitter_control.h"
 
-#include "rendering/bounding_box_renderer.h"
+#include "rendering/renderers/bounding_box_renderer.h"
 
 /* Standard library */
 #include <cstdlib>
@@ -93,9 +93,9 @@ public:
 
         //renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
 
-        renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
+        // renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
 
-        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.1f, 100.0f);
+        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.5f, 1500.0f);
         fbo = new Framebuffer(window.width, window.height);
         shadows = new PssmShadowMapping(cam, 4, 100);
     }
@@ -144,6 +144,11 @@ public:
 
     void InitPhysicsTests()
     {
+
+        /*rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
+        rb4->SetAwake(false);
+        PhysicsManager::GetInstance()->RegisterBody(rb4);*/
+
         /*rb1 = std::make_shared<physics::RigidBody>(std::make_shared<physics::SpherePhysicsShape>(0.5), 1.0);
         rb1->SetPosition(Vector3(2, 8, 0));
         //rb1->SetLinearVelocity(Vector3(-1, 10, 0));
@@ -154,48 +159,86 @@ public:
         rb2->SetPosition(Vector3(0, 7, 0));
         // rb2->SetLinearVelocity(Vector3(2, -1, 0.4));
         rb2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-        test_object_1->AddControl(rb2);
+        test_object_1->AddControl(rb2);*/
 
-        rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1)), 1.0);
-        rb3->SetPosition(Vector3(0, 4, 0));
-        rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-        test_object_2->AddControl(rb3);*/
+        Vector3 box_position = Vector3(0, 20, 0);
 
-        rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
-        rb4->SetAwake(false);
+        auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj", true);
+        box->GetChild(0)->GetRenderable()->SetShader(shader);
+        box->GetChild(0)->GetMaterial().diffuse_color = { 0.0f, 0.0f, 1.0f, 1.0f };
+
+        box->SetLocalTranslation(box_position);
+
+        rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 0.0);
+        rb3->SetPosition(box_position);
+        rb3->SetOrientation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(30.0f)));
+        rb3->SetAwake(false);
+        box->AddControl(rb3);
+        PhysicsManager::GetInstance()->RegisterBody(rb3);
+
+        auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rb3->GetBoundingBox());
+        auto bb_renderer_node = std::make_shared<Entity>();
+        bb_renderer_node->SetRenderable(bb_renderer);
+        box->AddChild(bb_renderer_node);
+
+        top->AddChild(box);
+
+
+        { // test object
+            auto object = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
+            for (size_t i = 0; i < object->NumChildren(); i++) {
+                object->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
+
+            auto tex = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/dummy.jpg");
+
+            for (int x = 0; x < 5; x++) {
+                for (int z = 0; z < 5; z++) {
+                    Vector3 position = Vector3(0, 50.0f + (z * 25 + x), 0);
+                    auto clone = std::dynamic_pointer_cast<Entity>(object->Clone());
+                    clone->SetLocalTranslation(position);
+                    clone->SetName("object_" + std::to_string(x) + "_" + std::to_string(z));
+                    for (size_t i = 0; i < clone->NumChildren(); i++) {
+                        clone->GetChild(i)->GetMaterial().texture0 = tex;
+                        clone->GetChild(i)->GetMaterial().SetParameter("roughness", float(x) / 5.0f);
+                        clone->GetChild(i)->GetMaterial().SetParameter("shininess", float(z) / 5.0f);
+                    }
+
+                    auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 4.0);
+                    rigid_body->SetPosition(position);
+                    rigid_body->SetLinearVelocity(Vector3(0, -9, 0));
+                    rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+                    clone->AddControl(rigid_body);
+                    PhysicsManager::GetInstance()->RegisterBody(rigid_body);
+
+
+                    auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rigid_body->GetBoundingBox());
+                    auto bb_renderer_node = std::make_shared<Entity>();
+                    bb_renderer_node->SetRenderable(bb_renderer);
+                    clone->AddChild(bb_renderer_node);
+
+                    if (x == 0 && z == 0) {
+                        auto audio_ctrl = std::make_shared<AudioControl>(
+                        AssetManager::GetInstance()->LoadFromFile<AudioSource>("res/sounds/cartoon001.wav"));
+                        clone->AddControl(audio_ctrl);
+                        audio_ctrl->GetSource()->SetLoop(true);
+                        audio_ctrl->GetSource()->Play();
+                    }
+
+                    top->AddChild(clone);
+                }
+            }
+        }
+
+        //rb4->SetAwake(false);
 
         /*PhysicsManager::GetInstance()->RegisterBody(rb1);
         PhysicsManager::GetInstance()->RegisterBody(rb2);
         PhysicsManager::GetInstance()->RegisterBody(rb3);*/
-        PhysicsManager::GetInstance()->RegisterBody(rb4);
     }
 
     void InitTestObjects()
     {
-        for (int x = -2; x < 2; x++) {
-            for (int z = -2; z < 2; z++) {
-
-                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj", true);
-                box->GetChild(0)->GetRenderable()->SetShader(shader);
-                box->GetChild(0)->GetMaterial().diffuse_color = { 0.0f, 0.0f, 1.0f, 1.0f };
-                Mesh *mesh = dynamic_cast<Mesh*>(box->GetChild(0)->GetRenderable().get());
-
-                /*auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&box->GetChild(0)->GetAABB());
-                auto bb_renderer_node = std::make_shared<Entity>();
-                bb_renderer_node->SetRenderable(bb_renderer);
-                box->AddChild(bb_renderer_node);*/
-
-                box->SetLocalTranslation(Vector3(x * 3, 12, z * 3));
-
-                auto rb = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 1.0);
-                rb->SetPosition(box->GetLocalTranslation());
-                rb->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(0.5), 1.0));
-                box->AddControl(rb);
-                PhysicsManager::GetInstance()->RegisterBody(rb);
-
-                top->AddChild(box);
-            }
-        }
 
         /*test_object_0 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere.obj");
         test_object_0->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 0.15f, 0.3f, 1.0f, 1.0f };
@@ -233,10 +276,10 @@ public:
 
         Environment::GetInstance()->GetSun().SetDirection(Vector3(0.9, 0.9, 0.9).Normalize());
 
-        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 21, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f), 10.0f));
-        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(6.0f, 21, 0), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
-        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 21, 6.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
-        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 21, -6.0f), Vector4(1.0f, 0.4f, 0.7f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(6.0f, 15, 0), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, 6.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, -6.0f), Vector4(1.0f, 0.4f, 0.7f, 1.0f), 10.0f));
 
         // Initialize root node
         top = std::make_shared<Entity>("top");
@@ -298,12 +341,12 @@ public:
 
         inputmgr->RegisterKeyEvent(KeyboardKey::KEY_6, raytest_event);
 
-        auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
+        /*auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
         dragger->Move(Vector3(3, -1.8f, 3));
         dragger->Scale(0.5);
         dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
         dragger->GetControl<SkeletonControl>(0)->PlayAnimation(1, 3.0);
-        top->AddChild(dragger);
+        top->AddChild(dragger);*/
 
          /*auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
          cube->GetChild(0)->GetRenderable()->SetShader(shader);
@@ -326,20 +369,72 @@ public:
         //     top->AddChild(house);
         // }
 
+        std::shared_ptr<Cubemap> cubemap(new Cubemap({
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_right.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_left.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
+        }));
 
-        { // mitsuba
-            auto mitsuba = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
-            for (size_t i = 0; i < mitsuba->NumChildren(); i++) {
-                mitsuba->GetChild(i)->GetRenderable()->SetShader(shader);
-            }
+        Environment::GetInstance()->SetGlobalCubemap(cubemap);
 
-            mitsuba->Move(Vector3(6.0f, 20.2f, 0));
-            mitsuba->SetName("mitsuba");
-            top->AddChild(mitsuba);
-        }
 
-        /*{ // sponza
-            auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
+
+        // { // sponza
+        //     auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
+        //     // std::function<void(Entity*)> scan_nodes;
+        //     // scan_nodes = [this, &scan_nodes](Entity *root) {
+
+        //     //     for (size_t i = 0; i < root->NumChildren(); i++) {
+        //     //         root->GetChild(i)->GetRenderable()->SetShader(shader);
+
+        //     //         scan_nodes(root->GetChild(i).get());
+        //     //     }
+        //     // };
+        //     // scan_nodes(sponza.get());
+        //     for (size_t i = 0; i < sponza->NumChildren(); i++) {
+        //         std::cout << " child [" << i << "] material shininess = " << sponza->GetChild(i)->GetMaterial().GetParameter("shininess")[0] << "\n";
+        //         sponza->GetChild(i)->GetRenderable()->SetShader(shader);
+        //     }
+
+        //     sponza->Move(Vector3(5, 18, 0));
+        //     sponza->SetName("sponza");
+        //     top->AddChild(sponza);
+
+        //     //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+        //     sponza->Scale(2.0f);
+        // }
+
+        // { // cloister
+        //     auto cloister = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cloister/cloister.obj");
+        //     // std::function<void(Entity*)> scan_nodes;
+        //     // scan_nodes = [this, &scan_nodes](Entity *root) {
+
+        //     //     for (size_t i = 0; i < root->NumChildren(); i++) {
+        //     //         root->GetChild(i)->GetRenderable()->SetShader(shader);
+
+        //     //         scan_nodes(root->GetChild(i).get());
+        //     //     }
+        //     // };
+        //     // scan_nodes(cloister.get());
+        //     for (size_t i = 0; i < cloister->NumChildren(); i++) {
+        //         cloister->GetChild(i)->GetRenderable()->SetShader(shader);
+        //     }
+
+        //     cloister->Move(Vector3(5, 18, 0));
+        //     cloister->SetName("cloister");
+        //     top->AddChild(cloister);
+
+        //     //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+        //     cloister->Scale(2.0f);
+        // }
+
+
+
+       /* { // apartment
+            auto apartment = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/apartment/flat01.obj");
             // std::function<void(Entity*)> scan_nodes;
             // scan_nodes = [this, &scan_nodes](Entity *root) {
 
@@ -349,46 +444,42 @@ public:
             //         scan_nodes(root->GetChild(i).get());
             //     }
             // };
-            // scan_nodes(sponza.get());
-            for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                std::cout << " child [" << i << "] material shininess = " << sponza->GetChild(i)->GetMaterial().GetParameter("shininess")[0] << "\n";
-                sponza->GetChild(i)->GetRenderable()->SetShader(shader);
+            // scan_nodes(apartment.get());
+            for (size_t i = 0; i < apartment->NumChildren(); i++) {
+                apartment->GetChild(i)->GetRenderable()->SetShader(shader);
             }
 
-            sponza->Move(Vector3(5, 18, 0));
-            sponza->SetName("sponza");
-            top->AddChild(sponza);
+            apartment->Move(Vector3(5, 18, 0));
+            apartment->SetName("apartment");
+            top->AddChild(apartment);
 
             //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-            sponza->Scale(2.0f);
+            apartment->Scale(4.0f);
         }*/
 
-        { // cloister
-            auto cloister = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cloister/cloister.obj");
-            // std::function<void(Entity*)> scan_nodes;
-            // scan_nodes = [this, &scan_nodes](Entity *root) {
+        // { // sewers
+        //     auto sewers = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sewers/sewers/sewer.obj");
+        //     // std::function<void(Entity*)> scan_nodes;
+        //     // scan_nodes = [this, &scan_nodes](Entity *root) {
 
-            //     for (size_t i = 0; i < root->NumChildren(); i++) {
-            //         root->GetChild(i)->GetRenderable()->SetShader(shader);
+        //     //     for (size_t i = 0; i < root->NumChildren(); i++) {
+        //     //         root->GetChild(i)->GetRenderable()->SetShader(shader);
 
-            //         scan_nodes(root->GetChild(i).get());
-            //     }
-            // };
-            // scan_nodes(cloister.get());
-            for (size_t i = 0; i < cloister->NumChildren(); i++) {
-                cloister->GetChild(i)->GetRenderable()->SetShader(shader);
-            }
+        //     //         scan_nodes(root->GetChild(i).get());
+        //     //     }
+        //     // };
+        //     // scan_nodes(sewers.get());
+        //     for (size_t i = 0; i < sewers->NumChildren(); i++) {
+        //         sewers->GetChild(i)->GetRenderable()->SetShader(shader);
+        //     }
 
-            cloister->Move(Vector3(5, 18, 0));
-            cloister->SetName("cloister");
-            top->AddChild(cloister);
+        //     sewers->Move(Vector3(5, 18, 0));
+        //     sewers->SetName("sewers");
+        //     top->AddChild(sewers);
 
-            //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-            cloister->Scale(2.0f);
-        }
-
-
-
+        //     //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+        //     sewers->Scale(5.0f);
+        // }
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 54));
@@ -439,12 +530,12 @@ public:
 
         cam->Update(dt);
 
-        const double theta = 0.02;
-        if (physics_update_timer >= theta) {
-            PhysicsManager::GetInstance()->RunPhysics(theta);
-            physics_update_timer = 0.0;
-        }
-        physics_update_timer += dt;
+        //const double theta = 0.01;
+        //if (physics_update_timer >= theta) {
+            PhysicsManager::GetInstance()->RunPhysics(dt);
+       //     physics_update_timer = 0.0;
+       // }
+       // physics_update_timer += dt;
 
         top->Update(dt);
     }
@@ -454,18 +545,18 @@ public:
         renderer->FindRenderables(top.get());
 
         if (Environment::GetInstance()->ShadowsEnabled()) {
-            if (shadow_timer >= 0.04) {
+            //if (shadow_timer >= 0.04) {
                 Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
                 shadow_dir.SetY(-1.0f);
                 shadows->SetLightDirection(shadow_dir.Normalize());
                 shadows->Render(renderer);
                 shadow_timer = 0.0;
-            }
+           // }
         }
 
-        renderer->RenderAll(cam, fbo);
+        renderer->RenderAll(cam/*, fbo*/);
         renderer->ClearRenderables();
-        renderer->RenderPost(cam, fbo);
+        //renderer->RenderPost(cam, fbo);
     }
 };
 

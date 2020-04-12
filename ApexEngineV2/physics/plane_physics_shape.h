@@ -17,6 +17,8 @@ public:
     inline double GetOffset() const { return m_offset; }
     inline void SetOffset(double offset) { m_offset = offset; }
 
+    virtual BoundingBox GetBoundingBox() override;
+
     bool CollidesWith(BoxPhysicsShape *shape, CollisionList &out);
     bool CollidesWith(SpherePhysicsShape *shape, CollisionList &out);
     bool CollidesWith(PlanePhysicsShape *shape, CollisionList &out);

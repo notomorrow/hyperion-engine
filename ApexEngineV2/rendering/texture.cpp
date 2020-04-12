@@ -4,33 +4,34 @@
 namespace apex {
 
 Texture::Texture()
-    : width(0), 
-      height(0), 
-      bytes(nullptr), 
-      ifmt(GL_RGB8), 
+    : width(0),
+      height(0),
+      bytes(nullptr),
+      ifmt(GL_RGB8),
       fmt(GL_RGB),
-      mag_filter(GL_LINEAR), 
+      mag_filter(GL_LINEAR),
       min_filter(GL_LINEAR_MIPMAP_LINEAR),
-      wrap_s(GL_REPEAT), 
+      wrap_s(GL_REPEAT),
       wrap_t(GL_REPEAT)
 {
 }
 
 Texture::Texture(int width, int height, unsigned char *bytes)
-    : width(width), 
-      height(height), 
-      bytes(bytes), 
-      ifmt(GL_RGB8), 
+    : width(width),
+      height(height),
+      bytes(bytes),
+      ifmt(GL_RGB8),
       fmt(GL_RGB),
-      mag_filter(GL_LINEAR), 
+      mag_filter(GL_LINEAR),
       min_filter(GL_LINEAR_MIPMAP_LINEAR),
-      wrap_s(GL_REPEAT), 
+      wrap_s(GL_REPEAT),
       wrap_t(GL_REPEAT)
 {
 }
 
 Texture::~Texture()
 {
+    free(bytes);
 }
 
 unsigned int Texture::GetId() const

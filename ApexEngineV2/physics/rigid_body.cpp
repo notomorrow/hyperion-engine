@@ -80,8 +80,8 @@ static Matrix3 CalculateInverseInertiaWorldMatrix(const Matrix3 &iit_body, const
 
 RigidBody::RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material)
     : EntityControl(60.0),
-      m_shape(shape), 
-      m_material(material), 
+      m_shape(shape),
+      m_material(material),
       m_awake(true)
 {
 }
@@ -131,6 +131,8 @@ void RigidBody::OnUpdate(double dt)
     tmp.Invert();
     parent->SetLocalRotation(tmp);
     parent->SetLocalTranslation(m_position);
+
+    m_bounding_box = m_shape->GetBoundingBox();
 }
 
 } // namespace physics

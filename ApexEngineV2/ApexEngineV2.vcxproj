@@ -216,7 +216,7 @@
     <ClInclude Include="physics\physics_manager.h" />
     <ClInclude Include="physics\physics_object.h" />
     <ClInclude Include="physics\shapes\aabb_physics_object.h" />
-    <ClInclude Include="rendering\bounding_box_renderer.h" />
+    <ClInclude Include="rendering\renderers\bounding_box_renderer.h" />
     <ClInclude Include="rendering\camera\camera.h" />
     <ClInclude Include="rendering\camera\fps_camera.h" />
     <ClInclude Include="rendering\camera\ortho_camera.h" />
@@ -249,6 +249,7 @@
     <ClInclude Include="rendering\postprocess\filters\ssao_filter.h" />
     <ClInclude Include="rendering\texture.h" />
     <ClInclude Include="rendering\texture_2D.h" />
+    <ClInclude Include="rendering\cubemap.h" />
     <ClInclude Include="rendering\vertex.h" />
     <ClInclude Include="render_window.h" />
     <ClInclude Include="math\transform.h" />
@@ -325,7 +326,7 @@
     <ClCompile Include="physics\physics_manager.cpp" />
     <ClCompile Include="physics\physics_object.cpp" />
     <ClCompile Include="physics\shapes\aabb_physics_object.cpp" />
-    <ClCompile Include="rendering\bounding_box_renderer.cpp" />
+    <ClCompile Include="rendering\renderers\bounding_box_renderer.cpp" />
     <ClCompile Include="rendering\camera\camera.cpp" />
     <ClCompile Include="core_engine.cpp" />
     <ClCompile Include="rendering\camera\fps_camera.cpp" />
@@ -358,6 +359,7 @@
     <ClCompile Include="rendering\skydome\skydome_shader.cpp" />
     <ClCompile Include="rendering\texture.cpp" />
     <ClCompile Include="rendering\texture_2D.cpp" />
+    <ClCompile Include="rendering\cubemap.cpp" />
     <ClCompile Include="terrain\noise_terrain\noise_terrain_chunk.cpp" />
     <ClCompile Include="terrain\noise_terrain\noise_terrain_control.cpp" />
     <ClCompile Include="terrain\terrain_shader.cpp" />

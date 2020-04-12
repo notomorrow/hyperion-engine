@@ -8,6 +8,7 @@
 #include "../math/vector3.h"
 #include "../math/matrix4.h"
 #include "../math/quaternion.h"
+#include "../math/bounding_box.h"
 
 #include <memory>
 
@@ -71,13 +72,15 @@ public:
     inline Vector3 &GetPosition()
         { return m_position; }
     inline void SetPosition(const Vector3 &position)
-        { m_position = position; }
+        { m_position = position; UpdateTransform(); }
     inline const Quaternion &GetOrientation() const
         { return m_orientation; }
     inline Quaternion &GetOrientation()
         { return m_orientation; }
     inline void SetOrientation(const Quaternion &orientation)
-        { m_orientation = orientation; }
+        { m_orientation = orientation; UpdateTransform(); }
+
+    inline const BoundingBox &GetBoundingBox() const { return m_bounding_box; }
 
     // updates the transform of the PhysicsShape within this object
     void UpdateTransform();
@@ -103,6 +106,7 @@ private:
     Vector3 m_torque_accum;
     Vector3 m_position;
     Quaternion m_orientation;
+    BoundingBox m_bounding_box;
 };
 } // namespace physics
 } // namespace apex

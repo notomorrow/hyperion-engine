@@ -152,8 +152,10 @@ std::shared_ptr<Loadable> Entity::Clone()
 
 std::shared_ptr<Entity> Entity::CloneImpl()
 {
-    auto new_entity = std::make_shared<Entity>(m_name);
-    
+    auto new_entity = std::make_shared<Entity>(m_name + "_clone");
+
+    new_entity->m_flags = m_flags;
+
     new_entity->m_material = m_material;
 
     // reference copy
@@ -165,7 +167,7 @@ std::shared_ptr<Entity> Entity::CloneImpl()
 
     // clone all child entities
     for (auto &child : m_children) {
-        new_entity->m_children.push_back(child->CloneImpl());
+        new_entity->AddChild(child->CloneImpl());
     }
 
     return new_entity;

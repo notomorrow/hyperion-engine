@@ -6,6 +6,7 @@
 #include "../math/matrix4.h"
 #include "../math/vector2.h"
 #include "../rendering/texture.h"
+#include "../rendering/cubemap.h"
 #include "./lights/directional_light.h"
 #include "./lights/point_light.h"
 
@@ -44,11 +45,17 @@ public:
     inline const std::shared_ptr<PointLight> &GetPointLight(size_t index) const { return m_point_lights[index]; }
     inline void AddPointLight(const std::shared_ptr<PointLight> &point_light) { m_point_lights.push_back(point_light); }
 
+    inline const std::shared_ptr<Cubemap> &GetGlobalCubemap() const { return m_global_cubemap; }
+    inline std::shared_ptr<Cubemap> &GetGlobalCubemap() { return m_global_cubemap; }
+    inline void SetGlobalCubemap(const std::shared_ptr<Cubemap> &cubemap) { m_global_cubemap = cubemap; }
+
 private:
     static Environment *instance;
 
     DirectionalLight m_sun;
     std::vector<std::shared_ptr<PointLight>> m_point_lights;
+
+    std::shared_ptr<Cubemap> m_global_cubemap;
 
     Vector3 m_gravity;
 

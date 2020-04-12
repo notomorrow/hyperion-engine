@@ -63,6 +63,12 @@ void LightingShader::ApplyMaterial(const Material &mat)
         SetUniform("u_diffuseMap", 0);
     }
 
+    if (auto cubemap = env->GetGlobalCubemap()) {
+        Texture::ActiveTexture(1);
+        cubemap->Use();
+        SetUniform("env_GlobalCubemap", 1);
+    }
+
     if (mat.HasParameter("shininess")) {
         SetUniform("u_shininess", mat.GetParameter("shininess")[0]);
     }

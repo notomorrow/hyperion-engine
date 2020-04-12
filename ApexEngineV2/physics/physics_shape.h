@@ -6,6 +6,7 @@
 #include "../math/vector3.h"
 #include "../math/matrix4.h"
 #include "../math/ray.h"
+#include "../math/bounding_box.h"
 
 namespace apex {
 namespace physics {
@@ -34,6 +35,8 @@ public:
     inline PhysicsShapeType GetType() const { return m_type; }
 
     Vector3 GetAxis(unsigned int index) const;
+
+    virtual BoundingBox GetBoundingBox() = 0;
 
     virtual bool CollidesWith(BoxPhysicsShape *shape, CollisionList &out) = 0;
     virtual bool CollidesWith(SpherePhysicsShape *shape, CollisionList &out) = 0;
