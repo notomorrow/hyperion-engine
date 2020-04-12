@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <vector>
 
-#include "renderable.h"
-#include "../math/bounding_box.h"
-#include "mesh.h"
+#include "../renderable.h"
+#include "../../math/bounding_box.h"
+#include "../mesh.h"
 
 namespace apex {
 

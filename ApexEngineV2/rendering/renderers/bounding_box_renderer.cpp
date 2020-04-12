@@ -1,5 +1,5 @@
 #include "bounding_box_renderer.h"
-#include "shaders/shader_code.h"
+#include "../shaders/shader_code.h"
 
 namespace apex {
 const std::vector<uint32_t> BoundingBoxRenderer::indices = {

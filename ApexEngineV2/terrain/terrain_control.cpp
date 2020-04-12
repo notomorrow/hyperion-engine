@@ -1,5 +1,5 @@
 #include "terrain_control.h"
-#include "../rendering/bounding_box_renderer.h"
+#include "../rendering/renderers/bounding_box_renderer.h"
 
 #include <thread>
 

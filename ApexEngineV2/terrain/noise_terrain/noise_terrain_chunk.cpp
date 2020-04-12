@@ -5,7 +5,6 @@
 #include "../../rendering/shaders/lighting_shader.h"
 #include "../../rendering/environment.h"
 #include "../../util/random/worley_noise_generator.h"
-#include "../../rendering/bounding_box_renderer.h"
 
 #include <noise/noise.h>
 #include <noise/module/ridgedmulti.h>
@@ -40,10 +39,6 @@ std::vector<double> NoiseTerrainChunk::GenerateHeights(int seed, const ChunkInfo
     multi.SetNoiseQuality(noise::NoiseQuality::QUALITY_FAST);
     multi.SetOctaveCount(11);
     multi.SetLacunarity(2.0);
-
-    module::Voronoi voronoi;
-    voronoi.SetFrequency(0.05);
-    voronoi.SetSeed(seed);
 
     WorleyNoiseGenerator worley(seed);
 
