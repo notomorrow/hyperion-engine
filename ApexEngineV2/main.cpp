@@ -28,6 +28,8 @@
 #include "animation/skeleton_control.h"
 #include "math/bounding_box.h"
 
+#include "rendering/shaders/cubemap_renderer_shader.h"
+
 /* Post */
 #include "rendering/postprocess/filters/gamma_correction_filter.h"
 #include "rendering/postprocess/filters/ssao_filter.h"
@@ -68,6 +70,7 @@ public:
     std::shared_ptr<Entity> top;
     std::shared_ptr<Entity> test_object_0, test_object_1, test_object_2;
     std::shared_ptr<Shader> shader;
+    std::shared_ptr<Shader> cubemap_renderer_shader;
     std::shared_ptr<Texture> tex;
     std::shared_ptr<Entity> debug_quad;
 
@@ -102,6 +105,7 @@ public:
         fbo = new Framebuffer2D(window.width, window.height);
         env_fbo = new FramebufferCube(256, 256);
         shadows = new PssmShadowMapping(cam, 4, 100);
+
     }
 
     ~MyGame()
@@ -311,6 +315,8 @@ public:
             { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
         };
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
+
+        cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties {});
 
         tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass.jpg");
 
@@ -566,7 +572,10 @@ public:
             shadows->Render(renderer);
         }
 
-        glBindFramebuffer(GL_FRAMEBUFFER, env_fbo->GetId());
+        env_fbo->Use();
+        renderer->RenderBucket(env_cam, renderer->opaque_bucket, cubemap_renderer_shader.get());
+        env_fbo->End();
+        /*glBindFramebuffer(GL_FRAMEBUFFER, env_fbo->GetId());
         env_cam->SetDirection(Vector3(1, 0, 0));
         env_cam->UpdateMatrices();
         renderer->RenderAll(cam, fbo);
@@ -596,7 +605,7 @@ public:
         env_cam->UpdateMatrices();
         renderer->RenderAll(env_cam, env_fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetId(), 0);
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetId(), 0);*/
 
         renderer->RenderAll(cam, fbo);
         renderer->ClearRenderables();

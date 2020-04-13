@@ -235,6 +235,7 @@
     <ClInclude Include="rendering\shader.h" />
     <ClInclude Include="rendering\shaders\lighting_shader.h" />
     <ClInclude Include="rendering\shaders\normals_shader.h" />
+    <ClInclude Include="rendering\shaders\cubemap_renderer_shader.h" />
     <ClInclude Include="rendering\shaders\post\gamma_correct.h" />
     <ClInclude Include="rendering\shaders\post\ssao.h" />
     <ClInclude Include="rendering\shaders\post_shader.h" />
@@ -347,6 +348,7 @@
     <ClCompile Include="rendering\shader.cpp" />
     <ClCompile Include="rendering\shaders\lighting_shader.cpp" />
     <ClCompile Include="rendering\shaders\normals_shader.cpp" />
+    <ClCompile Include="rendering\shaders\cubemap_renderer_shader.cpp" />
     <ClCompile Include="rendering\shaders\post\gamma_correct.cpp" />
     <ClCompile Include="rendering\shaders\post\ssao.cpp" />
     <ClCompile Include="rendering\shaders\post_shader.cpp" />

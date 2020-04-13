@@ -54,15 +54,17 @@ void Renderer::FindRenderables(Entity *top)
     }
 }
 
-void Renderer::RenderBucket(Camera *cam, Bucket_t &bucket)
+void Renderer::RenderBucket(Camera *cam, Bucket_t &bucket, Shader *override_shader)
 {
+    Shader *shader = nullptr;
+
     for (BucketItem &it : bucket) {
-        if (it.renderable->m_shader != nullptr) {
-            it.renderable->m_shader->ApplyMaterial(*it.material);
-            it.renderable->m_shader->ApplyTransforms(it.transform.GetMatrix(), cam);
-            it.renderable->m_shader->Use();
+        if ((shader = override_shader ? override_shader : it.renderable->m_shader.get())) {
+            shader->ApplyMaterial(*it.material);
+            shader->ApplyTransforms(it.transform.GetMatrix(), cam);
+            shader->Use();
             it.renderable->Render();
-            it.renderable->m_shader->End();
+            shader->End();
         }
     }
 }

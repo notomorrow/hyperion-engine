@@ -19,6 +19,8 @@ struct BucketItem {
 
 using Bucket_t = std::vector<BucketItem>;
 
+class Shader;
+
 class Renderer {
 public:
     Renderer();
@@ -26,7 +28,7 @@ public:
 
     void ClearRenderables();
     void FindRenderables(Entity *top);
-    void RenderBucket(Camera *cam, Bucket_t &bucket);
+    void RenderBucket(Camera *cam, Bucket_t &bucket, Shader *override_shader = nullptr);
     void RenderAll(Camera *cam, Framebuffer *fbo = nullptr);
     void RenderPost(Camera *cam, Framebuffer *fbo);
 
