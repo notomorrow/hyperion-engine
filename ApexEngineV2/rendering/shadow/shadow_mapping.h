@@ -3,7 +3,7 @@
 
 #include "../environment.h"
 #include "../texture.h"
-#include "../framebuffer.h"
+#include "../framebuffer_2d.h"
 #include "../../math/vector3.h"
 #include "../../math/bounding_box.h"
 #include "../../math/matrix_util.h"

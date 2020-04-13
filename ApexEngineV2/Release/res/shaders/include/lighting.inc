@@ -1,6 +1,16 @@
 uniform float u_shininess;
 uniform float u_roughness;
 
+uniform int u_hasDiffuseMap;
+uniform vec4 u_diffuseColor;
+uniform sampler2D u_diffuseMap;
+
+uniform int u_hasNormalMap;
+uniform sampler2D u_normalMap;
+
+uniform int u_hasAoMap;
+uniform sampler2D u_aoMap;
+
 struct DirectionalLight
 {
 	vec3 direction;
@@ -22,11 +32,14 @@ uniform int env_NumPointLights;
 /* cubemapping */
 uniform samplerCube env_GlobalCubemap;
 
+// brdf
+uniform sampler2D u_brdfMap;
+
 vec3 ReflectionVector(vec3 n, vec3 worldPos, vec3 camPos)
 {
-	  vec3 i = normalize(worldPos - camPos);
+	  vec3 v = normalize(worldPos - camPos);
 
-	  return reflect(i, n);
+	  return reflect(-v, n);
 }
 /* ========== */
 
@@ -232,6 +245,11 @@ vec3 ComputeDirectionalLight(DirectionalLight dl, vec3 n, vec3 v, vec3 vert, vec
 	lightDir.y = abs(lightDir.y);
 	lightDir = normalize(lightDir);
 
+
+  float fresnel;
+  fresnel = max(1.0 - dot(n, v), 0.0);
+  fresnel = pow(fresnel, 2.0);
+
 	vec3 F0 = vec3(0.04);
   F0 = mix(albedo, F0, metalness);
 
@@ -255,7 +273,7 @@ vec3 ComputeDirectionalLight(DirectionalLight dl, vec3 n, vec3 v, vec3 vert, vec
   kD *= vec3(1.0 - metalness);
   kD = max(min(kD, 1.0), 0.0);
 
-	return (kD * albedo / vec3(PI) + brdf) * vec3(NdotL) * dl.color.rgb * shadowness;
+	return (kD * albedo / vec3(PI) + brdf) * vec3(NdotL) * dl.color.rgb;
 }
 
 
@@ -289,5 +307,5 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 v, vec3 vert, vec3 albedo, fl
 	vec3 kD = vec3(1.0) - kS;
 	kD *= vec3(1.0 - metalness);
 
-	return (kD * albedo / vec3(PI) + brdf) * radiance * vec3(NdotL) * shadowness;
+	return (kD * albedo / vec3(PI) + brdf) * radiance * vec3(NdotL);
 }

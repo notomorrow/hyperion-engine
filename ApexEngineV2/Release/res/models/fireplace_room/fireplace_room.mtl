@@ -1,0 +1,160 @@
+newmtl grey_and_white_room:BottleCap
+illum 4
+Kd 0.46 0.00 0.00
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl grey_and_white_room:Branches
+illum 4
+Kd 0.16 0.08 0.02
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl grey_and_white_room:BrushedStainlessSteel
+illum 4
+Kd 0.0 0.0 0.00
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ks 0.85 0.78 0.55
+Ns 5
+Ni 1.00
+newmtl grey_and_white_room:Dirt
+illum 4
+Kd 0.10 0.05 0.04
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl grey_and_white_room:FireplaceGlass
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ks 0.1 0.1 0.1
+Ns 100
+Ni 1.00
+newmtl grey_and_white_room:Floor
+illum 4
+Kd 1.00 1.00 1.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 1.0
+Ks 0.02 0.02 0.02
+Ns 10.00
+map_Kd textures\wood.png
+newmtl grey_and_white_room:Glass
+illum 7
+Kd 0.0 0.00 0.0
+Ka 0.0 0.0 0.0
+Tf 0.1 0.1 0.1
+Ks 0.5 0.5 0.5
+Ns 1000
+Ni 1.00
+newmtl grey_and_white_room:Leaves
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+Ks 0.00 0.00 0.00
+Ns 0.06
+map_Kd textures\leaf.png
+#map_d textures\leaf_alpha.png
+newmtl grey_and_white_room:MattePaint
+illum 4
+Kd 0.9 0.9 0.9
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ks 0 0 0
+Ni 1.00
+newmtl grey_and_white_room:Mirror
+illum 3
+Kd 0.80 0.80 0.80
+Ka 0.0 0.00 0.00
+Ks 0.95 0.95 0.95
+Tf 1.00 1.00 1.00
+Ns 100000
+Ni 1.00
+newmtl grey_and_white_room:Painting
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+map_Kd textures\picture8.png
+newmtl grey_and_white_room:PaintingBack
+illum 4
+Kd 0.26 0.25 0.14
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl grey_and_white_room:Paneling
+illum 4
+Kd 0.90 0.90 0.90
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 1.00
+Ks 0.1 0.1 0.1
+Ns 5
+newmtl grey_and_white_room:PlantPot
+illum 4
+Kd 0.10 0.10 0.10
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl grey_and_white_room:Sofa
+illum 4
+Kd 0.9 0.9 0.88
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ks 0 0 0
+Ni 1.00
+newmtl grey_and_white_room:SofaLegs
+illum 4
+Kd 0.10 0.10 0.10
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl grey_and_white_room:TableWood
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+Ks 0.04 0.04 0.04
+Ns 0.06
+map_Kd textures\wood5.png
+newmtl grey_and_white_room:Transluscent
+illum 4
+Kd 0.30 0.30 0.30
+Ka 0.40 0.40 0.40
+Tf 1.00 1.00 1.00
+Ni 1.00
+newmtl grey_and_white_room:Walls
+illum 4
+Kd 0.17 0.132 0.10
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ks 0 0 0
+Ni 1.00
+newmtl grey_and_white_room:initialShadingGroup
+illum 4
+Kd 0.50 0.50 0.50
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+Ni 1.00
+
+# This is the front
+newmtl grey_and_white_room:lambert2SG_light
+illum 7
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Ke 4.00 4.00 4.00
+Ni 1.00
+
+# Side window (fireplace wall)
+newmtl lambert3SG
+illum 7
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Ke 4.00 4.00 4.00
+Ni 1.00

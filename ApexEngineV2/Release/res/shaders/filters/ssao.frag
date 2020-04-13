@@ -99,9 +99,9 @@ void main(void)
 		}
 	}
 
-    vec3 noiseRgb = texture(u_noiseMap, v_texcoord0 * vec2(300.0)).rgb;
+    vec3 noiseRgb = texture(u_noiseMap, v_texcoord0 * vec2(40.0)).rgb;
 	// No occlusion gets white, full occlusion gets black.
-	occlusion = 1.0 - (occlusion / float($KERNEL_SIZE));
+	occlusion = min(max(1.0 - ((occlusion / float($KERNEL_SIZE))), 0.0), 1.0);
 
 	gl_FragColor = vec4(texture(u_colorMap, v_texcoord0).rgb * vec3(occlusion), 1.0);
 }

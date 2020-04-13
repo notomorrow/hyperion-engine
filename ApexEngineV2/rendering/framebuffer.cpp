@@ -11,26 +11,6 @@ Framebuffer::Framebuffer(int width, int height)
 {
     is_uploaded = false;
     is_created = false;
-
-    color_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-    color_texture->SetInternalFormat(GL_RGB16);
-    color_texture->SetFilter(GL_NEAREST, GL_NEAREST);
-    color_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
-
-    normal_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-    normal_texture->SetInternalFormat(GL_RGBA32F);
-    normal_texture->SetFilter(GL_NEAREST, GL_NEAREST);
-    normal_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
-
-    position_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-    position_texture->SetInternalFormat(GL_RGBA32F);
-    position_texture->SetFilter(GL_NEAREST, GL_NEAREST);
-    position_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
-
-    depth_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-    depth_texture->SetInternalFormat(GL_DEPTH_COMPONENT24);
-    depth_texture->SetFormat(GL_DEPTH_COMPONENT);
-    depth_texture->SetFilter(GL_NEAREST, GL_NEAREST);
 }
 
 Framebuffer::~Framebuffer()
@@ -42,74 +22,9 @@ Framebuffer::~Framebuffer()
     is_created = false;
 }
 
-void Framebuffer::Use()
-{
-    if (!is_created) {
-        glGenFramebuffers(1, &id);
-        is_created = true;
-    }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, id);
-    glViewport(0, 0, width, height);
-
-    if (!is_uploaded) {
-        color_texture->Use();
-        glFramebufferTexture(GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT0, color_texture->GetId(), 0);
-        color_texture->End();
-
-        normal_texture->Use();
-        glFramebufferTexture(GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT1, normal_texture->GetId(), 0);
-        normal_texture->End();
-
-        position_texture->Use();
-        glFramebufferTexture(GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT2, position_texture->GetId(), 0);
-        position_texture->End();
-
-        depth_texture->Use();
-        glFramebufferTexture(GL_FRAMEBUFFER,
-            GL_DEPTH_ATTACHMENT, depth_texture->GetId(), 0);
-        depth_texture->End();
-
-        const unsigned int draw_buffers[] = {
-            GL_COLOR_ATTACHMENT0, // color map
-            GL_COLOR_ATTACHMENT1, // normal map
-            GL_COLOR_ATTACHMENT2  // position map
-        };
-        glDrawBuffers(3, draw_buffers);
-
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            throw std::runtime_error("Could not create framebuffer");
-        }
-
-        is_uploaded = true;
-    }
-
-}
-
 void Framebuffer::End()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-void Framebuffer::StoreColor()
-{
-    color_texture->Use();
-
-    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, width, height);
-
-    color_texture->End();
-}
-
-void Framebuffer::StoreDepth()
-{
-    depth_texture->Use();
-
-    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, width, height);
-
-    depth_texture->End();
 }
 
 

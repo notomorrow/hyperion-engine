@@ -70,6 +70,7 @@ void Mesh::SetAttribute(MeshAttributeType type, const MeshAttribute &attribute)
 
 std::vector<float> Mesh::CreateBuffer()
 {
+    std::cout << "create buffer\n";
     unsigned int vert_size = 0, prev_size = 0, offset = 0;
 
     for (auto &&attr : attribs) {
@@ -94,6 +95,7 @@ std::vector<float> Mesh::CreateBuffer()
 
     for (size_t i = 0; i < vertices.size(); i++) {
         auto &vertex = vertices[i];
+                // std::cout << "vertex tangent : " << vertex.GetTangent() << "\n";
         if (pos_it != attribs.end()) {
             buffer[(i * vert_size) + pos_it->second.offset] = vertex.GetPosition().x;
             buffer[(i * vert_size) + pos_it->second.offset + 1] = vertex.GetPosition().y;
@@ -139,6 +141,54 @@ std::vector<float> Mesh::CreateBuffer()
     return buffer;
 }
 
+void Mesh::CalculateTangents()
+{
+    Vertex *v[3];
+    Vector2 uv[3];
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        for (int j = 0; j < 3; j++) {
+            v[j] = &vertices[indices[i + j]];
+            uv[j] = v[j]->GetTexCoord0();
+        }
+
+        Vector3 edge1 = v[1]->GetPosition() - v[0]->GetPosition();
+        Vector3 edge2 = v[2]->GetPosition() - v[0]->GetPosition();
+
+        Vector2 edge1uv = uv[1] - uv[0];
+        Vector2 edge2uv = uv[2] - uv[0];
+
+        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
+
+        if (cp != 0.0f) {
+            const float mul = 1.0f / cp;
+
+            Vector3 tangent;
+            tangent.x = edge2uv.y * edge1.x - edge1uv.y * edge2.x;
+            tangent.y = edge2uv.y * edge1.y - edge1uv.y * edge2.y;
+            tangent.z = edge2uv.y * edge1.z - edge1uv.y * edge2.z;
+            tangent *= mul;
+            tangent.Normalize();
+
+            Vector3 bitangent;
+
+            bitangent.x = -edge2uv.x * edge1.x + edge1uv.x * edge2.x;
+            bitangent.y = -edge2uv.x * edge1.y + edge1uv.x * edge2.y;
+            bitangent.z = -edge2uv.x * edge1.z + edge1uv.x * edge2.z;
+            bitangent *= mul;
+            bitangent.Normalize();
+
+            for (int j = 0; j < 3; j++) {
+                v[j]->SetTangent(tangent);
+                v[j]->SetBitangent(bitangent);
+            }
+        }
+    }
+
+    SetAttribute(ATTR_TANGENTS, MeshAttribute::Tangents);
+    SetAttribute(ATTR_BITANGENTS, MeshAttribute::Bitangents);
+}
+
 void Mesh::Render()
 {
     if (!is_created) {
@@ -168,7 +218,7 @@ void Mesh::Render()
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glDrawElements(primitive_type, indices.size(), GL_UNSIGNED_INT, 0);
-    
+
     for (auto &&attr : attribs) {
         glDisableVertexAttribArray(attr.second.index);
     }

@@ -17,6 +17,7 @@ std::shared_ptr<Mesh> TerrainChunk::BuildMesh(const std::vector<double> &heights
     mesh->SetVertices(vertices, indices);
     mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
     mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
+    mesh->CalculateTangents();
 
     return mesh;
 }
@@ -40,9 +41,9 @@ void TerrainChunk::CalculateNormals(std::vector<Vertex> &vertices, const std::ve
 
         Vector3 u = p2 - p0;
         Vector3 v = p1 - p0;
-        Vector3 n = u;
+        Vector3 n = v;
 
-        n.Cross(v);
+        n.Cross(u);
         n.Normalize();
 
         AddNormal(vertices[i0], n);
@@ -53,7 +54,7 @@ void TerrainChunk::CalculateNormals(std::vector<Vertex> &vertices, const std::ve
     for (Vertex &vert : vertices) {
         Vector3 tmp(vert.GetNormal());
         tmp.Normalize();
-        vert.SetNormal(tmp * -1);
+        vert.SetNormal(tmp);
     }
 }
 

@@ -13,6 +13,9 @@ public:
     Cubemap(const std::array<std::shared_ptr<Texture2D>, 6> &textures);
     virtual ~Cubemap();
 
+    inline const std::array<std::shared_ptr<Texture2D>, 6> GetTextures() const
+        { return m_textures; }
+
     void Use();
     void End();
 

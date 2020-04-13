@@ -33,15 +33,19 @@ LightingShader::LightingShader(const ShaderProperties &properties)
 
 void LightingShader::ApplyMaterial(const Material &mat)
 {
+    int texture_index = 0;
+
     auto *env = Environment::GetInstance();
     if (env->ShadowsEnabled()) {
         for (int i = 0; i < env->NumCascades(); i++) {
             const std::string i_str = std::to_string(i);
-            Texture::ActiveTexture(5 + i);
+            Texture::ActiveTexture(texture_index);
             env->GetShadowMap(i)->Use();
-            SetUniform("u_shadowMap[" + i_str + "]", 5 + i);
+            SetUniform("u_shadowMap[" + i_str + "]", texture_index);
             SetUniform("u_shadowMatrix[" + i_str + "]", env->GetShadowMatrix(i));
             SetUniform("u_shadowSplit[" + i_str + "]", (float)env->GetShadowSplit(i));
+
+            texture_index++;
         }
     }
 
@@ -58,15 +62,63 @@ void LightingShader::ApplyMaterial(const Material &mat)
     SetUniform("u_diffuseColor", mat.diffuse_color);
 
     if (mat.texture0 != nullptr) {
-        Texture::ActiveTexture(0);
+        Texture::ActiveTexture(texture_index);
         mat.texture0->Use();
-        SetUniform("u_diffuseMap", 0);
+        SetUniform("u_diffuseMap", texture_index);
+        SetUniform("u_hasDiffuseMap", 1);
+
+        texture_index++;
+    } else {
+        SetUniform("u_hasDiffuseMap", 0);
     }
 
     if (auto cubemap = env->GetGlobalCubemap()) {
-        Texture::ActiveTexture(1);
+        Texture::ActiveTexture(texture_index);
         cubemap->Use();
-        SetUniform("env_GlobalCubemap", 1);
+        SetUniform("env_GlobalCubemap", texture_index);
+
+        texture_index++;
+    }
+
+    if (mat.texture1 != nullptr) {
+        Texture::ActiveTexture(texture_index);
+        mat.texture1->Use();
+        SetUniform("u_parallaxMap", texture_index);
+        SetUniform("u_hasParallaxMap", 1);
+
+        texture_index++;
+    } else {
+        SetUniform("u_hasParallaxMap", 0);
+    }
+
+    if (mat.texture2 != nullptr) {
+        Texture::ActiveTexture(texture_index);
+        mat.texture2->Use();
+        SetUniform("u_aoMap", texture_index);
+        SetUniform("u_hasAoMap", 1);
+
+        texture_index++;
+    } else {
+        SetUniform("u_hasAoMap", 0);
+    }
+
+    if (mat.texture3 != nullptr) {
+        Texture::ActiveTexture(texture_index);
+        mat.texture3->Use();
+        SetUniform("u_brdfMap", texture_index);
+
+        texture_index++;
+    }
+
+    if (mat.normals0 != nullptr) {
+        Texture::ActiveTexture(texture_index);
+        mat.normals0->Use();
+        SetUniform("u_normalMap", texture_index);
+        SetUniform("u_hasNormalMap", 1);
+
+        texture_index++;
+    } else {
+        SetUniform("u_hasNormalMap", 0);
     }
 
     if (mat.HasParameter("shininess")) {

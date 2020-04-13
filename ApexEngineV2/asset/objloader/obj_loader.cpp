@@ -79,7 +79,6 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
     int line_no = 0;
 
     while (std::getline(fs, line)) {
-        // std::cout << "line [" << line_no << "] = " << line << "\n";
         auto tokens = StringUtil::Split(line, ' ');
         tokens = StringUtil::RemoveEmpty(tokens);
 
@@ -100,7 +99,7 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
                 model.texcoords.push_back(Vector2(x, y));
             } else if (tokens[0] == "f") {
                 auto &list = model.CurrentList();
-                // std::cout << path << "\t" << "f " << tokens[1] << "\t" << tokens[2] << "\t" << tokens[3] << "\n";
+
                 for (int i = 0; i < tokens.size() - 3; i++) {
                     list.push_back(model.ParseObjIndex(tokens[1]));
                     list.push_back(model.ParseObjIndex(tokens[2 + i]));
@@ -140,7 +139,10 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
 
         if (model.has_normals) {
             mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
+
+            mesh->CalculateTangents();
         }
+
         if (model.has_texcoords) {
             mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
         }

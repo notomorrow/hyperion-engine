@@ -10,26 +10,25 @@ namespace apex {
 class Framebuffer {
 public:
     Framebuffer(int width, int height);
-    ~Framebuffer();
+    virtual ~Framebuffer();
 
-    inline const std::shared_ptr<Texture2D> &GetColorTexture() const { return color_texture; }
-    inline const std::shared_ptr<Texture2D> &GetNormalTexture() const { return normal_texture; }
-    inline const std::shared_ptr<Texture2D> &GetPositionTexture() const { return position_texture; }
-    inline const std::shared_ptr<Texture2D> &GetDepthTexture() const { return depth_texture; }
     inline unsigned int GetId() const { return id; }
 
-    void StoreColor();
-    void StoreDepth();
+    virtual const std::shared_ptr<Texture> GetColorTexture() const = 0;
+    virtual const std::shared_ptr<Texture> GetNormalTexture() const = 0;
+    virtual const std::shared_ptr<Texture> GetPositionTexture() const = 0;
+    virtual const std::shared_ptr<Texture> GetDepthTexture() const = 0;
 
-    void Use();
+    virtual void StoreColor() = 0;
+    virtual void StoreDepth() = 0;
+
+    virtual void Use() = 0;
     void End();
 
-private:
+protected:
     unsigned int id;
     int width, height;
     bool is_created, is_uploaded;
-
-    std::shared_ptr<Texture2D> color_texture, normal_texture, depth_texture, position_texture;
 };
 
 } // namespace apex

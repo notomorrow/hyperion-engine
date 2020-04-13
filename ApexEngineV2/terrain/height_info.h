@@ -44,9 +44,9 @@ struct NeighborChunkInfo {
 };
 
 struct ChunkInfo {
-    int m_width = 64;
-    int m_length = 64;
-    int m_height = 7;
+    int m_width = 256;
+    int m_length = 256;
+    int m_height = 64;
     Vector2 m_position;
     Vector3 m_scale;
     PageState m_page_state;

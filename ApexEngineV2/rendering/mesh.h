@@ -36,7 +36,7 @@ public:
     struct MeshAttribute {
         static const MeshAttribute Positions, Normals,
             TexCoords0, TexCoords1,
-            Tangents, Bitangents, 
+            Tangents, Bitangents,
             BoneWeights, BoneIndices;
 
         unsigned int offset, size, index;
@@ -57,8 +57,8 @@ public:
 
         bool operator==(const MeshAttribute &other) const
         {
-            return offset == other.offset && 
-                size == other.size && 
+            return offset == other.offset &&
+                size == other.size &&
                 index == other.index;
         }
     };
@@ -74,6 +74,8 @@ public:
     void SetAttribute(MeshAttributeType type, const MeshAttribute &attribute);
     inline void SetPrimitiveType(PrimitiveType prim_type) { primitive_type = prim_type; }
     inline PrimitiveType GetPrimitiveType() const { return primitive_type; }
+
+    void CalculateTangents();
 
     void Render();
 

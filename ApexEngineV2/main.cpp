@@ -11,7 +11,8 @@
 #include "rendering/camera/perspective_camera.h"
 #include "rendering/camera/fps_camera.h"
 #include "rendering/texture.h"
-#include "rendering/framebuffer.h"
+#include "rendering/framebuffer_2d.h"
+#include "rendering/framebuffer_cube.h"
 #include "rendering/shaders/lighting_shader.h"
 #include "rendering/shaders/post_shader.h"
 #include "rendering/shader_manager.h"
@@ -60,8 +61,8 @@ using namespace apex;
 class MyGame : public Game {
 public:
     Renderer *renderer;
-    Camera *cam;
-    Framebuffer *fbo;
+    Camera *cam, *env_cam;
+    Framebuffer *fbo, *env_fbo;
     PssmShadowMapping *shadows;
 
     std::shared_ptr<Entity> top;
@@ -93,10 +94,13 @@ public:
 
         //renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
 
-        // renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
+        renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
 
-        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.5f, 1500.0f);
-        fbo = new Framebuffer(window.width, window.height);
+        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.5f, 5500.0f);
+        env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
+        env_cam->SetTranslation(Vector3(0, 10, 0));
+        fbo = new Framebuffer2D(window.width, window.height);
+        env_fbo = new FramebufferCube(256, 256);
         shadows = new PssmShadowMapping(cam, 4, 100);
     }
 
@@ -104,7 +108,9 @@ public:
     {
         delete shadows;
         delete fbo;
+        delete env_fbo;
         delete cam;
+        delete env_cam;
         delete renderer;
     }
 
@@ -161,11 +167,18 @@ public:
         rb2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
         test_object_1->AddControl(rb2);*/
 
+        const auto brdf_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/brdfLUT.png");
+
         Vector3 box_position = Vector3(0, 20, 0);
 
-        auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj", true);
+        auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
         box->GetChild(0)->GetRenderable()->SetShader(shader);
-        box->GetChild(0)->GetMaterial().diffuse_color = { 0.0f, 0.0f, 1.0f, 1.0f };
+        box->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        box->GetChild(0)->GetMaterial().texture0 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/rock/Rock035_2K_Color.jpg");
+        box->GetChild(0)->GetMaterial().texture1 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/rock/Rock035_2K_Displacement.jpg");
+        box->GetChild(0)->GetMaterial().texture2 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/rock/Rock035_2K_AmbientOcclusion.jpg");
+        box->GetChild(0)->GetMaterial().texture3 = brdf_map;
+        box->GetChild(0)->GetMaterial().normals0 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/rock/Rock035_2K_Normal.jpg");
 
         box->SetLocalTranslation(box_position);
 
@@ -179,43 +192,46 @@ public:
         auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rb3->GetBoundingBox());
         auto bb_renderer_node = std::make_shared<Entity>();
         bb_renderer_node->SetRenderable(bb_renderer);
-        box->AddChild(bb_renderer_node);
+        //box->AddChild(bb_renderer_node);
 
         top->AddChild(box);
 
 
         { // test object
-            auto object = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/monkeyhq.obj");
+            auto object = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
             for (size_t i = 0; i < object->NumChildren(); i++) {
                 object->GetChild(i)->GetRenderable()->SetShader(shader);
+
+                object->GetChild(i)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+                object->GetChild(i)->GetMaterial().texture3 = brdf_map;
             }
 
             auto tex = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/dummy.jpg");
 
             for (int x = 0; x < 5; x++) {
                 for (int z = 0; z < 5; z++) {
-                    Vector3 position = Vector3(0, 50.0f + (z * 25 + x), 0);
+                    Vector3 position = Vector3(x * 3, 24.0f, z * 3);
                     auto clone = std::dynamic_pointer_cast<Entity>(object->Clone());
                     clone->SetLocalTranslation(position);
                     clone->SetName("object_" + std::to_string(x) + "_" + std::to_string(z));
                     for (size_t i = 0; i < clone->NumChildren(); i++) {
                         clone->GetChild(i)->GetMaterial().texture0 = tex;
-                        clone->GetChild(i)->GetMaterial().SetParameter("roughness", float(x) / 5.0f);
-                        clone->GetChild(i)->GetMaterial().SetParameter("shininess", float(z) / 5.0f);
+                        clone->GetChild(i)->GetMaterial().SetParameter("roughness", MathUtil::Max(float(x) / 5.0f, 0.001f));
+                        clone->GetChild(i)->GetMaterial().SetParameter("shininess", MathUtil::Max(float(z) / 5.0f, 0.001f));
                     }
 
                     auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 4.0);
                     rigid_body->SetPosition(position);
                     rigid_body->SetLinearVelocity(Vector3(0, -9, 0));
                     rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-                    clone->AddControl(rigid_body);
-                    PhysicsManager::GetInstance()->RegisterBody(rigid_body);
+                    //clone->AddControl(rigid_body);
+                    //PhysicsManager::GetInstance()->RegisterBody(rigid_body);
 
 
-                    auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rigid_body->GetBoundingBox());
-                    auto bb_renderer_node = std::make_shared<Entity>();
-                    bb_renderer_node->SetRenderable(bb_renderer);
-                    clone->AddChild(bb_renderer_node);
+                    //auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rigid_body->GetBoundingBox());
+                   // auto bb_renderer_node = std::make_shared<Entity>();
+                   // bb_renderer_node->SetRenderable(bb_renderer);
+                   // clone->AddChild(bb_renderer_node);
 
                     if (x == 0 && z == 0) {
                         auto audio_ctrl = std::make_shared<AudioControl>(
@@ -291,6 +307,7 @@ public:
 
         ShaderProperties defines = {
             { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
+            { "NORMAL_MAPPING", 1 },
             { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
         };
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
@@ -377,37 +394,35 @@ public:
             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
         }));
+        Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
+        //Environment::GetInstance()->SetGlobalCubemap(cubemap);
 
-        Environment::GetInstance()->SetGlobalCubemap(cubemap);
+        /*{ // sponza
+            auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
+            // std::function<void(Entity*)> scan_nodes;
+            // scan_nodes = [this, &scan_nodes](Entity *root) {
 
+            //     for (size_t i = 0; i < root->NumChildren(); i++) {
+            //         root->GetChild(i)->GetRenderable()->SetShader(shader);
 
+            //         scan_nodes(root->GetChild(i).get());
+            //     }
+            // };
+            // scan_nodes(sponza.get());
+            for (size_t i = 0; i < sponza->NumChildren(); i++) {
+                std::cout << " child [" << i << "] material shininess = " << sponza->GetChild(i)->GetMaterial().GetParameter("shininess")[0] << "\n";
+                sponza->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
 
-        // { // sponza
-        //     auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
-        //     // std::function<void(Entity*)> scan_nodes;
-        //     // scan_nodes = [this, &scan_nodes](Entity *root) {
+            sponza->Move(Vector3(60, 5, 0));
+            sponza->SetName("sponza");
+            top->AddChild(sponza);
 
-        //     //     for (size_t i = 0; i < root->NumChildren(); i++) {
-        //     //         root->GetChild(i)->GetRenderable()->SetShader(shader);
+            //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+            sponza->Scale(2.0f);
+        }*/
 
-        //     //         scan_nodes(root->GetChild(i).get());
-        //     //     }
-        //     // };
-        //     // scan_nodes(sponza.get());
-        //     for (size_t i = 0; i < sponza->NumChildren(); i++) {
-        //         std::cout << " child [" << i << "] material shininess = " << sponza->GetChild(i)->GetMaterial().GetParameter("shininess")[0] << "\n";
-        //         sponza->GetChild(i)->GetRenderable()->SetShader(shader);
-        //     }
-
-        //     sponza->Move(Vector3(5, 18, 0));
-        //     sponza->SetName("sponza");
-        //     top->AddChild(sponza);
-
-        //     //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-        //     sponza->Scale(2.0f);
-        // }
-
-        { // cloister
+        /*{ // cloister
             auto cloister = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cloister/cloister.obj");
             // std::function<void(Entity*)> scan_nodes;
             // scan_nodes = [this, &scan_nodes](Entity *root) {
@@ -429,7 +444,7 @@ public:
 
             //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
             cloister->Scale(2.0f);
-        }
+        }*/
 
 
 
@@ -482,7 +497,7 @@ public:
         // }
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 54));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3543534));
     }
 
     void Logic(double dt)
@@ -545,18 +560,47 @@ public:
         renderer->FindRenderables(top.get());
 
         if (Environment::GetInstance()->ShadowsEnabled()) {
-            //if (shadow_timer >= 0.04) {
-                Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
-                shadow_dir.SetY(-1.0f);
-                shadows->SetLightDirection(shadow_dir.Normalize());
-                shadows->Render(renderer);
-                shadow_timer = 0.0;
-           // }
+            Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
+            shadow_dir.SetY(-1.0f);
+            shadows->SetLightDirection(shadow_dir.Normalize());
+            shadows->Render(renderer);
         }
 
-        renderer->RenderAll(cam/*, fbo*/);
+        glBindFramebuffer(GL_FRAMEBUFFER, env_fbo->GetId());
+        env_cam->SetDirection(Vector3(1, 0, 0));
+        env_cam->UpdateMatrices();
+        renderer->RenderAll(cam, fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X, env_fbo->GetId(), 0);
+        env_cam->SetDirection(Vector3(-1, 0, 0));
+        env_cam->UpdateMatrices();
+        renderer->RenderAll(env_cam, env_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_X, env_fbo->GetId(), 0);
+        env_cam->SetDirection(Vector3(0, 1, 0));
+        env_cam->UpdateMatrices();
+        renderer->RenderAll(env_cam, env_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Y, env_fbo->GetId(), 0);
+        env_cam->SetDirection(Vector3(0, -1, 0));
+        env_cam->UpdateMatrices();
+        renderer->RenderAll(env_cam, env_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, env_fbo->GetId(), 0);
+        env_cam->SetDirection(Vector3(0, 0, 1));
+        env_cam->UpdateMatrices();
+        renderer->RenderAll(env_cam, env_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Z, env_fbo->GetId(), 0);
+        env_cam->SetDirection(Vector3(0, 0, -1));
+        env_cam->UpdateMatrices();
+        renderer->RenderAll(env_cam, env_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetId(), 0);
+
+        renderer->RenderAll(cam, fbo);
         renderer->ClearRenderables();
-        //renderer->RenderPost(cam, fbo);
+        renderer->RenderPost(cam, fbo);
     }
 };
 

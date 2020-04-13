@@ -223,6 +223,8 @@
     <ClInclude Include="rendering\camera\perspective_camera.h" />
     <ClInclude Include="rendering\environment.h" />
     <ClInclude Include="rendering\framebuffer.h" />
+    <ClInclude Include="rendering\framebuffer_2d.h" />
+    <ClInclude Include="rendering\framebuffer_cube.h" />
     <ClInclude Include="rendering\lightsource.h" />
     <ClInclude Include="rendering\lights\directional_light.h" />
     <ClInclude Include="rendering\lights\point_light.h" />
@@ -334,6 +336,8 @@
     <ClCompile Include="rendering\camera\perspective_camera.cpp" />
     <ClCompile Include="rendering\environment.cpp" />
     <ClCompile Include="rendering\framebuffer.cpp" />
+    <ClCompile Include="rendering\framebuffer_2d.cpp" />
+    <ClCompile Include="rendering\framebuffer_cube.cpp" />
     <ClCompile Include="rendering\lights\directional_light.cpp" />
     <ClCompile Include="rendering\lights\point_light.cpp" />
     <ClCompile Include="rendering\material.cpp" />

@@ -42,8 +42,10 @@ void BoundingBoxRenderer::Render()
     UpdateVertices();
 
     glLineWidth(2.0f);
+    m_shader->Use();
     m_mesh->SetVertices(m_vertices, BoundingBoxRenderer::indices);
     m_mesh->Render();
+    m_shader->End();
     glLineWidth(1.0f);
 }
 } // namespace apex
