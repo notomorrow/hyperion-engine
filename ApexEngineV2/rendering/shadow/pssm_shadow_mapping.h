@@ -10,13 +10,13 @@
 namespace apex {
 class PssmShadowMapping {
 public:
-    PssmShadowMapping(Camera *view_cam, int num_splits, int max_dist);
+    PssmShadowMapping(Camera *view_cam, int num_splits, double max_dist);
 
     int NumSplits() const;
     void SetLightDirection(const Vector3 &dir);
 
     void Render(Renderer *renderer);
-    
+
 private:
     const int num_splits;
     std::vector<std::shared_ptr<ShadowMapping>> shadow_renderers;

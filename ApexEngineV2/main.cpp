@@ -98,7 +98,7 @@ public:
 
         renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
 
-        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.5f, 5500.0f);
+        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.5f, 1500.0f);
         //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
         //env_cam->SetTranslation(Vector3(0, 10, 0));
         fbo = new Framebuffer2D(window.width, window.height);

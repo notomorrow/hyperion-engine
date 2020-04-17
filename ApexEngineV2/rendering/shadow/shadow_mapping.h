@@ -14,7 +14,7 @@
 namespace apex {
 class ShadowMapping {
 public:
-    ShadowMapping(Camera *view_cam, int max_dist);
+    ShadowMapping(Camera *view_cam, double max_dist);
     ~ShadowMapping();
 
     const Vector3 &GetLightDirection() const;
@@ -26,7 +26,7 @@ public:
     void End();
 
 private:
-    int max_dist;
+    double max_dist;
 
     OrthoCamera *shadow_cam;
     Camera *view_cam;

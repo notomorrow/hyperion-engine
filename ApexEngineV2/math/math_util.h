@@ -34,12 +34,12 @@ public:
     template <typename T>
     static inline T Clamp(const T &val, const T &min, const T &max)
     {
-        if (val > max) { 
-            return max; 
-        } else if (val < min) { 
-            return min; 
-        } else { 
-            return val; 
+        if (val > max) {
+            return max;
+        } else if (val < min) {
+            return min;
+        } else {
+            return val;
         }
     }
 
@@ -52,21 +52,33 @@ public:
     template <typename T>
     static inline T Min(const T &a, const T &b)
     {
-        if (a < b) { 
-            return a; 
-        } else { 
-            return b; 
+        if (a < b) {
+            return a;
+        } else {
+            return b;
         }
     }
 
     template <typename T>
     static inline T Max(const T &a, const T &b)
     {
-        if (a > b) { 
-            return a; 
+        if (a > b) {
+            return a;
         } else {
             return b;
         }
+    }
+
+    template <typename T>
+    static inline int Floor(T a)
+    {
+        return floor(a);
+    }
+
+    template <typename T>
+    static inline int Ceil(T a)
+    {
+        return ceil(a);
     }
 };
 
