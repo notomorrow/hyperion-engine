@@ -20,26 +20,26 @@ uniform vec3 u_camerapos;
 void main()
 {
   float metallic = u_shininess;
-  
-  
+
+
   vec3 lightDir = normalize(env_DirectionalLight.direction);
 
   vec3 n = normalize(v_normal.xyz);
   vec3 v = normalize(u_camerapos - v_position.xyz);
-  
+
   vec3 tangentViewPos = v_tbn * v;
   vec3 tangentLightPos = v_tbn * lightDir;
   vec3 tangentFragPos = v_tbn * v_position.xyz;
-  
+
   vec2 texCoords = v_texcoord0;
-  
+
   if (u_hasParallaxMap) {
     texCoords = ParallaxMapping(v_texcoord0, normalize(tangentViewPos - tangentFragPos));
   }
 
   vec4 diffuseTexture = texture2D(u_diffuseMap, texCoords);
 
-  
+
 #if NORMAL_MAPPING
   if (u_hasNormalMap) {
     vec4 normalsTexture = texture2D(u_normalMap, texCoords);
@@ -55,7 +55,7 @@ void main()
   float shadowness = 0.0;
   const float radius = 0.1;
   int shadowSplit = getShadowMapSplit(u_camerapos, v_position.xyz);
- 
+
   for (int x = 0; x < 4; x++) {
     for (int y = 0; y < 4; y++) {
       vec2 offset = poissonDisk[x * 4 + y] * radius;
@@ -84,7 +84,7 @@ void main()
   vec4 lighting = vec4(0.0, 0.0, 0.0, 1.0);//vec4(vec3(1.0 - fresnel) * vec3(1.0 / PI) * vec3(ndotl), 1.0);
 
   vec3 albedo = u_diffuseColor.rgb;
-  
+
   if (u_hasDiffuseMap) {
     albedo *= diffuseTexture.rgb;
   }
@@ -122,7 +122,7 @@ void main()
   if (u_hasAoMap) {
     ambient *= texture2D(u_aoMap, texCoords).r;
   }
-  
+
   for (int i = 0; i < env_NumPointLights; i++) {
     //Lo += ComputePointLight(env_PointLights[i], n, normalize(u_camerapos.xyz - v_position.xyz), v_position.xyz, albedo, shadowness, u_roughness, u_shininess);
   }
@@ -131,7 +131,7 @@ void main()
   vec3 color = (ambient + Lo) * shadowColor.rgb;
 
 
-  gl_FragData[0] = vec4(textureCube(env_GlobalCubemap, ReflectionVector(n, v_position.xyz, u_camerapos.xyz)).rgb, 1.0);//vec4(color, 1.0);
+  gl_FragData[0] = vec4(color, 1.0);//vec4(color, 1.0);
   gl_FragData[1] = vec4(n.xyz, 1.0);
   gl_FragData[2] = vec4(v_position.xyz, 1.0);
 }

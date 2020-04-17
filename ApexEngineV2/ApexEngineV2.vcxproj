@@ -369,7 +369,7 @@
     <ClCompile Include="terrain\noise_terrain\noise_terrain_chunk.cpp" />
     <ClCompile Include="terrain\noise_terrain\noise_terrain_control.cpp" />
     <ClCompile Include="terrain\terrain_shader.cpp" />
-    <ClCompile Include="util\random\open_simplex_noise.c" />
+    <ClCompile Include="util\random\open_simplex_noise.cpp" />
     <ClCompile Include="util\random\worley_noise_generator.cpp" />
     <ClCompile Include="terrain\terrain_chunk.cpp" />
     <ClCompile Include="terrain\terrain_control.cpp" />
