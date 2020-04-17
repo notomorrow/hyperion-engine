@@ -3,7 +3,7 @@
 
 namespace apex {
 
-const Mesh::MeshAttribute Mesh::MeshAttribute::Positions = {0, 3, 0};
+const Mesh::MeshAttribute Mesh::MeshAttribute::Positions = {0, 3, 0 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::Normals = { 0, 3, 1 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::TexCoords0 = { 0, 2, 2 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::TexCoords1 = { 0, 2, 3 };
@@ -36,7 +36,7 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts)
     vertices = verts;
     indices.clear();
     for (size_t i = 0; i < verts.size(); i++) {
-        indices.push_back(i);
+        indices.push_back(static_cast<MeshIndex>(i));
     }
 
     // update the aabb
@@ -48,7 +48,7 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts)
     is_uploaded = false;
 }
 
-void Mesh::SetVertices(const std::vector<Vertex> &verts, const std::vector<size_t> &ind)
+void Mesh::SetVertices(const std::vector<Vertex> &verts, const std::vector<MeshIndex> &ind)
 {
     vertices = verts;
     indices = ind;
@@ -70,7 +70,6 @@ void Mesh::SetAttribute(MeshAttributeType type, const MeshAttribute &attribute)
 
 std::vector<float> Mesh::CreateBuffer()
 {
-    std::cout << "create buffer\n";
     unsigned int vert_size = 0, prev_size = 0, offset = 0;
 
     for (auto &&attr : attribs) {
@@ -95,7 +94,7 @@ std::vector<float> Mesh::CreateBuffer()
 
     for (size_t i = 0; i < vertices.size(); i++) {
         auto &vertex = vertices[i];
-                // std::cout << "vertex tangent : " << vertex.GetTangent() << "\n";
+
         if (pos_it != attribs.end()) {
             buffer[(i * vert_size) + pos_it->second.offset] = vertex.GetPosition().x;
             buffer[(i * vert_size) + pos_it->second.offset + 1] = vertex.GetPosition().y;
@@ -202,7 +201,7 @@ void Mesh::Render()
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(float), &buffer[0], GL_STATIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(MeshIndex), &indices[0], GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         is_uploaded = true;

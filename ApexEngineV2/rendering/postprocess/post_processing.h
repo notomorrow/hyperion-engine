@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "../mesh.h"
 #include "../framebuffer.h"

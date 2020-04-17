@@ -7,9 +7,13 @@
 #include <vector>
 #include <map>
 
-#include <stddef.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace apex {
+
+typedef uint32_t MeshIndex;
+
 class Mesh : public Renderable {
 public:
     enum PrimitiveType {
@@ -67,9 +71,9 @@ public:
     virtual ~Mesh();
 
     void SetVertices(const std::vector<Vertex> &verts);
-    void SetVertices(const std::vector<Vertex> &verts, const std::vector<size_t> &ind);
+    void SetVertices(const std::vector<Vertex> &verts, const std::vector<MeshIndex> &ind);
     inline const std::vector<Vertex> &GetVertices() const { return vertices; }
-    inline const std::vector<size_t> &GetIndices() const { return indices; }
+    inline const std::vector<MeshIndex> &GetIndices() const { return indices; }
 
     void SetAttribute(MeshAttributeType type, const MeshAttribute &attribute);
     inline void SetPrimitiveType(PrimitiveType prim_type) { primitive_type = prim_type; }
@@ -83,7 +87,7 @@ private:
     bool is_uploaded, is_created;
     unsigned int vbo, ibo, vertex_size;
     std::vector<Vertex> vertices;
-    std::vector<size_t> indices;
+    std::vector<MeshIndex> indices;
     PrimitiveType primitive_type;
 
     // map attribute to offset

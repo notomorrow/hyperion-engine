@@ -69,9 +69,9 @@ void Shader::Use()
             if (!status) {
                 int maxlen;
                 glGetShaderiv(sub.id, GL_INFO_LOG_LENGTH, &maxlen);
-
                 char *log = new char[maxlen];
-                glGetShaderInfoLog(sub.id, maxlen, &maxlen, log);
+                memset(log, 0, maxlen);
+                glGetShaderInfoLog(sub.id, maxlen, NULL, log);
 
                 std::cout << "Shader compile error! ";
                 std::cout << "Compile log: \n" << log << "\n";
@@ -95,17 +95,20 @@ void Shader::Use()
         int linked = 0;
         glGetProgramiv(progid, GL_LINK_STATUS, &linked);
 
-        if (linked == false) {
+        if (!linked) {
             int maxlen = 0;
             glGetProgramiv(progid, GL_INFO_LOG_LENGTH, &maxlen);
 
-            char *log = new char[maxlen];
+            if (maxlen != 0) {
+                char *log = new char[maxlen];
+                std::cout << maxlen << "\n";
 
-            glGetProgramInfoLog(progid, maxlen, &maxlen, log);
-            glDeleteProgram(progid);
-            std::cout << "Log: \n " << log << "\n\n";
+                glGetProgramInfoLog(progid, maxlen, NULL, log);
+                memset(log, 0, maxlen);
+                glDeleteProgram(progid);
 
-            delete[] log;
+                delete[] log;
+            }
         }
 
         is_uploaded = true;

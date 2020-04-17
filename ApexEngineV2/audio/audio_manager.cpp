@@ -22,10 +22,18 @@ AudioManager::AudioManager()
 AudioManager::~AudioManager()
 {
     if (m_is_initialized) {
-        alcCloseDevice(m_device);
+        alcMakeContextCurrent(NULL);
         alcDestroyContext(m_context);
+        alcCloseDevice(m_device);
     }
     m_is_initialized = false;
+}
+
+void AudioManager::Deinitialize()
+{
+    delete instance;
+    instance = nullptr;
+
 }
 
 bool AudioManager::Initialize()

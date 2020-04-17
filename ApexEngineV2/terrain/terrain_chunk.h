@@ -26,9 +26,9 @@ protected:
 
     std::shared_ptr<Mesh> BuildMesh(const std::vector<double> &heights);
     void AddNormal(Vertex &vertex, const Vector3 &normal);
-    void CalculateNormals(std::vector<Vertex> &vertices, const std::vector<size_t> &indices);
+    void CalculateNormals(std::vector<Vertex> &vertices, const std::vector<MeshIndex> &indices);
     std::vector<Vertex> BuildVertices(const std::vector<double> &heights);
-    std::vector<size_t> BuildIndices();
+    std::vector<MeshIndex> BuildIndices();
 };
 
 } // namespace apex
