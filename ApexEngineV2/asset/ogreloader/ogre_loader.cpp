@@ -122,7 +122,7 @@ public:
             std::string skel_name = attributes.begin()->second;
             std::string current = filepath;
             current = current.substr(0, current.find_last_of("\\/"));
-            if (!StringUtil::Contains(current, "/") && !StringUtil::Contains(current, "\\")) {																// so just make the string empty
+            if (!StringUtil::Contains(current, "/") && !StringUtil::Contains(current, "\\")) { // so just make the string empty
                 current.clear();
             }
             current += "/" + skel_name + ".xml";
@@ -159,6 +159,7 @@ public:
 
     void End(const std::string &name)
     {
+        // get out of me swamp
     }
 
     void Characters(const std::string &value)

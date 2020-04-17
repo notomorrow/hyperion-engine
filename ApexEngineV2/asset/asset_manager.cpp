@@ -46,8 +46,10 @@ AssetManager::AssetManager()
 
 std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bool use_caching)
 {
+    const std::string new_path = StringUtil::ReplaceAll(path, "\\", "/");
+    
     if (use_caching) {
-        auto it = loaded_assets.find(path);
+        auto it = loaded_assets.find(new_path);
         if (it != loaded_assets.end()) {
             // reuse already loaded asset
             return it->second;
@@ -55,18 +57,18 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
     }
 
     try {
-        auto &loader = GetLoader(path);
+        auto &loader = GetLoader(new_path);
 
         if (loader != nullptr) {
-            auto loaded = loader->LoadFromFile(path);
+            auto loaded = loader->LoadFromFile(new_path);
 
             if (!loaded) {
-                std::cout << "error while loading file: " << path << "\n";
+                std::cout << "error while loading file: " << new_path << "\n";
                 return nullptr;
             } else {
-                loaded->SetFilePath(path);
+                loaded->SetFilePath(new_path);
                 if (use_caching) {
-                    loaded_assets[path] = loaded;
+                    loaded_assets[new_path] = loaded;
                 }
             }
             return loaded;

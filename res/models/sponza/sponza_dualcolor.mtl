@@ -1,0 +1,294 @@
+# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
+# File Created: 14.03.2014 16:14:22
+
+newmtl sponzaMaterial__57
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\vase_plant.tga
+	map_Kd maps\vase_plant.tga
+
+newmtl sponzachain
+	Ns 120.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.9412 0.9412 0.9412
+	Ks 0.2000 0.2000 0.2000
+	Ke 0.0000 0.0000 0.0000
+	metallic 1
+	map_Ka maps\chain_texture.tga
+	map_Kd maps\chain_texture.tga
+
+newmtl sponzacolumn_b
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_column_b_diff.tga
+	map_Kd maps\sponza_column_b_diff.tga
+	map_bump maps\sponza_column_b_ddn.tga
+	bump maps\sponza_column_b_ddn.tga
+
+newmtl sponzacolumn_c
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_column_c_diff.tga
+	map_Kd maps\sponza_column_c_diff.tga
+	map_bump maps\sponza_column_c_ddn.tga
+	bump maps\sponza_column_c_ddn.tga
+
+newmtl sponzafloor
+	Ns 124.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1 1 1
+	Ks 0.20970 0.20970 0.20970
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_floor_a_diff.tga
+	map_Kd maps\sponza_floor_a_diff.tga
+	map_bump maps\sponza_floor_a_diff.tga
+	bump maps\sponza_floor_a_diff.tga
+
+newmtl sponzacolumn_a
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_column_a_diff.tga
+	map_Kd maps\sponza_column_a_diff.tga
+	map_bump maps\sponza_column_a_ddn.tga
+	bump maps\sponza_column_a_ddn.tga
+
+newmtl sponzaceiling
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0100 0.0100 0.0100
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_ceiling_a_diff.tga
+	map_Kd maps\sponza_ceiling_a_diff.tga
+
+newmtl sponzaarch
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0100 0.0100 0.0100
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_arch_diff.tga
+	map_Kd maps\sponza_arch_diff.tga
+
+newmtl sponzabricks
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0100 0.0100 0.0100
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\spnza_bricks_a_diff.tga
+	map_Kd maps\spnza_bricks_a_diff.tga
+	map_bump maps\spnza_bricks_a_ddn.tga
+	bump maps\spnza_bricks_a_ddn.tga
+
+newmtl sponzaMaterial__25
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0100 0.0100 0.0100
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\lion.tga
+	map_Kd maps\lion.tga
+	map_bump maps\lion_ddn.tga
+	bump maps\lion_ddn.tga
+
+newmtl sponzavase
+	Ns 50.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\vase_dif.tga
+	map_Kd maps\vase_dif.tga
+
+newmtl sponzavase_round
+	Ns 20.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\vase_round.tga
+	map_Kd maps\vase_round.tga
+	map_bump maps\vase_round_ddn.tga
+	bump maps\vase_round_ddn.tga
+
+newmtl sponzavase_hanging
+	Ns 60.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.2000 0.2000 0.2000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\vase_hanging.tga
+	map_Kd maps\vase_hanging.tga
+
+newmtl sponzawire_177088027
+	Ns 72.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.6941 0.3451 0.1059
+	Ks 0.3500 0.3500 0.3500
+	Ke 0.0000 0.0000 0.0000
+	metallic 1
+	
+newmtl sponzaleaf
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0100 0.0100 0.0100
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_thorn_diff.tga
+	map_Kd maps\sponza_thorn_diff.tga
+
+newmtl sponzaroof
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_roof_diff.tga
+	map_Kd maps\sponza_roof_diff.tga
+
+newmtl sponzadetails
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.1000 0.1000 0.1000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_details_diff.tga
+	map_Kd maps\sponza_details_diff.tga
+
+newmtl sponzaMaterial__47
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.01000 0.01000 0.01000
+	Ke 0.0000 0.0000 0.0000
+
+newmtl sponzafabric
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.03000 0.03000 0.03000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_fabric_diff.tga
+	map_Kd maps\sponza_fabric_diff.tga
+	
+newmtl sponzafabric_blue	
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.03000 0.03000 0.03000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\sponza_fabric_bluen_diff.tga
+	map_Kd maps\sponza_fabric_bluen_diff.tga

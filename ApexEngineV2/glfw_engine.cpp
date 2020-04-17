@@ -48,14 +48,14 @@ bool GlfwEngine::InitializeGame(Game *game)
     glfwMakeContextCurrent(window);
 
     if (glewInit() != GLEW_OK) {
-        //throw std::exception("error initializing glew");
+        throw "error initializing glew";
     }
 
     glfwSwapInterval(1);
     // glEnable(GL_FRAMEBUFFER_SRGB);
     glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
     glEnable(GL_DEPTH_TEST);
+    glCullFace(GL_BACK);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
     game->Initialize();

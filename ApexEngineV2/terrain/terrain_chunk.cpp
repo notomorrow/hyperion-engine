@@ -10,7 +10,7 @@ TerrainChunk::TerrainChunk(const ChunkInfo &chunk_info)
 std::shared_ptr<Mesh> TerrainChunk::BuildMesh(const std::vector<double> &heights)
 {
     std::vector<Vertex> vertices = BuildVertices(heights);
-    std::vector<size_t> indices = BuildIndices();
+    std::vector<MeshIndex> indices = BuildIndices();
     CalculateNormals(vertices, indices);
 
     auto mesh = std::make_shared<Mesh>();
@@ -28,12 +28,12 @@ void TerrainChunk::AddNormal(Vertex &vertex, const Vector3 &normal)
     vertex.SetNormal(before + normal);
 }
 
-void TerrainChunk::CalculateNormals(std::vector<Vertex> &vertices, const std::vector<size_t> &indices)
+void TerrainChunk::CalculateNormals(std::vector<Vertex> &vertices, const std::vector<MeshIndex> &indices)
 {
     for (size_t i = 0; i < indices.size(); i += 3) {
-        size_t i0 = indices[i];
-        size_t i1 = indices[i + 1];
-        size_t i2 = indices[i + 2];
+        MeshIndex i0 = indices[i];
+        MeshIndex i1 = indices[i + 1];
+        MeshIndex i2 = indices[i + 2];
 
         const Vector3 &p0 = vertices[i0].GetPosition();
         const Vector3 &p1 = vertices[i1].GetPosition();
@@ -79,9 +79,9 @@ std::vector<Vertex> TerrainChunk::BuildVertices(const std::vector<double> &heigh
     return vertices;
 }
 
-std::vector<size_t> TerrainChunk::BuildIndices()
+std::vector<MeshIndex> TerrainChunk::BuildIndices()
 {
-    std::vector<size_t> indices;
+    std::vector<MeshIndex> indices;
     indices.resize(6 * (m_chunk_info.m_width - 1) * (m_chunk_info.m_length - 1));
 
     int pitch = m_chunk_info.m_width;

@@ -71,7 +71,6 @@ public:
     std::shared_ptr<Entity> test_object_0, test_object_1, test_object_2;
     std::shared_ptr<Shader> shader;
     std::shared_ptr<Shader> cubemap_renderer_shader;
-    std::shared_ptr<Texture> tex;
     std::shared_ptr<Entity> debug_quad;
 
     std::shared_ptr<physics::RigidBody> rb1, rb2, rb3, rb4;
@@ -95,15 +94,15 @@ public:
 
         renderer = new Renderer();
 
-        //renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
+        renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
 
         renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
 
         cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.5f, 5500.0f);
-        env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
-        env_cam->SetTranslation(Vector3(0, 10, 0));
+        //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
+        //env_cam->SetTranslation(Vector3(0, 10, 0));
         fbo = new Framebuffer2D(window.width, window.height);
-        env_fbo = new FramebufferCube(256, 256);
+        //env_fbo = new FramebufferCube(256, 256);
         shadows = new PssmShadowMapping(cam, 4, 100);
 
     }
@@ -112,10 +111,12 @@ public:
     {
         delete shadows;
         delete fbo;
-        delete env_fbo;
+        //delete env_fbo;
         delete cam;
-        delete env_cam;
+        //delete env_cam;
         delete renderer;
+
+        AudioManager::Deinitialize();
     }
 
     void InitParticleSystem()
@@ -196,13 +197,14 @@ public:
         auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rb3->GetBoundingBox());
         auto bb_renderer_node = std::make_shared<Entity>();
         bb_renderer_node->SetRenderable(bb_renderer);
+
         //box->AddChild(bb_renderer_node);
 
         top->AddChild(box);
 
 
         { // test object
-            auto object = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
+            auto object = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
             for (size_t i = 0; i < object->NumChildren(); i++) {
                 object->GetChild(i)->GetRenderable()->SetShader(shader);
 
@@ -237,13 +239,13 @@ public:
                    // bb_renderer_node->SetRenderable(bb_renderer);
                    // clone->AddChild(bb_renderer_node);
 
-                    if (x == 0 && z == 0) {
-                        auto audio_ctrl = std::make_shared<AudioControl>(
-                        AssetManager::GetInstance()->LoadFromFile<AudioSource>("res/sounds/cartoon001.wav"));
-                        clone->AddControl(audio_ctrl);
-                        audio_ctrl->GetSource()->SetLoop(true);
-                        audio_ctrl->GetSource()->Play();
-                    }
+//                    if (x == 0 && z == 0) {
+//                        auto audio_ctrl = std::make_shared<AudioControl>(
+//                        AssetManager::GetInstance()->LoadFromFile<AudioSource>("res/sounds/cartoon001.wav"));
+//                        clone->AddControl(audio_ctrl);
+//                        audio_ctrl->GetSource()->SetLoop(true);
+//                        audio_ctrl->GetSource()->Play();
+//                    }
 
                     top->AddChild(clone);
                 }
@@ -257,38 +259,6 @@ public:
         PhysicsManager::GetInstance()->RegisterBody(rb3);*/
     }
 
-    void InitTestObjects()
-    {
-
-        /*test_object_0 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere.obj");
-        test_object_0->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 0.15f, 0.3f, 1.0f, 1.0f };
-        test_object_0->GetChild(0)->GetRenderable()->SetShader(shader);
-        top->AddChild(test_object_0);
-
-        test_object_1 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/box.obj");
-        test_object_1->GetChild(0)->GetRenderable()->SetShader(shader);
-        test_object_1->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
-
-        auto audio_ctrl = std::make_shared<AudioControl>(
-            AssetManager::GetInstance()->LoadFromFile<AudioSource>("res/sounds/cartoon001.wav"));
-        //test_object_1->AddControl(audio_ctrl);
-        audio_ctrl->GetSource()->SetLoop(true);
-        audio_ctrl->GetSource()->Play();
-        top->AddChild(test_object_1);
-
-        test_object_2 = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/round_cube.obj");
-        test_object_2->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
-            { "DIFFUSE_MAP", true },
-            { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
-            { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
-        }));
-        test_object_2->GetChild(0)->GetRenderable()->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        test_object_2->GetChild(0)->GetRenderable()->GetMaterial().diffuse_texture = tex;
-        top->AddChild(test_object_2);*/
-
-
-    }
-
     void Initialize()
     {
         Environment::GetInstance()->SetShadowsEnabled(true);
@@ -300,7 +270,6 @@ public:
         Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(6.0f, 15, 0), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
         Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, 6.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
         Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, -6.0f), Vector4(1.0f, 0.4f, 0.7f, 1.0f), 10.0f));
-
         // Initialize root node
         top = std::make_shared<Entity>("top");
 
@@ -317,11 +286,6 @@ public:
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
 
         cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties {});
-
-        tex = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass.jpg");
-
-        //InitTestObjects();
-
         // TODO: terrain raycasting
         // Ray top_ray;
         // top_ray.m_direction = Vector3(0, -1, 0);
@@ -400,10 +364,10 @@ public:
             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
         }));
-        Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
-        //Environment::GetInstance()->SetGlobalCubemap(cubemap);
+        //Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
+        Environment::GetInstance()->SetGlobalCubemap(cubemap);
 
-        /*{ // sponza
+        { // sponza
             auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
             // std::function<void(Entity*)> scan_nodes;
             // scan_nodes = [this, &scan_nodes](Entity *root) {
@@ -426,7 +390,7 @@ public:
 
             //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
             sponza->Scale(2.0f);
-        }*/
+        }
 
         /*{ // cloister
             auto cloister = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cloister/cloister.obj");
@@ -572,9 +536,10 @@ public:
             shadows->Render(renderer);
         }
 
-        env_fbo->Use();
-        renderer->RenderBucket(env_cam, renderer->opaque_bucket, cubemap_renderer_shader.get());
-        env_fbo->End();
+        //env_fbo->Use();
+        //renderer->RenderBucket(env_cam, renderer->opaque_bucket, cubemap_renderer_shader.get());
+        //env_fbo->End();
+
         /*glBindFramebuffer(GL_FRAMEBUFFER, env_fbo->GetId());
         env_cam->SetDirection(Vector3(1, 0, 0));
         env_cam->UpdateMatrices();
