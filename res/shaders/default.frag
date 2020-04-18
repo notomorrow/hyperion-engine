@@ -35,7 +35,7 @@ void main()
   vec2 texCoords = v_texcoord0;
 
   if (u_hasParallaxMap == 1) {
-    texCoords = ParallaxMapping(v_texcoord0, normalize(tangentViewPos - tangentFragPos));
+    texCoords = ParallaxMapping(texCoords, normalize(tangentViewPos - tangentFragPos));
   }
 
   vec4 diffuseTexture = texture(u_diffuseMap, texCoords);

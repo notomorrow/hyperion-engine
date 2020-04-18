@@ -182,16 +182,18 @@ public:
 
         const auto brdf_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/brdfLUT.png");
 
-        Vector3 box_position = Vector3(0, 20, 0);
+        Vector3 box_position = Vector3(0, 150, 0);
 
         auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
         box->GetChild(0)->GetRenderable()->SetShader(shader);
         box->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        box->GetChild(0)->GetMaterial().texture0 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/rock/Rock035_2K_Color.jpg");
-        box->GetChild(0)->GetMaterial().texture1 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/rock/Rock035_2K_Displacement.jpg");
-        box->GetChild(0)->GetMaterial().texture2 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/rock/Rock035_2K_AmbientOcclusion.jpg");
+        box->GetChild(0)->GetMaterial().SetParameter("shininess", 0.6f);
+        box->GetChild(0)->GetMaterial().SetParameter("roughness", 0.2f);
+        box->GetChild(0)->GetMaterial().texture0 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png");
+        box->GetChild(0)->GetMaterial().texture1 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png");
+        box->GetChild(0)->GetMaterial().texture2 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png");
         box->GetChild(0)->GetMaterial().texture3 = brdf_map;
-        box->GetChild(0)->GetMaterial().normals0 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/rock/Rock035_2K_Normal.jpg");
+        box->GetChild(0)->GetMaterial().normals0 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png");
 
         box->SetLocalTranslation(box_position);
 
@@ -365,12 +367,12 @@ public:
         // }
 
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
-             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_right.jpg"),
-             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_left.jpg"),
-             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
-             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
-             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
-             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/posx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/negx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/posy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/negy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/posz.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/negz.jpg")
          }));
      // Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
         Environment::GetInstance()->SetGlobalCubemap(cubemap);
@@ -475,7 +477,7 @@ public:
         // }
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 34923949));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 2332));
     }
 
     void Logic(double dt)
