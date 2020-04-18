@@ -1,4 +1,4 @@
-#version 150
+#version 330 core
 
 varying vec2 v_texcoord0;
 uniform sampler2D u_colorMap;

@@ -1,5 +1,5 @@
 
-#version 150
+#version 330 core
 precision highp float;
 
 uniform sampler2D u_colorMap;
@@ -17,9 +17,11 @@ uniform mat4 u_projectionMatrix;
 
 uniform float u_radius;
 
-varying vec2 v_texcoord0;
+in vec2 v_texcoord0;
 
 uniform mat4 u_inverseProjectionMatrix;
+
+#include "../include/frag_output.inc"
 
 vec4 getViewPos(vec2 texCoord)
 {
@@ -103,5 +105,5 @@ void main(void)
 	// No occlusion gets white, full occlusion gets black.
 	occlusion = min(max(1.0 - ((occlusion / float($KERNEL_SIZE))), 0.0), 1.0);
 
-	gl_FragColor = vec4(texture(u_colorMap, v_texcoord0).rgb * vec3(occlusion), 1.0);
+	output0 = vec4(texture(u_colorMap, v_texcoord0).rgb * vec3(occlusion), 1.0);
 }

@@ -40,6 +40,8 @@ std::shared_ptr<Animation> SkeletonControl::GetAnimation(const std::string &name
             return anim;
         }
     }
+
+    return nullptr;
 }
 
 void SkeletonControl::AddAnimation(std::shared_ptr<Animation> anim)

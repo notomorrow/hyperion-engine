@@ -1,5 +1,5 @@
 #include "./cubemap.h"
-#include "../opengl.h"
+#include "../util.h"
 
 #include <iostream>
 
@@ -27,8 +27,11 @@ void Cubemap::Use()
 {
     if (!is_created) {
         glGenTextures(1, &id);
+        CatchGLErrors("Failed to generate cubemap texture", false);
+
         glEnable(GL_TEXTURE_CUBE_MAP);
-        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+        CatchGLErrors("Failed to enable GL_TEXTURE_CUBE_MAP", false);
+        //glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
         is_created = true;
     }
@@ -36,26 +39,28 @@ void Cubemap::Use()
     glBindTexture(GL_TEXTURE_CUBE_MAP, id);
 
     if (!is_uploaded) {
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
         for (size_t i = 0; i < m_textures.size(); i++) {
             const auto &tex = m_textures[i];
+
+            if (tex == nullptr) {
+                throw std::runtime_error("Could not upload cubemap because texture #" + std::to_string(i + 1) + " was nullptr.");
+            } else if (tex->GetBytes() == nullptr) {
+                throw std::runtime_error("Could not upload cubemap because texture #" + std::to_string(i + 1) + " had no bytes set.");
+            }
 
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, tex->GetInternalFormat(),
                 tex->GetWidth(), tex->GetHeight(), 0, tex->GetFormat(), GL_UNSIGNED_BYTE, tex->GetBytes());
         }
 
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
         //glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
-        unsigned int err;
-        while((err = glGetError()) != GL_NO_ERROR) {
-            std::cout << "GL Error uploading cubemap: " << err << std::endl;
-            throw std::runtime_error("Could not create cubemap");
-        }
+        CatchGLErrors("Failed to upload cubemap");
 
         is_uploaded = true;
     }

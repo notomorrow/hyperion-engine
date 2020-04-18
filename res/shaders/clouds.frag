@@ -1,8 +1,8 @@
-#version 330
+#version 330 core
 
-varying vec3 v_position;
-varying vec3 v_normal;
-varying vec2 v_texcoord0;
+in vec3 v_position;
+in vec3 v_normal;
+in vec2 v_texcoord0;
 
 uniform float m_GlobalTime;
 uniform sampler2D m_CloudMap;
@@ -22,7 +22,7 @@ float saturate(float num)
 
 float noise(vec2 uv)
 {
-  return texture2D(m_CloudMap, uv).r;
+  return texture(m_CloudMap, uv).r;
 }
 
 vec2 rotate(vec2 uv)

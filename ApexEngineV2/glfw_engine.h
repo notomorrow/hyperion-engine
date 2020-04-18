@@ -9,6 +9,7 @@ namespace apex {
 class GlfwEngine : public CoreEngine {
 public:
     bool InitializeGame(Game *game);
+    void SetCursorLocked(bool locked);
     void Viewport(int x, int y, size_t width, size_t height);
     void Clear(int mask);
     void SetMousePosition(double x, double y);
@@ -64,6 +65,8 @@ public:
     void Uniform3i(int location, int v0, int v1, int v2);
     void Uniform4i(int location, int v0, int v1, int v2, int v3);
     void UniformMatrix4fv(int location, int count, bool transpose, const float *value);
+    void VertexAttribDivisor(unsigned int index, unsigned int divisor);
+    void DrawArraysInstanced(int mode, int first, size_t count, size_t primcount);
 
 private:
     GLFWwindow *window;

@@ -8,7 +8,7 @@
 namespace apex {
 class FpsCamera : public PerspectiveCamera {
 public:
-    FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, float near_clip, float far_clip);
+    FpsCamera(InputManager *inputmgr, RenderWindow *window, int width, int height, float fov, float near, float far);
     virtual ~FpsCamera() = default;
 
     virtual void SetTranslation(const Vector3 &vec);
@@ -16,21 +16,21 @@ public:
     void UpdateLogic(double dt);
 
 private:
-    InputManager *inputmgr;
-    RenderWindow *window;
+    InputManager *m_inputmgr;
+    RenderWindow *m_window;
 
-    Vector3 dir_cross_y;
-    Vector3 next_translation;
+    Vector3 m_dir_cross_y;
+    Vector3 m_next_translation;
 
-    double mouse_x, mouse_y;
-    double mag_x, mag_y, old_mag_x, old_mag_y;
-    bool is_mouse_captured;
+    double m_mouse_x, m_mouse_y, m_old_mouse_x, m_old_mouse_y;
+    double m_mag_x, m_mag_y, m_old_mag_x, m_old_mag_y;
+    bool m_is_mouse_captured;
 
     void CenterMouse();
 
     void HandleMouseInput(double dt, int half_width, int half_height);
     void HandleKeyboardInput(double dt);
 };
-}
+} // namespace apex
 
 #endif

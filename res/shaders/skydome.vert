@@ -1,10 +1,8 @@
-#version 330
+#version 330 core
+
+#include "include/attributes.inc"
 
 #include "include/matrices.inc"
-
-attribute vec3 a_position;
-attribute vec3 a_normal;
-attribute vec2 a_texcoord0;
 
 uniform vec3 v3CameraPos;	// The camera's current position
 uniform vec3 v3LightPos;	// The direction vector to the light source
@@ -17,12 +15,12 @@ uniform float fKmESun;		// Km * ESun
 uniform float fKr4PI;		// Kr * 4 * PI
 uniform float fKm4PI;		// Km * 4 * PI
 
-varying vec3 v3Direction;
-varying vec4 v4RayleighColor;
-varying vec4 v4MieColor;
-varying vec3 v_position;
-varying vec3 v_normal;
-varying vec2 v_texcoord0;
+out vec3 v3Direction;
+out vec4 v4RayleighColor;
+out vec4 v4MieColor;
+out vec3 v_position;
+out vec3 v_normal;
+out vec2 v_texcoord0;
 
 void main(void)
 {

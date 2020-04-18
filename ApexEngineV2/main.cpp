@@ -98,10 +98,18 @@ public:
 
         renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
 
-        cam = new FpsCamera(inputmgr, &this->window, 70.0f, 0.5f, 1500.0f);
+        cam = new FpsCamera(
+            inputmgr,
+            &this->window,
+            window.GetScaledWidth(),
+            window.GetScaledHeight(),
+            70.0f,
+            0.5f,
+            1500.0f
+        );
         //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
         //env_cam->SetTranslation(Vector3(0, 10, 0));
-        fbo = new Framebuffer2D(window.width, window.height);
+        fbo = new Framebuffer2D(window.GetScaledWidth(), window.GetScaledHeight());
         //env_fbo = new FramebufferCube(256, 256);
         shadows = new PssmShadowMapping(cam, 4, 100);
 
@@ -201,6 +209,7 @@ public:
         //box->AddChild(bb_renderer_node);
 
         top->AddChild(box);
+        return;
 
 
         { // test object
@@ -285,7 +294,7 @@ public:
         };
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
 
-        cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties {});
+        //cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties {});
         // TODO: terrain raycasting
         // Ray top_ray;
         // top_ray.m_direction = Vector3(0, -1, 0);
@@ -364,10 +373,10 @@ public:
             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
         }));
-        //Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
+        // Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
         Environment::GetInstance()->SetGlobalCubemap(cubemap);
 
-        { // sponza
+        /*{ // sponza
             auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
             // std::function<void(Entity*)> scan_nodes;
             // scan_nodes = [this, &scan_nodes](Entity *root) {
@@ -390,7 +399,7 @@ public:
 
             //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
             sponza->Scale(2.0f);
-        }
+        }*/
 
         /*{ // cloister
             auto cloister = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cloister/cloister.obj");
@@ -466,7 +475,7 @@ public:
         //     sewers->Scale(5.0f);
         // }
 
-        top->AddControl(std::make_shared<SkydomeControl>(cam));
+        //top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3543534));
     }
 
@@ -572,9 +581,9 @@ public:
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetId(), 0);*/
 
-        renderer->RenderAll(cam, fbo);
+        renderer->RenderAll(cam);
         renderer->ClearRenderables();
-        renderer->RenderPost(cam, fbo);
+        //renderer->RenderPost(cam, fbo);
     }
 };
 

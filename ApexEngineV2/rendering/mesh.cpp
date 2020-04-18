@@ -1,5 +1,5 @@
 #include "mesh.h"
-#include "../opengl.h"
+#include "../util.h"
 
 namespace apex {
 
@@ -23,6 +23,7 @@ Mesh::Mesh()
 Mesh::~Mesh()
 {
     if (is_created) {
+        glDeleteVertexArrays(1, &vao);
         glDeleteBuffers(1, &vbo);
         glDeleteBuffers(1, &ibo);
     }
@@ -191,40 +192,57 @@ void Mesh::CalculateTangents()
 void Mesh::Render()
 {
     if (!is_created) {
+        glGenVertexArrays(1, &vao);
+        CatchGLErrors("Failed to generate vertex arrays.");
+
         glGenBuffers(1, &vbo);
         glGenBuffers(1, &ibo);
         is_created = true;
     }
 
+    glBindVertexArray(vao);
+
     if (!is_uploaded) {
         std::vector<float> buffer = CreateBuffer();
+
+
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(float), &buffer[0], GL_STATIC_DRAW);
+
+        unsigned int error;
+
+        for (auto &&attr : attribs) {
+            glEnableVertexAttribArray(attr.second.index);
+            CatchGLErrors("Failed to enable vertex attribute array." __FILE__);
+
+            glVertexAttribPointer(attr.second.index, attr.second.size, GL_FLOAT,
+                false, vertex_size * sizeof(float), (void*)(attr.second.offset * sizeof(float)));
+
+            CatchGLErrors("Failed to set vertex attribute pointer.");
+        }
+
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(MeshIndex), &indices[0], GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        // glBindBuffer(GL_ARRAY_BUFFER, 0);
+        // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
         is_uploaded = true;
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+   // glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    for (auto &&attr : attribs) {
-        glEnableVertexAttribArray(attr.second.index);
-        glVertexAttribPointer(attr.second.index, attr.second.size, GL_FLOAT,
-            false, vertex_size * sizeof(float), (void*)(attr.second.offset * sizeof(float)));
-    }
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+   // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glDrawElements(primitive_type, indices.size(), GL_UNSIGNED_INT, 0);
 
-    for (auto &&attr : attribs) {
-        glDisableVertexAttribArray(attr.second.index);
-    }
+    // for (auto &&attr : attribs) {
+    //     glDisableVertexAttribArray(attr.second.index);
+    // }
 
     // Unbind the buffers
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    glBindVertexArray(0);
 }
 
 } // namespace apex

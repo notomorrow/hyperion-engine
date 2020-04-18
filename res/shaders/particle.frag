@@ -1,8 +1,10 @@
-#version 330
+#version 330 core
 
-varying vec4 v_position;
-varying vec2 v_texcoord0;
-varying float v_lifespan;
+in vec4 v_position;
+in vec2 v_texcoord0;
+in float v_lifespan;
+
+#include "include/frag_output.inc"
 
 #if DIFFUSE_MAP
 uniform sampler2D u_diffuseTexture;
@@ -12,9 +14,9 @@ void main()
 {
   vec4 diffuseTexture = vec4(1.0, 1.0, 1.0, 1.0);
 #if DIFFUSE_MAP
-  diffuseTexture = texture2D(u_diffuseTexture, v_texcoord0);
+  diffuseTexture = texture(u_diffuseTexture, v_texcoord0);
 #endif
   vec4 color = diffuseTexture;
   color.a *= v_lifespan;
-  gl_FragData[0] = color;
+  output0 = color;
 }

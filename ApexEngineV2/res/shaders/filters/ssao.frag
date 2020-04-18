@@ -1,5 +1,5 @@
 
-#version 150
+#version 330 core
 precision highp float;
 
 uniform sampler2D u_colorMap;

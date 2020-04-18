@@ -1,10 +1,10 @@
-#version 330
+#version 330 core
 
-varying vec4 v_position;
-varying vec4 v_normal;
-varying vec2 v_texcoord0;
-varying vec3 v_tangent;
-varying vec3 v_bitangent;
+in vec4 v_position;
+in vec4 v_normal;
+in vec2 v_texcoord0;
+in vec3 v_tangent;
+in vec3 v_bitangent;
 
 uniform vec3 u_camerapos;
 
@@ -16,6 +16,8 @@ uniform float terrainTexture0Scale;
 uniform sampler2D slopeTexture;
 uniform sampler2D slopeTextureNormal;
 uniform float slopeTextureScale;
+
+#include "include/frag_output.inc"
 
 #if SHADOWS
 #include "include/shadows.inc"
@@ -32,8 +34,8 @@ void main()
   float ang = max(abs(v_normal.x), 0.0);
   float tex0Strength = 1.0 - clamp(ang / 0.5, 0.0, 1.0);
 
-  vec4 flatColor = texture2D(terrainTexture0, v_texcoord0 * terrainTexture0Scale);
-  vec4 slopeColor = texture2D(slopeTexture, v_texcoord0 * slopeTextureScale);
+  vec4 flatColor = texture(terrainTexture0, v_texcoord0 * terrainTexture0Scale);
+  vec4 slopeColor = texture(slopeTexture, v_texcoord0 * slopeTextureScale);
   vec4 diffuseTexture = mix(slopeColor, flatColor, tex0Strength);
 
   if (ang >= 0.5) {
@@ -46,8 +48,8 @@ void main()
   //mat3 TBN = mat3(v_tangent, v_bitangent, n)
 
 #if NORMAL_MAPPING
-  vec4 flatNormals = texture2D(terrainTexture0Normal, v_texcoord0 * terrainTexture0Scale);
-  vec4 slopeNormals = texture2D(slopeTextureNormal, v_texcoord0 * slopeTextureScale);
+  vec4 flatNormals = texture(terrainTexture0Normal, v_texcoord0 * terrainTexture0Scale);
+  vec4 slopeNormals = texture(slopeTextureNormal, v_texcoord0 * slopeTextureScale);
   vec4 normalsTexture = mix(slopeNormals, flatNormals, tex0Strength);
 
   normalsTexture.xy = (2.0 * (vec2(1.0) - normalsTexture.rg) - 1.0);
@@ -101,7 +103,7 @@ void main()
 
   vec2 brdfSamplePoint = clamp(vec2(NdotV, u_roughness), vec2(0.0, 0.0), vec2(1.0, 1.0));
   // retrieve a scale and bias to F0. See [1], Figure 3
-  vec2 brdf = texture2D(u_brdfMap, brdfSamplePoint).rg;
+  vec2 brdf = texture(u_brdfMap, brdfSamplePoint).rg;
 
   Lo += ComputeDirectionalLight(env_DirectionalLight, n, normalize(u_camerapos.xyz - v_position.xyz), v_position.xyz, albedo, shadowness, u_roughness, u_shininess);
   
@@ -142,8 +144,8 @@ void main()
   vec3 color = (ambient_color.rgb + diffuse.rgb + specular.rgb);
 
 
-  gl_FragData[1] = vec4(n.xyz, 1.0);
-  gl_FragData[2] = vec4(v_position.xyz, 1.0);
+  output0 = CalculateFogExp(vec4(color.rgb, 1.0), fogColor, v_position.xyz, u_camerapos, 320.0, 600.0);
+  output1 = vec4(n.xyz, 1.0);
+  output2 = vec4(v_position.xyz, 1.0);
  
-  gl_FragData[0] = CalculateFogExp(vec4(color.rgb, 1.0), fogColor, v_position.xyz, u_camerapos, 320.0, 600.0);
 }

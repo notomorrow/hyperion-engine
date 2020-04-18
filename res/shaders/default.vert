@@ -1,18 +1,14 @@
-#version 330
+#version 330 core
 
-attribute vec3 a_position;
-attribute vec3 a_normal;
-attribute vec2 a_texcoord0;
-attribute vec3 a_tangent;
-attribute vec3 a_bitangent;
+#include "include/attributes.inc"
 
-varying vec4 v_position;
-varying vec4 v_positionCamspace;
-varying vec4 v_normal;
-varying vec2 v_texcoord0;
-varying vec3 v_tangent;
-varying vec3 v_bitangent;
-varying mat3 v_tbn;
+out vec4 v_position;
+out vec4 v_positionCamspace;
+out vec4 v_normal;
+out vec2 v_texcoord0;
+out vec3 v_tangent;
+out vec3 v_bitangent;
+out mat3 v_tbn;
 
 #if SKINNING
 #include "include/skinning.inc"

@@ -30,7 +30,7 @@ int getShadowMapSplit(vec3 cam, vec3 world) {
 
 float getShadow(int index, vec3 coord) {
   float bias = 0.005;
-  float depth = texture2D(u_shadowMap[index], coord.xy).r;
+  float depth = texture(u_shadowMap[index], coord.xy).r;
   return max(step(coord.z-bias, depth), 0.0);
 }
 
