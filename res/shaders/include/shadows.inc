@@ -17,11 +17,14 @@ bool inRadius(vec3 cam, vec3 world, float radius) {
 }
 
 int getShadowMapSplit(vec3 cam, vec3 world) {
-  if (inRadius(cam, world, u_shadowSplit[0])) {
+  float distanceBuffer = 1.0;
+  float dist = float(floor(distance(cam, world))) + distanceBuffer;
+
+  if (dist < u_shadowSplit[0]) {
     return 0;
-  } else if (inRadius(cam, world, u_shadowSplit[1])) {
+  } else if (dist < u_shadowSplit[1]) {
     return 1;
-  } else if (inRadius(cam, world, u_shadowSplit[2])) {
+  } else if (dist < u_shadowSplit[2]) {
     return 2;
   } else {
     return 3;

@@ -11,7 +11,7 @@ public:
     FpsCamera(InputManager *inputmgr, RenderWindow *window, int width, int height, float fov, float near, float far);
     virtual ~FpsCamera() = default;
 
-    virtual void SetTranslation(const Vector3 &vec);
+    virtual void SetTranslation(const Vector3 &vec) override;
 
     void UpdateLogic(double dt);
 

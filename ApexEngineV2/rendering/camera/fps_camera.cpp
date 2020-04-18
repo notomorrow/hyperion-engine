@@ -26,7 +26,8 @@ FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, int width, in
 
 void FpsCamera::SetTranslation(const Vector3 &vec)
 {
-    m_translation = m_next_translation = vec;
+    Camera::SetTranslation(vec);
+    m_next_translation = m_translation;
 }
 
 void FpsCamera::UpdateLogic(double dt)

@@ -6,5 +6,5 @@ in vec4 v_position;
 
 void main() 
 {
-  output0 = vec4(0.0, 0.0, 0.0, 1.0);
+  output0 = vec4(1.0, 0.0, 0.0, 1.0);
 }

@@ -6,13 +6,11 @@ project(${BUILD_NAME} CXX)
 
 set(OpenGL_GL_PREFERENCE GLVND)
 
-link_directories(${CMAKE_SOURCE_DIR}/lib)
+link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib)
 
 find_package(Threads)
 find_package(OpenGL)
 find_package(OpenAL)
-
-LINK_DIRECTORIES(/usr/local/lib)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fpermissive")
 
