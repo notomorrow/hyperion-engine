@@ -36,8 +36,18 @@ bool GlfwEngine::InitializeGame(Game *game)
         return false;
     }
 
-    window = glfwCreateWindow(game->GetWindow().width, game->GetWindow().height,
-        game->GetWindow().title.c_str(), NULL, NULL);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+
+    window = glfwCreateWindow(
+        game->GetWindow().width,
+        game->GetWindow().height,
+        game->GetWindow().title.c_str(),
+        nullptr,
+        nullptr
+    );
 
     if (!window) {
         glfwTerminate();
@@ -47,16 +57,24 @@ bool GlfwEngine::InitializeGame(Game *game)
     glfwSetKeyCallback(window, KeyCallback);
     glfwMakeContextCurrent(window);
 
+    glfwGetWindowContentScale(
+        window,
+        &game->GetWindow().xscale,
+        &game->GetWindow().yscale
+    );
+
+#ifdef USE_GLEW
     if (glewInit() != GLEW_OK) {
         throw "error initializing glew";
     }
+#endif
 
     glfwSwapInterval(1);
     // glEnable(GL_FRAMEBUFFER_SRGB);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0.1f, 0.0f, 0.0f, 1.0f);
 
     game->Initialize();
 
@@ -81,7 +99,9 @@ bool GlfwEngine::InitializeGame(Game *game)
         glfwGetWindowSize(window, &game->GetWindow().width, &game->GetWindow().height);
 
         double mouse_x, mouse_y;
+
         glfwGetCursorPos(window, &mouse_x, &mouse_y);
+
         game->GetInputManager()->MouseMove(
             MathUtil::Clamp<double>(mouse_x, 0, game->GetWindow().width),
             MathUtil::Clamp<double>(mouse_y, 0, game->GetWindow().height));
@@ -98,6 +118,15 @@ bool GlfwEngine::InitializeGame(Game *game)
     glfwDestroyWindow(window);
     glfwTerminate();
     return true;
+}
+
+void GlfwEngine::SetCursorLocked(bool locked)
+{
+    if (locked) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    } else {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
 }
 
 void GlfwEngine::Viewport(int x, int y, size_t width, size_t height)
@@ -235,7 +264,7 @@ void GlfwEngine::BindFramebuffer(int target, unsigned int framebuffer)
 
 void GlfwEngine::FramebufferTexture(int target, int attachment, unsigned int texture, int level)
 {
-    glFramebufferTexture(target, attachment, texture, level);
+    glFramebufferTexture2D(target, attachment, GL_TEXTURE_2D, texture, level);
 }
 
 void GlfwEngine::DrawBuffers(size_t n, const unsigned int *bufs)
@@ -371,6 +400,16 @@ void GlfwEngine::Uniform4i(int location, int v0, int v1, int v2, int v3)
 void GlfwEngine::UniformMatrix4fv(int location, int count, bool transpose, const float *value)
 {
     glUniformMatrix4fv(location, count, transpose, value);
+}
+
+void GlfwEngine::VertexAttribDivisor(unsigned int index, unsigned int divisor)
+{
+    glVertexAttribDivisor(index, divisor);
+}
+
+void GlfwEngine::DrawArraysInstanced(int mode, int first, size_t count, size_t primcount)
+{
+    glDrawArraysInstanced(mode, first, count, primcount);
 }
 
 } // namespace apex

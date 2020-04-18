@@ -81,17 +81,25 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
                     }
                 }
 
-                auto loaded = AssetManager::GetInstance()->
-                    LoadFromFile<TextLoader::LoadedText>(local_path + "/" + path);
+                const std::string include_path = local_path + "/" + path;
 
-                std::string relative_path(loaded->GetFilePath().substr(0,
-                    loaded->GetFilePath().find_last_of("\\/")));
-                if (!(StringUtil::Contains(relative_path, "/") ||
-                    StringUtil::Contains(relative_path, "\\"))) {
-                    relative_path.clear();
+                if (auto loaded = AssetManager::GetInstance()->
+                    LoadFromFile<TextLoader::LoadedText>(include_path)) {
+
+                    std::string relative_path(loaded->GetFilePath().substr(0,
+                        loaded->GetFilePath().find_last_of("\\/")));
+
+                    if (!(StringUtil::Contains(relative_path, "/") ||
+                        StringUtil::Contains(relative_path, "\\"))) {
+                        relative_path.clear();
+                    }
+
+                    res += ProcessShader(loaded->GetText(), defines, relative_path) + "\n";
+                } else {
+                    res += "#error \"The include could not be found at: ";
+                    res += include_path;
+                    res += "\"";
                 }
-
-                res += ProcessShader(loaded->GetText(), defines, relative_path) + "\n";
             }
         } else {
             if (state) {

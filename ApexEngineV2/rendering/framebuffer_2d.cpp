@@ -14,12 +14,12 @@ Framebuffer2D::Framebuffer2D(int width, int height)
     color_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
     normal_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-    normal_texture->SetInternalFormat(GL_RGBA32F);
+    normal_texture->SetInternalFormat(GL_RGBA8);
     normal_texture->SetFilter(GL_NEAREST, GL_NEAREST);
     normal_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
     position_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-    position_texture->SetInternalFormat(GL_RGBA32F);
+    position_texture->SetInternalFormat(GL_RGBA8);
     position_texture->SetFilter(GL_NEAREST, GL_NEAREST);
     position_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
@@ -51,23 +51,23 @@ void Framebuffer2D::Use()
 
     if (!is_uploaded) {
         color_texture->Use();
-        glFramebufferTexture(GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT0, color_texture->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,
+            GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_texture->GetId(), 0);
         color_texture->End();
 
         normal_texture->Use();
-        glFramebufferTexture(GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT1, normal_texture->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,
+            GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, normal_texture->GetId(), 0);
         normal_texture->End();
 
         position_texture->Use();
-        glFramebufferTexture(GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT2, position_texture->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,
+            GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, position_texture->GetId(), 0);
         position_texture->End();
 
         depth_texture->Use();
-        glFramebufferTexture(GL_FRAMEBUFFER,
-            GL_DEPTH_ATTACHMENT, depth_texture->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,
+            GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_texture->GetId(), 0);
         depth_texture->End();
 
         const unsigned int draw_buffers[] = {

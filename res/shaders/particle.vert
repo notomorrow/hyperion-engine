@@ -1,11 +1,12 @@
-#version 330
+#version 330 core
 
 layout(location = 0) in vec3 position; // the vertex position
 layout(location = 1) in vec3 offset; // the particle's position
 layout(location = 2) in float lifespan; // opacity value
-varying vec4 v_position;
-varying vec2 v_texcoord0;
-varying float v_lifespan;
+
+out vec4 v_position;
+out vec2 v_texcoord0;
+out float v_lifespan;
 
 #include "include/matrices.inc"
 

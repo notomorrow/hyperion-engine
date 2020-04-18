@@ -76,9 +76,9 @@ void ShadowMapping::Begin()
     }
 
     MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
+
     shadow_cam->SetViewMatrix(new_view);
     shadow_cam->SetProjectionMatrix(new_proj);
-    shadow_cam->SetViewProjectionMatrix(new_view * new_proj);
 
     fbo->Use();
 }

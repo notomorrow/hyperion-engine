@@ -1,16 +1,18 @@
-#version 330
+#version 330 core
+
+#include "include/frag_output.inc"
 
 uniform vec3 v3LightPos;
 uniform float fg;
 uniform float fg2;
 uniform float fExposure;
 
-varying vec3 v3Direction;
-varying vec4 v4RayleighColor;
-varying vec4 v4MieColor;
-varying vec3 v_position;
-varying vec3 v_normal;
-varying vec2 v_texcoord0;
+in vec3 v3Direction;
+in vec4 v4RayleighColor;
+in vec4 v4MieColor;
+in vec3 v_position;
+in vec3 v_normal;
+in vec2 v_texcoord0;
 
 uniform vec4 u_sunColor;
 uniform float u_globalTime;
@@ -33,7 +35,7 @@ float saturate(float num)
 
 float noise(vec2 uv)
 {
-  return texture2D(u_noiseMap, uv).r;
+  return texture(u_noiseMap, uv).r;
 }
 
 vec2 rotate(vec2 uv)
@@ -96,7 +98,7 @@ void main (void)
   float fCos = dot(v3LightPos, v3Direction) / length(v3Direction);
   float fCos2 = fCos*fCos;
   vec4 skyColor = v4RayleighColor;
-  gl_FragColor = skyColor + getMiePhase(fCos, fCos2, fg, fg2) * v4MieColor * u_sunColor;
+  output0 = skyColor + getMiePhase(fCos, fCos2, fg, fg2) * v4MieColor * u_sunColor;
   //gl_FragColor.a = max(max(gl_FragColor.r, gl_FragColor.g), gl_FragColor.b);
 	
 	
@@ -118,7 +120,7 @@ void main (void)
     vec4 clouds1Color = vec4(cloudCol,cloudCol,cloudCol,1.0);
     vec4 clouds2Color = mix(clouds1Color,vec4(1.4, 1.4, 1.4, 0.6),0.4);
     vec4 cloudColComb = mix(clouds1Color,clouds2Color,saturate(clouds2-clouds1));
-  gl_FragColor = mix(vec4(1.0, 1.0, 1.0, 0.0),cloudColComb,cloudsFormComb);*/
+  output0 = mix(vec4(1.0, 1.0, 1.0, 0.0),cloudColComb,cloudsFormComb);*/
 	
 	
 #if CLOUDS
@@ -126,23 +128,23 @@ void main (void)
   
 	vec3 blend = getTriPlanarBlend(v_normal);
 	
-	float xaxisLayer1 = texture2D(u_noiseMap, v_position.yz + vec2(u_globalTime*0.2*timeScale)).r;
-	float yaxisLayer1 = texture2D(u_noiseMap, v_position.xz + vec2(u_globalTime*0.2*timeScale)).r;
-	float zaxisLayer1 = texture2D(u_noiseMap, v_position.xy + vec2(u_globalTime*0.2*timeScale)).r;
+	float xaxisLayer1 = texture(u_noiseMap, v_position.yz + vec2(u_globalTime*0.2*timeScale)).r;
+	float yaxisLayer1 = texture(u_noiseMap, v_position.xz + vec2(u_globalTime*0.2*timeScale)).r;
+	float zaxisLayer1 = texture(u_noiseMap, v_position.xy + vec2(u_globalTime*0.2*timeScale)).r;
 	vec4 layer1 = vec4(vec3(xaxisLayer1*blend.x + yaxisLayer1*blend.y + zaxisLayer1*blend.z), 1.0);
 	layer1.a = clamp(smoothstep(1.0-skyCover,min((1.0-skyCover)+softness*2.0,1.0),layer1.r), 0.0, 1.0);
 	layer1.rgba *= 3.0;
   
   
-	float xaxisLayer2 = texture2D(u_noiseMap, -v_position.yz*0.6 - vec2(u_globalTime*0.1*timeScale)).r;
-	float yaxisLayer2 = texture2D(u_noiseMap, -v_position.xz*0.6 - vec2(u_globalTime*0.1*timeScale)).r;
-	float zaxisLayer2 = texture2D(u_noiseMap, -v_position.xy*0.6 - vec2(u_globalTime*0.1*timeScale)).r;
+	float xaxisLayer2 = texture(u_noiseMap, -v_position.yz*0.6 - vec2(u_globalTime*0.1*timeScale)).r;
+	float yaxisLayer2 = texture(u_noiseMap, -v_position.xz*0.6 - vec2(u_globalTime*0.1*timeScale)).r;
+	float zaxisLayer2 = texture(u_noiseMap, -v_position.xy*0.6 - vec2(u_globalTime*0.1*timeScale)).r;
 	vec4 layer2 = vec4(vec3(xaxisLayer2*blend.x + yaxisLayer2*blend.y + zaxisLayer2*blend.z), 1.0);
 	layer2.a = clamp(smoothstep(1.0-skyCover,min((1.0-skyCover)+softness*2.0,1.0),layer2.r), 0.0, 1.0);
   
-	gl_FragColor += (layer1+layer2) * v4MieColor;
+	output0 += (layer1+layer2) * v4MieColor;
   
 #endif // CLOUDS
 	
-  gl_FragColor = 1.0 - exp(-fExposure * gl_FragColor);
+  output0 = 1.0 - exp(-fExposure * output0);
 }

@@ -60,7 +60,7 @@ public:
     {
         std::string res(s);
         res.erase(res.begin(), std::find_if(res.begin(), res.end(),
-            std::not1(std::ptr_fun<int, int>(std::isspace))));
+            [](int c) { return !std::isspace(c); }));
         return res;
     }
 
@@ -68,7 +68,7 @@ public:
     {
         std::string res(s);
         res.erase(std::find_if(res.rbegin(), res.rend(),
-            std::not1(std::ptr_fun<int, int>(std::isspace))).base(), res.end());
+            [](int c) { return !std::isspace(c); }).base(), res.end());
         return res;
     }
 

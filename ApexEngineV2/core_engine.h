@@ -116,6 +116,7 @@ public:
     };*/
 
     virtual bool InitializeGame(Game *game) = 0;
+    virtual void SetCursorLocked(bool locked) = 0;
     virtual void Viewport(int x, int y, size_t width, size_t height) = 0;
     virtual void Clear(int mask) = 0;
     virtual void SetMousePosition(double x, double y) = 0;
@@ -171,6 +172,8 @@ public:
     virtual void Uniform3i(int location, int v0, int v1, int v2) = 0;
     virtual void Uniform4i(int location, int v0, int v1, int v2, int v3) = 0;
     virtual void UniformMatrix4fv(int location, int count, bool transpose, const float *value) = 0;
+    virtual void VertexAttribDivisor(unsigned int index, unsigned int divisor) = 0;
+    virtual void DrawArraysInstanced(int mode, int first, size_t count, size_t primcount) = 0;
 
 private:
     static CoreEngine *instance;

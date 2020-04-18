@@ -6,15 +6,15 @@
 namespace apex {
 class PerspectiveCamera : public Camera {
 public:
-    PerspectiveCamera(float fov, int width, int height, float near_clip, float far_clip);
+    PerspectiveCamera(float fov, int width, int height, float near, float far);
     virtual ~PerspectiveCamera() = default;
 
     virtual void UpdateLogic(double dt);
     void UpdateMatrices();
 
 protected:
-    float fov;
+    float m_fov;
 };
-}
+} // namespace apex
 
 #endif

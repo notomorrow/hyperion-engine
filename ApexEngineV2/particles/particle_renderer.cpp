@@ -3,6 +3,7 @@
 #include "../rendering/shader_manager.h"
 #include "../rendering/environment.h"
 #include "../math/matrix_util.h"
+#include "../core_engine.h"
 #include <array>
 #include <ctime>
 #include <cassert>
@@ -115,18 +116,19 @@ void ParticleRenderer::Render()
     glBindBuffer(GL_ARRAY_BUFFER, m_lifespan_buffer);
     glVertexAttribPointer(2, 1, GL_FLOAT, false, 0, (void*)0);
 
-    glVertexAttribDivisor(0, 0);
-    glVertexAttribDivisor(1, 1);
-    glVertexAttribDivisor(2, 1);
+    CoreEngine::GetInstance()->VertexAttribDivisor(0, 0);
+    CoreEngine::GetInstance()->VertexAttribDivisor(1, 1);
+    CoreEngine::GetInstance()->VertexAttribDivisor(2, 1);
 
     // draw particles
-    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, m_particles->size());
+    CoreEngine::GetInstance()->DrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, m_particles->size());
 
     // reset changes
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glVertexAttribDivisor(0, 0);
-    glVertexAttribDivisor(1, 0);
-    glVertexAttribDivisor(2, 0);
+
+    CoreEngine::GetInstance()->VertexAttribDivisor(0, 0);
+    CoreEngine::GetInstance()->VertexAttribDivisor(1, 0);
+    CoreEngine::GetInstance()->VertexAttribDivisor(2, 0);
 
     glDisable(GL_BLEND);
     glDepthMask(true);

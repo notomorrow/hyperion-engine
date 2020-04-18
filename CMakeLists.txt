@@ -12,7 +12,9 @@ find_package(Threads)
 find_package(OpenGL)
 find_package(OpenAL)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fpermissive")
+LINK_DIRECTORIES(/usr/local/lib)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fpermissive")
 
 file(GLOB_RECURSE SOURCES "ApexEngineV2/*.cpp" "ApexEngineV2/*.cpp" "ApexEngineV2/*.c")
 file(GLOB_RECURSE HEADERS "ApexEngineV2/*.h")
@@ -24,7 +26,12 @@ include_directories(
   ${OPENAL_INCLUDE_DIR}
   ${CMAKE_SOURCE_DIR}/ApexEngineV2
 )
-
 add_executable(${BUILD_NAME} ${SOURCES} ${HEADERS})
-target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_SOURCE_DIR}/libnoise.a GLEW ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} glfw m)
+
+if(APPLE)
+  target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} glfw m)
+else()
+  target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} GLEW glfw m)
+endif()
+
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})

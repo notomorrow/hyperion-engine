@@ -1,7 +1,7 @@
 #include "shader.h"
 #include "../util/string_util.h"
 #include "../util/shader_preprocessor.h"
-#include <iostream>
+#include "../util.h"
 
 namespace apex {
 
@@ -49,8 +49,12 @@ void Shader::Use()
     if (!is_created) {
         progid = glCreateProgram();
 
+        CatchGLErrors("Failed to create shader program." __FILE__);
+
         for (auto &&sub : subshaders) {
             sub.id = glCreateShader(sub.type);
+
+            CatchGLErrors("Failed to create subshader." __FILE__);
         }
 
         is_created = true;
@@ -73,12 +77,17 @@ void Shader::Use()
                 memset(log, 0, maxlen);
                 glGetShaderInfoLog(sub.id, maxlen, NULL, log);
 
-                std::cout << "Shader compile error! ";
-                std::cout << "Compile log: \n" << log << "\n";
+                std::cout << "In shader of class " << typeid(*this).name() << ":\n";
+                std::cout << "\tShader compile error! ";
+                std::cout << "\tCompile log: \n" << log << "\n";
 
                 delete[] log;
             }
         }
+
+        glBindFragDataLocation(progid, 0, "output0");
+        glBindFragDataLocation(progid, 1, "output1");
+        glBindFragDataLocation(progid, 2, "output2");
 
         glBindAttribLocation(progid, 0, "a_position");
         glBindAttribLocation(progid, 1, "a_normal");
@@ -88,6 +97,7 @@ void Shader::Use()
         glBindAttribLocation(progid, 5, "a_bitangent");
         glBindAttribLocation(progid, 6, "a_boneweights");
         glBindAttribLocation(progid, 7, "a_boneindices");
+        CatchGLErrors("Failed to bind attributes." __FILE__);
 
         glLinkProgram(progid);
         glValidateProgram(progid);
@@ -101,13 +111,18 @@ void Shader::Use()
 
             if (maxlen != 0) {
                 char *log = new char[maxlen];
-                std::cout << maxlen << "\n";
 
                 glGetProgramInfoLog(progid, maxlen, NULL, log);
-                memset(log, 0, maxlen);
+
+                std::cout << "In shader of class " << typeid(*this).name() << ":\n";
+                std::cout << "\tShader linker error! ";
+                std::cout << "\tCompile log: \n" << log << "\n";
+
                 glDeleteProgram(progid);
 
                 delete[] log;
+
+                return;
             }
         }
 

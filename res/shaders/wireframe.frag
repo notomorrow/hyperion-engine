@@ -1,8 +1,10 @@
-#version 330
+#version 330 core
 
-varying vec4 v_position;
+#include "include/frag_output.inc"
+
+in vec4 v_position;
 
 void main() 
 {
-  gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+  output0 = vec4(0.0, 0.0, 0.0, 1.0);
 }

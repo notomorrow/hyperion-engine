@@ -47,10 +47,13 @@ void Entity::UpdateAABB()
             BoundingBox renderable_aabb_transformed;
             // multiply by transform
             std::array<Vector3, 8> corners = renderable_aabb.GetCorners();
+
             for (Vector3 &corner : corners) {
                 corner *= m_global_transform.GetMatrix();
+
                 renderable_aabb_transformed.Extend(corner);
             }
+
             m_aabb.Extend(renderable_aabb_transformed);
         }
     }

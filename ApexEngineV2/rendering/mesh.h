@@ -85,7 +85,7 @@ public:
 
 private:
     bool is_uploaded, is_created;
-    unsigned int vbo, ibo, vertex_size;
+    unsigned int vao, vbo, ibo, vertex_size;
     std::vector<Vertex> vertices;
     std::vector<MeshIndex> indices;
     PrimitiveType primitive_type;

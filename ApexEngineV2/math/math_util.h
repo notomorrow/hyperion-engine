@@ -2,6 +2,7 @@
 #define MATHUTIL_H
 
 #include <cstdlib>
+#include <cmath>
 
 namespace apex {
 
@@ -72,13 +73,13 @@ public:
     template <typename T>
     static inline int Floor(T a)
     {
-        return floor(a);
+        return std::floor(a);
     }
 
     template <typename T>
     static inline int Ceil(T a)
     {
-        return ceil(a);
+        return std::ceil(a);
     }
 };
 

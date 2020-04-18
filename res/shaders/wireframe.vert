@@ -1,7 +1,8 @@
-#version 330
+#version 330 core
 
-attribute vec3 a_position;
-varying vec4 v_position;
+#include "include/attributes.inc"
+
+out vec4 v_position;
 
 #include "include/matrices.inc"
 

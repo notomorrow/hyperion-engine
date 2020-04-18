@@ -34,8 +34,8 @@ public:
     inline size_t NumValues() const { return size; }
     inline MaterialParameterType GetType() const { return type; }
 
-    inline float &MaterialParameter::operator[](size_t idx) { return values[idx]; }
-    inline float MaterialParameter::operator[](size_t idx) const { return values[idx]; }
+    inline float &operator[](size_t idx) { return values[idx]; }
+    inline float operator[](size_t idx) const { return values[idx]; }
 
 private:
     size_t size;
