@@ -20,7 +20,7 @@ public:
     inline void SetFar(float far)     { m_far = far; }
 
     inline const Vector3 &GetTranslation() const           { return m_translation; }
-    inline void SetTranslation(const Vector3 &translation) { m_translation = translation; }
+    virtual void SetTranslation(const Vector3 &translation);
     inline const Vector3 &GetDirection() const             { return m_direction; }
     inline void SetDirection(const Vector3 &direction)     { m_direction = direction; }
     inline const Vector3 &GetUpVector() const              { return m_up; }

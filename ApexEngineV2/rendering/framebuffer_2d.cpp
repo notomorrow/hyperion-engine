@@ -25,9 +25,9 @@ Framebuffer2D::Framebuffer2D(int width, int height)
     position_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
     depth_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-    depth_texture->SetInternalFormat(GL_DEPTH_COMPONENT16);
+    depth_texture->SetInternalFormat(GL_DEPTH_COMPONENT24);
     depth_texture->SetFormat(GL_DEPTH_COMPONENT);
-    depth_texture->SetFilter(GL_NEAREST, GL_NEAREST);
+    depth_texture->SetFilter(GL_LINEAR, GL_LINEAR);
     depth_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 }
 

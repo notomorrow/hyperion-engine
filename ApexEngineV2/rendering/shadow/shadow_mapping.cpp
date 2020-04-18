@@ -7,8 +7,8 @@ namespace apex {
 ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist)
     : view_cam(view_cam), max_dist(max_dist)
 {
-    shadow_cam = new OrthoCamera(-10, 10, -10, 10, -10, 10);
-    fbo = new Framebuffer2D(512, 512);
+    shadow_cam = new OrthoCamera(0, 0, 0, 0, 0, 0);
+    fbo = new Framebuffer2D(1024, 1024);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -83,12 +83,12 @@ void ShadowMapping::Begin()
     glDepthMask(true);
     glClearDepth(1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    // glCullFace(GL_FRONT);
+    ///glCullFace(GL_FRONT);
 }
 
 void ShadowMapping::End()
 {
-    // glCullFace(GL_BACK);
+    //glCullFace(GL_BACK);
 
     fbo->End();
 }

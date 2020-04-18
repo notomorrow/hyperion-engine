@@ -15,6 +15,8 @@ const float softness = 0.4;
 const float brightness = 1.3;
 const int noiseOctaves = 4;
 
+#include "include/frag_output.inc"
+
 float saturate(float num)
 {
   return clamp(num, 0.0, 1.0);
@@ -86,6 +88,6 @@ void main()
   float fogFactor = (30.0 - dist) / (30.0 - 18.0);
   fogFactor = saturate(fogFactor);
   
-  gl_FragColor = mix(fogColor, cloudColComb, fogFactor);          
+  output0 = mix(fogColor, cloudColComb, fogFactor);          
 }
 

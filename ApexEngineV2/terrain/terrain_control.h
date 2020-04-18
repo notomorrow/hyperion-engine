@@ -8,6 +8,7 @@
 
 #include <queue>
 
+#define TERRAIN_CHUNK_VERTEX_SIZE 16
 #define TERRAIN_MAX_QUEUE_TICK 0.2
 #define TERRAIN_MAX_UPDATE_TICK 0.2
 #define TERRAIN_MAX_UNLOAD_TICK 1
@@ -32,7 +33,7 @@ public:
 protected:
     Camera *m_camera;
     Vector3 m_scale;
-    int m_chunk_size = 64;
+    int m_chunk_size = TERRAIN_CHUNK_VERTEX_SIZE;
     std::queue<NeighborChunkInfo*> m_queue;
     std::vector<TerrainChunk*> m_chunks;
 

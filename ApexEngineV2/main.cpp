@@ -105,13 +105,13 @@ public:
             window.GetScaledHeight(),
             70.0f,
             0.1f,
-            400.0f
+            2000.0f
         );
         //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
         //env_cam->SetTranslation(Vector3(0, 10, 0));
         fbo = new Framebuffer2D(window.GetScaledWidth(), window.GetScaledHeight());
         //env_fbo = new FramebufferCube(256, 256);
-        shadows = new PssmShadowMapping(cam, 4, 100);
+        shadows = new PssmShadowMapping(cam, 4, 200);
 
     }
 
@@ -281,7 +281,7 @@ public:
         // Initialize root node
         top = std::make_shared<Entity>("top");
 
-        cam->SetTranslation(Vector3(0, 20, 0));
+        cam->SetTranslation(Vector3(0, 50, 0));
 
         // Initialize particle system
         //InitParticleSystem();
@@ -364,16 +364,16 @@ public:
         //     top->AddChild(house);
         // }
 
-        // std::shared_ptr<Cubemap> cubemap(new Cubemap({
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_right.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_left.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
-        // }));
-        // // Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
-        // Environment::GetInstance()->SetGlobalCubemap(cubemap);
+        std::shared_ptr<Cubemap> cubemap(new Cubemap({
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_right.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_left.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
+         }));
+     // Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
+        Environment::GetInstance()->SetGlobalCubemap(cubemap);
 
         /*{ // sponza
             auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
@@ -474,8 +474,8 @@ public:
         //     sewers->Scale(5.0f);
         // }
 
-        //top->AddControl(std::make_shared<SkydomeControl>(cam));
-        //top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3543534));
+        top->AddControl(std::make_shared<SkydomeControl>(cam));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 34923949));
     }
 
     void Logic(double dt)
