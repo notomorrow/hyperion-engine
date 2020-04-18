@@ -1,16 +1,14 @@
 #include "shadow_mapping.h"
 #include "../../core_engine.h"
 #include "../../math/frustum.h"
-#include "../../opengl.h"
+#include "../../util.h"
 
 namespace apex {
 ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist)
     : view_cam(view_cam), max_dist(max_dist)
 {
     shadow_cam = new OrthoCamera(-10, 10, -10, 10, -10, 10);
-    fbo = new Framebuffer2D(2048, 2048);
-    fbo->GetDepthTexture()->SetFilter(GL_NEAREST, GL_NEAREST);
-    fbo->GetDepthTexture()->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+    fbo = new Framebuffer2D(512, 512);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -81,10 +79,17 @@ void ShadowMapping::Begin()
     shadow_cam->SetProjectionMatrix(new_proj);
 
     fbo->Use();
+
+    glDepthMask(true);
+    glClearDepth(1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    // glCullFace(GL_FRONT);
 }
 
 void ShadowMapping::End()
 {
+    // glCullFace(GL_BACK);
+
     fbo->End();
 }
 

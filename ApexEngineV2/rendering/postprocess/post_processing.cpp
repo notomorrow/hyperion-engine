@@ -24,6 +24,9 @@ void PostProcessing::RemoveFilter(const std::string &tag)
 
 void PostProcessing::Render(Camera *cam, Framebuffer *fbo)
 {
+  // glDepthMask(false);
+  // glDisable(GL_DEPTH_TEST);
+
   for (auto it : m_filters) {
     it.filter->Begin(cam, fbo);
 
@@ -31,6 +34,9 @@ void PostProcessing::Render(Camera *cam, Framebuffer *fbo)
 
     it.filter->End(cam, fbo);
   }
+
+  // glDepthMask(true);
+  // glEnable(GL_DEPTH_TEST);
 }
 
 } // namespace apex

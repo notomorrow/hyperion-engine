@@ -18,28 +18,38 @@ PostShader::PostShader(const ShaderProperties &properties)
 
 void PostShader::ApplyMaterial(const Material &mat)
 {
+    int texture_index = 1;
+
     if (mat.texture0 != nullptr) {
-        Texture::ActiveTexture(0);
+        Texture::ActiveTexture(texture_index);
         mat.texture0->Use();
-        SetUniform("u_colorMap", 0);
+        SetUniform("u_colorMap", texture_index);
+
+        texture_index++;
     }
 
     if (mat.texture1 != nullptr) {
-        Texture::ActiveTexture(1);
+        Texture::ActiveTexture(texture_index);
         mat.texture1->Use();
-        SetUniform("u_depthMap", 1);
+        SetUniform("u_depthMap", texture_index);
+
+        texture_index++;
     }
 
     if (mat.texture2 != nullptr) {
-        Texture::ActiveTexture(2);
+        Texture::ActiveTexture(texture_index);
         mat.texture2->Use();
-        SetUniform("u_positionMap", 2);
+        SetUniform("u_positionMap", texture_index);
+
+        texture_index++;
     }
 
     if (mat.normals0 != nullptr) {
-        Texture::ActiveTexture(3);
+        Texture::ActiveTexture(texture_index);
         mat.normals0->Use();
-        SetUniform("u_normalMap", 3);
+        SetUniform("u_normalMap", texture_index);
+
+        texture_index++;
     }
 
     // if (mat.alpha_blended) {
@@ -47,7 +57,7 @@ void PostShader::ApplyMaterial(const Material &mat)
     //     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     // }
 
-    glDepthMask(false);
-    glDisable(GL_DEPTH_TEST);
+    //glDepthMask(false);
+    //glDisable(GL_DEPTH_TEST);
 }
 } // namespace apex

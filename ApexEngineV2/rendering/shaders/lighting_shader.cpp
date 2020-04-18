@@ -33,7 +33,7 @@ LightingShader::LightingShader(const ShaderProperties &properties)
 
 void LightingShader::ApplyMaterial(const Material &mat)
 {
-    int texture_index = 0;
+    int texture_index = 1;
 
     auto *env = Environment::GetInstance();
     if (env->ShadowsEnabled()) {
