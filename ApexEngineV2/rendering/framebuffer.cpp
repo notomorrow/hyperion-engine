@@ -27,5 +27,4 @@ void Framebuffer::End()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-
 } // namespace apex

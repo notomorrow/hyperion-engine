@@ -71,6 +71,7 @@ bool GlfwEngine::InitializeGame(Game *game)
 
     glfwSwapInterval(1);
     // glEnable(GL_FRAMEBUFFER_SRGB);
+    glDepthMask(true);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);

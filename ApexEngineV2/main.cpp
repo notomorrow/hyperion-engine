@@ -94,7 +94,7 @@ public:
 
         renderer = new Renderer();
 
-        renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
+        //renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
 
         renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
 
@@ -104,8 +104,8 @@ public:
             window.GetScaledWidth(),
             window.GetScaledHeight(),
             70.0f,
-            0.5f,
-            1500.0f
+            0.1f,
+            400.0f
         );
         //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
         //env_cam->SetTranslation(Vector3(0, 10, 0));
@@ -209,7 +209,6 @@ public:
         //box->AddChild(bb_renderer_node);
 
         top->AddChild(box);
-        return;
 
 
         { // test object
@@ -365,16 +364,16 @@ public:
         //     top->AddChild(house);
         // }
 
-        std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_right.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_left.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
-        }));
-        // Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
-        Environment::GetInstance()->SetGlobalCubemap(cubemap);
+        // std::shared_ptr<Cubemap> cubemap(new Cubemap({
+        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_right.jpg"),
+        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_left.jpg"),
+        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
+        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
+        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
+        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
+        // }));
+        // // Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
+        // Environment::GetInstance()->SetGlobalCubemap(cubemap);
 
         /*{ // sponza
             auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
@@ -476,7 +475,7 @@ public:
         // }
 
         //top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3543534));
+        //top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3543534));
     }
 
     void Logic(double dt)
@@ -581,9 +580,9 @@ public:
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetId(), 0);*/
 
-        renderer->RenderAll(cam);
+        renderer->RenderAll(cam, fbo);
         renderer->ClearRenderables();
-        //renderer->RenderPost(cam, fbo);
+        renderer->RenderPost(cam, fbo);
     }
 };
 

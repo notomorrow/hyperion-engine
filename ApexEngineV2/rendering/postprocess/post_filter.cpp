@@ -1,5 +1,7 @@
 #include "./post_filter.h"
 
+#include "../environment.h"
+
 namespace apex {
 
 PostFilter::PostFilter(const std::shared_ptr<PostShader> &shader)
@@ -13,6 +15,8 @@ void PostFilter::Begin(Camera *cam, Framebuffer *fbo)
     m_material.texture1 = fbo->GetDepthTexture();
     m_material.texture2 = fbo->GetPositionTexture();
     m_material.normals0 = fbo->GetNormalTexture();
+
+    m_material.texture0 = Environment::GetInstance()->GetShadowMap(0);
 
     SetUniforms(cam);
 

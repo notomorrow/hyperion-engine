@@ -1,5 +1,5 @@
 #include "texture.h"
-#include "../opengl.h"
+#include "../util.h"
 
 namespace apex {
 
@@ -64,6 +64,7 @@ void Texture::SetWrapMode(int s, int t)
 void Texture::ActiveTexture(int i)
 {
     glActiveTexture(GL_TEXTURE0 + i);
+    CatchGLErrors("Failed to set active texture", false);
 }
 
 } // namespace apex

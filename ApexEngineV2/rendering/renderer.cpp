@@ -73,11 +73,12 @@ void Renderer::RenderAll(Camera *cam, Framebuffer *fbo)
 {
     if (fbo) {
         fbo->Use();
+
+        // todo: test
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     } else {
         CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
     }
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glDisable(GL_CULL_FACE);
     RenderBucket(cam, sky_bucket);

@@ -49,12 +49,12 @@ void Shader::Use()
     if (!is_created) {
         progid = glCreateProgram();
 
-        CatchGLErrors("Failed to create shader program." __FILE__);
+        CatchGLErrors("Failed to create shader program.");
 
         for (auto &&sub : subshaders) {
             sub.id = glCreateShader(sub.type);
 
-            CatchGLErrors("Failed to create subshader." __FILE__);
+            CatchGLErrors("Failed to create subshader.");
         }
 
         is_created = true;
@@ -97,7 +97,7 @@ void Shader::Use()
         glBindAttribLocation(progid, 5, "a_bitangent");
         glBindAttribLocation(progid, 6, "a_boneweights");
         glBindAttribLocation(progid, 7, "a_boneindices");
-        CatchGLErrors("Failed to bind attributes." __FILE__);
+        CatchGLErrors("Failed to bind shader attributes.");
 
         glLinkProgram(progid);
         glValidateProgram(progid);
