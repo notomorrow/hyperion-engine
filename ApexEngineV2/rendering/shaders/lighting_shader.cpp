@@ -39,13 +39,16 @@ void LightingShader::ApplyMaterial(const Material &mat)
     if (env->ShadowsEnabled()) {
         for (int i = 0; i < env->NumCascades(); i++) {
             const std::string i_str = std::to_string(i);
-            Texture::ActiveTexture(texture_index);
-            env->GetShadowMap(i)->Use();
-            SetUniform("u_shadowMap[" + i_str + "]", texture_index);
+
+            if (auto shadow_map = env->GetShadowMap(i)) {
+                Texture::ActiveTexture(texture_index);
+                shadow_map->Use();
+                SetUniform("u_shadowMap[" + i_str + "]", texture_index);
+                texture_index++;
+            }
+
             SetUniform("u_shadowMatrix[" + i_str + "]", env->GetShadowMatrix(i));
             SetUniform("u_shadowSplit[" + i_str + "]", (float)env->GetShadowSplit(i));
-
-            texture_index++;
         }
     }
 

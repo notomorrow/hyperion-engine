@@ -3,7 +3,6 @@
 #include "entity.h"
 #include "asset/asset_manager.h"
 #include "asset/text_loader.h"
-#include "rendering/renderer.h"
 #include "rendering/mesh.h"
 #include "rendering/shader.h"
 #include "rendering/environment.h"
@@ -62,7 +61,6 @@ using namespace apex;
 
 class MyGame : public Game {
 public:
-    Renderer *renderer;
     Camera *cam, *env_cam;
     Framebuffer *fbo, *env_fbo;
     PssmShadowMapping *shadows;
@@ -92,11 +90,9 @@ public:
 
         ShaderProperties defines;
 
-        renderer = new Renderer();
+        //m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
 
-        //renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
-
-        renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
+        m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
 
         cam = new FpsCamera(
             inputmgr,
@@ -122,7 +118,6 @@ public:
         //delete env_fbo;
         delete cam;
         //delete env_cam;
-        delete renderer;
 
         AudioManager::Deinitialize();
     }
@@ -364,16 +359,16 @@ public:
         //     top->AddChild(house);
         // }
 
-        // std::shared_ptr<Cubemap> cubemap(new Cubemap({
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_right.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_left.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
-        //     AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
-        // }));
-        // // Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
-        // Environment::GetInstance()->SetGlobalCubemap(cubemap);
+        std::shared_ptr<Cubemap> cubemap(new Cubemap({
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_right.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_left.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_top.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_front.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/lostvalley/lostvalley_back.jpg")
+        }));
+        // Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
+        Environment::GetInstance()->SetGlobalCubemap(cubemap);
 
         /*{ // sponza
             auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
@@ -475,7 +470,7 @@ public:
         // }
 
         //top->AddControl(std::make_shared<SkydomeControl>(cam));
-        //top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3543534));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3543534));
     }
 
     void Logic(double dt)
@@ -535,54 +530,54 @@ public:
 
     void Render()
     {
-        renderer->FindRenderables(top.get());
+        m_renderer->FindRenderables(top.get());
 
         if (Environment::GetInstance()->ShadowsEnabled()) {
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
             shadow_dir.SetY(-1.0f);
             shadows->SetLightDirection(shadow_dir.Normalize());
-            shadows->Render(renderer);
+            shadows->Render(m_renderer);
         }
 
         //env_fbo->Use();
-        //renderer->RenderBucket(env_cam, renderer->opaque_bucket, cubemap_renderer_shader.get());
+        //m_renderer->RenderBucket(env_cam, m_renderer->opaque_bucket, cubemap_renderer_shader.get());
         //env_fbo->End();
 
         /*glBindFramebuffer(GL_FRAMEBUFFER, env_fbo->GetId());
         env_cam->SetDirection(Vector3(1, 0, 0));
         env_cam->UpdateMatrices();
-        renderer->RenderAll(cam, fbo);
+        m_renderer->RenderAll(cam, fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_POSITIVE_X, env_fbo->GetId(), 0);
         env_cam->SetDirection(Vector3(-1, 0, 0));
         env_cam->UpdateMatrices();
-        renderer->RenderAll(env_cam, env_fbo);
+        m_renderer->RenderAll(env_cam, env_fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_NEGATIVE_X, env_fbo->GetId(), 0);
         env_cam->SetDirection(Vector3(0, 1, 0));
         env_cam->UpdateMatrices();
-        renderer->RenderAll(env_cam, env_fbo);
+        m_renderer->RenderAll(env_cam, env_fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_POSITIVE_Y, env_fbo->GetId(), 0);
         env_cam->SetDirection(Vector3(0, -1, 0));
         env_cam->UpdateMatrices();
-        renderer->RenderAll(env_cam, env_fbo);
+        m_renderer->RenderAll(env_cam, env_fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, env_fbo->GetId(), 0);
         env_cam->SetDirection(Vector3(0, 0, 1));
         env_cam->UpdateMatrices();
-        renderer->RenderAll(env_cam, env_fbo);
+        m_renderer->RenderAll(env_cam, env_fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_POSITIVE_Z, env_fbo->GetId(), 0);
         env_cam->SetDirection(Vector3(0, 0, -1));
         env_cam->UpdateMatrices();
-        renderer->RenderAll(env_cam, env_fbo);
+        m_renderer->RenderAll(env_cam, env_fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetId(), 0);*/
 
-        renderer->RenderAll(cam, fbo);
-        renderer->ClearRenderables();
-        renderer->RenderPost(cam, fbo);
+        m_renderer->RenderAll(cam, fbo);
+        m_renderer->ClearRenderables();
+        m_renderer->RenderPost(cam, fbo);
     }
 };
 

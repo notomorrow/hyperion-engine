@@ -9,6 +9,7 @@ in mat3 v_tbn;
 
 uniform vec3 u_camerapos;
 
+#include "include/depth.inc"
 #include "include/frag_output.inc"
 
 #if SHADOWS
@@ -136,4 +137,5 @@ void main()
   output0 = vec4(color, 1.0);//vec4(color, 1.0);
   output1 = vec4(n.xyz, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
+  outputDepth = packDepth(gl_FragCoord.z);
 }

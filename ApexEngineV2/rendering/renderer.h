@@ -31,7 +31,7 @@ public:
     void RenderBucket(Camera *cam, Bucket_t &bucket, Shader *override_shader = nullptr);
     void RenderAll(Camera *cam, Framebuffer *fbo = nullptr);
     void RenderPost(Camera *cam, Framebuffer *fbo);
-
+ 
     inline PostProcessing *GetPostProcessing() { return m_post_processing; }
     inline const PostProcessing *GetPostProcessing() const { return m_post_processing; }
 
