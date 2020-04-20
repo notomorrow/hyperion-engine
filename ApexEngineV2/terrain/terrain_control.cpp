@@ -12,7 +12,7 @@ TerrainControl::TerrainControl(Camera *camera)
       m_scale(3.0, 1.5, 3.0),
       m_tick(0),
       m_queuetick(0),
-      m_max_distance(5.0)
+      m_max_distance(1.0)
 {
 }
 

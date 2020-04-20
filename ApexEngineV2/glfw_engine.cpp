@@ -35,6 +35,7 @@ bool GlfwEngine::InitializeGame(Game *game)
     if (!glfwInit()) {
         return false;
     }
+    // glfwWindowHint(GLFW_SAMPLES, 4);
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
@@ -57,10 +58,12 @@ bool GlfwEngine::InitializeGame(Game *game)
     glfwSetKeyCallback(window, KeyCallback);
     glfwMakeContextCurrent(window);
 
+    Vector2 render_scale, prev_render_scale;
+
     glfwGetWindowContentScale(
         window,
-        &game->GetWindow().xscale,
-        &game->GetWindow().yscale
+        &render_scale.GetX(),
+        &render_scale.GetY()
     );
 
 #ifdef USE_GLEW
@@ -71,11 +74,13 @@ bool GlfwEngine::InitializeGame(Game *game)
 
     glfwSwapInterval(1);
     // glEnable(GL_FRAMEBUFFER_SRGB);
+    // glDepthFunc(GL_LESS);
+    glClearDepth(1.0);
     glDepthMask(true);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
-    glClearColor(0.1f, 0.0f, 0.0f, 1.0f);
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 
     game->Initialize();
 
@@ -98,6 +103,12 @@ bool GlfwEngine::InitializeGame(Game *game)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glfwGetWindowSize(window, &game->GetWindow().width, &game->GetWindow().height);
+
+        if (prev_render_scale != render_scale) {
+            game->GetRenderer()->GetPostProcessing()->SetRenderScale(render_scale);
+
+            prev_render_scale = render_scale;
+        }
 
         double mouse_x, mouse_y;
 
