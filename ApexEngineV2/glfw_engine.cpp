@@ -1,6 +1,7 @@
 #include "glfw_engine.h"
 #include "game.h"
 #include "input_manager.h"
+#include "util.h"
 #include "math/math_util.h"
 
 #include <iostream>
@@ -37,10 +38,12 @@ bool GlfwEngine::InitializeGame(Game *game)
     }
     // glfwWindowHint(GLFW_SAMPLES, 4);
 
+#if __APPLE__
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
 
     window = glfwCreateWindow(
         game->GetWindow().width,
@@ -66,6 +69,8 @@ bool GlfwEngine::InitializeGame(Game *game)
         &render_scale.GetY()
     );
 
+    render_scale = Vector2::Max(render_scale, Vector2::One());
+
 #ifdef USE_GLEW
     if (glewInit() != GLEW_OK) {
         throw "error initializing glew";
@@ -73,8 +78,7 @@ bool GlfwEngine::InitializeGame(Game *game)
 #endif
 
     glfwSwapInterval(1);
-    // glEnable(GL_FRAMEBUFFER_SRGB);
-    // glDepthFunc(GL_LESS);
+
     glClearDepth(1.0);
     glDepthMask(true);
     glEnable(GL_CULL_FACE);
@@ -105,7 +109,7 @@ bool GlfwEngine::InitializeGame(Game *game)
         glfwGetWindowSize(window, &game->GetWindow().width, &game->GetWindow().height);
 
         if (prev_render_scale != render_scale) {
-            game->GetRenderer()->GetPostProcessing()->SetRenderScale(render_scale);
+            game->GetRenderer()->GetPostProcessing()->SetRenderScale(Vector2::Max(render_scale, Vector2::One()));
 
             prev_render_scale = render_scale;
         }

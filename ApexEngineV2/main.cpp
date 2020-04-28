@@ -1,6 +1,7 @@
 #include "glfw_engine.h"
 #include "game.h"
 #include "entity.h"
+#include "util.h"
 #include "asset/asset_manager.h"
 #include "asset/text_loader.h"
 #include "rendering/mesh.h"
@@ -107,7 +108,7 @@ public:
         //env_cam->SetTranslation(Vector3(0, 10, 0));
         fbo = new Framebuffer2D(window.GetScaledWidth(), window.GetScaledHeight());
         //env_fbo = new FramebufferCube(256, 256);
-        shadows = new PssmShadowMapping(cam, 4, 100);
+        shadows = new PssmShadowMapping(cam, 4, 300);
 
     }
 
@@ -264,6 +265,7 @@ public:
 
     void Initialize()
     {
+
         Environment::GetInstance()->SetShadowsEnabled(true);
         AudioManager::GetInstance()->Initialize();
 
@@ -469,8 +471,10 @@ public:
         //     sewers->Scale(5.0f);
         // }
 
-        //top->AddControl(std::make_shared<SkydomeControl>(cam));
+        top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3543534));
+
+
     }
 
     void Logic(double dt)

@@ -1,6 +1,7 @@
 #include "pssm_shadow_mapping.h"
 #include "../shader_manager.h"
 #include "../shaders/depth_shader.h"
+#include "../../util.h"
 
 namespace apex {
 PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double max_dist)
