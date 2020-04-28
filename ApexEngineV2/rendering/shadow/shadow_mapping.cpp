@@ -11,7 +11,7 @@ ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist)
 
     // only use color component -- we will use DepthShader
     //   to render the depth into the color attachment
-    fbo = new Framebuffer2D(512, 512, true, false, false, false);
+    fbo = new Framebuffer2D(1024, 1024, true, true, false, false);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -37,7 +37,7 @@ OrthoCamera *ShadowMapping::GetShadowCamera()
 
 std::shared_ptr<Texture> ShadowMapping::GetShadowMap()
 {
-    return fbo->GetColorTexture();
+    return fbo->GetDepthTexture();
 }
 
 void ShadowMapping::Begin()
@@ -83,19 +83,19 @@ void ShadowMapping::Begin()
 
     fbo->Use();
 
-    // glPolygonMode(GL_FRONT_AND_BACK,GL_FILL); 
+    // glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
     // glDepthMask(true);
     // glClearDepth(1.0);
     // glDepthFunc(GL_LESS);
     // glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    // glCullFace(GL_FRONT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glCullFace(GL_FRONT);
 }
 
 void ShadowMapping::End()
 {
-    // glCullFace(GL_BACK);
+    glCullFace(GL_BACK);
 
     fbo->End();
 }
