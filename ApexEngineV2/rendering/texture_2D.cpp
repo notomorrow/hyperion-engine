@@ -33,8 +33,8 @@ void Texture2D::Use()
         glGenTextures(1, &id);
         CatchGLErrors("Failed to generate texture.", false);
 
-        //glEnable(GL_TEXTURE_2D);
-        //CatchGLErrors("Failed to enable Texture2D.", false);
+        // glEnable(GL_TEXTURE_2D);
+        // CatchGLErrors("Failed to enable Texture2D.", false);
 
         is_created = true;
     }

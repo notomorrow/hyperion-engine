@@ -10,7 +10,10 @@
 *.sln.docstates
 
 build/**/*
+ApexEngineV2/Debug/**/*
+ApexEngineV2/Release/**/*
 
+*.tlog
 Debug/**/*
 Release/**/*
 

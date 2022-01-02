@@ -10,7 +10,14 @@ namespace apex {
 
 class Framebuffer2D : public Framebuffer {
 public:
-    Framebuffer2D(int width, int height);
+    Framebuffer2D(
+        int width,
+        int height,
+        bool has_color_texture = true,
+        bool has_depth_texture = true,
+        bool has_normal_texture = true,
+        bool has_position_texture = true
+    );
     virtual ~Framebuffer2D();
 
     virtual const std::shared_ptr<Texture> GetColorTexture() const override;
@@ -24,7 +31,14 @@ public:
     virtual void Use() override;
 
 private:
-    std::shared_ptr<Texture2D> color_texture, normal_texture, depth_texture, position_texture;
+    std::shared_ptr<Texture2D> m_color_texture,
+                               m_normal_texture,
+                               m_depth_texture,
+                               m_position_texture;
+    bool m_has_color_texture,
+         m_has_normal_texture,
+         m_has_depth_texture,
+         m_has_position_texture;
 };
 
 } // namespace apex

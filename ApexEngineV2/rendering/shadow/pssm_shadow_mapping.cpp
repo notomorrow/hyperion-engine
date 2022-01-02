@@ -1,4 +1,7 @@
 #include "pssm_shadow_mapping.h"
+#include "../shader_manager.h"
+#include "../shaders/depth_shader.h"
+#include "../../util.h"
 
 namespace apex {
 PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double max_dist)
@@ -19,6 +22,8 @@ PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double ma
 
         Environment::GetInstance()->SetShadowMap(i, shadow_renderers[i]->GetShadowMap());
     }
+
+    m_depth_shader = ShaderManager::GetInstance()->GetShader<DepthShader>(ShaderProperties {});
 }
 
 int PssmShadowMapping::NumSplits() const
@@ -37,13 +42,13 @@ void PssmShadowMapping::Render(Renderer *renderer)
 {
     for (int i = 0; i < num_splits; i++) {
         shadow_renderers[i]->Begin();
-        // CoreEngine::GetInstance()->Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        //CoreEngine::GetInstance()->Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         // TODO: cache beforehand
         Environment::GetInstance()->SetShadowMatrix(i, shadow_renderers[i]->
             GetShadowCamera()->GetViewProjectionMatrix());
 
-        renderer->RenderBucket(shadow_renderers[i]->GetShadowCamera(), renderer->opaque_bucket);
+        renderer->RenderBucket(shadow_renderers[i]->GetShadowCamera(), renderer->opaque_bucket, m_depth_shader.get());
 
         shadow_renderers[i]->End();
     }

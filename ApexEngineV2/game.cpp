@@ -1,12 +1,10 @@
 #include "game.h"
 
-#include <iostream>
-#include <GLFW/glfw3.h>
-
 namespace apex {
 
 Game::Game(const RenderWindow &window) 
-    : inputmgr(new InputManager), 
+    : inputmgr(new InputManager),
+      m_renderer(new Renderer()), 
       window(window)
 {
 }
@@ -14,6 +12,7 @@ Game::Game(const RenderWindow &window)
 Game::~Game()
 {
     delete inputmgr;
+    delete m_renderer;
 }
 
 } // namespace apex

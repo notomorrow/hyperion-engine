@@ -6,11 +6,16 @@
 #include "../camera/camera.h"
 
 #include <vector>
+#include <memory>
 
 namespace apex {
+
+class Shader;
+
 class PssmShadowMapping {
 public:
     PssmShadowMapping(Camera *view_cam, int num_splits, double max_dist);
+    ~PssmShadowMapping() = default;
 
     int NumSplits() const;
     void SetLightDirection(const Vector3 &dir);
@@ -19,8 +24,10 @@ public:
 
 private:
     const int num_splits;
+    std::shared_ptr<Shader> m_depth_shader;
     std::vector<std::shared_ptr<ShadowMapping>> shadow_renderers;
 };
+
 } // namespace apex
 
 #endif
