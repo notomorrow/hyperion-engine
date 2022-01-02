@@ -98,10 +98,10 @@ void Renderer::RenderPost(Camera *cam, Framebuffer *fbo)
         return;
     }
 
-    glDisable(GL_CULL_FACE);
+    //glDisable(GL_CULL_FACE);
 
     m_post_processing->Render(cam, fbo);
 
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
 }
 } // namespace apex

@@ -16,8 +16,6 @@ void PostFilter::Begin(Camera *cam, Framebuffer *fbo)
     m_material.texture2 = fbo->GetPositionTexture();
     m_material.normals0 = fbo->GetNormalTexture();
 
-    //m_material.texture0 = Environment::GetInstance()->GetShadowMap(3);
-
     SetUniforms(cam);
 
     m_shader->ApplyMaterial(m_material);

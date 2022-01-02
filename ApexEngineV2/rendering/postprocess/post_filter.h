@@ -17,6 +17,9 @@ public:
 
     virtual void SetUniforms(Camera *cam) = 0;
 
+    inline std::shared_ptr<PostShader> &GetShader() { return m_shader; }
+    inline const std::shared_ptr<PostShader> &GetShader() const { return m_shader; }
+
     void Begin(Camera *cam, Framebuffer *fbo);
     void End(Camera *cam, Framebuffer *fbo);
 

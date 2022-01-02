@@ -7,8 +7,11 @@ namespace apex {
 ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist)
     : view_cam(view_cam), max_dist(max_dist)
 {
-    shadow_cam = new OrthoCamera(0, 0, 0, 0, 0, 0);
-    fbo = new Framebuffer2D(1024, 1024);
+    shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
+
+    // only use color component -- we will use DepthShader
+    //   to render the depth into the color attachment
+    fbo = new Framebuffer2D(1024, 1024, true, true, false, false);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -84,14 +87,20 @@ void ShadowMapping::Begin()
     glClearDepth(1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     ///glCullFace(GL_FRONT);
+    // glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+
+    // glDepthMask(true);
+    // glClearDepth(1.0);
+    // glDepthFunc(GL_LESS);
+    // glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glCullFace(GL_FRONT);
 }
 
 void ShadowMapping::End()
 {
-    //glCullFace(GL_BACK);
-
+    glCullFace(GL_BACK);
     fbo->End();
-}
 
 void ShadowMapping::TransformPoints(const std::array<Vector3, 8> &in_vec,
     std::array<Vector3, 8> &out_vec, const Matrix4 &mat) const

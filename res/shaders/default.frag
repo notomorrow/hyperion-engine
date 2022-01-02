@@ -10,6 +10,7 @@ in mat3 v_tbn;
 uniform vec3 u_camerapos;
 
 #include "include/frag_output.inc"
+#include "include/depth.inc"
 
 #if SHADOWS
 #include "include/shadows.inc"

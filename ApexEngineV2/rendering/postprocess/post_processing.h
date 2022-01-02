@@ -7,6 +7,7 @@
 #include <vector>
 #include <algorithm>
 
+#include "../../math/vector2.h"
 #include "../mesh.h"
 #include "../framebuffer.h"
 #include "../camera/camera.h"
@@ -17,6 +18,7 @@ namespace apex {
 class PostProcessing {
 public:
     struct Filter;
+    struct RenderScale;
 
     PostProcessing();
     PostProcessing(const PostProcessing &) = delete;
@@ -37,6 +39,9 @@ public:
             return a.rank < b.rank;
         });
     }
+
+    inline const Vector2 &GetRenderScale() const { return m_render_scale; }
+    inline void SetRenderScale(const Vector2 &render_scale) { m_render_scale = render_scale; }
 
     void RemoveFilter(const std::string &tag);
     inline std::vector<Filter> &GetFilters() { return m_filters; }
@@ -65,9 +70,12 @@ public:
     };
 
 private:
+    // void UpdateFilterScaling(PostFilter *filter);
+
     std::vector<Filter> m_filters;
 
     std::shared_ptr<Mesh> m_quad;
+    Vector2 m_render_scale;
 };
 
 } // namespace apex
