@@ -72,11 +72,8 @@ std::shared_ptr<Texture> MtlLoader::LoadTexture(const std::string &name, const s
     }
     dir += "/" + name;
 
-    std::cout << "load texture : " << dir << "\n";
-
     if (!(tex = AssetManager::GetInstance()->LoadFromFile<Texture>(dir))) {
         // load relatively
-    std::cout << "load texture #2 : " << name << "\n";
         tex = AssetManager::GetInstance()->LoadFromFile<Texture>(name);
     }
 

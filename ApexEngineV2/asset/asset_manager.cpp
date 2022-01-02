@@ -46,7 +46,7 @@ AssetManager::AssetManager()
 
 std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bool use_caching)
 {
-    const std::string new_path = StringUtil::ReplaceAll(path, "\\", "/");
+    const std::string new_path = StringUtil::Trim(StringUtil::ReplaceAll(path, "\\", "/"));
     
     if (use_caching) {
         auto it = loaded_assets.find(new_path);
@@ -63,8 +63,7 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
             auto loaded = loader->LoadFromFile(new_path);
 
             if (!loaded) {
-                std::cout << "error while loading file: " << new_path << "\n";
-                return nullptr;
+                throw std::string("Loader returned no data");
             } else {
                 loaded->SetFilePath(new_path);
                 if (use_caching) {
@@ -74,7 +73,7 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
             return loaded;
         }
     } catch (std::string err) {
-        std::cout << "File load error: " << err << "\n";
+        std::cout << "[" << path << "]: " << "File load error: " << err << "\n";
     }
 
     return nullptr;
@@ -86,13 +85,13 @@ const std::unique_ptr<AssetLoader> &AssetManager::GetLoader(const std::string &p
         const std::string &ext = it.first;
         auto &loader = it.second;
 
-        std::string path_lower;
-        path_lower.resize(path.length());
-        std::transform(path.begin(), path.end(), path_lower.begin(), ::tolower);
+        std::string path_lower(path);
+        std::transform(path_lower.begin(), path_lower.end(), path_lower.begin(), ::tolower);
         if (StringUtil::EndsWith(path_lower, ext)) {
             return loader;
         }
     }
+
     throw (std::string("No suitable loader found for requested file: ") + path);
 }
 } // namespace apex
