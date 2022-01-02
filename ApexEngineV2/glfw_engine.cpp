@@ -75,7 +75,7 @@ bool GlfwEngine::InitializeGame(Game *game)
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
-    glClearColor(0.1f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.5f, 0.0f, 0.0f, 1.0f);
 
     game->Initialize();
 

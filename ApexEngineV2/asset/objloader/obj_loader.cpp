@@ -79,6 +79,7 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
     int line_no = 0;
 
     while (std::getline(fs, line)) {
+        line = StringUtil::Trim(line);
         auto tokens = StringUtil::Split(line, ' ');
         tokens = StringUtil::RemoveEmpty(tokens);
 
