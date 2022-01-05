@@ -162,13 +162,13 @@ void main()
   }
 
 
-  float NdotL = dot(n, lightDir);
-	float NdotV = dot(n, viewVector);
+  float NdotL = max(0.0, dot(n, lightDir));
+	float NdotV = max(0.001, dot(n, viewVector));
 	vec3 H = normalize(lightDir + viewVector);
-	float NdotH = dot(n, H);
-	float LdotH = dot(lightDir, H);
-	float VdotH = dot(viewVector, H);
-	float HdotV = dot(H, viewVector);
+	float NdotH = max(0.001, dot(n, H));
+	float LdotH = max(0.001, dot(lightDir, H));
+	float VdotH = max(0.001, dot(viewVector, H));
+	float HdotV = max(0.001, dot(H, viewVector));
 
   int mipLevel = 0;//int(floor(roughness * 5));
 
@@ -178,7 +178,9 @@ void main()
   vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
   vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
 
-  specularCubemap = mix(specularCubemap, irradianceCubemap, 1.0 - roughness);
+
+  float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
+  specularCubemap = mix(specularCubemap, irradianceCubemap, roughnessMix);
 
 
   vec3 F0 = vec3(0.04);
@@ -233,21 +235,39 @@ void main()
 
   //vec3 fresnel_spec = specularCubemap.rgb * (fresnel_classic * brdf.x + brdf.y);
 
-  
+  vec3 metallicSpec = mix(vec3(0.04), albedo.rgb, metallic);
+  vec3 metallicDiff = mix(albedo.rgb, vec3(0.0), metallic);
 
-  vec3 F = FresnelTerm(specularCubemap.rgb, VdotH) * clamp(NdotL, 0.0, 1.0);
+  vec3 F = FresnelTerm(metallicSpec, VdotH) * clamp(NdotL, 0.0, 1.0);
   float D = clamp(DistributionGGX(n, H, roughness), 0.0, 1.0);
   //float G = NeumannVisibility(NdotV, NdotL);
   float G = clamp(SmithGGXSchlickVisibility(clamp(NdotL, 0.0, 1.0), clamp(NdotV, 0.0, 1.0), roughness), 0.0, 1.0);
   vec3 kS = F;
   vec3 kD = vec3(1.0) - kS;
   kD *= vec3(1.0 - metallic);
+
+  vec3 reflectedLight = vec3(0.0, 0.0, 0.0);
+  vec3 diffuseLight = vec3(0.0, 0.0, 0.0);
+
+  float rim = mix(1.0 - roughness * 1.0 /* 'rim' */ * 0.9, 1.0, NdotV);
+  vec3 specRef = ((1.0 / rim) * F * G * D) * NdotL;
+  reflectedLight += specRef;
+
+  vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * brdf.x + brdf.y);
+  reflectedLight += ibl * specularCubemap;
+
+
+  vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
+  diffuseLight += diffRef;
+  diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
+  diffuseLight *= metallicDiff;
+
   
-  vec3 irradiance = EnvRemap(Irradiance(n));
+  /*vec3 irradiance = EnvRemap(Irradiance(n));
   vec3 diffuse  = (albedo.rgb * irradiance) + (albedo.rgb * clamp(NdotL, 0.0, 1.0));
   vec3 ambientColor = (diffuse * kD);
 
-  vec3 specTerm = F * vec3(D * G * $PI);
+  vec3 specTerm = (F * vec3(D * G * $PI) * brdf.x + brdf.y) * specularCubemap;
 
   if (HasAoMap == 1) {
     float ao = texture(AoMap, texCoords).r;
@@ -255,9 +275,9 @@ void main()
     //specularCubemap *= texture(AoMap, texCoords).r;
     ambientColor *= ao;
     specTerm *= clamp(pow(NdotV + ao, roughness * roughness) - 1.0 + ao, 0.0, 1.0);
-  }
+  }*/
 
-  vec3 color = ambientColor + specTerm;
+  vec3 color = diffuseLight + reflectedLight; //reflectedLight;//ambientColor + specTerm;
 
   output0 = vec4(color, albedo.a);
   output1 = vec4(n.xyz, 1.0);
