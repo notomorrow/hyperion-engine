@@ -30,6 +30,7 @@ private:
     unsigned int m_vertex_buffer;
     unsigned int m_position_buffer;
     unsigned int m_lifespan_buffer;
+    unsigned int m_vao;
 };
 } // namespace apex
 

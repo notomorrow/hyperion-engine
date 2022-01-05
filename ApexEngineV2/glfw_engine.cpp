@@ -61,15 +61,9 @@ bool GlfwEngine::InitializeGame(Game *game)
     glfwSetKeyCallback(window, KeyCallback);
     glfwMakeContextCurrent(window);
 
-    Vector2 render_scale, prev_render_scale;
+    Vector2 render_scale(Vector2::One()), prev_render_scale = game->GetRenderer()->GetPostProcessing()->GetRenderScale();
 
-    glfwGetWindowContentScale(
-        window,
-        &render_scale.GetX(),
-        &render_scale.GetY()
-    );
-
-    render_scale = Vector2::Max(render_scale, Vector2::One());
+    //render_scale = Vector2::Max(render_scale, Vector2::One());
 
 #ifdef USE_GLEW
     if (glewInit() != GLEW_OK) {
@@ -85,6 +79,21 @@ bool GlfwEngine::InitializeGame(Game *game)
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+
+    if (!glfwWindowShouldClose(window)) {
+        glfwGetWindowContentScale(
+            window,
+            &render_scale.GetX(),
+            &render_scale.GetY()
+        );
+        glfwGetWindowSize(window, &game->GetWindow().width, &game->GetWindow().height);
+        
+        game->GetRenderer()->GetPostProcessing()->SetRenderScale(Vector2::Max(render_scale, Vector2::One()));
+
+        prev_render_scale = render_scale;
+    }
+
 
     game->Initialize();
 
@@ -106,6 +115,12 @@ bool GlfwEngine::InitializeGame(Game *game)
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+        glfwGetWindowContentScale(
+            window,
+            &render_scale.GetX(),
+            &render_scale.GetY()
+        );
         glfwGetWindowSize(window, &game->GetWindow().width, &game->GetWindow().height);
 
         if (prev_render_scale != render_scale) {

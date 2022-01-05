@@ -18,6 +18,7 @@ Renderer::~Renderer()
 
 void Renderer::ClearRenderables()
 {
+    // TODO: proper fragmentention - change detection to not require clearing and processing again each time
     sky_bucket.clear();
     opaque_bucket.clear();
     transparent_bucket.clear();
