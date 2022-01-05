@@ -27,7 +27,7 @@ Framebuffer2D::Framebuffer2D(
 
     if (m_has_normal_texture) {
         m_normal_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-        m_normal_texture->SetInternalFormat(GL_RGBA8);
+        m_normal_texture->SetInternalFormat(GL_RGBA16);
         m_normal_texture->SetFormat(GL_RGBA);
         m_normal_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         m_normal_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -35,7 +35,7 @@ Framebuffer2D::Framebuffer2D(
 
     if (m_has_position_texture) {
         m_position_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-        m_position_texture->SetInternalFormat(GL_RGBA8);
+        m_position_texture->SetInternalFormat(GL_RGBA16);
         m_position_texture->SetFormat(GL_RGBA);
         m_position_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         m_position_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);

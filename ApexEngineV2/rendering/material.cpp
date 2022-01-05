@@ -37,6 +37,7 @@ MaterialParameter::MaterialParameter(const MaterialParameter &other)
 }
 
 Material::Material()
+    : diffuse_color(Vector4(1.0))
 {
     for (auto it : default_parameters) {
         params[it.first] = it.second;
