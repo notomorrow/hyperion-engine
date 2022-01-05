@@ -13,6 +13,8 @@ public:
     virtual ~Framebuffer();
 
     inline unsigned int GetId() const { return id; }
+    inline int GetWidth() const { return width; }
+    inline int GetHeight() const { return height; }
 
     virtual const std::shared_ptr<Texture> GetColorTexture() const = 0;
     virtual const std::shared_ptr<Texture> GetNormalTexture() const = 0;

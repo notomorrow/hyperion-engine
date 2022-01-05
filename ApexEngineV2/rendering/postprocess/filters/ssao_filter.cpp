@@ -7,7 +7,7 @@ namespace apex {
 
 SSAOFilter::SSAOFilter()
     : PostFilter(ShaderManager::GetInstance()->GetShader<SSAOShader>(ShaderProperties {
-        { "KERNEL_SIZE", 32.0f },
+        { "KERNEL_SIZE", 64.0f },
         { "CAP_MIN_DISTANCE", 0.00001f },
         { "CAP_MAX_DISTANCE", 0.01f }
       }))
@@ -18,7 +18,7 @@ SSAOFilter::SSAOFilter()
         m_shader->SetUniform(std::string("u_kernel[") + std::to_string(i) + "]", m_kernel[i]);
     }
 
-    m_noise_scale = Vector2(100.0f);
+    m_noise_scale = Vector2(500.0f);
     m_shader->SetUniform("u_noiseScale", m_noise_scale);
 
     m_noise_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/noise_ssao.png");
@@ -34,7 +34,7 @@ void SSAOFilter::SetUniforms(Camera *cam)
     m_noise_map->Use();
     m_shader->SetUniform("u_noiseMap", 5);
 
-    m_shader->SetUniform("u_radius", 1.0f);
+    m_shader->SetUniform("u_radius", 5.0f);
 
     m_shader->SetUniform("u_view", cam->GetViewMatrix());
     m_shader->SetUniform("u_projectionMatrix", cam->GetProjectionMatrix());

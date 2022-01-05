@@ -81,8 +81,8 @@ float NeumannVisibility(float NdotV, float NdotL)
 
 void main()
 {
-  float roughness = u_roughness;
-  float metallic = u_shininess;
+  float roughness = clamp(u_roughness, 0.05, 0.99);
+  float metallic = clamp(u_shininess, 0.05, 0.99);
 
   vec3 lightDir = normalize(env_DirectionalLight.direction);
   vec3 n = normalize(v_normal.xyz);
@@ -151,16 +151,11 @@ void main()
   vec4 shadowColor = vec4(1.0);
 #endif
 
-  vec4 albedo = u_diffuseColor;
+  vec4 albedo = u_diffuseColor * diffuseTexture;
 
-  if (HasDiffuseMap == 1) {
-    albedo *= diffuseTexture;
-
-    if (albedo.a < 0.1) {
-      discard;
-    }
+  if (albedo.a < 0.1) {
+    discard;
   }
-
 
   float NdotL = max(0.0, dot(n, lightDir));
 	float NdotV = max(0.001, dot(n, viewVector));
@@ -235,7 +230,7 @@ void main()
 
   //vec3 fresnel_spec = specularCubemap.rgb * (fresnel_classic * brdf.x + brdf.y);
 
-  vec3 metallicSpec = mix(vec3(0.04), albedo.rgb, metallic);
+  vec3 metallicSpec = mix(vec3(0.04), /*albedo.rgb*/ vec3(1.0), metallic);
   vec3 metallicDiff = mix(albedo.rgb, vec3(0.0), metallic);
 
   vec3 F = FresnelTerm(metallicSpec, VdotH) * clamp(NdotL, 0.0, 1.0);
@@ -249,11 +244,11 @@ void main()
   vec3 reflectedLight = vec3(0.0, 0.0, 0.0);
   vec3 diffuseLight = vec3(0.0, 0.0, 0.0);
 
-  float rim = mix(1.0 - roughness * 1.0 /* 'rim' */ * 0.9, 1.0, NdotV);
+  float rim = mix(1.0 - roughnessMix * 1.0 /* 'rim' */ * 0.9, 1.0, NdotV);
   vec3 specRef = ((1.0 / rim) * F * G * D) * NdotL;
   reflectedLight += specRef;
 
-  vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * brdf.x + brdf.y);
+  vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * AB.x + AB.y);
   reflectedLight += ibl * specularCubemap;
 
 

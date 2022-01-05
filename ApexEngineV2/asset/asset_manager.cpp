@@ -50,9 +50,13 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
     
     if (use_caching) {
         auto it = loaded_assets.find(new_path);
-        if (it != loaded_assets.end()) {
+        if (it != loaded_assets.end() && it->second != nullptr) {
             // reuse already loaded asset
-            return it->second;
+            const auto clone = it->second->Clone();
+
+            if (clone == nullptr) { // no implementation; return shared ptr
+                return it->second;
+            }
         }
     }
 

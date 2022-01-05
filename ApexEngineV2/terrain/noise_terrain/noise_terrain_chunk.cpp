@@ -82,7 +82,8 @@ void NoiseTerrainChunk::OnAdded()
         { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
         { "NUM_SPLITS", Environment::GetInstance()->NumCascades() },
         { "NORMAL_MAPPING", 1 },
-        { "ROUGHNESS_MAPPING", 1 }
+        { "ROUGHNESS_MAPPING", 1 },
+        { "METALNESS_MAPPING", 1 }
     }));
     m_entity = std::make_shared<Entity>("terrain_node");
     m_entity->SetRenderable(mesh);
