@@ -1,5 +1,7 @@
 #include "obj_loader.h"
 #include "../../asset/asset_manager.h"
+#include "../../rendering/shader_manager.h"
+#include "../../rendering/shaders/lighting_shader.h"
 #include "../../rendering/mesh.h"
 #include "../../rendering/vertex.h"
 #include "../../util/string_util.h"
@@ -46,11 +48,15 @@ ObjModel::ObjIndex ObjModel::ParseObjIndex(const std::string &token)
             if (!tokens[1].empty()) {
                 has_texcoords = true;
                 res.texcoord_idx = std::stoi(tokens[1]) - 1;
+            } else {
+                res.texcoord_idx = -1;
             }
             if (tokens.size() > 2) {
                 if (!tokens[2].empty()) {
                     has_normals = true;
                     res.normal_idx = std::stoi(tokens[2]) - 1;
+                } else {
+                    res.normal_idx = -1;
                 }
             }
         }
@@ -129,10 +135,21 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
         std::vector<Vertex> vertices;
 
         for (auto &idc : list) {
-            vertices.push_back(Vertex(
-                (model.positions[idc.vertex_idx]),
-                (model.has_texcoords ? model.texcoords[idc.texcoord_idx] : Vector2()),
-                (model.has_normals ? model.normals[idc.normal_idx] : Vector3())));
+            Vertex vertex;
+
+            if (idc.vertex_idx >= 0) {
+                vertex.SetPosition(model.positions[idc.vertex_idx]);
+            }
+
+            if (model.has_normals && idc.normal_idx >= 0) {
+                vertex.SetNormal(model.normals.at(idc.normal_idx));
+            }
+
+            if (model.has_texcoords && idc.texcoord_idx >= 0) {
+                vertex.SetTexCoord0(model.texcoords.at(idc.texcoord_idx));
+            }
+
+            vertices.push_back(vertex);
         }
 
         auto mesh = std::make_shared<Mesh>();
@@ -142,11 +159,17 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
             mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
 
             mesh->CalculateTangents();
+        } else {
+            mesh->CalculateNormals();
         }
 
         if (model.has_texcoords) {
             mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
         }
+
+        mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
+            { "NORMAL_MAPPING", 1 }
+        }));
 
         auto geom = std::make_shared<Entity>();
         geom->SetName(model.mesh_names[i]);

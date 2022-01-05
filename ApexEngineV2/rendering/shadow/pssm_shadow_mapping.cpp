@@ -15,8 +15,6 @@ PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double ma
 
     for (int i = num_splits - 1; i >= 0; i--) {
         const double distance = MathUtil::Lerp(min_dist, max_dist, (double)(i) / ((double)num_splits - 1));
-        std::cout << "distance " << i << " = " << distance << "\n";
-
         Environment::GetInstance()->SetShadowSplit(i, distance);
         shadow_renderers[i] = std::make_shared<ShadowMapping>(view_cam, distance);
 

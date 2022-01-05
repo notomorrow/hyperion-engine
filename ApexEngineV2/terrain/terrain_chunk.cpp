@@ -11,12 +11,11 @@ std::shared_ptr<Mesh> TerrainChunk::BuildMesh(const std::vector<double> &heights
 {
     std::vector<Vertex> vertices = BuildVertices(heights);
     std::vector<MeshIndex> indices = BuildIndices();
-    CalculateNormals(vertices, indices);
 
     auto mesh = std::make_shared<Mesh>();
     mesh->SetVertices(vertices, indices);
     mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
-    mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
+    mesh->CalculateNormals();
     mesh->CalculateTangents();
 
     return mesh;

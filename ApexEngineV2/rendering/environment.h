@@ -49,6 +49,10 @@ public:
     inline std::shared_ptr<Cubemap> &GetGlobalCubemap() { return m_global_cubemap; }
     inline void SetGlobalCubemap(const std::shared_ptr<Cubemap> &cubemap) { m_global_cubemap = cubemap; }
 
+    inline const std::shared_ptr<Cubemap> &GetGlobalIrradianceCubemap() const { return m_global_irradiance_cubemap; }
+    inline std::shared_ptr<Cubemap> &GetGlobalIrradianceCubemap() { return m_global_irradiance_cubemap; }
+    inline void SetGlobalIrradianceCubemap(const std::shared_ptr<Cubemap> &cubemap) { m_global_irradiance_cubemap = cubemap; }
+
 private:
     static Environment *instance;
 
@@ -56,6 +60,7 @@ private:
     std::vector<std::shared_ptr<PointLight>> m_point_lights;
 
     std::shared_ptr<Cubemap> m_global_cubemap;
+    std::shared_ptr<Cubemap> m_global_irradiance_cubemap;
 
     Vector3 m_gravity;
 

@@ -58,6 +58,7 @@ void Renderer::RenderBucket(Camera *cam, Bucket_t &bucket, Shader *override_shad
 {
     Shader *shader = nullptr;
 
+    // TODO: group by same shader
     for (BucketItem &it : bucket) {
         if ((shader = override_shader ? override_shader : it.renderable->m_shader.get())) {
             shader->ApplyMaterial(*it.material);

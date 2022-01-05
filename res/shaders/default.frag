@@ -130,8 +130,11 @@ void main()
     //Lo += ComputePointLight(env_PointLights[i], n, normalize(u_camerapos.xyz - v_position.xyz), v_position.xyz, albedo, shadowness, u_roughness, u_shininess);
   }
 
+  float specular = SpecularDirectional(n, v_position.xyz, lightDir, u_roughness);
+  specular += fresnel;
 
-  vec3 color = (ambient + Lo) * shadowColor.rgb;
+
+  vec3 color = vec3(specular);
 
 
   output0 = vec4(color, 1.0);//vec4(color, 1.0);

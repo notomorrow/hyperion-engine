@@ -81,20 +81,32 @@ void NoiseTerrainChunk::OnAdded()
     mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
         { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
         { "NUM_SPLITS", Environment::GetInstance()->NumCascades() },
-        { "NORMAL_MAPPING", 1 }
+        { "NORMAL_MAPPING", 1 },
+        { "ROUGHNESS_MAPPING", 1 }
     }));
     m_entity = std::make_shared<Entity>("terrain_node");
     m_entity->SetRenderable(mesh);
 
-    m_entity->GetMaterial().SetParameter("shininess", 0.01f);
-    m_entity->GetMaterial().SetParameter("roughness", 0.8f);
-    m_entity->GetMaterial().texture0 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Base_Color.png");
-    m_entity->GetMaterial().texture1 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Height.png");
-    m_entity->GetMaterial().texture2 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Ambient_Occlusion.png");
-    m_entity->GetMaterial().normals0 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Normal-ogl.png");
-    //m_entity->GetMaterial().texture1 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirt.jpg");
-    //m_entity->GetMaterial().normals1 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirt_nrm.jpg");
-    m_entity->GetMaterial().texture3 = AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/brdfLUT.png");
+    m_entity->GetMaterial().SetParameter("shininess", 0.5f);
+    m_entity->GetMaterial().SetParameter("roughness", 0.9f);
+    // m_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
+    // m_entity->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Height.png"));
+    // m_entity->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Ambient_Occlusion.png"));
+    // m_entity->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));
+
+
+    // m_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Base_Color.png"));
+    // m_entity->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Height.png"));
+    // m_entity->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_AmbientOcculusion.png"));
+    // m_entity->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Normal-ogl.png"));
+
+    m_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
+    // m_entity->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Height.png"));
+    m_entity->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Ambient_Occlusion.png"));
+    m_entity->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));
+
+    // m_entity->GetMaterial().SetTexture("RoughnessMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass1/grass1-rough.png"));
+    m_entity->GetMaterial().SetTexture("BrdfMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/brdfLUT.png"));
 }
 
 int NoiseTerrainChunk::HeightIndexAt(int x, int z)

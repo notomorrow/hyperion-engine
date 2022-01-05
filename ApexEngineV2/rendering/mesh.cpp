@@ -245,4 +245,41 @@ void Mesh::Render()
     glBindVertexArray(0);
 }
 
+void Mesh::CalculateNormals()
+{
+    // reset to zero initially
+    for (Vertex &vert : vertices) {
+        vert.SetNormal(Vector3::Zero());
+    }
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        MeshIndex i0 = indices[i];
+        MeshIndex i1 = indices[i + 1];
+        MeshIndex i2 = indices[i + 2];
+
+        const Vector3 &p0 = vertices[i0].GetPosition();
+        const Vector3 &p1 = vertices[i1].GetPosition();
+        const Vector3 &p2 = vertices[i2].GetPosition();
+
+        Vector3 u = p2 - p0;
+        Vector3 v = p1 - p0;
+        Vector3 n = v;
+
+        n.Cross(u);
+        n.Normalize();
+
+        vertices[i0].SetNormal(vertices[i0].GetNormal() + n);
+        vertices[i1].SetNormal(vertices[i1].GetNormal() + n);
+        vertices[i2].SetNormal(vertices[i2].GetNormal() + n);
+    }
+
+    for (Vertex &vert : vertices) {
+        Vector3 tmp(vert.GetNormal());
+        tmp.Normalize();
+        vert.SetNormal(tmp);
+    }
+
+    SetAttribute(ATTR_NORMALS, MeshAttribute::Normals);
+}
+
 } // namespace apex

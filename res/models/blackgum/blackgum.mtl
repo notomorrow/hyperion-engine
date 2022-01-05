@@ -1,0 +1,69 @@
+# Wavefront Object Material File
+# Generated using SpeedTree tools
+
+newmtl BlackGumLeaves_1
+Tr 0
+d 1
+Kd 0.996078 1 1
+Ka 0.670588 0.666667 0.666667
+Ks 0.745098 0.745098 0.745098
+Ns 51.4
+illum 2
+map_Kd BlackGumLeaves_1.png
+map_d BlackGumLeaves_1.png
+map_bump BlackGumLeaves_1_Normal.png
+bump BlackGumLeaves_1_Normal.png -bm 1
+map_Ks BlackGumLeaves_1_Spec.png
+
+
+newmtl BlackGumLeaves_2
+Tr 0
+d 1
+Kd 0.996078 1 1
+Ka 0.670588 0.666667 0.666667
+Ks 0.745098 0.745098 0.745098
+Ns 51.4
+illum 2
+map_Kd BlackGumLeaves_2.png
+map_d BlackGumLeaves_2.png
+map_bump BlackGumLeaves_2_Normal.png
+bump BlackGumLeaves_2_Normal.png -bm 1
+map_Ks BlackGumLeaves_2_Spec.png
+
+
+newmtl BlackGumBark
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.603922 0.603922 0.603922
+illum 1
+map_Kd BlackGumBark.png
+map_d BlackGumBark.png
+map_bump BlackGumBark_Normal.png
+bump BlackGumBark_Normal.png -bm 1
+
+
+newmtl Branches_08
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.796078 0.796078 0.796078
+illum 1
+map_Kd Branches_08.png
+map_d Branches_08.png
+map_bump Branches_08_Normal.png
+bump Branches_08_Normal.png -bm 1
+
+
+newmtl Cap_06
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.796078 0.796078 0.796078
+illum 1
+map_Kd Cap_06.png
+map_d Cap_06.png
+map_bump Cap_06_Normal.png
+bump Cap_06_Normal.png -bm 1
+
+

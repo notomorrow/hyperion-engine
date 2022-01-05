@@ -51,6 +51,12 @@ public:
     }
 
     template <typename T>
+    static inline T Fract(const T &f)
+    {
+        return f - floorf(f);
+    }
+
+    template <typename T>
     static inline T Min(const T &a, const T &b)
     {
         if (a < b) {
@@ -80,6 +86,18 @@ public:
     static inline int Ceil(T a)
     {
         return std::ceil(a);
+    }
+
+    template <typename T>
+    static inline T Exp(T a)
+    {
+        return std::exp(a);
+    }
+
+    template <typename T>
+    static inline T Round(T a)
+    {
+        return std::round(a);
     }
 };
 

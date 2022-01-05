@@ -10,7 +10,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\wood_planks_new_0034_01_preview.jpg
+map_Kd textures/wood_planks_new_0034_01_preview.jpg
 
 newmtl Material.001
 Ns 96.078431
@@ -21,7 +21,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\wood_planks_new_0034_01_preview.jpg
+map_Kd textures/wood_planks_new_0034_01_preview.jpg
 
 newmtl insidewall
 Ns 96.078431
@@ -32,7 +32,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\plaster_new_0021_01_preview.jpg
+map_Kd textures/plaster_new_0021_01_preview.jpg
 
 newmtl roof
 Ns 200.078431
@@ -43,8 +43,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Bump C:\\Users\\User\\Documents\\3dmodels\\house\\textures\\roof_0064_02_preview_NRM.jpg
-map_Kd C:\\Users\\User\\Pictures\\roof_0064_02_preview.jpg
+map_Bump textures/roof_0064_02_preview_NRM.jpg
+map_Kd textures/roof_0064_02_preview.jpg
 
 newmtl w2
 Ns 96.078431
@@ -55,7 +55,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\plaster_new_0021_01_preview.jpg
+map_Kd textures/plaster_new_0021_01_preview.jpg
 
 newmtl wall
 Ns 96.078431
@@ -66,8 +66,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Bump C:\\Users\\User\\Documents\\3dmodels\\house\\textures\\plaster_new_0017_01_preview_NRM.jpg
-map_Kd C:\\Users\\User\\Pictures\\plaster_new_0017_01_preview.jpg
+map_Bump textures/plaster_new_0017_01_preview_NRM.jpg
+map_Kd textures/plaster_new_0017_01_preview.jpg
 
 newmtl wall.001
 Ns 96.078431
@@ -78,8 +78,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Bump C:\\Users\\User\\Documents\\3dmodels\\house\\textures\\plaster_new_0017_01_preview_NRM.jpg
-map_Kd C:\\Users\\User\\Pictures\\plaster_new_0017_01_preview.jpg
+map_Bump textures/plaster_new_0017_01_preview_NRM.jpg
+map_Kd textures/plaster_new_0017_01_preview.jpg
 
 newmtl win
 Ns 96.078431
@@ -90,7 +90,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\User\Documents\textures\15_wind.jpg
+map_Kd textures/15_wind.jpg
 
 newmtl win.001
 Ns 96.078431
@@ -101,7 +101,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\User\Documents\textures\15_wind.jpg
+map_Kd textures/15_wind.jpg
 
 newmtl win.003
 Ns 96.078431
@@ -112,7 +112,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\User\Documents\textures\15_wind.jpg
+map_Kd textures/15_wind.jpg
 
 newmtl win.003_15_wind.jpg.003
 Ns 96.078431
@@ -123,7 +123,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\User\Documents\textures\15_wind.jpg
+map_Kd textures/15_wind.jpg
 
 newmtl win.003_15_wind.jpg.004
 Ns 96.078431
@@ -134,7 +134,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\User\Documents\textures\15_wind.jpg
+map_Kd textures/15_wind.jpg
 
 newmtl win.005
 Ns 96.078431
@@ -145,7 +145,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\User\Documents\textures\15_wind.jpg
+map_Kd textures/15_wind.jpg
 
 newmtl win.005_15_wind.jpg.006
 Ns 96.078431
@@ -156,7 +156,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\User\Documents\textures\15_wind.jpg
+map_Kd textures/15_wind.jpg
 
 newmtl win.005_15_wind.jpg.007
 Ns 96.078431
@@ -167,7 +167,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\User\Documents\textures\15_wind.jpg
+map_Kd textures/15_wind.jpg
 
 newmtl wood
 Ns 96.078431
@@ -178,7 +178,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\concrete_clean_0033_01_preview.jpg
+map_Kd textures/concrete_clean_0033_01_preview.jpg
 
 newmtl wood.001
 Ns 96.078431
@@ -189,7 +189,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\plaster_new_0021_01_preview.jpg
+map_Kd textures/plaster_new_0021_01_preview.jpg
 
 newmtl wood.002
 Ns 96.078431
@@ -200,7 +200,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\plaster_new_0021_01_preview.jpg
+map_Kd textures/plaster_new_0021_01_preview.jpg
 
 newmtl wood.003
 Ns 96.078431
@@ -211,7 +211,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\plaster_new_0021_01_preview.jpg
+map_Kd textures/plaster_new_0021_01_preview.jpg
 
 newmtl wood.005
 Ns 96.078431
@@ -222,7 +222,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\plaster_new_0021_01_preview.jpg
+map_Kd textures/plaster_new_0021_01_preview.jpg
 
 newmtl wood.007
 Ns 96.078431
@@ -233,4 +233,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\\Users\\User\\Pictures\\plaster_new_0021_01_preview.jpg
+map_Kd textures/plaster_new_0021_01_preview.jpg
