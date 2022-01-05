@@ -3,6 +3,7 @@
 
 namespace apex {
 PostProcessing::PostProcessing()
+  : m_render_scale(Vector2::One())
 {
   m_quad = MeshFactory::CreateQuad();
 }

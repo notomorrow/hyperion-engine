@@ -92,23 +92,7 @@ public:
 
         ShaderProperties defines;
 
-        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
-        // m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
-
-        cam = new FpsCamera(
-            inputmgr,
-            &m_renderer->GetRenderWindow(),
-            m_renderer->GetScaledWindowWidth(),
-            m_renderer->GetScaledWindowHeight(),
-            75.0f,
-            0.1f,
-            2600.0f
-        );
-        //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
-        //env_cam->SetTranslation(Vector3(0, 10, 0));
-        fbo = new Framebuffer2D(cam->GetWidth(), cam->GetHeight());
-        //env_fbo = new FramebufferCube(256, 256);
-        shadows = new PssmShadowMapping(cam, 4, 200);
+        
 
     }
 
@@ -128,30 +112,31 @@ public:
         ParticleConstructionInfo particle_generator_info(
             // the lambda function for setting a particle's origin
             [](const Particle &particle) {
-                return Vector3(0, 20, 0);
+                return Vector3(0, 165, 0);
             },
                 // the lambda function for setting a particle's velocity
             [](const Particle &particle) {
                 static int counter = 0;
                 counter++;
 
-                float radius = 1.0f;
+                float radius = 0.15f;
                 const Vector3 rotation(sinf(counter * 0.2f) * radius, 0.0f, cosf(counter * 0.2f) * radius);
                 Vector3 random(MathUtil::Random(-0.3f, 0.3f), 0.0f, MathUtil::Random(-0.3f, 0.3f));
                 return rotation + random;
             }
         );
 
-        particle_generator_info.m_gravity = Vector3(0, 5, 0);
-        particle_generator_info.m_max_particles = 200;
-        particle_generator_info.m_lifespan = 1.0;
-        particle_generator_info.m_lifespan_randomness = 1.0;
+        particle_generator_info.m_gravity = Vector3(0, 8, 0);
+        particle_generator_info.m_max_particles = 250;
+        particle_generator_info.m_lifespan = 1.5;
+        particle_generator_info.m_lifespan_randomness = 1.5;
 
         auto particle_node = std::make_shared<Entity>();
         particle_node->SetName("particles");
         particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
-        particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/smoke.png"));
+        particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/smoke2.png"));
         particle_node->AddControl(std::make_shared<ParticleEmitterControl>(cam));
+        particle_node->SetLocalScale(Vector3(0.2));
 
         top->AddChild(particle_node);
     }
@@ -238,6 +223,24 @@ public:
 
     void Initialize()
     {
+        // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
+        m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 9999);
+
+        cam = new FpsCamera(
+            inputmgr,
+            &this->window,
+            window.GetWidth() * m_renderer->GetPostProcessing()->GetRenderScale().x,
+            window.GetHeight() * m_renderer->GetPostProcessing()->GetRenderScale().y,
+            65.0f,
+            0.1f,
+            2600.0f
+        );
+        //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
+        //env_cam->SetTranslation(Vector3(0, 10, 0));
+        fbo = new Framebuffer2D(cam->GetWidth(), cam->GetHeight());
+        //env_fbo = new FramebufferCube(256, 256);
+        shadows = new PssmShadowMapping(cam, 4, 200);
+
 
         Environment::GetInstance()->SetShadowsEnabled(true);
         AudioManager::GetInstance()->Initialize();
@@ -254,7 +257,7 @@ public:
         cam->SetTranslation(Vector3(0, 150, 0));
 
         // Initialize particle system
-        // InitParticleSystem();
+        InitParticleSystem();
 
         ShaderProperties defines = {
             { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
