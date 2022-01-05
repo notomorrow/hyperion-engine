@@ -92,22 +92,21 @@ public:
 
         ShaderProperties defines;
 
-        //m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
-
-        m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
+        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
+        // m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 1);
 
         cam = new FpsCamera(
             inputmgr,
-            &this->window,
-            window.GetScaledWidth(),
-            window.GetScaledHeight(),
+            &m_renderer->GetRenderWindow(),
+            m_renderer->GetScaledWindowWidth(),
+            m_renderer->GetScaledWindowHeight(),
             75.0f,
             0.1f,
             2600.0f
         );
         //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
         //env_cam->SetTranslation(Vector3(0, 10, 0));
-        fbo = new Framebuffer2D(window.GetScaledWidth(), window.GetScaledHeight());
+        fbo = new Framebuffer2D(cam->GetWidth(), cam->GetHeight());
         //env_fbo = new FramebufferCube(256, 256);
         shadows = new PssmShadowMapping(cam, 4, 200);
 
@@ -327,20 +326,40 @@ public:
 
         const auto brdf_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/brdfLUT.png");
 
-        Vector3 box_position = Vector3(4, 160, 0);
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                Vector3 box_position = Vector3((x * 6) + 6, 160, z * 6);
+                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+                box->GetChild(0)->GetRenderable()->SetShader(shader);
 
-        auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
-        box->GetChild(0)->GetRenderable()->SetShader(shader);
-        box->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.5f, 0.3f, 1.0f };
-        box->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f);
-        box->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
-        box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
-        box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
-        box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
-        box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
-        box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                // box->GetChild(0)->GetMaterial().alpha_blended = true;
+                box->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+                // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Base_Color.png"));
+                // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Height.png"));
+                // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Ambient_Occlusion.png"));
+                // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Normal-ogl.png"));
 
-        box->SetLocalTranslation(box_position);
+                // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-albedo.png"));
+                // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-normal-ogl.png"));
+                // box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-metalness.png"));
+                // box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-roughness.png"));
+
+                // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+                // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+                // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+                // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                box->GetChild(0)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
+                box->GetChild(0)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                box->SetLocalTranslation(box_position);
+                top->AddChild(box);
+            }
+        }
+        // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
+        // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+        // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+        // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+        // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+
 
 
         /*{
@@ -365,8 +384,9 @@ public:
                 // tree->GetChild(i)->GetRenderable()->SetShader(shader);
                 // // tree->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
                 tree->GetChild(0)->GetMaterial().SetParameter("shininess", 0.0f);
-                tree->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
+                tree->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
             }
+
             tree->GetChild("Branches_08")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
             tree->GetChild("Branches_08")->GetMaterial().alpha_blended = true;
             tree->GetChild("Branches_08")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
@@ -380,7 +400,7 @@ public:
         }
 
 
-        rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 0.0);
+        /*rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 0.0);
         rb3->SetPosition(box_position);
         // rb3->SetOrientation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(30.0f)));
         rb3->SetAwake(false);
@@ -389,11 +409,10 @@ public:
 
         auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rb3->GetBoundingBox());
         auto bb_renderer_node = std::make_shared<Entity>();
-        bb_renderer_node->SetRenderable(bb_renderer);
+        bb_renderer_node->SetRenderable(bb_renderer);*/
 
         // box->AddChild(bb_renderer_node);
 
-        top->AddChild(box);
 
         { // house
             auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
