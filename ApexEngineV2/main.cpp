@@ -36,6 +36,7 @@
 
 /* Extra */
 #include "rendering/skydome/skydome.h"
+#include "rendering/skybox/skybox.h"
 #include "terrain/noise_terrain/noise_terrain_control.h"
 
 /* Physics */
@@ -100,9 +101,9 @@ public:
             &this->window,
             window.GetScaledWidth(),
             window.GetScaledHeight(),
-            70.0f,
+            75.0f,
             0.1f,
-            2000.0f
+            2600.0f
         );
         //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
         //env_cam->SetTranslation(Vector3(0, 10, 0));
@@ -150,8 +151,7 @@ public:
         auto particle_node = std::make_shared<Entity>();
         particle_node->SetName("particles");
         particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
-        particle_node->GetMaterial().texture0 =
-            AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/smoke.png");
+        particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/smoke.png"));
         particle_node->AddControl(std::make_shared<ParticleEmitterControl>(cam));
 
         top->AddChild(particle_node);
@@ -176,87 +176,59 @@ public:
         rb2->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
         test_object_1->AddControl(rb2);*/
 
+        
+
+
         const auto brdf_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/brdfLUT.png");
 
-        Vector3 box_position = Vector3(0, 150, 0);
+        { // test object
+            auto object = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
+            for (size_t i = 0; i < object->NumChildren(); i++) {
+                object->GetChild(i)->GetRenderable()->SetShader(shader);
 
-        auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
-        box->GetChild(0)->GetRenderable()->SetShader(shader);
-        box->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        box->GetChild(0)->GetMaterial().SetParameter("shininess", 0.6f);
-        box->GetChild(0)->GetMaterial().SetParameter("roughness", 0.2f);
-        box->GetChild(0)->GetMaterial().texture0 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png");
-        box->GetChild(0)->GetMaterial().texture1 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png");
-        box->GetChild(0)->GetMaterial().texture2 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png");
-        box->GetChild(0)->GetMaterial().texture3 = brdf_map;
-        box->GetChild(0)->GetMaterial().normals0 = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png");
+                object->GetChild(i)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+                object->GetChild(i)->GetMaterial().SetTexture("BrdfMap", brdf_map);
+            }
 
-        box->SetLocalTranslation(box_position);
+            auto tex = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/dummy.jpg");
 
-        rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 0.0);
-        rb3->SetPosition(box_position);
-        rb3->SetOrientation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(30.0f)));
-        rb3->SetAwake(false);
-        box->AddControl(rb3);
-        PhysicsManager::GetInstance()->RegisterBody(rb3);
+            for (int x = 0; x < 5; x++) {
+                for (int z = 0; z < 5; z++) {
+                    Vector3 position = Vector3(x * 3, 24.0f, z * 3);
+                    auto clone = std::dynamic_pointer_cast<Entity>(object->Clone());
+                    clone->SetLocalTranslation(position);
+                    clone->SetName("object_" + std::to_string(x) + "_" + std::to_string(z));
+                    for (size_t i = 0; i < clone->NumChildren(); i++) {
+                        clone->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", tex);
+                        clone->GetChild(i)->GetMaterial().SetParameter("roughness", MathUtil::Max(float(x) / 5.0f, 0.001f));
+                        clone->GetChild(i)->GetMaterial().SetParameter("shininess", MathUtil::Max(float(z) / 5.0f, 0.001f));
+                    }
 
-        auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rb3->GetBoundingBox());
-        auto bb_renderer_node = std::make_shared<Entity>();
-        bb_renderer_node->SetRenderable(bb_renderer);
-
-        //box->AddChild(bb_renderer_node);
-
-        top->AddChild(box);
-
-
-//         { // test object
-//             auto object = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
-//             for (size_t i = 0; i < object->NumChildren(); i++) {
-//                 object->GetChild(i)->GetRenderable()->SetShader(shader);
-
-//                 object->GetChild(i)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-//                 object->GetChild(i)->GetMaterial().texture3 = brdf_map;
-//             }
-
-//             auto tex = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/dummy.jpg");
-
-//             for (int x = 0; x < 5; x++) {
-//                 for (int z = 0; z < 5; z++) {
-//                     Vector3 position = Vector3(x * 3, 24.0f, z * 3);
-//                     auto clone = std::dynamic_pointer_cast<Entity>(object->Clone());
-//                     clone->SetLocalTranslation(position);
-//                     clone->SetName("object_" + std::to_string(x) + "_" + std::to_string(z));
-//                     for (size_t i = 0; i < clone->NumChildren(); i++) {
-//                         clone->GetChild(i)->GetMaterial().texture0 = tex;
-//                         clone->GetChild(i)->GetMaterial().SetParameter("roughness", MathUtil::Max(float(x) / 5.0f, 0.001f));
-//                         clone->GetChild(i)->GetMaterial().SetParameter("shininess", MathUtil::Max(float(z) / 5.0f, 0.001f));
-//                     }
-
-//                     auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 4.0);
-//                     rigid_body->SetPosition(position);
-//                     rigid_body->SetLinearVelocity(Vector3(0, -9, 0));
-//                     rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-//                     //clone->AddControl(rigid_body);
-//                     //PhysicsManager::GetInstance()->RegisterBody(rigid_body);
+                    auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 4.0);
+                    rigid_body->SetPosition(position);
+                    rigid_body->SetLinearVelocity(Vector3(0, -9, 0));
+                    rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+                    //clone->AddControl(rigid_body);
+                    //PhysicsManager::GetInstance()->RegisterBody(rigid_body);
 
 
-//                     //auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rigid_body->GetBoundingBox());
-//                    // auto bb_renderer_node = std::make_shared<Entity>();
-//                    // bb_renderer_node->SetRenderable(bb_renderer);
-//                    // clone->AddChild(bb_renderer_node);
+                    //auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rigid_body->GetBoundingBox());
+                   // auto bb_renderer_node = std::make_shared<Entity>();
+                   // bb_renderer_node->SetRenderable(bb_renderer);
+                   // clone->AddChild(bb_renderer_node);
 
-// //                    if (x == 0 && z == 0) {
-// //                        auto audio_ctrl = std::make_shared<AudioControl>(
-// //                        AssetManager::GetInstance()->LoadFromFile<AudioSource>("res/sounds/cartoon001.wav"));
-// //                        clone->AddControl(audio_ctrl);
-// //                        audio_ctrl->GetSource()->SetLoop(true);
-// //                        audio_ctrl->GetSource()->Play();
-// //                    }
+//                    if (x == 0 && z == 0) {
+//                        auto audio_ctrl = std::make_shared<AudioControl>(
+//                        AssetManager::GetInstance()->LoadFromFile<AudioSource>("res/sounds/cartoon001.wav"));
+//                        clone->AddControl(audio_ctrl);
+//                        audio_ctrl->GetSource()->SetLoop(true);
+//                        audio_ctrl->GetSource()->Play();
+//                    }
 
-//                     top->AddChild(clone);
-//                 }
-//             }
-//         }
+                    top->AddChild(clone);
+                }
+            }
+        }
 
         //rb4->SetAwake(false);
 
@@ -271,7 +243,7 @@ public:
         Environment::GetInstance()->SetShadowsEnabled(true);
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.9, 0.9, 0.9).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(1.0).Normalize());
 
         Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f), 10.0f));
         Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(6.0f, 15, 0), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
@@ -280,14 +252,16 @@ public:
         // Initialize root node
         top = std::make_shared<Entity>("top");
 
-        cam->SetTranslation(Vector3(0, 50, 0));
+        cam->SetTranslation(Vector3(0, 150, 0));
 
         // Initialize particle system
-        //InitParticleSystem();
+        // InitParticleSystem();
 
         ShaderProperties defines = {
             { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
             { "NORMAL_MAPPING", 1 },
+            { "ROUGHNESS_MAPPING", 1 },
+            { "METALNESS_MAPPING", 1 },
             { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
         };
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
@@ -349,29 +323,108 @@ public:
          dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
          */
 
-        InitPhysicsTests();
+        // InitPhysicsTests();
 
-        // { // house
-        //     auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
-        //     for (size_t i = 0; i < house->NumChildren(); i++) {
-        //         //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
-        //         house->GetChild(i)->GetRenderable()->SetShader(shader);
-        //     }
+        const auto brdf_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/brdfLUT.png");
 
-        //     house->Move(Vector3(-3, 0, -3));
-        //     house->SetName("house");
-        //     top->AddChild(house);
-        // }
+        Vector3 box_position = Vector3(4, 160, 0);
 
-        // std::shared_ptr<Cubemap> cubemap(new Cubemap({
-        //      AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/posx.jpg"),
-        //      AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/negx.jpg"),
-        //      AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/posy.jpg"),
-        //      AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/negy.jpg"),
-        //      AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/posz.jpg"),
-        //      AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/mountain/negz.jpg")
-        //  }));
-        // Environment::GetInstance()->SetGlobalCubemap(cubemap);
+        auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+        box->GetChild(0)->GetRenderable()->SetShader(shader);
+        box->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.5f, 0.3f, 1.0f };
+        box->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f);
+        box->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
+        box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
+        box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+        box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+        box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+        box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+
+        box->SetLocalTranslation(box_position);
+
+
+        /*{
+            auto building = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/building/building.obj", true);
+            building->SetLocalTranslation(Vector3(0, 150, 0));
+            building->SetLocalScale(Vector3(20));
+            for (int i = 0; i < building->NumChildren(); i++) {
+                building->GetChild(i)->GetRenderable()->SetShader(shader);
+                building->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+                building->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f);
+                building->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
+            }
+            top->AddChild(building);
+        }*/
+
+        {
+            auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/blackgum/blackgum.obj", true);
+            tree->SetLocalTranslation(Vector3(0, 150, 5));
+            tree->SetLocalScale(Vector3(0.8));
+            for (int i = 0; i < tree->NumChildren(); i++) {
+                tree->GetChild(i)->GetMaterial().SetTexture("BrdfMap", brdf_map);
+                // tree->GetChild(i)->GetRenderable()->SetShader(shader);
+                // // tree->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+                tree->GetChild(0)->GetMaterial().SetParameter("shininess", 0.0f);
+                tree->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
+            }
+            tree->GetChild("Branches_08")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
+            tree->GetChild("Branches_08")->GetMaterial().alpha_blended = true;
+            tree->GetChild("Branches_08")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
+            tree->GetChild("BlackGumLeaves_1")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
+            tree->GetChild("BlackGumLeaves_1")->GetMaterial().alpha_blended = true;
+            tree->GetChild("BlackGumLeaves_1")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
+            tree->GetChild("BlackGumLeaves_2")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
+            tree->GetChild("BlackGumLeaves_2")->GetMaterial().alpha_blended = true;
+            tree->GetChild("BlackGumLeaves_2")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
+            top->AddChild(tree);
+        }
+
+
+        rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 0.0);
+        rb3->SetPosition(box_position);
+        // rb3->SetOrientation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(30.0f)));
+        rb3->SetAwake(false);
+        box->AddControl(rb3);
+        PhysicsManager::GetInstance()->RegisterBody(rb3);
+
+        auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rb3->GetBoundingBox());
+        auto bb_renderer_node = std::make_shared<Entity>();
+        bb_renderer_node->SetRenderable(bb_renderer);
+
+        // box->AddChild(bb_renderer_node);
+
+        top->AddChild(box);
+
+        { // house
+            auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
+            for (size_t i = 0; i < house->NumChildren(); i++) {
+                //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
+                house->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
+
+            house->Move(Vector3(-3, 50, -3));
+            house->SetName("house");
+            top->AddChild(house);
+        }
+
+        std::shared_ptr<Cubemap> cubemap(new Cubemap({
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posz.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negz.jpg")
+         }));
+        Environment::GetInstance()->SetGlobalCubemap(cubemap);
+
+        Environment::GetInstance()->SetGlobalIrradianceCubemap(std::shared_ptr<Cubemap>(new Cubemap({
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posz.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negz.jpg")
+        })));
 
         /*{ // sponza
             auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
@@ -398,29 +451,26 @@ public:
             sponza->Scale(2.0f);
         }*/
 
-        /*{ // cloister
-            auto cloister = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cloister/cloister.obj");
-            // std::function<void(Entity*)> scan_nodes;
-            // scan_nodes = [this, &scan_nodes](Entity *root) {
+        // { //
+        //     auto obj = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
+        //     std::function<void(Entity*)> scan_nodes;
+        //     scan_nodes = [this, &scan_nodes](Entity *root) {
 
-            //     for (size_t i = 0; i < root->NumChildren(); i++) {
-            //         root->GetChild(i)->GetRenderable()->SetShader(shader);
+        //         for (size_t i = 0; i < root->NumChildren(); i++) {
+        //             root->GetChild(i)->GetRenderable()->SetShader(shader);
 
-            //         scan_nodes(root->GetChild(i).get());
-            //     }
-            // };
-            // scan_nodes(cloister.get());
-            for (size_t i = 0; i < cloister->NumChildren(); i++) {
-                cloister->GetChild(i)->GetRenderable()->SetShader(shader);
-            }
+        //             scan_nodes(root->GetChild(i).get());
+        //         }
+        //     };
+        //     scan_nodes(obj.get());
 
-            cloister->Move(Vector3(0, 18, 0));
-            cloister->SetName("cloister");
-            top->AddChild(cloister);
+        //     obj->Move(Vector3(0, 0, 0));
+        //     obj->SetName("obj");
+        //     top->AddChild(obj);
 
-            //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-            cloister->Scale(2.0f);
-        }*/
+        //     //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+        //     obj->Scale(2.0f);
+        // }
 
 
 
@@ -473,7 +523,8 @@ public:
         // }
 
         // top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 2332));
+        top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3434));
     }
 
     void Logic(double dt)
@@ -507,7 +558,7 @@ public:
         timer += dt;
         shadow_timer += dt;
 
-        // Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.05), cos(timer * 0.05), 0.0f).Normalize());
+        // Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.2), cos(timer * 0.2), 0.0f).Normalize());
 
         Vector4 sun_color = Vector4(1.0, 0.95, 0.9, 1.0);
         const float sun_to_horizon = std::max(Environment::GetInstance()->GetSun().GetDirection().y, 0.0f);
@@ -517,7 +568,7 @@ public:
         sun_color.Lerp(Vector4(0.2, 0.2, 0.2, 1.0), sun_to_end);
 
 
-        Environment::GetInstance()->GetSun().SetColor(sun_color);
+        // Environment::GetInstance()->GetSun().SetColor(sun_color);
 
         cam->Update(dt);
 

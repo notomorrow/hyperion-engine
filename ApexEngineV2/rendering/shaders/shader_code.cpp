@@ -16,9 +16,10 @@ const char *ShaderCode::aabb_debug_vs =
 
 const char *ShaderCode::aabb_debug_fs =
     "#version 330 core\n"
+    "layout(location = 0) out vec4 output0;"
     "in vec4 v_position;"
     "void main() {"
-    "    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);"
+    "    output0 = vec4(1.0, 0.0, 0.0, 1.0);"
     "}";
 
 } // namespace apex

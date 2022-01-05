@@ -1,15 +1,27 @@
+#define $PI 3.141592654
+
 uniform float u_shininess;
 uniform float u_roughness;
 
-uniform int u_hasDiffuseMap;
+uniform int HasDiffuseMap;
 uniform vec4 u_diffuseColor;
-uniform sampler2D u_diffuseMap;
+uniform sampler2D DiffuseMap;
 
-uniform int u_hasNormalMap;
-uniform sampler2D u_normalMap;
+uniform int HasNormalMap;
+uniform sampler2D NormalMap;
 
-uniform int u_hasAoMap;
-uniform sampler2D u_aoMap;
+#if ROUGHNESS_MAPPING
+uniform int HasRoughnessMap;
+uniform sampler2D RoughnessMap;
+#endif
+
+#if METALNESS_MAPPING
+uniform int HasMetalnessMap;
+uniform sampler2D MetalnessMap;
+#endif
+
+uniform int HasAoMap;
+uniform sampler2D AoMap;
 
 struct DirectionalLight
 {
@@ -31,13 +43,46 @@ uniform int env_NumPointLights;
 
 /* cubemapping */
 uniform samplerCube env_GlobalCubemap;
+uniform samplerCube env_GlobalIrradianceCubemap;
 
 // brdf
-uniform sampler2D u_brdfMap;
+uniform sampler2D BrdfMap;
+uniform int HasBrdfMap;
+
+#define $SIN_1 0.84147098
+#define $COS_1 0.54030231
+#define $SIN_2 0.90929743
+#define $COS_2 -0.4161468
+
+vec3 Irradiance(vec3 normal) {
+	vec3 irradiance = vec3(0.0);  
+
+	vec3 up    = vec3(0.0, 1.0, 0.0);
+	vec3 right = normalize(cross(up, normal));
+	up         = normalize(cross(normal, right));
+
+	float sampleDelta = 0.8;
+	float nrSamples = 0.0; 
+
+	for(float phi = 0.0; phi < 2.0 * $PI; phi += sampleDelta)
+	{
+			for(float theta = 0.0; theta < 0.5 * $PI; theta += sampleDelta)
+			{
+					// spherical to cartesian (in tangent space)
+					vec3 tangentSample = vec3(sin(theta) * cos(phi),  sin(theta) * sin(phi), cos(theta));
+					// tangent space to world
+					vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal; 
+
+					irradiance += texture(env_GlobalIrradianceCubemap, sampleVec).rgb * cos(theta) * sin(theta);
+					nrSamples++;
+			}
+	}
+	return $PI * irradiance * (1.0 / float(nrSamples));
+}
 
 vec3 ReflectionVector(vec3 n, vec3 worldPos, vec3 camPos)
 {
-	  vec3 v = normalize(worldPos - camPos);
+	  vec3 v = normalize(camPos - worldPos);
 
 	  return reflect(-v, n);
 }
@@ -76,6 +121,31 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
     return normalize(sampleVec);
 }
 
+float ChiGGXTerm(float v) {
+    return v > 0 ? 1 : 0;
+}
+
+float ChiGGX(vec3 view, vec3 norm, vec3 halfV, float alpha) {
+    float VoH2 = clamp(dot(view,halfV),0.0,1.0);
+    float chi = ChiGGXTerm( VoH2 / clamp(dot(view,norm),0.0,1.0));
+    VoH2 = VoH2 * VoH2;
+    float tan2 = (1-VoH2) / VoH2;
+    return (chi*2)/(1+sqrt(1+alpha*alpha*tan2));
+
+}
+
+vec3 FresnelTerm(vec3 specularColor, float vdoth)
+{
+	vec3 fresnel = specularColor + (1. - specularColor) * pow((1. - vdoth), 5.);
+	return fresnel;
+}
+
+vec3 EnvRemap(vec3 c)
+{
+	return pow(2.0 * c, vec3(2.2));
+}
+
+
 float GGX(float alpha, float cosThetaM)
 {
   float CosSquared = cosThetaM * cosThetaM;
@@ -83,11 +153,15 @@ float GGX(float alpha, float cosThetaM)
   return (1.0 / PI) * sqr(alpha / (CosSquared * (alpha * alpha + TanSquared)));
 }
 
+
 float SchlickFresnel(float f0, float f90, float u)
 {
   return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
+vec3 SchlickFresnelRoughness2(float cosTheta, vec3 F0, float roughness) {
+  return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
 
 vec3 SchlickFresnelRoughness(vec3 f0, float u)
 {
@@ -157,6 +231,11 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
     denom = PI * denom * denom;
 
     return nom / denom;
+
+		/*float NdotH = max(dot(N, H), 0.0);
+    float r1 = 1.0 / ( 4.0 * roughness * roughness * pow(NdotH, 4.0));
+    float r2 = (NdotH * NdotH - 1.0) / (roughness * roughness * NdotH * NdotH);
+    return r1 * exp(r2);*/
 }
 
 

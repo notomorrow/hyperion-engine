@@ -23,6 +23,12 @@ enum MaterialParameterType {
     MaterialParameter_Vector4
 };
 
+enum MaterialFaceCull {
+    MaterialFace_None = 0x00,
+    MaterialFace_Front = 0x01,
+    MaterialFace_Back = 0x02
+};
+
 class MaterialParameter {
 public:
     MaterialParameter();
@@ -57,15 +63,21 @@ public:
 
     void SetParameter(const std::string &name, float);
     void SetParameter(const std::string &name, int);
-    void SetParameter(const std::string &name, const std::shared_ptr<Texture> &);
     void SetParameter(const std::string &name, const Vector2 &);
     void SetParameter(const std::string &name, const Vector3 &);
     void SetParameter(const std::string &name, const Vector4 &);
+
+    void SetTexture(const std::string &name, const std::shared_ptr<Texture> &);
+    std::shared_ptr<Texture> GetTexture(const std::string &name) const;
+
+    MaterialFaceCull cull_faces = MaterialFace_Back;
 
     bool alpha_blended = false;
     bool depth_test = true;
     bool depth_write = true;
     Vector4 diffuse_color = Vector4(1.0);
+
+    std::map<std::string, std::shared_ptr<Texture>> textures;
     std::shared_ptr<Texture> texture0 = nullptr;
     std::shared_ptr<Texture> texture1 = nullptr;
     std::shared_ptr<Texture> texture2 = nullptr;

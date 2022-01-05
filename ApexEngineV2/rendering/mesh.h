@@ -75,7 +75,10 @@ public:
     inline const std::vector<Vertex> &GetVertices() const { return vertices; }
     inline const std::vector<MeshIndex> &GetIndices() const { return indices; }
 
+    void CalculateNormals();
+
     void SetAttribute(MeshAttributeType type, const MeshAttribute &attribute);
+    inline const std::map<MeshAttributeType, MeshAttribute> &GetAttributes() const { return attribs; }
     inline void SetPrimitiveType(PrimitiveType prim_type) { primitive_type = prim_type; }
     inline PrimitiveType GetPrimitiveType() const { return primitive_type; }
 

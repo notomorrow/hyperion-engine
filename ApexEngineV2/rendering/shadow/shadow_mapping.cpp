@@ -9,8 +9,6 @@ ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist)
 {
     shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
 
-    // only use color component -- we will use DepthShader
-    //   to render the depth into the color attachment
     fbo = new Framebuffer2D(1024, 1024, true, true, false, false);
 }
 
@@ -85,7 +83,7 @@ void ShadowMapping::Begin()
 
     glDepthMask(true);
     glClearDepth(1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     ///glCullFace(GL_FRONT);
     // glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
@@ -94,13 +92,14 @@ void ShadowMapping::Begin()
     // glDepthFunc(GL_LESS);
     // glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glCullFace(GL_FRONT);
+    // glCullFace(GL_FRONT);
 }
 
 void ShadowMapping::End()
 {
-    glCullFace(GL_BACK);
+    // glCullFace(GL_BACK);
     fbo->End();
+}
 
 void ShadowMapping::TransformPoints(const std::array<Vector3, 8> &in_vec,
     std::array<Vector3, 8> &out_vec, const Matrix4 &mat) const
