@@ -12,7 +12,6 @@ public:
     virtual ~Game();
 
     inline InputManager *GetInputManager() const { return inputmgr; }
-    inline RenderWindow &GetWindow() { return window; }
     inline Renderer *GetRenderer() { return m_renderer; }
     inline const Renderer *GetRenderer() const { return m_renderer; }
 
@@ -22,7 +21,6 @@ public:
 
 protected:
     InputManager *inputmgr;
-    RenderWindow window;
     Renderer * const m_renderer;
 };
 } // namespace apex

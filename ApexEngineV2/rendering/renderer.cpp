@@ -1,7 +1,10 @@
 #include "renderer.h"
+#include "framebuffer_2d.h"
 
 namespace apex {
-Renderer::Renderer()
+Renderer::Renderer(const RenderWindow &render_window)
+    : m_render_window(render_window),
+      m_fbo(nullptr)
 {
     m_post_processing = new PostProcessing();
 
@@ -14,6 +17,28 @@ Renderer::Renderer()
 Renderer::~Renderer()
 {
     delete m_post_processing;
+    delete m_fbo;
+}
+
+void Renderer::Begin(Camera *cam, Entity *top)
+{
+    FindRenderables(cam, top);
+}
+
+void Renderer::Render(Camera *cam)
+{
+    if (m_fbo == nullptr) {
+        m_fbo = new Framebuffer2D(m_render_window.GetScaledWidth(), m_render_window.GetScaledHeight());
+    }
+
+    RenderAll(cam, m_fbo);
+    RenderPost(cam, m_fbo);
+}
+
+void Renderer::End(Camera *cam)
+{
+    ClearRenderables();
+    RenderPost(cam, m_fbo);
 }
 
 void Renderer::ClearRenderables()
@@ -25,9 +50,17 @@ void Renderer::ClearRenderables()
     particle_bucket.clear();
 }
 
-void Renderer::FindRenderables(Entity *top)
+void Renderer::FindRenderables(Camera *cam, Entity *top)
 {
     if (top->GetRenderable() != nullptr) {
+        if (top->GetRenderable()->GetRenderBucket() != Renderable::RB_SKY) {
+            const Frustum &frustum = cam->GetFrustum();
+
+            if (!frustum.BoundingBoxInFrustum(top->GetAABB())) {
+                return;
+            }
+        }
+
         BucketItem bucket_item;
         bucket_item.renderable = top->GetRenderable().get();
         bucket_item.material = &top->GetMaterial();
@@ -51,7 +84,7 @@ void Renderer::FindRenderables(Entity *top)
 
     for (size_t i = 0; i < top->NumChildren(); i++) {
         Entity *child = top->GetChild(i).get();
-        FindRenderables(child);
+        FindRenderables(cam, child);
     }
 }
 

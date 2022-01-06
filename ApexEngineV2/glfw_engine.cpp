@@ -46,9 +46,9 @@ bool GlfwEngine::InitializeGame(Game *game)
 #endif
 
     window = glfwCreateWindow(
-        game->GetWindow().width,
-        game->GetWindow().height,
-        game->GetWindow().title.c_str(),
+        game->GetRenderer()->GetRenderWindow().width,
+        game->GetRenderer()->GetRenderWindow().height,
+        game->GetRenderer()->GetRenderWindow().title.c_str(),
         nullptr,
         nullptr
     );
@@ -61,7 +61,7 @@ bool GlfwEngine::InitializeGame(Game *game)
     glfwSetKeyCallback(window, KeyCallback);
     glfwMakeContextCurrent(window);
 
-    Vector2 render_scale(Vector2::One()), prev_render_scale = game->GetRenderer()->GetPostProcessing()->GetRenderScale();
+    Vector2 render_scale(Vector2::One()), prev_render_scale = game->GetRenderer()->GetRenderWindow().GetScale();
 
     //render_scale = Vector2::Max(render_scale, Vector2::One());
 
@@ -87,9 +87,14 @@ bool GlfwEngine::InitializeGame(Game *game)
             &render_scale.GetX(),
             &render_scale.GetY()
         );
-        glfwGetWindowSize(window, &game->GetWindow().width, &game->GetWindow().height);
+
+        glfwGetWindowSize(
+            window,
+            &game->GetRenderer()->GetRenderWindow().width,
+            &game->GetRenderer()->GetRenderWindow().height
+        );
         
-        game->GetRenderer()->GetPostProcessing()->SetRenderScale(Vector2::Max(render_scale, Vector2::One()));
+        game->GetRenderer()->GetRenderWindow().SetScale(Vector2::Max(render_scale, Vector2::One()));
 
         prev_render_scale = render_scale;
     }
@@ -121,10 +126,15 @@ bool GlfwEngine::InitializeGame(Game *game)
             &render_scale.GetX(),
             &render_scale.GetY()
         );
-        glfwGetWindowSize(window, &game->GetWindow().width, &game->GetWindow().height);
+
+        glfwGetWindowSize(
+            window,
+            &game->GetRenderer()->GetRenderWindow().width,
+            &game->GetRenderer()->GetRenderWindow().height
+        );
 
         if (prev_render_scale != render_scale) {
-            game->GetRenderer()->GetPostProcessing()->SetRenderScale(Vector2::Max(render_scale, Vector2::One()));
+            game->GetRenderer()->GetRenderWindow().SetScale(Vector2::Max(render_scale, Vector2::One()));
 
             prev_render_scale = render_scale;
         }
@@ -134,8 +144,9 @@ bool GlfwEngine::InitializeGame(Game *game)
         glfwGetCursorPos(window, &mouse_x, &mouse_y);
 
         game->GetInputManager()->MouseMove(
-            MathUtil::Clamp<double>(mouse_x, 0, game->GetWindow().width),
-            MathUtil::Clamp<double>(mouse_y, 0, game->GetWindow().height));
+            MathUtil::Clamp<double>(mouse_x, 0, game->GetRenderer()->GetRenderWindow().width),
+            MathUtil::Clamp<double>(mouse_y, 0, game->GetRenderer()->GetRenderWindow().height)
+        );
 
         game->Logic(delta);
         game->Render();
@@ -215,6 +226,21 @@ void GlfwEngine::BindBuffer(int target, unsigned int buffer)
 void GlfwEngine::BufferData(int target, size_t size, const void *data, int usage)
 {
     glBufferData(target, size, data, usage);
+}
+
+void GlfwEngine::BufferSubData(int target, size_t offset, size_t size, const void *data)
+{
+    glBufferSubData(target, offset, size, data);
+}
+
+void GlfwEngine::BindVertexArray(unsigned int target)
+{
+    glBindVertexArray(target);
+}
+
+void GlfwEngine::GenVertexArrays(size_t size, unsigned int *arrays)
+{
+    glGenVertexArrays(size, arrays);
 }
 
 void GlfwEngine::EnableVertexAttribArray(unsigned int index)

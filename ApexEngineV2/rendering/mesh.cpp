@@ -197,6 +197,7 @@ void Mesh::Render()
 
         glGenBuffers(1, &vbo);
         glGenBuffers(1, &ibo);
+
         is_created = true;
     }
 
@@ -205,9 +206,9 @@ void Mesh::Render()
     if (!is_uploaded) {
         std::vector<float> buffer = CreateBuffer();
 
-
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(float), &buffer[0], GL_STATIC_DRAW);
+        CatchGLErrors("Failed to set buffer data.");
 
         unsigned int error;
 

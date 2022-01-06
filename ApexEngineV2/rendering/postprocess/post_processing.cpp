@@ -45,7 +45,7 @@ void PostProcessing::Render(Camera *cam, Framebuffer *fbo)
 {
   glDepthMask(false);
   glDisable(GL_DEPTH_TEST);
-  glViewport(0, 0, cam->GetWidth() * m_render_scale.x, cam->GetHeight() * m_render_scale.y);
+  glViewport(0, 0, cam->GetWidth(), cam->GetHeight());
 
   for (auto &&it : m_filters) {
     it.filter->Begin(cam, fbo);

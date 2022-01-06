@@ -24,10 +24,19 @@ void Camera::Rotate(const Vector3 &axis, float radians)
     m_direction.Normalize();
 }
 
+void Camera::UpdateFrustum()
+{
+    m_frustum.SetViewProjectionMatrix(m_view_proj_mat);
+}
+
 void Camera::Update(double dt)
 {
     UpdateLogic(dt);
     UpdateMatrices();
+
+    m_view_proj_mat = m_view_mat * m_proj_mat;
+
+    UpdateFrustum();
 }
 
 } // namespace apex

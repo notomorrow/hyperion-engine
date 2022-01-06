@@ -130,6 +130,9 @@ public:
     virtual void DeleteBuffers(size_t count, unsigned int *buffers) = 0;
     virtual void BindBuffer(int target, unsigned int buffer) = 0;
     virtual void BufferData(int target, size_t size, const void *data, int usage) = 0;
+    virtual void BufferSubData(int target, size_t offset, size_t size, const void *data) = 0;
+    virtual void BindVertexArray(unsigned int target) = 0;
+    virtual void GenVertexArrays(size_t size, unsigned int *arrays) = 0;
     virtual void EnableVertexAttribArray(unsigned int index) = 0;
     virtual void DisableVertexAttribArray(unsigned int index) = 0;
     virtual void VertexAttribPointer(unsigned int index, int size, int type, bool normalized, size_t stride, void *ptr) = 0;

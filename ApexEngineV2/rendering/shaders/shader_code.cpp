@@ -19,7 +19,7 @@ const char *ShaderCode::aabb_debug_fs =
     "layout(location = 0) out vec4 output0;"
     "in vec4 v_position;"
     "void main() {"
-    "    output0 = vec4(1.0, 0.0, 0.0, 1.0);"
+    "    output0 = vec4(0.0, 1.0, 0.0, 1.0);"
     "}";
 
 } // namespace apex

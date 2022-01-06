@@ -33,9 +33,6 @@ void Texture2D::Use()
         glGenTextures(1, &id);
         CatchGLErrors("Failed to generate texture.", false);
 
-        // glEnable(GL_TEXTURE_2D);
-        // CatchGLErrors("Failed to enable Texture2D.", false);
-
         is_created = true;
     }
 
@@ -55,7 +52,9 @@ void Texture2D::Use()
             width, height, 0, fmt, GL_UNSIGNED_BYTE, bytes);
         CatchGLErrors("glTexImage2D failed.", false);
 
-        if (min_filter = GL_LINEAR_MIPMAP_LINEAR) {
+        if (min_filter == GL_LINEAR_MIPMAP_LINEAR ||
+            min_filter == GL_LINEAR_MIPMAP_NEAREST ||
+            min_filter == GL_NEAREST_MIPMAP_NEAREST) {
             glGenerateMipmap(GL_TEXTURE_2D);
             CatchGLErrors("Failed to generate Texture2D mipmaps.", false);
         }
