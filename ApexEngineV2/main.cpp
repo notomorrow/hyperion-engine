@@ -50,7 +50,8 @@
 #include "particles/particle_renderer.h"
 #include "particles/particle_emitter_control.h"
 
-#include "rendering/renderers/bounding_box_renderer.h"
+#include "controls/bounding_box_control.h"
+// #include "rendering/renderers/bounding_box_renderer.h"
 
 /* Standard library */
 #include <cstdlib>
@@ -228,9 +229,11 @@ public:
 
         cam = new FpsCamera(
             inputmgr,
-            &this->window,
-            window.GetWidth() * m_renderer->GetPostProcessing()->GetRenderScale().x,
-            window.GetHeight() * m_renderer->GetPostProcessing()->GetRenderScale().y,
+            &m_renderer->GetRenderWindow(),
+            m_renderer->GetRenderWindow().GetScaledWidth(),
+            m_renderer->GetRenderWindow().GetScaledHeight(),
+            // m_renderer->GetRenderWindow().GetWidth() * m_renderer->GetPostProcessing()->GetRenderScale().x,
+            // m_renderer->GetRenderWindow().GetHeight() * m_renderer->GetPostProcessing()->GetRenderScale().y,
             65.0f,
             0.1f,
             2600.0f
@@ -399,7 +402,16 @@ public:
             tree->GetChild("BlackGumLeaves_2")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
             tree->GetChild("BlackGumLeaves_2")->GetMaterial().alpha_blended = true;
             tree->GetChild("BlackGumLeaves_2")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
+            
+            tree->AddControl(std::make_shared<BoundingBoxControl>());
+            
             top->AddChild(tree);
+
+
+            // auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&tree->GetAABB());
+            // auto bb_renderer_node = std::make_shared<Entity>();
+            // bb_renderer_node->SetRenderable(bb_renderer);
+            // tree->AddChild(bb_renderer_node);
         }
 
 
@@ -606,7 +618,7 @@ public:
 
     void Render()
     {
-        m_renderer->FindRenderables(top.get());
+        m_renderer->Begin(cam, top.get());
 
         if (Environment::GetInstance()->ShadowsEnabled()) {
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
@@ -651,9 +663,8 @@ public:
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetId(), 0);*/
 
-        m_renderer->RenderAll(cam, fbo);
-        m_renderer->ClearRenderables();
-        m_renderer->RenderPost(cam, fbo);
+        m_renderer->Render(cam);
+        m_renderer->End(cam);
     }
 };
 

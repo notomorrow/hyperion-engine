@@ -4,8 +4,7 @@ namespace apex {
 
 Game::Game(const RenderWindow &window) 
     : inputmgr(new InputManager),
-      m_renderer(new Renderer()), 
-      window(window)
+      m_renderer(new Renderer(window))
 {
 }
 

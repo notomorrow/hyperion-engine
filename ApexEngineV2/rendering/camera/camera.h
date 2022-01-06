@@ -3,6 +3,7 @@
 
 #include "../../math/vector3.h"
 #include "../../math/matrix4.h"
+#include "../../math/frustum.h"
 
 namespace apex {
 class Camera {
@@ -32,8 +33,8 @@ public:
     inline void SetViewMatrix(const Matrix4 &view_mat) { m_view_mat = view_mat; }
     inline const Matrix4 &GetProjectionMatrix() const { return m_proj_mat; }
     inline void SetProjectionMatrix(const Matrix4 &proj_mat) { m_proj_mat = proj_mat; }
-
-    inline Matrix4 GetViewProjectionMatrix() const { return m_view_mat * m_proj_mat; }
+    inline const Matrix4 &GetViewProjectionMatrix() const { return m_view_proj_mat; }
+    inline const Frustum &GetFrustum() const { return m_frustum; }
 
     void Rotate(const Vector3 &axis, float radians);
     void Update(double dt);
@@ -44,9 +45,16 @@ public:
 protected:
     Vector3 m_translation, m_direction, m_up;
     Matrix4 m_view_mat, m_proj_mat;
+    Frustum m_frustum;
 
     int m_width, m_height;
     float m_near, m_far;
+
+private:
+
+    Matrix4 m_view_proj_mat;
+
+    void UpdateFrustum();
 };
 }
 

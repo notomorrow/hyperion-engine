@@ -1,7 +1,8 @@
 #ifndef RENDER_WINDOW_H
 #define RENDER_WINDOW_H
 
-#include "./math/math_util.h"
+#include "math/math_util.h"
+#include "math/vector2.h"
 
 #include <string>
 
@@ -41,6 +42,9 @@ struct RenderWindow {
     inline int GetWidth() const { return width; }
     inline int GetHeight() const { return height; }
     const std::string &GetTitle() const { return title; }
+
+    inline Vector2 GetScale() const { return Vector2(xscale, yscale); }
+    inline void SetScale(const Vector2 &scale) { xscale = scale.x; yscale = scale.y; }
 
     int width, height;
     float xscale, yscale;

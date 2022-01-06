@@ -1,7 +1,55 @@
 #include "frustum.h"
 
 namespace apex {
+Frustum::Frustum()
+{
+}
+
+Frustum::Frustum(const Frustum &other)
+    : m_planes(other.m_planes)
+{
+}
+
 Frustum::Frustum(const Matrix4 &view_proj)
+{
+    SetViewProjectionMatrix(view_proj);
+}
+
+bool Frustum::BoundingBoxInFrustum(const BoundingBox &bounding_box) const
+{
+    // false if fully outside, true if inside or intersects
+
+    // check box outside/inside of frustum
+    for (int i = 0; i < 6; i++ )
+    {
+        int out = 0;
+        out += m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) < 0.0;
+        out += m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) < 0.0;
+        out += m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) < 0.0;
+        out += m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) < 0.0;
+        out += m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) < 0.0;
+        out += m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) < 0.0;
+        out += m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) < 0.0;
+        out += m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) < 0.0;
+
+        if (out == 8) {
+            return false;
+        }
+    }
+
+    // check frustum outside/inside box
+    // int out;
+    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].x > bounding_box.GetMax().x)?1:0); if( out==8 ) return false;
+    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].x < bounding_box.GetMin().x)?1:0); if( out==8 ) return false;
+    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].y > bounding_box.GetMax().y)?1:0); if( out==8 ) return false;
+    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].y < bounding_box.GetMin().y)?1:0); if( out==8 ) return false;
+    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].z > bounding_box.GetMax().z)?1:0); if( out==8 ) return false;
+    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].z < bounding_box.GetMin().z)?1:0); if( out==8 ) return false;
+
+    return true;
+}
+
+void Frustum::SetViewProjectionMatrix(const Matrix4 &view_proj)
 {
     Matrix4 mat = view_proj;
 

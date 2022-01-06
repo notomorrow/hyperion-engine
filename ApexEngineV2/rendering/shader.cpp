@@ -126,6 +126,7 @@ void Shader::Use()
         glBindFragDataLocation(progid, 0, "output0");
         glBindFragDataLocation(progid, 1, "output1");
         glBindFragDataLocation(progid, 2, "output2");
+        CatchGLErrors("Failed to bind shader frag data.");
 
         glBindAttribLocation(progid, 0, "a_position");
         glBindAttribLocation(progid, 1, "a_normal");
