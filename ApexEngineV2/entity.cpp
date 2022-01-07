@@ -73,8 +73,10 @@ void Entity::AddChild(std::shared_ptr<Entity> entity)
 
 void Entity::RemoveChild(const std::shared_ptr<Entity> &entity)
 {
+    m_children_pending_removal.push_back(entity);
     m_children.erase(std::find(m_children.begin(), m_children.end(), entity));
     entity->m_parent = nullptr;
+    entity->SetPendingRemovalFlag();
     entity->SetTransformUpdateFlag();
 }
 
@@ -92,6 +94,11 @@ std::shared_ptr<Entity> Entity::GetChild(const std::string &name) const
     });
 
     return it != m_children.end() ? *it : nullptr;
+}
+
+std::shared_ptr<Entity> Entity::GetChildPendingRemoval(size_t index) const
+{
+    return m_children_pending_removal.at(index);
 }
 
 void Entity::AddControl(std::shared_ptr<EntityControl> control)
@@ -145,6 +152,14 @@ void Entity::SetAABBUpdateFlag()
     m_flags |= UPDATE_AABB;
     for (auto &child : m_children) {
         child->SetAABBUpdateFlag();
+    }
+}
+
+void Entity::SetPendingRemovalFlag()
+{
+    m_flags |= PENDING_REMOVAL;
+    for (auto &child : m_children) {
+        child->SetPendingRemovalFlag();
     }
 }
 

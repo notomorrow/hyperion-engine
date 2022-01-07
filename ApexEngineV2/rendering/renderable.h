@@ -14,11 +14,11 @@ class Renderable {
     friend class Renderer;
 public:
     enum RenderBucket {
-        RB_OPAQUE,
-        RB_TRANSPARENT,
-        RB_SKY,
-        RB_PARTICLE,
-        RB_SCREEN,
+        RB_SKY = 0,
+        RB_OPAQUE = 1,
+        RB_TRANSPARENT = 2,
+        RB_PARTICLE = 3,
+        RB_SCREEN = 4,
     };
 
     Renderable(RenderBucket bucket = RB_OPAQUE);

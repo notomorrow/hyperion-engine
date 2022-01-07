@@ -12,7 +12,7 @@ find_package(Threads)
 find_package(OpenGL)
 find_package(OpenAL)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fpermissive")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Og -fpermissive")
 
 file(GLOB_RECURSE SOURCES "ApexEngineV2/*.cpp" "ApexEngineV2/*.cpp" "ApexEngineV2/*.c")
 file(GLOB_RECURSE HEADERS "ApexEngineV2/*.h")

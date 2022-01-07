@@ -314,12 +314,39 @@ public:
 
         inputmgr->RegisterKeyEvent(KeyboardKey::KEY_6, raytest_event);
 
-        /*auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
-        dragger->Move(Vector3(3, -1.8f, 3));
+        auto rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(20)), physics::PhysicsMaterial(0.0));
+        rb4->SetPosition(Vector3(-6, 100, -6));
+        rb4->SetAwake(false);
+        PhysicsManager::GetInstance()->RegisterBody(rb4);
+
+
+        auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
+        dragger->Move(Vector3(-6, 170, -6));
         dragger->Scale(0.5);
-        dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
-        dragger->GetControl<SkeletonControl>(0)->PlayAnimation(1, 3.0);
-        top->AddChild(dragger);*/
+        // dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
+        // dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 4.0);
+        top->AddChild(dragger);
+
+        // auto rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.25)), physics::PhysicsMaterial(0.01));
+        // rb3->SetPosition(dragger->GetGlobalTransform().GetTranslation());
+        // rb3->SetLinearVelocity(Vector3(0, -9, 0));
+        // rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+        // rb3->SetAwake(true);
+        // dragger->AddControl(rb3);
+        // PhysicsManager::GetInstance()->RegisterBody(rb3);
+
+        // for (auto bone : dragger->GetControl<SkeletonControl>(0)->GetBones()) {
+        //     auto rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.01)), physics::PhysicsMaterial(1.0));
+        //     rb3->SetPosition(bone->GetGlobalTransform().GetTranslation());
+        //     rb3->SetLinearVelocity(Vector3(0, -9, 0));
+        //     rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+        //     // rb3->SetOrientation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(30.0f)));
+        //     rb3->SetAwake(true);
+        //     bone->AddControl(rb3);
+        //     PhysicsManager::GetInstance()->RegisterBody(rb3);
+        // }
+
+        // dragger->GetControl<SkeletonControl>(0)->GetBone("head")->SetOffsetTranslation(Vector3(5.0));
 
          /*auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
          cube->GetChild(0)->GetRenderable()->SetShader(shader);
@@ -329,6 +356,10 @@ public:
          */
 
         // InitPhysicsTests();
+
+        auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
+        plane_rigid_body->SetAwake(false);
+        PhysicsManager::GetInstance()->RegisterBody(plane_rigid_body);
 
         const auto brdf_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/brdfLUT.png");
 
@@ -358,6 +389,16 @@ public:
                 box->GetChild(0)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
+
+                if (x == 0 && z == 0) {
+                auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.25)), 0.01);
+                rigid_body->SetPosition(box_position);
+                rigid_body->SetLinearVelocity(Vector3(0, -1, 0));
+                rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+                rigid_body->SetAwake(true);
+                box->AddControl(rigid_body);
+                PhysicsManager::GetInstance()->RegisterBody(rigid_body);
+                }
             }
         }
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
@@ -624,7 +665,7 @@ public:
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
             shadow_dir.SetY(-1.0f);
             shadows->SetLightDirection(shadow_dir.Normalize());
-            shadows->Render(m_renderer);
+            // shadows->Render(m_renderer);
         }
 
         //env_fbo->Use();
@@ -664,7 +705,9 @@ public:
             GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetId(), 0);*/
 
         m_renderer->Render(cam);
-        m_renderer->End(cam);
+        m_renderer->End(cam, top.get());
+
+        top->ClearPendingRemoval();
     }
 };
 

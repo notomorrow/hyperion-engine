@@ -1,6 +1,7 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
+#include "../hash_code.h"
 #include "texture.h"
 #include "../math/vector2.h"
 #include "../math/vector3.h"
@@ -78,14 +79,36 @@ public:
     Vector4 diffuse_color = Vector4(1.0);
 
     std::map<std::string, std::shared_ptr<Texture>> textures;
-    std::shared_ptr<Texture> texture0 = nullptr;
-    std::shared_ptr<Texture> texture1 = nullptr;
-    std::shared_ptr<Texture> texture2 = nullptr;
-    std::shared_ptr<Texture> texture3 = nullptr;
-    std::shared_ptr<Texture> normals0 = nullptr;
-    std::shared_ptr<Texture> normals1 = nullptr;
-    std::shared_ptr<Texture> normals2 = nullptr;
-    std::shared_ptr<Texture> normals3 = nullptr;
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        for (const auto &it : params) {
+            hc.Add(it.first);
+            
+            for (int i = 0; i < it.second.NumValues(); i++) {
+                hc.Add(it.second[i]);
+            }
+        }
+
+        for (const auto &it : textures) {
+            if (it.second == nullptr) {
+                continue;
+            }
+
+            hc.Add(it.first);
+            hc.Add(intptr_t(it.second->GetBytes())); // pointer to memory of image
+        }
+
+        hc.Add(alpha_blended);
+        hc.Add(depth_test);
+        hc.Add(depth_write);
+        hc.Add(diffuse_color.GetHashCode());
+        hc.Add(int(cull_faces));
+
+        return hc;
+    }
 
 private:
     std::map<std::string, MaterialParameter> params;

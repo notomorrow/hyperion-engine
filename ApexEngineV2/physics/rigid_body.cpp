@@ -1,5 +1,6 @@
 #include "rigid_body.h"
 #include "../math/matrix_util.h"
+#include "../animation/bone.h"
 
 namespace apex {
 namespace physics {
@@ -84,6 +85,7 @@ RigidBody::RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial materi
       m_material(material),
       m_awake(true)
 {
+    // TODO: inertia tensor
 }
 
 void RigidBody::UpdateTransform()
@@ -129,8 +131,17 @@ void RigidBody::OnUpdate(double dt)
 {
     Quaternion tmp(m_orientation);
     tmp.Invert();
-    parent->SetLocalRotation(tmp);
-    parent->SetLocalTranslation(m_position);
+    
+    // TODO: refactor Bone to just use local translation as offset
+    if (auto bone_ptr = dynamic_cast<Bone*>(parent)) {
+        bone_ptr->SetOffsetRotation(tmp);
+        bone_ptr->SetOffsetTranslation(m_position);
+    } else {
+        parent->SetLocalRotation(tmp);
+        parent->SetLocalTranslation(m_position);
+    }
+
+    std::cout << parent->GetName() << " position " << m_position << "\n";
 
     m_bounding_box = m_shape->GetBoundingBox();
 }

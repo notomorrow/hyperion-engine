@@ -36,9 +36,13 @@ void PhysicsManager::RunPhysics(double dt)
     for (size_t i = 0; i < m_bodies.size(); i++) {
         physics::RigidBody *a = m_bodies[i].get();
 
+        if (a == nullptr) {
+            continue;
+        }
+
         for (size_t j = i + 1; j < m_bodies.size(); j++) {
             physics::RigidBody *b = m_bodies[j].get();
-            if (b == a) {
+            if (b == nullptr || b == a) {
                 // skip duplicates
                 continue;
             }
@@ -89,7 +93,7 @@ void PhysicsManager::RunPhysics(double dt)
                 if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::PlanePhysicsShape*>(b_shape), list)) {
                     for (physics::CollisionInfo &info : list.m_collisions) {
                         // add more info (bodies involved)
-                        info.m_bodies = { a, nullptr };
+                        info.m_bodies = { a, b };
                         // combine materials of each object
                         info.m_combined_material.SetFriction(std::min(
                             a->GetPhysicsMaterial().GetFriction(),
@@ -116,7 +120,7 @@ void PhysicsManager::RunPhysics(double dt)
 
     for (auto &body : m_bodies) {
         if (body->IsAwake() && !body->IsStatic()) {
-            body->ApplyForce(Environment::GetInstance()->GetGravity() * body->GetPhysicsMaterial().GetMass());
+            body->ApplyForce(Environment::GetInstance()->GetGravity() * body->GetPhysicsMaterial().GetMass() * dt);
             body->Integrate(dt);
         }
     }

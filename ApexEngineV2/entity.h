@@ -3,9 +3,11 @@
 
 #include <string>
 #include <vector>
+#include <deque>
 #include <memory>
 
 #include "control.h"
+#include "hash_code.h"
 #include "asset/loadable.h"
 #include "math/transform.h"
 #include "math/bounding_box.h"
@@ -13,12 +15,12 @@
 #include "rendering/material.h"
 
 namespace apex {
-
 class Entity : public Loadable {
 public:
     enum UpdateFlags {
         UPDATE_TRANSFORM = 0x01,
-        UPDATE_AABB = 0x02
+        UPDATE_AABB = 0x02,
+        PENDING_REMOVAL = 0x04
     };
 
     Entity(const std::string &name = "entity");
@@ -31,6 +33,20 @@ public:
     inline void SetLocalTranslation(const Vector3 &translation) 
     { 
         m_local_translation = translation;
+        SetTransformUpdateFlag();
+        SetAABBUpdateFlag();
+    }
+
+    inline void SetGlobalTranslation(const Vector3 &translation)
+    {
+        if (m_parent == nullptr) {
+            SetLocalTranslation(translation);
+
+            return;
+        }
+
+        m_local_translation = translation - m_parent->GetGlobalTransform().GetTranslation();
+
         SetTransformUpdateFlag();
         SetAABBUpdateFlag();
     }
@@ -74,6 +90,17 @@ public:
     std::shared_ptr<Entity> GetChild(const std::string &name) const;
     inline size_t NumChildren() const { return m_children.size(); }
 
+    std::shared_ptr<Entity> GetChildPendingRemoval(size_t index) const;
+    inline size_t NumChildrenPendingRemoval() const { return m_children_pending_removal.size(); }
+    inline void ClearPendingRemoval()
+    {
+        m_children_pending_removal.clear();
+
+        for (auto &child : m_children) {
+            child->ClearPendingRemoval();
+        }
+    }
+
     template <typename T>
     std::shared_ptr<T> GetChild(size_t index) const
     {
@@ -106,14 +133,38 @@ public:
     inline std::shared_ptr<Renderable> GetRenderable() const { return m_renderable; }
     inline void SetRenderable(const std::shared_ptr<Renderable> &renderable) { m_renderable = renderable; }
 
+    inline bool PendingRemoval() const { return m_flags & PENDING_REMOVAL; }
+
     virtual void Update(double dt);
 
     virtual std::shared_ptr<Loadable> Clone();
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(m_name);
+        hc.Add(m_flags);
+        hc.Add(m_material.GetHashCode());
+        hc.Add(m_global_transform.GetHashCode());
+        hc.Add(intptr_t(m_renderable.get())); // TODO: maybe make this calc hash code
+
+        for (const auto &child : m_children) {
+            if (child == nullptr) {
+                continue;
+            }
+
+            hc.Add(child->GetHashCode());
+        }
+
+        return hc;
+    }
 
 protected:
     std::string m_name;
     std::shared_ptr<Renderable> m_renderable;
     std::vector<std::shared_ptr<Entity>> m_children;
+    std::deque<std::shared_ptr<Entity>> m_children_pending_removal;
     std::vector<std::shared_ptr<EntityControl>> m_controls;
 
     int m_flags;
@@ -127,10 +178,10 @@ protected:
 
     void SetTransformUpdateFlag();
     void SetAABBUpdateFlag();
+    void SetPendingRemovalFlag();
 
     std::shared_ptr<Entity> CloneImpl();
 };
-
 } // namespace apex
 
 #endif
