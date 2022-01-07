@@ -88,7 +88,7 @@ void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
 
 void FpsCamera::HandleKeyboardInput(double dt)
 {
-    double speed = dt * 8.0;
+    double speed = dt * 15.0;
 
     if (m_inputmgr->IsKeyDown(KEY_LEFT_SHIFT) || m_inputmgr->IsKeyDown(KEY_RIGHT_SHIFT)) {
         speed *= 2.0;

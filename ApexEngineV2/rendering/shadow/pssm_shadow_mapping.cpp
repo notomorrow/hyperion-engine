@@ -46,7 +46,7 @@ void PssmShadowMapping::Render(Renderer *renderer)
         Environment::GetInstance()->SetShadowMatrix(i, shadow_renderers[i]->
             GetShadowCamera()->GetViewProjectionMatrix());
 
-        renderer->RenderBucket(shadow_renderers[i]->GetShadowCamera(), renderer->opaque_bucket, m_depth_shader.get());
+        renderer->RenderBucket(shadow_renderers[i]->GetShadowCamera(), renderer->GetBucket(Renderable::RB_OPAQUE), m_depth_shader.get());
 
         shadow_renderers[i]->End();
     }

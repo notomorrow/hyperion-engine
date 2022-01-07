@@ -115,7 +115,7 @@ void Bone::UpdateTransform()
     MatrixUtil::ToTranslation(tmp_matrix, user_pos);
     rot_matrix *= tmp_matrix;
 
-    bone_matrix = rot_matrix;
+    bone_matrix = rot_matrix * m_offset_transform.GetMatrix();
 
     Bone *parent_bone;
     if (m_parent != nullptr) {
@@ -129,6 +129,8 @@ void Bone::UpdateTransform()
     m_local_translation = bind_pos + pose_pos + user_pos;
 
     Entity::UpdateTransform();
+
+    // m_global_transform *= m_offset_transform;
 }
 
 std::shared_ptr<Loadable> Bone::Clone()

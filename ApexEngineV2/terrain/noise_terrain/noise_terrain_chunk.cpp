@@ -85,7 +85,7 @@ void NoiseTerrainChunk::OnAdded()
         { "ROUGHNESS_MAPPING", 1 },
         { "METALNESS_MAPPING", 1 }
     }));
-    m_entity = std::make_shared<Entity>("terrain_node");
+    m_entity = std::make_shared<Entity>(std::string("noise_terrain_node_") + std::to_string(int(m_chunk_info.m_position.x)) + std::string("_") + std::to_string(int(m_chunk_info.m_position.y)));
     m_entity->SetRenderable(mesh);
 
     m_entity->GetMaterial().SetParameter("shininess", 0.5f);

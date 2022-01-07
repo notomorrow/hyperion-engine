@@ -1,6 +1,10 @@
 #ifndef MATHUTIL_H
 #define MATHUTIL_H
 
+#include "vector2.h"
+#include "vector3.h"
+#include "vector4.h"
+
 #include <cstdlib>
 #include <cmath>
 
@@ -10,6 +14,39 @@ class MathUtil {
 public:
     const static double PI;
     const static double EPSILON;
+
+    static inline Vector2 SafeValue(const Vector2 &value)
+    {
+        return Vector2::Max(Vector2::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest());
+    }
+
+    static inline Vector3 SafeValue(const Vector3 &value)
+    {
+        return Vector3::Max(Vector3::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest());
+    }
+
+    static inline Vector4 SafeValue(const Vector4 &value)
+    {
+        return Vector4::Max(Vector4::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest());
+    }
+
+    template <typename T>
+    static inline T SafeValue(const T &value)
+    {
+        return MathUtil::Max(MathUtil::Min(value, MathUtil::MaxSafeValue<T>()), MathUtil::MinSafeValue<T>());
+    }
+
+    template <typename T>
+    static inline T MaxSafeValue()
+    {
+        return std::numeric_limits<T>::max();
+    }
+
+    template <typename T>
+    static inline T MinSafeValue()
+    {
+        return std::numeric_limits<T>::lowest();
+    }
 
     template <typename T>
     static inline T Random(const T &a, const T &b)

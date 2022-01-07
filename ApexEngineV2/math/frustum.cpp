@@ -20,20 +20,31 @@ bool Frustum::BoundingBoxInFrustum(const BoundingBox &bounding_box) const
     // false if fully outside, true if inside or intersects
 
     // check box outside/inside of frustum
-    for (int i = 0; i < 6; i++ )
+    for (int i = 0; i < 6; i++)
     {
-        int out = 0;
-        out += m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) < 0.0;
-        out += m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) < 0.0;
-        out += m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) < 0.0;
-        out += m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) < 0.0;
-        out += m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) < 0.0;
-        out += m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) < 0.0;
-        out += m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) < 0.0;
-        out += m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) < 0.0;
-
-        if (out == 8) {
-            return false;
+        if (m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
+            return true;
+        }
+        if (m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
+            return true;
+        }
+        if (m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
+            return true;
+        }
+        if (m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
+            return true;
+        }
+        if (m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
+            return true;
+        }
+        if (m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
+            return true;
+        }
+        if (m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
+            return true;
+        }
+        if (m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
+            return true;
         }
     }
 

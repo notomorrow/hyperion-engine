@@ -255,12 +255,18 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
                 mesh->SetAttribute(Mesh::ATTR_BONEINDICES, Mesh::MeshAttribute::BoneIndices);
                 mesh->SetAttribute(Mesh::ATTR_BONEWEIGHTS, Mesh::MeshAttribute::BoneWeights);
             }
+
             if (handler.has_normals) {
                 mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
+            } else {
+                mesh->CalculateNormals();
             }
+
             if (handler.has_texcoords) {
                 mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
             }
+
+            mesh->CalculateTangents();
 
             auto ent = std::make_shared<Entity>();
             ent->SetRenderable(mesh);

@@ -38,4 +38,24 @@ void Transform::UpdateMatrix()
     m_matrix = S * R * T;
 }
 
+Transform Transform::operator*(const Transform &other) const
+{
+    return Transform(
+        m_translation + other.m_translation,
+        m_scale * other.m_scale,
+        m_rotation * other.m_rotation
+    );
+}
+
+Transform &Transform::operator*=(const Transform &other)
+{
+    m_translation += other.m_translation;
+    m_scale *= other.m_scale;
+    m_rotation *= other.m_rotation;
+
+    UpdateMatrix();
+
+    return *this;
+}
+
 } // namespace apex
