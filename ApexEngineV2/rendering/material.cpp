@@ -3,8 +3,8 @@
 namespace apex {
 
 const std::map<std::string, MaterialParameter> Material::default_parameters = {
-    { "roughness", MaterialParameter(0.3f) },
-    { "shininess", MaterialParameter(0.11f) }
+    { "roughness", MaterialParameter(0.8f) },
+    { "shininess", MaterialParameter(0.04f) }
 };
 
 MaterialParameter::MaterialParameter()
@@ -37,6 +37,7 @@ MaterialParameter::MaterialParameter(const MaterialParameter &other)
 }
 
 Material::Material()
+    : diffuse_color(Vector4(1.0))
 {
     for (auto it : default_parameters) {
         params[it.first] = it.second;
@@ -49,14 +50,7 @@ Material::Material(const Material &other)
       depth_test(other.depth_test),
       depth_write(other.depth_write),
       diffuse_color(other.diffuse_color),
-      texture0(other.texture0),
-      texture1(other.texture1),
-      texture2(other.texture2),
-      texture3(other.texture3),
-      normals0(other.normals0),
-      normals1(other.normals1),
-      normals2(other.normals2),
-      normals3(other.normals3)
+      textures(other.textures)
 {
 }
 
@@ -95,12 +89,6 @@ void Material::SetParameter(const std::string &name, int value)
     params[name] = MaterialParameter(values, 1, MaterialParameter_Int);
 }
 
-void Material::SetParameter(const std::string &name, const std::shared_ptr<Texture> &value)
-{
-    float values[] = { (float)value->GetId() };
-    params[name] = MaterialParameter(values, 1, MaterialParameter_Texture);
-}
-
 void Material::SetParameter(const std::string &name, const Vector2 &value)
 {
     float values[] = { value.x, value.y };
@@ -117,6 +105,22 @@ void Material::SetParameter(const std::string &name, const Vector4 &value)
 {
     float values[] = { value.x, value.y, value.z, value.w };
     params[name] = MaterialParameter(values, 4, MaterialParameter_Vector4);
+}
+
+void Material::SetTexture(const std::string &name, const std::shared_ptr<Texture> &texture)
+{
+    textures[name] = texture;
+}
+
+std::shared_ptr<Texture> Material::GetTexture(const std::string &name) const
+{
+    const auto it = textures.find(name);
+
+    if (it != textures.end()) {
+        return it->second;
+    }
+
+    return nullptr;
 }
 
 } // namespace apex

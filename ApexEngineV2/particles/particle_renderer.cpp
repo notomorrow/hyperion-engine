@@ -3,6 +3,8 @@
 #include "../rendering/shader_manager.h"
 #include "../rendering/environment.h"
 #include "../math/matrix_util.h"
+#include "../core_engine.h"
+#include "../util.h"
 #include <array>
 #include <ctime>
 #include <cassert>
@@ -30,7 +32,8 @@ ParticleRenderer::~ParticleRenderer()
             m_position_buffer,
             m_lifespan_buffer
         };
-        glDeleteBuffers(buffers.size(), &buffers[0]);
+
+        CoreEngine::GetInstance()->DeleteBuffers(buffers.size(), &buffers[0]);
     }
 }
 
@@ -45,17 +48,23 @@ void ParticleRenderer::Render()
     };
 
     if (!m_is_created) {
-        glGenBuffers(1, &m_vertex_buffer);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vertex_buffer);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+        CoreEngine::GetInstance()->GenVertexArrays(1, &m_vao);
+        CatchGLErrors("Failed to generate vertex arrays.");
 
-        glGenBuffers(1, &m_position_buffer);
-        glBindBuffer(GL_ARRAY_BUFFER, m_position_buffer);
-        glBufferData(GL_ARRAY_BUFFER, m_info.m_max_particles * 3 * sizeof(float), nullptr, GL_STREAM_DRAW);
+        CoreEngine::GetInstance()->GenBuffers(1, &m_vertex_buffer);
+        CoreEngine::GetInstance()->BindBuffer(GL_ARRAY_BUFFER, m_vertex_buffer);
+        CoreEngine::GetInstance()->BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+        CatchGLErrors("Failed to create and upload vertex buffer data.");
 
-        glGenBuffers(1, &m_lifespan_buffer);
-        glBindBuffer(GL_ARRAY_BUFFER, m_lifespan_buffer);
-        glBufferData(GL_ARRAY_BUFFER, m_info.m_max_particles * sizeof(float), nullptr, GL_STREAM_DRAW);
+        CoreEngine::GetInstance()->GenBuffers(1, &m_position_buffer);
+        CoreEngine::GetInstance()->BindBuffer(GL_ARRAY_BUFFER, m_position_buffer);
+        CoreEngine::GetInstance()->BufferData(GL_ARRAY_BUFFER, m_info.m_max_particles * 3 * sizeof(float), nullptr, GL_STREAM_DRAW);
+        CatchGLErrors("Failed to create and upload position buffer data.");
+
+        CoreEngine::GetInstance()->GenBuffers(1, &m_lifespan_buffer);
+        CoreEngine::GetInstance()->BindBuffer(GL_ARRAY_BUFFER, m_lifespan_buffer);
+        CoreEngine::GetInstance()->BufferData(GL_ARRAY_BUFFER, m_info.m_max_particles * sizeof(float), nullptr, GL_STREAM_DRAW);
+        CatchGLErrors("Failed to create and upload lifespan buffer data.");
 
         m_is_created = true;
     }
@@ -88,47 +97,60 @@ void ParticleRenderer::Render()
         }
     }
 
-    glDepthMask(false);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    CoreEngine::GetInstance()->DepthMask(false);
+    CoreEngine::GetInstance()->Enable(GL_BLEND);
+    CoreEngine::GetInstance()->BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    CoreEngine::GetInstance()->BindVertexArray(m_vao);
 
     // upload position buffer
-    glBindBuffer(GL_ARRAY_BUFFER, m_position_buffer);
-    glBufferData(GL_ARRAY_BUFFER, m_info.m_max_particles * 3 * sizeof(float), nullptr, GL_STREAM_DRAW);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(float), &positions[0]);
+    CoreEngine::GetInstance()->BindBuffer(GL_ARRAY_BUFFER, m_position_buffer);
+    CoreEngine::GetInstance()->BufferData(GL_ARRAY_BUFFER, m_info.m_max_particles * 3 * sizeof(float), nullptr, GL_STREAM_DRAW);
+    CoreEngine::GetInstance()->BufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(float), &positions[0]);
+    CatchGLErrors("Failed to upload particle position data.");
 
     // upload lifespan buffer
-    glBindBuffer(GL_ARRAY_BUFFER, m_lifespan_buffer);
-    glBufferData(GL_ARRAY_BUFFER, m_info.m_max_particles * sizeof(float), nullptr, GL_STREAM_DRAW);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, lifespans.size() * sizeof(float), &lifespans[0]);
+    CoreEngine::GetInstance()->BindBuffer(GL_ARRAY_BUFFER, m_lifespan_buffer);
+    CoreEngine::GetInstance()->BufferData(GL_ARRAY_BUFFER, m_info.m_max_particles * sizeof(float), nullptr, GL_STREAM_DRAW);
+    CoreEngine::GetInstance()->BufferSubData(GL_ARRAY_BUFFER, 0, lifespans.size() * sizeof(float), &lifespans[0]);
+    CatchGLErrors("Failed to upload particle lifespan data.");
 
     // update the vertex attributes
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vertex_buffer);
-    glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, (void*)0);
+    CoreEngine::GetInstance()->EnableVertexAttribArray(0);
+    CatchGLErrors("Failed to enable vertex attribute array.");
+    CoreEngine::GetInstance()->BindBuffer(GL_ARRAY_BUFFER, m_vertex_buffer);
+    CoreEngine::GetInstance()->VertexAttribPointer(0, 3, GL_FLOAT, false, 0, (void*)0);
+    CatchGLErrors("Failed to update particle vertex attribute data.");
 
-    glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, m_position_buffer);
-    glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, (void*)0);
+    CoreEngine::GetInstance()->EnableVertexAttribArray(1);
+    CatchGLErrors("Failed to enable position attribute array.");
+    CoreEngine::GetInstance()->BindBuffer(GL_ARRAY_BUFFER, m_position_buffer);
+    CoreEngine::GetInstance()->VertexAttribPointer(1, 3, GL_FLOAT, false, 0, (void*)0);
+    CatchGLErrors("Failed to update particle position attribute data.");
 
     glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ARRAY_BUFFER, m_lifespan_buffer);
-    glVertexAttribPointer(2, 1, GL_FLOAT, false, 0, (void*)0);
+    CatchGLErrors("Failed to lifespan attribute array.");
+    CoreEngine::GetInstance()->BindBuffer(GL_ARRAY_BUFFER, m_lifespan_buffer);
+    CoreEngine::GetInstance()->VertexAttribPointer(2, 1, GL_FLOAT, false, 0, (void*)0);
+    CatchGLErrors("Failed to update particle lifespan attribute data.");
 
-    glVertexAttribDivisor(0, 0);
-    glVertexAttribDivisor(1, 1);
-    glVertexAttribDivisor(2, 1);
+    CoreEngine::GetInstance()->VertexAttribDivisor(0, 0);
+    CoreEngine::GetInstance()->VertexAttribDivisor(1, 1);
+    CoreEngine::GetInstance()->VertexAttribDivisor(2, 1);
 
     // draw particles
-    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, m_particles->size());
+    CoreEngine::GetInstance()->DrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, m_particles->size());
 
     // reset changes
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glVertexAttribDivisor(0, 0);
-    glVertexAttribDivisor(1, 0);
-    glVertexAttribDivisor(2, 0);
+    CoreEngine::GetInstance()->BindBuffer(GL_ARRAY_BUFFER, 0);
 
-    glDisable(GL_BLEND);
-    glDepthMask(true);
+    CoreEngine::GetInstance()->VertexAttribDivisor(0, 0);
+    CoreEngine::GetInstance()->VertexAttribDivisor(1, 0);
+    CoreEngine::GetInstance()->VertexAttribDivisor(2, 0);
+
+    CoreEngine::GetInstance()->BindVertexArray(0);
+
+    CoreEngine::GetInstance()->Disable(GL_BLEND);
+    CoreEngine::GetInstance()->DepthMask(true);
 }
 } // namespace apex

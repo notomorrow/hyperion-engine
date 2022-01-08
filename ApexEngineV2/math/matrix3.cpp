@@ -47,7 +47,6 @@ Matrix3 &Matrix3::Transpose()
 Matrix3 &Matrix3::Invert()
 {
     float det = Determinant();
-    assert(det != 0.0);
     float inv_det = 1.0 / det;
 
     Matrix3 result;

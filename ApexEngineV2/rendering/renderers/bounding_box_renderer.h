@@ -11,20 +11,20 @@
 namespace apex {
 
 class BoundingBoxRenderer : public Renderable {
-    static const std::vector<size_t> indices;
+    static const std::vector<MeshIndex> indices;
 public:
-    BoundingBoxRenderer(const BoundingBox *bounding_box);
+    BoundingBoxRenderer();
     BoundingBoxRenderer(const BoundingBox &) = delete;
     virtual ~BoundingBoxRenderer();
 
     virtual void Render() override;
 
+    inline void SetAABB(const BoundingBox &aabb) { m_aabb = aabb; } 
+
 private:
     void UpdateVertices();
 
-    const BoundingBox *m_bounding_box;
     Mesh *m_mesh;
-
     std::vector<Vertex> m_vertices;
 };
 

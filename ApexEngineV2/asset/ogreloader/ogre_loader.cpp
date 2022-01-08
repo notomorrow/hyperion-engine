@@ -122,7 +122,7 @@ public:
             std::string skel_name = attributes.begin()->second;
             std::string current = filepath;
             current = current.substr(0, current.find_last_of("\\/"));
-            if (!StringUtil::Contains(current, "/") && !StringUtil::Contains(current, "\\")) {																// so just make the string empty
+            if (!StringUtil::Contains(current, "/") && !StringUtil::Contains(current, "\\")) { // so just make the string empty
                 current.clear();
             }
             current += "/" + skel_name + ".xml";
@@ -159,6 +159,7 @@ public:
 
     void End(const std::string &name)
     {
+        // get out of me swamp
     }
 
     void Characters(const std::string &value)
@@ -211,7 +212,6 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
         for (auto &&bone : handler.bones) {
             bone->StoreBindingPose();
             bone->ClearPose();
-            bone->UpdateTransform();
         }
     }
 
@@ -254,12 +254,18 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
                 mesh->SetAttribute(Mesh::ATTR_BONEINDICES, Mesh::MeshAttribute::BoneIndices);
                 mesh->SetAttribute(Mesh::ATTR_BONEWEIGHTS, Mesh::MeshAttribute::BoneWeights);
             }
+
             if (handler.has_normals) {
                 mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
+            } else {
+                mesh->CalculateNormals();
             }
+
             if (handler.has_texcoords) {
                 mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
             }
+
+            mesh->CalculateTangents();
 
             auto ent = std::make_shared<Entity>();
             ent->SetRenderable(mesh);
@@ -276,7 +282,13 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
             }
         }
 
-        final_node->AddChild(handler.bones[0]);
+        if (handler.bones.size() != 0) {
+            if (auto root_bone = handler.bones.front()) {
+                final_node->AddChild(root_bone);
+                root_bone->UpdateTransform();
+            }
+        }
+
         final_node->AddControl(skeleton_control);
     }
 

@@ -46,33 +46,38 @@ AssetManager::AssetManager()
 
 std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bool use_caching)
 {
+    const std::string new_path = StringUtil::Trim(StringUtil::ReplaceAll(path, "\\", "/"));
+    
     if (use_caching) {
-        auto it = loaded_assets.find(path);
-        if (it != loaded_assets.end()) {
+        auto it = loaded_assets.find(new_path);
+        if (it != loaded_assets.end() && it->second != nullptr) {
             // reuse already loaded asset
-            return it->second;
+            const auto clone = it->second->Clone();
+
+            if (clone == nullptr) { // no implementation; return shared ptr
+                return it->second;
+            }
         }
     }
 
     try {
-        auto &loader = GetLoader(path);
+        auto &loader = GetLoader(new_path);
 
         if (loader != nullptr) {
-            auto loaded = loader->LoadFromFile(path);
+            auto loaded = loader->LoadFromFile(new_path);
 
             if (!loaded) {
-                std::cout << "error while loading file: " << path << "\n";
-                return nullptr;
+                throw std::string("Loader returned no data");
             } else {
-                loaded->SetFilePath(path);
+                loaded->SetFilePath(new_path);
                 if (use_caching) {
-                    loaded_assets[path] = loaded;
+                    loaded_assets[new_path] = loaded;
                 }
             }
             return loaded;
         }
     } catch (std::string err) {
-        std::cout << "File load error: " << err << "\n";
+        std::cout << "[" << path << "]: " << "File load error: " << err << "\n";
     }
 
     return nullptr;
@@ -84,13 +89,13 @@ const std::unique_ptr<AssetLoader> &AssetManager::GetLoader(const std::string &p
         const std::string &ext = it.first;
         auto &loader = it.second;
 
-        std::string path_lower;
-        path_lower.resize(path.length());
-        std::transform(path.begin(), path.end(), path_lower.begin(), ::tolower);
+        std::string path_lower(path);
+        std::transform(path_lower.begin(), path_lower.end(), path_lower.begin(), ::tolower);
         if (StringUtil::EndsWith(path_lower, ext)) {
             return loader;
         }
     }
+
     throw (std::string("No suitable loader found for requested file: ") + path);
 }
 } // namespace apex

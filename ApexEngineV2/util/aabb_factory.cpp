@@ -32,8 +32,6 @@ BoundingBox AABBFactory::CreateEntityBoundingBox(const std::shared_ptr<Entity> &
     local_transform.SetScale(entity->GetLocalScale());
     aabb *= local_transform.GetMatrix();*/
 
-    std::cout << "create AABB from entity: " << aabb.GetDimensions() << "\n";
-
     return aabb;
 }
 

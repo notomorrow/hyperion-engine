@@ -58,70 +58,66 @@ void Collision::ApplyPositionChange(CollisionInfo &collision,
     for (int i = 0; i < 2; i++) {
         if (collision.m_bodies[i] != nullptr) {
             Matrix3 inverse_inertia_tensor = collision.m_bodies[i]->GetInverseInertiaTensorWorld();
-
             Vector3 angular_inertia_world = collision.m_relative_contact_position[i];
+
             angular_inertia_world.Cross(collision.m_contact_normal);
 
             angular_inertia_world *= inverse_inertia_tensor;
             angular_inertia_world.Cross(collision.m_relative_contact_position[i]);
             angular_inertia[i] = angular_inertia_world.Dot(collision.m_contact_normal);
-
             linear_inertia[i] = collision.m_bodies[i]->GetPhysicsMaterial().GetInverseMass();
             total_inertia += linear_inertia[i] + angular_inertia[i];
-
         }
     }
-
+    
     for (int i = 0; i < 2; i++) {
         RigidBody *body = collision.m_bodies[i];
 
-        if (body != nullptr) {
-            double sign = (i == 0) ? 1 : -1;
-            angular_move[i] = sign * penetration * (angular_inertia[i] / total_inertia);
-            linear_move[i] = sign * penetration * (linear_inertia[i] / total_inertia);
+        double sign = (i == 0) ? 1 : -1;
+        angular_move[i] = sign * penetration * (angular_inertia[i] / total_inertia);
+        linear_move[i] = sign * penetration * (linear_inertia[i] / total_inertia);
 
-            Vector3 proj = collision.m_relative_contact_position[i] +
-                (collision.m_contact_normal * (-collision.m_relative_contact_position[i].Dot(collision.m_contact_normal)));
+        Vector3 proj = collision.m_relative_contact_position[i] +
+            (collision.m_contact_normal * (-collision.m_relative_contact_position[i].Dot(collision.m_contact_normal)));
 
-            double max_magnitude = COLLISION_ANGULAR_LIMIT * proj.Length();
+        double max_magnitude = COLLISION_ANGULAR_LIMIT * proj.Length();
 
-            if (angular_move[i] < -max_magnitude) {
-                double total_move = angular_move[i] + linear_move[i];
-                angular_move[i] = -max_magnitude;
-                linear_move[i] = total_move - angular_move[i];
-            } else if (angular_move[i] > max_magnitude) {
-                double total_move = angular_move[i] + linear_move[i];
-                angular_move[i] = max_magnitude;
-                linear_move[i] = total_move - angular_move[i];
-            }
+        if (angular_move[i] < -max_magnitude) {
+            double total_move = angular_move[i] + linear_move[i];
+            angular_move[i] = -max_magnitude;
+            linear_move[i] = total_move - angular_move[i];
+        } else if (angular_move[i] > max_magnitude) {
+            double total_move = angular_move[i] + linear_move[i];
+            angular_move[i] = max_magnitude;
+            linear_move[i] = total_move - angular_move[i];
+        }
 
-            if (angular_move[i] == 0) {
-                angular_change[i] = Vector3::Zero();
-            } else {
-                Vector3 target_angular_direction = collision.m_relative_contact_position[i];
-                target_angular_direction.Cross(collision.m_contact_normal);
-                Matrix3 inverse_inertia_tensor = body->GetInverseInertiaTensorWorld();
+        if (angular_move[i] == 0) {
+            angular_change[i] = Vector3::Zero();
+        } else {
+            Vector3 target_angular_direction = collision.m_relative_contact_position[i];
+            target_angular_direction.Cross(collision.m_contact_normal);
+            Matrix3 inverse_inertia_tensor = body->GetInverseInertiaTensorWorld();
 
-                angular_change[i] = (target_angular_direction * inverse_inertia_tensor) *
-                    (angular_move[i] / angular_inertia[i]);
-            }
+            angular_change[i] = (target_angular_direction * inverse_inertia_tensor) *
+                (angular_move[i] / angular_inertia[i]);
+        }
 
-            linear_change[i] = collision.m_contact_normal * linear_move[i];
+        linear_change[i] = collision.m_contact_normal * linear_move[i];
 
-            if (!body->IsStatic()) {
-                Vector3 position = body->GetPosition();
-                position += collision.m_contact_normal * linear_move[i];
-                body->SetPosition(position);
+        if (!body->IsStatic()) {
+            Vector3 position = body->GetPosition();
+            position += collision.m_contact_normal * linear_move[i];
+            body->SetPosition(position);
 
-                Quaternion rotation = body->GetOrientation();
-                rotation += angular_change[i];
-                rotation.Normalize();
-                body->SetOrientation(rotation);
+            Quaternion rotation = body->GetOrientation();
+            rotation += angular_change[i];
+            rotation.Normalize();
+            body->SetOrientation(rotation);
 
-                // reflect changes on sleeping object
-                if (!body->IsAwake()) {
-                    body->UpdateTransform();
-                }
+            // reflect changes on sleeping object
+            if (!body->IsAwake()) {
+                body->UpdateTransform();
             }
         }
     }
@@ -191,7 +187,7 @@ Vector3 Collision::CalculateLocalVelocity(CollisionInfo &collision,
 
     Vector3 accumulate_velocity = body->GetLastAcceleration() * dt;
     accumulate_velocity *= contact_to_world_transpose;
-    accumulate_velocity.SetX(0);
+    accumulate_velocity.SetX(0); // wut?
 
     contact_velocity += accumulate_velocity;
     return contact_velocity;

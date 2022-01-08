@@ -76,6 +76,8 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
 
 void SkydomeShader::ApplyMaterial(const Material &mat)
 {
+    Shader::ApplyMaterial(mat);
+
     auto *env = Environment::GetInstance();
 
     if (has_clouds) {
@@ -88,17 +90,6 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
     SetUniform("v3LightPos", env->GetSun().GetDirection());
     SetUniform("u_skyColor", env->GetSun().GetColor());
     SetUniform("u_sunColor", sun_color);
-
-    if (mat.alpha_blended) {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    }
-    if (!mat.depth_test) {
-        glDisable(GL_DEPTH_TEST);
-    }
-    if (!mat.depth_write) {
-        glDepthMask(false);
-    }
 }
 
 void SkydomeShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)

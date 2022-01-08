@@ -13,11 +13,6 @@ void SkeletonControl::SetLoop(bool loop)
     loop_mode = loop ? LOOP : PLAY_ONCE;
 }
 
-Bone *SkeletonControl::GetBone(size_t index)
-{
-    return bones[index];
-}
-
 Bone *SkeletonControl::GetBone(const std::string &name)
 {
     for (auto &&bone : bones) {
@@ -40,6 +35,8 @@ std::shared_ptr<Animation> SkeletonControl::GetAnimation(const std::string &name
             return anim;
         }
     }
+
+    return nullptr;
 }
 
 void SkeletonControl::AddAnimation(std::shared_ptr<Animation> anim)

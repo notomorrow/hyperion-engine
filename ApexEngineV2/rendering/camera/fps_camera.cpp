@@ -1,52 +1,55 @@
 #include "fps_camera.h"
 
 namespace apex {
-FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, float fov, float near_clip, float far_clip)
-    : PerspectiveCamera(fov, 512, 512, near_clip, far_clip),
-      inputmgr(inputmgr),
-      window(window)
+FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, int width, int height, float fov, float near, float far)
+    : PerspectiveCamera(fov, width, height, near, far),
+      m_inputmgr(inputmgr),
+      m_window(window),
+      m_mag_x(0.0),
+      m_mag_y(0.0),
+      m_old_mag_x(0.0),
+      m_old_mag_y(0.0),
+      m_mouse_x(0.0),
+      m_mouse_y(0.0),
+      m_is_mouse_captured(false)
 {
-    mag_x = 0.0;
-    mag_y = 0.0;
-    old_mag_x = 0.0;
-    old_mag_y = 0.0;
-    mouse_x = 0.0;
-    mouse_y = 0.0;
+    m_dir_cross_y = Vector3(m_direction).Cross(m_up);
 
-    dir_cross_y = direction;
-    dir_cross_y.Cross(up);
-
-    is_mouse_captured = false;
-
-    inputmgr->RegisterKeyEvent(KeyboardKey::KEY_LEFT_ALT, InputEvent([&]() {
+    m_inputmgr->RegisterKeyEvent(KeyboardKey::KEY_LEFT_ALT, InputEvent([&]() {
         CenterMouse();
-        is_mouse_captured = !is_mouse_captured;
+
+        m_is_mouse_captured = !m_is_mouse_captured;
+
+        CoreEngine::GetInstance()->SetCursorLocked(m_is_mouse_captured);
     }));
 }
 
 void FpsCamera::SetTranslation(const Vector3 &vec)
 {
-    translation = vec;
-    next_translation = vec;
+    Camera::SetTranslation(vec);
+    m_next_translation = m_translation;
 }
 
 void FpsCamera::UpdateLogic(double dt)
 {
-    width = window->width;
-    height = window->height;
+    m_width = m_window->GetScaledWidth();
+    m_height = m_window->GetScaledHeight();
 
-    if (is_mouse_captured) {
-        mouse_x = inputmgr->GetMouseX();
-        mouse_y = inputmgr->GetMouseY();
+    if (m_is_mouse_captured) {
+        m_mouse_x = m_inputmgr->GetMouseX();
+        m_mouse_y = m_inputmgr->GetMouseY();
+
+        HandleMouseInput(dt, m_window->GetWidth() / 2, m_window->GetHeight() / 2);
+
         CenterMouse();
-        HandleMouseInput(dt, width / 2, height / 2);
     }
+
     HandleKeyboardInput(dt);
 }
 
 void FpsCamera::CenterMouse()
 {
-    inputmgr->SetMousePosition(width / 2, height / 2);
+    m_inputmgr->SetMousePosition(m_window->GetWidth() / 2, m_window->GetHeight() / 2);
 }
 
 void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
@@ -54,50 +57,55 @@ void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
     const double sensitivity = 0.1;
     const double smoothing = 10.0;
 
-    mag_x = mouse_x - half_width;
-    mag_y = mouse_y - half_height;
+    m_mag_x = m_mouse_x - half_width;
+    m_mag_y = m_mouse_y - half_height;
 
-    mag_x = MathUtil::Lerp(
-        old_mag_x,
-        mag_x,
+    m_mag_x = MathUtil::Lerp(
+        m_old_mag_x,
+        m_mag_x,
         MathUtil::Clamp(smoothing * dt, 0.0, 1.0)
     );
 
-    mag_y = MathUtil::Lerp(
-        old_mag_y,
-        mag_y,
+    m_mag_y = MathUtil::Lerp(
+        m_old_mag_y,
+        m_mag_y,
         MathUtil::Clamp(smoothing * dt, 0.0, 1.0)
     );
 
-    old_mag_x = mag_x;
-    old_mag_y = mag_y;
+    m_old_mag_x = m_mag_x;
+    m_old_mag_y = m_mag_y;
 
-    dir_cross_y = direction;
-    dir_cross_y.Cross(up);
+    m_dir_cross_y = Vector3(m_direction).Cross(m_up);
 
-    Rotate(up, MathUtil::DegToRad(mag_x * sensitivity));
-    Rotate(dir_cross_y, MathUtil::DegToRad(mag_y * sensitivity));
+    Rotate(m_up, MathUtil::DegToRad(m_mag_x * sensitivity));
+    Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag_y * sensitivity));
 
-    if (direction.y > 0.97f || direction.y < -0.97f) {
-        mag_y *= -1.0f;
-        Rotate(dir_cross_y, MathUtil::DegToRad(mag_y * sensitivity));
+    if (m_direction.y > 0.97f || m_direction.y < -0.97f) {
+        m_mag_y *= -1.0f;
+        Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag_y * sensitivity));
     }
 }
 
 void FpsCamera::HandleKeyboardInput(double dt)
 {
-    const double speed = dt * 8.0;
+    double speed = dt * 15.0;
 
-    if (inputmgr->IsKeyDown(KEY_W)) {
-        next_translation += direction * speed;
-    } else if (inputmgr->IsKeyDown(KEY_S)) {
-        next_translation -= direction * speed;
+    if (m_inputmgr->IsKeyDown(KEY_LEFT_SHIFT) || m_inputmgr->IsKeyDown(KEY_RIGHT_SHIFT)) {
+        speed *= 2.0;
     }
-    if (inputmgr->IsKeyDown(KEY_A)) {
-        next_translation -= dir_cross_y * speed;
-    } else if (inputmgr->IsKeyDown(KEY_D)) {
-        next_translation += dir_cross_y * speed;
+
+    if (m_inputmgr->IsKeyDown(KEY_W)) {
+        m_next_translation += m_direction * speed;
+    } else if (m_inputmgr->IsKeyDown(KEY_S)) {
+        m_next_translation -= m_direction * speed;
     }
-    translation.Lerp(next_translation, MathUtil::Clamp(2.0 * dt, 0.0, 1.0));
+
+    if (m_inputmgr->IsKeyDown(KEY_A)) {
+        m_next_translation -= m_dir_cross_y * speed;
+    } else if (m_inputmgr->IsKeyDown(KEY_D)) {
+        m_next_translation += m_dir_cross_y * speed;
+    }
+
+    m_translation.Lerp(m_next_translation, MathUtil::Clamp(2.0 * dt, 0.0, 1.0));
 }
-}
+} // namespace apex

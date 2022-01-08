@@ -1,13 +1,13 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
+#include "../hash_code.h"
 #include "vector3.h"
 #include "quaternion.h"
 #include "matrix4.h"
 #include "matrix_util.h"
 
 namespace apex {
-
 class Transform {
 public:
     Transform();
@@ -32,13 +32,24 @@ public:
     void UpdateMatrix();
     inline const Matrix4 &GetMatrix() const { return m_matrix; }
 
+    Transform operator*(const Transform &other) const;
+    Transform &operator*=(const Transform &other);
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(m_matrix.GetHashCode());
+
+        return hc;
+    }
+
 private:
     Vector3 m_translation;
     Vector3 m_scale;
     Quaternion m_rotation;
     Matrix4 m_matrix;
 };
-
 } // namespace apex
 
 #endif

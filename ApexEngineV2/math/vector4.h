@@ -3,7 +3,6 @@
 
 #include <cmath>
 #include <iostream>
-#include "math_util.h"
 #include "matrix4.h"
 
 namespace apex {
@@ -70,6 +69,18 @@ public:
     static Vector4 UnitY();
     static Vector4 UnitZ();
     static Vector4 UnitW();
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(x);
+        hc.Add(y);
+        hc.Add(z);
+        hc.Add(w);
+
+        return hc;
+    }
 };
 
 } // namespace apex

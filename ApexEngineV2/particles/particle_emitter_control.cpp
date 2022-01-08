@@ -5,14 +5,14 @@
 
 namespace apex {
 ParticleEmitterControl::ParticleEmitterControl(Camera *camera)
-    : EntityControl(30.0), 
+    : EntityControl(30.0),
       m_camera(camera)
 {
 }
 
 void ParticleEmitterControl::ResetParticle(Particle &particle)
 {
-    double lifespan_random = MathUtil::EPSILON + 
+    double lifespan_random = MathUtil::EPSILON +
         MathUtil::Random(0.0, fabs(m_renderer->m_info.m_lifespan_randomness));
 
     particle.m_position = m_renderer->m_info.m_origin_generator(particle);
@@ -27,7 +27,7 @@ void ParticleEmitterControl::ResetParticle(Particle &particle)
 
 void ParticleEmitterControl::OnAdded()
 {
-    if (parent->GetRenderable() == nullptr || 
+    if (parent->GetRenderable() == nullptr ||
         (m_renderer = dynamic_cast<ParticleRenderer*>(parent->GetRenderable().get())) == nullptr) {
         throw "parent->GetRenderable() must be a pointer to ParticleRenderer!";
     }

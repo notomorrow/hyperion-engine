@@ -1,16 +1,15 @@
 #include "shadow_mapping.h"
 #include "../../core_engine.h"
 #include "../../math/frustum.h"
-#include "../../opengl.h"
+#include "../../util.h"
 
 namespace apex {
-ShadowMapping::ShadowMapping(Camera *view_cam, int max_dist)
+ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist)
     : view_cam(view_cam), max_dist(max_dist)
 {
-    shadow_cam = new OrthoCamera(-5, 5, -5, 5, -5, 5);
-    fbo = new Framebuffer2D(2048, 2048);
-    fbo->GetDepthTexture()->SetFilter(GL_NEAREST, GL_NEAREST);
-    fbo->GetDepthTexture()->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+    shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
+
+    fbo = new Framebuffer2D(1024, 1024, true, true, false, false);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -76,15 +75,29 @@ void ShadowMapping::Begin()
     }
 
     MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
+
     shadow_cam->SetViewMatrix(new_view);
     shadow_cam->SetProjectionMatrix(new_proj);
-    shadow_cam->SetViewProjectionMatrix(new_view * new_proj);
 
     fbo->Use();
+
+    glDepthMask(true);
+    glClearDepth(1.0);
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    ///glCullFace(GL_FRONT);
+    // glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+
+    // glDepthMask(true);
+    // glClearDepth(1.0);
+    // glDepthFunc(GL_LESS);
+    // glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // glCullFace(GL_FRONT);
 }
 
 void ShadowMapping::End()
 {
+    // glCullFace(GL_BACK);
     fbo->End();
 }
 

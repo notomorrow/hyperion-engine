@@ -1,26 +1,31 @@
 #include "shader.h"
 #include "../util/string_util.h"
 #include "../util/shader_preprocessor.h"
-#include <iostream>
+#include "../util.h"
 
 namespace apex {
 
 Shader::Shader(const ShaderProperties &properties)
-    : is_uploaded(false),
+    : properties(properties),
+      is_uploaded(false),
       is_created(false),
       uniform_changed(false)
 {
+    ResetUniforms();
 }
 
 Shader::Shader(const ShaderProperties &properties,
     const std::string &vscode,
     const std::string &fscode)
-    : is_uploaded(false),
+    : properties(properties),
+      is_uploaded(false),
       is_created(false),
       uniform_changed(false)
 {
     subshaders.push_back(SubShader(GL_VERTEX_SHADER, vscode));
     subshaders.push_back(SubShader(GL_FRAGMENT_SHADER, fscode));
+
+    ResetUniforms();
 }
 
 Shader::~Shader()
@@ -33,8 +38,41 @@ Shader::~Shader()
     }
 }
 
+void Shader::ResetUniforms()
+{
+    SetUniform("HasDiffuseMap", 0);
+    SetUniform("HasNormalMap", 0);
+    SetUniform("HasParallaxMap", 0);
+    SetUniform("HasAoMap", 0);
+    SetUniform("HasBrdfMap", 0);
+    SetUniform("HasMetalnessMap", 0);
+    SetUniform("HasRoughnessMap", 0);
+}
+
 void Shader::ApplyMaterial(const Material &mat)
 {
+    ResetUniforms();
+
+    if (mat.cull_faces == (MaterialFaceCull::MaterialFace_Front | MaterialFaceCull::MaterialFace_Back)) {
+        glCullFace(GL_FRONT_AND_BACK);
+    } else if (mat.cull_faces & MaterialFaceCull::MaterialFace_Front) {
+        glCullFace(GL_FRONT);
+    } else if (mat.cull_faces & MaterialFaceCull::MaterialFace_Back) {
+        glCullFace(GL_BACK);
+    } else if (mat.cull_faces == MaterialFaceCull::MaterialFace_None) {
+        glDisable(GL_CULL_FACE);
+    }
+
+    if (mat.alpha_blended) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+    if (!mat.depth_test) {
+        glDisable(GL_DEPTH_TEST);
+    }
+    if (!mat.depth_write) {
+        glDepthMask(false);
+    }
 }
 
 void Shader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
@@ -49,8 +87,12 @@ void Shader::Use()
     if (!is_created) {
         progid = glCreateProgram();
 
+        CatchGLErrors("Failed to create shader program.");
+
         for (auto &&sub : subshaders) {
             sub.id = glCreateShader(sub.type);
+
+            CatchGLErrors("Failed to create subshader.");
         }
 
         is_created = true;
@@ -69,16 +111,22 @@ void Shader::Use()
             if (!status) {
                 int maxlen;
                 glGetShaderiv(sub.id, GL_INFO_LOG_LENGTH, &maxlen);
-
                 char *log = new char[maxlen];
-                glGetShaderInfoLog(sub.id, maxlen, &maxlen, log);
+                memset(log, 0, maxlen);
+                glGetShaderInfoLog(sub.id, maxlen, NULL, log);
 
-                std::cout << "Shader compile error! ";
-                std::cout << "Compile log: \n" << log << "\n";
+                std::cout << "In shader of class " << typeid(*this).name() << ":\n";
+                std::cout << "\tShader compile error! ";
+                std::cout << "\tCompile log: \n" << log << "\n";
 
                 delete[] log;
             }
         }
+
+        glBindFragDataLocation(progid, 0, "output0");
+        glBindFragDataLocation(progid, 1, "output1");
+        glBindFragDataLocation(progid, 2, "output2");
+        CatchGLErrors("Failed to bind shader frag data.");
 
         glBindAttribLocation(progid, 0, "a_position");
         glBindAttribLocation(progid, 1, "a_normal");
@@ -88,6 +136,7 @@ void Shader::Use()
         glBindAttribLocation(progid, 5, "a_bitangent");
         glBindAttribLocation(progid, 6, "a_boneweights");
         glBindAttribLocation(progid, 7, "a_boneindices");
+        CatchGLErrors("Failed to bind shader attributes.");
 
         glLinkProgram(progid);
         glValidateProgram(progid);
@@ -95,17 +144,25 @@ void Shader::Use()
         int linked = 0;
         glGetProgramiv(progid, GL_LINK_STATUS, &linked);
 
-        if (linked == false) {
+        if (!linked) {
             int maxlen = 0;
             glGetProgramiv(progid, GL_INFO_LOG_LENGTH, &maxlen);
 
-            char *log = new char[maxlen];
+            if (maxlen != 0) {
+                char *log = new char[maxlen];
 
-            glGetProgramInfoLog(progid, maxlen, &maxlen, log);
-            glDeleteProgram(progid);
-            std::cout << "Log: \n " << log << "\n\n";
+                glGetProgramInfoLog(progid, maxlen, NULL, log);
 
-            delete[] log;
+                std::cout << "In shader of class " << typeid(*this).name() << ":\n";
+                std::cout << "\tShader linker error! ";
+                std::cout << "\tCompile log: \n" << log << "\n";
+
+                glDeleteProgram(progid);
+
+                delete[] log;
+
+                return;
+            }
         }
 
         is_uploaded = true;
@@ -155,7 +212,9 @@ void Shader::End()
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(true);
-
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glBlendFunc(GL_ONE, GL_ZERO);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glUseProgram(0);
