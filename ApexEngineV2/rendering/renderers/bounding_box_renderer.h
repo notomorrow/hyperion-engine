@@ -11,7 +11,7 @@
 namespace apex {
 
 class BoundingBoxRenderer : public Renderable {
-    static const std::vector<uint32_t> indices;
+    static const std::vector<size_t> indices;
 public:
     BoundingBoxRenderer(const BoundingBox *bounding_box);
     BoundingBoxRenderer(const BoundingBox &) = delete;
