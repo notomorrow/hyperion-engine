@@ -24,7 +24,7 @@ public:
     inline int GetWidth() const { return width; }
     inline int GetHeight() const { return height; }
 
-    const unsigned char *GetBytes() const { return bytes; }
+    unsigned char * const GetBytes() const { return bytes; }
 
     static void ActiveTexture(int i);
 

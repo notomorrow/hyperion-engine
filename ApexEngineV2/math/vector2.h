@@ -1,7 +1,7 @@
 #ifndef VECTOR2_H
 #define VECTOR2_H
 
-#include "math_util.h"
+#include "../hash_code.h"
 
 #include <ostream>
 #include <cmath>
@@ -56,6 +56,16 @@ public:
     static Vector2 One();
     static Vector2 UnitX();
     static Vector2 UnitY();
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(x);
+        hc.Add(y);
+
+        return hc;
+    }
 };
 
 } // namespace apex

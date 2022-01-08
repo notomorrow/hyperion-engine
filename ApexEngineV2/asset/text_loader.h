@@ -20,8 +20,12 @@ public:
             return text;
         }
 
+        virtual std::shared_ptr<Loadable> Clone();
+
     private:
         std::string text;
+
+        std::shared_ptr<LoadedText> CloneImpl();
     };
 };
 }

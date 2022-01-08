@@ -25,10 +25,19 @@ ParticleShader::ParticleShader(const ShaderProperties &properties)
 
 void ParticleShader::ApplyMaterial(const Material &mat)
 {
-    if (mat.texture0 != nullptr) {
-        Texture::ActiveTexture(0);
-        mat.texture0->Use();
-        SetUniform("u_diffuseTexture", 0);
+    int texture_index = 1;
+
+    for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
+        if (it->second == nullptr) {
+            continue;
+        }
+
+        Texture::ActiveTexture(texture_index);
+        it->second->Use();
+        SetUniform(it->first, texture_index);
+        SetUniform(std::string("Has") + it->first, 1);
+
+        texture_index++;
     }
 }
 

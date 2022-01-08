@@ -9,6 +9,7 @@ namespace apex {
 class GlfwEngine : public CoreEngine {
 public:
     bool InitializeGame(Game *game);
+    void SetCursorLocked(bool locked);
     void Viewport(int x, int y, size_t width, size_t height);
     void Clear(int mask);
     void SetMousePosition(double x, double y);
@@ -20,6 +21,9 @@ public:
     void DeleteBuffers(size_t count, unsigned int *buffers);
     void BindBuffer(int target, unsigned int buffer);
     void BufferData(int target, size_t size, const void *data, int usage);
+    void BufferSubData(int target, size_t offset, size_t size, const void *data);
+    void BindVertexArray(unsigned int target);
+    void GenVertexArrays(size_t size, unsigned int *arrays);
     void EnableVertexAttribArray(unsigned int index);
     void DisableVertexAttribArray(unsigned int index);
     void VertexAttribPointer(unsigned int index, int size, int type, bool normalized, size_t stride, void *ptr);
@@ -64,6 +68,8 @@ public:
     void Uniform3i(int location, int v0, int v1, int v2);
     void Uniform4i(int location, int v0, int v1, int v2, int v3);
     void UniformMatrix4fv(int location, int count, bool transpose, const float *value);
+    void VertexAttribDivisor(unsigned int index, unsigned int divisor);
+    void DrawArraysInstanced(int mode, int first, size_t count, size_t primcount);
 
 private:
     GLFWwindow *window;

@@ -63,7 +63,7 @@ void MatrixUtil::ToPerspective(Matrix4 &mat, float fov, int w, int h, float n, f
 {
     mat = Matrix4::Identity();
 
-    float ar = static_cast<float>(w) / h;
+    float ar = (float)w / (float)h;
     float tan_half_fov = tan(MathUtil::DegToRad(fov / 2.0f));
     float range = n - f;
 

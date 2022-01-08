@@ -24,6 +24,51 @@ Entity::~Entity()
     m_children.clear();
 }
 
+void Entity::SetGlobalTranslation(const Vector3 &translation)
+{
+    if (m_parent == nullptr) {
+        SetLocalTranslation(translation);
+
+        return;
+    }
+
+    m_local_translation = translation - m_parent->GetGlobalTransform().GetTranslation();
+
+    SetTransformUpdateFlag();
+    SetAABBUpdateFlag();
+}
+
+void Entity::SetGlobalRotation(const Quaternion &rotation)
+{
+    if (m_parent == nullptr) {
+        SetLocalRotation(rotation);
+
+        return;
+    }
+
+    Quaternion tmp = m_parent->GetGlobalTransform().GetRotation();
+    tmp.Invert();
+
+    m_local_rotation = rotation * tmp;
+
+    SetTransformUpdateFlag();
+    SetAABBUpdateFlag();
+}
+
+void Entity::SetGlobalScale(const Vector3 &scale)
+{
+    if (m_parent == nullptr) {
+        SetLocalScale(scale);
+
+        return;
+    }
+
+    m_local_scale = scale / m_parent->GetGlobalTransform().GetScale();
+
+    SetTransformUpdateFlag();
+    SetAABBUpdateFlag();
+}
+
 void Entity::UpdateTransform()
 {
     if (m_parent != nullptr) {
@@ -47,10 +92,13 @@ void Entity::UpdateAABB()
             BoundingBox renderable_aabb_transformed;
             // multiply by transform
             std::array<Vector3, 8> corners = renderable_aabb.GetCorners();
+
             for (Vector3 &corner : corners) {
                 corner *= m_global_transform.GetMatrix();
+
                 renderable_aabb_transformed.Extend(corner);
             }
+
             m_aabb.Extend(renderable_aabb_transformed);
         }
     }
@@ -70,8 +118,10 @@ void Entity::AddChild(std::shared_ptr<Entity> entity)
 
 void Entity::RemoveChild(const std::shared_ptr<Entity> &entity)
 {
+    m_children_pending_removal.push_back(entity);
     m_children.erase(std::find(m_children.begin(), m_children.end(), entity));
     entity->m_parent = nullptr;
+    entity->SetPendingRemovalFlag();
     entity->SetTransformUpdateFlag();
 }
 
@@ -89,6 +139,11 @@ std::shared_ptr<Entity> Entity::GetChild(const std::string &name) const
     });
 
     return it != m_children.end() ? *it : nullptr;
+}
+
+std::shared_ptr<Entity> Entity::GetChildPendingRemoval(size_t index) const
+{
+    return m_children_pending_removal.at(index);
 }
 
 void Entity::AddControl(std::shared_ptr<EntityControl> control)
@@ -142,6 +197,14 @@ void Entity::SetAABBUpdateFlag()
     m_flags |= UPDATE_AABB;
     for (auto &child : m_children) {
         child->SetAABBUpdateFlag();
+    }
+}
+
+void Entity::SetPendingRemovalFlag()
+{
+    m_flags |= PENDING_REMOVAL;
+    for (auto &child : m_children) {
+        child->SetPendingRemovalFlag();
     }
 }
 

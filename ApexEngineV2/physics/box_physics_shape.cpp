@@ -2,6 +2,7 @@
 #include "box_collision.h"
 #include "sphere_physics_shape.h"
 #include "plane_physics_shape.h"
+#include "../math/bounding_box.h"
 
 #include <cassert>
 
@@ -11,6 +12,12 @@ namespace physics {
 BoxPhysicsShape::BoxPhysicsShape(const Vector3 &dimensions)
     : PhysicsShape(PhysicsShape_box),
       m_dimensions(dimensions)
+{
+}
+
+BoxPhysicsShape::BoxPhysicsShape(const BoundingBox &aabb)
+    : PhysicsShape(PhysicsShape_box),
+      m_dimensions(aabb.GetDimensions())
 {
 }
 
@@ -37,8 +44,14 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
 {
     Vector3 to_center = other->GetAxis(3) - GetAxis(3);
 
-    double penetration = std::numeric_limits<double>::max();
-    unsigned int best = std::numeric_limits<unsigned int>::max();
+    const float length = to_center.Length();
+
+    if (std::isnan(length) || std::isinf(length)) {
+        return false;
+    }
+
+    double penetration = MathUtil::MaxSafeValue<double>();
+    unsigned int best = MathUtil::MaxSafeValue<unsigned int>();
 
     for (int i = 0; i < 3; i++) {
         if (!BoxCollision::TryAxis(*this, *other, GetAxis(i), to_center,
@@ -71,9 +84,10 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
     }
 
     // check to make sure there was a result
-    assert(best != std::numeric_limits<decltype(best)>::max());
+    assert(MathUtil::SafeValue(best) != MathUtil::MaxSafeValue<decltype(best)>());
 
     CollisionInfo collision;
+
     if (best < 3) {
         BoxCollision::FillPointFaceBoxBox(*this, *other, to_center, collision, best, penetration);
         out.m_collisions.push_back(collision);

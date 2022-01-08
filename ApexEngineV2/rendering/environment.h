@@ -32,8 +32,8 @@ public:
     inline void SetShadowsEnabled(bool shadows_enabled) { m_shadows_enabled = shadows_enabled; }
     inline int NumCascades() const { return m_num_cascades; }
     inline void SetNumCascades(int num_cascades) { m_num_cascades = num_cascades; }
-    inline int GetShadowSplit(int i) const { return m_shadow_splits[i]; }
-    inline void SetShadowSplit(int i, int split) { m_shadow_splits[i] = split; }
+    inline double GetShadowSplit(int i) const { return m_shadow_splits[i]; }
+    inline void SetShadowSplit(int i, double split) { m_shadow_splits[i] = split; }
     inline std::shared_ptr<Texture> GetShadowMap(int i) const { return m_shadow_maps[i]; }
     inline void SetShadowMap(int i, const std::shared_ptr<Texture> &shadow_map) { m_shadow_maps[i] = shadow_map; }
     inline const Matrix4 &GetShadowMatrix(int i) const { return m_shadow_matrices[i]; }
@@ -49,6 +49,10 @@ public:
     inline std::shared_ptr<Cubemap> &GetGlobalCubemap() { return m_global_cubemap; }
     inline void SetGlobalCubemap(const std::shared_ptr<Cubemap> &cubemap) { m_global_cubemap = cubemap; }
 
+    inline const std::shared_ptr<Cubemap> &GetGlobalIrradianceCubemap() const { return m_global_irradiance_cubemap; }
+    inline std::shared_ptr<Cubemap> &GetGlobalIrradianceCubemap() { return m_global_irradiance_cubemap; }
+    inline void SetGlobalIrradianceCubemap(const std::shared_ptr<Cubemap> &cubemap) { m_global_irradiance_cubemap = cubemap; }
+
 private:
     static Environment *instance;
 
@@ -56,12 +60,13 @@ private:
     std::vector<std::shared_ptr<PointLight>> m_point_lights;
 
     std::shared_ptr<Cubemap> m_global_cubemap;
+    std::shared_ptr<Cubemap> m_global_irradiance_cubemap;
 
     Vector3 m_gravity;
 
     bool m_shadows_enabled;
     int m_num_cascades;
-    std::array<int, 4> m_shadow_splits;
+    std::array<double, 4> m_shadow_splits;
     std::array<std::shared_ptr<Texture>, 4> m_shadow_maps;
     std::array<Matrix4, 4> m_shadow_matrices;
 };

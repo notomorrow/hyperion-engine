@@ -1,9 +1,9 @@
 #include "mesh.h"
-#include "../opengl.h"
+#include "../util.h"
 
 namespace apex {
 
-const Mesh::MeshAttribute Mesh::MeshAttribute::Positions = {0, 3, 0};
+const Mesh::MeshAttribute Mesh::MeshAttribute::Positions = {0, 3, 0 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::Normals = { 0, 3, 1 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::TexCoords0 = { 0, 2, 2 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::TexCoords1 = { 0, 2, 3 };
@@ -23,6 +23,7 @@ Mesh::Mesh()
 Mesh::~Mesh()
 {
     if (is_created) {
+        glDeleteVertexArrays(1, &vao);
         glDeleteBuffers(1, &vbo);
         glDeleteBuffers(1, &ibo);
     }
@@ -36,7 +37,7 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts)
     vertices = verts;
     indices.clear();
     for (size_t i = 0; i < verts.size(); i++) {
-        indices.push_back(i);
+        indices.push_back(static_cast<MeshIndex>(i));
     }
 
     // update the aabb
@@ -48,7 +49,7 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts)
     is_uploaded = false;
 }
 
-void Mesh::SetVertices(const std::vector<Vertex> &verts, const std::vector<size_t> &ind)
+void Mesh::SetVertices(const std::vector<Vertex> &verts, const std::vector<MeshIndex> &ind)
 {
     vertices = verts;
     indices = ind;
@@ -70,7 +71,6 @@ void Mesh::SetAttribute(MeshAttributeType type, const MeshAttribute &attribute)
 
 std::vector<float> Mesh::CreateBuffer()
 {
-    std::cout << "create buffer\n";
     unsigned int vert_size = 0, prev_size = 0, offset = 0;
 
     for (auto &&attr : attribs) {
@@ -95,7 +95,7 @@ std::vector<float> Mesh::CreateBuffer()
 
     for (size_t i = 0; i < vertices.size(); i++) {
         auto &vertex = vertices[i];
-                // std::cout << "vertex tangent : " << vertex.GetTangent() << "\n";
+
         if (pos_it != attribs.end()) {
             buffer[(i * vert_size) + pos_it->second.offset] = vertex.GetPosition().x;
             buffer[(i * vert_size) + pos_it->second.offset + 1] = vertex.GetPosition().y;
@@ -192,40 +192,95 @@ void Mesh::CalculateTangents()
 void Mesh::Render()
 {
     if (!is_created) {
+        glGenVertexArrays(1, &vao);
+        CatchGLErrors("Failed to generate vertex arrays.");
+
         glGenBuffers(1, &vbo);
         glGenBuffers(1, &ibo);
+
         is_created = true;
     }
 
+    glBindVertexArray(vao);
+
     if (!is_uploaded) {
         std::vector<float> buffer = CreateBuffer();
+
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(float), &buffer[0], GL_STATIC_DRAW);
+        CatchGLErrors("Failed to set buffer data.");
+
+        unsigned int error;
+
+        for (auto &&attr : attribs) {
+            glEnableVertexAttribArray(attr.second.index);
+            CatchGLErrors("Failed to enable vertex attribute array." __FILE__);
+
+            glVertexAttribPointer(attr.second.index, attr.second.size, GL_FLOAT,
+                false, vertex_size * sizeof(float), (void*)(attr.second.offset * sizeof(float)));
+
+            CatchGLErrors("Failed to set vertex attribute pointer.");
+        }
+
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(MeshIndex), &indices[0], GL_STATIC_DRAW);
+        // glBindBuffer(GL_ARRAY_BUFFER, 0);
+        // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
         is_uploaded = true;
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+   // glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    for (auto &&attr : attribs) {
-        glEnableVertexAttribArray(attr.second.index);
-        glVertexAttribPointer(attr.second.index, attr.second.size, GL_FLOAT,
-            false, vertex_size * sizeof(float), (void*)(attr.second.offset * sizeof(float)));
-    }
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+   // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glDrawElements(primitive_type, indices.size(), GL_UNSIGNED_INT, 0);
 
-    for (auto &&attr : attribs) {
-        glDisableVertexAttribArray(attr.second.index);
-    }
+    // for (auto &&attr : attribs) {
+    //     glDisableVertexAttribArray(attr.second.index);
+    // }
 
     // Unbind the buffers
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    glBindVertexArray(0);
+}
+
+void Mesh::CalculateNormals()
+{
+    // reset to zero initially
+    for (Vertex &vert : vertices) {
+        vert.SetNormal(Vector3::Zero());
+    }
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        MeshIndex i0 = indices[i];
+        MeshIndex i1 = indices[i + 1];
+        MeshIndex i2 = indices[i + 2];
+
+        const Vector3 &p0 = vertices[i0].GetPosition();
+        const Vector3 &p1 = vertices[i1].GetPosition();
+        const Vector3 &p2 = vertices[i2].GetPosition();
+
+        Vector3 u = p2 - p0;
+        Vector3 v = p1 - p0;
+        Vector3 n = v;
+
+        n.Cross(u);
+        n.Normalize();
+
+        vertices[i0].SetNormal(vertices[i0].GetNormal() + n);
+        vertices[i1].SetNormal(vertices[i1].GetNormal() + n);
+        vertices[i2].SetNormal(vertices[i2].GetNormal() + n);
+    }
+
+    for (Vertex &vert : vertices) {
+        Vector3 tmp(vert.GetNormal());
+        tmp.Normalize();
+        vert.SetNormal(tmp);
+    }
+
+    SetAttribute(ATTR_NORMALS, MeshAttribute::Normals);
 }
 
 } // namespace apex

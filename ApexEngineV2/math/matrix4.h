@@ -1,6 +1,8 @@
 #ifndef MATRIX4_H
 #define MATRIX4_H
 
+#include "../hash_code.h"
+
 #include <iostream>
 #include <array>
 
@@ -35,6 +37,17 @@ public:
     static Matrix4 Zeroes();
     static Matrix4 Ones();
     static Matrix4 Identity();
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        for (float value : values) {
+            hc.Add(value);
+        }
+
+        return hc;
+    }
 };
 } // namespace apex
 

@@ -40,7 +40,7 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
 
                     if (Material *last_mtl = mtl->GetLastMaterial()) {
                         if (auto tex = LoadTexture(loc, path)) {
-                            last_mtl->texture0 = tex;
+                            last_mtl->SetTexture("DiffuseMap", tex);
                         }
                     }
                 }
@@ -50,8 +50,34 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
 
                     if (Material *last_mtl = mtl->GetLastMaterial()) {
                         if (auto tex = LoadTexture(loc, path)) {
-                            last_mtl->normals0 = tex;
+                            last_mtl->SetTexture("NormalMap", tex);
                         }
+                    }
+                }
+            } else if (tokens[0] == "map_Ks") {
+                if (tokens.size() >= 2) {
+                    const std::string loc = tokens[1];
+
+                    if (Material *last_mtl = mtl->GetLastMaterial()) {
+                        if (auto tex = LoadTexture(loc, path)) {
+                            last_mtl->SetTexture("MetalnessMap", tex);
+                        }
+                    }
+                }
+            } else if (tokens[0] == "Kd") {
+                if (tokens.size() >= 4) {
+                    Vector4 color(1.0);
+
+                    color.x = std::stof(tokens[1]);
+                    color.y = std::stof(tokens[2]);
+                    color.z = std::stof(tokens[3]);
+
+                    if (tokens.size() >= 5) {
+                        color.w = std::stof(tokens[4]);
+                    }
+
+                    if (Material *last_mtl = mtl->GetLastMaterial()) {
+                        last_mtl->diffuse_color = color;
                     }
                 }
             }
@@ -72,11 +98,8 @@ std::shared_ptr<Texture> MtlLoader::LoadTexture(const std::string &name, const s
     }
     dir += "/" + name;
 
-    std::cout << "load texture : " << dir << "\n";
-
     if (!(tex = AssetManager::GetInstance()->LoadFromFile<Texture>(dir))) {
         // load relatively
-    std::cout << "load texture #2 : " << name << "\n";
         tex = AssetManager::GetInstance()->LoadFromFile<Texture>(name);
     }
 
