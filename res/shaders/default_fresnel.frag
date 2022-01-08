@@ -195,42 +195,8 @@ void main()
   // retrieve a scale and bias to F0. See [1], Figure 3
   vec2 brdf = texture(BrdfMap, brdfSamplePoint).rg;
 
-  // Roughness dependent fresnel, from Fdez-Aguera
-  vec3 Fr = max(vec3(1.0 - roughness), F0) - F0;
-  vec3 k_S = F0 + Fr * pow(1.0 - NdotV, 5.0);
-  vec3 FssEss = k_S * AB.x + AB.y;
-  float specularWeight = 1.0;
-  vec3 fresnel = vec3(specularWeight) * specularCubemap * FssEss;
-  /*float Ess = AB.x + AB.y;
-  float Ems = 1-Ess;
-  vec3 Favg = F0 + (1-F0)/21;
-  vec3 Fms = FssEss*Favg/(1-(1-Ess)*Favg);*/
 
-
-  //vec3 Lo = ComputeDirectionalLight(env_DirectionalLight, n, viewVector,  v_position.xyz, albedo, shadowness, roughness, metallic);
-  
-
-  vec3 ambientSpecF = SchlickFresnelRoughness(F0, LdotH);
-  vec3 ambientDiffuse = vec3(1.0) - ambientSpecF;
-  ambientDiffuse *= 1.0 - metallic;
-  vec4 ambient = vec4(vec3(((diffuseCubemap * albedo.rgb) * ambientDiffuse) + (specularCubemap * albedo.rgb * clamp(brdf.x + brdf.y, 0.0, 1.0) * ambientSpecF)), albedo.a);
-  
-
-
-  for (int i = 0; i < env_NumPointLights; i++) {
-    //Lo += ComputePointLight(env_PointLights[i], n, normalize(u_camerapos.xyz - v_position.xyz), v_position.xyz, albedo, shadowness, roughness, u_shininess);
-  }
-
-
-  float fresnel_classic;
-  fresnel_classic = max(1.0 - dot(n, viewVector), 0.0);
-  fresnel_classic = pow(fresnel_classic, 2.0);
-  fresnel_classic *= metallic;
-
-
-  //vec3 fresnel_spec = specularCubemap.rgb * (fresnel_classic * brdf.x + brdf.y);
-
-  vec3 metallicSpec = mix(vec3(0.04), /*albedo.rgb*/ vec3(1.0), metallic);
+  vec3 metallicSpec = mix(vec3(0.04), albedo.rgb, metallic);
   vec3 metallicDiff = mix(albedo.rgb, vec3(0.0), metallic);
 
   vec3 F = FresnelTerm(metallicSpec, VdotH) * clamp(NdotL, 0.0, 1.0);
