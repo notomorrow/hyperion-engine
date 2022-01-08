@@ -69,11 +69,7 @@ void Collision::ApplyPositionChange(CollisionInfo &collision,
             total_inertia += linear_inertia[i] + angular_inertia[i];
         }
     }
-
-    // total_inertia = MathUtil::SafeValue(total_inertia);
     
-    std::cout << "COLLISION ON " << typeid(*collision.m_bodies[0]->GetPhysicsShape()).name() << " AND " << typeid(*collision.m_bodies[1]->GetPhysicsShape()).name() << "\n";
-
     for (int i = 0; i < 2; i++) {
         RigidBody *body = collision.m_bodies[i];
 
@@ -112,8 +108,6 @@ void Collision::ApplyPositionChange(CollisionInfo &collision,
         if (!body->IsStatic()) {
             Vector3 position = body->GetPosition();
             position += collision.m_contact_normal * linear_move[i];
-            // std::cout << "linear_move[" << i << "]" << linear_move[i] << "\n";
-            // std::cout << "collision.m_contact_normal = " << collision.m_contact_normal << "\n";
             body->SetPosition(position);
 
             Quaternion rotation = body->GetOrientation();
@@ -193,7 +187,7 @@ Vector3 Collision::CalculateLocalVelocity(CollisionInfo &collision,
 
     Vector3 accumulate_velocity = body->GetLastAcceleration() * dt;
     accumulate_velocity *= contact_to_world_transpose;
-    accumulate_velocity.SetX(0);
+    accumulate_velocity.SetX(0); // wut?
 
     contact_velocity += accumulate_velocity;
     return contact_velocity;

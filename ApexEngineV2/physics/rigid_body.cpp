@@ -1,6 +1,7 @@
 #include "rigid_body.h"
 #include "../math/matrix_util.h"
 #include "../animation/bone.h"
+#include "../rendering/renderers/bounding_box_renderer.h"
 
 namespace apex {
 namespace physics {
@@ -83,7 +84,10 @@ RigidBody::RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial materi
     : EntityControl(60.0),
       m_shape(shape),
       m_material(material),
-      m_awake(true)
+      m_awake(true),
+      m_render_debug_aabb(false),
+      m_aabb_renderer(new BoundingBoxRenderer()),
+      m_aabb_debug_node(new Entity("physics_aabb_debug"))
 {
     // TODO: inertia tensor
 }
@@ -121,29 +125,32 @@ void RigidBody::Integrate(double dt)
 
 void RigidBody::OnAdded()
 {
+    if (m_render_debug_aabb) {
+        m_aabb_debug_node->SetRenderable(m_aabb_renderer);
+        parent->AddChild(m_aabb_debug_node);
+    }
 }
 
 void RigidBody::OnRemoved()
 {
+    if (m_render_debug_aabb) {
+        parent->RemoveChild(m_aabb_debug_node);
+    }
 }
 
 void RigidBody::OnUpdate(double dt)
 {
     Quaternion tmp(m_orientation);
-    tmp.Invert();
-    
-    // TODO: refactor Bone to just use local translation as offset
-    if (auto bone_ptr = dynamic_cast<Bone*>(parent)) {
-        bone_ptr->SetOffsetRotation(tmp);
-        bone_ptr->SetOffsetTranslation(m_position);
-    } else {
-        parent->SetLocalRotation(tmp);
-        parent->SetLocalTranslation(m_position);
-    }
+    // tmp.Invert();
 
-    std::cout << parent->GetName() << " position " << m_position << "\n";
+    parent->SetGlobalRotation(tmp);
+    parent->SetGlobalTranslation(m_position);
 
     m_bounding_box = m_shape->GetBoundingBox();
+
+    if (m_render_debug_aabb) {
+        m_aabb_renderer->SetAABB(m_bounding_box);
+    }
 }
 
 } // namespace physics

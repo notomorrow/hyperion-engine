@@ -8,8 +8,6 @@ namespace apex {
 FramebufferCube::FramebufferCube(int width, int height)
     : Framebuffer(width, height)
 {
-    std::cout << "width = " << width << std::endl;
-
     std::array<std::shared_ptr<Texture2D>, 6> color_textures = {
         std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
         std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),

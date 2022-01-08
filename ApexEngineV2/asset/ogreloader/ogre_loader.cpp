@@ -212,7 +212,6 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
         for (auto &&bone : handler.bones) {
             bone->StoreBindingPose();
             bone->ClearPose();
-            bone->UpdateTransform();
         }
     }
 
@@ -283,7 +282,13 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
             }
         }
 
-        final_node->AddChild(handler.bones[0]);
+        if (handler.bones.size() != 0) {
+            if (auto root_bone = handler.bones.front()) {
+                final_node->AddChild(root_bone);
+                root_bone->UpdateTransform();
+            }
+        }
+
         final_node->AddControl(skeleton_control);
     }
 

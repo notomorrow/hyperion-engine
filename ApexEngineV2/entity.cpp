@@ -24,6 +24,51 @@ Entity::~Entity()
     m_children.clear();
 }
 
+void Entity::SetGlobalTranslation(const Vector3 &translation)
+{
+    if (m_parent == nullptr) {
+        SetLocalTranslation(translation);
+
+        return;
+    }
+
+    m_local_translation = translation - m_parent->GetGlobalTransform().GetTranslation();
+
+    SetTransformUpdateFlag();
+    SetAABBUpdateFlag();
+}
+
+void Entity::SetGlobalRotation(const Quaternion &rotation)
+{
+    if (m_parent == nullptr) {
+        SetLocalRotation(rotation);
+
+        return;
+    }
+
+    Quaternion tmp = m_parent->GetGlobalTransform().GetRotation();
+    tmp.Invert();
+
+    m_local_rotation = rotation * tmp;
+
+    SetTransformUpdateFlag();
+    SetAABBUpdateFlag();
+}
+
+void Entity::SetGlobalScale(const Vector3 &scale)
+{
+    if (m_parent == nullptr) {
+        SetLocalScale(scale);
+
+        return;
+    }
+
+    m_local_scale = scale / m_parent->GetGlobalTransform().GetScale();
+
+    SetTransformUpdateFlag();
+    SetAABBUpdateFlag();
+}
+
 void Entity::UpdateTransform()
 {
     if (m_parent != nullptr) {
