@@ -105,13 +105,13 @@ bool GlfwEngine::InitializeGame(Game *game)
     inputmgr = game->GetInputManager();
 
 #if USE_CHRONO
-    auto last = std::chrono::high_resolution_clock::now();
+    auto last = std::chrono::steady_clock::now();
 #else
     double last = 0.0;
 #endif
     while (!glfwWindowShouldClose(window)) {
 #if USE_CHRONO
-        auto current = std::chrono::high_resolution_clock::now();
+        auto current = std::chrono::steady_clock::now();
         auto delta = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(current - last).count();
 #else
         double current = glfwGetTime();

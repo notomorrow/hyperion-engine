@@ -2,6 +2,7 @@
 #include "box_collision.h"
 #include "sphere_physics_shape.h"
 #include "plane_physics_shape.h"
+#include "../math/bounding_box.h"
 
 #include <cassert>
 
@@ -11,6 +12,12 @@ namespace physics {
 BoxPhysicsShape::BoxPhysicsShape(const Vector3 &dimensions)
     : PhysicsShape(PhysicsShape_box),
       m_dimensions(dimensions)
+{
+}
+
+BoxPhysicsShape::BoxPhysicsShape(const BoundingBox &aabb)
+    : PhysicsShape(PhysicsShape_box),
+      m_dimensions(aabb.GetDimensions())
 {
 }
 

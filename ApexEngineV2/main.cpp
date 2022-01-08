@@ -314,18 +314,27 @@ public:
 
         inputmgr->RegisterKeyEvent(KeyboardKey::KEY_6, raytest_event);
 
-        auto rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(20)), physics::PhysicsMaterial(0.0));
-        rb4->SetPosition(Vector3(-6, 100, -6));
-        rb4->SetAwake(false);
+        auto box_node = std::make_shared<Entity>("box_node");
+        box_node->SetLocalTranslation(Vector3(6, 110, 6));
+        box_node->SetRenderable(MeshFactory::CreateCube());
+        box_node->SetLocalScale(20);
+        box_node->UpdateTransform();
+        auto rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(box_node->GetAABB()), physics::PhysicsMaterial(0.0));
+        rb4->SetPosition(Vector3(6, 110, 6));
+        rb4->SetRenderDebugBoundingBox(true);
+        // rb4->SetAwake(false);
         PhysicsManager::GetInstance()->RegisterBody(rb4);
+        box_node->AddControl(rb4);
+        top->AddChild(box_node);
 
 
         auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
-        dragger->Move(Vector3(-6, 170, -6));
-        dragger->Scale(0.5);
+        dragger->Move(Vector3(6, 200, 6));
+        // dragger->Scale(0.5);
         // dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
         // dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 4.0);
         top->AddChild(dragger);
+        dragger->UpdateTransform();
 
         // auto rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.25)), physics::PhysicsMaterial(0.01));
         // rb3->SetPosition(dragger->GetGlobalTransform().GetTranslation());
@@ -334,17 +343,40 @@ public:
         // rb3->SetAwake(true);
         // dragger->AddControl(rb3);
         // PhysicsManager::GetInstance()->RegisterBody(rb3);
+        Quaternion a(Vector3::UnitY(), 0.5);
+        Quaternion b(a);
+        Quaternion tmp(a);
+        tmp.Invert();
+        std::cout << "a : " << (a) << "\n";
+        std::cout << "div : " << (b * tmp) << "\n";
 
-        // for (auto bone : dragger->GetControl<SkeletonControl>(0)->GetBones()) {
-        //     auto rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.01)), physics::PhysicsMaterial(1.0));
-        //     rb3->SetPosition(bone->GetGlobalTransform().GetTranslation());
-        //     rb3->SetLinearVelocity(Vector3(0, -9, 0));
-        //     rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-        //     // rb3->SetOrientation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(30.0f)));
-        //     rb3->SetAwake(true);
-        //     bone->AddControl(rb3);
-        //     PhysicsManager::GetInstance()->RegisterBody(rb3);
-        // }
+        for (auto bone : dragger->GetControl<SkeletonControl>(0)->GetBones()) {
+            if (bone->GetName() != "head") {
+                continue;
+            }
+            // bone->SetLocalRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(30.0f)));
+            std::vector<Entity*> parents;
+            Entity *object = bone;
+            while (object != dragger.get()) {
+                object = object->GetParent();
+                parents.push_back(object);
+            }
+            for (int i = parents.size() - 1; i >= 0; i--) {
+                parents[i]->UpdateTransform();
+            }
+            bone->UpdateTransform();
+            auto rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1.0)), physics::PhysicsMaterial(0.5));
+            rb3->SetPosition(bone->GetGlobalTranslation());
+            rb3->SetOrientation(bone->GetGlobalTransform().GetRotation());
+            // std::cout << "head trans : " << bone->GetGlobalTransform().GetTranslation() << "\n";
+            // rb3->SetLinearVelocity(Vector3(0, -9, 0));
+            rb3->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+            rb3->SetRenderDebugBoundingBox(true);
+            // rb3->SetOrientation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(30.0f)));
+            rb3->SetAwake(true);
+            bone->AddControl(rb3);
+            PhysicsManager::GetInstance()->RegisterBody(rb3);
+        }
 
         // dragger->GetControl<SkeletonControl>(0)->GetBone("head")->SetOffsetTranslation(Vector3(5.0));
 
@@ -357,15 +389,15 @@ public:
 
         // InitPhysicsTests();
 
-        auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
-        plane_rigid_body->SetAwake(false);
-        PhysicsManager::GetInstance()->RegisterBody(plane_rigid_body);
+        // auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
+        // plane_rigid_body->SetAwake(false);
+        // PhysicsManager::GetInstance()->RegisterBody(plane_rigid_body);
 
         const auto brdf_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/brdfLUT.png");
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3((x * 6) + 6, 160, z * 6);
+                Vector3 box_position = Vector3((x * 6) + 6, 250, z * 6);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
                 box->GetChild(0)->GetRenderable()->SetShader(shader);
 
@@ -390,15 +422,14 @@ public:
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
 
-                if (x == 0 && z == 0) {
-                auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.25)), 0.01);
+                auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.5)), 0.1);
                 rigid_body->SetPosition(box_position);
-                rigid_body->SetLinearVelocity(Vector3(0, -1, 0));
+                // rigid_body->SetLinearVelocity(Vector3(0, -5, 0));
                 rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
                 rigid_body->SetAwake(true);
                 box->AddControl(rigid_body);
+                box->AddControl(std::make_shared<BoundingBoxControl>());
                 PhysicsManager::GetInstance()->RegisterBody(rigid_body);
-                }
             }
         }
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);

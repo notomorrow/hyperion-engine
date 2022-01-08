@@ -39,8 +39,9 @@ void Bone::StoreBindingPose()
 
 void Bone::SetToBindingPose()
 {
-    m_local_rotation = Quaternion::Identity();
-    m_local_translation = Vector3::Zero();
+    m_local_rotation = bind_rot;
+    std::cout << GetName() << " reset rotation to " << m_local_rotation << "\n";
+    m_local_translation = bind_pos;
 
     pose_pos = bind_pos;
     pose_rot = bind_rot;
@@ -94,12 +95,25 @@ const Matrix4 &Bone::GetBoneMatrix() const
 
 void Bone::UpdateTransform()
 {
-    Vector3 tmp_pos = global_bone_pos * -1;
+    Matrix4 scale_matrix, tmp_scale;
+
+    if (m_parent != nullptr) {
+        MatrixUtil::ToScaling(tmp_scale, m_parent->GetGlobalTransform().GetScale());
+        scale_matrix *= tmp_scale;
+    }
+
+    MatrixUtil::ToScaling(tmp_scale, m_local_scale);
+    scale_matrix *= tmp_scale;
+ 
+    Vector3 tmp_pos = (global_bone_pos) * -1;
 
     Matrix4 rot_matrix;
     MatrixUtil::ToTranslation(rot_matrix, tmp_pos);
 
-    Quaternion tmp_rot = global_bone_rot * pose_rot * user_rot * inv_bind_rot;
+    Quaternion tmp_rot = global_bone_rot * pose_rot * GetOffsetRotation() * inv_bind_rot;
+
+    std::cout << GetName() << " bind_rot = " << bind_rot << "\n";
+    std::cout << GetName() << " GetOffsetRotation() = " << GetOffsetRotation() << "\n";
 
     Matrix4 tmp_matrix;
     MatrixUtil::ToRotation(tmp_matrix, tmp_rot);
@@ -112,10 +126,10 @@ void Bone::UpdateTransform()
     MatrixUtil::ToTranslation(tmp_matrix, pose_pos);
     rot_matrix *= tmp_matrix;
 
-    MatrixUtil::ToTranslation(tmp_matrix, user_pos);
+    MatrixUtil::ToTranslation(tmp_matrix, GetOffsetTranslation());
     rot_matrix *= tmp_matrix;
 
-    bone_matrix = rot_matrix * m_offset_transform.GetMatrix();
+    bone_matrix = rot_matrix;
 
     Bone *parent_bone;
     if (m_parent != nullptr) {
@@ -125,12 +139,7 @@ void Bone::UpdateTransform()
         }
     }
 
-    m_local_rotation = bind_rot * pose_rot * user_rot;
-    m_local_translation = bind_pos + pose_pos + user_pos;
-
     Entity::UpdateTransform();
-
-    // m_global_transform *= m_offset_transform;
 }
 
 std::shared_ptr<Loadable> Bone::Clone()
@@ -146,13 +155,15 @@ std::shared_ptr<Bone> Bone::CloneImpl()
     new_bone->bind_pos = bind_pos;
     new_bone->inv_bind_pos = inv_bind_pos;
     new_bone->pose_pos = pose_pos;
-    new_bone->user_pos = user_pos;
+    new_bone->m_local_translation = m_local_translation;
 
     new_bone->global_bone_rot = global_bone_rot;
     new_bone->bind_rot = bind_rot;
     new_bone->inv_bind_rot = inv_bind_rot;
     new_bone->pose_rot = pose_rot;
-    new_bone->user_rot = user_rot;
+    new_bone->m_local_rotation = m_local_rotation;
+
+    new_bone->m_local_scale = m_local_scale;
 
     new_bone->bone_matrix = bone_matrix;
     new_bone->current_pose = current_pose;

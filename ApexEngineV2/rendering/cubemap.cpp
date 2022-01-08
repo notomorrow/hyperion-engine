@@ -41,7 +41,6 @@ void Cubemap::Use()
 
     if (!is_uploaded) {
         //Our image for the mipmap with pair level and red color
-        std::cout << "here" << std::flush;
         unsigned char imageArray2[1024*1024*3];
         for(int i = 0; i < 1024*1024*3; i++){
             if(i%3 == 0)

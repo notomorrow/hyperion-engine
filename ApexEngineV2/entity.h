@@ -37,19 +37,19 @@ public:
         SetAABBUpdateFlag();
     }
 
-    inline void SetGlobalTranslation(const Vector3 &translation)
-    {
-        if (m_parent == nullptr) {
-            SetLocalTranslation(translation);
+    inline const Vector3 &GetGlobalTranslation() const { return m_global_transform.GetTranslation(); }
+    void SetGlobalTranslation(const Vector3 &translation);
 
-            return;
-        }
-
-        m_local_translation = translation - m_parent->GetGlobalTransform().GetTranslation();
-
+    inline const Quaternion &GetLocalRotation() const { return m_local_rotation; }
+    inline void SetLocalRotation(const Quaternion &rotation) 
+    { 
+        m_local_rotation = rotation;
         SetTransformUpdateFlag();
         SetAABBUpdateFlag();
     }
+
+    inline const Quaternion &GetGlobalRotation() const { return m_global_transform.GetRotation(); }
+    void SetGlobalRotation(const Quaternion &rotation);
 
     inline const Vector3 &GetLocalScale() const { return m_local_scale; }
     inline void SetLocalScale(const Vector3 &scale) 
@@ -59,13 +59,8 @@ public:
         SetAABBUpdateFlag();
     }
 
-    inline const Quaternion &GetLocalRotation() const { return m_local_rotation; }
-    inline void SetLocalRotation(const Quaternion &rotation) 
-    { 
-        m_local_rotation = rotation;
-        SetTransformUpdateFlag();
-        SetAABBUpdateFlag();
-    }
+    inline const Vector3 &GetGlobalScale() const { return m_global_transform.GetScale(); }
+    void SetGlobalScale(const Vector3 &scale);
 
     inline const Transform &GetGlobalTransform() const { return m_global_transform; }
 

@@ -33,6 +33,16 @@ void PhysicsManager::RunPhysics(double dt)
     // gather collisions
     std::vector<physics::CollisionInfo> collisions;
 
+    for (auto &body : m_bodies) {
+        if (body == nullptr) {
+            continue;
+        }
+
+        if (body->IsAwake() && !body->IsStatic()) {
+            body->ApplyForce(Environment::GetInstance()->GetGravity() * body->GetPhysicsMaterial().GetMass());
+        }
+    }
+
     for (size_t i = 0; i < m_bodies.size(); i++) {
         physics::RigidBody *a = m_bodies[i].get();
 
@@ -120,7 +130,6 @@ void PhysicsManager::RunPhysics(double dt)
 
     for (auto &body : m_bodies) {
         if (body->IsAwake() && !body->IsStatic()) {
-            body->ApplyForce(Environment::GetInstance()->GetGravity() * body->GetPhysicsMaterial().GetMass() * dt);
             body->Integrate(dt);
         }
     }

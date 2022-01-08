@@ -5,11 +5,13 @@
 #include "../math/vector3.h"
 
 namespace apex {
+class BoundingBox;
 namespace physics {
 
 class BoxPhysicsShape : public PhysicsShape {
 public:
     BoxPhysicsShape(const Vector3 &dimensions);
+    BoxPhysicsShape(const BoundingBox &aabb);
     BoxPhysicsShape(const BoxPhysicsShape &other);
 
     inline const Vector3 &GetDimensions() const { return m_dimensions; }
