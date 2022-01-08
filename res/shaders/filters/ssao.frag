@@ -2,10 +2,10 @@
 #version 330 core
 precision highp float;
 
-uniform sampler2D u_colorMap;
-uniform sampler2D u_normalMap;
-uniform sampler2D u_positionMap;
-uniform sampler2D u_depthMap;
+uniform sampler2D ColorMap;
+uniform sampler2D NormalMap;
+uniform sampler2D PositionMap;
+uniform sampler2D DepthMap;
 
 uniform vec3 u_kernel[$KERNEL_SIZE];
 
@@ -31,7 +31,7 @@ vec4 getViewPos(vec2 texCoord)
 	float y = texCoord.t * 2.0 - 1.0;
 
 	// Assume we have a normal depth range between 0.0 and 1.0
-	float z = texture(u_depthMap, texCoord).r * 2.0 - 1.0;
+	float z = texture(DepthMap, texCoord).r * 2.0 - 1.0;
 
 	vec4 posProj = vec4(x, y, z, 1.0);
 
@@ -46,11 +46,13 @@ void main(void)
 {
 	// Calculate out of the current fragment in screen space the view space position.
 
+	float scale = 0.25;
+
 	vec4 posView = getViewPos(v_texcoord0);
 
 	// Normal gathering.
 
-	vec3 normalView = normalize(texture(u_normalMap, v_texcoord0).xyz * 2.0 - 1.0);
+	vec3 normalView = normalize(texture(NormalMap, v_texcoord0).xyz * 2.0 - 1.0);
 
 	// Calculate the rotation matrix for the kernel.
 
@@ -73,7 +75,7 @@ void main(void)
 	for (int i = 0; i < int($KERNEL_SIZE); i++)
 	{
 		// Reorient sample vector in view space ...
-		vec3 sampleVectorView = kernelMatrix * u_kernel[i];
+		vec3 sampleVectorView = kernelMatrix * u_kernel[i] * scale;
 
 		// ... and calculate sample point.
 		vec4 samplePointView = posView + u_radius * vec4(sampleVectorView, 0.0);
@@ -90,7 +92,7 @@ void main(void)
 
 		// Get sample out of depth texture
 
-		float zSceneNDC = texture(u_depthMap, samplePointTexCoord).r * 2.0 - 1.0;
+		float zSceneNDC = texture(DepthMap, samplePointTexCoord).r * 2.0 - 1.0;
 
 		float delta = samplePointNDC.z - zSceneNDC;
 
@@ -105,5 +107,5 @@ void main(void)
 	// No occlusion gets white, full occlusion gets black.
 	occlusion = min(max(1.0 - ((occlusion / float($KERNEL_SIZE))), 0.0), 1.0);
 
-	output0 = vec4(texture(u_colorMap, v_texcoord0).rgb * vec3(occlusion), 1.0);
+	output0 = vec4(texture(ColorMap, v_texcoord0).rgb * vec3(occlusion), 1.0);
 }

@@ -319,7 +319,7 @@ public:
         box_node->SetRenderable(MeshFactory::CreateCube());
         box_node->SetLocalScale(20);
         box_node->UpdateTransform();
-        auto rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(box_node->GetAABB()), physics::PhysicsMaterial(0.0));
+        auto rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1.0)), physics::PhysicsMaterial(0.0));
         rb4->SetPosition(Vector3(6, 110, 6));
         rb4->SetRenderDebugBoundingBox(true);
         // rb4->SetAwake(false);
