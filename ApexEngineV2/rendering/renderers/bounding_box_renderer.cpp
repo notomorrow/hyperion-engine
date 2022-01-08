@@ -2,7 +2,7 @@
 #include "../shaders/shader_code.h"
 
 namespace apex {
-const std::vector<uint32_t> BoundingBoxRenderer::indices = {
+const std::vector<size_t> BoundingBoxRenderer::indices = {
     0, 1, 1, 2, 2, 3,
     3, 0, 0, 4, 4, 5,
     5, 3, 5, 6, 6, 7,
