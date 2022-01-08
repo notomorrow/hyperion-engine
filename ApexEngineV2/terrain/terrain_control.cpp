@@ -9,10 +9,10 @@ static int num_threads = 0;
 
 TerrainControl::TerrainControl(Camera *camera)
     : m_camera(camera),
-      m_scale(2.0, 1.0, 2.0),
+      m_scale(20.0, 14.0, 20.0),
       m_tick(0),
       m_queuetick(0),
-      m_max_distance(5.0)
+      m_max_distance(4.0)
 {
 }
 
@@ -128,7 +128,9 @@ void TerrainControl::AddChunk(int x, int z)
 
     if (chunk == nullptr) {
         auto lambda = [this, x, z]() {
+#if TERRAIN_MULTITHREADED
             num_threads++;
+#endif
 
             ChunkInfo height_info(Vector2(x, z), m_scale);
             height_info.m_length = m_chunk_size;
@@ -142,11 +144,15 @@ void TerrainControl::AddChunk(int x, int z)
                 throw "chunk was nullptr";
             }
 
+#if TERRAIN_MULTITHREADED
             terrain_mtx.lock();
             m_chunks.push_back(new_chunk);
             terrain_mtx.unlock();
 
             num_threads--;
+#else
+            m_chunks.push_back(new_chunk);
+#endif
         };
 
 #if TERRAIN_MULTITHREADED

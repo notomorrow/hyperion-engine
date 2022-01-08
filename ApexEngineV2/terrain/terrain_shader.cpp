@@ -33,7 +33,7 @@ TerrainShader::TerrainShader(const ShaderProperties &properties)
 
 void TerrainShader::ApplyMaterial(const Material &mat)
 {
-    int texture_index = 0;
+    int texture_index = 1;
 
     auto *env = Environment::GetInstance();
     if (env->ShadowsEnabled()) {
@@ -51,39 +51,39 @@ void TerrainShader::ApplyMaterial(const Material &mat)
 
     env->GetSun().Bind(0, this);
 
-    if (mat.texture0 != nullptr) {
-        Texture::ActiveTexture(texture_index);
-        mat.texture0->Use();
-        SetUniform("terrainTexture0", texture_index);
-        SetUniform("terrainTexture0Scale", 40.0f);
+    // if (mat.texture0 != nullptr) {
+    //     Texture::ActiveTexture(texture_index);
+    //     mat.texture0->Use();
+    //     SetUniform("terrainTexture0", texture_index);
+    //     SetUniform("terrainTexture0Scale", 40.0f);
 
-        texture_index++;
-    }
+    //     texture_index++;
+    // }
 
-    if (mat.normals0 != nullptr) {
-        Texture::ActiveTexture(texture_index);
-        mat.normals0->Use();
-        SetUniform("terrainTexture0Normal", texture_index);
+    // if (mat.normals0 != nullptr) {
+    //     Texture::ActiveTexture(texture_index);
+    //     mat.normals0->Use();
+    //     SetUniform("terrainTexture0Normal", texture_index);
 
-        texture_index++;
-    }
+    //     texture_index++;
+    // }
 
-    if (mat.texture1 != nullptr) {
-        Texture::ActiveTexture(texture_index);
-        mat.texture1->Use();
-        SetUniform("slopeTexture", texture_index);
-        SetUniform("slopeTextureScale", 20.0f);
+    // if (mat.texture1 != nullptr) {
+    //     Texture::ActiveTexture(texture_index);
+    //     mat.texture1->Use();
+    //     SetUniform("slopeTexture", texture_index);
+    //     SetUniform("slopeTextureScale", 20.0f);
 
-        texture_index++;
-    }
+    //     texture_index++;
+    // }
 
-    if (mat.normals1 != nullptr) {
-        Texture::ActiveTexture(texture_index);
-        mat.normals1->Use();
-        SetUniform("slopeTextureNormal", texture_index);
+    // if (mat.normals1 != nullptr) {
+    //     Texture::ActiveTexture(texture_index);
+    //     mat.normals1->Use();
+    //     SetUniform("slopeTextureNormal", texture_index);
 
-        texture_index++;
-    }
+    //     texture_index++;
+    // }
 
     if (auto cubemap = env->GetGlobalCubemap()) {
         Texture::ActiveTexture(texture_index);
@@ -93,10 +93,19 @@ void TerrainShader::ApplyMaterial(const Material &mat)
         texture_index++;
     }
 
-    if (mat.texture2 != nullptr) {
+    // if (mat.texture2 != nullptr) {
+    //     Texture::ActiveTexture(texture_index);
+    //     mat.texture2->Use();
+    //     SetUniform("u_brdfMap", texture_index);
+
+    //     texture_index++;
+    // }
+
+    for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
         Texture::ActiveTexture(texture_index);
-        mat.texture2->Use();
-        SetUniform("u_brdfMap", texture_index);
+        it->second->Use();
+        SetUniform(it->first, texture_index);
+        SetUniform(std::string("Has") + it->first, 1);
 
         texture_index++;
     }

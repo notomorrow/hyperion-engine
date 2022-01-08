@@ -15,4 +15,14 @@ std::shared_ptr<Loadable> TextLoader::LoadFromFile(const std::string &filepath)
 
     return std::make_shared<LoadedText>(buffer.str());
 }
+
+std::shared_ptr<Loadable> TextLoader::LoadedText::Clone()
+{
+    return CloneImpl();
+}
+
+std::shared_ptr<TextLoader::LoadedText> TextLoader::LoadedText::CloneImpl()
+{
+    return std::make_shared<LoadedText>(text);
+}
 }

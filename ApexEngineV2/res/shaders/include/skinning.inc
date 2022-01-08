@@ -1,5 +1,5 @@
-attribute vec4 a_boneweights;
-attribute vec4 a_boneindices;
+in vec4 a_boneweights;
+in vec4 a_boneindices;
 
 uniform mat4 Bone[$NUM_BONES];
 

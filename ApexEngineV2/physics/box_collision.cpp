@@ -78,6 +78,7 @@ bool BoxCollision::TryAxis(const BoxPhysicsShape &a, const BoxPhysicsShape &b,
     if (axis.LengthSquared() < MathUtil::EPSILON) {
         return true;
     }
+
     axis.Normalize();
 
     double penetration = PenetrationOnAxis(a, b, axis, to_center);

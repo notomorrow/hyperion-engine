@@ -1,6 +1,7 @@
 #include "glfw_engine.h"
 #include "game.h"
 #include "input_manager.h"
+#include "util.h"
 #include "math/math_util.h"
 
 #include <iostream>
@@ -35,9 +36,22 @@ bool GlfwEngine::InitializeGame(Game *game)
     if (!glfwInit()) {
         return false;
     }
+    // glfwWindowHint(GLFW_SAMPLES, 4);
 
-    window = glfwCreateWindow(game->GetWindow().width, game->GetWindow().height,
-        game->GetWindow().title.c_str(), NULL, NULL);
+#if __APPLE__
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+    window = glfwCreateWindow(
+        game->GetRenderer()->GetRenderWindow().width,
+        game->GetRenderer()->GetRenderWindow().height,
+        game->GetRenderer()->GetRenderWindow().title.c_str(),
+        nullptr,
+        nullptr
+    );
 
     if (!window) {
         glfwTerminate();
@@ -47,29 +61,57 @@ bool GlfwEngine::InitializeGame(Game *game)
     glfwSetKeyCallback(window, KeyCallback);
     glfwMakeContextCurrent(window);
 
+    Vector2 render_scale(Vector2::One()), prev_render_scale = game->GetRenderer()->GetRenderWindow().GetScale();
+
+    //render_scale = Vector2::Max(render_scale, Vector2::One());
+
+#ifdef USE_GLEW
     if (glewInit() != GLEW_OK) {
-        //throw std::exception("error initializing glew");
+        throw "error initializing glew";
     }
+#endif
 
     glfwSwapInterval(1);
-    // glEnable(GL_FRAMEBUFFER_SRGB);
+
+    glClearDepth(1.0);
+    glDepthMask(true);
     glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
     glEnable(GL_DEPTH_TEST);
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glCullFace(GL_BACK);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+
+    if (!glfwWindowShouldClose(window)) {
+        glfwGetWindowContentScale(
+            window,
+            &render_scale.GetX(),
+            &render_scale.GetY()
+        );
+
+        glfwGetWindowSize(
+            window,
+            &game->GetRenderer()->GetRenderWindow().width,
+            &game->GetRenderer()->GetRenderWindow().height
+        );
+        
+        game->GetRenderer()->GetRenderWindow().SetScale(Vector2::Max(render_scale, Vector2::One()));
+
+        prev_render_scale = render_scale;
+    }
+
 
     game->Initialize();
 
     inputmgr = game->GetInputManager();
 
 #if USE_CHRONO
-    auto last = std::chrono::high_resolution_clock::now();
+    auto last = std::chrono::steady_clock::now();
 #else
     double last = 0.0;
 #endif
     while (!glfwWindowShouldClose(window)) {
 #if USE_CHRONO
-        auto current = std::chrono::high_resolution_clock::now();
+        auto current = std::chrono::steady_clock::now();
         auto delta = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(current - last).count();
 #else
         double current = glfwGetTime();
@@ -78,13 +120,33 @@ bool GlfwEngine::InitializeGame(Game *game)
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glfwGetWindowSize(window, &game->GetWindow().width, &game->GetWindow().height);
+
+        glfwGetWindowContentScale(
+            window,
+            &render_scale.GetX(),
+            &render_scale.GetY()
+        );
+
+        glfwGetWindowSize(
+            window,
+            &game->GetRenderer()->GetRenderWindow().width,
+            &game->GetRenderer()->GetRenderWindow().height
+        );
+
+        if (prev_render_scale != render_scale) {
+            game->GetRenderer()->GetRenderWindow().SetScale(Vector2::Max(render_scale, Vector2::One()));
+
+            prev_render_scale = render_scale;
+        }
 
         double mouse_x, mouse_y;
+
         glfwGetCursorPos(window, &mouse_x, &mouse_y);
+
         game->GetInputManager()->MouseMove(
-            MathUtil::Clamp<double>(mouse_x, 0, game->GetWindow().width),
-            MathUtil::Clamp<double>(mouse_y, 0, game->GetWindow().height));
+            MathUtil::Clamp<double>(mouse_x, 0, game->GetRenderer()->GetRenderWindow().width),
+            MathUtil::Clamp<double>(mouse_y, 0, game->GetRenderer()->GetRenderWindow().height)
+        );
 
         game->Logic(delta);
         game->Render();
@@ -98,6 +160,15 @@ bool GlfwEngine::InitializeGame(Game *game)
     glfwDestroyWindow(window);
     glfwTerminate();
     return true;
+}
+
+void GlfwEngine::SetCursorLocked(bool locked)
+{
+    if (locked) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    } else {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
 }
 
 void GlfwEngine::Viewport(int x, int y, size_t width, size_t height)
@@ -155,6 +226,21 @@ void GlfwEngine::BindBuffer(int target, unsigned int buffer)
 void GlfwEngine::BufferData(int target, size_t size, const void *data, int usage)
 {
     glBufferData(target, size, data, usage);
+}
+
+void GlfwEngine::BufferSubData(int target, size_t offset, size_t size, const void *data)
+{
+    glBufferSubData(target, offset, size, data);
+}
+
+void GlfwEngine::BindVertexArray(unsigned int target)
+{
+    glBindVertexArray(target);
+}
+
+void GlfwEngine::GenVertexArrays(size_t size, unsigned int *arrays)
+{
+    glGenVertexArrays(size, arrays);
 }
 
 void GlfwEngine::EnableVertexAttribArray(unsigned int index)
@@ -235,7 +321,7 @@ void GlfwEngine::BindFramebuffer(int target, unsigned int framebuffer)
 
 void GlfwEngine::FramebufferTexture(int target, int attachment, unsigned int texture, int level)
 {
-    glFramebufferTexture(target, attachment, texture, level);
+    glFramebufferTexture2D(target, attachment, GL_TEXTURE_2D, texture, level);
 }
 
 void GlfwEngine::DrawBuffers(size_t n, const unsigned int *bufs)
@@ -371,6 +457,16 @@ void GlfwEngine::Uniform4i(int location, int v0, int v1, int v2, int v3)
 void GlfwEngine::UniformMatrix4fv(int location, int count, bool transpose, const float *value)
 {
     glUniformMatrix4fv(location, count, transpose, value);
+}
+
+void GlfwEngine::VertexAttribDivisor(unsigned int index, unsigned int divisor)
+{
+    glVertexAttribDivisor(index, divisor);
+}
+
+void GlfwEngine::DrawArraysInstanced(int mode, int first, size_t count, size_t primcount)
+{
+    glDrawArraysInstanced(mode, first, count, primcount);
 }
 
 } // namespace apex

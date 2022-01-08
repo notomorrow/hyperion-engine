@@ -14,6 +14,8 @@ public:
     static CoreEngine *GetInstance();
     static void SetInstance(CoreEngine *ptr);
 
+    virtual ~CoreEngine() = default;
+
     /*enum GLEnums {
         DEPTH_BUFFER_BIT = 0x00000100,
         STENCIL_BUFFER_BIT = 0x00000400,
@@ -116,6 +118,7 @@ public:
     };*/
 
     virtual bool InitializeGame(Game *game) = 0;
+    virtual void SetCursorLocked(bool locked) = 0;
     virtual void Viewport(int x, int y, size_t width, size_t height) = 0;
     virtual void Clear(int mask) = 0;
     virtual void SetMousePosition(double x, double y) = 0;
@@ -127,6 +130,9 @@ public:
     virtual void DeleteBuffers(size_t count, unsigned int *buffers) = 0;
     virtual void BindBuffer(int target, unsigned int buffer) = 0;
     virtual void BufferData(int target, size_t size, const void *data, int usage) = 0;
+    virtual void BufferSubData(int target, size_t offset, size_t size, const void *data) = 0;
+    virtual void BindVertexArray(unsigned int target) = 0;
+    virtual void GenVertexArrays(size_t size, unsigned int *arrays) = 0;
     virtual void EnableVertexAttribArray(unsigned int index) = 0;
     virtual void DisableVertexAttribArray(unsigned int index) = 0;
     virtual void VertexAttribPointer(unsigned int index, int size, int type, bool normalized, size_t stride, void *ptr) = 0;
@@ -171,6 +177,8 @@ public:
     virtual void Uniform3i(int location, int v0, int v1, int v2) = 0;
     virtual void Uniform4i(int location, int v0, int v1, int v2, int v3) = 0;
     virtual void UniformMatrix4fv(int location, int count, bool transpose, const float *value) = 0;
+    virtual void VertexAttribDivisor(unsigned int index, unsigned int divisor) = 0;
+    virtual void DrawArraysInstanced(int mode, int first, size_t count, size_t primcount) = 0;
 
 private:
     static CoreEngine *instance;

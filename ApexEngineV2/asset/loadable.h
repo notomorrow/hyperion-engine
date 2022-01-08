@@ -12,7 +12,7 @@ public:
     inline const std::string &GetFilePath() const { return m_filepath; }
     inline void SetFilePath(const std::string &filepath) { m_filepath = filepath; }
 
-    virtual std::shared_ptr<Loadable> Clone() { return nullptr; };// = 0;
+    virtual std::shared_ptr<Loadable> Clone() { return nullptr; };
 
 private:
     std::string m_filepath;

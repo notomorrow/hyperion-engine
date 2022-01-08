@@ -4,7 +4,7 @@
 #include <cmath>
 #include <iostream>
 
-#include "math_util.h"
+#include "../hash_code.h"
 #include "matrix3.h"
 #include "matrix4.h"
 
@@ -75,6 +75,17 @@ public:
     static Vector3 UnitX();
     static Vector3 UnitY();
     static Vector3 UnitZ();
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(x);
+        hc.Add(y);
+        hc.Add(z);
+
+        return hc;
+    }
 };
 
 } // namespace apex
