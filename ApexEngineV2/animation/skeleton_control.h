@@ -17,7 +17,12 @@ public:
     SkeletonControl(std::shared_ptr<Shader> skinning_shader);
     virtual ~SkeletonControl() = default;
 
-    Bone *GetBone(size_t index);
+
+    inline std::vector<Bone*> &GetBones() { return bones; }
+    inline const std::vector<Bone*> &GetBones() const { return bones; }
+    inline Bone *GetBone(size_t index) { return bones[index]; }
+    inline const Bone *GetBone(size_t index) const { return bones[index]; }
+
     Bone *GetBone(const std::string &name);
 
     std::shared_ptr<Animation> GetAnimation(const std::string &name);

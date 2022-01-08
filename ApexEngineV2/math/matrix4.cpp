@@ -54,8 +54,6 @@ Matrix4 &Matrix4::Transpose()
 Matrix4 &Matrix4::Invert()
 {
     float det = Determinant();
-    assert(det != 0.0f);
-
     float inv_det = 1.0 / det;
 
     Matrix4 tmp;

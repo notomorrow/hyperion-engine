@@ -8,7 +8,7 @@
 namespace apex {
 
 std::string ShaderPreprocessor::ProcessShader(const std::string &code, 
-    const std::map<std::string, float> &defines, 
+    std::map<std::string, float> defines, 
     const std::string &path)
 {
     std::istringstream ss(code);
@@ -28,7 +28,7 @@ std::string ShaderPreprocessor::ProcessShader(const std::string &code,
 
 std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss, 
     std::streampos &pos,
-    const std::map<std::string, float> &defines,
+    std::map<std::string, float> &defines,
     const std::string &local_path)
 {
     std::string res;
@@ -38,7 +38,31 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
     while (std::getline(ss, line)) {
         line = StringUtil::Trim(line);
 
-        if (StringUtil::StartsWith(line, "#if !")) {
+        if (StringUtil::StartsWith(line, "#define $")) {
+            if (state) {
+                std::string val = line.substr(9);
+
+                const std::vector<std::string> components = StringUtil::Split(val, ' ');
+    
+                std::vector<std::string> new_components;
+                new_components.reserve(components.size());
+
+                for (const auto &item : components) {
+                    const auto trimmed = StringUtil::Trim(item);
+
+                    if (!trimmed.empty()) {
+                        new_components.push_back(trimmed);
+                    }
+                }
+
+                if (new_components.size() == 2) {
+                    // TODO: allow for defines of any type
+                    defines[new_components[0]] = std::stof(new_components[1]);
+                } else {
+                    res += "#error \"The `#define $` directive must be defined in the format: `#define $NAME value`\"\n";
+                }
+            }
+        } else if (StringUtil::StartsWith(line, "#if !")) {
             if (state) {
                 std::string val = line.substr(5);
                 auto it = defines.find(val);
@@ -81,17 +105,25 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
                     }
                 }
 
-                auto loaded = AssetManager::GetInstance()->
-                    LoadFromFile<TextLoader::LoadedText>(local_path + "/" + path);
+                const std::string include_path = local_path + "/" + path;
 
-                std::string relative_path(loaded->GetFilePath().substr(0,
-                    loaded->GetFilePath().find_last_of("\\/")));
-                if (!(StringUtil::Contains(relative_path, "/") ||
-                    StringUtil::Contains(relative_path, "\\"))) {
-                    relative_path.clear();
+                if (auto loaded = AssetManager::GetInstance()->
+                    LoadFromFile<TextLoader::LoadedText>(include_path)) {
+
+                    std::string relative_path(loaded->GetFilePath().substr(0,
+                        loaded->GetFilePath().find_last_of("\\/")));
+
+                    if (!(StringUtil::Contains(relative_path, "/") ||
+                        StringUtil::Contains(relative_path, "\\"))) {
+                        relative_path.clear();
+                    }
+
+                    res += ProcessShader(loaded->GetText(), defines, relative_path) + "\n";
+                } else {
+                    res += "#error \"The include could not be found at: ";
+                    res += include_path;
+                    res += "\"\n";
                 }
-
-                res += ProcessShader(loaded->GetText(), defines, relative_path) + "\n";
             }
         } else {
             if (state) {

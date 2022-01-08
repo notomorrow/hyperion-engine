@@ -10,6 +10,7 @@ namespace apex {
 class AudioManager {
 public:
     static AudioManager *GetInstance();
+    static void Deinitialize();
 
     AudioManager();
     ~AudioManager();

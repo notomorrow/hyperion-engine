@@ -13,6 +13,7 @@
 #include <memory>
 
 namespace apex {
+class BoundingBoxRenderer;
 namespace physics {
 class RigidBody : public EntityControl {
 public:
@@ -82,6 +83,9 @@ public:
 
     inline const BoundingBox &GetBoundingBox() const { return m_bounding_box; }
 
+    inline void SetRenderDebugBoundingBox(bool value) { m_render_debug_aabb = value; }
+    inline bool GetRenderDebugBoundingBox() const { return m_render_debug_aabb; }
+
     // updates the transform of the PhysicsShape within this object
     void UpdateTransform();
     // perform physics calculations on this rigidbody
@@ -107,6 +111,9 @@ private:
     Vector3 m_position;
     Quaternion m_orientation;
     BoundingBox m_bounding_box;
+    bool m_render_debug_aabb;
+    std::shared_ptr<BoundingBoxRenderer> m_aabb_renderer;
+    std::shared_ptr<Entity> m_aabb_debug_node;
 };
 } // namespace physics
 } // namespace apex

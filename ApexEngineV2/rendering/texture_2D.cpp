@@ -1,7 +1,6 @@
 #include "texture_2D.h"
-#include "../opengl.h"
+#include "../util.h"
 #include <cassert>
-#include <iostream>
 
 namespace apex {
 
@@ -32,14 +31,14 @@ void Texture2D::Use()
 {
     if (!is_created) {
         glGenTextures(1, &id);
+        CatchGLErrors("Failed to generate texture.", false);
+
         is_created = true;
     }
 
     glBindTexture(GL_TEXTURE_2D, id);
 
     if (!is_uploaded) {
-        //glEnable(GL_TEXTURE_2D);
-
         glTexParameteri(GL_TEXTURE_2D,
             GL_TEXTURE_MAG_FILTER, mag_filter);
         glTexParameteri(GL_TEXTURE_2D,
@@ -51,8 +50,14 @@ void Texture2D::Use()
 
         glTexImage2D(GL_TEXTURE_2D, 0, ifmt,
             width, height, 0, fmt, GL_UNSIGNED_BYTE, bytes);
+        CatchGLErrors("glTexImage2D failed.", false);
 
-        glGenerateMipmap(GL_TEXTURE_2D);
+        if (min_filter == GL_LINEAR_MIPMAP_LINEAR ||
+            min_filter == GL_LINEAR_MIPMAP_NEAREST ||
+            min_filter == GL_NEAREST_MIPMAP_NEAREST) {
+            glGenerateMipmap(GL_TEXTURE_2D);
+            CatchGLErrors("Failed to generate Texture2D mipmaps.", false);
+        }
 
         is_uploaded = true;
     }

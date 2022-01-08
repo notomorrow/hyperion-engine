@@ -1,5 +1,6 @@
 #include "vector4.h"
 #include "matrix_util.h"
+#include "math_util.h"
 #include "vector3.h"
 
 namespace apex {

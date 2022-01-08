@@ -41,6 +41,8 @@ public:
     void End();
 
 protected:
+    ShaderProperties properties;
+
     struct SubShader {
         int type;
         int id;
@@ -68,6 +70,8 @@ protected:
     };
 
     inline void AddSubShader(const SubShader &sub_shader) { subshaders.push_back(sub_shader); }
+
+    void ResetUniforms();
 
 private:
     bool is_uploaded, is_created, uniform_changed;

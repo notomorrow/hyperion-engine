@@ -3,9 +3,9 @@
 namespace apex {
 
 const char *ShaderCode::aabb_debug_vs =
-    "#version 330\n"
-    "attribute vec3 a_position;"
-    "varying vec4 v_position;"
+    "#version 330 core\n"
+    "layout(location = 0) in vec3 a_position;"
+    "out vec4 v_position;"
     "uniform mat4 u_modelMatrix;"
     "uniform mat4 u_viewMatrix;"
     "uniform mat4 u_projMatrix;"
@@ -15,10 +15,11 @@ const char *ShaderCode::aabb_debug_vs =
     "}";
 
 const char *ShaderCode::aabb_debug_fs =
-    "#version 330\n"
-    "varying vec4 v_position;"
+    "#version 330 core\n"
+    "layout(location = 0) out vec4 output0;"
+    "in vec4 v_position;"
     "void main() {"
-    "    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);"
+    "    output0 = vec4(0.0, 1.0, 0.0, 1.0);"
     "}";
 
 } // namespace apex

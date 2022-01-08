@@ -1,5 +1,5 @@
 #include "vector2.h"
-
+#include "math_util.h"
 namespace apex {
 
 Vector2::Vector2()

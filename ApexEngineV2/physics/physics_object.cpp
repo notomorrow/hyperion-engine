@@ -3,7 +3,7 @@
 namespace apex {
 PhysicsObject::PhysicsObject(const std::string &tag, 
     double mass, double restitution, PhysicsShape shape)
-    : tag(tag), mass(mass), restitution(restitution), shape(shape), grounded(false), gravity(0, -5, 0)
+    : tag(tag), mass(mass), restitution(restitution), shape(shape), grounded(false), gravity(0, -1, 0)
 {
 }
 
