@@ -10,7 +10,7 @@ public:
     SSAOShader(const ShaderProperties &properties);
     virtual ~SSAOShader() = default;
 
-    virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
+    virtual void ApplyTransforms(const Transform &transform, Camera *camera);
 };
 
 } // namespace apex

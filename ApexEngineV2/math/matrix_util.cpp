@@ -10,6 +10,11 @@ void MatrixUtil::ToTranslation(Matrix4 &mat, const Vector3 &translation)
     mat(2, 3) = translation.z;
 }
 
+Vector3 MatrixUtil::ExtractTranslation(const Matrix4 &mat)
+{
+    return Vector3(mat(0, 3), mat(1, 3), mat(2, 3));
+}
+
 void MatrixUtil::ToRotation(Matrix4 &mat, const Quaternion &rotation)
 {
     float xx = rotation.x * rotation.x;

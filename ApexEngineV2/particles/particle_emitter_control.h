@@ -13,7 +13,7 @@
 namespace apex {
 class ParticleEmitterControl : public EntityControl {
 public:
-    ParticleEmitterControl(Camera *camera);
+    ParticleEmitterControl(Camera *camera, const ParticleConstructionInfo &info);
 
     void ResetParticle(Particle &particle);
 
@@ -24,7 +24,8 @@ public:
 private:
     Camera *m_camera;
     std::vector<Particle> m_particles;
-    ParticleRenderer *m_renderer;
+    std::shared_ptr<Entity> m_entity;
+    std::shared_ptr<ParticleRenderer> m_particle_renderer;
 };
 } // namespace apex
 

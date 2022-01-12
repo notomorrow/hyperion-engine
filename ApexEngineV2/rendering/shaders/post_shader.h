@@ -10,7 +10,7 @@ public:
     virtual ~PostShader() = default;
 
     virtual void ApplyMaterial(const Material &mat);
-    virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera) = 0;
+    virtual void ApplyTransforms(const Transform &transform, Camera *camera) = 0;
 };
 } // namespace apex
 

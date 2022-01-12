@@ -2,6 +2,7 @@
 
 uniform float u_shininess;
 uniform float u_roughness;
+uniform float RimShading;
 
 uniform int HasDiffuseMap;
 uniform vec4 u_diffuseColor;

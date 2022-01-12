@@ -9,7 +9,7 @@ SSAOShader::SSAOShader(const ShaderProperties &properties)
 {
     const std::string fs_path("res/shaders/filters/ssao.frag");
 
-    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path
@@ -17,7 +17,7 @@ SSAOShader::SSAOShader(const ShaderProperties &properties)
     ));
 }
 
-void SSAOShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
+void SSAOShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     Shader::ApplyTransforms(transform, camera);
 }

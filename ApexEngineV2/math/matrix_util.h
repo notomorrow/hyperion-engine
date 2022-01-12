@@ -10,6 +10,7 @@ namespace apex {
 class MatrixUtil {
 public:
     static void ToTranslation(Matrix4 &mat, const Vector3 &translation);
+    static Vector3 ExtractTranslation(const Matrix4 &mat);
     static void ToRotation(Matrix4 &mat, const Quaternion &rotation);
     static void ToRotation(Matrix4 &mat, const Vector3 &axis, float radians);
     static void ToScaling(Matrix4 &mat, const Vector3 &scale);

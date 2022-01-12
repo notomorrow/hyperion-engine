@@ -10,7 +10,7 @@ public:
     GammaCorrectShader(const ShaderProperties &properties);
     virtual ~GammaCorrectShader() = default;
 
-    virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
+    virtual void ApplyTransforms(const Transform &transform, Camera *camera);
 };
 
 } // namespace apex

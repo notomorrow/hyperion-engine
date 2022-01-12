@@ -1,22 +1,30 @@
-#include "post_shader.h"
-#include "../../asset/asset_manager.h"
-#include "../../asset/text_loader.h"
-#include "../../util/shader_preprocessor.h"
+#include "ui_object_shader.h"
+#include "../../../asset/asset_manager.h"
+#include "../../../asset/text_loader.h"
+#include "../../../util/shader_preprocessor.h"
 
 namespace apex {
-PostShader::PostShader(const ShaderProperties &properties)
+UIObjectShader::UIObjectShader(const ShaderProperties &properties)
     : Shader(properties)
 {
-    const std::string vs_path("res/shaders/post.vert");
+    const std::string vs_path("res/shaders/ui/ui_object.vert");
 
     AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_VERTEX,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
         ));
+
+    const std::string fs_path("res/shaders/ui/ui_object.frag");
+
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
+        ShaderPreprocessor::ProcessShader(
+            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
+            properties, fs_path)
+        ));
 }
 
-void PostShader::ApplyMaterial(const Material &mat)
+void UIObjectShader::ApplyMaterial(const Material &mat)
 {
     int texture_index = 1;
 
@@ -67,5 +75,34 @@ void PostShader::ApplyMaterial(const Material &mat)
 
     //glDepthMask(false);
     //glDisable(GL_DEPTH_TEST);
+}
+
+void UIObjectShader::ApplyTransforms(const Transform &transform, Camera *camera)
+{
+    Shader::ApplyTransforms(transform, camera);
+
+    Transform model_2d;
+    
+    Vector2 screen_scale(1.0f / camera->GetWidth(), 1.0f / camera->GetHeight());
+    model_2d.SetScale(Vector3(
+        screen_scale.x * transform.GetScale().x,
+        screen_scale.y * transform.GetScale().y,
+        1.0
+    ));
+
+    model_2d.SetTranslation(transform.GetTranslation());
+
+    // model_2d.SetTranslation(Vector3(
+    //     ((transform.GetTranslation().x * screen_scale.x) + (model_2d.GetScale().x / 2.0)),
+    //     ((transform.GetTranslation().y * screen_scale.y) + (model_2d.GetScale().y / 2.0)),
+    //     0.0
+    // ));
+
+    // model_2d.SetRotation(transform.GetRotation());
+
+    Vector2 viewport(camera->GetWidth(), camera->GetHeight());
+
+    SetUniform("Viewport", viewport);
+    SetUniform("u_modelMatrix", model_2d.GetMatrix());
 }
 } // namespace apex

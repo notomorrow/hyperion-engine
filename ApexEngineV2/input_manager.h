@@ -94,16 +94,17 @@ enum KeyboardKey {
 class InputEvent {
 public:
     InputEvent();
-    InputEvent(std::function<void()> handler, bool is_up_evt = false);
+    InputEvent(std::function<void(bool)> handler);
     InputEvent(const InputEvent &other);
 
-    inline bool IsEmpty() const { return is_empty; }
-    inline bool IsUpEvent() const { return is_up_evt; }
-    inline void Trigger() { handler(); }
+    inline bool IsEmpty() const { return m_is_empty; }
+    inline void Trigger(bool pressed) { m_handler(pressed); }
+
+    inline void SetHandler(const std::function<void(bool)> &handler) { m_handler = handler; }
 
 private:
-    bool is_up_evt, is_empty;
-    std::function<void()> handler;
+    bool m_is_empty;
+    std::function<void(bool)> m_handler;
 };
 
 class InputManager {

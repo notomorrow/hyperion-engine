@@ -7,6 +7,7 @@ BoundingBoxControl::BoundingBoxControl()
     m_bounding_box_renderer.reset(new BoundingBoxRenderer());
 
     m_entity.reset(new Entity("AABB"));
+    m_entity->SetAABBAffectsParent(false);
     m_entity->SetRenderable(m_bounding_box_renderer);
 }
 

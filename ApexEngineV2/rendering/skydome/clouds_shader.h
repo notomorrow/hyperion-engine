@@ -12,7 +12,7 @@ public:
     virtual ~CloudsShader() = default;
 
     virtual void ApplyMaterial(const Material &mat);
-    virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
+    virtual void ApplyTransforms(const Transform &transform, Camera *camera);
 
     void SetCloudColor(const Vector4 &cloud_color);
     void SetGlobalTime(float global_time);

@@ -12,13 +12,13 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
     const std::string vs_path("res/shaders/skydome.vert");
     const std::string fs_path("res/shaders/skydome.frag");
 
-    AddSubShader(SubShader(GL_VERTEX_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_VERTEX,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
         ));
 
-    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
@@ -92,15 +92,17 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
     SetUniform("u_sunColor", sun_color);
 }
 
-void SkydomeShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
+void SkydomeShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     // Sky dome should follow the camera
-    Matrix4 dome_model_mat = transform;
-    dome_model_mat(0, 3) = camera->GetTranslation().x;
-    dome_model_mat(1, 3) = camera->GetTranslation().y - 5;
-    dome_model_mat(2, 3) = camera->GetTranslation().z;
+    Transform updated_transform(transform);
+    updated_transform.SetTranslation(Vector3(
+        camera->GetTranslation().x,
+        camera->GetTranslation().y - 5.0,
+        camera->GetTranslation().z
+    ));
 
-    Shader::ApplyTransforms(dome_model_mat, camera);
+    Shader::ApplyTransforms(updated_transform, camera);
 
     SetUniform("v3CameraPos", camera->GetTranslation());
 }

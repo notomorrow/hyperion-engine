@@ -6,6 +6,7 @@ namespace apex {
 
 Entity::Entity(const std::string &name)
     : m_name(name),
+      m_aabb_affects_parent(true),
       m_flags(0),
       m_parent(nullptr),
       m_local_translation(Vector3::Zero()),
@@ -103,7 +104,7 @@ void Entity::UpdateAABB()
         }
     }
 
-    if (m_parent != nullptr) {
+    if (m_aabb_affects_parent && m_parent != nullptr) {
         // multiply parent's bounding box by this one
         m_parent->m_aabb.Extend(m_aabb);
     }
@@ -114,6 +115,10 @@ void Entity::AddChild(std::shared_ptr<Entity> entity)
     m_children.push_back(entity);
     entity->m_parent = this;
     entity->SetTransformUpdateFlag();
+
+    if (entity->GetAABBAffectsParent()) {
+        SetAABBUpdateFlag();
+    }
 }
 
 void Entity::RemoveChild(const std::shared_ptr<Entity> &entity)
@@ -123,6 +128,10 @@ void Entity::RemoveChild(const std::shared_ptr<Entity> &entity)
     entity->m_parent = nullptr;
     entity->SetPendingRemovalFlag();
     entity->SetTransformUpdateFlag();
+
+    if (entity->GetAABBAffectsParent()) {
+        SetAABBUpdateFlag();
+    }
 }
 
 std::shared_ptr<Entity> Entity::GetChild(size_t index) const
