@@ -10,7 +10,6 @@
 #include "hash_code.h"
 #include "asset/loadable.h"
 #include "math/transform.h"
-#include "math/bounding_box.h"
 #include "rendering/renderable.h"
 #include "rendering/material.h"
 
@@ -28,6 +27,9 @@ public:
 
     inline const std::string &GetName() const { return m_name; }
     inline void SetName(const std::string &name) { m_name = name; }
+
+    inline bool GetAABBAffectsParent() const { return m_aabb_affects_parent; }
+    inline void SetAABBAffectsParent(bool value) { m_aabb_affects_parent = value; }
 
     inline const Vector3 &GetLocalTranslation() const { return m_local_translation; }
     inline void SetLocalTranslation(const Vector3 &translation) 
@@ -163,6 +165,7 @@ protected:
     std::vector<std::shared_ptr<EntityControl>> m_controls;
 
     int m_flags;
+    bool m_aabb_affects_parent;
     Vector3 m_local_translation;
     Vector3 m_local_scale;
     Quaternion m_local_rotation;

@@ -11,6 +11,9 @@ Renderer::Renderer(const RenderWindow &render_window)
     m_post_processing = new PostProcessing();
 
     m_buckets[Renderable::RB_SKY].enable_culling = false;
+    m_buckets[Renderable::RB_PARTICLE].enable_culling = false; // TODO
+    m_buckets[Renderable::RB_SCREEN].enable_culling = false;
+    m_buckets[Renderable::RB_DEBUG].enable_culling = false;
 }
 
 Renderer::~Renderer()
@@ -21,7 +24,7 @@ Renderer::~Renderer()
 
 void Renderer::Begin(Camera *cam, Entity *top)
 {
-    FindRenderables(cam, top);
+    FindRenderables(cam, top, false, true);
 }
 
 void Renderer::Render(Camera *cam)
@@ -31,12 +34,15 @@ void Renderer::Render(Camera *cam)
     }
 
     RenderAll(cam, m_fbo);
-    RenderPost(cam, m_fbo);
 }
 
 void Renderer::End(Camera *cam, Entity *top)
 {
     RenderPost(cam, m_fbo);
+
+    glDisable(GL_CULL_FACE);
+    RenderBucket(cam, m_buckets[Renderable::RB_SCREEN]);
+    glEnable(GL_CULL_FACE);
 }
 
 void Renderer::ClearRenderables()
@@ -46,7 +52,7 @@ void Renderer::ClearRenderables()
    }
 }
 
-void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled)
+void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bool is_root)
 {
     const size_t entity_hash = top->GetHashCode().Value();
     size_t previous_hash = 0;
@@ -133,7 +139,17 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled)
         }
     }
 
-    frustum_culled = frustum_culled || !cam->GetFrustum().BoundingBoxInFrustum(top->GetAABB());
+    if (!frustum_culled && !is_root) {
+        /*const float far_squared = cam->GetFar() * cam->GetFar();
+        const float radius = top->GetAABB().GetDimensions().LengthSquared();
+        const float distance = top->GetAABB().GetCenter().DistanceSquared(cam->GetTranslation());
+
+        if (distance - radius >= far_squared) {
+            frustum_culled = true;
+        } else {*/
+            frustum_culled = !MemoizedFrustumCheck(cam, top->GetAABB());
+        //}
+    }
 
     if (new_bucket != nullptr) {
         if (BucketItem *bucket_item_ptr = new_bucket->GetItemPtr(entity_hash)) {
@@ -152,23 +168,15 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled)
     }
 }
 
-bool Renderer::FrustumCheck(Camera *cam, const BucketItem &bucket_item)
+bool Renderer::MemoizedFrustumCheck(Camera *cam, const BoundingBox &aabb)
 {
-    return cam->GetFrustum().BoundingBoxInFrustum(bucket_item.aabb);
+    return cam->GetFrustum().BoundingBoxInFrustum(aabb);
 }
 
 void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader)
 {
-    // TODO:
-    //  items will be somehow parent->child mapped
-    //   visible_items will be a linear array
-    //   we will call UpdateVisibleItems() after something changed in FindRenderables OR
-    //   camera transformation has changed.
-    // bucket.UpdateVisibleItems(cam->GetFrustum());
-
     Shader *shader = nullptr;
 
-    // TODO: group by same shader
     for (const BucketItem &it : bucket.GetItems()) {
         if (!it.alive) {
             continue;
@@ -178,9 +186,10 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
             continue;
         }
 
+        // TODO: group by same shader
         if ((shader = override_shader ? override_shader : it.renderable->m_shader.get())) {
             shader->ApplyMaterial(*it.material);
-            shader->ApplyTransforms(it.transform.GetMatrix(), cam);
+            shader->ApplyTransforms(it.transform, cam);
             shader->Use();
             it.renderable->Render();
             shader->End();
@@ -205,6 +214,7 @@ void Renderer::RenderAll(Camera *cam, Framebuffer *fbo)
     RenderBucket(cam, m_buckets[Renderable::RB_OPAQUE]);
     RenderBucket(cam, m_buckets[Renderable::RB_TRANSPARENT]);
     RenderBucket(cam, m_buckets[Renderable::RB_PARTICLE]);
+    RenderBucket(cam, m_buckets[Renderable::RB_DEBUG]);
 
     if (fbo) {
         fbo->End();

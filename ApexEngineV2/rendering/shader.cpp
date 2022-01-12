@@ -22,8 +22,8 @@ Shader::Shader(const ShaderProperties &properties,
       is_created(false),
       uniform_changed(false)
 {
-    subshaders.push_back(SubShader(GL_VERTEX_SHADER, vscode));
-    subshaders.push_back(SubShader(GL_FRAGMENT_SHADER, fscode));
+    AddSubShader(SubShader(SubShaderType::SUBSHADER_VERTEX, vscode));
+    AddSubShader(SubShader(SubShaderType::SUBSHADER_FRAGMENT, fscode));
 
     ResetUniforms();
 }
@@ -32,8 +32,9 @@ Shader::~Shader()
 {
     if (is_created) {
         glDeleteProgram(progid);
+
         for (auto &&sub : subshaders) {
-            glDeleteShader(sub.id);
+            glDeleteShader(sub.second.id);
         }
     }
 }
@@ -75,9 +76,9 @@ void Shader::ApplyMaterial(const Material &mat)
     }
 }
 
-void Shader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
+void Shader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
-    SetUniform("u_modelMatrix", transform);
+    SetUniform("u_modelMatrix", transform.GetMatrix());
     SetUniform("u_viewMatrix", camera->GetViewMatrix());
     SetUniform("u_projMatrix", camera->GetProjectionMatrix());
 }
@@ -90,7 +91,7 @@ void Shader::Use()
         CatchGLErrors("Failed to create shader program.");
 
         for (auto &&sub : subshaders) {
-            sub.id = glCreateShader(sub.type);
+            sub.second.id = glCreateShader(sub.first);
 
             CatchGLErrors("Failed to create subshader.");
         }
@@ -99,7 +100,9 @@ void Shader::Use()
     }
 
     if (!is_uploaded) {
-        for (auto &&sub : subshaders) {
+        for (auto &&it : subshaders) {
+            auto &sub = it.second;
+
             const char *code_str = sub.code.c_str();
             glShaderSource(sub.id, 1, &code_str, NULL);
             glCompileShader(sub.id);

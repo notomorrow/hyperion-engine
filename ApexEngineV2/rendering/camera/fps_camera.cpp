@@ -15,12 +15,14 @@ FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, int width, in
 {
     m_dir_cross_y = Vector3(m_direction).Cross(m_up);
 
-    m_inputmgr->RegisterKeyEvent(KeyboardKey::KEY_LEFT_ALT, InputEvent([&]() {
-        CenterMouse();
+    m_inputmgr->RegisterKeyEvent(KeyboardKey::KEY_LEFT_ALT, InputEvent([&](bool pressed) {
+        if (pressed) {
+            CenterMouse();
 
-        m_is_mouse_captured = !m_is_mouse_captured;
+            m_is_mouse_captured = !m_is_mouse_captured;
 
-        CoreEngine::GetInstance()->SetCursorLocked(m_is_mouse_captured);
+            CoreEngine::GetInstance()->SetCursorLocked(m_is_mouse_captured);
+        }
     }));
 }
 

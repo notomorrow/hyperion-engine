@@ -7,6 +7,8 @@
 
 #include "../core_engine.h"
 #include "../entity.h"
+#include "../hash_code.h"
+#include "math/bounding_box.h"
 #include "render_window.h"
 #include "material.h"
 #include "camera/camera.h"
@@ -14,6 +16,67 @@
 #include "postprocess/post_processing.h"
 
 namespace apex {
+/*class MemoizedBoundingBox : public BoundingBox {
+    MemoizedBoundingBox()
+        : BoundingBox()
+    {   
+    }
+
+    MemoizedBoundingBox(const Vector3 &min, const Vector3 &max)
+        : BoundingBox(min, max)
+    {
+    }
+
+    MemoizedBoundingBox(const BoundingBox &other)
+        : BoundingBox(other)
+    {
+    }
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(GetMin().GetHashCode());
+        hc.Add(Max().GetHashCode());
+
+        return hc;
+    }
+};
+
+class MemoizedFrustum : public Frustum {
+    MemoizedFrustum()
+        : Frustum()
+    {   
+    }
+
+    MemoizedFrustum(const Frustum &other)
+        : Frustum(other)
+    {
+    }
+
+    MemoizedFrustum(const Matrix4 &view_proj)
+        : Frustum(view_proj)
+    {
+    }
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        for (const Vector4 &plane : m_planes) {
+            hc.Add(plane.GetHashCode());
+        }
+
+        return hc;
+    }
+};*/
+
+struct MemoizedFrustumCheckKey {
+    size_t frustum_hash_code;
+    size_t aabb_hash_code;
+};
+
+
 struct BucketItem {
     Renderable *renderable;
     Material *material;
@@ -183,7 +246,7 @@ public:
 
     inline Bucket &GetBucket(Renderable::RenderBucket bucket) { return m_buckets[bucket]; }
 
-    Bucket m_buckets[4];
+    Bucket m_buckets[6];
 
 private:
     PostProcessing *m_post_processing;
@@ -194,8 +257,10 @@ private:
     std::map<std::size_t, Renderable::RenderBucket> m_hash_to_bucket;
 
     void ClearRenderables();
-    void FindRenderables(Camera *cam, Entity *top, bool frustum_culled = false);
-    bool FrustumCheck(Camera *cam, const BucketItem &bucket_item);
+    void FindRenderables(Camera *cam, Entity *top, bool frustum_culled = false, bool is_root = false);
+    bool MemoizedFrustumCheck(Camera *cam, const BoundingBox &aabb);
+
+    std::map<MemoizedFrustumCheckKey, bool> m_memoized_frustum_checks; // TODO: some sort of deque map
 };
 } // namespace apex
 

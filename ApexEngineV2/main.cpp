@@ -50,8 +50,14 @@
 #include "particles/particle_renderer.h"
 #include "particles/particle_emitter_control.h"
 
+/* Misc. Controls */
 #include "controls/bounding_box_control.h"
+#include "controls/camera_follow_control.h"
 // #include "rendering/renderers/bounding_box_renderer.h"
+
+/* UI */
+#include "rendering/ui/ui_object.h"
+#include "rendering/ui/ui_button.h"
 
 /* Standard library */
 #include <cstdlib>
@@ -110,34 +116,25 @@ public:
 
     void InitParticleSystem()
     {
-        ParticleConstructionInfo particle_generator_info(
-            // the lambda function for setting a particle's origin
-            [](const Particle &particle) {
-                return Vector3(0, 165, 0);
-            },
-                // the lambda function for setting a particle's velocity
-            [](const Particle &particle) {
-                static int counter = 0;
-                counter++;
-
-                float radius = 0.15f;
-                const Vector3 rotation(sinf(counter * 0.2f) * radius, 0.0f, cosf(counter * 0.2f) * radius);
-                Vector3 random(MathUtil::Random(-0.3f, 0.3f), 0.0f, MathUtil::Random(-0.3f, 0.3f));
-                return rotation + random;
-            }
-        );
-
-        particle_generator_info.m_gravity = Vector3(0, 8, 0);
-        particle_generator_info.m_max_particles = 250;
-        particle_generator_info.m_lifespan = 1.5;
+        ParticleConstructionInfo particle_generator_info;
+        particle_generator_info.m_origin_randomness = Vector3(5.0f, 0.5f, 5.0f);
+        particle_generator_info.m_velocity = Vector3(0.5f, -3.0f, 0.5f);
+        particle_generator_info.m_velocity_randomness = Vector3(1.3f, 0.0f, 1.3f);
+        particle_generator_info.m_scale = Vector3(0.05);
+        particle_generator_info.m_gravity = Vector3(0, -9, 0);
+        particle_generator_info.m_max_particles = 300;
+        particle_generator_info.m_lifespan = 1.0;
         particle_generator_info.m_lifespan_randomness = 1.5;
 
         auto particle_node = std::make_shared<Entity>();
-        particle_node->SetName("particles");
-        particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
-        particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/smoke2.png"));
-        particle_node->AddControl(std::make_shared<ParticleEmitterControl>(cam));
-        particle_node->SetLocalScale(Vector3(0.2));
+        particle_node->SetName("Particle node");
+        // particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
+        particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/test_snowflake.png"));
+        particle_node->AddControl(std::make_shared<ParticleEmitterControl>(cam, particle_generator_info));
+        particle_node->SetLocalScale(Vector3(1.5));
+        particle_node->AddControl(std::make_shared<BoundingBoxControl>());
+        particle_node->SetLocalTranslation(Vector3(0, 165, 0));
+        particle_node->AddControl(std::make_shared<CameraFollowControl>(cam, Vector3(0, 2, 0)));
 
         top->AddChild(particle_node);
     }
@@ -228,7 +225,7 @@ public:
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 9999);
 
         cam = new FpsCamera(
-            inputmgr,
+            GetInputManager(),
             &m_renderer->GetRenderWindow(),
             m_renderer->GetRenderWindow().GetScaledWidth(),
             m_renderer->GetRenderWindow().GetScaledHeight(),
@@ -262,6 +259,20 @@ public:
         // Initialize particle system
         InitParticleSystem();
 
+
+
+        // UI test
+        auto test_ui = std::make_shared<ui::UIButton>("my_ui_object");
+        test_ui->SetLocalTranslation2D(Vector2(-0.5, 0.0));
+        test_ui->SetLocalScale2D(Vector2(200, 100));
+        // test_ui->GetMaterial().SetTexture("ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/brdfLUT.png"));
+        // test_ui->GetHoverEvent().SetHandler([&](bool pressed) {
+        //     test_ui->GetMaterial().SetTexture("ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grass2.jpg"));
+        // });
+        top->AddChild(test_ui);
+        GetUIManager()->RegisterUIObject(test_ui);
+
+
         ShaderProperties defines = {
             { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
             { "NORMAL_MAPPING", 1 },
@@ -277,8 +288,12 @@ public:
         // top_ray.m_direction = Vector3(0, -1, 0);
         // top_ray.m_position = Vector3(0, 15000, 0);
 
-        InputEvent raytest_event([=]()
+        InputEvent raytest_event([=](bool pressed)
             {
+                if (!pressed) {
+                    return;
+                }
+
                 Ray ray;
                 ray.m_direction = cam->GetDirection();
                 ray.m_position = cam->GetTranslation();
@@ -310,15 +325,14 @@ public:
 
                 std::cout << std::endl;
 
-            }, true);
+            });
 
-        inputmgr->RegisterKeyEvent(KeyboardKey::KEY_6, raytest_event);
+        GetInputManager()->RegisterKeyEvent(KeyboardKey::KEY_6, raytest_event);
 
         auto box_node = std::make_shared<Entity>("box_node");
         box_node->SetLocalTranslation(Vector3(6, 110, 6));
         box_node->SetRenderable(MeshFactory::CreateCube());
         box_node->SetLocalScale(20);
-        box_node->UpdateTransform();
         auto rb4 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(1.0)), physics::PhysicsMaterial(0.0));
         rb4->SetPosition(Vector3(6, 110, 6));
         rb4->SetRenderDebugBoundingBox(true);
@@ -329,8 +343,9 @@ public:
 
 
         auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
-        dragger->Move(Vector3(6, 200, 6));
-        // dragger->Scale(0.5);
+        dragger->Move(Vector3(-10, 150, 10));
+        dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
+        dynamic_cast<Mesh*>(dragger->GetChild(0)->GetRenderable().get())->CalculateNormals();
         // dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
         // dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 4.0);
         top->AddChild(dragger);
@@ -343,14 +358,8 @@ public:
         // rb3->SetAwake(true);
         // dragger->AddControl(rb3);
         // PhysicsManager::GetInstance()->RegisterBody(rb3);
-        Quaternion a(Vector3::UnitY(), 0.5);
-        Quaternion b(a);
-        Quaternion tmp(a);
-        tmp.Invert();
-        std::cout << "a : " << (a) << "\n";
-        std::cout << "div : " << (b * tmp) << "\n";
 
-        for (auto bone : dragger->GetControl<SkeletonControl>(0)->GetBones()) {
+        /*for (auto bone : dragger->GetControl<SkeletonControl>(0)->GetBones()) {
             if (bone->GetName() != "head") {
                 continue;
             }
@@ -376,18 +385,17 @@ public:
             rb3->SetAwake(true);
             bone->AddControl(rb3);
             PhysicsManager::GetInstance()->RegisterBody(rb3);
-        }
+        }*/
 
         // dragger->GetControl<SkeletonControl>(0)->GetBone("head")->SetOffsetTranslation(Vector3(5.0));
 
-         /*auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
-         cube->GetChild(0)->GetRenderable()->SetShader(shader);
-         cube->Scale(0.5);
-         cube->SetName("cube");
-         dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
-         */
-
-        // InitPhysicsTests();
+        auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
+        cube->GetChild(0)->GetRenderable()->SetShader(shader);
+        cube->GetChild(0)->GetMaterial().diffuse_color = { 0.0, 0.0, 1.0, 1.0 };
+        cube->Scale(0.5);
+        cube->SetName("cube");
+        dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
+         
 
         // auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
         // plane_rigid_body->SetAwake(false);
@@ -397,39 +405,46 @@ public:
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3((x * 6) + 6, 250, z * 6);
+                Vector3 box_position = Vector3((x * 6) + 6, 165, z * 6);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
-                box->GetChild(0)->GetRenderable()->SetShader(shader);
+                for (size_t i = 0; i < box->NumChildren(); i++) {
+                    box->GetChild(i)->GetRenderable()->SetShader(shader);
 
-                // box->GetChild(0)->GetMaterial().alpha_blended = true;
-                box->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-                // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Base_Color.png"));
-                // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Height.png"));
-                // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Ambient_Occlusion.png"));
-                // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Normal-ogl.png"));
+                    // box->GetChild(0)->GetMaterial().alpha_blended = true;
+                    // box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
+                    //     MathUtil::Random(0.0f, 1.0f),
+                    //     MathUtil::Random(0.0f, 1.0f),
+                    //     MathUtil::Random(0.0f, 1.0f),
+                    //     1.0f
+                    // );
+                    box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Base_Color.png"));
+                    box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Height.png"));
+                    box->GetChild(i)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Ambient_Occlusion.png"));
+                    box->GetChild(i)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Normal-ogl.png"));
 
-                // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-albedo.png"));
-                // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-normal-ogl.png"));
-                // box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-metalness.png"));
-                // box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-roughness.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-albedo.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-normal-ogl.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-metalness.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-roughness.png"));
 
-                // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
-                // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
-                // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
-                // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                box->GetChild(0)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
-                box->GetChild(0)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                    // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                    box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
+                    box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                }
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
 
-                auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.5)), 0.1);
+                /*auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.5)), 0.1);
                 rigid_body->SetPosition(box_position);
                 // rigid_body->SetLinearVelocity(Vector3(0, -5, 0));
                 rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
                 rigid_body->SetAwake(true);
                 box->AddControl(rigid_body);
                 box->AddControl(std::make_shared<BoundingBoxControl>());
-                PhysicsManager::GetInstance()->RegisterBody(rigid_body);
+                PhysicsManager::GetInstance()->RegisterBody(rigid_body);*/
             }
         }
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
@@ -458,24 +473,25 @@ public:
             tree->SetLocalTranslation(Vector3(0, 150, 5));
             tree->SetLocalScale(Vector3(0.8));
             for (int i = 0; i < tree->NumChildren(); i++) {
-                tree->GetChild(i)->GetMaterial().SetTexture("BrdfMap", brdf_map);
-                // tree->GetChild(i)->GetRenderable()->SetShader(shader);
-                // // tree->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-                tree->GetChild(0)->GetMaterial().SetParameter("shininess", 0.0f);
-                tree->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
+                tree->GetChild(i)->GetMaterial().SetParameter("shininess", 0.0f);
+                tree->GetChild(i)->GetMaterial().SetParameter("roughness", 0.9f);
+                // dynamic_cast<Mesh*>(tree->GetChild(i)->GetRenderable().get())->CalculateNormals();
             }
 
             tree->GetChild("Branches_08")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
             tree->GetChild("Branches_08")->GetMaterial().alpha_blended = true;
+            tree->GetChild("Branches_08")->GetMaterial().SetParameter("RimShading", 0.0f);
             tree->GetChild("Branches_08")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
             tree->GetChild("BlackGumLeaves_1")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
             tree->GetChild("BlackGumLeaves_1")->GetMaterial().alpha_blended = true;
             tree->GetChild("BlackGumLeaves_1")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
+            tree->GetChild("BlackGumLeaves_1")->GetMaterial().SetParameter("RimShading", 0.0f);
             tree->GetChild("BlackGumLeaves_2")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
             tree->GetChild("BlackGumLeaves_2")->GetMaterial().alpha_blended = true;
             tree->GetChild("BlackGumLeaves_2")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
+            tree->GetChild("BlackGumLeaves_2")->GetMaterial().SetParameter("RimShading", 0.0f);
             
-            tree->AddControl(std::make_shared<BoundingBoxControl>());
+            // tree->AddControl(std::make_shared<BoundingBoxControl>());
             
             top->AddChild(tree);
 

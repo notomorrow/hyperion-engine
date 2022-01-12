@@ -23,24 +23,6 @@ void PostProcessing::RemoveFilter(const std::string &tag)
     }
 }
 
-// void PostProcessing::UpdateFilterScaling(PostFilter *filter)
-// {
-//     if (filter->GetShader() == nullptr) {
-//         throw std::runtime_error("No shader attached to PostFilter");
-//     }
-
-//     filter->GetShader()->SetUniform("u_scale", m_render_scale);
-// }
-
-// void PostProcessing::SetRenderScale(const Vector2 &render_scale)
-// {
-//     m_render_scale = render_scale;
-
-//     for (auto &&it : m_filters) {
-//         UpdateFilterScaling(it.filter.get());
-//     }
-// }
-
 void PostProcessing::Render(Camera *cam, Framebuffer *fbo)
 {
   glDepthMask(false);

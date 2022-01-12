@@ -148,7 +148,7 @@ bool GlfwEngine::InitializeGame(Game *game)
             MathUtil::Clamp<double>(mouse_y, 0, game->GetRenderer()->GetRenderWindow().height)
         );
 
-        game->Logic(delta);
+        game->Update(delta);
         game->Render();
 
         glfwSwapBuffers(window);

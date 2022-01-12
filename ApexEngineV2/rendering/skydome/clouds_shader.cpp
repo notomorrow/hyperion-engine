@@ -11,14 +11,14 @@ CloudsShader::CloudsShader(const ShaderProperties &properties)
     const std::string vs_path("res/shaders/clouds.vert");
     const std::string fs_path("res/shaders/clouds.frag");
 
-    AddSubShader(SubShader(GL_VERTEX_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_VERTEX,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
         )
     );
 
-    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
@@ -55,15 +55,17 @@ void CloudsShader::ApplyMaterial(const Material &mat)
     }
 }
 
-void CloudsShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
+void CloudsShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     // Cloud layer should follow the camera
-    Matrix4 clouds_model_mat = transform;
-    clouds_model_mat(0, 3) = camera->GetTranslation().x;
-    clouds_model_mat(1, 3) = camera->GetTranslation().y + 10.0f;
-    clouds_model_mat(2, 3) = camera->GetTranslation().z;
+    Transform updated_transform(transform);
+    updated_transform.SetTranslation(Vector3(
+        camera->GetTranslation().x,
+        camera->GetTranslation().y + 10.0f,
+        camera->GetTranslation().z
+    ));
 
-    Shader::ApplyTransforms(clouds_model_mat, camera);
+    Shader::ApplyTransforms(updated_transform, camera);
 }
 
 void CloudsShader::SetCloudColor(const Vector4 &cloud_color)

@@ -46,7 +46,6 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
 
     const float length = to_center.Length();
 
-    std::cout << " length " << length << "\n";
     if (std::isnan(length) || std::isinf(length)) {
         return false;
     }

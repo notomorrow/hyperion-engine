@@ -19,6 +19,9 @@ public:
 
     virtual void Render() override;
 
+    inline ParticleConstructionInfo &GetParticleConstructionInfo() { return m_info; }
+    inline const ParticleConstructionInfo &GetParticleConstructionInfo() const { return m_info; }
+
 private:
     // pointer to particle vector (set by ParticleEmitterControl)
     std::vector<Particle> *m_particles;
@@ -29,6 +32,7 @@ private:
 
     unsigned int m_vertex_buffer;
     unsigned int m_position_buffer;
+    unsigned int m_scale_buffer;
     unsigned int m_lifespan_buffer;
     unsigned int m_vao;
 };

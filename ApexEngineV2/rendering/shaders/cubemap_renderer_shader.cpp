@@ -13,21 +13,21 @@ CubemapRendererShader::CubemapRendererShader(const ShaderProperties &properties)
     const std::string fs_path("res/shaders/cubemap_renderer.frag");
     const std::string gs_path("res/shaders/cubemap_renderer.geom");
 
-    AddSubShader(SubShader(GL_VERTEX_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_VERTEX,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
         )
     );
 
-    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
         )
     );
 
-    AddSubShader(SubShader(GL_GEOMETRY_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_GEOMETRY,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(gs_path)->GetText(),
             properties, gs_path)
@@ -39,7 +39,7 @@ void CubemapRendererShader::ApplyMaterial(const Material &mat)
 {
 }
 
-void CubemapRendererShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
+void CubemapRendererShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     Shader::ApplyTransforms(transform, camera);
     SetUniform("u_camerapos", camera->GetTranslation());

@@ -4,56 +4,77 @@
 #include <cassert>
 
 namespace apex {
-ParticleEmitterControl::ParticleEmitterControl(Camera *camera)
-    : EntityControl(30.0),
+ParticleEmitterControl::ParticleEmitterControl(Camera *camera, const ParticleConstructionInfo &info)
+    : EntityControl(60.0),
       m_camera(camera)
 {
+    m_particle_renderer.reset(new ParticleRenderer(info));
+
+    m_entity.reset(new Entity("Particles"));
+    m_entity->SetRenderable(m_particle_renderer);
 }
 
 void ParticleEmitterControl::ResetParticle(Particle &particle)
 {
     double lifespan_random = MathUtil::EPSILON +
-        MathUtil::Random(0.0, fabs(m_renderer->m_info.m_lifespan_randomness));
+        MathUtil::Random(0.0, fabs(m_particle_renderer->m_info.m_lifespan_randomness));
 
-    particle.m_position = m_renderer->m_info.m_origin_generator(particle);
+    particle.m_position = m_particle_renderer->m_info.m_origin + Vector3(
+        MathUtil::Random(-m_particle_renderer->m_info.m_origin_randomness.GetX(), m_particle_renderer->m_info.m_origin_randomness.GetX()),
+        MathUtil::Random(-m_particle_renderer->m_info.m_origin_randomness.GetY(), m_particle_renderer->m_info.m_origin_randomness.GetY()),
+        MathUtil::Random(-m_particle_renderer->m_info.m_origin_randomness.GetZ(), m_particle_renderer->m_info.m_origin_randomness.GetZ())
+    );
     particle.m_global_position = parent->GetGlobalTransform().GetTranslation() + particle.m_position;
-    particle.m_velocity = m_renderer->m_info.m_velocity_generator(particle);
+    particle.m_scale = m_particle_renderer->m_info.m_scale + Vector3(
+        MathUtil::Random(-m_particle_renderer->m_info.m_scale_randomness.GetX(), m_particle_renderer->m_info.m_scale_randomness.GetX()),
+        MathUtil::Random(-m_particle_renderer->m_info.m_scale_randomness.GetY(), m_particle_renderer->m_info.m_scale_randomness.GetY()),
+        MathUtil::Random(-m_particle_renderer->m_info.m_scale_randomness.GetZ(), m_particle_renderer->m_info.m_scale_randomness.GetZ())
+    );
+    particle.m_global_scale = parent->GetGlobalTransform().GetScale() * particle.m_scale;
+    particle.m_velocity = m_particle_renderer->m_info.m_velocity + Vector3(
+        MathUtil::Random(-m_particle_renderer->m_info.m_velocity_randomness.GetX(), m_particle_renderer->m_info.m_velocity_randomness.GetX()),
+        MathUtil::Random(-m_particle_renderer->m_info.m_velocity_randomness.GetY(), m_particle_renderer->m_info.m_velocity_randomness.GetY()),
+        MathUtil::Random(-m_particle_renderer->m_info.m_velocity_randomness.GetZ(), m_particle_renderer->m_info.m_velocity_randomness.GetZ())
+    );
     particle.m_camera_distance = 0.0;
-    particle.m_mass = 0.01 + MathUtil::Random(0.0f, 0.1f);
+    particle.m_mass = m_particle_renderer->m_info.m_mass + MathUtil::Random(
+        -m_particle_renderer->m_info.m_mass_randomness,
+        m_particle_renderer->m_info.m_mass_randomness
+    );
     particle.m_life = 0.0;
-    particle.m_lifespan = m_renderer->m_info.m_lifespan + lifespan_random;
+    particle.m_lifespan = m_particle_renderer->m_info.m_lifespan + lifespan_random;
     particle.m_alive = true;
 }
 
 void ParticleEmitterControl::OnAdded()
 {
-    if (parent->GetRenderable() == nullptr ||
-        (m_renderer = dynamic_cast<ParticleRenderer*>(parent->GetRenderable().get())) == nullptr) {
-        throw "parent->GetRenderable() must be a pointer to ParticleRenderer!";
-    }
-
-    m_renderer->m_particles = &m_particles;
+    m_particle_renderer->m_particles = &m_particles;
 
     // add all particles
-    m_particles.resize(m_renderer->m_info.m_max_particles);
+    m_particles.resize(m_particle_renderer->m_info.m_max_particles);
     for (Particle &particle : m_particles) {
         ResetParticle(particle);
     }
+
+    m_entity->SetMaterial(parent->GetMaterial()); // clone material
+    parent->AddChild(m_entity);
 }
 
 void ParticleEmitterControl::OnRemoved()
 {
-    m_renderer->m_particles = nullptr;
+    m_particle_renderer->m_particles = nullptr;
+
+    parent->RemoveChild(m_entity);
 }
 
 void ParticleEmitterControl::OnUpdate(double dt)
 {
-    assert(m_particles.size() <= m_renderer->m_info.m_max_particles);
+    assert(m_particles.size() <= m_particle_renderer->m_info.m_max_particles);
 
     for (Particle &particle : m_particles) {
         if (particle.m_alive) {
             particle.m_life += dt;
-            particle.m_velocity += m_renderer->m_info.m_gravity * particle.m_mass * dt;
+            particle.m_velocity += m_particle_renderer->m_info.m_gravity * particle.m_mass * dt;
             particle.m_position += particle.m_velocity * dt;
             particle.m_global_position = parent->GetGlobalTransform().GetTranslation() + particle.m_position;
             particle.m_camera_distance = particle.m_global_position.Distance(m_camera->GetTranslation());
@@ -69,6 +90,7 @@ void ParticleEmitterControl::OnUpdate(double dt)
     }
 
     // sort particles so that the closest particles are rendered first
+    // TODO: use more efficient algo
     std::sort(m_particles.begin(), m_particles.end());
 }
 } // namespace apex

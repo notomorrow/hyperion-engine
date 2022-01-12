@@ -1,6 +1,11 @@
 #include "frustum.h"
 
 namespace apex {
+enum BoundingBoxFrustumResult {
+    OUTSIDE = 0,
+    INSIDE = 1,
+    INTERSECTS = 2
+};
 Frustum::Frustum()
 {
 }
@@ -17,47 +22,26 @@ Frustum::Frustum(const Matrix4 &view_proj)
 
 bool Frustum::BoundingBoxInFrustum(const BoundingBox &bounding_box) const
 {
-    // false if fully outside, true if inside or intersects
 
-    // check box outside/inside of frustum
-    for (int i = 0; i < 6; i++)
-    {
-        if (m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
-            return true;
-        }
-        if (m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
-            return true;
-        }
-        if (m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
-            return true;
-        }
-        if (m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
-            return true;
-        }
-        if (m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
-            return true;
-        }
-        if (m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
-            return true;
-        }
-        if (m_planes[i].Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
-            return true;
-        }
-        if (m_planes[i].Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
-            return true;
+    const Vector3 &center = bounding_box.GetCenter();
+    const Vector3 &size = bounding_box.GetDimensions();
+    unsigned int result = INSIDE; // Assume that the aabb will be inside the frustum
+
+    for (int i = 0; i < 6; i++) {
+        const Vector4 &plane = m_planes[i];
+
+        float dot = center.x * plane.x + center.y * plane.y + center.z * plane.z; // dot product
+        float radius = size.x * fabsf(plane.x) + size.y * fabsf(plane.y) + size.z * fabsf(plane.z); // radius
+
+        if (dot + radius < -plane.w) {
+            result = OUTSIDE;
+            break;
+        } else if(dot - radius < -plane.w) {
+            result = INTERSECTS;
         }
     }
 
-    // check frustum outside/inside box
-    // int out;
-    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].x > bounding_box.GetMax().x)?1:0); if( out==8 ) return false;
-    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].x < bounding_box.GetMin().x)?1:0); if( out==8 ) return false;
-    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].y > bounding_box.GetMax().y)?1:0); if( out==8 ) return false;
-    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].y < bounding_box.GetMin().y)?1:0); if( out==8 ) return false;
-    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].z > bounding_box.GetMax().z)?1:0); if( out==8 ) return false;
-    // out=0; for( int i=0; i<8; i++ ) out += ((fru.mPoints[i].z < bounding_box.GetMin().z)?1:0); if( out==8 ) return false;
-
-    return true;
+    return result != OUTSIDE;
 }
 
 void Frustum::SetViewProjectionMatrix(const Matrix4 &view_proj)

@@ -9,16 +9,16 @@ LightingShader::LightingShader(const ShaderProperties &properties)
     : Shader(properties)
 {
     const std::string vs_path("res/shaders/default.vert");
-    const std::string fs_path("res/shaders/default_fresnel.frag");
+    const std::string fs_path("res/shaders/default.frag");
 
-    AddSubShader(SubShader(GL_VERTEX_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_VERTEX,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
         )
     );
 
-    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
@@ -66,17 +66,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     SetUniform("u_diffuseColor", mat.diffuse_color);
 
-    // if (mat.texture0 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.texture0->Use();
-    //     SetUniform("DiffuseMap", texture_index);
-    //     SetUniform("HasDiffuseMap", 1);
-
-    //     texture_index++;
-    // } else {
-    //     SetUniform("HasDiffuseMap", 0);
-    // }
-
     if (auto cubemap = env->GetGlobalCubemap()) {
         Texture::ActiveTexture(texture_index);
         cubemap->Use();
@@ -93,47 +82,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
         texture_index++;
     }
 
-    // if (mat.texture1 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.texture1->Use();
-    //     SetUniform("ParallaxMap", texture_index);
-    //     SetUniform("HasParallaxMap", 1);
-
-    //     texture_index++;
-    // } else {
-    //     SetUniform("HasParallaxMap", 0);
-    // }
-
-    // if (mat.texture2 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.texture2->Use();
-    //     SetUniform("AoMap", texture_index);
-    //     SetUniform("HasAoMap", 1);
-
-    //     texture_index++;
-    // } else {
-    //     SetUniform("HasAoMap", 0);
-    // }
-
-    // if (mat.texture3 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.texture3->Use();
-    //     SetUniform("BrdfMap", texture_index);
-
-    //     texture_index++;
-    // }
-
-    // if (mat.normals0 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.normals0->Use();
-    //     SetUniform("NormalMap", texture_index);
-    //     SetUniform("HasNormalMap", 1);
-
-    //     texture_index++;
-    // } else {
-    //     SetUniform("HasNormalMap", 0);
-    // }
-
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
         if (it->second == nullptr) {
             continue;
@@ -147,33 +95,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
         texture_index++;
     }
 
-    // if (properties["ROUGHNESS_MAPPING"] && mat.texture4 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.texture4->Use();
-    //     SetUniform("u_roughnessMap", texture_index);
-    //     SetUniform("u_hasRoughnessMap", 1);
-    //     texture_index++;
-    // }
-
-    // if (properties["METALNESS_MAPPING"] && mat.texture5 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.texture5->Use();
-    //     SetUniform("u_metalnessMap", texture_index);
-    //     SetUniform("u_hasMetalnessMap", 1);
-    //     texture_index++;
-    // }
-
-    // if (mat.normals0 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.normals0->Use();
-    //     SetUniform("u_normalMap", texture_index);
-    //     SetUniform("u_hasNormalMap", 1);
-
-    //     texture_index++;
-    // } else {
-    //     SetUniform("u_hasNormalMap", 0);
-    // }
-
     if (mat.HasParameter("shininess")) {
         SetUniform("u_shininess", mat.GetParameter("shininess")[0]);
     }
@@ -181,9 +102,13 @@ void LightingShader::ApplyMaterial(const Material &mat)
     if (mat.HasParameter("roughness")) {
         SetUniform("u_roughness", mat.GetParameter("roughness")[0]);
     }
+
+    if (mat.HasParameter("RimShading")) {
+        SetUniform("RimShading", mat.GetParameter("RimShading")[0]);
+    }
 }
 
-void LightingShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
+void LightingShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     Shader::ApplyTransforms(transform, camera);
     SetUniform("u_camerapos", camera->GetTranslation());

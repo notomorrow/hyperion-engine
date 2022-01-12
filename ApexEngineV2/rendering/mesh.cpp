@@ -41,6 +41,7 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts)
     }
 
     // update the aabb
+    // TODO: more concrete (virtual method?) way of setting aabb on Renderable
     m_aabb.Clear();
     for (Vertex &vertex : vertices) {
         m_aabb.Extend(vertex.GetPosition());

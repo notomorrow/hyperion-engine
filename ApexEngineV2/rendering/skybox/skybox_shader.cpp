@@ -11,14 +11,14 @@ SkyboxShader::SkyboxShader(const ShaderProperties &properties)
     const std::string vs_path("res/shaders/skybox.vert");
     const std::string fs_path("res/shaders/skybox.frag");
 
-    AddSubShader(SubShader(GL_VERTEX_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_VERTEX,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
             properties, vs_path)
         )
     );
 
-    AddSubShader(SubShader(GL_FRAGMENT_SHADER,
+    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
         ShaderPreprocessor::ProcessShader(
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
             properties, fs_path)
@@ -46,14 +46,12 @@ void SkyboxShader::ApplyMaterial(const Material &mat)
     }
 }
 
-void SkyboxShader::ApplyTransforms(const Matrix4 &transform, Camera *camera)
+void SkyboxShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
-    Matrix4 model_mat = transform;
-    model_mat(0, 3) = camera->GetTranslation().x;
-    model_mat(1, 3) = camera->GetTranslation().y;
-    model_mat(2, 3) = camera->GetTranslation().z;
+    Transform updated_transform(transform);
+    updated_transform.SetTranslation(camera->GetTranslation());
 
-    Shader::ApplyTransforms(model_mat, camera);
+    Shader::ApplyTransforms(updated_transform, camera);
 
     SetUniform("u_camerapos", camera->GetTranslation());
 }

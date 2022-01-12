@@ -19,6 +19,7 @@ public:
         RB_TRANSPARENT = 2,
         RB_PARTICLE = 3,
         RB_SCREEN = 4,
+        RB_DEBUG = 5
     };
 
     Renderable(RenderBucket bucket = RB_OPAQUE);

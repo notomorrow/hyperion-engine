@@ -10,7 +10,7 @@ const std::vector<MeshIndex> BoundingBoxRenderer::indices = {
 };
 
 BoundingBoxRenderer::BoundingBoxRenderer()
-    : Renderable(RenderBucket::RB_TRANSPARENT),
+    : Renderable(RenderBucket::RB_DEBUG),
       m_mesh(new Mesh)
 {
     m_vertices.resize(8);

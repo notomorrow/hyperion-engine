@@ -40,7 +40,6 @@ void Bone::StoreBindingPose()
 void Bone::SetToBindingPose()
 {
     m_local_rotation = bind_rot;
-    std::cout << GetName() << " reset rotation to " << m_local_rotation << "\n";
     m_local_translation = bind_pos;
 
     pose_pos = bind_pos;
@@ -111,9 +110,6 @@ void Bone::UpdateTransform()
     MatrixUtil::ToTranslation(rot_matrix, tmp_pos);
 
     Quaternion tmp_rot = global_bone_rot * pose_rot * GetOffsetRotation() * inv_bind_rot;
-
-    std::cout << GetName() << " bind_rot = " << bind_rot << "\n";
-    std::cout << GetName() << " GetOffsetRotation() = " << GetOffsetRotation() << "\n";
 
     Matrix4 tmp_matrix;
     MatrixUtil::ToRotation(tmp_matrix, tmp_rot);

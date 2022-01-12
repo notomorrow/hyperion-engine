@@ -5,22 +5,19 @@
 namespace apex {
 
 InputEvent::InputEvent()
-    : is_up_evt(false), 
-      is_empty(true)
+    : m_is_empty(true)
 {
 }
 
-InputEvent::InputEvent(std::function<void()> handler, bool is_up_evt)
-    : handler(handler), 
-      is_up_evt(is_up_evt), 
-      is_empty(false)
+InputEvent::InputEvent(std::function<void(bool)> handler)
+    : m_handler(handler),
+      m_is_empty(false)
 {
 }
 
 InputEvent::InputEvent(const InputEvent &other)
-    : handler(other.handler), 
-      is_up_evt(other.is_up_evt), 
-      is_empty(other.is_empty)
+    : m_handler(other.m_handler),
+      m_is_empty(other.m_is_empty)
 {
 }
 
@@ -47,8 +44,8 @@ void InputManager::SetKey(int key, bool pressed)
     if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
         InputEvent &handler = key_events[key];
 
-        if (!handler.IsEmpty() && (pressed ? handler.IsUpEvent() : !handler.IsUpEvent())) {
-            handler.Trigger();
+        if (!handler.IsEmpty()) {
+            handler.Trigger(pressed);
         }
 
         key_states[key] = pressed;
@@ -60,8 +57,8 @@ void InputManager::SetMouseButton(int btn, bool pressed)
     if (btn >= 0 && btn < NUM_MOUSE_BUTTONS) {
         InputEvent &handler = mouse_events[btn];
 
-        if (!handler.IsEmpty() && (pressed ? handler.IsUpEvent() : !handler.IsUpEvent())) {
-            handler.Trigger();
+        if (!handler.IsEmpty()) {
+            handler.Trigger(pressed);
         }
 
         mouse_states[btn] = pressed;

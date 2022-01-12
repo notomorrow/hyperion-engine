@@ -1,14 +1,14 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include "../opengl.h"
-#include "camera/camera.h"
 #include "../math/vector2.h"
 #include "../math/vector3.h"
 #include "../math/vector4.h"
 #include "../math/matrix4.h"
+#include "../math/transform.h"
 #include "../asset/loadable.h"
 #include "material.h"
+#include "camera/camera.h"
 
 #include <vector>
 #include <array>
@@ -28,7 +28,7 @@ public:
     virtual ~Shader();
 
     virtual void ApplyMaterial(const Material &mat);
-    virtual void ApplyTransforms(const Matrix4 &transform, Camera *camera);
+    virtual void ApplyTransforms(const Transform &transform, Camera *camera);
 
     inline void SetUniform(const std::string &name, float value) { uniforms[name] = Uniform(value); uniform_changed = true; }
     inline void SetUniform(const std::string &name, int value) { uniforms[name] = Uniform(value); uniform_changed = true; }
@@ -43,18 +43,25 @@ public:
 protected:
     ShaderProperties properties;
 
+    enum SubShaderType {
+        SUBSHADER_NONE = 0x00,
+        SUBSHADER_FRAGMENT = 0x8B30,
+        SUBSHADER_VERTEX = 0x8B31,
+        SUBSHADER_GEOMETRY = 0x8DD9
+    };
+
     struct SubShader {
-        int type;
+        SubShaderType type;
         int id;
         std::string code;
 
         SubShader()
-            : type(0),
+            : type(SubShaderType::SUBSHADER_NONE),
               id(0)
         {
         }
 
-        SubShader(int type, const std::string &code)
+        SubShader(SubShaderType type, const std::string &code)
             : type(type),
               id(0),
               code(code)
@@ -69,7 +76,7 @@ protected:
         }
     };
 
-    inline void AddSubShader(const SubShader &sub_shader) { subshaders.push_back(sub_shader); }
+    inline void AddSubShader(const SubShader &sub_shader) { subshaders[sub_shader.type] = sub_shader; }
 
     void ResetUniforms();
 
@@ -146,7 +153,7 @@ private:
         }
     };
 
-    std::vector<SubShader> subshaders;
+    std::map<SubShaderType, SubShader> subshaders;
     std::map<std::string, Uniform> uniforms;
 };
 
