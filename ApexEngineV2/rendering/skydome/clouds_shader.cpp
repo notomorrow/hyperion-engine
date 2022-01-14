@@ -1,5 +1,6 @@
 #include "clouds_shader.h"
 #include "../environment.h"
+#include "../../core_engine.h"
 #include "../../asset/asset_manager.h"
 #include "../../asset/text_loader.h"
 #include "../../util/shader_preprocessor.h"
@@ -44,14 +45,14 @@ void CloudsShader::ApplyMaterial(const Material &mat)
     SetUniform("m_CloudColor", m_cloud_color);
 
     if (mat.alpha_blended) {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::BLEND);
+        CoreEngine::GetInstance()->BlendFunc(CoreEngine::GLEnums::SRC_ALPHA, CoreEngine::GLEnums::ONE_MINUS_SRC_ALPHA);
     }
     if (!mat.depth_test) {
-        glDisable(GL_DEPTH_TEST);
+        CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::DEPTH_TEST);
     }
     if (!mat.depth_write) {
-        glDepthMask(false);
+        CoreEngine::GetInstance()->DepthMask(false);
     }
 }
 

@@ -98,7 +98,14 @@ public:
     InputEvent(const InputEvent &other);
 
     inline bool IsEmpty() const { return m_is_empty; }
-    inline void Trigger(bool pressed) { m_handler(pressed); }
+    inline void Trigger(bool pressed)
+    {
+        if (m_is_empty) {
+            return;
+        }
+
+        m_handler(pressed);
+    }
 
     inline void SetHandler(const std::function<void(bool)> &handler) { m_handler = handler; }
 

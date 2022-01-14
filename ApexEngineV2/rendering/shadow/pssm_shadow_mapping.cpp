@@ -40,13 +40,24 @@ void PssmShadowMapping::Render(Renderer *renderer)
 {
     for (int i = 0; i < num_splits; i++) {
         shadow_renderers[i]->Begin();
-        //CoreEngine::GetInstance()->Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         // TODO: cache beforehand
         Environment::GetInstance()->SetShadowMatrix(i, shadow_renderers[i]->
             GetShadowCamera()->GetViewProjectionMatrix());
 
-        renderer->RenderBucket(shadow_renderers[i]->GetShadowCamera(), renderer->GetBucket(Renderable::RB_OPAQUE), m_depth_shader.get());
+        renderer->RenderBucket(
+            shadow_renderers[i]->GetShadowCamera(),
+            renderer->GetBucket(Renderable::RB_OPAQUE),
+            m_depth_shader.get(),
+            false
+        );
+
+        renderer->RenderBucket(
+            shadow_renderers[i]->GetShadowCamera(),
+            renderer->GetBucket(Renderable::RB_TRANSPARENT),
+            m_depth_shader.get(),
+            false
+        );
 
         shadow_renderers[i]->End();
     }

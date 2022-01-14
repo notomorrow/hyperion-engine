@@ -24,16 +24,16 @@ LightingShader::LightingShader(const ShaderProperties &properties)
             properties, fs_path)
         )
     );
-
-    for (int i = 0; i < 16; i++) {
-        SetUniform("poissonDisk[" + std::to_string(i) + "]",
-            Environment::possion_disk[i]);
-    }
 }
 
 void LightingShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
+
+    for (int i = 0; i < 16; i++) {
+        SetUniform("poissonDisk[" + std::to_string(i) + "]",
+            Environment::possion_disk[i]);
+    }
 
     int texture_index = 1;
 
@@ -48,6 +48,8 @@ void LightingShader::ApplyMaterial(const Material &mat)
                 SetUniform("u_shadowMap[" + i_str + "]", texture_index);
                 texture_index++;
             }
+
+            std::cout << "shadow matrix " << i_str << " = " << env->GetShadowMatrix(i) << "\n";
 
             SetUniform("u_shadowMatrix[" + i_str + "]", env->GetShadowMatrix(i));
             SetUniform("u_shadowSplit[" + i_str + "]", (float)env->GetShadowSplit(i));
