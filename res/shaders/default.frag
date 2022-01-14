@@ -129,7 +129,7 @@ void main()
 
 #if SHADOWS
   float shadowness = 0.0;
-  const float radius = 0.1;
+  const float radius = 0.075;
   int shadowSplit = getShadowMapSplit(u_camerapos, v_position.xyz);
 
   for (int x = 0; x < 4; x++) {
@@ -140,10 +140,12 @@ void main()
     }
   }
   shadowness /= 16.0;
+  /*vec3 shadowCoord = getShadowCoord(shadowSplit, v_position.xyz);
+      shadowness += getShadow(shadowSplit, shadowCoord);*/
   //shadowness -= length(pl_specular);
-  //shadowness *= 1.0 - dot(n, lightDir);
-  vec4 shadowColor = vec4(vec3(max(shadowness, 0.5)), 1.0);
-  shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), v_position.xyz, u_camerapos, 0.0, u_shadowSplit[int($NUM_SPLITS) - 1]);
+  shadowness *= 1.0 - max(dot(n, lightDir), 0.0001);
+  vec4 shadowColor = vec4(vec3(shadowness), 1.0);
+  shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), v_position.xyz, u_camerapos, u_shadowSplit[int($NUM_SPLITS) - 2], u_shadowSplit[int($NUM_SPLITS) - 1]);
 #endif
 
 #if !SHADOWS
@@ -210,8 +212,8 @@ void main()
   vec3 reflectedLight = vec3(0.0, 0.0, 0.0);
   vec3 diffuseLight = vec3(0.0, 0.0, 0.0);
 
-  float rim = mix(1.0 - roughnessMix * 1.0 /* 'rim' */ * 0.9, 1.0, NdotV);
-  vec3 specRef = ((1.0 / rim) * F * G * D) * NdotL;
+  float rim = mix(1.0 - roughnessMix * 1.0 * 0.9, 1.0, NdotV);
+  vec3 specRef = vec3((1.0 / max(rim, 0.0001)) * F * G * D) * NdotL;
   reflectedLight += specRef;
 
   vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * AB.x + AB.y);
@@ -238,7 +240,9 @@ void main()
     specTerm *= clamp(pow(NdotV + ao, roughness * roughness) - 1.0 + ao, 0.0, 1.0);
   }*/
 
-  vec3 color = diffuseLight + reflectedLight; //reflectedLight;//ambientColor + specTerm;
+  vec3 color = diffuseLight + reflectedLight * shadowColor.rgb;
+
+  //color = vec3(shadowColor.rgb);
 
   output0 = vec4(color, albedo.a);
   output1 = vec4(n.xyz, 1.0);
