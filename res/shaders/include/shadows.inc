@@ -26,14 +26,30 @@ int getShadowMapSplit(vec3 cam, vec3 world) {
     return 1;
   } else if (dist < u_shadowSplit[2]) {
     return 2;
-  } else {
+  } else if (dist < u_shadowSplit[3]) {
     return 3;
   }
 }
 
 float getShadow(int index, vec3 coord) {
-  float bias = 0.005;
-  float depth = texture(u_shadowMap[index], coord.xy).r;
+  float bias = 0.01;
+  vec4 textureSample = vec4(0.0);
+
+  if (index == 0) {
+	  textureSample = texture(u_shadowMap[0], coord.xy);
+	} else if (index == 1) {
+		textureSample = texture(u_shadowMap[1], coord.xy);
+	} else if (index == 2) {
+		textureSample = texture(u_shadowMap[2], coord.xy);
+	} else {
+		textureSample = texture(u_shadowMap[3], coord.xy);
+	}
+#if PACK_DEPTH
+  float depth = unpackDepth(textureSample);
+#endif
+#if !PACK_DEPTH
+  float depth = textureSample.r;
+#endif
   return max(step(coord.z-bias, depth), 0.0);
 }
 
