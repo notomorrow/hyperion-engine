@@ -52,7 +52,7 @@ std::vector<double> NoiseTerrainChunk::GenerateHeights(int seed, const ChunkInfo
             const double biome_height = (GetSimplexNoise(&data, x_offset * 0.6, z_offset * 0.6) + 1) * 0.5;
 
             const double height = (GetSimplexNoise(&data, x_offset,
-                z_offset)) * 30;
+                z_offset)) * 30 - 30;
 
             const double mountain = ((worley.Noise((double)x_offset * 0.017, (double)z_offset * 0.017, 0))) * 80.0;
 
@@ -90,6 +90,8 @@ void NoiseTerrainChunk::OnAdded()
 
     m_entity->GetMaterial().SetParameter("shininess", 0.5f);
     m_entity->GetMaterial().SetParameter("roughness", 0.9f);
+    m_entity->GetMaterial().diffuse_color = { 1.0, 1.0, 1.0, 1.0 };
+    m_entity->GetMaterial().cull_faces = MaterialFace_Back;
     // m_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
     // m_entity->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Height.png"));
     // m_entity->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Ambient_Occlusion.png"));

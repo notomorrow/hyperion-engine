@@ -30,6 +30,11 @@ public:
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Transform &transform, Camera *camera);
 
+    inline ShaderProperties &GetProperties() { return m_properties; }
+    inline const ShaderProperties &GetProperties() const { return m_properties; }
+    inline MaterialFaceCull SetOverrideCullMode() const { return m_override_cull; }
+    inline void SetOverrideCullMode(MaterialFaceCull cull_mode) { m_override_cull = cull_mode; }
+
     inline void SetUniform(const std::string &name, float value) { uniforms[name] = Uniform(value); uniform_changed = true; }
     inline void SetUniform(const std::string &name, int value) { uniforms[name] = Uniform(value); uniform_changed = true; }
     inline void SetUniform(const std::string &name, const Vector2 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
@@ -41,7 +46,8 @@ public:
     void End();
 
 protected:
-    ShaderProperties properties;
+    ShaderProperties m_properties;
+    MaterialFaceCull m_override_cull;
 
     enum SubShaderType {
         SUBSHADER_NONE = 0x00,

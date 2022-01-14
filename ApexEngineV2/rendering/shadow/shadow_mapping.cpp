@@ -9,7 +9,7 @@ ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist)
 {
     shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
 
-    fbo = new Framebuffer2D(1024, 1024, true, true, false, false);
+    fbo = new Framebuffer2D(1024, 1024, true, true, true, true);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -81,11 +81,11 @@ void ShadowMapping::Begin()
 
     fbo->Use();
 
-    glDepthMask(true);
-    glClearDepth(1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    glCullFace(GL_FRONT);
-    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+    // glDepthMask(true);
+    // glClearDepth(1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // glCullFace(GL_FRONT);
+    // glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
     // glDepthMask(true);
     // glClearDepth(1.0);
@@ -97,7 +97,7 @@ void ShadowMapping::Begin()
 
 void ShadowMapping::End()
 {
-    glCullFace(GL_BACK);
+    // glCullFace(GL_BACK);
     fbo->End();
 }
 
