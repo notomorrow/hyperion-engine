@@ -2,6 +2,7 @@
 #include "../../asset/asset_manager.h"
 #include "../../rendering/shader_manager.h"
 #include "../../rendering/shaders/lighting_shader.h"
+#include "../../rendering/environment.h"
 #include "../../rendering/mesh.h"
 #include "../../rendering/vertex.h"
 #include "../../util/string_util.h"
@@ -168,6 +169,8 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
         }
 
         mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
+            { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
+            { "NUM_SPLITS", Environment::GetInstance()->NumCascades() },
             { "NORMAL_MAPPING", 1 }
         }));
 

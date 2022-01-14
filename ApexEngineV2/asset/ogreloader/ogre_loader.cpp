@@ -1,5 +1,6 @@
 #include "ogre_loader.h"
 #include "../../asset/asset_manager.h"
+#include "../../rendering/environment.h"
 #include "../../entity.h"
 #include "../../math/vector2.h"
 #include "../../math/vector3.h"
@@ -218,11 +219,16 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
     bool has_animations = !handler.animations.empty();
     bool has_bones = !handler.bones.empty();
 
-    ShaderProperties shader_properties;
+    ShaderProperties shader_properties = {
+        { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
+        { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
+    };
+
     if (has_bones) {
         shader_properties["SKINNING"] = true;
         shader_properties["NUM_BONES"] = handler.bones.size();
     }
+
     auto shader = ShaderManager::GetInstance()->GetShader<LightingShader>(shader_properties);
 
     if (!handler.has_submeshes) {

@@ -27,6 +27,7 @@ DepthShader::DepthShader(const ShaderProperties &properties)
 
 void DepthShader::ApplyMaterial(const Material &mat)
 {
+    Shader::ApplyMaterial(mat);
 }
 
 void DepthShader::ApplyTransforms(const Transform &transform, Camera *camera)

@@ -1,4 +1,5 @@
 #include "post_processing.h"
+#include "../../core_engine.h"
 #include "../../util/mesh_factory.h"
 
 namespace apex {
@@ -25,9 +26,9 @@ void PostProcessing::RemoveFilter(const std::string &tag)
 
 void PostProcessing::Render(Camera *cam, Framebuffer *fbo)
 {
-  glDepthMask(false);
-  glDisable(GL_DEPTH_TEST);
-  glViewport(0, 0, cam->GetWidth(), cam->GetHeight());
+  CoreEngine::GetInstance()->DepthMask(false);
+  CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::DEPTH_TEST);
+  CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
 
   for (auto &&it : m_filters) {
     it.filter->Begin(cam, fbo);
@@ -37,8 +38,8 @@ void PostProcessing::Render(Camera *cam, Framebuffer *fbo)
     it.filter->End(cam, fbo);
   }
 
-  glDepthMask(true);
-  glEnable(GL_DEPTH_TEST);
+  CoreEngine::GetInstance()->DepthMask(true);
+  CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::DEPTH_TEST);
 }
 
 } // namespace apex

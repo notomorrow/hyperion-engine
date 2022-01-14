@@ -16,13 +16,13 @@ public:
     virtual ~TerrainChunk() = default;
 
     virtual void OnAdded() = 0;
+    // to be implemented by derived class, as the way of generating heights
+    virtual int HeightIndexAt(int x, int z) = 0;
 
     ChunkInfo m_chunk_info;
     std::shared_ptr<Entity> m_entity = nullptr;
 
 protected:
-    // to be implemented by derived class, as the way of generating heights
-    virtual int HeightIndexAt(int x, int z) = 0;
 
     std::shared_ptr<Mesh> BuildMesh(const std::vector<double> &heights);
     void AddNormal(Vertex &vertex, const Vector3 &normal);

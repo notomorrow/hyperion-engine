@@ -40,9 +40,9 @@ void Renderer::End(Camera *cam, Entity *top)
 {
     RenderPost(cam, m_fbo);
 
-    glDisable(GL_CULL_FACE);
+    CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
     RenderBucket(cam, m_buckets[Renderable::RB_SCREEN]);
-    glEnable(GL_CULL_FACE);
+    CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
 }
 
 void Renderer::ClearRenderables()
@@ -173,8 +173,10 @@ bool Renderer::MemoizedFrustumCheck(Camera *cam, const BoundingBox &aabb)
     return cam->GetFrustum().BoundingBoxInFrustum(aabb);
 }
 
-void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader)
+void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader, bool enable_frustum_culling)
 {
+    enable_frustum_culling = enable_frustum_culling && bucket.enable_culling;
+
     Shader *shader = nullptr;
 
     for (const BucketItem &it : bucket.GetItems()) {
@@ -182,12 +184,14 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
             continue;
         }
 
-        if (bucket.enable_culling && it.frustum_culled) {
+        if (enable_frustum_culling && it.frustum_culled) {
             continue;
         }
 
         // TODO: group by same shader
-        if ((shader = override_shader ? override_shader : it.renderable->m_shader.get())) {
+        shader = (override_shader ? override_shader : it.renderable->m_shader.get());
+
+        if (shader) {
             shader->ApplyMaterial(*it.material);
             shader->ApplyTransforms(it.transform, cam);
             shader->Use();
@@ -203,14 +207,14 @@ void Renderer::RenderAll(Camera *cam, Framebuffer *fbo)
         fbo->Use();
 
         // todo: test
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
     } else {
         CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
     }
 
-    glDisable(GL_CULL_FACE);
+    CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
     RenderBucket(cam, m_buckets[Renderable::RB_SKY]);
-    glEnable(GL_CULL_FACE);
+    CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
     RenderBucket(cam, m_buckets[Renderable::RB_OPAQUE]);
     RenderBucket(cam, m_buckets[Renderable::RB_TRANSPARENT]);
     RenderBucket(cam, m_buckets[Renderable::RB_PARTICLE]);
