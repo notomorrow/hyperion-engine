@@ -16,7 +16,7 @@ public:
 
     virtual ~CoreEngine() = default;
 
-    /*enum GLEnums {
+    enum GLEnums {
         DEPTH_BUFFER_BIT = 0x00000100,
         STENCIL_BUFFER_BIT = 0x00000400,
         COLOR_BUFFER_BIT = 0x00004000,
@@ -115,7 +115,7 @@ public:
         STENCIL_ATTACHMENT = 0x8D20,
         NONE = 0,
         FRAMEBUFFER_COMPLETE = 0x8CD5,
-    };*/
+    };
 
     virtual bool InitializeGame(Game *game) = 0;
     virtual void SetCursorLocked(bool locked) = 0;

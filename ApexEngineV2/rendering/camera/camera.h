@@ -33,7 +33,7 @@ public:
     inline void SetViewMatrix(const Matrix4 &view_mat) { m_view_mat = view_mat; }
     inline const Matrix4 &GetProjectionMatrix() const { return m_proj_mat; }
     inline void SetProjectionMatrix(const Matrix4 &proj_mat) { m_proj_mat = proj_mat; }
-    inline const Matrix4 &GetViewProjectionMatrix() const { return m_view_proj_mat; }
+    inline Matrix4 GetViewProjectionMatrix() const { return m_view_mat * m_proj_mat; }
     inline const Frustum &GetFrustum() const { return m_frustum; }
 
     void Rotate(const Vector3 &axis, float radians);

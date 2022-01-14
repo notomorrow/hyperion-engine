@@ -83,21 +83,21 @@ void ShadowMapping::Begin()
 
     glDepthMask(true);
     glClearDepth(1.0);
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    ///glCullFace(GL_FRONT);
-    // glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glCullFace(GL_FRONT);
+    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
     // glDepthMask(true);
     // glClearDepth(1.0);
     // glDepthFunc(GL_LESS);
     // glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     // glCullFace(GL_FRONT);
 }
 
 void ShadowMapping::End()
 {
-    // glCullFace(GL_BACK);
+    glCullFace(GL_BACK);
     fbo->End();
 }
 
