@@ -14,7 +14,9 @@ PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double ma
     const double min_dist = max_dist / (double)num_splits;
 
     for (int i = num_splits - 1; i >= 0; i--) {
-        const double distance = MathUtil::Lerp(min_dist, max_dist, (double)(i) / ((double)num_splits - 1));
+        const double frac = double(i) / double(num_splits - 1);
+        //const double distance = MathUtil::Lerp(min_dist, max_dist, frac);
+        const double distance = max_dist * frac;
         Environment::GetInstance()->SetShadowSplit(i, distance);
         shadow_renderers[i] = std::make_shared<ShadowMapping>(view_cam, distance);
 
@@ -38,15 +40,28 @@ void PssmShadowMapping::SetLightDirection(const Vector3 &dir)
 
 void PssmShadowMapping::Render(Renderer *renderer)
 {
+    // m_depth_shader->SetOverrideCullMode(MaterialFaceCull::MaterialFace_Front);
+
     for (int i = 0; i < num_splits; i++) {
         shadow_renderers[i]->Begin();
-        //CoreEngine::GetInstance()->Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         // TODO: cache beforehand
         Environment::GetInstance()->SetShadowMatrix(i, shadow_renderers[i]->
             GetShadowCamera()->GetViewProjectionMatrix());
 
-        renderer->RenderBucket(shadow_renderers[i]->GetShadowCamera(), renderer->GetBucket(Renderable::RB_OPAQUE), m_depth_shader.get());
+        renderer->RenderBucket(
+            shadow_renderers[i]->GetShadowCamera(),
+            renderer->GetBucket(Renderable::RB_OPAQUE),
+            m_depth_shader.get(),
+            false
+        );
+
+        // renderer->RenderBucket(
+        //     shadow_renderers[i]->GetShadowCamera(),
+        //     renderer->GetBucket(Renderable::RB_TRANSPARENT),
+        //     m_depth_shader.get(),
+        //     false
+        // );
 
         shadow_renderers[i]->End();
     }

@@ -39,7 +39,7 @@ void main()
   
 #if SHADOWS
   float shadowness = 0.0;
-  const float radius = 0.05;
+  const float radius = 0.001;
   for (int x = 0; x < 4; x++) {
     for (int y = 0; y < 4; y++) {
       vec2 offset = poissonDisk[x * 4 + y] * radius;

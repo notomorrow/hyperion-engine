@@ -24,16 +24,16 @@ LightingShader::LightingShader(const ShaderProperties &properties)
             properties, fs_path)
         )
     );
-
-    for (int i = 0; i < 16; i++) {
-        SetUniform("poissonDisk[" + std::to_string(i) + "]",
-            Environment::possion_disk[i]);
-    }
 }
 
 void LightingShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
+
+    for (int i = 0; i < 16; i++) {
+        SetUniform("poissonDisk[" + std::to_string(i) + "]",
+            Environment::possion_disk[i]);
+    }
 
     int texture_index = 1;
 

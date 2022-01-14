@@ -11,6 +11,8 @@ UIButton::UIButton(const std::string &name)
     : UIObject(name)
 {
     m_renderable->SetShader(ShaderManager::GetInstance()->GetShader<UIButtonShader>({ }));
+
+    m_material.alpha_blended = true;
 }
 } // namespace ui
 } // namespace apex

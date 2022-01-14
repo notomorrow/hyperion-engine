@@ -235,7 +235,7 @@ public:
     void Render(Camera *cam);
     void End(Camera * cam, Entity *top);
 
-    void RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader = nullptr);
+    void RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader = nullptr, bool enable_frustum_culling = true);
     void RenderAll(Camera *cam, Framebuffer *fbo = nullptr);
     void RenderPost(Camera *cam, Framebuffer *fbo);
  

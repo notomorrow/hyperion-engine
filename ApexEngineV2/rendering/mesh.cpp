@@ -13,6 +13,7 @@ const Mesh::MeshAttribute Mesh::MeshAttribute::BoneWeights = { 0, 4, 6 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::BoneIndices = { 0, 4, 7 };
 
 Mesh::Mesh()
+    : Renderable()
 {
     SetAttribute(ATTR_POSITIONS, MeshAttribute::Positions);
     SetPrimitiveType(PRIM_TRIANGLES);
@@ -282,6 +283,14 @@ void Mesh::CalculateNormals()
     }
 
     SetAttribute(ATTR_NORMALS, MeshAttribute::Normals);
+}
+
+
+void Mesh::InvertNormals()
+{
+    for (Vertex &vert : vertices) {
+        vert.SetNormal(vert.GetNormal() * -1);
+    }
 }
 
 } // namespace apex

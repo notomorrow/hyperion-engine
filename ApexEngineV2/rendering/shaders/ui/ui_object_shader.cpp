@@ -26,6 +26,8 @@ UIObjectShader::UIObjectShader(const ShaderProperties &properties)
 
 void UIObjectShader::ApplyMaterial(const Material &mat)
 {
+    Shader::ApplyMaterial(mat);
+
     int texture_index = 1;
 
     // if (mat.texture0 != nullptr) {

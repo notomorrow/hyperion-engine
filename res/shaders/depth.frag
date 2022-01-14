@@ -9,9 +9,10 @@ in mat3 v_tbn;
 
 uniform vec3 u_camerapos;
 
+#include "include/depth.inc"
 #include "include/frag_output.inc"
 
 void main()
 {
-  output0 = vec4(gl_FragCoord.z / gl_FragCoord.w);
+  output0 = packDepth(gl_FragCoord.z / gl_FragCoord.w);
 }

@@ -6,7 +6,8 @@
 namespace apex {
 
 Shader::Shader(const ShaderProperties &properties)
-    : properties(properties),
+    : m_properties(properties),
+      m_override_cull(MaterialFaceCull::MaterialFace_None),
       is_uploaded(false),
       is_created(false),
       uniform_changed(false)
@@ -17,7 +18,8 @@ Shader::Shader(const ShaderProperties &properties)
 Shader::Shader(const ShaderProperties &properties,
     const std::string &vscode,
     const std::string &fscode)
-    : properties(properties),
+    : m_properties(properties),
+      m_override_cull(MaterialFaceCull::MaterialFace_None),
       is_uploaded(false),
       is_created(false),
       uniform_changed(false)
@@ -54,13 +56,19 @@ void Shader::ApplyMaterial(const Material &mat)
 {
     ResetUniforms();
 
-    if (mat.cull_faces == (MaterialFaceCull::MaterialFace_Front | MaterialFaceCull::MaterialFace_Back)) {
+    MaterialFaceCull cull_mode(mat.cull_faces);
+
+    if (m_override_cull != MaterialFaceCull::MaterialFace_None) {
+        cull_mode = m_override_cull;
+    }
+
+    if (cull_mode == (MaterialFaceCull::MaterialFace_Front | MaterialFaceCull::MaterialFace_Back)) {
         glCullFace(GL_FRONT_AND_BACK);
-    } else if (mat.cull_faces & MaterialFaceCull::MaterialFace_Front) {
+    } else if (cull_mode & MaterialFaceCull::MaterialFace_Front) {
         glCullFace(GL_FRONT);
-    } else if (mat.cull_faces & MaterialFaceCull::MaterialFace_Back) {
+    } else if (cull_mode & MaterialFaceCull::MaterialFace_Back) {
         glCullFace(GL_BACK);
-    } else if (mat.cull_faces == MaterialFaceCull::MaterialFace_None) {
+    } else if (cull_mode == MaterialFaceCull::MaterialFace_None) {
         glDisable(GL_CULL_FACE);
     }
 
@@ -212,6 +220,7 @@ void Shader::Use()
 
 void Shader::End()
 {
+    // m_override_cull = MaterialFaceCull::MaterialFace_None;
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(true);
