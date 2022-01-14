@@ -12,7 +12,7 @@ PostFilter::PostFilter(const std::shared_ptr<PostShader> &shader)
 void PostFilter::Begin(Camera *cam, Framebuffer *fbo)
 {
     // TODO: initialization
-    m_material.SetTexture("ColorMap", fbo->GetColorTexture());
+    m_material.SetTexture("ColorMap", fbo->GetColorTexture());//Environment::GetInstance()->GetShadowMap(3));
     m_material.SetTexture("DepthMap", fbo->GetDepthTexture());
     m_material.SetTexture("PositionMap", fbo->GetPositionTexture());
     m_material.SetTexture("NormalMap", fbo->GetNormalTexture());

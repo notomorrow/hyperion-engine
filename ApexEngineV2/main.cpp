@@ -239,13 +239,13 @@ public:
         //env_cam->SetTranslation(Vector3(0, 10, 0));
         fbo = new Framebuffer2D(cam->GetWidth(), cam->GetHeight());
         //env_fbo = new FramebufferCube(256, 256);
-        shadows = new PssmShadowMapping(cam, 4, 200);
+        shadows = new PssmShadowMapping(cam, 4, 50);
 
 
         Environment::GetInstance()->SetShadowsEnabled(true);
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.3).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(1.9f, 0.35f, 1.9f).Normalize());
 
         Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f), 10.0f));
         Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(6.0f, 15, 0), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
@@ -254,19 +254,17 @@ public:
         // Initialize root node
         top = std::make_shared<Entity>("top");
 
-        cam->SetTranslation(Vector3(0, 150, 0));
+        cam->SetTranslation(Vector3(0, 0, 0));
 
         // Initialize particle system
         InitParticleSystem();
 
-
-
         // UI test
-        auto test_ui = std::make_shared<ui::UIButton>("my_ui_object");
+        /*auto test_ui = std::make_shared<ui::UIButton>("my_ui_object");
         test_ui->SetLocalTranslation2D(Vector2(-0.5, 0.0));
         test_ui->SetLocalScale2D(Vector2(260, 80));
         top->AddChild(test_ui);
-        GetUIManager()->RegisterUIObject(test_ui);
+        GetUIManager()->RegisterUIObject(test_ui);*/
 
 
         ShaderProperties defines = {
@@ -276,6 +274,7 @@ public:
             { "METALNESS_MAPPING", 1 },
             { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
         };
+    
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
 
         //cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties {});
@@ -340,7 +339,8 @@ public:
 
         auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
         dragger->SetName("dragger");
-        dragger->Move(Vector3(7, 165, 6));
+        dragger->Move(Vector3(7, -10, 6));
+        dragger->Scale(0.25);
         dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
         dragger->GetChild(0)->GetMaterial().SetParameter("shininess", 0.4f);
         dragger->GetChild(0)->GetMaterial().SetParameter("roughness", 0.4f);
@@ -404,8 +404,9 @@ public:
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3((x * 6) + 6, 165, z * 6);
+                Vector3 box_position = Vector3((x * 6) + 6, 0, z * 6);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+                box->Scale(0.25);
                 for (size_t i = 0; i < box->NumChildren(); i++) {
                     box->GetChild(i)->GetRenderable()->SetShader(shader);
 
@@ -656,7 +657,7 @@ public:
 
         // top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 3434));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
     void Logic(double dt)
@@ -700,7 +701,7 @@ public:
         //     Vector3(sin(timer * 1.2) * 0.2, 0, -sin(timer * 1.2) * 0.2).Normalize()
         // ));
 
-        // Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.2), cos(timer * 0.2), 0.0f).Normalize());
+        // Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.2), 1, -cos(timer * 0.2)).Normalize());
 
         Vector4 sun_color = Vector4(1.0, 0.95, 0.9, 1.0);
         const float sun_to_horizon = std::max(Environment::GetInstance()->GetSun().GetDirection().y, 0.0f);

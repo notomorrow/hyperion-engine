@@ -49,8 +49,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
                 texture_index++;
             }
 
-            std::cout << "shadow matrix " << i_str << " = " << env->GetShadowMatrix(i) << "\n";
-
             SetUniform("u_shadowMatrix[" + i_str + "]", env->GetShadowMatrix(i));
             SetUniform("u_shadowSplit[" + i_str + "]", (float)env->GetShadowSplit(i));
         }

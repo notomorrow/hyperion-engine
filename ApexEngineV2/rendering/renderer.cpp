@@ -189,7 +189,9 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
         }
 
         // TODO: group by same shader
-        if ((shader = override_shader ? override_shader : it.renderable->m_shader.get())) {
+        shader = (override_shader ? override_shader : it.renderable->m_shader.get());
+
+        if (shader) {
             shader->ApplyMaterial(*it.material);
             shader->ApplyTransforms(it.transform, cam);
             shader->Use();
