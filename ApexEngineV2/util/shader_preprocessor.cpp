@@ -1,14 +1,15 @@
 #include "shader_preprocessor.h"
-#include "string_util.h"
+#include "../rendering/shader.h"
 #include "../asset/asset_manager.h"
 #include "../asset/text_loader.h"
+#include "string_util.h"
 
 #include <iostream>
 
 namespace apex {
 
 std::string ShaderPreprocessor::ProcessShader(const std::string &code, 
-    std::map<std::string, float> defines, 
+    const ShaderProperties &shader_properties, 
     const std::string &path)
 {
     std::istringstream ss(code);
@@ -23,14 +24,16 @@ std::string ShaderPreprocessor::ProcessShader(const std::string &code,
         local_path.clear();
     }
 
-    return ProcessInner(ss, pos, defines, local_path);
+    return ProcessInner(ss, pos, shader_properties, local_path);
 }
 
 std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss, 
     std::streampos &pos,
-    std::map<std::string, float> &defines,
+    const ShaderProperties &shader_properties,
     const std::string &local_path)
 {
+    ShaderProperties defines(shader_properties);
+
     std::string res;
     std::string line;
     int if_layer = 0;
@@ -40,9 +43,9 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
 
         if (StringUtil::StartsWith(line, "#define $")) {
             if (state) {
-                std::string val = line.substr(9);
+                std::string sub = line.substr(9);
 
-                const std::vector<std::string> components = StringUtil::Split(val, ' ');
+                const std::vector<std::string> components = StringUtil::Split(sub, ' ');
     
                 std::vector<std::string> new_components;
                 new_components.reserve(components.size());
@@ -55,18 +58,34 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
                     }
                 }
 
-                if (new_components.size() == 2) {
-                    // TODO: allow for defines of any type
-                    defines[new_components[0]] = std::stof(new_components[1]);
+                if (new_components.size() >= 2) {
+                    std::string key = new_components[0];
+                    std::string value = line.substr(9 + key.size());
+
+                    ShaderProperties::ShaderProperty::Value result;
+
+                    if (new_components.size() == 2) {
+                        if (StringUtil::ParseNumber<float>(value, &result.float_value)) {
+                            defines.Define(key, result.float_value);
+                        } else if (StringUtil::ParseNumber<int>(value, &result.int_value)) {
+                            defines.Define(key, result.int_value);
+                        } else if (StringUtil::ParseNumber<bool>(value, &result.bool_value)) {
+                            defines.Define(key, result.bool_value);
+                        } else {
+                            defines.Define(key, value);
+                        }
+                    } else {
+                        defines.Define(key, value);
+                    }
                 } else {
                     res += "#error \"The `#define $` directive must be defined in the format: `#define $NAME value`\"\n";
                 }
             }
         } else if (StringUtil::StartsWith(line, "#if !")) {
             if (state) {
-                std::string val = line.substr(5);
-                auto it = defines.find(val);
-                if (it != defines.end() && it->second) {
+                std::string key = line.substr(5);
+
+                if (defines.GetValue(key).IsTruthy()) {
                     ++if_layer;
                     state = false;
                 } else {
@@ -75,9 +94,9 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
             }
         } else if (StringUtil::StartsWith(line, "#if ")) {
             if (state) {
-                std::string val = line.substr(4);
-                auto it = defines.find(val);
-                if (it != defines.end() && it->second) {
+                std::string key = line.substr(4);
+
+                if (defines.GetValue(key).IsTruthy()) {
                     res += ProcessInner(ss, pos, defines, local_path) + "\n";
                 } else {
                     ++if_layer;
@@ -86,6 +105,7 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
             }
         } else if (StringUtil::StartsWith(line, "#endif")) {
             --if_layer;
+
             if (if_layer == 0) {
                 // exit #if branches, return to normal state
                 state = true;
@@ -146,16 +166,10 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
             }
 
             size_t len = i - start_pos;
-            auto it = defines.find(str);
-            if (it != defines.end()) {
-                std::string val;
-                if (it->second == (int)it->second) {
-                    val = std::to_string((int)it->second);
-                } else {
-                    val = std::to_string(it->second);
-                }
-                res = res.replace(start_pos, len, val);
-            }
+
+            auto value = defines.GetValue(str);
+
+            res = res.replace(start_pos, len, value.raw_value);
         }
     }
 

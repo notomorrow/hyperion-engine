@@ -1,7 +1,7 @@
 #include "shader.h"
 #include "../util/string_util.h"
 #include "../util/shader_preprocessor.h"
-#include "../util.h"
+#include "../gl_util.h"
 
 namespace apex {
 

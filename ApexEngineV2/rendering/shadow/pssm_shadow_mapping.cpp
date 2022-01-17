@@ -23,7 +23,7 @@ PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double ma
         Environment::GetInstance()->SetShadowMap(i, shadow_renderers[i]->GetShadowMap());
     }
 
-    m_depth_shader = ShaderManager::GetInstance()->GetShader<DepthShader>(ShaderProperties {});
+    m_depth_shader = ShaderManager::GetInstance()->GetShader<DepthShader>(ShaderProperties());
 }
 
 int PssmShadowMapping::NumSplits() const

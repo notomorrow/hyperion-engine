@@ -1,5 +1,5 @@
 #include "texture.h"
-#include "../util.h"
+#include "../gl_util.h"
 
 namespace apex {
 

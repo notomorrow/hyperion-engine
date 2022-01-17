@@ -17,8 +17,8 @@ SkydomeControl::SkydomeControl(Camera *camera)
 
 void SkydomeControl::OnAdded()
 {
-    ShaderProperties defines { {"CLOUDS", clouds_in_dome} };
-    shader = ShaderManager::GetInstance()->GetShader<SkydomeShader>(defines);
+    shader = ShaderManager::GetInstance()->GetShader<SkydomeShader>(ShaderProperties()
+        .Define("CLOUDS", clouds_in_dome));
 
     dome = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/dome.obj");
 
@@ -34,8 +34,7 @@ void SkydomeControl::OnAdded()
     dome->GetChild(0)->GetMaterial().alpha_blended = true;
 
     //if (!clouds_in_dome) {
-        ShaderProperties clouds_defines;
-        clouds_shader = ShaderManager::GetInstance()->GetShader<CloudsShader>(clouds_defines);
+        clouds_shader = ShaderManager::GetInstance()->GetShader<CloudsShader>(ShaderProperties());
         clouds_shader->SetCloudColor(Vector4(1.0));
 
         clouds_quad = MeshFactory::CreateQuad();

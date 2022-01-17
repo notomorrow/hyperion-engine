@@ -6,8 +6,7 @@
 namespace apex {
 
 BloomFilter::BloomFilter()
-    : PostFilter(ShaderManager::GetInstance()->GetShader<BloomShader>(ShaderProperties {
-      }))
+    : PostFilter(ShaderManager::GetInstance()->GetShader<BloomShader>(ShaderProperties()))
 {
 }
 

@@ -267,13 +267,12 @@ public:
         GetUIManager()->RegisterUIObject(test_ui);*/
 
 
-        ShaderProperties defines = {
-            { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
-            { "NORMAL_MAPPING", 1 },
-            { "ROUGHNESS_MAPPING", 1 },
-            { "METALNESS_MAPPING", 1 },
-            { "NUM_SPLITS", Environment::GetInstance()->NumCascades() }
-        };
+        ShaderProperties defines;
+        defines.Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled());
+        defines.Define("NORMAL_MAPPING", 1);
+        defines.Define("ROUGHNESS_MAPPING", 1);
+        defines.Define("METALNESS_MAPPING", 1);
+        defines.Define("NUM_SPLITS", Environment::GetInstance()->NumCascades());
     
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
 

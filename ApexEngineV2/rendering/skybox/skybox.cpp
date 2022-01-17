@@ -22,7 +22,7 @@ void SkyboxControl::OnAdded()
     cube->SetRenderable(MeshFactory::CreateCube());
     cube->SetLocalScale(10);
     cube->SetLocalTranslation(Vector3(0, 55, 2));
-    cube->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<SkyboxShader>({}));
+    cube->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<SkyboxShader>(ShaderProperties()));
     cube->GetRenderable()->SetRenderBucket(Renderable::RB_SKY);
     cube->GetMaterial().SetTexture("SkyboxMap", cubemap);
     cube->GetMaterial().depth_test = false;

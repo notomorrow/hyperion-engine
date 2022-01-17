@@ -78,13 +78,13 @@ void NoiseTerrainChunk::OnAdded()
 {
     std::shared_ptr<Mesh> mesh = BuildMesh(m_heights);
 
-    mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
-        { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
-        { "NUM_SPLITS", Environment::GetInstance()->NumCascades() },
-        { "NORMAL_MAPPING", 1 },
-        { "ROUGHNESS_MAPPING", 1 },
-        { "METALNESS_MAPPING", 1 }
-    }));
+    mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()
+        .Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled())
+        .Define("NUM_SPLITS", Environment::GetInstance()->NumCascades())
+        .Define("NORMAL_MAPPING", true)
+        .Define("ROUGHNESS_MAPPING", true)
+        .Define("METALNESS_MAPPING", true)
+    ));
     m_entity = std::make_shared<Entity>(std::string("noise_terrain_node_") + std::to_string(int(m_chunk_info.m_position.x)) + std::string("_") + std::to_string(int(m_chunk_info.m_position.y)));
     m_entity->SetRenderable(mesh);
 

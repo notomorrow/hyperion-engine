@@ -168,11 +168,11 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
             mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
         }
 
-        mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>({
-            { "SHADOWS", Environment::GetInstance()->ShadowsEnabled() },
-            { "NUM_SPLITS", Environment::GetInstance()->NumCascades() },
-            { "NORMAL_MAPPING", 1 }
-        }));
+        mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()
+            .Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled())
+            .Define("NUM_SPLITS", Environment::GetInstance()->NumCascades())
+            .Define("NORMAL_MAPPING", true)
+        ));
 
         auto geom = std::make_shared<Entity>();
         geom->SetName(model.mesh_names[i]);

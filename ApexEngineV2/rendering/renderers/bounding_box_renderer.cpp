@@ -17,8 +17,7 @@ BoundingBoxRenderer::BoundingBoxRenderer()
 
     m_mesh->SetPrimitiveType(Mesh::PRIM_LINES);
 
-    ShaderProperties properties = {};
-    m_shader.reset(new Shader(properties, ShaderCode::aabb_debug_vs, ShaderCode::aabb_debug_fs));
+    m_shader.reset(new Shader(ShaderProperties(), ShaderCode::aabb_debug_vs, ShaderCode::aabb_debug_fs));
 }
 
 BoundingBoxRenderer::~BoundingBoxRenderer()

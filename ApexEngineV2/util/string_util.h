@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <sstream>
+#include <iomanip>
 #include <functional>
 #include <cctype>
 
@@ -90,6 +92,39 @@ public:
             start_pos += to.length();
         }
         return result;
+    }
+
+    template <typename T>
+    static inline bool ParseNumber(const std::string &str, T *out_value)
+    {
+        std::istringstream ss(str);
+        T value;
+        ss >> std::boolalpha >> value;
+
+        if (ss.eof() && !ss.fail()) {
+            return false;
+        }
+
+        *out_value = value;
+
+        return true;
+    }
+
+    template <typename T>
+    static inline T ParseNumber(const std::string &str)
+    {
+        T value;
+
+        ParseNumber(str, &value);
+
+        return value;
+    }
+
+    template <typename T>
+    static inline bool IsNumber(const std::string &str) {
+        T value;
+
+        return ParseNumber(str, &value);
     }
 };
 
