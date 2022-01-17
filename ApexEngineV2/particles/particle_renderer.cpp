@@ -4,7 +4,7 @@
 #include "../rendering/environment.h"
 #include "../math/matrix_util.h"
 #include "../core_engine.h"
-#include "../util.h"
+#include "../gl_util.h"
 #include <array>
 #include <ctime>
 #include <cassert>
@@ -17,9 +17,8 @@ ParticleRenderer::ParticleRenderer(const ParticleConstructionInfo &info)
       m_particles(nullptr)
 {
     // load shader
-    ShaderProperties properties {
-        { "DIFFUSE_MAP", true }
-    };
+    ShaderProperties properties;
+    properties.Define("DIFFUSE_MAP", true);
 
     m_shader = ShaderManager::GetInstance()->GetShader<ParticleShader>(properties);
 }

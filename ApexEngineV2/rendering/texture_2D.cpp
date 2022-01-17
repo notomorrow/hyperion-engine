@@ -1,5 +1,5 @@
 #include "texture_2D.h"
-#include "../util.h"
+#include "../gl_util.h"
 #include <cassert>
 
 namespace apex {

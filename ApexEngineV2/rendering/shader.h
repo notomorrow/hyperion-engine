@@ -18,7 +18,136 @@
 
 namespace apex {
 
-typedef std::map<std::string, float> ShaderProperties;
+class ShaderProperties {
+public:
+
+    struct ShaderProperty {
+        std::string raw_value;
+
+        union Value {
+            float float_value;
+            int int_value;
+            bool bool_value;
+        } value;
+
+        enum ShaderPropertyType {
+            SHADER_PROPERTY_UNSET = 0,
+            SHADER_PROPERTY_STRING,
+            SHADER_PROPERTY_FLOAT,
+            SHADER_PROPERTY_INT,
+            SHADER_PROPERTY_BOOL
+        } type;
+
+        inline bool operator==(const ShaderProperty &other) const
+        {
+            return type == other.type &&
+                raw_value == other.raw_value;
+        }
+
+        inline bool IsTruthy() const
+        {
+            switch (type) {
+            case SHADER_PROPERTY_UNSET:
+                return false;
+            case SHADER_PROPERTY_STRING:
+                return true;
+            case SHADER_PROPERTY_INT:
+                return value.int_value != 0;
+            case SHADER_PROPERTY_FLOAT:
+                return value.float_value != 0.0;
+            case SHADER_PROPERTY_BOOL:
+                return !!value.bool_value;
+            default:
+                return false;
+            }
+        }
+    };
+
+    std::map<std::string, ShaderProperty> m_properties;
+
+    inline bool operator==(const ShaderProperties &other) const
+    {
+        return m_properties == other.m_properties;
+    }
+
+    inline bool HasValue(const std::string &key) const
+    {
+        auto it = m_properties.find(key);
+
+        return it != m_properties.end();
+    }
+
+    inline ShaderProperty GetValue(const std::string &key) const
+    {
+        ShaderProperty result;
+        result.value.int_value = 0;
+        result.type = ShaderProperty::SHADER_PROPERTY_UNSET;
+
+        auto it = m_properties.find(key);
+
+        if (it != m_properties.end()) {
+            result = it->second;
+        }
+
+        return result;
+    }
+
+    inline ShaderProperties &Define(const std::string &key, const std::string &value)
+    {
+        ShaderProperty shader_property;
+        shader_property.raw_value = value;
+        shader_property.type = ShaderProperty::ShaderPropertyType::SHADER_PROPERTY_STRING;
+
+        m_properties[key] = shader_property;
+
+        return *this;
+    }
+
+    inline ShaderProperties &Define(const std::string &key, int value)
+    {
+        ShaderProperty shader_property;
+        shader_property.raw_value = std::to_string(value);
+        shader_property.value.int_value = value;
+        shader_property.type = ShaderProperty::ShaderPropertyType::SHADER_PROPERTY_INT;
+
+        m_properties[key] = shader_property;
+
+        return *this;
+    }
+
+    inline ShaderProperties &Define(const std::string &key, float value)
+    {
+        ShaderProperty shader_property;
+        shader_property.raw_value = std::to_string(value);
+        shader_property.value.float_value = value;
+        shader_property.type = ShaderProperty::ShaderPropertyType::SHADER_PROPERTY_FLOAT;
+
+        m_properties[key] = shader_property;
+
+        return *this;
+    }
+
+    inline ShaderProperties &Define(const std::string &key, bool value)
+    {
+        ShaderProperty shader_property;
+        shader_property.raw_value = std::to_string(value);
+        shader_property.value.bool_value = value;
+        shader_property.type = ShaderProperty::ShaderPropertyType::SHADER_PROPERTY_BOOL;
+
+        m_properties[key] = shader_property;
+
+        return *this;
+    }
+
+    inline ShaderProperties &Merge(const ShaderProperties &other)
+    {
+        for (auto &it : other.m_properties) {
+            m_properties[it.first] = it.second;
+        }
+
+        return *this;
+    }
+};
 
 class Shader {
 public:

@@ -24,8 +24,8 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
             properties, fs_path)
         ));
 
-    if (properties.find("CLOUDS") != properties.end()) {
-        has_clouds = bool(properties.at("CLOUDS"));
+    if (properties.HasValue("CLOUDS")) {
+        has_clouds = properties.GetValue("CLOUDS").IsTruthy();
     } else {
         has_clouds = false;
     }

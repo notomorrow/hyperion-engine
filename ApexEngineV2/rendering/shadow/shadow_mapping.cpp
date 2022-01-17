@@ -83,7 +83,7 @@ void ShadowMapping::Begin()
 
     // glDepthMask(true);
     // glClearDepth(1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
     // glCullFace(GL_FRONT);
     // glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
@@ -97,7 +97,6 @@ void ShadowMapping::Begin()
 
 void ShadowMapping::End()
 {
-    // glCullFace(GL_BACK);
     fbo->End();
 }
 

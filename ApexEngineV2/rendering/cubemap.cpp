@@ -1,5 +1,5 @@
 #include "./cubemap.h"
-#include "../util.h"
+#include "../gl_util.h"
 #include "../math/math_util.h"
 
 #include <iostream>

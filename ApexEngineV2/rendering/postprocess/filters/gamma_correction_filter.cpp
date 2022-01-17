@@ -5,7 +5,7 @@
 namespace apex {
 
 GammaCorrectionFilter::GammaCorrectionFilter()
-    : PostFilter(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(ShaderProperties {}))
+    : PostFilter(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(ShaderProperties()))
 {
 }
 

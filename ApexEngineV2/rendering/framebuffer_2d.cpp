@@ -1,5 +1,5 @@
 #include "./framebuffer_2d.h"
-#include "../util.h"
+#include "../gl_util.h"
 
 namespace apex {
 
