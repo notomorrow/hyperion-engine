@@ -16,60 +16,6 @@
 #include "postprocess/post_processing.h"
 
 namespace apex {
-/*class MemoizedBoundingBox : public BoundingBox {
-    MemoizedBoundingBox()
-        : BoundingBox()
-    {   
-    }
-
-    MemoizedBoundingBox(const Vector3 &min, const Vector3 &max)
-        : BoundingBox(min, max)
-    {
-    }
-
-    MemoizedBoundingBox(const BoundingBox &other)
-        : BoundingBox(other)
-    {
-    }
-
-    inline HashCode GetHashCode() const
-    {
-        HashCode hc;
-
-        hc.Add(GetMin().GetHashCode());
-        hc.Add(Max().GetHashCode());
-
-        return hc;
-    }
-};
-
-class MemoizedFrustum : public Frustum {
-    MemoizedFrustum()
-        : Frustum()
-    {   
-    }
-
-    MemoizedFrustum(const Frustum &other)
-        : Frustum(other)
-    {
-    }
-
-    MemoizedFrustum(const Matrix4 &view_proj)
-        : Frustum(view_proj)
-    {
-    }
-
-    inline HashCode GetHashCode() const
-    {
-        HashCode hc;
-
-        for (const Vector4 &plane : m_planes) {
-            hc.Add(plane.GetHashCode());
-        }
-
-        return hc;
-    }
-};*/
 
 struct MemoizedFrustumCheckKey {
     size_t frustum_hash_code;

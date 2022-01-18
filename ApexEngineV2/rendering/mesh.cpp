@@ -1,4 +1,5 @@
 #include "mesh.h"
+#include "../math/triangle.h"
 #include "../gl_util.h"
 
 namespace apex {
@@ -226,26 +227,67 @@ void Mesh::Render()
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(MeshIndex), &indices[0], GL_STATIC_DRAW);
-        // glBindBuffer(GL_ARRAY_BUFFER, 0);
-        // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
         is_uploaded = true;
     }
 
-   // glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-   // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glDrawElements(primitive_type, indices.size(), GL_UNSIGNED_INT, 0);
 
-    // for (auto &&attr : attribs) {
-    //     glDisableVertexAttribArray(attr.second.index);
-    // }
-
-    // Unbind the buffers
-    // glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
     glBindVertexArray(0);
+}
+
+bool Mesh::IntersectRay(const Ray &ray, const Transform &transform, RaytestHit &out) const
+{
+    if (primitive_type != PRIM_TRIANGLES) {
+        // fall back to aabb test
+        return Renderable::IntersectRay(ray, transform, out);
+    }
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        Triangle t(
+            vertices[indices[i]].GetPosition(),
+            vertices[indices[i + 1]].GetPosition(),
+            vertices[indices[i + 2]].GetPosition()
+        );
+
+        t *= transform;
+
+        if (t.IntersectRay(ray, out)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Mesh::IntersectRay(const Ray &ray, const Transform &transform, RaytestHitList_t &out) const
+{
+    bool intersected = false;
+
+    if (primitive_type != PRIM_TRIANGLES) {
+        // fall back to aabb test
+        return Renderable::IntersectRay(ray, transform, out);
+    }
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        Triangle t(
+            vertices[indices[i]].GetPosition(),
+            vertices[indices[i + 1]].GetPosition(),
+            vertices[indices[i + 2]].GetPosition()
+        );
+
+        t *= transform;
+
+        RaytestHit intersection;
+
+        if (t.IntersectRay(ray, intersection)) {
+            intersected = true;
+
+            out.push_back(intersection);
+        }
+    }
+
+    return intersected;
 }
 
 void Mesh::CalculateNormals()

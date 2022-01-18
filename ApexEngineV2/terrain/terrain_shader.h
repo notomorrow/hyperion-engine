@@ -1,16 +1,15 @@
 #ifndef TERRAIN_SHADER_H
 #define TERRAIN_SHADER_H
 
-#include "../rendering/shader.h"
+#include "../rendering/shaders/lighting_shader.h"
 
 namespace apex {
-class TerrainShader : public Shader {
+class TerrainShader : public LightingShader {
 public:
     TerrainShader(const ShaderProperties &properties);
     virtual ~TerrainShader() = default;
 
-    virtual void ApplyMaterial(const Material &mat);
-    virtual void ApplyTransforms(const Transform &transform, Camera *camera);
+    virtual void ApplyMaterial(const Material &mat) override;
 };
 } // namespace apex
 

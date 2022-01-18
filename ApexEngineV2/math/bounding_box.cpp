@@ -27,13 +27,13 @@ std::array<Vector3, 8> BoundingBox::GetCorners() const
 {
     return std::array<Vector3, 8> {
         Vector3(m_min.x, m_min.y, m_min.z),
-            Vector3(m_max.x, m_min.y, m_min.z),
-            Vector3(m_max.x, m_max.y, m_min.z),
-            Vector3(m_min.x, m_max.y, m_min.z),
-            Vector3(m_min.x, m_min.y, m_max.z),
-            Vector3(m_min.x, m_max.y, m_max.z),
-            Vector3(m_max.x, m_max.y, m_max.z),
-            Vector3(m_max.x, m_min.y, m_max.z)
+        Vector3(m_max.x, m_min.y, m_min.z),
+        Vector3(m_max.x, m_max.y, m_min.z),
+        Vector3(m_min.x, m_max.y, m_min.z),
+        Vector3(m_min.x, m_min.y, m_max.z),
+        Vector3(m_min.x, m_max.y, m_max.z),
+        Vector3(m_max.x, m_max.y, m_max.z),
+        Vector3(m_max.x, m_min.y, m_max.z)
     };
 }
 
@@ -80,9 +80,31 @@ BoundingBox &BoundingBox::Extend(const BoundingBox &bb)
     return *this;
 }
 
-bool BoundingBox::IntersectRay(const Ray &ray, Vector3 &out) const
+BoundingBox BoundingBox::operator*(double scalar) const
 {
-    const float epsilon = 1e-6f;
+    BoundingBox other;
+
+    for (const Vector3 &corner : GetCorners()) {
+        other.Extend(corner * scalar);
+    }
+
+    return other;
+}
+
+BoundingBox BoundingBox::operator*(const Transform &transform) const
+{
+    BoundingBox other;
+
+    for (const Vector3 &corner : GetCorners()) {
+        other.Extend(corner * transform.GetMatrix());
+    }
+
+    return other;
+}
+
+bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const
+{
+    const float epsilon = MathUtil::EPSILON;
 
     if (m_max == Vector3(std::numeric_limits<float>::lowest()) && 
         m_min == Vector3(std::numeric_limits<float>::max())) {
@@ -146,7 +168,8 @@ bool BoundingBox::IntersectRay(const Ray &ray, Vector3 &out) const
         if (hit_max.z < hit_max.x) hit_max.x = hit_max.z;
     }
 
-    out = ray.m_position + (ray.m_direction * hit_min.x);
+    out.hitpoint = ray.m_position + (ray.m_direction * hit_min.x);
+
     return true;
 }
 

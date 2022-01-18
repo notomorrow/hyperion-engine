@@ -110,6 +110,11 @@ void Entity::UpdateAABB()
     }
 }
 
+float Entity::CalculateCameraDistance(Camera *camera) const
+{
+    return m_global_transform.GetTranslation().Distance(camera->GetTranslation());
+}
+
 void Entity::AddChild(std::shared_ptr<Entity> entity)
 {
     m_children.push_back(entity);

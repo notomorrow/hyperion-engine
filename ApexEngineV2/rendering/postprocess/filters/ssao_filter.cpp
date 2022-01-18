@@ -7,7 +7,7 @@ namespace apex {
 
 SSAOFilter::SSAOFilter()
     : PostFilter(ShaderManager::GetInstance()->GetShader<SSAOShader>(ShaderProperties()
-        .Define("KERNEL_SIZE", 64.0f)
+        .Define("KERNEL_SIZE", 64)
         .Define("CAP_MIN_DISTANCE", 0.00001f)
         .Define("CAP_MAX_DISTANCE", 0.01f)
     ))
@@ -34,7 +34,7 @@ void SSAOFilter::SetUniforms(Camera *cam)
     m_noise_map->Use();
     m_shader->SetUniform("u_noiseMap", 5);
 
-    m_shader->SetUniform("u_radius", 5.0f);
+    m_shader->SetUniform("u_radius", 2.0f);
 
     m_shader->SetUniform("u_view", cam->GetViewMatrix());
     m_shader->SetUniform("u_projectionMatrix", cam->GetProjectionMatrix());

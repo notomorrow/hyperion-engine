@@ -4,7 +4,7 @@
 #include "../../rendering/shaders/lighting_shader.h"
 #include "../../rendering/environment.h"
 #include "../../rendering/mesh.h"
-#include "../../rendering/vertex.h"
+#include "../../math/vertex.h"
 #include "../../util/string_util.h"
 #include "../../entity.h"
 #include "mtl_loader.h"

@@ -24,6 +24,15 @@ static void KeyCallback(GLFWwindow *window, int key, int scancode, int action, i
     }
 }
 
+static void MouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
+{
+    if (action == GLFW_PRESS) {
+        inputmgr->MouseButtonDown(button);
+    } else if (action == GLFW_RELEASE) {
+        inputmgr->MouseButtonUp(button);
+    }
+}
+
 static void ErrorCallback(int error, const char *description)
 {
     std::cout << "Error: " << description << "\n";
@@ -59,6 +68,8 @@ bool GlfwEngine::InitializeGame(Game *game)
     }
 
     glfwSetKeyCallback(window, KeyCallback);
+    glfwSetMouseButtonCallback(window, MouseButtonCallback);
+
     glfwMakeContextCurrent(window);
 
     Vector2 render_scale(Vector2::One()), prev_render_scale = game->GetRenderer()->GetRenderWindow().GetScale();

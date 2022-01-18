@@ -12,7 +12,16 @@ bool AABBPhysicsObject::RayTest(const Ray &ray, Vector3 &out) const
 {
     BoundingBox trans(aabb);
     trans *= transform;
-    return trans.IntersectRay(ray, out);
+
+    RaytestHit raytest_hit;
+
+    if (bool intersects = trans.IntersectRay(ray, raytest_hit)) {
+        out = raytest_hit.hitpoint;
+
+        return true;
+    }
+
+    return false;
 }
 
 bool AABBPhysicsObject::CheckCollision(AABBPhysicsObject *other, 

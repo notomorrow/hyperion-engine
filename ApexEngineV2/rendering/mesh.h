@@ -2,7 +2,7 @@
 #define MESH_H
 
 #include "renderable.h"
-#include "vertex.h"
+#include "../math/vertex.h"
 
 #include <vector>
 #include <map>
@@ -79,6 +79,9 @@ public:
     inline const std::map<MeshAttributeType, MeshAttribute> &GetAttributes() const { return attribs; }
     inline void SetPrimitiveType(PrimitiveType prim_type) { primitive_type = prim_type; }
     inline PrimitiveType GetPrimitiveType() const { return primitive_type; }
+
+    virtual bool IntersectRay(const Ray &ray, const Transform &transform, RaytestHit &out) const override;
+    virtual bool IntersectRay(const Ray &ray, const Transform &transform, RaytestHitList_t &out) const override;
 
     void CalculateNormals();
     void InvertNormals();

@@ -59,6 +59,7 @@
 /* UI */
 #include "rendering/ui/ui_object.h"
 #include "rendering/ui/ui_button.h"
+#include "rendering/ui/ui_text.h"
 
 /* Standard library */
 #include <cstdlib>
@@ -74,6 +75,8 @@ public:
     Camera *cam, *env_cam;
     Framebuffer *fbo, *env_fbo;
     PssmShadowMapping *shadows;
+
+    std::vector<std::shared_ptr<Entity>> m_raytested_entities;
 
     std::shared_ptr<Entity> top;
     std::shared_ptr<Entity> test_object_0, test_object_1, test_object_2;
@@ -222,7 +225,7 @@ public:
 
     void Initialize()
     {
-        // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
+        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 10);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 9999);
 
@@ -257,7 +260,7 @@ public:
         cam->SetTranslation(Vector3(0, 0, 0));
 
         // Initialize particle system
-        InitParticleSystem();
+        // InitParticleSystem();
 
         // UI test
         /*auto test_ui = std::make_shared<ui::UIButton>("my_ui_object");
@@ -265,6 +268,19 @@ public:
         test_ui->SetLocalScale2D(Vector2(260, 80));
         top->AddChild(test_ui);
         GetUIManager()->RegisterUIObject(test_ui);*/
+
+        auto ui_text = std::make_shared<ui::UIText>("text_test", "AEngine 1.2.0");
+        ui_text->SetLocalTranslation2D(Vector2(-1.0, 1.0));
+        ui_text->SetLocalScale2D(Vector2(30));
+        top->AddChild(ui_text);
+        GetUIManager()->RegisterUIObject(ui_text);
+
+        auto ui_crosshair = std::make_shared<ui::UIObject>("crosshair");
+        ui_crosshair->GetMaterial().SetTexture("ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/crosshair.png"));
+        ui_crosshair->SetLocalTranslation2D(Vector2(0));
+        ui_crosshair->SetLocalScale2D(Vector2(128));
+        top->AddChild(ui_crosshair);
+        GetUIManager()->RegisterUIObject(ui_crosshair);
 
 
         ShaderProperties defines;
@@ -288,40 +304,80 @@ public:
                     return;
                 }
 
+                // for (auto &it : m_raytested_entities) {
+                //     it->RemoveControl(it->GetControl<BoundingBoxControl>(0));
+                // }
+
+                m_raytested_entities.clear();
+
                 Ray ray;
                 ray.m_direction = cam->GetDirection();
+                ray.m_direction.Normalize();
                 ray.m_position = cam->GetTranslation();
 
-                Vector3 intersection;
 
-                std::vector<Entity*> intersections = { top.get() };
+                using Intersection_t = std::pair<std::shared_ptr<Entity>, RaytestHit>;
+
+                RaytestHit intersection;
+                std::vector<Intersection_t> intersections = { { top, intersection } };
 
                 while (true) {
-                    std::vector<Entity*> new_intersections;
-                    for (Entity *ent : intersections) {
-                        for (size_t i = 0; i < ent->NumChildren(); i++) {
-                            BoundingBox aabb = ent->GetChild(i)->GetAABB();
-                            if (aabb.IntersectRay(ray, intersection)) {
-                                std::cout << "intersection: { name: " << ent->GetChild(i)->GetName() <<
-                                             ", point: " << intersection << " }\n";
+                    std::vector<Intersection_t> new_intersections;
 
-                                new_intersections.push_back(ent->GetChild(i).get());
+                    for (auto &it : intersections) {
+                        for (size_t i = 0; i < it.first->NumChildren(); i++) {
+                            const auto &child = it.first->GetChild(i);
+
+                            BoundingBox aabb = child->GetAABB();
+
+                            if (aabb.IntersectRay(ray, intersection)) {
+                                new_intersections.push_back({ child, intersection });
                             }
                         }
                     }
 
-                    intersections = new_intersections;
-
-                    if (intersections.empty()) {
+                    if (new_intersections.empty()) {
                         break;
+                    }
+
+                    intersections = new_intersections;
+                }
+
+                if (intersections.empty()) {
+                    return;
+                }
+    
+                RaytestHitList_t mesh_intersections;
+
+                for (Intersection_t &it : intersections) {
+                    // it.first->AddControl(std::make_shared<BoundingBoxControl>());
+                    m_raytested_entities.push_back(it.first);
+
+                    if (auto renderable = it.first->GetRenderable()) {
+                        renderable->IntersectRay(ray, it.first->GetGlobalTransform(), mesh_intersections);
                     }
                 }
 
-                std::cout << std::endl;
+                if (mesh_intersections.empty()) {
+                    return;
+                }
 
+                std::sort(mesh_intersections.begin(), mesh_intersections.end(), [=](const RaytestHit &a, const RaytestHit &b) {
+                    return a.hitpoint.Distance(cam->GetTranslation()) < b.hitpoint.Distance(cam->GetTranslation());
+                });
+
+                auto cube = top->GetChild("cube");
+                std::cout << "normal : " << mesh_intersections[0].normal << "\n";
+                cube->SetGlobalTranslation(mesh_intersections[0].hitpoint);
+
+                Matrix4 look_at;
+                MatrixUtil::ToLookAt(look_at, mesh_intersections[0].normal, Vector3::UnitY());
+                cube->SetGlobalRotation(Quaternion(look_at));
+
+                std::cout << std::endl;
             });
 
-        GetInputManager()->RegisterKeyEvent(KeyboardKey::KEY_6, raytest_event);
+        GetInputManager()->RegisterClickEvent(MOUSE_BTN_LEFT, raytest_event);
 
         /*auto box_node = std::make_shared<Entity>("box_node");
         box_node->SetLocalTranslation(Vector3(6, 110, 6));
@@ -340,13 +396,55 @@ public:
         dragger->SetName("dragger");
         dragger->Move(Vector3(7, -10, 6));
         dragger->Scale(0.25);
-        dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.0f, 0.0f, 1.0f };
-        dragger->GetChild(0)->GetMaterial().SetParameter("shininess", 0.4f);
-        dragger->GetChild(0)->GetMaterial().SetParameter("roughness", 0.4f);
+        dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.7f, 0.6f, 1.0f };
+        dragger->GetChild(0)->GetMaterial().SetParameter("shininess", 0.1f);
+        dragger->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
         dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
-        dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 4.0);
+        dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
         top->AddChild(dragger);
         dragger->UpdateTransform();
+
+
+        /*auto durdle = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/durdle/durdle.obj");
+        durdle->SetName("durdle");
+        durdle->Move(Vector3(-7, -10, -6));
+        durdle->Scale(0.25);
+        for (size_t i = 0; i < durdle->NumChildren(); i++) {
+            durdle->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
+        }
+        top->AddChild(durdle);
+        durdle->UpdateTransform();
+
+        {
+            auto sundaysbest = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/durdle/sundays_best.obj");
+            sundaysbest->SetName("sundaysbest");
+            sundaysbest->Move(Vector3(-12, 0, -6));
+            sundaysbest->Scale(0.25);
+            for (size_t i = 0; i < sundaysbest->NumChildren(); i++) {
+                sundaysbest->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
+            }
+            top->AddChild(sundaysbest);
+            sundaysbest->UpdateTransform();
+
+            ParticleConstructionInfo particle_generator_info;
+            particle_generator_info.m_origin_randomness = Vector3(0.1, 0.0, 0.1);
+            particle_generator_info.m_velocity = Vector3(0.5f, 1.0f, -1.9f);
+            particle_generator_info.m_velocity_randomness = Vector3(0.1f, 0.25f, 1.0f);
+            // particle_generator_info.m_scale = Vector3(0.5);
+            particle_generator_info.m_gravity = Vector3(0, -9, 0);
+            particle_generator_info.m_max_particles = 150;
+            particle_generator_info.m_lifespan = 0.4;
+            particle_generator_info.m_lifespan_randomness = 0.25;
+
+            auto particle_node = std::make_shared<Entity>();
+            particle_node->SetName("Particle node");
+            // particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
+            particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/particle.png"));
+            particle_node->AddControl(std::make_shared<ParticleEmitterControl>(cam, particle_generator_info));
+            particle_node->SetLocalScale(Vector3(1.5));
+            particle_node->SetLocalTranslation(Vector3(-0.1, 1.9, -0.4));
+            sundaysbest->AddChild(particle_node);
+        }*/
 
         // auto rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.25)), physics::PhysicsMaterial(0.01));
         // rb3->SetPosition(dragger->GetGlobalTransform().GetTranslation());
@@ -386,11 +484,6 @@ public:
 
         // dragger->GetControl<SkeletonControl>(0)->GetBone("head")->SetOffsetTranslation(Vector3(5.0));
 
-        // auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
-        // cube->GetChild(0)->GetRenderable()->SetShader(shader);
-        // cube->GetChild(0)->GetMaterial().diffuse_color = { 0.0, 0.0, 1.0, 1.0 };
-        // cube->Scale(0.5);
-        // cube->SetName("cube");
 
         //dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
          
@@ -467,50 +560,60 @@ public:
             top->AddChild(building);
         }*/
 
-        /*{
-            auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/blackgum/blackgum.obj", true);
-            tree->SetLocalTranslation(Vector3(0, 150, 5));
-            tree->SetLocalScale(Vector3(0.8));
+        {
+            auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
+            cube->GetChild(0)->GetRenderable()->SetShader(shader);
+            cube->GetChild(0)->GetMaterial().diffuse_color = { 0.0, 0.0, 1.0, 1.0 };
+            cube->Scale(0.1);
+            cube->SetName("cube");
+            top->AddChild(cube);
+        }
+
+        {
+            auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/pine/LoblollyPine.obj", true);
+            tree->SetLocalTranslation(Vector3(0, 0, 0));
+            tree->SetLocalScale(Vector3(1.0));
             for (int i = 0; i < tree->NumChildren(); i++) {
                 tree->GetChild(i)->GetMaterial().SetParameter("shininess", 0.0f);
                 tree->GetChild(i)->GetMaterial().SetParameter("roughness", 0.9f);
                 // dynamic_cast<Mesh*>(tree->GetChild(i)->GetRenderable().get())->CalculateNormals();
             }
 
-            tree->GetChild("Branches_08")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
-            tree->GetChild("Branches_08")->GetMaterial().alpha_blended = true;
-            tree->GetChild("Branches_08")->GetMaterial().SetParameter("RimShading", 0.0f);
-            tree->GetChild("Branches_08")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
-            tree->GetChild("BlackGumLeaves_1")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
-            tree->GetChild("BlackGumLeaves_1")->GetMaterial().alpha_blended = true;
-            tree->GetChild("BlackGumLeaves_1")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
-            tree->GetChild("BlackGumLeaves_1")->GetMaterial().SetParameter("RimShading", 0.0f);
-            tree->GetChild("BlackGumLeaves_2")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
-            tree->GetChild("BlackGumLeaves_2")->GetMaterial().alpha_blended = true;
-            tree->GetChild("BlackGumLeaves_2")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
-            tree->GetChild("BlackGumLeaves_2")->GetMaterial().SetParameter("RimShading", 0.0f);
+            // tree->GetChild("Branches_08")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
+            // tree->GetChild("Branches_08")->GetMaterial().alpha_blended = true;
+            // tree->GetChild("Branches_08")->GetMaterial().SetParameter("RimShading", 0.0f);
+            // tree->GetChild("Branches_08")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
+            tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
+            tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().alpha_blended = true;
+            tree->GetChild("LoblollyPineNeedles_1")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
+            tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().SetParameter("RimShading", 0.0f);
+            // tree->GetChild("BlackGumLeaves_2")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
+            // tree->GetChild("BlackGumLeaves_2")->GetMaterial().alpha_blended = true;
+            // tree->GetChild("BlackGumLeaves_2")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
+            // tree->GetChild("BlackGumLeaves_2")->GetMaterial().SetParameter("RimShading", 0.0f);
             
             // tree->AddControl(std::make_shared<BoundingBoxControl>());
             
             top->AddChild(tree);
 
 
+
             // auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&tree->GetAABB());
             // auto bb_renderer_node = std::make_shared<Entity>();
             // bb_renderer_node->SetRenderable(bb_renderer);
             // tree->AddChild(bb_renderer_node);
-        }*/
+        }
 
-        {
+        /*{
             auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/tree02/Tree.obj", true);
-            tree->SetLocalTranslation(Vector3(0, 110, 5));
+            tree->SetLocalTranslation(Vector3(0, 0, 5));
             tree->SetLocalScale(Vector3(5));
             for (size_t i = 0; i < tree->NumChildren(); i++) {
                 tree->GetChild(i)->GetMaterial().SetParameter("shininess", 0.1f);
                 tree->GetChild(i)->GetMaterial().SetParameter("roughness", 0.9f);
             }
             top->AddChild(tree);
-        }
+        }*/
 
 
         /*rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 0.0);
@@ -527,17 +630,17 @@ public:
         // box->AddChild(bb_renderer_node);
 
 
-        /*{ // house
+        { // house
             auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
             for (size_t i = 0; i < house->NumChildren(); i++) {
                 //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
                 house->GetChild(i)->GetRenderable()->SetShader(shader);
             }
 
-            house->Move(Vector3(-3, 50, -3));
+            house->Move(Vector3(-3, 0, -3));
             house->SetName("house");
             top->AddChild(house);
-        }*/
+        }
 
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
              AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posx.jpg"),
@@ -690,12 +793,15 @@ public:
         timer += dt;
         shadow_timer += dt;
 
-        top->GetChild("dragger")->GetControl<SkeletonControl>(0)->GetBone("head")->SetLocalRotation(Quaternion(
-            Vector3(sin(timer * 1.2), cos(timer * 1.2), -sin(timer * 1.2)).Normalize()
-        ));
-        top->GetChild("dragger")->GetControl<SkeletonControl>(0)->GetBone("spine")->SetLocalRotation(Quaternion(
-            Vector3(sin(timer * 1.2) * 0.2, 0, cos(timer * 1.2) * 0.2).Normalize()
-        ));
+        // top->GetChild("dragger")->GetControl<SkeletonControl>(0)->GetBone("head")->SetLocalRotation(Quaternion(
+        //     Vector3(sin(timer * 1.2), cos(timer * 1.2), -sin(timer * 1.2)).Normalize()
+        // ));
+        // top->GetChild("dragger")->GetControl<SkeletonControl>(0)->GetBone("spine")->SetLocalRotation(Quaternion(
+        //     Vector3(sin(timer * 1.2) * 0.2, 0, cos(timer * 1.2) * 0.2).Normalize()
+        // ));
+        // top->GetChild("sundaysbest")->SetLocalRotation(Quaternion(
+        //     Vector3(sin(timer * 1.2) * 0.2, 0, cos(timer * 1.2) * 0.2).Normalize()
+        // ));
         // top->GetChild("dragger")->GetControl<SkeletonControl>(0)->GetBone("thigh.L")->SetLocalRotation(Quaternion(
         //     Vector3(sin(timer * 1.2) * 0.2, 0, -sin(timer * 1.2) * 0.2).Normalize()
         // ));
@@ -783,7 +889,7 @@ int main()
     CoreEngine *engine = new GlfwEngine();
     CoreEngine::SetInstance(engine);
 
-    auto *game = new MyGame(RenderWindow(1480, 1200, "Apex Engine 5.0"));
+    auto *game = new MyGame(RenderWindow(1480, 1200, "AEngine Demo"));
 
     engine->InitializeGame(game);
 

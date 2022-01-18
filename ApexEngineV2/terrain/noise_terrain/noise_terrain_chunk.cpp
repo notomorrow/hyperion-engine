@@ -12,9 +12,9 @@
 
 #include "../../util/random/open_simplex_noise.h"
 
-#define MOUNTAIN_SCALE_WIDTH 0.05
-#define MOUNTAIN_SCALE_LENGTH 0.05
-#define MOUNTAIN_SCALE_HEIGHT 8.0
+#define MOUNTAIN_SCALE_WIDTH 0.017
+#define MOUNTAIN_SCALE_LENGTH 0.017
+#define MOUNTAIN_SCALE_HEIGHT 80.0
 
 #define ROUGH_SCALE_WIDTH 0.8
 #define ROUGH_SCALE_LENGTH 0.8
@@ -35,12 +35,8 @@ std::vector<double> NoiseTerrainChunk::GenerateHeights(int seed, const ChunkInfo
 
     WorleyNoiseGenerator worley(seed);
 
-    SimplexNoiseData data;
-    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
-        open_simplex_noise(seed, &data.octaves[i]);
-        data.frequencies[i] = pow(2.0, double(i));
-        data.amplitudes[i] = pow(0.5, OSN_OCTAVE_COUNT - i);
-    }
+    SimplexNoiseData data = CreateSimplexNoise(seed);
+    SimplexNoiseData biome_data = CreateSimplexNoise(seed + 1);
 
     heights.resize(chunk_info.m_width * chunk_info.m_length);
 
@@ -49,21 +45,20 @@ std::vector<double> NoiseTerrainChunk::GenerateHeights(int seed, const ChunkInfo
             const double x_offset = x + (chunk_info.m_position.x * (chunk_info.m_width - 1));
             const double z_offset = z + (chunk_info.m_position.y * (chunk_info.m_length - 1));
 
-            const double biome_height = (GetSimplexNoise(&data, x_offset * 0.6, z_offset * 0.6) + 1) * 0.5;
+            const double biome_height = (GetSimplexNoise(&biome_data, x_offset * 0.6, z_offset * 0.6) + 1) * 0.5;
 
-            const double height = (GetSimplexNoise(&data, x_offset,
-                z_offset)) * 30 - 30;
+            const double height = (GetSimplexNoise(&data, x_offset, z_offset)) * 30 - 30;
 
-            const double mountain = ((worley.Noise((double)x_offset * 0.017, (double)z_offset * 0.017, 0))) * 80.0;
+            const double mountain = ((worley.Noise((double)x_offset * MOUNTAIN_SCALE_WIDTH, (double)z_offset * MOUNTAIN_SCALE_LENGTH, 0))) * MOUNTAIN_SCALE_HEIGHT;
 
             const size_t index = ((x + chunk_info.m_width) % chunk_info.m_width) + ((z + chunk_info.m_length) % chunk_info.m_length) * chunk_info.m_width;
+
             heights[index] = MathUtil::Lerp(height, mountain, MathUtil::Clamp(biome_height, 0.0, 1.0));
         }
     }
 
-    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
-        open_simplex_noise_free(data.octaves[i]);
-    }
+    FreeSimplexNoise(&biome_data);
+    FreeSimplexNoise(&data);
 
     return heights;
 }
@@ -78,12 +73,14 @@ void NoiseTerrainChunk::OnAdded()
 {
     std::shared_ptr<Mesh> mesh = BuildMesh(m_heights);
 
-    mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()
+    mesh->SetShader(ShaderManager::GetInstance()->GetShader<TerrainShader>(ShaderProperties()
         .Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled())
         .Define("NUM_SPLITS", Environment::GetInstance()->NumCascades())
         .Define("NORMAL_MAPPING", true)
+        .Define("PARALLAX_MAPPING", true)
         .Define("ROUGHNESS_MAPPING", true)
         .Define("METALNESS_MAPPING", true)
+        .Define("TERRAIN_BIOME_MAP", true)
     ));
     m_entity = std::make_shared<Entity>(std::string("noise_terrain_node_") + std::to_string(int(m_chunk_info.m_position.x)) + std::string("_") + std::to_string(int(m_chunk_info.m_position.y)));
     m_entity->SetRenderable(mesh);
@@ -98,18 +95,22 @@ void NoiseTerrainChunk::OnAdded()
     // m_entity->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));
 
 
-    // m_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Base_Color.png"));
-    // m_entity->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Height.png"));
-    // m_entity->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_AmbientOcculusion.png"));
-    // m_entity->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Normal-ogl.png"));
+    m_entity->GetMaterial().SetTexture("SlopeColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Base_Color.png"));
+    m_entity->GetMaterial().SetTexture("SlopeNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Normal-ogl.png"));
+    m_entity->GetMaterial().SetTexture("SlopeParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Height.png"));
+    m_entity->GetMaterial().SetTexture("SlopeAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_AmbientOcculusion.png"));
 
-    m_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
-    // m_entity->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Height.png"));
-    m_entity->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Ambient_Occlusion.png"));
-    m_entity->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));
+    // m_entity->GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
+    // m_entity->GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));
+    // m_entity->GetMaterial().SetTexture("BaseTerrainParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Height.png"));
+    // m_entity->GetMaterial().SetTexture("BaseTerrainAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Ambient_Occlusion.png"));
 
-    // m_entity->GetMaterial().SetTexture("RoughnessMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass1/grass1-rough.png"));
-    m_entity->GetMaterial().SetTexture("BrdfMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/brdfLUT.png"));
+    m_entity->GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass.jpg"));
+    m_entity->GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass_nrm.jpg"));
+
+    m_entity->GetMaterial().SetTexture("Level1ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
+    m_entity->GetMaterial().SetTexture("Level1NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));
+    m_entity->GetMaterial().SetParameter("Level1Height", 30);
 }
 
 int NoiseTerrainChunk::HeightIndexAt(int x, int z)
@@ -118,6 +119,30 @@ int NoiseTerrainChunk::HeightIndexAt(int x, int z)
     return ((x + size) % size) + ((z + size) % size) * size;
 }
 
+Vector4 NoiseTerrainChunk::BiomeAt(int x, int z)
+{
+
+}
+
+SimplexNoiseData NoiseTerrainChunk::CreateSimplexNoise(int seed)
+{
+    SimplexNoiseData data;
+
+    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
+        open_simplex_noise(seed, &data.octaves[i]);
+        data.frequencies[i] = pow(2.0, double(i));
+        data.amplitudes[i] = pow(0.5, OSN_OCTAVE_COUNT - i);
+    }
+
+    return data;
+}
+
+void NoiseTerrainChunk::FreeSimplexNoise(SimplexNoiseData *data)
+{
+    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
+        open_simplex_noise_free(data->octaves[i]);
+    }
+}
 
 double NoiseTerrainChunk::GetSimplexNoise(SimplexNoiseData *data, int x, int z)
 {

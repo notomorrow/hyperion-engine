@@ -2,13 +2,18 @@
 #define RENDERABLE_H
 
 #include "shader.h"
+#include "../math/vertex.h"
+#include "../math/ray.h"
 #include "../math/bounding_box.h"
 
 #include <memory>
+#include <vector>
 
 namespace apex {
 
 class CoreEngine;
+
+using Vertices_t = std::vector<Vertex>;
 
 class Renderable {
     friend class Renderer;
@@ -30,6 +35,9 @@ public:
     inline std::shared_ptr<Shader> GetShader() { return m_shader; }
     inline void SetShader(const std::shared_ptr<Shader> &shader) { m_shader = shader; }
     inline const BoundingBox &GetAABB() const { return m_aabb; }
+
+    virtual bool IntersectRay(const Ray &ray, const Transform &transform, RaytestHit &out) const;
+    virtual bool IntersectRay(const Ray &ray, const Transform &transform, RaytestHitList_t &out) const;
 
     virtual void Render() = 0;
 
