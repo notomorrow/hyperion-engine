@@ -24,16 +24,16 @@ LightingShader::LightingShader(const ShaderProperties &properties)
             properties, fs_path)
         )
     );
-}
-
-void LightingShader::ApplyMaterial(const Material &mat)
-{
-    Shader::ApplyMaterial(mat);
 
     for (int i = 0; i < 16; i++) {
         SetUniform("poissonDisk[" + std::to_string(i) + "]",
             Environment::possion_disk[i]);
     }
+}
+
+void LightingShader::ApplyMaterial(const Material &mat)
+{
+    Shader::ApplyMaterial(mat);
 
     int texture_index = 1;
 
@@ -105,6 +105,16 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     if (mat.HasParameter("RimShading")) {
         SetUniform("RimShading", mat.GetParameter("RimShading")[0]);
+    }
+
+    if (mat.HasParameter("FlipUV")) {
+        const auto &param = mat.GetParameter("FlipUV");
+        SetUniform("FlipUV_X", int(param[0]));
+        SetUniform("FlipUV_Y", int(param[1]));
+    } else if (mat.HasParameter("FlipUV_X")) {
+        SetUniform("FlipUV_X", int(mat.GetParameter("FlipUV_X")[0]));
+    } else if (mat.HasParameter("FlipUV_Y")) {
+        SetUniform("FlipUV_Y", int(mat.GetParameter("FlipUV_X")[0]));
     }
 }
 

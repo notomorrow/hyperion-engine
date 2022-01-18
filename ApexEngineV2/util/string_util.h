@@ -99,9 +99,8 @@ public:
     {
         std::istringstream ss(str);
         T value;
-        ss >> std::boolalpha >> value;
 
-        if (ss.eof() && !ss.fail()) {
+        if (!(ss >> std::boolalpha >> value)) {
             return false;
         }
 

@@ -119,4 +119,9 @@ std::vector<MeshIndex> TerrainChunk::BuildIndices()
     return indices;
 }
 
+Vector4 TerrainChunk::BiomeAt(int x, int z)
+{
+    return Vector4::Zero();
+}
+
 } // namespace apex

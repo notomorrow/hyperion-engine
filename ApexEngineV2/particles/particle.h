@@ -5,6 +5,7 @@
 
 namespace apex {
 struct Particle {
+    Vector3 m_origin;
     Vector3 m_position;
     Vector3 m_global_position;
     Vector3 m_scale;

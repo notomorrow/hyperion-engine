@@ -206,7 +206,6 @@ void Renderer::RenderAll(Camera *cam, Framebuffer *fbo)
     if (fbo) {
         fbo->Use();
 
-        // todo: test
         CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
     } else {
         CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());

@@ -4,8 +4,10 @@
 #define MAX_BONE_WEIGHTS 4
 #define MAX_BONE_INDICES 4
 
-#include "../math/vector2.h"
-#include "../math/vector3.h"
+#include "vector2.h"
+#include "vector3.h"
+#include "transform.h"
+#include "matrix4.h"
 
 #include <array>
 
@@ -72,6 +74,14 @@ public:
           bone_indices(other.bone_indices)
     {
     }
+
+    Vertex &operator=(const Vertex &other);
+    Vertex operator*(float scalar) const;
+    Vertex operator*(const Matrix4 &mat) const;
+    Vertex operator*(const Transform &transform) const;
+    Vertex &operator*=(float scalar);
+    Vertex &operator*=(const Matrix4 &mat);
+    Vertex &operator*=(const Transform &transform);
 
     inline void SetPosition(const Vector3 &vec) { position = vec; }
     inline const Vector3 &GetPosition() const { return position; }

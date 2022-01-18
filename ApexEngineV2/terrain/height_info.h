@@ -6,6 +6,10 @@
 
 #include <array>
 
+#define TERRAIN_CHUNK_WIDTH 256
+#define TERRAIN_CHUNK_LENGTH 256
+#define TERRAIN_CHUNK_HEIGHT 32
+
 namespace apex {
 
 enum class PageState {
@@ -44,9 +48,9 @@ struct NeighborChunkInfo {
 };
 
 struct ChunkInfo {
-    int m_width = 128;
-    int m_length = 128;
-    int m_height = 16;
+    int m_width = TERRAIN_CHUNK_WIDTH;
+    int m_length = TERRAIN_CHUNK_LENGTH;
+    int m_height = TERRAIN_CHUNK_HEIGHT;
     Vector2 m_position;
     Vector3 m_scale;
     PageState m_page_state;

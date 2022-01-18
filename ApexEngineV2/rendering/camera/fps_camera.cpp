@@ -108,10 +108,6 @@ void FpsCamera::HandleKeyboardInput(double dt)
         m_next_translation += m_dir_cross_y * speed;
     }
 
-    if (m_next_translation != m_translation) {
-        std::cout << "Next translation: " << m_next_translation << "\n";
-    }
-
     m_translation.Lerp(m_next_translation, MathUtil::Clamp(2.0 * dt, 0.0, 1.0));
 }
 } // namespace apex

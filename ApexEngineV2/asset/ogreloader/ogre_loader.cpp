@@ -4,7 +4,7 @@
 #include "../../entity.h"
 #include "../../math/vector2.h"
 #include "../../math/vector3.h"
-#include "../../rendering/vertex.h"
+#include "../../math/vertex.h"
 #include "../../rendering/mesh.h"
 #include "../../rendering/shader_manager.h"
 #include "../../rendering/shaders/lighting_shader.h"
@@ -145,14 +145,15 @@ public:
             has_submeshes = submeshes_enabled;
             submeshes.push_back(OgreSubmesh());
         } else if (name == "vertexbuffer") {
-            std::string normals = attributes.at("normals");
-            std::string texcoords = attributes.at("texture_coords");
+            auto it = attributes.find("normals");
 
-            if (normals == "true") {
+            if (it != attributes.end() && it->second == "true") {
                 has_normals = true;
             }
 
-            if (texcoords != "0") {
+            it = attributes.find("texture_coords");
+
+            if (it != attributes.end() && it->second != "0") {
                 has_texcoords = true;
             }
         }

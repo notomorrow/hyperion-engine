@@ -14,6 +14,7 @@
 #include "rendering/material.h"
 
 namespace apex {
+class Camera;
 class Entity : public Loadable {
 public:
     enum UpdateFlags {
@@ -72,6 +73,8 @@ public:
 
     virtual void UpdateTransform();
     virtual void UpdateAABB();
+
+    virtual float CalculateCameraDistance(Camera *camera) const;
 
     inline const BoundingBox &GetAABB() const { return m_aabb; }
 

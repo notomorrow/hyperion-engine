@@ -19,12 +19,13 @@ void ParticleEmitterControl::ResetParticle(Particle &particle)
     double lifespan_random = MathUtil::EPSILON +
         MathUtil::Random(0.0, fabs(m_particle_renderer->m_info.m_lifespan_randomness));
 
-    particle.m_position = m_particle_renderer->m_info.m_origin + Vector3(
+    particle.m_origin = (((m_particle_renderer->m_info.m_origin + Vector3(
         MathUtil::Random(-m_particle_renderer->m_info.m_origin_randomness.GetX(), m_particle_renderer->m_info.m_origin_randomness.GetX()),
         MathUtil::Random(-m_particle_renderer->m_info.m_origin_randomness.GetY(), m_particle_renderer->m_info.m_origin_randomness.GetY()),
         MathUtil::Random(-m_particle_renderer->m_info.m_origin_randomness.GetZ(), m_particle_renderer->m_info.m_origin_randomness.GetZ())
-    );
-    particle.m_global_position = parent->GetGlobalTransform().GetTranslation() + particle.m_position;
+    )))) * m_entity->GetGlobalTransform().GetMatrix();
+    particle.m_position = particle.m_origin;
+    particle.m_global_position = particle.m_position;//parent->GetGlobalTransform().GetTranslation() + particle.m_position;
     particle.m_scale = m_particle_renderer->m_info.m_scale + Vector3(
         MathUtil::Random(-m_particle_renderer->m_info.m_scale_randomness.GetX(), m_particle_renderer->m_info.m_scale_randomness.GetX()),
         MathUtil::Random(-m_particle_renderer->m_info.m_scale_randomness.GetY(), m_particle_renderer->m_info.m_scale_randomness.GetY()),
@@ -75,8 +76,8 @@ void ParticleEmitterControl::OnUpdate(double dt)
         if (particle.m_alive) {
             particle.m_life += dt;
             particle.m_velocity += m_particle_renderer->m_info.m_gravity * particle.m_mass * dt;
-            particle.m_position += particle.m_velocity * dt;
-            particle.m_global_position = parent->GetGlobalTransform().GetTranslation() + particle.m_position;
+            // particle.m_position += particle.m_velocity * dt;
+            // particle.m_global_position = particle.m_position;//parent->GetGlobalTransform().GetTranslation() + particle.m_position;
             particle.m_camera_distance = particle.m_global_position.Distance(m_camera->GetTranslation());
         } else {
             // reset the particle if it is passed it's lifespan.

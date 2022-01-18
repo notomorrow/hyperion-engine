@@ -24,6 +24,8 @@ public:
     std::array<Vector3, 8> GetCorners() const;
     inline Vector3 GetCenter() const { return (m_max + m_min) / Vector3(2.0f); }
 
+    BoundingBox operator*(double scalar) const;
+    BoundingBox operator*(const Transform &transform) const;
     BoundingBox &operator*=(double scalar);
     BoundingBox &operator*=(const Transform &transform);
 
@@ -38,7 +40,7 @@ public:
     BoundingBox &Extend(const Vector3 &vec);
     BoundingBox &Extend(const BoundingBox &bb);
 
-    bool IntersectRay(const Ray &ray, Vector3 &out) const;
+    bool IntersectRay(const Ray &ray, RaytestHit &out) const;
     bool ContainsPoint(const Vector3 &vec) const;
     double Area() const;
 

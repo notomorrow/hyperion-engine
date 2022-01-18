@@ -31,6 +31,10 @@ public:
 private:
     std::vector<double> m_heights;
 
+    virtual Vector4 BiomeAt(int x, int z) override;
+
+    static SimplexNoiseData CreateSimplexNoise(int seed);
+    static void FreeSimplexNoise(SimplexNoiseData *data);
     static double GetSimplexNoise(SimplexNoiseData *data, int x, int z);
 };
 

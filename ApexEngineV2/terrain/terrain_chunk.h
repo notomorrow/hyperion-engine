@@ -3,7 +3,7 @@
 
 #include "height_info.h"
 #include "../rendering/mesh.h"
-#include "../rendering/vertex.h"
+#include "../math/vertex.h"
 #include "../entity.h"
 
 #include <memory>
@@ -23,6 +23,8 @@ public:
     std::shared_ptr<Entity> m_entity = nullptr;
 
 protected:
+
+    virtual Vector4 BiomeAt(int x, int z);
 
     std::shared_ptr<Mesh> BuildMesh(const std::vector<double> &heights);
     void AddNormal(Vertex &vertex, const Vector3 &normal);
