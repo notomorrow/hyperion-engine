@@ -33,6 +33,7 @@
 /* Post */
 #include "rendering/postprocess/filters/gamma_correction_filter.h"
 #include "rendering/postprocess/filters/ssao_filter.h"
+#include "rendering/postprocess/filters/deferred_rendering_filter.h"
 #include "rendering/postprocess/filters/bloom_filter.h"
 
 /* Extra */
@@ -225,10 +226,6 @@ public:
 
     void Initialize()
     {
-        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 0);
-        m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 10);
-        m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 9999);
-
         cam = new FpsCamera(
             GetInputManager(),
             &m_renderer->GetRenderWindow(),
@@ -238,14 +235,26 @@ public:
             0.5f,
             750.0f
         );
+
+        shadows = new PssmShadowMapping(cam, 4, 50);
+        Environment::GetInstance()->SetShadowsEnabled(true);
+        Environment::GetInstance()->SetNumCascades(4);
+
+        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 20);
+        m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 9999);
+        m_renderer->SetDeferred(true);
+
+        ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
+            .Define("DEFERRED", m_renderer->IsDeferred())
+            .Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled())
+            .Define("NUM_SPLITS", Environment::GetInstance()->NumCascades())
+        );
+
         //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
         //env_cam->SetTranslation(Vector3(0, 10, 0));
         fbo = new Framebuffer2D(cam->GetWidth(), cam->GetHeight());
         //env_fbo = new FramebufferCube(256, 256);
-        shadows = new PssmShadowMapping(cam, 4, 50);
-
-
-        Environment::GetInstance()->SetShadowsEnabled(true);
         AudioManager::GetInstance()->Initialize();
 
         Environment::GetInstance()->GetSun().SetDirection(Vector3(1.9f, 0.35f, 1.9f).Normalize());
@@ -284,11 +293,12 @@ public:
 
 
         ShaderProperties defines;
-        defines.Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled());
+        // defines.Define("DEFERRED", m_renderer->IsDeferred());
+        // defines.Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled());
         defines.Define("NORMAL_MAPPING", 1);
         defines.Define("ROUGHNESS_MAPPING", 1);
         defines.Define("METALNESS_MAPPING", 1);
-        defines.Define("NUM_SPLITS", Environment::GetInstance()->NumCascades());
+        // defines.Define("NUM_SPLITS", Environment::GetInstance()->NumCascades());
     
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
 
@@ -547,18 +557,18 @@ public:
 
 
 
-        /*{
-            auto building = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/building/building.obj", true);
-            building->SetLocalTranslation(Vector3(0, 150, 0));
-            building->SetLocalScale(Vector3(20));
+        {
+            auto building = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/building2/building2.obj", true);
+            building->SetLocalTranslation(Vector3(0, 0, 15));
+            building->SetLocalScale(Vector3(1));
             for (int i = 0; i < building->NumChildren(); i++) {
                 building->GetChild(i)->GetRenderable()->SetShader(shader);
-                building->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+                // building->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
                 building->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f);
                 building->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
             }
             top->AddChild(building);
-        }*/
+        }
 
         {
             auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");

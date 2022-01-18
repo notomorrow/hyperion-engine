@@ -9,7 +9,7 @@ public:
     PostShader(const ShaderProperties &properties);
     virtual ~PostShader() = default;
 
-    virtual void ApplyMaterial(const Material &mat);
+    virtual void ApplyMaterial(const Material &mat) override;
     virtual void ApplyTransforms(const Transform &transform, Camera *camera) = 0;
 };
 } // namespace apex

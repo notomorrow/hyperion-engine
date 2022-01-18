@@ -15,6 +15,7 @@ namespace apex {
 class SSAOFilter : public PostFilter {
 public:
     SSAOFilter();
+    virtual ~SSAOFilter() = default;
 
     virtual void SetUniforms(Camera *cam) override;
 

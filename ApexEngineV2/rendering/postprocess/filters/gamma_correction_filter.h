@@ -4,14 +4,13 @@
 #include "../post_filter.h"
 
 namespace apex {
-
 class GammaCorrectionFilter : public PostFilter {
 public:
-  GammaCorrectionFilter();
+    GammaCorrectionFilter();
+    virtual ~GammaCorrectionFilter() = default;
 
-  virtual void SetUniforms(Camera *cam) override;
+    virtual void SetUniforms(Camera *cam) override;
 };
-
 } // namespace apex
 
 #endif

@@ -20,6 +20,7 @@ public:
     virtual const std::shared_ptr<Texture> GetNormalTexture() const = 0;
     virtual const std::shared_ptr<Texture> GetPositionTexture() const = 0;
     virtual const std::shared_ptr<Texture> GetDepthTexture() const = 0;
+    virtual const std::shared_ptr<Texture> GetDataTexture() const = 0;
 
     virtual void StoreColor() = 0;
     virtual void StoreDepth() = 0;

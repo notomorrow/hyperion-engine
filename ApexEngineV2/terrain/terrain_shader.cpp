@@ -10,11 +10,11 @@ TerrainShader::TerrainShader(const ShaderProperties &properties)
 {
     const std::string fs_path("res/shaders/terrain.frag");
 
-    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
-        ShaderPreprocessor::ProcessShader(
-            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
-            properties, fs_path)
-        )
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_FRAGMENT,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
+        properties,
+        fs_path
     );
 
     SetUniform("BaseTerrainScale", 1.0f);

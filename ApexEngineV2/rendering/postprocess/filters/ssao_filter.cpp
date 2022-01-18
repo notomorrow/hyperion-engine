@@ -30,9 +30,11 @@ SSAOFilter::SSAOFilter()
 
 void SSAOFilter::SetUniforms(Camera *cam)
 {
-    Texture::ActiveTexture(5);
+    Texture::ActiveTexture(6);
     m_noise_map->Use();
-    m_shader->SetUniform("u_noiseMap", 5);
+    m_shader->SetUniform("u_noiseMap", 6);
+
+    m_shader->SetUniform("u_resolution", Vector2(cam->GetWidth(), cam->GetHeight()));
 
     m_shader->SetUniform("u_radius", 2.0f);
 
