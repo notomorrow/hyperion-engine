@@ -18,10 +18,13 @@ float unpackDepth(const in vec4 rgba_depth) {
     return depth;
 }
 
-vec3 positionFromDepth(mat4 invProjView, vec2 uv, float depth) {
-    vec4 pos = vec4(uv.x, uv.y, depth, 1.0) * 2.0 - 1.0;
-    pos = invProjView * pos;
+vec3 positionFromDepth(mat4 invViewProjMatrix, vec2 uv, float depth) {
+    vec4 pos = vec4(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    /*pos = invProjMatrix * pos;
     pos = pos/pos.w;
+    pos = invViewMatrix * pos;*/
+    pos = invViewProjMatrix * pos;
+    pos = pos / pos.w;
 
     return pos.xyz;
 }

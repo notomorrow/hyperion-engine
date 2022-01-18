@@ -43,7 +43,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Bump textures/roof_0064_02_preview_NRM.jpg
+map_bump textures/roof_0064_02_preview_NRM.jpg
 map_Kd textures/roof_0064_02_preview.jpg
 
 newmtl w2
@@ -56,6 +56,7 @@ Ni 1.000000
 d 1.000000
 illum 2
 map_Kd textures/plaster_new_0021_01_preview.jpg
+map_bump textures/plaster_new_0017_01_preview_NRM.jpg
 
 newmtl wall
 Ns 96.078431
@@ -66,7 +67,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Bump textures/plaster_new_0017_01_preview_NRM.jpg
+map_bump textures/plaster_new_0017_01_preview_NRM.jpg
 map_Kd textures/plaster_new_0017_01_preview.jpg
 
 newmtl wall.001
@@ -78,7 +79,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Bump textures/plaster_new_0017_01_preview_NRM.jpg
+map_bump textures/plaster_new_0017_01_preview_NRM.jpg
 map_Kd textures/plaster_new_0017_01_preview.jpg
 
 newmtl win
@@ -190,6 +191,7 @@ Ni 1.000000
 d 1.000000
 illum 2
 map_Kd textures/plaster_new_0021_01_preview.jpg
+map_bump textures/plaster_new_0017_01_preview_NRM.jpg
 
 newmtl wood.002
 Ns 96.078431
@@ -201,6 +203,7 @@ Ni 1.000000
 d 1.000000
 illum 2
 map_Kd textures/plaster_new_0021_01_preview.jpg
+map_bump textures/plaster_new_0017_01_preview_NRM.jpg
 
 newmtl wood.003
 Ns 96.078431
@@ -212,6 +215,7 @@ Ni 1.000000
 d 1.000000
 illum 2
 map_Kd textures/plaster_new_0021_01_preview.jpg
+map_bump textures/plaster_new_0017_01_preview_NRM.jpg
 
 newmtl wood.005
 Ns 96.078431
@@ -223,6 +227,7 @@ Ni 1.000000
 d 1.000000
 illum 2
 map_Kd textures/plaster_new_0021_01_preview.jpg
+map_bump textures/plaster_new_0017_01_preview_NRM.jpg
 
 newmtl wood.007
 Ns 96.078431
@@ -234,3 +239,4 @@ Ni 1.000000
 d 1.000000
 illum 2
 map_Kd textures/plaster_new_0021_01_preview.jpg
+map_bump textures/plaster_new_0017_01_preview_NRM.jpg

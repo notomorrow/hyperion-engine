@@ -13,30 +13,6 @@ in vec2 v_texcoord0;
 
 void main(void)
 {
-  /*vec2 uv = v_texcoord0;
-    
-    vec3 color = ColorFetch(uv);
-    
-    
-    color += GetBloom(uv) * 0.08;
-    
-    color *= 200.0;
-	  //Tonemapping and color grading
-    color = pow(color, vec3(1.5));
-    color = color / (1.0 + color);
-    color = pow(color, vec3(1.0 / 1.5));
-
-    
-    color = mix(color, color * color * (3.0 - 2.0 * color), vec3(1.0));
-    color = pow(color, vec3(1.3, 1.20, 1.0));    
-
-	  color = clamp(color * 1.01, 0.0, 1.0);
-    
-    //color = pow(color, vec3(0.7 / 2.2));
-
-    output0 = vec4(color, 1.0);*/
-
-
     ivec2 size = textureSize(ColorMap, 0);
 
     float uv_x = v_texcoord0.x * size.x;
