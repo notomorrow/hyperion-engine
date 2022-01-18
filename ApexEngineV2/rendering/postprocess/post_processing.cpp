@@ -31,6 +31,8 @@ void PostProcessing::Render(Camera *cam, Framebuffer *fbo)
   CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
 
   for (auto &&it : m_filters) {
+    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
+
     it.filter->Begin(cam, fbo);
 
     m_quad->Render();

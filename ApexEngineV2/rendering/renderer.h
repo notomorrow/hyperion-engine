@@ -184,6 +184,9 @@ public:
     void RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader = nullptr, bool enable_frustum_culling = true);
     void RenderAll(Camera *cam, Framebuffer *fbo = nullptr);
     void RenderPost(Camera *cam, Framebuffer *fbo);
+
+    inline bool IsDeferred() const { return m_is_deferred; }
+    void SetDeferred(bool deferred);
  
     inline PostProcessing *GetPostProcessing() { return m_post_processing; }
     inline const PostProcessing *GetPostProcessing() const { return m_post_processing; }
@@ -198,6 +201,7 @@ private:
     PostProcessing *m_post_processing;
     Framebuffer *m_fbo;
     RenderWindow m_render_window;
+    bool m_is_deferred;
 
     std::map<Entity*, std::size_t> m_hash_cache;
     std::map<std::size_t, Renderable::RenderBucket> m_hash_to_bucket;

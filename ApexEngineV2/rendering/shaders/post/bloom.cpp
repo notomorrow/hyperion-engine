@@ -9,12 +9,12 @@ BloomShader::BloomShader(const ShaderProperties &properties)
 {
     const std::string fs_path("res/shaders/filters/bloom.frag");
 
-    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
-        ShaderPreprocessor::ProcessShader(
-            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
-            properties, fs_path
-        )
-    ));
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_FRAGMENT,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
+        properties,
+        fs_path
+    );
 }
 
 void BloomShader::ApplyTransforms(const Transform &transform, Camera *camera)

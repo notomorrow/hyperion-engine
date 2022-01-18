@@ -15,6 +15,7 @@ namespace apex {
 class BloomFilter : public PostFilter {
 public:
     BloomFilter();
+    virtual ~BloomFilter() = default;
 
     virtual void SetUniforms(Camera *cam) override;
 

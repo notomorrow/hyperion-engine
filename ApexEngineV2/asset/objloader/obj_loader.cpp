@@ -169,8 +169,6 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
         }
 
         mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()
-            .Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled())
-            .Define("NUM_SPLITS", Environment::GetInstance()->NumCascades())
             .Define("NORMAL_MAPPING", true)
         ));
 

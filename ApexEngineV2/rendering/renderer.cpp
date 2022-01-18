@@ -1,12 +1,14 @@
 #include "renderer.h"
 #include "framebuffer_2d.h"
+#include "postprocess/filters/deferred_rendering_filter.h"
 
 #include <cassert>
 
 namespace apex {
 Renderer::Renderer(const RenderWindow &render_window)
     : m_render_window(render_window),
-      m_fbo(nullptr)
+      m_fbo(nullptr),
+      m_is_deferred(false)
 {
     m_post_processing = new PostProcessing();
 
@@ -30,7 +32,15 @@ void Renderer::Begin(Camera *cam, Entity *top)
 void Renderer::Render(Camera *cam)
 {
     if (m_fbo == nullptr) {
-        m_fbo = new Framebuffer2D(m_render_window.GetScaledWidth(), m_render_window.GetScaledHeight());
+        m_fbo = new Framebuffer2D(
+            m_render_window.GetScaledWidth(),
+            m_render_window.GetScaledHeight(),
+            true, // color
+            true, // depth
+            true, // normals
+            true, // positions
+            true  // data
+        );
     }
 
     RenderAll(cam, m_fbo);
@@ -140,15 +150,7 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bo
     }
 
     if (!frustum_culled && !is_root) {
-        /*const float far_squared = cam->GetFar() * cam->GetFar();
-        const float radius = top->GetAABB().GetDimensions().LengthSquared();
-        const float distance = top->GetAABB().GetCenter().DistanceSquared(cam->GetTranslation());
-
-        if (distance - radius >= far_squared) {
-            frustum_culled = true;
-        } else {*/
-            frustum_culled = !MemoizedFrustumCheck(cam, top->GetAABB());
-        //}
+        frustum_culled = !MemoizedFrustumCheck(cam, top->GetAABB());
     }
 
     if (new_bucket != nullptr) {
@@ -230,10 +232,24 @@ void Renderer::RenderPost(Camera *cam, Framebuffer *fbo)
         return;
     }
 
-    //glDisable(GL_CULL_FACE);
-
     m_post_processing->Render(cam, fbo);
+}
 
-    //glEnable(GL_CULL_FACE);
+void Renderer::SetDeferred(bool deferred)
+{
+    if (m_is_deferred == deferred) {
+        return;
+    }
+
+    if (deferred) {
+        m_post_processing->AddFilter<DeferredRenderingFilter>("deferred", 10);
+    } else {
+        m_post_processing->RemoveFilter("deferred");
+    }
+
+    // TODO: a way to update the shader property for each registered shader,
+    // and recompile to allow for `if DEFERRED` checks
+
+    m_is_deferred = deferred;
 }
 } // namespace apex

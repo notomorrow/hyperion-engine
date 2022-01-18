@@ -9,11 +9,12 @@ PostShader::PostShader(const ShaderProperties &properties)
 {
     const std::string vs_path("res/shaders/post.vert");
 
-    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_VERTEX,
-        ShaderPreprocessor::ProcessShader(
-            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
-            properties, vs_path)
-        ));
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_VERTEX,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
+        properties,
+        vs_path
+    );
 }
 
 void PostShader::ApplyMaterial(const Material &mat)

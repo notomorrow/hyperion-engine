@@ -12,17 +12,19 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
     const std::string vs_path("res/shaders/skydome.vert");
     const std::string fs_path("res/shaders/skydome.frag");
 
-    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_VERTEX,
-        ShaderPreprocessor::ProcessShader(
-            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
-            properties, vs_path)
-        ));
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_VERTEX,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
+        properties,
+        vs_path
+    );
 
-    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
-        ShaderPreprocessor::ProcessShader(
-            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
-            properties, fs_path)
-        ));
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_FRAGMENT,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
+        properties,
+        fs_path
+    );
 
     if (properties.HasValue("CLOUDS")) {
         has_clouds = properties.GetValue("CLOUDS").IsTruthy();

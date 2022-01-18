@@ -7,6 +7,7 @@
 #include "../math/matrix4.h"
 #include "../math/transform.h"
 #include "../asset/loadable.h"
+#include "../hash_code.h"
 #include "material.h"
 #include "camera/camera.h"
 
@@ -20,7 +21,6 @@ namespace apex {
 
 class ShaderProperties {
 public:
-
     struct ShaderProperty {
         std::string raw_value;
 
@@ -61,7 +61,23 @@ public:
                 return false;
             }
         }
+
+        inline HashCode GetHashCode() const
+        {
+            HashCode hc;
+
+            hc.Add(int(type));
+            hc.Add(raw_value);
+
+            return hc;
+        }
     };
+
+    ShaderProperties() {}
+    ShaderProperties(const ShaderProperties &other)
+        : m_properties(other.m_properties)
+    {
+    }
 
     std::map<std::string, ShaderProperty> m_properties;
 
@@ -147,6 +163,18 @@ public:
 
         return *this;
     }
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        for (const auto &it : m_properties) {
+            hc.Add(it.first);
+            hc.Add(it.second.GetHashCode());
+        }
+
+        return hc;
+    }
 };
 
 class Shader {
@@ -161,6 +189,8 @@ public:
 
     inline ShaderProperties &GetProperties() { return m_properties; }
     inline const ShaderProperties &GetProperties() const { return m_properties; }
+    inline void SetProperties(const ShaderProperties &properties) { m_properties = properties; }
+
     inline MaterialFaceCull SetOverrideCullMode() const { return m_override_cull; }
     inline void SetOverrideCullMode(MaterialFaceCull cull_mode) { m_override_cull = cull_mode; }
 
@@ -189,6 +219,8 @@ protected:
         SubShaderType type;
         int id;
         std::string code;
+        std::string processed_code;
+        std::string path;
 
         SubShader()
             : type(SubShaderType::SUBSHADER_NONE),
@@ -206,18 +238,31 @@ protected:
         SubShader(const SubShader &other)
             : type(other.type),
               id(other.id),
-              code(other.code)
+              code(other.code),
+              processed_code(other.processed_code),
+              path(other.path)
         {
         }
     };
 
-    inline void AddSubShader(const SubShader &sub_shader) { subshaders[sub_shader.type] = sub_shader; }
+    void AddSubShader(SubShaderType type,
+        const std::string &code,
+        const ShaderProperties &properties,
+        const std::string &path);
+    void ReprocessSubShader(SubShader &sub_shader, const ShaderProperties &properties);
 
     void ResetUniforms();
 
 private:
     bool is_uploaded, is_created, uniform_changed;
     unsigned int progid;
+
+    size_t m_previous_properties_hash_code;
+
+    void CreateGpuData();
+    void UploadGpuData();
+    void DestroyGpuData();
+    bool ShaderPropertiesChanged() const;
 
     struct Uniform {
         enum {

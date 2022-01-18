@@ -9,12 +9,12 @@ GammaCorrectShader::GammaCorrectShader(const ShaderProperties &properties)
 {
     const std::string fs_path("res/shaders/filters/gammacorrect.frag");
 
-    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
-        ShaderPreprocessor::ProcessShader(
-            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
-            properties, fs_path
-        )
-    ));
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_FRAGMENT,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
+        properties,
+        fs_path
+    );
 }
 
 void GammaCorrectShader::ApplyTransforms(const Transform &transform, Camera *camera)

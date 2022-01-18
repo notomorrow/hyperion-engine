@@ -7,6 +7,7 @@ namespace apex {
 
 Shader::Shader(const ShaderProperties &properties)
     : m_properties(properties),
+      m_previous_properties_hash_code(properties.GetHashCode().Value()),
       m_override_cull(MaterialFaceCull::MaterialFace_None),
       is_uploaded(false),
       is_created(false),
@@ -19,18 +20,116 @@ Shader::Shader(const ShaderProperties &properties,
     const std::string &vscode,
     const std::string &fscode)
     : m_properties(properties),
+      m_previous_properties_hash_code(properties.GetHashCode().Value()),
       m_override_cull(MaterialFaceCull::MaterialFace_None),
       is_uploaded(false),
       is_created(false),
       uniform_changed(false)
 {
-    AddSubShader(SubShader(SubShaderType::SUBSHADER_VERTEX, vscode));
-    AddSubShader(SubShader(SubShaderType::SUBSHADER_FRAGMENT, fscode));
+    AddSubShader(SubShaderType::SUBSHADER_VERTEX, vscode, properties, "");
+    AddSubShader(SubShaderType::SUBSHADER_FRAGMENT, fscode, properties, "");
 
     ResetUniforms();
 }
 
 Shader::~Shader()
+{
+    DestroyGpuData();
+}
+
+void Shader::CreateGpuData()
+{
+    assert(!is_created);
+
+    progid = glCreateProgram();
+
+    CatchGLErrors("Failed to create shader program.");
+
+    for (auto &&sub : subshaders) {
+        sub.second.id = glCreateShader(sub.first);
+
+        CatchGLErrors("Failed to create subshader.");
+    }
+
+    is_created = true;
+}
+
+void Shader::UploadGpuData()
+{
+    assert(is_created && !is_uploaded);
+
+    for (auto &&it : subshaders) {
+        auto &sub = it.second;
+
+        const char *code_str = sub.processed_code.c_str();
+        glShaderSource(sub.id, 1, &code_str, NULL);
+        glCompileShader(sub.id);
+        glAttachShader(progid, sub.id);
+
+        int status = -1;
+        glGetShaderiv(sub.id, GL_COMPILE_STATUS, &status);
+
+        if (!status) {
+            int maxlen;
+            glGetShaderiv(sub.id, GL_INFO_LOG_LENGTH, &maxlen);
+            char *log = new char[maxlen];
+            memset(log, 0, maxlen);
+            glGetShaderInfoLog(sub.id, maxlen, NULL, log);
+
+            std::cout << "In shader of class " << typeid(*this).name() << ":\n";
+            std::cout << "\tShader compile error! ";
+            std::cout << "\tCompile log: \n" << log << "\n";
+
+            delete[] log;
+        }
+    }
+
+    glBindFragDataLocation(progid, 0, "output0");
+    glBindFragDataLocation(progid, 1, "output1");
+    glBindFragDataLocation(progid, 2, "output2");
+    CatchGLErrors("Failed to bind shader frag data.");
+
+    glBindAttribLocation(progid, 0, "a_position");
+    glBindAttribLocation(progid, 1, "a_normal");
+    glBindAttribLocation(progid, 2, "a_texcoord0");
+    glBindAttribLocation(progid, 3, "a_texcoord1");
+    glBindAttribLocation(progid, 4, "a_tangent");
+    glBindAttribLocation(progid, 5, "a_bitangent");
+    glBindAttribLocation(progid, 6, "a_boneweights");
+    glBindAttribLocation(progid, 7, "a_boneindices");
+    CatchGLErrors("Failed to bind shader attributes.");
+
+    glLinkProgram(progid);
+    glValidateProgram(progid);
+
+    int linked = 0;
+    glGetProgramiv(progid, GL_LINK_STATUS, &linked);
+
+    if (!linked) {
+        int maxlen = 0;
+        glGetProgramiv(progid, GL_INFO_LOG_LENGTH, &maxlen);
+
+        if (maxlen != 0) {
+            char *log = new char[maxlen];
+
+            glGetProgramInfoLog(progid, maxlen, NULL, log);
+
+            std::cout << "In shader of class " << typeid(*this).name() << ":\n";
+            std::cout << "\tShader linker error! ";
+            std::cout << "\tCompile log: \n" << log << "\n";
+
+            glDeleteProgram(progid);
+
+            delete[] log;
+
+            return;
+        }
+    }
+
+    is_uploaded = true;
+}
+
+void Shader::DestroyGpuData()
 {
     if (is_created) {
         glDeleteProgram(progid);
@@ -39,6 +138,15 @@ Shader::~Shader()
             glDeleteShader(sub.second.id);
         }
     }
+
+    is_created = false;
+    is_uploaded = false;
+}
+
+bool Shader::ShaderPropertiesChanged() const
+{
+    // TODO: memoization
+    return m_properties.GetHashCode().Value() != m_previous_properties_hash_code;
 }
 
 void Shader::ResetUniforms()
@@ -89,94 +197,28 @@ void Shader::ApplyTransforms(const Transform &transform, Camera *camera)
     SetUniform("u_modelMatrix", transform.GetMatrix());
     SetUniform("u_viewMatrix", camera->GetViewMatrix());
     SetUniform("u_projMatrix", camera->GetProjectionMatrix());
+    SetUniform("u_viewProjMatrix", camera->GetViewProjectionMatrix());
 }
 
 void Shader::Use()
 {
     if (!is_created) {
-        progid = glCreateProgram();
-
-        CatchGLErrors("Failed to create shader program.");
-
-        for (auto &&sub : subshaders) {
-            sub.second.id = glCreateShader(sub.first);
-
-            CatchGLErrors("Failed to create subshader.");
-        }
-
-        is_created = true;
+        CreateGpuData();
     }
 
     if (!is_uploaded) {
-        for (auto &&it : subshaders) {
-            auto &sub = it.second;
+        UploadGpuData();
+    } else if (ShaderPropertiesChanged()) {
+        DestroyGpuData();
 
-            const char *code_str = sub.code.c_str();
-            glShaderSource(sub.id, 1, &code_str, NULL);
-            glCompileShader(sub.id);
-            glAttachShader(progid, sub.id);
-
-            int status = -1;
-            glGetShaderiv(sub.id, GL_COMPILE_STATUS, &status);
-
-            if (!status) {
-                int maxlen;
-                glGetShaderiv(sub.id, GL_INFO_LOG_LENGTH, &maxlen);
-                char *log = new char[maxlen];
-                memset(log, 0, maxlen);
-                glGetShaderInfoLog(sub.id, maxlen, NULL, log);
-
-                std::cout << "In shader of class " << typeid(*this).name() << ":\n";
-                std::cout << "\tShader compile error! ";
-                std::cout << "\tCompile log: \n" << log << "\n";
-
-                delete[] log;
-            }
+        for (auto &sub_shader : subshaders) {
+            ReprocessSubShader(sub_shader.second, m_properties);
         }
 
-        glBindFragDataLocation(progid, 0, "output0");
-        glBindFragDataLocation(progid, 1, "output1");
-        glBindFragDataLocation(progid, 2, "output2");
-        CatchGLErrors("Failed to bind shader frag data.");
+        CreateGpuData();
+        UploadGpuData();
 
-        glBindAttribLocation(progid, 0, "a_position");
-        glBindAttribLocation(progid, 1, "a_normal");
-        glBindAttribLocation(progid, 2, "a_texcoord0");
-        glBindAttribLocation(progid, 3, "a_texcoord1");
-        glBindAttribLocation(progid, 4, "a_tangent");
-        glBindAttribLocation(progid, 5, "a_bitangent");
-        glBindAttribLocation(progid, 6, "a_boneweights");
-        glBindAttribLocation(progid, 7, "a_boneindices");
-        CatchGLErrors("Failed to bind shader attributes.");
-
-        glLinkProgram(progid);
-        glValidateProgram(progid);
-
-        int linked = 0;
-        glGetProgramiv(progid, GL_LINK_STATUS, &linked);
-
-        if (!linked) {
-            int maxlen = 0;
-            glGetProgramiv(progid, GL_INFO_LOG_LENGTH, &maxlen);
-
-            if (maxlen != 0) {
-                char *log = new char[maxlen];
-
-                glGetProgramInfoLog(progid, maxlen, NULL, log);
-
-                std::cout << "In shader of class " << typeid(*this).name() << ":\n";
-                std::cout << "\tShader linker error! ";
-                std::cout << "\tCompile log: \n" << log << "\n";
-
-                glDeleteProgram(progid);
-
-                delete[] log;
-
-                return;
-            }
-        }
-
-        is_uploaded = true;
+        m_previous_properties_hash_code = m_properties.GetHashCode().Value();
     }
 
     glUseProgram(progid);
@@ -230,6 +272,25 @@ void Shader::End()
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glUseProgram(0);
+}
+
+void Shader::AddSubShader(SubShaderType type,
+    const std::string &code,
+    const ShaderProperties &properties,
+    const std::string &path)
+{
+    SubShader sub_shader;
+    sub_shader.id = 0;
+    sub_shader.type = type;
+    sub_shader.code = code;
+    sub_shader.path = path;
+    sub_shader.processed_code = ShaderPreprocessor::ProcessShader(code, properties, path);
+    subshaders[type] = sub_shader;
+}
+
+void Shader::ReprocessSubShader(SubShader &sub_shader, const ShaderProperties &properties)
+{
+    sub_shader.processed_code = ShaderPreprocessor::ProcessShader(sub_shader.code, properties, sub_shader.path);
 }
 
 } // namespace apex

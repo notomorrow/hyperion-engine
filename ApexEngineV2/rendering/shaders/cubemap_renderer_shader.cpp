@@ -13,25 +13,25 @@ CubemapRendererShader::CubemapRendererShader(const ShaderProperties &properties)
     const std::string fs_path("res/shaders/cubemap_renderer.frag");
     const std::string gs_path("res/shaders/cubemap_renderer.geom");
 
-    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_VERTEX,
-        ShaderPreprocessor::ProcessShader(
-            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
-            properties, vs_path)
-        )
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_VERTEX,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(vs_path)->GetText(),
+        properties,
+        vs_path
     );
 
-    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_FRAGMENT,
-        ShaderPreprocessor::ProcessShader(
-            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
-            properties, fs_path)
-        )
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_FRAGMENT,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(fs_path)->GetText(),
+        properties,
+        fs_path
     );
 
-    AddSubShader(SubShader(Shader::SubShaderType::SUBSHADER_GEOMETRY,
-        ShaderPreprocessor::ProcessShader(
-            AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(gs_path)->GetText(),
-            properties, gs_path)
-        )
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_GEOMETRY,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(gs_path)->GetText(),
+        properties,
+        gs_path
     );
 }
 
