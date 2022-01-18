@@ -245,6 +245,35 @@ float cookTorranceG(float NdotL, float NdotV, float LdotH, float NdotH)
     return min(1, 2 * (NdotH / LdotH) * min(NdotL, NdotV));
 }
 
+// Smith GGX corrected Visibility
+// NdotL        = the dot product of the normal and direction to the light
+// NdotV        = the dot product of the normal and the camera view direction
+// roughness    = the roughness of the pixel
+float SmithGGXSchlickVisibility(float NdotL, float NdotV, float roughness)
+{
+    float alphaRoughnessSq = roughness * roughness;
+
+    float GGXV = NdotL * sqrt(NdotV * NdotV * (1.0 - alphaRoughnessSq) + alphaRoughnessSq);
+    float GGXL = NdotV * sqrt(NdotL * NdotL * (1.0 - alphaRoughnessSq) + alphaRoughnessSq);
+
+    float GGX = GGXV + GGXL;
+    if (GGX > 0.0)
+    {
+        return 0.5 / GGX;
+    }
+    return 0.0;
+}
+
+vec2 BRDFMap(float NdotV, float metallic)
+{
+		const vec4 c0 = vec4(-1, -0.0275, -0.572, 0.022);
+		const vec4 c1 = vec4(1, 0.0425, 1.04, -0.04);
+		vec4 r = metallic * c0 + c1;
+		float a004 = min(r.x * r.x, exp2(-9.28 * NdotV)) * r.x + r.y;
+	
+		return vec2(-1.04, 1.04) * a004 + r.zw;
+}
+
 
 /* ========== */
 
