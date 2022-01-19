@@ -19,7 +19,7 @@ void SkyboxControl::OnAdded()
 {
     cube = std::make_shared<Entity>("Skybox");
 
-    cube->SetRenderable(MeshFactory::CreateCube());
+    cube->SetRenderable(MeshFactory::CreateCube(Vector3(-0.5, 0.0, 0.5)));
     cube->SetLocalScale(10);
     cube->SetLocalTranslation(Vector3(0, 55, 2));
     cube->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<SkyboxShader>(ShaderProperties()));

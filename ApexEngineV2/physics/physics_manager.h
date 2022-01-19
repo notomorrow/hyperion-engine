@@ -13,20 +13,34 @@
 #include <vector>
 #include <memory>
 
+class btDiscreteDynamicsWorld;
+class btDefaultCollisionConfiguration;
+class btCollisionDispatcher;
+class btBroadphaseInterface;
+class btSequentialImpulseConstraintSolver;
+
 namespace apex {
 class PhysicsManager {
+    friend class physics::RigidBody;
 public:
     static PhysicsManager *GetInstance();
 
     PhysicsManager();
     ~PhysicsManager();
 
-    void RegisterBody(std::shared_ptr<physics::RigidBody> body);
+    void RegisterBody(physics::RigidBody *body);
+    void UnregisterBody(physics::RigidBody *body);
     void RunPhysics(double dt);
 
 private:
     static PhysicsManager *instance;
-    std::vector<std::shared_ptr<physics::RigidBody>> m_bodies;
+    std::vector<physics::RigidBody*> m_bodies;
+
+    btDiscreteDynamicsWorld *m_dynamics_world;
+    btDefaultCollisionConfiguration *m_collision_configuration;
+    btCollisionDispatcher *m_dispatcher;
+    btBroadphaseInterface *m_broadphase_interface;
+    btSequentialImpulseConstraintSolver *m_solver;
 
     void UpdateInternals(std::vector<physics::CollisionInfo> &collisions, double dt);
     void UpdateVelocities(std::vector<physics::CollisionInfo> &collisions, double dt);

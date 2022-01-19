@@ -11,6 +11,7 @@ link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib)
 find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
+find_package(Bullet REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Og -fpermissive")
 
@@ -22,13 +23,14 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/include
   ${OPENGL_INCLUDE_DIRS}
   ${OPENAL_INCLUDE_DIR}
+  ${BULLET_INCLUDE_DIR}
   ${CMAKE_SOURCE_DIR}/ApexEngineV2
 )
 add_executable(${BUILD_NAME} ${SOURCES} ${HEADERS})
 
 if(APPLE)
-  target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} glfw m)
+  target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} glfw m ${BULLET_LIBRARIES})
 else()
-  target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} GLEW glfw m)
+  target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} GLEW glfw m ${BULLET_LIBRARIES})
 endif()
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})

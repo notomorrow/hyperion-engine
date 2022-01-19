@@ -12,12 +12,18 @@
 
 #include <memory>
 
+class btRigidBody;
+class btDefaultMotionState;
+
 namespace apex {
 class BoundingBoxRenderer;
+class PhysicsManager;
 namespace physics {
 class RigidBody : public EntityControl {
+    friend class ::apex::PhysicsManager;
 public:
     RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material);
+    virtual ~RigidBody() override;
 
     inline std::shared_ptr<PhysicsShape> GetPhysicsShape() const { return m_shape; }
 
@@ -94,6 +100,10 @@ public:
     virtual void OnAdded() override;
     virtual void OnRemoved() override;
     virtual void OnUpdate(double dt) override;
+
+protected:
+    btRigidBody *m_rigid_body;
+    btDefaultMotionState *m_motion_state;
 
 private:
     std::shared_ptr<PhysicsShape> m_shape;

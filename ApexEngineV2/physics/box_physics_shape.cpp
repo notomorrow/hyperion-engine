@@ -4,6 +4,9 @@
 #include "plane_physics_shape.h"
 #include "../math/bounding_box.h"
 
+#include "../bullet_math_util.h"
+#include "btBulletDynamicsCommon.h"
+
 #include <cassert>
 
 namespace apex {
@@ -13,18 +16,26 @@ BoxPhysicsShape::BoxPhysicsShape(const Vector3 &dimensions)
     : PhysicsShape(PhysicsShape_box),
       m_dimensions(dimensions)
 {
+    m_collision_shape = new btBoxShape(ToBulletVector(m_dimensions));
 }
 
 BoxPhysicsShape::BoxPhysicsShape(const BoundingBox &aabb)
     : PhysicsShape(PhysicsShape_box),
       m_dimensions(aabb.GetDimensions())
 {
+    m_collision_shape = new btBoxShape(ToBulletVector(m_dimensions));
 }
 
 BoxPhysicsShape::BoxPhysicsShape(const BoxPhysicsShape &other)
     : PhysicsShape(PhysicsShape_box),
       m_dimensions(other.m_dimensions)
 {
+    m_collision_shape = new btBoxShape(ToBulletVector(m_dimensions));
+}
+
+BoxPhysicsShape::~BoxPhysicsShape()
+{
+    delete m_collision_shape;
 }
 
 BoundingBox BoxPhysicsShape::GetBoundingBox()

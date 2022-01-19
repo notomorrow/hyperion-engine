@@ -1,8 +1,19 @@
 #include "physics_shape.h"
+
 #include <cassert>
 
 namespace apex {
 namespace physics {
+
+PhysicsShape::PhysicsShape(PhysicsShapeType type)
+    : m_type(type),
+      m_collision_shape(nullptr)
+{
+}
+
+PhysicsShape::~PhysicsShape()
+{
+}
 
 Vector3 PhysicsShape::GetAxis(unsigned int index) const
 {

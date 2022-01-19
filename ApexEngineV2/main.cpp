@@ -529,13 +529,18 @@ public:
         //dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
          
 
-        auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
-        plane_rigid_body->SetAwake(false);
-        PhysicsManager::GetInstance()->RegisterBody(plane_rigid_body);
+        auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(10.0)), 0.0);
+        // plane_rigid_body->SetAwake(false);
+        auto plane_entity = std::make_shared<Entity>("static plane");
+        plane_entity->SetRenderable(MeshFactory::CreateCube());
+        plane_entity->Scale(Vector3(10.0));
+        plane_entity->GetRenderable()->SetShader(shader);
+        plane_entity->AddControl(plane_rigid_body);
+        top->AddChild(plane_entity);
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3((x * 6) + 6, 0, z * 6);
+                Vector3 box_position = Vector3(((float(x) - 2.5) * 6), 50, (float(z) - 2.5) * 6);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
                 box->Scale(0.25);
                 for (size_t i = 0; i < box->NumChildren(); i++) {
@@ -567,15 +572,16 @@ public:
                 }
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
+                box->UpdateTransform();
 
-                auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.5)), 0.1);
+                auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.25)), 0.1);
                 rigid_body->SetPosition(box_position);
                 // rigid_body->SetLinearVelocity(Vector3(0, -5, 0));
                 rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
                 rigid_body->SetAwake(true);
                 box->AddControl(rigid_body);
                 box->AddControl(std::make_shared<BoundingBoxControl>());
-                PhysicsManager::GetInstance()->RegisterBody(rigid_body);
+                // PhysicsManager::GetInstance()->RegisterBody(rigid_body);
             }
         }
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);

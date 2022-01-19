@@ -13,6 +13,9 @@ public:
     BoxPhysicsShape(const Vector3 &dimensions);
     BoxPhysicsShape(const BoundingBox &aabb);
     BoxPhysicsShape(const BoxPhysicsShape &other);
+    virtual ~BoxPhysicsShape() override;
+
+    BoxPhysicsShape &operator=(const BoxPhysicsShape &other) = delete;
 
     inline const Vector3 &GetDimensions() const { return m_dimensions; }
     inline Vector3 &GetDimensions() { return m_dimensions; }

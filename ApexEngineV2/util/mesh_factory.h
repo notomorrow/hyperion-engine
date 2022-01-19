@@ -10,7 +10,7 @@ namespace apex {
 class MeshFactory {
 public:
     static std::shared_ptr<Mesh> CreateQuad(bool triangle_fan = true);
-    static std::shared_ptr<Mesh> CreateCube();
+    static std::shared_ptr<Mesh> CreateCube(Vector3 offset = Vector3(0.0));
     static std::shared_ptr<Mesh> MergeMeshes(const std::shared_ptr<Mesh> &a,
         const std::shared_ptr<Mesh> &b,
         Transform transform_a,

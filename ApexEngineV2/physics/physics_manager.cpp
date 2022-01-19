@@ -2,6 +2,8 @@
 #include "collision_list.h"
 #include "../rendering/environment.h"
 
+#include "btBulletDynamicsCommon.h"
+
 #include <algorithm>
 
 namespace apex {
@@ -17,122 +19,63 @@ PhysicsManager *PhysicsManager::GetInstance()
 
 PhysicsManager::PhysicsManager()
 {
+    m_collision_configuration = new btDefaultCollisionConfiguration();
+    m_dispatcher = new btCollisionDispatcher(m_collision_configuration);
+    m_broadphase_interface = new btDbvtBroadphase();
+    m_solver = new btSequentialImpulseConstraintSolver();
+    m_dynamics_world = new btDiscreteDynamicsWorld(
+        m_dispatcher,
+        m_broadphase_interface,
+        m_solver,
+        m_collision_configuration
+    );
+
+    m_dynamics_world->setGravity(btVector3(
+        Environment::GetInstance()->GetGravity().x,
+        Environment::GetInstance()->GetGravity().y,
+        Environment::GetInstance()->GetGravity().z
+    ));
 }
 
 PhysicsManager::~PhysicsManager()
 {
+    // copy, as OnRemoved() may erase rigidbodies from m_bodies.
+    std::vector<physics::RigidBody*> bodies(m_bodies);
+
+    for (physics::RigidBody *body : bodies) {
+        body->OnRemoved(); // do not delete here, as it is used by shared_ptrs as entity controls
+    }
+
+    delete m_dynamics_world;
+    delete m_solver;
+    delete m_broadphase_interface;
+    delete m_dispatcher;
+    delete m_collision_configuration;
 }
 
-void PhysicsManager::RegisterBody(std::shared_ptr<physics::RigidBody> body)
+void PhysicsManager::RegisterBody(physics::RigidBody *body)
 {
+    m_dynamics_world->addRigidBody(body->m_rigid_body);
+
     m_bodies.push_back(body);
+}
+
+void PhysicsManager::UnregisterBody(physics::RigidBody *body)
+{
+    auto it = std::find(m_bodies.begin(), m_bodies.end(), body);
+
+    if (it != m_bodies.end()) {
+        m_bodies.erase(it);
+    }
+
+    if (body->m_rigid_body != nullptr) {
+        m_dynamics_world->removeRigidBody(body->m_rigid_body);
+    }
 }
 
 void PhysicsManager::RunPhysics(double dt)
 {
-    // gather collisions
-    std::vector<physics::CollisionInfo> collisions;
-
-    for (auto &body : m_bodies) {
-        if (body == nullptr) {
-            continue;
-        }
-
-        if (body->IsAwake() && !body->IsStatic()) {
-            body->ApplyForce(Environment::GetInstance()->GetGravity() * body->GetPhysicsMaterial().GetMass());
-        }
-    }
-
-    for (size_t i = 0; i < m_bodies.size(); i++) {
-        physics::RigidBody *a = m_bodies[i].get();
-
-        if (a == nullptr) {
-            continue;
-        }
-
-        for (size_t j = i + 1; j < m_bodies.size(); j++) {
-            physics::RigidBody *b = m_bodies[j].get();
-            if (b == nullptr || b == a) {
-                // skip duplicates
-                continue;
-            }
-
-            physics::PhysicsShape *b_shape = b->GetPhysicsShape().get();
-
-            // collision info for these two bodies will be stored in this object
-            physics::CollisionList list;
-
-            switch (b->GetPhysicsShape()->GetType()) {
-            case physics::PhysicsShape_box:
-                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::BoxPhysicsShape*>(b_shape), list)) {
-                    for (physics::CollisionInfo &info : list.m_collisions) {
-                        // add more info (bodies involved)
-                        info.m_bodies = { a, b };
-                        // combine materials of each object
-                        info.m_combined_material.SetFriction(std::min(
-                            a->GetPhysicsMaterial().GetFriction(),
-                            b->GetPhysicsMaterial().GetFriction()
-                        ));
-                        info.m_combined_material.SetRestitution(std::min(
-                            a->GetPhysicsMaterial().GetRestitution(),
-                            b->GetPhysicsMaterial().GetRestitution()
-                        ));
-                        collisions.push_back(info);
-                    }
-                }
-                break;
-            case physics::PhysicsShape_sphere:
-                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::SpherePhysicsShape*>(b_shape), list)) {
-                    for (physics::CollisionInfo &info : list.m_collisions) {
-                        // add more info (bodies involved)
-                        info.m_bodies = { a, b };
-                        // combine materials of each object
-                        info.m_combined_material.SetFriction(std::min(
-                            a->GetPhysicsMaterial().GetFriction(),
-                            b->GetPhysicsMaterial().GetFriction()
-                        ));
-                        info.m_combined_material.SetRestitution(std::min(
-                            a->GetPhysicsMaterial().GetRestitution(),
-                            b->GetPhysicsMaterial().GetRestitution()
-                        ));
-                        collisions.push_back(info);
-                    }
-                }
-                break;
-            case physics::PhysicsShape_plane:
-                if (a->GetPhysicsShape()->CollidesWith(static_cast<physics::PlanePhysicsShape*>(b_shape), list)) {
-                    for (physics::CollisionInfo &info : list.m_collisions) {
-                        // add more info (bodies involved)
-                        info.m_bodies = { a, b };
-                        // combine materials of each object
-                        info.m_combined_material.SetFriction(std::min(
-                            a->GetPhysicsMaterial().GetFriction(),
-                            b->GetPhysicsMaterial().GetFriction()
-                        ));
-                        info.m_combined_material.SetRestitution(std::min(
-                            a->GetPhysicsMaterial().GetRestitution(),
-                            b->GetPhysicsMaterial().GetRestitution()
-                        ));
-                        collisions.push_back(info);
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    // update internal data of collisions
-    UpdateInternals(collisions, dt);
-    // update positions of collisions
-    UpdatePositions(collisions, dt);
-    // update velocities of collisions
-    UpdateVelocities(collisions, dt);
-
-    for (auto &body : m_bodies) {
-        if (body->IsAwake() && !body->IsStatic()) {
-            body->Integrate(dt);
-        }
-    }
+    m_dynamics_world->stepSimulation(dt);
 }
 
 void PhysicsManager::UpdateInternals(std::vector<physics::CollisionInfo> &collisions, double dt)
