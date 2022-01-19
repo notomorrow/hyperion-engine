@@ -36,6 +36,7 @@
 #include "rendering/postprocess/filters/deferred_rendering_filter.h"
 #include "rendering/postprocess/filters/bloom_filter.h"
 #include "rendering/postprocess/filters/depth_of_field_filter.h"
+#include "rendering/postprocess/filters/fxaa_filter.h"
 
 /* Extra */
 #include "rendering/skydome/skydome.h"
@@ -248,7 +249,8 @@ public:
         m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 20);
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
         m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 9999);
+        m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
+        m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         m_renderer->SetDeferred(true);
 
         //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
@@ -434,17 +436,17 @@ public:
         dragger->UpdateTransform();
 
 
-        /*auto durdle = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/durdle/durdle.obj");
-        durdle->SetName("durdle");
-        durdle->Move(Vector3(-7, -10, -6));
-        durdle->Scale(0.25);
-        for (size_t i = 0; i < durdle->NumChildren(); i++) {
-            durdle->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
+        auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
+        superdan->SetName("superdan");
+        superdan->Move(Vector3(-7, 5, -6));
+        superdan->Scale(0.25);
+        for (size_t i = 0; i < superdan->NumChildren(); i++) {
+            superdan->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
         }
-        top->AddChild(durdle);
-        durdle->UpdateTransform();*/
+        top->AddChild(superdan);
+        superdan->UpdateTransform();
 
-        {
+        /*{
             auto sundaysbest = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/durdle/sundays_best.obj");
             sundaysbest->SetName("sundaysbest");
             sundaysbest->Move(Vector3(2, 4, 8));
@@ -473,7 +475,7 @@ public:
             particle_node->SetLocalScale(Vector3(1.5));
             particle_node->SetLocalTranslation(Vector3(-0.1, 1.9, -0.4));
             sundaysbest->AddChild(particle_node);
-        }
+        }*/
 
         // auto rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.25)), physics::PhysicsMaterial(0.01));
         // rb3->SetPosition(dragger->GetGlobalTransform().GetTranslation());
@@ -708,7 +710,7 @@ public:
             sponza->Scale(2.0f);
         }*/
 
-        {
+        /*{
             auto breakfast_room = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/breakfast_room/breakfast_room.obj");
            
 
@@ -719,7 +721,7 @@ public:
 
             //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
             breakfast_room->Scale(5.0f);
-        }
+        }*/
 
         // { //
         //     auto obj = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
@@ -744,7 +746,7 @@ public:
 
         //top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
-        // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
     void Logic(double dt)
