@@ -1,4 +1,5 @@
 #include "environment.h"
+#include "shader_manager.h"
 
 namespace apex {
 Environment *Environment::instance = nullptr;
@@ -38,6 +39,32 @@ Environment::Environment()
       m_shadow_matrices({ Matrix4::Identity() }),
       m_sun(Vector3(-1, -1, -1).Normalize(), Vector4(0.9, 0.8, 0.7, 1.0))
 {
+}
+
+void Environment::SetShadowsEnabled(bool shadows_enabled)
+{
+    if (shadows_enabled == m_shadows_enabled) {
+        return;
+    }
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("SHADOWS", shadows_enabled)
+    );
+
+    m_shadows_enabled = shadows_enabled;
+}
+
+void Environment::SetNumCascades(int num_cascades)
+{
+    if (num_cascades == m_num_cascades) {
+        return;
+    }
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("NUM_SPLITS", num_cascades)
+    );
+
+    m_num_cascades = num_cascades;
 }
 
 } // namespace apex

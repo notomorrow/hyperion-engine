@@ -21,7 +21,7 @@ Framebuffer2D::Framebuffer2D(
 {
     if (m_has_color_texture) {
         m_color_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-        m_color_texture->SetInternalFormat(GL_RGBA16);
+        m_color_texture->SetInternalFormat(GL_RGBA32F);
         m_color_texture->SetFormat(GL_RGBA);
         m_color_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         m_color_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -29,7 +29,7 @@ Framebuffer2D::Framebuffer2D(
 
     if (m_has_normal_texture) {
         m_normal_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-        m_normal_texture->SetInternalFormat(GL_RGBA16);
+        m_normal_texture->SetInternalFormat(GL_RGBA32F);
         m_normal_texture->SetFormat(GL_RGBA);
         m_normal_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         m_normal_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -37,7 +37,7 @@ Framebuffer2D::Framebuffer2D(
 
     if (m_has_position_texture) {
         m_position_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-        m_position_texture->SetInternalFormat(GL_RGBA16);
+        m_position_texture->SetInternalFormat(GL_RGBA32F);
         m_position_texture->SetFormat(GL_RGBA);
         m_position_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         m_position_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -45,7 +45,7 @@ Framebuffer2D::Framebuffer2D(
 
     if (m_has_depth_texture) {
         m_depth_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
-        m_depth_texture->SetInternalFormat(GL_DEPTH_COMPONENT24);
+        m_depth_texture->SetInternalFormat(GL_DEPTH_COMPONENT32F);
         m_depth_texture->SetFormat(GL_DEPTH_COMPONENT);
         m_depth_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         m_depth_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -86,7 +86,7 @@ void Framebuffer2D::Use()
     glViewport(0, 0, width, height);
 
     if (!is_uploaded) {
-        unsigned int draw_buffers[3] = { GL_NONE };
+        unsigned int draw_buffers[4] = { GL_NONE };
         int draw_buffer_index = 0;
 
         if (m_has_color_texture) {
