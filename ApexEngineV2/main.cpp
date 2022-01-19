@@ -446,6 +446,16 @@ public:
         top->AddChild(superdan);
         superdan->UpdateTransform();
 
+        {
+
+            auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
+            street->SetName("street");
+            street->Move(Vector3(0, 0, 0));
+            street->Scale(1);
+            top->AddChild(street);
+            street->UpdateTransform();
+        }
+
         /*{
             auto sundaysbest = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/durdle/sundays_best.obj");
             sundaysbest->SetName("sundaysbest");
@@ -519,11 +529,11 @@ public:
         //dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
          
 
-        // auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
-        // plane_rigid_body->SetAwake(false);
-        // PhysicsManager::GetInstance()->RegisterBody(plane_rigid_body);
+        auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::PlanePhysicsShape>(Vector3(0, 1, 0), 0.0), 0.0);
+        plane_rigid_body->SetAwake(false);
+        PhysicsManager::GetInstance()->RegisterBody(plane_rigid_body);
 
-        /*for (int x = 0; x < 5; x++) {
+        for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 Vector3 box_position = Vector3((x * 6) + 6, 0, z * 6);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
@@ -558,16 +568,16 @@ public:
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
 
-                // auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.5)), 0.1);
-                // rigid_body->SetPosition(box_position);
-                // // rigid_body->SetLinearVelocity(Vector3(0, -5, 0));
-                // rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-                // rigid_body->SetAwake(true);
-                // box->AddControl(rigid_body);
-                // box->AddControl(std::make_shared<BoundingBoxControl>());
-                // PhysicsManager::GetInstance()->RegisterBody(rigid_body);
+                auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.5)), 0.1);
+                rigid_body->SetPosition(box_position);
+                // rigid_body->SetLinearVelocity(Vector3(0, -5, 0));
+                rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+                rigid_body->SetAwake(true);
+                box->AddControl(rigid_body);
+                box->AddControl(std::make_shared<BoundingBoxControl>());
+                PhysicsManager::GetInstance()->RegisterBody(rigid_body);
             }
-        }*/
+        }
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
         // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
         // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
@@ -746,7 +756,7 @@ public:
 
         //top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
+        // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
     void Logic(double dt)
