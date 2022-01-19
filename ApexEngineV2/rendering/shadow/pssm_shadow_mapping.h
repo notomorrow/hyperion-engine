@@ -20,10 +20,14 @@ public:
     int NumSplits() const;
     void SetLightDirection(const Vector3 &dir);
 
+    inline bool IsVarianceShadowMapping() const { return m_is_variance_shadow_mapping; }
+    void SetVarianceShadowMapping(bool value);
+
     void Render(Renderer *renderer);
 
 private:
     const int num_splits;
+    bool m_is_variance_shadow_mapping;
     std::shared_ptr<Shader> m_depth_shader;
     std::vector<std::shared_ptr<ShadowMapping>> shadow_renderers;
 };

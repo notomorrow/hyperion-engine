@@ -243,6 +243,8 @@ public:
         );
 
         shadows = new PssmShadowMapping(cam, 4, 100);
+        shadows->SetVarianceShadowMapping(true);
+
         Environment::GetInstance()->SetShadowsEnabled(true);
         Environment::GetInstance()->SetNumCascades(4);
 
@@ -287,6 +289,13 @@ public:
         ui_text->SetLocalScale2D(Vector2(30));
         top->AddChild(ui_text);
         GetUIManager()->RegisterUIObject(ui_text);
+
+        auto ui_fbo_view = std::make_shared<ui::UIObject>("fbo_preview");
+        ui_fbo_view->GetMaterial().SetTexture("ColorMap", Environment::GetInstance()->GetShadowMap(0));
+        ui_fbo_view->SetLocalTranslation2D(Vector2(0.8, -0.8));
+        ui_fbo_view->SetLocalScale2D(Vector2(256));
+        top->AddChild(ui_fbo_view);
+        GetUIManager()->RegisterUIObject(ui_fbo_view);
 
         auto ui_crosshair = std::make_shared<ui::UIObject>("crosshair");
         ui_crosshair->GetMaterial().SetTexture("ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/crosshair.png"));

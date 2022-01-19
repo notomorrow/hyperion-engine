@@ -1,6 +1,7 @@
 #include "shadow_mapping.h"
 #include "../../core_engine.h"
 #include "../../math/frustum.h"
+#include "../shader_manager.h"
 #include "../../util.h"
 
 namespace apex {
@@ -9,7 +10,7 @@ ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist)
 {
     shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
 
-    fbo = new Framebuffer2D(1024, 1024, true, true, true, true);
+    fbo = new Framebuffer2D(1024, 1024, true, false, false, false);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -35,7 +36,7 @@ OrthoCamera *ShadowMapping::GetShadowCamera()
 
 std::shared_ptr<Texture> ShadowMapping::GetShadowMap()
 {
-    return fbo->GetDepthTexture();
+    return fbo->GetColorTexture();
 }
 
 void ShadowMapping::Begin()
@@ -81,18 +82,7 @@ void ShadowMapping::Begin()
 
     fbo->Use();
 
-    // glDepthMask(true);
-    // glClearDepth(1.0);
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
-    // glCullFace(GL_FRONT);
-    // glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
-
-    // glDepthMask(true);
-    // glClearDepth(1.0);
-    // glDepthFunc(GL_LESS);
-    // glEnable(GL_DEPTH_TEST);
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // glCullFace(GL_FRONT);
 }
 
 void ShadowMapping::End()
@@ -122,4 +112,26 @@ void ShadowMapping::UpdateFrustumPoints(std::array<Vector3, 8> &points)
     points[6] = Vector3(points[1].x, points[0].y, points[1].z);
     points[7] = Vector3(points[1].x, points[1].y, points[0].z);
 }
+
+void ShadowMapping::SetVarianceShadowMapping(bool value)
+{
+    if (value == m_is_variance_shadow_mapping) {
+        return;
+    }
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("SHADOWS_VARIANCE", value)
+    );
+
+    if (auto color_texture = fbo->GetColorTexture()) {
+        if (value) {
+            color_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR);
+        } else {
+            color_texture->SetFilter(CoreEngine::GLEnums::NEAREST, CoreEngine::GLEnums::NEAREST);
+        }
+    }
+
+    m_is_variance_shadow_mapping = value;
+}
+
 } // namespace apex
