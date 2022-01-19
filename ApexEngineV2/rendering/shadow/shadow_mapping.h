@@ -19,8 +19,13 @@ public:
 
     const Vector3 &GetLightDirection() const;
     void SetLightDirection(const Vector3 &dir);
+
     OrthoCamera *GetShadowCamera();
+
     std::shared_ptr<Texture> GetShadowMap();
+
+    inline bool IsVarianceShadowMapping() const { return m_is_variance_shadow_mapping; }
+    void SetVarianceShadowMapping(bool value);
 
     void Begin();
     void End();
@@ -36,6 +41,8 @@ private:
     std::array<Vector3, 8> frustum_corners_ls;
     std::array<Vector3, 8> frustum_corners_ws;
     BoundingBox bb;
+
+    bool m_is_variance_shadow_mapping;
 
     void TransformPoints(const std::array<Vector3, 8> &in_vec,
         std::array<Vector3, 8> &out_vec, const Matrix4 &mat) const;

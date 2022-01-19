@@ -38,6 +38,19 @@ void PssmShadowMapping::SetLightDirection(const Vector3 &dir)
     }
 }
 
+void PssmShadowMapping::SetVarianceShadowMapping(bool value)
+{
+    if (value == m_is_variance_shadow_mapping) {
+        return;
+    }
+
+    for (int i = 0; i < num_splits; i++) {
+        shadow_renderers[i]->SetVarianceShadowMapping(value);
+    }
+
+    m_is_variance_shadow_mapping = value;
+}
+
 void PssmShadowMapping::Render(Renderer *renderer)
 {
     m_depth_shader->SetOverrideCullMode(MaterialFaceCull::MaterialFace_Front);
