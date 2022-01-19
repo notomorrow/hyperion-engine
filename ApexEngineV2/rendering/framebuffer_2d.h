@@ -17,7 +17,7 @@ public:
         bool has_depth_texture = true,
         bool has_normal_texture = true,
         bool has_position_texture = true,
-        bool has_data_texture = false // { uv.x, uv.y, material.shininess, material.roughness }
+        bool has_data_texture = false // { material.shininess, material.roughness, _, perform deferred lighting? }
     );
     virtual ~Framebuffer2D();
 
