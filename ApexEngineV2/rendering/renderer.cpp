@@ -1,5 +1,6 @@
 #include "renderer.h"
 #include "framebuffer_2d.h"
+#include "shader_manager.h"
 #include "postprocess/filters/deferred_rendering_filter.h"
 
 #include <cassert>
@@ -247,8 +248,9 @@ void Renderer::SetDeferred(bool deferred)
         m_post_processing->RemoveFilter("deferred");
     }
 
-    // TODO: a way to update the shader property for each registered shader,
-    // and recompile to allow for `if DEFERRED` checks
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("DEFERRED", deferred)
+    );
 
     m_is_deferred = deferred;
 }

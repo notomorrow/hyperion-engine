@@ -35,6 +35,7 @@
 #include "rendering/postprocess/filters/ssao_filter.h"
 #include "rendering/postprocess/filters/deferred_rendering_filter.h"
 #include "rendering/postprocess/filters/bloom_filter.h"
+#include "rendering/postprocess/filters/depth_of_field_filter.h"
 
 /* Extra */
 #include "rendering/skydome/skydome.h"
@@ -226,6 +227,10 @@ public:
 
     void Initialize()
     {
+        ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
+            .Define("SHADOW_MAP_RADIUS", 0.055f)
+        );
+        
         cam = new FpsCamera(
             GetInputManager(),
             &m_renderer->GetRenderWindow(),
@@ -236,20 +241,15 @@ public:
             750.0f
         );
 
-        shadows = new PssmShadowMapping(cam, 4, 50);
+        shadows = new PssmShadowMapping(cam, 4, 100);
         Environment::GetInstance()->SetShadowsEnabled(true);
         Environment::GetInstance()->SetNumCascades(4);
 
         m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 20);
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 9999);
         m_renderer->SetDeferred(true);
-
-        ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
-            .Define("DEFERRED", m_renderer->IsDeferred())
-            .Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled())
-            .Define("NUM_SPLITS", Environment::GetInstance()->NumCascades())
-        );
 
         //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
         //env_cam->SetTranslation(Vector3(0, 10, 0));
@@ -266,7 +266,7 @@ public:
         // Initialize root node
         top = std::make_shared<Entity>("top");
 
-        cam->SetTranslation(Vector3(0, 0, 0));
+        cam->SetTranslation(Vector3(4, 0, 0));
 
         // Initialize particle system
         // InitParticleSystem();
@@ -278,7 +278,9 @@ public:
         top->AddChild(test_ui);
         GetUIManager()->RegisterUIObject(test_ui);*/
 
-        auto ui_text = std::make_shared<ui::UIText>("text_test", "AEngine 1.2.0");
+        auto ui_text = std::make_shared<ui::UIText>("text_test", "AEngine 1.2.0\n"
+            "Press 1 to toggle shadows\n"
+            "Press 2 to toggle deferred rendering");
         ui_text->SetLocalTranslation2D(Vector2(-1.0, 1.0));
         ui_text->SetLocalScale2D(Vector2(30));
         top->AddChild(ui_text);
@@ -307,6 +309,24 @@ public:
         // Ray top_ray;
         // top_ray.m_direction = Vector3(0, -1, 0);
         // top_ray.m_position = Vector3(0, 15000, 0);
+
+
+        GetInputManager()->RegisterKeyEvent(KEY_1, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            Environment::GetInstance()->SetShadowsEnabled(!Environment::GetInstance()->ShadowsEnabled());
+        }));
+
+        GetInputManager()->RegisterKeyEvent(KEY_2, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            m_renderer->SetDeferred(!m_renderer->IsDeferred());
+        }));
+
 
         InputEvent raytest_event([=](bool pressed)
             {
@@ -377,7 +397,6 @@ public:
                 });
 
                 auto cube = top->GetChild("cube");
-                std::cout << "normal : " << mesh_intersections[0].normal << "\n";
                 cube->SetGlobalTranslation(mesh_intersections[0].hitpoint);
 
                 Matrix4 look_at;
@@ -423,13 +442,13 @@ public:
             durdle->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
         }
         top->AddChild(durdle);
-        durdle->UpdateTransform();
+        durdle->UpdateTransform();*/
 
         {
             auto sundaysbest = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/durdle/sundays_best.obj");
             sundaysbest->SetName("sundaysbest");
-            sundaysbest->Move(Vector3(-12, 0, -6));
-            sundaysbest->Scale(0.25);
+            sundaysbest->Move(Vector3(2, 4, 8));
+            sundaysbest->Scale(0.3);
             for (size_t i = 0; i < sundaysbest->NumChildren(); i++) {
                 sundaysbest->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
             }
@@ -438,12 +457,12 @@ public:
 
             ParticleConstructionInfo particle_generator_info;
             particle_generator_info.m_origin_randomness = Vector3(0.1, 0.0, 0.1);
-            particle_generator_info.m_velocity = Vector3(0.5f, 1.0f, -1.9f);
+            particle_generator_info.m_velocity = Vector3(0.5f, 1.0f, -5.9f);
             particle_generator_info.m_velocity_randomness = Vector3(0.1f, 0.25f, 1.0f);
             // particle_generator_info.m_scale = Vector3(0.5);
             particle_generator_info.m_gravity = Vector3(0, -9, 0);
             particle_generator_info.m_max_particles = 150;
-            particle_generator_info.m_lifespan = 0.4;
+            particle_generator_info.m_lifespan = 0.1;
             particle_generator_info.m_lifespan_randomness = 0.25;
 
             auto particle_node = std::make_shared<Entity>();
@@ -454,7 +473,7 @@ public:
             particle_node->SetLocalScale(Vector3(1.5));
             particle_node->SetLocalTranslation(Vector3(-0.1, 1.9, -0.4));
             sundaysbest->AddChild(particle_node);
-        }*/
+        }
 
         // auto rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.25)), physics::PhysicsMaterial(0.01));
         // rb3->SetPosition(dragger->GetGlobalTransform().GetTranslation());
@@ -502,9 +521,7 @@ public:
         // plane_rigid_body->SetAwake(false);
         // PhysicsManager::GetInstance()->RegisterBody(plane_rigid_body);
 
-        const auto brdf_map = AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/brdfLUT.png");
-
-        for (int x = 0; x < 5; x++) {
+        /*for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 Vector3 box_position = Vector3((x * 6) + 6, 0, z * 6);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
@@ -539,16 +556,16 @@ public:
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
 
-                /*auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.5)), 0.1);
-                rigid_body->SetPosition(box_position);
-                // rigid_body->SetLinearVelocity(Vector3(0, -5, 0));
-                rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
-                rigid_body->SetAwake(true);
-                box->AddControl(rigid_body);
-                box->AddControl(std::make_shared<BoundingBoxControl>());
-                PhysicsManager::GetInstance()->RegisterBody(rigid_body);*/
+                // auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.5)), 0.1);
+                // rigid_body->SetPosition(box_position);
+                // // rigid_body->SetLinearVelocity(Vector3(0, -5, 0));
+                // rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
+                // rigid_body->SetAwake(true);
+                // box->AddControl(rigid_body);
+                // box->AddControl(std::make_shared<BoundingBoxControl>());
+                // PhysicsManager::GetInstance()->RegisterBody(rigid_body);
             }
-        }
+        }*/
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
         // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
         // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
@@ -557,7 +574,7 @@ public:
 
 
 
-        {
+        /*{
             auto building = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/building2/building2.obj", true);
             building->SetLocalTranslation(Vector3(0, 0, 15));
             building->SetLocalScale(Vector3(1));
@@ -568,7 +585,7 @@ public:
                 building->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
             }
             top->AddChild(building);
-        }
+        }*/
 
         {
             auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
@@ -579,7 +596,7 @@ public:
             top->AddChild(cube);
         }
 
-        {
+        /*{
             auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/pine/LoblollyPine.obj", true);
             tree->SetLocalTranslation(Vector3(0, 0, 0));
             tree->SetLocalScale(Vector3(1.0));
@@ -612,7 +629,7 @@ public:
             // auto bb_renderer_node = std::make_shared<Entity>();
             // bb_renderer_node->SetRenderable(bb_renderer);
             // tree->AddChild(bb_renderer_node);
-        }
+        }*/
 
         /*{
             auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/tree02/Tree.obj", true);
@@ -633,14 +650,9 @@ public:
         box->AddControl(rb3);
         PhysicsManager::GetInstance()->RegisterBody(rb3);
 
-        auto bb_renderer = std::make_shared<BoundingBoxRenderer>(&rb3->GetBoundingBox());
-        auto bb_renderer_node = std::make_shared<Entity>();
-        bb_renderer_node->SetRenderable(bb_renderer);*/
-
-        // box->AddChild(bb_renderer_node);
 
 
-        { // house
+        /*{ // house
             auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
             for (size_t i = 0; i < house->NumChildren(); i++) {
                 //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
@@ -650,7 +662,7 @@ public:
             house->Move(Vector3(-3, 0, -3));
             house->SetName("house");
             top->AddChild(house);
-        }
+        }*/
 
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
              AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posx.jpg"),
@@ -683,18 +695,31 @@ public:
             //     }
             // };
             // scan_nodes(sponza.get());
-            for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                std::cout << " child [" << i << "] material shininess = " << sponza->GetChild(i)->GetMaterial().GetParameter("shininess")[0] << "\n";
-                sponza->GetChild(i)->GetRenderable()->SetShader(shader);
-            }
+            // for (size_t i = 0; i < sponza->NumChildren(); i++) {
+            //     std::cout << " child [" << i << "] material shininess = " << sponza->GetChild(i)->GetMaterial().GetParameter("shininess")[0] << "\n";
+            //     sponza->GetChild(i)->GetRenderable()->SetShader(shader);
+            // }
 
-            sponza->Move(Vector3(60, 5, 0));
+            sponza->Move(Vector3(, 5, 0));
             sponza->SetName("sponza");
             top->AddChild(sponza);
 
             //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
             sponza->Scale(2.0f);
         }*/
+
+        {
+            auto breakfast_room = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/living_room/living_room.obj");
+           
+
+            breakfast_room->Move(Vector3(0, 0, 0));
+            breakfast_room->SetName("breakfast_room");
+            breakfast_room->Scale(Vector3(0.25));
+            top->AddChild(breakfast_room);
+
+            //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+            breakfast_room->Scale(5.0f);
+        }
 
         // { //
         //     auto obj = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
@@ -769,7 +794,7 @@ public:
 
         // top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
+        // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
     void Logic(double dt)

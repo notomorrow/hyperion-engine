@@ -29,9 +29,9 @@ public:
     inline void SetGravity(const Vector3 &gravity) { m_gravity = gravity; }
 
     inline bool ShadowsEnabled() const { return m_shadows_enabled; }
-    inline void SetShadowsEnabled(bool shadows_enabled) { m_shadows_enabled = shadows_enabled; }
+    void SetShadowsEnabled(bool shadows_enabled);
     inline int NumCascades() const { return m_num_cascades; }
-    inline void SetNumCascades(int num_cascades) { m_num_cascades = num_cascades; }
+    void SetNumCascades(int num_cascades);
     inline double GetShadowSplit(int i) const { return m_shadow_splits[i]; }
     inline void SetShadowSplit(int i, double split) { m_shadow_splits[i] = split; }
     inline std::shared_ptr<Texture> GetShadowMap(int i) const { return m_shadow_maps[i]; }

@@ -76,8 +76,8 @@ void ParticleEmitterControl::OnUpdate(double dt)
         if (particle.m_alive) {
             particle.m_life += dt;
             particle.m_velocity += m_particle_renderer->m_info.m_gravity * particle.m_mass * dt;
-            // particle.m_position += particle.m_velocity * dt;
-            // particle.m_global_position = particle.m_position;//parent->GetGlobalTransform().GetTranslation() + particle.m_position;
+            particle.m_position += particle.m_velocity * dt;
+            particle.m_global_position = particle.m_position;
             particle.m_camera_distance = particle.m_global_position.Distance(m_camera->GetTranslation());
         } else {
             // reset the particle if it is passed it's lifespan.
