@@ -709,7 +709,7 @@ public:
         }*/
 
         {
-            auto breakfast_room = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/living_room/living_room.obj");
+            auto breakfast_room = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/breakfast_room/breakfast_room.obj");
            
 
             breakfast_room->Move(Vector3(0, 0, 0));
@@ -742,57 +742,7 @@ public:
         //     obj->Scale(2.0f);
         // }
 
-
-
-       /* { // apartment
-            auto apartment = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/apartment/flat01.obj");
-            // std::function<void(Entity*)> scan_nodes;
-            // scan_nodes = [this, &scan_nodes](Entity *root) {
-
-            //     for (size_t i = 0; i < root->NumChildren(); i++) {
-            //         root->GetChild(i)->GetRenderable()->SetShader(shader);
-
-            //         scan_nodes(root->GetChild(i).get());
-            //     }
-            // };
-            // scan_nodes(apartment.get());
-            for (size_t i = 0; i < apartment->NumChildren(); i++) {
-                apartment->GetChild(i)->GetRenderable()->SetShader(shader);
-            }
-
-            apartment->Move(Vector3(5, 18, 0));
-            apartment->SetName("apartment");
-            top->AddChild(apartment);
-
-            //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-            apartment->Scale(4.0f);
-        }*/
-
-        // { // sewers
-        //     auto sewers = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sewers/sewers/sewer.obj");
-        //     // std::function<void(Entity*)> scan_nodes;
-        //     // scan_nodes = [this, &scan_nodes](Entity *root) {
-
-        //     //     for (size_t i = 0; i < root->NumChildren(); i++) {
-        //     //         root->GetChild(i)->GetRenderable()->SetShader(shader);
-
-        //     //         scan_nodes(root->GetChild(i).get());
-        //     //     }
-        //     // };
-        //     // scan_nodes(sewers.get());
-        //     for (size_t i = 0; i < sewers->NumChildren(); i++) {
-        //         sewers->GetChild(i)->GetRenderable()->SetShader(shader);
-        //     }
-
-        //     sewers->Move(Vector3(5, 18, 0));
-        //     sewers->SetName("sewers");
-        //     top->AddChild(sewers);
-
-        //     //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-        //     sewers->Scale(5.0f);
-        // }
-
-        // top->AddControl(std::make_shared<SkydomeControl>(cam));
+        //top->AddControl(std::make_shared<SkydomeControl>(cam));
         top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
         // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
