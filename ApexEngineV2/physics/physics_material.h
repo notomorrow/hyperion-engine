@@ -9,6 +9,7 @@
 namespace apex {
 namespace physics {
 class PhysicsMaterial {
+    friend class RigidBody;
 public:
     PhysicsMaterial(double mass = 1.0, double friction = 0.8, double restitution = 0.2,
         double linear_damping = 0.85, double angular_damping = 0.7);

@@ -9,6 +9,9 @@ class SpherePhysicsShape : public PhysicsShape {
 public:
     SpherePhysicsShape(double radius);
     SpherePhysicsShape(const SpherePhysicsShape &other);
+    virtual ~SpherePhysicsShape() override;
+
+    SpherePhysicsShape &operator=(const SpherePhysicsShape &other) = delete;
 
     inline double GetRadius() const { return m_radius; }
     inline void SetRadius(double radius) { m_radius = radius; }

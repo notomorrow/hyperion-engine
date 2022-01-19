@@ -21,6 +21,7 @@ Entity::~Entity()
         (*it)->OnRemoved();
         (*it)->parent = nullptr;
     }
+
     m_controls.clear();
     m_children.clear();
 }

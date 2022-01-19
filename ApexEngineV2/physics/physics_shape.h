@@ -8,6 +8,8 @@
 #include "../math/ray.h"
 #include "../math/bounding_box.h"
 
+class btCollisionShape;
+
 namespace apex {
 namespace physics {
 
@@ -26,8 +28,8 @@ enum PhysicsShapeType {
 class PhysicsShape {
     friend class RigidBody;
 public:
-    PhysicsShape(PhysicsShapeType type) : m_type(type) {}
-    virtual ~PhysicsShape() = default;
+    PhysicsShape(PhysicsShapeType type);
+    virtual ~PhysicsShape();
 
     inline const Matrix4 &GetTransform() const { return m_transform; }
     inline Matrix4 &GetTransform() { return m_transform; }
@@ -44,6 +46,8 @@ public:
 
 protected:
     Matrix4 m_transform;
+
+    btCollisionShape *m_collision_shape;
 
 private:
     const PhysicsShapeType m_type;

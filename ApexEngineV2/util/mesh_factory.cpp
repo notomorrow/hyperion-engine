@@ -128,15 +128,21 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::shared_ptr<Mesh> &a,
 }
 
 
-std::shared_ptr<Mesh> MeshFactory::CreateCube()
+std::shared_ptr<Mesh> MeshFactory::CreateCube(Vector3 offset)
 {
     const std::vector<Transform> sides = {
-        Transform(Vector3::Zero(), Vector3::One(), Quaternion(Vector3::UnitX() * 1, MathUtil::DegToRad(180.0f)) * Quaternion(Vector3::UnitZ(), MathUtil::DegToRad(180.0f))),
-        Transform(Vector3(-1, 0, -1), Vector3::One(), Quaternion(Vector3::UnitY() * -1, MathUtil::DegToRad(90.0f))),
-        Transform(Vector3(1, 0, -1), Vector3::One(), Quaternion(Vector3::UnitY() * -1, MathUtil::DegToRad(-90.0f))),
-        Transform(Vector3(0, 0, -2), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(0.0f))),
-        Transform(Vector3(0, -1, -1), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(-90.0f))),
-        Transform(Vector3(0, 1, -1), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(90.0f)))
+        Transform(Vector3(0, 0, -1), Vector3::One(), Quaternion::Identity()),
+        Transform(Vector3(0, 0, 1), Vector3::One(), Quaternion(Vector3::UnitY(), MathUtil::DegToRad(180.0f))),
+        Transform(Vector3(1, 0, 0), Vector3::One(), Quaternion(Vector3::UnitY(), MathUtil::DegToRad(90.0f))),
+        Transform(Vector3(-1, 0, 0), Vector3::One(), Quaternion(Vector3::UnitY() * -1, MathUtil::DegToRad(90.0f))),
+        Transform(Vector3(0, 1, 0), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(90.0f))),
+        Transform(Vector3(0, -1, 0), Vector3::One(), Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)))
+        // Transform(Vector3::Zero(), Vector3::One(), Quaternion(Vector3::UnitX() * 1, MathUtil::DegToRad(180.0f)) * Quaternion(Vector3::UnitZ(), MathUtil::DegToRad(180.0f))),
+        // Transform(Vector3(-1, 0, -1), Vector3::One(), Quaternion(Vector3::UnitY() * -1, MathUtil::DegToRad(90.0f))),
+        // Transform(Vector3(1, 0, -1), Vector3::One(), Quaternion(Vector3::UnitY() * -1, MathUtil::DegToRad(-90.0f))),
+        // Transform(Vector3(0, 0, -2), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(0.0f))),
+        // Transform(Vector3(0, -1, -1), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(-90.0f))),
+        // Transform(Vector3(0, 1, -1), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(90.0f)))
     };
 
     std::shared_ptr<Mesh> mesh;
@@ -158,7 +164,11 @@ std::shared_ptr<Mesh> MeshFactory::CreateCube()
 
     mesh = TransformMesh(
         mesh,
-        Transform(Vector3(-0.5, 0, 0.5), Vector3::One(), Quaternion::Identity())
+        Transform(
+            offset,
+            Vector3::One(),
+            Quaternion::Identity()
+        )
     );
 
     mesh->CalculateNormals();

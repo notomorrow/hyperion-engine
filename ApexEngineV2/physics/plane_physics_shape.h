@@ -10,6 +10,9 @@ class PlanePhysicsShape : public PhysicsShape {
 public:
     PlanePhysicsShape(const Vector3 &direction, double offset);
     PlanePhysicsShape(const PlanePhysicsShape &other);
+    virtual ~PlanePhysicsShape() override;
+
+    PlanePhysicsShape &operator=(const PlanePhysicsShape &other) = delete;
 
     inline const Vector3 &GetDirection() const { return m_direction; }
     inline Vector3 &GetDirection() { return m_direction; }

@@ -1,7 +1,11 @@
 #include "rigid_body.h"
+#include "physics_manager.h"
 #include "../math/matrix_util.h"
 #include "../animation/bone.h"
 #include "../rendering/renderers/bounding_box_renderer.h"
+
+#include "../bullet_math_util.h"
+#include "btBulletDynamicsCommon.h"
 
 namespace apex {
 namespace physics {
@@ -87,9 +91,21 @@ RigidBody::RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial materi
       m_awake(true),
       m_render_debug_aabb(false),
       m_aabb_renderer(new BoundingBoxRenderer()),
-      m_aabb_debug_node(new Entity("physics_aabb_debug"))
+      m_aabb_debug_node(new Entity("physics_aabb_debug")),
+      m_rigid_body(nullptr),
+      m_motion_state(nullptr)
 {
-    // TODO: inertia tensor
+}
+
+RigidBody::~RigidBody()
+{
+    if (m_rigid_body) {
+        delete m_rigid_body;
+    }
+
+    if (m_motion_state) {
+        delete m_motion_state;
+    }
 }
 
 void RigidBody::UpdateTransform()
@@ -129,6 +145,35 @@ void RigidBody::OnAdded()
         m_aabb_debug_node->SetRenderable(m_aabb_renderer);
         parent->AddChild(m_aabb_debug_node);
     }
+
+    assert(m_shape != nullptr);
+
+    assert(m_rigid_body == nullptr);
+    assert(m_motion_state == nullptr);
+
+    if (m_shape->m_collision_shape == nullptr) {
+        throw std::invalid_argument("shape has no defined collision shape, cannot create rigid body");
+    }
+
+    bool is_dynamic = m_material.m_mass != 0.0f;
+
+    btVector3 local_inertia(0, 0, 0);
+
+    if (is_dynamic) {
+        m_shape->m_collision_shape->calculateLocalInertia(m_material.m_mass, local_inertia);
+    }
+
+    btTransform bt_transform;
+    bt_transform.setIdentity();
+    bt_transform.setOrigin(ToBulletVector(parent->GetGlobalTranslation()));
+    bt_transform.setRotation(ToBulletQuaternion(parent->GetGlobalRotation()));
+
+    m_motion_state = new btDefaultMotionState(bt_transform);
+    btRigidBody::btRigidBodyConstructionInfo info(m_material.m_mass, m_motion_state, m_shape->m_collision_shape, local_inertia);
+
+    m_rigid_body = new btRigidBody(info);
+
+    PhysicsManager::GetInstance()->RegisterBody(this);
 }
 
 void RigidBody::OnRemoved()
@@ -136,11 +181,22 @@ void RigidBody::OnRemoved()
     if (m_render_debug_aabb) {
         parent->RemoveChild(m_aabb_debug_node);
     }
+
+    assert(m_rigid_body != nullptr);
+    assert(m_motion_state != nullptr);
+
+    PhysicsManager::GetInstance()->UnregisterBody(this);
+
+    delete m_rigid_body;
+    m_rigid_body = nullptr;
+
+    delete m_motion_state;
+    m_motion_state = nullptr;
 }
 
 void RigidBody::OnUpdate(double dt)
 {
-    Quaternion tmp(m_orientation);
+    /*Quaternion tmp(m_orientation);
     // tmp.Invert();
 
     parent->SetGlobalRotation(tmp);
@@ -150,7 +206,20 @@ void RigidBody::OnUpdate(double dt)
 
     if (m_render_debug_aabb) {
         m_aabb_renderer->SetAABB(m_bounding_box);
-    }
+    }*/
+
+
+    btTransform bt_transform;
+    m_motion_state->getWorldTransform(bt_transform);
+
+    // Matrix4 mat;
+    // bt_transform.getOpenGLMatrix(mat.values.data());
+    // mat.Transpose();
+
+    // Vector3 translation = MatrixUtil::ExtractTranslation(mat);
+    // // std::cout << "translation : " << translation << "\n";
+    parent->SetGlobalTranslation(FromBulletVector(bt_transform.getOrigin()));
+    parent->SetGlobalRotation(FromBulletQuaternion(bt_transform.getRotation()));
 }
 
 } // namespace physics
