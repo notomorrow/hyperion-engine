@@ -16,7 +16,10 @@ FramebufferCube::FramebufferCube(int width, int height)
     std::array<std::shared_ptr<Texture2D>, 6> color_textures, depth_textures;
 
     for (int i = 0; i < color_textures.size(); i++) {
-        color_textures[i] = std::make_shared<Texture2D>(width, height, (unsigned char*)malloc(color_map_texture_byte_size));
+        unsigned char *data = (unsigned char*)malloc(color_map_texture_byte_size);
+        memset(data, 0, color_map_texture_byte_size);
+
+        color_textures[i] = std::make_shared<Texture2D>(width, height, data);
     }
 
     color_texture = std::make_shared<Cubemap>(color_textures);
@@ -26,7 +29,10 @@ FramebufferCube::FramebufferCube(int width, int height)
     color_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
     for (int i = 0; i < depth_textures.size(); i++) {
-        depth_textures[i] = std::make_shared<Texture2D>(width, height, (unsigned char*)malloc(depth_map_texture_byte_size));
+        unsigned char *data = (unsigned char*)malloc(depth_map_texture_byte_size);
+        memset(data, 0, depth_map_texture_byte_size);
+
+        depth_textures[i] = std::make_shared<Texture2D>(width, height, data);
         depth_textures[i]->SetInternalFormat(GL_DEPTH_COMPONENT24);
         depth_textures[i]->SetFormat(GL_DEPTH_COMPONENT);
     }
@@ -36,21 +42,6 @@ FramebufferCube::FramebufferCube(int width, int height)
     depth_texture->SetFormat(GL_DEPTH_COMPONENT);
     depth_texture->SetFilter(GL_NEAREST, GL_NEAREST);
     depth_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
-
-    /*std::array<std::shared_ptr<Texture2D>, 6> depth_textures = {
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr)
-    };
-
-    depth_texture = std::make_shared<Cubemap>(depth_textures);
-    depth_texture->SetInternalFormat(GL_RGB8);
-    depth_texture->SetFormat(GL_RGB);
-    depth_texture->SetFilter(GL_NEAREST, GL_NEAREST);
-    depth_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);*/
 }
 
 FramebufferCube::~FramebufferCube()
@@ -79,9 +70,9 @@ void FramebufferCube::Use()
         color_texture->Use();
         //glFramebufferTexture(GL_FRAMEBUFFER,
         //    GL_COLOR_ATTACHMENT0, color_texture->GetId(), 0);
-        for (int i = 0; i < 6; i++) {
-            glFramebufferTexture2D(GL_FRAMEBUFFER,
-                GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, color_texture->GetId(), 0);
+        for (int i = 0; /*i < 6*/ i < 1; i++) {
+            glFramebufferTexture(GL_FRAMEBUFFER,
+                GL_COLOR_ATTACHMENT0, color_texture->GetId(), 0);
 
             CatchGLErrors("Failed to set framebuffer cube color data");
         }
@@ -89,9 +80,9 @@ void FramebufferCube::Use()
         color_texture->End();
 
         depth_texture->Use();
-        for (int i = 0; i < 6; i++) {
-            glFramebufferTexture2D(GL_FRAMEBUFFER,
-                GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, depth_texture->GetId(), 0);
+        for (int i = 0; /*i < 6*/ i < 1; i++) {
+            glFramebufferTexture(GL_FRAMEBUFFER,
+                GL_DEPTH_ATTACHMENT, depth_texture->GetId(), 0);
 
             CatchGLErrors("Failed to set framebuffer cube depth data");
         }

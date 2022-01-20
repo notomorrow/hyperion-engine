@@ -40,7 +40,7 @@ public:
     void GenFramebuffers(size_t n, unsigned int *ids);
     void DeleteFramebuffers(size_t n, const unsigned int *ids);
     void BindFramebuffer(int target, unsigned int framebuffer);
-    void FramebufferTexture(int target, int attachment, unsigned int texture, int level);
+    void FramebufferTexture(int target, int attachment, unsigned int texture, unsigned int texture_target, int level);
     void DrawBuffers(size_t n, const unsigned int *bufs);
     unsigned int CheckFramebufferStatus(int target);
     unsigned int CreateProgram();

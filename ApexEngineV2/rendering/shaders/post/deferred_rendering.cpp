@@ -62,6 +62,13 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
         SetUniform("env_GlobalCubemap", texture_index);
 
         texture_index++;
+
+        if (env->ProbeEnabled()) {
+            const auto &origin = env->GetProbeRenderer()->GetProbe()->GetOrigin();
+            SetUniform("EnvProbe.position", origin);
+            SetUniform("EnvProbe.max", Vector3(env->GetProbeRenderer()->GetProbe()->GetFar()));
+            SetUniform("EnvProbe.min", Vector3(-env->GetProbeRenderer()->GetProbe()->GetFar()));
+        }
     }
 
     if (auto cubemap = env->GetGlobalIrradianceCubemap()) {

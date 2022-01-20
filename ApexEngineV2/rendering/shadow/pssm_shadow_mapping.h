@@ -20,6 +20,9 @@ public:
     int NumSplits() const;
     void SetLightDirection(const Vector3 &dir);
 
+    inline const Vector3 &GetOrigin() const { return m_origin; }
+    void SetOrigin(const Vector3 &origin);
+
     inline bool IsVarianceShadowMapping() const { return m_is_variance_shadow_mapping; }
     void SetVarianceShadowMapping(bool value);
 
@@ -30,6 +33,7 @@ private:
     bool m_is_variance_shadow_mapping;
     std::shared_ptr<Shader> m_depth_shader;
     std::vector<std::shared_ptr<ShadowMapping>> shadow_renderers;
+    Vector3 m_origin;
 };
 
 } // namespace apex

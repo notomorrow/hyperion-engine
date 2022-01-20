@@ -37,8 +37,15 @@ Environment::Environment()
       m_num_cascades(0),
       m_shadow_maps({ nullptr }),
       m_shadow_matrices({ Matrix4::Identity() }),
-      m_sun(Vector3(-1, -1, -1).Normalize(), Vector4(0.9, 0.8, 0.7, 1.0))
+      m_sun(Vector3(-1, -1, -1).Normalize(), Vector4(0.9, 0.8, 0.7, 1.0)),
+      m_probe_renderer(new ProbeRenderer()),
+      m_probe_enabled(false)
 {
+}
+
+Environment::~Environment()
+{
+    delete m_probe_renderer;
 }
 
 void Environment::SetShadowsEnabled(bool shadows_enabled)
@@ -65,6 +72,19 @@ void Environment::SetNumCascades(int num_cascades)
     );
 
     m_num_cascades = num_cascades;
+}
+
+void Environment::SetProbeEnabled(bool probe_enabled)
+{
+    if (probe_enabled == m_probe_enabled) {
+        return;
+    }
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("PROBE_ENABLED", probe_enabled)
+    );
+
+    m_probe_enabled = probe_enabled;
 }
 
 } // namespace apex

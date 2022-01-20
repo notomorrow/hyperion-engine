@@ -5,6 +5,7 @@
 
 #include "../math/matrix4.h"
 #include "../math/vector2.h"
+#include "../rendering/probe/probe_renderer.h"
 #include "../rendering/texture.h"
 #include "../rendering/cubemap.h"
 #include "./lights/directional_light.h"
@@ -21,6 +22,7 @@ public:
     static const Vector2 possion_disk[16];
 
     Environment();
+    ~Environment();
 
     inline DirectionalLight &GetSun() { return m_sun; }
     inline const DirectionalLight &GetSun() const { return m_sun; }
@@ -53,6 +55,11 @@ public:
     inline std::shared_ptr<Cubemap> &GetGlobalIrradianceCubemap() { return m_global_irradiance_cubemap; }
     inline void SetGlobalIrradianceCubemap(const std::shared_ptr<Cubemap> &cubemap) { m_global_irradiance_cubemap = cubemap; }
 
+    inline const ProbeRenderer *GetProbeRenderer() const { return m_probe_renderer; }
+    inline ProbeRenderer *GetProbeRenderer() { return m_probe_renderer; }
+    inline bool ProbeEnabled() const { return m_probe_enabled; }
+    void SetProbeEnabled(bool probe_enabled);
+
 private:
     static Environment *instance;
 
@@ -69,6 +76,9 @@ private:
     std::array<double, 4> m_shadow_splits;
     std::array<std::shared_ptr<Texture>, 4> m_shadow_maps;
     std::array<Matrix4, 4> m_shadow_matrices;
+
+    ProbeRenderer *m_probe_renderer;
+    bool m_probe_enabled;
 };
 } // namespace apex
 

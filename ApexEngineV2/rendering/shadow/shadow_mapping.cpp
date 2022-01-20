@@ -5,8 +5,10 @@
 #include "../../util.h"
 
 namespace apex {
-ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist)
-    : view_cam(view_cam), max_dist(max_dist)
+ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist, bool use_fbo)
+    : view_cam(view_cam),
+      max_dist(max_dist),
+      m_use_fbo(use_fbo)
 {
     shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
 
@@ -29,7 +31,7 @@ void ShadowMapping::SetLightDirection(const Vector3 &dir)
     light_direction = dir;
 }
 
-OrthoCamera *ShadowMapping::GetShadowCamera()
+Camera *ShadowMapping::GetShadowCamera()
 {
     return shadow_cam;
 }
@@ -83,14 +85,18 @@ void ShadowMapping::Begin()
     shadow_cam->SetViewMatrix(new_view);
     shadow_cam->SetProjectionMatrix(new_proj);
 
-    fbo->Use();
+    if (m_use_fbo) {
+        fbo->Use();
+    }
 
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 }
 
 void ShadowMapping::End()
 {
-    fbo->End();
+    if (m_use_fbo) {
+        fbo->End();
+    }
 }
 
 void ShadowMapping::TransformPoints(const std::array<Vector3, 8> &in_vec,
@@ -103,8 +109,10 @@ void ShadowMapping::TransformPoints(const std::array<Vector3, 8> &in_vec,
 
 void ShadowMapping::UpdateFrustumPoints(std::array<Vector3, 8> &points)
 {
-    bb = BoundingBox(Vector3::Round(view_cam->GetTranslation() - max_dist),
-        Vector3::Round(view_cam->GetTranslation() + max_dist));
+    bb = BoundingBox(
+        Vector3::Round(m_origin - max_dist),
+        Vector3::Round(m_origin + max_dist)
+    );
 
     points[0] = bb.GetMin();
     points[1] = bb.GetMax();

@@ -31,7 +31,7 @@
 
 #include "rendering/shaders/cubemap_renderer_shader.h"
 
-#include "rendering/gi/gi_renderer.h"
+#include "rendering/probe/probe_renderer.h"
 
 /* Post */
 #include "rendering/postprocess/filters/gamma_correction_filter.h"
@@ -82,8 +82,6 @@ public:
     Framebuffer *fbo, *env_fbo;
     PssmShadowMapping *shadows;
 
-    GIRenderer *gi;
-
     std::vector<std::shared_ptr<Entity>> m_raytested_entities;
 
     std::shared_ptr<Entity> top;
@@ -119,9 +117,9 @@ public:
     {
         delete shadows;
         delete fbo;
-        delete env_fbo;
+        // delete env_fbo;
         delete cam;
-        delete env_cam;
+        // delete env_cam;
 
         AudioManager::Deinitialize();
     }
@@ -252,8 +250,10 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(true);
         Environment::GetInstance()->SetNumCascades(4);
-
-        gi = new GIRenderer(cam);
+        Environment::GetInstance()->SetProbeEnabled(true);
+        Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
+        Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
+        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 10, 0));
 
         m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 20);
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
@@ -545,34 +545,37 @@ public:
         //dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
          
 
-        auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(10.0)), 0.0);
+        auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(6.0)), 0.0);
         // plane_rigid_body->SetAwake(false);
         auto plane_entity = std::make_shared<Entity>("static plane");
         plane_entity->SetRenderable(MeshFactory::CreateCube());
-        plane_entity->Scale(Vector3(10.0));
+        plane_entity->Scale(Vector3(5.0));
         plane_entity->GetRenderable()->SetShader(shader);
+        plane_entity->GetMaterial().diffuse_color = Vector4(1.0, 0.0, 0.0, 1.0);
+        plane_entity->GetMaterial().SetParameter("shininess", 0.6f);
+        plane_entity->GetMaterial().SetParameter("roughness", 0.0f);
         plane_entity->AddControl(plane_rigid_body);
         top->AddChild(plane_entity);
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3(((float(x) - 2.5) * 6), 50, (float(z) - 2.5) * 6);
+                Vector3 box_position = Vector3(((float(x) - 2.5) * 6), 4, (float(z) - 2.5) * 6);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
                 box->Scale(0.25);
                 for (size_t i = 0; i < box->NumChildren(); i++) {
                     box->GetChild(i)->GetRenderable()->SetShader(shader);
 
                     // box->GetChild(0)->GetMaterial().alpha_blended = true;
-                    // box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
-                    //     MathUtil::Random(0.0f, 1.0f),
-                    //     MathUtil::Random(0.0f, 1.0f),
-                    //     MathUtil::Random(0.0f, 1.0f),
-                    //     1.0f
-                    // );
-                    box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Base_Color.png"));
-                    box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Height.png"));
-                    box->GetChild(i)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Ambient_Occlusion.png"));
-                    box->GetChild(i)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Normal-ogl.png"));
+                    box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
+                        1.0f,//MathUtil::Random(0.0f, 1.0f),
+                        1.0f,//MathUtil::Random(0.0f, 1.0f),
+                        1.0f,//MathUtil::Random(0.0f, 1.0f),
+                        1.0f
+                    );
+                    // box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Base_Color.png"));
+                    // box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Height.png"));
+                    // box->GetChild(i)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Ambient_Occlusion.png"));
+                    // box->GetChild(i)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/dirtwithrocks-ogl/dirtwithrocks_Normal-ogl.png"));
 
                     // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-albedo.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-normal-ogl.png"));
@@ -583,8 +586,10 @@ public:
                     // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                    box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
-                    box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                    // box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
+                    // box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                    box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.8f);
+                    box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.0f);
                 }
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
@@ -595,9 +600,8 @@ public:
                 // rigid_body->SetLinearVelocity(Vector3(0, -5, 0));
                 rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
                 rigid_body->SetAwake(true);
-                box->AddControl(rigid_body);
-                box->AddControl(std::make_shared<BoundingBoxControl>());
-                // PhysicsManager::GetInstance()->RegisterBody(rigid_body);
+                // box->AddControl(rigid_body);
+                // box->AddControl(std::make_shared<BoundingBoxControl>());
             }
         }
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
@@ -777,7 +781,7 @@ public:
         // }
 
         //top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<SkyboxControl>(cam, nullptr));
+        top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
         // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
@@ -856,79 +860,17 @@ public:
         if (Environment::GetInstance()->ShadowsEnabled()) {
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
             shadow_dir.SetY(-1.0f);
+            shadows->SetOrigin(cam->GetTranslation());
             shadows->SetLightDirection(shadow_dir.Normalize());
             shadows->Render(m_renderer);
         }
 
-        // env_fbo->Use();
-        // m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get());
-        // env_fbo->End();
-
-        env_fbo->Use();
-        env_cam->SetDirection(Vector3(1, 0, 0));
-        env_cam->UpdateMatrices();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_POSITIVE_X, env_fbo->GetColorTexture()->GetId(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_CUBE_MAP_POSITIVE_X, env_fbo->GetDepthTexture()->GetId(), 0);
-        env_fbo->End();
-        env_fbo->Use();
-        env_cam->SetDirection(Vector3(-1, 0, 0));
-        env_cam->UpdateMatrices();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_X, env_fbo->GetColorTexture()->GetId(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_X, env_fbo->GetDepthTexture()->GetId(), 0);
-        env_fbo->End();
-        env_fbo->Use();
-        env_cam->SetDirection(Vector3(0, 1, 0));
-        env_cam->UpdateMatrices();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_POSITIVE_Y, env_fbo->GetColorTexture()->GetId(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_CUBE_MAP_POSITIVE_Y, env_fbo->GetDepthTexture()->GetId(), 0);
-        env_fbo->End();
-        env_fbo->Use();
-        env_cam->SetDirection(Vector3(0, -1, 0));
-        env_cam->UpdateMatrices();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, env_fbo->GetColorTexture()->GetId(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, env_fbo->GetDepthTexture()->GetId(), 0);
-        env_fbo->End();
-        env_fbo->Use();
-        env_cam->SetDirection(Vector3(0, 0, 1));
-        env_cam->UpdateMatrices();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_POSITIVE_Z, env_fbo->GetColorTexture()->GetId(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_CUBE_MAP_POSITIVE_Z, env_fbo->GetDepthTexture()->GetId(), 0);
-        env_fbo->End();
-        env_fbo->Use();
-        env_cam->SetDirection(Vector3(0, 0, -1));
-        env_cam->UpdateMatrices();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetColorTexture()->GetId(), 0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetDepthTexture()->GetId(), 0);
-        env_fbo->End();
-
-        CatchGLErrors("Failed to set up frame buffer cube data.");
+        Environment::GetInstance()->GetProbeRenderer()->Render(m_renderer, cam);
 
         if (!Environment::GetInstance()->GetGlobalCubemap()) {
-            Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
+            Environment::GetInstance()->SetGlobalCubemap(
+                Environment::GetInstance()->GetProbeRenderer()->GetColorTexture()
+            );
         }
 
         m_renderer->Render(cam);

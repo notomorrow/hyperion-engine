@@ -38,6 +38,15 @@ void PssmShadowMapping::SetLightDirection(const Vector3 &dir)
     }
 }
 
+void PssmShadowMapping::SetOrigin(const Vector3 &origin)
+{
+    m_origin = origin;
+
+    for (int i = 0; i < num_splits; i++) {
+        shadow_renderers[i]->SetOrigin(origin);
+    }
+}
+
 void PssmShadowMapping::SetVarianceShadowMapping(bool value)
 {
     if (value == m_is_variance_shadow_mapping) {
