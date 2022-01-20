@@ -480,4 +480,9 @@ void GlfwEngine::DrawArraysInstanced(int mode, int first, size_t count, size_t p
     glDrawArraysInstanced(mode, first, count, primcount);
 }
 
+void GlfwEngine::BindImageTexture(unsigned int unit, unsigned int texture, int level, bool layered, int layer, unsigned int access, unsigned int format)
+{
+    glBindImageTexture(unit, texture, level, layered, layer, access, format);
+}
+
 } // namespace apex

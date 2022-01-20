@@ -1,6 +1,7 @@
 #include "gi_mapping.h"
 
 #include "../../opengl.h"
+#include "../../gl_util.h"
 
 namespace apex {
 GIMapping::GIMapping(Camera *view_cam, double max_dist)
@@ -13,13 +14,19 @@ void GIMapping::Begin()
 {
     if (m_texture_id == 0) {
         glGenTextures(1, &m_texture_id);
+        CatchGLErrors("Failed to generate 3d texture");
+
         glBindTexture(GL_TEXTURE_3D, m_texture_id);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, 128, 128, 128);
+        CatchGLErrors("Failed to generate set 3d texture storage.");
+
         glGenerateMipmap(GL_TEXTURE_3D);
+        CatchGLErrors("Failed to generate mipmaps for 3d texture");
+
         glBindTexture(GL_TEXTURE_3D, 0);
     }
 
