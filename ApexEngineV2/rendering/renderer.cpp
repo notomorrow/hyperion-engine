@@ -209,10 +209,11 @@ void Renderer::RenderAll(Camera *cam, Framebuffer *fbo)
     if (fbo) {
         fbo->Use();
 
-        CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
     } else {
         CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
     }
+
+    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
     RenderBucket(cam, m_buckets[Renderable::RB_SKY]);

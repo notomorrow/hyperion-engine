@@ -330,9 +330,9 @@ void GlfwEngine::BindFramebuffer(int target, unsigned int framebuffer)
     glBindFramebuffer(target, framebuffer);
 }
 
-void GlfwEngine::FramebufferTexture(int target, int attachment, unsigned int texture, int level)
+void GlfwEngine::FramebufferTexture(int target, int attachment, unsigned int texture_target, unsigned int texture, int level)
 {
-    glFramebufferTexture2D(target, attachment, GL_TEXTURE_2D, texture, level);
+    glFramebufferTexture2D(target, attachment, texture_target, texture, level);
 }
 
 void GlfwEngine::DrawBuffers(size_t n, const unsigned int *bufs)

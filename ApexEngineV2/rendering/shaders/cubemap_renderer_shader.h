@@ -17,6 +17,7 @@ public:
 
 private:
     std::array<Matrix4, 6> m_shadow_matrices;
+    std::array<std::pair<Vector3, Vector3>, 6> m_directions;
 };
 } // namespace apex
 

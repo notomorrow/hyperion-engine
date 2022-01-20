@@ -40,9 +40,9 @@ void SkyboxControl::OnRemoved()
 
 void SkyboxControl::OnUpdate(double dt)
 {
-    if (m_cubemap == nullptr) {
-        m_cubemap = Environment::GetInstance()->GetGlobalCubemap();
-        m_cube->GetMaterial().SetTexture("SkyboxMap", m_cubemap);
-    }
+    // if (m_cubemap == nullptr) {
+    //     m_cubemap = Environment::GetInstance()->GetGlobalCubemap();
+    //     m_cube->GetMaterial().SetTexture("SkyboxMap", m_cubemap);
+    // }
 }
 } // namespace apex

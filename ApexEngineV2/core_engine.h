@@ -149,7 +149,7 @@ public:
     virtual void GenFramebuffers(size_t n, unsigned int *ids) = 0;
     virtual void DeleteFramebuffers(size_t n, const unsigned int *ids) = 0;
     virtual void BindFramebuffer(int target, unsigned int framebuffer) = 0;
-    virtual void FramebufferTexture(int target, int attachment, unsigned int texture, int level) = 0;
+    virtual void FramebufferTexture(int target, int attachment, unsigned int texture, unsigned int texture_target, int level) = 0;
     virtual void DrawBuffers(size_t n, const unsigned int *bufs) = 0;
     virtual unsigned int CheckFramebufferStatus(int target) = 0;
     virtual unsigned int CreateProgram() = 0;
