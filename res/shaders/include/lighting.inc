@@ -24,6 +24,14 @@ uniform sampler2D MetalnessMap;
 uniform int HasAoMap;
 uniform sampler2D AoMap;
 
+struct Probe {
+	vec3 position;
+	vec3 min;
+	vec3 max;
+};
+
+uniform Probe EnvProbe; // TODO: multiple
+
 struct DirectionalLight
 {
 	vec3 direction;
@@ -87,6 +95,68 @@ vec3 ReflectionVector(vec3 n, vec3 worldPos, vec3 camPos)
 
 	  return reflect(-v, n);
 }
+
+vec3 EnvProbeVector(vec3 n, vec3 worldPos, vec3 camPos, mat4 modelMatrix)
+{
+	vec3 PositionWS = worldPos;
+	vec3 CameraWS = camPos;
+	vec3 NormalWS = n;
+
+	/*vec3 DirectionWS = normalize(PositionWS - CameraWS);
+	vec3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
+
+	// Intersection with OBB convertto unit box space
+	// Transform in local unit parallax cube space (scaled and rotated)
+	mat4 WorldToLocal = inverse(modelMatrix);
+	vec3 RayLS = (WorldToLocal * vec4(ReflDirectionWS, 1.0)).xyz;
+	vec3 PositionLS = (WorldToLocal * vec4(PositionWS, 1.0)).xyz;
+
+	vec3 Unitary = vec3(1.0, 1.0, 1.0);
+	vec3 FirstPlaneIntersect  = (Unitary - PositionLS) / RayLS;
+	vec3 SecondPlaneIntersect = (-Unitary - PositionLS) / RayLS;
+	vec3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+	float Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
+
+	// Use Distance in WS directly to recover intersection
+	vec3 IntersectPositionWS = PositionWS + ReflDirectionWS * Distance;
+	ReflDirectionWS = IntersectPositionWS - EnvProbe.position;
+
+	return ReflDirectionWS;*/
+
+	vec3 DirectionWS = PositionWS - CameraWS;
+	vec3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
+	// mat4 ToLocalSpace = inverse(modelMatrix);
+	// vec3 PositionLS = (ToLocalSpace * vec4(PositionWS, 1.0)).xyz;
+	// vec3 ReflDirectionLS = (ToLocalSpace * vec4(PositionWS, 1.0)).xyz;
+
+	// ^^^ Normal cube-mapped reflection code
+
+	// Following is the parallax-correction code
+	// Find the ray intersection with box plane
+	vec3 FirstPlaneIntersect = (EnvProbe.max - PositionWS) / ReflDirectionWS;
+	vec3 SecondPlaneIntersect = (EnvProbe.min - PositionWS) / ReflDirectionWS;
+	// Get the furthest of these intersections along the ray
+	// (Ok because x/0 give +inf and -x/0 give –inf )
+	vec3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+	// Find the closest far intersection
+	float Distance = min(min(FurthestPlane.x, FurthestPlane.y), FurthestPlane.z);
+
+	// Get the intersection position
+	vec3 IntersectPositionWS = PositionWS + ReflDirectionWS * Distance;
+	// Get corrected reflection
+	ReflDirectionWS = IntersectPositionWS - EnvProbe.position;
+	// End parallax-correction code
+
+	vec3 BoxDiff = (EnvProbe.max - EnvProbe.min);
+	float minDim = min(BoxDiff.z, min(BoxDiff.x, BoxDiff.y));
+	vec3 BoxScale = minDim / BoxDiff;
+
+	ReflDirectionWS *= BoxScale;
+
+
+	return ReflDirectionWS;
+}
+
 /* ========== */
 
 float sqr(float x)
@@ -137,7 +207,7 @@ float ChiGGX(vec3 view, vec3 norm, vec3 halfV, float alpha) {
 
 vec3 FresnelTerm(vec3 specularColor, float vdoth)
 {
-	vec3 fresnel = specularColor + (1. - specularColor) * pow((1. - vdoth), 5.);
+	vec3 fresnel = specularColor + (vec3(1.0) - specularColor) * pow((1.0 - vdoth), 5.0);
 	return fresnel;
 }
 

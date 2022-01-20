@@ -84,7 +84,6 @@ void main()
 #endif
 
 #if !DEFERRED
-
   float NdotL = max(0.0, dot(n, lightDir));
   float NdotV = max(0.001, dot(n, viewVector));
   vec3 H = normalize(lightDir + viewVector);
@@ -96,12 +95,11 @@ void main()
 
 #if SHADOWS
   float shadowness = 0.0;
-  const float radius = 0.075;
   int shadowSplit = getShadowMapSplit(u_camerapos, v_position.xyz);
 
   for (int x = 0; x < 4; x++) {
     for (int y = 0; y < 4; y++) {
-      vec2 offset = poissonDisk[x * 4 + y] * radius;
+      vec2 offset = poissonDisk[x * 4 + y] * $SHADOW_MAP_RADIUS;
       vec3 shadowCoord = getShadowCoord(shadowSplit, v_position.xyz + vec3(offset.x, offset.y, -offset.x));
       shadowness += getShadow(shadowSplit, shadowCoord);
     }
@@ -118,14 +116,14 @@ void main()
 #endif
 
   vec3 reflectionVector = ReflectionVector(n, v_position.xyz, u_camerapos.xyz);
-  vec3 irradianceCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
+  vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
 
   vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
   vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
 
 
   float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
-  specularCubemap = mix(specularCubemap, irradianceCubemap, roughnessMix);
+  specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
 
 
   vec3 F0 = vec3(0.04);
@@ -159,15 +157,16 @@ void main()
   diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
   diffuseLight *= metallicDiff;
 
-  vec3 color = diffuseLight + reflectedLight;// * shadowColor.rgb;
+  vec3 color = diffuseLight + reflectedLight * shadowColor.rgb;
+
+  output0 = vec4(color, 1.0);
 #endif
 
 #if DEFERRED
-  vec3 color = albedo.rgb;
+  output0 = albedo;
 #endif
 
-  output0 = vec4(color, albedo.a);
   output1 = vec4(n * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
-  output3 = vec4(v_texcoord0.x, v_texcoord0.y, metallic, roughness);
+  output3 = vec4(metallic, roughness, 0.0, 1.0);
 }

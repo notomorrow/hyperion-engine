@@ -6,14 +6,32 @@ uniform float u_far;
 
 #include "include/frag_output.inc"
 
+uniform int HasDiffuseMap;
+uniform vec4 u_diffuseColor;
+uniform sampler2D DiffuseMap;
+
+in GSOutput
+{
+	vec3 normal;
+	vec2 texcoord0;
+    vec4 lighting;
+} gs_out;
+
 void main()
 {
-    // get distance between fragment and light source
-    float lightDistance = length(FragPos.xyz - u_lightPos);
-    
-    // map to [0;1] range by dividing by far_plane
-    lightDistance = lightDistance / u_far;
-    
-    // write this as modified depth
-    output0 = vec4(vec3(lightDistance), 1.0);
+    vec4 albedo = u_diffuseColor;
+
+#if PROBE_RENDER_TEXTURES
+    if (HasDiffuseMap == 1) {
+        albedo *= texture(DiffuseMap, gs_out.texcoord0);
+    }
+#endif
+
+#if PROBE_RENDER_SHADING
+    output0 = albedo * gs_out.lighting;
+#endif
+
+#if !PROBE_RENDER_SHADING
+    output0 = albedo;
+#endif
 }  

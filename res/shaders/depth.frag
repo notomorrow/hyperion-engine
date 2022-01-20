@@ -14,5 +14,20 @@ uniform vec3 u_camerapos;
 
 void main()
 {
-  output0 = packDepth(gl_FragCoord.z / gl_FragCoord.w);
+    float depthCoord = gl_FragCoord.z / gl_FragCoord.w;
+
+#if SHADOWS_VARIANCE
+    float moment2 = depthCoord * depthCoord;
+    output0 = vec4(depthCoord, moment2, 0.0, 1.0);
+#endif
+
+#if !SHADOWS_VARIANCE
+#if SHADOWS_PACK_DEPTH
+    output0 = packDepth(depthCoord);
+#endif
+
+#if !SHADOWS_PACK_DEPTH
+    output0 = vec4(depthCoord, depthCoord, depthCoord, 1.0);
+#endif
+#endif
 }
