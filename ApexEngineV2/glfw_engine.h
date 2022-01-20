@@ -70,6 +70,7 @@ public:
     void UniformMatrix4fv(int location, int count, bool transpose, const float *value);
     void VertexAttribDivisor(unsigned int index, unsigned int divisor);
     void DrawArraysInstanced(int mode, int first, size_t count, size_t primcount);
+    void BindImageTexture(unsigned int unit, unsigned int texture, int level, bool layered, int layer, unsigned int access, unsigned int format);
 
 private:
     GLFWwindow *window;

@@ -42,14 +42,17 @@ std::shared_ptr<Texture> ShadowMapping::GetShadowMap()
 void ShadowMapping::Begin()
 {
     UpdateFrustumPoints(frustum_corners_ws);
-    Vector3 center_pos;
+    
+    m_center_pos = Vector3();
+
     for (size_t i = 0; i < frustum_corners_ws.size(); i++) {
-        center_pos += frustum_corners_ws[i];
+        m_center_pos += frustum_corners_ws[i];
     }
-    center_pos /= frustum_corners_ws.size();
+
+    m_center_pos /= frustum_corners_ws.size();
 
     Matrix4 new_view, new_proj;
-    MatrixUtil::ToLookAt(new_view, center_pos - light_direction, center_pos, Vector3::UnitY());
+    MatrixUtil::ToLookAt(new_view, m_center_pos - light_direction, m_center_pos, Vector3::UnitY());
 
     TransformPoints(frustum_corners_ws, frustum_corners_ls, new_view);
 

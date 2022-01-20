@@ -3,9 +3,9 @@
 
 #define USE_GLFW_ENGINE 1
 
-#ifndef __APPLE__
+// #ifndef __APPLE__
 #define USE_GLEW 1
-#endif
+// #endif
 
 #if USE_GLFW_ENGINE
 

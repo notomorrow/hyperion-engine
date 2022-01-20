@@ -30,6 +30,8 @@
 
 #include "rendering/shaders/cubemap_renderer_shader.h"
 
+#include "rendering/gi/gi_renderer.h"
+
 /* Post */
 #include "rendering/postprocess/filters/gamma_correction_filter.h"
 #include "rendering/postprocess/filters/ssao_filter.h"
@@ -78,6 +80,8 @@ public:
     Camera *cam, *env_cam;
     Framebuffer *fbo, *env_fbo;
     PssmShadowMapping *shadows;
+
+    GIRenderer *gi;
 
     std::vector<std::shared_ptr<Entity>> m_raytested_entities;
 
@@ -247,6 +251,8 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(true);
         Environment::GetInstance()->SetNumCascades(4);
+
+        gi = new GIRenderer(cam);
 
         m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 20);
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
@@ -845,6 +851,8 @@ public:
     void Render()
     {
         m_renderer->Begin(cam, top.get());
+
+        gi->Render(m_renderer);
 
         if (Environment::GetInstance()->ShadowsEnabled()) {
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
