@@ -1,4 +1,5 @@
 #include "glfw_engine.h"
+#include "gl_util.h"
 #include "game.h"
 #include "entity.h"
 #include "util.h"
@@ -118,9 +119,9 @@ public:
     {
         delete shadows;
         delete fbo;
-        //delete env_fbo;
+        delete env_fbo;
         delete cam;
-        //delete env_cam;
+        delete env_cam;
 
         AudioManager::Deinitialize();
     }
@@ -261,10 +262,10 @@ public:
         m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         m_renderer->SetDeferred(true);
 
-        //env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
-        //env_cam->SetTranslation(Vector3(0, 10, 0));
+        env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
+        env_cam->SetTranslation(Vector3(0, 10, 0));
         fbo = new Framebuffer2D(cam->GetWidth(), cam->GetHeight());
-        //env_fbo = new FramebufferCube(256, 256);
+        env_fbo = new FramebufferCube(256, 256);
         AudioManager::GetInstance()->Initialize();
 
         Environment::GetInstance()->GetSun().SetDirection(Vector3(1.9f, 0.35f, 1.9f).Normalize());
@@ -321,7 +322,7 @@ public:
     
         shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
 
-        //cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties {});
+        cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties {});
         // TODO: terrain raycasting
         // Ray top_ray;
         // top_ray.m_direction = Vector3(0, -1, 0);
@@ -705,7 +706,7 @@ public:
              AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posz.jpg"),
              AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negz.jpg")
          }));
-        Environment::GetInstance()->SetGlobalCubemap(cubemap);
+        // Environment::GetInstance()->SetGlobalCubemap(cubemap);
 
         Environment::GetInstance()->SetGlobalIrradianceCubemap(std::shared_ptr<Cubemap>(new Cubemap({
              AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posx.jpg"),
@@ -776,7 +777,7 @@ public:
         // }
 
         //top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
+        top->AddControl(std::make_shared<SkyboxControl>(cam, nullptr));
         // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
@@ -852,8 +853,6 @@ public:
     {
         m_renderer->Begin(cam, top.get());
 
-        gi->Render(m_renderer);
-
         if (Environment::GetInstance()->ShadowsEnabled()) {
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
             shadow_dir.SetY(-1.0f);
@@ -861,41 +860,76 @@ public:
             shadows->Render(m_renderer);
         }
 
-        //env_fbo->Use();
-        //m_renderer->RenderBucket(env_cam, m_renderer->opaque_bucket, cubemap_renderer_shader.get());
-        //env_fbo->End();
+        // env_fbo->Use();
+        // m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get());
+        // env_fbo->End();
 
-        /*glBindFramebuffer(GL_FRAMEBUFFER, env_fbo->GetId());
+        env_fbo->Use();
         env_cam->SetDirection(Vector3(1, 0, 0));
         env_cam->UpdateMatrices();
-        m_renderer->RenderAll(cam, fbo);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_POSITIVE_X, env_fbo->GetId(), 0);
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X, env_fbo->GetColorTexture()->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X, env_fbo->GetDepthTexture()->GetId(), 0);
+        env_fbo->End();
+        env_fbo->Use();
         env_cam->SetDirection(Vector3(-1, 0, 0));
         env_cam->UpdateMatrices();
-        m_renderer->RenderAll(env_cam, env_fbo);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_X, env_fbo->GetId(), 0);
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_X, env_fbo->GetColorTexture()->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_X, env_fbo->GetDepthTexture()->GetId(), 0);
+        env_fbo->End();
+        env_fbo->Use();
         env_cam->SetDirection(Vector3(0, 1, 0));
         env_cam->UpdateMatrices();
-        m_renderer->RenderAll(env_cam, env_fbo);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_POSITIVE_Y, env_fbo->GetId(), 0);
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Y, env_fbo->GetColorTexture()->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Y, env_fbo->GetDepthTexture()->GetId(), 0);
+        env_fbo->End();
+        env_fbo->Use();
         env_cam->SetDirection(Vector3(0, -1, 0));
         env_cam->UpdateMatrices();
-        m_renderer->RenderAll(env_cam, env_fbo);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, env_fbo->GetId(), 0);
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, env_fbo->GetColorTexture()->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, env_fbo->GetDepthTexture()->GetId(), 0);
+        env_fbo->End();
+        env_fbo->Use();
         env_cam->SetDirection(Vector3(0, 0, 1));
         env_cam->UpdateMatrices();
-        m_renderer->RenderAll(env_cam, env_fbo);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_POSITIVE_Z, env_fbo->GetId(), 0);
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Z, env_fbo->GetColorTexture()->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Z, env_fbo->GetDepthTexture()->GetId(), 0);
+        env_fbo->End();
+        env_fbo->Use();
         env_cam->SetDirection(Vector3(0, 0, -1));
         env_cam->UpdateMatrices();
-        m_renderer->RenderAll(env_cam, env_fbo);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        m_renderer->RenderBucket(env_cam, m_renderer->GetBucket(Renderable::RB_OPAQUE), cubemap_renderer_shader.get(), false);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetId(), 0);*/
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetColorTexture()->GetId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, env_fbo->GetDepthTexture()->GetId(), 0);
+        env_fbo->End();
+
+        CatchGLErrors("Failed to set up frame buffer cube data.");
+
+        if (!Environment::GetInstance()->GetGlobalCubemap()) {
+            Environment::GetInstance()->SetGlobalCubemap(std::dynamic_pointer_cast<Cubemap>(env_fbo->GetColorTexture()));
+        }
 
         m_renderer->Render(cam);
         m_renderer->End(cam, top.get());
