@@ -1,3 +1,5 @@
+#define $SHADOW_BIAS 0.001
+
 uniform sampler2D u_shadowMap[$NUM_SPLITS];
 uniform mat4 u_shadowMatrix[$NUM_SPLITS];
 uniform float u_shadowSplit[$NUM_SPLITS];
@@ -32,7 +34,6 @@ int getShadowMapSplit(vec3 cam, vec3 world) {
 }
 
 float getShadow(int index, vec3 coord) {
-  float bias = 0.01;
   vec4 textureSample = vec4(0.0);
 
   if (index == 0) {
@@ -44,18 +45,40 @@ float getShadow(int index, vec3 coord) {
 	} else {
 		textureSample = texture(u_shadowMap[3], coord.xy);
 	}
-#if PACK_DEPTH
+#if SHADOWS_PACK_DEPTH
   float depth = unpackDepth(textureSample);
 #endif
-#if !PACK_DEPTH
+#if !SHADOWS_PACK_DEPTH
   float depth = textureSample.r;
 #endif
-  return max(step(coord.z-bias, depth), 0.0);
+
+#if SHADOWS_VARIANCE
+  float moment2 = textureSample.g;
+
+  vec2 moments = vec2(depth, moment2);
+
+  float distance = coord.z;
+
+  if (distance <= depth) {
+    return 1.0;
+  }
+
+  float variance = moments.y - (moments.x * moments.x);
+  variance = max(variance, 0.0000005);
+  float d = coord.z - moments.x;
+  float shadowPCT = variance / (variance + d*d);
+  return shadowPCT;
+#endif
+
+#if !SHADOWS_VARIANCE
+  return max(step(coord.z-$SHADOW_BIAS, depth), 0.0);
+#endif
 }
 
 vec3 getShadowCoord(int index, vec3 pos) {
   vec4 shadowPos = u_shadowMatrix[index] * vec4(pos, 1.0);
   shadowPos *= vec4(0.5);
   shadowPos += vec4(0.5);
+  shadowPos.xyz /= shadowPos.w;
   return shadowPos.xyz;
 }

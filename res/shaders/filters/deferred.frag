@@ -37,9 +37,16 @@ void main()
     vec4 albedo = texture(ColorMap, v_texcoord0);
     vec4 data = texture(DataMap, v_texcoord0);
     float depth = texture(DepthMap, v_texcoord0).r;
-    vec2 uv = data.xy;
-    float metallic = data.z;
-    float roughness = data.w;
+    float metallic = data.x;
+    float roughness = data.y;
+    float performLighting = data.w;
+
+    if (performLighting < 0.1) {
+        output0 = vec4(albedo.rgb, 1.0);
+
+        return;
+    }
+
     vec4 position = vec4(positionFromDepth(InverseViewProjMatrix, v_texcoord0, depth), 1.0);
 
     vec3 lightDir = normalize(env_DirectionalLight.direction);
@@ -56,12 +63,11 @@ void main()
 
 #if SHADOWS
     float shadowness = 0.0;
-    const float radius = 0.075;
     int shadowSplit = getShadowMapSplit(CameraPosition, position.xyz);
 
     for (int x = 0; x < 4; x++) {
         for (int y = 0; y < 4; y++) {
-            vec2 offset = poissonDisk[x * 4 + y] * radius;
+            vec2 offset = poissonDisk[x * 4 + y] * $SHADOW_MAP_RADIUS;
             vec3 shadowCoord = getShadowCoord(shadowSplit, position.xyz + vec3(offset.x, offset.y, -offset.x));
             shadowness += getShadow(shadowSplit, shadowCoord);
         }
@@ -79,7 +85,13 @@ void main()
     vec4 shadowColor = vec4(1.0);
 #endif
 
+#if PROBE_ENABLED
+    vec3 reflectionVector = EnvProbeVector(n, position.xyz, CameraPosition, u_modelMatrix);
+#endif
+
+#if !PROBE_ENABLED
     vec3 reflectionVector = ReflectionVector(n, position.xyz, CameraPosition);
+#endif
 
     vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
     vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;

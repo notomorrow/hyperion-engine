@@ -11,7 +11,29 @@ out vec3 v_bitangent;
 out mat3 v_tbn;
 
 #include "include/matrices.inc"
+#include "include/lighting.inc"
+
+out VSOutput
+{
+  vec3 position;
+	vec3 normal;
+	vec2 texcoord0;
+#if PROBE_RENDER_SHADING
+  vec4 lighting;
+#endif
+} vs_out;
 
 void main() {
-  gl_Position = u_modelMatrix * vec4(a_position, 1.0);
+  v_position = u_modelMatrix * vec4(a_position, 1.0);
+  vs_out.normal = a_normal.xyz;
+  vs_out.texcoord0 = a_texcoord0;
+  vs_out.position = v_position.xyz;
+
+#if PROBE_RENDER_SHADING
+  // vertex shading
+  float NdotL = dot(a_normal.xyz, env_DirectionalLight.direction);
+  vs_out.lighting = vec4(NdotL, NdotL, NdotL, 1.0) * env_DirectionalLight.color;
+#endif
+
+  gl_Position = v_position;
 }

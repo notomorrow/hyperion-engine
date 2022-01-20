@@ -18,9 +18,11 @@ uniform int HasSkyboxMap;
 
 void main()
 {
-  
   vec3 color = texture(SkyboxMap, v_position.xyz).rgb;
-
+  vec3 n = v_normal.xyz;
 
   output0 = vec4(color, 1.0);
+  output1 = vec4(n * 0.5 + 0.5, 1.0);
+  output2 = vec4(v_position.xyz, 1.0);
+  output3 = vec4(0.0);
 }

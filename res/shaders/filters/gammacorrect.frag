@@ -9,7 +9,7 @@ uniform sampler2D DepthMap;
 uniform sampler2D PositionMap;
 uniform sampler2D NormalMap;
 
-const float gamma = 2.2;
+const float gamma = 2.0;
 
 void main()
 {
