@@ -15,7 +15,7 @@ namespace apex {
 class ShadowMapping {
 public:
     ShadowMapping(Camera *view_cam, double max_dist);
-    ~ShadowMapping();
+    virtual ~ShadowMapping();
 
     const Vector3 &GetLightDirection() const;
     void SetLightDirection(const Vector3 &dir);
@@ -27,10 +27,10 @@ public:
     inline bool IsVarianceShadowMapping() const { return m_is_variance_shadow_mapping; }
     void SetVarianceShadowMapping(bool value);
 
-    void Begin();
-    void End();
+    virtual void Begin();
+    virtual void End();
 
-private:
+protected:
     double max_dist;
 
     OrthoCamera *shadow_cam;
@@ -43,6 +43,8 @@ private:
     BoundingBox bb;
 
     bool m_is_variance_shadow_mapping;
+
+    Vector3 m_center_pos;
 
     void TransformPoints(const std::array<Vector3, 8> &in_vec,
         std::array<Vector3, 8> &out_vec, const Matrix4 &mat) const;
