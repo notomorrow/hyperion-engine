@@ -50,6 +50,7 @@ void Texture2D::Use()
 
         glTexImage2D(GL_TEXTURE_2D, 0, ifmt,
             width, height, 0, fmt, GL_UNSIGNED_BYTE, bytes);
+
         CatchGLErrors("glTexImage2D failed.", false);
 
         if (min_filter == GL_LINEAR_MIPMAP_LINEAR ||

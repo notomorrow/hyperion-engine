@@ -40,15 +40,6 @@ void Cubemap::Use()
     glBindTexture(GL_TEXTURE_CUBE_MAP, id);
 
     if (!is_uploaded) {
-        //Our image for the mipmap with pair level and red color
-        unsigned char imageArray2[1024*1024*3];
-        for(int i = 0; i < 1024*1024*3; i++){
-            if(i%3 == 0)
-                imageArray2[i] = 255;
-            else
-                imageArray2[i] = 0;
-        }
-
         for (size_t i = 0; i < m_textures.size(); i++) {
             const auto &tex = m_textures[i];
 
@@ -59,27 +50,16 @@ void Cubemap::Use()
             }
 
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, tex->GetInternalFormat(),
-                tex->GetWidth(), tex->GetHeight(), 0, tex->GetFormat(), GL_UNSIGNED_BYTE, tex->GetBytes());
-
-            const auto mipmap_array = GenerateMipmaps(tex);
-            
-            for (unsigned int j = 0; j < mipmap_array.size(); j++) {
-                const auto it = mipmap_array[j];
-    
-                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, j + 1, GL_RGB8,
-                    it.size, it.size, 0, GL_RGB, GL_UNSIGNED_BYTE, it.bytes.data());
-            }
-
-            
+                tex->GetWidth(), tex->GetHeight(), 0, tex->GetFormat(), GL_UNSIGNED_BYTE, tex->GetBytes());            
         }
 
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, CUBEMAP_NUM_MIPMAPS);
+        // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
+        // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, CUBEMAP_NUM_MIPMAPS);
 
         // glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 

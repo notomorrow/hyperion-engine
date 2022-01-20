@@ -10,34 +10,39 @@
 namespace apex {
 SkyboxControl::SkyboxControl(Camera *camera, const std::shared_ptr<Cubemap> &cubemap)
     : EntityControl(),
-      camera(camera),
-      cubemap(cubemap)
+      m_camera(camera),
+      m_cubemap(cubemap)
 {
 }
 
 void SkyboxControl::OnAdded()
 {
-    cube = std::make_shared<Entity>("Skybox");
+    m_cube = std::make_shared<Entity>("Skybox");
 
-    cube->SetRenderable(MeshFactory::CreateCube(Vector3(-0.5, 0.0, 0.5)));
-    cube->SetLocalScale(10);
-    cube->SetLocalTranslation(Vector3(0, 55, 2));
-    cube->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<SkyboxShader>(ShaderProperties()));
-    cube->GetRenderable()->SetRenderBucket(Renderable::RB_SKY);
-    cube->GetMaterial().SetTexture("SkyboxMap", cubemap);
-    cube->GetMaterial().depth_test = false;
-    cube->GetMaterial().depth_write = false;
-    cube->GetMaterial().alpha_blended = true;
+    m_cube->SetRenderable(MeshFactory::CreateCube());
 
-    parent->AddChild(cube);
+    m_cube->SetLocalScale(10);
+    m_cube->SetLocalTranslation(Vector3(0, 55, 2));
+    m_cube->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<SkyboxShader>(ShaderProperties()));
+    m_cube->GetRenderable()->SetRenderBucket(Renderable::RB_SKY);
+    m_cube->GetMaterial().SetTexture("SkyboxMap", m_cubemap);
+    m_cube->GetMaterial().depth_test = false;
+    m_cube->GetMaterial().depth_write = false;
+    m_cube->GetMaterial().alpha_blended = true;
+
+    parent->AddChild(m_cube);
 }
 
 void SkyboxControl::OnRemoved()
 {
-    parent->RemoveChild(cube);
+    parent->RemoveChild(m_cube);
 }
 
 void SkyboxControl::OnUpdate(double dt)
 {
+    if (m_cubemap == nullptr) {
+        m_cubemap = Environment::GetInstance()->GetGlobalCubemap();
+        m_cube->GetMaterial().SetTexture("SkyboxMap", m_cubemap);
+    }
 }
 } // namespace apex

@@ -1,5 +1,6 @@
 #include "./framebuffer_cube.h"
 #include "../opengl.h"
+#include "../gl_util.h"
 
 #include <iostream>
 
@@ -8,20 +9,33 @@ namespace apex {
 FramebufferCube::FramebufferCube(int width, int height)
     : Framebuffer(width, height)
 {
-    std::array<std::shared_ptr<Texture2D>, 6> color_textures = {
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
-        std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr)
-    };
+    const int num_components = 3; // r, g, b
+    const size_t color_map_texture_byte_size = width * height * num_components,
+        depth_map_texture_byte_size = width * height;
+
+    std::array<std::shared_ptr<Texture2D>, 6> color_textures, depth_textures;
+
+    for (int i = 0; i < color_textures.size(); i++) {
+        color_textures[i] = std::make_shared<Texture2D>(width, height, (unsigned char*)malloc(color_map_texture_byte_size));
+    }
 
     color_texture = std::make_shared<Cubemap>(color_textures);
     color_texture->SetInternalFormat(GL_RGB8);
     color_texture->SetFormat(GL_RGB);
     color_texture->SetFilter(GL_NEAREST, GL_NEAREST);
     color_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+
+    for (int i = 0; i < depth_textures.size(); i++) {
+        depth_textures[i] = std::make_shared<Texture2D>(width, height, (unsigned char*)malloc(depth_map_texture_byte_size));
+        depth_textures[i]->SetInternalFormat(GL_DEPTH_COMPONENT24);
+        depth_textures[i]->SetFormat(GL_DEPTH_COMPONENT);
+    }
+
+    depth_texture = std::make_shared<Cubemap>(depth_textures);
+    depth_texture->SetInternalFormat(GL_DEPTH_COMPONENT24);
+    depth_texture->SetFormat(GL_DEPTH_COMPONENT);
+    depth_texture->SetFilter(GL_NEAREST, GL_NEAREST);
+    depth_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
     /*std::array<std::shared_ptr<Texture2D>, 6> depth_textures = {
         std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr),
@@ -47,12 +61,15 @@ const std::shared_ptr<Texture> FramebufferCube::GetColorTexture() const { return
 const std::shared_ptr<Texture> FramebufferCube::GetNormalTexture() const { return nullptr; }
 const std::shared_ptr<Texture> FramebufferCube::GetPositionTexture() const { return nullptr; }
 const std::shared_ptr<Texture> FramebufferCube::GetDepthTexture() const { return depth_texture; }
+const std::shared_ptr<Texture> FramebufferCube::GetDataTexture() const { return nullptr; }
 
 void FramebufferCube::Use()
 {
     if (!is_created) {
         glGenFramebuffers(1, &id);
         is_created = true;
+
+        CatchGLErrors("Failed to generate framebuffer for framebuffer cube.");
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, id);
@@ -65,25 +82,31 @@ void FramebufferCube::Use()
         for (int i = 0; i < 6; i++) {
             glFramebufferTexture2D(GL_FRAMEBUFFER,
                 GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, color_texture->GetId(), 0);
+
+            CatchGLErrors("Failed to set framebuffer cube color data");
         }
+
         color_texture->End();
 
-        /*depth_texture->Use();
+        depth_texture->Use();
         for (int i = 0; i < 6; i++) {
             glFramebufferTexture2D(GL_FRAMEBUFFER,
-                GL_COLOR_ATTACHMENT1, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, depth_texture->GetId(), 0);
+                GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, depth_texture->GetId(), 0);
+
+            CatchGLErrors("Failed to set framebuffer cube depth data");
         }
-        // glFramebufferTexture(GL_FRAMEBUFFER,
-        //     GL_DEPTH_ATTACHMENT, depth_texture->GetId(), 0);
-        depth_texture->End();*/
+        depth_texture->End();
 
         const unsigned int draw_buffers[] = {
             GL_COLOR_ATTACHMENT0, // color map
            // GL_COLOR_ATTACHMENT1
         };
+
         glDrawBuffers(1, draw_buffers);
+        CatchGLErrors("Failed to use glDrawBuffers in framebuffer cube");
 
         unsigned int status;
+
         if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
             std::cout << "Could not create FramebufferCube " << status << std::endl;
             throw std::runtime_error("Could not create FramebufferCube");

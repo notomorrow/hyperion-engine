@@ -37,6 +37,22 @@ CubemapRendererShader::CubemapRendererShader(const ShaderProperties &properties)
 
 void CubemapRendererShader::ApplyMaterial(const Material &mat)
 {
+    SetUniform("u_diffuseColor", mat.diffuse_color);
+
+    int texture_index = 1;
+
+    for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
+        if (it->second == nullptr) {
+            continue;
+        }
+
+        Texture::ActiveTexture(texture_index);
+        it->second->Use();
+        SetUniform(it->first, texture_index);
+        SetUniform(std::string("Has") + it->first, 1);
+
+        texture_index++;
+    }
 }
 
 void CubemapRendererShader::ApplyTransforms(const Transform &transform, Camera *camera)

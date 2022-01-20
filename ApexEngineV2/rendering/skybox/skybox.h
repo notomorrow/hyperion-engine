@@ -21,9 +21,9 @@ public:
     void OnUpdate(double dt);
 
 private:
-    std::shared_ptr<Entity> cube;
-    std::shared_ptr<Cubemap> cubemap;
-    Camera *camera;
+    std::shared_ptr<Entity> m_cube;
+    std::shared_ptr<Cubemap> m_cubemap;
+    Camera *m_camera;
 };
 } // namespace apex
 
