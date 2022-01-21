@@ -7,7 +7,7 @@
 #include <iostream>
 #include <chrono>
 
-#define USE_CHRONO 1
+#define USE_CHRONO 0
 
 namespace apex {
 
@@ -115,6 +115,10 @@ bool GlfwEngine::InitializeGame(Game *game)
 
     inputmgr = game->GetInputManager();
 
+    int num_frames = 0;
+    double fps_delta = 0.0;
+    double fps_last = 0.0;
+
 #if USE_CHRONO
     auto last = std::chrono::steady_clock::now();
 #else
@@ -126,8 +130,18 @@ bool GlfwEngine::InitializeGame(Game *game)
         auto delta = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(current - last).count();
 #else
         double current = glfwGetTime();
-        double delta = current_time - last;
+        double delta = current - last;
 #endif
+
+        num_frames++;
+
+        if ((current - fps_last) >= 1.0) {
+            stats.fps = double(num_frames) / delta;
+            std::cout << stats.fps << " fps\n";
+
+            num_frames = 0;
+            fps_last = current;
+        }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

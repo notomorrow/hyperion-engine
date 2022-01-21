@@ -255,9 +255,9 @@ public:
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 10, 0));
 
-        // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 15);
-        m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
-        m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
+        // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 20);
+        // m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        // m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
         m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         m_renderer->SetDeferred(true);
@@ -296,6 +296,12 @@ public:
         ui_text->SetLocalScale2D(Vector2(30));
         top->AddChild(ui_text);
         GetUIManager()->RegisterUIObject(ui_text);
+
+        auto fps_counter = std::make_shared<ui::UIText>("fps_coutner", "- FPS");
+        fps_counter->SetLocalTranslation2D(Vector2(0.8, 1.0));
+        fps_counter->SetLocalScale2D(Vector2(30));
+        top->AddChild(fps_counter);
+        GetUIManager()->RegisterUIObject(fps_counter);
 
         auto ui_fbo_view = std::make_shared<ui::UIObject>("fbo_preview");
         ui_fbo_view->GetMaterial().SetTexture("ColorMap", Environment::GetInstance()->GetShadowMap(0));
@@ -849,6 +855,10 @@ public:
        //     physics_update_timer = 0.0;
        // }
        // physics_update_timer += dt;
+
+        // if (auto fps_counter = std::static_pointer_cast<ui::UIText>(top->GetChild("fps_counter"))) {
+        //     fps_counter->SetText(std::to_string(CoreEngine::GetInstance()->stats.fps) + " FPS");
+        // }
 
         top->Update(dt);
     }
