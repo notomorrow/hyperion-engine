@@ -66,7 +66,7 @@ void UIObjectShader::ApplyMaterial(const Material &mat)
 
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
         Texture::ActiveTexture(texture_index);
-        it->second->Use();
+        it->second->Begin();
         SetUniform(it->first, texture_index);
         SetUniform(std::string("Has") + it->first, 1);
         texture_index++;

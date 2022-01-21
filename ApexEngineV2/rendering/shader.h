@@ -18,6 +18,7 @@
 #include <cstring>
 
 namespace apex {
+class Texture;
 
 class ShaderProperties {
 public:
@@ -196,6 +197,7 @@ public:
 
     inline void SetUniform(const std::string &name, float value) { uniforms[name] = Uniform(value); uniform_changed = true; }
     inline void SetUniform(const std::string &name, int value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, Texture *value) { uniforms[name] = Uniform(value); uniform_changed = true; }
     inline void SetUniform(const std::string &name, const Vector2 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
     inline void SetUniform(const std::string &name, const Vector3 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
     inline void SetUniform(const std::string &name, const Vector4 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
@@ -265,14 +267,16 @@ private:
     bool ShaderPropertiesChanged() const;
 
     struct Uniform {
-        enum {
+        enum UniformType {
             Uniform_None = -1,
             Uniform_Float,
             Uniform_Int,
             Uniform_Vector2,
             Uniform_Vector3,
             Uniform_Vector4,
-            Uniform_Matrix4
+            Uniform_Matrix4,
+            Uniform_Texture2D,
+            Uniform_Texture3D
         } type;
 
         std::array<float, 16> data;
@@ -323,6 +327,12 @@ private:
         {
             std::memcpy(&data[0], &value.values[0], value.values.size() * sizeof(float));
             type = Uniform_Matrix4;
+        }
+
+        Uniform(Texture *texture)
+        {
+            data[0] = texture->GetId();
+            type = UniformType(int(Uniform_Texture2D) + int(texture->GetTextureType()));
         }
 
         Uniform &operator=(const Uniform &other)

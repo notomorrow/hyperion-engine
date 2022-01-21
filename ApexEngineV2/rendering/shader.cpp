@@ -227,6 +227,8 @@ void Shader::Use()
     glUseProgram(progid);
 
     if (uniform_changed) {
+        int texture_index = 1;
+
         for (auto &&uniform : uniforms) {
             int loc = glGetUniformLocation(progid, uniform.first.c_str());
 
@@ -252,10 +254,24 @@ void Shader::Use()
                 case Uniform::Uniform_Matrix4:
                     glUniformMatrix4fv(loc, 1, true, &uniform.second.data[0]);
                     break;
+                case Uniform::Uniform_Texture2D:
+                    Texture::ActiveTexture(texture_index);
+                    glBindTexture(GL_TEXTURE_2D, int(uniform.second.data[0]));
+                    glUniform1i(loc, texture_index);
+                    texture_index++;
+                    break;
+                case Uniform::Uniform_Texture3D:
+                    Texture::ActiveTexture(texture_index);
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, int(uniform.second.data[0]));
+                    glUniform1i(loc, texture_index);
+                    texture_index++;
+                    break;
                 default:
                     std::cout << "invalid uniform: " << uniform.first << "\n";
                     break;
                 }
+
+                CatchGLErrors((uniform.first + ": Failed to set uniform").c_str(), false);
             }
         }
 

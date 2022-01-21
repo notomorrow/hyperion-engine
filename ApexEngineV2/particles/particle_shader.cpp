@@ -35,7 +35,7 @@ void ParticleShader::ApplyMaterial(const Material &mat)
         }
 
         Texture::ActiveTexture(texture_index);
-        it->second->Use();
+        it->second->Begin();
         SetUniform(it->first, texture_index);
         SetUniform(std::string("Has") + it->first, 1);
 

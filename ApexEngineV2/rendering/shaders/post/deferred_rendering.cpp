@@ -27,18 +27,15 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
 {
     PostShader::ApplyMaterial(mat);
 
-    int texture_index = 6;
-
     auto *env = Environment::GetInstance();
     if (env->ShadowsEnabled()) {
         for (int i = 0; i < env->NumCascades(); i++) {
             const std::string i_str = std::to_string(i);
 
             if (auto shadow_map = env->GetShadowMap(i)) {
-                Texture::ActiveTexture(texture_index);
-                shadow_map->Use();
-                SetUniform("u_shadowMap[" + i_str + "]", texture_index);
-                texture_index++;
+                shadow_map->Prepare();
+
+                SetUniform("u_shadowMap[" + i_str + "]", shadow_map.get());
             }
 
             SetUniform("u_shadowMatrix[" + i_str + "]", env->GetShadowMatrix(i));
@@ -57,11 +54,9 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
     }
 
     if (auto cubemap = env->GetGlobalCubemap()) {
-        Texture::ActiveTexture(texture_index);
-        cubemap->Use();
-        SetUniform("env_GlobalCubemap", texture_index);
+        cubemap->Prepare();
 
-        texture_index++;
+        SetUniform("env_GlobalCubemap", cubemap.get());
 
         if (env->ProbeEnabled()) {
             const auto &origin = env->GetProbeRenderer()->GetProbe()->GetOrigin();
@@ -72,11 +67,9 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
     }
 
     if (auto cubemap = env->GetGlobalIrradianceCubemap()) {
-        Texture::ActiveTexture(texture_index);
-        cubemap->Use();
-        SetUniform("env_GlobalIrradianceCubemap", texture_index);
+        cubemap->Prepare();
 
-        texture_index++;
+        SetUniform("env_GlobalIrradianceCubemap", cubemap.get());
     }
 }
 
