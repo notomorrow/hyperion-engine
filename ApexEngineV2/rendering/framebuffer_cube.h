@@ -17,8 +17,7 @@ public:
     virtual const std::shared_ptr<Texture> GetDepthTexture() const override;
     virtual const std::shared_ptr<Texture> GetDataTexture() const override;
 
-    virtual void StoreColor() override;
-    virtual void StoreDepth() override;
+    virtual void Store(const std::shared_ptr<Texture> &texture, int index) override;
 
     virtual void Use() override;
 

@@ -60,6 +60,13 @@ void ProbeRenderer::Render(Renderer *renderer, Camera *cam)
         false
     );
 
+    renderer->RenderBucket(
+        cam,
+        renderer->GetBucket(Renderable::RB_SKY),
+        m_cubemap_renderer_shader.get(),
+        false
+    );
+
     m_probe->End();
     m_fbo->End();
 }

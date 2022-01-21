@@ -4,12 +4,13 @@
 #include <memory>
 #include <map>
 #include <string>
+#include <array>
 #include <vector>
 #include <algorithm>
 
 #include "../../math/vector2.h"
 #include "../mesh.h"
-#include "../framebuffer.h"
+#include "../framebuffer_2d.h"
 #include "../camera/camera.h"
 #include "./post_filter.h"
 
@@ -47,7 +48,7 @@ public:
     inline std::vector<Filter> &GetFilters() { return m_filters; }
     inline const std::vector<Filter> &GetFilters() const { return m_filters; }
 
-    void Render(Camera *cam, Framebuffer *fbo);
+    void Render(Camera *cam, Framebuffer2D *fbo);
 
     struct Filter {
         int rank;
@@ -70,7 +71,8 @@ public:
     };
 
 private:
-    // void UpdateFilterScaling(PostFilter *filter);
+    std::array<Framebuffer2D*, 2> m_buffers;
+    bool m_buffers_created;
 
     std::vector<Filter> m_filters;
 

@@ -9,7 +9,7 @@ PostFilter::PostFilter(const std::shared_ptr<PostShader> &shader)
     m_shader = shader;
 }
 
-void PostFilter::Begin(Camera *cam, Framebuffer *fbo)
+void PostFilter::Begin(Camera *cam, Framebuffer2D *fbo)
 {
     // TODO: initialization
     m_material.SetTexture("ColorMap", fbo->GetColorTexture());
@@ -17,6 +17,7 @@ void PostFilter::Begin(Camera *cam, Framebuffer *fbo)
     m_material.SetTexture("PositionMap", fbo->GetPositionTexture());
     m_material.SetTexture("NormalMap", fbo->GetNormalTexture());
     m_material.SetTexture("DataMap", fbo->GetDataTexture());
+    m_material.SetTexture("SSLightingMap", fbo->GetAoTexture());
 
     SetUniforms(cam);
 
@@ -25,11 +26,14 @@ void PostFilter::Begin(Camera *cam, Framebuffer *fbo)
     m_shader->Use();
 }
 
-void PostFilter::End(Camera *cam, Framebuffer *fbo)
+void PostFilter::End(Camera *cam, Framebuffer2D *fbo)
 {
     m_shader->End();
 
-    fbo->StoreColor();
+    // fbo->Store(fbo->GetColorTexture(), 0);
+
+    // // TODO: check
+    // fbo->Store(fbo->GetAoTexture(), 4);
 }
 
 } // namespace apex

@@ -1,5 +1,4 @@
 #include "renderer.h"
-#include "framebuffer_2d.h"
 #include "shader_manager.h"
 #include "postprocess/filters/deferred_rendering_filter.h"
 
@@ -40,7 +39,8 @@ void Renderer::Render(Camera *cam)
             true, // depth
             true, // normals
             true, // positions
-            true  // data
+            true,  // data
+            true // ao
         );
     }
 
@@ -204,7 +204,7 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
     }
 }
 
-void Renderer::RenderAll(Camera *cam, Framebuffer *fbo)
+void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
 {
     if (fbo) {
         fbo->Use();
@@ -228,7 +228,7 @@ void Renderer::RenderAll(Camera *cam, Framebuffer *fbo)
     }
 }
 
-void Renderer::RenderPost(Camera *cam, Framebuffer *fbo)
+void Renderer::RenderPost(Camera *cam, Framebuffer2D *fbo)
 {
     if (m_post_processing->GetFilters().empty()) {
         return;

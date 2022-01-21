@@ -10,14 +10,16 @@ Framebuffer2D::Framebuffer2D(
     bool has_depth_texture,
     bool has_normal_texture,
     bool has_position_texture,
-    bool has_data_texture
+    bool has_data_texture,
+    bool has_ao_texture
 )
     : Framebuffer(width, height),
       m_has_color_texture(has_color_texture),
       m_has_depth_texture(has_depth_texture),
       m_has_normal_texture(has_normal_texture),
       m_has_position_texture(has_position_texture),
-      m_has_data_texture(has_data_texture)
+      m_has_data_texture(has_data_texture),
+      m_has_ao_texture(has_ao_texture)
 {
     if (m_has_color_texture) {
         m_color_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
@@ -58,6 +60,14 @@ Framebuffer2D::Framebuffer2D(
         m_data_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         m_data_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
     }
+
+    if (m_has_ao_texture) {
+        m_ao_texture = std::make_shared<Texture2D>(width, height, (unsigned char*)nullptr);
+        m_ao_texture->SetInternalFormat(GL_RGBA8);
+        m_ao_texture->SetFormat(GL_RGBA);
+        m_ao_texture->SetFilter(GL_NEAREST, GL_NEAREST);
+        m_ao_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+    }
 }
 
 Framebuffer2D::~Framebuffer2D()
@@ -70,6 +80,7 @@ const std::shared_ptr<Texture> Framebuffer2D::GetNormalTexture() const { return 
 const std::shared_ptr<Texture> Framebuffer2D::GetPositionTexture() const { return m_position_texture; }
 const std::shared_ptr<Texture> Framebuffer2D::GetDepthTexture() const { return m_depth_texture; }
 const std::shared_ptr<Texture> Framebuffer2D::GetDataTexture() const { return m_data_texture; }
+const std::shared_ptr<Texture> Framebuffer2D::GetAoTexture() const { return m_ao_texture; }
 
 void Framebuffer2D::Use()
 {
@@ -86,7 +97,7 @@ void Framebuffer2D::Use()
     glViewport(0, 0, width, height);
 
     if (!is_uploaded) {
-        unsigned int draw_buffers[4] = { GL_NONE };
+        unsigned int draw_buffers[5] = { GL_NONE };
         int draw_buffer_index = 0;
 
         if (m_has_color_texture) {
@@ -129,6 +140,16 @@ void Framebuffer2D::Use()
             draw_buffers[draw_buffer_index++] = GL_COLOR_ATTACHMENT3;
         }
 
+        if (m_has_ao_texture) {
+            m_ao_texture->Use();
+            glFramebufferTexture2D(GL_FRAMEBUFFER,
+                GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, m_ao_texture->GetId(), 0);
+            CatchGLErrors("Failed to attach color attachment 4 to framebuffer.", false);
+            m_ao_texture->End();
+
+            draw_buffers[draw_buffer_index++] = GL_COLOR_ATTACHMENT4;
+        }
+
         if (m_has_depth_texture) {
             m_depth_texture->Use();
             glFramebufferTexture2D(GL_FRAMEBUFFER,
@@ -148,30 +169,17 @@ void Framebuffer2D::Use()
 
 }
 
-void Framebuffer2D::StoreColor()
+// TODO convert to index format
+// TODO: dont copy textures, just modify directly
+void Framebuffer2D::Store(const std::shared_ptr<Texture> &texture, int index)
 {
-    if (!m_has_color_texture) {
-        return;
-    }
+    texture->Use();
 
-    m_color_texture->Use();
-
+    glReadBuffer(GL_COLOR_ATTACHMENT0 + index);
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, width, height);
+    glReadBuffer(0);
 
-    m_color_texture->End();
-}
-
-void Framebuffer2D::StoreDepth()
-{
-    if (!m_has_depth_texture) {
-        return;
-    }
-
-    m_depth_texture->Use();
-
-    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, width, height);
-
-    m_depth_texture->End();
+    texture->End();
 }
 
 } // namespace apex

@@ -108,12 +108,7 @@ void FramebufferCube::Use()
 
 }
 
-void FramebufferCube::StoreColor()
-{
-    // not implemented
-}
-
-void FramebufferCube::StoreDepth()
+void FramebufferCube::Store(const std::shared_ptr<Texture> &texture, int index)
 {
     // not implemented
 }
