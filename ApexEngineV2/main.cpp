@@ -786,8 +786,8 @@ public:
         //     obj->Scale(2.0f);
         // }
 
-        // top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
+        top->AddControl(std::make_shared<SkydomeControl>(cam));
+        // top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
         // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
