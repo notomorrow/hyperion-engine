@@ -38,7 +38,7 @@ CloudsShader::CloudsShader(const ShaderProperties &properties)
 void CloudsShader::ApplyMaterial(const Material &mat)
 {
     Texture::ActiveTexture(0);
-    cloud_map->Use();
+    cloud_map->Begin();
     SetUniform("m_CloudMap", 0);
 
     SetUniform("m_GlobalTime", m_global_time);

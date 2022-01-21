@@ -11,11 +11,11 @@ public:
     Texture2D(int width, int height, unsigned char *bytes);
     virtual ~Texture2D();
 
-    void Use();
-    void End();
+    virtual void End() override;
 
-private:
-    bool is_created, is_uploaded;
+protected:
+    virtual void UploadGpuData() override;
+    virtual void Use() override;
 };
 
 } // namespace apex

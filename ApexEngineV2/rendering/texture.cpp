@@ -1,10 +1,13 @@
 #include "texture.h"
 #include "../gl_util.h"
+#include "../core_engine.h"
 
 namespace apex {
 
-Texture::Texture()
-    : width(0),
+Texture::Texture(TextureType texture_type)
+    : m_texture_type(texture_type),
+      id(0),
+      width(0),
       height(0),
       bytes(nullptr),
       ifmt(GL_RGB8),
@@ -12,12 +15,16 @@ Texture::Texture()
       mag_filter(GL_LINEAR),
       min_filter(GL_LINEAR_MIPMAP_LINEAR),
       wrap_s(GL_REPEAT),
-      wrap_t(GL_REPEAT)
+      wrap_t(GL_REPEAT),
+      is_uploaded(false),
+      is_created(false)
 {
 }
 
-Texture::Texture(int width, int height, unsigned char *bytes)
-    : width(width),
+Texture::Texture(TextureType texture_type, int width, int height, unsigned char *bytes)
+    : m_texture_type(texture_type),
+      id(0),
+      width(width),
       height(height),
       bytes(bytes),
       ifmt(GL_RGB8),
@@ -25,12 +32,16 @@ Texture::Texture(int width, int height, unsigned char *bytes)
       mag_filter(GL_LINEAR),
       min_filter(GL_LINEAR_MIPMAP_LINEAR),
       wrap_s(GL_REPEAT),
-      wrap_t(GL_REPEAT)
+      wrap_t(GL_REPEAT),
+      is_uploaded(false),
+      is_created(false)
 {
 }
 
 Texture::~Texture()
 {
+    Deinitialize();
+
     free(bytes);
 }
 
@@ -65,6 +76,52 @@ void Texture::ActiveTexture(int i)
 {
     glActiveTexture(GL_TEXTURE0 + i);
     CatchGLErrors("Failed to set active texture", false);
+}
+
+void Texture::Initialize()
+{
+    assert(is_created == false && id == 0);
+
+    CoreEngine::GetInstance()->GenTextures(1, &id);
+
+    CatchGLErrors("Failed to generate texture.", false);
+
+    is_created = true;
+    is_uploaded = false;
+}
+
+void Texture::Deinitialize()
+{
+    if (is_created) {
+        assert(id != 0);
+
+        CoreEngine::GetInstance()->DeleteTextures(1, &id);
+
+        CatchGLErrors("Failed to delete texture.", false);
+
+        is_created = false;
+    }
+}
+
+void Texture::Prepare()
+{
+    if (is_created && is_uploaded) {
+        return;
+    }
+
+    if (!is_created) {
+        Initialize();
+    }
+
+    Use();
+
+    if (!is_uploaded) {
+        UploadGpuData();
+
+        is_uploaded = true;
+    }
+
+    End();
 }
 
 } // namespace apex

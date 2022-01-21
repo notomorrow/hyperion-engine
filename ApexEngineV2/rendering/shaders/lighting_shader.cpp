@@ -44,7 +44,7 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
             if (auto shadow_map = env->GetShadowMap(i)) {
                 Texture::ActiveTexture(texture_index);
-                shadow_map->Use();
+                shadow_map->Begin();
                 SetUniform("u_shadowMap[" + i_str + "]", texture_index);
                 texture_index++;
             }
@@ -68,7 +68,7 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     if (auto cubemap = env->GetGlobalCubemap()) {
         Texture::ActiveTexture(texture_index);
-        cubemap->Use();
+        cubemap->Begin();
         SetUniform("env_GlobalCubemap", texture_index);
 
         texture_index++;
@@ -76,7 +76,7 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     if (auto cubemap = env->GetGlobalIrradianceCubemap()) {
         Texture::ActiveTexture(texture_index);
-        cubemap->Use();
+        cubemap->Begin();
         SetUniform("env_GlobalIrradianceCubemap", texture_index);
 
         texture_index++;
@@ -89,7 +89,7 @@ void LightingShader::ApplyMaterial(const Material &mat)
         }
 
         Texture::ActiveTexture(texture_index);
-        it->second->Use();
+        it->second->Begin();
         SetUniform(it->first, texture_index);
         SetUniform(std::string("Has") + it->first, 1);
 

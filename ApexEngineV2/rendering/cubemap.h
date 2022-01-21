@@ -26,14 +26,15 @@ public:
     inline const std::array<std::shared_ptr<Texture2D>, 6> GetTextures() const
         { return m_textures; }
 
-    void Use();
-    void End();
+    virtual void End() override;
+
+protected:
+    virtual void Initialize() override;
+    virtual void UploadGpuData() override;
+    virtual void Use() override;
 
 private:
     std::array<std::shared_ptr<Texture2D>, 6> m_textures;
-    bool is_created, is_uploaded;
-
-    Cubemap::MipMapArray_t GenerateMipmaps(const std::shared_ptr<Texture2D> &texture);
 };
 
 } // namespace apex

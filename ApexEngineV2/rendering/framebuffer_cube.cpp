@@ -67,7 +67,7 @@ void FramebufferCube::Use()
     glViewport(0, 0, width, height);
 
     if (!is_uploaded) {
-        color_texture->Use();
+        color_texture->Begin();
         //glFramebufferTexture(GL_FRAMEBUFFER,
         //    GL_COLOR_ATTACHMENT0, color_texture->GetId(), 0);
         for (int i = 0; /*i < 6*/ i < 1; i++) {
@@ -79,7 +79,7 @@ void FramebufferCube::Use()
 
         color_texture->End();
 
-        depth_texture->Use();
+        depth_texture->Begin();
         for (int i = 0; /*i < 6*/ i < 1; i++) {
             glFramebufferTexture(GL_FRAMEBUFFER,
                 GL_DEPTH_ATTACHMENT, depth_texture->GetId(), 0);

@@ -30,19 +30,20 @@ void SkyboxShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
 
-    int texture_index = 1;
+    // int texture_index = 10;
 
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
         if (it->second == nullptr) {
             continue;
         }
 
-        Texture::ActiveTexture(texture_index);
-        it->second->Use();
-        SetUniform(it->first, texture_index);
+        // Texture::ActiveTexture(texture_index);
+        it->second->Prepare();
+
+        SetUniform(it->first, it->second.get());
         SetUniform(std::string("Has") + it->first, 1);
 
-        texture_index++;
+        // texture_index++;
     }
 }
 

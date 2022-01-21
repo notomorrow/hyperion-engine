@@ -84,7 +84,7 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
 
     if (has_clouds) {
         Texture::ActiveTexture(0);
-        noise_map->Use();
+        noise_map->Begin();
         SetUniform("u_noiseMap", 0);
     }
 
