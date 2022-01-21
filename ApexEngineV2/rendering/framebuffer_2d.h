@@ -17,7 +17,8 @@ public:
         bool has_depth_texture = true,
         bool has_normal_texture = true,
         bool has_position_texture = true,
-        bool has_data_texture = false // { material.shininess, material.roughness, _, perform deferred lighting? }
+        bool has_data_texture = false, // { material.shininess, material.roughness, _, perform deferred lighting? }
+        bool has_ao_texture = false // { gi.r, gi.g, gi.b, ao }
     );
     virtual ~Framebuffer2D();
 
@@ -26,9 +27,9 @@ public:
     virtual const std::shared_ptr<Texture> GetPositionTexture() const override;
     virtual const std::shared_ptr<Texture> GetDepthTexture() const override;
     virtual const std::shared_ptr<Texture> GetDataTexture() const override;
+    const std::shared_ptr<Texture> GetAoTexture() const;
 
-    virtual void StoreColor() override;
-    virtual void StoreDepth() override;
+    virtual void Store(const std::shared_ptr<Texture> &texture, int index) override;
 
     virtual void Use() override;
 
@@ -37,12 +38,14 @@ private:
                                m_normal_texture,
                                m_depth_texture,
                                m_position_texture,
-                               m_data_texture;
+                               m_data_texture,
+                               m_ao_texture;
     bool m_has_color_texture,
          m_has_normal_texture,
          m_has_depth_texture,
          m_has_position_texture,
-         m_has_data_texture;
+         m_has_data_texture,
+         m_has_ao_texture;
 };
 
 } // namespace apex

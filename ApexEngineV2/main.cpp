@@ -255,7 +255,7 @@ public:
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 10, 0));
 
-        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 20);
+        // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 15);
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
         m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
@@ -780,8 +780,8 @@ public:
         //     obj->Scale(2.0f);
         // }
 
-        //top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
+        top->AddControl(std::make_shared<SkydomeControl>(cam));
+        // top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
         // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 

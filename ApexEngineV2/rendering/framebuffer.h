@@ -22,8 +22,7 @@ public:
     virtual const std::shared_ptr<Texture> GetDepthTexture() const = 0;
     virtual const std::shared_ptr<Texture> GetDataTexture() const = 0;
 
-    virtual void StoreColor() = 0;
-    virtual void StoreDepth() = 0;
+    virtual void Store(const std::shared_ptr<Texture> &texture, int index) = 0;
 
     virtual void Use() = 0;
     void End();

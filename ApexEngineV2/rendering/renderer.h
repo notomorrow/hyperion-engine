@@ -12,7 +12,7 @@
 #include "render_window.h"
 #include "material.h"
 #include "camera/camera.h"
-#include "framebuffer.h"
+#include "framebuffer_2d.h"
 #include "postprocess/post_processing.h"
 
 namespace apex {
@@ -182,8 +182,8 @@ public:
     void End(Camera * cam, Entity *top);
 
     void RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader = nullptr, bool enable_frustum_culling = true);
-    void RenderAll(Camera *cam, Framebuffer *fbo = nullptr);
-    void RenderPost(Camera *cam, Framebuffer *fbo);
+    void RenderAll(Camera *cam, Framebuffer2D *fbo = nullptr);
+    void RenderPost(Camera *cam, Framebuffer2D *fbo);
 
     inline bool IsDeferred() const { return m_is_deferred; }
     void SetDeferred(bool deferred);
@@ -199,7 +199,7 @@ public:
 
 private:
     PostProcessing *m_post_processing;
-    Framebuffer *m_fbo;
+    Framebuffer2D *m_fbo;
     RenderWindow m_render_window;
     bool m_is_deferred;
 

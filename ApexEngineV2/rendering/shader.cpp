@@ -87,6 +87,9 @@ void Shader::UploadGpuData()
     glBindFragDataLocation(progid, 0, "output0");
     glBindFragDataLocation(progid, 1, "output1");
     glBindFragDataLocation(progid, 2, "output2");
+    glBindFragDataLocation(progid, 3, "output3");
+    glBindFragDataLocation(progid, 4, "output4");
+    glBindFragDataLocation(progid, 5, "output5");
     CatchGLErrors("Failed to bind shader frag data.");
 
     glBindAttribLocation(progid, 0, "a_position");
@@ -162,7 +165,7 @@ void Shader::ResetUniforms()
 
 void Shader::ApplyMaterial(const Material &mat)
 {
-    ResetUniforms();
+    // ResetUniforms();
 
     MaterialFaceCull cull_mode(mat.cull_faces);
 

@@ -6,7 +6,7 @@
 
 #include "../shaders/post_shader.h"
 #include "../camera/camera.h"
-#include "../framebuffer.h"
+#include "../framebuffer_2d.h"
 #include "../material.h"
 
 namespace apex {
@@ -20,8 +20,8 @@ public:
     inline std::shared_ptr<PostShader> &GetShader() { return m_shader; }
     inline const std::shared_ptr<PostShader> &GetShader() const { return m_shader; }
 
-    void Begin(Camera *cam, Framebuffer *fbo);
-    void End(Camera *cam, Framebuffer *fbo);
+    void Begin(Camera *cam, Framebuffer2D *fbo);
+    void End(Camera *cam, Framebuffer2D *fbo);
 
 protected:
     std::shared_ptr<PostShader> m_shader;
