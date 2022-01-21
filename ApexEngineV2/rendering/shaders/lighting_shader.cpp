@@ -35,18 +35,15 @@ void LightingShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
 
-    int texture_index = 1;
-
     auto *env = Environment::GetInstance();
     if (env->ShadowsEnabled()) {
         for (int i = 0; i < env->NumCascades(); i++) {
             const std::string i_str = std::to_string(i);
 
             if (auto shadow_map = env->GetShadowMap(i)) {
-                Texture::ActiveTexture(texture_index);
-                shadow_map->Begin();
-                SetUniform("u_shadowMap[" + i_str + "]", texture_index);
-                texture_index++;
+                shadow_map->Prepare();
+
+                SetUniform("u_shadowMap[" + i_str + "]", shadow_map.get());
             }
 
             SetUniform("u_shadowMatrix[" + i_str + "]", env->GetShadowMatrix(i));
@@ -67,33 +64,26 @@ void LightingShader::ApplyMaterial(const Material &mat)
     SetUniform("u_diffuseColor", mat.diffuse_color);
 
     if (auto cubemap = env->GetGlobalCubemap()) {
-        Texture::ActiveTexture(texture_index);
-        cubemap->Begin();
-        SetUniform("env_GlobalCubemap", texture_index);
+        cubemap->Prepare();
 
-        texture_index++;
+        SetUniform("env_GlobalCubemap", cubemap.get());
     }
 
     if (auto cubemap = env->GetGlobalIrradianceCubemap()) {
-        Texture::ActiveTexture(texture_index);
-        cubemap->Begin();
-        SetUniform("env_GlobalIrradianceCubemap", texture_index);
+        cubemap->Prepare();
 
-        texture_index++;
+        SetUniform("env_GlobalIrradianceCubemap", cubemap.get());
     }
 
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
         if (it->second == nullptr) {
-            SetUniform(std::string("Has") + it->first, 0);
             continue;
         }
 
-        Texture::ActiveTexture(texture_index);
-        it->second->Begin();
-        SetUniform(it->first, texture_index);
-        SetUniform(std::string("Has") + it->first, 1);
+        it->second->Prepare();
 
-        texture_index++;
+        SetUniform(it->first, it->second.get());
+        SetUniform(std::string("Has") + it->first, 1);
     }
 
     if (mat.HasParameter("shininess")) {
