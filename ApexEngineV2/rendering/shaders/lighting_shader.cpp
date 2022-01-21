@@ -84,6 +84,7 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
         if (it->second == nullptr) {
+            SetUniform(std::string("Has") + it->first, 0);
             continue;
         }
 
