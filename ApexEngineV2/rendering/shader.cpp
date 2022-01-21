@@ -165,7 +165,7 @@ void Shader::ResetUniforms()
 
 void Shader::ApplyMaterial(const Material &mat)
 {
-    // ResetUniforms();
+    ResetUniforms();
 
     MaterialFaceCull cull_mode(mat.cull_faces);
 

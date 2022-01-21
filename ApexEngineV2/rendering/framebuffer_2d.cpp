@@ -141,7 +141,7 @@ void Framebuffer2D::Use()
         }
 
         if (m_has_ao_texture) {
-            m_ao_texture->Use();
+            m_ao_texture->Begin();
             glFramebufferTexture2D(GL_FRAMEBUFFER,
                 GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, m_ao_texture->GetId(), 0);
             CatchGLErrors("Failed to attach color attachment 4 to framebuffer.", false);
@@ -173,7 +173,7 @@ void Framebuffer2D::Use()
 // TODO: dont copy textures, just modify directly
 void Framebuffer2D::Store(const std::shared_ptr<Texture> &texture, int index)
 {
-    texture->Use();
+    texture->Begin();
 
     glReadBuffer(GL_COLOR_ATTACHMENT0 + index);
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, width, height);

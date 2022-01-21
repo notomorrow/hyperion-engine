@@ -331,6 +331,8 @@ private:
 
         Uniform(Texture *texture)
         {
+            assert(texture != nullptr);
+
             data[0] = texture->GetId();
             type = UniformType(int(Uniform_Texture2D) + int(texture->GetTextureType()));
         }
