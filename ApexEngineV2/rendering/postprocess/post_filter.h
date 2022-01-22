@@ -20,8 +20,8 @@ public:
     inline std::shared_ptr<PostShader> &GetShader() { return m_shader; }
     inline const std::shared_ptr<PostShader> &GetShader() const { return m_shader; }
 
-    void Begin(Camera *cam, Framebuffer2D *fbo);
-    void End(Camera *cam, Framebuffer2D *fbo);
+    void Begin(Camera *cam, const Framebuffer::FramebufferAttachments_t &attachments);
+    void End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAttachments_t &attachments);
 
 protected:
     std::shared_ptr<PostShader> m_shader;

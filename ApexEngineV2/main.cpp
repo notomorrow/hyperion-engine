@@ -259,7 +259,7 @@ public:
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
         // m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
-        m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
+        // m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         m_renderer->SetDeferred(true);
 
         env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);

@@ -3,16 +3,16 @@
 #include "../shaders/ui/ui_object_shader.h"
 #include "../../util/mesh_factory.h"
 #include "../../asset/asset_manager.h"
+#include "../../util.h"
 
 #include <algorithm>
-#include <cassert>
 
 namespace apex {
 namespace ui {
 FontMap::FontMap(const std::shared_ptr<Texture2D> &texture, int num_chars_per_row, int num_chars_per_col, int char_offset)
     : m_texture(texture)
 {
-    assert(texture != nullptr);
+    ex_assert(texture != nullptr);
 
     m_char_size = Vector2(
         m_texture->GetWidth() / num_chars_per_row,

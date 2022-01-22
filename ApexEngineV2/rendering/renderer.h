@@ -5,6 +5,7 @@
 #include <map>
 #include <cstdlib>
 
+#include "../util.h"
 #include "../core_engine.h"
 #include "../entity.h"
 #include "../hash_code.h"
@@ -78,7 +79,7 @@ struct Bucket {
     std::size_t GetIndex(size_t at)
     {
         const auto it = hash_to_item_index.find(at);
-        assert(it != hash_to_item_index.end());
+        ex_assert(it != hash_to_item_index.end());
 
         return it->second;
     }
@@ -93,7 +94,7 @@ struct Bucket {
         }
 
         const size_t index = it->second;
-        assert(index < items.size());
+        ex_assert(index < items.size());
 
         return &items[index];
     }
@@ -101,10 +102,10 @@ struct Bucket {
     BucketItem &GetItem(size_t at)
     {
         const auto it = hash_to_item_index.find(at);
-        assert(it != hash_to_item_index.end());
+        ex_assert(it != hash_to_item_index.end());
 
         const size_t index = it->second;
-        assert(index < items.size());
+        ex_assert(index < items.size());
 
         return items[index];
     }
@@ -112,7 +113,7 @@ struct Bucket {
     void AddItem(const BucketItem &bucket_item)
     {
         const auto it = hash_to_item_index.find(bucket_item.hash_code);
-        assert(it == hash_to_item_index.end());
+        ex_assert(it == hash_to_item_index.end());
 
         const size_t index = items.size();
 
@@ -123,10 +124,10 @@ struct Bucket {
     void SetItem(size_t at, const BucketItem &bucket_item)
     {
         const auto it = hash_to_item_index.find(at);
-        assert(it != hash_to_item_index.end());
+        ex_assert(it != hash_to_item_index.end());
 
         const size_t index = it->second;
-        assert(index < items.size());
+        ex_assert(index < items.size());
 
         items[index] = bucket_item;
 
@@ -139,10 +140,10 @@ struct Bucket {
     void RemoveItem(size_t at)
     {
         const auto it = hash_to_item_index.find(at);
-        assert(it != hash_to_item_index.end());
+        ex_assert(it != hash_to_item_index.end());
 
         const size_t index = it->second;
-        assert(index < items.size());
+        ex_assert(index < items.size());
 
         hash_to_item_index.erase(it);
         //items.erase(items.begin() + index);

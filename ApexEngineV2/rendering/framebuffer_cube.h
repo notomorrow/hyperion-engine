@@ -11,18 +11,9 @@ public:
     FramebufferCube(int width, int height);
     virtual ~FramebufferCube();
 
-    virtual const std::shared_ptr<Texture> GetColorTexture() const override;
-    virtual const std::shared_ptr<Texture> GetNormalTexture() const override;
-    virtual const std::shared_ptr<Texture> GetPositionTexture() const override;
-    virtual const std::shared_ptr<Texture> GetDepthTexture() const override;
-    virtual const std::shared_ptr<Texture> GetDataTexture() const override;
-
-    virtual void Store(const std::shared_ptr<Texture> &texture, int index) override;
+    virtual void Store(FramebufferAttachment attachment, std::shared_ptr<Texture> &texture) override;
 
     virtual void Use() override;
-
-private:
-    std::shared_ptr<Cubemap> color_texture, depth_texture;
 };
 
 } // namespace apex

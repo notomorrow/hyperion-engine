@@ -21,12 +21,12 @@ public:
 
     inline std::shared_ptr<Cubemap> GetColorTexture() const
     {
-        return std::static_pointer_cast<Cubemap>(m_fbo->GetColorTexture());
+        return std::static_pointer_cast<Cubemap>(m_fbo->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_COLOR));
     }
 
     inline std::shared_ptr<Cubemap> GetDepthTexture() const
     {
-        return std::static_pointer_cast<Cubemap>(m_fbo->GetDepthTexture());
+        return std::static_pointer_cast<Cubemap>(m_fbo->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_DEPTH));
     }
 
     inline const Probe *GetProbe() const { return m_probe; }

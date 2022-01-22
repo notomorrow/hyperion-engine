@@ -1,6 +1,6 @@
 #include "physics_shape.h"
 
-#include <cassert>
+#include "../util.h"
 
 namespace apex {
 namespace physics {
@@ -17,7 +17,8 @@ PhysicsShape::~PhysicsShape()
 
 Vector3 PhysicsShape::GetAxis(unsigned int index) const
 {
-    assert(index < 8);
+    ex_assert(index < 8);
+
     return Vector3(m_transform.values[index],
         m_transform.values[index + 4],
         m_transform.values[index + 8]);

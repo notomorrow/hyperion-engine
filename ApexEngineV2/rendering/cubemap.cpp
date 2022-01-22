@@ -1,5 +1,6 @@
 #include "./cubemap.h"
 #include "../gl_util.h"
+#include "../util.h"
 #include "../core_engine.h"
 #include "../math/math_util.h"
 
@@ -26,19 +27,26 @@ void Cubemap::Initialize()
     Texture::Initialize();
 }
 
-void Cubemap::UploadGpuData()
+void Cubemap::CopyData(Texture * const other)
 {
-    for (size_t i = 0; i < m_textures.size(); i++) {
-        const auto &tex = m_textures[i];
+    not_implemented;
+}
 
-        if (tex == nullptr) {
-            throw std::runtime_error("Could not upload cubemap because texture #" + std::to_string(i + 1) + " was nullptr.");
-        } else if (tex->GetBytes() == nullptr) {
-            throw std::runtime_error("Could not upload cubemap because texture #" + std::to_string(i + 1) + " had no bytes set.");
+void Cubemap::UploadGpuData(bool should_upload_data)
+{
+    if (should_upload_data) {
+        for (size_t i = 0; i < m_textures.size(); i++) {
+            const auto &tex = m_textures[i];
+
+            if (tex == nullptr) {
+                throw std::runtime_error("Could not upload cubemap because texture #" + std::to_string(i + 1) + " was nullptr.");
+            } else if (tex->GetBytes() == nullptr) {
+                throw std::runtime_error("Could not upload cubemap because texture #" + std::to_string(i + 1) + " had no bytes set.");
+            }
+
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, tex->GetInternalFormat(),
+                tex->GetWidth(), tex->GetHeight(), 0, tex->GetFormat(), GL_UNSIGNED_BYTE, tex->GetBytes());            
         }
-
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, tex->GetInternalFormat(),
-            tex->GetWidth(), tex->GetHeight(), 0, tex->GetFormat(), GL_UNSIGNED_BYTE, tex->GetBytes());            
     }
 
     CoreEngine::GetInstance()->TexParameteri(
