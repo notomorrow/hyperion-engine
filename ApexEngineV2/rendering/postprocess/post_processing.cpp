@@ -32,6 +32,8 @@ void PostProcessing::RemoveFilter(const std::string &tag)
 
 void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
 {
+    hard_assert(!m_filters.empty());
+
     if (!m_chained_textures_initialized) {
         for (int i = 0; i < m_chained_textures.size(); i++) {
             Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
@@ -89,35 +91,29 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
 
     // TODO: have counter, if counter == m_filters.size() - 1, end the fbo. then we can avoid copying textures one time,
     // as well as not having to blit the whole fbo to the backbuffer.
+    int counter = 0;
+    bool in_fbo = true;
+    const int counter_max = m_filters.size() - 1;
 
     for (auto &&it : m_filters) {
         CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
+
+        if (++counter == counter_max) {
+            m_blit_framebuffer->End();
+            in_fbo = false;
+        }
 
         it.filter->Begin(cam, m_chained_textures);
 
         m_quad->Render();
 
-        it.filter->End(cam, m_blit_framebuffer, m_chained_textures); // store
+        if (in_fbo) {
+            it.filter->End(cam, m_blit_framebuffer, m_chained_textures); // store
+        }
     }
-    
-    m_blit_framebuffer->End();
 
     CoreEngine::GetInstance()->DepthMask(true);
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::DEPTH_TEST);
-
-    
-    CoreEngine::GetInstance()->BindFramebuffer(GL_READ_FRAMEBUFFER, m_blit_framebuffer->GetId());
-    glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-    CoreEngine::GetInstance()->BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glDrawBuffer(GL_BACK);
-
-    glBlitFramebuffer(
-        0, 0, m_blit_framebuffer->GetWidth(), m_blit_framebuffer->GetHeight(),
-        0, 0, fbo->GetWidth(), fbo->GetHeight(),
-        GL_COLOR_BUFFER_BIT,
-        GL_NEAREST
-    );
 }
 
 } // namespace apex
