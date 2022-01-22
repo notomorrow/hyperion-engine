@@ -252,13 +252,13 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(true);
+        Environment::GetInstance()->SetProbeEnabled(false);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 10, 5));
 
-        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
+        // m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
         // m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         // m_renderer->GetPostProcessing()->AddFilter<ShadertoyFilter>("shadertoytest", 100);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
@@ -867,28 +867,11 @@ public:
 
         // Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.2), 1, -cos(timer * 0.2)).Normalize());
 
-        Vector4 sun_color = Vector4(1.0, 0.95, 0.9, 1.0);
-        const float sun_to_horizon = std::max(Environment::GetInstance()->GetSun().GetDirection().y, 0.0f);
-
-        sun_color.Lerp(Vector4(0.9, 0.8, 0.7, 1.0), 1.0 - sun_to_horizon);
-        const float sun_to_end = std::min(std::max(-Environment::GetInstance()->GetSun().GetDirection().y * 5.0f, 0.0f), 1.0f);
-        sun_color.Lerp(Vector4(0.2, 0.2, 0.2, 1.0), sun_to_end);
-
-
         // Environment::GetInstance()->GetSun().SetColor(sun_color);
 
         cam->Update(dt);
 
-        //const double theta = 0.01;
-        //if (physics_update_timer >= theta) {
-            PhysicsManager::GetInstance()->RunPhysics(dt);
-       //     physics_update_timer = 0.0;
-       // }
-       // physics_update_timer += dt;
-
-        // if (auto fps_counter = std::static_pointer_cast<ui::UIText>(top->GetChild("fps_counter"))) {
-        //     fps_counter->SetText(std::to_string(CoreEngine::GetInstance()->stats.fps) + " FPS");
-        // }
+        PhysicsManager::GetInstance()->RunPhysics(dt);
 
         top->Update(dt);
     }

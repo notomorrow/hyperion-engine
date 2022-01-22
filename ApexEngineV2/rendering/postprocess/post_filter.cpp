@@ -4,19 +4,18 @@
 
 namespace apex {
 
-PostFilter::PostFilter(const std::shared_ptr<PostShader> &shader)
+PostFilter::PostFilter(const std::shared_ptr<PostShader> &shader, BitFlags_t modifies_attachments)
+    : m_shader(shader),
+      m_modifies_attachments(modifies_attachments)
 {
-    m_shader = shader;
 }
 
 void PostFilter::Begin(Camera *cam, const Framebuffer::FramebufferAttachments_t &attachments)
 {
     for (int i = 0; i < attachments.size(); i++) {
-        Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
-
         m_material.SetTexture(
-            Framebuffer::default_texture_attributes[attachment].material_key,
-            attachments[attachment]
+            Framebuffer::default_texture_attributes[i].material_key,
+            attachments[i]
         );
     }
 
@@ -31,18 +30,25 @@ void PostFilter::End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAtta
 {
     m_shader->End();
 
-    if (copy_textures) {
-        for (int i = 0; i < attachments.size(); i++) {
-            Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
+    if (!copy_textures) {
+        return;
+    }
 
-            if (!Framebuffer::default_texture_attributes[attachment].is_volatile) {
-                continue;
-            }
+    if (!m_modifies_attachments) {
+        return;
+    }
 
-            soft_assert(attachments[attachment] != nullptr);
+    for (int i = 0; i < attachments.size(); i++) {
+        Framebuffer::FramebufferAttachment attachment = Framebuffer::OrdinalToAttachment(i);
 
-            fbo->Store(attachment, attachments[attachment]);
+        if (!ModifiesAttachment(attachment)) {
+            continue;
         }
+
+        soft_assert(attachments[i] != nullptr);
+        soft_assert(Framebuffer::default_texture_attributes[i].is_volatile)
+
+        fbo->Store(attachment, attachments[i]);
     }
 }
 

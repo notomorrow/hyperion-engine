@@ -30,7 +30,7 @@ FramebufferCube::FramebufferCube(int width, int height)
         color_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         color_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
-        m_attachments[Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_COLOR] = color_texture;
+        m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)] = color_texture;
     }
 
     {
@@ -49,7 +49,7 @@ FramebufferCube::FramebufferCube(int width, int height)
         depth_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         depth_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
-        m_attachments[Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_DEPTH] = depth_texture;
+        m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)] = depth_texture;
     }
 }
 
@@ -70,31 +70,31 @@ void FramebufferCube::Use()
     glViewport(0, 0, width, height);
 
     if (!is_uploaded) {
-        m_attachments[FRAMEBUFFER_ATTACHMENT_COLOR]->Begin(); // TODO: try with should_upload_data = false
+        m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)]->Begin(); // TODO: try with should_upload_data = false
         for (int i = 0; /*i < 6*/ i < 1; i++) {
             glFramebufferTexture(
                 GL_FRAMEBUFFER,
                 GL_COLOR_ATTACHMENT0,
-                m_attachments[FRAMEBUFFER_ATTACHMENT_COLOR]->GetId(),
+                m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)]->GetId(),
                 0
             );
 
             CatchGLErrors("Failed to set framebuffer cube color data");
         }
-        m_attachments[FRAMEBUFFER_ATTACHMENT_COLOR]->End();
+        m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)]->End();
 
-        m_attachments[FRAMEBUFFER_ATTACHMENT_DEPTH]->Begin();
+        m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)]->Begin();
         for (int i = 0; /*i < 6*/ i < 1; i++) {
             glFramebufferTexture(
                 GL_FRAMEBUFFER,
                 GL_DEPTH_ATTACHMENT,
-                m_attachments[FRAMEBUFFER_ATTACHMENT_DEPTH]->GetId(),
+                m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)]->GetId(),
                 0
             );
 
             CatchGLErrors("Failed to set framebuffer cube depth data");
         }
-        m_attachments[FRAMEBUFFER_ATTACHMENT_DEPTH]->End();
+        m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)]->End();
 
         const unsigned int draw_buffers[] = {
             GL_COLOR_ATTACHMENT0

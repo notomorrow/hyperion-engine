@@ -2,24 +2,39 @@
 #define FRAMEBUFFER_H
 
 #include "texture_2D.h"
+#include "../util.h"
 
 #include <memory>
 #include <array>
+#include <cmath>
+
+#define FRAMEBUFFER_MAX_ATTACHMENTS 6
 
 namespace apex {
 
 class Framebuffer {
 public:
-    enum FramebufferAttachment { // TODO: convert to power-of-two values and use bitshifts plus some kinda Modifies(flags) operation on postfilters to test whether a filter modifies a filter
-        FRAMEBUFFER_ATTACHMENT_COLOR = 0,
-        FRAMEBUFFER_ATTACHMENT_NORMALS,
-        FRAMEBUFFER_ATTACHMENT_POSITIONS,
-        FRAMEBUFFER_ATTACHMENT_USERDATA,
-        FRAMEBUFFER_ATTACHMENT_SSAO,
-        FRAMEBUFFER_ATTACHMENT_DEPTH,
-        // --
-        FRAMEBUFFER_ATTACHMENT_MAX
+    enum FramebufferAttachment {
+        FRAMEBUFFER_ATTACHMENT_NONE = 0b00,
+        FRAMEBUFFER_ATTACHMENT_COLOR = 0b01,
+        FRAMEBUFFER_ATTACHMENT_NORMALS = 0b10,
+        FRAMEBUFFER_ATTACHMENT_POSITIONS = 0b100,
+        FRAMEBUFFER_ATTACHMENT_USERDATA = 0b1000,
+        FRAMEBUFFER_ATTACHMENT_SSAO = 0b10000,
+        FRAMEBUFFER_ATTACHMENT_DEPTH = 0b100000
     };
+
+    // convert from attachment (2^x) into ordinal (0-5) for use as an array index
+    static inline uint64_t AttachmentToOrdinal(FramebufferAttachment attachment)
+        { return FastLog2(uint64_t(attachment)); }
+
+    // convert from ordinal (0-5) into power-of-two for use as bit flags
+    static inline FramebufferAttachment OrdinalToAttachment(uint64_t ordinal)
+    {
+        hard_assert(ordinal < FRAMEBUFFER_MAX_ATTACHMENTS);
+
+        return FramebufferAttachment(1 << ordinal);
+    }
 
     struct FramebufferTextureAttributes {
         const char * const material_key;
@@ -40,9 +55,9 @@ public:
         }
     };
 
-    static const std::array<FramebufferTextureAttributes, FRAMEBUFFER_ATTACHMENT_MAX> default_texture_attributes;
+    static const std::array<const FramebufferTextureAttributes, FRAMEBUFFER_MAX_ATTACHMENTS> default_texture_attributes;
 
-    using FramebufferAttachments_t = std::array<std::shared_ptr<Texture>, FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_MAX>;
+    using FramebufferAttachments_t = std::array<std::shared_ptr<Texture>, FRAMEBUFFER_MAX_ATTACHMENTS>;
 
     Framebuffer(int width, int height);
     virtual ~Framebuffer();
@@ -51,9 +66,9 @@ public:
     inline int GetWidth() const { return width; }
     inline int GetHeight() const { return height; }
 
-    inline bool HasAttachment(FramebufferAttachment attachment) const { return m_attachments[attachment] != nullptr; }
-    inline std::shared_ptr<Texture> &GetAttachment(FramebufferAttachment attachment) { return m_attachments[attachment]; }
-    inline const std::shared_ptr<Texture> &GetAttachment(FramebufferAttachment attachment) const { return m_attachments[attachment]; }
+    inline bool HasAttachment(FramebufferAttachment attachment) const { return m_attachments[AttachmentToOrdinal(attachment)] != nullptr; }
+    inline std::shared_ptr<Texture> &GetAttachment(FramebufferAttachment attachment) { return m_attachments[AttachmentToOrdinal(attachment)]; }
+    inline const std::shared_ptr<Texture> &GetAttachment(FramebufferAttachment attachment) const { return m_attachments[AttachmentToOrdinal(attachment)]; }
 
     inline FramebufferAttachments_t &GetAttachments() { return m_attachments; }
     inline const FramebufferAttachments_t &GetAttachments() const { return m_attachments; }

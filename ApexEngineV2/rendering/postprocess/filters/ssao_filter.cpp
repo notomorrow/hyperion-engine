@@ -7,11 +7,14 @@
 namespace apex {
 
 SSAOFilter::SSAOFilter()
-    : PostFilter(ShaderManager::GetInstance()->GetShader<SSAOShader>(ShaderProperties()
-        .Define("KERNEL_SIZE", 64)
-        .Define("CAP_MIN_DISTANCE", 0.00001f)
-        .Define("CAP_MAX_DISTANCE", 0.01f)
-    ))
+    : PostFilter(
+        ShaderManager::GetInstance()->GetShader<SSAOShader>(ShaderProperties()
+            .Define("KERNEL_SIZE", 64)
+            .Define("CAP_MIN_DISTANCE", 0.00001f)
+            .Define("CAP_MAX_DISTANCE", 0.01f)
+        ),
+        Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_SSAO
+    )
 {
     for (int i = 0; i < m_kernel.size(); i++) {
         m_kernel[i] = Vector3(MathUtil::Random(-0.1f, 0.1f), MathUtil::Random(-0.1f, 0.1f), MathUtil::Random(-0.1f, 0.1f));
