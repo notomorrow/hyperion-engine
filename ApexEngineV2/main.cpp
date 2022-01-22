@@ -15,6 +15,7 @@
 #include "rendering/framebuffer_2d.h"
 #include "rendering/framebuffer_cube.h"
 #include "rendering/shaders/lighting_shader.h"
+#include "rendering/shaders/fur_shader.h"
 #include "rendering/shaders/post_shader.h"
 #include "rendering/shader_manager.h"
 #include "rendering/shadow/shadow_mapping.h"
@@ -561,16 +562,20 @@ public:
 
         auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(6.0)), 0.0);
         // plane_rigid_body->SetAwake(false);
-        /*auto plane_entity = std::make_shared<Entity>("static plane");
-        plane_entity->SetRenderable(MeshFactory::CreateCube());
-        plane_entity->Scale(Vector3(5.0));
-        plane_entity->GetRenderable()->SetShader(shader);
-        plane_entity->GetMaterial().diffuse_color = Vector4(1.0, 0.0, 0.0, 1.0);
-        plane_entity->GetMaterial().SetParameter("shininess", 0.3f);
-        plane_entity->GetMaterial().SetParameter("roughness", 0.9f);
+        auto plane_entity = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj");//std::make_shared<Entity>("static plane");
+        //plane_entity->SetRenderable(MeshFactory::CreateCube());
+        plane_entity->GetChild(0)->Scale(Vector3(1.0));
+        plane_entity->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<FurShader>(ShaderProperties()));
+        // plane_entity->GetChild(0)->GetMaterial().alpha_blended = true;
+        plane_entity->GetChild(0)->GetMaterial().diffuse_color = Vector4(1.0, 0.0, 0.0, 1.0);
+        plane_entity->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg"));
+        plane_entity->GetChild(0)->GetMaterial().SetTexture("FurStrengthMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/noise.png"));
+        plane_entity->GetChild(0)->GetMaterial().SetParameter("shininess", 0.3f);
+        plane_entity->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
         plane_entity->AddControl(plane_rigid_body);
-        top->AddChild(plane_entity);*/
+        top->AddChild(plane_entity);
 
+#if 0
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 Vector3 box_position = Vector3(((float(x) - 2.5) * 6), 4, (float(z) - 2.5) * 6);
@@ -616,6 +621,7 @@ public:
                 // box->AddControl(std::make_shared<BoundingBoxControl>());
             }
         }
+#endif
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
         // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
         // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
