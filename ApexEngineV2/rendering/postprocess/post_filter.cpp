@@ -38,9 +38,7 @@ void PostFilter::End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAtta
             continue;
         }
 
-        if (attachments[attachment] == nullptr) {
-            continue;
-        }
+        soft_assert(attachments[attachment] != nullptr);
 
         fbo->Store(attachment, attachments[attachment]);
     }

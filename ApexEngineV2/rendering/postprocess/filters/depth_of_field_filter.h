@@ -14,7 +14,7 @@ namespace apex {
 
 class DepthOfFieldFilter : public PostFilter {
 public:
-    DepthOfFieldFilter(float focus_range = 40.0f, float focus_scale = 4.0f);
+    DepthOfFieldFilter(float focus_range = 40.0f, float focus_scale = 8.0f);
     virtual ~DepthOfFieldFilter() = default;
 
     virtual void SetUniforms(Camera *cam) override;

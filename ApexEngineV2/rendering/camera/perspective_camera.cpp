@@ -3,9 +3,9 @@
 
 namespace apex {
 PerspectiveCamera::PerspectiveCamera(float fov, int width, int height, float near, float far)
-    : Camera(width, height, near, far),
-      m_fov(fov)
+    : Camera(width, height, near, far)
 {
+    m_fov = fov;
 }
 
 void PerspectiveCamera::UpdateLogic(double dt)

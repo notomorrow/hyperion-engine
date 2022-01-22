@@ -10,7 +10,8 @@ namespace apex {
 
 std::string ShaderPreprocessor::ProcessShader(const std::string &code, 
     const ShaderProperties &shader_properties, 
-    const std::string &path)
+    const std::string &path,
+    int *line_num_ptr)
 {
     std::istringstream ss(code);
     std::ostringstream os;
@@ -24,21 +25,35 @@ std::string ShaderPreprocessor::ProcessShader(const std::string &code,
         local_path.clear();
     }
 
-    return ProcessInner(ss, pos, shader_properties, local_path);
+    int line_num = 0;
+
+    if (line_num_ptr == nullptr) {
+        line_num_ptr = &line_num;
+    }
+
+    return FileHeader(path) + ProcessInner(ss, pos, shader_properties, local_path, line_num_ptr);
 }
 
 std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss, 
     std::streampos &pos,
     const ShaderProperties &shader_properties,
-    const std::string &local_path)
+    const std::string &local_path,
+    int *line_num_ptr)
 {
     ShaderProperties defines(shader_properties);
 
     std::string res;
+
     std::string line;
 
     while (std::getline(ss, line)) {
+        (*line_num_ptr)++;
+
         line = StringUtil::Trim(line);
+
+        std::string new_line = "/* ";
+        new_line += std::to_string(*line_num_ptr);
+        new_line += " */ ";
 
         if (StringUtil::StartsWith(line, "#define $")) {
             std::string sub = line.substr(9);
@@ -64,7 +79,11 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
 
                 if (new_components.size() == 2) {
                     if (StringUtil::ParseNumber<float>(value, &result.float_value)) {
-                        defines.Define(key, result.float_value);
+                        if (MathUtil::Round(result.float_value) == result.float_value) {
+                            defines.Define(key, int(result.float_value));
+                        } else {
+                            defines.Define(key, result.float_value);
+                        }
                     } else if (StringUtil::ParseNumber<int>(value, &result.int_value)) {
                         defines.Define(key, result.int_value);
                     } else if (StringUtil::ParseNumber<bool>(value, &result.bool_value)) {
@@ -76,27 +95,28 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
                     defines.Define(key, value);
                 }
             } else {
-                res += "#error \"The `#define $` directive must be defined in the format: `#define $NAME value`\"\n";
+                new_line += "#error \"The `#define $` directive must be defined in the format: `#define $NAME value`\"";
             }
         } else if (StringUtil::StartsWith(line, "#if !")) {
             std::string key = line.substr(5);
-            std::string inner = ProcessInner(ss, pos, defines, local_path);
+            std::string inner = ProcessInner(ss, pos, defines, local_path, line_num_ptr);
 
             if (!defines.GetValue(key).IsTruthy()) {
-                res += inner + "\n";
+                new_line += inner;
             }
         } else if (StringUtil::StartsWith(line, "#if ")) {
             std::string key = line.substr(4);
-            std::string inner = ProcessInner(ss, pos, defines, local_path);
+            std::string inner = ProcessInner(ss, pos, defines, local_path, line_num_ptr);
 
             if (defines.GetValue(key).IsTruthy()) {
-                res += inner + "\n";
+                new_line += inner;
             }
         } else if (StringUtil::StartsWith(line, "#endif")) {
             break; // exit current recursion
         } else if (StringUtil::StartsWith(line, "#include ")) {
             std::string val = line.substr(9);
             std::string path;
+
             if (val[0] == '\"') {
                 int idx = 1;
                 while (idx < val.size() && val[idx] != '\"') {
@@ -118,15 +138,19 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
                     relative_path.clear();
                 }
 
-                res += ProcessShader(loaded->GetText(), defines, relative_path) + "\n";
+                new_line += ProcessShader(loaded->GetText(), defines, relative_path, line_num_ptr) + "\n";
+                new_line += "\n";
+                new_line += FileHeader(local_path);
             } else {
-                res += "#error \"The include could not be found at: ";
-                res += include_path;
-                res += "\"\n";
+                new_line += "#error \"The include could not be found at: ";
+                new_line += include_path;
+                new_line += "\"";
             }
         } else {
-            res += line + "\n";
+            new_line += line;
         }
+
+        res += new_line + "\n";
     }
 
     std::string res_processed;
@@ -155,6 +179,14 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
     }
 
     return res_processed;
+}
+
+std::string ShaderPreprocessor::FileHeader(const std::string &path)
+{
+    std::string header = "/* ===== ";
+    header += path;
+    header += " ===== */\n";
+    return header;
 }
 
 } // namespace apex
