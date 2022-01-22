@@ -11,7 +11,7 @@ std::shared_ptr<Texture> Framebuffer2D::MakeTexture(
     unsigned char *bytes
 )
 {
-    auto attributes = Framebuffer::default_texture_attributes[attachment];
+    auto attributes = Framebuffer::default_texture_attributes[Framebuffer::AttachmentToOrdinal(attachment)];
 
     auto texture = std::make_shared<Texture2D>(width, height, bytes);
     texture->SetInternalFormat(attributes.internal_format);
@@ -33,12 +33,12 @@ Framebuffer2D::Framebuffer2D(
     bool has_ao_texture
 ) : Framebuffer(width, height)
 {
-    has_color_texture && (m_attachments[FRAMEBUFFER_ATTACHMENT_COLOR] = MakeTexture(FRAMEBUFFER_ATTACHMENT_COLOR, width, height));
-    has_depth_texture && (m_attachments[FRAMEBUFFER_ATTACHMENT_DEPTH] = MakeTexture(FRAMEBUFFER_ATTACHMENT_DEPTH, width, height));
-    has_normal_texture && (m_attachments[FRAMEBUFFER_ATTACHMENT_NORMALS] = MakeTexture(FRAMEBUFFER_ATTACHMENT_NORMALS, width, height));
-    has_position_texture && (m_attachments[FRAMEBUFFER_ATTACHMENT_POSITIONS] = MakeTexture(FRAMEBUFFER_ATTACHMENT_POSITIONS, width, height));
-    has_data_texture && (m_attachments[FRAMEBUFFER_ATTACHMENT_USERDATA] = MakeTexture(FRAMEBUFFER_ATTACHMENT_USERDATA, width, height));
-    has_ao_texture && (m_attachments[FRAMEBUFFER_ATTACHMENT_SSAO] = MakeTexture(FRAMEBUFFER_ATTACHMENT_SSAO, width, height));
+    has_color_texture && (m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)] = MakeTexture(FRAMEBUFFER_ATTACHMENT_COLOR, width, height));
+    has_depth_texture && (m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)] = MakeTexture(FRAMEBUFFER_ATTACHMENT_DEPTH, width, height));
+    has_normal_texture && (m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_NORMALS)] = MakeTexture(FRAMEBUFFER_ATTACHMENT_NORMALS, width, height));
+    has_position_texture && (m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_POSITIONS)] = MakeTexture(FRAMEBUFFER_ATTACHMENT_POSITIONS, width, height));
+    has_data_texture && (m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_USERDATA)] = MakeTexture(FRAMEBUFFER_ATTACHMENT_USERDATA, width, height));
+    has_ao_texture && (m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_SSAO)] = MakeTexture(FRAMEBUFFER_ATTACHMENT_SSAO, width, height));
 }
 
 Framebuffer2D::~Framebuffer2D()
@@ -61,7 +61,7 @@ void Framebuffer2D::Use()
     glViewport(0, 0, width, height);
 
     if (!is_uploaded) {
-        unsigned int draw_buffers[FRAMEBUFFER_ATTACHMENT_MAX - 1] = { GL_NONE }; // - 1 for depth
+        unsigned int draw_buffers[FRAMEBUFFER_MAX_ATTACHMENTS - 1] = { GL_NONE }; // - 1 for depth
         int draw_buffer_index = 0;
 
         for (int i = 0; i < sizeof(draw_buffers) / sizeof(draw_buffers[0]); i++) {
@@ -83,17 +83,17 @@ void Framebuffer2D::Use()
             draw_buffers[draw_buffer_index++] = GL_COLOR_ATTACHMENT0 + i;
         }
 
-        if (m_attachments[FRAMEBUFFER_ATTACHMENT_DEPTH] != nullptr) {
-            m_attachments[FRAMEBUFFER_ATTACHMENT_DEPTH]->Begin();
+        if (m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)] != nullptr) {
+            m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)]->Begin();
             glFramebufferTexture2D(
                 GL_FRAMEBUFFER,
                 GL_DEPTH_ATTACHMENT,
                 GL_TEXTURE_2D,
-                m_attachments[FRAMEBUFFER_ATTACHMENT_DEPTH]->GetId(),
+                m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)]->GetId(),
                 0
             );
             CatchGLErrors("Failed to attach depth texture to framebuffer.", false);
-            m_attachments[FRAMEBUFFER_ATTACHMENT_DEPTH]->End();
+            m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)]->End();
         }
 
         glDrawBuffers(draw_buffer_index, draw_buffers);
@@ -109,15 +109,14 @@ void Framebuffer2D::Use()
 
 void Framebuffer2D::Store(FramebufferAttachment attachment, std::shared_ptr<Texture> &texture)
 {
-    soft_assert(m_attachments[attachment] != nullptr);
+    soft_assert(m_attachments[AttachmentToOrdinal(attachment)] != nullptr);
 
     // What happens for depth tex?
-    
-    glReadBuffer(GL_COLOR_ATTACHMENT0 + int(attachment));
+    glReadBuffer(GL_COLOR_ATTACHMENT0 + AttachmentToOrdinal(attachment));
     CatchGLErrors("Failed to set read buffer");
 
     texture->Begin(false); // do not upload data (eg glTexImage2D)
-    texture->CopyData(m_attachments[attachment].get());
+    texture->CopyData(m_attachments[AttachmentToOrdinal(attachment)].get());
     texture->End();
 }
 

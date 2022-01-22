@@ -40,7 +40,7 @@ Framebuffer::default_texture_attributes = {
         CoreEngine::GLEnums::NEAREST,
         false
     ),
-    Framebuffer::FramebufferTextureAttributes( // ssao
+    Framebuffer::FramebufferTextureAttributes( // ssao / gi
         "SSLightingMap",
         CoreEngine::GLEnums::RGBA,
         CoreEngine::GLEnums::RGBA8,
