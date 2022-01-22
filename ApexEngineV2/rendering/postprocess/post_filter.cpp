@@ -32,11 +32,17 @@ void PostFilter::End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAtta
     m_shader->End();
 
     for (int i = 0; i < attachments.size(); i++) {
-        if (attachments[i] == nullptr) {
+        Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
+
+        if (!Framebuffer::default_texture_attributes[attachment].is_volatile) {
             continue;
         }
 
-        fbo->Store(Framebuffer::FramebufferAttachment(i), attachments[i]);
+        if (attachments[attachment] == nullptr) {
+            continue;
+        }
+
+        fbo->Store(attachment, attachments[attachment]);
     }
 }
 
