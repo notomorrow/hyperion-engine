@@ -10,7 +10,7 @@ namespace apex {
 
 class Framebuffer {
 public:
-    enum FramebufferAttachment {
+    enum FramebufferAttachment { // TODO: convert to power-of-two values and use bitshifts plus some kinda Modifies(flags) operation on postfilters to test whether a filter modifies a filter
         FRAMEBUFFER_ATTACHMENT_COLOR = 0,
         FRAMEBUFFER_ATTACHMENT_NORMALS,
         FRAMEBUFFER_ATTACHMENT_POSITIONS,

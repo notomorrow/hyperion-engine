@@ -9,7 +9,7 @@ namespace apex {
 const bool SkydomeControl::clouds_in_dome = true;
 
 SkydomeControl::SkydomeControl(Camera *camera)
-    : EntityControl(50.0),
+    : EntityControl(30.0),
       camera(camera),
       global_time(0.0)
 {
@@ -29,11 +29,11 @@ void SkydomeControl::OnAdded()
     dome->SetLocalScale(50);
     dome->GetChild(0)->GetRenderable()->SetShader(shader);
     dome->GetChild(0)->GetRenderable()->SetRenderBucket(Renderable::RB_SKY);
-    dome->GetChild(0)->GetMaterial().depth_test = false;
-    dome->GetChild(0)->GetMaterial().depth_write = false;
-    dome->GetChild(0)->GetMaterial().alpha_blended = true;
+    // dome->GetChild(0)->GetMaterial().depth_test = false;
+    // dome->GetChild(0)->GetMaterial().depth_write = false;
+    // dome->GetChild(0)->GetMaterial().alpha_blended = true;
 
-    //if (!clouds_in_dome) {
+    if (!clouds_in_dome) {
         clouds_shader = ShaderManager::GetInstance()->GetShader<CloudsShader>(ShaderProperties());
         clouds_shader->SetCloudColor(Vector4(1.0));
 
@@ -49,7 +49,7 @@ void SkydomeControl::OnAdded()
         clouds_node->GetMaterial().depth_write = false;
         clouds_node->GetMaterial().alpha_blended = true;
         dome->AddChild(clouds_node);
-    //}
+    }
 
     parent->AddChild(dome);
 }
@@ -62,11 +62,11 @@ void SkydomeControl::OnRemoved()
 void SkydomeControl::OnUpdate(double dt)
 {
     global_time += 0.01;
-    //if (!clouds_in_dome) {
+    if (!clouds_in_dome) {
         clouds_shader->SetGlobalTime(global_time);
         clouds_shader->SetCloudColor(Environment::GetInstance()->GetSun().GetColor());
-    //} else {
+    } else {
         shader->SetGlobalTime(global_time);
-    //}
+    }
 }
 } // namespace apex

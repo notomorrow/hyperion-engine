@@ -21,7 +21,7 @@ public:
     inline const std::shared_ptr<PostShader> &GetShader() const { return m_shader; }
 
     void Begin(Camera *cam, const Framebuffer::FramebufferAttachments_t &attachments);
-    void End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAttachments_t &attachments);
+    void End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAttachments_t &attachments, bool copy_textures = true);
 
 protected:
     std::shared_ptr<PostShader> m_shader;
