@@ -38,7 +38,7 @@ Camera *ShadowMapping::GetShadowCamera()
 
 std::shared_ptr<Texture> ShadowMapping::GetShadowMap()
 {
-    return fbo->GetColorTexture();
+    return fbo->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_COLOR);
 }
 
 void ShadowMapping::Begin()
@@ -134,7 +134,7 @@ void ShadowMapping::SetVarianceShadowMapping(bool value)
         ShaderProperties().Define("SHADOWS_VARIANCE", value)
     );
 
-    if (auto color_texture = fbo->GetColorTexture()) {
+    if (auto color_texture = fbo->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_COLOR)) {
         if (value) {
             color_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR);
         } else {

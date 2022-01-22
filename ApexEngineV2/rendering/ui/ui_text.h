@@ -2,6 +2,7 @@
 #define UI_TEXT_H
 
 #include "ui_object.h"
+#include "../../util.h"
 #include "../../math/vector2.h"
 #include "../texture_2D.h"
 
@@ -32,21 +33,21 @@ public:
 
     inline Vector2 GetScaling() const
     {
-        assert(m_texture != nullptr);
+        ex_assert(m_texture != nullptr);
 
         return m_char_size / Vector2(m_texture->GetWidth(), m_texture->GetHeight());
     }
 
     inline int NumCharsPerRow() const
     {
-        assert(m_texture != nullptr);
+        ex_assert(m_texture != nullptr);
 
         return m_texture->GetWidth() / int(m_char_size.x);
     }
 
     inline int NumCharsPerCol() const
     {
-        assert(m_texture != nullptr);
+        ex_assert(m_texture != nullptr);
 
         return m_texture->GetHeight() / int(m_char_size.y);
     }

@@ -8,6 +8,7 @@
 #include "../math/transform.h"
 #include "../asset/loadable.h"
 #include "../hash_code.h"
+#include "../util.h"
 #include "material.h"
 #include "camera/camera.h"
 
@@ -253,6 +254,10 @@ protected:
         const std::string &path);
     void ReprocessSubShader(SubShader &sub_shader, const ShaderProperties &properties);
 
+    // TODO: add better resetting of uniforms
+    // track all uniforms that were set and unset their values.
+    // still, we should be able to keep base uniforms set during the constructor.
+    // two different paths..? a flag on the uniform?
     void ResetUniforms();
 
 private:
@@ -331,7 +336,7 @@ private:
 
         Uniform(Texture *texture)
         {
-            assert(texture != nullptr);
+            ex_assert(texture != nullptr);
 
             data[0] = texture->GetId();
             type = UniformType(int(Uniform_Texture2D) + int(texture->GetTextureType()));

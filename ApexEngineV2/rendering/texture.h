@@ -23,31 +23,40 @@ public:
     inline int GetFormat() const { return fmt; }
     void SetInternalFormat(int type);
     inline int GetInternalFormat() const { return ifmt; }
-    void SetFilter(int mag, int min);
-    void SetWrapMode(int s, int t);
 
     inline int GetWidth() const { return width; }
     inline int GetHeight() const { return height; }
+
+    void SetFilter(int mag, int min);
+    inline int GetMagFilter() const { return mag_filter; }
+    inline int GetMinFilter() const { return min_filter; }
+
+    void SetWrapMode(int s, int t);
+    inline int GetWrapS() const { return wrap_s; }
+    inline int GetWrapT() const { return wrap_t; }
+
+    virtual void CopyData(Texture * const other) = 0;
 
     inline TextureType GetTextureType() const { return m_texture_type; }
 
     unsigned char * const GetBytes() const { return bytes; }
 
+    static size_t NumComponents(int format);
     static void ActiveTexture(int i);
 
-    void Prepare();
+    void Prepare(bool should_upload_data = true);
 
     virtual void End() = 0;
 
-    // TEMP: remove once all uniforms are bound directly to texture id, and Begin() calls replaced w/ Prepare()
-    inline void Begin()
+    inline void Begin(bool should_upload_data = true)
     {
-        Prepare(); 
+        Prepare(should_upload_data); 
         Use();
     }
 
 protected:
     unsigned int id;
+
     int ifmt, fmt, width, height;
     unsigned char *bytes;
 
@@ -58,7 +67,7 @@ protected:
 
     virtual void Initialize();
     virtual void Deinitialize();
-    virtual void UploadGpuData() = 0;
+    virtual void UploadGpuData(bool should_upload_data) = 0;
     virtual void Use() = 0;
 
 private:

@@ -71,8 +71,10 @@ public:
     };
 
 private:
-    std::array<Framebuffer2D*, 2> m_buffers;
-    bool m_buffers_created;
+    Framebuffer::FramebufferAttachments_t m_chained_textures;
+    bool m_chained_textures_initialized;
+
+    Framebuffer2D *m_blit_framebuffer;
 
     std::vector<Filter> m_filters;
 

@@ -146,10 +146,10 @@ void RigidBody::OnAdded()
         parent->AddChild(m_aabb_debug_node);
     }
 
-    assert(m_shape != nullptr);
+    ex_assert(m_shape != nullptr);
 
-    assert(m_rigid_body == nullptr);
-    assert(m_motion_state == nullptr);
+    ex_assert(m_rigid_body == nullptr);
+    ex_assert(m_motion_state == nullptr);
 
     if (m_shape->m_collision_shape == nullptr) {
         throw std::invalid_argument("shape has no defined collision shape, cannot create rigid body");
@@ -182,8 +182,8 @@ void RigidBody::OnRemoved()
         parent->RemoveChild(m_aabb_debug_node);
     }
 
-    assert(m_rigid_body != nullptr);
-    assert(m_motion_state != nullptr);
+    ex_assert(m_rigid_body != nullptr);
+    ex_assert(m_motion_state != nullptr);
 
     PhysicsManager::GetInstance()->UnregisterBody(this);
 

@@ -1,5 +1,5 @@
 #include "particle_construction_info.h"
-#include <cassert>
+#include "../util.h"
 
 namespace apex {
 ParticleConstructionInfo::ParticleConstructionInfo(const Vector3 &origin, const Vector3 &origin_randomness,
@@ -19,7 +19,7 @@ ParticleConstructionInfo::ParticleConstructionInfo(const Vector3 &origin, const 
       m_scale(scale),
       m_scale_randomness(scale_randomness)
 {
-    assert(m_lifespan > 0.0);
+    ex_assert(m_lifespan > 0.0);
 }
 
 ParticleConstructionInfo::ParticleConstructionInfo(const ParticleConstructionInfo &other)
@@ -37,6 +37,6 @@ ParticleConstructionInfo::ParticleConstructionInfo(const ParticleConstructionInf
       m_scale(other.m_scale),
       m_scale_randomness(other.m_scale_randomness)
 {
-    assert(m_lifespan > 0.0);
+    ex_assert(m_lifespan > 0.0);
 }
 } // namespace apex

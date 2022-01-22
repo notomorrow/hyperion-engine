@@ -12,11 +12,11 @@
 #include "../../animation/animation.h"
 #include "../../animation/skeleton.h"
 #include "../../animation/skeleton_control.h"
+#include "../../util.h"
 #include "../../util/string_util.h"
 
 #include <vector>
 #include <map>
-#include <cassert>
 #include <memory>
 
 namespace apex {
@@ -109,7 +109,8 @@ public:
             float y = std::stof(attributes.at("v"));
             texcoords.push_back(Vector2(x, y));
         } else if (name == "face") {
-            assert(attributes.size() == 3);
+            ex_assert(attributes.size() == 3);
+
             if (!has_submeshes) {
                 for (auto &&it : attributes) {
                     faces.push_back(std::stof(it.second));

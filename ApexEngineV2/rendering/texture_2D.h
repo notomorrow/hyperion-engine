@@ -12,9 +12,10 @@ public:
     virtual ~Texture2D();
 
     virtual void End() override;
+    virtual void CopyData(Texture * const other) override;
 
 protected:
-    virtual void UploadGpuData() override;
+    virtual void UploadGpuData(bool should_upload_data) override;
     virtual void Use() override;
 };
 

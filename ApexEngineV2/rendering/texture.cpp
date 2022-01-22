@@ -1,6 +1,8 @@
 #include "texture.h"
-#include "../gl_util.h"
 #include "../core_engine.h"
+#include "../core_engine.h"
+#include "../gl_util.h"
+#include "../util.h"
 
 namespace apex {
 
@@ -72,10 +74,26 @@ void Texture::SetWrapMode(int s, int t)
     wrap_t = t;
 }
 
+size_t Texture::NumComponents(int format)
+{
+    switch (format) {
+    // case CoreEngine::GLEnums::RED:
+    case CoreEngine::GLEnums::DEPTH_COMPONENT:
+        return 1;
+    // case CoreEngine::GLEnums::RG:
+    case CoreEngine::GLEnums::RGB:
+        return 3;
+    case CoreEngine::GLEnums::RGBA:
+        return 4;
+    }
+
+    unexpected_value_msg(format, "Unknown number of components for format");
+}
+
 void Texture::ActiveTexture(int i)
 {
     glActiveTexture(GL_TEXTURE0 + i);
-    CatchGLErrors("Failed to set active texture", false);
+    CatchGLErrors("Failed to set active texture", true);
 }
 
 void Texture::Initialize()
@@ -103,7 +121,7 @@ void Texture::Deinitialize()
     }
 }
 
-void Texture::Prepare()
+void Texture::Prepare(bool should_upload_data)
 {
     if (is_created && is_uploaded) {
         return;
@@ -116,7 +134,7 @@ void Texture::Prepare()
     Use();
 
     if (!is_uploaded) {
-        UploadGpuData();
+        UploadGpuData(should_upload_data);
 
         is_uploaded = true;
     }

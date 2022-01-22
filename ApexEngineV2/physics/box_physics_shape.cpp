@@ -3,6 +3,7 @@
 #include "sphere_physics_shape.h"
 #include "plane_physics_shape.h"
 #include "../math/bounding_box.h"
+#include "../util.h"
 
 #include "../bullet_math_util.h"
 #include "btBulletDynamicsCommon.h"
@@ -95,7 +96,7 @@ bool BoxPhysicsShape::CollidesWith(BoxPhysicsShape *other, CollisionList &out)
     }
 
     // check to make sure there was a result
-    assert(MathUtil::SafeValue(best) != MathUtil::MaxSafeValue<decltype(best)>());
+    ex_assert(MathUtil::SafeValue(best) != MathUtil::MaxSafeValue<decltype(best)>());
 
     CollisionInfo collision;
 

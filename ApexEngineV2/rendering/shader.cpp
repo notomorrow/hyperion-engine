@@ -1,6 +1,7 @@
 #include "shader.h"
 #include "../util/string_util.h"
 #include "../util/shader_preprocessor.h"
+#include "../util.h"
 #include "../gl_util.h"
 
 namespace apex {
@@ -39,7 +40,7 @@ Shader::~Shader()
 
 void Shader::CreateGpuData()
 {
-    assert(!is_created);
+    ex_assert(!is_created);
 
     progid = glCreateProgram();
 
@@ -56,7 +57,7 @@ void Shader::CreateGpuData()
 
 void Shader::UploadGpuData()
 {
-    assert(is_created && !is_uploaded);
+    ex_assert(is_created && !is_uploaded);
 
     for (auto &&it : subshaders) {
         auto &sub = it.second;

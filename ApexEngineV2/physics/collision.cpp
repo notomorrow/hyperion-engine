@@ -129,7 +129,7 @@ void Collision::CalculateInternals(CollisionInfo &collision, double dt)
         SwapBodies(collision);
     }
 
-    assert(collision.m_bodies[0] != nullptr);
+    ex_assert(collision.m_bodies[0] != nullptr);
 
     CalculateContactBasis(collision);
 

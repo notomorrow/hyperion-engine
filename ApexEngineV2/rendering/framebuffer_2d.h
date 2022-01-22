@@ -5,6 +5,7 @@
 #include "./texture_2D.h"
 
 #include <memory>
+#include <array>
 
 namespace apex {
 
@@ -22,30 +23,16 @@ public:
     );
     virtual ~Framebuffer2D();
 
-    virtual const std::shared_ptr<Texture> GetColorTexture() const override;
-    virtual const std::shared_ptr<Texture> GetNormalTexture() const override;
-    virtual const std::shared_ptr<Texture> GetPositionTexture() const override;
-    virtual const std::shared_ptr<Texture> GetDepthTexture() const override;
-    virtual const std::shared_ptr<Texture> GetDataTexture() const override;
-    const std::shared_ptr<Texture> GetAoTexture() const;
-
-    virtual void Store(const std::shared_ptr<Texture> &texture, int index) override;
+    virtual void Store(FramebufferAttachment attachment, std::shared_ptr<Texture> &texture) override;
 
     virtual void Use() override;
 
-private:
-    std::shared_ptr<Texture2D> m_color_texture,
-                               m_normal_texture,
-                               m_depth_texture,
-                               m_position_texture,
-                               m_data_texture,
-                               m_ao_texture;
-    bool m_has_color_texture,
-         m_has_normal_texture,
-         m_has_depth_texture,
-         m_has_position_texture,
-         m_has_data_texture,
-         m_has_ao_texture;
+    static std::shared_ptr<Texture> MakeTexture(
+        Framebuffer::FramebufferAttachment attachment,
+        int width,
+        int height,
+        unsigned char *bytes = nullptr
+    );
 };
 
 } // namespace apex

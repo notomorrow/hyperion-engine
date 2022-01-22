@@ -70,7 +70,7 @@ void ParticleEmitterControl::OnRemoved()
 
 void ParticleEmitterControl::OnUpdate(double dt)
 {
-    assert(m_particles.size() <= m_particle_renderer->m_info.m_max_particles);
+    ex_assert(m_particles.size() <= m_particle_renderer->m_info.m_max_particles);
 
     for (Particle &particle : m_particles) {
         if (particle.m_alive) {

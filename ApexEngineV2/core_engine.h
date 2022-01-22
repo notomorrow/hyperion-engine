@@ -61,6 +61,8 @@ public:
         RGB8 = 0x8051,
         RGBA8 = 0x8058,
         RGB10_A2 = 0x8059,
+        RGBA32F = 0x8814,
+        RGB32F = 0x8815,
         DEPTH_COMPONENT16 = 0x81A5,
         DEPTH_COMPONENT24 = 0x81A6,
         DEPTH_COMPONENT32F = 0x8CAC,

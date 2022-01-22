@@ -2,7 +2,7 @@
 #include "shader_manager.h"
 #include "postprocess/filters/deferred_rendering_filter.h"
 
-#include <cassert>
+#include "../util.h"
 
 namespace apex {
 Renderer::Renderer(const RenderWindow &render_window)
@@ -91,7 +91,7 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bo
     if (top->GetRenderable() != nullptr) { // NOTE: this currently doesnt handle renderable being set to null.
         const Renderable::RenderBucket new_bucket_index = top->GetRenderable()->GetRenderBucket();
 
-        assert(new_bucket_index < sizeof(m_buckets) / sizeof(Bucket));
+        hard_assert(new_bucket_index < sizeof(m_buckets) / sizeof(Bucket));
 
         new_bucket = &m_buckets[new_bucket_index];
     
@@ -107,7 +107,7 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bo
                 if (item_in_existing_bucket != m_hash_to_bucket.end()) {
                     const Renderable::RenderBucket previous_bucket_index = item_in_existing_bucket->second;
 
-                    assert(previous_bucket_index < sizeof(m_buckets) / sizeof(Bucket));
+                    hard_assert(previous_bucket_index < sizeof(m_buckets) / sizeof(Bucket));
 
                     // remove from prev bucket
                     previous_bucket = &m_buckets[previous_bucket_index];
