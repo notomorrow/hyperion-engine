@@ -33,27 +33,21 @@ void PostProcessing::RemoveFilter(const std::string &tag)
 void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
 {
     if (!m_chained_textures_initialized) {
-        CoreEngine::GetInstance()->BindFramebuffer(GL_READ_FRAMEBUFFER, fbo->GetId());
-
         for (int i = 0; i < m_chained_textures.size(); i++) {
             Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
 
-            m_chained_textures[attachment] = Framebuffer2D::MakeTexture(
-                attachment,
-                fbo->GetWidth(),
-                fbo->GetHeight(),
-                nullptr
-                // (unsigned char*)malloc(
-                //     fbo->GetWidth() * fbo->GetHeight() * (Texture::NumComponents(
-                //         Framebuffer::default_texture_attributes[attachment].format
-                //     ) * sizeof(float))
-                // )
-            );
-
-            // m_chained_textures[i]->Use(); // upload initial fbo data
+            if (Framebuffer::default_texture_attributes[attachment].is_volatile) {
+                m_chained_textures[attachment] = Framebuffer2D::MakeTexture(
+                    attachment,
+                    fbo->GetWidth(),
+                    fbo->GetHeight(),
+                    nullptr
+                );
+            } else {
+                // no need to copy
+                m_chained_textures[attachment] = fbo->GetAttachment(attachment);
+            }
         }
-
-        CoreEngine::GetInstance()->BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
         m_chained_textures_initialized = true;
     }
@@ -70,12 +64,20 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
         );
     }
 
-    CoreEngine::GetInstance()->BindFramebuffer(GL_READ_FRAMEBUFFER, fbo->GetId());
-        for (int i = 0; i < m_chained_textures.size(); i++) {
-            Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
+    // Copy data from FBO into our textures
 
-            fbo->Store(attachment, m_chained_textures[attachment]);
+    CoreEngine::GetInstance()->BindFramebuffer(GL_READ_FRAMEBUFFER, fbo->GetId());
+
+    for (int i = 0; i < m_chained_textures.size(); i++) {
+        Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
+
+        if (!Framebuffer::default_texture_attributes[attachment].is_volatile) {
+            continue;
         }
+
+        fbo->Store(attachment, m_chained_textures[attachment]);
+    }
+
     CoreEngine::GetInstance()->BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
     CoreEngine::GetInstance()->DepthMask(false);

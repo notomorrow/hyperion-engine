@@ -257,9 +257,9 @@ public:
 
         m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 20);
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
-        // m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
+        m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
-        // m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
+        m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         m_renderer->SetDeferred(true);
 
         env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
@@ -875,6 +875,7 @@ public:
             shadows->Render(m_renderer);
         }
 
+        // TODO: ProbeControl on top node
         Environment::GetInstance()->GetProbeRenderer()->Render(m_renderer, cam);
 
         if (!Environment::GetInstance()->GetGlobalCubemap()) {
