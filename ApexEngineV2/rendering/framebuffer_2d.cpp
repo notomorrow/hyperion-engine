@@ -1,5 +1,6 @@
 #include "./framebuffer_2d.h"
 #include "../gl_util.h"
+#include "../util.h"
 
 namespace apex {
 
@@ -60,7 +61,7 @@ void Framebuffer2D::Use()
     glViewport(0, 0, width, height);
 
     if (!is_uploaded) {
-        unsigned int draw_buffers[FRAMEBUFFER_ATTACHMENT_MAX - 1] = { GL_NONE }; // -1 for depth
+        unsigned int draw_buffers[FRAMEBUFFER_ATTACHMENT_MAX - 1] = { GL_NONE }; // - 1 for depth
         int draw_buffer_index = 0;
 
         for (int i = 0; i < sizeof(draw_buffers) / sizeof(draw_buffers[0]); i++) {
@@ -108,9 +109,7 @@ void Framebuffer2D::Use()
 
 void Framebuffer2D::Store(FramebufferAttachment attachment, std::shared_ptr<Texture> &texture)
 {
-    if (m_attachments[attachment] == nullptr) {
-        return;
-    }
+    soft_assert(m_attachments[attachment] != nullptr);
 
     // What happens for depth tex?
     

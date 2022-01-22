@@ -60,6 +60,7 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
             true,
             true,
             true,
+            true,
             true
         );
     }
@@ -86,6 +87,9 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
 
     m_blit_framebuffer->Use();
 
+    // TODO: have counter, if counter == m_filters.size() - 1, end the fbo. then we can avoid copying textures one time,
+    // as well as not having to blit the whole fbo to the backbuffer.
+
     for (auto &&it : m_filters) {
         CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
@@ -102,7 +106,6 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::DEPTH_TEST);
 
     
-
     CoreEngine::GetInstance()->BindFramebuffer(GL_READ_FRAMEBUFFER, m_blit_framebuffer->GetId());
     glReadBuffer(GL_COLOR_ATTACHMENT0);
 
@@ -115,7 +118,6 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
         GL_COLOR_BUFFER_BIT,
         GL_NEAREST
     );
-
 }
 
 } // namespace apex

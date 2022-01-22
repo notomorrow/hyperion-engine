@@ -14,7 +14,7 @@ DepthOfFieldFilter::DepthOfFieldFilter(float focus_range, float focus_scale)
 
 void DepthOfFieldFilter::SetUniforms(Camera *cam)
 {
-    float blur_coef = 0.6f;
+    float blur_coef = 1.0f;
     m_shader->SetUniform("CameraNearFar", Vector2(cam->GetNear(), cam->GetFar()));
     m_shader->SetUniform("Scale", Vector2(1.0f / (cam->GetWidth() * blur_coef), 1.0f / (cam->GetHeight() * blur_coef)));
     m_shader->SetUniform("FocusScale", m_focus_scale);

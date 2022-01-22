@@ -1,8 +1,6 @@
 #ifndef ENVIRONMENT_H
 #define ENVIRONMENT_H
 
-#define ENVIRONMENT_MAX_POINT_LIGHTS 4
-
 #include "../math/matrix4.h"
 #include "../math/vector2.h"
 #include "../rendering/probe/probe_renderer.h"
@@ -41,7 +39,8 @@ public:
     inline const Matrix4 &GetShadowMatrix(int i) const { return m_shadow_matrices[i]; }
     inline void SetShadowMatrix(int i, const Matrix4 &shadow_matrix) { m_shadow_matrices[i] = shadow_matrix; }
 
-    inline size_t GetMaxPointLights() const { return ENVIRONMENT_MAX_POINT_LIGHTS; }
+    inline int GetMaxPointLights() const { return m_max_point_lights; }
+    void SetMaxPointLights(int max_point_lights);
     inline size_t GetNumPointLights() const { return m_point_lights.size(); }
     inline std::shared_ptr<PointLight> &GetPointLight(size_t index) { return m_point_lights[index]; }
     inline const std::shared_ptr<PointLight> &GetPointLight(size_t index) const { return m_point_lights[index]; }
@@ -65,6 +64,7 @@ private:
 
     DirectionalLight m_sun;
     std::vector<std::shared_ptr<PointLight>> m_point_lights;
+    int m_max_point_lights;
 
     std::shared_ptr<Cubemap> m_global_cubemap;
     std::shared_ptr<Cubemap> m_global_irradiance_cubemap;

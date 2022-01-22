@@ -39,13 +39,28 @@ Environment::Environment()
       m_shadow_matrices({ Matrix4::Identity() }),
       m_sun(Vector3(-1, -1, -1).Normalize(), Vector4(0.9, 0.8, 0.7, 1.0)),
       m_probe_renderer(new ProbeRenderer()),
-      m_probe_enabled(false)
+      m_probe_enabled(false),
+      m_max_point_lights(0)
 {
+    SetMaxPointLights(10);
 }
 
 Environment::~Environment()
 {
     delete m_probe_renderer;
+}
+
+void Environment::SetMaxPointLights(int max_point_lights)
+{
+    if (max_point_lights == m_max_point_lights) {
+        return;
+    }
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("MAX_POINT_LIGHTS", max_point_lights)
+    );
+
+    m_max_point_lights = max_point_lights;
 }
 
 void Environment::SetShadowsEnabled(bool shadows_enabled)

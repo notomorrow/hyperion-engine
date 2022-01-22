@@ -82,6 +82,7 @@ void DeferredRenderingShader::ApplyTransforms(const Transform &transform, Camera
     inverse_proj_view *= camera->GetProjectionMatrix();
     inverse_proj_view.Invert();
 
+    // TODO: move into general shader calculations
     SetUniform("InverseViewProjMatrix", inverse_proj_view);
 }
 } // namespace apex

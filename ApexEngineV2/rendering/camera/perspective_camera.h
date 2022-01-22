@@ -11,9 +11,6 @@ public:
 
     virtual void UpdateLogic(double dt);
     void UpdateMatrices();
-
-protected:
-    float m_fov;
 };
 } // namespace apex
 

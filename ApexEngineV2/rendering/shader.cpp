@@ -122,6 +122,30 @@ void Shader::UploadGpuData()
             std::cout << "\tShader linker error! ";
             std::cout << "\tCompile log: \n" << log << "\n";
 
+            std::cout << "\n\n\n";
+            std::cout << "Pre-processed shader code:\n\n";
+
+            for (auto &&it : subshaders) {
+                std::cout << "===================\n";
+
+                switch (it.first) {
+                case SubShaderType::SUBSHADER_FRAGMENT:
+                    std::cout << "  FRAGMENT SHADER\n";
+                    break;
+                case SubShaderType::SUBSHADER_VERTEX:
+                    std::cout << "   VERTEX SHADER\n";
+                    break;
+                case SubShaderType::SUBSHADER_GEOMETRY:
+                    std::cout << "  GEOMETRY SHADER\n";
+                    break;
+                }
+
+                std::cout << "===================\n";
+                std::cout << it.second.processed_code;
+
+                std::cout << "\n\n";
+            }
+
             glDeleteProgram(progid);
 
             delete[] log;

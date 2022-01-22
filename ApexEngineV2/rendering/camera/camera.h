@@ -36,6 +36,8 @@ public:
     inline Matrix4 GetViewProjectionMatrix() const { return m_view_mat * m_proj_mat; }
     inline const Frustum &GetFrustum() const { return m_frustum; }
 
+    inline int GetFov() const { return m_fov; }
+
     void Rotate(const Vector3 &axis, float radians);
     void Update(double dt);
 
@@ -49,6 +51,7 @@ protected:
 
     int m_width, m_height;
     float m_near, m_far;
+    float m_fov; // only for perspective
 
 private:
 
