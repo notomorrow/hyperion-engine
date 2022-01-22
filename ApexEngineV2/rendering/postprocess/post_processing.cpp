@@ -71,6 +71,8 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
 
     CoreEngine::GetInstance()->BindFramebuffer(GL_READ_FRAMEBUFFER, fbo->GetId());
 
+    // TODO: maybe for first pass we can just use texture from fbo without copying...
+    /// but is there a point if we have to copy anyway?
     for (int i = 0; i < m_chained_textures.size(); i++) {
         Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
 
@@ -89,7 +91,7 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
 
     m_blit_framebuffer->Use();
 
-    // TODO: have counter, if counter == m_filters.size() - 1, end the fbo. then we can avoid copying textures one time,
+    // optimization: if counter == m_filters.size() - 1, end the fbo. then we can avoid copying textures one time,
     // as well as not having to blit the whole fbo to the backbuffer.
     int counter = 0;
     bool in_fbo = true;
@@ -107,9 +109,7 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
 
         m_quad->Render();
 
-        if (in_fbo) {
-            it.filter->End(cam, m_blit_framebuffer, m_chained_textures); // store
-        }
+        it.filter->End(cam, m_blit_framebuffer, m_chained_textures, in_fbo); // store
     }
 
     CoreEngine::GetInstance()->DepthMask(true);

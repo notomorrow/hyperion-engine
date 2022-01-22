@@ -27,20 +27,22 @@ void PostFilter::Begin(Camera *cam, const Framebuffer::FramebufferAttachments_t 
     m_shader->Use();
 }
 
-void PostFilter::End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAttachments_t &attachments)
+void PostFilter::End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAttachments_t &attachments, bool copy_textures)
 {
     m_shader->End();
 
-    for (int i = 0; i < attachments.size(); i++) {
-        Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
+    if (copy_textures) {
+        for (int i = 0; i < attachments.size(); i++) {
+            Framebuffer::FramebufferAttachment attachment = (Framebuffer::FramebufferAttachment)i;
 
-        if (!Framebuffer::default_texture_attributes[attachment].is_volatile) {
-            continue;
+            if (!Framebuffer::default_texture_attributes[attachment].is_volatile) {
+                continue;
+            }
+
+            soft_assert(attachments[attachment] != nullptr);
+
+            fbo->Store(attachment, attachments[attachment]);
         }
-
-        soft_assert(attachments[attachment] != nullptr);
-
-        fbo->Store(attachment, attachments[attachment]);
     }
 }
 

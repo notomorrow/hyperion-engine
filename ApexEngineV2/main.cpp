@@ -41,6 +41,7 @@
 #include "rendering/postprocess/filters/bloom_filter.h"
 #include "rendering/postprocess/filters/depth_of_field_filter.h"
 #include "rendering/postprocess/filters/fxaa_filter.h"
+#include "rendering/postprocess/filters/shadertoy_filter.h"
 
 /* Extra */
 #include "rendering/skydome/skydome.h"
@@ -251,14 +252,15 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(false);
+        Environment::GetInstance()->SetProbeEnabled(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
-        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 10, 0));
+        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 10, 5));
 
         m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
         // m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
+        // m_renderer->GetPostProcessing()->AddFilter<ShadertoyFilter>("shadertoytest", 100);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
         m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         m_renderer->SetDeferred(true);
@@ -460,7 +462,7 @@ public:
             dragger->UpdateTransform();
         }*/
 
-        /*{
+        {
             auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
             superdan->SetName("superdan");
             superdan->Move(Vector3(-7, 5, -6));
@@ -470,7 +472,7 @@ public:
             }
             top->AddChild(superdan);
             superdan->UpdateTransform();
-        }*/
+        }
 
         /*{
 
@@ -562,16 +564,17 @@ public:
 
         auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(6.0)), 0.0);
         // plane_rigid_body->SetAwake(false);
-        auto plane_entity = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj");//std::make_shared<Entity>("static plane");
-        //plane_entity->SetRenderable(MeshFactory::CreateCube());
-        plane_entity->GetChild(0)->Scale(Vector3(1.0));
-        plane_entity->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<FurShader>(ShaderProperties()));
+        auto plane_entity = std::make_shared<Entity>("static plane");
+        plane_entity->SetRenderable(MeshFactory::CreateCube());
+        plane_entity->GetRenderable()->SetShader(shader);
+        plane_entity->Scale(Vector3(3.0));
+        // plane_entity->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<FurShader>(ShaderProperties()));
         // plane_entity->GetChild(0)->GetMaterial().alpha_blended = true;
-        plane_entity->GetChild(0)->GetMaterial().diffuse_color = Vector4(1.0, 0.0, 0.0, 1.0);
-        plane_entity->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg"));
-        plane_entity->GetChild(0)->GetMaterial().SetTexture("FurStrengthMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/noise.png"));
-        plane_entity->GetChild(0)->GetMaterial().SetParameter("shininess", 0.3f);
-        plane_entity->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
+        plane_entity->GetMaterial().diffuse_color = Vector4(1.0, 1.0, 1.0, 1.0);
+        // plane_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg"));
+        // plane_entity->GetMaterial().SetTexture("FurStrengthMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/noise.png"));
+        plane_entity->GetMaterial().SetParameter("shininess", 0.5f);
+        plane_entity->GetMaterial().SetParameter("roughness", 0.1f);
         plane_entity->AddControl(plane_rigid_body);
         top->AddChild(plane_entity);
 
@@ -813,8 +816,8 @@ public:
         //     obj->Scale(2.0f);
         // }
 
-        // top->AddControl(std::make_shared<SkydomeControl>(cam));
-        top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
+        top->AddControl(std::make_shared<SkydomeControl>(cam));
+        // top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
         // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
