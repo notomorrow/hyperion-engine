@@ -4,7 +4,7 @@
 
 #include <cmath>
 
-namespace apex {
+namespace hyperion {
 
 Vector3::Vector3()
     : x(0.0f), 
@@ -323,4 +323,4 @@ std::ostream &operator<<(std::ostream &out, const Vector3 &vec) // output
     return out;
 }
 
-} // namespace apex
+} // namespace hyperion

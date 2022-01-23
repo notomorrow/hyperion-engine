@@ -8,7 +8,7 @@
 #include <utility>
 #include <string>
 
-namespace apex {
+namespace hyperion {
 
 class ShaderManager {
 public:
@@ -56,6 +56,6 @@ private:
     > instances;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

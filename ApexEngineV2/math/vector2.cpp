@@ -1,6 +1,6 @@
 #include "vector2.h"
 #include "math_util.h"
-namespace apex {
+namespace hyperion {
 
 Vector2::Vector2()
     : x(0.0f), 
@@ -183,4 +183,4 @@ std::ostream &operator<<(std::ostream &out, const Vector2 &vec) // output
     return out;
 }
 
-} // namespace apex
+} // namespace hyperion

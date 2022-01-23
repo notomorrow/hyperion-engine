@@ -1,7 +1,7 @@
 #include "animation.h"
 #include "../math/math_util.h"
 
-namespace apex {
+namespace hyperion {
 Animation::Animation(const std::string &name)
     : name(name)
 {

@@ -9,7 +9,7 @@
 #include <vector>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class TerrainChunk;
 class Camera;
 class Populator : public EntityControl {
@@ -124,6 +124,6 @@ protected:
     int m_patch_spread;
     bool m_use_batching;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

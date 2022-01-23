@@ -2,7 +2,7 @@
 #include "../gl_util.h"
 #include "../util.h"
 
-namespace apex {
+namespace hyperion {
 
 std::shared_ptr<Texture> Framebuffer2D::MakeTexture(
     Framebuffer::FramebufferAttachment attachment,
@@ -120,4 +120,4 @@ void Framebuffer2D::Store(FramebufferAttachment attachment, std::shared_ptr<Text
     texture->End();
 }
 
-} // namespace apex
+} // namespace hyperion

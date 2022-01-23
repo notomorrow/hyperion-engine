@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-namespace apex {
+namespace hyperion {
 PhysicsManager *PhysicsManager::instance = nullptr;
 
 PhysicsManager *PhysicsManager::GetInstance()
@@ -182,4 +182,4 @@ void PhysicsManager::UpdatePositions(std::vector<physics::CollisionInfo> &collis
         }
     }
 }
-} // namespace apex
+} // namespace hyperion

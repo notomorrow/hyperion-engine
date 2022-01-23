@@ -1,6 +1,6 @@
 #include "shader_code.h"
 
-namespace apex {
+namespace hyperion {
 
 const char *ShaderCode::aabb_debug_vs =
     "#version 330 core\n"
@@ -22,4 +22,4 @@ const char *ShaderCode::aabb_debug_fs =
     "    output0 = vec4(0.0, 1.0, 0.0, 1.0);"
     "}";
 
-} // namespace apex
+} // namespace hyperion

@@ -10,7 +10,7 @@
 #include <vector>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class ParticleRenderer : public Renderable {
     friend class ParticleEmitterControl;
 public:
@@ -36,6 +36,6 @@ private:
     unsigned int m_lifespan_buffer;
     unsigned int m_vao;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

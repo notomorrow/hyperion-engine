@@ -6,7 +6,7 @@
 
 #include <array>
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 // forward declaration
 class RigidBody;
@@ -27,6 +27,6 @@ struct CollisionInfo {
     CollisionInfo(const CollisionInfo &other);
 };
 } // namespace physics
-} // namespace apex
+} // namespace hyperion
 
 #endif

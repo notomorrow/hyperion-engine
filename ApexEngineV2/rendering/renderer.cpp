@@ -4,7 +4,7 @@
 
 #include "../util.h"
 
-namespace apex {
+namespace hyperion {
 Renderer::Renderer(const RenderWindow &render_window)
     : m_render_window(render_window),
       m_fbo(nullptr),
@@ -255,4 +255,4 @@ void Renderer::SetDeferred(bool deferred)
 
     m_is_deferred = deferred;
 }
-} // namespace apex
+} // namespace hyperion

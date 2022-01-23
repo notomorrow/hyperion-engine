@@ -11,7 +11,7 @@
 
 #include <array>
 
-namespace apex {
+namespace hyperion {
 
 class Vertex {
 public:
@@ -114,6 +114,6 @@ private:
     std::array<int, MAX_BONE_INDICES> bone_indices;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

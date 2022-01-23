@@ -12,7 +12,7 @@
 
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class SkydomeControl : public EntityControl {
 public:
     SkydomeControl(Camera *camera);
@@ -33,6 +33,6 @@ private:
     double global_time;
     Vector4 sky_color;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

@@ -5,7 +5,7 @@
 #include "box_physics_shape.h"
 #include "../math/vector3.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 
 class BoxCollision {
@@ -29,6 +29,6 @@ public:
 };
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion
 
 #endif

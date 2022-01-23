@@ -6,7 +6,7 @@
 #include <string>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class AssetLoader {
 public:
     virtual ~AssetLoader() = default;

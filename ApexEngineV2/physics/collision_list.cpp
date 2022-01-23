@@ -1,6 +1,6 @@
 #include "collision_list.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 CollisionList::CollisionList()
 {
@@ -14,4 +14,4 @@ CollisionList::CollisionList(const CollisionList &other)
 }
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

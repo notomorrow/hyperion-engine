@@ -6,7 +6,7 @@
 #include <ostream>
 #include <cmath>
 
-namespace apex {
+namespace hyperion {
 
 class Vector2 {
     friend std::ostream &operator<<(std::ostream &out, const Vector2 &vec);
@@ -68,6 +68,6 @@ public:
     }
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

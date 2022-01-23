@@ -1,6 +1,6 @@
 #include "vertex.h"
 
-namespace apex {
+namespace hyperion {
 Vertex &Vertex::operator=(const Vertex &other)
 {
     position = other.position;
@@ -52,4 +52,4 @@ Vertex &Vertex::operator*=(const Transform &transform)
 {
     return *this = operator*(transform);
 }
-} // namespace apex
+} // namespace hyperion

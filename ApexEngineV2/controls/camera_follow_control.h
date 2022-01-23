@@ -8,7 +8,7 @@
 #include "../rendering/camera/camera.h"
 #include "../entity.h"
 
-namespace apex {
+namespace hyperion {
 class CameraFollowControl : public EntityControl {
 public:
     CameraFollowControl(Camera *camera, const Vector3 &offset = Vector3::Zero());
@@ -25,6 +25,6 @@ private:
     Camera *m_camera;
     Vector3 m_offset;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

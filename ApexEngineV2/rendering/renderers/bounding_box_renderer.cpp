@@ -1,7 +1,7 @@
 #include "bounding_box_renderer.h"
 #include "../shaders/shader_code.h"
 
-namespace apex {
+namespace hyperion {
 const std::vector<MeshIndex> BoundingBoxRenderer::indices = {
     0, 1, 1, 2, 2, 3,
     3, 0, 0, 4, 4, 5,
@@ -45,4 +45,4 @@ void BoundingBoxRenderer::Render()
     m_shader->End();
     // glLineWidth(1.0f);
 }
-} // namespace apex
+} // namespace hyperion

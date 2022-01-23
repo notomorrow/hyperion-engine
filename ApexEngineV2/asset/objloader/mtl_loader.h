@@ -10,7 +10,7 @@
 #include <string>
 #include <algorithm>
 
-namespace apex {
+namespace hyperion {
 
 class MtlLib : public Loadable {
 public:

@@ -2,7 +2,7 @@
 
 #include "../util.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 
 PhysicsShape::PhysicsShape(PhysicsShapeType type)
@@ -25,4 +25,4 @@ Vector3 PhysicsShape::GetAxis(unsigned int index) const
 }
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

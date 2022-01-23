@@ -10,7 +10,7 @@
 
 #define MAX_VELOCITY 20
 
-namespace apex {
+namespace hyperion {
 // forward declarations
 class AABBPhysicsObject;
 class MeshPhysicsObject;
@@ -60,6 +60,6 @@ protected:
     Vector3 velocity;
     Vector3 gravity;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

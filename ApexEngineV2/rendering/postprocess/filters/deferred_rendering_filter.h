@@ -3,7 +3,7 @@
 
 #include "../post_filter.h"
 
-namespace apex {
+namespace hyperion {
 class DeferredRenderingFilter : public PostFilter {
 public:
     DeferredRenderingFilter();
@@ -11,6 +11,6 @@ public:
 
     virtual void SetUniforms(Camera *cam) override;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

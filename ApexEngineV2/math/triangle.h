@@ -8,7 +8,7 @@
 
 #include <array>
 
-namespace apex {
+namespace hyperion {
 class Triangle {
 public:
     Triangle();
@@ -34,6 +34,6 @@ public:
 private:
     std::array<Vertex, 3> m_points;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

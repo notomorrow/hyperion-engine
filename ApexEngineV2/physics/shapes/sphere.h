@@ -3,13 +3,13 @@
 
 #include "../../math/vector3.h"
 
-namespace apex {
+namespace hyperion {
 
 struct Sphere {
     Vector3 m_center;
     double m_radius;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

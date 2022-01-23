@@ -4,7 +4,7 @@
 #include "../shader_manager.h"
 #include "../../util.h"
 
-namespace apex {
+namespace hyperion {
 ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist, bool use_fbo)
     : view_cam(view_cam),
       max_dist(max_dist),
@@ -145,4 +145,4 @@ void ShadowMapping::SetVarianceShadowMapping(bool value)
     m_is_variance_shadow_mapping = value;
 }
 
-} // namespace apex
+} // namespace hyperion

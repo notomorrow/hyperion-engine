@@ -5,10 +5,10 @@
 #include "../math/bounding_box.h"
 #include "../math/ray.h"
 
-namespace apex {
+namespace hyperion {
 
 void RayTestSphere(const Ray &ray, const Sphere &sphere);
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

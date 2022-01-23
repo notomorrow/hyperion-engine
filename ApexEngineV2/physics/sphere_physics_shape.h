@@ -3,7 +3,7 @@
 
 #include "physics_shape.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 class SpherePhysicsShape : public PhysicsShape {
 public:
@@ -26,6 +26,6 @@ private:
     double m_radius;
 };
 } // namespace physics
-} // namespace apex
+} // namespace hyperion
 
 #endif

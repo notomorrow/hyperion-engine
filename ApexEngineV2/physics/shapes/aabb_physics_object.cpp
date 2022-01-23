@@ -1,7 +1,7 @@
 #include "aabb_physics_object.h"
 #include <algorithm>
 
-namespace apex {
+namespace hyperion {
 AABBPhysicsObject::AABBPhysicsObject(const std::string &tag, 
     double mass, double restituion, const BoundingBox &aabb)
     : aabb(aabb), PhysicsObject(tag, mass, restituion, AABB_physics_shape)

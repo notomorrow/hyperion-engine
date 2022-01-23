@@ -8,7 +8,7 @@
 #include <array>
 #include <limits>
 
-namespace apex {
+namespace hyperion {
 
 class BoundingBox {
 public:
@@ -49,6 +49,6 @@ private:
     Vector3 m_max;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

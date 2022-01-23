@@ -1,6 +1,6 @@
 #include "shader_manager.h"
 
-namespace apex {
+namespace hyperion {
 
 ShaderManager *ShaderManager::instance = nullptr;
 
@@ -32,4 +32,4 @@ void ShaderManager::SetBaseShaderProperties(const ShaderProperties &properties)
     }
 }
 
-} // namespace apex
+} // namespace hyperion

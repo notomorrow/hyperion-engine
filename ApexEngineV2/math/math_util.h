@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <cmath>
 
-namespace apex {
+namespace hyperion {
 
 class MathUtil {
 public:
@@ -138,6 +138,6 @@ public:
     }
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

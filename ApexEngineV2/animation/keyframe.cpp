@@ -1,7 +1,7 @@
 #include "keyframe.h"
 #include "../math/math_util.h"
 
-namespace apex {
+namespace hyperion {
 Keyframe::Keyframe()
     : time(0.0f)
 {

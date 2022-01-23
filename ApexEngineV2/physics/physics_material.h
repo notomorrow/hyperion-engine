@@ -6,7 +6,7 @@
 
 #include <float.h>
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 class PhysicsMaterial {
     friend class RigidBody;
@@ -35,6 +35,6 @@ private:
     double m_angular_damping;
 };
 } // namespace physics
-} // namespace apex
+} // namespace hyperion
 
 #endif

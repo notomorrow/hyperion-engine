@@ -3,7 +3,7 @@
 
 #include "camera.h"
 
-namespace apex {
+namespace hyperion {
 class PerspectiveCamera : public Camera {
 public:
     PerspectiveCamera(float fov, int width, int height, float near, float far);
@@ -12,6 +12,6 @@ public:
     virtual void UpdateLogic(double dt);
     void UpdateMatrices();
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

@@ -6,7 +6,7 @@
 
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class MeshFactory {
 public:
     static std::shared_ptr<Mesh> CreateQuad(bool triangle_fan = true);
@@ -18,6 +18,6 @@ public:
     static std::shared_ptr<Mesh> TransformMesh(const std::shared_ptr<Mesh> &mesh,
         const Transform &transform);
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

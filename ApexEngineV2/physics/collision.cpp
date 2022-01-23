@@ -2,7 +2,7 @@
 #include "rigid_body.h"
 #include <cassert>
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 void Collision::ApplyVelocityChange(CollisionInfo &collision,
     std::array<Vector3, 2> &linear_change,
@@ -342,4 +342,4 @@ Vector3 Collision::CalculateFrictionImpulse(CollisionInfo &collision,
 }
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

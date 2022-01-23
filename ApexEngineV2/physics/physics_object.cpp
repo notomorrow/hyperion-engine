@@ -1,6 +1,6 @@
 #include "physics_object.h"
 
-namespace apex {
+namespace hyperion {
 PhysicsObject::PhysicsObject(const std::string &tag, 
     double mass, double restitution, PhysicsShape shape)
     : tag(tag), mass(mass), restitution(restitution), shape(shape), grounded(false), gravity(0, -1, 0)
@@ -55,4 +55,4 @@ void PhysicsObject::ApplyForce(const Vector3 &vec)
 {
     force += vec;
 }
-} // namespace apex
+} // namespace hyperion

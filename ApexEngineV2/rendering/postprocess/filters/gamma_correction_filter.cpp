@@ -2,7 +2,7 @@
 #include "../../shader_manager.h"
 #include "../../shaders/post/gamma_correct.h"
 
-namespace apex {
+namespace hyperion {
 
 GammaCorrectionFilter::GammaCorrectionFilter()
     : PostFilter(ShaderManager::GetInstance()->GetShader<GammaCorrectShader>(ShaderProperties()))
@@ -13,4 +13,4 @@ void GammaCorrectionFilter::SetUniforms(Camera *cam)
 {
 }
 
-} // namespace apex
+} // namespace hyperion

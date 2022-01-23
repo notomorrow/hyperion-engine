@@ -3,7 +3,7 @@
 #include "../camera/perspective_camera.h"
 #include "../../math/matrix_util.h"
 
-namespace apex {
+namespace hyperion {
 Probe::Probe(const Vector3 &origin, int width, int height, float near, float far)
     : m_origin(origin),
       m_width(width),
@@ -39,4 +39,4 @@ void Probe::Begin()
 void Probe::End()
 {
 }
-} // namespace apex
+} // namespace hyperion

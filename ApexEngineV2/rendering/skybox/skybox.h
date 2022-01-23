@@ -10,7 +10,7 @@
 
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class SkyboxControl : public EntityControl {
 public:
     SkyboxControl(Camera *camera, const std::shared_ptr<Cubemap> &cubemap);
@@ -25,6 +25,6 @@ private:
     std::shared_ptr<Cubemap> m_cubemap;
     Camera *m_camera;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

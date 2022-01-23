@@ -1,6 +1,6 @@
 #include "transform.h"
 
-namespace apex {
+namespace hyperion {
 
 Transform::Transform()
     : m_translation(Vector3::Zero()),
@@ -58,4 +58,4 @@ Transform &Transform::operator*=(const Transform &other)
     return *this;
 }
 
-} // namespace apex
+} // namespace hyperion

@@ -8,7 +8,7 @@
 #include "matrix3.h"
 #include "matrix4.h"
 
-namespace apex {
+namespace hyperion {
 
 class Quaternion;
 
@@ -88,6 +88,6 @@ public:
     }
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

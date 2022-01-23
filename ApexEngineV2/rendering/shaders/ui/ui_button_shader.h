@@ -3,12 +3,12 @@
 
 #include "ui_object_shader.h"
 
-namespace apex {
+namespace hyperion {
 class UIButtonShader : public UIObjectShader {
 public:
     UIButtonShader(const ShaderProperties &properties);
     virtual ~UIButtonShader() = default;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

@@ -10,7 +10,7 @@
 #include "../../../math/vector2.h"
 #include "../../../math/matrix4.h"
 
-namespace apex {
+namespace hyperion {
 
 class FXAAFilter : public PostFilter {
 public:
@@ -20,6 +20,6 @@ public:
     virtual void SetUniforms(Camera *cam) override;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

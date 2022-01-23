@@ -7,7 +7,7 @@
 
 #include <functional>
 
-namespace apex {
+namespace hyperion {
 struct ParticleConstructionInfo {
     /*// the function used to create a particle's origin
     std::function<Vector3(const Particle &particle)> m_origin_generator;
@@ -50,6 +50,6 @@ struct ParticleConstructionInfo {
     ParticleConstructionInfo(const ParticleConstructionInfo &other);
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

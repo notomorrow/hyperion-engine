@@ -12,7 +12,7 @@
 #include <map>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 
 enum MaterialParameterType {
     MaterialParameter_None,
@@ -114,6 +114,6 @@ private:
     std::map<std::string, MaterialParameter> params;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

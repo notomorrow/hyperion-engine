@@ -11,7 +11,7 @@
 
 #include <fstream>
 
-namespace apex {
+namespace hyperion {
 void ObjModel::AddMesh(const std::string &name)
 {
     std::string mesh_name = name;

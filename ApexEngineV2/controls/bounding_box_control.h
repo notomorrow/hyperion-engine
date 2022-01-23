@@ -9,7 +9,7 @@
 #include "../entity.h"
 #include "../rendering/renderers/bounding_box_renderer.h"
 
-namespace apex {
+namespace hyperion {
 class BoundingBoxControl : public EntityControl {
 public:
     BoundingBoxControl();
@@ -23,6 +23,6 @@ private:
     std::shared_ptr<Entity> m_entity;
     std::shared_ptr<BoundingBoxRenderer> m_bounding_box_renderer;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

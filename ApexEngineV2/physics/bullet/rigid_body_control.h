@@ -3,7 +3,7 @@
 
 #include "../control.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 class RigidBodyControl : public EntityControl {
 public:
@@ -15,6 +15,6 @@ public:
     virtual void OnUpdate(double dt) override;
 };
 }
-} // namespace apex
+} // namespace hyperion
 
 #endif

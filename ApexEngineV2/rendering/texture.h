@@ -3,7 +3,7 @@
 
 #include "../asset/loadable.h"
 
-namespace apex {
+namespace hyperion {
 
 class Texture : public Loadable {
     friend class TextureLoader;
@@ -74,6 +74,6 @@ private:
     bool is_created, is_uploaded;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

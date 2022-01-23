@@ -2,7 +2,7 @@
 #define BYTE_READER_H
 #include <fstream>
 
-namespace apex {
+namespace hyperion {
 class ByteReader {
 public:
     virtual ~ByteReader() {}

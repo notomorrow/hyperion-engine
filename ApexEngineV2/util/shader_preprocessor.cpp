@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-namespace apex {
+namespace hyperion {
 
 std::string ShaderPreprocessor::ProcessShader(const std::string &code, 
     const ShaderProperties &shader_properties, 
@@ -189,4 +189,4 @@ std::string ShaderPreprocessor::FileHeader(const std::string &path)
     return header;
 }
 
-} // namespace apex
+} // namespace hyperion

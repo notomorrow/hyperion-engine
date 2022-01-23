@@ -8,7 +8,7 @@
 
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 
 class TerrainChunk {
 public:
@@ -33,6 +33,6 @@ protected:
     std::vector<MeshIndex> BuildIndices();
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

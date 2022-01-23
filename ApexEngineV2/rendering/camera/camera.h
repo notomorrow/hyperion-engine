@@ -5,7 +5,7 @@
 #include "../../math/matrix4.h"
 #include "../../math/frustum.h"
 
-namespace apex {
+namespace hyperion {
 class Camera {
 public:
     Camera(int width, int height, float near, float far);

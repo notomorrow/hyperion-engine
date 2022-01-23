@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace apex {
+namespace hyperion {
 WorleyNoiseGenerator::WorleyNoiseGenerator(int seed)
     : m_seed(seed)
 {
@@ -114,4 +114,4 @@ void WorleyNoiseGenerator::Insert(std::vector<double> &data, double value)
         }
     }
 }
-} // namespace apex
+} // namespace hyperion

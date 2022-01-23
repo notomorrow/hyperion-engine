@@ -15,12 +15,12 @@
 class btRigidBody;
 class btDefaultMotionState;
 
-namespace apex {
+namespace hyperion {
 class BoundingBoxRenderer;
 class PhysicsManager;
 namespace physics {
 class RigidBody : public EntityControl {
-    friend class ::apex::PhysicsManager;
+    friend class ::hyperion::PhysicsManager;
 public:
     RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial material);
     virtual ~RigidBody() override;
@@ -126,6 +126,6 @@ private:
     std::shared_ptr<Entity> m_aabb_debug_node;
 };
 } // namespace physics
-} // namespace apex
+} // namespace hyperion
 
 #endif

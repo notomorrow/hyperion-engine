@@ -19,7 +19,7 @@
 #include <map>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 struct BoneAssign {
     size_t vertex_idx;
     size_t bone_idx;
@@ -299,4 +299,4 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
 
     return final_node;
 }
-} // namespace apex
+} // namespace hyperion

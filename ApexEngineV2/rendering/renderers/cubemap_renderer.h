@@ -3,7 +3,7 @@
 
 #include "../renderable.h"
 
-namespace apex {
+namespace hyperion {
 
 class CubemapRenderer : public Renderable {
 public:
@@ -13,6 +13,6 @@ public:
 
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

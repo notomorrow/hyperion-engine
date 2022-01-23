@@ -3,7 +3,7 @@
 
 #include "ui_object.h"
 
-namespace apex {
+namespace hyperion {
 namespace ui {
 class UIButton : public UIObject {
 public:
@@ -11,7 +11,7 @@ public:
     virtual ~UIButton() = default;
 };
 } // namespace ui
-} // namespace apex
+} // namespace hyperion
 
 
 #endif

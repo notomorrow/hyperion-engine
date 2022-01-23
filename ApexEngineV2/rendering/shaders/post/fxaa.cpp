@@ -3,7 +3,7 @@
 #include "../../../asset/text_loader.h"
 #include "../../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 FXAAShader::FXAAShader(const ShaderProperties &properties)
     : PostShader(properties)
 {
@@ -21,4 +21,4 @@ void FXAAShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     Shader::ApplyTransforms(transform, camera);
 }
-} // namespace apex
+} // namespace hyperion

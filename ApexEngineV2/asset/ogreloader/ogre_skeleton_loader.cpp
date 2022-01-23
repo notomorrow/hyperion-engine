@@ -1,7 +1,7 @@
 #include "ogre_skeleton_loader.h"
 #include "../../math/vector3.h"
 
-namespace apex {
+namespace hyperion {
 class OgreSkeletonHandler : public xml::SaxHandler {
 public:
     OgreSkeletonHandler()

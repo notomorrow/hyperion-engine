@@ -4,7 +4,7 @@
 #include "../../../util/shader_preprocessor.h"
 #include "../../environment.h"
 
-namespace apex {
+namespace hyperion {
 ShadertoyShader::ShadertoyShader(const ShaderProperties &properties)
     : PostShader(properties)
 {
@@ -26,4 +26,4 @@ void ShadertoyShader::ApplyTransforms(const Transform &transform, Camera *camera
     SetUniform("iTime", 0.1f); // TODO
     SetUniform("iResolution", Vector2(1, 1));//camera->GetWidth(), camera->GetHeight()));
 }
-} // namespace apex
+} // namespace hyperion

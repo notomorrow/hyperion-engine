@@ -16,7 +16,7 @@
 #include "framebuffer_2d.h"
 #include "postprocess/post_processing.h"
 
-namespace apex {
+namespace hyperion {
 
 struct MemoizedFrustumCheckKey {
     size_t frustum_hash_code;
@@ -213,6 +213,6 @@ private:
 
     std::map<MemoizedFrustumCheckKey, bool> m_memoized_frustum_checks; // TODO: some sort of deque map
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

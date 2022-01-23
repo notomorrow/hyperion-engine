@@ -11,7 +11,7 @@
 
 #include <array>
 
-namespace apex {
+namespace hyperion {
 class ShadowMapping {
 public:
     ShadowMapping(Camera *view_cam, double max_dist, bool use_fbo = true);
@@ -56,6 +56,6 @@ protected:
         std::array<Vector3, 8> &out_vec, const Matrix4 &mat) const;
     void UpdateFrustumPoints(std::array<Vector3, 8> &points);
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

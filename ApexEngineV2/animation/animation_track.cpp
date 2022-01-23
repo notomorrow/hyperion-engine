@@ -1,6 +1,6 @@
 #include "animation_track.h"
 
-namespace apex {
+namespace hyperion {
 AnimationTrack::AnimationTrack(std::shared_ptr<Bone> bone) :
     bone(bone)
 {

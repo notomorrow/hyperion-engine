@@ -1,6 +1,6 @@
 #include "box_collision.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 
 double BoxCollision::TransformToAxis(const BoxPhysicsShape &box, const Vector3 &axis)
@@ -95,4 +95,4 @@ bool BoxCollision::TryAxis(const BoxPhysicsShape &a, const BoxPhysicsShape &b,
 }
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cstring>
 
-namespace apex {
+namespace hyperion {
 AudioManager *AudioManager::instance = nullptr;
 
 AudioManager *AudioManager::GetInstance()
@@ -89,4 +89,4 @@ void AudioManager::SetListenerOrientation(const Vector3 &forward, const Vector3 
     const float values[] = { forward.x, forward.y, forward.z, up.x, up.y, up.z };
     alListenerfv(AL_ORIENTATION, values);
 }
-} // namespace apex
+} // namespace hyperion

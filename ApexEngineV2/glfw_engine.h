@@ -4,7 +4,7 @@
 #include "core_engine.h"
 #include "opengl.h"
 
-namespace apex {
+namespace hyperion {
 
 class GlfwEngine : public CoreEngine {
 public:
@@ -76,6 +76,6 @@ private:
     GLFWwindow *window;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

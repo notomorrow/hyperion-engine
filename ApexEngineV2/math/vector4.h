@@ -5,7 +5,7 @@
 #include <iostream>
 #include "matrix4.h"
 
-namespace apex {
+namespace hyperion {
 
 class Vector3;
 
@@ -83,6 +83,6 @@ public:
     }
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

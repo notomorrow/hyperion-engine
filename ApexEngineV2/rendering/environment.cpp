@@ -1,7 +1,7 @@
 #include "environment.h"
 #include "shader_manager.h"
 
-namespace apex {
+namespace hyperion {
 Environment *Environment::instance = nullptr;
 const Vector2 Environment::possion_disk[16] = {
     Vector2(-0.94201624f, -0.39906216f),
@@ -102,4 +102,4 @@ void Environment::SetProbeEnabled(bool probe_enabled)
     m_probe_enabled = probe_enabled;
 }
 
-} // namespace apex
+} // namespace hyperion

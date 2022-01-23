@@ -10,7 +10,7 @@
 
 #include <cassert>
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 
 BoxPhysicsShape::BoxPhysicsShape(const Vector3 &dimensions)
@@ -263,4 +263,4 @@ bool BoxPhysicsShape::CollidesWith(PlanePhysicsShape *shape, CollisionList &out)
 }
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

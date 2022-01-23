@@ -8,7 +8,7 @@
 #include <vector>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 struct Submesh {
     std::shared_ptr<Mesh> mesh;
     Transform transform;
@@ -30,6 +30,6 @@ protected:
     void UpdateSubmeshes();
     void ApplyTransforms();
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

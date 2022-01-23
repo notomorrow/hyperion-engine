@@ -1,6 +1,6 @@
 #include "renderable.h"
 
-namespace apex {
+namespace hyperion {
 
 Renderable::Renderable(RenderBucket bucket)
     : m_bucket(bucket)
@@ -25,4 +25,4 @@ bool Renderable::IntersectRay(const Ray &ray, const Transform &transform, Raytes
     return false;
 }
 
-} // namespace apex
+} // namespace hyperion

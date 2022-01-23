@@ -8,7 +8,7 @@
 #include <cmath>
 using std::abs;
 
-namespace apex {
+namespace hyperion {
 class Quaternion {
     friend std::ostream &operator<<(std::ostream &out, const Quaternion &rot);
 public:
@@ -53,6 +53,6 @@ public:
 
     static Quaternion Identity();
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

@@ -4,7 +4,7 @@
 #include "../terrain_control.h"
 #include "noise_terrain_chunk.h"
 
-namespace apex {
+namespace hyperion {
 
 class NoiseTerrainControl : public TerrainControl {
 public:
@@ -17,6 +17,6 @@ protected:
     virtual TerrainChunk *NewChunk(const ChunkInfo &height_info) override;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

@@ -1,6 +1,6 @@
 #include "game.h"
 
-namespace apex {
+namespace hyperion {
 
 Game::Game(const RenderWindow &window) 
     : m_input_manager(new InputManager),
@@ -23,4 +23,4 @@ void Game::Update(double dt)
     Logic(dt);
 }
 
-} // namespace apex
+} // namespace hyperion

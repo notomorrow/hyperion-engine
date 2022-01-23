@@ -4,7 +4,7 @@
 
 #include <fstream>
 
-namespace apex {
+namespace hyperion {
 std::shared_ptr<Loadable> MtlLib::Clone()
 {
     std::shared_ptr<MtlLib> new_mtl = std::make_shared<MtlLib>();

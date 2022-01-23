@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace apex {
+namespace hyperion {
 class Skeleton : public Loadable {
 public:
     Skeleton(const std::string &name = "");

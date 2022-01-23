@@ -4,7 +4,7 @@
 #include "../../asset/text_loader.h"
 #include "../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 SkyboxShader::SkyboxShader(const ShaderProperties &properties)
     : Shader(properties)
 {
@@ -56,4 +56,4 @@ void SkyboxShader::ApplyTransforms(const Transform &transform, Camera *camera)
 
     SetUniform("u_camerapos", camera->GetTranslation());
 }
-} // namespace apex
+} // namespace hyperion

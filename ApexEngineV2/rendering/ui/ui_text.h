@@ -9,7 +9,7 @@
 #include <array>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class Mesh;
 namespace ui {
 class FontMap {
@@ -74,7 +74,7 @@ protected:
     CharMesh OptimizeCharMeshes(std::vector<CharMesh> char_meshes) const;
 };
 } // namespace ui
-} // namespace apex
+} // namespace hyperion
 
 
 #endif

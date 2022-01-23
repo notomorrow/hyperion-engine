@@ -9,7 +9,7 @@
 
 struct osn_context;
 
-namespace apex {
+namespace hyperion {
 
 struct SimplexNoiseData {
     osn_context *octaves[OSN_OCTAVE_COUNT];
@@ -38,6 +38,6 @@ private:
     static double GetSimplexNoise(SimplexNoiseData *data, int x, int z);
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

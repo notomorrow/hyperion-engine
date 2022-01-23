@@ -3,7 +3,7 @@
 #include "../../gl_util.h"
 #include "../../util/mesh_factory.h"
 
-namespace apex {
+namespace hyperion {
 PostProcessing::PostProcessing()
     : m_render_scale(Vector2::One()),
       m_chained_textures_initialized(false),
@@ -115,4 +115,4 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::DEPTH_TEST);
 }
 
-} // namespace apex
+} // namespace hyperion

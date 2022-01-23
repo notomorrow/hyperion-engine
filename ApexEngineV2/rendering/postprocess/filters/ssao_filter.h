@@ -10,7 +10,7 @@
 #include "../../../math/vector2.h"
 #include "../../../math/matrix4.h"
 
-namespace apex {
+namespace hyperion {
 
 class SSAOFilter : public PostFilter {
 public:
@@ -25,6 +25,6 @@ private:
     std::shared_ptr<Texture2D> m_noise_map;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

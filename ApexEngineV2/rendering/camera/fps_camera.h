@@ -5,7 +5,7 @@
 #include "../../render_window.h"
 #include "perspective_camera.h"
 
-namespace apex {
+namespace hyperion {
 class FpsCamera : public PerspectiveCamera {
 public:
     FpsCamera(InputManager *inputmgr, RenderWindow *window, int width, int height, float fov, float near, float far);
@@ -31,6 +31,6 @@ private:
     void HandleMouseInput(double dt, int half_width, int half_height);
     void HandleKeyboardInput(double dt);
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

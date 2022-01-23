@@ -3,7 +3,7 @@
 
 #include "camera.h"
 
-namespace apex {
+namespace hyperion {
 class OrthoCamera : public Camera {
 public:
     OrthoCamera(float left, float right, float bottom, float top, float near, float far);

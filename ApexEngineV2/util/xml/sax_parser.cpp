@@ -1,6 +1,6 @@
 #include "sax_parser.h"
 
-namespace apex {
+namespace hyperion {
 namespace xml {
 
 SaxParser::SaxParser(SaxHandler *handler)
@@ -128,4 +128,4 @@ void SaxParser::Parse(const std::string &filepath)
 }
 
 } // namespace xml
-} // namespace apex
+} // namespace hyperion

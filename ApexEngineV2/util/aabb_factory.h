@@ -5,7 +5,7 @@
 #include "../rendering/mesh.h"
 #include "../entity.h"
 
-namespace apex {
+namespace hyperion {
 
 class AABBFactory {
 public:
@@ -13,6 +13,6 @@ public:
     static BoundingBox CreateEntityBoundingBox(const std::shared_ptr<Entity> &entity);
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

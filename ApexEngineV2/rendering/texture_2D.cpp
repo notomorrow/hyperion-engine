@@ -4,7 +4,7 @@
 #include "../util.h"
 #include <cassert>
 
-namespace apex {
+namespace hyperion {
 
 Texture2D::Texture2D()
     : Texture(TextureType::TEXTURE_TYPE_2D)
@@ -70,4 +70,4 @@ void Texture2D::End()
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-} // namespace apex
+} // namespace hyperion

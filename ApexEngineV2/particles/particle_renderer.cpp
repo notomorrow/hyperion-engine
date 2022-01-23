@@ -9,7 +9,7 @@
 #include <ctime>
 #include <cassert>
 
-namespace apex {
+namespace hyperion {
 ParticleRenderer::ParticleRenderer(const ParticleConstructionInfo &info)
     : Renderable(RB_PARTICLE),
       m_info(info),
@@ -210,4 +210,4 @@ void ParticleRenderer::Render()
     CoreEngine::GetInstance()->Disable(GL_BLEND);
     CoreEngine::GetInstance()->DepthMask(true);
 }
-} // namespace apex
+} // namespace hyperion

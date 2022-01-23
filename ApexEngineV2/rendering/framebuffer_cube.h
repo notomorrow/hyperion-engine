@@ -4,7 +4,7 @@
 #include "./framebuffer.h"
 #include "./cubemap.h"
 
-namespace apex {
+namespace hyperion {
 
 class FramebufferCube : public Framebuffer {
 public:
@@ -16,7 +16,7 @@ public:
     virtual void Use() override;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 
 #endif

@@ -9,7 +9,7 @@
 #include <functional>
 #include <cctype>
 
-namespace apex {
+namespace hyperion {
 
 class StringUtil {
 public:
@@ -127,6 +127,6 @@ public:
     }
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

@@ -3,7 +3,7 @@
 #include "../../../asset/text_loader.h"
 #include "../../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 DepthOfFieldShader::DepthOfFieldShader(const ShaderProperties &properties)
     : PostShader(properties)
 {
@@ -21,4 +21,4 @@ void DepthOfFieldShader::ApplyTransforms(const Transform &transform, Camera *cam
 {
     Shader::ApplyTransforms(transform, camera);
 }
-} // namespace apex
+} // namespace hyperion

@@ -4,7 +4,7 @@
 #include "../../entity.h"
 #include "../../input_manager.h"
 
-namespace apex {
+namespace hyperion {
 class Texture;
 namespace ui {
 class UIObject : public Entity {
@@ -44,6 +44,6 @@ protected:
     InputEvent m_hover_event;
 };
 } // namespace ui
-} // namespace apex
+} // namespace hyperion
 
 #endif

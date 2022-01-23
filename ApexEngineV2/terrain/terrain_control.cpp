@@ -3,7 +3,7 @@
 
 #include <thread>
 
-namespace apex {
+namespace hyperion {
 
 static int num_threads = 0;
 
@@ -195,4 +195,4 @@ std::array<NeighborChunkInfo, 8> TerrainControl::GetNeighbors(int x, int z)
     return neighbors;
 }
 
-} // namespace apex
+} // namespace hyperion

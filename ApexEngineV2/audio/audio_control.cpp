@@ -1,7 +1,7 @@
 #include "audio_control.h"
 #include "../entity.h"
 
-namespace apex {
+namespace hyperion {
 AudioControl::AudioControl(std::shared_ptr<AudioSource> source)
     : EntityControl(10), m_source(source)
 {
@@ -29,4 +29,4 @@ void AudioControl::OnUpdate(double dt)
         m_last_position = current_position;
     }
 }
-} // namespace apex
+} // namespace hyperion

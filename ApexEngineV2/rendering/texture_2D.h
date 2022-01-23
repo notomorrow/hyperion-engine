@@ -3,7 +3,7 @@
 
 #include "texture.h"
 
-namespace apex {
+namespace hyperion {
 
 class Texture2D : public Texture {
 public:
@@ -19,6 +19,6 @@ protected:
     virtual void Use() override;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

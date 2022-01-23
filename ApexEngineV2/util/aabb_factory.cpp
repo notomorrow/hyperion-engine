@@ -1,6 +1,6 @@
 #include "aabb_factory.h"
 
-namespace apex {
+namespace hyperion {
 
 BoundingBox AABBFactory::CreateMeshBoundingBox(const std::shared_ptr<Mesh> &mesh)
 {
@@ -35,4 +35,4 @@ BoundingBox AABBFactory::CreateEntityBoundingBox(const std::shared_ptr<Entity> &
     return aabb;
 }
 
-} // namespace apex
+} // namespace hyperion

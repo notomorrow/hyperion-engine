@@ -1,7 +1,7 @@
 #ifndef CONTROL_H
 #define CONTROL_H
 
-namespace apex {
+namespace hyperion {
 
 class Entity;
 
@@ -23,6 +23,6 @@ private:
     double tick;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

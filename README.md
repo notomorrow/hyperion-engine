@@ -1,12 +1,12 @@
-# Apex Engine
+# Hyperion Engine
 
 ### About
 
-Apex Engine (pending name change) is a game engine written in C++. I started writing it about five or six years ago, and for a while I hadn't worked on it. Now, I'm bringing it back and enhancing it quite a bit.
+Hyperion Engine is a 3D game engine written in C++. We aim to make Hyperion be easy to understand and use, while still enabling the user to have ample control over the game engine.
 
-Plans are in place to add support for Vulkan as well as other rendering platforms (currently it runs on OpenGL). I've begun porting it over to Metal as well using [MGL](https://github.com/openglonmetal/MGL).
+Hyperion currently renders using OpenGL primarily, but plans are in place to add support for Vulkan as well as other rendering platforms (currently it runs on OpenGL). It is currently in the process of being ported over to Metal as well using [MGL](https://github.com/openglonmetal/MGL).
 
-Feel free to contribute anything - I'd love to have some more eyes on this project! Submit an issue if you run into anything
+Feel free to contribute anything - We'd love to have some more eyes on this project! Submit an issue if you run into anything, as well.
 
 ### Screenshots
 

@@ -1,6 +1,6 @@
 #include "frustum.h"
 
-namespace apex {
+namespace hyperion {
 enum BoundingBoxFrustumResult {
     OUTSIDE = 0,
     INSIDE = 1,
@@ -101,4 +101,4 @@ void Frustum::SetViewProjectionMatrix(const Matrix4 &view_proj)
     m_planes[5].w = mat.values[15] + mat.values[14];
     m_planes[5].Normalize();
 }
-} // namespace apex
+} // namespace hyperion

@@ -8,7 +8,7 @@
 #include <vector>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 
 class Shader;
 
@@ -36,6 +36,6 @@ private:
     Vector3 m_origin;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

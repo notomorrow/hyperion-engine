@@ -27,7 +27,7 @@
 #define MASK_SCALE_WIDTH 0.02
 #define MASK_SCALE_LENGTH 0.02
 
-namespace apex {
+namespace hyperion {
 
 std::vector<double> NoiseTerrainChunk::GenerateHeights(int seed, const ChunkInfo &chunk_info)
 {
@@ -149,4 +149,4 @@ double NoiseTerrainChunk::GetSimplexNoise(SimplexNoiseData *data, int x, int z)
     return result;
 }
 
-} // namespace apex
+} // namespace hyperion

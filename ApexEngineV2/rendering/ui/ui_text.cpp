@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-namespace apex {
+namespace hyperion {
 namespace ui {
 FontMap::FontMap(const std::shared_ptr<Texture2D> &texture, int num_chars_per_row, int num_chars_per_col, int char_offset)
     : m_texture(texture)
@@ -135,4 +135,4 @@ UIText::CharMesh UIText::OptimizeCharMeshes(std::vector<CharMesh> char_meshes) c
     return char_meshes[0];
 }
 } // namespace ui
-} // namespace apex
+} // namespace hyperion

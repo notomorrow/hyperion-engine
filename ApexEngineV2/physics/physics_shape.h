@@ -10,7 +10,7 @@
 
 class btCollisionShape;
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 
 // forward declarations
@@ -54,6 +54,6 @@ private:
 };
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion
 
 #endif

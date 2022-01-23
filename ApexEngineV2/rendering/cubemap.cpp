@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-namespace apex {
+namespace hyperion {
 
 Cubemap::Cubemap(const std::array<std::shared_ptr<Texture2D>, 6> &textures)
     : Texture(TextureType::TEXTURE_TYPE_3D),
@@ -76,4 +76,4 @@ void Cubemap::End()
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
-} // namespace apex
+} // namespace hyperion

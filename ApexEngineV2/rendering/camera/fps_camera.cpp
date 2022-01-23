@@ -1,6 +1,6 @@
 #include "fps_camera.h"
 
-namespace apex {
+namespace hyperion {
 FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, int width, int height, float fov, float near, float far)
     : PerspectiveCamera(fov, width, height, near, far),
       m_inputmgr(inputmgr),
@@ -114,4 +114,4 @@ void FpsCamera::HandleKeyboardInput(double dt)
 
     m_translation.Lerp(m_next_translation, MathUtil::Clamp(2.0 * dt, 0.0, 1.0));
 }
-} // namespace apex
+} // namespace hyperion

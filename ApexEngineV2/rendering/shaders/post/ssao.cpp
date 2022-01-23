@@ -4,7 +4,7 @@
 #include "../../../util/shader_preprocessor.h"
 #include "../../environment.h"
 
-namespace apex {
+namespace hyperion {
 SSAOShader::SSAOShader(const ShaderProperties &properties)
     : PostShader(properties)
 {
@@ -35,4 +35,4 @@ void SSAOShader::ApplyTransforms(const Transform &transform, Camera *camera)
     // TODO: move into general shader calculations
     SetUniform("InverseViewProjMatrix", inverse_proj_view);
 }
-} // namespace apex
+} // namespace hyperion

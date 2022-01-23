@@ -1,6 +1,6 @@
 #include "camera.h"
 
-namespace apex {
+namespace hyperion {
 
 Camera::Camera(int width, int height, float near, float far)
     : m_width(width),
@@ -39,4 +39,4 @@ void Camera::Update(double dt)
     UpdateFrustum();
 }
 
-} // namespace apex
+} // namespace hyperion

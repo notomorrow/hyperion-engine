@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-namespace apex {
+namespace hyperion {
 
 decltype(Framebuffer::default_texture_attributes)
 Framebuffer::default_texture_attributes = {
@@ -80,4 +80,4 @@ void Framebuffer::End()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-} // namespace apex
+} // namespace hyperion

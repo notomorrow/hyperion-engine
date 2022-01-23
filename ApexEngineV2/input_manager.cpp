@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string.h>
 
-namespace apex {
+namespace hyperion {
 
 InputEvent::InputEvent()
     : m_is_empty(true)
@@ -99,4 +99,4 @@ bool InputManager::RegisterClickEvent(int btn, const InputEvent &evt)
     return false;
 }
 
-} // namespace apex
+} // namespace hyperion

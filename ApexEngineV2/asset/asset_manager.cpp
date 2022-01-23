@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-namespace apex {
+namespace hyperion {
 AssetManager *AssetManager::instance = nullptr;
 
 AssetManager *AssetManager::GetInstance()
@@ -98,4 +98,4 @@ const std::unique_ptr<AssetLoader> &AssetManager::GetLoader(const std::string &p
 
     throw (std::string("No suitable loader found for requested file: ") + path);
 }
-} // namespace apex
+} // namespace hyperion

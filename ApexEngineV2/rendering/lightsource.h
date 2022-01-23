@@ -1,7 +1,7 @@
 #ifndef LIGHTSOURCE_H
 #define LIGHTSOURCE_H
 
-namespace apex {
+namespace hyperion {
 
 class Shader;
 
@@ -11,6 +11,6 @@ public:
     virtual void Bind(int index, Shader *shader) = 0;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

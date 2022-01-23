@@ -3,7 +3,7 @@
 #include "../../../asset/text_loader.h"
 #include "../../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 UIObjectShader::UIObjectShader(const ShaderProperties &properties)
     : Shader(properties)
 {
@@ -109,4 +109,4 @@ void UIObjectShader::ApplyTransforms(const Transform &transform, Camera *camera)
     SetUniform("Viewport", viewport);
     SetUniform("u_modelMatrix", model_2d.GetMatrix());
 }
-} // namespace apex
+} // namespace hyperion

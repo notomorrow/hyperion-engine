@@ -6,7 +6,7 @@
 
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class AudioControl : public EntityControl {
 public:
     AudioControl(std::shared_ptr<AudioSource> source);
@@ -22,6 +22,6 @@ private:
     std::shared_ptr<AudioSource> m_source;
     Vector3 m_last_position;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

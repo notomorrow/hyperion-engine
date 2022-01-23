@@ -7,7 +7,7 @@
 #include <memory>
 #include <array>
 
-namespace apex {
+namespace hyperion {
 
 class Framebuffer2D : public Framebuffer {
 public:
@@ -35,6 +35,6 @@ public:
     );
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

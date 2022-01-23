@@ -7,7 +7,7 @@
 #include "../../asset/asset_manager.h"
 #include "../../math/math_util.h"
 
-namespace apex {
+namespace hyperion {
 SkyboxControl::SkyboxControl(Camera *camera, const std::shared_ptr<Cubemap> &cubemap)
     : EntityControl(),
       m_camera(camera),
@@ -45,4 +45,4 @@ void SkyboxControl::OnUpdate(double dt)
     //     m_cube->GetMaterial().SetTexture("SkyboxMap", m_cubemap);
     // }
 }
-} // namespace apex
+} // namespace hyperion

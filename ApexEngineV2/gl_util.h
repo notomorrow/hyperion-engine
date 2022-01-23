@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-namespace apex {
+namespace hyperion {
     inline void CatchGLErrors(const char *message, bool should_throw = true, bool recursive = true)
     {
         unsigned int errors[255] = { GL_NO_ERROR },
@@ -33,6 +33,6 @@ namespace apex {
             throw std::runtime_error(message);
         }
     }
-} // namespace apex
+} // namespace hyperion
 
 #endif

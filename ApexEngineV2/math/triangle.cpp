@@ -1,7 +1,7 @@
 #include "triangle.h"
 #include "math_util.h"
 
-namespace apex {
+namespace hyperion {
 Triangle::Triangle()
 {
 }

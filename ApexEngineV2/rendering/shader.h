@@ -18,7 +18,7 @@
 #include <string>
 #include <cstring>
 
-namespace apex {
+namespace hyperion {
 class Texture;
 
 class ShaderProperties {
@@ -354,6 +354,6 @@ private:
     std::map<std::string, Uniform> uniforms;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

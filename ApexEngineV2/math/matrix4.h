@@ -6,7 +6,7 @@
 #include <iostream>
 #include <array>
 
-namespace apex {
+namespace hyperion {
 class Matrix4 {
     friend std::ostream &operator<<(std::ostream &os, const Matrix4 &mat);
 public:
@@ -49,6 +49,6 @@ public:
         return hc;
     }
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

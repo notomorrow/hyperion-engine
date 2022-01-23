@@ -6,7 +6,7 @@
 #include "input_manager.h"
 #include "rendering/ui/ui_manager.h"
 
-namespace apex {
+namespace hyperion {
 class Game {
 public:
     Game(const RenderWindow &window);
@@ -27,6 +27,6 @@ protected:
     UIManager *m_ui_manager;
     Renderer * const m_renderer;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

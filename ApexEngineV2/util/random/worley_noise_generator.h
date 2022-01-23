@@ -9,7 +9,7 @@
 
 #define FNV_PRIME 16777619
 
-namespace apex {
+namespace hyperion {
 class WorleyNoiseGenerator {
 public:
     WorleyNoiseGenerator(int seed);
@@ -41,6 +41,6 @@ private:
         return ((((((OFFSET_BASIS ^ i) * FNV_PRIME) ^ j) * FNV_PRIME) ^ k) * FNV_PRIME);
     }
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

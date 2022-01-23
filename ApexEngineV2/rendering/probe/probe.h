@@ -7,7 +7,7 @@
 #include <memory>
 #include <array>
 
-namespace apex {
+namespace hyperion {
 class Probe {
 public:
     Probe(const Vector3 &origin, int width, int height, float near, float far);
@@ -39,6 +39,6 @@ private:
 
     void UpdateMatrices();
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif
