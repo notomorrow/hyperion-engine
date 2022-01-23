@@ -250,9 +250,9 @@ public:
         shadows = new PssmShadowMapping(cam, 4, 100);
         shadows->SetVarianceShadowMapping(true);
 
-        Environment::GetInstance()->SetShadowsEnabled(false);
+        Environment::GetInstance()->SetShadowsEnabled(true);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(false);
+        Environment::GetInstance()->SetProbeEnabled(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 10, 5));
@@ -573,7 +573,7 @@ public:
         // plane_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg"));
         // plane_entity->GetMaterial().SetTexture("FurStrengthMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/noise.png"));
         plane_entity->GetMaterial().SetParameter("shininess", 0.5f);
-        plane_entity->GetMaterial().SetParameter("roughness", 0.1f);
+        plane_entity->GetMaterial().SetParameter("roughness", 0.05f);
         plane_entity->AddControl(plane_rigid_body);
         top->AddChild(plane_entity);
 
