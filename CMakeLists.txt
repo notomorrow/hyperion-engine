@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(BUILD_NAME apex)
+set(BUILD_NAME hyperion)
 
 project(${BUILD_NAME} CXX C)
 
@@ -15,8 +15,8 @@ find_package(Bullet REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fpermissive")
 
-file(GLOB_RECURSE SOURCES "ApexEngineV2/*.cpp" "ApexEngineV2/*.c")
-file(GLOB_RECURSE HEADERS "ApexEngineV2/*.h")
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
+file(GLOB_RECURSE HEADERS "src/*.h")
 
 set(CMAKE_CXX_STANDARD 17)
 include_directories(
@@ -24,7 +24,7 @@ include_directories(
   ${OPENGL_INCLUDE_DIRS}
   ${OPENAL_INCLUDE_DIR}
   ${BULLET_INCLUDE_DIR}
-  ${CMAKE_SOURCE_DIR}/ApexEngineV2
+  ${CMAKE_SOURCE_DIR}/src
 )
 add_executable(${BUILD_NAME} ${SOURCES} ${HEADERS})
 

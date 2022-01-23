@@ -292,7 +292,7 @@ public:
         top->AddChild(test_ui);
         GetUIManager()->RegisterUIObject(test_ui);*/
 
-        auto ui_text = std::make_shared<ui::UIText>("text_test", "AEngine 1.2.0\n"
+        auto ui_text = std::make_shared<ui::UIText>("text_test", "Hyperion 0.1.0\n"
             "Press 1 to toggle shadows\n"
             "Press 2 to toggle deferred rendering");
         ui_text->SetLocalTranslation2D(Vector2(-1.0, 1.0));
@@ -909,7 +909,7 @@ int main()
     CoreEngine *engine = new GlfwEngine();
     CoreEngine::SetInstance(engine);
 
-    auto *game = new MyGame(RenderWindow(1480, 1200, "AEngine Demo"));
+    auto *game = new MyGame(RenderWindow(1480, 1200, "Hyperion Demo"));
 
     engine->InitializeGame(game);
 
