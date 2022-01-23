@@ -9,7 +9,7 @@ static int num_threads = 0;
 
 TerrainControl::TerrainControl(Camera *camera)
     : m_camera(camera),
-      m_scale(4.85),
+      m_scale(8.85, 4.85, 8.85),
       m_tick(0),
       m_queuetick(0),
       m_max_distance(8.0)

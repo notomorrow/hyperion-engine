@@ -222,8 +222,6 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
     bool has_bones = !handler.bones.empty();
 
     ShaderProperties shader_properties;
-    shader_properties.Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled());
-    shader_properties.Define("NUM_SPLITS",Environment::GetInstance()->NumCascades());
 
     if (has_bones) {
         shader_properties.Define("SKINNING", true);

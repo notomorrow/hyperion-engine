@@ -29,8 +29,8 @@ void SkydomeControl::OnAdded()
     dome->SetLocalScale(50);
     dome->GetChild(0)->GetRenderable()->SetShader(shader);
     dome->GetChild(0)->GetRenderable()->SetRenderBucket(Renderable::RB_SKY);
-    // dome->GetChild(0)->GetMaterial().depth_test = false;
-    // dome->GetChild(0)->GetMaterial().depth_write = false;
+    dome->GetChild(0)->GetMaterial().depth_test = false;
+    dome->GetChild(0)->GetMaterial().depth_write = false;
     // dome->GetChild(0)->GetMaterial().alpha_blended = true;
 
     if (!clouds_in_dome) {

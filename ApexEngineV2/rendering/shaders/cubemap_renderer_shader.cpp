@@ -49,19 +49,15 @@ void CubemapRendererShader::ApplyMaterial(const Material &mat)
 
     SetUniform("u_diffuseColor", mat.diffuse_color);
 
-    int texture_index = 1;
-
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
         if (it->second == nullptr) {
             continue;
         }
 
-        Texture::ActiveTexture(texture_index);
-        it->second->Begin();
-        SetUniform(it->first, texture_index);
-        SetUniform(std::string("Has") + it->first, 1);
+        it->second->Prepare();
 
-        texture_index++;
+        SetUniform(it->first, it->second.get());
+        SetUniform(std::string("Has") + it->first, 1);
     }
 
     Environment::GetInstance()->GetSun().Bind(0, this);
