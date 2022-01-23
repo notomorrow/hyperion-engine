@@ -5,7 +5,7 @@
 #include "../../asset/text_loader.h"
 #include "../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 CloudsShader::CloudsShader(const ShaderProperties &properties)
     : Shader(properties)
 {
@@ -77,4 +77,4 @@ void CloudsShader::SetGlobalTime(float global_time)
 {
     m_global_time = global_time;
 }
-} // namespace apex
+} // namespace hyperion

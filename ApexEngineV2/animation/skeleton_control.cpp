@@ -1,6 +1,6 @@
 #include "skeleton_control.h"
 
-namespace apex {
+namespace hyperion {
 SkeletonControl::SkeletonControl(std::shared_ptr<Shader> skinning_shader)
     : EntityControl(60.0), skinning_shader(skinning_shader),
     play_state(STOPPED), loop_mode(PLAY_ONCE),

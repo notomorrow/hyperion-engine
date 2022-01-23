@@ -10,7 +10,7 @@
 #include "../../../math/vector2.h"
 #include "../../../math/matrix4.h"
 
-namespace apex {
+namespace hyperion {
 
 class BloomFilter : public PostFilter {
 public:
@@ -22,6 +22,6 @@ public:
 private:
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

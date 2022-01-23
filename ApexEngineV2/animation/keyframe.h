@@ -4,7 +4,7 @@
 #include "../math/vector3.h"
 #include "../math/quaternion.h"
 
-namespace apex {
+namespace hyperion {
 class Keyframe {
 public:
     Keyframe();

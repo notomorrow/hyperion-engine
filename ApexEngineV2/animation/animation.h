@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 
-namespace apex {
+namespace hyperion {
 class Animation {
 public:
     Animation(const std::string &name);

@@ -19,7 +19,7 @@ class btCollisionDispatcher;
 class btBroadphaseInterface;
 class btSequentialImpulseConstraintSolver;
 
-namespace apex {
+namespace hyperion {
 class PhysicsManager {
     friend class physics::RigidBody;
 public:

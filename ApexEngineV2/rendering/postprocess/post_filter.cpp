@@ -2,7 +2,7 @@
 
 #include "../environment.h"
 
-namespace apex {
+namespace hyperion {
 
 PostFilter::PostFilter(const std::shared_ptr<PostShader> &shader, BitFlags_t modifies_attachments)
     : m_shader(shader),
@@ -52,4 +52,4 @@ void PostFilter::End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAtta
     }
 }
 
-} // namespace apex
+} // namespace hyperion

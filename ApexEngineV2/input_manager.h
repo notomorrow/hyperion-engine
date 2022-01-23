@@ -8,7 +8,7 @@
 
 #include <functional>
 
-namespace apex {
+namespace hyperion {
 
 enum MouseButton {
     MOUSE_BTN_UNKNOWN = -1,
@@ -149,6 +149,6 @@ private:
     void SetMouseButton(int btn, bool pressed);
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

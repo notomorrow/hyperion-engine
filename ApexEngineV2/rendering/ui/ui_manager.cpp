@@ -1,6 +1,6 @@
 #include "ui_manager.h"
 
-namespace apex {
+namespace hyperion {
 UIManager::UIManager(InputManager *input_manager)
     : m_input_manager(input_manager),
       m_input_event(new InputEvent),
@@ -40,4 +40,4 @@ void UIManager::HandleMouseEvent()
         }
     }
 }
-} // namespace apex
+} // namespace hyperion

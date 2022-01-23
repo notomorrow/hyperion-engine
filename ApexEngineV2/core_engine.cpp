@@ -1,7 +1,7 @@
 #include "core_engine.h"
 #include <exception>
 
-namespace apex {
+namespace hyperion {
 
 CoreEngine *CoreEngine::instance = nullptr;
 
@@ -18,4 +18,4 @@ void CoreEngine::SetInstance(CoreEngine *ptr)
     instance = ptr;
 }
 
-} // namespace apex
+} // namespace hyperion

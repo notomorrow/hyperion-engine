@@ -9,7 +9,7 @@
 
 #define CUBEMAP_NUM_MIPMAPS 5
 
-namespace apex {
+namespace hyperion {
 
 class Cubemap : public Texture {
 public:
@@ -32,6 +32,6 @@ private:
     std::array<std::shared_ptr<Texture2D>, 6> m_textures;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

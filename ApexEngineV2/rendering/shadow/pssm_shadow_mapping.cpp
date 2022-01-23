@@ -3,7 +3,7 @@
 #include "../shaders/depth_shader.h"
 #include "../../util.h"
 
-namespace apex {
+namespace hyperion {
 PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double max_dist)
     : num_splits(num_splits)
 {
@@ -88,4 +88,4 @@ void PssmShadowMapping::Render(Renderer *renderer)
         shadow_renderers[i]->End();
     }
 }
-} // namespace apex
+} // namespace hyperion

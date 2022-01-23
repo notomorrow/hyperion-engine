@@ -5,7 +5,7 @@
 #include "../shader.h"
 #include "../texture_2D.h"
 
-namespace apex {
+namespace hyperion {
 class CloudsShader : public Shader {
 public:
     CloudsShader(const ShaderProperties &properties);
@@ -23,6 +23,6 @@ private:
     Vector4 m_cloud_color;
     float m_global_time;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

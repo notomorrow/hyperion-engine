@@ -4,7 +4,7 @@
 #include "../asset/text_loader.h"
 #include "../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 TerrainShader::TerrainShader(const ShaderProperties &properties)
     : LightingShader(properties)
 {
@@ -27,4 +27,4 @@ void TerrainShader::ApplyMaterial(const Material &mat)
 {
     LightingShader::ApplyMaterial(mat);
 }
-} // namespace apex
+} // namespace hyperion

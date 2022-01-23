@@ -10,7 +10,7 @@
 #include "../material.h"
 #include "../../util.h"
 
-namespace apex {
+namespace hyperion {
 class PostFilter {
 public:
     PostFilter(
@@ -38,6 +38,6 @@ protected:
 private:
     BitFlags_t m_modifies_attachments;
 };
-}; // namespace apex
+}; // namespace hyperion
 
 #endif

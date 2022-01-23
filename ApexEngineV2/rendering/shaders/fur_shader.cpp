@@ -4,7 +4,7 @@
 #include "../../asset/text_loader.h"
 #include "../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 FurShader::FurShader(const ShaderProperties &properties)
     : LightingShader(properties)
 {
@@ -46,4 +46,4 @@ void FurShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     LightingShader::ApplyTransforms(transform, camera);
 }
-} // namespace apex
+} // namespace hyperion

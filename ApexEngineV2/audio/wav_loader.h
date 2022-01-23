@@ -3,11 +3,11 @@
 
 #include "../asset/asset_loader.h"
 
-namespace apex {
+namespace hyperion {
 class WavLoader : public AssetLoader {
 public:
     std::shared_ptr<Loadable> LoadFromFile(const std::string &);
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

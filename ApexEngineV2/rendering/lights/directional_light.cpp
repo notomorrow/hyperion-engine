@@ -1,7 +1,7 @@
 #include "directional_light.h"
 #include "../shader.h"
 
-namespace apex {
+namespace hyperion {
 DirectionalLight::DirectionalLight()
     : direction(0.57735f), color(1.0f)
 {

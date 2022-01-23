@@ -6,7 +6,7 @@
 
 #include "../math/vector3.h"
 
-namespace apex {
+namespace hyperion {
 class AudioManager {
 public:
     static AudioManager *GetInstance();
@@ -32,6 +32,6 @@ private:
     ALCdevice *m_device;
     ALCcontext *m_context;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

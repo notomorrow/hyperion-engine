@@ -4,7 +4,7 @@
 #include "../../environment.h"
 #include "../../shaders/post/ssao.h"
 
-namespace apex {
+namespace hyperion {
 
 SSAOFilter::SSAOFilter()
     : PostFilter(
@@ -61,4 +61,4 @@ void SSAOFilter::SetUniforms(Camera *cam)
     m_shader->SetUniform("u_inverseProjectionMatrix", inverse_projection);
 }
 
-} // namespace apex
+} // namespace hyperion

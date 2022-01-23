@@ -1,6 +1,6 @@
 #include "matrix_util.h"
 
-namespace apex {
+namespace hyperion {
 void MatrixUtil::ToTranslation(Matrix4 &mat, const Vector3 &translation)
 {
     mat = Matrix4::Identity();
@@ -173,4 +173,4 @@ Matrix3 MatrixUtil::CreateInertiaTensor(const Vector3 &half_size, double mass)
     res.values[8] = 0.3 * mass * (sqr.GetX() + sqr.GetY());
     return res;
 }
-} // namespace apex
+} // namespace hyperion

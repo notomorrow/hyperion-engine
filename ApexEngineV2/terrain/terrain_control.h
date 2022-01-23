@@ -19,7 +19,7 @@
 #include <mutex>
 #endif
 
-namespace apex {
+namespace hyperion {
 
 class TerrainControl : public EntityControl {
 public:
@@ -54,6 +54,6 @@ private:
 #endif
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

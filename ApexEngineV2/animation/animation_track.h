@@ -9,7 +9,7 @@
 #include <vector>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class AnimationTrack {
 public:
     AnimationTrack(std::shared_ptr<Bone> bone);

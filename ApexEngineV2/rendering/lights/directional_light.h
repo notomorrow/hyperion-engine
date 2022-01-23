@@ -5,7 +5,7 @@
 #include "../../math/vector3.h"
 #include "../../math/vector4.h"
 
-namespace apex {
+namespace hyperion {
 class DirectionalLight : public LightSource {
 public:
     DirectionalLight();

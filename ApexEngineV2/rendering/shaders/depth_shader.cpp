@@ -3,7 +3,7 @@
 #include "../../asset/text_loader.h"
 #include "../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 DepthShader::DepthShader(const ShaderProperties &properties)
     : Shader(properties)
 {
@@ -35,4 +35,4 @@ void DepthShader::ApplyTransforms(const Transform &transform, Camera *camera)
     Shader::ApplyTransforms(transform, camera);
     SetUniform("u_camerapos", camera->GetTranslation());
 }
-} // namespace apex
+} // namespace hyperion

@@ -13,7 +13,7 @@
 #include "rendering/renderable.h"
 #include "rendering/material.h"
 
-namespace apex {
+namespace hyperion {
 class Camera;
 class Entity : public Loadable {
 public:
@@ -183,6 +183,6 @@ protected:
 
     std::shared_ptr<Entity> CloneImpl();
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

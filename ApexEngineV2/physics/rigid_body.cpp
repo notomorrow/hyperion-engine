@@ -7,7 +7,7 @@
 #include "../bullet_math_util.h"
 #include "btBulletDynamicsCommon.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 static Matrix4 CalculateTransformMatrix(const Vector3 &position, Quaternion orientation)
 {
@@ -223,4 +223,4 @@ void RigidBody::OnUpdate(double dt)
 }
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

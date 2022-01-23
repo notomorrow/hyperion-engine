@@ -7,7 +7,7 @@
 #include "matrix4.h"
 #include "matrix_util.h"
 
-namespace apex {
+namespace hyperion {
 class Transform {
 public:
     Transform();
@@ -50,6 +50,6 @@ private:
     Quaternion m_rotation;
     Matrix4 m_matrix;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

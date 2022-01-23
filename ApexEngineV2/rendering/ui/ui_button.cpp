@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-namespace apex {
+namespace hyperion {
 namespace ui {
 UIButton::UIButton(const std::string &name)
     : UIObject(name)
@@ -13,4 +13,4 @@ UIButton::UIButton(const std::string &name)
     m_renderable->SetShader(ShaderManager::GetInstance()->GetShader<UIButtonShader>(ShaderProperties()));
 }
 } // namespace ui
-} // namespace apex
+} // namespace hyperion

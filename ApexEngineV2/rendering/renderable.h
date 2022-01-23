@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-namespace apex {
+namespace hyperion {
 
 class CoreEngine;
 
@@ -47,6 +47,6 @@ protected:
     BoundingBox m_aabb;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

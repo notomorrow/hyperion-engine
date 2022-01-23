@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <functional>
 
-namespace apex {
+namespace hyperion {
 struct HashCode {
     HashCode()
         : hash(0)
@@ -43,6 +43,6 @@ private:
         hash ^= other + 0x9e3779b9 + (hash << 6) + (hash >> 2);
     }
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

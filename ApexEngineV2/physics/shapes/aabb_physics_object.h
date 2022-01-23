@@ -4,7 +4,7 @@
 #include "../physics_object.h"
 #include "../../math/bounding_box.h"
 
-namespace apex {
+namespace hyperion {
 
 class AABBPhysicsObject final : public PhysicsObject {
 public:
@@ -20,6 +20,6 @@ protected:
     BoundingBox aabb;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

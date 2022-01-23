@@ -3,7 +3,7 @@
 #include "../entity.h"
 #include <cassert>
 
-namespace apex {
+namespace hyperion {
 ParticleEmitterControl::ParticleEmitterControl(Camera *camera, const ParticleConstructionInfo &info)
     : EntityControl(60.0),
       m_camera(camera)
@@ -94,4 +94,4 @@ void ParticleEmitterControl::OnUpdate(double dt)
     // TODO: use more efficient algo
     std::sort(m_particles.begin(), m_particles.end());
 }
-} // namespace apex
+} // namespace hyperion

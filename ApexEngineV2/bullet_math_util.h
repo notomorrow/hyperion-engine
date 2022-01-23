@@ -7,24 +7,24 @@
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btQuaternion.h"
 
-static inline btVector3 ToBulletVector(const apex::Vector3 &vec)
+static inline btVector3 ToBulletVector(const hyperion::Vector3 &vec)
 {
     return btVector3(vec.x, vec.y, vec.z);
 }
 
-static inline apex::Vector3 FromBulletVector(const btVector3 &vec)
+static inline hyperion::Vector3 FromBulletVector(const btVector3 &vec)
 {
-    return apex::Vector3(vec.x(), vec.y(), vec.z());
+    return hyperion::Vector3(vec.x(), vec.y(), vec.z());
 }
 
-static inline btQuaternion ToBulletQuaternion(const apex::Quaternion &quat)
+static inline btQuaternion ToBulletQuaternion(const hyperion::Quaternion &quat)
 {
     return btQuaternion(quat.x, quat.y, quat.z, quat.w);
 }
 
-static inline apex::Quaternion FromBulletQuaternion(const btQuaternion &quat)
+static inline hyperion::Quaternion FromBulletQuaternion(const btQuaternion &quat)
 {
-    return apex::Quaternion(quat.x(), quat.y(), quat.z(), quat.w());
+    return hyperion::Quaternion(quat.x(), quat.y(), quat.z(), quat.w());
 }
 
 

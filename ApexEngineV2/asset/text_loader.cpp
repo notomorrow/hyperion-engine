@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace apex {
+namespace hyperion {
 std::shared_ptr<Loadable> TextLoader::LoadFromFile(const std::string &filepath)
 {
     std::ifstream file(filepath);

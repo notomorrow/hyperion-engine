@@ -1,6 +1,6 @@
 #include "terrain_chunk.h"
 
-namespace apex {
+namespace hyperion {
 
 TerrainChunk::TerrainChunk(const ChunkInfo &chunk_info)
     : m_chunk_info(chunk_info)
@@ -124,4 +124,4 @@ Vector4 TerrainChunk::BiomeAt(int x, int z)
     return Vector4::Zero();
 }
 
-} // namespace apex
+} // namespace hyperion

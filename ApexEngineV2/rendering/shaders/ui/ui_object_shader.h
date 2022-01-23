@@ -3,7 +3,7 @@
 
 #include "../../shader.h"
 
-namespace apex {
+namespace hyperion {
 class UIObjectShader : public Shader {
 public:
     UIObjectShader(const ShaderProperties &properties);
@@ -12,6 +12,6 @@ public:
     virtual void ApplyMaterial(const Material &mat) override;
     virtual void ApplyTransforms(const Transform &transform, Camera *camera) override;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

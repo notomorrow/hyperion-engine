@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 
-namespace apex {
+namespace hyperion {
 struct RiffHeader {
     char chunk_id[4];
     long chunk_size;
@@ -114,4 +114,4 @@ std::shared_ptr<Loadable> WavLoader::LoadFromFile(const std::string &path)
         return nullptr;
     }
 }
-} // namespace apex
+} // namespace hyperion

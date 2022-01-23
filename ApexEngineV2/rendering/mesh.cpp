@@ -2,7 +2,7 @@
 #include "../math/triangle.h"
 #include "../gl_util.h"
 
-namespace apex {
+namespace hyperion {
 
 const Mesh::MeshAttribute Mesh::MeshAttribute::Positions = {0, 3, 0 };
 const Mesh::MeshAttribute Mesh::MeshAttribute::Normals = { 0, 3, 1 };
@@ -335,4 +335,4 @@ void Mesh::InvertNormals()
     }
 }
 
-} // namespace apex
+} // namespace hyperion

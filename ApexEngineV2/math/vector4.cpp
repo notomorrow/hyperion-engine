@@ -3,7 +3,7 @@
 #include "math_util.h"
 #include "vector3.h"
 
-namespace apex {
+namespace hyperion {
 
 Vector4::Vector4()
     : x(0.0f), 
@@ -254,4 +254,4 @@ std::ostream &operator<<(std::ostream &out, const Vector4 &vec) // output
     return out;
 }
 
-} // namespace apex
+} // namespace hyperion

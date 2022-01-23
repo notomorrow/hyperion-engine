@@ -11,7 +11,7 @@
 #include <vector>
 #include <string>
 
-namespace apex {
+namespace hyperion {
 class SkeletonControl : public EntityControl {
 public:
     SkeletonControl(std::shared_ptr<Shader> skinning_shader);

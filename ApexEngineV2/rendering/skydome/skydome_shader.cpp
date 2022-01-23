@@ -5,7 +5,7 @@
 #include "../../util/shader_preprocessor.h"
 #include "../../math/math_util.h"
 
-namespace apex {
+namespace hyperion {
 SkydomeShader::SkydomeShader(const ShaderProperties &properties)
     : Shader(properties)
 {
@@ -113,4 +113,4 @@ void SkydomeShader::SetGlobalTime(float global_time)
 {
     m_global_time = global_time;
 }
-} // namespace apex
+} // namespace hyperion

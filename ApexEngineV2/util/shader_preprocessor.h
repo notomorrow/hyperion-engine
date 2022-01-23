@@ -4,7 +4,7 @@
 #include <string>
 #include <sstream>
 
-namespace apex {
+namespace hyperion {
 class ShaderProperties;
 
 class ShaderPreprocessor {
@@ -24,6 +24,6 @@ private:
     static std::string FileHeader(const std::string &path);
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

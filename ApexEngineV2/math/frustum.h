@@ -7,7 +7,7 @@
 
 #include <array>
 
-namespace apex {
+namespace hyperion {
 class Frustum {
 public:
     Frustum();
@@ -23,7 +23,7 @@ public:
 private:
     std::array<Vector4, 6> m_planes;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif
 

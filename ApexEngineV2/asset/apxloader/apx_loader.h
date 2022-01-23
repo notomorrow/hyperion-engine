@@ -11,7 +11,7 @@
 #include <vector>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 
 const std::string TOKEN_FACES = "faces";
 const std::string TOKEN_FACE = "face";

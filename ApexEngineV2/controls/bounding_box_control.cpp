@@ -1,6 +1,6 @@
 #include "bounding_box_control.h"
 
-namespace apex {
+namespace hyperion {
 BoundingBoxControl::BoundingBoxControl()
     : EntityControl()
 {
@@ -29,4 +29,4 @@ void BoundingBoxControl::OnUpdate(double dt)
 {
     m_bounding_box_renderer->SetAABB(parent->GetAABB());
 }
-} // namespace apex
+} // namespace hyperion

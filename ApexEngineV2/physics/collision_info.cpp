@@ -1,6 +1,6 @@
 #include "collision_info.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 CollisionInfo::CollisionInfo()
     : m_contact_penetration(0.0)
@@ -21,4 +21,4 @@ CollisionInfo::CollisionInfo(const CollisionInfo &other)
 {
 }
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

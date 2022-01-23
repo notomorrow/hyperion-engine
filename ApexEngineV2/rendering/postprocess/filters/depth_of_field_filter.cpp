@@ -3,7 +3,7 @@
 #include "../../shader_manager.h"
 #include "../../shaders/post/depth_of_field.h"
 
-namespace apex {
+namespace hyperion {
 
 DepthOfFieldFilter::DepthOfFieldFilter(float focus_range, float focus_scale)
     : PostFilter(ShaderManager::GetInstance()->GetShader<DepthOfFieldShader>(ShaderProperties())),
@@ -22,4 +22,4 @@ void DepthOfFieldFilter::SetUniforms(Camera *cam)
     m_shader->SetUniform("PixelSize", Vector2(1.0f / cam->GetWidth(), 1.0f / cam->GetHeight()));
 }
 
-} // namespace apex
+} // namespace hyperion

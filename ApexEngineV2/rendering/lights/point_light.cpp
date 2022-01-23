@@ -1,7 +1,7 @@
 #include "./point_light.h"
 #include "../shader.h"
 
-namespace apex {
+namespace hyperion {
 
 PointLight::PointLight()
     : m_position(0.0f),
@@ -33,4 +33,4 @@ void PointLight::Bind(int index, Shader *shader)
     shader->SetUniform("env_PointLights[" + index_str + "].radius", m_radius);
 }
 
-} // namespace apex
+} // namespace hyperion

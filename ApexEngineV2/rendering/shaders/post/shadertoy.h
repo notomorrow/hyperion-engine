@@ -3,7 +3,7 @@
 
 #include "../post_shader.h"
 
-namespace apex {
+namespace hyperion {
 
 class ShadertoyShader : public PostShader {
 public:
@@ -13,6 +13,6 @@ public:
     virtual void ApplyTransforms(const Transform &transform, Camera *camera);
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

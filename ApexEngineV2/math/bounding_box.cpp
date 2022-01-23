@@ -3,7 +3,7 @@
 #include <limits>
 #include <cmath>
 
-namespace apex {
+namespace hyperion {
 
 BoundingBox::BoundingBox()
     : m_min(std::numeric_limits<float>::max()), 
@@ -191,4 +191,4 @@ double BoundingBox::Area() const
     return dimensions.x * dimensions.y * dimensions.z;
 }
 
-} // namespace apex
+} // namespace hyperion

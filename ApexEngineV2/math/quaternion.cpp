@@ -2,7 +2,7 @@
 
 #include <float.h>
 
-namespace apex {
+namespace hyperion {
 Quaternion::Quaternion()
     : x(0.0), y(0.0), z(0.0), w(1.0)
 {
@@ -256,4 +256,4 @@ std::ostream &operator<<(std::ostream &out, const Quaternion &rot) // output
     out << "[" << rot.x << ", " << rot.y << ", " << rot.z << ", " << rot.w << "]";
     return out;
 }
-} // namespace apex
+} // namespace hyperion

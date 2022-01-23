@@ -10,7 +10,7 @@
 #define COLLISION_VELOCITY_LIMIT 0.025
 #define COLLISION_ANGULAR_LIMIT 0.02
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 // a class with static functions for working with collisions
 class Collision {
@@ -44,6 +44,6 @@ public:
 };
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion
 
 #endif

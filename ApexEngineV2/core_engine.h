@@ -5,7 +5,7 @@
 
 #define APEX_MULTITHREADING 1
 
-namespace apex {
+namespace hyperion {
 
 class Game;
 
@@ -191,6 +191,6 @@ private:
     static CoreEngine *instance;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

@@ -1,7 +1,7 @@
 #include "particle_construction_info.h"
 #include "../util.h"
 
-namespace apex {
+namespace hyperion {
 ParticleConstructionInfo::ParticleConstructionInfo(const Vector3 &origin, const Vector3 &origin_randomness,
     const Vector3 &velocity, const Vector3 &velocity_randomness,
     double mass, double mass_randomness,
@@ -39,4 +39,4 @@ ParticleConstructionInfo::ParticleConstructionInfo(const ParticleConstructionInf
 {
     ex_assert(m_lifespan > 0.0);
 }
-} // namespace apex
+} // namespace hyperion

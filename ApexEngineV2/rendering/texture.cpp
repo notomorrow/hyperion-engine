@@ -4,7 +4,7 @@
 #include "../gl_util.h"
 #include "../util.h"
 
-namespace apex {
+namespace hyperion {
 
 Texture::Texture(TextureType texture_type)
     : m_texture_type(texture_type),
@@ -142,4 +142,4 @@ void Texture::Prepare(bool should_upload_data)
     End();
 }
 
-} // namespace apex
+} // namespace hyperion

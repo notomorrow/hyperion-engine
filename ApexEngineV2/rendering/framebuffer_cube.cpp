@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-namespace apex {
+namespace hyperion {
 
 FramebufferCube::FramebufferCube(int width, int height)
     : Framebuffer(width, height)
@@ -119,4 +119,4 @@ void FramebufferCube::Store(FramebufferAttachment attachment, std::shared_ptr<Te
     not_implemented;
 }
 
-} // namespace apex
+} // namespace hyperion

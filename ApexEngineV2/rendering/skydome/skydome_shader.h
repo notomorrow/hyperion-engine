@@ -8,7 +8,7 @@
 #include "../../math/vector3.h"
 #include "../../math/vector4.h"
 
-namespace apex {
+namespace hyperion {
 class SkydomeShader : public Shader {
 public:
     SkydomeShader(const ShaderProperties &properties);
@@ -44,6 +44,6 @@ private:
     float scale_over_scale_depth;
     float exposure;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

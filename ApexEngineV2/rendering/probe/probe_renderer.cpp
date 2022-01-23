@@ -3,7 +3,7 @@
 #include "../shader_manager.h"
 #include "../shaders/cubemap_renderer_shader.h"
 
-namespace apex {
+namespace hyperion {
 ProbeRenderer::ProbeRenderer(int width, int height)
     : m_fbo(new FramebufferCube(width, height)),
       m_render_shading(false),
@@ -96,4 +96,4 @@ void ProbeRenderer::SetRenderTextures(bool value)
 
     m_render_textures = value;
 }
-} // namespace apex
+} // namespace hyperion

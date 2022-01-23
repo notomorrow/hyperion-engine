@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-namespace apex {
+namespace hyperion {
 namespace ui {
 UIObject::UIObject(const std::string &name)
     : Entity(name)
@@ -45,4 +45,4 @@ bool UIObject::IsMouseOver(double x, double y) const
     return true;
 }
 } // namespace ui
-} // namespace apex
+} // namespace hyperion

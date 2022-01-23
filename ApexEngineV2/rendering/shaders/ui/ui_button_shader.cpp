@@ -3,7 +3,7 @@
 #include "../../../asset/text_loader.h"
 #include "../../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 UIButtonShader::UIButtonShader(const ShaderProperties &properties)
     : UIObjectShader(properties)
 {
@@ -16,4 +16,4 @@ UIButtonShader::UIButtonShader(const ShaderProperties &properties)
         fs_path
     );
 }
-} // namespace apex
+} // namespace hyperion

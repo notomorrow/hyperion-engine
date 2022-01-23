@@ -4,7 +4,7 @@
 
 #include "../bullet_math_util.h"
 #include "btBulletDynamicsCommon.h"
-namespace apex {
+namespace hyperion {
 namespace physics {
 SpherePhysicsShape::SpherePhysicsShape(double radius)
     : PhysicsShape(PhysicsShape_sphere),
@@ -89,4 +89,4 @@ bool SpherePhysicsShape::CollidesWith(PlanePhysicsShape *shape, CollisionList &o
     return true;
 }
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

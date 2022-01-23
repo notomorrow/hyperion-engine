@@ -5,7 +5,7 @@
 #include "../../asset/asset_manager.h"
 #include "../../math/math_util.h"
 
-namespace apex {
+namespace hyperion {
 const bool SkydomeControl::clouds_in_dome = true;
 
 SkydomeControl::SkydomeControl(Camera *camera)
@@ -69,4 +69,4 @@ void SkydomeControl::OnUpdate(double dt)
         shader->SetGlobalTime(global_time);
     }
 }
-} // namespace apex
+} // namespace hyperion

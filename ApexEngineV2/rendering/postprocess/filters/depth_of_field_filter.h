@@ -10,7 +10,7 @@
 #include "../../../math/vector2.h"
 #include "../../../math/matrix4.h"
 
-namespace apex {
+namespace hyperion {
 
 class DepthOfFieldFilter : public PostFilter {
 public:
@@ -24,6 +24,6 @@ private:
     float m_focus_scale;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

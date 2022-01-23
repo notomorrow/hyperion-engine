@@ -3,7 +3,7 @@
 #include "../../rendering/camera/camera.h"
 #include "../terrain_chunk.h"
 
-namespace apex {
+namespace hyperion {
 Populator::Populator(
     Camera *camera,
     float tolerance,
@@ -73,4 +73,4 @@ void Populator::OnUpdate(double dt)
         // if (patch.m_tile.InRange(camera_vec - ))
     }
 }
-} // namespace apex
+} // namespace hyperion

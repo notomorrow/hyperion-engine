@@ -8,7 +8,7 @@
 #include <map>
 #include <algorithm>
 
-namespace apex {
+namespace hyperion {
 class AssetManager {
 public:
     static AssetManager *GetInstance();

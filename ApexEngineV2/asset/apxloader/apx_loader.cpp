@@ -1,7 +1,7 @@
 #include "apx_loader.h"
 #include "../../animation/bone.h"
 
-namespace apex {
+namespace hyperion {
 ApxModel::ApxModel()
     : n_faces_per_vertex(0), last_entity(nullptr)
 {

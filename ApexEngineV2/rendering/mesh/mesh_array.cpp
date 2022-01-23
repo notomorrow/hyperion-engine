@@ -2,7 +2,7 @@
 
 #include "../../util/mesh_factory.h"
 
-namespace apex {
+namespace hyperion {
 MeshArray::MeshArray()
     : Renderable()
 {
@@ -58,4 +58,4 @@ void MeshArray::Optimize()
 
     m_submeshes.resize(1);
 }
-} // namespace apex
+} // namespace hyperion

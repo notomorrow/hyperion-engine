@@ -4,7 +4,7 @@
 #include "../asset/loadable.h"
 #include "../math/vector3.h"
 
-namespace apex {
+namespace hyperion {
 class AudioSource : public Loadable {
 public:
     AudioSource(int format, unsigned char *data, size_t size, size_t freq);
@@ -24,6 +24,6 @@ private:
     unsigned int m_buffer_id;
     unsigned int m_source_id;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

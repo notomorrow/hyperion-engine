@@ -3,7 +3,7 @@
 
 #include "asset_loader.h"
 
-namespace apex {
+namespace hyperion {
 class TextLoader : public AssetLoader {
 public:
     std::shared_ptr<Loadable> LoadFromFile(const std::string &);

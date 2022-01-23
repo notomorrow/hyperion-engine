@@ -1,7 +1,7 @@
 #include "audio_source.h"
 #include "audio_manager.h"
 
-namespace apex {
+namespace hyperion {
 AudioSource::AudioSource(int format, unsigned char *data, size_t size, size_t freq)
 {
     if (AudioManager::GetInstance()->IsInitialized()) {
@@ -77,4 +77,4 @@ void AudioSource::Stop()
         alSourceStop(m_source_id);
     }
 }
-} // namespace apex
+} // namespace hyperion

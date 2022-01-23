@@ -1,7 +1,7 @@
 #include "mesh_factory.h"
 #include "../math/math_util.h"
 
-namespace apex {
+namespace hyperion {
 
 std::shared_ptr<Mesh> MeshFactory::CreateQuad(bool triangle_fan)
 {
@@ -176,4 +176,4 @@ std::shared_ptr<Mesh> MeshFactory::CreateCube(Vector3 offset)
     return mesh;
 }
 
-} // namespace apex
+} // namespace hyperion

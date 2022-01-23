@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace apex {
+namespace hyperion {
 
 typedef uint32_t MeshIndex;
 
@@ -101,6 +101,6 @@ private:
 
     std::vector<float> CreateBuffer();
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

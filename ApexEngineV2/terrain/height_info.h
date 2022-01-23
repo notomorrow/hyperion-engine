@@ -10,7 +10,7 @@
 #define TERRAIN_CHUNK_LENGTH 256
 #define TERRAIN_CHUNK_HEIGHT 32
 
-namespace apex {
+namespace hyperion {
 
 enum class PageState {
     WAITING,
@@ -87,6 +87,6 @@ struct ChunkInfo {
     }
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

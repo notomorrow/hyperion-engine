@@ -2,7 +2,7 @@
 #include <cassert>
 #include <string.h>
 
-namespace apex {
+namespace hyperion {
 Matrix3::Matrix3()
 {
     for (int i = 0; i < 3; i++) {
@@ -215,4 +215,4 @@ std::ostream &operator<<(std::ostream &os, const Matrix3 &mat)
     os << "]";
     return os;
 }
-} // namespace apex
+} // namespace hyperion

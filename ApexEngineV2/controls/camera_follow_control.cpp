@@ -1,6 +1,6 @@
 #include "camera_follow_control.h"
 
-namespace apex {
+namespace hyperion {
 CameraFollowControl::CameraFollowControl(Camera *camera, const Vector3 &offset)
     : EntityControl(60.0),
       m_camera(camera),
@@ -24,4 +24,4 @@ void CameraFollowControl::OnUpdate(double dt)
 {
     parent->SetGlobalTranslation(m_camera->GetTranslation() + m_offset);
 }
-} // namespace apex
+} // namespace hyperion

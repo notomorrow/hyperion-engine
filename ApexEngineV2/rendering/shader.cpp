@@ -4,7 +4,7 @@
 #include "../util.h"
 #include "../gl_util.h"
 
-namespace apex {
+namespace hyperion {
 
 Shader::Shader(const ShaderProperties &properties)
     : m_properties(properties),
@@ -337,4 +337,4 @@ void Shader::ReprocessSubShader(SubShader &sub_shader, const ShaderProperties &p
     sub_shader.processed_code = ShaderPreprocessor::ProcessShader(sub_shader.code, properties, sub_shader.path);
 }
 
-} // namespace apex
+} // namespace hyperion

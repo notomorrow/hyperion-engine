@@ -13,7 +13,7 @@
 #include <array>
 #include <vector>
 
-namespace apex {
+namespace hyperion {
 class Environment {
 public:
     static Environment *GetInstance();
@@ -80,6 +80,6 @@ private:
     ProbeRenderer *m_probe_renderer;
     bool m_probe_enabled;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

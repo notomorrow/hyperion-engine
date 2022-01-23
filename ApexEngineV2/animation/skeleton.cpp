@@ -1,6 +1,6 @@
 #include "skeleton.h"
 
-namespace apex {
+namespace hyperion {
 Skeleton::Skeleton(const std::string &name)
     : m_name(name)
 {

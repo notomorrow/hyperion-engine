@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace apex {
+namespace hyperion {
 
 Entity::Entity(const std::string &name)
     : m_name(name),
@@ -251,4 +251,4 @@ std::shared_ptr<Entity> Entity::CloneImpl()
     return new_entity;
 }
 
-} // namespace apex
+} // namespace hyperion

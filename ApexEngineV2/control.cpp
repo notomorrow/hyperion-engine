@@ -1,6 +1,6 @@
 #include "control.h"
 
-namespace apex {
+namespace hyperion {
 
 EntityControl::EntityControl(const double tps)
     : tps(tps), 
@@ -12,4 +12,4 @@ EntityControl::~EntityControl()
 {
 }
 
-} // namespace apex
+} // namespace hyperion

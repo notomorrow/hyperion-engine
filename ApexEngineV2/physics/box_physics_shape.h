@@ -4,7 +4,7 @@
 #include "physics_shape.h"
 #include "../math/vector3.h"
 
-namespace apex {
+namespace hyperion {
 class BoundingBox;
 namespace physics {
 
@@ -32,6 +32,6 @@ private:
 };
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion
 
 #endif

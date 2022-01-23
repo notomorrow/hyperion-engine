@@ -3,7 +3,7 @@
 
 #include "../shader.h"
 
-namespace apex {
+namespace hyperion {
 class PostShader : public Shader {
 public:
     PostShader(const ShaderProperties &properties);
@@ -12,6 +12,6 @@ public:
     virtual void ApplyMaterial(const Material &mat) override;
     virtual void ApplyTransforms(const Transform &transform, Camera *camera) = 0;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

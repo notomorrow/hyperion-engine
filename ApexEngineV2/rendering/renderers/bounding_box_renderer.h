@@ -8,7 +8,7 @@
 #include "../../math/bounding_box.h"
 #include "../mesh.h"
 
-namespace apex {
+namespace hyperion {
 
 class BoundingBoxRenderer : public Renderable {
     static const std::vector<MeshIndex> indices;
@@ -28,6 +28,6 @@ private:
     std::vector<Vertex> m_vertices;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

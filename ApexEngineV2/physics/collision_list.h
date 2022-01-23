@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 struct CollisionList {
     std::vector<CollisionInfo> m_collisions;
@@ -15,6 +15,6 @@ struct CollisionList {
 };
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion
 
 #endif

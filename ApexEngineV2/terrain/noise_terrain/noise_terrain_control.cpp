@@ -1,6 +1,6 @@
 #include "noise_terrain_control.h"
 
-namespace apex {
+namespace hyperion {
 
 NoiseTerrainControl::NoiseTerrainControl(Camera *camera, int seed)
     : TerrainControl(camera), 
@@ -14,4 +14,4 @@ TerrainChunk *NoiseTerrainControl::NewChunk(const ChunkInfo &chunk_info)
     return new NoiseTerrainChunk(heights, chunk_info);
 }
 
-} // namespace apex
+} // namespace hyperion

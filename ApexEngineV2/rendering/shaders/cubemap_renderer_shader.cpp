@@ -5,7 +5,7 @@
 #include "../../util/shader_preprocessor.h"
 #include "../../math/matrix_util.h"
 
-namespace apex {
+namespace hyperion {
 CubemapRendererShader::CubemapRendererShader(const ShaderProperties &properties)
     : Shader(properties),
       m_directions({
@@ -69,4 +69,4 @@ void CubemapRendererShader::ApplyTransforms(const Transform &transform, Camera *
 
     SetUniform("u_camerapos", camera->GetTranslation());
 }
-} // namespace apex
+} // namespace hyperion

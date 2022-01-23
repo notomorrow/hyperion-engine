@@ -1,6 +1,6 @@
 #include "physics_material.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 PhysicsMaterial::PhysicsMaterial(double mass, double friction, double restitution, 
     double linear_damping, double angular_damping)
@@ -21,4 +21,4 @@ PhysicsMaterial::PhysicsMaterial(const PhysicsMaterial &other)
 {
 }
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

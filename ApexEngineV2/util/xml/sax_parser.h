@@ -7,7 +7,7 @@
 #include <vector>
 #include <map>
 
-namespace apex {
+namespace hyperion {
 namespace xml {
 
 typedef std::map<std::string, std::string> AttributeMap;
@@ -34,6 +34,6 @@ private:
 };
 
 } // namespace xml
-} // namespace apex
+} // namespace hyperion
 
 #endif

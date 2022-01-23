@@ -1,7 +1,7 @@
 #include "bone.h"
 #include "../math/matrix_util.h"
 
-namespace apex {
+namespace hyperion {
 Bone::Bone(const std::string &name)
     : Entity(name)
 {

@@ -4,7 +4,7 @@
 #include "../../environment.h"
 #include "../../shaders/post/shadertoy.h"
 
-namespace apex {
+namespace hyperion {
 
 ShadertoyFilter::ShadertoyFilter()
     : PostFilter(ShaderManager::GetInstance()->GetShader<ShadertoyShader>(ShaderProperties()))
@@ -16,4 +16,4 @@ void ShadertoyFilter::SetUniforms(Camera *cam)
 {
 }
 
-} // namespace apex
+} // namespace hyperion

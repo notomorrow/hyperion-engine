@@ -3,7 +3,7 @@
 
 #include "../math/vector3.h"
 
-namespace apex {
+namespace hyperion {
 struct Particle {
     Vector3 m_origin;
     Vector3 m_position;
@@ -19,6 +19,6 @@ struct Particle {
 
     bool operator<(const Particle &other) const;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

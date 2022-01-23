@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-namespace apex {
+namespace hyperion {
 std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
 {
     int width, height, comp;
@@ -51,4 +51,4 @@ std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
 
     return tex;
 }
-} // namespace apex
+} // namespace hyperion

@@ -9,7 +9,7 @@
 #include <string>
 #include <map>
 
-namespace apex {
+namespace hyperion {
 class MtlLib;
 
 struct ObjModel {

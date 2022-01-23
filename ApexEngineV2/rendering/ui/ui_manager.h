@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class InputManager;
 class InputEvent;
 class UIManager {
@@ -29,6 +29,6 @@ private:
     InputManager *m_input_manager;
     InputEvent *m_input_event;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

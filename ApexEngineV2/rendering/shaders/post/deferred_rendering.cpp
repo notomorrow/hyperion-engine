@@ -4,7 +4,7 @@
 #include "../../../asset/text_loader.h"
 #include "../../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 DeferredRenderingShader::DeferredRenderingShader(const ShaderProperties &properties)
     : PostShader(properties)
 {
@@ -85,4 +85,4 @@ void DeferredRenderingShader::ApplyTransforms(const Transform &transform, Camera
     // TODO: move into general shader calculations
     SetUniform("InverseViewProjMatrix", inverse_proj_view);
 }
-} // namespace apex
+} // namespace hyperion

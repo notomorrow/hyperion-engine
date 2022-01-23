@@ -8,7 +8,7 @@
 #include <array>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 
 class Shader;
 class Framebuffer;
@@ -49,6 +49,6 @@ private:
     void UpdateUniforms();
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

@@ -5,7 +5,7 @@
 #include <sstream>
 #include <cctype>
 
-namespace apex {
+namespace hyperion {
 
 using BitFlags_t = uint64_t;
 
@@ -51,6 +51,6 @@ static inline uint64_t FastLog2(uint64_t value)
     return tab64[((uint64_t)((value - (value >> 1))*0x07EDD5E59A4E28C2)) >> 58];
 }
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

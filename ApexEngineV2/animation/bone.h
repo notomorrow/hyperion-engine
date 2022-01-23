@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace apex {
+namespace hyperion {
 class Bone : public Entity {
     friend class Skeleton;
 public:

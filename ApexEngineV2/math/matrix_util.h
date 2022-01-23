@@ -6,7 +6,7 @@
 #include "matrix4.h"
 #include "vector3.h"
 
-namespace apex {
+namespace hyperion {
 class MatrixUtil {
 public:
     static void ToTranslation(Matrix4 &mat, const Vector3 &translation);
@@ -22,6 +22,6 @@ public:
     /** Creates an inertia tensor matrix for a block shape */
     static Matrix3 CreateInertiaTensor(const Vector3 &half_size, double mass);
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

@@ -10,7 +10,7 @@
 
 #define FRAMEBUFFER_MAX_ATTACHMENTS 6
 
-namespace apex {
+namespace hyperion {
 
 class Framebuffer {
 public:
@@ -86,6 +86,6 @@ protected:
     FramebufferAttachments_t m_attachments;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

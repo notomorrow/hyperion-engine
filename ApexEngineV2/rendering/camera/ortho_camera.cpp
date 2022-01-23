@@ -1,7 +1,7 @@
 #include "ortho_camera.h"
 #include "../../math/matrix_util.h"
 
-namespace apex {
+namespace hyperion {
 OrthoCamera::OrthoCamera(float left, float right, float bottom, float top, float near, float far)
     : Camera(512, 512, near, far),
       m_left(left),

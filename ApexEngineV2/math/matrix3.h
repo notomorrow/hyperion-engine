@@ -4,7 +4,7 @@
 #include <iostream>
 #include <array>
 
-namespace apex {
+namespace hyperion {
 class Matrix3 {
     friend std::ostream &operator<<(std::ostream &os, const Matrix3 &mat);
 public:

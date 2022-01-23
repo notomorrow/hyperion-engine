@@ -1,6 +1,6 @@
 #include "raytest.h"
 
-namespace apex {
+namespace hyperion {
 
 void RayTestSphere(const Ray &ray, const Sphere &sphere)
 {
@@ -20,4 +20,4 @@ void RayTestSphere(const Ray &ray, const Sphere &sphere)
     }*/
 }
 
-} // namespace apex
+} // namespace hyperion

@@ -76,7 +76,7 @@
 #include <string>
 #include <math.h>
 
-using namespace apex;
+using namespace hyperion;
 
 class MyGame : public Game {
 public:

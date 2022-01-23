@@ -3,7 +3,7 @@
 
 #include "../shader.h"
 
-namespace apex {
+namespace hyperion {
 class NormalsShader : public Shader {
 public:
     NormalsShader(const ShaderProperties &properties);
@@ -12,6 +12,6 @@ public:
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Transform &transform, Camera *camera);
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

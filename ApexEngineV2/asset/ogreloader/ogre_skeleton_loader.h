@@ -8,7 +8,7 @@
 
 #include <string>
 
-namespace apex {
+namespace hyperion {
 class OgreSkeletonLoader : public AssetLoader {
 public:
     std::shared_ptr<Loadable> LoadFromFile(const std::string &);

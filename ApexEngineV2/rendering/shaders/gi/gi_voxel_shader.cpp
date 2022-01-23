@@ -2,7 +2,7 @@
 #include "../../../asset/asset_manager.h"
 #include "../../../asset/text_loader.h"
 
-namespace apex {
+namespace hyperion {
 GIVoxelShader::GIVoxelShader(const ShaderProperties &properties)
     : Shader(properties)
 {
@@ -42,4 +42,4 @@ void GIVoxelShader::ApplyTransforms(const Transform &transform, Camera *camera)
     Shader::ApplyTransforms(transform, camera);
     SetUniform("CameraPosition", camera->GetTranslation());
 }
-} // namespace apex
+} // namespace hyperion

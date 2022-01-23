@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace apex {
+namespace hyperion {
 
 struct RenderWindow {
     RenderWindow() 
@@ -51,6 +51,6 @@ struct RenderWindow {
     std::string title;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

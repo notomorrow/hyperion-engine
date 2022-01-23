@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace apex {
+namespace hyperion {
 
 struct Ray {
     Vector3 m_position;
@@ -19,6 +19,6 @@ struct RaytestHit {
 
 using RaytestHitList_t = std::vector<RaytestHit>;
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

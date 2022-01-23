@@ -1,6 +1,6 @@
 #include "material.h"
 
-namespace apex {
+namespace hyperion {
 
 const std::map<std::string, MaterialParameter> Material::default_parameters = {
     { "roughness", MaterialParameter(0.8f) },
@@ -123,4 +123,4 @@ std::shared_ptr<Texture> Material::GetTexture(const std::string &name) const
     return nullptr;
 }
 
-} // namespace apex
+} // namespace hyperion

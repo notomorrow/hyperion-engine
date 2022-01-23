@@ -3,7 +3,7 @@
 #include "../../asset/text_loader.h"
 #include "../../util/shader_preprocessor.h"
 
-namespace apex {
+namespace hyperion {
 PostShader::PostShader(const ShaderProperties &properties)
     : Shader(properties)
 {
@@ -26,4 +26,4 @@ void PostShader::ApplyMaterial(const Material &mat)
         SetUniform(std::string("Has") + it->first, 1);
     }
 }
-} // namespace apex
+} // namespace hyperion

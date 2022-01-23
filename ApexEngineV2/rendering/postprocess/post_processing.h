@@ -14,7 +14,7 @@
 #include "../camera/camera.h"
 #include "./post_filter.h"
 
-namespace apex {
+namespace hyperion {
 
 class PostProcessing {
 public:
@@ -82,6 +82,6 @@ private:
     Vector2 m_render_scale;
 };
 
-} // namespace apex
+} // namespace hyperion
 
 #endif

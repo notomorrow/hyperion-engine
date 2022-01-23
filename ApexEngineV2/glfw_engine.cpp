@@ -9,9 +9,9 @@
 
 #define USE_CHRONO 0
 
-namespace apex {
+namespace hyperion {
 
-static apex::InputManager *inputmgr;
+static hyperion::InputManager *inputmgr;
 
 static void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
@@ -499,4 +499,4 @@ void GlfwEngine::BindImageTexture(unsigned int unit, unsigned int texture, int l
     glBindImageTexture(unit, texture, level, layered, layer, access, format);
 }
 
-} // namespace apex
+} // namespace hyperion

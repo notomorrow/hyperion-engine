@@ -3,7 +3,7 @@
 
 #include "../rendering/shaders/lighting_shader.h"
 
-namespace apex {
+namespace hyperion {
 class TerrainShader : public LightingShader {
 public:
     TerrainShader(const ShaderProperties &properties);
@@ -11,6 +11,6 @@ public:
 
     virtual void ApplyMaterial(const Material &mat) override;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

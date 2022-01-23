@@ -10,7 +10,7 @@
 #include <vector>
 #include <memory>
 
-namespace apex {
+namespace hyperion {
 class ParticleEmitterControl : public EntityControl {
 public:
     ParticleEmitterControl(Camera *camera, const ParticleConstructionInfo &info);
@@ -27,6 +27,6 @@ private:
     std::shared_ptr<Entity> m_entity;
     std::shared_ptr<ParticleRenderer> m_particle_renderer;
 };
-} // namespace apex
+} // namespace hyperion
 
 #endif

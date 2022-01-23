@@ -5,7 +5,7 @@
 #include "../bullet_math_util.h"
 #include "btBulletDynamicsCommon.h"
 
-namespace apex {
+namespace hyperion {
 namespace physics {
 
 PlanePhysicsShape::PlanePhysicsShape(const Vector3 &direction, double offset)
@@ -56,4 +56,4 @@ bool PlanePhysicsShape::CollidesWith(PlanePhysicsShape *shape, CollisionList &ou
 }
 
 } // namespace physics
-} // namespace apex
+} // namespace hyperion

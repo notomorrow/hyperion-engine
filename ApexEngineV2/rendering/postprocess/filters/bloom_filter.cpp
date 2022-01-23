@@ -3,7 +3,7 @@
 #include "../../shader_manager.h"
 #include "../../shaders/post/bloom.h"
 
-namespace apex {
+namespace hyperion {
 
 BloomFilter::BloomFilter()
     : PostFilter(ShaderManager::GetInstance()->GetShader<BloomShader>(
@@ -18,4 +18,4 @@ void BloomFilter::SetUniforms(Camera *cam)
 {
 }
 
-} // namespace apex
+} // namespace hyperion
