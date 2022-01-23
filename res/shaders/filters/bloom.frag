@@ -6,9 +6,6 @@ precision highp float;
 
 uniform sampler2D ColorMap;
 
-const float BloomSpread = 0.8;
-const float BloomIntensity = 1.1;
-
 in vec2 v_texcoord0;
 
 void main(void)
@@ -20,21 +17,21 @@ void main(void)
 
     vec4 sum = vec4(0.0);
     for (int n = 0; n < 9; ++n) {
-        uv_y = (v_texcoord0.y * size.y) + (BloomSpread * float(n - 4));
+        uv_y = (v_texcoord0.y * size.y) + ($BLOOM_SPREAD * float(n - 4));
         vec4 h_sum = vec4(0.0);
-        h_sum += texelFetch(ColorMap, ivec2(uv_x - (4.0 * BloomSpread), uv_y), 0);
-        h_sum += texelFetch(ColorMap, ivec2(uv_x - (3.0 * BloomSpread), uv_y), 0);
-        h_sum += texelFetch(ColorMap, ivec2(uv_x - (2.0 * BloomSpread), uv_y), 0);
-        h_sum += texelFetch(ColorMap, ivec2(uv_x - BloomSpread, uv_y), 0);
+        h_sum += texelFetch(ColorMap, ivec2(uv_x - (4.0 * $BLOOM_SPREAD), uv_y), 0);
+        h_sum += texelFetch(ColorMap, ivec2(uv_x - (3.0 * $BLOOM_SPREAD), uv_y), 0);
+        h_sum += texelFetch(ColorMap, ivec2(uv_x - (2.0 * $BLOOM_SPREAD), uv_y), 0);
+        h_sum += texelFetch(ColorMap, ivec2(uv_x - $BLOOM_SPREAD, uv_y), 0);
         h_sum += texelFetch(ColorMap, ivec2(uv_x, uv_y), 0);
-        h_sum += texelFetch(ColorMap, ivec2(uv_x + BloomSpread, uv_y), 0);
-        h_sum += texelFetch(ColorMap, ivec2(uv_x + (2.0 * BloomSpread), uv_y), 0);
-        h_sum += texelFetch(ColorMap, ivec2(uv_x + (3.0 * BloomSpread), uv_y), 0);
-        h_sum += texelFetch(ColorMap, ivec2(uv_x + (4.0 * BloomSpread), uv_y), 0);
+        h_sum += texelFetch(ColorMap, ivec2(uv_x + $BLOOM_SPREAD, uv_y), 0);
+        h_sum += texelFetch(ColorMap, ivec2(uv_x + (2.0 * $BLOOM_SPREAD), uv_y), 0);
+        h_sum += texelFetch(ColorMap, ivec2(uv_x + (3.0 * $BLOOM_SPREAD), uv_y), 0);
+        h_sum += texelFetch(ColorMap, ivec2(uv_x + (4.0 * $BLOOM_SPREAD), uv_y), 0);
         sum += h_sum / 9.0;
     }
 
-    vec3 color = (texture(ColorMap, v_texcoord0) + ((sum / 9.0) * BloomIntensity)).rgb;
+    vec3 color = (texture(ColorMap, v_texcoord0) + ((sum / 9.0) * $BLOOM_INTENSITY)).rgb;
 
     //Tonemapping and color grading
     color = pow(color, vec3(1.5));
