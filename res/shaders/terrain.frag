@@ -15,8 +15,12 @@ uniform vec3 u_camerapos;
 
 uniform sampler2D BaseTerrainColorMap;
 uniform sampler2D BaseTerrainNormalMap;
+uniform sampler2D BaseTerrainParallaxMap;
+uniform sampler2D BaseTerrainAoMap;
 uniform int HasBaseTerrainColorMap;
 uniform int HasBaseTerrainNormalMap;
+uniform int HasBaseTerrainParallaxMap;
+uniform int HasBaseTerrainAoMap;
 uniform float BaseTerrainScale;
 
 uniform sampler2D Level1ColorMap;
@@ -30,53 +34,31 @@ uniform sampler2D SlopeColorMap;
 uniform sampler2D SlopeNormalMap;
 uniform float SlopeScale;
 
+#include "include/matrices.inc"
 #include "include/frag_output.inc"
+#include "include/depth.inc"
+#include "include/lighting.inc"
+#include "include/parallax.inc"
 
 #if SHADOWS
 #include "include/shadows.inc"
 #endif
 
-#include "include/lighting.inc"
-
-#include "include/parallax.inc"
 
 void main() 
 {
   //float ang = 1.0 - v_normal.y;
   //float slopeBlend = 1.0 - clamp(ang / $SLOPE_ANGLE, 0.0, 1.0);
 
+  // === parallax pre calculations ===
+  float roughness = clamp(u_roughness, 0.05, 0.99);
+  float metallic = clamp(u_shininess, 0.05, 0.99);
+
   vec3 slopeBlend = abs(v_normal.xyz);
   slopeBlend = (slopeBlend - vec3(0.2)) * 0.7;
   slopeBlend = normalize(max(slopeBlend, 0.00001));      // Force weights to sum to 1.0 (very important!)
   float b = (slopeBlend.x + slopeBlend.y + slopeBlend.z);
   slopeBlend /= vec3(b, b, b);
-
-  vec4 flatColor = texture(BaseTerrainColorMap, v_texcoord0 * BaseTerrainScale);
-  vec4 flatNormal = texture(BaseTerrainNormalMap, v_texcoord0 * BaseTerrainScale);
-
-  vec4 level1Color = texture(Level1ColorMap, v_texcoord0 * Level1Scale);
-  vec4 level1Normal = texture(Level1NormalMap, v_texcoord0 * Level1Scale);
-
-  vec4 slopeColor1 = texture(SlopeColorMap, v_position.yz * SlopeScale);
-  vec4 slopeColor2 = texture(SlopeColorMap, v_position.xy * SlopeScale);
-  vec4 slopeNormal1 = texture(SlopeNormalMap, v_position.yz * SlopeScale);
-  vec4 slopeNormal2 = texture(SlopeNormalMap, v_position.xy * SlopeScale);
-
-  float level1Amount = clamp((v_position.y) / Level1Height, 0.0, 1.0);
-
-  vec4 diffuseTexture = mix(flatColor, level1Color, level1Amount);
-  vec4 normalsTexture = mix(flatNormal, level1Normal, level1Amount);
-
-  diffuseTexture = (slopeBlend.y * diffuseTexture + slopeBlend.x * slopeColor1 + slopeBlend.z * slopeColor2);
-  normalsTexture = (slopeBlend.y * normalsTexture + slopeBlend.x * slopeNormal1 + slopeBlend.z * slopeNormal2);
-
-  /*if (ang >= $SLOPE_ANGLE) {
-    diffuseTexture = slopeColor;
-    normalsTexture = slopeNormal;
-  }*/
-  
-  float roughness = clamp(u_roughness, 0.05, 0.99);
-  float metallic = clamp(u_shininess, 0.05, 0.99);
 
   vec3 lightDir = normalize(env_DirectionalLight.direction);
   vec3 n = normalize(v_normal.xyz);
@@ -86,21 +68,61 @@ void main()
   vec3 tangentLightPos = v_tbn * lightDir;
   vec3 tangentFragPos = v_tbn * v_position.xyz;
 
-  vec2 texCoords = v_texcoord0;
+  vec2 flatTexCoord = v_texcoord0 * BaseTerrainScale;
 
-  if (HasParallaxMap == 1) {
-    texCoords = ParallaxMapping(texCoords, normalize(tangentViewPos - tangentFragPos));
+  if (HasBaseTerrainParallaxMap == 1) {
+    flatTexCoord = ParallaxMappingTexture(BaseTerrainParallaxMap, flatTexCoord, normalize(tangentViewPos - tangentFragPos));
   }
+
+  // === flat terrain level ===
+  vec4 flatColor = texture(BaseTerrainColorMap, flatTexCoord);
+  vec4 flatNormals = texture(BaseTerrainNormalMap, flatTexCoord);
+  float flatAo = 1.0;
+  
+  //if (HasBaseTerrainAoMap == 1) {
+  //  flatAo = texture(BaseTerrainAoMap, flatTexCoord).r;
+  //}
+
+  vec4 diffuseTexture = flatColor;
+  vec4 normalsTexture = flatNormals;
+  float ao = flatAo;
+
+  // === level-based blending ====
+
+  vec4 level1Color = texture(Level1ColorMap, v_texcoord0 * Level1Scale);
+  vec4 level1Normals = texture(Level1NormalMap, v_texcoord0 * Level1Scale);
+  float level1Ao = 1.0;
+
+  float level1Amount = clamp((v_position.y) / Level1Height, 0.0, 1.0);
+
+  diffuseTexture = mix(diffuseTexture, level1Color, level1Amount);
+  normalsTexture = mix(normalsTexture, level1Normals, level1Amount);
+  ao = mix(ao, level1Ao, level1Amount);
+
+  // === slope-based blending ====
+  vec4 slopeColor1 = texture(SlopeColorMap, v_position.yz * SlopeScale);
+  vec4 slopeColor2 = texture(SlopeColorMap, v_position.xy * SlopeScale);
+  vec4 slopeNormal1 = texture(SlopeNormalMap, v_position.yz * SlopeScale);
+  vec4 slopeNormal2 = texture(SlopeNormalMap, v_position.xy * SlopeScale);
+
+  diffuseTexture = (slopeBlend.y * diffuseTexture + slopeBlend.x * slopeColor1 + slopeBlend.z * slopeColor2);
+  normalsTexture = (slopeBlend.y * normalsTexture + slopeBlend.x * slopeNormal1 + slopeBlend.z * slopeNormal2);
+  // TODO: mixing for other tex's
+
+  // if (ang >= $SLOPE_ANGLE) {
+  //   diffuseTexture = slopeColor;
+  //   normalsTexture = slopeNormal;
+  // }
 
 #if ROUGHNESS_MAPPING
   if (HasRoughnessMap == 1) {
-    roughness = texture(RoughnessMap, texCoords).r;
+    roughness = texture(RoughnessMap, flatTexCoord).r; // TODO: blending texcoords?
   }
 #endif
 
 #if METALNESS_MAPPING
   if (HasMetalnessMap == 1) {
-    metallic = texture(MetalnessMap, texCoords).r;
+    metallic = texture(MetalnessMap, flatTexCoord).r; // TODO: blending texcoords?
   }
 #endif
 
@@ -151,17 +173,21 @@ void main()
   vec4 shadowColor = vec4(1.0);
 #endif
 
-  int mipLevel = 0;//int(floor(roughness * 5));
 
-  vec3 reflectionVector = ReflectionVector(n, v_position.xyz, u_camerapos.xyz);
-  vec3 irradianceCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
+#if PROBE_ENABLED
+    vec3 reflectionVector = EnvProbeVector(n, v_position.xyz, u_camerapos, u_modelMatrix);
+#endif
 
+#if !PROBE_ENABLED
+    vec3 reflectionVector = ReflectionVector(n, v_position.xyz, u_camerapos);
+#endif
+
+  vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
   vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
   vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
 
-
   float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
-  specularCubemap = mix(specularCubemap, irradianceCubemap, roughnessMix);
+  specularCubemap = mix(specularCubemap, diffuseCubemap, roughnessMix);
 
 
   vec3 F0 = vec3(0.04);
@@ -196,19 +222,12 @@ void main()
   diffuseLight *= metallicDiff;
 
   
-  /*vec3 irradiance = EnvRemap(Irradiance(n));
-  vec3 diffuse  = (albedo.rgb * irradiance) + (albedo.rgb * clamp(NdotL, 0.0, 1.0));
-  vec3 ambientColor = (diffuse * kD);
+  // vec3 irradiance = EnvRemap(Irradiance(n));
+  // vec3 diffuse  = (albedo.rgb * irradiance) + (albedo.rgb * clamp(NdotL, 0.0, 1.0));
+  // vec3 ambientColor = (diffuse * kD);
 
-  vec3 specTerm = (F * vec3(D * G * $PI) * brdf.x + brdf.y) * specularCubemap;
-
-  if (HasAoMap == 1) {
-    float ao = texture(AoMap, texCoords).r;
-    //diffuseCubemap *= texture(AoMap, texCoords).r;
-    //specularCubemap *= texture(AoMap, texCoords).r;
-    ambientColor *= ao;
-    specTerm *= clamp(pow(NdotV + ao, roughness * roughness) - 1.0 + ao, 0.0, 1.0);
-  }*/
+  // vec3 specTerm = (F * vec3(D * G * $PI) * brdf.x + brdf.y) * specularCubemap;
+  
 
   vec3 color = diffuseLight + reflectedLight * shadowColor.rgb;
 #endif
@@ -217,8 +236,9 @@ void main()
   vec3 color = albedo.rgb;
 #endif
 
-  output0 = vec4(color, albedo.a);
+  output0 = vec4(color, 1.0);
   output1 = vec4(n * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
-  output3 = vec4(v_texcoord0.x, v_texcoord0.y, metallic, roughness);
+  output3 = vec4(metallic, roughness, 0.0, 1.0);
+  output4 = vec4(0.0, 0.0, 0.0, ao);
 }

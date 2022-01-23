@@ -13,16 +13,15 @@ in mat3 v_tbn;
 
 uniform vec3 u_camerapos;
 
+#include "include/matrices.inc"
 #include "include/frag_output.inc"
 #include "include/depth.inc"
+#include "include/lighting.inc"
+#include "include/parallax.inc"
 
 #if SHADOWS
 #include "include/shadows.inc"
 #endif
-
-#include "include/lighting.inc"
-
-#include "include/parallax.inc"
 
 vec4 encodeNormal(vec3 n)
 {
@@ -115,9 +114,16 @@ void main()
   vec4 shadowColor = vec4(1.0);
 #endif
 
-  vec3 reflectionVector = ReflectionVector(n, v_position.xyz, u_camerapos.xyz);
-  vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
 
+#if PROBE_ENABLED
+    vec3 reflectionVector = EnvProbeVector(n, v_position.xyz, u_camerapos, u_modelMatrix);
+#endif
+
+#if !PROBE_ENABLED
+    vec3 reflectionVector = ReflectionVector(n, v_position.xyz, u_camerapos);
+#endif
+
+  vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
   vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
   vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
 
@@ -163,10 +169,11 @@ void main()
 #endif
 
 #if DEFERRED
-  output0 = albedo;
+ output0 = albedo;
 #endif
 
   output1 = vec4(n * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(metallic, roughness, 0.0, 1.0);
+  output4 = vec4(0.0, 0.0, 0.0, 0.0); // TODO: alpha should be aomap
 }

@@ -30,9 +30,9 @@ float noise(vec2 uv)
 vec2 rotate(vec2 uv)
 {
   uv = uv + noise(uv*0.2) * 0.005;
-  /*float rot = 0.5;
-  float sinRot=sin(rot);
-  float cosRot=cos(rot);*/
+  // float rot = 0.5;
+  // float sinRot=sin(rot);
+  // float cosRot=cos(rot);
   
   // optimized
   float sinRot = 0.479426;
@@ -44,9 +44,9 @@ vec2 rotate(vec2 uv)
 
 float fbm (vec2 uv)
 {
-  /*const float rot = 1.57;
-  float sinRot=sin(rot);
-  float cosRot=cos(rot);*/
+  // const float rot = 1.57;
+  // float sinRot=sin(rot);
+  // float cosRot=cos(rot);
   
   // optimized
   float sinRot = 0.999999;
@@ -88,6 +88,7 @@ void main()
   float fogFactor = (30.0 - dist) / (30.0 - 18.0);
   fogFactor = saturate(fogFactor);
   
-  output0 = mix(fogColor, cloudColComb, fogFactor);          
+  output0 = mix(fogColor, cloudColComb, fogFactor);
+  output3 = vec4(0.0);    
 }
 

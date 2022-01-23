@@ -1,9 +1,12 @@
 #version 330 core
 precision highp float;
+
 #include "../include/frag_output.inc"
 
+#define $HQ_DOF 0
 
-/*uniform sampler2D ColorMap; //Image to be processed
+#if HQ_DOF
+uniform sampler2D ColorMap; //Image to be processed
 uniform sampler2D DepthMap; //Linear depth, where 1.0 == far plane
 uniform vec2 PixelSize; //The size of a pixel: vec2(1.0/width, 1.0/height)
 uniform vec2 CameraNearFar;
@@ -12,8 +15,8 @@ uniform float FocusRange;
 in vec2 v_texcoord0;
 
 const float GOLDEN_ANGLE = 2.39996323;
-const float MAX_BLUR_SIZE = 10.0;
-const float RAD_SCALE = 1.5; // Smaller = nicer blur, larger = faster
+const float MAX_BLUR_SIZE = 20.0;
+const float RAD_SCALE = 0.8; // Smaller = nicer blur, larger = faster
 
 float getBlurSize(float depth, float focusPoint, float focusScale)
 {
@@ -50,7 +53,11 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale)
 void main()
 {
     output0 = vec4(depthOfField(v_texcoord0, FocusRange, FocusScale), 1.0);
-}*/
+}
+
+#endif
+
+#if !HQ_DOF
 
 uniform sampler2D ColorMap;
 uniform sampler2D DepthMap;
@@ -80,4 +87,4 @@ void main()
 
     output0 = mix(texture(ColorMap, v_texcoord0), finalBlurVal, unfocus);  
 }
-
+#endif

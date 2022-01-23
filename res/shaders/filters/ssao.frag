@@ -17,15 +17,6 @@ float strength = 1.0;
 
 // -------------
 
-/*
-SSAO GLSL shader v1.2
-assembled by Martins U$PItis (martinsh) (devlog-martinsh.blogspot.com)
-original technique is made by Arkano22 (www.gamedev.net/to$PIc/550699-ssao-no-halo-artifacts/)
-changelog:
-1.2 - added fog calculation to mask AO. Minor fixes.
-1.1 - added s$PIral sampling method from here:
-(http://www.cgafaq.info/wiki/Evenly_distributed_points_on_sphere)
-*/
 //uniform sampler2D bgl_RenderedTexture;
 
 #define $PI 3.14159265
@@ -181,9 +172,5 @@ void main(void)
     ao = mix(ao, 1.0, doMist());
   }
 
-	vec4 colorTexture = texture(ColorMap, v_texcoord0);
-	colorTexture.rgb *= vec3(ao);
-
-  output0 = colorTexture;
-
+  output4 = vec4(0.0, 0.0, 0.0, 1.0 - ao);
 }

@@ -6,6 +6,7 @@
 #include "../include/frag_output.inc"
 #include "../include/depth.inc"
 #include "../include/lighting.inc"
+#include "../include/parallax.inc"
 
 #if SHADOWS
 #include "../include/shadows.inc"
@@ -18,8 +19,13 @@ uniform sampler2D PositionMap;
 //uniform sampler2D NormalMap; // included in lighting.inc
 uniform sampler2D DataMap;
 
+uniform sampler2D SSLightingMap;
+uniform int HasSSLightingMap;
+
 uniform vec3 CameraPosition;
 uniform mat4 InverseViewProjMatrix;
+
+#define $DIRECTIONAL_LIGHTING 1
 
 vec3 decodeNormal(vec4 enc)
 {
@@ -37,21 +43,29 @@ void main()
     vec4 albedo = texture(ColorMap, v_texcoord0);
     vec4 data = texture(DataMap, v_texcoord0);
     float depth = texture(DepthMap, v_texcoord0).r;
-    float metallic = data.x;
-    float roughness = data.y;
-    float performLighting = data.w;
-
-    if (performLighting < 0.1) {
-        output0 = vec4(albedo.rgb, 1.0);
-
-        return;
-    }
+    float metallic = data.r;
+    float roughness = data.g;
+    float performLighting = data.a;
+    float ao = 1.0;
+    vec3 gi = vec3(0.0);
 
     vec4 position = vec4(positionFromDepth(InverseViewProjMatrix, v_texcoord0, depth), 1.0);
-
     vec3 lightDir = normalize(env_DirectionalLight.direction);
     vec3 n = texture(NormalMap, v_texcoord0).rgb * 2.0 - 1.0;
     vec3 viewVector = normalize(CameraPosition - position.xyz);
+
+    if (performLighting < 0.9) {
+        output0 = vec4(albedo.rgb, 1.0);
+        return;
+    }
+
+    if (HasSSLightingMap == 1) {
+        vec4 ssl = texture(SSLightingMap, v_texcoord0);
+        gi = ssl.rgb;
+        ao *= 1.0 - ssl.a;
+    }
+
+#if DIRECTIONAL_LIGHTING
 
     float NdotL = max(0.001, dot(n, lightDir));
     float NdotV = max(0.001, dot(n, viewVector));
@@ -126,11 +140,29 @@ void main()
     reflectedLight += ibl * specularCubemap;
 
     vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
+    diffRef += gi;
     diffuseLight += diffRef;
     diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
     diffuseLight *= metallicDiff;
 
     vec3 result = diffuseLight + reflectedLight * shadowColor.rgb;
+
+#endif
+
+    for (int i = 0; i < env_NumPointLights; i++) {
+        result += ComputePointLight(
+            env_PointLights[i],
+            n,
+            CameraPosition,
+            position.xyz,
+            albedo.rgb,
+            0, // todo
+            roughness,
+            metallic
+        );
+    }
+
+    result *= ao;
 
     output0 = vec4(result, 1.0);
 }

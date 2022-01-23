@@ -8,11 +8,11 @@ uniform vec2 poissonDisk[16];
 
 bool inRadius(vec3 cam, vec3 world, float radius) {
   if (cam.x >= (world.x - (radius)) && cam.x <= (world.x + (radius))) {
-    if (cam.y >= (world.y - (radius)) && cam.y <= (world.y + (radius))) {
-      //if (cam.z >= (world.z - (radius)) && cam.z <= (world.z + (radius))) {
+    //if (cam.y >= (world.y - (radius)) && cam.y <= (world.y + (radius))) {
+      if (cam.z >= (world.z - (radius)) && cam.z <= (world.z + (radius))) {
         return true;
-      //}
-    }
+      }
+    //}
   }
 
   return false;
@@ -20,17 +20,28 @@ bool inRadius(vec3 cam, vec3 world, float radius) {
 
 int getShadowMapSplit(vec3 cam, vec3 world) {
   float distanceBuffer = 1.0;
-  float dist = float(floor(distance(cam, world))) + distanceBuffer;
+  //float dist = float(floor(distance(cam, world))) + distanceBuffer;
 
-  if (dist < u_shadowSplit[0]) {
+  if (inRadius(cam, world, u_shadowSplit[0])) {
     return 0;
-  } else if (dist < u_shadowSplit[1]) {
+  } else if (inRadius(cam, world, u_shadowSplit[1])) {
     return 1;
-  } else if (dist < u_shadowSplit[2]) {
+  } else if (inRadius(cam, world, u_shadowSplit[2])) {
     return 2;
-  } else if (dist < u_shadowSplit[3]) {
+  } else if (inRadius(cam, world, u_shadowSplit[3])) {
     return 3;
   }
+}
+
+vec3 shadowDebugColor(int shadowSplit) {
+  vec3 shadowSplitColors[] = vec3[](
+    vec3(1.0, 0.0, 0.0),
+    vec3(0.0, 1.0, 0.0),
+    vec3(0.0, 0.0, 1.0),
+    vec3(0.0, 0.5, 0.5)
+  );
+
+  return shadowSplitColors[shadowSplit];
 }
 
 float getShadow(int index, vec3 coord) {
@@ -82,3 +93,4 @@ vec3 getShadowCoord(int index, vec3 pos) {
   shadowPos.xyz /= shadowPos.w;
   return shadowPos.xyz;
 }
+

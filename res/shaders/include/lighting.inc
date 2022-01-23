@@ -47,10 +47,9 @@ struct PointLight
     float radius;
 };
 
-uniform PointLight env_PointLights[4]; // @TODO: add default shader properties so this can be passed
+uniform PointLight env_PointLights[/*$MAX_POINT_LIGHTS*/4];
 uniform int env_NumPointLights;
 
-/* cubemapping */
 uniform samplerCube env_GlobalCubemap;
 uniform samplerCube env_GlobalIrradianceCubemap;
 
@@ -102,34 +101,8 @@ vec3 EnvProbeVector(vec3 n, vec3 worldPos, vec3 camPos, mat4 modelMatrix)
 	vec3 CameraWS = camPos;
 	vec3 NormalWS = n;
 
-	/*vec3 DirectionWS = normalize(PositionWS - CameraWS);
-	vec3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
-
-	// Intersection with OBB convertto unit box space
-	// Transform in local unit parallax cube space (scaled and rotated)
-	mat4 WorldToLocal = inverse(modelMatrix);
-	vec3 RayLS = (WorldToLocal * vec4(ReflDirectionWS, 1.0)).xyz;
-	vec3 PositionLS = (WorldToLocal * vec4(PositionWS, 1.0)).xyz;
-
-	vec3 Unitary = vec3(1.0, 1.0, 1.0);
-	vec3 FirstPlaneIntersect  = (Unitary - PositionLS) / RayLS;
-	vec3 SecondPlaneIntersect = (-Unitary - PositionLS) / RayLS;
-	vec3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
-	float Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
-
-	// Use Distance in WS directly to recover intersection
-	vec3 IntersectPositionWS = PositionWS + ReflDirectionWS * Distance;
-	ReflDirectionWS = IntersectPositionWS - EnvProbe.position;
-
-	return ReflDirectionWS;*/
-
 	vec3 DirectionWS = PositionWS - CameraWS;
 	vec3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
-	// mat4 ToLocalSpace = inverse(modelMatrix);
-	// vec3 PositionLS = (ToLocalSpace * vec4(PositionWS, 1.0)).xyz;
-	// vec3 ReflDirectionLS = (ToLocalSpace * vec4(PositionWS, 1.0)).xyz;
-
-	// ^^^ Normal cube-mapped reflection code
 
 	// Following is the parallax-correction code
 	// Find the ray intersection with box plane
@@ -153,18 +126,13 @@ vec3 EnvProbeVector(vec3 n, vec3 worldPos, vec3 camPos, mat4 modelMatrix)
 
 	ReflDirectionWS *= BoxScale;
 
-
 	return ReflDirectionWS;
 }
-
-/* ========== */
 
 float sqr(float x)
 {
   return x * x;
 }
-
-/* lighting functions */
 
 const float PI = 3.14159265358979323846;
 
@@ -302,11 +270,6 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
     denom = PI * denom * denom;
 
     return nom / denom;
-
-		/*float NdotH = max(dot(N, H), 0.0);
-    float r1 = 1.0 / ( 4.0 * roughness * roughness * pow(NdotH, 4.0));
-    float r2 = (NdotH * NdotH - 1.0) / (roughness * roughness * NdotH * NdotH);
-    return r1 * exp(r2);*/
 }
 
 
@@ -343,10 +306,6 @@ vec2 BRDFMap(float NdotV, float metallic)
 	
 		return vec2(-1.04, 1.04) * a004 + r.zw;
 }
-
-
-/* ========== */
-
 
 vec3 BRDF(vec3 n, vec3 v, vec3 lightDir, float roughness, float shininess, float metallic)
 {
@@ -441,35 +400,105 @@ vec3 ComputeDirectionalLight(DirectionalLight dl, vec3 n, vec3 v, vec3 vert, vec
 }
 
 
-vec3 ComputePointLight(PointLight pl, vec3 n, vec3 v, vec3 vert, vec3 albedo, float shadowness, float roughness, float metalness)
-{
-	vec3 F0 = vec3(0.04);
-	F0 = mix(albedo, F0, metalness);
+// vec3 ComputePointLight(PointLight pl, vec3 n, vec3 v, vec3 vert, vec3 albedo, float shadowness, float roughness, float metalness)
+// {
+// 	vec3 F0 = vec3(0.04);
+// 	F0 = mix(albedo, F0, metalness);
 
-	vec3 p_direction = normalize(pl.position - vert);
+// 	vec3 p_direction = normalize(pl.position - vert);
+
+// 	float dist = distance(pl.position, vert);
+// 	float attenuation = clamp(1.0 - (dist * dist)/(pl.radius * pl.radius), 0.0, 1.0);
+// 	attenuation *= attenuation;
+// 	vec3 radiance = pl.color.rgb * attenuation;
+
+// 	float NdotL = dot(n, p_direction);
+// 	float NdotV = dot(n, v);
+
+// 	vec3 H = normalize(p_direction + v);
+// 	float NdotH = dot(n, H);
+// 	float LdotH = dot(p_direction, H);
+
+// 	float D = DistributionGGX(n, H, roughness);
+// 	vec3 F = SchlickFresnelRoughness(F0, LdotH);
+// 	float G = smithG_GGX(NdotL, NdotV, roughness);
+
+// 	vec3 nominator = vec3(D * G * F);
+// 	float denominator = (4 * NdotL * NdotV) + 0.001;
+// 	vec3 brdf = nominator / vec3(denominator);
+// 	vec3 kS = F;
+// 	vec3 kD = vec3(1.0) - kS;
+// 	kD *= vec3(1.0 - metalness);
+
+// 	return (kD * albedo / vec3(PI) + brdf) * radiance * vec3(NdotL);
+// }
+
+
+vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, vec3 albedo, float shadowness, float roughness, float metallic)
+{
+	vec3 viewVector = normalize(cameraPosition - vert);
+	vec3 lightDir = normalize(pl.position - vert);
 
 	float dist = distance(pl.position, vert);
 	float attenuation = clamp(1.0 - (dist * dist)/(pl.radius * pl.radius), 0.0, 1.0);
 	attenuation *= attenuation;
+	//float attenuation = 20.0 / dot(local_light_pos - v_pos, local_light_pos - v_pos);
 	vec3 radiance = pl.color.rgb * attenuation;
 
-	float NdotL = dot(n, p_direction);
-	float NdotV = dot(n, v);
+	float NdotL = max(0.001, dot(n, lightDir));
+    float NdotV = max(0.001, dot(n, viewVector));
+    vec3 H = normalize(lightDir + viewVector);
+    float NdotH = max(0.001, dot(n, H));
+    float LdotH = max(0.001, dot(lightDir, H));
+    float VdotH = max(0.001, dot(viewVector, H));
+    float HdotV = max(0.001, dot(H, viewVector));
 
-	vec3 H = normalize(p_direction + v);
-	float NdotH = dot(n, H);
-	float LdotH = dot(p_direction, H);
 
-	float D = DistributionGGX(n, H, roughness);
-	vec3 F = SchlickFresnelRoughness(F0, LdotH);
-	float G = smithG_GGX(NdotL, NdotV, roughness);
+#if PROBE_ENABLED
+    vec3 reflectionVector = EnvProbeVector(n, vert, cameraPosition, u_modelMatrix);
+#endif
 
-	vec3 nominator = vec3(D * G * F);
-	float denominator = (4 * NdotL * NdotV) + 0.001;
-	vec3 brdf = nominator / vec3(denominator);
-	vec3 kS = F;
-	vec3 kD = vec3(1.0) - kS;
-	kD *= vec3(1.0 - metalness);
+#if !PROBE_ENABLED
+    vec3 reflectionVector = ReflectionVector(n, vert, cameraPosition);
+#endif
 
-	return (kD * albedo / vec3(PI) + brdf) * radiance * vec3(NdotL);
+    vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
+    vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
+    vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
+
+    float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
+    specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
+
+    vec3 F0 = vec3(0.04);
+    F0 = mix(vec3(1.0), F0, metallic);
+
+    vec2 AB = BRDFMap(NdotV, metallic);
+
+    vec3 metallicSpec = mix(vec3(0.04), albedo.rgb, metallic);
+    vec3 metallicDiff = mix(albedo.rgb, vec3(0.0), metallic);
+
+    vec3 F = FresnelTerm(metallicSpec, VdotH) * clamp(NdotL, 0.0, 1.0);
+    float D = clamp(DistributionGGX(n, H, roughness), 0.0, 1.0);
+    float G = clamp(SmithGGXSchlickVisibility(clamp(NdotL, 0.0, 1.0), clamp(NdotV, 0.0, 1.0), roughness), 0.0, 1.0);
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= vec3(1.0 - metallic);
+
+    vec3 reflectedLight = vec3(0.0, 0.0, 0.0);
+    vec3 diffuseLight = vec3(0.0, 0.0, 0.0);
+
+    float rim = mix(1.0 - roughnessMix * 1.0 * 0.9, 1.0, NdotV);
+    vec3 specRef = vec3((1.0 / max(rim, 0.0001)) * F * G * D) * NdotL;
+    reflectedLight += specRef;
+
+    vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * AB.x + AB.y);
+    reflectedLight += ibl * specularCubemap;
+
+    vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
+    //diffRef += gi;
+    diffuseLight += diffRef;
+    diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
+    diffuseLight *= metallicDiff;
+
+	return (diffuseLight + reflectedLight) * radiance;
 }

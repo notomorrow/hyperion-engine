@@ -15,16 +15,6 @@ void main() {
 
   v_position = u_modelMatrix * vec4(a_position, 1.0);
   v_normal = transpose(inverse(u_modelMatrix)) * vec4(a_normal, 0.0);
-  /*vec3 c1 = cross(a_normal, vec3(0.0, 0.0, 1.0));
-  vec3 c2 = cross(a_normal, vec3(0.0, 1.0, 0.0));
-  if (length(c1)>length(c2))
-	v_tangent = c1;
-  else
-    v_tangent = c2;
-  v_tangent = normalize(v_tangent);
-  v_bitangent = cross(a_normal, v_tangent);
-  v_bitangent = normalize(v_bitangent);*/
-
 
   v_tangent = a_tangent - a_normal * dot( a_tangent, a_normal ); // orthonormalization ot the tangent vectors
   v_bitangent = a_bitangent - a_normal * dot( a_bitangent, a_normal ); // orthonormalization of the binormal vectors to the normal vector
