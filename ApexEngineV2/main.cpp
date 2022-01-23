@@ -257,10 +257,9 @@ public:
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 10, 5));
 
-        // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        // m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
-        // m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        // m_renderer->GetPostProcessing()->AddFilter<ShadertoyFilter>("shadertoytest", 100);
+        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
+        m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
         m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         m_renderer->SetDeferred(true);
@@ -578,7 +577,6 @@ public:
         plane_entity->AddControl(plane_rigid_body);
         top->AddChild(plane_entity);
 
-#if 0
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 Vector3 box_position = Vector3(((float(x) - 2.5) * 6), 4, (float(z) - 2.5) * 6);
@@ -624,7 +622,7 @@ public:
                 // box->AddControl(std::make_shared<BoundingBoxControl>());
             }
         }
-#endif
+        
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
         // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
         // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
@@ -818,7 +816,7 @@ public:
 
         top->AddControl(std::make_shared<SkydomeControl>(cam));
         // top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
-        // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
+        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
     void Logic(double dt)

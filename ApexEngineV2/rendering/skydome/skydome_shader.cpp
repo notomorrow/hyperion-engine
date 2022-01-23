@@ -83,9 +83,9 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
     auto *env = Environment::GetInstance();
 
     if (has_clouds) {
-        Texture::ActiveTexture(0);
-        noise_map->Begin();
-        SetUniform("u_noiseMap", 0);
+        noise_map->Prepare();
+
+        SetUniform("u_noiseMap", noise_map.get());
     }
 
     SetUniform("u_globalTime", m_global_time);

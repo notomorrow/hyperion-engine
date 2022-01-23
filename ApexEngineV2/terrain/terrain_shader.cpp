@@ -19,7 +19,7 @@ TerrainShader::TerrainShader(const ShaderProperties &properties)
 
     SetUniform("BaseTerrainScale", 1.0f);
     SetUniform("Level1Scale", 1.0f);
-    SetUniform("Level1Height", 5.0f);
+    SetUniform("Level1Height", 250.0f);
     SetUniform("SlopeScale", 1.0f);
 }
 
