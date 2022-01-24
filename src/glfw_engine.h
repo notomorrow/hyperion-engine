@@ -71,6 +71,7 @@ public:
     void VertexAttribDivisor(unsigned int index, unsigned int divisor);
     void DrawArraysInstanced(int mode, int first, size_t count, size_t primcount);
     void BindImageTexture(unsigned int unit, unsigned int texture, int level, bool layered, int layer, unsigned int access, unsigned int format);
+    void CullFace(unsigned int mode);
 
 private:
     GLFWwindow *window;

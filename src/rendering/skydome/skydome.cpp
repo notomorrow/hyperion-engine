@@ -42,8 +42,8 @@ void SkydomeControl::OnAdded()
         clouds_quad->SetRenderBucket(Renderable::RB_SKY);
 
         auto clouds_node = std::make_shared<Entity>("clouds");
-        clouds_node->Rotate(Quaternion(Vector3::UnitX(), MathUtil::PI / 2.0f));
-        clouds_node->Scale(Vector3(150.0));
+        clouds_node->Rotate(Quaternion(Vector3::UnitX(), MathUtil::PI / -2.0f));
+        clouds_node->Scale(Vector3(50.0));
         clouds_node->SetRenderable(clouds_quad);
         clouds_node->GetMaterial().depth_test = false;
         clouds_node->GetMaterial().depth_write = false;

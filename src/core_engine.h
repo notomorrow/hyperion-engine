@@ -188,6 +188,7 @@ public:
     virtual void VertexAttribDivisor(unsigned int index, unsigned int divisor) = 0;
     virtual void DrawArraysInstanced(int mode, int first, size_t count, size_t primcount) = 0;
     virtual void BindImageTexture(unsigned int unit, unsigned int texture, int level, bool layered, int layer, unsigned int access, unsigned int format) = 0;
+    virtual void CullFace(unsigned int mode) = 0;
 
 private:
     static CoreEngine *instance;

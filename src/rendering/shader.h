@@ -180,6 +180,7 @@ public:
 };
 
 class Shader {
+    friend class Renderer;
 public:
     Shader(const ShaderProperties &properties);
     Shader(const ShaderProperties &properties,
@@ -188,6 +189,8 @@ public:
 
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Transform &transform, Camera *camera);
+
+    inline int GetId() const { return progid; }
 
     inline ShaderProperties &GetProperties() { return m_properties; }
     inline const ShaderProperties &GetProperties() const { return m_properties; }
@@ -270,6 +273,8 @@ private:
     void UploadGpuData();
     void DestroyGpuData();
     bool ShaderPropertiesChanged() const;
+
+    void ApplyUniforms();
 
     struct Uniform {
         enum UniformType {

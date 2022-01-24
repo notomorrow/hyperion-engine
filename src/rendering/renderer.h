@@ -16,6 +16,8 @@
 #include "framebuffer_2d.h"
 #include "postprocess/post_processing.h"
 
+#define RENDERER_SHADER_GROUPING 1
+
 namespace hyperion {
 
 struct MemoizedFrustumCheckKey {
@@ -115,10 +117,68 @@ struct Bucket {
         const auto it = hash_to_item_index.find(bucket_item.hash_code);
         ex_assert(it == hash_to_item_index.end());
 
-        const size_t index = items.size();
+        soft_assert(bucket_item.renderable != nullptr);
 
-        items.push_back(bucket_item);
-        hash_to_item_index[bucket_item.hash_code] = index;
+        // For optimization: try to find an existing slot that
+        // where the same shader is used previously or next
+        // this will save us from having to switch shaders
+        // as much.
+        // if no slots are found where the shaders match,
+        // use an existing (non alive) slot anyway,
+        // that way we don't have to increase the array size.
+        // it comes free anyway
+
+        size_t slot_index = 0;
+        bool slot_found = false;
+
+#if RENDERER_SHADER_GROUPING
+        for (size_t i = 0; i < items.size(); i++) {
+            if (!items[i].alive) {
+                slot_index = i;
+                slot_found = true;
+
+                soft_assert_break_msg(bucket_item.renderable->GetShader() != nullptr, "No shader set, using first found inactive slot");
+
+                continue;
+            }
+
+            // it is alive -- check if "next" slot is empty
+            bool is_next_empty = (i < items.size() - 1) && !items[i + 1].alive;
+            bool is_prev_empty = (i > 0) && !items[i - 1].alive;
+
+            if (!is_next_empty && !is_prev_empty) {
+                continue;
+            }
+
+            // next one is empty, so we compare shaders for this,
+            // checking if we should insert the item into the next slot
+
+            hard_assert(items[i].renderable != nullptr);
+
+            if (items[i].renderable->GetShader() != nullptr) {
+                // doing ID check for now... not sure how portable it will be
+                if (items[i].renderable->GetShader()->GetId() == bucket_item.renderable->GetShader()->GetId()) {
+                    slot_index = is_next_empty ? (i + 1) : (i - 1);
+                    slot_found = true;
+
+                    std::cout << "CHA CHING, saved 1 switch of shaders, woo\n";
+
+                    break;
+                }
+            }
+        }
+
+        if (slot_found) {
+            items[slot_index] = bucket_item;
+        } else {
+#endif
+            slot_index = items.size();
+            items.push_back(bucket_item);
+#if RENDERER_SHADER_GROUPING
+        }
+#endif
+
+        hash_to_item_index[bucket_item.hash_code] = slot_index;
     }
 
     void SetItem(size_t at, const BucketItem &bucket_item)
@@ -212,6 +272,8 @@ private:
     void ClearRenderables();
     void FindRenderables(Camera *cam, Entity *top, bool frustum_culled = false, bool is_root = false);
     bool MemoizedFrustumCheck(Camera *cam, const BoundingBox &aabb);
+
+    void SetRendererDefaults();
 
     std::map<MemoizedFrustumCheckKey, bool> m_memoized_frustum_checks; // TODO: some sort of deque map
 };
