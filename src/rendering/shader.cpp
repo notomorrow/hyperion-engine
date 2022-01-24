@@ -209,6 +209,7 @@ void Shader::ApplyMaterial(const Material &mat)
     }
 
     if (mat.alpha_blended) {
+        glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
     if (!mat.depth_test) {
@@ -227,29 +228,8 @@ void Shader::ApplyTransforms(const Transform &transform, Camera *camera)
     SetUniform("u_viewProjMatrix", camera->GetViewProjectionMatrix());
 }
 
-void Shader::Use()
+void Shader::ApplyUniforms()
 {
-    if (!is_created) {
-        CreateGpuData();
-    }
-
-    if (!is_uploaded) {
-        UploadGpuData();
-    } else if (ShaderPropertiesChanged()) {
-        DestroyGpuData();
-
-        for (auto &sub_shader : subshaders) {
-            ReprocessSubShader(sub_shader.second, m_properties);
-        }
-
-        CreateGpuData();
-        UploadGpuData();
-
-        m_previous_properties_hash_code = m_properties.GetHashCode().Value();
-    }
-
-    glUseProgram(progid);
-
     if (uniform_changed) {
         int texture_index = 1;
 
@@ -303,17 +283,35 @@ void Shader::Use()
     }
 }
 
+void Shader::Use()
+{
+    if (!is_created) {
+        CreateGpuData();
+    }
+
+    if (!is_uploaded) {
+        UploadGpuData();
+    } else if (ShaderPropertiesChanged()) {
+        DestroyGpuData();
+
+        for (auto &sub_shader : subshaders) {
+            ReprocessSubShader(sub_shader.second, m_properties);
+        }
+
+        CreateGpuData();
+        UploadGpuData();
+
+        m_previous_properties_hash_code = m_properties.GetHashCode().Value();
+    }
+
+    glUseProgram(progid);
+
+    ApplyUniforms();
+}
+
 void Shader::End()
 {
     // m_override_cull = MaterialFaceCull::MaterialFace_None;
-    glBlendFunc(GL_ONE, GL_ZERO);
-    glEnable(GL_DEPTH_TEST);
-    glDepthMask(true);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-
     glUseProgram(0);
 }
 

@@ -46,17 +46,6 @@ void CloudsShader::ApplyMaterial(const Material &mat)
 
     SetUniform("m_GlobalTime", m_global_time);
     SetUniform("m_CloudColor", m_cloud_color);
-
-    if (mat.alpha_blended) {
-        CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::BLEND);
-        CoreEngine::GetInstance()->BlendFunc(CoreEngine::GLEnums::SRC_ALPHA, CoreEngine::GLEnums::ONE_MINUS_SRC_ALPHA);
-    }
-    if (!mat.depth_test) {
-        CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::DEPTH_TEST);
-    }
-    if (!mat.depth_write) {
-        CoreEngine::GetInstance()->DepthMask(false);
-    }
 }
 
 void CloudsShader::ApplyTransforms(const Transform &transform, Camera *camera)
@@ -65,7 +54,7 @@ void CloudsShader::ApplyTransforms(const Transform &transform, Camera *camera)
     Transform updated_transform(transform);
     updated_transform.SetTranslation(Vector3(
         camera->GetTranslation().x,
-        camera->GetTranslation().y + 20.0f,
+        camera->GetTranslation().y + 25.0f,
         camera->GetTranslation().z
     ));
 

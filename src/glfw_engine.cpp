@@ -89,7 +89,7 @@ bool GlfwEngine::InitializeGame(Game *game)
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
-    glEnable(GL_BLEND);
+    // glEnable(GL_BLEND);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 
@@ -498,6 +498,11 @@ void GlfwEngine::DrawArraysInstanced(int mode, int first, size_t count, size_t p
 void GlfwEngine::BindImageTexture(unsigned int unit, unsigned int texture, int level, bool layered, int layer, unsigned int access, unsigned int format)
 {
     glBindImageTexture(unit, texture, level, layered, layer, access, format);
+}
+
+void GlfwEngine::CullFace(unsigned int mode)
+{
+    glCullFace(mode);
 }
 
 } // namespace hyperion

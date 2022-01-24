@@ -185,6 +185,7 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
     enable_frustum_culling = enable_frustum_culling && bucket.enable_culling;
 
     Shader *shader = nullptr;
+    Shader *last_shader = nullptr;
 
     for (const BucketItem &it : bucket.GetItems()) {
         if (!it.alive) {
@@ -201,11 +202,49 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
         if (shader) {
             shader->ApplyMaterial(*it.material);
             shader->ApplyTransforms(it.transform, cam);
+
+#if RENDERER_SHADER_GROUPING
+            if (shader != last_shader) {
+                if (last_shader != nullptr) {
+                    last_shader->End();
+                }
+
+                last_shader = shader;
+
+                shader->Use(); // this will call ApplyUniforms() as well
+            } else {
+                shader->ApplyUniforms(); // re-using shader; have to apply uniforms manually
+            }
+#else
             shader->Use();
+#endif
+
             it.renderable->Render();
+
+#if !RENDERER_SHADER_GROUPING
             shader->End();
+#endif
+
+            SetRendererDefaults();
         }
     }
+
+#if RENDERER_SHADER_GROUPING
+    if (last_shader != nullptr) {
+        last_shader->End();
+    }
+#endif
+}
+
+void Renderer::SetRendererDefaults()
+{
+    CoreEngine::GetInstance()->BlendFunc(CoreEngine::GLEnums::ONE, CoreEngine::GLEnums::ZERO);
+    CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::DEPTH_TEST);
+    CoreEngine::GetInstance()->DepthMask(true);
+    CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
+    CoreEngine::GetInstance()->CullFace(CoreEngine::GLEnums::BACK);
+    CoreEngine::GetInstance()->BindTexture(CoreEngine::GLEnums::TEXTURE_2D, 0);
+    CoreEngine::GetInstance()->BindTexture(CoreEngine::GLEnums::TEXTURE_CUBE_MAP, 0);
 }
 
 void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
