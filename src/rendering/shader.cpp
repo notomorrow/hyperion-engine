@@ -209,7 +209,6 @@ void Shader::ApplyMaterial(const Material &mat)
     }
 
     if (mat.alpha_blended) {
-        glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
     if (!mat.depth_test) {
@@ -307,13 +306,13 @@ void Shader::Use()
 void Shader::End()
 {
     // m_override_cull = MaterialFaceCull::MaterialFace_None;
-    glDisable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ZERO);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(true);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    glBlendFunc(GL_ONE, GL_ZERO);
     glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
     glUseProgram(0);
 }

@@ -4,6 +4,8 @@
 
 #include "../util.h"
 
+#define FRUSTUM_CULLING 1
+
 namespace hyperion {
 Renderer::Renderer(const RenderWindow &render_window)
     : m_render_window(render_window),
@@ -150,9 +152,11 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bo
         }
     }
 
+#if FRUSTUM_CULLING
     if (!frustum_culled && !is_root) {
         frustum_culled = !MemoizedFrustumCheck(cam, top->GetAABB());
     }
+#endif
 
     if (new_bucket != nullptr) {
         if (BucketItem *bucket_item_ptr = new_bucket->GetItemPtr(entity_hash)) {
@@ -208,12 +212,11 @@ void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
 {
     if (fbo) {
         fbo->Use();
-
     } else {
         CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
     }
 
-    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
+    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT | CoreEngine::GLEnums::STENCIL_BUFFER_BIT);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
     RenderBucket(cam, m_buckets[Renderable::RB_SKY]);

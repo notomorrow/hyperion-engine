@@ -10,8 +10,8 @@ decltype(Framebuffer::default_texture_attributes)
 Framebuffer::default_texture_attributes = {
     Framebuffer::FramebufferTextureAttributes( // color
         "ColorMap",
-        CoreEngine::GLEnums::RGB,
-        CoreEngine::GLEnums::RGB32F,
+        CoreEngine::GLEnums::RGBA,
+        CoreEngine::GLEnums::RGBA32F,
         CoreEngine::GLEnums::NEAREST,
         CoreEngine::GLEnums::NEAREST,
         true

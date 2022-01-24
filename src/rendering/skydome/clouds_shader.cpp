@@ -37,8 +37,12 @@ CloudsShader::CloudsShader(const ShaderProperties &properties)
 
 void CloudsShader::ApplyMaterial(const Material &mat)
 {
-    cloud_map->Prepare();
-    SetUniform("m_CloudMap", cloud_map.get());
+    Shader::ApplyMaterial(mat);
+
+    if (cloud_map != nullptr) {
+        cloud_map->Prepare();
+        SetUniform("m_CloudMap", cloud_map.get());
+    }
 
     SetUniform("m_GlobalTime", m_global_time);
     SetUniform("m_CloudColor", m_cloud_color);
@@ -57,11 +61,11 @@ void CloudsShader::ApplyMaterial(const Material &mat)
 
 void CloudsShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
-    // Cloud layer should follow the camera
+     // Cloud layer should follow the camera
     Transform updated_transform(transform);
     updated_transform.SetTranslation(Vector3(
         camera->GetTranslation().x,
-        camera->GetTranslation().y + 10.0f,
+        camera->GetTranslation().y + 20.0f,
         camera->GetTranslation().z
     ));
 
