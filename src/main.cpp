@@ -892,7 +892,7 @@ public:
         //     Vector3(sin(timer * 1.2) * 0.2, 0, -sin(timer * 1.2) * 0.2).Normalize()
         // ));
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.5),  1.0f, cos(timer * 0.5)).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.1),  1.0f, cos(timer * 0.1)).Normalize());
 
         // Environment::GetInstance()->GetSun().SetColor(sun_color);
 
