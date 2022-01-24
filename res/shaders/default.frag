@@ -100,7 +100,7 @@ void main()
     for (int y = 0; y < 4; y++) {
       vec2 offset = poissonDisk[x * 4 + y] * $SHADOW_MAP_RADIUS;
       vec3 shadowCoord = getShadowCoord(shadowSplit, v_position.xyz + vec3(offset.x, offset.y, -offset.x));
-      shadowness += getShadow(shadowSplit, shadowCoord);
+      shadowness += getShadow(shadowSplit, shadowCoord, NdotL);
     }
   }
   shadowness /= 16.0;

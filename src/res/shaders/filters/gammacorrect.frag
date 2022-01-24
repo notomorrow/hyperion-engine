@@ -3,7 +3,7 @@
 varying vec2 v_texcoord0;
 uniform sampler2D u_texture;
 
-const float gamma = 1.5;
+const float gamma = 2.2;
 
 void main()
 {

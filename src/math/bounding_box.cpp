@@ -112,7 +112,7 @@ bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const
         return false;
     }
 
-    Vector3 hit_min(std::numeric_limits<float>::min());
+    Vector3 hit_min(std::numeric_limits<float>::lowest());
     Vector3 hit_max(std::numeric_limits<float>::max());
 
     if (std::fabs(ray.m_direction.x) < epsilon) {

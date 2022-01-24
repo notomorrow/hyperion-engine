@@ -87,7 +87,7 @@ void NoiseTerrainChunk::OnAdded()
     m_entity->GetMaterial().SetParameter("shininess", 0.5f);
     m_entity->GetMaterial().SetParameter("roughness", 0.9f);
     m_entity->GetMaterial().diffuse_color = { 1.0, 1.0, 1.0, 1.0 };
-    m_entity->GetMaterial().cull_faces = MaterialFace_Back;
+    m_entity->GetMaterial().cull_faces = MaterialFace_None;
 
     m_entity->GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
     m_entity->GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));

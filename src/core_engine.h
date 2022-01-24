@@ -121,6 +121,8 @@ public:
         STENCIL_ATTACHMENT = 0x8D20,
         NONE = 0,
         FRAMEBUFFER_COMPLETE = 0x8CD5,
+
+        DEPTH_CLAMP = 0x864F
     };
 
     virtual bool InitializeGame(Game *game) = 0;
