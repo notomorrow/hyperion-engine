@@ -188,6 +188,8 @@ public:
 
     inline bool IsDeferred() const { return m_is_deferred; }
     void SetDeferred(bool deferred);
+
+    inline const Framebuffer2D *GetFramebuffer() const { return m_fbo; }
  
     inline PostProcessing *GetPostProcessing() { return m_post_processing; }
     inline const PostProcessing *GetPostProcessing() const { return m_post_processing; }

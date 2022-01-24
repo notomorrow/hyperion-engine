@@ -1,5 +1,8 @@
-#include "glfw_engine.h"
-#include "gl_util.h"
+#include "core_engine.h"
+
+#include "backend/glfw_engine.h"
+#include "backend/mgl_engine.h"
+
 #include "game.h"
 #include "entity.h"
 #include "util.h"
@@ -15,7 +18,6 @@
 #include "rendering/framebuffer_2d.h"
 #include "rendering/framebuffer_cube.h"
 #include "rendering/shaders/lighting_shader.h"
-#include "rendering/shaders/fur_shader.h"
 #include "rendering/shaders/post_shader.h"
 #include "rendering/shader_manager.h"
 #include "rendering/shadow/shadow_mapping.h"
@@ -41,7 +43,6 @@
 #include "rendering/postprocess/filters/bloom_filter.h"
 #include "rendering/postprocess/filters/depth_of_field_filter.h"
 #include "rendering/postprocess/filters/fxaa_filter.h"
-#include "rendering/postprocess/filters/shadertoy_filter.h"
 
 /* Extra */
 #include "rendering/skydome/skydome.h"
@@ -76,12 +77,12 @@
 #include <string>
 #include <math.h>
 
-using namespace hyperion;
+using namespace apex;
 
 class MyGame : public Game {
 public:
-    Camera *cam, *env_cam;
-    Framebuffer *fbo, *env_fbo;
+    Camera *cam;
+    Framebuffer *fbo;
     PssmShadowMapping *shadows;
 
     std::vector<std::shared_ptr<Entity>> m_raytested_entities;
@@ -119,9 +120,7 @@ public:
     {
         delete shadows;
         delete fbo;
-        // delete env_fbo;
         delete cam;
-        // delete env_cam;
 
         AudioManager::Deinitialize();
     }
@@ -233,9 +232,11 @@ public:
 
     void Initialize()
     {
+        // Initialize root node
+        top = std::make_shared<Entity>("top");
+
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
-            .Define("SHADOW_MAP_RADIUS", 0.05f)
-            .Define("SHADOW_PCF", true)
+            .Define("SHADOW_MAP_RADIUS", 0.005f)
         );
         
         cam = new FpsCamera(
@@ -243,45 +244,42 @@ public:
             &m_renderer->GetRenderWindow(),
             m_renderer->GetRenderWindow().GetScaledWidth(),
             m_renderer->GetRenderWindow().GetScaledHeight(),
-            75.0f,
+            55.0f,
             0.5f,
             750.0f
         );
 
-        shadows = new PssmShadowMapping(cam, 4, 100.0);
-        shadows->SetVarianceShadowMapping(false);
+        cam->SetTranslation(Vector3(4, 0, 0));
+
+        shadows = new PssmShadowMapping(cam, 4, 100);
+        shadows->SetVarianceShadowMapping(true);
 
         Environment::GetInstance()->SetShadowsEnabled(true);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(false);
+        Environment::GetInstance()->SetProbeEnabled(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
-        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 0, 0));
+        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 10, 0));
 
-        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
-        m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
-        m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
-        m_renderer->SetDeferred(true);
+        // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 20);
+        // m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        // m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
+        // m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
+        // m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
+        // m_renderer->SetDeferred(true);
 
-        env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
-        env_cam->SetTranslation(Vector3(0, 10, 0));
         fbo = new Framebuffer2D(cam->GetWidth(), cam->GetHeight());
-        env_fbo = new FramebufferCube(256, 256);
+
+
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(1.9f, 0.35f, 1.9f).Normalize());
 
-        for (int x = 0; x < Environment::GetInstance()->GetMaxPointLights() / 2; x++) {
-            for (int z = 0; z < Environment::GetInstance()->GetMaxPointLights() / 2; z++) {
-                Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(x * 0.5f, 0.5f, z * 0.5f), Vector4(1.0f, 1.0f, 1.0f, 1.0f), 2.0f));
-            }
-        }
-        // Initialize root node
-        top = std::make_shared<Entity>("top");
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(6.0f, 15, 0), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, 6.0f), Vector4(0.0f, 1.0f, 0.0f, 1.0f), 10.0f));
+        Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 15, -6.0f), Vector4(1.0f, 0.4f, 0.7f, 1.0f), 10.0f));
 
-        cam->SetTranslation(Vector3(4, 0, 0));
 
         // Initialize particle system
         // InitParticleSystem();
@@ -293,54 +291,29 @@ public:
         top->AddChild(test_ui);
         GetUIManager()->RegisterUIObject(test_ui);*/
 
-        auto ui_text = std::make_shared<ui::UIText>("text_test", "Hyperion 0.1.0\n"
-            "Press 1 to toggle shadows\n"
-            "Press 2 to toggle deferred rendering");
-        ui_text->SetLocalTranslation2D(Vector2(-1.0, 1.0));
-        ui_text->SetLocalScale2D(Vector2(30));
-        top->AddChild(ui_text);
-        GetUIManager()->RegisterUIObject(ui_text);
+        // auto ui_text = std::make_shared<ui::UIText>("text_test", "AEngine 1.2.0\n"
+        //     "Press 1 to toggle shadows\n"
+        //     "Press 2 to toggle deferred rendering");
+        // ui_text->SetLocalTranslation2D(Vector2(-1.0, 1.0));
+        // ui_text->SetLocalScale2D(Vector2(30));
+        // top->AddChild(ui_text);
+        // GetUIManager()->RegisterUIObject(ui_text);
 
-        auto fps_counter = std::make_shared<ui::UIText>("fps_coutner", "- FPS");
-        fps_counter->SetLocalTranslation2D(Vector2(0.8, 1.0));
-        fps_counter->SetLocalScale2D(Vector2(30));
-        top->AddChild(fps_counter);
-        GetUIManager()->RegisterUIObject(fps_counter);
+        auto ui_fbo_view = std::make_shared<ui::UIObject>("fbo_preview");
+        // ui_fbo_view->GetMaterial().SetTexture("ColorMap", Environment::GetInstance()->GetShadowMap(0));
+        ui_fbo_view->SetLocalTranslation2D(Vector2(0.8, -0.8));
+        ui_fbo_view->SetLocalScale2D(Vector2(256));
+        top->AddChild(ui_fbo_view);
+        GetUIManager()->RegisterUIObject(ui_fbo_view);
 
-        // auto ui_depth_view = std::make_shared<ui::UIObject>("fbo_preview_depth");
-        // ui_depth_view->SetLocalTranslation2D(Vector2(0.8, -0.5));
-        // ui_depth_view->SetLocalScale2D(Vector2(256));
-        // top->AddChild(ui_depth_view);
-        // GetUIManager()->RegisterUIObject(ui_depth_view);
+        // auto ui_crosshair = std::make_shared<ui::UIObject>("crosshair");
+        // // ui_crosshair->GetMaterial().SetTexture("ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/crosshair.png"));
+        // ui_crosshair->SetLocalTranslation2D(Vector2(0));
+        // ui_crosshair->SetLocalScale2D(Vector2(128));
+        // top->AddChild(ui_crosshair);
+        // GetUIManager()->RegisterUIObject(ui_crosshair);
 
-        int total_cascades = Environment::GetInstance()->NumCascades();
-        for (int x = 0; x < 2; x++) {
-            for (int z = 0; z < 2; z++) {
-                auto ui_fbo_view = std::make_shared<ui::UIObject>("fbo_preview_" + std::to_string(x * 2 + z));
-                ui_fbo_view->GetMaterial().SetTexture("ColorMap", Environment::GetInstance()->GetShadowMap(x * 2 + z));
-                ui_fbo_view->SetLocalTranslation2D(Vector2(0.7 + (double(x) * 0.2), -0.4 + (double(z) * -0.3)));
-                ui_fbo_view->SetLocalScale2D(Vector2(256));
-                top->AddChild(ui_fbo_view);
-                GetUIManager()->RegisterUIObject(ui_fbo_view);
-
-                total_cascades--;
-                if (total_cascades == 0) {
-                    break;
-                }
-            }
-
-            if (total_cascades == 0) {
-                break;
-            }
-        }
-
-        auto ui_crosshair = std::make_shared<ui::UIObject>("crosshair");
-        ui_crosshair->GetMaterial().SetTexture("ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/crosshair.png"));
-        ui_crosshair->SetLocalTranslation2D(Vector2(0));
-        ui_crosshair->SetLocalScale2D(Vector2(128));
-        top->AddChild(ui_crosshair);
-        GetUIManager()->RegisterUIObject(ui_crosshair);
-
+        return;
 
         ShaderProperties defines;
         // defines.Define("DEFERRED", m_renderer->IsDeferred());
@@ -444,12 +417,12 @@ public:
                     return a.hitpoint.Distance(cam->GetTranslation()) < b.hitpoint.Distance(cam->GetTranslation());
                 });
 
-                /*auto cube = top->GetChild("cube");
+                auto cube = top->GetChild("cube");
                 cube->SetGlobalTranslation(mesh_intersections[0].hitpoint);
 
                 Matrix4 look_at;
                 MatrixUtil::ToLookAt(look_at, mesh_intersections[0].normal, Vector3::UnitY());
-                cube->SetGlobalRotation(Quaternion(look_at));*/
+                cube->SetGlobalRotation(Quaternion(look_at));
 
                 std::cout << std::endl;
             });
@@ -468,33 +441,31 @@ public:
         box_node->AddControl(rb4);
         top->AddChild(box_node);*/
 
-        /*{
-            auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
-            dragger->SetName("dragger");
-            dragger->Move(Vector3(7, -10, 6));
-            dragger->Scale(0.25);
-            dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.7f, 0.6f, 1.0f };
-            dragger->GetChild(0)->GetMaterial().SetParameter("shininess", 0.1f);
-            dragger->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
-            dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
-            dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
-            top->AddChild(dragger);
-            dragger->UpdateTransform();
-        }*/
+
+        auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
+        dragger->SetName("dragger");
+        dragger->Move(Vector3(7, -10, 6));
+        dragger->Scale(0.25);
+        dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.7f, 0.6f, 1.0f };
+        dragger->GetChild(0)->GetMaterial().SetParameter("shininess", 0.1f);
+        dragger->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
+        dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
+        dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
+        top->AddChild(dragger);
+        dragger->UpdateTransform();
+
+
+        auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
+        superdan->SetName("superdan");
+        superdan->Move(Vector3(-7, 5, -6));
+        superdan->Scale(0.25);
+        for (size_t i = 0; i < superdan->NumChildren(); i++) {
+            superdan->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
+        }
+        top->AddChild(superdan);
+        superdan->UpdateTransform();
 
         {
-            auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
-            superdan->SetName("superdan");
-            superdan->Move(Vector3(-7, 5, -6));
-            superdan->Scale(0.25);
-            for (size_t i = 0; i < superdan->NumChildren(); i++) {
-                superdan->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
-            }
-            top->AddChild(superdan);
-            superdan->UpdateTransform();
-        }
-
-        /*{
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
             street->SetName("street");
@@ -502,12 +473,7 @@ public:
             street->Scale(1);
             top->AddChild(street);
             street->UpdateTransform();
-        }*/
-        /*{
-            auto hotel = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/hotel/hotel.obj");
-            hotel->SetName("hotel");
-            top->AddChild(hotel);
-        }*/
+        }
 
         /*{
             auto sundaysbest = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/durdle/sundays_best.obj");
@@ -582,30 +548,21 @@ public:
         //dragger->GetControl<SkeletonControl>(0)->GetBone("head")->AddChild(cube);
          
 
-        
-
-        /*for (int i = 0; i < 4; i++) {
-            // auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(6.0)), 0.0);
-            // plane_rigid_body->SetAwake(false);
-            auto plane_entity = std::make_shared<Entity>("static plane");
-            plane_entity->SetRenderable(MeshFactory::CreateCube());
-            plane_entity->GetRenderable()->SetShader(shader);
-            plane_entity->Scale(Vector3(3.0));
-            plane_entity->Move(Vector3(0, i * -5.0, 0));
-            // plane_entity->GetChild(0)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<FurShader>(ShaderProperties()));
-            // plane_entity->GetChild(0)->GetMaterial().alpha_blended = true;
-            plane_entity->GetMaterial().diffuse_color = Vector4(1.0, 1.0, 1.0, 1.0);
-            // plane_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg"));
-            // plane_entity->GetMaterial().SetTexture("FurStrengthMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/noise.png"));
-            plane_entity->GetMaterial().SetParameter("shininess", 0.5f);
-            plane_entity->GetMaterial().SetParameter("roughness", 0.05f);
-            // plane_entity->AddControl(plane_rigid_body);
-            top->AddChild(plane_entity);
-        }*/
+        auto plane_rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(6.0)), 0.0);
+        // plane_rigid_body->SetAwake(false);
+        auto plane_entity = std::make_shared<Entity>("static plane");
+        plane_entity->SetRenderable(MeshFactory::CreateCube());
+        plane_entity->Scale(Vector3(5.0));
+        plane_entity->GetRenderable()->SetShader(shader);
+        plane_entity->GetMaterial().diffuse_color = Vector4(1.0, 0.0, 0.0, 1.0);
+        plane_entity->GetMaterial().SetParameter("shininess", 0.6f);
+        plane_entity->GetMaterial().SetParameter("roughness", 0.0f);
+        plane_entity->AddControl(plane_rigid_body);
+        top->AddChild(plane_entity);
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3(((float(x) - 2.5) * 6), -30, (float(z) - 2.5) * 6);
+                Vector3 box_position = Vector3(((float(x) - 2.5) * 6), 4, (float(z) - 2.5) * 6);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
                 box->Scale(0.25);
                 for (size_t i = 0; i < box->NumChildren(); i++) {
@@ -628,12 +585,14 @@ public:
                     // box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-metalness.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-roughness.png"));
 
-                    box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                    box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
-                    box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                    // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                    // box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
+                    // box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                    box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.8f);
+                    box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.0f);
                 }
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
@@ -648,7 +607,6 @@ public:
                 // box->AddControl(std::make_shared<BoundingBoxControl>());
             }
         }
-        
         // box->GetChild(0)->GetMaterial().SetTexture("BrdfMap", brdf_map);
         // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
         // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
@@ -674,8 +632,7 @@ public:
             auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
             cube->GetChild(0)->GetRenderable()->SetShader(shader);
             cube->GetChild(0)->GetMaterial().diffuse_color = { 0.0, 0.0, 1.0, 1.0 };
-            // cube->Scale(0.1);
-            cube->Move(Vector3(-2, 1.5, 0));
+            cube->Scale(0.1);
             cube->SetName("cube");
             top->AddChild(cube);
         }
@@ -726,18 +683,6 @@ public:
             top->AddChild(tree);
         }*/
 
-        { // house
-            auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
-            for (size_t i = 0; i < house->NumChildren(); i++) {
-                //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
-                house->GetChild(i)->GetRenderable()->SetShader(shader);
-            }
-
-            house->Move(Vector3(0, -33, 0));
-            house->SetName("house");
-            top->AddChild(house);
-        }
-
 
         /*rb3 = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 0.0);
         rb3->SetPosition(box_position);
@@ -748,32 +693,39 @@ public:
 
 
 
-        */
+        /*{ // house
+            auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
+            for (size_t i = 0; i < house->NumChildren(); i++) {
+                //monkey->GetChild(i)->GetRenderable()->GetMaterial().diffuse_color = Vector4(0.0f, 0.9f, 0.2f, 1.0f);
+                house->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
+
+            house->Move(Vector3(-3, 0, -3));
+            house->SetName("house");
+            top->AddChild(house);
+        }*/
 
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posz.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negz.jpg")
-        }));
-
-        if (!Environment::GetInstance()->ProbeEnabled()) {
-            Environment::GetInstance()->SetGlobalCubemap(cubemap);
-        }
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posz.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negz.jpg")
+         }));
+        // Environment::GetInstance()->SetGlobalCubemap(cubemap);
 
         Environment::GetInstance()->SetGlobalIrradianceCubemap(std::shared_ptr<Cubemap>(new Cubemap({
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posz.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negz.jpg")
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negx.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negy.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posz.jpg"),
+             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negz.jpg")
         })));
 
         /*{ // sponza
-            auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+            auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza_dualcolor.obj");
             // std::function<void(Entity*)> scan_nodes;
             // scan_nodes = [this, &scan_nodes](Entity *root) {
 
@@ -789,17 +741,16 @@ public:
             //     sponza->GetChild(i)->GetRenderable()->SetShader(shader);
             // }
 
-            sponza->Move(Vector3(0, 5, 0));
+            sponza->Move(Vector3(, 5, 0));
             sponza->SetName("sponza");
             top->AddChild(sponza);
 
             //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-            sponza->Scale(0.03f);
+            sponza->Scale(2.0f);
         }*/
 
-
         /*{
-            auto breakfast_room = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/living_room/living_room.obj");
+            auto breakfast_room = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/breakfast_room/breakfast_room.obj");
            
 
             breakfast_room->Move(Vector3(0, 0, 0));
@@ -810,18 +761,7 @@ public:
             //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
             breakfast_room->Scale(5.0f);
         }*/
-        /*{
-            auto chungus = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/chungus/san-miguel-low-poly.obj");
-           
 
-            chungus->Move(Vector3(0, 0, 0));
-            chungus->SetName("chungus");
-            chungus->Scale(Vector3(0.25));
-            top->AddChild(chungus);
-
-            //room->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-            chungus->Scale(1.0f);
-        }*/
         // { //
         //     auto obj = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
         //     std::function<void(Entity*)> scan_nodes;
@@ -843,9 +783,9 @@ public:
         //     obj->Scale(2.0f);
         // }
 
-        top->AddControl(std::make_shared<SkydomeControl>(cam));
-        // top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
+        //top->AddControl(std::make_shared<SkydomeControl>(cam));
+        top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
+        // top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
     void Logic(double dt)
@@ -892,57 +832,64 @@ public:
         //     Vector3(sin(timer * 1.2) * 0.2, 0, -sin(timer * 1.2) * 0.2).Normalize()
         // ));
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.5),  1.0f, cos(timer * 0.5)).Normalize());
+        // Environment::GetInstance()->GetSun().SetDirection(Vector3(sin(timer * 0.2), 1, -cos(timer * 0.2)).Normalize());
+
+        Vector4 sun_color = Vector4(1.0, 0.95, 0.9, 1.0);
+        const float sun_to_horizon = std::max(Environment::GetInstance()->GetSun().GetDirection().y, 0.0f);
+
+        sun_color.Lerp(Vector4(0.9, 0.8, 0.7, 1.0), 1.0 - sun_to_horizon);
+        const float sun_to_end = std::min(std::max(-Environment::GetInstance()->GetSun().GetDirection().y * 5.0f, 0.0f), 1.0f);
+        sun_color.Lerp(Vector4(0.2, 0.2, 0.2, 1.0), sun_to_end);
+
 
         // Environment::GetInstance()->GetSun().SetColor(sun_color);
 
         cam->Update(dt);
 
-        PhysicsManager::GetInstance()->RunPhysics(dt);
+        //const double theta = 0.01;
+        //if (physics_update_timer >= theta) {
+            PhysicsManager::GetInstance()->RunPhysics(dt);
+       //     physics_update_timer = 0.0;
+       // }
+       // physics_update_timer += dt;
 
         top->Update(dt);
     }
 
     void Render()
     {
+
         m_renderer->Begin(cam, top.get());
 
-        if (Environment::GetInstance()->ShadowsEnabled()) {
+        /*if (Environment::GetInstance()->ShadowsEnabled()) {
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
-            // shadow_dir.SetY(-1.0f);
+            shadow_dir.SetY(-1.0f);
             shadows->SetOrigin(cam->GetTranslation());
-            shadows->SetLightDirection(shadow_dir);
+            shadows->SetLightDirection(shadow_dir.Normalize());
             shadows->Render(m_renderer);
         }
 
-        // TODO: ProbeControl on top node
-        if (Environment::GetInstance()->ProbeEnabled()) {
-            Environment::GetInstance()->GetProbeRenderer()->Render(m_renderer, cam);
+        Environment::GetInstance()->GetProbeRenderer()->Render(m_renderer, cam);
 
-            if (!Environment::GetInstance()->GetGlobalCubemap()) {
-                Environment::GetInstance()->SetGlobalCubemap(
-                    Environment::GetInstance()->GetProbeRenderer()->GetColorTexture()
-                );
-            }
-        }
+        if (!Environment::GetInstance()->GetGlobalCubemap()) {
+            Environment::GetInstance()->SetGlobalCubemap(
+                Environment::GetInstance()->GetProbeRenderer()->GetColorTexture()
+            );
+        }*/
 
-        m_renderer->Render(cam);
+        // m_renderer->Render(cam);
         m_renderer->End(cam, top.get());
 
         top->ClearPendingRemoval();
-
-        // if (auto depth_view = top->GetChild("fbo_preview_depth")) {
-        //     depth_view->GetMaterial().SetTexture("ColorMap", m_renderer->GetFramebuffer()->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_DEPTH));
-        // }
     }
 };
 
 int main()
 {
-    CoreEngine *engine = new GlfwEngine();
+    CoreEngine *engine = new ENGINE_BACKEND();
     CoreEngine::SetInstance(engine);
 
-    auto *game = new MyGame(RenderWindow(1480, 1200, "Hyperion Demo"));
+    auto *game = new MyGame(RenderWindow(1480, 1200, "AEngine Demo"));
 
     engine->InitializeGame(game);
 

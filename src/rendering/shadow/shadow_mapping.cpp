@@ -12,7 +12,7 @@ ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist, bool use_fbo)
 {
     shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
 
-    fbo = new Framebuffer2D(1024, 1024, true, false, false, false);
+    fbo = new Framebuffer2D(1024, 1024, true, true, false, false);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -28,7 +28,7 @@ const Vector3 &ShadowMapping::GetLightDirection() const
 
 void ShadowMapping::SetLightDirection(const Vector3 &dir)
 {
-    light_direction = dir;
+    light_direction = Vector3(dir).Normalize();
 }
 
 Camera *ShadowMapping::GetShadowCamera()
@@ -44,22 +44,28 @@ std::shared_ptr<Texture> ShadowMapping::GetShadowMap()
 void ShadowMapping::Begin()
 {
     UpdateFrustumPoints(frustum_corners_ws);
+
+    Vector3 frustum_min(MathUtil::MaxSafeValue<float>());
+    Vector3 frustum_max(MathUtil::MinSafeValue<float>());
     
-    m_center_pos = Vector3();
+    // m_center_pos = Vector3();
 
     for (size_t i = 0; i < frustum_corners_ws.size(); i++) {
-        m_center_pos += frustum_corners_ws[i];
+        // m_center_pos += frustum_corners_ws[i];
+        frustum_min = Vector3::Min(frustum_min, frustum_corners_ws[i]);
+        frustum_max = Vector3::Max(frustum_max, frustum_corners_ws[i]);
     }
 
-    m_center_pos /= frustum_corners_ws.size();
+    //m_center_pos /= frustum_corners_ws.size();
+    m_center_pos = (frustum_min + frustum_max) / 2;
 
     Matrix4 new_view, new_proj;
     MatrixUtil::ToLookAt(new_view, m_center_pos - light_direction, m_center_pos, Vector3::UnitY());
 
     TransformPoints(frustum_corners_ws, frustum_corners_ls, new_view);
 
-    maxes = Vector3(std::numeric_limits<float>::min());
-    mins = Vector3(std::numeric_limits<float>::max());
+    maxes = Vector3(MathUtil::MinSafeValue<float>());
+    mins = Vector3(MathUtil::MaxSafeValue<float>());
 
     for (size_t i = 0; i < frustum_corners_ls.size(); i++) {
         auto &corner = frustum_corners_ls[i];
@@ -80,7 +86,8 @@ void ShadowMapping::Begin()
         }
     }
 
-    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
+    // MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
+    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -100, 100);
 
     shadow_cam->SetViewMatrix(new_view);
     shadow_cam->SetProjectionMatrix(new_proj);

@@ -149,20 +149,45 @@ void main()
 
 #endif
 
-    for (int i = 0; i < env_NumPointLights; i++) {
-        result += ComputePointLight(
-            env_PointLights[i],
-            n,
-            CameraPosition,
-            position.xyz,
-            albedo.rgb,
-            0, // todo
-            roughness,
-            metallic
-        );
-    }
+    // for (int i = 0; i < env_NumPointLights; i++) {
+    //     result += ComputePointLight(
+    //         env_PointLights[i],
+    //         n,
+    //         CameraPosition,
+    //         position.xyz,
+    //         albedo.rgb,
+    //         0, // todo
+    //         roughness,
+    //         metallic
+    //     );
+    // }
 
     result *= ao;
 
-    output0 = vec4(result, 1.0);
+    int layer = -1;
+    for (int i = 0; i < $NUM_SPLITS; ++i)
+    {
+        if (depth < u_shadowSplit[i])
+        {
+            layer = i;
+            break;
+        }
+    }
+    if (layer == -1)
+    {
+        layer = $NUM_SPLITS;
+    }
+
+    vec4 splitColor = vec4(0.0, 0.0, 0.0, 1.0);
+    if (layer == 0) {
+        splitColor = vec4(1.0, 0.0, 1.0, 1.0);
+    } else if (layer == 1) {
+        splitColor = vec4(0.0, 1.0, 0.0, 1.0);
+    } else if (layer == 2) {
+        splitColor = vec4(0.0, 0.0, 1.0, 1.0);
+    } else if (layer == 3) {
+        splitColor = vec4(0.0, 1.0, 1.0, 1.0);
+    }
+
+    output0 = vec4(splitColor.rgb, 1.0);
 }
