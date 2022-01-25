@@ -1,5 +1,7 @@
 #include "terrain_control.h"
 #include "../rendering/renderers/bounding_box_renderer.h"
+#include "populators/populator.h"
+#include "../util.h"
 
 #include <thread>
 
@@ -9,20 +11,15 @@ static int num_threads = 0;
 
 TerrainControl::TerrainControl(Camera *camera)
     : m_camera(camera),
-      m_scale(8.85, 4.85, 8.85),
+      m_scale(1),//8.85, 4.85, 8.85),
       m_tick(0),
       m_queuetick(0),
-      m_max_distance(5.0)
+      m_max_distance(2.0)
 {
 }
 
 TerrainControl::~TerrainControl()
 {
-    for (TerrainChunk *chunk : m_chunks) {
-        if (chunk != nullptr) {
-            delete chunk;
-        }
-    }
 }
 
 void TerrainControl::OnAdded()
@@ -58,61 +55,61 @@ void TerrainControl::OnUpdate(double dt)
     if (m_tick >= TERRAIN_MAX_UPDATE_TICK) {
 
         for (size_t chunk_index = 0; chunk_index < m_chunks.size(); chunk_index++) {
-            TerrainChunk *chunk = m_chunks[chunk_index];
-            if (chunk != nullptr) {
-                switch (chunk->m_chunk_info.m_page_state) {
-                    case PageState::WAITING:
-                        chunk->m_chunk_info.m_page_state = PageState::LOADED;
-                        chunk->OnAdded();
+            auto &chunk = m_chunks[chunk_index];
 
-                        if (chunk->m_entity == nullptr) {
-                            throw "chunk->entity was nullptr";
+            if (chunk == nullptr) {
+                continue;
+            }
+
+            switch (chunk->m_chunk_info.m_page_state) {
+                case PageState::WAITING:
+                    chunk->m_chunk_info.m_page_state = PageState::LOADED;
+                    chunk->OnAdded();
+
+                    chunk->SetLocalTranslation(Vector3(
+                        chunk->m_chunk_info.m_position.x * (m_chunk_size - 1) * m_scale.x,
+                        0,
+                        chunk->m_chunk_info.m_position.y * (m_chunk_size - 1) * m_scale.z
+                    ));
+
+                    chunk->AddControl(std::make_shared<Populator>(m_camera));
+
+                    // fallthrough
+                case PageState::LOADED:
+                    if (chunk->m_chunk_info.Center().Distance(v2cam) >= m_max_distance) {
+                        chunk->m_chunk_info.m_page_state = PageState::UNLOADING;
+                    } else {
+                        if (chunk->GetParent() == nullptr) {
+                            parent->AddChild(chunk);
                         }
 
-                        chunk->m_entity->SetLocalTranslation(Vector3(
-                            chunk->m_chunk_info.m_position.x * (m_chunk_size - 1) * m_scale.x,
-                            0,
-                            chunk->m_chunk_info.m_position.y * (m_chunk_size - 1) * m_scale.z
-                        ));
-
-                        // fallthrough
-                    case PageState::LOADED:
-                        if (chunk->m_chunk_info.Center().Distance(v2cam) >= m_max_distance) {
-                            chunk->m_chunk_info.m_page_state = PageState::UNLOADING;
-                        } else {
-                            if (chunk->m_entity->GetParent() == nullptr) {
-                                parent->AddChild(chunk->m_entity);
-                            }
-
-                            for (auto &it : chunk->m_chunk_info.m_neighboring_chunks) {
-                                if (!it.m_in_queue) {
-                                    if (it.Center().Distance(v2cam) < m_max_distance) {
-                                        it.m_in_queue = true;
-                                        m_queue.push(&it);
-                                    }
+                        for (auto &it : chunk->m_chunk_info.m_neighboring_chunks) {
+                            if (!it.m_in_queue) {
+                                if (it.Center().Distance(v2cam) < m_max_distance) {
+                                    it.m_in_queue = true;
+                                    m_queue.push(&it);
                                 }
                             }
                         }
+                    }
 
-                        break;
-                    case PageState::UNLOADING:
-                        chunk->m_chunk_info.m_unload_time += TERRAIN_UPDATE_STEP;
+                    break;
+                case PageState::UNLOADING:
+                    chunk->m_chunk_info.m_unload_time += TERRAIN_UPDATE_STEP;
 
-                        if (chunk->m_chunk_info.m_unload_time >= TERRAIN_MAX_UNLOAD_TICK) {
-                            chunk->m_chunk_info.m_page_state = PageState::UNLOADED;
-                        }
+                    if (chunk->m_chunk_info.m_unload_time >= TERRAIN_MAX_UNLOAD_TICK) {
+                        chunk->m_chunk_info.m_page_state = PageState::UNLOADED;
+                    }
 
-                        break;
-                    case PageState::UNLOADED:
-                        if (chunk->m_entity != nullptr && chunk->m_entity->GetParent() == parent) {
-                            parent->RemoveChild(chunk->m_entity);
-                        }
+                    break;
+                case PageState::UNLOADED:
+                    if (chunk->GetParent() == parent) {
+                        parent->RemoveChild(chunk);
+                    }
 
-                        m_chunks.erase(m_chunks.begin() + chunk_index);
-                        delete chunk;
+                    m_chunks.erase(m_chunks.begin() + chunk_index);
 
-                        break;
-                }
+                    break;
             }
         }
 
@@ -124,7 +121,7 @@ void TerrainControl::OnUpdate(double dt)
 
 void TerrainControl::AddChunk(int x, int z)
 {
-    TerrainChunk *chunk = GetChunk(x, z);
+    std::shared_ptr<TerrainChunk> chunk = GetChunk(x, z);
 
     if (chunk == nullptr) {
         auto lambda = [this, x, z]() {
@@ -138,11 +135,9 @@ void TerrainControl::AddChunk(int x, int z)
             height_info.m_page_state = PageState::WAITING;
             height_info.m_neighboring_chunks = GetNeighbors(x, z);
 
-            TerrainChunk *new_chunk = NewChunk(height_info);
+            std::shared_ptr<TerrainChunk> new_chunk = NewChunk(height_info);
 
-            if (new_chunk == nullptr) {
-                throw "chunk was nullptr";
-            }
+            ex_assert(new_chunk != nullptr);
 
 #if TERRAIN_MULTITHREADED
             terrain_mtx.lock();
@@ -165,9 +160,9 @@ void TerrainControl::AddChunk(int x, int z)
     }
 }
 
-TerrainChunk *TerrainControl::GetChunk(int x, int z)
+std::shared_ptr<TerrainChunk> TerrainControl::GetChunk(int x, int z)
 {
-    for (TerrainChunk *chunk : m_chunks) {
+    for (auto &chunk : m_chunks) {
         if (chunk != nullptr) {
             if ((int)chunk->m_chunk_info.m_position.x == x &&
                 (int)chunk->m_chunk_info.m_position.y == z) {

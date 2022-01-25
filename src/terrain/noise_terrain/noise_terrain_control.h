@@ -14,7 +14,7 @@ public:
 protected:
     int seed;
 
-    virtual TerrainChunk *NewChunk(const ChunkInfo &height_info) override;
+    virtual std::shared_ptr<TerrainChunk> NewChunk(const ChunkInfo &height_info) override;
 };
 
 } // namespace hyperion

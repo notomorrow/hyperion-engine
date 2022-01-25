@@ -8,10 +8,11 @@ NoiseTerrainControl::NoiseTerrainControl(Camera *camera, int seed)
 {
 }
 
-TerrainChunk *NoiseTerrainControl::NewChunk(const ChunkInfo &chunk_info)
+std::shared_ptr<TerrainChunk> NoiseTerrainControl::NewChunk(const ChunkInfo &chunk_info)
 {
     const std::vector<double> heights = NoiseTerrainChunk::GenerateHeights(seed, chunk_info);
-    return new NoiseTerrainChunk(heights, chunk_info);
+
+    return std::make_shared<NoiseTerrainChunk>(heights, chunk_info);
 }
 
 } // namespace hyperion

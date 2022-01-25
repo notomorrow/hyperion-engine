@@ -10,7 +10,7 @@
 
 namespace hyperion {
 
-class TerrainChunk {
+class TerrainChunk : public Entity {
 public:
     TerrainChunk(const ChunkInfo &chunk_info);
     virtual ~TerrainChunk() = default;
@@ -20,7 +20,9 @@ public:
     virtual int HeightIndexAt(int x, int z) = 0;
 
     ChunkInfo m_chunk_info;
-    std::shared_ptr<Entity> m_entity = nullptr;
+    // std::shared_ptr<Entity> m_entity = nullptr;
+
+    std::vector<double> m_heights; // TODO: refactor
 
 protected:
 

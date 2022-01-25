@@ -1,5 +1,6 @@
 #include "mesh_factory.h"
 #include "../math/math_util.h"
+#include "../entity.h"
 
 namespace hyperion {
 
@@ -127,6 +128,25 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::shared_ptr<Mesh> &a,
     return new_mesh;
 }
 
+std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const MeshWithTransform_t &a, const MeshWithTransform_t &b)
+{
+    return MergeMeshes(a.first, b.first, a.second, b.second);
+}
+
+std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::vector<MeshWithTransform_t> &meshes)
+{
+    std::shared_ptr<Mesh> mesh;
+
+    for (auto &it : meshes) {
+        if (mesh == nullptr) {
+            mesh = std::make_shared<Mesh>();
+        }
+
+        mesh = MergeMeshes(std::make_pair(mesh, Transform()), it);
+    }
+
+    return mesh;
+}
 
 std::shared_ptr<Mesh> MeshFactory::CreateCube(Vector3 offset)
 {
@@ -174,6 +194,26 @@ std::shared_ptr<Mesh> MeshFactory::CreateCube(Vector3 offset)
     mesh->CalculateNormals();
 
     return mesh;
+}
+
+std::vector<MeshWithTransform_t> MeshFactory::GatherMeshes(Entity *entity)
+{
+    ex_assert(entity != nullptr);
+
+    std::vector<MeshWithTransform_t> meshes;
+    meshes.reserve(10);
+
+    if (auto mesh = std::dynamic_pointer_cast<Mesh>(entity->GetRenderable())) {
+        meshes.push_back(std::make_pair(mesh, entity->GetGlobalTransform()));
+    }
+
+    for (size_t i = 0; i < entity->NumChildren(); i++) {
+        std::vector<MeshWithTransform_t> sub_meshes = GatherMeshes(entity->GetChild(i).get());
+
+        meshes.insert(meshes.end(), sub_meshes.begin(), sub_meshes.end());
+    }
+
+    return meshes;
 }
 
 } // namespace hyperion

@@ -7,6 +7,7 @@
 #include "terrain_chunk.h"
 
 #include <queue>
+#include <memory>
 
 #define TERRAIN_CHUNK_VERTEX_SIZE 16
 #define TERRAIN_MAX_QUEUE_TICK 0.2
@@ -35,13 +36,13 @@ protected:
     Vector3 m_scale;
     int m_chunk_size = TERRAIN_CHUNK_VERTEX_SIZE;
     std::queue<NeighborChunkInfo*> m_queue;
-    std::vector<TerrainChunk*> m_chunks;
+    std::vector<std::shared_ptr<TerrainChunk>> m_chunks;
 
-    virtual TerrainChunk *NewChunk(const ChunkInfo &chunk_info) = 0;
+    virtual std::shared_ptr<TerrainChunk> NewChunk(const ChunkInfo &chunk_info) = 0;
 
 private:
     void AddChunk(int x, int z);
-    TerrainChunk *GetChunk(int x, int z);
+    std::shared_ptr<TerrainChunk> GetChunk(int x, int z);
     std::array<NeighborChunkInfo, 8> GetNeighbors(int x, int z);
 
     int m_tick;
