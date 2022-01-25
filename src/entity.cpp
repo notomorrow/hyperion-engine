@@ -118,6 +118,21 @@ float Entity::CalculateCameraDistance(Camera *camera) const
 
 void Entity::AddChild(std::shared_ptr<Entity> entity)
 {
+    if (entity->m_flags & PENDING_REMOVAL) {
+        std::cout << entity->GetName() << " saved from death\n";
+        entity->m_flags &= ~PENDING_REMOVAL;
+        auto it = std::find(
+            m_children_pending_removal.begin(),
+            m_children_pending_removal.end(),
+            entity
+        );
+
+        if (it != m_children_pending_removal.end()) {
+            m_children_pending_removal.erase(it);
+            entity->m_flags &= ~PENDING_REMOVAL;
+        }
+    }
+
     m_children.push_back(entity);
     entity->m_parent = this;
     entity->SetTransformUpdateFlag();

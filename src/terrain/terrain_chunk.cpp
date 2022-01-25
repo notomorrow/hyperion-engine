@@ -3,12 +3,15 @@
 namespace hyperion {
 
 TerrainChunk::TerrainChunk(const ChunkInfo &chunk_info)
-    : m_chunk_info(chunk_info)
+    : Entity(std::string("terrain_chunk__") + std::to_string(chunk_info.m_position.x) + "_" + std::to_string(chunk_info.m_position.y)),
+      m_chunk_info(chunk_info)
 {
 }
 
 std::shared_ptr<Mesh> TerrainChunk::BuildMesh(const std::vector<double> &heights)
 {
+    m_heights = heights; // TODO: refactor
+
     std::vector<Vertex> vertices = BuildVertices(heights);
     std::vector<MeshIndex> indices = BuildIndices();
 

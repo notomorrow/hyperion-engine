@@ -5,6 +5,7 @@
 #include "../../control.h"
 #include "../../math/vector2.h"
 #include "../../math/vector3.h"
+#include "../../util/random/simplex.h"
 
 #include <vector>
 #include <memory>
@@ -14,30 +15,35 @@ class TerrainChunk;
 class Camera;
 class Populator : public EntityControl {
 public:
+    struct Patch;
+
     Populator(
         Camera *camera,
+        unsigned long seed = 12345,
+        double probability_factor = 0.7,
         float tolerance = 0.15f,
-        float max_distance = 700.0f,
+        float max_distance = 70.0f,
         float spread = 5.0f,
-        int num_patches = 1,
+        int num_entities_per_chunk = 2,
+        int num_patches = 4,
         int patch_spread = -1,
-        bool use_batching = true
+        bool use_batching = false
     );
-    virtual ~Populator() = default;
+    virtual ~Populator();
 
     virtual void OnAdded() override;
     virtual void OnRemoved() override;
     virtual void OnUpdate(double dt) override;
 
+    virtual std::shared_ptr<Entity> CreateEntityNode(Patch &patch);
+    virtual double GetNoise(const Vector2 &location) const;
+    virtual float GetHeight(const Vector2 &location) const;
+
     void CreatePatches(
         const Vector2 &origin,
         const Vector2 &center,
-        int num_chunks,
-        int num_entity_per_chunk,
         float parent_size
     );
-
-protected:
 
     struct GridTile {
         float width;
@@ -79,8 +85,8 @@ protected:
 
         inline bool Collides(const Vector2 &point, const Vector2 &target, float size)
         {
-            if (MathUtil::Round(point.x) >= target.x - size && MathUtil::Round(point.x <= target.x + size)) {
-                if (MathUtil::Round(point.y) >= target.y - size && MathUtil::Round(point.y <= target.y + size)) {
+            if (MathUtil::Round(point.x) >= target.x - size && MathUtil::Round(point.x) <= target.x + size) {
+                if (MathUtil::Round(point.y) >= target.y - size && MathUtil::Round(point.y) <= target.y + size) {
                     return true;
                 }
             }
@@ -97,12 +103,17 @@ protected:
     };
 
     struct Patch {
-        std::vector<std::shared_ptr<Entity>> m_entities;
-        Vector2 m_terrain_patch_loc;
+        std::shared_ptr<Entity> m_node;
         Vector3 m_chunk_start;
         bool m_is_created;
         float m_chunk_size;
+        int m_num_entities_per_chunk;
         GridTile m_tile;
+
+        // inline Vector2 GetCenter() const
+        // {
+        //     return m_chunk_start + Vector2(m_chunk_size / 2.0f);
+        // }
 
         enum PageState {
             PATCH_WAITING,
@@ -112,17 +123,24 @@ protected:
         } m_page_state;
     };
 
+protected:
     Camera *m_camera;
 
     std::shared_ptr<Entity> m_entity;
 
     std::vector<Patch> m_patches;
+    unsigned long m_seed;
+    double m_probability_factor;
     float m_tolerance;
     float m_max_distance;
     float m_spread;
+    int m_num_entities_per_chunk;
     int m_num_patches;
     int m_patch_spread;
     bool m_use_batching;
+
+private:
+    SimplexNoiseData m_simplex_noise;
 };
 } // namespace hyperion
 
