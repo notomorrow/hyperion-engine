@@ -16,8 +16,24 @@ public:
     virtual ~TerrainChunk() = default;
 
     virtual void OnAdded() = 0;
-    // to be implemented by derived class, as the way of generating heights
-    virtual int HeightIndexAt(int x, int z) = 0;
+
+    int HeightIndexAt(int x, int z) const;
+    int HeightIndexAtWorld(const Vector3 &world) const;
+    double HeightAtIndex(int index) const;
+    double HeightAt(int x, int z) const;
+    double HeightAtWorld(const Vector3 &world) const;
+
+    Vector3 NormalAtIndex(int index) const;
+    Vector3 NormalAt(int x, int z) const;
+    Vector3 NormalAtWorld(const Vector3 &world) const;
+
+    inline Vector2 GetCenteredChunkPosition() const
+    {
+        return Vector2(
+            m_chunk_info.m_position.x - (float(m_chunk_info.m_width) / 2.0f),
+            m_chunk_info.m_position.y - (float(m_chunk_info.m_length) / 2.0f)
+        );
+    }
 
     ChunkInfo m_chunk_info;
     // std::shared_ptr<Entity> m_entity = nullptr;

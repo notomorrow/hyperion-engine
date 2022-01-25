@@ -42,34 +42,6 @@ Vector3 &Vector3::operator=(const Vector3 &other)
     return *this;
 }
 
-float Vector3::operator[](size_t index) const
-{
-    switch (index) {
-    case 0:
-        return x;
-    case 1:
-        return y;
-    case 2:
-        return z;
-    default:
-        throw std::out_of_range("out of range!");
-    }
-}
-
-float &Vector3::operator[](size_t index)
-{
-    switch (index) {
-    case 0:
-        return x;
-    case 1:
-        return y;
-    case 2:
-        return z;
-    default:
-        throw std::out_of_range("out of range!");
-    }
-}
-
 Vector3 Vector3::operator+(const Vector3 &other) const
 {
     return Vector3(x + other.x, y + other.y, z + other.z);

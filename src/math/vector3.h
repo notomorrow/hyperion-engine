@@ -4,9 +4,10 @@
 #include <cmath>
 #include <iostream>
 
-#include "../hash_code.h"
 #include "matrix3.h"
 #include "matrix4.h"
+#include "../hash_code.h"
+#include "../util.h"
 
 namespace hyperion {
 
@@ -32,9 +33,26 @@ public:
     inline float &GetZ() { return z; }
     inline void SetZ(float z) { this->z = z; }
 
+
+    constexpr inline float operator[](size_t index) const
+    {
+        if (index == 0) return x;
+        if (index == 1) return y;
+        if (index == 2) return z;
+
+        ex_assert_msg(false, "Index out of bounds");
+    }
+
+    constexpr inline float &operator[](size_t index)
+    {
+        if (index == 0) return x;
+        if (index == 1) return y;
+        if (index == 2) return z;
+
+        ex_assert_msg(false, "Index out of bounds");
+    }
+
     Vector3 &operator=(const Vector3 &other);
-    float operator[](size_t index) const;
-    float &operator[](size_t index);
     Vector3 operator+(const Vector3 &other) const;
     Vector3 &operator+=(const Vector3 &other);
     Vector3 operator-(const Vector3 &other) const;

@@ -4,8 +4,6 @@
 
 #include "../util.h"
 
-#define FRUSTUM_CULLING 0
-
 namespace hyperion {
 Renderer::Renderer(const RenderWindow &render_window)
     : m_render_window(render_window),
@@ -84,7 +82,7 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bo
 
     if (recalc) {
         if (top->PendingRemoval()) {
-            std::cout << "[RENDERER] " << top->GetName() << " pending removal, erasing from hash cache\n";
+            // std::cout << "[RENDERER] " << top->GetName() << " pending removal, erasing from hash cache\n";
             m_hash_cache.erase(top);
         } else {
             m_hash_cache[top] = entity_hash;
@@ -153,7 +151,7 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bo
         }
     }
 
-#if FRUSTUM_CULLING
+#if RENDERER_FRUSTUM_CULLING
     if (!frustum_culled && !is_root) {
         frustum_culled = !MemoizedFrustumCheck(cam, top->GetAABB());
     }

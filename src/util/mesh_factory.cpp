@@ -128,12 +128,12 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::shared_ptr<Mesh> &a,
     return new_mesh;
 }
 
-std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const MeshWithTransform_t &a, const MeshWithTransform_t &b)
+std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const RenderableMesh_t &a, const RenderableMesh_t &b)
 {
-    return MergeMeshes(a.first, b.first, a.second, b.second);
+    return MergeMeshes(std::get<0>(a), std::get<0>(b), std::get<1>(a), std::get<1>(b));
 }
 
-std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::vector<MeshWithTransform_t> &meshes)
+std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::vector<RenderableMesh_t> &meshes)
 {
     std::shared_ptr<Mesh> mesh;
 
@@ -142,7 +142,7 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::vector<MeshWithTransfo
             mesh = std::make_shared<Mesh>();
         }
 
-        mesh = MergeMeshes(std::make_pair(mesh, Transform()), it);
+        mesh = MergeMeshes(std::make_tuple(mesh, Transform(), Material()), it);
     }
 
     return mesh;
@@ -196,19 +196,25 @@ std::shared_ptr<Mesh> MeshFactory::CreateCube(Vector3 offset)
     return mesh;
 }
 
-std::vector<MeshWithTransform_t> MeshFactory::GatherMeshes(Entity *entity)
+std::vector<RenderableMesh_t> MeshFactory::GatherMeshes(Entity *entity)
 {
     ex_assert(entity != nullptr);
 
-    std::vector<MeshWithTransform_t> meshes;
+    entity->UpdateTransform();
+
+    std::vector<RenderableMesh_t> meshes;
     meshes.reserve(10);
 
     if (auto mesh = std::dynamic_pointer_cast<Mesh>(entity->GetRenderable())) {
-        meshes.push_back(std::make_pair(mesh, entity->GetGlobalTransform()));
+        meshes.push_back(std::make_tuple(
+            mesh,
+            entity->GetGlobalTransform(),
+            entity->GetMaterial()
+        ));
     }
 
     for (size_t i = 0; i < entity->NumChildren(); i++) {
-        std::vector<MeshWithTransform_t> sub_meshes = GatherMeshes(entity->GetChild(i).get());
+        std::vector<RenderableMesh_t> sub_meshes = GatherMeshes(entity->GetChild(i).get());
 
         meshes.insert(meshes.end(), sub_meshes.begin(), sub_meshes.end());
     }

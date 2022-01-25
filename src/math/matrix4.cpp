@@ -185,26 +185,6 @@ bool Matrix4::operator==(const Matrix4 &other) const
     return true;
 }
 
-float Matrix4::operator()(int i, int j) const
-{
-    return values[i * 4 + j];
-}
-
-float &Matrix4::operator()(int i, int j)
-{
-    return values[i * 4 + j];
-}
-
-float Matrix4::At(int i, int j) const
-{
-    return operator()(i, j);
-}
-
-float &Matrix4::At(int i, int j)
-{
-    return operator()(i, j);
-}
-
 Matrix4 Matrix4::Zeroes()
 {
     float zero_array[16];

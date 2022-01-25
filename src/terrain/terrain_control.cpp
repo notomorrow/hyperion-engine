@@ -2,6 +2,7 @@
 #include "../rendering/renderers/bounding_box_renderer.h"
 #include "populators/populator.h"
 #include "../util.h"
+#include "../asset/asset_manager.h"
 
 #include <thread>
 
@@ -11,10 +12,10 @@ static int num_threads = 0;
 
 TerrainControl::TerrainControl(Camera *camera)
     : m_camera(camera),
-      m_scale(1),//8.85, 4.85, 8.85),
+      m_scale(1, 1, 1),//8.85, 1, 8.85),
       m_tick(0),
       m_queuetick(0),
-      m_max_distance(2.0)
+      m_max_distance(4.0)
 {
 }
 
@@ -67,10 +68,17 @@ void TerrainControl::OnUpdate(double dt)
                     chunk->OnAdded();
 
                     chunk->SetLocalTranslation(Vector3(
-                        chunk->m_chunk_info.m_position.x * (m_chunk_size - 1) * m_scale.x,
+                        (chunk->m_chunk_info.m_position.x ) * (m_chunk_size - 1) * m_scale.x,
                         0,
-                        chunk->m_chunk_info.m_position.y * (m_chunk_size - 1) * m_scale.z
+                        (chunk->m_chunk_info.m_position.y ) * (m_chunk_size - 1) * m_scale.z
                     ));
+
+                    // if (auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj")) {
+                    //     Vector3 pos= Vector3(15, 0, 15);
+                    //     pos.y = chunk->HeightAtWorld(chunk->GetGlobalTranslation() + pos);
+                    //     cube->SetLocalTranslation(pos);
+                    //     chunk->AddChild(cube);
+                    // }
 
                     chunk->AddControl(std::make_shared<Populator>(m_camera));
 

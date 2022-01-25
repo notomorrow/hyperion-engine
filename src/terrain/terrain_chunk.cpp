@@ -1,4 +1,5 @@
 #include "terrain_chunk.h"
+#include "../util.h"
 
 namespace hyperion {
 
@@ -69,7 +70,7 @@ std::vector<Vertex> TerrainChunk::BuildVertices(const std::vector<double> &heigh
 
     for (int z = 0; z < m_chunk_info.m_length; z++) {
         for (int x = 0; x < m_chunk_info.m_width; x++) {
-            Vector3 position(x - m_chunk_info.m_width / 2, heights[i], z - m_chunk_info.m_length / 2);
+            Vector3 position(x /*- m_chunk_info.m_width / 2*/, heights[i], z /*- m_chunk_info.m_length / 2*/);
             position *= m_chunk_info.m_scale;
 
             Vector2 texcoord(-x / float(m_chunk_info.m_width), -z / float(m_chunk_info.m_length));
@@ -126,5 +127,81 @@ Vector4 TerrainChunk::BiomeAt(int x, int z)
 {
     return Vector4::Zero();
 }
+
+int TerrainChunk::HeightIndexAt(int x, int z) const
+{
+    int index = x + (z * (m_chunk_info.m_width));
+
+    if (index < 0) {
+        return -1;
+    }
+
+    if (index >= m_heights.size()) {
+        return -1;
+    }
+
+    return index;
+}
+
+int TerrainChunk::HeightIndexAtWorld(const Vector3 &world) const
+{
+    Matrix4 inv = Matrix4(m_global_transform.GetMatrix()).Invert();
+    Vector3 offset = world * inv;
+    offset /= m_chunk_info.m_scale;
+
+    return HeightIndexAt(offset.x, offset.z);
+}
+
+double TerrainChunk::HeightAtIndex(int index) const
+{
+    if (index < 0) {
+        return NAN;
+    }
+
+    if (index >= m_heights.size()) {
+        return NAN;
+    }
+
+    return m_heights[index] * m_chunk_info.m_scale.y;
+}
+
+double TerrainChunk::HeightAt(int x, int z) const
+{
+    return HeightAtIndex(HeightIndexAt(x, z));
+}
+
+double TerrainChunk::HeightAtWorld(const Vector3 &world) const
+{
+    return HeightAtIndex(HeightIndexAtWorld(world));
+}
+
+Vector3 TerrainChunk::NormalAtIndex(int index) const
+{
+    if (index < 0) {
+        return Vector3(NAN);
+    }
+
+    if (index >= m_heights.size()) {
+        return Vector3(NAN);
+    }
+
+
+    Mesh *mesh = dynamic_cast<Mesh*>(m_renderable.get());
+
+    hard_assert(mesh != nullptr);
+
+    return mesh->GetVertices().at(index).GetNormal();
+}
+
+Vector3 TerrainChunk::NormalAt(int x, int z) const
+{
+    return NormalAtIndex(HeightIndexAt(x, z));
+}
+
+Vector3 TerrainChunk::NormalAtWorld(const Vector3 &world) const
+{
+    return NormalAtIndex(HeightIndexAtWorld(world));
+}
+
 
 } // namespace hyperion

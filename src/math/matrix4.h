@@ -28,11 +28,11 @@ public:
     Matrix4 operator*(float scalar) const;
     Matrix4 &operator*=(float scalar);
     bool operator==(const Matrix4 &other) const;
-    float operator()(int i, int j) const;
-    float &operator()(int i, int j);
 
-    float At(int i, int j) const;
-    float &At(int i, int j);
+    float operator()(int i, int j) const { return values[i * 4 + j]; }
+    inline float &operator()(int i, int j) { return values[i * 4 + j]; }
+    inline float At(int i, int j) const { return operator()(i, j); }
+    inline float &At(int i, int j) { return operator()(i, j); }
 
     static Matrix4 Zeroes();
     static Matrix4 Ones();
