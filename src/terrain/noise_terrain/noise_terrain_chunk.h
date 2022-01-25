@@ -19,7 +19,6 @@ public:
     virtual ~NoiseTerrainChunk() = default;
 
     virtual void OnAdded() override;
-    virtual int HeightIndexAt(int x, int z) override;
 
 private:
     std::vector<double> m_heights;

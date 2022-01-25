@@ -2,14 +2,16 @@
 #define MESH_FACTORY_H
 
 #include "../rendering/mesh.h"
+#include "../rendering/material.h"
 #include "../math/transform.h"
 
 #include <memory>
 #include <utility>
+#include <tuple>
 
 namespace hyperion {
 class Entity;
-using MeshWithTransform_t = std::pair<std::shared_ptr<Mesh>, Transform>;
+using RenderableMesh_t = std::tuple<std::shared_ptr<Mesh>, Transform, Material>;
 
 class MeshFactory {
 public:
@@ -21,13 +23,13 @@ public:
         Transform transform_a,
         Transform transform_b);
     static std::shared_ptr<Mesh> MergeMeshes(
-        const MeshWithTransform_t &a,
-        const MeshWithTransform_t &b);
-    static std::shared_ptr<Mesh> MergeMeshes(const std::vector<MeshWithTransform_t> &meshes);
+        const RenderableMesh_t &a,
+        const RenderableMesh_t &b);
+    static std::shared_ptr<Mesh> MergeMeshes(const std::vector<RenderableMesh_t> &meshes);
     static std::shared_ptr<Mesh> TransformMesh(const std::shared_ptr<Mesh> &mesh,
         const Transform &transform);
 
-    static std::vector<MeshWithTransform_t> GatherMeshes(Entity *entity);
+    static std::vector<RenderableMesh_t> GatherMeshes(Entity *entity);
 };
 } // namespace hyperion
 

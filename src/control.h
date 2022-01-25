@@ -13,6 +13,7 @@ public:
 
     virtual void OnAdded() = 0;
     virtual void OnRemoved() = 0;
+    virtual void OnFirstRun(double dt);
     virtual void OnUpdate(double dt) = 0;
 
 protected:
@@ -21,6 +22,7 @@ protected:
 private:
     const double tps;
     double tick;
+    bool m_first_run;
 };
 
 } // namespace hyperion

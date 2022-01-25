@@ -104,12 +104,6 @@ void NoiseTerrainChunk::OnAdded()
     GetMaterial().SetParameter("Level1Height", 80.0f);
 }
 
-int NoiseTerrainChunk::HeightIndexAt(int x, int z)
-{
-    const int size = m_chunk_info.m_width;
-    return ((x + size) % size) + ((z + size) % size) * size;
-}
-
 Vector4 NoiseTerrainChunk::BiomeAt(int x, int z)
 {
 

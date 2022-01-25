@@ -6,6 +6,7 @@
 #include "../../asset/asset_manager.h"
 #include "../terrain_chunk.h"
 #include "../../util/mesh_factory.h"
+#include "../../math/matrix_util.h"
 
 #include <cmath>
 
@@ -59,16 +60,15 @@ void Populator::CreatePatches(const Vector2 &origin,
     const Vector2 &_center,
     float parent_size)
 {
+
     parent->UpdateTransform(); // maybe not needed?
 
     float patch_size = parent_size / float(m_num_patches);
 
-    Vector2 center(patch_size * 0.5f);
-
     for (int x = 0; x < m_num_patches; x++) {
         for (int z = 0; z < m_num_patches; z++) {
             Vector2 offset(x * patch_size, z * patch_size);
-            Vector2 patch_location = (origin + offset) - center;
+            Vector2 patch_location = origin + offset;
 
             Patch patch;
             patch.m_node = nullptr;
@@ -76,6 +76,13 @@ void Populator::CreatePatches(const Vector2 &origin,
             patch.m_chunk_size = patch_size;
             patch.m_chunk_start = Vector3(patch_location.x, 0, patch_location.y);
             patch.m_num_entities_per_chunk = m_num_entities_per_chunk;
+
+            patch.m_test_patch_color = Vector4(
+                MathUtil::Random(0.0f, 1.0f),
+                MathUtil::Random(0.0f, 1.0f),
+                MathUtil::Random(0.0f, 1.0f),
+                1.0f
+            );
             m_patches.push_back(patch);
         }
     }
@@ -85,60 +92,57 @@ std::shared_ptr<Entity> Populator::CreateEntityNode(Patch &patch)
 {
     auto node = std::make_shared<Entity>("Populator node");
 
-    const float mult = float(patch.m_chunk_size) / float(patch.m_num_entities_per_chunk);
+    float placement = float(patch.m_chunk_size) / float(patch.m_num_entities_per_chunk);
 
     for (int x = 0; x < patch.m_num_entities_per_chunk; x++) {
         for (int z = 0; z < patch.m_num_entities_per_chunk; z++) {
-            Vector3 position(
-                float(x) * mult + MathUtil::Random(-7.0f, 7.0f),
-                INFINITY,
-                float(z) * mult + MathUtil::Random(-7.0f, 7.0f)
+            Vector3 entity_offset(
+                float(x) * placement + (placement * 0.5f) + MathUtil::Random(-m_spread, m_spread),
+                0,
+                float(z) * placement + (placement * 0.5f) + MathUtil::Random(-m_spread, m_spread)
             );
 
-            Vector3 global_position = parent->GetGlobalTranslation() + patch.m_chunk_start + position;
-            Vector2 global_position_v2 = Vector2(global_position.x, global_position.z);
+            const Vector3 position = patch.m_chunk_start + entity_offset;
+            const Vector3 global_position = parent->GetGlobalTranslation() + position;
 
-            double chance = GetNoise(global_position_v2) * 0.5 + 0.5;
+            double chance = GetNoise(Vector2(global_position.x, global_position.z)) * 0.5 + 0.5;
 
             if (chance > m_probability_factor) {
                 continue;
             }
 
-            position.y = GetHeight(global_position_v2);
+            entity_offset.y = GetHeight(global_position);
 
-            if (std::isnan(position.y)) {
+            if (std::isnan(entity_offset.y)) {
                 continue;
             }
 
+            Vector3 normal = GetNormal(global_position);
+
+            Matrix4 lookat_mat;
+            MatrixUtil::ToLookAt(lookat_mat, normal, Vector3(0, 1, 0));
+
             auto object_node = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/grass/grass2.obj");
+            // auto object_node = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
             // auto object_node = std::make_shared<Entity>("Populator object"); // TODO: virtual method
-            object_node->SetLocalRotation(Quaternion(Vector3::UnitY(), MathUtil::Random(0.0f, MathUtil::DegToRad(359.0f))));
-            object_node->SetLocalTranslation(position);
+            object_node->SetLocalRotation(Quaternion(lookat_mat));
+            object_node->SetLocalTranslation(entity_offset);
             object_node->UpdateTransform();
+
             node->AddChild(object_node);
         }
     }
 
     if (m_use_batching) {
-        std::vector<MeshWithTransform_t> meshes = MeshFactory::GatherMeshes(node.get());
+        std::vector<RenderableMesh_t> meshes = MeshFactory::GatherMeshes(node.get());
 
         if (!meshes.empty()) {
             auto merged_mesh = MeshFactory::MergeMeshes(meshes);
             merged_mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties())); // TODO
 
-            Material mat;
-
-            if (node->NumChildren() >= 1) {
-                hard_assert(node->GetChild(0) != nullptr);
-
-                mat = node->GetChild(0)->GetMaterial();
-            }
-
-            mat.cull_faces = MaterialFace_None;
-
             node.reset(new Entity(std::string("Populator node (batched) ") + std::to_string(patch.m_chunk_start.x) + "," + std::to_string(patch.m_chunk_start.y)));
             node->SetRenderable(merged_mesh);
-            node->SetMaterial(mat);
+            node->SetMaterial(std::get<2>(meshes.front()));
         }
     }
 
@@ -170,30 +174,42 @@ double Populator::GetNoise(const Vector2 &location) const
     return result;
 }
 
-float Populator::GetHeight(const Vector2 &location) const
+float Populator::GetHeight(const Vector3 &location) const
 {
     // TODO: More optimal way of doing this.
     // overload the class maybe, to be specific for terrain?
     if (TerrainChunk *chunk = dynamic_cast<TerrainChunk*>(parent)) {
-        Matrix4 mat(chunk->GetGlobalTransform().GetMatrix());
-        mat.Invert();
-
-        Vector3 location_local(location.x, 0, location.y);
-        location_local -= chunk->GetGlobalTranslation();
-        location_local /= chunk->GetGlobalScale();
-
-        int height_index = chunk->HeightIndexAt(location_local.z, location_local.x);
-        // std::cout << "height index " << height_index << " at " << location << " (" << location_local << ") = " << chunk->m_heights.at(height_index) << "\n";
-        return chunk->m_heights.at(height_index);
+        return chunk->HeightAtWorld(location);
     }
 
     return NAN;
 }
 
+Vector3 Populator::GetNormal(const Vector3 &location) const
+{
+    // TODO: More optimal way of doing this.
+    // overload the class maybe, to be specific for terrain?
+    if (TerrainChunk *chunk = dynamic_cast<TerrainChunk*>(parent)) {
+        return chunk->NormalAtWorld(location);
+    }
+
+    return Vector3(NAN);
+}
+
 void Populator::OnAdded()
 {
+    parent->AddChild(m_entity);
+}
+
+void Populator::OnRemoved()
+{
+    parent->RemoveChild(m_entity);
+}
+
+void Populator::OnFirstRun(double dt)
+{
     if (TerrainChunk *chunk = dynamic_cast<TerrainChunk*>(parent)) {
-        const float size = (chunk->m_chunk_info.m_width + chunk->m_chunk_info.m_height) / 2.0f;
+        const float size = (chunk->m_chunk_info.m_width + chunk->m_chunk_info.m_length) / 2.0f;
         const float scale = (chunk->m_chunk_info.m_scale.x + chunk->m_chunk_info.m_scale.z) / 2.0f;
 
         CreatePatches(
@@ -208,13 +224,6 @@ void Populator::OnAdded()
             8.0f
         );
     }
-
-    parent->AddChild(m_entity);
-}
-
-void Populator::OnRemoved()
-{
-    parent->RemoveChild(m_entity);
 }
 
 void Populator::OnUpdate(double dt)

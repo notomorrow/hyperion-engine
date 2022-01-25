@@ -136,6 +136,7 @@ public:
     inline bool PendingRemoval() const { return m_flags & PENDING_REMOVAL; }
 
     virtual void Update(double dt);
+    void UpdateControls(double dt);
 
     virtual std::shared_ptr<Loadable> Clone();
 

@@ -20,24 +20,26 @@ public:
     Populator(
         Camera *camera,
         unsigned long seed = 12345,
-        double probability_factor = 0.7,
+        double probability_factor = 0.45,
         float tolerance = 0.15f,
         float max_distance = 70.0f,
-        float spread = 5.0f,
-        int num_entities_per_chunk = 2,
-        int num_patches = 4,
+        float spread = 0.35f,
+        int num_entities_per_chunk = 4,
+        int num_patches = 2,
         int patch_spread = -1,
-        bool use_batching = false
+        bool use_batching = true
     );
     virtual ~Populator();
 
     virtual void OnAdded() override;
     virtual void OnRemoved() override;
+    virtual void OnFirstRun(double dt) override;
     virtual void OnUpdate(double dt) override;
 
     virtual std::shared_ptr<Entity> CreateEntityNode(Patch &patch);
     virtual double GetNoise(const Vector2 &location) const;
-    virtual float GetHeight(const Vector2 &location) const;
+    virtual float GetHeight(const Vector3 &location) const;
+    virtual Vector3 GetNormal(const Vector3 &location) const;
 
     void CreatePatches(
         const Vector2 &origin,
@@ -109,11 +111,12 @@ public:
         float m_chunk_size;
         int m_num_entities_per_chunk;
         GridTile m_tile;
+        Vector4 m_test_patch_color;
 
-        // inline Vector2 GetCenter() const
-        // {
-        //     return m_chunk_start + Vector2(m_chunk_size / 2.0f);
-        // }
+        inline Vector3 GetCenter() const
+        {
+            return m_chunk_start + Vector3(m_chunk_size / 2.0f, 0, m_chunk_size / 2.0f);
+        }
 
         enum PageState {
             PATCH_WAITING,

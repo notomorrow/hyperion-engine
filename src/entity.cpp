@@ -1,4 +1,5 @@
 #include "entity.h"
+#include "util.h"
 
 #include <algorithm>
 
@@ -19,6 +20,7 @@ Entity::~Entity()
 {
     for (auto it = m_controls.rbegin(); it != m_controls.rend(); ++it) {
         (*it)->OnRemoved();
+        (*it)->m_first_run = true;
         (*it)->parent = nullptr;
     }
 
@@ -118,6 +120,8 @@ float Entity::CalculateCameraDistance(Camera *camera) const
 
 void Entity::AddChild(std::shared_ptr<Entity> entity)
 {
+    // ex_assert(entity->m_parent == nullptr);
+
     if (entity->m_flags & PENDING_REMOVAL) {
         std::cout << entity->GetName() << " saved from death\n";
         entity->m_flags &= ~PENDING_REMOVAL;
@@ -178,6 +182,8 @@ std::shared_ptr<Entity> Entity::GetChildPendingRemoval(size_t index) const
 
 void Entity::AddControl(std::shared_ptr<EntityControl> control)
 {
+    // ex_assert(control->parent == nullptr);
+
     m_controls.push_back(control);
     control->parent = this;
     control->OnAdded();
@@ -201,7 +207,21 @@ void Entity::Update(double dt)
         m_flags &= ~UPDATE_AABB;
     }
 
+    UpdateControls(dt);
+
+    for (auto &child : m_children) {
+        child->Update(dt);
+    }
+}
+
+void Entity::UpdateControls(double dt)
+{
     for (auto &control : m_controls) {
+        if (control->m_first_run) {
+            control->OnFirstRun(dt);
+            control->m_first_run = false;
+        }
+
         control->tick += dt * 1000;
         if ((control->tick / 1000 * control->tps) >= 1) {
             control->OnUpdate(dt);
@@ -209,9 +229,9 @@ void Entity::Update(double dt)
         }
     }
 
-    for (auto &child : m_children) {
-        child->Update(dt);
-    }
+    // for (auto &child : m_children) {
+    //     child->UpdateControls(dt);
+    // }
 }
 
 void Entity::SetTransformUpdateFlag()

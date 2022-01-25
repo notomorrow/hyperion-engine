@@ -17,6 +17,7 @@
 #include "postprocess/post_processing.h"
 
 #define RENDERER_SHADER_GROUPING 1
+#define RENDERER_FRUSTUM_CULLING 1
 
 namespace hyperion {
 
