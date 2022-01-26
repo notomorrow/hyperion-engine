@@ -17,7 +17,7 @@ TerrainShader::TerrainShader(const ShaderProperties &properties)
         fs_path
     );
 
-    SetUniform("BaseTerrainScale", 1.0f);
+    SetUniform("BaseTerrainScale", 0.03f);
     SetUniform("Level1Scale", 1.0f);
     SetUniform("Level1Height", 250.0f);
     SetUniform("SlopeScale", 1.0f);

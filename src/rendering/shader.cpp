@@ -218,6 +218,16 @@ void Shader::ApplyMaterial(const Material &mat)
     if (!mat.depth_write) {
         glDepthMask(false);
     }
+
+    if (mat.HasParameter("FlipUV")) {
+        const auto &param = mat.GetParameter("FlipUV");
+        SetUniform("FlipUV_X", int(param[0]));
+        SetUniform("FlipUV_Y", int(param[1]));
+    } else if (mat.HasParameter("FlipUV_X")) {
+        SetUniform("FlipUV_X", int(mat.GetParameter("FlipUV_X")[0]));
+    } else if (mat.HasParameter("FlipUV_Y")) {
+        SetUniform("FlipUV_Y", int(mat.GetParameter("FlipUV_X")[0]));
+    }
 }
 
 void Shader::ApplyTransforms(const Transform &transform, Camera *camera)
@@ -313,6 +323,8 @@ void Shader::End()
 {
     // m_override_cull = MaterialFaceCull::MaterialFace_None;
     glUseProgram(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
 void Shader::AddSubShader(SubShaderType type,

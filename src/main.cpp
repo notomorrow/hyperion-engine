@@ -15,6 +15,7 @@
 #include "rendering/framebuffer_2d.h"
 #include "rendering/framebuffer_cube.h"
 #include "rendering/shaders/lighting_shader.h"
+#include "rendering/shaders/vegetation_shader.h"
 #include "rendering/shaders/fur_shader.h"
 #include "rendering/shaders/post_shader.h"
 #include "rendering/shader_manager.h"
@@ -71,6 +72,9 @@
 
 /* Populators */
 #include "terrain/populators/populator.h"
+
+#include "util/noise_factory.h"
+#include "util/img/write_bitmap.h"
 
 /* Standard library */
 #include <cstdlib>
@@ -237,7 +241,7 @@ public:
     void Initialize()
     {
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
-            .Define("SHADOW_MAP_RADIUS", 0.05f)
+            .Define("SHADOW_MAP_RADIUS", 0.09f)
             .Define("SHADOW_PCF", true)
         );
         
@@ -251,7 +255,7 @@ public:
             750.0f
         );
 
-        shadows = new PssmShadowMapping(cam, 4, 100.0);
+        shadows = new PssmShadowMapping(cam, 4, 400.0);
         shadows->SetVarianceShadowMapping(false);
 
         Environment::GetInstance()->SetShadowsEnabled(true);
@@ -278,7 +282,7 @@ public:
 
         for (int x = 0; x < Environment::GetInstance()->GetMaxPointLights() / 2; x++) {
             for (int z = 0; z < Environment::GetInstance()->GetMaxPointLights() / 2; z++) {
-                Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(x * 0.5f, 0.5f, z * 0.5f), Vector4(1.0f, 1.0f, 1.0f, 1.0f), 2.0f));
+                Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(x * 0.5f, 0.5f, z * 0.5f), Vector4(MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), 1.0f), 2.0f));
             }
         }
         // Initialize root node
@@ -677,6 +681,8 @@ public:
             auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
             cube->GetChild(0)->GetRenderable()->SetShader(shader);
             cube->GetChild(0)->GetMaterial().diffuse_color = { 0.0, 0.0, 1.0, 1.0 };
+            cube->GetChild(0)->GetMaterial().SetParameter("roughness", 0.0f),
+            cube->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f),
             // cube->Scale(0.1);
             cube->Move(Vector3(-2, 1.5, 0));
             cube->SetName("cube");
@@ -698,7 +704,14 @@ public:
             // tree->GetChild("Branches_08")->GetMaterial().SetParameter("RimShading", 0.0f);
             // tree->GetChild("Branches_08")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
             tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
-            tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().alpha_blended = true;
+            // tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().alpha_blended = true;
+            tree->GetChild("LoblollyPineNeedles_1")->GetRenderable()->SetShader(
+                ShaderManager::GetInstance()->GetShader<VegetationShader>(
+                    ShaderProperties()
+                        .Define("VEGETATION_FADE", false)
+                        .Define("VEGETATION_LIGHTING", false)
+                )
+            );
             tree->GetChild("LoblollyPineNeedles_1")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
             tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().SetParameter("RimShading", 0.0f);
             // tree->GetChild("BlackGumLeaves_2")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
@@ -942,6 +955,30 @@ public:
 
 int main()
 {
+    unsigned char *data = new unsigned char[128 * 128 * 3];
+
+    // === noise test ===
+    auto noise = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::WORLEY_NOISE, 1223);
+
+    int pixel = 0;
+    double noise_scale = 0.01;
+    for (int x = 0; x < 128; x++) {
+        for (int z = 0; z < 128; z++) {
+            double n = noise->GetNoise(x * noise_scale, z * noise_scale);
+            data[pixel++] = (n / 1.0) * 255;
+            data[pixel++] = (n / 1.0) * 255;
+            data[pixel++] = (n / 1.0) * 255;
+        }
+    }
+
+    NoiseFactory::GetInstance()->Release(noise);
+
+    delete[] data;
+
+    WriteBitmap::Write("./test_img.bmp", 128, 128, data);
+
+    // === noise test ===
+
     CoreEngine *engine = new GlfwEngine();
     CoreEngine::SetInstance(engine);
 

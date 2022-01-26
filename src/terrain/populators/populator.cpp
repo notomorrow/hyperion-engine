@@ -2,11 +2,13 @@
 
 #include "../../rendering/camera/camera.h"
 #include "../../rendering/shader_manager.h"
-#include "../../rendering/shaders/lighting_shader.h"
-#include "../../asset/asset_manager.h"
+#include "../../rendering/shaders/vegetation_shader.h"
 #include "../terrain_chunk.h"
 #include "../../util/mesh_factory.h"
+#include "../../util/noise_factory.h"
 #include "../../math/matrix_util.h"
+
+#include "../../controls/bounding_box_control.h"
 
 #include <cmath>
 
@@ -36,25 +38,13 @@ Populator::Populator(
       m_use_batching(use_batching),
       m_entity(new Entity("Populator node"))
 {
-    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
-        open_simplex_noise(seed, &m_simplex_noise.octaves[i]);
-        m_simplex_noise.frequencies[i] = pow(2.0, double(i));
-        m_simplex_noise.amplitudes[i] = pow(0.5, OSN_OCTAVE_COUNT - i);
-    }
+    m_noise = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, m_seed);
 }
 
 Populator::~Populator()
 {
-    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
-        open_simplex_noise_free(m_simplex_noise.octaves[i]);
-    }
+    NoiseFactory::GetInstance()->Release(m_noise);
 }
-
-// void Populator::Rebuild()
-// {
-//     m_patches.clear();
-//     m_entity.reset(new Entity("Populator node"));
-// }
 
 void Populator::CreatePatches(const Vector2 &origin,
     const Vector2 &_center,
@@ -117,24 +107,17 @@ std::shared_ptr<Entity> Populator::CreateEntityNode(Patch &patch)
                 continue;
             }
 
-            Vector3 normal = GetNormal(global_position);
+            // Vector3 normal = GetNormal(global_position);
 
-            Matrix4 lookat_mat;
-            MatrixUtil::ToLookAt(lookat_mat, normal, Vector3(0, 1, 0));
+            // Matrix4 lookat_mat;
+            // MatrixUtil::ToLookAt(lookat_mat, normal, Vector3(0, 1, 0));
 
-            auto object_node = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/grass/grass2.obj");
-            // auto object_node = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
-            // auto object_node = std::make_shared<Entity>("Populator object"); // TODO: virtual method
-            object_node->SetLocalRotation(Quaternion(lookat_mat));
-            object_node->SetLocalTranslation(entity_offset);
-            object_node->UpdateTransform();
-
-            node->AddChild(object_node);
+            node->AddChild(CreateEntity(entity_offset));
         }
     }
 
     if (m_use_batching) {
-        std::vector<RenderableMesh_t> meshes = MeshFactory::GatherMeshes(node.get());
+        /*std::vector<RenderableMesh_t> meshes = MeshFactory::GatherMeshes(node.get());
 
         if (!meshes.empty()) {
             auto merged_mesh = MeshFactory::MergeMeshes(meshes);
@@ -143,20 +126,42 @@ std::shared_ptr<Entity> Populator::CreateEntityNode(Patch &patch)
             node.reset(new Entity(std::string("Populator node (batched) ") + std::to_string(patch.m_chunk_start.x) + "," + std::to_string(patch.m_chunk_start.y)));
             node->SetRenderable(merged_mesh);
             node->SetMaterial(std::get<2>(meshes.front()));
+            node->AddControl(std::make_shared<BoundingBoxControl>());
+        }*/
+        std::vector<RenderableMesh_t> meshes = MeshFactory::GatherMeshes(node.get());
+
+        if (!meshes.empty()) {
+            auto merged_meshes = MeshFactory::MergeMeshesOnMaterial(meshes);
+
+            int counter = 1;
+
+            node.reset(new Entity(std::string("Populator node (batched) ") + std::to_string(patch.m_chunk_start.x) + "," + std::to_string(patch.m_chunk_start.y)));
+
+            for (auto &renderable_mesh : merged_meshes) {
+                std::shared_ptr<Entity> subnode = std::make_shared<Entity>(std::string("Batched subnode ") + std::to_string(counter++));
+
+                auto mesh = std::get<0>(renderable_mesh);
+                subnode->SetRenderable(mesh);
+
+                auto material = std::get<2>(renderable_mesh);
+                subnode->SetMaterial(material);
+
+                node->AddChild(subnode);
+            }
         }
     }
 
-    for (size_t i = 0; i < node->NumChildren(); i++) {
-        auto child = node->GetChild(i);
+    // for (size_t i = 0; i < node->NumChildren(); i++) {
+    //     auto child = node->GetChild(i);
 
-        if (child == nullptr) {
-            continue;
-        }
+    //     if (child == nullptr) {
+    //         continue;
+    //     }
 
-        if (auto renderable = child->GetRenderable()) {
-            renderable->SetRenderBucket(Renderable::RB_PARTICLE);
-        }
-    }
+    //     if (auto renderable = child->GetRenderable()) {
+    //         renderable->SetRenderBucket(Renderable::RB_TRANSPARENT);
+    //     }
+    // }
 
     node->SetLocalTranslation(patch.m_chunk_start);
 
@@ -165,13 +170,7 @@ std::shared_ptr<Entity> Populator::CreateEntityNode(Patch &patch)
 
 double Populator::GetNoise(const Vector2 &location) const
 {
-    double result = 0.0;
-
-    for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
-        result += open_simplex_noise2(m_simplex_noise.octaves[i], location.x / m_simplex_noise.frequencies[i], location.y / m_simplex_noise.frequencies[i]) * m_simplex_noise.amplitudes[i];
-    }
-
-    return result;
+    return m_noise->GetNoise(location.x, location.y);
 }
 
 float Populator::GetHeight(const Vector3 &location) const

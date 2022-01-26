@@ -1,6 +1,9 @@
 #include "mesh_factory.h"
 #include "../math/math_util.h"
 #include "../entity.h"
+#include "../hash_code.h"
+
+#include <unordered_map>
 
 namespace hyperion {
 
@@ -125,6 +128,9 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::shared_ptr<Mesh> &a,
     new_mesh->SetVertices(all_vertices, all_indices);
     new_mesh->SetPrimitiveType(Mesh::PrimitiveType::PRIM_TRIANGLES);
 
+    new_mesh->SetShader(b->GetShader()); // hmm..
+    new_mesh->SetRenderBucket(b->GetRenderBucket());
+
     return new_mesh;
 }
 
@@ -146,6 +152,42 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::vector<RenderableMesh_
     }
 
     return mesh;
+}
+
+std::vector<RenderableMesh_t> MeshFactory::MergeMeshesOnMaterial(const std::vector<RenderableMesh_t> &meshes)
+{
+    std::unordered_map<HashCode_t, RenderableMesh_t> renderable_map;
+
+    for (auto &renderable : meshes) {
+        Material material = std::get<2>(renderable);
+        HashCode_t material_hash_code = material.GetHashCode().Value();
+
+        auto it = renderable_map.find(material_hash_code);
+
+        if (it == renderable_map.end()) {
+            renderable_map[material_hash_code] = std::make_tuple(
+                std::make_shared<Mesh>(),
+                Transform(),
+                Material()
+            );
+        }
+
+        auto merged_mesh = MergeMeshes(
+            renderable_map[material_hash_code],
+            renderable
+        );
+
+        renderable_map[material_hash_code] = std::make_tuple(merged_mesh, Transform(), material);
+    }
+
+    std::vector<RenderableMesh_t> values;
+    values.reserve(renderable_map.size());
+
+    for (auto &it : renderable_map) {
+        values.push_back(it.second);
+    }
+
+    return values;
 }
 
 std::shared_ptr<Mesh> MeshFactory::CreateCube(Vector3 offset)
