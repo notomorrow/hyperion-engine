@@ -10,9 +10,9 @@
 #define FNV_PRIME 16777619
 
 namespace hyperion {
-class WorleyNoiseGenerator {
+class WorleyNoise {
 public:
-    WorleyNoiseGenerator(int seed);
+    WorleyNoise(int seed);
 
     double Noise(double x, double y, double z);
 

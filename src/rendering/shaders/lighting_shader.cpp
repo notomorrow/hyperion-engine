@@ -67,6 +67,13 @@ void LightingShader::ApplyMaterial(const Material &mat)
         cubemap->Prepare();
 
         SetUniform("env_GlobalCubemap", cubemap.get());
+
+        if (env->ProbeEnabled()) {
+            const auto &origin = env->GetProbeRenderer()->GetProbe()->GetOrigin();
+            SetUniform("EnvProbe.position", origin);
+            SetUniform("EnvProbe.max", Vector3(env->GetProbeRenderer()->GetProbe()->GetFar()));
+            SetUniform("EnvProbe.min", Vector3(-env->GetProbeRenderer()->GetProbe()->GetFar()));
+        }
     }
 
     if (auto cubemap = env->GetGlobalIrradianceCubemap()) {
@@ -96,16 +103,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     if (mat.HasParameter("RimShading")) {
         SetUniform("RimShading", mat.GetParameter("RimShading")[0]);
-    }
-
-    if (mat.HasParameter("FlipUV")) {
-        const auto &param = mat.GetParameter("FlipUV");
-        SetUniform("FlipUV_X", int(param[0]));
-        SetUniform("FlipUV_Y", int(param[1]));
-    } else if (mat.HasParameter("FlipUV_X")) {
-        SetUniform("FlipUV_X", int(mat.GetParameter("FlipUV_X")[0]));
-    } else if (mat.HasParameter("FlipUV_Y")) {
-        SetUniform("FlipUV_Y", int(mat.GetParameter("FlipUV_X")[0]));
     }
 }
 

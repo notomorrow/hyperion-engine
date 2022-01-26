@@ -5,6 +5,8 @@
 #include <functional>
 
 namespace hyperion {
+using HashCode_t = size_t;
+
 struct HashCode {
     HashCode()
         : hash(0)
@@ -36,9 +38,9 @@ struct HashCode {
     }
 
 private:
-    size_t hash;
+    HashCode_t hash;
 
-    void HashCombine(size_t other)
+    void HashCombine(HashCode_t other)
     {
         hash ^= other + 0x9e3779b9 + (hash << 6) + (hash >> 2);
     }

@@ -13,6 +13,7 @@
 namespace hyperion {
 class TerrainChunk;
 class Camera;
+class NoiseGenerator;
 class Populator : public EntityControl {
 public:
     struct Patch;
@@ -20,10 +21,10 @@ public:
     Populator(
         Camera *camera,
         unsigned long seed = 12345,
-        double probability_factor = 0.45,
+        double probability_factor = 0.55,
         float tolerance = 0.15f,
-        float max_distance = 70.0f,
-        float spread = 0.35f,
+        float max_distance = 150.0f,
+        float spread = 1.5f,
         int num_entities_per_chunk = 4,
         int num_patches = 2,
         int patch_spread = -1,
@@ -35,6 +36,8 @@ public:
     virtual void OnRemoved() override;
     virtual void OnFirstRun(double dt) override;
     virtual void OnUpdate(double dt) override;
+
+    virtual std::shared_ptr<Entity> CreateEntity(const Vector3 &position) const = 0;
 
     virtual std::shared_ptr<Entity> CreateEntityNode(Patch &patch);
     virtual double GetNoise(const Vector2 &location) const;
@@ -143,7 +146,7 @@ protected:
     bool m_use_batching;
 
 private:
-    SimplexNoiseData m_simplex_noise;
+    NoiseGenerator *m_noise;
 };
 } // namespace hyperion
 
