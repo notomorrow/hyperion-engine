@@ -21,6 +21,11 @@ public:
     static std::shared_ptr<Mesh> CreateCube(
         Vector3 offset = Vector3(0.0));
 
+    static std::shared_ptr<Mesh> CreateSphere(
+        float radius,
+        int num_slices = 16,
+        int num_stacks = 8);
+
     // merge two meshes into one (perserving transform)
     static std::shared_ptr<Mesh> MergeMeshes(
         const std::shared_ptr<Mesh> &a,

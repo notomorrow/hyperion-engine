@@ -10,12 +10,12 @@ public:
     TreePopulator(
         Camera *camera,
         unsigned long seed = 555,
-        double probability_factor = 0.35,
+        double probability_factor = 0.4,
         float tolerance = 0.15f,
-        float max_distance = 450.0f,
+        float max_distance = 200.0f,
         float spread = 4.5f,
-        int num_entities_per_chunk = 2,
-        int num_patches = 2
+        int num_entities_per_chunk = 3,
+        int num_patches = 3
     );
     ~TreePopulator();
 

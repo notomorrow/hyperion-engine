@@ -21,16 +21,16 @@ public:
 
     inline float GetX() const { return x; }
     inline float &GetX() { return x; }
-    inline void SetX(float x) { this->x = x; }
+    inline Vector4 &SetX(float x) { this->x = x; return *this; }
     inline float GetY() const { return y; }
     inline float &GetY() { return y; }
-    inline void SetY(float y) { this->y = y; }
+    inline Vector4 &SetY(float y) { this->y = y; return *this; }
     inline float GetZ() const { return z; }
     inline float &GetZ() { return z; }
-    inline void SetZ(float z) { this->z = z; }
+    inline Vector4 &SetZ(float z) { this->z = z; return *this; }
     inline float GetW() const { return w; }
     inline float &GetW() { return w; }
-    inline void SetW(float w) { this->w = w; }
+    inline Vector4 &SetW(float w) { this->w = w; return *this; }
 
     Vector4 &operator=(const Vector4 &other);
     Vector4 operator+(const Vector4 &other) const;

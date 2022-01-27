@@ -2,6 +2,7 @@
 #define MESH_H
 
 #include "renderable.h"
+#include "../math/triangle.h"
 #include "../math/vertex.h"
 
 #include <vector>
@@ -74,6 +75,7 @@ public:
     void SetVertices(const std::vector<Vertex> &verts, const std::vector<MeshIndex> &ind);
     inline const std::vector<Vertex> &GetVertices() const { return vertices; }
     inline const std::vector<MeshIndex> &GetIndices() const { return indices; }
+    void SetTriangles(const std::vector<Triangle> &triangles);
 
     void SetAttribute(MeshAttributeType type, const MeshAttribute &attribute);
     inline const std::map<MeshAttributeType, MeshAttribute> &GetAttributes() const { return attribs; }

@@ -1,5 +1,4 @@
 #include "mesh.h"
-#include "../math/triangle.h"
 #include "../gl_util.h"
 
 namespace hyperion {
@@ -64,6 +63,20 @@ void Mesh::SetVertices(const std::vector<Vertex> &verts, const std::vector<MeshI
     }
 
     is_uploaded = false;
+}
+
+void Mesh::SetTriangles(const std::vector<Triangle> &triangles)
+{
+    std::vector<Vertex> verts;
+    verts.resize(triangles.size() * 3);
+
+    for (size_t i = 0; i < triangles.size(); i++) {
+        for (int j = 0; j < 3; j++) {
+            verts[i] = triangles[i][j];
+        }
+    }
+
+    SetVertices(verts);
 }
 
 void Mesh::SetAttribute(MeshAttributeType type, const MeshAttribute &attribute)

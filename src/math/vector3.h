@@ -25,13 +25,13 @@ public:
 
     inline float GetX() const { return x; }
     inline float &GetX() { return x; }
-    inline void SetX(float x) { this->x = x; }
+    inline Vector3 &SetX(float x) { this->x = x; return *this; }
     inline float GetY() const { return y; }
     inline float &GetY() { return y; }
-    inline void SetY(float y) { this->y = y; }
+    inline Vector3 &SetY(float y) { this->y = y; return *this; }
     inline float GetZ() const { return z; }
     inline float &GetZ() { return z; }
-    inline void SetZ(float z) { this->z = z; }
+    inline Vector3 &SetZ(float z) { this->z = z; return *this; }
 
 
     constexpr inline float operator[](size_t index) const
