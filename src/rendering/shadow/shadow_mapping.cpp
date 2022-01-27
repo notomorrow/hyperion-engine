@@ -12,7 +12,7 @@ ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist, bool use_fbo)
 {
     shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
 
-    fbo = new Framebuffer2D(1024, 1024, true, true, false, false);
+    fbo = new Framebuffer2D(512, 512, true, false, false, false);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -86,8 +86,7 @@ void ShadowMapping::Begin()
         }
     }
 
-    // MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
-    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -100, 100);
+    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
 
     shadow_cam->SetViewMatrix(new_view);
     shadow_cam->SetProjectionMatrix(new_proj);
@@ -96,7 +95,7 @@ void ShadowMapping::Begin()
         fbo->Use();
     }
 
-    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
+    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT);
 }
 
 void ShadowMapping::End()

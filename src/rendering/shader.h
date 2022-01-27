@@ -15,6 +15,7 @@
 #include <vector>
 #include <array>
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <cstring>
 
@@ -81,7 +82,7 @@ public:
     {
     }
 
-    std::map<std::string, ShaderProperty> m_properties;
+    std::unordered_map<std::string, ShaderProperty> m_properties;
 
     inline bool operator==(const ShaderProperties &other) const
     {

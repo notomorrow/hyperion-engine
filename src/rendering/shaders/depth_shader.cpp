@@ -28,6 +28,13 @@ DepthShader::DepthShader(const ShaderProperties &properties)
 void DepthShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
+
+    if (auto diffuse = mat.GetTexture("DiffuseMap")) {
+        diffuse->Prepare();
+
+        SetUniform("DiffuseMap", diffuse.get());
+        SetUniform("HasDiffuseMap", 1);
+    }
 }
 
 void DepthShader::ApplyTransforms(const Transform &transform, Camera *camera)

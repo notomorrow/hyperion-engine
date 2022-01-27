@@ -18,6 +18,8 @@ Entity::Entity(const std::string &name)
 
 Entity::~Entity()
 {
+    std::cout << "Delete node " << GetName() << "\n";
+
     for (auto it = m_controls.rbegin(); it != m_controls.rend(); ++it) {
         (*it)->OnRemoved();
         (*it)->m_first_run = true;

@@ -35,6 +35,8 @@ void LightingShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
 
+    SetUniform("u_diffuseColor", mat.diffuse_color);
+
     auto *env = Environment::GetInstance();
     if (env->ShadowsEnabled()) {
         for (int i = 0; i < env->NumCascades(); i++) {
@@ -51,6 +53,8 @@ void LightingShader::ApplyMaterial(const Material &mat)
         }
     }
 
+    // if (!m_properties.GetValue("DEFERRED").IsTruthy()) {
+
     env->GetSun().Bind(0, this);
 
     SetUniform("env_NumPointLights", (int)env->GetNumPointLights());
@@ -60,8 +64,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
             point_light->Bind(i, this);
         }
     }
-
-    SetUniform("u_diffuseColor", mat.diffuse_color);
 
     if (auto cubemap = env->GetGlobalCubemap()) {
         cubemap->Prepare();
