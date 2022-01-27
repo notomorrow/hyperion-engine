@@ -31,8 +31,6 @@
 #include "animation/skeleton_control.h"
 #include "math/bounding_box.h"
 
-#include "rendering/shaders/cubemap_renderer_shader.h"
-
 #include "rendering/probe/probe_renderer.h"
 
 /* Post */
@@ -87,8 +85,8 @@ using namespace hyperion;
 
 class MyGame : public Game {
 public:
-    Camera *cam, *env_cam;
-    Framebuffer *fbo, *env_fbo;
+    Camera *cam;
+    Framebuffer *fbo;
     PssmShadowMapping *shadows;
 
     std::vector<std::shared_ptr<Entity>> m_raytested_entities;
@@ -96,7 +94,6 @@ public:
     std::shared_ptr<Entity> top;
     std::shared_ptr<Entity> test_object_0, test_object_1, test_object_2;
     std::shared_ptr<Shader> shader;
-    std::shared_ptr<Shader> cubemap_renderer_shader;
     std::shared_ptr<Entity> debug_quad;
 
     std::shared_ptr<physics::RigidBody> rb1, rb2, rb3, rb4;
@@ -126,9 +123,7 @@ public:
     {
         delete shadows;
         delete fbo;
-        // delete env_fbo;
         delete cam;
-        // delete env_cam;
 
         AudioManager::Deinitialize();
     }
@@ -156,6 +151,99 @@ public:
         particle_node->AddControl(std::make_shared<CameraFollowControl>(cam, Vector3(0, 2, 0)));
 
         top->AddChild(particle_node);
+    }
+
+    std::shared_ptr<Cubemap> InitCubemap()
+    {
+        std::shared_ptr<Cubemap> cubemap(new Cubemap({
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posx.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negx.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posy.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negy.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posz.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negz.jpg")
+        }));
+
+        if (!Environment::GetInstance()->ProbeEnabled()) {
+            Environment::GetInstance()->SetGlobalCubemap(cubemap);
+        }
+
+        Environment::GetInstance()->SetGlobalIrradianceCubemap(std::shared_ptr<Cubemap>(new Cubemap({
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posx.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negx.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posy.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negy.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posz.jpg"),
+            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negz.jpg")
+        })));
+
+        return cubemap;
+    }
+
+    void InitTestArea()
+    {
+        // auto test_scene = std::make_shared<Entity>("sphere");
+        // test_scene->SetRenderable(MeshFactory::CreateSphere(1.0f));
+        // test_scene->GetRenderable()->SetShader(shader);
+        // test_scene->SetLocalScale(Vector3(2.0f));
+        // test_scene->SetLocalTranslation(Vector3(0, 10, 0));
+        // // test_scene->SetLocalRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+        // test_scene->GetMaterial().SetParameter("shininess", 0.8f);
+        // test_scene->GetMaterial().SetParameter("roughness", 0.1f);
+        // test_scene->GetMaterial().cull_faces = MaterialFace_None;
+        // top->AddChild(test_scene);
+
+        {
+
+            auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
+            street->SetName("street");
+            // street->SetLocalTranslation(Vector3(3.0f, -0.5f, -1.5f));
+            street->Scale(0.5f);
+
+            for (size_t i = 0; i < street->NumChildren(); i++) {
+                street->GetChild(i)->GetMaterial().SetParameter("shininess", 0.5f);
+                street->GetChild(i)->GetMaterial().SetParameter("roughness", 0.0f);
+            }
+
+            top->AddChild(street);
+            street->UpdateTransform();
+        }
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                Vector3 box_position = Vector3(((float(x) - 2.5) * 8), 3.0f, (float(z) - 2.5) * 8);
+                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+                box->Scale(0.45f);
+
+                for (size_t i = 0; i < box->NumChildren(); i++) {
+                    Vector3 col = Vector3(
+                        MathUtil::Random(0.4f, 1.0f),
+                        MathUtil::Random(0.4f, 1.0f),
+                        MathUtil::Random(0.4f, 1.0f)
+                    ).Normalize();
+
+                    box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
+                        col.x,
+                        col.y,
+                        col.z,
+                        1.0f
+                    );
+
+                    // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                    // box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
+                    // box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                    box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.8f);
+                    box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.1f);
+                }
+
+                box->SetLocalTranslation(box_position);
+                top->AddChild(box);
+            }
+        }
+
     }
 
     void InitPhysicsTests()
@@ -241,8 +329,9 @@ public:
     void Initialize()
     {
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
-            .Define("SHADOW_MAP_RADIUS", 0.15f)
-            .Define("SHADOW_PCF", false)
+            .Define("NORMAL_MAPPING", true)
+            .Define("SHADOW_MAP_RADIUS", 0.05f)
+            .Define("SHADOW_PCF", true)
         );
         
         cam = new FpsCamera(
@@ -255,15 +344,15 @@ public:
             750.0f
         );
 
-        shadows = new PssmShadowMapping(cam, 4, 600.0);
-        shadows->SetVarianceShadowMapping(true);
+        shadows = new PssmShadowMapping(cam, 4, 200.0);
+        shadows->SetVarianceShadowMapping(false);
 
-        Environment::GetInstance()->SetShadowsEnabled(true);
+        Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(false);
+        Environment::GetInstance()->SetProbeEnabled(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
-        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 0, 0));
+        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 1.0f, 0));
 
         m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
         m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
@@ -272,10 +361,7 @@ public:
         m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         m_renderer->SetDeferred(true);
 
-        env_cam = new PerspectiveCamera(45, 256, 256, 0.3f, 100.0f);
-        env_cam->SetTranslation(Vector3(0, 10, 0));
         fbo = new Framebuffer2D(cam->GetWidth(), cam->GetHeight());
-        env_fbo = new FramebufferCube(256, 256);
         AudioManager::GetInstance()->Initialize();
 
         Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5).Normalize());
@@ -314,13 +400,24 @@ public:
         top->AddChild(fps_counter);
         GetUIManager()->RegisterUIObject(fps_counter);
 
+
+
+        auto cm = InitCubemap();
+
+        top->AddControl(std::make_shared<SkydomeControl>(cam));
+        // top->AddControl(std::make_shared<SkyboxControl>(cam, nullptr));
+
+        // shader = ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties());
+
+        InitTestArea();
+
         // auto ui_depth_view = std::make_shared<ui::UIObject>("fbo_preview_depth");
         // ui_depth_view->SetLocalTranslation2D(Vector2(0.8, -0.5));
         // ui_depth_view->SetLocalScale2D(Vector2(256));
         // top->AddChild(ui_depth_view);
         // GetUIManager()->RegisterUIObject(ui_depth_view);
 
-        int total_cascades = Environment::GetInstance()->NumCascades();
+        /*int total_cascades = Environment::GetInstance()->NumCascades();
         for (int x = 0; x < 2; x++) {
             for (int z = 0; z < 2; z++) {
                 auto ui_fbo_view = std::make_shared<ui::UIObject>("fbo_preview_" + std::to_string(x * 2 + z));
@@ -339,7 +436,7 @@ public:
             if (total_cascades == 0) {
                 break;
             }
-        }
+        }*/
 
         auto ui_crosshair = std::make_shared<ui::UIObject>("crosshair");
         ui_crosshair->GetMaterial().SetTexture("ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/crosshair.png"));
@@ -348,18 +445,8 @@ public:
         top->AddChild(ui_crosshair);
         GetUIManager()->RegisterUIObject(ui_crosshair);
 
-
-        ShaderProperties defines;
-        // defines.Define("DEFERRED", m_renderer->IsDeferred());
-        // defines.Define("SHADOWS", Environment::GetInstance()->ShadowsEnabled());
-        defines.Define("NORMAL_MAPPING", 1);
-        defines.Define("ROUGHNESS_MAPPING", 1);
-        defines.Define("METALNESS_MAPPING", 1);
         // defines.Define("NUM_SPLITS", Environment::GetInstance()->NumCascades());
     
-        shader = ShaderManager::GetInstance()->GetShader<LightingShader>(defines);
-
-        cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties {});
         // TODO: terrain raycasting
         // Ray top_ray;
         // top_ray.m_direction = Vector3(0, -1, 0);
@@ -381,6 +468,23 @@ public:
 
             m_renderer->SetDeferred(!m_renderer->IsDeferred());
         }));
+
+
+
+        {
+            auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
+            superdan->SetName("superdan");
+            superdan->Move(Vector3(2, 4, 0));
+            superdan->Scale(0.25);
+            for (size_t i = 0; i < superdan->NumChildren(); i++) {
+                superdan->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
+            }
+            top->AddChild(superdan);
+            superdan->UpdateTransform();
+        }
+
+
+        return;
 
 
         InputEvent raytest_event([=](bool pressed)
@@ -475,11 +579,11 @@ public:
         box_node->AddControl(rb4);
         top->AddChild(box_node);*/
 
-        /*{
+        {
             auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
             dragger->SetName("dragger");
             dragger->Move(Vector3(7, -10, 6));
-            dragger->Scale(0.25);
+            dragger->Scale(0.85);
             dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.7f, 0.6f, 1.0f };
             dragger->GetChild(0)->GetMaterial().SetParameter("shininess", 0.1f);
             dragger->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
@@ -487,18 +591,6 @@ public:
             dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
             top->AddChild(dragger);
             dragger->UpdateTransform();
-        }*/
-
-        {
-            auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
-            superdan->SetName("superdan");
-            superdan->Move(Vector3(-7, 5, -6));
-            superdan->Scale(0.25);
-            for (size_t i = 0; i < superdan->NumChildren(); i++) {
-                superdan->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
-            }
-            top->AddChild(superdan);
-            superdan->UpdateTransform();
         }
 
         /*{
@@ -612,7 +704,7 @@ public:
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3(((float(x) - 2.5) * 6), -30, (float(z) - 2.5) * 6);
+                Vector3 box_position = Vector3(((float(x) - 2.5) * 8), -30, (float(z) - 2.5) * 8);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
                 box->Scale(0.25);
                 for (size_t i = 0; i < box->NumChildren(); i++) {
@@ -635,10 +727,10 @@ public:
                     // box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-metalness.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/grimy/grimy-metal-roughness.png"));
 
-                    box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
                     box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
                     box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
                 }
@@ -648,7 +740,6 @@ public:
 
                 auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(0.25)), 0.1);
                 rigid_body->SetPosition(box_position);
-                // rigid_body->SetLinearVelocity(Vector3(0, -5, 0));
                 rigid_body->SetInertiaTensor(MatrixUtil::CreateInertiaTensor(Vector3(1.0) / 2, 1.0));
                 rigid_body->SetAwake(true);
                 // box->AddControl(rigid_body);
@@ -767,27 +858,7 @@ public:
 
         */
 
-        std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posz.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negz.jpg")
-        }));
-
-        if (!Environment::GetInstance()->ProbeEnabled()) {
-            Environment::GetInstance()->SetGlobalCubemap(cubemap);
-        }
-
-        Environment::GetInstance()->SetGlobalIrradianceCubemap(std::shared_ptr<Cubemap>(new Cubemap({
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posz.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negz.jpg")
-        })));
+        
 
         /*{ // sponza
             auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
@@ -860,7 +931,6 @@ public:
         //     obj->Scale(2.0f);
         // }
 
-        top->AddControl(std::make_shared<SkydomeControl>(cam));
         // top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
         top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
@@ -934,6 +1004,7 @@ public:
 
         // TODO: ProbeControl on top node
         if (Environment::GetInstance()->ProbeEnabled()) {
+            Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(cam->GetTranslation()).SetY(0));
             Environment::GetInstance()->GetProbeRenderer()->Render(m_renderer, cam);
 
             if (!Environment::GetInstance()->GetGlobalCubemap()) {

@@ -16,7 +16,7 @@ class Cubemap;
 
 class ProbeRenderer {
 public:
-    ProbeRenderer(int width = 256, int height = 256);
+    ProbeRenderer(int width = 128, int height = 128);
     ~ProbeRenderer();
 
     inline std::shared_ptr<Cubemap> GetColorTexture() const
@@ -36,6 +36,8 @@ public:
     void SetRenderShading(bool value);
     inline bool RenderTextures() const { return m_render_textures; }
     void SetRenderTextures(bool value);
+
+    void SetOrigin(const Vector3 &origin);
 
     void Render(Renderer *renderer, Camera *camera);
 

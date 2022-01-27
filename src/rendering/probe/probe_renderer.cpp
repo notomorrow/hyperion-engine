@@ -16,7 +16,7 @@ ProbeRenderer::ProbeRenderer(int width, int height)
         width,
         height,
         0.1f,
-        10.0f
+        50.0f
     );
 }
 
@@ -60,12 +60,12 @@ void ProbeRenderer::Render(Renderer *renderer, Camera *cam)
         false
     );
 
-    renderer->RenderBucket(
-        cam,
-        renderer->GetBucket(Renderable::RB_SKY),
-        m_cubemap_renderer_shader.get(),
-        false
-    );
+    // renderer->RenderBucket(
+    //     cam,
+    //     renderer->GetBucket(Renderable::RB_SKY),
+    //     m_cubemap_renderer_shader.get(),
+    //     false
+    // );
 
     m_probe->End();
     m_fbo->End();
@@ -95,5 +95,12 @@ void ProbeRenderer::SetRenderTextures(bool value)
     );
 
     m_render_textures = value;
+}
+
+void ProbeRenderer::SetOrigin(const Vector3 &origin)
+{
+    hard_assert(m_probe != nullptr);
+
+    m_probe->SetOrigin(origin);
 }
 } // namespace hyperion

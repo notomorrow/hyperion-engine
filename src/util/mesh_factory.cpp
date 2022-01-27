@@ -199,12 +199,6 @@ std::shared_ptr<Mesh> MeshFactory::CreateCube(Vector3 offset)
         Transform(Vector3(-1, 0, 0), Vector3::One(), Quaternion(Vector3::UnitY() * -1, MathUtil::DegToRad(90.0f))),
         Transform(Vector3(0, 1, 0), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(90.0f))),
         Transform(Vector3(0, -1, 0), Vector3::One(), Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)))
-        // Transform(Vector3::Zero(), Vector3::One(), Quaternion(Vector3::UnitX() * 1, MathUtil::DegToRad(180.0f)) * Quaternion(Vector3::UnitZ(), MathUtil::DegToRad(180.0f))),
-        // Transform(Vector3(-1, 0, -1), Vector3::One(), Quaternion(Vector3::UnitY() * -1, MathUtil::DegToRad(90.0f))),
-        // Transform(Vector3(1, 0, -1), Vector3::One(), Quaternion(Vector3::UnitY() * -1, MathUtil::DegToRad(-90.0f))),
-        // Transform(Vector3(0, 0, -2), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(0.0f))),
-        // Transform(Vector3(0, -1, -1), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(-90.0f))),
-        // Transform(Vector3(0, 1, -1), Vector3::One(), Quaternion(Vector3::UnitX() * -1, MathUtil::DegToRad(90.0f)))
     };
 
     std::shared_ptr<Mesh> mesh;
@@ -234,6 +228,79 @@ std::shared_ptr<Mesh> MeshFactory::CreateCube(Vector3 offset)
     );
 
     mesh->CalculateNormals();
+
+    return mesh;
+}
+
+// https://www.danielsieger.com/blog/2021/03/27/generating-spheres.html
+std::shared_ptr<Mesh> MeshFactory::CreateSphere(float radius, int num_slices, int num_stacks)
+{
+    std::vector<Vertex> vertices;
+    std::vector<MeshIndex> indices;
+
+    // top vertex
+    vertices.push_back(Vertex(Vector3(0, 1, 0)));
+    indices.push_back(0);
+    MeshIndex v0 = indices.back(); 
+
+    for (int i = 0; i < num_stacks - 1; i++) {
+        auto phi = M_PI * double(i + 1) / double(num_stacks);
+
+        for (int j = 0; j < num_slices; j++) {
+            double theta = 2.0 * M_PI * double(j) / double(num_slices);
+            double x = std::sin(phi) * std::cos(theta);
+            double y = std::cos(phi);
+            double z = std::sin(phi) * std::sin(theta);
+
+            vertices.push_back(Vertex(Vector3(x, y, z)));
+            // indices.push_back(indices.size());
+        }
+    }
+
+    // bottom vertex
+    vertices.push_back(Vertex(Vector3(0, -1, 0)));
+    indices.push_back(indices.size());
+    MeshIndex v1 = indices.back();
+
+    // add top / bottom triangles
+    for (int i = 0; i < num_slices; ++i) {
+        int i0 = i + 1;
+        int i1 = (i + 1) % num_slices + 1;
+
+        indices.push_back(v0);
+        indices.push_back(i1);
+        indices.push_back(i0);
+
+        i0 = i + num_slices * (num_stacks - 2) + 1;
+        i1 = (i + 1) % num_slices + num_slices * (num_stacks - 2) + 1;
+
+        indices.push_back(v1);
+        indices.push_back(i0);
+        indices.push_back(i1);
+    }
+
+    // add quads per stack / slice
+    for (int j = 0; j < num_stacks - 2; j++)
+    {
+        auto j0 = j * num_slices + 1;
+        auto j1 = (j + 1) * num_slices + 1;
+        for (int i = 0; i < num_slices; i++) {
+            auto i0 = j0 + i;
+            auto i1 = j0 + (i + 1) % num_slices;
+            auto i2 = j1 + (i + 1) % num_slices;
+            auto i3 = j1 + i;
+
+            indices.push_back(i0);
+            indices.push_back(i3);
+            indices.push_back(i2);
+            indices.push_back(i0);
+            indices.push_back(i2);
+            indices.push_back(i1);
+        }
+    }
+
+    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
+    mesh->SetVertices(vertices, indices);
 
     return mesh;
 }

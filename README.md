@@ -10,17 +10,11 @@ Feel free to contribute anything - We'd love to have some more eyes on this proj
 
 ## Screenshots
 
-Procedurally generated terrain plus atomospheric scattering:
-![Apex engine screenshot](/screenshot5.png)
-PBR Scene w/ SSAO:
-![Apex engine screenshot](/screenshot1.png)
-Furball:
-![Apex engine screenshot](/screenshot6.png)
-More procedural terrain:
-![Apex engine screenshot](/screenshot2.png)
-First shot at dynamic reflections:
-![Apex engine screenshot](/screenshot4.png)
 ![Apex engine screenshot](/screenshot7.png)
+![Apex engine screenshot](/screenshot4.png)
+![Apex engine screenshot](/screenshot5.png)
+![Apex engine screenshot](/screenshot1.png)
+![Apex engine screenshot](/screenshot6.png)
 ![Apex engine screenshot](/screenshot8.png)
 ![Apex engine screenshot](/screenshot9.png)
 

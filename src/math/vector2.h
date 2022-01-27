@@ -20,10 +20,10 @@ public:
 
     inline float GetX() const { return x; }
     inline float &GetX() { return x; }
-    inline void SetX(float x) { this->x = x; }
+    inline Vector2 &SetX(float x) { this->x = x; return *this; }
     inline float GetY() const { return y; }
     inline float &GetY() { return y; }
-    inline void SetY(float y) { this->y = y; }
+    inline Vector2 &SetY(float y) { this->y = y; return *this; }
 
     Vector2 &operator=(const Vector2 &other);
     Vector2 operator+(const Vector2 &other) const;
