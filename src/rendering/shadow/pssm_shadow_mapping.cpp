@@ -11,14 +11,16 @@ PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double ma
 
     Environment::GetInstance()->SetNumCascades(num_splits);
 
-    const double min_dist = max_dist / (double)num_splits;
+    // const double min_dist = max_dist / (double)num_splits;
+    double dist = max_dist;
 
     for (int i = num_splits - 1; i >= 0; i--) {
-        const double frac = double(i + 1) / double(num_splits);
+        dist /= 2;
+        // const double frac = double(i + 1) / double(num_splits);
         // const double distance = MathUtil::Lerp(min_dist, max_dist, frac);
-        const double distance = max_dist * frac;
-        Environment::GetInstance()->SetShadowSplit(i, distance);
-        shadow_renderers[i] = std::make_shared<ShadowMapping>(view_cam, distance);
+        // const double distance = max_dist * frac;
+        Environment::GetInstance()->SetShadowSplit(i, dist);
+        shadow_renderers[i] = std::make_shared<ShadowMapping>(view_cam, dist);
 
         Environment::GetInstance()->SetShadowMap(i, shadow_renderers[i]->GetShadowMap());
     }
@@ -63,7 +65,7 @@ void PssmShadowMapping::SetVarianceShadowMapping(bool value)
 void PssmShadowMapping::Render(Renderer *renderer)
 {
     // m_depth_shader->SetOverrideCullMode(MaterialFaceCull::MaterialFace_Front);
-    CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::DEPTH_CLAMP);
+    // CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::DEPTH_CLAMP);
     for (int i = 0; i < num_splits; i++) {
         shadow_renderers[i]->Begin();
 
@@ -87,6 +89,6 @@ void PssmShadowMapping::Render(Renderer *renderer)
 
         shadow_renderers[i]->End();
     }
-    CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::DEPTH_CLAMP);
+    // CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::DEPTH_CLAMP);
 }
 } // namespace hyperion

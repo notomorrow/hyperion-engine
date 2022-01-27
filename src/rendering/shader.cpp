@@ -321,7 +321,6 @@ void Shader::Use()
 
 void Shader::End()
 {
-    // m_override_cull = MaterialFaceCull::MaterialFace_None;
     glUseProgram(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);

@@ -54,7 +54,7 @@ void CloudsShader::ApplyTransforms(const Transform &transform, Camera *camera)
     Transform updated_transform(transform);
     updated_transform.SetTranslation(Vector3(
         camera->GetTranslation().x,
-        camera->GetTranslation().y + 25.0f,
+        camera->GetTranslation().y + 50.0f,
         camera->GetTranslation().z
     ));
 

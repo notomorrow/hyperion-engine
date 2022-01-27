@@ -241,8 +241,8 @@ public:
     void Initialize()
     {
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
-            .Define("SHADOW_MAP_RADIUS", 0.09f)
-            .Define("SHADOW_PCF", true)
+            .Define("SHADOW_MAP_RADIUS", 0.15f)
+            .Define("SHADOW_PCF", false)
         );
         
         cam = new FpsCamera(
@@ -255,8 +255,8 @@ public:
             750.0f
         );
 
-        shadows = new PssmShadowMapping(cam, 4, 400.0);
-        shadows->SetVarianceShadowMapping(false);
+        shadows = new PssmShadowMapping(cam, 4, 600.0);
+        shadows->SetVarianceShadowMapping(true);
 
         Environment::GetInstance()->SetShadowsEnabled(true);
         Environment::GetInstance()->SetNumCascades(4);
@@ -282,7 +282,7 @@ public:
 
         for (int x = 0; x < Environment::GetInstance()->GetMaxPointLights() / 2; x++) {
             for (int z = 0; z < Environment::GetInstance()->GetMaxPointLights() / 2; z++) {
-                Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(x * 0.5f, 0.5f, z * 0.5f), Vector4(MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), 1.0f), 2.0f));
+                Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(x * 0.5f, -6.0f, z * 0.5f), Vector4(MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), 1.0f), 2.0f));
             }
         }
         // Initialize root node
@@ -749,8 +749,9 @@ public:
                 house->GetChild(i)->GetRenderable()->SetShader(shader);
             }
 
-            house->Move(Vector3(0, -33, 0));
+            house->Move(Vector3(-4, -12, -4));
             house->SetName("house");
+            house->Scale(Vector3(2));
             top->AddChild(house);
         }
 
