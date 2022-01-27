@@ -20,6 +20,9 @@ More procedural terrain:
 ![Apex engine screenshot](/screenshot2.png)
 First shot at dynamic reflections:
 ![Apex engine screenshot](/screenshot4.png)
+![Apex engine screenshot](/screenshot7.png)
+![Apex engine screenshot](/screenshot8.png)
+![Apex engine screenshot](/screenshot9.png)
 
 ## Building
 
