@@ -43,8 +43,8 @@ void main()
     vec4 albedo = texture(ColorMap, v_texcoord0);
     vec4 data = texture(DataMap, v_texcoord0);
     float depth = texture(DepthMap, v_texcoord0).r;
-    float metallic = data.r;
-    float roughness = data.g;
+    float metallic = clamp(data.r, 0.05, 0.99);
+    float roughness = clamp(data.g, 0.05, 0.99);
     float performLighting = data.a;
     float ao = 1.0;
     vec3 gi = vec3(0.0);
@@ -77,18 +77,24 @@ void main()
 
 #if SHADOWS
     float shadowness = 0.0;
-    int shadowSplit = getShadowMapSplit(CameraPosition, position.xyz);
+    int shadowSplit = getShadowMapSplit(distance(CameraPosition, position.xyz));
 
+#if SHADOW_PCF
     for (int x = 0; x < 4; x++) {
         for (int y = 0; y < 4; y++) {
             vec2 offset = poissonDisk[x * 4 + y] * $SHADOW_MAP_RADIUS;
             vec3 shadowCoord = getShadowCoord(shadowSplit, position.xyz + vec3(offset.x, offset.y, -offset.x));
-            shadowness += getShadow(shadowSplit, shadowCoord);
+            shadowness += getShadow(shadowSplit, shadowCoord, NdotL);
         }
     }
 
     shadowness /= 16.0;
-    shadowness *= 1.0 - NdotL;
+#endif
+
+#if !SHADOW_PCF
+    vec3 shadowCoord = getShadowCoord(shadowSplit, position.xyz);
+    shadowness = getShadow(shadowSplit, shadowCoord, NdotL);
+#endif
 
     vec4 shadowColor = vec4(vec3(shadowness), 1.0);
     shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), position.xyz, CameraPosition, u_shadowSplit[int($NUM_SPLITS) - 2], u_shadowSplit[int($NUM_SPLITS) - 1]);
@@ -111,7 +117,7 @@ void main()
     vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
     vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
 
-    float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
+    float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
     specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
 
     vec3 F0 = vec3(0.04);
@@ -149,45 +155,18 @@ void main()
 
 #endif
 
-    // for (int i = 0; i < env_NumPointLights; i++) {
-    //     result += ComputePointLight(
-    //         env_PointLights[i],
-    //         n,
-    //         CameraPosition,
-    //         position.xyz,
-    //         albedo.rgb,
-    //         0, // todo
-    //         roughness,
-    //         metallic
-    //     );
-    // }
-
-    result *= ao;
-
-    int layer = -1;
-    for (int i = 0; i < $NUM_SPLITS; ++i)
-    {
-        if (depth < u_shadowSplit[i])
-        {
-            layer = i;
-            break;
-        }
-    }
-    if (layer == -1)
-    {
-        layer = $NUM_SPLITS;
+    for (int i = 0; i < env_NumPointLights; i++) {
+        result += ComputePointLight(
+            env_PointLights[i],
+            n,
+            CameraPosition,
+            position.xyz,
+            albedo.rgb,
+            0, // todo
+            roughness,
+            metallic
+        );
     }
 
-    vec4 splitColor = vec4(0.0, 0.0, 0.0, 1.0);
-    if (layer == 0) {
-        splitColor = vec4(1.0, 0.0, 1.0, 1.0);
-    } else if (layer == 1) {
-        splitColor = vec4(0.0, 1.0, 0.0, 1.0);
-    } else if (layer == 2) {
-        splitColor = vec4(0.0, 0.0, 1.0, 1.0);
-    } else if (layer == 3) {
-        splitColor = vec4(0.0, 1.0, 1.0, 1.0);
-    }
-
-    output0 = vec4(splitColor.rgb, 1.0);
+    output0 = vec4(result, 1.0);
 }

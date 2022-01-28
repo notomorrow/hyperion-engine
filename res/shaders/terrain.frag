@@ -3,6 +3,8 @@
 #define $PI 3.141592654
 #define $SLOPE_ANGLE 0.7
 #define $LEVEL_THRESHOLD 10.0
+#define $TRIPLANAR_BLENDING 1
+#define $TERRAIN_LEVEL1 0
 
 in vec4 v_position;
 in vec4 v_normal;
@@ -54,11 +56,11 @@ void main()
   float roughness = clamp(u_roughness, 0.05, 0.99);
   float metallic = clamp(u_shininess, 0.05, 0.99);
 
-  vec3 slopeBlend = abs(v_normal.xyz);
-  slopeBlend = (slopeBlend - vec3(0.2)) * 0.7;
-  slopeBlend = normalize(max(slopeBlend, 0.00001));      // Force weights to sum to 1.0 (very important!)
-  float b = (slopeBlend.x + slopeBlend.y + slopeBlend.z);
-  slopeBlend /= vec3(b, b, b);
+  // vec3 slopeBlend = abs(v_normal.xyz);
+  // slopeBlend = (slopeBlend - vec3(0.2)) * 0.7;
+  // slopeBlend = normalize(max(slopeBlend, 0.00001));      // Force weights to sum to 1.0 (very important!)
+  // float b = (slopeBlend.x + slopeBlend.y + slopeBlend.z);
+  // slopeBlend /= vec3(b, b, b);
 
   vec3 lightDir = normalize(env_DirectionalLight.direction);
   vec3 n = normalize(v_normal.xyz);
@@ -75,8 +77,31 @@ void main()
   }
 
   // === flat terrain level ===
+#if TRIPLANAR_BLENDING
+  // in wNorm is the world-space normal of the fragment
+  vec3 blending = abs(n);
+  blending = normalize(max(blending, 0.00001)); // Force weights to sum to 1.0
+  float b = (blending.x + blending.y + blending.z);
+  blending /= vec3(b, b, b);
+
+  vec4 flat_xaxis = texture(BaseTerrainColorMap, v_position.yz * BaseTerrainScale);
+  vec4 flat_yaxis = texture(BaseTerrainColorMap, v_position.xz * BaseTerrainScale);
+  vec4 flat_zaxis = texture(BaseTerrainColorMap, v_position.xy * BaseTerrainScale);
+  // blend the results of the 3 planar projections.
+  vec4 flatColor = flat_xaxis * blending.x + flat_yaxis * blending.y + flat_zaxis * blending.z;
+
+  vec4 normal_xaxis = texture(BaseTerrainNormalMap, v_position.yz * BaseTerrainScale);
+  vec4 normal_yaxis = texture(BaseTerrainNormalMap, v_position.xz * BaseTerrainScale);
+  vec4 normal_zaxis = texture(BaseTerrainNormalMap, v_position.xy * BaseTerrainScale);
+
+  vec4 flatNormals = normal_xaxis * blending.x + normal_yaxis * blending.y + normal_zaxis * blending.z;
+#endif
+
+#if !TRIPLANAR_BLENDING
   vec4 flatColor = texture(BaseTerrainColorMap, flatTexCoord);
   vec4 flatNormals = texture(BaseTerrainNormalMap, flatTexCoord);
+#endif
+
   float flatAo = 1.0;
   
   //if (HasBaseTerrainAoMap == 1) {
@@ -87,6 +112,7 @@ void main()
   vec4 normalsTexture = flatNormals;
   float ao = flatAo;
 
+#if TERRAIN_LEVEL0
   // === level-based blending ====
 
   vec4 level1Color = texture(Level1ColorMap, v_texcoord0 * Level1Scale);
@@ -98,15 +124,18 @@ void main()
   diffuseTexture = mix(diffuseTexture, level1Color, level1Amount);
   normalsTexture = mix(normalsTexture, level1Normals, level1Amount);
   ao = mix(ao, level1Ao, level1Amount);
+#endif
 
   // === slope-based blending ====
-  vec4 slopeColor1 = texture(SlopeColorMap, v_position.yz * SlopeScale);
-  vec4 slopeColor2 = texture(SlopeColorMap, v_position.xy * SlopeScale);
-  vec4 slopeNormal1 = texture(SlopeNormalMap, v_position.yz * SlopeScale);
-  vec4 slopeNormal2 = texture(SlopeNormalMap, v_position.xy * SlopeScale);
+  // vec4 slopeColor1 = texture(SlopeColorMap, v_position.yz * SlopeScale);
+  // vec4 slopeColor2 = texture(SlopeColorMap, v_position.xy * SlopeScale);
+  // vec4 slopeNormal1 = texture(SlopeNormalMap, v_position.yz * SlopeScale);
+  // vec4 slopeNormal2 = texture(SlopeNormalMap, v_position.xy * SlopeScale);
 
-  diffuseTexture = (slopeBlend.y * diffuseTexture + slopeBlend.x * slopeColor1 + slopeBlend.z * slopeColor2);
-  normalsTexture = (slopeBlend.y * normalsTexture + slopeBlend.x * slopeNormal1 + slopeBlend.z * slopeNormal2);
+  // diffuseTexture = (slopeBlend.y * diffuseTexture + slopeBlend.x * slopeColor1 + slopeBlend.z * slopeColor2);
+  // normalsTexture = (slopeBlend.y * normalsTexture + slopeBlend.x * slopeNormal1 + slopeBlend.z * slopeNormal2);
+  
+  
   // TODO: mixing for other tex's
 
   // if (ang >= $SLOPE_ANGLE) {
@@ -135,10 +164,6 @@ void main()
 
   vec4 albedo = u_diffuseColor * diffuseTexture;
 
-  if (albedo.a < 0.1) {
-    discard;
-  }
-
 #if !DEFERRED
 
   float NdotL = max(0.0, dot(n, lightDir));
@@ -153,17 +178,25 @@ void main()
 #if SHADOWS
   float shadowness = 0.0;
   const float radius = 0.075;
-  int shadowSplit = getShadowMapSplit(u_camerapos, v_position.xyz);
+  int shadowSplit = getShadowMapSplit(distance(u_camerapos, v_position.xyz));
 
-  for (int x = 0; x < 4; x++) {
-    for (int y = 0; y < 4; y++) {
-      vec2 offset = poissonDisk[x * 4 + y] * radius;
-      vec3 shadowCoord = getShadowCoord(shadowSplit, v_position.xyz + vec3(offset.x, offset.y, -offset.x));
-      shadowness += getShadow(shadowSplit, shadowCoord, NdotL);
+#if SHADOW_PCF
+    for (int x = 0; x < 4; x++) {
+        for (int y = 0; y < 4; y++) {
+            vec2 offset = poissonDisk[x * 4 + y] * $SHADOW_MAP_RADIUS;
+            vec3 shadowCoord = getShadowCoord(shadowSplit, v_position.xyz + vec3(offset.x, offset.y, -offset.x));
+            shadowness += getShadow(shadowSplit, shadowCoord, NdotL);
+        }
     }
-  }
-  shadowness /= 16.0;
-  shadowness *= 1.0 - NdotL;
+
+    shadowness /= 16.0;
+#endif
+
+#if !SHADOW_PCF
+    vec3 shadowCoord = getShadowCoord(shadowSplit, v_position.xyz);
+    shadowness = getShadow(shadowSplit, shadowCoord, NdotL);
+#endif
+
   vec4 shadowColor = vec4(vec3(shadowness), 1.0);
   shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), v_position.xyz, u_camerapos, u_shadowSplit[int($NUM_SPLITS) - 2], u_shadowSplit[int($NUM_SPLITS) - 1]);
 #endif
@@ -182,12 +215,12 @@ void main()
     vec3 reflectionVector = ReflectionVector(n, v_position.xyz, u_camerapos);
 #endif
 
-  vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
   vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
   vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
+  vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
 
-  float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
-  specularCubemap = mix(specularCubemap, diffuseCubemap, roughnessMix);
+  float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
+  specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
 
 
   vec3 F0 = vec3(0.04);
