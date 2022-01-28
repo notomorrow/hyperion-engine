@@ -55,8 +55,14 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
             const auto clone = it->second->Clone();
 
             if (clone == nullptr) { // no implementation; return shared ptr
+                std::cout << "Use cached object (direct)" << new_path << "\n";
+
                 return it->second;
             }
+
+            std::cout << "Use cached object (clone) " << new_path << "\n";
+
+            return clone;
         }
     }
 
@@ -70,10 +76,10 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
                 throw std::string("Loader returned no data");
             } else {
                 loaded->SetFilePath(new_path);
-                if (use_caching) {
-                    loaded_assets[new_path] = loaded;
-                }
+
+                loaded_assets[new_path] = loaded;
             }
+
             return loaded;
         }
     } catch (std::string err) {
