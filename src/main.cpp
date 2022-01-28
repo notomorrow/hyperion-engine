@@ -1004,7 +1004,7 @@ public:
 
         // TODO: ProbeControl on top node
         if (Environment::GetInstance()->ProbeEnabled()) {
-            Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(cam->GetTranslation()));
+            Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(cam->GetTranslation()).SetY(5));
             Environment::GetInstance()->GetProbeRenderer()->Render(m_renderer, cam);
 
             if (!Environment::GetInstance()->GetGlobalCubemap()) {

@@ -8,7 +8,7 @@
 namespace hyperion {
     inline void CatchGLErrors(const char *message, bool should_throw = true, bool recursive = true)
     {
-        unsigned int errors[255] = { GL_NO_ERROR },
+        unsigned int errors[16] = { GL_NO_ERROR },
             error = GL_NO_ERROR,
             counter = 0;
 
@@ -19,7 +19,7 @@ namespace hyperion {
                 break;
             }
 
-            if (counter == 255) { // max len
+            if (counter == 16) { // max len
                 break;
             }
         }
