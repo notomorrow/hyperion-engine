@@ -105,17 +105,20 @@ void main()
     vec4 shadowColor = vec4(1.0);
 #endif
 
+
+    vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
+
 #if PROBE_ENABLED
-    vec3 reflectionVector = EnvProbeVector(n, position.xyz, CameraPosition, u_modelMatrix);
+    vec3 specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, position.xyz, CameraPosition);
+    vec3 blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, position.xyz, CameraPosition);
 #endif
 
 #if !PROBE_ENABLED
     vec3 reflectionVector = ReflectionVector(n, position.xyz, CameraPosition);
-#endif
-
-    vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
     vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
     vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
+#endif
+
 
     float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
     specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
