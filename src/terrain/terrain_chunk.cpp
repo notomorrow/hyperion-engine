@@ -123,11 +123,6 @@ std::vector<MeshIndex> TerrainChunk::BuildIndices()
     return indices;
 }
 
-Vector4 TerrainChunk::BiomeAt(int x, int z)
-{
-    return Vector4::Zero();
-}
-
 int TerrainChunk::HeightIndexAt(int x, int z) const
 {
     int index = x + (z * (m_chunk_info.m_width));

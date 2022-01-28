@@ -104,11 +104,6 @@ void NoiseTerrainChunk::OnAdded()
     GetMaterial().SetParameter("Level1Height", 80.0f);
 }
 
-Vector4 NoiseTerrainChunk::BiomeAt(int x, int z)
-{
-
-}
-
 SimplexNoiseData NoiseTerrainChunk::CreateSimplexNoise(int seed)
 {
     SimplexNoiseData data;

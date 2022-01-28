@@ -1,7 +1,9 @@
 #include "particle_emitter_control.h"
 #include "../math/math_util.h"
 #include "../entity.h"
+
 #include <cassert>
+#include <algorithm>
 
 namespace hyperion {
 ParticleEmitterControl::ParticleEmitterControl(Camera *camera, const ParticleConstructionInfo &info)

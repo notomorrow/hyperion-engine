@@ -42,8 +42,6 @@ public:
 
 protected:
 
-    virtual Vector4 BiomeAt(int x, int z);
-
     std::shared_ptr<Mesh> BuildMesh(const std::vector<double> &heights);
     void AddNormal(Vertex &vertex, const Vector3 &normal);
     void CalculateNormals(std::vector<Vertex> &vertices, const std::vector<MeshIndex> &indices);

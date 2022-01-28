@@ -112,6 +112,7 @@ void Framebuffer2D::Store(FramebufferAttachment attachment, std::shared_ptr<Text
     soft_assert(m_attachments[AttachmentToOrdinal(attachment)] != nullptr);
 
     // What happens for depth tex?
+    std::cout << "Set readbuffer: " << AttachmentToOrdinal(attachment) << "\n";
     glReadBuffer(GL_COLOR_ATTACHMENT0 + AttachmentToOrdinal(attachment));
     CatchGLErrors("Failed to set read buffer");
 

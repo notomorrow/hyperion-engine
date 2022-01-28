@@ -932,7 +932,7 @@ public:
         // }
 
         // top->AddControl(std::make_shared<SkyboxControl>(cam, cubemap));
-        top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
+        //top->AddControl(std::make_shared<NoiseTerrainControl>(cam, 223));
     }
 
     void Logic(double dt)
