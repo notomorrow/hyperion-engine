@@ -21,8 +21,8 @@ using BitFlags_t = uint64_t;
 #define soft_assert_msg(cond, msg) { if (!(cond)) { _print_assert_msg("soft", cond, msg); return; } }
 #define soft_assert_break(cond) { if (!(cond)) { _print_assert("soft", cond); break; } }
 #define soft_assert_break_msg(cond, msg) { if (!(cond)) { _print_assert_msg("soft", cond, msg); break; } }
-#define hard_assert(cond) { if (__builtin_expect(!(cond), 0)) { _print_assert("hard", cond); exit(1); } }
-#define hard_assert_msg(cond, msg) { if (__builtin_expect(!(cond), 0)) { _print_assert_msg("hard", cond, msg); exit(1); } }
+#define hard_assert(cond) { if (!(cond)) { _print_assert("hard", cond); exit(1); } }
+#define hard_assert_msg(cond, msg) { if (!(cond)) { _print_assert_msg("hard", cond, msg); exit(1); } }
 
 #define not_implemented hard_assert_msg(0, __func__ " not implemented")
 #define function_body_not_implemented { not_implemented; }

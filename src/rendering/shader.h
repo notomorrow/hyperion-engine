@@ -274,6 +274,7 @@ private:
     void UploadGpuData();
     void DestroyGpuData();
     bool ShaderPropertiesChanged() const;
+    // void OutputShaderError(int id);
 
     void ApplyUniforms();
 
