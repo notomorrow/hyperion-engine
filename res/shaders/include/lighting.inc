@@ -101,8 +101,11 @@ vec3 EnvProbeVector(vec3 n, vec3 worldPos, vec3 camPos, mat4 modelMatrix)
 	vec3 CameraWS = camPos;
 	vec3 NormalWS = n;
 
-	vec3 DirectionWS = PositionWS - CameraWS;
+	vec3 DirectionWS = PositionWS - CameraWS;//CameraWS - PositionWS);
 	vec3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
+
+  //vec3 ReflDirectionLS = (u_viewMatrix * vec4(ReflDirectionWS, 1.0)).xyz;
+  
 
 	// Following is the parallax-correction code
 	// Find the ray intersection with box plane
@@ -120,11 +123,11 @@ vec3 EnvProbeVector(vec3 n, vec3 worldPos, vec3 camPos, mat4 modelMatrix)
 	ReflDirectionWS = IntersectPositionWS - EnvProbe.position;
 	// End parallax-correction code
 
-	vec3 BoxDiff = (EnvProbe.max - EnvProbe.min);
-	float minDim = min(BoxDiff.z, min(BoxDiff.x, BoxDiff.y));
-	vec3 BoxScale = minDim / BoxDiff;
+	// vec3 BoxDiff = (EnvProbe.max - EnvProbe.min);
+	// float minDim = min(BoxDiff.z, min(BoxDiff.x, BoxDiff.y));
+	// vec3 BoxScale = minDim / BoxDiff;
 
-	ReflDirectionWS *= BoxScale;
+	// ReflDirectionWS *= BoxScale;
 
 	return ReflDirectionWS;
 }

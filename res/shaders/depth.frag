@@ -1,5 +1,8 @@
 #version 330 core
 
+// for alpha blended shadows
+#define $SHADOW_ALPHA_THRESHOLD 0.1
+
 in vec4 v_position;
 in vec4 v_normal;
 in vec2 v_texcoord0;
@@ -9,11 +12,22 @@ in mat3 v_tbn;
 
 uniform vec3 u_camerapos;
 
+uniform int HasDiffuseMap;
+uniform sampler2D DiffuseMap;
+
 #include "include/depth.inc"
 #include "include/frag_output.inc"
 
 void main()
 {
+    if (HasDiffuseMap == 1) {
+        vec4 diffuse = texture(DiffuseMap, v_texcoord0);
+
+        if (diffuse.a < $SHADOW_ALPHA_THRESHOLD) {
+            discard;
+        }
+    }
+
     float depthCoord = gl_FragCoord.z / gl_FragCoord.w;
 
 #if SHADOWS_VARIANCE

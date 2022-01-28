@@ -1,4 +1,6 @@
-#define $SHADOW_BIAS 0.001
+#define $SHADOW_BIAS 0.0005
+#define $SHADOW_BIAS_SMOOTHING 1
+#define $SHADOW_VARIANCE_LOD 5
 
 uniform sampler2D u_shadowMap[$NUM_SPLITS];
 uniform mat4 u_shadowMatrix[$NUM_SPLITS];
@@ -8,29 +10,24 @@ uniform vec2 poissonDisk[16];
 
 bool inRadius(vec3 cam, vec3 world, float radius) {
   if (cam.x >= (world.x - (radius)) && cam.x <= (world.x + (radius))) {
-    //if (cam.y >= (world.y - (radius)) && cam.y <= (world.y + (radius))) {
+    if (cam.y >= (world.y - (radius)) && cam.y <= (world.y + (radius))) {
       if (cam.z >= (world.z - (radius)) && cam.z <= (world.z + (radius))) {
         return true;
       }
-    //}
+    }
   }
 
   return false;
 }
 
-int getShadowMapSplit(vec3 cam, vec3 world) {
-  float distanceBuffer = 1.0;;
-  //float dist = float(floor(distance(cam, world))) + distanceBuffer;
-
-  if (inRadius(cam, world, u_shadowSplit[0])) {
-    return 0;
-  } else if (inRadius(cam, world, u_shadowSplit[1])) {
-    return 1;
-  } else if (inRadius(cam, world, u_shadowSplit[2])) {
-    return 2;
-  } else if (inRadius(cam, world, u_shadowSplit[3])) {
-    return 3;
+int getShadowMapSplit(float viewSpaceDepth) {
+  for (int i = 0; i < $NUM_SPLITS; ++i) {
+      if (viewSpaceDepth < u_shadowSplit[i]) {
+          return i;
+      }
   }
+
+  return $NUM_SPLITS - 1;
 }
 
 vec3 shadowDebugColor(int shadowSplit) {
@@ -44,9 +41,23 @@ vec3 shadowDebugColor(int shadowSplit) {
   return shadowSplitColors[shadowSplit];
 }
 
-float getShadow(int index, vec3 coord) {
+float getShadow(int index, vec3 coord, float NdotL) {
   vec4 textureSample = vec4(0.0);
 
+
+#if SHADOWS_VARIANCE
+if (index == 0) {
+	  textureSample = texture(u_shadowMap[0], coord.xy, $SHADOW_VARIANCE_LOD);
+	} else if (index == 1) {
+		textureSample = texture(u_shadowMap[1], coord.xy, $SHADOW_VARIANCE_LOD);
+	} else if (index == 2) {
+		textureSample = texture(u_shadowMap[2], coord.xy, $SHADOW_VARIANCE_LOD);
+	} else {
+		textureSample = texture(u_shadowMap[3], coord.xy, $SHADOW_VARIANCE_LOD);
+	}
+#endif
+
+#if !SHADOWS_VARIANCE
   if (index == 0) {
 	  textureSample = texture(u_shadowMap[0], coord.xy);
 	} else if (index == 1) {
@@ -56,6 +67,8 @@ float getShadow(int index, vec3 coord) {
 	} else {
 		textureSample = texture(u_shadowMap[3], coord.xy);
 	}
+#endif
+
 #if SHADOWS_PACK_DEPTH
   float depth = unpackDepth(textureSample);
 #endif
@@ -81,8 +94,15 @@ float getShadow(int index, vec3 coord) {
   return shadowPCT;
 #endif
 
+  float bias = $SHADOW_BIAS;
+
+#if SHADOW_BIAS_SMOOTHING
+  bias = 0.005 * tan(acos(NdotL));
+  bias = clamp(bias, 0,0.01);
+#endif
+
 #if !SHADOWS_VARIANCE
-  return max(step(coord.z-$SHADOW_BIAS, depth), 0.0);
+  return max(step(coord.z-bias, depth), 0.0);
 #endif
 }
 

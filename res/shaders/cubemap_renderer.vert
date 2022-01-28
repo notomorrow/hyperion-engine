@@ -13,6 +13,8 @@ out mat3 v_tbn;
 #include "include/matrices.inc"
 #include "include/lighting.inc"
 
+#define $CUBEMAP_LIGHTING_AMBIENT 0.2
+
 out VSOutput
 {
   vec3 position;
@@ -31,7 +33,7 @@ void main() {
 
 #if PROBE_RENDER_SHADING
   // vertex shading
-  float NdotL = dot(a_normal.xyz, env_DirectionalLight.direction);
+  float NdotL = clamp(dot(a_normal.xyz, env_DirectionalLight.direction), $CUBEMAP_LIGHTING_AMBIENT, 1.0);
   vs_out.lighting = vec4(NdotL, NdotL, NdotL, 1.0) * env_DirectionalLight.color;
 #endif
 
