@@ -95,43 +95,6 @@ vec3 ReflectionVector(vec3 n, vec3 worldPos, vec3 camPos)
 	  return reflect(-v, n);
 }
 
-vec3 EnvProbeVector(vec3 n, vec3 worldPos, vec3 camPos, mat4 modelMatrix)
-{
-	vec3 PositionWS = worldPos;
-	vec3 CameraWS = camPos;
-	vec3 NormalWS = n;
-
-	vec3 DirectionWS = PositionWS - CameraWS;//CameraWS - PositionWS);
-	vec3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
-
-  //vec3 ReflDirectionLS = (u_viewMatrix * vec4(ReflDirectionWS, 1.0)).xyz;
-  
-
-	// Following is the parallax-correction code
-	// Find the ray intersection with box plane
-	vec3 FirstPlaneIntersect = (EnvProbe.max - PositionWS) / ReflDirectionWS;
-	vec3 SecondPlaneIntersect = (EnvProbe.min - PositionWS) / ReflDirectionWS;
-	// Get the furthest of these intersections along the ray
-	// (Ok because x/0 give +inf and -x/0 give –inf )
-	vec3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
-	// Find the closest far intersection
-	float Distance = min(min(FurthestPlane.x, FurthestPlane.y), FurthestPlane.z);
-
-	// Get the intersection position
-	vec3 IntersectPositionWS = PositionWS + ReflDirectionWS * Distance;
-	// Get corrected reflection
-	ReflDirectionWS = IntersectPositionWS - EnvProbe.position;
-	// End parallax-correction code
-
-	// vec3 BoxDiff = (EnvProbe.max - EnvProbe.min);
-	// float minDim = min(BoxDiff.z, min(BoxDiff.x, BoxDiff.y));
-	// vec3 BoxScale = minDim / BoxDiff;
-
-	// ReflDirectionWS *= BoxScale;
-
-	return ReflDirectionWS;
-}
-
 float sqr(float x)
 {
   return x * x;
@@ -365,6 +328,84 @@ vec4 CalculateFogLinear(vec4 inColor, vec4 toColor, vec3 worldPos, vec3 camPos, 
 	return mix(inColor, toColor, 1.0-fogFactor);
 }
 
+
+
+vec3 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos)
+{
+
+  vec4 sample;
+
+	vec3 PositionWS = worldPos;
+	vec3 CameraWS = camPos;
+	vec3 NormalWS = n;
+	vec3 DirectionWS = PositionWS - CameraWS;
+	vec3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
+  
+
+
+
+  vec3 cubeSize = EnvProbe.max;
+  vec3 cubePos = EnvProbe.position;
+  vec3 pos = worldPos;
+
+  vec3 nDir = normalize(ReflDirectionWS);//DirectionWS);
+  vec3 rbmax = (   .5 * ( cubeSize - cubePos ) - pos ) / nDir;
+  vec3 rbmin = ( - .5 * ( cubeSize - cubePos ) - pos ) / nDir;
+
+  vec3 rbminmax;// = max(rbmax, rbmin);
+  rbminmax.x = ( nDir.x > 0. )?rbmax.x:rbmin.x;
+  rbminmax.y = ( nDir.y > 0. )?rbmax.y:rbmin.y;
+  rbminmax.z = ( nDir.z > 0. )?rbmax.z:rbmin.z;
+
+  float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
+  vec3 boxIntersection = pos + nDir * correction;
+
+  vec3 coord = boxIntersection - cubePos;
+
+  sample = texture(tex, coord);
+
+  // fade out env map at boundary
+
+  float maxDistanceLength = length(EnvProbe.max);
+  float fogStart = maxDistanceLength - 10.0;
+  float fogEnd = maxDistanceLength;
+
+  // return sample.rgb;
+  
+  return CalculateFogLinear(sample, vec4(sample.rgb, 0.0), worldPos, camPos, fogStart, fogEnd).rgb;
+
+  // return reflect(DirectionWS, normalize(coord));
+
+
+
+  //vec3 ReflDirectionLS = (u_viewMatrix * vec4(ReflDirectionWS, 1.0)).xyz;
+  
+
+	// Following is the parallax-correction code
+	// Find the ray intersection with box plane
+	vec3 FirstPlaneIntersect = (EnvProbe.position + vec3(15.0) - PositionWS) / ReflDirectionWS;
+	vec3 SecondPlaneIntersect = (EnvProbe.position - vec3(15.0) - PositionWS) / ReflDirectionWS;
+	// Get the furthest of these intersections along the ray
+	// (Ok because x/0 give +inf and -x/0 give –inf )
+	vec3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+	// Find the closest far intersection
+	float Distance = min(min(FurthestPlane.x, FurthestPlane.y), FurthestPlane.z);
+
+	// Get the intersection position
+	vec3 IntersectPositionWS = PositionWS + ReflDirectionWS * Distance;
+	// Get corrected reflection
+	ReflDirectionWS = IntersectPositionWS - EnvProbe.position;
+	// End parallax-correction code
+
+	// vec3 BoxDiff = (EnvProbe.max - EnvProbe.min);
+	// float minDim = min(BoxDiff.z, min(BoxDiff.x, BoxDiff.y));
+	// vec3 BoxScale = minDim / BoxDiff;
+
+	// ReflDirectionWS *= BoxScale;
+
+	return ReflDirectionWS;
+}
+
 vec3 ComputeDirectionalLight(DirectionalLight dl, vec3 n, vec3 v, vec3 vert, vec3 albedo, float shadowness, float roughness, float metalness)
 {
 	vec3 lightDir = dl.direction;
@@ -456,18 +497,19 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
     float VdotH = max(0.001, dot(viewVector, H));
     float HdotV = max(0.001, dot(H, viewVector));
 
+    vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
 
 #if PROBE_ENABLED
-    vec3 reflectionVector = EnvProbeVector(n, vert, cameraPosition, u_modelMatrix);
+    vec3 specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, vert, cameraPosition).rgb;
+    vec3 blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, vert, cameraPosition).rgb;
 #endif
 
 #if !PROBE_ENABLED
     vec3 reflectionVector = ReflectionVector(n, vert, cameraPosition);
-#endif
-
-    vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
     vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
     vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
+#endif
+
 
     float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
     specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
@@ -505,3 +547,5 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
 
 	return (diffuseLight + reflectedLight) * radiance;
 }
+
+
