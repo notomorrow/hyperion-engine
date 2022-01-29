@@ -61,8 +61,7 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
         if (env->ProbeEnabled()) {
             const auto &origin = env->GetProbeRenderer()->GetProbe()->GetOrigin();
             SetUniform("EnvProbe.position", origin);
-            SetUniform("EnvProbe.max", Vector3(env->GetProbeRenderer()->GetProbe()->GetFar()));
-            SetUniform("EnvProbe.min", Vector3(-env->GetProbeRenderer()->GetProbe()->GetFar()));
+            SetUniform("EnvProbe.max", Vector3(40.0f));
         }
     }
 

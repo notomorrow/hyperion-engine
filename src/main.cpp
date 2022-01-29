@@ -380,7 +380,7 @@ public:
         // InitParticleSystem();
 
         // UI test
-        /*auto test_ui = std::make_shared<ui::UIButton>("my_ui_object");
+        /* test_ui = std::make_shared<ui::UIButton>("my_ui_object");
         test_ui->SetLocalTranslation2D(Vector2(-0.5, 0.0));
         test_ui->SetLocalScale2D(Vector2(260, 80));
         top->AddChild(test_ui);
@@ -481,6 +481,22 @@ public:
             }
             top->AddChild(superdan);
             superdan->UpdateTransform();
+        }
+
+
+
+
+        {
+            auto building = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/building2/building2.obj", true);
+            building->SetLocalTranslation(Vector3(4, 2, 0));
+            building->SetLocalScale(Vector3(0.5f));
+            for (int i = 0; i < building->NumChildren(); i++) {
+                //building->GetChild(i)->GetRenderable()->SetShader(shader);
+                // building->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+                building->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f);
+                building->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
+            }
+            top->AddChild(building);
         }
 
 
@@ -754,20 +770,6 @@ public:
         // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
 
 
-
-        /*{
-            auto building = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/building2/building2.obj", true);
-            building->SetLocalTranslation(Vector3(0, 0, 15));
-            building->SetLocalScale(Vector3(1));
-            for (int i = 0; i < building->NumChildren(); i++) {
-                building->GetChild(i)->GetRenderable()->SetShader(shader);
-                // building->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-                building->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f);
-                building->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
-            }
-            top->AddChild(building);
-        }*/
-
         {
             auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
             cube->GetChild(0)->GetRenderable()->SetShader(shader);
@@ -1004,7 +1006,7 @@ public:
 
         // TODO: ProbeControl on top node
         if (Environment::GetInstance()->ProbeEnabled()) {
-            Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(cam->GetTranslation()).SetY(5));
+            Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(cam->GetTranslation()));
             Environment::GetInstance()->GetProbeRenderer()->Render(m_renderer, cam);
 
             if (!Environment::GetInstance()->GetGlobalCubemap()) {
