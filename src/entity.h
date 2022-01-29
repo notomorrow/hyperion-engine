@@ -119,8 +119,13 @@ public:
 
     void AddControl(std::shared_ptr<EntityControl> control);
     void RemoveControl(const std::shared_ptr<EntityControl> &control);
-    inline std::shared_ptr<EntityControl> GetControl(size_t index) const { return m_controls[index]; }
     inline size_t NumControls() const { return m_controls.size(); }
+    inline std::shared_ptr<EntityControl> GetControl(size_t index) const
+    {
+        soft_assert_return(index < NumControls(), nullptr);
+
+        return m_controls[index];
+    }
 
     template <typename T>
     std::shared_ptr<T> GetControl(size_t index) const

@@ -75,7 +75,6 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
 void DeferredRenderingShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     Shader::ApplyTransforms(transform, camera);
-    SetUniform("CameraPosition", camera->GetTranslation());
 
     Matrix4 inverse_proj_view(camera->GetViewMatrix());
     inverse_proj_view *= camera->GetProjectionMatrix();

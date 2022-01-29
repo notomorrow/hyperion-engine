@@ -24,6 +24,9 @@ public:
     // merges all submeshes into one
     void Optimize();
 
+    void AddSubmesh(const Submesh &submesh);
+    void ClearSubmeshes();
+
 protected:
     std::vector<Submesh> m_submeshes;
 

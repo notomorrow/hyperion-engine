@@ -15,6 +15,18 @@ void MeshArray::Render()
     }
 }
 
+void MeshArray::AddSubmesh(const Submesh &submesh)
+{
+    m_submeshes.push_back(submesh);
+
+    UpdateSubmeshes();
+}
+
+void MeshArray::ClearSubmeshes()
+{
+    m_submeshes.clear();
+}
+
 void MeshArray::UpdateSubmeshes()
 {
     if (m_submeshes.empty()) {
