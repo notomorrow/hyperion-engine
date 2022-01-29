@@ -196,6 +196,8 @@ void Entity::AddControl(std::shared_ptr<EntityControl> control)
 
 void Entity::RemoveControl(const std::shared_ptr<EntityControl> &control)
 {
+    soft_assert(control != nullptr);
+
     m_controls.erase(std::find(m_controls.begin(), m_controls.end(), control));
     control->OnRemoved();
     control->parent = nullptr;

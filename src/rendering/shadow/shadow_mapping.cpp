@@ -86,7 +86,8 @@ void ShadowMapping::Begin()
         }
     }
 
-    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
+    //MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
+    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -100.0f, 100.0f);
 
     shadow_cam->SetViewMatrix(new_view);
     shadow_cam->SetProjectionMatrix(new_proj);
@@ -95,7 +96,7 @@ void ShadowMapping::Begin()
         fbo->Use();
     }
 
-    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT);
+    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 }
 
 void ShadowMapping::End()

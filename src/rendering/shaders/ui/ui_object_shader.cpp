@@ -30,55 +30,16 @@ void UIObjectShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
 
-    int texture_index = 1;
-
-    // if (mat.texture0 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.texture0->Use();
-    //     SetUniform("u_colorMap", texture_index);
-
-    //     texture_index++;
-    // }
-
-    // if (mat.texture1 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.texture1->Use();
-    //     SetUniform("u_depthMap", texture_index);
-
-    //     texture_index++;
-    // }
-
-    // if (mat.texture2 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.texture2->Use();
-    //     SetUniform("u_positionMap", texture_index);
-
-    //     texture_index++;
-    // }
-
-    // if (mat.normals0 != nullptr) {
-    //     Texture::ActiveTexture(texture_index);
-    //     mat.normals0->Use();
-    //     SetUniform("u_normalMap", texture_index);
-
-    //     texture_index++;
-    // }
-
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
-        Texture::ActiveTexture(texture_index);
-        it->second->Begin();
-        SetUniform(it->first, texture_index);
+        if (it->second == nullptr) {
+            continue;
+        }
+
+        it->second->Prepare();
+
+        SetUniform(it->first, it->second.get());
         SetUniform(std::string("Has") + it->first, 1);
-        texture_index++;
     }
-
-    // if (mat.alpha_blended) {
-    //     glEnable(GL_BLEND);
-    //     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // }
-
-    //glDepthMask(false);
-    //glDisable(GL_DEPTH_TEST);
 }
 
 void UIObjectShader::ApplyTransforms(const Transform &transform, Camera *camera)

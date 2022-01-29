@@ -11,6 +11,7 @@ DeferredRenderingFilter::DeferredRenderingFilter()
 
 void DeferredRenderingFilter::SetUniforms(Camera *cam)
 {
+    m_shader->SetUniform("CameraPosition", cam->GetTranslation());
 }
 
 } // namespace hyperion

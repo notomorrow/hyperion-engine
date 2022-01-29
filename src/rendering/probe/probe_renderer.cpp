@@ -16,7 +16,7 @@ ProbeRenderer::ProbeRenderer(int width, int height)
         width,
         height,
         0.1f,
-        250.0f
+        45.0f
     );
 }
 
