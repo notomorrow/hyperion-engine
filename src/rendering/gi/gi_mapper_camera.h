@@ -2,6 +2,7 @@
 #define GI_MAPPER_CAMERA_H
 
 #include "../../math/bounding_box.h"
+#include "../texture_3D.h"
 #include "../renderable.h"
 
 #include <memory>
@@ -24,7 +25,8 @@ public:
     GIMapperRegion &GetRegion() { return m_region; }
     const GIMapperRegion &GetRegion() const { return m_region; }
 
-    inline unsigned int GetTextureId() const { return m_texture_id; }
+    inline std::shared_ptr<Texture3D> &GetTexture() { return m_texture; }
+    inline const std::shared_ptr<Texture3D> &GetTexture() const { return m_texture; }
 
     void Begin();
     void End();
@@ -35,6 +37,7 @@ public:
 
 private:
     unsigned int m_texture_id;
+    std::shared_ptr<Texture3D> m_texture;
     GIMapperRegion m_region;
     std::shared_ptr<ComputeShader> m_clear_shader;
     Camera *m_camera;

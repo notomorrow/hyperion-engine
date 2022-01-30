@@ -32,6 +32,8 @@ public:
 
 private:
     double m_render_tick;
+    int m_render_index;
+    bool m_is_first_run;
     std::array<GIMapperCamera*, 6> m_cameras;
     std::array<std::pair<Vector3, Vector3>, 6> m_directions;
     BoundingBox m_bounds;

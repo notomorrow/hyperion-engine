@@ -5,6 +5,7 @@
 #include "../shaders/gi/gi_voxel_shader.h"
 #include "../shaders/gi/gi_voxel_clear_shader.h"
 #include "../renderer.h"
+#include "../texture_3D.h"
 #include "../camera/perspective_camera.h"
 #include "../../math/math_util.h"
 #include "../../opengl.h"
@@ -17,6 +18,12 @@ GIMapperCamera::GIMapperCamera(const GIMapperRegion &region)
       m_region(region),
       m_camera(new PerspectiveCamera(90.0f, GIManager::voxel_map_size, GIManager::voxel_map_size, 0.1f, 100.0f))
 {
+    m_texture.reset(new Texture3D(GIManager::voxel_map_size, GIManager::voxel_map_size, GIManager::voxel_map_size, nullptr));
+    m_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
+    m_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
+    m_texture->SetFormat(CoreEngine::GLEnums::RGBA);
+    m_texture->SetInternalFormat(CoreEngine::GLEnums::RGBA32F);
+
     m_clear_shader = ShaderManager::GetInstance()->GetShader<GIVoxelClearShader>(ShaderProperties());
 }
 
@@ -31,24 +38,14 @@ GIMapperCamera::~GIMapperCamera()
 
 void GIMapperCamera::Begin()
 {
-    if (m_texture_id == 0) {
-        glGenTextures(1, &m_texture_id);
-        CatchGLErrors("Failed to generate textures.");
-        glBindTexture(GL_TEXTURE_3D, m_texture_id);
-        CatchGLErrors("Failed to bind 3d texture.");
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        CatchGLErrors("Failed to init 3d texture parameters.");
-        glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, GIManager::voxel_map_size, GIManager::voxel_map_size, GIManager::voxel_map_size);
-        CatchGLErrors("Failed to set 3d texture storage.");
-        glGenerateMipmap(GL_TEXTURE_3D);
-        //CatchGLErrors("Failed to gen 3d texture mipmaps.");
-        glBindTexture(GL_TEXTURE_3D, 0);
+    if (!m_texture->IsUploaded()) {
+        m_texture->Begin(false); // do not upload texture data
+        // this ought to be refactored int a more reusable format
+        glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, m_texture->GetWidth(), m_texture->GetHeight(), m_texture->GetLength());
+        m_texture->End();
     }
 
-    glBindImageTexture(0, m_texture_id, 0, true, 0, GL_READ_WRITE, GL_RGBA32F);
+    glBindImageTexture(0, m_texture->GetId(), 0, true, 0, GL_READ_WRITE, GL_RGBA32F);
     CatchGLErrors("Failed to bind image texture.");
 }
 

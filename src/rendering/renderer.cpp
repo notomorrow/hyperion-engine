@@ -219,7 +219,6 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
 #endif
 
             it.renderable->Render(this, cam);
-            it.renderable->Render(this, cam);
 
 #if !RENDERER_SHADER_GROUPING
             shader->End();

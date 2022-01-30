@@ -4,7 +4,8 @@ namespace hyperion {
 
 const std::map<std::string, MaterialParameter> Material::default_parameters = {
     { "roughness", MaterialParameter(0.8f) },
-    { "shininess", MaterialParameter(0.04f) }
+    { "shininess", MaterialParameter(0.04f) },
+    { "Emissiveness", MaterialParameter(0.1f) }
 };
 
 MaterialParameter::MaterialParameter()
