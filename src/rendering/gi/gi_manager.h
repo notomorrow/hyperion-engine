@@ -18,6 +18,8 @@ public:
     GIManager();
     ~GIManager() = default;
 
+    static const int voxel_map_size;
+
     inline void AddProbe(const std::shared_ptr<GIMapper> &mapper) { m_gi_map_renderers.push_back(mapper); }
     inline void RemoveProbe(const std::shared_ptr<GIMapper> &mapper)
     {

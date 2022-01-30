@@ -20,9 +20,8 @@ std::string ShaderPreprocessor::ProcessShader(const std::string &code,
 
     std::string local_path(path.substr(0, path.find_last_of("\\/")));
 
-    if (!(StringUtil::Contains(local_path, "/") ||
-        StringUtil::Contains(local_path, "\\"))) {
-        local_path.clear();
+    if (StringUtil::StartsWith(local_path, "/") || StringUtil::StartsWith(local_path, "\\")) {
+        local_path.clear(); // non-relative path
     }
 
     int line_num = 0;
@@ -125,20 +124,16 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
                 }
             }
 
-            const std::string include_path = local_path + "/" + path;
+            std::string include_path;
+            
+            if (local_path.length() != 0) {
+                include_path = local_path + "/" + path;
+            } else {
+                include_path = path;
+            }
 
-            if (auto loaded = AssetManager::GetInstance()->
-                LoadFromFile<TextLoader::LoadedText>(include_path)) {
-
-                std::string relative_path(loaded->GetFilePath().substr(0,
-                    loaded->GetFilePath().find_last_of("\\/")));
-
-                if (!(StringUtil::Contains(relative_path, "/") ||
-                    StringUtil::Contains(relative_path, "\\"))) {
-                    relative_path.clear();
-                }
-
-                new_line += ProcessShader(loaded->GetText(), defines, relative_path, line_num_ptr) + "\n";
+            if (auto loaded = AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(include_path)) {
+                new_line += ProcessShader(loaded->GetText(), defines, include_path, line_num_ptr) + "\n";
                 new_line += "\n";
                 new_line += FileHeader(local_path);
             } else {

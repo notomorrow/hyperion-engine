@@ -308,6 +308,12 @@ void Shader::ApplyUniforms()
                     break;
                 case Uniform::Uniform_Texture3D:
                     Texture::ActiveTexture(texture_index);
+                    glBindTexture(GL_TEXTURE_3D, int(uniform.second.data[0]));
+                    glUniform1i(loc, texture_index);
+                    texture_index++;
+                    break;
+                case Uniform::Uniform_TextureCube:
+                    Texture::ActiveTexture(texture_index);
                     glBindTexture(GL_TEXTURE_CUBE_MAP, int(uniform.second.data[0]));
                     glUniform1i(loc, texture_index);
                     texture_index++;
@@ -355,6 +361,7 @@ void Shader::End()
 {
     glUseProgram(0);
     glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_3D, 0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 

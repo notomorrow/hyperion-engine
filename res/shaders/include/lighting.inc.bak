@@ -24,6 +24,11 @@ uniform sampler2D MetalnessMap;
 uniform int HasAoMap;
 uniform sampler2D AoMap;
 
+#if VCT_ENABLED
+#include "./gi/vct.inc"
+#endif
+
+// cubemap probe
 struct Probe {
 	vec3 position;
 	vec3 min;
@@ -332,7 +337,7 @@ vec4 CalculateFogLinear(vec4 inColor, vec4 toColor, vec3 worldPos, vec3 camPos, 
 
 vec3 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos)
 {
-  vec4 sample;
+  vec4 samp;
 
   vec3 viewVector = worldPos - camPos;
   vec3 refl = reflect(viewVector, n);
@@ -364,7 +369,7 @@ vec3 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos)
   
   //coord = reflect(coord, viewVector);
 
-  sample = texture(tex, coord);
+  samp = texture(tex, coord);
 
   // fade out env map at boundary
 
@@ -372,9 +377,9 @@ vec3 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos)
   float fogStart = maxDistanceLength - 30.0;
   float fogEnd = maxDistanceLength;
 
-  return sample.rgb;
+  return samp.rgb;
   
-  vec4 sampleBlended = CalculateFogLinear(sample, vec4(sample.rgb, 0.0), worldPos, cubePos, fogStart, fogEnd);
+  vec4 sampleBlended = CalculateFogLinear(samp, vec4(samp.rgb, 0.0), worldPos, cubePos, fogStart, fogEnd);
   
   return sampleBlended.rgb * sampleBlended.a;
 

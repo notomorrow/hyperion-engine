@@ -41,7 +41,8 @@ Environment::Environment()
       m_probe_renderer(new ProbeRenderer()),
       m_probe_enabled(false),
       m_max_point_lights(0),
-      m_gi_manager(GIManager::GetInstance())
+      m_gi_manager(GIManager::GetInstance()),
+      m_vct_enabled(false)
 {
     SetMaxPointLights(10);
 }
@@ -101,6 +102,19 @@ void Environment::SetProbeEnabled(bool probe_enabled)
     );
 
     m_probe_enabled = probe_enabled;
+}
+
+void Environment::SetVCTEnabled(bool vct_enabled)
+{
+    if (vct_enabled == m_vct_enabled) {
+        return;
+    }
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("VCT_ENABLED", vct_enabled)
+    );
+
+    m_vct_enabled = vct_enabled;
 }
 
 } // namespace hyperion

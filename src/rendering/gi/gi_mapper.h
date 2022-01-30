@@ -1,42 +1,41 @@
 #ifndef GI_MAPPER_H
 #define GI_MAPPER_H
 
+#include "gi_mapper_camera.h"
 #include "../../math/bounding_box.h"
 #include "../renderable.h"
 
 #include <memory>
+#include <array>
+#include <utility>
 
 namespace hyperion {
 class Shader;
 class ComputeShader;
 
-struct GIMapperRegion {
-    BoundingBox bounds;
-};
-
 class GIMapper : public Renderable {
 public:
-    GIMapper(const GIMapperRegion &region);
+    GIMapper(const BoundingBox &bounds);
     ~GIMapper();
 
-    GIMapperRegion &GetRegion() { return m_region; }
-    const GIMapperRegion &GetRegion() const { return m_region; }
+    void SetOrigin(const Vector3 &origin);
 
-    inline unsigned int GetTextureId() const { return m_texture_id; }
+    inline GIMapperCamera *GetCamera(int index) { return m_cameras[index]; }
+    inline const GIMapperCamera *GetCamera(int index) const { return m_cameras[index]; }
+    inline constexpr size_t NumCameras() const { return m_cameras.size(); }
 
     void Bind(Shader *shader);
 
-    void Begin();
-    void End();
-
     virtual void Render(Renderer *renderer, Camera *cam) override;
+
     void UpdateRenderTick(double dt);
 
 private:
-    unsigned int m_texture_id;
-    GIMapperRegion m_region;
-    std::shared_ptr<ComputeShader> m_clear_shader;
     double m_render_tick;
+    std::array<GIMapperCamera*, 6> m_cameras;
+    std::array<std::pair<Vector3, Vector3>, 6> m_directions;
+    BoundingBox m_bounds;
+    BoundingBox m_last_bounds;
 };
 } // namespace apex
 

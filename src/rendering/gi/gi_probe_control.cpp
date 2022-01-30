@@ -11,9 +11,9 @@
 
 namespace hyperion {
 GIProbeControl::GIProbeControl(const BoundingBox &bounds)
-    : EntityControl(25.0),
+    : EntityControl(10.0),
       m_gi_mapper_node(new Entity("GI Mapper Node")),
-      m_gi_mapper(std::make_shared<GIMapper>(GIMapperRegion{ bounds }))
+      m_gi_mapper(std::make_shared<GIMapper>(bounds))
 {
     m_gi_mapper_node->SetRenderable(m_gi_mapper);
 }
@@ -33,7 +33,7 @@ void GIProbeControl::OnRemoved()
 
 void GIProbeControl::OnUpdate(double dt)
 {
+    m_gi_mapper->SetOrigin(parent->GetGlobalTranslation());
     m_gi_mapper->UpdateRenderTick(dt);
-    m_gi_mapper->GetRegion().bounds.SetCenter(parent->GetGlobalTranslation());
 }
 } // namespace hyperion

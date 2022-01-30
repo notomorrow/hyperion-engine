@@ -42,7 +42,7 @@ vec3 worldToTex(vec3 world)
 }
 void main(void) 
 {
-	float voxelImageSize = 128.0;
+	float voxelImageSize = float($VCT_MAP_SIZE);
 	float halfVoxelImageSize = voxelImageSize * 0.5;
 
 	vec4 storagePos = ndcPos;//StorageTransformMatrix * ndcPos;
