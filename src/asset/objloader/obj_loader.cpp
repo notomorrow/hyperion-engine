@@ -1,5 +1,6 @@
 #include "obj_loader.h"
 #include "../../asset/asset_manager.h"
+#include "../../asset/text_loader.h"
 #include "../../rendering/shader_manager.h"
 #include "../../rendering/shaders/lighting_shader.h"
 #include "../../rendering/environment.h"
@@ -43,49 +44,55 @@ ObjModel::ObjIndex ObjModel::ParseObjIndex(const std::string &token)
     auto tokens = StringUtil::Split(token, '/');
 
     ObjIndex res;
+    res.vertex_idx = -1;
+    res.normal_idx = -1;
+    res.texcoord_idx = -1;
+
     if (!tokens.empty()) {
         res.vertex_idx = std::stoi(tokens[0]) - 1;
+
         if (tokens.size() > 1) {
             if (!tokens[1].empty()) {
                 has_texcoords = true;
                 res.texcoord_idx = std::stoi(tokens[1]) - 1;
-            } else {
-                res.texcoord_idx = -1;
             }
+
             if (tokens.size() > 2) {
                 if (!tokens[2].empty()) {
                     has_normals = true;
                     res.normal_idx = std::stoi(tokens[2]) - 1;
-                } else {
-                    res.normal_idx = -1;
                 }
             }
         }
     }
+
     return res;
 }
 
 std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
 {
+    auto loaded_text = TextLoader().LoadTextFromFile(path);
+
+    if (loaded_text == nullptr) {
+        return nullptr;
+    }
+
     ObjModel model;
 
     auto res = std::make_shared<Entity>();
 
+    // model name
     std::string dir(path);
     std::string model_name = dir.substr(dir.find_last_of("\\/") + 1);
     model_name = model_name.substr(0, model_name.find_first_of("."));
 
     res->SetName(model_name);
 
-    std::string line;
-    std::ifstream fs(path);
-    if (!fs.is_open()) {
-        return nullptr;
-    }
-
+    std::vector<std::string> lines = StringUtil::Split(loaded_text->GetText(), '\n');
+  
     int line_no = 0;
 
-    while (std::getline(fs, line)) {
+    for (auto &line : lines) {
         line = StringUtil::Trim(line);
         auto tokens = StringUtil::Split(line, ' ');
         tokens = StringUtil::RemoveEmpty(tokens);
@@ -117,9 +124,11 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
                 std::string loc = tokens[1];
                 std::string dir(path);
                 dir = dir.substr(0, dir.find_last_of("\\/"));
+
                 if (!(StringUtil::Contains(dir, "/") || StringUtil::Contains(dir, "\\"))) {
                     dir.clear();
                 }
+
                 dir += "/" + loc;
 
                 model.mtl_lib = AssetManager::GetInstance()->LoadFromFile<MtlLib>(dir);

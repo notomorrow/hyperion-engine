@@ -8,10 +8,10 @@ MeshArray::MeshArray()
 {
 }
 
-void MeshArray::Render()
+void MeshArray::Render(Renderer *renderer, Camera *cam)
 {
     for (auto &submesh : m_submeshes) {
-        submesh.mesh->Render();
+        submesh.mesh->Render(renderer, cam);
     }
 }
 

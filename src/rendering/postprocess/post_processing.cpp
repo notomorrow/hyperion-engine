@@ -106,7 +106,7 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
 
         it.filter->Begin(cam, m_chained_textures);
 
-        m_quad->Render();
+        m_quad->Render(nullptr, cam); // TODO
 
         it.filter->End(cam, m_blit_framebuffer, m_chained_textures, in_fbo); // store
     }

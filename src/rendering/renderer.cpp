@@ -218,7 +218,8 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
             shader->Use();
 #endif
 
-            it.renderable->Render();
+            it.renderable->Render(this, cam);
+            it.renderable->Render(this, cam);
 
 #if !RENDERER_SHADER_GROUPING
             shader->End();
@@ -252,6 +253,12 @@ void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
         fbo->Use();
     } else {
         CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
+    }
+
+    if (!m_buckets[Renderable::RB_BUFFER].IsEmpty()) {
+        CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT | CoreEngine::GLEnums::STENCIL_BUFFER_BIT);
+
+        RenderBucket(cam, m_buckets[Renderable::RB_BUFFER]); // PRE
     }
 
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT | CoreEngine::GLEnums::STENCIL_BUFFER_BIT);

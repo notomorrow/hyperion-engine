@@ -74,10 +74,8 @@ struct Bucket {
     {
     }
 
-    inline const std::vector<BucketItem> &GetItems() const
-    {
-        return items;
-    }
+    inline bool IsEmpty() const { return items.empty(); }
+    inline const std::vector<BucketItem> &GetItems() const { return items; }
 
     std::size_t GetIndex(size_t at)
     {
@@ -259,7 +257,7 @@ public:
 
     inline Bucket &GetBucket(Renderable::RenderBucket bucket) { return m_buckets[bucket]; }
 
-    Bucket m_buckets[6];
+    Bucket m_buckets[7];
 
 private:
     PostProcessing *m_post_processing;

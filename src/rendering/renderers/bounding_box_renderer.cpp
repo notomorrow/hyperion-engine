@@ -34,15 +34,13 @@ void BoundingBoxRenderer::UpdateVertices()
     }
 }
 
-void BoundingBoxRenderer::Render()
+void BoundingBoxRenderer::Render(Renderer *renderer, Camera *cam)
 {
     UpdateVertices();
 
-    // glLineWidth(2.0f);
     m_shader->Use();
     m_mesh->SetVertices(m_vertices, BoundingBoxRenderer::indices);
-    m_mesh->Render();
+    m_mesh->Render(renderer, cam);
     m_shader->End();
-    // glLineWidth(1.0f);
 }
 } // namespace hyperion

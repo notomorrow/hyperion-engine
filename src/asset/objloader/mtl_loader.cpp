@@ -1,6 +1,7 @@
 #include "mtl_loader.h"
 #include "../../util/string_util.h"
 #include "../../asset/asset_manager.h"
+#include "../../asset/text_loader.h"
 
 #include <fstream>
 
@@ -16,13 +17,15 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
 {
     std::shared_ptr<MtlLib> mtl = std::make_shared<MtlLib>();
 
-    std::string line;
-    std::ifstream fs(path);
-    if (!fs.is_open()) {
+    auto loaded_text = TextLoader().LoadTextFromFile(path);
+
+    if (loaded_text == nullptr) {
         return nullptr;
     }
 
-    while (std::getline(fs, line)) {
+    std::vector<std::string> lines = StringUtil::Split(loaded_text->GetText(), '\n');
+
+    for (auto &line : lines) {
         line = StringUtil::Trim(line);
 
         auto tokens = StringUtil::Split(line, ' ');

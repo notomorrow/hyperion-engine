@@ -17,7 +17,7 @@ public:
     BoundingBoxRenderer(const BoundingBox &) = delete;
     virtual ~BoundingBoxRenderer();
 
-    virtual void Render() override;
+    virtual void Render(Renderer *renderer, Camera *cam) override;
 
     inline void SetAABB(const BoundingBox &aabb) { m_aabb = aabb; } 
 

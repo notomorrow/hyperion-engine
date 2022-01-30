@@ -27,12 +27,10 @@ uniform vec3 u_camerapos;
 uniform vec3 u_probePos;
 uniform float u_scale;
 uniform sampler3D tex[6];
-layout(binding = 0, rgba32f) uniform image3D framebufferImage;
-layout(binding = 1, rgba32f) uniform image3D framebufferImage1;
-layout(binding = 2, rgba32f) uniform image3D framebufferImage2;
-layout(binding = 3, rgba32f) uniform image3D framebufferImage3;
-layout(binding = 4, rgba32f) uniform image3D framebufferImage4;
-layout(binding = 5, rgba32f) uniform image3D framebufferImage5;
+uniform vec3 VoxelSceneScale;
+
+#define $SPECULAR_CONE_SIZE 0.1
+#define $DIFFUSE_CONE_SIZE 0.5
 
 uniform mat4 WorldToVoxelTexMatrix;
 
@@ -112,8 +110,16 @@ void main()
 	float voxelImageSize = 128.0;
 	float halfVoxelImageSize = voxelImageSize * 0.5;
 
+	vec3 eyeToFragment = normalize(v_position.xyz - u_camerapos);
+	vec3 reflectionDir = reflect(eyeToFragment, normalize(v_normal.xyz));
+	
+	vec4 albedo = u_diffuseColor;
+	
+	if (HasDiffuseMap == 1) {
+		albedo *= texture(DiffuseMap, v_texcoord0);
+	}
 		
-	vec4 lambert = vec4(0.0, 0.0, 0.0, 1.0);// = calcDirectionalLight(v_normals, env_DirectionalLight.direction);
+	vec3 lambert = ComputeDirectionalLight(env_DirectionalLight, v_normal.xyz, eyeToFragment, v_position.xyz, albedo.rgb, 0.0, 0.5, 0.5);
 	vec4 specular = vec4(0.0, 0.0, 0.0, 1.0);// = calcDirectionalLightSpec(normalize(directionalLight.direction), u_specularFactor, normalize(v_normals.xyz), u_cameraPosition, v_position, C_albedo);
 	vec4 imageColor = u_diffuseColor;
 	//if (B_hasDiffuseMap > 0) {
@@ -123,26 +129,26 @@ void main()
 	float dist = distance(u_camerapos, v_position.xyz);
 	float maxDist = voxelImageSize/u_scale;
 	//if (dist < maxDist) {
-		vec3 vPos = (vec3(v_voxelPosition.xyz * 5.0)-u_probePos+vec3(halfVoxelImageSize))/vec3(voxelImageSize);
+		vec3 vPos = (vec3((v_voxelPosition.xyz-u_camerapos) * 0.1)+vec3(halfVoxelImageSize))/vec3(voxelImageSize);
 		//vec4 voxelPosition = u_projMatrix * u_viewMatrix * vec4(v_position.xyz, 1.0);//WorldToVoxelTexMatrix * vec4(v_position.xyz, 1.0);
 		//voxelPosition.xyz /= voxelPosition.w;
 		//vec3 vPos = voxelPosition.xyz;
 		
-		vec3 eyeToFragment = normalize(v_position.xyz - u_camerapos);
-		vec3 reflectionDir = reflect(eyeToFragment, normalize(v_normal.xyz));
 		
 		float rangeMin = 0.02;
 		float rangeMax = 0.1;
 		float level = clamp(dist/maxDist*0.5, rangeMin, rangeMax);
-		vec4 reflection = voxelTraceCone(1.0/voxelImageSize, vPos, normalize(reflectionDir), 0.2, 20.0);
-		coneTraceRes += voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz), 1.0, .3);
-	    coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz+v_tangent), 1.0, .3);
-		coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz-v_tangent), 1.0, .3);
-		coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz+v_bitangent), 1.0, .3);
-		coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz-v_bitangent), 1.0, .3);
+		#define $SPECULAR_MAX_LEN 5.0
+		vec4 reflection = voxelTraceCone(1.0/voxelImageSize, vPos, normalize(reflectionDir), $SPECULAR_CONE_SIZE, $SPECULAR_MAX_LEN);
+		#define $DIFFUSE_MAX_LEN 0.3
+		coneTraceRes += voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz), $DIFFUSE_CONE_SIZE, $DIFFUSE_MAX_LEN);
+	    coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz+v_tangent), $DIFFUSE_CONE_SIZE, $DIFFUSE_MAX_LEN);
+		coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz-v_tangent), $DIFFUSE_CONE_SIZE, $DIFFUSE_MAX_LEN);
+		coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz+v_bitangent), $DIFFUSE_CONE_SIZE, $DIFFUSE_MAX_LEN);
+		coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz-v_bitangent), $DIFFUSE_CONE_SIZE, $DIFFUSE_MAX_LEN);
 		specular += reflection;////mix(reflection, vec4(0.0), clamp(dist/maxDist, 0.0, 1.0));//+vec4(ambientLight.color.rgb, 1.0);
 	//}
 	
-	output0 = vec4(reflection.rgb, 1.0);//(lambert)*imageColor + (specular) ;
+	output0 = vec4(lambert + reflection.rgb + coneTraceRes.rgb * 0.1, 1.0);//(lambert)*imageColor + (specular) ;
 	
 }

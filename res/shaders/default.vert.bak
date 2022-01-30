@@ -41,7 +41,7 @@ void main() {
   //v_bitangent = (transpose(inverse(u_modelMatrix)) * vec4(a_bitangent, 0.0)).xyz;
 #endif
 
-    v_voxelPosition = u_projMatrix * u_viewMatrix * v_position;
+    v_voxelPosition = u_viewMatrix * v_position;
 
 	v_tangent = a_tangent - a_normal * dot( a_tangent, a_normal ); // orthonormalization ot the tangent vectors
 	v_bitangent = a_bitangent - a_normal * dot( a_bitangent, a_normal ); // orthonormalization of the binormal vectors to the normal vector 
