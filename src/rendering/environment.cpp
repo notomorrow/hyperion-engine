@@ -40,7 +40,8 @@ Environment::Environment()
       m_sun(Vector3(-1, -1, -1).Normalize(), Vector4(0.9, 0.8, 0.7, 1.0)),
       m_probe_renderer(new ProbeRenderer()),
       m_probe_enabled(false),
-      m_max_point_lights(0)
+      m_max_point_lights(0),
+      m_gi_renderer(nullptr)
 {
     SetMaxPointLights(10);
 }

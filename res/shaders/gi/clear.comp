@@ -1,0 +1,9 @@
+#version 430 core
+
+layout(binding = 0, rgba32f) uniform image3D framebufferImage;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+void main(void) { 
+  ivec3 pix = ivec3(gl_GlobalInvocationID.xyz); 
+  imageStore(framebufferImage, pix, vec4(0.0, 0.0, 0.0, 0.0));
+}

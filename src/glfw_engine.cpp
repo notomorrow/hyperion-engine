@@ -505,4 +505,14 @@ void GlfwEngine::CullFace(unsigned int mode)
     glCullFace(mode);
 }
 
+void GlfwEngine::GetProgram(unsigned int program, unsigned int pname, int *params)
+{
+    glGetProgramiv(program, pname, params);
+}
+
+void GlfwEngine::DispatchCompute(unsigned int num_groups_x, unsigned int num_groups_y, unsigned int num_groups_z)
+{
+    glDispatchCompute(num_groups_x, num_groups_y, num_groups_z);
+}
+
 } // namespace hyperion

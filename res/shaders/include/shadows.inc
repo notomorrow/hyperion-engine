@@ -1,4 +1,4 @@
-#define $SHADOW_BIAS 0.0005
+#define $SHADOW_BIAS 0.0015
 #define $SHADOW_BIAS_SMOOTHING 1
 #define $SHADOW_VARIANCE_LOD 5
 
@@ -21,10 +21,22 @@ bool inRadius(vec3 cam, vec3 world, float radius) {
 }
 
 int getShadowMapSplit(float viewSpaceDepth) {
-  for (int i = 0; i < $NUM_SPLITS; ++i) {
-      if (viewSpaceDepth < u_shadowSplit[i]) {
-          return i;
-      }
+  // have to do this...
+  
+  if (viewSpaceDepth < u_shadowSplit[0]) {
+    return 0;
+  }
+  
+  if (viewSpaceDepth < u_shadowSplit[1]) {
+    return 1;
+  }
+  
+  if (viewSpaceDepth < u_shadowSplit[2]) {
+    return 2;
+  }
+  
+  if (viewSpaceDepth < u_shadowSplit[3]) {
+    return 3;
   }
 
   return $NUM_SPLITS - 1;

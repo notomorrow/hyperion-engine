@@ -104,6 +104,7 @@ public:
         BACK = 0x0405,
         FRONT_AND_BACK = 0x0408,
         TEXTURE_2D = 0x0DE1,
+        TEXTURE_3D = 0x806F,
         CULL_FACE = 0x0B44,
 
         FRAGMENT_SHADER = 0x8B30,
@@ -122,7 +123,9 @@ public:
         NONE = 0,
         FRAMEBUFFER_COMPLETE = 0x8CD5,
 
-        DEPTH_CLAMP = 0x864F
+        DEPTH_CLAMP = 0x864F,
+
+        COMPUTE_WORK_GROUP_SIZE = 0x8267
     };
 
     virtual bool InitializeGame(Game *game) = 0;
@@ -189,6 +192,8 @@ public:
     virtual void DrawArraysInstanced(int mode, int first, size_t count, size_t primcount) = 0;
     virtual void BindImageTexture(unsigned int unit, unsigned int texture, int level, bool layered, int layer, unsigned int access, unsigned int format) = 0;
     virtual void CullFace(unsigned int mode) = 0;
+    virtual void GetProgram(unsigned int program, unsigned int pname, int *params) = 0;
+    virtual void DispatchCompute(unsigned int num_groups_x, unsigned int num_groups_y, unsigned int num_groups_z) = 0;
 
 private:
     static CoreEngine *instance;

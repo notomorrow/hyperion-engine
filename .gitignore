@@ -14,6 +14,12 @@ build_old/**/*
 out/build/**/*
 ApexEngineV2/Debug/**/*
 ApexEngineV2/Release/**/*
+res.old/**/*
+res.1/**/*
+res.2/**/*
+res.3/**/*
+res.4/**/*
+res.5/**/*
 
 *.tlog
 Debug/**/*

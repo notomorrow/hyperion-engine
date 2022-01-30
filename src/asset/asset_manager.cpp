@@ -30,6 +30,7 @@ AssetManager::AssetManager()
     RegisterLoader<TextLoader>(".frag");
     RegisterLoader<TextLoader>(".vert");
     RegisterLoader<TextLoader>(".geom");
+    RegisterLoader<TextLoader>(".comp");
 
     RegisterLoader<ObjLoader>(".obj");
     RegisterLoader<MtlLoader>(".mtl");

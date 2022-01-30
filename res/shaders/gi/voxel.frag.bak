@@ -54,7 +54,7 @@ void main(void)
 	//imageStore(framebufferImage, ivec3(gl_FragCoord.x/8, gl_FragCoord.y/8, gl_FragCoord.z/8), C_albedo);
 	
 	ivec3 voxelPos = ivec3(imageSize(framebufferImage) * (storagePos.xyz * .5 + .5));
-	vec3 test_store_pos = (gs_out.position).xyz * 0.2;
+	vec3 test_store_pos = (gs_out.position).xyz * 5.0;
 	imageStore(framebufferImage, ivec3(test_store_pos.x, test_store_pos.y, test_store_pos.z)-ivec3(u_probePos.x, u_probePos.y, u_probePos.z)+ivec3(halfVoxelImageSize), imageColor);
 	//imageStore(framebufferImage, voxelPos, imageColor);
 }

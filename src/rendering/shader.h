@@ -219,7 +219,8 @@ protected:
         SUBSHADER_NONE = 0x00,
         SUBSHADER_FRAGMENT = 0x8B30,
         SUBSHADER_VERTEX = 0x8B31,
-        SUBSHADER_GEOMETRY = 0x8DD9
+        SUBSHADER_GEOMETRY = 0x8DD9,
+        SUBSHADER_COMPUTE = 0x91B9
     };
 
     struct SubShader {
