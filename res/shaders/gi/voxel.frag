@@ -21,7 +21,7 @@ uniform mat4 StorageTransformMatrix;
 
 uniform vec3 VoxelSceneScale;
 
-uniform float u_intensity;
+uniform float Emissiveness;
 
 // output
 in GSOutput
@@ -49,17 +49,17 @@ void main(void)
     storagePos.xyz /= storagePos.w;	
 	
 	vec4 imageColor = C_albedo;
+
 	
 	if (HasDiffuseMap == 1) {
 	  imageColor = texture(DiffuseMap, gs_out.texcoord0.xy);
 	}
 	
-	//imageColor *= u_intensity;
-	//imageColor *= lighting;
-	//imageStore(framebufferImage, ivec3(gl_FragCoord.x/8, gl_FragCoord.y/8, gl_FragCoord.z/8), C_albedo);
+	
+	imageColor *= vec4(1.0 + Emissiveness);
+	imageColor.a = 1.0;
 	
 	ivec3 voxelPos = ivec3(imageSize(framebufferImage) * (storagePos.xyz * .5 + .5));
 	vec3 test_store_pos = ((gs_out.position).xyz - VoxelProbePosition) * 0.1;
 	imageStore(framebufferImage, ivec3(test_store_pos.x, test_store_pos.y, test_store_pos.z)+ivec3(halfVoxelImageSize), imageColor);
-	//imageStore(framebufferImage, voxelPos, imageColor);
 }
