@@ -5,6 +5,27 @@
 
 #include <fstream>
 
+/*
+ Illumination    Properties that are turned on in the
+ model           Property Editor
+
+ 0		Color on and Ambient off
+ 1		Color on and Ambient on
+ 2		Highlight on
+ 3		Reflection on and Ray trace on
+ 4		Transparency: Glass on
+        Reflection: Ray trace on
+ 5		Reflection: Fresnel on and Ray trace on
+ 6		Transparency: Refraction on
+        Reflection: Fresnel off and Ray trace on
+ 7		Transparency: Refraction on
+        Reflection: Fresnel on and Ray trace on
+ 8		Reflection on and Ray trace off
+ 9		Transparency: Glass on
+        Reflection: Ray trace off
+ 10		Casts shadows onto invisible surfaces
+ */
+
 namespace hyperion {
 std::shared_ptr<Loadable> MtlLib::Clone()
 {
@@ -81,6 +102,24 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
 
                     if (Material *last_mtl = mtl->GetLastMaterial()) {
                         last_mtl->diffuse_color = color;
+                    }
+                }
+            } else if (tokens[0] == "illum") {
+                if (tokens.size() >= 2) {
+                    int model = std::stoi(tokens[1]);
+
+                    if (model >= 4) {
+                        if (Material *last_mtl = mtl->GetLastMaterial()) {
+                            last_mtl->SetParameter("shininess", float(model) / 9.0f); // kinda arb but gives a place to start
+                        }
+                    }
+                }
+            } else if (tokens[0] == "Ns") {
+                if (tokens.size() >= 2) {
+                    int spec_amount = std::stoi(tokens[1]);
+
+                    if (Material *last_mtl = mtl->GetLastMaterial()) {
+                        last_mtl->SetParameter("Emissiveness", float(spec_amount) / 100.0f);
                     }
                 }
             }

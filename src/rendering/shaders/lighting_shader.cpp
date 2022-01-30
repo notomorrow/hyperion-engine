@@ -123,10 +123,10 @@ void LightingShader::ApplyMaterial(const Material &mat)
                 for (int j = 0; j < probe->NumCameras(); j++) {
 
                     // TODO
-                    CoreEngine::GetInstance()->ActiveTexture(CoreEngine::GLEnums::TEXTURE0 + 11 + i + j);
-                    CoreEngine::GetInstance()->BindTexture(CoreEngine::GLEnums::TEXTURE_3D, probe->GetCamera(j)->GetTextureId());
+                    //CoreEngine::GetInstance()->ActiveTexture(CoreEngine::GLEnums::TEXTURE0 + 11 + i + j);
+                    //CoreEngine::GetInstance()->BindTexture(CoreEngine::GLEnums::TEXTURE_3D, probe->GetCamera(j)->GetTexture()->GetId());
 
-                    SetUniform(std::string("VoxelMap[") + std::to_string(j) + "]", 11 + i + j);
+                    SetUniform(std::string("VoxelMap[") + std::to_string(j) + "]", probe->GetCamera(j)->GetTexture().get());
                 }
             }
         }

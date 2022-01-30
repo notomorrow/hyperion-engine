@@ -20,6 +20,9 @@ public:
 
     unsigned int GetId() const;
 
+    inline bool IsCreated() const { return is_created; }
+    inline bool IsUploaded() const { return is_uploaded; }
+
     void SetFormat(int type);
     inline int GetFormat() const { return fmt; }
     void SetInternalFormat(int type);
@@ -63,6 +66,8 @@ protected:
 
     int mag_filter, min_filter;
     int wrap_s, wrap_t;
+
+    bool m_is_storage;
 
     TextureType m_texture_type;
 

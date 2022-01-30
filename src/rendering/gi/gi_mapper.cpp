@@ -14,6 +14,8 @@ GIMapper::GIMapper(const BoundingBox &bounds)
     : Renderable(RB_BUFFER),
       m_bounds(bounds),
       m_render_tick(0.0),
+      m_render_index(0),
+      m_is_first_run(true),
       m_directions({
           std::make_pair(Vector3(1, 0, 0), Vector3(0, -1, 0)),
           std::make_pair(Vector3(-1, 0, 0), Vector3(0, -1, 0)),
@@ -73,6 +75,20 @@ void GIMapper::Bind(Shader *shader)
 
 void GIMapper::Render(Renderer *renderer, Camera *cam)
 {
+    if (m_is_first_run) {
+        if (!Environment::GetInstance()->VCTEnabled()) {
+            return;
+        }
+
+        for (GIMapperCamera *gi_cam : m_cameras) {
+            gi_cam->Render(renderer, cam);
+        }
+
+        m_is_first_run = false;
+
+        return;
+    }
+
     if (m_render_tick < 1.0) {
         return;
     }
@@ -83,8 +99,9 @@ void GIMapper::Render(Renderer *renderer, Camera *cam)
         return;
     }
 
-    for (GIMapperCamera *gi_cam : m_cameras) {
-        gi_cam->Render(renderer, cam);
-    }
+    m_cameras[m_render_index]->Render(renderer, cam);
+
+    m_render_index++;
+    m_render_index = m_render_index % m_cameras.size();
 }
 } // namespace apex

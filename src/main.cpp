@@ -177,19 +177,29 @@ public:
     void InitTestArea()
     {
         bool voxel_debug = false;
+
+        auto mitsuba = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
+        //living_room->Scale(0.05f);
+        mitsuba->Move(Vector3(-4.5, 1.2, -4.5));
+        mitsuba->Scale(2);
+        mitsuba->GetChild(0)->GetMaterial().diffuse_color = Vector4(1.0);
+        mitsuba->GetChild(0)->GetMaterial().SetParameter("Emissiveness", 50.0f);
+        top->AddChild(mitsuba);
+
         auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
         sponza->Scale(Vector3(0.1f));
-        if (voxel_debug) {
+        //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
-                sponza->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
+                sponza->GetChild(i)->GetMaterial().SetParameter("shininess", 0.6f);
+                sponza->GetChild(i)->GetMaterial().SetParameter("roughness", 0.5f);
+               // sponza->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
             }
-        }
+        //}
         top->AddChild(sponza);
-        return;
-        {
+        /*{
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
             street->SetName("street");
@@ -205,13 +215,13 @@ public:
 
             top->AddChild(street);
             street->UpdateTransform();
-        }
+        }*/
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 Vector3 box_position = Vector3(((float(x) - 2.5) * 8), 3.0f, (float(z) - 2.5) * 8);
                 auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
-                box->Scale(1.0f);
+                box->Scale(0.7f);
 
                 for (size_t i = 0; i < box->NumChildren(); i++) {
                     Vector3 col = Vector3(
@@ -352,8 +362,8 @@ public:
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 0, 0));
 
-       // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        //m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
+        m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
         //m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
         m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
@@ -416,12 +426,18 @@ public:
 
         // shader = ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties());
 
-        /*auto hydrant = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/FireHydrant/FireHydrantMesh.obj");
+        auto hydrant = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/FireHydrant/FireHydrantMesh.obj");
         hydrant->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Base_Color.png"));
         hydrant->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Normal_OpenGL.png"));
         hydrant->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Mixed_AO.png"));
+        hydrant->GetChild(0)->GetMaterial().SetParameter("Emissiveness", 3.5f);
         hydrant->Scale(Vector3(5.0f));
-        top->AddChild(hydrant);*/
+        top->AddChild(hydrant);
+
+        auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
+        house->Scale(Vector3(1.0f));
+        house->Move(Vector3(0.0f, -5.0f, 0.0f));
+        top->AddChild(house);
 
         InitTestArea();
 
