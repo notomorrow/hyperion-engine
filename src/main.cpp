@@ -186,7 +186,7 @@ public:
         mitsuba->GetChild(0)->GetMaterial().SetParameter("Emissiveness", 50.0f);
         top->AddChild(mitsuba);
 
-        auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+        /*auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
         sponza->Scale(Vector3(0.1f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
@@ -198,8 +198,8 @@ public:
                // sponza->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
             }
         //}
-        top->AddChild(sponza);
-        /*{
+        top->AddChild(sponza);*/
+        {
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
             street->SetName("street");
@@ -215,7 +215,7 @@ public:
 
             top->AddChild(street);
             street->UpdateTransform();
-        }*/
+        }
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
@@ -419,7 +419,7 @@ public:
 
         auto cm = InitCubemap();
 
-        //top->AddControl(std::make_shared<SkydomeControl>(cam));
+        top->AddControl(std::make_shared<SkydomeControl>(cam));
         // top->AddControl(std::make_shared<SkyboxControl>(cam, nullptr));
 
         // shader = ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties());
