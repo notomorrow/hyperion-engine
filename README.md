@@ -10,14 +10,14 @@ Feel free to contribute anything - We'd love to have some more eyes on this proj
 
 ## Screenshots
 
-![Apex engine screenshot](/screenshot7.png)
-![Apex engine screenshot](/screenshot4.png)
-![Apex engine screenshot](/screenshot10.png)
-![Apex engine screenshot](/screenshot5.png)
-![Apex engine screenshot](/screenshot1.png)
-![Apex engine screenshot](/screenshot6.png)
-![Apex engine screenshot](/screenshot8.png)
-![Apex engine screenshot](/screenshot9.png)
+![Apex engine screenshot](/screenshots/screenshot7.png)
+![Apex engine screenshot](/screenshots/screenshot4.png)
+![Apex engine screenshot](/screenshots/screenshot10.png)
+![Apex engine screenshot](/screenshots/screenshot5.png)
+![Apex engine screenshot](/screenshots/screenshot1.png)
+![Apex engine screenshot](/screenshots/screenshot6.png)
+![Apex engine screenshot](/screenshots/screenshot8.png)
+![Apex engine screenshot](/screenshots/screenshot9.png)
 
 ## Building
 
