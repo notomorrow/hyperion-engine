@@ -18,6 +18,8 @@ uniform sampler2D DepthMap;
 uniform sampler2D PositionMap;
 //uniform sampler2D NormalMap; // included in lighting.inc
 uniform sampler2D DataMap;
+uniform sampler2D TangentMap;
+uniform sampler2D BitangentMap;
 
 uniform sampler2D SSLightingMap;
 uniform int HasSSLightingMap;
@@ -43,6 +45,9 @@ void main()
     vec4 albedo = texture(ColorMap, v_texcoord0);
     vec4 data = texture(DataMap, v_texcoord0);
     float depth = texture(DepthMap, v_texcoord0).r;
+	vec3 tangent = texture(TangentMap, v_texcoord0).rgb * 2.0 - 1.0;
+	vec3 bitangent = texture(BitangentMap, v_texcoord0).rgb * 2.0 - 1.0;
+
     float metallic = clamp(data.r, 0.05, 0.99);
     float roughness = clamp(data.g, 0.05, 0.99);
     float performLighting = data.a;
@@ -89,36 +94,54 @@ void main()
     }
 
     shadowness /= 16.0;
-#endif
+#endif // !SHADOW_PCF
 
 #if !SHADOW_PCF
     vec3 shadowCoord = getShadowCoord(shadowSplit, position.xyz);
     shadowness = getShadow(shadowSplit, shadowCoord, NdotL);
-#endif
+#endif // !SHADOW_PCF
 
     vec4 shadowColor = vec4(vec3(shadowness), 1.0);
     shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), position.xyz, CameraPosition, u_shadowSplit[int($NUM_SPLITS) - 2], u_shadowSplit[int($NUM_SPLITS) - 1]);
-#endif
+#endif // SHADOWS
 
 #if !SHADOWS
     float shadowness = 1.0;
     vec4 shadowColor = vec4(1.0);
-#endif
+#endif 
 
+  vec3 blurredSpecularCubemap = vec3(0.0);
+  vec3 specularCubemap = vec3(0.0);
+  vec3 diffuseCubemap = vec3(0.0);
 
-    vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
+#if VCT_ENABLED
+  //testing
+  vec3 voxel = position.xyz;
+  vec4 vctSpec = VCTSpecular(voxel, position.xyz, n.xyz, CameraPosition);
+  vec4 vctDiff = VCTDiffuse(voxel, position.xyz, n.xyz, CameraPosition, tangent, bitangent);
+  specularCubemap = vctSpec.rgb;
+  diffuseCubemap = vctDiff.rgb;
+  gi += diffuseCubemap;
+#endif // VCT_ENABLED
+
+#if !VCT_ENABLED
+  diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
+#endif // !VCT_ENABLED
 
 #if PROBE_ENABLED
-    vec3 specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, position.xyz, CameraPosition);
-    vec3 blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, position.xyz, CameraPosition);
-#endif
+  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, position.xyz, CameraPosition).rgb;
+#if !VCT_ENABLED
+  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, position.xyz, CameraPosition).rgb;
+#endif // !VCT_ENABLED
+#endif // PROBE_ENABLED
 
 #if !PROBE_ENABLED
-    vec3 reflectionVector = ReflectionVector(n, position.xyz, CameraPosition);
-    vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
-    vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
-#endif
-
+  vec3 reflectionVector = ReflectionVector(n, position.xyz, CameraPosition);
+  blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
+#if !VCT_ENABLED
+  specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
+#endif // !VCT_ENABLED
+#endif // !PROBE_ENABLED
 
     float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
     specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
@@ -160,6 +183,7 @@ void main()
 
 #endif
 
+#if NO_OP
     for (int i = 0; i < env_NumPointLights; i++) {
         result += ComputePointLight(
             env_PointLights[i],
@@ -172,6 +196,7 @@ void main()
             metallic
         );
     }
+#endif
 
     output0 = vec4(n.xyz, 1.0);
 }

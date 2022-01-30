@@ -22,7 +22,7 @@ uniform mat4 StorageTransformMatrix;
 
 uniform vec3 VoxelSceneScale;
 
-uniform float u_intensity;
+uniform float Emissiveness;
 
 
 #if VCT_GEOMETRY_SHADER
@@ -55,6 +55,7 @@ void main(void)
 
 	
 	vec4 imageColor = C_albedo;
+
 	
 	if (HasDiffuseMap == 1) {
 #if VCT_GEOMETRY_SHADER
@@ -65,6 +66,9 @@ void main(void)
 	  imageColor = texture(DiffuseMap, v_texcoord0);
 #endif
 	}
+	
+	imageColor *= vec4(1.0 + Emissiveness);
+	imageColor.a = 1.0;
 
 #if VCT_GEOMETRY_SHADER
 	vec4 position = gs_out.position;

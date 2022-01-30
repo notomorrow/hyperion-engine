@@ -12,8 +12,6 @@ uniform sampler3D VoxelMap[$VCT_NUM_MAPS];
 uniform vec3 VoxelProbePosition;
 uniform mat4 WorldToVoxel;
 
-in vec4 v_voxelPosition; // from vertex shader
-
 vec4 voxelFetch(vec3 pos, vec3 dir, float lod)
 {
 	return textureLod(VoxelMap[0], pos, lod) + textureLod(VoxelMap[1], pos, lod) + textureLod(VoxelMap[2], pos, lod) +
@@ -103,7 +101,7 @@ vec4 VCTDiffuse(vec3 position, vec3 normal, vec3 camera, vec3 tangent, vec3 bita
 	return coneTraceRes / 5.0;
 }
 
-vec4 VCTSpecular(vec3 position, vec3 normal, vec3 camera)
+vec4 VCTSpecular(vec3 voxel, vec3 position, vec3 normal, vec3 camera)
 {
 	float voxelImageSize = float($VCT_MAP_SIZE);
 
