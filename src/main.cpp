@@ -74,6 +74,8 @@
 #include "util/noise_factory.h"
 #include "util/img/write_bitmap.h"
 
+#include "rendering/shaders/gi/gi_voxel_debug_shader.h"
+
 /* Standard library */
 #include <cstdlib>
 #include <ctime>
@@ -173,8 +175,19 @@ public:
 
     void InitTestArea()
     {
-
-        
+        bool voxel_debug = false;
+        auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+        sponza->Scale(Vector3(0.1f));
+        if (voxel_debug) {
+            for (size_t i = 0; i < sponza->NumChildren(); i++) {
+                if (sponza->GetChild(i)->GetRenderable() == nullptr) {
+                    continue;
+                }
+                sponza->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
+            }
+        }
+        top->AddChild(sponza);
+        return;
         {
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
@@ -183,6 +196,8 @@ public:
             street->Scale(0.5f);
 
             for (size_t i = 0; i < street->NumChildren(); i++) {
+                if (voxel_debug)
+                    street->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
                 street->GetChild(i)->GetMaterial().SetParameter("shininess", 0.5f);
                 street->GetChild(i)->GetMaterial().SetParameter("roughness", 0.0f);
             }
@@ -220,6 +235,8 @@ public:
                     // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
                     box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
                     box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                    if (voxel_debug)
+                        box->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
                     //box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.8f);
                     //box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.1f);
                 }
@@ -327,19 +344,19 @@ public:
         shadows = new PssmShadowMapping(cam, 4, 120.0f);
         shadows->SetVarianceShadowMapping(true);
 
-        Environment::GetInstance()->SetShadowsEnabled(true);
+        Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(true);
+        Environment::GetInstance()->SetProbeEnabled(false);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 0, 0));
 
-        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
-        m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
+       // m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
+        //m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        //m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
         m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
-        m_renderer->SetDeferred(true);
+        m_renderer->SetDeferred(false);
 
         AudioManager::GetInstance()->Initialize();
 
@@ -384,21 +401,21 @@ public:
         top->AddChild(m_rotate_mode_btn);
         GetUIManager()->RegisterUIObject(m_rotate_mode_btn);
 
-
+        Environment::GetInstance()->SetGIRenderer(new GIRenderer());
 
         auto cm = InitCubemap();
 
-        top->AddControl(std::make_shared<SkydomeControl>(cam));
+        //top->AddControl(std::make_shared<SkydomeControl>(cam));
         // top->AddControl(std::make_shared<SkyboxControl>(cam, nullptr));
 
         // shader = ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties());
 
-        auto hydrant = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/FireHydrant/FireHydrantMesh.obj");
+        /*auto hydrant = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/FireHydrant/FireHydrantMesh.obj");
         hydrant->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Base_Color.png"));
         hydrant->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Normal_OpenGL.png"));
         hydrant->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Mixed_AO.png"));
         hydrant->Scale(Vector3(5.0f));
-        top->AddChild(hydrant);
+        top->AddChild(hydrant);*/
 
         InitTestArea();
 
@@ -573,14 +590,6 @@ public:
             });
 
         GetInputManager()->RegisterClickEvent(MOUSE_BTN_LEFT, raytest_event);
-
-        { // house
-            auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
-            house->Move(Vector3(-4, -12, -4));
-            house->SetName("house");
-            house->Scale(Vector3(2));
-            top->AddChild(house);
-        }
     }
 
     void Logic(double dt)
@@ -638,6 +647,8 @@ public:
     {
         m_renderer->Begin(cam, top.get());
 
+        Environment::GetInstance()->GetGIRenderer()->Render(m_renderer, cam);
+
         if (Environment::GetInstance()->ShadowsEnabled()) {
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
             // shadow_dir.SetY(-1.0f);
@@ -657,7 +668,6 @@ public:
                 );
             }
         }
-
         m_renderer->Render(cam);
         m_renderer->End(cam, top.get());
 

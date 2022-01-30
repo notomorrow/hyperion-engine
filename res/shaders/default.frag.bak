@@ -123,7 +123,7 @@ void main()
 	float dist = distance(u_camerapos, v_position.xyz);
 	float maxDist = voxelImageSize/u_scale;
 	//if (dist < maxDist) {
-		vec3 vPos = (vec3(v_voxelPosition.xyz * 0.2)-u_probePos+vec3(halfVoxelImageSize))/vec3(voxelImageSize);
+		vec3 vPos = (vec3(v_voxelPosition.xyz * 5.0)-u_probePos+vec3(halfVoxelImageSize))/vec3(voxelImageSize);
 		//vec4 voxelPosition = u_projMatrix * u_viewMatrix * vec4(v_position.xyz, 1.0);//WorldToVoxelTexMatrix * vec4(v_position.xyz, 1.0);
 		//voxelPosition.xyz /= voxelPosition.w;
 		//vec3 vPos = voxelPosition.xyz;

@@ -1,7 +1,6 @@
 #ifndef SHADOW_MAPPING_H
 #define SHADOW_MAPPING_H
 
-#include "../environment.h"
 #include "../texture.h"
 #include "../framebuffer_2d.h"
 #include "../../math/vector3.h"

@@ -77,12 +77,6 @@ void Shader::UploadGpuData()
             memset(log, 0, maxlen);
             glGetShaderInfoLog(sub.id, maxlen, NULL, log);
 
-            std::cout << "In shader of class " << typeid(*this).name() << ":\n";
-            std::cout << "\tShader compile error! ";
-            std::cout << "\tCompile log: \n" << log << "\n";
-
-
-            std::cout << "\n\n\n";
             std::cout << "Pre-processed shader code:\n\n";
 
             for (auto&& it : subshaders) {
@@ -98,6 +92,9 @@ void Shader::UploadGpuData()
                 case SubShaderType::SUBSHADER_GEOMETRY:
                     std::cout << "  GEOMETRY SHADER\n";
                     break;
+                case SubShaderType::SUBSHADER_COMPUTE:
+                    std::cout << "  COMPUTE SHADER\n";
+                    break;
                 }
 
                 std::cout << "===================\n";
@@ -105,6 +102,12 @@ void Shader::UploadGpuData()
 
                 std::cout << "\n\n";
             }
+
+            std::cout << "\n\n\n";
+
+            std::cout << "In shader of class " << typeid(*this).name() << ":\n";
+            std::cout << "\tShader compile error! ";
+            std::cout << "\tCompile log: \n" << log << "\n";
 
 
             delete[] log;
@@ -142,13 +145,6 @@ void Shader::UploadGpuData()
         if (maxlen != 0) {
             char *log = new char[maxlen];
 
-            glGetProgramInfoLog(progid, maxlen, NULL, log);
-
-            std::cout << "In shader of class " << typeid(*this).name() << ":\n";
-            std::cout << "\tShader linker error! ";
-            std::cout << "\tCompile log: \n" << log << "\n";
-
-            std::cout << "\n\n\n";
             std::cout << "Pre-processed shader code:\n\n";
 
             for (auto &&it : subshaders) {
@@ -164,6 +160,8 @@ void Shader::UploadGpuData()
                 case SubShaderType::SUBSHADER_GEOMETRY:
                     std::cout << "  GEOMETRY SHADER\n";
                     break;
+                case SubShaderType::SUBSHADER_COMPUTE:
+                    std::cout << "  COMPUTE SHADER\n";
                 }
 
                 std::cout << "===================\n";
@@ -171,6 +169,14 @@ void Shader::UploadGpuData()
 
                 std::cout << "\n\n";
             }
+
+            glGetProgramInfoLog(progid, maxlen, NULL, log);
+
+            std::cout << "\n\n\n";
+
+            std::cout << "In shader of class " << typeid(*this).name() << ":\n";
+            std::cout << "\tShader linker error! ";
+            std::cout << "\tCompile log: \n" << log << "\n";
 
             glDeleteProgram(progid);
 

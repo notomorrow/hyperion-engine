@@ -72,6 +72,8 @@ public:
     void DrawArraysInstanced(int mode, int first, size_t count, size_t primcount);
     void BindImageTexture(unsigned int unit, unsigned int texture, int level, bool layered, int layer, unsigned int access, unsigned int format);
     void CullFace(unsigned int mode);
+    void GetProgram(unsigned int program, unsigned int pname, int *params);
+    void DispatchCompute(unsigned int num_groups_x, unsigned int num_groups_y, unsigned int num_groups_z);
 
 private:
     GLFWwindow *window;

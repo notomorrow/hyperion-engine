@@ -147,12 +147,14 @@ void main()
 
     vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * AB.x + AB.y);
     reflectedLight += ibl * specularCubemap;
+	reflectedLight *= ao;
 
     vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
     diffRef += gi;
     diffuseLight += diffRef;
     diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
     diffuseLight *= metallicDiff;
+	diffuseLight *= ao;
 
     vec3 result = diffuseLight + reflectedLight * shadowColor.rgb;
 

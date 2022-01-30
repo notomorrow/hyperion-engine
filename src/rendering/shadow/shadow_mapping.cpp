@@ -2,6 +2,7 @@
 #include "../../core_engine.h"
 #include "../../math/frustum.h"
 #include "../shader_manager.h"
+#include "../environment.h"
 #include "../../util.h"
 
 namespace hyperion {
@@ -12,7 +13,7 @@ ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist, bool use_fbo)
 {
     shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
 
-    fbo = new Framebuffer2D(512, 512, true, false, false, false);
+    fbo = new Framebuffer2D(512, 512, true, true, false, false);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -86,8 +87,8 @@ void ShadowMapping::Begin()
         }
     }
 
-    //MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
-    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -100.0f, 100.0f);
+    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
+    //MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -100.0f, 100.0f);
 
     shadow_cam->SetViewMatrix(new_view);
     shadow_cam->SetProjectionMatrix(new_proj);

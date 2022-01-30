@@ -5,7 +5,6 @@
 
 in vec4 v_position;
 in vec4 v_ndc;
-in vec4 v_voxelPosition;
 in vec4 v_positionCamspace;
 in vec4 v_normal;
 in vec2 v_texcoord0;
@@ -15,14 +14,14 @@ in mat3 v_tbn;
 
 uniform vec3 u_camerapos;
 
-#include "include/matrices.inc"
-#include "include/frag_output.inc"
-#include "include/depth.inc"
-#include "include/lighting.inc"
-#include "include/parallax.inc"
+#include "../include/matrices.inc"
+#include "../include/frag_output.inc"
+#include "../include/depth.inc"
+#include "../include/lighting.inc"
+#include "../include/parallax.inc"
 
 #if SHADOWS
-#include "include/shadows.inc"
+#include "../include/shadows.inc"
 #endif
 uniform vec3 u_probePos;
 uniform float u_scale;
@@ -35,10 +34,17 @@ layout(binding = 4, rgba32f) uniform image3D framebufferImage4;
 layout(binding = 5, rgba32f) uniform image3D framebufferImage5;
 
 uniform mat4 WorldToVoxelTexMatrix;
+// output
+in GSOutput
+{
+	vec3 normal;
+	vec3 texcoord0;
+	vec3 offset;
+	vec4 position;
+} gs_out;
 
 vec4 voxelFetch(vec3 pos, vec3 dir, float lod)
 {
-	return textureLod(tex[0], pos, lod);
 	vec4 sampleX =
 		dir.x < 0.0
 		? textureLod(tex[0], pos, lod)
@@ -109,40 +115,10 @@ vec4 voxelTraceCone(float minVoxelDiameter, vec3 origin, vec3 dir, float coneRat
 }
 void main() 
 {
-	float voxelImageSize = 128.0;
-	float halfVoxelImageSize = voxelImageSize * 0.5;
-
-		
-	vec4 lambert = vec4(0.0, 0.0, 0.0, 1.0);// = calcDirectionalLight(v_normals, env_DirectionalLight.direction);
-	vec4 specular = vec4(0.0, 0.0, 0.0, 1.0);// = calcDirectionalLightSpec(normalize(directionalLight.direction), u_specularFactor, normalize(v_normals.xyz), u_cameraPosition, v_position, C_albedo);
-	vec4 imageColor = u_diffuseColor;
-	//if (B_hasDiffuseMap > 0) {
-	//	imageColor.rgb *= texture2D(T_diffuse, texcoord0).rgb;
-	//}	
-	vec4 coneTraceRes;
-	float dist = distance(u_camerapos, v_position.xyz);
-	float maxDist = voxelImageSize/u_scale;
-	//if (dist < maxDist) {
-		vec3 vPos = (vec3(v_voxelPosition.xyz * 0.2)-u_probePos+vec3(halfVoxelImageSize))/vec3(voxelImageSize);
-		//vec4 voxelPosition = u_projMatrix * u_viewMatrix * vec4(v_position.xyz, 1.0);//WorldToVoxelTexMatrix * vec4(v_position.xyz, 1.0);
-		//voxelPosition.xyz /= voxelPosition.w;
-		//vec3 vPos = voxelPosition.xyz;
-		
-		vec3 eyeToFragment = normalize(v_position.xyz - u_camerapos);
-		vec3 reflectionDir = reflect(eyeToFragment, normalize(v_normal.xyz));
-		
-		float rangeMin = 0.02;
-		float rangeMax = 0.1;
-		float level = clamp(dist/maxDist*0.5, rangeMin, rangeMax);
-		vec4 reflection = voxelTraceCone(1.0/voxelImageSize, vPos, normalize(reflectionDir), 0.2, 20.0);
-		coneTraceRes += voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz), 1.0, .3);
-	    coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz+v_tangent), 1.0, .3);
-		coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz-v_tangent), 1.0, .3);
-		coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz+v_bitangent), 1.0, .3);
-		coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, vPos, normalize(v_normal.xyz-v_bitangent), 1.0, .3);
-		specular += reflection;////mix(reflection, vec4(0.0), clamp(dist/maxDist, 0.0, 1.0));//+vec4(ambientLight.color.rgb, 1.0);
-	//}
+	output0 = u_diffuseColor;
 	
-	output0 = vec4(reflection.rgb, 1.0);//(lambert)*imageColor + (specular) ;
-	
+	if (HasDiffuseMap == 1) {
+	  output0 = texture(DiffuseMap, gs_out.texcoord0.xy);
+	}
+	output0.a = 1.0;
 }

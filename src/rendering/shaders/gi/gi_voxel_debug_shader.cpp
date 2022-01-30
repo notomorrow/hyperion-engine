@@ -1,15 +1,16 @@
-#include "lighting_shader.h"
-#include "../environment.h"
-#include "../../asset/asset_manager.h"
-#include "../../asset/text_loader.h"
-#include "../../util/shader_preprocessor.h"
+#include "gi_voxel_debug_shader.h"
+#include "../../environment.h"
+#include "../../../asset/asset_manager.h"
+#include "../../../asset/text_loader.h"
+#include "../../../util/shader_preprocessor.h"
 
 namespace hyperion {
-LightingShader::LightingShader(const ShaderProperties &properties)
-    : Shader(properties)
+GIVoxelDebugShader::GIVoxelDebugShader(const ShaderProperties &properties)
+    : LightingShader(properties)
 {
-    const std::string vs_path("res/shaders/default.vert");
-    const std::string fs_path("res/shaders/default.frag");
+    const std::string vs_path("res/shaders/gi/voxel.vert");
+    const std::string gs_path("res/shaders/gi/voxel.geom");
+    const std::string fs_path("res/shaders/gi/gi_debug.frag");
 
     AddSubShader(
         Shader::SubShaderType::SUBSHADER_VERTEX,
@@ -25,15 +26,23 @@ LightingShader::LightingShader(const ShaderProperties &properties)
         fs_path
     );
 
+    AddSubShader(
+        Shader::SubShaderType::SUBSHADER_GEOMETRY,
+        AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(gs_path)->GetText(),
+        properties,
+        gs_path
+    );
+
+
     for (int i = 0; i < 16; i++) {
         SetUniform("poissonDisk[" + std::to_string(i) + "]",
             Environment::possion_disk[i]);
     }
 }
 
-void LightingShader::ApplyMaterial(const Material &mat)
+void GIVoxelDebugShader::ApplyMaterial(const Material &mat)
 {
-    Shader::ApplyMaterial(mat);
+    LightingShader::ApplyMaterial(mat);
 
     SetUniform("u_diffuseColor", mat.diffuse_color);
 
@@ -64,12 +73,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
             point_light->Bind(i, this);
         }
     }
-
-    /*if (auto gi = Environment::GetInstance()->GetGIRenderer()->GetGIMapping(0)->GetShadowMap()) {
-        gi->Prepare();
-
-        SetUniform("env_GlobalCubemap", gi.get());
-    }*/
 
     if (auto cubemap = env->GetGlobalCubemap()) {
         //cubemap->Prepare();
@@ -115,20 +118,16 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     SetUniform("u_scale", 5.0f);
     SetUniform("u_probePos", Vector3(0.0));//Environment::GetInstance()->GetGIRenderer()->GetGIMapping(0)->GetProbePosition());
-
-    for (int i = 0; i < Environment::GetInstance()->GetGIRenderer()->NumProbes(); i++) {
-        //Environment::GetInstance()->GetGIRenderer()->GetGIMapping(i)->GetShadowMap()->Prepare();
-        CoreEngine::GetInstance()->ActiveTexture(CoreEngine::GLEnums::TEXTURE0 + 11 + i);
-        CoreEngine::GetInstance()->BindTexture(CoreEngine::GLEnums::TEXTURE_3D, Environment::GetInstance()->GetGIRenderer()->GetGIMapping(i)->GetTextureId());
-
-
-        SetUniform(std::string("tex[") + std::to_string(i) + "]", 11 + i);
-    }
 }
 
-void LightingShader::ApplyTransforms(const Transform &transform, Camera *camera)
+void GIVoxelDebugShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
-    Shader::ApplyTransforms(transform, camera);
-    SetUniform("u_camerapos", camera->GetTranslation());
+    LightingShader::ApplyTransforms(transform, camera);
+
+
+    Vector3 voxel_bias(20.0f); // todo
+
+    Transform world_to_voxel_tex(Vector3(voxel_bias), Vector3(5.0f)/* scale*/, Quaternion());
+    SetUniform("WorldToVoxelTexMatrix", world_to_voxel_tex.GetMatrix());
 }
 } // namespace hyperion
