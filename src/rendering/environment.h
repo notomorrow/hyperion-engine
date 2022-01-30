@@ -3,7 +3,7 @@
 
 #include "../math/matrix4.h"
 #include "../math/vector2.h"
-#include "../rendering/gi/gi_renderer.h"
+#include "../rendering/gi/gi_manager.h"
 #include "../rendering/probe/probe_renderer.h"
 #include "../rendering/texture.h"
 #include "../rendering/cubemap.h"
@@ -40,9 +40,8 @@ public:
     inline const Matrix4 &GetShadowMatrix(int i) const { return m_shadow_matrices[i]; }
     inline void SetShadowMatrix(int i, const Matrix4 &shadow_matrix) { m_shadow_matrices[i] = shadow_matrix; }
 
-    inline GIRenderer *GetGIRenderer() { return m_gi_renderer; }
-    inline const GIRenderer *GetGIRenderer() const { return m_gi_renderer; }
-    inline void SetGIRenderer(GIRenderer *gi_renderer) { m_gi_renderer = gi_renderer; }// todo
+    inline GIManager *GetGIManager() { return m_gi_manager; }
+    inline const GIManager *GetGIManager() const { return m_gi_manager; }
 
     inline int GetMaxPointLights() const { return m_max_point_lights; }
     void SetMaxPointLights(int max_point_lights);
@@ -85,7 +84,7 @@ private:
     ProbeRenderer *m_probe_renderer;
     bool m_probe_enabled;
 
-    GIRenderer *m_gi_renderer;
+    GIManager *m_gi_manager;
 };
 } // namespace hyperion
 

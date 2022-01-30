@@ -74,6 +74,7 @@
 #include "util/noise_factory.h"
 #include "util/img/write_bitmap.h"
 
+#include "rendering/gi/gi_probe_control.h"
 #include "rendering/shaders/gi/gi_voxel_debug_shader.h"
 
 /* Standard library */
@@ -370,6 +371,12 @@ public:
         // Initialize root node
         top = std::make_shared<Entity>("top");
 
+        auto gi_test_node = std::make_shared<Entity>("gi_test_node");
+        gi_test_node->Move(Vector3(0, 5, 0));
+        gi_test_node->AddControl(std::make_shared<GIProbeControl>(BoundingBox(Vector3(-25.0f), Vector3(25.0f))));
+        top->AddChild(gi_test_node);
+
+
         cam->SetTranslation(Vector3(4, 0, 0));
 
         // Initialize particle system
@@ -400,8 +407,6 @@ public:
         m_rotate_mode_btn->SetLocalScale2D(Vector2(15));
         top->AddChild(m_rotate_mode_btn);
         GetUIManager()->RegisterUIObject(m_rotate_mode_btn);
-
-        Environment::GetInstance()->SetGIRenderer(new GIRenderer());
 
         auto cm = InitCubemap();
 
@@ -646,8 +651,6 @@ public:
     void Render()
     {
         m_renderer->Begin(cam, top.get());
-
-        Environment::GetInstance()->GetGIRenderer()->Render(m_renderer, cam);
 
         if (Environment::GetInstance()->ShadowsEnabled()) {
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;

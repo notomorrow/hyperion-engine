@@ -37,6 +37,14 @@ std::array<Vector3, 8> BoundingBox::GetCorners() const
     };
 }
 
+void BoundingBox::SetCenter(const Vector3 &center)
+{
+    Vector3 dimensions = GetDimensions();
+
+    m_max = center + dimensions * 0.5f;
+    m_min = center - dimensions * 0.5f;
+}
+
 BoundingBox &BoundingBox::operator*=(double scalar)
 {
     m_min *= scalar;

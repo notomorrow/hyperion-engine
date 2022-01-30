@@ -116,13 +116,16 @@ void LightingShader::ApplyMaterial(const Material &mat)
     SetUniform("u_scale", 5.0f);
     SetUniform("u_probePos", Vector3(0.0));//Environment::GetInstance()->GetGIRenderer()->GetGIMapping(0)->GetProbePosition());
 
-    for (int i = 0; i < Environment::GetInstance()->GetGIRenderer()->NumProbes(); i++) {
-        //Environment::GetInstance()->GetGIRenderer()->GetGIMapping(i)->GetShadowMap()->Prepare();
-        CoreEngine::GetInstance()->ActiveTexture(CoreEngine::GLEnums::TEXTURE0 + 11 + i);
-        CoreEngine::GetInstance()->BindTexture(CoreEngine::GLEnums::TEXTURE_3D, Environment::GetInstance()->GetGIRenderer()->GetGIMapping(i)->GetTextureId());
+    for (int i = 0; i < Environment::GetInstance()->GetGIManager()->NumProbes(); i++) {
+        if (auto &probe = Environment::GetInstance()->GetGIManager()->GetProbe(i)) {
+            probe->Bind(this);
 
+            // TODO
+            CoreEngine::GetInstance()->ActiveTexture(CoreEngine::GLEnums::TEXTURE0 + 11 + i);
+            CoreEngine::GetInstance()->BindTexture(CoreEngine::GLEnums::TEXTURE_3D, probe->GetTextureId());
 
-        SetUniform(std::string("tex[") + std::to_string(i) + "]", 11 + i);
+            SetUniform(std::string("tex[") + std::to_string(i) + "]", 11 + i);
+        }
     }
 }
 

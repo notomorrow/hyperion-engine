@@ -12,6 +12,7 @@
 namespace hyperion {
 
 class CoreEngine;
+class Camera;
 
 using Vertices_t = std::vector<Vertex>;
 
@@ -24,7 +25,8 @@ public:
         RB_TRANSPARENT = 2,
         RB_PARTICLE = 3,
         RB_SCREEN = 4,
-        RB_DEBUG = 5
+        RB_DEBUG = 5,
+        RB_BUFFER = 6
     };
 
     Renderable(RenderBucket bucket = RB_OPAQUE);
@@ -39,7 +41,7 @@ public:
     virtual bool IntersectRay(const Ray &ray, const Transform &transform, RaytestHit &out) const;
     virtual bool IntersectRay(const Ray &ray, const Transform &transform, RaytestHitList_t &out) const;
 
-    virtual void Render() = 0;
+    virtual void Render(Renderer *renderer, Camera *cam) = 0;
 
 protected:
     RenderBucket m_bucket;

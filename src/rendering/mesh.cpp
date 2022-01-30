@@ -205,7 +205,7 @@ void Mesh::CalculateTangents()
     SetAttribute(ATTR_BITANGENTS, MeshAttribute::Bitangents);
 }
 
-void Mesh::Render()
+void Mesh::Render(Renderer *renderer, Camera *cam)
 {
     if (!is_created) {
         glGenVertexArrays(1, &vao);

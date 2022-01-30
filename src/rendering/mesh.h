@@ -47,6 +47,7 @@ public:
         unsigned int offset, size, index;
 
         MeshAttribute()
+            : offset(0), size(0), index(0)
         {
         }
 
@@ -89,7 +90,7 @@ public:
     void InvertNormals();
     void CalculateTangents();
 
-    void Render();
+    void Render(Renderer *renderer, Camera *cam);
 
 private:
     bool is_uploaded, is_created;

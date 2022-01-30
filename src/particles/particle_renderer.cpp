@@ -37,7 +37,7 @@ ParticleRenderer::~ParticleRenderer()
     }
 }
 
-void ParticleRenderer::Render()
+void ParticleRenderer::Render(Renderer *renderer, Camera *cam)
 {
     // vertices of a particle
     static const std::array<float, 12> vertices {

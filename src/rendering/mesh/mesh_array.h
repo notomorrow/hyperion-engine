@@ -19,7 +19,7 @@ public:
     MeshArray();
     virtual ~MeshArray() = default;
 
-    virtual void Render() override;
+    virtual void Render(Renderer *renderer, Camera *cam) override;
 
     // merges all submeshes into one
     void Optimize();

@@ -17,7 +17,7 @@ public:
     ParticleRenderer(const ParticleConstructionInfo &info);
     ~ParticleRenderer();
 
-    virtual void Render() override;
+    virtual void Render(Renderer *renderer, Camera *cam) override;
 
     inline ParticleConstructionInfo &GetParticleConstructionInfo() { return m_info; }
     inline const ParticleConstructionInfo &GetParticleConstructionInfo() const { return m_info; }

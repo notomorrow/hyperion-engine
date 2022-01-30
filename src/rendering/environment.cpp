@@ -41,7 +41,7 @@ Environment::Environment()
       m_probe_renderer(new ProbeRenderer()),
       m_probe_enabled(false),
       m_max_point_lights(0),
-      m_gi_renderer(nullptr)
+      m_gi_manager(GIManager::GetInstance())
 {
     SetMaxPointLights(10);
 }

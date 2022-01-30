@@ -25,7 +25,7 @@ out GSOutput
 } gs_out;
 
 
-float cubeScale = 1.5;
+float cubeScale = 1.2;
 
 void main()
 {
