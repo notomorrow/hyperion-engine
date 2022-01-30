@@ -40,9 +40,6 @@ public:
     inline const Matrix4 &GetShadowMatrix(int i) const { return m_shadow_matrices[i]; }
     inline void SetShadowMatrix(int i, const Matrix4 &shadow_matrix) { m_shadow_matrices[i] = shadow_matrix; }
 
-    inline GIManager *GetGIManager() { return m_gi_manager; }
-    inline const GIManager *GetGIManager() const { return m_gi_manager; }
-
     inline int GetMaxPointLights() const { return m_max_point_lights; }
     void SetMaxPointLights(int max_point_lights);
     inline size_t GetNumPointLights() const { return m_point_lights.size(); }
@@ -62,6 +59,11 @@ public:
     inline ProbeRenderer *GetProbeRenderer() { return m_probe_renderer; }
     inline bool ProbeEnabled() const { return m_probe_enabled; }
     void SetProbeEnabled(bool probe_enabled);
+
+    inline GIManager *GetGIManager() { return m_gi_manager; }
+    inline const GIManager *GetGIManager() const { return m_gi_manager; }
+    inline bool VCTEnabled() const { return m_vct_enabled; }
+    void SetVCTEnabled(bool vct_enabled);
 
 private:
     static Environment *instance;
@@ -85,6 +87,7 @@ private:
     bool m_probe_enabled;
 
     GIManager *m_gi_manager;
+    bool m_vct_enabled;
 };
 } // namespace hyperion
 

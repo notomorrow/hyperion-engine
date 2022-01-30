@@ -9,7 +9,7 @@
 namespace hyperion {
 
 Cubemap::Cubemap(const std::array<std::shared_ptr<Texture2D>, 6> &textures)
-    : Texture(TextureType::TEXTURE_TYPE_3D),
+    : Texture(TextureType::TEXTURE_TYPE_CUBEMAP),
       m_textures(textures)
 {
 }

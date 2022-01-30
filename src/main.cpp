@@ -384,7 +384,8 @@ public:
 
         auto ui_text = std::make_shared<ui::UIText>("text_test", "Hyperion 0.1.0\n"
             "Press 1 to toggle shadows\n"
-            "Press 2 to toggle deferred rendering");
+            "Press 2 to toggle deferred rendering\n"
+            "Press 3 to toggle voxel cone tracing\n");
         ui_text->SetLocalTranslation2D(Vector2(-1.0, 1.0));
         ui_text->SetLocalScale2D(Vector2(30));
         top->AddChild(ui_text);
@@ -473,6 +474,14 @@ public:
             }
 
             m_renderer->SetDeferred(!m_renderer->IsDeferred());
+        }));
+
+        GetInputManager()->RegisterKeyEvent(KEY_3, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            Environment::GetInstance()->SetVCTEnabled(!Environment::GetInstance()->VCTEnabled());
         }));
 
         GetInputManager()->RegisterKeyEvent(KEY_ARROW_LEFT, InputEvent([=](bool pressed) {

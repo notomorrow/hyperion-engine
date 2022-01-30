@@ -4,91 +4,87 @@
 #include "../shaders/gi/gi_voxel_shader.h"
 #include "../shaders/gi/gi_voxel_clear_shader.h"
 #include "../renderer.h"
+#include "../environment.h"
 #include "../../math/math_util.h"
 #include "../../opengl.h"
 #include "../../gl_util.h"
 
 namespace hyperion {
-GIMapper::GIMapper(const GIMapperRegion &region)
+GIMapper::GIMapper(const BoundingBox &bounds)
     : Renderable(RB_BUFFER),
-      m_texture_id(0),
-      m_region(region),
-      m_render_tick(MathUtil::MaxSafeValue<double>())
+      m_bounds(bounds),
+      m_render_tick(0.0),
+      m_directions({
+          std::make_pair(Vector3(1, 0, 0), Vector3(0, -1, 0)),
+          std::make_pair(Vector3(-1, 0, 0), Vector3(0, -1, 0)),
+          std::make_pair(Vector3(0, 1, 0), Vector3(0, 0, 1)),
+          std::make_pair(Vector3(0, -1, 0), Vector3(0, 0, -1)),
+          std::make_pair(Vector3(0, 0, 1), Vector3(0, -1, 0)),
+          std::make_pair(Vector3(0, 0, -1), Vector3(0, -1, 0))
+      })
 {
     SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelShader>(ShaderProperties()));
-    m_clear_shader = ShaderManager::GetInstance()->GetShader<GIVoxelClearShader>(ShaderProperties());
+
+    for (int i = 0; i < m_cameras.size(); i++) {
+        GIMapperRegion region;
+        region.bounds = m_bounds;
+        region.direction = m_directions[i].first;
+        region.up_vector = m_directions[i].second;
+
+        m_cameras[i] = new GIMapperCamera(region);
+        m_cameras[i]->SetShader(m_shader);
+    }
 }
 
 GIMapper::~GIMapper()
 {
-    if (m_texture_id != 0) {
-        glDeleteTextures(1, &m_texture_id);
+    for (GIMapperCamera *cam : m_cameras) {
+        if (cam == nullptr) {
+            continue;
+        }
+
+        delete cam;
     }
 }
 
-void GIMapper::Bind(Shader *shader)
+void GIMapper::SetOrigin(const Vector3 &origin)
 {
-    shader->SetUniform("VoxelProbePosition", m_region.bounds.GetCenter());
-    shader->SetUniform("VoxelSceneScale", m_region.bounds.GetDimensions());
-}
+    m_bounds.SetCenter(origin);
 
-void GIMapper::Begin()
-{
-    if (m_texture_id == 0) {
-        glGenTextures(1, &m_texture_id);
-        CatchGLErrors("Failed to generate textures.");
-        glBindTexture(GL_TEXTURE_3D, m_texture_id);
-        CatchGLErrors("Failed to bind 3d texture.");
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        CatchGLErrors("Failed to init 3d texture parameters.");
-        glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, 128, 128, 128);
-        CatchGLErrors("Failed to set 3d texture storage.");
-        glGenerateMipmap(GL_TEXTURE_3D);
-        //CatchGLErrors("Failed to gen 3d texture mipmaps.");
-        glBindTexture(GL_TEXTURE_3D, 0);
+    for (GIMapperCamera *cam : m_cameras) {
+        cam->GetRegion().bounds = m_bounds;
     }
-
-    glBindImageTexture(0, m_texture_id, 0, true, 0, GL_READ_WRITE, GL_RGBA32F);
-    CatchGLErrors("Failed to bind image texture.");
-}
-
-void GIMapper::End()
-{
-    glBindImageTexture(0, 0, 0, true, 0, GL_READ_WRITE, GL_RGBA32F);
 }
 
 void GIMapper::UpdateRenderTick(double dt)
 {
     m_render_tick += dt;
+
+    for (GIMapperCamera *gi_cam : m_cameras) {
+        gi_cam->Update(dt); // update matrices
+    }
+}
+
+void GIMapper::Bind(Shader *shader)
+{
+    shader->SetUniform("VoxelProbePosition", m_bounds.GetCenter());
+    shader->SetUniform("VoxelSceneScale", m_bounds.GetDimensions());
 }
 
 void GIMapper::Render(Renderer *renderer, Camera *cam)
 {
-    if (m_render_tick < 0.1) {
+    if (m_render_tick < 1.0) {
         return;
     }
 
     m_render_tick = 0.0;
 
-    Begin();
+    if (!Environment::GetInstance()->VCTEnabled()) {
+        return;
+    }
 
-    // clear texture of previous frame's voxels
-    m_clear_shader->Use();
-    m_clear_shader->Dispatch();
-    m_clear_shader->End();
-
-    Bind(m_shader.get());
-
-    renderer->RenderBucket(
-        cam,
-        renderer->GetBucket(Renderable::RB_OPAQUE),
-        m_shader.get(),
-        false
-    );
-
-    End();
+    for (GIMapperCamera *gi_cam : m_cameras) {
+        gi_cam->Render(renderer, cam);
+    }
 }
 } // namespace apex

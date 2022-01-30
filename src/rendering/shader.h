@@ -289,7 +289,8 @@ private:
             Uniform_Vector4,
             Uniform_Matrix4,
             Uniform_Texture2D,
-            Uniform_Texture3D
+            Uniform_Texture3D,
+            Uniform_TextureCube
         } type;
 
         std::array<float, 16> data;
@@ -347,6 +348,7 @@ private:
             ex_assert(texture != nullptr);
 
             data[0] = texture->GetId();
+            // texture->GetTextureType() should start at 0 and map to the correct uniform texture type
             type = UniformType(int(Uniform_Texture2D) + int(texture->GetTextureType()));
         }
 

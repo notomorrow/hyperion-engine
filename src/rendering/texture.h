@@ -9,8 +9,9 @@ class Texture : public Loadable {
     friend class TextureLoader;
 public:
     enum TextureType {
-        TEXTURE_TYPE_2D = 0x0,
-        TEXTURE_TYPE_3D = 0x1
+        TEXTURE_TYPE_2D = 0,
+        TEXTURE_TYPE_3D = 1,
+        TEXTURE_TYPE_CUBEMAP = 2
     };
 
     Texture(TextureType texture_type);
