@@ -171,6 +171,13 @@ void main(void)
   {
     ao = mix(ao, 1.0, doMist());
   }
+  
+#if !DEFERRED
+  output0 = texture(ColorMap, v_texcoord0);
+  output0.rgb *= ao;
+#endif
 
+#if DEFERRED
   output4 = vec4(0.0, 0.0, 0.0, 1.0 - ao);
+#endif
 }

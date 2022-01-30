@@ -110,7 +110,7 @@ if (index == 0) {
 
 #if SHADOW_BIAS_SMOOTHING
   bias = 0.005 * tan(acos(NdotL));
-  bias = clamp(bias, 0,0.01);
+  bias = clamp(bias, 0.0, 0.01);
 #endif
 
 #if !SHADOWS_VARIANCE
