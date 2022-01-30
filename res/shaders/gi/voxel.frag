@@ -66,6 +66,9 @@ void main(void)
 	  imageColor = texture(DiffuseMap, v_texcoord0);
 #endif
 	}
+	
+	imageColor *= vec4(1.0 + Emissiveness);
+	imageColor.a = 1.0;
 
 #if VCT_GEOMETRY_SHADER
 	vec4 position = gs_out.position;
