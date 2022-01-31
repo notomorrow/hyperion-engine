@@ -77,6 +77,9 @@
 #include "rendering/gi/gi_probe_control.h"
 #include "rendering/shaders/gi/gi_voxel_debug_shader.h"
 
+#include "asset/fbom/fbom.h"
+#include "asset/byte_writer.h"
+
 /* Standard library */
 #include <cstdlib>
 #include <ctime>
@@ -725,6 +728,13 @@ public:
 
 int main()
 {
+    std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
+    FileByteWriter fbw("test.fbom");
+    fbom::FBOMLoader().WriteToByteStream(&fbw, my_entity.get());
+    //fbom::FBOMLoader().LoadFromFile("foo.fbom");
+
+    return 0;
+
     CoreEngine *engine = new GlfwEngine();
     CoreEngine::SetInstance(engine);
 
