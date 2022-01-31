@@ -74,6 +74,9 @@
 #include "util/noise_factory.h"
 #include "util/img/write_bitmap.h"
 
+#include "asset/fbom/fbom.h"
+#include "asset/byte_writer.h"
+
 /* Standard library */
 #include <cstdlib>
 #include <ctime>
@@ -1027,27 +1030,12 @@ public:
 
 int main()
 {
-    unsigned char *data = new unsigned char[128 * 128 * 3];
+    std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
+    FileByteWriter fbw("test.fbom");
+    fbom::FBOMLoader().WriteToByteStream(&fbw, my_entity.get());
+    //fbom::FBOMLoader().LoadFromFile("foo.fbom");
 
-    // === noise test ===
-    auto noise = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::WORLEY_NOISE, 1223);
-
-    int pixel = 0;
-    double noise_scale = 0.01;
-    for (int x = 0; x < 128; x++) {
-        for (int z = 0; z < 128; z++) {
-            double n = noise->GetNoise(x * noise_scale, z * noise_scale);
-            data[pixel++] = (n / 1.0) * 255;
-            data[pixel++] = (n / 1.0) * 255;
-            data[pixel++] = (n / 1.0) * 255;
-        }
-    }
-
-    NoiseFactory::GetInstance()->Release(noise);
-
-    delete[] data;
-
-    WriteBitmap::Write("./test_img.bmp", 128, 128, data);
+    return 0;
 
     // === noise test ===
 

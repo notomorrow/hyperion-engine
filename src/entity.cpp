@@ -6,7 +6,8 @@
 namespace hyperion {
 
 Entity::Entity(const std::string &name)
-    : m_name(name),
+    : fbom::FBOMLoadable("ENTITY"),
+      m_name(name),
       m_aabb_affects_parent(true),
       m_flags(0),
       m_parent(nullptr),
