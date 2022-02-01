@@ -10,7 +10,7 @@ const std::vector<MeshIndex> BoundingBoxRenderer::indices = {
 };
 
 BoundingBoxRenderer::BoundingBoxRenderer()
-    : Renderable(RenderBucket::RB_DEBUG),
+    : Renderable(fbom::FBOMObjectType("BOUNDING_BOX_RENDERER"), RenderBucket::RB_DEBUG),
       m_mesh(new Mesh)
 {
     m_vertices.resize(8);
@@ -44,5 +44,17 @@ void BoundingBoxRenderer::Render()
     m_mesh->Render();
     m_shader->End();
     // glLineWidth(1.0f);
+}
+
+std::shared_ptr<Renderable> BoundingBoxRenderer::CloneImpl()
+{
+    auto clone = std::make_shared<BoundingBoxRenderer>();
+
+    clone->m_vertices = m_vertices;
+    clone->m_aabb = m_aabb;
+
+    // TODO: Mesh?
+
+    return clone;
 }
 } // namespace hyperion

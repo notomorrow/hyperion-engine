@@ -219,15 +219,9 @@ void Shader::ApplyMaterial(const Material &mat)
         glDepthMask(false);
     }
 
-    if (mat.HasParameter("FlipUV")) {
-        const auto &param = mat.GetParameter("FlipUV");
-        SetUniform("FlipUV_X", int(param[0]));
-        SetUniform("FlipUV_Y", int(param[1]));
-    } else if (mat.HasParameter("FlipUV_X")) {
-        SetUniform("FlipUV_X", int(mat.GetParameter("FlipUV_X")[0]));
-    } else if (mat.HasParameter("FlipUV_Y")) {
-        SetUniform("FlipUV_Y", int(mat.GetParameter("FlipUV_X")[0]));
-    }
+    const auto &param = mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV);
+    SetUniform("FlipUV_X", int(param[0]));
+    SetUniform("FlipUV_Y", int(param[1]));
 }
 
 void Shader::ApplyTransforms(const Transform &transform, Camera *camera)

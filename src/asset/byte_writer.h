@@ -25,9 +25,13 @@ public:
 
     void WriteString(const std::string &str)
     {
-        uint32_t len = str.size();
+        uint32_t len = str.size() + 1;
+        char *tmp = new char[len];
+        memset(tmp, 0, len);
+        memcpy(tmp, str.c_str(), str.size());
         WriteBytes(reinterpret_cast<char*>(&len), sizeof(uint32_t));
-        WriteBytes(const_cast<char*>(str.data()), len);
+        WriteBytes(tmp, len);
+        delete[] tmp;
     }
 
     virtual std::streampos Position() const = 0;

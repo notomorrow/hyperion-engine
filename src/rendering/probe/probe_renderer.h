@@ -17,6 +17,8 @@ class Cubemap;
 class ProbeRenderer {
 public:
     ProbeRenderer(int width = 128, int height = 128);
+    ProbeRenderer(const ProbeRenderer &other) = delete;
+    ProbeRenderer &operator=(const ProbeRenderer &other) = delete;
     ~ProbeRenderer();
 
     inline std::shared_ptr<Cubemap> GetColorTexture() const

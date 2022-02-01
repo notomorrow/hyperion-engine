@@ -9,7 +9,7 @@ namespace hyperion {
 const bool SkydomeControl::clouds_in_dome = false;
 
 SkydomeControl::SkydomeControl(Camera *camera)
-    : EntityControl(30.0),
+    : EntityControl(fbom::FBOMObjectType("SKYDOME_CONTROL"), 30.0),
       camera(camera),
       global_time(0.0)
 {
@@ -70,5 +70,10 @@ void SkydomeControl::OnUpdate(double dt)
     } else {
         shader->SetGlobalTime(global_time);
     }
+}
+
+std::shared_ptr<EntityControl> SkydomeControl::CloneImpl()
+{
+    return std::make_shared<SkydomeControl>(nullptr); // TODO
 }
 } // namespace hyperion

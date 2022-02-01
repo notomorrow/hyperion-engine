@@ -185,7 +185,10 @@ class Shader {
 public:
     Shader(const ShaderProperties &properties);
     Shader(const ShaderProperties &properties,
-        const std::string &vscode, const std::string &fscode);
+        const std::string &vscode,
+        const std::string &fscode);
+    Shader(const Shader &other) = delete;
+    Shader &operator=(const Shader &other) = delete;
     virtual ~Shader();
 
     virtual void ApplyMaterial(const Material &mat);

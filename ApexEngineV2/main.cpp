@@ -193,8 +193,8 @@ public:
                     clone->SetName("object_" + std::to_string(x) + "_" + std::to_string(z));
                     for (size_t i = 0; i < clone->NumChildren(); i++) {
                         clone->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", tex);
-                        clone->GetChild(i)->GetMaterial().SetParameter("roughness", MathUtil::Max(float(x) / 5.0f, 0.001f));
-                        clone->GetChild(i)->GetMaterial().SetParameter("shininess", MathUtil::Max(float(z) / 5.0f, 0.001f));
+                        clone->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, MathUtil::Max(float(x) / 5.0f, 0.001f));
+                        clone->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, MathUtil::Max(float(z) / 5.0f, 0.001f));
                     }
 
                     auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 4.0);
@@ -447,8 +447,8 @@ public:
         dragger->Move(Vector3(7, -10, 6));
         dragger->Scale(0.25);
         dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.7f, 0.6f, 1.0f };
-        dragger->GetChild(0)->GetMaterial().SetParameter("shininess", 0.1f);
-        dragger->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
+        dragger->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
+        dragger->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
         dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
         dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
         top->AddChild(dragger);
@@ -460,7 +460,7 @@ public:
         superdan->Move(Vector3(-7, 5, -6));
         superdan->Scale(0.25);
         for (size_t i = 0; i < superdan->NumChildren(); i++) {
-            superdan->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
+            superdan->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
         }
         top->AddChild(superdan);
         superdan->UpdateTransform();
@@ -555,8 +555,8 @@ public:
         plane_entity->Scale(Vector3(5.0));
         plane_entity->GetRenderable()->SetShader(shader);
         plane_entity->GetMaterial().diffuse_color = Vector4(1.0, 0.0, 0.0, 1.0);
-        plane_entity->GetMaterial().SetParameter("shininess", 0.6f);
-        plane_entity->GetMaterial().SetParameter("roughness", 0.0f);
+        plane_entity->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.6f);
+        plane_entity->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.0f);
         plane_entity->AddControl(plane_rigid_body);
         top->AddChild(plane_entity);
 
@@ -589,10 +589,10 @@ public:
                     // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                    // box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
-                    // box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
-                    box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.8f);
-                    box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.0f);
+                    // box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, float(x) / 5.0f);
+                    // box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, float(z) / 5.0f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.8f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.0f);
                 }
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
@@ -622,8 +622,8 @@ public:
             for (int i = 0; i < building->NumChildren(); i++) {
                 building->GetChild(i)->GetRenderable()->SetShader(shader);
                 // building->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-                building->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f);
-                building->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
+                building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.5f);
+                building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.5f);
             }
             top->AddChild(building);
         }*/
@@ -642,8 +642,8 @@ public:
             tree->SetLocalTranslation(Vector3(0, 0, 0));
             tree->SetLocalScale(Vector3(1.0));
             for (int i = 0; i < tree->NumChildren(); i++) {
-                tree->GetChild(i)->GetMaterial().SetParameter("shininess", 0.0f);
-                tree->GetChild(i)->GetMaterial().SetParameter("roughness", 0.9f);
+                tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
+                tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
                 // dynamic_cast<Mesh*>(tree->GetChild(i)->GetRenderable().get())->CalculateNormals();
             }
 
@@ -677,8 +677,8 @@ public:
             tree->SetLocalTranslation(Vector3(0, 0, 5));
             tree->SetLocalScale(Vector3(5));
             for (size_t i = 0; i < tree->NumChildren(); i++) {
-                tree->GetChild(i)->GetMaterial().SetParameter("shininess", 0.1f);
-                tree->GetChild(i)->GetMaterial().SetParameter("roughness", 0.9f);
+                tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
+                tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
             }
             top->AddChild(tree);
         }*/

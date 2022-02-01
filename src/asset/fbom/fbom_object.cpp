@@ -1,6 +1,8 @@
 #include "fbom.h"
 #include "../byte_writer.h";
 
+#include <stack>
+
 namespace hyperion {
 namespace fbom {
 
@@ -8,8 +10,27 @@ void FBOMObject::WriteToByteStream(ByteWriter *out) const
 {
     out->Write(uint8_t(FBOM_OBJECT_START));
 
-    // write string of object type (loader to use)
-    out->WriteString(decl_type);
+    // write typechain
+
+    std::stack<const FBOMType*> type_chain;
+    const FBOMType *type = &m_object_type;
+
+    while (type != nullptr) {
+        type_chain.push(type);
+        type = type->extends;
+    }
+
+    while (!type_chain.empty()) {
+        // write string of object type (loader to use)
+        out->WriteString(type_chain.top()->name);
+
+        type_chain.pop();
+
+        // write a byte stating whether there is an extender class
+        uint8_t has_extender = !type_chain.empty();
+
+        out->Write(has_extender);
+    }
 
     // add all properties
     for (auto &it : properties) {
@@ -24,7 +45,6 @@ void FBOMObject::WriteToByteStream(ByteWriter *out) const
         // write out size of object
         // TODO: if not unbounded type, assert that size of data matches type size
         size_t total_size = it.second.TotalSize();
-
         // TODO: assert total_size is less than max value of uint32_t
 
         out->Write(uint32_t(total_size));

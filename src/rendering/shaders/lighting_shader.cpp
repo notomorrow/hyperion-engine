@@ -95,17 +95,8 @@ void LightingShader::ApplyMaterial(const Material &mat)
         SetUniform(std::string("Has") + it->first, 1);
     }
 
-    if (mat.HasParameter("shininess")) {
-        SetUniform("u_shininess", mat.GetParameter("shininess")[0]);
-    }
-
-    if (mat.HasParameter("roughness")) {
-        SetUniform("u_roughness", mat.GetParameter("roughness")[0]);
-    }
-
-    if (mat.HasParameter("RimShading")) {
-        SetUniform("RimShading", mat.GetParameter("RimShading")[0]);
-    }
+    SetUniform("u_shininess", mat.GetParameter(MATERIAL_PARAMETER_METALNESS)[0]);
+    SetUniform("u_roughness", mat.GetParameter(MATERIAL_PARAMETER_ROUGHNESS)[0]);
 }
 
 void LightingShader::ApplyTransforms(const Transform &transform, Camera *camera)

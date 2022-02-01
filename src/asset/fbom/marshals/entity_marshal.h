@@ -12,8 +12,8 @@ public:
     EntityMarshal() = default;
     virtual ~EntityMarshal() = default;
 
-    virtual FBOMResult Deserialize(FBOMObject *in, FBOMLoadable *&out) const override;
-    virtual FBOMResult Serialize(FBOMLoadable *in, FBOMObject *out) const override;
+    virtual FBOMResult Deserialize(FBOMLoader *, FBOMObject *in, FBOMDeserialized &out) const override;
+    virtual FBOMResult Serialize(FBOMLoader *, FBOMLoadable *in, FBOMObject *out) const override;
 };
 
 } // namespace fbom

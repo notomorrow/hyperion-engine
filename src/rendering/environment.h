@@ -20,6 +20,8 @@ public:
     static const Vector2 possion_disk[16];
 
     Environment();
+    Environment(const Environment &other) = delete;
+    Environment &operator=(const Environment &other) = delete;
     ~Environment();
 
     inline DirectionalLight &GetSun() { return m_sun; }

@@ -73,9 +73,11 @@
 
 #include "util/noise_factory.h"
 #include "util/img/write_bitmap.h"
+#include "util/enum_options.h"
 
 #include "asset/fbom/fbom.h"
 #include "asset/byte_writer.h"
+
 
 /* Standard library */
 #include <cstdlib>
@@ -191,8 +193,8 @@ public:
         // test_scene->SetLocalScale(Vector3(2.0f));
         // test_scene->SetLocalTranslation(Vector3(0, 10, 0));
         // // test_scene->SetLocalRotation(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-        // test_scene->GetMaterial().SetParameter("shininess", 0.8f);
-        // test_scene->GetMaterial().SetParameter("roughness", 0.1f);
+        // test_scene->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.8f);
+        // test_scene->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.1f);
         // test_scene->GetMaterial().cull_faces = MaterialFace_None;
         // top->AddChild(test_scene);
 
@@ -204,8 +206,8 @@ public:
             street->Scale(0.5f);
 
             for (size_t i = 0; i < street->NumChildren(); i++) {
-                street->GetChild(i)->GetMaterial().SetParameter("shininess", 0.5f);
-                street->GetChild(i)->GetMaterial().SetParameter("roughness", 0.0f);
+                street->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.5f);
+                street->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.0f);
             }
 
             top->AddChild(street);
@@ -236,10 +238,10 @@ public:
                     // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                    // box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
-                    // box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
-                    box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.8f);
-                    box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.1f);
+                    // box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, float(x) / 5.0f);
+                    // box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, float(z) / 5.0f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.8f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.1f);
                 }
 
                 box->SetLocalTranslation(box_position);
@@ -292,8 +294,8 @@ public:
                     clone->SetName("object_" + std::to_string(x) + "_" + std::to_string(z));
                     for (size_t i = 0; i < clone->NumChildren(); i++) {
                         clone->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", tex);
-                        clone->GetChild(i)->GetMaterial().SetParameter("roughness", MathUtil::Max(float(x) / 5.0f, 0.001f));
-                        clone->GetChild(i)->GetMaterial().SetParameter("shininess", MathUtil::Max(float(z) / 5.0f, 0.001f));
+                        clone->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, MathUtil::Max(float(x) / 5.0f, 0.001f));
+                        clone->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, MathUtil::Max(float(z) / 5.0f, 0.001f));
                     }
 
                     auto rigid_body = std::make_shared<physics::RigidBody>(std::make_shared<physics::BoxPhysicsShape>(Vector3(2.0)), 4.0);
@@ -410,7 +412,7 @@ public:
         top->AddControl(std::make_shared<SkydomeControl>(cam));
         // top->AddControl(std::make_shared<SkyboxControl>(cam, nullptr));
 
-        // shader = ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties());
+        shader = ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties());
 
         InitTestArea();
 
@@ -472,7 +474,22 @@ public:
             m_renderer->SetDeferred(!m_renderer->IsDeferred());
         }));
 
+        std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
 
+        std::cout << "Result: " << typeid(*result.get()).name() << "\n";
+        if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+            std::cout << "Loaded entity name: " << entity->GetName() << "\n";
+            std::cout << "entity num children: " << entity->NumChildren() << "\n";
+            entity->Scale(1.0f);
+            for (size_t i = 0; i < entity->NumChildren(); i++) {
+                std::cout << "child [" << i << "] renderable == " << intptr_t(entity->GetChild(i)->GetRenderable().get()) << "\n";
+                if (entity->GetChild(i)->GetRenderable() == nullptr) {
+                    continue;
+                }
+                entity->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
+            top->AddChild(entity);
+        }
 
         {
             auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
@@ -480,7 +497,7 @@ public:
             superdan->Move(Vector3(2, 4, 0));
             superdan->Scale(0.25);
             for (size_t i = 0; i < superdan->NumChildren(); i++) {
-                superdan->GetChild(i)->GetMaterial().SetParameter("FlipUV", Vector2(0, 1));
+                superdan->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
             }
             top->AddChild(superdan);
             superdan->UpdateTransform();
@@ -588,8 +605,8 @@ public:
             dragger->Move(Vector3(7, -10, 6));
             dragger->Scale(0.85);
             dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.7f, 0.6f, 1.0f };
-            dragger->GetChild(0)->GetMaterial().SetParameter("shininess", 0.1f);
-            dragger->GetChild(0)->GetMaterial().SetParameter("roughness", 0.9f);
+            dragger->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
+            dragger->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
             dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
             dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
             top->AddChild(dragger);
@@ -699,8 +716,8 @@ public:
             plane_entity->GetMaterial().diffuse_color = Vector4(1.0, 1.0, 1.0, 1.0);
             // plane_entity->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/grass2.jpg"));
             // plane_entity->GetMaterial().SetTexture("FurStrengthMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/noise.png"));
-            plane_entity->GetMaterial().SetParameter("shininess", 0.5f);
-            plane_entity->GetMaterial().SetParameter("roughness", 0.05f);
+            plane_entity->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.5f);
+            plane_entity->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
             // plane_entity->AddControl(plane_rigid_body);
             top->AddChild(plane_entity);
         }*/
@@ -734,8 +751,8 @@ public:
                     // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                    box->GetChild(i)->GetMaterial().SetParameter("shininess", float(x) / 5.0f);
-                    box->GetChild(i)->GetMaterial().SetParameter("roughness", float(z) / 5.0f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, float(x) / 5.0f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, float(z) / 5.0f);
                 }
                 box->SetLocalTranslation(box_position);
                 top->AddChild(box);
@@ -765,8 +782,8 @@ public:
             for (int i = 0; i < building->NumChildren(); i++) {
                 building->GetChild(i)->GetRenderable()->SetShader(shader);
                 // building->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-                building->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f);
-                building->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
+                building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.5f);
+                building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.5f);
             }
             top->AddChild(building);
         }*/
@@ -775,8 +792,8 @@ public:
             auto cube = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/cube.obj");
             cube->GetChild(0)->GetRenderable()->SetShader(shader);
             cube->GetChild(0)->GetMaterial().diffuse_color = { 0.0, 0.0, 1.0, 1.0 };
-            cube->GetChild(0)->GetMaterial().SetParameter("roughness", 0.0f),
-            cube->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f),
+            cube->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.0f),
+            cube->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.5f),
             // cube->Scale(0.1);
             cube->Move(Vector3(-2, 1.5, 0));
             cube->SetName("cube");
@@ -788,8 +805,8 @@ public:
             tree->SetLocalTranslation(Vector3(0, 0, 0));
             tree->SetLocalScale(Vector3(1.0));
             for (int i = 0; i < tree->NumChildren(); i++) {
-                tree->GetChild(i)->GetMaterial().SetParameter("shininess", 0.0f);
-                tree->GetChild(i)->GetMaterial().SetParameter("roughness", 0.9f);
+                tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
+                tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
                 // dynamic_cast<Mesh*>(tree->GetChild(i)->GetRenderable().get())->CalculateNormals();
             }
 
@@ -830,8 +847,8 @@ public:
             tree->SetLocalTranslation(Vector3(0, 0, 5));
             tree->SetLocalScale(Vector3(5));
             for (size_t i = 0; i < tree->NumChildren(); i++) {
-                tree->GetChild(i)->GetMaterial().SetParameter("shininess", 0.1f);
-                tree->GetChild(i)->GetMaterial().SetParameter("roughness", 0.9f);
+                tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
+                tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
             }
             top->AddChild(tree);
         }*/
@@ -1030,12 +1047,31 @@ public:
 
 int main()
 {
-    std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
-    FileByteWriter fbw("test.fbom");
-    fbom::FBOMLoader().WriteToByteStream(&fbw, my_entity.get());
-    //fbom::FBOMLoader().LoadFromFile("foo.fbom");
 
-    return 0;
+    // std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
+    // my_entity->AddControl(std::make_shared<NoiseTerrainControl>(nullptr, 12345));
+
+    auto my_entity = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+    my_entity->Scale(Vector3(0.2f));
+    my_entity->Move(Vector3(0, 2, 0));
+
+    FileByteWriter fbw("test.fbom");
+    auto res = fbom::FBOMLoader().WriteToByteStream(&fbw, my_entity.get());
+    fbw.Close();
+
+    if (res != fbom::FBOMResult::FBOM_OK) {
+        throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+    }
+
+    // return 0;
+
+    /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
+
+    if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+        std::cout << "Loaded entity name: " << entity->GetName() << "\n";
+    }
+
+    return 0;*/
 
     // === noise test ===
 

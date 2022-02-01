@@ -5,6 +5,7 @@
 #include "../math/vertex.h"
 #include "../math/ray.h"
 #include "../math/bounding_box.h"
+#include "../asset/fbom/fbom.h"
 
 #include <memory>
 #include <vector>
@@ -15,7 +16,7 @@ class CoreEngine;
 
 using Vertices_t = std::vector<Vertex>;
 
-class Renderable {
+class Renderable : public fbom::FBOMLoadable {
     friend class Renderer;
 public:
     enum RenderBucket {
@@ -27,7 +28,10 @@ public:
         RB_DEBUG = 5
     };
 
-    Renderable(RenderBucket bucket = RB_OPAQUE);
+    Renderable(const fbom::FBOMObjectType &loadable_type,
+        RenderBucket bucket = RB_OPAQUE);
+    Renderable(const Renderable &other) = delete;
+    Renderable &operator=(const Renderable &other) = delete;
     virtual ~Renderable() = default;
 
     inline RenderBucket GetRenderBucket() const { return m_bucket; }
@@ -41,10 +45,14 @@ public:
 
     virtual void Render() = 0;
 
+    virtual std::shared_ptr<Loadable> Clone() override;
+
 protected:
     RenderBucket m_bucket;
     std::shared_ptr<Shader> m_shader;
     BoundingBox m_aabb;
+
+    virtual std::shared_ptr<Renderable> CloneImpl() = 0;
 };
 
 } // namespace hyperion

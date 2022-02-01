@@ -26,7 +26,11 @@ public:
     virtual std::streampos Max() const = 0;
     virtual void Skip(unsigned amount) = 0;
     virtual void Seek(unsigned long where_to) = 0;
-    virtual bool Eof() const = 0;
+
+    bool Eof() const
+    {
+        return Position() >= Max();
+    }
 
 protected:
     virtual void ReadBytes(char *ptr, unsigned size) = 0;
@@ -63,11 +67,6 @@ public:
     void Seek(unsigned long where_to)
     {
         m_pos = where_to;
-    }
-
-    bool Eof() const
-    {
-        return m_pos >= m_size;
     }
 
 private:
@@ -118,11 +117,6 @@ public:
     void Seek(unsigned long where_to)
     {
         file->seekg(pos = where_to);
-    }
-
-    bool Eof() const
-    {
-        return file->eof();
     }
 
 private:
