@@ -73,12 +73,14 @@
 
 #include "util/noise_factory.h"
 #include "util/img/write_bitmap.h"
+#include "util/enum_options.h"
 
 #include "rendering/gi/gi_probe_control.h"
 #include "rendering/shaders/gi/gi_voxel_debug_shader.h"
 
 #include "asset/fbom/fbom.h"
 #include "asset/byte_writer.h"
+
 
 /* Standard library */
 #include <cstdlib>
@@ -222,8 +224,6 @@ public:
             for (size_t i = 0; i < street->NumChildren(); i++) {
                 if (voxel_debug)
                     street->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
-                street->GetChild(i)->GetMaterial().SetParameter("shininess", 0.3f);
-                street->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
             }
 
             top->AddChild(street);
@@ -275,8 +275,8 @@ public:
                     //box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
                     if (voxel_debug)
                         box->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
-                   box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.8f);
-                   box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.1f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.8f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.1f);
                 }
 
                 box->SetLocalTranslation(box_position);
@@ -452,7 +452,7 @@ public:
         top->AddControl(std::make_shared<SkydomeControl>(cam));
         // top->AddControl(std::make_shared<SkyboxControl>(cam, nullptr));
 
-        // shader = ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties());
+        shader = ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties());
 
         /*auto hydrant = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/FireHydrant/FireHydrantMesh.obj");
         hydrant->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Base_Color.png"));
@@ -518,29 +518,6 @@ public:
         GetInputManager()->RegisterKeyEvent(KEY_3, InputEvent([=](bool pressed) {
             if (!pressed) {
                 return;
-            }
-
-            Environment::GetInstance()->SetVCTEnabled(!Environment::GetInstance()->VCTEnabled());
-        }));
-
-        GetInputManager()->RegisterKeyEvent(KEY_ARROW_LEFT, InputEvent([=](bool pressed) {
-            if (!pressed) {
-                return;
-            }
-
-            if (m_selected_node == nullptr) {
-                return;
-            }
-
-            // move the node in the left direction relative to the camera
-            Vector3 lookat_vector = cam->GetTranslation() - m_selected_node->GetGlobalTranslation();
-            lookat_vector.Normalize();
-
-            Vector3 dir;
-
-            if (fabs(lookat_vector.z) > fabs(lookat_vector.x)) {
-                if (lookat_vector.z > 0.0f) {
-                    dir = Vector3(-1.0f, 0.0f, 0.0f);
                 } else {
                     dir = Vector3(1.0f, 0.0f, 0.0f);
                 }
@@ -590,6 +567,33 @@ public:
             m_selected_node->Move(dir);
         }));
 
+        std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
+
+        std::cout << "Result: " << typeid(*result.get()).name() << "\n";
+        if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+            std::cout << "Loaded entity name: " << entity->GetName() << "\n";
+            std::cout << "entity num children: " << entity->NumChildren() << "\n";
+            entity->Scale(1.0f);
+            for (size_t i = 0; i < entity->NumChildren(); i++) {
+                std::cout << "child [" << i << "] renderable == " << intptr_t(entity->GetChild(i)->GetRenderable().get()) << "\n";
+                if (entity->GetChild(i)->GetRenderable() == nullptr) {
+                    continue;
+                }
+                entity->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
+            top->AddChild(entity);
+        }
+
+        {
+            auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
+            superdan->SetName("superdan");
+            superdan->Move(Vector3(2, 4, 0));
+            superdan->Scale(0.25);
+            for (size_t i = 0; i < superdan->NumChildren(); i++) {
+                superdan->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
+            }
+        }
+
 
         /* {
             auto building = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/building2/building2.obj", true);
@@ -598,8 +602,8 @@ public:
             for (int i = 0; i < building->NumChildren(); i++) {
                 //building->GetChild(i)->GetRenderable()->SetShader(shader);
                 // building->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-                building->GetChild(0)->GetMaterial().SetParameter("shininess", 0.5f);
-                building->GetChild(0)->GetMaterial().SetParameter("roughness", 0.5f);
+                building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.5f);
+                building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.5f);
             }
             top->AddChild(building);
         }*/
@@ -728,12 +732,31 @@ public:
 
 int main()
 {
-    std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
-    FileByteWriter fbw("test.fbom");
-    fbom::FBOMLoader().WriteToByteStream(&fbw, my_entity.get());
-    //fbom::FBOMLoader().LoadFromFile("foo.fbom");
 
-    return 0;
+    // std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
+    // my_entity->AddControl(std::make_shared<NoiseTerrainControl>(nullptr, 12345));
+
+    auto my_entity = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+    my_entity->Scale(Vector3(0.2f));
+    my_entity->Move(Vector3(0, 2, 0));
+
+    FileByteWriter fbw("test.fbom");
+    auto res = fbom::FBOMLoader().WriteToByteStream(&fbw, my_entity.get());
+    fbw.Close();
+
+    if (res != fbom::FBOMResult::FBOM_OK) {
+        throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+    }
+
+    // return 0;
+
+    /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
+
+    if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+        std::cout << "Loaded entity name: " << entity->GetName() << "\n";
+    }
+
+    return 0;*/
 
     CoreEngine *engine = new GlfwEngine();
     CoreEngine::SetInstance(engine);

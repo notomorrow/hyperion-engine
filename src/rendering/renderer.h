@@ -235,6 +235,8 @@ class Shader;
 class Renderer {
 public:
     Renderer(const RenderWindow &);
+    Renderer(const Renderer &other) = delete;
+    Renderer &operator=(const Renderer &other) = delete;
     ~Renderer();
 
     void Begin(Camera *cam, Entity *top);
