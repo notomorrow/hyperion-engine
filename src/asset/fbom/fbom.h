@@ -243,6 +243,22 @@ struct FBOMArray : FBOMType {
     }
 };
 
+struct FBOMStruct : FBOMType {
+    FBOMStruct(size_t sz)
+        : FBOMType("STRUCT", sz) {}
+};
+
+struct FBOMArray : FBOMType {
+    FBOMArray()
+        : FBOMType("ARRAY", 0) {}
+
+    FBOMArray(const FBOMType &held_type, size_t count)
+        : FBOMType("ARRAY", held_type.size * count)
+    {
+        ex_assert_msg(!held_type.IsUnbouned(), "Cannot create array of unbounded type");
+    }
+};
+
 struct FBOMString : FBOMType {
     FBOMString() : FBOMType("STRING", 0) {}
 

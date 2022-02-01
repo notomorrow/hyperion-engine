@@ -68,7 +68,12 @@ FBOMResult FBOMLoader::Deserialize(FBOMObject *in, FBOMDeserialized &out)
     return deserialize_result;
 }
 
-std::shared_ptr<Loadable> FBOMLoader::LoadFromFile(const std::string &path)
+    FBOMResult serialize_result = it->second.m_serializer(this, in, out);
+
+    return serialize_result;
+}
+
+FBOMResult FBOMLoader::WriteToByteStream(ByteWriter *writer, FBOMLoadable *loadable)
 {
     ByteReader *reader = new FileByteReader(path);
 
@@ -97,7 +102,8 @@ std::shared_ptr<Loadable> FBOMLoader::LoadFromFile(const std::string &path)
 
     delete reader;
 
-    hard_assert(root != nullptr);
+    ex_assert_msg(root->nodes.size() == 1, "No object added to root (should be one)");
+    ex_assert(root->nodes[0] != nullptr);
 
     ex_assert_msg(root->nodes.size() == 1, "No object added to root (should be one)");
     ex_assert(root->nodes[0] != nullptr);

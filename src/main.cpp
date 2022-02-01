@@ -368,10 +368,10 @@ public:
         shadows = new PssmShadowMapping(GetCamera(), 4, 120.0f);
         shadows->SetVarianceShadowMapping(true);
 
-        Environment::GetInstance()->SetVCTEnabled(false);
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
         Environment::GetInstance()->SetProbeEnabled(false);
+        Environment::GetInstance()->SetVCTEnabled(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 0, 0));
@@ -508,6 +508,32 @@ public:
             }
             GetScene()->AddChild(entity);
         }*/
+
+        {
+            auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
+            superdan->SetName("superdan");
+            superdan->Move(Vector3(2, 4, 0));
+            superdan->Scale(0.25);
+            for (size_t i = 0; i < superdan->NumChildren(); i++) {
+                superdan->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
+            }
+        }
+
+
+        std::cout << "Result: " << typeid(*result.get()).name() << "\n";
+        if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+            std::cout << "Loaded entity name: " << entity->GetName() << "\n";
+            std::cout << "entity num children: " << entity->NumChildren() << "\n";
+            entity->Scale(1.0f);
+            for (size_t i = 0; i < entity->NumChildren(); i++) {
+                std::cout << "child [" << i << "] renderable == " << intptr_t(entity->GetChild(i)->GetRenderable().get()) << "\n";
+                if (entity->GetChild(i)->GetRenderable() == nullptr) {
+                    continue;
+                }
+                entity->GetChild(i)->GetRenderable()->SetShader(shader);
+            }
+            top->AddChild(entity);
+        }
 
         {
             auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
