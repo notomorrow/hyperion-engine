@@ -101,29 +101,8 @@ void LightingShader::ApplyMaterial(const Material &mat)
         SetUniform(std::string("Has") + it->first, 1);
     }
 
-    if (mat.HasParameter("shininess")) {
-        SetUniform("u_shininess", mat.GetParameter("shininess")[0]);
-    }
-
-    if (mat.HasParameter("roughness")) {
-        SetUniform("u_roughness", mat.GetParameter("roughness")[0]);
-    }
-
-    if (mat.HasParameter("RimShading")) {
-        SetUniform("RimShading", mat.GetParameter("RimShading")[0]);
-    }
-
-    if (Environment::GetInstance()->VCTEnabled()) {
-        for (int i = 0; i < Environment::GetInstance()->GetGIManager()->NumProbes(); i++) {
-            if (auto &probe = Environment::GetInstance()->GetGIManager()->GetProbe(i)) {
-                probe->Bind(this);
-
-                for (int j = 0; j < probe->NumCameras(); j++) {
-                    SetUniform(std::string("VoxelMap[") + std::to_string(j) + "]", probe->GetCamera(j)->GetTexture().get());
-                }
-            }
-        }
-    }
+    SetUniform("u_shininess", mat.GetParameter(MATERIAL_PARAMETER_METALNESS)[0]);
+    SetUniform("u_roughness", mat.GetParameter(MATERIAL_PARAMETER_ROUGHNESS)[0]);
 }
 
 void LightingShader::ApplyTransforms(const Transform &transform, Camera *camera)

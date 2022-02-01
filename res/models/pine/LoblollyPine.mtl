@@ -1,0 +1,46 @@
+# Wavefront Object Material File
+# Generated using SpeedTree tools
+
+newmtl Cap_01
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.686275 0.694118 0.694118
+Ks 0.27451 0.27451 0.27451
+Ns 64
+illum 2
+map_Kd Cap_01.png
+map_d Cap_01.png
+map_bump Cap_01_Normal.png
+bump Cap_01_Normal.png -bm 1
+
+
+newmtl LoblollyPineBark
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.686275 0.694118 0.694118
+Ks 0.27451 0.27451 0.27451
+Ns 64
+illum 2
+map_Kd LoblollyPineBark.png
+map_d LoblollyPineBark.png
+map_bump LoblollyPineBark_Normal.png
+bump LoblollyPineBark_Normal.png -bm 1
+
+
+newmtl LoblollyPineNeedles_1
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.839216 0.839216 0.839216
+Ks 0.698039 0.705882 0.705882
+Ns 19.9
+illum 2
+map_Kd LoblollyPineNeedles_1.png
+map_d LoblollyPineNeedles_1.png
+map_bump LoblollyPineNeedles_1_Normal.png
+bump LoblollyPineNeedles_1_Normal.png -bm 1
+map_Ks LoblollyPineNeedles_1_Spec.png
+
+

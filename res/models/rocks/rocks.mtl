@@ -1,0 +1,48 @@
+# Wavefront Object Material File
+# Generated using SpeedTree tools
+
+newmtl Granite_1
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.501961 0.501961 0.501961
+Ks 0.223529 0.223529 0.223529
+Ns 76.6
+illum 2
+map_Kd Granite_1.png
+map_d Granite_1.png
+map_bump Granite_1_Normal.png
+bump Granite_1_Normal.png -bm 1
+map_Ks Granite_1_Spec.png
+
+
+newmtl Granite_2
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.501961 0.501961 0.501961
+Ks 0.223529 0.223529 0.223529
+Ns 76.6
+illum 2
+map_Kd Granite_2.png
+map_d Granite_2.png
+map_bump Granite_2_Normal.png
+bump Granite_2_Normal.png -bm 1
+map_Ks Granite_2_Spec.png
+
+
+newmtl Granite_3
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.501961 0.501961 0.501961
+Ks 0.223529 0.223529 0.223529
+Ns 76.6
+illum 2
+map_Kd Granite_3.png
+map_d Granite_3.png
+map_bump Granite_3_Normal.png
+bump Granite_3_Normal.png -bm 1
+map_Ks Granite_3_Spec.png
+
+

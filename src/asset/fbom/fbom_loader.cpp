@@ -1,14 +1,20 @@
 #include "fbom.h"
 #include "../byte_reader.h"
-#include "marshals/entity_marshal.h"
+
+// marshal classes
+#include "../../entity.h"
+#include "../../terrain/noise_terrain/noise_terrain_control.h"
+#include "../../rendering/mesh.h"
 
 namespace hyperion {
 namespace fbom {
 
 FBOMLoader::FBOMLoader()
-    : root(new FBOMObject("ROOT")),
+    : root(new FBOMObject(FBOMObjectType("ROOT"))),
       m_loaders({
-          { "ENTITY", new EntityMarshal() }
+          { "ENTITY", FBOM_MARSHAL_CLASS(Entity) },
+          { "NOISE_TERRAIN_CONTROL", FBOM_MARSHAL_CLASS(NoiseTerrainControl) },
+          { "MESH", FBOM_MARSHAL_CLASS(Mesh) }
       })
 {
     last = root;
@@ -21,38 +27,72 @@ FBOMLoader::FBOMLoader()
         FBOMFloat(),
         FBOMBool(),
         FBOMByte(),
-        FBOMString()
+        FBOMString(),
+        FBOMStruct(0),
+        FBOMArray()
     };
+
+    // add array types for each type
+    // for (auto it : m_registered_types) {
+    //     m_registered_types.push_back(FBOMArray())
+    // }
 }
 
 FBOMLoader::~FBOMLoader()
 {
-    for (auto it : m_loaders) {
-        if (it.second != nullptr) {
-            delete it.second;
-        }
-    }
-
     if (root) {
         delete root;
     }
 }
 
-FBOMResult FBOMLoader::WriteToByteStream(ByteWriter *writer, FBOMLoadable *loadable) const
+FBOMResult FBOMLoader::Deserialize(FBOMObject *in, FBOMDeserialized &out)
+{
+    ex_assert(in != nullptr);
+    ex_assert(out == nullptr);
+    ex_assert_msg(in->deserialized_object == nullptr, "Object was already deserialized");
+
+    std::string object_type = in->m_object_type.name;
+
+    auto it = m_loaders.find(object_type);
+
+    if (it == m_loaders.end()) {
+        return FBOMResult(FBOMResult::FBOM_ERR, std::string("No loader for type ") + object_type);
+    }
+
+    FBOMResult deserialize_result = it->second.m_deserializer(this, in, out);
+
+    in->deserialized_object = out;
+
+    return deserialize_result;
+}
+
+FBOMResult FBOMLoader::Serialize(FBOMLoadable *in, FBOMObject *out)
+{
+    ex_assert(in != nullptr);
+    ex_assert(out != nullptr);
+
+    std::string object_type = in->GetLoadableType().name;
+
+    auto it = m_loaders.find(object_type);
+
+    if (it == m_loaders.end()) {
+        return FBOMResult(FBOMResult::FBOM_ERR, std::string("No loader for type ") + object_type);
+    }
+
+    FBOMResult serialize_result = it->second.m_serializer(this, in, out);
+
+    return serialize_result;
+}
+
+FBOMResult FBOMLoader::WriteToByteStream(ByteWriter *writer, FBOMLoadable *loadable)
 {
     ex_assert(writer != nullptr);
 
-    std::string loadable_type = loadable->GetLoadableType();
+    const FBOMObjectType &loadable_type = loadable->GetLoadableType();
     FBOMObject base(loadable_type);
+    FBOMResult result = Serialize(loadable, &base);
 
-    // get loader for this type
-    auto it = m_loaders.find(loadable_type);
-
-    ex_assert_msg(it != m_loaders.end(), "No loader found");
-
-    FBOMResult result = it->second->Serialize(loadable, &base);
-
-    if (result == FBOM_OK) {
+    if (result == FBOMResult::FBOM_OK) {
         base.WriteToByteStream(writer);
     }
 
@@ -61,58 +101,6 @@ FBOMResult FBOMLoader::WriteToByteStream(ByteWriter *writer, FBOMLoadable *loada
 
 std::shared_ptr<Loadable> FBOMLoader::LoadFromFile(const std::string &path)
 {
-    /*const char test_data[] = {
-        char(FBOM_OBJECT_START),
-            11, 0, 0, 0,
-            'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd',
-            char(FBOM_DEFINE_PROPERTY),
-                4, 0, 0, 0,
-                'n', 'a', 'm', 'e',
-                5, 0, 0, 0,
-                'I', 'N', 'T', '3', '2',
-                4, 0, 0, 0,
-                123, 0, 0, 0,
-            char(FBOM_DEFINE_PROPERTY),
-                5, 0, 0, 0,
-                'c', 'o', 'l', 'o', 'r',
-                5, 0, 0, 0,
-                'I', 'N', 'T', '6', '4',
-                8, 0, 0, 0,
-                12, 0, 0, 0, 0, 0, 0, 0,
-            char(FBOM_DEFINE_PROPERTY),
-                5, 0, 0, 0,
-                'h', 'e', 'l', 'l', 'o',
-                6, 0, 0, 0,
-                'S', 'T', 'R', 'I', 'N', 'G',
-                4, 0, 0, 0,
-                'w', 'o', 'o', 't',
-            char(FBOM_OBJECT_START), // subnode
-                11, 0, 0, 0,
-                'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd',
-                char(FBOM_DEFINE_PROPERTY),
-                    5, 0, 0, 0,
-                    'h', 'e', 'l', 'l', 'o',
-                    6, 0, 0, 0,
-                    'S', 'T', 'R', 'I', 'N', 'G',
-                    4, 0, 0, 0,
-                    'p', 'o', 'o', 't',
-            char(FBOM_OBJECT_END),
-        char(FBOM_OBJECT_END)
-    };
-
-    FBOMLoaderData loader;
-    loader.deserialize_fn = [](FBOMObject *obj) -> std::shared_ptr<FBOMLoadable> {
-        std::cout << "deserialize object\n";
-
-        if (auto property = obj->GetProperty("hello")) {
-            std::cout << "color: " << property.ToString() << "\n";
-        }
-
-        return nullptr;
-    };
-
-    m_loaders.insert_or_assign("hello world", loader);*/
-
     ByteReader *reader = new FileByteReader(path);
 
     // TODO: file header
@@ -136,10 +124,12 @@ std::shared_ptr<Loadable> FBOMLoader::LoadFromFile(const std::string &path)
     delete reader;
 
     ex_assert(ins == FBOM_OBJECT_END);
-
     hard_assert(root != nullptr);
 
-    return root->deserialized_object;
+    ex_assert_msg(root->nodes.size() == 1, "No object added to root (should be one)");
+    ex_assert(root->nodes[0] != nullptr);
+
+    return root->nodes[0]->deserialized_object;
 }
 
 std::string FBOMLoader::ReadString(ByteReader *reader)
@@ -160,9 +150,37 @@ std::string FBOMLoader::ReadString(ByteReader *reader)
     return str;
 }
 
+FBOMObjectType FBOMLoader::ReadObjectType(ByteReader *reader)
+{
+    FBOMObjectType result("UNSET");
+
+    while (true) {
+        std::string object_type_name = ReadString(reader);
+
+        result.name = object_type_name;
+
+        // object type has unbounded size (0), so we don't write it in here, no need to read
+
+        uint8_t extends_flag;
+        reader->Read(&extends_flag);
+
+        soft_assert_break_msg(extends_flag <= 1, "flag should be 0 or 1, higher number indicative of read error");
+
+        if (!extends_flag) {
+            break;
+        }
+
+        result = result.Extend(FBOMObjectType("UNSET"));
+    }
+
+    return result;
+}
+
 void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
 {
     std::string object_type;
+
+    // TODO: pre-saving ObjectTypes at start, then using offset
 
     switch (command) {
     case FBOM_OBJECT_START:
@@ -170,12 +188,12 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
         hard_assert(last != nullptr);
 
         // read string of "type" - loader to use
-        object_type = ReadString(reader);
+        FBOMObjectType object_type = ReadObjectType(reader);
 
-        auto it = m_loaders.find(object_type);
+        auto it = m_loaders.find(object_type.name);
 
         if (it == m_loaders.end()) {
-            throw std::runtime_error(std::string("No loader defined for ") + object_type);
+            throw std::runtime_error(std::string("No loader defined for ") + object_type.name);
         }
 
         last = last->AddChild(object_type);
@@ -186,18 +204,16 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
     {
         hard_assert(last != nullptr);
 
-        // call the deserializer
-        object_type = last->decl_type;
+        FBOMDeserialized out = nullptr;
+        FBOMResult deserialize_result = Deserialize(last, out);
 
-        ex_assert(last->deserialized_object == nullptr);
+        last->deserialized_object = out;
 
-        FBOMLoadable *out_ptr = nullptr;
-        FBOMResult deserialize_result = m_loaders.at(object_type)->Deserialize(last, out_ptr);
+        if (deserialize_result != FBOMResult::FBOM_OK) {
+            throw std::runtime_error(std::string("Could not deserialize ") + last->m_object_type.name + " object: " + deserialize_result.message);
+        }
 
-        last->deserialized_object.reset(out_ptr);
         last = last->parent;
-
-        soft_assert_msg(deserialize_result == FBOM_OK, "Could not serialize object");
 
         break;
     }
@@ -206,7 +222,6 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
         hard_assert(last != nullptr);
 
         std::string property_name = ReadString(reader);
-
         std::string property_type = ReadString(reader);
         
         auto type_it = std::find_if(m_registered_types.begin(), m_registered_types.end(), [=](const auto &it) {
@@ -214,15 +229,15 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
         });
 
         if (type_it == m_registered_types.end()) {
-            throw std::runtime_error(std::string("Unregistered type '") + property_type + "'");
+            throw std::runtime_error(std::string("Unregistered primitive type '") + property_type + "'");
         }
 
         uint32_t sz;
         reader->Read(&sz);
 
-        if (!type_it->IsUnbouned()) {
-            ex_assert_msg(sz == type_it->size, "size mismatch for bounded size type");
-        }
+        // if (!type_it->IsUnbouned()) {
+        //     ex_assert_msg(sz == type_it->size, "size mismatch for bounded size type");
+        // }
 
         unsigned char *bytes = new unsigned char[sz];
         reader->Read(bytes, sz);

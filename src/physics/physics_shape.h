@@ -29,6 +29,8 @@ class PhysicsShape {
     friend class RigidBody;
 public:
     PhysicsShape(PhysicsShapeType type);
+    PhysicsShape(const PhysicsShape &other) = delete;
+    PhysicsShape &operator=(const PhysicsShape &other) = delete;
     virtual ~PhysicsShape();
 
     inline const Matrix4 &GetTransform() const { return m_transform; }

@@ -1,0 +1,16 @@
+# Blender MTL File: 'None'
+# Material Count: 1
+
+newmtl Granite_1.001
+Ns 76.470588
+Ka 0.501961 0.501961 0.501961
+Kd 1.000000 1.000000 1.000000
+Ks 0.223529 0.223529 0.223529
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd Granite_1.png
+map_Bump Granite_1_Normal.png
+map_Ks Granite_1_Spec.png
+map_d Granite_1.png

@@ -81,8 +81,8 @@ void NoiseTerrainChunk::OnAdded()
 
     SetRenderable(mesh);
 
-    GetMaterial().SetParameter("shininess", 0.5f);
-    GetMaterial().SetParameter("roughness", 0.9f);
+    GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.5f);
+    GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
     GetMaterial().diffuse_color = { 1.0, 1.0, 1.0, 1.0 };
     GetMaterial().cull_faces = MaterialFace_None;
 
@@ -101,7 +101,7 @@ void NoiseTerrainChunk::OnAdded()
 
     // GetMaterial().SetTexture("Level1ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
     // GetMaterial().SetTexture("Level1NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));
-    GetMaterial().SetParameter("Level1Height", 80.0f);
+    GetMaterial().SetParameter(MATERIAL_PARAMETER_TERRAIN_LEVEL_0_HEIGHT, 80.0f);
 }
 
 SimplexNoiseData NoiseTerrainChunk::CreateSimplexNoise(int seed)
