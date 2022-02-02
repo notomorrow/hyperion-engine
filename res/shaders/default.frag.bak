@@ -339,9 +339,10 @@ void main()
   
 #if VCT_ENABLED
   //testing
-  vec3 vct = VCTSpecular(v_position.xyz, n.xyz, u_camerapos);
+  vec4 vctSpecular = VCTSpecular(v_position.xyz, n.xyz, u_camerapos);
+  vec4 vctDiffuse = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent);
 
-  output0 = vec4(vct, 1.0);
+  output0 = vec4(vctDiffuse.rgb, 1.0);//voxelFetch(decodeVoxelPosition(v_position.xyz), viewVector, 0);
 #endif
 
 #if !VCT_ENABLED

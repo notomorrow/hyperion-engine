@@ -299,9 +299,16 @@ void main()
   vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
 #endif
 
+#if VCT_ENABLED
+  //testing
+  vec4 vctSpecular = VCTSpecular(v_position.xyz, n.xyz, u_camerapos);
+  vec4 vctDiffuse = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent);
+  specularCubemap = vctSpecular.rgb;
+  diffuseCubemap = vctDiffuse.rgb;
+#endif
 
   float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
-  specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughness);
+  //specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughness);
 
 
   vec3 F0 = vec3(0.04);
@@ -332,16 +339,14 @@ void main()
 
   vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
   diffuseLight += diffRef;
-  diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
+  diffuseLight += diffuseCubemap.rgb;
   diffuseLight *= metallicDiff;
 
   vec3 color = diffuseLight + reflectedLight * shadowColor.rgb;
   
 #if VCT_ENABLED
-  //testing
-  vec4 vct = VCTSpecular(v_position.xyz, n.xyz, u_camerapos);
 
-  output0 = vec4(vct.xyz, 1.0);
+  output0 = vec4(color, 1.0);//voxelFetch(decodeVoxelPosition(v_position.xyz), viewVector, 0);
 #endif
 
 #if !VCT_ENABLED

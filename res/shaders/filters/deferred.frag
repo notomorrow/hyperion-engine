@@ -173,5 +173,5 @@ void main()
         );
     }
 
-    output0 = vec4(result, 1.0);
+    output0 = vec4(n.xyz, 1.0);
 }

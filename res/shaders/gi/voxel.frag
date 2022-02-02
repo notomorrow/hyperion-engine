@@ -24,6 +24,7 @@ uniform vec3 VoxelSceneScale;
 
 uniform float u_intensity;
 
+
 #if VCT_GEOMETRY_SHADER
 // output
 in GSOutput
@@ -64,30 +65,16 @@ void main(void)
 	  imageColor = texture(DiffuseMap, v_texcoord0);
 #endif
 	}
-	
-	//imageColor *= u_intensity;
-	//imageColor *= lighting;
-	//imageStore(framebufferImage, ivec3(gl_FragCoord.x/8, gl_FragCoord.y/8, gl_FragCoord.z/8), C_albedo);
-	
-	//vec3 voxel = scaleAndBias(gs_out.position.xyz);
-	//ivec3 dim = imageSize(framebufferImage);
 
 #if VCT_GEOMETRY_SHADER
-	vec3 test_store_pos = ((gs_out.position).xyz - VoxelProbePosition) * 0.1;
-	imageStore(framebufferImage, ivec3(test_store_pos.x, test_store_pos.y, test_store_pos.z)+ivec3(halfVoxelImageSize), imageColor);
+	vec4 position = gs_out.position;
 #endif
-
 #if !VCT_GEOMETRY_SHADER
-	vec4 storagePos = StorageTransformMatrix * ndcPos;
-	storagePos.xyz *= 1.0 / storagePos.w;
-	
-	ivec3 voxelPos = ivec3(imageSize(framebufferImage) * (storagePos.xyz * .5 + .5));
-	//imageStore(framebufferImage, voxelPos, imageColor);
-	
-	
-	vec3 test_store_pos = ((v_position).xyz - VoxelProbePosition) * 0.1;
-	imageStore(framebufferImage, ivec3(test_store_pos.x, test_store_pos.y, test_store_pos.z)+ivec3(halfVoxelImageSize), imageColor);
+	vec4 position = v_position;
 #endif
 
-	//imageStore(framebufferImage, ivec3(dim * voxel), imageColor);
+	position /= position.w;
+
+	vec3 test_store_pos = (position.xyz - VoxelProbePosition) * $VCT_SCALE;
+	imageStore(framebufferImage, ivec3(test_store_pos.x, test_store_pos.y, test_store_pos.z) + ivec3(halfVoxelImageSize), imageColor);
 }
