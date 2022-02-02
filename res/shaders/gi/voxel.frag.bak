@@ -55,6 +55,7 @@ void main(void)
 
 	
 	vec4 imageColor = C_albedo;
+
 	
 	if (HasDiffuseMap == 1) {
 #if VCT_GEOMETRY_SHADER
@@ -66,7 +67,9 @@ void main(void)
 #endif
 	}
 	
+	
 	imageColor *= vec4(1.0 + Emissiveness);
+	imageColor.a = 1.0;
 	
 	//vec3 voxel = scaleAndBias(gs_out.position.xyz);
 	//ivec3 dim = imageSize(framebufferImage);
