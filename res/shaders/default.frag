@@ -151,14 +151,20 @@ void main()
 
 #if !PROBE_ENABLED
   vec3 reflectionVector = ReflectionVector(n, v_position.xyz, u_camerapos);
-  blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
-#if !VCT_ENABLED
-  specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
-#endif // !VCT_ENABLED
-#endif // !PROBE_ENABLED
+  vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
+  vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
+#endif
+
+#if VCT_ENABLED
+  //testing
+  vec4 vctSpecular = VCTSpecular(v_position.xyz, n.xyz, u_camerapos);
+  vec4 vctDiffuse = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent);
+  specularCubemap = vctSpecular.rgb;
+  diffuseCubemap = vctDiffuse.rgb;
+#endif
 
   float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
-  specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughness);
+  //specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughness);
 
 
   vec3 F0 = vec3(0.04);
@@ -191,14 +197,15 @@ void main()
   diffRef += diffuseCubemap;// * (1.0 / $PI); // use diffuse cubemap as GI
 #endif
   diffuseLight += diffRef;
-
-//#if !VCT_ENABLED
-  diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
-//#endif
+  diffuseLight += diffuseCubemap.rgb;
   diffuseLight *= metallicDiff;
 
   vec3 color = diffuseLight + reflectedLight * shadowColor.rgb;
   
+#if VCT_ENABLED
+
+  output0 = vec4(color, 1.0);//voxelFetch(decodeVoxelPosition(v_position.xyz), viewVector, 0);
+#endif
 
   output0 = vec4(color, 1.0);
 #endif
