@@ -341,7 +341,7 @@ void main()
   //testing
   vec4 vct = VCTSpecular(v_position.xyz, n.xyz, u_camerapos);
 
-  output0 = vec4(vct.rgb, 1.0);
+  output0 = vec4(vct.xyz, 1.0);
 #endif
 
 #if !VCT_ENABLED

@@ -6,7 +6,8 @@ uniform mat4 u_viewMatrix;
 
 
 layout(triangles) in;
-layout(triangle_strip, max_vertices = 24) out;
+//layout(triangle_strip, max_vertices = 24) out;
+layout(triangle_strip, max_vertices = 3) out;
 // input
 in VSOutput
 {
@@ -27,6 +28,9 @@ out GSOutput
 
 float cubeScale = 1.2;
 
+#define $OLD 1
+
+#if OLD
 void main()
 {
 
@@ -222,3 +226,27 @@ void main()
 	EndPrimitive();
 
 }
+#endif
+
+#if NEW
+void main() {
+    const vec3 p1 = (vs_out[1].position - vs_out[0].position).xyz;
+	const vec3 p2 = (vs_out[2].position - vs_out[0].position).xyz;
+	const vec3 p = abs(cross(p1, p2)); 
+	for(uint i = 0; i < 3; ++i){
+		gs_out.position = vs_out[i].position;
+		gs_out.normal = vs_out[i].normal;
+		gs_out.texcoord0 = vs_out[i].texcoord0;
+		if(p.z > p.x && p.z > p.y){
+			gl_Position = vec4(gs_out.position.x, gs_out.position.y, 0.0, 1.0);
+		} else if (p.x > p.y && p.x > p.z){
+			gl_Position = vec4(gs_out.position.y, gs_out.position.z, 0.0, 1.0);
+		} else {
+			gl_Position = vec4(gs_out.position.x, gs_out.position.z, 0.0, 1.0);
+		}
+		EmitVertex();
+	}
+    EndPrimitive();
+
+}
+#endif

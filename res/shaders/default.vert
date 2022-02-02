@@ -12,6 +12,8 @@ out mat3 v_tbn;
 out vec4 v_ndc;
 out vec4 v_voxelPosition;
 
+uniform mat4 WorldToNdcMatrix;
+
 #if SKINNING
 #include "include/skinning.inc"
 #endif
