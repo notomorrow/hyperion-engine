@@ -11,6 +11,7 @@
 
 uniform sampler3D VoxelMap[$VCT_NUM_MAPS];
 uniform vec3 VoxelProbePosition;
+uniform mat4 WorldToVoxel;
 
 vec4 voxelFetch(vec3 pos, vec3 dir, float lod)
 {
@@ -41,6 +42,8 @@ vec4 voxelFetch(vec3 pos, vec3 dir, float lod)
 	return filtered;
 }
 
+vec3 scaleAndBias(const vec3 p) { return 0.5f * p + vec3(0.5f); }
+
 vec4 voxelTraceCone(float minVoxelDiameter, vec3 origin, vec3 dir, float coneRatio, float maxDist)
 {
 	float minVoxelDiameterInv = 1.0/minVoxelDiameter;
@@ -66,6 +69,11 @@ vec4 voxelTraceCone(float minVoxelDiameter, vec3 origin, vec3 dir, float coneRat
 
 vec3 decodeVoxelPosition(vec3 voxel)
 {
+	//return scaleAndBias(v_voxelPosition.xyz);
+	vec4 voxelPos = WorldToVoxel * vec4(v_voxelPosition.xyz, 1.0);
+	voxelPos.xyz *= 1.0 / voxelPos.w;
+	//return voxelPos.xyz;
+	
 	float voxelImageSize = float($VCT_MAP_SIZE);
 	float halfVoxelImageSize = voxelImageSize * 0.5;
 
