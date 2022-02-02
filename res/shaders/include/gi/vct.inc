@@ -101,7 +101,7 @@ vec4 VCTDiffuse(vec3 position, vec3 normal, vec3 camera, vec3 tangent, vec3 bita
 	return coneTraceRes / 5.0;
 }
 
-vec4 VCTSpecular(vec3 voxel, vec3 position, vec3 normal, vec3 camera)
+vec4 VCTSpecular(vec3 position, vec3 normal, vec3 camera)
 {
 	float voxelImageSize = float($VCT_MAP_SIZE);
 

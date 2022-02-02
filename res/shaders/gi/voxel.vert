@@ -12,7 +12,6 @@ uniform mat4 WorldToNdcMatrix;
 out vec4 v_position;
 out vec4 v_normal;
 out vec2 v_texcoord0;
-out vec4 ndcPos;
 
 #if VCT_GEOMETRY_SHADER
 out VSOutput
