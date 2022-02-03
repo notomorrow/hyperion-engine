@@ -2,7 +2,7 @@
 
 namespace hyperion {
 
-EntityControl::EntityControl(const fbom::FBOMObjectType &loadable_type, const double tps)
+EntityControl::EntityControl(const fbom::FBOMType &loadable_type, const double tps)
     : fbom::FBOMLoadable(fbom::FBOMObjectType("CONTROL").Extend(loadable_type)),
       tps(tps), 
       tick(0.0),

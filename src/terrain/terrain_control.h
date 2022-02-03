@@ -24,7 +24,7 @@ namespace hyperion {
 
 class TerrainControl : public EntityControl {
 public:
-    TerrainControl(const fbom::FBOMObjectType &loadable_type, Camera *camera);
+    TerrainControl(const fbom::FBOMType &loadable_type, Camera *camera);
     virtual ~TerrainControl();
 
     virtual void OnAdded();

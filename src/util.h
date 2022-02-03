@@ -12,8 +12,8 @@ using BitFlags_t = uint64_t;
 #define STR(s) #s
 #define STRINGIFY(s) STR(s)
 
-#define _print_assert(mode, cond) { const char *s = "*** " #mode " assertion failed ***\n\t" #cond " evaluated to FALSE in file " __FILE__; puts(s); }
-#define _print_assert_msg(mode, cond, msg) { const char *s = "*** " #mode " assertion failed: " #msg " ***\n\t" #cond " evaluated to FALSE in file " __FILE__; puts(s); }
+#define _print_assert(mode, cond) { const char *s = "*** " mode " assertion failed ***\n\t" #cond " evaluated to FALSE in file " __FILE__; puts(s); }
+#define _print_assert_msg(mode, cond, msg) { const char *s = "*** " mode " assertion failed: " #msg " ***\n\t" #cond " evaluated to FALSE in file " __FILE__; puts(s); }
 
 #define ex_assert_msg(cond, msg) { if (!(cond)) { throw std::runtime_error("Invalid argument: " msg "\n\tCondition: " #cond " evaluated to FALSE in file " __FILE__); } }
 #define ex_assert(cond) { if (!(cond)) { const char *s = "*** assertion failed ***\n\t" #cond " evaluated to FALSE in file " __FILE__; throw std::runtime_error(s); } }

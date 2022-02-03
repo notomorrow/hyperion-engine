@@ -11,26 +11,7 @@ void FBOMObject::WriteToByteStream(ByteWriter *out) const
     out->Write(uint8_t(FBOM_OBJECT_START));
 
     // write typechain
-
-    std::stack<const FBOMType*> type_chain;
-    const FBOMType *type = &m_object_type;
-
-    while (type != nullptr) {
-        type_chain.push(type);
-        type = type->extends;
-    }
-
-    while (!type_chain.empty()) {
-        // write string of object type (loader to use)
-        out->WriteString(type_chain.top()->name);
-
-        type_chain.pop();
-
-        // write a byte stating whether there is an extender class
-        uint8_t has_extender = !type_chain.empty();
-
-        out->Write(has_extender);
-    }
+    FBOMWriter::WriteObjectType(out, m_object_type);
 
     // add all properties
     for (auto &it : properties) {
@@ -39,8 +20,8 @@ void FBOMObject::WriteToByteStream(ByteWriter *out) const
         // write property name
         out->WriteString(it.first);
 
-        // write property type name
-        out->WriteString(it.second.GetType().name);
+        // write property type
+        FBOMWriter::WriteObjectType(out, it.second.GetType());
 
         // write out size of object
         // TODO: if not unbounded type, assert that size of data matches type size

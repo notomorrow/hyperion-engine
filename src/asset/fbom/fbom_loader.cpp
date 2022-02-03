@@ -88,8 +88,7 @@ FBOMResult FBOMLoader::WriteToByteStream(ByteWriter *writer, FBOMLoadable *loada
 {
     ex_assert(writer != nullptr);
 
-    const FBOMObjectType &loadable_type = loadable->GetLoadableType();
-    FBOMObject base(loadable_type);
+    FBOMObject base(loadable->GetLoadableType());
     FBOMResult result = Serialize(loadable, &base);
 
     if (result == FBOMResult::FBOM_OK) {
@@ -150,27 +149,40 @@ std::string FBOMLoader::ReadString(ByteReader *reader)
     return str;
 }
 
-FBOMObjectType FBOMLoader::ReadObjectType(ByteReader *reader)
+FBOMType FBOMLoader::ReadObjectType(ByteReader *reader)
 {
-    FBOMObjectType result("UNSET");
+    FBOMType result = FBOMUnset();
 
-    while (true) {
-        std::string object_type_name = ReadString(reader);
+    enum {
+        OBJECT_TYPE_LOCATION_NONE = 0x00,
+        OBJECT_TYPE_LOCATION_STATIC = 0x01,
+        OBJECT_TYPE_LOCATION_INPLACE = 0x02
+    };
 
-        result.name = object_type_name;
+    uint8_t object_type_location = OBJECT_TYPE_LOCATION_NONE;
 
-        // object type has unbounded size (0), so we don't write it in here, no need to read
+    // read location (later will add "static" type, which just uses an index)
+    reader->Read(&object_type_location);
 
-        uint8_t extends_flag;
-        reader->Read(&extends_flag);
+    hard_assert_msg(object_type_location == OBJECT_TYPE_LOCATION_INPLACE, "other locations not implemented");
 
-        soft_assert_break_msg(extends_flag <= 1, "flag should be 0 or 1, higher number indicative of read error");
+    uint8_t extend_level;
+    reader->Read(&extend_level);
 
-        if (!extends_flag) {
+    for (int i = 0; i < extend_level; i++) {
+        std::string type_name = ReadString(reader);
+        result.name = type_name;
+
+        // read size of object
+        uint64_t type_size;
+        reader->Read(&type_size);
+        result.size = type_size;
+
+        if (i == extend_level - 1) {
             break;
         }
 
-        result = result.Extend(FBOMObjectType("UNSET"));
+        result = result.Extend(FBOMUnset());
     }
 
     return result;
@@ -188,7 +200,7 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
         hard_assert(last != nullptr);
 
         // read string of "type" - loader to use
-        FBOMObjectType object_type = ReadObjectType(reader);
+        FBOMType object_type = ReadObjectType(reader);
 
         auto it = m_loaders.find(object_type.name);
 
@@ -222,15 +234,16 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
         hard_assert(last != nullptr);
 
         std::string property_name = ReadString(reader);
-        std::string property_type = ReadString(reader);
         
-        auto type_it = std::find_if(m_registered_types.begin(), m_registered_types.end(), [=](const auto &it) {
+        /*auto type_it = std::find_if(m_registered_types.begin(), m_registered_types.end(), [=](const auto &it) {
             return it.name == property_type;
         });
 
         if (type_it == m_registered_types.end()) {
             throw std::runtime_error(std::string("Unregistered primitive type '") + property_type + "'");
-        }
+        }*/
+
+        FBOMType object_type = ReadObjectType(reader);
 
         uint32_t sz;
         reader->Read(&sz);
@@ -242,7 +255,7 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
         unsigned char *bytes = new unsigned char[sz];
         reader->Read(bytes, sz);
 
-        last->SetProperty(property_name, *type_it, sz, bytes);
+        last->SetProperty(property_name, object_type, sz, bytes);
 
         delete[] bytes;
 
