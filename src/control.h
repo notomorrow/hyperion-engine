@@ -10,7 +10,7 @@ class Entity;
 class EntityControl : public fbom::FBOMLoadable {
     friend class Entity;
 public:
-    EntityControl(const fbom::FBOMObjectType &loadable_type, const double tps = 30.0);
+    EntityControl(const fbom::FBOMType &loadable_type, const double tps = 30.0);
     EntityControl(const EntityControl &other) = delete;
     EntityControl &operator=(const EntityControl &other) = delete;
     virtual ~EntityControl();
