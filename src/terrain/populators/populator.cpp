@@ -14,7 +14,7 @@
 
 namespace hyperion {
 Populator::Populator(
-    const fbom::FBOMObjectType &loadable_type,
+    const fbom::FBOMType &loadable_type,
     Camera *camera,
     unsigned long seed,
     double probability_factor,

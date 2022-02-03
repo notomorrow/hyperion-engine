@@ -19,7 +19,7 @@ public:
     struct Patch;
 
     Populator(
-        const fbom::FBOMObjectType &loadable_type,
+        const fbom::FBOMType &loadable_type,
         Camera *camera,
         unsigned long seed = 12345,
         double probability_factor = 0.55,

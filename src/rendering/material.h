@@ -137,12 +137,6 @@ public:
     {
         HashCode hc;
 
-        // for (int i = 0; i < m_params.Size(); i++) {
-        //     auto pair = m_params.KeyValueAt(i);
-
-        //     hc.Add(int(pair.first));
-        //     hc.Add(pair.second.GetHashCode());
-        // }
         hc.Add(m_params.GetHashCode());
 
         for (const auto &it : textures) {
@@ -171,6 +165,8 @@ public:
         using namespace fbom;
 
         out = std::make_shared<Material>();
+
+        
 
         return FBOMResult::FBOM_OK;
     }

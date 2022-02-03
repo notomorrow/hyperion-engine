@@ -11,7 +11,7 @@ namespace hyperion {
 
 static int num_threads = 0;
 
-TerrainControl::TerrainControl(const fbom::FBOMObjectType &loadable_type, Camera *camera)
+TerrainControl::TerrainControl(const fbom::FBOMType &loadable_type, Camera *camera)
     : EntityControl(fbom::FBOMObjectType("TERRAIN_CONTROL").Extend(loadable_type), 30.0),
       m_camera(camera),
       m_scale(8, 4, 8),

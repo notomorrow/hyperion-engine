@@ -31,7 +31,7 @@ public:
         RB_BUFFER = 6
     };
 
-    Renderable(const fbom::FBOMObjectType &loadable_type,
+    Renderable(const fbom::FBOMType &loadable_type,
         RenderBucket bucket = RB_OPAQUE);
     Renderable(const Renderable &other) = delete;
     Renderable &operator=(const Renderable &other) = delete;

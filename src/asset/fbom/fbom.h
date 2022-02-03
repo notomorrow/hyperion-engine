@@ -93,6 +93,8 @@ struct FBOMType {
         }
     }
 
+    FBOMType Extend(const FBOMType &object) const;
+
     // inline bool IsArray() const { return IsOrExtends("ARRAY"); }
     // inline bool IsStruct() const { return IsOrExtends("STRUCT"); }
 
@@ -126,10 +128,16 @@ struct FBOMType {
         return extends->IsOrExtends(name);
     }
 
-    bool IsOrExtends(const FBOMType &other) const
+    bool IsOrExtends(const FBOMType &other, bool allow_unbounded = true) const
     {
         if (operator==(other)) {
             return true;
+        }
+
+        if (allow_unbounded && (IsUnbouned() || other.IsUnbouned())) {
+            if (name == other.name && extends == other.extends) { // don't size check
+                return true;
+            }
         }
 
         return Extends(other);
@@ -155,6 +163,17 @@ struct FBOMType {
         return name == other.name
             && size == other.size
             && extends == other.extends;
+    }
+
+    std::string ToString() const
+    {
+        std::string str = name + " (" + std::to_string(size) + ") ";
+
+        if (extends != nullptr) {
+            str += "[" + extends->ToString() + "]";
+        }
+
+        return str;
     }
 };
 
@@ -228,8 +247,8 @@ struct FBOMBaseObjectType : FBOMType {
 };
 
 struct FBOMObjectType : FBOMType {
-    FBOMObjectType(const std::string &name, FBOMType extends)
-        : FBOMType(name, 0, &extends)
+    explicit FBOMObjectType(void)
+        : FBOMObjectType("UNSET")
     {
     }
 
@@ -238,9 +257,9 @@ struct FBOMObjectType : FBOMType {
     {
     }
 
-    FBOMObjectType Extend(const FBOMType &object) const
+    FBOMObjectType(const std::string &name, FBOMType extends)
+        : FBOMType(name, 0, &extends)
     {
-        return FBOMObjectType(object.name, *this);
     }
 };
 
@@ -368,7 +387,7 @@ struct FBOMData {
     inline bool Is##type_name() const { return type == FBOM##type_name(); } \
     inline FBOMResult Read##type_name(c_type *out) const \
     { \
-        FBOM_ASSERT(Is##type_name(), "Type mismatch"); \
+        FBOM_ASSERT(Is##type_name(), std::string("Type mismatch (object of type ") + type.ToString() + " was asked for " #c_type " value)"); \
         ReadBytes(FBOM##type_name().size, (unsigned char*)out); \
         FBOM_RETURN_OK; \
     }
@@ -384,11 +403,11 @@ struct FBOMData {
 
 #undef FBOM_TYPE_FUNCTIONS
 
-    inline bool IsString() const { return type == FBOMString(); }
+    inline bool IsString() const { return type.IsOrExtends(FBOMString()); }
 
     inline FBOMResult ReadString(std::string &str) const
     {
-        FBOM_ASSERT(IsString(), "Type mismatch");
+        FBOM_ASSERT(IsString(), std::string("Type mismatch (object of type ") + type.ToString() + " was asked for string value)");
 
         size_t total_size = TotalSize();
         char *ch = new char[total_size + 1];
@@ -405,22 +424,22 @@ struct FBOMData {
     }
 
     inline bool IsArray() const
-        { return type == FBOMArray(); }
+        { return type.IsOrExtends(FBOMArray()); }
 
     // does NOT check that the types are exact, just that the size is a match
     inline bool IsArrayMatching(const FBOMType &held_type, size_t num_items) const
-        { return type == FBOMArray(held_type, num_items); }
+        { return type.IsOrExtends(FBOMArray(held_type, num_items)); }
 
     // does the array size equal byte_size bytes?
     inline bool IsArrayOfByteSize(size_t byte_size) const
-        { return type == FBOMArray(FBOMByte(), byte_size); }
+        { return type.IsOrExtends(FBOMArray(FBOMByte(), byte_size)); }
 
     // count is number of ELEMENTS
     inline FBOMResult ReadArrayElements(const FBOMType &held_type, size_t num_items, unsigned char *out)
     {
         ex_assert(out != nullptr);
 
-        FBOM_ASSERT(IsArray(), "Type mismatch");
+        FBOM_ASSERT(IsArray(), std::string("Type mismatch (object of type ") + type.ToString() + " was asked for array value)");
 
         // assert that the number of items fits evenly.
         // FBOM_ASSERT(type.size % held_type.size == 0, "Array does not evenly store held_type -- byte size mismatch");
@@ -468,19 +487,19 @@ class FBOMLoader;
 
 class FBOMLoadable : public Loadable {
 public:
-    FBOMLoadable(const FBOMObjectType &loadable_type)
+    FBOMLoadable(const FBOMType &loadable_type)
         : m_loadable_type(loadable_type)
     {
     }
 
     virtual ~FBOMLoadable() = default;
 
-    inline const FBOMObjectType &GetLoadableType() const { return m_loadable_type; }
+    inline const FBOMType &GetLoadableType() const { return m_loadable_type; }
 
     virtual std::shared_ptr<Loadable> Clone() = 0;
 
 protected:
-    FBOMObjectType m_loadable_type;
+    FBOMType m_loadable_type;
 };
 
 using FBOMDeserialized = std::shared_ptr<FBOMLoadable>;
@@ -488,13 +507,18 @@ using FBOMDeserialized = std::shared_ptr<FBOMLoadable>;
 class FBOMObject {
 public:
     // std::string decl_type;
-    FBOMObjectType m_object_type;
+    FBOMType m_object_type;
     std::vector<std::shared_ptr<FBOMObject>> nodes;
     std::map<std::string, FBOMData> properties;
     FBOMObject *parent = nullptr;
     FBOMDeserialized deserialized_object = nullptr;
 
-    FBOMObject(const FBOMObjectType &loader_type)
+    explicit FBOMObject(void)
+        : m_object_type(FBOMObjectType())
+    {
+    }
+
+    FBOMObject(const FBOMType &loader_type)
         : m_object_type(loader_type)
     {
 
@@ -525,7 +549,7 @@ public:
         SetProperty(key, type, type.size, bytes);
     }
 
-    FBOMObject *AddChild(const FBOMObjectType &loader_type)
+    FBOMObject *AddChild(const FBOMType &loader_type)
     {
         std::shared_ptr<FBOMObject> child_node = std::make_shared<FBOMObject>(loader_type);
         child_node->parent = this;
@@ -542,8 +566,8 @@ enum FBOMCommand {
     FBOM_NONE = 0,
     FBOM_OBJECT_START,
     FBOM_OBJECT_END,
-    FBOM_NODE_START,
-    FBOM_NODE_END,
+    FBOM_STATIC_DATA_START,
+    FBOM_STATIC_DATA_END,
     FBOM_DEFINE_PROPERTY,
 };
 
@@ -602,14 +626,29 @@ private:
 
     std::string ReadString(ByteReader *);
 
-    FBOMObjectType ReadObjectType(ByteReader *);
+    FBOMType ReadObjectType(ByteReader *);
 
     void Handle(ByteReader *, FBOMCommand);
+
+    struct FBOMStaticData {
+        enum {
+            FBOM_STATIC_DATA_NONE = 0x00,
+            FBOM_STATIC_DATA_OBJECT = 0x01,
+            FBOM_STATIC_DATA_TYPE = 0x02
+        } type;
+
+        union {
+            void *raw_data;
+            FBOMObject object_data;
+            FBOMType type_data;
+        };
+    };
 };
 
 class FBOMWriter {
 public:
     static FBOMResult WriteToByteStream(ByteWriter *writer);
+    static FBOMResult WriteObjectType(ByteWriter *writer, FBOMType type);
 };
 
 } // namespace fbom

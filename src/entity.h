@@ -219,6 +219,7 @@ public:
 
     FBOM_DEF_SERIALIZER(loader, in, out)
     {
+        // TODO: static data and instancing
         using namespace fbom;
 
         auto entity = dynamic_cast<Entity*>(in);
