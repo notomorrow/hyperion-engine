@@ -741,7 +741,9 @@ int main()
     my_entity->Move(Vector3(0, 2, 0));
 
     FileByteWriter fbw("test.fbom");
-    auto res = fbom::FBOMLoader().WriteToByteStream(&fbw, my_entity.get());
+    fbom::FBOMWriter writer;
+    writer.Append(my_entity.get());
+    auto res = writer.Emit(&fbw);
     fbw.Close();
 
     if (res != fbom::FBOMResult::FBOM_OK) {
