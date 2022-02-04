@@ -9,13 +9,15 @@
 namespace hyperion {
 namespace fbom {
 
+decltype(FBOMLoader::loaders) FBOMLoader::loaders = {
+    { "ENTITY", FBOM_MARSHAL_CLASS(Entity) },
+    { "NOISE_TERRAIN_CONTROL", FBOM_MARSHAL_CLASS(NoiseTerrainControl) },
+    { "MESH", FBOM_MARSHAL_CLASS(Mesh) }
+};
+
 FBOMLoader::FBOMLoader()
     : root(new FBOMObject(FBOMObjectType("ROOT"))),
-      m_loaders({
-          { "ENTITY", FBOM_MARSHAL_CLASS(Entity) },
-          { "NOISE_TERRAIN_CONTROL", FBOM_MARSHAL_CLASS(NoiseTerrainControl) },
-          { "MESH", FBOM_MARSHAL_CLASS(Mesh) }
-      })
+      m_in_static_data(false)
 {
     last = root;
 
@@ -53,9 +55,9 @@ FBOMResult FBOMLoader::Deserialize(FBOMObject *in, FBOMDeserialized &out)
 
     std::string object_type = in->m_object_type.name;
 
-    auto it = m_loaders.find(object_type);
+    auto it = loaders.find(object_type);
 
-    if (it == m_loaders.end()) {
+    if (it == loaders.end()) {
         return FBOMResult(FBOMResult::FBOM_ERR, std::string("No loader for type ") + object_type);
     }
 
@@ -66,51 +68,24 @@ FBOMResult FBOMLoader::Deserialize(FBOMObject *in, FBOMDeserialized &out)
     return deserialize_result;
 }
 
-FBOMResult FBOMLoader::Serialize(FBOMLoadable *in, FBOMObject *out)
-{
-    ex_assert(in != nullptr);
-    ex_assert(out != nullptr);
-
-    std::string object_type = in->GetLoadableType().name;
-
-    auto it = m_loaders.find(object_type);
-
-    if (it == m_loaders.end()) {
-        return FBOMResult(FBOMResult::FBOM_ERR, std::string("No loader for type ") + object_type);
-    }
-
-    FBOMResult serialize_result = it->second.m_serializer(this, in, out);
-
-    return serialize_result;
-}
-
-FBOMResult FBOMLoader::WriteToByteStream(ByteWriter *writer, FBOMLoadable *loadable)
-{
-    ex_assert(writer != nullptr);
-
-    FBOMObject base(loadable->GetLoadableType());
-    FBOMResult result = Serialize(loadable, &base);
-
-    if (result == FBOMResult::FBOM_OK) {
-        base.WriteToByteStream(writer);
-    }
-
-    return result;
-}
-
 std::shared_ptr<Loadable> FBOMLoader::LoadFromFile(const std::string &path)
 {
     ByteReader *reader = new FileByteReader(path);
 
+    m_static_data_pool.clear();
+    m_in_static_data = false;
+
     // TODO: file header
 
     // expect first FBOMObject defined
-
-    uint8_t ins = 0;
+    FBOMCommand command = FBOM_NONE;
 
     while (!reader->Eof()) {
-        reader->Read(&ins, sizeof(uint8_t));
-        Handle(reader, (FBOMCommand)ins);
+        command = NextCommand(reader);
+
+        if (auto err = Handle(reader, command, root)) {
+            throw std::runtime_error(err.message);
+        }
 
         if (last == nullptr) {
             // end of file
@@ -122,13 +97,23 @@ std::shared_ptr<Loadable> FBOMLoader::LoadFromFile(const std::string &path)
 
     delete reader;
 
-    ex_assert(ins == FBOM_OBJECT_END);
+    ex_assert(command == FBOM_OBJECT_END);
     hard_assert(root != nullptr);
 
     ex_assert_msg(root->nodes.size() == 1, "No object added to root (should be one)");
     ex_assert(root->nodes[0] != nullptr);
 
     return root->nodes[0]->deserialized_object;
+}
+
+FBOMCommand FBOMLoader::NextCommand(ByteReader *reader)
+{
+    hard_assert(!reader->Eof());
+
+    uint8_t ins = 0;
+    reader->Read(&ins);
+
+    return FBOMCommand(ins);
 }
 
 std::string FBOMLoader::ReadString(ByteReader *reader)
@@ -153,42 +138,80 @@ FBOMType FBOMLoader::ReadObjectType(ByteReader *reader)
 {
     FBOMType result = FBOMUnset();
 
-    enum {
-        OBJECT_TYPE_LOCATION_NONE = 0x00,
-        OBJECT_TYPE_LOCATION_STATIC = 0x01,
-        OBJECT_TYPE_LOCATION_INPLACE = 0x02
-    };
-
-    uint8_t object_type_location = OBJECT_TYPE_LOCATION_NONE;
-
-    // read location (later will add "static" type, which just uses an index)
+    uint8_t object_type_location = FBOM_DATA_LOCATION_NONE;
     reader->Read(&object_type_location);
 
-    hard_assert_msg(object_type_location == OBJECT_TYPE_LOCATION_INPLACE, "other locations not implemented");
+    if (object_type_location == FBOM_DATA_LOCATION_INPLACE) {
+        uint8_t extend_level;
+        reader->Read(&extend_level);
 
-    uint8_t extend_level;
-    reader->Read(&extend_level);
+        for (int i = 0; i < extend_level; i++) {
+            std::string type_name = ReadString(reader);
+            result.name = type_name;
 
-    for (int i = 0; i < extend_level; i++) {
-        std::string type_name = ReadString(reader);
-        result.name = type_name;
+            // read size of object
+            uint64_t type_size;
+            reader->Read(&type_size);
+            result.size = type_size;
 
-        // read size of object
-        uint64_t type_size;
-        reader->Read(&type_size);
-        result.size = type_size;
+            if (i == extend_level - 1) {
+                break;
+            }
 
-        if (i == extend_level - 1) {
-            break;
+            result = result.Extend(FBOMUnset());
         }
+    } else if (object_type_location == FBOM_DATA_LOCATION_STATIC) {
+        // read offset as uint32_t
+        uint32_t offset;
+        reader->Read(&offset);
 
-        result = result.Extend(FBOMUnset());
+        // grab from static data pool
+        ex_assert(m_static_data_pool.at(offset).type == FBOMStaticData::FBOM_STATIC_DATA_TYPE);
+        result = m_static_data_pool.at(offset).type_data;
     }
 
     return result;
 }
 
-void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
+FBOMResult FBOMLoader::ReadData(ByteReader *reader, FBOMData &data)
+{
+    // read data location
+    uint8_t object_type_location = FBOM_DATA_LOCATION_NONE;
+    reader->Read(&object_type_location);
+
+    if (object_type_location == FBOM_DATA_LOCATION_INPLACE) {
+        FBOMType object_type = ReadObjectType(reader);
+
+        uint32_t sz;
+        reader->Read(&sz);
+
+        unsigned char *bytes = new unsigned char[sz];
+        reader->Read(bytes, sz);
+
+        data = FBOMData(object_type);
+        data.SetBytes(sz, bytes);
+
+        delete[] bytes;
+    } else if (object_type_location == FBOM_DATA_LOCATION_STATIC) {
+        // read offset as uint32_t
+        uint32_t offset;
+        reader->Read(&offset);
+
+        // grab from static data pool
+        ex_assert(m_static_data_pool.at(offset).type == FBOMStaticData::FBOM_STATIC_DATA_DATA);
+        data = m_static_data_pool.at(offset).data_data;
+    }
+
+    return FBOMResult::FBOM_OK;
+}
+
+
+FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
+{
+
+}
+
+FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObject *parent)
 {
     std::string object_type;
 
@@ -202,10 +225,10 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
         // read string of "type" - loader to use
         FBOMType object_type = ReadObjectType(reader);
 
-        auto it = m_loaders.find(object_type.name);
+        auto it = loaders.find(object_type.name);
 
-        if (it == m_loaders.end()) {
-            throw std::runtime_error(std::string("No loader defined for ") + object_type.name);
+        if (it == loaders.end()) {
+            return FBOMResult(FBOMResult::FBOM_ERR, std::string("No loader defined for ") + object_type.name);
         }
 
         last = last->AddChild(object_type);
@@ -222,10 +245,77 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
         last->deserialized_object = out;
 
         if (deserialize_result != FBOMResult::FBOM_OK) {
-            throw std::runtime_error(std::string("Could not deserialize ") + last->m_object_type.name + " object: " + deserialize_result.message);
+            return FBOMResult(FBOMResult::FBOM_ERR, std::string("Could not deserialize ") + last->m_object_type.name + " object: " + deserialize_result.message);
         }
 
         last = last->parent;
+
+        break;
+    }
+    case FBOM_STATIC_DATA_START:
+    {
+        hard_assert(!m_in_static_data);
+
+        m_in_static_data = true;
+
+        // read uint32_t describing size of static data pool
+        uint32_t static_data_size;
+        reader->Read(&static_data_size);
+        const uint32_t initial_static_data_size = static_data_size;
+
+        // skip 8 bytes of padding
+        uint64_t tmp;
+        reader->Read(&tmp);
+
+        m_static_data_pool.resize(static_data_size);
+
+        // now read each item
+        //   uint32_t as index/offset
+        //   uint8_t as type of static data
+        //   then, the actual size of the data will vary depending on the held type
+        while (static_data_size) {
+            uint32_t offset;
+            reader->Read(&offset);
+
+            if (offset >= initial_static_data_size) {
+                return FBOMResult(FBOMResult::FBOM_ERR, std::string("read offset as ") + std::to_string(offset) + ", which is >= alotted size of static data pool (" + std::to_string(static_data_size) + ")");
+            }
+
+            uint8_t type;
+            reader->Read(&type);
+
+            switch (type)
+            {
+            case FBOMStaticData::FBOM_STATIC_DATA_TYPE:
+                m_static_data_pool[offset] = FBOMStaticData(ReadObjectType(reader), offset);
+
+                break;
+            case FBOMStaticData::FBOM_STATIC_DATA_DATA:
+            {
+                FBOMData data;
+
+                if (auto err = ReadData(reader, data)) {
+                    return err;
+                }
+
+                m_static_data_pool[offset] = FBOMStaticData(data, offset);
+
+                break;
+            }
+            default:
+                return FBOMResult(FBOMResult::FBOM_ERR, std::string("Cannot process static data type ") + std::to_string(type));
+            }
+
+            --static_data_size;
+        }
+
+        break;
+    }
+    case FBOM_STATIC_DATA_END:
+    {
+        hard_assert(m_in_static_data);
+
+        m_in_static_data = false;
 
         break;
     }
@@ -234,36 +324,22 @@ void FBOMLoader::Handle(ByteReader *reader, FBOMCommand command)
         hard_assert(last != nullptr);
 
         std::string property_name = ReadString(reader);
-        
-        /*auto type_it = std::find_if(m_registered_types.begin(), m_registered_types.end(), [=](const auto &it) {
-            return it.name == property_type;
-        });
 
-        if (type_it == m_registered_types.end()) {
-            throw std::runtime_error(std::string("Unregistered primitive type '") + property_type + "'");
-        }*/
+        FBOMData data;
 
-        FBOMType object_type = ReadObjectType(reader);
+        if (auto err = ReadData(reader, data)) {
+            return err;
+        }
 
-        uint32_t sz;
-        reader->Read(&sz);
-
-        // if (!type_it->IsUnbouned()) {
-        //     ex_assert_msg(sz == type_it->size, "size mismatch for bounded size type");
-        // }
-
-        unsigned char *bytes = new unsigned char[sz];
-        reader->Read(bytes, sz);
-
-        last->SetProperty(property_name, object_type, sz, bytes);
-
-        delete[] bytes;
+        last->SetProperty(property_name, data);
 
         break;
     }
     default:
         throw std::runtime_error(std::string("Unknown command: ") + std::to_string(int(command)));
     }
+
+    return FBOMResult::FBOM_OK;
 }
 
 } // namespace fbom

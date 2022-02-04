@@ -3,6 +3,7 @@
 
 #include "../loadable.h"
 #include "../asset_loader.h"
+#include "../../hash_code.h"
 #include "../../math/math_util.h"
 
 #include <vector>
@@ -10,9 +11,14 @@
 #include <map>
 #include <type_traits>
 #include <sstream>
+#include <unordered_map>
 #include <iomanip>
 #include <memory>
 #include <map>
+#include <cstring>
+
+using std::memset;
+using std::memcpy;
 
 #define FBOM_DATA_MAX_SIZE size_t(64)
 
@@ -49,14 +55,6 @@ struct FBOMResult {
     }
 
     inline operator int() const { return int(value); }
-
-    /*inline bool operator==(const FBOMResult &other)
-    {
-        // intentionally leave out message in comparison
-        return value == other.value;
-    }
-
-    inline bool operator!=(const FBOMResult &other) { return !operator==(other); }*/
 };
 
 class FBOMObjectType;
@@ -65,6 +63,13 @@ struct FBOMType {
     std::string name;
     size_t size;
     FBOMType *extends = nullptr;
+
+    FBOMType()
+        : name("UNSET"),
+          size(0),
+          extends(nullptr)
+    {
+    }
 
     FBOMType(const std::string &name, size_t size, const FBOMType *extends = nullptr)
         : name(name),
@@ -175,56 +180,60 @@ struct FBOMType {
 
         return str;
     }
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(name);
+        hc.Add(size);
+
+        if (extends != nullptr) {
+            hc.Add(extends->GetHashCode());
+        }
+
+        return hc;
+    }
 };
 
 struct FBOMUnset : FBOMType {
-    FBOMUnset()
-        : FBOMType("UNSET", 0) {}
+    FBOMUnset() : FBOMType() {}
 };
 
 struct FBOMUnsignedInt : FBOMType {
-    FBOMUnsignedInt()
-        : FBOMType("UINT32", 4) {}
+    FBOMUnsignedInt() : FBOMType("UINT32", 4) {}
 };
 
 struct FBOMUnsignedLong : FBOMType {
-    FBOMUnsignedLong()
-        : FBOMType("UINT64", 8) {}
+    FBOMUnsignedLong() : FBOMType("UINT64", 8) {}
 };
 
 struct FBOMInt : FBOMType {
-    FBOMInt()
-        : FBOMType("INT32", 4) {}
+    FBOMInt() : FBOMType("INT32", 4) {}
 };
 
 struct FBOMLong : FBOMType {
-    FBOMLong()
-        : FBOMType("INT64", 8) {}
+    FBOMLong() : FBOMType("INT64", 8) {}
 };
 
 struct FBOMFloat : FBOMType {
-    FBOMFloat()
-        : FBOMType("FLOAT32", 4) {}
+    FBOMFloat() : FBOMType("FLOAT32", 4) {}
 };
 
 struct FBOMBool : FBOMType {
-    FBOMBool()
-        : FBOMType("BOOL", 1) {}
+    FBOMBool() : FBOMType("BOOL", 1) {}
 };
 
 struct FBOMByte : FBOMType {
-    FBOMByte()
-        : FBOMType("BYTE", 1) {}
+    FBOMByte() : FBOMType("BYTE", 1) {}
 };
 
 struct FBOMStruct : FBOMType {
-    FBOMStruct(size_t sz)
-        : FBOMType("STRUCT", sz) {}
+    FBOMStruct(size_t sz) : FBOMType("STRUCT", sz) {}
 };
 
 struct FBOMArray : FBOMType {
-    FBOMArray()
-        : FBOMType("ARRAY", 0) {}
+    FBOMArray() : FBOMType("ARRAY", 0) {}
 
     FBOMArray(const FBOMType &held_type, size_t count)
         : FBOMType("ARRAY", held_type.size * count)
@@ -234,21 +243,17 @@ struct FBOMArray : FBOMType {
 };
 
 struct FBOMString : FBOMType {
-    FBOMString()
-        : FBOMType("STRING", 0) {}
+    FBOMString() : FBOMType("STRING", 0) {}
 
-    FBOMString(size_t length)
-        : FBOMType("STRING", length) {}
+    FBOMString(size_t length) : FBOMType("STRING", length) {}
 };
 
 struct FBOMBaseObjectType : FBOMType {
-    FBOMBaseObjectType()
-        : FBOMType("OBJECT", 0) {}
+    FBOMBaseObjectType() : FBOMType("OBJECT", 0) {}
 };
 
 struct FBOMObjectType : FBOMType {
-    explicit FBOMObjectType(void)
-        : FBOMObjectType("UNSET")
+    explicit FBOMObjectType(void) : FBOMObjectType("UNSET")
     {
     }
 
@@ -475,6 +480,24 @@ struct FBOMData {
         return stream.str();
     }
 
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(data_size);
+        hc.Add(type.GetHashCode());
+
+        for (size_t i = 0; i < data_size; i++) {
+            hc.Add(raw_data[i]);
+        }
+
+        if (next != nullptr) {
+            hc.Add(next->GetHashCode());
+        }
+
+        return hc;
+    }
+
 private:
     size_t data_size;
     FBOMRawData_t raw_data;
@@ -484,6 +507,7 @@ private:
 
 class FBOMObject;
 class FBOMLoader;
+class FBOMWriter;
 
 class FBOMLoadable : public Loadable {
 public:
@@ -513,7 +537,7 @@ public:
     FBOMObject *parent = nullptr;
     FBOMDeserialized deserialized_object = nullptr;
 
-    explicit FBOMObject(void)
+    FBOMObject()
         : m_object_type(FBOMObjectType())
     {
     }
@@ -535,11 +559,17 @@ public:
         return it->second;
     }
 
+    inline void SetProperty(const std::string &key, const FBOMData &data)
+    {
+        properties[key] = data;
+    }
+
     inline void SetProperty(const std::string &key, const FBOMType &type, size_t size, const void *bytes)
     {
         FBOMData data(type);
         data.SetBytes(size, reinterpret_cast<const unsigned char*>(bytes));
-        properties[key] = data;
+
+        SetProperty(key, data);
     }
 
     inline void SetProperty(const std::string &key, const FBOMType &type, const void *bytes)
@@ -559,7 +589,27 @@ public:
         return child_node.get();
     }
 
-    void WriteToByteStream(ByteWriter *out) const;
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(m_object_type.GetHashCode());
+
+        for (const auto &it : nodes) {
+            soft_assert_continue(it != nullptr);
+
+            hc.Add(it->GetHashCode());
+        }
+
+        for (const auto &it : properties) {
+            hc.Add(it.first);
+            hc.Add(it.second.GetHashCode());
+        }
+
+        // no parent
+
+        return hc;
+    }
 };
 
 enum FBOMCommand {
@@ -572,7 +622,7 @@ enum FBOMCommand {
 };
 
 using FBOMDeserializeFunction = std::function<FBOMResult(FBOMLoader *, FBOMObject *, FBOMDeserialized &)>;
-using FBOMSerializeFunction = std::function<FBOMResult(FBOMLoader *, FBOMLoadable *, FBOMObject *)>;
+using FBOMSerializeFunction = std::function<FBOMResult(const FBOMWriter *, FBOMLoadable *, FBOMObject *)>;
 
 struct FBOMMarshal {
     FBOMMarshal(FBOMDeserializeFunction deserializer, FBOMSerializeFunction serializer)
@@ -587,8 +637,8 @@ struct FBOMMarshal {
 
 #define FBOM_DEF_DESERIALIZER(l, in, out) \
     static inline fbom::FBOMResult FBOM_Deserialize(fbom::FBOMLoader *l, fbom::FBOMObject *in, fbom::FBOMDeserialized &out)
-#define FBOM_DEF_SERIALIZER(l, in, out) \
-    static inline fbom::FBOMResult FBOM_Serialize(fbom::FBOMLoader *l, fbom::FBOMLoadable *in, fbom::FBOMObject *out)
+#define FBOM_DEF_SERIALIZER(w, in, out) \
+    static inline fbom::FBOMResult FBOM_Serialize(const fbom::FBOMWriter *w, fbom::FBOMLoadable *in, fbom::FBOMObject *out)
 #define FBOM_GET_DESERIALIZER(kls) \
     &kls::FBOM_Deserialize
 #define FBOM_GET_SERIALIZER(kls) \
@@ -597,58 +647,128 @@ struct FBOMMarshal {
 #define FBOM_MARSHAL_CLASS(kls) \
     FBOMMarshal(FBOM_GET_DESERIALIZER(kls), FBOM_GET_SERIALIZER(kls))
 
-class Marshal {
-public:
-    Marshal() = default;
-    virtual ~Marshal() = default;
 
-    virtual FBOMResult Deserialize(FBOMLoader *, FBOMObject *in, FBOMDeserialized &out) const = 0;
-    virtual FBOMResult Serialize(FBOMLoader *, FBOMLoadable *in, FBOMObject *out) const = 0;
+enum FBOMDataLocation {
+    FBOM_DATA_LOCATION_NONE = 0x00,
+    FBOM_DATA_LOCATION_STATIC = 0x01,
+    FBOM_DATA_LOCATION_INPLACE = 0x02
+};
+
+struct FBOMStaticData {
+    enum {
+        FBOM_STATIC_DATA_NONE = 0x00,
+        FBOM_STATIC_DATA_OBJECT = 0x01,
+        FBOM_STATIC_DATA_TYPE = 0x02,
+        FBOM_STATIC_DATA_DATA = 0x04
+    } type;
+
+    uint32_t offset;
+
+    // no longer a union due to destructors needed
+    void *raw_data;
+    FBOMObject object_data;
+    FBOMType type_data;
+    FBOMData data_data;
+
+    FBOMStaticData()
+        : type(FBOM_STATIC_DATA_NONE), raw_data(nullptr), offset(0) {}
+    FBOMStaticData(const FBOMObject &object_data, uint32_t offset = 0)
+        : type(FBOM_STATIC_DATA_OBJECT),
+          object_data(object_data),
+          raw_data(nullptr),
+          offset(offset) {}
+    FBOMStaticData(const FBOMType &type_data, uint32_t offset = 0)
+        : type(FBOM_STATIC_DATA_TYPE),
+          type_data(type_data),
+          raw_data(nullptr),
+          offset(offset) {}
+    FBOMStaticData(const FBOMData &data_data, uint32_t offset = 0)
+        : type(FBOM_STATIC_DATA_DATA),
+          data_data(data_data),
+          raw_data(nullptr),
+          offset(offset) {}
+
+    inline HashCode GetHashCode() const
+    {
+        switch (type) {
+        case FBOM_STATIC_DATA_OBJECT:
+            return object_data.GetHashCode();
+        case FBOM_STATIC_DATA_TYPE:
+            return type_data.GetHashCode();
+        case FBOM_STATIC_DATA_DATA:
+            return data_data.GetHashCode();
+        default:
+            return HashCode();
+        }
+    }
 };
 
 class FBOMLoader : public AssetLoader {
 public:
+    static const std::map<std::string, FBOMMarshal> loaders; // loader type -> loader
+
     FBOMLoader();
     virtual ~FBOMLoader() override;
 
     FBOMResult Deserialize(FBOMObject *in, FBOMDeserialized &out);
-    FBOMResult Serialize(FBOMLoadable *in, FBOMObject *out);
-    FBOMResult WriteToByteStream(ByteWriter *writer, FBOMLoadable *);
 
     virtual std::shared_ptr<Loadable> LoadFromFile(const std::string &) override;
 
 private:
-    FBOMObject *root;
-    FBOMObject *last;
-    // std::map<std::string, std::unique_ptr<FBOMLoader>> loaders;
-    const std::map<std::string, FBOMMarshal> m_loaders; // loader type -> loader
-    std::vector<FBOMType> m_registered_types;
+    FBOMCommand NextCommand(ByteReader *);
 
     std::string ReadString(ByteReader *);
-
     FBOMType ReadObjectType(ByteReader *);
+    FBOMResult ReadData(ByteReader *, FBOMData &data);
+    FBOMResult ReadObject(ByteReader *, FBOMObject &object);
 
-    void Handle(ByteReader *, FBOMCommand);
+    FBOMResult Handle(ByteReader *, FBOMCommand, FBOMObject *parent);
 
-    struct FBOMStaticData {
-        enum {
-            FBOM_STATIC_DATA_NONE = 0x00,
-            FBOM_STATIC_DATA_OBJECT = 0x01,
-            FBOM_STATIC_DATA_TYPE = 0x02
-        } type;
+    FBOMObject *root;
+    FBOMObject *last;
 
-        union {
-            void *raw_data;
-            FBOMObject object_data;
-            FBOMType type_data;
-        };
-    };
+    std::vector<FBOMType> m_registered_types;
+
+    bool m_in_static_data;
+    std::vector<FBOMStaticData> m_static_data_pool;
 };
 
 class FBOMWriter {
 public:
-    static FBOMResult WriteToByteStream(ByteWriter *writer);
-    static FBOMResult WriteObjectType(ByteWriter *writer, FBOMType type);
+    FBOMWriter();
+    ~FBOMWriter();
+
+    FBOMResult Serialize(FBOMLoadable *in, FBOMObject *out) const;
+
+    FBOMResult Append(FBOMLoadable *);
+    FBOMResult Append(FBOMObject);
+    FBOMResult Emit(ByteWriter *out);
+
+private:
+    void BuildStaticData();
+    void Prune(FBOMObject *);
+    size_t OffsetStaticData();
+    FBOMResult WriteStaticDataToByteStream(ByteWriter *out);
+
+    FBOMResult WriteToByteStream(ByteWriter *out, const FBOMObject &) const;
+    FBOMResult WriteToByteStream(ByteWriter *out, FBOMLoadable *) const;
+    FBOMResult WriteObjectType(ByteWriter *out, const FBOMType &) const;
+    FBOMResult WriteData(ByteWriter *out, const FBOMData &) const;
+    FBOMResult WriteStaticDataUsage(ByteWriter *out, const FBOMStaticData &) const;
+
+    void AddObjectData(const FBOMObject &);
+    FBOMStaticData AddStaticData(const FBOMType &);
+    FBOMStaticData AddStaticData(const FBOMObject &);
+    FBOMStaticData AddStaticData(const FBOMData &);
+
+    struct WriteStream {
+        std::unordered_map<HashCode::Value_t, FBOMStaticData> m_static_data; // map hashcodes to static data to be stored.
+        std::unordered_map<HashCode::Value_t, int> m_hash_use_count_map;
+        std::vector<FBOMObject> m_object_data; // TODO: make multiple objects be supported by the loader.
+        bool m_writing_static_data = false;
+
+        FBOMDataLocation GetDataLocation(HashCode::Value_t, FBOMStaticData &out) const;
+    } m_write_stream;
 };
 
 } // namespace fbom
