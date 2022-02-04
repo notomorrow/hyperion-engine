@@ -244,13 +244,11 @@ struct FBOMArray : FBOMType {
 };
 
 struct FBOMStruct : FBOMType {
-    FBOMStruct(size_t sz)
-        : FBOMType("STRUCT", sz) {}
+    FBOMStruct(size_t sz) : FBOMType("STRUCT", sz) {}
 };
 
 struct FBOMArray : FBOMType {
-    FBOMArray()
-        : FBOMType("ARRAY", 0) {}
+    FBOMArray() : FBOMType("ARRAY", 0) {}
 
     FBOMArray(const FBOMType &held_type, size_t count)
         : FBOMType("ARRAY", held_type.size * count)
