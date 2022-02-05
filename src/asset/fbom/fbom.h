@@ -91,18 +91,6 @@ struct FBOMType {
         }
     }
 
-    ~FBOMType()
-    {
-        if (extends != nullptr) {
-            delete extends;
-        }
-    }
-
-    FBOMType Extend(const FBOMType &object) const;
-
-    // inline bool IsArray() const { return IsOrExtends("ARRAY"); }
-    // inline bool IsStruct() const { return IsOrExtends("STRUCT"); }
-
     inline FBOMType &operator=(const FBOMType &other)
     {
         if (extends != nullptr) {
@@ -119,6 +107,19 @@ struct FBOMType {
 
         return *this;
     }
+
+    ~FBOMType()
+    {
+        if (extends != nullptr) {
+            delete extends;
+        }
+    }
+
+    FBOMType Extend(const FBOMType &object) const;
+
+    // inline bool IsArray() const { return IsOrExtends("ARRAY"); }
+    // inline bool IsStruct() const { return IsOrExtends("STRUCT"); }
+
 
     bool IsOrExtends(const std::string &name) const
     {
@@ -472,7 +473,7 @@ struct FBOMData {
         stream << " }, next: ";
 
         if (next != nullptr) {
-            stream << next->ToString();
+            stream << "<" << next->GetType().name << ">";
         }
 
         stream << "]";
@@ -534,18 +535,34 @@ public:
     FBOMType m_object_type;
     std::vector<std::shared_ptr<FBOMObject>> nodes;
     std::map<std::string, FBOMData> properties;
-    FBOMObject *parent = nullptr;
     FBOMDeserialized deserialized_object = nullptr;
 
     FBOMObject()
-        : m_object_type(FBOMObjectType())
+        : m_object_type(FBOMUnset())
     {
     }
 
     FBOMObject(const FBOMType &loader_type)
         : m_object_type(loader_type)
     {
+    }
 
+    FBOMObject(const FBOMObject &other)
+        : m_object_type(other.m_object_type),
+          nodes(other.nodes),
+          properties(other.properties),
+          deserialized_object(other.deserialized_object)
+    {
+    }
+
+    FBOMObject &operator=(const FBOMObject &other)
+    {
+        m_object_type = other.m_object_type;
+        nodes = other.nodes;
+        properties = other.properties;
+        deserialized_object = other.deserialized_object;
+
+        return *this;
     }
 
     FBOMData GetProperty(const std::string &key)
@@ -582,7 +599,6 @@ public:
     FBOMObject *AddChild(const FBOMType &loader_type)
     {
         std::shared_ptr<FBOMObject> child_node = std::make_shared<FBOMObject>(loader_type);
-        child_node->parent = this;
 
         nodes.push_back(child_node);
 
@@ -606,9 +622,38 @@ public:
             hc.Add(it.second.GetHashCode());
         }
 
-        // no parent
-
         return hc;
+    }
+
+    inline std::string ToString() const
+    {
+        std::stringstream ss;
+
+        ss << m_object_type.ToString();
+        ss << " { properties: { ";
+        for (auto &prop : properties) {
+            ss << prop.first;// << ": ";
+            //ss << prop.second.ToString();
+            ss << ", ";
+        }
+        ss << " }, nodes: [ ";
+
+        ss << nodes.size();
+
+        // for (auto &node : nodes) {
+        //     if (node == nullptr) {
+        //         ss << "NULL";
+        //     } else {
+        //         ss << node->ToString();
+        //     }
+        //     ss << ", ";
+        // }
+    
+        ss << " ] ";
+
+        ss << " } ";
+
+        return ss.str();
     }
 };
 
@@ -662,31 +707,57 @@ struct FBOMStaticData {
         FBOM_STATIC_DATA_DATA = 0x04
     } type;
 
-    uint32_t offset;
+    int64_t offset;
 
     // no longer a union due to destructors needed
     void *raw_data;
     FBOMObject object_data;
     FBOMType type_data;
     FBOMData data_data;
+    bool written;
 
     FBOMStaticData()
-        : type(FBOM_STATIC_DATA_NONE), raw_data(nullptr), offset(0) {}
-    FBOMStaticData(const FBOMObject &object_data, uint32_t offset = 0)
+        : type(FBOM_STATIC_DATA_NONE), raw_data(nullptr), offset(-1), written(false) {}
+    FBOMStaticData(const FBOMObject &object_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_OBJECT),
           object_data(object_data),
           raw_data(nullptr),
-          offset(offset) {}
-    FBOMStaticData(const FBOMType &type_data, uint32_t offset = 0)
+          offset(offset),
+          written(false) {}
+    FBOMStaticData(const FBOMType &type_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_TYPE),
           type_data(type_data),
           raw_data(nullptr),
-          offset(offset) {}
-    FBOMStaticData(const FBOMData &data_data, uint32_t offset = 0)
+          offset(offset),
+          written(false) {}
+    FBOMStaticData(const FBOMData &data_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_DATA),
           data_data(data_data),
           raw_data(nullptr),
-          offset(offset) {}
+          offset(offset),
+          written(false) {}
+    FBOMStaticData(const FBOMStaticData &other)
+        : type(other.type),
+          object_data(other.object_data),
+          type_data(other.type_data),
+          data_data(other.data_data),
+          raw_data(other.raw_data),
+          offset(other.offset),
+          written(other.written) {}
+    FBOMStaticData &operator=(const FBOMStaticData &other)
+    {
+        type = other.type;
+        object_data = other.object_data;
+        type_data = other.type_data;
+        data_data = other.data_data;
+        raw_data = other.raw_data;
+        offset = other.offset;
+        written = other.written;
+
+        return *this;
+    }
+
+    ~FBOMStaticData() = default;
 
     inline HashCode GetHashCode() const
     {
@@ -699,6 +770,20 @@ struct FBOMStaticData {
             return data_data.GetHashCode();
         default:
             return HashCode();
+        }
+    }
+
+    inline std::string ToString() const
+    {
+        switch (type) {
+        case FBOM_STATIC_DATA_OBJECT:
+            return object_data.ToString();
+        case FBOM_STATIC_DATA_TYPE:
+            return type_data.ToString();
+        case FBOM_STATIC_DATA_DATA:
+            return data_data.ToString();
+        default:
+            return "???";
         }
     }
 };
@@ -716,6 +801,8 @@ public:
 
 private:
     FBOMCommand NextCommand(ByteReader *);
+    FBOMCommand PeekCommand(ByteReader *);
+    FBOMResult Eat(ByteReader *, FBOMCommand, bool read = true);
 
     std::string ReadString(ByteReader *);
     FBOMType ReadObjectType(ByteReader *);
@@ -747,13 +834,12 @@ public:
 private:
     void BuildStaticData();
     void Prune(FBOMObject *);
-    size_t OffsetStaticData();
     FBOMResult WriteStaticDataToByteStream(ByteWriter *out);
 
-    FBOMResult WriteToByteStream(ByteWriter *out, const FBOMObject &) const;
-    FBOMResult WriteToByteStream(ByteWriter *out, FBOMLoadable *) const;
-    FBOMResult WriteObjectType(ByteWriter *out, const FBOMType &) const;
-    FBOMResult WriteData(ByteWriter *out, const FBOMData &) const;
+    FBOMResult WriteObject(ByteWriter *out, const FBOMObject &);
+    FBOMResult WriteObject(ByteWriter *out, FBOMLoadable *);
+    FBOMResult WriteObjectType(ByteWriter *out, const FBOMType &);
+    FBOMResult WriteData(ByteWriter *out, const FBOMData &);
     FBOMResult WriteStaticDataUsage(ByteWriter *out, const FBOMStaticData &) const;
 
     void AddObjectData(const FBOMObject &);
@@ -762,12 +848,13 @@ private:
     FBOMStaticData AddStaticData(const FBOMData &);
 
     struct WriteStream {
-        std::unordered_map<HashCode::Value_t, FBOMStaticData> m_static_data; // map hashcodes to static data to be stored.
+        std::map<HashCode::Value_t, FBOMStaticData> m_static_data; // map hashcodes to static data to be stored.
         std::unordered_map<HashCode::Value_t, int> m_hash_use_count_map;
         std::vector<FBOMObject> m_object_data; // TODO: make multiple objects be supported by the loader.
-        bool m_writing_static_data = false;
+        size_t m_static_data_offset = 0;
 
         FBOMDataLocation GetDataLocation(HashCode::Value_t, FBOMStaticData &out) const;
+        void MarkStaticDataWritten(HashCode::Value_t);
     } m_write_stream;
 };
 
