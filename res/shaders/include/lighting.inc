@@ -334,52 +334,43 @@ vec4 CalculateFogLinear(vec4 inColor, vec4 toColor, vec3 worldPos, vec3 camPos, 
 
 vec3 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos)
 {
-  vec4 samp;
+  vec4 sample;
 
-  vec3 viewVector = worldPos - camPos;
-  vec3 refl = reflect(viewVector, n);
+	vec3 PositionWS = worldPos;
+	vec3 CameraWS = camPos;
+	vec3 NormalWS = n;
+	vec3 DirectionWS = PositionWS - CameraWS;
+	vec3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
   
-  //return texture(tex, refl).rgb;
-
-
   vec3 cubeSize = EnvProbe.max;
   vec3 cubePos = EnvProbe.position;
+  vec3 pos = worldPos;
 
-  vec3 reflN = normalize(refl);
-
-  // refl = normalize(viewVector);
-  //vec3 rbmax = (cubePos + cubeSize - worldPos) / refl;
-  //vec3 rbmin = (cubePos - cubeSize - worldPos) / refl;
-  vec3 rbmax = (   .5 * ( cubeSize - cubePos ) /*- worldPos*/  ) / reflN;
-  vec3 rbmin = ( - .5 * ( cubeSize - cubePos ) /*- worldPos*/  ) / reflN;
+  vec3 nDir = normalize(ReflDirectionWS);//DirectionWS);
+  vec3 rbmax = (   .5 * ( cubeSize - cubePos ) - pos ) / nDir;
+  vec3 rbmin = ( - .5 * ( cubeSize - cubePos ) - pos ) / nDir;
 
   vec3 rbminmax;// = max(rbmax, rbmin);
-  rbminmax.x = ( refl.x > 0. )?rbmax.x:rbmin.x;
-  rbminmax.y = ( refl.y > 0. )?rbmax.y:rbmin.y;
-  rbminmax.z = ( refl.z > 0. )?rbmax.z:rbmin.z;
-  
+  rbminmax.x = ( nDir.x > 0. )?rbmax.x:rbmin.x;
+  rbminmax.y = ( nDir.y > 0. )?rbmax.y:rbmin.y;
+  rbminmax.z = ( nDir.z > 0. )?rbmax.z:rbmin.z;
 
   float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
-  vec3 boxIntersection = worldPos + reflN * correction;
+  vec3 boxIntersection = pos + nDir * correction;
 
   vec3 coord = boxIntersection - cubePos;
-  
-  //coord = reflect(coord, viewVector);
 
-  samp = texture(tex, coord);
+  sample = texture(tex, coord);
 
   // fade out env map at boundary
 
   float maxDistanceLength = length(EnvProbe.max);
-  float fogStart = maxDistanceLength - 30.0;
+  float fogStart = maxDistanceLength - 10.0;
   float fogEnd = maxDistanceLength;
 
-  return samp.rgb;
+  // return sample.rgb;
   
-  vec4 sampleBlended = CalculateFogLinear(samp, vec4(samp.rgb, 0.0), worldPos, cubePos, fogStart, fogEnd);
-  
-  return sampleBlended.rgb * sampleBlended.a;
-
+  return CalculateFogLinear(sample, vec4(sample.rgb, 0.0), worldPos, camPos, fogStart, fogEnd).rgb;
 }
 
 vec3 ComputeDirectionalLight(DirectionalLight dl, vec3 n, vec3 v, vec3 vert, vec3 albedo, float shadowness, float roughness, float metalness)
