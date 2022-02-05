@@ -37,6 +37,8 @@ public:
     virtual void Render(Renderer *renderer, Camera *cam) override;
 
 private:
+    virtual std::shared_ptr<Renderable> CloneImpl() override;
+
     unsigned int m_texture_id;
     std::shared_ptr<Texture3D> m_texture;
     GIMapperRegion m_region;

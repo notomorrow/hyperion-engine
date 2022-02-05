@@ -77,6 +77,10 @@ FBOMResult FBOMLoader::WriteToByteStream(ByteWriter *writer, FBOMLoadable *loada
 {
     ByteReader *reader = new FileByteReader(path);
 
+    if (reader->Eof()) {
+        return nullptr;
+    }
+
     m_static_data_pool.clear();
     m_in_static_data = false;
 

@@ -33,6 +33,8 @@ public:
     std::array<std::pair<Matrix4, Matrix4>, 6> m_storage_transform_matrices; //  TEMP
 
 private:
+    virtual std::shared_ptr<Renderable> CloneImpl() override;
+
     double m_render_tick;
     int m_render_index;
     bool m_is_first_run;

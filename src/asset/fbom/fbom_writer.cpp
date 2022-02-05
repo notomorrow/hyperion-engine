@@ -2,6 +2,7 @@
 #include "../byte_writer.h"
 
 #include <stack>
+#include <algorithm>
 
 namespace hyperion {
 namespace fbom {
