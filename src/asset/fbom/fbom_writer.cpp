@@ -56,7 +56,7 @@ FBOMResult FBOMWriter::Emit(ByteWriter *out)
     WriteStaticDataToByteStream(out);
 
     for (const auto &it : m_write_stream.m_object_data) {
-        if (auto err = WriteToByteStream(out, it)) {
+        if (auto err = WriteObject(out, it)) {
             return err;
         }
     }
@@ -73,6 +73,22 @@ void FBOMWriter::BuildStaticData()
 
 void FBOMWriter::Prune(FBOMObject *object)
 {
+    AddStaticData(object->m_object_type);
+
+    for (const auto &node : object->nodes) {
+        soft_assert_continue(node != nullptr);
+
+        Prune(node.get());
+    }
+
+    for (auto &prop : object->properties) {
+        int property_value_usage = m_write_stream.m_hash_use_count_map[prop.second.GetHashCode().Value()];
+
+        // if (property_value_usage > 1) {
+            AddStaticData(prop.second);
+        // }
+    }
+
     // convert use counts into static objects
     HashCode::Value_t hc = object->GetHashCode().Value();
     int object_usage = 0;
@@ -83,50 +99,28 @@ void FBOMWriter::Prune(FBOMObject *object)
         object_usage = it->second;
     }
 
-    // if (object_usage > 1) {
-    //     AddStaticData(*object);
-    // }
-
-    AddStaticData(object->m_object_type);
-
-    for (auto &prop : object->properties) {
-        int property_value_usage = m_write_stream.m_hash_use_count_map[prop.second.GetHashCode().Value()];
-
-        if (property_value_usage > 1) {
-            AddStaticData(prop.second);
-        }
+    if (object_usage > 1) {
+        AddStaticData(*object);
     }
-
-    for (const auto &node : object->nodes) {
-        soft_assert_continue(node != nullptr);
-
-        Prune(node.get());
-    }
-}
-
-size_t FBOMWriter::OffsetStaticData()
-{
-    size_t i = 0;
-
-    for (auto &it : m_write_stream.m_static_data) {
-        it.second.offset = i;
-
-        i++;
-    }
-
-    return i;
 }
 
 FBOMResult FBOMWriter::WriteStaticDataToByteStream(ByteWriter *out)
 {
-    m_write_stream.m_writing_static_data = true;
+    std::vector<FBOMStaticData> static_data_ordered;
+    static_data_ordered.reserve(m_write_stream.m_static_data.size());
 
-    size_t sz = OffsetStaticData();
+    for (auto &it : m_write_stream.m_static_data) {
+        static_data_ordered.push_back(it.second);
+    }
+
+    std::sort(static_data_ordered.begin(), static_data_ordered.end(), [](auto &a, auto &b) {
+        return a.offset < b.offset;
+    });
 
     out->Write(uint8_t(FBOM_STATIC_DATA_START));
 
     // write SIZE of static data as uint32_t
-    out->Write(uint32_t(sz));
+    out->Write(uint32_t(static_data_ordered.size()));
     // 8 bytes of padding
     out->Write(uint64_t(0));
 
@@ -135,23 +129,23 @@ FBOMResult FBOMWriter::WriteStaticDataToByteStream(ByteWriter *out)
     //   uint8_t as type of static data
     //   then, the actual size of the data will vary depending on the held type
 
-    for (auto &it : m_write_stream.m_static_data) {
-        out->Write(uint32_t(it.second.offset));
-        out->Write(uint8_t(it.second.type));
+    for (auto &it : static_data_ordered) {
+        out->Write(uint32_t(it.offset));
+        out->Write(uint8_t(it.type));
 
-        switch (it.second.type) {
+        switch (it.type) {
         case FBOMStaticData::FBOM_STATIC_DATA_OBJECT:
-            if (auto err = WriteToByteStream(out, it.second.object_data)) {
+            if (auto err = WriteObject(out, it.object_data)) {
                 return err;
             }
             break;
         case FBOMStaticData::FBOM_STATIC_DATA_TYPE:
-            if (auto err = WriteObjectType(out, it.second.type_data)) {
+            if (auto err = WriteObjectType(out, it.type_data)) {
                 return err;
             }
             break;
         case FBOMStaticData::FBOM_STATIC_DATA_DATA:
-            if (auto err = WriteData(out, it.second.data_data)) {
+            if (auto err = WriteData(out, it.data_data)) {
                 return err;
             }
             break;
@@ -162,47 +156,58 @@ FBOMResult FBOMWriter::WriteStaticDataToByteStream(ByteWriter *out)
 
     out->Write(uint8_t(FBOM_STATIC_DATA_END));
 
-    m_write_stream.m_writing_static_data = false;
-
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::WriteToByteStream(ByteWriter *out, const FBOMObject &object) const
+FBOMResult FBOMWriter::WriteObject(ByteWriter *out, const FBOMObject &object)
 {
     out->Write(uint8_t(FBOM_OBJECT_START));
 
-    // write typechain
-    if (auto err = WriteObjectType(out, object.m_object_type)) {
-        return err;
+    FBOMStaticData static_data;
+    const HashCode::Value_t hash_code = object.GetHashCode().Value();
+    uint8_t data_location = uint8_t(m_write_stream.GetDataLocation(hash_code, static_data));
+    out->Write(data_location);
+
+    if (data_location == FBOM_DATA_LOCATION_STATIC) {
+        return WriteStaticDataUsage(out, static_data);
     }
 
-    // add all properties
-    for (auto &it : object.properties) {
-        out->Write(uint8_t(FBOM_DEFINE_PROPERTY));
-
-        // // write property name
-        out->WriteString(it.first);
-
-        if (auto err = WriteData(out, it.second)) {
+    if (data_location == FBOM_DATA_LOCATION_INPLACE) {
+        // write typechain
+        if (auto err = WriteObjectType(out, object.m_object_type)) {
             return err;
         }
-    }
 
-    // now write out all child nodes
-    for (auto &node : object.nodes) {
-        soft_assert_continue(node != nullptr);
+        // add all properties
+        for (auto &it : object.properties) {
+            out->Write(uint8_t(FBOM_DEFINE_PROPERTY));
 
-        if (auto err = WriteToByteStream(out, *node)) {
-            return err;
+            // // write property name
+            out->WriteString(it.first);
+
+            if (auto err = WriteData(out, it.second)) {
+                return err;
+            }
         }
-    }
 
-    out->Write(uint8_t(FBOM_OBJECT_END));
+        // now write out all child nodes
+        for (auto &node : object.nodes) {
+            soft_assert_continue(node != nullptr);
+
+            if (auto err = WriteObject(out, *node)) {
+                return err;
+            }
+        }
+
+        out->Write(uint8_t(FBOM_OBJECT_END));
+
+        m_write_stream.MarkStaticDataWritten(hash_code);
+    }
 
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::WriteToByteStream(ByteWriter *out, FBOMLoadable *loadable) const
+FBOMResult FBOMWriter::WriteObject(ByteWriter *out, FBOMLoadable *loadable)
 {
     ex_assert(out != nullptr);
 
@@ -211,13 +216,14 @@ FBOMResult FBOMWriter::WriteToByteStream(ByteWriter *out, FBOMLoadable *loadable
         return err;
     }
 
-    return WriteToByteStream(out, base);
+    return WriteObject(out, base);
 }
 
-FBOMResult FBOMWriter::WriteObjectType(ByteWriter *out, const FBOMType &type) const
+FBOMResult FBOMWriter::WriteObjectType(ByteWriter *out, const FBOMType &type)
 {
     FBOMStaticData static_data;
-    uint8_t data_location = uint8_t(m_write_stream.GetDataLocation(type.GetHashCode().Value(), static_data));
+    const HashCode::Value_t hash_code = type.GetHashCode().Value();
+    uint8_t data_location = uint8_t(m_write_stream.GetDataLocation(hash_code, static_data));
     out->Write(data_location);
 
     if (data_location == FBOM_DATA_LOCATION_STATIC) {
@@ -246,6 +252,8 @@ FBOMResult FBOMWriter::WriteObjectType(ByteWriter *out, const FBOMType &type) co
 
             type_chain.pop();
         }
+
+        m_write_stream.MarkStaticDataWritten(hash_code);
     } else {
         return FBOMResult::FBOM_ERR;
     }
@@ -253,10 +261,11 @@ FBOMResult FBOMWriter::WriteObjectType(ByteWriter *out, const FBOMType &type) co
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::WriteData(ByteWriter *out, const FBOMData &data) const
+FBOMResult FBOMWriter::WriteData(ByteWriter *out, const FBOMData &data)
 {
     FBOMStaticData static_data;
-    uint8_t data_location = uint8_t(m_write_stream.GetDataLocation(data.GetHashCode().Value(), static_data));
+    HashCode::Value_t hash_code = data.GetHashCode().Value();
+    uint8_t data_location = uint8_t(m_write_stream.GetDataLocation(hash_code, static_data));
     out->Write(data_location);
 
     if (data_location == FBOM_DATA_LOCATION_STATIC) {
@@ -280,6 +289,8 @@ FBOMResult FBOMWriter::WriteData(ByteWriter *out, const FBOMData &data) const
         out->Write(bytes, sz);
 
         delete[] bytes;
+
+        m_write_stream.MarkStaticDataWritten(hash_code);
     } else {
         return FBOMResult::FBOM_ERR;
     }
@@ -313,33 +324,70 @@ void FBOMWriter::AddObjectData(const FBOMObject &object)
 
 FBOMStaticData FBOMWriter::AddStaticData(const FBOMType &type)
 {
+    // if (type.extends != nullptr) {
+    //     AddStaticData(*type.extends);
+    // }
+
     FBOMStaticData sd;
     sd.type = FBOMStaticData::FBOM_STATIC_DATA_TYPE;
     sd.type_data = type;
 
-    m_write_stream.m_static_data[sd.GetHashCode().Value()] = sd;
+    const HashCode::Value_t hash_code = sd.GetHashCode().Value();
+
+    auto it = m_write_stream.m_static_data.find(hash_code);
+
+    if (it == m_write_stream.m_static_data.end()) {
+        sd.offset = m_write_stream.m_static_data_offset++;
+        m_write_stream.m_static_data[hash_code] = sd;
+    }
 
     return sd;
 }
 
 FBOMStaticData FBOMWriter::AddStaticData(const FBOMObject &object)
 {
+    AddStaticData(object.m_object_type);
+
+    // for (const auto &node : object.nodes) {
+    //     soft_assert_continue(node != nullptr);
+
+    //     AddStaticData(*node);
+    // }
+
     FBOMStaticData sd;
     sd.type = FBOMStaticData::FBOM_STATIC_DATA_OBJECT;
     sd.object_data = object;
 
-    m_write_stream.m_static_data[sd.GetHashCode().Value()] = sd;
+    const HashCode::Value_t hash_code = sd.GetHashCode().Value();
+
+    auto it = m_write_stream.m_static_data.find(hash_code);
+
+    if (it == m_write_stream.m_static_data.end()) {
+        sd.offset = m_write_stream.m_static_data_offset++;
+        m_write_stream.m_static_data[hash_code] = sd;
+    }
+
 
     return sd;
 }
 
 FBOMStaticData FBOMWriter::AddStaticData(const FBOMData &object)
 {
+    AddStaticData(object.GetType());
+
     FBOMStaticData sd;
     sd.type = FBOMStaticData::FBOM_STATIC_DATA_DATA;
     sd.data_data = object;
 
-    m_write_stream.m_static_data[sd.GetHashCode().Value()] = sd;
+    const HashCode::Value_t hash_code = sd.GetHashCode().Value();
+
+    auto it = m_write_stream.m_static_data.find(hash_code);
+
+    if (it == m_write_stream.m_static_data.end()) {
+        sd.offset = m_write_stream.m_static_data_offset++;
+        m_write_stream.m_static_data[hash_code] = sd;
+    }
+
 
     return sd;
 }
@@ -348,17 +396,24 @@ FBOMDataLocation FBOMWriter::WriteStream::GetDataLocation(HashCode::Value_t hash
 {
     FBOMDataLocation data_location = FBOM_DATA_LOCATION_INPLACE;
 
-    if (!m_writing_static_data) { // just write in place if we are currently writing the static data table
-        // first we check to see if any static data exists that we can piggyback off of
-        auto it = m_static_data.find(hash_code);
+    auto it = m_static_data.find(hash_code);
 
-        if (it != m_static_data.end()) {
-            out = it->second;
-            data_location = FBOM_DATA_LOCATION_STATIC;
-        }
+    if (it != m_static_data.end() && it->second.written) {
+        out = it->second;
+        data_location = FBOM_DATA_LOCATION_STATIC;
     }
 
     return data_location;
+}
+
+void FBOMWriter::WriteStream::MarkStaticDataWritten(HashCode::Value_t hash_code)
+{
+    auto it = m_static_data.find(hash_code);
+
+    ex_assert(it != m_static_data.end());
+    ex_assert(!m_static_data[hash_code].written);
+
+    m_static_data[hash_code].written = true;
 }
 
 } // namespace fbom

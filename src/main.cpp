@@ -1047,23 +1047,68 @@ public:
 
 int main()
 {
+    // timing test
+    { // fbom
+        using namespace std;
+        using namespace std::chrono;
+        auto start = high_resolution_clock::now();
+    
+        // Call the function, here sort()
+        std::shared_ptr<Loadable> result;
+        for (int i = 0; i < 100; i++) {
+            result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
+        }
+    
+        // Get ending timepoint
+        auto stop = high_resolution_clock::now();
+    
+        // Get duration. Substart timepoints to 
+        // get durarion. To cast it to proper unit
+        // use duration cast method
+        auto duration = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(stop - start).count();
+
+        std::cout << "FBOM time: " << duration << "\n";
+    }
+    // timing test
+    { // obj
+        using namespace std;
+        using namespace std::chrono;
+        auto start = high_resolution_clock::now();
+    
+        // Call the function, here sort()
+        std::shared_ptr<Loadable> result;
+        for (int i = 0; i < 100; i++) {
+            result = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", false);
+        }
+    
+        // Get ending timepoint
+        auto stop = high_resolution_clock::now();
+    
+        // Get duration. Substart timepoints to 
+        // get durarion. To cast it to proper unit
+        // use duration cast method
+        auto duration = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(stop - start).count();
+
+        std::cout << "OBJ time: " << duration << "\n";
+    }
+
 
     // std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
     // my_entity->AddControl(std::make_shared<NoiseTerrainControl>(nullptr, 12345));
 
-    auto my_entity = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
-    my_entity->Scale(Vector3(0.2f));
-    my_entity->Move(Vector3(0, 2, 0));
+    // auto my_entity = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+    // my_entity->Scale(Vector3(0.2f));
+    // my_entity->Move(Vector3(0, 2, 0));
 
-    FileByteWriter fbw("test.fbom");
-    fbom::FBOMWriter writer;
-    writer.Append(my_entity.get());
-    auto res = writer.Emit(&fbw);
-    fbw.Close();
+    // FileByteWriter fbw("test.fbom");
+    // fbom::FBOMWriter writer;
+    // writer.Append(my_entity.get());
+    // auto res = writer.Emit(&fbw);
+    // fbw.Close();
 
-    if (res != fbom::FBOMResult::FBOM_OK) {
-        throw std::runtime_error(std::string("FBOM Error: ") + res.message);
-    }
+    // if (res != fbom::FBOMResult::FBOM_OK) {
+    //     throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+    // }
 
     // return 0;
 
