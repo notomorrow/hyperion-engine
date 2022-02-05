@@ -130,8 +130,8 @@ void main()
 
 #if VCT_ENABLED
   //testing
-  vec4 vctSpec = VCTSpecular(v_position.xyz, n.xyz, u_camerapos);
-  vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent);
+  vec4 vctSpec = VCTSpecular(v_position.xyz, n.xyz, u_camerapos, u_roughness);
+  vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent, roughness);
   specularCubemap = vctSpec.rgb;
   diffuseCubemap = vctDiff.rgb;
 #endif // VCT_ENABLED

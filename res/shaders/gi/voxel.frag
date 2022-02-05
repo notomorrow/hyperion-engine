@@ -2,7 +2,6 @@
 
 in vec4 v_position;
 in vec2 v_texcoord0;
-in vec4 ndcPos;
 
 
 #include "../include/matrices.inc"
