@@ -721,6 +721,32 @@ int main()
     }*/
 
 
+        std::cout << "FBOM time: " << duration << "\n";
+    }
+    // timing test
+    { // obj
+        using namespace std;
+        using namespace std::chrono;
+        auto start = high_resolution_clock::now();
+    
+        // Call the function, here sort()
+        std::shared_ptr<Loadable> result;
+        for (int i = 0; i < 100; i++) {
+            result = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", false);
+        }
+    
+        // Get ending timepoint
+        auto stop = high_resolution_clock::now();
+    
+        // Get duration. Substart timepoints to 
+        // get durarion. To cast it to proper unit
+        // use duration cast method
+        auto duration = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(stop - start).count();
+
+        std::cout << "OBJ time: " << duration << "\n";
+    }
+
+
     // std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
     // my_entity->AddControl(std::make_shared<NoiseTerrainControl>(nullptr, 12345));
 
