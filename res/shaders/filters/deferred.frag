@@ -116,8 +116,8 @@ void main()
 
 #if VCT_ENABLED
   //testing
-  vec4 vctSpec = VCTSpecular(position.xyz, n.xyz, CameraPosition);
-  vec4 vctDiff = VCTDiffuse(position.xyz, n.xyz, CameraPosition, tangent, bitangent);
+  vec4 vctSpec = VCTSpecular(position.xyz, n.xyz, CameraPosition, roughness);
+  vec4 vctDiff = VCTDiffuse(position.xyz, n.xyz, CameraPosition, tangent, bitangent, roughness);
   specularCubemap = vctSpec.rgb;
   diffuseCubemap = vctDiff.rgb;
   gi += diffuseCubemap;
@@ -143,7 +143,7 @@ void main()
 #endif // !PROBE_ENABLED
 
     float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
-    specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
+    //specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
 
     vec3 F0 = vec3(0.04);
     F0 = mix(vec3(1.0), F0, metallic);
@@ -197,5 +197,5 @@ void main()
     }
 #endif
 
-    output0 = vec4(n.xyz, 1.0);
+    output0 = vec4(result, 1.0);
 }

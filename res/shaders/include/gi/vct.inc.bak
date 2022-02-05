@@ -41,6 +41,7 @@ vec4 voxelFetch(vec3 pos, vec3 dir, float lod)
 		+ sampleY * sampleWeights.y
 		+ sampleZ * sampleWeights.z;
 
+	filtered.a = 1.0;
 	return filtered;
 }
 
@@ -61,7 +62,7 @@ vec4 voxelTraceCone(float minVoxelDiameter, vec3 origin, vec3 dir, float coneRat
 		float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
 		vec3 samplePos = origin + dir * dist;
 		vec4 sampleValue = voxelFetch(samplePos, -dir, sampleLOD);
-		//sampleValue = mix(sampleValue,fadeCol, clamp(dist/maxDist, 0.0, 1.0));
+		sampleValue = mix(sampleValue,fadeCol, clamp(dist/maxDist, 0.0, 1.0));
 		float sampleWeight = (1.0 - accum.w);
 		accum += sampleValue * sampleWeight;
 		dist += sampleDiameter;
@@ -80,27 +81,29 @@ vec3 decodeVoxelPosition(vec3 voxelPosition)
 	float voxelImageSize = float($VCT_MAP_SIZE);
 	float halfVoxelImageSize = voxelImageSize * 0.5;
 
-	return (vec3((voxelPosition - VoxelProbePosition) * $VCT_SCALE) + vec3(halfVoxelImageSize)) / vec3(voxelImageSize);
+	return clamp((vec3((voxelPosition - VoxelProbePosition) * $VCT_SCALE) + vec3(halfVoxelImageSize)) / vec3(voxelImageSize), vec3(0.0), vec3(1.0));
 }
 
-vec4 VCTDiffuse(vec3 position, vec3 normal, vec3 camera, vec3 tangent, vec3 bitangent)
+vec4 VCTDiffuse(vec3 position, vec3 normal, vec3 camera, vec3 tangent, vec3 bitangent, float roughness)
 {
 	float voxelImageSize = float($VCT_MAP_SIZE);
 	
 	vec3 voxelPosition = decodeVoxelPosition(position) + (normal * $VCT_NORMAL_OFFSET);
+	
+	float roughnessConversion = mix(-0.1, 4.0, roughness);
 
 	vec4 coneTraceRes = vec4(0.0);
 
-	coneTraceRes += voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal), $VCT_DIFFUSE_CONE_SIZE, $VCT_DIFFUSE_MAX_LEN);
-	coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal+tangent), $VCT_DIFFUSE_CONE_SIZE, $VCT_DIFFUSE_MAX_LEN);
-	coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal-tangent), $VCT_DIFFUSE_CONE_SIZE, $VCT_DIFFUSE_MAX_LEN);
-	coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal+bitangent), $VCT_DIFFUSE_CONE_SIZE, $VCT_DIFFUSE_MAX_LEN);
-	coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal-bitangent), $VCT_DIFFUSE_CONE_SIZE, $VCT_DIFFUSE_MAX_LEN);
+	coneTraceRes += voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal), $VCT_DIFFUSE_CONE_SIZE + roughnessConversion, $VCT_DIFFUSE_MAX_LEN);
+	coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal+tangent), $VCT_DIFFUSE_CONE_SIZE + roughnessConversion, $VCT_DIFFUSE_MAX_LEN);
+	coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal-tangent), $VCT_DIFFUSE_CONE_SIZE + roughnessConversion, $VCT_DIFFUSE_MAX_LEN);
+	coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal+bitangent), $VCT_DIFFUSE_CONE_SIZE + roughnessConversion, $VCT_DIFFUSE_MAX_LEN);
+	coneTraceRes += 0.707 * voxelTraceCone(1.0/voxelImageSize, voxelPosition, normalize(normal-bitangent), $VCT_DIFFUSE_CONE_SIZE + roughnessConversion, $VCT_DIFFUSE_MAX_LEN);
 	
 	return coneTraceRes / 5.0;
 }
 
-vec4 VCTSpecular(vec3 position, vec3 normal, vec3 camera)
+vec4 VCTSpecular(vec3 position, vec3 normal, vec3 camera, float roughness)
 {
 	float voxelImageSize = float($VCT_MAP_SIZE);
 
@@ -109,5 +112,7 @@ vec4 VCTSpecular(vec3 position, vec3 normal, vec3 camera)
 	
 	vec3 voxelPosition = decodeVoxelPosition(position) + (normal * $VCT_NORMAL_OFFSET);
 	
-	return voxelTraceCone(1.0 / voxelImageSize, voxelPosition, normalize(reflectionDir), $VCT_SPECULAR_CONE_SIZE, $VCT_SPECULAR_MAX_LEN);
+	float roughnessConversion = mix(-0.1, 4.0, roughness);
+	
+	return voxelTraceCone(1.0 / voxelImageSize, voxelPosition, normalize(reflectionDir), $VCT_SPECULAR_CONE_SIZE + roughnessConversion, $VCT_SPECULAR_MAX_LEN);
 }
