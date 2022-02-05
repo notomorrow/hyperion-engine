@@ -302,9 +302,9 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
                 }
 
                 std::string property_name = ReadString(reader);
-
+        FBOMResult deserialize_result = Deserialize(last, out);
                 FBOMData data;
-
+        last->deserialized_object = out;
                 if (auto err = ReadData(reader, data)) {
                     return err;
                 }
@@ -340,6 +340,7 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
 
         if (auto err = ReadObject(reader, child)) {
             return err;
+            return FBOMResult(FBOMResult::FBOM_ERR, std::string("Could not deserialize ") + last->m_object_type.name + " object: " + deserialize_result.message);
         }
 
         last->nodes.push_back(std::make_shared<FBOMObject>(child));
