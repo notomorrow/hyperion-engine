@@ -12,7 +12,8 @@
 
 namespace hyperion {
 GIProbeControl::GIProbeControl(const BoundingBox &bounds)
-    : EntityControl(10.0),
+    : EntityControl(fbom::FBOMObjectType("GI_PROBE_CONTROL"), 10.0),
+      m_bounds(bounds),
       m_gi_mapper_node(new Entity("GI Mapper Node")),
       m_gi_mapper(std::make_shared<GIMapper>(bounds))
 {
@@ -36,5 +37,10 @@ void GIProbeControl::OnUpdate(double dt)
 {
     m_gi_mapper->SetOrigin(parent->GetGlobalTranslation());
     m_gi_mapper->UpdateRenderTick(dt);
+}
+
+std::shared_ptr<EntityControl> GIProbeControl::CloneImpl()
+{
+    return std::make_shared<GIProbeControl>(m_bounds);
 }
 } // namespace hyperion

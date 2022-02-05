@@ -17,8 +17,11 @@ public:
     virtual void OnUpdate(double dt);
 
 protected:
+    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+
     std::shared_ptr<Entity> m_gi_mapper_node;
     std::shared_ptr<GIMapper> m_gi_mapper;
+    BoundingBox m_bounds;
 };
 } // namespace hyperion
 

@@ -72,16 +72,16 @@ void LightingShader::ApplyMaterial(const Material &mat)
     }*/
 
     if (auto cubemap = env->GetGlobalCubemap()) {
-        //cubemap->Prepare();
+        cubemap->Prepare();
 
-        //SetUniform("env_GlobalCubemap", cubemap.get());
+        SetUniform("env_GlobalCubemap", cubemap.get());
 
 
-        /*if (env->ProbeEnabled()) {
+        if (env->ProbeEnabled()) {
             const auto &origin = env->GetProbeRenderer()->GetProbe()->GetOrigin();
             SetUniform("EnvProbe.position", origin);
             SetUniform("EnvProbe.max", Vector3(40.0f));
-        }*/
+        }
     }
 
     if (auto cubemap = env->GetGlobalIrradianceCubemap()) {

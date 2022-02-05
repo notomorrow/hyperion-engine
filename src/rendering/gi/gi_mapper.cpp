@@ -11,7 +11,7 @@
 
 namespace hyperion {
 GIMapper::GIMapper(const BoundingBox &bounds)
-    : Renderable(RB_BUFFER),
+    : Renderable(fbom::FBOMObjectType("GI_MAPPER"), RB_BUFFER),
       m_bounds(bounds),
       m_render_tick(0.0),
       m_render_index(0),
@@ -179,5 +179,10 @@ void GIMapper::Render(Renderer *renderer, Camera *cam)
 
     m_render_index++;
     m_render_index = m_render_index % m_cameras.size();
+}
+
+std::shared_ptr<Renderable> GIMapper::CloneImpl()
+{
+    return std::make_shared<GIMapper>(m_bounds);
 }
 } // namespace apex

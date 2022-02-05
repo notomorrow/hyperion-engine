@@ -15,7 +15,7 @@
 
 namespace hyperion {
 GIMapperCamera::GIMapperCamera(const GIMapperRegion &region)
-    : Renderable(RB_BUFFER),
+    : Renderable(fbom::FBOMObjectType("GI_MAPPER_CAMERA"), RB_BUFFER),
       m_texture_id(0),
       m_region(region),
       m_camera(new OrthoCamera(-GIManager::voxel_map_size, GIManager::voxel_map_size, -GIManager::voxel_map_size, GIManager::voxel_map_size, 0, GIManager::voxel_map_size))//new PerspectiveCamera(90.0f, GIManager::voxel_map_size, GIManager::voxel_map_size, 0.01f, GIManager::voxel_map_size / GIManager::voxel_map_scale))
@@ -98,5 +98,10 @@ void GIMapperCamera::Render(Renderer *renderer, Camera *)
         m_mipmap_shader->End();
     }
 
+}
+
+std::shared_ptr<Renderable> GIMapperCamera::CloneImpl()
+{
+    return std::make_shared<GIMapperCamera>(m_region);
 }
 } // namespace apex

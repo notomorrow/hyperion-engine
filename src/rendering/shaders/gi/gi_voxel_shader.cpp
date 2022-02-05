@@ -44,10 +44,7 @@ void GIVoxelShader::ApplyMaterial(const Material &mat)
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
 
     SetUniform("C_albedo", mat.diffuse_color);
-
-    if (mat.HasParameter("Emissiveness")) {
-        SetUniform("Emissiveness", mat.GetParameter("Emissiveness")[0]);
-    }
+    SetUniform("Emissiveness", mat.GetParameter(MATERIAL_PARAMETER_EMISSIVENESS)[0]);
 
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
         if (it->second == nullptr) {

@@ -370,11 +370,11 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(false);
-        Environment::GetInstance()->SetVCTEnabled(true);
+        Environment::GetInstance()->SetProbeEnabled(true);
+        Environment::GetInstance()->SetVCTEnabled(false);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
-        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 0, 0));
+        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 5, 0));
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
         GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
@@ -530,10 +530,10 @@ public:
                 if (entity->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
-                entity->GetChild(i)->GetRenderable()->SetShader(shader);
+                //entity->GetChild(i)->GetRenderable()->SetShader(shader);
             }
             top->AddChild(entity);
-        }
+        }*/
 
         {
             auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
