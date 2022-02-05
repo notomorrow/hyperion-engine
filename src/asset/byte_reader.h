@@ -21,10 +21,18 @@ public:
 
         ReadBytes(reinterpret_cast<char*>(ptr), size);
     }
+    
+    template <typename T>
+    void Peek(T *ptr, unsigned size = sizeof(T))
+    {
+        Read(ptr, size);
+        Rewind(size);
+    }
 
     virtual std::streampos Position() const = 0;
     virtual std::streampos Max() const = 0;
     virtual void Skip(unsigned amount) = 0;
+    virtual void Rewind(unsigned long amount) = 0;
     virtual void Seek(unsigned long where_to) = 0;
 
     bool Eof() const
@@ -62,6 +70,11 @@ public:
     void Skip(unsigned amount)
     {
         m_pos += amount;
+    }
+
+    void Rewind(unsigned long amount)
+    {
+        m_pos -= amount;
     }
 
     void Seek(unsigned long where_to)
@@ -112,6 +125,11 @@ public:
     void Skip(unsigned amount)
     {
         file->seekg(pos += amount);
+    }
+
+    void Rewind(unsigned long amount)
+    {
+        file->seekg(pos -= amount);
     }
 
     void Seek(unsigned long where_to)

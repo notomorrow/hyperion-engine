@@ -180,7 +180,7 @@ public:
         if (material == nullptr) {
             return FBOMResult::FBOM_ERR;
         }
-        
+
         return FBOMResult(FBOMResult::FBOM_ERR, "material serialization is not yet implemented");
         /*uint32_t num_parameters = material->params.size();
 

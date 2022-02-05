@@ -41,6 +41,43 @@ protected:
     virtual void WriteBytes(char *ptr, unsigned size) = 0;
 };
 
+// TEMP
+class MemoryByteWriter : public ByteWriter {
+public:
+    MemoryByteWriter()
+        : m_pos(0)
+    {
+        
+    }
+
+    ~MemoryByteWriter()
+    {
+    }
+
+    std::streampos Position() const
+    {
+        return std::streampos(m_pos);
+    }
+
+    void Close()
+    {
+    }
+
+    inline const std::vector<char> &GetData() const { return m_data; }
+
+private:
+    std::vector<char> m_data;
+    size_t m_pos;
+
+    void WriteBytes(char *ptr, unsigned size)
+    {
+        for (size_t i = 0; i < size; i++) {
+            m_data.push_back(ptr[i]);
+            m_pos++;
+        }
+    }
+};
+
 class FileByteWriter : public ByteWriter {
 public:
     FileByteWriter(const std::string &filepath, std::streampos begin = 0)
