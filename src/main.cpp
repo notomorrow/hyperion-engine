@@ -194,12 +194,12 @@ public:
         }
         top->AddChild(mitsuba);
 
-        /*auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
-        sponza->Scale(Vector3(0.1f));
+        auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+        sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter("shininess", 0.1f);
-                sponza->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
+                sponza->GetChild(i)->GetMaterial().SetParameter("shininess", 0.3f);
+                sponza->GetChild(i)->GetMaterial().SetParameter("roughness", 0.4f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
@@ -208,7 +208,7 @@ public:
                 }
             }
         //}
-        top->AddChild(sponza);*/
+        top->AddChild(sponza);
         /*{
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
@@ -228,7 +228,7 @@ public:
         }*/
 
 
-        {
+        /*{
             auto model = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/conference/conference.obj");
             model->SetName("model");
             model->Scale(0.01f);
@@ -242,7 +242,7 @@ public:
 
             top->AddChild(model);
             model->UpdateTransform();
-        }
+        }*/
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {

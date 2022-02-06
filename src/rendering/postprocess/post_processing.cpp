@@ -99,7 +99,7 @@ void PostProcessing::Render(Camera *cam, Framebuffer2D *fbo)
     for (auto &&it : m_filters) {
         CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
-        if (++counter == counter_max) {
+        if (counter++ == counter_max) {
             m_blit_framebuffer->End();
             in_fbo = false;
         }
