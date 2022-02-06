@@ -24,9 +24,6 @@ uniform sampler2D MetalnessMap;
 uniform int HasAoMap;
 uniform sampler2D AoMap;
 
-#if VCT_ENABLED
-#include "gi/vct.inc"
-#endif
 
 // cubemap probe
 struct Probe {
@@ -528,3 +525,6 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
 }
 
 
+#if VCT_ENABLED
+#include "gi/vct.inc"
+#endif
