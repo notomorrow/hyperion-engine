@@ -32,6 +32,7 @@ GIMapper::GIMapper(const BoundingBox &bounds)
         region.bounds = m_bounds;
         region.direction = m_directions[i].first;
         region.up_vector = m_directions[i].second;
+        region.direction_index = i;
 
         m_cameras[i] = new GIMapperCamera(region);
         m_cameras[i]->SetShader(m_shader);

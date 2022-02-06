@@ -2,10 +2,10 @@
 #error "VCT_ENABLED must be set to true to include this header"
 #endif
 
-#define $VCT_SPECULAR_MAX_LEN 0.5
+#define $VCT_SPECULAR_MAX_LEN 0.3
 #define $VCT_SPECULAR_CONE_SIZE 0.1
-#define $VCT_DIFFUSE_MAX_LEN 0.1
-#define $VCT_DIFFUSE_CONE_SIZE 0.2
+#define $VCT_DIFFUSE_MAX_LEN 0.2
+#define $VCT_DIFFUSE_CONE_SIZE 3.0
 #define $VCT_NORMAL_OFFSET 0.015
 
 uniform sampler3D VoxelMap[$VCT_NUM_MAPS];

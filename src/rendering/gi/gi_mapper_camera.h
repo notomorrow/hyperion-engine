@@ -15,6 +15,7 @@ struct GIMapperRegion {
     BoundingBox bounds;
     Vector3 direction;
     Vector3 up_vector;
+    int direction_index;
 };
 
 class GIMapperCamera : public Renderable {
@@ -40,6 +41,7 @@ private:
     std::shared_ptr<Texture3D> m_texture;
     GIMapperRegion m_region;
     std::shared_ptr<ComputeShader> m_clear_shader;
+    std::shared_ptr<ComputeShader> m_mipmap_shader;
     Camera *m_camera;
 };
 } // namespace apex

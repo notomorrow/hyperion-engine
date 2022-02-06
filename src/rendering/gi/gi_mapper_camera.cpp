@@ -4,6 +4,7 @@
 #include "../shader_manager.h"
 #include "../shaders/gi/gi_voxel_shader.h"
 #include "../shaders/gi/gi_voxel_clear_shader.h"
+#include "../shaders/compute/blur_compute_shader.h"
 #include "../renderer.h"
 #include "../texture_3D.h"
 #include "../camera/perspective_camera.h"
@@ -20,11 +21,15 @@ GIMapperCamera::GIMapperCamera(const GIMapperRegion &region)
 {
     m_texture.reset(new Texture3D(GIManager::voxel_map_size, GIManager::voxel_map_size, GIManager::voxel_map_size, nullptr));
     m_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
-    m_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR);
+    m_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
     m_texture->SetFormat(CoreEngine::GLEnums::RGBA);
     m_texture->SetInternalFormat(CoreEngine::GLEnums::RGBA32F);
 
     m_clear_shader = ShaderManager::GetInstance()->GetShader<GIVoxelClearShader>(ShaderProperties());
+    m_mipmap_shader = ShaderManager::GetInstance()->GetShader<BlurComputeShader>(
+        ShaderProperties()
+            .Define(std::string("DIRECTION_") + std::to_string(region.direction_index), true)
+    );
 }
 
 GIMapperCamera::~GIMapperCamera()
@@ -40,20 +45,19 @@ void GIMapperCamera::Begin()
 {
     if (!m_texture->IsUploaded()) {
         m_texture->Begin(false); // do not upload texture data
-        // this ought to be refactored int a more reusable format
-        glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA32F, m_texture->GetWidth(), m_texture->GetHeight(), m_texture->GetLength());
-        //glGenerateMipmap(GL_TEXTURE_3D);
+        // this ought to be refactored into a more reusable format
+        glTexStorage3D(GL_TEXTURE_3D, GIManager::voxel_map_num_mipmaps, GL_RGBA32F, m_texture->GetWidth(), m_texture->GetHeight(), m_texture->GetLength());
         m_texture->End();
     }
 
-    glBindImageTexture(0, m_texture->GetId(), 0, true, 0, GL_READ_WRITE, GL_RGBA32F);
+    glBindImageTexture(0, m_texture->GetId(), 0, true, 0, GL_WRITE_ONLY, GL_RGBA32F);
     CatchGLErrors("Failed to bind image texture.");
 
 }
 
 void GIMapperCamera::End()
 {
-    glBindImageTexture(0, 0, 0, true, 0, GL_READ_WRITE, GL_RGBA32F);
+    glBindImageTexture(0, 0, 0, true, 0, GL_WRITE_ONLY, GL_RGBA32F);
 }
 
 void GIMapperCamera::Update(double dt)
@@ -70,7 +74,7 @@ void GIMapperCamera::Render(Renderer *renderer, Camera *)
 
     // clear texture of previous frame's voxels
     m_clear_shader->Use();
-    m_clear_shader->Dispatch();
+    m_clear_shader->Dispatch(GIManager::voxel_map_size, GIManager::voxel_map_size, GIManager::voxel_map_size);
     m_clear_shader->End();
 
     renderer->RenderBucket(
@@ -81,5 +85,17 @@ void GIMapperCamera::Render(Renderer *renderer, Camera *)
     );
 
     End();
+
+    m_mipmap_shader->SetUniform("srcTex", m_texture.get());
+
+    for (int i = 1; i < GIManager::voxel_map_num_mipmaps; i++) {
+        int mip_size = GIManager::voxel_map_size >> i;
+        m_mipmap_shader->SetUniform("srcMipLevel", i - 1);
+        glBindImageTexture(0, m_texture->GetId(), i, true, 0, GL_WRITE_ONLY, GL_RGBA32F);
+        m_mipmap_shader->Use();
+        m_mipmap_shader->Dispatch(mip_size, mip_size, mip_size);
+        m_mipmap_shader->End();
+    }
+
 }
 } // namespace apex
