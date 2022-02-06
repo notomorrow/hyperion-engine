@@ -17,7 +17,7 @@ decltype(FBOMLoader::loaders) FBOMLoader::loaders = {
 
 FBOMLoader::FBOMLoader()
     : root(new FBOMObject(FBOMObjectType("ROOT"))),
-      m_in_static_data(false)
+    m_in_static_data(false)
 {
     last = root;
 
@@ -68,18 +68,9 @@ FBOMResult FBOMLoader::Deserialize(FBOMObject *in, FBOMDeserialized &out)
     return deserialize_result;
 }
 
-    FBOMResult serialize_result = it->second.m_serializer(this, in, out);
-
-    return serialize_result;
-}
-
-FBOMResult FBOMLoader::WriteToByteStream(ByteWriter *writer, FBOMLoadable *loadable)
+std::shared_ptr<Loadable> FBOMLoader::LoadFromFile(const std::string &path)
 {
     ByteReader *reader = new FileByteReader(path);
-
-    if (reader->Eof()) {
-        return nullptr;
-    }
 
     m_static_data_pool.clear();
     m_in_static_data = false;
@@ -106,8 +97,7 @@ FBOMResult FBOMLoader::WriteToByteStream(ByteWriter *writer, FBOMLoadable *loada
 
     delete reader;
 
-    ex_assert_msg(root->nodes.size() == 1, "No object added to root (should be one)");
-    ex_assert(root->nodes[0] != nullptr);
+    hard_assert(root != nullptr);
 
     ex_assert_msg(root->nodes.size() == 1, "No object added to root (should be one)");
     ex_assert(root->nodes[0] != nullptr);
@@ -209,7 +199,7 @@ FBOMType FBOMLoader::ReadObjectType(ByteReader *reader)
     return result;
 }
 
-FBOMResult FBOMLoader::ReadData(ByteReader *reader, FBOMData &data)
+FBOMResult FBOMLoader::ReadData(ByteReader *reader, std::shared_ptr<FBOMData> &data)
 {
     // read data location
     uint8_t object_type_location = FBOM_DATA_LOCATION_NONE;
@@ -224,8 +214,8 @@ FBOMResult FBOMLoader::ReadData(ByteReader *reader, FBOMData &data)
         unsigned char *bytes = new unsigned char[sz];
         reader->Read(bytes, sz);
 
-        data = FBOMData(object_type);
-        data.SetBytes(sz, bytes);
+        data.reset(new FBOMData(object_type));
+        data->SetBytes(sz, bytes);
 
         delete[] bytes;
     } else if (object_type_location == FBOM_DATA_LOCATION_STATIC) {
@@ -306,9 +296,9 @@ FBOMResult FBOMLoader::ReadObject(ByteReader *reader, FBOMObject &object)
                 }
 
                 std::string property_name = ReadString(reader);
-        FBOMResult deserialize_result = Deserialize(last, out);
-                FBOMData data;
-        last->deserialized_object = out;
+
+                std::shared_ptr<FBOMData> data;
+
                 if (auto err = ReadData(reader, data)) {
                     return err;
                 }
@@ -344,7 +334,6 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
 
         if (auto err = ReadObject(reader, child)) {
             return err;
-            return FBOMResult(FBOMResult::FBOM_ERR, std::string("Could not deserialize ") + last->m_object_type.name + " object: " + deserialize_result.message);
         }
 
         last->nodes.push_back(std::make_shared<FBOMObject>(child));
@@ -391,7 +380,7 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
             {
             case FBOMStaticData::FBOM_STATIC_DATA_NONE:
                 m_static_data_pool[offset] = FBOMStaticData();
-            
+
                 break;
             case FBOMStaticData::FBOM_STATIC_DATA_OBJECT:
             {
@@ -411,7 +400,7 @@ FBOMResult FBOMLoader::Handle(ByteReader *reader, FBOMCommand command, FBOMObjec
                 break;
             case FBOMStaticData::FBOM_STATIC_DATA_DATA:
             {
-                FBOMData data;
+                std::shared_ptr<FBOMData> data;
 
                 if (auto err = ReadData(reader, data)) {
                     return err;
