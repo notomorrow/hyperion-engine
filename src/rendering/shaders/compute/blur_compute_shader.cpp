@@ -1,13 +1,13 @@
-#include "gi_voxel_clear_shader.h"
+#include "blur_compute_shader.h"
 #include "../../gi/gi_manager.h"
 #include "../../../asset/asset_manager.h"
 #include "../../../asset/text_loader.h"
 
 namespace hyperion {
-GIVoxelClearShader::GIVoxelClearShader(const ShaderProperties &properties)
+BlurComputeShader::BlurComputeShader(const ShaderProperties &properties)
     : ComputeShader(properties)
 {
-    const std::string cs_path("res/shaders/gi/clear.comp");
+    const std::string cs_path("res/shaders/compute/blur.comp");
 
     AddSubShader(
         Shader::SubShaderType::SUBSHADER_COMPUTE,
@@ -15,5 +15,9 @@ GIVoxelClearShader::GIVoxelClearShader(const ShaderProperties &properties)
         properties,
         cs_path
     );
+}
+
+BlurComputeShader::~BlurComputeShader()
+{
 }
 } // namespace hyperion

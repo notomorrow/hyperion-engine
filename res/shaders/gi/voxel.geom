@@ -6,7 +6,7 @@ uniform mat4 u_viewMatrix;
 
 
 layout(triangles) in;
-layout(triangle_strip, max_vertices = 24) out;
+//
 // input
 in VSOutput
 {
@@ -25,13 +25,14 @@ out GSOutput
 } gs_out;
 
 
-float cubeScale = 0.35;
+float cubeScale = 1.0 / $VCT_SCALE;
 
+layout(triangle_strip, max_vertices = 24) out;
 void main()
 {
 
-	vec4 centerPos = gl_in[0].gl_Position;
-	mat4 mvp = u_projMatrix * u_viewMatrix * u_modelMatrix;
+	vec4 centerPos = vs_out[0].position;
+	mat4 mvp = u_projMatrix * u_viewMatrix;
 
 	// -X
 	{
@@ -39,28 +40,28 @@ void main()
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, .5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(-.5, .5, -.5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, .5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(-.5, -.5, .5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, -.5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 		
 		gl_Position = mvp * (centerPos + cubeScale * vec4(-.5, -.5, -.5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, -.5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 	}
 	EndPrimitive();
@@ -71,28 +72,28 @@ void main()
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, .5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(.5, .5, .5, 0.0));			
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, .5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(.5, -.5, -.5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, -.5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 		
 		gl_Position = mvp * (centerPos + cubeScale * vec4(.5, -.5, .5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, -.5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 	}
 	EndPrimitive();
@@ -102,28 +103,28 @@ void main()
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, -.5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(.5, -.5, -.5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, -.5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(-.5, -.5, .5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, -.5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 		
 		gl_Position = mvp * (centerPos + cubeScale * vec4(.5, -.5, .5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, -.5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 	}
 	EndPrimitive();
@@ -133,28 +134,28 @@ void main()
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, .5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(-.5, .5, -.5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, .5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(.5, .5, .5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, .5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 		
 		gl_Position = mvp * (centerPos + cubeScale * vec4(-.5, .5, .5, 0.0));			
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, .5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 	}
 	EndPrimitive();
@@ -164,28 +165,28 @@ void main()
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, -.5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(-.5, .5, -.5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, .5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(.5, -.5, -.5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, -.5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 		
 		gl_Position = mvp * (centerPos + cubeScale * vec4(.5, .5, -.5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, .5, -.5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 	}
 	EndPrimitive();
@@ -195,28 +196,28 @@ void main()
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, -.5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(.5, .5, .5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(.5, .5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 
 		gl_Position = mvp * (centerPos + cubeScale * vec4(-.5, -.5, .5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, -.5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 		
 		gl_Position = mvp * (centerPos + cubeScale * vec4(-.5, .5, .5, 0.0));
 		gs_out.texcoord0 = vs_out[0].texcoord0;
 		gs_out.offset = vec3(-.5, .5, .5);
 		gs_out.normal = vs_out[0].normal;
-		gs_out.position = u_modelMatrix * vs_out[0].position;
+		gs_out.position = vs_out[0].position;
 		EmitVertex();
 	}
 	EndPrimitive();

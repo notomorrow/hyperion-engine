@@ -11,7 +11,6 @@ in vec2 v_texcoord0;
 in vec3 v_tangent;
 in vec3 v_bitangent;
 in mat3 v_tbn;
-in vec4 v_voxelPosition;
 
 uniform vec3 u_camerapos;
 
@@ -131,9 +130,8 @@ void main()
 
 #if VCT_ENABLED
   //testing
-  vec3 voxel = v_voxelPosition.xyz;
-  vec4 vctSpec = VCTSpecular(voxel, v_position.xyz, n.xyz, u_camerapos);
-  vec4 vctDiff = VCTDiffuse(voxel, v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent);
+  vec4 vctSpec = VCTSpecular(v_position.xyz, n.xyz, u_camerapos, u_roughness);
+  vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent, roughness);
   specularCubemap = vctSpec.rgb;
   diffuseCubemap = vctDiff.rgb;
 #endif // VCT_ENABLED
@@ -158,7 +156,7 @@ void main()
 #endif // !PROBE_ENABLED
 
   float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
-  specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughness);
+  //specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughness);
 
 
   vec3 F0 = vec3(0.04);
