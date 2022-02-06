@@ -5,7 +5,6 @@
 #define POSITION_EPSILON 0.0005
 
 #include "rigid_body.h"
-#include "collision.h"
 #include "box_physics_shape.h"
 #include "sphere_physics_shape.h"
 #include "plane_physics_shape.h"

@@ -9,11 +9,15 @@
 
 #if USE_GLFW_ENGINE
 
-#if USE_GLEW
-#include <GL/glew.h>
-#include <GL/gl.h>
+#if __APPLE__
+// #include <OpenGL/gl3.h>
 #else
 #include <GL/gl.h>
+#endif
+
+
+#if USE_GLEW
+#include <GL/glew.h>
 #endif
 
 #include <GLFW/glfw3.h>

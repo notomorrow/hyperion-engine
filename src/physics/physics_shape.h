@@ -1,8 +1,6 @@
 #ifndef APEX_PHYSICS_PHYSICS_SHAPE_H
 #define APEX_PHYSICS_PHYSICS_SHAPE_H
 
-#include "collision_info.h"
-#include "collision_list.h"
 #include "../math/vector3.h"
 #include "../math/matrix4.h"
 #include "../math/ray.h"
@@ -41,10 +39,6 @@ public:
     Vector3 GetAxis(unsigned int index) const;
 
     virtual BoundingBox GetBoundingBox() = 0;
-
-    virtual bool CollidesWith(BoxPhysicsShape *shape, CollisionList &out) = 0;
-    virtual bool CollidesWith(SpherePhysicsShape *shape, CollisionList &out) = 0;
-    virtual bool CollidesWith(PlanePhysicsShape *shape, CollisionList &out) = 0;
 
 protected:
     Matrix4 m_transform;
