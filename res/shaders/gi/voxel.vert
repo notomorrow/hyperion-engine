@@ -32,7 +32,9 @@ void main()
 	vs_out.texcoord0 = vec3(a_texcoord0, 0.0);
 	vs_out.normal = v_normal.xyz;
 	vs_out.position = v_position;
+	gl_Position = vs_out.position;
 #endif
-	//gl_Position = vec4(a_position, 1.0);
+#if !VCT_GEOMETRY_SHADER
 	gl_Position = u_projMatrix*u_viewMatrix*v_position;
+#endif
 }
