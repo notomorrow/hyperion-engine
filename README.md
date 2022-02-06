@@ -1,5 +1,7 @@
 # Hyperion Engine
 
+![Apex engine screenshot](/screenshots/screenshot22.PNG)
+
 ## About
 
 Hyperion Engine is a 3D game engine written in C++ - it is easy to understand and use, while still giving you ample control over the game engine.
@@ -11,7 +13,6 @@ Feel free to contribute anything - We'd love to have some more eyes on this proj
 ## Screenshots
 
 ![Apex engine screenshot](/screenshots/screenshot21.PNG)
-![Apex engine screenshot](/screenshots/screenshot22.PNG)
 ![Apex engine screenshot](/screenshots/screenshot7.png)
 
 ## Building
