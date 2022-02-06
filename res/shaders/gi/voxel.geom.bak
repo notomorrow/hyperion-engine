@@ -6,7 +6,7 @@ uniform mat4 u_viewMatrix;
 
 
 layout(triangles) in;
-layout(triangle_strip, max_vertices = 24) out;
+//
 // input
 in VSOutput
 {
@@ -25,13 +25,14 @@ out GSOutput
 } gs_out;
 
 
-float cubeScale = 0.35;
+float cubeScale = 2.3;
 
+layout(triangle_strip, max_vertices = 24) out;
 void main()
 {
 
-	vec4 centerPos = gl_in[0].gl_Position;
-	mat4 mvp = u_projMatrix * u_viewMatrix * u_modelMatrix;
+	vec4 centerPos = vs_out[0].position;
+	mat4 mvp = u_projMatrix * u_viewMatrix;
 
 	// -X
 	{
