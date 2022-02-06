@@ -7,7 +7,8 @@
 #include "../shaders/compute/blur_compute_shader.h"
 #include "../renderer.h"
 #include "../texture_3D.h"
-#include "../camera/perspective_camera.h"
+//#include "../camera/perspective_camera.h"
+#include "../camera/ortho_camera.h"
 #include "../../math/math_util.h"
 #include "../../opengl.h"
 #include "../../gl_util.h"
@@ -17,11 +18,11 @@ GIMapperCamera::GIMapperCamera(const GIMapperRegion &region)
     : Renderable(RB_BUFFER),
       m_texture_id(0),
       m_region(region),
-      m_camera(new PerspectiveCamera(90.0f, GIManager::voxel_map_size, GIManager::voxel_map_size, 0.01f, GIManager::voxel_map_size / GIManager::voxel_map_scale))
+      m_camera(new OrthoCamera(-GIManager::voxel_map_size, GIManager::voxel_map_size, -GIManager::voxel_map_size, GIManager::voxel_map_size, 0, GIManager::voxel_map_size))//new PerspectiveCamera(90.0f, GIManager::voxel_map_size, GIManager::voxel_map_size, 0.01f, GIManager::voxel_map_size / GIManager::voxel_map_scale))
 {
     m_texture.reset(new Texture3D(GIManager::voxel_map_size, GIManager::voxel_map_size, GIManager::voxel_map_size, nullptr));
     m_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
-    m_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
+    m_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_NEAREST);
     m_texture->SetFormat(CoreEngine::GLEnums::RGBA);
     m_texture->SetInternalFormat(CoreEngine::GLEnums::RGBA32F);
 
