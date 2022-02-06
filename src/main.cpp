@@ -94,7 +94,6 @@ using namespace hyperion;
 
 class SceneEditor : public Game {
 public:
-    Camera *cam;
     PssmShadowMapping *shadows;
 
     std::vector<std::shared_ptr<Entity>> m_raytested_entities;
@@ -109,8 +108,6 @@ public:
     std::shared_ptr<ui::UIText> m_selected_node_text;
     std::shared_ptr<ui::UIButton> m_rotate_mode_btn;
 
-    std::shared_ptr<Entity> top;
-
     SceneEditor(const RenderWindow &window)
         : Game(window)
     {
@@ -122,7 +119,6 @@ public:
     ~SceneEditor()
     {
         delete shadows;
-        delete cam;
 
         AudioManager::Deinitialize();
     }
@@ -143,13 +139,13 @@ public:
         particle_node->SetName("Particle node");
         // particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
         particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/test_snowflake.png"));
-        particle_node->AddControl(std::make_shared<ParticleEmitterControl>(cam, particle_generator_info));
+        particle_node->AddControl(std::make_shared<ParticleEmitterControl>(GetCamera(), particle_generator_info));
         particle_node->SetLocalScale(Vector3(1.5));
         particle_node->AddControl(std::make_shared<BoundingBoxControl>());
         particle_node->SetLocalTranslation(Vector3(0, 165, 0));
-        particle_node->AddControl(std::make_shared<CameraFollowControl>(cam, Vector3(0, 2, 0)));
+        particle_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera(), Vector3(0, 2, 0)));
 
-        top->AddChild(particle_node);
+        GetScene()->AddChild(particle_node);
     }
 
     std::shared_ptr<Cubemap> InitCubemap()
@@ -197,7 +193,7 @@ public:
             if (voxel_debug)
                 mitsuba->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
         }
-        top->AddChild(mitsuba);
+        GetScene()->AddChild(mitsuba);
 
         /*auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
         sponza->Scale(Vector3(0.07f));
@@ -213,7 +209,7 @@ public:
                 }
             }
         //}
-        top->AddChild(sponza);*/
+        GetScene()->AddChild(sponza);*/
         /*{
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
@@ -226,7 +222,7 @@ public:
                     street->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
             }
 
-            top->AddChild(street);
+            GetScene()->AddChild(street);
             street->UpdateTransform();
         }*/
 
@@ -243,7 +239,7 @@ public:
                 model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
             }
 
-            top->AddChild(model);
+            GetScene()->AddChild(model);
             model->UpdateTransform();
         }
 
@@ -280,7 +276,7 @@ public:
                 }
 
                 box->SetLocalTranslation(box_position);
-                top->AddChild(box);
+                GetScene()->AddChild(box);
             }
         }
     }
@@ -290,15 +286,15 @@ public:
         m_raytested_entities.clear();
 
         Ray ray;
-        ray.m_direction = cam->GetDirection();
+        ray.m_direction = GetCamera()->GetDirection();
         ray.m_direction.Normalize();
-        ray.m_position = cam->GetTranslation();
+        ray.m_position = GetCamera()->GetTranslation();
 
 
         using Intersection_t = std::pair<std::shared_ptr<Entity>, RaytestHit>;
 
         RaytestHit intersection;
-        std::vector<Intersection_t> intersections = { { top, intersection } };
+        std::vector<Intersection_t> intersections = { { GetScene(), intersection } };
 
         while (true) {
             std::vector<Intersection_t> new_intersections;
@@ -354,7 +350,7 @@ public:
         }
 
         std::sort(mesh_intersections.begin(), mesh_intersections.end(), [=](const RaytestHit& a, const RaytestHit& b) {
-            return a.hitpoint.Distance(cam->GetTranslation()) < b.hitpoint.Distance(cam->GetTranslation());
+            return a.hitpoint.Distance(GetCamera()->GetTranslation()) < b.hitpoint.Distance(GetCamera()->GetTranslation());
         });
 
         m_ray_hit = mesh_intersections[0];
@@ -368,18 +364,8 @@ public:
             .Define("SHADOW_MAP_RADIUS", 0.05f)
             .Define("SHADOW_PCF", true)
         );
-        
-        cam = new FpsCamera(
-            GetInputManager(),
-            &m_renderer->GetRenderWindow(),
-            m_renderer->GetRenderWindow().GetScaledWidth(),
-            m_renderer->GetRenderWindow().GetScaledHeight(),
-            75.0f,
-            0.5f,
-            750.0f
-        );
 
-        shadows = new PssmShadowMapping(cam, 4, 120.0f);
+        shadows = new PssmShadowMapping(GetCamera(), 4, 120.0f);
         shadows->SetVarianceShadowMapping(true);
 
         Environment::GetInstance()->SetVCTEnabled(false);
@@ -390,12 +376,12 @@ public:
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 0, 0));
 
-        m_renderer->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        m_renderer->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
-        //m_renderer->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        m_renderer->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
-        m_renderer->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
-        m_renderer->SetDeferred(true);
+        GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
+        GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
+        GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
+        GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
+        GetRenderer()->SetDeferred(true);
 
         AudioManager::GetInstance()->Initialize();
 
@@ -406,8 +392,6 @@ public:
                 Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(x * 0.5f, -6.0f, z * 0.5f), Vector4(MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), 1.0f), 2.0f));
             }
         }*/
-        // Initialize root node
-        top = std::make_shared<Entity>("top");
 
         // auto gi_test_node = std::make_shared<Entity>("gi_test_node");
         // gi_test_node->Move(Vector3(0, 5, 0));
@@ -415,7 +399,7 @@ public:
         // top->AddChild(gi_test_node);
 
 
-        cam->SetTranslation(Vector3(4, 0, 0));
+        GetCamera()->SetTranslation(Vector3(4, 0, 0));
 
         // Initialize particle system
         // InitParticleSystem();
@@ -426,56 +410,42 @@ public:
             "Press 3 to toggle voxel cone tracing\n");
         ui_text->SetLocalTranslation2D(Vector2(-1.0, 1.0));
         ui_text->SetLocalScale2D(Vector2(30));
-        top->AddChild(ui_text);
+        GetUI()->AddChild(ui_text);
         GetUIManager()->RegisterUIObject(ui_text);
 
         auto fps_counter = std::make_shared<ui::UIText>("fps_coutner", "- FPS");
         fps_counter->SetLocalTranslation2D(Vector2(0.8, 1.0));
         fps_counter->SetLocalScale2D(Vector2(30));
-        top->AddChild(fps_counter);
+        GetUI()->AddChild(fps_counter);
         GetUIManager()->RegisterUIObject(fps_counter);
 
         m_selected_node_text = std::make_shared<ui::UIText>("selected_node_text", "No object selected");
         m_selected_node_text->SetLocalTranslation2D(Vector2(-1.0, -0.8));
         m_selected_node_text->SetLocalScale2D(Vector2(15));
-        top->AddChild(m_selected_node_text);
+        GetUI()->AddChild(m_selected_node_text);
         GetUIManager()->RegisterUIObject(m_selected_node_text);
 
         m_rotate_mode_btn = std::make_shared<ui::UIButton>("rotate_mode");
         m_rotate_mode_btn->SetLocalTranslation2D(Vector2(-1.0, -0.6));
         m_rotate_mode_btn->SetLocalScale2D(Vector2(15));
-        top->AddChild(m_rotate_mode_btn);
+        GetUI()->AddChild(m_rotate_mode_btn);
         GetUIManager()->RegisterUIObject(m_rotate_mode_btn);
 
         auto cm = InitCubemap();
 
-        top->AddControl(std::make_shared<SkydomeControl>(cam));
-        // top->AddControl(std::make_shared<SkyboxControl>(cam, nullptr));
-
-        /*auto hydrant = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/FireHydrant/FireHydrantMesh.obj");
-        hydrant->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Base_Color.png"));
-        hydrant->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Normal_OpenGL.png"));
-        hydrant->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Mixed_AO.png"));
-        hydrant->Scale(Vector3(5.0f));
-        top->AddChild(hydrant);*/
+        GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         InitTestArea();
 
         FileByteWriter fbw("scene.fbom");
         fbom::FBOMWriter writer;
-        writer.Append(top.get());
+        writer.Append(GetScene().get());
         auto res = writer.Emit(&fbw);
         fbw.Close();
 
         if (res != fbom::FBOMResult::FBOM_OK) {
             throw std::runtime_error(std::string("FBOM Error: ") + res.message);
         }
-
-        // auto ui_depth_view = std::make_shared<ui::UIObject>("fbo_preview_depth");
-        // ui_depth_view->SetLocalTranslation2D(Vector2(0.8, -0.5));
-        // ui_depth_view->SetLocalScale2D(Vector2(256));
-        // top->AddChild(ui_depth_view);
-        // GetUIManager()->RegisterUIObject(ui_depth_view);
 
         /*int total_cascades = Environment::GetInstance()->NumCascades();
         for (int x = 0; x < 2; x++) {
@@ -484,7 +454,7 @@ public:
                 ui_fbo_view->GetMaterial().SetTexture("ColorMap", Environment::GetInstance()->GetShadowMap(x * 2 + z));
                 ui_fbo_view->SetLocalTranslation2D(Vector2(0.7 + (double(x) * 0.2), -0.4 + (double(z) * -0.3)));
                 ui_fbo_view->SetLocalScale2D(Vector2(256));
-                top->AddChild(ui_fbo_view);
+                GetUI()->AddChild(ui_fbo_view);
                 GetUIManager()->RegisterUIObject(ui_fbo_view);
 
                 total_cascades--;
@@ -502,7 +472,7 @@ public:
         ui_crosshair->GetMaterial().SetTexture("ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/crosshair.png"));
         ui_crosshair->SetLocalTranslation2D(Vector2(0));
         ui_crosshair->SetLocalScale2D(Vector2(128));
-        top->AddChild(ui_crosshair);
+        GetUI()->AddChild(ui_crosshair);
         GetUIManager()->RegisterUIObject(ui_crosshair);
 
 
@@ -519,7 +489,7 @@ public:
                 return;
             }
 
-            m_renderer->SetDeferred(!m_renderer->IsDeferred());
+            GetRenderer()->SetDeferred(!GetRenderer()->IsDeferred());
         }));
 
         /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
@@ -536,7 +506,7 @@ public:
                 }
                 entity->GetChild(i)->GetRenderable()->SetShader(shader);
             }
-            top->AddChild(entity);
+            GetScene()->AddChild(entity);
         }*/
 
         {
@@ -560,7 +530,7 @@ public:
                 building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.5f);
                 building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.5f);
             }
-            top->AddChild(building);
+            GetScene()->AddChild(building);
         }*/
 
 
@@ -593,7 +563,7 @@ public:
                 
                 m_selected_node_text->SetText(ss.str());
 
-                /*auto cube = top->GetChild("cube");
+                /*auto cube = GetScene()->GetChild("cube");
                 cube->SetGlobalTranslation(mesh_intersections[0].hitpoint);
 
                 Matrix4 look_at;
@@ -645,32 +615,28 @@ public:
             m_dragging_timer = 0.0f;
         }
 
-        AudioManager::GetInstance()->SetListenerPosition(cam->GetTranslation());
-        AudioManager::GetInstance()->SetListenerOrientation(cam->GetDirection(), cam->GetUpVector());
+        AudioManager::GetInstance()->SetListenerPosition(GetCamera()->GetTranslation());
+        AudioManager::GetInstance()->SetListenerOrientation(GetCamera()->GetDirection(), GetCamera()->GetUpVector());
 
-        cam->Update(dt);
+        GetCamera()->Update(dt);
 
         PhysicsManager::GetInstance()->RunPhysics(dt);
-
-        top->Update(dt);
     }
 
-    void Render()
+    void OnRender()
     {
-        m_renderer->Begin(cam, top.get());
-
         if (Environment::GetInstance()->ShadowsEnabled()) {
             Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
             // shadow_dir.SetY(-1.0f);
-            shadows->SetOrigin(cam->GetTranslation());
+            shadows->SetOrigin(GetCamera()->GetTranslation());
             shadows->SetLightDirection(shadow_dir);
-            shadows->Render(m_renderer);
+            shadows->Render(GetRenderer());
         }
 
         // TODO: ProbeControl on top node
         if (Environment::GetInstance()->ProbeEnabled()) {
-            Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(cam->GetTranslation()));
-            Environment::GetInstance()->GetProbeRenderer()->Render(m_renderer, cam);
+            Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(GetCamera()->GetTranslation()));
+            Environment::GetInstance()->GetProbeRenderer()->Render(GetRenderer(), GetCamera());
 
             if (!Environment::GetInstance()->GetGlobalCubemap()) {
                 Environment::GetInstance()->SetGlobalCubemap(
@@ -678,10 +644,6 @@ public:
                 );
             }
         }
-        m_renderer->Render(cam);
-        m_renderer->End(cam, top.get());
-
-        top->ClearPendingRemoval();
     }
 };
 
