@@ -49,7 +49,7 @@ void Renderer::Render(Camera *cam)
     RenderAll(cam, m_fbo);
 }
 
-void Renderer::End(Camera *cam, Entity *top)
+void Renderer::End(Camera *cam)
 {
     RenderPost(cam, m_fbo);
 
