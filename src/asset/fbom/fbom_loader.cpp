@@ -5,6 +5,7 @@
 #include "../../entity.h"
 #include "../../terrain/noise_terrain/noise_terrain_control.h"
 #include "../../rendering/mesh.h"
+#include "../../rendering/material.h"
 
 namespace hyperion {
 namespace fbom {
@@ -12,7 +13,8 @@ namespace fbom {
 decltype(FBOMLoader::loaders) FBOMLoader::loaders = {
     { "ENTITY", FBOM_MARSHAL_CLASS(Entity) },
     { "NOISE_TERRAIN_CONTROL", FBOM_MARSHAL_CLASS(NoiseTerrainControl) },
-    { "MESH", FBOM_MARSHAL_CLASS(Mesh) }
+    { "MESH", FBOM_MARSHAL_CLASS(Mesh) },
+    { "MATERIAL", FBOM_MARSHAL_CLASS(Material) }
 };
 
 FBOMLoader::FBOMLoader()
@@ -33,11 +35,6 @@ FBOMLoader::FBOMLoader()
         FBOMStruct(0),
         FBOMArray()
     };
-
-    // add array types for each type
-    // for (auto it : m_registered_types) {
-    //     m_registered_types.push_back(FBOMArray())
-    // }
 }
 
 FBOMLoader::~FBOMLoader()

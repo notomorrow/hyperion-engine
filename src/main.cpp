@@ -435,16 +435,35 @@ public:
 
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
-        InitTestArea();
+        bool write = false;
 
-        FileByteWriter fbw("scene.fbom");
-        fbom::FBOMWriter writer;
-        writer.Append(GetScene()->GetChild("model").get());
-        auto res = writer.Emit(&fbw);
-        fbw.Close();
+        if (write) {
+            InitTestArea();
 
-        if (res != fbom::FBOMResult::FBOM_OK) {
-            throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+            FileByteWriter fbw("scene.fbom");
+            fbom::FBOMWriter writer;
+            writer.Append(GetScene()->GetChild("model").get());
+            auto res = writer.Emit(&fbw);
+            fbw.Close();
+
+            if (res != fbom::FBOMResult::FBOM_OK) {
+                throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+            }
+        } else {
+
+            std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./scene.fbom");
+
+            if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+                for (size_t i = 0; i < entity->NumChildren(); i++) {
+                    if (auto child = entity->GetChild(i)) {
+                        if (auto ren = child->GetRenderable()) {
+                            ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+                        }
+                    }
+                }
+
+                GetScene()->AddChild(entity);
+            }
         }
 
         /*int total_cascades = Environment::GetInstance()->NumCascades();
@@ -509,26 +528,7 @@ public:
             GetScene()->AddChild(entity);
         }*/
 
-        {
-            auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
-            superdan->SetName("superdan");
-            superdan->Move(Vector3(2, 4, 0));
-            superdan->Scale(0.25);
-            for (size_t i = 0; i < superdan->NumChildren(); i++) {
-                superdan->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
-            }
-        }
-
-        {
-            auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
-            superdan->SetName("superdan");
-            superdan->Move(Vector3(2, 4, 0));
-            superdan->Scale(0.25);
-            for (size_t i = 0; i < superdan->NumChildren(); i++) {
-                superdan->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
-            }
-        }
-
+      
 
         InputEvent raytest_event([=](bool pressed)
             {
@@ -631,7 +631,7 @@ public:
 
         // TODO: ProbeControl on top node
         if (Environment::GetInstance()->ProbeEnabled()) {
-            Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(GetCamera()->GetTranslation()));
+            //Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(GetCamera()->GetTranslation()));
             Environment::GetInstance()->GetProbeRenderer()->Render(GetRenderer(), GetCamera());
 
             if (!Environment::GetInstance()->GetGlobalCubemap()) {

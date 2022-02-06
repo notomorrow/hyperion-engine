@@ -907,6 +907,7 @@ private:
         std::unordered_map<HashCode::Value_t, int> m_hash_use_count_map;
         std::vector<FBOMObject> m_object_data; // TODO: make multiple objects be supported by the loader.
         size_t m_static_data_offset = 0;
+        FBOMResult m_last_result = FBOMResult::FBOM_OK;
 
         FBOMDataLocation GetDataLocation(HashCode::Value_t, FBOMStaticData &out) const;
         void MarkStaticDataWritten(HashCode::Value_t);
