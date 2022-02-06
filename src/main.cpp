@@ -439,7 +439,7 @@ public:
 
         FileByteWriter fbw("scene.fbom");
         fbom::FBOMWriter writer;
-        writer.Append(GetScene().get());
+        writer.Append(GetScene()->GetChild("model").get());
         auto res = writer.Emit(&fbw);
         fbw.Close();
 
@@ -519,22 +519,6 @@ public:
             }
         }
 
-
-        std::cout << "Result: " << typeid(*result.get()).name() << "\n";
-        if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
-            std::cout << "Loaded entity name: " << entity->GetName() << "\n";
-            std::cout << "entity num children: " << entity->NumChildren() << "\n";
-            entity->Scale(1.0f);
-            for (size_t i = 0; i < entity->NumChildren(); i++) {
-                std::cout << "child [" << i << "] renderable == " << intptr_t(entity->GetChild(i)->GetRenderable().get()) << "\n";
-                if (entity->GetChild(i)->GetRenderable() == nullptr) {
-                    continue;
-                }
-                //entity->GetChild(i)->GetRenderable()->SetShader(shader);
-            }
-            top->AddChild(entity);
-        }*/
-
         {
             auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
             superdan->SetName("superdan");
@@ -544,20 +528,6 @@ public:
                 superdan->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
             }
         }
-
-
-        /* {
-            auto building = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/building2/building2.obj", true);
-            building->SetLocalTranslation(Vector3(4, 2, 0));
-            building->SetLocalScale(Vector3(0.5f));
-            for (int i = 0; i < building->NumChildren(); i++) {
-                //building->GetChild(i)->GetRenderable()->SetShader(shader);
-                // building->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-                building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.5f);
-                building->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.5f);
-            }
-            GetScene()->AddChild(building);
-        }*/
 
 
         InputEvent raytest_event([=](bool pressed)
@@ -719,32 +689,6 @@ int main()
 
         std::cout << "OBJ time: " << duration << "\n";
     }*/
-
-
-        std::cout << "FBOM time: " << duration << "\n";
-    }
-    // timing test
-    { // obj
-        using namespace std;
-        using namespace std::chrono;
-        auto start = high_resolution_clock::now();
-    
-        // Call the function, here sort()
-        std::shared_ptr<Loadable> result;
-        for (int i = 0; i < 100; i++) {
-            result = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", false);
-        }
-    
-        // Get ending timepoint
-        auto stop = high_resolution_clock::now();
-    
-        // Get duration. Substart timepoints to 
-        // get durarion. To cast it to proper unit
-        // use duration cast method
-        auto duration = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(stop - start).count();
-
-        std::cout << "OBJ time: " << duration << "\n";
-    }
 
 
     // std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");

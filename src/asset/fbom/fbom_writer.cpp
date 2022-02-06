@@ -83,10 +83,12 @@ void FBOMWriter::Prune(FBOMObject *object)
     }
 
     for (auto &prop : object->properties) {
-        int property_value_usage = m_write_stream.m_hash_use_count_map[prop.second.GetHashCode().Value()];
+        soft_assert_continue(prop.second != nullptr);
+
+        int property_value_usage = m_write_stream.m_hash_use_count_map[prop.second->GetHashCode().Value()];
 
         // if (property_value_usage > 1) {
-            AddStaticData(prop.second);
+        AddStaticData(prop.second);
         // }
     }
 
@@ -232,7 +234,7 @@ FBOMResult FBOMWriter::WriteObjectType(ByteWriter *out, const FBOMType &type)
     }
 
     if (data_location == FBOM_DATA_LOCATION_INPLACE) {
-        std::stack<const FBOMType*> type_chain;
+        std::stack<const FBOMType *> type_chain;
         const FBOMType *type_ptr = &type;
 
         while (type_ptr != nullptr) {
@@ -262,10 +264,12 @@ FBOMResult FBOMWriter::WriteObjectType(ByteWriter *out, const FBOMType &type)
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::WriteData(ByteWriter *out, const FBOMData &data)
+FBOMResult FBOMWriter::WriteData(ByteWriter *out, const std::shared_ptr<FBOMData> &data)
 {
+    ex_assert(data != nullptr);
+
     FBOMStaticData static_data;
-    HashCode::Value_t hash_code = data.GetHashCode().Value();
+    HashCode::Value_t hash_code = data->GetHashCode().Value();
     uint8_t data_location = uint8_t(m_write_stream.GetDataLocation(hash_code, static_data));
     out->Write(data_location);
 
@@ -275,15 +279,15 @@ FBOMResult FBOMWriter::WriteData(ByteWriter *out, const FBOMData &data)
 
     if (data_location == FBOM_DATA_LOCATION_INPLACE) {
         // write type first
-        if (auto err = WriteObjectType(out, data.GetType())) {
+        if (auto err = WriteObjectType(out, data->GetType())) {
             return err;
         }
 
-        size_t sz = data.TotalSize();
+        size_t sz = data->TotalSize();
 
         unsigned char *bytes = new unsigned char[sz];
 
-        data.ReadBytes(sz, bytes);
+        data->ReadBytes(sz, bytes);
 
         // size of data as uint32_t
         out->Write(uint32_t(sz));
@@ -325,9 +329,6 @@ void FBOMWriter::AddObjectData(const FBOMObject &object)
 
 FBOMStaticData FBOMWriter::AddStaticData(const FBOMType &type)
 {
-    // if (type.extends != nullptr) {
-    //     AddStaticData(*type.extends);
-    // }
 
     FBOMStaticData sd;
     sd.type = FBOMStaticData::FBOM_STATIC_DATA_TYPE;
@@ -349,12 +350,6 @@ FBOMStaticData FBOMWriter::AddStaticData(const FBOMObject &object)
 {
     AddStaticData(object.m_object_type);
 
-    // for (const auto &node : object.nodes) {
-    //     soft_assert_continue(node != nullptr);
-
-    //     AddStaticData(*node);
-    // }
-
     FBOMStaticData sd;
     sd.type = FBOMStaticData::FBOM_STATIC_DATA_OBJECT;
     sd.object_data = object;
@@ -368,17 +363,18 @@ FBOMStaticData FBOMWriter::AddStaticData(const FBOMObject &object)
         m_write_stream.m_static_data[hash_code] = sd;
     }
 
-
     return sd;
 }
 
-FBOMStaticData FBOMWriter::AddStaticData(const FBOMData &object)
+FBOMStaticData FBOMWriter::AddStaticData(const std::shared_ptr<FBOMData> &data)
 {
-    AddStaticData(object.GetType());
+    ex_assert(data != nullptr);
+
+    AddStaticData(data->GetType());
 
     FBOMStaticData sd;
     sd.type = FBOMStaticData::FBOM_STATIC_DATA_DATA;
-    sd.data_data = object;
+    sd.data_data = data;
 
     const HashCode::Value_t hash_code = sd.GetHashCode().Value();
 
@@ -388,7 +384,6 @@ FBOMStaticData FBOMWriter::AddStaticData(const FBOMData &object)
         sd.offset = m_write_stream.m_static_data_offset++;
         m_write_stream.m_static_data[hash_code] = sd;
     }
-
 
     return sd;
 }
@@ -412,7 +407,6 @@ void FBOMWriter::WriteStream::MarkStaticDataWritten(HashCode::Value_t hash_code)
     auto it = m_static_data.find(hash_code);
 
     ex_assert(it != m_static_data.end());
-    ex_assert(!m_static_data[hash_code].written);
 
     m_static_data[hash_code].written = true;
 }

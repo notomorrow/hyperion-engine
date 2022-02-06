@@ -20,7 +20,7 @@
 using std::memset;
 using std::memcpy;
 
-#define FBOM_DATA_MAX_SIZE size_t(64)
+#define FBOM_DATA_MAX_SIZE size_t(256)
 
 #define FBOM_ASSERT(cond, message) \
     if (!(cond)) { return FBOMResult(FBOMResult::FBOM_ERR, (message)); }
@@ -32,7 +32,7 @@ class ByteReader;
 class ByteWriter;
 namespace fbom {
 
-using FBOMRawData_t = unsigned char[FBOM_DATA_MAX_SIZE];
+using FBOMRawData_t = unsigned char *;//unsigned char[FBOM_DATA_MAX_SIZE];
 
 struct FBOMResult {
     enum {
@@ -243,20 +243,6 @@ struct FBOMArray : FBOMType {
     }
 };
 
-struct FBOMStruct : FBOMType {
-    FBOMStruct(size_t sz) : FBOMType("STRUCT", sz) {}
-};
-
-struct FBOMArray : FBOMType {
-    FBOMArray() : FBOMType("ARRAY", 0) {}
-
-    FBOMArray(const FBOMType &held_type, size_t count)
-        : FBOMType("ARRAY", held_type.size * count)
-    {
-        ex_assert_msg(!held_type.IsUnbouned(), "Cannot create array of unbounded type");
-    }
-};
-
 struct FBOMString : FBOMType {
     FBOMString() : FBOMType("STRING", 0) {}
 
@@ -284,71 +270,90 @@ struct FBOMObjectType : FBOMType {
 };
 
 struct FBOMData {
+    static const FBOMData UNSET;
+
     FBOMData()
         : type(FBOMUnset()),
           data_size(0),
-          next(nullptr)
+          raw_data(nullptr)
     {
-        memset(raw_data, 0, sizeof(raw_data)); // tmp
+        //memset(raw_data, 0, sizeof(raw_data)); // tmp
     }
 
     FBOMData(const FBOMType &type)
         : type(type),
           data_size(0),
-          next(nullptr)
+          raw_data(nullptr)
     {
-        memset(raw_data, 0, sizeof(raw_data)); // tmp
+        //memset(raw_data, 0, sizeof(raw_data)); // tmp
     }
 
     FBOMData(const FBOMData &other)
         : type(other.type),
           data_size(other.data_size)
     {
-        memcpy(raw_data, other.raw_data, data_size);
+        if (data_size == 0) {
+            raw_data = nullptr;
+        } else {
+            raw_data = new unsigned char[data_size];
+            memcpy(raw_data, other.raw_data, data_size);
+        }
 
-        if (other.next != nullptr) {
+        /*if (other.next != nullptr) {
             next = new FBOMData(*other.next);
         } else {
             next = nullptr;
-        }
+        }*/
     }
 
     FBOMData &operator=(const FBOMData &other)
     {
-        if (next != nullptr) {
+        /*if (next != nullptr) {
             delete next;
             next = nullptr;
-        }
+        }*/
 
         type = other.type;
+        if (raw_data != nullptr && other.data_size > data_size) {
+            delete[] raw_data;
+            raw_data = nullptr;
+        }
+
         data_size = other.data_size;
+
+        if (raw_data == nullptr) {
+            raw_data = new unsigned char[data_size];
+        }
 
         memcpy(raw_data, other.raw_data, data_size);
 
-        if (other.next != nullptr) {
-            next = new FBOMData(*other.next);
-        }
+        //if (other.next != nullptr) {
+        //    next = new FBOMData(*other.next);
+        //}
 
         return *this;
     }
 
     ~FBOMData()
     {
-        if (next != nullptr) {
-            delete next;
+        //if (next != nullptr) {
+        //    delete next;
+       // }
+        if (raw_data != nullptr) {
+            delete[] raw_data;
         }
     }
 
     operator bool() const
     {
-        return data_size != 0;
+        return data_size != 0 && raw_data != nullptr;
     }
 
     inline const FBOMType &GetType() const { return type; }
 
     size_t TotalSize() const
     {
-        const FBOMData *tip = this;
+        /*const FBOMData *tip = this;
         size_t sz = 0;
 
         while (tip) {
@@ -356,7 +361,8 @@ struct FBOMData {
             tip = tip->next;
         }
 
-        return sz;
+        return sz;*/
+        return data_size;
     }
 
     void ReadBytes(size_t n, unsigned char *out) const
@@ -367,7 +373,10 @@ struct FBOMData {
             }
         }
 
-        const FBOMData *tip = this;
+        size_t to_read = MathUtil::Min(n, data_size);
+        memcpy(out, raw_data, to_read);
+
+        /*const FBOMData *tip = this;
 
         while (n && tip) {
             size_t to_read = MathUtil::Min(n, MathUtil::Min(FBOM_DATA_MAX_SIZE, tip->data_size));
@@ -376,7 +385,7 @@ struct FBOMData {
             n -= to_read;
             out += to_read;
             tip = tip->next;
-        }
+        }*/
     }
 
     void SetBytes(size_t n, const unsigned char *data)
@@ -385,22 +394,52 @@ struct FBOMData {
             ex_assert_msg(n <= type.size, "Attempt to insert data past size max size of object");
         }
 
-        if (next) {
-            delete next;
-            next = nullptr;
+        if (raw_data != nullptr && n > data_size) {
+            delete[] raw_data;
+            raw_data = nullptr;
         }
 
-        size_t to_copy = MathUtil::Min(n, FBOM_DATA_MAX_SIZE);
-        memcpy(raw_data, data, to_copy);
-        data_size = to_copy;
+        data_size = n;
 
-        data += to_copy;
-        n -= to_copy;
-
-        if (n) {
-            next = new FBOMData(type);
-            next->SetBytes(n, data);
+        if (raw_data == nullptr) {
+            raw_data = new unsigned char[data_size];
         }
+
+        memcpy(raw_data, data, data_size);
+
+        /*if (n == 0) {
+            data_size = 0;
+
+            if (next) {
+                delete next;
+                next = nullptr;
+            }
+
+            return;
+        }
+
+        FBOMData *tip = this;
+
+        while (n) {
+            size_t to_copy = MathUtil::Min(n, FBOM_DATA_MAX_SIZE);
+            memcpy(tip->raw_data, data, to_copy);
+            data_size = to_copy;
+
+            data += to_copy;
+
+            if (n -= to_copy) {
+                if (!tip->next) {
+                    tip->next = new FBOMData(tip->type);
+                }
+
+                tip = tip->next;
+            } else {
+                if (tip->next) {
+                    delete tip->next;
+                    tip->next = nullptr;
+                }
+            }
+        }*/
     }
 
 #define FBOM_TYPE_FUNCTIONS(type_name, c_type) \
@@ -455,7 +494,7 @@ struct FBOMData {
         { return type.IsOrExtends(FBOMArray(FBOMByte(), byte_size)); }
 
     // count is number of ELEMENTS
-    inline FBOMResult ReadArrayElements(const FBOMType &held_type, size_t num_items, unsigned char *out)
+    inline FBOMResult ReadArrayElements(const FBOMType &held_type, size_t num_items, unsigned char *out) const
     {
         ex_assert(out != nullptr);
 
@@ -484,11 +523,11 @@ struct FBOMData {
             stream << std::hex << int(raw_data[i]) << " ";
         }
 
-        stream << " }, next: ";
+        stream << " } ";
 
-        if (next != nullptr) {
-            stream << "<" << next->GetType().name << ">";
-        }
+        //if (next != nullptr) {
+         //   stream << "<" << next->GetType().name << ">";
+        //}
 
         stream << "]";
 
@@ -506,9 +545,9 @@ struct FBOMData {
             hc.Add(raw_data[i]);
         }
 
-        if (next != nullptr) {
-            hc.Add(next->GetHashCode());
-        }
+        //if (next != nullptr) {
+        //    hc.Add(next->GetHashCode());
+        //}
 
         return hc;
     }
@@ -516,7 +555,7 @@ struct FBOMData {
 private:
     size_t data_size;
     FBOMRawData_t raw_data;
-    FBOMData *next;
+    //FBOMData *next;
     FBOMType type;
 };
 
@@ -548,7 +587,7 @@ public:
     // std::string decl_type;
     FBOMType m_object_type;
     std::vector<std::shared_ptr<FBOMObject>> nodes;
-    std::map<std::string, FBOMData> properties;
+    std::map<std::string, std::shared_ptr<FBOMData>> properties;
     FBOMDeserialized deserialized_object = nullptr;
 
     FBOMObject()
@@ -579,26 +618,26 @@ public:
         return *this;
     }
 
-    FBOMData GetProperty(const std::string &key)
+    const FBOMData &GetProperty(const std::string &key)
     {
         auto it = properties.find(key);
 
-        if (it == properties.end()) {
-            return FBOMData(FBOMUnset());
+        if (it == properties.end() || it->second == nullptr) {
+            return FBOMData::UNSET;
         }
 
-        return it->second;
+        return *it->second;
     }
 
-    inline void SetProperty(const std::string &key, const FBOMData &data)
+    inline void SetProperty(const std::string &key, const std::shared_ptr<FBOMData> &data)
     {
         properties[key] = data;
     }
 
     inline void SetProperty(const std::string &key, const FBOMType &type, size_t size, const void *bytes)
     {
-        FBOMData data(type);
-        data.SetBytes(size, reinterpret_cast<const unsigned char*>(bytes));
+        std::shared_ptr<FBOMData> data(new FBOMData(type));
+        data->SetBytes(size, reinterpret_cast<const unsigned char*>(bytes));
 
         SetProperty(key, data);
     }
@@ -632,8 +671,10 @@ public:
         }
 
         for (const auto &it : properties) {
+            soft_assert_continue(it.second != nullptr);
+
             hc.Add(it.first);
-            hc.Add(it.second.GetHashCode());
+            hc.Add(it.second->GetHashCode());
         }
 
         return hc;
@@ -727,7 +768,7 @@ struct FBOMStaticData {
     void *raw_data;
     FBOMObject object_data;
     FBOMType type_data;
-    FBOMData data_data;
+    std::shared_ptr<FBOMData> data_data;
     bool written;
 
     FBOMStaticData()
@@ -744,7 +785,7 @@ struct FBOMStaticData {
           raw_data(nullptr),
           offset(offset),
           written(false) {}
-    FBOMStaticData(const FBOMData &data_data, int64_t offset = -1)
+    FBOMStaticData(const std::shared_ptr<FBOMData> &data_data, int64_t offset = -1)
         : type(FBOM_STATIC_DATA_DATA),
           data_data(data_data),
           raw_data(nullptr),
@@ -781,7 +822,7 @@ struct FBOMStaticData {
         case FBOM_STATIC_DATA_TYPE:
             return type_data.GetHashCode();
         case FBOM_STATIC_DATA_DATA:
-            return data_data.GetHashCode();
+            return data_data->GetHashCode();
         default:
             return HashCode();
         }
@@ -795,7 +836,7 @@ struct FBOMStaticData {
         case FBOM_STATIC_DATA_TYPE:
             return type_data.ToString();
         case FBOM_STATIC_DATA_DATA:
-            return data_data.ToString();
+            return data_data->ToString();
         default:
             return "???";
         }
@@ -820,7 +861,7 @@ private:
 
     std::string ReadString(ByteReader *);
     FBOMType ReadObjectType(ByteReader *);
-    FBOMResult ReadData(ByteReader *, FBOMData &data);
+    FBOMResult ReadData(ByteReader *, std::shared_ptr<FBOMData> &data);
     FBOMResult ReadObject(ByteReader *, FBOMObject &object);
 
     FBOMResult Handle(ByteReader *, FBOMCommand, FBOMObject *parent);
@@ -853,13 +894,13 @@ private:
     FBOMResult WriteObject(ByteWriter *out, const FBOMObject &);
     FBOMResult WriteObject(ByteWriter *out, FBOMLoadable *);
     FBOMResult WriteObjectType(ByteWriter *out, const FBOMType &);
-    FBOMResult WriteData(ByteWriter *out, const FBOMData &);
+    FBOMResult WriteData(ByteWriter *out, const std::shared_ptr<FBOMData> &);
     FBOMResult WriteStaticDataUsage(ByteWriter *out, const FBOMStaticData &) const;
 
     void AddObjectData(const FBOMObject &);
     FBOMStaticData AddStaticData(const FBOMType &);
     FBOMStaticData AddStaticData(const FBOMObject &);
-    FBOMStaticData AddStaticData(const FBOMData &);
+    FBOMStaticData AddStaticData(const std::shared_ptr<FBOMData> &);
 
     struct WriteStream {
         std::map<HashCode::Value_t, FBOMStaticData> m_static_data; // map hashcodes to static data to be stored.
