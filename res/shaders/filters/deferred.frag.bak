@@ -197,5 +197,5 @@ void main()
     }
 #endif
 
-    output0 = vec4(gi, 1.0);
+    output0 = vec4(result, 1.0);
 }

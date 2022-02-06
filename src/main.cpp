@@ -194,12 +194,12 @@ public:
         }
         top->AddChild(mitsuba);
 
-        auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+        /*auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
         sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter("shininess", 0.3f);
-                sponza->GetChild(i)->GetMaterial().SetParameter("roughness", 0.4f);
+                sponza->GetChild(i)->GetMaterial().SetParameter("shininess", 0.6f);
+                sponza->GetChild(i)->GetMaterial().SetParameter("roughness", 0.34f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
@@ -208,7 +208,7 @@ public:
                 }
             }
         //}
-        top->AddChild(sponza);
+        top->AddChild(sponza);*/
         /*{
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
@@ -228,7 +228,7 @@ public:
         }*/
 
 
-        /*{
+        {
             auto model = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/conference/conference.obj");
             model->SetName("model");
             model->Scale(0.01f);
@@ -242,7 +242,7 @@ public:
 
             top->AddChild(model);
             model->UpdateTransform();
-        }*/
+        }
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
@@ -268,12 +268,12 @@ public:
                     // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
                     // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                    box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.25f);
-                    box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
+                    //box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.25f);
+                    //box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
                     if (voxel_debug)
                         box->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
-                   // box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.8f);
-                    //box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.1f);
+                   box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.8f);
+                   box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.1f);
                 }
 
                 box->SetLocalTranslation(box_position);

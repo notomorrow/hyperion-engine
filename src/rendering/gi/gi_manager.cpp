@@ -6,7 +6,7 @@
 
 namespace hyperion {
 const int GIManager::voxel_map_size = 128;
-const float GIManager::voxel_map_scale = 1.0f;
+const float GIManager::voxel_map_scale = 3.0f;
 const int GIManager::voxel_map_num_mipmaps = 7;
 
 GIManager *GIManager::instance = nullptr;
