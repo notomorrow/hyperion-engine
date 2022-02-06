@@ -12,6 +12,7 @@
 
 namespace hyperion {
 
+class Renderer;
 class CoreEngine;
 class Camera;
 class Renderer;

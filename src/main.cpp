@@ -409,10 +409,10 @@ public:
         // Initialize root node
         top = std::make_shared<Entity>("top");
 
-        auto gi_test_node = std::make_shared<Entity>("gi_test_node");
-        gi_test_node->Move(Vector3(0, 5, 0));
-        gi_test_node->AddControl(std::make_shared<GIProbeControl>(BoundingBox(Vector3(-25.0f), Vector3(25.0f))));
-        top->AddChild(gi_test_node);
+        // auto gi_test_node = std::make_shared<Entity>("gi_test_node");
+        // gi_test_node->Move(Vector3(0, 5, 0));
+        // gi_test_node->AddControl(std::make_shared<GIProbeControl>(BoundingBox(Vector3(-25.0f), Vector3(25.0f))));
+        // top->AddChild(gi_test_node);
 
 
         cam->SetTranslation(Vector3(4, 0, 0));
@@ -452,17 +452,24 @@ public:
         top->AddControl(std::make_shared<SkydomeControl>(cam));
         // top->AddControl(std::make_shared<SkyboxControl>(cam, nullptr));
 
-        shader = ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties());
-
         /*auto hydrant = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/FireHydrant/FireHydrantMesh.obj");
         hydrant->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Base_Color.png"));
         hydrant->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Normal_OpenGL.png"));
         hydrant->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Mixed_AO.png"));
-        hydrant->GetChild(0)->GetMaterial().SetParameter("Emissiveness", 3.5f);
         hydrant->Scale(Vector3(5.0f));
         top->AddChild(hydrant);*/
 
         InitTestArea();
+
+        FileByteWriter fbw("scene.fbom");
+        fbom::FBOMWriter writer;
+        writer.Append(top.get());
+        auto res = writer.Emit(&fbw);
+        fbw.Close();
+
+        if (res != fbom::FBOMResult::FBOM_OK) {
+            throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+        }
 
         // auto ui_depth_view = std::make_shared<ui::UIObject>("fbo_preview_depth");
         // ui_depth_view->SetLocalTranslation2D(Vector2(0.8, -0.5));
@@ -515,59 +522,7 @@ public:
             m_renderer->SetDeferred(!m_renderer->IsDeferred());
         }));
 
-        GetInputManager()->RegisterKeyEvent(KEY_3, InputEvent([=](bool pressed) {
-            if (!pressed) {
-                return;
-                } else {
-                    dir = Vector3(1.0f, 0.0f, 0.0f);
-                }
-            } else {
-                if (lookat_vector.x > 0.0f) {
-                    dir = Vector3(0.0f, 0.0f, 1.0f);
-                } else {
-                    dir = Vector3(0.0f, 0.0f, -1.0f);
-                }
-            }
-
-            m_selected_node->Move(dir);
-        }));
-
-        GetInputManager()->RegisterKeyEvent(KEY_ARROW_RIGHT, InputEvent([=](bool pressed) {
-            if (!pressed) {
-                return;
-            }
-
-            if (m_selected_node == nullptr) {
-                return;
-            }
-
-            // move the node in the left direction relative to the camera
-            Vector3 lookat_vector = cam->GetTranslation() - m_selected_node->GetGlobalTranslation();
-            lookat_vector.Normalize();
-
-            Vector3 dir;
-
-            if (fabs(lookat_vector.z) > fabs(lookat_vector.x)) {
-                if (lookat_vector.z > 0.0f) {
-                    dir = Vector3(1.0f, 0.0f, 0.0f);
-                }
-                else {
-                    dir = Vector3(-1.0f, 0.0f, 0.0f);
-                }
-            }
-            else {
-                if (lookat_vector.x > 0.0f) {
-                    dir = Vector3(0.0f, 0.0f, -1.0f);
-                }
-                else {
-                    dir = Vector3(0.0f, 0.0f, 1.0f);
-                }
-            }
-
-            m_selected_node->Move(dir);
-        }));
-
-        std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
+        /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
 
         std::cout << "Result: " << typeid(*result.get()).name() << "\n";
         if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
@@ -582,7 +537,7 @@ public:
                 entity->GetChild(i)->GetRenderable()->SetShader(shader);
             }
             top->AddChild(entity);
-        }
+        }*/
 
         {
             auto superdan = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
@@ -733,7 +688,7 @@ public:
 int main()
 {
     // timing test
-    { // fbom
+    /*{ // fbom
         using namespace std;
         using namespace std::chrono;
         auto start = high_resolution_clock::now();
@@ -775,7 +730,7 @@ int main()
         auto duration = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(stop - start).count();
 
         std::cout << "OBJ time: " << duration << "\n";
-    }
+    }*/
 
 
     // std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
