@@ -1,5 +1,4 @@
 #include "physics_manager.h"
-#include "collision_list.h"
 #include "../rendering/environment.h"
 
 #include "btBulletDynamicsCommon.h"

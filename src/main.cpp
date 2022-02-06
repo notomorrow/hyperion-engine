@@ -188,7 +188,7 @@ public:
         mitsuba->Move(Vector3(-4.5, 1.2, -4.5));
         mitsuba->Scale(2);
         mitsuba->GetChild(0)->GetMaterial().diffuse_color = Vector4(1.0);
-        mitsuba->GetChild(0)->GetMaterial().SetParameter("Emissiveness", 60.0f);
+        mitsuba->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_EMISSIVENESS, 60.0f);
         for (size_t i = 0; i < mitsuba->NumChildren(); i++) {
             if (mitsuba->GetChild(i)->GetRenderable() == nullptr) {
                 continue;
@@ -239,8 +239,8 @@ public:
             for (size_t i = 0; i < model->NumChildren(); i++) {
                 if (voxel_debug)
                     model->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
-                model->GetChild(i)->GetMaterial().SetParameter("shininess", 0.2f);
-                model->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
             }
 
             top->AddChild(model);
@@ -382,7 +382,7 @@ public:
         shadows = new PssmShadowMapping(cam, 4, 120.0f);
         shadows->SetVarianceShadowMapping(true);
 
-        Environment::GetInstance()->SetVCTEnabled(true);
+        Environment::GetInstance()->SetVCTEnabled(false);
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
         Environment::GetInstance()->SetProbeEnabled(false);
