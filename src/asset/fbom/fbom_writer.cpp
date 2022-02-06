@@ -35,9 +35,15 @@ FBOMResult FBOMWriter::Append(FBOMLoadable *loadable)
 {
     ex_assert(loadable != nullptr);
 
+    if (auto err = m_write_stream.m_last_result) {
+        return err;
+    }
+
     FBOMObject base(loadable->GetLoadableType());
 
     if (auto err = Serialize(loadable, &base)) {
+        m_write_stream.m_last_result = err;
+
         return err;
     }
 
@@ -53,11 +59,17 @@ FBOMResult FBOMWriter::Append(FBOMObject object)
 
 FBOMResult FBOMWriter::Emit(ByteWriter *out)
 {
+    if (auto err = m_write_stream.m_last_result) {
+        return err;
+    }
+
     BuildStaticData();
     WriteStaticDataToByteStream(out);
 
     for (const auto &it : m_write_stream.m_object_data) {
         if (auto err = WriteObject(out, it)) {
+            m_write_stream.m_last_result = err;
+
             return err;
         }
     }
@@ -102,9 +114,9 @@ void FBOMWriter::Prune(FBOMObject *object)
         object_usage = it->second;
     }
 
-    if (object_usage > 1) {
+    //if (object_usage > 1) {
         AddStaticData(*object);
-    }
+    //}
 }
 
 FBOMResult FBOMWriter::WriteStaticDataToByteStream(ByteWriter *out)

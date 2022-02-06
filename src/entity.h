@@ -211,6 +211,15 @@ public:
                 continue;
             }
 
+            if (child->GetLoadableType().IsOrExtends("MATERIAL")) {
+                auto material = std::dynamic_pointer_cast<Material>(child);
+                ex_assert(material != nullptr);
+
+                out_entity->SetMaterial(*material);
+
+                continue;
+            }
+
             return FBOMResult(FBOMResult::FBOM_ERR, std::string("Entity does not know how to handle ") + node->m_object_type.name + " subnode");
         }
 
@@ -262,6 +271,11 @@ public:
             if (loader_result != FBOMResult::FBOM_OK) {
                 return loader_result;
             }
+        }
+
+        FBOMObject *material_object = out->AddChild(entity->GetMaterial().GetLoadableType());
+        if (auto err = loader->Serialize(&entity->GetMaterial(), material_object)) {
+            return err;
         }
 
         return FBOMResult::FBOM_OK;

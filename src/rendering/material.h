@@ -66,18 +66,15 @@ public:
     MaterialParameter(const float value);
     MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype);
     MaterialParameter(const MaterialParameter &other);
-    virtual ~MaterialParameter() = default;
+    ~MaterialParameter() = default;
 
-    inline bool IsEmpty() const { return size == 0; }
-    inline size_t NumValues() const { return size; }
-    inline MaterialParameterType GetType() const { return type; }
+    inline MaterialParameterType GetType() const { return MaterialParameterType(type); }
 
     inline float &operator[](size_t idx) { return values[idx]; }
     inline float operator[](size_t idx) const { return values[idx]; }
     inline bool operator==(const MaterialParameter &other) const
     {
-        return size == other.size
-            && values == other.values
+        return values == other.values
             && type == other.type;
     }
     inline bool operator!=(const MaterialParameter &other) const { return !operator==(other); }
@@ -88,7 +85,7 @@ public:
 
         hc.Add(int(type));
 
-        for (int i = 0; i < NumValues(); i++) {
+        for (int i = 0; i < values.size(); i++) {
             hc.Add(values[i]);
         }
 
@@ -96,10 +93,8 @@ public:
     }
 
 private:
-    size_t size;
-    // TODO: refactor to use UNION
+    int32_t type;
     std::array<float, 4> values;
-    MaterialParameterType type;
 };
 
 class Material : public fbom::FBOMLoadable {
@@ -164,9 +159,19 @@ public:
     FBOM_DEF_DESERIALIZER(loader, in, out) {
         using namespace fbom;
 
-        out = std::make_shared<Material>();
+        static_assert(sizeof(MaterialParameter) == 4 + 16); /* sizeof(int32_t) + sizeof(float) * 4 */
+        static_assert(sizeof(MaterialParameterTable_t) == (sizeof(MaterialParameter) * MATERIAL_MAX_PARAMETERS) + 8); /* uint64_t */
 
-        
+        auto out_material = std::make_shared<Material>();
+        out = out_material;
+
+        if (auto err = in->GetProperty("diffuse_color").ReadArrayElements(FBOMFloat(), 4, (unsigned char *)&out_material->diffuse_color)) {
+            return err;
+        }
+
+        if (auto err = in->GetProperty("parameters").ReadArrayElements(FBOMStruct(sizeof(MaterialParameterTable_t)), 1, (unsigned char *)&out_material->m_params)) {
+            return err;
+        }
 
         return FBOMResult::FBOM_OK;
     }
@@ -180,22 +185,9 @@ public:
         if (material == nullptr) {
             return FBOMResult::FBOM_ERR;
         }
-
-        return FBOMResult(FBOMResult::FBOM_ERR, "material serialization is not yet implemented");
-        /*uint32_t num_parameters = material->params.size();
-
-        // saving as pairs so that order is preserved in case that
-        // type of params changes in the future (will likely be indexed by enum ordinal,
-        // see framebuffer attachment for example)
-        std::vector<std::pair<std::string, MaterialParameter>> param_pairs;
-        param_pairs.reserve(num_parameters);
-
-        for (auto it : material->params) {
-            param_pairs.push_back(std::make_pair(it.first, it.second));
-        }
-
-        out->SetProperty("num_parameters", FBOMUnsignedInt(), &num_parameters);
-        out->SetProperty("parameter_keys", FBOMArray(FBOMString()))*/
+ 
+        out->SetProperty("diffuse_color", FBOMArray(FBOMFloat(), 4), (void*)&material->diffuse_color);
+        out->SetProperty("parameters", FBOMStruct(sizeof(MaterialParameterTable_t)), (void *)&material->m_params);
 
         return FBOMResult::FBOM_OK;
     }
