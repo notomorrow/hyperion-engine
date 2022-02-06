@@ -66,8 +66,7 @@ void main(void)
 #endif
 	}
 	
-	imageColor *= vec4(1.0 + Emissiveness);
-	imageColor.a = 1.0;
+	//imageColor *= vec4(1.0 + Emissiveness);
 
 #if VCT_GEOMETRY_SHADER
 	vec4 position = gs_out.position;

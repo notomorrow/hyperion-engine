@@ -25,12 +25,8 @@ out GSOutput
 } gs_out;
 
 
-float cubeScale = 0.3;
+float cubeScale = 2.3;
 
-
-// TODO: cull hidden faces. only 3 faces of a cube are visible at any given time.
-
-#if !NEW
 layout(triangle_strip, max_vertices = 24) out;
 void main()
 {
@@ -227,89 +223,3 @@ void main()
 	EndPrimitive();
 
 }
-#endif
-
-#if NEW
-layout(triangle_strip, max_vertices = 3) out;
-// projection matrices along each axis
-uniform mat4 mvp_x, mvp_y, mvp_z;
-
-uniform int axis_override = -1;
-
-void main() {
-//#if NONE
-    // find dominant axis (using face normal)
-    //vec3 faceNormal = normalize(cross(gs_in[1].position - gs_in[0].position, gs_in[2].position - gs_in[0].position));
-    vec3 faceNormal = normalize(vs_out[0].normal + vs_out[1].normal + vs_out[2].normal);
-    vec3 eyeSpaceNormal = abs(faceNormal);
-	//vec3 eyeSpaceNormal = abs(cross(normalize(vs_out[1].position.xyz - vs_out[0].position.xyz),
-	//								normalize(vs_out[2].position.xyz - vs_out[0].position.xyz)));
-    // since projecting onto std basis just find max component
-    mat4 mvp;
-    float axis = max(eyeSpaceNormal.x, max(eyeSpaceNormal.y, eyeSpaceNormal.z));	
-    if (axis == eyeSpaceNormal.x) {
-		mvp = mvp_x;
-        //mvp = mat3(vec3(0.0, 0.0, 1.0),
-		//					 vec3(0.0, 1.0, 0.0),
-		//					 vec3(1.0, 0.0, 0.0));	
-    }
-    else if (axis == eyeSpaceNormal.y) {
-		mvp = mvp_y;
-        //mvp = mat3(vec3(1.0, 0.0, 0.0),
-		//				 	 vec3(0.0, 0.0, 1.0),
-		//					 vec3(0.0, 1.0, 0.0));	
-    }
-    else if (axis == eyeSpaceNormal.z) {
-		mvp =mvp_z;
-        //mvp = mat3(vec3(1.0, 0.0, 0.0),
-		//					 vec3(0.0, 1.0, 0.0),
-		//					 vec3(0.0, 0.0, 1.0));	
-    }
-
-    // project and emit vertices
-    for (int i = 0; i < 3; i++) {
-		if (axis == eyeSpaceNormal.x) gl_Position = vec4(mvp*vs_out[i].position.zyx, 1);			//Rotate *actual* vertex Position so that dominant axis faces world Z axis. (Project along dominant axis with Z axis being the canvas)
-		else if (axis == eyeSpaceNormal.y) gl_Position = vec4(mvp*vs_out[i].position.xzy, 1);
-		else if (axis == eyeSpaceNormal.z) gl_Position = vec4(mvp*vs_out[i].position.xyz, 1);
-        //gl_Position = u_projMatrix*u_viewMatrix*vec4(vs_out[i].position.xyz, 1.0);
-		//gl_Position = vec4(vs_out[i].position.xyz, 1);
-        gs_out.position = vs_out[i].position;
-        gs_out.normal = vs_out[i].normal;
-        gs_out.texcoord0 = vs_out[i].texcoord0;
-        gs_out.offset = vec3(0.0);
-        //gs_out.axis = axis;
-        EmitVertex();
-    }
-
-    EndPrimitive();
-//#endif
-
-#if NOOP
-// Plane normal
-    const vec3 N = abs(cross(vs_out[1].position.xyz - vs_out[0].position.xyz, vs_out[2].position.xyz - vs_out[0].position.xyz));
-    for (int i = 0; i < 3; ++i)
-    {
-        vec3 WorldPos = vs_out[i].position.xyz;
-        vec3 WorldNormal = vs_out[i].normal.xyz;
-		gs_out.position = vs_out[i].position;
-        gs_out.normal = WorldNormal;
-        gs_out.texcoord0 = vs_out[i].texcoord0;
-        gs_out.offset = vec3(0.0);
-        if (N.z > N.x && N.z > N.y)
-        {
-            gl_Position = u_projMatrix*u_viewMatrix*vec4(WorldPos.x, WorldPos.y, 0.0f, 1.0f);
-        }
-        else if (N.x > N.y && N.x > N.z)
-        {
-            gl_Position = u_projMatrix*u_viewMatrix*vec4(WorldPos.y, WorldPos.z, 0.0f, 1.0f);
-        }
-        else
-        {
-            gl_Position = u_projMatrix*u_viewMatrix*vec4(WorldPos.x, WorldPos.z, 0.0f, 1.0f);
-        }
-        EmitVertex();
-    }
-    EndPrimitive();
-#endif
-}
-#endif
