@@ -1,20 +1,19 @@
 #include "gi_mapper_camera.h"
 
 #include "gi_manager.h"
-#include "../shader_manager.h"
-#include "../shaders/gi/gi_voxel_shader.h"
-#include "../shaders/gi/gi_voxel_clear_shader.h"
-#include "../shaders/compute/blur_compute_shader.h"
-#include "../renderer.h"
-#include "../texture_3D.h"
-//#include "../camera/perspective_camera.h"
-#include "../camera/ortho_camera.h"
-#include "../../math/math_util.h"
-#include "../../opengl.h"
-#include "../../gl_util.h"
+#include "../../shader_manager.h"
+#include "../../shaders/gi/gi_voxel_shader.h"
+#include "../../shaders/gi/gi_voxel_clear_shader.h"
+#include "../../shaders/compute/blur_compute_shader.h"
+#include "../../renderer.h"
+#include "../../texture_3D.h"
+#include "../../camera/ortho_camera.h"
+#include "../../../math/math_util.h"
+#include "../../../opengl.h"
+#include "../../../gl_util.h"
 
 namespace hyperion {
-GIMapperCamera::GIMapperCamera(const GIMapperRegion &region)
+GIMapperCamera::GIMapperCamera(const ProbeRegion &region)
     : Renderable(fbom::FBOMObjectType("GI_MAPPER_CAMERA"), RB_BUFFER),
       m_texture_id(0),
       m_region(region),
@@ -29,7 +28,7 @@ GIMapperCamera::GIMapperCamera(const GIMapperRegion &region)
     m_clear_shader = ShaderManager::GetInstance()->GetShader<GIVoxelClearShader>(ShaderProperties());
     m_mipmap_shader = ShaderManager::GetInstance()->GetShader<BlurComputeShader>(
         ShaderProperties()
-            .Define(std::string("DIRECTION_") + std::to_string(region.direction_index), true)
+            .Define(std::string("DIRECTION_") + std::to_string(region.index), true)
     );
 }
 
@@ -104,4 +103,4 @@ std::shared_ptr<Renderable> GIMapperCamera::CloneImpl()
 {
     return std::make_shared<GIMapperCamera>(m_region);
 }
-} // namespace apex
+} // namespace hyperion

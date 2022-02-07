@@ -1,14 +1,9 @@
 #include "gi_probe_control.h"
 #include "gi_mapper.h"
-#include <memory>
 #include "gi_manager.h"
-#include "../../entity.h"
+#include "../../../entity.h"
 
-// TODO: NOTE:
-// Currently everything for the voxel cone tracing algo is just rendered from
-// the main camera perspective (just one pass)
-// so this creates some jank as you're looking around and the global illumination changes
-// we'll have to use some kind of cubemap setup, although that will be hard on the VRAM and GPU
+#include <memory>
 
 namespace hyperion {
 GIProbeControl::GIProbeControl(const BoundingBox &bounds)

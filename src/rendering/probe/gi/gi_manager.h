@@ -2,7 +2,7 @@
 #define GI_MANAGER_H
 
 #include "gi_mapper.h"
-#include "../camera/camera.h"
+#include "../../camera/camera.h"
 
 #include <array>
 #include <memory>

@@ -3,7 +3,7 @@
 
 #include "../math/matrix4.h"
 #include "../math/vector2.h"
-#include "../rendering/gi/gi_manager.h"
+#include "../rendering/probe/gi/gi_manager.h"
 #include "../rendering/probe/probe_renderer.h"
 #include "../rendering/texture.h"
 #include "../rendering/cubemap.h"

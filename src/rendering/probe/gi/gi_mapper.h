@@ -2,8 +2,8 @@
 #define GI_MAPPER_H
 
 #include "gi_mapper_camera.h"
-#include "../../math/bounding_box.h"
-#include "../renderable.h"
+#include "../../../math/bounding_box.h"
+#include "../../renderable.h"
 
 #include <memory>
 #include <array>
@@ -30,8 +30,6 @@ public:
 
     void UpdateRenderTick(double dt);
 
-    std::array<std::pair<Matrix4, Matrix4>, 6> m_storage_transform_matrices; //  TEMP
-
 private:
     virtual std::shared_ptr<Renderable> CloneImpl() override;
 
@@ -39,7 +37,7 @@ private:
     int m_render_index;
     bool m_is_first_run;
     std::array<GIMapperCamera*, 6> m_cameras;
-    std::array<std::pair<Vector3, Vector3>, 6> m_directions;
+    const std::array<std::pair<Vector3, Vector3>, 6> m_directions;
     BoundingBox m_bounds;
     BoundingBox m_last_bounds;
 };
