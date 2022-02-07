@@ -24,12 +24,12 @@ Renderer::~Renderer()
     delete m_fbo;
 }
 
-void Renderer::Begin(Camera *cam, Entity *top)
+void Renderer::Collect(Camera *cam, Entity *top)
 {
     FindRenderables(cam, top, false, true);
 }
 
-void Renderer::Render(Camera *cam)
+void Renderer::Begin(Camera *cam)
 {
     if (m_fbo == nullptr) {
         m_fbo = new Framebuffer2D(
@@ -45,7 +45,10 @@ void Renderer::Render(Camera *cam)
             true  // bitangents
         );
     }
+}
 
+void Renderer::Render(Camera *cam)
+{
     RenderAll(cam, m_fbo);
 }
 
@@ -60,7 +63,7 @@ void Renderer::End(Camera *cam)
 
 void Renderer::ClearRenderables()
 {
-   for (int i = 0; i < sizeof(m_buckets) / sizeof(Bucket); i++) {
+   for (int i = 0; i < Renderable::RB_MAX; i++) {
        m_buckets[i].ClearAll();
    }
 }
@@ -83,10 +86,12 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bo
     }
 
     if (recalc) {
+        // hash has changed so we will need to recalculate a few things
         if (top->PendingRemoval()) {
-            // std::cout << "[RENDERER] " << top->GetName() << " pending removal, erasing from hash cache\n";
+            // pending removal -- erase from hash cache
             m_hash_cache.erase(top);
         } else {
+            // not pending removal, just update hash for this entity's memory address
             m_hash_cache[top] = entity_hash;
         }
     }

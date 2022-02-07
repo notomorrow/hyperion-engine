@@ -169,7 +169,7 @@ public:
             return err;
         }
 
-        if (auto err = in->GetProperty("parameters").ReadArrayElements(FBOMStruct(sizeof(MaterialParameterTable_t)), 1, (unsigned char *)&out_material->m_params)) {
+        if (auto err = in->GetProperty("parameters").ReadStruct(sizeof(MaterialParameterTable_t), (unsigned char *)&out_material->m_params)) {
             return err;
         }
 
@@ -187,7 +187,7 @@ public:
         }
  
         out->SetProperty("diffuse_color", FBOMArray(FBOMFloat(), 4), (void*)&material->diffuse_color);
-        out->SetProperty("parameters", FBOMStruct(sizeof(MaterialParameterTable_t)), (void *)&material->m_params);
+        out->SetProperty("parameters", FBOMStruct(sizeof(MaterialParameterTable_t)), (void*)&material->m_params);
 
         return FBOMResult::FBOM_OK;
     }

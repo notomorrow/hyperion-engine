@@ -36,7 +36,7 @@ include_directories(
 add_executable(${BUILD_NAME} ${SOURCES} ${HEADERS})
 
 if(APPLE)
-  target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} ${BULLET_LIBRARIES} glfw)
+  target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} ${BULLET_LIBRARIES} GLEW glfw)
 elseif(MSVC)
   target_link_libraries(${BUILD_NAME} ${CMAKE_THREAD_LIBS_INIT} ${OPENAL_LIBRARY} ${OPENGL_LIBRARIES} ${BULLET_LIBRARIES} ${GLEW_LIBRARIES} glfw)
 else()

@@ -1,4 +1,5 @@
-#include "fbom.h"
+#include "type.h"
+#include "base_types.h"
 
 namespace hyperion {
 namespace fbom {
