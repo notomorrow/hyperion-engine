@@ -57,6 +57,7 @@ void Renderer::End(Camera *cam)
     RenderPost(cam, m_fbo);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
+    RenderBucket(cam, m_buckets[Renderable::RB_DEBUG]);
     RenderBucket(cam, m_buckets[Renderable::RB_SCREEN]);
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
 }
@@ -275,7 +276,6 @@ void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
     RenderBucket(cam, m_buckets[Renderable::RB_OPAQUE]);
     RenderBucket(cam, m_buckets[Renderable::RB_TRANSPARENT]);
     RenderBucket(cam, m_buckets[Renderable::RB_PARTICLE]);
-    RenderBucket(cam, m_buckets[Renderable::RB_DEBUG]);
 
     if (fbo) {
         fbo->End();

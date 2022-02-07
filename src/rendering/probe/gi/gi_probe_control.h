@@ -1,9 +1,9 @@
 #ifndef GI_PROBE_CONTROL_H
 #define GI_PROBE_CONTROL_H
 
+#include "../../../control.h"
+#include "../../../math/bounding_box.h"
 #include <memory>
-#include "../../control.h"
-#include "../../math/bounding_box.h"
 
 namespace hyperion {
 class GIMapper;

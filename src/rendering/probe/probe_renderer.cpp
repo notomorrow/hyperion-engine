@@ -4,7 +4,7 @@
 #include "../shaders/cubemap_renderer_shader.h"
 
 namespace hyperion {
-ProbeRenderer::ProbeRenderer(int width, int height)
+ProbeRenderer::ProbeRenderer(const Vector3 &origin, const BoundingBox &bounds, int width, int height)
     : m_fbo(new FramebufferCube(width, height)),
       m_render_shading(false),
       m_render_textures(false)
@@ -12,11 +12,12 @@ ProbeRenderer::ProbeRenderer(int width, int height)
     m_cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties());
 
     m_probe = new Probe(
-        Vector3(0, 0, 0),
+        origin,
+        bounds,
         width,
         height,
         0.1f,
-        45.0f
+        45.0f //todo
     );
 }
 
@@ -27,13 +28,13 @@ ProbeRenderer::~ProbeRenderer()
 
 void ProbeRenderer::UpdateUniforms()
 {
-    const auto &matrices = m_probe->GetMatrices();
+    const auto &cameras = m_probe->GetCameras();
 
-    for (int i = 0; i < matrices.size(); i++) {
-        m_cubemap_renderer_shader->SetUniform("u_shadowMatrices[" + std::to_string(i) + "]", matrices[i]);
+    for (int i = 0; i < cameras.size(); i++) {
+        m_cubemap_renderer_shader->SetUniform("u_shadowMatrices[" + std::to_string(i) + "]", cameras[i]->GetCamera()->GetViewProjectionMatrix());
     }
 
-    m_cubemap_renderer_shader->SetUniform("u_lightPos", m_probe->GetOrigin());
+    //m_cubemap_renderer_shader->SetUniform("u_lightPos", m_probe->GetOrigin());
     m_cubemap_renderer_shader->SetUniform("u_far", m_probe->GetFar());
 }
 

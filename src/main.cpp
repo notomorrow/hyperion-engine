@@ -75,7 +75,7 @@
 #include "util/img/write_bitmap.h"
 #include "util/enum_options.h"
 
-#include "rendering/gi/gi_probe_control.h"
+#include "rendering/probe/gi/gi_probe_control.h"
 #include "rendering/shaders/gi/gi_voxel_debug_shader.h"
 
 #include "asset/fbom/fbom.h"
@@ -210,7 +210,7 @@ public:
             }
         //}
         GetScene()->AddChild(sponza);*/
-        /*{
+        {
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
             street->SetName("street");
@@ -224,7 +224,7 @@ public:
 
             GetScene()->AddChild(street);
             street->UpdateTransform();
-        }*/
+        }
 
 
         {
@@ -374,7 +374,7 @@ public:
         Environment::GetInstance()->SetVCTEnabled(false);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
-        Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetOrigin(Vector3(0, 5, 0));
+        Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(4, 3, -1));
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
         GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
@@ -399,7 +399,20 @@ public:
         // top->AddChild(gi_test_node);
 
 
-        GetCamera()->SetTranslation(Vector3(4, 0, 0));
+        GetCamera()->SetTranslation(Vector3(0, 0, 0));
+
+        {
+            auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
+            dragger->SetName("dragger");
+            dragger->Move(Vector3(0, 3, 0));
+            dragger->Scale(0.25);
+            dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.7f, 0.6f, 1.0f };
+            dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
+            dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
+            GetScene()->AddChild(dragger);
+            dragger->UpdateTransform();
+        }
+
 
         // Initialize particle system
         // InitParticleSystem();
@@ -436,9 +449,10 @@ public:
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
+        bool read = false;
+        InitTestArea();
 
         if (write) {
-            InitTestArea();
 
             FileByteWriter fbw("scene.fbom");
             fbom::FBOMWriter writer;
@@ -449,7 +463,9 @@ public:
             if (res != fbom::FBOMResult::FBOM_OK) {
                 throw std::runtime_error(std::string("FBOM Error: ") + res.message);
             }
-        } else {
+        }
+        
+        if (read) {
 
             std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./scene.fbom");
 
@@ -465,6 +481,7 @@ public:
                 GetScene()->AddChild(entity);
             }
         }
+
 
         /*int total_cascades = Environment::GetInstance()->NumCascades();
         for (int x = 0; x < 2; x++) {
@@ -551,11 +568,16 @@ public:
                 m_selected_node = m_hit_to_entity[m_ray_hit.GetHashCode().Value()];
                 m_selected_node->AddControl(std::make_shared<BoundingBoxControl>());
 
+
+                BoundingBox bb(m_selected_node->GetAABB());
+                Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetBounds(bb);
+
                 std::stringstream ss;
                 ss << "Selected object: ";
                 ss << m_selected_node->GetName();
                 ss << " ";
                 ss << m_selected_node->GetGlobalTranslation();
+                ss << " " << m_selected_node->GetAABB();
                 
                 m_selected_node_text->SetText(ss.str());
 

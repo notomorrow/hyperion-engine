@@ -1,5 +1,5 @@
 #include "gi_voxel_clear_shader.h"
-#include "../../gi/gi_manager.h"
+#include "../../probe/gi/gi_manager.h"
 #include "../../../asset/asset_manager.h"
 #include "../../../asset/text_loader.h"
 

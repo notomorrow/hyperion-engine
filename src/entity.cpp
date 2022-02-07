@@ -9,7 +9,7 @@ Entity::Entity(const std::string &name)
     : fbom::FBOMLoadable(fbom::FBOMObjectType("ENTITY")),
       m_name(name),
       m_aabb_affects_parent(true),
-      m_flags(0),
+      m_flags(UPDATE_TRANSFORM | UPDATE_AABB),
       m_parent(nullptr),
       m_local_translation(Vector3::Zero()),
       m_local_scale(Vector3::One()),

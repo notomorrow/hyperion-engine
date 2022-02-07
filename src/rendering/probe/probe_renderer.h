@@ -16,7 +16,7 @@ class Cubemap;
 
 class ProbeRenderer {
 public:
-    ProbeRenderer(int width = 128, int height = 128);
+    ProbeRenderer(const Vector3 &origin, const BoundingBox &bounds, int width = 128, int height = 128);
     ProbeRenderer(const ProbeRenderer &other) = delete;
     ProbeRenderer &operator=(const ProbeRenderer &other) = delete;
     ~ProbeRenderer();
