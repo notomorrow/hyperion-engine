@@ -23,13 +23,15 @@ class Renderable : public fbom::FBOMLoadable {
     friend class Renderer;
 public:
     enum RenderBucket {
-        RB_SKY = 0,
-        RB_OPAQUE = 1,
-        RB_TRANSPARENT = 2,
-        RB_PARTICLE = 3,
-        RB_SCREEN = 4,
-        RB_DEBUG = 5,
-        RB_BUFFER = 6
+        RB_SKY,
+        RB_OPAQUE,
+        RB_TRANSPARENT,
+        RB_PARTICLE,
+        RB_SCREEN,
+        RB_DEBUG,
+        RB_BUFFER,
+        // ...
+        RB_MAX
     };
 
     Renderable(const fbom::FBOMType &loadable_type,

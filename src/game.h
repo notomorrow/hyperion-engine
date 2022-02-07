@@ -40,6 +40,7 @@ protected:
     Renderer * const m_renderer;
 
 private:
+    void PreRender();
     void PostRender();
 };
 } // namespace hyperion

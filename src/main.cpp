@@ -370,7 +370,7 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(true);
+        Environment::GetInstance()->SetProbeEnabled(false);
         Environment::GetInstance()->SetVCTEnabled(false);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
@@ -613,8 +613,6 @@ public:
 
         AudioManager::GetInstance()->SetListenerPosition(GetCamera()->GetTranslation());
         AudioManager::GetInstance()->SetListenerOrientation(GetCamera()->GetDirection(), GetCamera()->GetUpVector());
-
-        GetCamera()->Update(dt);
 
         PhysicsManager::GetInstance()->RunPhysics(dt);
     }

@@ -35,19 +35,30 @@ void Game::Update(double dt)
 
     Logic(dt);
 
+    m_camera->Update(dt);
+
     m_scene->Update(dt);
     m_ui->Update(dt);
 }
 
+void Game::PreRender()
+{
+    m_renderer->Collect(m_camera, m_scene.get());
+    m_renderer->Collect(m_camera, m_ui.get());
+}
+
 void Game::Render()
 {
-    m_renderer->Begin(m_camera, m_scene.get());
-    m_renderer->Begin(m_camera, m_ui.get());
+    PreRender();
+
+    m_renderer->Begin(m_camera);
 
     OnRender();
 
     m_renderer->Render(m_camera);
     m_renderer->End(m_camera);
+
+    PostRender();
 }
 
 void Game::PostRender()

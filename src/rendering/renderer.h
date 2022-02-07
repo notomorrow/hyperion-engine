@@ -239,7 +239,8 @@ public:
     Renderer &operator=(const Renderer &other) = delete;
     ~Renderer();
 
-    void Begin(Camera *cam, Entity *top);
+    void Collect(Camera *cam, Entity *top);
+    void Begin(Camera *cam);
     void Render(Camera *cam);
     void End(Camera * cam);
 
@@ -259,7 +260,7 @@ public:
 
     inline Bucket &GetBucket(Renderable::RenderBucket bucket) { return m_buckets[bucket]; }
 
-    Bucket m_buckets[7];
+    Bucket m_buckets[Renderable::RB_MAX];
 
 private:
     PostProcessing *m_post_processing;
