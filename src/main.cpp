@@ -160,7 +160,7 @@ public:
             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negz.jpg")
         }));
 
-        if (!Environment::GetInstance()->ProbeEnabled()) {
+        if (!ProbeManager::GetInstance()->EnvMapEnabled()) {
             Environment::GetInstance()->SetGlobalCubemap(cubemap);
         }
 
@@ -196,12 +196,13 @@ public:
         }
         GetScene()->AddChild(mitsuba);
 
-        /*auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+        auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+        sponza->SetName("sponza");
         sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter("shininess", 0.6f);
-                sponza->GetChild(i)->GetMaterial().SetParameter("roughness", 0.34f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
@@ -210,7 +211,9 @@ public:
                 }
             }
         //}
-        GetScene()->AddChild(sponza);*/
+        sponza->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+        GetScene()->AddChild(sponza);
+        return;
         {
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
@@ -326,9 +329,9 @@ public:
     void Initialize()
     {
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
-            .Define("NORMAL_MAPPING", true)
+            .Define("NORMAL_MAPPING", false)
             .Define("SHADOW_MAP_RADIUS", 0.05f)
-            .Define("SHADOW_PCF", true)
+            .Define("SHADOW_PCF", false)
         );
 
         shadows = new PssmShadowMapping(GetCamera(), 4, 120.0f);
@@ -336,28 +339,20 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(true);
-        Environment::GetInstance()->SetVCTEnabled(false);
-        //Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
-        //Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
-        //Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(4, 3, -1));
+        Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(true);
+        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
+        Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(true);
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
+        //GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
+        //GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
         GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
-        GetRenderer()->SetDeferred(false);
+        GetRenderer()->SetDeferred(true);
 
         AudioManager::GetInstance()->Initialize();
 
         Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5).Normalize());
-
-        /*for (int x = 0; x < Environment::GetInstance()->GetMaxPointLights() / 2; x++) {
-            for (int z = 0; z < Environment::GetInstance()->GetMaxPointLights() / 2; z++) {
-                Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(x * 0.5f, -6.0f, z * 0.5f), Vector4(MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), 1.0f), 2.0f));
-            }
-        }*/
 
         auto gi_test_node = std::make_shared<Entity>("gi_test_node");
         gi_test_node->Move(Vector3(0, 5, 0));
@@ -367,7 +362,7 @@ public:
 
         GetCamera()->SetTranslation(Vector3(0, 0, 0));
 
-        {
+        if (false) {
             auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
             dragger->SetName("dragger");
             dragger->Move(Vector3(0, 3, 0));
@@ -386,9 +381,11 @@ public:
         auto ui_text = std::make_shared<ui::UIText>("text_test", "Hyperion 0.1.0\n"
             "Press 1 to toggle shadows\n"
             "Press 2 to toggle deferred rendering\n"
-            "Press 3 to toggle voxel cone tracing\n");
+            "Press 3 to toggle environment cubemapping\n"
+            "Press 4 to toggle spherical harmonics mapping\n"
+            "Press 5 to toggle voxel cone tracing\n");
         ui_text->SetLocalTranslation2D(Vector2(-1.0, 1.0));
-        ui_text->SetLocalScale2D(Vector2(30));
+        ui_text->SetLocalScale2D(Vector2(20));
         GetUI()->AddChild(ui_text);
         GetUIManager()->RegisterUIObject(ui_text);
 
@@ -416,37 +413,39 @@ public:
 
         bool write = false;
         bool read = true;
-        //
 
-        if (write) {
+        if (!write && !read) {
             InitTestArea();
-            FileByteWriter fbw("scene.fbom");
-            fbom::FBOMWriter writer;
-            writer.Append(GetScene()->GetChild("model").get());
-            auto res = writer.Emit(&fbw);
-            fbw.Close();
+        } else {
+            if (write) {
+                InitTestArea();
+                FileByteWriter fbw("./models/scene.fbom");
+                fbom::FBOMWriter writer;
+                writer.Append(GetScene()->GetChild("model").get());
+                auto res = writer.Emit(&fbw);
+                fbw.Close();
 
-            if (res != fbom::FBOMResult::FBOM_OK) {
-                throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+                if (res != fbom::FBOMResult::FBOM_OK) {
+                    throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+                }
             }
-            
-        }
-        
-        if (read) {
 
-            std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./scene.fbom");
+            if (read) {
 
-            if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
-                for (size_t i = 0; i < entity->NumChildren(); i++) {
-                    if (auto child = entity->GetChild(i)) {
-                        if (auto ren = child->GetRenderable()) {
-                            ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+                std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./models/scene.fbom");
+
+                if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+                    for (size_t i = 0; i < entity->NumChildren(); i++) {
+                        if (auto child = entity->GetChild(i)) {
+                            if (auto ren = child->GetRenderable()) {
+                                ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+                            }
                         }
                     }
-                }
 
-                GetScene()->AddChild(entity);
-                entity->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 4.0f, 0.0f)));
+                    GetScene()->AddChild(entity);
+                    entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
+                }
             }
         }
 
@@ -470,14 +469,14 @@ public:
                         1.0f
                     );
 
-                    // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
-                    // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
-                    // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
-                    // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                    //box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.25f);
-                    //box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.8f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.1f);
+                    box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+                    //box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.25f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
                 }
 
                 box->SetLocalTranslation(box_position);
@@ -530,6 +529,37 @@ public:
 
             GetRenderer()->SetDeferred(!GetRenderer()->IsDeferred());
         }));
+
+        GetInputManager()->RegisterKeyEvent(KEY_3, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            ProbeManager::GetInstance()->SetEnvMapEnabled(!ProbeManager::GetInstance()->EnvMapEnabled());
+        }));
+
+        GetInputManager()->RegisterKeyEvent(KEY_4, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            ProbeManager::GetInstance()->SetSphericalHarmonicsEnabled(!ProbeManager::GetInstance()->SphericalHarmonicsEnabled());
+        }));
+
+        GetInputManager()->RegisterKeyEvent(KEY_5, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            ProbeManager::GetInstance()->SetVCTEnabled(!ProbeManager::GetInstance()->VCTEnabled());
+        }));
+
+        /*auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
+        GetScene()->AddChild(house);
+
+        auto sd = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
+        sd->SetLocalTranslation(Vector3(0, 4, 0));
+        GetScene()->AddChild(sd);*/
 
         /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
 

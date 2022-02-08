@@ -8,6 +8,7 @@
 #include "../../renderer.h"
 #include "../../texture_3D.h"
 #include "../../camera/ortho_camera.h"
+#include "../../camera/perspective_camera.h"
 #include "../../../math/math_util.h"
 #include "../../../opengl.h"
 #include "../../../gl_util.h"
@@ -16,7 +17,9 @@ namespace hyperion {
 GIMapperCamera::GIMapperCamera(const ProbeRegion &region)
     : ProbeCamera(fbom::FBOMObjectType("GI_MAPPER_CAMERA"), region)
 {
-    m_camera = new OrthoCamera(-ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, -ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, 0, ProbeManager::voxel_map_size);
+    m_camera = new PerspectiveCamera(90.0f, ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, 0.05f, float(ProbeManager::voxel_map_size) / ProbeManager::voxel_map_scale);
+
+        //new OrthoCamera(-ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, -ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, 0, ProbeManager::voxel_map_size);
 
     m_texture.reset(new Texture3D(ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, nullptr));
     m_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
@@ -71,6 +74,7 @@ void GIMapperCamera::Render(Renderer *renderer, Camera *)
     m_clear_shader->Use();
     m_clear_shader->Dispatch(ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, ProbeManager::voxel_map_size);
     m_clear_shader->End();
+    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
     renderer->RenderBucket(
         m_camera,

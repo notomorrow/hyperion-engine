@@ -55,14 +55,8 @@ public:
     inline const std::shared_ptr<Cubemap> &GetGlobalIrradianceCubemap() const { return m_global_irradiance_cubemap; }
     inline std::shared_ptr<Cubemap> &GetGlobalIrradianceCubemap() { return m_global_irradiance_cubemap; }
     inline void SetGlobalIrradianceCubemap(const std::shared_ptr<Cubemap> &cubemap) { m_global_irradiance_cubemap = cubemap; }
-
-    inline bool ProbeEnabled() const { return m_probe_enabled; }
-    void SetProbeEnabled(bool probe_enabled);
-
     inline ProbeManager *GetProbeManager() { return m_probe_manager; }
     inline const ProbeManager *GetProbeManager() const { return m_probe_manager; }
-    inline bool VCTEnabled() const { return m_vct_enabled; }
-    void SetVCTEnabled(bool vct_enabled);
 
 private:
     static Environment *instance;
@@ -82,10 +76,7 @@ private:
     std::array<std::shared_ptr<Texture>, 4> m_shadow_maps;
     std::array<Matrix4, 4> m_shadow_matrices;
 
-    bool m_probe_enabled;
-
     ProbeManager *m_probe_manager;
-    bool m_vct_enabled;
 };
 } // namespace hyperion
 
