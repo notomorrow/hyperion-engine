@@ -115,7 +115,6 @@ void main()
   vec3 diffuseCubemap = vec3(0.0);
 
 #if VCT_ENABLED
-  //testing
   vec4 vctSpec = VCTSpecular(position.xyz, n.xyz, CameraPosition, roughness);
   vec4 vctDiff = VCTDiffuse(position.xyz, n.xyz, CameraPosition, tangent, bitangent, roughness);
   specularCubemap = vctSpec.rgb;
@@ -124,15 +123,23 @@ void main()
 #endif // VCT_ENABLED
 
 #if !VCT_ENABLED
-  diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
-#endif // !VCT_ENABLED
 
 #if PROBE_ENABLED
   blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, position.xyz, CameraPosition, tangent, bitangent).rgb;
-#if !VCT_ENABLED
+
   specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, position.xyz, CameraPosition, tangent, bitangent).rgb;
-#endif // !VCT_ENABLED
+  
+#if SPHERICAL_HARMONICS_ENABLED
+  diffuseCubemap = SampleSphericalHarmonics(n);
+  gi += diffuseCubemap;
+#endif // SPHERICAL_HARMONICS_ENABLED
+
+#if !SPHERICAL_HARMONICS_ENABLED
+  diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
+#endif // !SPHERICAL_HARMONICS_ENABLED
+
 #endif // PROBE_ENABLED
+#endif // !VCT_ENABLED
 
 #if !PROBE_ENABLED
   vec3 reflectionVector = ReflectionVector(n, position.xyz, CameraPosition);
@@ -197,6 +204,5 @@ void main()
     }
 #endif
 
-    //output0 = vec4(result, 1.0);
-	output0 = texture(SphericalHarmonicsMap, v_texcoord0);
+    output0 = vec4(result, 1.0);
 }

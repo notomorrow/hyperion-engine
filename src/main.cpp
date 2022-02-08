@@ -196,12 +196,13 @@ public:
         }
         GetScene()->AddChild(mitsuba);
 
-        /*auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+        auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+        sponza->SetName("sponza");
         sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter("shininess", 0.6f);
-                sponza->GetChild(i)->GetMaterial().SetParameter("roughness", 0.34f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.6f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.34f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
@@ -210,7 +211,8 @@ public:
                 }
             }
         //}
-        GetScene()->AddChild(sponza);*/
+        GetScene()->AddChild(sponza);
+        return;
         {
 
             auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
@@ -326,9 +328,9 @@ public:
     void Initialize()
     {
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
-            .Define("NORMAL_MAPPING", true)
+            .Define("NORMAL_MAPPING", false)
             .Define("SHADOW_MAP_RADIUS", 0.05f)
-            .Define("SHADOW_PCF", true)
+            .Define("SHADOW_PCF", false)
         );
 
         shadows = new PssmShadowMapping(GetCamera(), 4, 120.0f);
@@ -336,15 +338,12 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(true);
-        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
-        Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(false);
-        //Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
-        //Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
-        //Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(4, 3, -1));
+        //Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(true);
+        //Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
+        //Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(false);
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        //GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 105);
+        GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 105);
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
         GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
@@ -362,7 +361,7 @@ public:
 
         GetCamera()->SetTranslation(Vector3(0, 0, 0));
 
-        {
+        if (false) {
             auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
             dragger->SetName("dragger");
             dragger->Move(Vector3(0, 3, 0));
@@ -417,7 +416,7 @@ public:
             InitTestArea();
             FileByteWriter fbw("scene.fbom");
             fbom::FBOMWriter writer;
-            writer.Append(GetScene()->GetChild("model").get());
+            writer.Append(GetScene()->GetChild("sponza").get());
             auto res = writer.Emit(&fbw);
             fbw.Close();
 
@@ -533,6 +532,13 @@ public:
 
             ProbeManager::GetInstance()->SetVCTEnabled(!ProbeManager::GetInstance()->VCTEnabled());
         }));
+
+        /*auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
+        GetScene()->AddChild(house);
+
+        auto sd = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
+        sd->SetLocalTranslation(Vector3(0, 4, 0));
+        GetScene()->AddChild(sd);*/
 
         /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
 
