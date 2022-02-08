@@ -78,9 +78,13 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
 
         if (env->ProbeEnabled()) {
-            SetUniform("EnvProbe.position", env->GetProbeRenderer()->GetProbe()->GetOrigin());
+            /*SetUniform("EnvProbe.position", env->GetProbeRenderer()->GetProbe()->GetOrigin());
             SetUniform("EnvProbe.max", env->GetProbeRenderer()->GetProbe()->GetBounds().GetMax());
             SetUniform("EnvProbe.min", env->GetProbeRenderer()->GetProbe()->GetBounds().GetMin());
+
+
+            SetUniform("SphericalHarmonicsMap", env->GetProbeRenderer()->m_sh_texture.get());
+            SetUniform("HasSphericalHarmonicsMap", 1);*/
         }
     }
 

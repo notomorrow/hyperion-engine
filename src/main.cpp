@@ -31,7 +31,7 @@
 #include "animation/skeleton_control.h"
 #include "math/bounding_box.h"
 
-#include "rendering/probe/probe_renderer.h"
+#include "rendering/probe/envmap/envmap_probe_control.h"
 
 /* Post */
 #include "rendering/postprocess/filters/gamma_correction_filter.h"
@@ -41,6 +41,7 @@
 #include "rendering/postprocess/filters/depth_of_field_filter.h"
 #include "rendering/postprocess/filters/fxaa_filter.h"
 #include "rendering/postprocess/filters/shadertoy_filter.h"
+#include "rendering/postprocess/filters/default_filter.h"
 
 /* Extra */
 #include "rendering/skydome/skydome.h"
@@ -243,42 +244,7 @@ public:
             model->UpdateTransform();
         }
 
-        for (int x = 0; x < 5; x++) {
-            for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3(((float(x) - 2.5) * 8), 3.0f, (float(z) - 2.5) * 8);
-                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
-                box->Scale(0.7f);
-
-                for (size_t i = 0; i < box->NumChildren(); i++) {
-                    Vector3 col = Vector3(
-                        MathUtil::Random(0.4f, 1.80f),
-                        MathUtil::Random(0.4f, 1.80f),
-                        MathUtil::Random(0.4f, 1.80f)
-                    ).Normalize();
-
-                    box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
-                        col.x,
-                        col.y,
-                        col.z,
-                        1.0f
-                    );
-
-                    // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
-                    // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
-                    // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
-                    // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                    //box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.25f);
-                    //box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
-                    if (voxel_debug)
-                        box->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.8f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.1f);
-                }
-
-                box->SetLocalTranslation(box_position);
-                GetScene()->AddChild(box);
-            }
-        }
+        
     }
 
     void PerformRaytest()
@@ -393,10 +359,10 @@ public:
             }
         }*/
 
-        // auto gi_test_node = std::make_shared<Entity>("gi_test_node");
-        // gi_test_node->Move(Vector3(0, 5, 0));
-        // gi_test_node->AddControl(std::make_shared<GIProbeControl>(BoundingBox(Vector3(-25.0f), Vector3(25.0f))));
-        // top->AddChild(gi_test_node);
+        auto gi_test_node = std::make_shared<Entity>("gi_test_node");
+        gi_test_node->Move(Vector3(0, 5, 0));
+        gi_test_node->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f), BoundingBox(Vector3(-25.0f), Vector3(25.0f))));
+        GetScene()->AddChild(gi_test_node);
 
 
         GetCamera()->SetTranslation(Vector3(0, 0, 0));
@@ -406,7 +372,7 @@ public:
             dragger->SetName("dragger");
             dragger->Move(Vector3(0, 3, 0));
             dragger->Scale(0.25);
-            dragger->GetChild(0)->GetMaterial().diffuse_color = { 1.0f, 0.7f, 0.6f, 1.0f };
+            dragger->GetChild(0)->GetMaterial().diffuse_color = { 0.0f, 0.0f, 1.0f, 1.0f };
             dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
             dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
             GetScene()->AddChild(dragger);
@@ -449,8 +415,8 @@ public:
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
-        bool read = false;
-        InitTestArea();
+        bool read = true;
+        //InitTestArea();
 
         if (write) {
 
@@ -479,6 +445,42 @@ public:
                 }
 
                 GetScene()->AddChild(entity);
+                entity->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f)));
+            }
+        }
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                Vector3 box_position = Vector3(((float(x) - 2.5) * 8), 3.0f, (float(z) - 2.5) * 8);
+                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+                box->Scale(0.7f);
+
+                for (size_t i = 0; i < box->NumChildren(); i++) {
+                    Vector3 col = Vector3(
+                        MathUtil::Random(0.4f, 1.80f),
+                        MathUtil::Random(0.4f, 1.80f),
+                        MathUtil::Random(0.4f, 1.80f)
+                    ).Normalize();
+
+                    box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
+                        1,//col.x,
+                        1,//col.y,
+                        1,//col.z,
+                        1.0f
+                    );
+
+                    // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+                    // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                    //box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.25f);
+                    //box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.8f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.1f);
+                }
+
+                box->SetLocalTranslation(box_position);
+                GetScene()->AddChild(box);
             }
         }
 
@@ -569,9 +571,6 @@ public:
                 m_selected_node->AddControl(std::make_shared<BoundingBoxControl>());
 
 
-                BoundingBox bb(m_selected_node->GetAABB());
-                Environment::GetInstance()->GetProbeRenderer()->GetProbe()->SetBounds(bb);
-
                 std::stringstream ss;
                 ss << "Selected object: ";
                 ss << m_selected_node->GetName();
@@ -650,7 +649,7 @@ public:
         }
 
         // TODO: ProbeControl on top node
-        if (Environment::GetInstance()->ProbeEnabled()) {
+        /*if (Environment::GetInstance()->ProbeEnabled()) {
             //Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(GetCamera()->GetTranslation()));
             Environment::GetInstance()->GetProbeRenderer()->Render(GetRenderer(), GetCamera());
 
@@ -659,7 +658,7 @@ public:
                     Environment::GetInstance()->GetProbeRenderer()->GetColorTexture()
                 );
             }
-        }
+        }*/
     }
 };
 

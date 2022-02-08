@@ -2,6 +2,7 @@
 #define PROBE_H
 
 #include "probe_camera.h"
+#include "../renderable.h"
 #include "../../math/matrix4.h"
 #include "../../math/vector3.h"
 
@@ -9,9 +10,9 @@
 #include <array>
 
 namespace hyperion {
-class Probe {
+class Probe : public Renderable {
 public:
-    Probe(const Vector3 &origin, const BoundingBox &bounds, int width, int height, float near, float far);
+    Probe(const fbom::FBOMType &loadable_type, const Vector3 &origin, const BoundingBox &bounds);
     Probe(const Probe &other) = delete;
     Probe &operator=(const Probe &other) = delete;
     virtual ~Probe();
@@ -22,23 +23,14 @@ public:
     inline const Vector3 &GetOrigin() const { return m_origin; }
     void SetOrigin(const Vector3 &origin);
 
-    inline const std::array<ProbeCamera *, 6> &GetCameras() const { return m_cameras; }
+    inline const std::array<ProbeCamera*, 6> &GetCameras() const { return m_cameras; }
+    inline ProbeCamera *GetCamera(int index) { return m_cameras[index]; }
+    inline const ProbeCamera *GetCamera(int index) const { return m_cameras[index]; }
+    inline constexpr size_t NumCameras() const { return m_cameras.size(); }
 
-    inline int GetWidth() const { return m_width; }
-    inline int GetHeight() const { return m_height; }
-    inline float GetNear() const { return m_near; }
-    inline float GetFar() const { return m_far; }
-
-    void Begin();
-    void End();
-
-private:
+protected:
     BoundingBox m_bounds;
     Vector3 m_origin;
-    int m_width;
-    int m_height;
-    float m_near;
-    float m_far;
     std::array<ProbeCamera*, 6> m_cameras;
     const std::array<std::pair<Vector3, Vector3>, 6> m_directions;
 };
