@@ -1,0 +1,130 @@
+#version 430
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+
+uniform samplerCube srcTex;
+layout(binding = 0, rgba8) uniform image2D dstMip;
+
+// https://github.com/TheRealMJP/LowResRendering/blob/master/SampleFramework11/v1.01/Graphics/Textures.cpp#L329
+vec3 MapXYSToDirection(uint x, uint y, uint s, uint width, uint height)
+{
+	float u = ((float(x) + 0.5) / float(width)) * 2.0 - 1.0;
+    float v = ((float(y) + 0.5) / float(height)) * 2.0 - 1.0;
+    v *= -1.0;
+
+    vec3 dir = vec3(0.0);
+
+    // +x, -x, +y, -y, +z, -z
+    switch(s) {
+    case 0:
+        dir = normalize(vec3(1.0, v, -u));
+        break;
+    case 1:
+        dir = normalize(vec3(-1.0, v, u));
+        break;
+    case 2:
+        dir = normalize(vec3(u, 1.0, -v));
+        break;
+    case 3:
+        dir = normalize(vec3(u, -1.0, v));
+        break;
+    case 4:
+        dir = normalize(vec3(u, v, 1.0));
+        break;
+    case 5:
+        dir = normalize(vec3(-u, v, -1.0));
+        break;
+    }
+
+    return dir;
+}
+
+float[9] ProjectOntoSH9(vec3 dir)
+{
+    float[9] sh;
+
+    // Band 0
+    sh[0] = 0.282095f;
+
+    // Band 1
+    sh[1] = 0.488603f * dir.y;
+    sh[2] = 0.488603f * dir.z;
+    sh[3] = 0.488603f * dir.x;
+
+    // Band 2
+    sh[4] = 1.092548f * dir.x * dir.y;
+    sh[5] = 1.092548f * dir.y * dir.z;
+    sh[6] = 0.315392f * (3.0f * dir.z * dir.z - 1.0f);
+    sh[7] = 1.092548f * dir.x * dir.z;
+    sh[8] = 0.546274f * (dir.x * dir.x - dir.y * dir.y);
+
+    return sh;
+}
+
+vec3[9] ProjectOntoSH9Color(vec3 dir, vec3 color)
+{
+    float[9] sh = ProjectOntoSH9(dir);
+    vec3[9] shColor;
+    for(uint i = 0; i < 9; ++i)
+        shColor[i] = color * sh[i];
+    return shColor;
+}
+
+void main(void)
+{
+	//if (gl_GlobalInvocationID.x > 3 || gl_GlobalInvocationID.y > 3) { // only need 3x3 texture
+	//	return;
+	//}
+	
+	const uint size = 128;
+	
+	vec4 result = vec4(0.0);
+	
+	float weightSum = 0.0;
+	
+	vec3[9] shResult;
+	for (uint i = 0; i < 9; i++) {
+		shResult[i] = vec3(0.0);
+	}
+	
+	for (uint face = 0; face < 6; face++) {
+		for (uint v = 0; v < size; v++) {
+			for (uint u = 0; u < size; u++) {
+				vec2 xy = vec2((float(u) + 0.5) / float(size), (float(v) + 0.5) / float(size));
+				xy *= vec2(2.0);
+				xy -= vec2(1.0);
+				
+				float temp = 1.0 + xy.x * xy.x + xy.y * xy.y;
+				float weight = 4.0 / (sqrt(temp) * temp);
+				
+				vec3 dir = MapXYSToDirection(u, v, face, size, size); 
+				
+				vec4 samp = texture(srcTex, dir);
+				result = samp;
+				vec3[9] sh = ProjectOntoSH9Color(dir, samp.rgb);
+				for (uint i = 0; i < 9; i++) {
+					shResult[i] += sh[i] * weight;
+				}
+				weightSum += weight;
+			}
+		}
+	
+	}
+	
+	
+	for (uint x = 0; x < 3; x++) {
+		for (uint y = 0; y < 3; y++) {
+			vec3 shSample = shResult[x * 3 + y] * (4.0f * 3.14159f) / weightSum;
+			imageStore(dstMip, ivec2(x, y), vec4(shSample, 1.0));
+		}
+	}
+
+	//ivec2 dstSize = imageSize(dstMip);
+	
+	//	ivec2 dstPos = ivec2(gl_GlobalInvocationID);
+		//ivec3 srcPos = dstPos * 2;
+		
+		//vec4 srcColor0 = texture(srcTex, srcPos);
+		
+	//	imageStore(dstMip, dstPos, result);
+}

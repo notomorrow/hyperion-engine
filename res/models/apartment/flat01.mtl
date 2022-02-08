@@ -1,0 +1,72 @@
+# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
+# File Created: 11.06.2014 15:19:15
+
+newmtl Basic_Wall
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.7961 0.7373 0.6510
+	Kd 0.7961 0.7373 0.6510
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+
+newmtl 17___Default
+	Ns 50.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5882 0.5882 0.5882
+	Kd 0.5882 0.5882 0.5882
+	Ks 0.1440 0.1440 0.1440
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\CEDFENCE.JPG
+	map_Kd maps\CEDFENCE.JPG
+
+newmtl Doors
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5882 0.5882 0.5882
+	Kd 0.5882 0.5882 0.5882
+	Ks 0.1173 0.1173 0.1101
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\italy018.jpg
+	map_Kd maps\italy018.jpg
+	map_bump maps\italy018.jpg
+	bump maps\italy018.jpg
+
+newmtl tiles
+	Ns 20.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5882 0.5882 0.5882
+	Kd 0.5882 0.5882 0.5882
+	Ks 0.2070 0.2070 0.2070
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\TANCER.JPG
+	map_Kd maps\TANCER.JPG
+
+newmtl roof_
+	Ns 0.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5882 0.5882 0.5882
+	Kd 0.5882 0.5882 0.5882
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka maps\BLOWN.JPG
+	map_Kd maps\BLOWN.JPG

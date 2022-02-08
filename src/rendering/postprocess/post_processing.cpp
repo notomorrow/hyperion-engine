@@ -1,4 +1,6 @@
 #include "post_processing.h"
+#include "filters/default_filter.h"
+#include "../../math/math_util.h"
 #include "../../core_engine.h"
 #include "../../gl_util.h"
 #include "../../util/mesh_factory.h"
@@ -10,6 +12,8 @@ PostProcessing::PostProcessing()
       m_blit_framebuffer(nullptr)
 {
     m_quad = MeshFactory::CreateQuad();
+
+    AddFilter<DefaultFilter>("default", MathUtil::MaxSafeValue<int>());
 }
 
 PostProcessing::~PostProcessing()

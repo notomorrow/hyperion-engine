@@ -7,15 +7,7 @@
 
 namespace hyperion {
 CubemapRendererShader::CubemapRendererShader(const ShaderProperties &properties)
-    : Shader(properties),
-      m_directions({
-        std::make_pair(Vector3(1, 0, 0), Vector3(0, -1, 0)),
-        std::make_pair(Vector3(-1, 0, 0), Vector3(0, -1, 0)),
-        std::make_pair(Vector3(0, 1, 0), Vector3(0, 0, 1)),
-        std::make_pair(Vector3(0, -1, 0), Vector3(0, 0, -1)),
-        std::make_pair(Vector3(0, 0, 1), Vector3(0, -1, 0)),
-        std::make_pair(Vector3(0, 0, -1), Vector3(0, -1, 0))
-      })
+    : Shader(properties)
 {
     const std::string vs_path("res/shaders/cubemap_renderer.vert");
     const std::string fs_path("res/shaders/cubemap_renderer.frag");
