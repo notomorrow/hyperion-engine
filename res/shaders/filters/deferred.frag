@@ -128,9 +128,9 @@ void main()
 #endif // !VCT_ENABLED
 
 #if PROBE_ENABLED
-  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, position.xyz, CameraPosition).rgb;
+  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, position.xyz, CameraPosition, tangent, bitangent).rgb;
 #if !VCT_ENABLED
-  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, position.xyz, CameraPosition).rgb;
+  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, position.xyz, CameraPosition, tangent, bitangent).rgb;
 #endif // !VCT_ENABLED
 #endif // PROBE_ENABLED
 
@@ -197,5 +197,5 @@ void main()
     }
 #endif
 
-    output0 = vec4(specularCubemap, 1.0);
+    output0 = vec4(result, 1.0);
 }
