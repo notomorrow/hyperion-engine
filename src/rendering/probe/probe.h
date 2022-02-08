@@ -17,9 +17,12 @@ public:
     Probe &operator=(const Probe &other) = delete;
     virtual ~Probe();
 
+    virtual void Bind(Shader *shader) = 0;
+    virtual void Update(double dt) = 0;
+    virtual void Render(Renderer *renderer, Camera *cam) = 0;
+
     inline const BoundingBox &GetBounds() const { return m_bounds; }
     void SetBounds(const BoundingBox &bounds);
-
     inline const Vector3 &GetOrigin() const { return m_origin; }
     void SetOrigin(const Vector3 &origin);
 

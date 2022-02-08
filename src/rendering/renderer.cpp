@@ -256,16 +256,14 @@ void Renderer::SetRendererDefaults()
 
 void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
 {
+    if (!m_buckets[Renderable::RB_BUFFER].IsEmpty()) {
+        RenderBucket(cam, m_buckets[Renderable::RB_BUFFER]); // PRE
+    }
+
     if (fbo) {
         fbo->Use();
     } else {
         CoreEngine::GetInstance()->Viewport(0, 0, cam->GetWidth(), cam->GetHeight());
-    }
-
-    if (!m_buckets[Renderable::RB_BUFFER].IsEmpty()) {
-        CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
-
-        RenderBucket(cam, m_buckets[Renderable::RB_BUFFER]); // PRE
     }
 
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);

@@ -1,5 +1,4 @@
 #include "blur_compute_shader.h"
-#include "../../probe/gi/gi_manager.h"
 #include "../../../asset/asset_manager.h"
 #include "../../../asset/text_loader.h"
 

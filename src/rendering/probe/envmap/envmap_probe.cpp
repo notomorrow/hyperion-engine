@@ -1,5 +1,6 @@
 #include "envmap_probe.h"
 #include "envmap_probe_camera.h"
+#include "../../environment.h"
 #include "../../shader_manager.h"
 #include "../../shaders/cubemap_renderer_shader.h"
 #include "../../shaders/compute/sh_compute_shader.h"
@@ -18,11 +19,15 @@ EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int w
       m_width(width),
       m_height(height),
       m_near(near),
-      m_far(far)
+      m_far(far),
+      m_render_tick(0.0),
+      m_render_index(0),
+      m_is_first_run(true)
 {
     m_fbo = new FramebufferCube(width, height);
 
-    m_cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties());
+    SetShader(ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties()));
+
     m_spherical_harmonics_shader = ShaderManager::GetInstance()->GetShader<SHComputeShader>(ShaderProperties());
     m_sh_texture = std::make_shared<Texture2D>(8, 8, nullptr);
     m_sh_texture->SetFormat(CoreEngine::GLEnums::RGBA);
@@ -57,32 +62,83 @@ EnvMapProbe::~EnvMapProbe()
     delete m_fbo;
 }
 
+void EnvMapProbe::Bind(Shader *shader)
+{
+    GetColorTexture()->Prepare();
+    shader->SetUniform("env_GlobalCubemap", GetColorTexture().get());
+
+    shader->SetUniform("EnvProbe.position", m_origin);
+    shader->SetUniform("EnvProbe.max", m_bounds.GetMax());
+    shader->SetUniform("EnvProbe.min", m_bounds.GetMin());
+
+    shader->SetUniform("SphericalHarmonicsMap", m_sh_texture.get());
+    shader->SetUniform("HasSphericalHarmonicsMap", 1);
+}
+
+void EnvMapProbe::Update(double dt)
+{
+    m_render_tick += dt;
+
+    for (ProbeCamera *cam : m_cameras) {
+        cam->Update(dt); // update matrices
+    }
+}
+
 void EnvMapProbe::Render(Renderer *renderer, Camera *cam)
+{
+    if (m_is_first_run) {
+        if (!Environment::GetInstance()->ProbeEnabled()) {
+            return;
+        }
+
+        RenderCubemap(renderer, cam);
+        RenderSphericalHarmonics();
+
+        m_is_first_run = false;
+
+        return;
+    }
+
+    if (m_render_tick < 0.25) {
+        return;
+    }
+
+    m_render_tick = 0.0;
+
+    RenderCubemap(renderer, cam);
+    RenderSphericalHarmonics();
+}
+
+
+void EnvMapProbe::RenderCubemap(Renderer *renderer, Camera *cam)
 {
     m_fbo->Use();
 
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
     for (int i = 0; i < m_cameras.size(); i++) {
-        m_cubemap_renderer_shader->SetUniform("u_shadowMatrices[" + std::to_string(i) + "]", m_cameras[i]->GetCamera()->GetViewProjectionMatrix());
+        m_shader->SetUniform("u_shadowMatrices[" + std::to_string(i) + "]", m_cameras[i]->GetCamera()->GetViewProjectionMatrix());
     }
 
     renderer->RenderBucket(
         cam,
         renderer->GetBucket(Renderable::RB_OPAQUE),
-        m_cubemap_renderer_shader.get(),
+        m_shader.get(),
         false
     );
 
     renderer->RenderBucket(
         cam,
         renderer->GetBucket(Renderable::RB_TRANSPARENT),
-        m_cubemap_renderer_shader.get(),
+        m_shader.get(),
         false
     );
 
     m_fbo->End();
+}
 
+void EnvMapProbe::RenderSphericalHarmonics()
+{
     if (!m_sh_texture->IsUploaded()) {
         m_sh_texture->Begin(false); // do not upload texture data
         CatchGLErrors("Failed to begin texture storage 2d for spherical harmonics");

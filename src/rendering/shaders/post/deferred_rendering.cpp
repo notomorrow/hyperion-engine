@@ -58,7 +58,7 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
 
         SetUniform("env_GlobalCubemap", cubemap.get());
 
-        if (env->ProbeEnabled()) {
+        //if (env->ProbeEnabled()) {
             /*SetUniform("EnvProbe.position", env->GetProbeRenderer()->GetProbe()->GetOrigin());
             SetUniform("EnvProbe.max", env->GetProbeRenderer()->GetProbe()->GetBounds().GetMax());
             SetUniform("EnvProbe.min", env->GetProbeRenderer()->GetProbe()->GetBounds().GetMin());
@@ -66,7 +66,7 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
 
             SetUniform("SphericalHarmonicsMap", env->GetProbeRenderer()->m_sh_texture.get());
             SetUniform("HasSphericalHarmonicsMap", 1);*/
-        }
+        //}
     }
 
     if (auto cubemap = env->GetGlobalIrradianceCubemap()) {
@@ -74,8 +74,12 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
 
         SetUniform("env_GlobalIrradianceCubemap", cubemap.get());
     }
+    
+    for (int i = 0; i < env->GetProbeManager()->NumProbes(); i++) {
+        env->GetProbeManager()->GetProbe(i)->Bind(this);
+    }
 
-    if (Environment::GetInstance()->VCTEnabled()) {
+    /*if (Environment::GetInstance()->VCTEnabled()) {
         for (int i = 0; i < Environment::GetInstance()->GetGIManager()->NumProbes(); i++) {
             if (auto &probe = Environment::GetInstance()->GetGIManager()->GetProbe(i)) {
                 probe->Bind(this);
@@ -85,7 +89,7 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
                 }
             }
         }
-    }
+    }*/
 }
 
 void DeferredRenderingShader::ApplyTransforms(const Transform &transform, Camera *camera)

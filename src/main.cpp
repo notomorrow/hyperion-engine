@@ -336,18 +336,18 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(false);
+        Environment::GetInstance()->SetProbeEnabled(true);
         Environment::GetInstance()->SetVCTEnabled(false);
-        Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
-        Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
-        Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(4, 3, -1));
+        //Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
+        //Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
+        //Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(4, 3, -1));
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
         GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
         GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
-        GetRenderer()->SetDeferred(true);
+        GetRenderer()->SetDeferred(false);
 
         AudioManager::GetInstance()->Initialize();
 
@@ -416,10 +416,10 @@ public:
 
         bool write = false;
         bool read = true;
-        //InitTestArea();
+        //
 
         if (write) {
-
+            InitTestArea();
             FileByteWriter fbw("scene.fbom");
             fbom::FBOMWriter writer;
             writer.Append(GetScene()->GetChild("model").get());
@@ -429,6 +429,7 @@ public:
             if (res != fbom::FBOMResult::FBOM_OK) {
                 throw std::runtime_error(std::string("FBOM Error: ") + res.message);
             }
+            
         }
         
         if (read) {
@@ -445,7 +446,7 @@ public:
                 }
 
                 GetScene()->AddChild(entity);
-                entity->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f)));
+                entity->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 4.0f, 0.0f)));
             }
         }
 

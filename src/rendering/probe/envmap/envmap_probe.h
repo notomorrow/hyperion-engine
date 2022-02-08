@@ -37,6 +37,8 @@ public:
     inline float GetNear() const { return m_near; }
     inline float GetFar() const { return m_far; }
 
+    virtual void Bind(Shader *shader) override;
+    virtual void Update(double dt) override;
     virtual void Render(Renderer *renderer, Camera *cam) override;
 
     std::shared_ptr<Texture2D> m_sh_texture; // tmp
@@ -44,13 +46,18 @@ public:
 private:
     virtual std::shared_ptr<Renderable> CloneImpl() override;
 
+    void RenderCubemap(Renderer *, Camera *);
+    void RenderSphericalHarmonics();
+
     int m_width;
     int m_height;
     float m_near;
     float m_far;
-    std::shared_ptr<Shader> m_cubemap_renderer_shader;
     std::shared_ptr<ComputeShader> m_spherical_harmonics_shader;
     Framebuffer *m_fbo;
+    double m_render_tick;
+    int m_render_index;
+    bool m_is_first_run;
 };
 } // namespace hyperion
 

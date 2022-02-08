@@ -65,11 +65,10 @@ void GIVoxelShader::ApplyTransforms(const Transform &transform, Camera *camera)
     Shader::ApplyTransforms(transform, camera);
     SetUniform("CameraPosition", camera->GetTranslation());
 
-    for (int i = 0; i < Environment::GetInstance()->GetGIManager()->NumProbes(); i++) {
-        if (auto &probe = Environment::GetInstance()->GetGIManager()->GetProbe(i)) {
+    // TODO filter by type
+    for (int i = 0; i < Environment::GetInstance()->GetProbeManager()->NumProbes(); i++) {
+        if (auto &probe = Environment::GetInstance()->GetProbeManager()->GetProbe(i)) {
             probe->Bind(this);
-
-
         }
     }
 }
