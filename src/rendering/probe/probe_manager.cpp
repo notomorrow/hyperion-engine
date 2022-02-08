@@ -19,6 +19,9 @@ ProbeManager *ProbeManager::GetInstance()
 }
 
 ProbeManager::ProbeManager()
+    : m_spherical_harmonics_enabled(false),
+      m_env_map_enabled(false),
+      m_vct_enabled(false)
 {
     ShaderManager::GetInstance()->SetBaseShaderProperties(
         ShaderProperties()
@@ -28,6 +31,46 @@ ProbeManager::ProbeManager()
             .Define("VCT_GEOMETRY_SHADER", false)
             .Define("PROBE_RENDER_TEXTURES", true)
             .Define("PROBE_RENDER_SHADING", true)
+            .Define("SPHERICAL_HARMONICS_ENABLED", m_spherical_harmonics_enabled)
+            .Define("PROBE_ENABLED", m_env_map_enabled)
+            .Define("VCT_ENABLED", m_vct_enabled)
     );
+}
+
+void ProbeManager::SetSphericalHarmonicsEnabled(bool value)
+{
+    if (m_spherical_harmonics_enabled == value) {
+        return;
+    }
+
+    m_spherical_harmonics_enabled = value;
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties().Define("SPHERICAL_HARMONICS_ENABLED", value));
+}
+
+void ProbeManager::SetEnvMapEnabled(bool value)
+{
+    if (value == m_env_map_enabled) {
+        return;
+    }
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("PROBE_ENABLED", value)
+    );
+
+    m_env_map_enabled = value;
+}
+
+void ProbeManager::SetVCTEnabled(bool vct_enabled)
+{
+    if (vct_enabled == m_vct_enabled) {
+        return;
+    }
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("VCT_ENABLED", vct_enabled)
+    );
+
+    m_vct_enabled = vct_enabled;
 }
 } // namespace apex

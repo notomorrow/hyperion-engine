@@ -40,10 +40,21 @@ public:
     inline const std::shared_ptr<Probe> &GetProbe(int index) const { return m_probes[index]; }
     inline size_t NumProbes() const { return m_probes.size(); }
 
+    inline bool SphericalHarmonicsEnabled() const { return m_spherical_harmonics_enabled; }
+    void SetSphericalHarmonicsEnabled(bool value);
+    inline bool VCTEnabled() const { return m_vct_enabled; }
+    void SetVCTEnabled(bool value);
+    inline bool EnvMapEnabled() const { return m_env_map_enabled; }
+    void SetEnvMapEnabled(bool value);
+
+
     static ProbeManager *GetInstance();
 
 private:
     std::vector<std::shared_ptr<Probe>> m_probes;
+    bool m_spherical_harmonics_enabled;
+    bool m_env_map_enabled;
+    bool m_vct_enabled;
 
     static ProbeManager *instance;
 };
