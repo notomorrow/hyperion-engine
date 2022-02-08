@@ -4,7 +4,7 @@
 
 namespace hyperion {
 const int ProbeManager::voxel_map_size = 128;
-const float ProbeManager::voxel_map_scale = 3.0f;
+const float ProbeManager::voxel_map_scale = 1.0f;
 const int ProbeManager::voxel_map_num_mipmaps = 7;
 
 ProbeManager *ProbeManager::instance = nullptr;
@@ -43,9 +43,11 @@ void ProbeManager::SetSphericalHarmonicsEnabled(bool value)
         return;
     }
 
-    m_spherical_harmonics_enabled = value;
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("SPHERICAL_HARMONICS_ENABLED", value)
+    );
 
-    ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties().Define("SPHERICAL_HARMONICS_ENABLED", value));
+    m_spherical_harmonics_enabled = value;
 }
 
 void ProbeManager::SetEnvMapEnabled(bool value)

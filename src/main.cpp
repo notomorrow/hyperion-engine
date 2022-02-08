@@ -201,8 +201,8 @@ public:
         sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.6f);
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.34f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
@@ -211,6 +211,7 @@ public:
                 }
             }
         //}
+        sponza->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         GetScene()->AddChild(sponza);
         return;
         {
@@ -338,14 +339,14 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        //Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(true);
-        //Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
-        //Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(false);
+        Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(true);
+        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
+        Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(true);
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 105);
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
+        //GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
+        //GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
         GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         GetRenderer()->SetDeferred(true);
 
@@ -380,9 +381,11 @@ public:
         auto ui_text = std::make_shared<ui::UIText>("text_test", "Hyperion 0.1.0\n"
             "Press 1 to toggle shadows\n"
             "Press 2 to toggle deferred rendering\n"
-            "Press 3 to toggle voxel cone tracing\n");
+            "Press 3 to toggle environment cubemapping\n"
+            "Press 4 to toggle spherical harmonics mapping\n"
+            "Press 5 to toggle voxel cone tracing\n");
         ui_text->SetLocalTranslation2D(Vector2(-1.0, 1.0));
-        ui_text->SetLocalScale2D(Vector2(30));
+        ui_text->SetLocalScale2D(Vector2(20));
         GetUI()->AddChild(ui_text);
         GetUIManager()->RegisterUIObject(ui_text);
 
@@ -410,37 +413,39 @@ public:
 
         bool write = false;
         bool read = true;
-        //
 
-        if (write) {
+        if (!write && !read) {
             InitTestArea();
-            FileByteWriter fbw("scene.fbom");
-            fbom::FBOMWriter writer;
-            writer.Append(GetScene()->GetChild("sponza").get());
-            auto res = writer.Emit(&fbw);
-            fbw.Close();
+        } else {
+            if (write) {
+                InitTestArea();
+                FileByteWriter fbw("./models/scene.fbom");
+                fbom::FBOMWriter writer;
+                writer.Append(GetScene()->GetChild("model").get());
+                auto res = writer.Emit(&fbw);
+                fbw.Close();
 
-            if (res != fbom::FBOMResult::FBOM_OK) {
-                throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+                if (res != fbom::FBOMResult::FBOM_OK) {
+                    throw std::runtime_error(std::string("FBOM Error: ") + res.message);
+                }
             }
-            
-        }
-        
-        if (read) {
 
-            std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./scene.fbom");
+            if (read) {
 
-            if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
-                for (size_t i = 0; i < entity->NumChildren(); i++) {
-                    if (auto child = entity->GetChild(i)) {
-                        if (auto ren = child->GetRenderable()) {
-                            ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+                std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./models/scene.fbom");
+
+                if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+                    for (size_t i = 0; i < entity->NumChildren(); i++) {
+                        if (auto child = entity->GetChild(i)) {
+                            if (auto ren = child->GetRenderable()) {
+                                ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+                            }
                         }
                     }
-                }
 
-                GetScene()->AddChild(entity);
-                entity->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 4.0f, 0.0f)));
+                    GetScene()->AddChild(entity);
+                    entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
+                }
             }
         }
 
@@ -458,20 +463,20 @@ public:
                     ).Normalize();
 
                     box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
-                        col.x,
-                        col.y,
-                        col.z,
+                        1,//col.x,
+                        1,//col.y,
+                        1,//col.z,
                         1.0f
                     );
 
                     box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
-                    //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
                     //box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
                     box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
-                    //box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.25f);
-                    //box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.7f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.25f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
                 }
 
                 box->SetLocalTranslation(box_position);
@@ -526,6 +531,22 @@ public:
         }));
 
         GetInputManager()->RegisterKeyEvent(KEY_3, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            ProbeManager::GetInstance()->SetEnvMapEnabled(!ProbeManager::GetInstance()->EnvMapEnabled());
+        }));
+
+        GetInputManager()->RegisterKeyEvent(KEY_4, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            ProbeManager::GetInstance()->SetSphericalHarmonicsEnabled(!ProbeManager::GetInstance()->SphericalHarmonicsEnabled());
+        }));
+
+        GetInputManager()->RegisterKeyEvent(KEY_5, InputEvent([=](bool pressed) {
             if (!pressed) {
                 return;
             }

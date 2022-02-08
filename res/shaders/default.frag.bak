@@ -34,6 +34,7 @@ void main()
 {
   float roughness = clamp(u_roughness, 0.05, 0.99);
   float metallic = clamp(u_shininess, 0.05, 0.99);
+  float ao = 0.0;
 
   vec3 lightDir = normalize(env_DirectionalLight.direction);
   vec3 n = normalize(v_normal.xyz);
@@ -53,6 +54,10 @@ void main()
 
   if (HasDiffuseMap == 1) {
     diffuseTexture = texture(DiffuseMap, texCoords);
+  }
+  
+  if (HasAoMap == 1) {
+    ao = texture(AoMap, texCoords).r;
   }
 
   vec4 albedo = u_diffuseColor * diffuseTexture;
@@ -140,10 +145,7 @@ void main()
 #if PROBE_ENABLED
   blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
   specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
-  
-#if SPHERICAL_HARMONICS_ENABLED
-  gi += SampleSphericalHarmonics(n);
-#endif // SPHERICAL_HARMONICS_ENABLED
+
 
 #if !SPHERICAL_HARMONICS_ENABLED
   gi += EnvRemap(Irradiance(n)) * (1.0 / $PI);
@@ -158,7 +160,11 @@ void main()
 #if !VCT_ENABLED
   specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
 #endif // !VCT_ENABLED
-#endif // !PROBE_ENABLED
+#endif // !PROBE_ENABLED  
+
+#if SPHERICAL_HARMONICS_ENABLED
+  gi += SampleSphericalHarmonics(n);
+#endif // SPHERICAL_HARMONICS_ENABLED
 
   float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
   //specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughness);
@@ -192,7 +198,6 @@ void main()
   vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
   diffRef += gi;
   diffuseLight += diffRef;
-  diffuseLight += ;
   diffuseLight *= metallicDiff;
 
   vec3 color = diffuseLight + reflectedLight * shadowColor.rgb;
@@ -202,13 +207,13 @@ void main()
 #endif
 
 #if DEFERRED
- output0 = albedo;
+  output0 = albedo;
 #endif
 
   output1 = vec4(n * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(metallic, roughness, 0.0, 1.0);
-  output4 = vec4(0.0, 0.0, 0.0, 0.0); // TODO: alpha should be aomap
+  output4 = vec4(0.0, 0.0, 0.0, ao);
   output5 = vec4(v_tangent * 0.5 + 0.5, 1.0);
   output6 = vec4(v_bitangent * 0.5 + 0.5, 1.0);
 }

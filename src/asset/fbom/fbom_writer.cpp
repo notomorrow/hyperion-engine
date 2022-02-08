@@ -33,7 +33,9 @@ FBOMResult FBOMWriter::Serialize(FBOMLoadable *in, FBOMObject *out) const
 
 FBOMResult FBOMWriter::Append(FBOMLoadable *loadable)
 {
-    ex_assert(loadable != nullptr);
+    if (loadable == nullptr) {
+        return (m_write_stream.m_last_result = FBOMResult(FBOMResult::FBOM_ERR, "null object appended to write stream"));
+    }
 
     if (auto err = m_write_stream.m_last_result) {
         return err;

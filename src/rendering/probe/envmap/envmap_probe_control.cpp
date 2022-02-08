@@ -29,7 +29,7 @@ void EnvMapProbeControl::OnRemoved()
 void EnvMapProbeControl::OnUpdate(double dt)
 {
     if (m_env_probe->GetBounds().Empty()) {
-        m_env_probe->SetBounds(m_env_probe->GetAABB());
+        m_env_probe->SetBounds(parent->GetAABB());
     }
 
     m_env_probe->SetOrigin(parent->GetGlobalTranslation());
