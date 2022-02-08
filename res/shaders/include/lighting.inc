@@ -24,6 +24,9 @@ uniform sampler2D MetalnessMap;
 uniform int HasAoMap;
 uniform sampler2D AoMap;
 
+uniform int HasSphericalHarmonicsMap;
+uniform sampler2D SphericalHarmonicsMap;
+
 
 // cubemap probe
 struct Probe {
@@ -330,47 +333,85 @@ vec4 CalculateFogLinear(vec4 inColor, vec4 toColor, vec3 worldPos, vec3 camPos, 
 	return mix(inColor, toColor, 1.0-fogFactor);
 }
 
+vec3 SphericalHarmonics(const vec3 sph[9], const in vec3 normal) {
+  float x = normal.x;
+  float y = normal.y;
+  float z = normal.z;
 
+  vec3 result = (
+    sph[0] +
 
-vec3 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos)
+    sph[1] * x +
+    sph[2] * y +
+    sph[3] * z +
+
+    sph[4] * z * x +
+    sph[5] * y * z +
+    sph[6] * y * x +
+    sph[7] * (3.0 * z * z - 1.0) +
+    sph[8] * (x*x - y*y)
+  );
+
+  return max(result, vec3(0.0));
+}
+
+vec3 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl)
 {
-  vec4 sample;
 
-	vec3 PositionWS = worldPos;
-	vec3 CameraWS = camPos;
-	vec3 NormalWS = n;
-	vec3 DirectionWS = PositionWS - CameraWS;
-	vec3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
+  vec4 samp;
+
+  vec3 rbmax = (EnvProbe.max - worldPos) / refl;
+  vec3 rbmin = (EnvProbe.min - worldPos) / refl;
+
+  vec3 rbminmax = max(rbmax, rbmin);
   
-  vec3 cubeSize = EnvProbe.max;
-  vec3 cubePos = EnvProbe.position;
-  vec3 pos = worldPos;
-
-  vec3 nDir = normalize(ReflDirectionWS);//DirectionWS);
-  vec3 rbmax = (   .5 * ( cubeSize - cubePos ) - pos ) / nDir;
-  vec3 rbmin = ( - .5 * ( cubeSize - cubePos ) - pos ) / nDir;
-
-  vec3 rbminmax;// = max(rbmax, rbmin);
-  rbminmax.x = ( nDir.x > 0. )?rbmax.x:rbmin.x;
-  rbminmax.y = ( nDir.y > 0. )?rbmax.y:rbmin.y;
-  rbminmax.z = ( nDir.z > 0. )?rbmax.z:rbmin.z;
 
   float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
-  vec3 boxIntersection = pos + nDir * correction;
+  vec3 boxIntersection = worldPos + refl * correction;
 
-  vec3 coord = boxIntersection - cubePos;
+  vec3 coord = boxIntersection - EnvProbe.position;
 
-  sample = texture(tex, coord);
+  samp = textureLod(tex, coord, 4);
 
-  // fade out env map at boundary
+  return samp.rgb;
 
-  float maxDistanceLength = length(EnvProbe.max);
-  float fogStart = maxDistanceLength - 10.0;
-  float fogEnd = maxDistanceLength;
+}
 
-  // return sample.rgb;
+vec3 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos, vec3 tangent, vec3 bitangent)
+{
+
+  if (HasSphericalHarmonicsMap == 1) {
+    vec3 sh[9];
+	
+	for (int x = 0; x < 3; x++) {
+	  for (int y = 0; y < 3; y++) {
+	    sh[x * 3 + y] = texture(SphericalHarmonicsMap, vec2(float(x) / 8.0, float(y) / 8.0)).rgb;
+		
+	  }
+	}
+	
+	return SphericalHarmonics(sh, n);
   
-  return CalculateFogLinear(sample, vec4(sample.rgb, 0.0), worldPos, camPos, fogStart, fogEnd).rgb;
+  }
+  vec4 samp;
+
+  return SampleEnvProbeRefl(tex, worldPos, ReflectionVector(n, worldPos, camPos));
+
+  //vec3 accum = vec3(0.0);
+  
+  //accum += SampleEnvProbeRefl(tex, worldPos, n);
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.03, 0.0, 0.03)));
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n - vec3(0.03, 0.0, 0.05)));
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.03, 0.0, -0.03)));
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(-0.03, 0.0, 0.03)));
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.05, 0.0, 0.05)));
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n - vec3(0.05, 0.0, 0.05)));
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.05, 0.0, -0.05)));
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(-0.05, 0.0, 0.05)));
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + bitangent));
+  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n - bitangent));
+  //return accum / 9.0;
+
 }
 
 vec3 ComputeDirectionalLight(DirectionalLight dl, vec3 n, vec3 v, vec3 vert, vec3 albedo, float shadowness, float roughness, float metalness)
@@ -466,16 +507,16 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
 
     vec3 diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
 
-#if PROBE_ENABLED
-    vec3 specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, vert, cameraPosition).rgb;
-    vec3 blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, vert, cameraPosition).rgb;
-#endif
+//#if PROBE_ENABLED
+    //vec3 specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, vert, cameraPosition).rgb;
+    //vec3 blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, vert, cameraPosition).rgb;
+//#endif
 
-#if !PROBE_ENABLED
+//#if !PROBE_ENABLED
     vec3 reflectionVector = ReflectionVector(n, vert, cameraPosition);
     vec3 specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
     vec3 blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
-#endif
+//#endif
 
 
     float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));

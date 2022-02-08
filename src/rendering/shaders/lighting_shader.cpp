@@ -71,10 +71,14 @@ void LightingShader::ApplyMaterial(const Material &mat)
         SetUniform("env_GlobalCubemap", gi.get());
     }*/
 
-    if (auto cubemap = env->GetGlobalCubemap()) {
-        cubemap->Prepare();
 
-        SetUniform("env_GlobalCubemap", cubemap.get());
+    for (int i = 0; i < env->GetProbeManager()->NumProbes(); i++) {
+        env->GetProbeManager()->GetProbe(i)->Bind(this);
+    }
+    if (auto cubemap = env->GetGlobalCubemap()) {
+        //cubemap->Prepare();
+
+        //SetUniform("env_GlobalCubemap", cubemap.get());
 
 
         if (env->ProbeEnabled()) {
@@ -107,6 +111,8 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     SetUniform("u_shininess", mat.GetParameter(MATERIAL_PARAMETER_METALNESS)[0]);
     SetUniform("u_roughness", mat.GetParameter(MATERIAL_PARAMETER_ROUGHNESS)[0]);
+
+
 }
 
 void LightingShader::ApplyTransforms(const Transform &transform, Camera *camera)

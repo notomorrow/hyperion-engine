@@ -1,12 +1,13 @@
 #include "envmap_probe_control.h"
 #include "envmap_probe.h"
+#include "../probe_manager.h"
 #include "../../../entity.h"
 
 #include <memory>
 
 namespace hyperion {
 EnvMapProbeControl::EnvMapProbeControl(const Vector3 &origin, BoundingBox bounds)
-    : EntityControl(fbom::FBOMObjectType("ENVMAP_PROBE_CONTROL"), 10.0),
+    : EntityControl(fbom::FBOMObjectType("ENVMAP_PROBE_CONTROL"), 5.0),
       m_env_probe_node(new Entity("EnvMapProbeControl")),
       m_env_probe(new EnvMapProbe(origin, bounds, 128, 128, 0.1f, 50.0f)) // TODO
 {
@@ -16,11 +17,13 @@ EnvMapProbeControl::EnvMapProbeControl(const Vector3 &origin, BoundingBox bounds
 void EnvMapProbeControl::OnAdded()
 {
     parent->AddChild(m_env_probe_node);
+    ProbeManager::GetInstance()->AddProbe(m_env_probe);
 }
 
 void EnvMapProbeControl::OnRemoved()
 {
     parent->RemoveChild(m_env_probe_node);
+    ProbeManager::GetInstance()->RemoveProbe(m_env_probe);
 }
 
 void EnvMapProbeControl::OnUpdate(double dt)
@@ -30,6 +33,7 @@ void EnvMapProbeControl::OnUpdate(double dt)
     }
 
     m_env_probe->SetOrigin(parent->GetGlobalTranslation());
+    m_env_probe->Update(dt);
 }
 
 std::shared_ptr<EntityControl> EnvMapProbeControl::CloneImpl()

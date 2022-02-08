@@ -1,9 +1,6 @@
 #version 330 core
 in vec4 FragPos;
 
-uniform vec3 u_lightPos;
-uniform float u_far;
-
 #include "include/frag_output.inc"
 
 uniform int HasDiffuseMap;

@@ -19,11 +19,9 @@ public:
     GIMapper(const Vector3 &origin, const BoundingBox &bounds);
     ~GIMapper();
 
-    void Bind(Shader *shader);
-
+    virtual void Bind(Shader *shader) override;
+    virtual void Update(double dt) override;
     virtual void Render(Renderer *renderer, Camera *cam) override;
-
-    void UpdateRenderTick(double dt);
 
 private:
     virtual std::shared_ptr<Renderable> CloneImpl() override;

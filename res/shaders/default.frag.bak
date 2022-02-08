@@ -131,7 +131,7 @@ void main()
 #if VCT_ENABLED
   //testing
   vec4 vctSpec = VCTSpecular(v_position.xyz, n.xyz, u_camerapos, u_roughness);
-  vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent);
+  vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent, roughness);
   specularCubemap = vctSpec.rgb;
   diffuseCubemap = vctDiff.rgb;
 #endif // VCT_ENABLED
@@ -141,9 +141,9 @@ void main()
 #endif // !VCT_ENABLED
 
 #if PROBE_ENABLED
-  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos).rgb;
+  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
 #if !VCT_ENABLED
-  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos).rgb;
+  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
 #endif // !VCT_ENABLED
 #endif // PROBE_ENABLED
 
@@ -198,7 +198,7 @@ void main()
   vec3 color = diffuseLight + reflectedLight * shadowColor.rgb;
   
 
-  output0 = vec4(color, 1.0);
+  output0 = vec4(specularCubemap, 1.0);
 #endif
 
 #if DEFERRED

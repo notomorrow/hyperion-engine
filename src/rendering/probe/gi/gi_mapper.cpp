@@ -42,7 +42,7 @@ GIMapper::~GIMapper()
     }
 }
 
-void GIMapper::UpdateRenderTick(double dt)
+void GIMapper::Update(double dt)
 {
     m_render_tick += dt;
 
@@ -55,6 +55,10 @@ void GIMapper::Bind(Shader *shader)
 {
     shader->SetUniform("VoxelProbePosition", m_bounds.GetCenter());
     shader->SetUniform("VoxelSceneScale", m_bounds.GetDimensions());
+
+    for (int j = 0; j < m_cameras.size(); j++) {
+        shader->SetUniform(std::string("VoxelMap[") + std::to_string(j) + "]", m_cameras[j]->GetTexture());
+    }
 }
 
 void GIMapper::Render(Renderer *renderer, Camera *cam)

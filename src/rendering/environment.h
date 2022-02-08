@@ -3,7 +3,7 @@
 
 #include "../math/matrix4.h"
 #include "../math/vector2.h"
-#include "../rendering/probe/gi/gi_manager.h"
+#include "../rendering/probe/probe_manager.h"
 #include "../rendering/texture.h"
 #include "../rendering/cubemap.h"
 #include "./lights/directional_light.h"
@@ -59,8 +59,8 @@ public:
     inline bool ProbeEnabled() const { return m_probe_enabled; }
     void SetProbeEnabled(bool probe_enabled);
 
-    inline GIManager *GetGIManager() { return m_gi_manager; }
-    inline const GIManager *GetGIManager() const { return m_gi_manager; }
+    inline ProbeManager *GetProbeManager() { return m_probe_manager; }
+    inline const ProbeManager *GetProbeManager() const { return m_probe_manager; }
     inline bool VCTEnabled() const { return m_vct_enabled; }
     void SetVCTEnabled(bool vct_enabled);
 
@@ -84,7 +84,7 @@ private:
 
     bool m_probe_enabled;
 
-    GIManager *m_gi_manager;
+    ProbeManager *m_probe_manager;
     bool m_vct_enabled;
 };
 } // namespace hyperion
