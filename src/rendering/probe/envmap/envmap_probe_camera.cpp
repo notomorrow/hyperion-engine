@@ -23,15 +23,16 @@ const Texture *EnvMapProbeCamera::GetTexture() const
 
 void EnvMapProbeCamera::Update(double dt)
 {
-    m_camera->SetTranslation(m_region.origin);
+    //m_camera->SetTranslation(m_region.origin);
     m_camera->SetDirection(m_region.direction);
     m_camera->SetUpVector(m_region.up_vector);
     m_camera->Update(dt);
 }
 
-void EnvMapProbeCamera::Render(Renderer *renderer, Camera *)
+void EnvMapProbeCamera::Render(Renderer *renderer, Camera *camera)
 {
     // no-op
+    m_camera->SetTranslation(camera->GetTranslation());
 }
 
 std::shared_ptr<Renderable> EnvMapProbeCamera::CloneImpl()

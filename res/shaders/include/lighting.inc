@@ -355,6 +355,19 @@ vec3 SphericalHarmonics(const vec3 sph[9], const in vec3 normal) {
   return max(result, vec3(0.0));
 }
 
+vec3 SampleSphericalHarmonics(vec3 n)
+{
+	vec3 sh[9];
+	
+	for (int x = 0; x < 3; x++) {
+	  for (int y = 0; y < 3; y++) {
+		sh[x * 3 + y] = texture(SphericalHarmonicsMap, vec2(float(x) / 8.0, float(y) / 8.0)).rgb;
+	  }
+	}
+
+	return SphericalHarmonics(sh, n);
+}
+
 vec3 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl)
 {
 
@@ -379,20 +392,6 @@ vec3 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl)
 
 vec3 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos, vec3 tangent, vec3 bitangent)
 {
-
-  if (HasSphericalHarmonicsMap == 1) {
-    vec3 sh[9];
-	
-	for (int x = 0; x < 3; x++) {
-	  for (int y = 0; y < 3; y++) {
-	    sh[x * 3 + y] = texture(SphericalHarmonicsMap, vec2(float(x) / 8.0, float(y) / 8.0)).rgb;
-		
-	  }
-	}
-	
-	return SphericalHarmonics(sh, n);
-  
-  }
   vec4 samp;
 
   return SampleEnvProbeRefl(tex, worldPos, ReflectionVector(n, worldPos, camPos));

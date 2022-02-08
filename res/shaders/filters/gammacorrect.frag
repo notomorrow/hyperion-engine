@@ -9,7 +9,7 @@ uniform sampler2D DepthMap;
 uniform sampler2D PositionMap;
 uniform sampler2D NormalMap;
 
-#define $GAMMA 2.2
+#define $GAMMA 2.1
 
 void main()
 {
