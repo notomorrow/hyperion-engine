@@ -59,9 +59,13 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
         SetUniform("env_GlobalCubemap", cubemap.get());
 
         if (env->ProbeEnabled()) {
-            SetUniform("EnvProbe.position", env->GetProbeRenderer()->GetProbe()->GetOrigin());
+            /*SetUniform("EnvProbe.position", env->GetProbeRenderer()->GetProbe()->GetOrigin());
             SetUniform("EnvProbe.max", env->GetProbeRenderer()->GetProbe()->GetBounds().GetMax());
             SetUniform("EnvProbe.min", env->GetProbeRenderer()->GetProbe()->GetBounds().GetMin());
+
+
+            SetUniform("SphericalHarmonicsMap", env->GetProbeRenderer()->m_sh_texture.get());
+            SetUniform("HasSphericalHarmonicsMap", 1);*/
         }
     }
 
@@ -77,7 +81,7 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
                 probe->Bind(this);
 
                 for (int j = 0; j < probe->NumCameras(); j++) {
-                    SetUniform(std::string("VoxelMap[") + std::to_string(j) + "]", probe->GetCamera(j)->GetTexture().get());
+                    SetUniform(std::string("VoxelMap[") + std::to_string(j) + "]", probe->GetCamera(j)->GetTexture());
                 }
             }
         }

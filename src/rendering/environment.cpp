@@ -38,7 +38,6 @@ Environment::Environment()
       m_shadow_maps({ nullptr }),
       m_shadow_matrices({ Matrix4::Identity() }),
       m_sun(Vector3(-1, -1, -1).Normalize(), Vector4(0.9, 0.8, 0.7, 1.0)),
-      m_probe_renderer(new ProbeRenderer(Vector3(0, 2, 2), BoundingBox())),
       m_probe_enabled(false),
       m_max_point_lights(0),
       m_gi_manager(GIManager::GetInstance()),
@@ -49,7 +48,6 @@ Environment::Environment()
 
 Environment::~Environment()
 {
-    delete m_probe_renderer;
 }
 
 void Environment::SetMaxPointLights(int max_point_lights)

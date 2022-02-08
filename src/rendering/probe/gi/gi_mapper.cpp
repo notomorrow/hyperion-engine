@@ -11,20 +11,11 @@
 #include "../../../gl_util.h"
 
 namespace hyperion {
-GIMapper::GIMapper(const BoundingBox &bounds)
-    : Renderable(fbom::FBOMObjectType("GI_MAPPER"), RB_BUFFER),
-      m_bounds(bounds),
+GIMapper::GIMapper(const Vector3 &origin, const BoundingBox &bounds)
+    : Probe(fbom::FBOMObjectType("GI_MAPPER"), origin, bounds),
       m_render_tick(0.0),
       m_render_index(0),
-      m_is_first_run(true),
-      m_directions({
-          std::make_pair(Vector3(1, 0, 0), Vector3(0, -1, 0)),
-          std::make_pair(Vector3(-1, 0, 0), Vector3(0, -1, 0)),
-          std::make_pair(Vector3(0, 1, 0), Vector3(0, 0, 1)),
-          std::make_pair(Vector3(0, -1, 0), Vector3(0, 0, -1)),
-          std::make_pair(Vector3(0, 0, 1), Vector3(0, -1, 0)),
-          std::make_pair(Vector3(0, 0, -1), Vector3(0, -1, 0))
-      })
+      m_is_first_run(true)
 {
     SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelShader>(ShaderProperties()));
 
@@ -42,7 +33,7 @@ GIMapper::GIMapper(const BoundingBox &bounds)
 
 GIMapper::~GIMapper()
 {
-    for (GIMapperCamera *cam : m_cameras) {
+    for (ProbeCamera *cam : m_cameras) {
         if (cam == nullptr) {
             continue;
         }
@@ -51,20 +42,11 @@ GIMapper::~GIMapper()
     }
 }
 
-void GIMapper::SetOrigin(const Vector3 &origin)
-{
-    m_bounds.SetCenter(origin);
-
-    for (GIMapperCamera *cam : m_cameras) {
-        cam->GetRegion().bounds = m_bounds;
-    }
-}
-
 void GIMapper::UpdateRenderTick(double dt)
 {
     m_render_tick += dt;
 
-    for (GIMapperCamera *gi_cam : m_cameras) {
+    for (ProbeCamera *gi_cam : m_cameras) {
         gi_cam->Update(dt); // update matrices
     }
 }
@@ -83,8 +65,7 @@ void GIMapper::Render(Renderer *renderer, Camera *cam)
         }
 
         for (int i = 0; i < m_cameras.size(); i++) {
-            GIMapperCamera *gi_cam = m_cameras[i];
-            gi_cam->Render(renderer, cam);
+            m_cameras[i]->Render(renderer, cam);
         }
 
         m_is_first_run = false;
@@ -110,6 +91,6 @@ void GIMapper::Render(Renderer *renderer, Camera *cam)
 
 std::shared_ptr<Renderable> GIMapper::CloneImpl()
 {
-    return std::make_shared<GIMapper>(m_bounds);
+    return std::make_shared<GIMapper>(m_origin, m_bounds);
 }
 } // namespace apex

@@ -4,6 +4,8 @@
 #include "../../../asset/text_loader.h"
 #include "../../environment.h"
 
+#include "../../../core_engine.h"
+
 namespace hyperion {
 GIVoxelShader::GIVoxelShader(const ShaderProperties &properties)
     : Shader(properties)

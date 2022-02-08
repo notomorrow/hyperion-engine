@@ -14,11 +14,10 @@
 
 namespace hyperion {
 GIMapperCamera::GIMapperCamera(const ProbeRegion &region)
-    : Renderable(fbom::FBOMObjectType("GI_MAPPER_CAMERA"), RB_BUFFER),
-      m_texture_id(0),
-      m_region(region),
-      m_camera(new OrthoCamera(-GIManager::voxel_map_size, GIManager::voxel_map_size, -GIManager::voxel_map_size, GIManager::voxel_map_size, 0, GIManager::voxel_map_size))//new PerspectiveCamera(90.0f, GIManager::voxel_map_size, GIManager::voxel_map_size, 0.01f, GIManager::voxel_map_size / GIManager::voxel_map_scale))
+    : ProbeCamera(fbom::FBOMObjectType("GI_MAPPER_CAMERA"), region)
 {
+    m_camera = new OrthoCamera(-GIManager::voxel_map_size, GIManager::voxel_map_size, -GIManager::voxel_map_size, GIManager::voxel_map_size, 0, GIManager::voxel_map_size);
+
     m_texture.reset(new Texture3D(GIManager::voxel_map_size, GIManager::voxel_map_size, GIManager::voxel_map_size, nullptr));
     m_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
     m_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_NEAREST);
@@ -35,10 +34,6 @@ GIMapperCamera::GIMapperCamera(const ProbeRegion &region)
 GIMapperCamera::~GIMapperCamera()
 {
     delete m_camera;
-
-    if (m_texture_id != 0) {
-        glDeleteTextures(1, &m_texture_id);
-    }
 }
 
 void GIMapperCamera::Begin()
@@ -97,6 +92,11 @@ void GIMapperCamera::Render(Renderer *renderer, Camera *)
         m_mipmap_shader->End();
     }
 
+}
+
+const Texture *GIMapperCamera::GetTexture() const
+{
+    return m_texture.get();
 }
 
 std::shared_ptr<Renderable> GIMapperCamera::CloneImpl()
