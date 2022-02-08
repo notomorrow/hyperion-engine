@@ -76,11 +76,19 @@ void LightingShader::ApplyMaterial(const Material &mat)
         env->GetProbeManager()->GetProbe(i)->Bind(this);
     }
 
-    /*if (auto cubemap = env->GetGlobalIrradianceCubemap()) {
-        cubemap->Prepare();
+    if (!env->GetProbeManager()->EnvMapEnabled()) {
+        if (auto cubemap = env->GetGlobalCubemap()) {
+            cubemap->Prepare();
 
-        SetUniform("env_GlobalIrradianceCubemap", cubemap.get());
-    }*/
+            SetUniform("env_GlobalCubemap", cubemap.get());
+        }
+
+        if (auto cubemap = env->GetGlobalIrradianceCubemap()) {
+            cubemap->Prepare();
+
+            SetUniform("env_GlobalIrradianceCubemap", cubemap.get());
+        }
+    }
 
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
         if (it->second == nullptr) {
