@@ -22,8 +22,8 @@ uniform int FlipUV_Y;
 
 void main() {
   vec3 n = a_normal.xyz;
-  v_texcoord0.x = abs(float(FlipUV_X) - a_texcoord0.x);
-  v_texcoord0.y = abs(float(FlipUV_Y) - a_texcoord0.y);
+  v_texcoord0.x = a_texcoord0.x;
+  v_texcoord0.y = a_texcoord0.y;
 
 #if SKINNING
 	mat4 skinningMat = createSkinningMatrix();
