@@ -8,7 +8,7 @@ namespace hyperion {
 BloomFilter::BloomFilter()
     : PostFilter(ShaderManager::GetInstance()->GetShader<BloomShader>(
         ShaderProperties()
-            .Define("BLOOM_INTENSITY", 3.5f)
+            .Define("BLOOM_INTENSITY", 1.5f)
             .Define("BLOOM_SPREAD", 0.35f)
     ))
 {

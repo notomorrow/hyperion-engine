@@ -63,11 +63,11 @@ void GIMapper::Bind(Shader *shader)
 
 void GIMapper::Render(Renderer *renderer, Camera *cam)
 {
-    if (m_is_first_run) {
-        if (!Environment::GetInstance()->VCTEnabled()) {
-            return;
-        }
+    if (!ProbeManager::GetInstance()->VCTEnabled()) {
+        return;
+    }
 
+    if (m_is_first_run) {
         for (int i = 0; i < m_cameras.size(); i++) {
             m_cameras[i]->Render(renderer, cam);
         }
@@ -82,10 +82,6 @@ void GIMapper::Render(Renderer *renderer, Camera *cam)
     }
 
     m_render_tick = 0.0;
-
-    if (!Environment::GetInstance()->VCTEnabled()) {
-        return;
-    }
 
     m_cameras[m_render_index]->Render(renderer, cam);
 

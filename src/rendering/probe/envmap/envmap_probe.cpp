@@ -86,11 +86,11 @@ void EnvMapProbe::Update(double dt)
 
 void EnvMapProbe::Render(Renderer *renderer, Camera *cam)
 {
-    if (m_is_first_run) {
-        if (!Environment::GetInstance()->ProbeEnabled()) {
-            return;
-        }
+    if (!ProbeManager::GetInstance()->EnvMapEnabled()) {
+        return;
+    }
 
+    if (m_is_first_run) {
         RenderCubemap(renderer, cam);
         RenderSphericalHarmonics();
 
@@ -139,6 +139,10 @@ void EnvMapProbe::RenderCubemap(Renderer *renderer, Camera *cam)
 
 void EnvMapProbe::RenderSphericalHarmonics()
 {
+    if (!ProbeManager::GetInstance()->SphericalHarmonicsEnabled()) {
+        return;
+    }
+
     if (!m_sh_texture->IsUploaded()) {
         m_sh_texture->Begin(false); // do not upload texture data
         CatchGLErrors("Failed to begin texture storage 2d for spherical harmonics");

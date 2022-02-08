@@ -160,7 +160,7 @@ public:
             AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negz.jpg")
         }));
 
-        if (!Environment::GetInstance()->ProbeEnabled()) {
+        if (!ProbeManager::GetInstance()->EnvMapEnabled()) {
             Environment::GetInstance()->SetGlobalCubemap(cubemap);
         }
 
@@ -336,28 +336,23 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->SetProbeEnabled(true);
-        Environment::GetInstance()->SetVCTEnabled(false);
+        Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(true);
+        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
+        Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(false);
         //Environment::GetInstance()->GetProbeRenderer()->SetRenderShading(true);
         //Environment::GetInstance()->GetProbeRenderer()->SetRenderTextures(true);
         //Environment::GetInstance()->GetProbeRenderer()->SetOrigin(Vector3(4, 3, -1));
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 40);
+        //GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 105);
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 999);
+        GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
         GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
-        GetRenderer()->SetDeferred(false);
+        GetRenderer()->SetDeferred(true);
 
         AudioManager::GetInstance()->Initialize();
 
         Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5).Normalize());
-
-        /*for (int x = 0; x < Environment::GetInstance()->GetMaxPointLights() / 2; x++) {
-            for (int z = 0; z < Environment::GetInstance()->GetMaxPointLights() / 2; z++) {
-                Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(x * 0.5f, -6.0f, z * 0.5f), Vector4(MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), MathUtil::Random(0.0f, 1.0f), 1.0f), 2.0f));
-            }
-        }*/
 
         auto gi_test_node = std::make_shared<Entity>("gi_test_node");
         gi_test_node->Move(Vector3(0, 5, 0));
@@ -464,20 +459,20 @@ public:
                     ).Normalize();
 
                     box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
-                        1,//col.x,
-                        1,//col.y,
-                        1,//col.z,
+                        col.x,
+                        col.y,
+                        col.z,
                         1.0f
                     );
 
-                    // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
-                    // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
-                    // box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
-                    // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
+                    //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
+                    //box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
                     //box->GetChild(i)->GetMaterial().SetParameter("shininess", 0.25f);
                     //box->GetChild(i)->GetMaterial().SetParameter("roughness", 0.8f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.8f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.1f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.7f);
                 }
 
                 box->SetLocalTranslation(box_position);
@@ -529,6 +524,14 @@ public:
             }
 
             GetRenderer()->SetDeferred(!GetRenderer()->IsDeferred());
+        }));
+
+        GetInputManager()->RegisterKeyEvent(KEY_3, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            ProbeManager::GetInstance()->SetVCTEnabled(!ProbeManager::GetInstance()->VCTEnabled());
         }));
 
         /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
