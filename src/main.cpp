@@ -187,8 +187,8 @@ public:
         sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.6f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.3f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
@@ -198,6 +198,7 @@ public:
             }
         //}
         sponza->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+        sponza->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         GetScene()->AddChild(sponza);
         return;
         {
@@ -336,7 +337,7 @@ public:
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         //GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
         //GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
-        GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
+        //GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         GetRenderer()->SetDeferred(true);
 
         AudioManager::GetInstance()->Initialize();
@@ -345,13 +346,13 @@ public:
 
         auto gi_test_node = std::make_shared<Entity>("gi_test_node");
         gi_test_node->Move(Vector3(0, 5, 0));
-        gi_test_node->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f), BoundingBox(Vector3(-25.0f), Vector3(25.0f))));
-        GetScene()->AddChild(gi_test_node);
+        gi_test_node->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f)));
+        //GetScene()->AddChild(gi_test_node);
 
 
         GetCamera()->SetTranslation(Vector3(0, 0, 0));
 
-        if (false) {
+        if (true) {
             auto dragger = asset_manager->LoadFromFile<Entity>("models/ogrexml/dragger_Body.mesh.xml");
             dragger->SetName("dragger");
             dragger->Move(Vector3(0, 3, 0));
@@ -401,14 +402,19 @@ public:
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
-        bool read = true;
+        bool read = false;
 
         if (!write && !read) {
             InitTestArea();
+            /*GetScene()->AddControl(std::make_shared<NoiseTerrainControl>(GetCamera()));
+            auto tmp = std::make_shared<Entity>("dummy node for vct");
+            tmp->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0, 0, 0), BoundingBox(Vector3(-15, 5, -15), Vector3(15, 5, 15))));
+            tmp->AddControl(std::make_shared<GIProbeControl>(Vector3(0, 0, 0)));
+            GetScene()->AddChild(tmp);*/
         } else {
             if (write) {
                 InitTestArea();
-                FileByteWriter fbw("models/scene.fbom");
+                FileByteWriter fbw(AssetManager::GetInstance()->GetRootDir() + "models/scene.fbom");
                 fbom::FBOMWriter writer;
                 writer.Append(GetScene()->GetChild("model").get());
                 auto res = writer.Emit(&fbw);
@@ -428,12 +434,14 @@ public:
                         if (auto child = entity->GetChild(i)) {
                             if (auto ren = child->GetRenderable()) {
                                 ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+                                //ren->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
                             }
                         }
                     }
 
                     GetScene()->AddChild(entity);
                     entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
+                    entity->GetChild("mesh0_SG")->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
                 }
             }
         }
@@ -542,13 +550,6 @@ public:
 
             ProbeManager::GetInstance()->SetVCTEnabled(!ProbeManager::GetInstance()->VCTEnabled());
         }));
-
-        /*auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
-        GetScene()->AddChild(house);
-
-        auto sd = asset_manager->LoadFromFile<Entity>("models/superdan/superdan.obj");
-        sd->SetLocalTranslation(Vector3(0, 4, 0));
-        GetScene()->AddChild(sd);*/
 
         /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
 

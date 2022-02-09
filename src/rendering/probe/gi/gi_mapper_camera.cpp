@@ -21,17 +21,6 @@ GIMapperCamera::GIMapperCamera(const ProbeRegion &region)
 
         //new OrthoCamera(-ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, -ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, 0, ProbeManager::voxel_map_size);
 
-    m_texture.reset(new Texture3D(ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, nullptr));
-    m_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
-    m_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_NEAREST);
-    m_texture->SetFormat(CoreEngine::GLEnums::RGBA);
-    m_texture->SetInternalFormat(CoreEngine::GLEnums::RGBA32F);
-
-    m_clear_shader = ShaderManager::GetInstance()->GetShader<GIVoxelClearShader>(ShaderProperties());
-    m_mipmap_shader = ShaderManager::GetInstance()->GetShader<BlurComputeShader>(
-        ShaderProperties()
-            .Define(std::string("DIRECTION_") + std::to_string(region.index), true)
-    );
 }
 
 GIMapperCamera::~GIMapperCamera()
@@ -39,28 +28,9 @@ GIMapperCamera::~GIMapperCamera()
     delete m_camera;
 }
 
-void GIMapperCamera::Begin()
-{
-    if (!m_texture->IsUploaded()) {
-        m_texture->Begin(false); // do not upload texture data
-        // this ought to be refactored into a more reusable format
-        glTexStorage3D(GL_TEXTURE_3D, ProbeManager::voxel_map_num_mipmaps, GL_RGBA32F, m_texture->GetWidth(), m_texture->GetHeight(), m_texture->GetLength());
-        m_texture->End();
-    }
-
-    glBindImageTexture(0, m_texture->GetId(), 0, true, 0, GL_WRITE_ONLY, GL_RGBA32F);
-    CatchGLErrors("Failed to bind image texture.");
-
-}
-
-void GIMapperCamera::End()
-{
-    glBindImageTexture(0, 0, 0, true, 0, GL_WRITE_ONLY, GL_RGBA32F);
-}
-
 void GIMapperCamera::Update(double dt)
 {
-    m_camera->SetTranslation(m_region.bounds.GetCenter());
+    m_camera->SetTranslation(m_region.origin);
     m_camera->SetDirection(m_region.direction);
     m_camera->SetUpVector(m_region.up_vector);
     m_camera->Update(dt);
@@ -68,39 +38,12 @@ void GIMapperCamera::Update(double dt)
 
 void GIMapperCamera::Render(Renderer *renderer, Camera *)
 {
-    Begin();
-
-    // clear texture of previous frame's voxels
-    m_clear_shader->Use();
-    m_clear_shader->Dispatch(ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, ProbeManager::voxel_map_size);
-    m_clear_shader->End();
-    CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
-
     renderer->RenderBucket(
         m_camera,
         renderer->GetBucket(Renderable::RB_OPAQUE),
         m_shader.get(),
         false
     );
-
-    End();
-
-    m_mipmap_shader->SetUniform("srcTex", m_texture.get());
-
-    for (int i = 1; i < ProbeManager::voxel_map_num_mipmaps; i++) {
-        int mip_size = ProbeManager::voxel_map_size >> i;
-        m_mipmap_shader->SetUniform("srcMipLevel", i - 1);
-        glBindImageTexture(0, m_texture->GetId(), i, true, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        m_mipmap_shader->Use();
-        m_mipmap_shader->Dispatch(mip_size, mip_size, mip_size);
-        m_mipmap_shader->End();
-    }
-
-}
-
-const Texture *GIMapperCamera::GetTexture() const
-{
-    return m_texture.get();
 }
 
 std::shared_ptr<Renderable> GIMapperCamera::CloneImpl()

@@ -58,6 +58,7 @@ std::shared_ptr<Entity> GrassPopulator::CreateEntity(const Vector3 &position) co
 
         object_node->GetChild(i)->GetMaterial().alpha_blended = true;
         object_node->GetChild(i)->GetMaterial().cull_faces = MaterialFace_None;
+        object_node->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
     }
     
     return object_node;

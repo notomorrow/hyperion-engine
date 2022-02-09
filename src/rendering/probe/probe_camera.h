@@ -19,8 +19,6 @@ public:
     inline Camera *GetCamera() { return m_camera; }
     inline const Camera *GetCamera() const { return m_camera; }
 
-    virtual const Texture *GetTexture() const = 0;
-
     virtual void Update(double dt) = 0;
     virtual void Render(Renderer *renderer, Camera *cam) = 0;
 

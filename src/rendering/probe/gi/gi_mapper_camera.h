@@ -18,21 +18,11 @@ public:
     GIMapperCamera(const ProbeRegion &region);
     virtual ~GIMapperCamera();
 
-    virtual const Texture *GetTexture() const override;
-
-    void Begin();
-    void End();
-
     virtual void Update(double dt) override;
-
     virtual void Render(Renderer *renderer, Camera *cam) override;
 
 private:
     virtual std::shared_ptr<Renderable> CloneImpl() override;
-
-    std::shared_ptr<Texture3D> m_texture;
-    std::shared_ptr<ComputeShader> m_clear_shader;
-    std::shared_ptr<ComputeShader> m_mipmap_shader;
 };
 } // namespace hyperion
 

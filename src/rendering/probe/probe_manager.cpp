@@ -26,7 +26,6 @@ ProbeManager::ProbeManager()
     ShaderManager::GetInstance()->SetBaseShaderProperties(
         ShaderProperties()
             .Define("VCT_MAP_SIZE", voxel_map_size)
-            .Define("VCT_NUM_MAPS", 6)
             .Define("VCT_SCALE", voxel_map_scale)
             .Define("VCT_GEOMETRY_SHADER", false)
             .Define("PROBE_RENDER_TEXTURES", true)

@@ -5,27 +5,32 @@ namespace hyperion {
 const decltype(Material::default_parameters) Material::default_parameters; // TODO
 
 MaterialParameter::MaterialParameter()
-    : type(MaterialParameter_None)
+    : type(MaterialParameter_None),
+      values({ 0.0f })
 {
 }
 
 MaterialParameter::MaterialParameter(const float value)
-    : type(MaterialParameter_Float)
+    : type(MaterialParameter_Float),
+      values({ value, 0.0f, 0.0f, 0.0f })
 {
-    values[0] = value;
 }
 
 MaterialParameter::MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype)
     : type(paramtype)
 {
-    for (size_t i = 0; i < nvalues; i++) {
-        values[i] = data[i];
+    for (size_t i = 0; i < values.size(); i++) {
+        if (i < nvalues) {
+            values[i] = data[i];
+        } else {
+            values[i] = 0.0f;
+        }
     }
 }
 
 MaterialParameter::MaterialParameter(const MaterialParameter &other)
-    : values(other.values),
-      type(other.type)
+    : type(other.type),
+      values(other.values)
 {
 }
 

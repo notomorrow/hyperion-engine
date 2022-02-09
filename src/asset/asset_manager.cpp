@@ -49,7 +49,7 @@ void AssetManager::SetRootDir(const std::string &path) {
     this->root_path = path;
 }
 
-std::string AssetManager::GetRootDir() {
+const std::string &AssetManager::GetRootDir() const {
     return this->root_path;
 }
 
