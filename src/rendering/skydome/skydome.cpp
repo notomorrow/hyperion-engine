@@ -31,6 +31,7 @@ void SkydomeControl::OnAdded()
     dome->GetChild(0)->GetRenderable()->SetRenderBucket(Renderable::RB_SKY);
     dome->GetChild(0)->GetMaterial().depth_test = false;
     dome->GetChild(0)->GetMaterial().depth_write = false;
+    dome->GetChild(0)->GetMaterial().diffuse_color = Vector4(0.2, 0.3, 0.8, 1.0);
     // dome->GetChild(0)->GetMaterial().alpha_blended = true;
 
     if (!clouds_in_dome) {

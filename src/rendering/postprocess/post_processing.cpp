@@ -13,7 +13,7 @@ PostProcessing::PostProcessing()
 {
     m_quad = MeshFactory::CreateQuad();
 
-    AddFilter<DefaultFilter>("default", MathUtil::MaxSafeValue<int>());
+    //AddFilter<DefaultFilter>("default", MathUtil::MaxSafeValue<int>());
 }
 
 PostProcessing::~PostProcessing()

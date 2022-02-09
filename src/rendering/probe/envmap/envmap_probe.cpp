@@ -117,12 +117,13 @@ void EnvMapProbe::RenderCubemap(Renderer *renderer, Camera *cam)
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
     for (int i = 0; i < m_cameras.size(); i++) {
+        m_cameras[i]->Render(renderer, cam);
         m_shader->SetUniform("u_shadowMatrices[" + std::to_string(i) + "]", m_cameras[i]->GetCamera()->GetViewProjectionMatrix());
     }
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Renderable::RB_OPAQUE),
+        renderer->GetBucket(Renderable::RB_SKY),
         m_shader.get(),
         false
     );
@@ -130,6 +131,13 @@ void EnvMapProbe::RenderCubemap(Renderer *renderer, Camera *cam)
     renderer->RenderBucket(
         cam,
         renderer->GetBucket(Renderable::RB_TRANSPARENT),
+        m_shader.get(),
+        false
+    );
+
+    renderer->RenderBucket(
+        cam,
+        renderer->GetBucket(Renderable::RB_OPAQUE),
         m_shader.get(),
         false
     );

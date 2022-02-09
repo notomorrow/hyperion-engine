@@ -14,7 +14,7 @@ public:
     EnvMapProbeCamera &operator=(const EnvMapProbeCamera &other) = delete;
     ~EnvMapProbeCamera();
 
-    virtual const Texture *GetTexture() const override;
+    virtual const Texture *GetTexture() const;
 
     virtual void Update(double dt) override;
     virtual void Render(Renderer *renderer, Camera *cam) override;

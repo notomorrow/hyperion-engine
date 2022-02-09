@@ -9,7 +9,7 @@ namespace hyperion {
 class GIMapper;
 class GIProbeControl : public EntityControl {
 public:
-    GIProbeControl(const Vector3 &origin, const BoundingBox &bounds);
+    GIProbeControl(const Vector3 &origin);
     virtual ~GIProbeControl() = default;
 
     virtual void OnAdded() override;

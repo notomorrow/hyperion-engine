@@ -9,7 +9,7 @@ namespace hyperion {
 EnvMapProbeControl::EnvMapProbeControl(const Vector3 &origin, BoundingBox bounds)
     : EntityControl(fbom::FBOMObjectType("ENVMAP_PROBE_CONTROL"), 5.0),
       m_env_probe_node(new Entity("EnvMapProbeControl")),
-      m_env_probe(new EnvMapProbe(origin, bounds, 128, 128, 0.1f, 50.0f)) // TODO
+      m_env_probe(new EnvMapProbe(origin, bounds, 128, 128, 0.1f, 150.0f)) // TODO
 {
     m_env_probe_node->SetRenderable(m_env_probe);
 }
