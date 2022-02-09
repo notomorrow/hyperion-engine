@@ -52,14 +52,19 @@ void main()
 	vec4 position = v_position;
     vec3 n = normalize(v_normal.xyz);
 #endif
-	
+
+#if VCT_ENABLED
     vec3 viewVector = normalize(u_camerapos-position.xyz);
 	float voxelImageSize = float($VCT_MAP_SIZE);
 	float halfVoxelImageSize = voxelImageSize * 0.5;
-	output0 = voxelFetch(decodeVoxelPosition(position.xyz), viewVector, 0);
+	//output0 = voxelFetch(decodeVoxelPosition(position.xyz), viewVector, 0);
 
 	
 	vec3 test_store_pos = (position.xyz - VoxelProbePosition) * $VCT_SCALE;
-	//output0 = imageLoad(framebufferImage, ivec3(test_store_pos.x, test_store_pos.y, test_store_pos.z)+ivec3(halfVoxelImageSize));
+	output0 = imageLoad(framebufferImage, ivec3(test_store_pos.x, test_store_pos.y, test_store_pos.z)+ivec3(halfVoxelImageSize));
+#endif
 
+#if !VCT_ENABLED
+	output0 = vec4(0.0, 1.0, 0.0, 1.0);
+#endif
 }

@@ -1,10 +1,22 @@
 #version 430
-layout (local_size_x = 16, local_size_y = 8, local_size_z = 1) in;
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 
 uniform int srcMipLevel;
 uniform sampler3D srcTex;
 layout(binding = 0, rgba32f) uniform image3D dstMip;
+
+vec4[8] fetchTexels(ivec3 pos) {
+  return vec4[8] (texelFetch(srcTex, pos + ivec3(1, 1, 1), srcMipLevel),  // 0
+                  texelFetch(srcTex, pos + ivec3(1, 1, 0), srcMipLevel),  // 1
+                  texelFetch(srcTex, pos + ivec3(1, 0, 1), srcMipLevel),  // 2
+                  texelFetch(srcTex, pos + ivec3(1, 0, 0), srcMipLevel),  // 3
+                  texelFetch(srcTex, pos + ivec3(0, 1, 1), srcMipLevel),  // 4
+                  texelFetch(srcTex, pos + ivec3(0, 1, 0), srcMipLevel),  // 5
+                  texelFetch(srcTex, pos + ivec3(0, 0, 1), srcMipLevel),  // 6
+                  texelFetch(srcTex, pos + ivec3(0, 0, 0), srcMipLevel)); // 7
+}
+
 
 
 void main()
@@ -36,55 +48,44 @@ void main()
 		// so, the blending here assumes inputs are premultiplied,
 		// and produces a premultiplied output
 		
-		vec4 outColor = vec4(1.0, 0.0, 0.0, 1.0);
-#if DIRECTION_0
+		vec4 outColor = vec4(0.0, 0.0, 0.0, 1.0);
+
 		// +X
-		outColor =
-			srcColor0 + srcColor1 * (1.0 - srcColor0.w)
+		outColor +=
+			(srcColor0 + srcColor1 * (1.0 - srcColor0.w)
 			+ srcColor2 + srcColor3 * (1.0 - srcColor2.w)
 			+ srcColor4 + srcColor5 * (1.0 - srcColor4.w)
-			+ srcColor6 + srcColor7 * (1.0 - srcColor6.w);
-#endif
-#if DIRECTION_1
+			+ srcColor6 + srcColor7 * (1.0 - srcColor6.w)) * 0.166;
 		// -X
-		outColor =
-			srcColor1 + srcColor0 * (1.0 - srcColor1.w)
+		outColor +=
+			(srcColor1 + srcColor0 * (1.0 - srcColor1.w)
 			+ srcColor3 + srcColor2 * (1.0 - srcColor3.w)
 			+ srcColor5 + srcColor4 * (1.0 - srcColor5.w)
-			+ srcColor7 + srcColor6 * (1.0 - srcColor7.w);
-#endif
-#if DIRECTION_2
+			+ srcColor7 + srcColor6 * (1.0 - srcColor7.w)) * 0.166;
 		// +Y
-		outColor =
-			srcColor0 + srcColor2 * (1.0 - srcColor0.w)
+		outColor +=
+			(srcColor0 + srcColor2 * (1.0 - srcColor0.w)
 			+ srcColor1 + srcColor3 * (1.0 - srcColor1.w)
 			+ srcColor4 + srcColor6 * (1.0 - srcColor4.w)
-			+ srcColor5 + srcColor7 * (1.0 - srcColor5.w);
-#endif
-#if DIRECTION_3
+			+ srcColor5 + srcColor7 * (1.0 - srcColor5.w)) * 0.166;
 		// -Y
-		outColor =
-			srcColor2 + srcColor0 * (1.0 - srcColor2.w)
+		outColor +=
+			(srcColor2 + srcColor0 * (1.0 - srcColor2.w)
 			+ srcColor3 + srcColor1 * (1.0 - srcColor3.w)
 			+ srcColor6 + srcColor4 * (1.0 - srcColor6.w)
-			+ srcColor7 + srcColor5 * (1.0 - srcColor7.w);
-#endif
-#if DIRECTION_4
+			+ srcColor7 + srcColor5 * (1.0 - srcColor7.w)) * 0.166;
 		// +Z
-		outColor =
-			srcColor0 + srcColor4 * (1.0 - srcColor0.w)
+		outColor +=
+			(srcColor0 + srcColor4 * (1.0 - srcColor0.w)
 			+ srcColor1 + srcColor5 * (1.0 - srcColor1.w)
 			+ srcColor2 + srcColor6 * (1.0 - srcColor2.w)
-			+ srcColor3 + srcColor7 * (1.0 - srcColor3.w);
-#endif
-#if DIRECTION_5
+			+ srcColor3 + srcColor7 * (1.0 - srcColor3.w)) * 0.166;
 		// -Z
-		outColor =
-			srcColor4 + srcColor0 * (1.0 - srcColor4.w)
+		outColor +=
+			(srcColor4 + srcColor0 * (1.0 - srcColor4.w)
 			+ srcColor5 + srcColor1 * (1.0 - srcColor5.w)
 			+ srcColor6 + srcColor2 * (1.0 - srcColor6.w)
-			+ srcColor7 + srcColor3 * (1.0 - srcColor7.w);
-#endif
+			+ srcColor7 + srcColor3 * (1.0 - srcColor7.w)) * 0.166;
 
 		outColor *= .25;
 		

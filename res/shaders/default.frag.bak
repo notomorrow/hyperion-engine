@@ -148,7 +148,7 @@ void main()
 
 
 #if !SPHERICAL_HARMONICS_ENABLED
-  gi += EnvRemap(Irradiance(n)) * (1.0 / $PI);
+  gi += EnvRemap(Irradiance(n));
 #endif // !SPHERICAL_HARMONICS_ENABLED
 
 #endif // PROBE_ENABLED
@@ -197,7 +197,7 @@ void main()
 
   vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
   diffRef += gi;
-  diffuseLight += diffRef;
+  diffuseLight += diffRef * (1.0 / $PI);
   diffuseLight *= metallicDiff;
 
   vec3 color = diffuseLight + reflectedLight * shadowColor.rgb;
