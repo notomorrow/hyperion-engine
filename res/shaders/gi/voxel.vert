@@ -13,6 +13,10 @@ out vec4 v_position;
 out vec4 v_normal;
 out vec2 v_texcoord0;
 
+#if SKINNING
+#include "../include/skinning.inc"
+#endif
+
 #if VCT_GEOMETRY_SHADER
 out VSOutput
 {
@@ -24,8 +28,17 @@ out VSOutput
 
 void main() 
 {
+#if SKINNING
+	mat4 skinningMat = createSkinningMatrix();
+    v_position = u_modelMatrix * skinningMat * vec4(a_position, 1.0);
+    v_normal = transpose(inverse(u_modelMatrix * skinningMat)) * vec4(a_normal, 0.0);
+#endif
+
+#if !SKINNING
     v_position = u_modelMatrix * vec4(a_position, 1.0);
     v_normal = transpose(inverse(u_modelMatrix)) * vec4(a_normal, 0.0);
+#endif
+
 	v_texcoord0 = a_texcoord0;
 
 #if VCT_GEOMETRY_SHADER

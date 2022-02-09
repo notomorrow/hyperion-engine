@@ -29,7 +29,7 @@ uniform float u_scale;
 uniform mat4 WorldToVoxelTexMatrix;
 layout(binding = 0, rgba32f) uniform image3D framebufferImage;
 
-#if VCT_GEOMETRY_SHADERR
+#if VCT_GEOMETRY_SHADER
 // output
 in GSOutput
 {
@@ -43,16 +43,17 @@ in GSOutput
 
 void main() 
 {
-#if VCT_GEOMETRY_SHADERR
+#if VCT_GEOMETRY_SHADER
 	vec4 position = gs_out.position;
     vec3 n = normalize(gs_out.normal);
 #endif
 
-#if !VCT_GEOMETRY_SHADERR
+#if !VCT_GEOMETRY_SHADER
 	vec4 position = v_position;
     vec3 n = normalize(v_normal.xyz);
 #endif
-	
+
+#if VCT_ENABLED
     vec3 viewVector = normalize(u_camerapos-position.xyz);
 	float voxelImageSize = float($VCT_MAP_SIZE);
 	float halfVoxelImageSize = voxelImageSize * 0.5;
@@ -61,5 +62,9 @@ void main()
 	
 	vec3 test_store_pos = (position.xyz - VoxelProbePosition) * $VCT_SCALE;
 	//output0 = imageLoad(framebufferImage, ivec3(test_store_pos.x, test_store_pos.y, test_store_pos.z)+ivec3(halfVoxelImageSize));
+#endif
 
+#if !VCT_ENABLED
+	output0 = vec4(0.0, 1.0, 0.0, 1.0);
+#endif
 }

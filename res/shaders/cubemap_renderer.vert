@@ -11,7 +11,9 @@ out vec3 v_bitangent;
 out mat3 v_tbn;
 
 #include "include/matrices.inc"
+#if PROBE_RENDER_SHADING
 #include "include/lighting.inc"
+#endif
 
 #define $CUBEMAP_LIGHTING_AMBIENT 0.2
 

@@ -132,7 +132,7 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
 }
 
 float ChiGGXTerm(float v) {
-    return v > 0.0 ? 1.0 : 0.0;
+    return v > 0 ? 1 : 0;
 }
 
 float ChiGGX(vec3 view, vec3 norm, vec3 halfV, float alpha) {
