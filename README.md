@@ -1,6 +1,5 @@
 # Hyperion Engine
 
-![Apex engine screenshot](/screenshots/screenshot22.PNG)
 
 ## About
 
@@ -12,7 +11,8 @@ Feel free to contribute anything - We'd love to have some more eyes on this proj
 
 ## Screenshots
 
-![Apex engine screenshot](/screenshots/screenshot21.PNG)
+![Apex engine screenshot](/screenshots/screenshot26.PNG)
+![Apex engine screenshot](/screenshots/screenshot25.PNG)
 ![Apex engine screenshot](/screenshots/screenshot7.png)
 
 ## Building
