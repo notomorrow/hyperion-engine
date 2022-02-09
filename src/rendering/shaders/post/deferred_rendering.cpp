@@ -8,7 +8,7 @@ namespace hyperion {
 DeferredRenderingShader::DeferredRenderingShader(const ShaderProperties &properties)
     : PostShader(properties)
 {
-    const std::string fs_path("res/shaders/filters/deferred.frag");
+    const std::string fs_path("shaders/filters/deferred.frag");
 
     AddSubShader(
         Shader::SubShaderType::SUBSHADER_FRAGMENT,

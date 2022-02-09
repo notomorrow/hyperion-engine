@@ -6,7 +6,7 @@ namespace hyperion {
 BlurComputeShader::BlurComputeShader(const ShaderProperties &properties)
     : ComputeShader(properties)
 {
-    const std::string cs_path("res/shaders/compute/blur.comp");
+    const std::string cs_path("shaders/compute/blur.comp");
 
     AddSubShader(
         Shader::SubShaderType::SUBSHADER_COMPUTE,

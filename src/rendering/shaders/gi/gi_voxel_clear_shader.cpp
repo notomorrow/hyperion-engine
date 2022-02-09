@@ -6,7 +6,7 @@ namespace hyperion {
 GIVoxelClearShader::GIVoxelClearShader(const ShaderProperties &properties)
     : ComputeShader(properties)
 {
-    const std::string cs_path("res/shaders/gi/clear.comp");
+    const std::string cs_path("shaders/gi/clear.comp");
 
     AddSubShader(
         Shader::SubShaderType::SUBSHADER_COMPUTE,

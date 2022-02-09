@@ -1,33 +1,17 @@
 #include "glfw_engine.h"
-#include "gl_util.h"
 #include "game.h"
 #include "entity.h"
 #include "util.h"
 #include "asset/asset_manager.h"
-#include "asset/text_loader.h"
-#include "rendering/mesh.h"
 #include "rendering/shader.h"
 #include "rendering/environment.h"
-#include "rendering/camera/ortho_camera.h"
-#include "rendering/camera/perspective_camera.h"
-#include "rendering/camera/fps_camera.h"
 #include "rendering/texture.h"
 #include "rendering/framebuffer_2d.h"
 #include "rendering/framebuffer_cube.h"
 #include "rendering/shaders/lighting_shader.h"
-#include "rendering/shaders/vegetation_shader.h"
-#include "rendering/shaders/fur_shader.h"
-#include "rendering/shaders/post_shader.h"
 #include "rendering/shader_manager.h"
-#include "rendering/shadow/shadow_mapping.h"
 #include "rendering/shadow/pssm_shadow_mapping.h"
-#include "util/shader_preprocessor.h"
-#include "util/mesh_factory.h"
-#include "util/aabb_factory.h"
 #include "audio/audio_manager.h"
-#include "audio/audio_source.h"
-#include "audio/audio_control.h"
-#include "animation/bone.h"
 #include "animation/skeleton_control.h"
 #include "math/bounding_box.h"
 
@@ -139,7 +123,7 @@ public:
         auto particle_node = std::make_shared<Entity>();
         particle_node->SetName("Particle node");
         // particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
-        particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/textures/test_snowflake.png"));
+        particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/test_snowflake.png"));
         particle_node->AddControl(std::make_shared<ParticleEmitterControl>(GetCamera(), particle_generator_info));
         particle_node->SetLocalScale(Vector3(1.5));
         particle_node->AddControl(std::make_shared<BoundingBoxControl>());
@@ -151,13 +135,14 @@ public:
 
     std::shared_ptr<Cubemap> InitCubemap()
     {
+        AssetManager *asset_manager = AssetManager::GetInstance();
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/posz.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver/negz.jpg")
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/posx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/negx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/posy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/negy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/posz.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/negz.jpg")
         }));
 
         if (!ProbeManager::GetInstance()->EnvMapEnabled()) {
@@ -165,12 +150,12 @@ public:
         }
 
         Environment::GetInstance()->SetGlobalIrradianceCubemap(std::shared_ptr<Cubemap>(new Cubemap({
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negx.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negy.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/posz.jpg"),
-            AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/IceRiver_irradiance/negz.jpg")
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/posx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/negx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/posy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/negy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/posz.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/negz.jpg")
         })));
 
         return cubemap;
@@ -178,9 +163,10 @@ public:
 
     void InitTestArea()
     {
+        AssetManager *asset_manager = AssetManager::GetInstance();
         bool voxel_debug = false;
 
-        auto mitsuba = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/mitsuba.obj");
+        auto mitsuba = asset_manager->LoadFromFile<Entity>("models/mitsuba.obj");
         //living_room->Scale(0.05f);
         mitsuba->Move(Vector3(-4.5, 1.2, -4.5));
         mitsuba->Scale(2);
@@ -196,7 +182,7 @@ public:
         }
         GetScene()->AddChild(mitsuba);
 
-        auto sponza = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sponza/sponza.obj");
+        auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
         sponza->SetName("sponza");
         sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
@@ -216,7 +202,7 @@ public:
         return;
         {
 
-            auto street = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/street/street.obj");
+            auto street = asset_manager->LoadFromFile<Entity>("models/street/street.obj");
             street->SetName("street");
             // street->SetLocalTranslation(Vector3(3.0f, -0.5f, -1.5f));
             street->Scale(0.6f);
@@ -232,7 +218,7 @@ public:
 
 
         {
-            auto model = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/conference/conference.obj");
+            auto model = asset_manager->LoadFromFile<Entity>("models/conference/conference.obj");
             model->SetName("model");
             model->Scale(0.01f);
 
@@ -328,11 +314,14 @@ public:
 
     void Initialize()
     {
+
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
             .Define("NORMAL_MAPPING", false)
             .Define("SHADOW_MAP_RADIUS", 0.05f)
             .Define("SHADOW_PCF", false)
         );
+
+        AssetManager *asset_manager = AssetManager::GetInstance();
 
         shadows = new PssmShadowMapping(GetCamera(), 4, 120.0f);
         shadows->SetVarianceShadowMapping(true);
@@ -363,7 +352,7 @@ public:
         GetCamera()->SetTranslation(Vector3(0, 0, 0));
 
         if (false) {
-            auto dragger = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/ogrexml/dragger_Body.mesh.xml");
+            auto dragger = asset_manager->LoadFromFile<Entity>("models/ogrexml/dragger_Body.mesh.xml");
             dragger->SetName("dragger");
             dragger->Move(Vector3(0, 3, 0));
             dragger->Scale(0.25);
@@ -419,7 +408,7 @@ public:
         } else {
             if (write) {
                 InitTestArea();
-                FileByteWriter fbw("./models/scene.fbom");
+                FileByteWriter fbw("models/scene.fbom");
                 fbom::FBOMWriter writer;
                 writer.Append(GetScene()->GetChild("model").get());
                 auto res = writer.Emit(&fbw);
@@ -432,7 +421,7 @@ public:
 
             if (read) {
 
-                std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./models/scene.fbom");
+                std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("models/scene.fbom");
 
                 if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
                     for (size_t i = 0; i < entity->NumChildren(); i++) {
@@ -452,7 +441,7 @@ public:
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 Vector3 box_position = Vector3(((float(x) - 2.5) * 8), 3.0f, (float(z) - 2.5) * 8);
-                auto box = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+                auto box = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
                 box->Scale(0.7f);
 
                 for (size_t i = 0; i < box->NumChildren(); i++) {
@@ -469,10 +458,10 @@ public:
                         1.0f
                     );
 
-                    box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_albedo.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_height.png"));
-                    //box->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_ao.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/steelplate/steelplate1_normal-ogl.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_albedo.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_height.png"));
+                    //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_ao.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_normal-ogl.png"));
                     box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.25f);
                     box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                     //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
@@ -507,7 +496,7 @@ public:
         }*/
 
         auto ui_crosshair = std::make_shared<ui::UIObject>("crosshair");
-        ui_crosshair->GetMaterial().SetTexture("ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture2D>("res/textures/crosshair.png"));
+        ui_crosshair->GetMaterial().SetTexture("ColorMap", asset_manager->LoadFromFile<Texture2D>("textures/crosshair.png"));
         ui_crosshair->SetLocalTranslation2D(Vector2(0));
         ui_crosshair->SetLocalScale2D(Vector2(128));
         GetUI()->AddChild(ui_crosshair);
@@ -554,10 +543,10 @@ public:
             ProbeManager::GetInstance()->SetVCTEnabled(!ProbeManager::GetInstance()->VCTEnabled());
         }));
 
-        /*auto house = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/house.obj");
+        /*auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
         GetScene()->AddChild(house);
 
-        auto sd = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/superdan/superdan.obj");
+        auto sd = asset_manager->LoadFromFile<Entity>("models/superdan/superdan.obj");
         sd->SetLocalTranslation(Vector3(0, 4, 0));
         GetScene()->AddChild(sd);*/
 
@@ -726,7 +715,7 @@ int main()
         // Call the function, here sort()
         std::shared_ptr<Loadable> result;
         for (int i = 0; i < 100; i++) {
-            result = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", false);
+            result = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", false);
         }
     
         // Get ending timepoint
@@ -744,7 +733,7 @@ int main()
     // std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
     // my_entity->AddControl(std::make_shared<NoiseTerrainControl>(nullptr, 12345));
 
-    // auto my_entity = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/sphere_hq.obj", true);
+    // auto my_entity = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
     // my_entity->Scale(Vector3(0.2f));
     // my_entity->Move(Vector3(0, 2, 0));
 
@@ -770,6 +759,9 @@ int main()
 
     CoreEngine *engine = new GlfwEngine();
     CoreEngine::SetInstance(engine);
+
+    std::string base_path = HYP_ROOT_DIR;
+    AssetManager::GetInstance()->SetRootDir(base_path+"/res/");
 
     auto *game = new SceneEditor(RenderWindow(1480, 1200, "Hyperion Demo"));
 

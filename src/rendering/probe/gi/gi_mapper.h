@@ -2,7 +2,7 @@
 #define GI_MAPPER_H
 
 #include "../probe.h"
-#include "gi_mapper_camera.h""
+#include "gi_mapper_camera.h"
 #include "../../../math/bounding_box.h"
 #include "../../renderable.h"
 

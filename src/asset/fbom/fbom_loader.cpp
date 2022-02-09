@@ -6,6 +6,7 @@
 #include "../../terrain/noise_terrain/noise_terrain_control.h"
 #include "../../rendering/mesh.h"
 #include "../../rendering/material.h"
+#include "../asset_manager.h"
 
 namespace hyperion {
 namespace fbom {
@@ -67,7 +68,9 @@ FBOMResult FBOMLoader::Deserialize(FBOMObject *in, FBOMDeserialized &out)
 
 std::shared_ptr<Loadable> FBOMLoader::LoadFromFile(const std::string &path)
 {
-    ByteReader *reader = new FileByteReader(path);
+    // Include our root dir as part of the path
+    std::string root_dir = AssetManager::GetInstance()->GetRootDir();
+    ByteReader *reader = new FileByteReader(root_dir+path);
 
     m_static_data_pool.clear();
     m_in_static_data = false;
