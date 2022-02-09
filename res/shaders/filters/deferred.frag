@@ -66,7 +66,7 @@ void main()
 
     if (HasSSLightingMap == 1) {
         vec4 ssl = texture(SSLightingMap, v_texcoord0);
-        gi = ssl.rgb;
+        //gi = ssl.rgb;
         ao *= 1.0 - ssl.a;
     }
 
@@ -112,35 +112,35 @@ void main()
 
   vec3 blurredSpecularCubemap = vec3(0.0);
   vec3 specularCubemap = vec3(0.0);
-  vec3 diffuseCubemap = vec3(0.0);
 
 #if VCT_ENABLED
-  //testing
   vec4 vctSpec = VCTSpecular(position.xyz, n.xyz, CameraPosition, roughness);
   vec4 vctDiff = VCTDiffuse(position.xyz, n.xyz, CameraPosition, tangent, bitangent, roughness);
-  specularCubemap = vctSpec.rgb;
-  diffuseCubemap = vctDiff.rgb;
-  gi += diffuseCubemap;
+  specularCubemap += vctSpec.rgb;
+  gi += vctDiff.rgb;
 #endif // VCT_ENABLED
 
-#if !VCT_ENABLED
-  diffuseCubemap = texture(env_GlobalIrradianceCubemap, n).rgb;
-#endif // !VCT_ENABLED
-
 #if PROBE_ENABLED
-  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, position.xyz, CameraPosition).rgb;
-#if !VCT_ENABLED
-  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, position.xyz, CameraPosition).rgb;
-#endif // !VCT_ENABLED
+  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, position.xyz, CameraPosition, tangent, bitangent).rgb;
+  specularCubemap += SampleEnvProbe(env_GlobalCubemap, n, position.xyz, CameraPosition, tangent, bitangent).rgb;
+
+#if !SPHERICAL_HARMONICS_ENABLED
+  gi += EnvRemap(Irradiance(n));
+#endif // !SPHERICAL_HARMONICS_ENABLED
+
 #endif // PROBE_ENABLED
 
-#if !PROBE_ENABLED
-  vec3 reflectionVector = ReflectionVector(n, position.xyz, CameraPosition);
-  blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
-#if !VCT_ENABLED
-  specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
-#endif // !VCT_ENABLED
-#endif // !PROBE_ENABLED
+//#if !PROBE_ENABLED
+//  vec3 reflectionVector = ReflectionVector(n, position.xyz, CameraPosition);
+//  blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
+//#if !VCT_ENABLED
+//  specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
+//#endif // !VCT_ENABLED
+//#endif // !PROBE_ENABLED
+
+#if SPHERICAL_HARMONICS_ENABLED
+  gi += SampleSphericalHarmonics(n);
+#endif // SPHERICAL_HARMONICS_ENABLED
 
     float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
     //specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughnessMix);
@@ -173,8 +173,7 @@ void main()
 
     vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
     diffRef += gi;
-    diffuseLight += diffRef;
-    diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
+    diffuseLight += diffRef * (1.0 / $PI);
     diffuseLight *= metallicDiff;
 	diffuseLight *= ao;
 
