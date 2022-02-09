@@ -35,7 +35,7 @@ TreePopulator::~TreePopulator()
 
 std::shared_ptr<Entity> TreePopulator::CreateEntity(const Vector3 &position) const
 {
-    auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/pine/LoblollyPine.obj", true);
+    auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("models/pine/LoblollyPine.obj", true);
 
     for (int i = 0; i < tree->NumChildren(); i++) {
         tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);

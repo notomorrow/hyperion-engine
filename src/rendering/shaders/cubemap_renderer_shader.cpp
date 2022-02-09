@@ -9,9 +9,9 @@ namespace hyperion {
 CubemapRendererShader::CubemapRendererShader(const ShaderProperties &properties)
     : Shader(properties)
 {
-    const std::string vs_path("res/shaders/cubemap_renderer.vert");
-    const std::string fs_path("res/shaders/cubemap_renderer.frag");
-    const std::string gs_path("res/shaders/cubemap_renderer.geom");
+    const std::string vs_path("shaders/cubemap_renderer.vert");
+    const std::string fs_path("shaders/cubemap_renderer.frag");
+    const std::string gs_path("shaders/cubemap_renderer.geom");
 
     AddSubShader(
         Shader::SubShaderType::SUBSHADER_VERTEX,

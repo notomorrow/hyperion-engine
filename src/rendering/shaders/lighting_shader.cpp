@@ -8,8 +8,8 @@ namespace hyperion {
 LightingShader::LightingShader(const ShaderProperties &properties)
     : Shader(properties)
 {
-    const std::string vs_path("res/shaders/default.vert");
-    const std::string fs_path("res/shaders/default.frag");
+    const std::string vs_path("shaders/default.vert");
+    const std::string fs_path("shaders/default.frag");
 
     AddSubShader(
         Shader::SubShaderType::SUBSHADER_VERTEX,

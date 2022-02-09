@@ -20,7 +20,7 @@ void SkydomeControl::OnAdded()
     shader = ShaderManager::GetInstance()->GetShader<SkydomeShader>(ShaderProperties()
         .Define("CLOUDS", clouds_in_dome));
 
-    dome = AssetManager::GetInstance()->LoadFromFile<Entity>("res/models/dome.obj");
+    dome = AssetManager::GetInstance()->LoadFromFile<Entity>("models/dome.obj");
 
     if (dome == nullptr) {
         throw std::runtime_error("Could not load skydome model!");

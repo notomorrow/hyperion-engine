@@ -10,9 +10,9 @@ namespace hyperion {
 GIVoxelShader::GIVoxelShader(const ShaderProperties &properties)
     : Shader(properties)
 {
-    const std::string vs_path("res/shaders/gi/voxel.vert");
-    const std::string fs_path("res/shaders/gi/voxel.frag");
-    const std::string gs_path("res/shaders/gi/voxel.geom");
+    const std::string vs_path("shaders/gi/voxel.vert");
+    const std::string fs_path("shaders/gi/voxel.frag");
+    const std::string gs_path("shaders/gi/voxel.geom");
 
     AddSubShader(
         Shader::SubShaderType::SUBSHADER_VERTEX,
