@@ -34,7 +34,7 @@ void GIProbeControl::OnUpdate(double dt)
     m_gi_mapper->Update(dt);
 }
 
-std::shared_ptr<EntityControl> GIProbeControl::CloneImpl()
+std::shared_ptr<Control> GIProbeControl::CloneImpl()
 {
     return std::make_shared<GIProbeControl>(m_origin);
 }

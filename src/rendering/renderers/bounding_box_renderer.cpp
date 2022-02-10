@@ -10,12 +10,20 @@ const std::vector<MeshIndex> BoundingBoxRenderer::indices = {
 };
 
 BoundingBoxRenderer::BoundingBoxRenderer()
+    : BoundingBoxRenderer(m_aabb)
+{
+}
+
+BoundingBoxRenderer::BoundingBoxRenderer(const BoundingBox &aabb)
     : Renderable(fbom::FBOMObjectType("BOUNDING_BOX_RENDERER"), RenderBucket::RB_DEBUG),
       m_mesh(new Mesh)
 {
+    m_aabb = aabb;
+
     m_vertices.resize(8);
 
     m_mesh->SetPrimitiveType(Mesh::PRIM_LINES);
+    UpdateVertices();
 
     m_shader.reset(new Shader(ShaderProperties(), ShaderCode::aabb_debug_vs, ShaderCode::aabb_debug_fs));
 }

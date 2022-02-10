@@ -59,7 +59,7 @@ std::shared_ptr<Entity> TreePopulator::CreateEntity(const Vector3 &position) con
     return tree;
 }
 
-std::shared_ptr<EntityControl> TreePopulator::CloneImpl()
+std::shared_ptr<Control> TreePopulator::CloneImpl()
 {
     return std::make_shared<TreePopulator>(nullptr, m_seed, m_probability_factor,
         m_tolerance, m_max_distance, m_spread, m_num_entities_per_chunk,

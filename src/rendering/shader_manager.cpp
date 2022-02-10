@@ -1,4 +1,5 @@
 #include "shader_manager.h"
+#include "environment.h"
 
 namespace hyperion {
 
@@ -11,6 +12,16 @@ ShaderManager *ShaderManager::GetInstance()
     }
 
     return instance;
+}
+
+ShaderManager::ShaderManager()
+{
+    m_base_shader_properties
+        .Define("MAX_POINT_LIGHTS", int(Environment::max_point_lights_on_screen));
+}
+
+ShaderManager::~ShaderManager()
+{
 }
 
 void ShaderManager::SetBaseShaderProperties(const ShaderProperties &properties)

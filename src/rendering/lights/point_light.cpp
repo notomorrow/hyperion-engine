@@ -24,7 +24,7 @@ PointLight::PointLight(const Vector3 &position, const Vector4 &color, float radi
 {
 }
 
-void PointLight::Bind(int index, Shader *shader)
+void PointLight::Bind(int index, Shader *shader) const
 {
     const std::string index_str = std::to_string(index);
 

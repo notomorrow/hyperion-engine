@@ -97,7 +97,7 @@ void ParticleEmitterControl::OnUpdate(double dt)
     std::sort(m_particles.begin(), m_particles.end());
 }
 
-std::shared_ptr<EntityControl> ParticleEmitterControl::CloneImpl()
+std::shared_ptr<Control> ParticleEmitterControl::CloneImpl()
 {
     ex_assert(m_particle_renderer != nullptr);
 

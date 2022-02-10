@@ -30,7 +30,7 @@ void BoundingBoxControl::OnUpdate(double dt)
     m_bounding_box_renderer->SetAABB(parent->GetAABB());
 }
 
-std::shared_ptr<EntityControl> BoundingBoxControl::CloneImpl()
+std::shared_ptr<Control> BoundingBoxControl::CloneImpl()
 {
     return std::make_shared<BoundingBoxControl>();
 }

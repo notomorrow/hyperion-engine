@@ -6,7 +6,7 @@
 #include <deque>
 #include <memory>
 
-#include "control.h"
+#include "controls/entity_control.h"
 #include "hash_code.h"
 #include "asset/loadable.h"
 #include "math/transform.h"

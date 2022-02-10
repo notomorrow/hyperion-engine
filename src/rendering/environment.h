@@ -18,6 +18,10 @@ class Environment {
 public:
     static Environment *GetInstance();
     static const Vector2 possion_disk[16];
+    // for deferred rendering - the maximum number of pointlights to be sent to our
+    // deferred renderer. they will be chosen based on on-screen visibilty, then sorted via
+    // distance from the camera after that.
+    static const size_t max_point_lights_on_screen;
 
     Environment();
     Environment(const Environment &other) = delete;
@@ -41,12 +45,14 @@ public:
     inline const Matrix4 &GetShadowMatrix(int i) const { return m_shadow_matrices[i]; }
     inline void SetShadowMatrix(int i, const Matrix4 &shadow_matrix) { m_shadow_matrices[i] = shadow_matrix; }
 
-    inline int GetMaxPointLights() const { return m_max_point_lights; }
-    void SetMaxPointLights(int max_point_lights);
-    inline size_t GetNumPointLights() const { return m_point_lights.size(); }
+    inline size_t NumPointLights() const { return m_point_lights.size(); }
+    inline size_t NumVisiblePointLights() const { return MathUtil::Min(m_point_lights_sorted.size(), max_point_lights_on_screen); }
     inline std::shared_ptr<PointLight> &GetPointLight(size_t index) { return m_point_lights[index]; }
     inline const std::shared_ptr<PointLight> &GetPointLight(size_t index) const { return m_point_lights[index]; }
     inline void AddPointLight(const std::shared_ptr<PointLight> &point_light) { m_point_lights.push_back(point_light); }
+    // Todo: refactor into some sort of Control class that does this automatically
+    void CollectVisiblePointLights(Camera *camera);
+    void BindLights(Shader *shader) const;
 
     inline const std::shared_ptr<Cubemap> &GetGlobalCubemap() const { return m_global_cubemap; }
     inline std::shared_ptr<Cubemap> &GetGlobalCubemap() { return m_global_cubemap; }
@@ -63,7 +69,13 @@ private:
 
     DirectionalLight m_sun;
     std::vector<std::shared_ptr<PointLight>> m_point_lights;
-    int m_max_point_lights;
+
+    struct PointLightCameraData {
+        PointLight *point_light;
+        float distance;
+    };
+
+    std::vector<PointLightCameraData> m_point_lights_sorted;
 
     std::shared_ptr<Cubemap> m_global_cubemap;
     std::shared_ptr<Cubemap> m_global_irradiance_cubemap;

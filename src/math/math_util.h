@@ -16,37 +16,29 @@ public:
     const static double EPSILON;
 
     static inline Vector2 SafeValue(const Vector2 &value)
-    {
-        return Vector2::Max(Vector2::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest());
-    }
+        { return Vector2::Max(Vector2::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest()); }
 
     static inline Vector3 SafeValue(const Vector3 &value)
-    {
-        return Vector3::Max(Vector3::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest());
-    }
+        { return Vector3::Max(Vector3::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest()); }
 
     static inline Vector4 SafeValue(const Vector4 &value)
-    {
-        return Vector4::Max(Vector4::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest());
-    }
+        { return Vector4::Max(Vector4::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest()); }
 
     template <typename T>
     static inline T SafeValue(const T &value)
-    {
-        return MathUtil::Max(MathUtil::Min(value, MathUtil::MaxSafeValue<T>()), MathUtil::MinSafeValue<T>());
-    }
+        { return MathUtil::Max(MathUtil::Min(value, MathUtil::MaxSafeValue<T>()), MathUtil::MinSafeValue<T>()); }
 
     template <typename T>
-    static inline T MaxSafeValue()
-    {
-        return std::numeric_limits<T>::max();
-    }
+    static inline constexpr T MaxSafeValue()
+        { return std::numeric_limits<T>::max(); }
 
     template <typename T>
-    static inline T MinSafeValue()
-    {
-        return std::numeric_limits<T>::lowest();
-    }
+    static inline constexpr T MinSafeValue()
+        { return std::numeric_limits<T>::lowest(); }
+
+    template <typename T>
+    static inline constexpr T NaN()
+        { return std::numeric_limits<T>::quiet_NaN(); }
 
     template <typename T>
     static inline T Random(const T &a, const T &b)
@@ -58,19 +50,19 @@ public:
     }
 
     template <typename T>
-    static inline T RadToDeg(const T &rad)
+    static inline constexpr T RadToDeg(const T &rad)
     {
         return rad * (T)180 / (T)PI;
     }
 
     template <typename T>
-    static inline T DegToRad(const T &deg)
+    static inline constexpr T DegToRad(const T &deg)
     {
         return deg * (T)PI / (T)180;
     }
 
     template <typename T>
-    static inline T Clamp(const T &val, const T &min, const T &max)
+    static inline constexpr T Clamp(const T &val, const T &min, const T &max)
     {
         if (val > max) {
             return max;
@@ -82,7 +74,7 @@ public:
     }
 
     template <typename T>
-    static inline T Lerp(const T &from, const T &to, const T &amt)
+    static inline constexpr T Lerp(const T &from, const T &to, const T &amt)
     {
         return from + amt * (to - from);
     }
@@ -94,7 +86,7 @@ public:
     }
 
     template <typename T>
-    static inline T Min(const T &a, const T &b)
+    static inline constexpr T Min(const T &a, const T &b)
     {
         if (a < b) {
             return a;
@@ -104,7 +96,7 @@ public:
     }
 
     template <typename T>
-    static inline T Max(const T &a, const T &b)
+    static inline constexpr T Max(const T &a, const T &b)
     {
         if (a > b) {
             return a;

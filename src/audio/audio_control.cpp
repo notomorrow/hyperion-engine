@@ -31,7 +31,7 @@ void AudioControl::OnUpdate(double dt)
     }
 }
 
-std::shared_ptr<EntityControl> AudioControl::CloneImpl()
+std::shared_ptr<Control> AudioControl::CloneImpl()
 {
     auto clone = std::make_shared<AudioControl>(m_source); // should source be cloned?
 

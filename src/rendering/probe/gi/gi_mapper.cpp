@@ -94,11 +94,12 @@ void GIMapper::Render(Renderer *renderer, Camera *cam)
     m_render_tick = 0.0;
 
     //if (m_is_first_run) {
+
+        glBindImageTexture(0, m_texture->GetId(), 0, true, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
         m_clear_shader->Use();
         m_clear_shader->Dispatch(ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, ProbeManager::voxel_map_size);
         m_clear_shader->End();
-
-        glBindImageTexture(0, m_texture->GetId(), 0, true, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
         for (int i = 0; i < 6; i++) {
             m_cameras[i]->Render(renderer, cam);

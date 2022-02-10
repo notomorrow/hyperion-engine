@@ -141,7 +141,6 @@ void main()
   gi += vctDiff.rgb;
 #endif // VCT_ENABLED
 
-#if !VCT_ENABLED
 #if PROBE_ENABLED
   blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
   specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
@@ -152,15 +151,6 @@ void main()
 #endif // !SPHERICAL_HARMONICS_ENABLED
 
 #endif // PROBE_ENABLED
-#endif // !VCT_ENABLED
-
-#if !PROBE_ENABLED
-  vec3 reflectionVector = ReflectionVector(n, v_position.xyz, u_camerapos);
-  blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, reflectionVector).rgb;
-#if !VCT_ENABLED
-  specularCubemap = texture(env_GlobalCubemap, reflectionVector).rgb;
-#endif // !VCT_ENABLED
-#endif // !PROBE_ENABLED  
 
 #if SPHERICAL_HARMONICS_ENABLED
   gi += SampleSphericalHarmonics(n);

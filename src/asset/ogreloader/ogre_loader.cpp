@@ -181,7 +181,10 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
 {
     OgreHandler handler(path);
     xml::SaxParser parser(&handler);
-    parser.Parse(path);
+
+    if (auto err = parser.Parse(path)) {
+        return nullptr;
+    }
 
     auto final_node = std::make_shared<Entity>();
 

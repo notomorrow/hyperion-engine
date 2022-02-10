@@ -1,7 +1,7 @@
 #ifndef SKELETON_CONTROL_H
 #define SKELETON_CONTROL_H
 
-#include "../control.h"
+#include "../controls/entity_control.h"
 #include "../entity.h"
 #include "../rendering/shader.h"
 #include "bone.h"
@@ -43,7 +43,7 @@ public:
 private:
     void FindBones(Entity *top);
 
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
     std::vector<std::string> bone_names;
     std::vector<Bone*> bones;

@@ -129,21 +129,21 @@ void main()
 #endif
 
 
-  vec3 blurredSpecularCubemap = vec3(0.0);
-  vec3 specularCubemap = vec3(0.0);
-  vec3 gi = vec3(0.0);
+  vec4 blurredSpecularCubemap = vec4(0.0);
+  vec4 specularCubemap = vec4(0.0);
+  vec4 gi = vec4(0.0);
 
 #if VCT_ENABLED
   //testing
   vec4 vctSpec = VCTSpecular(v_position.xyz, n.xyz, u_camerapos, u_roughness);
   vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent, roughness);
-  specularCubemap = vctSpec.rgb;
-  gi += vctDiff.rgb;
+  specularCubemap = vctSpec;
+  gi += vctDiff;
 #endif // VCT_ENABLED
 
 #if PROBE_ENABLED
-  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
-  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
+  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent);
+  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent);
 
 
 #if !SPHERICAL_HARMONICS_ENABLED
@@ -153,7 +153,7 @@ void main()
 #endif // PROBE_ENABLED
 
 #if SPHERICAL_HARMONICS_ENABLED
-  gi += SampleSphericalHarmonics(n);
+  gi.rgb += SampleSphericalHarmonics(n);
 #endif // SPHERICAL_HARMONICS_ENABLED
 
   float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
@@ -183,10 +183,10 @@ void main()
   reflectedLight += specRef;
 
   vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * AB.x + AB.y);
-  reflectedLight += ibl * specularCubemap;
+  reflectedLight += ibl * specularCubemap.rgb;
 
   vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
-  diffRef += gi;
+  diffRef += gi.rgb;
   diffuseLight += diffRef * (1.0 / $PI);
   diffuseLight *= metallicDiff;
 
