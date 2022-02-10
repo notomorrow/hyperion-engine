@@ -2,7 +2,7 @@
 #define SKYDOME_H
 
 #include "../../entity.h"
-#include "../../control.h"
+#include "../../controls/entity_control.h"
 #include "../mesh.h"
 #include "../texture.h"
 #include "../camera/camera.h"
@@ -23,7 +23,7 @@ public:
     void OnUpdate(double dt);
 
 private:
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
     static const bool clouds_in_dome;
 

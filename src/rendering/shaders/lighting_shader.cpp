@@ -53,18 +53,9 @@ void LightingShader::ApplyMaterial(const Material &mat)
         }
     }
 
+    env->BindLights(this);
+
     // if (!m_properties.GetValue("DEFERRED").IsTruthy()) {
-
-    env->GetSun().Bind(0, this);
-
-    SetUniform("env_NumPointLights", (int)env->GetNumPointLights());
-
-    for (int i = 0; i < env->GetNumPointLights(); i++) {
-        if (auto point_light = env->GetPointLight(i)) {
-            point_light->Bind(i, this);
-        }
-    }
-
     /*if (auto gi = Environment::GetInstance()->GetGIRenderer()->GetGIMapping(0)->GetShadowMap()) {
         gi->Prepare();
 

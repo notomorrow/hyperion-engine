@@ -73,7 +73,7 @@ void SkydomeControl::OnUpdate(double dt)
     }
 }
 
-std::shared_ptr<EntityControl> SkydomeControl::CloneImpl()
+std::shared_ptr<Control> SkydomeControl::CloneImpl()
 {
     return std::make_shared<SkydomeControl>(nullptr); // TODO
 }

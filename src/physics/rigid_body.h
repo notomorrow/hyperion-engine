@@ -1,7 +1,7 @@
-#ifndef APEX_PHYSICS_RIGID_BODY_H
-#define APEX_PHYSICS_RIGID_BODY_H
+#ifndef RIGID_BODY_H
+#define RIGID_BODY_H
 
-#include "../control.h"
+#include "../controls/entity_control.h"
 #include "../entity.h"
 #include "physics_shape.h"
 #include "physics_material.h"
@@ -106,7 +106,7 @@ protected:
     btDefaultMotionState *m_motion_state;
 
 private:
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
     std::shared_ptr<PhysicsShape> m_shape;
     PhysicsMaterial m_material;

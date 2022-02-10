@@ -1,7 +1,7 @@
 #ifndef PARTICLE_EMITTER_CONTROL_H
 #define PARTICLE_EMITTER_CONTROL_H
 
-#include "../control.h"
+#include "../controls/entity_control.h"
 #include "../rendering/camera/camera.h"
 #include "particle.h"
 #include "particle_construction_info.h"
@@ -22,7 +22,7 @@ public:
     void OnUpdate(double dt);
 
 private:
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
     Camera *m_camera;
     std::vector<Particle> m_particles;

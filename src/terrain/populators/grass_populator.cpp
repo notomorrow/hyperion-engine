@@ -64,7 +64,7 @@ std::shared_ptr<Entity> GrassPopulator::CreateEntity(const Vector3 &position) co
     return object_node;
 }
 
-std::shared_ptr<EntityControl> GrassPopulator::CloneImpl()
+std::shared_ptr<Control> GrassPopulator::CloneImpl()
 {
     return std::make_shared<GrassPopulator>(nullptr, m_seed, m_probability_factor,
         m_tolerance, m_max_distance, m_spread, m_num_entities_per_chunk,

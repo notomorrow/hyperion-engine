@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <vector>
 
-#include "../control.h"
+#include "entity_control.h"
 #include "../rendering/camera/camera.h"
 #include "../entity.h"
 
@@ -22,7 +22,7 @@ public:
     inline void SetOffset(const Vector3 &offset) { m_offset = offset; }
 
 private:
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
     Camera *m_camera;
     Vector3 m_offset;

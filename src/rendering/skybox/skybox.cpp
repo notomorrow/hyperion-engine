@@ -46,7 +46,7 @@ void SkyboxControl::OnUpdate(double dt)
     }
 }
 
-std::shared_ptr<EntityControl> SkyboxControl::CloneImpl()
+std::shared_ptr<Control> SkyboxControl::CloneImpl()
 {
     return std::make_shared<SkyboxControl>(nullptr, m_cubemap); // TODO
 }

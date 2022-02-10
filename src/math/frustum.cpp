@@ -1,11 +1,6 @@
 #include "frustum.h"
 
 namespace hyperion {
-enum BoundingBoxFrustumResult {
-    OUTSIDE = 0,
-    INSIDE = 1,
-    INTERSECTS = 2
-};
 Frustum::Frustum()
 {
 }
@@ -22,26 +17,43 @@ Frustum::Frustum(const Matrix4 &view_proj)
 
 bool Frustum::BoundingBoxInFrustum(const BoundingBox &bounding_box) const
 {
-
-    const Vector3 &center = bounding_box.GetCenter();
-    const Vector3 &size = bounding_box.GetDimensions();
-    unsigned int result = INSIDE; // Assume that the aabb will be inside the frustum
-
-    for (int i = 0; i < 6; i++) {
-        const Vector4 &plane = m_planes[i];
-
-        float dot = center.x * plane.x + center.y * plane.y + center.z * plane.z; // dot product
-        float radius = size.x * fabsf(plane.x) + size.y * fabsf(plane.y) + size.z * fabsf(plane.z); // radius
-
-        if (dot + radius < -plane.w) {
-            result = OUTSIDE;
-            break;
-        } else if(dot - radius < -plane.w) {
-            result = INTERSECTS;
+    for (const auto &plane : m_planes) {
+        if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
+            continue;
         }
+
+        if (plane.Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
+            continue;
+        }
+
+        if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
+            continue;
+        }
+
+        if (plane.Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
+            continue;
+        }
+
+        if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
+            continue;
+        }
+
+        if (plane.Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
+            continue;
+        }
+
+        if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
+            continue;
+        }
+
+        if (plane.Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
+            continue;
+        }
+
+        return false;
     }
 
-    return result != OUTSIDE;
+    return true;
 }
 
 void Frustum::SetViewProjectionMatrix(const Matrix4 &view_proj)

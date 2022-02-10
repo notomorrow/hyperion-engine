@@ -187,8 +187,8 @@ public:
         sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.6f);
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.3f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.39f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.7f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
@@ -354,6 +354,7 @@ public:
 
         if (true) {
             auto dragger = asset_manager->LoadFromFile<Entity>("models/ogrexml/dragger_Body.mesh.xml");
+
             dragger->SetName("dragger");
             dragger->Move(Vector3(0, 3, 0));
             dragger->Scale(0.25);
@@ -446,18 +447,19 @@ public:
             }
         }
 
-        for (int x = 0; x < 5; x++) {
-            for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3(((float(x) - 2.5) * 8), 3.0f, (float(z) - 2.5) * 8);
-                auto box = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
-                box->Scale(0.7f);
+        for (int x = 0; x < 6; x++) {
+            for (int z = 0; z < 6; z++) {
+                Vector3 box_position = Vector3(((float(x) - 3) * 2), 3.0f, (float(z) - 3) * 2);
+                Vector3 col = Vector3(
+                    MathUtil::Random(0.4f, 1.80f),
+                    MathUtil::Random(0.4f, 1.80f),
+                    MathUtil::Random(0.4f, 1.80f)
+                ).Normalize();
+                /*auto box = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
+                box->Scale(0.3);
+                
 
                 for (size_t i = 0; i < box->NumChildren(); i++) {
-                    Vector3 col = Vector3(
-                        MathUtil::Random(0.4f, 1.80f),
-                        MathUtil::Random(0.4f, 1.80f),
-                        MathUtil::Random(0.4f, 1.80f)
-                    ).Normalize();
 
                     box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
                         1,//col.x,
@@ -474,12 +476,24 @@ public:
                     box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                     //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
                     //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
-                }
+                }*/
 
-                box->SetLocalTranslation(box_position);
-                GetScene()->AddChild(box);
+                //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position, Vector4(col.x, col.y, col.z, 1.0f), 1.5f));
+
+                //box->SetLocalTranslation(box_position);
+                //GetScene()->AddChild(box);
             }
         }
+        
+        //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(5, 1, 5), Vector4(1.0f, 1.0f, 1.0f, 1.0f), 3.5f));
+
+
+        //for (size_t i = 0; i < Environment::GetInstance()->NumPointLights(); i++) {
+           // auto n = std::make_shared<Entity>();
+           // n->SetRenderable(std::make_shared<BoundingBoxRenderer>(Environment::GetInstance()->GetPointLight(i)->GetAABB()));
+           // n->SetLocalTranslation(Environment::GetInstance()->GetPointLight(i)->GetPosition());
+            //GetScene()->AddChild(n);
+        //}
 
 
         /*int total_cascades = Environment::GetInstance()->NumCascades();
@@ -657,6 +671,7 @@ public:
         AudioManager::GetInstance()->SetListenerOrientation(GetCamera()->GetDirection(), GetCamera()->GetUpVector());
 
         PhysicsManager::GetInstance()->RunPhysics(dt);
+
     }
 
     void OnRender()
@@ -680,6 +695,8 @@ public:
                 );
             }
         }*/
+
+        Environment::GetInstance()->CollectVisiblePointLights(GetCamera());
     }
 };
 

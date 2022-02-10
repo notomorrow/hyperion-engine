@@ -14,7 +14,8 @@ class BoundingBoxRenderer : public Renderable {
     static const std::vector<MeshIndex> indices;
 public:
     BoundingBoxRenderer();
-    BoundingBoxRenderer(const BoundingBox &) = delete;
+    BoundingBoxRenderer(const BoundingBox &aabb);
+    BoundingBoxRenderer(const BoundingBoxRenderer &) = delete;
     virtual ~BoundingBoxRenderer();
 
     virtual void Render(Renderer *renderer, Camera *cam) override;

@@ -15,7 +15,7 @@ std::shared_ptr<TerrainChunk> NoiseTerrainControl::NewChunk(const ChunkInfo &chu
     return std::make_shared<NoiseTerrainChunk>(heights, chunk_info);
 }
 
-std::shared_ptr<EntityControl> NoiseTerrainControl::CloneImpl()
+std::shared_ptr<Control> NoiseTerrainControl::CloneImpl()
 {
     return std::make_shared<NoiseTerrainControl>(nullptr, seed); // TODO
 }

@@ -222,7 +222,7 @@ void RigidBody::OnUpdate(double dt)
     parent->SetGlobalRotation(FromBulletQuaternion(bt_transform.getRotation()));
 }
 
-std::shared_ptr<EntityControl> RigidBody::CloneImpl()
+std::shared_ptr<Control> RigidBody::CloneImpl()
 {
     auto clone = std::make_shared<RigidBody>(m_shape, m_material);
 

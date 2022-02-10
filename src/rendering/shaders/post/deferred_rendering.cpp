@@ -43,15 +43,7 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
         }
     }
 
-    env->GetSun().Bind(0, this);
-
-    SetUniform("env_NumPointLights", (int)env->GetNumPointLights());
-
-    for (int i = 0; i < env->GetNumPointLights(); i++) {
-        if (auto point_light = env->GetPointLight(i)) {
-            point_light->Bind(i, this);
-        }
-    }
+    env->BindLights(this);
 
 
     for (int i = 0; i < env->GetProbeManager()->NumProbes(); i++) {

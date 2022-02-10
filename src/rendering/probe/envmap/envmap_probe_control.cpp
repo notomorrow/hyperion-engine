@@ -36,7 +36,7 @@ void EnvMapProbeControl::OnUpdate(double dt)
     m_env_probe->Update(dt);
 }
 
-std::shared_ptr<EntityControl> EnvMapProbeControl::CloneImpl()
+std::shared_ptr<Control> EnvMapProbeControl::CloneImpl()
 {
     return std::make_shared<EnvMapProbeControl>(m_env_probe->GetOrigin(), m_env_probe->GetBounds());
 }

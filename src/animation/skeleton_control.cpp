@@ -130,7 +130,7 @@ void SkeletonControl::OnUpdate(double dt)
     }
 }
 
-std::shared_ptr<EntityControl> SkeletonControl::CloneImpl()
+std::shared_ptr<Control> SkeletonControl::CloneImpl()
 {
     std::shared_ptr<SkeletonControl> clone = std::make_shared<SkeletonControl>(skinning_shader);
 

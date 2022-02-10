@@ -2,7 +2,7 @@
 #define POPULATOR_H
 
 #include "../../entity.h"
-#include "../../control.h"
+#include "../../controls/entity_control.h"
 #include "../../math/vector2.h"
 #include "../../math/vector3.h"
 #include "../../util/random/simplex.h"
@@ -131,7 +131,7 @@ public:
     };
 
 protected:
-    virtual std::shared_ptr<EntityControl> CloneImpl() = 0;
+    virtual std::shared_ptr<Control> CloneImpl() = 0;
 
     Camera *m_camera;
 
