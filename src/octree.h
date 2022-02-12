@@ -27,12 +27,13 @@ using OctreeChangeCallback_t = std::function<void(OctreeChangeEvent, const Octre
 
 class Octree {
 public:
-    Octree(const BoundingBox &aabb)
+    Octree(const BoundingBox &aabb, int level = 0)
         : m_aabb(aabb),
           m_parent(nullptr),
           m_octants({ nullptr }),
           m_is_divided(false),
-          m_needs_recalculation(false)
+          m_needs_recalculation(false),
+          m_level(level)
     {
     }
 
@@ -67,11 +68,11 @@ public:
     bool AllEmpty() const
     {
         if (!m_is_divided) {
-            return true;
+            return Empty();
         }
 
         for (int i = 0; i < m_octants.size(); i++) {
-            if (!m_octants[i]->AllEmpty()) {
+            if (!m_octants[i]->Empty()) {
                 return false;
             }
         }
@@ -89,52 +90,6 @@ public:
         }
     }*/
 
-    /*void DetectChanges()
-    {
-        if (m_needs_recalculation) {
-            return;
-        }
-
-        if (!m_is_divided) {
-            return;
-        }
-
-        for (const auto &node : m_nodes) {
-            if (node->GetFlags() & Entity::UPDATE_TRANSFORM ||
-                node->GetFlags() & Entity::UPDATE_AABB ||
-                node->GetFlags() & Entity::PENDING_REMOVAL)
-            {
-                m_needs_recalculation = true;
-            }
-
-            if (node->GetFlags() & Entity::PENDING_REMOVAL) {
-                auto it = std::find(m_nodes.begin(), m_nodes.end(), node);
-                if (it != m_nodes.end()) {
-                    m_nodes.erase(it); // remove from octree
-                }
-            }
-        }
-
-        for (Octree *octant : m_octants) {
-            if (octant == nullptr) {
-                continue;
-            }
-
-            octant->DetectChanges();
-        }
-    }
-
-    void Update()
-    {
-        if (!m_needs_recalculation) {
-            return;
-        }
-
-
-
-        m_needs_recalculation = false;
-    }*/
-
     // call when the transform of a node has updated and we need to
     // slot the node into a better place.
     // this function will first check if the node's current octant
@@ -147,16 +102,13 @@ public:
 
         non_owning_ptr<Octree> prev_octree(entity->GetOctree());
         entity->GetOctree()->DispatchEvent(OCTREE_NODE_TRANSFORM_CHANGE);
+        return;
 
-        //if (entity->GetOctree()->Contains(entity->GetAABB())) {
-        //    std::cout << "object " <<
-        //    return; // OK
-        //}
-        //RemoveNode(entity, false);
+        //RemoveNode(entity);
         //InsertNode(non_owning_ptr(entity));
         //prev_octree->Prune();
 
-       // return;
+        //return;
 
         non_owning_ptr<Octree> oct_iter(entity->GetOctree());
 
@@ -172,7 +124,7 @@ public:
         }
         //RemoveNode(entity, false);
         //ex_assert(oct_iter != entity->GetOctree());
-        entity->GetOctree()->RemoveNode(entity, false);
+        prev_octree->RemoveNode(entity, false);
 
         if (oct_iter == nullptr) {
             // no parent can fully contain this node
@@ -186,6 +138,35 @@ public:
         prev_octree->Prune();
     }
 
+    void Clear()
+    {
+        for (auto &node : m_nodes) {
+            if (node == nullptr) {
+                continue;
+            }
+
+            node->SetOctree(non_owning_ptr<Octree>(nullptr));
+        }
+        
+        m_nodes.clear();
+
+        if (m_is_divided) {
+            for (size_t i = 0; i < m_octants.size(); i++) {
+                if (m_octants[i] == nullptr) {
+                    continue;
+                }
+
+                m_octants[i]->Clear();
+                m_octants[i]->DispatchEvent(OCTREE_REMOVE_OCTANT);
+
+                delete m_octants[i];
+                m_octants[i] = nullptr;
+            }
+
+            m_is_divided = false;
+        }
+    }
+
     // walk up chain undividing octants until a non-empty octant is found
     void Prune()
     {
@@ -195,7 +176,11 @@ public:
         //entity->SetOctree(non_owning_ptr<Octree>(nullptr));
 
         while (oct_iter != nullptr) {
-            std::cout << " check prune, has " << oct_iter->m_nodes.size() << " items \n";
+            std::cout << " check prune at level " << oct_iter->m_level << "\n";
+            if (!oct_iter->m_is_divided) {
+                break;
+            }
+
             for (auto &node : oct_iter->m_nodes) {
                 if (node == nullptr) continue;
                 std::cout << "has " << node->GetName() << ", ";
@@ -219,53 +204,86 @@ public:
     // called on octree A3 with entity with octree A3:
     //    removes entity from A3
     //    checks if A3 is empty, if so, undivides octants
-    non_owning_ptr<Octree> RemoveNode(Entity *entity, bool undivide = true)
+    void RemoveNode(Entity *entity, bool undivide = true)
     {
         if (entity->GetOctree() == nullptr) {
-            return non_owning_ptr<Octree>(nullptr);
+            return;
         }
 
+        std::cout << "=== REMOVING " << entity->GetName() << " ===\n";
+        
         m_needs_recalculation = true;
 
         // look through my nodes, see if that entity exists
         // how to handle undivision?
         non_owning_ptr<Octree> oct_iter(entity->GetOctree());
-        non_owning_ptr<Octree> last_oct(oct_iter);
-        bool found = false;
 
+        auto it = std::find(oct_iter->m_nodes.begin(), oct_iter->m_nodes.end(), non_owning_ptr(entity));
 
-
-        do {
-            last_oct = oct_iter;
-
-            if (!found) {
-                auto it = std::find(oct_iter->m_nodes.begin(), oct_iter->m_nodes.end(), non_owning_ptr(entity));
-                if (it != oct_iter->m_nodes.end()) {
-                    oct_iter->m_nodes.erase(it);
-                    found = true;
-
-                    oct_iter->DispatchEvent(OCTREE_REMOVE_NODE);
-
-                    if (!undivide) {
-                        break;
-                    }
-                }
-            }
-
-            if (undivide && oct_iter->AllEmpty()) {
-                oct_iter->Undivide();
-            }
-
-            oct_iter = oct_iter->m_parent;
-        } while (oct_iter != nullptr && oct_iter != this);
-
-        if (!found) {
+        if (it == oct_iter->m_nodes.end()) {
             throw std::runtime_error("object " + entity->GetName() + " not in octree");
         }
+        
+        /*for (size_t i = 0; i < entity->NumChildren(); i++) {
+            if (auto &child = entity->GetChild(i)) {
+                RemoveNode(child.get(), undivide);
+            }
+        }*/
 
-        UnsetEntityOctree(entity);
+        oct_iter->m_nodes.erase(it);
+        oct_iter->DispatchEvent(OCTREE_REMOVE_NODE);
+        entity->SetOctree(non_owning_ptr<Octree>(nullptr));
 
-        return non_owning_ptr(last_oct);
+        if (undivide) {
+            std::cout << " <on level " << m_level << ">\n";
+            while (oct_iter) {
+                std::cout << "Check if will undivide octree level " << oct_iter->m_level << ": " << oct_iter->AllEmpty() << "\n";
+                if (!oct_iter->m_is_divided) {
+                    std::cout << "NOT DIVIDED\n";
+                    break;
+                }
+                
+                std::cout << "OCTREE LEVEL " << oct_iter->m_level << " HAS :\n";
+                for (const auto &node : oct_iter->m_nodes) {
+                    if (node == nullptr) {
+                        continue;
+                    }
+
+                    std::cout << node->GetName() << ", ";
+                }
+                std::cout << "\tnested: ";
+                std::cout << "\n\n";
+                int counter = 0;
+                for (Octree *octant : oct_iter->m_octants) {
+                    counter++;
+                    if (octant == nullptr) {
+                        continue;
+                    }
+                    std::cout << "\toctant " << counter << ":\n\t\t";
+                    for (const auto &node : octant->m_nodes) {
+                        if (node == nullptr) {
+                            continue;
+                        }
+
+                        std::cout << node->GetName() << ", ";
+                    }
+                    std::cout << "\n";
+                }
+
+                std::cout << "\n\n";
+                if (/*oct_iter == this ||*/ !oct_iter->AllEmpty()) {
+                    break;
+                }
+
+                oct_iter->Undivide();
+
+                oct_iter = oct_iter->m_parent;
+            }
+        }
+
+        //UnsetEntityOctree(entity);
+
+        std::cout << "=== END " << entity->GetName() << " ===\n";
     }
 
     void InsertNode(non_owning_ptr<Entity> entity, bool dispatch_callbacks = true)
@@ -282,14 +300,14 @@ public:
         m_needs_recalculation = true;
         //std::cout << "IN insert new node " << intptr_t(this) << " " << m_aabb << "\n";
 
-        bool newly_divided = false;
-
         if (!m_is_divided) {
             Divide();
-            newly_divided = true;
         }
 
+        //std::cout << "insert node " << entity->GetName() << "   " << entity->GetAABB() << "\n";
+
         for (Octree *oct : m_octants) {
+            //std::cout << " !checking " << oct->GetAABB() << " contains " << entity->GetAABB() << ":  " << oct->Contains(entity->GetAABB()) << "\n";
             if (oct->Contains(entity->GetAABB())) {
                 oct->InsertNode(non_owning_ptr(entity));
                 return;
@@ -322,7 +340,7 @@ public:
 
     void Undivide()
     {
-        ex_assert(AllEmpty()); // TODO
+        //ex_assert(AllEmpty()); // TODO
 
         if (!m_is_divided) {
             return;
@@ -359,7 +377,7 @@ public:
                         Octree *octant = new Octree(BoundingBox(
                             m_aabb.GetMin() + (divided_aabb_dimensions * Vector3(x, y, z)),
                             m_aabb.GetMin() + (divided_aabb_dimensions * (Vector3(x, y, z) + Vector3(1.0f)))
-                        ));
+                        ), m_level + 1);
 
                         octant->m_parent = non_owning_ptr(this);
                         octant->DispatchEvent(OCTREE_INSERT_OCTANT);
@@ -372,6 +390,12 @@ public:
 
         m_is_divided = true;
     }
+
+    std::array<Octree *, 8> m_octants;
+    non_owning_ptr<Octree> m_parent;
+    BoundingBox m_aabb;
+    bool m_is_divided;
+    int m_level;
 
 private:
 
@@ -403,11 +427,6 @@ private:
             UnsetEntityOctree(entity->GetChild(i).get());
         }
     }
-
-    std::array<Octree*, 8> m_octants;
-    non_owning_ptr<Octree> m_parent;
-    BoundingBox m_aabb;
-    bool m_is_divided;
 
     bool m_needs_recalculation;
 
