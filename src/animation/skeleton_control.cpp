@@ -90,13 +90,19 @@ void SkeletonControl::StopAnimation()
 
 void SkeletonControl::FindBones(Entity *top)
 {
+    ex_assert(top != nullptr);
+
     auto *bone = dynamic_cast<Bone*>(top);
+
     if (bone) {
         bone_names.push_back("Bone[" + std::to_string(bones.size()) + "]");
         bones.push_back(bone);
     }
+
     for (size_t i = 0; i < top->NumChildren(); i++) {
-        FindBones(top->GetChild(i).get());
+        if (auto child = top->GetChild(i).get()) {
+            FindBones(child);
+        }
     }
 }
 

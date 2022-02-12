@@ -323,9 +323,11 @@ std::vector<RenderableMesh_t> MeshFactory::GatherMeshes(Entity *entity)
     }
 
     for (size_t i = 0; i < entity->NumChildren(); i++) {
-        std::vector<RenderableMesh_t> sub_meshes = GatherMeshes(entity->GetChild(i).get());
+        if (auto *child = entity->GetChild(i).get()) {
+            std::vector<RenderableMesh_t> sub_meshes = GatherMeshes(child);
 
-        meshes.insert(meshes.end(), sub_meshes.begin(), sub_meshes.end());
+            meshes.insert(meshes.end(), sub_meshes.begin(), sub_meshes.end());
+        }
     }
 
     return meshes;

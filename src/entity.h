@@ -103,14 +103,7 @@ public:
 
     std::shared_ptr<Entity> GetChildPendingRemoval(size_t index) const;
     inline size_t NumChildrenPendingRemoval() const { return m_children_pending_removal.size(); }
-    inline void ClearPendingRemoval()
-    {
-        m_children_pending_removal.clear();
-
-        for (auto &child : m_children) {
-            child->ClearPendingRemoval();
-        }
-    }
+    void ClearPendingRemoval();
 
     template <typename T>
     std::shared_ptr<T> GetChild(size_t index) const

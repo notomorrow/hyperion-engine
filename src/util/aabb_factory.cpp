@@ -23,7 +23,9 @@ BoundingBox AABBFactory::CreateEntityBoundingBox(const std::shared_ptr<Entity> &
     }
 
     for (size_t i = 0; i < entity->NumChildren(); i++) {
-        aabb.Extend(CreateEntityBoundingBox(entity->GetChild(i)));
+        if (auto child = entity->GetChild(i)) {
+            aabb.Extend(CreateEntityBoundingBox(child));
+        }
     }
 
     /*Transform local_transform;

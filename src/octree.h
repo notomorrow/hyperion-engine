@@ -64,6 +64,21 @@ public:
     inline const std::array<Octree*, 8> &GetOctants() const { return m_octants; }
     inline bool Empty() const { return m_nodes.empty(); }
 
+    bool AllEmpty() const
+    {
+        if (!m_is_divided) {
+            return true;
+        }
+
+        for (int i = 0; i < m_octants.size(); i++) {
+            if (!m_octants[i]->AllEmpty()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     inline void AddCallback(OctreeChangeCallback_t cb) { m_callbacks.push_back(cb); }
     /*inline void RemoveCallback(OctreeChangeCallback_t cb)
     {
@@ -130,16 +145,18 @@ public:
         ex_assert(entity->GetOctree() != nullptr);
         std::cout << "node transform changed " << entity->GetName() << "\n";
 
+        non_owning_ptr<Octree> prev_octree(entity->GetOctree());
         entity->GetOctree()->DispatchEvent(OCTREE_NODE_TRANSFORM_CHANGE);
 
         //if (entity->GetOctree()->Contains(entity->GetAABB())) {
         //    std::cout << "object " <<
         //    return; // OK
         //}
-        //RemoveNode(entity);
+        //RemoveNode(entity, false);
         //InsertNode(non_owning_ptr(entity));
+        //prev_octree->Prune();
 
-        //return;
+       // return;
 
         non_owning_ptr<Octree> oct_iter(entity->GetOctree());
 
@@ -166,6 +183,32 @@ public:
         oct_iter->InsertNode(non_owning_ptr(entity));
 
         // now, undivide?
+        prev_octree->Prune();
+    }
+
+    // walk up chain undividing octants until a non-empty octant is found
+    void Prune()
+    {
+        non_owning_ptr<Octree> oct_iter(this);
+
+        //entity->GetOctree()->DispatchEvent(OCTREE_REMOVE_NODE);
+        //entity->SetOctree(non_owning_ptr<Octree>(nullptr));
+
+        while (oct_iter != nullptr) {
+            std::cout << " check prune, has " << oct_iter->m_nodes.size() << " items \n";
+            for (auto &node : oct_iter->m_nodes) {
+                if (node == nullptr) continue;
+                std::cout << "has " << node->GetName() << ", ";
+            }
+            std::cout << "\n";
+            if (!oct_iter->AllEmpty()) {
+                break;
+            }
+
+            oct_iter->Undivide();
+
+            oct_iter = oct_iter->m_parent;
+        }
     }
 
     // called on octree A1 with entity with octree A3:
@@ -209,7 +252,7 @@ public:
                 }
             }
 
-            if (undivide && oct_iter->Empty()) {
+            if (undivide && oct_iter->AllEmpty()) {
                 oct_iter->Undivide();
             }
 
@@ -229,12 +272,21 @@ public:
     {
         if (entity->GetOctree() != nullptr) {
             // TODO: recalculation
+            return;
         }
+
+        if (!entity->GetAABBAffectsParent()) {
+            return;
+        }
+
         m_needs_recalculation = true;
         //std::cout << "IN insert new node " << intptr_t(this) << " " << m_aabb << "\n";
 
+        bool newly_divided = false;
+
         if (!m_is_divided) {
             Divide();
+            newly_divided = true;
         }
 
         for (Octree *oct : m_octants) {
@@ -254,11 +306,13 @@ public:
         // we can simplify this a bit by only starting to add the child nodes
         // at this "found" octant
         for (size_t i = 0; i < entity->NumChildren(); i++) {
-            if (entity->GetChild(i) == nullptr) {
-                continue;
-            }
+            if (auto child = entity->GetChild(i).get()) {
+                if (!child->GetAABBAffectsParent()) {
+                    continue;
+                }
 
-            InsertNode(non_owning_ptr(entity->GetChild(i).get()), false);
+                InsertNode(non_owning_ptr(child), false);
+            }
         }
 
         if (dispatch_callbacks) {
@@ -268,7 +322,7 @@ public:
 
     void Undivide()
     {
-        ex_assert(Empty()); // TODO
+        ex_assert(AllEmpty()); // TODO
 
         if (!m_is_divided) {
             return;

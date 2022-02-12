@@ -172,13 +172,15 @@ void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bo
     }
 
     for (size_t i = 0; i < top->NumChildren(); i++) {
-        Entity *child = top->GetChild(i).get();
-        FindRenderables(cam, child, frustum_culled);
+        if (Entity *child = top->GetChild(i).get()) {
+            FindRenderables(cam, child, frustum_culled);
+        }
     }
 
     for (size_t i = 0; i < top->NumChildrenPendingRemoval(); i++) {
-        Entity *child = top->GetChildPendingRemoval(i).get();
-        FindRenderables(cam, child, frustum_culled);
+        if (Entity *child = top->GetChildPendingRemoval(i).get()) {
+            FindRenderables(cam, child, frustum_culled);
+        }
     }
 }
 

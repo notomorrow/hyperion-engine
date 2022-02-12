@@ -38,8 +38,10 @@ std::shared_ptr<Entity> TreePopulator::CreateEntity(const Vector3 &position) con
     auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("models/pine/LoblollyPine.obj", true);
 
     for (int i = 0; i < tree->NumChildren(); i++) {
-        tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
-        tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
+        if (auto child = tree->GetChild(i)) {
+            tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
+            tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
+        }
     }
 
    /* tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
