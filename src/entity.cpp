@@ -21,8 +21,6 @@ Entity::Entity(const std::string &name)
 
 Entity::~Entity()
 {
-    std::cout << "Delete node " << m_name << "\n";
-
     if (m_octree != nullptr) {
         m_octree->RemoveNode(this);
     }

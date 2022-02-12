@@ -59,6 +59,7 @@
 #include "util/noise_factory.h"
 #include "util/img/write_bitmap.h"
 #include "util/enum_options.h"
+#include "util/mesh_factory.h"
 
 #include "rendering/probe/gi/gi_probe_control.h"
 #include "rendering/shaders/gi/gi_voxel_debug_shader.h"
@@ -279,8 +280,6 @@ public:
             intersections = new_intersections;
         }
 
-        std::cout << intersections.size() << " intersections\n";
-
         if (intersections.empty()) {
             return;
         }
@@ -373,23 +372,22 @@ public:
         auto gi_test_node = std::make_shared<Entity>("gi_test_node");
         gi_test_node->Move(Vector3(0, 5, 0));
         gi_test_node->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f)));
-        //GetScene()->AddChild(gi_test_node);
+        gi_test_node->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+        GetScene()->AddChild(gi_test_node);
 
 
         GetCamera()->SetTranslation(Vector3(0, 0, 0));
 
-        if (true) {
-            auto dragger = asset_manager->LoadFromFile<Entity>("models/ogrexml/dragger_Body.mesh.xml");
+        /*auto dragger = asset_manager->LoadFromFile<Entity>("models/ogrexml/dragger_Body.mesh.xml");
 
-            dragger->SetName("dragger");
-            dragger->Move(Vector3(0, 3, 0));
-            dragger->Scale(0.25);
-            dragger->GetChild(0)->GetMaterial().diffuse_color = { 0.0f, 0.0f, 1.0f, 1.0f };
-            dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
-            dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
-            GetScene()->AddChild(dragger);
-            dragger->UpdateTransform();
-        }
+        dragger->SetName("dragger");
+        dragger->Move(Vector3(0, 3, 0));
+        dragger->Scale(0.25);
+        dragger->GetChild(0)->GetMaterial().diffuse_color = { 0.0f, 0.0f, 1.0f, 1.0f };
+        dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
+        dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
+        GetScene()->AddChild(dragger);
+        dragger->UpdateTransform();*/
 
 
 
@@ -428,13 +426,13 @@ public:
 
         auto cm = InitCubemap();
 
-        GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
+        //GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
-        bool read = true;
+        bool read = false;
 
         if (!write && !read) {
-            InitTestArea();
+            //InitTestArea();
             /*GetScene()->AddControl(std::make_shared<NoiseTerrainControl>(GetCamera()));
             auto tmp = std::make_shared<Entity>("dummy node for vct");
             tmp->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0, 0, 0), BoundingBox(Vector3(-15, 5, -15), Vector3(15, 5, 15))));
@@ -477,61 +475,110 @@ public:
 
         GetScene()->Update(0.1f);
         m_octree->AddCallback([this](OctreeChangeEvent evt, const Octree *oct) {
-            std::cout << "event " << evt << "\n";
+            //std::cout << "event " << evt << "\n";
             if (evt == OCTREE_INSERT_OCTANT) {
-                std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
+                //std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
                 auto bb_node = std::make_shared<Entity>("oct_" + std::to_string(intptr_t(oct)));
                 bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
                 bb_node->SetAABBAffectsParent(false);
                 GetScene()->AddChild(bb_node);
-                std::cout << "<ADDED BB NODE>\n";
+                //std::cout << "<ADDED BB NODE>\n";
             } else if (evt == OCTREE_REMOVE_OCTANT) {
-                std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
+                //std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
                 auto node = GetScene()->GetChild("oct_" + std::to_string(intptr_t(oct)));
                 if (node != nullptr) {
                     GetScene()->RemoveChild(node);
-                    std::cout << "<REMOVE BB NODE>\n";
+                    //std::cout << "<REMOVE BB NODE>\n";
                 }
             }
         });
-        m_octree->InsertNode(non_owning_ptr(GetScene().get()));
+        //m_octree->InsertNode(non_owning_ptr(GetScene().get()));
         //BuildOctreeAABB(m_octree);
 
-        for (int x = 0; x < 6; x++) {
-            for (int z = 0; z < 6; z++) {
-                Vector3 box_position = Vector3(((float(x) - 3) * 2), 3.0f, (float(z) - 3) * 2);
+        //dragger->SetGlobalTranslation({ 5, 2, 5 });
+        //dragger->Update(1.0f);
+        //m_octree->InsertNode(non_owning_ptr(dragger.get()));
+
+        //auto d2 = std::dynamic_pointer_cast<Entity>(dragger->Clone());
+        //d2->SetGlobalTranslation({ -5, 2, -5 });
+        //d2->Update(1.0);
+        //GetScene()->AddChild(d2);
+        //m_octree->InsertNode(non_owning_ptr(d2.get()));
+
+        /*auto octree_test = std::make_shared<Entity>("octreetest_root");
+        octree_test->SetRenderable(MeshFactory::CreateCube());
+        octree_test->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+        octree_test->GetMaterial().diffuse_color = Vector4(0, 0, 1, 1);
+        octree_test->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
+        octree_test->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+        auto octree_sub = std::make_shared<Entity>("octreetest_sub");
+        octree_sub->SetRenderable(MeshFactory::CreateCube());
+        octree_sub->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+        octree_sub->GetMaterial().diffuse_color = Vector4(1, 0, 0, 1);
+        octree_sub->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
+        octree_sub->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+        octree_sub->Move(Vector3(3, 5, 3));
+        octree_sub->Scale(Vector3(0.25f));
+        GetScene()->AddChild(octree_sub);
+        octree_test->Move(Vector3(5, 2, 5));
+        GetScene()->AddChild(octree_test);
+        //octree_test->Update(1.0f);
+        //m_octree->InsertNode(non_owning_ptr(octree_test.get()));
+
+        auto octree_test2 = std::make_shared<Entity>("octreetest2_root");
+        octree_test2->SetRenderable(MeshFactory::CreateCube());
+        octree_test2->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+        octree_test2->GetMaterial().diffuse_color = Vector4(0, 1, 0, 1);
+        
+        octree_test2->Move(Vector3(-5, 2, -5));
+        octree_test2->Scale(Vector3(0.25f));
+        GetScene()->AddChild(octree_test2);*/
+        //GetScene()->Update(1.0f);
+        //m_octree->InsertNode(non_owning_ptr(GetScene().get()));
+
+
+        /*m_octree->Divide();
+        m_octree->GetOctants()[0]->Divide();
+        m_octree->GetOctants()[0]->GetOctants()[0]->Divide();
+        m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Divide();
+        m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Undivide();*/
+        
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                Vector3 box_position = Vector3(((float(x))), 2.0f, (float(z)));
                 Vector3 col = Vector3(
                     MathUtil::Random(0.4f, 1.80f),
                     MathUtil::Random(0.4f, 1.80f),
                     MathUtil::Random(0.4f, 1.80f)
                 ).Normalize();
-                /*auto box = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
-                box->Scale(0.3);
+                auto box = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
+                box->Scale(0.2);
                 
 
                 for (size_t i = 0; i < box->NumChildren(); i++) {
 
                     box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
-                        1,//col.x,
-                        1,//col.y,
-                        1,//col.z,
+                        col.x,
+                        col.y,
+                        col.z,
                         1.0f
                     );
 
-                    box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_albedo.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_height.png"));
+                    //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_albedo.png"));
+                    //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_height.png"));
                     //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_ao.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_normal-ogl.png"));
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.25f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+                    //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_normal-ogl.png"));
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.3f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
                     //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
-                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
-                }*/
+                   // box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
+                }
 
-                //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position, Vector4(col.x, col.y, col.z, 1.0f), 1.5f));
+                //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f), 4.5f));
 
-                //box->SetLocalTranslation(box_position);
-                //GetScene()->AddChild(box);
+                box->SetLocalTranslation(box_position);
+                GetScene()->AddChild(box);
             }
         }
         
@@ -615,6 +662,35 @@ public:
             ProbeManager::GetInstance()->SetVCTEnabled(!ProbeManager::GetInstance()->VCTEnabled());
         }));
 
+        GetInputManager()->RegisterKeyEvent(KEY_C, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            m_octree->Clear();
+        }));
+
+        GetInputManager()->RegisterKeyEvent(KEY_V, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            m_octree->InsertNode(non_owning_ptr(GetScene().get()));
+        }));
+
+        // remove selected node from octree
+        GetInputManager()->RegisterKeyEvent(KEY_R, InputEvent([=](bool pressed) {
+            if (!pressed) {
+                return;
+            }
+
+            if (m_selected_node == nullptr) {
+                return;
+            }
+
+            m_octree->RemoveNode(m_selected_node.get());
+        }));
+
         /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
 
         std::cout << "Result: " << typeid(*result.get()).name() << "\n";
@@ -655,6 +731,25 @@ public:
                 m_selected_node = m_hit_to_entity[m_ray_hit.GetHashCode().Value()];
                 m_selected_node->AddControl(std::make_shared<BoundingBoxControl>());
 
+                std::cout << "SELECTED OBJECT IN OCTREE: ";
+
+                if (!m_selected_node->GetOctree()) {
+                    std::cout << " <NONE>\n";
+                } else {
+                    non_owning_ptr<Octree> oct(m_selected_node->GetOctree());
+
+                    while (oct) {
+
+                        std::cout << oct->m_level;
+                        oct = oct->m_parent;
+
+                        if (oct) {
+                            std::cout << "->";
+                        }
+                    }
+                    std::cout << "\n";
+                }
+
 
                 std::stringstream ss;
                 ss << "Selected object: ";
@@ -684,7 +779,6 @@ public:
                 m_dragging_timer += dt;
 
                 if (m_dragging_timer >= 0.5f) {
-                    std::cout << "Dragging " << m_selected_node->GetName() << "\n";
                     m_dragging_node = true;
                 }
             } else {
@@ -695,8 +789,6 @@ public:
                     auto intersected_with = m_hit_to_entity[m_ray_hit.GetHashCode().Value()];
 
                     ex_assert(intersected_with != nullptr);
-
-                    std::cout << "Intersected with: " << intersected_with->GetName() << "\n";
 
                     if (intersected_with != m_selected_node) {
                         m_selected_node->SetGlobalTranslation(m_ray_hit.hitpoint);
