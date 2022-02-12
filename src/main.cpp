@@ -63,8 +63,12 @@
 #include "rendering/probe/gi/gi_probe_control.h"
 #include "rendering/shaders/gi/gi_voxel_debug_shader.h"
 
+#include "rendering/probe/sh/light_volume_grid_control.h"
+
 #include "asset/fbom/fbom.h"
 #include "asset/byte_writer.h"
+
+#include "octree.h"
 
 
 /* Standard library */
@@ -197,9 +201,10 @@ public:
                 }
             }
         //}
-        sponza->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+        //sponza->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         sponza->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         GetScene()->AddChild(sponza);
+        //GetScene()->AddControl(std::make_shared<LightVolumeGridControl>(Vector3(), BoundingBox(Vector3(-25), Vector3(25))));
         return;
         {
 
@@ -257,13 +262,13 @@ public:
 
             for (auto& it : intersections) {
                 for (size_t i = 0; i < it.first->NumChildren(); i++) {
-                    const auto& child = it.first->GetChild(i);
+                    const auto &child = it.first->GetChild(i);
 
-                    BoundingBox aabb = child->GetAABB();
+                        BoundingBox aabb = child->GetAABB();
 
-                    if (aabb.IntersectRay(ray, intersection)) {
-                        new_intersections.push_back({ child, intersection });
-                    }
+                        if (aabb.IntersectRay(ray, intersection)) {
+                            new_intersections.push_back({ child, intersection });
+                        }
                 }
             }
 
@@ -285,6 +290,7 @@ public:
 
         for (Intersection_t& it : intersections) {
             // it.first->AddControl(std::make_shared<BoundingBoxControl>());
+
             m_raytested_entities.push_back(it.first);
 
             if (auto renderable = it.first->GetRenderable()) {
@@ -311,6 +317,24 @@ public:
 
         m_ray_hit = mesh_intersections[0];
         m_is_ray_hit = true;
+    }
+
+    void BuildOctreeAABB(Octree *oct)
+    {
+        if (!oct->IsDivided()) {
+            auto bb_node = std::make_shared<Entity>();
+            bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
+            GetScene()->AddChild(bb_node);
+            return;
+        }
+
+        for (auto *child : oct->GetOctants()) {
+            if (child == nullptr) {
+                continue;
+            }
+
+            BuildOctreeAABB(child);
+        }
     }
 
     void Initialize()
@@ -364,6 +388,8 @@ public:
             GetScene()->AddChild(dragger);
             dragger->UpdateTransform();
         }
+
+
 
 
         // Initialize particle system
@@ -446,6 +472,26 @@ public:
                 }
             }
         }
+
+        GetScene()->Update(0.1f);
+        m_octree->AddCallback([=](OctreeChangeEvent evt, const Octree *oct) {
+            std::cout << "event " << evt << "\n";
+            if (evt == OCTREE_INSERT_OCTANT) {
+                std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
+                auto bb_node = std::make_shared<Entity>("oct_" + std::to_string(intptr_t(oct)));
+                bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
+                bb_node->SetAABBAffectsParent(false);
+                //GetScene()->AddChild(bb_node);
+            } else if (evt == OCTREE_REMOVE_OCTANT) {
+                std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
+                auto node = GetScene()->GetChild("oct_" + std::to_string(intptr_t(oct)));
+                if (node != nullptr) {
+                   // GetScene()->RemoveChild(node);
+                }
+            }
+        });
+        m_octree->InsertNode(non_owning_ptr(GetScene().get()));
+        //BuildOctreeAABB(m_octree);
 
         for (int x = 0; x < 6; x++) {
             for (int z = 0; z < 6; z++) {

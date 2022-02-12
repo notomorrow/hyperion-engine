@@ -21,6 +21,8 @@ uniform sampler2D DataMap;
 uniform sampler2D TangentMap;
 uniform sampler2D BitangentMap;
 
+uniform sampler3D LightVolumeMap;
+
 uniform sampler2D SSLightingMap;
 uniform int HasSSLightingMap;
 
@@ -193,6 +195,9 @@ void main()
             metallic
         );
     }
+	
+	vec3 lvmCoord = vec3(0, 0, 0) / vec3(32.0);
+	result = texture(LightVolumeMap, lvmCoord).rgb;
 
-    output0 = vec4(reflectedLight, 1.0);
+    output0 = vec4(result, 1.0);
 }

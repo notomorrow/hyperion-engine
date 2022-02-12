@@ -1,5 +1,6 @@
 #include "entity.h"
 #include "util.h"
+#include "octree.h"
 
 #include <algorithm>
 
@@ -13,7 +14,8 @@ Entity::Entity(const std::string &name)
       m_parent(nullptr),
       m_local_translation(Vector3::Zero()),
       m_local_scale(Vector3::One()),
-      m_local_rotation(Quaternion::Identity())
+      m_local_rotation(Quaternion::Identity()),
+      m_octree(nullptr)
 {
 }
 
@@ -27,6 +29,12 @@ Entity::~Entity()
 
     m_controls.clear();
     m_children.clear();
+
+    std::cout << "Delete node " << m_name << "\n";
+
+    if (m_octree != nullptr) {
+        m_octree->RemoveNode(this);
+    }
 }
 
 void Entity::SetGlobalTranslation(const Vector3 &translation)
@@ -108,10 +116,14 @@ void Entity::UpdateAABB()
         }
     }
 
+    /*if (m_octree != nullptr) {
+        m_octree->NodeTransformChanged(this);
+    }
+
     if (m_aabb_affects_parent && m_parent != nullptr) {
         // multiply parent's bounding box by this one
         m_parent->m_aabb.Extend(m_aabb);
-    }
+    }*/
 }
 
 float Entity::CalculateCameraDistance(Camera *camera) const
@@ -139,27 +151,39 @@ void Entity::AddChild(std::shared_ptr<Entity> entity)
     }
 
     m_children.push_back(entity);
-    entity->m_parent = this;
+    entity->m_parent = non_owning_ptr(this);
+
     entity->SetTransformUpdateFlag();
+    //entity->UpdateTransform();
 
     if (entity->GetAABBAffectsParent()) {
         SetAABBUpdateFlag();
+        //entity->UpdateAABB();
+
+        if (m_octree != nullptr) {
+            m_octree->InsertNode(non_owning_ptr(entity.get()));
+        }
     }
 }
 
-void Entity::RemoveChild(const std::shared_ptr<Entity> &entity)
+void Entity::RemoveChild(std::shared_ptr<Entity> entity)
 {
     ex_assert(entity != nullptr);
 
     m_children_pending_removal.push_back(entity);
     m_children.erase(std::find(m_children.begin(), m_children.end(), entity));
 
-    entity->m_parent = nullptr;
+    entity->m_parent = non_owning_ptr<Entity>();
     entity->SetPendingRemovalFlag();
     entity->SetTransformUpdateFlag();
 
     if (entity->GetAABBAffectsParent()) {
         SetAABBUpdateFlag();
+
+        if (m_octree != nullptr) {
+            std::cout << "Remove child " << entity->GetName() << " from octree... has octree? " << (entity->GetOctree() != nullptr) << "\n";
+            m_octree->RemoveNode(entity.get());
+        }
     }
 }
 
@@ -204,10 +228,13 @@ void Entity::RemoveControl(const std::shared_ptr<EntityControl> &control)
 
 void Entity::Update(double dt)
 {
+    BoundingBox aabb_before(m_aabb);
+
     if (m_flags & UPDATE_TRANSFORM) {
         UpdateTransform();
         m_flags &= ~UPDATE_TRANSFORM;
     }
+
     if (m_flags & UPDATE_AABB) {
         UpdateAABB();
         m_flags &= ~UPDATE_AABB;
@@ -215,8 +242,23 @@ void Entity::Update(double dt)
 
     UpdateControls(dt);
 
-    for (auto &child : m_children) {
+    size_t num_children = m_children.size();
+
+    for (size_t i = 0; i < num_children; i++) {
+        auto &child = m_children[i];
+
+        if (child == nullptr) {
+            continue;
+        }
+
         child->Update(dt);
+    }
+
+    if (aabb_before != m_aabb) {
+        std::cout << "aabb change\n";
+        if (m_octree != nullptr) {
+            m_octree->NodeTransformChanged(this);
+        }
     }
 }
 
