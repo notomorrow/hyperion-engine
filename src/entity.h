@@ -12,10 +12,12 @@
 #include "math/transform.h"
 #include "rendering/renderable.h"
 #include "rendering/material.h"
+#include "util/non_owning_ptr.h"
 
 #include "asset/fbom/fbom.h"
 namespace hyperion {
 class Camera;
+class Octree;
 class Entity : public fbom::FBOMLoadable {
 public:
     enum UpdateFlags {
@@ -28,6 +30,8 @@ public:
     Entity(const Entity &other) = delete;
     Entity &operator=(const Entity &other) = delete;
     virtual ~Entity();
+
+    inline int GetFlags() const { return m_flags; }
 
     inline const std::string &GetName() const { return m_name; }
     inline void SetName(const std::string &name) { m_name = name; }
@@ -81,14 +85,18 @@ public:
 
     inline const BoundingBox &GetAABB() const { return m_aabb; }
 
-    inline Entity *GetParent() const { return m_parent; }
+    inline const non_owning_ptr<Entity> &GetParent() const { return m_parent; }
 
     inline Material &GetMaterial() { return m_material; }
     inline const Material &GetMaterial() const { return m_material; }
     inline void SetMaterial(const Material &material) { m_material = material; }
 
+    inline non_owning_ptr<Octree> &GetOctree() { return m_octree; }
+    inline const non_owning_ptr<Octree> &GetOctree() const { return m_octree; }
+    inline void SetOctree(const non_owning_ptr<Octree> &octree) { m_octree = octree; }
+
     void AddChild(std::shared_ptr<Entity> entity);
-    void RemoveChild(const std::shared_ptr<Entity> &entity);
+    void RemoveChild(std::shared_ptr<Entity> entity);
     std::shared_ptr<Entity> GetChild(size_t index) const;
     std::shared_ptr<Entity> GetChild(const std::string &name) const;
     inline size_t NumChildren() const { return m_children.size(); }
@@ -317,7 +325,7 @@ protected:
     Quaternion m_local_rotation;
     Transform m_global_transform;
     BoundingBox m_aabb;
-    Entity *m_parent;
+    non_owning_ptr<Entity> m_parent;
     Material m_material;
 
     void SetTransformUpdateFlag();
@@ -325,6 +333,9 @@ protected:
     void SetPendingRemovalFlag();
 
     std::shared_ptr<Entity> CloneImpl();
+
+private:
+    non_owning_ptr<Octree> m_octree;
 };
 } // namespace hyperion
 

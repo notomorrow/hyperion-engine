@@ -189,6 +189,8 @@ void Shader::UploadGpuData()
     }
 
     is_uploaded = true;
+
+    CatchGLErrors("Failed to use upload shader GPU data");
 }
 
 void Shader::DestroyGpuData()
@@ -349,6 +351,7 @@ void Shader::Use()
     }
 
     glUseProgram(progid);
+    CatchGLErrors("Failed to use shader program");
 
     ApplyUniforms();
 }

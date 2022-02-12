@@ -2,7 +2,7 @@
 #define ENUM_OPTIONS_H
 
 #include "../hash_code.h"
-#include "../util.h"
+#include "../math/math_util.h"
 
 #include <array>
 #include <initializer_list>
@@ -18,7 +18,7 @@ public:
 
     // convert from attachment (2^x) into ordinal (0-5) for use as an array index
     static inline Ordinal_t EnumToOrdinal(EnumOption_t option)
-        { return FastLog2(option); }
+        { return MathUtil::FastLog2(option); }
 
     // convert from ordinal (0-5) into power-of-two for use as bit flags
     static inline EnumOption_t OrdinalToEnum(Ordinal_t ordinal)

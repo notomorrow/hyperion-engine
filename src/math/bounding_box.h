@@ -30,6 +30,10 @@ public:
     BoundingBox operator*(const Transform &transform) const;
     BoundingBox &operator*=(double scalar);
     BoundingBox &operator*=(const Transform &transform);
+    inline bool operator==(const BoundingBox &other) const
+        { return m_min == other.m_min && m_max == other.m_max; }
+    inline bool operator!=(const BoundingBox &other) const
+        { return !operator==(other); }
 
     BoundingBox &Clear();
     
@@ -43,6 +47,10 @@ public:
     BoundingBox &Extend(const BoundingBox &bb);
 
     bool IntersectRay(const Ray &ray, RaytestHit &out) const;
+    // do the AABB's intersect at all?
+    bool Intersects(const BoundingBox &other) const;
+    // does this AABB completely contain other?
+    bool Contains(const BoundingBox &other) const;
     bool ContainsPoint(const Vector3 &vec) const;
     double Area() const;
 

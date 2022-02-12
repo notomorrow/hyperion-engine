@@ -17,7 +17,7 @@
 #include "postprocess/post_processing.h"
 
 #define RENDERER_SHADER_GROUPING 1
-#define RENDERER_FRUSTUM_CULLING 0 // something is off with culling + batching
+#define RENDERER_FRUSTUM_CULLING 1
 
 namespace hyperion {
 
@@ -268,8 +268,8 @@ private:
     RenderWindow m_render_window;
     bool m_is_deferred;
 
-    std::map<Entity*, std::size_t> m_hash_cache;
-    std::map<std::size_t, Renderable::RenderBucket> m_hash_to_bucket;
+    std::map<Entity*, HashCode::Value_t> m_hash_cache;
+    std::map<HashCode::Value_t, Renderable::RenderBucket> m_hash_to_bucket;
 
     void ClearRenderables();
     void FindRenderables(Camera *cam, Entity *top, bool frustum_culled = false, bool is_root = false);

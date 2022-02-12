@@ -181,6 +181,28 @@ bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const
     return true;
 }
 
+bool BoundingBox::Intersects(const BoundingBox &other) const
+{
+    for (const auto &corner : other.GetCorners()) {
+        if (ContainsPoint(corner)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool BoundingBox::Contains(const BoundingBox &other) const
+{
+    for (const auto &corner : other.GetCorners()) {
+        if (!ContainsPoint(corner)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool BoundingBox::ContainsPoint(const Vector3 &vec) const
 {
     if (vec.x < m_min.x) return false;

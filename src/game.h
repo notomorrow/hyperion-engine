@@ -7,6 +7,7 @@
 #include "rendering/camera/camera.h"
 #include "input_manager.h"
 #include "entity.h"
+#include "octree.h"
 
 namespace hyperion {
 class Game {
@@ -33,6 +34,7 @@ public:
 
 protected:
     Camera *m_camera;
+    Octree *m_octree;
     std::shared_ptr<Entity> m_scene;
     std::shared_ptr<Entity> m_ui;
     InputManager *m_input_manager;
