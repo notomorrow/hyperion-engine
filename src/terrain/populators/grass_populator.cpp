@@ -45,20 +45,22 @@ std::shared_ptr<Entity> GrassPopulator::CreateEntity(const Vector3 &position) co
     object_node->SetLocalRotation(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(MathUtil::Random(0, 359))));
 
     for (int i = 0; i < object_node->NumChildren(); i++) {
-        if (auto renderable = object_node->GetChild(i)->GetRenderable()) {
-            renderable->SetShader(
-                ShaderManager::GetInstance()->GetShader<VegetationShader>(
-                    ShaderProperties()
+        if (auto child = object_node->GetChild(i)) {
+            if (auto renderable = object_node->GetChild(i)->GetRenderable()) {
+                renderable->SetShader(
+                    ShaderManager::GetInstance()->GetShader<VegetationShader>(
+                        ShaderProperties()
                         .Define("VEGETATION_FADE", true)
                         .Define("VEGETATION_LIGHTING", false)
-                )
-            );
-            renderable->SetRenderBucket(Renderable::RB_PARTICLE);
-        }
+                        )
+                );
+                renderable->SetRenderBucket(Renderable::RB_PARTICLE);
+            }
 
-        object_node->GetChild(i)->GetMaterial().alpha_blended = true;
-        object_node->GetChild(i)->GetMaterial().cull_faces = MaterialFace_None;
-        object_node->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
+            object_node->GetChild(i)->GetMaterial().alpha_blended = true;
+            object_node->GetChild(i)->GetMaterial().cull_faces = MaterialFace_None;
+            object_node->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
+        }
     }
     
     return object_node;

@@ -21,6 +21,12 @@ Entity::Entity(const std::string &name)
 
 Entity::~Entity()
 {
+    std::cout << "Delete node " << m_name << "\n";
+
+    if (m_octree != nullptr) {
+        m_octree->RemoveNode(this);
+    }
+
     for (auto it = m_controls.rbegin(); it != m_controls.rend(); ++it) {
         (*it)->OnRemoved();
         (*it)->m_first_run = true;
@@ -29,12 +35,6 @@ Entity::~Entity()
 
     m_controls.clear();
     m_children.clear();
-
-    std::cout << "Delete node " << m_name << "\n";
-
-    if (m_octree != nullptr) {
-        m_octree->RemoveNode(this);
-    }
 }
 
 void Entity::SetGlobalTranslation(const Vector3 &translation)
@@ -116,14 +116,10 @@ void Entity::UpdateAABB()
         }
     }
 
-    /*if (m_octree != nullptr) {
-        m_octree->NodeTransformChanged(this);
-    }
-
     if (m_aabb_affects_parent && m_parent != nullptr) {
         // multiply parent's bounding box by this one
         m_parent->m_aabb.Extend(m_aabb);
-    }*/
+    }
 }
 
 float Entity::CalculateCameraDistance(Camera *camera) const
@@ -134,6 +130,8 @@ float Entity::CalculateCameraDistance(Camera *camera) const
 void Entity::AddChild(std::shared_ptr<Entity> entity)
 {
     ex_assert(entity != nullptr);
+    ex_assert(entity->m_parent == nullptr);
+    //ex_assert_msg(std::find(m_children.begin(), m_children.end(), entity) == m_children.end(), "object already exists in node");
 
     if (entity->m_flags & PENDING_REMOVAL) {
         std::cout << entity->GetName() << " saved from death\n";
@@ -150,7 +148,22 @@ void Entity::AddChild(std::shared_ptr<Entity> entity)
         }
     }
 
-    m_children.push_back(entity);
+    // find free slot
+    bool slot_found = false;
+
+    for (size_t i = 0; i < m_children.size(); i++) {
+        if (m_children[i] == nullptr) {
+            m_children[i] = entity;
+            slot_found = true;
+
+            break;
+        }
+    }
+
+    if (!slot_found) {
+        m_children.push_back(entity);
+    }
+
     entity->m_parent = non_owning_ptr(this);
 
     entity->SetTransformUpdateFlag();
@@ -169,11 +182,15 @@ void Entity::AddChild(std::shared_ptr<Entity> entity)
 void Entity::RemoveChild(std::shared_ptr<Entity> entity)
 {
     ex_assert(entity != nullptr);
+    ex_assert(entity->m_parent == this);
 
     m_children_pending_removal.push_back(entity);
-    m_children.erase(std::find(m_children.begin(), m_children.end(), entity));
 
-    entity->m_parent = non_owning_ptr<Entity>();
+    // fill slot with nullptr, rather than resizing, potentially causing a chain
+    // of events that will cause a loop to overflow
+    std::replace(m_children.begin(), m_children.end(), entity, std::shared_ptr<Entity>(nullptr));
+
+    entity->m_parent = non_owning_ptr<Entity>(nullptr);
     entity->SetPendingRemovalFlag();
     entity->SetTransformUpdateFlag();
 
@@ -194,9 +211,12 @@ std::shared_ptr<Entity> Entity::GetChild(size_t index) const
 
 std::shared_ptr<Entity> Entity::GetChild(const std::string &name) const
 {
-    auto it = std::find_if(m_children.begin(), m_children.end(),
-        [&](const std::shared_ptr<Entity> &elt)
+    auto it = std::find_if(m_children.begin(), m_children.end(), [&](const std::shared_ptr<Entity> &elt)
     {
+        if (elt == nullptr) {
+            return false;
+        }
+
         return elt->GetName() == name;
     });
 
@@ -206,6 +226,23 @@ std::shared_ptr<Entity> Entity::GetChild(const std::string &name) const
 std::shared_ptr<Entity> Entity::GetChildPendingRemoval(size_t index) const
 {
     return m_children_pending_removal.at(index);
+}
+
+void Entity::ClearPendingRemoval()
+{
+    m_children_pending_removal.clear();
+
+    size_t num_children = m_children.size();
+
+    for (size_t i = 0; i < num_children; i++) {
+        auto &child = m_children[i];
+
+        if (child == nullptr) {
+            continue;
+        }
+
+        child->ClearPendingRemoval();
+    }
 }
 
 void Entity::AddControl(std::shared_ptr<EntityControl> control)
@@ -255,7 +292,6 @@ void Entity::Update(double dt)
     }
 
     if (aabb_before != m_aabb) {
-        std::cout << "aabb change\n";
         if (m_octree != nullptr) {
             m_octree->NodeTransformChanged(this);
         }
@@ -285,7 +321,12 @@ void Entity::UpdateControls(double dt)
 void Entity::SetTransformUpdateFlag()
 {
     m_flags |= UPDATE_TRANSFORM;
+
     for (auto &child : m_children) {
+        if (child == nullptr) {
+            continue;
+        }
+
         child->SetTransformUpdateFlag();
     }
 }
@@ -293,7 +334,12 @@ void Entity::SetTransformUpdateFlag()
 void Entity::SetAABBUpdateFlag()
 {
     m_flags |= UPDATE_AABB;
+
     for (auto &child : m_children) {
+        if (child == nullptr) {
+            continue;
+        }
+
         child->SetAABBUpdateFlag();
     }
 }
@@ -301,7 +347,12 @@ void Entity::SetAABBUpdateFlag()
 void Entity::SetPendingRemovalFlag()
 {
     m_flags |= PENDING_REMOVAL;
+
     for (auto &child : m_children) {
+        if (child == nullptr) {
+            continue;
+        }
+
         child->SetPendingRemovalFlag();
     }
 }
@@ -328,6 +379,10 @@ std::shared_ptr<Entity> Entity::CloneImpl()
 
     // clone all child entities
     for (auto &child : m_children) {
+        if (child == nullptr) {
+            continue;
+        }
+
         new_entity->AddChild(child->CloneImpl());
     }
 

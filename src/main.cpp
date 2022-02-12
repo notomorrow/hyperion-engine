@@ -201,7 +201,7 @@ public:
                 }
             }
         //}
-        //sponza->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+        sponza->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         sponza->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         GetScene()->AddChild(sponza);
         //GetScene()->AddControl(std::make_shared<LightVolumeGridControl>(Vector3(), BoundingBox(Vector3(-25), Vector3(25))));
@@ -262,13 +262,13 @@ public:
 
             for (auto& it : intersections) {
                 for (size_t i = 0; i < it.first->NumChildren(); i++) {
-                    const auto &child = it.first->GetChild(i);
-
+                    if (const auto &child = it.first->GetChild(i)) {
                         BoundingBox aabb = child->GetAABB();
 
                         if (aabb.IntersectRay(ray, intersection)) {
                             new_intersections.push_back({ child, intersection });
                         }
+                    }
                 }
             }
 
@@ -278,6 +278,8 @@ public:
 
             intersections = new_intersections;
         }
+
+        std::cout << intersections.size() << " intersections\n";
 
         if (intersections.empty()) {
             return;
@@ -429,7 +431,7 @@ public:
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
-        bool read = false;
+        bool read = true;
 
         if (!write && !read) {
             InitTestArea();
@@ -474,19 +476,21 @@ public:
         }
 
         GetScene()->Update(0.1f);
-        m_octree->AddCallback([=](OctreeChangeEvent evt, const Octree *oct) {
+        m_octree->AddCallback([this](OctreeChangeEvent evt, const Octree *oct) {
             std::cout << "event " << evt << "\n";
             if (evt == OCTREE_INSERT_OCTANT) {
                 std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
                 auto bb_node = std::make_shared<Entity>("oct_" + std::to_string(intptr_t(oct)));
                 bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
                 bb_node->SetAABBAffectsParent(false);
-                //GetScene()->AddChild(bb_node);
+                GetScene()->AddChild(bb_node);
+                std::cout << "<ADDED BB NODE>\n";
             } else if (evt == OCTREE_REMOVE_OCTANT) {
                 std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
                 auto node = GetScene()->GetChild("oct_" + std::to_string(intptr_t(oct)));
                 if (node != nullptr) {
-                   // GetScene()->RemoveChild(node);
+                    GetScene()->RemoveChild(node);
+                    std::cout << "<REMOVE BB NODE>\n";
                 }
             }
         });
