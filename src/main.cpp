@@ -207,7 +207,7 @@ public:
         GetScene()->AddChild(sponza);
         //GetScene()->AddControl(std::make_shared<LightVolumeGridControl>(Vector3(), BoundingBox(Vector3(-25), Vector3(25))));
         return;*/
-        {
+        /*{
 
             auto street = asset_manager->LoadFromFile<Entity>("models/street/street.obj");
             street->SetName("street");
@@ -223,7 +223,7 @@ public:
             street->UpdateTransform();
             street->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
             street->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
-        }
+        }*/
 
 
         {
@@ -413,7 +413,7 @@ public:
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
-        bool read = false;
+        bool read = true;
 
         if (!write && !read) {
             InitTestArea();
