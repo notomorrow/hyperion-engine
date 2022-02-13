@@ -542,13 +542,18 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
     vec3 specRef = vec3((1.0 / max(rim, 0.0001)) * F * G * D) * NdotL;
     reflectedLight += specRef;
 
+	return specRef * radiance;
+
     vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * AB.x + AB.y);
+	
+	
+
     reflectedLight += ibl * specularCubemap;
 
     vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
     //diffRef += gi;
     diffuseLight += diffRef;
-    diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
+    diffuseLight += EnvRemap(Irradiance(n)).rgb * (1.0 / $PI);
     diffuseLight *= metallicDiff;
 
 	return (diffuseLight + reflectedLight) * radiance;

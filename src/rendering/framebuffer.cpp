@@ -51,7 +51,7 @@ Framebuffer::default_texture_attributes = {
     Framebuffer::FramebufferTextureAttributes( // tangents
         "TangentMap",
         CoreEngine::GLEnums::RGBA,
-        CoreEngine::GLEnums::RGBA8,
+        CoreEngine::GLEnums::RGBA32F,
         CoreEngine::GLEnums::NEAREST,
         CoreEngine::GLEnums::NEAREST,
         false
@@ -59,7 +59,7 @@ Framebuffer::default_texture_attributes = {
     Framebuffer::FramebufferTextureAttributes( // bitangents
         "BitangentMap",
         CoreEngine::GLEnums::RGBA,
-        CoreEngine::GLEnums::RGBA8,
+        CoreEngine::GLEnums::RGBA32F,
         CoreEngine::GLEnums::NEAREST,
         CoreEngine::GLEnums::NEAREST,
         false

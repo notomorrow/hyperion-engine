@@ -7,10 +7,12 @@ template <class T>
 class non_owning_ptr {
 public:
     non_owning_ptr() : ptr(nullptr) {}
+    non_owning_ptr(std::nullptr_t) : ptr(nullptr) {}
     // marked explicit so that it is obvious in the code when this class is used
     explicit non_owning_ptr(T *ptr) : ptr(ptr) {}
     non_owning_ptr(const non_owning_ptr &other) : ptr(other.ptr) {}
     non_owning_ptr &operator=(const non_owning_ptr &other) { ptr = other.ptr; return *this; }
+    non_owning_ptr &operator=(std::nullptr_t) { ptr = nullptr; return *this; }
     ~non_owning_ptr() = default;
 
     T *operator->() { return ptr; }

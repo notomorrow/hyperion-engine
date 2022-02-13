@@ -5,7 +5,7 @@
 #define $VCT_SPECULAR_MAX_LEN 0.3
 #define $VCT_SPECULAR_CONE_SIZE 0.07
 #define $VCT_DIFFUSE_MAX_LEN 0.2
-#define $VCT_DIFFUSE_CONE_SIZE 0.7
+#define $VCT_DIFFUSE_CONE_SIZE 1.5
 #define $VCT_NORMAL_OFFSET 0.015
 
 uniform sampler3D VoxelMap;

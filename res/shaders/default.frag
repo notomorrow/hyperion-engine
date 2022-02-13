@@ -10,6 +10,8 @@ in vec4 v_normal;
 in vec2 v_texcoord0;
 in vec3 v_tangent;
 in vec3 v_bitangent;
+in vec4 v_tangentWS;
+in vec4 v_bitangentWS;
 in mat3 v_tbn;
 
 uniform vec3 u_camerapos;
@@ -132,32 +134,27 @@ void main()
   vec4 blurredSpecularCubemap = vec4(0.0);
   vec4 specularCubemap = vec4(0.0);
   vec4 gi = vec4(0.0);
+  float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
 
 #if VCT_ENABLED
-  //testing
   vec4 vctSpec = VCTSpecular(v_position.xyz, n.xyz, u_camerapos, u_roughness);
   vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent, roughness);
-  specularCubemap = vctSpec;
+  specularCubemap += vctSpec;
   gi += vctDiff;
 #endif // VCT_ENABLED
 
 #if PROBE_ENABLED
   blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent);
-  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent);
-
-
+  specularCubemap += SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent);
+  //specularCubemap += mix(SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent), blurredSpecularCubemap, roughnessMix);
 #if !SPHERICAL_HARMONICS_ENABLED
-  gi += EnvRemap(Irradiance(n));
+  //gi += EnvRemap(Irradiance(n));
 #endif // !SPHERICAL_HARMONICS_ENABLED
-
 #endif // PROBE_ENABLED
 
 #if SPHERICAL_HARMONICS_ENABLED
   gi.rgb += SampleSphericalHarmonics(n);
 #endif // SPHERICAL_HARMONICS_ENABLED
-
-  float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
-  //specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughness);
 
 
   vec3 F0 = vec3(0.04);
@@ -204,6 +201,6 @@ void main()
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(metallic, roughness, 0.0, 1.0);
   output4 = vec4(0.0, 0.0, 0.0, ao);
-  output5 = vec4(v_tangent * 0.5 + 0.5, 1.0);
-  output6 = vec4(v_bitangent * 0.5 + 0.5, 1.0);
+  output5 = vec4(v_tangentWS.xyz * 0.5 + 0.5, 1.0);
+  output6 = vec4(v_bitangentWS.xyz * 0.5 + 0.5, 1.0);
 }

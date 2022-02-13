@@ -187,13 +187,13 @@ public:
         }
         GetScene()->AddChild(mitsuba);
 
-        auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
+        /*auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
         sponza->SetName("sponza");
         sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.39f);
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.7f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.05f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.3f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
@@ -206,7 +206,7 @@ public:
         sponza->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         GetScene()->AddChild(sponza);
         //GetScene()->AddControl(std::make_shared<LightVolumeGridControl>(Vector3(), BoundingBox(Vector3(-25), Vector3(25))));
-        return;
+        return;*/
         {
 
             auto street = asset_manager->LoadFromFile<Entity>("models/street/street.obj");
@@ -221,6 +221,8 @@ public:
 
             GetScene()->AddChild(street);
             street->UpdateTransform();
+            street->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+            street->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         }
 
 
@@ -320,37 +322,19 @@ public:
         m_is_ray_hit = true;
     }
 
-    void BuildOctreeAABB(Octree *oct)
-    {
-        if (!oct->IsDivided()) {
-            auto bb_node = std::make_shared<Entity>();
-            bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
-            GetScene()->AddChild(bb_node);
-            return;
-        }
-
-        for (auto *child : oct->GetOctants()) {
-            if (child == nullptr) {
-                continue;
-            }
-
-            BuildOctreeAABB(child);
-        }
-    }
-
     void Initialize()
     {
 
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
-            .Define("NORMAL_MAPPING", false)
-            .Define("SHADOW_MAP_RADIUS", 0.05f)
-            .Define("SHADOW_PCF", false)
+            .Define("NORMAL_MAPPING", true)
+            .Define("SHADOW_MAP_RADIUS", 0.02f)
+            .Define("SHADOW_PCF", true)
         );
 
         AssetManager *asset_manager = AssetManager::GetInstance();
 
-        shadows = new PssmShadowMapping(GetCamera(), 4, 120.0f);
-        shadows->SetVarianceShadowMapping(true);
+        shadows = new PssmShadowMapping(GetCamera(), 4, 30.0f);
+        shadows->SetVarianceShadowMapping(false);
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
@@ -360,7 +344,7 @@ public:
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        //GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
+        GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
         //GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
         //GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         GetRenderer()->SetDeferred(true);
@@ -369,11 +353,11 @@ public:
 
         Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5).Normalize());
 
-        auto gi_test_node = std::make_shared<Entity>("gi_test_node");
+        /*auto gi_test_node = std::make_shared<Entity>("gi_test_node");
         gi_test_node->Move(Vector3(0, 5, 0));
         gi_test_node->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f)));
         gi_test_node->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
-        GetScene()->AddChild(gi_test_node);
+        GetScene()->AddChild(gi_test_node);*/
 
 
         GetCamera()->SetTranslation(Vector3(0, 0, 0));
@@ -426,13 +410,13 @@ public:
 
         auto cm = InitCubemap();
 
-        //GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
+        GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
         bool read = false;
 
         if (!write && !read) {
-            //InitTestArea();
+            InitTestArea();
             /*GetScene()->AddControl(std::make_shared<NoiseTerrainControl>(GetCamera()));
             auto tmp = std::make_shared<Entity>("dummy node for vct");
             tmp->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0, 0, 0), BoundingBox(Vector3(-15, 5, -15), Vector3(15, 5, 15))));
@@ -477,14 +461,14 @@ public:
         m_octree->AddCallback([this](OctreeChangeEvent evt, const Octree *oct) {
             //std::cout << "event " << evt << "\n";
             if (evt == OCTREE_INSERT_OCTANT) {
-                //std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
+                std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
                 auto bb_node = std::make_shared<Entity>("oct_" + std::to_string(intptr_t(oct)));
                 bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
                 bb_node->SetAABBAffectsParent(false);
                 GetScene()->AddChild(bb_node);
                 //std::cout << "<ADDED BB NODE>\n";
             } else if (evt == OCTREE_REMOVE_OCTANT) {
-                //std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
+                std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
                 auto node = GetScene()->GetChild("oct_" + std::to_string(intptr_t(oct)));
                 if (node != nullptr) {
                     GetScene()->RemoveChild(node);
@@ -542,7 +526,25 @@ public:
         m_octree->GetOctants()[0]->GetOctants()[0]->Divide();
         m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Divide();
         m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Undivide();*/
-        
+
+        auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
+        GetScene()->AddChild(house);
+
+
+        m_octree->InsertNode(Octree::Node{ 1, BoundingBox(Vector3(-4, -4, -4), Vector3(-3.2, -3.2, -3.2)) });
+        m_octree->InsertNode(Octree::Node{ 2, BoundingBox(Vector3(5, 5, 5), Vector3(7, 7, 7)) });
+        m_octree->InsertNode(Octree::Node{ 3, BoundingBox(Vector3(12, 12, -12), Vector3(13, 13, -13)) });
+        m_octree->InsertNode(Octree::Node{ 4, BoundingBox(Vector3(-3, -3, -3), Vector3(-1, -1, -1)) });
+
+        m_octree->RemoveNode(1);
+        m_octree->RemoveNode(2);
+        m_octree->RemoveNode(3);
+        m_octree->RemoveNode(4);
+        std::cout << *m_octree << "\n";
+        //m_octree->RemoveNode(4);
+        //for (int i = 0; i < 8; i++) {
+        //    m_octree->Undivide();
+        //}
 
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
@@ -553,36 +555,36 @@ public:
                     MathUtil::Random(0.4f, 1.80f)
                 ).Normalize();
                 auto box = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
-                box->Scale(0.2);
+                box->SetLocalScale(0.25f);
                 
 
                 for (size_t i = 0; i < box->NumChildren(); i++) {
 
                     box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
-                        col.x,
-                        col.y,
-                        col.z,
+                        1.0,//col.x,
+                        1.0,//col.y,
+                        1.0,//col.z,
                         1.0f
                     );
 
-                    //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_albedo.png"));
-                    //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_height.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_albedo.png"));
+                    box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_height.png"));
                     //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_ao.png"));
-                    //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_normal-ogl.png"));
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.3f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
-                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
-                   // box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
+                    box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_normal-ogl.png"));
+                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.7f);
+                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.4f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
                 }
 
-                //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f), 4.5f));
+                //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));
 
                 box->SetLocalTranslation(box_position);
                 GetScene()->AddChild(box);
             }
         }
         
-        //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(5, 1, 5), Vector4(1.0f, 1.0f, 1.0f, 1.0f), 3.5f));
+        //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 1, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f) * 3.0f, 1.5f));
 
 
         //for (size_t i = 0; i < Environment::GetInstance()->NumPointLights(); i++) {
@@ -667,7 +669,7 @@ public:
                 return;
             }
 
-            m_octree->Clear();
+            //m_octree->Clear();
         }));
 
         GetInputManager()->RegisterKeyEvent(KEY_V, InputEvent([=](bool pressed) {
@@ -675,7 +677,7 @@ public:
                 return;
             }
 
-            m_octree->InsertNode(non_owning_ptr(GetScene().get()));
+            //m_octree->InsertNode(non_owning_ptr(GetScene().get()));
         }));
 
         // remove selected node from octree
@@ -688,7 +690,13 @@ public:
                 return;
             }
 
-            m_octree->RemoveNode(m_selected_node.get());
+            /*Entity *node_iter = m_selected_node.get();
+
+            while (node_iter != nullptr && node_iter != GetScene().get()) {
+                m_octree->RemoveNode(node_iter, false);
+                std::cout << "remove " << node_iter->GetName() << "\n";
+                node_iter = node_iter->GetParent().get();
+            }*/
         }));
 
         /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
@@ -728,7 +736,9 @@ public:
 
                 ex_assert(m_hit_to_entity.find(m_ray_hit.GetHashCode().Value()) != m_hit_to_entity.end());
 
-                m_selected_node = m_hit_to_entity[m_ray_hit.GetHashCode().Value()];
+                auto node = m_hit_to_entity[m_ray_hit.GetHashCode().Value()];
+
+                m_selected_node = node;
                 m_selected_node->AddControl(std::make_shared<BoundingBoxControl>());
 
                 std::cout << "SELECTED OBJECT IN OCTREE: ";
