@@ -187,7 +187,7 @@ public:
         }
         GetScene()->AddChild(mitsuba);
 
-        /*auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
+        auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
         sponza->SetName("sponza");
         sponza->Scale(Vector3(0.07f));
         //if (voxel_debug) {
@@ -206,7 +206,7 @@ public:
         sponza->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         GetScene()->AddChild(sponza);
         //GetScene()->AddControl(std::make_shared<LightVolumeGridControl>(Vector3(), BoundingBox(Vector3(-25), Vector3(25))));
-        return;*/
+        return;
         /*{
 
             auto street = asset_manager->LoadFromFile<Entity>("models/street/street.obj");
@@ -339,7 +339,7 @@ public:
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
         Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(true);
-        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
+        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(false);
         Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(true);
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
@@ -351,7 +351,7 @@ public:
 
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(1, 1, 0).Normalize());
 
         /*auto gi_test_node = std::make_shared<Entity>("gi_test_node");
         gi_test_node->Move(Vector3(0, 5, 0));
@@ -528,6 +528,12 @@ public:
         m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Undivide();*/
 
         auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
+        for (size_t i = 0; i < house->NumChildren(); i++) {
+            if (auto &child = house->GetChild(i)) {
+                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.75f);
+                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
+            }
+        }
         GetScene()->AddChild(house);
 
 
@@ -555,7 +561,7 @@ public:
                     MathUtil::Random(0.4f, 1.80f)
                 ).Normalize();
                 auto box = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
-                box->SetLocalScale(0.25f);
+                box->SetLocalScale(0.1f);
                 
 
                 for (size_t i = 0; i < box->NumChildren(); i++) {

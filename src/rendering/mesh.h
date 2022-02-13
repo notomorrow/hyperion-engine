@@ -201,6 +201,9 @@ public:
             in->GetProperty("indices").ReadBytes(total_indices_bytes, reinterpret_cast<unsigned char*>(out_mesh->indices.data()));
         }
 
+        //out_mesh->InvertNormals();
+        //out_mesh->CalculateTangents();
+
         return FBOMResult::FBOM_OK;
     }
 
