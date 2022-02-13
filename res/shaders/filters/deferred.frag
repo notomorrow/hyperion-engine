@@ -229,8 +229,8 @@ void main()
     float aspect = sqrt(1-anisotropic*.9);
     float ax = max(.001, sqr(roughness)/aspect);
     float ay = max(.001, sqr(roughness)*aspect);
-    float Ds = GTR2_aniso(NdotH, HdotX, HdotY, ax, ay);
-    float FH = SchlickFresnel2(LdotH);
+    float Ds = clamp(GTR2_aniso(NdotH, HdotX, HdotY, ax, ay), 0.0, 1.0);
+    float FH = clamp(SchlickFresnel2(LdotH), 0.0, 1.0);
     vec3 Fs = mix(Cspec0, vec3(1), FH);
     float Gs;
     Gs  = smithG_GGX_aniso(NdotL, LdotX, LdotY, ax, ay);
@@ -249,11 +249,11 @@ void main()
     vec3 ibl = min(vec3(0.99), FH * AB.x + AB.y) * specularCubemap.rgb;
 	
 
-    vec3 result = (((1.0/$PI) * (mix(Fd, ss, subsurface) + gi.rgb))*Cdlin + Fsheen) * irradiance
-        * (1-metallic)
-        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) * ibl;
+    vec3 result = (((1.0/$PI) * (mix(Fd, ss, subsurface) + gi.rgb))*Cdlin + Fsheen)
+        * (1.0-metallic)
+        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr);
 
-	result *= ao;
+	//result *= ao;
 #endif
 
 #if !DISNEY_BRDF
