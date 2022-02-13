@@ -22,7 +22,7 @@ Entity::Entity(const std::string &name)
 Entity::~Entity()
 {
     if (m_octree != nullptr) {
-        m_octree->RemoveNode(this);
+        //m_octree->RemoveNode(this);
     }
 
     for (auto it = m_controls.rbegin(); it != m_controls.rend(); ++it) {
@@ -172,7 +172,7 @@ void Entity::AddChild(std::shared_ptr<Entity> entity)
         //entity->UpdateAABB();
 
         if (m_octree != nullptr) {
-            m_octree->InsertNode(non_owning_ptr(entity.get()));
+            //m_octree->InsertNode(non_owning_ptr(entity.get()));
         }
     }
 }
@@ -197,7 +197,7 @@ void Entity::RemoveChild(std::shared_ptr<Entity> entity)
 
         if (m_octree != nullptr) {
             std::cout << "Remove child " << entity->GetName() << " from octree... has octree? " << (entity->GetOctree() != nullptr) << "\n";
-            m_octree->RemoveNode(entity.get());
+            //m_octree->RemoveNode(entity.get());
         }
     }
 }
@@ -291,7 +291,7 @@ void Entity::Update(double dt)
 
     if (aabb_before != m_aabb) {
         if (m_octree != nullptr) {
-            m_octree->NodeTransformChanged(this);
+            //m_octree->NodeTransformChanged(this);
         }
     }
 }

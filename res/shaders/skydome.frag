@@ -1,6 +1,7 @@
 #version 330 core
 
 #include "include/frag_output.inc"
+#include "include/tonemap.inc"
 
 uniform vec3 v3LightPos;
 uniform float fg;
@@ -287,6 +288,7 @@ void main (void)
 #endif // CLOUDS
 	
   output0 = 1.0 - exp(-fExposure * output0);
+  output0.rgb = tonemap(output0.rgb);
   output1 = vec4(v_normal * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(0.0, 0.0, 0.0, 0.0);

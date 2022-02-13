@@ -490,7 +490,7 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
 	vec3 lightDir = normalize(pl.position - vert);
 
 	float dist = distance(pl.position, vert);
-	float attenuation = clamp(1.0 - (dist * dist)/(pl.radius * pl.radius), 0.0, 1.0);
+	float attenuation = clamp(1.0 - (dist * dist)/max(pl.radius * pl.radius, 0.001), 0.0, 1.0);
 	attenuation *= attenuation;
 	//float attenuation = 20.0 / dot(local_light_pos - v_pos, local_light_pos - v_pos);
 	vec3 radiance = pl.color.rgb * attenuation;
@@ -542,7 +542,12 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
     vec3 specRef = vec3((1.0 / max(rim, 0.0001)) * F * G * D) * NdotL;
     reflectedLight += specRef;
 
+	return specRef * radiance;
+
     vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * AB.x + AB.y);
+	
+	
+
     reflectedLight += ibl * specularCubemap;
 
     vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);

@@ -252,54 +252,6 @@ void Mesh::SetVerticesFromFloatBuffer(const std::vector<float> &buffer)
     SetVertices(result);
 }
 
-void Mesh::CalculateTangents()
-{
-    Vertex *v[3];
-    Vector2 uv[3];
-
-    for (size_t i = 0; i < indices.size(); i += 3) {
-        for (int j = 0; j < 3; j++) {
-            v[j] = &vertices[indices[i + j]];
-            uv[j] = v[j]->GetTexCoord0();
-        }
-
-        Vector3 edge1 = v[1]->GetPosition() - v[0]->GetPosition();
-        Vector3 edge2 = v[2]->GetPosition() - v[0]->GetPosition();
-
-        Vector2 edge1uv = uv[1] - uv[0];
-        Vector2 edge2uv = uv[2] - uv[0];
-
-        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
-
-        if (cp != 0.0f) {
-            const float mul = 1.0f / cp;
-
-            Vector3 tangent;
-            tangent.x = edge2uv.y * edge1.x - edge1uv.y * edge2.x;
-            tangent.y = edge2uv.y * edge1.y - edge1uv.y * edge2.y;
-            tangent.z = edge2uv.y * edge1.z - edge1uv.y * edge2.z;
-            tangent *= mul;
-            tangent.Normalize();
-
-            Vector3 bitangent;
-
-            bitangent.x = -edge2uv.x * edge1.x + edge1uv.x * edge2.x;
-            bitangent.y = -edge2uv.x * edge1.y + edge1uv.x * edge2.y;
-            bitangent.z = -edge2uv.x * edge1.z + edge1uv.x * edge2.z;
-            bitangent *= mul;
-            bitangent.Normalize();
-
-            for (int j = 0; j < 3; j++) {
-                v[j]->SetTangent(tangent);
-                v[j]->SetBitangent(bitangent);
-            }
-        }
-    }
-
-    SetAttribute(ATTR_TANGENTS, MeshAttribute::Tangents);
-    SetAttribute(ATTR_BITANGENTS, MeshAttribute::Bitangents);
-}
-
 void Mesh::Render(Renderer *renderer, Camera *cam)
 {
     if (!is_created) {
@@ -439,8 +391,57 @@ void Mesh::CalculateNormals()
     }
 
     SetAttribute(ATTR_NORMALS, MeshAttribute::Normals);
+
+    CalculateTangents();
 }
 
+void Mesh::CalculateTangents()
+{
+    Vertex *v[3];
+    Vector2 uv[3];
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        for (int j = 0; j < 3; j++) {
+            v[j] = &vertices[indices[i + j]];
+            uv[j] = v[j]->GetTexCoord0();
+        }
+
+        Vector3 edge1 = v[1]->GetPosition() - v[0]->GetPosition();
+        Vector3 edge2 = v[2]->GetPosition() - v[0]->GetPosition();
+
+        Vector2 edge1uv = uv[1] - uv[0];
+        Vector2 edge2uv = uv[2] - uv[0];
+
+        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
+
+        if (cp != 0.0f) {
+            const float mul = 1.0f / cp;
+
+            Vector3 tangent;
+            tangent.x = edge2uv.y * edge1.x - edge1uv.y * edge2.x;
+            tangent.y = edge2uv.y * edge1.y - edge1uv.y * edge2.y;
+            tangent.z = edge2uv.y * edge1.z - edge1uv.y * edge2.z;
+            tangent *= mul;
+            tangent.Normalize();
+
+            Vector3 bitangent;
+
+            bitangent.x = -edge2uv.x * edge1.x + edge1uv.x * edge2.x;
+            bitangent.y = -edge2uv.x * edge1.y + edge1uv.x * edge2.y;
+            bitangent.z = -edge2uv.x * edge1.z + edge1uv.x * edge2.z;
+            bitangent *= mul;
+            bitangent.Normalize();
+
+            for (int j = 0; j < 3; j++) {
+                v[j]->SetTangent(tangent);
+                v[j]->SetBitangent(bitangent);
+            }
+        }
+    }
+
+    SetAttribute(ATTR_TANGENTS, MeshAttribute::Tangents);
+    SetAttribute(ATTR_BITANGENTS, MeshAttribute::Bitangents);
+}
 
 void Mesh::InvertNormals()
 {

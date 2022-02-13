@@ -85,6 +85,7 @@ public:
 
     inline const BoundingBox &GetAABB() const { return m_aabb; }
 
+    inline non_owning_ptr<Entity> &GetParent() { return m_parent; }
     inline const non_owning_ptr<Entity> &GetParent() const { return m_parent; }
 
     inline Material &GetMaterial() { return m_material; }
