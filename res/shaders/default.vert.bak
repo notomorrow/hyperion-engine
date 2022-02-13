@@ -22,6 +22,16 @@ uniform mat4 WorldToNdcMatrix;
 uniform int FlipUV_X;
 uniform int FlipUV_Y;
 
+vec3 calculate_tangent(vec3 n) {
+	vec3 v = vec3(1.0, 0.0, 0.0);
+	float d = dot(v, n);
+	if (abs(d) < 1.0e-3) {
+		v = vec3(0.0, 1.0, 0.0);
+		d = dot(v, n);
+	}
+	return normalize(v - d * n);
+}
+
 void main() {
   vec3 n = a_normal.xyz;
   v_texcoord0.x = a_texcoord0.x;
@@ -41,18 +51,22 @@ void main() {
   v_position = u_modelMatrix * vec4(a_position, 1.0);
   v_positionCamspace = u_viewMatrix * v_position;
   normalMatrix = transpose(inverse(u_modelMatrix));
-  v_tangent = (normalMatrix * vec4(a_tangent, 0.0)).xyz;
-  v_bitangent = (normalMatrix * vec4(a_bitangent, 0.0)).xyz;
 #endif
 	v_normal = normalMatrix * vec4(a_normal, 0.0);
 
 	v_tangent = a_tangent - a_normal * dot( a_tangent, a_normal ); // orthonormalization ot the tangent vectors
 	v_bitangent = a_bitangent - a_normal * dot( a_bitangent, a_normal ); // orthonormalization of the binormal vectors to the normal vector 
 	v_bitangent = v_bitangent - v_tangent * dot( v_bitangent, v_tangent ); // orthonormalization of the binormal vectors to the tangent vector
-	v_tbn = mat3( normalize(v_tangent), normalize(v_bitangent), a_normal );
 	
-	v_tangentWS = normalMatrix * vec4(v_tangent, 0.0); //vec4(v_tangent, 0.0);//
-	v_bitangentWS = normalMatrix * vec4(v_bitangent, 0.0); //vec4(v_bitangent, 0.0);//
+	//v_tangent = calculate_tangent(a_normal.xyz);
+	//v_bitangent = cross(a_normal.xyz, v_tangent);
+	
+	v_tangent = normalize(v_tangent);
+	v_bitangent = normalize(v_bitangent);
+	
+	v_tbn = mat3( normalize(v_tangent), normalize(v_bitangent), a_normal );
+  v_tangentWS = normalMatrix * vec4(v_tangent, 0.0);
+  v_bitangentWS = normalMatrix * vec4(v_bitangent, 0.0);
 
   gl_Position = u_projMatrix * u_viewMatrix * v_position;
 }

@@ -12,7 +12,6 @@ uniform float fExposure;
 #define $MIE vec4(21e-6, 21e-6, 21e-6, 1.0)
 
 in vec3 v3Direction;
-in vec4 v4RayleighColor;
 in vec4 v4MieColor;
 in vec3 v_position;
 in vec3 v_normal;
@@ -239,57 +238,4 @@ void main (void)
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(0.0, 0.0, 0.0, 0.0);
   output4 = vec4(0.0);
-  return;
-  //gl_FragColor.a = max(max(gl_FragColor.r, gl_FragColor.g), gl_FragColor.b);
-	
-	
-	
-  //   vec2 uv = v_texCoord0.xy/(400000.0*cloudScale);
-    
-  //   float cover = 0.5;
-  //   float bright = 0.85;
-    
-  //   float color1 =  fbm(uv-0.5+u_globalTime*0.004*timeScale);
-  //   float color2 = fbm(uv-10.5+u_globalTime*0.002*timeScale);
-    
-  //   float clouds1 = smoothstep(1.0-cover,min((1.0-cover)+softness*2.0,1.0),color1);
-  //   float clouds2 = smoothstep(1.0-cover,min((1.0-cover)+softness,1.0),color2);
-    
-  //   float cloudsFormComb = saturate(clouds1+clouds2);
-    
-  //   float cloudCol = saturate(saturate(1.0-pow(color1,1.0)*0.2)*bright);
-  //   vec4 clouds1Color = vec4(cloudCol,cloudCol,cloudCol,1.0);
-  //   vec4 clouds2Color = mix(clouds1Color,vec4(1.4, 1.4, 1.4, 0.6),0.4);
-  //   vec4 cloudColComb = mix(clouds1Color,clouds2Color,saturate(clouds2-clouds1));
-  // output0 = mix(vec4(1.0, 1.0, 1.0, 0.0),cloudColComb,cloudsFormComb);
-	
-	
-#if CLOUDS
-  const float cloud_scale = 0.03;
-  
-	vec3 blend = getTriPlanarBlend(v_normal);
-	
-	float xaxisLayer1 = texture(u_noiseMap, v_position.yz + vec2(u_globalTime*0.2*timeScale)).r;
-	float yaxisLayer1 = texture(u_noiseMap, v_position.xz + vec2(u_globalTime*0.2*timeScale)).r;
-	float zaxisLayer1 = texture(u_noiseMap, v_position.xy + vec2(u_globalTime*0.2*timeScale)).r;
-	vec4 layer1 = vec4(vec3(xaxisLayer1*blend.x + yaxisLayer1*blend.y + zaxisLayer1*blend.z), 1.0);
-	layer1.a = clamp(smoothstep(1.0-skyCover,min((1.0-skyCover)+softness*2.0,1.0),layer1.r), 0.0, 1.0);
-	layer1.rgba *= 3.0;
-  
-  
-	float xaxisLayer2 = texture(u_noiseMap, -v_position.yz*0.6 - vec2(u_globalTime*0.1*timeScale)).r;
-	float yaxisLayer2 = texture(u_noiseMap, -v_position.xz*0.6 - vec2(u_globalTime*0.1*timeScale)).r;
-	float zaxisLayer2 = texture(u_noiseMap, -v_position.xy*0.6 - vec2(u_globalTime*0.1*timeScale)).r;
-	vec4 layer2 = vec4(vec3(xaxisLayer2*blend.x + yaxisLayer2*blend.y + zaxisLayer2*blend.z), 1.0);
-	layer2.a = clamp(smoothstep(1.0-skyCover,min((1.0-skyCover)+softness*2.0,1.0),layer2.r), 0.0, 1.0);
-  
-	output0 += (layer1+layer2) * v4MieColor;
-  
-#endif // CLOUDS
-	
-  output0 = 1.0 - exp(-fExposure * output0);
-  output0.rgb = tonemap(output0.rgb);
-  output1 = vec4(v_normal * 0.5 + 0.5, 1.0);
-  output2 = vec4(v_position.xyz, 1.0);
-  output3 = vec4(0.0, 0.0, 0.0, 0.0);
 }
