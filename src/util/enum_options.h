@@ -3,6 +3,7 @@
 
 #include "../hash_code.h"
 #include "../math/math_util.h"
+#include "../util.h"
 
 #include <array>
 #include <initializer_list>
@@ -15,6 +16,7 @@ public:
     using EnumOption_t = EnumType;
     using Ordinal_t = uint64_t;
     using EnumValueArray_t = std::array<ValueType, Sz>;
+    using EnumValuePair_t = std::pair<EnumType, ValueType>;
 
     // convert from attachment (2^x) into ordinal (0-5) for use as an array index
     static inline Ordinal_t EnumToOrdinal(EnumOption_t option)
@@ -37,6 +39,15 @@ public:
         UpdateFlags();
     }
 
+    EnumOptions(const std::vector<EnumValuePair_t> &pairs)
+        : m_flags(0)
+    {
+        std::cout << "pairs: " << pairs.size() << "\n";
+        for (const auto &item : pairs) {
+            Set(item.first, item.second);
+        }
+    }
+
     EnumOptions(const EnumOptions &other)
         : m_values(other.m_values),
           m_flags(other.m_flags)
@@ -56,8 +67,6 @@ public:
     {
     }
 
-    using EnumValuePair_t = std::pair<EnumType, ValueType>;
-
     inline EnumValuePair_t KeyValueAt(size_t index) const
         { return std::make_pair(OrdinalToEnum(index), m_values[index]); }
 
@@ -69,7 +78,11 @@ public:
 
     inline EnumOptions &Set(EnumOption_t enum_key, const ValueType &value)
     {
-        m_values[EnumToOrdinal(enum_key)] = value;
+        auto ord = EnumToOrdinal(enum_key);
+
+        ex_assert(ord < m_values.size());
+
+        m_values[ord] = value;
         m_flags |= uint64_t(enum_key);
 
         return *this;
@@ -77,7 +90,11 @@ public:
 
     inline EnumOptions &Unset(EnumOption_t enum_key)
     {
-        m_values[EnumToOrdinal(enum_key)] = ValueType();
+        auto ord = EnumToOrdinal(enum_key);
+
+        ex_assert(ord < m_values.size());
+
+        m_values[ord] = ValueType();
         m_flags &= ~uint64_t(enum_key);
 
         return *this;
@@ -88,10 +105,6 @@ public:
 
     inline size_t Size() const
         { return m_values.size(); }
-
-
-    // inline ValueType &operator[](EnumOption_t enum_key) { return m_values[EnumToOrdinal(enum_key)]; }
-    // inline const ValueType &operator[](EnumOption_t enum_key) const { return m_values[EnumToOrdinal(enum_key)]; }
 
     inline HashCode GetHashCode() const
     {
@@ -105,26 +118,6 @@ public:
 
         return hc;
     }
-
-    /*class iterator {
-    public:
-        iterator(EnumValuePair_t pair, const EnumValueArray_t *values): pair(pair), values(values) {}
-        iterator operator++() {
-            size_t index = EnumToOrdinal(pair.first);
-            pair = std::make_pair(OrdinalToEnum(index + 1), values->at(index + 1));
-
-            return *this;
-        }
-        bool operator!=(const iterator &other) const { return pair != other.pair; }
-        EnumValuePair_t &operator*() { return pair; }
-        const EnumValuePair_t &operator*() const { return pair; }
-    private:
-        EnumValuePair_t pair;
-        const EnumValueArray_t *values;
-    };
-
-    iterator begin() const { return iterator(std::make_pair(OrdinalToEnum(0), m_values.front()), &m_values); }
-    iterator end() const { return iterator(std::make_pair(OrdinalToEnum(Size - 1), m_values.back()), &m_values); }*/
 
 private:
     EnumValueArray_t m_values;

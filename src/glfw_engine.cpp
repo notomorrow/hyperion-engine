@@ -89,7 +89,9 @@ bool GlfwEngine::InitializeGame(Game *game)
     glCullFace(GL_BACK);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glEnable(GL_FRAMEBUFFER_SRGB);
-
+    glClampColorARB(GL_CLAMP_VERTEX_COLOR_ARB, GL_FALSE);
+    glClampColorARB(GL_CLAMP_READ_COLOR_ARB, GL_FALSE);
+    glClampColorARB(GL_CLAMP_FRAGMENT_COLOR_ARB, GL_FALSE);
 
     if (!glfwWindowShouldClose(window)) {
         glfwGetWindowContentScale(

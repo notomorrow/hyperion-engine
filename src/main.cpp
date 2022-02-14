@@ -187,13 +187,13 @@ public:
         }
         GetScene()->AddChild(mitsuba);
 
-        auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
+        /*auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
         sponza->SetName("sponza");
-        sponza->Scale(Vector3(0.07f));
+        sponza->Scale(Vector3(0.025f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.05f);
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.3f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
@@ -206,7 +206,7 @@ public:
         sponza->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         GetScene()->AddChild(sponza);
         //GetScene()->AddControl(std::make_shared<LightVolumeGridControl>(Vector3(), BoundingBox(Vector3(-25), Vector3(25))));
-        return;
+        return;*/
         /*{
 
             auto street = asset_manager->LoadFromFile<Entity>("models/street/street.obj");
@@ -224,25 +224,37 @@ public:
             street->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
             street->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         }*/
+        /*{
 
+            auto fireplace_room = asset_manager->LoadFromFile<Entity>("models/fireplace_room/fireplace_room.obj");
+            fireplace_room->SetName("fireplace_room");
+            fireplace_room->SetLocalTranslation(Vector3(6.0f, -0.5f, 5.5f));
+            fireplace_room->Scale(7.0f);
+
+                fireplace_room->GetChild("grey_and_white_room:Floor")->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
+                fireplace_room->GetChild("grey_and_white_room:Floor")->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
+
+            GetScene()->AddChild(fireplace_room);
+            fireplace_room->Update(1.0f);
+            fireplace_room->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
+            fireplace_room->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+        }*/
+
+        /*{
+            auto sdb = asset_manager->LoadFromFile<Entity>("models/salle_de_bain/salle_de_bain.obj");
+            sdb->SetName("salle_de_bain");
+            GetScene()->AddChild(sdb);
+            //sdb->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
+            //sdb->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+        }*/
 
         {
-            auto model = asset_manager->LoadFromFile<Entity>("models/conference/conference.obj");
-            model->SetName("model");
-            model->Scale(0.01f);
-
-            for (size_t i = 0; i < model->NumChildren(); i++) {
-                if (voxel_debug)
-                    model->GetChild(i)->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
-                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
-                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-            }
-
+            auto model = asset_manager->LoadFromFile<Entity>("models/sibenik/sibenik.obj");
+            model->SetName("sibenik");
             GetScene()->AddChild(model);
-            model->UpdateTransform();
+            model->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
+            model->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         }
-
-        
     }
 
     void PerformRaytest()
@@ -339,14 +351,14 @@ public:
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
         Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(true);
-        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(false);
+        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
         Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(true);
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
         //GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
-        //GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
+        GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         GetRenderer()->SetDeferred(true);
 
         AudioManager::GetInstance()->Initialize();
@@ -413,7 +425,7 @@ public:
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
-        bool read = true;
+        bool read = false;
 
         if (!write && !read) {
             InitTestArea();
@@ -425,9 +437,9 @@ public:
         } else {
             if (write) {
                 InitTestArea();
-                FileByteWriter fbw(AssetManager::GetInstance()->GetRootDir() + "models/scene.fbom");
+                FileByteWriter fbw(AssetManager::GetInstance()->GetRootDir() + "models/sdb.fbom");
                 fbom::FBOMWriter writer;
-                writer.Append(GetScene()->GetChild("model").get());
+                writer.Append(GetScene()->GetChild("salle_de_bain").get());
                 auto res = writer.Emit(&fbw);
                 fbw.Close();
 
@@ -527,14 +539,14 @@ public:
         m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Divide();
         m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Undivide();*/
 
-        auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
+        /*auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
         for (size_t i = 0; i < house->NumChildren(); i++) {
             if (auto &child = house->GetChild(i)) {
-                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.75f);
-                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.2f);
+                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.2f);
+                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
             }
         }
-        GetScene()->AddChild(house);
+        GetScene()->AddChild(house);*/
 
 
         m_octree->InsertNode(Octree::Node{ 1, BoundingBox(Vector3(-4, -4, -4), Vector3(-3.2, -3.2, -3.2)) });
@@ -552,41 +564,46 @@ public:
         //    m_octree->Undivide();
         //}
 
-        for (int x = 0; x < 5; x++) {
-            for (int z = 0; z < 5; z++) {
-                Vector3 box_position = Vector3(((float(x))), 2.0f, (float(z)));
-                Vector3 col = Vector3(
-                    MathUtil::Random(0.4f, 1.80f),
-                    MathUtil::Random(0.4f, 1.80f),
-                    MathUtil::Random(0.4f, 1.80f)
-                ).Normalize();
-                auto box = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
-                box->SetLocalScale(0.1f);
-                
+        bool add_spheres = true;
 
-                for (size_t i = 0; i < box->NumChildren(); i++) {
+        if (add_spheres) {
 
-                    box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
-                        1.0,//col.x,
-                        1.0,//col.y,
-                        1.0,//col.z,
-                        1.0f
-                    );
+            for (int x = 0; x < 5; x++) {
+                for (int z = 0; z < 5; z++) {
+                    Vector3 box_position = Vector3(((float(x))), 2.0f, (float(z)));
+                    Vector3 col = Vector3(
+                        MathUtil::Random(0.4f, 1.80f),
+                        MathUtil::Random(0.4f, 1.80f),
+                        MathUtil::Random(0.4f, 1.80f)
+                    ).Normalize();
+                    auto box = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
+                    box->SetLocalScale(0.1f);
 
-                    box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_albedo.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_height.png"));
-                    //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_ao.png"));
-                    box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_normal-ogl.png"));
-                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.7f);
-                    //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.4f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
-                    box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
+
+                    for (size_t i = 0; i < box->NumChildren(); i++) {
+
+                        box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
+                            1.0f,//col.x,
+                            1.0f,//1.0,//col.y,
+                            1.0f,//1.0,//col.z,
+                            1.0f
+                        );
+
+                        //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_albedo.png"));
+                        //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_height.png"));
+                        //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_ao.png"));
+                        //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_normal-ogl.png"));
+                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.7f);
+                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.4f);
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
+                    }
+
+                    //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));
+
+                    box->SetLocalTranslation(box_position);
+                    GetScene()->AddChild(box);
                 }
-
-                //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));
-
-                box->SetLocalTranslation(box_position);
-                GetScene()->AddChild(box);
             }
         }
         

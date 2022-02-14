@@ -2,7 +2,11 @@
 
 namespace hyperion {
 
-const decltype(Material::default_parameters) Material::default_parameters; // TODO
+const Material::MaterialParameterTable_t Material::default_parameters({
+    std::make_pair(MATERIAL_PARAMETER_ROUGHNESS, 0.3f),
+    std::make_pair(MATERIAL_PARAMETER_METALNESS, 0.7f),
+    std::make_pair(MATERIAL_PARAMETER_EMISSIVENESS, 0.0f)
+});
 
 MaterialParameter::MaterialParameter()
     : type(MaterialParameter_None),
@@ -40,7 +44,10 @@ Material::Material()
 {
     for (size_t i = 0; i < default_parameters.Size(); i++) {
         auto pair = default_parameters.KeyValueAt(i);
-        m_params.Set(pair.first, pair.second);
+
+        if (default_parameters.Has(pair.first)) {
+            m_params.Set(pair.first, pair.second);
+        }
     }
 }
 

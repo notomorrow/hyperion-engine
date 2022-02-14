@@ -101,7 +101,7 @@ class Material : public fbom::FBOMLoadable {
 public:
     using MaterialParameterTable_t = EnumOptions<MaterialParameterKey, MaterialParameter, MATERIAL_MAX_PARAMETERS>;
 
-    static const EnumOptions<MaterialParameterKey, MaterialParameter, 3> default_parameters;
+    static const MaterialParameterTable_t default_parameters;
 
     Material();
     Material(const Material &other);
