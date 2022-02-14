@@ -10,8 +10,6 @@ in vec4 v_normal;
 in vec2 v_texcoord0;
 in vec3 v_tangent;
 in vec3 v_bitangent;
-in vec4 v_tangentWS;
-in vec4 v_bitangentWS;
 in mat3 v_tbn;
 
 uniform vec3 u_camerapos;
@@ -197,30 +195,10 @@ void main()
   output0 = albedo;
 #endif
 
-
-	// compute derivations of the world position
-	/*vec3 p_dx = dFdx(v_position.xyz);
-	vec3 p_dy = dFdy(v_position.xyz);
-	// compute derivations of the texture coordinate
-	vec2 tc_dx = dFdx(v_texcoord0);
-	vec2 tc_dy = dFdy(v_texcoord0);
-	// compute initial tangent and bi-tangent
-	vec3 t = normalize( tc_dy.y * p_dx - tc_dx.y * p_dy );
-	vec3 b = normalize( tc_dy.x * p_dx - tc_dx.x * p_dy ); // sign inversion
-	// get new tangent from a given mesh normal
-	vec3 x = cross(n, t);
-	t = cross(x, n);
-	t = normalize(t);
-	// get updated bi-tangent
-	x = cross(b, n);
-	b = cross(n, x);
-	b = normalize(b);*/
-
-
-  output1 = vec4(n * 0.5 + 0.5, 1.0);
+  output1 = vec4(normalize(n) * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(metallic, roughness, 0.0, 1.0);
   output4 = vec4(0.0, 0.0, 0.0, ao);
-  output5 = vec4(v_tangent.xyz, 1.0);
-  output6 = vec4(v_bitangent.xyz, 1.0);
+  output5 = vec4(normalize(v_tangent.xyz) * 0.5 + 0.5, 1.0);
+  output6 = vec4(normalize(v_bitangent.xyz) * 0.5 + 0.5, 1.0);
 }

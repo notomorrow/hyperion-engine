@@ -100,14 +100,14 @@ void main()
     vec4 gi = vec4(0.0);
 	vec3 irradiance = vec3(1.0);
 
-    vec3 N = normalize(texture(NormalMap, v_texcoord0).rgb * 2.0 - 1.0);
-	vec3 tangent = texture(TangentMap, v_texcoord0).rgb;
-	vec3 bitangent = texture(BitangentMap, v_texcoord0).rgb;
+    vec3 N = (texture(NormalMap, v_texcoord0).rgb * 2.0 - 1.0);
+	vec3 tangent = texture(TangentMap, v_texcoord0).rgb * 2.0 - 1.0;
+	vec3 bitangent = texture(BitangentMap, v_texcoord0).rgb * 2.0 - 1.0;
 	mat3 tbn = mat3( normalize(tangent), normalize(bitangent), N );
 	
     vec4 position = vec4(positionFromDepth(InverseViewProjMatrix, v_texcoord0, depth), 1.0);
-    vec3 L = normalize(env_DirectionalLight.direction * -1.0);
-    vec3 V = normalize(position.xyz-CameraPosition);
+    vec3 L = normalize(env_DirectionalLight.direction);
+    vec3 V = normalize(CameraPosition-position.xyz);
 	
 
     if (performLighting < 0.9) {
@@ -197,18 +197,18 @@ void main()
 
 	float subsurface = 0.0;
 	float specular = 0.5;
-	float specularTint = 0.5;
-	float anisotropic = 0.3;
-	float sheen = 0.2;
-	float sheenTint = 0.0;
-	float clearcoat = 0.0;
+	float specularTint = 0.0;
+	float anisotropic = 0.0;
+	float sheen = 0.0;
+	float sheenTint = 0.1;
+	float clearcoat = 0.4;
 	float clearcoatGloss = 1.0;
 	
 
 #define $DISNEY_BRDF 1
 	
 #if DISNEY_BRDF
-    vec3 Cdlin = mon2lin(albedo.rgb);
+    vec3 Cdlin = albedo.rgb;//mon2lin(albedo.rgb);
     float Cdlum = .3*Cdlin[0] + .6*Cdlin[1]  + .1*Cdlin[2]; // luminance approx.
 
     vec3 Ctint = Cdlum > 0 ? Cdlin/Cdlum : vec3(1); // normalize lum. to isolate hue+sat
@@ -233,7 +233,7 @@ void main()
     float ax = max(.001, sqr(roughness)/aspect);
     float ay = max(.001, sqr(roughness)*aspect);
     float Ds = clamp(GTR2_aniso(NdotH, HdotX, HdotY, ax, ay), 0.0, 1.0);
-    float FH = clamp(SchlickFresnel2(LdotH), 0.0, 1.0);
+    float FH = SchlickFresnel2(LdotH);
     vec3 Fs = mix(Cspec0, vec3(1), FH);
     float Gs;
     Gs  = smithG_GGX_aniso(NdotL, LdotX, LdotY, ax, ay);
@@ -251,14 +251,11 @@ void main()
     vec2 AB = BRDFMap(NdotV, metallic);
     vec3 ibl = min(vec3(0.99), FH * AB.x + AB.y) * specularCubemap.rgb;
 	
+	vec3 ambient = Cdlin * irradiance * ao;
 
-    vec3 result = (((1.0/$PI) * (mix(Fd, ss, subsurface) + (gi.rgb + irradiance)))*Cdlin + Fsheen)
+    vec3 result = (((1.0/$PI) * (mix(Fd, ss, subsurface) + (gi.rgb)))*ambient + Fsheen)
         * (1.0-metallic)
         + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) * ibl;
-	result *= ao;
-	
-	
-	
 #endif
 
 #if !DISNEY_BRDF
@@ -335,8 +332,6 @@ void main()
     }*/
 	
 	result.rgb = tonemap(result.rgb);
-	
-	
 
     output0 = vec4(result, 1.0);
 }

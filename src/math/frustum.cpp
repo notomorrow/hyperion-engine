@@ -17,8 +17,24 @@ Frustum::Frustum(const Matrix4 &view_proj)
 
 bool Frustum::BoundingBoxInFrustum(const BoundingBox &bounding_box) const
 {
+    const auto &corners = bounding_box.GetCorners();
+
     for (const auto &plane : m_planes) {
-        if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
+        bool pass = false;
+
+        for (const auto &corner : corners) {
+            if (plane.Dot(Vector4(corner.x, corner.y, corner.z, 1.0f)) >= 0.0f) {
+                pass = true;
+                break;
+            }
+        }
+
+        if (pass) {
+            continue;
+        }
+
+
+        /*if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
             continue;
         }
 
@@ -48,7 +64,7 @@ bool Frustum::BoundingBoxInFrustum(const BoundingBox &bounding_box) const
 
         if (plane.Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
             continue;
-        }
+        }*/
 
         return false;
     }
