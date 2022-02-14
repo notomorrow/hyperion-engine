@@ -249,13 +249,13 @@ void main()
 	
 	
     vec2 AB = BRDFMap(NdotV, metallic);
-    vec3 ibl = min(vec3(0.99), FH * AB.x + AB.y) * specularCubemap.rgb;
+    vec3 ibl = min(vec3(0.99), FV * AB.x + AB.y) * specularCubemap.rgb;
 	
-	vec3 ambient = Cdlin * irradiance * ao;
+	vec3 ambient = Cdlin + gi.rgb * irradiance * ao;
 
-    vec3 result = (((1.0/$PI) * (mix(Fd, ss, subsurface) + (gi.rgb)))*ambient + Fsheen)
+    vec3 result = ((1.0/$PI) * mix(Fd, ss, subsurface)*ambient + Fsheen)
         * (1.0-metallic)
-        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) * ibl;
+        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) + ibl;
 #endif
 
 #if !DISNEY_BRDF
