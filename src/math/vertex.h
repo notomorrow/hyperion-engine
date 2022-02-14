@@ -10,6 +10,7 @@
 #include "matrix4.h"
 
 #include <array>
+#include <cstring>
 
 namespace hyperion {
 
@@ -74,6 +75,9 @@ public:
           bone_indices(other.bone_indices)
     {
     }
+
+    inline bool operator==(const Vertex &other) const
+        { return std::memcmp(this, &other, sizeof(Vertex)) == 0; }
 
     Vertex &operator=(const Vertex &other);
     Vertex operator*(float scalar) const;

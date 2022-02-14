@@ -200,15 +200,15 @@ void main()
 	float specularTint = 0.0;
 	float anisotropic = 0.0;
 	float sheen = 0.0;
-	float sheenTint = 0.1;
-	float clearcoat = 0.4;
+	float sheenTint = 0.0;
+	float clearcoat = 0.6;
 	float clearcoatGloss = 1.0;
 	
 
 #define $DISNEY_BRDF 1
 	
 #if DISNEY_BRDF
-    vec3 Cdlin = albedo.rgb;//mon2lin(albedo.rgb);
+    vec3 Cdlin = mon2lin(albedo.rgb);
     float Cdlum = .3*Cdlin[0] + .6*Cdlin[1]  + .1*Cdlin[2]; // luminance approx.
 
     vec3 Ctint = Cdlum > 0 ? Cdlin/Cdlum : vec3(1); // normalize lum. to isolate hue+sat
@@ -236,8 +236,10 @@ void main()
     float FH = SchlickFresnel2(LdotH);
     vec3 Fs = mix(Cspec0, vec3(1), FH);
     float Gs;
-    Gs  = smithG_GGX_aniso(NdotL, LdotX, LdotY, ax, ay);
-    Gs *= smithG_GGX_aniso(NdotV, VdotX, VdotY, ax, ay);
+    //Gs  = smithG_GGX_aniso(NdotL, LdotX, LdotY, ax, ay);
+    //Gs *= smithG_GGX_aniso(NdotV, VdotX, VdotY, ax, ay);
+	
+	Gs = cookTorranceG(NdotL, NdotV, LdotH, NdotH);//SmithGGXSchlickVisibility(clamp(NdotL, 0.0, 1.0), clamp(NdotV, 0.0, 1.0), roughness);
 
     // sheen
     vec3 Fsheen = FH * sheen * Csheen;
@@ -259,7 +261,7 @@ void main()
 #endif
 
 #if !DISNEY_BRDF
-    vec3 Cdlin = mon2lin(albedo.rgb);
+    vec3 Cdlin = albedo.rgb;
     float Cdlum = .3*Cdlin[0] + .6*Cdlin[1]  + .1*Cdlin[2]; // luminance approx.
 
     vec3 Ctint = Cdlum > 0 ? Cdlin/Cdlum : vec3(1); // normalize lum. to isolate hue+sat

@@ -17,8 +17,8 @@ Game::Game(const RenderWindow &window)
         m_renderer->GetRenderWindow().GetScaledWidth(),
         m_renderer->GetRenderWindow().GetScaledHeight(),
         75.0f,
-        0.5f,
-        750.0f
+        0.05f,
+        250.0f
     );
 }
 

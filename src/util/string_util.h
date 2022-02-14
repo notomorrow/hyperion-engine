@@ -35,7 +35,30 @@ public:
         return text.find(token) != std::string::npos;
     }
 
-    static inline std::vector<std::string> Split(const std::string &text, const char sep)
+    template <class LambdaFunction>
+    static inline void SplitBuffered(const std::string &text, char sep, LambdaFunction func)
+    {
+        std::stringstream accum;
+
+        for (char ch : text) {
+            if (ch == sep) {
+                func(accum.str());
+                accum.str(std::string());
+
+                continue;
+            }
+
+            accum << ch;
+        }
+
+        auto str = accum.str();
+
+        if (str.length()) {
+            func(str);
+        }
+    }
+
+    static inline std::vector<std::string> Split(const std::string &text, char sep)
     {
         std::vector<std::string> tokens;
         std::string working_string;
@@ -56,25 +79,19 @@ public:
         }
 
         return tokens;
-
-
-        /*size_t start = 0, end = 0;
-        while ((end = text.find(sep, start)) != std::string::npos) {
-            tokens.push_back(text.substr(start, end - start));
-            start = end + 1;
-        }
-        tokens.push_back(text.substr(start));*/
-        return tokens;
     }
 
     static inline std::vector<std::string> RemoveEmpty(const std::vector<std::string> &strings)
     {
         std::vector<std::string> res;
+        res.reserve(strings.size());
+
         for (auto &&str : strings) {
             if (!str.empty()) {
                 res.push_back(str);
             }
         }
+
         return res;
     }
 

@@ -196,12 +196,10 @@ float Vector3::Distance(const Vector3 &other) const
 Vector3 &Vector3::Normalize()
 {
     float len = Length();
-    float len_sqr = len * len;
-    if (len_sqr == 0 || len_sqr == 1) {
-        return *this;
-    }
+    float len_sqr = MathUtil::Clamp(len * len, 0.0001f, 1.0f);
 
     (*this) *= (1.0f / len);
+
     return *this;
 }
 
