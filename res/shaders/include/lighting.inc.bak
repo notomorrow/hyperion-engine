@@ -361,7 +361,7 @@ vec3 SampleSphericalHarmonics(vec3 n)
 	
 	for (int x = 0; x < 3; x++) {
 	  for (int y = 0; y < 3; y++) {
-		sh[x * 3 + y] = texture(SphericalHarmonicsMap, vec2(float(x) / 8.0, float(y) / 8.0)).rgb;
+		sh[x * 3 + y] = texture(SphericalHarmonicsMap, vec2(0.0)).rgb;
 	  }
 	}
 
@@ -490,7 +490,7 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
 	vec3 lightDir = normalize(pl.position - vert);
 
 	float dist = distance(pl.position, vert);
-	float attenuation = clamp(1.0 - (dist * dist)/(pl.radius * pl.radius), 0.0, 1.0);
+	float attenuation = clamp(1.0 - (dist * dist)/max(pl.radius * pl.radius, 0.001), 0.0, 1.0);
 	attenuation *= attenuation;
 	//float attenuation = 20.0 / dot(local_light_pos - v_pos, local_light_pos - v_pos);
 	vec3 radiance = pl.color.rgb * attenuation;

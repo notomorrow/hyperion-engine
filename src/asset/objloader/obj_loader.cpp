@@ -8,45 +8,46 @@
 #include "../../math/vertex.h"
 #include "../../util/string_util.h"
 #include "../../entity.h"
+#include "../../asset/buffered_text_reader.h"
 #include "mtl_loader.h"
 
 #include <fstream>
+#include <set>
 
 namespace hyperion {
+const bool ObjLoader::use_indices = true;
+
 void ObjModel::AddMesh(const std::string &name)
 {
     std::string mesh_name = name;
 
     int counter = 0;
 
-    while (std::find(mesh_names.begin(), mesh_names.end(), mesh_name) != mesh_names.end()) {
+    while (std::find_if(meshes.begin(), meshes.end(), [mesh_name](auto &mesh) { return mesh.name == mesh_name; }) != meshes.end()) {
         ++counter;
         mesh_name = name + std::to_string(counter);
     }
 
-    mesh_names.push_back(mesh_name);
-    mesh_material_names[mesh_name] = name;
-
-    indices.push_back(std::vector<ObjIndex>());
+    meshes.push_back(ObjMesh{ mesh_name, name });
 }
 
-std::vector<ObjModel::ObjIndex> &ObjModel::CurrentList()
+ObjMesh &ObjModel::CurrentList()
 {
-    if (indices.empty()) {
+    if (meshes.empty()) {
         AddMesh("mesh");
     }
 
-    return indices.back();
+    return meshes.back();
 }
 
-ObjModel::ObjIndex ObjModel::ParseObjIndex(const std::string &token)
+ObjIndex ObjModel::ParseObjIndex(const std::string &token)
 {
     auto tokens = StringUtil::Split(token, '/');
 
     ObjIndex res;
-    res.vertex_idx = -1;
-    res.normal_idx = -1;
-    res.texcoord_idx = -1;
+    res.vertex_idx = 0;
+    res.normal_idx = 0;
+    res.texcoord_idx = 0;
 
     if (!tokens.empty()) {
         res.vertex_idx = std::stoi(tokens[0]) - 1;
@@ -71,11 +72,11 @@ ObjModel::ObjIndex ObjModel::ParseObjIndex(const std::string &token)
 
 std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
 {
-    auto loaded_text = TextLoader().LoadTextFromFile(path);
+    /*auto loaded_text = TextLoader().LoadTextFromFile(path);
 
     if (loaded_text == nullptr) {
         return nullptr;
-    }
+    }*/
 
     ObjModel model;
 
@@ -88,14 +89,28 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
 
     res->SetName(model_name);
 
-    std::vector<std::string> lines = StringUtil::Split(loaded_text->GetText(), '\n');
+
+
+    //std::vector<std::string> lines = StringUtil::Split(loaded_text->GetText(), '\n');
   
     int line_no = 0;
 
-    for (auto &line : lines) {
-        line = StringUtil::Trim(line);
-        auto tokens = StringUtil::Split(line, ' ');
-        tokens = StringUtil::RemoveEmpty(tokens);
+    BufferedTextReader<2048> buf(path);
+
+    std::vector<std::string> tokens;
+    tokens.reserve(5);
+
+    auto split_tokens = [&, this](std::string token) {
+        if (token.length() != 0) {
+            tokens.push_back(token);
+        }
+    };
+
+    //for (auto &line : lines) {
+    buf.ReadLines([&, this](auto line) {
+        tokens.clear();
+
+        StringUtil::SplitBuffered(line, ' ', split_tokens);
 
         if (!tokens.empty() && tokens[0] != "#") {
             if (tokens[0] == "v") {
@@ -113,12 +128,12 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
                 float y = std::stof(tokens[2]);
                 model.texcoords.push_back(Vector2(x, y));
             } else if (tokens[0] == "f") {
-                auto &list = model.CurrentList();
+                auto &mesh = model.CurrentList();
 
                 for (int i = 0; i < tokens.size() - 3; i++) {
-                    list.push_back(model.ParseObjIndex(tokens[1]));
-                    list.push_back(model.ParseObjIndex(tokens[2 + i]));
-                    list.push_back(model.ParseObjIndex(tokens[3 + i]));
+                    mesh.indices.push_back(model.ParseObjIndex(tokens[1]));
+                    mesh.indices.push_back(model.ParseObjIndex(tokens[2 + i]));
+                    mesh.indices.push_back(model.ParseObjIndex(tokens[3 + i]));
                 }
             } else if (tokens[0] == "mtllib") {
                 std::string loc = tokens[1];
@@ -138,40 +153,74 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
         }
 
         line_no++;
-    }
+    });
 
-    for (size_t i = 0; i < model.indices.size(); i++) {
-        auto &list = model.indices[i];
-        std::vector<Vertex> vertices;
+    for (size_t i = 0; i < model.meshes.size(); i++) {
+        auto &obj_mesh = model.meshes[i];
 
-        for (auto &idc : list) {
+        std::vector<Vertex> mesh_vertices;
+        mesh_vertices.reserve(obj_mesh.indices.size());
+
+        std::vector<MeshIndex> mesh_indices;
+        mesh_indices.reserve(obj_mesh.indices.size());
+
+        std::map<ObjIndex, MeshIndex> m_index_map; // map objindex to in hyperion mesh index
+
+        for (auto &idc : obj_mesh.indices) {
+            auto it = m_index_map.find(idc);
+
+            if (it != m_index_map.end()) {
+                mesh_indices.push_back(it->second);
+                continue;
+            }
+
             Vertex vertex;
+            MeshIndex mesh_index = mesh_vertices.size();
 
             if (idc.vertex_idx >= 0) {
+                ex_assert(idc.vertex_idx < model.positions.size());
                 vertex.SetPosition(model.positions[idc.vertex_idx]);
+            } else {
+                ex_assert(idc.vertex_idx * -1 < model.positions.size());
+                vertex.SetPosition(model.positions[model.positions.size() + idc.vertex_idx]);
             }
 
-            if (model.has_normals && idc.normal_idx >= 0) {
-                vertex.SetNormal(model.normals.at(idc.normal_idx));
+            if (model.has_normals) {
+                if (idc.normal_idx >= 0) {
+                    ex_assert(idc.normal_idx < model.normals.size());
+                    vertex.SetNormal(model.normals[idc.normal_idx]);
+                } else {
+                    ex_assert(idc.normal_idx * -1 < model.normals.size());
+                    vertex.SetPosition(model.normals[model.normals.size() + idc.normal_idx]);
+                }
             }
 
-            if (model.has_texcoords && idc.texcoord_idx >= 0) {
-                vertex.SetTexCoord0(model.texcoords.at(idc.texcoord_idx));
+            if (model.has_texcoords) {
+                if (idc.texcoord_idx >= 0) {
+                    ex_assert(idc.texcoord_idx < model.texcoords.size());
+                    vertex.SetTexCoord0(model.texcoords[idc.texcoord_idx]);
+                } else {
+                    ex_assert(idc.texcoord_idx * -1 < model.texcoords.size());
+                    vertex.SetTexCoord0(model.texcoords[model.texcoords.size() + idc.texcoord_idx]);
+                }
             }
 
-            vertices.push_back(vertex);
+            mesh_vertices.push_back(vertex);
+            mesh_indices.push_back(mesh_index);
+            m_index_map[idc] = mesh_index;
         }
 
+
         auto mesh = std::make_shared<Mesh>();
-        mesh->SetVertices(vertices);
+        mesh->SetVertices(mesh_vertices, mesh_indices);
 
         if (model.has_normals) {
             mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
 
             mesh->CalculateTangents();
         } else {
-            mesh->CalculateNormals();
         }
+        mesh->CalculateNormals();
 
         if (model.has_texcoords) {
             mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
@@ -182,16 +231,12 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
         ));
 
         auto geom = std::make_shared<Entity>();
-        geom->SetName(model.mesh_names[i]);
+        geom->SetName(obj_mesh.name);
         geom->SetRenderable(mesh);
 
         if (model.mtl_lib) {
-            auto it = model.mesh_material_names.find(model.mesh_names[i]);
-
-            if (it != model.mesh_material_names.end()) {
-                if (auto material_ptr = model.mtl_lib->GetMaterial(it->second)) {
-                    geom->SetMaterial(*material_ptr);
-                }
+            if (auto material_ptr = model.mtl_lib->GetMaterial(obj_mesh.mtl)) {
+                geom->SetMaterial(*material_ptr);
             }
         }
 

@@ -189,13 +189,13 @@ void main()
   
 
   output0 = vec4(color, 1.0);
-  
-  output0 = vec4(v_tangent.xyz, 1.0);
 #endif
 
 #if DEFERRED
   output0 = albedo;
 #endif
+
+  output0.rgb = texture(NormalMap, texCoords).rgb;
 
   output1 = vec4(normalize(n) * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);

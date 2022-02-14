@@ -42,6 +42,10 @@ public:
         { return std::numeric_limits<T>::quiet_NaN(); }
 
     template <typename T>
+    static inline constexpr bool Approximately(const T &a, const T &b)
+        { return std::abs(a - b) <= T(EPSILON); }
+
+    template <typename T>
     static inline T Random(const T &a, const T &b)
     {
         T random = ((T)rand()) / (T)RAND_MAX;
@@ -104,6 +108,12 @@ public:
         } else {
             return b;
         }
+    }
+
+    template <typename T>
+    static inline constexpr T Sign(const T &value)
+    {
+        return (T(0) < value) - (value < T(0));
     }
 
     template <typename T>

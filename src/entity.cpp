@@ -140,10 +140,10 @@ void Entity::AddChild(std::shared_ptr<Entity> entity)
             entity
         );
 
-        if (it != m_children_pending_removal.end()) {
-            m_children_pending_removal.erase(it);
-            entity->m_flags &= ~PENDING_REMOVAL;
-        }
+        ex_assert(it != m_children_pending_removal.end());
+
+        m_children_pending_removal.erase(it);
+        entity->m_flags &= ~PENDING_REMOVAL;
     }
 
     // find free slot
@@ -228,6 +228,14 @@ std::shared_ptr<Entity> Entity::GetChildPendingRemoval(size_t index) const
 
 void Entity::ClearPendingRemoval()
 {
+    for (auto &child : m_children_pending_removal) {
+        if (child == nullptr) {
+            continue;
+        }
+
+        child->m_flags &= ~PENDING_REMOVAL;
+    }
+
     m_children_pending_removal.clear();
 
     size_t num_children = m_children.size();
@@ -364,7 +372,7 @@ std::shared_ptr<Entity> Entity::CloneImpl()
 {
     auto new_entity = std::make_shared<Entity>(m_name + "_clone");
 
-    new_entity->m_flags = m_flags;
+    //new_entity->m_flags = m_flags;
 
     new_entity->m_material = m_material;
 
