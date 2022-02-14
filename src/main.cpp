@@ -187,7 +187,7 @@ public:
         }
         GetScene()->AddChild(mitsuba);
 
-        /*auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
+        auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
         sponza->SetName("sponza");
         sponza->Scale(Vector3(0.025f));
         //if (voxel_debug) {
@@ -206,7 +206,7 @@ public:
         sponza->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
         GetScene()->AddChild(sponza);
         //GetScene()->AddControl(std::make_shared<LightVolumeGridControl>(Vector3(), BoundingBox(Vector3(-25), Vector3(25))));
-        return;*/
+        return;
         /*{
 
             auto street = asset_manager->LoadFromFile<Entity>("models/street/street.obj");
@@ -425,7 +425,7 @@ public:
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
-        bool read = false;
+        bool read = true;
 
         if (!write && !read) {
             InitTestArea();
@@ -539,14 +539,14 @@ public:
         m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Divide();
         m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Undivide();*/
 
-        /*auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
+        auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
         for (size_t i = 0; i < house->NumChildren(); i++) {
             if (auto &child = house->GetChild(i)) {
-                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.2f);
+                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.6f);
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
             }
         }
-        GetScene()->AddChild(house);*/
+        GetScene()->AddChild(house);
 
 
         m_octree->InsertNode(Octree::Node{ 1, BoundingBox(Vector3(-4, -4, -4), Vector3(-3.2, -3.2, -3.2)) });
@@ -584,8 +584,8 @@ public:
 
                         box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
                             1.0f,//col.x,
-                            1.0f,//1.0,//col.y,
-                            1.0f,//1.0,//col.z,
+                            0.0f,//1.0,//col.y,
+                            0.0f,//1.0,//col.z,
                             1.0f
                         );
 

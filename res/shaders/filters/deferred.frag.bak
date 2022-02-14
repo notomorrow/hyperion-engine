@@ -93,8 +93,8 @@ void main()
     vec4 data = texture(DataMap, v_texcoord0);
     float depth = texture(DepthMap, v_texcoord0).r;
 
-    float metallic = 0.4;//clamp(data.r, 0.05, 0.99);
-    float roughness = 0.1;//clamp(data.g, 0.05, 0.99);
+    float metallic = clamp(data.r, 0.05, 0.99);
+    float roughness = clamp(data.g, 0.05, 0.99);
     float performLighting = data.a;
     float ao = 1.0;
     vec4 gi = vec4(0.0);
@@ -249,13 +249,13 @@ void main()
 	
 	
     vec2 AB = BRDFMap(NdotV, metallic);
-    vec3 ibl = min(vec3(0.99), FH * AB.x + AB.y) * specularCubemap.rgb;
+    vec3 ibl = min(vec3(0.99), FV * AB.x + AB.y) * specularCubemap.rgb;
 	
-	vec3 ambient = Cdlin * irradiance * ao;
+	vec3 ambient = Cdlin + gi.rgb * irradiance * ao;
 
-    vec3 result = (((1.0/$PI) * (mix(Fd, ss, subsurface) + (gi.rgb)))*ambient + Fsheen)
+    vec3 result = (((1.0/$PI) * mix(Fd, ss, subsurface))*ambient + Fsheen)
         * (1.0-metallic)
-        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) * ibl;
+        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) + ibl;
 #endif
 
 #if !DISNEY_BRDF
