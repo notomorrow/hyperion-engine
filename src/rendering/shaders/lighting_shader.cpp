@@ -94,9 +94,17 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
     SetUniform("u_shininess", mat.GetParameter(MATERIAL_PARAMETER_METALNESS)[0]);
     SetUniform("u_roughness", mat.GetParameter(MATERIAL_PARAMETER_ROUGHNESS)[0]);
+    SetUniform("material.subsurface", mat.GetParameter(MATERIAL_PARAMETER_SUBSURFACE)[0]);
+    SetUniform("material.specular", mat.GetParameter(MATERIAL_PARAMETER_SPECULAR)[0]);
+    SetUniform("material.specularTint", mat.GetParameter(MATERIAL_PARAMETER_SPECULAR_TINT)[0]);
+    SetUniform("material.anisotropic", mat.GetParameter(MATERIAL_PARAMETER_ANISOTROPIC)[0]);
+    SetUniform("material.sheen", mat.GetParameter(MATERIAL_PARAMETER_SHEEN)[0]);
+    SetUniform("material.sheenTint", mat.GetParameter(MATERIAL_PARAMETER_SHEEN_TINT)[0]);
+    SetUniform("material.clearcoat", mat.GetParameter(MATERIAL_PARAMETER_CLEARCOAT)[0]);
+    SetUniform("material.clearcoatGloss", mat.GetParameter(MATERIAL_PARAMETER_CLEARCOAT_GLOSS)[0]);
     SetUniform("FlipUV_X", int(mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV)[0]));
     SetUniform("FlipUV_Y", int(mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV)[1]));
-    SetUniform("ParallaxHeight", mat.GetParameter(MATERIAL_PARALLAX_HEIGHT)[0]);
+    SetUniform("ParallaxHeight", mat.GetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT)[0]);
 
 }
 

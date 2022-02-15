@@ -6,6 +6,7 @@
 #include "../include/frag_output.inc"
 #include "../include/depth.inc"
 #include "../include/lighting.inc"
+#include "../include/material.inc"
 #include "../include/parallax.inc"
 #include "../include/tonemap.inc"
 
@@ -86,6 +87,9 @@ vec3 mon2lin(vec3 x)
 {
     return vec3(pow(x[0], 2.2), pow(x[1], 2.2), pow(x[2], 2.2));
 }
+
+
+
 
 void main()
 {
@@ -175,21 +179,30 @@ void main()
   vec4 specularCubemap = vec4(0.0);
   float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
 
-#if VCT_ENABLED
-  vec4 vctSpec = VCTSpecular(position.xyz, N.xyz, CameraPosition, roughness);
-  vec4 vctDiff = VCTDiffuse(position.xyz, N.xyz, CameraPosition, tangent, bitangent, roughness);
-  specularCubemap += vctSpec;
-  gi += vctDiff;
-#endif // VCT_ENABLED
 
 #if PROBE_ENABLED
   blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, N, position.xyz, CameraPosition, tangent, bitangent);
   specularCubemap += SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, tangent, bitangent);
   //specularCubemap += mix(SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, tangent, bitangent), blurredSpecularCubemap, roughnessMix);
-#if !SPHERICAL_HARMONICS_ENABLED
-  //gi += EnvRemap(Irradiance(N));
-#endif // !SPHERICAL_HARMONICS_ENABLED
 #endif // PROBE_ENABLED
+
+#if !PROBE_ENABLED
+  blurredSpecularCubemap = texture(env_GlobalIrradianceCubemap, ReflectionVector(N, position.xyz, CameraPosition));
+  specularCubemap += mix(texture(env_GlobalCubemap, ReflectionVector(N, position.xyz, CameraPosition)), blurredSpecularCubemap, roughnessMix);
+ 
+#if !SPHERICAL_HARMONICS_ENABLED
+  irradiance = EnvRemap(Irradiance(N)).rgb;
+#endif // !SPHERICAL_HARMONICS_ENABLED
+#endif
+
+
+#if VCT_ENABLED
+  vec4 vctSpec = VCTSpecular(position.xyz, N.xyz, CameraPosition, roughness);
+  vec4 vctDiff = VCTDiffuse(position.xyz, N.xyz, CameraPosition, tangent, bitangent, roughness);
+  specularCubemap = mix(specularCubemap, vctSpec, vctSpec.a);
+  gi += vctDiff;
+#endif // VCT_ENABLED
+
 
 #if SPHERICAL_HARMONICS_ENABLED
   irradiance = SampleSphericalHarmonics(N);
@@ -217,7 +230,8 @@ void main()
 
     // Diffuse fresnel - go from 1 at normal incidence to .5 at grazing
     // and mix in diffuse retro-reflection based on roughness
-    float FL = SchlickFresnel2(NdotL), FV = SchlickFresnel2(NdotV);
+    float FL = SchlickFresnelRoughness2(NdotL, mix(vec3(0.04), vec3(1.0), metallic), roughness).r,  //FresnelTerm( mix(vec3(0.04), vec3(1.0), metallic), NdotL).r,//SchlickFresnel2(NdotL),
+		FV = SchlickFresnelRoughness2(NdotV, mix(vec3(0.04), vec3(1.0), metallic), roughness).r;  //FresnelTerm(mix(vec3(0.04), vec3(1.0), metallic), NdotV).r;//SchlickFresnel2(NdotV);
     float Fd90 = 0.5 + 2 * LdotH*LdotH * roughness;
     float Fd = mix(1.0, Fd90, FL) * mix(1.0, Fd90, FV);
 
@@ -233,7 +247,7 @@ void main()
     float ax = max(.001, sqr(roughness)/aspect);
     float ay = max(.001, sqr(roughness)*aspect);
     float Ds = clamp(GTR2_aniso(NdotH, HdotX, HdotY, ax, ay), 0.0, 1.0);
-    float FH = SchlickFresnel2(LdotH);
+    float FH =   SchlickFresnelRoughness2(LdotH, mix(vec3(0.04), vec3(1.0), metallic), roughness).r; ///FresnelTerm(mix(vec3(0.04), vec3(1.0), metallic), LdotH).r; //SchlickFresnel2(LdotH);
     vec3 Fs = mix(Cspec0, vec3(1), FH);
     float Gs;
     //Gs  = smithG_GGX_aniso(NdotL, LdotX, LdotY, ax, ay);
@@ -253,24 +267,27 @@ void main()
     vec2 AB = BRDFMap(NdotV, metallic);
     vec3 ibl = min(vec3(0.99), FV * AB.x + AB.y) * specularCubemap.rgb;
 	
-	vec3 ambient = (Cdlin + gi.rgb) * irradiance;
+	
+	vec3 iblSpec;
+	float iblAtten = CalculateAttenuationIBL(roughness, NdotL, NdotV);
+	float ndf = NormalizedTrowbridgeReitz(NdotH, roughness);
+	float iblNumer = FV * ndf * iblAtten;
+	float denom = max(0.001, 4.0 * NdotL * NdotV);
+	iblSpec = (ibl * FV * iblAtten * VdotH) / (NdotH * NdotV);
+	
+	vec3 ambient = (Cdlin) * mix(irradiance.rgb, gi.rgb, gi.a);
 
     /*vec3 result = ((1.0/$PI) * mix(Fd, ss, subsurface)*ambient + Fsheen)
-        * (1.0-metallic)
-        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) * ibl;*/
+        * (1.0-metallic) * ao
+        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) + iblSpec;*/
 		
-		
-	vec3 directLight = ((1.0/$PI) * mix(Fd, ss, subsurface)*Cdlin + Fsheen)
-        * (1.0-metallic)
-        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr);
-		
-	vec3 indirectLight = ((1.0/$PI) * ambient)
-        * (1.0-metallic)
-		+ ibl;
-		
-	vec3 result = directLight + indirectLight * ao;
+
+	vec3 ambientSpecular = ibl;
+	vec3 ambientTerm = (ambient * (1.0-metallic) + ambientSpecular) * ao;
+	vec3 directTerm = ( mix(Fd, ss, subsurface) * Cdlin / $PI * (1.0-metallic)) + ((Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) / denom) * NdotL;
+	vec3 result = ambientTerm + directTerm;
 	
-	result = specularCubemap.rgb;
+	
 #endif
 
 #if !DISNEY_BRDF
@@ -328,7 +345,6 @@ void main()
 	diffuseLight *= ao;
 
     vec3 result = (diffuseLight * irradiance) + reflectedLight * shadowColor.rgb;
-
 #endif
 
 #endif

@@ -2,7 +2,7 @@ uniform sampler2D ParallaxMap;
 uniform float ParallaxHeight;
 uniform int HasParallaxMap;
 
-#define $PARALLAX_NUM_LAYERS 10
+#define $PARALLAX_NUM_LAYERS 20
 
 vec2 ParallaxMappingTexture(sampler2D parallaxTexture, vec2 texCoords, vec3 viewDir)
 {
