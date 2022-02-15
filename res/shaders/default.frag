@@ -40,14 +40,14 @@ void main()
   vec3 n = normalize(v_normal.xyz);
   vec3 viewVector = normalize(u_camerapos-v_position.xyz);
 
-  vec3 tangentViewPos = v_tbn * viewVector;
+  vec3 tangentViewPos = v_tbn * u_camerapos.xyz;//((u_viewMatrix * v_position)).xyz;
   vec3 tangentLightPos = v_tbn * lightDir;
   vec3 tangentFragPos = v_tbn * v_position.xyz;
 
   vec2 texCoords = v_texcoord0;
 
   if (HasParallaxMap == 1) {
-    texCoords = ParallaxMapping(texCoords, normalize(tangentViewPos - tangentFragPos));
+    texCoords = ParallaxMapping(texCoords, normalize(v_tbn * viewVector));
   }
 
   vec4 diffuseTexture = vec4(1.0, 1.0, 1.0, 1.0);

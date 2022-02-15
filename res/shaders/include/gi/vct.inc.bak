@@ -5,7 +5,7 @@
 #define $VCT_SPECULAR_MAX_LEN 0.3
 #define $VCT_SPECULAR_CONE_SIZE 0.07
 #define $VCT_DIFFUSE_MAX_LEN 0.2
-#define $VCT_DIFFUSE_CONE_SIZE 0.7
+#define $VCT_DIFFUSE_CONE_SIZE 1.5
 #define $VCT_NORMAL_OFFSET 0.015
 
 uniform sampler3D VoxelMap;
@@ -25,14 +25,14 @@ vec4 voxelTraceCone(float minVoxelDiameter, vec3 origin, vec3 dir, float coneRat
 	float minDiameter = minVoxelDiameter;
 	float startDist = minDiameter;
 	float dist = startDist;
-	vec4 fadeCol = vec4(0.0, 0.0, 0.0, 0.0);
+	vec4 fadeCol = vec4(1.0, 1.0, 1.0, 0.0);
 	while (dist <= maxDist && accum.w < 1.0)
 	{
 		float sampleDiameter = max(minDiameter, coneRatio * dist);
 		float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
 		vec3 samplePos = origin + dir * dist;
 		vec4 sampleValue = voxelFetch(samplePos, -dir, sampleLOD);
-		sampleValue = mix(sampleValue,vec4(sampleValue.rgb, 0.0), clamp(dist/maxDist, 0.0, 1.0));
+		sampleValue = mix(sampleValue,fadeCol, clamp(dist/maxDist, 0.0, 1.0));
 		float sampleWeight = (1.0 - accum.w);
 		accum += sampleValue * sampleWeight;
 		dist += sampleDiameter;
