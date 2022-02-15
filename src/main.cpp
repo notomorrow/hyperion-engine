@@ -426,7 +426,7 @@ public:
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
-        bool read = false;
+        bool read = true;
 
         if (!write && !read) {
             InitTestArea();
@@ -464,7 +464,7 @@ public:
                     }
 
                     GetScene()->AddChild(entity);
-                    entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
+                    entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(2.0f, 3.0f, 3.0f)));
                     entity->GetChild("mesh0_SG")->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
                 }
             }
@@ -547,7 +547,7 @@ public:
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
             }
         }
-        GetScene()->AddChild(house);
+        //GetScene()->AddChild(house);
 
 
         m_octree->InsertNode(Octree::Node{ 1, BoundingBox(Vector3(-4, -4, -4), Vector3(-3.2, -3.2, -3.2)) });
@@ -590,10 +590,10 @@ public:
                             1.0f
                         );
 
-                        //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
-                        //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/snow2/rock-snow-ice1-2k_Height.png"));
+                        //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_albedo.png"));
+                        //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_height.png"));
                         //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_ao.png"));
-                        //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));
+                        //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/steelplate/steelplate1_normal-ogl.png"));
                         //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.7f);
                         //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.4f);
                         box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);

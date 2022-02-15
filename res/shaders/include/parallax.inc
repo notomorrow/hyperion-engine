@@ -1,19 +1,18 @@
 uniform sampler2D ParallaxMap;
-//uniform float u_parallaxHeight;
+uniform float ParallaxHeight;
 uniform int HasParallaxMap;
+
+#define $PARALLAX_NUM_LAYERS 10
 
 vec2 ParallaxMappingTexture(sampler2D parallaxTexture, vec2 texCoords, vec3 viewDir)
 {
-  float u_parallaxHeight = 0.025;
-  // number of depth layers
-  const float numLayers = 10;
   // calculate the size of each layer
-  float layerDepth = 1.0 / numLayers;
+  float layerDepth = 1.0 / $PARALLAX_NUM_LAYERS;
   // depth of current layer
   float currentLayerDepth = 0.0;
   // the amount to shift the texture coordinates per layer (from vector P)
-  vec2 P = viewDir.xy * u_parallaxHeight; 
-  vec2 deltaTexCoords = P / numLayers;
+  vec2 P = viewDir.xy * ParallaxHeight; 
+  vec2 deltaTexCoords = P / $PARALLAX_NUM_LAYERS;
   // get initial values
   vec2  currentTexCoords     = texCoords;
   float currentDepthMapValue = texture(parallaxTexture, currentTexCoords).r;
