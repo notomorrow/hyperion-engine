@@ -361,7 +361,7 @@ vec3 SampleSphericalHarmonics(vec3 n)
 	
 	for (int x = 0; x < 3; x++) {
 	  for (int y = 0; y < 3; y++) {
-		sh[x * 3 + y] = texture(SphericalHarmonicsMap, vec2(0.0)).rgb;
+		sh[x * 3 + y] = texture(SphericalHarmonicsMap, vec2(float(x) / 8.0, float(y) / 8.0)).rgb;
 	  }
 	}
 

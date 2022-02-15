@@ -96,6 +96,7 @@ void LightingShader::ApplyMaterial(const Material &mat)
     SetUniform("u_roughness", mat.GetParameter(MATERIAL_PARAMETER_ROUGHNESS)[0]);
     SetUniform("FlipUV_X", int(mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV)[0]));
     SetUniform("FlipUV_Y", int(mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV)[1]));
+    SetUniform("ParallaxHeight", mat.GetParameter(MATERIAL_PARALLAX_HEIGHT)[0]);
 
 }
 

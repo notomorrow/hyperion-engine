@@ -19,7 +19,7 @@ FramebufferCube::FramebufferCube(int width, int height)
 
     {
         for (int i = 0; i < color_textures.size(); i++) {
-            unsigned char *data = (unsigned char*)malloc(color_map_texture_byte_size);
+            unsigned char *data = (unsigned char*)malloc(color_map_texture_byte_size); // later freed in ~Texture()
             memset(data, 0, color_map_texture_byte_size);
 
             color_textures[i] = std::make_shared<Texture2D>(width, height, data);

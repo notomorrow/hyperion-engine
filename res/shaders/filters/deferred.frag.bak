@@ -201,7 +201,7 @@ void main()
 	float anisotropic = 0.0;
 	float sheen = 0.0;
 	float sheenTint = 0.0;
-	float clearcoat = 0.6;
+	float clearcoat = 0.0;
 	float clearcoatGloss = 1.0;
 	
 
@@ -253,11 +253,24 @@ void main()
     vec2 AB = BRDFMap(NdotV, metallic);
     vec3 ibl = min(vec3(0.99), FV * AB.x + AB.y) * specularCubemap.rgb;
 	
-	vec3 ambient = Cdlin + gi.rgb * irradiance * ao;
+	vec3 ambient = (Cdlin + gi.rgb) * irradiance;
 
-    vec3 result = (((1.0/$PI) * mix(Fd, ss, subsurface))*ambient + Fsheen)
+    /*vec3 result = ((1.0/$PI) * mix(Fd, ss, subsurface)*ambient + Fsheen)
         * (1.0-metallic)
-        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) + ibl;
+        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr) * ibl;*/
+		
+		
+	vec3 directLight = ((1.0/$PI) * mix(Fd, ss, subsurface)*Cdlin + Fsheen)
+        * (1.0-metallic)
+        + (Gs*Fs*Ds + .25*clearcoat*Gr*Fr*Dr);
+		
+	vec3 indirectLight = ((1.0/$PI) * ambient)
+        * (1.0-metallic)
+		+ ibl;
+		
+	vec3 result = directLight + indirectLight * ao;
+	
+	result = ibl;
 #endif
 
 #if !DISNEY_BRDF

@@ -3,9 +3,10 @@
 namespace hyperion {
 
 const Material::MaterialParameterTable_t Material::default_parameters({
-    std::make_pair(MATERIAL_PARAMETER_ROUGHNESS, 0.3f),
-    std::make_pair(MATERIAL_PARAMETER_METALNESS, 0.7f),
-    std::make_pair(MATERIAL_PARAMETER_EMISSIVENESS, 0.0f)
+    std::make_pair(MATERIAL_PARAMETER_ROUGHNESS, 0.5f),
+    std::make_pair(MATERIAL_PARAMETER_METALNESS, 0.1f),
+    std::make_pair(MATERIAL_PARAMETER_EMISSIVENESS, 0.0f),
+    std::make_pair(MATERIAL_PARALLAX_HEIGHT, 0.025f)
 });
 
 MaterialParameter::MaterialParameter()

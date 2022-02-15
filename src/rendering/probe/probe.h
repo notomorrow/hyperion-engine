@@ -35,7 +35,7 @@ protected:
     BoundingBox m_bounds;
     Vector3 m_origin;
     std::array<ProbeCamera*, 6> m_cameras;
-    const std::array<std::pair<Vector3, Vector3>, 6> m_directions;
+    /*const*/ std::array<std::pair<Vector3, Vector3>, 6> m_directions;
 };
 } // namespace hyperion
 
