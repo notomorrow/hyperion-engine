@@ -12,7 +12,7 @@ FXAAFilter::FXAAFilter()
 
 void FXAAFilter::SetUniforms(Camera *cam)
 {
-    m_shader->SetUniform("Resolution", Vector2(cam->GetWidth(), cam->GetHeight()));
+    PostFilter::SetUniforms(cam);
 }
 
 } // namespace hyperion

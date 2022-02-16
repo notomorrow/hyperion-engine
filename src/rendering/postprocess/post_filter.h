@@ -19,7 +19,7 @@ public:
     );
     virtual ~PostFilter() = default;
 
-    virtual void SetUniforms(Camera *cam) = 0;
+    virtual void SetUniforms(Camera *cam);
 
     inline BitFlags_t ModifiesAttachments() const { return m_modifies_attachments; }
     inline bool ModifiesAttachment(Framebuffer::FramebufferAttachment attachment) const

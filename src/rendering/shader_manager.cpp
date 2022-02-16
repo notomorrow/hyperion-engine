@@ -17,6 +17,8 @@ ShaderManager *ShaderManager::GetInstance()
 ShaderManager::ShaderManager()
 {
     m_base_shader_properties
+        .Define("METALNESS_MAPPING", true)
+        .Define("ROUGHNESS_MAPPING", true)
         .Define("MAX_POINT_LIGHTS", int(Environment::max_point_lights_on_screen))
         .Define("HDR", true)
         .Define("HDR_TONEMAP_FILMIC", true)

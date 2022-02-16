@@ -392,24 +392,7 @@ vec4 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl)
 
 vec4 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos, vec3 tangent, vec3 bitangent)
 {
-
   return SampleEnvProbeRefl(tex, worldPos, ReflectionVector(n, worldPos, camPos));
-
-  //vec3 accum = vec3(0.0);
-  
-  //accum += SampleEnvProbeRefl(tex, worldPos, n);
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.03, 0.0, 0.03)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n - vec3(0.03, 0.0, 0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.03, 0.0, -0.03)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(-0.03, 0.0, 0.03)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.05, 0.0, 0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n - vec3(0.05, 0.0, 0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.05, 0.0, -0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(-0.05, 0.0, 0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + bitangent));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n - bitangent));
-  //return accum / 9.0;
-
 }
 
 vec3 ComputeDirectionalLight(DirectionalLight dl, vec3 n, vec3 v, vec3 vert, vec3 albedo, float shadowness, float roughness, float metalness)

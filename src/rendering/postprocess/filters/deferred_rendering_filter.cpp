@@ -11,6 +11,8 @@ DeferredRenderingFilter::DeferredRenderingFilter()
 
 void DeferredRenderingFilter::SetUniforms(Camera *cam)
 {
+    PostFilter::SetUniforms(cam);
+
     m_shader->SetUniform("CameraPosition", cam->GetTranslation());
 }
 

@@ -86,7 +86,7 @@ vec4 Irradiance(vec3 normal) {
 					// tangent space to world
 					vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal; 
 
-					irradiance += texture(env_GlobalIrradianceCubemap, sampleVec) * cos(theta) * sin(theta);
+					irradiance += textureLod(env_GlobalCubemap, sampleVec, 7) * cos(theta) * sin(theta);
 					nrSamples++;
 			}
 	}

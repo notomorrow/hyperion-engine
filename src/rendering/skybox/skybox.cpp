@@ -28,7 +28,7 @@ void SkyboxControl::OnAdded()
     m_cube->GetMaterial().SetTexture("SkyboxMap", m_cubemap);
     m_cube->GetMaterial().depth_test = false;
     m_cube->GetMaterial().depth_write = false;
-    m_cube->GetMaterial().alpha_blended = true;
+    //m_cube->GetMaterial().alpha_blended = false;
 
     parent->AddChild(m_cube);
 }

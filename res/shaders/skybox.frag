@@ -25,4 +25,7 @@ void main()
   output1 = vec4(n * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(0.0);
+  output4 = vec4(0.0);
+  output5 = vec4(0.0);
+  output6 = vec4(0.0);
 }
