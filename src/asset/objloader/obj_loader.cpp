@@ -219,8 +219,8 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
 
             mesh->CalculateTangents();
         } else {
+            mesh->CalculateNormals();
         }
-        mesh->CalculateNormals();
 
         if (model.has_texcoords) {
             mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);

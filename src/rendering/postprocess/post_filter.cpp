@@ -10,6 +10,13 @@ PostFilter::PostFilter(const std::shared_ptr<PostShader> &shader, BitFlags_t mod
 {
 }
 
+void PostFilter::SetUniforms(Camera *cam)
+{
+    m_shader->SetUniform("Resolution", Vector2(cam->GetWidth(), cam->GetHeight()));
+    m_shader->SetUniform("CamFar", cam->GetFar());
+    m_shader->SetUniform("CamNear", cam->GetNear());
+}
+
 void PostFilter::Begin(Camera *cam, const Framebuffer::FramebufferAttachments_t &attachments)
 {
     for (int i = 0; i < attachments.size(); i++) {

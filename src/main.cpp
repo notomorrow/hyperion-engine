@@ -142,13 +142,15 @@ public:
     {
         AssetManager *asset_manager = AssetManager::GetInstance();
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/posx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/negx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/posy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/negy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/posz.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver/negz.jpg")
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posz.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negz.jpg")
         }));
+
+        cubemap->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
 
         if (!ProbeManager::GetInstance()->EnvMapEnabled()) {
             Environment::GetInstance()->SetGlobalCubemap(cubemap);
@@ -351,9 +353,9 @@ public:
 
         Environment::GetInstance()->SetShadowsEnabled(false);
         Environment::GetInstance()->SetNumCascades(4);
-        Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(true);
-        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
-        Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(true);
+        Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(false);
+        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(false);
+        Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(false);
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
@@ -413,7 +415,8 @@ public:
 
         auto cm = InitCubemap();
 
-        GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
+        GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), cm));
+       // GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         bool write = false;
         bool read = false;
@@ -454,7 +457,7 @@ public:
                     }
 
                     GetScene()->AddChild(entity);
-                    entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
+                    entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
                     entity->GetChild("mesh0_SG")->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
                 }
             }
@@ -530,14 +533,14 @@ public:
         m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Divide();
         m_octree->GetOctants()[0]->GetOctants()[0]->GetOctants()[0]->Undivide();*/
 
-        auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
+        /*auto house = asset_manager->LoadFromFile<Entity>("models/house.obj");
         for (size_t i = 0; i < house->NumChildren(); i++) {
             if (auto &child = house->GetChild(i)) {
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
             }
         }
-        GetScene()->AddChild(house);
+        GetScene()->AddChild(house);*/
 
         /*auto hydrant = asset_manager->LoadFromFile<Entity>("models/FireHydrant/FireHydrantMesh.obj");
         hydrant->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Base_Color.png"));
@@ -568,16 +571,16 @@ public:
 
         if (add_spheres) {
 
-            for (int x = 0; x < 5; x++) {
-                for (int z = 0; z < 5; z++) {
-                    Vector3 box_position = Vector3(((float(x))), 2.0f, (float(z)));
+            for (int x = 0; x < 1; x++) {
+                for (int z = 0; z < 1; z++) {
+                    Vector3 box_position = Vector3(((float(x) - 3)), 2.0f, (float(z)));
                     Vector3 col = Vector3(
                         MathUtil::Random(0.4f, 1.80f),
                         MathUtil::Random(0.4f, 1.80f),
                         MathUtil::Random(0.4f, 1.80f)
                     ).Normalize();
-                    auto box = asset_manager->LoadFromFile<Entity>("models/cube.obj", true);
-                    box->SetLocalScale(0.1f);
+                    auto box = asset_manager->LoadFromFile<Entity>("models/material_sphere/material_sphere.obj", true);
+                    box->SetLocalScale(0.6f);
 
 
                     for (size_t i = 0; i < box->NumChildren(); i++) {
@@ -588,15 +591,22 @@ public:
                             1.0f,//1.0,//col.z,
                             1.0f
                         );
+                        /*box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/albedo.png"));
+                        //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/dirty-red-bricks-unity/dirty-red-bricks_height.png"));
+                        box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/ao.png"));
+                        box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/normal.png"));
+                        box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/roughness.png"));
+                        box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/metallic.png"));*/
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
 
-                        box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/dirty-red-bricks-unity/dirty-red-bricks_albedo.png"));
-                        box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/dirty-red-bricks-unity/dirty-red-bricks_height.png"));
-                        //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/vintage-tile-unity/vintage-tile1_ao.png"));
-                        box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/dirty-red-bricks-unity/dirty-red-bricks_normal-ogl.png"));
-                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.7f);
-                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.4f);
-                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
-                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
+                        box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_albedo.png"));
+                        box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_height.png"));
+                        box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-ao.png"));
+                        box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_normal-ogl.png"));
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
                     }
 
                     //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));

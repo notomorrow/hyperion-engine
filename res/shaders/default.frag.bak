@@ -47,7 +47,10 @@ void main()
   vec2 texCoords = v_texcoord0;
 
   if (HasParallaxMap == 1) {
-    texCoords = ParallaxMapping(texCoords, normalize(tangentFragPos-tangentViewPos));
+    texCoords = ParallaxMapping(texCoords, normalize(tangentFragPos - tangentViewPos/*v_tbn * (u_viewMatrix * vec4(v_position)).xyz*/));
+    if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0) {
+      discard;
+    }
   }
 
   vec4 diffuseTexture = vec4(1.0, 1.0, 1.0, 1.0);

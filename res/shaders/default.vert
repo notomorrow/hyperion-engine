@@ -17,8 +17,8 @@ uniform mat4 WorldToNdcMatrix;
 #endif
 #include "include/matrices.inc"
 
-uniform int FlipUV_X;
-uniform int FlipUV_Y;
+uniform int FlipUV_X = 0;
+uniform int FlipUV_Y = 0;
 
 vec3 calculate_tangent(vec3 n) {
 	vec3 v = vec3(1.0, 0.0, 0.0);
@@ -32,8 +32,8 @@ vec3 calculate_tangent(vec3 n) {
 
 void main() {
   vec3 n = a_normal.xyz;
-  v_texcoord0.x = a_texcoord0.x;
-  v_texcoord0.y = a_texcoord0.y;
+  v_texcoord0.x = abs(float(FlipUV_X) - a_texcoord0.x);
+  v_texcoord0.y = abs(float(FlipUV_Y) - a_texcoord0.y);
   
   mat4 normalMatrix;
 
@@ -58,9 +58,7 @@ void main() {
 	v_bitangent = v_bitangent - v_tangent * dot( v_bitangent, v_tangent ); // orthonormalization of the binormal vectors to the tangent vector
 	v_tangent = (normalMatrix * vec4(v_tangent, 0.0)).xyz;
 	v_bitangent = (normalMatrix * vec4(v_bitangent, 0.0)).xyz;
-	v_tbn = mat3( normalize(v_tangent), normalize(v_bitangent), normalize(v_normal.xyz ));
-
-	//v_tbn = mat3(normalize(v_tangent), normalize(v_bitangent), normalize(v_normal.xyz));
+	v_tbn = mat3( normalize(v_tangent), normalize(v_bitangent), normalize(v_normal.xyz));
 
 	gl_Position = u_projMatrix * u_viewMatrix * v_position;
 }
