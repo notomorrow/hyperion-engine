@@ -1,17 +1,18 @@
 #include "envmap_probe_control.h"
 #include "envmap_probe.h"
 #include "../probe_manager.h"
-#include "../../../entity.h"
+#include "../../../scene/node.h"
 
 #include <memory>
 
 namespace hyperion {
 EnvMapProbeControl::EnvMapProbeControl(const Vector3 &origin, BoundingBox bounds)
     : EntityControl(fbom::FBOMObjectType("ENVMAP_PROBE_CONTROL"), 5.0),
-      m_env_probe_node(new Entity("EnvMapProbeControl")),
+      m_env_probe_node(new Node("EnvMapProbeControl")),
       m_env_probe(new EnvMapProbe(origin, bounds, 128, 128, 0.01f, 150.0f)) // TODO
 {
     m_env_probe_node->SetRenderable(m_env_probe);
+    m_env_probe_node->GetSpatial().SetBucket(Spatial::Bucket::RB_BUFFER);
 }
 
 void EnvMapProbeControl::OnAdded()

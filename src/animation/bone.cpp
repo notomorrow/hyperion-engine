@@ -3,7 +3,7 @@
 
 namespace hyperion {
 Bone::Bone(const std::string &name)
-    : Entity(name)
+    : Node(name)
 {
 }
 
@@ -135,7 +135,7 @@ void Bone::UpdateTransform()
         }
     }
 
-    Entity::UpdateTransform();
+    Node::UpdateTransform();
 }
 
 std::shared_ptr<Loadable> Bone::Clone()

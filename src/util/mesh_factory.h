@@ -10,7 +10,7 @@
 #include <tuple>
 
 namespace hyperion {
-class Entity;
+class Node;
 using RenderableMesh_t = std::tuple<std::shared_ptr<Mesh>, Transform, Material>;
 
 class MeshFactory {
@@ -53,7 +53,7 @@ public:
 
     // iterate over all child nodes of an entity, collecting meshes,
     // as well as transforms and materials.
-    static std::vector<RenderableMesh_t> GatherMeshes(Entity *entity);
+    static std::vector<RenderableMesh_t> GatherMeshes(Node *);
 };
 } // namespace hyperion
 

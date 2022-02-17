@@ -84,7 +84,6 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
     }
 
     for (const auto &path : try_paths) {
-        std::cout << "trying " << path << "\n";
         try {
             auto &loader = GetLoader(path);
 

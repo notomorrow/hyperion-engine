@@ -2,10 +2,8 @@
 
 namespace hyperion {
 
-Renderable::Renderable(const fbom::FBOMType &loadable_type,
-    RenderBucket bucket)
-    : fbom::FBOMLoadable(fbom::FBOMObjectType("RENDERABLE").Extend(loadable_type)),
-      m_bucket(bucket)
+Renderable::Renderable(const fbom::FBOMType &loadable_type)
+    : fbom::FBOMLoadable(fbom::FBOMObjectType("RENDERABLE").Extend(loadable_type))
 {
 }
 

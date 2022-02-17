@@ -10,7 +10,7 @@ namespace ui {
 UIButton::UIButton(const std::string &name)
     : UIObject(name)
 {
-    m_renderable->SetShader(ShaderManager::GetInstance()->GetShader<UIButtonShader>(ShaderProperties()));
+    GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<UIButtonShader>(ShaderProperties()));
 }
 } // namespace ui
 } // namespace hyperion

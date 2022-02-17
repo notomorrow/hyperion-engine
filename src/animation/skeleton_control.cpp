@@ -88,7 +88,7 @@ void SkeletonControl::StopAnimation()
     play_state = STOPPED;
 }
 
-void SkeletonControl::FindBones(Entity *top)
+void SkeletonControl::FindBones(Node *top)
 {
     ex_assert(top != nullptr);
 

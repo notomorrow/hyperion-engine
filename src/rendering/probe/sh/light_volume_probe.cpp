@@ -71,21 +71,21 @@ void LightVolumeProbe::Render(Renderer *renderer, Camera *cam)
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Renderable::RB_SKY),
+        renderer->GetBucket(Spatial::Bucket::RB_SKY),
         m_shader.get(),
         false
     );
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Renderable::RB_TRANSPARENT),
+        renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT),
         m_shader.get(),
         false
     );
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Renderable::RB_OPAQUE),
+        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
         m_shader.get(),
         false
     );

@@ -11,7 +11,7 @@
 
 namespace hyperion {
 ParticleRenderer::ParticleRenderer(const ParticleConstructionInfo &info)
-    : Renderable(fbom::FBOMObjectType("PARTICLE_RENDERER"), RB_PARTICLE),
+    : Renderable(fbom::FBOMObjectType("PARTICLE_RENDERER")),
       m_info(info),
       m_is_created(false),
       m_particles(nullptr)

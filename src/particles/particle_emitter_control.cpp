@@ -1,6 +1,6 @@
 #include "particle_emitter_control.h"
 #include "../math/math_util.h"
-#include "../entity.h"
+#include "../scene/node.h"
 
 #include <cassert>
 #include <algorithm>
@@ -12,8 +12,9 @@ ParticleEmitterControl::ParticleEmitterControl(Camera *camera, const ParticleCon
 {
     m_particle_renderer.reset(new ParticleRenderer(info));
 
-    m_entity.reset(new Entity("Particles"));
-    m_entity->SetRenderable(m_particle_renderer);
+    m_node.reset(new Node("Particles"));
+    m_node->GetSpatial().SetBucket(Spatial::Bucket::RB_PARTICLE);
+    m_node->SetRenderable(m_particle_renderer);
 }
 
 void ParticleEmitterControl::ResetParticle(Particle &particle)
@@ -25,7 +26,7 @@ void ParticleEmitterControl::ResetParticle(Particle &particle)
         MathUtil::Random(-m_particle_renderer->m_info.m_origin_randomness.GetX(), m_particle_renderer->m_info.m_origin_randomness.GetX()),
         MathUtil::Random(-m_particle_renderer->m_info.m_origin_randomness.GetY(), m_particle_renderer->m_info.m_origin_randomness.GetY()),
         MathUtil::Random(-m_particle_renderer->m_info.m_origin_randomness.GetZ(), m_particle_renderer->m_info.m_origin_randomness.GetZ())
-    )))) * m_entity->GetGlobalTransform().GetMatrix();
+    )))) * m_node->GetGlobalTransform().GetMatrix();
     particle.m_position = particle.m_origin;
     particle.m_global_position = particle.m_position;//parent->GetGlobalTransform().GetTranslation() + particle.m_position;
     particle.m_scale = m_particle_renderer->m_info.m_scale + Vector3(
@@ -59,15 +60,15 @@ void ParticleEmitterControl::OnAdded()
         ResetParticle(particle);
     }
 
-    m_entity->SetMaterial(parent->GetMaterial()); // clone material
-    parent->AddChild(m_entity);
+    m_node->SetMaterial(parent->GetMaterial()); // clone material
+    parent->AddChild(m_node);
 }
 
 void ParticleEmitterControl::OnRemoved()
 {
     m_particle_renderer->m_particles = nullptr;
 
-    parent->RemoveChild(m_entity);
+    parent->RemoveChild(m_node);
 }
 
 void ParticleEmitterControl::OnUpdate(double dt)

@@ -112,7 +112,6 @@ public:
         auto out_mesh = std::make_shared<Mesh>();
         out = out_mesh;
 
-        in->GetProperty("bucket").ReadInt((int32_t*)&out_mesh->m_bucket);
         in->GetProperty("primitive_type").ReadInt((int32_t*)&out_mesh->primitive_type);
         in->GetProperty("vertex_size").ReadUnsignedInt(&out_mesh->vertex_size);
 
@@ -255,7 +254,6 @@ public:
             out->SetProperty("attribute_data", FBOMArray(FBOMStruct(sizeof(MeshAttribute)), attribute_data.size()), (void*)attribute_data.data());
         }
 
-        out->SetProperty("bucket", FBOMInt(), (void*)&mesh->m_bucket);
         out->SetProperty("vertex_size", FBOMUnsignedInt(), (void*)&mesh->vertex_size);
         out->SetProperty("primitive_type", FBOMInt(), (void*)&mesh->primitive_type);
 

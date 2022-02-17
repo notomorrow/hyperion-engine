@@ -620,7 +620,6 @@ std::shared_ptr<Renderable> Mesh::CloneImpl()
     clone->attribs = attribs;
     clone->primitive_type = primitive_type;
     clone->m_shader = m_shader; // TODO: clone shader?
-    clone->m_bucket = m_bucket;
     clone->m_aabb = m_aabb;
 
     return clone;

@@ -1,6 +1,6 @@
 #include "glfw_engine.h"
 #include "game.h"
-#include "entity.h"
+#include "scene/node.h"
 #include "util.h"
 #include "asset/asset_manager.h"
 #include "rendering/shader.h"
@@ -64,13 +64,8 @@
 #include "rendering/probe/gi/gi_probe_control.h"
 #include "rendering/shaders/gi/gi_voxel_debug_shader.h"
 
-#include "rendering/probe/sh/light_volume_grid_control.h"
-
 #include "asset/fbom/fbom.h"
 #include "asset/byte_writer.h"
-
-#include "octree.h"
-
 
 /* Standard library */
 #include <cstdlib>
@@ -86,9 +81,9 @@ class SceneEditor : public Game {
 public:
     PssmShadowMapping *shadows;
 
-    std::vector<std::shared_ptr<Entity>> m_raytested_entities;
-    std::unordered_map<HashCode_t, std::shared_ptr<Entity>> m_hit_to_entity;
-    std::shared_ptr<Entity> m_selected_node;
+    std::vector<std::shared_ptr<Node>> m_raytested_entities;
+    std::unordered_map<HashCode_t, std::shared_ptr<Node>> m_hit_to_entity;
+    std::shared_ptr<Node> m_selected_node;
     bool m_dragging_node = false;
     float m_dragging_timer = 0.0f;
     bool m_left_click_left = false;
@@ -125,7 +120,7 @@ public:
         particle_generator_info.m_lifespan = 1.0;
         particle_generator_info.m_lifespan_randomness = 1.5;
 
-        auto particle_node = std::make_shared<Entity>();
+        auto particle_node = std::make_shared<Node>();
         particle_node->SetName("Particle node");
         // particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
         particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/test_snowflake.png"));
@@ -189,7 +184,7 @@ public:
         }
         GetScene()->AddChild(mitsuba);*/
 
-        auto sponza = asset_manager->LoadFromFile<Entity>("models/sponza/sponza.obj");
+        auto sponza = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
         sponza->SetName("sponza");
         sponza->Scale(Vector3(0.025f));
         //if (voxel_debug) {
@@ -252,7 +247,7 @@ public:
         }*/
 
         {
-            auto model = asset_manager->LoadFromFile<Entity>("models/sibenik/sibenik.obj");
+            auto model = asset_manager->LoadFromFile<Node>("models/sibenik/sibenik.obj");
             model->SetName("sibenik");
             GetScene()->AddChild(model);
             model->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
@@ -270,7 +265,7 @@ public:
         ray.m_position = GetCamera()->GetTranslation();
 
 
-        using Intersection_t = std::pair<std::shared_ptr<Entity>, RaytestHit>;
+        using Intersection_t = std::pair<std::shared_ptr<Node>, RaytestHit>;
 
         RaytestHit intersection;
         std::vector<Intersection_t> intersections = { { GetScene(), intersection } };
@@ -446,7 +441,7 @@ public:
 
                 std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("models/scene.fbom");
 
-                if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+                if (auto entity = std::dynamic_pointer_cast<Node>(result)) {
                     for (size_t i = 0; i < entity->NumChildren(); i++) {
                         if (auto child = entity->GetChild(i)) {
                             if (auto ren = child->GetRenderable()) {
@@ -463,21 +458,20 @@ public:
             }
         }
 
-        GetScene()->Update(0.1f);
-        m_octree->AddCallback([this](OctreeChangeEvent evt, const Octree *oct) {
-            //std::cout << "event " << evt << "\n";
+        GetSceneManager()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
+            std::cout << "event " << evt << ", node: " << node_id << "\n";
             if (evt == OCTREE_INSERT_OCTANT) {
                 std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
-                auto bb_node = std::make_shared<Entity>("oct_" + std::to_string(intptr_t(oct)));
+                auto bb_node = std::make_shared<Node>("oct_" + std::to_string(intptr_t(oct)));
                 bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
                 bb_node->SetAABBAffectsParent(false);
-                GetScene()->AddChild(bb_node);
+                //GetScene()->AddChild(bb_node);
                 //std::cout << "<ADDED BB NODE>\n";
             } else if (evt == OCTREE_REMOVE_OCTANT) {
                 std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
                 auto node = GetScene()->GetChild("oct_" + std::to_string(intptr_t(oct)));
                 if (node != nullptr) {
-                    GetScene()->RemoveChild(node);
+                    //GetScene()->RemoveChild(node);
                     //std::cout << "<REMOVE BB NODE>\n";
                 }
             }
@@ -552,16 +546,16 @@ public:
         hydrant->Scale(Vector3(3.0f));
         GetScene()->AddChild(hydrant);*/
 
-        m_octree->InsertNode(Octree::Node{ 1, BoundingBox(Vector3(-4, -4, -4), Vector3(-3.2, -3.2, -3.2)) });
-        m_octree->InsertNode(Octree::Node{ 2, BoundingBox(Vector3(5, 5, 5), Vector3(7, 7, 7)) });
-        m_octree->InsertNode(Octree::Node{ 3, BoundingBox(Vector3(12, 12, -12), Vector3(13, 13, -13)) });
-        m_octree->InsertNode(Octree::Node{ 4, BoundingBox(Vector3(-3, -3, -3), Vector3(-1, -1, -1)) });
+        /*GetSceneManager()->GetOctree()->InsertNode(Octree::Node{1, BoundingBox(Vector3(-4, -4, -4), Vector3(-3.2, -3.2, -3.2))});
+        GetSceneManager()->GetOctree()->InsertNode(Octree::Node{ 2, BoundingBox(Vector3(5, 5, 5), Vector3(7, 7, 7)) });
+        GetSceneManager()->GetOctree()->InsertNode(Octree::Node{ 3, BoundingBox(Vector3(12, 12, -12), Vector3(13, 13, -13)) });
+        GetSceneManager()->GetOctree()->InsertNode(Octree::Node{ 4, BoundingBox(Vector3(-3, -3, -3), Vector3(-1, -1, -1)) });
 
-        m_octree->RemoveNode(1);
-        m_octree->RemoveNode(2);
-        m_octree->RemoveNode(3);
-        m_octree->RemoveNode(4);
-        std::cout << *m_octree << "\n";
+        GetSceneManager()->GetOctree()->RemoveNode(1);
+        GetSceneManager()->GetOctree()->RemoveNode(2);
+        GetSceneManager()->GetOctree()->RemoveNode(3);
+        GetSceneManager()->GetOctree()->RemoveNode(4);*/
+
         //m_octree->RemoveNode(4);
         //for (int i = 0; i < 8; i++) {
         //    m_octree->Undivide();
@@ -571,15 +565,15 @@ public:
 
         if (add_spheres) {
 
-            for (int x = 0; x < 1; x++) {
-                for (int z = 0; z < 1; z++) {
+            for (int x = 0; x < 5; x++) {
+                for (int z = 0; z < 5; z++) {
                     Vector3 box_position = Vector3(((float(x) - 3)), 2.0f, (float(z)));
                     Vector3 col = Vector3(
                         MathUtil::Random(0.4f, 1.80f),
                         MathUtil::Random(0.4f, 1.80f),
                         MathUtil::Random(0.4f, 1.80f)
                     ).Normalize();
-                    auto box = asset_manager->LoadFromFile<Entity>("models/material_sphere/material_sphere.obj", true);
+                    auto box = asset_manager->LoadFromFile<Node>("models/material_sphere/material_sphere.obj", true);
                     box->SetLocalScale(0.6f);
 
 
@@ -599,14 +593,14 @@ public:
                         box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/metallic.png"));*/
                         box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
 
-                        box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_albedo.png"));
-                        box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_height.png"));
-                        box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-ao.png"));
-                        box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_normal-ogl.png"));
-                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
-                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
-                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
+                        box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/plastic/plasticpattern1-albedo.png"));
+                        //box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_height.png"));
+                        //box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-ao.png"));
+                        box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/plastic/plasticpattern1-normal2-unity2b.png"));
+                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
+                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
                     }
 
                     //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));
@@ -785,26 +779,6 @@ public:
 
                 m_selected_node = node;
                 m_selected_node->AddControl(std::make_shared<BoundingBoxControl>());
-
-                std::cout << "SELECTED OBJECT IN OCTREE: ";
-
-                if (!m_selected_node->GetOctree()) {
-                    std::cout << " <NONE>\n";
-                } else {
-                    non_owning_ptr<Octree> oct(m_selected_node->GetOctree());
-
-                    while (oct) {
-
-                        std::cout << oct->m_level;
-                        oct = oct->m_parent;
-
-                        if (oct) {
-                            std::cout << "->";
-                        }
-                    }
-                    std::cout << "\n";
-                }
-
 
                 std::stringstream ss;
                 ss << "Selected object: ";

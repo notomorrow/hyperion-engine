@@ -1,13 +1,13 @@
 #ifndef BONE_H
 #define BONE_H
 
-#include "../entity.h"
+#include "../scene/node.h"
 #include "keyframe.h"
 
 #include <string>
 
 namespace hyperion {
-class Bone : public Entity {
+class Bone : public Node {
     friend class Skeleton;
 public:
     Bone(const std::string &name = "");

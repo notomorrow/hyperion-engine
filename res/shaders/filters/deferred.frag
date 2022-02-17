@@ -94,10 +94,6 @@ vec3 mon2lin(vec3 x)
 }
 
 
-
-
-#define $SSR_ENABLED 1
-
 #if SSR_ENABLED
 
 
@@ -356,9 +352,8 @@ void main()
   ppd.modelMatrix = u_modelMatrix;
   ppd.projMatrix = u_projMatrix;
   vec4 ssrResult = PostProcess_SSR(ppd);
-  specularCubemap = ssrResult;//mix(specularCubemap, ssrResult, ssrResult.a);
+  specularCubemap = mix(specularCubemap, ssrResult, ssrResult.a);
 #endif
-
 
 
 #if SPHERICAL_HARMONICS_ENABLED

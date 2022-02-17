@@ -6,7 +6,7 @@
 
 #include "entity_control.h"
 #include "../math/bounding_box.h"
-#include "../entity.h"
+#include "../scene/node.h"
 #include "../rendering/renderers/bounding_box_renderer.h"
 
 namespace hyperion {
@@ -22,7 +22,7 @@ public:
 private:
     virtual std::shared_ptr<Control> CloneImpl() override;
 
-    std::shared_ptr<Entity> m_entity;
+    std::shared_ptr<Node> m_node;
     std::shared_ptr<BoundingBoxRenderer> m_bounding_box_renderer;
 };
 } // namespace hyperion

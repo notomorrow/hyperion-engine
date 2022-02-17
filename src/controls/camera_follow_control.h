@@ -6,7 +6,7 @@
 
 #include "entity_control.h"
 #include "../rendering/camera/camera.h"
-#include "../entity.h"
+#include "../scene/node.h"
 
 namespace hyperion {
 class CameraFollowControl : public EntityControl {

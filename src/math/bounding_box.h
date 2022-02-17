@@ -5,6 +5,8 @@
 #include "matrix4.h"
 #include "transform.h"
 #include "ray.h"
+#include "../hash_code.h"
+
 #include <array>
 #include <limits>
 
@@ -53,6 +55,16 @@ public:
     bool Contains(const BoundingBox &other) const;
     bool ContainsPoint(const Vector3 &vec) const;
     double Area() const;
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(m_min.GetHashCode());
+        hc.Add(m_max.GetHashCode());
+
+        return hc;
+    }
 
 private:
     Vector3 m_min;

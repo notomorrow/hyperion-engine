@@ -1,5 +1,6 @@
 #include "renderer.h"
 #include "shader_manager.h"
+#include "../scene/scene_manager.h"
 #include "postprocess/filters/deferred_rendering_filter.h"
 
 #include "../util.h"
@@ -12,21 +13,34 @@ Renderer::Renderer(const RenderWindow &render_window)
 {
     m_post_processing = new PostProcessing();
 
-    m_buckets[Renderable::RB_SKY].enable_culling = false;
-    m_buckets[Renderable::RB_PARTICLE].enable_culling = false; // TODO
-    m_buckets[Renderable::RB_SCREEN].enable_culling = false;
-    m_buckets[Renderable::RB_DEBUG].enable_culling = false;
+    m_buckets[Spatial::Bucket::RB_SKY].enable_culling = false;
+    m_buckets[Spatial::Bucket::RB_PARTICLE].enable_culling = false; // TODO
+    m_buckets[Spatial::Bucket::RB_SCREEN].enable_culling = false;
+    m_buckets[Spatial::Bucket::RB_DEBUG].enable_culling = false;
+
+    // TODO: re-introduce frustum culling
+    m_octree_callback_id = SceneManager::GetInstance()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
+        if (spatial == nullptr) {
+            return;
+        }
+
+        if (evt == OCTREE_INSERT_NODE) {
+            std::cout << "insert " << node_id << "\n";
+            m_buckets[spatial->GetBucket()].AddItem(BucketItem(node_id, *spatial));
+        } else if (evt == OCTREE_REMOVE_NODE) {
+            m_buckets[spatial->GetBucket()].RemoveItem(node_id);
+        } else if (evt == OCTREE_NODE_TRANSFORM_CHANGE) {
+            //m_buckets[spatial->GetRenderable()->GetRenderBucket()].SetItem(node_id, BucketItem(node_id, *spatial));
+        }
+    });
 }
 
 Renderer::~Renderer()
 {
+    SceneManager::GetInstance()->GetOctree()->RemoveCallback(m_octree_callback_id);
+
     delete m_post_processing;
     delete m_fbo;
-}
-
-void Renderer::Collect(Camera *cam, Entity *top)
-{
-    FindRenderables(cam, top, false, true);
 }
 
 void Renderer::Begin(Camera *cam)
@@ -57,136 +71,16 @@ void Renderer::End(Camera *cam)
     RenderPost(cam, m_fbo);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
-    RenderBucket(cam, m_buckets[Renderable::RB_DEBUG]);
-    RenderBucket(cam, m_buckets[Renderable::RB_SCREEN]);
+    RenderBucket(cam, m_buckets[Spatial::Bucket::RB_DEBUG]);
+    RenderBucket(cam, m_buckets[Spatial::Bucket::RB_SCREEN]);
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
 }
 
 void Renderer::ClearRenderables()
 {
-   for (int i = 0; i < Renderable::RB_MAX; i++) {
+   for (int i = 0; i < Spatial::Bucket::RB_MAX; i++) {
        m_buckets[i].ClearAll();
    }
-}
-
-void Renderer::FindRenderables(Camera *cam, Entity *top, bool frustum_culled, bool is_root)
-{
-    const size_t entity_hash = top->GetHashCode().Value();
-    size_t previous_hash = 0;
-    const auto it = m_hash_cache.find(top);
-    bool recalc = true;
-
-    Bucket *new_bucket = nullptr;
-
-    if (it != m_hash_cache.end()) {
-        previous_hash = it->second;
-
-        if (previous_hash == entity_hash) {
-            recalc = false;
-        }
-    }
-
-    if (recalc) {
-        // hash has changed so we will need to recalculate a few things
-        if (top->PendingRemoval()) {
-            // pending removal -- erase from hash cache
-            m_hash_cache.erase(top);
-        } else {
-            // not pending removal, just update hash for this entity's memory address
-            m_hash_cache[top] = entity_hash;
-        }
-    }
-
-    if (top->GetRenderable() != nullptr) { // NOTE: this currently doesnt handle renderable being set to null.
-        const Renderable::RenderBucket new_bucket_index = top->GetRenderable()->GetRenderBucket();
-
-        hard_assert(new_bucket_index < sizeof(m_buckets) / sizeof(Bucket));
-
-        new_bucket = &m_buckets[new_bucket_index];
-    
-        if (recalc) {
-            bool push_new = true;
-
-            if (previous_hash != 0) {
-                auto item_in_existing_bucket = m_hash_to_bucket.find(previous_hash);
-
-                Bucket *previous_bucket = nullptr;
-
-                // IF bucket has changed, we have to remove the entry from that bucket first.
-                if (item_in_existing_bucket != m_hash_to_bucket.end()) {
-                    const Renderable::RenderBucket previous_bucket_index = item_in_existing_bucket->second;
-
-                    hard_assert(previous_bucket_index < sizeof(m_buckets) / sizeof(Bucket));
-
-                    // remove from prev bucket
-                    previous_bucket = &m_buckets[previous_bucket_index];
-
-                    m_hash_to_bucket.erase(item_in_existing_bucket);
-                }
-
-                if (previous_bucket != nullptr) {
-                    if (top->PendingRemoval() || new_bucket != previous_bucket) {
-                        previous_bucket->RemoveItem(previous_hash);
-                    } else {
-                        BucketItem bucket_item;
-                        bucket_item.renderable = top->GetRenderable().get();
-                        bucket_item.material = &top->GetMaterial();
-                        bucket_item.aabb = top->GetAABB();
-                        bucket_item.transform = top->GetGlobalTransform();
-                        bucket_item.hash_code = entity_hash;
-
-                        previous_bucket->SetItem(previous_hash, bucket_item);
-
-                        push_new = false;
-                    }
-                }
-            }
-
-            if (!top->PendingRemoval()) {
-                m_hash_to_bucket[entity_hash] = new_bucket_index;
-
-                if (push_new) {
-                    BucketItem bucket_item;
-                    bucket_item.renderable = top->GetRenderable().get();
-                    bucket_item.material = &top->GetMaterial();
-                    bucket_item.aabb = top->GetAABB();
-                    bucket_item.transform = top->GetGlobalTransform();
-                    bucket_item.hash_code = entity_hash;
-
-                    new_bucket->AddItem(bucket_item);
-                }
-            }
-        }
-    }
-
-#if RENDERER_FRUSTUM_CULLING
-    if (!frustum_culled && !is_root) {
-        frustum_culled = !MemoizedFrustumCheck(cam, top->GetAABB());
-    }
-#endif
-
-    if (new_bucket != nullptr) {
-        if (BucketItem *bucket_item_ptr = new_bucket->GetItemPtr(entity_hash)) {
-            bucket_item_ptr->frustum_culled = frustum_culled;
-        }
-    }
-
-    for (size_t i = 0; i < top->NumChildren(); i++) {
-        if (Entity *child = top->GetChild(i).get()) {
-            FindRenderables(cam, child, frustum_culled);
-        }
-    }
-
-    for (size_t i = 0; i < top->NumChildrenPendingRemoval(); i++) {
-        if (Entity *child = top->GetChildPendingRemoval(i).get()) {
-            FindRenderables(cam, child, frustum_culled);
-        }
-    }
-}
-
-bool Renderer::MemoizedFrustumCheck(Camera *cam, const BoundingBox &aabb)
-{
-    return cam->GetFrustum().BoundingBoxInFrustum(aabb);
 }
 
 void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader, bool enable_frustum_culling)
@@ -205,12 +99,14 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
             continue;
         }
 
+        soft_assert_continue(it.GetSpatial().GetRenderable() != nullptr);
+
         // TODO: group by same shader
-        shader = (override_shader ? override_shader : it.renderable->m_shader.get());
+        shader = (override_shader ? override_shader : it.GetSpatial().GetRenderable()->m_shader.get());
 
         if (shader) {
-            shader->ApplyMaterial(*it.material);
-            shader->ApplyTransforms(it.transform, cam);
+            shader->ApplyMaterial(it.GetSpatial().GetMaterial());
+            shader->ApplyTransforms(it.GetSpatial().GetTransform(), cam);
 
 #if RENDERER_SHADER_GROUPING
             if (shader != last_shader) {
@@ -228,7 +124,7 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
             shader->Use();
 #endif
 
-            it.renderable->Render(this, cam);
+            it.GetSpatial().GetRenderable()->Render(this, cam);
 
 #if !RENDERER_SHADER_GROUPING
             shader->End();
@@ -258,8 +154,8 @@ void Renderer::SetRendererDefaults()
 
 void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
 {
-    if (!m_buckets[Renderable::RB_BUFFER].IsEmpty()) {
-        RenderBucket(cam, m_buckets[Renderable::RB_BUFFER]); // PRE
+    if (!m_buckets[Spatial::Bucket::RB_BUFFER].IsEmpty()) {
+        RenderBucket(cam, m_buckets[Spatial::Bucket::RB_BUFFER]); // PRE
     }
 
     if (fbo) {
@@ -271,11 +167,11 @@ void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
-    RenderBucket(cam, m_buckets[Renderable::RB_SKY]);
+    RenderBucket(cam, m_buckets[Spatial::Bucket::RB_SKY]);
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
-    RenderBucket(cam, m_buckets[Renderable::RB_OPAQUE]);
-    RenderBucket(cam, m_buckets[Renderable::RB_TRANSPARENT]);
-    RenderBucket(cam, m_buckets[Renderable::RB_PARTICLE]);
+    RenderBucket(cam, m_buckets[Spatial::Bucket::RB_OPAQUE]);
+    RenderBucket(cam, m_buckets[Spatial::Bucket::RB_TRANSPARENT]);
+    RenderBucket(cam, m_buckets[Spatial::Bucket::RB_PARTICLE]);
 
     if (fbo) {
         fbo->End();

@@ -138,7 +138,7 @@ bool GlfwEngine::InitializeGame(Game *game)
 
         if ((current - fps_last) >= 1.0) {
             stats.fps = double(num_frames) / delta;
-            std::cout << stats.fps << " fps\n";
+            //std::cout << stats.fps << " fps\n";
 
             num_frames = 0;
             fps_last = current;

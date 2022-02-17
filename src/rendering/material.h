@@ -107,6 +107,9 @@ public:
     Material(const Material &other);
     virtual ~Material() = default;
 
+    inline bool operator==(const Material &other) const
+        { return GetHashCode().Value() == other.GetHashCode().Value(); }
+
     inline MaterialParameterTable_t &GetParameters() { return m_params; }
     inline const MaterialParameter &GetParameter(MaterialParameterKey key) const { return m_params.Get(key); }
 

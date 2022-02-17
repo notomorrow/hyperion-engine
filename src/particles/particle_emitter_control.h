@@ -26,7 +26,7 @@ private:
 
     Camera *m_camera;
     std::vector<Particle> m_particles;
-    std::shared_ptr<Entity> m_entity;
+    std::shared_ptr<Node> m_node;
     std::shared_ptr<ParticleRenderer> m_particle_renderer;
 };
 } // namespace hyperion
