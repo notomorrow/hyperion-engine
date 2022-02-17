@@ -88,10 +88,6 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
     model_name = model_name.substr(0, model_name.find_first_of("."));
 
     res->SetName(model_name);
-
-
-
-    //std::vector<std::string> lines = StringUtil::Split(loaded_text->GetText(), '\n');
   
     int line_no = 0;
 
