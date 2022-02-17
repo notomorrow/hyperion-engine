@@ -36,8 +36,6 @@ uniform mat4 InverseViewProjMatrix;
 
 #define $DIRECTIONAL_LIGHTING 1
 
-#define $BLAH 0
-
 vec3 decodeNormal(vec4 enc)
 {
     vec2 fenc = enc.xy*4-2;
@@ -92,142 +90,6 @@ vec3 mon2lin(vec3 x)
 {
     return vec3(pow(x[0], 2.2), pow(x[1], 2.2), pow(x[2], 2.2));
 }
-
-
-#if SSR_ENABLED
-
-
-
-uniform float rayStep = 0.1f;
-uniform int iterationCount = 100;
-uniform float distanceBias = 0.02f;
-uniform float offset = 0.1f;
-uniform bool enableSSR = false;
-uniform int sampleCount = 4;
-uniform bool isSamplingEnabled = false;
-uniform bool isExponentialStepEnabled = false;
-uniform bool isAdaptiveStepEnabled = false;
-uniform bool isBinarySearchEnabled = true;
-uniform bool debugDraw = false;
-uniform float samplingCoefficient = 0.3;
-
-vec3 generatePositionFromDepth(vec2 texturePos, float depth) {
-	vec4 ndc = vec4((texturePos - 0.5) * 2, depth, 1.f);
-	vec4 inversed = inverse(u_projMatrix) * ndc;// going back from projected
-	inversed /= inversed.w;
-	return inversed.xyz;
-}
-
-vec2 generateProjectedPosition(vec3 pos){
-	vec4 samplePosition = u_projMatrix * vec4(pos, 1.f);
-	samplePosition.xy = (samplePosition.xy / samplePosition.w) * 0.5 + 0.5;
-	return samplePosition.xy;
-}
-
-float SSRAlpha(vec3 dir, vec3 origin, vec3 hitPosition)
-{
-	float alpha = 1.0;
-
-	float dist = distance(origin, hitPosition);
-	// Fade ray hits based on distance from ray origin
-	alpha *= 1.0 - clamp(dist / 6, 0.0, 1.0);
-	
-	return alpha;
-}
-
-vec3 SSR(vec3 position, vec3 reflection) {
-	vec3 step = rayStep * reflection;
-	vec3 marchingPosition = position + step;
-	float delta;
-	float depthFromScreen;
-	vec2 screenPosition;
-	
-	int i = 0;
-	for (; i < iterationCount; i++) {
-		screenPosition = generateProjectedPosition(marchingPosition);
-		depthFromScreen = abs(generatePositionFromDepth(screenPosition, texture(DepthMap, screenPosition).x).z);
-		delta = abs(marchingPosition.z) - depthFromScreen;
-		if (abs(delta) < distanceBias) {
-			return texture(ColorMap, screenPosition).xyz * SSRAlpha(reflection, position, marchingPosition);
-		}
-		if (isBinarySearchEnabled && delta > 0) {
-			break;
-		}
-		if (isAdaptiveStepEnabled){
-			float directionSign = sign(abs(marchingPosition.z) - depthFromScreen);
-			//this is sort of adapting step, should prevent lining reflection by doing sort of iterative converging
-			//some implementation doing it by binary search, but I found this idea more cheaty and way easier to implement
-			step = step * (1.0 - rayStep * max(directionSign, 0.0));
-			marchingPosition += step * (-directionSign);
-		}
-		else {
-			marchingPosition += step;
-		}
-		if (isExponentialStepEnabled){
-			step *= 1.05;
-		}
-    }
-	if(isBinarySearchEnabled){
-		for(; i < iterationCount; i++){
-			
-			step *= 0.5;
-			marchingPosition = marchingPosition - step * sign(delta);
-			
-			screenPosition = generateProjectedPosition(marchingPosition);
-			depthFromScreen = abs(generatePositionFromDepth(screenPosition, texture(DepthMap, screenPosition).x).z);
-			delta = abs(marchingPosition.z) - depthFromScreen;
-			
-			if (abs(delta) < distanceBias) {
-				return texture(ColorMap, screenPosition).xyz * SSRAlpha(reflection, position, marchingPosition);
-			}
-		}
-	}
-	
-    return vec3(0.0);
-}
-
-#if BLAH
-void main(){
-	vec2 UV = v_texcoord0 / Resolution;
-    float depth = texture(DepthMap, v_texcoord0).r;
-    vec4 position = vec4(generatePositionFromDepth(v_texcoord0, depth), 1.0);
-	vec4 normal = u_viewMatrix * vec4(texture(NormalMap, v_texcoord0).xyz * 2.0 - 1.0, 0.0);
-    vec4 data = texture(DataMap, v_texcoord0);
-    float roughness = clamp(data.g, 0.05, 0.99);
-
-	if (roughness < 0.01) {
-		output0 = texture(ColorMap, v_texcoord0);
-	} else {
-		vec3 reflectionDirection = normalize(reflect(position.xyz, normalize(normal.xyz)));
-		if (isSamplingEnabled) {
-		vec3 firstBasis = normalize(cross(normalize(u_viewMatrix * vec4(0.f, 0.f, 1.f, 1.0)).xyz, reflectionDirection));
-		vec3 secondBasis = normalize(cross(reflectionDirection, firstBasis));
-		vec4 resultingColor = vec4(0.f);
-		for (int i = 0; i < sampleCount; i++) {
-			vec2 coeffs = vec2(random(v_texcoord0 + vec2(0, i) / Resolution) + random(v_texcoord0 + vec2(i, 0) / Resolution)) * samplingCoefficient;
-			vec3 reflectionDirectionRandomized = reflectionDirection + firstBasis * coeffs.x + secondBasis * coeffs.y;
-			vec3 tempColor = SSR(position.xyz, normalize(reflectionDirectionRandomized));
-			if (tempColor != vec3(0.f)) {
-				resultingColor += vec4(tempColor, 1.f);
-			}
-		}
-		if (resultingColor.w == 0){
-			output0 = texture(ColorMap, v_texcoord0);
-		} else {
-			resultingColor /= resultingColor.w;
-			output0 = vec4(resultingColor.xyz, 1.f);
-		}
-		} else {
-			output0 = vec4(SSR(position.xyz, normalize(reflectionDirection ) + (normal.xyz)), 1.f);
-		}
-	}
-}
-#endif
-
-
-
-#endif
-#if !BLAH
 
 void main()
 {
@@ -369,10 +231,6 @@ void main()
 	float clearcoat = 0.0;
 	float clearcoatGloss = 1.0;
 	
-#define $PBR_IBL_MATERIAL 1
-#define $PBR_CLOTH_MATERIAL 1
-
-	
     vec3 Cdlin = mon2lin(albedo.rgb);
     float Cdlum = .3*Cdlin[0] + .6*Cdlin[1]  + .1*Cdlin[2]; // luminance approx.
 
@@ -439,7 +297,7 @@ void main()
 
 #endif
 
-    /*for (int i = 0; i < env_NumPointLights; i++) {
+    for (int i = 0; i < env_NumPointLights; i++) {
         result += ComputePointLight(
             env_PointLights[i],
             N,
@@ -450,10 +308,9 @@ void main()
             roughness,
             metallic
         );
-    }*/
+    }
 	
 	result.rgb = tonemap(result.rgb);
 
     output0 = vec4(result, 1.0);
 }
-#endif
