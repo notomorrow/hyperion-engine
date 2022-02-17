@@ -4,13 +4,13 @@
 #include "height_info.h"
 #include "../rendering/mesh.h"
 #include "../math/vertex.h"
-#include "../entity.h"
+#include "../scene/node.h"
 
 #include <memory>
 
 namespace hyperion {
 
-class TerrainChunk : public Entity {
+class TerrainChunk : public Node {
 public:
     TerrainChunk(const ChunkInfo &chunk_info);
     virtual ~TerrainChunk() = default;
@@ -36,7 +36,6 @@ public:
     }
 
     ChunkInfo m_chunk_info;
-    // std::shared_ptr<Entity> m_entity = nullptr;
 
     std::vector<double> m_heights; // TODO: refactor
 

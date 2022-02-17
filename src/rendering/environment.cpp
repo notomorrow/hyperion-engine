@@ -1,8 +1,11 @@
 #include "environment.h"
 #include "shader_manager.h"
 
+#include <algorithm>
+
 namespace hyperion {
 Environment *Environment::instance = nullptr;
+
 const Vector2 Environment::possion_disk[16] = {
     Vector2(-0.94201624f, -0.39906216f),
     Vector2(0.94558609f, -0.76890725f),
@@ -22,6 +25,8 @@ const Vector2 Environment::possion_disk[16] = {
     Vector2(0.14383161f, -0.14100790f)
 };
 
+const size_t Environment::max_point_lights_on_screen = 32;
+
 Environment *Environment::GetInstance()
 {
     if (instance == nullptr) {
@@ -38,27 +43,12 @@ Environment::Environment()
       m_shadow_maps({ nullptr }),
       m_shadow_matrices({ Matrix4::Identity() }),
       m_sun(Vector3(-1, -1, -1).Normalize(), Vector4(0.9, 0.8, 0.7, 1.0)),
-      m_max_point_lights(0),
       m_probe_manager(ProbeManager::GetInstance())
 {
-    SetMaxPointLights(10);
 }
 
 Environment::~Environment()
 {
-}
-
-void Environment::SetMaxPointLights(int max_point_lights)
-{
-    if (max_point_lights == m_max_point_lights) {
-        return;
-    }
-
-    ShaderManager::GetInstance()->SetBaseShaderProperties(
-        ShaderProperties().Define("MAX_POINT_LIGHTS", max_point_lights)
-    );
-
-    m_max_point_lights = max_point_lights;
 }
 
 void Environment::SetShadowsEnabled(bool shadows_enabled)
@@ -85,6 +75,51 @@ void Environment::SetNumCascades(int num_cascades)
     );
 
     m_num_cascades = num_cascades;
+}
+
+void Environment::CollectVisiblePointLights(Camera *camera)
+{
+    const Frustum &frustum = camera->GetFrustum();
+
+    m_point_lights_sorted.clear();
+    m_point_lights_sorted.reserve(m_point_lights.size());
+
+    for (size_t i = 0; i < m_point_lights.size(); i++) {
+        const auto &point_light = m_point_lights[i];
+
+        // NOTE: we could also maybe just do a simple "behind camera" check?
+        // also, if the frustum route does work then maybe it makes sense to refactor lights into being
+        // some sorta Renderable?
+        if (point_light == nullptr || !frustum.BoundingBoxInFrustum(point_light->GetAABB())) {
+            continue;
+        }
+
+        m_point_lights_sorted.push_back(PointLightCameraData{
+            point_light.get(),
+            camera->GetTranslation().Distance(point_light->GetPosition())
+        });
+    }
+
+    if (m_point_lights.size() > max_point_lights_on_screen) {
+        std::sort(m_point_lights_sorted.begin(), m_point_lights_sorted.end(), [](const auto &a, const auto &b) {
+            return a.distance < b.distance;
+        });
+    }
+}
+
+void Environment::BindLights(Shader *shader) const
+{
+    size_t num_visible_point_lights = NumVisiblePointLights();
+
+    shader->SetUniform("env_NumPointLights", int(num_visible_point_lights));
+
+    for (int i = 0; i < num_visible_point_lights; i++) {
+        if (PointLight *point_light = m_point_lights_sorted[i].point_light) {
+            point_light->Bind(i, shader);
+        }
+    }
+
+    GetSun().Bind(0, shader);
 }
 
 } // namespace hyperion

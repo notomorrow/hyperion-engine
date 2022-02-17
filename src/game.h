@@ -6,7 +6,8 @@
 #include "rendering/ui/ui_manager.h"
 #include "rendering/camera/camera.h"
 #include "input_manager.h"
-#include "entity.h"
+#include "scene/scene_manager.h"
+#include "scene/node.h"
 
 namespace hyperion {
 class Game {
@@ -18,10 +19,12 @@ public:
     inline UIManager *GetUIManager() const { return m_ui_manager; }
     inline Renderer *GetRenderer() { return m_renderer; }
     inline const Renderer *GetRenderer() const { return m_renderer; }
-    inline std::shared_ptr<Entity> &GetScene() { return m_scene; }
-    inline const std::shared_ptr<Entity> &GetScene() const { return m_scene; }
-    inline std::shared_ptr<Entity> &GetUI() { return m_ui; }
-    inline const std::shared_ptr<Entity> &GetUI() const { return m_ui; }
+    inline SceneManager *GetSceneManager() { return m_scene_manager; }
+    inline const SceneManager *GetSceneManager() const { return m_scene_manager; }
+    inline std::shared_ptr<Node> &GetScene() { return m_scene; }
+    inline const std::shared_ptr<Node> &GetScene() const { return m_scene; }
+    inline std::shared_ptr<Node> &GetUI() { return m_ui; }
+    inline const std::shared_ptr<Node> &GetUI() const { return m_ui; }
     inline Camera *GetCamera() { return m_camera; }
     inline const Camera *GetCamera() const { return m_camera; }
 
@@ -33,8 +36,9 @@ public:
 
 protected:
     Camera *m_camera;
-    std::shared_ptr<Entity> m_scene;
-    std::shared_ptr<Entity> m_ui;
+    std::shared_ptr<Node> m_scene;
+    std::shared_ptr<Node> m_ui;
+    SceneManager *m_scene_manager;
     InputManager *m_input_manager;
     UIManager *m_ui_manager;
     Renderer * const m_renderer;

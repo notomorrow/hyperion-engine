@@ -22,26 +22,14 @@ using Vertices_t = std::vector<Vertex>;
 class Renderable : public fbom::FBOMLoadable {
     friend class Renderer;
 public:
-    enum RenderBucket {
-        RB_SKY,
-        RB_OPAQUE,
-        RB_TRANSPARENT,
-        RB_PARTICLE,
-        RB_SCREEN,
-        RB_DEBUG,
-        RB_BUFFER,
-        // ...
-        RB_MAX
-    };
 
-    Renderable(const fbom::FBOMType &loadable_type,
-        RenderBucket bucket = RB_OPAQUE);
+    Renderable(const fbom::FBOMType &loadable_type);
     Renderable(const Renderable &other) = delete;
     Renderable &operator=(const Renderable &other) = delete;
     virtual ~Renderable() = default;
 
-    inline RenderBucket GetRenderBucket() const { return m_bucket; }
-    inline void SetRenderBucket(RenderBucket bucket) { m_bucket = bucket; }
+    //inline RenderBucket GetRenderBucket() const { return m_bucket; }
+    //inline void SetRenderBucket(RenderBucket bucket) { m_bucket = bucket; }
     inline std::shared_ptr<Shader> GetShader() { return m_shader; }
     inline void SetShader(const std::shared_ptr<Shader> &shader) { m_shader = shader; }
     inline const BoundingBox &GetAABB() const { return m_aabb; }
@@ -54,7 +42,6 @@ public:
     virtual std::shared_ptr<Loadable> Clone() override;
 
 protected:
-    RenderBucket m_bucket;
     std::shared_ptr<Shader> m_shader;
     BoundingBox m_aabb;
 

@@ -7,8 +7,9 @@ Game::Game(const RenderWindow &window)
     : m_input_manager(new InputManager),
       m_ui_manager(new UIManager(m_input_manager)),
       m_renderer(new Renderer(window)),
-      m_scene(new Entity("Scene")),
-      m_ui(new Entity("UI"))
+      m_scene(new Node("Scene")),
+      m_ui(new Node("UI")),
+      m_scene_manager(SceneManager::GetInstance())
 {
     m_camera = new FpsCamera(
         GetInputManager(),
@@ -16,8 +17,8 @@ Game::Game(const RenderWindow &window)
         m_renderer->GetRenderWindow().GetScaledWidth(),
         m_renderer->GetRenderWindow().GetScaledHeight(),
         75.0f,
-        0.5f,
-        750.0f
+        0.05f,
+        250.0f
     );
 }
 
@@ -43,8 +44,7 @@ void Game::Update(double dt)
 
 void Game::PreRender()
 {
-    m_renderer->Collect(m_camera, m_scene.get());
-    m_renderer->Collect(m_camera, m_ui.get());
+    // no-op
 }
 
 void Game::Render()

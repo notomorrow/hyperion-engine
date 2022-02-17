@@ -44,6 +44,7 @@ Texture::~Texture()
 {
     Deinitialize();
 
+    // free stb image data
     free(bytes);
 }
 

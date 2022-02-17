@@ -57,7 +57,7 @@ public:
             case SHADER_PROPERTY_INT:
                 return value.int_value != 0;
             case SHADER_PROPERTY_FLOAT:
-                return value.float_value != 0.0;
+                return !MathUtil::Approximately(value.float_value, 0.0f);
             case SHADER_PROPERTY_BOOL:
                 return !!value.bool_value;
             default:

@@ -4,7 +4,7 @@
 
 namespace hyperion {
 const int ProbeManager::voxel_map_size = 128;
-const float ProbeManager::voxel_map_scale = 1.0f;
+const float ProbeManager::voxel_map_scale = 7.0f;
 const int ProbeManager::voxel_map_num_mipmaps = 7;
 
 ProbeManager *ProbeManager::instance = nullptr;

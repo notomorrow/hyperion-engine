@@ -42,7 +42,7 @@ public:
 protected:
     int seed;
 
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
     virtual std::shared_ptr<TerrainChunk> NewChunk(const ChunkInfo &height_info) override;
 };

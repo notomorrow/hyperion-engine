@@ -11,9 +11,9 @@ Feel free to contribute anything - We'd love to have some more eyes on this proj
 
 ## Screenshots
 
-![Apex engine screenshot](/screenshots/screenshot26.PNG)
-![Apex engine screenshot](/screenshots/screenshot25.PNG)
-![Apex engine screenshot](/screenshots/screenshot7.png)
+![Apex engine screenshot](/screenshots/screenshot33.PNG)
+![Apex engine screenshot](/screenshots/screenshot34.PNG)
+![Apex engine screenshot](/screenshots/screenshot8.png)
 
 ## Building
 

@@ -1,6 +1,6 @@
 #include "skybox.h"
 #include "skybox_shader.h"
-#include "../../entity.h"
+#include "../../scene/node.h"
 #include "../shader_manager.h"
 #include "../environment.h"
 #include "../../util/mesh_factory.h"
@@ -17,18 +17,18 @@ SkyboxControl::SkyboxControl(Camera *camera, const std::shared_ptr<Cubemap> &cub
 
 void SkyboxControl::OnAdded()
 {
-    m_cube = std::make_shared<Entity>("Skybox");
+    m_cube = std::make_shared<Node>("Skybox");
 
     m_cube->SetRenderable(MeshFactory::CreateCube());
 
     m_cube->SetLocalScale(10);
     m_cube->SetLocalTranslation(Vector3(0, 55, 2));
     m_cube->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<SkyboxShader>(ShaderProperties()));
-    m_cube->GetRenderable()->SetRenderBucket(Renderable::RB_SKY);
+    m_cube->GetSpatial().SetBucket(Spatial::Bucket::RB_SKY);
     m_cube->GetMaterial().SetTexture("SkyboxMap", m_cubemap);
     m_cube->GetMaterial().depth_test = false;
     m_cube->GetMaterial().depth_write = false;
-    m_cube->GetMaterial().alpha_blended = true;
+    //m_cube->GetMaterial().alpha_blended = false;
 
     parent->AddChild(m_cube);
 }
@@ -46,7 +46,7 @@ void SkyboxControl::OnUpdate(double dt)
     }
 }
 
-std::shared_ptr<EntityControl> SkyboxControl::CloneImpl()
+std::shared_ptr<Control> SkyboxControl::CloneImpl()
 {
     return std::make_shared<SkyboxControl>(nullptr, m_cubemap); // TODO
 }

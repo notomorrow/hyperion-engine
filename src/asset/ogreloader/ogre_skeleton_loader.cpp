@@ -118,7 +118,10 @@ std::shared_ptr<Loadable> OgreSkeletonLoader::LoadFromFile(const std::string &pa
 {
     OgreSkeletonHandler handler;
     xml::SaxParser parser(&handler);
-    parser.Parse(path.c_str());
+
+    if (auto err = parser.Parse(path.c_str())) {
+        return nullptr;
+    }
 
     return handler.GetSkeleton();
 }

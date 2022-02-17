@@ -3,7 +3,7 @@
 
 namespace hyperion {
 Bone::Bone(const std::string &name)
-    : Entity(name)
+    : Node(name)
 {
 }
 
@@ -53,7 +53,7 @@ const Vector3 &Bone::CalcBindingTranslation()
     global_bone_pos = bind_pos;
 
     Bone *parent_bone;
-    if (m_parent && (parent_bone = dynamic_cast<Bone*>(m_parent))) {
+    if (m_parent && (parent_bone = dynamic_cast<Bone*>(m_parent.get()))) {
         global_bone_pos = parent_bone->global_bone_rot * bind_pos;
         global_bone_pos += parent_bone->global_bone_pos;
     }
@@ -73,7 +73,7 @@ const Quaternion &Bone::CalcBindingRotation()
     global_bone_rot = bind_rot;
 
     Bone *parent_bone;
-    if (m_parent && (parent_bone = dynamic_cast<Bone*>(m_parent))) {
+    if (m_parent && (parent_bone = dynamic_cast<Bone*>(m_parent.get()))) {
         global_bone_rot = parent_bone->global_bone_rot * bind_rot;
     }
 
@@ -129,13 +129,13 @@ void Bone::UpdateTransform()
 
     Bone *parent_bone;
     if (m_parent != nullptr) {
-        parent_bone = dynamic_cast<Bone*>(m_parent);
+        parent_bone = dynamic_cast<Bone*>(m_parent.get());
         if (parent_bone != nullptr) {
             bone_matrix *= parent_bone->bone_matrix;
         }
     }
 
-    Entity::UpdateTransform();
+    Node::UpdateTransform();
 }
 
 std::shared_ptr<Loadable> Bone::Clone()

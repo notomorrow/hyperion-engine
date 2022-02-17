@@ -1,7 +1,7 @@
 #ifndef GI_PROBE_CONTROL_H
 #define GI_PROBE_CONTROL_H
 
-#include "../../../control.h"
+#include "../../../controls/entity_control.h"
 #include "../../../math/bounding_box.h"
 #include <memory>
 
@@ -17,9 +17,9 @@ public:
     virtual void OnUpdate(double dt);
 
 protected:
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
-    std::shared_ptr<Entity> m_gi_mapper_node;
+    std::shared_ptr<Node> m_gi_mapper_node;
     std::shared_ptr<GIMapper> m_gi_mapper;
     Vector3 m_origin;
     BoundingBox m_bounds;

@@ -8,12 +8,12 @@ SaxParser::SaxParser(SaxHandler *handler)
 {
 }
 
-void SaxParser::Parse(const std::string &filepath)
+SaxResult SaxParser::Parse(const std::string &filepath)
 {
     file.open(filepath);
+
     if (!file.is_open()) {
-        std::cout << "Error opening file stream!";
-        return;
+        return SAX_ERR;
     }
 
     bool is_reading = false,
@@ -27,11 +27,12 @@ void SaxParser::Parse(const std::string &filepath)
          in_attribute_value = false,
          in_attribute_name = false;
 
-    char last_char;
+    char last_char = '\0';
     std::string element_str, comment_str, value_str;
     std::vector<std::pair<std::string, std::string>> attribs;
 
     // shield your eyes
+    // 2022-02-09: wtf
     char ch;
     while (file.get(ch)) {
         if (ch != '\t' && ch != '\n') {
@@ -125,6 +126,8 @@ void SaxParser::Parse(const std::string &filepath)
         }
         last_char = ch;
     }
+
+    return SAX_OK;
 }
 
 } // namespace xml

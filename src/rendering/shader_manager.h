@@ -15,6 +15,9 @@ public:
     static ShaderManager *instance;
     static ShaderManager *GetInstance();
 
+    ShaderManager();
+    ~ShaderManager();
+
     template <typename T>
     std::shared_ptr<T> GetShader(const ShaderProperties &properties)
     {

@@ -55,44 +55,54 @@ const std::string &AssetManager::GetRootDir() const {
 
 std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bool use_caching)
 {
-    const std::string new_path = this->GetRootDir()+StringUtil::Trim(StringUtil::ReplaceAll(path, "\\", "/"));
-    
+    const std::string trimmed_path = StringUtil::Trim(StringUtil::ReplaceAll(path, "\\", "/"));
+
+    // paths to try a few times before giving up, in order
+    const std::array<std::string, 2> try_paths = {
+         this->GetRootDir() + trimmed_path,
+         trimmed_path
+    };
+   
     if (use_caching) {
-        auto it = loaded_assets.find(new_path);
-        if (it != loaded_assets.end() && it->second != nullptr) {
-            // reuse already loaded asset
-            const auto clone = it->second->Clone();
+        for (const auto &path : try_paths) {
+            auto it = loaded_assets.find(path);
+            if (it != loaded_assets.end() && it->second != nullptr) {
+                // reuse already loaded asset
+                const auto clone = it->second->Clone();
 
-            if (clone == nullptr) { // no implementation; return shared ptr
-                std::cout << "Use cached object (direct)" << new_path << "\n";
+                if (clone == nullptr) { // no implementation; return shared ptr
+                    std::cout << "Use cached object (direct) " << path << "\n";
 
-                return it->second;
+                    return it->second;
+                }
+
+                std::cout << "Use cached object (clone) " << path << "\n";
+
+                return clone;
             }
-
-            std::cout << "Use cached object (clone) " << new_path << "\n";
-
-            return clone;
         }
     }
 
-    try {
-        auto &loader = GetLoader(new_path);
+    for (const auto &path : try_paths) {
+        try {
+            auto &loader = GetLoader(path);
 
-        if (loader != nullptr) {
-            auto loaded = loader->LoadFromFile(new_path);
+            if (loader != nullptr) {
+                auto loaded = loader->LoadFromFile(path);
 
-            if (!loaded) {
-                throw std::string("Loader returned no data");
-            } else {
-                loaded->SetFilePath(new_path);
+                if (!loaded) {
+                    throw std::string("Loader returned no data");
+                } else {
+                    loaded->SetFilePath(path);
 
-                loaded_assets[new_path] = loaded;
+                    loaded_assets[path] = loaded;
+                }
+
+                return loaded;
             }
-
-            return loaded;
+        } catch (std::string err) {
+            std::cout << "[" << path << "]: " << "File load error: " << err << "\n";
         }
-    } catch (std::string err) {
-        std::cout << "[" << path << "]: " << "File load error: " << err << "\n";
     }
 
     return nullptr;

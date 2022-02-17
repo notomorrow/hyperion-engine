@@ -1,6 +1,6 @@
 #include "mesh_factory.h"
 #include "../math/math_util.h"
-#include "../entity.h"
+#include "../scene/node.h"
 #include "../hash_code.h"
 
 #include <unordered_map>
@@ -129,7 +129,6 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::shared_ptr<Mesh> &a,
     new_mesh->SetPrimitiveType(Mesh::PrimitiveType::PRIM_TRIANGLES);
 
     new_mesh->SetShader(b->GetShader()); // hmm..
-    new_mesh->SetRenderBucket(b->GetRenderBucket());
 
     return new_mesh;
 }
@@ -305,27 +304,29 @@ std::shared_ptr<Mesh> MeshFactory::CreateSphere(float radius, int num_slices, in
     return mesh;
 }
 
-std::vector<RenderableMesh_t> MeshFactory::GatherMeshes(Entity *entity)
+std::vector<RenderableMesh_t> MeshFactory::GatherMeshes(Node *node)
 {
-    ex_assert(entity != nullptr);
+    ex_assert(node != nullptr);
 
-    entity->UpdateTransform();
+    node->UpdateTransform();
 
     std::vector<RenderableMesh_t> meshes;
     meshes.reserve(10);
 
-    if (auto mesh = std::dynamic_pointer_cast<Mesh>(entity->GetRenderable())) {
+    if (auto mesh = std::dynamic_pointer_cast<Mesh>(node->GetRenderable())) {
         meshes.push_back(std::make_tuple(
             mesh,
-            entity->GetGlobalTransform(),
-            entity->GetMaterial()
+            node->GetGlobalTransform(),
+            node->GetMaterial()
         ));
     }
 
-    for (size_t i = 0; i < entity->NumChildren(); i++) {
-        std::vector<RenderableMesh_t> sub_meshes = GatherMeshes(entity->GetChild(i).get());
+    for (size_t i = 0; i < node->NumChildren(); i++) {
+        if (auto *child = node->GetChild(i).get()) {
+            std::vector<RenderableMesh_t> sub_meshes = GatherMeshes(child);
 
-        meshes.insert(meshes.end(), sub_meshes.begin(), sub_meshes.end());
+            meshes.insert(meshes.end(), sub_meshes.begin(), sub_meshes.end());
+        }
     }
 
     return meshes;

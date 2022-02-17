@@ -12,6 +12,11 @@ namespace xml {
 
 typedef std::map<std::string, std::string> AttributeMap;
 
+enum SaxResult {
+    SAX_OK = 0,
+    SAX_ERR = 1
+};
+
 class SaxHandler {
 public:
     SaxHandler() {}
@@ -26,7 +31,7 @@ public:
 class SaxParser {
 public:
     SaxParser(SaxHandler *handler);
-    void Parse(const std::string &filepath);
+    SaxResult Parse(const std::string &filepath);
 
 private:
     std::ifstream file;

@@ -252,54 +252,6 @@ void Mesh::SetVerticesFromFloatBuffer(const std::vector<float> &buffer)
     SetVertices(result);
 }
 
-void Mesh::CalculateTangents()
-{
-    Vertex *v[3];
-    Vector2 uv[3];
-
-    for (size_t i = 0; i < indices.size(); i += 3) {
-        for (int j = 0; j < 3; j++) {
-            v[j] = &vertices[indices[i + j]];
-            uv[j] = v[j]->GetTexCoord0();
-        }
-
-        Vector3 edge1 = v[1]->GetPosition() - v[0]->GetPosition();
-        Vector3 edge2 = v[2]->GetPosition() - v[0]->GetPosition();
-
-        Vector2 edge1uv = uv[1] - uv[0];
-        Vector2 edge2uv = uv[2] - uv[0];
-
-        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
-
-        if (cp != 0.0f) {
-            const float mul = 1.0f / cp;
-
-            Vector3 tangent;
-            tangent.x = edge2uv.y * edge1.x - edge1uv.y * edge2.x;
-            tangent.y = edge2uv.y * edge1.y - edge1uv.y * edge2.y;
-            tangent.z = edge2uv.y * edge1.z - edge1uv.y * edge2.z;
-            tangent *= mul;
-            tangent.Normalize();
-
-            Vector3 bitangent;
-
-            bitangent.x = -edge2uv.x * edge1.x + edge1uv.x * edge2.x;
-            bitangent.y = -edge2uv.x * edge1.y + edge1uv.x * edge2.y;
-            bitangent.z = -edge2uv.x * edge1.z + edge1uv.x * edge2.z;
-            bitangent *= mul;
-            bitangent.Normalize();
-
-            for (int j = 0; j < 3; j++) {
-                v[j]->SetTangent(tangent);
-                v[j]->SetBitangent(bitangent);
-            }
-        }
-    }
-
-    SetAttribute(ATTR_TANGENTS, MeshAttribute::Tangents);
-    SetAttribute(ATTR_BITANGENTS, MeshAttribute::Bitangents);
-}
-
 void Mesh::Render(Renderer *renderer, Camera *cam)
 {
     if (!is_created) {
@@ -411,6 +363,10 @@ void Mesh::CalculateNormals()
         vert.SetNormal(Vector3::Zero());
     }
 
+    std::vector<Vector3> new_normals(indices.size(), Vector3(0.0f));
+
+    std::unordered_map<MeshIndex, std::vector<Vector3>> normals;
+
     for (size_t i = 0; i < indices.size(); i += 3) {
         MeshIndex i0 = indices[i];
         MeshIndex i1 = indices[i + 1];
@@ -427,20 +383,227 @@ void Mesh::CalculateNormals()
         n.Cross(u);
         n.Normalize();
 
-        vertices[i0].SetNormal(vertices[i0].GetNormal() + n);
-        vertices[i1].SetNormal(vertices[i1].GetNormal() + n);
-        vertices[i2].SetNormal(vertices[i2].GetNormal() + n);
+        //vertices[i0].SetNormal(vertices[i0].GetNormal() + n);
+        //vertices[i1].SetNormal(vertices[i1].GetNormal() + n);
+        //vertices[i2].SetNormal(vertices[i2].GetNormal() + n);
+        /*new_normals[i] = n;
+        new_normals[i + 1] = n;
+        new_normals[i + 2] = n;*/
+        normals[i0].push_back(n);
+        normals[i1].push_back(n);
+        normals[i2].push_back(n);
     }
 
-    for (Vertex &vert : vertices) {
-        Vector3 tmp(vert.GetNormal());
-        tmp.Normalize();
-        vert.SetNormal(tmp);
+    /*for (Vertex &vert : vertices) {
+        vert.SetNormal(Vector3(vert.GetNormal()).Normalize());
+    }*/
+
+    for (size_t i = 0; i < vertices.size(); i++) {
+        // find average
+        Vector3 average;
+
+        for (const auto &normal : normals[i]) {
+            average += normal * (1.0f / float(normals[i].size()));
+        }
+
+        average.Normalize();
+
+        vertices[i].SetNormal(average);
+
+        /*int shared = 0;
+        Vector3 normal_sum;
+
+        for (size_t j = 0; j < indices.size(); j++) {
+            if (indices[j] != i) {
+                continue;
+            }
+
+            normal_sum += new_normals[j];
+            shared++;
+        }
+
+        if (shared) {
+            vertices[i].SetNormal(Vector3(normal_sum / shared).Normalize());
+        }*/
     }
 
     SetAttribute(ATTR_NORMALS, MeshAttribute::Normals);
+
+    CalculateTangents();
 }
 
+void Mesh::CalculateTangents()
+{
+    /*Vertex *v[3];
+    Vector2 uv[3];
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        for (int j = 0; j < 3; j++) {
+            v[j] = &vertices[indices[i + j]];
+            uv[j] = v[j]->GetTexCoord0();
+        }
+
+        Vector3 edge1 = v[1]->GetPosition() - v[0]->GetPosition();
+        Vector3 edge2 = v[2]->GetPosition() - v[0]->GetPosition();
+
+        Vector2 edge1uv = uv[1] - uv[0];
+        Vector2 edge2uv = uv[2] - uv[0];
+
+        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
+
+        if (cp != 0.0f) {
+            const float mul = 1.0f / cp;
+
+            Vector3 tangent;
+            tangent.x = edge2uv.y * edge1.x - edge1uv.y * edge2.x;
+            tangent.y = edge2uv.y * edge1.y - edge1uv.y * edge2.y;
+            tangent.z = edge2uv.y * edge1.z - edge1uv.y * edge2.z;
+            tangent *= mul;
+            tangent.Normalize();
+
+            Vector3 bitangent;
+
+            bitangent.x = -edge2uv.x * edge1.x + edge1uv.x * edge2.x;
+            bitangent.y = -edge2uv.x * edge1.y + edge1uv.x * edge2.y;
+            bitangent.z = -edge2uv.x * edge1.z + edge1uv.x * edge2.z;
+            bitangent *= mul;
+            bitangent.Normalize();
+
+            for (int j = 0; j < 3; j++) {
+                v[j]->SetTangent(tangent);
+                v[j]->SetBitangent(bitangent);
+            }
+        }
+    }*/
+
+
+    /*Vertex *v[3];
+    Vector2 uv[3];
+
+    for (auto &vertex : vertices) {
+        vertex.SetTangent(Vector3(0.0f));
+        vertex.SetBitangent(Vector3(0.0f));
+    }
+
+    std::vector<Vector3> new_tangents(indices.size(), Vector3());
+    std::vector<Vector3> new_bitangents(indices.size(), Vector3());
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        for (int j = 0; j < 3; j++) {
+            v[j] = &vertices[indices[i + j]];
+            uv[j] = v[j]->GetTexCoord0();
+        }
+
+        Vector3 edge1 = v[1]->GetPosition() - v[0]->GetPosition();
+        Vector3 edge2 = v[2]->GetPosition() - v[0]->GetPosition();
+
+        Vector2 edge1uv = uv[1] - uv[0];
+        Vector2 edge2uv = uv[2] - uv[0];
+
+        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
+
+        const float mul = 1.0f / cp;
+
+        Vector3 tangent = ((edge1 * edge2uv.y) - (edge2 * edge1uv.y)) * mul;
+        Vector3 bitangent = ((edge1 * edge2uv.x) - (edge2 * edge1uv.x)) * mul;
+
+        new_tangents[i] += tangent;
+        new_tangents[i + 1] += tangent;
+        new_tangents[i + 2] += tangent;
+
+        new_bitangents[i] += bitangent;
+        new_bitangents[i + 1] += bitangent;
+        new_bitangents[i + 2] += bitangent;
+    }
+
+    for (size_t i = 0; i < vertices.size(); i++) {
+        int shared = 0;
+        Vector3 tangent_sum, bitangent_sum;
+
+        for (size_t j = 0; j < indices.size(); j++) {
+            if (indices[j] != i) {
+                continue;
+            }
+
+            tangent_sum += new_tangents[j];
+            bitangent_sum += new_bitangents[j];
+            shared++;
+        }
+
+        if (shared) {
+            vertices[i].SetTangent(Vector3(tangent_sum / shared).Normalize());
+            vertices[i].SetBitangent(Vector3(bitangent_sum / shared).Normalize());
+        }
+    }*/
+
+    /*for (size_t i = 0; i < vertices.size(); i++) {
+        Vector3 n = vertices[i].GetNormal();
+        Vector3 tangent = (new_tangents[i] - (n * n.Dot(new_tangents[i])));
+        Vector3 cross = n.Cross(new_tangents[i]);
+
+        Vector3 bitangent = cross * MathUtil::Sign(cross.Dot(new_bitangents[i]));
+
+        vertices[i].SetTangent(tangent);
+
+        vertices[i].SetBitangent(bitangent);
+    }*/
+
+
+    Vertex *v[3];
+    Vector2 uv[3];
+
+    for (auto &vertex : vertices) {
+        vertex.SetTangent(Vector3(0.0f));
+        vertex.SetBitangent(Vector3(0.0f));
+    }
+
+    std::vector<Vector3> new_tangents(vertices.size(), Vector3());
+    std::vector<Vector3> new_bitangents(vertices.size(), Vector3());
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        for (int j = 0; j < 3; j++) {
+            v[j] = &vertices[indices[i + j]];
+            uv[j] = v[j]->GetTexCoord0();
+        }
+
+        Vector3 edge1 = v[1]->GetPosition() - v[0]->GetPosition();
+        Vector3 edge2 = v[2]->GetPosition() - v[0]->GetPosition();
+
+        Vector2 edge1uv = uv[1] - uv[0];
+        Vector2 edge2uv = uv[2] - uv[0];
+
+        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
+
+        //if (!MathUtil::Approximately(cp, 0.0f)) {
+            const float mul = 1.0f / cp;
+
+            Vector3 tangent = ((edge1 * edge2uv.y) - (edge2 * edge1uv.y)) * mul;
+            Vector3 bitangent = ((edge1 * edge2uv.x) - (edge2 * edge1uv.x)) * mul;
+
+            new_tangents[indices[i]] += tangent;
+            new_tangents[indices[i + 1]] += tangent;
+            new_tangents[indices[i + 2]] += tangent;
+
+            new_bitangents[indices[i]] += bitangent;
+            new_bitangents[indices[i + 1]] += bitangent;
+            new_bitangents[indices[i + 2]] += bitangent;
+        //}
+    }
+
+    for (size_t i = 0; i < vertices.size(); i++) {
+        Vector3 n = vertices[i].GetNormal();
+        Vector3 tangent = (new_tangents[i] - (n * n.Dot(new_tangents[i])));
+        Vector3 cross = n.Cross(new_tangents[i]);
+
+        Vector3 bitangent = cross * MathUtil::Sign(cross.Dot(new_bitangents[i]));
+
+        vertices[i].SetTangent(tangent);
+        vertices[i].SetBitangent(bitangent);
+    } 
+
+    SetAttribute(ATTR_TANGENTS, MeshAttribute::Tangents);
+    SetAttribute(ATTR_BITANGENTS, MeshAttribute::Bitangents);
+}
 
 void Mesh::InvertNormals()
 {
@@ -457,7 +620,6 @@ std::shared_ptr<Renderable> Mesh::CloneImpl()
     clone->attribs = attribs;
     clone->primitive_type = primitive_type;
     clone->m_shader = m_shader; // TODO: clone shader?
-    clone->m_bucket = m_bucket;
     clone->m_aabb = m_aabb;
 
     return clone;
