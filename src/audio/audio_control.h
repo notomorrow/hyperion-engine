@@ -1,7 +1,7 @@
 #ifndef AUDIO_CONTROL_H
 #define AUDIO_CONTROL_H
 
-#include "../control.h"
+#include "../controls/entity_control.h"
 #include "audio_source.h"
 
 #include <memory>
@@ -19,7 +19,7 @@ public:
     void OnUpdate(double dt);
 
 private:
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
     std::shared_ptr<AudioSource> m_source;
     Vector3 m_last_position;

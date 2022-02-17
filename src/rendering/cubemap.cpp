@@ -49,20 +49,23 @@ void Cubemap::UploadGpuData(bool should_upload_data)
         }
     }
 
-    CoreEngine::GetInstance()->TexParameteri(
-        CoreEngine::GLEnums::TEXTURE_CUBE_MAP,
-        CoreEngine::GLEnums::TEXTURE_MAG_FILTER,
-        CoreEngine::GLEnums::LINEAR
-    );
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, mag_filter);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, min_filter);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
-    // glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, CUBEMAP_NUM_MIPMAPS);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 8);
 
-    // glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    if (should_upload_data) {
 
+        if (min_filter == GL_LINEAR_MIPMAP_LINEAR ||
+            min_filter == GL_LINEAR_MIPMAP_NEAREST ||
+            min_filter == GL_NEAREST_MIPMAP_NEAREST) {
+            glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+            CatchGLErrors("Failed to generate cubemap mipmaps.", false);
+        }
+    }
     CatchGLErrors("Failed to upload cubemap");
 }
 

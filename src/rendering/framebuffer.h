@@ -2,7 +2,7 @@
 #define FRAMEBUFFER_H
 
 #include "texture_2D.h"
-#include "../util.h"
+#include "../math/math_util.h"
 
 #include <memory>
 #include <array>
@@ -28,7 +28,7 @@ public:
 
     // convert from attachment (2^x) into ordinal (0-5) for use as an array index
     static inline uint64_t AttachmentToOrdinal(FramebufferAttachment attachment)
-        { return FastLog2(uint64_t(attachment)); }
+        { return MathUtil::FastLog2(uint64_t(attachment)); }
 
     // convert from ordinal (0-5) into power-of-two for use as bit flags
     static inline FramebufferAttachment OrdinalToAttachment(uint64_t ordinal)

@@ -1,6 +1,19 @@
 #include "vertex.h"
 
 namespace hyperion {
+/*bool Vertex::operator==(const Vertex &other) const
+{
+    return position == other.position
+        && normal == other.normal
+        && texcoord0 == other.texcoord0
+        && texcoord1 == other.texcoord1
+        && tangent == other.tangent
+        && nboneindices == other.nboneindices
+        && nboneweights == other.nboneweights
+        && bone_weights == other.bone_weights
+        && bone_indices == other.bone_indices;
+}*/
+
 Vertex &Vertex::operator=(const Vertex &other)
 {
     position = other.position;

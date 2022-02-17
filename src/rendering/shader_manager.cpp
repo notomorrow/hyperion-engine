@@ -1,4 +1,5 @@
 #include "shader_manager.h"
+#include "environment.h"
 
 namespace hyperion {
 
@@ -11,6 +12,23 @@ ShaderManager *ShaderManager::GetInstance()
     }
 
     return instance;
+}
+
+ShaderManager::ShaderManager()
+{
+    m_base_shader_properties
+        .Define("METALNESS_MAPPING", true)
+        .Define("ROUGHNESS_MAPPING", true)
+        .Define("NORMAL_MAPPING", true)
+        .Define("SSR_ENABLED", true)
+        .Define("MAX_POINT_LIGHTS", int(Environment::max_point_lights_on_screen))
+        .Define("HDR", true)
+        .Define("HDR_TONEMAP_FILMIC", true)
+        .Define("HDR_TONEMAP_UNREAL", false);
+}
+
+ShaderManager::~ShaderManager()
+{
 }
 
 void ShaderManager::SetBaseShaderProperties(const ShaderProperties &properties)

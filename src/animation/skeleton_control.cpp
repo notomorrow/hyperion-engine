@@ -88,15 +88,21 @@ void SkeletonControl::StopAnimation()
     play_state = STOPPED;
 }
 
-void SkeletonControl::FindBones(Entity *top)
+void SkeletonControl::FindBones(Node *top)
 {
+    ex_assert(top != nullptr);
+
     auto *bone = dynamic_cast<Bone*>(top);
+
     if (bone) {
         bone_names.push_back("Bone[" + std::to_string(bones.size()) + "]");
         bones.push_back(bone);
     }
+
     for (size_t i = 0; i < top->NumChildren(); i++) {
-        FindBones(top->GetChild(i).get());
+        if (auto child = top->GetChild(i).get()) {
+            FindBones(child);
+        }
     }
 }
 
@@ -130,7 +136,7 @@ void SkeletonControl::OnUpdate(double dt)
     }
 }
 
-std::shared_ptr<EntityControl> SkeletonControl::CloneImpl()
+std::shared_ptr<Control> SkeletonControl::CloneImpl()
 {
     std::shared_ptr<SkeletonControl> clone = std::make_shared<SkeletonControl>(skinning_shader);
 

@@ -4,7 +4,7 @@
 namespace hyperion {
 
 TerrainChunk::TerrainChunk(const ChunkInfo &chunk_info)
-    : Entity(std::string("terrain_chunk__") + std::to_string(chunk_info.m_position.x) + "_" + std::to_string(chunk_info.m_position.y)),
+    : Node(std::string("terrain_chunk__") + std::to_string(chunk_info.m_position.x) + "_" + std::to_string(chunk_info.m_position.y)),
       m_chunk_info(chunk_info)
 {
 }
@@ -140,7 +140,7 @@ int TerrainChunk::HeightIndexAt(int x, int z) const
 
 int TerrainChunk::HeightIndexAtWorld(const Vector3 &world) const
 {
-    Matrix4 inv = Matrix4(m_global_transform.GetMatrix()).Invert();
+    Matrix4 inv = Matrix4(GetGlobalTransform().GetMatrix()).Invert();
     Vector3 offset = world * inv;
     offset /= m_chunk_info.m_scale;
 
@@ -181,7 +181,7 @@ Vector3 TerrainChunk::NormalAtIndex(int index) const
     }
 
 
-    Mesh *mesh = dynamic_cast<Mesh*>(m_renderable.get());
+    Mesh *mesh = dynamic_cast<Mesh*>(GetRenderable().get());
 
     hard_assert(mesh != nullptr);
 

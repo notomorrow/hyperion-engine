@@ -7,22 +7,34 @@
 
 #include <vector>
 #include <string>
+#include <cstring>
 #include <map>
+#include <tuple>
 
 namespace hyperion {
 class MtlLib;
 
-struct ObjModel {
-    struct ObjIndex {
-        int vertex_idx, normal_idx, texcoord_idx;
-    };
+struct ObjIndex {
+    int vertex_idx, normal_idx, texcoord_idx;
 
-    std::vector<std::string> mesh_names;
-    std::map<std::string, std::string> mesh_material_names;
+    inline bool operator==(const ObjIndex &other) const
+        { return std::memcmp(this, &other, sizeof(ObjIndex)) == 0; }
+
+    inline bool operator<(const ObjIndex &other) const
+        { return std::tie(vertex_idx, normal_idx, texcoord_idx) < std::tie(other.vertex_idx, other.normal_idx, other.texcoord_idx); }
+};
+
+struct ObjMesh {
+    std::string name;
+    std::string mtl;
+    std::vector<ObjIndex> indices;
+};
+
+struct ObjModel {
     std::vector<Vector3> positions;
     std::vector<Vector3> normals;
     std::vector<Vector2> texcoords;
-    std::vector<std::vector<ObjIndex>> indices;
+    std::vector<ObjMesh> meshes;
     std::shared_ptr<MtlLib> mtl_lib;
 
     bool has_normals, has_texcoords;
@@ -34,12 +46,14 @@ struct ObjModel {
     }
 
     void AddMesh(const std::string &name);
-    std::vector<ObjIndex> &CurrentList();
+    ObjMesh &CurrentList();
     ObjIndex ParseObjIndex(const std::string &);
 };
 
 class ObjLoader : public AssetLoader {
 public:
+    static const bool use_indices;
+
     virtual ~ObjLoader() = default;
 
     std::shared_ptr<Loadable> LoadFromFile(const std::string &);

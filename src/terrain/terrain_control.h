@@ -1,7 +1,7 @@
 #ifndef TERRAIN_CONTROL_H
 #define TERRAIN_CONTROL_H
 
-#include "../control.h"
+#include "../controls/entity_control.h"
 #include "../math/vector2.h"
 #include "../math/vector3.h"
 #include "terrain_chunk.h"
@@ -32,7 +32,7 @@ public:
     virtual void OnUpdate(double dt);
 
 protected:
-    virtual std::shared_ptr<EntityControl> CloneImpl() = 0;
+    virtual std::shared_ptr<Control> CloneImpl() = 0;
 
     Camera *m_camera;
     Vector3 m_scale;

@@ -29,7 +29,7 @@ void CameraFollowControl::OnUpdate(double dt)
     parent->SetGlobalTranslation(m_camera->GetTranslation() + m_offset);
 }
 
-std::shared_ptr<EntityControl> CameraFollowControl::CloneImpl()
+std::shared_ptr<Control> CameraFollowControl::CloneImpl()
 {
     return std::make_shared<CameraFollowControl>(nullptr, m_offset); // todo
 }

@@ -29,13 +29,13 @@ out VSOutput
 
 void main() {
   v_position = u_modelMatrix * vec4(a_position, 1.0);
-  vs_out.normal = a_normal.xyz;
+  vs_out.normal = (transpose(inverse(u_modelMatrix)) * vec4(a_normal.xyz, 0.0)).xyz;
   vs_out.texcoord0 = a_texcoord0;
   vs_out.position = v_position.xyz;
 
 #if PROBE_RENDER_SHADING
   // vertex shading
-  float NdotL = clamp(dot(a_normal.xyz, env_DirectionalLight.direction), $CUBEMAP_LIGHTING_AMBIENT, 1.0);
+  float NdotL = clamp(dot(vs_out.normal, env_DirectionalLight.direction), $CUBEMAP_LIGHTING_AMBIENT, 1.0);
   vs_out.lighting = vec4(NdotL, NdotL, NdotL, 1.0) * env_DirectionalLight.color;
 #endif
 

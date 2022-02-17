@@ -22,20 +22,20 @@ enum MaterialParameterKey {
     MATERIAL_PARAMETER_NONE = 0b00,
     
     // basic
-    MATERIAL_PARAMETER_DIFFUSE_COLOR = 0b10,
-    MATERIAL_PARAMETER_METALNESS     = 0b100,
-    MATERIAL_PARAMETER_ROUGHNESS     = 0b1000,
-    MATERIAL_PARAMETER_EMISSIVENESS  = 0b10000,
-    MATERIAL_PARAMETER_FLIP_UV       = 0b100000,
-    MATERIAL_PARAMETER_RESERVED_1    = 0b1000000,
-    MATERIAL_PARAMETER_RESERVED_2    = 0b10000000,
-    MATERIAL_PARAMETER_RESERVED_3    = 0b100000000,
-    MATERIAL_PARAMETER_RESERVED_4    = 0b1000000000,
-    MATERIAL_PARAMETER_RESERVED_5    = 0b10000000000,
-    MATERIAL_PARAMETER_RESERVED_6    = 0b100000000000,
-    MATERIAL_PARAMETER_RESERVED_7    = 0b1000000000000,
-    MATERIAL_PARAMETER_RESERVED_8    = 0b10000000000000,
-    MATERIAL_PARAMETER_RESERVED_9    = 0b100000000000000,
+    MATERIAL_PARAMETER_DIFFUSE_COLOR   = 0b10,
+    MATERIAL_PARAMETER_METALNESS       = 0b100,
+    MATERIAL_PARAMETER_ROUGHNESS       = 0b1000,
+    MATERIAL_PARAMETER_SUBSURFACE      = 0b10000,
+    MATERIAL_PARAMETER_SPECULAR        = 0b100000,
+    MATERIAL_PARAMETER_SPECULAR_TINT   = 0b1000000,
+    MATERIAL_PARAMETER_ANISOTROPIC     = 0b10000000,
+    MATERIAL_PARAMETER_SHEEN           = 0b100000000,
+    MATERIAL_PARAMETER_SHEEN_TINT      = 0b1000000000,
+    MATERIAL_PARAMETER_CLEARCOAT       = 0b10000000000,
+    MATERIAL_PARAMETER_CLEARCOAT_GLOSS = 0b100000000000,
+    MATERIAL_PARAMETER_EMISSIVENESS    = 0b1000000000000,
+    MATERIAL_PARAMETER_FLIP_UV         = 0b10000000000000,
+    MATERIAL_PARAMETER_PARALLAX_HEIGHT = 0b100000000000000,
 
     // terrain
     MATERIAL_PARAMETER_TERRAIN_LEVEL_0_HEIGHT = 0b1000000000000000,
@@ -101,11 +101,14 @@ class Material : public fbom::FBOMLoadable {
 public:
     using MaterialParameterTable_t = EnumOptions<MaterialParameterKey, MaterialParameter, MATERIAL_MAX_PARAMETERS>;
 
-    static const EnumOptions<MaterialParameterKey, MaterialParameter, 3> default_parameters;
+    static const MaterialParameterTable_t default_parameters;
 
     Material();
     Material(const Material &other);
     virtual ~Material() = default;
+
+    inline bool operator==(const Material &other) const
+        { return GetHashCode().Value() == other.GetHashCode().Value(); }
 
     inline MaterialParameterTable_t &GetParameters() { return m_params; }
     inline const MaterialParameter &GetParameter(MaterialParameterKey key) const { return m_params.Get(key); }

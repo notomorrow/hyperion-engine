@@ -2,7 +2,20 @@
 
 namespace hyperion {
 
-const decltype(Material::default_parameters) Material::default_parameters; // TODO
+const Material::MaterialParameterTable_t Material::default_parameters({
+    std::make_pair(MATERIAL_PARAMETER_ROUGHNESS, 0.5f),
+    std::make_pair(MATERIAL_PARAMETER_METALNESS, 0.1f),
+    std::make_pair(MATERIAL_PARAMETER_SUBSURFACE, 0.0f),
+    std::make_pair(MATERIAL_PARAMETER_SPECULAR, 0.25f),
+    std::make_pair(MATERIAL_PARAMETER_SPECULAR_TINT, 0.1f),
+    std::make_pair(MATERIAL_PARAMETER_ANISOTROPIC, 0.0f),
+    std::make_pair(MATERIAL_PARAMETER_SHEEN, 0.0f),
+    std::make_pair(MATERIAL_PARAMETER_SHEEN_TINT, 0.0f),
+    std::make_pair(MATERIAL_PARAMETER_CLEARCOAT, 0.0f),
+    std::make_pair(MATERIAL_PARAMETER_CLEARCOAT_GLOSS, 0.0f),
+    std::make_pair(MATERIAL_PARAMETER_EMISSIVENESS, 0.0f),
+    std::make_pair(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.15f)
+});
 
 MaterialParameter::MaterialParameter()
     : type(MaterialParameter_None),
@@ -40,7 +53,10 @@ Material::Material()
 {
     for (size_t i = 0; i < default_parameters.Size(); i++) {
         auto pair = default_parameters.KeyValueAt(i);
-        m_params.Set(pair.first, pair.second);
+
+        if (default_parameters.Has(pair.first)) {
+            m_params.Set(pair.first, pair.second);
+        }
     }
 }
 

@@ -33,13 +33,15 @@ TreePopulator::~TreePopulator()
 {
 }
 
-std::shared_ptr<Entity> TreePopulator::CreateEntity(const Vector3 &position) const
+std::shared_ptr<Node> TreePopulator::CreateEntity(const Vector3 &position) const
 {
-    auto tree = AssetManager::GetInstance()->LoadFromFile<Entity>("models/pine/LoblollyPine.obj", true);
+    auto tree = AssetManager::GetInstance()->LoadFromFile<Node>("models/pine/LoblollyPine.obj", true);
 
     for (int i = 0; i < tree->NumChildren(); i++) {
-        tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
-        tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
+        if (auto child = tree->GetChild(i)) {
+            tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
+            tree->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
+        }
     }
 
    /* tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
@@ -59,7 +61,7 @@ std::shared_ptr<Entity> TreePopulator::CreateEntity(const Vector3 &position) con
     return tree;
 }
 
-std::shared_ptr<EntityControl> TreePopulator::CloneImpl()
+std::shared_ptr<Control> TreePopulator::CloneImpl()
 {
     return std::make_shared<TreePopulator>(nullptr, m_seed, m_probability_factor,
         m_tolerance, m_max_distance, m_spread, m_num_entities_per_chunk,

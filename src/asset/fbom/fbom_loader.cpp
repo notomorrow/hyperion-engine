@@ -2,7 +2,7 @@
 #include "../byte_reader.h"
 
 // marshal classes
-#include "../../entity.h"
+#include "../../scene/node.h"
 #include "../../terrain/noise_terrain/noise_terrain_control.h"
 #include "../../rendering/mesh.h"
 #include "../../rendering/material.h"
@@ -12,7 +12,7 @@ namespace hyperion {
 namespace fbom {
 
 decltype(FBOMLoader::loaders) FBOMLoader::loaders = {
-    { "ENTITY", FBOM_MARSHAL_CLASS(Entity) },
+    { "ENTITY", FBOM_MARSHAL_CLASS(Node) },
     { "NOISE_TERRAIN_CONTROL", FBOM_MARSHAL_CLASS(NoiseTerrainControl) },
     { "MESH", FBOM_MARSHAL_CLASS(Mesh) },
     { "MATERIAL", FBOM_MARSHAL_CLASS(Material) }

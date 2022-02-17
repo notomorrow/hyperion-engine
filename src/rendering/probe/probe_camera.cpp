@@ -6,7 +6,7 @@
 
 namespace hyperion {
 ProbeCamera::ProbeCamera(const fbom::FBOMType &loadable_type, const ProbeRegion &region)
-    : Renderable(fbom::FBOMObjectType("PROBE_CAMERA").Extend(loadable_type), RB_BUFFER),
+    : Renderable(fbom::FBOMObjectType("PROBE_CAMERA").Extend(loadable_type)),
       m_region(region),
       m_camera(nullptr)
 {

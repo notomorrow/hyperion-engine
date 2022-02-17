@@ -1,7 +1,7 @@
 #ifndef ENVMAP_PROBE_CONTROL_H
 #define ENVMAP_PROBE_CONTROL_H
 
-#include "../../../control.h"
+#include "../../../controls/entity_control.h"
 #include "../../../math/bounding_box.h"
 #include <memory>
 
@@ -17,9 +17,9 @@ public:
     virtual void OnUpdate(double dt);
 
 protected:
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
-    std::shared_ptr<Entity> m_env_probe_node;
+    std::shared_ptr<Node> m_env_probe_node;
     std::shared_ptr<EnvMapProbe> m_env_probe;
 };
 } // namespace hyperion

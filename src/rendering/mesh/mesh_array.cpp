@@ -33,10 +33,6 @@ void MeshArray::UpdateSubmeshes()
         return;
     }
 
-    if (m_submeshes[0].mesh != nullptr) {
-        SetRenderBucket(m_submeshes[0].mesh->GetRenderBucket());
-    }
-
     ApplyTransforms();
 }
 

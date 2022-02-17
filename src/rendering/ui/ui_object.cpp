@@ -8,37 +8,37 @@
 namespace hyperion {
 namespace ui {
 UIObject::UIObject(const std::string &name)
-    : Entity(name)
+    : Node(name)
 {
-    m_material.depth_test = false;
-    m_material.depth_write = false;
-    m_material.alpha_blended = true;
+    GetMaterial().depth_test = false;
+    GetMaterial().depth_write = false;
+    GetMaterial().alpha_blended = true;
 
-    m_renderable = MeshFactory::CreateQuad();
-    m_renderable->SetShader(ShaderManager::GetInstance()->GetShader<UIObjectShader>(ShaderProperties()));
-    m_renderable->SetRenderBucket(Renderable::RB_SCREEN);
+    SetRenderable(MeshFactory::CreateQuad());
+    GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<UIObjectShader>(ShaderProperties()));
+    GetSpatial().SetBucket(Spatial::Bucket::RB_SCREEN);
 }
 
 void UIObject::UpdateTransform()
 {
-    Entity::UpdateTransform();
+    Node::UpdateTransform();
 }
 
 bool UIObject::IsMouseOver(double x, double y) const
 {
-    if (x < m_global_transform.GetTranslation().x) {
+    if (x < GetGlobalTranslation().x) {
         return false;
     }
 
-    if (x > m_global_transform.GetTranslation().x + m_global_transform.GetScale().x) {
+    if (x > GetGlobalTranslation().x + GetGlobalScale().x) {
         return false;
     }
 
-    if (y < m_global_transform.GetTranslation().y) {
+    if (y < GetGlobalTranslation().y) {
         return false;
     }
 
-    if (y > m_global_transform.GetTranslation().y + m_global_transform.GetScale().y) {
+    if (y > GetGlobalTranslation().y + GetGlobalScale().y) {
         return false;
     }
 

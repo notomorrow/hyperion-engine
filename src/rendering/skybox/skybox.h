@@ -1,7 +1,7 @@
 #ifndef SKYBOX_H
 #define SKYBOX_H
 
-#include "../../control.h"
+#include "../../controls/entity_control.h"
 #include "../cubemap.h"
 #include "../mesh.h"
 #include "../texture.h"
@@ -21,9 +21,9 @@ public:
     void OnUpdate(double dt);
 
 private:
-    virtual std::shared_ptr<EntityControl> CloneImpl() override;
+    virtual std::shared_ptr<Control> CloneImpl() override;
 
-    std::shared_ptr<Entity> m_cube;
+    std::shared_ptr<Node> m_cube;
     std::shared_ptr<Cubemap> m_cubemap;
     Camera *m_camera;
 };

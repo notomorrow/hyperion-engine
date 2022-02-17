@@ -76,14 +76,14 @@ void PssmShadowMapping::Render(Renderer *renderer)
 
         renderer->RenderBucket(
             shadow_renderers[i]->GetShadowCamera(),
-            renderer->GetBucket(Renderable::RB_OPAQUE),
+            renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
             m_depth_shader.get(),
             false
         );
 
         renderer->RenderBucket(
             shadow_renderers[i]->GetShadowCamera(),
-            renderer->GetBucket(Renderable::RB_TRANSPARENT),
+            renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT),
             m_depth_shader.get(),
             false
         );

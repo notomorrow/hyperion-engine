@@ -1,13 +1,13 @@
 #ifndef UI_OBJECT_H
 #define UI_OBJECT_H
 
-#include "../../entity.h"
+#include "../../scene/node.h"
 #include "../../input_manager.h"
 
 namespace hyperion {
 class Texture;
 namespace ui {
-class UIObject : public Entity {
+class UIObject : public Node {
 public:
     UIObject(const std::string &name = "");
     virtual ~UIObject() = default;
@@ -25,9 +25,9 @@ public:
     void SetHoverEvent(const InputEvent &input_event) { m_hover_event = input_event; }
 
     inline std::shared_ptr<Texture> GetImage() const
-        { return m_material.GetTexture("ColorMap"); }
+        { return GetMaterial().GetTexture("ColorMap"); }
     inline void SetImage(std::shared_ptr<Texture> texture)
-        { m_material.SetTexture("ColorMap", texture); }
+        { GetMaterial().SetTexture("ColorMap", texture); }
 
     inline void SetLocalTranslation2D(const Vector2 &translation)   
         { SetLocalTranslation(Vector3(translation.x, translation.y, m_local_translation.z)); }

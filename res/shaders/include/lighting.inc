@@ -52,7 +52,7 @@ struct PointLight
     float radius;
 };
 
-uniform PointLight env_PointLights[/*$MAX_POINT_LIGHTS*/4];
+uniform PointLight env_PointLights[$MAX_POINT_LIGHTS];
 uniform int env_NumPointLights;
 
 uniform samplerCube env_GlobalCubemap;
@@ -67,8 +67,8 @@ uniform int HasBrdfMap;
 #define $SIN_2 0.90929743
 #define $COS_2 -0.4161468
 
-vec3 Irradiance(vec3 normal) {
-	vec3 irradiance = vec3(0.0);  
+vec4 Irradiance(vec3 normal) {
+	vec4 irradiance = vec4(0.0);  
 
 	vec3 up    = vec3(0.0, 1.0, 0.0);
 	vec3 right = normalize(cross(up, normal));
@@ -86,7 +86,7 @@ vec3 Irradiance(vec3 normal) {
 					// tangent space to world
 					vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal; 
 
-					irradiance += texture(env_GlobalIrradianceCubemap, sampleVec).rgb * cos(theta) * sin(theta);
+					irradiance += textureLod(env_GlobalCubemap, sampleVec, 7) * cos(theta) * sin(theta);
 					nrSamples++;
 			}
 	}
@@ -150,9 +150,9 @@ vec3 FresnelTerm(vec3 specularColor, float vdoth)
 	return fresnel;
 }
 
-vec3 EnvRemap(vec3 c)
+vec4 EnvRemap(vec4 c)
 {
-	return pow(2.0 * c, vec3(2.2));
+	return pow(2.0 * c, vec4(2.2));
 }
 
 
@@ -368,7 +368,7 @@ vec3 SampleSphericalHarmonics(vec3 n)
 	return SphericalHarmonics(sh, n);
 }
 
-vec3 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl)
+vec4 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl)
 {
 
   vec4 samp;
@@ -384,33 +384,15 @@ vec3 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl)
 
   vec3 coord = boxIntersection - EnvProbe.position;
 
-  samp = textureLod(tex, coord, 4);
+  samp = texture(tex, coord);
 
-  return samp.rgb;
+  return samp;
 
 }
 
-vec3 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos, vec3 tangent, vec3 bitangent)
+vec4 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos, vec3 tangent, vec3 bitangent)
 {
-  vec4 samp;
-
   return SampleEnvProbeRefl(tex, worldPos, ReflectionVector(n, worldPos, camPos));
-
-  //vec3 accum = vec3(0.0);
-  
-  //accum += SampleEnvProbeRefl(tex, worldPos, n);
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.03, 0.0, 0.03)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n - vec3(0.03, 0.0, 0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.03, 0.0, -0.03)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(-0.03, 0.0, 0.03)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.05, 0.0, 0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n - vec3(0.05, 0.0, 0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(0.05, 0.0, -0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + vec3(-0.05, 0.0, 0.05)));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n + bitangent));
-  //accum += SampleEnvProbeRefl(tex, worldPos, normalize(n - bitangent));
-  //return accum / 9.0;
-
 }
 
 vec3 ComputeDirectionalLight(DirectionalLight dl, vec3 n, vec3 v, vec3 vert, vec3 albedo, float shadowness, float roughness, float metalness)
@@ -491,7 +473,7 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
 	vec3 lightDir = normalize(pl.position - vert);
 
 	float dist = distance(pl.position, vert);
-	float attenuation = clamp(1.0 - (dist * dist)/(pl.radius * pl.radius), 0.0, 1.0);
+	float attenuation = clamp(1.0 - (dist * dist)/max(pl.radius * pl.radius, 0.001), 0.0, 1.0);
 	attenuation *= attenuation;
 	//float attenuation = 20.0 / dot(local_light_pos - v_pos, local_light_pos - v_pos);
 	vec3 radiance = pl.color.rgb * attenuation;
@@ -543,13 +525,18 @@ vec3 ComputePointLight(PointLight pl, vec3 n, vec3 cameraPosition, vec3 vert, ve
     vec3 specRef = vec3((1.0 / max(rim, 0.0001)) * F * G * D) * NdotL;
     reflectedLight += specRef;
 
+	return specRef * radiance;
+
     vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * AB.x + AB.y);
+	
+	
+
     reflectedLight += ibl * specularCubemap;
 
     vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
     //diffRef += gi;
     diffuseLight += diffRef;
-    diffuseLight += EnvRemap(Irradiance(n)) * (1.0 / $PI);
+    diffuseLight += EnvRemap(Irradiance(n)).rgb * (1.0 / $PI);
     diffuseLight *= metallicDiff;
 
 	return (diffuseLight + reflectedLight) * radiance;

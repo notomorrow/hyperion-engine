@@ -20,7 +20,7 @@ void SkydomeControl::OnAdded()
     shader = ShaderManager::GetInstance()->GetShader<SkydomeShader>(ShaderProperties()
         .Define("CLOUDS", clouds_in_dome));
 
-    dome = AssetManager::GetInstance()->LoadFromFile<Entity>("models/dome.obj");
+    dome = AssetManager::GetInstance()->LoadFromFile<Node>("models/dome.obj");
 
     if (dome == nullptr) {
         throw std::runtime_error("Could not load skydome model!");
@@ -28,7 +28,7 @@ void SkydomeControl::OnAdded()
 
     dome->SetLocalScale(50);
     dome->GetChild(0)->GetRenderable()->SetShader(shader);
-    dome->GetChild(0)->GetRenderable()->SetRenderBucket(Renderable::RB_SKY);
+    dome->GetChild(0)->GetSpatial().SetBucket(Spatial::Bucket::RB_SKY);
     dome->GetChild(0)->GetMaterial().depth_test = false;
     dome->GetChild(0)->GetMaterial().depth_write = false;
     dome->GetChild(0)->GetMaterial().diffuse_color = Vector4(0.2, 0.3, 0.8, 1.0);
@@ -40,9 +40,9 @@ void SkydomeControl::OnAdded()
 
         clouds_quad = MeshFactory::CreateQuad();
         clouds_quad->SetShader(clouds_shader);
-        clouds_quad->SetRenderBucket(Renderable::RB_SKY);
 
-        auto clouds_node = std::make_shared<Entity>("clouds");
+        auto clouds_node = std::make_shared<Node>("clouds");
+        clouds_node->GetSpatial().SetBucket(Spatial::Bucket::RB_SKY);
         clouds_node->Rotate(Quaternion(Vector3::UnitX(), MathUtil::PI / -2.0f));
         clouds_node->Scale(Vector3(250.0));
         clouds_node->SetRenderable(clouds_quad);
@@ -73,7 +73,7 @@ void SkydomeControl::OnUpdate(double dt)
     }
 }
 
-std::shared_ptr<EntityControl> SkydomeControl::CloneImpl()
+std::shared_ptr<Control> SkydomeControl::CloneImpl()
 {
     return std::make_shared<SkydomeControl>(nullptr); // TODO
 }

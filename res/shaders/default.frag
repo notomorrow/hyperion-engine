@@ -40,14 +40,17 @@ void main()
   vec3 n = normalize(v_normal.xyz);
   vec3 viewVector = normalize(u_camerapos-v_position.xyz);
 
-  vec3 tangentViewPos = v_tbn * viewVector;
+  vec3 tangentViewPos = v_tbn * u_camerapos.xyz;//((u_viewMatrix * v_position)).xyz;
   vec3 tangentLightPos = v_tbn * lightDir;
   vec3 tangentFragPos = v_tbn * v_position.xyz;
 
   vec2 texCoords = v_texcoord0;
 
   if (HasParallaxMap == 1) {
-    texCoords = ParallaxMapping(texCoords, normalize(tangentViewPos - tangentFragPos));
+    texCoords = ParallaxMapping(texCoords, normalize(tangentFragPos - tangentViewPos/*v_tbn * (u_viewMatrix * vec4(v_position)).xyz*/));
+    if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0) {
+      texCoords = v_texcoord0;
+    }
   }
 
   vec4 diffuseTexture = vec4(1.0, 1.0, 1.0, 1.0);
@@ -129,35 +132,30 @@ void main()
 #endif
 
 
-  vec3 blurredSpecularCubemap = vec3(0.0);
-  vec3 specularCubemap = vec3(0.0);
-  vec3 gi = vec3(0.0);
+  vec4 blurredSpecularCubemap = vec4(0.0);
+  vec4 specularCubemap = vec4(0.0);
+  vec4 gi = vec4(0.0);
+  float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
 
 #if VCT_ENABLED
-  //testing
   vec4 vctSpec = VCTSpecular(v_position.xyz, n.xyz, u_camerapos, u_roughness);
   vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent, roughness);
-  specularCubemap = vctSpec.rgb;
-  gi += vctDiff.rgb;
+  specularCubemap += vctSpec;
+  gi += vctDiff;
 #endif // VCT_ENABLED
 
 #if PROBE_ENABLED
-  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
-  specularCubemap = SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent).rgb;
-
-
+  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent);
+  specularCubemap += SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent);
+  //specularCubemap += mix(SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent), blurredSpecularCubemap, roughnessMix);
 #if !SPHERICAL_HARMONICS_ENABLED
-  gi += EnvRemap(Irradiance(n));
+  //gi += EnvRemap(Irradiance(n));
 #endif // !SPHERICAL_HARMONICS_ENABLED
-
 #endif // PROBE_ENABLED
 
 #if SPHERICAL_HARMONICS_ENABLED
-  gi += SampleSphericalHarmonics(n);
+  gi.rgb += SampleSphericalHarmonics(n);
 #endif // SPHERICAL_HARMONICS_ENABLED
-
-  float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
-  //specularCubemap = mix(specularCubemap, blurredSpecularCubemap, roughness);
 
 
   vec3 F0 = vec3(0.04);
@@ -183,10 +181,10 @@ void main()
   reflectedLight += specRef;
 
   vec3 ibl = min(vec3(0.99), FresnelTerm(metallicSpec, NdotV) * AB.x + AB.y);
-  reflectedLight += ibl * specularCubemap;
+  reflectedLight += ibl * specularCubemap.rgb;
 
   vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
-  diffRef += gi;
+  diffRef += gi.rgb;
   diffuseLight += diffRef * (1.0 / $PI);
   diffuseLight *= metallicDiff;
 
@@ -200,10 +198,10 @@ void main()
   output0 = albedo;
 #endif
 
-  output1 = vec4(n * 0.5 + 0.5, 1.0);
+  output1 = vec4(normalize(n) * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(metallic, roughness, 0.0, 1.0);
   output4 = vec4(0.0, 0.0, 0.0, ao);
-  output5 = vec4(v_tangent * 0.5 + 0.5, 1.0);
-  output6 = vec4(v_bitangent * 0.5 + 0.5, 1.0);
+  output5 = vec4(normalize(v_tangent.xyz) * 0.5 + 0.5, 1.0);
+  output6 = vec4(normalize(v_bitangent.xyz) * 0.5 + 0.5, 1.0);
 }
