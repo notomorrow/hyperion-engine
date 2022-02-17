@@ -1,5 +1,5 @@
 #include "audio_control.h"
-#include "../entity.h"
+#include "../scene/node.h"
 
 namespace hyperion {
 AudioControl::AudioControl(std::shared_ptr<AudioSource> source)

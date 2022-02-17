@@ -19,7 +19,7 @@ public:
 protected:
     virtual std::shared_ptr<Control> CloneImpl() override;
 
-    std::shared_ptr<Entity> m_env_probe_node;
+    std::shared_ptr<Node> m_env_probe_node;
     std::shared_ptr<EnvMapProbe> m_env_probe;
 };
 } // namespace hyperion

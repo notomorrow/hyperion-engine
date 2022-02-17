@@ -91,7 +91,7 @@ RigidBody::RigidBody(std::shared_ptr<PhysicsShape> shape, PhysicsMaterial materi
       m_awake(true),
       m_render_debug_aabb(false),
       m_aabb_renderer(new BoundingBoxRenderer()),
-      m_aabb_debug_node(new Entity("physics_aabb_debug")),
+      m_aabb_debug_node(new Node("physics_aabb_debug")),
       m_rigid_body(nullptr),
       m_motion_state(nullptr)
 {

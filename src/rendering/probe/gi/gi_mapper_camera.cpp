@@ -40,7 +40,7 @@ void GIMapperCamera::Render(Renderer *renderer, Camera *)
 {
     renderer->RenderBucket(
         m_camera,
-        renderer->GetBucket(Renderable::RB_OPAQUE),
+        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
         m_shader.get(),
         false
     );

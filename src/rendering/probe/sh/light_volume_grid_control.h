@@ -19,7 +19,7 @@ public:
 protected:
     virtual std::shared_ptr<Control> CloneImpl() override;
 
-    std::shared_ptr<Entity> m_light_volume_grid_node;
+    std::shared_ptr<Node> m_light_volume_grid_node;
     std::shared_ptr<LightVolumeGrid> m_light_volume_grid;
 };
 } // namespace hyperion

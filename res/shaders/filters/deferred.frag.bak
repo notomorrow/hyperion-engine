@@ -36,7 +36,7 @@ uniform mat4 InverseViewProjMatrix;
 
 #define $DIRECTIONAL_LIGHTING 1
 
-#define $BLAH 1
+#define $BLAH 0
 
 vec3 decodeNormal(vec4 enc)
 {
@@ -93,10 +93,6 @@ vec3 mon2lin(vec3 x)
     return vec3(pow(x[0], 2.2), pow(x[1], 2.2), pow(x[2], 2.2));
 }
 
-
-
-
-#define $SSR_ENABLED 1
 
 #if SSR_ENABLED
 
@@ -358,7 +354,6 @@ void main()
   vec4 ssrResult = PostProcess_SSR(ppd);
   specularCubemap = ssrResult;//mix(specularCubemap, ssrResult, ssrResult.a);
 #endif
-
 
 
 #if SPHERICAL_HARMONICS_ENABLED

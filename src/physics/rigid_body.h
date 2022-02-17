@@ -2,7 +2,7 @@
 #define RIGID_BODY_H
 
 #include "../controls/entity_control.h"
-#include "../entity.h"
+#include "../scene/node.h"
 #include "physics_shape.h"
 #include "physics_material.h"
 #include "../math/vector3.h"
@@ -125,7 +125,7 @@ private:
     BoundingBox m_bounding_box;
     bool m_render_debug_aabb;
     std::shared_ptr<BoundingBoxRenderer> m_aabb_renderer;
-    std::shared_ptr<Entity> m_aabb_debug_node;
+    std::shared_ptr<Node> m_aabb_debug_node;
 };
 } // namespace physics
 } // namespace hyperion

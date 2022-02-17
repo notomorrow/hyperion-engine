@@ -79,14 +79,14 @@ UIText::UIText(const std::string &name, const std::string &text)
         32
     );
 
-    m_renderable = std::make_shared<MeshArray>();
+    SetRenderable(std::make_shared<MeshArray>());
 
     if (!m_text.empty()) {
         UpdateTextTransforms();
 
-        m_material.SetTexture("ColorMap", m_font_map->GetTexture());
-        m_renderable->SetShader(ShaderManager::GetInstance()->GetShader<UIObjectShader>(ShaderProperties()));
-        m_renderable->SetRenderBucket(Renderable::RB_SCREEN);
+        GetMaterial().SetTexture("ColorMap", m_font_map->GetTexture());
+        GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<UIObjectShader>(ShaderProperties()));
+        GetSpatial().SetBucket(Spatial::Bucket::RB_SCREEN);
     }
 }
 
@@ -102,7 +102,7 @@ void UIText::UpdateTextTransforms()
     m_char_mesh_transforms.clear();
     m_char_mesh_transforms.resize(m_text.size());
 
-    auto mesh_array = std::dynamic_pointer_cast<MeshArray>(m_renderable);
+    auto mesh_array = std::dynamic_pointer_cast<MeshArray>(GetRenderable());
 
     ex_assert(mesh_array != nullptr);
 

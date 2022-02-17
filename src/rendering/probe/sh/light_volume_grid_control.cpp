@@ -1,7 +1,7 @@
 #include "light_volume_grid_control.h"
 #include "light_volume_grid.h"
 #include "../probe_manager.h"
-#include "../../../entity.h"
+#include "../../../scene/node.h"
 
 #include "../../../rendering/renderers/bounding_box_renderer.h"
 
@@ -10,7 +10,7 @@
 namespace hyperion {
 LightVolumeGridControl::LightVolumeGridControl(const Vector3 &origin, BoundingBox bounds)
     : EntityControl(fbom::FBOMObjectType("LIGHT_VOLUME_GRID_CONTROL"), 5.0),
-      m_light_volume_grid_node(new Entity("LightVolumeGrid")),
+      m_light_volume_grid_node(new Node("LightVolumeGrid")),
       m_light_volume_grid(new LightVolumeGrid(origin, bounds, 3)) // TODO
 {
     m_light_volume_grid_node->SetRenderable(m_light_volume_grid);
@@ -22,7 +22,7 @@ void LightVolumeGridControl::OnAdded()
     ProbeManager::GetInstance()->AddProbe(m_light_volume_grid);
 
     for (auto it : m_light_volume_grid->m_light_volumes) {
-        auto node = std::make_shared<Entity>();
+        auto node = std::make_shared<Node>();
         node->SetRenderable(std::make_shared<BoundingBoxRenderer>(it->GetBounds()));
         parent->AddChild(node);
     }

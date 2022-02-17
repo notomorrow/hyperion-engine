@@ -2,7 +2,7 @@
 #define SKELETON_CONTROL_H
 
 #include "../controls/entity_control.h"
-#include "../entity.h"
+#include "../scene/node.h"
 #include "../rendering/shader.h"
 #include "bone.h"
 #include "animation.h"
@@ -41,7 +41,7 @@ public:
     void OnUpdate(double dt);
 
 private:
-    void FindBones(Entity *top);
+    void FindBones(Node *top);
 
     virtual std::shared_ptr<Control> CloneImpl() override;
 

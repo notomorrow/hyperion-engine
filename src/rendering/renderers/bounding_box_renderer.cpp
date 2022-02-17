@@ -15,7 +15,7 @@ BoundingBoxRenderer::BoundingBoxRenderer()
 }
 
 BoundingBoxRenderer::BoundingBoxRenderer(const BoundingBox &aabb)
-    : Renderable(fbom::FBOMObjectType("BOUNDING_BOX_RENDERER"), RenderBucket::RB_DEBUG),
+    : Renderable(fbom::FBOMObjectType("BOUNDING_BOX_RENDERER")),
       m_mesh(new Mesh)
 {
     m_aabb = aabb;
@@ -46,10 +46,8 @@ void BoundingBoxRenderer::Render(Renderer *renderer, Camera *cam)
 {
     UpdateVertices();
 
-    m_shader->Use();
     m_mesh->SetVertices(m_vertices, BoundingBoxRenderer::indices);
     m_mesh->Render(renderer, cam);
-    m_shader->End();
 }
 
 std::shared_ptr<Renderable> BoundingBoxRenderer::CloneImpl()

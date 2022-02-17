@@ -6,7 +6,7 @@
 namespace hyperion {
 
 class EntityControl : public Control {
-    friend class Entity;
+    friend class Node;
 public:
     EntityControl(const fbom::FBOMType &loadable_type, const double tps = 30.0);
     EntityControl(const EntityControl &other) = delete;
@@ -16,7 +16,7 @@ public:
     virtual void OnUpdate(double dt) = 0;
 
 protected:
-    Entity *parent;
+    Node *parent;
 };
 
 } // namespace hyperion

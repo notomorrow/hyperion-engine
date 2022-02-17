@@ -7,8 +7,9 @@
 
 #include "../util.h"
 #include "../core_engine.h"
-#include "../entity.h"
+#include "../scene/node.h"
 #include "../hash_code.h"
+#include "scene/spatial.h"
 #include "math/bounding_box.h"
 #include "render_window.h"
 #include "material.h"
@@ -21,42 +22,41 @@
 
 namespace hyperion {
 
-struct MemoizedFrustumCheckKey {
-    size_t frustum_hash_code;
-    size_t aabb_hash_code;
-};
-
-
 struct BucketItem {
-    Renderable *renderable;
-    Material *material;
-    BoundingBox aabb;
-    Transform transform;
-    size_t hash_code;
+    int m_id;
+    Spatial m_spatial;
     bool frustum_culled;
     bool alive;
 
-    BucketItem()
-        : renderable(nullptr),
-          material(nullptr),
-          aabb(),
-          transform(),
-          hash_code(0),
+    BucketItem(int id)
+        : m_id(id),
+          frustum_culled(false),
+          alive(true)
+    {
+    }
+
+    BucketItem(int id, const Spatial &spatial)
+        : m_id(id),
+          m_spatial(spatial),
           frustum_culled(false),
           alive(true)
     {
     }
 
     BucketItem(const BucketItem &other)
-        : renderable(other.renderable),
-          material(other.material),
-          aabb(other.aabb),
-          transform(other.transform),
-          hash_code(other.hash_code),
+        : m_id(other.m_id),
+          m_spatial(other.m_spatial),
           frustum_culled(other.frustum_culled),
           alive(other.alive)
     {
     }
+
+    inline const std::shared_ptr<Renderable> &GetRenderable() const
+        { return m_spatial.GetRenderable(); }
+    inline const Spatial &GetSpatial() const
+        { return m_spatial; }
+    inline int GetId() const
+        { return m_id; }
 };
 
 struct Bucket {
@@ -77,17 +77,17 @@ struct Bucket {
     inline bool IsEmpty() const { return items.empty(); }
     inline const std::vector<BucketItem> &GetItems() const { return items; }
 
-    std::size_t GetIndex(size_t at)
+    std::size_t GetIndex(int id)
     {
-        const auto it = hash_to_item_index.find(at);
+        const auto it = hash_to_item_index.find(id);
         ex_assert(it != hash_to_item_index.end());
 
         return it->second;
     }
 
-    BucketItem *GetItemPtr(size_t at)
+    BucketItem *GetItemPtr(int id)
     {
-        const auto it = hash_to_item_index.find(at);
+        const auto it = hash_to_item_index.find(id);
 
         if (it == hash_to_item_index.end())
         {
@@ -100,9 +100,9 @@ struct Bucket {
         return &items[index];
     }
 
-    BucketItem &GetItem(size_t at)
+    BucketItem &GetItem(int id)
     {
-        const auto it = hash_to_item_index.find(at);
+        const auto it = hash_to_item_index.find(id);
         ex_assert(it != hash_to_item_index.end());
 
         const size_t index = it->second;
@@ -113,10 +113,10 @@ struct Bucket {
 
     void AddItem(const BucketItem &bucket_item)
     {
-        const auto it = hash_to_item_index.find(bucket_item.hash_code);
-        ex_assert(it == hash_to_item_index.end());
+        const auto it = hash_to_item_index.find(bucket_item.GetId());
+        soft_assert(it == hash_to_item_index.end());
 
-        soft_assert(bucket_item.renderable != nullptr);
+        soft_assert(bucket_item.GetRenderable() != nullptr);
 
         // For optimization: try to find an existing slot that
         // where the same shader is used previously or next
@@ -136,7 +136,7 @@ struct Bucket {
                 slot_index = i;
                 slot_found = true;
 
-                soft_assert_break_msg(bucket_item.renderable->GetShader() != nullptr, "No shader set, using first found inactive slot");
+                soft_assert_break_msg(bucket_item.GetRenderable()->GetShader() != nullptr, "No shader set, using first found inactive slot");
 
                 continue;
             }
@@ -152,11 +152,11 @@ struct Bucket {
             // next one is empty, so we compare shaders for this,
             // checking if we should insert the item into the next slot
 
-            hard_assert(items[i].renderable != nullptr);
+            hard_assert(items[i].GetRenderable() != nullptr);
 
-            if (items[i].renderable->GetShader() != nullptr) {
+            if (items[i].GetRenderable()->GetShader() != nullptr) {
                 // doing ID check for now... not sure how portable it will be
-                if (items[i].renderable->GetShader()->GetId() == bucket_item.renderable->GetShader()->GetId()) {
+                if (items[i].GetRenderable()->GetShader()->GetId() == bucket_item.GetRenderable()->GetShader()->GetId()) {
                     slot_index = is_next_empty ? (i + 1) : (i - 1);
                     slot_found = true;
 
@@ -177,29 +177,29 @@ struct Bucket {
         }
 #endif
 
-        hash_to_item_index[bucket_item.hash_code] = slot_index;
+        hash_to_item_index[bucket_item.GetId()] = slot_index;
     }
 
-    void SetItem(size_t at, const BucketItem &bucket_item)
+    void SetItem(int id, const BucketItem &bucket_item)
     {
-        const auto it = hash_to_item_index.find(at);
-        ex_assert(it != hash_to_item_index.end());
+        const auto it = hash_to_item_index.find(id);
+        soft_assert(it != hash_to_item_index.end());
 
         const size_t index = it->second;
         ex_assert(index < items.size());
 
         items[index] = bucket_item;
 
-        if (bucket_item.hash_code != at) {
+        if (bucket_item.GetId() != id) {
             hash_to_item_index.erase(it);
-            hash_to_item_index[bucket_item.hash_code] = index;
+            hash_to_item_index[id] = index;
         }
     }
 
-    void RemoveItem(size_t at)
+    void RemoveItem(int id)
     {
-        const auto it = hash_to_item_index.find(at);
-        ex_assert(it != hash_to_item_index.end());
+        const auto it = hash_to_item_index.find(id);
+        soft_assert(it != hash_to_item_index.end());
 
         const size_t index = it->second;
         ex_assert(index < items.size());
@@ -225,7 +225,7 @@ struct Bucket {
 private:
 
     std::vector<BucketItem> items;
-    std::map<std::size_t, std::size_t> hash_to_item_index;
+    std::map<HashCode::Value_t, std::size_t> hash_to_item_index;
 };
 
 using Bucket_t = std::vector<BucketItem>;
@@ -239,7 +239,6 @@ public:
     Renderer &operator=(const Renderer &other) = delete;
     ~Renderer();
 
-    void Collect(Camera *cam, Entity *top);
     void Begin(Camera *cam);
     void Render(Camera *cam);
     void End(Camera * cam);
@@ -258,26 +257,24 @@ public:
     inline RenderWindow &GetRenderWindow() { return m_render_window; }
     inline const RenderWindow &GetRenderWindow() const { return m_render_window; }
 
-    inline Bucket &GetBucket(Renderable::RenderBucket bucket) { return m_buckets[bucket]; }
+    inline Bucket &GetBucket(Spatial::Bucket bucket) { return m_buckets[bucket]; }
 
-    Bucket m_buckets[Renderable::RB_MAX];
+    Bucket m_buckets[Spatial::Bucket::RB_MAX];
 
 private:
     PostProcessing *m_post_processing;
     Framebuffer2D *m_fbo;
     RenderWindow m_render_window;
     bool m_is_deferred;
+    int m_octree_callback_id;
 
-    std::map<Entity*, HashCode::Value_t> m_hash_cache;
-    std::map<HashCode::Value_t, Renderable::RenderBucket> m_hash_to_bucket;
+    std::map<Node*, HashCode::Value_t> m_hash_cache;
+    std::map<HashCode::Value_t, Spatial::Bucket> m_hash_to_bucket;
 
     void ClearRenderables();
-    void FindRenderables(Camera *cam, Entity *top, bool frustum_culled = false, bool is_root = false);
-    bool MemoizedFrustumCheck(Camera *cam, const BoundingBox &aabb);
+    void FindRenderables(Camera *cam, Node *top, bool frustum_culled = false, bool is_root = false);
 
     void SetRendererDefaults();
-
-    std::map<MemoizedFrustumCheckKey, bool> m_memoized_frustum_checks; // TODO: some sort of deque map
 };
 } // namespace hyperion
 

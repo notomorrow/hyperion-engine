@@ -1,7 +1,7 @@
 #include "ogre_loader.h"
 #include "../../asset/asset_manager.h"
 #include "../../rendering/environment.h"
-#include "../../entity.h"
+#include "../../scene/node.h"
 #include "../../math/vector2.h"
 #include "../../math/vector3.h"
 #include "../../math/vertex.h"
@@ -186,7 +186,7 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
         return nullptr;
     }
 
-    auto final_node = std::make_shared<Entity>();
+    auto final_node = std::make_shared<Node>();
 
     std::string current = std::string(path);
     std::string node_filepath = current.substr(current.find_last_of("\\/") + 1);
@@ -249,9 +249,9 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
             mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
         }
 
-        auto ent = std::make_shared<Entity>();
-        ent->SetRenderable(mesh);
-        final_node->AddChild(ent);
+        auto node = std::make_shared<Node>();
+        node->SetRenderable(mesh);
+        final_node->AddChild(node);
     } else {
         for (auto &&sm : handler.submeshes) {
             auto mesh = std::make_shared<Mesh>();
@@ -275,9 +275,9 @@ std::shared_ptr<Loadable> OgreLoader::LoadFromFile(const std::string &path)
 
             mesh->CalculateTangents();
 
-            auto ent = std::make_shared<Entity>();
-            ent->SetRenderable(mesh);
-            final_node->AddChild(ent);
+            auto node = std::make_shared<Node>();
+            node->SetRenderable(mesh);
+            final_node->AddChild(node);
         }
     }
 

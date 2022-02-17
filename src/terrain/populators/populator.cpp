@@ -37,7 +37,7 @@ Populator::Populator(
       m_num_patches(num_patches),
       m_patch_spread(patch_spread),
       m_use_batching(use_batching),
-      m_entity(new Entity("Populator node"))
+      m_node(new Node("Populator node"))
 {
     m_noise = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, m_seed);
 }
@@ -79,9 +79,9 @@ void Populator::CreatePatches(const Vector2 &origin,
     }
 }
 
-std::shared_ptr<Entity> Populator::CreateEntityNode(Patch &patch)
+std::shared_ptr<Node> Populator::CreateEntityNode(Patch &patch)
 {
-    auto node = std::make_shared<Entity>("Populator node");
+    auto node = std::make_shared<Node>("Populator node");
 
     float placement = float(patch.m_chunk_size) / float(patch.m_num_entities_per_chunk);
 
@@ -136,10 +136,10 @@ std::shared_ptr<Entity> Populator::CreateEntityNode(Patch &patch)
 
             int counter = 1;
 
-            node.reset(new Entity(std::string("Populator node (batched) ") + std::to_string(patch.m_chunk_start.x) + "," + std::to_string(patch.m_chunk_start.y)));
+            node.reset(new Node(std::string("Populator node (batched) ") + std::to_string(patch.m_chunk_start.x) + "," + std::to_string(patch.m_chunk_start.y)));
 
             for (auto &renderable_mesh : merged_meshes) {
-                std::shared_ptr<Entity> subnode = std::make_shared<Entity>(std::string("Batched subnode ") + std::to_string(counter++));
+                std::shared_ptr<Node> subnode = std::make_shared<Node>(std::string("Batched subnode ") + std::to_string(counter++));
 
                 auto mesh = std::get<0>(renderable_mesh);
                 subnode->SetRenderable(mesh);
@@ -198,12 +198,12 @@ Vector3 Populator::GetNormal(const Vector3 &location) const
 
 void Populator::OnAdded()
 {
-    parent->AddChild(m_entity);
+    parent->AddChild(m_node);
 }
 
 void Populator::OnRemoved()
 {
-    parent->RemoveChild(m_entity);
+    parent->RemoveChild(m_node);
 }
 
 void Populator::OnFirstRun(double dt)
@@ -243,7 +243,7 @@ void Populator::OnUpdate(double dt)
                     patch.m_node = CreateEntityNode(patch);
                 }
                 
-                m_entity->AddChild(patch.m_node);
+                m_node->AddChild(patch.m_node);
 
                 patch.m_page_state = Patch::PageState::PATCH_LOADED;
             }
@@ -255,7 +255,7 @@ void Populator::OnUpdate(double dt)
                 break;
             case Patch::PageState::PATCH_UNLOADING:
                 std::cout << "patch uploaded " << patch.m_chunk_start << "\n";
-                m_entity->RemoveChild(patch.m_node);
+                m_node->RemoveChild(patch.m_node);
                 // patch.m_node = nullptr;
                 patch.m_page_state = Patch::PageState::PATCH_UNLOADED;
                 break;

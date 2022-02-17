@@ -19,7 +19,7 @@ public:
 protected:
     virtual std::shared_ptr<Control> CloneImpl() override;
 
-    std::shared_ptr<Entity> m_gi_mapper_node;
+    std::shared_ptr<Node> m_gi_mapper_node;
     std::shared_ptr<GIMapper> m_gi_mapper;
     Vector3 m_origin;
     BoundingBox m_bounds;

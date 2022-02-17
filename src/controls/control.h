@@ -5,10 +5,10 @@
 
 namespace hyperion {
 
-class Entity;
+class Node;
 
 class Control : public fbom::FBOMLoadable {
-    friend class Entity;
+    friend class Node;
 public:
     Control(const fbom::FBOMType &loadable_type, const double tps = 30.0);
     Control(const Control &other) = delete;

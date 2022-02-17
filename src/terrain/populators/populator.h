@@ -1,7 +1,7 @@
 #ifndef POPULATOR_H
 #define POPULATOR_H
 
-#include "../../entity.h"
+#include "../../scene/node.h"
 #include "../../controls/entity_control.h"
 #include "../../math/vector2.h"
 #include "../../math/vector3.h"
@@ -38,9 +38,9 @@ public:
     virtual void OnFirstRun(double dt) override;
     virtual void OnUpdate(double dt) override;
 
-    virtual std::shared_ptr<Entity> CreateEntity(const Vector3 &position) const = 0;
+    virtual std::shared_ptr<Node> CreateEntity(const Vector3 &position) const = 0;
 
-    virtual std::shared_ptr<Entity> CreateEntityNode(Patch &patch);
+    virtual std::shared_ptr<Node> CreateEntityNode(Patch &patch);
     virtual double GetNoise(const Vector2 &location) const;
     virtual float GetHeight(const Vector3 &location) const;
     virtual Vector3 GetNormal(const Vector3 &location) const;
@@ -109,7 +109,7 @@ public:
     };
 
     struct Patch {
-        std::shared_ptr<Entity> m_node;
+        std::shared_ptr<Node> m_node;
         Vector3 m_chunk_start;
         bool m_is_created;
         float m_chunk_size;
@@ -135,7 +135,7 @@ protected:
 
     Camera *m_camera;
 
-    std::shared_ptr<Entity> m_entity;
+    std::shared_ptr<Node> m_node;
 
     std::vector<Patch> m_patches;
     unsigned long m_seed;

@@ -7,9 +7,9 @@ Game::Game(const RenderWindow &window)
     : m_input_manager(new InputManager),
       m_ui_manager(new UIManager(m_input_manager)),
       m_renderer(new Renderer(window)),
-      m_scene(new Entity("Scene")),
-      m_ui(new Entity("UI")),
-      m_octree(new Octree(BoundingBox(-100, 100))) // TODO: initially set to size of scene?
+      m_scene(new Node("Scene")),
+      m_ui(new Node("UI")),
+      m_scene_manager(SceneManager::GetInstance())
 {
     m_camera = new FpsCamera(
         GetInputManager(),
@@ -24,7 +24,6 @@ Game::Game(const RenderWindow &window)
 
 Game::~Game()
 {
-    delete m_octree;
     delete m_camera;
     delete m_input_manager;
     delete m_ui_manager;
@@ -37,20 +36,15 @@ void Game::Update(double dt)
 
     Logic(dt);
 
-    //m_octree->DetectChanges();
-
     m_camera->Update(dt);
 
     m_scene->Update(dt);
     m_ui->Update(dt);
-
-    //m_octree->Update();
 }
 
 void Game::PreRender()
 {
-    m_renderer->Collect(m_camera, m_scene.get());
-    m_renderer->Collect(m_camera, m_ui.get());
+    // no-op
 }
 
 void Game::Render()

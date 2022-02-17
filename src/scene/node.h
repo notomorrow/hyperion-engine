@@ -1,24 +1,25 @@
-#ifndef ENTITY_H
-#define ENTITY_H
+#ifndef NODE_H
+#define NODE_H
 
 #include <string>
 #include <vector>
 #include <deque>
 #include <memory>
 
-#include "controls/entity_control.h"
-#include "hash_code.h"
-#include "asset/loadable.h"
-#include "math/transform.h"
-#include "rendering/renderable.h"
-#include "rendering/material.h"
-#include "util/non_owning_ptr.h"
+#include "../controls/entity_control.h"
+#include "../hash_code.h"
+#include "../asset/loadable.h"
 
-#include "asset/fbom/fbom.h"
+#include "spatial.h"
+#include "../math/transform.h"
+#include "../rendering/renderable.h"
+#include "../rendering/material.h"
+#include "../util/non_owning_ptr.h"
+
+#include "../asset/fbom/fbom.h"
 namespace hyperion {
 class Camera;
-class Octree;
-class Entity : public fbom::FBOMLoadable {
+class Node : public fbom::FBOMLoadable {
 public:
     enum UpdateFlags {
         UPDATE_TRANSFORM = 0x01,
@@ -26,10 +27,10 @@ public:
         PENDING_REMOVAL = 0x04
     };
 
-    Entity(const std::string &name = "entity");
-    Entity(const Entity &other) = delete;
-    Entity &operator=(const Entity &other) = delete;
-    virtual ~Entity();
+    Node(const std::string &name = "<Unnamed>");
+    Node(const Node &other) = delete;
+    Node &operator=(const Node &other) = delete;
+    virtual ~Node();
 
     inline int GetFlags() const { return m_flags; }
 
@@ -47,7 +48,7 @@ public:
         SetAABBUpdateFlag();
     }
 
-    inline const Vector3 &GetGlobalTranslation() const { return m_global_transform.GetTranslation(); }
+    inline const Vector3 &GetGlobalTranslation() const { return m_spatial.m_transform.GetTranslation(); }
     void SetGlobalTranslation(const Vector3 &translation);
 
     inline const Quaternion &GetLocalRotation() const { return m_local_rotation; }
@@ -58,7 +59,7 @@ public:
         SetAABBUpdateFlag();
     }
 
-    inline const Quaternion &GetGlobalRotation() const { return m_global_transform.GetRotation(); }
+    inline const Quaternion &GetGlobalRotation() const { return m_spatial.m_transform.GetRotation(); }
     void SetGlobalRotation(const Quaternion &rotation);
 
     inline const Vector3 &GetLocalScale() const { return m_local_scale; }
@@ -69,10 +70,10 @@ public:
         SetAABBUpdateFlag();
     }
 
-    inline const Vector3 &GetGlobalScale() const { return m_global_transform.GetScale(); }
+    inline const Vector3 &GetGlobalScale() const { return m_spatial.m_transform.GetScale(); }
     void SetGlobalScale(const Vector3 &scale);
 
-    inline const Transform &GetGlobalTransform() const { return m_global_transform; }
+    inline const Transform &GetGlobalTransform() const { return m_spatial.m_transform; }
 
     inline void Move(const Vector3 &vec) { SetLocalTranslation(m_local_translation + vec); }
     inline void Scale(const Vector3 &vec) { SetLocalScale(m_local_scale * vec); }
@@ -83,42 +84,38 @@ public:
 
     virtual float CalculateCameraDistance(Camera *camera) const;
 
-    inline const BoundingBox &GetAABB() const { return m_aabb; }
+    inline const BoundingBox &GetAABB() const { return m_spatial.m_aabb; }
 
-    inline non_owning_ptr<Entity> &GetParent() { return m_parent; }
-    inline const non_owning_ptr<Entity> &GetParent() const { return m_parent; }
+    inline non_owning_ptr<Node> &GetParent() { return m_parent; }
+    inline const non_owning_ptr<Node> &GetParent() const { return m_parent; }
 
-    inline Material &GetMaterial() { return m_material; }
-    inline const Material &GetMaterial() const { return m_material; }
-    inline void SetMaterial(const Material &material) { m_material = material; }
+    inline Material &GetMaterial() { return m_spatial.m_material; }
+    inline const Material &GetMaterial() const { return m_spatial.m_material; }
+    inline void SetMaterial(const Material &material) { m_spatial.m_material = material; }
 
-    inline non_owning_ptr<Octree> &GetOctree() { return m_octree; }
-    inline const non_owning_ptr<Octree> &GetOctree() const { return m_octree; }
-    inline void SetOctree(const non_owning_ptr<Octree> &octree) { m_octree = octree; }
-
-    void AddChild(std::shared_ptr<Entity> entity);
-    void RemoveChild(std::shared_ptr<Entity> entity);
-    std::shared_ptr<Entity> GetChild(size_t index) const;
-    std::shared_ptr<Entity> GetChild(const std::string &name) const;
+    void AddChild(std::shared_ptr<Node> node);
+    void RemoveChild(std::shared_ptr<Node> node);
+    std::shared_ptr<Node> GetChild(size_t index) const;
+    std::shared_ptr<Node> GetChild(const std::string &name) const;
     inline size_t NumChildren() const { return m_children.size(); }
 
-    std::shared_ptr<Entity> GetChildPendingRemoval(size_t index) const;
+    std::shared_ptr<Node> GetChildPendingRemoval(size_t index) const;
     inline size_t NumChildrenPendingRemoval() const { return m_children_pending_removal.size(); }
     void ClearPendingRemoval();
 
     template <typename T>
     std::shared_ptr<T> GetChild(size_t index) const
     {
-        static_assert(std::is_base_of<Entity, T>::value,
-            "T must be a derived class of Entity");
+        static_assert(std::is_base_of<Node, T>::value,
+            "T must be a derived class of Node");
         return std::dynamic_pointer_cast<T>(GetChild(index));
     }
 
     template <typename T>
     std::shared_ptr<T> GetChild(const std::string &name) const
     {
-        static_assert(std::is_base_of<Entity, T>::value,
-            "T must be a derived class of Entity");
+        static_assert(std::is_base_of<Node, T>::value,
+            "T must be a derived class of Node");
         return std::dynamic_pointer_cast<T>(GetChild(name));
     }
 
@@ -140,8 +137,10 @@ public:
         return std::dynamic_pointer_cast<T>(GetControl(index));
     }
 
-    inline std::shared_ptr<Renderable> GetRenderable() const { return m_renderable; }
-    inline void SetRenderable(const std::shared_ptr<Renderable> &renderable) { m_renderable = renderable; }
+    inline Spatial &GetSpatial() { return m_spatial; }
+    inline const Spatial &GetSpatial() const { return m_spatial; }
+    inline const std::shared_ptr<Renderable> &GetRenderable() const { return m_spatial.m_renderable; }
+    inline void SetRenderable(const std::shared_ptr<Renderable> &renderable) { m_spatial.m_renderable = renderable; }
 
     inline bool PendingRemoval() const { return m_flags & PENDING_REMOVAL; }
 
@@ -174,7 +173,7 @@ public:
             return err;
         }
 
-        auto out_entity = std::make_shared<Entity>(name);
+        auto out_entity = std::make_shared<Node>(name);
         out = out_entity;
 
         out_entity->SetLocalTranslation(translation);
@@ -187,7 +186,7 @@ public:
             FBOMDeserialized child = node->deserialized_object;
 
             if (child->GetLoadableType().IsOrExtends("ENTITY")) {
-                auto child_entity = std::dynamic_pointer_cast<Entity>(child);
+                auto child_entity = std::dynamic_pointer_cast<Node>(child);
                 ex_assert(child_entity != nullptr);
 
                 out_entity->AddChild(child_entity);
@@ -222,7 +221,7 @@ public:
                 continue;
             }
 
-            return FBOMResult(FBOMResult::FBOM_ERR, std::string("Entity does not know how to handle ") + node->m_object_type.name + " subnode");
+            return FBOMResult(FBOMResult::FBOM_ERR, std::string("Node does not know how to handle ") + node->m_object_type.name + " subnode");
         }
 
         return FBOMResult::FBOM_OK;
@@ -233,7 +232,7 @@ public:
         // TODO: static data and instancing
         using namespace fbom;
 
-        auto entity = dynamic_cast<Entity*>(in);
+        auto entity = dynamic_cast<Node*>(in);
 
         if (entity == nullptr) {
             return FBOMResult::FBOM_ERR;
@@ -290,9 +289,9 @@ public:
 
         hc.Add(m_name);
         hc.Add(m_flags);
-        hc.Add(m_material.GetHashCode());
-        hc.Add(m_global_transform.GetHashCode());
-        hc.Add(intptr_t(m_renderable.get())); // TODO: maybe make this calc hash code
+        hc.Add(GetMaterial().GetHashCode());
+        hc.Add(GetGlobalTransform().GetHashCode());
+        hc.Add(intptr_t(GetRenderable().get())); // TODO: maybe make this calc hash code
 
         for (const auto &child : m_children) {
             if (child == nullptr) {
@@ -307,9 +306,12 @@ public:
 
 protected:
     std::string m_name;
-    std::shared_ptr<Renderable> m_renderable;
-    std::vector<std::shared_ptr<Entity>> m_children;
-    std::deque<std::shared_ptr<Entity>> m_children_pending_removal;
+
+    Spatial m_spatial;
+
+    //std::shared_ptr<Renderable> m_renderable;
+    std::vector<std::shared_ptr<Node>> m_children;
+    std::deque<std::shared_ptr<Node>> m_children_pending_removal;
     std::vector<std::shared_ptr<EntityControl>> m_controls;
 
     int m_flags;
@@ -317,19 +319,21 @@ protected:
     Vector3 m_local_translation;
     Vector3 m_local_scale;
     Quaternion m_local_rotation;
-    Transform m_global_transform;
-    BoundingBox m_aabb;
-    non_owning_ptr<Entity> m_parent;
-    Material m_material;
+    //Transform m_global_transform;
+    //BoundingBox m_aabb;
+    non_owning_ptr<Node> m_parent;
+    //Material m_material;
 
     void SetTransformUpdateFlag();
     void SetAABBUpdateFlag();
     void SetPendingRemovalFlag();
 
-    std::shared_ptr<Entity> CloneImpl();
+    std::shared_ptr<Node> CloneImpl();
 
 private:
-    non_owning_ptr<Octree> m_octree;
+    int m_octree_node_id;
+    
+    static int NodeId();
 };
 } // namespace hyperion
 

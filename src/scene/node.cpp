@@ -1,12 +1,19 @@
-#include "entity.h"
+#include "node.h"
 #include "util.h"
-#include "octree.h"
+#include "scene/scene_manager.h"
 
 #include <algorithm>
 
 namespace hyperion {
 
-Entity::Entity(const std::string &name)
+int Node::NodeId()
+{
+    static int id = 0;
+
+    return ++id;
+}
+
+Node::Node(const std::string &name)
     : fbom::FBOMLoadable(fbom::FBOMObjectType("ENTITY")),
       m_name(name),
       m_aabb_affects_parent(true),
@@ -15,15 +22,13 @@ Entity::Entity(const std::string &name)
       m_local_translation(Vector3::Zero()),
       m_local_scale(Vector3::One()),
       m_local_rotation(Quaternion::Identity()),
-      m_octree(nullptr)
+      m_octree_node_id(NodeId())
 {
 }
 
-Entity::~Entity()
+Node::~Node()
 {
-    if (m_octree != nullptr) {
-        //m_octree->RemoveNode(this);
-    }
+    SceneManager::GetInstance()->GetOctree()->RemoveNode(m_octree_node_id);
 
     for (auto it = m_controls.rbegin(); it != m_controls.rend(); ++it) {
         (*it)->OnRemoved();
@@ -35,7 +40,7 @@ Entity::~Entity()
     m_children.clear();
 }
 
-void Entity::SetGlobalTranslation(const Vector3 &translation)
+void Node::SetGlobalTranslation(const Vector3 &translation)
 {
     if (m_parent == nullptr) {
         SetLocalTranslation(translation);
@@ -49,7 +54,7 @@ void Entity::SetGlobalTranslation(const Vector3 &translation)
     SetAABBUpdateFlag();
 }
 
-void Entity::SetGlobalRotation(const Quaternion &rotation)
+void Node::SetGlobalRotation(const Quaternion &rotation)
 {
     if (m_parent == nullptr) {
         SetLocalRotation(rotation);
@@ -66,7 +71,7 @@ void Entity::SetGlobalRotation(const Quaternion &rotation)
     SetAABBUpdateFlag();
 }
 
-void Entity::SetGlobalScale(const Vector3 &scale)
+void Node::SetGlobalScale(const Vector3 &scale)
 {
     if (m_parent == nullptr) {
         SetLocalScale(scale);
@@ -80,24 +85,24 @@ void Entity::SetGlobalScale(const Vector3 &scale)
     SetAABBUpdateFlag();
 }
 
-void Entity::UpdateTransform()
+void Node::UpdateTransform()
 {
     if (m_parent != nullptr) {
-        m_global_transform.SetTranslation(m_local_translation + m_parent->GetGlobalTransform().GetTranslation());
-        m_global_transform.SetScale(m_local_scale * m_parent->GetGlobalTransform().GetScale());
-        m_global_transform.SetRotation(m_local_rotation * m_parent->GetGlobalTransform().GetRotation());
+        m_spatial.m_transform.SetTranslation(m_local_translation + m_parent->GetGlobalTransform().GetTranslation());
+        m_spatial.m_transform.SetScale(m_local_scale * m_parent->GetGlobalTransform().GetScale());
+        m_spatial.m_transform.SetRotation(m_local_rotation * m_parent->GetGlobalTransform().GetRotation());
     } else {
-        m_global_transform = Transform(m_local_translation, m_local_scale, m_local_rotation);
+        m_spatial.m_transform = Transform(m_local_translation, m_local_scale, m_local_rotation);
     }
 }
 
-void Entity::UpdateAABB()
+void Node::UpdateAABB()
 {
     // clear current aabb
-    m_aabb.Clear();
+    m_spatial.m_aabb.Clear();
     // retrieve renderable's aabb
-    if (m_renderable != nullptr) {
-        BoundingBox renderable_aabb = m_renderable->GetAABB();
+    if (m_spatial.m_renderable != nullptr) {
+        BoundingBox renderable_aabb = m_spatial.m_renderable->GetAABB();
 
         if (!renderable_aabb.Empty()) {
             BoundingBox renderable_aabb_transformed;
@@ -105,27 +110,27 @@ void Entity::UpdateAABB()
             std::array<Vector3, 8> corners = renderable_aabb.GetCorners();
 
             for (Vector3 &corner : corners) {
-                corner *= m_global_transform.GetMatrix();
+                corner *= m_spatial.m_transform.GetMatrix();
 
                 renderable_aabb_transformed.Extend(corner);
             }
 
-            m_aabb.Extend(renderable_aabb_transformed);
+            m_spatial.m_aabb.Extend(renderable_aabb_transformed);
         }
     }
 
     if (m_aabb_affects_parent && m_parent != nullptr) {
         // multiply parent's bounding box by this one
-        m_parent->m_aabb.Extend(m_aabb);
+        m_parent->m_spatial.m_aabb.Extend(m_spatial.m_aabb);
     }
 }
 
-float Entity::CalculateCameraDistance(Camera *camera) const
+float Node::CalculateCameraDistance(Camera *camera) const
 {
-    return m_global_transform.GetTranslation().Distance(camera->GetTranslation());
+    return GetGlobalTranslation().Distance(camera->GetTranslation());
 }
 
-void Entity::AddChild(std::shared_ptr<Entity> entity)
+void Node::AddChild(std::shared_ptr<Node> entity)
 {
     ex_assert(entity != nullptr);
     ex_assert(entity->m_parent == nullptr);
@@ -171,13 +176,11 @@ void Entity::AddChild(std::shared_ptr<Entity> entity)
         SetAABBUpdateFlag();
         //entity->UpdateAABB();
 
-        if (m_octree != nullptr) {
-            //m_octree->InsertNode(non_owning_ptr(entity.get()));
-        }
+        SceneManager::GetInstance()->GetOctree()->InsertNode(entity->m_octree_node_id, entity->m_spatial);
     }
 }
 
-void Entity::RemoveChild(std::shared_ptr<Entity> entity)
+void Node::RemoveChild(std::shared_ptr<Node> entity)
 {
     ex_assert(entity != nullptr);
     ex_assert(entity->m_parent == this);
@@ -186,30 +189,27 @@ void Entity::RemoveChild(std::shared_ptr<Entity> entity)
 
     // fill slot with nullptr, rather than resizing, potentially causing a chain
     // of events that will cause a loop to overflow
-    std::replace(m_children.begin(), m_children.end(), entity, std::shared_ptr<Entity>(nullptr));
+    std::replace(m_children.begin(), m_children.end(), entity, std::shared_ptr<Node>(nullptr));
 
-    entity->m_parent = non_owning_ptr<Entity>(nullptr);
+    entity->m_parent = non_owning_ptr<Node>(nullptr);
     entity->SetPendingRemovalFlag();
     entity->SetTransformUpdateFlag();
 
     if (entity->GetAABBAffectsParent()) {
         SetAABBUpdateFlag();
 
-        if (m_octree != nullptr) {
-            std::cout << "Remove child " << entity->GetName() << " from octree... has octree? " << (entity->GetOctree() != nullptr) << "\n";
-            //m_octree->RemoveNode(entity.get());
-        }
+        SceneManager::GetInstance()->GetOctree()->RemoveNode(entity->m_octree_node_id);
     }
 }
 
-std::shared_ptr<Entity> Entity::GetChild(size_t index) const
+std::shared_ptr<Node> Node::GetChild(size_t index) const
 {
     return m_children.at(index);
 }
 
-std::shared_ptr<Entity> Entity::GetChild(const std::string &name) const
+std::shared_ptr<Node> Node::GetChild(const std::string &name) const
 {
-    auto it = std::find_if(m_children.begin(), m_children.end(), [&](const std::shared_ptr<Entity> &elt)
+    auto it = std::find_if(m_children.begin(), m_children.end(), [&](const std::shared_ptr<Node> &elt)
     {
         if (elt == nullptr) {
             return false;
@@ -221,12 +221,12 @@ std::shared_ptr<Entity> Entity::GetChild(const std::string &name) const
     return it != m_children.end() ? *it : nullptr;
 }
 
-std::shared_ptr<Entity> Entity::GetChildPendingRemoval(size_t index) const
+std::shared_ptr<Node> Node::GetChildPendingRemoval(size_t index) const
 {
     return m_children_pending_removal.at(index);
 }
 
-void Entity::ClearPendingRemoval()
+void Node::ClearPendingRemoval()
 {
     for (auto &child : m_children_pending_removal) {
         if (child == nullptr) {
@@ -251,7 +251,7 @@ void Entity::ClearPendingRemoval()
     }
 }
 
-void Entity::AddControl(std::shared_ptr<EntityControl> control)
+void Node::AddControl(std::shared_ptr<EntityControl> control)
 {
     // ex_assert(control->parent == nullptr);
 
@@ -260,7 +260,7 @@ void Entity::AddControl(std::shared_ptr<EntityControl> control)
     control->OnAdded();
 }
 
-void Entity::RemoveControl(const std::shared_ptr<EntityControl> &control)
+void Node::RemoveControl(const std::shared_ptr<EntityControl> &control)
 {
     soft_assert(control != nullptr);
 
@@ -269,9 +269,9 @@ void Entity::RemoveControl(const std::shared_ptr<EntityControl> &control)
     control->parent = nullptr;
 }
 
-void Entity::Update(double dt)
+void Node::Update(double dt)
 {
-    BoundingBox aabb_before(m_aabb);
+    BoundingBox aabb_before(m_spatial.m_aabb);
 
     if (m_flags & UPDATE_TRANSFORM) {
         UpdateTransform();
@@ -297,14 +297,12 @@ void Entity::Update(double dt)
         child->Update(dt);
     }
 
-    if (aabb_before != m_aabb) {
-        if (m_octree != nullptr) {
-            //m_octree->NodeTransformChanged(this);
-        }
+    if (GetAABBAffectsParent() && aabb_before != m_spatial.m_aabb) {
+        SceneManager::GetInstance()->GetOctree()->UpdateNode(m_octree_node_id, m_spatial);
     }
 }
 
-void Entity::UpdateControls(double dt)
+void Node::UpdateControls(double dt)
 {
     for (auto &control : m_controls) {
         if (control->m_first_run) {
@@ -318,13 +316,9 @@ void Entity::UpdateControls(double dt)
             control->tick = 0;
         }
     }
-
-    // for (auto &child : m_children) {
-    //     child->UpdateControls(dt);
-    // }
 }
 
-void Entity::SetTransformUpdateFlag()
+void Node::SetTransformUpdateFlag()
 {
     m_flags |= UPDATE_TRANSFORM;
 
@@ -337,7 +331,7 @@ void Entity::SetTransformUpdateFlag()
     }
 }
 
-void Entity::SetAABBUpdateFlag()
+void Node::SetAABBUpdateFlag()
 {
     m_flags |= UPDATE_AABB;
 
@@ -350,7 +344,7 @@ void Entity::SetAABBUpdateFlag()
     }
 }
 
-void Entity::SetPendingRemovalFlag()
+void Node::SetPendingRemovalFlag()
 {
     m_flags |= PENDING_REMOVAL;
 
@@ -363,21 +357,17 @@ void Entity::SetPendingRemovalFlag()
     }
 }
 
-std::shared_ptr<Loadable> Entity::Clone()
+std::shared_ptr<Loadable> Node::Clone()
 {
     return CloneImpl();
 }
 
-std::shared_ptr<Entity> Entity::CloneImpl()
+std::shared_ptr<Node> Node::CloneImpl()
 {
-    auto new_entity = std::make_shared<Entity>(m_name + "_clone");
+    auto new_entity = std::make_shared<Node>(m_name + "_clone");
 
     //new_entity->m_flags = m_flags;
-
-    new_entity->m_material = m_material;
-
-    // reference copy
-    new_entity->m_renderable = m_renderable;
+    new_entity->m_spatial = m_spatial;
 
     new_entity->m_local_translation = m_local_translation;
     new_entity->m_local_scale = m_local_scale;

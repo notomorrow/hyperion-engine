@@ -7,7 +7,7 @@
 #include "../../rendering/mesh.h"
 #include "../../math/vertex.h"
 #include "../../util/string_util.h"
-#include "../../entity.h"
+#include "../../scene/node.h"
 #include "../../asset/buffered_text_reader.h"
 #include "mtl_loader.h"
 
@@ -80,7 +80,7 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
 
     ObjModel model;
 
-    auto res = std::make_shared<Entity>();
+    auto res = std::make_shared<Node>();
 
     // model name
     std::string dir(path);
@@ -230,7 +230,7 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
             .Define("NORMAL_MAPPING", true)
         ));
 
-        auto geom = std::make_shared<Entity>();
+        auto geom = std::make_shared<Node>();
         geom->SetName(obj_mesh.name);
         geom->SetRenderable(mesh);
 

@@ -35,6 +35,9 @@ public:
     Transform operator*(const Transform &other) const;
     Transform &operator*=(const Transform &other);
 
+    inline bool operator==(const Transform &other) const
+        { return m_matrix == other.m_matrix; }
+
     inline HashCode GetHashCode() const
     {
         HashCode hc;
