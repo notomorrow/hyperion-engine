@@ -183,7 +183,7 @@ Vector3 TerrainChunk::NormalAtIndex(int index) const
 
     Mesh *mesh = dynamic_cast<Mesh*>(GetRenderable().get());
 
-    hard_assert(mesh != nullptr);
+    AssertExit(mesh != nullptr);
 
     return mesh->GetVertices().at(index).GetNormal();
 }

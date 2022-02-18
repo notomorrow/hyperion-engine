@@ -111,7 +111,7 @@ void Shader::InitUniforms()
 
 void Shader::CreateGpuData()
 {
-    ex_assert(!is_created);
+    AssertThrow(!is_created);
 
     progid = glCreateProgram();
 
@@ -128,7 +128,7 @@ void Shader::CreateGpuData()
 
 void Shader::UploadGpuData()
 {
-    ex_assert(is_created && !is_uploaded);
+    AssertThrow(is_created && !is_uploaded);
 
     for (auto &&it : subshaders) {
         auto &sub = it.second;
