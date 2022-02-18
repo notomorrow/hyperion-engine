@@ -536,15 +536,15 @@ public:
         }
         GetScene()->AddChild(house);*/
 
-        auto hydrant = asset_manager->LoadFromFile<Node>("models/FireHydrant/FireHydrantMesh.obj");
-        hydrant->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Base_Color.png"));
-        hydrant->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Normal_OpenGL.png"));
-        hydrant->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("res/models/FireHydrant/fire_hydrant_Mixed_AO.png"));
+        /*auto hydrant = asset_manager->LoadFromFile<Node>("models/FireHydrant/FireHydrantMesh.obj");
+        hydrant->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("models/FireHydrant/fire_hydrant_Base_Color.png"));
+        hydrant->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("models/FireHydrant/fire_hydrant_Normal_OpenGL.png"));
+        hydrant->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("models/FireHydrant/fire_hydrant_Mixed_AO.png"));
         hydrant->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.35f);
         hydrant->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.6f);
         hydrant->Move(Vector3(3, 0, 3));
         hydrant->Scale(Vector3(2.0f));
-        GetScene()->AddChild(hydrant);
+        GetScene()->AddChild(hydrant);*/
 
         /*GetSceneManager()->GetOctree()->InsertNode(Octree::Node{1, BoundingBox(Vector3(-4, -4, -4), Vector3(-3.2, -3.2, -3.2))});
         GetSceneManager()->GetOctree()->InsertNode(Octree::Node{ 2, BoundingBox(Vector3(5, 5, 5), Vector3(7, 7, 7)) });
@@ -573,7 +573,7 @@ public:
                         MathUtil::Random(0.4f, 1.80f),
                         MathUtil::Random(0.4f, 1.80f)
                     ).Normalize();
-                    auto box = asset_manager->LoadFromFile<Node>("models/material_sphere/material_sphere.obj", true);
+                    auto box = asset_manager->LoadFromFile<Node>("models/sphere_hq.obj", true);
                     box->SetLocalScale(0.6f);
 
 
