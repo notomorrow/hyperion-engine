@@ -705,6 +705,7 @@ int main()
     renderer.CreateSurface();
 
     renderer.InitializeRendererDevice();
+    renderer.InitializeSwapchain();
 
     bool running = true;
     while (running) {
