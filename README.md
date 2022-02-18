@@ -3,9 +3,21 @@
 
 ## About
 
-Hyperion Engine is a 3D game engine written in C++ - it is easy to understand and use, while still giving you ample control over the game engine.
+Hyperion Engine is a 3D game engine written in C++ - it is easy to understand and use, while still giving you ample control over the game engine. It currently renders using OpenGL primarily but is in the process of being ported to Vulkan.
 
-Hyperion currently renders using OpenGL primarily, but plans are in place to add support for Vulkan as well as other rendering platforms (currently it runs on OpenGL). It is currently in the process of being ported over to Metal as well using [MGL](https://github.com/openglonmetal/MGL).
+### Current features include:
+* Physically based rendering
+* Voxel Cone Tracing global illumination
+* Parallax corrected dynamic cubemaps w/ spherical harmonics generation
+* Procedural terrain generation
+* Dynamic skydome with procedural clouds, skybox
+* Deferred rendering with light optimzation - have 1000's of point lights
+* Skeletal animation
+* Post processing effects (SSAO, screen space reflections, depth of field, bloom, fxaa)
+* Cascaded shadow maps, variance shadow maps
+* Scene graph + octree
+* Fast binary objects/models (FBOM) using object serialization/deserialization
+* Bullet physics
 
 Feel free to contribute anything - We'd love to have some more eyes on this project! Submit an issue if you run into anything, as well.
 
