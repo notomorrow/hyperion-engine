@@ -620,7 +620,7 @@ public:
                     return;
                 }
 
-                ex_assert(m_hit_to_entity.find(m_ray_hit.GetHashCode().Value()) != m_hit_to_entity.end());
+                AssertThrow(m_hit_to_entity.find(m_ray_hit.GetHashCode().Value()) != m_hit_to_entity.end());
 
                 auto node = m_hit_to_entity[m_ray_hit.GetHashCode().Value()];
 
@@ -657,7 +657,7 @@ public:
                     // check what it is intersecting with
                     auto intersected_with = m_hit_to_entity[m_ray_hit.GetHashCode().Value()];
 
-                    ex_assert(intersected_with != nullptr);
+                    AssertThrow(intersected_with != nullptr);
 
                     if (intersected_with != m_selected_node) {
                         m_selected_node->SetGlobalTranslation(m_ray_hit.hitpoint);
@@ -694,7 +694,7 @@ public:
 int main()
 {
     SystemSDL system;
-    SystemWindow window = SystemSDL::CreateWindow("Hyperion Engine", 1024, 768);
+    SystemWindow *window = SystemSDL::CreateWindow("Hyperion Engine", 1024, 768);
     system.SetCurrentWindow(window);
 
     SystemEvent event;
@@ -702,8 +702,8 @@ int main()
     VkRenderer renderer(system, "Hyperion Vulkan Test", "HyperionEngine");
 
     renderer.Initialize(true);
+    system.GetVulkanExtensionNames();
     renderer.CreateSurface();
-
     renderer.InitializeRendererDevice();
     renderer.InitializeSwapchain();
 
@@ -714,6 +714,7 @@ int main()
     shader.AttachShader(device, ShaderType::Fragment, "../res/vkshaders/frag.spv");
     shader.CreateProgram("main");
     renderer.InitializePipeline(&shader);
+
 
     bool running = true;
     while (running) {
@@ -732,6 +733,7 @@ int main()
     }
 
     shader.Destroy();
+    delete window;
 
     return  0;
 

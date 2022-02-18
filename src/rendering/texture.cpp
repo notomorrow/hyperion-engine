@@ -109,7 +109,7 @@ void Texture::ActiveTexture(int i)
 
 void Texture::Initialize()
 {
-    hard_assert(is_created == false && id == 0);
+    AssertExit(is_created == false && id == 0);
 
     CoreEngine::GetInstance()->GenTextures(1, &id);
 
@@ -122,7 +122,7 @@ void Texture::Initialize()
 void Texture::Deinitialize()
 {
     if (is_created) {
-        hard_assert(id != 0);
+        AssertExit(id != 0);
 
         CoreEngine::GetInstance()->DeleteTextures(1, &id);
 

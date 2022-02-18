@@ -29,7 +29,7 @@ void ComputeShader::ApplyTransforms(const Transform &transform, Camera *camera)
 
 void ComputeShader::Dispatch(int width, int height, int length)
 {
-    ex_assert(GetId() != 0);
+    AssertThrow(GetId() != 0);
 
     if (m_work_group_size == nullptr) {
         GetWorkGroupSize();
@@ -41,7 +41,7 @@ void ComputeShader::Dispatch(int width, int height, int length)
 
 void ComputeShader::GetWorkGroupSize()
 {
-    hard_assert(m_work_group_size == nullptr);
+    AssertExit(m_work_group_size == nullptr);
 
     m_work_group_size = new int[3];
 

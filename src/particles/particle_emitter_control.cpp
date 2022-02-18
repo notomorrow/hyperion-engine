@@ -73,7 +73,7 @@ void ParticleEmitterControl::OnRemoved()
 
 void ParticleEmitterControl::OnUpdate(double dt)
 {
-    ex_assert(m_particles.size() <= m_particle_renderer->m_info.m_max_particles);
+    AssertThrow(m_particles.size() <= m_particle_renderer->m_info.m_max_particles);
 
     for (Particle &particle : m_particles) {
         if (particle.m_alive) {
@@ -100,7 +100,7 @@ void ParticleEmitterControl::OnUpdate(double dt)
 
 std::shared_ptr<Control> ParticleEmitterControl::CloneImpl()
 {
-    ex_assert(m_particle_renderer != nullptr);
+    AssertThrow(m_particle_renderer != nullptr);
 
     auto clone = std::make_shared<ParticleEmitterControl>(nullptr, m_particle_renderer->m_info); // TODO
 
