@@ -1,19 +1,28 @@
 #include "shadow_mapping.h"
 #include "../../core_engine.h"
 #include "../../math/frustum.h"
+#include "../../scene/spatial.h"
+#include "../shaders/depth_shader.h"
 #include "../shader_manager.h"
 #include "../environment.h"
+#include "../renderer.h"
 #include "../../util.h"
 
 namespace hyperion {
-ShadowMapping::ShadowMapping(Camera *view_cam, double max_dist, bool use_fbo)
-    : view_cam(view_cam),
-      max_dist(max_dist),
-      m_use_fbo(use_fbo)
+ShadowMapping::ShadowMapping(double max_dist, int level, bool use_fbo)
+    : Renderable(fbom::FBOMObjectType("SHADOW_MAPPING")),
+      m_max_dist(max_dist),
+      m_level(level),
+      m_use_fbo(use_fbo),
+      m_is_variance_shadow_mapping(ShaderManager::GetInstance()->GetBaseShaderProperties().GetValue("SHADOWS_VARIANCE").IsTruthy())
 {
     shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
 
-    fbo = new Framebuffer2D(512, 512, true, true, false, false);
+    m_depth_shader = ShaderManager::GetInstance()->GetShader<DepthShader>(ShaderProperties());
+
+    fbo = new Framebuffer2D(2048, 2048, true, true, false, false);
+
+    Environment::GetInstance()->SetShadowSplit(m_level, m_max_dist);
 }
 
 ShadowMapping::~ShadowMapping()
@@ -42,8 +51,12 @@ std::shared_ptr<Texture> ShadowMapping::GetShadowMap()
     return fbo->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_COLOR);
 }
 
-void ShadowMapping::Begin()
+void ShadowMapping::Render(Renderer *renderer, Camera *cam)
 {
+    if (!renderer->GetEnvironment()->ShadowsEnabled()) {
+        return;
+    }
+
     UpdateFrustumPoints(frustum_corners_ws);
 
     Vector3 frustum_min(MathUtil::MaxSafeValue<float>());
@@ -87,7 +100,7 @@ void ShadowMapping::Begin()
         }
     }
 
-    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -max_dist, max_dist);
+    MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, mins.z, maxes.z);
     //MatrixUtil::ToOrtho(new_proj, mins.x, maxes.x, mins.y, maxes.y, -100.0f, 100.0f);
 
     shadow_cam->SetViewMatrix(new_view);
@@ -98,13 +111,27 @@ void ShadowMapping::Begin()
     }
 
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
-}
 
-void ShadowMapping::End()
-{
+    renderer->RenderBucket(
+        GetShadowCamera(),
+        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
+        m_depth_shader.get(),
+        false
+    );
+
+    renderer->RenderBucket(
+        GetShadowCamera(),
+        renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT),
+        m_depth_shader.get(),
+        false
+    );
+
     if (m_use_fbo) {
         fbo->End();
     }
+
+    Environment::GetInstance()->SetShadowMap(m_level, GetShadowMap());
+    Environment::GetInstance()->SetShadowMatrix(m_level, GetShadowCamera()->GetViewProjectionMatrix());
 }
 
 void ShadowMapping::TransformPoints(const std::array<Vector3, 8> &in_vec,
@@ -118,9 +145,11 @@ void ShadowMapping::TransformPoints(const std::array<Vector3, 8> &in_vec,
 void ShadowMapping::UpdateFrustumPoints(std::array<Vector3, 8> &points)
 {
     bb = BoundingBox(
-        Vector3::Round(m_origin - max_dist),
-        Vector3::Round(m_origin + max_dist)
+        Vector3::Round(m_origin - m_max_dist),
+        Vector3::Round(m_origin + m_max_dist)
     );
+
+    //points = bb.GetCorners();
 
     points[0] = bb.GetMin();
     points[1] = bb.GetMax();
@@ -153,4 +182,8 @@ void ShadowMapping::SetVarianceShadowMapping(bool value)
     m_is_variance_shadow_mapping = value;
 }
 
+std::shared_ptr<Renderable> ShadowMapping::CloneImpl()
+{
+    return std::make_shared<ShadowMapping>(m_max_dist, m_level, m_use_fbo);
+}
 } // namespace hyperion

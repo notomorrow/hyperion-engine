@@ -147,35 +147,7 @@ void main()
 	float HdotX = dot(H, X);
 	float HdotY = dot(H, Y);
 
-#if SHADOWS
-    float shadowness = 0.0;
-    int shadowSplit = getShadowMapSplit(distance(CameraPosition, position.xyz));
-
-#if SHADOW_PCF
-    for (int x = 0; x < 4; x++) {
-        for (int y = 0; y < 4; y++) {
-            vec2 offset = poissonDisk[x * 4 + y] * $SHADOW_MAP_RADIUS;
-            vec3 shadowCoord = getShadowCoord(shadowSplit, position.xyz + vec3(offset.x, offset.y, -offset.x));
-            shadowness += getShadow(shadowSplit, shadowCoord, NdotL);
-        }
-    }
-
-    shadowness /= 16.0;
-#endif // !SHADOW_PCF
-
-#if !SHADOW_PCF
-    vec3 shadowCoord = getShadowCoord(shadowSplit, position.xyz);
-    shadowness = getShadow(shadowSplit, shadowCoord, NdotL);
-#endif // !SHADOW_PCF
-
-    vec4 shadowColor = vec4(vec3(shadowness), 1.0);
-    shadowColor = CalculateFogLinear(shadowColor, vec4(1.0), position.xyz, CameraPosition, u_shadowSplit[int($NUM_SPLITS) - 2], u_shadowSplit[int($NUM_SPLITS) - 1]);
-#endif // SHADOWS
-
-#if !SHADOWS
-    float shadowness = 1.0;
-    vec4 shadowColor = vec4(1.0);
-#endif 
+#include "../include/inl/shadowing.inl.glsl"
 
   vec4 specularCubemap = vec4(0.0);
   float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
@@ -285,7 +257,7 @@ void main()
 	float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
 	float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
 	
-	irradiance += gi.rgb * (gi.a * exposure * $GI_INTENSITY);
+	irradiance += gi.rgb;// * (gi.a * exposure * $GI_INTENSITY);
 	
 	// ibl
 	
@@ -298,8 +270,15 @@ void main()
 	vec3 radiance = specularDFG * specularCubemap.rgb;
 	vec3 _Fd = Cdlin.rgb * irradiance * (1.0 - specularDFG) * ao;//todo diffuse brdf for cloth
 	result = _Fd+radiance;
+    
+    
+    /// look at
+    // Chan 2018, "Material Advances in Call of Duty: WWII"
+    //float aperture = inversesqrt(1.0 - visibility);
+    //float microShadow = saturate(NoL * aperture);
+    //return microShadow * microShadow;
 	
-	float iblIntensity = 15000.0;
+	float iblIntensity = 7000.0;
 	result *= iblIntensity * exposure;
 //#if SHADING_MODEL_CLOTH
     // Energy compensation for multiple scattering in a microfacet model
@@ -320,7 +299,7 @@ void main()
     vec3 _diffuse = Cdlin.rgb * (1.0 - metallic) * (lightScatter * viewScatter * (1.0 / $PI));
 	//vec3 _diffuse = Cdlin.rgb * (1.0 - metallic) * (1.0 / $PI);
 	vec3 surfaceShading = _diffuse + _Fr * energyCompensation;
-	surfaceShading *= (/*light.attenuation*/1.0 * NdotL * ao);
+	surfaceShading *= (/*light.attenuation*/1.0 * NdotL * ao * shadowColor.rgb);
 	
 	
 	surfaceShading *= exposure * env_DirectionalLight.intensity;

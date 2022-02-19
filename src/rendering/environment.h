@@ -36,6 +36,8 @@ public:
 
     inline bool ShadowsEnabled() const { return m_shadows_enabled; }
     void SetShadowsEnabled(bool shadows_enabled);
+    inline bool PSSMEnabled() const { return m_pssm_enabled; }
+    void SetPSSMEnabled(bool pssm_enabled);
     inline int NumCascades() const { return m_num_cascades; }
     void SetNumCascades(int num_cascades);
     inline double GetShadowSplit(int i) const { return m_shadow_splits[i]; }
@@ -79,6 +81,7 @@ private:
     Vector3 m_gravity;
 
     bool m_shadows_enabled;
+    bool m_pssm_enabled;
     int m_num_cascades;
     std::array<double, 4> m_shadow_splits;
     std::array<std::shared_ptr<Texture>, 4> m_shadow_maps;

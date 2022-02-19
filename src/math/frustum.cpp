@@ -33,39 +33,6 @@ bool Frustum::BoundingBoxInFrustum(const BoundingBox &bounding_box) const
             continue;
         }
 
-
-        /*if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
-            continue;
-        }
-
-        if (plane.Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
-            continue;
-        }
-
-        if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
-            continue;
-        }
-
-        if (plane.Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMin().z, 1.0f)) >= 0.0) {
-            continue;
-        }
-
-        if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
-            continue;
-        }
-
-        if (plane.Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMin().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
-            continue;
-        }
-
-        if (plane.Dot(Vector4(bounding_box.GetMin().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
-            continue;
-        }
-
-        if (plane.Dot(Vector4(bounding_box.GetMax().x, bounding_box.GetMax().y, bounding_box.GetMax().z, 1.0f)) >= 0.0) {
-            continue;
-        }*/
-
         return false;
     }
 

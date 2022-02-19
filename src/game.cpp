@@ -22,6 +22,9 @@ Game::Game(const RenderWindow &window)
     );
 
     m_scene->SetOctant(make_non_owning(m_scene_manager->GetOctree()));
+
+    // just till we have a better way of manually traversing the ui node
+    //m_ui->SetOctant(make_non_owning(m_scene_manager->GetOctree()));
 }
 
 Game::~Game()

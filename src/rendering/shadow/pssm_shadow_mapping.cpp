@@ -1,18 +1,19 @@
 #include "pssm_shadow_mapping.h"
 #include "../shader_manager.h"
-#include "../shaders/depth_shader.h"
 #include "../environment.h"
 #include "../../util.h"
 
 namespace hyperion {
-PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double max_dist)
-    : num_splits(num_splits)
+PssmShadowMapping::PssmShadowMapping(int num_splits, double max_dist)
+    : Renderable(fbom::FBOMObjectType("PSSM_SHADOW_MAPPING")),
+      m_num_splits(num_splits),
+      m_max_dist(max_dist),
+      m_is_variance_shadow_mapping(ShaderManager::GetInstance()->GetBaseShaderProperties().GetValue("SHADOWS_VARIANCE").IsTruthy())
 {
-    shadow_renderers.resize(num_splits, nullptr);
+    m_shadow_renderers.resize(num_splits, nullptr);
 
     Environment::GetInstance()->SetNumCascades(num_splits);
 
-    // const double min_dist = max_dist / (double)num_splits;
     double dist = max_dist;
 
     for (int i = num_splits - 1; i >= 0; i--) {
@@ -20,24 +21,19 @@ PssmShadowMapping::PssmShadowMapping(Camera *view_cam, int num_splits, double ma
         // const double frac = double(i + 1) / double(num_splits);
         // const double distance = MathUtil::Lerp(min_dist, max_dist, frac);
         // const double distance = max_dist * frac;
-        Environment::GetInstance()->SetShadowSplit(i, dist);
-        shadow_renderers[i] = std::make_shared<ShadowMapping>(view_cam, dist);
-
-        Environment::GetInstance()->SetShadowMap(i, shadow_renderers[i]->GetShadowMap());
+        m_shadow_renderers[i] = std::make_shared<ShadowMapping>(dist, i);
     }
-
-    m_depth_shader = ShaderManager::GetInstance()->GetShader<DepthShader>(ShaderProperties());
 }
 
 int PssmShadowMapping::NumSplits() const
 {
-    return num_splits;
+    return m_num_splits;
 }
 
 void PssmShadowMapping::SetLightDirection(const Vector3 &dir)
 {
-    for (int i = 0; i < num_splits; i++) {
-        shadow_renderers[i]->SetLightDirection(dir);
+    for (int i = 0; i < m_num_splits; i++) {
+        m_shadow_renderers[i]->SetLightDirection(dir);
     }
 }
 
@@ -45,8 +41,8 @@ void PssmShadowMapping::SetOrigin(const Vector3 &origin)
 {
     m_origin = origin;
 
-    for (int i = 0; i < num_splits; i++) {
-        shadow_renderers[i]->SetOrigin(origin);
+    for (int i = 0; i < m_num_splits; i++) {
+        m_shadow_renderers[i]->SetOrigin(origin);
     }
 }
 
@@ -56,40 +52,26 @@ void PssmShadowMapping::SetVarianceShadowMapping(bool value)
         return;
     }
 
-    for (int i = 0; i < num_splits; i++) {
-        shadow_renderers[i]->SetVarianceShadowMapping(value);
+    for (int i = 0; i < m_num_splits; i++) {
+        m_shadow_renderers[i]->SetVarianceShadowMapping(value);
     }
 
     m_is_variance_shadow_mapping = value;
 }
 
-void PssmShadowMapping::Render(Renderer *renderer)
+void PssmShadowMapping::Render(Renderer *renderer, Camera *cam)
 {
-    // m_depth_shader->SetOverrideCullMode(MaterialFaceCull::MaterialFace_Front);
-    // CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::DEPTH_CLAMP);
-    for (int i = 0; i < num_splits; i++) {
-        shadow_renderers[i]->Begin();
-
-        // TODO: cache beforehand
-        Environment::GetInstance()->SetShadowMatrix(i, shadow_renderers[i]->
-            GetShadowCamera()->GetViewProjectionMatrix());
-
-        renderer->RenderBucket(
-            shadow_renderers[i]->GetShadowCamera(),
-            renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
-            m_depth_shader.get(),
-            false
-        );
-
-        renderer->RenderBucket(
-            shadow_renderers[i]->GetShadowCamera(),
-            renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT),
-            m_depth_shader.get(),
-            false
-        );
-
-        shadow_renderers[i]->End();
+    if (!renderer->GetEnvironment()->PSSMEnabled()) {
+        return;
     }
-    // CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::DEPTH_CLAMP);
+
+    for (int i = 0; i < m_num_splits; i++) {
+        m_shadow_renderers[i]->Render(renderer, cam);
+    }
+}
+
+std::shared_ptr<Renderable> PssmShadowMapping::CloneImpl()
+{
+    return std::make_shared<PssmShadowMapping>(m_num_splits, m_max_dist);
 }
 } // namespace hyperion
