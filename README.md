@@ -3,11 +3,12 @@
 
 ## About
 
-Hyperion Engine is a 3D game engine written in C++ - it is easy to understand and use, while still giving you ample control over the game engine. It currently renders using OpenGL primarily but is in the process of being ported to Vulkan.
+Hyperion Engine is an object-oriented 3D game engine written in C++ - it is easy to understand and build games with, while still giving you ample control over the game engine. It currently renders using OpenGL primarily but is in the process of being ported to Vulkan.
 
 ### Current features include:
 * Physically based rendering
 * Voxel Cone Tracing global illumination
+* HDR tone mapping
 * Parallax corrected dynamic cubemaps w/ spherical harmonics generation
 * Procedural terrain generation
 * Dynamic skydome with procedural clouds, skybox
