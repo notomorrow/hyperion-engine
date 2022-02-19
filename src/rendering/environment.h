@@ -58,9 +58,6 @@ public:
     inline std::shared_ptr<Cubemap> &GetGlobalCubemap() { return m_global_cubemap; }
     inline void SetGlobalCubemap(const std::shared_ptr<Cubemap> &cubemap) { m_global_cubemap = cubemap; }
 
-    inline const std::shared_ptr<Cubemap> &GetGlobalIrradianceCubemap() const { return m_global_irradiance_cubemap; }
-    inline std::shared_ptr<Cubemap> &GetGlobalIrradianceCubemap() { return m_global_irradiance_cubemap; }
-    inline void SetGlobalIrradianceCubemap(const std::shared_ptr<Cubemap> &cubemap) { m_global_irradiance_cubemap = cubemap; }
     inline ProbeManager *GetProbeManager() { return m_probe_manager; }
     inline const ProbeManager *GetProbeManager() const { return m_probe_manager; }
 
@@ -78,7 +75,6 @@ private:
     std::vector<PointLightCameraData> m_point_lights_sorted;
 
     std::shared_ptr<Cubemap> m_global_cubemap;
-    std::shared_ptr<Cubemap> m_global_irradiance_cubemap;
 
     Vector3 m_gravity;
 

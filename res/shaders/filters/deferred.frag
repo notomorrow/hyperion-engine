@@ -112,7 +112,6 @@ void main()
     vec4 position = vec4(positionFromDepth(InverseViewProjMatrix, v_texcoord0, depth), 1.0);
     vec3 L = normalize(env_DirectionalLight.direction);
     vec3 V = normalize(CameraPosition-position.xyz);
-	
 
     if (performLighting < 0.9) {
         output0 = vec4(albedo.rgb, 1.0);
@@ -181,6 +180,8 @@ void main()
   vec4 specularCubemap = vec4(0.0);
   float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
 
+  float perceptualRoughness = sqrt(roughness);
+  float lod = 12.0 * perceptualRoughness * (2.0 - perceptualRoughness);
 
 #if PROBE_ENABLED
   specularCubemap = SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, tangent, bitangent);
@@ -188,8 +189,6 @@ void main()
 #endif // PROBE_ENABLED
 
 #if !PROBE_ENABLED
-  float perceptualRoughness = sqrt(roughness);
-  float lod = 12.0 * perceptualRoughness * (2.0 - perceptualRoughness);
   specularCubemap = textureLod(env_GlobalCubemap, ReflectionVector(N, position.xyz, CameraPosition), lod);
  
 #if !SPHERICAL_HARMONICS_ENABLED
@@ -201,7 +200,7 @@ void main()
 #if VCT_ENABLED
   vec4 vctSpec = VCTSpecular(position.xyz, N.xyz, CameraPosition, roughness);
   vec4 vctDiff = VCTDiffuse(position.xyz, N.xyz, CameraPosition, tangent, bitangent, roughness);
-  specularCubemap = mix(specularCubemap, vctSpec, vctSpec.a);
+  specularCubemap.rgb *= mix(vec3(1.0), vctSpec.rgb, vctSpec.a);
   gi += vctDiff;
 #endif // VCT_ENABLED
 
@@ -274,26 +273,59 @@ void main()
     float Gr = smithG_GGX(NdotL, .25) * smithG_GGX(NdotV, .25);
 	
 	
-    vec2 AB = BRDFMap(NdotV, roughness);
+    vec2 AB = vec2(1.0, 1.0) - BRDFMap(NdotV, perceptualRoughness);
 	
 	//result = mix(Fd, ss, subsurface) * Cdlin;
-	float reflectance = 1.0;
+	
+	//irradiance = mix(irradiance, gi.rgb, gi.a);
+	//irradiance *= mix(vec3(1.0), gi.rgb, gi.a);
+	float aperture = 16.0;
+	float shutterSpeed = 1.0/125.0;
+	float sensitivity = 100.0;
+	float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
+	float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
+	
+	irradiance += gi.rgb * (gi.a * exposure * $GI_INTENSITY);
+	
+	// ibl
 	
 	vec3 result;
+	float materialReflectance = 0.5;
+	float reflectance = 0.16 * materialReflectance * materialReflectance; // dielectric reflectance
 	vec3 F0 = Cdlin.rgb * metallic + (reflectance * (1.0 - metallic));
 	
 	vec3 specularDFG = mix(vec3(AB.x), vec3(AB.y), F0);
 	vec3 radiance = specularDFG * specularCubemap.rgb;
-	vec3 _Fd = Cdlin.rgb * mix(irradiance.rgb, gi.rgb, gi.a) * (1.0 - specularDFG) * ao;//todo diffuse brdf for cloth
+	vec3 _Fd = Cdlin.rgb * irradiance * (1.0 - specularDFG) * ao;//todo diffuse brdf for cloth
 	result = _Fd+radiance;
+	
+	float iblIntensity = 15000.0;
+	result *= iblIntensity * exposure;
+//#if SHADING_MODEL_CLOTH
+    // Energy compensation for multiple scattering in a microfacet model
+    // See "Multiple-Scattering Microfacet BSDFs with the Smith Model"
+    //vec3 energyCompensation = vec3(1.0) + F0 * (1.0 / AB.y - 1.0);
+//#else
+    vec3 energyCompensation = vec3(1.0);
+//#endif
 
-	vec3 _Fr = (GTR2_aniso(NdotH, HdotX, HdotY, ax, ay) * cookTorranceG(NdotL, NdotV, LdotH, NdotH)) * SchlickFresnelRoughness(F0, LdotH);
+	// surface
+
+    vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
+	vec3 _Fr = (GTR2_aniso(NdotH, HdotX, HdotY, ax, ay) * cookTorranceG(NdotL, NdotV, LdotH, NdotH)) * SchlickFresnel(F0, F90, LdotH);
 	// Burley 2012, "Physically-Based Shading at Disney"
-    float f90 = 0.5 + 2.0 * roughness * LdotH * LdotH;
-    float lightScatter = SchlickFresnel(1.0, f90, NdotL);
-    float viewScatter  = SchlickFresnel(1.0, f90, NdotV);
+    //float f90 = 0.5 + 2.0 * roughness * LdotH * LdotH;
+    vec3 lightScatter = SchlickFresnel(vec3(1.0), F90, NdotL);
+    vec3 viewScatter  = SchlickFresnel(vec3(1.0), F90, NdotV);
     vec3 _diffuse = Cdlin.rgb * (1.0 - metallic) * (lightScatter * viewScatter * (1.0 / $PI));
-	result = result + _diffuse*ao;
+	//vec3 _diffuse = Cdlin.rgb * (1.0 - metallic) * (1.0 / $PI);
+	vec3 surfaceShading = _diffuse + _Fr * energyCompensation;
+	surfaceShading *= (/*light.attenuation*/1.0 * NdotL * ao);
+	
+	
+	surfaceShading *= exposure * env_DirectionalLight.intensity;
+	
+	result += surfaceShading;
 
 #endif
 

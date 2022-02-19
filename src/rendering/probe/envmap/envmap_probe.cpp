@@ -64,6 +64,10 @@ EnvMapProbe::~EnvMapProbe()
 
 void EnvMapProbe::Bind(Shader *shader)
 {
+    if (!ProbeManager::GetInstance()->EnvMapEnabled()) {
+        return;
+    }
+
     GetColorTexture()->Prepare();
     shader->SetUniform("env_GlobalCubemap", GetColorTexture().get());
 
@@ -72,7 +76,7 @@ void EnvMapProbe::Bind(Shader *shader)
     shader->SetUniform("EnvProbe.min", m_bounds.GetMin());
 
     shader->SetUniform("SphericalHarmonicsMap", m_sh_texture.get());
-    shader->SetUniform("HasSphericalHarmonicsMap", 1);
+    shader->SetUniform("HasSphericalHarmonicsMap", ProbeManager::GetInstance()->SphericalHarmonicsEnabled());
 }
 
 void EnvMapProbe::Update(double dt)

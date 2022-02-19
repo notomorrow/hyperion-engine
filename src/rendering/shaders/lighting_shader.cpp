@@ -73,12 +73,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
 
             SetUniform("env_GlobalCubemap", cubemap.get());
         }
-
-        if (auto cubemap = env->GetGlobalIrradianceCubemap()) {
-            cubemap->Prepare();
-
-            SetUniform("env_GlobalIrradianceCubemap", cubemap.get());
-        }
     }
 
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {

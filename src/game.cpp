@@ -20,6 +20,8 @@ Game::Game(const RenderWindow &window)
         0.05f,
         250.0f
     );
+
+    m_scene->SetOctant(make_non_owning(m_scene_manager->GetOctree()));
 }
 
 Game::~Game()
@@ -32,6 +34,9 @@ Game::~Game()
 
 void Game::Update(double dt)
 {
+    m_scene->AddPending();
+    m_ui->AddPending();
+
     m_ui_manager->Update(dt);
 
     Logic(dt);

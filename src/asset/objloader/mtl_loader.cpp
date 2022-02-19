@@ -110,6 +110,21 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
                         }));
                     }
                 }
+            } else if (tokens[0] == "map_Ns") {
+                if (tokens.size() >= 2) {
+                    const std::string loc = tokens[1];
+
+                    if (Material *last_mtl = mtl->GetLastMaterial()) {
+                        texture_threads.push_back(std::thread([this, last_mtl, loc, path, &texture_mutex]() {
+
+                            if (auto tex = LoadTexture(loc, path)) {
+                                texture_mutex.lock();
+                                last_mtl->SetTexture("RoughnessMap", tex);
+                                texture_mutex.unlock();
+                            }
+                        }));
+                    }
+                }
             } else if (tokens[0] == "Kd") {
                 if (tokens.size() >= 4) {
                     Vector4 color(1.0);
