@@ -3,6 +3,7 @@
 
 #include "shadow_mapping.h"
 #include "../renderer.h"
+#include "../renderable.h"
 #include "../camera/camera.h"
 
 #include <vector>
@@ -12,9 +13,9 @@ namespace hyperion {
 
 class Shader;
 
-class PssmShadowMapping {
+class PssmShadowMapping : public Renderable {
 public:
-    PssmShadowMapping(Camera *view_cam, int num_splits, double max_dist);
+    PssmShadowMapping(int num_splits, double max_dist);
     ~PssmShadowMapping() = default;
 
     int NumSplits() const;
@@ -26,14 +27,16 @@ public:
     inline bool IsVarianceShadowMapping() const { return m_is_variance_shadow_mapping; }
     void SetVarianceShadowMapping(bool value);
 
-    void Render(Renderer *renderer);
+    virtual void Render(Renderer *renderer, Camera *cam) override;
 
 private:
-    const int num_splits;
+    const int m_num_splits;
+    const double m_max_dist;
     bool m_is_variance_shadow_mapping;
-    std::shared_ptr<Shader> m_depth_shader;
-    std::vector<std::shared_ptr<ShadowMapping>> shadow_renderers;
+    std::vector<std::shared_ptr<ShadowMapping>> m_shadow_renderers;
     Vector3 m_origin;
+
+    virtual std::shared_ptr<Renderable> CloneImpl() override;
 };
 
 } // namespace hyperion

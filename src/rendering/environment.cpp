@@ -39,7 +39,8 @@ Environment *Environment::GetInstance()
 Environment::Environment()
     : m_gravity(0.0f, -9.81f, 0.0f),
       m_shadows_enabled(false),
-      m_num_cascades(0),
+      m_pssm_enabled(false),
+      m_num_cascades(1),
       m_shadow_maps({ nullptr }),
       m_shadow_matrices({ Matrix4::Identity() }),
       m_sun(Vector3(-1, -1, -1).Normalize(), Vector4(0.9, 0.8, 0.7, 1.0)),
@@ -61,7 +62,28 @@ void Environment::SetShadowsEnabled(bool shadows_enabled)
         ShaderProperties().Define("SHADOWS", shadows_enabled)
     );
 
+    if (!shadows_enabled) {
+        SetPSSMEnabled(false);
+    }
+
     m_shadows_enabled = shadows_enabled;
+}
+
+void Environment::SetPSSMEnabled(bool pssm_enabled)
+{
+    if (pssm_enabled == m_pssm_enabled) {
+        return;
+    }
+
+    ShaderManager::GetInstance()->SetBaseShaderProperties(
+        ShaderProperties().Define("PSSM_ENABLED", pssm_enabled)
+    );
+
+    if (pssm_enabled) {
+        SetShadowsEnabled(true);
+    }
+
+    m_pssm_enabled = pssm_enabled;
 }
 
 void Environment::SetNumCascades(int num_cascades)

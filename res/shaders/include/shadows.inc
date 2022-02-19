@@ -1,25 +1,21 @@
-#define $SHADOW_BIAS 0.0015
+#define $SHADOW_BIAS 0.001
 #define $SHADOW_BIAS_SMOOTHING 1
 #define $SHADOW_VARIANCE_LOD 5
 
+#if PSSM_ENABLED
 uniform sampler2D u_shadowMap[$NUM_SPLITS];
 uniform mat4 u_shadowMatrix[$NUM_SPLITS];
 uniform float u_shadowSplit[$NUM_SPLITS];
+#endif
+
+#if !PSSM_ENABLED
+uniform sampler2D u_shadowMap[1];
+uniform mat4 u_shadowMatrix[1];
+#endif
 
 uniform vec2 poissonDisk[16];
 
-bool inRadius(vec3 cam, vec3 world, float radius) {
-  if (cam.x >= (world.x - (radius)) && cam.x <= (world.x + (radius))) {
-    if (cam.y >= (world.y - (radius)) && cam.y <= (world.y + (radius))) {
-      if (cam.z >= (world.z - (radius)) && cam.z <= (world.z + (radius))) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
+#if PSSM_ENABLED
 int getShadowMapSplit(float viewSpaceDepth) {
   // have to do this...
   
@@ -53,13 +49,23 @@ vec3 shadowDebugColor(int shadowSplit) {
   return shadowSplitColors[shadowSplit];
 }
 
+#endif
+
+vec3 getShadowCoord(int index, vec3 pos) {
+  vec4 shadowPos = u_shadowMatrix[index] * vec4(pos, 1.0);
+  shadowPos *= vec4(0.5);
+  shadowPos += vec4(0.5);
+  shadowPos.xyz /= shadowPos.w;
+  return shadowPos.xyz;
+}
+
 float getShadow(int index, vec3 coord, float NdotL) {
   vec4 textureSample = vec4(0.0);
 
-
+#if PSSM_ENABLED
 #if SHADOWS_VARIANCE
-if (index == 0) {
-	  textureSample = texture(u_shadowMap[0], coord.xy, $SHADOW_VARIANCE_LOD);
+    if (index == 0) {
+        textureSample = texture(u_shadowMap[0], coord.xy, $SHADOW_VARIANCE_LOD);
 	} else if (index == 1) {
 		textureSample = texture(u_shadowMap[1], coord.xy, $SHADOW_VARIANCE_LOD);
 	} else if (index == 2) {
@@ -70,16 +76,27 @@ if (index == 0) {
 #endif
 
 #if !SHADOWS_VARIANCE
-  if (index == 0) {
-	  textureSample = texture(u_shadowMap[0], coord.xy);
-	} else if (index == 1) {
-		textureSample = texture(u_shadowMap[1], coord.xy);
-	} else if (index == 2) {
-		textureSample = texture(u_shadowMap[2], coord.xy);
-	} else {
-		textureSample = texture(u_shadowMap[3], coord.xy);
-	}
+    if (index == 0) {
+        textureSample = texture(u_shadowMap[0], coord.xy);
+    } else if (index == 1) {
+        textureSample = texture(u_shadowMap[1], coord.xy);
+    } else if (index == 2) {
+        textureSample = texture(u_shadowMap[2], coord.xy);
+    } else {
+        textureSample = texture(u_shadowMap[3], coord.xy);
+    }
+#endif // SHADOWS_VARIANCE
+#endif // PSSM_ENABLED
+
+#if !PSSM_ENABLED
+#if SHADOWS_VARIANCE
+    textureSample = texture(u_shadowMap[0], coord.xy, $SHADOW_VARIANCE_LOD);
 #endif
+
+#if !SHADOWS_VARIANCE
+    textureSample = texture(u_shadowMap[0], coord.xy);
+#endif // SHADOWS_VARIANCE
+#endif // !PSSM_ENABLED
 
 #if SHADOWS_PACK_DEPTH
   float depth = unpackDepth(textureSample);
@@ -117,12 +134,3 @@ if (index == 0) {
   return max(step(coord.z-bias, depth), 0.0);
 #endif
 }
-
-vec3 getShadowCoord(int index, vec3 pos) {
-  vec4 shadowPos = u_shadowMatrix[index] * vec4(pos, 1.0);
-  shadowPos *= vec4(0.5);
-  shadowPos += vec4(0.5);
-  shadowPos.xyz /= shadowPos.w;
-  return shadowPos.xyz;
-}
-

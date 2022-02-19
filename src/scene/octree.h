@@ -219,7 +219,6 @@ public:
 
     OctreeResult UpdateNode(int id, const Spatial &new_value)
     {
-        std::cout << "octree UpdateNode " << id << "\n";
         auto it = std::find_if(m_nodes.begin(), m_nodes.end(), [id](const Node &node) {
             return node.m_id == id;
         });
@@ -313,32 +312,20 @@ public:
 
     OctreeResult RemoveNode(int id)
     {
-        std::cout << "octree RemoveNode " << id << "\n";
-        //ex_assert(node.m_octree != nullptr);
-
-        //std::cout << " from " << m_level << ":\n";
-        //std::cout << "=== REMOVING " << id << " ===\n";
-
         auto it = std::find_if(m_nodes.begin(), m_nodes.end(), [id](const Node &node) {
             return node.m_id == id;
         });
 
         if (it != m_nodes.end()) {
             DispatchEvent(OCTREE_REMOVE_NODE, it->m_id, &it->m_spatial);
-            std::cout << "Removed " << id << " from " << m_level << "\n";
+
             m_nodes.erase(it);
 
             if (!m_is_divided) {
-
-                //if (m_is_divided && AllEmpty()) {
-                //    Undivide();
-                //}
-
                 if (Empty()) {
                     non_owning_ptr<Octree> oct_iter(m_parent);
 
                     while (oct_iter != nullptr && oct_iter->AllEmpty()) {
-                        std::cout << "Undividing    " << oct_iter->m_level << "\n";
                         hard_assert_msg(oct_iter->m_is_divided, "Should not have undivided octants throughout the octree");
 
                         oct_iter->Undivide();

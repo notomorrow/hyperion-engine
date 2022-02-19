@@ -22,6 +22,8 @@
 
 namespace hyperion {
 
+class Environment;
+
 struct BucketItem {
     int m_id;
     Spatial m_spatial;
@@ -257,6 +259,9 @@ public:
     inline RenderWindow &GetRenderWindow() { return m_render_window; }
     inline const RenderWindow &GetRenderWindow() const { return m_render_window; }
 
+    inline Environment *GetEnvironment() { return m_environment; }
+    inline const Environment *GetEnvironment() const { return m_environment; }
+
     inline Bucket &GetBucket(Spatial::Bucket bucket) { return m_buckets[bucket]; }
 
     Bucket m_buckets[Spatial::Bucket::RB_MAX];
@@ -267,6 +272,8 @@ private:
     RenderWindow m_render_window;
     bool m_is_deferred;
     int m_octree_callback_id;
+
+    Environment *m_environment;
 
     std::map<Node*, HashCode::Value_t> m_hash_cache;
     std::map<HashCode::Value_t, Spatial::Bucket> m_hash_to_bucket;

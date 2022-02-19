@@ -1,5 +1,6 @@
 #include "renderer.h"
 #include "shader_manager.h"
+#include "environment.h"
 #include "../scene/scene_manager.h"
 #include "postprocess/filters/deferred_rendering_filter.h"
 
@@ -9,7 +10,8 @@ namespace hyperion {
 Renderer::Renderer(const RenderWindow &render_window)
     : m_render_window(render_window),
       m_fbo(nullptr),
-      m_is_deferred(false)
+      m_is_deferred(false),
+      m_environment(Environment::GetInstance())
 {
     m_post_processing = new PostProcessing();
 
@@ -20,13 +22,11 @@ Renderer::Renderer(const RenderWindow &render_window)
 
     // TODO: re-introduce frustum culling
     m_octree_callback_id = SceneManager::GetInstance()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
-        std::cout << "EVENT " << evt << " " << oct << " " << node_id << "\n";
         if (spatial == nullptr) {
             return;
         }
 
         if (evt == OCTREE_INSERT_NODE) {
-            std::cout << "insert " << node_id << "\n";
             m_buckets[spatial->GetBucket()].AddItem(BucketItem(node_id, *spatial));
         } else if (evt == OCTREE_REMOVE_NODE) {
             m_buckets[spatial->GetBucket()].RemoveItem(node_id);
@@ -88,6 +88,9 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
 {
     enable_frustum_culling = enable_frustum_culling && bucket.enable_culling;
 
+    // proceed even if no shader is set if the render bucket is BUFFER.
+    bool render_if_no_shader = &bucket == &GetBucket(Spatial::Bucket::RB_BUFFER);
+
     Shader *shader = nullptr;
     Shader *last_shader = nullptr;
 
@@ -104,6 +107,10 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
 
         // TODO: group by same shader
         shader = (override_shader ? override_shader : it.GetSpatial().GetRenderable()->m_shader.get());
+
+        if (!shader && !render_if_no_shader) {
+            continue;
+        }
 
         if (shader) {
             shader->ApplyMaterial(it.GetSpatial().GetMaterial());
@@ -131,8 +138,11 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
             shader->End();
 #endif
 
-            SetRendererDefaults();
+        } else if (render_if_no_shader) {
+            it.GetSpatial().GetRenderable()->Render(this, cam);
         }
+
+        SetRendererDefaults();
     }
 
 #if RENDERER_SHADER_GROUPING

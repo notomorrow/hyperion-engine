@@ -64,6 +64,7 @@
 #include "rendering/probe/gi/gi_probe_control.h"
 #include "rendering/probe/spherical_harmonics/spherical_harmonics_control.h"
 #include "rendering/shaders/gi/gi_voxel_debug_shader.h"
+#include "rendering/shadow/shadow_map_control.h"
 
 #include "asset/fbom/fbom.h"
 #include "asset/byte_writer.h"
@@ -80,8 +81,6 @@ using namespace hyperion;
 
 class SceneEditor : public Game {
 public:
-    PssmShadowMapping *shadows;
-
     std::vector<std::shared_ptr<Node>> m_raytested_entities;
     std::unordered_map<HashCode_t, std::shared_ptr<Node>> m_hit_to_entity;
     std::shared_ptr<Node> m_selected_node;
@@ -108,8 +107,6 @@ public:
         for (auto &thread : m_threads) {
             thread.join();
         }
-
-        delete shadows;
 
         AudioManager::Deinitialize();
     }
@@ -334,32 +331,30 @@ public:
 
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
             .Define("NORMAL_MAPPING", true)
-            .Define("SHADOW_MAP_RADIUS", 0.02f)
+            .Define("SHADOW_MAP_RADIUS", 0.0085f)
             .Define("SHADOW_PCF", true)
+            .Define("SHADOWS_VARIANCE", true)
         );
 
         AssetManager *asset_manager = AssetManager::GetInstance();
 
-        shadows = new PssmShadowMapping(GetCamera(), 4, 30.0f);
-        shadows->SetVarianceShadowMapping(false);
-
         Environment::GetInstance()->SetShadowsEnabled(false);
-        Environment::GetInstance()->SetNumCascades(4);
+        Environment::GetInstance()->SetNumCascades(1);
         Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(false);
         Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(false);
         Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(false);
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
-        //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        //GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
+        GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
+        GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
         //GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
         //GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         GetRenderer()->SetDeferred(true);
 
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(1, 1, 0).Normalize());
-        Environment::GetInstance()->GetSun().SetIntensity(500000.0f);
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.7, 1.0, 0.0).Normalize());
+        Environment::GetInstance()->GetSun().SetIntensity(400000.0f);
 
         //auto gi_test_node = std::make_shared<Node>("gi_test_node");
         //gi_test_node->Move(Vector3(0, 5, 0));
@@ -423,6 +418,7 @@ public:
                     continue;
                 }
             }
+            sponza->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
             scene->AddChildAsync(sponza, [](const std::shared_ptr<Node> &) {
                 std::cout << "!!! ADDED\n";
             });
@@ -558,7 +554,32 @@ public:
             tv->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
         }
             
-        GetScene()->AddChild(tv);
+        //GetScene()->AddChild(tv);
+
+        int total_cascades = Environment::GetInstance()->NumCascades();
+        for (int x = 0; x < 1; x++) {
+            for (int z = 0; z < 1; z++) {
+                auto ui_fbo_view = std::make_shared<ui::UIObject>("fbo_preview_" + std::to_string(x * 2 + z));
+                ui_fbo_view->GetMaterial().SetTexture("ColorMap", Environment::GetInstance()->GetShadowMap(x * 2 + z));
+                ui_fbo_view->SetLocalTranslation2D(Vector2(0.7 + (double(x) * 0.2), -0.4 + (double(z) * -0.3)));
+                ui_fbo_view->SetLocalScale2D(Vector2(256));
+                GetUI()->AddChild(ui_fbo_view);
+                GetUIManager()->RegisterUIObject(ui_fbo_view);
+                total_cascades--;
+                if (total_cascades == 0) {
+                    break;
+                }
+            }
+            if (total_cascades == 0) {
+                break;
+            }
+        }
+
+        auto shadow_node = std::make_shared<Node>("shadow_node");
+        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 5.0));
+        //shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
+        GetScene()->AddChild(shadow_node);
+
 
 
         bool add_spheres = true;
@@ -567,54 +588,55 @@ public:
 
             for (int x = 0; x < 5; x++) {
                 for (int z = 0; z < 5; z++) {
+
                     Vector3 box_position = Vector3(((float(x) - 3)), 2.0f, (float(z)));
-                    Vector3 col = Vector3(
-                        MathUtil::Random(0.4f, 1.80f),
-                        MathUtil::Random(0.4f, 1.80f),
-                        MathUtil::Random(0.4f, 1.80f)
-                    ).Normalize();
-                    auto box = asset_manager->LoadFromFile<Node>("models/material_sphere/material_sphere.obj", true);
-                    box->SetLocalScale(0.4f);
+
+                    //m_threads.emplace_back(std::thread([=, scene = GetScene()]() {
+                        //auto box = asset_manager->LoadFromFile<Node>("models/material_sphere/material_sphere.obj", true);
+                    auto box = asset_manager->LoadFromFile<Node>("models/monkey/monkey.obj", true);
+                        box->SetLocalScale(0.4f);
 
 
-                    for (size_t i = 0; i < box->NumChildren(); i++) {
+                        for (size_t i = 0; i < box->NumChildren(); i++) {
 
-                        box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
-                            1.f,//col.x,
-                            1.f,//1.0,//col.y,
-                            1.f,//1.0,//col.z,
-                            1.f
-                        );
-                       // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/albedo.png"));
-                       // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
-                       // box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/ao.png"));
-                       // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/normal.png"));
-                       // box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/roughness.png"));
-                       // box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/metallic.png"));
+                            box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
+                                1.f,//col.x,
+                                1.f,//1.0,//col.y,
+                                1.f,//1.0,//col.z,
+                                1.f
+                            );
+                            box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/albedo.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/ao.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/normal.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/roughness.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/metallic.png"));
 
 
-                        box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-albedo.png"));
-                        //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
-                        box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-ao.png"));
-                        box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-normal.png"));
-                        box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-roughness.png"));
-                        box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("textures/bomboo_wood/bamboo_wood/bamboo-wood-semigloss-metal.png"));
-                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
+                            //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-albedo.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-ao.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-normal.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-roughness.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("textures/bomboo_wood/bamboo_wood/bamboo-wood-semigloss-metal.png"));
+                            box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
 
-                        //box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/plastic/plasticpattern1-albedo.png"));
-                        //box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_height.png"));
-                        //box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-ao.png"));
-                        //box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/plastic/plasticpattern1-normal2-unity2b.png"));
-                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
-                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
-                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
-                    }
+                            //box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/plastic/plasticpattern1-albedo.png"));
+                            //box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_height.png"));
+                            //box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-ao.png"));
+                            //box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/plastic/plasticpattern1-normal2-unity2b.png"));
+                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
+                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+                            box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                            box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
+                        }
 
-                    //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));
+                        //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));
 
-                    box->SetLocalTranslation(box_position);
-                    GetScene()->AddChild(box);
+                        box->SetLocalTranslation(box_position);
+
+                        GetScene()->AddChildAsync(box, [](auto) {});
+                   // }));
                 }
             }
         }
@@ -759,14 +781,6 @@ public:
 
     void OnRender()
     {
-        if (Environment::GetInstance()->ShadowsEnabled()) {
-            Vector3 shadow_dir = Environment::GetInstance()->GetSun().GetDirection() * -1;
-            // shadow_dir.SetY(-1.0f);
-            shadows->SetOrigin(GetCamera()->GetTranslation());
-            shadows->SetLightDirection(shadow_dir);
-            shadows->Render(GetRenderer());
-        }
-
         Environment::GetInstance()->CollectVisiblePointLights(GetCamera());
     }
 };

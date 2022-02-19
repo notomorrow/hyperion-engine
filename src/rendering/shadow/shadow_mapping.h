@@ -7,13 +7,14 @@
 #include "../../math/bounding_box.h"
 #include "../../math/matrix_util.h"
 #include "../camera/ortho_camera.h"
+#include "../renderable.h"
 
 #include <array>
 
 namespace hyperion {
-class ShadowMapping {
+class ShadowMapping : public Renderable {
 public:
-    ShadowMapping(Camera *view_cam, double max_dist, bool use_fbo = true);
+    ShadowMapping(double max_dist, int level = 0, bool use_fbo = true);
     virtual ~ShadowMapping();
 
     const Vector3 &GetLightDirection() const;
@@ -29,12 +30,11 @@ public:
     inline bool IsVarianceShadowMapping() const { return m_is_variance_shadow_mapping; }
     void SetVarianceShadowMapping(bool value);
 
-    virtual void Begin();
-    virtual void End();
-    Camera *view_cam; // temp
+    virtual void Render(Renderer *renderer, Camera *cam) override;
 
 protected:
-    double max_dist;
+    double m_max_dist;
+    int m_level;
 
     Camera *shadow_cam;
     Framebuffer *fbo;
@@ -42,6 +42,7 @@ protected:
     Vector3 maxes, mins, light_direction;
     std::array<Vector3, 8> frustum_corners_ls;
     std::array<Vector3, 8> frustum_corners_ws;
+    std::shared_ptr<Shader> m_depth_shader;
     BoundingBox bb;
 
     bool m_is_variance_shadow_mapping;
@@ -54,6 +55,10 @@ protected:
     void TransformPoints(const std::array<Vector3, 8> &in_vec,
         std::array<Vector3, 8> &out_vec, const Matrix4 &mat) const;
     void UpdateFrustumPoints(std::array<Vector3, 8> &points);
+
+private:
+
+    virtual std::shared_ptr<Renderable> CloneImpl() override;
 };
 } // namespace hyperion
 
