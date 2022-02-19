@@ -2,11 +2,11 @@
 
 #define $SSR_MAX_ITERATIONS 20
 #define $SSR_MAX_BINARY_SEARCH_ITERATIONS 5
-#define $SSR_PIXEL_STRIDE 16
+#define $SSR_PIXEL_STRIDE 20
 #define $SSR_PIXEL_STRIDE_CUTOFF 10
-#define $SSR_MAX_RAY_DISTANCE 4
+#define $SSR_MAX_RAY_DISTANCE 6
 #define $SSR_SCREEN_EDGE_FADE_START 0.9
-#define $SSR_EYE_FADE_START 0.4
+#define $SSR_EYE_FADE_START 0.7
 #define $SSR_EYE_FADE_END 0.8
 #define $SSR_Z_THICKNESS_THRESHOLD 0.1
 #define $SSR_JITTER_OFFSET 0
@@ -221,7 +221,7 @@ vec4 PostProcess_SSR(PostProcessData data)
     float iterationCount;
 
     vec2 uv2 = data.texCoord * data.resolution;
-    float jitter = fract((uv2.x + uv2.y) * 0.25 + $SSR_JITTER_OFFSET);
+    float jitter = fract((data.texCoord.x + data.texCoord.y) * 0.25 + $SSR_JITTER_OFFSET);
 
     bool intersect = traceScreenSpaceRay(data, rayOrigin, rayDir, jitter, hitPixel, hitPoint, iterationCount);
 

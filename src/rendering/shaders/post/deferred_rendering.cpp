@@ -57,12 +57,6 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
 
             SetUniform("env_GlobalCubemap", cubemap.get());
         }
-
-        if (auto cubemap = env->GetGlobalIrradianceCubemap()) {
-            cubemap->Prepare();
-
-            SetUniform("env_GlobalIrradianceCubemap", cubemap.get());
-        }
     }
 }
 

@@ -72,6 +72,39 @@ public:
             { return !operator==(other); }
     };
 
+    struct OctreeResult {
+        enum {
+            OCTREE_OK = 0,
+            OCTREE_ERR = 1
+        } result;
+
+        non_owning_ptr<Octree> octree;
+        std::string message;
+
+        OctreeResult(decltype(result) result, non_owning_ptr<Octree> octree)
+            : result(result),
+              octree(octree)
+        {
+        }
+
+        OctreeResult(decltype(result) result, const std::string &message, non_owning_ptr<Octree> octree = nullptr)
+            : result(result),
+              octree(octree),
+              message(message)
+        {
+        }
+
+        OctreeResult(const OctreeResult &other)
+            : result(other.result),
+              octree(other.octree),
+              message(other.message)
+        {
+        }
+
+        inline operator bool() { return result == OCTREE_OK; }
+        inline operator bool() const { return result == OCTREE_OK; }
+    };
+
     Octree(const BoundingBox &aabb, int level = 0)
         : m_aabb(aabb),
           m_parent(nullptr),
@@ -184,8 +217,9 @@ public:
         }
     }
 
-    bool UpdateNode(int id, const Spatial &new_value)
+    OctreeResult UpdateNode(int id, const Spatial &new_value)
     {
+        std::cout << "octree UpdateNode " << id << "\n";
         auto it = std::find_if(m_nodes.begin(), m_nodes.end(), [id](const Node &node) {
             return node.m_id == id;
         });
@@ -195,13 +229,13 @@ public:
                 for (Octant &octant : m_octants) {
                     hard_assert(octant.m_octree != nullptr);
 
-                    if (octant.m_octree->UpdateNode(id, new_value)) {
-                        return true;
+                    if (auto result = octant.m_octree->UpdateNode(id, new_value)) {
+                        return result;
                     }
                 }
             }
 
-            return false;
+            return OctreeResult(OctreeResult::OCTREE_ERR, "Spatial not found in this nor any child octants");
         }
 
         if (new_value.GetAABB() == it->m_spatial.GetAABB()) {
@@ -209,7 +243,7 @@ public:
 
             // DispatchEvent(OCTREE_NODE_TRANSFORM_CHANGE, new_node.m_id, &new_node.m_spatial);
 
-            return true;
+            return OctreeResult(OctreeResult::OCTREE_OK, "AABB has not changed, no need to update octree", non_owning_ptr(this));
         }
 
         DispatchEvent(OCTREE_REMOVE_NODE, it->m_id, &it->m_spatial);
@@ -221,10 +255,15 @@ public:
 
         if (new_parent == nullptr || Contains(new_value.GetAABB())) {
             // top-level: try insert bounding box into new subdivision
-            InsertNode(id, new_value);
-            DispatchEvent(OCTREE_NODE_TRANSFORM_CHANGE, id, &new_value);
+            auto insert_result = InsertNode(id, new_value);
 
-            return true;
+            if (insert_result) {
+                DispatchEvent(OCTREE_NODE_TRANSFORM_CHANGE, id, &new_value);
+            }
+
+            return insert_result;
+
+            //return { OctreeResult::OCTREE_OK, "Still contains spatial AABB or at topmost level -- reinserting node", non_owning_ptr(this) };
         }
 
         // Contains() is false at this point
@@ -265,11 +304,16 @@ public:
             }
         }
 
-        return inserted;
+        if (inserted) {
+            return OctreeResult(OctreeResult::OCTREE_OK, new_parent);
+        }
+
+        return OctreeResult(OctreeResult::OCTREE_ERR, "Object was not inserted -- no suitable parent octant found");
     }
 
-    bool RemoveNode(int id)
+    OctreeResult RemoveNode(int id)
     {
+        std::cout << "octree RemoveNode " << id << "\n";
         //ex_assert(node.m_octree != nullptr);
 
         //std::cout << " from " << m_level << ":\n";
@@ -281,6 +325,7 @@ public:
 
         if (it != m_nodes.end()) {
             DispatchEvent(OCTREE_REMOVE_NODE, it->m_id, &it->m_spatial);
+            std::cout << "Removed " << id << " from " << m_level << "\n";
             m_nodes.erase(it);
 
             if (!m_is_divided) {
@@ -303,23 +348,23 @@ public:
                 }
             }
 
-            return true;
+            return OctreeResult(OctreeResult::OCTREE_OK, non_owning_ptr<Octree>(nullptr));
         }
 
         if (m_is_divided) {
             for (Octant &octant : m_octants) {
                 hard_assert(octant.m_octree != nullptr);
 
-                if (octant.m_octree->RemoveNode(id)) {
-                    return true;
+                if (auto result = octant.m_octree->RemoveNode(id)) {
+                    return result;
                 }
             }
         }
 
-        return false;
+        return OctreeResult(OctreeResult::OCTREE_ERR, "Node could not be removed");
     }
 
-    void InsertNode(int id, const Spatial &spatial, bool dispatch_callbacks = true)
+    OctreeResult InsertNode(int id, const Spatial &spatial, bool dispatch_callbacks = true)
     {
         for (Octant &octant : m_octants) {
             if (octant.Contains(spatial.GetAABB())) {
@@ -329,9 +374,7 @@ public:
 
                 hard_assert(octant.m_octree != nullptr);
 
-                octant.m_octree->InsertNode(id, spatial);
-
-                return;
+                return octant.m_octree->InsertNode(id, spatial);
             }
         }
 
@@ -342,6 +385,8 @@ public:
         if (dispatch_callbacks) {
             DispatchEvent(OCTREE_INSERT_NODE, id, &spatial);
         }
+
+        return OctreeResult(OctreeResult::OCTREE_OK, non_owning_ptr(this));
     }
 
     void Undivide()

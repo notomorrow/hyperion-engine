@@ -20,6 +20,7 @@ Renderer::Renderer(const RenderWindow &render_window)
 
     // TODO: re-introduce frustum culling
     m_octree_callback_id = SceneManager::GetInstance()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
+        std::cout << "EVENT " << evt << " " << oct << " " << node_id << "\n";
         if (spatial == nullptr) {
             return;
         }

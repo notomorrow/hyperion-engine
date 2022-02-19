@@ -62,6 +62,7 @@
 #include "util/mesh_factory.h"
 
 #include "rendering/probe/gi/gi_probe_control.h"
+#include "rendering/probe/spherical_harmonics/spherical_harmonics_control.h"
 #include "rendering/shaders/gi/gi_voxel_debug_shader.h"
 
 #include "asset/fbom/fbom.h"
@@ -89,6 +90,7 @@ public:
     bool m_left_click_left = false;
     RaytestHit m_ray_hit;
     bool m_is_ray_hit = false;
+    std::vector<std::thread> m_threads;
 
     std::shared_ptr<ui::UIText> m_selected_node_text;
     std::shared_ptr<ui::UIButton> m_rotate_mode_btn;
@@ -103,6 +105,10 @@ public:
 
     ~SceneEditor()
     {
+        for (auto &thread : m_threads) {
+            thread.join();
+        }
+
         delete shadows;
 
         AudioManager::Deinitialize();
@@ -151,15 +157,6 @@ public:
             Environment::GetInstance()->SetGlobalCubemap(cubemap);
         }
 
-        Environment::GetInstance()->SetGlobalIrradianceCubemap(std::shared_ptr<Cubemap>(new Cubemap({
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/posx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/negx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/posy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/negy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/posz.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/IceRiver_irradiance/negz.jpg")
-        })));
-
         return cubemap;
     }
 
@@ -186,10 +183,10 @@ public:
 
         auto sponza = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
         sponza->SetName("sponza");
-        sponza->Scale(Vector3(0.025f));
+        sponza->Scale(Vector3(0.01f));
         //if (voxel_debug) {
             for (size_t i = 0; i < sponza->NumChildren(); i++) {
-                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.02f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
                 sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                 if (sponza->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
@@ -354,20 +351,22 @@ public:
 
         GetRenderer()->GetPostProcessing()->AddFilter<SSAOFilter>("ssao", 5);
         //GetRenderer()->GetPostProcessing()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
-        GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
+        //GetRenderer()->GetPostProcessing()->AddFilter<BloomFilter>("bloom", 80);
         //GetRenderer()->GetPostProcessing()->AddFilter<GammaCorrectionFilter>("gamma correction", 100);
         //GetRenderer()->GetPostProcessing()->AddFilter<FXAAFilter>("fxaa", 9999);
         GetRenderer()->SetDeferred(true);
 
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(0, 1, 0).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(1, 1, 0).Normalize());
+        Environment::GetInstance()->GetSun().SetIntensity(500000.0f);
 
-        /*auto gi_test_node = std::make_shared<Entity>("gi_test_node");
-        gi_test_node->Move(Vector3(0, 5, 0));
-        gi_test_node->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f)));
-        gi_test_node->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
-        GetScene()->AddChild(gi_test_node);*/
+        //auto gi_test_node = std::make_shared<Node>("gi_test_node");
+        //gi_test_node->Move(Vector3(0, 5, 0));
+        //gi_test_node->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f)));
+        //gi_test_node->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 1.0f, 0.0f), BoundingBox(-25.0f, 25.0f)));
+        //gi_test_node->AddControl(std::make_shared<SphericalHarmonicsControl>(Vector3(0.0f, 1.0f, 0.0f), BoundingBox(-25.0f, 25.0f)));
+        //GetScene()->AddChild(gi_test_node);
 
 
         GetCamera()->SetTranslation(Vector3(0, 0, 0));
@@ -410,14 +409,30 @@ public:
 
         auto cm = InitCubemap();
 
-        GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), cm));
+        GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
        // GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
+
+        m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
+            auto sponza = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
+            sponza->SetName("sponza");
+            sponza->Scale(Vector3(0.01f));
+            for (size_t i = 0; i < sponza->NumChildren(); i++) {
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
+                sponza->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+                if (sponza->GetChild(i)->GetRenderable() == nullptr) {
+                    continue;
+                }
+            }
+            scene->AddChildAsync(sponza, [](const std::shared_ptr<Node> &) {
+                std::cout << "!!! ADDED\n";
+            });
+        }));
 
         bool write = false;
         bool read = false;
 
         if (!write && !read) {
-            InitTestArea();
+            //InitTestArea();
             /*GetScene()->AddControl(std::make_shared<NoiseTerrainControl>(GetCamera()));
             auto tmp = std::make_shared<Entity>("dummy node for vct");
             tmp->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0, 0, 0), BoundingBox(Vector3(-15, 5, -15), Vector3(15, 5, 15))));
@@ -458,7 +473,7 @@ public:
             }
         }
 
-        GetSceneManager()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
+        /*GetSceneManager()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
             std::cout << "event " << evt << ", node: " << node_id << "\n";
             if (evt == OCTREE_INSERT_OCTANT) {
                 std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
@@ -475,7 +490,7 @@ public:
                     //std::cout << "<REMOVE BB NODE>\n";
                 }
             }
-        });
+        });*/
         //m_octree->InsertNode(non_owning_ptr(GetScene().get()));
         //BuildOctreeAABB(m_octree);
 
@@ -536,30 +551,15 @@ public:
         }
         GetScene()->AddChild(house);*/
 
-        /*auto hydrant = asset_manager->LoadFromFile<Node>("models/FireHydrant/FireHydrantMesh.obj");
-        hydrant->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("models/FireHydrant/fire_hydrant_Base_Color.png"));
-        hydrant->GetChild(0)->GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("models/FireHydrant/fire_hydrant_Normal_OpenGL.png"));
-        hydrant->GetChild(0)->GetMaterial().SetTexture("AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("models/FireHydrant/fire_hydrant_Mixed_AO.png"));
-        hydrant->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.35f);
-        hydrant->GetChild(0)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.6f);
-        hydrant->Move(Vector3(3, 0, 3));
-        hydrant->Scale(Vector3(2.0f));
-        GetScene()->AddChild(hydrant);*/
 
-        /*GetSceneManager()->GetOctree()->InsertNode(Octree::Node{1, BoundingBox(Vector3(-4, -4, -4), Vector3(-3.2, -3.2, -3.2))});
-        GetSceneManager()->GetOctree()->InsertNode(Octree::Node{ 2, BoundingBox(Vector3(5, 5, 5), Vector3(7, 7, 7)) });
-        GetSceneManager()->GetOctree()->InsertNode(Octree::Node{ 3, BoundingBox(Vector3(12, 12, -12), Vector3(13, 13, -13)) });
-        GetSceneManager()->GetOctree()->InsertNode(Octree::Node{ 4, BoundingBox(Vector3(-3, -3, -3), Vector3(-1, -1, -1)) });
+        auto tv = asset_manager->LoadFromFile<Node>("models/television/Television_01_4k.obj", true);
+        tv->SetLocalScale(4.f);
+        for (size_t i = 0; i < tv->NumChildren(); i++) {
+            tv->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
+        }
+            
+        GetScene()->AddChild(tv);
 
-        GetSceneManager()->GetOctree()->RemoveNode(1);
-        GetSceneManager()->GetOctree()->RemoveNode(2);
-        GetSceneManager()->GetOctree()->RemoveNode(3);
-        GetSceneManager()->GetOctree()->RemoveNode(4);*/
-
-        //m_octree->RemoveNode(4);
-        //for (int i = 0; i < 8; i++) {
-        //    m_octree->Undivide();
-        //}
 
         bool add_spheres = true;
 
@@ -573,8 +573,8 @@ public:
                         MathUtil::Random(0.4f, 1.80f),
                         MathUtil::Random(0.4f, 1.80f)
                     ).Normalize();
-                    auto box = asset_manager->LoadFromFile<Node>("models/sphere_hq.obj", true);
-                    box->SetLocalScale(0.6f);
+                    auto box = asset_manager->LoadFromFile<Node>("models/material_sphere/material_sphere.obj", true);
+                    box->SetLocalScale(0.4f);
 
 
                     for (size_t i = 0; i < box->NumChildren(); i++) {
@@ -585,6 +585,14 @@ public:
                             1.f,//1.0,//col.z,
                             1.f
                         );
+                       // box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/albedo.png"));
+                       // box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
+                       // box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/ao.png"));
+                       // box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/normal.png"));
+                       // box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/roughness.png"));
+                       // box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/metallic.png"));
+
+
                         box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-albedo.png"));
                         //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
                         box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-ao.png"));
@@ -599,8 +607,8 @@ public:
                         //box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/plastic/plasticpattern1-normal2-unity2b.png"));
                         //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
                         //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
-                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
                     }
 
                     //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));
@@ -610,50 +618,8 @@ public:
                 }
             }
         }
-
-
-        /*auto dragger = asset_manager->LoadFromFile<Entity>("models/ogrexml/dragger_Body.mesh.xml");
-
-        dragger->SetName("dragger");
-        dragger->Move(Vector3(0, 0, 0));
-        dragger->Scale(0.25);
-        dragger->GetChild(0)->GetMaterial().diffuse_color = { 0.0f, 0.0f, 1.0f, 1.0f };
-        dragger->GetControl<SkeletonControl>(0)->SetLoop(true);
-        dragger->GetControl<SkeletonControl>(0)->PlayAnimation(0, 12.0);
-        GetScene()->AddChild(dragger);
-        dragger->UpdateTransform();*/
         
         //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 1, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f) * 3.0f, 1.5f));
-
-
-        //for (size_t i = 0; i < Environment::GetInstance()->NumPointLights(); i++) {
-           // auto n = std::make_shared<Entity>();
-           // n->SetRenderable(std::make_shared<BoundingBoxRenderer>(Environment::GetInstance()->GetPointLight(i)->GetAABB()));
-           // n->SetLocalTranslation(Environment::GetInstance()->GetPointLight(i)->GetPosition());
-            //GetScene()->AddChild(n);
-        //}
-
-
-        /*int total_cascades = Environment::GetInstance()->NumCascades();
-        for (int x = 0; x < 2; x++) {
-            for (int z = 0; z < 2; z++) {
-                auto ui_fbo_view = std::make_shared<ui::UIObject>("fbo_preview_" + std::to_string(x * 2 + z));
-                ui_fbo_view->GetMaterial().SetTexture("ColorMap", Environment::GetInstance()->GetShadowMap(x * 2 + z));
-                ui_fbo_view->SetLocalTranslation2D(Vector2(0.7 + (double(x) * 0.2), -0.4 + (double(z) * -0.3)));
-                ui_fbo_view->SetLocalScale2D(Vector2(256));
-                GetUI()->AddChild(ui_fbo_view);
-                GetUIManager()->RegisterUIObject(ui_fbo_view);
-
-                total_cascades--;
-                if (total_cascades == 0) {
-                    break;
-                }
-            }
-
-            if (total_cascades == 0) {
-                break;
-            }
-        }*/
 
         auto ui_crosshair = std::make_shared<ui::UIObject>("crosshair");
         ui_crosshair->GetMaterial().SetTexture("ColorMap", asset_manager->LoadFromFile<Texture2D>("textures/crosshair.png"));
@@ -702,60 +668,6 @@ public:
 
             ProbeManager::GetInstance()->SetVCTEnabled(!ProbeManager::GetInstance()->VCTEnabled());
         }));
-
-        GetInputManager()->RegisterKeyEvent(KEY_C, InputEvent([=](bool pressed) {
-            if (!pressed) {
-                return;
-            }
-
-            //m_octree->Clear();
-        }));
-
-        GetInputManager()->RegisterKeyEvent(KEY_V, InputEvent([=](bool pressed) {
-            if (!pressed) {
-                return;
-            }
-
-            //m_octree->InsertNode(non_owning_ptr(GetScene().get()));
-        }));
-
-        // remove selected node from octree
-        GetInputManager()->RegisterKeyEvent(KEY_R, InputEvent([=](bool pressed) {
-            if (!pressed) {
-                return;
-            }
-
-            if (m_selected_node == nullptr) {
-                return;
-            }
-
-            /*Entity *node_iter = m_selected_node.get();
-
-            while (node_iter != nullptr && node_iter != GetScene().get()) {
-                m_octree->RemoveNode(node_iter, false);
-                std::cout << "remove " << node_iter->GetName() << "\n";
-                node_iter = node_iter->GetParent().get();
-            }*/
-        }));
-
-        /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
-
-        std::cout << "Result: " << typeid(*result.get()).name() << "\n";
-        if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
-            std::cout << "Loaded entity name: " << entity->GetName() << "\n";
-            std::cout << "entity num children: " << entity->NumChildren() << "\n";
-            entity->Scale(1.0f);
-            for (size_t i = 0; i < entity->NumChildren(); i++) {
-                std::cout << "child [" << i << "] renderable == " << intptr_t(entity->GetChild(i)->GetRenderable().get()) << "\n";
-                if (entity->GetChild(i)->GetRenderable() == nullptr) {
-                    continue;
-                }
-                entity->GetChild(i)->GetRenderable()->SetShader(shader);
-            }
-            GetScene()->AddChild(entity);
-        }*/
-
-      
 
         InputEvent raytest_event([=](bool pressed)
             {

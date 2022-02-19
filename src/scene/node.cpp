@@ -2,9 +2,12 @@
 #include "util.h"
 #include "scene/scene_manager.h"
 
+
 #include <algorithm>
 
 namespace hyperion {
+
+std::mutex Node::add_pending_mutex{};
 
 int Node::NodeId()
 {
@@ -22,13 +25,17 @@ Node::Node(const std::string &name)
       m_local_translation(Vector3::Zero()),
       m_local_scale(Vector3::One()),
       m_local_rotation(Quaternion::Identity()),
-      m_octree_node_id(NodeId())
+      m_octree_node_id(NodeId()),
+      m_octant(nullptr)
 {
 }
 
 Node::~Node()
 {
-    SceneManager::GetInstance()->GetOctree()->RemoveNode(m_octree_node_id);
+    if (m_octant != nullptr) {
+        m_octant->RemoveNode(m_octree_node_id);
+    }
+    //SceneManager::GetInstance()->GetOctree()->RemoveNode(m_octree_node_id);
 
     for (auto it = m_controls.rbegin(); it != m_controls.rend(); ++it) {
         (*it)->OnRemoved();
@@ -176,7 +183,7 @@ void Node::AddChild(std::shared_ptr<Node> entity)
         SetAABBUpdateFlag();
         //entity->UpdateAABB();
 
-        SceneManager::GetInstance()->GetOctree()->InsertNode(entity->m_octree_node_id, entity->m_spatial);
+        entity->SetOctant(m_octant);
     }
 }
 
@@ -198,7 +205,7 @@ void Node::RemoveChild(std::shared_ptr<Node> entity)
     if (entity->GetAABBAffectsParent()) {
         SetAABBUpdateFlag();
 
-        SceneManager::GetInstance()->GetOctree()->RemoveNode(entity->m_octree_node_id);
+        entity->SetOctant(nullptr);
     }
 }
 
@@ -221,9 +228,36 @@ std::shared_ptr<Node> Node::GetChild(const std::string &name) const
     return it != m_children.end() ? *it : nullptr;
 }
 
-std::shared_ptr<Node> Node::GetChildPendingRemoval(size_t index) const
+void Node::AddChildAsync(std::shared_ptr<Node> node, NodeCallback_t on_added)
 {
-    return m_children_pending_removal.at(index);
+    ex_assert(node != nullptr);
+
+    std::lock_guard guard(add_pending_mutex);
+
+    node->m_flags |= PENDING_ADDITION;
+    m_children_pending_addition.push_back(std::make_pair(node, on_added));
+}
+
+void Node::AddPending()
+{
+    std::lock_guard guard(add_pending_mutex);
+
+    if (m_children_pending_addition.empty()) {
+        return;
+    }
+
+    for (auto &pending : m_children_pending_addition) {
+        if (pending.first == nullptr) {
+            continue;
+        }
+
+        pending.first->m_flags &= ~PENDING_ADDITION;
+
+        AddChild(pending.first);
+        pending.second(pending.first);
+    }
+
+    m_children_pending_addition.clear();
 }
 
 void Node::ClearPendingRemoval()
@@ -271,6 +305,8 @@ void Node::RemoveControl(const std::shared_ptr<EntityControl> &control)
 
 void Node::Update(double dt)
 {
+    AddPending();
+
     BoundingBox aabb_before(m_spatial.m_aabb);
 
     if (m_flags & UPDATE_TRANSFORM) {
@@ -297,8 +333,15 @@ void Node::Update(double dt)
         child->Update(dt);
     }
 
-    if (GetAABBAffectsParent() && aabb_before != m_spatial.m_aabb) {
-        SceneManager::GetInstance()->GetOctree()->UpdateNode(m_octree_node_id, m_spatial);
+    if (m_octant != nullptr && aabb_before != m_spatial.m_aabb) {
+        auto result = m_octant->UpdateNode(m_octree_node_id, m_spatial);
+
+        if (!result) {
+            // DebugLog
+            std::cout << result.message << "\n";
+        }
+
+        SetOctantInternal(result.octree);
     }
 }
 
@@ -354,6 +397,61 @@ void Node::SetPendingRemovalFlag()
         }
 
         child->SetPendingRemovalFlag();
+    }
+}
+
+
+void Node::SetOctant(non_owning_ptr<Octree> octant)
+{
+    if (octant == m_octant) {
+        return;
+    }
+
+    if (m_octant != nullptr) {
+        m_octant->RemoveNode(m_octree_node_id);
+    }
+
+    non_owning_ptr<Octree> real_octant;
+
+    if (octant != nullptr) {
+        auto result = octant->InsertNode(m_octree_node_id, m_spatial);
+
+        if (result) {
+            real_octant = result.octree;
+        } else {
+            // DebugLog
+        }
+    }
+
+    for (auto &child : m_children) {
+        if (child == nullptr) {
+            continue;
+        }
+
+        // call RemoveNode() on current octant, if it is present
+        child->SetOctant(nullptr);
+    }
+
+    SetOctantInternal(real_octant);
+}
+
+void Node::SetOctantInternal(non_owning_ptr<Octree> octant)
+{
+    if (octant == m_octant) {
+        return;
+    }
+
+    m_octant = octant;
+
+    for (auto &child : m_children) {
+        if (child == nullptr) {
+            continue;
+        }
+
+        // call RemoveNode() on current octant, if it is present
+        // will also call InsertNode on `m_octant`, setting `child`'s
+        // octant to a descendent octant of `m_octant`, or `m_octant` itself.
+        child->SetOctant(m_octant);
     }
 }
 

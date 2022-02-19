@@ -17,10 +17,11 @@ ShaderManager *ShaderManager::GetInstance()
 ShaderManager::ShaderManager()
 {
     m_base_shader_properties
+        .Define("GI_INTENSITY", 100000.0f)
         .Define("METALNESS_MAPPING", true)
         .Define("ROUGHNESS_MAPPING", true)
         .Define("NORMAL_MAPPING", true)
-        .Define("SSR_ENABLED", true)
+        .Define("SSR_ENABLED", false)
         .Define("MAX_POINT_LIGHTS", int(Environment::max_point_lights_on_screen))
         .Define("HDR", true)
         .Define("HDR_TONEMAP_FILMIC", true)

@@ -41,6 +41,7 @@ struct DirectionalLight
 {
 	vec3 direction;
 	vec4 color;
+	float intensity;
 };
 
 uniform DirectionalLight env_DirectionalLight;
@@ -74,7 +75,7 @@ vec4 Irradiance(vec3 normal) {
 	vec3 right = normalize(cross(up, normal));
 	up         = normalize(cross(normal, right));
 
-	float sampleDelta = 0.8;
+	float sampleDelta = 0.15;
 	float nrSamples = 0.0; 
 
 	for(float phi = 0.0; phi < 2.0 * $PI; phi += sampleDelta)
@@ -86,7 +87,7 @@ vec4 Irradiance(vec3 normal) {
 					// tangent space to world
 					vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal; 
 
-					irradiance += textureLod(env_GlobalCubemap, sampleVec, 7) * cos(theta) * sin(theta);
+					irradiance += textureLod(env_GlobalCubemap, sampleVec, 4) * cos(theta) * sin(theta);
 					nrSamples++;
 			}
 	}
@@ -164,7 +165,7 @@ float GGX(float alpha, float cosThetaM)
 }
 
 
-float SchlickFresnel(float f0, float f90, float u)
+vec3 SchlickFresnel(vec3 f0, vec3 f90, float u)
 {
   return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
@@ -278,40 +279,6 @@ vec2 BRDFMap(float NdotV, float metallic)
 		return vec2(-1.04, 1.04) * a004 + r.zw;
 }
 
-vec3 BRDF(vec3 n, vec3 v, vec3 lightDir, float roughness, float shininess, float metallic)
-{
-	float NdotL = dot(n, lightDir);
-	float NdotV = dot(n, v);
-  if (NdotL < 0 || NdotV < 0) return vec3(0);
-
-	vec3 H = normalize(lightDir + v);
-	float NdotH = dot(n, H);
-	float LdotH = dot(lightDir, H);
-
-
-	float D = NormalizedTrowbridgeReitz(NdotH, roughness);
-
-	float F = SchlickFresnel(metallic, 1, LdotH);
-
-	float G = smithG_GGX(NdotL, NdotV, roughness) / (4 * NdotL * NdotV);
-
-	return vec3(shininess * D * F * G);
-}
-
-float SpecularDirectional(vec3 n, vec3 v, vec3 lightDir, float roughness)
-{
-
-
-  vec3 vHalfVector = normalize(lightDir + v);
-
-	float NdotH = dot(n, vHalfVector);
-	float LdotH = dot(lightDir, vHalfVector);
-
-	float D = GGX(roughness, NdotH);
-	float F = SchlickFresnel(0.2, 1.0, LdotH);
-
-	return F * D;
-}
 
 vec4 CalculateFogExp(vec4 inColor, vec4 toColor, vec3 worldPos, vec3 camPos, float fogStart, float fogEnd)
 {

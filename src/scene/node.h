@@ -3,8 +3,9 @@
 
 #include <string>
 #include <vector>
-#include <deque>
 #include <memory>
+#include <mutex>
+#include <functional>
 
 #include "../controls/entity_control.h"
 #include "../hash_code.h"
@@ -17,14 +18,23 @@
 #include "../util/non_owning_ptr.h"
 
 #include "../asset/fbom/fbom.h"
+
 namespace hyperion {
 class Camera;
+class Node;
+class Octree;
+
+using NodeCallback_t = std::function<void(const std::shared_ptr<Node> &)>;
+using PendingNode_t = std::pair<std::shared_ptr<Node>, NodeCallback_t>;
+
 class Node : public fbom::FBOMLoadable {
+    static std::mutex add_pending_mutex;
 public:
     enum UpdateFlags {
         UPDATE_TRANSFORM = 0x01,
         UPDATE_AABB = 0x02,
-        PENDING_REMOVAL = 0x04
+        PENDING_REMOVAL = 0x04,
+        PENDING_ADDITION = 0x08
     };
 
     Node(const std::string &name = "<Unnamed>");
@@ -99,8 +109,9 @@ public:
     std::shared_ptr<Node> GetChild(const std::string &name) const;
     inline size_t NumChildren() const { return m_children.size(); }
 
-    std::shared_ptr<Node> GetChildPendingRemoval(size_t index) const;
-    inline size_t NumChildrenPendingRemoval() const { return m_children_pending_removal.size(); }
+    void AddChildAsync(std::shared_ptr<Node> node, NodeCallback_t on_added);
+
+    void AddPending();
     void ClearPendingRemoval();
 
     template <typename T>
@@ -143,9 +154,16 @@ public:
     inline void SetRenderable(const std::shared_ptr<Renderable> &renderable) { m_spatial.m_renderable = renderable; }
 
     inline bool PendingRemoval() const { return m_flags & PENDING_REMOVAL; }
+    inline bool PendingAddition() const { return m_flags & PENDING_ADDITION; }
 
     virtual void Update(double dt);
     void UpdateControls(double dt);
+
+    // assumes m_octant as NOT become invalidated.
+    // will call InsertNode() and RemoveNode() methods,
+    // removing the node from the current Octree and inserting it
+    // into the new one.
+    void SetOctant(non_owning_ptr<Octree> octant);
 
     virtual std::shared_ptr<Loadable> Clone() override;
 
@@ -311,7 +329,8 @@ protected:
 
     //std::shared_ptr<Renderable> m_renderable;
     std::vector<std::shared_ptr<Node>> m_children;
-    std::deque<std::shared_ptr<Node>> m_children_pending_removal;
+    std::vector<std::shared_ptr<Node>> m_children_pending_removal;
+    std::vector<PendingNode_t> m_children_pending_addition;
     std::vector<std::shared_ptr<EntityControl>> m_controls;
 
     int m_flags;
@@ -332,6 +351,12 @@ protected:
 
 private:
     int m_octree_node_id;
+    non_owning_ptr<Octree> m_octant;
+
+    // assumes m_octant may have become invalidated in the meantime due to updates
+    // to the octree leading up to this call.
+    // does NOT call any methods on, nor deference `m_octant`.
+    void SetOctantInternal(non_owning_ptr<Octree> octant);
     
     static int NodeId();
 };

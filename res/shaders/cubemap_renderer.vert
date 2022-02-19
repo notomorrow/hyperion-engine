@@ -15,7 +15,7 @@ out mat3 v_tbn;
 #include "include/lighting.inc"
 #endif
 
-#define $CUBEMAP_LIGHTING_AMBIENT 0.2
+#define $CUBEMAP_LIGHTING_AMBIENT 0.05
 
 out VSOutput
 {
@@ -36,7 +36,7 @@ void main() {
 #if PROBE_RENDER_SHADING
   // vertex shading
   float NdotL = clamp(dot(vs_out.normal, env_DirectionalLight.direction), $CUBEMAP_LIGHTING_AMBIENT, 1.0);
-  vs_out.lighting = vec4(NdotL, NdotL, NdotL, 1.0) * env_DirectionalLight.color;
+  vs_out.lighting = vec4(NdotL, NdotL, NdotL, 1.0) * env_DirectionalLight.color * env_DirectionalLight.intensity;
 #endif
 
   gl_Position = v_position;

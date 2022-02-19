@@ -18,12 +18,12 @@ ComputeShader::~ComputeShader()
 
 void ComputeShader::ApplyMaterial(const Material &mat)
 {
-    hard_assert_msg(false, "Compute shader does not implement ApplyMaterial");
+    // Compute shader does not implement ApplyMaterial
 }
 
 void ComputeShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
-    hard_assert_msg(false, "Compute shader does not implement ApplyTransforms");
+    // Compute shader does not implement ApplyTransforms
 }
 
 void ComputeShader::Dispatch(int width, int height, int length)

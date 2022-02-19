@@ -34,6 +34,13 @@ public:
 private:
     T *ptr;
 };
+
+template <class T>
+static inline non_owning_ptr<T> make_non_owning(T *ptr)
+{
+    return non_owning_ptr(ptr);
+}
+
 } // namespace hyperion
 
 #endif
