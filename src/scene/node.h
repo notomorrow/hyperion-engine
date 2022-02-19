@@ -34,7 +34,8 @@ public:
         UPDATE_TRANSFORM = 0x01,
         UPDATE_AABB = 0x02,
         PENDING_REMOVAL = 0x04,
-        PENDING_ADDITION = 0x08
+        PENDING_ADDITION = 0x08,
+        NODES_ENQUEUED = 0x10
     };
 
     Node(const std::string &name = "<Unnamed>");
