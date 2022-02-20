@@ -37,9 +37,6 @@ Game::~Game()
 
 void Game::Update(double dt)
 {
-    m_scene->AddPending();
-    m_ui->AddPending();
-
     m_ui_manager->Update(dt);
 
     Logic(dt);
