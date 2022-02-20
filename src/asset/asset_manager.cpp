@@ -11,6 +11,9 @@
 #include <iostream>
 
 namespace hyperion {
+const AssetLoader::Result AssetManager::ErrorList::no_error{ AssetLoader::Result::ASSET_OK };
+const int AssetManager::ErrorList::max_size = 16;
+
 AssetManager *AssetManager::instance = nullptr;
 
 AssetManager *AssetManager::GetInstance()
@@ -31,6 +34,7 @@ AssetManager::AssetManager()
     RegisterLoader<TextLoader>(".vert");
     RegisterLoader<TextLoader>(".geom");
     RegisterLoader<TextLoader>(".comp");
+    RegisterLoader<TextLoader>(".spv");
 
     RegisterLoader<ObjLoader>(".obj");
     RegisterLoader<MtlLoader>(".mtl");
@@ -89,27 +93,25 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
         }
     }
 
-    for (const auto &path : try_paths) {
-        try {
-            auto &loader = GetLoader(path);
+    auto &loader = GetLoader(new_path);
 
-            if (loader != nullptr) {
-                auto loaded = loader->LoadFromFile(path);
+    if (loader != nullptr) {
+        for (const auto &p : try_paths) {
+            auto result = loader->LoadFromFile(p);
 
-                if (!loaded) {
-                    throw std::string("Loader returned no data");
-                } else {
-                    //std::lock_guard guard(load_asset_mtx);
+            if (!result) {
+                m_error_list.Add(result);
 
-                    loaded->SetFilePath(path);
+                DebugLog(LogType::Warn, "Asset could not be loaded at %s:  %s\n", p.c_str(), result.message.c_str());
+            } else if (result.loadable == nullptr) {
+                DebugLog(LogType::Warn, "Asset loader gave ASSET_OK result but asset was null at %s:  %s\n", p.c_str(), result.message.c_str());
+            } else {
+                result.loadable->SetFilePath(p);
 
-                    loaded_assets[path] = loaded;
-                }
+                loaded_assets[p] = result.loadable;
 
-                return loaded;
+                return result.loadable;
             }
-        } catch (std::string err) {
-            std::cout << "[" << path << "]: " << "File load error: " << err << "\n";
         }
     }
 
