@@ -4,6 +4,7 @@
 #include "asset_loader.h"
 
 #include <memory>
+#include <deque>
 #include <string>
 #include <unordered_map>
 #include <algorithm>
@@ -14,12 +15,46 @@ class AssetManager {
 public:
     static AssetManager *GetInstance();
 
+    struct ErrorList {
+        static const AssetLoader::Result no_error;
+        static const int max_size;
+
+        inline int Size() const { return results.size(); }
+
+        inline const AssetLoader::Result &Last() const
+        {
+            if (results.empty()) {
+                return no_error;
+            }
+
+            return results.back();
+        }
+
+        inline void Add(const AssetLoader::Result &result)
+        {
+            if (result) {
+                return;
+            }
+
+            if (results.size() == max_size) {
+                results.pop_front();
+            }
+
+            results.emplace_back(result);
+        }
+
+    private:
+        std::deque<AssetLoader::Result> results;
+    };
+
     AssetManager();
 
     void SetRootDir(const std::string &path);
     const std::string &GetRootDir() const;
     std::shared_ptr<Loadable> LoadFromFile(const std::string &path, bool use_caching = true);
     const std::unique_ptr<AssetLoader> &GetLoader(const std::string &path);
+
+    inline const ErrorList &GetErrors() const { return m_error_list; }
 
     template <typename T>
     const std::shared_ptr<T> LoadFromFile(const std::string &path, bool use_caching = true)
@@ -43,6 +78,8 @@ public:
 
 private:
     static AssetManager *instance;
+
+    ErrorList m_error_list;
 
     std::string root_path = "./";
 

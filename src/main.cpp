@@ -3,6 +3,8 @@
 #include "scene/node.h"
 #include "util.h"
 #include "asset/asset_manager.h"
+#include "asset/text_loader.h"
+#include "asset/byte_reader.h"
 #include "rendering/shader.h"
 #include "rendering/environment.h"
 #include "rendering/texture.h"
@@ -348,91 +350,22 @@ public:
                     model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
                 }
 
-                if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "Bin")) {
+                if (auto result = fbom::FBOMLoader().LoadFromFile("models/scene.fbom")) {
+                    if (auto entity = std::dynamic_pointer_cast<Node>(result.loadable)) {
+                        for (size_t i = 0; i < entity->NumChildren(); i++) {
+                            if (auto child = entity->GetChild(i)) {
+                                if (auto ren = child->GetRenderable()) {
+                                    ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
+                                }
+                            }
+                        }
 
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.9f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.7f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "Ceramic")) {
-
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.1f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "Mirror")) {
-
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.9f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.01f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "Plastic")) {
-
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.9f);
-                }
-
-                if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "leaf")) {
-                    model->GetChild(i)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                    model->GetChild(i)->GetSpatial().GetMaterial().alpha_blended = true;
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "Material__57")) {
-                    model->GetChild(i)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                    model->GetChild(i)->GetSpatial().GetMaterial().alpha_blended = true;
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "vase")) {
-
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.6f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "chain")) {
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "flagpole")) {
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                } else {
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 1.0f);
+                        GetScene()->AddChild(entity);
+                        entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
+                    }
                 }
             }
-
-            model->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
-            model->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
-            GetScene()->AddChild(model);
-        //}));
-#else
-        /*auto terrain = asset_manager->LoadFromFile<Node>("models/tmp_terrain.obj");
-        terrain->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-        terrain->Scale(20.0f);
-        //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_albedo.png"));
-        ///terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_Height.png"));
-        //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_Normal-ogl.png"));
-        //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor-ao.png"));
-        //terrain->GetChild(0)->GetSpatial().GetMaterial().SetParameter(MATERIAL_PARAMETER_UV_SCALE, Vector2(50.0f));
-
-        // GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/snow2/rock-snow-ice1-2k_Base_Color.png"));
-        // GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/snow2/rock-snow-ice1-2k_Normal-ogl.png"));
-        // GetMaterial().SetTexture("BaseTerrainParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/snow2/rock-snow-ice1-2k_Height.png"));
-        // GetMaterial().SetTexture("BaseTerrainAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/snow2/rock-snow-ice1-2k_Ambient_Occlusion.png"));
-
-        // GetMaterial().SetTexture("SlopeColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirtwithrocks-ogl/dirtwithrocks_Base_Color.png"));
-        // GetMaterial().SetTexture("SlopeNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirtwithrocks-ogl/dirtwithrocks_Normal-ogl.png"));
-        // GetMaterial().SetTexture("SlopeParallaxMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirtwithrocks-ogl/dirtwithrocks_Height.png"));
-        // GetMaterial().SetTexture("SlopeAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirtwithrocks-ogl/dirtwithrocks_AmbientOcculusion.png"));
-
-        //GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/grass3.jpg"));
-        //GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/grass_nrm.jpg"));
-        terrain->GetChild(0)->GetSpatial().GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<TerrainShader>(ShaderProperties()));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_albedo.png")); // for vct
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_BASE_TERRAIN_COLOR_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_albedo.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_BASE_TERRAIN_NORMAL_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_normal-dx.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_BASE_TERRAIN_AO_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_ao.png"));
-        //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png"));
-        //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png"));
-        //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL1_COLOR_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-albedo.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL1_NORMAL_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-Normal-dx.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL1_AO_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-ao.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL2_COLOR_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_albedo.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL2_NORMAL_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_Normal-ogl.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor-ao.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_SPLAT_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/splat.png"));
+        }
 
         terrain->GetChild(0)->GetSpatial().GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.95f);
         terrain->GetChild(0)->GetSpatial().GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
@@ -693,6 +626,10 @@ public:
 
 int main()
 {
+    std::string base_path = HYP_ROOT_DIR;
+    AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
+
+
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateWindow("Hyperion Engine", 1024, 768);
     system.SetCurrentWindow(window);
@@ -710,8 +647,8 @@ int main()
     RendererDevice *device = renderer.GetRendererDevice();
 
     RendererShader shader;
-    shader.AttachShader(device, ShaderType::Vertex, "../res/vkshaders/vert.spv");
-    shader.AttachShader(device, ShaderType::Fragment, "../res/vkshaders/frag.spv");
+    shader.AttachShader(device, SPIRVObject{ SPIRVObject::Type::Vertex, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
+    shader.AttachShader(device, SPIRVObject{ SPIRVObject::Type::Fragment, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/frag.spv").Read() });
     shader.CreateProgram("main");
     renderer.InitializePipeline(&shader);
 
@@ -769,7 +706,7 @@ int main()
         // Call the function, here sort()
         std::shared_ptr<Loadable> result;
         for (int i = 0; i < 100; i++) {
-            result = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", false);
+            result = asset_manager->LoadFromFile<Node>("models/sphere_hq.obj", false);
         }
     
         // Get ending timepoint
@@ -784,10 +721,10 @@ int main()
     }*/
 
 
-    // std::shared_ptr<Entity> my_entity = std::make_shared<Entity>("FOO BAR");
+    // std::shared_ptr<Node> my_entity = std::make_shared<Node>("FOO BAR");
     // my_entity->AddControl(std::make_shared<NoiseTerrainControl>(nullptr, 12345));
 
-    // auto my_entity = asset_manager->LoadFromFile<Entity>("models/sphere_hq.obj", true);
+    // auto my_entity = asset_manager->LoadFromFile<Node>("models/sphere_hq.obj", true);
     // my_entity->Scale(Vector3(0.2f));
     // my_entity->Move(Vector3(0, 2, 0));
 
@@ -805,7 +742,7 @@ int main()
 
     /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
 
-    if (auto entity = std::dynamic_pointer_cast<Entity>(result)) {
+    if (auto entity = std::dynamic_pointer_cast<Node>(result)) {
         std::cout << "Loaded entity name: " << entity->GetName() << "\n";
     }
 
@@ -813,9 +750,6 @@ int main()
 
     CoreEngine *engine = new GlfwEngine();
     CoreEngine::SetInstance(engine);
-
-    std::string base_path = HYP_ROOT_DIR;
-    AssetManager::GetInstance()->SetRootDir(base_path+"/res/");
 
     auto *game = new SceneEditor(RenderWindow(1480, 1200, "Hyperion Demo"));
 
