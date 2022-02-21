@@ -1,0 +1,41 @@
+# Wavefront Object Material File
+# Generated using SpeedTree tools
+
+newmtl Default
+Tr 0
+d 1
+Kd 1 1 1
+Ka 1 1 1
+Ks 0 0 0
+Ns 13.6
+illum 2
+map_Kd BaldCypressNeedles_2_Fall.tga
+map_d BaldCypressNeedles_2_Fall.tga
+map_bump BaldCypressNeedles_2_Normal.tga
+bump BaldCypressNeedles_2_Normal.tga -bm 1
+
+
+newmtl Material 2
+Tr 0
+d 1
+Kd 1 1 1
+Ka 1 1 1
+Ks 0 0 0
+Ns 13.6
+illum 2
+map_Kd BaldCypressBark.tga
+map_d BaldCypressBark.tga
+map_bump BaldCypressBark_Normal.tga
+bump BaldCypressBark_Normal.tga -bm 1
+
+
+newmtl Material 1
+Tr 0
+d 1
+Kd 1 1 1
+Ka 1 1 1
+Ks 0 0 0
+Ns 13.6
+illum 2
+
+

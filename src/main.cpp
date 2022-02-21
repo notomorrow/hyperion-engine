@@ -419,9 +419,13 @@ public:
             //GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/grass3.jpg"));
             //GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/grass_nrm.jpg"));
             terrain->GetChild(0)->GetSpatial().GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<TerrainShader>(ShaderProperties()));
-            terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/mixedmoss-ue4/mixedmoss-albedo2.png"));
-            terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/mixedmoss-ue4/mixedmoss-normal2.png"));
-            terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/mixedmoss-ue4/mixedmoss-ao2.png"));
+            terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_albedo.png")); // for vct
+            terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_albedo.png"));
+            terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_normal-dx.png"));
+            terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_ao.png"));
+            //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png"));
+            //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png"));
+            //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png"));
             terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("Terrain1ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-albedo.png"));
             terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("Terrain1NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-Normal-dx.png"));
             terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("Terrain1AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-ao.png"));
@@ -483,6 +487,33 @@ public:
             tree3->SetLocalScale(0.045f);
             tree3->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(-35.0f)));
             GetScene()->AddChild(tree3);
+
+            auto tree4 = asset_manager->LoadFromFile<Node>("models/conifer/fir.obj");
+            for (size_t i = 0; i < tree4->NumChildren(); i++) {
+                if (auto child = tree4->GetChild(i)) {
+                    //child->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
+                    child->GetSpatial().GetMaterial().alpha_blended = true;
+                    child->GetSpatial().GetMaterial().cull_faces = MaterialFace_None;
+                }
+            }
+            tree4->SetLocalTranslation({ 24.f, 6.3f, -1.7f });
+            tree4->SetLocalScale(0.05f);
+            tree4->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(-35.0f)));
+            GetScene()->AddChild(tree4);
+
+            auto tree5 = asset_manager->LoadFromFile<Node>("models/conifer/fir.obj");
+            for (size_t i = 0; i < tree5->NumChildren(); i++) {
+                if (auto child = tree5->GetChild(i)) {
+                    //child->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
+                    child->GetSpatial().GetMaterial().alpha_blended = true;
+                    child->GetSpatial().GetMaterial().cull_faces = MaterialFace_None;
+                }
+            }
+            tree5->SetLocalTranslation({ 27.f, 7.f, -1.f });
+            tree5->SetLocalScale(0.045f);
+            tree5->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(-76.0f)));
+            GetScene()->AddChild(tree5);
+
         } else {
             if (write) {
                 FileByteWriter fbw(AssetManager::GetInstance()->GetRootDir() + "models/sdb.fbom");
@@ -560,7 +591,7 @@ public:
         shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
         GetScene()->AddChild(shadow_node);
 
-        bool add_spheres = false;
+        bool add_spheres = true;
 
         if (add_spheres) {
 
@@ -589,10 +620,10 @@ public:
                             //box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/roughness.png"));
                             //box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/metallic.png"));
 
-                            box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_ao.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_normal-ogl.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_albedo.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
+                            ///box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_ao.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_normal-ogl.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_albedo.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
 
 
                             //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-albedo.png"));
@@ -602,10 +633,18 @@ public:
                             //box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("textures/bomboo_wood/bamboo_wood/bamboo-wood-semigloss-metal.png"));
                             box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
 
-                            //box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/plastic/plasticpattern1-albedo.png"));
-                            //box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-fabric_height.png"));
-                            //box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/nylon-tent-fabric1-unity/nylon-tent-ao.png"));
-                            //box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/plastic/plasticpattern1-normal2-unity2b.png"));
+
+                            box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-albedo.png"));
+                            box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-height.png"));
+                            box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-ao.png"));
+                            box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-normal-dx.png"));
+                            box->GetChild(i)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-roughness.png"));
+                            box->GetChild(i)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-metallic.png"));
+
+                            //box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_albedo.png"));
+                            //box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_Height.png"));
+                            //box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_ao.png"));
+                            //box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_Normal-dx.png"));
                             //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
                             //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                             box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
