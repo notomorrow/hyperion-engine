@@ -1,0 +1,89 @@
+# Wavefront Object Material File
+# Generated using SpeedTree tools
+
+newmtl BlueSpruceBark
+Tr 0
+d 1
+Kd 0.921569 0.921569 0.921569
+Ka 0.603922 0.611765 0.611765
+illum 1
+map_Kd BlueSpruceBark.png
+map_bump BlueSpruceBark_Normal.png
+bump BlueSpruceBark_Normal.png -bm 1
+
+
+newmtl Needle_HighDetail1
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.552941 0.490196 0.427451
+Ks 0.25098 0.258824 0.258824
+Ns 64
+illum 2
+map_Kd BlueSpruceNeedle_HD.png
+map_bump BlueSpruceNeedle_HD_Normal.png
+bump BlueSpruceNeedle_HD_Normal.png -bm 1
+map_Ks BlueSpruceNeedle_HD_Specularity.png
+
+
+newmtl Needle_HighDetail2
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.552941 0.490196 0.427451
+Ks 0.25098 0.258824 0.258824
+Ns 64
+illum 2
+map_Kd BlueSpruceNeedle_HD2.png
+map_bump BlueSpruceNeedle_HD_Normal.png
+bump BlueSpruceNeedle_HD_Normal.png -bm 1
+map_Ks BlueSpruceNeedle_HD_Specularity.png
+
+
+newmtl Needle_HighDetail3
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.552941 0.490196 0.427451
+Ks 0.25098 0.258824 0.258824
+Ns 64
+illum 2
+map_Kd BlueSpruceNeedle_HD3.png
+map_bump BlueSpruceNeedle_HD_Normal.png
+bump BlueSpruceNeedle_HD_Normal.png -bm 1
+map_Ks BlueSpruceNeedle_HD_Specularity.png
+
+
+newmtl BlueSpruceCone
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.596078 0.6 0.6
+illum 1
+map_Kd BlueSpruceCone.png
+map_bump BlueSpruceCone_Normal.png
+bump BlueSpruceCone_Normal.png -bm 1
+
+
+newmtl Branches
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.596078 0.6 0.6
+illum 1
+map_Kd Branches_01.png
+map_bump Branches_01_Normal.png
+bump Branches_01_Normal.png -bm 1
+
+
+newmtl Cap
+Tr 0
+d 1
+Kd 1 1 1
+Ka 0.596078 0.6 0.6
+illum 1
+map_Kd Cap_04.png
+map_bump Cap_04_Normal.png
+bump Cap_04_Normal.png -bm 1
+
+

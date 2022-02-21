@@ -98,7 +98,11 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
 
     auto split_tokens = [&, this](std::string token) {
         if (token.length() != 0) {
-            tokens.push_back(token);
+            auto trimmed = StringUtil::Trim(token);
+
+            if (trimmed.length() != 0) {
+                tokens.push_back(trimmed);
+            }
         }
     };
 

@@ -98,6 +98,7 @@ void LightingShader::ApplyMaterial(const Material &mat)
     SetUniform("material.clearcoatGloss", mat.GetParameter(MATERIAL_PARAMETER_CLEARCOAT_GLOSS)[0]);
     SetUniform("FlipUV_X", int(mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV)[0]));
     SetUniform("FlipUV_Y", int(mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV)[1]));
+    SetUniform("UVScale", Vector2(mat.GetParameter(MATERIAL_PARAMETER_UV_SCALE)[0], mat.GetParameter(MATERIAL_PARAMETER_UV_SCALE)[1]));
     SetUniform("ParallaxHeight", mat.GetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT)[0]);
 
 }

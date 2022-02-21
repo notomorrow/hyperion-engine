@@ -44,7 +44,7 @@ std::shared_ptr<Node> TreePopulator::CreateEntity(const Vector3 &position) const
         }
     }
 
-   /* tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
+    /*tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().cull_faces = MaterialFaceCull::MaterialFace_None;
     // tree->GetChild("LoblollyPineNeedles_1")->GetMaterial().alpha_blended = true;
     tree->GetChild("LoblollyPineNeedles_1")->GetRenderable()->SetShader(
         ShaderManager::GetInstance()->GetShader<VegetationShader>(
@@ -52,8 +52,8 @@ std::shared_ptr<Node> TreePopulator::CreateEntity(const Vector3 &position) const
                 .Define("VEGETATION_FADE", false)
                 .Define("VEGETATION_LIGHTING", true)
         )
-    );
-    tree->GetChild("LoblollyPineNeedles_1")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);*/
+    );*/
+    //tree->GetChild("LoblollyPineNeedles_1")->GetRenderable()->SetRenderBucket(Renderable::RB_TRANSPARENT);
     tree->SetLocalTranslation(position);
     tree->SetLocalScale(Vector3(1.3f) + MathUtil::Random(-0.5f, 0.5f));
     tree->SetLocalRotation(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(MathUtil::Random(0, 359))));
