@@ -3,7 +3,7 @@ precision highp float;
 
 #include "../include/frag_output.inc"
 
-#define $HQ_DOF 0
+#define $HQ_DOF 1
 
 #if HQ_DOF
 uniform sampler2D ColorMap; //Image to be processed
@@ -12,11 +12,17 @@ uniform vec2 PixelSize; //The size of a pixel: vec2(1.0/width, 1.0/height)
 uniform vec2 CameraNearFar;
 uniform float FocusScale;
 uniform float FocusRange;
+uniform mat4 ProjectionMatrix;
 in vec2 v_texcoord0;
 
 const float GOLDEN_ANGLE = 2.39996323;
 const float MAX_BLUR_SIZE = 20.0;
-const float RAD_SCALE = 0.8; // Smaller = nicer blur, larger = faster
+const float RAD_SCALE = 0.56; // Smaller = nicer blur, larger = faster
+
+float linearDepth(float depth)
+{
+    return ProjectionMatrix[3][2] / (depth * ProjectionMatrix[2][3] - ProjectionMatrix[2][2]);
+}
 
 float getBlurSize(float depth, float focusPoint, float focusScale)
 {

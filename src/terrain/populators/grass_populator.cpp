@@ -48,11 +48,12 @@ std::shared_ptr<Node> GrassPopulator::CreateEntity(const Vector3 &position) cons
         if (auto child = object_node->GetChild(i)) {
             if (auto renderable = object_node->GetChild(i)->GetRenderable()) {
                 renderable->SetShader(
-                    ShaderManager::GetInstance()->GetShader<VegetationShader>(
+                    ShaderManager::GetInstance()->GetShader<LightingShader>(
                         ShaderProperties()
-                        .Define("VEGETATION_FADE", true)
-                        .Define("VEGETATION_LIGHTING", false)
-                        )
+                            .Define("DEFERRED", false)
+                            .Define("VEGETATION_FADE", true)
+                            .Define("VEGETATION_LIGHTING", false)
+                    )
                 );
             }
             object_node->GetChild(i)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
@@ -61,6 +62,9 @@ std::shared_ptr<Node> GrassPopulator::CreateEntity(const Vector3 &position) cons
             object_node->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
         }
     }
+
+    object_node->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
+    object_node->Update(1.0f);
     
     return object_node;
 }

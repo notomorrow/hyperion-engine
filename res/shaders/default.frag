@@ -2,7 +2,7 @@
 #version 430 core
 
 #define $PI 3.141592654
-#define $ALPHA_DISCARD 0.08
+#define $ALPHA_DISCARD 0.2
 
 in vec4 v_position;
 in vec4 v_positionCamspace;
@@ -60,7 +60,7 @@ void main()
   }
   
   if (HasAoMap == 1) {
-    ao = texture(AoMap, texCoords).r;
+    ao = 1.0-texture(AoMap, texCoords).r;
   }
 
   vec4 albedo = u_diffuseColor * diffuseTexture;
@@ -104,19 +104,19 @@ void main()
   float HdotV = max(0.001, dot(H, viewVector));
 
   vec3 CameraPosition = u_camerapos;
-  vec3 position = v_position;
+  vec3 position = v_position.xyz;
 #include "include/inl/shadowing.inl.glsl"
 
   vec4 blurredSpecularCubemap = vec4(0.0);
   vec4 specularCubemap = vec4(0.0);
   vec4 gi = vec4(0.0);
   float roughnessMix = 1.0 - exp(-(roughness / 1.0 * log(100.0)));
-
+#if 0
 #if VCT_ENABLED
-  vec4 vctSpec = VCTSpecular(v_position.xyz, n.xyz, u_camerapos, u_roughness);
-  vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent, roughness);
-  specularCubemap += vctSpec;
-  gi += vctDiff;
+  //vec4 vctSpec = VCTSpecular(v_position.xyz, n.xyz, u_camerapos, u_roughness);
+  //vec4 vctDiff = VCTDiffuse(v_position.xyz, n.xyz, u_camerapos, v_tangent, v_bitangent, roughness);
+  //specularCubemap += vctSpec;
+  //gi += vctDiff;
 #endif // VCT_ENABLED
 
 #if PROBE_ENABLED
@@ -131,7 +131,7 @@ void main()
 #if SPHERICAL_HARMONICS_ENABLED
   gi.rgb += SampleSphericalHarmonics(n);
 #endif // SPHERICAL_HARMONICS_ENABLED
-
+#endif
 
   vec3 F0 = vec3(0.04);
   F0 = mix(vec3(1.0), F0, metallic);
@@ -159,11 +159,11 @@ void main()
   reflectedLight += ibl * specularCubemap.rgb;
 
   vec3 diffRef = vec3((vec3(1.0) - F) * (1.0 / $PI) * NdotL);
-  diffRef += gi.rgb;
+  //diffRef += gi.rgb;
   diffuseLight += diffRef * (1.0 / $PI);
   diffuseLight *= metallicDiff;
 
-  vec3 color = diffuseLight + reflectedLight * shadowColor.rgb;
+  vec3 color = diffuseLight + reflectedLight;
   
 
   output0 = vec4(color, 1.0);
@@ -171,12 +171,11 @@ void main()
 
 #if DEFERRED
   output0 = albedo;
-#endif
-
   output1 = vec4(normalize(n) * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(metallic, roughness, 0.0, 1.0);
   output4 = vec4(0.0, 0.0, 0.0, ao);
   output5 = vec4(normalize(v_tangent.xyz) * 0.5 + 0.5, 1.0);
   output6 = vec4(normalize(v_bitangent.xyz) * 0.5 + 0.5, 1.0);
+#endif
 }

@@ -69,7 +69,7 @@ Framebuffer::default_texture_attributes = {
     Framebuffer::FramebufferTextureAttributes( // depth
         "DepthMap",
         CoreEngine::GLEnums::DEPTH_COMPONENT,
-        CoreEngine::GLEnums::DEPTH_COMPONENT32F,
+        CoreEngine::GLEnums::DEPTH_COMPONENT32,
         CoreEngine::GLEnums::NEAREST,
         CoreEngine::GLEnums::NEAREST,
         false

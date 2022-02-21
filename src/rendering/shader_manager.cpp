@@ -17,6 +17,7 @@ ShaderManager *ShaderManager::GetInstance()
 ShaderManager::ShaderManager()
 {
     m_base_shader_properties
+        .Define("DEFERRED", true)
         .Define("GI_INTENSITY", 100000.0f)
         .Define("METALNESS_MAPPING", true)
         .Define("ROUGHNESS_MAPPING", true)

@@ -56,12 +56,9 @@ void Game::Render()
 {
     PreRender();
 
-    m_renderer->Begin(m_camera);
-
     OnRender();
 
     m_renderer->Render(m_camera);
-    m_renderer->End(m_camera);
 
     PostRender();
 }

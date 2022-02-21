@@ -60,7 +60,7 @@ vec4 VCTDiffuse(vec3 position, vec3 normal, vec3 camera, vec3 tangent, vec3 bita
 	
 	vec3 voxelPosition = decodeVoxelPosition(position) + (normal * $VCT_NORMAL_OFFSET);
 	
-	float roughnessConversion = mix(0.0, 1.0, roughness);
+	float roughnessConversion = mix(0.0, 2.0, roughness);
 
 	vec4 coneTraceRes = vec4(0.0);
 
@@ -82,7 +82,7 @@ vec4 VCTSpecular(vec3 position, vec3 normal, vec3 camera, float roughness)
 	
 	vec3 voxelPosition = decodeVoxelPosition(position) + (normal * $VCT_NORMAL_OFFSET);
 	
-	float roughnessConversion = mix(0.0, 1.0, roughness);
+	float roughnessConversion = mix(0.0, 2.0, roughness);
 	
 	vec4 spec = voxelTraceCone(1.0 / voxelImageSize, voxelPosition, normalize(reflectionDir), $VCT_SPECULAR_CONE_SIZE + roughnessConversion, $VCT_SPECULAR_MAX_LEN);
 

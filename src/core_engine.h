@@ -65,6 +65,7 @@ public:
         RGB32F = 0x8815,
         DEPTH_COMPONENT16 = 0x81A5,
         DEPTH_COMPONENT24 = 0x81A6,
+        DEPTH_COMPONENT32 = 0x81A7,
         DEPTH_COMPONENT32F = 0x8CAC,
 
         NEAREST = 0x2600,

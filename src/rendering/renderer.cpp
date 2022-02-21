@@ -10,11 +10,9 @@ namespace hyperion {
 Renderer::Renderer(const RenderWindow &render_window)
     : m_render_window(render_window),
       m_fbo(nullptr),
-      m_is_deferred(false),
-      m_environment(Environment::GetInstance())
+      m_environment(Environment::GetInstance()),
+      m_deferred_pipeline(new DeferredPipeline())
 {
-    m_post_processing = new PostProcessing();
-
     m_buckets[Spatial::Bucket::RB_SKY].enable_culling = false;
     m_buckets[Spatial::Bucket::RB_PARTICLE].enable_culling = false; // TODO
     m_buckets[Spatial::Bucket::RB_SCREEN].enable_culling = false;
@@ -40,11 +38,11 @@ Renderer::~Renderer()
 {
     SceneManager::GetInstance()->GetOctree()->RemoveCallback(m_octree_callback_id);
 
-    delete m_post_processing;
+    delete m_deferred_pipeline;
     delete m_fbo;
 }
 
-void Renderer::Begin(Camera *cam)
+void Renderer::Render(Camera *cam)
 {
     if (m_fbo == nullptr) {
         m_fbo = new Framebuffer2D(
@@ -60,16 +58,12 @@ void Renderer::Begin(Camera *cam)
             true  // bitangents
         );
     }
-}
 
-void Renderer::Render(Camera *cam)
-{
-    RenderAll(cam, m_fbo);
-}
+    if (!m_buckets[Spatial::Bucket::RB_BUFFER].IsEmpty()) {
+        RenderBucket(cam, m_buckets[Spatial::Bucket::RB_BUFFER]); // PRE
+    }
 
-void Renderer::End(Camera *cam)
-{
-    RenderPost(cam, m_fbo);
+    m_deferred_pipeline->Render(this, cam, m_fbo);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
     RenderBucket(cam, m_buckets[Spatial::Bucket::RB_DEBUG]);
@@ -187,33 +181,5 @@ void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
     if (fbo) {
         fbo->End();
     }
-}
-
-void Renderer::RenderPost(Camera *cam, Framebuffer2D *fbo)
-{
-    if (m_post_processing->GetFilters().empty()) {
-        return;
-    }
-
-    m_post_processing->Render(cam, fbo);
-}
-
-void Renderer::SetDeferred(bool deferred)
-{
-    if (m_is_deferred == deferred) {
-        return;
-    }
-
-    if (deferred) {
-        m_post_processing->AddFilter<DeferredRenderingFilter>("deferred", 10);
-    } else {
-        m_post_processing->RemoveFilter("deferred");
-    }
-
-    ShaderManager::GetInstance()->SetBaseShaderProperties(
-        ShaderProperties().Define("DEFERRED", deferred)
-    );
-
-    m_is_deferred = deferred;
 }
 } // namespace hyperion

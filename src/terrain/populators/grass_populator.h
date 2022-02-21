@@ -10,12 +10,12 @@ public:
     GrassPopulator(
         Camera *camera,
         unsigned long seed = 12345,
-        double probability_factor = 0.55,
-        float tolerance = 0.15f,
-        float max_distance = 150.0f,
+        double probability_factor = 0.45,
+        float tolerance = 0.1f,
+        float max_distance = 20.0f,
         float spread = 1.5f,
         int num_entities_per_chunk = 4,
-        int num_patches = 4
+        int num_patches = 5
     );
     ~GrassPopulator();
 

@@ -112,8 +112,9 @@ std::shared_ptr<Node> Populator::CreateEntityNode(Patch &patch)
 
             // Matrix4 lookat_mat;
             // MatrixUtil::ToLookAt(lookat_mat, normal, Vector3(0, 1, 0));
-
-            node->AddChild(CreateEntity(entity_offset));
+            auto created_node = CreateEntity(entity_offset);
+            node->AddChild(created_node);
+            node->GetSpatial().SetBucket(created_node->GetSpatial().GetBucket());
         }
     }
 
@@ -146,6 +147,9 @@ std::shared_ptr<Node> Populator::CreateEntityNode(Patch &patch)
 
                 auto material = std::get<2>(renderable_mesh);
                 subnode->SetMaterial(material);
+
+                // TODO: refactor this all to use Spatial
+                subnode->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
 
                 node->AddChild(subnode);
             }

@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include "util/string_util.h"
+
 #include <string>
 #include <sstream>
 #include <cctype>
