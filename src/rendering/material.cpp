@@ -64,6 +64,7 @@ Material::Material(const Material &other)
     : fbom::FBOMLoadable(fbom::FBOMObjectType("MATERIAL")),
       m_params(other.m_params),
       alpha_blended(other.alpha_blended),
+      cull_faces(other.cull_faces),
       depth_test(other.depth_test),
       depth_write(other.depth_write),
       diffuse_color(other.diffuse_color),

@@ -122,6 +122,8 @@ void Shader::UploadGpuData()
     glBindFragDataLocation(progid, 3, "output3");
     glBindFragDataLocation(progid, 4, "output4");
     glBindFragDataLocation(progid, 5, "output5");
+    glBindFragDataLocation(progid, 6, "output6");
+    glBindFragDataLocation(progid, 7, "output7");
     CatchGLErrors("Failed to bind shader frag data.");
 
     glBindAttribLocation(progid, 0, "a_position");
@@ -236,9 +238,9 @@ void Shader::ApplyMaterial(const Material &mat)
 
     if (cull_mode == (MaterialFaceCull::MaterialFace_Front | MaterialFaceCull::MaterialFace_Back)) {
         glCullFace(GL_FRONT_AND_BACK);
-    } else if (cull_mode & MaterialFaceCull::MaterialFace_Front) {
+    } else if (cull_mode == MaterialFaceCull::MaterialFace_Front) {
         glCullFace(GL_FRONT);
-    } else if (cull_mode & MaterialFaceCull::MaterialFace_Back) {
+    } else if (cull_mode == MaterialFaceCull::MaterialFace_Back) {
         glCullFace(GL_BACK);
     } else if (cull_mode == MaterialFaceCull::MaterialFace_None) {
         glDisable(GL_CULL_FACE);

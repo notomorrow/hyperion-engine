@@ -20,6 +20,11 @@ PostShader::PostShader(const ShaderProperties &properties)
 void PostShader::ApplyMaterial(const Material &mat)
 {
     for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
+        //if (it->second == nullptr) {
+       //     continue;
+        //}
+        ex_assert(it->second != nullptr);
+
         it->second->Prepare();
 
         SetUniform(it->first, it->second.get());

@@ -1,5 +1,5 @@
-#ifndef POST_PROCESSING_H
-#define POST_PROCESSING_H
+#ifndef FILTER_STACK_H
+#define FILTER_STACK_H
 
 #include <memory>
 #include <map>
@@ -13,19 +13,20 @@
 #include "../framebuffer_2d.h"
 #include "../camera/camera.h"
 #include "./post_filter.h"
+#include "../../util/non_owning_ptr.h"
 
 namespace hyperion {
 
-class PostProcessing {
+class FilterStack {
 public:
     struct Filter;
     struct RenderScale;
 
-    PostProcessing();
-    PostProcessing(const PostProcessing &) = delete;
-    PostProcessing(PostProcessing &&) = delete;
-    PostProcessing &operator=(const PostProcessing &) = delete;
-    ~PostProcessing();
+    FilterStack();
+    FilterStack(const FilterStack &) = delete;
+    FilterStack(FilterStack &&) = delete;
+    FilterStack &operator=(const FilterStack &) = delete;
+    ~FilterStack();
 
     template<typename T>
     void AddFilter(const std::string &tag, int rank = 0)
@@ -42,6 +43,9 @@ public:
         });
     }
 
+    inline bool SavesLastToFbo() const { return m_save_last_to_fbo; }
+    inline void SetSavesLastToFbo(bool value) { m_save_last_to_fbo = value; }
+
     inline const Vector2 &GetRenderScale() const { return m_render_scale; }
     inline void SetRenderScale(const Vector2 &render_scale) { m_render_scale = render_scale; }
 
@@ -49,7 +53,11 @@ public:
     inline std::vector<Filter> &GetFilters() { return m_filters; }
     inline const std::vector<Filter> &GetFilters() const { return m_filters; }
 
-    void Render(Camera *cam, Framebuffer2D *fbo);
+    inline non_owning_ptr<Framebuffer::FramebufferAttachments_t> GetGBuffer() { return m_gbuffer; }
+    inline const non_owning_ptr<Framebuffer::FramebufferAttachments_t> GetGBuffer() const { return m_gbuffer; }
+    inline void SetGBuffer(non_owning_ptr<Framebuffer::FramebufferAttachments_t> gbuffer) { m_gbuffer = gbuffer; }
+
+    void Render(Camera *cam, Framebuffer2D *read_fbo, Framebuffer2D *blit_fbo);
 
     struct Filter {
         int rank;
@@ -72,10 +80,8 @@ public:
     };
 
 private:
-    Framebuffer::FramebufferAttachments_t m_chained_textures;
-    bool m_chained_textures_initialized;
-
-    Framebuffer2D *m_blit_framebuffer;
+    non_owning_ptr<Framebuffer::FramebufferAttachments_t> m_gbuffer;
+    bool m_save_last_to_fbo;
 
     std::vector<Filter> m_filters;
 

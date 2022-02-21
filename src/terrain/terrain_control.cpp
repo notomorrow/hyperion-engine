@@ -14,7 +14,7 @@ static int num_threads = 0;
 TerrainControl::TerrainControl(const fbom::FBOMType &loadable_type, Camera *camera)
     : EntityControl(fbom::FBOMObjectType("TERRAIN_CONTROL").Extend(loadable_type), 10.0),
       m_camera(camera),
-      m_scale(8, 8, 8),
+      m_scale(1, 0.6f, 1),
       m_tick(0),
       m_queuetick(0),
       m_max_distance(6.0)
@@ -27,7 +27,7 @@ TerrainControl::~TerrainControl()
 
 void TerrainControl::OnAdded()
 {
-    m_chunks.reserve(12);
+    m_chunks.reserve(25);
     AddChunk(0, 0);
 }
 

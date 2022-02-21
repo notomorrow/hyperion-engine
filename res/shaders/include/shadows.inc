@@ -1,4 +1,4 @@
-#define $SHADOW_BIAS 0.001
+#define $SHADOW_BIAS 0.0005
 #define $SHADOW_BIAS_SMOOTHING 1
 #define $SHADOW_VARIANCE_LOD 5
 
@@ -126,7 +126,7 @@ float getShadow(int index, vec3 coord, float NdotL) {
   float bias = $SHADOW_BIAS;
 
 #if SHADOW_BIAS_SMOOTHING
-  bias = 0.005 * tan(acos(NdotL));
+  bias *= tan(acos(NdotL));
   bias = clamp(bias, 0.0, 0.01);
 #endif
 

@@ -14,7 +14,7 @@ namespace hyperion {
 
 class DepthOfFieldFilter : public PostFilter {
 public:
-    DepthOfFieldFilter(float focus_range = 40.0f, float focus_scale = 8.0f);
+    DepthOfFieldFilter(float focus_range = 10.0f, float focus_scale = 1.0f);
     virtual ~DepthOfFieldFilter() = default;
 
     virtual void SetUniforms(Camera *cam) override;

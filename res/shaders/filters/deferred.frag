@@ -125,6 +125,7 @@ void main()
 		// if ssl.a == 0, do not use AO from ao map (hence why we invert it)
 		// else, just use our existing ao
         //ao = mix(ao, 1.0 - ssl.a, ssl.a);
+        ao = 1.0 - ssl.a;
     }
 
 #if DIRECTIONAL_LIGHTING
@@ -164,7 +165,7 @@ void main()
   specularCubemap = textureLod(env_GlobalCubemap, ReflectionVector(N, position.xyz, CameraPosition), lod);
  
 #if !SPHERICAL_HARMONICS_ENABLED
-  irradiance = EnvRemap(Irradiance(N)).rgb;
+  irradiance = Irradiance(N).rgb;
 #endif // !SPHERICAL_HARMONICS_ENABLED
 #endif
 
@@ -172,7 +173,7 @@ void main()
 #if VCT_ENABLED
   vec4 vctSpec = VCTSpecular(position.xyz, N.xyz, CameraPosition, roughness);
   vec4 vctDiff = VCTDiffuse(position.xyz, N.xyz, CameraPosition, tangent, bitangent, roughness);
-  specularCubemap.rgb *= mix(vec3(1.0), vctSpec.rgb, vctSpec.a);
+  specularCubemap.rgb = mix(specularCubemap.rgb, vctSpec.rgb, vctSpec.rgb * vctSpec.a);
   gi += vctDiff;
 #endif // VCT_ENABLED
 
@@ -256,8 +257,9 @@ void main()
 	float sensitivity = 100.0;
 	float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
 	float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
-	
-	irradiance += gi.rgb;// * (gi.a * exposure * $GI_INTENSITY);
+
+	float iblIntensity = 10000.0;
+    irradiance += gi.rgb;
 	
 	// ibl
 	
@@ -278,8 +280,9 @@ void main()
     //float microShadow = saturate(NoL * aperture);
     //return microShadow * microShadow;
 	
-	float iblIntensity = 7000.0;
 	result *= iblIntensity * exposure;
+    
+    
 //#if SHADING_MODEL_CLOTH
     // Energy compensation for multiple scattering in a microfacet model
     // See "Multiple-Scattering Microfacet BSDFs with the Smith Model"
@@ -291,19 +294,17 @@ void main()
 	// surface
 
     vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
-	vec3 _Fr = (GTR2_aniso(NdotH, HdotX, HdotY, ax, ay) * cookTorranceG(NdotL, NdotV, LdotH, NdotH)) * SchlickFresnel(F0, F90, LdotH);
+    float _D = DistributionGGX(N, H, roughness); // GTR2_aniso(NdotH, HdotX, HdotY, ax, ay)
+	vec3 _Fr = (_D * cookTorranceG(NdotL, NdotV, LdotH, NdotH)) * SchlickFresnel(F0, F90, LdotH);
 	// Burley 2012, "Physically-Based Shading at Disney"
     //float f90 = 0.5 + 2.0 * roughness * LdotH * LdotH;
     vec3 lightScatter = SchlickFresnel(vec3(1.0), F90, NdotL);
     vec3 viewScatter  = SchlickFresnel(vec3(1.0), F90, NdotV);
     vec3 _diffuse = Cdlin.rgb * (1.0 - metallic) * (lightScatter * viewScatter * (1.0 / $PI));
-	//vec3 _diffuse = Cdlin.rgb * (1.0 - metallic) * (1.0 / $PI);
+
 	vec3 surfaceShading = _diffuse + _Fr * energyCompensation;
-	surfaceShading *= (/*light.attenuation*/1.0 * NdotL * ao * shadowColor.rgb);
-	
-	
+	surfaceShading *= env_DirectionalLight.color.rgb * (/*light.attenuation*/1.0 * NdotL * ao * shadowColor.rgb);
 	surfaceShading *= exposure * env_DirectionalLight.intensity;
-	
 	result += surfaceShading;
 
 #endif
@@ -323,5 +324,6 @@ void main()
 	
 	result.rgb = tonemap(result.rgb);
 
-    output0 = vec4(result, 1.0);
+    output0 = vec4(result.rgb, 1.0);
+    //output0 = vec4(texture(DepthMap, v_texcoord0));
 }

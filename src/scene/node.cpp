@@ -140,7 +140,6 @@ float Node::CalculateCameraDistance(Camera *camera) const
 void Node::AddChild(std::shared_ptr<Node> entity)
 {
     ex_assert(entity != nullptr);
-    ex_assert(entity->m_parent == nullptr);
     //ex_assert_msg(std::find(m_children.begin(), m_children.end(), entity) == m_children.end(), "object already exists in node");
 
     if (entity->m_flags & PENDING_REMOVAL) {
@@ -157,6 +156,12 @@ void Node::AddChild(std::shared_ptr<Node> entity)
         m_children_pending_removal.erase(it);
         entity->m_flags &= ~PENDING_REMOVAL;
     }
+
+    if (entity->m_parent == this) {
+        return;
+    }
+
+    ex_assert(entity->m_parent == nullptr);
 
     // find free slot
     bool slot_found = false;
@@ -391,13 +396,13 @@ void Node::SetPendingRemovalFlag()
 {
     m_flags |= PENDING_REMOVAL;
 
-    for (auto &child : m_children) {
+    /*for (auto &child : m_children) {
         if (child == nullptr) {
             continue;
         }
 
         child->SetPendingRemovalFlag();
-    }
+    }*/
 }
 
 

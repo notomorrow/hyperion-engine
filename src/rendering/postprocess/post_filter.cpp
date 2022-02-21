@@ -12,6 +12,8 @@ PostFilter::PostFilter(const std::shared_ptr<PostShader> &shader, BitFlags_t mod
 
 void PostFilter::SetUniforms(Camera *cam)
 {
+    m_shader->SetUniform("ViewMatrix", cam->GetViewMatrix());
+    m_shader->SetUniform("ProjectionMatrix", cam->GetProjectionMatrix());
     m_shader->SetUniform("Resolution", Vector2(cam->GetWidth(), cam->GetHeight()));
     m_shader->SetUniform("CamFar", cam->GetFar());
     m_shader->SetUniform("CamNear", cam->GetNear());
@@ -45,6 +47,10 @@ void PostFilter::End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAtta
         return;
     }
 
+    if (fbo == nullptr) {
+        return;
+    }
+
     for (int i = 0; i < attachments.size(); i++) {
         Framebuffer::FramebufferAttachment attachment = Framebuffer::OrdinalToAttachment(i);
 
@@ -53,7 +59,7 @@ void PostFilter::End(Camera *cam, Framebuffer *fbo, Framebuffer::FramebufferAtta
         }
 
         soft_assert(attachments[i] != nullptr);
-        soft_assert(Framebuffer::default_texture_attributes[i].is_volatile)
+        soft_assert(Framebuffer::default_texture_attributes[i].is_volatile);
 
         fbo->Store(attachment, attachments[i]);
     }

@@ -15,7 +15,7 @@
 #include "material.h"
 #include "camera/camera.h"
 #include "framebuffer_2d.h"
-#include "postprocess/post_processing.h"
+#include "deferred/pipeline.h"
 
 #define RENDERER_SHADER_GROUPING 1
 #define RENDERER_FRUSTUM_CULLING 1
@@ -241,21 +241,16 @@ public:
     Renderer &operator=(const Renderer &other) = delete;
     ~Renderer();
 
-    void Begin(Camera *cam);
     void Render(Camera *cam);
-    void End(Camera * cam);
 
     void RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader = nullptr, bool enable_frustum_culling = true);
     void RenderAll(Camera *cam, Framebuffer2D *fbo = nullptr);
-    void RenderPost(Camera *cam, Framebuffer2D *fbo);
-
-    inline bool IsDeferred() const { return m_is_deferred; }
-    void SetDeferred(bool deferred);
 
     inline const Framebuffer2D *GetFramebuffer() const { return m_fbo; }
- 
-    inline PostProcessing *GetPostProcessing() { return m_post_processing; }
-    inline const PostProcessing *GetPostProcessing() const { return m_post_processing; }
+
+    inline DeferredPipeline *GetDeferredPipeline() { return m_deferred_pipeline; }
+    inline const DeferredPipeline *GetDeferredPipeline() const { return m_deferred_pipeline; }
+
     inline RenderWindow &GetRenderWindow() { return m_render_window; }
     inline const RenderWindow &GetRenderWindow() const { return m_render_window; }
 
@@ -267,10 +262,10 @@ public:
     Bucket m_buckets[Spatial::Bucket::RB_MAX];
 
 private:
-    PostProcessing *m_post_processing;
+    DeferredPipeline *m_deferred_pipeline;
+
     Framebuffer2D *m_fbo;
     RenderWindow m_render_window;
-    bool m_is_deferred;
     int m_octree_callback_id;
 
     Environment *m_environment;

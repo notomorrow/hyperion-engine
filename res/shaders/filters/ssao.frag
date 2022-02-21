@@ -178,9 +178,10 @@ void main(void)
   
   if (HasSSLightingMap == 1) {
 	previousAo = texture(SSLightingMap, v_texcoord0);
+    previousAo.a = 1.0 - previousAo.a;
   }
   
-  ao *= 1.0-previousAo.a;
+  ao *= previousAo.a;
   
 #if !DEFERRED
   // TODO: take in AO from AOMap value  and include it in our calculations
@@ -189,6 +190,6 @@ void main(void)
 #endif
 
 #if DEFERRED
-  output4 = vec4(previousAo.rgb, (1.0 - ao));
+  output4 = vec4(previousAo.rgb, 1.0 - ao);
 #endif
 }
