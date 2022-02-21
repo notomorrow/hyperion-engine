@@ -2,7 +2,7 @@
 #version 430 core
 
 #define $PI 3.141592654
-#define $ALPHA_DISCARD 0.2
+#define $ALPHA_DISCARD 0.4
 
 in vec4 v_position;
 in vec4 v_positionCamspace;
