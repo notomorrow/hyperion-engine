@@ -35,13 +35,18 @@ enum MaterialParameterKey {
     MATERIAL_PARAMETER_CLEARCOAT_GLOSS = 0b100000000000,
     MATERIAL_PARAMETER_EMISSIVENESS    = 0b1000000000000,
     MATERIAL_PARAMETER_FLIP_UV         = 0b10000000000000,
-    MATERIAL_PARAMETER_PARALLAX_HEIGHT = 0b100000000000000,
+    MATERIAL_PARAMETER_UV_SCALE        = 0b100000000000000,
+    MATERIAL_PARAMETER_PARALLAX_HEIGHT = 0b1000000000000000,
+    MATERIAL_PARAMETER_RESERVED0       = 0b10000000000000000,
+    MATERIAL_PARAMETER_RESERVED1       = 0b100000000000000000,
+    MATERIAL_PARAMETER_RESERVED2       = 0b1000000000000000000,
+    MATERIAL_PARAMETER_RESERVED3       = 0b10000000000000000000,
 
     // terrain
-    MATERIAL_PARAMETER_TERRAIN_LEVEL_0_HEIGHT = 0b1000000000000000,
-    MATERIAL_PARAMETER_TERRAIN_LEVEL_1_HEIGHT = 0b10000000000000000,
-    MATERIAL_PARAMETER_TERRAIN_LEVEL_2_HEIGHT = 0b100000000000000000,
-    MATERIAL_PARAMETER_TERRAIN_LEVEL_3_HEIGHT = 0b1000000000000000000
+    MATERIAL_PARAMETER_TERRAIN_LEVEL_0_HEIGHT = 0b100000000000000000000,
+    MATERIAL_PARAMETER_TERRAIN_LEVEL_1_HEIGHT = 0b1000000000000000000000,
+    MATERIAL_PARAMETER_TERRAIN_LEVEL_2_HEIGHT = 0b10000000000000000000000,
+    MATERIAL_PARAMETER_TERRAIN_LEVEL_3_HEIGHT = 0b100000000000000000000000
 };
 
 enum MaterialParameterType {
@@ -63,7 +68,13 @@ enum MaterialFaceCull {
 class MaterialParameter {
 public:
     MaterialParameter();
-    MaterialParameter(const float value);
+    MaterialParameter(float value);
+    MaterialParameter(float x, float y);
+    MaterialParameter(float x, float y, float z);
+    MaterialParameter(float x, float y, float z, float w);
+    MaterialParameter(const Vector2 &);
+    MaterialParameter(const Vector3 &);
+    MaterialParameter(const Vector4 &);
     MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype);
     MaterialParameter(const MaterialParameter &other);
     ~MaterialParameter() = default;

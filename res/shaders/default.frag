@@ -85,12 +85,7 @@ void main()
 #if NORMAL_MAPPING
   if (HasNormalMap == 1) {
     vec4 normalsTexture = texture(NormalMap, texCoords) * 2.0 - 1.0;
-    //normalsTexture.xy = (2.0 * (vec2(1.0) - normalsTexture.rg) - 1.0);
-    //normalsTexture.z = sqrt(1.0 - dot(normalsTexture.xy, normalsTexture.xy));
-    //n = normalize((v_tangent * normalsTexture.x) + (v_bitangent * normalsTexture.y) + (n * normalsTexture.z));
-    
     n = normalize(v_tbn * normalsTexture.rgb);
-    
   }
 #endif
 

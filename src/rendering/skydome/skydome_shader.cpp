@@ -88,6 +88,8 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
         SetUniform("u_noiseMap", noise_map.get());
     }
 
+    env->GetSun().Bind(0, this);
+
     SetUniform("u_globalTime", m_global_time);
     SetUniform("v3LightPos", env->GetSun().GetDirection());
     SetUniform("u_skyColor", env->GetSun().GetColor());

@@ -19,6 +19,7 @@ uniform mat4 WorldToNdcMatrix;
 
 uniform int FlipUV_X = 0;
 uniform int FlipUV_Y = 0;
+uniform vec2 UVScale = vec2(1.0);
 
 vec3 calculate_tangent(vec3 n) {
 	vec3 v = vec3(1.0, 0.0, 0.0);
@@ -32,8 +33,8 @@ vec3 calculate_tangent(vec3 n) {
 
 void main() {
   vec3 n = a_normal.xyz;
-  v_texcoord0.x = abs(float(FlipUV_X) - a_texcoord0.x);
-  v_texcoord0.y = abs(float(FlipUV_Y) - a_texcoord0.y);
+  v_texcoord0.x = abs(float(FlipUV_X) - a_texcoord0.x) * UVScale.x;
+  v_texcoord0.y = abs(float(FlipUV_Y) - a_texcoord0.y) * UVScale.y;
   
   mat4 normalMatrix;
 

@@ -14,7 +14,9 @@ const Material::MaterialParameterTable_t Material::default_parameters({
     std::make_pair(MATERIAL_PARAMETER_CLEARCOAT, 0.0f),
     std::make_pair(MATERIAL_PARAMETER_CLEARCOAT_GLOSS, 0.0f),
     std::make_pair(MATERIAL_PARAMETER_EMISSIVENESS, 0.0f),
-    std::make_pair(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.15f)
+    std::make_pair(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.15f),
+    std::make_pair(MATERIAL_PARAMETER_FLIP_UV, Vector2(0)),
+    std::make_pair(MATERIAL_PARAMETER_UV_SCALE, Vector2(1)),
 });
 
 MaterialParameter::MaterialParameter()
@@ -23,11 +25,32 @@ MaterialParameter::MaterialParameter()
 {
 }
 
-MaterialParameter::MaterialParameter(const float value)
+MaterialParameter::MaterialParameter(float value)
     : type(MaterialParameter_Float),
       values({ value, 0.0f, 0.0f, 0.0f })
 {
 }
+
+MaterialParameter::MaterialParameter(float x, float y)
+    : type(MaterialParameter_Vector2),
+      values({ x, y, 0.0f, 0.0f })
+{
+}
+
+MaterialParameter::MaterialParameter(float x, float y, float z)
+    : type(MaterialParameter_Vector3),
+      values({ x, y, z, 0.0f })
+{
+}
+
+MaterialParameter::MaterialParameter(float x, float y, float z, float w)
+    : type(MaterialParameter_Vector4),
+      values({ x, y, z, w })
+{
+}
+MaterialParameter::MaterialParameter(const Vector2 &value) : MaterialParameter(value.x, value.y) {}
+MaterialParameter::MaterialParameter(const Vector3 &value) : MaterialParameter(value.x, value.y, value.z) {}
+MaterialParameter::MaterialParameter(const Vector4 &value) : MaterialParameter(value.x, value.y, value.z, value.w) {}
 
 MaterialParameter::MaterialParameter(const float *data, size_t nvalues, MaterialParameterType paramtype)
     : type(paramtype)

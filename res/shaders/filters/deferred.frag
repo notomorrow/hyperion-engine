@@ -204,46 +204,11 @@ void main()
 	float clearcoatGloss = 1.0;
 	
     vec3 Cdlin = mon2lin(albedo.rgb);
-    float Cdlum = .3*Cdlin[0] + .6*Cdlin[1]  + .1*Cdlin[2]; // luminance approx.
-
-    vec3 Ctint = Cdlum > 0 ? Cdlin/Cdlum : vec3(1); // normalize lum. to isolate hue+sat
-    vec3 Cspec0 = mix(specular*.08*mix(vec3(1), Ctint, specularTint) , Cdlin, metallic);
-    vec3 Csheen = mix(vec3(1), Ctint, sheenTint);
-
-    // Diffuse fresnel - go from 1 at normal incidence to .5 at grazing
-    // and mix in diffuse retro-reflection based on roughness
-    float FL = SchlickFresnelRoughness2(NdotL, mix(vec3(0.04), vec3(1.0), metallic), roughness).r,  //FresnelTerm( mix(vec3(0.04), vec3(1.0), metallic), NdotL).r,//SchlickFresnel2(NdotL),
-		FV = SchlickFresnelRoughness2(NdotV, mix(vec3(0.04), vec3(1.0), metallic), roughness).r;  //FresnelTerm(mix(vec3(0.04), vec3(1.0), metallic), NdotV).r;//SchlickFresnel2(NdotV);
-    float Fd90 = 0.5 + 2 * LdotH*LdotH * roughness;
-    float Fd = mix(1.0, Fd90, FL) * mix(1.0, Fd90, FV);
-
-    // Based on Hanrahan-Krueger brdf approximation of isotropic bssrdf
-    // 1.25 scale is used to (roughly) preserve albedo
-    // Fss90 used to "flatten" retroreflection based on roughness
-    float Fss90 = LdotH*LdotH*roughness;
-    float Fss = mix(1.0, Fss90, FL) * mix(1.0, Fss90, FV);
-    float ss = 1.25 * (Fss * (1 / (NdotL + NdotV) - .5) + .5);
 
     // specular
     float aspect = sqrt(1.0-anisotropic*0.9);
     float ax = max(.001, sqr(roughness)/aspect);
     float ay = max(.001, sqr(roughness)*aspect);
-    float Ds = clamp(GTR2_aniso(NdotH, HdotX, HdotY, ax, ay), 0.0, 1.0);
-    float FH =   SchlickFresnelRoughness2(LdotH, mix(vec3(0.04), vec3(1.0), metallic), roughness).r; ///FresnelTerm(mix(vec3(0.04), vec3(1.0), metallic), LdotH).r; //SchlickFresnel2(LdotH);
-    vec3 Fs = mix(Cspec0, vec3(1), FH);
-    float Gs;
-    //Gs  = smithG_GGX_aniso(NdotL, LdotX, LdotY, ax, ay);
-    //Gs *= smithG_GGX_aniso(NdotV, VdotX, VdotY, ax, ay);
-	
-	Gs = cookTorranceG(NdotL, NdotV, LdotH, NdotH);//SmithGGXSchlickVisibility(clamp(NdotL, 0.0, 1.0), clamp(NdotV, 0.0, 1.0), roughness);
-
-    // sheen
-    vec3 Fsheen = FH * sheen * Csheen;
-
-    // clearcoat (ior = 1.5 -> F0 = 0.04)
-    float Dr = GTR1(NdotH, mix(.1,.001,clearcoatGloss));
-    float Fr = mix(.04, 1.0, FH);
-    float Gr = smithG_GGX(NdotL, .25) * smithG_GGX(NdotV, .25);
 	
 	
     vec2 AB = vec2(1.0, 1.0) - BRDFMap(NdotV, perceptualRoughness);

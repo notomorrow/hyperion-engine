@@ -149,6 +149,7 @@ std::shared_ptr<Node> Populator::CreateEntityNode(Patch &patch)
                 subnode->SetMaterial(material);
 
                 // TODO: refactor this all to use Spatial
+                subnode->GetSpatial().GetMaterial().alpha_blended = true;
                 subnode->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
 
                 node->AddChild(subnode);

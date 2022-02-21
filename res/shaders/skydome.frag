@@ -1,6 +1,7 @@
 #version 330 core
 
 #include "include/frag_output.inc"
+#include "include/lighting.inc"
 #include "include/tonemap.inc"
 
 uniform vec3 v3LightPos;
@@ -211,7 +212,7 @@ void main (void)
   vec3 color = atmosphere(
         normalize(v_position.xyz),           // normalized ray direction
         vec3(0,6372e3,0),               // ray origin
-        v3LightPos,                        // position of the sun
+        env_DirectionalLight.direction,                        // position of the sun
         22.0,                           // intensity of the sun
         6371e3,                         // radius of the planet in meters
         6471e3,                         // radius of the atmosphere in meters
@@ -224,15 +225,26 @@ void main (void)
 
 
 
-  float fCos = dot(v3LightPos, v3Direction) / length(v3Direction);
+  float fCos = dot(env_DirectionalLight.direction, v3Direction) / length(v3Direction);
   float fCos2 = fCos*fCos;
   vec4 skyColor = $RAYLEIGH;
 
   color += (getMiePhase(fCos, fCos2, fg, fg2) * v4MieColor * u_sunColor).rgb;//skyColor + getMiePhase(fCos, fCos2, fg, fg2) * $MIE * u_sunColor;
 
+  // todo: standardize in engine
+  float aperture = 16.0;
+  float shutterSpeed = 1.0/125.0;
+  float sensitivity = 100.0;
+  float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
+  float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
+
 
   // Apply exposure.
-  color = 1.0 - exp(-1.0 * color);
+  //color = 1.0 - exp(-1.0 * color);
+  color *= env_DirectionalLight.color.rgb;
+  color *= exposure * env_DirectionalLight.intensity;
+  color = tonemap(color);
+  
   output0 = vec4(color, 1.0);
   output1 = vec4(v_normal * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
