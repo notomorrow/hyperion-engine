@@ -17,17 +17,27 @@ Renderer::Renderer(const RenderWindow &render_window)
 
     // TODO: re-introduce frustum culling
     m_octree_callback_id = SceneManager::GetInstance()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
-        if (evt == OCTREE_INSERT_NODE) {
+        /*if (evt == OCTREE_INSERT_NODE) {
             hard_assert(spatial != nullptr);
 
             m_queue->GetBucket(spatial->GetBucket()).AddItem(BucketItem(node_id, *spatial, non_owning_ptr(oct)));
-        } else if (evt == OCTREE_REMOVE_NODE) {
+        } else */
+        
+        if (evt == OCTREE_REMOVE_NODE) {
             hard_assert(spatial != nullptr);
 
             m_queue->GetBucket(spatial->GetBucket()).RemoveItem(node_id);
-        } else if (evt == OCTREE_NODE_TRANSFORM_CHANGE) {
-            //m_buckets[spatial->GetRenderable()->GetRenderBucket()].SetItem(node_id, BucketItem(node_id, *spatial));
         } else if (evt == OCTREE_VISIBILITY_STATE) {
+            for (const auto &node : oct->GetNodes()) {
+                if (node.m_spatial.GetRenderable() == nullptr) {
+                    continue;
+                }
+
+                m_queue->GetBucket(node.m_spatial.GetBucket()).InsertOrUpdateItem(
+                    node.m_id,
+                    BucketItem(node.m_id, node.m_spatial)
+                );
+            }
         }
     });
 }
@@ -89,12 +99,6 @@ void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader
         if (!it.alive) {
             continue;
         }
-
-        if (enable_frustum_culling && !it.GetOctant()->VisibleToParent()) {
-            continue;
-        }
-
-        soft_assert_continue(it.GetSpatial().GetRenderable() != nullptr);
 
         shader = (override_shader ? override_shader : it.GetSpatial().GetRenderable()->m_shader.get());
 

@@ -49,6 +49,8 @@ public:
 
     inline Bucket &GetBucket(Spatial::Bucket bucket) { return m_queue->GetBucket(bucket); }
 
+    void ClearRenderables();
+
 private:
     RenderQueue *m_queue;
     DeferredPipeline *m_deferred_pipeline;
@@ -61,8 +63,6 @@ private:
 
     std::map<Node*, HashCode::Value_t> m_hash_cache;
     std::map<HashCode::Value_t, Spatial::Bucket> m_hash_to_bucket;
-
-    void ClearRenderables();
 
     void SetRendererDefaults();
 };

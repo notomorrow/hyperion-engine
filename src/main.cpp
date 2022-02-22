@@ -304,11 +304,29 @@ public:
         //GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
+        GetScene()->Update(0.1f);
+
+        /*GetSceneManager()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
+            std::cout << "event " << evt << ", node: " << node_id << "\n";
+            if (evt == OCTREE_INSERT_OCTANT) {
+                std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
+                auto bb_node = std::make_shared<Node>("oct_" + std::to_string(intptr_t(oct)));
+                bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
+                GetScene()->AddChild(bb_node);
+            } else if (evt == OCTREE_REMOVE_OCTANT) {
+                std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
+                auto node = GetScene()->GetChild("oct_" + std::to_string(intptr_t(oct)));
+                if (node != nullptr) {
+                    GetScene()->RemoveChild(node);
+                }
+            }
+        });*/
+
 #if 0
         m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
-            auto model = asset_manager->LoadFromFile<Node>("models/fireplace_room/fireplace_room.obj");
+            auto model = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
             model->SetName("model");
-            model->Scale(Vector3(5.01f));
+            model->Scale(Vector3(0.01f));
             for (size_t i = 0; i < model->NumChildren(); i++) {
                 if (model->GetChild(i) == nullptr) {
                     continue;
