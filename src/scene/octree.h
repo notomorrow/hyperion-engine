@@ -241,11 +241,11 @@ public:
      * Note: this octant is assumed to be visible.
      * This is to be called, generally, from the root node of the octree.
      */
-    void UpdateVisibilityStates(const Frustum &frustum)
+    void UpdateVisibilityState(const Frustum &frustum)
     {
         VisibilityState new_visibility_state(m_visibility_state.check_id + 1); // allow unsigned overflow warparound
 
-        UpdateVisibilityStates(frustum, new_visibility_state);
+        UpdateVisibilityState(frustum, new_visibility_state);
     }
 
     OctreeResult UpdateNode(int id, const Spatial &new_value)
@@ -444,7 +444,7 @@ public:
 
 private:
 
-    void UpdateVisibilityStates(const Frustum &frustum, const VisibilityState &visibility_state)
+    void UpdateVisibilityState(const Frustum &frustum, const VisibilityState &visibility_state)
     {
         m_visibility_state = visibility_state;
 
@@ -454,7 +454,7 @@ private:
                     continue;
                 }
 
-                octant.m_octree->UpdateVisibilityStates(frustum, visibility_state);
+                octant.m_octree->UpdateVisibilityState(frustum, visibility_state);
             }
         }
 

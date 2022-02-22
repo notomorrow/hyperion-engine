@@ -16,7 +16,7 @@ Game::Game(const RenderWindow &window)
         &m_renderer->GetRenderWindow(),
         m_renderer->GetRenderWindow().GetScaledWidth(),
         m_renderer->GetRenderWindow().GetScaledHeight(),
-        75.0f,
+        65.0f,
         0.05f,
         250.0f
     );
@@ -42,7 +42,6 @@ void Game::Update(double dt)
     Logic(dt);
 
     m_camera->Update(dt);
-    m_scene_manager->GetOctree()->UpdateVisibilityStates(m_camera->GetFrustum());
 
     m_scene->Update(dt);
     m_ui->Update(dt);
@@ -50,7 +49,7 @@ void Game::Update(double dt)
 
 void Game::PreRender()
 {
-    // no-op
+    m_scene_manager->GetOctree()->UpdateVisibilityState(m_camera->GetFrustum());
 }
 
 void Game::Render()
@@ -68,6 +67,8 @@ void Game::PostRender()
 {
     m_scene->ClearPendingRemoval();
     m_ui->ClearPendingRemoval();
+
+    m_renderer->ClearRenderables();
 }
 
 } // namespace hyperion

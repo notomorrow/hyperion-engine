@@ -9,24 +9,17 @@ namespace hyperion {
 struct BucketItem {
     int m_id;
     Spatial m_spatial;
-    non_owning_ptr<const Octree> m_octant;
-    //Octree::VisibilityState m_visibility_state;
-    //bool frustum_culled;
     bool alive;
 
     BucketItem(int id)
         : m_id(id),
-          //m_visibility_state({}),
-          m_octant(nullptr),
           alive(true)
     {
     }
 
-    BucketItem(int id, const Spatial &spatial, non_owning_ptr<const Octree> octant)
+    BucketItem(int id, const Spatial &spatial)
         : m_id(id),
           m_spatial(spatial),
-          m_octant(octant),
-          //m_visibility_state({}),
           alive(true)
     {
     }
@@ -34,17 +27,10 @@ struct BucketItem {
     BucketItem(const BucketItem &other)
         : m_id(other.m_id),
           m_spatial(other.m_spatial),
-          m_octant(other.m_octant),
-          //m_visibility_state(other.m_visibility_state),
           alive(other.alive)
     {
     }
 
-    inline non_owning_ptr<const Octree> GetOctant() const { return m_octant; }
-    inline void SetOctant(non_owning_ptr<const Octree> octant) { m_octant = octant; }
-
-    //inline const Octree::VisibilityState &GetVisibilityState() const { return m_visibility_state; }
-    //inline void SetVisibilityState(const Octree::VisibilityState &visibility_state) { m_visibility_state = visibility_state; }
     inline const std::shared_ptr<Renderable> &GetRenderable() const { return m_spatial.GetRenderable(); }
     inline const Spatial &GetSpatial() const { return m_spatial; }
     inline int GetId() const { return m_id; }
@@ -171,13 +157,34 @@ struct Bucket {
         hash_to_item_index[bucket_item.GetId()] = slot_index;
     }
 
-    void SetItem(int id, const BucketItem &bucket_item)
+    void InsertOrUpdateItem(int id, const BucketItem &bucket_item)
+    {
+        const auto it = hash_to_item_index.find(id);
+
+        if (it == hash_to_item_index.end()) {
+            AddItem(bucket_item);
+
+            return;
+        }
+
+        const size_t index = it->second;
+        hard_assert(index < items.size());
+
+        items[index] = bucket_item;
+
+        if (bucket_item.GetId() != id) {
+            hash_to_item_index.erase(it);
+            hash_to_item_index[id] = index;
+        }
+    }
+
+    void UpdateItem(int id, const BucketItem &bucket_item)
     {
         const auto it = hash_to_item_index.find(id);
         soft_assert(it != hash_to_item_index.end());
 
         const size_t index = it->second;
-        ex_assert(index < items.size());
+        hard_assert(index < items.size());
 
         items[index] = bucket_item;
 
@@ -202,7 +209,6 @@ struct Bucket {
         // which would lose indexes
 
         items[index].alive = false;
-        items[index].m_octant = nullptr; // to be sure...
 
         if (index == items.size() - 1) {
             items.pop_back();
@@ -212,6 +218,7 @@ struct Bucket {
     void ClearAll()
     {
         items.clear();
+        hash_to_item_index.clear();
     }
 
 private:
