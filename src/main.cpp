@@ -304,11 +304,11 @@ public:
         //GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
-#if 1
+#if 0
         m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
-            auto model = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
+            auto model = asset_manager->LoadFromFile<Node>("models/fireplace_room/fireplace_room.obj");
             model->SetName("model");
-            model->Scale(Vector3(0.01f));
+            model->Scale(Vector3(5.01f));
             for (size_t i = 0; i < model->NumChildren(); i++) {
                 if (model->GetChild(i) == nullptr) {
                     continue;
@@ -583,10 +583,10 @@ public:
         }
 
         auto shadow_node = std::make_shared<Node>("shadow_node");
-        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 8.0f));
+        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 14.0f));
         //shadow_node->SetLocalTranslation(Vector3(22, 12, 5));
-        shadow_node->SetLocalTranslation({ -9.f, 15.f, 0.5f });
-        //shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
+        shadow_node->SetLocalTranslation({ 10.0f, 8.0f, -9.0f });
+        shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
         GetScene()->AddChild(shadow_node);
 
         bool add_spheres = true;

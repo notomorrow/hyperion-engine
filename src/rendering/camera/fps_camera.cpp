@@ -107,10 +107,6 @@ void FpsCamera::HandleKeyboardInput(double dt)
     } else if (m_inputmgr->IsKeyDown(KEY_D)) {
         m_next_translation += m_dir_cross_y * speed;
     }
-    
-    if (!MathUtil::Approximately(m_translation.LengthSquared(), m_next_translation.LengthSquared())) {
-        std::cout << "Move camera to " << m_next_translation << "\n";
-    }
 
     m_translation.Lerp(m_next_translation, MathUtil::Clamp(2.0 * dt, 0.0, 1.0));
 }

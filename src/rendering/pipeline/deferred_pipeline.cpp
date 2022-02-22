@@ -1,4 +1,4 @@
-#include "pipeline.h"
+#include "deferred_pipeline.h"
 #include "../postprocess/filters/deferred_rendering_filter.h"
 #include "../../util/mesh_factory.h"
 #include "../renderer.h"

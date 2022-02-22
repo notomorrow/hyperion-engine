@@ -2,6 +2,7 @@
 #define OCTREE_H
 
 #include "../math/bounding_box.h"
+#include "../math/frustum.h"
 #include "spatial.h"
 #include "../util/non_owning_ptr.h"
 #include "../util.h"
@@ -18,12 +19,14 @@ enum OctreeChangeEvent {
     OCTREE_REMOVE_OCTANT = 2,
     OCTREE_INSERT_NODE = 4,
     OCTREE_REMOVE_NODE = 8,
-    OCTREE_NODE_TRANSFORM_CHANGE = 16
+    OCTREE_NODE_TRANSFORM_CHANGE = 16,
+    OCTREE_VISIBILITY_STATE = 32
 };
 
 class Octree;
 
 using OctreeChangeCallback_t = std::function<void(OctreeChangeEvent, const Octree *, int, const Spatial*)>;
+
 
 class Octree {
 public:
@@ -105,6 +108,22 @@ public:
         inline operator bool() const { return result == OCTREE_OK; }
     };
 
+    struct VisibilityState {
+        // visibility is not determined by a boolean, as we'd have to traverse the whole octree,
+        // and doing this every frame when unnecessary is a bit of a performance killer.
+        // instead we calculate a hash at the start of the visibility check, and if the octant is visible,
+        // tag it with the new hash then once we hit a point of non-visibility, the octants will not be given the new hash.
+        // we can then check an octants visibility by comparing the hashes.
+        HashCode::Value_t check_id;
+
+        VisibilityState() : check_id(0) {}
+        VisibilityState(HashCode::Value_t check_id) : check_id(check_id) {}
+        VisibilityState(const VisibilityState &other) : check_id(other.check_id) {}
+        inline VisibilityState &operator=(const VisibilityState &other) { check_id = other.check_id; return *this; }
+        inline bool operator==(const VisibilityState &other) const { return check_id == other.check_id; }
+        ~VisibilityState() = default;
+    };
+
     Octree(const BoundingBox &aabb, int level = 0)
         : m_aabb(aabb),
           m_parent(nullptr),
@@ -134,8 +153,6 @@ public:
 
     ~Octree()
     {
-        DispatchEvent(OCTREE_REMOVE_OCTANT);
-
         if (m_is_divided) {
             for (Octant &octant : m_octants) {
                 hard_assert(octant.m_octree != nullptr);
@@ -144,14 +161,13 @@ public:
             }
         }
 
-
-        /*for (auto &node : m_nodes) {
-            if (node == nullptr) {
-                continue;
+        if (!m_nodes.empty()) {
+            for (const auto &node : m_nodes) {
+                DispatchEvent(OCTREE_REMOVE_NODE, node.m_id, &node.m_spatial);
             }
+        }
 
-            node->SetOctree(non_owning_ptr<Octree>(nullptr));
-        }*/
+        DispatchEvent(OCTREE_REMOVE_OCTANT);
     }
 
     inline const BoundingBox &GetAABB() const { return m_aabb; }
@@ -162,6 +178,10 @@ public:
     inline std::vector<Node> &GetNodes() { return m_nodes; }
     inline const std::vector<Node> &GetNodes() const { return m_nodes; }
     inline bool Empty() const { return m_nodes.empty(); }
+
+    inline const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
+    inline bool VisibleTo(const VisibilityState &parent_state) const { return m_visibility_state == parent_state; }
+    inline bool VisibleToParent() const { return m_parent == nullptr || VisibleTo(m_parent->m_visibility_state); }
 
     bool AllEmpty() const
     {
@@ -215,6 +235,17 @@ public:
 
             m_is_divided = false;
         }
+    }
+
+    /* 
+     * Note: this octant is assumed to be visible.
+     * This is to be called, generally, from the root node of the octree.
+     */
+    void UpdateVisibilityStates(const Frustum &frustum)
+    {
+        VisibilityState new_visibility_state(m_visibility_state.check_id + 1); // allow unsigned overflow warparound
+
+        UpdateVisibilityStates(frustum, new_visibility_state);
     }
 
     OctreeResult UpdateNode(int id, const Spatial &new_value)
@@ -413,6 +444,23 @@ public:
 
 private:
 
+    void UpdateVisibilityStates(const Frustum &frustum, const VisibilityState &visibility_state)
+    {
+        m_visibility_state = visibility_state;
+
+        if (m_is_divided) {
+            for (auto &octant : m_octants) {
+                if (!frustum.BoundingBoxInFrustum(octant.m_aabb)) {
+                    continue;
+                }
+
+                octant.m_octree->UpdateVisibilityStates(frustum, visibility_state);
+            }
+        }
+
+        DispatchEvent(OCTREE_VISIBILITY_STATE);
+    }
+
     void DispatchEvent(OctreeChangeEvent evt, int node_id = -1, const Spatial *spatial = nullptr) const
     {
         const Octree *oct = this;
@@ -428,6 +476,7 @@ private:
 
     std::vector<Node> m_nodes;
     std::vector<OctreeChangeCallback_t> m_callbacks;
+    VisibilityState m_visibility_state;
 };
 
 } // namespace hyperion
