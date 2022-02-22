@@ -42,6 +42,7 @@ void Game::Update(double dt)
     Logic(dt);
 
     m_camera->Update(dt);
+    m_scene_manager->GetOctree()->UpdateVisibilityStates(m_camera->GetFrustum());
 
     m_scene->Update(dt);
     m_ui->Update(dt);
