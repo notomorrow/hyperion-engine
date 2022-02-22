@@ -240,7 +240,6 @@ void main (void)
 
 
   // Apply exposure.
-  //color = 1.0 - exp(-1.0 * color);
   color *= env_DirectionalLight.color.rgb;
   color *= exposure * env_DirectionalLight.intensity;
   color = tonemap(color);

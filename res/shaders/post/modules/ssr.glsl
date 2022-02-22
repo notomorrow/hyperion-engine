@@ -21,11 +21,6 @@ float fetchDepth(vec2 uv, vec2 resolution)
     return depthTexel.r * 2.0 - 1.0;
 }
 
-float linearDepth(mat4 projMatrix, float depth)
-{
-    return projMatrix[3][2] / (depth * projMatrix[2][3] - projMatrix[2][2]);
-}
-
 bool rayIntersectDepth(PostProcessData data, float rayZNear, float rayZFar, vec2 hitPixel)
 {
     // Swap if bigger
