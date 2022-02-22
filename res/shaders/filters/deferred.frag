@@ -10,15 +10,12 @@
 #include "../include/parallax.inc"
 #include "../include/tonemap.inc"
 
-#if SHADOWS
 #include "../include/shadows.inc"
-#endif
 
 in vec2 v_texcoord0;
 uniform sampler2D ColorMap;
 uniform sampler2D DepthMap;
 uniform sampler2D PositionMap;
-//uniform sampler2D NormalMap; // included in lighting.inc
 uniform sampler2D DataMap;
 uniform sampler2D TangentMap;
 uniform sampler2D BitangentMap;
@@ -29,7 +26,13 @@ uniform sampler2D SSLightingMap;
 uniform int HasSSLightingMap;
 
 uniform vec3 CameraPosition;
+uniform vec2 CameraNearFar;
 uniform mat4 InverseViewProjMatrix;
+
+float linearDepth(mat4 projMatrix, float depth)
+{
+    return projMatrix[3][2] / (depth * projMatrix[2][3] - projMatrix[2][2]);
+}
 
 #include "../post/modules/base.glsl"
 #include "../post/modules/ssr.glsl"
@@ -91,6 +94,78 @@ vec3 mon2lin(vec3 x)
     return vec3(pow(x[0], 2.2), pow(x[1], 2.2), pow(x[2], 2.2));
 }
 
+
+#define $VOLUMETRIC_LIGHTING_STEPS 64
+#define $VOLUMETRIC_LIGHTING_MIE_G -0.995
+#define $VOLUMETRIC_LIGHTING_ENABLED 1
+#define $VOLUMETRIC_LIGHTING_FADE_START 0.95
+#define $VOLUMETRIC_LIGHTING_FADE_END 0.9
+#define $VOLUMETRIC_LIGHTING_INTENSITY 0.9
+
+struct VolumetricLight {
+    float scattering;
+    float extinction;
+    float range;
+};
+
+float VolumetricLightDensity(vec3 position)
+{
+    // TODO: noise
+    return 1.0;
+}
+
+float VolumetricLightAttenuation(vec3 position, float NdotL)
+{
+    vec3 shadowCoord = getShadowCoord(0, position);
+    float shadow = getShadow(0, shadowCoord, NdotL);
+    
+    return shadow;
+}
+
+float VolumetricLightMieScattering(float fCos, float fCos2, float g, float g2)
+{
+    return 1.5 * ((1.0 - g2) / (2.0 + g2)) * (1.0 + fCos2) / pow(1.0 + g2 - 2.0*g*fCos, 1.5);
+}
+
+vec4 VolumetricLightRaymarch(vec2 uv, vec3 rayStart, vec3 rayDir, float rayLength)
+{
+    VolumetricLight volumetricLight;
+    volumetricLight.scattering = 1.0;
+    volumetricLight.extinction = 1.0;
+    
+    float stepSize = rayLength / $VOLUMETRIC_LIGHTING_STEPS;
+    vec3 rayDeltaStep = rayDir * stepSize;
+
+    vec3 currentPosition = rayStart + rayDeltaStep;
+    
+    float volumetric = 0.0;
+    
+    float extinction = 0.0; // for directional light
+    float cosAngle = dot(env_DirectionalLight.direction, -rayDir);
+    
+    for (int i = 0; i < $VOLUMETRIC_LIGHTING_STEPS; i++) {
+        float atten = VolumetricLightAttenuation(currentPosition, cosAngle);
+        //float density = VolumetricLightDensity(currentPosition);
+        //float scattering = volumetricLight.scattering * stepSize * density;
+        //extinction += volumetricLight.extinction * stepSize * density;
+        
+        float light = atten;//atten * scattering * density * exp(-extinction);
+        
+        volumetric += light;
+        
+        currentPosition += rayDeltaStep;
+    }
+    
+    volumetric /= float($VOLUMETRIC_LIGHTING_STEPS);
+
+    volumetric *= clamp(VolumetricLightMieScattering(cosAngle, cosAngle*cosAngle, $VOLUMETRIC_LIGHTING_MIE_G, $VOLUMETRIC_LIGHTING_MIE_G * $VOLUMETRIC_LIGHTING_MIE_G), 0.0, 1.0);
+    volumetric = max(0.0, volumetric);
+    //volumetric *= exp(-extinction);
+    
+    return env_DirectionalLight.color * volumetric * $VOLUMETRIC_LIGHTING_INTENSITY;
+}
+
+
 void main()
 {
     vec4 albedo = texture(ColorMap, v_texcoord0);
@@ -150,48 +225,48 @@ void main()
 
 #include "../include/inl/shadowing.inl.glsl"
 
-  vec4 specularCubemap = vec4(0.0);
-  float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
+    vec4 specularCubemap = vec4(0.0);
+    float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
 
-  float perceptualRoughness = sqrt(roughness);
-  float lod = 12.0 * perceptualRoughness * (2.0 - perceptualRoughness);
+    float perceptualRoughness = sqrt(roughness);
+    float lod = 12.0 * perceptualRoughness * (2.0 - perceptualRoughness);
 
 #if PROBE_ENABLED
-  specularCubemap = SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, tangent, bitangent);
+    specularCubemap = SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, tangent, bitangent);
   //specularCubemap += mix(SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, tangent, bitangent), blurredSpecularCubemap, roughnessMix);
 #endif // PROBE_ENABLED
 
 #if !PROBE_ENABLED
-  specularCubemap = textureLod(env_GlobalCubemap, ReflectionVector(N, position.xyz, CameraPosition), lod);
+    specularCubemap = textureLod(env_GlobalCubemap, ReflectionVector(N, position.xyz, CameraPosition), lod);
  
 #if !SPHERICAL_HARMONICS_ENABLED
-  irradiance = Irradiance(N).rgb;
+    irradiance = Irradiance(N).rgb;
 #endif // !SPHERICAL_HARMONICS_ENABLED
 #endif
 
 
 #if VCT_ENABLED
-  vec4 vctSpec = VCTSpecular(position.xyz, N.xyz, CameraPosition, roughness);
-  vec4 vctDiff = VCTDiffuse(position.xyz, N.xyz, CameraPosition, tangent, bitangent, roughness);
-  specularCubemap.rgb = mix(specularCubemap.rgb, vctSpec.rgb, vctSpec.rgb * vctSpec.a);
-  gi += vctDiff;
+    vec4 vctSpec = VCTSpecular(position.xyz, N.xyz, CameraPosition, roughness);
+    vec4 vctDiff = VCTDiffuse(position.xyz, N.xyz, CameraPosition, tangent, bitangent, roughness);
+    specularCubemap.rgb = mix(specularCubemap.rgb, vctSpec.rgb, vctSpec.rgb * vctSpec.a);
+    gi += vctDiff;
 #endif // VCT_ENABLED
 
 
 #if SSR_ENABLED
-  PostProcessData ppd;
-  ppd.texCoord = v_texcoord0;
-  ppd.resolution = Resolution;
-  ppd.viewMatrix = u_viewMatrix;
-  ppd.modelMatrix = u_modelMatrix;
-  ppd.projMatrix = u_projMatrix;
-  vec4 ssrResult = PostProcess_SSR(ppd);
-  specularCubemap = mix(specularCubemap, ssrResult, ssrResult.a);
+    PostProcessData ppd;
+    ppd.texCoord = v_texcoord0;
+    ppd.resolution = Resolution;
+    ppd.viewMatrix = u_viewMatrix;
+    ppd.modelMatrix = u_modelMatrix;
+    ppd.projMatrix = u_projMatrix;
+    vec4 ssrResult = PostProcess_SSR(ppd);
+    specularCubemap = mix(specularCubemap, ssrResult, ssrResult.a);
 #endif
 
 
 #if SPHERICAL_HARMONICS_ENABLED
-  irradiance = SampleSphericalHarmonics(N);
+    irradiance = SampleSphericalHarmonics(N);
 #endif // SPHERICAL_HARMONICS_ENABLED
 
 	float subsurface = 0.0;
@@ -223,7 +298,6 @@ void main()
 	float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
 	float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
 
-	float iblIntensity = 10000.0;
     irradiance += gi.rgb;
 	
 	// ibl
@@ -245,7 +319,7 @@ void main()
     //float microShadow = saturate(NoL * aperture);
     //return microShadow * microShadow;
 	
-	result *= iblIntensity * exposure;
+	result *= $IBL_INTENSITY * exposure;
     
     
 //#if SHADING_MODEL_CLOTH
@@ -257,6 +331,20 @@ void main()
 //#endif
 
 	// surface
+    
+#if VOLUMETRIC_LIGHTING_ENABLED
+    vec3 rayDir = position.xyz - CameraPosition;
+    float rayLength = length(rayDir);
+    rayDir /= rayLength;
+    rayLength = min(rayLength, linearDepth(u_projMatrix, depth));
+    //rayDir = normalize(rayDir);
+    
+    //vec3 rayDeltaStep = rayDir / ($VOLUMETRIC_LIGHTING_STEPS + 1);
+    
+    //vec3 rayDirNorm = normalize(rayDir);
+    vec4 volumetric = VolumetricLightRaymarch(v_texcoord0, CameraPosition, rayDir, rayLength);
+#endif
+    
 
     vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
     float _D = DistributionGGX(N, H, roughness); // GTR2_aniso(NdotH, HdotX, HdotY, ax, ay)
@@ -269,8 +357,14 @@ void main()
 
 	vec3 surfaceShading = _diffuse + _Fr * energyCompensation;
 	surfaceShading *= env_DirectionalLight.color.rgb * (/*light.attenuation*/1.0 * NdotL * ao * shadowColor.rgb);
+
 	surfaceShading *= exposure * env_DirectionalLight.intensity;
 	result += surfaceShading;
+
+#if VOLUMETRIC_LIGHTING_ENABLED
+    result += volumetric.rgb * exposure * env_DirectionalLight.intensity;
+    //result += (depth < $VOLUMETRIC_LIGHTING_FADE_END) ? mix(volumetric.rgb * exposure * env_DirectionalLight.intensity, vec3(0.0), ($VOLUMETRIC_LIGHTING_FADE_END - depth)/($VOLUMETRIC_LIGHTING_FADE_END - $VOLUMETRIC_LIGHTING_FADE_START)) : vec3(0.0);
+#endif
 
 #endif
 
