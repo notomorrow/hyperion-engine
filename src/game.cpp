@@ -49,7 +49,10 @@ void Game::Update(double dt)
 
 void Game::PreRender()
 {
-    m_scene_manager->GetOctree()->UpdateVisibilityState(m_camera->GetFrustum());
+    m_scene_manager->GetOctree()->UpdateVisibilityState(
+        Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN,
+        m_camera->GetFrustum()
+    );
 }
 
 void Game::Render()
@@ -58,7 +61,7 @@ void Game::Render()
 
     OnRender();
 
-    m_renderer->Render(m_camera);
+    m_renderer->Render(m_camera, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
 
     PostRender();
 }

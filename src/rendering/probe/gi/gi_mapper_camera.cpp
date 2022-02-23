@@ -40,9 +40,9 @@ void GIMapperCamera::Render(Renderer *renderer, Camera *)
 {
     renderer->RenderBucket(
         m_camera,
-        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
-        m_shader.get(),
-        false
+        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE, Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER2),
+        Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER2,
+        m_shader.get()
     );
 }
 

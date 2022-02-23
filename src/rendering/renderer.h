@@ -9,6 +9,7 @@
 #include "../core_engine.h"
 #include "../scene/node.h"
 #include "../hash_code.h"
+#include "../scene/scene_manager.h"
 #include "scene/spatial.h"
 #include "math/bounding_box.h"
 #include "render_window.h"
@@ -31,10 +32,9 @@ public:
     Renderer &operator=(const Renderer &other) = delete;
     ~Renderer();
 
-    void Render(Camera *cam);
-
-    void RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader = nullptr, bool enable_frustum_culling = true);
-    void RenderAll(Camera *cam, Framebuffer2D *fbo = nullptr);
+    void Render(Camera *cam, Octree::VisibilityState::CameraType camera_type);
+    void RenderBucket(Camera *cam, Bucket &bucket, Octree::VisibilityState::CameraType camera_type, Shader *override_shader = nullptr);
+    void RenderAll(Camera *cam, Octree::VisibilityState::CameraType camera_type, Framebuffer2D *fbo = nullptr);
 
     inline const Framebuffer2D *GetFramebuffer() const { return m_fbo; }
 
@@ -47,12 +47,13 @@ public:
     inline Environment *GetEnvironment() { return m_environment; }
     inline const Environment *GetEnvironment() const { return m_environment; }
 
-    inline Bucket &GetBucket(Spatial::Bucket bucket) { return m_queue->GetBucket(bucket); }
+    inline Bucket &GetBucket(Spatial::Bucket bucket, Octree::VisibilityState::CameraType camera_type)
+        { return m_queues[camera_type].GetBucket(bucket); }
 
     void ClearRenderables();
 
 private:
-    RenderQueue *m_queue;
+    std::array<RenderQueue, Octree::VisibilityState::CameraType::VIS_CAMERA_MAX> m_queues;
     DeferredPipeline *m_deferred_pipeline;
 
     Framebuffer2D *m_fbo;

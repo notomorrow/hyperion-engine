@@ -127,23 +127,23 @@ void EnvMapProbe::RenderCubemap(Renderer *renderer, Camera *cam)
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Spatial::Bucket::RB_SKY),
-        m_shader.get(),
-        false
+        renderer->GetBucket(Spatial::Bucket::RB_SKY, Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0),
+        Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0,
+        m_shader.get()
     );
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT),
-        m_shader.get(),
-        false
+        renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT, Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0),
+        Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0,
+        m_shader.get()
     );
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
-        m_shader.get(),
-        false
+        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE, Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0),
+        Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0,
+        m_shader.get()
     );
 
     m_fbo->End();
