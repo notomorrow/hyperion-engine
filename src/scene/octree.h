@@ -25,7 +25,7 @@ enum OctreeChangeEvent {
 
 class Octree;
 
-using OctreeChangeCallback_t = std::function<void(OctreeChangeEvent, const Octree *, int, const Spatial*)>;
+using OctreeChangeCallback_t = std::function<void(OctreeChangeEvent, const Octree *, int, const Spatial*, void *)>;
 
 
 class Octree {
@@ -109,18 +109,35 @@ public:
     };
 
     struct VisibilityState {
+        enum CameraType {
+            VIS_CAMERA_MAIN,
+            VIS_CAMERA_SHADOW0,
+            VIS_CAMERA_SHADOW1,
+            VIS_CAMERA_SHADOW2,
+            VIS_CAMERA_SHADOW3,
+            VIS_CAMERA_OTHER0,
+            VIS_CAMERA_OTHER1,
+            VIS_CAMERA_OTHER2,
+
+            VIS_CAMERA_MAX
+        };
+
         // visibility is not determined by a boolean, as we'd have to traverse the whole octree,
         // and doing this every frame when unnecessary is a bit of a performance killer.
         // instead we calculate a hash at the start of the visibility check, and if the octant is visible,
         // tag it with the new hash then once we hit a point of non-visibility, the octants will not be given the new hash.
         // we can then check an octants visibility by comparing the hashes.
-        HashCode::Value_t check_id;
+        std::array<HashCode::Value_t, VIS_CAMERA_MAX> check_id;
 
-        VisibilityState() : check_id(0) {}
-        VisibilityState(HashCode::Value_t check_id) : check_id(check_id) {}
+        VisibilityState() : check_id({ 0 }) {}
+        VisibilityState(const decltype(check_id) &check_id) : check_id(check_id) {}
         VisibilityState(const VisibilityState &other) : check_id(other.check_id) {}
         inline VisibilityState &operator=(const VisibilityState &other) { check_id = other.check_id; return *this; }
-        inline bool operator==(const VisibilityState &other) const { return check_id == other.check_id; }
+        //inline bool operator==(const VisibilityState &other) const { return check_id == other.check_id; }
+        inline bool Compare(CameraType type, const VisibilityState &other) const { return check_id[type] == other.check_id[type]; }
+        inline HashCode::Value_t &operator[](CameraType type) { return check_id[type]; }
+        inline const HashCode::Value_t &operator[](CameraType type) const { return check_id[type]; }
+
         ~VisibilityState() = default;
     };
 
@@ -180,8 +197,10 @@ public:
     inline bool Empty() const { return m_nodes.empty(); }
 
     inline const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
-    inline bool VisibleTo(const VisibilityState &parent_state) const { return m_visibility_state == parent_state; }
-    inline bool VisibleToParent() const { return m_parent == nullptr || VisibleTo(m_parent->m_visibility_state); }
+    inline bool VisibleTo(VisibilityState::CameraType type, const VisibilityState &parent_state) const
+        { return m_visibility_state.Compare(type, parent_state); }
+    inline bool VisibleToParent(VisibilityState::CameraType type) const
+        { return m_parent == nullptr || VisibleTo(type, m_parent->m_visibility_state); }
 
     bool AllEmpty() const
     {
@@ -241,11 +260,11 @@ public:
      * Note: this octant is assumed to be visible.
      * This is to be called, generally, from the root node of the octree.
      */
-    void UpdateVisibilityState(const Frustum &frustum)
+    void UpdateVisibilityState(VisibilityState::CameraType type, const Frustum &frustum)
     {
-        VisibilityState new_visibility_state(m_visibility_state.check_id + 1); // allow unsigned overflow warparound
+        m_visibility_state[type]++;
 
-        UpdateVisibilityState(frustum, new_visibility_state);
+        UpdateVisibilityState(frustum, type, m_visibility_state);
     }
 
     OctreeResult UpdateNode(int id, const Spatial &new_value)
@@ -444,9 +463,9 @@ public:
 
 private:
 
-    void UpdateVisibilityState(const Frustum &frustum, const VisibilityState &visibility_state)
+    void UpdateVisibilityState(const Frustum &frustum, VisibilityState::CameraType type, const VisibilityState &visibility_state)
     {
-        m_visibility_state = visibility_state;
+        m_visibility_state[type] = visibility_state[type];
 
         if (m_is_divided) {
             for (auto &octant : m_octants) {
@@ -454,20 +473,20 @@ private:
                     continue;
                 }
 
-                octant.m_octree->UpdateVisibilityState(frustum, visibility_state);
+                octant.m_octree->UpdateVisibilityState(frustum, type, visibility_state);
             }
         }
 
-        DispatchEvent(OCTREE_VISIBILITY_STATE);
+        DispatchEvent(OCTREE_VISIBILITY_STATE, -1, nullptr, (void*)int32_t(type));
     }
 
-    void DispatchEvent(OctreeChangeEvent evt, int node_id = -1, const Spatial *spatial = nullptr) const
+    void DispatchEvent(OctreeChangeEvent evt, int node_id = -1, const Spatial *spatial = nullptr, void *raw_data = nullptr) const
     {
         const Octree *oct = this;
 
         while (oct != nullptr) {
             for (auto &cb : oct->m_callbacks) {
-                cb(evt, this, node_id, spatial);
+                cb(evt, this, node_id, spatial, raw_data);
             }
 
             oct = oct->m_parent.get();

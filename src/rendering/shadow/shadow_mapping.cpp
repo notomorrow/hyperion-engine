@@ -114,16 +114,16 @@ void ShadowMapping::Render(Renderer *renderer, Camera *cam)
 
     renderer->RenderBucket(
         GetShadowCamera(),
-        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
-        m_depth_shader.get(),
-        false
+        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE, Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_level)),
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_level),
+        m_depth_shader.get()
     );
 
     renderer->RenderBucket(
         GetShadowCamera(),
-        renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT),
-        m_depth_shader.get(),
-        false
+        renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT, Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_level)),
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_level),
+        m_depth_shader.get()
     );
 
     if (m_use_fbo) {

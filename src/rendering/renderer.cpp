@@ -1,7 +1,6 @@
 #include "renderer.h"
 #include "shader_manager.h"
 #include "environment.h"
-#include "../scene/scene_manager.h"
 #include "postprocess/filters/deferred_rendering_filter.h"
 
 #include "../util.h"
@@ -11,12 +10,11 @@ Renderer::Renderer(const RenderWindow &render_window)
     : m_render_window(render_window),
       m_fbo(nullptr),
       m_environment(Environment::GetInstance()),
-      m_deferred_pipeline(new DeferredPipeline()),
-      m_queue(new RenderQueue())
+      m_deferred_pipeline(new DeferredPipeline())
 {
 
     // TODO: re-introduce frustum culling
-    m_octree_callback_id = SceneManager::GetInstance()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
+    m_octree_callback_id = SceneManager::GetInstance()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial, void *raw_data) {
         /*if (evt == OCTREE_INSERT_NODE) {
             hard_assert(spatial != nullptr);
 
@@ -26,14 +24,18 @@ Renderer::Renderer(const RenderWindow &render_window)
         if (evt == OCTREE_REMOVE_NODE) {
             hard_assert(spatial != nullptr);
 
-            m_queue->GetBucket(spatial->GetBucket()).RemoveItem(node_id);
+            for (int i = 0; i < Octree::VisibilityState::CameraType::VIS_CAMERA_MAX; i++) {
+                GetBucket(spatial->GetBucket(), Octree::VisibilityState::CameraType(i)).RemoveItem(node_id);
+            }
         } else if (evt == OCTREE_VISIBILITY_STATE) {
+            Octree::VisibilityState::CameraType camera_type = Octree::VisibilityState::CameraType(int32_t(raw_data));
+
             for (const auto &node : oct->GetNodes()) {
                 if (node.m_spatial.GetRenderable() == nullptr) {
                     continue;
                 }
 
-                m_queue->GetBucket(node.m_spatial.GetBucket()).InsertOrUpdateItem(
+                GetBucket(node.m_spatial.GetBucket(), camera_type).InsertOrUpdateItem(
                     node.m_id,
                     BucketItem(node.m_id, node.m_spatial)
                 );
@@ -46,12 +48,11 @@ Renderer::~Renderer()
 {
     SceneManager::GetInstance()->GetOctree()->RemoveCallback(m_octree_callback_id);
 
-    delete m_queue;
     delete m_deferred_pipeline;
     delete m_fbo;
 }
 
-void Renderer::Render(Camera *cam)
+void Renderer::Render(Camera *cam, Octree::VisibilityState::CameraType camera_type)
 {
     if (m_fbo == nullptr) {
         m_fbo = new Framebuffer2D(
@@ -68,29 +69,31 @@ void Renderer::Render(Camera *cam)
         );
     }
 
-    if (!m_queue->GetBucket(Spatial::Bucket::RB_BUFFER).IsEmpty()) {
-        RenderBucket(cam, m_queue->GetBucket(Spatial::Bucket::RB_BUFFER)); // PRE
+    if (!GetBucket(Spatial::Bucket::RB_BUFFER, camera_type).IsEmpty()) {
+        RenderBucket(cam, GetBucket(Spatial::Bucket::RB_BUFFER, camera_type), camera_type); // PRE
     }
 
     m_deferred_pipeline->Render(this, cam, m_fbo);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
-    RenderBucket(cam, m_queue->GetBucket(Spatial::Bucket::RB_DEBUG));
-    RenderBucket(cam, m_queue->GetBucket(Spatial::Bucket::RB_SCREEN));
+    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_DEBUG, camera_type), camera_type);
+    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_SCREEN, camera_type), camera_type);
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
 }
 
 void Renderer::ClearRenderables()
 {
-    m_queue->Clear();
+    for (int i = 0; i < Octree::VisibilityState::CameraType::VIS_CAMERA_MAX; i++) {
+        m_queues[i].Clear();
+    }
 }
 
-void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Shader *override_shader, bool enable_frustum_culling)
+void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Octree::VisibilityState::CameraType camera_type, Shader *override_shader)
 {
-    enable_frustum_culling = enable_frustum_culling && bucket.enable_culling;
+    bool enable_frustum_culling = bucket.enable_culling;
 
     // proceed even if no shader is set if the render bucket is BUFFER.
-    bool render_if_no_shader = &bucket == &m_queue->GetBucket(Spatial::Bucket::RB_BUFFER);
+    bool render_if_no_shader = &bucket == &GetBucket(Spatial::Bucket::RB_BUFFER, camera_type);
 
     Shader *shader = nullptr;
     Shader *last_shader = nullptr;
@@ -157,10 +160,10 @@ void Renderer::SetRendererDefaults()
     CoreEngine::GetInstance()->BindTexture(CoreEngine::GLEnums::TEXTURE_CUBE_MAP, 0);
 }
 
-void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
+void Renderer::RenderAll(Camera *cam, Octree::VisibilityState::CameraType camera_type, Framebuffer2D *fbo)
 {
-    if (!m_queue->GetBucket(Spatial::Bucket::RB_BUFFER).IsEmpty()) {
-        RenderBucket(cam, m_queue->GetBucket(Spatial::Bucket::RB_BUFFER)); // PRE
+    if (!GetBucket(Spatial::Bucket::RB_BUFFER, camera_type).IsEmpty()) {
+        RenderBucket(cam, GetBucket(Spatial::Bucket::RB_BUFFER, camera_type), camera_type); // PRE
     }
 
     if (fbo) {
@@ -172,11 +175,11 @@ void Renderer::RenderAll(Camera *cam, Framebuffer2D *fbo)
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
-    RenderBucket(cam, m_queue->GetBucket(Spatial::Bucket::RB_SKY));
+    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_SKY, camera_type), camera_type);
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
-    RenderBucket(cam, m_queue->GetBucket(Spatial::Bucket::RB_OPAQUE));
-    RenderBucket(cam, m_queue->GetBucket(Spatial::Bucket::RB_TRANSPARENT));
-    RenderBucket(cam, m_queue->GetBucket(Spatial::Bucket::RB_PARTICLE));
+    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_OPAQUE, camera_type), camera_type);
+    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_TRANSPARENT, camera_type), camera_type);
+    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_PARTICLE, camera_type), camera_type);
 
     if (fbo) {
         fbo->End();
