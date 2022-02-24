@@ -35,8 +35,6 @@ public:
     void Render(Camera *cam, Octree::VisibilityState::CameraType camera_type);
     void RenderBucket(Camera *cam, Spatial::Bucket spatial_bucket, Octree::VisibilityState::CameraType camera_type, Shader *override_shader = nullptr);
     void RenderAll(Camera *cam, Octree::VisibilityState::CameraType camera_type, Framebuffer2D *fbo = nullptr);
-    inline void ClearRenderables(Octree::VisibilityState::CameraType camera_type)
-        { m_queues[camera_type].Clear(); }
 
     inline const Framebuffer2D *GetFramebuffer() const { return m_fbo; }
 
@@ -49,11 +47,11 @@ public:
     inline Environment *GetEnvironment() { return m_environment; }
     inline const Environment *GetEnvironment() const { return m_environment; }
 
-    inline Bucket &GetBucket(Spatial::Bucket bucket, Octree::VisibilityState::CameraType camera_type)
-        { return m_queues[camera_type].GetBucket(bucket); }
+    inline Bucket &GetBucket(Spatial::Bucket bucket)
+        { return m_all_items.GetBucket(bucket); }
 
 private:
-    std::array<RenderQueue, Octree::VisibilityState::CameraType::VIS_CAMERA_MAX> m_queues;
+    RenderQueue m_all_items;
     DeferredPipeline *m_deferred_pipeline;
 
     Framebuffer2D *m_fbo;

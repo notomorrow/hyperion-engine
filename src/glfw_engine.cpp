@@ -80,7 +80,7 @@ bool GlfwEngine::InitializeGame(Game *game)
     }
 #endif
 
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
     glClearDepth(1.0);
     glDepthMask(true);

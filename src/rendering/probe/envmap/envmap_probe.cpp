@@ -101,6 +101,12 @@ void EnvMapProbe::Render(Renderer *renderer, Camera *cam)
 
 void EnvMapProbe::RenderCubemap(Renderer *renderer, Camera *cam)
 {
+    // TODO: better frustum culling of this
+    SceneManager::GetInstance()->GetOctree()->UpdateVisibilityState(
+        Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0,
+        cam->GetFrustum()
+    );
+
     m_fbo->Use();
 
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
