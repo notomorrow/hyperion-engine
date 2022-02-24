@@ -33,11 +33,6 @@ void ShadowMapControl::OnRemoved()
 
 void ShadowMapControl::OnUpdate(double dt)
 {
-    SceneManager::GetInstance()->GetOctree()->UpdateVisibilityState(
-        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_shadow_map_renderer->GetLevel()),
-        m_shadow_map_renderer->GetShadowCamera()->GetFrustum()
-    );
-
     m_shadow_map_renderer->SetOrigin(m_node->GetGlobalTranslation());
 }
 

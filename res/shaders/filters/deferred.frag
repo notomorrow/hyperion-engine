@@ -337,7 +337,6 @@ void main()
         );
     }
 	
-    result.rgb = irradiance.rgb;
 	result.rgb = tonemap(result.rgb);
 
     output0 = vec4(result.rgb, 1.0);

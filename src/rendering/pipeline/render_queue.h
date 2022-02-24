@@ -12,10 +12,30 @@ namespace hyperion {
 struct BucketItem {
     int m_id;
     Spatial m_spatial;
+    int m_flags;
     bool alive;
+
+    enum Visibility {
+        VIS_CAM_NONE = 0,
+        VIS_CAM_MAIN = 1,
+        VIS_CAM_SHADOW0 = 2,
+        VIS_CAM_SHADOW1 = 4,
+        VIS_CAM_SHADOW2 = 8,
+        VIS_CAM_SHADOW3 = 16,
+        VIS_CAM_VOXEL0 = 32,
+        VIS_CAM_VOXEL1 = 64,
+        VIS_CAM_VOXEL2 = 128,
+        VIS_CAM_VOXEL3 = 256,
+        VIS_CAM_VOXEL4 = 512,
+        VIS_CAM_VOXEL5 = 1024,
+        VIS_CAM_OTHER0 = 2048,
+        VIS_CAM_OTHER1 = 4096,
+        VIS_CAM_OTHER2 = 8192
+    };
 
     BucketItem(int id)
         : m_id(id),
+          m_flags(0),
           alive(true)
     {
     }
@@ -23,6 +43,7 @@ struct BucketItem {
     BucketItem(int id, const Spatial &spatial)
         : m_id(id),
           m_spatial(spatial),
+          m_flags(0),
           alive(true)
     {
     }
@@ -30,6 +51,7 @@ struct BucketItem {
     BucketItem(const BucketItem &other)
         : m_id(other.m_id),
           m_spatial(other.m_spatial),
+          m_flags(other.m_flags),
           alive(other.alive)
     {
     }
@@ -51,6 +73,7 @@ struct Bucket {
     inline Bucket &operator=(const Bucket &other) = delete;
 
     inline bool IsEmpty() const { return items.empty(); }
+    inline std::vector<BucketItem> &GetItems() { return items; }
     inline const std::vector<BucketItem> &GetItems() const { return items; }
 
     std::size_t GetIndex(int id)

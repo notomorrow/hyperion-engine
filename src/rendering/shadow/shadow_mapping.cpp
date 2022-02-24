@@ -59,6 +59,11 @@ void ShadowMapping::Render(Renderer *renderer, Camera *cam)
         return;
     }
 
+    SceneManager::GetInstance()->GetOctree()->UpdateVisibilityState(
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_level),
+        shadow_cam->GetFrustum()
+    );
+
     UpdateFrustumPoints(frustum_corners_ws);
 
     Vector3 frustum_min(MathUtil::MaxSafeValue<float>());

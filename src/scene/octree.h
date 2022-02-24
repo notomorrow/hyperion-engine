@@ -110,6 +110,7 @@ public:
 
     struct VisibilityState {
         enum CameraType {
+            VIS_CAMERA_NONE,
             VIS_CAMERA_MAIN,
             VIS_CAMERA_SHADOW0,
             VIS_CAMERA_SHADOW1,
@@ -208,6 +209,17 @@ public:
     inline bool VisibleToParent(VisibilityState::CameraType type) const
         { return m_parent == nullptr || VisibleTo(type, m_parent->m_visibility_state); }
 
+    /*
+     * Note: this octant is assumed to be visible.
+     * This is to be called, generally, from the root node of the octree.
+     */
+    void UpdateVisibilityState(VisibilityState::CameraType type, const Frustum & frustum)
+    {
+        m_visibility_state[type]++;
+
+        UpdateVisibilityState(frustum, type, m_visibility_state);
+    }
+
     bool AllEmpty() const
     {
         if (!m_is_divided) {
@@ -260,17 +272,6 @@ public:
 
             m_is_divided = false;
         }
-    }
-
-    /* 
-     * Note: this octant is assumed to be visible.
-     * This is to be called, generally, from the root node of the octree.
-     */
-    void UpdateVisibilityState(VisibilityState::CameraType type, const Frustum &frustum)
-    {
-        m_visibility_state[type]++;
-
-        UpdateVisibilityState(frustum, type, m_visibility_state);
     }
 
     OctreeResult UpdateNode(int id, const Spatial &new_value)
