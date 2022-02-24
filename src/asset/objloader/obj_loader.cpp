@@ -11,6 +11,7 @@
 #include "../../asset/buffered_text_reader.h"
 #include "mtl_loader.h"
 
+#include <unordered_map>
 #include <fstream>
 #include <set>
 
@@ -164,7 +165,7 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
         std::vector<MeshIndex> mesh_indices;
         mesh_indices.reserve(obj_mesh.indices.size());
 
-        std::map<ObjIndex, MeshIndex> m_index_map; // map objindex to in hyperion mesh index
+        std::unordered_map<ObjIndex, MeshIndex> m_index_map; // map objindex to in hyperion mesh index
 
         for (auto &idc : obj_mesh.indices) {
             auto it = m_index_map.find(idc);

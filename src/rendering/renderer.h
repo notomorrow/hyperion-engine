@@ -62,9 +62,6 @@ private:
 
     Environment *m_environment;
 
-    std::map<Node*, HashCode::Value_t> m_hash_cache;
-    std::map<HashCode::Value_t, Spatial::Bucket> m_hash_to_bucket;
-
     void SetRendererDefaults();
 };
 } // namespace hyperion

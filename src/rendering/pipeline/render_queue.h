@@ -1,6 +1,9 @@
 #ifndef RENDER_QUEUE_H
 #define RENDER_QUEUE_H
 
+#include <unordered_map>
+#include <vector>
+
 #define RENDERER_SHADER_GROUPING 1
 #define RENDERER_FRUSTUM_CULLING 1
 
@@ -43,13 +46,6 @@ struct Bucket {
         : enable_culling(true)
     {
     }
-
-    /*Bucket(const Bucket &other)
-        : enable_culling(other.enable_culling),
-          items(other.items),
-          hash_to_item_index(other.hash_to_item_index)
-    {
-    }*/
 
     Bucket(const Bucket &other) = delete;
     inline Bucket &operator=(const Bucket &other) = delete;
@@ -227,7 +223,7 @@ struct Bucket {
 private:
 
     std::vector<BucketItem> items;
-    std::map<HashCode::Value_t, std::size_t> hash_to_item_index;
+    std::unordered_map<HashCode::Value_t, std::size_t> hash_to_item_index;
 };
 
 using Bucket_t = std::vector<BucketItem>;
