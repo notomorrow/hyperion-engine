@@ -71,7 +71,7 @@ void Game::PostRender()
     m_scene->ClearPendingRemoval();
     m_ui->ClearPendingRemoval();
 
-    m_renderer->ClearRenderables();
+    m_renderer->ClearRenderables(Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
 }
 
 } // namespace hyperion

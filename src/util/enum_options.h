@@ -42,7 +42,6 @@ public:
     EnumOptions(const std::vector<EnumValuePair_t> &pairs)
         : m_flags(0)
     {
-        std::cout << "pairs: " << pairs.size() << "\n";
         for (const auto &item : pairs) {
             Set(item.first, item.second);
         }
@@ -66,6 +65,18 @@ public:
     ~EnumOptions()
     {
     }
+
+    inline bool HasAt(size_t index) const
+        { return m_flags & OrdinalToEnum(index); }
+
+    inline EnumType KeyAt(size_t index) const
+        { return OrdinalToEnum(index); }
+
+    inline ValueType &ValueAt(size_t index)
+        { return m_values[index]; }
+
+    inline const ValueType &ValueAt(size_t index) const
+        { return m_values[index]; }
 
     inline EnumValuePair_t KeyValueAt(size_t index) const
         { return std::make_pair(OrdinalToEnum(index), m_values[index]); }

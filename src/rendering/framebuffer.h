@@ -39,14 +39,14 @@ public:
     }
 
     struct FramebufferTextureAttributes {
-        const char * const material_key;
+        int material_key;
         int format;
         int internal_format;
         int min_filter;
         int mag_filter;
         bool is_volatile; // can change between post processing passes?
 
-        FramebufferTextureAttributes(const char * const material_key, int format, int internal_format, int min_filter, int mag_filter, bool is_volatile)
+        FramebufferTextureAttributes(int material_key, int format, int internal_format, int min_filter, int mag_filter, bool is_volatile)
             : material_key(material_key),
               format(format),
               internal_format(internal_format),

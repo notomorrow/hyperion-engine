@@ -10,6 +10,8 @@
 namespace hyperion {
 class Transform {
 public:
+    static const Transform identity;
+
     Transform();
     Transform(const Vector3 &translation, const Vector3 &scale, const Quaternion &rotation);
     Transform(const Transform &other);

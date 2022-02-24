@@ -25,9 +25,9 @@ public:
     void SetHoverEvent(const InputEvent &input_event) { m_hover_event = input_event; }
 
     inline std::shared_ptr<Texture> GetImage() const
-        { return GetMaterial().GetTexture("ColorMap"); }
+        { return GetMaterial().GetTexture(MATERIAL_TEXTURE_COLOR_MAP); }
     inline void SetImage(std::shared_ptr<Texture> texture)
-        { GetMaterial().SetTexture("ColorMap", texture); }
+        { GetMaterial().SetTexture(MATERIAL_TEXTURE_COLOR_MAP, texture); }
 
     inline void SetLocalTranslation2D(const Vector2 &translation)   
         { SetLocalTranslation(Vector3(translation.x, translation.y, m_local_translation.z)); }

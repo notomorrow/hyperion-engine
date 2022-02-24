@@ -25,17 +25,70 @@ LightingShader::LightingShader(const ShaderProperties &properties)
         fs_path
     );
 
+    m_uniform_shininess = m_uniforms.Acquire("u_shininess").id;
+    m_uniform_roughness = m_uniforms.Acquire("u_roughness").id;
+    m_uniform_camera_position = m_uniforms.Acquire("u_camerapos").id;
+    m_uniform_parallax_height = m_uniforms.Acquire("ParallaxHeight").id;
+    m_uniform_diffuse_color = m_uniforms.Acquire("u_diffuseColor").id;
+    m_uniform_env_global_cubemap = m_uniforms.Acquire("env_GlobalCubemap").id;
+
+    m_uniform_shadow_map[0] = m_uniforms.Acquire("u_shadowMap[0]").id;
+    m_uniform_shadow_map[1] = m_uniforms.Acquire("u_shadowMap[1]").id;
+    m_uniform_shadow_map[2] = m_uniforms.Acquire("u_shadowMap[2]").id;
+    m_uniform_shadow_map[3] = m_uniforms.Acquire("u_shadowMap[3]").id;
+
+    m_uniform_shadow_matrix[0] = m_uniforms.Acquire("u_shadowMatrix[0]").id;
+    m_uniform_shadow_matrix[1] = m_uniforms.Acquire("u_shadowMatrix[1]").id;
+    m_uniform_shadow_matrix[2] = m_uniforms.Acquire("u_shadowMatrix[2]").id;
+    m_uniform_shadow_matrix[3] = m_uniforms.Acquire("u_shadowMatrix[3]").id;
+
+    m_uniform_shadow_split[0] = m_uniforms.Acquire("u_shadowSplit[0]").id;
+    m_uniform_shadow_split[1] = m_uniforms.Acquire("u_shadowSplit[1]").id;
+    m_uniform_shadow_split[2] = m_uniforms.Acquire("u_shadowSplit[2]").id;
+    m_uniform_shadow_split[3] = m_uniforms.Acquire("u_shadowSplit[3]").id;
+
+    m_uniform_poisson_disk[0] = m_uniforms.Acquire("poissonDisk[0]").id;
+    m_uniform_poisson_disk[1] = m_uniforms.Acquire("poissonDisk[1]").id;
+    m_uniform_poisson_disk[2] = m_uniforms.Acquire("poissonDisk[2]").id;
+    m_uniform_poisson_disk[3] = m_uniforms.Acquire("poissonDisk[3]").id;
+    m_uniform_poisson_disk[4] = m_uniforms.Acquire("poissonDisk[4]").id;
+    m_uniform_poisson_disk[5] = m_uniforms.Acquire("poissonDisk[5]").id;
+    m_uniform_poisson_disk[6] = m_uniforms.Acquire("poissonDisk[6]").id;
+    m_uniform_poisson_disk[7] = m_uniforms.Acquire("poissonDisk[7]").id;
+    m_uniform_poisson_disk[8] = m_uniforms.Acquire("poissonDisk[8]").id;
+    m_uniform_poisson_disk[9] = m_uniforms.Acquire("poissonDisk[9]").id;
+    m_uniform_poisson_disk[10] = m_uniforms.Acquire("poissonDisk[10]").id;
+    m_uniform_poisson_disk[11] = m_uniforms.Acquire("poissonDisk[11]").id;
+    m_uniform_poisson_disk[12] = m_uniforms.Acquire("poissonDisk[12]").id;
+    m_uniform_poisson_disk[13] = m_uniforms.Acquire("poissonDisk[13]").id;
+    m_uniform_poisson_disk[14] = m_uniforms.Acquire("poissonDisk[14]").id;
+    m_uniform_poisson_disk[15] = m_uniforms.Acquire("poissonDisk[15]").id;
+
     for (int i = 0; i < 16; i++) {
-        SetUniform("poissonDisk[" + std::to_string(i) + "]",
-            Environment::possion_disk[i]);
+        SetUniform(m_uniform_poisson_disk[i], Environment::possion_disk[i]);
     }
+
+    m_uniform_envmap_origin = m_uniforms.Acquire("EnvProbe.position").id;
+    m_uniform_envmap_max = m_uniforms.Acquire("EnvProbe.max").id;
+    m_uniform_envmap_min = m_uniforms.Acquire("EnvProbe.min").id;
+
+    m_uniform_voxel_map = m_uniforms.Acquire("VoxelMap").id;
+    m_uniform_voxel_scene_scale = m_uniforms.Acquire("VoxelSceneScale").id;
+    m_uniform_voxel_probe_position = m_uniforms.Acquire("VoxelProbePosition").id;
+
+    m_uniform_sh_map = m_uniforms.Acquire("SphericalHarmonicsMap").id;
+    m_uniform_has_sh_map = m_uniforms.Acquire("HasSphericalHarmonicsMap").id;
+
+    m_uniform_directional_light_direction = m_uniforms.Acquire("env_DirectionalLight.direction").id;
+    m_uniform_directional_light_color = m_uniforms.Acquire("env_DirectionalLight.color").id;
+    m_uniform_directional_light_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity").id;
 }
 
 void LightingShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
 
-    SetUniform("u_diffuseColor", mat.diffuse_color);
+    SetUniform(m_uniform_diffuse_color, mat.diffuse_color);
 
     auto *env = Environment::GetInstance();
     if (env->ShadowsEnabled()) {
@@ -45,67 +98,68 @@ void LightingShader::ApplyMaterial(const Material &mat)
             if (auto shadow_map = env->GetShadowMap(i)) {
                 shadow_map->Prepare();
 
-                SetUniform("u_shadowMap[" + i_str + "]", shadow_map.get());
+                SetUniform(m_uniform_shadow_map[i], shadow_map.get());
             }
 
-            SetUniform("u_shadowMatrix[" + i_str + "]", env->GetShadowMatrix(i));
-            SetUniform("u_shadowSplit[" + i_str + "]", (float)env->GetShadowSplit(i));
+            SetUniform(m_uniform_shadow_matrix[i], env->GetShadowMatrix(i));
+            SetUniform(m_uniform_shadow_split[i], (float)env->GetShadowSplit(i));
         }
     }
 
-    env->BindLights(this);
-
-    // if (!m_properties.GetValue("DEFERRED").IsTruthy()) {
-    /*if (auto gi = Environment::GetInstance()->GetGIRenderer()->GetGIMapping(0)->GetShadowMap()) {
-        gi->Prepare();
-
-        SetUniform("env_GlobalCubemap", gi.get());
-    }*/
-
+    SetUniform(m_uniform_directional_light_direction, env->GetSun().GetDirection());
+    SetUniform(m_uniform_directional_light_color, env->GetSun().GetColor());
+    SetUniform(m_uniform_directional_light_intensity, env->GetSun().GetIntensity());
 
     for (int i = 0; i < env->GetProbeManager()->NumProbes(); i++) {
-        env->GetProbeManager()->GetProbe(i)->Bind(this);
+        const auto &probe = env->GetProbeManager()->GetProbe(i);
+
+        switch (probe->GetProbeType()) {
+        case Probe::PROBE_TYPE_ENVMAP:
+            if (auto &texture = probe->GetTexture()) {
+                texture->Prepare();
+                SetUniform(m_uniform_env_global_cubemap, texture.get());
+
+                SetUniform(m_uniform_envmap_origin, probe->GetOrigin());
+                SetUniform(m_uniform_envmap_max, probe->GetBounds().GetMax());
+                SetUniform(m_uniform_envmap_min, probe->GetBounds().GetMin());
+            }
+            break;
+        case Probe::PROBE_TYPE_VCT:
+            if (auto &texture = probe->GetTexture()) {
+                SetUniform(m_uniform_voxel_probe_position, probe->GetOrigin());
+                SetUniform(m_uniform_voxel_scene_scale, probe->GetBounds().GetDimensions());
+                SetUniform(m_uniform_voxel_map, texture.get());
+            }
+            break;
+        case Probe::PROBE_TYPE_SH:
+            if (auto &texture = probe->GetTexture()) {
+                SetUniform(m_uniform_sh_map, texture.get());
+                SetUniform(m_uniform_has_sh_map, 1);
+            } else {
+                SetUniform(m_uniform_has_sh_map, 0);
+            }
+            break;
+        }
     }
 
     if (!env->GetProbeManager()->EnvMapEnabled()) {
         if (auto cubemap = env->GetGlobalCubemap()) {
             cubemap->Prepare();
 
-            SetUniform("env_GlobalCubemap", cubemap.get());
+            SetUniform(m_uniform_env_global_cubemap, cubemap.get());
         }
     }
 
-    for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
-        if (it->second == nullptr) {
-            continue;
-        }
-
-        it->second->Prepare();
-
-        SetUniform(it->first, it->second.get());
-        SetUniform(std::string("Has") + it->first, 1);
-    }
-
-    SetUniform("u_shininess", mat.GetParameter(MATERIAL_PARAMETER_METALNESS)[0]);
-    SetUniform("u_roughness", mat.GetParameter(MATERIAL_PARAMETER_ROUGHNESS)[0]);
-    SetUniform("material.subsurface", mat.GetParameter(MATERIAL_PARAMETER_SUBSURFACE)[0]);
-    SetUniform("material.specular", mat.GetParameter(MATERIAL_PARAMETER_SPECULAR)[0]);
-    SetUniform("material.specularTint", mat.GetParameter(MATERIAL_PARAMETER_SPECULAR_TINT)[0]);
-    SetUniform("material.anisotropic", mat.GetParameter(MATERIAL_PARAMETER_ANISOTROPIC)[0]);
-    SetUniform("material.sheen", mat.GetParameter(MATERIAL_PARAMETER_SHEEN)[0]);
-    SetUniform("material.sheenTint", mat.GetParameter(MATERIAL_PARAMETER_SHEEN_TINT)[0]);
-    SetUniform("material.clearcoat", mat.GetParameter(MATERIAL_PARAMETER_CLEARCOAT)[0]);
-    SetUniform("material.clearcoatGloss", mat.GetParameter(MATERIAL_PARAMETER_CLEARCOAT_GLOSS)[0]);
-    SetUniform("FlipUV_X", int(mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV)[0]));
-    SetUniform("FlipUV_Y", int(mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV)[1]));
-    SetUniform("UVScale", Vector2(mat.GetParameter(MATERIAL_PARAMETER_UV_SCALE)[0], mat.GetParameter(MATERIAL_PARAMETER_UV_SCALE)[1]));
-    SetUniform("ParallaxHeight", mat.GetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT)[0]);
+    SetUniform(m_uniform_shininess, mat.GetParameter(MATERIAL_PARAMETER_METALNESS)[0]);
+    SetUniform(m_uniform_roughness, mat.GetParameter(MATERIAL_PARAMETER_ROUGHNESS)[0]);
+    SetUniform(m_uniform_parallax_height, mat.GetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT)[0]);
 
 }
 
 void LightingShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     Shader::ApplyTransforms(transform, camera);
-    SetUniform("u_camerapos", camera->GetTranslation());
+
+    SetUniform(m_uniform_camera_position, camera->GetTranslation());
 }
 } // namespace hyperion

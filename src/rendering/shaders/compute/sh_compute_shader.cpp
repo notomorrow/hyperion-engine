@@ -14,6 +14,8 @@ SHComputeShader::SHComputeShader(const ShaderProperties &properties)
         properties,
         cs_path
     );
+
+    m_uniform_src_texture = m_uniforms.Acquire("srcTex").id;
 }
 
 SHComputeShader::~SHComputeShader()

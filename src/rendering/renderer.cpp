@@ -70,26 +70,21 @@ void Renderer::Render(Camera *cam, Octree::VisibilityState::CameraType camera_ty
     }
 
     if (!GetBucket(Spatial::Bucket::RB_BUFFER, camera_type).IsEmpty()) {
-        RenderBucket(cam, GetBucket(Spatial::Bucket::RB_BUFFER, camera_type), camera_type); // PRE
+        RenderBucket(cam, Spatial::Bucket::RB_BUFFER, camera_type); // PRE
     }
 
     m_deferred_pipeline->Render(this, cam, m_fbo);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
-    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_DEBUG, camera_type), camera_type);
-    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_SCREEN, camera_type), camera_type);
+    RenderBucket(cam, Spatial::Bucket::RB_DEBUG, camera_type);
+    RenderBucket(cam, Spatial::Bucket::RB_SCREEN, camera_type);
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
 }
 
-void Renderer::ClearRenderables()
+void Renderer::RenderBucket(Camera *cam, Spatial::Bucket spatial_bucket, Octree::VisibilityState::CameraType camera_type, Shader *override_shader)
 {
-    for (int i = 0; i < Octree::VisibilityState::CameraType::VIS_CAMERA_MAX; i++) {
-        m_queues[i].Clear();
-    }
-}
+    const Bucket &bucket = GetBucket(spatial_bucket, camera_type);
 
-void Renderer::RenderBucket(Camera *cam, Bucket &bucket, Octree::VisibilityState::CameraType camera_type, Shader *override_shader)
-{
     bool enable_frustum_culling = bucket.enable_culling;
 
     // proceed even if no shader is set if the render bucket is BUFFER.
@@ -163,7 +158,7 @@ void Renderer::SetRendererDefaults()
 void Renderer::RenderAll(Camera *cam, Octree::VisibilityState::CameraType camera_type, Framebuffer2D *fbo)
 {
     if (!GetBucket(Spatial::Bucket::RB_BUFFER, camera_type).IsEmpty()) {
-        RenderBucket(cam, GetBucket(Spatial::Bucket::RB_BUFFER, camera_type), camera_type); // PRE
+        RenderBucket(cam, Spatial::Bucket::RB_BUFFER, camera_type); // PRE
     }
 
     if (fbo) {
@@ -175,11 +170,11 @@ void Renderer::RenderAll(Camera *cam, Octree::VisibilityState::CameraType camera
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
-    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_SKY, camera_type), camera_type);
+    RenderBucket(cam, Spatial::Bucket::RB_SKY, camera_type);
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
-    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_OPAQUE, camera_type), camera_type);
-    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_TRANSPARENT, camera_type), camera_type);
-    RenderBucket(cam, GetBucket(Spatial::Bucket::RB_PARTICLE, camera_type), camera_type);
+    RenderBucket(cam, Spatial::Bucket::RB_OPAQUE, camera_type);
+    RenderBucket(cam, Spatial::Bucket::RB_TRANSPARENT, camera_type);
+    RenderBucket(cam, Spatial::Bucket::RB_PARTICLE, camera_type);
 
     if (fbo) {
         fbo->End();

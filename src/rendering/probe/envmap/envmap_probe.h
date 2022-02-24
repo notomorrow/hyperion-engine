@@ -12,7 +12,8 @@
 namespace hyperion {
 
 class Shader;
-class ComputeShader;
+class SHComputeShader;
+class CubemapRendererShader;
 class Cubemap;
 
 class EnvMapProbe : public Probe {
@@ -24,12 +25,16 @@ public:
 
     inline std::shared_ptr<Cubemap> GetColorTexture() const
     {
-        return std::static_pointer_cast<Cubemap>(m_fbo->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_COLOR));
+        return std::static_pointer_cast<Cubemap>(m_fbo->GetAttachment(
+            Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_COLOR
+        ));
     }
 
     inline std::shared_ptr<Cubemap> GetDepthTexture() const
     {
-        return std::static_pointer_cast<Cubemap>(m_fbo->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_DEPTH));
+        return std::static_pointer_cast<Cubemap>(m_fbo->GetAttachment(
+            Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_DEPTH
+        ));
     }
 
     inline int GetWidth() const { return m_width; }
@@ -37,7 +42,6 @@ public:
     inline float GetNear() const { return m_near; }
     inline float GetFar() const { return m_far; }
 
-    virtual void Bind(Shader *shader) override;
     virtual void Update(double dt) override;
     virtual void Render(Renderer *renderer, Camera *cam) override;
 
@@ -53,7 +57,8 @@ private:
     int m_height;
     float m_near;
     float m_far;
-    std::shared_ptr<ComputeShader> m_spherical_harmonics_shader;
+    std::shared_ptr<CubemapRendererShader> m_cubemap_renderer_shader;
+    std::shared_ptr<SHComputeShader> m_spherical_harmonics_shader;
     Framebuffer *m_fbo;
     double m_render_tick;
     int m_render_index;

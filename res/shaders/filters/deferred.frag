@@ -34,8 +34,14 @@ float linearDepth(mat4 projMatrix, float depth)
     return projMatrix[3][2] / (depth * projMatrix[2][3] - projMatrix[2][2]);
 }
 
+#define $VOLUMETRIC_LIGHTING_ENABLED 0
+
 #include "../post/modules/base.glsl"
 #include "../post/modules/ssr.glsl"
+
+#if VOLUMETRIC_LIGHTING_ENABLED
+#include "../post/modules/light_rays.glsl"
+#endif
 
 #define $DIRECTIONAL_LIGHTING 1
 
@@ -95,75 +101,6 @@ vec3 mon2lin(vec3 x)
 }
 
 
-#define $VOLUMETRIC_LIGHTING_ENABLED 1
-#define $VOLUMETRIC_LIGHTING_STEPS 64
-#define $VOLUMETRIC_LIGHTING_MIE_G -0.995
-#define $VOLUMETRIC_LIGHTING_FADE_START 0.95
-#define $VOLUMETRIC_LIGHTING_FADE_END 0.9
-#define $VOLUMETRIC_LIGHTING_INTENSITY 0.9
-
-struct VolumetricLight {
-    float scattering;
-    float extinction;
-    float range;
-};
-
-float VolumetricLightDensity(vec3 position)
-{
-    // TODO: noise
-    return 1.0;
-}
-
-float VolumetricLightAttenuation(vec3 position, float NdotL)
-{
-    vec3 shadowCoord = getShadowCoord(0, position);
-    float shadow = getShadow(0, shadowCoord, NdotL);
-    
-    return shadow;
-}
-
-float VolumetricLightMieScattering(float fCos, float fCos2, float g, float g2)
-{
-    return 1.5 * ((1.0 - g2) / (2.0 + g2)) * (1.0 + fCos2) / pow(1.0 + g2 - 2.0*g*fCos, 1.5);
-}
-
-vec4 VolumetricLightRaymarch(vec2 uv, vec3 rayStart, vec3 rayDir, float rayLength)
-{
-    VolumetricLight volumetricLight;
-    volumetricLight.scattering = 1.0;
-    volumetricLight.extinction = 1.0;
-    
-    float stepSize = rayLength / $VOLUMETRIC_LIGHTING_STEPS;
-    vec3 rayDeltaStep = rayDir * stepSize;
-
-    vec3 currentPosition = rayStart + rayDeltaStep;
-    
-    float volumetric = 0.0;
-    
-    float extinction = 0.0; // for directional light
-    float cosAngle = dot(env_DirectionalLight.direction, -rayDir);
-    
-    for (int i = 0; i < $VOLUMETRIC_LIGHTING_STEPS; i++) {
-        float atten = VolumetricLightAttenuation(currentPosition, cosAngle);
-        //float density = VolumetricLightDensity(currentPosition);
-        //float scattering = volumetricLight.scattering * stepSize * density;
-        //extinction += volumetricLight.extinction * stepSize * density;
-        
-        float light = atten;//atten * scattering * density * exp(-extinction);
-        
-        volumetric += light;
-        
-        currentPosition += rayDeltaStep;
-    }
-    
-    volumetric /= float($VOLUMETRIC_LIGHTING_STEPS);
-
-    volumetric *= clamp(VolumetricLightMieScattering(cosAngle, cosAngle*cosAngle, $VOLUMETRIC_LIGHTING_MIE_G, $VOLUMETRIC_LIGHTING_MIE_G * $VOLUMETRIC_LIGHTING_MIE_G), 0.0, 1.0);
-    volumetric = max(0.0, volumetric);
-    //volumetric *= exp(-extinction);
-    
-    return env_DirectionalLight.color * volumetric * $VOLUMETRIC_LIGHTING_INTENSITY;
-}
 
 
 void main()
@@ -253,17 +190,32 @@ void main()
 #endif // VCT_ENABLED
 
 
-#if SSR_ENABLED
+	float aperture = 16.0;
+	float shutterSpeed = 1.0/125.0;
+	float sensitivity = 100.0;
+	float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
+	float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
+
     PostProcessData ppd;
     ppd.texCoord = v_texcoord0;
     ppd.resolution = Resolution;
+    ppd.worldPosition = position.xyz;
+    ppd.cameraPosition = CameraPosition;
+    ppd.depth = depth;
+    ppd.linearDepth = linearDepth(u_projMatrix, depth);
+    ppd.exposure = exposure;
     ppd.viewMatrix = u_viewMatrix;
     ppd.modelMatrix = u_modelMatrix;
     ppd.projMatrix = u_projMatrix;
+    
+    PostProcessResult ppr;
+    ppr.color = vec4(0.0);
+    ppr.mode = 0;//$POST_PROCESS_EQL;
+
+#if SSR_ENABLED
     vec4 ssrResult = PostProcess_SSR(ppd);
     specularCubemap = mix(specularCubemap, ssrResult, ssrResult.a);
 #endif
-
 
 #if SPHERICAL_HARMONICS_ENABLED
     irradiance = SampleSphericalHarmonics(N);
@@ -292,11 +244,6 @@ void main()
 	
 	//irradiance = mix(irradiance, gi.rgb, gi.a);
 	//irradiance *= mix(vec3(1.0), gi.rgb, gi.a);
-	float aperture = 16.0;
-	float shutterSpeed = 1.0/125.0;
-	float sensitivity = 100.0;
-	float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
-	float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
 
     irradiance += gi.rgb;
 	
@@ -332,7 +279,16 @@ void main()
 
 	// surface
     
+
 #if VOLUMETRIC_LIGHTING_ENABLED
+    PostProcess_LightRays(ppd, ppr);
+    result = (ppr.mode == $POST_PROCESS_EQL) ? ppr.color.rgb :
+        (ppr.mode == $POST_PROCESS_ADD) ? result + ppr.color.rgb :
+        (ppr.mode == $POST_PROCESS_MUL) ? result * ppr.color.rgb : result;
+#endif
+
+
+#if 0
     vec3 rayDir = position.xyz - CameraPosition;
     float rayLength = length(rayDir);
     rayDir /= rayLength;
@@ -362,7 +318,7 @@ void main()
 	result += surfaceShading;
 
 #if VOLUMETRIC_LIGHTING_ENABLED
-    result += volumetric.rgb * exposure * env_DirectionalLight.intensity;
+    //result += volumetric.rgb * exposure * env_DirectionalLight.intensity;
     //result += (depth < $VOLUMETRIC_LIGHTING_FADE_END) ? mix(volumetric.rgb * exposure * env_DirectionalLight.intensity, vec3(0.0), ($VOLUMETRIC_LIGHTING_FADE_END - depth)/($VOLUMETRIC_LIGHTING_FADE_END - $VOLUMETRIC_LIGHTING_FADE_START)) : vec3(0.0);
 #endif
 
@@ -381,8 +337,8 @@ void main()
         );
     }
 	
+    result.rgb = irradiance.rgb;
 	result.rgb = tonemap(result.rgb);
 
     output0 = vec4(result.rgb, 1.0);
-    //output0 = vec4(texture(DepthMap, v_texcoord0));
 }

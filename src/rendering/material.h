@@ -15,8 +15,32 @@
 #include <memory>
 
 #define MATERIAL_MAX_PARAMETERS 32
+#define MATERIAL_MAX_TEXTURES 32
 
 namespace hyperion {
+
+struct MaterialTextureWrapper {
+    MaterialTextureWrapper() : m_texture(nullptr) {}
+    MaterialTextureWrapper(const std::shared_ptr<Texture> &texture) : m_texture(texture) {}
+    MaterialTextureWrapper(const MaterialTextureWrapper &other) : m_texture(other.m_texture) {}
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        if (m_texture != nullptr) {
+            hc.Add(int32_t(m_texture->GetTextureType()));
+            hc.Add(int32_t(m_texture->GetWidth()));
+            hc.Add(int32_t(m_texture->GetHeight()));
+            // TODO other
+            hc.Add(intptr_t(m_texture->GetBytes())); // pointer to memory of image
+        }
+
+        return hc;
+    }
+
+    std::shared_ptr<Texture> m_texture;
+};
 
 enum MaterialParameterKey {
     MATERIAL_PARAMETER_NONE = 0b00,
@@ -37,16 +61,57 @@ enum MaterialParameterKey {
     MATERIAL_PARAMETER_FLIP_UV         = 0b10000000000000,
     MATERIAL_PARAMETER_UV_SCALE        = 0b100000000000000,
     MATERIAL_PARAMETER_PARALLAX_HEIGHT = 0b1000000000000000,
-    MATERIAL_PARAMETER_RESERVED0       = 0b10000000000000000,
-    MATERIAL_PARAMETER_RESERVED1       = 0b100000000000000000,
-    MATERIAL_PARAMETER_RESERVED2       = 0b1000000000000000000,
-    MATERIAL_PARAMETER_RESERVED3       = 0b10000000000000000000,
+    MATERIAL_PARAMETER_RESERVED1       = 0b10000000000000000,
+    MATERIAL_PARAMETER_RESERVED2       = 0b100000000000000000,
+    MATERIAL_PARAMETER_RESERVED3       = 0b1000000000000000000,
 
     // terrain
-    MATERIAL_PARAMETER_TERRAIN_LEVEL_0_HEIGHT = 0b100000000000000000000,
-    MATERIAL_PARAMETER_TERRAIN_LEVEL_1_HEIGHT = 0b1000000000000000000000,
-    MATERIAL_PARAMETER_TERRAIN_LEVEL_2_HEIGHT = 0b10000000000000000000000,
-    MATERIAL_PARAMETER_TERRAIN_LEVEL_3_HEIGHT = 0b100000000000000000000000
+    MATERIAL_PARAMETER_TERRAIN_LEVEL_0_HEIGHT = 0b10000000000000000000,
+    MATERIAL_PARAMETER_TERRAIN_LEVEL_1_HEIGHT = 0b100000000000000000000,
+    MATERIAL_PARAMETER_TERRAIN_LEVEL_2_HEIGHT = 0b1000000000000000000000,
+    MATERIAL_PARAMETER_TERRAIN_LEVEL_3_HEIGHT = 0b10000000000000000000000
+};
+
+enum MaterialTextureKey {
+    MATERIAL_TEXTURE_NONE = 0b00,
+
+    MATERIAL_TEXTURE_DIFFUSE_MAP = 0b01,
+    MATERIAL_TEXTURE_NORMAL_MAP = 0b10,
+    MATERIAL_TEXTURE_AO_MAP = 0b100,
+    MATERIAL_TEXTURE_PARALLAX_MAP = 0b1000,
+    MATERIAL_TEXTURE_METALNESS_MAP = 0b10000,
+    MATERIAL_TEXTURE_ROUGHNESS_MAP = 0b100000,
+    MATERIAL_TEXTURE_SKYBOX_MAP = 0b1000000,
+    MATERIAL_TEXTURE_COLOR_MAP = 0b10000000,
+    MATERIAL_TEXTURE_POSITION_MAP = 0b100000000,
+    MATERIAL_TEXTURE_DATA_MAP = 0b1000000000,
+    MATERIAL_TEXTURE_SSAO_MAP = 0b10000000000,
+    MATERIAL_TEXTURE_TANGENT_MAP = 0b100000000000,
+    MATERIAL_TEXTURE_BITANGENT_MAP = 0b1000000000000,
+    MATERIAL_TEXTURE_DEPTH_MAP = 0b10000000000000,
+    MATERIAL_TEXTURE_RESERVED6 = 0b100000000000000,
+    MATERIAL_TEXTURE_RESERVED7 = 0b1000000000000000,
+    MATERIAL_TEXTURE_RESERVED8 = 0b10000000000000000,
+    MATERIAL_TEXTURE_RESERVED9 = 0b100000000000000000,
+
+    // terrain
+
+    MATERIAL_TEXTURE_SPLAT_MAP = 0b1000000000000000000,
+
+    MATERIAL_TEXTURE_BASE_TERRAIN_COLOR_MAP = 0b10000000000000000000,
+    MATERIAL_TEXTURE_BASE_TERRAIN_NORMAL_MAP = 0b100000000000000000000,
+    MATERIAL_TEXTURE_BASE_TERRAIN_AO_MAP = 0b1000000000000000000000,
+    MATERIAL_TEXTURE_BASE_TERRAIN_PARALLAX_MAP = 0b10000000000000000000000,
+
+    MATERIAL_TEXTURE_TERRAIN_LEVEL1_COLOR_MAP = 0b100000000000000000000000,
+    MATERIAL_TEXTURE_TERRAIN_LEVEL1_NORMAL_MAP = 0b1000000000000000000000000,
+    MATERIAL_TEXTURE_TERRAIN_LEVEL1_AO_MAP = 0b10000000000000000000000000,
+    MATERIAL_TEXTURE_TERRAIN_LEVEL1_PARALLAX_MAP = 0b100000000000000000000000000,
+
+    MATERIAL_TEXTURE_TERRAIN_LEVEL2_COLOR_MAP = 0b1000000000000000000000000000,
+    MATERIAL_TEXTURE_TERRAIN_LEVEL2_NORMAL_MAP = 0b10000000000000000000000000000,
+    MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP = 0b100000000000000000000000000000,
+    MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP = 0b1000000000000000000000000000000
 };
 
 enum MaterialParameterType {
@@ -111,8 +176,10 @@ private:
 class Material : public fbom::FBOMLoadable {
 public:
     using MaterialParameterTable_t = EnumOptions<MaterialParameterKey, MaterialParameter, MATERIAL_MAX_PARAMETERS>;
+    using MaterialTextureTable_t = EnumOptions<MaterialTextureKey, MaterialTextureWrapper, MATERIAL_MAX_TEXTURES>;
 
     static const MaterialParameterTable_t default_parameters;
+    static const EnumOptions<MaterialTextureKey, const char *, MATERIAL_MAX_TEXTURES> material_texture_names;
 
     Material();
     Material(const Material &other);
@@ -124,14 +191,16 @@ public:
     inline MaterialParameterTable_t &GetParameters() { return m_params; }
     inline const MaterialParameter &GetParameter(MaterialParameterKey key) const { return m_params.Get(key); }
 
+    inline MaterialTextureTable_t &GetTextures() { return m_textures; }
+    inline const MaterialTextureTable_t &GetTextures() const { return m_textures; }
+    void SetTexture(MaterialTextureKey, const std::shared_ptr<Texture> &);
+    std::shared_ptr<Texture> GetTexture(MaterialTextureKey) const;
+
     void SetParameter(MaterialParameterKey, float);
     void SetParameter(MaterialParameterKey, int);
     void SetParameter(MaterialParameterKey, const Vector2 &);
     void SetParameter(MaterialParameterKey, const Vector3 &);
     void SetParameter(MaterialParameterKey, const Vector4 &);
-
-    void SetTexture(const std::string &name, const std::shared_ptr<Texture> &);
-    std::shared_ptr<Texture> GetTexture(const std::string &name) const;
 
     MaterialFaceCull cull_faces = MaterialFace_Back;
 
@@ -140,22 +209,12 @@ public:
     bool depth_write = true;
     Vector4 diffuse_color = Vector4(1.0);
 
-    std::map<std::string, std::shared_ptr<Texture>> textures;
-
     inline HashCode GetHashCode() const
     {
         HashCode hc;
 
         hc.Add(m_params.GetHashCode());
-
-        for (const auto &it : textures) {
-            if (it.second == nullptr) {
-                continue;
-            }
-
-            hc.Add(it.first);
-            hc.Add(intptr_t(it.second->GetBytes())); // pointer to memory of image
-        }
+        hc.Add(m_textures.GetHashCode());
 
         hc.Add(alpha_blended);
         hc.Add(depth_test);
@@ -209,6 +268,7 @@ public:
 
 private:
     MaterialParameterTable_t m_params;
+    MaterialTextureTable_t m_textures;
 
     std::shared_ptr<Material> CloneImpl();
 };

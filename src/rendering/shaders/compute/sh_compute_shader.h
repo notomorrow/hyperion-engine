@@ -8,6 +8,8 @@ class SHComputeShader : public ComputeShader {
 public:
     SHComputeShader(const ShaderProperties &properties);
     virtual ~SHComputeShader();
+
+    DeclaredUniform::Id_t m_uniform_src_texture;
 };
 } // namespace hyperion
 

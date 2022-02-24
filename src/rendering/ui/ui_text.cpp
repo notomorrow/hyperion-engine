@@ -84,7 +84,7 @@ UIText::UIText(const std::string &name, const std::string &text)
     if (!m_text.empty()) {
         UpdateTextTransforms();
 
-        GetMaterial().SetTexture("ColorMap", m_font_map->GetTexture());
+        GetMaterial().SetTexture(MATERIAL_TEXTURE_COLOR_MAP, m_font_map->GetTexture());
         GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<UIObjectShader>(ShaderProperties()));
         GetSpatial().SetBucket(Spatial::Bucket::RB_SCREEN);
     }

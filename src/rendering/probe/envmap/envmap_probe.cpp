@@ -15,7 +15,7 @@
 
 namespace hyperion {
 EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int width, int height, float near, float far)
-    : Probe(fbom::FBOMObjectType("ENVMAP_PROBE"), origin, bounds),
+    : Probe(fbom::FBOMObjectType("ENVMAP_PROBE"), ProbeType::PROBE_TYPE_ENVMAP, origin, bounds),
       m_width(width),
       m_height(height),
       m_near(near),
@@ -26,7 +26,9 @@ EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int w
 {
     m_fbo = new FramebufferCube(width, height);
 
-    SetShader(ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties()));
+    m_rendered_texture = GetColorTexture();
+
+    m_cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties());
 
     m_spherical_harmonics_shader = ShaderManager::GetInstance()->GetShader<SHComputeShader>(ShaderProperties());
     m_sh_texture = std::make_shared<Texture2D>(8, 8, nullptr);
@@ -44,7 +46,7 @@ EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int w
         region.index = i;
 
         auto *cam = new EnvMapProbeCamera(region, width, height, near, far);
-        cam->SetTexture(GetColorTexture().get());
+        cam->SetTexture(m_rendered_texture.get());
         m_cameras[i] = cam;
     }
 }
@@ -60,23 +62,6 @@ EnvMapProbe::~EnvMapProbe()
     }
 
     delete m_fbo;
-}
-
-void EnvMapProbe::Bind(Shader *shader)
-{
-    if (!ProbeManager::GetInstance()->EnvMapEnabled()) {
-        return;
-    }
-
-    GetColorTexture()->Prepare();
-    shader->SetUniform("env_GlobalCubemap", GetColorTexture().get());
-
-    shader->SetUniform("EnvProbe.position", m_origin);
-    shader->SetUniform("EnvProbe.max", m_bounds.GetMax());
-    shader->SetUniform("EnvProbe.min", m_bounds.GetMin());
-
-    shader->SetUniform("SphericalHarmonicsMap", m_sh_texture.get());
-    shader->SetUniform("HasSphericalHarmonicsMap", ProbeManager::GetInstance()->SphericalHarmonicsEnabled());
 }
 
 void EnvMapProbe::Update(double dt)
@@ -122,28 +107,31 @@ void EnvMapProbe::RenderCubemap(Renderer *renderer, Camera *cam)
 
     for (int i = 0; i < m_cameras.size(); i++) {
         m_cameras[i]->Render(renderer, cam);
-        m_shader->SetUniform("u_shadowMatrices[" + std::to_string(i) + "]", m_cameras[i]->GetCamera()->GetViewProjectionMatrix());
+        m_cubemap_renderer_shader->SetUniform(
+            m_cubemap_renderer_shader->m_uniform_cube_matrices[i],
+            m_cameras[i]->GetCamera()->GetViewProjectionMatrix()
+        );
     }
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Spatial::Bucket::RB_SKY, Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0),
+        Spatial::Bucket::RB_SKY,
         Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0,
-        m_shader.get()
+        m_cubemap_renderer_shader.get()
     );
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT, Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0),
+        Spatial::Bucket::RB_TRANSPARENT,
         Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0,
-        m_shader.get()
+        m_cubemap_renderer_shader.get()
     );
 
     renderer->RenderBucket(
         cam,
-        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE, Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0),
+        Spatial::Bucket::RB_OPAQUE,
         Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER0,
-        m_shader.get()
+        m_cubemap_renderer_shader.get()
     );
 
     m_fbo->End();
@@ -167,7 +155,10 @@ void EnvMapProbe::RenderSphericalHarmonics()
 
     glBindImageTexture(0, m_sh_texture->GetId(), 0, false, 0, GL_WRITE_ONLY, GL_RGBA8);
     CatchGLErrors("Failed to bind imagetexture");
-    m_spherical_harmonics_shader->SetUniform("srcTex", GetColorTexture().get());
+    m_spherical_harmonics_shader->SetUniform(
+        m_spherical_harmonics_shader->m_uniform_src_texture,
+        m_rendered_texture.get()
+    );
     m_spherical_harmonics_shader->Use();
     m_spherical_harmonics_shader->Dispatch(8, 8, 1);
     m_spherical_harmonics_shader->End();

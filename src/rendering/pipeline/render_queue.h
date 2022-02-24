@@ -44,12 +44,15 @@ struct Bucket {
     {
     }
 
-    Bucket(const Bucket &other)
+    /*Bucket(const Bucket &other)
         : enable_culling(other.enable_culling),
           items(other.items),
           hash_to_item_index(other.hash_to_item_index)
     {
-    }
+    }*/
+
+    Bucket(const Bucket &other) = delete;
+    inline Bucket &operator=(const Bucket &other) = delete;
 
     inline bool IsEmpty() const { return items.empty(); }
     inline const std::vector<BucketItem> &GetItems() const { return items; }

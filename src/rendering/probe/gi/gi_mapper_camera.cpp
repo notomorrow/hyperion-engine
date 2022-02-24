@@ -34,14 +34,19 @@ void GIMapperCamera::Update(double dt)
     m_camera->SetDirection(m_region.direction);
     m_camera->SetUpVector(m_region.up_vector);
     m_camera->Update(dt);
+
+    SceneManager::GetInstance()->GetOctree()->UpdateVisibilityState(
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_VOXEL0 + m_region.index),
+        m_camera->GetFrustum()
+    );
 }
 
 void GIMapperCamera::Render(Renderer *renderer, Camera *)
 {
     renderer->RenderBucket(
         m_camera,
-        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE, Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER2),
-        Octree::VisibilityState::CameraType::VIS_CAMERA_OTHER2,
+        Spatial::Bucket::RB_OPAQUE,
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_VOXEL0 + m_region.index),
         m_shader.get()
     );
 }

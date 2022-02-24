@@ -4,8 +4,9 @@
 #include "../../math/matrix_util.h"
 
 namespace hyperion {
-Probe::Probe(const fbom::FBOMType &loadable_type, const Vector3 &origin, const BoundingBox &bounds)
+Probe::Probe(const fbom::FBOMType &loadable_type, ProbeType probe_type, const Vector3 &origin, const BoundingBox &bounds)
     : Renderable(fbom::FBOMObjectType("PROBE").Extend(loadable_type)),
+      m_probe_type(probe_type),
       m_cameras({ nullptr }),
       m_origin(origin),
       m_bounds(bounds),

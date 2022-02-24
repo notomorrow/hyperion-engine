@@ -33,32 +33,38 @@ CubemapRendererShader::CubemapRendererShader(const ShaderProperties &properties)
         properties,
         gs_path
     );
+
+    m_uniform_camera_position = m_uniforms.Acquire("u_camerapos").id;
+    m_uniform_diffuse_color = m_uniforms.Acquire("u_diffuseColor").id;
+
+    m_uniform_cube_matrices[0] = m_uniforms.Acquire("u_shadowMatrices[0]").id;
+    m_uniform_cube_matrices[1] = m_uniforms.Acquire("u_shadowMatrices[1]").id;
+    m_uniform_cube_matrices[2] = m_uniforms.Acquire("u_shadowMatrices[2]").id;
+    m_uniform_cube_matrices[3] = m_uniforms.Acquire("u_shadowMatrices[3]").id;
+    m_uniform_cube_matrices[4] = m_uniforms.Acquire("u_shadowMatrices[4]").id;
+    m_uniform_cube_matrices[5] = m_uniforms.Acquire("u_shadowMatrices[5]").id;
+
+    m_uniform_directional_light_direction = m_uniforms.Acquire("env_DirectionalLight.direction").id;
+    m_uniform_directional_light_color = m_uniforms.Acquire("env_DirectionalLight.color").id;
+    m_uniform_directional_light_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity").id;
 }
 
 void CubemapRendererShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
 
-    SetUniform("u_diffuseColor", mat.diffuse_color);
+    SetUniform(m_uniform_diffuse_color, mat.diffuse_color);
 
-    for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
-        if (it->second == nullptr) {
-            continue;
-        }
-
-        it->second->Prepare();
-
-        SetUniform(it->first, it->second.get());
-        SetUniform(std::string("Has") + it->first, 1);
-    }
-
-    Environment::GetInstance()->GetSun().Bind(0, this);
+    auto env = Environment::GetInstance();
+    SetUniform(m_uniform_directional_light_direction, env->GetSun().GetDirection());
+    SetUniform(m_uniform_directional_light_color, env->GetSun().GetColor());
+    SetUniform(m_uniform_directional_light_intensity, env->GetSun().GetIntensity());
 }
 
 void CubemapRendererShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     Shader::ApplyTransforms(transform, camera);
 
-    SetUniform("u_camerapos", camera->GetTranslation());
+    SetUniform(m_uniform_camera_position, camera->GetTranslation());
 }
 } // namespace hyperion
