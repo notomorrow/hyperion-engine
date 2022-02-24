@@ -38,10 +38,10 @@ void DeferredPipeline::RenderOpaqueBuckets(Renderer *renderer, Camera *cam, Fram
     CoreEngine::GetInstance()->Clear(CoreEngine::GLEnums::COLOR_BUFFER_BIT | CoreEngine::GLEnums::DEPTH_BUFFER_BIT);
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
-    renderer->RenderBucket(cam, renderer->GetBucket(Spatial::Bucket::RB_SKY, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN), Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
+    renderer->RenderBucket(cam, Spatial::Bucket::RB_SKY, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
     CoreEngine::GetInstance()->Enable(CoreEngine::GLEnums::CULL_FACE);
 
-    renderer->RenderBucket(cam, renderer->GetBucket(Spatial::Bucket::RB_OPAQUE, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN), Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
+    renderer->RenderBucket(cam, Spatial::Bucket::RB_OPAQUE, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
 
     fbo->End();
 }
@@ -173,8 +173,8 @@ void DeferredPipeline::Render(Renderer *renderer, Camera *cam, Framebuffer2D *fb
 
     m_blit_fbo->Use();
 
-    renderer->RenderBucket(cam, renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN), Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
-    renderer->RenderBucket(cam, renderer->GetBucket(Spatial::Bucket::RB_PARTICLE, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN), Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
+    renderer->RenderBucket(cam, Spatial::Bucket::RB_TRANSPARENT, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
+    renderer->RenderBucket(cam, Spatial::Bucket::RB_PARTICLE, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
 
     /* Write the 'final' color texture into the G-buffer. Now, we can proceed to the post-processing stage, where we manipulate this image. */
     m_blit_fbo->Store(Framebuffer::FRAMEBUFFER_ATTACHMENT_COLOR, m_gbuffer[Framebuffer::AttachmentToOrdinal(Framebuffer::FRAMEBUFFER_ATTACHMENT_COLOR)]);

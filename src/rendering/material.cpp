@@ -19,6 +19,36 @@ const Material::MaterialParameterTable_t Material::default_parameters({
     std::make_pair(MATERIAL_PARAMETER_UV_SCALE, Vector2(1)),
 });
 
+const decltype(Material::material_texture_names) Material::material_texture_names({
+    std::make_pair(MATERIAL_TEXTURE_DIFFUSE_MAP, "DiffuseMap"),
+    std::make_pair(MATERIAL_TEXTURE_NORMAL_MAP, "NormalMap"),
+    std::make_pair(MATERIAL_TEXTURE_AO_MAP, "AoMap"),
+    std::make_pair(MATERIAL_TEXTURE_PARALLAX_MAP, "ParallaxMap"),
+    std::make_pair(MATERIAL_TEXTURE_METALNESS_MAP, "MetalnessMap"),
+    std::make_pair(MATERIAL_TEXTURE_ROUGHNESS_MAP, "RoughnessMap"),
+    std::make_pair(MATERIAL_TEXTURE_SKYBOX_MAP, "SkyboxMap"),
+    std::make_pair(MATERIAL_TEXTURE_COLOR_MAP, "ColorMap"),
+    std::make_pair(MATERIAL_TEXTURE_POSITION_MAP, "PositionMap"),
+    std::make_pair(MATERIAL_TEXTURE_DATA_MAP, "DataMap"),
+    std::make_pair(MATERIAL_TEXTURE_SSAO_MAP, "SSLightingMap"),
+    std::make_pair(MATERIAL_TEXTURE_TANGENT_MAP, "TangentMap"),
+    std::make_pair(MATERIAL_TEXTURE_BITANGENT_MAP, "BitangentMap"),
+    std::make_pair(MATERIAL_TEXTURE_DEPTH_MAP, "DepthMap"),
+    std::make_pair(MATERIAL_TEXTURE_SPLAT_MAP, "SplatMap"),
+    std::make_pair(MATERIAL_TEXTURE_BASE_TERRAIN_COLOR_MAP, "BaseTerrainColorMap"),
+    std::make_pair(MATERIAL_TEXTURE_BASE_TERRAIN_NORMAL_MAP, "BaseTerrainNormalMap"),
+    std::make_pair(MATERIAL_TEXTURE_BASE_TERRAIN_AO_MAP, "BaseTerrainAoMap"),
+    std::make_pair(MATERIAL_TEXTURE_BASE_TERRAIN_PARALLAX_MAP, "BaseTerrainParallaxMap"),
+    std::make_pair(MATERIAL_TEXTURE_TERRAIN_LEVEL1_COLOR_MAP, "Terrain1ColorMap"),
+    std::make_pair(MATERIAL_TEXTURE_TERRAIN_LEVEL1_NORMAL_MAP, "Terrain1NormalMap"),
+    std::make_pair(MATERIAL_TEXTURE_TERRAIN_LEVEL1_AO_MAP, "Terrain2AoMap"),
+    std::make_pair(MATERIAL_TEXTURE_TERRAIN_LEVEL1_PARALLAX_MAP, "Terrain1ParallaxMap"),
+    std::make_pair(MATERIAL_TEXTURE_TERRAIN_LEVEL2_COLOR_MAP, "Terrain2ColorMap"),
+    std::make_pair(MATERIAL_TEXTURE_TERRAIN_LEVEL2_NORMAL_MAP, "Terrain2NormalMap"),
+    std::make_pair(MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP, "Terrain2AoMap"),
+    std::make_pair(MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP, "Terrain2ParallaxMap")
+});
+
 MaterialParameter::MaterialParameter()
     : type(MaterialParameter_None),
       values({ 0.0f })
@@ -86,12 +116,12 @@ Material::Material()
 Material::Material(const Material &other)
     : fbom::FBOMLoadable(fbom::FBOMObjectType("MATERIAL")),
       m_params(other.m_params),
+      m_textures(other.m_textures),
       alpha_blended(other.alpha_blended),
       cull_faces(other.cull_faces),
       depth_test(other.depth_test),
       depth_write(other.depth_write),
-      diffuse_color(other.diffuse_color),
-      textures(other.textures)
+      diffuse_color(other.diffuse_color)
 {
 }
 
@@ -125,20 +155,14 @@ void Material::SetParameter(MaterialParameterKey key, const Vector4 &value)
     m_params.Set(key, MaterialParameter(values, 4, MaterialParameter_Vector4));
 }
 
-void Material::SetTexture(const std::string &name, const std::shared_ptr<Texture> &texture)
+void Material::SetTexture(MaterialTextureKey key, const std::shared_ptr<Texture> &texture)
 {
-    textures[name] = texture;
+    m_textures.Set(key, MaterialTextureWrapper(texture));
 }
 
-std::shared_ptr<Texture> Material::GetTexture(const std::string &name) const
+std::shared_ptr<Texture> Material::GetTexture(MaterialTextureKey key) const
 {
-    const auto it = textures.find(name);
-
-    if (it != textures.end()) {
-        return it->second;
-    }
-
-    return nullptr;
+    return m_textures.Get(key).m_texture;
 }
 
 std::shared_ptr<Loadable> Material::Clone()

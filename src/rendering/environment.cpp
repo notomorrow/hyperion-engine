@@ -133,15 +133,14 @@ void Environment::BindLights(Shader *shader) const
 {
     size_t num_visible_point_lights = NumVisiblePointLights();
 
-    shader->SetUniform("env_NumPointLights", int(num_visible_point_lights));
+    // TODO
+    //shader->SetUniform("env_NumPointLights", int(num_visible_point_lights));
 
     for (int i = 0; i < num_visible_point_lights; i++) {
         if (PointLight *point_light = m_point_lights_sorted[i].point_light) {
             point_light->Bind(i, shader);
         }
     }
-
-    GetSun().Bind(0, shader);
 }
 
 } // namespace hyperion

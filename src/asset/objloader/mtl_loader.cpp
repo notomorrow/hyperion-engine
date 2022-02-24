@@ -74,7 +74,7 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
 
                             if (auto tex = LoadTexture(loc, path)) {
                                 texture_mutex.lock();
-                                last_mtl->SetTexture("DiffuseMap", tex);
+                                last_mtl->SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, tex);
                                 texture_mutex.unlock();
                             }
                         }));
@@ -89,7 +89,7 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
 
                             if (auto tex = LoadTexture(loc, path)) {
                                 texture_mutex.lock();
-                                last_mtl->SetTexture("NormalMap", tex);
+                                last_mtl->SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, tex);
                                 texture_mutex.unlock();
                             }
                         }));
@@ -104,7 +104,7 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
 
                             if (auto tex = LoadTexture(loc, path)) {
                                 texture_mutex.lock();
-                                last_mtl->SetTexture("MetalnessMap", tex);
+                                last_mtl->SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, tex);
                                 texture_mutex.unlock();
                             }
                         }));
@@ -119,7 +119,7 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
 
                             if (auto tex = LoadTexture(loc, path)) {
                                 texture_mutex.lock();
-                                last_mtl->SetTexture("RoughnessMap", tex);
+                                last_mtl->SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, tex);
                                 texture_mutex.unlock();
                             }
                         }));

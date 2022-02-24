@@ -1,4 +1,5 @@
 #include "framebuffer.h"
+#include "material.h"
 #include "../opengl.h"
 #include "../core_engine.h"
 
@@ -9,7 +10,7 @@ namespace hyperion {
 decltype(Framebuffer::default_texture_attributes)
 Framebuffer::default_texture_attributes = {
     Framebuffer::FramebufferTextureAttributes( // color
-        "ColorMap",
+        MaterialTextureKey::MATERIAL_TEXTURE_COLOR_MAP,
         CoreEngine::GLEnums::RGBA,
         CoreEngine::GLEnums::RGBA32F,
         CoreEngine::GLEnums::NEAREST,
@@ -17,7 +18,7 @@ Framebuffer::default_texture_attributes = {
         true
     ),
     Framebuffer::FramebufferTextureAttributes( // normals
-        "NormalMap",
+        MaterialTextureKey::MATERIAL_TEXTURE_NORMAL_MAP,
         CoreEngine::GLEnums::RGB,
         CoreEngine::GLEnums::RGBA32F,
         CoreEngine::GLEnums::NEAREST,
@@ -25,7 +26,7 @@ Framebuffer::default_texture_attributes = {
         false
     ),
     Framebuffer::FramebufferTextureAttributes( // positions
-        "PositionMap",
+        MaterialTextureKey::MATERIAL_TEXTURE_POSITION_MAP,
         CoreEngine::GLEnums::RGB,
         CoreEngine::GLEnums::RGBA32F,
         CoreEngine::GLEnums::NEAREST,
@@ -33,7 +34,7 @@ Framebuffer::default_texture_attributes = {
         false
     ),
     Framebuffer::FramebufferTextureAttributes( // userdata
-        "DataMap",
+        MaterialTextureKey::MATERIAL_TEXTURE_DATA_MAP,
         CoreEngine::GLEnums::RGBA,
         CoreEngine::GLEnums::RGBA8,
         CoreEngine::GLEnums::NEAREST,
@@ -41,7 +42,7 @@ Framebuffer::default_texture_attributes = {
         false
     ),
     Framebuffer::FramebufferTextureAttributes( // ssao / gi
-        "SSLightingMap",
+        MaterialTextureKey::MATERIAL_TEXTURE_SSAO_MAP,
         CoreEngine::GLEnums::RGBA,
         CoreEngine::GLEnums::RGBA8,
         CoreEngine::GLEnums::NEAREST,
@@ -49,7 +50,7 @@ Framebuffer::default_texture_attributes = {
         true
     ),
     Framebuffer::FramebufferTextureAttributes( // tangents
-        "TangentMap",
+        MaterialTextureKey::MATERIAL_TEXTURE_TANGENT_MAP,
         CoreEngine::GLEnums::RGBA,
         CoreEngine::GLEnums::RGBA32F,
         CoreEngine::GLEnums::NEAREST,
@@ -57,7 +58,7 @@ Framebuffer::default_texture_attributes = {
         false
     ),
     Framebuffer::FramebufferTextureAttributes( // bitangents
-        "BitangentMap",
+        MaterialTextureKey::MATERIAL_TEXTURE_BITANGENT_MAP,
         CoreEngine::GLEnums::RGBA,
         CoreEngine::GLEnums::RGBA32F,
         CoreEngine::GLEnums::NEAREST,
@@ -67,7 +68,7 @@ Framebuffer::default_texture_attributes = {
 
     // *** depth must remain last
     Framebuffer::FramebufferTextureAttributes( // depth
-        "DepthMap",
+        MaterialTextureKey::MATERIAL_TEXTURE_DEPTH_MAP,
         CoreEngine::GLEnums::DEPTH_COMPONENT,
         CoreEngine::GLEnums::DEPTH_COMPONENT32,
         CoreEngine::GLEnums::NEAREST,

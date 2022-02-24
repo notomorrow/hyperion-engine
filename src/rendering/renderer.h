@@ -33,8 +33,10 @@ public:
     ~Renderer();
 
     void Render(Camera *cam, Octree::VisibilityState::CameraType camera_type);
-    void RenderBucket(Camera *cam, Bucket &bucket, Octree::VisibilityState::CameraType camera_type, Shader *override_shader = nullptr);
+    void RenderBucket(Camera *cam, Spatial::Bucket spatial_bucket, Octree::VisibilityState::CameraType camera_type, Shader *override_shader = nullptr);
     void RenderAll(Camera *cam, Octree::VisibilityState::CameraType camera_type, Framebuffer2D *fbo = nullptr);
+    inline void ClearRenderables(Octree::VisibilityState::CameraType camera_type)
+        { m_queues[camera_type].Clear(); }
 
     inline const Framebuffer2D *GetFramebuffer() const { return m_fbo; }
 
@@ -49,8 +51,6 @@ public:
 
     inline Bucket &GetBucket(Spatial::Bucket bucket, Octree::VisibilityState::CameraType camera_type)
         { return m_queues[camera_type].GetBucket(bucket); }
-
-    void ClearRenderables();
 
 private:
     std::array<RenderQueue, Octree::VisibilityState::CameraType::VIS_CAMERA_MAX> m_queues;

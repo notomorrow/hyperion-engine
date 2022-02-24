@@ -23,6 +23,8 @@ public:
     inline const Vector3 &GetOrigin() const { return m_origin; }
     inline void SetOrigin(const Vector3 &origin) { m_origin = origin; }
 
+    inline int GetLevel() const { return m_level; }
+
     Camera *GetShadowCamera();
 
     std::shared_ptr<Texture> GetShadowMap();
@@ -57,8 +59,9 @@ protected:
     void UpdateFrustumPoints(std::array<Vector3, 8> &points);
 
 private:
-
     virtual std::shared_ptr<Renderable> CloneImpl() override;
+
+    void UpdateShadowMapFiltering();
 };
 } // namespace hyperion
 

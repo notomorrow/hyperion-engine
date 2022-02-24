@@ -25,7 +25,8 @@ void SkyboxControl::OnAdded()
     m_cube->SetLocalTranslation(Vector3(0, 55, 2));
     m_cube->GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<SkyboxShader>(ShaderProperties()));
     m_cube->GetSpatial().SetBucket(Spatial::Bucket::RB_SKY);
-    m_cube->GetMaterial().SetTexture("SkyboxMap", m_cubemap);
+
+    m_cube->GetMaterial().SetTexture(MATERIAL_TEXTURE_SKYBOX_MAP, m_cubemap);
     m_cube->GetMaterial().depth_test = false;
     m_cube->GetMaterial().depth_write = false;
     //m_cube->GetMaterial().alpha_blended = false;
@@ -42,7 +43,7 @@ void SkyboxControl::OnUpdate(double dt)
 {
     if (m_cubemap == nullptr) {
         m_cubemap = Environment::GetInstance()->GetGlobalCubemap();
-        m_cube->GetMaterial().SetTexture("SkyboxMap", m_cubemap);
+        m_cube->GetMaterial().SetTexture(MATERIAL_TEXTURE_SKYBOX_MAP, m_cubemap);
     }
 }
 

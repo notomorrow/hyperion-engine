@@ -1,6 +1,7 @@
 #include "shadow_map_control.h"
 #include "shadow_mapping.h"
 #include "../../scene/node.h"
+#include "../../scene/scene_manager.h"
 
 #include <memory>
 
@@ -32,6 +33,11 @@ void ShadowMapControl::OnRemoved()
 
 void ShadowMapControl::OnUpdate(double dt)
 {
+    SceneManager::GetInstance()->GetOctree()->UpdateVisibilityState(
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_shadow_map_renderer->GetLevel()),
+        m_shadow_map_renderer->GetShadowCamera()->GetFrustum()
+    );
+
     m_shadow_map_renderer->SetOrigin(m_node->GetGlobalTranslation());
 }
 

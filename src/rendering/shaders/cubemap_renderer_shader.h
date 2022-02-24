@@ -14,6 +14,17 @@ public:
 
     virtual void ApplyMaterial(const Material &mat);
     virtual void ApplyTransforms(const Transform &transform, Camera *camera);
+
+    DeclaredUniform::Id_t m_uniform_cube_matrices[6];
+
+private:
+    DeclaredUniform::Id_t m_uniform_camera_position,
+        m_uniform_diffuse_color;
+
+    // lights
+    DeclaredUniform::Id_t m_uniform_directional_light_direction,
+        m_uniform_directional_light_color,
+        m_uniform_directional_light_intensity;
 };
 } // namespace hyperion
 

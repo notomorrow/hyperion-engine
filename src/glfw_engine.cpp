@@ -92,6 +92,7 @@ bool GlfwEngine::InitializeGame(Game *game)
     glClampColorARB(GL_CLAMP_VERTEX_COLOR_ARB, GL_FALSE);
     glClampColorARB(GL_CLAMP_READ_COLOR_ARB, GL_FALSE);
     glClampColorARB(GL_CLAMP_FRAGMENT_COLOR_ARB, GL_FALSE);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     if (!glfwWindowShouldClose(window)) {
         glfwGetWindowContentScale(
