@@ -60,4 +60,18 @@ public:
 };
 }
 
+namespace std {
+template<> struct hash<hyperion::ObjIndex> {
+    inline size_t operator()(const hyperion::ObjIndex &obj) const
+    {
+        hyperion::HashCode hc;
+        hc.Add(obj.vertex_idx);
+        hc.Add(obj.normal_idx);
+        hc.Add(obj.texcoord_idx);
+
+        return hc.Value();
+    }
+};
+}
+
 #endif

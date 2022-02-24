@@ -479,7 +479,7 @@ private:
     bool is_uploaded, is_created, uniform_changed;
     unsigned int progid;
 
-    size_t m_previous_properties_hash_code;
+    HashCode::Value_t m_previous_properties_hash_code;
 
     void CreateGpuData();
     void UploadGpuData();
@@ -489,7 +489,6 @@ private:
     void ApplyUniforms();
 
     std::map<SubShaderType, SubShader> subshaders;
-    //std::map<std::string, Uniform> uniforms;
 };
 
 } // namespace hyperion
