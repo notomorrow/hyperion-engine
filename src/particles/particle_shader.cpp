@@ -27,20 +27,7 @@ ParticleShader::ParticleShader(const ShaderProperties &properties)
 
 void ParticleShader::ApplyMaterial(const Material &mat)
 {
-    int texture_index = 1;
-
-    for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
-        if (it->second == nullptr) {
-            continue;
-        }
-
-        Texture::ActiveTexture(texture_index);
-        it->second->Begin();
-        SetUniform(it->first, texture_index);
-        SetUniform(std::string("Has") + it->first, 1);
-
-        texture_index++;
-    }
+    Shader::ApplyMaterial(mat);
 }
 
 void ParticleShader::ApplyTransforms(const Transform &transform, Camera *camera)

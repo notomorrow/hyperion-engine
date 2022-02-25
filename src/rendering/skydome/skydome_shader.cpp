@@ -42,38 +42,20 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
 
     sun_color = Vector4(0.05f, 0.02f, 0.01f, 1.0f);
 
-    wavelength = Vector3(0.731f, 0.612f, 0.455f);
-    inv_wavelength4.x = 1.0f / pow(wavelength.x, 4.0f);
-    inv_wavelength4.y = 1.0f / pow(wavelength.y, 4.0f);
-    inv_wavelength4.z = 1.0f / pow(wavelength.z, 4.0f);
+    m_uniform_noise_map = m_uniforms.Acquire("u_noiseMap").id;
+    m_uniform_fg = m_uniforms.Acquire("fg").id;
+    m_uniform_fg2 = m_uniforms.Acquire("fg2").id;
+    m_uniform_sun_color = m_uniforms.Acquire("u_sunColor").id;
+    m_uniform_global_time = m_uniforms.Acquire("u_globalTime").id;
 
-    num_samples = 4;
-    Kr = 0.0025f;
-    Km = 0.0015f;
-    ESun = 100.0f;
-    KrESun = Kr * ESun;
-    KmESun = Km * ESun;
-    Kr4PI = Kr * 4.0f * MathUtil::PI;
-    Km4PI = Km * 4.0f * MathUtil::PI;
-    exposure = 2.0f;
+    m_uniform_directional_light_direction = m_uniforms.Acquire("env_DirectionalLight.direction").id;
+    m_uniform_directional_light_color = m_uniforms.Acquire("env_DirectionalLight.color").id;
+    m_uniform_directional_light_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity").id;
+
     G = -0.990f;
-    inner_radius = 100.0f;
-    scale = 1.0f / (inner_radius * 1.025f - inner_radius);
-    scale_depth = 0.25f;
-    scale_over_scale_depth = scale / scale_depth;
 
-    // Set uniform constants
-    SetUniform("fKrESun", KrESun);
-    SetUniform("fKmESun", KmESun);
-    SetUniform("fOuterRadius", inner_radius * 1.025f);
-    SetUniform("fInnerRadius", inner_radius);
-    SetUniform("fOuterRadius2", (float)pow(inner_radius * 1.025f, 2.0f));
-    SetUniform("fInnerRadius2", inner_radius * inner_radius);
-    SetUniform("fKr4PI", Kr4PI);
-    SetUniform("fKm4PI", Km4PI);
-    SetUniform("fg", G);
-    SetUniform("fg2", G * G);
-    SetUniform("fExposure", exposure);
+    SetUniform(m_uniform_fg, G);
+    SetUniform(m_uniform_fg2, G * G);
 }
 
 void SkydomeShader::ApplyMaterial(const Material &mat)
@@ -85,15 +67,15 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
     if (has_clouds) {
         noise_map->Prepare();
 
-        SetUniform("u_noiseMap", noise_map.get());
+        SetUniform(m_uniform_noise_map, noise_map.get());
     }
 
-    env->GetSun().Bind(0, this);
+    SetUniform(m_uniform_directional_light_direction, env->GetSun().GetDirection());
+    SetUniform(m_uniform_directional_light_color, env->GetSun().GetColor());
+    SetUniform(m_uniform_directional_light_intensity, env->GetSun().GetIntensity());
 
-    SetUniform("u_globalTime", m_global_time);
-    SetUniform("v3LightPos", env->GetSun().GetDirection());
-    SetUniform("u_skyColor", env->GetSun().GetColor());
-    SetUniform("u_sunColor", sun_color);
+    SetUniform(m_uniform_global_time, m_global_time);
+    SetUniform(m_uniform_sun_color, sun_color);
 }
 
 void SkydomeShader::ApplyTransforms(const Transform &transform, Camera *camera)
@@ -107,8 +89,6 @@ void SkydomeShader::ApplyTransforms(const Transform &transform, Camera *camera)
     ));
 
     Shader::ApplyTransforms(updated_transform, camera);
-
-    SetUniform("v3CameraPos", camera->GetTranslation());
 }
 
 void SkydomeShader::SetGlobalTime(float global_time)

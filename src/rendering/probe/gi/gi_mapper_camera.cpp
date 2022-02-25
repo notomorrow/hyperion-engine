@@ -38,11 +38,16 @@ void GIMapperCamera::Update(double dt)
 
 void GIMapperCamera::Render(Renderer *renderer, Camera *)
 {
+    SceneManager::GetInstance()->GetOctree()->UpdateVisibilityState(
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_VOXEL0 + m_region.index),
+        m_camera->GetFrustum()
+    );
+
     renderer->RenderBucket(
         m_camera,
-        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
-        m_shader.get(),
-        false
+        Spatial::Bucket::RB_OPAQUE,
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_VOXEL0 + m_region.index),
+        m_shader.get()
     );
 }
 

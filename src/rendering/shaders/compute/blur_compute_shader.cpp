@@ -14,6 +14,9 @@ BlurComputeShader::BlurComputeShader(const ShaderProperties &properties)
         properties,
         cs_path
     );
+
+    m_uniform_src_texture = m_uniforms.Acquire("srcTex").id;
+    m_uniform_src_mip_level = m_uniforms.Acquire("srcMipLevel").id;
 }
 
 BlurComputeShader::~BlurComputeShader()

@@ -6,14 +6,7 @@
 
 uniform vec3 v3CameraPos;	// The camera's current position
 uniform vec3 v3LightPos;	// The direction vector to the light source
-uniform float fOuterRadius;	// The outer (atmosphere) radius
-uniform float fOuterRadius2;	// fOuterRadius^2
-uniform float fInnerRadius;	// The inner (planetary) radius
-uniform float fInnerRadius2;	// fInnerRadius^2
-uniform float fKrESun;		// Kr * ESun
 uniform float fKmESun;		// Km * ESun
-uniform float fKr4PI;		// Kr * 4 * PI
-uniform float fKm4PI;		// Km * 4 * PI
 
 out vec3 v3Direction;
 out vec4 v4MieColor;

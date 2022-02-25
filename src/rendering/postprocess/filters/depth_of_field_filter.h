@@ -22,6 +22,12 @@ public:
 private:
     float m_focus_range;
     float m_focus_scale;
+
+    Shader::DeclaredUniform::Id_t m_uniform_camera_near_far,
+        m_uniform_scale,
+        m_uniform_focus_range,
+        m_uniform_focus_scale,
+        m_uniform_pixel_size;
 };
 
 } // namespace hyperion

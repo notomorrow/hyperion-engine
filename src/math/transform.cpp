@@ -2,6 +2,8 @@
 
 namespace hyperion {
 
+const Transform Transform::identity{};
+
 Transform::Transform()
     : m_translation(Vector3::Zero()),
       m_scale(Vector3::One()),

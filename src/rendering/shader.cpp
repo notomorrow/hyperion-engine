@@ -16,7 +16,7 @@ Shader::Shader(const ShaderProperties &properties)
       is_created(false),
       uniform_changed(false)
 {
-    ResetUniforms();
+    InitUniforms();
 }
 
 Shader::Shader(const ShaderProperties &properties,
@@ -32,12 +32,69 @@ Shader::Shader(const ShaderProperties &properties,
     AddSubShader(SubShaderType::SUBSHADER_VERTEX, vscode, properties, "");
     AddSubShader(SubShaderType::SUBSHADER_FRAGMENT, fscode, properties, "");
 
-    ResetUniforms();
+    InitUniforms();
 }
 
 Shader::~Shader()
 {
     DestroyGpuData();
+}
+
+void Shader::InitUniforms()
+{
+    m_uniform_viewport = m_uniforms.Acquire("Viewport").id;
+    m_uniform_flip_uv_x = m_uniforms.Acquire("FlipUV_X").id;
+    m_uniform_flip_uv_y = m_uniforms.Acquire("FlipUV_Y").id;
+    m_uniform_uv_scale = m_uniforms.Acquire("UVScale").id;
+    m_uniform_model_matrix = m_uniforms.Acquire("u_modelMatrix").id;
+    m_uniform_view_matrix = m_uniforms.Acquire("u_viewMatrix").id;
+    m_uniform_proj_matrix = m_uniforms.Acquire("u_projMatrix").id;
+    m_uniform_view_proj_matrix = m_uniforms.Acquire("u_viewProjMatrix").id;
+
+    EnumOptions<MaterialTextureKey, const char *, MATERIAL_MAX_TEXTURES> has_texture_names({
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_DIFFUSE_MAP, "HasDiffuseMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_NORMAL_MAP, "HasNormalMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_AO_MAP, "HasAoMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_PARALLAX_MAP, "HasParallaxMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_METALNESS_MAP, "HasMetalnessMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, "HasRoughnessMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_SKYBOX_MAP, "HasSkyboxMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_COLOR_MAP, "HasColorMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_POSITION_MAP, "HasPositionMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_DATA_MAP, "HasDataMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_SSAO_MAP, "HasSSLightingMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TANGENT_MAP, "HasTangentMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_BITANGENT_MAP, "HasBitangentMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_DEPTH_MAP, "HasDepthMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_SPLAT_MAP, "HasSplatMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_BASE_TERRAIN_COLOR_MAP, "HasBaseTerrainColorMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_BASE_TERRAIN_NORMAL_MAP, "HasBaseTerrainNormalMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_BASE_TERRAIN_AO_MAP, "HasBaseTerrainAoMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_BASE_TERRAIN_PARALLAX_MAP, "HasBaseTerrainParallaxMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TERRAIN_LEVEL1_COLOR_MAP, "HasTerrain1ColorMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TERRAIN_LEVEL1_NORMAL_MAP, "HasTerrain1NormalMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TERRAIN_LEVEL1_AO_MAP, "HasTerrain1AoMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TERRAIN_LEVEL1_PARALLAX_MAP, "HasTerrain1ParallaxMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TERRAIN_LEVEL2_COLOR_MAP, "HasTerrain2ColorMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TERRAIN_LEVEL2_NORMAL_MAP, "HasTerrain2NormalMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP, "HasTerrain2AoMap"),
+        std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP, "HasTerrain2ParallaxMap")
+    });
+
+    for (int i = 0; i < MATERIAL_MAX_TEXTURES; i++) {
+        if (!Material::material_texture_names.HasAt(i)) {
+            m_uniform_textures[i] = -1;
+            m_uniform_has_textures[i] = -1;
+            continue;
+        }
+
+        auto pair = Material::material_texture_names.KeyValueAt(i);
+
+        m_uniform_textures[i] = m_uniforms.Acquire(pair.second).id;
+        m_uniform_has_textures[i] = m_uniforms.Acquire(has_texture_names.Get(pair.first)).id;
+    }
+
+    ResetUniforms();
 }
 
 void Shader::CreateGpuData()
@@ -217,13 +274,15 @@ bool Shader::ShaderPropertiesChanged() const
 
 void Shader::ResetUniforms()
 {
-    SetUniform("HasDiffuseMap", 0);
-    SetUniform("HasNormalMap", 0);
-    SetUniform("HasParallaxMap", 0);
-    SetUniform("HasAoMap", 0);
-    SetUniform("HasBrdfMap", 0);
-    SetUniform("HasMetalnessMap", 0);
-    SetUniform("HasRoughnessMap", 0);
+    for (int i = 0; i < MATERIAL_MAX_TEXTURES; i++) {
+        if (m_uniform_has_textures[i] == -1) {
+            continue;
+        }
+
+        SetUniform(m_uniform_has_textures[i], 0);
+    }
+
+    SetUniform(m_uniform_uv_scale, Vector2(1));
 }
 
 void Shader::ApplyMaterial(const Material &mat)
@@ -257,17 +316,42 @@ void Shader::ApplyMaterial(const Material &mat)
         glDepthMask(false);
     }
 
-    const auto &param = mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV);
-    SetUniform("FlipUV_X", int(param[0]));
-    SetUniform("FlipUV_Y", int(param[1]));
+    const auto &flip_uv = mat.GetParameter(MATERIAL_PARAMETER_FLIP_UV);
+    SetUniform(m_uniform_flip_uv_x, int(flip_uv[0]));
+    SetUniform(m_uniform_flip_uv_y, int(flip_uv[1]));
+
+    SetUniform(m_uniform_uv_scale, Vector2(mat.GetParameter(MATERIAL_PARAMETER_UV_SCALE)[0], mat.GetParameter(MATERIAL_PARAMETER_UV_SCALE)[1]));
+
+    for (size_t i = 0; i < MATERIAL_MAX_TEXTURES; i++) {
+        bool has_texture = mat.GetTextures().HasAt(i);
+
+        if (has_texture) {
+            auto texture = mat.GetTextures().ValueAt(i).m_texture.get();
+
+            if (texture == nullptr) {
+                continue;
+            }
+
+            texture->Prepare();
+
+            if (m_uniform_textures[i] != -1) {
+                SetUniform(m_uniform_textures[i], texture);
+            }
+        }
+
+        if (m_uniform_has_textures[i] != -1) {
+            SetUniform(m_uniform_has_textures[i], int(has_texture));
+        }
+    }
 }
 
 void Shader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
-    SetUniform("u_modelMatrix", transform.GetMatrix());
-    SetUniform("u_viewMatrix", camera->GetViewMatrix());
-    SetUniform("u_projMatrix", camera->GetProjectionMatrix());
-    SetUniform("u_viewProjMatrix", camera->GetViewProjectionMatrix());
+    SetUniform(m_uniform_model_matrix, transform.GetMatrix());
+    SetUniform(m_uniform_view_matrix, camera->GetViewMatrix());
+    SetUniform(m_uniform_proj_matrix, camera->GetProjectionMatrix());
+    SetUniform(m_uniform_view_proj_matrix, camera->GetViewProjectionMatrix());
+    SetUniform(m_uniform_viewport, Vector2(camera->GetWidth(), camera->GetHeight()));
 }
 
 void Shader::ApplyUniforms()
@@ -275,55 +359,60 @@ void Shader::ApplyUniforms()
     if (uniform_changed) {
         int texture_index = 1;
 
-        for (auto &&uniform : uniforms) {
-            int loc = glGetUniformLocation(progid, uniform.first.c_str());
+        for (const auto &uniform : m_uniforms.m_uniforms) {
+            if (uniform.value.type == Uniform::Uniform_None) {
+                // not set
+                continue;
+            }
+
+            int loc = glGetUniformLocation(progid, uniform.name);
 
             if (loc != -1) {
-                switch (uniform.second.type) {
+                switch (uniform.value.type) {
                 case Uniform::Uniform_Float:
-                    glUniform1f(loc, uniform.second.data[0]);
+                    glUniform1f(loc, uniform.value.data[0]);
                     break;
                 case Uniform::Uniform_Int:
-                    glUniform1i(loc, (int)uniform.second.data[0]);
+                    glUniform1i(loc, (int)uniform.value.data[0]);
                     break;
                 case Uniform::Uniform_Vector2:
-                    glUniform2f(loc, uniform.second.data[0], uniform.second.data[1]);
+                    glUniform2f(loc, uniform.value.data[0], uniform.value.data[1]);
                     break;
                 case Uniform::Uniform_Vector3:
-                    glUniform3f(loc, uniform.second.data[0], uniform.second.data[1],
-                        uniform.second.data[2]);
+                    glUniform3f(loc, uniform.value.data[0], uniform.value.data[1],
+                        uniform.value.data[2]);
                     break;
                 case Uniform::Uniform_Vector4:
-                    glUniform4f(loc, uniform.second.data[0], uniform.second.data[1],
-                        uniform.second.data[2], uniform.second.data[3]);
+                    glUniform4f(loc, uniform.value.data[0], uniform.value.data[1],
+                        uniform.value.data[2], uniform.value.data[3]);
                     break;
                 case Uniform::Uniform_Matrix4:
-                    glUniformMatrix4fv(loc, 1, true, &uniform.second.data[0]);
+                    glUniformMatrix4fv(loc, 1, true, &uniform.value.data[0]);
                     break;
                 case Uniform::Uniform_Texture2D:
                     Texture::ActiveTexture(texture_index);
-                    glBindTexture(GL_TEXTURE_2D, int(uniform.second.data[0]));
+                    glBindTexture(GL_TEXTURE_2D, int(uniform.value.data[0]));
                     glUniform1i(loc, texture_index);
                     texture_index++;
                     break;
                 case Uniform::Uniform_Texture3D:
                     Texture::ActiveTexture(texture_index);
-                    glBindTexture(GL_TEXTURE_3D, int(uniform.second.data[0]));
+                    glBindTexture(GL_TEXTURE_3D, int(uniform.value.data[0]));
                     glUniform1i(loc, texture_index);
                     texture_index++;
                     break;
                 case Uniform::Uniform_TextureCube:
                     Texture::ActiveTexture(texture_index);
-                    glBindTexture(GL_TEXTURE_CUBE_MAP, int(uniform.second.data[0]));
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, int(uniform.value.data[0]));
                     glUniform1i(loc, texture_index);
                     texture_index++;
                     break;
                 default:
-                    std::cout << "invalid uniform: " << uniform.first << "\n";
+                    std::cout << "invalid uniform type " << uniform.value.type << " for " << uniform.name << "\n";
                     break;
                 }
 
-                CatchGLErrors((uniform.first + ": Failed to set uniform").c_str(), false);
+                CatchGLErrors("Failed to set uniform", false);
             }
         }
 
@@ -343,7 +432,7 @@ void Shader::Use()
         DestroyGpuData();
 
         for (auto &sub_shader : subshaders) {
-            ReprocessSubShader(sub_shader.second, m_properties);
+            PreprocessSubShader(sub_shader.second, m_properties);
         }
 
         CreateGpuData();
@@ -376,13 +465,15 @@ void Shader::AddSubShader(SubShaderType type,
     sub_shader.type = type;
     sub_shader.code = code;
     sub_shader.path = path;
-    sub_shader.processed_code = ShaderPreprocessor::ProcessShader(code, properties, path);
+    PreprocessSubShader(sub_shader, properties);
     subshaders[type] = sub_shader;
 }
 
-void Shader::ReprocessSubShader(SubShader &sub_shader, const ShaderProperties &properties)
+void Shader::PreprocessSubShader(SubShader &sub_shader, const ShaderProperties &properties)
 {
-    sub_shader.processed_code = ShaderPreprocessor::ProcessShader(sub_shader.code, properties, sub_shader.path);
+    ShaderProperties defines(properties);
+
+    sub_shader.processed_code = ShaderPreprocessor::ProcessShader(sub_shader.code, defines, sub_shader.path);
 }
 
 std::string EnumerateLines(const std::string &str)

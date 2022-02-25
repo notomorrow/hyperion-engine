@@ -12,12 +12,22 @@
 namespace hyperion {
 class Probe : public Renderable {
 public:
-    Probe(const fbom::FBOMType &loadable_type, const Vector3 &origin, const BoundingBox &bounds);
+    enum ProbeType {
+        PROBE_TYPE_NONE = 0,
+        PROBE_TYPE_ENVMAP,
+        PROBE_TYPE_VCT,
+        PROBE_TYPE_SH,
+        PROBE_TYPE_LIGHT_VOLUMES
+    };
+
+    Probe(const fbom::FBOMType &loadable_type, ProbeType probe_type, const Vector3 &origin, const BoundingBox &bounds);
     Probe(const Probe &other) = delete;
     Probe &operator=(const Probe &other) = delete;
     virtual ~Probe();
 
-    virtual void Bind(Shader *shader) = 0;
+    inline ProbeType GetProbeType() const { return m_probe_type; }
+    inline const std::shared_ptr<Texture> &GetTexture() const { return m_rendered_texture; }
+
     virtual void Update(double dt) = 0;
     virtual void Render(Renderer *renderer, Camera *cam) = 0;
 
@@ -32,10 +42,12 @@ public:
     inline constexpr size_t NumCameras() const { return m_cameras.size(); }
 
 protected:
+    const ProbeType m_probe_type;
     BoundingBox m_bounds;
     Vector3 m_origin;
     std::array<ProbeCamera*, 6> m_cameras;
     /*const*/ std::array<std::pair<Vector3, Vector3>, 6> m_directions;
+    std::shared_ptr<Texture> m_rendered_texture;
 };
 } // namespace hyperion
 

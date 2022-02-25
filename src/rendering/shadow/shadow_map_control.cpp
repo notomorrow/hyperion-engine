@@ -1,6 +1,7 @@
 #include "shadow_map_control.h"
 #include "shadow_mapping.h"
 #include "../../scene/node.h"
+#include "../../scene/scene_manager.h"
 
 #include <memory>
 

@@ -15,31 +15,20 @@
 
 namespace hyperion {
 SphericalHarmonicsProbe::SphericalHarmonicsProbe(const Vector3 &origin, const BoundingBox &bounds)
-    : Probe(fbom::FBOMObjectType("SPHERICAL_HARMONICS_PROBE"), origin, bounds),
+    : Probe(fbom::FBOMObjectType("SPHERICAL_HARMONICS_PROBE"), ProbeType::PROBE_TYPE_SH, origin, bounds),
       m_needs_rerender(false)
 {
-    SetShader(ShaderManager::GetInstance()->GetShader<SHComputeShader>(ShaderProperties()));
+    m_spherical_harmonics_shader = ShaderManager::GetInstance()->GetShader<SHComputeShader>(ShaderProperties());
 
-    m_sh_texture = std::make_shared<Texture2D>(8, 8, nullptr);
-    m_sh_texture->SetFormat(CoreEngine::GLEnums::RGBA);
-    m_sh_texture->SetInternalFormat(CoreEngine::GLEnums::RGBA8);
-    m_sh_texture->SetFilter(CoreEngine::GLEnums::NEAREST, CoreEngine::GLEnums::NEAREST);
-    m_sh_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
+    m_rendered_texture = std::make_shared<Texture2D>(8, 8, nullptr);
+    m_rendered_texture->SetFormat(CoreEngine::GLEnums::RGBA);
+    m_rendered_texture->SetInternalFormat(CoreEngine::GLEnums::RGBA8);
+    m_rendered_texture->SetFilter(CoreEngine::GLEnums::NEAREST, CoreEngine::GLEnums::NEAREST);
+    m_rendered_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
 }
 
 SphericalHarmonicsProbe::~SphericalHarmonicsProbe()
 {
-}
-
-void SphericalHarmonicsProbe::Bind(Shader *shader)
-{
-    if (!ProbeManager::GetInstance()->SphericalHarmonicsEnabled()) {
-        shader->SetUniform("HasSphericalHarmonicsMap", 0);
-        return;
-    }
-
-    shader->SetUniform("SphericalHarmonicsMap", m_sh_texture.get());
-    shader->SetUniform("HasSphericalHarmonicsMap", 1);
 }
 
 void SphericalHarmonicsProbe::Update(double dt)
@@ -50,7 +39,7 @@ void SphericalHarmonicsProbe::Update(double dt)
             m_cubemap = nearest_cubemap;
             m_needs_rerender = true;
 
-            m_shader->SetUniform("srcTex", m_cubemap.get());
+            //m_sh_shader->SetUniform(m_sh_shader->m_uniform_src_texture, m_cubemap.get());
         }
     }
 }
@@ -65,20 +54,27 @@ void SphericalHarmonicsProbe::Render(Renderer *renderer, Camera *cam)
         return;
     }
 
-    if (!m_sh_texture->IsUploaded()) {
-        m_sh_texture->Begin(false); // do not upload texture data
+    if (!m_rendered_texture->IsUploaded()) {
+        m_rendered_texture->Begin(false); // do not upload texture data
         CatchGLErrors("Failed to begin texture storage 2d for spherical harmonics");
         // this ought to be refactored into a more reusable format
-        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, m_sh_texture->GetWidth(), m_sh_texture->GetHeight());
+        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, m_rendered_texture->GetWidth(), m_rendered_texture->GetHeight());
         CatchGLErrors("Failed to set texture storage 2d for spherical harmonics");
-        m_sh_texture->End();
+        m_rendered_texture->End();
         CatchGLErrors("Failed to end texture storage 2d for spherical harmonics");
     }
 
-    glBindImageTexture(0, m_sh_texture->GetId(), 0, false, 0, GL_WRITE_ONLY, GL_RGBA8);
+    glBindImageTexture(0, m_rendered_texture->GetId(), 0, false, 0, GL_WRITE_ONLY, GL_RGBA8);
     CatchGLErrors("Failed to bind imagetexture");
-    static_cast<ComputeShader*>(m_shader.get())->Dispatch(8, 8, 1);
-    std::cout << "dispatch\n";
+
+    m_spherical_harmonics_shader->SetUniform(
+        m_spherical_harmonics_shader->m_uniform_src_texture,
+        m_cubemap.get()
+    );
+    m_spherical_harmonics_shader->Use();
+    m_spherical_harmonics_shader->Dispatch(8, 8, 1);
+    m_spherical_harmonics_shader->End();
+
     glBindImageTexture(0, 0, 0, false, 0, GL_WRITE_ONLY, GL_RGBA8);
 
     m_needs_rerender = false;

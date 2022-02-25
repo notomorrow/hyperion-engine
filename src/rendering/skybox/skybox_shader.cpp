@@ -24,27 +24,13 @@ SkyboxShader::SkyboxShader(const ShaderProperties &properties)
         properties,
         fs_path
     );
+
+    m_uniform_camera_position = m_uniforms.Acquire("u_camerapos").id;
 }
 
 void SkyboxShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
-
-    // int texture_index = 10;
-
-    for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
-        if (it->second == nullptr) {
-            continue;
-        }
-
-        // Texture::ActiveTexture(texture_index);
-        it->second->Prepare();
-
-        SetUniform(it->first, it->second.get());
-        SetUniform(std::string("Has") + it->first, 1);
-
-        // texture_index++;
-    }
 }
 
 void SkyboxShader::ApplyTransforms(const Transform &transform, Camera *camera)
@@ -54,6 +40,6 @@ void SkyboxShader::ApplyTransforms(const Transform &transform, Camera *camera)
 
     Shader::ApplyTransforms(updated_transform, camera);
 
-    SetUniform("u_camerapos", camera->GetTranslation());
+    SetUniform(m_uniform_camera_position, camera->GetTranslation());
 }
 } // namespace hyperion

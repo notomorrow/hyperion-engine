@@ -16,7 +16,7 @@ Game::Game(const RenderWindow &window)
         &m_renderer->GetRenderWindow(),
         m_renderer->GetRenderWindow().GetScaledWidth(),
         m_renderer->GetRenderWindow().GetScaledHeight(),
-        75.0f,
+        65.0f,
         0.05f,
         250.0f
     );
@@ -49,7 +49,10 @@ void Game::Update(double dt)
 
 void Game::PreRender()
 {
-    // no-op
+    m_scene_manager->GetOctree()->UpdateVisibilityState(
+        Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN,
+        m_camera->GetFrustum()
+    );
 }
 
 void Game::Render()
@@ -58,7 +61,7 @@ void Game::Render()
 
     OnRender();
 
-    m_renderer->Render(m_camera);
+    m_renderer->Render(m_camera, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
 
     PostRender();
 }

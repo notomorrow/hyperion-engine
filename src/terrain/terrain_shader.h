@@ -10,6 +10,9 @@ public:
     virtual ~TerrainShader() = default;
 
     virtual void ApplyMaterial(const Material &mat) override;
+
+protected:
+    DeclaredUniform::Id_t m_uniform_base_terrain_scale;
 };
 } // namespace hyperion
 

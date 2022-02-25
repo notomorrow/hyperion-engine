@@ -22,6 +22,8 @@ ShadowMapping::ShadowMapping(double max_dist, int level, bool use_fbo)
 
     fbo = new Framebuffer2D(2048, 2048, true, true, false, false);
 
+    UpdateShadowMapFiltering();
+
     Environment::GetInstance()->SetShadowSplit(m_level, m_max_dist);
 }
 
@@ -56,6 +58,11 @@ void ShadowMapping::Render(Renderer *renderer, Camera *cam)
     if (!renderer->GetEnvironment()->ShadowsEnabled()) {
         return;
     }
+
+    SceneManager::GetInstance()->GetOctree()->UpdateVisibilityState(
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_level),
+        shadow_cam->GetFrustum()
+    );
 
     UpdateFrustumPoints(frustum_corners_ws);
 
@@ -114,16 +121,16 @@ void ShadowMapping::Render(Renderer *renderer, Camera *cam)
 
     renderer->RenderBucket(
         GetShadowCamera(),
-        renderer->GetBucket(Spatial::Bucket::RB_OPAQUE),
-        m_depth_shader.get(),
-        false
+        Spatial::Bucket::RB_OPAQUE,
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_level),
+        m_depth_shader.get()
     );
 
     renderer->RenderBucket(
         GetShadowCamera(),
-        renderer->GetBucket(Spatial::Bucket::RB_TRANSPARENT),
-        m_depth_shader.get(),
-        false
+        Spatial::Bucket::RB_TRANSPARENT,
+        Octree::VisibilityState::CameraType(Octree::VisibilityState::CameraType::VIS_CAMERA_SHADOW0 + m_level),
+        m_depth_shader.get()
     );
 
     if (m_use_fbo) {
@@ -171,15 +178,20 @@ void ShadowMapping::SetVarianceShadowMapping(bool value)
         ShaderProperties().Define("SHADOWS_VARIANCE", value)
     );
 
+    UpdateShadowMapFiltering();
+
+    m_is_variance_shadow_mapping = value;
+}
+
+void ShadowMapping::UpdateShadowMapFiltering()
+{
     if (auto color_texture = fbo->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_COLOR)) {
-        if (value) {
+        if (m_is_variance_shadow_mapping) {
             color_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR);
         } else {
             color_texture->SetFilter(CoreEngine::GLEnums::NEAREST, CoreEngine::GLEnums::NEAREST);
         }
     }
-
-    m_is_variance_shadow_mapping = value;
 }
 
 std::shared_ptr<Renderable> ShadowMapping::CloneImpl()

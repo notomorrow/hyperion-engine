@@ -41,6 +41,29 @@ public:
             SHADER_PROPERTY_BOOL
         } type;
 
+        ShaderProperty()
+            : type(SHADER_PROPERTY_UNSET),
+              raw_value("")
+        {
+            value.int_value = 0;
+        }
+
+        ShaderProperty(const ShaderProperty &other)
+            : type(other.type),
+              raw_value(other.raw_value),
+              value(other.value)
+        {
+        }
+
+        inline ShaderProperty &operator=(const ShaderProperty &other)
+        {
+            type = other.type;
+            raw_value = other.raw_value;
+            value = other.value;
+
+            return *this;
+        }
+
         inline bool operator==(const ShaderProperty &other) const
         {
             return type == other.type &&
@@ -183,104 +206,7 @@ public:
 class Shader {
     friend class Renderer;
 public:
-    Shader(const ShaderProperties &properties);
-    Shader(const ShaderProperties &properties,
-        const std::string &vscode,
-        const std::string &fscode);
-    Shader(const Shader &other) = delete;
-    Shader &operator=(const Shader &other) = delete;
-    virtual ~Shader();
 
-    virtual void ApplyMaterial(const Material &mat);
-    virtual void ApplyTransforms(const Transform &transform, Camera *camera);
-
-    inline int GetId() const { return progid; }
-
-    inline ShaderProperties &GetProperties() { return m_properties; }
-    inline const ShaderProperties &GetProperties() const { return m_properties; }
-    inline void SetProperties(const ShaderProperties &properties) { m_properties = properties; }
-
-    inline MaterialFaceCull SetOverrideCullMode() const { return m_override_cull; }
-    inline void SetOverrideCullMode(MaterialFaceCull cull_mode) { m_override_cull = cull_mode; }
-
-    inline void SetUniform(const std::string &name, float value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, int value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Texture *value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Vector2 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Vector3 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Vector4 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Matrix4 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-
-    void Use();
-    void End();
-
-protected:
-    ShaderProperties m_properties;
-    MaterialFaceCull m_override_cull;
-
-    enum SubShaderType {
-        SUBSHADER_NONE = 0x00,
-        SUBSHADER_FRAGMENT = 0x8B30,
-        SUBSHADER_VERTEX = 0x8B31,
-        SUBSHADER_GEOMETRY = 0x8DD9,
-        SUBSHADER_COMPUTE = 0x91B9
-    };
-
-    struct SubShader {
-        SubShaderType type;
-        int id;
-        std::string code;
-        std::string processed_code;
-        std::string path;
-
-        SubShader()
-            : type(SubShaderType::SUBSHADER_NONE),
-              id(0)
-        {
-        }
-
-        SubShader(SubShaderType type, const std::string &code)
-            : type(type),
-              id(0),
-              code(code)
-        {
-        }
-
-        SubShader(const SubShader &other)
-            : type(other.type),
-              id(other.id),
-              code(other.code),
-              processed_code(other.processed_code),
-              path(other.path)
-        {
-        }
-    };
-
-    void AddSubShader(SubShaderType type,
-        const std::string &code,
-        const ShaderProperties &properties,
-        const std::string &path);
-    void ReprocessSubShader(SubShader &sub_shader, const ShaderProperties &properties);
-
-    // TODO: add better resetting of uniforms
-    // track all uniforms that were set and unset their values.
-    // still, we should be able to keep base uniforms set during the constructor.
-    // two different paths..? a flag on the uniform?
-    void ResetUniforms();
-
-private:
-    bool is_uploaded, is_created, uniform_changed;
-    unsigned int progid;
-
-    size_t m_previous_properties_hash_code;
-
-    void CreateGpuData();
-    void UploadGpuData();
-    void DestroyGpuData();
-    bool ShaderPropertiesChanged() const;
-    // void OutputShaderError(int id);
-
-    void ApplyUniforms();
 
     struct Uniform {
         enum UniformType {
@@ -363,8 +289,206 @@ private:
         }
     };
 
+    struct DeclaredUniform {
+        using Id_t = int;
+
+        Id_t id;
+        const char *name = nullptr;
+        Uniform value;
+
+        DeclaredUniform(Id_t id, const char *name, Uniform value = Uniform())
+            : id(id), name(name), value(value)
+        {
+        }
+
+        DeclaredUniform(const DeclaredUniform &other)
+            : id(other.id), name(other.name), value(other.value)
+        {
+        }
+
+        inline DeclaredUniform &operator=(const DeclaredUniform &other)
+        {
+            id = other.id;
+            name = other.name;
+            value = other.value;
+
+            return *this;
+        }
+    };
+
+    class DeclaredUniforms {
+    public:
+        struct Result {
+            enum {
+                DECLARED_UNIFORM_OK,
+                DECLARED_UNIFORM_ERR
+            } result;
+
+            DeclaredUniform::Id_t id;
+
+            std::string message;
+
+            Result(decltype(result) result, DeclaredUniform::Id_t id = -1, const std::string &message = "")
+                : result(result), message(message), id(id) {}
+            Result(const Result &other)
+                : result(other.result), message(other.message), id(other.id) {}
+            inline Result &operator=(const Result &other)
+            {
+                result = other.result;
+                id = other.id;
+                message = other.message;
+
+                return *this;
+            }
+
+            inline explicit operator bool() const { return result == DECLARED_UNIFORM_OK; }
+        };
+
+        DeclaredUniforms() { m_uniforms.reserve(32); }
+        DeclaredUniforms(const DeclaredUniforms &other) = delete;
+        inline DeclaredUniforms &operator=(const DeclaredUniforms &other) = delete;
+
+        Result Acquire(const char *name)
+        {
+            
+            DeclaredUniform::Id_t id = m_uniforms.size();
+            std::cout << id << "   " << name << "\n";
+            m_uniforms.push_back(DeclaredUniform(id, name));
+
+            return Result(Result::DECLARED_UNIFORM_OK, id);
+        }
+
+        inline void Set(DeclaredUniform::Id_t id, const Uniform &uniform)
+        {
+            ex_assert(id >= 0);
+            ex_assert(id < m_uniforms.size());
+            m_uniforms[id].value = uniform;
+        }
+
+        std::vector<DeclaredUniform> m_uniforms;
+    };
+
+
+    Shader(const ShaderProperties &properties);
+    Shader(const ShaderProperties &properties,
+        const std::string &vscode,
+        const std::string &fscode);
+    Shader(const Shader &other) = delete;
+    Shader &operator=(const Shader &other) = delete;
+    virtual ~Shader();
+
+    virtual void ApplyMaterial(const Material &mat);
+    virtual void ApplyTransforms(const Transform &transform, Camera *camera);
+
+    inline int GetId() const { return progid; }
+
+    inline ShaderProperties &GetProperties() { return m_properties; }
+    inline const ShaderProperties &GetProperties() const { return m_properties; }
+    inline void SetProperties(const ShaderProperties &properties) { m_properties = properties; }
+
+    inline MaterialFaceCull SetOverrideCullMode() const { return m_override_cull; }
+    inline void SetOverrideCullMode(MaterialFaceCull cull_mode) { m_override_cull = cull_mode; }
+
+    inline DeclaredUniforms &GetUniforms() { return m_uniforms; }
+    inline const DeclaredUniforms &GetUniforms() const { return m_uniforms; }
+
+    inline void SetUniform(DeclaredUniform::Id_t id, float value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+    inline void SetUniform(DeclaredUniform::Id_t id, int value)   { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+    inline void SetUniform(DeclaredUniform::Id_t id, const Texture *value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+    inline void SetUniform(DeclaredUniform::Id_t id, const Vector2 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+    inline void SetUniform(DeclaredUniform::Id_t id, const Vector3 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+    inline void SetUniform(DeclaredUniform::Id_t id, const Vector4 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+    inline void SetUniform(DeclaredUniform::Id_t id, const Matrix4 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+
+    /*inline void SetUniform(const std::string &name, float value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, int value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, const Texture *value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, const Vector2 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, const Vector3 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, const Vector4 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
+    inline void SetUniform(const std::string &name, const Matrix4 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }*/
+
+    void Use();
+    void End();
+
+protected:
+    ShaderProperties m_properties;
+    MaterialFaceCull m_override_cull;
+
+    enum SubShaderType {
+        SUBSHADER_NONE = 0x00,
+        SUBSHADER_FRAGMENT = 0x8B30,
+        SUBSHADER_VERTEX = 0x8B31,
+        SUBSHADER_GEOMETRY = 0x8DD9,
+        SUBSHADER_COMPUTE = 0x91B9
+    };
+
+    struct SubShader {
+        SubShaderType type;
+        int id;
+        std::string code;
+        std::string processed_code;
+        std::string path;
+
+        SubShader()
+            : type(SubShaderType::SUBSHADER_NONE),
+              id(0)
+        {
+        }
+
+        SubShader(SubShaderType type, const std::string &code)
+            : type(type),
+              id(0),
+              code(code)
+        {
+        }
+
+        SubShader(const SubShader &other)
+            : type(other.type),
+              id(other.id),
+              code(other.code),
+              processed_code(other.processed_code),
+              path(other.path)
+        {
+        }
+    };
+
+    void AddSubShader(SubShaderType type,
+        const std::string &code,
+        const ShaderProperties &properties,
+        const std::string &path);
+    void PreprocessSubShader(SubShader &sub_shader, const ShaderProperties &properties);
+
+    void InitUniforms();
+    void ResetUniforms();
+
+    DeclaredUniform::Id_t m_uniform_viewport;
+    DeclaredUniform::Id_t m_uniform_flip_uv_x;
+    DeclaredUniform::Id_t m_uniform_flip_uv_y;
+    DeclaredUniform::Id_t m_uniform_uv_scale;
+    DeclaredUniform::Id_t m_uniform_model_matrix;
+    DeclaredUniform::Id_t m_uniform_view_matrix;
+    DeclaredUniform::Id_t m_uniform_proj_matrix;
+    DeclaredUniform::Id_t m_uniform_view_proj_matrix;
+    DeclaredUniform::Id_t m_uniform_textures[MATERIAL_MAX_TEXTURES],
+        m_uniform_has_textures[MATERIAL_MAX_TEXTURES];
+
+    DeclaredUniforms m_uniforms;
+
+private:
+    bool is_uploaded, is_created, uniform_changed;
+    unsigned int progid;
+
+    HashCode::Value_t m_previous_properties_hash_code;
+
+    void CreateGpuData();
+    void UploadGpuData();
+    void DestroyGpuData();
+    bool ShaderPropertiesChanged() const;
+
+    void ApplyUniforms();
+
     std::map<SubShaderType, SubShader> subshaders;
-    std::map<std::string, Uniform> uniforms;
 };
 
 } // namespace hyperion

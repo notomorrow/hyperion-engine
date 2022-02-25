@@ -11,8 +11,8 @@ uniform sampler2D SSLightingMap;
 uniform int HasSSLightingMap;
 in vec2 v_texcoord0;
 
-uniform vec2 u_resolution;
-float strength = 1.0;
+uniform vec2 Resolution;
+uniform float Strength = 1.0;
 
 #define $CAP_MIN_DISTANCE 0.0001
 #define $CAP_MAX_DISTANCE 0.01
@@ -23,8 +23,8 @@ float strength = 1.0;
 
 #define $PI 3.14159265
 
-float width = u_resolution.x; //texture width
-float height = u_resolution.y; //texture height
+float width = Resolution.x; //texture width
+float height = Resolution.y; //texture height
 
 vec2 texCoord = v_texcoord0;
 
@@ -166,7 +166,7 @@ void main(void)
 
 
   ao /= float(samples);
-  ao *= strength;
+  ao *= Strength;
   ao = 1.0-ao;
 
   if (mist)

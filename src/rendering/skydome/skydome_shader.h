@@ -20,6 +20,16 @@ public:
     void SetGlobalTime(float global_time);
 
 private:
+    DeclaredUniform::Id_t m_uniform_noise_map,
+        m_uniform_fg, m_uniform_fg2,
+        m_uniform_sun_color,
+        m_uniform_global_time;
+
+    // lights
+    DeclaredUniform::Id_t m_uniform_directional_light_direction,
+        m_uniform_directional_light_color,
+        m_uniform_directional_light_intensity;
+
     std::shared_ptr<Texture2D> noise_map;
 
     float m_global_time;
