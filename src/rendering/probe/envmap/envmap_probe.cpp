@@ -141,6 +141,8 @@ void EnvMapProbe::RenderCubemap(Renderer *renderer, Camera *cam)
     );
 
     m_fbo->End();
+
+    Environment::GetInstance()->SetGlobalCubemap(GetColorTexture());
 }
 
 void EnvMapProbe::RenderSphericalHarmonics()

@@ -115,7 +115,7 @@ void main()
 #endif // VCT_ENABLED
 
 #if PROBE_ENABLED
-  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent);
+  blurredSpecularCubemap = SampleEnvProbe(env_GlobalIrradianceCubemap, n, v_position.xyz, u_camerapos, 0.0);
   specularCubemap += SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent);
   //specularCubemap += mix(SampleEnvProbe(env_GlobalCubemap, n, v_position.xyz, u_camerapos, v_tangent, v_bitangent), blurredSpecularCubemap, roughnessMix);
 #if !SPHERICAL_HARMONICS_ENABLED
