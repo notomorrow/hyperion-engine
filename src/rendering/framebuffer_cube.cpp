@@ -28,7 +28,7 @@ FramebufferCube::FramebufferCube(int width, int height)
         auto color_texture = std::make_shared<Cubemap>(color_textures);
         color_texture->SetInternalFormat(GL_RGB8);
         color_texture->SetFormat(GL_RGB);
-        color_texture->SetFilter(GL_NEAREST, GL_NEAREST);
+        color_texture->SetFilter(GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
         color_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
         m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)] = color_texture;
@@ -71,7 +71,7 @@ void FramebufferCube::Use()
     glViewport(0, 0, width, height);
 
     if (!is_uploaded) {
-        m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)]->Begin(); // TODO: try with should_upload_data = false
+        m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)]->Begin();
         for (int i = 0; /*i < 6*/ i < 1; i++) {
             glFramebufferTexture(
                 GL_FRAMEBUFFER,
@@ -113,6 +113,16 @@ void FramebufferCube::Use()
 
         is_uploaded = true;
     }
+}
+
+void FramebufferCube::End()
+{
+    Framebuffer::End();
+
+    m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)]->Begin();
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+    CatchGLErrors("Failed to generate cubemap framebuffer mipmaps.", false);
+    m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)]->End();
 }
 
 void FramebufferCube::Store(FramebufferAttachment attachment, std::shared_ptr<Texture> &texture)

@@ -29,7 +29,7 @@ Renderer::Renderer(const RenderWindow &render_window)
             Octree::VisibilityState::CameraType camera_type = Octree::VisibilityState::CameraType(int32_t(raw_data));
             
             for (const auto &node : oct->GetNodes()) {
-                if (auto * ptr = m_all_items.GetBucket(node.m_spatial.GetBucket()).GetItemPtr(node.m_id)) {
+                if (auto *ptr = m_all_items.GetBucket(node.m_spatial.GetBucket()).GetItemPtr(node.m_id)) {
                     ptr->m_flags |= 1 << camera_type; // temp
                 }
             }
@@ -76,7 +76,7 @@ void Renderer::Render(Camera *cam, Octree::VisibilityState::CameraType camera_ty
 
 void Renderer::RenderBucket(Camera *cam, Spatial::Bucket spatial_bucket, Octree::VisibilityState::CameraType camera_type, Shader *override_shader)
 {
-    Bucket &bucket = m_all_items.GetBucket(spatial_bucket);//GetBucket(spatial_bucket, camera_type);
+    Bucket &bucket = m_all_items.GetBucket(spatial_bucket);
 
     bool enable_frustum_culling = bucket.enable_culling;
 

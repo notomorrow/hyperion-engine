@@ -141,12 +141,12 @@ public:
     {
         AssetManager *asset_manager = AssetManager::GetInstance();
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/posx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/negx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/posy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/negy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/posz.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/negz.jpg")
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posz.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negz.jpg")
         }));
 
         cubemap->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
@@ -256,12 +256,12 @@ public:
         GetRenderer()->GetDeferredPipeline()->GetPreFilterStack()->AddFilter<SSAOFilter>("ssao", 5);
         //GetRenderer()->GetDeferredPipeline()->GetPostFilterStack()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         GetRenderer()->GetDeferredPipeline()->GetPostFilterStack()->AddFilter<BloomFilter>("bloom", 80);
-        //GetRenderer()->GetDeferredPipeline()->GetPostFilterStack()->AddFilter<FXAAFilter>("fxaa", 9999);
+        GetRenderer()->GetDeferredPipeline()->GetPostFilterStack()->AddFilter<FXAAFilter>("fxaa", 9999);
 
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(1, 1, 0).Normalize());
-        Environment::GetInstance()->GetSun().SetIntensity(100000.0f);
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5, 1, 0).Normalize());
+        Environment::GetInstance()->GetSun().SetIntensity(600000.0f);
         Environment::GetInstance()->GetSun().SetColor(Vector4(1.0, 0.8, 0.65, 1.0));
 
 
@@ -303,7 +303,7 @@ public:
         GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
         //GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
-        GetScene()->Update(0.1f);
+        ///GetScene()->Update(0.1f);
 
         /*GetSceneManager()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
             std::cout << "event " << evt << ", node: " << node_id << "\n";
@@ -323,9 +323,9 @@ public:
 
 #if 1
         m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
-            auto model = asset_manager->LoadFromFile<Node>("models/fireplace_room/fireplace_room.obj");
+            auto model = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
             model->SetName("model");
-            model->Scale(Vector3(5.01f));
+            model->Scale(Vector3(0.01f));
             for (size_t i = 0; i < model->NumChildren(); i++) {
                 if (model->GetChild(i) == nullptr) {
                     continue;
@@ -404,6 +404,7 @@ public:
             }
 
             model->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+            model->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
             scene->AddChildAsync(model, [](const std::shared_ptr<Node> &) {
                 std::cout << "!!! ADDED\n";
             });
@@ -562,14 +563,14 @@ public:
             }
         }
 
-        /*auto house = asset_manager->LoadFromFile<Node>("models/house.obj");
+        auto house = asset_manager->LoadFromFile<Node>("models/house.obj");
         for (size_t i = 0; i < house->NumChildren(); i++) {
             if (auto &child = house->GetChild(i)) {
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.05f);
             }
         }
-        GetScene()->AddChild(house);*/
+        GetScene()->AddChild(house);
 
 
         auto tv = asset_manager->LoadFromFile<Node>("models/television/Television_01_4k.obj", true);
@@ -600,10 +601,10 @@ public:
         }
 
         auto shadow_node = std::make_shared<Node>("shadow_node");
-        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 5.0f));
+        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 18.0f));
         //shadow_node->SetLocalTranslation(Vector3(22, 12, 5));
         shadow_node->SetLocalTranslation({ 10.0f, 8.0f, -9.0f });
-        //shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
+        shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
         GetScene()->AddChild(shadow_node);
 
         bool add_spheres = true;

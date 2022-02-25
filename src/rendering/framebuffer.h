@@ -78,7 +78,7 @@ public:
     virtual void Store(FramebufferAttachment attachment, std::shared_ptr<Texture> &texture) = 0;
 
     virtual void Use() = 0;
-    void End();
+    virtual void End();
 
 protected:
     unsigned int id;

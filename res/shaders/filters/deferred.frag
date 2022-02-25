@@ -19,11 +19,12 @@ uniform sampler2D PositionMap;
 uniform sampler2D DataMap;
 uniform sampler2D TangentMap;
 uniform sampler2D BitangentMap;
-
 uniform sampler3D LightVolumeMap;
 
 uniform sampler2D SSLightingMap;
 uniform int HasSSLightingMap;
+
+uniform vec2 Resolution;
 
 uniform vec3 CameraPosition;
 uniform vec2 CameraNearFar;
@@ -34,10 +35,12 @@ float linearDepth(mat4 projMatrix, float depth)
     return projMatrix[3][2] / (depth * projMatrix[2][3] - projMatrix[2][2]);
 }
 
-#define $VOLUMETRIC_LIGHTING_ENABLED 0
+#define $VOLUMETRIC_LIGHTING_ENABLED 1
 
 #include "../post/modules/base.glsl"
+#if SSR_ENABLED
 #include "../post/modules/ssr.glsl"
+#endif
 
 #if VOLUMETRIC_LIGHTING_ENABLED
 #include "../post/modules/light_rays.glsl"
@@ -169,8 +172,7 @@ void main()
     float lod = 12.0 * perceptualRoughness * (2.0 - perceptualRoughness);
 
 #if PROBE_ENABLED
-    specularCubemap = SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, tangent, bitangent);
-  //specularCubemap += mix(SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, tangent, bitangent), blurredSpecularCubemap, roughnessMix);
+    specularCubemap = SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, lod);
 #endif // PROBE_ENABLED
 
 #if !PROBE_ENABLED
@@ -237,18 +239,11 @@ void main()
     float ax = max(.001, sqr(roughness)/aspect);
     float ay = max(.001, sqr(roughness)*aspect);
 	
-	
     vec2 AB = vec2(1.0, 1.0) - BRDFMap(NdotV, perceptualRoughness);
-	
-	//result = mix(Fd, ss, subsurface) * Cdlin;
-	
-	//irradiance = mix(irradiance, gi.rgb, gi.a);
-	//irradiance *= mix(vec3(1.0), gi.rgb, gi.a);
 
     irradiance += gi.rgb;
 	
 	// ibl
-	
 	vec3 result;
 	float materialReflectance = 0.5;
 	float reflectance = 0.16 * materialReflectance * materialReflectance; // dielectric reflectance
@@ -277,9 +272,6 @@ void main()
     vec3 energyCompensation = vec3(1.0);
 //#endif
 
-	// surface
-    
-
 #if VOLUMETRIC_LIGHTING_ENABLED
     PostProcess_LightRays(ppd, ppr);
     result = (ppr.mode == $POST_PROCESS_EQL) ? ppr.color.rgb :
@@ -287,21 +279,7 @@ void main()
         (ppr.mode == $POST_PROCESS_MUL) ? result * ppr.color.rgb : result;
 #endif
 
-
-#if 0
-    vec3 rayDir = position.xyz - CameraPosition;
-    float rayLength = length(rayDir);
-    rayDir /= rayLength;
-    rayLength = min(rayLength, linearDepth(u_projMatrix, depth));
-    //rayDir = normalize(rayDir);
-    
-    //vec3 rayDeltaStep = rayDir / ($VOLUMETRIC_LIGHTING_STEPS + 1);
-    
-    //vec3 rayDirNorm = normalize(rayDir);
-    vec4 volumetric = VolumetricLightRaymarch(v_texcoord0, CameraPosition, rayDir, rayLength);
-#endif
-    
-
+	// surface
     vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
     float _D = DistributionGGX(N, H, roughness); // GTR2_aniso(NdotH, HdotX, HdotY, ax, ay)
 	vec3 _Fr = (_D * cookTorranceG(NdotL, NdotV, LdotH, NdotH)) * SchlickFresnel(F0, F90, LdotH);
@@ -317,11 +295,6 @@ void main()
 	surfaceShading *= exposure * env_DirectionalLight.intensity;
 	result += surfaceShading;
 
-#if VOLUMETRIC_LIGHTING_ENABLED
-    //result += volumetric.rgb * exposure * env_DirectionalLight.intensity;
-    //result += (depth < $VOLUMETRIC_LIGHTING_FADE_END) ? mix(volumetric.rgb * exposure * env_DirectionalLight.intensity, vec3(0.0), ($VOLUMETRIC_LIGHTING_FADE_END - depth)/($VOLUMETRIC_LIGHTING_FADE_END - $VOLUMETRIC_LIGHTING_FADE_START)) : vec3(0.0);
-#endif
-
 #endif
 
     for (int i = 0; i < env_NumPointLights; i++) {
@@ -336,7 +309,7 @@ void main()
             metallic
         );
     }
-	
+
 	result.rgb = tonemap(result.rgb);
 
     output0 = vec4(result.rgb, 1.0);
