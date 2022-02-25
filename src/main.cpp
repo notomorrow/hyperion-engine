@@ -141,12 +141,12 @@ public:
     {
         AssetManager *asset_manager = AssetManager::GetInstance();
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/posx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/negx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/posy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/negy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/posz.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/negz.jpg")
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posz.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negz.jpg")
         }));
 
         cubemap->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
@@ -240,9 +240,9 @@ public:
 
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
             .Define("NORMAL_MAPPING", true)
-            .Define("SHADOW_MAP_RADIUS", 0.01f)
-            .Define("SHADOW_PCF", false)
-            .Define("SHADOWS_VARIANCE", true)
+            .Define("SHADOW_MAP_RADIUS", 0.005f)
+            .Define("SHADOW_PCF", true)
+            .Define("SHADOWS_VARIANCE", false)
         );
 
         AssetManager *asset_manager = AssetManager::GetInstance();
@@ -260,12 +260,12 @@ public:
 
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(.7, 1, .7).Normalize());
-        Environment::GetInstance()->GetSun().SetIntensity(200000.0f);
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(1, 1, 0).Normalize());
+        Environment::GetInstance()->GetSun().SetIntensity(300000.0f);
         Environment::GetInstance()->GetSun().SetColor(Vector4(1.0, 0.8, 0.65, 1.0));
 
 
-        GetCamera()->SetTranslation(Vector3(0, 4, 0));
+        GetCamera()->SetTranslation(Vector3(0, 8, 0));
 
         // Initialize particle system
         // InitParticleSystem();
@@ -303,9 +303,24 @@ public:
         //GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
+        /*auto model = AssetManager::GetInstance()->LoadFromFile<Node>("models/monkey.obj");
+        for (size_t i = 0; i < model->NumChildren(); i++) {
+            if (model->GetChild(i) == nullptr) {
+                continue;
+            }
+            if (auto renderable = model->GetChild(i)->GetRenderable()) {
+                if (auto mesh = std::dynamic_pointer_cast<Mesh>(renderable)) {
+                    auto voxel_mesh = MeshFactory::DebugVoxelMesh(MeshFactory::BuildVoxels(mesh));
+                    voxel_mesh->SetShader(mesh->GetShader());
+                    model->GetChild(i)->SetRenderable(voxel_mesh);
+                    continue;
+                }
+            }
+        }
+        GetScene()->AddChild(model);*/
         ///GetScene()->Update(0.1f);
 
-        /*GetSceneManager()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
+        /*GetSceneManager()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial, void*) {
             std::cout << "event " << evt << ", node: " << node_id << "\n";
             if (evt == OCTREE_INSERT_OCTANT) {
                 std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
@@ -321,7 +336,8 @@ public:
             }
         });*/
 
-#if 0
+#if 1
+
         m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
             auto model = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
             model->SetName("model");
@@ -457,13 +473,13 @@ public:
         GetScene()->AddChild(terrain);
         terrain->Move({ 5, 0, -5 });
 
-        /*GetScene()->AddControl(std::make_shared<NoiseTerrainControl>(GetCamera()));
+        GetScene()->AddControl(std::make_shared<NoiseTerrainControl>(GetCamera()));
         auto tmp = std::make_shared<Node>("dummy node for vct");
         tmp->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0, 0, 0), BoundingBox(Vector3(-15, 5, -15), Vector3(15, 5, 15))));
         tmp->AddControl(std::make_shared<GIProbeControl>(Vector3(0, 0, 0)));
         GetScene()->AddChild(tmp);*/
 
-        /*auto tree = asset_manager->LoadFromFile<Node>("models/conifer/Conifer_Low.obj");
+        auto tree = asset_manager->LoadFromFile<Node>("models/conifer/Conifer_Low.obj");
         for (size_t i = 0; i < tree->NumChildren(); i++) {
             if (auto child = tree->GetChild(i)) {
                 //child->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
@@ -525,7 +541,7 @@ public:
         tree5->SetLocalTranslation({ 27.f, 7.f, -1.f });
         tree5->SetLocalScale(0.045f);
         tree5->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(-76.0f)));
-        GetScene()->AddChild(tree5);*/
+        GetScene()->AddChild(tree5);
 #endif
 
         bool write = false;
@@ -601,24 +617,26 @@ public:
         }
 
         auto shadow_node = std::make_shared<Node>("shadow_node");
-        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 18.0f));
+        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 6.0f));
         //shadow_node->SetLocalTranslation(Vector3(22, 12, 5));
-        shadow_node->SetLocalTranslation({ 10.0f, 8.0f, -9.0f });
+        //shadow_node->SetLocalTranslation({ 10.0f, 8.0f, -9.0f });
         shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
         GetScene()->AddChild(shadow_node);
 
-        bool add_spheres = true;
+
+
+        bool add_spheres = false;
 
         if (add_spheres) {
 
             for (int x = 0; x < 5; x++) {
                 for (int z = 0; z < 5; z++) {
 
-                    Vector3 box_position = Vector3(((float(x) + 23.0f)), 7.4f, (float(z) - 5.0f));
+                    Vector3 box_position = Vector3(((float(x))), 6.4f, (float(z)));
 
                     //m_threads.emplace_back(std::thread([=, scene = GetScene()]() {
-                    auto box = asset_manager->LoadFromFile<Node>("models/cube.obj", true);
-                        box->SetLocalScale(0.35f);
+                    auto box = asset_manager->LoadFromFile<Node>("models/sphere_hq.obj", true);
+                        box->SetLocalScale(0.1f);
                         //box->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
 
 
@@ -642,12 +660,12 @@ public:
                             //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
 
 
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-albedo.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-ao.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-normal-dx.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-roughness.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-metallic.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-height.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_albedo.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_ao.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_normal-dx.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_roughness.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_metallic.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_height.png"));
                             box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
                             box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.08f);
 
@@ -768,6 +786,10 @@ public:
 
     void Logic(double dt)
     {
+        for (int i = 0; i < 2; i++) {
+            auto shader = ShaderManager::GetInstance()->GetShader<LightingShader>();
+            std::cout << shader->GetId() << "\n";
+        }
         if (GetInputManager()->IsButtonDown(MouseButton::MOUSE_BTN_LEFT) && m_selected_node != nullptr) {
             //std::cout << "Left button down\n";
             if (!m_dragging_node) {

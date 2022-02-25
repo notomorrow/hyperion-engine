@@ -11,7 +11,6 @@
 #define $SSR_Z_THICKNESS_THRESHOLD 0.1
 #define $SSR_JITTER_OFFSET 0
 
-uniform vec2 Resolution;
 uniform float CamFar;
 uniform float CamNear;
 

@@ -99,18 +99,14 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
 
     auto split_tokens = [&, this](std::string token) {
         if (token.length() != 0) {
-            auto trimmed = StringUtil::Trim(token);
-
-            if (trimmed.length() != 0) {
-                tokens.push_back(trimmed);
-            }
+            tokens.push_back(token);
         }
     };
 
-    //for (auto &line : lines) {
     buf.ReadLines([&, this](auto line) {
         tokens.clear();
 
+        StringUtil::Trim(line);
         StringUtil::SplitBuffered(line, ' ', split_tokens);
 
         if (!tokens.empty() && tokens[0] != "#") {

@@ -6,7 +6,7 @@
 #include <iostream>
 
 namespace hyperion {
-    inline void CatchGLErrors(const char *message, bool should_throw = true, bool recursive = true)
+    inline void CatchGLErrors(const char *message, bool should_throw = true, bool recursive = false)
     {
         unsigned int errors[16] = { GL_NO_ERROR },
             error = GL_NO_ERROR,

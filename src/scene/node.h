@@ -151,6 +151,13 @@ public:
 
     inline Spatial &GetSpatial() { return m_spatial; }
     inline const Spatial &GetSpatial() const { return m_spatial; }
+    inline void SetSpatial(const Spatial &spatial)
+    {
+        m_spatial = spatial;
+        SetTransformUpdateFlag();
+        SetAABBUpdateFlag();
+    }
+
     inline const std::shared_ptr<Renderable> &GetRenderable() const { return m_spatial.m_renderable; }
     inline void SetRenderable(const std::shared_ptr<Renderable> &renderable) { m_spatial.m_renderable = renderable; }
 

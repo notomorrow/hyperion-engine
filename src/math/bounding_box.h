@@ -23,10 +23,11 @@ public:
     inline void SetMin(const Vector3 &min) { m_min = min; }
     inline const Vector3 &GetMax() const { return m_max; }
     inline void SetMax(const Vector3 &max) { m_max = max; }
-    inline Vector3 GetDimensions() const { return m_max - m_min; }
     std::array<Vector3, 8> GetCorners() const;
     inline Vector3 GetCenter() const { return (m_max + m_min) / Vector3(2.0f); }
     void SetCenter(const Vector3 &center);
+    inline Vector3 GetDimensions() const { return m_max - m_min; }
+    void SetDimensions(const Vector3 &dimensions);
 
     BoundingBox operator*(double scalar) const;
     BoundingBox operator*(const Transform &transform) const;

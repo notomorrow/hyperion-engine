@@ -130,7 +130,7 @@ std::shared_ptr<Node> Populator::CreateEntityNode(Patch &patch)
             node->SetMaterial(std::get<2>(meshes.front()));
             node->AddControl(std::make_shared<BoundingBoxControl>());
         }*/
-        std::vector<RenderableMesh_t> meshes = MeshFactory::GatherMeshes(node.get());
+        std::vector<Spatial> meshes = MeshFactory::GatherMeshes(node.get());
 
         if (!meshes.empty()) {
             auto merged_meshes = MeshFactory::MergeMeshesOnMaterial(meshes);
@@ -142,11 +142,13 @@ std::shared_ptr<Node> Populator::CreateEntityNode(Patch &patch)
             for (auto &renderable_mesh : merged_meshes) {
                 std::shared_ptr<Node> subnode = std::make_shared<Node>(std::string("Batched subnode ") + std::to_string(counter++));
 
-                auto mesh = std::get<0>(renderable_mesh);
+                /*auto mesh = std::get<0>(renderable_mesh);
                 subnode->SetRenderable(mesh);
 
                 auto material = std::get<2>(renderable_mesh);
-                subnode->SetMaterial(material);
+                subnode->SetMaterial(material);*/
+
+                subnode->SetSpatial(renderable_mesh);
 
                 // TODO: refactor this all to use Spatial
                 subnode->GetSpatial().GetMaterial().alpha_blended = true;
