@@ -26,11 +26,7 @@ Feel free to contribute anything - We'd love to have some more eyes on this proj
 
 ![Apex engine screenshot](/screenshots/screenshot57.PNG)
 ![Apex engine screenshot](/screenshots/screenshot58.PNG)
-![Apex engine screenshot](/screenshots/screenshot50.PNG)
-![Apex engine screenshot](/screenshots/screenshot47.PNG)
-![Apex engine screenshot](/screenshots/screenshot45.PNG)
-![Apex engine screenshot](/screenshots/screenshot40.PNG)
-![Apex engine screenshot](/screenshots/screenshot36.PNG)
+![Apex engine screenshot](/screenshots/screenshot61.PNG)
 
 ## Building
 
