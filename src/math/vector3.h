@@ -71,6 +71,9 @@ public:
     bool operator!=(const Vector3 &other) const;
     inline Vector3 operator-() const { return operator*(-1.0f); }
 
+    inline bool operator<(const Vector3 &other) const
+        { return x < other.x && y < other.y && z < other.z; }
+
     float Length() const;
     float LengthSquared() const;
 

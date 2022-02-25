@@ -239,7 +239,7 @@ void main (void)
 
   // Apply exposure.
   color *= env_DirectionalLight.color.rgb;
-  color *= exposure * env_DirectionalLight.intensity;
+  color *= exposure * $SKY_INTENSITY;
   color = tonemap(color);
   
   output0 = vec4(color, 1.0);

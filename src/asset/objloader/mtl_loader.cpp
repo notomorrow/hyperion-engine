@@ -4,8 +4,11 @@
 #include "../../asset/text_loader.h"
 
 #include <fstream>
+
+#if HYPERION_MTL_USE_THREADS
 #include <thread>
 #include <mutex>
+#endif
 
 /*
  Illumination    Properties that are turned on in the
@@ -48,10 +51,12 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
 
     std::vector<std::string> lines = StringUtil::Split(loaded_text->GetText(), '\n');
 
+#if HYPERION_MTL_USE_THREADS
     std::vector<std::thread> texture_threads;
     std::mutex texture_mutex;
 
-    std::map < Material *, std::pair<std::string, std::shared_ptr<Texture>>> tex_map;
+    std::map<Material *, std::pair<std::string, std::shared_ptr<Texture>>> tex_map;
+#endif
 
     for (auto &line : lines) {
         line = StringUtil::Trim(line);
@@ -70,6 +75,7 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
                     const std::string loc = tokens[1];
 
                     if (Material *last_mtl = mtl->GetLastMaterial()) {
+#if HYPERION_MTL_USE_THREADS
                         texture_threads.push_back(std::thread([this, last_mtl, loc, path, &texture_mutex]() {
 
                             if (auto tex = LoadTexture(loc, path)) {
@@ -78,6 +84,11 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
                                 texture_mutex.unlock();
                             }
                         }));
+#else
+                        if(auto tex = LoadTexture(loc, path)) {
+                            last_mtl->SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, tex);
+                        }
+#endif
                     }
                 }
             } else if (tokens[0] == "map_bump") {
@@ -85,6 +96,7 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
                     const std::string loc = tokens[1];
 
                     if (Material *last_mtl = mtl->GetLastMaterial()) {
+#if HYPERION_MTL_USE_THREADS
                         texture_threads.push_back(std::thread([this, last_mtl, loc, path, &texture_mutex]() {
 
                             if (auto tex = LoadTexture(loc, path)) {
@@ -93,6 +105,11 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
                                 texture_mutex.unlock();
                             }
                         }));
+#else
+                            if (auto tex = LoadTexture(loc, path)) {
+                                last_mtl->SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, tex);
+                            }
+#endif
                     }
                 }
             } else if (tokens[0] == "map_Ks") {
@@ -100,6 +117,7 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
                     const std::string loc = tokens[1];
 
                     if (Material *last_mtl = mtl->GetLastMaterial()) {
+#if HYPERION_MTL_USE_THREADS
                         texture_threads.push_back(std::thread([this, last_mtl, loc, path, &texture_mutex]() {
 
                             if (auto tex = LoadTexture(loc, path)) {
@@ -108,6 +126,11 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
                                 texture_mutex.unlock();
                             }
                         }));
+#else
+                        if (auto tex = LoadTexture(loc, path)) {
+                            last_mtl->SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, tex);
+                        }
+#endif
                     }
                 }
             } else if (tokens[0] == "map_Ns") {
@@ -115,6 +138,7 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
                     const std::string loc = tokens[1];
 
                     if (Material *last_mtl = mtl->GetLastMaterial()) {
+#if HYPERION_MTL_USE_THREADS
                         texture_threads.push_back(std::thread([this, last_mtl, loc, path, &texture_mutex]() {
 
                             if (auto tex = LoadTexture(loc, path)) {
@@ -123,6 +147,11 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
                                 texture_mutex.unlock();
                             }
                         }));
+#else
+                            if (auto tex = LoadTexture(loc, path)) {
+                                last_mtl->SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, tex);
+                            }
+#endif
                     }
                 }
             } else if (tokens[0] == "Kd") {
@@ -163,9 +192,11 @@ std::shared_ptr<Loadable> MtlLoader::LoadFromFile(const std::string &path)
         }
     }
 
+#if HYPERION_MTL_USE_THREADS
     for (auto &th : texture_threads) {
         th.join();
     }
+#endif
 
     return mtl;
 }

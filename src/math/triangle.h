@@ -21,11 +21,23 @@ public:
     Triangle operator*(const Transform &transform) const;
     Triangle &operator*=(const Transform &transform);
 
+    inline bool operator<(const Triangle &other) const
+    {
+        return m_points[0] < other.m_points[0]
+            && m_points[1] < other.m_points[1]
+            && m_points[2] < other.m_points[2];
+    }
+
     inline Vertex &operator[](int index) { return m_points[index]; }
     inline const Vertex &operator[](int index) const { return m_points[index]; }
     inline Vertex &GetPoint(int index) { return operator[](index); }
     inline const Vertex &GetPoint(int index) const { return operator[](index); }
     inline void SetPoint(int index, const Vertex &value) { m_points[index] = value; }
+
+    inline Vector3 GetCenter() const
+    {
+        return (m_points[0].GetPosition() + m_points[1].GetPosition() + m_points[2].GetPosition()) / 3.0f;
+    }
 
     Vertex &Closest(const Vector3 &vec);
     const Vertex &Closest(const Vector3 &vec) const;

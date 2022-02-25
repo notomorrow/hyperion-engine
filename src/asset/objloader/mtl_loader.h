@@ -10,6 +10,8 @@
 #include <string>
 #include <algorithm>
 
+#define HYPERION_MTL_USE_THREADS 0
+
 namespace hyperion {
 
 class MtlLib : public Loadable {

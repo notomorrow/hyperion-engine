@@ -237,7 +237,7 @@ void main()
     float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
 
     float perceptualRoughness = sqrt(roughness);
-    float lod = 26.0 * perceptualRoughness * (2.0 - perceptualRoughness);
+    float lod = 12.0 * perceptualRoughness * (2.0 - perceptualRoughness);
 
 #if PROBE_ENABLED
     specularCubemap = SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, lod);
@@ -310,7 +310,7 @@ void main()
 	
     vec2 AB = vec2(1.0, 1.0) - BRDFMap(NdotV, perceptualRoughness);
 
-    irradiance += gi.rgb;
+    irradiance += gi.rgb * $GI_INTENSITY;
 	
 	// ibl
 	vec3 result;

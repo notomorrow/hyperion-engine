@@ -7,6 +7,7 @@
 #include <vector>
 #include <utility>
 #include <string>
+#include <mutex>
 
 namespace hyperion {
 
@@ -17,6 +18,9 @@ public:
 
     ShaderManager();
     ~ShaderManager();
+
+    template <typename T>
+    std::shared_ptr<T> GetShader() { return GetShader<T>(ShaderProperties()); }
 
     template <typename T>
     std::shared_ptr<T> GetShader(const ShaderProperties &properties)

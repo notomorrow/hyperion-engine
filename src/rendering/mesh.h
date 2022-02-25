@@ -87,6 +87,7 @@ public:
     void SetVertices(const std::vector<Vertex> &verts, const std::vector<MeshIndex> &ind);
     inline const std::vector<Vertex> &GetVertices() const { return vertices; }
     inline const std::vector<MeshIndex> &GetIndices() const { return indices; }
+    std::vector<Triangle> CalculateTriangleBuffer() const;
     void SetTriangles(const std::vector<Triangle> &triangles);
 
     void SetAttribute(MeshAttributeType type, const MeshAttribute &attribute);

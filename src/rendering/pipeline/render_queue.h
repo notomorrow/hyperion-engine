@@ -153,8 +153,8 @@ struct Bucket {
 
             hard_assert(items[i].GetRenderable() != nullptr);
 
-            if (items[i].GetRenderable()->GetShader() != nullptr) {
-                // doing ID check for now... not sure how portable it will be
+            if (items[i].GetRenderable()->GetShader() != nullptr && bucket_item.GetRenderable()->GetShader() != nullptr) {
+                // doing ID check for now.
                 if (items[i].GetRenderable()->GetShader()->GetId() == bucket_item.GetRenderable()->GetShader()->GetId()) {
                     slot_index = is_next_empty ? (i + 1) : (i - 1);
                     slot_found = true;

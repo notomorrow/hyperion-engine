@@ -75,11 +75,34 @@ void Mesh::SetTriangles(const std::vector<Triangle> &triangles)
 
     for (size_t i = 0; i < triangles.size(); i++) {
         for (int j = 0; j < 3; j++) {
-            verts[i] = triangles[i][j];
+            verts[i * 3 + j] = triangles[i][j];
         }
     }
 
     SetVertices(verts);
+}
+
+std::vector<Triangle> Mesh::CalculateTriangleBuffer() const
+{
+    // TODO: assert mesh is triangle type?
+    ex_assert(indices.size() % 3 == 0);
+
+    std::vector<Triangle> triangles;
+    triangles.reserve(indices.size() * 3);
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        MeshIndex i0 = indices[i];
+        MeshIndex i1 = indices[i + 1];
+        MeshIndex i2 = indices[i + 2];
+
+        triangles.emplace_back(Triangle(
+            vertices[i0],
+            vertices[i1],
+            vertices[i2]
+        ));
+    }
+
+    return triangles;
 }
 
 void Mesh::SetAttribute(MeshAttributeType type, const MeshAttribute &attribute)

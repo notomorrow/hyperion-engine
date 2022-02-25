@@ -107,6 +107,8 @@ public:
     inline void AddBoneWeight(float val) { if (nboneweights < MAX_BONE_WEIGHTS) bone_weights[nboneweights++] = val; }
     inline void AddBoneIndex(int val) { if (nboneindices < MAX_BONE_INDICES) bone_indices[nboneindices++] = val; }
 
+    inline bool operator<(const Vertex &other) const { return position < other.position; }
+
 private:
     int nboneindices,
         nboneweights;

@@ -45,6 +45,14 @@ void BoundingBox::SetCenter(const Vector3 &center)
     m_min = center - dimensions * 0.5f;
 }
 
+void BoundingBox::SetDimensions(const Vector3 &dimensions)
+{
+    Vector3 center = GetCenter();
+
+    m_max = center + dimensions * 0.5f;
+    m_min = center - dimensions * 0.5f;
+}
+
 BoundingBox &BoundingBox::operator*=(double scalar)
 {
     m_min *= scalar;
@@ -64,27 +72,6 @@ BoundingBox &BoundingBox::operator*=(const Transform &transform)
     m_min += transform.GetTranslation();
     m_max += transform.GetTranslation();
 
-    return *this;
-}
-
-BoundingBox &BoundingBox::Clear()
-{
-    m_min = Vector3(std::numeric_limits<float>::max());
-    m_max = Vector3(std::numeric_limits<float>::lowest());
-    return *this;
-}
-
-BoundingBox &BoundingBox::Extend(const Vector3 &vec)
-{
-    m_min = Vector3::Min(m_min, vec);
-    m_max = Vector3::Max(m_max, vec);
-    return *this;
-}
-
-BoundingBox &BoundingBox::Extend(const BoundingBox &bb)
-{
-    m_min = Vector3::Min(m_min, bb.m_min);
-    m_max = Vector3::Max(m_max, bb.m_max);
     return *this;
 }
 
@@ -108,6 +95,27 @@ BoundingBox BoundingBox::operator*(const Transform &transform) const
     }
 
     return other;
+}
+
+BoundingBox &BoundingBox::Clear()
+{
+    m_min = Vector3(std::numeric_limits<float>::max());
+    m_max = Vector3(std::numeric_limits<float>::lowest());
+    return *this;
+}
+
+BoundingBox &BoundingBox::Extend(const Vector3 &vec)
+{
+    m_min = Vector3::Min(m_min, vec);
+    m_max = Vector3::Max(m_max, vec);
+    return *this;
+}
+
+BoundingBox &BoundingBox::Extend(const BoundingBox &bb)
+{
+    m_min = Vector3::Min(m_min, bb.m_min);
+    m_max = Vector3::Max(m_max, bb.m_max);
+    return *this;
 }
 
 bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const

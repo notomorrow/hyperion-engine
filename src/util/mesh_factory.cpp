@@ -1,6 +1,7 @@
 #include "mesh_factory.h"
 #include "../math/math_util.h"
 #include "../scene/node.h"
+#include "../scene/spatial.h"
 #include "../hash_code.h"
 
 #include <unordered_map>
@@ -133,12 +134,17 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::shared_ptr<Mesh> &a,
     return new_mesh;
 }
 
-std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const RenderableMesh_t &a, const RenderableMesh_t &b)
+std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const Spatial &a, const Spatial &b)
 {
-    return MergeMeshes(std::get<0>(a), std::get<0>(b), std::get<1>(a), std::get<1>(b));
+    return MergeMeshes(
+        std::dynamic_pointer_cast<Mesh>(a.GetRenderable()),
+        std::dynamic_pointer_cast<Mesh>(b.GetRenderable()),
+        a.GetTransform(),
+        b.GetTransform()
+    );
 }
 
-std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::vector<RenderableMesh_t> &meshes)
+std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::vector<Spatial> &meshes)
 {
     std::shared_ptr<Mesh> mesh;
 
@@ -147,27 +153,32 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::vector<RenderableMesh_
             mesh = std::make_shared<Mesh>();
         }
 
-        mesh = MergeMeshes(std::make_tuple(mesh, Transform(), Material()), it);
+        mesh = MergeMeshes(
+            Spatial(Spatial::Bucket::RB_OPAQUE, mesh, Material(), BoundingBox(), Transform()),
+            it
+        );
     }
 
     return mesh;
 }
 
-std::vector<RenderableMesh_t> MeshFactory::MergeMeshesOnMaterial(const std::vector<RenderableMesh_t> &meshes)
+std::vector<Spatial> MeshFactory::MergeMeshesOnMaterial(const std::vector<Spatial> &meshes)
 {
-    std::unordered_map<HashCode_t, RenderableMesh_t> renderable_map;
+    std::unordered_map<HashCode_t, Spatial> renderable_map;
 
     for (auto &renderable : meshes) {
-        Material material = std::get<2>(renderable);
+        Material material = renderable.GetMaterial();
         HashCode_t material_hash_code = material.GetHashCode().Value();
 
         auto it = renderable_map.find(material_hash_code);
 
         if (it == renderable_map.end()) {
-            renderable_map[material_hash_code] = std::make_tuple(
+            renderable_map[material_hash_code] = Spatial(
+                Spatial::Bucket::RB_OPAQUE,
                 std::make_shared<Mesh>(),
-                Transform(),
-                Material()
+                material,
+                BoundingBox(),
+                Transform()
             );
         }
 
@@ -176,10 +187,16 @@ std::vector<RenderableMesh_t> MeshFactory::MergeMeshesOnMaterial(const std::vect
             renderable
         );
 
-        renderable_map[material_hash_code] = std::make_tuple(merged_mesh, Transform(), material);
+        renderable_map[material_hash_code] = Spatial(
+            Spatial::Bucket::RB_OPAQUE,
+            merged_mesh,
+            material,
+            BoundingBox(),
+            Transform()
+        );
     }
 
-    std::vector<RenderableMesh_t> values;
+    std::vector<Spatial> values;
     values.reserve(renderable_map.size());
 
     for (auto &it : renderable_map) {
@@ -226,6 +243,36 @@ std::shared_ptr<Mesh> MeshFactory::CreateCube(Vector3 offset)
         )
     );
 
+    mesh->CalculateNormals();
+
+    return mesh;
+}
+
+std::shared_ptr<Mesh> MeshFactory::CreateCube(const BoundingBox &aabb)
+{
+    auto mesh = std::make_shared<Mesh>();
+
+#define MESH_FACTORY_QUAD_INDICES(a, b, c, d) a, b, c, a, c, d
+    const std::vector<MeshIndex> indices = {
+        MESH_FACTORY_QUAD_INDICES(1, 0, 3, 2),
+        MESH_FACTORY_QUAD_INDICES(2, 3, 7, 6),
+        MESH_FACTORY_QUAD_INDICES(3, 0, 4, 7),
+        MESH_FACTORY_QUAD_INDICES(6, 5, 1, 2),
+        MESH_FACTORY_QUAD_INDICES(4, 5, 6, 7),
+        MESH_FACTORY_QUAD_INDICES(5, 4, 0, 1)
+    };
+#undef MESH_FACTORY_QUAD_INDICES
+
+    std::vector<Vertex> vertices;
+    vertices.resize(8);
+
+    const auto &corners = aabb.GetCorners();
+
+    for (int i = 0; i < corners.size(); i++) {
+        vertices[i].SetPosition(corners[i]);
+    }
+
+    mesh->SetVertices(vertices, indices);
     mesh->CalculateNormals();
 
     return mesh;
@@ -304,32 +351,165 @@ std::shared_ptr<Mesh> MeshFactory::CreateSphere(float radius, int num_slices, in
     return mesh;
 }
 
-std::vector<RenderableMesh_t> MeshFactory::GatherMeshes(Node *node)
+std::vector<Spatial> MeshFactory::GatherMeshes(Node *node)
 {
     ex_assert(node != nullptr);
 
     node->UpdateTransform();
 
-    std::vector<RenderableMesh_t> meshes;
+    std::vector<Spatial> meshes;
     meshes.reserve(10);
 
     if (auto mesh = std::dynamic_pointer_cast<Mesh>(node->GetRenderable())) {
-        meshes.push_back(std::make_tuple(
-            mesh,
-            node->GetGlobalTransform(),
-            node->GetMaterial()
-        ));
+        meshes.push_back(node->GetSpatial());
     }
 
     for (size_t i = 0; i < node->NumChildren(); i++) {
         if (auto *child = node->GetChild(i).get()) {
-            std::vector<RenderableMesh_t> sub_meshes = GatherMeshes(child);
+            std::vector<Spatial> sub_meshes = GatherMeshes(child);
 
             meshes.insert(meshes.end(), sub_meshes.begin(), sub_meshes.end());
         }
     }
 
     return meshes;
+}
+
+std::vector<Spatial> MeshFactory::SplitMesh(
+    const std::shared_ptr<Mesh> &mesh,
+    size_t num_splits)
+{
+    auto triangles = mesh->CalculateTriangleBuffer();
+    std::sort(triangles.begin(), triangles.end());
+
+    std::vector<BoundingBox> aabbs;
+    std::vector<std::vector<Triangle>> sub_triangles; // map aabbs to tris
+
+    BoundingBox total_aabb = mesh->GetAABB();
+
+    sub_triangles.resize(num_splits * num_splits * num_splits);
+    aabbs.resize(num_splits * num_splits * num_splits);
+    
+    // setup aabbs
+    for (int x = 0; x < num_splits; x++) {
+        for (int y = 0; y < num_splits; y++) {
+            for (int z = 0; z < num_splits; z++) {
+                size_t index = (x * num_splits * num_splits) + (y * num_splits) + z;
+                aabbs[index] = total_aabb;
+                aabbs[index].SetMax(total_aabb.GetMax() * (1.0f / num_splits));
+                aabbs[index].SetCenter(aabbs[index].GetCenter() + (aabbs[index].GetDimensions() * Vector3(x, y, z)));
+            }
+        }
+    }
+
+    // place triangles into correct subarrays
+    for (size_t i = 0; i < triangles.size(); i++) {
+        for (size_t j = 0; j < aabbs.size(); j++) {
+            if (aabbs[j].ContainsPoint(triangles[i][0].GetPosition())
+                || aabbs[j].ContainsPoint(triangles[i][1].GetPosition())
+                || aabbs[j].ContainsPoint(triangles[i][2].GetPosition())) {
+                sub_triangles[j].push_back(triangles[i]);
+            }
+        }
+    }
+
+    std::vector<Spatial> meshes;
+
+    for (size_t i = 0; i < sub_triangles.size(); i++) {
+        auto new_mesh = std::make_shared<Mesh>();
+        new_mesh->SetShader(mesh->GetShader());
+        new_mesh->SetTriangles(sub_triangles[i]);
+        meshes.push_back(Spatial(
+            Spatial::Bucket::RB_OPAQUE,
+            new_mesh,
+            Material(),
+            BoundingBox(),
+            Transform()
+        ));
+    }
+
+    return meshes;
+}
+
+MeshFactory::VoxelGrid MeshFactory::BuildVoxels(const std::shared_ptr<Mesh> &mesh, float voxel_size)
+{
+    BoundingBox total_aabb = mesh->GetAABB();
+    Vector3 total_aabb_dimensions = total_aabb.GetDimensions();
+
+    size_t num_voxels_x = MathUtil::Ceil(total_aabb_dimensions.x / voxel_size);
+    size_t num_voxels_y = MathUtil::Ceil(total_aabb_dimensions.y / voxel_size);
+    size_t num_voxels_z = MathUtil::Ceil(total_aabb_dimensions.z / voxel_size);
+
+
+    // building out grid
+    VoxelGrid grid;
+    grid.voxel_size = voxel_size;
+    grid.size_x = num_voxels_x;
+    grid.size_y = num_voxels_y;
+    grid.size_z = num_voxels_z;
+
+    if (!num_voxels_x || !num_voxels_y || !num_voxels_z) {
+        return grid;
+    }
+
+    grid.voxels.resize(num_voxels_x * num_voxels_y * num_voxels_z);
+
+    for (size_t x = 0; x < num_voxels_x; x++) {
+        for (size_t y = 0; y < num_voxels_y; y++) {
+            for (size_t z = 0; z < num_voxels_z; z++) {
+                size_t index = (z * num_voxels_x * num_voxels_y) + (y * num_voxels_y) + x;
+                grid.voxels[index] = Voxel(
+                    BoundingBox(
+                        Vector3(x, y, z) * voxel_size,
+                        Vector3(x + 1, y + 1, z + 1) * voxel_size
+                    ),
+                    false
+                );
+            }
+        }
+    }
+
+    // filling in data
+    for (auto &index : mesh->GetIndices()) {
+        const auto &vertex = mesh->GetVertices()[index];
+        Vector3 vertex_over_dimensions = (vertex.GetPosition() - total_aabb.GetMin()) / Vector3::Max(total_aabb.GetDimensions(), 0.0001f);
+
+        size_t x = MathUtil::Floor(MathUtil::Clamp(vertex_over_dimensions.x * (num_voxels_x - 1), 0.0f, num_voxels_x - 1.0f));
+        size_t y = MathUtil::Floor(MathUtil::Clamp(vertex_over_dimensions.y * (num_voxels_y - 1), 0.0f, num_voxels_y - 1.0f));
+        size_t z = MathUtil::Floor(MathUtil::Clamp(vertex_over_dimensions.z * (num_voxels_z - 1), 0.0f, num_voxels_z - 1.0f));
+
+        size_t index = (z * num_voxels_x * num_voxels_y) + (y * num_voxels_y) + x;
+
+        grid.voxels[index].filled = true;
+    }
+
+    return grid;
+}
+
+std::shared_ptr<Mesh> MeshFactory::DebugVoxelMesh(const VoxelGrid &grid)
+{
+    auto mesh = std::make_shared<Mesh>();
+
+    for (size_t x = 0; x < grid.size_x; x++) {
+        for (size_t y = 0; y < grid.size_y; y++) {
+            for (size_t z = 0; z < grid.size_z; z++) {
+                size_t index = (z * grid.size_x * grid.size_y) + (y * grid.size_y) + x;
+
+                if (!grid.voxels[index].filled) {
+                    continue;
+                }
+
+                mesh = MergeMeshes(
+                    mesh,
+                    CreateCube(),
+                    Transform(),
+                    Transform(Vector3(x, y, z) * grid.voxel_size, grid.voxel_size, Quaternion::Identity())
+                );
+            }
+        }
+    }
+
+    return mesh;
 }
 
 } // namespace hyperion

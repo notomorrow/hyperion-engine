@@ -18,7 +18,7 @@ ShadowMapping::ShadowMapping(double max_dist, int level, bool use_fbo)
 {
     shadow_cam = new OrthoCamera(-1, 1, -1, 1, -1, 1);
 
-    m_depth_shader = ShaderManager::GetInstance()->GetShader<DepthShader>(ShaderProperties());
+    m_depth_shader = ShaderManager::GetInstance()->GetShader<DepthShader>();
 
     fbo = new Framebuffer2D(2048, 2048, true, true, false, false);
 
