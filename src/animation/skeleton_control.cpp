@@ -119,7 +119,7 @@ void SkeletonControl::OnRemoved()
 
 void SkeletonControl::OnUpdate(double dt)
 {
-    const double step = 0.01;
+    const double step = 0.1 * dt;
     if (play_state == PLAYING && current_anim != nullptr) {
         time += step * play_speed;
         if (time > current_anim->GetLength()) {
@@ -132,7 +132,9 @@ void SkeletonControl::OnUpdate(double dt)
     }
 
     for (size_t i = 0; i < bones.size(); i++) {
-        skinning_shader->SetUniform(bone_names[i], bones[i]->GetBoneMatrix());
+        // TODO: not really sure to do this w/ new declared uniform style? besides
+        // maybe uniform blocks?
+        //skinning_shader->SetUniform(bone_names[i], bones[i]->GetBoneMatrix());
     }
 }
 

@@ -29,7 +29,6 @@ GIVoxelShader::GIVoxelShader(const ShaderProperties &properties)
     );
 
     if (ShaderManager::GetInstance()->GetBaseShaderProperties().GetValue("VCT_GEOMETRY_SHADER").IsTruthy()) {
-
         AddSubShader(
             Shader::SubShaderType::SUBSHADER_GEOMETRY,
             AssetManager::GetInstance()->LoadFromFile<TextLoader::LoadedText>(gs_path)->GetText(),
@@ -37,6 +36,14 @@ GIVoxelShader::GIVoxelShader(const ShaderProperties &properties)
             gs_path
         );
     }
+
+    m_uniform_albedo = m_uniforms.Acquire("C_albedo").id;
+    m_uniform_emissiveness = m_uniforms.Acquire("Emissiveness").id;
+    m_uniform_camera_position = m_uniforms.Acquire("CameraPosition").id;
+
+    m_uniform_voxel_map = m_uniforms.Acquire("VoxelMap").id;
+    m_uniform_voxel_scene_scale = m_uniforms.Acquire("VoxelSceneScale").id;
+    m_uniform_voxel_probe_position = m_uniforms.Acquire("VoxelProbePosition").id;
 }
 
 void GIVoxelShader::ApplyMaterial(const Material &mat)
@@ -45,31 +52,33 @@ void GIVoxelShader::ApplyMaterial(const Material &mat)
 
     CoreEngine::GetInstance()->Disable(CoreEngine::GLEnums::CULL_FACE);
 
-    SetUniform("C_albedo", mat.diffuse_color);
-    SetUniform("Emissiveness", mat.GetParameter(MATERIAL_PARAMETER_EMISSIVENESS)[0]);
+    SetUniform(m_uniform_albedo, mat.diffuse_color);
+    SetUniform(m_uniform_emissiveness, mat.GetParameter(MATERIAL_PARAMETER_EMISSIVENESS)[0]);
 
-    for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
-        if (it->second == nullptr) {
-            continue;
+    auto env = Environment::GetInstance();
+
+    for (int i = 0; i < env->GetProbeManager()->NumProbes(); i++) {
+        const auto &probe = env->GetProbeManager()->GetProbe(i);
+
+        switch (probe->GetProbeType()) {
+        case Probe::PROBE_TYPE_VCT:
+            if (auto &texture = probe->GetTexture()) {
+                SetUniform(m_uniform_voxel_probe_position, probe->GetOrigin());
+                SetUniform(m_uniform_voxel_scene_scale, probe->GetBounds().GetDimensions());
+                SetUniform(m_uniform_voxel_map, texture.get());
+            }
+            break;
+        default:
+            // do nothing
+            break;
         }
-
-        it->second->Prepare();
-
-        SetUniform(it->first, it->second.get());
-        SetUniform(std::string("Has") + it->first, 1);
     }
 }
 
 void GIVoxelShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     Shader::ApplyTransforms(transform, camera);
-    SetUniform("CameraPosition", camera->GetTranslation());
 
-    // TODO filter by type
-    for (int i = 0; i < Environment::GetInstance()->GetProbeManager()->NumProbes(); i++) {
-        if (auto &probe = Environment::GetInstance()->GetProbeManager()->GetProbe(i)) {
-            probe->Bind(this);
-        }
-    }
+    SetUniform(m_uniform_camera_position, camera->GetTranslation());
 }
 } // namespace hyperion

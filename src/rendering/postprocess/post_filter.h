@@ -35,6 +35,12 @@ protected:
     std::shared_ptr<PostShader> m_shader;
     Material m_material;
 
+    Shader::DeclaredUniform::Id_t m_uniform_view_matrix,
+        m_uniform_projection_matrix,
+        m_uniform_resolution,
+        m_uniform_cam_near,
+        m_uniform_cam_far;
+
 private:
     BitFlags_t m_modifies_attachments;
 };

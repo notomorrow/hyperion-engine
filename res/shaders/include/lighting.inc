@@ -335,7 +335,7 @@ vec3 SampleSphericalHarmonics(vec3 n)
 	return SphericalHarmonics(sh, n);
 }
 
-vec4 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl)
+vec4 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl, float lod)
 {
 
   vec4 samp;
@@ -351,15 +351,15 @@ vec4 SampleEnvProbeRefl(samplerCube tex, vec3 worldPos, vec3 refl)
 
   vec3 coord = boxIntersection - EnvProbe.position;
 
-  samp = texture(tex, coord);
+  samp = textureLod(tex, coord, lod);
 
   return samp;
 
 }
 
-vec4 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos, vec3 tangent, vec3 bitangent)
+vec4 SampleEnvProbe(samplerCube tex, vec3 n, vec3 worldPos, vec3 camPos, float lod)
 {
-  return SampleEnvProbeRefl(tex, worldPos, ReflectionVector(n, worldPos, camPos));
+  return SampleEnvProbeRefl(tex, worldPos, ReflectionVector(n, worldPos, camPos), lod);
 }
 
 vec3 ComputeDirectionalLight(DirectionalLight dl, vec3 n, vec3 v, vec3 vert, vec3 albedo, float shadowness, float roughness, float metalness)

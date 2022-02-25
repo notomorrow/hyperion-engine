@@ -2,6 +2,7 @@
 #define OCTREE_H
 
 #include "../math/bounding_box.h"
+#include "../math/frustum.h"
 #include "spatial.h"
 #include "../util/non_owning_ptr.h"
 #include "../util.h"
@@ -18,12 +19,14 @@ enum OctreeChangeEvent {
     OCTREE_REMOVE_OCTANT = 2,
     OCTREE_INSERT_NODE = 4,
     OCTREE_REMOVE_NODE = 8,
-    OCTREE_NODE_TRANSFORM_CHANGE = 16
+    OCTREE_NODE_TRANSFORM_CHANGE = 16,
+    OCTREE_VISIBILITY_STATE = 32
 };
 
 class Octree;
 
-using OctreeChangeCallback_t = std::function<void(OctreeChangeEvent, const Octree *, int, const Spatial*)>;
+using OctreeChangeCallback_t = std::function<void(OctreeChangeEvent, const Octree *, int, const Spatial*, void *)>;
+
 
 class Octree {
 public:
@@ -105,6 +108,46 @@ public:
         inline operator bool() const { return result == OCTREE_OK; }
     };
 
+    struct VisibilityState {
+        enum CameraType {
+            VIS_CAMERA_NONE,
+            VIS_CAMERA_MAIN,
+            VIS_CAMERA_SHADOW0,
+            VIS_CAMERA_SHADOW1,
+            VIS_CAMERA_SHADOW2,
+            VIS_CAMERA_SHADOW3,
+            VIS_CAMERA_VOXEL0,
+            VIS_CAMERA_VOXEL1,
+            VIS_CAMERA_VOXEL2,
+            VIS_CAMERA_VOXEL3,
+            VIS_CAMERA_VOXEL4,
+            VIS_CAMERA_VOXEL5,
+            VIS_CAMERA_OTHER0,
+            VIS_CAMERA_OTHER1,
+            VIS_CAMERA_OTHER2,
+
+            VIS_CAMERA_MAX
+        };
+
+        // visibility is not determined by a boolean, as we'd have to traverse the whole octree,
+        // and doing this every frame when unnecessary is a bit of a performance killer.
+        // instead we calculate a hash at the start of the visibility check, and if the octant is visible,
+        // tag it with the new hash then once we hit a point of non-visibility, the octants will not be given the new hash.
+        // we can then check an octants visibility by comparing the hashes.
+        std::array<HashCode::Value_t, VIS_CAMERA_MAX> check_id;
+
+        VisibilityState() : check_id({ 0 }) {}
+        VisibilityState(const decltype(check_id) &check_id) : check_id(check_id) {}
+        VisibilityState(const VisibilityState &other) : check_id(other.check_id) {}
+        inline VisibilityState &operator=(const VisibilityState &other) { check_id = other.check_id; return *this; }
+        //inline bool operator==(const VisibilityState &other) const { return check_id == other.check_id; }
+        inline bool Compare(CameraType type, const VisibilityState &other) const { return check_id[type] == other.check_id[type]; }
+        inline HashCode::Value_t &operator[](CameraType type) { return check_id[type]; }
+        inline const HashCode::Value_t &operator[](CameraType type) const { return check_id[type]; }
+
+        ~VisibilityState() = default;
+    };
+
     Octree(const BoundingBox &aabb, int level = 0)
         : m_aabb(aabb),
           m_parent(nullptr),
@@ -134,8 +177,6 @@ public:
 
     ~Octree()
     {
-        DispatchEvent(OCTREE_REMOVE_OCTANT);
-
         if (m_is_divided) {
             for (Octant &octant : m_octants) {
                 hard_assert(octant.m_octree != nullptr);
@@ -144,14 +185,13 @@ public:
             }
         }
 
-
-        /*for (auto &node : m_nodes) {
-            if (node == nullptr) {
-                continue;
+        if (!m_nodes.empty()) {
+            for (const auto &node : m_nodes) {
+                DispatchEvent(OCTREE_REMOVE_NODE, node.m_id, &node.m_spatial);
             }
+        }
 
-            node->SetOctree(non_owning_ptr<Octree>(nullptr));
-        }*/
+        DispatchEvent(OCTREE_REMOVE_OCTANT);
     }
 
     inline const BoundingBox &GetAABB() const { return m_aabb; }
@@ -162,6 +202,23 @@ public:
     inline std::vector<Node> &GetNodes() { return m_nodes; }
     inline const std::vector<Node> &GetNodes() const { return m_nodes; }
     inline bool Empty() const { return m_nodes.empty(); }
+
+    inline const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
+    inline bool VisibleTo(VisibilityState::CameraType type, const VisibilityState &parent_state) const
+        { return m_visibility_state.Compare(type, parent_state); }
+    inline bool VisibleToParent(VisibilityState::CameraType type) const
+        { return m_parent == nullptr || VisibleTo(type, m_parent->m_visibility_state); }
+
+    /*
+     * Note: this octant is assumed to be visible.
+     * This is to be called, generally, from the root node of the octree.
+     */
+    void UpdateVisibilityState(VisibilityState::CameraType type, const Frustum & frustum)
+    {
+        m_visibility_state[type]++;
+
+        UpdateVisibilityState(frustum, type, m_visibility_state);
+    }
 
     bool AllEmpty() const
     {
@@ -413,13 +470,30 @@ public:
 
 private:
 
-    void DispatchEvent(OctreeChangeEvent evt, int node_id = -1, const Spatial *spatial = nullptr) const
+    void UpdateVisibilityState(const Frustum &frustum, VisibilityState::CameraType type, const VisibilityState &visibility_state)
+    {
+        m_visibility_state[type] = visibility_state[type];
+
+        if (m_is_divided) {
+            for (auto &octant : m_octants) {
+                if (!frustum.BoundingBoxInFrustum(octant.m_aabb)) {
+                    continue;
+                }
+
+                octant.m_octree->UpdateVisibilityState(frustum, type, visibility_state);
+            }
+        }
+
+        DispatchEvent(OCTREE_VISIBILITY_STATE, -1, nullptr, (void*)int32_t(type));
+    }
+
+    void DispatchEvent(OctreeChangeEvent evt, int node_id = -1, const Spatial *spatial = nullptr, void *raw_data = nullptr) const
     {
         const Octree *oct = this;
 
         while (oct != nullptr) {
             for (auto &cb : oct->m_callbacks) {
-                cb(evt, this, node_id, spatial);
+                cb(evt, this, node_id, spatial, raw_data);
             }
 
             oct = oct->m_parent.get();
@@ -428,6 +502,7 @@ private:
 
     std::vector<Node> m_nodes;
     std::vector<OctreeChangeCallback_t> m_callbacks;
+    VisibilityState m_visibility_state;
 };
 
 } // namespace hyperion

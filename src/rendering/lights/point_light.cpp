@@ -28,9 +28,11 @@ void PointLight::Bind(int index, Shader *shader) const
 {
     const std::string index_str = std::to_string(index);
 
-    shader->SetUniform("env_PointLights[" + index_str + "].position", m_position);
-    shader->SetUniform("env_PointLights[" + index_str + "].color", m_color);
-    shader->SetUniform("env_PointLights[" + index_str + "].radius", m_radius);
+    // TODO: update for new uniforms
+
+    //shader->SetUniform("env_PointLights[" + index_str + "].position", m_position);
+    //shader->SetUniform("env_PointLights[" + index_str + "].color", m_color);
+    //shader->SetUniform("env_PointLights[" + index_str + "].radius", m_radius);
 }
 
 } // namespace hyperion

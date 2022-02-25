@@ -12,23 +12,22 @@
 
 namespace hyperion {
 class Shader;
-class ComputeShader;
+class BlurComputeShader;
+class GIVoxelClearShader;
 
 class GIMapper : public Probe {
 public:
     GIMapper(const Vector3 &origin, const BoundingBox &bounds);
     ~GIMapper();
 
-    virtual void Bind(Shader *shader) override;
     virtual void Update(double dt) override;
     virtual void Render(Renderer *renderer, Camera *cam) override;
 
 private:
     virtual std::shared_ptr<Renderable> CloneImpl() override;
 
-    std::shared_ptr<Texture3D> m_texture;
-    std::shared_ptr<ComputeShader> m_clear_shader;
-    std::shared_ptr<ComputeShader> m_mipmap_shader;
+    std::shared_ptr<GIVoxelClearShader> m_clear_shader;
+    std::shared_ptr<BlurComputeShader> m_mipmap_shader;
 
     Vector3 m_previous_origin;
     double m_render_tick;

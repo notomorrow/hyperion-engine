@@ -14,6 +14,7 @@ public:
     virtual void Store(FramebufferAttachment attachment, std::shared_ptr<Texture> &texture) override;
 
     virtual void Use() override;
+    virtual void End() override;
 };
 
 } // namespace hyperion

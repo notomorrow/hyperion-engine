@@ -20,6 +20,10 @@ public:
 private:
     std::shared_ptr<Texture2D> cloud_map;
 
+    DeclaredUniform::Id_t m_uniform_cloud_map,
+        m_uniform_cloud_color,
+        m_uniform_global_time;
+
     Vector4 m_cloud_color;
     float m_global_time;
 };

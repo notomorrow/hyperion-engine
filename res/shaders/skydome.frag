@@ -4,10 +4,8 @@
 #include "include/lighting.inc"
 #include "include/tonemap.inc"
 
-uniform vec3 v3LightPos;
 uniform float fg;
 uniform float fg2;
-uniform float fExposure;
 
 #define $RAYLEIGH vec4(5.8e-6, 13.5e-6, 33.1e-6, 1.0)
 #define $MIE vec4(21e-6, 21e-6, 21e-6, 1.0)

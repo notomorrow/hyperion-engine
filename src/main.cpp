@@ -26,7 +26,6 @@
 #include "rendering/postprocess/filters/bloom_filter.h"
 #include "rendering/postprocess/filters/depth_of_field_filter.h"
 #include "rendering/postprocess/filters/fxaa_filter.h"
-#include "rendering/postprocess/filters/shadertoy_filter.h"
 #include "rendering/postprocess/filters/default_filter.h"
 
 /* Extra */
@@ -128,7 +127,7 @@ public:
         auto particle_node = std::make_shared<Node>();
         particle_node->SetName("Particle node");
         // particle_node->SetRenderable(std::make_shared<ParticleRenderer>(particle_generator_info));
-        particle_node->GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/test_snowflake.png"));
+        particle_node->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/test_snowflake.png"));
         particle_node->AddControl(std::make_shared<ParticleEmitterControl>(GetCamera(), particle_generator_info));
         particle_node->SetLocalScale(Vector3(1.5));
         particle_node->AddControl(std::make_shared<BoundingBoxControl>());
@@ -142,12 +141,12 @@ public:
     {
         AssetManager *asset_manager = AssetManager::GetInstance();
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/posx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/negx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/posy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/negy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/posz.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/negz.jpg")
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posz.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negz.jpg")
         }));
 
         cubemap->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
@@ -241,7 +240,7 @@ public:
 
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
             .Define("NORMAL_MAPPING", true)
-            .Define("SHADOW_MAP_RADIUS", 0.0085f)
+            .Define("SHADOW_MAP_RADIUS", 0.01f)
             .Define("SHADOW_PCF", false)
             .Define("SHADOWS_VARIANCE", true)
         );
@@ -261,8 +260,8 @@ public:
 
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(1, 1, 0).Normalize());
-        Environment::GetInstance()->GetSun().SetIntensity(100000.0f);
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5, 1, 0).Normalize());
+        Environment::GetInstance()->GetSun().SetIntensity(600000.0f);
         Environment::GetInstance()->GetSun().SetColor(Vector4(1.0, 0.8, 0.65, 1.0));
 
 
@@ -301,8 +300,26 @@ public:
 
         auto cm = InitCubemap();
 
-        //GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
-        GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
+        GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
+        //GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
+
+        ///GetScene()->Update(0.1f);
+
+        /*GetSceneManager()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial) {
+            std::cout << "event " << evt << ", node: " << node_id << "\n";
+            if (evt == OCTREE_INSERT_OCTANT) {
+                std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
+                auto bb_node = std::make_shared<Node>("oct_" + std::to_string(intptr_t(oct)));
+                bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
+                GetScene()->AddChild(bb_node);
+            } else if (evt == OCTREE_REMOVE_OCTANT) {
+                std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
+                auto node = GetScene()->GetChild("oct_" + std::to_string(intptr_t(oct)));
+                if (node != nullptr) {
+                    GetScene()->RemoveChild(node);
+                }
+            }
+        });*/
 
 #if 1
         m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
@@ -387,6 +404,7 @@ public:
             }
 
             model->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
+            model->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
             scene->AddChildAsync(model, [](const std::shared_ptr<Node> &) {
                 std::cout << "!!! ADDED\n";
             });
@@ -414,20 +432,20 @@ public:
         //GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/grass3.jpg"));
         //GetMaterial().SetTexture("NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/grass_nrm.jpg"));
         terrain->GetChild(0)->GetSpatial().GetRenderable()->SetShader(ShaderManager::GetInstance()->GetShader<TerrainShader>(ShaderProperties()));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("DiffuseMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_albedo.png")); // for vct
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_albedo.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_normal-dx.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_ao.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_albedo.png")); // for vct
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_BASE_TERRAIN_COLOR_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_albedo.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_BASE_TERRAIN_NORMAL_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_normal-dx.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_BASE_TERRAIN_AO_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/patchy-meadow1-ue/patchy-meadow1_ao.png"));
         //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png"));
         //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainNormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png"));
         //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("BaseTerrainAoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("Terrain1ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-albedo.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("Terrain1NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-Normal-dx.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("Terrain1AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-ao.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("Terrain2ColorMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_albedo.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("Terrain2NormalMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_Normal-ogl.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("Terrain2AoMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor-ao.png"));
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("SplatMap", AssetManager::GetInstance()->LoadFromFile<Texture>("textures/splat.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL1_COLOR_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-albedo.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL1_NORMAL_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-Normal-dx.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL1_AO_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/damp-rocky-ground-ue/damp-rocky-ground1-ao.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL2_COLOR_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_albedo.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL2_NORMAL_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_Normal-ogl.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor-ao.png"));
+        terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture(MATERIAL_TEXTURE_SPLAT_MAP, AssetManager::GetInstance()->LoadFromFile<Texture>("textures/splat.png"));
 
         terrain->GetChild(0)->GetSpatial().GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.95f);
         terrain->GetChild(0)->GetSpatial().GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
@@ -545,14 +563,14 @@ public:
             }
         }
 
-        /*auto house = asset_manager->LoadFromFile<Node>("models/house.obj");
+        auto house = asset_manager->LoadFromFile<Node>("models/house.obj");
         for (size_t i = 0; i < house->NumChildren(); i++) {
             if (auto &child = house->GetChild(i)) {
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.05f);
             }
         }
-        GetScene()->AddChild(house);*/
+        GetScene()->AddChild(house);
 
 
         auto tv = asset_manager->LoadFromFile<Node>("models/television/Television_01_4k.obj", true);
@@ -567,7 +585,7 @@ public:
         for (int x = 0; x < 1; x++) {
             for (int z = 0; z < 1; z++) {
                 auto ui_fbo_view = std::make_shared<ui::UIObject>("fbo_preview_" + std::to_string(x * 2 + z));
-                ui_fbo_view->GetMaterial().SetTexture("ColorMap", Environment::GetInstance()->GetShadowMap(x * 2 + z));
+                ui_fbo_view->GetMaterial().SetTexture(MATERIAL_TEXTURE_COLOR_MAP, Environment::GetInstance()->GetShadowMap(x * 2 + z));
                 ui_fbo_view->SetLocalTranslation2D(Vector2(0.7 + (double(x) * 0.2), -0.4 + (double(z) * -0.3)));
                 ui_fbo_view->SetLocalScale2D(Vector2(256));
                 GetUI()->AddChild(ui_fbo_view);
@@ -583,10 +601,10 @@ public:
         }
 
         auto shadow_node = std::make_shared<Node>("shadow_node");
-        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 8.0f));
+        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 18.0f));
         //shadow_node->SetLocalTranslation(Vector3(22, 12, 5));
-        shadow_node->SetLocalTranslation({ -9.f, 15.f, 0.5f });
-        //shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
+        shadow_node->SetLocalTranslation({ 10.0f, 8.0f, -9.0f });
+        shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
         GetScene()->AddChild(shadow_node);
 
         bool add_spheres = true;
@@ -639,10 +657,10 @@ public:
                             box->GetChild(i)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-roughness.png"));
                             box->GetChild(i)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-metallic.png"));
                             */
-                            box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_albedo.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_Height.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_ao.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_Normal-dx.png"));
+                            box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_albedo.png"));
+                            box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_Height.png"));
+                            box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_ao.png"));
+                            box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_Normal-dx.png"));
                             //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
                             //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                             box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
@@ -662,7 +680,7 @@ public:
         //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 1, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f) * 3.0f, 1.5f));
 
         auto ui_crosshair = std::make_shared<ui::UIObject>("crosshair");
-        ui_crosshair->GetMaterial().SetTexture("ColorMap", asset_manager->LoadFromFile<Texture2D>("textures/crosshair.png"));
+        ui_crosshair->GetMaterial().SetTexture(MATERIAL_TEXTURE_COLOR_MAP, asset_manager->LoadFromFile<Texture2D>("textures/crosshair.png"));
         ui_crosshair->SetLocalTranslation2D(Vector2(0));
         ui_crosshair->SetLocalScale2D(Vector2(128));
         GetUI()->AddChild(ui_crosshair);

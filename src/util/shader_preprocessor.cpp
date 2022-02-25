@@ -9,7 +9,7 @@
 namespace hyperion {
 
 std::string ShaderPreprocessor::ProcessShader(const std::string &code, 
-    const ShaderProperties &shader_properties, 
+    ShaderProperties &defines, 
     const std::string &path)
 {
     std::istringstream ss(code);
@@ -23,16 +23,14 @@ std::string ShaderPreprocessor::ProcessShader(const std::string &code,
         local_path.clear(); // non-relative path
     }
 
-    return FileHeader(path) + ProcessInner(ss, pos, shader_properties, local_path);
+    return FileHeader(path) + ProcessInner(ss, pos, defines, local_path);
 }
 
 std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss, 
     std::streampos &pos,
-    const ShaderProperties &shader_properties,
+    ShaderProperties &defines,
     const std::string &local_path)
 {
-    ShaderProperties defines(shader_properties);
-
     std::string res;
 
     std::string line;

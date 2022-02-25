@@ -14,15 +14,15 @@ namespace hyperion {
 
 class SSAOFilter : public PostFilter {
 public:
-    SSAOFilter();
+    SSAOFilter(float strength = 2.0);
     virtual ~SSAOFilter() = default;
 
     virtual void SetUniforms(Camera *cam) override;
 
 private:
-    std::array<Vector3, 32> m_kernel;
-    Vector2 m_noise_scale;
-    std::shared_ptr<Texture2D> m_noise_map;
+    Shader::DeclaredUniform::Id_t m_uniform_strength;
+
+    float m_strength;
 };
 
 } // namespace hyperion

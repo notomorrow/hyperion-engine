@@ -16,7 +16,7 @@
 #include "../../util/string_util.h"
 
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <memory>
 
 namespace hyperion {
@@ -53,7 +53,7 @@ public:
 
     std::vector<std::shared_ptr<Bone>> bones;
     std::vector<std::shared_ptr<Animation>> animations;
-    std::map<size_t, std::vector<BoneAssign>> bone_assigns;
+    std::unordered_map<size_t, std::vector<BoneAssign>> bone_assigns;
 
     OgreSubmesh &CurrentSubmesh()
     {

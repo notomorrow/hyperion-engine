@@ -29,17 +29,6 @@ UIObjectShader::UIObjectShader(const ShaderProperties &properties)
 void UIObjectShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
-
-    for (auto it = mat.textures.begin(); it != mat.textures.end(); it++) {
-        if (it->second == nullptr) {
-            continue;
-        }
-
-        it->second->Prepare();
-
-        SetUniform(it->first, it->second.get());
-        SetUniform(std::string("Has") + it->first, 1);
-    }
 }
 
 void UIObjectShader::ApplyTransforms(const Transform &transform, Camera *camera)
@@ -64,10 +53,6 @@ void UIObjectShader::ApplyTransforms(const Transform &transform, Camera *camera)
     // ));
 
     // model_2d.SetRotation(transform.GetRotation());
-
-    Vector2 viewport(camera->GetWidth(), camera->GetHeight());
-
-    SetUniform("Viewport", viewport);
-    SetUniform("u_modelMatrix", model_2d.GetMatrix());
+    SetUniform(m_uniform_model_matrix, model_2d.GetMatrix());
 }
 } // namespace hyperion

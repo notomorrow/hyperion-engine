@@ -31,6 +31,10 @@ CloudsShader::CloudsShader(const ShaderProperties &properties)
         throw std::runtime_error("Could not load cloud map!");
     }
 
+    m_uniform_cloud_map = m_uniforms.Acquire("m_CloudMap").id;
+    m_uniform_cloud_color = m_uniforms.Acquire("m_CloudColor").id;
+    m_uniform_global_time = m_uniforms.Acquire("m_GlobalTime").id;
+
     m_global_time = 0.0f;
     m_cloud_color = Vector4(1.0);
 }
@@ -41,11 +45,11 @@ void CloudsShader::ApplyMaterial(const Material &mat)
 
     if (cloud_map != nullptr) {
         cloud_map->Prepare();
-        SetUniform("m_CloudMap", cloud_map.get());
+        SetUniform(m_uniform_cloud_map, cloud_map.get());
     }
 
-    SetUniform("m_GlobalTime", m_global_time);
-    SetUniform("m_CloudColor", m_cloud_color);
+    SetUniform(m_uniform_global_time, m_global_time);
+    SetUniform(m_uniform_cloud_color, m_cloud_color);
 }
 
 void CloudsShader::ApplyTransforms(const Transform &transform, Camera *camera)

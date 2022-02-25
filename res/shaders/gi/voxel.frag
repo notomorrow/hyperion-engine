@@ -9,15 +9,12 @@ in vec2 v_texcoord0;
 
 layout(binding = 0, rgba32f) uniform image3D framebufferImage;
 uniform vec4 C_albedo;
-uniform vec3 u_probePos;
 uniform vec3 CameraPosition;
 
 uniform sampler2D DiffuseMap;
 uniform int HasDiffuseMap;
 
 uniform vec3 VoxelProbePosition;
-
-uniform mat4 StorageTransformMatrix;
 
 uniform vec3 VoxelSceneScale;
 

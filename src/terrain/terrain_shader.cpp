@@ -17,11 +17,9 @@ TerrainShader::TerrainShader(const ShaderProperties &properties)
         fs_path
     );
 
-    SetUniform("BaseTerrainScale", 0.85f);
-    SetUniform("Level1Scale", 1.0f);
-    SetUniform("Level1Height", 250.0f);
-    SetUniform("SlopeScale", 1.0f);
-    SetUniform("SplatMapScale", 0.05f);
+    m_uniform_base_terrain_scale = m_uniforms.Acquire("BaseTerrainScale").id;
+
+    SetUniform(m_uniform_base_terrain_scale, 0.85f);
 }
 
 void TerrainShader::ApplyMaterial(const Material &mat)

@@ -23,23 +23,19 @@ DepthShader::DepthShader(const ShaderProperties &properties)
         properties,
         fs_path
     );
+
+    m_uniform_camera_position = m_uniforms.Acquire("u_camerapos").id;
 }
 
 void DepthShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
-
-    if (auto diffuse = mat.GetTexture("DiffuseMap")) {
-        diffuse->Prepare();
-
-        SetUniform("DiffuseMap", diffuse.get());
-        SetUniform("HasDiffuseMap", 1);
-    }
 }
 
 void DepthShader::ApplyTransforms(const Transform &transform, Camera *camera)
 {
     Shader::ApplyTransforms(transform, camera);
-    SetUniform("u_camerapos", camera->GetTranslation());
+
+    SetUniform(m_uniform_camera_position, camera->GetTranslation());
 }
 } // namespace hyperion
