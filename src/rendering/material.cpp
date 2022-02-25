@@ -14,7 +14,7 @@ const Material::MaterialParameterTable_t Material::default_parameters({
     std::make_pair(MATERIAL_PARAMETER_CLEARCOAT, 0.0f),
     std::make_pair(MATERIAL_PARAMETER_CLEARCOAT_GLOSS, 0.0f),
     std::make_pair(MATERIAL_PARAMETER_EMISSIVENESS, 0.0f),
-    std::make_pair(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.15f),
+    std::make_pair(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.2f),
     std::make_pair(MATERIAL_PARAMETER_FLIP_UV, Vector2(0)),
     std::make_pair(MATERIAL_PARAMETER_UV_SCALE, Vector2(1)),
 });

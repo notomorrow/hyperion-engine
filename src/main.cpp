@@ -141,12 +141,12 @@ public:
     {
         AssetManager *asset_manager = AssetManager::GetInstance();
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posz.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negz.jpg")
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/posx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/negx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/posy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/negy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/posz.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele/negz.jpg")
         }));
 
         cubemap->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
@@ -254,14 +254,14 @@ public:
         Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(false);
 
         GetRenderer()->GetDeferredPipeline()->GetPreFilterStack()->AddFilter<SSAOFilter>("ssao", 5);
+        GetRenderer()->GetDeferredPipeline()->GetPreFilterStack()->AddFilter<FXAAFilter>("fxaa", 6);
         //GetRenderer()->GetDeferredPipeline()->GetPostFilterStack()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         GetRenderer()->GetDeferredPipeline()->GetPostFilterStack()->AddFilter<BloomFilter>("bloom", 80);
-        GetRenderer()->GetDeferredPipeline()->GetPostFilterStack()->AddFilter<FXAAFilter>("fxaa", 9999);
 
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5, 1, 0).Normalize());
-        Environment::GetInstance()->GetSun().SetIntensity(600000.0f);
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(.7, 1, .7).Normalize());
+        Environment::GetInstance()->GetSun().SetIntensity(200000.0f);
         Environment::GetInstance()->GetSun().SetColor(Vector4(1.0, 0.8, 0.65, 1.0));
 
 
@@ -300,8 +300,8 @@ public:
 
         auto cm = InitCubemap();
 
-        GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
-        //GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
+        //GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
+        GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         ///GetScene()->Update(0.1f);
 
@@ -321,7 +321,7 @@ public:
             }
         });*/
 
-#if 1
+#if 0
         m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
             auto model = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
             model->SetName("model");
@@ -463,7 +463,7 @@ public:
         tmp->AddControl(std::make_shared<GIProbeControl>(Vector3(0, 0, 0)));
         GetScene()->AddChild(tmp);*/
 
-        auto tree = asset_manager->LoadFromFile<Node>("models/conifer/Conifer_Low.obj");
+        /*auto tree = asset_manager->LoadFromFile<Node>("models/conifer/Conifer_Low.obj");
         for (size_t i = 0; i < tree->NumChildren(); i++) {
             if (auto child = tree->GetChild(i)) {
                 //child->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
@@ -525,7 +525,7 @@ public:
         tree5->SetLocalTranslation({ 27.f, 7.f, -1.f });
         tree5->SetLocalScale(0.045f);
         tree5->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(-76.0f)));
-        GetScene()->AddChild(tree5);
+        GetScene()->AddChild(tree5);*/
 #endif
 
         bool write = false;
@@ -563,14 +563,14 @@ public:
             }
         }
 
-        auto house = asset_manager->LoadFromFile<Node>("models/house.obj");
+        /*auto house = asset_manager->LoadFromFile<Node>("models/house.obj");
         for (size_t i = 0; i < house->NumChildren(); i++) {
             if (auto &child = house->GetChild(i)) {
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
                 child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.05f);
             }
         }
-        GetScene()->AddChild(house);
+        GetScene()->AddChild(house);*/
 
 
         auto tv = asset_manager->LoadFromFile<Node>("models/television/Television_01_4k.obj", true);
@@ -617,9 +617,9 @@ public:
                     Vector3 box_position = Vector3(((float(x) + 23.0f)), 7.4f, (float(z) - 5.0f));
 
                     //m_threads.emplace_back(std::thread([=, scene = GetScene()]() {
-                    auto box = asset_manager->LoadFromFile<Node>("models/material_sphere/material_sphere.obj", true);
-                    //auto box = asset_manager->LoadFromFile<Node>("models/monkey/monkey.obj", true);
-                        box->SetLocalScale(0.4f);
+                    auto box = asset_manager->LoadFromFile<Node>("models/cube.obj", true);
+                        box->SetLocalScale(0.35f);
+                        //box->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
 
 
                         for (size_t i = 0; i < box->NumChildren(); i++) {
@@ -630,11 +630,11 @@ public:
                                 1.f,//1.0,//col.z,
                                 1.f
                             );
-                            //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/albedo.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/ao.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/normal.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/roughness.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("models/monkey/metallic.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/albedo.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/ao.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/normal.png"));
+                            ///box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/roughness.png"));
+                            //box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/metallic.png"));
 
                             ///box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_ao.png"));
                             //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_normal-ogl.png"));
@@ -642,12 +642,14 @@ public:
                             //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
 
 
-                            //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-albedo.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-ao.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-normal.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("textures/bamboo_wood/bamboo-wood-semigloss-roughness.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("textures/bomboo_wood/bamboo_wood/bamboo-wood-semigloss-metal.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-albedo.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-ao.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-normal-dx.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-roughness.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-metallic.png"));
+                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/dirty-wicker-weave1-ue/dirty-wicker-weave1-height.png"));
                             box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
+                            box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.08f);
 
 
                             /*box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-albedo.png"));
@@ -657,14 +659,16 @@ public:
                             box->GetChild(i)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-roughness.png"));
                             box->GetChild(i)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-metallic.png"));
                             */
-                            box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_albedo.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_Height.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_ao.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("textures/cracking-painted-asphalt1-ue/cracking_painted_asphalt_Normal-dx.png"));
+                           // box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("models/Apple/3DApple001_HQ-1K_Color.jpg"));
+                           // box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/Rocks/Rocks011_1K_Displacement.png"));
+                            //box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("models/Apple/3DApple001_HQ-1K_AmbientOcclusion.jpg"));
+                           // box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("models/Apple/3DApple001_HQ-1K_NormalGL.jpg"));
+                            //box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/Rocks/Rocks011_1K_Roughness.png"));
+                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 5.0f);
                             //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
                             //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                            box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
-                            box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, z / 5.0f);
+                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.2f);
                         }
 
                         //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));

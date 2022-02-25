@@ -105,6 +105,74 @@ vec3 mon2lin(vec3 x)
 
 
 
+/**
+ * Approximates acos(x) with a max absolute error of 9.0x10^-3.
+ * Valid in the range -1..1.
+ */
+float acosFast(float x) {
+    // Lagarde 2014, "Inverse trigonometric functions GPU optimization for AMD GCN architecture"
+    // This is the approximation of degree 1, with a max absolute error of 9.0x10^-3
+    float y = abs(x);
+    float p = -0.1565827 * y + 1.570796;
+    p *= sqrt(1.0 - y);
+    return x >= 0.0 ? p : PI - p;
+}
+
+/**
+ * Approximates acos(x) with a max absolute error of 9.0x10^-3.
+ * Valid only in the range 0..1.
+ */
+float acosFastPositive(float x) {
+    float p = -0.1565827 * x + 1.570796;
+    return p * sqrt(1.0 - x);
+}
+float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
+    // Oat and Sander 2007, "Ambient Aperture Lighting"
+    // Approximation mentioned by Jimenez et al. 2016
+    float r1 = acosFastPositive(cosCap1);
+    float r2 = acosFastPositive(cosCap2);
+    float d  = acosFast(cosDistance);
+
+    // We work with cosine angles, replace the original paper's use of
+    // cos(min(r1, r2)) with max(cosCap1, cosCap2)
+    // We also remove a multiplication by 2 * PI to simplify the computation
+    // since we divide by 2 * PI in computeBentSpecularAO()
+
+    if (min(r1, r2) <= max(r1, r2) - d) {
+        return 1.0 - max(cosCap1, cosCap2);
+    } else if (r1 + r2 <= d) {
+        return 0.0;
+    }
+
+    float delta = abs(r1 - r2);
+    float x = 1.0 - clamp((d - delta) / max(r1 + r2 - delta, 1e-4), 0.0, 1.0);
+    // simplified smoothstep()
+    float area = sqr(x) * (-2.0 * x + 3.0);
+    return area * (1.0 - max(cosCap1, cosCap2));
+}
+// This function could (should?) be implemented as a 3D LUT instead, but we need to save samplers
+float SpecularAO_Cones(vec3 bentNormal, float visibility, float roughness, vec3 shading_reflected) {
+    // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
+
+    // aperture from ambient occlusion
+    float cosAv = sqrt(1.0 - visibility);
+    // aperture from roughness, log(10) / log(2) = 3.321928
+    float cosAs = exp2(-3.321928 * sqr(roughness));
+    // angle betwen bent normal and reflection direction
+    float cosB  = dot(bentNormal, shading_reflected);
+
+    // Remove the 2 * PI term from the denominator, it cancels out the same term from
+    // sphericalCapsIntersection()
+    float ao = sphericalCapsIntersection(cosAv, cosAs, cosB) / (1.0 - cosAs);
+    // Smoothly kill specular AO when entering the perceptual roughness range [0.1..0.3]
+    // Without this, specular AO can remove all reflections, which looks bad on metals
+    return mix(1.0, ao, smoothstep(0.01, 0.09, roughness));
+}
+float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {
+    // Lagarde and de Rousiers 2014, "Moving Frostbite to PBR"
+    return clamp(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility, 0.0, 1.0);
+}
+
 
 void main()
 {
@@ -169,7 +237,7 @@ void main()
     float roughnessMix = clamp(1.0 - exp(-(roughness / 1.0 * log(100.0))), 0.0, 1.0);
 
     float perceptualRoughness = sqrt(roughness);
-    float lod = 12.0 * perceptualRoughness * (2.0 - perceptualRoughness);
+    float lod = 26.0 * perceptualRoughness * (2.0 - perceptualRoughness);
 
 #if PROBE_ENABLED
     specularCubemap = SampleEnvProbe(env_GlobalCubemap, N, position.xyz, CameraPosition, lod);
@@ -233,6 +301,7 @@ void main()
 	float clearcoatGloss = 1.0;
 	
     vec3 Cdlin = mon2lin(albedo.rgb);
+    vec3 energyCompensation = vec3(1.0);
 
     // specular
     float aspect = sqrt(1.0-anisotropic*0.9);
@@ -248,9 +317,12 @@ void main()
 	float materialReflectance = 0.5;
 	float reflectance = 0.16 * materialReflectance * materialReflectance; // dielectric reflectance
 	vec3 F0 = Cdlin.rgb * metallic + (reflectance * (1.0 - metallic));
+    
+    //vec3 visibility = shadowColor.rgb * ao;
 	
 	vec3 specularDFG = mix(vec3(AB.x), vec3(AB.y), F0);
-	vec3 radiance = specularDFG * specularCubemap.rgb;
+    vec3 specularSingleBounceAO = vec3(SpecularAO_Cones(N, ao, roughness, ReflectionVector(N, position.xyz, CameraPosition)));//SpecularAO_Lagarde(NdotV, ao, roughness) * energyCompensation;//vec3(ao) * NdotV * pixel.energyCompensation;
+	vec3 radiance = specularDFG * specularCubemap.rgb * specularSingleBounceAO;
 	vec3 _Fd = Cdlin.rgb * irradiance * (1.0 - specularDFG) * ao;//todo diffuse brdf for cloth
 	result = _Fd+radiance;
     
@@ -269,7 +341,6 @@ void main()
     // See "Multiple-Scattering Microfacet BSDFs with the Smith Model"
     //vec3 energyCompensation = vec3(1.0) + F0 * (1.0 / AB.y - 1.0);
 //#else
-    vec3 energyCompensation = vec3(1.0);
 //#endif
 
 #if VOLUMETRIC_LIGHTING_ENABLED

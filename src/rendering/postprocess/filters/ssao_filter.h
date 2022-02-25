@@ -14,7 +14,7 @@ namespace hyperion {
 
 class SSAOFilter : public PostFilter {
 public:
-    SSAOFilter(float strength = 2.0);
+    SSAOFilter(float strength = 1.0f);
     virtual ~SSAOFilter() = default;
 
     virtual void SetUniforms(Camera *cam) override;
