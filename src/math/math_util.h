@@ -112,33 +112,26 @@ public:
 
     template <typename T>
     static inline constexpr T Sign(const T &value)
-    {
-        return (T(0) < value) - (value < T(0));
-    }
+        { return (T(0) < value) - (value < T(0)); }
 
     template <typename T>
     static inline int Floor(T a)
-    {
-        return std::floor(a);
-    }
+        { return std::floor(a); }
 
     template <typename T>
     static inline int Ceil(T a)
-    {
-        return std::ceil(a);
-    }
+        { return std::ceil(a); }
 
     template <typename T>
     static inline T Exp(T a)
-    {
-        return std::exp(a);
-    }
+        { return std::exp(a); }
 
     template <typename T>
     static inline T Round(T a)
-    {
-        return std::round(a);
-    }
+        { return std::round(a); }
+
+    static inline bool IsPowerOfTwo(uint64_t value)
+        { return (value & (value - 1)) == 0; }
 
     // https://stackoverflow.com/questions/11376288/fast-computing-of-log2-for-64-bit-integers
     static inline uint64_t FastLog2(uint64_t value)

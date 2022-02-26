@@ -21,8 +21,8 @@ SphericalHarmonicsProbe::SphericalHarmonicsProbe(const Vector3 &origin, const Bo
     m_spherical_harmonics_shader = ShaderManager::GetInstance()->GetShader<SHComputeShader>(ShaderProperties());
 
     m_rendered_texture = std::make_shared<Texture2D>(8, 8, nullptr);
-    m_rendered_texture->SetFormat(CoreEngine::GLEnums::RGBA);
-    m_rendered_texture->SetInternalFormat(CoreEngine::GLEnums::RGBA8);
+    m_rendered_texture->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGBA);
+    m_rendered_texture->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8);
     m_rendered_texture->SetFilter(CoreEngine::GLEnums::NEAREST, CoreEngine::GLEnums::NEAREST);
     m_rendered_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
 }

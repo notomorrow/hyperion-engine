@@ -44,8 +44,8 @@ void Cubemap::UploadGpuData(bool should_upload_data)
                 throw std::runtime_error("Could not upload cubemap because texture #" + std::to_string(i + 1) + " had no bytes set.");
             }
 
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, tex->GetInternalFormat(),
-                tex->GetWidth(), tex->GetHeight(), 0, tex->GetFormat(), GL_UNSIGNED_BYTE, tex->GetBytes());            
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToOpenGLInternalFormat(tex->GetInternalFormat()),
+                tex->GetWidth(), tex->GetHeight(), 0, ToOpenGLBaseFormat(tex->GetFormat()), GL_UNSIGNED_BYTE, tex->GetBytes());            
         }
     }
 

@@ -25,7 +25,7 @@ public:
 
     inline Material *GetMaterial(const std::string &name)
     {
-        const auto it = std::find_if(m_materials.begin(), m_materials.end(), [name](auto p) {
+        const auto it = std::find_if(m_materials.begin(), m_materials.end(), [name](auto &p) {
             return p.first == name;
         });
 

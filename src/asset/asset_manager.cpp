@@ -64,7 +64,7 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
     };
    
     if (use_caching) {
-        std::lock_guard guard(load_asset_mtx);
+        //std::lock_guard guard(load_asset_mtx);
 
         for (const auto &path : try_paths) {
             auto it = loaded_assets.find(path);
@@ -95,7 +95,7 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
                 if (!loaded) {
                     throw std::string("Loader returned no data");
                 } else {
-                    std::lock_guard guard(load_asset_mtx);
+                    //std::lock_guard guard(load_asset_mtx);
 
                     loaded->SetFilePath(path);
 

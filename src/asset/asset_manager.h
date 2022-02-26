@@ -46,8 +46,6 @@ private:
 
     std::string root_path = "./";
 
-    std::mutex load_asset_mtx;
-
     std::unordered_map<std::string, std::unique_ptr<AssetLoader>> loaders;
     std::unordered_map<std::string, std::shared_ptr<Loadable>> loaded_assets;
 };

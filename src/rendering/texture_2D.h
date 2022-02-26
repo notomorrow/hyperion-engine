@@ -11,6 +11,8 @@ public:
     Texture2D(int width, int height, unsigned char *bytes);
     virtual ~Texture2D();
 
+    void Resize(int new_width, int new_height);
+
     virtual void End() override;
     virtual void CopyData(Texture * const other) override;
 

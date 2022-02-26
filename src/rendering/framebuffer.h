@@ -40,13 +40,13 @@ public:
 
     struct FramebufferTextureAttributes {
         int material_key;
-        int format;
-        int internal_format;
+        Texture::TextureBaseFormat format;
+        Texture::TextureInternalFormat internal_format;
         int min_filter;
         int mag_filter;
         bool is_volatile; // can change between post processing passes?
 
-        FramebufferTextureAttributes(int material_key, int format, int internal_format, int min_filter, int mag_filter, bool is_volatile)
+        FramebufferTextureAttributes(int material_key, Texture::TextureBaseFormat format, Texture::TextureInternalFormat internal_format, int min_filter, int mag_filter, bool is_volatile)
             : material_key(material_key),
               format(format),
               internal_format(internal_format),

@@ -38,11 +38,17 @@ void MeshArray::UpdateSubmeshes()
 
 void MeshArray::ApplyTransforms()
 {
+    if (m_submeshes.empty()) {
+        return;
+    }
+
     for (auto &submesh : m_submeshes) {
-        submesh.mesh = MeshFactory::TransformMesh(
-            submesh.mesh,
-            submesh.transform
-        );
+        if (submesh.mesh != nullptr) {
+            submesh.mesh = MeshFactory::TransformMesh(
+                submesh.mesh,
+                submesh.transform
+            );
+        }
 
         // reset transform
         submesh.transform = Transform();

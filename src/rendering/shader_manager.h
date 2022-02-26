@@ -7,7 +7,6 @@
 #include <vector>
 #include <utility>
 #include <string>
-#include <mutex>
 
 namespace hyperion {
 
