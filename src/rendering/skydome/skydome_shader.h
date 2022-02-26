@@ -25,11 +25,6 @@ private:
         m_uniform_sun_color,
         m_uniform_global_time;
 
-    // lights
-    DeclaredUniform::Id_t m_uniform_directional_light_direction,
-        m_uniform_directional_light_color,
-        m_uniform_directional_light_intensity;
-
     std::shared_ptr<Texture2D> noise_map;
 
     float m_global_time;

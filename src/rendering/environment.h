@@ -23,6 +23,11 @@ public:
     // distance from the camera after that.
     static const size_t max_point_lights_on_screen;
 
+    struct PointLightCameraData {
+        PointLight *point_light;
+        float distance;
+    };
+
     Environment();
     Environment(const Environment &other) = delete;
     Environment &operator=(const Environment &other) = delete;
@@ -51,6 +56,8 @@ public:
     inline size_t NumVisiblePointLights() const { return MathUtil::Min(m_point_lights_sorted.size(), max_point_lights_on_screen); }
     inline std::shared_ptr<PointLight> &GetPointLight(size_t index) { return m_point_lights[index]; }
     inline const std::shared_ptr<PointLight> &GetPointLight(size_t index) const { return m_point_lights[index]; }
+    inline std::vector<PointLightCameraData> &GetVisiblePointLights() { return m_point_lights_sorted; }
+    inline const std::vector<PointLightCameraData> &GetVisiblePointLights() const { return m_point_lights_sorted; }
     inline void AddPointLight(const std::shared_ptr<PointLight> &point_light) { m_point_lights.push_back(point_light); }
     // Todo: refactor into some sort of Control class that does this automatically
     void CollectVisiblePointLights(Camera *camera);
@@ -68,11 +75,6 @@ private:
 
     DirectionalLight m_sun;
     std::vector<std::shared_ptr<PointLight>> m_point_lights;
-
-    struct PointLightCameraData {
-        PointLight *point_light;
-        float distance;
-    };
 
     std::vector<PointLightCameraData> m_point_lights_sorted;
 

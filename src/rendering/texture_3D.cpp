@@ -25,9 +25,9 @@ Texture3D::~Texture3D()
 void Texture3D::UploadGpuData(bool should_upload_data)
 {
     glTexParameteri(GL_TEXTURE_3D,
-        GL_TEXTURE_MAG_FILTER, mag_filter);
+        GL_TEXTURE_MAG_FILTER, ToOpenGLFilterMode(mag_filter));
     glTexParameteri(GL_TEXTURE_3D,
-        GL_TEXTURE_MIN_FILTER, min_filter);
+        GL_TEXTURE_MIN_FILTER, ToOpenGLFilterMode(min_filter));
     glTexParameteri(GL_TEXTURE_3D,
         GL_TEXTURE_WRAP_S, wrap_s);
     glTexParameteri(GL_TEXTURE_3D,
@@ -39,9 +39,7 @@ void Texture3D::UploadGpuData(bool should_upload_data)
 
         CatchGLErrors("glTexImage3D failed.", false);
 
-        if (min_filter == GL_LINEAR_MIPMAP_LINEAR ||
-            min_filter == GL_LINEAR_MIPMAP_NEAREST ||
-            min_filter == GL_NEAREST_MIPMAP_NEAREST) {
+        if (min_filter == Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP) {
             glGenerateMipmap(GL_TEXTURE_3D);
             CatchGLErrors("Failed to generate Texture3D mipmaps.", false);
         }

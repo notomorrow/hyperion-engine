@@ -78,19 +78,18 @@ LightingShader::LightingShader(const ShaderProperties &properties)
 
     m_uniform_sh_map = m_uniforms.Acquire("SphericalHarmonicsMap").id;
     m_uniform_has_sh_map = m_uniforms.Acquire("HasSphericalHarmonicsMap").id;
-
-    m_uniform_directional_light_direction = m_uniforms.Acquire("env_DirectionalLight.direction").id;
-    m_uniform_directional_light_color = m_uniforms.Acquire("env_DirectionalLight.color").id;
-    m_uniform_directional_light_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity").id;
 }
 
 void LightingShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
 
+    auto *env = Environment::GetInstance();
+    Shader::SetLightUniforms(env);
+
     SetUniform(m_uniform_diffuse_color, mat.diffuse_color);
 
-    auto *env = Environment::GetInstance();
+
     if (env->ShadowsEnabled()) {
         for (int i = 0; i < env->NumCascades(); i++) {
             const std::string i_str = std::to_string(i);
@@ -105,10 +104,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
             SetUniform(m_uniform_shadow_split[i], (float)env->GetShadowSplit(i));
         }
     }
-
-    SetUniform(m_uniform_directional_light_direction, env->GetSun().GetDirection());
-    SetUniform(m_uniform_directional_light_color, env->GetSun().GetColor());
-    SetUniform(m_uniform_directional_light_intensity, env->GetSun().GetIntensity());
 
     for (int i = 0; i < env->GetProbeManager()->NumProbes(); i++) {
         const auto &probe = env->GetProbeManager()->GetProbe(i);
@@ -153,7 +148,6 @@ void LightingShader::ApplyMaterial(const Material &mat)
     SetUniform(m_uniform_shininess, mat.GetParameter(MATERIAL_PARAMETER_METALNESS)[0]);
     SetUniform(m_uniform_roughness, mat.GetParameter(MATERIAL_PARAMETER_ROUGHNESS)[0]);
     SetUniform(m_uniform_parallax_height, mat.GetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT)[0]);
-
 }
 
 void LightingShader::ApplyTransforms(const Transform &transform, Camera *camera)

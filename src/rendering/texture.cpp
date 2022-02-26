@@ -14,8 +14,8 @@ Texture::Texture(TextureType texture_type)
       bytes(nullptr),
       ifmt(TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8),
       fmt(TextureBaseFormat::TEXTURE_FORMAT_RGB),
-      mag_filter(GL_LINEAR),
-      min_filter(GL_LINEAR_MIPMAP_LINEAR),
+      mag_filter(TextureFilterMode::TEXTURE_FILTER_LINEAR),
+      min_filter(TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP),
       wrap_s(GL_REPEAT),
       wrap_t(GL_REPEAT),
       is_uploaded(false),
@@ -31,8 +31,8 @@ Texture::Texture(TextureType texture_type, int width, int height, unsigned char 
       bytes(bytes),
       ifmt(TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8),
       fmt(TextureBaseFormat::TEXTURE_FORMAT_RGB),
-      mag_filter(GL_LINEAR),
-      min_filter(GL_LINEAR_MIPMAP_LINEAR),
+      mag_filter(TextureFilterMode::TEXTURE_FILTER_LINEAR),
+      min_filter(TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP),
       wrap_s(GL_REPEAT),
       wrap_t(GL_REPEAT),
       is_uploaded(false),
@@ -63,10 +63,22 @@ void Texture::SetInternalFormat(TextureInternalFormat type)
     ifmt = type;
 }
 
-void Texture::SetFilter(int mag, int min)
+void Texture::SetFilter(TextureFilterMode mag, TextureFilterMode min)
 {
     mag_filter = mag;
     min_filter = min;
+}
+
+void Texture::SetFilter(TextureFilterMode mode)
+{
+    switch (mode) {
+    case TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP:
+        SetFilter(TextureFilterMode::TEXTURE_FILTER_LINEAR, mode);
+        return;
+    default:
+        SetFilter(mode, mode);
+        break;
+    }
 }
 
 void Texture::SetWrapMode(int s, int t)
@@ -83,6 +95,7 @@ size_t Texture::NumComponents(TextureBaseFormat format)
     case TextureBaseFormat::TEXTURE_FORMAT_RG : return 2;
     case TextureBaseFormat::TEXTURE_FORMAT_RGB: return 3;
     case TextureBaseFormat::TEXTURE_FORMAT_RGBA: return 4;
+    case TextureBaseFormat::TEXTURE_FORMAT_DEPTH: return 1;
     }
 
     unexpected_value_msg(format, "Unknown number of components for format");
@@ -183,6 +196,17 @@ int Texture::ToOpenGLBaseFormat(TextureBaseFormat fmt)
     }
 
     unexpected_value_msg(format, "Unhandled texture format case");
+}
+
+int Texture::ToOpenGLFilterMode(TextureFilterMode mode)
+{
+    switch (mode) {
+    case TextureFilterMode::TEXTURE_FILTER_NEAREST: return GL_NEAREST;
+    case TextureFilterMode::TEXTURE_FILTER_LINEAR: return GL_LINEAR;
+    case TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP: return GL_LINEAR_MIPMAP_LINEAR;
+    }
+
+    unexpected_value_msg(format, "Unhandled texture filter mode case");
 }
 
 } // namespace hyperion

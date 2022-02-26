@@ -53,6 +53,12 @@ public:
         TEXTURE_INTERNAL_FORMAT_DEPTH_32F
     };
 
+    enum class TextureFilterMode {
+        TEXTURE_FILTER_NEAREST,
+        TEXTURE_FILTER_LINEAR,
+        TEXTURE_FILTER_LINEAR_MIPMAP
+    };
+
     Texture(TextureType texture_type);
     Texture(TextureType texture_type, int width, int height, unsigned char *bytes);
     Texture(const Texture &other) = delete;
@@ -72,9 +78,10 @@ public:
     inline int GetWidth() const { return width; }
     inline int GetHeight() const { return height; }
 
-    void SetFilter(int mag, int min);
-    inline int GetMagFilter() const { return mag_filter; }
-    inline int GetMinFilter() const { return min_filter; }
+    void SetFilter(TextureFilterMode mag, TextureFilterMode min);
+    void SetFilter(TextureFilterMode mode);
+    inline TextureFilterMode GetMagFilter() const { return mag_filter; }
+    inline TextureFilterMode GetMinFilter() const { return min_filter; }
 
     void SetWrapMode(int s, int t);
     inline int GetWrapS() const { return wrap_s; }
@@ -107,7 +114,7 @@ protected:
     TextureBaseFormat fmt;
     unsigned char *bytes;
 
-    int mag_filter, min_filter;
+    TextureFilterMode mag_filter, min_filter;
     int wrap_s, wrap_t;
 
     bool m_is_storage;
@@ -123,6 +130,7 @@ protected:
     // temp until vulkan is main renderer
     static int ToOpenGLInternalFormat(TextureInternalFormat);
     static int ToOpenGLBaseFormat(TextureBaseFormat);
+    static int ToOpenGLFilterMode(TextureFilterMode);
 
 private:
 };

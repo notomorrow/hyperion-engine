@@ -10,6 +10,7 @@
 #include "../hash_code.h"
 #include "../util.h"
 #include "material.h"
+#include "uniform.h"
 #include "camera/camera.h"
 
 #include <vector>
@@ -21,6 +22,7 @@
 
 namespace hyperion {
 class Texture;
+class Environment;
 
 class ShaderProperties {
 public:
@@ -207,96 +209,14 @@ class Shader {
     friend class Renderer;
 public:
 
-
-    struct Uniform {
-        enum UniformType {
-            Uniform_None = -1,
-            Uniform_Float,
-            Uniform_Int,
-            Uniform_Vector2,
-            Uniform_Vector3,
-            Uniform_Vector4,
-            Uniform_Matrix4,
-            Uniform_Texture2D,
-            Uniform_Texture3D,
-            Uniform_TextureCube
-        } type;
-
-        std::array<float, 16> data;
-
-        Uniform()
-        {
-            data = { 0.0f };
-            type = Uniform_None;
-        }
-
-        Uniform(float value)
-        {
-            data[0] = value;
-            type = Uniform_Float;
-        }
-
-        Uniform(int value)
-        {
-            data[0] = (float)value;
-            type = Uniform_Int;
-        }
-
-        Uniform(const Vector2 &value)
-        {
-            data[0] = value.x;
-            data[1] = value.y;
-            type = Uniform_Vector2;
-        }
-
-        Uniform(const Vector3 &value)
-        {
-            data[0] = value.x;
-            data[1] = value.y;
-            data[2] = value.z;
-            type = Uniform_Vector3;
-        }
-
-        Uniform(const Vector4 &value)
-        {
-            data[0] = value.x;
-            data[1] = value.y;
-            data[2] = value.z;
-            data[3] = value.w;
-            type = Uniform_Vector4;
-        }
-
-        Uniform(const Matrix4 &value)
-        {
-            std::memcpy(&data[0], &value.values[0], value.values.size() * sizeof(float));
-            type = Uniform_Matrix4;
-        }
-
-        Uniform(const Texture *texture)
-        {
-            ex_assert(texture != nullptr);
-
-            data[0] = texture->GetId();
-            // texture->GetTextureType() should start at 0 and map to the correct uniform texture type
-            type = UniformType(int(Uniform_Texture2D) + int(texture->GetTextureType()));
-        }
-
-        Uniform &operator=(const Uniform &other)
-        {
-            type = other.type;
-            data = other.data;
-            return *this;
-        }
-    };
-
     struct DeclaredUniform {
         using Id_t = int;
 
         Id_t id;
-        const char *name = nullptr;
+        std::string name;
         Uniform value;
 
-        DeclaredUniform(Id_t id, const char *name, Uniform value = Uniform())
+        DeclaredUniform(Id_t id, const std::string &name, Uniform value = Uniform())
             : id(id), name(name), value(value)
         {
         }
@@ -314,6 +234,19 @@ public:
 
             return *this;
         }
+    };
+
+    struct DirectionalLightUniform {
+        DeclaredUniform::Id_t uniform_color,
+            uniform_direction,
+            uniform_intensity;
+    };
+
+    struct PointLightUniform {
+        DeclaredUniform::Id_t uniform_color,
+            uniform_position,
+            uniform_radius,
+            uniform_intensity;
     };
 
     class DeclaredUniforms {
@@ -348,12 +281,10 @@ public:
         DeclaredUniforms(const DeclaredUniforms &other) = delete;
         inline DeclaredUniforms &operator=(const DeclaredUniforms &other) = delete;
 
-        Result Acquire(const char *name)
+        Result Acquire(const std::string &name)
         {
-            
             DeclaredUniform::Id_t id = m_uniforms.size();
-            std::cout << id << "   " << name << "\n";
-            m_uniforms.push_back(DeclaredUniform(id, name));
+            m_uniforms.push_back(std::make_pair(DeclaredUniform(id, name), true));
 
             return Result(Result::DECLARED_UNIFORM_OK, id);
         }
@@ -362,10 +293,13 @@ public:
         {
             ex_assert(id >= 0);
             ex_assert(id < m_uniforms.size());
-            m_uniforms[id].value = uniform;
+
+            m_uniforms[id].first.value = uniform;
+            m_uniforms[id].second = true;
         }
 
-        std::vector<DeclaredUniform> m_uniforms;
+        // bool - has changed?
+        std::vector<std::pair<DeclaredUniform, bool>> m_uniforms;
     };
 
 
@@ -399,14 +333,6 @@ public:
     inline void SetUniform(DeclaredUniform::Id_t id, const Vector3 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
     inline void SetUniform(DeclaredUniform::Id_t id, const Vector4 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
     inline void SetUniform(DeclaredUniform::Id_t id, const Matrix4 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
-
-    /*inline void SetUniform(const std::string &name, float value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, int value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Texture *value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Vector2 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Vector3 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Vector4 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }
-    inline void SetUniform(const std::string &name, const Matrix4 &value) { uniforms[name] = Uniform(value); uniform_changed = true; }*/
 
     void Use();
     void End();
@@ -462,14 +388,25 @@ protected:
     void InitUniforms();
     void ResetUniforms();
 
-    DeclaredUniform::Id_t m_uniform_viewport;
+    // has to be called manually in ApplyMaterial() by shaders that base off
+    // of this class.
+    void SetLightUniforms(Environment *);
+
     DeclaredUniform::Id_t m_uniform_flip_uv_x;
     DeclaredUniform::Id_t m_uniform_flip_uv_y;
     DeclaredUniform::Id_t m_uniform_uv_scale;
+    DeclaredUniform::Id_t m_uniform_viewport;
+    // matrices
     DeclaredUniform::Id_t m_uniform_model_matrix;
     DeclaredUniform::Id_t m_uniform_view_matrix;
     DeclaredUniform::Id_t m_uniform_proj_matrix;
     DeclaredUniform::Id_t m_uniform_view_proj_matrix;
+    // lights
+    DirectionalLightUniform m_uniform_directional_light;
+    std::vector<PointLightUniform> m_uniform_point_lights;
+    DeclaredUniform::Id_t m_uniform_num_point_lights;
+
+    // textures
     DeclaredUniform::Id_t m_uniform_textures[MATERIAL_MAX_TEXTURES],
         m_uniform_has_textures[MATERIAL_MAX_TEXTURES];
 
