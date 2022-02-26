@@ -113,9 +113,14 @@ struct Bucket {
     void AddItem(const BucketItem &bucket_item)
     {
         const auto it = hash_to_item_index.find(bucket_item.GetId());
-        soft_assert(it == hash_to_item_index.end());
 
-        soft_assert(bucket_item.GetRenderable() != nullptr);
+        if (it != hash_to_item_index.end()) {
+            return;
+        }
+
+        if (bucket_item.GetRenderable() == nullptr) {
+            return;
+        }
 
         // For optimization: try to find an existing slot that
         // where the same shader is used previously or next
@@ -219,7 +224,9 @@ struct Bucket {
     void RemoveItem(int id)
     {
         const auto it = hash_to_item_index.find(id);
-        soft_assert(it != hash_to_item_index.end());
+        if (it == hash_to_item_index.end()) {
+            return;
+        }
 
         const size_t index = it->second;
         ex_assert(index < items.size());

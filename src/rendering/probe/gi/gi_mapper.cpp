@@ -26,8 +26,8 @@ GIMapper::GIMapper(const Vector3 &origin, const BoundingBox &bounds)
     m_rendered_texture.reset(new Texture3D(ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, ProbeManager::voxel_map_size, nullptr));
     m_rendered_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
     m_rendered_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
-    m_rendered_texture->SetFormat(CoreEngine::GLEnums::RGBA);
-    m_rendered_texture->SetInternalFormat(CoreEngine::GLEnums::RGBA32F);
+    m_rendered_texture->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGBA);
+    m_rendered_texture->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F);
 
     m_clear_shader = ShaderManager::GetInstance()->GetShader<GIVoxelClearShader>(ShaderProperties());
     m_mipmap_shader = ShaderManager::GetInstance()->GetShader<BlurComputeShader>(

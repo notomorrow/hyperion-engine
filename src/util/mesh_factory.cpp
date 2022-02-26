@@ -57,6 +57,10 @@ std::shared_ptr<Mesh> MeshFactory::CreateQuad(bool triangle_fan)
 std::shared_ptr<Mesh> MeshFactory::TransformMesh(const std::shared_ptr<Mesh> &mesh,
     const Transform &transform)
 {
+    if (mesh == nullptr) {
+        return nullptr;
+    }
+
     auto new_mesh = std::make_shared<Mesh>();
 
     std::map<Mesh::MeshAttributeType, Mesh::MeshAttribute> all_mesh_attributes;

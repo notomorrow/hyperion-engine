@@ -14,6 +14,45 @@ public:
         TEXTURE_TYPE_CUBEMAP = 2
     };
 
+    enum class TextureBaseFormat {
+        TEXTURE_FORMAT_NONE,
+        TEXTURE_FORMAT_R,
+        TEXTURE_FORMAT_RG,
+        TEXTURE_FORMAT_RGB,
+        TEXTURE_FORMAT_RGBA,
+
+        TEXTURE_FORMAT_DEPTH
+    };
+
+    enum class TextureInternalFormat {
+        TEXTURE_INTERNAL_FORMAT_NONE,
+        TEXTURE_INTERNAL_FORMAT_R8,
+        TEXTURE_INTERNAL_FORMAT_RG8,
+        TEXTURE_INTERNAL_FORMAT_RGB8,
+        TEXTURE_INTERNAL_FORMAT_RGBA8,
+        TEXTURE_INTERNAL_FORMAT_R16,
+        TEXTURE_INTERNAL_FORMAT_RG16,
+        TEXTURE_INTERNAL_FORMAT_RGB16,
+        TEXTURE_INTERNAL_FORMAT_RGBA16,
+        TEXTURE_INTERNAL_FORMAT_R32,
+        TEXTURE_INTERNAL_FORMAT_RG32,
+        TEXTURE_INTERNAL_FORMAT_RGB32,
+        TEXTURE_INTERNAL_FORMAT_RGBA32,
+        TEXTURE_INTERNAL_FORMAT_R16F,
+        TEXTURE_INTERNAL_FORMAT_RG16F,
+        TEXTURE_INTERNAL_FORMAT_RGB16F,
+        TEXTURE_INTERNAL_FORMAT_RGBA16F,
+        TEXTURE_INTERNAL_FORMAT_R32F,
+        TEXTURE_INTERNAL_FORMAT_RG32F,
+        TEXTURE_INTERNAL_FORMAT_RGB32F,
+        TEXTURE_INTERNAL_FORMAT_RGBA32F,
+
+        TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+        TEXTURE_INTERNAL_FORMAT_DEPTH_24,
+        TEXTURE_INTERNAL_FORMAT_DEPTH_32,
+        TEXTURE_INTERNAL_FORMAT_DEPTH_32F
+    };
+
     Texture(TextureType texture_type);
     Texture(TextureType texture_type, int width, int height, unsigned char *bytes);
     Texture(const Texture &other) = delete;
@@ -25,10 +64,10 @@ public:
     inline bool IsCreated() const { return is_created; }
     inline bool IsUploaded() const { return is_uploaded; }
 
-    void SetFormat(int type);
-    inline int GetFormat() const { return fmt; }
-    void SetInternalFormat(int type);
-    inline int GetInternalFormat() const { return ifmt; }
+    void SetFormat(TextureBaseFormat type);
+    inline TextureBaseFormat GetFormat() const { return fmt; }
+    void SetInternalFormat(TextureInternalFormat type);
+    inline TextureInternalFormat GetInternalFormat() const { return ifmt; }
 
     inline int GetWidth() const { return width; }
     inline int GetHeight() const { return height; }
@@ -47,7 +86,7 @@ public:
 
     unsigned char * const GetBytes() const { return bytes; }
 
-    static size_t NumComponents(int format);
+    static size_t NumComponents(TextureBaseFormat format);
     static void ActiveTexture(int i);
 
     void Prepare(bool should_upload_data = true);
@@ -63,13 +102,16 @@ public:
 protected:
     unsigned int id;
 
-    int ifmt, fmt, width, height;
+    int width, height;
+    TextureInternalFormat ifmt;
+    TextureBaseFormat fmt;
     unsigned char *bytes;
 
     int mag_filter, min_filter;
     int wrap_s, wrap_t;
 
     bool m_is_storage;
+    bool is_created, is_uploaded;
 
     TextureType m_texture_type;
 
@@ -78,8 +120,11 @@ protected:
     virtual void UploadGpuData(bool should_upload_data) = 0;
     virtual void Use() = 0;
 
+    // temp until vulkan is main renderer
+    static int ToOpenGLInternalFormat(TextureInternalFormat);
+    static int ToOpenGLBaseFormat(TextureBaseFormat);
+
 private:
-    bool is_created, is_uploaded;
 };
 
 } // namespace hyperion

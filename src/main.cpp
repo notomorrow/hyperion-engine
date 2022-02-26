@@ -260,8 +260,8 @@ public:
 
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(1, 1, 0).Normalize());
-        Environment::GetInstance()->GetSun().SetIntensity(300000.0f);
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5, 1, 0.5).Normalize());
+        Environment::GetInstance()->GetSun().SetIntensity(700000.0f);
         Environment::GetInstance()->GetSun().SetColor(Vector4(1.0, 0.8, 0.65, 1.0));
 
 
@@ -303,47 +303,19 @@ public:
         //GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
-        /*auto model = AssetManager::GetInstance()->LoadFromFile<Node>("models/monkey.obj");
-        for (size_t i = 0; i < model->NumChildren(); i++) {
-            if (model->GetChild(i) == nullptr) {
-                continue;
-            }
-            if (auto renderable = model->GetChild(i)->GetRenderable()) {
-                if (auto mesh = std::dynamic_pointer_cast<Mesh>(renderable)) {
-                    auto voxel_mesh = MeshFactory::DebugVoxelMesh(MeshFactory::BuildVoxels(mesh));
-                    voxel_mesh->SetShader(mesh->GetShader());
-                    model->GetChild(i)->SetRenderable(voxel_mesh);
-                    continue;
-                }
-            }
-        }
-        GetScene()->AddChild(model);*/
-        ///GetScene()->Update(0.1f);
-
-        /*GetSceneManager()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial, void*) {
-            std::cout << "event " << evt << ", node: " << node_id << "\n";
-            if (evt == OCTREE_INSERT_OCTANT) {
-                std::cout << "INSERT OCTANT " << oct->GetAABB() << "\n";
-                auto bb_node = std::make_shared<Node>("oct_" + std::to_string(intptr_t(oct)));
-                bb_node->SetRenderable(std::make_shared<BoundingBoxRenderer>(oct->GetAABB()));
-                GetScene()->AddChild(bb_node);
-            } else if (evt == OCTREE_REMOVE_OCTANT) {
-                std::cout << "REMOVE OCTANT " << oct->GetAABB() << "\n";
-                auto node = GetScene()->GetChild("oct_" + std::to_string(intptr_t(oct)));
-                if (node != nullptr) {
-                    GetScene()->RemoveChild(node);
-                }
-            }
-        });*/
 
 #if 1
 
-        m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
-            auto model = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
+        //m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
+            auto model = asset_manager->LoadFromFile<Node>("models/san-miguel/san-miguel-low-poly.obj");
             model->SetName("model");
-            model->Scale(Vector3(0.01f));
+            model->Scale(Vector3(0.5f));
             for (size_t i = 0; i < model->NumChildren(); i++) {
                 if (model->GetChild(i) == nullptr) {
+                    continue;
+                }
+
+                if (model->GetChild(i)->GetRenderable() == nullptr) {
                     continue;
                 }
 
@@ -413,20 +385,14 @@ public:
                     model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
                     model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 1.0f);
                 }
-
-                if (model->GetChild(i)->GetRenderable() == nullptr) {
-                    continue;
-                }
             }
 
             model->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 1.0f, 0.0f)));
             model->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
-            scene->AddChildAsync(model, [](const std::shared_ptr<Node> &) {
-                std::cout << "!!! ADDED\n";
-            });
-        }));
+            GetScene()->AddChild(model);
+        //}));
 #else
-        auto terrain = asset_manager->LoadFromFile<Node>("models/tmp_terrain.obj");
+        /*auto terrain = asset_manager->LoadFromFile<Node>("models/tmp_terrain.obj");
         terrain->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
         terrain->Scale(20.0f);
         //terrain->GetChild(0)->GetSpatial().GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture>("textures/forest-floor-unity/forest_floor_albedo.png"));
@@ -473,11 +439,6 @@ public:
         GetScene()->AddChild(terrain);
         terrain->Move({ 5, 0, -5 });
 
-        GetScene()->AddControl(std::make_shared<NoiseTerrainControl>(GetCamera()));
-        auto tmp = std::make_shared<Node>("dummy node for vct");
-        tmp->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0, 0, 0), BoundingBox(Vector3(-15, 5, -15), Vector3(15, 5, 15))));
-        tmp->AddControl(std::make_shared<GIProbeControl>(Vector3(0, 0, 0)));
-        GetScene()->AddChild(tmp);*/
 
         auto tree = asset_manager->LoadFromFile<Node>("models/conifer/Conifer_Low.obj");
         for (size_t i = 0; i < tree->NumChildren(); i++) {
@@ -541,44 +502,8 @@ public:
         tree5->SetLocalTranslation({ 27.f, 7.f, -1.f });
         tree5->SetLocalScale(0.045f);
         tree5->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(-76.0f)));
-        GetScene()->AddChild(tree5);
+        GetScene()->AddChild(tree5);*/
 #endif
-
-        bool write = false;
-        bool read = false;
-
-        if (write) {
-            FileByteWriter fbw(AssetManager::GetInstance()->GetRootDir() + "models/sdb.fbom");
-            fbom::FBOMWriter writer;
-            writer.Append(GetScene()->GetChild("salle_de_bain").get());
-            auto res = writer.Emit(&fbw);
-            fbw.Close();
-
-            if (res != fbom::FBOMResult::FBOM_OK) {
-                throw std::runtime_error(std::string("FBOM Error: ") + res.message);
-            }
-        }
-
-        if (read) {
-
-            std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("models/scene.fbom");
-
-            if (auto entity = std::dynamic_pointer_cast<Node>(result)) {
-                for (size_t i = 0; i < entity->NumChildren(); i++) {
-                    if (auto child = entity->GetChild(i)) {
-                        if (auto ren = child->GetRenderable()) {
-                            ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
-                            //ren->SetShader(ShaderManager::GetInstance()->GetShader<GIVoxelDebugShader>(ShaderProperties()));
-                        }
-                    }
-                }
-
-                GetScene()->AddChild(entity);
-                entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 3.0f, 4.0f)));
-                entity->GetChild("mesh0_SG")->AddControl(std::make_shared<GIProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
-            }
-        }
-
         /*auto house = asset_manager->LoadFromFile<Node>("models/house.obj");
         for (size_t i = 0; i < house->NumChildren(); i++) {
             if (auto &child = house->GetChild(i)) {
@@ -588,116 +513,10 @@ public:
         }
         GetScene()->AddChild(house);*/
 
-
-        auto tv = asset_manager->LoadFromFile<Node>("models/television/Television_01_4k.obj", true);
-        tv->SetLocalScale(4.f);
-        for (size_t i = 0; i < tv->NumChildren(); i++) {
-            tv->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
-        }
-            
-        //GetScene()->AddChild(tv);
-
-        int total_cascades = Environment::GetInstance()->NumCascades();
-        for (int x = 0; x < 1; x++) {
-            for (int z = 0; z < 1; z++) {
-                auto ui_fbo_view = std::make_shared<ui::UIObject>("fbo_preview_" + std::to_string(x * 2 + z));
-                ui_fbo_view->GetMaterial().SetTexture(MATERIAL_TEXTURE_COLOR_MAP, Environment::GetInstance()->GetShadowMap(x * 2 + z));
-                ui_fbo_view->SetLocalTranslation2D(Vector2(0.7 + (double(x) * 0.2), -0.4 + (double(z) * -0.3)));
-                ui_fbo_view->SetLocalScale2D(Vector2(256));
-                GetUI()->AddChild(ui_fbo_view);
-                GetUIManager()->RegisterUIObject(ui_fbo_view);
-                total_cascades--;
-                if (total_cascades == 0) {
-                    break;
-                }
-            }
-            if (total_cascades == 0) {
-                break;
-            }
-        }
-
         auto shadow_node = std::make_shared<Node>("shadow_node");
-        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 6.0f));
-        //shadow_node->SetLocalTranslation(Vector3(22, 12, 5));
-        //shadow_node->SetLocalTranslation({ 10.0f, 8.0f, -9.0f });
+        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 8.0f));
         shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
         GetScene()->AddChild(shadow_node);
-
-
-
-        bool add_spheres = false;
-
-        if (add_spheres) {
-
-            for (int x = 0; x < 5; x++) {
-                for (int z = 0; z < 5; z++) {
-
-                    Vector3 box_position = Vector3(((float(x))), 6.4f, (float(z)));
-
-                    //m_threads.emplace_back(std::thread([=, scene = GetScene()]() {
-                    auto box = asset_manager->LoadFromFile<Node>("models/sphere_hq.obj", true);
-                        box->SetLocalScale(0.1f);
-                        //box->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
-
-
-                        for (size_t i = 0; i < box->NumChildren(); i++) {
-
-                            box->GetChild(i)->GetMaterial().diffuse_color = Vector4(
-                                1.f,//col.x,
-                                1.f,//1.0,//col.y,
-                                1.f,//1.0,//col.z,
-                                1.f
-                            );
-                            //box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/albedo.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/ao.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/normal.png"));
-                            ///box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/roughness.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, asset_manager->LoadFromFile<Texture2D>("models/monkey/metallic.png"));
-
-                            ///box->GetChild(0)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_ao.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_normal-ogl.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_albedo.png"));
-                            //box->GetChild(0)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/columned-lava-rock-unity/columned-lava-rock_height.png"));
-
-
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_albedo.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_ao.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_normal-dx.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_roughness.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_metallic.png"));
-                            box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/human-skin-freckled-ue/human-skin-freckled_height.png"));
-                            box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
-                            box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.08f);
-
-
-                            /*box->GetChild(i)->GetMaterial().SetTexture("DiffuseMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-albedo.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture("ParallaxMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-height.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture("AoMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-ao.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture("NormalMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-normal-dx.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture("RoughnessMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-roughness.png"));
-                            box->GetChild(i)->GetMaterial().SetTexture("MetalnessMap", asset_manager->LoadFromFile<Texture2D>("textures/ornate-celtic-gold-ue/ornate-celtic-gold-metallic.png"));
-                            */
-                           // box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("models/Apple/3DApple001_HQ-1K_Color.jpg"));
-                           // box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/Rocks/Rocks011_1K_Displacement.png"));
-                            //box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("models/Apple/3DApple001_HQ-1K_AmbientOcclusion.jpg"));
-                           // box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("models/Apple/3DApple001_HQ-1K_NormalGL.jpg"));
-                            //box->GetChild(i)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/Rocks/Rocks011_1K_Roughness.png"));
-                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 5.0f);
-                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
-                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
-                            //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.2f);
-                        }
-
-                        //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));
-
-                        box->SetLocalTranslation(box_position);
-
-                        GetScene()->AddChildAsync(box, [](auto) {});
-                   // }));
-                }
-            }
-        }
         
         //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(Vector3(0, 1, 0), Vector4(1.0f, 0.0f, 0.0f, 1.0f) * 3.0f, 1.5f));
 
@@ -772,13 +591,6 @@ public:
                 ss << " " << m_selected_node->GetAABB();
                 
                 m_selected_node_text->SetText(ss.str());
-
-                /*auto cube = GetScene()->GetChild("cube");
-                cube->SetGlobalTranslation(mesh_intersections[0].hitpoint);
-
-                Matrix4 look_at;
-                MatrixUtil::ToLookAt(look_at, mesh_intersections[0].normal, Vector3::UnitY());
-                cube->SetGlobalRotation(Quaternion(look_at));*/
             });
 
         GetInputManager()->RegisterClickEvent(MOUSE_BTN_LEFT, raytest_event);
@@ -786,10 +598,6 @@ public:
 
     void Logic(double dt)
     {
-        for (int i = 0; i < 2; i++) {
-            auto shader = ShaderManager::GetInstance()->GetShader<LightingShader>();
-            std::cout << shader->GetId() << "\n";
-        }
         if (GetInputManager()->IsButtonDown(MouseButton::MOUSE_BTN_LEFT) && m_selected_node != nullptr) {
             //std::cout << "Left button down\n";
             if (!m_dragging_node) {

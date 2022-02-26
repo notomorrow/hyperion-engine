@@ -237,7 +237,7 @@ void Node::AddChildAsync(std::shared_ptr<Node> node, NodeCallback_t on_added)
 {
     ex_assert(node != nullptr);
 
-    std::lock_guard guard(add_pending_mutex);
+    //std::lock_guard guard(add_pending_mutex);
 
     node->m_flags |= PENDING_ADDITION;
     m_children_pending_addition.push_back(std::make_pair(node, on_added));
@@ -245,7 +245,7 @@ void Node::AddChildAsync(std::shared_ptr<Node> node, NodeCallback_t on_added)
 
 void Node::AddPending()
 {
-    std::lock_guard guard(add_pending_mutex);
+    //std::lock_guard guard(add_pending_mutex);
 
     if (m_children_pending_addition.empty()) {
         return;
@@ -310,7 +310,7 @@ void Node::RemoveControl(const std::shared_ptr<EntityControl> &control)
 
 void Node::Update(double dt)
 {
-    AddPending();
+    //AddPending();
 
     BoundingBox aabb_before(m_spatial.m_aabb);
 

@@ -26,8 +26,8 @@ FramebufferCube::FramebufferCube(int width, int height)
         }
 
         auto color_texture = std::make_shared<Cubemap>(color_textures);
-        color_texture->SetInternalFormat(GL_RGB8);
-        color_texture->SetFormat(GL_RGB);
+        color_texture->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8);
+        color_texture->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGB);
         color_texture->SetFilter(GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
         color_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
@@ -40,13 +40,13 @@ FramebufferCube::FramebufferCube(int width, int height)
             memset(data, 0, depth_map_texture_byte_size);
 
             depth_textures[i] = std::make_shared<Texture2D>(width, height, data);
-            depth_textures[i]->SetInternalFormat(GL_DEPTH_COMPONENT24);
-            depth_textures[i]->SetFormat(GL_DEPTH_COMPONENT);
+            depth_textures[i]->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24);
+            depth_textures[i]->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH);
         }
 
         auto depth_texture = std::make_shared<Cubemap>(depth_textures);
-        depth_texture->SetInternalFormat(GL_DEPTH_COMPONENT24);
-        depth_texture->SetFormat(GL_DEPTH_COMPONENT);
+        depth_texture->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24);
+        depth_texture->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH);
         depth_texture->SetFilter(GL_NEAREST, GL_NEAREST);
         depth_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 

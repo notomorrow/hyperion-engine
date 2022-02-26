@@ -106,7 +106,7 @@ std::shared_ptr<Loadable> ObjLoader::LoadFromFile(const std::string &path)
     buf.ReadLines([&, this](auto line) {
         tokens.clear();
 
-        StringUtil::Trim(line);
+        line = StringUtil::Trim(line);
         StringUtil::SplitBuffered(line, ' ', split_tokens);
 
         if (!tokens.empty() && tokens[0] != "#") {

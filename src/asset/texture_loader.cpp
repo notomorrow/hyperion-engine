@@ -3,6 +3,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../util/img/stb_image.h"
 
+#include "../math/math_util.h"
 #include "../rendering/texture_2D.h"
 #include "../opengl.h"
 
@@ -22,24 +23,43 @@ std::shared_ptr<Loadable> TextureLoader::LoadFromFile(const std::string &path)
 
     switch (comp) {
         case STBI_rgb_alpha:
-            tex->SetFormat(GL_RGBA);
-            tex->SetInternalFormat(GL_RGBA8);
+            tex->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGBA);
+            tex->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8);
             break;
         case STBI_rgb:
-            tex->SetFormat(GL_RGB);
-            tex->SetInternalFormat(GL_RGB8);
+            tex->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGB);
+            tex->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8);
             break;
         case STBI_grey_alpha:
-            tex->SetFormat(GL_RG);
-            tex->SetInternalFormat(GL_RG8);
+            tex->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RG);
+            tex->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG8);
             break;
         case STBI_grey:
-            tex->SetFormat(GL_RED);
-            tex->SetInternalFormat(GL_R8);
+            tex->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_R);
+            tex->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R8);
             break;
         default:
             std::cout << "Unknown image format!" << std::endl;
             throw "Unknown image format";
+    }
+
+    bool resize = false;
+    size_t new_width = width, new_height = height;
+
+    if (!MathUtil::IsPowerOfTwo(width)) {
+        resize = true;
+        new_width = MathUtil::NextPowerOf2(width);
+    }
+
+    if (!MathUtil::IsPowerOfTwo(height)) {
+        resize = true;
+        new_height = MathUtil::NextPowerOf2(height);
+    }
+
+    if (resize) {
+        std::cout << "Prev size: " << width << ", " << height << "\n";
+        std::cout << "New size: " << new_width << ", " << new_height << "\n";
+        tex->Resize(new_width, new_height);
     }
 
     return tex;

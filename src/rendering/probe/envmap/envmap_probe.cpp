@@ -32,8 +32,8 @@ EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int w
 
     m_spherical_harmonics_shader = ShaderManager::GetInstance()->GetShader<SHComputeShader>(ShaderProperties());
     m_sh_texture = std::make_shared<Texture2D>(8, 8, nullptr);
-    m_sh_texture->SetFormat(CoreEngine::GLEnums::RGBA);
-    m_sh_texture->SetInternalFormat(CoreEngine::GLEnums::RGBA8);
+    m_sh_texture->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGBA);
+    m_sh_texture->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8);
     m_sh_texture->SetFilter(CoreEngine::GLEnums::NEAREST, CoreEngine::GLEnums::NEAREST);
     m_sh_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
 
