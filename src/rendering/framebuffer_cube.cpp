@@ -11,9 +11,8 @@ namespace hyperion {
 FramebufferCube::FramebufferCube(int width, int height)
     : Framebuffer(width, height)
 {
-    const int num_components = 3; // r, g, b
-    const size_t color_map_texture_byte_size = width * height * num_components,
-        depth_map_texture_byte_size = width * height;
+    const size_t color_map_texture_byte_size = width * height * Texture::NumComponents(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGB),
+                 depth_map_texture_byte_size = width * height * Texture::NumComponents(Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH);
 
     std::array<std::shared_ptr<Texture2D>, 6> color_textures, depth_textures;
 
@@ -28,7 +27,7 @@ FramebufferCube::FramebufferCube(int width, int height)
         auto color_texture = std::make_shared<Cubemap>(color_textures);
         color_texture->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8);
         color_texture->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGB);
-        color_texture->SetFilter(GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
+        color_texture->SetFilter(Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
         color_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
         m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_COLOR)] = color_texture;
@@ -47,7 +46,7 @@ FramebufferCube::FramebufferCube(int width, int height)
         auto depth_texture = std::make_shared<Cubemap>(depth_textures);
         depth_texture->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24);
         depth_texture->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH);
-        depth_texture->SetFilter(GL_NEAREST, GL_NEAREST);
+        depth_texture->SetFilter(Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST);
         depth_texture->SetWrapMode(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
         m_attachments[AttachmentToOrdinal(FRAMEBUFFER_ATTACHMENT_DEPTH)] = depth_texture;

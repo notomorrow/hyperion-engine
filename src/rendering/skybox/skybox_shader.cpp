@@ -26,21 +26,14 @@ SkyboxShader::SkyboxShader(const ShaderProperties &properties)
     );
 
     m_uniform_camera_position = m_uniforms.Acquire("u_camerapos").id;
-
-    m_uniform_directional_light_direction = m_uniforms.Acquire("env_DirectionalLight.direction").id;
-    m_uniform_directional_light_color = m_uniforms.Acquire("env_DirectionalLight.color").id;
-    m_uniform_directional_light_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity").id;
 }
 
 void SkyboxShader::ApplyMaterial(const Material &mat)
 {
     Shader::ApplyMaterial(mat);
 
-    auto env = Environment::GetInstance();
-
-    SetUniform(m_uniform_directional_light_direction, env->GetSun().GetDirection());
-    SetUniform(m_uniform_directional_light_color, env->GetSun().GetColor());
-    SetUniform(m_uniform_directional_light_intensity, env->GetSun().GetIntensity());
+    auto *env = Environment::GetInstance();
+    Shader::SetLightUniforms(env);
 }
 
 void SkyboxShader::ApplyTransforms(const Transform &transform, Camera *camera)

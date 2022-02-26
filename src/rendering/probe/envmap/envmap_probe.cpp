@@ -34,7 +34,7 @@ EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int w
     m_sh_texture = std::make_shared<Texture2D>(8, 8, nullptr);
     m_sh_texture->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGBA);
     m_sh_texture->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8);
-    m_sh_texture->SetFilter(CoreEngine::GLEnums::NEAREST, CoreEngine::GLEnums::NEAREST);
+    m_sh_texture->SetFilter(Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST);
     m_sh_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
 
     for (int i = 0; i < m_cameras.size(); i++) {

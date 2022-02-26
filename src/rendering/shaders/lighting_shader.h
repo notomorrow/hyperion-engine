@@ -23,10 +23,6 @@ private:
         m_uniform_shadow_map[4],
         m_uniform_diffuse_color,
         m_uniform_poisson_disk[16];
-    // lights
-    DeclaredUniform::Id_t m_uniform_directional_light_direction,
-        m_uniform_directional_light_color,
-        m_uniform_directional_light_intensity;
     // envmap
     DeclaredUniform::Id_t m_uniform_envmap_origin,
         m_uniform_envmap_max,

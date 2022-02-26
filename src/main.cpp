@@ -149,7 +149,7 @@ public:
             asset_manager->LoadFromFile<Texture2D>("textures/chapel/negz.jpg")
         }));
 
-        cubemap->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR_MIPMAP_LINEAR);
+        cubemap->SetFilter(Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
 
         if (!ProbeManager::GetInstance()->EnvMapEnabled()) {
             Environment::GetInstance()->SetGlobalCubemap(cubemap);
@@ -241,8 +241,8 @@ public:
         ShaderManager::GetInstance()->SetBaseShaderProperties(ShaderProperties()
             .Define("NORMAL_MAPPING", true)
             .Define("SHADOW_MAP_RADIUS", 0.005f)
-            .Define("SHADOW_PCF", true)
-            .Define("SHADOWS_VARIANCE", false)
+            .Define("SHADOW_PCF", false)
+            .Define("SHADOWS_VARIANCE", true)
         );
 
         AssetManager *asset_manager = AssetManager::GetInstance();

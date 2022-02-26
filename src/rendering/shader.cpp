@@ -1,4 +1,5 @@
 #include "shader.h"
+#include "environment.h"
 #include "../util/string_util.h"
 #include "../util/shader_preprocessor.h"
 #include "../util.h"
@@ -42,15 +43,26 @@ Shader::~Shader()
 
 void Shader::InitUniforms()
 {
-    m_uniform_viewport = m_uniforms.Acquire("Viewport").id;
     m_uniform_flip_uv_x = m_uniforms.Acquire("FlipUV_X").id;
     m_uniform_flip_uv_y = m_uniforms.Acquire("FlipUV_Y").id;
     m_uniform_uv_scale = m_uniforms.Acquire("UVScale").id;
+
+    m_uniform_viewport = m_uniforms.Acquire("Viewport").id;
+
+    // matrices
     m_uniform_model_matrix = m_uniforms.Acquire("u_modelMatrix").id;
     m_uniform_view_matrix = m_uniforms.Acquire("u_viewMatrix").id;
     m_uniform_proj_matrix = m_uniforms.Acquire("u_projMatrix").id;
     m_uniform_view_proj_matrix = m_uniforms.Acquire("u_viewProjMatrix").id;
 
+    // lights
+    m_uniform_num_point_lights = m_uniforms.Acquire("env_NumPointLights").id;
+
+    m_uniform_directional_light.uniform_direction = m_uniforms.Acquire("env_DirectionalLight.direction").id;
+    m_uniform_directional_light.uniform_color = m_uniforms.Acquire("env_DirectionalLight.color").id;
+    m_uniform_directional_light.uniform_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity").id;
+
+    // textures
     EnumOptions<MaterialTextureKey, const char *, MATERIAL_MAX_TEXTURES> has_texture_names({
         std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_DIFFUSE_MAP, "HasDiffuseMap"),
         std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_NORMAL_MAP, "HasNormalMap"),
@@ -285,6 +297,40 @@ void Shader::ResetUniforms()
     SetUniform(m_uniform_uv_scale, Vector2(1));
 }
 
+
+void Shader::SetLightUniforms(Environment *env)
+{
+    size_t num_point_lights = env->NumVisiblePointLights();
+
+    SetUniform(m_uniform_num_point_lights, int(num_point_lights));
+
+    if (num_point_lights > m_uniform_point_lights.size()) {
+        size_t prev_size = m_uniform_point_lights.size();
+        m_uniform_point_lights.resize(num_point_lights);
+
+        for (size_t i = prev_size; i < num_point_lights; i++) {
+            std::string index_string(std::to_string(i));
+
+            m_uniform_point_lights[i].uniform_color = m_uniforms.Acquire("env_PointLights[" + index_string + "].color").id;
+            m_uniform_point_lights[i].uniform_position = m_uniforms.Acquire("env_PointLights[" + index_string + "].position").id;
+            m_uniform_point_lights[i].uniform_radius = m_uniforms.Acquire("env_PointLights[" + index_string + "].radius").id;
+            m_uniform_point_lights[i].uniform_intensity = m_uniforms.Acquire("env_PointLights[" + index_string + "].intensity").id;
+        }
+    }
+
+    for (size_t i = 0; i < num_point_lights; i++) {
+        const auto &pl = env->GetVisiblePointLights()[i];
+
+        SetUniform(m_uniform_point_lights[i].uniform_color, pl.point_light->GetColor());
+        SetUniform(m_uniform_point_lights[i].uniform_position, pl.point_light->GetPosition());
+        SetUniform(m_uniform_point_lights[i].uniform_radius, pl.point_light->GetRadius());
+    }
+
+    SetUniform(m_uniform_directional_light.uniform_direction, env->GetSun().GetDirection());
+    SetUniform(m_uniform_directional_light.uniform_color, env->GetSun().GetColor());
+    SetUniform(m_uniform_directional_light.uniform_intensity, env->GetSun().GetIntensity());
+}
+
 void Shader::ApplyMaterial(const Material &mat)
 {
     ResetUniforms();
@@ -352,6 +398,7 @@ void Shader::ApplyTransforms(const Transform &transform, Camera *camera)
     SetUniform(m_uniform_proj_matrix, camera->GetProjectionMatrix());
     SetUniform(m_uniform_view_proj_matrix, camera->GetViewProjectionMatrix());
     SetUniform(m_uniform_viewport, Vector2(camera->GetWidth(), camera->GetHeight()));
+    SetUniform(m_uniform_num_point_lights, 0);
 }
 
 void Shader::ApplyUniforms()
@@ -359,61 +406,17 @@ void Shader::ApplyUniforms()
     if (uniform_changed) {
         int texture_index = 1;
 
-        for (const auto &uniform : m_uniforms.m_uniforms) {
-            if (uniform.value.type == Uniform::Uniform_None) {
-                // not set
+        for (auto &it : m_uniforms.m_uniforms) {
+            if (!it.second) {
+                // has not changed so we skip it
                 continue;
             }
 
-            int loc = glGetUniformLocation(progid, uniform.name);
+            const auto &uniform = it.first;
 
-            if (loc != -1) {
-                switch (uniform.value.type) {
-                case Uniform::Uniform_Float:
-                    glUniform1f(loc, uniform.value.data[0]);
-                    break;
-                case Uniform::Uniform_Int:
-                    glUniform1i(loc, (int)uniform.value.data[0]);
-                    break;
-                case Uniform::Uniform_Vector2:
-                    glUniform2f(loc, uniform.value.data[0], uniform.value.data[1]);
-                    break;
-                case Uniform::Uniform_Vector3:
-                    glUniform3f(loc, uniform.value.data[0], uniform.value.data[1],
-                        uniform.value.data[2]);
-                    break;
-                case Uniform::Uniform_Vector4:
-                    glUniform4f(loc, uniform.value.data[0], uniform.value.data[1],
-                        uniform.value.data[2], uniform.value.data[3]);
-                    break;
-                case Uniform::Uniform_Matrix4:
-                    glUniformMatrix4fv(loc, 1, true, &uniform.value.data[0]);
-                    break;
-                case Uniform::Uniform_Texture2D:
-                    Texture::ActiveTexture(texture_index);
-                    glBindTexture(GL_TEXTURE_2D, int(uniform.value.data[0]));
-                    glUniform1i(loc, texture_index);
-                    texture_index++;
-                    break;
-                case Uniform::Uniform_Texture3D:
-                    Texture::ActiveTexture(texture_index);
-                    glBindTexture(GL_TEXTURE_3D, int(uniform.value.data[0]));
-                    glUniform1i(loc, texture_index);
-                    texture_index++;
-                    break;
-                case Uniform::Uniform_TextureCube:
-                    Texture::ActiveTexture(texture_index);
-                    glBindTexture(GL_TEXTURE_CUBE_MAP, int(uniform.value.data[0]));
-                    glUniform1i(loc, texture_index);
-                    texture_index++;
-                    break;
-                default:
-                    std::cout << "invalid uniform type " << uniform.value.type << " for " << uniform.name << "\n";
-                    break;
-                }
+            it.second = false; // set to changed = false;
 
-                CatchGLErrors("Failed to set uniform", false);
-            }
+            it.first.value.BindUniform(this, it.first.name.c_str(), texture_index);
         }
 
         uniform_changed = false;

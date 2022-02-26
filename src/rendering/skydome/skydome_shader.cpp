@@ -48,10 +48,6 @@ SkydomeShader::SkydomeShader(const ShaderProperties &properties)
     m_uniform_sun_color = m_uniforms.Acquire("u_sunColor").id;
     m_uniform_global_time = m_uniforms.Acquire("u_globalTime").id;
 
-    m_uniform_directional_light_direction = m_uniforms.Acquire("env_DirectionalLight.direction").id;
-    m_uniform_directional_light_color = m_uniforms.Acquire("env_DirectionalLight.color").id;
-    m_uniform_directional_light_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity").id;
-
     G = -0.990f;
 
     SetUniform(m_uniform_fg, G);
@@ -63,16 +59,13 @@ void SkydomeShader::ApplyMaterial(const Material &mat)
     Shader::ApplyMaterial(mat);
 
     auto *env = Environment::GetInstance();
+    Shader::SetLightUniforms(env);
 
     if (has_clouds) {
         noise_map->Prepare();
 
         SetUniform(m_uniform_noise_map, noise_map.get());
     }
-
-    SetUniform(m_uniform_directional_light_direction, env->GetSun().GetDirection());
-    SetUniform(m_uniform_directional_light_color, env->GetSun().GetColor());
-    SetUniform(m_uniform_directional_light_intensity, env->GetSun().GetIntensity());
 
     SetUniform(m_uniform_global_time, m_global_time);
     SetUniform(m_uniform_sun_color, sun_color);

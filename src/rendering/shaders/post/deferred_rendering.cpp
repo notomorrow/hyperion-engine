@@ -67,10 +67,6 @@ DeferredRenderingShader::DeferredRenderingShader(const ShaderProperties &propert
     m_uniform_sh_map = m_uniforms.Acquire("SphericalHarmonicsMap").id;
     m_uniform_has_sh_map = m_uniforms.Acquire("HasSphericalHarmonicsMap").id;
 
-    m_uniform_directional_light_direction = m_uniforms.Acquire("env_DirectionalLight.direction").id;
-    m_uniform_directional_light_color = m_uniforms.Acquire("env_DirectionalLight.color").id;
-    m_uniform_directional_light_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity").id;
-
     m_uniform_inverse_view_proj_matrix = m_uniforms.Acquire("InverseViewProjMatrix").id;
 }
 
@@ -79,6 +75,8 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
     PostShader::ApplyMaterial(mat);
 
     auto *env = Environment::GetInstance();
+    Shader::SetLightUniforms(env);
+
     if (env->ShadowsEnabled()) {
         for (int i = 0; i < env->NumCascades(); i++) {
             if (auto shadow_map = env->GetShadowMap(i)) {
@@ -91,12 +89,6 @@ void DeferredRenderingShader::ApplyMaterial(const Material &mat)
             SetUniform(m_uniform_shadow_split[i], (float)env->GetShadowSplit(i));
         }
     }
-
-    env->BindLights(this);
-
-    SetUniform(m_uniform_directional_light_direction, env->GetSun().GetDirection());
-    SetUniform(m_uniform_directional_light_color, env->GetSun().GetColor());
-    SetUniform(m_uniform_directional_light_intensity, env->GetSun().GetIntensity());
 
     for (int i = 0; i < env->GetProbeManager()->NumProbes(); i++) {
         const auto &probe = env->GetProbeManager()->GetProbe(i);

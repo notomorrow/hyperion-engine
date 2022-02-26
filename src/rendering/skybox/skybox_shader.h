@@ -14,11 +14,6 @@ public:
 
 private:
     DeclaredUniform::Id_t m_uniform_camera_position;
-
-    // lights
-    DeclaredUniform::Id_t m_uniform_directional_light_direction,
-        m_uniform_directional_light_color,
-        m_uniform_directional_light_intensity;
 };
 } // namespace hyperion
 

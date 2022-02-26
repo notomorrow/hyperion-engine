@@ -187,9 +187,9 @@ void ShadowMapping::UpdateShadowMapFiltering()
 {
     if (auto color_texture = fbo->GetAttachment(Framebuffer::FramebufferAttachment::FRAMEBUFFER_ATTACHMENT_COLOR)) {
         if (m_is_variance_shadow_mapping) {
-            color_texture->SetFilter(CoreEngine::GLEnums::LINEAR, CoreEngine::GLEnums::LINEAR);
+            color_texture->SetFilter(Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR);
         } else {
-            color_texture->SetFilter(CoreEngine::GLEnums::NEAREST, CoreEngine::GLEnums::NEAREST);
+            color_texture->SetFilter(Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST);
         }
     }
 }

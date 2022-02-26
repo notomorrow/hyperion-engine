@@ -49,8 +49,8 @@ void Cubemap::UploadGpuData(bool should_upload_data)
         }
     }
 
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, mag_filter);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, min_filter);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, ToOpenGLFilterMode(mag_filter));
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, ToOpenGLFilterMode(min_filter));
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -59,9 +59,7 @@ void Cubemap::UploadGpuData(bool should_upload_data)
 
     if (should_upload_data) {
 
-        if (min_filter == GL_LINEAR_MIPMAP_LINEAR ||
-            min_filter == GL_LINEAR_MIPMAP_NEAREST ||
-            min_filter == GL_NEAREST_MIPMAP_NEAREST) {
+        if (min_filter == Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP) {
             glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
             CatchGLErrors("Failed to generate cubemap mipmaps.", false);
         }
