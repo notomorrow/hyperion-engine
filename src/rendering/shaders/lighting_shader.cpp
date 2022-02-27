@@ -78,6 +78,10 @@ LightingShader::LightingShader(const ShaderProperties &properties)
 
     m_uniform_sh_map = m_uniforms.Acquire("SphericalHarmonicsMap").id;
     m_uniform_has_sh_map = m_uniforms.Acquire("HasSphericalHarmonicsMap").id;
+
+
+    m_test_buffer = m_uniforms.AcquireBuffer("TestBlock").id;
+    m_my_color = m_uniforms.Acquire(m_test_buffer, "my_color").id;
 }
 
 void LightingShader::ApplyMaterial(const Material &mat)
@@ -148,6 +152,9 @@ void LightingShader::ApplyMaterial(const Material &mat)
     SetUniform(m_uniform_shininess, mat.GetParameter(MATERIAL_PARAMETER_METALNESS)[0]);
     SetUniform(m_uniform_roughness, mat.GetParameter(MATERIAL_PARAMETER_ROUGHNESS)[0]);
     SetUniform(m_uniform_parallax_height, mat.GetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT)[0]);
+
+
+    SetUniform(m_test_buffer, m_my_color, Vector3(0.0, 1.0, 0.0));
 }
 
 void LightingShader::ApplyTransforms(const Transform &transform, Camera *camera)

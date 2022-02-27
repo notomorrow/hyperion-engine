@@ -34,6 +34,9 @@ private:
     // sh
     DeclaredUniform::Id_t m_uniform_sh_map,
         m_uniform_has_sh_map;
+
+    UniformBuffer::Id_t m_test_buffer;
+    DeclaredUniform::Id_t m_my_color;
 };
 } // namespace hyperion
 

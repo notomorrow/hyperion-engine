@@ -9,6 +9,7 @@
 #include "../asset/loadable.h"
 #include "../hash_code.h"
 #include "../util.h"
+#include "../util/non_owning_ptr.h"
 #include "material.h"
 #include "uniform.h"
 #include "camera/camera.h"
@@ -209,6 +210,9 @@ class Shader {
     friend class Renderer;
 public:
 
+    struct UniformResult;
+    struct UniformBufferResult;
+
     struct DeclaredUniform {
         using Id_t = int;
 
@@ -236,6 +240,65 @@ public:
         }
     };
 
+    struct UniformBuffer {
+        using Id_t = int;
+
+        Id_t id;
+        std::string name;
+        std::vector<DeclaredUniform> data;
+
+        struct Internal {
+            using Handle_t = unsigned int;
+
+            Handle_t handle;
+            size_t size;
+            size_t index;
+            bool generated;
+        };
+
+        non_owning_ptr<Internal> _internal;
+
+        UniformBuffer(Id_t id, const std::string &name)
+            : id(id),
+              name(name)
+        {
+        }
+
+        UniformBuffer(const UniformBuffer &other)
+            : id(other.id),
+              name(other.name),
+              data(other.data),
+              _internal(other._internal)
+        {
+        }
+
+        inline UniformBuffer &operator=(const UniformBuffer &other)
+        {
+            id = other.id;
+            name = other.name;
+            data = other.data;
+            _internal = other._internal;
+
+            return *this;
+        }
+
+        UniformResult Acquire(const std::string &name)
+        {
+            DeclaredUniform::Id_t id = data.size();
+            data.push_back(DeclaredUniform(id, name));
+
+            return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
+        }
+
+        inline void Set(DeclaredUniform::Id_t id, const Uniform &uniform)
+        {
+            ex_assert(id >= 0);
+            ex_assert(id < data.size());
+
+            data[id].value = uniform;
+        }
+    };
+
     struct DirectionalLightUniform {
         DeclaredUniform::Id_t uniform_color,
             uniform_direction,
@@ -251,42 +314,35 @@ public:
 
     class DeclaredUniforms {
     public:
-        struct Result {
-            enum {
-                DECLARED_UNIFORM_OK,
-                DECLARED_UNIFORM_ERR
-            } result;
-
-            DeclaredUniform::Id_t id;
-
-            std::string message;
-
-            Result(decltype(result) result, DeclaredUniform::Id_t id = -1, const std::string &message = "")
-                : result(result), message(message), id(id) {}
-            Result(const Result &other)
-                : result(other.result), message(other.message), id(other.id) {}
-            inline Result &operator=(const Result &other)
-            {
-                result = other.result;
-                id = other.id;
-                message = other.message;
-
-                return *this;
-            }
-
-            inline explicit operator bool() const { return result == DECLARED_UNIFORM_OK; }
-        };
 
         DeclaredUniforms() { m_uniforms.reserve(32); }
         DeclaredUniforms(const DeclaredUniforms &other) = delete;
         inline DeclaredUniforms &operator=(const DeclaredUniforms &other) = delete;
 
-        Result Acquire(const std::string &name)
+        UniformBufferResult AcquireBuffer(const std::string &name)
+        {
+            UniformBuffer::Id_t id = m_uniform_buffers.size();
+            m_uniform_buffers.push_back(std::make_pair(UniformBuffer(id, name), true));
+
+            return UniformBufferResult(UniformBufferResult::DECLARED_UNIFORM_BUFFER_OK, id);
+        }
+
+        UniformResult Acquire(const std::string &name)
         {
             DeclaredUniform::Id_t id = m_uniforms.size();
             m_uniforms.push_back(std::make_pair(DeclaredUniform(id, name), true));
+ 
+            return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
+        }
 
-            return Result(Result::DECLARED_UNIFORM_OK, id);
+        UniformResult Acquire(UniformBuffer::Id_t buffer_id, const std::string &name)
+        {
+            ex_assert(buffer_id >= 0);
+            ex_assert(buffer_id < m_uniform_buffers.size());
+
+            auto &buffer = m_uniform_buffers[buffer_id].first;
+
+            return buffer.Acquire(name);
         }
 
         inline void Set(DeclaredUniform::Id_t id, const Uniform &uniform)
@@ -298,8 +354,75 @@ public:
             m_uniforms[id].second = true;
         }
 
+        inline void Set(UniformBuffer::Id_t buffer_id, DeclaredUniform::Id_t uniform_id, const Uniform &uniform)
+        {
+            ex_assert(buffer_id >= 0);
+            ex_assert(buffer_id < m_uniform_buffers.size());
+
+            auto &buffer = m_uniform_buffers[buffer_id].first;
+
+            ex_assert(uniform_id >= 0);
+            ex_assert(uniform_id < buffer.data.size());
+
+            buffer.data[uniform_id].value = uniform;
+
+            m_uniform_buffers[buffer_id].second = true; // set changed to true
+        }
+
         // bool - has changed?
         std::vector<std::pair<DeclaredUniform, bool>> m_uniforms;
+        std::vector<std::pair<UniformBuffer, bool>> m_uniform_buffers;
+    };
+    struct UniformResult {
+        enum {
+            DECLARED_UNIFORM_OK,
+            DECLARED_UNIFORM_ERR
+        } result;
+
+        DeclaredUniform::Id_t id;
+
+        std::string message;
+
+        UniformResult(decltype(result) result, DeclaredUniform::Id_t id = -1, const std::string &message = "")
+            : result(result), message(message), id(id) {}
+        UniformResult(const UniformResult &other)
+            : result(other.result), message(other.message), id(other.id) {}
+        inline UniformResult &operator=(const UniformResult &other)
+        {
+            result = other.result;
+            id = other.id;
+            message = other.message;
+
+            return *this;
+        }
+
+        inline explicit operator bool() const { return result == DECLARED_UNIFORM_OK; }
+    };
+
+    struct UniformBufferResult {
+        enum {
+            DECLARED_UNIFORM_BUFFER_OK,
+            DECLARED_UNIFORM_BUFFER_ERR
+        } result;
+
+        UniformBuffer::Id_t id;
+
+        std::string message;
+
+        UniformBufferResult(decltype(result) result, UniformBuffer::Id_t id = -1, const std::string &message = "")
+            : result(result), message(message), id(id) {}
+        UniformBufferResult(const UniformBufferResult &other)
+            : result(other.result), message(other.message), id(other.id) {}
+        inline UniformBufferResult &operator=(const UniformBufferResult &other)
+        {
+            result = other.result;
+            id = other.id;
+            message = other.message;
+
+            return *this;
+        }
+
+        inline explicit operator bool() const { return result == DECLARED_UNIFORM_BUFFER_OK; }
     };
 
 
@@ -326,13 +449,14 @@ public:
     inline DeclaredUniforms &GetUniforms() { return m_uniforms; }
     inline const DeclaredUniforms &GetUniforms() const { return m_uniforms; }
 
-    inline void SetUniform(DeclaredUniform::Id_t id, float value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
-    inline void SetUniform(DeclaredUniform::Id_t id, int value)   { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
-    inline void SetUniform(DeclaredUniform::Id_t id, const Texture *value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
-    inline void SetUniform(DeclaredUniform::Id_t id, const Vector2 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
-    inline void SetUniform(DeclaredUniform::Id_t id, const Vector3 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
-    inline void SetUniform(DeclaredUniform::Id_t id, const Vector4 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
-    inline void SetUniform(DeclaredUniform::Id_t id, const Matrix4 &value) { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+    template <class T>
+    inline void SetUniform(DeclaredUniform::Id_t id, const T &value)
+        { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+
+    template <class T>
+    inline void SetUniform(UniformBuffer::Id_t buffer_id, DeclaredUniform::Id_t uniform_id, const T &value)
+        { m_uniforms.Set(buffer_id, uniform_id, Uniform(value)); uniform_changed = true; }
+
 
     void Use();
     void End();
@@ -422,8 +546,11 @@ private:
     void UploadGpuData();
     void DestroyGpuData();
     bool ShaderPropertiesChanged() const;
-
     void ApplyUniforms();
+
+    UniformBuffer::Internal *CreateUniformBuffer(const char *name);
+    void DestroyUniformBuffer(UniformBuffer::Internal *);
+    std::vector<UniformBuffer::Internal*> m_uniform_buffer_internals;
 
     std::map<SubShaderType, SubShader> subshaders;
 };

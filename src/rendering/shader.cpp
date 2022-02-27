@@ -419,6 +419,33 @@ void Shader::ApplyUniforms()
             it.first.value.BindUniform(this, it.first.name.c_str(), texture_index);
         }
 
+        for (auto &it : m_uniforms.m_uniform_buffers) {
+            if (!it.second) {
+                continue;
+            }
+
+            auto &uniform_buffer = it.first;
+
+            if (uniform_buffer._internal == nullptr) {
+                uniform_buffer._internal = non_owning_ptr(CreateUniformBuffer(uniform_buffer.name.c_str()));
+            }
+
+            glBindBuffer(GL_UNIFORM_BUFFER, uniform_buffer._internal->handle);
+
+            size_t offset = 0;
+            for (size_t i = 0; i < uniform_buffer.data.size(); i++) {
+                size_t size = uniform_buffer.data[i].value.GetSize();
+
+                glBufferSubData(GL_UNIFORM_BUFFER, offset, size, (void*)&uniform_buffer.data[i].value.data);
+
+                offset += MathUtil::NextMultiple(size, 16);
+            }
+
+            glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+            // TODO: shared data across programs
+        }
+
         uniform_changed = false;
     }
 }
@@ -457,6 +484,48 @@ void Shader::End()
     glBindTexture(GL_TEXTURE_3D, 0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
+
+Shader::UniformBuffer::Internal *Shader::CreateUniformBuffer(const char *name)
+{
+    GLuint block_index = glGetUniformBlockIndex(progid, name);
+
+    GLint block_size;
+    glGetActiveUniformBlockiv(progid, block_index, GL_UNIFORM_BLOCK_DATA_SIZE, &block_size);
+
+    GLuint handle;
+    glGenBuffers(1, &handle);
+    
+    UniformBuffer::Internal *_internal = new UniformBuffer::Internal;
+    _internal->handle = handle;
+    _internal->index = block_index;
+    _internal->size = block_size;
+    _internal->generated = true;
+
+    m_uniform_buffer_internals.push_back(_internal);
+
+    return _internal;
+}
+
+void Shader::DestroyUniformBuffer(Shader::UniformBuffer::Internal *_internal)
+{
+    auto it = std::find(
+        m_uniform_buffer_internals.begin(),
+        m_uniform_buffer_internals.end(),
+        _internal
+    );
+
+    ex_assert(it != m_uniform_buffer_internals.end());
+
+    if (_internal->generated) {
+        GLuint handle = _internal->handle;
+        glDeleteBuffers(1, &handle);
+    }
+
+    delete _internal;
+
+    m_uniform_buffer_internals.erase(it);
+}
+
 
 void Shader::AddSubShader(SubShaderType type,
     const std::string &code,

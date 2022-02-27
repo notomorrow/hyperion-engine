@@ -167,6 +167,21 @@ public:
         // next power of two will have a bit set at position `lg+1`.
         return 1 << FastLog2(value) + 1;
     }
+
+    static inline uint64_t NextMultiple(uint64_t value, uint64_t multiple)
+    {
+        if (multiple == 0) {
+            return value;
+        }
+
+        uint64_t remainder = value % multiple;
+
+        if (remainder == 0) {
+            return value;
+        }
+
+        return value + multiple - remainder;
+    }
 };
 
 } // namespace hyperion
