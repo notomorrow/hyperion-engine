@@ -105,11 +105,69 @@ public:
         type = UniformType(int(Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D) + int(texture->GetTextureType()));
     }
 
-    Uniform &operator=(const Uniform &other)
+    inline Uniform &operator=(const Uniform &other)
     {
         type = other.type;
         data = other.data;
         return *this;
+    }
+
+    inline bool operator==(const Uniform &other) const
+    {
+        if (type != other.type) {
+            return false;
+        }
+
+        if (type == Uniform::UniformType::UNIFORM_TYPE_NONE) {
+            return true;
+        }
+
+        return !memcmp(GetRawPtr(), other.GetRawPtr(), GetSize());
+
+        switch (type) {
+        case Uniform::UniformType::UNIFORM_TYPE_FLOAT: return data.f == other.data.f;
+        case Uniform::UniformType::UNIFORM_TYPE_I32: return data.i32 == other.data.i32;
+        case Uniform::UniformType::UNIFORM_TYPE_I64: return data.i64 == other.data.i64;
+        case Uniform::UniformType::UNIFORM_TYPE_U32: return data.u32 == other.data.u32;
+        case Uniform::UniformType::UNIFORM_TYPE_U64: return data.u64 == other.data.u64;
+        case Uniform::UniformType::UNIFORM_TYPE_VEC2: return !memcmp(&data.vec2[0], &other.data.vec2[0], sizeof(float) * 2);
+        case Uniform::UniformType::UNIFORM_TYPE_VEC3: return !memcmp(&data.vec3[0], &other.data.vec3[0], sizeof(float) * 3);
+        case Uniform::UniformType::UNIFORM_TYPE_VEC4: return !memcmp(&data.vec4[0], &other.data.vec4[0], sizeof(float) * 4);
+        case Uniform::UniformType::UNIFORM_TYPE_MAT4: return !memcmp(&data.mat4[0], &other.data.mat4[0], sizeof(float) * 16);
+        case Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D:
+            // fallthrough
+        case Uniform::UniformType::UNIFORM_TYPE_TEXTURE3D:
+            // fallthrough
+        case Uniform::UniformType::UNIFORM_TYPE_TEXTURECUBE:
+            return data.texture_id == other.data.texture_id;
+        default:
+            return true;
+        }
+    }
+
+    inline bool operator!=(const Uniform &other) const { return !operator==(other); }
+
+    inline void *GetRawPtr() const
+    {
+        switch (type) {
+        case Uniform::UniformType::UNIFORM_TYPE_FLOAT: return (void *)&data.f;
+        case Uniform::UniformType::UNIFORM_TYPE_I32: return (void *)&data.i32;
+        case Uniform::UniformType::UNIFORM_TYPE_I64: return (void *)&data.i64;
+        case Uniform::UniformType::UNIFORM_TYPE_U32: return (void *)&data.u32;
+        case Uniform::UniformType::UNIFORM_TYPE_U64: return (void *)&data.u64;
+        case Uniform::UniformType::UNIFORM_TYPE_VEC2: return (void *)&data.vec2[0];
+        case Uniform::UniformType::UNIFORM_TYPE_VEC3: return (void *)&data.vec3[0];
+        case Uniform::UniformType::UNIFORM_TYPE_VEC4: return (void *)&data.vec4[0];
+        case Uniform::UniformType::UNIFORM_TYPE_MAT4: return (void *)&data.mat4[0];
+        case Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D:
+            // fallthrough
+        case Uniform::UniformType::UNIFORM_TYPE_TEXTURE3D:
+            // fallthrough
+        case Uniform::UniformType::UNIFORM_TYPE_TEXTURECUBE:
+            return (void *)&data.texture_id;
+        default:
+            return 0;
+        }
     }
 
     inline size_t GetSize() const

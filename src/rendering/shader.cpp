@@ -266,6 +266,8 @@ void Shader::UploadGpuData()
 
 void Shader::DestroyGpuData()
 {
+    DestroyUniformBufferObjects();
+
     if (is_created) {
         glDeleteProgram(progid);
 
@@ -420,27 +422,37 @@ void Shader::ApplyUniforms()
         }
 
         for (auto &it : m_uniforms.m_uniform_buffers) {
-            if (!it.second) {
-                continue;
-            }
+            //if (!it.second) {
+            //    continue;
+            //}
 
             auto &uniform_buffer = it.first;
 
             if (uniform_buffer._internal == nullptr) {
-                uniform_buffer._internal = non_owning_ptr(CreateUniformBuffer(uniform_buffer.name.c_str()));
+                uniform_buffer._internal = non_owning_ptr(const_cast<const Shader::UniformBuffer::Internal*>(CreateUniformBufferInternal(uniform_buffer)));
             }
 
+            soft_assert_continue_msg(uniform_buffer._internal->generated, "Uniform buffer not generated, may be in an error state.");
+
+            //soft_assert_continue(uniform_buffer._internal->index != -1);
             glBindBuffer(GL_UNIFORM_BUFFER, uniform_buffer._internal->handle);
+            CatchGLErrors("Failed to bind uniform buffer");
 
-            size_t offset = 0;
+            const size_t buffer_size = uniform_buffer._internal->size;
+            size_t total_size = 0, offset = 0;
+
             for (size_t i = 0; i < uniform_buffer.data.size(); i++) {
+                soft_assert_break_msg(total_size < buffer_size, "Total buffer size reached capacity!");
+
                 size_t size = uniform_buffer.data[i].value.GetSize();
+                glBufferSubData(GL_UNIFORM_BUFFER, offset, size, uniform_buffer.data[i].value.GetRawPtr());
+                CatchGLErrors("Failed to set uniform buffer subdata");
 
-                glBufferSubData(GL_UNIFORM_BUFFER, offset, size, (void*)&uniform_buffer.data[i].value.data);
-
+                total_size += size;
                 offset += MathUtil::NextMultiple(size, 16);
             }
 
+            glBindBufferBase(GL_UNIFORM_BUFFER, uniform_buffer._internal->index, uniform_buffer._internal->handle);
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
             // TODO: shared data across programs
@@ -467,6 +479,7 @@ void Shader::Use()
 
         CreateGpuData();
         UploadGpuData();
+        CreateUniformBufferObjects(); // rebuild UBOs
 
         m_previous_properties_hash_code = m_properties.GetHashCode().Value();
     }
@@ -485,28 +498,48 @@ void Shader::End()
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
-Shader::UniformBuffer::Internal *Shader::CreateUniformBuffer(const char *name)
+Shader::UniformBuffer::Internal *Shader::CreateUniformBufferInternal(UniformBuffer &uniform_buffer)
 {
-    GLuint block_index = glGetUniformBlockIndex(progid, name);
+    size_t total_size = 0; // calculate total size of data allocated for uniform buffer
+    for (size_t i = 0; i < uniform_buffer.data.size(); i++) {
+        total_size += uniform_buffer.data[i].value.GetSize();
+    }
 
-    GLint block_size;
-    glGetActiveUniformBlockiv(progid, block_index, GL_UNIFORM_BLOCK_DATA_SIZE, &block_size);
-
-    GLuint handle;
-    glGenBuffers(1, &handle);
-    
     UniformBuffer::Internal *_internal = new UniformBuffer::Internal;
-    _internal->handle = handle;
-    _internal->index = block_index;
-    _internal->size = block_size;
-    _internal->generated = true;
+    _internal->generated = false;
+
+    // TODO: assert total_size fits into block_size?
+    GLuint block_index = glGetUniformBlockIndex(progid, uniform_buffer.name.c_str());
+    CatchGLErrors("Failed to get uniform block index");
+
+    if (block_index != GL_INVALID_INDEX) {
+        GLint block_size;
+        glGetActiveUniformBlockiv(progid, block_index, GL_UNIFORM_BLOCK_DATA_SIZE, &block_size);
+        CatchGLErrors("Failed to get active uniform block size");
+
+        _internal->size = block_size;
+
+        GLuint handle;
+        glGenBuffers(1, &handle);
+        CatchGLErrors("Failed to generate uniform buffer");
+
+        glBindBuffer(GL_UNIFORM_BUFFER, handle);
+        glBufferData(GL_UNIFORM_BUFFER, total_size, nullptr, GL_STATIC_DRAW);
+        CatchGLErrors("Failed to set uniform buffer initial data");
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+        _internal->handle = handle;
+        _internal->index = block_index;
+        _internal->generated = true;
+    }
+    
 
     m_uniform_buffer_internals.push_back(_internal);
 
     return _internal;
 }
 
-void Shader::DestroyUniformBuffer(Shader::UniformBuffer::Internal *_internal)
+void Shader::DestroyUniformBufferInternal(Shader::UniformBuffer::Internal *_internal)
 {
     auto it = std::find(
         m_uniform_buffer_internals.begin(),
@@ -519,6 +552,7 @@ void Shader::DestroyUniformBuffer(Shader::UniformBuffer::Internal *_internal)
     if (_internal->generated) {
         GLuint handle = _internal->handle;
         glDeleteBuffers(1, &handle);
+        CatchGLErrors("Failed to delete uniform buffer");
     }
 
     delete _internal;
@@ -526,6 +560,30 @@ void Shader::DestroyUniformBuffer(Shader::UniformBuffer::Internal *_internal)
     m_uniform_buffer_internals.erase(it);
 }
 
+void Shader::CreateUniformBufferObjects()
+{
+    for (auto &it : m_uniforms.m_uniform_buffers) {
+        if (it.first._internal != nullptr) {
+            continue;
+        }
+
+        it.first._internal = non_owning_ptr(const_cast<const Shader::UniformBuffer::Internal*>(CreateUniformBufferInternal(it.first)));
+    }
+}
+
+void Shader::DestroyUniformBufferObjects()
+{
+    for (auto *uniform_buffer : m_uniform_buffer_internals) {
+        DestroyUniformBufferInternal(uniform_buffer);
+    }
+
+    m_uniform_buffer_internals.clear();
+
+    for (auto &it : m_uniforms.m_uniform_buffers) {
+        // destroyed above
+        it.first._internal = nullptr;
+    }
+}
 
 void Shader::AddSubShader(SubShaderType type,
     const std::string &code,

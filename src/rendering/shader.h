@@ -254,13 +254,18 @@ public:
             size_t size;
             size_t index;
             bool generated;
+
+            Internal() = default;
+            Internal(const Internal &other) = delete;
+            Internal &operator=(const Internal &other) = delete;
         };
 
-        non_owning_ptr<Internal> _internal;
+        non_owning_ptr<const Internal> _internal;
 
         UniformBuffer(Id_t id, const std::string &name)
             : id(id),
-              name(name)
+              name(name),
+              _internal(nullptr)
         {
         }
 
@@ -282,10 +287,10 @@ public:
             return *this;
         }
 
-        UniformResult Acquire(const std::string &name)
+        UniformResult Acquire(const std::string &name, const Uniform &initial_value)
         {
             DeclaredUniform::Id_t id = data.size();
-            data.push_back(DeclaredUniform(id, name));
+            data.push_back(DeclaredUniform(id, name, initial_value));
 
             return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
         }
@@ -335,26 +340,32 @@ public:
             return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
         }
 
-        UniformResult Acquire(UniformBuffer::Id_t buffer_id, const std::string &name)
+        UniformResult Acquire(UniformBuffer::Id_t buffer_id, const std::string &name, const Uniform &initial_value)
         {
             ex_assert(buffer_id >= 0);
             ex_assert(buffer_id < m_uniform_buffers.size());
 
             auto &buffer = m_uniform_buffers[buffer_id].first;
 
-            return buffer.Acquire(name);
+            return buffer.Acquire(name, initial_value);
         }
 
-        inline void Set(DeclaredUniform::Id_t id, const Uniform &uniform)
+        inline bool Set(DeclaredUniform::Id_t id, const Uniform &uniform)
         {
             ex_assert(id >= 0);
             ex_assert(id < m_uniforms.size());
 
-            m_uniforms[id].first.value = uniform;
-            m_uniforms[id].second = true;
+            if (m_uniforms[id].first.value != uniform) {
+                m_uniforms[id].first.value = uniform;
+                m_uniforms[id].second = true;
+
+                return true;
+            }
+
+            return false;
         }
 
-        inline void Set(UniformBuffer::Id_t buffer_id, DeclaredUniform::Id_t uniform_id, const Uniform &uniform)
+        inline bool Set(UniformBuffer::Id_t buffer_id, DeclaredUniform::Id_t uniform_id, const Uniform &uniform)
         {
             ex_assert(buffer_id >= 0);
             ex_assert(buffer_id < m_uniform_buffers.size());
@@ -364,9 +375,15 @@ public:
             ex_assert(uniform_id >= 0);
             ex_assert(uniform_id < buffer.data.size());
 
-            buffer.data[uniform_id].value = uniform;
+            if (buffer.data[uniform_id].value != uniform) {
+                buffer.data[uniform_id].value = uniform;
 
-            m_uniform_buffers[buffer_id].second = true; // set changed to true
+                m_uniform_buffers[buffer_id].second = true; // set changed to true
+
+                return true;
+            }
+
+            return false;
         }
 
         // bool - has changed?
@@ -451,11 +468,11 @@ public:
 
     template <class T>
     inline void SetUniform(DeclaredUniform::Id_t id, const T &value)
-        { m_uniforms.Set(id, Uniform(value)); uniform_changed = true; }
+        { uniform_changed |= m_uniforms.Set(id, Uniform(value)); }
 
     template <class T>
     inline void SetUniform(UniformBuffer::Id_t buffer_id, DeclaredUniform::Id_t uniform_id, const T &value)
-        { m_uniforms.Set(buffer_id, uniform_id, Uniform(value)); uniform_changed = true; }
+        { uniform_changed |= m_uniforms.Set(buffer_id, uniform_id, Uniform(value)); }
 
 
     void Use();
@@ -548,8 +565,10 @@ private:
     bool ShaderPropertiesChanged() const;
     void ApplyUniforms();
 
-    UniformBuffer::Internal *CreateUniformBuffer(const char *name);
-    void DestroyUniformBuffer(UniformBuffer::Internal *);
+    UniformBuffer::Internal *CreateUniformBufferInternal(UniformBuffer &);
+    void DestroyUniformBufferInternal(UniformBuffer::Internal *);
+    void CreateUniformBufferObjects();
+    void DestroyUniformBufferObjects();
     std::vector<UniformBuffer::Internal*> m_uniform_buffer_internals;
 
     std::map<SubShaderType, SubShader> subshaders;
