@@ -17,76 +17,92 @@ class Shader;
 
 class Uniform {
 public:
-    enum UniformType {
-        Uniform_None = -1,
-        Uniform_Float,
-        Uniform_Int,
-        Uniform_Vector2,
-        Uniform_Vector3,
-        Uniform_Vector4,
-        Uniform_Matrix4,
-        Uniform_Texture2D,
-        Uniform_Texture3D,
-        Uniform_TextureCube
+
+    enum class UniformType {
+        UNIFORM_TYPE_NONE = 0,
+        UNIFORM_TYPE_FLOAT,
+        UNIFORM_TYPE_I32,
+        UNIFORM_TYPE_I64,
+        UNIFORM_TYPE_U32,
+        UNIFORM_TYPE_U64,
+        UNIFORM_TYPE_VEC2,
+        UNIFORM_TYPE_VEC3,
+        UNIFORM_TYPE_VEC4,
+        UNIFORM_TYPE_MAT4,
+        UNIFORM_TYPE_TEXTURE2D,
+        UNIFORM_TYPE_TEXTURE3D,
+        UNIFORM_TYPE_TEXTURECUBE
     } type;
 
-    std::array<float, 16> data;
+    union {
+        void *v;
+        float f;
+        int32_t i32;
+        int64_t i64;
+        uint32_t u32;
+        uint64_t u64;
+        float vec2[2];
+        float vec3[3];
+        float vec4[4];
+        float mat4[16];
+        Texture::Id_t texture_id;
+    } data;
 
     Uniform()
     {
-        data = { 0.0f };
-        type = Uniform_None;
+        data.v = 0;
+        type = UniformType::UNIFORM_TYPE_NONE;
     }
 
     Uniform(float value)
     {
-        data[0] = value;
-        type = Uniform_Float;
+        data.f = value;
+        type = UniformType::UNIFORM_TYPE_FLOAT;
     }
 
     Uniform(int value)
     {
-        data[0] = (float)value;
-        type = Uniform_Int;
+        data.i32 = value;
+        type = UniformType::UNIFORM_TYPE_I32;
     }
 
     Uniform(const Vector2 &value)
     {
-        data[0] = value.x;
-        data[1] = value.y;
-        type = Uniform_Vector2;
+        data.vec2[0] = value.x;
+        data.vec2[1] = value.y;
+        type = UniformType::UNIFORM_TYPE_VEC2;
     }
 
     Uniform(const Vector3 &value)
     {
-        data[0] = value.x;
-        data[1] = value.y;
-        data[2] = value.z;
-        type = Uniform_Vector3;
+        data.vec3[0] = value.x;
+        data.vec3[1] = value.y;
+        data.vec3[2] = value.z;
+        type = UniformType::UNIFORM_TYPE_VEC3;
     }
 
     Uniform(const Vector4 &value)
     {
-        data[0] = value.x;
-        data[1] = value.y;
-        data[2] = value.z;
-        data[3] = value.w;
-        type = Uniform_Vector4;
+        data.vec4[0] = value.x;
+        data.vec4[1] = value.y;
+        data.vec4[2] = value.z;
+        data.vec4[3] = value.w;
+        type = UniformType::UNIFORM_TYPE_VEC4;
     }
 
     Uniform(const Matrix4 &value)
     {
-        std::memcpy(&data[0], &value.values[0], value.values.size() * sizeof(float));
-        type = Uniform_Matrix4;
+        std::memcpy(&data.mat4[0], &value.values[0], value.values.size() * sizeof(float));
+        type = UniformType::UNIFORM_TYPE_MAT4;
     }
 
     Uniform(const Texture *texture)
     {
         ex_assert(texture != nullptr);
 
-        data[0] = texture->GetId();
+        data.texture_id = texture->GetId();
         // texture->GetTextureType() should start at 0 and map to the correct uniform texture type
-        type = UniformType(int(Uniform_Texture2D) + int(texture->GetTextureType()));
+        type = UniformType(int(Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D) + int(texture->GetTextureType()));
     }
 
     Uniform &operator=(const Uniform &other)

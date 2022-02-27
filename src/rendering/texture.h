@@ -8,6 +8,8 @@ namespace hyperion {
 class Texture : public Loadable {
     friend class TextureLoader;
 public:
+    using Id_t = uint32_t;
+
     enum TextureType {
         TEXTURE_TYPE_2D = 0,
         TEXTURE_TYPE_3D = 1,
@@ -65,7 +67,7 @@ public:
     Texture &operator=(const Texture &other) = delete;
     virtual ~Texture();
 
-    unsigned int GetId() const;
+    Id_t GetId() const;
 
     inline bool IsCreated() const { return is_created; }
     inline bool IsUploaded() const { return is_uploaded; }
@@ -107,7 +109,7 @@ public:
     }
 
 protected:
-    unsigned int id;
+    Id_t id;
 
     int width, height;
     TextureInternalFormat ifmt;
