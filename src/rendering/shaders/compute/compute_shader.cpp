@@ -1,6 +1,7 @@
 #include "compute_shader.h"
 #include "../../../core_engine.h"
 #include "../../../util.h"
+#include "../../../gl_util.h"
 
 namespace hyperion {
 ComputeShader::ComputeShader(const ShaderProperties &properties)
@@ -35,6 +36,7 @@ void ComputeShader::Dispatch(int width, int height, int length)
     }
 
     CoreEngine::GetInstance()->DispatchCompute(width / m_work_group_size[0], height / m_work_group_size[1], length / m_work_group_size[2]);
+    CatchGLErrors("Failed to dispatch compute shader");
 }
 
 void ComputeShader::GetWorkGroupSize()
@@ -44,5 +46,6 @@ void ComputeShader::GetWorkGroupSize()
     m_work_group_size = new int[3];
 
     CoreEngine::GetInstance()->GetProgram(GetId(), CoreEngine::GLEnums::COMPUTE_WORK_GROUP_SIZE, m_work_group_size);
+    CatchGLErrors("Failed to get workgroup size");
 }
 } // namespace hyperion

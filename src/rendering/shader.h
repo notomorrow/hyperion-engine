@@ -295,12 +295,19 @@ public:
             return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
         }
 
-        inline void Set(DeclaredUniform::Id_t id, const Uniform &uniform)
+        inline bool Set(DeclaredUniform::Id_t id, const Uniform &uniform)
         {
             ex_assert(id >= 0);
             ex_assert(id < data.size());
 
-            data[id].value = uniform;
+
+            if (data[id].value != uniform || uniform.IsTextureType()) {
+                data[id].value = uniform;
+
+                return true;
+            }
+
+            return false;
         }
     };
 
@@ -336,6 +343,14 @@ public:
         {
             DeclaredUniform::Id_t id = m_uniforms.size();
             m_uniforms.push_back(std::make_pair(DeclaredUniform(id, name), true));
+
+            return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
+        }
+
+        UniformResult Acquire(const std::string &name, const Uniform &initial_value)
+        {
+            DeclaredUniform::Id_t id = m_uniforms.size();
+            m_uniforms.push_back(std::make_pair(DeclaredUniform(id, name, initial_value), true));
  
             return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
         }
@@ -355,7 +370,7 @@ public:
             ex_assert(id >= 0);
             ex_assert(id < m_uniforms.size());
 
-            if (m_uniforms[id].first.value != uniform) {
+            if (m_uniforms[id].first.value != uniform || uniform.IsTextureType()) {
                 m_uniforms[id].first.value = uniform;
                 m_uniforms[id].second = true;
 
@@ -375,15 +390,11 @@ public:
             ex_assert(uniform_id >= 0);
             ex_assert(uniform_id < buffer.data.size());
 
-            if (buffer.data[uniform_id].value != uniform) {
-                buffer.data[uniform_id].value = uniform;
+            bool changed = buffer.Set(uniform_id, uniform);
 
-                m_uniform_buffers[buffer_id].second = true; // set changed to true
+            m_uniform_buffers[buffer_id].second |= changed;
 
-                return true;
-            }
-
-            return false;
+            return changed;
         }
 
         // bool - has changed?

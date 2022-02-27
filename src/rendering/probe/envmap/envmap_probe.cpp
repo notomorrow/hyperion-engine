@@ -3,7 +3,6 @@
 #include "../../environment.h"
 #include "../../shader_manager.h"
 #include "../../shaders/cubemap_renderer_shader.h"
-#include "../../shaders/compute/sh_compute_shader.h"
 #include "../../renderer.h"
 
 #include "../../camera/perspective_camera.h"
@@ -29,13 +28,6 @@ EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int w
     m_rendered_texture = GetColorTexture();
 
     m_cubemap_renderer_shader = ShaderManager::GetInstance()->GetShader<CubemapRendererShader>(ShaderProperties());
-
-    m_spherical_harmonics_shader = ShaderManager::GetInstance()->GetShader<SHComputeShader>(ShaderProperties());
-    m_sh_texture = std::make_shared<Texture2D>(8, 8, nullptr);
-    m_sh_texture->SetFormat(Texture::TextureBaseFormat::TEXTURE_FORMAT_RGBA);
-    m_sh_texture->SetInternalFormat(Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8);
-    m_sh_texture->SetFilter(Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST);
-    m_sh_texture->SetWrapMode(CoreEngine::GLEnums::CLAMP_TO_EDGE, CoreEngine::GLEnums::CLAMP_TO_EDGE);
 
     for (int i = 0; i < m_cameras.size(); i++) {
         ProbeRegion region;
@@ -81,7 +73,6 @@ void EnvMapProbe::Render(Renderer *renderer, Camera *cam)
 
     if (m_is_first_run) {
         RenderCubemap(renderer, cam);
-        RenderSphericalHarmonics();
 
         m_is_first_run = false;
 
@@ -95,7 +86,6 @@ void EnvMapProbe::Render(Renderer *renderer, Camera *cam)
     m_render_tick = 0.0;
 
     RenderCubemap(renderer, cam);
-    RenderSphericalHarmonics();
 }
 
 
@@ -143,34 +133,6 @@ void EnvMapProbe::RenderCubemap(Renderer *renderer, Camera *cam)
     m_fbo->End();
 
     Environment::GetInstance()->SetGlobalCubemap(GetColorTexture());
-}
-
-void EnvMapProbe::RenderSphericalHarmonics()
-{
-    if (!ProbeManager::GetInstance()->SphericalHarmonicsEnabled()) {
-        return;
-    }
-
-    if (!m_sh_texture->IsUploaded()) {
-        m_sh_texture->Begin(false); // do not upload texture data
-        CatchGLErrors("Failed to begin texture storage 2d for spherical harmonics");
-        // this ought to be refactored into a more reusable format
-        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, m_sh_texture->GetWidth(), m_sh_texture->GetHeight());
-        CatchGLErrors("Failed to set texture storage 2d for spherical harmonics");
-        m_sh_texture->End();
-        CatchGLErrors("Failed to end texture storage 2d for spherical harmonics");
-    }
-
-    glBindImageTexture(0, m_sh_texture->GetId(), 0, false, 0, GL_WRITE_ONLY, GL_RGBA8);
-    CatchGLErrors("Failed to bind imagetexture");
-    m_spherical_harmonics_shader->SetUniform(
-        m_spherical_harmonics_shader->m_uniform_src_texture,
-        m_rendered_texture.get()
-    );
-    m_spherical_harmonics_shader->Use();
-    m_spherical_harmonics_shader->Dispatch(8, 8, 1);
-    m_spherical_harmonics_shader->End();
-    glBindImageTexture(0, 0, 0, false, 0, GL_WRITE_ONLY, GL_RGBA8);
 }
 
 std::shared_ptr<Renderable> EnvMapProbe::CloneImpl()

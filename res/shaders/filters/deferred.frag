@@ -380,8 +380,8 @@ void main()
             metallic
         );
     }
-
+    
 	result.rgb = tonemap(result.rgb);
-
+    //result.rgb = texture(SphericalHarmonicsMap, v_texcoord0).rgb;
     output0 = vec4(result.rgb, 1.0);
 }

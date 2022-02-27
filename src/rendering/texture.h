@@ -16,6 +16,14 @@ public:
         TEXTURE_TYPE_CUBEMAP = 2
     };
 
+    enum class TextureDatumType {
+        TEXTURE_DATUM_UNSIGNED_BYTE,
+        TEXTURE_DATUM_SIGNED_BYTE,
+        TEXTURE_DATUM_UNSIGNED_INT,
+        TEXTURE_DATUM_SIGNED_INT,
+        TEXTURE_DATUM_FLOAT
+    };
+
     enum class TextureBaseFormat {
         TEXTURE_FORMAT_NONE,
         TEXTURE_FORMAT_R,
@@ -92,6 +100,7 @@ public:
     virtual void CopyData(Texture * const other) = 0;
 
     inline TextureType GetTextureType() const { return m_texture_type; }
+    TextureDatumType GetDatumType() const;
 
     unsigned char * const GetBytes() const { return bytes; }
 
@@ -133,6 +142,7 @@ protected:
     static int ToOpenGLInternalFormat(TextureInternalFormat);
     static int ToOpenGLBaseFormat(TextureBaseFormat);
     static int ToOpenGLFilterMode(TextureFilterMode);
+    static int ToOpenGLDatumType(TextureDatumType);
 
 private:
 };

@@ -43,30 +43,38 @@ ObjMesh &ObjModel::CurrentList()
 
 ObjIndex ObjModel::ParseObjIndex(const std::string &token)
 {
-    auto tokens = StringUtil::Split(token, '/');
 
     ObjIndex res;
     res.vertex_idx = 0;
     res.normal_idx = 0;
     res.texcoord_idx = 0;
 
-    if (!tokens.empty()) {
-        res.vertex_idx = std::stoi(tokens[0]) - 1;
+    size_t token_index = 0;
 
-        if (tokens.size() > 1) {
-            if (!tokens[1].empty()) {
-                has_texcoords = true;
-                res.texcoord_idx = std::stoi(tokens[1]) - 1;
-            }
-
-            if (tokens.size() > 2) {
-                if (!tokens[2].empty()) {
-                    has_normals = true;
-                    res.normal_idx = std::stoi(tokens[2]) - 1;
-                }
-            }
+    StringUtil::SplitBuffered(token, '/', [&, this](const std::string &token) {
+        if (token.empty()) {
+            return;
         }
-    }
+
+        switch (token_index) {
+        case 0:
+            res.vertex_idx = std::stoi(token) - 1;
+            break;
+        case 1:
+            has_texcoords = true;
+            res.texcoord_idx = std::stoi(token) - 1;
+            break;
+        case 2:
+            has_normals = true;
+            res.normal_idx = std::stoi(token) - 1;
+            break;
+        default:
+            // ??
+            break;
+        }
+
+        token_index++;
+    });
 
     return res;
 }

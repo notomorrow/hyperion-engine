@@ -250,7 +250,7 @@ public:
         Environment::GetInstance()->SetShadowsEnabled(true);
         Environment::GetInstance()->SetNumCascades(1);
         Environment::GetInstance()->GetProbeManager()->SetEnvMapEnabled(false);
-        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(false);
+        Environment::GetInstance()->GetProbeManager()->SetSphericalHarmonicsEnabled(true);
         Environment::GetInstance()->GetProbeManager()->SetVCTEnabled(false);
 
         GetRenderer()->GetDeferredPipeline()->GetPreFilterStack()->AddFilter<SSAOFilter>("ssao", 5);
@@ -260,7 +260,7 @@ public:
 
         AudioManager::GetInstance()->Initialize();
 
-        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.5, 1, 0.5).Normalize());
+        Environment::GetInstance()->GetSun().SetDirection(Vector3(0.2, 1, 0.2).Normalize());
         Environment::GetInstance()->GetSun().SetIntensity(700000.0f);
         Environment::GetInstance()->GetSun().SetColor(Vector4(1.0, 0.8, 0.65, 1.0));
 
@@ -300,16 +300,21 @@ public:
 
         auto cm = InitCubemap();
 
-        //GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
-        GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
+        GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
+        //GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
 
-#if 0
+        //GetScene()->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 5.0f, 0.0f), BoundingBox(-25.0f, 25.0f)));
+
+        GetScene()->AddControl(std::make_shared<SphericalHarmonicsControl>(Vector3(0.0f), BoundingBox(-25.0f, 25.0f)));
+
+
+#if 1
 
         //m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
-            auto model = asset_manager->LoadFromFile<Node>("models/san-miguel/san-miguel-low-poly.obj");
+            auto model = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
             model->SetName("model");
-            model->Scale(Vector3(0.5f));
+            model->Scale(Vector3(0.01f));
             for (size_t i = 0; i < model->NumChildren(); i++) {
                 if (model->GetChild(i) == nullptr) {
                     continue;
@@ -549,9 +554,9 @@ public:
                         box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-normal-dx.png"));
                         box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-roughness.png"));
                         box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-metallic.png"));
-                        box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-height.png"));
+                        //box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-height.png"));
                         box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
-                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.25f);
+                        //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.25f);
 
                          //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 5.0f);
                          //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);

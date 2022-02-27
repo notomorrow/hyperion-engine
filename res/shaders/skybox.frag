@@ -32,8 +32,8 @@ void main()
 
 
   // Apply exposure.
-  color *= exposure * $IBL_INTENSITY;
-  color = tonemap(color);
+  //color *= exposure * $IBL_INTENSITY;
+  //color = tonemap(color);
   
 
   output0 = vec4(color, 1.0);

@@ -30,7 +30,6 @@ private:
     virtual std::shared_ptr<Renderable> CloneImpl() override;
 
     bool m_needs_rerender;
-    std::shared_ptr<SHComputeShader> m_spherical_harmonics_shader;
     std::shared_ptr<Cubemap> m_cubemap;
 };
 } // namespace hyperion

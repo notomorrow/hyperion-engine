@@ -101,8 +101,7 @@ void Shader::InitUniforms()
         }
 
         auto pair = Material::material_texture_names.KeyValueAt(i);
-
-        m_uniform_textures[i] = m_uniforms.Acquire(pair.second).id;
+        m_uniform_textures[i] = m_uniforms.Acquire(pair.second, Uniform((const Texture*)nullptr)).id;
         m_uniform_has_textures[i] = m_uniforms.Acquire(has_texture_names.Get(pair.first)).id;
     }
 
@@ -409,12 +408,12 @@ void Shader::ApplyUniforms()
         int texture_index = 1;
 
         for (auto &it : m_uniforms.m_uniforms) {
-            if (!it.second) {
+            const auto &uniform = it.first;
+
+            /*if (!it.second && !uniform.value.IsTextureType()) {
                 // has not changed so we skip it
                 continue;
-            }
-
-            const auto &uniform = it.first;
+            }*/
 
             it.second = false; // set to changed = false;
 
@@ -422,10 +421,6 @@ void Shader::ApplyUniforms()
         }
 
         for (auto &it : m_uniforms.m_uniform_buffers) {
-            //if (!it.second) {
-            //    continue;
-            //}
-
             auto &uniform_buffer = it.first;
 
             if (uniform_buffer._internal == nullptr) {
@@ -433,6 +428,14 @@ void Shader::ApplyUniforms()
             }
 
             soft_assert_continue_msg(uniform_buffer._internal->generated, "Uniform buffer not generated, may be in an error state.");
+
+            glBindBufferBase(GL_UNIFORM_BUFFER, uniform_buffer._internal->index, uniform_buffer._internal->handle);
+
+            if (!it.second) {
+                continue;
+            }
+
+            it.second = false; // set to changed = false;
 
             //soft_assert_continue(uniform_buffer._internal->index != -1);
             glBindBuffer(GL_UNIFORM_BUFFER, uniform_buffer._internal->handle);
@@ -452,7 +455,6 @@ void Shader::ApplyUniforms()
                 offset += MathUtil::NextMultiple(size, 16);
             }
 
-            glBindBufferBase(GL_UNIFORM_BUFFER, uniform_buffer._internal->index, uniform_buffer._internal->handle);
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
             // TODO: shared data across programs
