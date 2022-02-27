@@ -62,7 +62,7 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
          this->GetRootDir() + trimmed_path,
          trimmed_path
     };
-   
+
     if (use_caching) {
         //std::lock_guard guard(load_asset_mtx);
 
@@ -85,7 +85,9 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
         }
     }
 
-    auto &loader = GetLoader(trimmed_path);
+    for (const auto &path : try_paths) {
+        try {
+            auto &loader = GetLoader(path);
 
             if (loader != nullptr) {
                 auto loaded = loader->LoadFromFile(path);
