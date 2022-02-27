@@ -19,6 +19,8 @@ find_package(OpenAL REQUIRED)
 find_package(Bullet REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glfw3 REQUIRED)
+find_package(Vulkan REQUIRED)
+find_package(SDL2 REQUIRED)
 
 add_definitions(-DHYP_ROOT_DIR="${CMAKE_CURRENT_LIST_DIR}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fpermissive")

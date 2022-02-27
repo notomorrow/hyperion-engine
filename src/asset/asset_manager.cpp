@@ -85,9 +85,7 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
         }
     }
 
-    for (const auto &path : try_paths) {
-        try {
-            auto &loader = GetLoader(path);
+    auto &loader = GetLoader(trimmed_path);
 
             if (loader != nullptr) {
                 auto loaded = loader->LoadFromFile(path);

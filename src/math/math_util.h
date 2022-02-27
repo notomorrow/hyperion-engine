@@ -165,7 +165,7 @@ public:
         value = value - 1;
 
         // next power of two will have a bit set at position `lg+1`.
-        return 1 << FastLog2(value) + 1;
+        return 1ULL << FastLog2(value) + 1;
     }
 
     static inline uint64_t NextMultiple(uint64_t value, uint64_t multiple)
