@@ -54,26 +54,32 @@ public:
         type = UniformType::UNIFORM_TYPE_NONE;
     }
 
-    Uniform(float value)
+    Uniform(const Uniform &other)
+        : type(other.type)
+    {
+        memcpy(&data, &other.data, sizeof(other.data));
+    }
+
+    explicit Uniform(float value)
     {
         data.f = value;
         type = UniformType::UNIFORM_TYPE_FLOAT;
     }
 
-    Uniform(int value)
+    explicit Uniform(int value)
     {
         data.i32 = value;
         type = UniformType::UNIFORM_TYPE_I32;
     }
 
-    Uniform(const Vector2 &value)
+    explicit Uniform(const Vector2 &value)
     {
         data.vec2[0] = value.x;
         data.vec2[1] = value.y;
         type = UniformType::UNIFORM_TYPE_VEC2;
     }
 
-    Uniform(const Vector3 &value)
+    explicit Uniform(const Vector3 &value)
     {
         data.vec3[0] = value.x;
         data.vec3[1] = value.y;
@@ -81,7 +87,7 @@ public:
         type = UniformType::UNIFORM_TYPE_VEC3;
     }
 
-    Uniform(const Vector4 &value)
+    explicit Uniform(const Vector4 &value)
     {
         data.vec4[0] = value.x;
         data.vec4[1] = value.y;
@@ -90,25 +96,28 @@ public:
         type = UniformType::UNIFORM_TYPE_VEC4;
     }
 
-    Uniform(const Matrix4 &value)
+    explicit Uniform(const Matrix4 &value)
     {
         std::memcpy(&data.mat4[0], &value.values[0], value.values.size() * sizeof(float));
         type = UniformType::UNIFORM_TYPE_MAT4;
     }
 
-    Uniform(const Texture *texture)
+    explicit Uniform(const Texture *texture)
     {
-        ex_assert(texture != nullptr);
-
-        data.texture_id = texture->GetId();
-        // texture->GetTextureType() should start at 0 and map to the correct uniform texture type
-        type = UniformType(int(Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D) + int(texture->GetTextureType()));
+        if (texture != nullptr) {
+            data.texture_id = texture->GetId();
+            // texture->GetTextureType() should start at 0 and map to the correct uniform texture type
+            type = UniformType(int(Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D) + int(texture->GetTextureType()));
+        } else {
+            data.texture_id = 0;
+            type = Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D;
+        }
     }
 
     inline Uniform &operator=(const Uniform &other)
     {
         type = other.type;
-        data = other.data;
+        memcpy(&data, &other.data, sizeof(other.data));
         return *this;
     }
 
@@ -123,29 +132,16 @@ public:
         }
 
         return !memcmp(GetRawPtr(), other.GetRawPtr(), GetSize());
-
-        switch (type) {
-        case Uniform::UniformType::UNIFORM_TYPE_FLOAT: return data.f == other.data.f;
-        case Uniform::UniformType::UNIFORM_TYPE_I32: return data.i32 == other.data.i32;
-        case Uniform::UniformType::UNIFORM_TYPE_I64: return data.i64 == other.data.i64;
-        case Uniform::UniformType::UNIFORM_TYPE_U32: return data.u32 == other.data.u32;
-        case Uniform::UniformType::UNIFORM_TYPE_U64: return data.u64 == other.data.u64;
-        case Uniform::UniformType::UNIFORM_TYPE_VEC2: return !memcmp(&data.vec2[0], &other.data.vec2[0], sizeof(float) * 2);
-        case Uniform::UniformType::UNIFORM_TYPE_VEC3: return !memcmp(&data.vec3[0], &other.data.vec3[0], sizeof(float) * 3);
-        case Uniform::UniformType::UNIFORM_TYPE_VEC4: return !memcmp(&data.vec4[0], &other.data.vec4[0], sizeof(float) * 4);
-        case Uniform::UniformType::UNIFORM_TYPE_MAT4: return !memcmp(&data.mat4[0], &other.data.mat4[0], sizeof(float) * 16);
-        case Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D:
-            // fallthrough
-        case Uniform::UniformType::UNIFORM_TYPE_TEXTURE3D:
-            // fallthrough
-        case Uniform::UniformType::UNIFORM_TYPE_TEXTURECUBE:
-            return data.texture_id == other.data.texture_id;
-        default:
-            return true;
-        }
     }
 
     inline bool operator!=(const Uniform &other) const { return !operator==(other); }
+
+    inline bool IsTextureType() const
+    {
+        return type == Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D
+            || type == Uniform::UniformType::UNIFORM_TYPE_TEXTURE3D
+            || type == Uniform::UniformType::UNIFORM_TYPE_TEXTURECUBE;
+    }
 
     inline void *GetRawPtr() const
     {

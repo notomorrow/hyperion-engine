@@ -6,7 +6,7 @@ uniform samplerCube srcTex;
 layout(binding = 0, rgba8) uniform image2D dstMip;
 
 // https://github.com/TheRealMJP/LowResRendering/blob/master/SampleFramework11/v1.01/Graphics/Textures.cpp#L329
-vec3 MapXYSToDirection(uint x, uint y, uint s, uint width, uint height)
+vec3 MapXYSToDirection(uint x, uint y, uint s, int width, int height)
 {
 	float u = ((float(x) + 0.5) / float(width)) * 2.0 - 1.0;
     float v = ((float(y) + 0.5) / float(height)) * 2.0 - 1.0;
@@ -76,7 +76,7 @@ void main(void)
 	//	return;
 	//}
 	
-	const uint size = 128;
+	ivec2 size = textureSize(srcTex, 0);
 	
 	vec4 result = vec4(0.0);
 	
@@ -88,19 +88,18 @@ void main(void)
 	}
 	
 	for (uint face = 0; face < 6; face++) {
-		for (uint v = 0; v < size; v++) {
-			for (uint u = 0; u < size; u++) {
-				vec2 xy = vec2((float(u) + 0.5) / float(size), (float(v) + 0.5) / float(size));
+		for (uint v = 0; v < size.x; v++) {
+			for (uint u = 0; u < size.y; u++) {
+				vec2 xy = vec2((float(u) + 0.5) / float(size.x), (float(v) + 0.5) / float(size.y));
 				xy *= vec2(2.0);
 				xy -= vec2(1.0);
 				
 				float temp = 1.0 + xy.x * xy.x + xy.y * xy.y;
 				float weight = 4.0 / (sqrt(temp) * temp);
 				
-				vec3 dir = MapXYSToDirection(u, v, face, size, size); 
+				vec3 dir = MapXYSToDirection(u, v, face, size.x, size.y); 
 				
 				vec4 samp = texture(srcTex, dir);
-				result = samp;
 				vec3[9] sh = ProjectOntoSH9Color(dir, samp.rgb);
 				for (uint i = 0; i < 9; i++) {
 					shResult[i] += sh[i] * weight;
@@ -114,7 +113,7 @@ void main(void)
 	
 	for (uint x = 0; x < 3; x++) {
 		for (uint y = 0; y < 3; y++) {
-			vec3 shSample = shResult[x * 3 + y] * (4.0f * 3.14159f) / weightSum;
+			vec3 shSample = shResult[x * 3 + y] * (4.0f * 3.14159f) / max(weightSum, 0.001);
 			imageStore(dstMip, ivec2(x, y), vec4(shSample, 1.0));
 		}
 	}

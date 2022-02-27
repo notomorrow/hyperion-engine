@@ -326,11 +326,24 @@ vec3 SampleSphericalHarmonics(vec3 n)
 {
 	vec3 sh[9];
 	
-	for (int x = 0; x < 3; x++) {
+	/*for (int x = 0; x < 3; x++) {
 	  for (int y = 0; y < 3; y++) {
 		sh[x * 3 + y] = texture(SphericalHarmonicsMap, vec2(float(x) / 8.0, float(y) / 8.0)).rgb;
 	  }
-	}
+	}*/
+    
+    sh[0] = texelFetch(SphericalHarmonicsMap, ivec2(0, 0), 0).rgb;
+    sh[1] = texelFetch(SphericalHarmonicsMap, ivec2(1, 0), 0).rgb;
+    sh[2] = texelFetch(SphericalHarmonicsMap, ivec2(2, 0), 0).rgb;
+    sh[3] = texelFetch(SphericalHarmonicsMap, ivec2(3, 0), 0).rgb;
+    sh[4] = texelFetch(SphericalHarmonicsMap, ivec2(4, 0), 0).rgb;
+    sh[5] = texelFetch(SphericalHarmonicsMap, ivec2(5, 0), 0).rgb;
+    sh[6] = texelFetch(SphericalHarmonicsMap, ivec2(6, 0), 0).rgb;
+    sh[7] = texelFetch(SphericalHarmonicsMap, ivec2(7, 0), 0).rgb;
+    sh[8] = texelFetch(SphericalHarmonicsMap, ivec2(0, 1), 0).rgb;
+    
+    
+    
 
 	return SphericalHarmonics(sh, n);
 }

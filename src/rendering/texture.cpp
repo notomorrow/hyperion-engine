@@ -153,6 +153,41 @@ void Texture::Prepare(bool should_upload_data)
     End();
 }
 
+Texture::TextureDatumType Texture::GetDatumType() const
+{
+    switch (ifmt) {
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R8:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG8:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R32:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG32:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32:
+        return TextureDatumType::TEXTURE_DATUM_UNSIGNED_BYTE;
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R16F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R32F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F:
+        return TextureDatumType::TEXTURE_DATUM_FLOAT;
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32:
+        return TextureDatumType::TEXTURE_DATUM_UNSIGNED_INT;
+    }
+
+    unexpected_value_msg(format, "Unhandled texture format case");
+}
+
 int Texture::ToOpenGLInternalFormat(TextureInternalFormat fmt)
 {
     switch (fmt) {
@@ -207,6 +242,19 @@ int Texture::ToOpenGLFilterMode(TextureFilterMode mode)
     }
 
     unexpected_value_msg(format, "Unhandled texture filter mode case");
+}
+
+int Texture::ToOpenGLDatumType(TextureDatumType type)
+{
+    switch (type) {
+    case TextureDatumType::TEXTURE_DATUM_UNSIGNED_BYTE: return GL_UNSIGNED_BYTE;
+    case TextureDatumType::TEXTURE_DATUM_SIGNED_BYTE: return GL_BYTE;
+    case TextureDatumType::TEXTURE_DATUM_UNSIGNED_INT: return GL_UNSIGNED_INT;
+    case TextureDatumType::TEXTURE_DATUM_SIGNED_INT: return GL_INT;
+    case TextureDatumType::TEXTURE_DATUM_FLOAT: return GL_FLOAT;
+    }
+
+    unexpected_value_msg(format, "Unhandled texture datum type case");
 }
 
 } // namespace hyperion

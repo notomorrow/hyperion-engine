@@ -72,7 +72,7 @@ void Texture2D::UploadGpuData(bool should_upload_data)
 
     if (should_upload_data) {
         glTexImage2D(GL_TEXTURE_2D, 0, ToOpenGLInternalFormat(ifmt),
-            width, height, 0, ToOpenGLBaseFormat(fmt), GL_UNSIGNED_BYTE, bytes);
+            width, height, 0, ToOpenGLBaseFormat(fmt), ToOpenGLDatumType(GetDatumType()), bytes);
 
         CatchGLErrors("glTexImage2D failed.", false);
 

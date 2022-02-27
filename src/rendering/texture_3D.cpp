@@ -35,7 +35,7 @@ void Texture3D::UploadGpuData(bool should_upload_data)
 
     if (should_upload_data) {
         glTexImage3D(GL_TEXTURE_3D, 0, ToOpenGLInternalFormat(ifmt),
-            width, height, m_length, 0, ToOpenGLBaseFormat(fmt), GL_UNSIGNED_BYTE, bytes);
+            width, height, m_length, 0, ToOpenGLBaseFormat(fmt), ToOpenGLDatumType(GetDatumType()), bytes);
 
         CatchGLErrors("glTexImage3D failed.", false);
 

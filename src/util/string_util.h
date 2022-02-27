@@ -38,23 +38,22 @@ public:
     template <class LambdaFunction>
     static inline void SplitBuffered(const std::string &text, char sep, LambdaFunction func)
     {
-        std::stringstream accum;
+        std::string accum;
+        accum.reserve(1024);
 
         for (char ch : text) {
             if (ch == sep) {
-                func(accum.str());
-                accum.str(std::string());
+                func(accum);
+                accum.clear();
 
                 continue;
             }
 
-            accum << ch;
+            accum += ch;
         }
 
-        auto str = accum.str();
-
-        if (str.length()) {
-            func(str);
+        if (accum.length()) {
+            func(accum);
         }
     }
 

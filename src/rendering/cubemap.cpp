@@ -12,6 +12,22 @@ Cubemap::Cubemap(const std::array<std::shared_ptr<Texture2D>, 6> &textures)
     : Texture(TextureType::TEXTURE_TYPE_CUBEMAP),
       m_textures(textures)
 {
+    for (auto &texture : m_textures) {
+        if (texture == nullptr) {
+            continue;
+        }
+
+        width = texture->GetWidth();
+        height = texture->GetHeight();
+        fmt = texture->GetFormat();
+        ifmt = texture->GetInternalFormat();
+        mag_filter = texture->GetMagFilter();
+        min_filter = texture->GetMinFilter();
+        wrap_s = texture->GetWrapS();
+        wrap_t = texture->GetWrapT();
+
+        break;
+    }
 }
 
 Cubemap::~Cubemap()
@@ -45,7 +61,7 @@ void Cubemap::UploadGpuData(bool should_upload_data)
             }
 
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, ToOpenGLInternalFormat(tex->GetInternalFormat()),
-                tex->GetWidth(), tex->GetHeight(), 0, ToOpenGLBaseFormat(tex->GetFormat()), GL_UNSIGNED_BYTE, tex->GetBytes());            
+                tex->GetWidth(), tex->GetHeight(), 0, ToOpenGLBaseFormat(tex->GetFormat()), ToOpenGLDatumType(tex->GetDatumType()), tex->GetBytes());
         }
     }
 

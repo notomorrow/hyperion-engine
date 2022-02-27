@@ -98,25 +98,24 @@ public:
         // keep that last line and continue accumulating until a newline is found
 
 
-        std::stringstream accum;
+        std::string accum;
+        accum.reserve(BufferSize);
 
         while (size_t count = Read()) {
             for (size_t i = 0; i < count; i++) {
                 if (buffer[i] == '\n') {
-                    func(accum.str());
-                    accum.str(std::string());
+                    func(accum);
+                    accum.clear();
                     
                     continue;
                 }
 
-                accum << buffer[i];
+                accum += buffer[i];
             }
         }
 
-        auto str = accum.str();
-
-        if (str.length() != 0) {
-            func(str);
+        if (accum.length() != 0) {
+            func(accum);
         }
     }
 

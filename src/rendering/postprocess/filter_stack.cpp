@@ -31,7 +31,7 @@ void FilterStack::RemoveFilter(const std::string &tag)
 
 void FilterStack::Render(Camera *cam, Framebuffer2D *read_fbo, Framebuffer2D *blit_fbo)
 {
-    hard_assert(!m_filters.empty());
+    ex_assert(!m_filters.empty());
     ex_assert(m_gbuffer != nullptr);
 
     blit_fbo->Use();

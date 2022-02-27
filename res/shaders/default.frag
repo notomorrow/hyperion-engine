@@ -170,7 +170,7 @@ void main()
 #endif
 
 #if DEFERRED
-  output0 = vec4(my_color, 1.0);
+  output0 = vec4(albedo.rgb, 1.0);
   output1 = vec4(normalize(n) * 0.5 + 0.5, 1.0);
   output2 = vec4(v_position.xyz, 1.0);
   output3 = vec4(metallic, roughness, 0.0, 1.0);

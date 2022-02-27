@@ -12,7 +12,6 @@
 namespace hyperion {
 
 class Shader;
-class SHComputeShader;
 class CubemapRendererShader;
 class Cubemap;
 
@@ -51,14 +50,12 @@ private:
     virtual std::shared_ptr<Renderable> CloneImpl() override;
 
     void RenderCubemap(Renderer *, Camera *);
-    void RenderSphericalHarmonics();
 
     int m_width;
     int m_height;
     float m_near;
     float m_far;
     std::shared_ptr<CubemapRendererShader> m_cubemap_renderer_shader;
-    std::shared_ptr<SHComputeShader> m_spherical_harmonics_shader;
     Framebuffer *m_fbo;
     double m_render_tick;
     int m_render_index;
