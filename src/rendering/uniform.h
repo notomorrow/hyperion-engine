@@ -96,6 +96,29 @@ public:
         return *this;
     }
 
+    inline size_t GetSize() const
+    {
+        switch (type) {
+        case Uniform::UniformType::UNIFORM_TYPE_FLOAT: return sizeof(data.f);
+        case Uniform::UniformType::UNIFORM_TYPE_I32: return sizeof(data.i32);
+        case Uniform::UniformType::UNIFORM_TYPE_I64: return sizeof(data.i64);
+        case Uniform::UniformType::UNIFORM_TYPE_U32: return sizeof(data.u32);
+        case Uniform::UniformType::UNIFORM_TYPE_U64: return sizeof(data.u64);
+        case Uniform::UniformType::UNIFORM_TYPE_VEC2: return sizeof(data.vec2);
+        case Uniform::UniformType::UNIFORM_TYPE_VEC3: return sizeof(data.vec3);
+        case Uniform::UniformType::UNIFORM_TYPE_VEC4: return sizeof(data.vec4);
+        case Uniform::UniformType::UNIFORM_TYPE_MAT4: return sizeof(data.mat4);
+        case Uniform::UniformType::UNIFORM_TYPE_TEXTURE2D:
+            // fallthrough
+        case Uniform::UniformType::UNIFORM_TYPE_TEXTURE3D:
+            // fallthrough
+        case Uniform::UniformType::UNIFORM_TYPE_TEXTURECUBE:
+            return sizeof(data.texture_id);
+        default:
+            return 0;
+        }
+    }
+
     void BindUniform(Shader *shader, const char *name, int &texture_index);
 };
 } // namespace hyperion
