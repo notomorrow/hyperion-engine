@@ -130,11 +130,11 @@ public:
     static inline T Round(T a)
         { return std::round(a); }
 
-    static inline bool IsPowerOfTwo(uint64_t value)
+    static inline constexpr bool IsPowerOfTwo(uint64_t value)
         { return (value & (value - 1)) == 0; }
 
     // https://stackoverflow.com/questions/11376288/fast-computing-of-log2-for-64-bit-integers
-    static inline uint64_t FastLog2(uint64_t value)
+    static inline constexpr uint64_t FastLog2(uint64_t value)
     {
         const int tab64[64] = {
             63,  0, 58,  1, 59, 47, 53,  2,
@@ -158,7 +158,7 @@ public:
     }
 
     // https://www.techiedelight.com/round-next-highest-power-2/
-    static inline uint64_t NextPowerOf2(uint64_t value)
+    static inline constexpr uint64_t NextPowerOf2(uint64_t value)
     {
         // decrement `n` (to handle the case when `n` itself
         // is a power of 2)
