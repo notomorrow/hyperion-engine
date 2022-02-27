@@ -304,7 +304,7 @@ public:
         GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
 
-#if 1
+#if 0
 
         //m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
             auto model = asset_manager->LoadFromFile<Node>("models/san-miguel/san-miguel-low-poly.obj");
@@ -527,6 +527,45 @@ public:
         GetUI()->AddChild(ui_crosshair);
         GetUIManager()->RegisterUIObject(ui_crosshair);
 
+
+        bool add_spheres = true;
+
+        if (add_spheres) {
+
+            for (int x = 0; x < 5; x++) {
+                for (int z = 0; z < 5; z++) {
+
+                    Vector3 box_position = Vector3(((float(x))), 6.4f, (float(z)));
+
+                    //m_threads.emplace_back(std::thread([=, scene = GetScene()]() {
+                    auto box = asset_manager->LoadFromFile<Node>("models/cube.obj", true);
+                    box->SetLocalScale(0.35f);
+
+                    //box->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));
+
+                    for (size_t i = 0; i < box->NumChildren(); i++) {
+                        box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_DIFFUSE_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-albedo.png"));
+                        box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_AO_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-ao.png"));
+                        box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_NORMAL_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-normal-dx.png"));
+                        box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-roughness.png"));
+                        box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_METALNESS_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-metallic.png"));
+                        box->GetChild(0)->GetMaterial().SetTexture(MATERIAL_TEXTURE_PARALLAX_MAP, asset_manager->LoadFromFile<Texture2D>("textures/rough-wet-cobble-ue/rough-wet-cobble-height.png"));
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_FLIP_UV, Vector2(0, 1));
+                        box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 0.25f);
+
+                         //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_PARALLAX_HEIGHT, 5.0f);
+                         //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.1f);
+                         //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+                         //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, x / 5.0f);
+                         //box->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.2f);
+                    }
+                    //Environment::GetInstance()->AddPointLight(std::make_shared<PointLight>(box_position + Vector3(0, 1, 0), Vector4(col.x, col.y, col.z, 1.0f) * 1.0f, 2.0f));
+                    box->SetLocalTranslation(box_position);
+                    GetScene()->AddChildAsync(box, [](auto) {});
+                    // }));
+                }
+            }
+        }
 
         GetInputManager()->RegisterKeyEvent(KEY_1, InputEvent([=](bool pressed) {
             if (!pressed) {
