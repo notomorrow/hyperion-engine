@@ -354,6 +354,7 @@ void Mesh::RenderVk(VkRenderer *vk_renderer, Camera *cam) {
     VkCommandBuffer *cmd = &pipeline->command_buffers[0];
     const VkDeviceSize offsets[] = { 0 };
 
+
     RendererDevice *device = vk_renderer->GetRendererDevice();
     VkDevice vk_device = device->GetDevice();
     if (!this->is_uploaded) {
@@ -381,6 +382,7 @@ void Mesh::RenderVk(VkRenderer *vk_renderer, Camera *cam) {
         this->is_uploaded = true;
     }
     AssertThrow(this->vk_vbo->buffer != nullptr);
+
     vkCmdBindVertexBuffers(*cmd, 0, 1, &this->vk_vbo->buffer, offsets);
     vkCmdBindIndexBuffer(*cmd, this->vk_ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
     //vkCmdDraw(*cmd, (uint32_t)this->vertices.size(), 1, 0, 0);

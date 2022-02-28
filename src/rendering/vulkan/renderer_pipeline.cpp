@@ -14,6 +14,8 @@ RendererPipeline::RendererPipeline(RendererDevice *_device, RendererSwapchain *_
     this->primitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     this->swapchain = _swapchain;
     this->device = _device;
+    this->intern_vertex_buffers = nullptr;
+    this->intern_vertex_buffers_size = 0;
 
     auto width = (float) swapchain->extent.width;
     auto height = (float) swapchain->extent.height;
@@ -68,7 +70,7 @@ void RendererPipeline::CreateCommandPool() {
     VkCommandPoolCreateInfo pool_info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
     pool_info.queueFamilyIndex = family_indices.graphics_family.value();
     /* TODO: look into VK_COMMAND_POOL_CREATE_TRANSIENT_BIT for constantly changing objects */
-    pool_info.flags = 0;
+    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
     auto result = vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &this->command_pool);
 
@@ -110,7 +112,7 @@ void RendererPipeline::SetVertexBuffers(std::vector<RendererVertexBuffer> &verte
 std::vector<VkVertexInputAttributeDescription> RendererPipeline::SetVertexAttribs() {
     VkVertexInputBindingDescription binding_desc{};
     binding_desc.binding = 0;
-    binding_desc.stride = 64/* Jesus christ */;
+    binding_desc.stride = 0/* Jesus christ */;
     binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     this->vertex_binding_descriptions.push_back(binding_desc);
@@ -121,30 +123,27 @@ std::vector<VkVertexInputAttributeDescription> RendererPipeline::SetVertexAttrib
     uint32_t prev_size = 0;
 
     std::vector<VkVertexInputAttributeDescription> attrs;
-    attrs.resize(6);
+    //attrs.resize(6);
+    attrs.resize(1);
 
     /* Vector3 */
     attrs[0] = { 0, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
     prev_size += 3;
 
-    attrs[1] = { 1, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
+    /*attrs[1] = { 1, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
     prev_size += 3;
 
-    /* Vector2 (texcoords) */
-
-    attrs[2] = { 2, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
+    attrs[2] = { 2, 0, fmt_vec2, prev_size*(uint32_t)sizeof(float) };
     prev_size += 2;
 
     attrs[3] = { 3, 0, fmt_vec2, prev_size*(uint32_t)sizeof(float) };
     prev_size += 2;
 
-    /* Tangent */
     attrs[4] = { 4, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
     prev_size += 3;
 
-    /* Bitangent */
     attrs[5] = { 5, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
-    prev_size += 3;
+    prev_size += 3;*/
 
     this->vertex_attributes = attrs;
 
@@ -355,6 +354,8 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
 }
 
 void RendererPipeline::Destroy() {
+    delete[] intern_vertex_buffers;
+
     VkDevice render_device = this->device->GetDevice();
 
     vkFreeCommandBuffers(render_device, this->command_pool, this->command_buffers.size(), this->command_buffers.data());
