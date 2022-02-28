@@ -5,6 +5,8 @@
 #include "../math/triangle.h"
 #include "../math/vertex.h"
 
+#include "../rendering/vulkan/vk_renderer.h"
+
 #include <vector>
 #include <map>
 
@@ -70,6 +72,31 @@ public:
         {
         }
 
+        RendererMeshInputAttribute GetAttributeDescription(uint32_t binding, VkFormat format) {
+            VkFormat vk_fmt;
+            switch (this->size) {
+                case 2:
+                    /* R  G  B
+                     * 32 64 96 */
+                    vk_fmt = VK_FORMAT_R32G32_SFLOAT;
+                    break;
+                case 3:
+                    /* R  G  B
+                     * 32 64 96 */
+                    vk_fmt = VK_FORMAT_R32G32B32_SFLOAT;
+                    break;
+                case 4:
+                    /* R  G  B  A
+                     * 32 64 96 128 */
+                    vk_fmt = VK_FORMAT_R32G32B32A32_SFLOAT;
+                    break;
+                default: AssertThrowMsg(nullptr, "Unsupported vertex attribute format!");
+            }
+            RendererMeshInputAttribute attribute(binding, this->index, this->offset, vk_fmt);
+
+            return attribute;
+        }
+
         bool operator==(const MeshAttribute &other) const
         {
             return offset == other.offset &&
@@ -103,7 +130,10 @@ public:
     void InvertNormals();
     void CalculateTangents();
 
+    RendererMeshBindingDescription GetBindingDescription();
+
     void Render(Renderer *renderer, Camera *cam);
+    void RenderVk(VkRenderer *vk_renderer, Camera *cam);
 
 
 #pragma region serialization
@@ -268,6 +298,10 @@ protected:
 private:
     bool is_uploaded, is_created;
     unsigned int vao, vbo, ibo, vertex_size;
+
+    RendererGPUBuffer *vk_vbo;
+    RendererGPUBuffer *vk_ibo;
+
     std::vector<Vertex> vertices;
     std::vector<MeshIndex> indices;
     PrimitiveType primitive_type;

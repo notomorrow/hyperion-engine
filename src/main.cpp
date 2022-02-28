@@ -17,6 +17,8 @@
 #include "animation/skeleton_control.h"
 #include "math/bounding_box.h"
 
+#include "util/mesh_factory.h"
+
 #include "system/sdl_system.h"
 #include "system/debug.h"
 #include "rendering/vulkan/vk_renderer.h"
@@ -624,11 +626,16 @@ public:
     }
 };
 
+struct VkVertex {
+    Vector2 position;
+    Vector3 colour;
+};
+
+
 int main()
 {
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
-
 
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateWindow("Hyperion Engine", 1024, 768);
@@ -639,9 +646,6 @@ int main()
     VkRenderer renderer(system, "Hyperion Vulkan Test", "HyperionEngine");
 
     renderer.Initialize(true);
-    renderer.CreateSurface();
-    renderer.InitializeRendererDevice();
-    renderer.InitializeSwapchain();
 
     RendererDevice *device = renderer.GetRendererDevice();
 
@@ -651,6 +655,11 @@ int main()
     shader.CreateProgram("main");
 
     renderer.InitializePipeline(&shader);
+    auto mesh = MeshFactory::CreateQuad(false);
+    //return 0;
+    RendererPipeline *pipeline = renderer.GetCurrentPipeline();
+
+    uint32_t frame_index;
 
     bool running = true;
     while (running) {
@@ -666,7 +675,15 @@ int main()
                     break;
             }
         }
-        renderer.DrawFrame();
+        renderer.StartFrame(&frame_index);
+        mesh->RenderVk(&renderer, nullptr);
+        renderer.EndFrame(&frame_index);
+        renderer.DrawFrame(frame_index);
+
+        //pipeline->StartRenderPass();
+        //mesh->RenderVk(&renderer, nullptr);
+        //pipeline->EndRenderPass();
+
     }
 
     shader.Destroy();

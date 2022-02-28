@@ -17,6 +17,7 @@
 #include "renderer_device.h"
 #include "renderer_swapchain.h"
 #include "renderer_shader.h"
+#include "renderer_buffer.h"
 #include "renderer_pipeline.h"
 
 #define VK_RENDERER_API_VERSION VK_API_VERSION_1_2
@@ -33,18 +34,23 @@ private:
 
 class VkRenderer {
     static bool CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
+
     std::vector<VkPhysicalDevice> EnumeratePhysicalDevices();
     VkPhysicalDevice PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices);
+
     void CreateSyncObjects();
+    void DestroySyncObjects();
+    /* Setup debug mode */
     void SetupDebug();
-    VkResult AcquireNextImage(uint32_t *image_index);
 public:
     VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name);
     void Initialize(bool load_debug_layers=false);
     void CreateSurface();
 
-    void RenderFrame(uint32_t *image_index);
-    void DrawFrame();
+    VkResult AcquireNextImage(uint32_t *image_index);
+    void     StartFrame(uint32_t *image_index);
+    void     EndFrame(uint32_t *image_index);
+    void     DrawFrame(uint32_t frame_index);
 
     void SetValidationLayers(std::vector<const char *> _layers);
     RendererDevice *GetRendererDevice();
@@ -56,6 +62,8 @@ public:
 
     void SetCurrentWindow(SystemWindow *window);
     SystemWindow *GetCurrentWindow();
+    RendererPipeline *GetCurrentPipeline();
+    void SetCurrentPipeline(RendererPipeline *pipeline);
     void Destroy();
 
     std::vector<const char *> requested_device_extensions;

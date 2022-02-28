@@ -31,7 +31,7 @@ class RendererSwapchain {
 public:
     RendererSwapchain(RendererDevice *_device, const SwapchainSupportDetails &_details);
 
-    ~RendererSwapchain();
+    void Destroy();
 
     void Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices);
 
@@ -39,7 +39,7 @@ public:
 
     std::vector<VkFramebuffer> framebuffers;
 
-    VkSwapchainKHR swapchain;
+    VkSwapchainKHR swapchain = nullptr;
     VkImageUsageFlags image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     VkPresentModeKHR present_mode;
     VkExtent2D extent;

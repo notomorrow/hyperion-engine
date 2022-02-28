@@ -153,7 +153,7 @@ void RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices q
     this->CreateImageViews();
 }
 
-RendererSwapchain::~RendererSwapchain() {
+void RendererSwapchain::Destroy() {
     for (auto framebuffer: this->framebuffers) {
         vkDestroyFramebuffer(this->renderer_device->GetDevice(), framebuffer, nullptr);
     }

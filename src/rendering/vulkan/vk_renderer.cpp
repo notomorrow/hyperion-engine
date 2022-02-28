@@ -23,6 +23,14 @@ void RendererQueue::GetQueueFromDevice(RendererDevice device, uint32_t queue_fam
     vkGetDeviceQueue(device.GetDevice(), queue_family_index, queue_index, &this->queue);
 }
 
+RendererPipeline *VkRenderer::GetCurrentPipeline() {
+    AssertThrowMsg((this->pipeline != nullptr), "Renderer pipeline not initialized!\n");
+    return this->pipeline;
+}
+void VkRenderer::SetCurrentPipeline(RendererPipeline *pipeline) {
+    this->pipeline = pipeline;
+}
+
 VkResult VkRenderer::AcquireNextImage(uint32_t *image_index) {
     const VkDevice render_device = this->device->GetDevice();
 
@@ -37,21 +45,24 @@ VkResult VkRenderer::AcquireNextImage(uint32_t *image_index) {
         vkWaitForFences(render_device, 1, &this->fc_queue_submit, true, UINT64_MAX);
         vkResetFences(render_device, 1, &this->fc_queue_submit);
     }
-    if (this->pipeline->command_pool != VK_NULL_HANDLE)
-        vkResetCommandPool(render_device, this->pipeline->command_pool, 0);
+    if (this->GetCurrentPipeline()->command_pool != VK_NULL_HANDLE)
+        vkResetCommandPool(render_device, this->GetCurrentPipeline()->command_pool, 0);
 
     return VK_SUCCESS;
 }
 
-void VkRenderer::RenderFrame(uint32_t *image_index) {
+void VkRenderer::StartFrame(uint32_t *image_index) {
     auto new_image_result = this->AcquireNextImage(image_index);
     if (new_image_result == VK_SUBOPTIMAL_KHR || new_image_result == VK_ERROR_OUT_OF_DATE_KHR) {
         vkDeviceWaitIdle(this->device->GetDevice());
         /* TODO: regenerate framebuffers and swapchain */
     }
+}
+
+void VkRenderer::EndFrame(uint32_t *image_index) {
 
     /* Render objects to the swapchain using our graphics pipeline */
-    this->pipeline->DoRenderPass();
+    //this->pipeline->DoRenderPass();
 
     VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
     VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -67,22 +78,26 @@ void VkRenderer::RenderFrame(uint32_t *image_index) {
     submit_info.pCommandBuffers = &this->pipeline->command_buffers[*image_index];
 
     auto result = vkQueueSubmit(this->queue_graphics, 1, &submit_info, this->fc_queue_submit);
+
     AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");
 }
 
-void VkRenderer::DrawFrame() {
-    uint32_t frame_index;
-    this->RenderFrame(&frame_index);
+
+void VkRenderer::DrawFrame(uint32_t frame_index) {
+
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores = &this->sp_swap_release;
+
+    AssertThrow(this->swapchain != nullptr || this->swapchain->swapchain != nullptr);
 
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &this->swapchain->swapchain;
     present_info.pImageIndices = &frame_index;
     present_info.pResults = nullptr;
 
-    //vkQueueWaitIdle(this->queue_present);
+
+    vkQueueWaitIdle(this->queue_present);
     vkQueuePresentKHR(this->queue_present, &present_info);
 }
 
@@ -132,15 +147,24 @@ SystemWindow *VkRenderer::GetCurrentWindow() {
 void VkRenderer::CreateSyncObjects() {
     VkDevice rd_device = this->device->GetDevice();
     VkSemaphoreCreateInfo semaphore_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-    auto ia_result = vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_acquire);
-    auto rf_result = vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_release);
+    auto sa_result = vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_acquire);
+    auto sr_result = vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_release);
 
     VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     auto fc_result = vkCreateFence(rd_device, &fence_info, nullptr, &this->fc_queue_submit);
 
     AssertThrowMsg(fc_result == VK_SUCCESS, "Error creating render fence\n");
-    AssertThrowMsg((ia_result == VK_SUCCESS && rf_result == VK_SUCCESS), "Error creating render semaphores!\n");
+    AssertThrowMsg((sa_result == VK_SUCCESS && sr_result == VK_SUCCESS), "Error creating render semaphores!\n");
+}
+
+void VkRenderer::DestroySyncObjects() {
+    VkDevice rd_device = this->device->GetDevice();
+    vkDeviceWaitIdle(rd_device);
+
+    vkDestroySemaphore(rd_device, this->sp_swap_acquire, nullptr);
+    vkDestroySemaphore(rd_device, this->sp_swap_release, nullptr);
+    vkDestroyFence(rd_device, this->fc_queue_submit, nullptr);
 }
 
 VkRenderer::VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name) {
@@ -191,21 +215,41 @@ void VkRenderer::Initialize(bool load_debug_layers) {
     this->requested_device_extensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
+
+    /* Create our renderable surface from SDL */
+    this->CreateSurface();
+    /* Find and set up an adequate GPU for rendering and presentation */
+    this->InitializeRendererDevice();
+    this->CreateSyncObjects();
+    /* Set up our swapchain for our GPU to present our image.
+     * This is essentially a "root" framebuffer. */
+    this->InitializeSwapchain();
 }
 
 void VkRenderer::Destroy() {
+    /* Wait for the GPU to finish, we need to be in an idle state. */
     vkDeviceWaitIdle(this->device->GetDevice());
-    vkDestroySemaphore(this->device->GetDevice(), this->sp_swap_acquire, nullptr);
-    vkDestroySemaphore(this->device->GetDevice(), this->sp_swap_release, nullptr);
-    DebugLog(LogType::Info, "Destroying Semaphores\n");
-    vkDestroyFence(this->device->GetDevice(), this->fc_queue_submit, nullptr);
+    /* Cleanup our semaphores and fences! */
+    this->DestroySyncObjects();
 
+    /* Destroy our pipeline(before everything else!) */
+    if (this->pipeline != nullptr)
+        this->pipeline->Destroy();
     delete this->pipeline;
+
+    /* Destroy the vulkan swapchain */
+    if (this->swapchain != nullptr)
+        this->swapchain->Destroy();
     delete this->swapchain;
-    DebugLog(LogType::Info, "Destroying surface and instance\n");
-    vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
-    delete this->device;
+
     /* Destroy the surface from SDL */
+    vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
+
+    /* Destroy our device */
+    if (this->device != nullptr)
+        this->device->Destroy();
+    delete this->device;
+
     /* Destroy the Vulkan instance(this should always be last!) */
     vkDestroyInstance(this->instance, nullptr);
 }
@@ -213,12 +257,6 @@ void VkRenderer::Destroy() {
 void VkRenderer::SetQueueFamilies(std::set<uint32_t> _queue_families) {
     this->queue_families = _queue_families;
 }
-//VkDevice VkRenderer::InitDevice(const VkPhysicalDevice &physical,
-//                                std::set<uint32_t> unique_queue_families,
-//                          <      const std::vector<const char *> &required_extensions)
-//{
-//
-//}
 
 RendererDevice *VkRenderer::GetRendererDevice() {
     return this->device;
@@ -259,19 +297,20 @@ VkPhysicalDevice VkRenderer::PickPhysicalDevice(std::vector<VkPhysicalDevice> _d
 }
 
 RendererDevice *VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_device) {
+    /* If no physical device passed in, we select one */
     if (physical_device == nullptr) {
-        std::cout << "Selecting Physical Device\n";
         std::vector<VkPhysicalDevice> physical_devices = this->EnumeratePhysicalDevices();
         physical_device = this->PickPhysicalDevice(physical_devices);
     }
 
-    AssertExit(this->device == nullptr);
-
-    this->device = new RendererDevice();
+    if (this->device == nullptr) {
+        this->device = new RendererDevice();
+    }
 
     this->device->SetRequiredExtensions(this->requested_device_extensions);
     this->device->SetPhysicalDevice(physical_device);
     this->device->SetRenderSurface(this->surface);
+
     QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
 
     /* No user specified queue families to create, so we just use the defaults */
@@ -283,9 +322,8 @@ RendererDevice *VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_d
             family_indices.present_family.value()
         });
     }
-    std::cout << "Creating Logical Device\n";
+    /* Create a logical device to operate on */
     this->device->CreateLogicalDevice(this->queue_families, this->requested_device_extensions);
-    std::cout << "Finding the queues\n";
 
     /* Get the internal queues from our device */
     this->queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
@@ -296,12 +334,12 @@ RendererDevice *VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_d
 
 void VkRenderer::InitializePipeline(RendererShader *render_shader) {
     this->pipeline = new RendererPipeline(this->device, this->swapchain);
+
     this->pipeline->CreateRenderPass();
     this->swapchain->CreateFramebuffers(this->pipeline->GetRenderPass());
     this->pipeline->Rebuild(render_shader);
 
     /* Create our synchronization objects */
-    this->CreateSyncObjects();
     this->pipeline->CreateCommandPool();
     this->pipeline->CreateCommandBuffers();
     DebugLog(LogType::Info, "Created command buffers+pool!\n");
