@@ -141,12 +141,12 @@ public:
     {
         AssetManager *asset_manager = AssetManager::GetInstance();
         std::shared_ptr<Cubemap> cubemap(new Cubemap({
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negx.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negy.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/posz.jpg"),
-            asset_manager->LoadFromFile<Texture2D>("textures/chapel/negz.jpg")
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/posx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/negx.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/posy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/negy.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/posz.jpg"),
+            asset_manager->LoadFromFile<Texture2D>("textures/Lycksele3/negz.jpg")
         }));
 
         cubemap->SetFilter(Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
@@ -205,7 +205,7 @@ public:
         m_hit_to_entity.clear();
 
         for (Intersection_t& it : intersections) {
-            // it.first->AddControl(std::make_shared<BoundingBoxControl>());
+            it.first->AddControl(std::make_shared<BoundingBoxControl>());
 
             m_raytested_entities.push_back(it.first);
 
@@ -255,7 +255,6 @@ public:
 
         GetRenderer()->GetDeferredPipeline()->GetPreFilterStack()->AddFilter<SSAOFilter>("ssao", 5);
         GetRenderer()->GetDeferredPipeline()->GetPreFilterStack()->AddFilter<FXAAFilter>("fxaa", 6);
-        //GetRenderer()->GetDeferredPipeline()->GetPostFilterStack()->AddFilter<DepthOfFieldFilter>("depth of field", 50);
         GetRenderer()->GetDeferredPipeline()->GetPostFilterStack()->AddFilter<BloomFilter>("bloom", 80);
 
         AudioManager::GetInstance()->Initialize();
@@ -300,11 +299,8 @@ public:
 
         auto cm = InitCubemap();
 
-        GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
-        //GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
-
-
-        //GetScene()->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 5.0f, 0.0f), BoundingBox(-25.0f, 25.0f)));
+        //GetScene()->AddControl(std::make_shared<SkyboxControl>(GetCamera(), nullptr));
+        GetScene()->AddControl(std::make_shared<SkydomeControl>(GetCamera()));
 
         GetScene()->AddControl(std::make_shared<SphericalHarmonicsControl>(Vector3(0.0f), BoundingBox(-25.0f, 25.0f)));
 
@@ -519,7 +515,7 @@ public:
         GetScene()->AddChild(house);*/
 
         auto shadow_node = std::make_shared<Node>("shadow_node");
-        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 8.0f));
+        shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 15.0f));
         shadow_node->AddControl(std::make_shared<CameraFollowControl>(GetCamera()));
         GetScene()->AddChild(shadow_node);
         

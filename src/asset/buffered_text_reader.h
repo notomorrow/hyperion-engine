@@ -96,8 +96,6 @@ public:
         // call func for each line in the buffer,
         // holding onto the last one (assuming no newline at the end)
         // keep that last line and continue accumulating until a newline is found
-
-
         std::string accum;
         accum.reserve(BufferSize);
 

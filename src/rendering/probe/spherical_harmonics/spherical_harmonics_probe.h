@@ -13,7 +13,6 @@ namespace hyperion {
 
 class Shader;
 class ComputeShader;
-class SHComputeShader;
 class Cubemap;
 
 class SphericalHarmonicsProbe : public Probe {

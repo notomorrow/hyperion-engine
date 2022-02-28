@@ -318,8 +318,6 @@ public:
             }
 
             return insert_result;
-
-            //return { OctreeResult::OCTREE_OK, "Still contains spatial AABB or at topmost level -- reinserting node", non_owning_ptr(this) };
         }
 
         // Contains() is false at this point

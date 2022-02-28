@@ -20,10 +20,6 @@ private:
         m_uniform_shadow_map[4],
         m_uniform_poisson_disk[16],
         m_uniform_inverse_view_proj_matrix;
-    // lights
-    DirectionalLightUniform m_uniform_directional_light;
-    std::vector<PointLightUniform> m_uniform_point_lights;
-    DeclaredUniform::Id_t m_uniform_num_point_lights;
     // envmap
     DeclaredUniform::Id_t m_uniform_envmap_origin,
         m_uniform_envmap_max,

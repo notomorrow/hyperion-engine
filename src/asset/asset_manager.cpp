@@ -41,6 +41,10 @@ AssetManager::AssetManager()
     RegisterLoader<TextureLoader>(".jpg");
     RegisterLoader<TextureLoader>(".png");
     RegisterLoader<TextureLoader>(".tga");
+    RegisterLoader<TextureLoader>(".psd");
+    RegisterLoader<TextureLoader>(".bmp");
+    RegisterLoader<TextureLoader>(".gif");
+    RegisterLoader<TextureLoader>(".hdr");
 
     RegisterLoader<WavLoader>(".wav");
 }
