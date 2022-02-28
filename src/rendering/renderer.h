@@ -19,6 +19,8 @@
 #include "pipeline/render_queue.h"
 #include "pipeline/deferred_pipeline.h"
 
+#include "vulkan/vk_renderer.h"
+
 namespace hyperion {
 
 class Environment;
@@ -50,6 +52,7 @@ public:
     inline Bucket &GetBucket(Spatial::Bucket bucket)
         { return m_all_items.GetBucket(bucket); }
 
+    VkRenderer *vk_renderer;
 private:
     RenderQueue m_all_items;
     DeferredPipeline *m_deferred_pipeline;

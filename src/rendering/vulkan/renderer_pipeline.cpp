@@ -6,6 +6,8 @@
 
 #include "../../system/debug.h"
 
+#include <cstring>
+
 namespace hyperion {
 
 RendererPipeline::RendererPipeline(RendererDevice *_device, RendererSwapchain *_swapchain) {
@@ -20,7 +22,7 @@ RendererPipeline::RendererPipeline(RendererDevice *_device, RendererSwapchain *_
 
     std::vector<VkDynamicState> default_dynamic_states = {
             VK_DYNAMIC_STATE_VIEWPORT,
-            VK_DYNAMIC_STATE_LINE_WIDTH,
+            VK_DYNAMIC_STATE_SCISSOR,
     };
     this->SetDynamicStates(default_dynamic_states);
 }
@@ -86,35 +88,106 @@ void RendererPipeline::CreateCommandBuffers() {
     AssertThrowMsg(result == VK_SUCCESS, "Could not create Vulkan command buffers\n");
 }
 
-void RendererPipeline::DoRenderPass() {
-    for (size_t i = 0; i < this->command_buffers.size(); i++) {
-        VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        begin_info.pInheritanceInfo = nullptr;
-        /* Begin recording our command buffer */
-        auto result = vkBeginCommandBuffer(this->command_buffers[i], &begin_info);
-        AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer [%d]!\n", i);
+void RendererPipeline::UpdateDynamicStates(VkCommandBuffer *cmd) {
+    vkCmdSetViewport(*cmd, 0, 1, &this->viewport);
+    vkCmdSetScissor(*cmd, 0, 1, &this->scissor);
+}
 
-        VkRenderPassBeginInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-        render_pass_info.renderPass = this->render_pass;
-        render_pass_info.framebuffer = this->swapchain->framebuffers[i];
-        render_pass_info.renderArea.offset = {0, 0};
-        render_pass_info.renderArea.extent = this->swapchain->extent;
-
-        VkClearValue clear_colour = {0.5f, 0.7f, 0.5f, 1.0f};
-        render_pass_info.clearValueCount = 1;
-        render_pass_info.pClearValues = &clear_colour;
-        /* Start adding draw commands  */
-        vkCmdBeginRenderPass(this->command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-        /* Bind the graphics pipeline */
-        vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
-        vkCmdDraw(this->command_buffers[i], 3, 1, 0, 0);
-        /* Finish the render pass */
-        vkCmdEndRenderPass(this->command_buffers[i]);
-
-        result = vkEndCommandBuffer(this->command_buffers[i]);
-        AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer [%d]!\n", i);
+void RendererPipeline::SetVertexBuffers(std::vector<RendererVertexBuffer> &vertex_buffers) {
+    /* Because C++ can have some overhead with vector implementations we'll just
+     * copy the direct VkBuffer's to a memory chunk so we are guaranteed to have near
+     * linear complexity. */
+    uint32_t size = vertex_buffers.size();
+    this->intern_vertex_buffers_size = size;
+    this->intern_vertex_buffers = new VkBuffer[size];
+    /* We should never run out of memory here... */
+    AssertThrowMsg(this->intern_vertex_buffers != nullptr, "Could not allocate memory!\n");
+    for (uint32_t i = 0; i < size; i++) {
+        memcpy(&this->intern_vertex_buffers[i], &vertex_buffers[i].gpu_buffer->memory, sizeof(VkBuffer));
     }
+}
+
+std::vector<VkVertexInputAttributeDescription> RendererPipeline::SetVertexAttribs() {
+    VkVertexInputBindingDescription binding_desc{};
+    binding_desc.binding = 0;
+    binding_desc.stride = 64/* Jesus christ */;
+    binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    this->vertex_binding_descriptions.push_back(binding_desc);
+
+    const VkFormat fmt_vec3 = VK_FORMAT_R32G32B32_SFLOAT;
+    const VkFormat fmt_vec2 = VK_FORMAT_R32G32_SFLOAT;
+
+    uint32_t prev_size = 0;
+
+    std::vector<VkVertexInputAttributeDescription> attrs;
+    attrs.resize(6);
+
+    /* Vector3 */
+    attrs[0] = { 0, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
+    prev_size += 3;
+
+    attrs[1] = { 1, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
+    prev_size += 3;
+
+    /* Vector2 (texcoords) */
+
+    attrs[2] = { 2, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
+    prev_size += 2;
+
+    attrs[3] = { 3, 0, fmt_vec2, prev_size*(uint32_t)sizeof(float) };
+    prev_size += 2;
+
+    /* Tangent */
+    attrs[4] = { 4, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
+    prev_size += 3;
+
+    /* Bitangent */
+    attrs[5] = { 5, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
+    prev_size += 3;
+
+    this->vertex_attributes = attrs;
+
+    return attrs;
+}
+
+void RendererPipeline::StartRenderPass(VkCommandBuffer *cmd) {
+    if (cmd == nullptr) {
+        AssertThrowMsg(this->command_buffers.size() > 0, "No command buffers available!\n");
+        cmd = &this->command_buffers[0];
+    }
+    VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    begin_info.pInheritanceInfo = nullptr;
+    /* Begin recording our command buffer */
+    auto result = vkBeginCommandBuffer(*cmd, &begin_info);
+    AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer!\n");
+
+    VkRenderPassBeginInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+    render_pass_info.renderPass = this->render_pass;
+    render_pass_info.framebuffer = this->swapchain->framebuffers[0];
+    render_pass_info.renderArea.offset = { 0, 0 };
+    render_pass_info.renderArea.extent = this->swapchain->extent;
+
+    VkClearValue clear_colour = {0.5f, 0.7f, 0.5f, 1.0f};
+    render_pass_info.clearValueCount = 1;
+    render_pass_info.pClearValues = &clear_colour;
+    /* Start adding draw commands  */
+    vkCmdBeginRenderPass(*cmd, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    /* Bind the graphics pipeline */
+    vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
+    this->UpdateDynamicStates(cmd);
+}
+
+void RendererPipeline::EndRenderPass(VkCommandBuffer *cmd) {
+    if (cmd == nullptr) {
+        AssertThrowMsg(this->command_buffers.size() > 0, "No command buffers available!\n");
+        cmd = &this->command_buffers[0];
+    }
+    vkCmdEndRenderPass(*cmd);
+
+    auto result = vkEndCommandBuffer(*cmd);
+    AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
 }
 
 void RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_count) {
@@ -169,12 +242,20 @@ void RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_count) {
     DebugLog(LogType::Info, "Renderpass created!\n");
 }
 
+void RendererPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
+                                          std::vector<VkVertexInputAttributeDescription> &attribs) {
+    this->vertex_binding_descriptions = binding_descs;
+    this->vertex_attributes = attribs;
+}
+
 void RendererPipeline::Rebuild(RendererShader *shader) {
+    this->SetVertexAttribs();
+
     VkPipelineVertexInputStateCreateInfo vertex_input_info{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-    vertex_input_info.vertexBindingDescriptionCount = 0;
-    vertex_input_info.pVertexBindingDescriptions = nullptr;
-    vertex_input_info.vertexAttributeDescriptionCount = 0;
-    vertex_input_info.pVertexAttributeDescriptions = nullptr;
+    vertex_input_info.vertexBindingDescriptionCount   = (uint32_t)(this->vertex_binding_descriptions.size());
+    vertex_input_info.pVertexBindingDescriptions      = this->vertex_binding_descriptions.data();
+    vertex_input_info.vertexAttributeDescriptionCount = (uint32_t)(this->vertex_attributes.size());
+    vertex_input_info.pVertexAttributeDescriptions    = this->vertex_attributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo input_asm_info{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
     input_asm_info.topology = this->GetPrimitive();
@@ -227,12 +308,10 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     /* Dynamic states; these are the values that can be changed without
      * rebuilding the rendering pipeline. */
     VkPipelineDynamicStateCreateInfo dynamic_state{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-    dynamic_state.dynamicStateCount = 2;
-    VkDynamicState states[] = {
-            VK_DYNAMIC_STATE_VIEWPORT,
-            VK_DYNAMIC_STATE_LINE_WIDTH,
-    };
-    dynamic_state.pDynamicStates = states;
+    const auto states = this->GetDynamicStates();
+
+    dynamic_state.dynamicStateCount = states.size();
+    dynamic_state.pDynamicStates = states.data();
     DebugLog(LogType::Info, "Enabling [%d] dynamic states\n", dynamic_state.dynamicStateCount);
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
@@ -259,7 +338,7 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     pipeline_info.pDepthStencilState = nullptr;
     pipeline_info.pColorBlendState = &color_blending;
     /* TODO: reimplement dynamic states! */
-    pipeline_info.pDynamicState = nullptr;
+    pipeline_info.pDynamicState = &dynamic_state;
 
     pipeline_info.layout = layout;
     pipeline_info.renderPass = render_pass;
@@ -275,11 +354,10 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     DebugLog(LogType::Info, "Created graphics pipeline!\n");
 }
 
-RendererPipeline::~RendererPipeline() {
+void RendererPipeline::Destroy() {
     VkDevice render_device = this->device->GetDevice();
 
     vkFreeCommandBuffers(render_device, this->command_pool, this->command_buffers.size(), this->command_buffers.data());
-
     vkDestroyCommandPool(render_device, this->command_pool, nullptr);
 
     DebugLog(LogType::Info, "Destroying pipeline!\n");

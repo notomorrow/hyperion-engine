@@ -11,6 +11,51 @@
 #include <vector>
 #include <optional>
 
+struct RendererMeshBindingDescription {
+    uint32_t binding;
+    uint32_t stride;
+    VkVertexInputRate input_rate;
+
+    RendererMeshBindingDescription()
+        : binding(0), stride(0), input_rate(VK_VERTEX_INPUT_RATE_VERTEX)
+    {
+    }
+
+    RendererMeshBindingDescription(uint32_t binding, uint32_t stride, VkVertexInputRate input_rate)
+        : binding(binding), stride(stride), input_rate(input_rate)
+    {
+    }
+
+    VkVertexInputBindingDescription GetBindingDescription() {
+        VkVertexInputBindingDescription bind;
+        bind.binding   = this->binding;
+        bind.stride    = this->stride;
+        bind.inputRate = this->input_rate;
+        return bind;
+    }
+};
+
+struct RendererMeshInputAttribute {
+    uint32_t    location;
+    uint32_t    binding;
+    VkFormat    format;
+    uint32_t    offset;
+
+    RendererMeshInputAttribute(uint32_t binding, uint32_t location, uint32_t offset, VkFormat format)
+        : location(location), binding(binding), offset(offset), format(format)
+    {
+    }
+
+    VkVertexInputAttributeDescription GetAttributeDescription() {
+        VkVertexInputAttributeDescription attrib;
+        attrib.location = this->location;
+        attrib.binding = this->binding;
+        attrib.format = this->format;
+        attrib.offset = this->offset;
+        return attrib;
+    }
+};
+
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphics_family;
     std::optional<uint32_t> present_family;

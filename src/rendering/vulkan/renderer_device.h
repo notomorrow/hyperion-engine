@@ -14,7 +14,7 @@
 class RendererDevice {
 public:
     RendererDevice();
-    ~RendererDevice();
+    void Destroy();
 
     void SetDevice(const VkDevice &_device);
     void SetPhysicalDevice(const VkPhysicalDevice &_physical);

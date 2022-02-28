@@ -205,7 +205,7 @@ VkQueue RendererDevice::GetQueue(uint32_t queue_family_index, uint32_t queue_ind
 }
 
 
-RendererDevice::~RendererDevice() {
+void RendererDevice::Destroy() {
     /* By the time this destructor is called there should never
      * be a running queue, but just in case we will wait until
      * all the queues on our device are stopped. */
