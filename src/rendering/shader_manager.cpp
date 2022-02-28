@@ -19,7 +19,7 @@ ShaderManager::ShaderManager()
     m_base_shader_properties
         .Define("DEFERRED", true)
         .Define("GI_INTENSITY", 20.0f)
-        .Define("IBL_INTENSITY", 8000.0f)
+        .Define("IBL_INTENSITY", 12000.0f)
         .Define("SKY_INTENSITY", 100000.0f)
         .Define("METALNESS_MAPPING", true)
         .Define("ROUGHNESS_MAPPING", true)

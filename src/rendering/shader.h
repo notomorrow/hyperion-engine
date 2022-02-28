@@ -569,6 +569,8 @@ private:
     unsigned int progid;
 
     HashCode::Value_t m_previous_properties_hash_code;
+    std::vector<UniformBuffer::Internal *> m_uniform_buffer_internals;
+    std::map<SubShaderType, SubShader> subshaders;
 
     void CreateGpuData();
     void UploadGpuData();
@@ -580,9 +582,6 @@ private:
     void DestroyUniformBufferInternal(UniformBuffer::Internal *);
     void CreateUniformBufferObjects();
     void DestroyUniformBufferObjects();
-    std::vector<UniformBuffer::Internal*> m_uniform_buffer_internals;
-
-    std::map<SubShaderType, SubShader> subshaders;
 };
 
 } // namespace hyperion

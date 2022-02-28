@@ -56,11 +56,12 @@ void Shader::InitUniforms()
     m_uniform_view_proj_matrix = m_uniforms.Acquire("u_viewProjMatrix").id;
 
     // lights
+
     m_uniform_num_point_lights = m_uniforms.Acquire("env_NumPointLights").id;
 
-    m_uniform_directional_light.uniform_direction = m_uniforms.Acquire("env_DirectionalLight.direction").id;
-    m_uniform_directional_light.uniform_color = m_uniforms.Acquire("env_DirectionalLight.color").id;
-    m_uniform_directional_light.uniform_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity").id;
+    m_uniform_directional_light.uniform_direction = m_uniforms.Acquire("env_DirectionalLight.direction", Uniform(Vector3())).id;
+    m_uniform_directional_light.uniform_color = m_uniforms.Acquire("env_DirectionalLight.color", Uniform(Vector4())).id;
+    m_uniform_directional_light.uniform_intensity = m_uniforms.Acquire("env_DirectionalLight.intensity", Uniform(100000.0f)).id;
 
     // textures
     EnumOptions<MaterialTextureKey, const char *, MATERIAL_MAX_TEXTURES> has_texture_names({
@@ -429,15 +430,6 @@ void Shader::ApplyUniforms()
 
             soft_assert_continue_msg(uniform_buffer._internal->generated, "Uniform buffer not generated, may be in an error state.");
 
-            glBindBufferBase(GL_UNIFORM_BUFFER, uniform_buffer._internal->index, uniform_buffer._internal->handle);
-
-            if (!it.second) {
-                continue;
-            }
-
-            it.second = false; // set to changed = false;
-
-            //soft_assert_continue(uniform_buffer._internal->index != -1);
             glBindBuffer(GL_UNIFORM_BUFFER, uniform_buffer._internal->handle);
             CatchGLErrors("Failed to bind uniform buffer");
 
@@ -455,7 +447,9 @@ void Shader::ApplyUniforms()
                 offset += MathUtil::NextMultiple(size, 16);
             }
 
+            glBindBufferBase(GL_UNIFORM_BUFFER, uniform_buffer._internal->index, uniform_buffer._internal->handle);
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
+            it.second = false; // set to changed = false;
 
             // TODO: shared data across programs
         }

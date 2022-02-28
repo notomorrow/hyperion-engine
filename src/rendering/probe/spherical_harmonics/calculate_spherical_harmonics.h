@@ -98,11 +98,11 @@ static inline std::array<Vector3, 9> CalculateSphericalHarmonics(Cubemap *cubema
         }
     }
 
-    float weightSum = 0.0;
+    float weight_sum = 0.0;
+
+    std::array<Vector3, 9> result{ Vector3::Zero() };
+
     std::mutex sum_mtx;
-
-    std::array<Vector3, 9> shResult{ Vector3::Zero() };
-
     std::vector<std::thread> threads;
 
     for (int face = 0; face < 6; face++) {
@@ -113,7 +113,7 @@ static inline std::array<Vector3, 9> CalculateSphericalHarmonics(Cubemap *cubema
 
         auto new_texture = std::make_shared<Texture2D>(texture->GetWidth(), texture->GetHeight(), texture_bytes);
 
-        threads.emplace_back([texture, new_texture, face, &sum_mtx, &weightSum, &shResult]() {
+        threads.emplace_back([texture, new_texture, face, &sum_mtx, &weight_sum, &result]() {
             new_texture->SetFormat(texture->GetFormat());
             new_texture->SetInternalFormat(texture->GetInternalFormat());
             new_texture->SetFilter(Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST);
@@ -139,10 +139,13 @@ static inline std::array<Vector3, 9> CalculateSphericalHarmonics(Cubemap *cubema
                     std::array<Vector3, 9> sh = ProjectOntoSH9Color(dir, pixel_rgb);
 
                     sum_mtx.lock();
+
                     for (int i = 0; i < 9; i++) {
-                        shResult[i] += sh[i] * weight;
+                        result[i] += sh[i] * weight;
                     }
-                    weightSum += weight;
+
+                    weight_sum += weight;
+
                     sum_mtx.unlock();
                 }
             }
@@ -156,7 +159,7 @@ static inline std::array<Vector3, 9> CalculateSphericalHarmonics(Cubemap *cubema
     std::array<Vector3, 9> sh_samples;
 
     for (int i = 0; i < 9; i++) {
-        sh_samples[i] = shResult[i] * (4.0f * 3.14159f) / MathUtil::Max(weightSum, 0.001f);
+        sh_samples[i] = result[i] * (4.0f * 3.14159f) / MathUtil::Max(weight_sum, 0.0001f);
     }
 
     return sh_samples;
