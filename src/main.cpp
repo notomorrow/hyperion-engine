@@ -676,7 +676,9 @@ int main()
             }
         }
         renderer.StartFrame(&frame_index);
+        pipeline->StartRenderPass();
         mesh->RenderVk(&renderer, nullptr);
+        pipeline->EndRenderPass();
         renderer.EndFrame(&frame_index);
         renderer.DrawFrame(frame_index);
 

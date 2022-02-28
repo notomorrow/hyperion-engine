@@ -45,6 +45,8 @@ public:
     /* Per frame data */
     VkCommandPool command_pool;
     std::vector<VkCommandBuffer> command_buffers;
+
+    VkPipeline pipeline;
 private:
     VkBuffer *intern_vertex_buffers = nullptr;
     uint64_t  intern_vertex_buffers_size = 0;
@@ -55,7 +57,6 @@ private:
     VkRect2D scissor;
     VkPrimitiveTopology primitive;
 
-    VkPipeline pipeline;
     VkPipelineLayout layout;
     VkRenderPass render_pass;
 
