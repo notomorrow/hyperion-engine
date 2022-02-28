@@ -129,6 +129,7 @@ void Mesh::CalculateVertexSize()
         attr.second.offset = offset;
         prev_size = attr.second.size;
         vert_size += prev_size;
+        break;
     }
 
     vertex_size = vert_size;
@@ -157,7 +158,7 @@ std::vector<float> Mesh::CreateBuffer()
             buffer[(i * vertex_size) + pos_it->second.offset + 1] = vertex.GetPosition().y;
             buffer[(i * vertex_size) + pos_it->second.offset + 2] = vertex.GetPosition().z;
         }
-        if (norm_it != attribs.end()) {
+        /*if (norm_it != attribs.end()) {
             buffer[(i * vertex_size) + norm_it->second.offset] = vertex.GetNormal().x;
             buffer[(i * vertex_size) + norm_it->second.offset + 1] = vertex.GetNormal().y;
             buffer[(i * vertex_size) + norm_it->second.offset + 2] = vertex.GetNormal().z;
@@ -191,7 +192,7 @@ std::vector<float> Mesh::CreateBuffer()
             buffer[(i * vertex_size) + bonew_it->second.offset + 1] = vertex.GetBoneWeight(1);
             buffer[(i * vertex_size) + bonew_it->second.offset + 2] = vertex.GetBoneWeight(2);
             buffer[(i * vertex_size) + bonew_it->second.offset + 3] = vertex.GetBoneWeight(3);
-        }
+        }*/
     }
 
     return buffer;
@@ -386,7 +387,7 @@ void Mesh::RenderVk(VkRenderer *vk_renderer, Camera *cam) {
     vkCmdBindVertexBuffers(*cmd, 0, 1, &this->vk_vbo->buffer, offsets);
     vkCmdBindIndexBuffer(*cmd, this->vk_ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
     //vkCmdDraw(*cmd, (uint32_t)this->vertices.size(), 1, 0, 0);
-    vkCmdDrawIndexed(*cmd, (uint32_t)(indices.size()), 1, 0, 0, 0);
+    vkCmdDrawIndexed(*cmd, (uint32_t)(indices.size()), 1, 0, 0, 1);
 }
 
 /*
