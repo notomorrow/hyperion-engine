@@ -47,17 +47,25 @@ public:
     std::vector<VkCommandBuffer> command_buffers;
 
     VkPipeline pipeline;
+
+    struct PushConstants {
+        float x = 1.0f;
+        float y = 0.0f;
+        float z = 0.0f;
+        float w = 1.0f;
+    } push_constants;
+
 private:
     VkBuffer *intern_vertex_buffers = nullptr;
     uint64_t  intern_vertex_buffers_size = 0;
 
     std::vector<VkDynamicState> dynamic_states;
+    VkPipelineLayout layout;
 
     VkViewport viewport;
     VkRect2D scissor;
     VkPrimitiveTopology primitive;
 
-    VkPipelineLayout layout;
     VkRenderPass render_pass;
 
     std::vector<VkVertexInputBindingDescription>   vertex_binding_descriptions = { };

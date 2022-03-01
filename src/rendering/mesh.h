@@ -108,7 +108,9 @@ public:
     Mesh &operator=(const Mesh &other) = delete;
     virtual ~Mesh();
 
-    struct RenderContext {
+    class RenderContext {
+        friend class Mesh;
+
         RenderContext(Mesh *, VkRenderer *);
         RenderContext(const RenderContext &other) = delete;
         RenderContext &operator=(const RenderContext &other) = delete;

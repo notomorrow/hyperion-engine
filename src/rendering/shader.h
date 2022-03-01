@@ -343,16 +343,11 @@ private:
     HashCode::Value_t m_previous_properties_hash_code;
     std::map<SubShaderType, SubShader> subshaders;
 
-    UniformBufferInternalsHolder m_uniform_buffer_internals;
-
     void CreateGpuData();
     void UploadGpuData();
     void DestroyGpuData();
     bool ShaderPropertiesChanged() const;
     void ApplyUniforms();
-
-    void CreateUniformBufferObjects();
-    void DestroyUniformBufferObjects();
 };
 
 } // namespace hyperion

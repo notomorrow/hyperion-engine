@@ -79,14 +79,15 @@ void RendererGPUBuffer::Copy(RendererDevice *device, size_t size, void *ptr) {
 
 
 RendererVertexBuffer::RendererVertexBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
-    : RendererGPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, memory_property_flags, sharing_mode)
-{
-}
+    : RendererGPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, memory_property_flags, sharing_mode) {}
 
 void RendererVertexBuffer::BindBuffer(VkCommandBuffer *cmd) {
     const VkBuffer vertex_buffers[] = { buffer };
     const VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(*cmd, 0, 1, vertex_buffers, offsets);
 }
+
+RendererUniformBuffer::RendererUniformBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
+    : RendererGPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memory_property_flags, sharing_mode) {}
 
 }; /* namespace hyperion */

@@ -266,7 +266,7 @@ void Shader::UploadGpuData()
 
 void Shader::DestroyGpuData()
 {
-    DestroyUniformBufferObjects();
+    //DestroyUniformBufferObjects();
 
     if (is_created) {
         glDeleteProgram(progid);
@@ -475,7 +475,7 @@ void Shader::Use()
 
         CreateGpuData();
         UploadGpuData();
-        CreateUniformBufferObjects(); // rebuild UBOs
+        //CreateUniformBufferObjects(); // rebuild UBOs
 
         m_previous_properties_hash_code = m_properties.GetHashCode().Value();
     }
@@ -493,28 +493,6 @@ void Shader::End()
     glBindTexture(GL_TEXTURE_3D, 0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
-
-void Shader::CreateUniformBufferObjects()
-{
-    /*for (auto &it : m_uniforms.m_uniform_buffers) {
-        if (it.first._internal != nullptr) {
-            continue;
-        }
-
-        it.first._internal = non_owning_ptr(const_cast<const UniformBuffer::Internal*>(m_uniform_buffer_internals.CreateUniformBufferInternal(this, it.first)));
-    }*/
-}
-
-void Shader::DestroyUniformBufferObjects()
-{
-    m_uniform_buffer_internals.Reset();
-
-    for (auto &it : m_uniforms.m_uniform_buffers) {
-        // destroyed above
-        it.first._internal = nullptr;
-    }
-}
-
 void Shader::AddSubShader(SubShaderType type,
     const std::string &code,
     const ShaderProperties &properties,
