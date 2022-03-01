@@ -80,7 +80,7 @@ static inline std::array<Vector3, 9> ProjectOntoSH9Color(const Vector3 &dir, con
 
 static inline std::array<Vector3, 9> CalculateSphericalHarmonics(Cubemap *cubemap)
 {
-    ex_assert_msg(
+    AssertThrowMsg(
         cubemap->GetInternalFormat() == Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8
             || cubemap->GetInternalFormat() == Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8,
         "Cubemap expected to be in rgb8 or rgba8 format"

@@ -90,7 +90,7 @@ void SkeletonControl::StopAnimation()
 
 void SkeletonControl::FindBones(Node *top)
 {
-    ex_assert(top != nullptr);
+    AssertThrow(top != nullptr);
 
     auto *bone = dynamic_cast<Bone*>(top);
 

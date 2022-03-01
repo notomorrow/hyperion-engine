@@ -428,7 +428,7 @@ void Shader::ApplyUniforms()
                 uniform_buffer._internal = non_owning_ptr(const_cast<const Shader::UniformBuffer::Internal*>(CreateUniformBufferInternal(uniform_buffer)));
             }
 
-            soft_assert_continue_msg(uniform_buffer._internal->generated, "Uniform buffer not generated, may be in an error state.");
+            AssertContinueMsg(uniform_buffer._internal->generated, "Uniform buffer not generated, may be in an error state.");
 
             glBindBuffer(GL_UNIFORM_BUFFER, uniform_buffer._internal->handle);
             CatchGLErrors("Failed to bind uniform buffer");
@@ -437,7 +437,7 @@ void Shader::ApplyUniforms()
             size_t total_size = 0, offset = 0;
 
             for (size_t i = 0; i < uniform_buffer.data.size(); i++) {
-                soft_assert_break_msg(total_size < buffer_size, "Total buffer size reached capacity!");
+                AssertBreakMsg(total_size < buffer_size, "Total buffer size reached capacity!");
 
                 size_t size = uniform_buffer.data[i].value.GetSize();
                 glBufferSubData(GL_UNIFORM_BUFFER, offset, size, uniform_buffer.data[i].value.GetRawPtr());
@@ -543,7 +543,7 @@ void Shader::DestroyUniformBufferInternal(Shader::UniformBuffer::Internal *_inte
         _internal
     );
 
-    ex_assert(it != m_uniform_buffer_internals.end());
+    AssertThrow(it != m_uniform_buffer_internals.end());
 
     if (_internal->generated) {
         GLuint handle = _internal->handle;

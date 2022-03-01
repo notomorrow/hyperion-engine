@@ -16,13 +16,13 @@ Renderer::Renderer(const RenderWindow &render_window)
     // TODO: re-introduce frustum culling
     m_octree_callback_id = SceneManager::GetInstance()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial, void *raw_data) {
         if (evt == OCTREE_INSERT_NODE) {
-            hard_assert(spatial != nullptr);
+            AssertExit(spatial != nullptr);
 
             for (int i = 0; i < Octree::VisibilityState::CameraType::VIS_CAMERA_MAX; i++) {
                 m_all_items.GetBucket(spatial->GetBucket()).AddItem(BucketItem(node_id, *spatial));
             }
         } else if (evt == OCTREE_REMOVE_NODE) {
-            hard_assert(spatial != nullptr);
+            AssertExit(spatial != nullptr);
 
             m_all_items.GetBucket(spatial->GetBucket()).RemoveItem(node_id);
         } else if (evt == OCTREE_VISIBILITY_STATE) {

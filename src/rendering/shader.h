@@ -297,8 +297,8 @@ public:
 
         inline bool Set(DeclaredUniform::Id_t id, const Uniform &uniform)
         {
-            ex_assert(id >= 0);
-            ex_assert(id < data.size());
+            AssertThrow(id >= 0);
+            AssertThrow(id < data.size());
 
 
             if (data[id].value != uniform || uniform.IsTextureType()) {
@@ -357,8 +357,8 @@ public:
 
         UniformResult Acquire(UniformBuffer::Id_t buffer_id, const std::string &name, const Uniform &initial_value)
         {
-            ex_assert(buffer_id >= 0);
-            ex_assert(buffer_id < m_uniform_buffers.size());
+            AssertThrow(buffer_id >= 0);
+            AssertThrow(buffer_id < m_uniform_buffers.size());
 
             auto &buffer = m_uniform_buffers[buffer_id].first;
 
@@ -367,8 +367,8 @@ public:
 
         inline bool Set(DeclaredUniform::Id_t id, const Uniform &uniform)
         {
-            ex_assert(id >= 0);
-            ex_assert(id < m_uniforms.size());
+            AssertThrow(id >= 0);
+            AssertThrow(id < m_uniforms.size());
 
             if (m_uniforms[id].first.value != uniform || uniform.IsTextureType()) {
                 m_uniforms[id].first.value = uniform;
@@ -382,13 +382,13 @@ public:
 
         inline bool Set(UniformBuffer::Id_t buffer_id, DeclaredUniform::Id_t uniform_id, const Uniform &uniform)
         {
-            ex_assert(buffer_id >= 0);
-            ex_assert(buffer_id < m_uniform_buffers.size());
+            AssertThrow(buffer_id >= 0);
+            AssertThrow(buffer_id < m_uniform_buffers.size());
 
             auto &buffer = m_uniform_buffers[buffer_id].first;
 
-            ex_assert(uniform_id >= 0);
-            ex_assert(uniform_id < buffer.data.size());
+            AssertThrow(uniform_id >= 0);
+            AssertThrow(uniform_id < buffer.data.size());
 
             bool changed = buffer.Set(uniform_id, uniform);
 

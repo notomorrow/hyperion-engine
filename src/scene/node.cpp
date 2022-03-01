@@ -139,8 +139,8 @@ float Node::CalculateCameraDistance(Camera *camera) const
 
 void Node::AddChild(std::shared_ptr<Node> entity)
 {
-    ex_assert(entity != nullptr);
-    //ex_assert_msg(std::find(m_children.begin(), m_children.end(), entity) == m_children.end(), "object already exists in node");
+    AssertThrow(entity != nullptr);
+    //AssertThrowMsg(std::find(m_children.begin(), m_children.end(), entity) == m_children.end(), "object already exists in node");
 
     if (entity->m_flags & PENDING_REMOVAL) {
         std::cout << entity->GetName() << " saved from death\n";
@@ -151,7 +151,7 @@ void Node::AddChild(std::shared_ptr<Node> entity)
             entity
         );
 
-        ex_assert(it != m_children_pending_removal.end());
+        AssertThrow(it != m_children_pending_removal.end());
 
         m_children_pending_removal.erase(it);
         entity->m_flags &= ~PENDING_REMOVAL;
@@ -161,7 +161,7 @@ void Node::AddChild(std::shared_ptr<Node> entity)
         return;
     }
 
-    ex_assert(entity->m_parent == nullptr);
+    AssertThrow(entity->m_parent == nullptr);
 
     // find free slot
     bool slot_found = false;
@@ -194,8 +194,8 @@ void Node::AddChild(std::shared_ptr<Node> entity)
 
 void Node::RemoveChild(std::shared_ptr<Node> entity)
 {
-    ex_assert(entity != nullptr);
-    ex_assert(entity->m_parent == this);
+    AssertThrow(entity != nullptr);
+    AssertThrow(entity->m_parent == this);
 
     m_children_pending_removal.push_back(entity);
 
@@ -235,7 +235,7 @@ std::shared_ptr<Node> Node::GetChild(const std::string &name) const
 
 void Node::AddChildAsync(std::shared_ptr<Node> node, NodeCallback_t on_added)
 {
-    ex_assert(node != nullptr);
+    AssertThrow(node != nullptr);
 
     std::lock_guard guard(add_pending_mutex);
 
@@ -295,7 +295,7 @@ void Node::ClearPendingRemoval()
 
 void Node::AddControl(std::shared_ptr<EntityControl> control)
 {
-    // ex_assert(control->parent == nullptr);
+    // AssertThrow(control->parent == nullptr);
 
     m_controls.push_back(control);
     control->parent = this;
@@ -304,7 +304,7 @@ void Node::AddControl(std::shared_ptr<EntityControl> control)
 
 void Node::RemoveControl(const std::shared_ptr<EntityControl> &control)
 {
-    soft_assert(control != nullptr);
+    AssertSoft(control != nullptr);
 
     m_controls.erase(std::find(m_controls.begin(), m_controls.end(), control));
     control->OnRemoved();

@@ -179,7 +179,7 @@ public:
     {
         if (m_is_divided) {
             for (Octant &octant : m_octants) {
-                hard_assert(octant.m_octree != nullptr);
+                AssertExit(octant.m_octree != nullptr);
 
                 delete octant.m_octree.get();
             }
@@ -227,7 +227,7 @@ public:
         }
 
         for (int i = 0; i < m_octants.size(); i++) {
-            hard_assert(m_octants[i].m_octree != nullptr);
+            AssertExit(m_octants[i].m_octree != nullptr);
 
             if (!m_octants[i].m_octree->AllEmpty()) {
                 return false;
@@ -261,7 +261,7 @@ public:
 
         if (m_is_divided) {
             for (size_t i = 0; i < m_octants.size(); i++) {
-                hard_assert(m_octants[i].m_octree != nullptr);
+                AssertExit(m_octants[i].m_octree != nullptr);
 
                 m_octants[i].m_octree->Clear();
                 m_octants[i].m_octree->DispatchEvent(OCTREE_REMOVE_OCTANT);
@@ -283,7 +283,7 @@ public:
         if (it == m_nodes.end()) {
             if (m_is_divided) {
                 for (Octant &octant : m_octants) {
-                    hard_assert(octant.m_octree != nullptr);
+                    AssertExit(octant.m_octree != nullptr);
 
                     if (auto result = octant.m_octree->UpdateNode(id, new_value)) {
                         return result;
@@ -349,7 +349,7 @@ public:
                 non_owning_ptr<Octree> oct_iter(m_parent);
 
                 while (oct_iter != nullptr && oct_iter->AllEmpty()) {
-                    hard_assert_msg(oct_iter->m_is_divided, "Should not have undivided octants throughout the octree");
+                    AssertExitMsg(oct_iter->m_is_divided, "Should not have undivided octants throughout the octree");
 
                     oct_iter->Undivide();
 
@@ -381,7 +381,7 @@ public:
                     non_owning_ptr<Octree> oct_iter(m_parent);
 
                     while (oct_iter != nullptr && oct_iter->AllEmpty()) {
-                        hard_assert_msg(oct_iter->m_is_divided, "Should not have undivided octants throughout the octree");
+                        AssertExitMsg(oct_iter->m_is_divided, "Should not have undivided octants throughout the octree");
 
                         oct_iter->Undivide();
 
@@ -395,7 +395,7 @@ public:
 
         if (m_is_divided) {
             for (Octant &octant : m_octants) {
-                hard_assert(octant.m_octree != nullptr);
+                AssertExit(octant.m_octree != nullptr);
 
                 if (auto result = octant.m_octree->RemoveNode(id)) {
                     return result;
@@ -414,7 +414,7 @@ public:
                     Divide();
                 }
 
-                hard_assert(octant.m_octree != nullptr);
+                AssertExit(octant.m_octree != nullptr);
 
                 return octant.m_octree->InsertNode(id, spatial);
             }
@@ -431,12 +431,20 @@ public:
         return OctreeResult(OctreeResult::OCTREE_OK, non_owning_ptr(this));
     }
 
+    std::array<Octant, 8> m_octants;
+    non_owning_ptr<Octree> m_parent;
+    BoundingBox m_aabb;
+    bool m_is_divided;
+    int m_level;
+
+private:
+
     void Undivide()
     {
-        ex_assert(m_is_divided);
+        AssertExit(m_is_divided);
 
         for (size_t i = 0; i < m_octants.size(); i++) {
-            hard_assert(m_octants[i].m_octree != nullptr);
+            AssertExit(m_octants[i].m_octree != nullptr);
 
             delete m_octants[i].m_octree.get();
             m_octants[i].m_octree = nullptr;
@@ -447,10 +455,10 @@ public:
 
     void Divide()
     {
-        ex_assert(!m_is_divided);
+        AssertExit(!m_is_divided);
 
         for (Octant &octant : m_octants) {
-            hard_assert(octant.m_octree == nullptr);
+            AssertExit(octant.m_octree == nullptr);
 
             octant.m_octree = non_owning_ptr(new Octree(octant.m_aabb, m_level + 1));
             octant.m_octree->m_parent = non_owning_ptr(this);
@@ -459,14 +467,6 @@ public:
 
         m_is_divided = true;
     }
-
-    std::array<Octant, 8> m_octants;
-    non_owning_ptr<Octree> m_parent;
-    BoundingBox m_aabb;
-    bool m_is_divided;
-    int m_level;
-
-private:
 
     void UpdateVisibilityState(const Frustum &frustum, VisibilityState::CameraType type, const VisibilityState &visibility_state)
     {
