@@ -425,7 +425,7 @@ void Shader::ApplyUniforms()
             auto &uniform_buffer = it.first;
 
             if (uniform_buffer._internal == nullptr) {
-                uniform_buffer._internal = non_owning_ptr(const_cast<const Shader::UniformBuffer::Internal*>(CreateUniformBufferInternal(uniform_buffer)));
+                uniform_buffer._internal = non_owning_ptr(const_cast<const UniformBuffer::Internal*>(m_uniform_buffer_internals.CreateUniformBufferInternal(this, uniform_buffer)));
             }
 
             AssertContinueMsg(uniform_buffer._internal->generated, "Uniform buffer not generated, may be in an error state.");
@@ -494,68 +494,6 @@ void Shader::End()
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
-Shader::UniformBuffer::Internal *Shader::CreateUniformBufferInternal(UniformBuffer &uniform_buffer)
-{
-    size_t total_size = 0; // calculate total size of data allocated for uniform buffer
-    for (size_t i = 0; i < uniform_buffer.data.size(); i++) {
-        total_size += uniform_buffer.data[i].value.GetSize();
-    }
-
-    UniformBuffer::Internal *_internal = new UniformBuffer::Internal;
-    _internal->generated = false;
-
-    // TODO: assert total_size fits into block_size?
-    GLuint block_index = glGetUniformBlockIndex(progid, uniform_buffer.name.c_str());
-    CatchGLErrors("Failed to get uniform block index");
-
-    if (block_index != GL_INVALID_INDEX) {
-        GLint block_size;
-        glGetActiveUniformBlockiv(progid, block_index, GL_UNIFORM_BLOCK_DATA_SIZE, &block_size);
-        CatchGLErrors("Failed to get active uniform block size");
-
-        _internal->size = block_size;
-
-        GLuint handle;
-        glGenBuffers(1, &handle);
-        CatchGLErrors("Failed to generate uniform buffer");
-
-        glBindBuffer(GL_UNIFORM_BUFFER, handle);
-        glBufferData(GL_UNIFORM_BUFFER, total_size, nullptr, GL_STATIC_DRAW);
-        CatchGLErrors("Failed to set uniform buffer initial data");
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-        _internal->handle = handle;
-        _internal->index = block_index;
-        _internal->generated = true;
-    }
-    
-
-    m_uniform_buffer_internals.push_back(_internal);
-
-    return _internal;
-}
-
-void Shader::DestroyUniformBufferInternal(Shader::UniformBuffer::Internal *_internal)
-{
-    auto it = std::find(
-        m_uniform_buffer_internals.begin(),
-        m_uniform_buffer_internals.end(),
-        _internal
-    );
-
-    AssertThrow(it != m_uniform_buffer_internals.end());
-
-    if (_internal->generated) {
-        GLuint handle = _internal->handle;
-        glDeleteBuffers(1, &handle);
-        CatchGLErrors("Failed to delete uniform buffer");
-    }
-
-    delete _internal;
-
-    m_uniform_buffer_internals.erase(it);
-}
-
 void Shader::CreateUniformBufferObjects()
 {
     for (auto &it : m_uniforms.m_uniform_buffers) {
@@ -563,17 +501,13 @@ void Shader::CreateUniformBufferObjects()
             continue;
         }
 
-        it.first._internal = non_owning_ptr(const_cast<const Shader::UniformBuffer::Internal*>(CreateUniformBufferInternal(it.first)));
+        it.first._internal = non_owning_ptr(const_cast<const UniformBuffer::Internal*>(m_uniform_buffer_internals.CreateUniformBufferInternal(this, it.first)));
     }
 }
 
 void Shader::DestroyUniformBufferObjects()
 {
-    for (auto *uniform_buffer : m_uniform_buffer_internals) {
-        DestroyUniformBufferInternal(uniform_buffer);
-    }
-
-    m_uniform_buffer_internals.clear();
+    m_uniform_buffer_internals.Reset();
 
     for (auto &it : m_uniforms.m_uniform_buffers) {
         // destroyed above

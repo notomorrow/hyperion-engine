@@ -12,6 +12,7 @@
 #include "../util/non_owning_ptr.h"
 #include "material.h"
 #include "uniform.h"
+#include "uniform_buffer.h"
 #include "camera/camera.h"
 
 #include <vector>
@@ -210,107 +211,6 @@ class Shader {
     friend class Renderer;
 public:
 
-    struct UniformResult;
-    struct UniformBufferResult;
-
-    struct DeclaredUniform {
-        using Id_t = int;
-
-        Id_t id;
-        std::string name;
-        Uniform value;
-
-        DeclaredUniform(Id_t id, const std::string &name, Uniform value = Uniform())
-            : id(id), name(name), value(value)
-        {
-        }
-
-        DeclaredUniform(const DeclaredUniform &other)
-            : id(other.id), name(other.name), value(other.value)
-        {
-        }
-
-        inline DeclaredUniform &operator=(const DeclaredUniform &other)
-        {
-            id = other.id;
-            name = other.name;
-            value = other.value;
-
-            return *this;
-        }
-    };
-
-    struct UniformBuffer {
-        using Id_t = int;
-
-        Id_t id;
-        std::string name;
-        std::vector<DeclaredUniform> data;
-
-        struct Internal {
-            using Handle_t = unsigned int;
-
-            Handle_t handle;
-            size_t size;
-            size_t index;
-            bool generated;
-
-            Internal() = default;
-            Internal(const Internal &other) = delete;
-            Internal &operator=(const Internal &other) = delete;
-        };
-
-        non_owning_ptr<const Internal> _internal;
-
-        UniformBuffer(Id_t id, const std::string &name)
-            : id(id),
-              name(name),
-              _internal(nullptr)
-        {
-        }
-
-        UniformBuffer(const UniformBuffer &other)
-            : id(other.id),
-              name(other.name),
-              data(other.data),
-              _internal(other._internal)
-        {
-        }
-
-        inline UniformBuffer &operator=(const UniformBuffer &other)
-        {
-            id = other.id;
-            name = other.name;
-            data = other.data;
-            _internal = other._internal;
-
-            return *this;
-        }
-
-        UniformResult Acquire(const std::string &name, const Uniform &initial_value)
-        {
-            DeclaredUniform::Id_t id = data.size();
-            data.push_back(DeclaredUniform(id, name, initial_value));
-
-            return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
-        }
-
-        inline bool Set(DeclaredUniform::Id_t id, const Uniform &uniform)
-        {
-            AssertThrow(id >= 0);
-            AssertThrow(id < data.size());
-
-
-            if (data[id].value != uniform || uniform.IsTextureType()) {
-                data[id].value = uniform;
-
-                return true;
-            }
-
-            return false;
-        }
-    };
-
     struct DirectionalLightUniform {
         DeclaredUniform::Id_t uniform_color,
             uniform_direction,
@@ -322,135 +222,6 @@ public:
             uniform_position,
             uniform_radius,
             uniform_intensity;
-    };
-
-    class DeclaredUniforms {
-    public:
-
-        DeclaredUniforms() { m_uniforms.reserve(32); }
-        DeclaredUniforms(const DeclaredUniforms &other) = delete;
-        inline DeclaredUniforms &operator=(const DeclaredUniforms &other) = delete;
-
-        UniformBufferResult AcquireBuffer(const std::string &name)
-        {
-            UniformBuffer::Id_t id = m_uniform_buffers.size();
-            m_uniform_buffers.push_back(std::make_pair(UniformBuffer(id, name), true));
-
-            return UniformBufferResult(UniformBufferResult::DECLARED_UNIFORM_BUFFER_OK, id);
-        }
-
-        UniformResult Acquire(const std::string &name)
-        {
-            DeclaredUniform::Id_t id = m_uniforms.size();
-            m_uniforms.push_back(std::make_pair(DeclaredUniform(id, name), true));
-
-            return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
-        }
-
-        UniformResult Acquire(const std::string &name, const Uniform &initial_value)
-        {
-            DeclaredUniform::Id_t id = m_uniforms.size();
-            m_uniforms.push_back(std::make_pair(DeclaredUniform(id, name, initial_value), true));
- 
-            return UniformResult(UniformResult::DECLARED_UNIFORM_OK, id);
-        }
-
-        UniformResult Acquire(UniformBuffer::Id_t buffer_id, const std::string &name, const Uniform &initial_value)
-        {
-            AssertThrow(buffer_id >= 0);
-            AssertThrow(buffer_id < m_uniform_buffers.size());
-
-            auto &buffer = m_uniform_buffers[buffer_id].first;
-
-            return buffer.Acquire(name, initial_value);
-        }
-
-        inline bool Set(DeclaredUniform::Id_t id, const Uniform &uniform)
-        {
-            AssertThrow(id >= 0);
-            AssertThrow(id < m_uniforms.size());
-
-            if (m_uniforms[id].first.value != uniform || uniform.IsTextureType()) {
-                m_uniforms[id].first.value = uniform;
-                m_uniforms[id].second = true;
-
-                return true;
-            }
-
-            return false;
-        }
-
-        inline bool Set(UniformBuffer::Id_t buffer_id, DeclaredUniform::Id_t uniform_id, const Uniform &uniform)
-        {
-            AssertThrow(buffer_id >= 0);
-            AssertThrow(buffer_id < m_uniform_buffers.size());
-
-            auto &buffer = m_uniform_buffers[buffer_id].first;
-
-            AssertThrow(uniform_id >= 0);
-            AssertThrow(uniform_id < buffer.data.size());
-
-            bool changed = buffer.Set(uniform_id, uniform);
-
-            m_uniform_buffers[buffer_id].second |= changed;
-
-            return changed;
-        }
-
-        // bool - has changed?
-        std::vector<std::pair<DeclaredUniform, bool>> m_uniforms;
-        std::vector<std::pair<UniformBuffer, bool>> m_uniform_buffers;
-    };
-    struct UniformResult {
-        enum {
-            DECLARED_UNIFORM_OK,
-            DECLARED_UNIFORM_ERR
-        } result;
-
-        DeclaredUniform::Id_t id;
-
-        std::string message;
-
-        UniformResult(decltype(result) result, DeclaredUniform::Id_t id = -1, const std::string &message = "")
-            : result(result), message(message), id(id) {}
-        UniformResult(const UniformResult &other)
-            : result(other.result), message(other.message), id(other.id) {}
-        inline UniformResult &operator=(const UniformResult &other)
-        {
-            result = other.result;
-            id = other.id;
-            message = other.message;
-
-            return *this;
-        }
-
-        inline explicit operator bool() const { return result == DECLARED_UNIFORM_OK; }
-    };
-
-    struct UniformBufferResult {
-        enum {
-            DECLARED_UNIFORM_BUFFER_OK,
-            DECLARED_UNIFORM_BUFFER_ERR
-        } result;
-
-        UniformBuffer::Id_t id;
-
-        std::string message;
-
-        UniformBufferResult(decltype(result) result, UniformBuffer::Id_t id = -1, const std::string &message = "")
-            : result(result), message(message), id(id) {}
-        UniformBufferResult(const UniformBufferResult &other)
-            : result(other.result), message(other.message), id(other.id) {}
-        inline UniformBufferResult &operator=(const UniformBufferResult &other)
-        {
-            result = other.result;
-            id = other.id;
-            message = other.message;
-
-            return *this;
-        }
-
-        inline explicit operator bool() const { return result == DECLARED_UNIFORM_BUFFER_OK; }
     };
 
 
@@ -569,8 +340,9 @@ private:
     unsigned int progid;
 
     HashCode::Value_t m_previous_properties_hash_code;
-    std::vector<UniformBuffer::Internal *> m_uniform_buffer_internals;
     std::map<SubShaderType, SubShader> subshaders;
+
+    UniformBufferInternalsHolder m_uniform_buffer_internals;
 
     void CreateGpuData();
     void UploadGpuData();
@@ -578,8 +350,6 @@ private:
     bool ShaderPropertiesChanged() const;
     void ApplyUniforms();
 
-    UniformBuffer::Internal *CreateUniformBufferInternal(UniformBuffer &);
-    void DestroyUniformBufferInternal(UniformBuffer::Internal *);
     void CreateUniformBufferObjects();
     void DestroyUniformBufferObjects();
 };
