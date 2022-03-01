@@ -48,7 +48,7 @@ void DeferredPipeline::RenderOpaqueBuckets(Renderer *renderer, Camera *cam, Fram
 
 void DeferredPipeline::InitializeBlitFbo(Framebuffer2D *read_fbo)
 {
-    ex_assert(m_blit_fbo == nullptr);
+    AssertThrow(m_blit_fbo == nullptr);
 
     m_blit_fbo = new Framebuffer2D(
         read_fbo->GetWidth(),

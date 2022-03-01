@@ -189,29 +189,29 @@ AssetLoader::Result ObjLoader::LoadFromFile(const std::string &path)
             MeshIndex mesh_index = mesh_vertices.size();
 
             if (idc.vertex_idx >= 0) {
-                ex_assert(idc.vertex_idx < model.positions.size());
+                AssertThrow(idc.vertex_idx < model.positions.size());
                 vertex.SetPosition(model.positions[idc.vertex_idx]);
             } else {
-                ex_assert(idc.vertex_idx * -1 < model.positions.size());
+                AssertThrow(idc.vertex_idx * -1 < model.positions.size());
                 vertex.SetPosition(model.positions[model.positions.size() + idc.vertex_idx]);
             }
 
             if (model.has_normals) {
                 if (idc.normal_idx >= 0) {
-                    ex_assert(idc.normal_idx < model.normals.size());
+                    AssertThrow(idc.normal_idx < model.normals.size());
                     vertex.SetNormal(model.normals[idc.normal_idx]);
                 } else {
-                    ex_assert(idc.normal_idx * -1 < model.normals.size());
+                    AssertThrow(idc.normal_idx * -1 < model.normals.size());
                     vertex.SetPosition(model.normals[model.normals.size() + idc.normal_idx]);
                 }
             }
 
             if (model.has_texcoords) {
                 if (idc.texcoord_idx >= 0) {
-                    ex_assert(idc.texcoord_idx < model.texcoords.size());
+                    AssertThrow(idc.texcoord_idx < model.texcoords.size());
                     vertex.SetTexCoord0(model.texcoords[idc.texcoord_idx]);
                 } else {
-                    ex_assert(idc.texcoord_idx * -1 < model.texcoords.size());
+                    AssertThrow(idc.texcoord_idx * -1 < model.texcoords.size());
                     vertex.SetTexCoord0(model.texcoords[model.texcoords.size() + idc.texcoord_idx]);
                 }
             }
@@ -220,7 +220,6 @@ AssetLoader::Result ObjLoader::LoadFromFile(const std::string &path)
             mesh_indices.push_back(mesh_index);
             m_index_map[idc] = mesh_index;
         }
-
 
         auto mesh = std::make_shared<Mesh>();
         mesh->SetVertices(mesh_vertices, mesh_indices);

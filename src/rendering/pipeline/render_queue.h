@@ -79,7 +79,7 @@ struct Bucket {
     std::size_t GetIndex(int id)
     {
         const auto it = hash_to_item_index.find(id);
-        ex_assert(it != hash_to_item_index.end());
+        AssertThrow(it != hash_to_item_index.end());
 
         return it->second;
     }
@@ -94,7 +94,7 @@ struct Bucket {
         }
 
         const size_t index = it->second;
-        ex_assert(index < items.size());
+        AssertExit(index < items.size());
 
         return &items[index];
     }
@@ -102,10 +102,10 @@ struct Bucket {
     BucketItem &GetItem(int id)
     {
         const auto it = hash_to_item_index.find(id);
-        ex_assert(it != hash_to_item_index.end());
+        AssertThrow(it != hash_to_item_index.end());
 
         const size_t index = it->second;
-        ex_assert(index < items.size());
+        AssertExit(index < items.size());
 
         return items[index];
     }
@@ -140,7 +140,7 @@ struct Bucket {
                 slot_index = i;
                 slot_found = true;
 
-                soft_assert_break_msg(bucket_item.GetRenderable()->GetShader() != nullptr, "No shader set, using first found inactive slot");
+                AssertBreakMsg(bucket_item.GetRenderable()->GetShader() != nullptr, "No shader set, using first found inactive slot");
 
                 continue;
             }
@@ -156,7 +156,7 @@ struct Bucket {
             // next one is empty, so we compare shaders for this,
             // checking if we should insert the item into the next slot
 
-            hard_assert(items[i].GetRenderable() != nullptr);
+            AssertExit(items[i].GetRenderable() != nullptr);
 
             if (items[i].GetRenderable()->GetShader() != nullptr && bucket_item.GetRenderable()->GetShader() != nullptr) {
                 // doing ID check for now.
@@ -195,7 +195,7 @@ struct Bucket {
         }
 
         const size_t index = it->second;
-        hard_assert(index < items.size());
+        AssertExit(index < items.size());
 
         items[index] = bucket_item;
 
@@ -208,10 +208,10 @@ struct Bucket {
     void UpdateItem(int id, const BucketItem &bucket_item)
     {
         const auto it = hash_to_item_index.find(id);
-        soft_assert(it != hash_to_item_index.end());
+        AssertSoft(it != hash_to_item_index.end());
 
         const size_t index = it->second;
-        hard_assert(index < items.size());
+        AssertExit(index < items.size());
 
         items[index] = bucket_item;
 
@@ -229,7 +229,7 @@ struct Bucket {
         }
 
         const size_t index = it->second;
-        ex_assert(index < items.size());
+        AssertExit(index < items.size());
 
         hash_to_item_index.erase(it);
         //items.erase(items.begin() + index);

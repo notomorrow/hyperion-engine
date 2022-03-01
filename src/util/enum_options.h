@@ -20,7 +20,7 @@ public:
 
     // convert from attachment (2^x) into ordinal (0-5) for use as an array index
     static inline constexpr Ordinal_t EnumToOrdinal(EnumOption_t option)
-        { return FastLog2(option); }
+        { return MathUtil::FastLog2(option); }
 
     // convert from ordinal (0-5) into power-of-two for use as bit flags
     static inline constexpr EnumOption_t OrdinalToEnum(Ordinal_t ordinal)
@@ -67,9 +67,14 @@ public:
     }
 
     using EnumValuePair_t = std::pair<EnumType, ValueType>;
+
+    inline constexpr bool HasAt(size_t index) const
         { return m_flags & OrdinalToEnum(index); }
 
     inline constexpr EnumValuePair_t KeyValueAt(size_t index) const
+        { return std::make_pair(OrdinalToEnum(index), m_values[index]); }
+
+    inline constexpr EnumType KeyAt(size_t index) const
         { return OrdinalToEnum(index); }
 
     inline constexpr ValueType &ValueAt(size_t index)
@@ -77,9 +82,6 @@ public:
 
     inline constexpr const ValueType &ValueAt(size_t index) const
         { return m_values[index]; }
-
-    inline constexpr EnumValuePair_t KeyValueAt(size_t index) const
-        { return std::make_pair(OrdinalToEnum(index), m_values[index]); }
 
     inline constexpr ValueType &Get(EnumOption_t enum_key)
         { return m_values[EnumToOrdinal(enum_key)]; }
@@ -89,7 +91,7 @@ public:
 
     inline EnumOptions &Set(EnumOption_t enum_key, const ValueType &value)
     {
-        m_values[EnumToOrdinal(enum_key)] = value;
+        auto ord = EnumToOrdinal(enum_key);
 
         AssertThrow(ord < m_values.size());
 
@@ -103,7 +105,7 @@ public:
     {
         auto ord = EnumToOrdinal(enum_key);
 
-        ex_assert(ord < m_values.size());
+        AssertThrow(ord < m_values.size());
 
         m_values[ord] = ValueType();
         m_flags &= ~uint64_t(enum_key);

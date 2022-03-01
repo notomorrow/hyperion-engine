@@ -315,143 +315,58 @@ public:
 
 #if 1
 
-        //m_threads.emplace_back(std::thread([scene = GetScene(), asset_manager]() {
-            auto model = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
-            model->SetName("model");
-            model->Scale(Vector3(0.01f));
-            for (size_t i = 0; i < model->NumChildren(); i++) {
-                if (model->GetChild(i) == nullptr) {
-                    continue;
-                }
+        auto model = asset_manager->LoadFromFile<Node>("models/sponza/sponza.obj");
+        model->SetName("model");
+        model->Scale(Vector3(0.01f));
+        for (size_t i = 0; i < model->NumChildren(); i++) {
+            if (model->GetChild(i) == nullptr) {
+                continue;
+            }
 
-                if (model->GetChild(i)->GetRenderable() == nullptr) {
-                    continue;
-                }
+            if (model->GetChild(i)->GetRenderable() == nullptr) {
+                continue;
+            }
 
-                if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:Branches")) {
-                    model->GetChild(i)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                    model->GetChild(i)->GetSpatial().GetMaterial().alpha_blended = true;
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:Floor")) {
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:Leaves")) {
-                    model->GetChild(i)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                    model->GetChild(i)->GetSpatial().GetMaterial().alpha_blended = true;
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:TableWood")) {
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
-                } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:Transluscent")) {
-                    model->GetChild(i)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                    model->GetChild(i)->GetSpatial().GetMaterial().alpha_blended = true;
-                    model->GetChild(i)->GetMaterial().diffuse_color = Vector4(1.0, 1.0, 1.0, 0.5f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
-                    model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
-                }
+            if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:Branches")) {
+                model->GetChild(i)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
+                model->GetChild(i)->GetSpatial().GetMaterial().alpha_blended = true;
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+            } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:Floor")) {
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
+            } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:Leaves")) {
+                model->GetChild(i)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
+                model->GetChild(i)->GetSpatial().GetMaterial().alpha_blended = true;
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
+            } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:TableWood")) {
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
+            } else if (StringUtil::StartsWith(model->GetChild(i)->GetName(), "grey_and_white_room:Transluscent")) {
+                model->GetChild(i)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
+                model->GetChild(i)->GetSpatial().GetMaterial().alpha_blended = true;
+                model->GetChild(i)->GetMaterial().diffuse_color = Vector4(1.0, 1.0, 1.0, 0.5f);
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.04f);
+                model->GetChild(i)->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.05f);
+            }
 
-                if (auto result = fbom::FBOMLoader().LoadFromFile("models/scene.fbom")) {
-                    if (auto entity = std::dynamic_pointer_cast<Node>(result.loadable)) {
-                        for (size_t i = 0; i < entity->NumChildren(); i++) {
-                            if (auto child = entity->GetChild(i)) {
-                                if (auto ren = child->GetRenderable()) {
-                                    ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
-                                }
+            if (auto result = fbom::FBOMLoader().LoadFromFile("models/scene.fbom")) {
+                if (auto entity = std::dynamic_pointer_cast<Node>(result.loadable)) {
+                    for (size_t i = 0; i < entity->NumChildren(); i++) {
+                        if (auto child = entity->GetChild(i)) {
+                            if (auto ren = child->GetRenderable()) {
+                                ren->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()));
                             }
                         }
-
-                        GetScene()->AddChild(entity);
-                        entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
                     }
+
+                    GetScene()->AddChild(entity);
+                    entity->GetChild("mesh0_SG")->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0.0f, 2.0f, 0.0f)));
                 }
             }
         }
-
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.95f);
-        terrain->GetChild(0)->GetSpatial().GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.0f);
-        terrain->Scale({ 2, 2.5, 2 });
-        //terrain->GetChild(0)->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-
-        //tmp->AddControl(std::make_shared<EnvMapProbeControl>(Vector3(0, 0, 0), BoundingBox(Vector3(-15, 5, -15), Vector3(15, 5, 15))));
-        terrain->AddControl(std::make_shared<GIProbeControl>(Vector3(0, 0, 0)));
-        GetScene()->AddChild(terrain);
-        terrain->Move({ 5, 0, -5 });
-
-
-        auto tree = asset_manager->LoadFromFile<Node>("models/conifer/Conifer_Low.obj");
-        for (size_t i = 0; i < tree->NumChildren(); i++) {
-            if (auto child = tree->GetChild(i)) {
-                //child->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                child->GetSpatial().GetMaterial().alpha_blended = true;
-                child->GetSpatial().GetMaterial().cull_faces = MaterialFace_None;
-            }
-        }
-        tree->SetLocalTranslation({ 21.f, 6.4f, -4.f });
-        tree->Scale(0.05f);
-        GetScene()->AddChild(tree);
-
-        auto tree2 = asset_manager->LoadFromFile<Node>("models/conifer/Conifer_Low.obj");
-        for (size_t i = 0; i < tree2->NumChildren(); i++) {
-            if (auto child = tree2->GetChild(i)) {
-                //child->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                child->GetSpatial().GetMaterial().alpha_blended = true;
-                child->GetSpatial().GetMaterial().cull_faces = MaterialFace_None;
-            }
-        }
-        tree2->SetLocalTranslation({ 22.f, 6.4f, -5.7f });
-        tree2->SetLocalScale(0.059f);
-        tree2->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(35.0f)));
-        GetScene()->AddChild(tree2);
-
-        auto tree3 = asset_manager->LoadFromFile<Node>("models/conifer/Conifer_Low.obj");
-        for (size_t i = 0; i < tree3->NumChildren(); i++) {
-            if (auto child = tree3->GetChild(i)) {
-                //child->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                child->GetSpatial().GetMaterial().alpha_blended = true;
-                child->GetSpatial().GetMaterial().cull_faces = MaterialFace_None;
-            }
-        }
-        tree3->SetLocalTranslation({ 24.f, 6.3f, -3.7f });
-        tree3->SetLocalScale(0.045f);
-        tree3->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(-35.0f)));
-        GetScene()->AddChild(tree3);
-
-        auto tree4 = asset_manager->LoadFromFile<Node>("models/conifer/fir.obj");
-        for (size_t i = 0; i < tree4->NumChildren(); i++) {
-            if (auto child = tree4->GetChild(i)) {
-                //child->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                child->GetSpatial().GetMaterial().alpha_blended = true;
-                child->GetSpatial().GetMaterial().cull_faces = MaterialFace_None;
-            }
-        }
-        tree4->SetLocalTranslation({ 24.f, 6.3f, -1.7f });
-        tree4->SetLocalScale(0.05f);
-        tree4->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(-35.0f)));
-        GetScene()->AddChild(tree4);
-
-        auto tree5 = asset_manager->LoadFromFile<Node>("models/conifer/fir.obj");
-        for (size_t i = 0; i < tree5->NumChildren(); i++) {
-            if (auto child = tree5->GetChild(i)) {
-                //child->GetSpatial().SetBucket(Spatial::Bucket::RB_TRANSPARENT);
-                child->GetSpatial().GetMaterial().alpha_blended = true;
-                child->GetSpatial().GetMaterial().cull_faces = MaterialFace_None;
-            }
-        }
-        tree5->SetLocalTranslation({ 27.f, 7.f, -1.f });
-        tree5->SetLocalScale(0.045f);
-        tree5->Rotate(Quaternion(Vector3::UnitY(), MathUtil::DegToRad(-76.0f)));
-        GetScene()->AddChild(tree5);*/
 #endif
-        /*auto house = asset_manager->LoadFromFile<Node>("models/house.obj");
-        for (size_t i = 0; i < house->NumChildren(); i++) {
-            if (auto &child = house->GetChild(i)) {
-                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_ROUGHNESS, 0.8f);
-                child->GetMaterial().SetParameter(MATERIAL_PARAMETER_METALNESS, 0.05f);
-            }
-        }
-        GetScene()->AddChild(house);*/
 
         auto shadow_node = std::make_shared<Node>("shadow_node");
         shadow_node->AddControl(std::make_shared<ShadowMapControl>(GetRenderer()->GetEnvironment()->GetSun().GetDirection() * -1.0f, 15.0f));

@@ -35,14 +35,14 @@ public:
 
     inline void Rewind(unsigned long amount)
     {
-        ex_assert(amount <= pos);
+        AssertThrow(amount <= pos);
 
         file->seekg(pos -= amount);
     }
 
     inline void Seek(unsigned long where_to)
     {
-        ex_assert(where_to <= pos);
+        AssertThrow(where_to <= pos);
 
         file->seekg(pos = where_to);
     }
@@ -58,7 +58,7 @@ public:
 
         size_t count = file->gcount();
 
-        hard_assert(count <= BufferSize);
+        AssertThrow(count <= BufferSize);
 
         pos += count;
 
@@ -67,7 +67,7 @@ public:
 
     size_t Read(char *out, size_t sz)
     {
-        ex_assert(sz <= BufferSize);
+        AssertThrow(sz <= BufferSize);
 
         if (file->eof()) {
             return 0;
