@@ -226,7 +226,7 @@ AssetLoader::Result ObjLoader::LoadFromFile(const std::string &path)
         mesh->SetVertices(mesh_vertices, mesh_indices);
 
         if (model.has_normals) {
-            mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
+            mesh->EnableAttribute(Mesh::ATTR_NORMALS);
 
             mesh->CalculateTangents();
         } else {
@@ -234,7 +234,7 @@ AssetLoader::Result ObjLoader::LoadFromFile(const std::string &path)
         }
 
         if (model.has_texcoords) {
-            mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
+            mesh->EnableAttribute(Mesh::ATTR_TEXCOORDS0);
         }
 
         mesh->SetShader(ShaderManager::GetInstance()->GetShader<LightingShader>(ShaderProperties()

@@ -241,14 +241,14 @@ AssetLoader::Result OgreLoader::LoadFromFile(const std::string &path)
         mesh->SetVertices(vertices);
 
         if (has_bones) {
-            mesh->SetAttribute(Mesh::ATTR_BONEINDICES, Mesh::MeshAttribute::BoneIndices);
-            mesh->SetAttribute(Mesh::ATTR_BONEWEIGHTS, Mesh::MeshAttribute::BoneWeights);
+            mesh->EnableAttribute(Mesh::ATTR_BONEINDICES);
+            mesh->EnableAttribute(Mesh::ATTR_BONEWEIGHTS);
         }
         if (handler.has_normals) {
-            mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
+            mesh->EnableAttribute(Mesh::ATTR_NORMALS);
         }
         if (handler.has_texcoords) {
-            mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
+            mesh->EnableAttribute(Mesh::ATTR_TEXCOORDS0);
         }
 
         auto node = std::make_shared<Node>();
@@ -261,18 +261,18 @@ AssetLoader::Result OgreLoader::LoadFromFile(const std::string &path)
             mesh->SetVertices(sm.vertices);
 
             if (has_bones) {
-                mesh->SetAttribute(Mesh::ATTR_BONEINDICES, Mesh::MeshAttribute::BoneIndices);
-                mesh->SetAttribute(Mesh::ATTR_BONEWEIGHTS, Mesh::MeshAttribute::BoneWeights);
+                mesh->EnableAttribute(Mesh::ATTR_BONEINDICES);
+                mesh->EnableAttribute(Mesh::ATTR_BONEWEIGHTS);
             }
 
             if (handler.has_normals) {
-                mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
+                mesh->EnableAttribute(Mesh::ATTR_NORMALS);
             } else {
                 mesh->CalculateNormals();
             }
 
             if (handler.has_texcoords) {
-                mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
+                mesh->EnableAttribute(Mesh::ATTR_TEXCOORDS0);
             }
 
             mesh->CalculateTangents();

@@ -19,11 +19,11 @@ public:
     using EnumValuePair_t = std::pair<EnumType, ValueType>;
 
     // convert from attachment (2^x) into ordinal (0-5) for use as an array index
-    static inline Ordinal_t EnumToOrdinal(EnumOption_t option)
-        { return MathUtil::FastLog2(option); }
+    static inline constexpr Ordinal_t EnumToOrdinal(EnumOption_t option)
+        { return FastLog2(option); }
 
     // convert from ordinal (0-5) into power-of-two for use as bit flags
-    static inline EnumOption_t OrdinalToEnum(Ordinal_t ordinal)
+    static inline constexpr EnumOption_t OrdinalToEnum(Ordinal_t ordinal)
         { return EnumOption_t(1 << ordinal); }
 
     EnumOptions()
@@ -34,7 +34,7 @@ public:
 
     EnumOptions(const EnumValueArray_t &array)
         : m_values(array),
-          m_flags(0)
+        m_flags(0)
     {
         UpdateFlags();
     }
@@ -49,7 +49,7 @@ public:
 
     EnumOptions(const EnumOptions &other)
         : m_values(other.m_values),
-          m_flags(other.m_flags)
+        m_flags(other.m_flags)
     {
         static_assert(Sz != 0, "EnumOptions cannot have size of zero");
     }
@@ -66,32 +66,32 @@ public:
     {
     }
 
-    inline bool HasAt(size_t index) const
+    using EnumValuePair_t = std::pair<EnumType, ValueType>;
         { return m_flags & OrdinalToEnum(index); }
 
-    inline EnumType KeyAt(size_t index) const
+    inline constexpr EnumValuePair_t KeyValueAt(size_t index) const
         { return OrdinalToEnum(index); }
 
-    inline ValueType &ValueAt(size_t index)
+    inline constexpr ValueType &ValueAt(size_t index)
         { return m_values[index]; }
 
-    inline const ValueType &ValueAt(size_t index) const
+    inline constexpr const ValueType &ValueAt(size_t index) const
         { return m_values[index]; }
 
-    inline EnumValuePair_t KeyValueAt(size_t index) const
+    inline constexpr EnumValuePair_t KeyValueAt(size_t index) const
         { return std::make_pair(OrdinalToEnum(index), m_values[index]); }
 
-    inline ValueType &Get(EnumOption_t enum_key)
+    inline constexpr ValueType &Get(EnumOption_t enum_key)
         { return m_values[EnumToOrdinal(enum_key)]; }
 
-    inline const ValueType &Get(EnumOption_t enum_key) const
+    inline constexpr const ValueType &Get(EnumOption_t enum_key) const
         { return m_values[EnumToOrdinal(enum_key)]; }
 
     inline EnumOptions &Set(EnumOption_t enum_key, const ValueType &value)
     {
-        auto ord = EnumToOrdinal(enum_key);
+        m_values[EnumToOrdinal(enum_key)] = value;
 
-        ex_assert(ord < m_values.size());
+        AssertThrow(ord < m_values.size());
 
         m_values[ord] = value;
         m_flags |= uint64_t(enum_key);
@@ -114,7 +114,7 @@ public:
     inline bool Has(EnumOption_t enum_key) const
         { return m_flags & uint64_t(enum_key); }
 
-    inline size_t Size() const
+    inline constexpr size_t Size() const
         { return m_values.size(); }
 
     inline HashCode GetHashCode() const

@@ -18,7 +18,7 @@ std::shared_ptr<Mesh> TerrainChunk::BuildMesh(const std::vector<double> &heights
 
     auto mesh = std::make_shared<Mesh>();
     mesh->SetVertices(vertices, indices);
-    mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
+    mesh->EnableAttribute(Mesh::ATTR_TEXCOORDS0);
     mesh->CalculateNormals();
     mesh->CalculateTangents();
 
