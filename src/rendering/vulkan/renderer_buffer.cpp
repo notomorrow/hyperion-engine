@@ -22,26 +22,21 @@ uint32_t RendererGPUBuffer::FindMemoryType(RendererDevice *device, uint32_t vk_t
     AssertThrowMsg(nullptr, "Could not find suitable memory type!\n");
 }
 
-RendererGPUBuffer::RendererGPUBuffer() {
-    this->SetMemoryPropertyFlags((VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-    this->SetSharingMode(VK_SHARING_MODE_EXCLUSIVE);
-    this->size = 0;
+RendererGPUBuffer::RendererGPUBuffer(uint32_t usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
+    : usage_flags(usage_flags),
+      memory_property_flags(memory_property_flags),
+      sharing_mode(sharing_mode),
+      size(0)
+{
 }
 
-void RendererGPUBuffer::SetMemoryPropertyFlags(uint32_t flags) {
-    this->memory_property_flags = flags;
-}
-void RendererGPUBuffer::SetSharingMode(VkSharingMode sharing_mode) {
-    this->sharing_mode = sharing_mode;
-}
-
-void RendererGPUBuffer::Create(RendererDevice *device, VkBufferUsageFlags usage_flags, VkDeviceSize buffer_size) {
+void RendererGPUBuffer::Create(RendererDevice *device, VkDeviceSize buffer_size) {
     VkDevice vk_device = device->GetDevice();
 
     VkBufferCreateInfo buffer_info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     buffer_info.size = buffer_size;
-    buffer_info.usage = usage_flags;
-    buffer_info.sharingMode = this->sharing_mode;
+    buffer_info.usage = (VkBufferUsageFlags)usage_flags;
+    buffer_info.sharingMode = (VkSharingMode)this->sharing_mode;
 
     auto result = vkCreateBuffer(vk_device, &buffer_info, nullptr, &this->buffer);
     AssertThrowMsg(result == VK_SUCCESS, "Could not create vulkan vertex buffer!\n");
@@ -61,6 +56,13 @@ void RendererGPUBuffer::Create(RendererDevice *device, VkBufferUsageFlags usage_
     this->size = buffer_info.size;
 }
 
+void RendererGPUBuffer::Destroy(RendererDevice *device)
+{
+    VkDevice vk_device = device->GetDevice();
+
+    vkDestroyBuffer(vk_device, buffer, nullptr);
+}
+
 void RendererGPUBuffer::Map(RendererDevice *device, void **ptr) {
     vkMapMemory(device->GetDevice(), this->memory, 0, this->size, 0, ptr);
 }
@@ -68,26 +70,23 @@ void RendererGPUBuffer::Unmap(RendererDevice *device) {
     vkUnmapMemory(device->GetDevice(), this->memory);
 }
 
-void RendererVertexBuffer::Copy(RendererDevice *device, size_t size, void *ptr) {
+void RendererGPUBuffer::Copy(RendererDevice *device, size_t size, void *ptr) {
     void *map;
-    this->gpu_buffer->Map(device, &map);
+    Map(device, &map);
     memcpy(map, ptr, size);
-    this->gpu_buffer->Unmap(device);
+    Unmap(device);
+}
+
+
+RendererVertexBuffer::RendererVertexBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
+    : RendererGPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, memory_property_flags, sharing_mode)
+{
 }
 
 void RendererVertexBuffer::BindBuffer(VkCommandBuffer *cmd) {
-    const VkBuffer vertex_buffers[] = { this->GetVkBuffer() };
+    const VkBuffer vertex_buffers[] = { buffer };
     const VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(*cmd, 0, 1, vertex_buffers, offsets);
-}
-
-void RendererVertexBuffer::Create(RendererDevice *device, VkDeviceSize buffer_size) {
-    auto *buffer = new RendererGPUBuffer();
-    buffer->SetMemoryPropertyFlags((VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-    buffer->SetSharingMode(VK_SHARING_MODE_EXCLUSIVE);
-    buffer->Create(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, buffer_size);
-
-    this->gpu_buffer = buffer;
 }
 
 }; /* namespace hyperion */

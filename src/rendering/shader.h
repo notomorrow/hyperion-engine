@@ -13,6 +13,7 @@
 #include "material.h"
 #include "uniform.h"
 #include "uniform_buffer.h"
+#include "declared_uniforms.h"
 #include "camera/camera.h"
 
 #include <vector>

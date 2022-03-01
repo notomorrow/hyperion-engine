@@ -18,11 +18,7 @@ static const EnumOptions<Mesh::MeshAttributeType, Mesh::MeshAttribute, 8> attrib
 
 Mesh::Mesh()
     : Renderable(fbom::FBOMObjectType("MESH")),
-      vao(0),
-      vbo(0),
-      ibo(0),
-      vk_vbo(nullptr),
-      vk_ibo(nullptr)
+      _render_context(nullptr)
 {
     EnableAttribute(ATTR_POSITIONS);
     EnableAttribute(ATTR_NORMALS);
@@ -40,17 +36,13 @@ Mesh::~Mesh()
 {
     DebugLog(LogType::Info, "Calling Mesh destructor\n");
 
-    /*
-    if (is_created) {
-        glDeleteVertexArrays(1, &vao);
-        glDeleteBuffers(1, &vbo);
-        glDeleteBuffers(1, &ibo);
-    }*/
+    if (_render_context != nullptr) {
+        delete _render_context;
+    }
 
     is_uploaded = false;
     is_created = false;
 }
-
 
 void Mesh::EnableAttribute(MeshAttributeType type)
 {
@@ -308,57 +300,18 @@ void Mesh::Render(Renderer *renderer, Camera *cam) {
 }
 
 void Mesh::RenderVk(VkCommandBuffer *cmd, VkRenderer *vk_renderer, Camera *cam) {
-    if (!this->is_created) {
-        AssertThrow(this->vk_vbo == nullptr/* || this->vk_ibo == nullptr*/);
-        this->vk_vbo = new RendererGPUBuffer();
-        this->vk_ibo = new RendererGPUBuffer();
-
-        this->is_created = true;
+    if (!is_created) {
+        _render_context = new RenderContext(this, vk_renderer);
+        _render_context->Create(cmd);
+        is_created = true;
     }
-    RendererPipeline *pipeline = vk_renderer->GetCurrentPipeline();
-    //VkCommandBuffer *cmd = &pipeline->command_buffers[image_index];
-    vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
-    const VkDeviceSize offsets[] = { 0 };
 
-    RendererDevice *device = vk_renderer->GetRendererDevice();
-    VkDevice vk_device = device->GetDevice();
-    if (!this->is_uploaded) {
-        std::vector<float> buffer = CreateBuffer();
-        const size_t gpu_buffer_size = buffer.size() * sizeof(float);
-
-        /* Bind and copy vertex buffer */
-        this->vk_vbo->Create(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, gpu_buffer_size);
-        vkCmdBindVertexBuffers(*cmd, 0, 1, &this->vk_vbo->buffer, offsets);
-
-        void *memory_buffer = nullptr;
-        vkMapMemory(vk_device, this->vk_vbo->memory, 0, gpu_buffer_size, 0, &memory_buffer);
-        memcpy(memory_buffer, &buffer[0], gpu_buffer_size);
-        vkUnmapMemory(vk_device, this->vk_vbo->memory);
-
-        for (auto &index : this->indices) {
-            DebugLog(LogType::Debug, "Index : %d\n", index);
-        }
-        /* Bind and copy index buffer */
-        size_t gpu_indices_size = indices.size()*sizeof(MeshIndex);
-        this->vk_ibo->SetSharingMode(VK_SHARING_MODE_EXCLUSIVE);
-        this->vk_ibo->Create(device, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, gpu_indices_size);
-        vkCmdBindIndexBuffer(*cmd, this->vk_ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
-
-        memory_buffer = nullptr;
-        vkMapMemory(vk_device, this->vk_ibo->memory, 0, gpu_indices_size, 0, &memory_buffer);
-        memcpy(memory_buffer, indices.data(), gpu_indices_size);
-        vkUnmapMemory(vk_device, this->vk_ibo->memory);
-
-        this->is_uploaded = true;
+    if (!is_uploaded) {
+        _render_context->Upload(cmd);
+        is_uploaded = true;
     }
-    AssertThrow(this->vk_vbo->buffer != nullptr);
 
-    vkCmdBindVertexBuffers(*cmd, 0, 1, &this->vk_vbo->buffer, offsets);
-    vkCmdBindIndexBuffer(*cmd, this->vk_ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
-
-    vkCmdDrawIndexed(*cmd, indices.size(), 1, 0, 0, 0);
-
-    DebugLog(LogType::Info, "DRAW %d\n", this->indices.size());
+    _render_context->Draw(cmd);
 }
 
 /*

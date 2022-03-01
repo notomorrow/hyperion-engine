@@ -2,6 +2,13 @@
 #define UNIFORM_BUFFER_H
 
 #include "uniform.h"
+#include "declared_uniform.h"
+#include "../util/non_owning_ptr.h"
+
+#include "vulkan/renderer_buffer.h"
+#include "vulkan/renderer_device.h"
+
+#include <vulkan/vulkan.h>
 
 #include <string>
 #include <vector>
@@ -18,12 +25,13 @@ struct UniformBuffer {
     std::vector<DeclaredUniform> data;
 
     struct Internal {
-        using Handle_t = unsigned int;
+        using Handle_t = VkBuffer;
 
         Handle_t handle;
         size_t size;
         size_t index;
         bool generated;
+        RendererGPUBuffer *gpu_buffer;
 
         Internal() = default;
         Internal(const Internal &other) = delete;
@@ -81,6 +89,32 @@ struct UniformBuffer {
     }
 };
 
+struct UniformBufferResult {
+    enum {
+        DECLARED_UNIFORM_BUFFER_OK,
+        DECLARED_UNIFORM_BUFFER_ERR
+    } result;
+
+    UniformBuffer::Id_t id;
+
+    std::string message;
+
+    UniformBufferResult(decltype(result) result, UniformBuffer::Id_t id = -1, const std::string &message = "")
+        : result(result), message(message), id(id) {}
+    UniformBufferResult(const UniformBufferResult &other)
+        : result(other.result), message(other.message), id(other.id) {}
+    inline UniformBufferResult &operator=(const UniformBufferResult &other)
+    {
+        result = other.result;
+        id = other.id;
+        message = other.message;
+
+        return *this;
+    }
+
+    inline explicit operator bool() const { return result == DECLARED_UNIFORM_BUFFER_OK; }
+};
+
 class UniformBufferInternalsHolder {
 public:
     UniformBufferInternalsHolder();
@@ -88,7 +122,7 @@ public:
     UniformBufferInternalsHolder &operator=(const UniformBufferInternalsHolder &other) = delete;
     ~UniformBufferInternalsHolder();
 
-    UniformBuffer::Internal *CreateUniformBufferInternal(Shader *shader, UniformBuffer &);
+    UniformBuffer::Internal *CreateUniformBufferInternal(RendererDevice *device, Shader *shader, UniformBuffer &);
     void DestroyUniformBufferInternal(UniformBuffer::Internal *);
     void Reset();
 

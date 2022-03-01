@@ -108,6 +108,22 @@ public:
     Mesh &operator=(const Mesh &other) = delete;
     virtual ~Mesh();
 
+    struct RenderContext {
+        RenderContext(Mesh *, VkRenderer *);
+        RenderContext(const RenderContext &other) = delete;
+        RenderContext &operator=(const RenderContext &other) = delete;
+        ~RenderContext();
+
+        void Create(VkCommandBuffer *cmd);
+        void Upload(VkCommandBuffer *cmd);
+        void Draw(VkCommandBuffer *cmd);
+
+        non_owning_ptr<Mesh> _mesh;
+        non_owning_ptr<VkRenderer> _renderer;
+        RendererGPUBuffer *_vbo;
+        RendererGPUBuffer *_ibo;
+    } *_render_context;
+
     void SetVertices(const std::vector<Vertex> &verts);
     void SetVertices(const std::vector<Vertex> &verts, const std::vector<MeshIndex> &ind);
     inline const std::vector<Vertex> &GetVertices() const { return vertices; }
