@@ -4,6 +4,7 @@
 #include "renderable.h"
 #include "../math/triangle.h"
 #include "../math/vertex.h"
+#include "../util/enum_options.h"
 
 #include "../rendering/vulkan/vk_renderer.h"
 
@@ -41,6 +42,8 @@ public:
         ATTR_BITANGENTS = 0x20,
         ATTR_BONEWEIGHTS = 0x40,
         ATTR_BONEINDICES = 0x80,
+        ATTR_PLACEHOLDER0 = 0x100,
+        ATTR_PLACEHOLDER1 = 0x200,
 
         // ...
 
@@ -49,11 +52,6 @@ public:
 
     struct MeshAttribute {
         using MeshAttributeField_t = uint64_t;
-
-        static const MeshAttribute Positions, Normals,
-            TexCoords0, TexCoords1,
-            Tangents, Bitangents,
-            BoneWeights, BoneIndices;
 
         MeshAttributeField_t offset, size, index;
 
@@ -117,7 +115,7 @@ public:
     std::vector<Triangle> CalculateTriangleBuffer() const;
     void SetTriangles(const std::vector<Triangle> &triangles);
 
-    void SetAttribute(MeshAttributeType type, const MeshAttribute &attribute);
+    void EnableAttribute(MeshAttributeType type);
     inline const std::map<MeshAttributeType, MeshAttribute> &GetAttributes() const { return attribs; }
     inline bool HasAttribute(MeshAttributeType type) const { return attribs.find(type) != attribs.end(); }
     inline void SetPrimitiveType(PrimitiveType prim_type) { primitive_type = prim_type; }

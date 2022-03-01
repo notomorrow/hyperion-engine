@@ -40,8 +40,8 @@ std::shared_ptr<Mesh> MeshFactory::CreateQuad(bool triangle_fan)
         0, 2, 1
     };
 
-    mesh->SetAttribute(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute::TexCoords0);
-    mesh->SetAttribute(Mesh::ATTR_NORMALS, Mesh::MeshAttribute::Normals);
+    mesh->EnableAttribute(Mesh::ATTR_TEXCOORDS0);
+    mesh->EnableAttribute(Mesh::ATTR_NORMALS);
 
     if (triangle_fan) {
         mesh->SetVertices(vertices);
@@ -78,7 +78,7 @@ std::shared_ptr<Mesh> MeshFactory::TransformMesh(const std::shared_ptr<Mesh> &me
     }
 
     for (auto it : all_mesh_attributes) {
-        new_mesh->SetAttribute(it.first, it.second);
+        new_mesh->EnableAttribute(it.first);
     }
 
     new_mesh->SetVertices(all_vertices, all_indices);
@@ -127,7 +127,7 @@ std::shared_ptr<Mesh> MeshFactory::MergeMeshes(const std::shared_ptr<Mesh> &a,
     }
 
     for (auto it : all_mesh_attributes) {
-        new_mesh->SetAttribute(it.first, it.second);
+        new_mesh->EnableAttribute(it.first);
     }
 
     new_mesh->SetVertices(all_vertices, all_indices);

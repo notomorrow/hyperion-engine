@@ -5,14 +5,16 @@
 
 namespace hyperion {
 
-const Mesh::MeshAttribute Mesh::MeshAttribute::Positions   = { 0, 3, 0 };
-const Mesh::MeshAttribute Mesh::MeshAttribute::Normals     = { 0, 3, 1 };
-const Mesh::MeshAttribute Mesh::MeshAttribute::TexCoords0  = { 0, 2, 2 };
-const Mesh::MeshAttribute Mesh::MeshAttribute::TexCoords1  = { 0, 2, 3 };
-const Mesh::MeshAttribute Mesh::MeshAttribute::Tangents    = { 0, 3, 4 };
-const Mesh::MeshAttribute Mesh::MeshAttribute::Bitangents  = { 0, 3, 5 };
-const Mesh::MeshAttribute Mesh::MeshAttribute::BoneWeights = { 0, 4, 6 };
-const Mesh::MeshAttribute Mesh::MeshAttribute::BoneIndices = { 0, 4, 7 };
+static const EnumOptions<Mesh::MeshAttributeType, Mesh::MeshAttribute, 8> attributes({
+    std::make_pair(Mesh::ATTR_POSITIONS, Mesh::MeshAttribute({ 0, 3, 0 })),
+    std::make_pair(Mesh::ATTR_NORMALS, Mesh::MeshAttribute({ 0, 3, 1 })),
+    std::make_pair(Mesh::ATTR_TEXCOORDS0, Mesh::MeshAttribute({ 0, 2, 2 })),
+    std::make_pair(Mesh::ATTR_TEXCOORDS1, Mesh::MeshAttribute({ 0, 2, 3 })),
+    std::make_pair(Mesh::ATTR_TANGENTS, Mesh::MeshAttribute({ 0, 3, 4 })),
+    std::make_pair(Mesh::ATTR_BITANGENTS, Mesh::MeshAttribute({ 0, 3, 5 })),
+    std::make_pair(Mesh::ATTR_BONEWEIGHTS, Mesh::MeshAttribute({ 0, 4, 6 })),
+    std::make_pair(Mesh::ATTR_BONEINDICES, Mesh::MeshAttribute({0, 4, 7})),
+});
 
 Mesh::Mesh()
     : Renderable(fbom::FBOMObjectType("MESH")),
@@ -22,12 +24,12 @@ Mesh::Mesh()
       vk_vbo(nullptr),
       vk_ibo(nullptr)
 {
-    SetAttribute(ATTR_POSITIONS, MeshAttribute::Positions);
-    SetAttribute(ATTR_NORMALS, MeshAttribute::Normals);
-    SetAttribute(ATTR_TEXCOORDS0, MeshAttribute::TexCoords0);
-    SetAttribute(ATTR_TEXCOORDS1, MeshAttribute::TexCoords1);
-    SetAttribute(ATTR_TANGENTS, MeshAttribute::Tangents);
-    SetAttribute(ATTR_BITANGENTS, MeshAttribute::Bitangents);
+    EnableAttribute(ATTR_POSITIONS);
+    EnableAttribute(ATTR_NORMALS);
+    EnableAttribute(ATTR_TEXCOORDS0);
+    EnableAttribute(ATTR_TEXCOORDS1);
+    EnableAttribute(ATTR_TANGENTS);
+    EnableAttribute(ATTR_BITANGENTS);
     SetPrimitiveType(PRIM_TRIANGLES);
     DebugLog(LogType::Info, "Calling Mesh constructor\n");
     is_uploaded = false;
@@ -49,6 +51,19 @@ Mesh::~Mesh()
     is_created = false;
 }
 
+
+void Mesh::EnableAttribute(MeshAttributeType type)
+{
+    auto it = attribs.find(type);
+
+    if (it != attribs.end()) {
+        return;
+    }
+
+    attribs.emplace(type, attributes.Get(type));
+
+    is_uploaded = false;
+}
 
 void Mesh::SetVertices(const std::vector<Vertex> &verts)
 {
@@ -129,10 +144,10 @@ void Mesh::CalculateVertexSize()
 {
     unsigned int vert_size = 0, prev_size = 0, offset = 0;
 
-    for (auto &attr : attribs) {
+    for (auto &attrib : attribs) {
         offset += prev_size;
-        attr.second.offset = offset;
-        prev_size = attr.second.size;
+        attrib.second.offset = offset;
+        prev_size = attrib.second.size;
         vert_size += prev_size;
     }
 
@@ -333,8 +348,8 @@ void Mesh::CalculateTangents()
         }
     }
 
-    SetAttribute(ATTR_TANGENTS, MeshAttribute::Tangents);
-    SetAttribute(ATTR_BITANGENTS, MeshAttribute::Bitangents);
+    EnableAttribute(ATTR_TANGENTS);
+    EnableAttribute(ATTR_BITANGENTS);
 }
 
 RendererMeshBindingDescription Mesh::GetBindingDescription() {
@@ -578,7 +593,7 @@ void Mesh::CalculateNormals()
         }*/
     }
 
-    SetAttribute(ATTR_NORMALS, MeshAttribute::Normals);
+    EnableAttribute(ATTR_NORMALS);
 
     CalculateTangents();
 }
