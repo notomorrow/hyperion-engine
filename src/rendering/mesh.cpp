@@ -22,8 +22,13 @@ Mesh::Mesh()
       vk_vbo(nullptr),
       vk_ibo(nullptr)
 {
-    //SetAttribute(ATTR_POSITIONS, MeshAttribute::Positions);
-    //SetPrimitiveType(PRIM_TRIANGLES);
+    SetAttribute(ATTR_POSITIONS, MeshAttribute::Positions);
+    SetAttribute(ATTR_NORMALS, MeshAttribute::Normals);
+    SetAttribute(ATTR_TEXCOORDS0, MeshAttribute::TexCoords0);
+    SetAttribute(ATTR_TEXCOORDS1, MeshAttribute::TexCoords1);
+    SetAttribute(ATTR_TANGENTS, MeshAttribute::Tangents);
+    SetAttribute(ATTR_BITANGENTS, MeshAttribute::Bitangents);
+    SetPrimitiveType(PRIM_TRIANGLES);
     DebugLog(LogType::Info, "Calling Mesh constructor\n");
     is_uploaded = false;
     is_created = false;
@@ -129,7 +134,6 @@ void Mesh::CalculateVertexSize()
         attr.second.offset = offset;
         prev_size = attr.second.size;
         vert_size += prev_size;
-        break;
     }
 
     vertex_size = vert_size;
@@ -158,7 +162,7 @@ std::vector<float> Mesh::CreateBuffer()
             buffer[(i * vertex_size) + pos_it->second.offset + 1] = vertex.GetPosition().y;
             buffer[(i * vertex_size) + pos_it->second.offset + 2] = vertex.GetPosition().z;
         }
-        /*if (norm_it != attribs.end()) {
+        if (norm_it != attribs.end()) {
             buffer[(i * vertex_size) + norm_it->second.offset] = vertex.GetNormal().x;
             buffer[(i * vertex_size) + norm_it->second.offset + 1] = vertex.GetNormal().y;
             buffer[(i * vertex_size) + norm_it->second.offset + 2] = vertex.GetNormal().z;
@@ -192,7 +196,7 @@ std::vector<float> Mesh::CreateBuffer()
             buffer[(i * vertex_size) + bonew_it->second.offset + 1] = vertex.GetBoneWeight(1);
             buffer[(i * vertex_size) + bonew_it->second.offset + 2] = vertex.GetBoneWeight(2);
             buffer[(i * vertex_size) + bonew_it->second.offset + 3] = vertex.GetBoneWeight(3);
-        }*/
+        }
     }
 
     return buffer;
@@ -388,7 +392,7 @@ void Mesh::RenderVk(VkCommandBuffer *cmd, VkRenderer *vk_renderer, Camera *cam) 
     vkCmdBindIndexBuffer(*cmd, this->vk_ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdDrawIndexed(*cmd, (uint32_t)(indices.size()), 1, 0, 0, 1);
-    //vkCmdDraw(*cmd, vertices.size(), 1, 0, 0);
+    //vkCmdDraw(*cmd, 3, 1, 0, 0);
     DebugLog(LogType::Info, "DRAW %d\n", this->vertices.size());
 }
 
