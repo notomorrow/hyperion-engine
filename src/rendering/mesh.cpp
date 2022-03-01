@@ -374,15 +374,19 @@ void Mesh::RenderVk(VkCommandBuffer *cmd, VkRenderer *vk_renderer, Camera *cam) 
         memcpy(memory_buffer, &buffer[0], gpu_buffer_size);
         vkUnmapMemory(vk_device, this->vk_vbo->memory);
 
+        for (auto &index : this->indices) {
+            DebugLog(LogType::Debug, "Index : %d\n", index);
+        }
         /* Bind and copy index buffer */
-        const size_t gpu_indices_size = indices.size()*sizeof(MeshIndex);
+        size_t gpu_indices_size = indices.size()*sizeof(MeshIndex);
+        this->vk_ibo->SetSharingMode(VK_SHARING_MODE_EXCLUSIVE);
         this->vk_ibo->Create(device, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, gpu_indices_size);
         vkCmdBindIndexBuffer(*cmd, this->vk_ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
 
+        memory_buffer = nullptr;
         vkMapMemory(vk_device, this->vk_ibo->memory, 0, gpu_indices_size, 0, &memory_buffer);
-        memcpy(memory_buffer, &indices[0], gpu_indices_size);
+        memcpy(memory_buffer, indices.data(), gpu_indices_size);
         vkUnmapMemory(vk_device, this->vk_ibo->memory);
-
 
         this->is_uploaded = true;
     }
@@ -391,9 +395,11 @@ void Mesh::RenderVk(VkCommandBuffer *cmd, VkRenderer *vk_renderer, Camera *cam) 
     vkCmdBindVertexBuffers(*cmd, 0, 1, &this->vk_vbo->buffer, offsets);
     vkCmdBindIndexBuffer(*cmd, this->vk_ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdDrawIndexed(*cmd, (uint32_t)(indices.size()), 1, 0, 0, 1);
+    vkCmdDrawIndexed(*cmd, (indices.size()), 1, 0, 0, 0);
+    //vkCmdDraw(*cmd, vertices.size(), 1, 0, 0);
+
     //vkCmdDraw(*cmd, 3, 1, 0, 0);
-    DebugLog(LogType::Info, "DRAW %d\n", this->vertices.size());
+    DebugLog(LogType::Info, "DRAW %d\n", this->indices.size());
 }
 
 /*

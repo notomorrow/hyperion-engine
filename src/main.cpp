@@ -655,7 +655,7 @@ int main()
     shader.CreateProgram("main");
 
     renderer.InitializePipeline(&shader);
-    auto mesh = MeshFactory::CreateQuad(false);
+    auto mesh = MeshFactory::CreateCube();
     //return 0;
     RendererPipeline *pipeline = renderer.GetCurrentPipeline();
 
