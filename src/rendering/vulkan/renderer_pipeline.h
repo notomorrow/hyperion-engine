@@ -35,8 +35,8 @@ public:
 
     void CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
     // void DoRenderPass(void (*render_callback)(RendererPipeline *pl, VkCommandBuffer *cmd));
-    void StartRenderPass(VkCommandBuffer *cmd=nullptr);
-    void EndRenderPass(VkCommandBuffer *cmd=nullptr);
+    void StartRenderPass(VkCommandBuffer *cmd, uint32_t image_index);
+    void EndRenderPass(VkCommandBuffer *cmd);
 
     VkPrimitiveTopology GetPrimitive();
     std::vector<VkDynamicState> GetDynamicStates();

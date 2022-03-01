@@ -45,6 +45,7 @@ VkResult VkRenderer::AcquireNextImage(uint32_t *image_index) {
         vkWaitForFences(render_device, 1, &this->fc_queue_submit, true, UINT64_MAX);
         vkResetFences(render_device, 1, &this->fc_queue_submit);
     }
+    //vkResetCommandBuffer(this->GetCurrentPipeline()->command_buffers[*image_index], 0);
     if (this->GetCurrentPipeline()->command_pool != VK_NULL_HANDLE)
         vkResetCommandPool(render_device, this->GetCurrentPipeline()->command_pool, 0);
 
@@ -57,9 +58,11 @@ void VkRenderer::StartFrame(uint32_t *image_index) {
         vkDeviceWaitIdle(this->device->GetDevice());
         /* TODO: regenerate framebuffers and swapchain */
     }
+    //this->pipeline->StartRenderPass(*image_index);
 }
 
 void VkRenderer::EndFrame(uint32_t *image_index) {
+    //this->pipeline->EndRenderPass(*image_index);
 
     /* Render objects to the swapchain using our graphics pipeline */
     //this->pipeline->DoRenderPass();
@@ -73,6 +76,7 @@ void VkRenderer::EndFrame(uint32_t *image_index) {
     submit_info.pSignalSemaphores = &this->sp_swap_release;
 
     submit_info.pWaitDstStageMask = wait_stages;
+    DebugLog(LogType::Info, "Image index set to [%d]\n", *image_index);
 
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &this->pipeline->command_buffers[*image_index];
@@ -84,7 +88,6 @@ void VkRenderer::EndFrame(uint32_t *image_index) {
 
 
 void VkRenderer::DrawFrame(uint32_t frame_index) {
-
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores = &this->sp_swap_release;
@@ -96,8 +99,7 @@ void VkRenderer::DrawFrame(uint32_t frame_index) {
     present_info.pImageIndices = &frame_index;
     present_info.pResults = nullptr;
 
-
-    vkQueueWaitIdle(this->queue_present);
+    //vkQueueWaitIdle(this->queue_present);
     vkQueuePresentKHR(this->queue_present, &present_info);
 }
 
@@ -153,6 +155,8 @@ void VkRenderer::CreateSyncObjects() {
     VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     auto fc_result = vkCreateFence(rd_device, &fence_info, nullptr, &this->fc_queue_submit);
+
+    DebugLog(LogType::Debug, "Create Sync objects!\n");
 
     AssertThrowMsg(fc_result == VK_SUCCESS, "Error creating render fence\n");
     AssertThrowMsg((sa_result == VK_SUCCESS && sr_result == VK_SUCCESS), "Error creating render semaphores!\n");
@@ -220,10 +224,10 @@ void VkRenderer::Initialize(bool load_debug_layers) {
     this->CreateSurface();
     /* Find and set up an adequate GPU for rendering and presentation */
     this->InitializeRendererDevice();
-    this->CreateSyncObjects();
     /* Set up our swapchain for our GPU to present our image.
      * This is essentially a "root" framebuffer. */
     this->InitializeSwapchain();
+    this->CreateSyncObjects();
 }
 
 void VkRenderer::Destroy() {

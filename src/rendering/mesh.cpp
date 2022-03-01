@@ -342,19 +342,18 @@ void Mesh::Render(Renderer *renderer, Camera *cam) {
 
 }
 
-void Mesh::RenderVk(VkRenderer *vk_renderer, Camera *cam) {
+void Mesh::RenderVk(VkCommandBuffer *cmd, VkRenderer *vk_renderer, Camera *cam) {
     if (!this->is_created) {
-        AssertThrow(this->vk_vbo == nullptr || this->vk_ibo == nullptr);
-        //this->vk_vbo = new RendererVertexBuffer();
+        AssertThrow(this->vk_vbo == nullptr/* || this->vk_ibo == nullptr*/);
         this->vk_vbo = new RendererGPUBuffer();
         this->vk_ibo = new RendererGPUBuffer();
 
         this->is_created = true;
     }
     RendererPipeline *pipeline = vk_renderer->GetCurrentPipeline();
-    VkCommandBuffer *cmd = &pipeline->command_buffers[0];
+    //VkCommandBuffer *cmd = &pipeline->command_buffers[image_index];
+    vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
     const VkDeviceSize offsets[] = { 0 };
-
 
     RendererDevice *device = vk_renderer->GetRendererDevice();
     VkDevice vk_device = device->GetDevice();
@@ -380,14 +379,17 @@ void Mesh::RenderVk(VkRenderer *vk_renderer, Camera *cam) {
         memcpy(memory_buffer, &indices[0], gpu_indices_size);
         vkUnmapMemory(vk_device, this->vk_ibo->memory);
 
+
         this->is_uploaded = true;
     }
     AssertThrow(this->vk_vbo->buffer != nullptr);
 
     vkCmdBindVertexBuffers(*cmd, 0, 1, &this->vk_vbo->buffer, offsets);
     vkCmdBindIndexBuffer(*cmd, this->vk_ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
-    //vkCmdDraw(*cmd, (uint32_t)this->vertices.size(), 1, 0, 0);
+
     vkCmdDrawIndexed(*cmd, (uint32_t)(indices.size()), 1, 0, 0, 1);
+    //vkCmdDraw(*cmd, vertices.size(), 1, 0, 0);
+    DebugLog(LogType::Info, "DRAW %d\n", this->vertices.size());
 }
 
 /*

@@ -14,8 +14,8 @@ RendererPipeline::RendererPipeline(RendererDevice *_device, RendererSwapchain *_
     this->primitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     this->swapchain = _swapchain;
     this->device = _device;
-    this->intern_vertex_buffers = nullptr;
-    this->intern_vertex_buffers_size = 0;
+    // this->intern_vertex_buffers = nullptr;
+    // this->intern_vertex_buffers_size = 0;
 
     auto width = (float) swapchain->extent.width;
     auto height = (float) swapchain->extent.height;
@@ -27,6 +27,8 @@ RendererPipeline::RendererPipeline(RendererDevice *_device, RendererSwapchain *_
             VK_DYNAMIC_STATE_SCISSOR,
     };
     this->SetDynamicStates(default_dynamic_states);
+    static int x = 0;
+    DebugLog(LogType::Debug, "Create RendererPipeline [%d]\n", x++);
 }
 
 void RendererPipeline::SetPrimitive(VkPrimitiveTopology _primitive) {
@@ -74,6 +76,7 @@ void RendererPipeline::CreateCommandPool() {
 
     auto result = vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &this->command_pool);
 
+    DebugLog(LogType::Debug, "Create Command pool\n");
     AssertThrowMsg(result == VK_SUCCESS, "Could not create Vulkan command pool\n");
 }
 
@@ -86,7 +89,7 @@ void RendererPipeline::CreateCommandBuffers() {
     alloc_info.commandBufferCount = (uint32_t) this->command_buffers.size();
 
     auto result = vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data());
-
+    DebugLog(LogType::Debug, "Allocate command buffers\n");
     AssertThrowMsg(result == VK_SUCCESS, "Could not create Vulkan command buffers\n");
 }
 
@@ -112,7 +115,7 @@ void RendererPipeline::SetVertexBuffers(std::vector<RendererVertexBuffer> &verte
 std::vector<VkVertexInputAttributeDescription> RendererPipeline::SetVertexAttribs() {
     VkVertexInputBindingDescription binding_desc{};
     binding_desc.binding = 0;
-    binding_desc.stride = 0/* Jesus christ */;
+    binding_desc.stride = 64/* Jesus christ */;
     binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     this->vertex_binding_descriptions.push_back(binding_desc);
@@ -124,39 +127,37 @@ std::vector<VkVertexInputAttributeDescription> RendererPipeline::SetVertexAttrib
 
     std::vector<VkVertexInputAttributeDescription> attrs;
     //attrs.resize(6);
-    attrs.resize(1);
+    attrs.resize(6);
 
-    /* Vector3 */
+    /* Position */
     attrs[0] = { 0, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
     prev_size += 3;
-
-    /*attrs[1] = { 1, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
+    /* Normal */
+    attrs[1] = { 1, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
     prev_size += 3;
-
+    /* Texcoord0 */
     attrs[2] = { 2, 0, fmt_vec2, prev_size*(uint32_t)sizeof(float) };
     prev_size += 2;
-
+    /* Texcoord1 */
     attrs[3] = { 3, 0, fmt_vec2, prev_size*(uint32_t)sizeof(float) };
     prev_size += 2;
-
+    /* Tangent */
     attrs[4] = { 4, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
     prev_size += 3;
-
+    /* Bitangent */
     attrs[5] = { 5, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
-    prev_size += 3;*/
+    prev_size += 3;
+    DebugLog(LogType::Info, "Total size: %d\n", prev_size);
 
     this->vertex_attributes = attrs;
 
     return attrs;
 }
 
-void RendererPipeline::StartRenderPass(VkCommandBuffer *cmd) {
-    if (cmd == nullptr) {
-        AssertThrowMsg(this->command_buffers.size() > 0, "No command buffers available!\n");
-        cmd = &this->command_buffers[0];
-    }
+void RendererPipeline::StartRenderPass(VkCommandBuffer *cmd, uint32_t image_index) {
+    //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
     VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     begin_info.pInheritanceInfo = nullptr;
     /* Begin recording our command buffer */
     auto result = vkBeginCommandBuffer(*cmd, &begin_info);
@@ -164,7 +165,7 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer *cmd) {
 
     VkRenderPassBeginInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
     render_pass_info.renderPass = this->render_pass;
-    render_pass_info.framebuffer = this->swapchain->framebuffers[0];
+    render_pass_info.framebuffer = this->swapchain->framebuffers[image_index];
     render_pass_info.renderArea.offset = { 0, 0 };
     render_pass_info.renderArea.extent = this->swapchain->extent;
 
@@ -174,15 +175,12 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer *cmd) {
     /* Start adding draw commands  */
     vkCmdBeginRenderPass(*cmd, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     /* Bind the graphics pipeline */
-    vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
+    //vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
     this->UpdateDynamicStates(cmd);
 }
 
 void RendererPipeline::EndRenderPass(VkCommandBuffer *cmd) {
-    if (cmd == nullptr) {
-        AssertThrowMsg(this->command_buffers.size() > 0, "No command buffers available!\n");
-        cmd = &this->command_buffers[0];
-    }
+    //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
     vkCmdEndRenderPass(*cmd);
 
     auto result = vkEndCommandBuffer(*cmd);
@@ -354,7 +352,7 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
 }
 
 void RendererPipeline::Destroy() {
-    delete[] intern_vertex_buffers;
+    //delete[] intern_vertex_buffers;
 
     VkDevice render_device = this->device->GetDevice();
 

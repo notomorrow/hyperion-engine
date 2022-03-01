@@ -14,6 +14,8 @@ RendererDevice::RendererDevice()
           physical(nullptr),
           surface(nullptr)
 {
+    static int x = 0;
+    DebugLog(LogType::Debug, "Created RendererDevice [%d]\n", x++);
 }
 
 void RendererDevice::SetDevice(const VkDevice &_device) {
