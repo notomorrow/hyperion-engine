@@ -676,9 +676,12 @@ int main()
             }
         }
         renderer.StartFrame(&frame_index);
-        pipeline->StartRenderPass();
-        mesh->RenderVk(&renderer, nullptr);
-        pipeline->EndRenderPass();
+        for (int i = 0; i < pipeline->command_buffers.size(); i++) {
+            VkCommandBuffer *cmd = &pipeline->command_buffers[i];
+            pipeline->StartRenderPass(cmd, frame_index);
+            mesh->RenderVk(cmd, &renderer, nullptr);
+            pipeline->EndRenderPass(cmd);
+        }
         renderer.EndFrame(&frame_index);
         renderer.DrawFrame(frame_index);
 

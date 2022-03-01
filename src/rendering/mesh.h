@@ -133,7 +133,7 @@ public:
     RendererMeshBindingDescription GetBindingDescription();
 
     void Render(Renderer *renderer, Camera *cam);
-    void RenderVk(VkRenderer *vk_renderer, Camera *cam);
+    void RenderVk(VkCommandBuffer *cmd, VkRenderer *vk_renderer, Camera *cam);
 
 
 #pragma region serialization
