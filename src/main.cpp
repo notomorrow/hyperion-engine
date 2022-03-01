@@ -576,6 +576,8 @@ int main()
 
     uint32_t frame_index;
 
+    double timer = 0.0;
+
     bool running = true;
     while (running) {
         while (SystemSDL::PollEvent(&event)) {
@@ -590,6 +592,10 @@ int main()
                     break;
             }
         }
+        timer += 0.01;
+        pipeline->push_constants.x = std::sin(timer);
+        pipeline->push_constants.y = std::cos(timer);
+        pipeline->push_constants.z = std::tan(timer);
         renderer.StartFrame(&frame_index);
         for (int i = 0; i < pipeline->command_buffers.size(); i++) {
             VkCommandBuffer *cmd = &pipeline->command_buffers[i];

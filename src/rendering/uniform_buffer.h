@@ -42,8 +42,8 @@ struct UniformBuffer {
 
     UniformBuffer(Id_t id, const std::string &name)
         : id(id),
-        name(name),
-        _internal(nullptr)
+          name(name),
+          _internal(nullptr)
     {
     }
 
@@ -117,16 +117,17 @@ struct UniformBufferResult {
 
 class UniformBufferInternalsHolder {
 public:
-    UniformBufferInternalsHolder();
+    UniformBufferInternalsHolder(RendererDevice *);
     UniformBufferInternalsHolder(const UniformBufferInternalsHolder &other) = delete;
     UniformBufferInternalsHolder &operator=(const UniformBufferInternalsHolder &other) = delete;
     ~UniformBufferInternalsHolder();
 
-    UniformBuffer::Internal *CreateUniformBufferInternal(RendererDevice *device, Shader *shader, UniformBuffer &);
+    UniformBuffer::Internal *CreateUniformBufferInternal(Shader *shader, UniformBuffer &);
     void DestroyUniformBufferInternal(UniformBuffer::Internal *);
     void Reset();
 
     std::vector<UniformBuffer::Internal *> m_internals;
+    non_owning_ptr<RendererDevice> _device;
 };
 
 } // namespace hyperion

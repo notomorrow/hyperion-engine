@@ -10,7 +10,10 @@
 
 namespace hyperion {
 
-RendererPipeline::RendererPipeline(RendererDevice *_device, RendererSwapchain *_swapchain) {
+RendererPipeline::RendererPipeline(RendererDevice *_device, RendererSwapchain *_swapchain)
+    : intern_vertex_buffers(nullptr),
+      intern_vertex_buffers_size(0)
+{
     this->primitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     this->swapchain = _swapchain;
     this->device = _device;
@@ -99,6 +102,9 @@ void RendererPipeline::UpdateDynamicStates(VkCommandBuffer *cmd) {
 }
 
 void RendererPipeline::SetVertexBuffers(std::vector<RendererVertexBuffer> &vertex_buffers) {
+    if (intern_vertex_buffers != nullptr) {
+        delete[] intern_vertex_buffers;
+    }
     /* Because C++ can have some overhead with vector implementations we'll just
      * copy the direct VkBuffer's to a memory chunk so we are guaranteed to have near
      * linear complexity. */
@@ -177,6 +183,10 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer *cmd, uint32_t image_inde
     /* Bind the graphics pipeline */
     //vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
     this->UpdateDynamicStates(cmd);
+
+    vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    vkCmdPushConstants(*cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &push_constants);
 }
 
 void RendererPipeline::EndRenderPass(VkCommandBuffer *cmd) {
@@ -302,6 +312,16 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     color_blending.attachmentCount = 1;
     color_blending.pAttachments = &color_blend_attachment;
 
+    /* Push constants */
+    //setup push constants
+    VkPushConstantRange push_constant;
+    //this push constant range starts at the beginning
+    push_constant.offset = 0;
+    //this push constant range takes up the size of a MeshPushConstants struct
+    push_constant.size = sizeof(PushConstants);
+    //this push constant range is accessible only in the vertex shader
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
     /* Dynamic states; these are the values that can be changed without
      * rebuilding the rendering pipeline. */
     VkPipelineDynamicStateCreateInfo dynamic_state{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
@@ -314,8 +334,8 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
     layout_info.setLayoutCount = 0;
     layout_info.pSetLayouts = nullptr;
-    layout_info.pushConstantRangeCount = 0;
-    layout_info.pPushConstantRanges = nullptr;
+    layout_info.pushConstantRangeCount = 1;
+    layout_info.pPushConstantRanges = &push_constant;
 
     if (vkCreatePipelineLayout(this->device->GetDevice(), &layout_info, nullptr, &this->layout) != VK_SUCCESS) {
         DebugLog(LogType::Error, "Error creating pipeline layout!\n");
@@ -352,7 +372,9 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
 }
 
 void RendererPipeline::Destroy() {
-    //delete[] intern_vertex_buffers;
+    if (intern_vertex_buffers != nullptr) {
+        delete[] intern_vertex_buffers;
+    }
 
     VkDevice render_device = this->device->GetDevice();
 
