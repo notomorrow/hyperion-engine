@@ -10,6 +10,7 @@ layout (location = 4) in vec3 a_tangent;
 layout (location = 5) in vec3 a_bitangent;
 
 void main() {
-    gl_Position = vec4(a_position, 1.0);
-    fragColor = vec3(1.0, 0.0, 0.0);
+    gl_Position = vec4(a_position[0], a_position[1], 0.0, 1.0);
+    fragColor = 0.25*a_position;
+    //fragColor = vec3(1.0, 0.0, 0.0);
 } 
