@@ -421,7 +421,7 @@ void Shader::ApplyUniforms()
             it.first.value.BindUniform(this, it.first.name.c_str(), texture_index);
         }
 
-        for (auto &it : m_uniforms.m_uniform_buffers) {
+        /*for (auto &it : m_uniforms.m_uniform_buffers) {
             auto &uniform_buffer = it.first;
 
             if (uniform_buffer._internal == nullptr) {
@@ -452,7 +452,7 @@ void Shader::ApplyUniforms()
             it.second = false; // set to changed = false;
 
             // TODO: shared data across programs
-        }
+        }*/
 
         uniform_changed = false;
     }
@@ -496,13 +496,13 @@ void Shader::End()
 
 void Shader::CreateUniformBufferObjects()
 {
-    for (auto &it : m_uniforms.m_uniform_buffers) {
+    /*for (auto &it : m_uniforms.m_uniform_buffers) {
         if (it.first._internal != nullptr) {
             continue;
         }
 
         it.first._internal = non_owning_ptr(const_cast<const UniformBuffer::Internal*>(m_uniform_buffer_internals.CreateUniformBufferInternal(this, it.first)));
-    }
+    }*/
 }
 
 void Shader::DestroyUniformBufferObjects()

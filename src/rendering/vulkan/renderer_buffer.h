@@ -11,13 +11,16 @@ namespace hyperion {
 
 class RendererGPUBuffer {
 public:
-    RendererGPUBuffer();
-
-    void SetMemoryPropertyFlags(uint32_t flags);
-    void SetSharingMode(VkSharingMode sharing_mode);
+    RendererGPUBuffer(
+        uint32_t usage_flags,
+        uint32_t memory_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        uint32_t sharing_mode = VK_SHARING_MODE_EXCLUSIVE
+    );
 
     static uint32_t FindMemoryType(RendererDevice *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties);
-    void Create(RendererDevice *device, VkBufferUsageFlags usage_flags, VkDeviceSize buffer_size);
+    void Create(RendererDevice *device, VkDeviceSize buffer_size);
+    void Copy(RendererDevice *device, size_t size, void *ptr);
+    void Destroy(RendererDevice *device);
 
     void Map(RendererDevice *device, void **ptr);
     void Unmap(RendererDevice *device);
@@ -26,23 +29,21 @@ public:
     VkDeviceMemory memory;
 
     VkDeviceSize size;
+
 private:
-    VkSharingMode sharing_mode;
+    uint32_t sharing_mode;
     uint32_t memory_property_flags;
+    uint32_t usage_flags;
 };
 
-class RendererVertexBuffer {
+class RendererVertexBuffer : public RendererGPUBuffer {
 public:
-    void Create(RendererDevice *device, VkDeviceSize buffer_size);
-    void Copy(RendererDevice *device, size_t size, void *ptr);
+    RendererVertexBuffer(
+        uint32_t memory_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        uint32_t sharing_mode = VK_SHARING_MODE_EXCLUSIVE
+    );
+
     void BindBuffer(VkCommandBuffer *command_buffer);
-
-
-    VkBuffer GetVkBuffer() {
-        return this->gpu_buffer->buffer;
-    }
-
-    RendererGPUBuffer *gpu_buffer;
 };
 
 }; /* namespace hyperion */

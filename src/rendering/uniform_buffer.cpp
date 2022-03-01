@@ -11,41 +11,65 @@ UniformBufferInternalsHolder::~UniformBufferInternalsHolder()
     Reset();
 }
 
-UniformBuffer::Internal *UniformBufferInternalsHolder::CreateUniformBufferInternal(Shader *shader, UniformBuffer &uniform_buffer)
+UniformBuffer::Internal *UniformBufferInternalsHolder::CreateUniformBufferInternal(RendererDevice *device, Shader *shader, UniformBuffer &uniform_buffer)
 {
     size_t total_size = 0; // calculate total size of data allocated for uniform buffer
     for (size_t i = 0; i < uniform_buffer.data.size(); i++) {
         total_size += uniform_buffer.data[i].value.GetSize();
     }
 
+    unsigned char *raw_uniform_data = new unsigned char[total_size]; // TODO: more linear layout for the above data table to ease copying
+    // OR add an offset parameter to Copy() to facilitate doing this in a loop
+    size_t offset = 0;
+    for (size_t i = 0; i < uniform_buffer.data.size(); i++) {
+        size_t sz = uniform_buffer.data[i].value.GetSize();
+        std::memcpy(raw_uniform_data + offset, uniform_buffer.data[i].value.GetRawPtr(), sz);
+        offset += sz;
+    }
+
     UniformBuffer::Internal *_internal = new UniformBuffer::Internal;
     _internal->generated = false;
 
-    // TODO: assert total_size fits into block_size?
-    GLuint block_index = glGetUniformBlockIndex(shader->GetId(), uniform_buffer.name.c_str());
-    CatchGLErrors("Failed to get uniform block index");
+    _internal->gpu_buffer = new RendererGPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    _internal->gpu_buffer->Create(device, total_size);
+    _internal->gpu_buffer->Copy(device, total_size, raw_uniform_data);
 
-    if (block_index != GL_INVALID_INDEX) {
-        GLint block_size;
-        glGetActiveUniformBlockiv(shader->GetId(), block_index, GL_UNIFORM_BLOCK_DATA_SIZE, &block_size);
-        CatchGLErrors("Failed to get active uniform block size");
+    delete[] raw_uniform_data;
 
-        _internal->size = block_size;
+    // TODO: rest
 
-        GLuint handle;
-        glGenBuffers(1, &handle);
-        CatchGLErrors("Failed to generate uniform buffer");
+   /* VkBufferCreateInfo buf_info = {};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.pNext = NULL;
+    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buf_info.size = total_size;
+    buf_info.queueFamilyIndexCount = 0;
+    buf_info.pQueueFamilyIndices = NULL;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buf_info.flags = 0;
+    auto res = vkCreateBuffer(*device, &buf_info, NULL, &_internal->handle);
+    AssertThrow(res == VK_SUCCESS);
 
-        glBindBuffer(GL_UNIFORM_BUFFER, handle);
-        glBufferData(GL_UNIFORM_BUFFER, total_size, nullptr, GL_STATIC_DRAW);
-        CatchGLErrors("Failed to set uniform buffer initial data");
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-        _internal->handle = handle;
-        _internal->index = block_index;
-        _internal->generated = true;
-    }
 
+
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(*device, _internal->handle,
+        &mem_reqs);
+
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+
+    alloc_info.allocationSize = mem_reqs.size;
+    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &alloc_info.memoryTypeIndex);
+
+    res = vkAllocateMemory(info.device, &alloc_info, NULL,
+        &(info.uniform_data.mem));*/
 
     m_internals.push_back(_internal);
 
@@ -63,9 +87,7 @@ void UniformBufferInternalsHolder::DestroyUniformBufferInternal(UniformBuffer::I
     AssertThrow(it != m_internals.end());
 
     if (_internal->generated) {
-        GLuint handle = _internal->handle;
-        glDeleteBuffers(1, &handle);
-        CatchGLErrors("Failed to delete uniform buffer");
+        // TODO:
     }
 
     delete _internal;

@@ -20,7 +20,7 @@ public:
     virtual void SetUniforms(Camera *cam) override;
 
 private:
-    Shader::DeclaredUniform::Id_t m_uniform_strength;
+    DeclaredUniform::Id_t m_uniform_strength;
 
     float m_strength;
 };

@@ -108,7 +108,7 @@ void RendererPipeline::SetVertexBuffers(std::vector<RendererVertexBuffer> &verte
     /* We should never run out of memory here... */
     AssertThrowMsg(this->intern_vertex_buffers != nullptr, "Could not allocate memory!\n");
     for (uint32_t i = 0; i < size; i++) {
-        memcpy(&this->intern_vertex_buffers[i], &vertex_buffers[i].gpu_buffer->memory, sizeof(VkBuffer));
+        memcpy(&this->intern_vertex_buffers[i], &vertex_buffers[i].memory, sizeof(VkBuffer));
     }
 }
 
