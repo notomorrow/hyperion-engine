@@ -92,11 +92,16 @@ RendererResult RendererDescriptorPool::Destroy(RendererDevice *device)
     return RendererResult(RendererResult::RENDERER_OK);
 }
 
-RendererResult RendererDescriptorPool::BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout)
+RendererResult RendererDescriptorPool::BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout, size_t start_index, size_t size)
 {
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, m_descriptor_sets.size(), m_descriptor_sets_view, 0, nullptr);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, size, &m_descriptor_sets_view[start_index], 0, nullptr);
 
     return RendererResult(RendererResult::RENDERER_OK);
+}
+
+RendererResult RendererDescriptorPool::BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout)
+{
+    return BindDescriptorSets(cmd, layout, 0, m_descriptor_sets.size());
 }
 
 

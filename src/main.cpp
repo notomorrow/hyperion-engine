@@ -585,6 +585,9 @@ int main()
     //float data[] = { 1.0f, 0.0f, 0.0f, 1.0f };
     //set.GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);
 
+    Transform tf;
+    tf.SetScale(Vector3(0.25f));
+
     bool running = true;
     while (running) {
         while (SystemSDL::PollEvent(&event)) {
@@ -600,7 +603,7 @@ int main()
             }
         }
 
-        timer += 0.01;
+        timer += 0.05;
         float push_constant_data[] = { std::sinf(timer), std::cosf(timer), std::tanf(timer), 1.0f };
         memcpy(&pipeline->push_constants, push_constant_data, sizeof(push_constant_data));
 
@@ -608,6 +611,13 @@ int main()
         for (int i = 0; i < pipeline->command_buffers.size(); i++) {
             VkCommandBuffer cmd = pipeline->command_buffers[i];
             pipeline->StartRenderPass(cmd, frame_index);
+
+
+            tf.SetScale(Vector3(0.25f) + std::cos(timer));
+            tf.SetRotation(Quaternion(Vector3(0, 0, 1), std::sin(timer)));
+
+            pipeline->descriptor_pool.GetDescriptorSet(0)->GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(tf.GetMatrix()), (void *)&tf.GetMatrix());
+            pipeline->descriptor_pool.BindDescriptorSets(cmd, pipeline->layout);
 
             mesh->RenderVk(cmd, &renderer, nullptr);
             pipeline->EndRenderPass(cmd);
