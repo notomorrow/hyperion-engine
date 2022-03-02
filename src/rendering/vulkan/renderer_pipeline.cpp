@@ -95,8 +95,9 @@ void RendererPipeline::CreateCommandBuffers() {
     alloc_info.commandBufferCount = (uint32_t) this->command_buffers.size();
 
     auto result = vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data());
-    DebugLog(LogType::Debug, "Allocate command buffers\n");
     AssertThrowMsg(result == VK_SUCCESS, "Could not create Vulkan command buffers\n");
+
+    DebugLog(LogType::Debug, "Allocate %d command buffers\n", this->command_buffers.size());
 }
 
 void RendererPipeline::UpdateDynamicStates(VkCommandBuffer cmd) {
@@ -404,4 +405,16 @@ void RendererPipeline::Destroy() {
     vkDestroyRenderPass(render_device, this->render_pass, nullptr);
 }
 
-}; /* namespace hyperion */
+helpers::SingleTimeCommands RendererPipeline::GetSingleTimeCommands()
+{
+    QueueFamilyIndices family_indices = this->device->FindQueueFamilies(); // TODO: this result should be cached
+
+    helpers::SingleTimeCommands single_time_commands{};
+    single_time_commands.cmd = nullptr;
+    single_time_commands.pool = command_pool;
+    single_time_commands.family_indices = family_indices;
+
+    return single_time_commands;
+}
+
+} /* namespace hyperion */

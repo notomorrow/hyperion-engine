@@ -40,7 +40,7 @@ public:
         return features;
     }
 
-    VkQueue GetQueue(uint32_t queue_family_index, uint32_t queue_index = 0);
+    VkQueue GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index = 0);
 
     VkDevice CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions);
     VkPhysicalDeviceFeatures GetDeviceFeatures();

@@ -14,6 +14,7 @@
 #include "renderer_descriptor_pool.h"
 #include "renderer_descriptor_set.h"
 #include "renderer_descriptor.h"
+#include "helpers.h"
 
 namespace hyperion {
 
@@ -44,6 +45,8 @@ public:
     VkPrimitiveTopology GetPrimitive();
     std::vector<VkDynamicState> GetDynamicStates();
     VkRenderPass *GetRenderPass();
+
+    helpers::SingleTimeCommands GetSingleTimeCommands();
 
     /* Per frame data */
     VkCommandPool command_pool;

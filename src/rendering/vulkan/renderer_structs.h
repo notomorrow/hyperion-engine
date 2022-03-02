@@ -59,11 +59,16 @@ struct RendererMeshInputAttribute {
 };
 
 struct QueueFamilyIndices {
-    std::optional<uint32_t> graphics_family;
-    std::optional<uint32_t> present_family;
+    using Index_t = uint32_t;
+
+    std::optional<Index_t> graphics_family;
+    std::optional<Index_t> transfer_family;
+    std::optional<Index_t> present_family;
 
     const bool IsComplete() {
-        return this->graphics_family.has_value() && this->present_family.has_value();
+        return this->graphics_family.has_value()
+            && this->transfer_family.has_value()
+            && this->present_family.has_value();
     }
 };
 

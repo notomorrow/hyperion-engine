@@ -76,7 +76,7 @@ void VkRenderer::EndFrame(uint32_t *image_index) {
     submit_info.pSignalSemaphores = &this->sp_swap_release;
 
     submit_info.pWaitDstStageMask = wait_stages;
-    DebugLog(LogType::Info, "Image index set to [%d]\n", *image_index);
+    //DebugLog(LogType::Info, "Image index set to [%d]\n", *image_index);
 
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &this->pipeline->command_buffers[*image_index];

@@ -9,7 +9,7 @@
 
 namespace hyperion {
 
-uint32_t RendererGPUBuffer::FindMemoryType(RendererDevice *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties) {
+uint32_t RendererGPUMemory::FindMemoryType(RendererDevice *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties mem_properties;
     vkGetPhysicalDeviceMemoryProperties(device->GetPhysicalDevice(), &mem_properties);
 
@@ -22,12 +22,42 @@ uint32_t RendererGPUBuffer::FindMemoryType(RendererDevice *device, uint32_t vk_t
     AssertThrowMsg(nullptr, "Could not find suitable memory type!\n");
 }
 
-RendererGPUBuffer::RendererGPUBuffer(VkBufferUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
-    : usage_flags(usage_flags),
-      memory_property_flags(memory_property_flags),
+RendererGPUMemory::RendererGPUMemory(
+    uint32_t memory_property_flags,
+    uint32_t sharing_mode)
+    : memory_property_flags(memory_property_flags),
       sharing_mode(sharing_mode),
-      size(0)
+      size(0),
+      memory(nullptr)
 {
+}
+
+void RendererGPUMemory::Map(RendererDevice *device, void **ptr) {
+    vkMapMemory(device->GetDevice(), this->memory, 0, this->size, 0, ptr);
+}
+
+void RendererGPUMemory::Unmap(RendererDevice *device) {
+    vkUnmapMemory(device->GetDevice(), this->memory);
+}
+
+void RendererGPUMemory::Copy(RendererDevice *device, size_t size, void *ptr) {
+    void *map;
+    Map(device, &map);
+    memcpy(map, ptr, size);
+    Unmap(device);
+}
+
+RendererGPUBuffer::RendererGPUBuffer(VkBufferUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
+    : RendererGPUMemory(memory_property_flags, sharing_mode),
+      usage_flags(usage_flags),
+      buffer(nullptr)
+{
+}
+
+RendererGPUBuffer::~RendererGPUBuffer()
+{
+    AssertExit(memory == nullptr);
+    AssertExit(buffer == nullptr);
 }
 
 void RendererGPUBuffer::Create(RendererDevice *device, size_t size) {
@@ -60,21 +90,11 @@ void RendererGPUBuffer::Destroy(RendererDevice *device)
 {
     VkDevice vk_device = device->GetDevice();
 
+    vkFreeMemory(vk_device, memory, nullptr);
+    memory = nullptr;
+
     vkDestroyBuffer(vk_device, buffer, nullptr);
-}
-
-void RendererGPUBuffer::Map(RendererDevice *device, void **ptr) {
-    vkMapMemory(device->GetDevice(), this->memory, 0, this->size, 0, ptr);
-}
-void RendererGPUBuffer::Unmap(RendererDevice *device) {
-    vkUnmapMemory(device->GetDevice(), this->memory);
-}
-
-void RendererGPUBuffer::Copy(RendererDevice *device, size_t size, void *ptr) {
-    void *map;
-    Map(device, &map);
-    memcpy(map, ptr, size);
-    Unmap(device);
+    buffer = nullptr;
 }
 
 
@@ -89,5 +109,63 @@ void RendererVertexBuffer::BindBuffer(VkCommandBuffer *cmd) {
 
 RendererUniformBuffer::RendererUniformBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
     : RendererGPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memory_property_flags, sharing_mode) {}
+
+
+RendererStagingBuffer::RendererStagingBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
+    : RendererGPUBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, memory_property_flags, sharing_mode) {}
+
+
+
+RendererGPUImage::RendererGPUImage(VkImageUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
+    : RendererGPUMemory(memory_property_flags, sharing_mode),
+      usage_flags(usage_flags),
+      image(nullptr)
+{
+}
+
+RendererGPUImage::~RendererGPUImage()
+{
+    AssertExit(memory == nullptr);
+    AssertExit(image == nullptr);
+}
+
+RendererResult RendererGPUImage::Create(RendererDevice *device, size_t size, VkImageCreateInfo *image_info) {
+    this->size = size;
+
+    VkDevice vk_device = device->GetDevice();
+
+    if (vkCreateImage(device->GetDevice(), image_info, nullptr, &image) != VK_SUCCESS) {
+        return RendererResult(RendererResult::RENDERER_ERR, "Could not create image!");
+    }
+
+    VkMemoryRequirements requirements;
+    vkGetImageMemoryRequirements(vk_device, image, &requirements);
+
+    VkMemoryAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    alloc_info.allocationSize = requirements.size;
+    //this->memory_property_flags = (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    alloc_info.memoryTypeIndex = FindMemoryType(device, requirements.memoryTypeBits, this->memory_property_flags);
+
+    if (vkAllocateMemory(vk_device, &alloc_info, nullptr, &this->memory) != VK_SUCCESS) {
+        return RendererResult(RendererResult::RENDERER_ERR, "Could not allocate image memory!");
+    }
+
+    vkBindImageMemory(vk_device, this->image, this->memory, 0);
+
+    return RendererResult(RendererResult::RENDERER_OK);
+}
+
+RendererResult RendererGPUImage::Destroy(RendererDevice *device)
+{
+    VkDevice vk_device = device->GetDevice();
+
+    vkFreeMemory(vk_device, memory, nullptr);
+    memory = nullptr;
+
+    vkDestroyImage(vk_device, image, nullptr);
+    image = nullptr;
+
+    return RendererResult(RendererResult::RENDERER_OK);
+}
 
 }; /* namespace hyperion */

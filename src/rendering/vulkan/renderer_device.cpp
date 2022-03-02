@@ -65,16 +65,23 @@ QueueFamilyIndices RendererDevice::FindQueueFamilies() {
     vkGetPhysicalDeviceQueueFamilyProperties(_physical_device, &queue_family_count, families.data());
 
     int index = 0;
-    VkBool32 supports_presentation = false;
+
     for (const auto &queue_family : families) {
-        if (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        VkBool32 supports_presentation = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(_physical_device, index, this->GetRenderSurface(), &supports_presentation);
+
+        if (supports_presentation)
+            indices.present_family = index;
+
+        if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) && supports_presentation)
             indices.graphics_family = index;
+
+        /* For the transfer bit, use a separate queue family than the graphics bit */
+        if ((queue_family.queueFlags & VK_QUEUE_TRANSFER_BIT) && !(queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) && supports_presentation)
+            indices.transfer_family = index;
 
         /* Some devices appear only to compute and are not graphical,
          * so we need to make sure it supports presenting to the user. */
-        vkGetPhysicalDeviceSurfaceSupportKHR(_physical_device, index, this->GetRenderSurface(), &supports_presentation);
-        if (supports_presentation)
-            indices.present_family = index;
 
         /* Everything was found, return the indices */
         if (indices.IsComplete())
@@ -82,6 +89,18 @@ QueueFamilyIndices RendererDevice::FindQueueFamilies() {
 
         index++;
     }
+
+    if (!indices.IsComplete()) {
+        /* if a graphics family has been found but a transfer family has /not/ been found,
+         * set the transfer family to just use the graphics family. */
+
+        if (indices.graphics_family.has_value() && !indices.transfer_family.has_value()) {
+            DebugLog(LogType::Info, "No dedicated transfer family, using graphics family.\n");
+
+            indices.transfer_family = indices.graphics_family;
+        }
+    }
+
     return indices;
 }
 
@@ -205,7 +224,7 @@ VkDevice RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_
     return this->device;
 }
 
-VkQueue RendererDevice::GetQueue(uint32_t queue_family_index, uint32_t queue_index) {
+VkQueue RendererDevice::GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index) {
     VkQueue queue;
     vkGetDeviceQueue(this->GetDevice(), queue_family_index, queue_index, &queue);
     return queue;
