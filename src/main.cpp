@@ -84,7 +84,8 @@
 #include <iostream>
 #include <unordered_map>
 #include <string>
-#include <math.h>
+#include <cmath>
+#include <thread>
 
 using namespace hyperion;
 
