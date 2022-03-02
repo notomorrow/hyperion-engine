@@ -593,10 +593,11 @@ int main()
                     break;
             }
         }
+
         timer += 0.01;
-        pipeline->push_constants.x = std::sin(timer);
-        pipeline->push_constants.y = std::cos(timer);
-        pipeline->push_constants.z = std::tan(timer);
+        float push_constant_data[] = { std::sinf(timer), std::cosf(timer), std::tanf(timer), 1.0f };
+        memcpy(&pipeline->push_constants, push_constant_data, sizeof(push_constant_data));
+
         renderer.StartFrame(&frame_index);
         for (int i = 0; i < pipeline->command_buffers.size(); i++) {
             VkCommandBuffer *cmd = &pipeline->command_buffers[i];

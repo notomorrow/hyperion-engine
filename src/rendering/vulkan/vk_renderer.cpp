@@ -271,40 +271,72 @@ void VkRenderer::CreateSurface() {
     std::cout << "Created window surface\n";
 }
 
-VkPhysicalDevice VkRenderer::PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices) {
-    VkPhysicalDeviceProperties properties;
-    VkPhysicalDeviceFeatures   features;
+VkPhysicalDevice VkRenderer::PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices,
+    VkPhysicalDeviceProperties &out_properties,
+    VkPhysicalDeviceFeatures &out_features)
+{
+    DeviceRequirementsResult device_requirements_result(
+        DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR,
+        "No device found"
+    );
 
     /* Check for a discrete/dedicated GPU with geometry shaders */
     for (const auto &_device : _devices) {
-        vkGetPhysicalDeviceProperties(_device, &properties);
-        vkGetPhysicalDeviceFeatures(_device, &features);
+        vkGetPhysicalDeviceProperties(_device, &out_properties);
+        vkGetPhysicalDeviceFeatures(_device, &out_features);
 
-        if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && features.geometryShader) {
-            std::cout << "select device " << properties.deviceName << "\n";
-            return _device;
+        if (out_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+            device_requirements_result = DeviceSatisfiesMinimumRequirements(out_features, out_properties);
+
+            if (device_requirements_result.result == DeviceRequirementsResult::DEVICE_REQUIREMENTS_OK) {
+                DebugLog(LogType::Info, "Select discrete device %s\n", out_properties.deviceName);
+
+                return _device;
+            }
         }
     }
 
-    /* No discrete gpu found, look for a device with at least geometry shaders */
+    /* No discrete gpu found, look for a device which satisfies requirements */
     for (const auto &_device : _devices) {
-        vkGetPhysicalDeviceFeatures(_device, &features);
-        if (features.geometryShader) {
+        vkGetPhysicalDeviceProperties(_device, &out_properties);
+        vkGetPhysicalDeviceFeatures(_device, &out_features);
+
+        device_requirements_result = DeviceSatisfiesMinimumRequirements(out_features, out_properties);
+
+        if (device_requirements_result.result == DeviceRequirementsResult::DEVICE_REQUIREMENTS_OK) {
+            DebugLog(LogType::Info, "Select non-discrete device %s\n", out_properties.deviceName);
+
             return _device;
         }
     }
 
     AssertExit(!_devices.empty());
 
+    auto _device = _devices[0];
+
+    vkGetPhysicalDeviceProperties(_device, &out_properties);
+    vkGetPhysicalDeviceFeatures(_device, &out_features);
+    device_requirements_result = DeviceSatisfiesMinimumRequirements(out_features, out_properties);
+
+    DebugLog(
+        LogType::Error,
+        "No device found which satisfied the minimum requirements; selecting device %s.\nThe error message was: %s\n",
+        out_properties.deviceName,
+        device_requirements_result.message
+    );
+
     /* well shit, we'll just hope for the best at this point */
-    return _devices[0];
+    return _device;
 }
 
 RendererDevice *VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_device) {
     /* If no physical device passed in, we select one */
+    VkPhysicalDeviceFeatures features;
+    VkPhysicalDeviceProperties properties;
+
     if (physical_device == nullptr) {
         std::vector<VkPhysicalDevice> physical_devices = this->EnumeratePhysicalDevices();
-        physical_device = this->PickPhysicalDevice(physical_devices);
+        physical_device = this->PickPhysicalDevice(physical_devices, properties, features);
     }
 
     if (this->device == nullptr) {
@@ -312,7 +344,7 @@ RendererDevice *VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_d
     }
 
     this->device->SetRequiredExtensions(this->requested_device_extensions);
-    this->device->SetPhysicalDevice(physical_device);
+    this->device->SetPhysicalDevice(physical_device, properties, features);
     this->device->SetRenderSurface(this->surface);
 
     QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
@@ -372,5 +404,24 @@ std::vector<VkPhysicalDevice> VkRenderer::EnumeratePhysicalDevices() {
 
     return devices;
 }
+
+
+#define REQUIRES_VK_FEATURE(feature) \
+    do { \
+        if (!(feature)) { \
+            return DeviceRequirementsResult(DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR, "Feature constraint " #feature " not satisfied."); \
+        } \
+    } while (0)
+
+VkRenderer::DeviceRequirementsResult VkRenderer::DeviceSatisfiesMinimumRequirements(VkPhysicalDeviceFeatures features, VkPhysicalDeviceProperties properties)
+{
+    REQUIRES_VK_FEATURE(features.geometryShader);
+    REQUIRES_VK_FEATURE(properties.limits.maxDescriptorSetSamplers >= 16);
+    REQUIRES_VK_FEATURE(properties.limits.maxDescriptorSetUniformBuffers >= 16);
+
+    return DeviceRequirementsResult(DeviceRequirementsResult::DEVICE_REQUIREMENTS_OK);
+}
+
+#undef REQUIRES_VK_FEATURE
 
 } // namespace hyperion

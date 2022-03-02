@@ -23,18 +23,12 @@ Mesh::RenderContext::~RenderContext()
 
 void Mesh::RenderContext::Create(VkCommandBuffer *cmd)
 {
-    //RendererPipeline *pipeline = _renderer->GetCurrentPipeline();
-    //vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
-
     RendererDevice *device = _renderer->GetRendererDevice();
     VkDevice vk_device = device->GetDevice();
 }
 
 void Mesh::RenderContext::Upload(VkCommandBuffer *cmd)
 {
-    //RendererPipeline *pipeline = _renderer->GetCurrentPipeline();
-    //vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
-
     const VkDeviceSize offsets[] = { 0 };
 
     RendererDevice *device = _renderer->GetRendererDevice();
@@ -68,13 +62,10 @@ void Mesh::RenderContext::Upload(VkCommandBuffer *cmd)
 
 void Mesh::RenderContext::Draw(VkCommandBuffer *cmd)
 {
-
     const VkDeviceSize offsets[] = { 0 };
 
     vkCmdBindVertexBuffers(*cmd, 0, 1, &_vbo->buffer, offsets);
     vkCmdBindIndexBuffer(*cmd, _ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
-
-    //vkCmdPushConstants(*cmd, pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pipeline->push_constants), &pipeline->push_constants);
 
     vkCmdDrawIndexed(*cmd, _mesh->indices.size(), 1, 0, 0, 0);
 

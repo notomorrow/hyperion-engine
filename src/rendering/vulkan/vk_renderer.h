@@ -33,10 +33,28 @@ private:
 };
 
 class VkRenderer {
+    struct DeviceRequirementsResult {
+        enum {
+            DEVICE_REQUIREMENTS_OK = 0,
+            DEVICE_REQUIREMENTS_ERR = 1
+        } result;
+
+        const char *message;
+
+        DeviceRequirementsResult(decltype(result) result, const char *message = "")
+            : result(result), message(message) {}
+        DeviceRequirementsResult(const DeviceRequirementsResult &other)
+            : result(other.result), message(other.message) {}
+        inline operator bool() const { return result == DEVICE_REQUIREMENTS_OK; }
+    };
+
+    static DeviceRequirementsResult DeviceSatisfiesMinimumRequirements(VkPhysicalDeviceFeatures, VkPhysicalDeviceProperties);
     static bool CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
 
     std::vector<VkPhysicalDevice> EnumeratePhysicalDevices();
-    VkPhysicalDevice PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices);
+    VkPhysicalDevice PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices,
+        VkPhysicalDeviceProperties &out_properties,
+        VkPhysicalDeviceFeatures &out_features);
 
     void CreateSyncObjects();
     void DestroySyncObjects();

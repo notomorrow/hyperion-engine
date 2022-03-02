@@ -18,17 +18,22 @@ RendererDevice::RendererDevice()
     DebugLog(LogType::Debug, "Created RendererDevice [%d]\n", x++);
 }
 
-void RendererDevice::SetDevice(const VkDevice &_device) {
-    this->device = _device;
+void RendererDevice::SetDevice(const VkDevice &device) {
+    this->device = device;
 }
-void RendererDevice::SetPhysicalDevice(const VkPhysicalDevice &_physical) {
-    this->physical = _physical;
+void RendererDevice::SetPhysicalDevice(const VkPhysicalDevice &physical,
+    const VkPhysicalDeviceProperties &properties,
+    const VkPhysicalDeviceFeatures &features)
+{
+    this->physical = physical;
+    this->properties = properties;
+    this->features = features;
 }
-void RendererDevice::SetRenderSurface(const VkSurfaceKHR &_surface) {
-    this->surface = _surface;
+void RendererDevice::SetRenderSurface(const VkSurfaceKHR &surface) {
+    this->surface = surface;
 }
-void RendererDevice::SetRequiredExtensions(const std::vector<const char *> &_extensions) {
-    this->required_extensions = _extensions;
+void RendererDevice::SetRequiredExtensions(const std::vector<const char *> &extensions) {
+    this->required_extensions = extensions;
 }
 
 VkDevice RendererDevice::GetDevice() {
@@ -190,10 +195,8 @@ VkDevice RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_
 
     VkDevice _device;
     VkResult result = vkCreateDevice(this->physical, &create_info, nullptr, &_device);
-    if (result != VK_SUCCESS) {
-        DebugLog(LogType::Error, "Could not create RendererDevice!\n");
-        throw std::runtime_error("Could not create RendererDevice!");
-    }
+
+    AssertThrow(result == VK_SUCCESS, "Could not create RendererDevice!");
 
     this->SetDevice(_device);
 
