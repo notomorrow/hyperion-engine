@@ -49,10 +49,7 @@ public:
     VkPipeline pipeline;
 
     struct PushConstants {
-        float x = 1.0f;
-        float y = 0.0f;
-        float z = 0.0f;
-        float w = 1.0f;
+        unsigned char data[128];
     } push_constants;
 
 private:
