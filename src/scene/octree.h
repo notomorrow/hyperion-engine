@@ -25,8 +25,8 @@ enum OctreeChangeEvent {
 
 class Octree;
 
-using OctreeChangeCallback_t = std::function<void(OctreeChangeEvent, const Octree *, int, const Spatial*, void *)>;
-
+using OctreeRawData_t = uint32_t;
+using OctreeChangeCallback_t = std::function<void(OctreeChangeEvent, const Octree *, int, const Spatial*, OctreeRawData_t)>;
 
 class Octree {
 public:
@@ -482,10 +482,10 @@ private:
             }
         }
 
-        DispatchEvent(OCTREE_VISIBILITY_STATE, -1, nullptr, (void*)int32_t(type));
+        DispatchEvent(OCTREE_VISIBILITY_STATE, -1, nullptr, int32_t(type));
     }
 
-    void DispatchEvent(OctreeChangeEvent evt, int node_id = -1, const Spatial *spatial = nullptr, void *raw_data = nullptr) const
+    void DispatchEvent(OctreeChangeEvent evt, int node_id = -1, const Spatial *spatial = nullptr, OctreeRawData_t raw_data = 0) const
     {
         const Octree *oct = this;
 

@@ -482,9 +482,9 @@ MeshFactory::VoxelGrid MeshFactory::BuildVoxels(const std::shared_ptr<Mesh> &mes
         size_t y = MathUtil::Floor(MathUtil::Clamp(vertex_over_dimensions.y * (num_voxels_y - 1), 0.0f, num_voxels_y - 1.0f));
         size_t z = MathUtil::Floor(MathUtil::Clamp(vertex_over_dimensions.z * (num_voxels_z - 1), 0.0f, num_voxels_z - 1.0f));
 
-        size_t index = (z * num_voxels_x * num_voxels_y) + (y * num_voxels_y) + x;
+        size_t voxel_index = (z * num_voxels_x * num_voxels_y) + (y * num_voxels_y) + x;
 
-        grid.voxels[index].filled = true;
+        grid.voxels[voxel_index].filled = true;
     }
 
     return grid;

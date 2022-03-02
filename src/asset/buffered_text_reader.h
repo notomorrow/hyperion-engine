@@ -77,7 +77,7 @@ public:
 
         size_t count = file->gcount();
 
-        hard_assert(count <= BufferSize);
+        AssertExit(count <= BufferSize);
 
         pos += count;
 

@@ -66,8 +66,6 @@ public:
     {
     }
 
-    using EnumValuePair_t = std::pair<EnumType, ValueType>;
-
     inline constexpr bool HasAt(size_t index) const
         { return m_flags & OrdinalToEnum(index); }
 
