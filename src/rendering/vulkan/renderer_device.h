@@ -11,6 +11,8 @@
 
 #include "renderer_structs.h"
 
+namespace hyperion {
+
 class RendererDevice {
 public:
     RendererDevice();
@@ -29,12 +31,16 @@ public:
     SwapchainSupportDetails QuerySwapchainSupport();
 
     inline const VkPhysicalDeviceProperties &GetPhysicalDeviceProperties() const
-        { return properties; }
+    {
+        return properties;
+    }
 
     inline const VkPhysicalDeviceFeatures &GetPhysicalDeviceFeatures() const
-        { return features; }
+    {
+        return features;
+    }
 
-    VkQueue GetQueue(uint32_t queue_family_index, uint32_t queue_index=0);
+    VkQueue GetQueue(uint32_t queue_family_index, uint32_t queue_index = 0);
 
     VkDevice CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions);
     VkPhysicalDeviceFeatures GetDeviceFeatures();
@@ -55,5 +61,6 @@ private:
     std::vector<const char *> required_extensions;
 };
 
+} // namespace hyperion
 
 #endif //HYPERION_RENDERER_DEVICE_H

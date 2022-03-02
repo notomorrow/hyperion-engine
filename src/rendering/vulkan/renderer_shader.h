@@ -29,6 +29,6 @@ private:
     RendererDevice *device = nullptr;
 };
 
-}; /* namespace hyperion */
+}; // namespace hyperion
 
 #endif //HYPERION_RENDERER_SHADER_H

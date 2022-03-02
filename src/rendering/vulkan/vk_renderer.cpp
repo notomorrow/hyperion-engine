@@ -418,6 +418,7 @@ VkRenderer::DeviceRequirementsResult VkRenderer::DeviceSatisfiesMinimumRequireme
     REQUIRES_VK_FEATURE(features.geometryShader);
     REQUIRES_VK_FEATURE(properties.limits.maxDescriptorSetSamplers >= 16);
     REQUIRES_VK_FEATURE(properties.limits.maxDescriptorSetUniformBuffers >= 16);
+    std::cout << "MAX DESCRIPTOR SET SAMPLERS" << properties.limits.maxDescriptorSetSamplers << "\n";
 
     return DeviceRequirementsResult(DeviceRequirementsResult::DEVICE_REQUIREMENTS_OK);
 }

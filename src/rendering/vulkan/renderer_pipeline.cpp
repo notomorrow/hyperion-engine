@@ -30,6 +30,7 @@ RendererPipeline::RendererPipeline(RendererDevice *_device, RendererSwapchain *_
             VK_DYNAMIC_STATE_SCISSOR,
     };
     this->SetDynamicStates(default_dynamic_states);
+
     static int x = 0;
     DebugLog(LogType::Debug, "Create RendererPipeline [%d]\n", x++);
 }
@@ -96,9 +97,9 @@ void RendererPipeline::CreateCommandBuffers() {
     AssertThrowMsg(result == VK_SUCCESS, "Could not create Vulkan command buffers\n");
 }
 
-void RendererPipeline::UpdateDynamicStates(VkCommandBuffer *cmd) {
-    vkCmdSetViewport(*cmd, 0, 1, &this->viewport);
-    vkCmdSetScissor(*cmd, 0, 1, &this->scissor);
+void RendererPipeline::UpdateDynamicStates(VkCommandBuffer cmd) {
+    vkCmdSetViewport(cmd, 0, 1, &this->viewport);
+    vkCmdSetScissor(cmd, 0, 1, &this->scissor);
 }
 
 void RendererPipeline::SetVertexBuffers(std::vector<RendererVertexBuffer> &vertex_buffers) {
@@ -160,13 +161,13 @@ std::vector<VkVertexInputAttributeDescription> RendererPipeline::SetVertexAttrib
     return attrs;
 }
 
-void RendererPipeline::StartRenderPass(VkCommandBuffer *cmd, uint32_t image_index) {
+void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index) {
     //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
     VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     begin_info.pInheritanceInfo = nullptr;
     /* Begin recording our command buffer */
-    auto result = vkBeginCommandBuffer(*cmd, &begin_info);
+    auto result = vkBeginCommandBuffer(cmd, &begin_info);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer!\n");
 
     VkRenderPassBeginInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
@@ -179,21 +180,23 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer *cmd, uint32_t image_inde
     render_pass_info.clearValueCount = 1;
     render_pass_info.pClearValues = &clear_colour;
     /* Start adding draw commands  */
-    vkCmdBeginRenderPass(*cmd, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(cmd, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     /* Bind the graphics pipeline */
     //vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
     this->UpdateDynamicStates(cmd);
 
-    vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-    vkCmdPushConstants(*cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &push_constants);
+    vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &push_constants);
+
+    descriptor_pool.BindDescriptorSets(cmd, layout);
 }
 
-void RendererPipeline::EndRenderPass(VkCommandBuffer *cmd) {
+void RendererPipeline::EndRenderPass(VkCommandBuffer cmd) {
     //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
-    vkCmdEndRenderPass(*cmd);
+    vkCmdEndRenderPass(cmd);
 
-    auto result = vkEndCommandBuffer(*cmd);
+    auto result = vkEndCommandBuffer(cmd);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
 }
 
@@ -330,10 +333,24 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     dynamic_state.dynamicStateCount = states.size();
     dynamic_state.pDynamicStates = states.data();
     DebugLog(LogType::Info, "Enabling [%d] dynamic states\n", dynamic_state.dynamicStateCount);
+
+
+    /* Descriptor sets */
+    descriptor_pool
+        .AddDescriptorSet()
+            ->AddDescriptor(0, 12, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHADER_STAGE_VERTEX_BIT);
+    //tmp_descriptor_set.Create(device, &descriptor_pool);
+
+    auto descriptor_pool_result = descriptor_pool.Create(device, 0);
+    AssertThrow(descriptor_pool_result, "Error creating descriptor pool! Message was: %s\n", descriptor_pool_result.message);
+
+    float data[] = { 1.0f, 0.0f, 0.0f };
+    descriptor_pool.GetDescriptorSet(0)->GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);
+
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-    layout_info.setLayoutCount = 0;
-    layout_info.pSetLayouts = nullptr;
+    layout_info.setLayoutCount = descriptor_pool.m_descriptor_set_layouts.size(); // TODO: refactor
+    layout_info.pSetLayouts = descriptor_pool.m_descriptor_set_layouts.data();
     layout_info.pushConstantRangeCount = 1;
     layout_info.pPushConstantRanges = &push_constant;
 
@@ -382,6 +399,8 @@ void RendererPipeline::Destroy() {
     vkDestroyCommandPool(render_device, this->command_pool, nullptr);
 
     DebugLog(LogType::Info, "Destroying pipeline!\n");
+
+    descriptor_pool.Destroy(this->device);
 
     vkDestroyPipeline(render_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(render_device, this->layout, nullptr);
