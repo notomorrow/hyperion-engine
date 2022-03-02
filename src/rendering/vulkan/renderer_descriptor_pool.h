@@ -43,6 +43,7 @@ public:
 
     RendererResult Create(RendererDevice *device, VkDescriptorPoolCreateFlags flags);
     RendererResult Destroy(RendererDevice *device);
+    RendererResult BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout, size_t start_index, size_t size);
     RendererResult BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout);
 
     RendererDescriptorSet *AddDescriptorSet();

@@ -5,6 +5,8 @@
 #include "renderer_pipeline.h"
 
 #include "../../system/debug.h"
+#include "../../math/math_util.h"
+#include "../../math/transform.h"
 
 #include <cstring>
 
@@ -188,8 +190,6 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &push_constants);
-
-    descriptor_pool.BindDescriptorSets(cmd, layout);
 }
 
 void RendererPipeline::EndRenderPass(VkCommandBuffer cmd) {
@@ -338,14 +338,11 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     /* Descriptor sets */
     descriptor_pool
         .AddDescriptorSet()
-            ->AddDescriptor(0, 12, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHADER_STAGE_VERTEX_BIT);
+            ->AddDescriptor(0, 64, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHADER_STAGE_VERTEX_BIT);
     //tmp_descriptor_set.Create(device, &descriptor_pool);
 
     auto descriptor_pool_result = descriptor_pool.Create(device, 0);
     AssertThrow(descriptor_pool_result, "Error creating descriptor pool! Message was: %s\n", descriptor_pool_result.message);
-
-    float data[] = { 1.0f, 0.0f, 0.0f };
-    descriptor_pool.GetDescriptorSet(0)->GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);
 
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
