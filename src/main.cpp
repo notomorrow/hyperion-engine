@@ -22,6 +22,9 @@
 #include "system/sdl_system.h"
 #include "system/debug.h"
 #include "rendering/vulkan/vk_renderer.h"
+#include "rendering/vulkan/renderer_descriptor_pool.h"
+#include "rendering/vulkan/renderer_descriptor_set.h"
+#include "rendering/vulkan/renderer_descriptor.h"
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
@@ -579,6 +582,9 @@ int main()
 
     double timer = 0.0;
 
+    //float data[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    //set.GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);
+
     bool running = true;
     while (running) {
         while (SystemSDL::PollEvent(&event)) {
@@ -600,8 +606,9 @@ int main()
 
         renderer.StartFrame(&frame_index);
         for (int i = 0; i < pipeline->command_buffers.size(); i++) {
-            VkCommandBuffer *cmd = &pipeline->command_buffers[i];
+            VkCommandBuffer cmd = pipeline->command_buffers[i];
             pipeline->StartRenderPass(cmd, frame_index);
+
             mesh->RenderVk(cmd, &renderer, nullptr);
             pipeline->EndRenderPass(cmd);
         }
@@ -614,6 +621,7 @@ int main()
 
     }
     mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
+
     shader.Destroy();
     renderer.Destroy();
     delete window;

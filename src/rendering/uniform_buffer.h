@@ -87,6 +87,17 @@ struct UniformBuffer {
 
         return false;
     }
+
+    inline size_t TotalSize() const
+    {
+        size_t size = 0;
+
+        for (const auto &item : data) {
+            size += item.value.GetSize();
+        }
+
+        return size;
+    }
 };
 
 struct UniformBufferResult {

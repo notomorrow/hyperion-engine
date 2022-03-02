@@ -53,7 +53,7 @@ private:
     std::vector<VkImage> images;
     std::vector<VkImageView> image_views;
 };
-}; /* namespace hyperion */
+}; // namespace hyperion
 
 
 #endif //HYPERION_RENDERER_SWAPCHAIN_H

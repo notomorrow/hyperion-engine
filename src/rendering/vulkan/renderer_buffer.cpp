@@ -22,7 +22,7 @@ uint32_t RendererGPUBuffer::FindMemoryType(RendererDevice *device, uint32_t vk_t
     AssertThrowMsg(nullptr, "Could not find suitable memory type!\n");
 }
 
-RendererGPUBuffer::RendererGPUBuffer(uint32_t usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
+RendererGPUBuffer::RendererGPUBuffer(VkBufferUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
     : usage_flags(usage_flags),
       memory_property_flags(memory_property_flags),
       sharing_mode(sharing_mode),
@@ -30,11 +30,11 @@ RendererGPUBuffer::RendererGPUBuffer(uint32_t usage_flags, uint32_t memory_prope
 {
 }
 
-void RendererGPUBuffer::Create(RendererDevice *device, VkDeviceSize buffer_size) {
+void RendererGPUBuffer::Create(RendererDevice *device, size_t size) {
     VkDevice vk_device = device->GetDevice();
 
     VkBufferCreateInfo buffer_info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    buffer_info.size = buffer_size;
+    buffer_info.size = size;
     buffer_info.usage = (VkBufferUsageFlags)usage_flags;
     buffer_info.sharingMode = (VkSharingMode)this->sharing_mode;
 

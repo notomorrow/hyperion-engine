@@ -116,9 +116,9 @@ public:
         RenderContext &operator=(const RenderContext &other) = delete;
         ~RenderContext();
 
-        void Create(VkCommandBuffer *cmd);
-        void Upload(VkCommandBuffer *cmd);
-        void Draw(VkCommandBuffer *cmd);
+        void Create(VkCommandBuffer cmd);
+        void Upload(VkCommandBuffer cmd);
+        void Draw(VkCommandBuffer cmd);
 
         non_owning_ptr<Mesh> _mesh;
         non_owning_ptr<VkRenderer> _renderer;
@@ -149,7 +149,7 @@ public:
     RendererMeshBindingDescription GetBindingDescription();
 
     void Render(Renderer *renderer, Camera *cam);
-    void RenderVk(VkCommandBuffer *cmd, VkRenderer *vk_renderer, Camera *cam);
+    void RenderVk(VkCommandBuffer cmd, VkRenderer *vk_renderer, Camera *cam);
 
 
 #pragma region serialization

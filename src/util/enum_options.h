@@ -111,7 +111,7 @@ public:
         return *this;
     }
 
-    inline bool Has(EnumOption_t enum_key) const
+    inline constexpr bool Has(EnumOption_t enum_key) const
         { return m_flags & uint64_t(enum_key); }
 
     inline constexpr size_t Size() const

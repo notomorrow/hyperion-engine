@@ -9,10 +9,12 @@
 
 #include "../../system/debug.h"
 
+namespace hyperion {
+
 RendererDevice::RendererDevice()
-        : device(nullptr),
-          physical(nullptr),
-          surface(nullptr)
+    : device(nullptr),
+    physical(nullptr),
+    surface(nullptr)
 {
     static int x = 0;
     DebugLog(LogType::Debug, "Created RendererDevice [%d]\n", x++);
@@ -118,7 +120,7 @@ std::vector<const char *> RendererDevice::CheckExtensionSupport() {
 SwapchainSupportDetails RendererDevice::QuerySwapchainSupport() {
     SwapchainSupportDetails details;
     VkPhysicalDevice _physical = this->GetPhysicalDevice();
-    VkSurfaceKHR     _surface  = this->GetRenderSurface();
+    VkSurfaceKHR     _surface = this->GetRenderSurface();
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physical, _surface, &details.capabilities);
     uint32_t count = 0;
@@ -169,8 +171,8 @@ VkDevice RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_
     const float priorities[] = { 1.0f };
     // for each queue family(for separate threads) we add them to
     // our device initialization data
-    for (uint32_t family: required_queue_families) {
-        VkDeviceQueueCreateInfo queue_info{VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
+    for (uint32_t family : required_queue_families) {
+        VkDeviceQueueCreateInfo queue_info{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
         queue_info.pQueuePriorities = priorities;
         queue_info.queueCount = 1;
         queue_info.queueFamilyIndex = family;
@@ -183,11 +185,11 @@ VkDevice RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_
         throw std::runtime_error("Device not suitable");
     }
 
-    VkDeviceCreateInfo create_info{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+    VkDeviceCreateInfo create_info{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
     create_info.pQueueCreateInfos = queue_create_info_vec.data();
-    create_info.queueCreateInfoCount = (uint32_t) (queue_create_info_vec.size());
+    create_info.queueCreateInfoCount = (uint32_t)(queue_create_info_vec.size());
     // Setup Device extensions
-    create_info.enabledExtensionCount = (uint32_t) (required_extensions.size());
+    create_info.enabledExtensionCount = (uint32_t)(required_extensions.size());
     create_info.ppEnabledExtensionNames = required_extensions.data();
     // Setup Device Features
     VkPhysicalDeviceFeatures device_features = this->GetDeviceFeatures();
@@ -217,3 +219,5 @@ void RendererDevice::Destroy() {
     vkDeviceWaitIdle(this->device);
     vkDestroyDevice(this->device, nullptr);
 }
+
+} // namespace hyperion

@@ -11,6 +11,8 @@
 #include <vector>
 #include <optional>
 
+namespace hyperion {
+
 struct RendererMeshBindingDescription {
     uint32_t binding;
     uint32_t stride;
@@ -28,8 +30,8 @@ struct RendererMeshBindingDescription {
 
     VkVertexInputBindingDescription GetBindingDescription() {
         VkVertexInputBindingDescription bind;
-        bind.binding   = this->binding;
-        bind.stride    = this->stride;
+        bind.binding = this->binding;
+        bind.stride = this->stride;
         bind.inputRate = this->input_rate;
         return bind;
     }
@@ -71,5 +73,6 @@ struct SwapchainSupportDetails {
     std::vector<VkPresentModeKHR> present_modes;
 };
 
+} // namespace hyperion
 
 #endif //HYPERION_RENDERER_STRUCTS_H

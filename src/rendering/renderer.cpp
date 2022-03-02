@@ -12,7 +12,6 @@ Renderer::Renderer(const RenderWindow &render_window)
       m_environment(Environment::GetInstance()),
       m_deferred_pipeline(new DeferredPipeline())
 {
-
     // TODO: re-introduce frustum culling
     m_octree_callback_id = SceneManager::GetInstance()->GetOctree()->AddCallback([this](OctreeChangeEvent evt, const Octree *oct, int node_id, const Spatial *spatial, OctreeRawData_t raw_data) {
         if (evt == OCTREE_INSERT_NODE) {
@@ -26,7 +25,7 @@ Renderer::Renderer(const RenderWindow &render_window)
 
             m_all_items.GetBucket(spatial->GetBucket()).RemoveItem(node_id);
         } else if (evt == OCTREE_VISIBILITY_STATE) {
-            Octree::VisibilityState::CameraType camera_type = Octree::VisibilityState::CameraType(int32_t(raw_data));
+            Octree::VisibilityState::CameraType camera_type = Octree::VisibilityState::CameraType(raw_data);
             
             for (const auto &node : oct->GetNodes()) {
                 if (auto *ptr = m_all_items.GetBucket(node.m_spatial.GetBucket()).GetItemPtr(node.m_id)) {

@@ -28,6 +28,7 @@ class Octree;
 using OctreeRawData_t = uint32_t;
 using OctreeChangeCallback_t = std::function<void(OctreeChangeEvent, const Octree *, int, const Spatial*, OctreeRawData_t)>;
 
+
 class Octree {
 public:
     friend std::ostream &operator<<(std::ostream &out, const Octree &octree);
@@ -482,7 +483,7 @@ private:
             }
         }
 
-        DispatchEvent(OCTREE_VISIBILITY_STATE, -1, nullptr, int32_t(type));
+        DispatchEvent(OCTREE_VISIBILITY_STATE, -1, nullptr, OctreeRawData_t(type));
     }
 
     void DispatchEvent(OctreeChangeEvent evt, int node_id = -1, const Spatial *spatial = nullptr, OctreeRawData_t raw_data = 0) const
