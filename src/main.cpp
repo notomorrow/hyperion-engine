@@ -25,6 +25,7 @@
 #include "rendering/vulkan/renderer_descriptor_pool.h"
 #include "rendering/vulkan/renderer_descriptor_set.h"
 #include "rendering/vulkan/renderer_descriptor.h"
+#include "rendering/vulkan/renderer_image.h"
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
@@ -582,6 +583,11 @@ int main()
 
     double timer = 0.0;
 
+
+    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/brdfLUT.png");
+    RendererImage image(texture->GetWidth(), texture->GetHeight(), 1, texture->GetInternalFormat(), texture->GetTextureType(), texture->GetBytes());
+    image.Create(device, pipeline);
+
     //float data[] = { 1.0f, 0.0f, 0.0f, 1.0f };
     //set.GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);
 
@@ -632,6 +638,7 @@ int main()
     }
     mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
 
+    image.Destroy(device);
     shader.Destroy();
     renderer.Destroy();
     delete window;

@@ -6,6 +6,43 @@
 
 namespace hyperion {
 
+Texture::TextureBaseFormat Texture::GetBaseFormat(TextureInternalFormat fmt)
+{
+    switch (fmt) {
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R8:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R32:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R16F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R32F:
+        return TextureBaseFormat::TEXTURE_FORMAT_R;
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG8:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG32:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F:
+        return TextureBaseFormat::TEXTURE_FORMAT_RG;
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F:
+        return TextureBaseFormat::TEXTURE_FORMAT_RGB;
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F:
+        return TextureBaseFormat::TEXTURE_FORMAT_RGBA;
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32:
+    case TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F:
+        return TextureBaseFormat::TEXTURE_FORMAT_DEPTH;
+    }
+
+    unexpected_value_msg(format, "Unhandled texture format case");
+}
+
 Texture::Texture(TextureType texture_type)
     : m_texture_type(texture_type),
       id(0),

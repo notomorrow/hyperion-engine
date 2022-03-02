@@ -46,9 +46,6 @@ void Mesh::RenderContext::Upload(VkCommandBuffer cmd)
     memcpy(memory_buffer, &buffer[0], gpu_buffer_size);
     vkUnmapMemory(vk_device, _vbo->memory);
 
-    for (auto &index : _mesh->indices) {
-        DebugLog(LogType::Debug, "Index : %d\n", index);
-    }
     /* Bind and copy index buffer */
     size_t gpu_indices_size = _mesh->indices.size() * sizeof(MeshIndex);
     _ibo->Create(device, gpu_indices_size);

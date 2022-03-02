@@ -6,33 +6,49 @@
 #define HYPERION_RENDERER_BUFFER_H
 
 #include "renderer_device.h"
+#include "renderer_result.h"
 
 namespace hyperion {
 
-class RendererGPUBuffer {
+class RendererGPUMemory {
+public:
+    static uint32_t FindMemoryType(RendererDevice *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties);
+    RendererGPUMemory(
+        uint32_t memory_property_flags,
+        uint32_t sharing_mode
+    );
+
+    VkDeviceMemory memory;
+    VkDeviceSize size;
+
+    void Map(RendererDevice *device, void **ptr);
+    void Unmap(RendererDevice *device);
+    void Copy(RendererDevice *device, size_t size, void *ptr);
+
+protected:
+    uint32_t sharing_mode;
+    uint32_t memory_property_flags;
+};
+
+/* buffers */
+
+class RendererGPUBuffer : public RendererGPUMemory {
 public:
     RendererGPUBuffer(
         VkBufferUsageFlags usage_flags,
         uint32_t memory_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         uint32_t sharing_mode = VK_SHARING_MODE_EXCLUSIVE
     );
+    RendererGPUBuffer(const RendererGPUBuffer &other) = delete;
+    RendererGPUBuffer &operator=(const RendererGPUBuffer &other) = delete;
+    ~RendererGPUBuffer();
 
-    static uint32_t FindMemoryType(RendererDevice *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties);
     void Create(RendererDevice *device, size_t buffer_size);
-    void Copy(RendererDevice *device, size_t size, void *ptr);
     void Destroy(RendererDevice *device);
 
-    void Map(RendererDevice *device, void **ptr);
-    void Unmap(RendererDevice *device);
-
     VkBuffer buffer;
-    VkDeviceMemory memory;
-
-    VkDeviceSize size;
 
 private:
-    uint32_t sharing_mode;
-    uint32_t memory_property_flags;
     VkBufferUsageFlags usage_flags;
 };
 
@@ -54,6 +70,36 @@ public:
     );
 };
 
+class RendererStagingBuffer : public RendererGPUBuffer {
+public:
+    RendererStagingBuffer(
+        uint32_t memory_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        uint32_t sharing_mode = VK_SHARING_MODE_EXCLUSIVE
+    );
+};
+
+/* images */
+
+
+class RendererGPUImage : public RendererGPUMemory {
+public:
+    RendererGPUImage(
+        VkImageUsageFlags usage_flags,
+        uint32_t memory_property_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        uint32_t sharing_mode = VK_SHARING_MODE_EXCLUSIVE
+    );
+    RendererGPUImage(const RendererGPUImage &other) = delete;
+    RendererGPUImage &operator=(const RendererGPUImage &other) = delete;
+    ~RendererGPUImage();
+
+    RendererResult Create(RendererDevice *device, size_t size, VkImageCreateInfo *image_info);
+    RendererResult Destroy(RendererDevice *device);
+
+    VkImage image;
+
+private:
+    VkImageUsageFlags usage_flags;
+};
 }; // namespace hyperion
 
 #endif //HYPERION_RENDERER_BUFFER_H

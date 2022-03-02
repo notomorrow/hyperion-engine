@@ -69,6 +69,8 @@ public:
         TEXTURE_FILTER_LINEAR_MIPMAP
     };
 
+    static TextureBaseFormat GetBaseFormat(TextureInternalFormat);
+
     Texture(TextureType texture_type);
     Texture(TextureType texture_type, int width, int height, unsigned char *bytes);
     Texture(const Texture &other) = delete;
