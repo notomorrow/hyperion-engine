@@ -24,7 +24,7 @@ RendererDescriptorPool::RendererDescriptorPool()
 
 RendererDescriptorPool::~RendererDescriptorPool()
 {
-    AssertThrow(m_descriptor_pool == nullptr); // should have been deleted by Destroy()
+    AssertExitMsg(m_descriptor_pool == nullptr, "descriptor pool should have been destroyed!");
 
     delete[] m_descriptor_sets_view;
 }

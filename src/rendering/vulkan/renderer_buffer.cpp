@@ -56,8 +56,8 @@ RendererGPUBuffer::RendererGPUBuffer(VkBufferUsageFlags usage_flags, uint32_t me
 
 RendererGPUBuffer::~RendererGPUBuffer()
 {
-    AssertExit(memory == nullptr);
-    AssertExit(buffer == nullptr);
+    AssertExitMsg(memory == nullptr, "memory should have been destroyed!");
+    AssertExitMsg(buffer == nullptr, "buffer should have been destroyed!");
 }
 
 void RendererGPUBuffer::Create(RendererDevice *device, size_t size) {
@@ -67,6 +67,13 @@ void RendererGPUBuffer::Create(RendererDevice *device, size_t size) {
     buffer_info.size = size;
     buffer_info.usage = (VkBufferUsageFlags)usage_flags;
     buffer_info.sharingMode = (VkSharingMode)this->sharing_mode;
+
+
+    QueueFamilyIndices family_indices = device->FindQueueFamilies();
+
+    uint32_t indices_array[] = { family_indices.graphics_family.value(), family_indices.transfer_family.value() };
+    buffer_info.pQueueFamilyIndices = indices_array;
+    buffer_info.queueFamilyIndexCount = sizeof(indices_array) / sizeof(indices_array[0]);
 
     auto result = vkCreateBuffer(vk_device, &buffer_info, nullptr, &this->buffer);
     AssertThrowMsg(result == VK_SUCCESS, "Could not create vulkan vertex buffer!\n");

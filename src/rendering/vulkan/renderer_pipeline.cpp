@@ -340,7 +340,6 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     descriptor_pool
         .AddDescriptorSet()
             ->AddDescriptor(0, 64, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHADER_STAGE_VERTEX_BIT);
-    //tmp_descriptor_set.Create(device, &descriptor_pool);
 
     auto descriptor_pool_result = descriptor_pool.Create(device, 0);
     AssertThrow(descriptor_pool_result, "Error creating descriptor pool! Message was: %s\n", descriptor_pool_result.message);
