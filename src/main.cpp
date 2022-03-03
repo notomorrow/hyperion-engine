@@ -22,6 +22,10 @@
 #include "system/sdl_system.h"
 #include "system/debug.h"
 #include "rendering/vulkan/vk_renderer.h"
+#include "rendering/vulkan/renderer_descriptor_pool.h"
+#include "rendering/vulkan/renderer_descriptor_set.h"
+#include "rendering/vulkan/renderer_descriptor.h"
+#include "rendering/vulkan/renderer_image.h"
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
@@ -559,6 +563,10 @@ int main()
 
     SystemEvent event;
 
+    /* Max frames/sync objects to have available to render to. This prevents the graphics
+     * pipeline from stalling when waiting for device upload/download. */
+    const uint16_t pending_frames = 2;
+
     VkRenderer renderer(system, "Hyperion Vulkan Test", "HyperionEngine");
 
     renderer.Initialize(true);
@@ -571,15 +579,28 @@ int main()
     shader.CreateProgram("main");
 
     renderer.InitializePipeline(&shader);
+
     auto mesh = MeshFactory::CreateCube();
-    //return 0;
     RendererPipeline *pipeline = renderer.GetCurrentPipeline();
 
     uint32_t frame_index;
 
-    double timer = 0.0;
+    float timer = 0.0;
+
+    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/brdfLUT.png");
+    RendererImage image(texture->GetWidth(), texture->GetHeight(), 1, texture->GetInternalFormat(), texture->GetTextureType(), texture->GetBytes());
+    auto image_create_result = image.Create(device, pipeline);
+    if (!image_create_result) DebugLog(LogType::Error, "failed to create image!\n");
+
+    //float data[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    //set.GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);
+
+    Transform tf;
+    tf.SetScale(Vector3(0.25f));
 
     bool running = true;
+
+    RendererFrame *frame = nullptr;
     while (running) {
         while (SystemSDL::PollEvent(&event)) {
             switch (event.GetType()) {
@@ -593,26 +614,26 @@ int main()
                     break;
             }
         }
-        timer += 0.01;
-        pipeline->push_constants.x = std::sin(timer);
-        pipeline->push_constants.y = std::cos(timer);
-        pipeline->push_constants.z = std::tan(timer);
-        renderer.StartFrame(&frame_index);
-        for (int i = 0; i < pipeline->command_buffers.size(); i++) {
-            VkCommandBuffer *cmd = &pipeline->command_buffers[i];
-            pipeline->StartRenderPass(cmd, frame_index);
-            mesh->RenderVk(cmd, &renderer, nullptr);
-            pipeline->EndRenderPass(cmd);
-        }
-        renderer.EndFrame(&frame_index);
-        renderer.DrawFrame(frame_index);
 
-        //pipeline->StartRenderPass();
-        //mesh->RenderVk(&renderer, nullptr);
-        //pipeline->EndRenderPass();
+        timer += 0.05;
+        float push_constant_data[] = { sinf(timer), cosf(timer), tanf(timer), 1.0f };
+        memcpy(&pipeline->push_constants, push_constant_data, sizeof(push_constant_data));
 
+        frame = renderer.GetNextFrame();
+        renderer.StartFrame(frame);
+
+        tf.SetScale(Vector3(0.25f) + std::cos(timer));
+        tf.SetRotation(Quaternion(Vector3(0, 0, 1), std::sin(timer)));
+        pipeline->descriptor_pool.GetDescriptorSet(0)->GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(tf.GetMatrix()), (void *)&tf.GetMatrix());
+        pipeline->descriptor_pool.BindDescriptorSets(*frame->command_buffer, pipeline->layout);
+        mesh->RenderVk(frame, &renderer, nullptr);
+
+        renderer.EndFrame(frame);
+        renderer.DrawFrame(frame);
     }
     mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
+
+    image.Destroy(device);
     shader.Destroy();
     renderer.Destroy();
     delete window;
