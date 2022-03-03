@@ -27,15 +27,12 @@ Mesh::Mesh()
     EnableAttribute(ATTR_TANGENTS);
     EnableAttribute(ATTR_BITANGENTS);
     SetPrimitiveType(PRIM_TRIANGLES);
-    DebugLog(LogType::Info, "Calling Mesh constructor\n");
     is_uploaded = false;
     is_created = false;
 }
 
 Mesh::~Mesh()
 {
-    DebugLog(LogType::Info, "Calling Mesh destructor\n");
-
     if (_render_context != nullptr) {
         delete _render_context;
     }
@@ -299,7 +296,9 @@ void Mesh::Render(Renderer *renderer, Camera *cam) {
 
 }
 
-void Mesh::RenderVk(VkCommandBuffer *cmd, VkRenderer *vk_renderer, Camera *cam) {
+void Mesh::RenderVk(RendererFrame *frame, VkRenderer *vk_renderer, Camera *cam) {
+    AssertThrow(frame != nullptr);
+    VkCommandBuffer cmd = *frame->command_buffer;
     if (!is_created) {
         _render_context = new RenderContext(this, vk_renderer);
         _render_context->Create(cmd);
