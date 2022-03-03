@@ -24,6 +24,25 @@
 
 namespace hyperion {
 
+#define DEFAULT_PENDING_FRAMES_COUNT 2
+
+class RendererFrame {
+    void CreateSyncObjects();
+    void DestroySyncObjects();
+public:
+    void Create(RendererDevice *device, VkCommandBuffer *cmd);
+    void Destroy();
+
+    VkCommandBuffer *command_buffer;
+    /* Sync objects for each frame */
+    VkSemaphore sp_swap_acquire;
+    VkSemaphore sp_swap_release;
+    VkFence     fc_queue_submit;
+
+    RendererDevice *creation_device = nullptr;
+};
+
+
 class RendererQueue {
 public:
     RendererQueue();
@@ -56,19 +75,22 @@ class VkRenderer {
         VkPhysicalDeviceProperties &out_properties,
         VkPhysicalDeviceFeatures &out_features);
 
-    void CreateSyncObjects();
-    void DestroySyncObjects();
     /* Setup debug mode */
     void SetupDebug();
+
+    void AllocatePendingFrames();
+    void CleanupPendingFrames();
 public:
     VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name);
     void Initialize(bool load_debug_layers=false);
     void CreateSurface();
 
-    VkResult AcquireNextImage(uint32_t *image_index);
-    void     StartFrame(uint32_t *image_index);
-    void     EndFrame(uint32_t *image_index);
-    void     DrawFrame(uint32_t frame_index);
+    RendererFrame *GetNextFrame();
+
+    VkResult AcquireNextImage(RendererFrame *frame);
+    void     StartFrame(RendererFrame *frame);
+    void     EndFrame(RendererFrame *frame);
+    void     DrawFrame(RendererFrame *frame);
 
     void SetValidationLayers(std::vector<const char *> _layers);
     RendererDevice *GetRendererDevice();
@@ -85,6 +107,9 @@ public:
     void Destroy();
 
     std::vector<const char *> requested_device_extensions;
+
+    uint16_t frames_to_allocate = DEFAULT_PENDING_FRAMES_COUNT;
+
     const char *app_name;
     const char *engine_name;
 private:
@@ -94,10 +119,11 @@ private:
     VkInstance instance = nullptr;
     VkSurfaceKHR surface = nullptr;
 
-    VkSemaphore sp_swap_acquire;
-    VkSemaphore sp_swap_release;
-    VkFence     fc_queue_submit;
+    std::vector<RendererFrame *> pending_frames;
+    RendererFrame *current_frame = nullptr;
+    int frames_index = 0;
 
+    uint32_t acquired_frames_index = 0;
 
     VkQueue queue_graphics;
     VkQueue queue_present;

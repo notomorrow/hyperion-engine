@@ -86,7 +86,8 @@ void RendererPipeline::CreateCommandPool() {
     AssertThrowMsg(result == VK_SUCCESS, "Could not create Vulkan command pool\n");
 }
 
-void RendererPipeline::CreateCommandBuffers() {
+void RendererPipeline::CreateCommandBuffers(uint16_t count) {
+    AssertThrow(count >= 1);
     this->command_buffers.resize(this->swapchain->framebuffers.size());
 
     VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
@@ -342,7 +343,7 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
             ->AddDescriptor(0, 64, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHADER_STAGE_VERTEX_BIT);
 
     auto descriptor_pool_result = descriptor_pool.Create(device, 0);
-    AssertThrow(descriptor_pool_result, "Error creating descriptor pool! Message was: %s\n", descriptor_pool_result.message);
+    AssertThrowMsg(descriptor_pool_result, "Error creating descriptor pool! Message was: %s\n", descriptor_pool_result.message);
 
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};

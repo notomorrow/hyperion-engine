@@ -29,7 +29,7 @@ public:
     void SetDynamicStates(const std::vector<VkDynamicState> &_states);
 
     void CreateCommandPool();
-    void CreateCommandBuffers();
+    void CreateCommandBuffers(uint16_t count);
 
     void UpdateDynamicStates(VkCommandBuffer cmd);
     void SetViewport(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);

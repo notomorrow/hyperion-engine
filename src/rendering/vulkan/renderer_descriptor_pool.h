@@ -3,6 +3,8 @@
 
 #include "renderer_result.h"
 
+#include "renderer_descriptor_set.h"
+
 #include <vulkan/vulkan.h>
 
 #include <unordered_map>

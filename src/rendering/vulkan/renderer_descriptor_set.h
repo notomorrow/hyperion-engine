@@ -2,7 +2,6 @@
 #define HYPERION_RENDERER_DESCRIPTOR_SET_H
 
 #include "renderer_descriptor.h"
-#include "renderer_descriptor_pool.h"
 #include "renderer_result.h"
 
 #include <vector>
