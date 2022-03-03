@@ -18,10 +18,19 @@ public:
     RendererResult Create(RendererDevice *device, RendererPipeline *pipeline);
     RendererResult Destroy(RendererDevice *device);
 
+    inline RendererGPUImage *GetGPUImage() { return m_image; }
+    inline const RendererGPUImage *GetGPUImage() const { return m_image; }
+
+    inline Texture::TextureInternalFormat GetTextureFormat() const { return m_format; }
+    inline Texture::TextureType GetTextureType() const { return m_type; }
+
+    inline VkFormat GetImageFormat() const { return ToVkFormat(m_format); }
+    inline VkImageType GetImageType() const { return ToVkType(m_type); }
+
+private:
     static VkFormat ToVkFormat(Texture::TextureInternalFormat);
     static VkImageType ToVkType(Texture::TextureType);
 
-private:
     size_t m_width;
     size_t m_height;
     size_t m_depth;

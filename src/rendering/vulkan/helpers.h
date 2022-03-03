@@ -1,28 +1,50 @@
 #ifndef HYPERION_RENDERER_HELPERS_H
 #define HYPERION_RENDERER_HELPERS_H
 
+#include "renderer_result.h"
+#include "renderer_device.h"
+
 #include <vulkan/vulkan.h>
+
+#include <vector>
+
+#define DEFAULT_FENCE_TIMEOUT 100000000000
 
 namespace hyperion {
 namespace helpers {
-// https://vulkan-tutorial.com/Texture_mapping/Images
+
 class SingleTimeCommands {
 public:
-    template <class LambdaFunction>
-    inline RendererResult Execute(RendererDevice *device, LambdaFunction execute_commands)
+    inline void Push(const std::function<RendererResult(VkCommandBuffer)> &fn)
     {
-        Begin(device);
+        m_functions.push_back(fn);
+    }
 
-        auto result = execute_commands(cmd);
+    inline RendererResult Execute(RendererDevice *device)
+    {
+        auto begin_result = Begin(device);
+        if (!begin_result) return begin_result;
 
-        End(device);
+        RendererResult result(RendererResult::RENDERER_OK);
+
+        for (auto &fn : m_functions) {
+            result = m_functions.front()(cmd);
+
+            if (!result) {
+                break;
+            }
+        }
+
+        m_functions.clear();
+
+        auto end_result = End(device);
+        if (!end_result) return end_result;
 
         return result;
     }
 
-    inline
-    RendererResult TransitionImageLayout(RendererDevice *device, VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout) {
-        return Execute(device, [this, image, format, old_layout, new_layout](VkCommandBuffer cmd) -> RendererResult {
+    inline void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout) {
+        Push([this, image, format, old_layout, new_layout](VkCommandBuffer cmd) -> RendererResult {
             VkImageMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             barrier.oldLayout = old_layout;
@@ -74,7 +96,7 @@ public:
                 return RendererResult(RendererResult::RENDERER_ERR, "Unsupported image layout transition");
             }
 
-            vkCmdPipelineBarrier(cmd, src, dst, {}, 0, nullptr, 0, nullptr, 1, &barrier);
+            vkCmdPipelineBarrier(cmd, src, dst, 0, 0, nullptr, 0, nullptr, 1, &barrier);
             
             return RendererResult(RendererResult::RENDERER_OK);
         });
@@ -85,7 +107,9 @@ public:
     QueueFamilyIndices family_indices;
 
 private:
-    inline VkCommandBuffer Begin(RendererDevice *device)
+    std::vector<std::function<RendererResult(VkCommandBuffer)>> m_functions;
+
+    inline RendererResult Begin(RendererDevice *device)
     {
         VkCommandBufferAllocateInfo alloc_info{};
         alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -93,32 +117,59 @@ private:
         alloc_info.commandPool = pool;
         alloc_info.commandBufferCount = 1;
 
-        vkAllocateCommandBuffers(device->GetDevice(), &alloc_info, &cmd);
+        if (vkAllocateCommandBuffers(device->GetDevice(), &alloc_info, &cmd) != VK_SUCCESS) {
+            return RendererResult(RendererResult::RENDERER_ERR, "Failed to allocate command buffers");
+        }
 
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-        vkBeginCommandBuffer(cmd, &begin_info);
+        if (vkBeginCommandBuffer(cmd, &begin_info) != VK_SUCCESS) {
+            vkFreeCommandBuffers(device->GetDevice(), pool, 1, &cmd);
+            return RendererResult(RendererResult::RENDERER_ERR, "Failed to begin command buffer");
+        }
 
-        return cmd;
+        return RendererResult(RendererResult::RENDERER_OK);
     }
 
-    inline void End(RendererDevice *device)
+    inline RendererResult End(RendererDevice *device)
     {
         auto queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
 
-        vkEndCommandBuffer(cmd);
+        if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
+            return RendererResult(RendererResult::RENDERER_ERR, "Failed to end command buffer");
+        }
 
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &cmd;
 
-        vkQueueSubmit(queue_graphics, 1, &submit_info, VK_NULL_HANDLE);
-        vkQueueWaitIdle(queue_graphics);
+        // Create fence to ensure that the command buffer has finished executing
+        VkFenceCreateInfo fence_create_info{};
+        fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_create_info.flags = 0;
 
+        VkFence fence;
+        if (vkCreateFence(device->GetDevice(), &fence_create_info, nullptr, &fence) != VK_SUCCESS) {
+            return RendererResult(RendererResult::RENDERER_ERR, "Failed to create fence");
+        }
+
+        // Submit to the queue
+        if (vkQueueSubmit(queue_graphics, 1, &submit_info, fence) != VK_SUCCESS) {
+            return RendererResult(RendererResult::RENDERER_ERR, "Failed to submit fence to queue");
+        }
+
+        // Wait for the fence to signal that command buffer has finished executing
+        if (vkWaitForFences(device->GetDevice(), 1, &fence, true, DEFAULT_FENCE_TIMEOUT) != VK_SUCCESS) {
+            return RendererResult(RendererResult::RENDERER_ERR, "Failed to wait for fences");
+        }
+
+        vkDestroyFence(device->GetDevice(), fence, nullptr);
         vkFreeCommandBuffers(device->GetDevice(), pool, 1, &cmd);
+
+        return RendererResult(RendererResult::RENDERER_OK);
     }
 };
 

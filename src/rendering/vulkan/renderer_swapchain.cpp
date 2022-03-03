@@ -38,6 +38,7 @@ void RendererSwapchain::RetrieveImageHandles() {
     /* Query for the size, as we will need to create swap chains with more images
      * in the future for more complex applications. */
     vkGetSwapchainImagesKHR(this->renderer_device->GetDevice(), this->swapchain, &image_count, nullptr);
+    DebugLog(LogType::Warn, "image count %d\n", image_count);
     this->images.resize(image_count);
     vkGetSwapchainImagesKHR(this->renderer_device->GetDevice(), this->swapchain, &image_count, this->images.data());
     DebugLog(LogType::Info, "Retrieved Swapchain images\n");

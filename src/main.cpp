@@ -586,7 +586,8 @@ int main()
 
     auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/brdfLUT.png");
     RendererImage image(texture->GetWidth(), texture->GetHeight(), 1, texture->GetInternalFormat(), texture->GetTextureType(), texture->GetBytes());
-    image.Create(device, pipeline);
+    auto image_create_result = image.Create(device, pipeline);
+    if (!image_create_result) DebugLog(LogType::Error, "failed to create image!\n");
 
     //float data[] = { 1.0f, 0.0f, 0.0f, 1.0f };
     //set.GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);

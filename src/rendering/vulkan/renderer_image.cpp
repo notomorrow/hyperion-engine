@@ -36,11 +36,11 @@ RendererImage::~RendererImage()
 
 RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *pipeline)
 {
-    VkFormat format = ToVkFormat(m_format); // TODO: pick best available image type
+    VkFormat format = GetImageFormat(); // TODO: pick best available image type
 
     VkImageCreateInfo image_info{};
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.imageType = ToVkType(m_type);
+    image_info.imageType = GetImageType();
     image_info.extent.width = uint32_t(m_width);
     image_info.extent.height = uint32_t(m_height);
     image_info.extent.depth = uint32_t(m_depth);
@@ -61,25 +61,50 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
     // safe to delete m_bytes here?
 
     m_image = new RendererGPUImage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-    m_image->Create(device, m_size, &image_info);
+
+    auto image_create_result = m_image->Create(device, m_size, &image_info);
+    if (!image_create_result) return image_create_result;
 
     auto commands = pipeline->GetSingleTimeCommands();
 
     { // transition from 'undefined' layout state into one optimal for transfer
-        auto transition_layout_result = commands.TransitionImageLayout(
-            device,
+        /*commands.TransitionImageLayout(
             m_image->image,
             format,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-        );
+        );*/
 
-        if (!transition_layout_result) return transition_layout_result;
-    }
 
-    {
+        VkImageMemoryBarrier acquire_barrier{},
+                             release_barrier{};
+
+        commands.Push([this, &image_info, &acquire_barrier](VkCommandBuffer cmd) {
+            VkImageSubresourceRange range;
+            range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            range.baseMipLevel = 0;
+            range.levelCount = 1;
+            range.baseArrayLayer = 0;
+            range.layerCount = 1;
+
+            acquire_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+
+            acquire_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            acquire_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            acquire_barrier.image = m_image->image;
+            acquire_barrier.subresourceRange = range;
+
+            acquire_barrier.srcAccessMask = 0;
+            acquire_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            //barrier the image into the transfer-receive layout
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &acquire_barrier);
+
+            return RendererResult(RendererResult::RENDERER_OK);
+        });
+
         // copy from staging to image
-        auto copy_staging_buffer_result = commands.Execute(device, [this, &image_info](VkCommandBuffer cmd) {
+        commands.Push([this, &image_info](VkCommandBuffer cmd) {
             VkBufferImageCopy region{};
             region.bufferOffset = 0;
             region.bufferRowLength = 0;
@@ -103,27 +128,41 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
             return RendererResult(RendererResult::RENDERER_OK);
         });
 
-        if (!copy_staging_buffer_result) return copy_staging_buffer_result;
-    }
-
-    { // transition from the previous layout state into a shader read-only state
-        auto transition_layout_result = commands.TransitionImageLayout(
-            device,
+        // transition from the previous layout state into a shader read-only state
+        /*commands.TransitionImageLayout(
             m_image->image,
             format,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        );
+        );*/
 
-        if (!transition_layout_result) return transition_layout_result;
+        commands.Push([this, &acquire_barrier, &release_barrier](VkCommandBuffer cmd) {
+            release_barrier = acquire_barrier;
+
+            release_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            release_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            release_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            release_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            //barrier the image into the shader readable layout
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &release_barrier);
+
+            return RendererResult(RendererResult::RENDERER_OK);
+        });
+
+        // execute command stack
+        auto commands_result = commands.Execute(device);
+        if (!commands_result) return commands_result;
     }
 
+    // TODO: memory pool to re-use staging buffers
 
     // destroy staging buffer
     m_staging_buffer->Destroy(device);
     delete m_staging_buffer;
     m_staging_buffer = nullptr;
 
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
 RendererResult RendererImage::Destroy(RendererDevice *device)
@@ -141,7 +180,6 @@ RendererResult RendererImage::Destroy(RendererDevice *device)
 
 VkFormat RendererImage::ToVkFormat(Texture::TextureInternalFormat fmt)
 {
-
     switch (fmt) {
     case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R8: return VK_FORMAT_R8_UNORM;
     case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG8: return VK_FORMAT_R8G8_UNORM;
