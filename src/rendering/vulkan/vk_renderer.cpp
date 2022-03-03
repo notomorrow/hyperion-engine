@@ -31,38 +31,43 @@ void VkRenderer::SetCurrentPipeline(RendererPipeline *pipeline) {
     this->pipeline = pipeline;
 }
 
-VkResult VkRenderer::AcquireNextImage(uint32_t *image_index) {
-    const VkDevice render_device = this->device->GetDevice();
+VkResult VkRenderer::AcquireNextImage(RendererFrame *frame) {
+    //const VkDevice render_device = this->device->GetDevice();
+    AssertThrow(frame != nullptr && this->swapchain != nullptr);
+    VkDevice render_device = frame->creation_device->GetDevice();
+    if (frame->fc_queue_submit != VK_NULL_HANDLE) {
+        /* Wait for our queue fence which should have hopefully completed multiple frames
+         * earlier. This function should not block at all, but we do this as a precaution. */
+        vkWaitForFences(render_device, 1, &frame->fc_queue_submit, true, UINT64_MAX);
+        vkResetFences(render_device, 1, &frame->fc_queue_submit);
+    }
 
-    VkResult result = vkAcquireNextImageKHR(render_device, this->swapchain->swapchain, UINT64_MAX, this->sp_swap_acquire, VK_NULL_HANDLE,
-                          image_index);
+    VkResult result = vkAcquireNextImageKHR(render_device, this->swapchain->swapchain, UINT64_MAX, frame->sp_swap_acquire, VK_NULL_HANDLE,
+                          &this->acquired_frames_index);
     if (result != VK_SUCCESS)
         return result;
 
-    if (this->fc_queue_submit != VK_NULL_HANDLE) {
-        /* Wait for our queue fence which should have hopefully completed multiple frames
-         * earlier. This function should not block at all, but we do this as a precaution. */
-        vkWaitForFences(render_device, 1, &this->fc_queue_submit, true, UINT64_MAX);
-        vkResetFences(render_device, 1, &this->fc_queue_submit);
-    }
-    //vkResetCommandBuffer(this->GetCurrentPipeline()->command_buffers[*image_index], 0);
-    if (this->GetCurrentPipeline()->command_pool != VK_NULL_HANDLE)
-        vkResetCommandPool(render_device, this->GetCurrentPipeline()->command_pool, 0);
+    vkResetCommandBuffer(*(frame->command_buffer), 0);
+    //if (this->GetCurrentPipeline()->command_pool != VK_NULL_HANDLE)
+    //    vkResetCommandPool(render_device, this->GetCurrentPipeline()->command_pool, 0);
 
     return VK_SUCCESS;
 }
 
-void VkRenderer::StartFrame(uint32_t *image_index) {
-    auto new_image_result = this->AcquireNextImage(image_index);
+void VkRenderer::StartFrame(RendererFrame *frame) {
+    AssertThrow(frame != nullptr);
+
+    auto new_image_result = this->AcquireNextImage(frame);
+
     if (new_image_result == VK_SUBOPTIMAL_KHR || new_image_result == VK_ERROR_OUT_OF_DATE_KHR) {
         vkDeviceWaitIdle(this->device->GetDevice());
         /* TODO: regenerate framebuffers and swapchain */
     }
-    //this->pipeline->StartRenderPass(*image_index);
+    this->pipeline->StartRenderPass(frame->command_buffer, this->acquired_frames_index);
 }
 
-void VkRenderer::EndFrame(uint32_t *image_index) {
-    //this->pipeline->EndRenderPass(*image_index);
+void VkRenderer::EndFrame(RendererFrame *frame) {
+    this->pipeline->EndRenderPass(frame->command_buffer);
 
     /* Render objects to the swapchain using our graphics pipeline */
     //this->pipeline->DoRenderPass();
@@ -71,32 +76,31 @@ void VkRenderer::EndFrame(uint32_t *image_index) {
     VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &this->sp_swap_acquire;
+    submit_info.pWaitSemaphores = &frame->sp_swap_acquire;
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &this->sp_swap_release;
+    submit_info.pSignalSemaphores = &frame->sp_swap_release;
 
     submit_info.pWaitDstStageMask = wait_stages;
-    //DebugLog(LogType::Info, "Image index set to [%d]\n", *image_index);
 
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &this->pipeline->command_buffers[*image_index];
+    submit_info.pCommandBuffers = frame->command_buffer;
 
-    auto result = vkQueueSubmit(this->queue_graphics, 1, &submit_info, this->fc_queue_submit);
+    auto result = vkQueueSubmit(this->queue_graphics, 1, &submit_info, frame->fc_queue_submit);
 
     AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");
 }
 
 
-void VkRenderer::DrawFrame(uint32_t frame_index) {
+void VkRenderer::DrawFrame(RendererFrame *frame) {
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &this->sp_swap_release;
+    present_info.pWaitSemaphores = &frame->sp_swap_release;
 
     AssertThrow(this->swapchain != nullptr || this->swapchain->swapchain != nullptr);
 
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &this->swapchain->swapchain;
-    present_info.pImageIndices = &frame_index;
+    present_info.pImageIndices = &this->acquired_frames_index;
     present_info.pResults = nullptr;
 
     //vkQueueWaitIdle(this->queue_present);
@@ -146,8 +150,20 @@ SystemWindow *VkRenderer::GetCurrentWindow() {
     return this->window;
 }
 
-void VkRenderer::CreateSyncObjects() {
-    VkDevice rd_device = this->device->GetDevice();
+void RendererFrame::Create(RendererDevice *device, VkCommandBuffer *cmd) {
+    this->creation_device = device;
+    this->command_buffer = cmd;
+    this->CreateSyncObjects();
+}
+
+void RendererFrame::Destroy() {
+    this->DestroySyncObjects();
+}
+
+void RendererFrame::CreateSyncObjects() {
+    AssertThrow(this->creation_device != nullptr);
+
+    VkDevice rd_device = this->creation_device->GetDevice();
     VkSemaphoreCreateInfo semaphore_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     auto sa_result = vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_acquire);
     auto sr_result = vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_release);
@@ -162,8 +178,10 @@ void VkRenderer::CreateSyncObjects() {
     AssertThrowMsg((sa_result == VK_SUCCESS && sr_result == VK_SUCCESS), "Error creating render semaphores!\n");
 }
 
-void VkRenderer::DestroySyncObjects() {
-    VkDevice rd_device = this->device->GetDevice();
+void RendererFrame::DestroySyncObjects() {
+    AssertThrow(this->creation_device != nullptr);
+
+    VkDevice rd_device = this->creation_device->GetDevice();
     vkDeviceWaitIdle(rd_device);
 
     vkDestroySemaphore(rd_device, this->sp_swap_acquire, nullptr);
@@ -176,6 +194,29 @@ VkRenderer::VkRenderer(SystemSDL &_system, const char *app_name, const char *eng
     this->app_name = app_name;
     this->engine_name = engine_name;
     this->device = nullptr;
+}
+
+void VkRenderer::AllocatePendingFrames() {
+    AssertThrow(this->frames_to_allocate >= 1);
+    AssertThrowMsg(this->pipeline->command_buffers.size() >= this->frames_to_allocate,
+                   "Insufficient pipeline command buffers\n");
+
+    this->pending_frames.reserve(this->frames_to_allocate);
+    DebugLog(LogType::Debug, "Allocating [%d] frames\n", this->frames_to_allocate);
+    for (uint16_t i = 0; i < this->frames_to_allocate; i++) {
+        auto *frame = new RendererFrame;
+        VkCommandBuffer *cmd = &this->pipeline->command_buffers[i];
+        frame->Create(this->device, cmd);
+        this->pending_frames.push_back(frame);
+    }
+}
+
+RendererFrame *VkRenderer::GetNextFrame() {
+    AssertThrow(this->pending_frames.size());
+    if (this->frames_index >= this->frames_to_allocate)
+        this->frames_index = 0;
+    this->current_frame = this->pending_frames[this->frames_index++];
+    return this->current_frame;
 }
 
 void VkRenderer::Initialize(bool load_debug_layers) {
@@ -227,14 +268,20 @@ void VkRenderer::Initialize(bool load_debug_layers) {
     /* Set up our swapchain for our GPU to present our image.
      * This is essentially a "root" framebuffer. */
     this->InitializeSwapchain();
-    this->CreateSyncObjects();
+}
+
+void VkRenderer::CleanupPendingFrames() {
+    for (auto &frame : this->pending_frames) {
+        frame->Destroy();
+        delete frame;
+    }
 }
 
 void VkRenderer::Destroy() {
     /* Wait for the GPU to finish, we need to be in an idle state. */
     vkDeviceWaitIdle(this->device->GetDevice());
     /* Cleanup our semaphores and fences! */
-    this->DestroySyncObjects();
+    this->CleanupPendingFrames();
 
     /* Destroy our pipeline(before everything else!) */
     if (this->pipeline != nullptr)
@@ -271,72 +318,40 @@ void VkRenderer::CreateSurface() {
     std::cout << "Created window surface\n";
 }
 
-VkPhysicalDevice VkRenderer::PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices,
-    VkPhysicalDeviceProperties &out_properties,
-    VkPhysicalDeviceFeatures &out_features)
-{
-    DeviceRequirementsResult device_requirements_result(
-        DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR,
-        "No device found"
-    );
+VkPhysicalDevice VkRenderer::PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices) {
+    VkPhysicalDeviceProperties properties;
+    VkPhysicalDeviceFeatures   features;
 
     /* Check for a discrete/dedicated GPU with geometry shaders */
     for (const auto &_device : _devices) {
-        vkGetPhysicalDeviceProperties(_device, &out_properties);
-        vkGetPhysicalDeviceFeatures(_device, &out_features);
+        vkGetPhysicalDeviceProperties(_device, &properties);
+        vkGetPhysicalDeviceFeatures(_device, &features);
 
-        if (out_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-            device_requirements_result = DeviceSatisfiesMinimumRequirements(out_features, out_properties);
-
-            if (device_requirements_result.result == DeviceRequirementsResult::DEVICE_REQUIREMENTS_OK) {
-                DebugLog(LogType::Info, "Select discrete device %s\n", out_properties.deviceName);
-
-                return _device;
-            }
+        if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && features.geometryShader) {
+            std::cout << "select device " << properties.deviceName << "\n";
+            return _device;
         }
     }
 
-    /* No discrete gpu found, look for a device which satisfies requirements */
+    /* No discrete gpu found, look for a device with at least geometry shaders */
     for (const auto &_device : _devices) {
-        vkGetPhysicalDeviceProperties(_device, &out_properties);
-        vkGetPhysicalDeviceFeatures(_device, &out_features);
-
-        device_requirements_result = DeviceSatisfiesMinimumRequirements(out_features, out_properties);
-
-        if (device_requirements_result.result == DeviceRequirementsResult::DEVICE_REQUIREMENTS_OK) {
-            DebugLog(LogType::Info, "Select non-discrete device %s\n", out_properties.deviceName);
-
+        vkGetPhysicalDeviceFeatures(_device, &features);
+        if (features.geometryShader) {
             return _device;
         }
     }
 
     AssertExit(!_devices.empty());
 
-    auto _device = _devices[0];
-
-    vkGetPhysicalDeviceProperties(_device, &out_properties);
-    vkGetPhysicalDeviceFeatures(_device, &out_features);
-    device_requirements_result = DeviceSatisfiesMinimumRequirements(out_features, out_properties);
-
-    DebugLog(
-        LogType::Error,
-        "No device found which satisfied the minimum requirements; selecting device %s.\nThe error message was: %s\n",
-        out_properties.deviceName,
-        device_requirements_result.message
-    );
-
     /* well shit, we'll just hope for the best at this point */
-    return _device;
+    return _devices[0];
 }
 
 RendererDevice *VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_device) {
     /* If no physical device passed in, we select one */
-    VkPhysicalDeviceFeatures features;
-    VkPhysicalDeviceProperties properties;
-
     if (physical_device == nullptr) {
         std::vector<VkPhysicalDevice> physical_devices = this->EnumeratePhysicalDevices();
-        physical_device = this->PickPhysicalDevice(physical_devices, properties, features);
+        physical_device = this->PickPhysicalDevice(physical_devices);
     }
 
     if (this->device == nullptr) {
@@ -344,7 +359,7 @@ RendererDevice *VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_d
     }
 
     this->device->SetRequiredExtensions(this->requested_device_extensions);
-    this->device->SetPhysicalDevice(physical_device, properties, features);
+    this->device->SetPhysicalDevice(physical_device);
     this->device->SetRenderSurface(this->surface);
 
     QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
@@ -377,8 +392,11 @@ void VkRenderer::InitializePipeline(RendererShader *render_shader) {
 
     /* Create our synchronization objects */
     this->pipeline->CreateCommandPool();
-    this->pipeline->CreateCommandBuffers();
-    DebugLog(LogType::Info, "Created command buffers+pool!\n");
+    /* Our command pool will have a command buffer for each frame we can render to. */
+    this->pipeline->CreateCommandBuffers(this->frames_to_allocate);
+    DebugLog(LogType::Info, "Created command buffers\n");
+
+    this->AllocatePendingFrames();
 }
 
 void VkRenderer::InitializeSwapchain() {
@@ -404,25 +422,5 @@ std::vector<VkPhysicalDevice> VkRenderer::EnumeratePhysicalDevices() {
 
     return devices;
 }
-
-
-#define REQUIRES_VK_FEATURE(feature) \
-    do { \
-        if (!(feature)) { \
-            return DeviceRequirementsResult(DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR, "Feature constraint " #feature " not satisfied."); \
-        } \
-    } while (0)
-
-VkRenderer::DeviceRequirementsResult VkRenderer::DeviceSatisfiesMinimumRequirements(VkPhysicalDeviceFeatures features, VkPhysicalDeviceProperties properties)
-{
-    REQUIRES_VK_FEATURE(features.geometryShader);
-    REQUIRES_VK_FEATURE(properties.limits.maxDescriptorSetSamplers >= 16);
-    REQUIRES_VK_FEATURE(properties.limits.maxDescriptorSetUniformBuffers >= 16);
-    std::cout << "MAX DESCRIPTOR SET SAMPLERS" << properties.limits.maxDescriptorSetSamplers << "\n";
-
-    return DeviceRequirementsResult(DeviceRequirementsResult::DEVICE_REQUIREMENTS_OK);
-}
-
-#undef REQUIRES_VK_FEATURE
 
 } // namespace hyperion

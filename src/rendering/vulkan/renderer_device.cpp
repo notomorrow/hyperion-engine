@@ -39,6 +39,7 @@ void RendererDevice::SetRequiredExtensions(const std::vector<const char *> &exte
 }
 
 VkDevice RendererDevice::GetDevice() {
+    AssertThrow(this->device != nullptr);
     return this->device;
 }
 VkPhysicalDevice RendererDevice::GetPhysicalDevice() {
@@ -217,7 +218,7 @@ VkDevice RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_
     VkDevice _device;
     VkResult result = vkCreateDevice(this->physical, &create_info, nullptr, &_device);
 
-    AssertThrow(result == VK_SUCCESS, "Could not create RendererDevice!");
+    AssertThrowMsg(result == VK_SUCCESS, "Could not create RendererDevice!");
 
     this->SetDevice(_device);
 

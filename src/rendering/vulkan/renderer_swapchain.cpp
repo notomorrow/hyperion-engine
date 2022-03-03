@@ -110,6 +110,7 @@ void RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices q
     this->image_format = this->surface_format.format;
 
     uint32_t image_count = this->support_details.capabilities.minImageCount + 1;
+    DebugLog(LogType::Debug, "Min images required: %d\n", this->support_details.capabilities.minImageCount);
 
     VkSwapchainCreateInfoKHR create_info{VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
     create_info.surface = surface;
@@ -152,6 +153,7 @@ void RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices q
     DebugLog(LogType::Info, "Created Swapchain!\n");
     this->RetrieveImageHandles();
     this->CreateImageViews();
+
 }
 
 void RendererSwapchain::Destroy() {
