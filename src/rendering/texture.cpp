@@ -3,6 +3,7 @@
 #include "../core_engine.h"
 #include "../gl_util.h"
 #include "../util.h"
+#include "../math/math_util.h"
 
 namespace hyperion {
 
@@ -41,6 +42,19 @@ Texture::TextureBaseFormat Texture::GetBaseFormat(TextureInternalFormat fmt)
     }
 
     unexpected_value_msg(format, "Unhandled texture format case");
+}
+
+Texture::TextureInternalFormat Texture::FormatChangeNumComponents(TextureInternalFormat fmt, uint8_t new_num_components)
+{
+    if (new_num_components == 0) {
+        return Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
+    }
+
+    new_num_components = MathUtil::Clamp(new_num_components, uint8_t(1), uint8_t(4));
+
+    int current_num_components = int(NumComponents(GetBaseFormat(fmt)));
+    
+    return Texture::TextureInternalFormat(int(fmt) + int(new_num_components) - current_num_components);
 }
 
 Texture::Texture(TextureType texture_type)

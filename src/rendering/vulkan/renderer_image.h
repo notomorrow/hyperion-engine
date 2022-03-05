@@ -26,6 +26,7 @@ public:
 
     inline VkFormat GetImageFormat() const { return ToVkFormat(m_format); }
     inline VkImageType GetImageType() const { return ToVkType(m_type); }
+    inline VkImageUsageFlags GetImageUsageFlags() const { return VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT; }
 
 private:
     static VkFormat ToVkFormat(Texture::TextureInternalFormat);
@@ -40,6 +41,7 @@ private:
     unsigned char *m_bytes;
 
     size_t m_size;
+    size_t m_bpp;
     RendererStagingBuffer *m_staging_buffer;
     RendererGPUImage *m_image;
 };

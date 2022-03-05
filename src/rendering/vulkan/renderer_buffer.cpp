@@ -157,7 +157,9 @@ RendererResult RendererGPUImage::Create(RendererDevice *device, size_t size, VkI
         return RendererResult(RendererResult::RENDERER_ERR, "Could not allocate image memory!");
     }
 
-    vkBindImageMemory(vk_device, this->image, this->memory, 0);
+    if (vkBindImageMemory(vk_device, this->image, this->memory, 0) != VK_SUCCESS) {
+        return RendererResult(RendererResult::RENDERER_ERR, "Could not bind image memory!");
+    }
 
     return RendererResult(RendererResult::RENDERER_OK);
 }

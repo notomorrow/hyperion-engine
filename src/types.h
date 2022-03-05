@@ -5,8 +5,8 @@
 
 namespace hyperion {
 
-using byte = uint8_t;
-using ibyte = int8_t;
+using ubyte = uint8_t;
+using sbyte = int8_t;
 
 } // namespace hyperion
 

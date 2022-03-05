@@ -568,6 +568,16 @@ int main()
     renderer.Initialize(true);
 
     RendererDevice *device = renderer.GetRendererDevice();
+    RendererPipeline *pipeline = renderer.GetCurrentPipeline();
+
+    /* Descriptor sets */
+    RendererGPUBuffer test_gpu_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
+    // test image
+    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
+    RendererImage image(texture->GetWidth(), texture->GetHeight(), 1, texture->GetInternalFormat(), texture->GetTextureType(), texture->GetBytes());
+    RendererImageView test_image_view;
+    RendererSampler test_sampler(Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR, Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE);
 
     RendererShader shader;
     shader.AttachShader(device, SPIRVObject{ SPIRVObject::Type::Vertex, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
@@ -576,15 +586,34 @@ int main()
 
     renderer.InitializePipeline(&shader);
 
+    pipeline->descriptor_pool
+        .AddDescriptorSet()
+        .AddDescriptor(std::make_unique<RendererBufferDescriptor>(0, non_owning_ptr(&test_gpu_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT))
+        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(1, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+
+    // test data for descriptors
+
+    struct MainShaderData {
+        Matrix4 model;
+        Matrix4 pv;
+    };
+    test_gpu_buffer.Create(device, sizeof(MainShaderData));
+    //renderer.pipeline->CreateCommandPool();
+
+    auto image_create_result = image.Create(device, pipeline);
+    AssertThrowMsg(image_create_result, "%s", image_create_result.message);
+
+    auto image_view_result = test_image_view.Create(device, &image);
+    AssertThrowMsg(image_view_result, "%s", image_view_result.message);
+
+    auto sampler_result = test_sampler.Create(device, &test_image_view);
+    AssertThrowMsg(sampler_result, "%s", sampler_result.message);
+
+
+    renderer.pipeline->Rebuild(&shader);
     auto mesh = MeshFactory::CreateCube();
-    RendererPipeline *pipeline = renderer.GetCurrentPipeline();
 
     float timer = 0.0;
-
-    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/brdfLUT.png");
-    RendererImage image(texture->GetWidth(), texture->GetHeight(), 1, texture->GetInternalFormat(), texture->GetTextureType(), texture->GetBytes());
-    auto image_create_result = image.Create(device, pipeline);
-    if (!image_create_result) DebugLog(LogType::Error, "failed to create image!\n");
 
     //float data[] = { 1.0f, 0.0f, 0.0f, 1.0f };
     //set.GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);
@@ -612,11 +641,6 @@ int main()
     uint64_t tick_now = SDL_GetPerformanceCounter();
     uint64_t tick_last = 0;
     double delta_time = 0;
-
-    struct MainShaderData {
-        Matrix4 model;
-        Matrix4 pv;
-    };
 
     while (running) {
         tick_last = tick_now;
@@ -652,7 +676,7 @@ int main()
 
         //tf.SetScale(Vector3(0.25f) + std::cos(timer));
         //tf.SetRotation(Quaternion(Vector3(0, 0, 1), std::sin(timer)));
-        pipeline->descriptor_pool.GetDescriptorSet(0)->GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(shad_data), (void *)&shad_data);
+        test_gpu_buffer.Copy(device, sizeof(shad_data), (void *)&shad_data);
         pipeline->descriptor_pool.BindDescriptorSets(*frame->command_buffer, pipeline->layout);
         mesh->RenderVk(frame, &renderer, nullptr);
 
@@ -661,7 +685,12 @@ int main()
     }
     mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
 
+
+    test_gpu_buffer.Destroy(device);
+    test_image_view.Destroy(device);
+    test_sampler.Destroy(device);
     image.Destroy(device);
+
     shader.Destroy();
     renderer.Destroy();
     delete window;

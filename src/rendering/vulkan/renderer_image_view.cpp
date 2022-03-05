@@ -26,6 +26,7 @@ RendererResult RendererImageView::Create(RendererDevice *device, RendererImage *
     viewInfo.image = image->GetGPUImage()->image;
     viewInfo.viewType = ToVkImageViewType(image->GetTextureType());
     viewInfo.format = image->GetImageFormat();
+
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = 1;

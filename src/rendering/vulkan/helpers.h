@@ -28,7 +28,7 @@ public:
         RendererResult result(RendererResult::RENDERER_OK);
 
         for (auto &fn : m_functions) {
-            result = m_functions.front()(cmd);
+            result = fn(cmd);
 
             if (!result) {
                 break;

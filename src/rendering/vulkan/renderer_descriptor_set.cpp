@@ -11,21 +11,11 @@ RendererDescriptorSet::~RendererDescriptorSet()
 {
 }
 
-RendererDescriptor *RendererDescriptorSet::AddDescriptor(uint32_t binding,
-    size_t size,
-    VkDescriptorType type,
-    VkBufferUsageFlags usage_flags,
-    VkShaderStageFlags stage_flags)
+RendererDescriptorSet &RendererDescriptorSet::AddDescriptor(std::unique_ptr<RendererDescriptor> &&descriptor)
 {
-    m_descriptors.emplace_back(std::make_unique<RendererDescriptor>(
-        binding,
-        size,
-        type,
-        usage_flags,
-        stage_flags
-    ));
+    m_descriptors.emplace_back(std::move(descriptor));
 
-    return m_descriptors.back().get();
+    return *this;
 }
 
 RendererResult RendererDescriptorSet::Create(RendererDevice *device, RendererDescriptorPool *pool)
@@ -37,27 +27,12 @@ RendererResult RendererDescriptorSet::Create(RendererDevice *device, RendererDes
     bindings.reserve(m_descriptors.size());
 
     for (auto &descriptor : m_descriptors) {
-        descriptor->Create(device);
+        RendererDescriptor::Info info{};
 
-        VkDescriptorSetLayoutBinding new_binding{};
-        new_binding.descriptorCount = 1;
-        new_binding.descriptorType = descriptor->m_type;
-        new_binding.pImmutableSamplers = nullptr;
-        new_binding.stageFlags = descriptor->m_stage_flags;
-        new_binding.binding = descriptor->m_binding;
+        descriptor->Create(device, &info);
 
-        bindings.push_back(new_binding);
-
-        VkWriteDescriptorSet new_write{};
-        new_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        new_write.pNext = nullptr;
-        new_write.descriptorCount = 1;
-        new_write.descriptorType = descriptor->m_type;
-        new_write.pBufferInfo = &descriptor->m_buffer_info;
-        new_write.pImageInfo = &descriptor->m_image_info;
-        new_write.dstBinding = descriptor->m_binding;
-
-        writes.push_back(new_write);
+        bindings.push_back(info.binding);
+        writes.push_back(info.write);
     }
 
     //build layout first
@@ -104,7 +79,6 @@ RendererResult RendererDescriptorSet::Destroy(RendererDevice *device)
     for (auto &descriptor : m_descriptors) {
         descriptor->Destroy(device);
     }
-
 
     // TODO: clear descriptor set
 

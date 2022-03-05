@@ -17,11 +17,8 @@ public:
     RendererDescriptorSet &operator=(const RendererDescriptorSet &other) = delete;
     ~RendererDescriptorSet();
 
-    RendererDescriptor *AddDescriptor(uint32_t binding,
-        size_t size,
-        VkDescriptorType type,
-        VkBufferUsageFlags usage_flags,
-        VkShaderStageFlags stage_flags);
+    // return this
+    RendererDescriptorSet &AddDescriptor(std::unique_ptr<RendererDescriptor> &&);
 
     inline RendererDescriptor *GetDescriptor(size_t index) { return m_descriptors[index].get(); }
     inline const RendererDescriptor *GetDescriptor(size_t index) const { return m_descriptors[index].get(); }

@@ -52,28 +52,10 @@ private:
 };
 
 class VkRenderer {
-    struct DeviceRequirementsResult {
-        enum {
-            DEVICE_REQUIREMENTS_OK = 0,
-            DEVICE_REQUIREMENTS_ERR = 1
-        } result;
-
-        const char *message;
-
-        DeviceRequirementsResult(decltype(result) result, const char *message = "")
-            : result(result), message(message) {}
-        DeviceRequirementsResult(const DeviceRequirementsResult &other)
-            : result(other.result), message(other.message) {}
-        inline operator bool() const { return result == DEVICE_REQUIREMENTS_OK; }
-    };
-
-    static DeviceRequirementsResult DeviceSatisfiesMinimumRequirements(VkPhysicalDeviceFeatures, VkPhysicalDeviceProperties);
     static bool CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
 
     std::vector<VkPhysicalDevice> EnumeratePhysicalDevices();
-    VkPhysicalDevice PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices,
-        VkPhysicalDeviceProperties &out_properties,
-        VkPhysicalDeviceFeatures &out_features);
+    VkPhysicalDevice PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices);
 
     /* Setup debug mode */
     void SetupDebug();
@@ -94,7 +76,7 @@ public:
 
     void SetValidationLayers(std::vector<const char *> _layers);
     RendererDevice *GetRendererDevice();
-    RendererDevice *InitializeRendererDevice(VkPhysicalDevice _physical_device=nullptr);
+    RendererDevice *InitializeRendererDevice(VkPhysicalDevice _physical_device = nullptr);
     void InitializeSwapchain();
     void InitializePipeline(RendererShader *shader);
 
@@ -112,6 +94,7 @@ public:
 
     const char *app_name;
     const char *engine_name;
+    RendererPipeline *pipeline = nullptr;
 private:
     SystemWindow *window = nullptr;
     SystemSDL    system;
@@ -130,7 +113,6 @@ private:
 
     RendererDevice    *device = nullptr;
     RendererSwapchain *swapchain = nullptr;
-    RendererPipeline  *pipeline = nullptr;
 
     std::set<uint32_t> queue_families;
     std::vector<const char *> validation_layers;

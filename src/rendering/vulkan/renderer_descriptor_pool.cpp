@@ -11,6 +11,7 @@ const std::unordered_map<VkDescriptorType, size_t> RendererDescriptorPool::items
     { VK_DESCRIPTOR_TYPE_SAMPLER, 1 },
     { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 },
     { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2 },
     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }
 };
 
@@ -29,13 +30,13 @@ RendererDescriptorPool::~RendererDescriptorPool()
     delete[] m_descriptor_sets_view;
 }
 
-RendererDescriptorSet *RendererDescriptorPool::AddDescriptorSet()
+RendererDescriptorSet &RendererDescriptorPool::AddDescriptorSet()
 {
     AssertThrowMsg(m_descriptor_sets.size() + 1 <= max_descriptor_sets, "Maximum number of descriptor sets added");
 
     m_descriptor_sets.emplace_back(std::make_unique<RendererDescriptorSet>());
 
-    return m_descriptor_sets.back().get();
+    return *m_descriptor_sets.back();
 }
 
 RendererResult RendererDescriptorPool::Create(RendererDevice *device, VkDescriptorPoolCreateFlags flags)
@@ -49,7 +50,7 @@ RendererResult RendererDescriptorPool::Create(RendererDevice *device, VkDescript
         pool_sizes.push_back({ it.first, uint32_t(it.second * set_size) });
     }
 
-    VkDescriptorPoolCreateInfo pool_info = {};
+    VkDescriptorPoolCreateInfo pool_info{};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info.flags = flags;
     pool_info.maxSets = set_size;
@@ -75,19 +76,29 @@ RendererResult RendererDescriptorPool::Create(RendererDevice *device, VkDescript
 
 RendererResult RendererDescriptorPool::Destroy(RendererDevice *device)
 {
-    for (auto &set : m_descriptor_sets) {
-        set->Destroy(device);
+    {
+        for (auto &layout : m_descriptor_set_layouts) {
+            vkDestroyDescriptorSetLayout(device->GetDevice(), layout, nullptr);
+        }
+
+        m_descriptor_set_layouts.clear();
     }
 
-    for (auto &layout : m_descriptor_set_layouts) {
-        vkDestroyDescriptorSetLayout(device->GetDevice(), layout, nullptr);
+    {
+        for (auto &set : m_descriptor_sets) {
+            set->Destroy(device);
+        }
+
+        vkFreeDescriptorSets(device->GetDevice(), m_descriptor_pool, m_descriptor_sets.size(), m_descriptor_sets_view);
+
+        // set all to nullptr
+        std::memset(m_descriptor_sets_view, 0, sizeof(VkDescriptorSet *) * max_descriptor_sets);
     }
 
-    m_descriptor_set_layouts.clear();
-
-    vkDestroyDescriptorPool(device->GetDevice(), m_descriptor_pool, nullptr);
-
-    m_descriptor_pool = nullptr;
+    {
+        vkDestroyDescriptorPool(device->GetDevice(), m_descriptor_pool, nullptr);
+        m_descriptor_pool = nullptr;
+    }
 
     return RendererResult(RendererResult::RENDERER_OK);
 }

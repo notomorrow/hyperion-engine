@@ -1,9 +1,12 @@
 #include "renderer_image.h"
 #include "renderer_device.h"
 #include "renderer_pipeline.h"
+#include <util/img/image_util.h>
 #include <system/debug.h>
 
 #include <vulkan/vulkan.h>
+
+#include <unordered_map>
 
 namespace hyperion {
 
@@ -15,9 +18,10 @@ RendererImage::RendererImage(size_t width, size_t height, size_t depth, Texture:
       m_type(type),
       m_tiling(VK_IMAGE_TILING_LINEAR),
       m_image(nullptr),
-      m_staging_buffer(nullptr)
+      m_staging_buffer(nullptr),
+      m_bpp(Texture::NumComponents(Texture::GetBaseFormat(format)))
 {
-    m_size = width * height * depth * Texture::NumComponents(Texture::GetBaseFormat(format));
+    m_size = width * height * depth * m_bpp;
 
     m_bytes = new unsigned char[m_size];
 
@@ -37,10 +41,55 @@ RendererImage::~RendererImage()
 RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *pipeline)
 {
     VkFormat format = GetImageFormat(); // TODO: pick best available image type
+    VkImageType image_type = GetImageType();
+    VkImageUsageFlags image_usage_flags = GetImageUsageFlags();
+    VkImageCreateFlags image_create_flags = 0;
+    VkImageFormatProperties image_format_properties{};
+
+    auto format_support_result = device->GetRendererFeatures().GetImageFormatProperties(
+        format,
+        image_type,
+        m_tiling,
+        image_usage_flags,
+        image_create_flags,
+        &image_format_properties
+    );
+
+    if (!format_support_result) {
+        // try converting to 32bpp
+        if (m_bpp != 4) {
+            DebugLog(LogType::Info, "Attempting to convert image to 32bpp\n");
+
+            size_t new_bpp = 4;
+            size_t new_size = m_width * m_height * m_depth * new_bpp;
+
+            unsigned char *new_bytes = new unsigned char[new_size];
+
+            ImageUtil::ConvertBpp(m_width, m_height, m_bpp, new_bpp, m_bytes, new_bytes);
+
+            delete[] m_bytes;
+            m_bytes = new_bytes;
+
+            m_format = Texture::FormatChangeNumComponents(m_format, new_bpp);
+            m_bpp = new_bpp;
+            m_size = new_size;
+
+            format = GetImageFormat();
+
+            // try checking format support result again
+            if (!(format_support_result = device->GetRendererFeatures().GetImageFormatProperties(
+                format, image_type, m_tiling, image_usage_flags, image_create_flags, &image_format_properties)))
+                return format_support_result;
+
+            DebugLog(LogType::Info, "Converted image to 32bpp successfully\n");
+        } else {
+            return format_support_result;
+        }
+    }
 
     VkImageCreateInfo image_info{};
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.imageType = GetImageType();
+    image_info.imageType = image_type;
     image_info.extent.width = uint32_t(m_width);
     image_info.extent.height = uint32_t(m_height);
     image_info.extent.depth = uint32_t(m_depth);
@@ -49,11 +98,10 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
     image_info.format = format;
     image_info.tiling = m_tiling;
     image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_info.usage = image_usage_flags;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_info.flags = 0; // TODO: look into flags for sparse textures for VCT
-
+    image_info.flags = image_create_flags; // TODO: look into flags for sparse textures for VCT
 
     m_staging_buffer = new RendererStagingBuffer();
     m_staging_buffer->Create(device, m_size);
@@ -68,16 +116,13 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
     auto commands = pipeline->GetSingleTimeCommands();
 
     { // transition from 'undefined' layout state into one optimal for transfer
-        /*commands.TransitionImageLayout(
-            m_image->image,
-            format,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-        );*/
-
-
         VkImageMemoryBarrier acquire_barrier{},
                              release_barrier{};
+
+        acquire_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        acquire_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        acquire_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        acquire_barrier.image = m_image->image;
 
         commands.Push([this, &image_info, &acquire_barrier](VkCommandBuffer cmd) {
             VkImageSubresourceRange range;
@@ -87,13 +132,7 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
             range.baseArrayLayer = 0;
             range.layerCount = 1;
 
-            acquire_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-
-            acquire_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            acquire_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            acquire_barrier.image = m_image->image;
             acquire_barrier.subresourceRange = range;
-
             acquire_barrier.srcAccessMask = 0;
             acquire_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
@@ -129,13 +168,6 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
         });
 
         // transition from the previous layout state into a shader read-only state
-        /*commands.TransitionImageLayout(
-            m_image->image,
-            format,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        );*/
-
         commands.Push([this, &acquire_barrier, &release_barrier](VkCommandBuffer cmd) {
             release_barrier = acquire_barrier;
 

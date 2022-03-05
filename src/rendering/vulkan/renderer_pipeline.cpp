@@ -337,12 +337,6 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     dynamic_state.pDynamicStates = states.data();
     DebugLog(LogType::Info, "Enabling [%d] dynamic states\n", dynamic_state.dynamicStateCount);
 
-
-    /* Descriptor sets */
-    descriptor_pool
-        .AddDescriptorSet()
-            ->AddDescriptor(0, 128, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHADER_STAGE_VERTEX_BIT);
-
     auto descriptor_pool_result = descriptor_pool.Create(device, 0);
     AssertThrowMsg(descriptor_pool_result, "Error creating descriptor pool! Message was: %s\n", descriptor_pool_result.message);
 
@@ -412,7 +406,7 @@ helpers::SingleTimeCommands RendererPipeline::GetSingleTimeCommands()
 
     helpers::SingleTimeCommands single_time_commands{};
     single_time_commands.cmd = nullptr;
-    single_time_commands.pool = command_pool;
+    single_time_commands.pool = this->command_pool;
     single_time_commands.family_indices = family_indices;
 
     return single_time_commands;
