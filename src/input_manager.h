@@ -44,12 +44,14 @@ public:
     inline void GetMousePosition(int *x, int *y) { this->GetWindow()->GetMouseState(x, y); }
     inline void SetMousePosition(int x,  int y) { this->GetWindow()->SetMousePosition(x, y); }
 
-    inline void KeyDown(int key) { DebugLog(LogType::Info, "Button %c(%d) pressed\n", key, key); SetKey(key, true); }
+    inline void KeyDown(int key) { SetKey(key, true); }
     inline void KeyUp(int key) { SetKey(key, false); }
 
     inline void MouseButtonDown(int btn) { SetMouseButton(btn, true); }
     inline void MouseButtonUp(int btn) { SetMouseButton(btn, false); }
     inline void MouseMove(double x, double y) { mouse_x = x; mouse_y = y; }
+
+    void UpdateMousePosition();
 
     bool IsKeyDown(int key) const;
     inline bool IsKeyUp(int key) const { return !IsKeyDown(key); }

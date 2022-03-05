@@ -59,12 +59,12 @@ void FpsCamera::CenterMouse()
 void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
 {
     const double sensitivity = 0.1;
-    const double smoothing = 10.0;
+    const double smoothing = 15.0;
 
     m_mag_x = m_mouse_x - half_width;
     m_mag_y = m_mouse_y - half_height;
 
-    m_mag_x = MathUtil::Lerp(
+    /*m_mag_x = MathUtil::Lerp(
         m_old_mag_x,
         m_mag_x,
         MathUtil::Clamp(smoothing * dt, 0.0, 1.0)
@@ -74,7 +74,7 @@ void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
         m_old_mag_y,
         m_mag_y,
         MathUtil::Clamp(smoothing * dt, 0.0, 1.0)
-    );
+    );*/
 
     m_old_mag_x = m_mag_x;
     m_old_mag_y = m_mag_y;

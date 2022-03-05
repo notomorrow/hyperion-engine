@@ -55,9 +55,15 @@ void InputManager::CheckEvent(SystemEvent *event) {
         case SystemEventType::EVENT_MOUSEBUTTON_UP:
             this->MouseButtonUp(event->GetMouseButton());
             break;
+        case SystemEventType::EVENT_MOUSEMOTION:
+            this->UpdateMousePosition();
         default:
             break;
     }
+}
+
+void InputManager::UpdateMousePosition() {
+    this->GetMousePosition((int *)&this->mouse_x, (int *)&this->mouse_y);
 }
 
 void InputManager::SetKey(int key, bool pressed)
