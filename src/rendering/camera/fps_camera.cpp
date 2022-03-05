@@ -1,7 +1,7 @@
 #include "fps_camera.h"
 
 namespace hyperion {
-FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, int width, int height, float fov, float near, float far)
+FpsCamera::FpsCamera(InputManager *inputmgr, SystemWindow *window, int width, int height, float fov, float near, float far)
     : PerspectiveCamera(fov, width, height, near, far),
       m_inputmgr(inputmgr),
       m_window(window),
@@ -15,13 +15,14 @@ FpsCamera::FpsCamera(InputManager *inputmgr, RenderWindow *window, int width, in
 {
     m_dir_cross_y = Vector3(m_direction).Cross(m_up);
 
-    m_inputmgr->RegisterKeyEvent(KeyboardKey::KEY_LEFT_ALT, InputEvent([&](bool pressed) {
+    m_inputmgr->RegisterKeyEvent(SystemKey::KEY_LEFT_ALT, InputEvent([&](bool pressed) {
         if (pressed) {
             CenterMouse();
-
             m_is_mouse_captured = !m_is_mouse_captured;
+            DebugLog(LogType::Info, "Mouse state switched [%d]\n", m_is_mouse_captured);
 
-            CoreEngine::GetInstance()->SetCursorLocked(m_is_mouse_captured);
+            window->LockMouse(m_is_mouse_captured);
+            //CoreEngine::GetInstance()->SetCursorLocked(m_is_mouse_captured);
         }
     }));
 }
@@ -34,14 +35,14 @@ void FpsCamera::SetTranslation(const Vector3 &vec)
 
 void FpsCamera::UpdateLogic(double dt)
 {
-    m_width = m_window->GetScaledWidth();
-    m_height = m_window->GetScaledHeight();
+    this->m_window->GetSize(&m_width, &m_height);
+    //m_width = m_window->GetScaledWidth();
+    //m_height = m_window->GetScaledHeight();
 
     if (m_is_mouse_captured) {
-        m_mouse_x = m_inputmgr->GetMouseX();
-        m_mouse_y = m_inputmgr->GetMouseY();
+        m_inputmgr->GetMousePosition(&m_mouse_x, &m_mouse_y);
 
-        HandleMouseInput(dt, m_window->GetWidth() / 2, m_window->GetHeight() / 2);
+        HandleMouseInput(dt, m_width / 2, m_height / 2);
 
         CenterMouse();
     }
@@ -51,7 +52,8 @@ void FpsCamera::UpdateLogic(double dt)
 
 void FpsCamera::CenterMouse()
 {
-    m_inputmgr->SetMousePosition(m_window->GetWidth() / 2, m_window->GetHeight() / 2);
+    this->m_window->GetSize(&m_width, &m_height);
+    m_inputmgr->SetMousePosition(m_width / 2, m_height / 2);
 }
 
 void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
@@ -77,7 +79,7 @@ void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
     m_old_mag_x = m_mag_x;
     m_old_mag_y = m_mag_y;
 
-    m_dir_cross_y = Vector3(m_direction).Cross(m_up);
+    m_dir_cross_y = Vector3(-m_direction).Cross(m_up);
 
     Rotate(m_up, MathUtil::DegToRad(m_mag_x * sensitivity));
     Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag_y * sensitivity));
@@ -103,9 +105,9 @@ void FpsCamera::HandleKeyboardInput(double dt)
     }
 
     if (m_inputmgr->IsKeyDown(KEY_A)) {
-        m_next_translation -= m_dir_cross_y * speed;
-    } else if (m_inputmgr->IsKeyDown(KEY_D)) {
         m_next_translation += m_dir_cross_y * speed;
+    } else if (m_inputmgr->IsKeyDown(KEY_D)) {
+        m_next_translation -= m_dir_cross_y * speed;
     }
 
     m_translation.Lerp(m_next_translation, MathUtil::Clamp(2.0 * dt, 0.0, 1.0));

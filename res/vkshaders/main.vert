@@ -9,8 +9,9 @@ layout (location = 3) in vec2 a_texcoord1;
 layout (location = 4) in vec3 a_tangent;
 layout (location = 5) in vec3 a_bitangent;
 
-layout(set = 0, binding = 0) uniform TestDescriptor {
-	mat4 testMatrix;
+layout(binding = 0, row_major) uniform TestDescriptor {
+    mat4 model;
+	mat4 pv;
 } DescriptorData;
 
 //push constants block
@@ -20,6 +21,7 @@ layout( push_constant ) uniform constants
 } PushConstants;
 
 void main() {
-    gl_Position = DescriptorData.testMatrix * vec4(a_position[0], a_position[1], 0.0, 1.0);
-    fragColor = vec3(0.0, 1.0, 0.0);
+    mat4 mvp = DescriptorData.pv*DescriptorData.model;
+    gl_Position = mvp * vec4(a_position, 1.0);
+    fragColor = vec3(1.0, 0.0, 0.2);
 } 

@@ -21,8 +21,10 @@ InputEvent::InputEvent(const InputEvent &other)
 {
 }
 
-InputManager::InputManager()
+InputManager::InputManager(SystemWindow *window)
 {
+    this->window = window;
+
     key_events = new InputEvent[NUM_KEYBOARD_KEYS];
     mouse_events = new InputEvent[NUM_MOUSE_BUTTONS];
 
@@ -39,9 +41,32 @@ InputManager::~InputManager()
     delete[] mouse_events;
 }
 
+void InputManager::CheckEvent(SystemEvent *event) {
+    switch (event->GetType()) {
+        case SystemEventType::EVENT_KEYDOWN:
+            this->KeyDown(event->GetKeyCode());
+            break;
+        case SystemEventType::EVENT_KEYUP:
+            this->KeyUp(event->GetKeyCode());
+            break;
+        case SystemEventType::EVENT_MOUSEBUTTON_DOWN:
+            this->MouseButtonDown(event->GetMouseButton());
+            break;
+        case SystemEventType::EVENT_MOUSEBUTTON_UP:
+            this->MouseButtonUp(event->GetMouseButton());
+            break;
+        default:
+            break;
+    }
+}
+
 void InputManager::SetKey(int key, bool pressed)
 {
     if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
+        /* Set all letters to uppercase */
+        if (key >= 'a' && key <= 'z')
+            key = 'A'+(key-'a');
+
         InputEvent &handler = key_events[key];
 
         if (!handler.IsEmpty()) {
@@ -83,6 +108,7 @@ bool InputManager::IsButtonDown(int btn) const
 
 bool InputManager::RegisterKeyEvent(int key, const InputEvent &evt)
 {
+    DebugLog(LogType::Debug, "Registering key event for [%d]\n", key);
     if (key >= 0 && key < NUM_KEYBOARD_KEYS) {
         key_events[key] = evt;
         return true;

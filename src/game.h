@@ -1,7 +1,6 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "render_window.h"
 #include "rendering/renderer.h"
 #include "rendering/ui/ui_manager.h"
 #include "rendering/camera/camera.h"
@@ -12,7 +11,7 @@
 namespace hyperion {
 class Game {
 public:
-    Game(const RenderWindow &window);
+    Game(SystemWindow *window);
     virtual ~Game();
 
     inline InputManager *GetInputManager() const { return m_input_manager; }

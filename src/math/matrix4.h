@@ -50,7 +50,7 @@ public:
 
         return hc;
     }
-};
+} __attribute__((packed));
 } // namespace hyperion
 
 #endif

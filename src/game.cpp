@@ -3,14 +3,15 @@
 
 namespace hyperion {
 
-Game::Game(const RenderWindow &window) 
-    : m_input_manager(new InputManager),
+Game::Game(SystemWindow *window)
+    : m_input_manager(new InputManager(window)),
       m_ui_manager(new UIManager(m_input_manager)),
-      m_renderer(new Renderer(window)),
+      m_renderer(new Renderer()),
       m_scene(new Node("Scene")),
       m_ui(new Node("UI")),
       m_scene_manager(SceneManager::GetInstance())
 {
+    /*
     m_camera = new FpsCamera(
         GetInputManager(),
         &m_renderer->GetRenderWindow(),
@@ -19,7 +20,7 @@ Game::Game(const RenderWindow &window)
         65.0f,
         0.05f,
         250.0f
-    );
+    );*/
 
     m_scene->SetOctant(make_non_owning(m_scene_manager->GetOctree()));
 
@@ -61,7 +62,7 @@ void Game::Render()
 
     OnRender();
 
-    m_renderer->Render(m_camera, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
+    //m_renderer->Render(m_camera, Octree::VisibilityState::CameraType::VIS_CAMERA_MAIN);
 
     PostRender();
 }

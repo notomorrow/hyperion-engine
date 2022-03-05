@@ -289,8 +289,9 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     /* Backface culling */
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    /*rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;*/
+    rasterizer.cullMode = VK_CULL_MODE_NONE;
     /* Also visit for shadow mapping! Along with other optional parameters such as
      * depthBiasClamp, slopeFactor etc. */
     rasterizer.depthBiasEnable = VK_FALSE;
@@ -340,7 +341,7 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     /* Descriptor sets */
     descriptor_pool
         .AddDescriptorSet()
-            ->AddDescriptor(0, 64, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHADER_STAGE_VERTEX_BIT);
+            ->AddDescriptor(0, 128, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHADER_STAGE_VERTEX_BIT);
 
     auto descriptor_pool_result = descriptor_pool.Create(device, 0);
     AssertThrowMsg(descriptor_pool_result, "Error creating descriptor pool! Message was: %s\n", descriptor_pool_result.message);
