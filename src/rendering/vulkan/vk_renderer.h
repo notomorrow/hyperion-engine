@@ -33,7 +33,7 @@ public:
     void Create(RendererDevice *device, VkCommandBuffer *cmd);
     void Destroy();
 
-    VkCommandBuffer *command_buffer;
+    VkCommandBuffer *command_buffer = nullptr;
     /* Sync objects for each frame */
     VkSemaphore sp_swap_acquire;
     VkSemaphore sp_swap_release;

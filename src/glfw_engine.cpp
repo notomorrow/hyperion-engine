@@ -38,6 +38,7 @@ static void ErrorCallback(int error, const char *description)
 
 bool GlfwEngine::InitializeGame(Game *game)
 {
+    /*
     glfwSetErrorCallback(ErrorCallback);
 
     if (!glfwInit()) {
@@ -186,6 +187,8 @@ bool GlfwEngine::InitializeGame(Game *game)
 
     glfwDestroyWindow(window);
     glfwTerminate();
+    return true;
+    */
     return true;
 }
 

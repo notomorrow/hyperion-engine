@@ -9,13 +9,10 @@
 #include <SDL2/SDL_vulkan.h>
 #include <vulkan/vulkan.hpp>
 
+namespace hyperion {
+
 SDL_Event *SystemEvent::GetInternalEvent() {
     return &(this->sdl_event);
-}
-
-SystemEventType SystemEvent::GetType() {
-    uint32_t event_type = this->GetInternalEvent()->type;
-    return (SystemEventType)event_type;
 }
 
 SystemWindow::SystemWindow(const char *_title, int _width, int _height) {
@@ -23,6 +20,14 @@ SystemWindow::SystemWindow(const char *_title, int _width, int _height) {
     this->title = _title;
     this->width = _width;
     this->height = _height;
+}
+
+void SystemWindow::SetMousePosition(int x, int y) {
+    SDL_WarpMouseInWindow(this->GetInternalWindow(), x, y);
+}
+
+MouseButtonMask SystemWindow::GetMouseState(int *x, int *y) {
+    return SDL_GetMouseState(x, y);
 }
 
 void SystemWindow::Initialize() {
@@ -35,10 +40,6 @@ void SystemWindow::Initialize() {
     );
 
     AssertThrowMsg(this->window != nullptr, "Failed to initialize window: %s", SDL_GetError());
-}
-
-SDL_Window *SystemWindow::GetInternalWindow() {
-    return this->window;
 }
 
 VkSurfaceKHR SystemWindow::CreateVulkanSurface(VkInstance instance) {
@@ -98,11 +99,16 @@ SystemSDL::~SystemSDL() {
     SDL_Quit();
 }
 
-void SystemSDL::ThrowError()
-{
+uint64_t SystemSDL::GetTicks() {
+    return SDL_GetTicks64();
+}
+
+void SystemSDL::ThrowError() {
     std::string message = SDL_GetError();
 
     DebugLog(LogType::Error, "SDL Error: %s", message.c_str());
 
     throw std::runtime_error(message);
 }
+
+} // namespace hyperion

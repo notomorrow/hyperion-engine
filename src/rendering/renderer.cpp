@@ -6,9 +6,8 @@
 #include "../util.h"
 
 namespace hyperion {
-Renderer::Renderer(const RenderWindow &render_window)
-    : m_render_window(render_window),
-      m_fbo(nullptr),
+Renderer::Renderer()
+    : m_fbo(nullptr),
       m_environment(Environment::GetInstance()),
       m_deferred_pipeline(new DeferredPipeline())
 {
@@ -44,12 +43,14 @@ Renderer::~Renderer()
     delete m_fbo;
 }
 
-void Renderer::Render(Camera *cam, Octree::VisibilityState::CameraType camera_type)
+void Renderer::Render(SystemWindow *window, Camera *cam, Octree::VisibilityState::CameraType camera_type)
 {
+    int width, height;
+    window->GetSize(&width, &height);
     if (m_fbo == nullptr) {
         m_fbo = new Framebuffer2D(
-            m_render_window.GetScaledWidth(),
-            m_render_window.GetScaledHeight(),
+            width,
+            height,
             true, // color
             true, // depth
             true, // normals

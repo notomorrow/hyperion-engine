@@ -11,7 +11,7 @@ UIManager::UIManager(InputManager *input_manager)
         // process click event on all ui objects
         HandleMouseEvent();
     });
-    m_input_manager->RegisterClickEvent(MouseButton::MOUSE_BTN_LEFT, *m_input_event);
+    m_input_manager->RegisterClickEvent(MouseButton::MOUSE_BUTTON_LEFT, *m_input_event);
 }
 
 UIManager::~UIManager()
@@ -26,7 +26,9 @@ void UIManager::Update(double dt)
 
 void UIManager::HandleMouseEvent()
 {
-    Vector2 mouse_vector(m_input_manager->GetMouseX(), m_input_manager->GetMouseY());
+    int mouse_x, mouse_y;
+    m_input_manager->GetMousePosition(&mouse_x, &mouse_y);
+    Vector2 mouse_vector((float)mouse_x, (float)mouse_y);
     mouse_vector *= 0.5;
     mouse_vector += 0.5;
 
@@ -34,7 +36,7 @@ void UIManager::HandleMouseEvent()
 
     for (auto &object : m_ui_objects) {
         // std::cout << "update " << object->GetName() << "\n";
-        if (object->IsMouseOver(m_input_manager->GetMouseX(), m_input_manager->GetMouseY())) {
+        if (object->IsMouseOver((float)mouse_x, (float)mouse_y)) {
             std::cout << "mouseover " << object->GetName() << "\n";
             object->GetClickEvent().Trigger(m_mouse_pressed);
         }

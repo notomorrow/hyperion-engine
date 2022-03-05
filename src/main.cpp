@@ -17,6 +17,8 @@
 #include "animation/skeleton_control.h"
 #include "math/bounding_box.h"
 
+#include "rendering/camera/fps_camera.h"
+
 #include "util/mesh_factory.h"
 
 #include "system/sdl_system.h"
@@ -108,7 +110,7 @@ public:
     std::shared_ptr<ui::UIText> m_selected_node_text;
     std::shared_ptr<ui::UIButton> m_rotate_mode_btn;
 
-    SceneEditor(const RenderWindow &window)
+    SceneEditor(SystemWindow *window)
         : Game(window)
     {
         std::srand(std::time(nullptr));
@@ -492,12 +494,12 @@ public:
                 m_selected_node_text->SetText(ss.str());
             });
 
-        GetInputManager()->RegisterClickEvent(MOUSE_BTN_LEFT, raytest_event);
+        GetInputManager()->RegisterClickEvent(MouseButton::MOUSE_BUTTON_LEFT, raytest_event);
     }
 
     void Logic(double dt)
     {
-        if (GetInputManager()->IsButtonDown(MouseButton::MOUSE_BTN_LEFT) && m_selected_node != nullptr) {
+        if (GetInputManager()->IsButtonDown(MouseButton::MOUSE_BUTTON_LEFT) && m_selected_node != nullptr) {
             //std::cout << "Left button down\n";
             if (!m_dragging_node) {
                 m_dragging_timer += dt;
@@ -546,12 +548,6 @@ public:
     }
 };
 
-struct VkVertex {
-    Vector2 position;
-    Vector3 colour;
-};
-
-
 int main()
 {
     std::string base_path = HYP_ROOT_DIR;
@@ -583,8 +579,6 @@ int main()
     auto mesh = MeshFactory::CreateCube();
     RendererPipeline *pipeline = renderer.GetCurrentPipeline();
 
-    uint32_t frame_index;
-
     float timer = 0.0;
 
     auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/brdfLUT.png");
@@ -598,17 +592,42 @@ int main()
     Transform tf;
     tf.SetScale(Vector3(0.25f));
 
+    auto *input_manager = new InputManager(window);
+    input_manager->SetWindow(window);
+
+    auto *camera = new FpsCamera(
+            input_manager,
+            window,
+            1024,
+            768,
+            80.0f,
+            0.05f,
+            250.0f
+    );
+
     bool running = true;
 
     RendererFrame *frame = nullptr;
+
+    uint64_t tick_now = SDL_GetPerformanceCounter();
+    uint64_t tick_last = 0;
+    double delta_time = 0;
+
+    struct MainShaderData {
+        Matrix4 model;
+        Matrix4 pv;
+    };
+
     while (running) {
+        tick_last = tick_now;
+        tick_now = SDL_GetPerformanceCounter();
+        delta_time = ((double)tick_now-(double)tick_last) / (double)SDL_GetPerformanceFrequency();
+
         while (SystemSDL::PollEvent(&event)) {
+            input_manager->CheckEvent(&event);
             switch (event.GetType()) {
                 case SystemEventType::EVENT_SHUTDOWN:
                     running = false;
-                    break;
-                case SystemEventType::EVENT_KEYDOWN:
-                    DebugLog(LogType::Info, "Keydown captured!");
                     break;
                 default:
                     break;
@@ -616,15 +635,24 @@ int main()
         }
 
         timer += 0.05;
-        float push_constant_data[] = { sinf(timer), cosf(timer), tanf(timer), 1.0f };
-        memcpy(&pipeline->push_constants, push_constant_data, sizeof(push_constant_data));
 
         frame = renderer.GetNextFrame();
         renderer.StartFrame(frame);
+        //delta_time = 0.1;
+        camera->Update(delta_time);
 
-        tf.SetScale(Vector3(0.25f) + std::cos(timer));
-        tf.SetRotation(Quaternion(Vector3(0, 0, 1), std::sin(timer)));
-        pipeline->descriptor_pool.GetDescriptorSet(0)->GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(tf.GetMatrix()), (void *)&tf.GetMatrix());
+        MainShaderData shad_data;
+
+        Transform tf2;
+        tf2.SetTranslation(Vector3(0, 1, 0));
+
+        shad_data.model = tf.GetMatrix();
+        shad_data.pv = camera->GetViewProjectionMatrix();
+
+
+        //tf.SetScale(Vector3(0.25f) + std::cos(timer));
+        //tf.SetRotation(Quaternion(Vector3(0, 0, 1), std::sin(timer)));
+        pipeline->descriptor_pool.GetDescriptorSet(0)->GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(shad_data), (void *)&shad_data);
         pipeline->descriptor_pool.BindDescriptorSets(*frame->command_buffer, pipeline->layout);
         mesh->RenderVk(frame, &renderer, nullptr);
 
@@ -717,7 +745,7 @@ int main()
     CoreEngine *engine = new GlfwEngine();
     CoreEngine::SetInstance(engine);
 
-    auto *game = new SceneEditor(RenderWindow(1480, 1200, "Hyperion Demo"));
+    auto *game = new SceneEditor(window);
 
     engine->InitializeGame(game);
 
