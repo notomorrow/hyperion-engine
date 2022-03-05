@@ -103,7 +103,7 @@ void VkRenderer::DrawFrame(RendererFrame *frame) {
     vkQueuePresentKHR(this->queue_present, &present_info);
 }
 
-bool VkRenderer::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers) {
+RendererResult VkRenderer::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers) {
     uint32_t layers_count;
     vkEnumerateInstanceLayerProperties(&layers_count, nullptr);
 
@@ -112,29 +112,37 @@ bool VkRenderer::CheckValidationLayerSupport(const std::vector<const char *> &re
 
     for (const char *request : requested_layers) {
         bool layer_found = false;
+
         for (const auto &available_properties : available_layers) {
             if (!strcmp(available_properties.layerName, request)) {
                 layer_found = true;
                 break;
             }
         }
+
         if (!layer_found) {
             // TODO: disable debug mode/validation layers instead of causing a runtime error
-            throw std::runtime_error("Validation Layer "+std::string(request)+" is unavailable!");
+            DebugLog(LogType::Warn, "Validation layer %s is unavailable!\n", request);
+
+            return RendererResult(RendererResult::RENDERER_ERR, "Requested validation layer was unavailable; check debug log for the name of the requested layer");
         }
     }
-    return false;
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
 void VkRenderer::SetValidationLayers(std::vector<const char *> _layers) {
-    this->CheckValidationLayerSupport(_layers);
     this->validation_layers = _layers;
 }
 
-void VkRenderer::SetupDebug() {
-    const std::vector<const char *> layers = {
+RendererResult VkRenderer::SetupDebug() {
+    static const std::vector<const char *> layers {
         "VK_LAYER_KHRONOS_validation",
+        "VK_LAYER_LUNARG_monitor"
     };
+
+    HYPERION_BUBBLE_ERRORS(this->CheckValidationLayerSupport(layers));
+
     this->SetValidationLayers(layers);
 }
 
@@ -217,13 +225,12 @@ RendererFrame *VkRenderer::GetNextFrame() {
     return this->current_frame;
 }
 
-void VkRenderer::Initialize(bool load_debug_layers) {
+RendererResult VkRenderer::Initialize(bool load_debug_layers) {
     // Application names/versions
     this->SetCurrentWindow(this->system.GetCurrentWindow());
 
     /* Set up our debug and validation layers */
-    if (load_debug_layers)
-        this->SetupDebug();
+    if (load_debug_layers) HYPERION_IGNORE_ERRORS(this->SetupDebug());
 
     VkApplicationInfo app_info{VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app_info.pApplicationName = app_name;
@@ -248,11 +255,10 @@ void VkRenderer::Initialize(bool load_debug_layers) {
 
     DebugLog(LogType::Info, "Loading [%d] Instance extensions...\n", extension_names.size());
 
-    VkResult result = vkCreateInstance(&create_info, nullptr, &this->instance);
-    if (result != VK_SUCCESS) {
-        DebugLog(LogType::Fatal, "Failed to create Vulkan Instance!\n");
-        throw std::runtime_error("Failed to create Vulkan Instance!");
-    }
+    HYPERION_VK_CHECK_MSG(
+        vkCreateInstance(&create_info, nullptr, &this->instance),
+        "Failed to create Vulkan Instance!"
+    );
 
     this->surface = nullptr;
     this->requested_device_extensions = {
@@ -262,12 +268,14 @@ void VkRenderer::Initialize(bool load_debug_layers) {
     /* Create our renderable surface from SDL */
     this->CreateSurface();
     /* Find and set up an adequate GPU for rendering and presentation */
-    this->InitializeRendererDevice();
+    HYPERION_BUBBLE_ERRORS(this->InitializeRendererDevice());
     /* Set up our swapchain for our GPU to present our image.
      * This is essentially a "root" framebuffer. */
-    this->InitializeSwapchain();
+    HYPERION_BUBBLE_ERRORS(this->InitializeSwapchain());
 
     this->pipeline = new RendererPipeline(this->device, this->swapchain);
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
 void VkRenderer::CleanupPendingFrames() {
@@ -315,7 +323,7 @@ RendererDevice *VkRenderer::GetRendererDevice() {
 
 void VkRenderer::CreateSurface() {
     this->surface = this->GetCurrentWindow()->CreateVulkanSurface(this->instance);
-    std::cout << "Created window surface\n";
+    DebugLog(LogType::Debug, "Created window surface\n");
 }
 
 VkPhysicalDevice VkRenderer::PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices)
@@ -369,7 +377,7 @@ VkPhysicalDevice VkRenderer::PickPhysicalDevice(std::vector<VkPhysicalDevice> _d
     return _device;
 }
 
-RendererDevice *VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_device) {
+RendererResult VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_device) {
     /* If no physical device passed in, we select one */
     if (physical_device == nullptr) {
         std::vector<VkPhysicalDevice> physical_devices = this->EnumeratePhysicalDevices();
@@ -387,43 +395,51 @@ RendererDevice *VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_d
     QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
 
     /* No user specified queue families to create, so we just use the defaults */
-    std::cout << "Found queue family indices\n";
+    DebugLog(LogType::Debug, "Found queue family indices\n");
+
     if (this->queue_families.empty()) {
-        std::cout << "queue_families is empty! setting to defaults\n";
+        DebugLog(LogType::Debug, "queue_families is empty! setting to defaults\n");
+
         this->SetQueueFamilies({
             family_indices.graphics_family.value(),
             family_indices.present_family.value()
         });
     }
+
     /* Create a logical device to operate on */
-    this->device->CreateLogicalDevice(this->queue_families, this->requested_device_extensions);
+    HYPERION_BUBBLE_ERRORS(
+        this->device->CreateLogicalDevice(this->queue_families, this->requested_device_extensions)
+    );
 
     /* Get the internal queues from our device */
     this->queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
     this->queue_present  = device->GetQueue(family_indices.present_family.value(), 0);
 
-    return this->device;
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
-void VkRenderer::InitializePipeline(RendererShader *render_shader) {
-    this->pipeline->CreateRenderPass();
-    this->swapchain->CreateFramebuffers(this->pipeline->GetRenderPass());
+RendererResult VkRenderer::InitializePipeline(RendererShader *render_shader) {
+    HYPERION_BUBBLE_ERRORS(this->pipeline->CreateRenderPass());
+    HYPERION_BUBBLE_ERRORS(this->swapchain->CreateFramebuffers(this->pipeline->GetRenderPass()));
 
     /* Create our synchronization objects */
-    this->pipeline->CreateCommandPool();
+    HYPERION_BUBBLE_ERRORS(this->pipeline->CreateCommandPool());
     /* Our command pool will have a command buffer for each frame we can render to. */
-    this->pipeline->CreateCommandBuffers(this->frames_to_allocate);
-    DebugLog(LogType::Info, "Created command buffers\n");
+    HYPERION_BUBBLE_ERRORS(this->pipeline->CreateCommandBuffers(this->frames_to_allocate));
 
     this->AllocatePendingFrames();
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
-void VkRenderer::InitializeSwapchain() {
+RendererResult VkRenderer::InitializeSwapchain() {
     SwapchainSupportDetails sc_support = this->device->QuerySwapchainSupport();
     QueueFamilyIndices      qf_indices = this->device->FindQueueFamilies();
 
     this->swapchain = new RendererSwapchain(this->device, sc_support);
-    this->swapchain->Create(this->surface, qf_indices);
+    HYPERION_BUBBLE_ERRORS(this->swapchain->Create(this->surface, qf_indices));
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
 std::vector<VkPhysicalDevice> VkRenderer::EnumeratePhysicalDevices() {

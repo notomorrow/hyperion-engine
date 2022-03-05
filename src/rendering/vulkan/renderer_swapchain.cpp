@@ -8,7 +8,9 @@
 
 namespace hyperion {
 
-RendererSwapchain::RendererSwapchain(RendererDevice *_device, const SwapchainSupportDetails &_details) {
+RendererSwapchain::RendererSwapchain(RendererDevice *_device, const SwapchainSupportDetails &_details)
+    : depth_buffer{}
+{
     this->swapchain = nullptr;
     this->renderer_device = _device;
     this->support_details = _details;
@@ -26,7 +28,7 @@ VkSurfaceFormatKHR RendererSwapchain::ChooseSurfaceFormat() {
 
 VkPresentModeKHR RendererSwapchain::ChoosePresentMode() {
     /* TODO: add more presentation modes in the future */
-    return VK_PRESENT_MODE_FIFO_KHR;
+    return VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
 VkExtent2D RendererSwapchain::ChooseSwapchainExtent() {
@@ -44,66 +46,91 @@ void RendererSwapchain::RetrieveImageHandles() {
     DebugLog(LogType::Info, "Retrieved Swapchain images\n");
 }
 
-void RendererSwapchain::CreateImageView(size_t index, VkImage *swapchain_image) {
-    VkImageViewCreateInfo create_info{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-    create_info.image = (*swapchain_image);
-    create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    create_info.format = this->image_format;
-    /* Components; we'll just stick to the default mapping for now. */
-    create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-    create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    create_info.subresourceRange.baseMipLevel = 0;
-    create_info.subresourceRange.levelCount = 1;
-    create_info.subresourceRange.baseArrayLayer = 0;
-    create_info.subresourceRange.layerCount = 1;
-
-    if (vkCreateImageView(this->renderer_device->GetDevice(), &create_info, nullptr, &this->image_views[index]) !=
-        VK_SUCCESS) {
-        DebugLog(LogType::Error, "Could not create swapchain image views!\n");
-        throw std::runtime_error("Could not create image views");
-    }
-}
-
-void RendererSwapchain::CreateImageViews() {
+RendererResult RendererSwapchain::CreateImageViews() {
     this->image_views.resize(this->images.size());
+
     for (size_t i = 0; i < this->images.size(); i++) {
-        this->CreateImageView(i, &this->images[i]);
+        VkImage image = this->images[i];
+
+        auto image_view = std::make_unique<RendererImageView>();
+        HYPERION_BUBBLE_ERRORS(image_view->Create(
+            this->renderer_device,
+            image,
+            this->image_format
+        ));
+
+        this->image_views[i] = std::move(image_view);
     }
+
+    /* create a depth buffer */
+    this->depth_buffer.image = std::make_unique<RendererImage>(
+        this->extent.width,
+        this->extent.height,
+        1,
+        Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+        Texture::TextureType::TEXTURE_TYPE_2D,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        nullptr
+    );
+
+    HYPERION_BUBBLE_ERRORS(this->depth_buffer.image->Create(this->renderer_device, VK_IMAGE_LAYOUT_UNDEFINED));
+    this->depth_buffer.image_view = std::make_unique<RendererImageView>();
+    HYPERION_BUBBLE_ERRORS(this->depth_buffer.image_view->Create(this->renderer_device, this->depth_buffer.image.get()));
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
 void RendererSwapchain::DestroyImageViews() {
-    for (auto view: this->image_views) {
-        vkDestroyImageView(this->renderer_device->GetDevice(), view, nullptr);
+    for (auto &image_view : this->image_views) {
+        image_view->Destroy(this->renderer_device);
     }
+
+    this->image_views.clear();
+
+    this->depth_buffer.image->Destroy(this->renderer_device);
+    this->depth_buffer.image.release();
+    this->depth_buffer.image_view->Destroy(this->renderer_device);
+    this->depth_buffer.image_view.release();
 }
 
-void RendererSwapchain::CreateFramebuffers(VkRenderPass *renderpass) {
+RendererResult RendererSwapchain::CreateFramebuffers(VkRenderPass *renderpass) {
     this->framebuffers.resize(this->image_views.size());
-    DebugLog(LogType::Info, "[%d] image views found!\n", this->image_views.size());
+    DebugLog(LogType::Debug, "[%d] image views found!\n", this->image_views.size());
+
     for (size_t i = 0; i < this->image_views.size(); i++) {
-        VkImageView attachments[] = {this->image_views[i]};
+        /*std::vector<VkImageView> attachments;
+        attachments.resize(this->image_views.size());
+
+        for (size_t i = 0; i < this->image_views.size(); i++) {
+            attachments[i] = this->image_views[i]->GetImageView();
+        }*/
+
+        const std::array attachments{
+            this->image_views[i]->GetImageView(),
+            this->depth_buffer.image_view->GetImageView()
+        };
+
         VkFramebufferCreateInfo create_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
         create_info.renderPass = *renderpass;
-        create_info.attachmentCount = 1;
-        create_info.pAttachments = attachments;
-        create_info.width = this->extent.width;
+        create_info.attachmentCount = attachments.size();
+        create_info.pAttachments = attachments.data();
+        create_info.width  = this->extent.width;
         create_info.height = this->extent.height;
         create_info.layers = 1;
 
-        if (vkCreateFramebuffer(this->renderer_device->GetDevice(), &create_info, nullptr, &this->framebuffers[i]) !=
-            VK_SUCCESS) {
-            DebugLog(LogType::Error, "Could not create Vulkan framebuffer!\n");
-            throw std::runtime_error("could not create framebuffer");
-        }
-        DebugLog(LogType::Info, "Created Pipeline Framebuffer #%d\n", i);
+        HYPERION_VK_CHECK_MSG(
+            vkCreateFramebuffer(this->renderer_device->GetDevice(), &create_info, nullptr, &this->framebuffers[i]),
+            "Could not create Vulkan framebuffer!"
+        );
+
+        DebugLog(LogType::Debug, "Created Pipeline Framebuffer #%d\n", i);
     }
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
-void RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices) {
+RendererResult RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices) {
     this->surface_format = this->ChooseSurfaceFormat();
     this->present_mode = this->ChoosePresentMode();
     this->extent = this->ChooseSwapchainExtent();
@@ -145,15 +172,18 @@ void RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices q
     create_info.clipped = VK_TRUE;
     create_info.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(this->renderer_device->GetDevice(), &create_info, nullptr, &this->swapchain) !=
-        VK_SUCCESS) {
-        DebugLog(LogType::Error, "Failed to create Vulkan swapchain!\n");
-        throw std::runtime_error("Failed to create swapchain");
-    }
-    DebugLog(LogType::Info, "Created Swapchain!\n");
-    this->RetrieveImageHandles();
-    this->CreateImageViews();
+    HYPERION_VK_CHECK_MSG(
+        vkCreateSwapchainKHR(this->renderer_device->GetDevice(), &create_info, nullptr, &this->swapchain),
+        "Failed to create Vulkan swapchain!"
+    );
 
+    DebugLog(LogType::Debug, "Created Swapchain!\n");
+
+    this->RetrieveImageHandles();
+
+    HYPERION_BUBBLE_ERRORS(this->CreateImageViews());
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
 void RendererSwapchain::Destroy() {

@@ -36,9 +36,9 @@ public:
 
     VkQueue GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index = 0);
 
-    VkDevice CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions);
+    RendererResult CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions);
 
-    bool CheckDeviceSuitable();
+    RendererResult CheckDeviceSuitable();
 
     std::vector<const char *> CheckExtensionSupport(std::vector<const char *> _extensions);
     std::vector<const char *> CheckExtensionSupport();

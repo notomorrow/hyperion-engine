@@ -158,7 +158,7 @@ SwapchainSupportDetails RendererDevice::QuerySwapchainSupport() {
     return details;
 }
 
-bool RendererDevice::CheckDeviceSuitable() {
+RendererResult RendererDevice::CheckDeviceSuitable() {
     QueueFamilyIndices indices = this->FindQueueFamilies();
     std::vector<const char *> unsupported_extensions = this->CheckExtensionSupport();
     if (!unsupported_extensions.empty()) {
@@ -168,18 +168,29 @@ bool RendererDevice::CheckDeviceSuitable() {
         }
         DebugLog(LogType::Error, "Vulkan: Device does not support required extensions\n");
         /* TODO: try different device(s) before exploding  */
-        throw std::runtime_error("Device does not support required extensions");
+        //throw std::runtime_error("Device does not support required extensions");
+        return RendererResult(RendererResult::RENDERER_ERR, "Device does not support required extensions");
     }
     bool extensions_available = unsupported_extensions.empty();
 
     SwapchainSupportDetails swapchain_support = this->QuerySwapchainSupport();
     bool swapchains_available = (!swapchain_support.formats.empty() && !swapchain_support.present_modes.empty());
 
-    return (indices.IsComplete() && extensions_available && swapchains_available);
+    if (!indices.IsComplete())
+        return RendererResult(RendererResult::RENDERER_ERR, "Device not supported -- indices setup was not complete.");
+
+    if (!extensions_available)
+        return RendererResult(RendererResult::RENDERER_ERR, "Device not supported -- required extensions were not available.");
+
+    if (!swapchains_available)
+        return RendererResult(RendererResult::RENDERER_ERR, "Device not supported -- swapchains not available.");
+
+    return RendererResult(RendererResult::RENDERER_OK);
+
 }
 
 
-VkDevice RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions) {
+RendererResult RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions) {
     this->SetRequiredExtensions(required_extensions);
 
     std::vector<VkDeviceQueueCreateInfo> queue_create_info_vec;
@@ -195,10 +206,7 @@ VkDevice RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_
         queue_create_info_vec.push_back(queue_info);
     }
 
-    if (!this->CheckDeviceSuitable()) {
-        DebugLog(LogType::Error, "Device not suitable!\n");
-        throw std::runtime_error("Device not suitable");
-    }
+    HYPERION_BUBBLE_ERRORS(this->CheckDeviceSuitable());
 
     VkDeviceCreateInfo create_info{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
     create_info.pQueueCreateInfos = queue_create_info_vec.data();
@@ -210,13 +218,15 @@ VkDevice RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_
     create_info.pEnabledFeatures = &this->renderer_features.GetPhysicalDeviceFeatures();
 
     VkDevice _device;
-    VkResult result = vkCreateDevice(this->physical, &create_info, nullptr, &_device);
 
-    AssertThrowMsg(result == VK_SUCCESS, "Could not create RendererDevice!");
+    HYPERION_VK_CHECK_MSG(
+        vkCreateDevice(this->physical, &create_info, nullptr, &_device),
+        "Could not create RendererDevice!"
+    );
 
     this->SetDevice(_device);
 
-    return this->device;
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
 VkQueue RendererDevice::GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index) {

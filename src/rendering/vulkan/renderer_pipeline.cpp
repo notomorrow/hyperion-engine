@@ -72,7 +72,7 @@ VkRenderPass *RendererPipeline::GetRenderPass() {
     return &this->render_pass;
 }
 
-void RendererPipeline::CreateCommandPool() {
+RendererResult RendererPipeline::CreateCommandPool() {
     QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
 
     VkCommandPoolCreateInfo pool_info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
@@ -80,13 +80,17 @@ void RendererPipeline::CreateCommandPool() {
     /* TODO: look into VK_COMMAND_POOL_CREATE_TRANSIENT_BIT for constantly changing objects */
     pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-    auto result = vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &this->command_pool);
+    HYPERION_VK_CHECK_MSG(
+        vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &this->command_pool),
+        "Could not create Vulkan command pool"
+    );
 
     DebugLog(LogType::Debug, "Create Command pool\n");
-    AssertThrowMsg(result == VK_SUCCESS, "Could not create Vulkan command pool\n");
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
-void RendererPipeline::CreateCommandBuffers(uint16_t count) {
+RendererResult RendererPipeline::CreateCommandBuffers(uint16_t count) {
     AssertThrow(count >= 1);
     this->command_buffers.resize(this->swapchain->framebuffers.size());
 
@@ -95,10 +99,14 @@ void RendererPipeline::CreateCommandBuffers(uint16_t count) {
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = (uint32_t) this->command_buffers.size();
 
-    auto result = vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data());
-    AssertThrowMsg(result == VK_SUCCESS, "Could not create Vulkan command buffers\n");
+    HYPERION_VK_CHECK_MSG(
+        vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data()),
+        "Could not create Vulkan command buffers"
+    );
 
     DebugLog(LogType::Debug, "Allocate %d command buffers\n", this->command_buffers.size());
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
 void RendererPipeline::UpdateDynamicStates(VkCommandBuffer cmd) {
@@ -180,9 +188,13 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index
     render_pass_info.renderArea.offset = { 0, 0 };
     render_pass_info.renderArea.extent = this->swapchain->extent;
 
-    VkClearValue clear_colour = {0.5f, 0.7f, 0.5f, 1.0f};
-    render_pass_info.clearValueCount = 1;
-    render_pass_info.pClearValues = &clear_colour;
+    const std::array clear_values {
+        VkClearValue{.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+        VkClearValue{.depthStencil = {1.0f, 0}}
+    };
+    render_pass_info.clearValueCount = clear_values.size();
+    render_pass_info.pClearValues = clear_values.data();
+
     /* Start adding draw commands  */
     vkCmdBeginRenderPass(cmd, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     /* Bind the graphics pipeline */
@@ -202,56 +214,95 @@ void RendererPipeline::EndRenderPass(VkCommandBuffer cmd) {
     AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
 }
 
-void RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_count) {
-    VkAttachmentDescription attachment{};
-    attachment.format = this->swapchain->image_format;
-    attachment.samples = sample_count;
-    /* Options to change what happens before and after our render pass */
-    attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+RendererResult RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_count) {
+    std::array color_attachment_references{
+        VkAttachmentReference{
+            .attachment = 0,
+            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        }
+    };
 
-    attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    /* Images are presented to the swapchain */
-    attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    std::array depth_stencil_attachment_references{
+        VkAttachmentReference{
+            .attachment = 1,
+            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        }
+    };
 
-    VkAttachmentReference attachment_ref{};
-    attachment_ref.attachment = 0; /* Our attachment array(only one pass, so it will be 0) */
-    attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    static_assert(
+        depth_stencil_attachment_references.size() == 1,
+        "May only have 1 depth/stencil attachment"
+    );
+
+    AssertExit(this->swapchain->depth_buffer.image != nullptr);
+
+    std::array attachment_descriptions{
+        /* Color attachment */
+        VkAttachmentDescription{
+            .format = this->swapchain->image_format,
+            .samples = sample_count,
+            /* Options to change what happens before and after our render pass */
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            /* Images are presented to the swapchain */
+            .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+        },
+        /* Depth attachment */
+        VkAttachmentDescription {
+            .format = this->swapchain->depth_buffer.image->GetImageFormat(),
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        }
+    };
+
+    static_assert(
+        attachment_descriptions.size() == color_attachment_references.size() + depth_stencil_attachment_references.size(),
+        "Number of attachment descriptions must match number of references"
+    );
 
     /* Subpasses for post processing, etc. */
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &attachment_ref;
+    subpass.colorAttachmentCount = color_attachment_references.size();
+    subpass.pColorAttachments = color_attachment_references.data();
+    subpass.pDepthStencilAttachment = depth_stencil_attachment_references.data();
 
-    const VkAttachmentDescription attachments[] = {attachment};
+    //const VkAttachmentDescription attachments[] = {attachment};
     const VkSubpassDescription subpasses[] = {subpass};
 
     /* Create render pass */
-    VkRenderPassCreateInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    render_pass_info.attachmentCount = 1;
-    render_pass_info.pAttachments = attachments;
-    render_pass_info.subpassCount = 1;
-    render_pass_info.pSubpasses = subpasses;
-
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
+    VkRenderPassCreateInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
+    render_pass_info.attachmentCount = attachment_descriptions.size();
+    render_pass_info.pAttachments = attachment_descriptions.data();
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = subpasses;
     render_pass_info.dependencyCount = 1;
     render_pass_info.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(this->device->GetDevice(), &render_pass_info, nullptr, &this->render_pass) != VK_SUCCESS) {
-        DebugLog(LogType::Error, "Could not create render pass!\n");
-        throw std::runtime_error("Error creating render pass");
-    }
-    DebugLog(LogType::Info, "Renderpass created!\n");
+    HYPERION_VK_CHECK_MSG(
+        vkCreateRenderPass(this->device->GetDevice(), &render_pass_info, nullptr, &this->render_pass),
+        "Could not create render pass!"
+    );
+
+    DebugLog(LogType::Debug, "Renderpass created!\n");
+
+    return RendererResult(RendererResult::RENDERER_OK);
 }
 
 void RendererPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
@@ -320,7 +371,7 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
 
     /* Push constants */
     //setup push constants
-    VkPushConstantRange push_constant;
+    VkPushConstantRange push_constant{};
     //this push constant range starts at the beginning
     push_constant.offset = 0;
     //this push constant range takes up the size of a MeshPushConstants struct
@@ -352,6 +403,19 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
         throw std::runtime_error("Error creating pipeline layout");
     }
 
+    /* Depth / stencil */
+    VkPipelineDepthStencilStateCreateInfo depth_stencil{};
+    depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil.depthTestEnable = VK_TRUE;
+    depth_stencil.depthWriteEnable = VK_TRUE;
+    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depth_stencil.depthBoundsTestEnable = VK_FALSE;
+    depth_stencil.minDepthBounds = 0.0f; // Optional
+    depth_stencil.maxDepthBounds = 1.0f; // Optional
+    depth_stencil.stencilTestEnable = VK_FALSE;
+    depth_stencil.front = {}; // Optional
+    depth_stencil.back = {}; // Optional
+
     VkGraphicsPipelineCreateInfo pipeline_info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
     auto stages = shader->shader_stages;
     pipeline_info.stageCount = stages.size();
@@ -362,7 +426,7 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     pipeline_info.pViewportState = &viewport_state;
     pipeline_info.pRasterizationState = &rasterizer;
     pipeline_info.pMultisampleState = &multisampling;
-    pipeline_info.pDepthStencilState = nullptr;
+    pipeline_info.pDepthStencilState = &depth_stencil;
     pipeline_info.pColorBlendState = &color_blending;
     /* TODO: reimplement dynamic states! */
     pipeline_info.pDynamicState = &dynamic_state;
