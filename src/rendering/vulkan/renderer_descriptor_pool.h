@@ -48,7 +48,8 @@ public:
     RendererResult BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout, size_t start_index, size_t size);
     RendererResult BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout);
 
-    RendererDescriptorSet *AddDescriptorSet();
+    // return new descriptor set
+    RendererDescriptorSet &AddDescriptorSet();
     inline RendererDescriptorSet *GetDescriptorSet(size_t index) { return m_descriptor_sets[index].get(); }
     inline const RendererDescriptorSet *GetDescriptorSet(size_t index) const { return m_descriptor_sets[index].get(); }
 

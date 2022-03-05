@@ -8,7 +8,7 @@
 namespace hyperion {
 
 struct SPIRVObject {
-    using Raw_t = std::vector<byte>;
+    using Raw_t = std::vector<ubyte>;
 
     enum class Type : int {
         Vertex = 0,

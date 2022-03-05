@@ -10,16 +10,18 @@
 #include <optional>
 
 #include "renderer_structs.h"
+#include "renderer_features.h"
 
 namespace hyperion {
 
 class RendererDevice {
 public:
     RendererDevice();
+    ~RendererDevice();
     void Destroy();
 
     void SetDevice(const VkDevice &_device);
-    void SetPhysicalDevice(const VkPhysicalDevice &, const VkPhysicalDeviceProperties &, const VkPhysicalDeviceFeatures &);
+    void SetPhysicalDevice(VkPhysicalDevice);
     void SetRenderSurface(const VkSurfaceKHR &_surface);
     void SetRequiredExtensions(const std::vector<const char *> &_extensions);
     VkDevice         GetDevice();
@@ -30,20 +32,11 @@ public:
     QueueFamilyIndices FindQueueFamilies();
     SwapchainSupportDetails QuerySwapchainSupport();
 
-    inline const VkPhysicalDeviceProperties &GetPhysicalDeviceProperties() const
-    {
-        return properties;
-    }
-
-    inline const VkPhysicalDeviceFeatures &GetPhysicalDeviceFeatures() const
-    {
-        return features;
-    }
+    inline const RendererFeatures &GetRendererFeatures() const { return renderer_features; }
 
     VkQueue GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index = 0);
 
     VkDevice CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions);
-    VkPhysicalDeviceFeatures GetDeviceFeatures();
 
     bool CheckDeviceSuitable();
 
@@ -55,8 +48,8 @@ private:
     VkDevice                   device;
     VkSurfaceKHR               surface;
     VkPhysicalDevice           physical;
-    VkPhysicalDeviceProperties properties;
-    VkPhysicalDeviceFeatures   features;
+
+    RendererFeatures renderer_features;
 
     std::vector<const char *> required_extensions;
 };

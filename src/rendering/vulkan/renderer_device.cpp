@@ -13,23 +13,24 @@ namespace hyperion {
 
 RendererDevice::RendererDevice()
     : device(nullptr),
-    physical(nullptr),
-    surface(nullptr)
+      physical(nullptr),
+      surface(nullptr)
 {
     static int x = 0;
     DebugLog(LogType::Debug, "Created RendererDevice [%d]\n", x++);
 }
 
+RendererDevice::~RendererDevice()
+{
+}
+
 void RendererDevice::SetDevice(const VkDevice &device) {
     this->device = device;
 }
-void RendererDevice::SetPhysicalDevice(const VkPhysicalDevice &physical,
-    const VkPhysicalDeviceProperties &properties,
-    const VkPhysicalDeviceFeatures &features)
+void RendererDevice::SetPhysicalDevice(VkPhysicalDevice physical)
 {
     this->physical = physical;
-    this->properties = properties;
-    this->features = features;
+    this->renderer_features.SetPhysicalDevice(physical);
 }
 void RendererDevice::SetRenderSurface(const VkSurfaceKHR &surface) {
     this->surface = surface;
@@ -103,12 +104,6 @@ QueueFamilyIndices RendererDevice::FindQueueFamilies() {
     }
 
     return indices;
-}
-
-VkPhysicalDeviceFeatures RendererDevice::GetDeviceFeatures() {
-    VkPhysicalDeviceFeatures features;
-    vkGetPhysicalDeviceFeatures(this->physical, &features);
-    return features;
 }
 
 std::vector<VkExtensionProperties> RendererDevice::GetSupportedExtensions() {
@@ -212,8 +207,7 @@ VkDevice RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &required_
     create_info.enabledExtensionCount = (uint32_t)(required_extensions.size());
     create_info.ppEnabledExtensionNames = required_extensions.data();
     // Setup Device Features
-    VkPhysicalDeviceFeatures device_features = this->GetDeviceFeatures();
-    create_info.pEnabledFeatures = &device_features;
+    create_info.pEnabledFeatures = &this->renderer_features.GetPhysicalDeviceFeatures();
 
     VkDevice _device;
     VkResult result = vkCreateDevice(this->physical, &create_info, nullptr, &_device);

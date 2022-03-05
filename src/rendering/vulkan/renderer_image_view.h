@@ -16,13 +16,15 @@ public:
     RendererImageView &operator=(const RendererImageView &other) = delete;
     ~RendererImageView();
 
+    inline VkImageView &GetImageView() { return m_image_view; }
+    inline const VkImageView &GetImageView() const { return m_image_view; }
+
     RendererResult Create(RendererDevice *device, RendererImage *image);
     RendererResult Destroy(RendererDevice *device);
 
 private:
     static VkImageViewType ToVkImageViewType(Texture::TextureType);
 
-    VkImage m_image;
     VkImageView m_image_view;
 };
 

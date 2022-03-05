@@ -23,9 +23,9 @@ public:
         ReadBytes(reinterpret_cast<char*>(ptr), size);
     }
 
-    inline std::vector<byte> Read()
+    inline std::vector<ubyte> Read()
     {
-        std::vector<byte> data;
+        std::vector<ubyte> data;
         data.resize(Max());
 
         Read(data.data(), data.size());

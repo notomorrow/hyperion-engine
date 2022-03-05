@@ -69,7 +69,15 @@ public:
         TEXTURE_FILTER_LINEAR_MIPMAP
     };
 
+    enum class TextureWrapMode {
+        TEXTURE_WRAP_CLAMP_TO_EDGE,
+        TEXTURE_WRAP_REPEAT
+    };
+
     static TextureBaseFormat GetBaseFormat(TextureInternalFormat);
+
+    // returns a texture format that has a shifted bpp
+    static TextureInternalFormat FormatChangeNumComponents(TextureInternalFormat, uint8_t new_num_components);
 
     Texture(TextureType texture_type);
     Texture(TextureType texture_type, int width, int height, unsigned char *bytes);

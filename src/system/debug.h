@@ -58,13 +58,13 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
 
 #define _DebugLogAssertion(level, cond) \
     { \
-        DebugLog(level, "*** assertion failed ***\n\t%s evaluated to FALSE in file '%s'\n", #cond, __FILE__); \
+        const char *s = "*** assertion failed: (" #cond ") ***"; \
+        DebugLog(level, "%s", s); \
     }
 
-#define _DebugLogAssertionMsg(level, cond, ...) \
+#define _DebugLogAssertionMsg(level, cond, msg, ...) \
     { \
-        const char *s = "*** assertion failed: ***\n\t" #cond " evaluated to FALSE in file " __FILE__; \
-        DebugLog(level, "%s\nMessage was: %s", s, __VA_ARGS__); \
+        DebugLog(level, "*** assertion failed: (" #cond ") ***\n\tMessage: " msg, __VA_ARGS__); \
     }
 
 #define AssertOrElse(level, cond, stmt) \
