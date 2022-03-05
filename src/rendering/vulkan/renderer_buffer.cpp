@@ -141,9 +141,7 @@ RendererResult RendererGPUImage::Create(RendererDevice *device, size_t size, VkI
 
     VkDevice vk_device = device->GetDevice();
 
-    if (vkCreateImage(device->GetDevice(), image_info, nullptr, &image) != VK_SUCCESS) {
-        return RendererResult(RendererResult::RENDERER_ERR, "Could not create image!");
-    }
+    HYPERION_VK_CHECK_MSG(vkCreateImage(device->GetDevice(), image_info, nullptr, &image), "Could not create image!");
 
     VkMemoryRequirements requirements;
     vkGetImageMemoryRequirements(vk_device, image, &requirements);
@@ -153,13 +151,8 @@ RendererResult RendererGPUImage::Create(RendererDevice *device, size_t size, VkI
     //this->memory_property_flags = (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     alloc_info.memoryTypeIndex = FindMemoryType(device, requirements.memoryTypeBits, this->memory_property_flags);
 
-    if (vkAllocateMemory(vk_device, &alloc_info, nullptr, &this->memory) != VK_SUCCESS) {
-        return RendererResult(RendererResult::RENDERER_ERR, "Could not allocate image memory!");
-    }
-
-    if (vkBindImageMemory(vk_device, this->image, this->memory, 0) != VK_SUCCESS) {
-        return RendererResult(RendererResult::RENDERER_ERR, "Could not bind image memory!");
-    }
+    HYPERION_VK_CHECK_MSG(vkAllocateMemory(vk_device, &alloc_info, nullptr, &this->memory), "Could not allocate image memory!");
+    HYPERION_VK_CHECK_MSG(vkBindImageMemory(vk_device, this->image, this->memory, 0), "Could not bind image memory!");
 
     return RendererResult(RendererResult::RENDERER_OK);
 }

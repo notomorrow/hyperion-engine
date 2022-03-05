@@ -1,6 +1,8 @@
 #ifndef RENDERER_RESULT_H
 #define RENDERER_RESULT_H
 
+#include <system/debug.h>
+
 namespace hyperion {
 
 struct RendererResult {
@@ -19,6 +21,24 @@ struct RendererResult {
 
     inline operator bool() const { return result == RENDERER_OK; }
 };
+
+#define HYPERION_BUBBLE_ERRORS(result) \
+    do { \
+        RendererResult _result = result; \
+        if (!_result) return _result; \
+    } while (0);
+
+#define HYPERION_VK_CHECK(vk_result) \
+    do { \
+        if ((vk_result) != VK_SUCCESS) \
+            return RendererResult(RendererResult::RENDERER_ERR, #vk_result " != VK_SUCCESS"); \
+    } while (0)
+
+#define HYPERION_VK_CHECK_MSG(vk_result, msg) \
+    do { \
+        if ((vk_result) != VK_SUCCESS) \
+            return RendererResult(RendererResult::RENDERER_ERR, msg ":\t" #vk_result " != VK_SUCCESS"); \
+    } while (0)
 
 } // namespace hyperion
 
