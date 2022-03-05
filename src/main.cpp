@@ -668,14 +668,12 @@ int main()
         MainShaderData shad_data;
 
         Transform tf2;
-        tf2.SetTranslation(Vector3(0, 1, 0));
+        tf2.SetTranslation(Vector3(6, 0, 6));
 
         shad_data.model = tf.GetMatrix();
         shad_data.pv = camera->GetViewProjectionMatrix();
 
 
-        //tf.SetScale(Vector3(0.25f) + std::cos(timer));
-        //tf.SetRotation(Quaternion(Vector3(0, 0, 1), std::sin(timer)));
         test_gpu_buffer.Copy(device, sizeof(shad_data), (void *)&shad_data);
         pipeline->descriptor_pool.BindDescriptorSets(*frame->command_buffer, pipeline->layout);
         mesh->RenderVk(frame, &renderer, nullptr);

@@ -65,7 +65,7 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
 
             unsigned char *new_bytes = new unsigned char[new_size];
 
-            ImageUtil::ConvertBpp(m_width, m_height, m_bpp, new_bpp, m_bytes, new_bytes);
+            ImageUtil::ConvertBpp(m_width, m_height, m_depth, m_bpp, new_bpp, m_bytes, new_bytes);
 
             delete[] m_bytes;
             m_bytes = new_bytes;

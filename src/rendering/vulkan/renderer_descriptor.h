@@ -30,7 +30,6 @@ public:
         non_owning_ptr<RendererGPUBuffer> gpu_buffer;
 
         VkDescriptorImageInfo image_info;
-        non_owning_ptr<RendererGPUImage> gpu_image;
         non_owning_ptr<RendererImageView> image_view;
         non_owning_ptr<RendererSampler> sampler;
 
@@ -39,7 +38,6 @@ public:
               buffer_info{},
               gpu_buffer(nullptr),
               image_info{},
-              gpu_image(nullptr),
               image_view(nullptr),
               sampler(nullptr)
         {}
@@ -49,7 +47,6 @@ public:
               buffer_info{},
               gpu_buffer(gpu_buffer),
               image_info{},
-              gpu_image(nullptr),
               image_view(nullptr),
               sampler(nullptr)
         {}
@@ -59,7 +56,6 @@ public:
               buffer_info{},
               gpu_buffer(nullptr),
               image_info{},
-              gpu_image(nullptr),
               image_view(image_view),
               sampler(sampler)
         {}
@@ -69,17 +65,16 @@ public:
               buffer_info(other.buffer_info),
               gpu_buffer(other.gpu_buffer),
               image_info(other.image_info),
-              gpu_image(other.gpu_image),
               image_view(other.image_view),
               sampler(other.sampler)
         {}
+
         BufferInfo &operator=(const BufferInfo &other)
         {
             mode = other.mode;
             buffer_info = other.buffer_info;
             gpu_buffer = other.gpu_buffer;
             image_info = other.image_info;
-            gpu_image = other.gpu_image;
             image_view = other.image_view;
             sampler = other.sampler;
 

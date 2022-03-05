@@ -21,21 +21,19 @@ RendererResult RendererImageView::Create(RendererDevice *device, RendererImage *
     AssertThrow(image != nullptr);
     AssertThrow(image->GetGPUImage() != nullptr);
 
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image->GetGPUImage()->image;
-    viewInfo.viewType = ToVkImageViewType(image->GetTextureType());
-    viewInfo.format = image->GetImageFormat();
+    VkImageViewCreateInfo view_info{};
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view_info.image = image->GetGPUImage()->image;
+    view_info.viewType = ToVkImageViewType(image->GetTextureType());
+    view_info.format = image->GetImageFormat();
 
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.levelCount = 1;
+    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.layerCount = 1;
 
-    if (vkCreateImageView(device->GetDevice(), &viewInfo, nullptr, &m_image_view) != VK_SUCCESS) {
-        return RendererResult(RendererResult::RENDERER_ERR, "Failed to create image view");
-    }
+    HYPERION_VK_CHECK_MSG(vkCreateImageView(device->GetDevice(), &view_info, nullptr, &m_image_view), "Failed to create image view");
 
     return RendererResult(RendererResult::RENDERER_OK);
 }

@@ -4,9 +4,7 @@
 
 namespace hyperion {
 RendererDescriptor::RendererDescriptor(uint32_t binding, const BufferInfo &info, VkDescriptorType type, VkShaderStageFlags stage_flags)
-    :// m_buffer(nullptr),
-     // m_image(nullptr),
-      m_binding(binding),
+    : m_binding(binding),
       m_info(info),
       m_type(type),
       m_stage_flags(stage_flags)
@@ -15,15 +13,10 @@ RendererDescriptor::RendererDescriptor(uint32_t binding, const BufferInfo &info,
 
 RendererDescriptor::~RendererDescriptor()
 {
-   // AssertExitMsg(m_buffer == nullptr, "buffer should have been destroyed");
-   // AssertExitMsg(m_image == nullptr,  "image should have been destroyed");
 }
 
 void RendererDescriptor::Create(RendererDevice *device, RendererDescriptor::Info *out_info)
 {
-    /*AssertExit(m_buffer == nullptr);
-    AssertExit(m_image == nullptr);*/
-
     AssertExit(m_info.mode != Mode::UNSET);
 
     switch (m_info.mode) {
@@ -66,12 +59,6 @@ void RendererDescriptor::Create(RendererDevice *device, RendererDescriptor::Info
 
 void RendererDescriptor::Destroy(RendererDevice *device)
 {
-    /*AssertExit(m_buffer != nullptr);
-
-    m_buffer->Destroy(device);
-
-    delete m_buffer;
-    m_buffer = nullptr;*/
 }
 
 } // namespace hyperion

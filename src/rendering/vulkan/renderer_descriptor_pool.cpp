@@ -62,13 +62,13 @@ RendererResult RendererDescriptorPool::Create(RendererDevice *device, VkDescript
     }
 
     size_t index = 0;
+
     for (const auto &set : m_descriptor_sets) {
         auto descriptor_set_result = set->Create(device, this);
 
         if (!descriptor_set_result) return descriptor_set_result;
 
-        m_descriptor_sets_view[index] = set->m_set;
-        index++;
+        m_descriptor_sets_view[index++] = set->m_set;
     }
 
     return RendererResult(RendererResult::RENDERER_OK);
