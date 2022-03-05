@@ -56,21 +56,21 @@ void DebugLog_(LogType type, const char *fmt, ...);
 void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt, ...);
 #endif
 
-#define _DebugLogAssertion(level, cond) \
+#define DebugLogAssertion(level, cond) \
     { \
         const char *s = "*** assertion failed: (" #cond ") ***"; \
         DebugLog(level, "%s", s); \
     }
 
-#define _DebugLogAssertionMsg(level, cond, msg, ...) \
+#define DebugLogAssertionMsg(level, cond, ...) \
     { \
-        DebugLog(level, "*** assertion failed: (" #cond ") ***\n\tMessage: " msg, __VA_ARGS__); \
+        DebugLog(level, "*** assertion failed: (" #cond ") ***\n\tMessage: ", __VA_ARGS__); \
     }
 
 #define AssertOrElse(level, cond, stmt) \
     { \
         if (!(cond)) { \
-            _DebugLogAssertion(level, cond); \
+            DebugLogAssertion(level, cond); \
             { stmt; } \
         } \
     }
@@ -78,7 +78,7 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
 #define AssertOrElseMsg(level, cond, stmt, ...) \
     { \
         if (!(cond)) {                                            \
-            _DebugLogAssertionMsg(level, cond, __VA_ARGS__); \
+            DebugLogAssertionMsg(level, cond, __VA_ARGS__); \
             { stmt; }                                               \
         }                                                         \
     }
@@ -87,7 +87,7 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
 #define AssertThrowMsg(cond, ...) AssertOrElseMsg(LogType::Error, cond, throw std::runtime_error("Assertion failed"), __VA_ARGS__)
 #define AssertSoft(cond) AssertOrElse(LogType::Warn, cond, return);
 #define AssertSoftMsg(cond, ...) AssertOrElseMsg(LogType::Warn, cond, return, __VA_ARGS__);
-#define AssertReturn(cond, value) AssertOrElse(LogType::Warn, cond, return value);
+#define AssertReturn(cond, value) AssertOrElse(LogType::Warn, cond, return (value));
 #define AssertReturnMsg(cond, value, ...) AssertOrElseMsg(LogType::Warn, cond, return value, __VA_ARGS__);
 #define AssertBreak(cond) AssertOrElse(LogType::Warn, cond, break);
 #define AssertBreakMsg(cond, ...) AssertOrElseMsg(LogType::Warn, cond, break, __VA_ARGS__);
