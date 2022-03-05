@@ -565,7 +565,8 @@ int main()
 
     VkRenderer renderer(system, "Hyperion Vulkan Test", "HyperionEngine");
 
-    renderer.Initialize(true);
+    auto renderer_initialize_result = renderer.Initialize(true);
+    AssertThrowMsg(renderer_initialize_result, "%s", renderer_initialize_result.message);
 
     RendererDevice *device = renderer.GetRendererDevice();
     RendererPipeline *pipeline = renderer.GetCurrentPipeline();
@@ -575,7 +576,16 @@ int main()
 
     // test image
     auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
-    RendererImage image(texture->GetWidth(), texture->GetHeight(), 1, texture->GetInternalFormat(), texture->GetTextureType(), texture->GetBytes());
+    RendererImage image(
+        texture->GetWidth(),
+        texture->GetHeight(),
+        1,
+        texture->GetInternalFormat(),
+        texture->GetTextureType(),
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        texture->GetBytes()
+    );
     RendererImageView test_image_view;
     RendererSampler test_sampler(Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR, Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE);
 
@@ -584,7 +594,8 @@ int main()
     shader.AttachShader(device, SPIRVObject{ SPIRVObject::Type::Fragment, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/frag.spv").Read() });
     shader.CreateProgram("main");
 
-    renderer.InitializePipeline(&shader);
+    auto initialize_pipeline_result = renderer.InitializePipeline(&shader);
+    AssertThrowMsg(initialize_pipeline_result, "%s", initialize_pipeline_result.message);
 
     pipeline->descriptor_pool
         .AddDescriptorSet()
@@ -600,7 +611,12 @@ int main()
     test_gpu_buffer.Create(device, sizeof(MainShaderData));
     //renderer.pipeline->CreateCommandPool();
 
-    auto image_create_result = image.Create(device, pipeline);
+    auto image_create_result = image.Create(
+        device,
+        pipeline,
+        RendererImage::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
+        RendererImage::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
+    );
     AssertThrowMsg(image_create_result, "%s", image_create_result.message);
 
     auto image_view_result = test_image_view.Create(device, &image);
@@ -608,7 +624,6 @@ int main()
 
     auto sampler_result = test_sampler.Create(device, &test_image_view);
     AssertThrowMsg(sampler_result, "%s", sampler_result.message);
-
 
     renderer.pipeline->Rebuild(&shader);
     auto mesh = MeshFactory::CreateCube();

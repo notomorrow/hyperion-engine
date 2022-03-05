@@ -28,8 +28,8 @@ public:
     void SetPrimitive(VkPrimitiveTopology _primitive);
     void SetDynamicStates(const std::vector<VkDynamicState> &_states);
 
-    void CreateCommandPool();
-    void CreateCommandBuffers(uint16_t count);
+    RendererResult CreateCommandPool();
+    RendererResult CreateCommandBuffers(uint16_t count);
 
     void UpdateDynamicStates(VkCommandBuffer cmd);
     void SetViewport(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
@@ -37,7 +37,7 @@ public:
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
     void Rebuild(RendererShader *shader);
 
-    void CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
+    RendererResult CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
     // void DoRenderPass(void (*render_callback)(RendererPipeline *pl, VkCommandBuffer *cmd));
     void StartRenderPass(VkCommandBuffer cmd, uint32_t image_index);
     void EndRenderPass(VkCommandBuffer cmd);

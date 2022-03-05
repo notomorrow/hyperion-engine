@@ -24,8 +24,14 @@ struct RendererResult {
 
 #define HYPERION_BUBBLE_ERRORS(result) \
     do { \
-        RendererResult _result = result; \
+        RendererResult _result = (result); \
         if (!_result) return _result; \
+    } while (0);
+
+#define HYPERION_IGNORE_ERRORS(result) \
+    do { \
+        RendererResult _result = (result); \
+        (void)_result; \
     } while (0);
 
 #define HYPERION_VK_CHECK(vk_result) \

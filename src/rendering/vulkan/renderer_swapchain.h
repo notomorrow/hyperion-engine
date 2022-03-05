@@ -6,8 +6,8 @@
 #define HYPERION_RENDERER_SWAPCHAIN_H
 
 #include "renderer_structs.h"
-
 #include "renderer_device.h"
+#include "renderer_image_view.h"
 
 #include <vector>
 
@@ -15,27 +15,33 @@ namespace hyperion {
 
 class RendererSwapchain {
     VkSurfaceFormatKHR ChooseSurfaceFormat();
-
     VkPresentModeKHR ChoosePresentMode();
-
     VkExtent2D ChooseSwapchainExtent();
 
     void RetrieveImageHandles();
-
-    void CreateImageView(size_t index, VkImage *swapchain_image);
-
-    void CreateImageViews();
-
+    RendererResult CreateImageViews();
     void DestroyImageViews();
 
 public:
+    struct DepthBuffer {
+        std::unique_ptr<RendererImageView> image_view;
+        std::unique_ptr<RendererImage> image;
+        //VkImage image;
+        //VkDeviceMemory memory;
+
+        DepthBuffer() : image_view{}, image{} {}
+        DepthBuffer(const DepthBuffer &other) = delete;
+        DepthBuffer &operator=(const DepthBuffer &other) = delete;
+        ~DepthBuffer() = default;
+    };
+
     RendererSwapchain(RendererDevice *_device, const SwapchainSupportDetails &_details);
+    ~RendererSwapchain() = default;
 
     void Destroy();
 
-    void Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices);
-
-    void CreateFramebuffers(VkRenderPass *renderpass);
+    RendererResult Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices);
+    RendererResult CreateFramebuffers(VkRenderPass *renderpass);
 
     std::vector<VkFramebuffer> framebuffers;
 
@@ -46,12 +52,15 @@ public:
     VkSurfaceFormatKHR surface_format;
 
     VkFormat image_format;
+
+    DepthBuffer depth_buffer;
+
 private:
     RendererDevice *renderer_device = nullptr;
     SwapchainSupportDetails support_details;
 
     std::vector<VkImage> images;
-    std::vector<VkImageView> image_views;
+    std::vector<std::unique_ptr<RendererImageView>> image_views;
 };
 }; // namespace hyperion
 

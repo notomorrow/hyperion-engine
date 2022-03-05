@@ -52,19 +52,19 @@ private:
 };
 
 class VkRenderer {
-    static bool CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
+    static RendererResult CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
 
     std::vector<VkPhysicalDevice> EnumeratePhysicalDevices();
     VkPhysicalDevice PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices);
 
     /* Setup debug mode */
-    void SetupDebug();
+    RendererResult SetupDebug();
 
     void AllocatePendingFrames();
     void CleanupPendingFrames();
 public:
     VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name);
-    void Initialize(bool load_debug_layers=false);
+    RendererResult Initialize(bool load_debug_layers=false);
     void CreateSurface();
 
     RendererFrame *GetNextFrame();
@@ -76,9 +76,9 @@ public:
 
     void SetValidationLayers(std::vector<const char *> _layers);
     RendererDevice *GetRendererDevice();
-    RendererDevice *InitializeRendererDevice(VkPhysicalDevice _physical_device = nullptr);
-    void InitializeSwapchain();
-    void InitializePipeline(RendererShader *shader);
+    RendererResult InitializeRendererDevice(VkPhysicalDevice _physical_device = nullptr);
+    RendererResult InitializeSwapchain();
+    RendererResult InitializePipeline(RendererShader *shader);
 
     void SetQueueFamilies(std::set<uint32_t> queue_families);
 

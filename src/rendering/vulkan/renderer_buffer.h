@@ -13,10 +13,14 @@ namespace hyperion {
 class RendererGPUMemory {
 public:
     static uint32_t FindMemoryType(RendererDevice *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties);
+
     RendererGPUMemory(
         uint32_t memory_property_flags,
         uint32_t sharing_mode
     );
+    RendererGPUMemory(const RendererGPUMemory &other) = delete;
+    RendererGPUMemory &operator=(const RendererGPUMemory &other) = delete;
+    ~RendererGPUMemory() = default;
 
     VkDeviceMemory memory;
     VkDeviceSize size;

@@ -41,7 +41,7 @@ RendererDescriptorSet &RendererDescriptorPool::AddDescriptorSet()
 
 RendererResult RendererDescriptorPool::Create(RendererDevice *device, VkDescriptorPoolCreateFlags flags)
 {
-    uint32_t set_size = m_descriptor_sets.size();
+    uint32_t set_size = uint32_t(m_descriptor_sets.size());
 
     std::vector<VkDescriptorPoolSize> pool_sizes;
     pool_sizes.reserve(items_per_set.size());
@@ -90,6 +90,8 @@ RendererResult RendererDescriptorPool::Destroy(RendererDevice *device)
         }
 
         vkFreeDescriptorSets(device->GetDevice(), m_descriptor_pool, m_descriptor_sets.size(), m_descriptor_sets_view);
+
+        m_descriptor_sets.clear();
 
         // set all to nullptr
         std::memset(m_descriptor_sets_view, 0, sizeof(VkDescriptorSet *) * max_descriptor_sets);

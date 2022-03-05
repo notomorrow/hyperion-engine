@@ -16,18 +16,25 @@ RendererImageView::~RendererImageView()
     AssertExitMsg(m_image_view == nullptr, "image view should have been destroyed");
 }
 
-RendererResult RendererImageView::Create(RendererDevice *device, RendererImage *image)
+RendererResult RendererImageView::Create(RendererDevice *device,
+    VkImage image,
+    VkFormat format,
+    VkImageViewType view_type,
+    VkImageAspectFlags aspect_mask)
 {
-    AssertThrow(image != nullptr);
-    AssertThrow(image->GetGPUImage() != nullptr);
 
     VkImageViewCreateInfo view_info{};
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    view_info.image = image->GetGPUImage()->image;
-    view_info.viewType = ToVkImageViewType(image->GetTextureType());
-    view_info.format = image->GetImageFormat();
+    view_info.image = image;
+    view_info.viewType = view_type;
+    view_info.format = format;
 
-    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    view_info.subresourceRange.aspectMask = aspect_mask;
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.levelCount = 1;
     view_info.subresourceRange.baseArrayLayer = 0;
@@ -36,6 +43,20 @@ RendererResult RendererImageView::Create(RendererDevice *device, RendererImage *
     HYPERION_VK_CHECK_MSG(vkCreateImageView(device->GetDevice(), &view_info, nullptr, &m_image_view), "Failed to create image view");
 
     return RendererResult(RendererResult::RENDERER_OK);
+}
+
+RendererResult RendererImageView::Create(RendererDevice *device, RendererImage *image)
+{
+    AssertThrow(image != nullptr);
+    AssertThrow(image->GetGPUImage() != nullptr);
+
+    return Create(
+        device,
+        image->GetGPUImage()->image,
+        image->GetImageFormat(),
+        ToVkImageViewType(image->GetTextureType()),
+        VK_IMAGE_ASPECT_COLOR_BIT
+    );
 }
 
 RendererResult RendererImageView::Destroy(RendererDevice *device)
