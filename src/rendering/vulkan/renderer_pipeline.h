@@ -20,6 +20,7 @@
 
 namespace hyperion {
 class RendererRenderPass;
+class RendererFramebufferObject;
 class RendererPipeline {
 public:
     struct ConstructionInfo {
@@ -69,8 +70,8 @@ public:
 
     RendererResult CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
     // void DoRenderPass(void (*render_callback)(RendererPipeline *pl, VkCommandBuffer *cmd));
-    void StartRenderPass(VkCommandBuffer cmd, uint32_t image_index);
-    void EndRenderPass(VkCommandBuffer cmd);
+    void StartRenderPass(VkCommandBuffer cmd, uint32_t image_index, RendererFramebufferObject *fbo = nullptr);
+    void EndRenderPass(VkCommandBuffer cmd, RendererFramebufferObject *fbo = nullptr);
 
     VkPrimitiveTopology GetPrimitive();
     std::vector<VkDynamicState> GetDynamicStates();

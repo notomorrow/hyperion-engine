@@ -28,6 +28,7 @@
 #include "rendering/vulkan/renderer_descriptor_set.h"
 #include "rendering/vulkan/renderer_descriptor.h"
 #include "rendering/vulkan/renderer_image.h"
+#include "rendering/vulkan/renderer_fbo.h"
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
@@ -573,6 +574,12 @@ int main()
 
     RendererDevice *device = renderer.GetRendererDevice();
 
+    /* Test fbo */
+    RendererFramebufferObject test_fbo(512, 512);
+    auto fbo_result = test_fbo.Create(device);
+
+    AssertThrowMsg(fbo_result, "%s", fbo_result.message);
+
     /* Descriptor sets */
     RendererGPUBuffer test_gpu_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
@@ -724,7 +731,7 @@ int main()
         shad_data.pv = camera->GetViewProjectionMatrix();
 
 
-        RendererPipeline *pl = pipelines[int(timer) % pipelines.size()];
+        RendererPipeline *pl = pipelines[0];
 
         frame = renderer.GetNextFrame();
         renderer.StartFrame(frame, pl);
@@ -734,6 +741,11 @@ int main()
         mesh->RenderVk(frame, &renderer, nullptr);
 
         renderer.EndFrame(frame, pl);
+
+
+        //RendererPipeline *fbo_pl = pipelines[1];
+        //fbo_pl->StartRenderPass(frame->command_buffer, )
+
 
         renderer.DrawFrame(frame);
     }

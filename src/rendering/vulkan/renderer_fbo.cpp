@@ -25,21 +25,32 @@ RendererResult RendererFramebufferObject::Create(RendererDevice *device)
     const auto color_format = device->GetRendererFeatures().FindSupportedFormat(
         std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
+    );
+
+    if (color_format == Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE) {
+        return RendererResult(
+            RendererResult::RENDERER_ERR,
+            "No RGBA color format was found with the required features; check debug log for info"
+        );
+    }
+
+    const auto depth_format = device->GetRendererFeatures().FindSupportedFormat(
+        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
     );
 
-    const auto depth_format = device->GetRendererFeatures().FindSupportedFormat(
-        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
-    );
+    if (depth_format == Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE) {
+        return RendererResult(
+            RendererResult::RENDERER_ERR,
+            "No depth format was found; check debug log for info"
+        );
+    }
 
     /* Add color attachment */
     m_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
