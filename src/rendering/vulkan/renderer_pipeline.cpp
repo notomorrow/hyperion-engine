@@ -3,6 +3,7 @@
 //
 
 #include "renderer_pipeline.h"
+#include "renderer_render_pass.h"
 
 #include "../../system/debug.h"
 #include "../../math/math_util.h"
@@ -17,7 +18,8 @@ RendererPipeline::RendererPipeline(RendererDevice *_device,
     const ConstructionInfo &construction_info)
     : intern_vertex_buffers(nullptr),
       intern_vertex_buffers_size(0),
-      m_construction_info(construction_info)
+      m_construction_info(construction_info),
+      render_pass(nullptr)
 {
     AssertExit(construction_info.shader != nullptr);
 
@@ -74,7 +76,7 @@ std::vector<VkDynamicState> RendererPipeline::GetDynamicStates() {
 }
 
 VkRenderPass *RendererPipeline::GetRenderPass() {
-    return &this->render_pass;
+    return &this->render_pass->m_render_pass;
 }
 
 RendererResult RendererPipeline::CreateCommandPool() {
@@ -179,21 +181,8 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index
     auto result = vkBeginCommandBuffer(cmd, &begin_info);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer!\n");
 
-    VkRenderPassBeginInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-    render_pass_info.renderPass = this->render_pass;
-    render_pass_info.framebuffer = this->swapchain->framebuffers[image_index];
-    render_pass_info.renderArea.offset = { 0, 0 };
-    render_pass_info.renderArea.extent = this->swapchain->extent;
+    render_pass->Begin(cmd, this->swapchain->framebuffers[image_index], this->swapchain->extent);
 
-    const std::array clear_values {
-        VkClearValue{.color = {0.0f, 0.0f, 0.0f, 1.0f}},
-        VkClearValue{.depthStencil = {1.0f, 0}}
-    };
-    render_pass_info.clearValueCount = clear_values.size();
-    render_pass_info.pClearValues = clear_values.data();
-
-    /* Start adding draw commands  */
-    vkCmdBeginRenderPass(cmd, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
     /* Bind the graphics pipeline */
     //vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
     this->UpdateDynamicStates(cmd);
@@ -204,97 +193,59 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index
 }
 
 void RendererPipeline::EndRenderPass(VkCommandBuffer cmd) {
-    vkCmdEndRenderPass(cmd);
+    render_pass->End(cmd);
 
     auto result = vkEndCommandBuffer(cmd);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
 }
 
 RendererResult RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_count) {
-    std::array color_attachment_references{
-        VkAttachmentReference{
-            .attachment = 0,
-            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        }
-    };
-
-    std::array depth_stencil_attachment_references{
-        VkAttachmentReference{
-            .attachment = 1,
-            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        }
-    };
-
-    static_assert(
-        depth_stencil_attachment_references.size() == 1,
-        "May only have 1 depth/stencil attachment"
-    );
-
     AssertExit(this->swapchain->depth_buffer.image != nullptr);
 
-    std::array attachment_descriptions{
-        /* Color attachment */
-        VkAttachmentDescription{
-            .format = this->swapchain->image_format,
-            .samples = sample_count,
-            /* Options to change what happens before and after our render pass */
-            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            /* Images are presented to the swapchain */
-            .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-        },
-        /* Depth attachment */
-        VkAttachmentDescription {
-            .format = this->swapchain->depth_buffer.image->GetImageFormat(),
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        }
-    };
+    AssertExit(render_pass == nullptr);
 
-    static_assert(
-        attachment_descriptions.size() == color_attachment_references.size() + depth_stencil_attachment_references.size(),
-        "Number of attachment descriptions must match number of references"
-    );
+    render_pass = new RendererRenderPass();
 
-    /* Subpasses for post processing, etc. */
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = color_attachment_references.size();
-    subpass.pColorAttachments = color_attachment_references.data();
-    subpass.pDepthStencilAttachment = depth_stencil_attachment_references.data();
+    render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
+        .attachment = std::make_unique<RendererAttachment>(
+            this->swapchain->image_format,
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            0, 
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        ),
+        .is_depth_attachment = false
+    });
 
-    //const VkAttachmentDescription attachments[] = {attachment};
-    const VkSubpassDescription subpasses[] = {subpass};
+    /* Add our main depth attachment */
 
-    /* Create render pass */
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
+        .attachment = std::make_unique<RendererAttachment>(
+            this->swapchain->depth_buffer.image->GetImageFormat(),
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            1,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        ),
+        .is_depth_attachment = true
+    });
 
-    VkRenderPassCreateInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    render_pass_info.attachmentCount = attachment_descriptions.size();
-    render_pass_info.pAttachments = attachment_descriptions.data();
-    render_pass_info.subpassCount = 1;
-    render_pass_info.pSubpasses = subpasses;
-    render_pass_info.dependencyCount = 1;
-    render_pass_info.pDependencies = &dependency;
+    render_pass->AddDependency(VkSubpassDependency{
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+    });
 
-    HYPERION_VK_CHECK_MSG(
-        vkCreateRenderPass(this->device->GetDevice(), &render_pass_info, nullptr, &this->render_pass),
-        "Could not create render pass!"
-    );
+    HYPERION_BUBBLE_ERRORS(render_pass->Create(this->device));
 
     DebugLog(LogType::Debug, "Renderpass created!\n");
 
@@ -441,7 +392,7 @@ void RendererPipeline::Rebuild(const ConstructionInfo &construction_info, Render
     pipeline_info.pDynamicState = &dynamic_state;
 
     pipeline_info.layout = layout;
-    pipeline_info.renderPass = render_pass;
+    pipeline_info.renderPass = render_pass->GetRenderPass();
     pipeline_info.subpass = 0; /* Index of the subpass */
     pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex = -1;
@@ -468,7 +419,12 @@ void RendererPipeline::Destroy() {
 
     vkDestroyPipeline(render_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(render_device, this->layout, nullptr);
-    vkDestroyRenderPass(render_device, this->render_pass, nullptr);
+
+    render_pass->Destroy(this->device);
+    delete render_pass;
+    render_pass = nullptr;
+
+    //vkDestroyRenderPass(render_device, this->render_pass, nullptr);
 }
 
 helpers::SingleTimeCommands RendererPipeline::GetSingleTimeCommands()

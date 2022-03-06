@@ -1,9 +1,7 @@
 #ifndef HYPERION_RENDERER_FBO_H
 #define HYPERION_RENDERER_FBO_H
 
-#include "renderer_image.h"
-#include "renderer_image_view.h"
-#include "renderer_sampler.h"
+#include "renderer_render_pass.h"
 #include "renderer_attachment.h"
 
 #include <memory>
@@ -13,29 +11,31 @@ namespace hyperion {
 
 class RendererFramebufferObject {
 public:
-    struct AttachmentInfo {
-        RendererImage image;
-        RendererImageView image_view;
-        RendererSampler sampler;
-    };
 
     RendererFramebufferObject(size_t width, size_t height);
     RendererFramebufferObject(const RendererFramebufferObject &other) = delete;
     RendererFramebufferObject &operator=(const RendererFramebufferObject &other) = delete;
     ~RendererFramebufferObject();
 
+    inline RendererRenderPass *GetRenderPass() { return m_render_pass.get(); }
+    inline const RendererRenderPass *GetRenderPass() const { return m_render_pass.get(); }
+
     RendererResult Create(RendererDevice *device);
     RendererResult Destroy(RendererDevice *device);
 
-    void AddAttachment(std::unique_ptr<AttachmentInfo> &&attachment);
-
 private:
+    struct AttachmentImageInfo {
+        std::unique_ptr<RendererImage> image;
+        std::unique_ptr<RendererImageView> image_view;
+        std::unique_ptr<RendererSampler> sampler;
+    };
+
     size_t m_width,
            m_height;
 
-    std::vector<std::unique_ptr<AttachmentInfo>> m_attachment_infos;
+    std::unique_ptr<RendererRenderPass> m_render_pass;
+    std::vector<AttachmentImageInfo> m_fbo_attachments;
 
-    VkRenderPass m_render_pass;
     VkFramebuffer m_framebuffer;
 };
 
