@@ -124,7 +124,7 @@ RendererResult RendererImage::CreateImage(RendererDevice *device,
 
     HYPERION_BUBBLE_ERRORS(m_image->Create(device, m_size, &image_info));
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererImage::Create(RendererDevice *device, VkImageLayout layout)
@@ -171,8 +171,8 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
 
             //barrier the image into the transfer-receive layout
             vkCmdPipelineBarrier(cmd, transfer_from.src_stage_mask, transfer_from.dst_stage_mask, 0, 0, nullptr, 0, nullptr, 1, &acquire_barrier);
-
-            return RendererResult(RendererResult::RENDERER_OK);
+            
+            HYPERION_RETURN_OK;
         });
 
         // copy from staging to image
@@ -195,9 +195,9 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
                 transfer_from.new_layout,
                 1,
                 &region
-            );  
+            );
 
-            return RendererResult(RendererResult::RENDERER_OK);
+            HYPERION_RETURN_OK;
         });
 
         // transition from the previous layout state into a shader read-only state
@@ -211,8 +211,8 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
 
             //barrier the image into the shader readable layout
             vkCmdPipelineBarrier(cmd, transfer_to.src_stage_mask, transfer_to.dst_stage_mask, 0, 0, nullptr, 0, nullptr, 1, &release_barrier);
-
-            return RendererResult(RendererResult::RENDERER_OK);
+            
+            HYPERION_RETURN_OK;
         });
 
         // execute command stack
@@ -225,8 +225,8 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
     m_staging_buffer->Destroy(device);
     delete m_staging_buffer;
     m_staging_buffer = nullptr;
-
-    return RendererResult(RendererResult::RENDERER_OK);
+    
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererImage::Destroy(RendererDevice *device)
@@ -238,8 +238,8 @@ RendererResult RendererImage::Destroy(RendererDevice *device)
 
         if (!destroy_image_result) return destroy_image_result;
     }
-
-    return RendererResult(RendererResult::RENDERER_OK);
+    
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererImage::ConvertTo32Bpp(
@@ -266,8 +266,8 @@ RendererResult RendererImage::ConvertTo32Bpp(
     m_size = new_size;
 
     *out_format = GetImageFormat();
-
-    return RendererResult(RendererResult::RENDERER_OK);
+    
+    HYPERION_RETURN_OK;
 }
 
 VkFormat RendererImage::ToVkFormat(Texture::TextureInternalFormat fmt)

@@ -185,8 +185,7 @@ RendererResult RendererDevice::CheckDeviceSuitable() {
     if (!swapchains_available)
         return RendererResult(RendererResult::RENDERER_ERR, "Device not supported -- swapchains not available.");
 
-    return RendererResult(RendererResult::RENDERER_OK);
-
+    HYPERION_RETURN_OK;
 }
 
 
@@ -226,7 +225,7 @@ RendererResult RendererDevice::CreateLogicalDevice(const std::set<uint32_t> &req
 
     this->SetDevice(_device);
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 VkQueue RendererDevice::GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index) {

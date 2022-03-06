@@ -54,7 +54,7 @@ RendererResult RendererSampler::Create(RendererDevice *device, RendererImageView
         return RendererResult(RendererResult::RENDERER_ERR, "Failed to create sampler!");
     }
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererSampler::Destroy(RendererDevice *device)
@@ -63,7 +63,7 @@ RendererResult RendererSampler::Destroy(RendererDevice *device)
 
     m_sampler = nullptr;
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 VkFilter RendererSampler::ToVkFilter(Texture::TextureFilterMode filter_mode)
@@ -81,6 +81,7 @@ VkSamplerAddressMode RendererSampler::ToVkSamplerAddressMode(Texture::TextureWra
 {
     switch (texture_wrap_mode) {
     case Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    case Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     case Texture::TextureWrapMode::TEXTURE_WRAP_REPEAT: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
     }
 

@@ -71,7 +71,7 @@ RendererResult RendererDescriptorPool::Create(RendererDevice *device, VkDescript
         m_descriptor_sets_view[index++] = set->m_set;
     }
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererDescriptorPool::Destroy(RendererDevice *device)
@@ -102,14 +102,14 @@ RendererResult RendererDescriptorPool::Destroy(RendererDevice *device)
         m_descriptor_pool = nullptr;
     }
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererDescriptorPool::BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout, size_t start_index, size_t size)
 {
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, size, &m_descriptor_sets_view[start_index], 0, nullptr);
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererDescriptorPool::BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout)
@@ -127,7 +127,7 @@ RendererResult RendererDescriptorPool::CreateDescriptorSetLayout(RendererDevice 
 
     m_descriptor_set_layouts.push_back(*out);
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererDescriptorPool::DestroyDescriptorSetLayout(RendererDevice *device, VkDescriptorSetLayout *layout)
@@ -142,7 +142,7 @@ RendererResult RendererDescriptorPool::DestroyDescriptorSetLayout(RendererDevice
 
     m_descriptor_set_layouts.erase(it);
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererDescriptorPool::AllocateDescriptorSet(RendererDevice *device, VkDescriptorSetLayout *layout, RendererDescriptorSet *out)
@@ -157,7 +157,7 @@ RendererResult RendererDescriptorPool::AllocateDescriptorSet(RendererDevice *dev
     VkResult alloc_result = vkAllocateDescriptorSets(device->GetDevice(), &alloc_info, &out->m_set);
 
     switch (alloc_result) {
-    case VK_SUCCESS: return RendererResult(RendererResult::RENDERER_OK);
+    case VK_SUCCESS: return RendererResult::OK;
     case VK_ERROR_FRAGMENTED_POOL:
     case VK_ERROR_OUT_OF_POOL_MEMORY:
         // TODO: re-allocation

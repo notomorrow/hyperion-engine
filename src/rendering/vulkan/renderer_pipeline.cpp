@@ -87,7 +87,7 @@ RendererResult RendererPipeline::CreateCommandPool() {
 
     DebugLog(LogType::Debug, "Create Command pool\n");
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererPipeline::CreateCommandBuffers(uint16_t count) {
@@ -106,7 +106,7 @@ RendererResult RendererPipeline::CreateCommandBuffers(uint16_t count) {
 
     DebugLog(LogType::Debug, "Allocate %d command buffers\n", this->command_buffers.size());
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 void RendererPipeline::UpdateDynamicStates(VkCommandBuffer cmd) {
@@ -131,46 +131,38 @@ void RendererPipeline::SetVertexBuffers(std::vector<RendererVertexBuffer> &verte
     }
 }
 
-std::vector<VkVertexInputAttributeDescription> RendererPipeline::SetVertexAttribs() {
-    VkVertexInputBindingDescription binding_desc{};
-    binding_desc.binding = 0;
-    binding_desc.stride = 64/* Jesus christ */;
-    binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+std::vector<VkVertexInputAttributeDescription> RendererPipeline::BuildVertexAttributes(const RendererMeshInputAttributeSet &attribute_set)
+{
+    std::unordered_map<uint32_t, size_t> binding_sizes{};
 
-    this->vertex_binding_descriptions.push_back(binding_desc);
+    this->vertex_attributes = std::vector<VkVertexInputAttributeDescription>(attribute_set.attributes.size());
 
-    const VkFormat fmt_vec3 = VK_FORMAT_R32G32B32_SFLOAT;
-    const VkFormat fmt_vec2 = VK_FORMAT_R32G32_SFLOAT;
+    for (size_t i = 0; i < attribute_set.attributes.size(); i++) {
+        const auto &attribute = attribute_set.attributes[i];
 
-    uint32_t prev_size = 0;
+        this->vertex_attributes[i] = VkVertexInputAttributeDescription{
+            .location = attribute.location,
+            .binding = attribute.binding,
+            .format = attribute.format,
+            .offset = uint32_t(binding_sizes[attribute.binding])
+        };
 
-    std::vector<VkVertexInputAttributeDescription> attrs;
-    //attrs.resize(6);
-    attrs.resize(6);
+        binding_sizes[attribute.binding] += attribute.size;
+    }
 
-    /* Position */
-    attrs[0] = { 0, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
-    prev_size += 3;
-    /* Normal */
-    attrs[1] = { 1, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
-    prev_size += 3;
-    /* Texcoord0 */
-    attrs[2] = { 2, 0, fmt_vec2, prev_size*(uint32_t)sizeof(float) };
-    prev_size += 2;
-    /* Texcoord1 */
-    attrs[3] = { 3, 0, fmt_vec2, prev_size*(uint32_t)sizeof(float) };
-    prev_size += 2;
-    /* Tangent */
-    attrs[4] = { 4, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
-    prev_size += 3;
-    /* Bitangent */
-    attrs[5] = { 5, 0, fmt_vec3, prev_size*(uint32_t)sizeof(float) };
-    prev_size += 3;
-    DebugLog(LogType::Info, "Total size: %d\n", prev_size);
+    this->vertex_binding_descriptions.clear();
+    this->vertex_binding_descriptions.reserve(binding_sizes.size());
 
-    this->vertex_attributes = attrs;
+    for (auto &it : binding_sizes) {
+        VkVertexInputBindingDescription binding_desc{};
+        binding_desc.binding = it.first;
+        binding_desc.stride = it.second;
+        binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    return attrs;
+        this->vertex_binding_descriptions.push_back(binding_desc);
+    }
+
+    return this->vertex_attributes;
 }
 
 void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index) {
@@ -302,7 +294,7 @@ RendererResult RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_c
 
     DebugLog(LogType::Debug, "Renderpass created!\n");
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 void RendererPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
@@ -311,13 +303,15 @@ void RendererPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescri
     this->vertex_attributes = attribs;
 }
 
-void RendererPipeline::Rebuild(RendererShader *shader) {
-    this->SetVertexAttribs();
+void RendererPipeline::Rebuild(const ConstructionInfo &construction_info) {
+    AssertExit(construction_info.shader != nullptr);
+
+    this->BuildVertexAttributes(construction_info.vertex_attributes);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-    vertex_input_info.vertexBindingDescriptionCount   = (uint32_t)(this->vertex_binding_descriptions.size());
+    vertex_input_info.vertexBindingDescriptionCount   = uint32_t(this->vertex_binding_descriptions.size());
     vertex_input_info.pVertexBindingDescriptions      = this->vertex_binding_descriptions.data();
-    vertex_input_info.vertexAttributeDescriptionCount = (uint32_t)(this->vertex_attributes.size());
+    vertex_input_info.vertexAttributeDescriptionCount = uint32_t(this->vertex_attributes.size());
     vertex_input_info.pVertexAttributeDescriptions    = this->vertex_attributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo input_asm_info{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
@@ -340,9 +334,20 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     /* Backface culling */
-    /*rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;*/
-    rasterizer.cullMode = VK_CULL_MODE_NONE;
+    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+
+    switch (construction_info.cull_mode) {
+    case ConstructionInfo::CullMode::BACK:
+        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+        break;
+    case ConstructionInfo::CullMode::FRONT:
+        rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+        break;
+    default:
+        rasterizer.cullMode = VK_CULL_MODE_NONE;
+        break;
+    }
+
     /* Also visit for shadow mapping! Along with other optional parameters such as
      * depthBiasClamp, slopeFactor etc. */
     rasterizer.depthBiasEnable = VK_FALSE;
@@ -406,8 +411,8 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     /* Depth / stencil */
     VkPipelineDepthStencilStateCreateInfo depth_stencil{};
     depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_stencil.depthTestEnable = VK_TRUE;
-    depth_stencil.depthWriteEnable = VK_TRUE;
+    depth_stencil.depthTestEnable = construction_info.depth_test;
+    depth_stencil.depthWriteEnable = construction_info.depth_write;
     depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depth_stencil.depthBoundsTestEnable = VK_FALSE;
     depth_stencil.minDepthBounds = 0.0f; // Optional
@@ -417,7 +422,8 @@ void RendererPipeline::Rebuild(RendererShader *shader) {
     depth_stencil.back = {}; // Optional
 
     VkGraphicsPipelineCreateInfo pipeline_info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-    auto stages = shader->shader_stages;
+
+    auto stages = construction_info.shader->shader_stages;
     pipeline_info.stageCount = stages.size();
     pipeline_info.pStages = stages.data();
 

@@ -11,7 +11,7 @@ namespace hyperion {
 class RendererDevice;
 class RendererImageView {
 public:
-    RendererImageView();
+    RendererImageView(VkImageAspectFlags aspect_mask);
     RendererImageView(const RendererImageView &other) = delete;
     RendererImageView &operator=(const RendererImageView &other) = delete;
     ~RendererImageView();
@@ -22,14 +22,15 @@ public:
     RendererResult Create(RendererDevice *device,
         VkImage image,
         VkFormat format,
-        VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D,
-        VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT);
-    RendererResult Create(RendererDevice *device, RendererImage *image);
+        VkImageViewType view_type);
+    RendererResult Create(RendererDevice *device,
+        RendererImage *image);
     RendererResult Destroy(RendererDevice *device);
 
 private:
     static VkImageViewType ToVkImageViewType(Texture::TextureType);
 
+    VkImageAspectFlags m_aspect_mask;
     VkImageView m_image_view;
 };
 

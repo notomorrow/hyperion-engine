@@ -70,8 +70,9 @@ public:
         {
         }
 
-        RendererMeshInputAttribute GetAttributeDescription(uint32_t binding, VkFormat format) {
-            VkFormat vk_fmt;
+        RendererMeshInputAttribute GetAttributeDescription(uint32_t location, uint32_t binding = 0) const {
+            VkFormat vk_fmt = VK_FORMAT_UNDEFINED;
+
             switch (this->size) {
                 case 2:
                     /* R  G  B
@@ -90,9 +91,8 @@ public:
                     break;
                 default: AssertThrowMsg(nullptr, "Unsupported vertex attribute format!");
             }
-            RendererMeshInputAttribute attribute(binding, this->index, this->offset, vk_fmt);
 
-            return attribute;
+            return RendererMeshInputAttribute(location, binding, this->size * sizeof(float), vk_fmt);
         }
 
         bool operator==(const MeshAttribute &other) const

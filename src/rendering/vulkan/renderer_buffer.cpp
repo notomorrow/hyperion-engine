@@ -154,7 +154,7 @@ RendererResult RendererGPUImage::Create(RendererDevice *device, size_t size, VkI
     HYPERION_VK_CHECK_MSG(vkAllocateMemory(vk_device, &alloc_info, nullptr, &this->memory), "Could not allocate image memory!");
     HYPERION_VK_CHECK_MSG(vkBindImageMemory(vk_device, this->image, this->memory, 0), "Could not bind image memory!");
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererGPUImage::Destroy(RendererDevice *device)
@@ -167,7 +167,7 @@ RendererResult RendererGPUImage::Destroy(RendererDevice *device)
     vkDestroyImage(vk_device, image, nullptr);
     image = nullptr;
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 }; /* namespace hyperion */

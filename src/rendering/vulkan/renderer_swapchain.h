@@ -15,19 +15,17 @@ namespace hyperion {
 
 class RendererSwapchain {
     VkSurfaceFormatKHR ChooseSurfaceFormat();
-    VkPresentModeKHR ChoosePresentMode();
+    VkPresentModeKHR GetPresentMode();
     VkExtent2D ChooseSwapchainExtent();
 
     void RetrieveImageHandles();
     RendererResult CreateImageViews();
-    void DestroyImageViews();
+    RendererResult DestroyImageViews();
 
 public:
     struct DepthBuffer {
         std::unique_ptr<RendererImageView> image_view;
         std::unique_ptr<RendererImage> image;
-        //VkImage image;
-        //VkDeviceMemory memory;
 
         DepthBuffer() : image_view{}, image{} {}
         DepthBuffer(const DepthBuffer &other) = delete;
@@ -38,10 +36,9 @@ public:
     RendererSwapchain(RendererDevice *_device, const SwapchainSupportDetails &_details);
     ~RendererSwapchain() = default;
 
-    void Destroy();
-
     RendererResult Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices);
     RendererResult CreateFramebuffers(VkRenderPass *renderpass);
+    RendererResult Destroy();
 
     std::vector<VkFramebuffer> framebuffers;
 

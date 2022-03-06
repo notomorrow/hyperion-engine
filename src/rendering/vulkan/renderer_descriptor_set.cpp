@@ -71,7 +71,7 @@ RendererResult RendererDescriptorSet::Create(RendererDevice *device, RendererDes
 
     vkUpdateDescriptorSets(device->GetDevice(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererDescriptorSet::Destroy(RendererDevice *device)
@@ -82,7 +82,7 @@ RendererResult RendererDescriptorSet::Destroy(RendererDevice *device)
 
     // TODO: clear descriptor set
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 } // namespace hyperion

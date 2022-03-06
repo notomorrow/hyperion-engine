@@ -26,8 +26,7 @@ VkSurfaceFormatKHR RendererSwapchain::ChooseSurfaceFormat() {
     return this->support_details.formats[0];
 }
 
-VkPresentModeKHR RendererSwapchain::ChoosePresentMode() {
-    /* TODO: add more presentation modes in the future */
+VkPresentModeKHR RendererSwapchain::GetPresentMode() {
     return VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
@@ -46,17 +45,20 @@ void RendererSwapchain::RetrieveImageHandles() {
     DebugLog(LogType::Info, "Retrieved Swapchain images\n");
 }
 
-RendererResult RendererSwapchain::CreateImageViews() {
+RendererResult RendererSwapchain::CreateImageViews()
+{
     this->image_views.resize(this->images.size());
 
     for (size_t i = 0; i < this->images.size(); i++) {
         VkImage image = this->images[i];
 
-        auto image_view = std::make_unique<RendererImageView>();
+        auto image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_COLOR_BIT);
+ 
         HYPERION_BUBBLE_ERRORS(image_view->Create(
             this->renderer_device,
             image,
-            this->image_format
+            this->image_format,
+            VK_IMAGE_VIEW_TYPE_2D
         ));
 
         this->image_views[i] = std::move(image_view);
@@ -74,38 +76,49 @@ RendererResult RendererSwapchain::CreateImageViews() {
         nullptr
     );
 
-    HYPERION_BUBBLE_ERRORS(this->depth_buffer.image->Create(this->renderer_device, VK_IMAGE_LAYOUT_UNDEFINED));
-    this->depth_buffer.image_view = std::make_unique<RendererImageView>();
-    HYPERION_BUBBLE_ERRORS(this->depth_buffer.image_view->Create(this->renderer_device, this->depth_buffer.image.get()));
+    HYPERION_BUBBLE_ERRORS(this->depth_buffer.image->Create(
+        this->renderer_device,
+        VK_IMAGE_LAYOUT_UNDEFINED
+    ));
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    AssertExit(this->depth_buffer.image != nullptr);
+    AssertExit(this->depth_buffer.image->GetGPUImage() != nullptr);
+
+    this->depth_buffer.image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_DEPTH_BIT);
+    
+    HYPERION_BUBBLE_ERRORS(this->depth_buffer.image_view->Create(
+        this->renderer_device,
+        this->depth_buffer.image.get()
+    ));
+
+    HYPERION_RETURN_OK;
 }
 
-void RendererSwapchain::DestroyImageViews() {
+RendererResult RendererSwapchain::DestroyImageViews()
+{
+    RendererResult result(RendererResult::OK);
+
     for (auto &image_view : this->image_views) {
-        image_view->Destroy(this->renderer_device);
+        HYPERION_PASS_ERRORS(image_view->Destroy(this->renderer_device), result);
     }
 
     this->image_views.clear();
 
-    this->depth_buffer.image->Destroy(this->renderer_device);
+    HYPERION_PASS_ERRORS(this->depth_buffer.image->Destroy(this->renderer_device), result);
     this->depth_buffer.image.release();
-    this->depth_buffer.image_view->Destroy(this->renderer_device);
+
+    HYPERION_PASS_ERRORS(this->depth_buffer.image_view->Destroy(this->renderer_device), result);
     this->depth_buffer.image_view.release();
+
+    return result;
 }
 
-RendererResult RendererSwapchain::CreateFramebuffers(VkRenderPass *renderpass) {
+RendererResult RendererSwapchain::CreateFramebuffers(VkRenderPass *renderpass)
+{
     this->framebuffers.resize(this->image_views.size());
-    DebugLog(LogType::Debug, "[%d] image views found!\n", this->image_views.size());
+    DebugLog(LogType::Debug, "[%d] image views found\n", this->image_views.size());
 
     for (size_t i = 0; i < this->image_views.size(); i++) {
-        /*std::vector<VkImageView> attachments;
-        attachments.resize(this->image_views.size());
-
-        for (size_t i = 0; i < this->image_views.size(); i++) {
-            attachments[i] = this->image_views[i]->GetImageView();
-        }*/
-
         const std::array attachments{
             this->image_views[i]->GetImageView(),
             this->depth_buffer.image_view->GetImageView()
@@ -121,18 +134,19 @@ RendererResult RendererSwapchain::CreateFramebuffers(VkRenderPass *renderpass) {
 
         HYPERION_VK_CHECK_MSG(
             vkCreateFramebuffer(this->renderer_device->GetDevice(), &create_info, nullptr, &this->framebuffers[i]),
-            "Could not create Vulkan framebuffer!"
+            "Could not create Vulkan framebuffer"
         );
 
         DebugLog(LogType::Debug, "Created Pipeline Framebuffer #%d\n", i);
     }
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
-RendererResult RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices) {
+RendererResult RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices)
+{
     this->surface_format = this->ChooseSurfaceFormat();
-    this->present_mode = this->ChoosePresentMode();
+    this->present_mode = this->GetPresentMode();
     this->extent = this->ChooseSwapchainExtent();
     this->image_format = this->surface_format.format;
 
@@ -150,15 +164,14 @@ RendererResult RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamil
 
     /* Graphics computations and presentation are done on separate hardware */
     if (qf_indices.graphics_family != qf_indices.present_family) {
-        DebugLog(LogType::Info, "Swapchain sharing mode set to Concurrent!\n");
+        DebugLog(LogType::Debug, "Swapchain sharing mode set to Concurrent\n");
         create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         create_info.queueFamilyIndexCount = 2; /* Two family indices(one for each process) */
         const uint32_t families[] = {qf_indices.graphics_family.value(), qf_indices.present_family.value()};
         create_info.pQueueFamilyIndices = families;
-    }
+    } else {
         /* Computations and presentation are done on same hardware(most scenarios) */
-    else {
-        DebugLog(LogType::Info, "Swapchain sharing mode set to Exclusive!\n");
+        DebugLog(LogType::Debug, "Swapchain sharing mode set to Exclusive\n");
         create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         create_info.queueFamilyIndexCount = 0;       /* Optional */
         create_info.pQueueFamilyIndices = nullptr; /* Optional */
@@ -183,16 +196,23 @@ RendererResult RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamil
 
     HYPERION_BUBBLE_ERRORS(this->CreateImageViews());
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
-void RendererSwapchain::Destroy() {
-    for (auto framebuffer: this->framebuffers) {
+RendererResult RendererSwapchain::Destroy() {
+    DebugLog(LogType::Debug, "Destroying swapchain\n");
+
+    RendererResult result(RendererResult::RENDERER_OK);
+
+    for (auto framebuffer : this->framebuffers) {
         vkDestroyFramebuffer(this->renderer_device->GetDevice(), framebuffer, nullptr);
     }
-    this->DestroyImageViews();
+
+    HYPERION_PASS_ERRORS(this->DestroyImageViews(), result);
+
     vkDestroySwapchainKHR(this->renderer_device->GetDevice(), this->swapchain, nullptr);
-    DebugLog(LogType::Info, "Destroying swapchain\n");
+
+    return result;
 }
 
 };
