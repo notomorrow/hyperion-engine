@@ -20,6 +20,7 @@
 #include "renderer_shader.h"
 #include "renderer_buffer.h"
 #include "renderer_pipeline.h"
+#include "renderer_descriptor_pool.h"
 
 #define VK_RENDERER_API_VERSION VK_API_VERSION_1_2
 
@@ -64,7 +65,7 @@ class VkRenderer {
     /* Setup debug mode */
     RendererResult SetupDebug();
 
-    RendererResult AllocatePendingFrames();
+    RendererResult AllocatePendingFrames(RendererPipeline *pipeline);
     void CleanupPendingFrames();
 public:
     VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name);
@@ -76,22 +77,21 @@ public:
     HYP_FORCE_INLINE const RendererFrame *GetCurrentFrame() const { return this->current_frame; }
 
     VkResult AcquireNextImage(RendererFrame *frame);
-    void     StartFrame(RendererFrame *frame);
-    void     EndFrame(RendererFrame *frame);
-    void     DrawFrame(RendererFrame *frame);
+    void     StartFrame(RendererFrame *frame, RendererPipeline *pipeline);
+    void     EndFrame  (RendererFrame *frame, RendererPipeline *pipeline);
+    void     DrawFrame (RendererFrame *frame);
 
     void SetValidationLayers(std::vector<const char *> _layers);
     RendererDevice *GetRendererDevice();
     RendererResult InitializeRendererDevice(VkPhysicalDevice _physical_device = nullptr);
     RendererResult InitializeSwapchain();
-    RendererResult InitializePipeline(RendererShader *shader);
+
+    RendererResult AddPipeline(const RendererPipeline::ConstructionInfo &construction_info, RendererPipeline **out = nullptr);
 
     void SetQueueFamilies(std::set<uint32_t> queue_families);
-
     void SetCurrentWindow(SystemWindow *window);
+
     SystemWindow *GetCurrentWindow();
-    RendererPipeline *GetCurrentPipeline();
-    void SetCurrentPipeline(RendererPipeline *pipeline);
     RendererResult Destroy();
 
     std::vector<const char *> requested_device_extensions;
@@ -100,7 +100,10 @@ public:
 
     const char *app_name;
     const char *engine_name;
-    RendererPipeline *pipeline = nullptr;
+
+    std::vector<std::unique_ptr<RendererPipeline>> pipelines;
+    RendererDescriptorPool descriptor_pool;
+
 private:
     SystemWindow *window = nullptr;
     SystemSDL    system;

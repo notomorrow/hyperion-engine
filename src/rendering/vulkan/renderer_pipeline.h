@@ -49,7 +49,7 @@ public:
         }
     };
 
-    RendererPipeline(RendererDevice *_device, RendererSwapchain *_swapchain);
+    RendererPipeline(RendererDevice *_device, RendererSwapchain *_swapchain, const ConstructionInfo &construction_info);
     void Destroy();
 
     void SetPrimitive(VkPrimitiveTopology _primitive);
@@ -62,7 +62,10 @@ public:
     void SetViewport(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
     void SetScissor(int x, int y, uint32_t width, uint32_t height);
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
-    void Rebuild(const ConstructionInfo &construction_info);
+    inline void Build(RendererDescriptorPool *descriptor_pool)
+        { Rebuild(m_construction_info, descriptor_pool); }
+    void Rebuild(const ConstructionInfo &construction_info,
+        RendererDescriptorPool *descriptor_pool);
 
     RendererResult CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
     // void DoRenderPass(void (*render_callback)(RendererPipeline *pl, VkCommandBuffer *cmd));
@@ -72,6 +75,8 @@ public:
     VkPrimitiveTopology GetPrimitive();
     std::vector<VkDynamicState> GetDynamicStates();
     VkRenderPass *GetRenderPass();
+
+    inline const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
 
     helpers::SingleTimeCommands GetSingleTimeCommands();
 
@@ -85,8 +90,6 @@ public:
     struct PushConstants {
         unsigned char data[128];
     } push_constants;
-
-    RendererDescriptorPool descriptor_pool;
 
 private:
     VkBuffer *intern_vertex_buffers = nullptr;
@@ -105,6 +108,8 @@ private:
 
     RendererSwapchain *swapchain;
     RendererDevice *device;
+
+    ConstructionInfo m_construction_info;
 
     std::vector<VkVertexInputAttributeDescription> BuildVertexAttributes(const RendererMeshInputAttributeSet &attribute_set);
     void SetVertexBuffers(std::vector<RendererVertexBuffer> &vertex_buffers);

@@ -12,10 +12,15 @@
 
 namespace hyperion {
 
-RendererPipeline::RendererPipeline(RendererDevice *_device, RendererSwapchain *_swapchain)
+RendererPipeline::RendererPipeline(RendererDevice *_device,
+    RendererSwapchain *_swapchain,
+    const ConstructionInfo &construction_info)
     : intern_vertex_buffers(nullptr),
-      intern_vertex_buffers_size(0)
+      intern_vertex_buffers_size(0),
+      m_construction_info(construction_info)
 {
+    AssertExit(construction_info.shader != nullptr);
+
     this->primitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     this->swapchain = _swapchain;
     this->device = _device;
@@ -302,10 +307,12 @@ void RendererPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescri
     this->vertex_attributes = attribs;
 }
 
-void RendererPipeline::Rebuild(const ConstructionInfo &construction_info) {
+void RendererPipeline::Rebuild(const ConstructionInfo &construction_info, RendererDescriptorPool *descriptor_pool) {
     AssertExit(construction_info.shader != nullptr);
 
-    this->BuildVertexAttributes(construction_info.vertex_attributes);
+    m_construction_info = construction_info;
+
+    this->BuildVertexAttributes(m_construction_info.vertex_attributes);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
     vertex_input_info.vertexBindingDescriptionCount   = uint32_t(this->vertex_binding_descriptions.size());
@@ -335,7 +342,7 @@ void RendererPipeline::Rebuild(const ConstructionInfo &construction_info) {
     /* Backface culling */
     rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
-    switch (construction_info.cull_mode) {
+    switch (m_construction_info.cull_mode) {
     case ConstructionInfo::CullMode::BACK:
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
         break;
@@ -392,13 +399,10 @@ void RendererPipeline::Rebuild(const ConstructionInfo &construction_info) {
     dynamic_state.pDynamicStates = states.data();
     DebugLog(LogType::Info, "Enabling [%d] dynamic states\n", dynamic_state.dynamicStateCount);
 
-    auto descriptor_pool_result = descriptor_pool.Create(device, 0);
-    AssertThrowMsg(descriptor_pool_result, "Error creating descriptor pool! Message was: %s\n", descriptor_pool_result.message);
-
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-    layout_info.setLayoutCount = descriptor_pool.m_descriptor_set_layouts.size(); // TODO: refactor
-    layout_info.pSetLayouts = descriptor_pool.m_descriptor_set_layouts.data();
+    layout_info.setLayoutCount = descriptor_pool->m_descriptor_set_layouts.size();
+    layout_info.pSetLayouts    = descriptor_pool->m_descriptor_set_layouts.data();
     layout_info.pushConstantRangeCount = 1;
     layout_info.pPushConstantRanges = &push_constant;
 
@@ -461,8 +465,6 @@ void RendererPipeline::Destroy() {
     vkDestroyCommandPool(render_device, this->command_pool, nullptr);
 
     DebugLog(LogType::Info, "Destroying pipeline!\n");
-
-    descriptor_pool.Destroy(this->device);
 
     vkDestroyPipeline(render_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(render_device, this->layout, nullptr);
