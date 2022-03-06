@@ -199,7 +199,6 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index
 }
 
 void RendererPipeline::EndRenderPass(VkCommandBuffer cmd) {
-    //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
     vkCmdEndRenderPass(cmd);
 
     auto result = vkEndCommandBuffer(cmd);

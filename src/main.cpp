@@ -712,6 +712,7 @@ int main()
         renderer.EndFrame(frame);
         renderer.DrawFrame(frame);
     }
+
     mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
 
 
