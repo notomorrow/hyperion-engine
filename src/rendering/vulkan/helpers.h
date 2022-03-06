@@ -72,7 +72,7 @@ private:
             return RendererResult(RendererResult::RENDERER_ERR, "Failed to begin command buffer");
         }
 
-        return RendererResult(RendererResult::RENDERER_OK);
+        HYPERION_RETURN_OK;
     }
 
     inline RendererResult End(RendererDevice *device)
@@ -111,7 +111,7 @@ private:
         vkDestroyFence(device->GetDevice(), fence, nullptr);
         vkFreeCommandBuffers(device->GetDevice(), pool, 1, &cmd);
 
-        return RendererResult(RendererResult::RENDERER_OK);
+        HYPERION_RETURN_OK;
     }
 };
 

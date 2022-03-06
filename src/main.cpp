@@ -559,6 +559,9 @@ int main()
 
     SystemEvent event;
 
+
+    auto mesh = MeshFactory::CreateCube();
+
     /* Max frames/sync objects to have available to render to. This prevents the graphics
      * pipeline from stalling when waiting for device upload/download. */
     const uint16_t pending_frames = 2;
@@ -586,7 +589,7 @@ int main()
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         texture->GetBytes()
     );
-    RendererImageView test_image_view;
+    RendererImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
     RendererSampler test_sampler(Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR, Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE);
 
     RendererShader shader;
@@ -625,8 +628,22 @@ int main()
     auto sampler_result = test_sampler.Create(device, &test_image_view);
     AssertThrowMsg(sampler_result, "%s", sampler_result.message);
 
-    renderer.pipeline->Rebuild(&shader);
-    auto mesh = MeshFactory::CreateCube();
+    RendererPipeline::ConstructionInfo pipeline_construction_info{
+        .vertex_attributes = RendererMeshInputAttributeSet({
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
+         }),
+        .shader = &shader,
+        .cull_mode = RendererPipeline::ConstructionInfo::CullMode::BACK,
+        .depth_test = true,
+        .depth_write = true
+    };
+
+    renderer.pipeline->Rebuild(pipeline_construction_info);
 
     float timer = 0.0;
 
@@ -690,7 +707,7 @@ int main()
 
 
         test_gpu_buffer.Copy(device, sizeof(shad_data), (void *)&shad_data);
-        pipeline->descriptor_pool.BindDescriptorSets(*frame->command_buffer, pipeline->layout);
+        pipeline->descriptor_pool.BindDescriptorSets(frame->command_buffer, pipeline->layout);
         mesh->RenderVk(frame, &renderer, nullptr);
 
         renderer.EndFrame(frame);

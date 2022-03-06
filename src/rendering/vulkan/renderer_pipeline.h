@@ -16,12 +16,39 @@
 #include "renderer_descriptor.h"
 #include "helpers.h"
 
+#include "../../hash_code.h"
+
 namespace hyperion {
 
 class RendererPipeline {
-    std::vector<VkVertexInputAttributeDescription> SetVertexAttribs();
-
 public:
+    struct ConstructionInfo {
+        RendererMeshInputAttributeSet vertex_attributes;
+        RendererShader *shader;
+
+        enum class CullMode : int {
+            NONE,
+            BACK,
+            FRONT
+        } cull_mode;
+
+        bool depth_test,
+             depth_write;
+
+        inline HashCode GetHashCode() const
+        {
+            HashCode hc;
+
+            hc.Add((shader != nullptr) ? shader->GetHashCode().Value() : 0);
+            hc.Add(vertex_attributes.GetHashCode());
+            hc.Add(int(cull_mode));
+            hc.Add(depth_test);
+            hc.Add(depth_write);
+
+            return hc;
+        }
+    };
+
     RendererPipeline(RendererDevice *_device, RendererSwapchain *_swapchain);
     void Destroy();
 
@@ -35,7 +62,7 @@ public:
     void SetViewport(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
     void SetScissor(int x, int y, uint32_t width, uint32_t height);
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
-    void Rebuild(RendererShader *shader);
+    void Rebuild(const ConstructionInfo &construction_info);
 
     RendererResult CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
     // void DoRenderPass(void (*render_callback)(RendererPipeline *pl, VkCommandBuffer *cmd));
@@ -79,6 +106,7 @@ private:
     RendererSwapchain *swapchain;
     RendererDevice *device;
 
+    std::vector<VkVertexInputAttributeDescription> BuildVertexAttributes(const RendererMeshInputAttributeSet &attribute_set);
     void SetVertexBuffers(std::vector<RendererVertexBuffer> &vertex_buffers);
 };
 

@@ -44,13 +44,13 @@ RendererResult RendererAttachment::Create(RendererDevice *device)
     m_attachment_reference.attachment = m_ref_attachment;
     m_attachment_reference.layout = m_ref_layout;
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 
 RendererResult RendererAttachment::Destroy(RendererDevice *device)
 {
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 

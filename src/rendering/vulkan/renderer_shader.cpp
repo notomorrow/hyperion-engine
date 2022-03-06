@@ -6,6 +6,8 @@
 
 #include "../../system/debug.h"
 
+#include <algorithm>
+
 namespace hyperion {
 
 void RendererShader::AttachShader(RendererDevice *_device, const SPIRVObject &spirv) {
@@ -14,23 +16,27 @@ void RendererShader::AttachShader(RendererDevice *_device, const SPIRVObject &sp
     VkShaderModuleCreateInfo create_info{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
     create_info.codeSize = spirv.raw.size();
     create_info.pCode = spirv.VkCode();
-    VkShaderModule module;
 
-    if (vkCreateShaderModule(device->GetDevice(), &create_info, nullptr, &module) != VK_SUCCESS) {
+    VkShaderModule shader_module;
+
+    if (vkCreateShaderModule(device->GetDevice(), &create_info, nullptr, &shader_module) != VK_SUCCESS) {
         DebugLog(LogType::Error, "Could not create Vulkan shader module!\n");
         return;
     }
 
-    RendererShaderModule shader_mod = {spirv.type, module};
-    this->shader_modules.push_back(shader_mod);
+    this->shader_modules.emplace_back(RendererShaderModule(spirv, shader_module));
+
+    std::sort(this->shader_modules.begin(), this->shader_modules.end());
 }
 
 VkPipelineShaderStageCreateInfo
-RendererShader::CreateShaderStage(RendererShaderModule *module, const char *entry_point) {
+RendererShader::CreateShaderStage(const RendererShaderModule &shader_module, const char *entry_point) {
     VkPipelineShaderStageCreateInfo create_info{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
-    create_info.module = module->module;
+    
+    create_info.module = shader_module.shader_module;
     create_info.pName = entry_point;
-    switch (module->type) {
+
+    switch (shader_module.spirv.type) {
         case SPIRVObject::Type::Vertex:
             create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
             break;
@@ -71,22 +77,24 @@ RendererShader::CreateShaderStage(RendererShaderModule *module, const char *entr
             create_info.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
             break;
         default:
-            DebugLog(LogType::Warn, "Shader type %d is currently unimplemented!\n", module->type);
+            DebugLog(LogType::Warn, "Shader type %d is currently unimplemented!\n", shader_module.spirv.type);
     }
     return create_info;
 }
 
 void RendererShader::CreateProgram(const char *entry_point) {
     std::vector<VkPipelineShaderStageCreateInfo> stages;
-    for (auto module: this->shader_modules) {
-        auto stage = this->CreateShaderStage(&module, entry_point);
+
+    for (auto &shader_module : this->shader_modules) {
+        auto stage = this->CreateShaderStage(shader_module, entry_point);
+
         this->shader_stages.push_back(stage);
     }
 }
 
 void RendererShader::Destroy() {
-    for (auto module: this->shader_modules) {
-        vkDestroyShaderModule(this->device->GetDevice(), module.module, nullptr);
+    for (auto &shader_module : this->shader_modules) {
+        vkDestroyShaderModule(this->device->GetDevice(), shader_module.shader_module, nullptr);
     }
 }
 

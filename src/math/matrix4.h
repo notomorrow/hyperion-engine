@@ -8,7 +8,7 @@
 #include <array>
 
 namespace hyperion {
-HYPERION_PACK_BEGIN
+HYP_PACK_BEGIN
 class Matrix4 {
     friend std::ostream &operator<<(std::ostream &os, const Matrix4 &mat);
 public:
@@ -53,7 +53,7 @@ public:
         return hc;
     }
 }
-HYPERION_PACK_END
+HYP_PACK_END
 } // namespace hyperion
 
 #endif

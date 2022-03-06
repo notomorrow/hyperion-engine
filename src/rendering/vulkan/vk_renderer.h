@@ -12,6 +12,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <util/non_owning_ptr.h>
 #include "../../system/sdl_system.h"
 
 #include "renderer_device.h"
@@ -27,19 +28,22 @@ namespace hyperion {
 #define DEFAULT_PENDING_FRAMES_COUNT 2
 
 class RendererFrame {
-    void CreateSyncObjects();
-    void DestroySyncObjects();
+    RendererResult CreateSyncObjects();
+    RendererResult DestroySyncObjects();
 public:
-    void Create(RendererDevice *device, VkCommandBuffer *cmd);
-    void Destroy();
+    RendererFrame();
+    ~RendererFrame();
 
-    VkCommandBuffer *command_buffer = nullptr;
+    RendererResult Create(non_owning_ptr<RendererDevice> device, VkCommandBuffer cmd);
+    RendererResult Destroy();
+
+    VkCommandBuffer command_buffer;
     /* Sync objects for each frame */
     VkSemaphore sp_swap_acquire;
     VkSemaphore sp_swap_release;
     VkFence     fc_queue_submit;
 
-    RendererDevice *creation_device = nullptr;
+    non_owning_ptr<RendererDevice> creation_device;
 };
 
 
@@ -60,7 +64,7 @@ class VkRenderer {
     /* Setup debug mode */
     RendererResult SetupDebug();
 
-    void AllocatePendingFrames();
+    RendererResult AllocatePendingFrames();
     void CleanupPendingFrames();
 public:
     VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name);
@@ -68,6 +72,8 @@ public:
     void CreateSurface();
 
     RendererFrame *GetNextFrame();
+    HYP_FORCE_INLINE RendererFrame *GetCurrentFrame() { return this->current_frame; }
+    HYP_FORCE_INLINE const RendererFrame *GetCurrentFrame() const { return this->current_frame; }
 
     VkResult AcquireNextImage(RendererFrame *frame);
     void     StartFrame(RendererFrame *frame);
@@ -86,7 +92,7 @@ public:
     SystemWindow *GetCurrentWindow();
     RendererPipeline *GetCurrentPipeline();
     void SetCurrentPipeline(RendererPipeline *pipeline);
-    void Destroy();
+    RendererResult Destroy();
 
     std::vector<const char *> requested_device_extensions;
 
@@ -102,7 +108,7 @@ private:
     VkInstance instance = nullptr;
     VkSurfaceKHR surface = nullptr;
 
-    std::vector<RendererFrame *> pending_frames;
+    std::vector<std::unique_ptr<RendererFrame>> pending_frames;
     RendererFrame *current_frame = nullptr;
     int frames_index = 0;
 

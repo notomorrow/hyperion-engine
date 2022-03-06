@@ -71,6 +71,7 @@ public:
 
     enum class TextureWrapMode {
         TEXTURE_WRAP_CLAMP_TO_EDGE,
+        TEXTURE_WRAP_CLAMP_TO_BORDER,
         TEXTURE_WRAP_REPEAT
     };
 

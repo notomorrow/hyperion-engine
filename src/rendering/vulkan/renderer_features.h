@@ -104,7 +104,7 @@ public:
             return RendererResult(RendererResult::RENDERER_ERR, "Failed to get image format properties");
         }
 
-        return RendererResult(RendererResult::RENDERER_OK);
+        HYPERION_RETURN_OK;
     }
 
     inline bool IsImageFormatSupported(VkFormat format,

@@ -2,6 +2,7 @@
 #define BACKEND_SPIRV_H
 
 #include "../../types.h"
+#include "../../hash_code.h"
 
 #include <vector>
 
@@ -11,7 +12,8 @@ struct SPIRVObject {
     using Raw_t = std::vector<ubyte>;
 
     enum class Type : int {
-        Vertex = 0,
+        UNSET = 0,
+        Vertex,
         Fragment,
         Geometry,
         Compute,
@@ -32,11 +34,26 @@ struct SPIRVObject {
     Raw_t raw;
     Type type;
 
-    SPIRVObject(Type type) : type(type) {}
-    SPIRVObject(Type type, const Raw_t &raw) : type(type), raw(raw) {}
+    SPIRVObject() : type(Type::UNSET) {}
+    explicit SPIRVObject(Type type) : type(type) {}
+    explicit SPIRVObject(Type type, const Raw_t &raw) : type(type), raw(raw) {}
     SPIRVObject(const SPIRVObject &other) : type(other.type), raw(other.raw) {}
+    ~SPIRVObject() = default;
 
     inline const uint32_t *VkCode() const { return reinterpret_cast<const uint32_t*>(raw.data()); }
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(uint32_t(type));
+        
+        for (size_t i = 0; i < raw.size(); i++) {
+            hc.Add(raw[i]);
+        }
+
+        return hc;
+    }
 };
 
 } // namespace hyperion

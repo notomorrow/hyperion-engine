@@ -29,8 +29,9 @@ RendererPipeline *VkRenderer::GetCurrentPipeline() {
 
 VkResult VkRenderer::AcquireNextImage(RendererFrame *frame) {
     //const VkDevice render_device = this->device->GetDevice();
-    AssertThrow(frame != nullptr && this->swapchain != nullptr);
+    AssertExit(frame != nullptr && this->swapchain != nullptr);
     VkDevice render_device = frame->creation_device->GetDevice();
+
     if (frame->fc_queue_submit != VK_NULL_HANDLE) {
         /* Wait for our queue fence which should have hopefully completed multiple frames
          * earlier. This function should not block at all, but we do this as a precaution. */
@@ -40,14 +41,14 @@ VkResult VkRenderer::AcquireNextImage(RendererFrame *frame) {
 
     VkResult result = vkAcquireNextImageKHR(render_device, this->swapchain->swapchain, UINT64_MAX, frame->sp_swap_acquire, VK_NULL_HANDLE,
                           &this->acquired_frames_index);
-    if (result != VK_SUCCESS)
-        return result;
 
-    vkResetCommandBuffer(*(frame->command_buffer), 0);
+    if (result != VK_SUCCESS) return result;
+
+    ;
     //if (this->GetCurrentPipeline()->command_pool != VK_NULL_HANDLE)
     //    vkResetCommandPool(render_device, this->GetCurrentPipeline()->command_pool, 0);
 
-    return VK_SUCCESS;
+    return vkResetCommandBuffer(frame->command_buffer, 0);
 }
 
 void VkRenderer::StartFrame(RendererFrame *frame) {
@@ -59,11 +60,11 @@ void VkRenderer::StartFrame(RendererFrame *frame) {
         vkDeviceWaitIdle(this->device->GetDevice());
         /* TODO: regenerate framebuffers and swapchain */
     }
-    this->pipeline->StartRenderPass(*frame->command_buffer, this->acquired_frames_index);
+    this->pipeline->StartRenderPass(frame->command_buffer, this->acquired_frames_index);
 }
 
 void VkRenderer::EndFrame(RendererFrame *frame) {
-    this->pipeline->EndRenderPass(*frame->command_buffer);
+    this->pipeline->EndRenderPass(frame->command_buffer);
 
     /* Render objects to the swapchain using our graphics pipeline */
     //this->pipeline->DoRenderPass();
@@ -79,7 +80,7 @@ void VkRenderer::EndFrame(RendererFrame *frame) {
     submit_info.pWaitDstStageMask = wait_stages;
 
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = frame->command_buffer;
+    submit_info.pCommandBuffers = &frame->command_buffer;
 
     auto result = vkQueueSubmit(this->queue_graphics, 1, &submit_info, frame->fc_queue_submit);
 
@@ -128,7 +129,7 @@ RendererResult VkRenderer::CheckValidationLayerSupport(const std::vector<const c
         }
     }
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 void VkRenderer::SetValidationLayers(std::vector<const char *> _layers) {
@@ -154,43 +155,84 @@ SystemWindow *VkRenderer::GetCurrentWindow() {
     return this->window;
 }
 
-void RendererFrame::Create(RendererDevice *device, VkCommandBuffer *cmd) {
+
+RendererFrame::RendererFrame()
+    : creation_device(nullptr),
+      command_buffer(nullptr),
+      sp_swap_acquire(nullptr),
+      sp_swap_release(nullptr),
+      fc_queue_submit(nullptr)
+{
+}
+
+RendererFrame::~RendererFrame()
+{
+    AssertExitMsg(sp_swap_acquire == nullptr, "sp_swap_acquire should have been destroyed");
+    AssertExitMsg(sp_swap_release == nullptr, "sp_swap_release should have been destroyed");
+    AssertExitMsg(fc_queue_submit == nullptr, "fc_queue_submit should have been destroyed");
+}
+
+RendererResult RendererFrame::Create(non_owning_ptr<RendererDevice> device, VkCommandBuffer cmd)
+{
     this->creation_device = device;
     this->command_buffer = cmd;
-    this->CreateSyncObjects();
+
+    return this->CreateSyncObjects();
 }
 
-void RendererFrame::Destroy() {
-    this->DestroySyncObjects();
+RendererResult RendererFrame::Destroy()
+{
+    return this->DestroySyncObjects();
 }
 
-void RendererFrame::CreateSyncObjects() {
+RendererResult RendererFrame::CreateSyncObjects()
+{
     AssertThrow(this->creation_device != nullptr);
 
     VkDevice rd_device = this->creation_device->GetDevice();
     VkSemaphoreCreateInfo semaphore_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-    auto sa_result = vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_acquire);
-    auto sr_result = vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_release);
+
+    HYPERION_VK_CHECK_MSG(
+        vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_acquire),
+        "Error creating render swap acquire semaphore!"
+    );
+
+    HYPERION_VK_CHECK_MSG(
+        vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_release),
+        "Error creating render swap release semaphore!"
+    );
 
     VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    auto fc_result = vkCreateFence(rd_device, &fence_info, nullptr, &this->fc_queue_submit);
+
+    HYPERION_VK_CHECK_MSG(
+        vkCreateFence(rd_device, &fence_info, nullptr, &this->fc_queue_submit),
+        "Error creating render fence!"
+    );
 
     DebugLog(LogType::Debug, "Create Sync objects!\n");
 
-    AssertThrowMsg(fc_result == VK_SUCCESS, "Error creating render fence\n");
-    AssertThrowMsg((sa_result == VK_SUCCESS && sr_result == VK_SUCCESS), "Error creating render semaphores!\n");
+    HYPERION_RETURN_OK;
 }
 
-void RendererFrame::DestroySyncObjects() {
+RendererResult RendererFrame::DestroySyncObjects()
+{
     AssertThrow(this->creation_device != nullptr);
 
     VkDevice rd_device = this->creation_device->GetDevice();
-    vkDeviceWaitIdle(rd_device);
+
+    HYPERION_VK_CHECK(vkDeviceWaitIdle(rd_device));
 
     vkDestroySemaphore(rd_device, this->sp_swap_acquire, nullptr);
+    this->sp_swap_acquire = nullptr;
+
     vkDestroySemaphore(rd_device, this->sp_swap_release, nullptr);
+    this->sp_swap_release = nullptr;
+
     vkDestroyFence(rd_device, this->fc_queue_submit, nullptr);
+    this->fc_queue_submit = nullptr;
+
+    HYPERION_RETURN_OK;
 }
 
 VkRenderer::VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name) {
@@ -198,30 +240,34 @@ VkRenderer::VkRenderer(SystemSDL &_system, const char *app_name, const char *eng
     this->app_name = app_name;
     this->engine_name = engine_name;
     this->device = nullptr;
-
 }
 
-void VkRenderer::AllocatePendingFrames() {
-    AssertThrow(this->frames_to_allocate >= 1);
-    AssertThrowMsg(this->pipeline->command_buffers.size() >= this->frames_to_allocate,
+RendererResult VkRenderer::AllocatePendingFrames() {
+    AssertExit(this->frames_to_allocate >= 1);
+    AssertExitMsg(this->pipeline->command_buffers.size() >= this->frames_to_allocate,
                    "Insufficient pipeline command buffers\n");
 
     this->pending_frames.reserve(this->frames_to_allocate);
     DebugLog(LogType::Debug, "Allocating [%d] frames\n", this->frames_to_allocate);
+
     for (uint16_t i = 0; i < this->frames_to_allocate; i++) {
-        auto *frame = new RendererFrame;
-        VkCommandBuffer *cmd = &this->pipeline->command_buffers[i];
-        frame->Create(this->device, cmd);
-        this->pending_frames.push_back(frame);
+        auto frame = std::make_unique<RendererFrame>();
+
+        HYPERION_BUBBLE_ERRORS(frame->Create(non_owning_ptr(this->device), this->pipeline->command_buffers[i]));
+
+        this->pending_frames.emplace_back(std::move(frame));
     }
+
+    HYPERION_RETURN_OK;
 }
 
 RendererFrame *VkRenderer::GetNextFrame() {
     AssertThrow(this->pending_frames.size());
+    ++this->frames_index;
     if (this->frames_index >= this->frames_to_allocate)
         this->frames_index = 0;
-    this->current_frame = this->pending_frames[this->frames_index++];
-    this->current_frame = this->pending_frames[this->frames_index++];
+    this->current_frame = this->pending_frames[this->frames_index].get();
+    //this->current_frame = this->pending_frames[this->frames_index++].get();
     return this->current_frame;
 }
 
@@ -275,19 +321,22 @@ RendererResult VkRenderer::Initialize(bool load_debug_layers) {
 
     this->pipeline = new RendererPipeline(this->device, this->swapchain);
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 void VkRenderer::CleanupPendingFrames() {
     for (auto &frame : this->pending_frames) {
         frame->Destroy();
-        delete frame;
     }
+
+    this->pending_frames.clear();
 }
 
-void VkRenderer::Destroy() {
+RendererResult VkRenderer::Destroy() {
+    RendererResult result(RendererResult::RENDERER_OK);
+
     /* Wait for the GPU to finish, we need to be in an idle state. */
-    vkDeviceWaitIdle(this->device->GetDevice());
+    HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(this->device->GetDevice()), result);
     /* Cleanup our semaphores and fences! */
     this->CleanupPendingFrames();
 
@@ -298,7 +347,7 @@ void VkRenderer::Destroy() {
 
     /* Destroy the vulkan swapchain */
     if (this->swapchain != nullptr)
-        this->swapchain->Destroy();
+        HYPERION_PASS_ERRORS(this->swapchain->Destroy(), result);
     delete this->swapchain;
 
     /* Destroy the surface from SDL */
@@ -311,6 +360,8 @@ void VkRenderer::Destroy() {
 
     /* Destroy the Vulkan instance(this should always be last!) */
     vkDestroyInstance(this->instance, nullptr);
+
+    return result;
 }
 
 void VkRenderer::SetQueueFamilies(std::set<uint32_t> _queue_families) {
@@ -415,7 +466,7 @@ RendererResult VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_de
     this->queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
     this->queue_present  = device->GetQueue(family_indices.present_family.value(), 0);
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult VkRenderer::InitializePipeline(RendererShader *render_shader) {
@@ -427,9 +478,9 @@ RendererResult VkRenderer::InitializePipeline(RendererShader *render_shader) {
     /* Our command pool will have a command buffer for each frame we can render to. */
     HYPERION_BUBBLE_ERRORS(this->pipeline->CreateCommandBuffers(this->frames_to_allocate));
 
-    this->AllocatePendingFrames();
+    HYPERION_BUBBLE_ERRORS(this->AllocatePendingFrames());
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 RendererResult VkRenderer::InitializeSwapchain() {
@@ -439,7 +490,7 @@ RendererResult VkRenderer::InitializeSwapchain() {
     this->swapchain = new RendererSwapchain(this->device, sc_support);
     HYPERION_BUBBLE_ERRORS(this->swapchain->Create(this->surface, qf_indices));
 
-    return RendererResult(RendererResult::RENDERER_OK);
+    HYPERION_RETURN_OK;
 }
 
 std::vector<VkPhysicalDevice> VkRenderer::EnumeratePhysicalDevices() {
