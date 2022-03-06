@@ -75,14 +75,40 @@ public:
             return false;
         }
 
+        DebugLog(
+            LogType::Debug,
+            "Checking support for Vulkan format %d with tiling mode %d and feature flags %d.\n",
+            format,
+            tiling,
+            features
+        );
+
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(m_physical_device, format, &props);
 
-        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-            return true;
-        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+        const VkFormatFeatureFlags flags = (tiling == VK_IMAGE_TILING_LINEAR)
+            ? props.linearTilingFeatures
+            : (tiling == VK_IMAGE_TILING_OPTIMAL) ? props.optimalTilingFeatures : 0;
+
+        if ((flags & features) == features) {
+            DebugLog(
+                LogType::Debug,
+                "Vulkan format %d with tiling mode %d and feature flags %d support found!\n",
+                format,
+                tiling,
+                features
+            );
+
             return true;
         }
+
+        DebugLog(
+            LogType::Debug,
+            "Vulkan format %d with tiling mode %d and feature flags %d not supported.\n",
+            format,
+            tiling,
+            features
+        );
 
         return false;
     }
@@ -93,7 +119,16 @@ public:
     {
         static_assert(Size > 0, "Size must be greater than zero!");
 
+        DebugLog(
+            LogType::Debug,
+            "Looking for format to use with tiling option %d and format features %d. First choice: %d\n",
+            tiling,
+            features,
+            possible_formats[0]
+        );
+
         if (m_physical_device == nullptr) {
+            DebugLog(LogType::Debug, "No physical device set -- cannot find supported format!\n");
             return VK_FORMAT_UNDEFINED;
         }
 
@@ -114,7 +149,16 @@ public:
     {
         static_assert(Size > 0, "Size must be greater than zero!");
 
+        DebugLog(
+            LogType::Debug,
+            "Looking for format to use with tiling option %d and format features %d. First choice: %d\n",
+            tiling,
+            features,
+            helpers::ToVkFormat(possible_formats[0])
+        );
+
         if (m_physical_device == nullptr) {
+            DebugLog(LogType::Debug, "No physical device set -- cannot find supported format!\n");
             return Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
         }
 

@@ -100,7 +100,7 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
 
 #define not_implemented AssertExitMsg(0, "Not implemented")
 #define function_body_not_implemented { not_implemented; }
-#define unexpected_value(value) AssertExitMsg(0, #value ": unexpected value")
-#define unexpected_value_msg(value, msg) AssertExitMsg(0, #value ": " #msg)
+#define unexpected_value(value) AssertExitMsg(0, "%s", #value ": unexpected value")
+#define unexpected_value_msg(value, msg) AssertExitMsg(0, "%s", #value ": " #msg)
 
 #endif //HYPERION_DEBUG_H

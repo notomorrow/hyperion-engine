@@ -4,6 +4,7 @@
 
 #include "renderer_pipeline.h"
 #include "renderer_render_pass.h"
+#include "renderer_fbo.h"
 
 #include "../../system/debug.h"
 #include "../../math/math_util.h"
@@ -172,7 +173,7 @@ std::vector<VkVertexInputAttributeDescription> RendererPipeline::BuildVertexAttr
     return this->vertex_attributes;
 }
 
-void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index) {
+void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index, RendererFramebufferObject *fbo) {
     //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
     VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -181,19 +182,25 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index
     auto result = vkBeginCommandBuffer(cmd, &begin_info);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer!\n");
 
-    render_pass->Begin(cmd, this->swapchain->framebuffers[image_index], this->swapchain->extent);
+    if (fbo != nullptr) {
+        fbo->GetRenderPass()->Begin(cmd, this->swapchain->framebuffers[image_index], this->swapchain->extent);
+    } else {
+        render_pass->Begin(cmd, this->swapchain->framebuffers[image_index], this->swapchain->extent);
+    }
 
-    /* Bind the graphics pipeline */
-    //vkCmdBindPipeline(*cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
     this->UpdateDynamicStates(cmd);
 
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
     vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &push_constants);
 }
 
-void RendererPipeline::EndRenderPass(VkCommandBuffer cmd) {
-    render_pass->End(cmd);
+void RendererPipeline::EndRenderPass(VkCommandBuffer cmd, RendererFramebufferObject *fbo) {
+    if (fbo != nullptr) {
+        fbo->GetRenderPass()->End(cmd);
+    } else {
+        render_pass->End(cmd);
+    }
 
     auto result = vkEndCommandBuffer(cmd);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
