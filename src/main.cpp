@@ -593,8 +593,8 @@ int main()
     RendererSampler test_sampler(Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR, Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE);
 
     RendererShader shader;
-    shader.AttachShader(device, SPIRVObject{ SPIRVObject::Type::Vertex, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
-    shader.AttachShader(device, SPIRVObject{ SPIRVObject::Type::Fragment, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/frag.spv").Read() });
+    shader.AttachShader(device, SPIRVObject{ SPIRVObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
+    shader.AttachShader(device, SPIRVObject{ SPIRVObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/frag.spv").Read() });
     shader.CreateProgram("main");
 
     auto initialize_pipeline_result = renderer.InitializePipeline(&shader);
@@ -606,7 +606,6 @@ int main()
         .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(1, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
 
     // test data for descriptors
-
     struct MainShaderData {
         Matrix4 model;
         Matrix4 pv;

@@ -37,48 +37,49 @@ RendererShader::CreateShaderStage(const RendererShaderModule &shader_module, con
     create_info.pName = entry_point;
 
     switch (shader_module.spirv.type) {
-        case SPIRVObject::Type::Vertex:
+        case SPIRVObject::Type::VERTEX:
             create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
             break;
-        case SPIRVObject::Type::Fragment:
+        case SPIRVObject::Type::FRAGMENT:
             create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
             break;
-        case SPIRVObject::Type::Geometry:
+        case SPIRVObject::Type::GEOMETRY:
             create_info.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
             break;
-        case SPIRVObject::Type::Compute:
+        case SPIRVObject::Type::COMPUTE:
             create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
             break;
-        case SPIRVObject::Type::Task:
+        case SPIRVObject::Type::TASK:
             create_info.stage = VK_SHADER_STAGE_TASK_BIT_NV;
             break;
-        case SPIRVObject::Type::Mesh:
+        case SPIRVObject::Type::MESH:
             create_info.stage = VK_SHADER_STAGE_MESH_BIT_NV;
             break;
-        case SPIRVObject::Type::TessControl:
+        case SPIRVObject::Type::TESS_CONTROL:
             create_info.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
             break;
-        case SPIRVObject::Type::TessEval:
+        case SPIRVObject::Type::TESS_EVAL:
             create_info.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
             break;
-        case SPIRVObject::Type::RayGen:
+        case SPIRVObject::Type::RAY_GEN:
             create_info.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
             break;
-        case SPIRVObject::Type::RayIntersect:
+        case SPIRVObject::Type::RAY_INTERSECT:
             create_info.stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
             break;
-        case SPIRVObject::Type::RayAnyHit:
+        case SPIRVObject::Type::RAY_ANY_HIT:
             create_info.stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
             break;
-        case SPIRVObject::Type::RayClosestHit:
+        case SPIRVObject::Type::RAY_CLOSEST_HIT:
             create_info.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
             break;
-        case SPIRVObject::Type::RayMiss:
+        case SPIRVObject::Type::RAY_MISS:
             create_info.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
             break;
         default:
-            DebugLog(LogType::Warn, "Shader type %d is currently unimplemented!\n", shader_module.spirv.type);
+            throw std::runtime_error("Shader type " + std::to_string(int(shader_module.spirv.type)) + " is currently unimplemented!");
     }
+
     return create_info;
 }
 

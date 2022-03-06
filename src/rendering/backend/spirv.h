@@ -13,22 +13,22 @@ struct SPIRVObject {
 
     enum class Type : int {
         UNSET = 0,
-        Vertex,
-        Fragment,
-        Geometry,
-        Compute,
+        VERTEX,
+        FRAGMENT,
+        GEOMETRY,
+        COMPUTE,
         /* Mesh shaders */
-        Task,
-        Mesh,
+        TASK,
+        MESH,
         /* Tesselation */
-        TessControl,
-        TessEval,
+        TESS_CONTROL,
+        TESS_EVAL,
         /* Raytracing */
-        RayGen,
-        RayIntersect,
-        RayAnyHit,
-        RayClosestHit,
-        RayMiss,
+        RAY_GEN,
+        RAY_INTERSECT,
+        RAY_ANY_HIT,
+        RAY_CLOSEST_HIT,
+        RAY_MISS,
     };
 
     Raw_t raw;
