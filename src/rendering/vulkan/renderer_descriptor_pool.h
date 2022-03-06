@@ -43,7 +43,7 @@ public:
     RendererDescriptorPool &operator=(const RendererDescriptorPool &other) = delete;
     ~RendererDescriptorPool();
 
-    RendererResult Create(RendererDevice *device, VkDescriptorPoolCreateFlags flags);
+    RendererResult Create(RendererDevice *device);
     RendererResult Destroy(RendererDevice *device);
     RendererResult BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout, size_t start_index, size_t size);
     RendererResult BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout);

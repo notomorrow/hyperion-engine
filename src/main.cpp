@@ -572,7 +572,6 @@ int main()
     AssertThrowMsg(renderer_initialize_result, "%s", renderer_initialize_result.message);
 
     RendererDevice *device = renderer.GetRendererDevice();
-    RendererPipeline *pipeline = renderer.GetCurrentPipeline();
 
     /* Descriptor sets */
     RendererGPUBuffer test_gpu_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
@@ -597,10 +596,43 @@ int main()
     shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/frag.spv").Read() });
     shader.CreateProgram("main");
 
-    auto initialize_pipeline_result = renderer.InitializePipeline(&shader);
-    AssertThrowMsg(initialize_pipeline_result, "%s", initialize_pipeline_result.message);
+    std::array<RendererPipeline *, 2> pipelines{};
 
-    pipeline->descriptor_pool
+    auto add_pipeline_result = renderer.AddPipeline({
+        .vertex_attributes = RendererMeshInputAttributeSet({
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
+         }),
+        .shader = &shader,
+        .cull_mode = RendererPipeline::ConstructionInfo::CullMode::BACK,
+        .depth_test = true,
+        .depth_write = true
+    }, &pipelines[0]);
+
+    AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
+
+    add_pipeline_result = renderer.AddPipeline({
+        .vertex_attributes = RendererMeshInputAttributeSet({
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
+         }),
+        .shader = &shader,
+        .cull_mode = RendererPipeline::ConstructionInfo::CullMode::FRONT,
+        .depth_test = true,
+        .depth_write = true
+        }, &pipelines[1]);
+
+    AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
+
+    renderer.descriptor_pool
         .AddDescriptorSet()
         .AddDescriptor(std::make_unique<RendererBufferDescriptor>(0, non_owning_ptr(&test_gpu_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT))
         .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(1, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
@@ -615,7 +647,7 @@ int main()
 
     auto image_create_result = image.Create(
         device,
-        pipeline,
+        pipelines[0],
         RendererImage::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
         RendererImage::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
     );
@@ -627,22 +659,13 @@ int main()
     auto sampler_result = test_sampler.Create(device, &test_image_view);
     AssertThrowMsg(sampler_result, "%s", sampler_result.message);
 
-    RendererPipeline::ConstructionInfo pipeline_construction_info{
-        .vertex_attributes = RendererMeshInputAttributeSet({
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
-         }),
-        .shader = &shader,
-        .cull_mode = RendererPipeline::ConstructionInfo::CullMode::BACK,
-        .depth_test = true,
-        .depth_write = true
-    };
+    /* Initialize descriptor pool */
+    auto descriptor_pool_result = renderer.descriptor_pool.Create(renderer.GetRendererDevice());
+    AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
 
-    renderer.pipeline->Rebuild(pipeline_construction_info);
+    for (auto *pl : pipelines) {
+        pl->Build(&renderer.descriptor_pool);
+    }
 
     float timer = 0.0;
 
@@ -660,7 +683,7 @@ int main()
             window,
             1024,
             768,
-            80.0f,
+            50.0f,
             0.05f,
             250.0f
     );
@@ -689,13 +712,9 @@ int main()
             }
         }
 
-        timer += 0.05;
+        timer += delta_time;
 
-        frame = renderer.GetNextFrame();
-        renderer.StartFrame(frame);
-        //delta_time = 0.1;
         camera->Update(delta_time);
-
         MainShaderData shad_data;
 
         Transform tf2;
@@ -705,11 +724,17 @@ int main()
         shad_data.pv = camera->GetViewProjectionMatrix();
 
 
+        RendererPipeline *pl = pipelines[int(timer) % pipelines.size()];
+
+        frame = renderer.GetNextFrame();
+        renderer.StartFrame(frame, pl);
+
         test_gpu_buffer.Copy(device, sizeof(shad_data), (void *)&shad_data);
-        pipeline->descriptor_pool.BindDescriptorSets(frame->command_buffer, pipeline->layout);
+        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, pl->layout);
         mesh->RenderVk(frame, &renderer, nullptr);
 
-        renderer.EndFrame(frame);
+        renderer.EndFrame(frame, pl);
+
         renderer.DrawFrame(frame);
     }
 

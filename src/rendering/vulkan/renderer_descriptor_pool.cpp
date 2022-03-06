@@ -39,7 +39,7 @@ RendererDescriptorSet &RendererDescriptorPool::AddDescriptorSet()
     return *m_descriptor_sets.back();
 }
 
-RendererResult RendererDescriptorPool::Create(RendererDevice *device, VkDescriptorPoolCreateFlags flags)
+RendererResult RendererDescriptorPool::Create(RendererDevice *device)
 {
     uint32_t set_size = uint32_t(m_descriptor_sets.size());
 
@@ -52,7 +52,7 @@ RendererResult RendererDescriptorPool::Create(RendererDevice *device, VkDescript
 
     VkDescriptorPoolCreateInfo pool_info{};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.flags = flags;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     pool_info.maxSets = set_size;
     pool_info.poolSizeCount = (uint32_t)pool_sizes.size();
     pool_info.pPoolSizes = pool_sizes.data();

@@ -137,7 +137,7 @@ RendererResult RendererSwapchain::CreateFramebuffers(VkRenderPass *renderpass)
             "Could not create Vulkan framebuffer"
         );
 
-        DebugLog(LogType::Debug, "Created Pipeline Framebuffer #%d\n", i);
+        DebugLog(LogType::Debug, "Created Framebuffer #%d\n", i);
     }
 
     HYPERION_RETURN_OK;
