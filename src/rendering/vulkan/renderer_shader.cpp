@@ -10,7 +10,7 @@
 
 namespace hyperion {
 
-void RendererShader::AttachShader(RendererDevice *_device, const SPIRVObject &spirv) {
+void RendererShader::AttachShader(RendererDevice *_device, const SpirvObject &spirv) {
     this->device = _device;
 
     VkShaderModuleCreateInfo create_info{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
@@ -37,43 +37,43 @@ RendererShader::CreateShaderStage(const RendererShaderModule &shader_module, con
     create_info.pName = entry_point;
 
     switch (shader_module.spirv.type) {
-        case SPIRVObject::Type::VERTEX:
+        case SpirvObject::Type::VERTEX:
             create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
             break;
-        case SPIRVObject::Type::FRAGMENT:
+        case SpirvObject::Type::FRAGMENT:
             create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
             break;
-        case SPIRVObject::Type::GEOMETRY:
+        case SpirvObject::Type::GEOMETRY:
             create_info.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
             break;
-        case SPIRVObject::Type::COMPUTE:
+        case SpirvObject::Type::COMPUTE:
             create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
             break;
-        case SPIRVObject::Type::TASK:
+        case SpirvObject::Type::TASK:
             create_info.stage = VK_SHADER_STAGE_TASK_BIT_NV;
             break;
-        case SPIRVObject::Type::MESH:
+        case SpirvObject::Type::MESH:
             create_info.stage = VK_SHADER_STAGE_MESH_BIT_NV;
             break;
-        case SPIRVObject::Type::TESS_CONTROL:
+        case SpirvObject::Type::TESS_CONTROL:
             create_info.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
             break;
-        case SPIRVObject::Type::TESS_EVAL:
+        case SpirvObject::Type::TESS_EVAL:
             create_info.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
             break;
-        case SPIRVObject::Type::RAY_GEN:
+        case SpirvObject::Type::RAY_GEN:
             create_info.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
             break;
-        case SPIRVObject::Type::RAY_INTERSECT:
+        case SpirvObject::Type::RAY_INTERSECT:
             create_info.stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
             break;
-        case SPIRVObject::Type::RAY_ANY_HIT:
+        case SpirvObject::Type::RAY_ANY_HIT:
             create_info.stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
             break;
-        case SPIRVObject::Type::RAY_CLOSEST_HIT:
+        case SpirvObject::Type::RAY_CLOSEST_HIT:
             create_info.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
             break;
-        case SPIRVObject::Type::RAY_MISS:
+        case SpirvObject::Type::RAY_MISS:
             create_info.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
             break;
         default:
