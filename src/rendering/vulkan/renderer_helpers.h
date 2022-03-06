@@ -4,7 +4,6 @@
 #include "renderer_result.h"
 #include "renderer_device.h"
 
-
 #include <vulkan/vulkan.h>
 
 #include <vector>
@@ -13,6 +12,9 @@
 
 namespace hyperion {
 namespace helpers {
+
+//static VkFormat ToVkFormat(Texture::TextureInternalFormat fmt);
+//static VkImageType ToVkType(Texture::TextureType type);
 
 class SingleTimeCommands {
 public:

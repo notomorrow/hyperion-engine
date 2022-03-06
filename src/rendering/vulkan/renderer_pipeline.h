@@ -14,12 +14,12 @@
 #include "renderer_descriptor_pool.h"
 #include "renderer_descriptor_set.h"
 #include "renderer_descriptor.h"
-#include "helpers.h"
+#include "renderer_helpers.h"
 
 #include "../../hash_code.h"
 
 namespace hyperion {
-
+class RendererRenderPass;
 class RendererPipeline {
 public:
     struct ConstructionInfo {
@@ -101,7 +101,7 @@ private:
     VkRect2D scissor;
     VkPrimitiveTopology primitive;
 
-    VkRenderPass render_pass;
+    RendererRenderPass *render_pass;
 
     std::vector<VkVertexInputBindingDescription>   vertex_binding_descriptions = { };
     std::vector<VkVertexInputAttributeDescription> vertex_attributes = { };

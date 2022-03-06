@@ -2,12 +2,18 @@
 #define HYPERION_RENDERER_FEATURES_H
 
 #include "renderer_result.h"
+#include "../texture.h"
 
 #include <vulkan/vulkan.h>
 
 #include <array>
 
 namespace hyperion {
+namespace helpers {
+// forward decl's
+VkFormat ToVkFormat(Texture::TextureInternalFormat fmt);
+VkImageType ToVkType(Texture::TextureType type);
+} // namespace helpers
 
 class RendererFeatures {
 public:
@@ -63,9 +69,27 @@ public:
 
 #undef REQUIRES_VK_FEATURE
 
+    inline bool IsSupportedFormat(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features) const
+    {
+        if (m_physical_device == nullptr) {
+            return false;
+        }
+
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(m_physical_device, format, &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+            return true;
+        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+            return true;
+        }
+
+        return false;
+    }
+
     /* get the first supported format out of the provided list of format choices. */
     template <size_t Size>
-    inline VkFormat GetSupportedFormat(std::array<VkFormat, Size> possible_formats, VkImageTiling tiling, VkFormatFeatureFlags features) const
+    inline VkFormat FindSupportedFormat(std::array<VkFormat, Size> possible_formats, VkImageTiling tiling, VkFormatFeatureFlags features) const
     {
         static_assert(Size > 0, "Size must be greater than zero!");
 
@@ -76,17 +100,31 @@ public:
         for (size_t i = 0; i < Size; i++) {
             VkFormat format = possible_formats[i];
 
-            VkFormatProperties props;
-            vkGetPhysicalDeviceFormatProperties(m_physical_device, format, &props);
-
-            if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-                return format;
-            } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+            if (IsSupportedFormat(format, tiling, features)) {
                 return format;
             }
         }
 
         return VK_FORMAT_UNDEFINED;
+    }
+
+    /* get the first supported format out of the provided list of format choices. */
+    template <size_t Size>
+    inline Texture::TextureInternalFormat FindSupportedFormat(std::array<Texture::TextureInternalFormat, Size> possible_formats, VkImageTiling tiling, VkFormatFeatureFlags features) const
+    {
+        static_assert(Size > 0, "Size must be greater than zero!");
+
+        if (m_physical_device == nullptr) {
+            return Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
+        }
+
+        for (size_t i = 0; i < Size; i++) {
+            if (IsSupportedFormat(helpers::ToVkFormat(possible_formats[i]), tiling, features) != VK_FORMAT_UNDEFINED) {
+                return possible_formats[i];
+            }
+        }
+
+        return Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
     }
 
     inline RendererResult GetImageFormatProperties(VkFormat format,
@@ -107,7 +145,7 @@ public:
         HYPERION_RETURN_OK;
     }
 
-    inline bool IsImageFormatSupported(VkFormat format,
+    inline bool IsSupportedImageFormat(VkFormat format,
         VkImageType             type,
         VkImageTiling           tiling,
         VkImageUsageFlags       usage,

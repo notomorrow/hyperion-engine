@@ -7,7 +7,7 @@ namespace hyperion {
 RendererFramebufferObject::RendererFramebufferObject(size_t width, size_t height)
     : m_width(width),
       m_height(height),
-      m_render_pass{},
+      m_render_pass(nullptr),
       m_framebuffer{}
 {
 
@@ -15,119 +15,143 @@ RendererFramebufferObject::RendererFramebufferObject(size_t width, size_t height
 
 RendererFramebufferObject::~RendererFramebufferObject()
 {
+    AssertExitMsg(m_render_pass == nullptr, "render pass should have been released");
 }
 
 RendererResult RendererFramebufferObject::Create(RendererDevice *device)
 {
-    /*m_image = std::make_unique<RendererImage>(
-        m_width,
-        m_height,
-        1,
-        Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
-        Texture::TextureType::TEXTURE_TYPE_2D,
+    m_render_pass = std::make_unique<RendererRenderPass>();
+
+    const auto color_format = device->GetRendererFeatures().FindSupportedFormat(
+        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
         VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        nullptr
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
     );
 
-    HYPERION_BUBBLE_ERRORS(m_image->Create(device, VK_IMAGE_LAYOUT_UNDEFINED));*/
+    const auto depth_format = device->GetRendererFeatures().FindSupportedFormat(
+        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
+    );
 
-    std::vector<VkAttachmentDescription> attachments;
-    attachments.reserve(m_attachment_infos.size());
+    /* Add color attachment */
+    m_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
+        .attachment = std::make_unique<RendererAttachment>(
+            helpers::ToVkFormat(color_format),
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            0,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+         ),
+        .is_depth_attachment = false
+    });
 
-    VkAttachmentReference depth_attachment_ref{};
-    std::vector<VkAttachmentReference> color_attachment_refs;
+    m_fbo_attachments.push_back(AttachmentImageInfo{
+        .image = std::make_unique<RendererImage>(
+            m_width,
+            m_height,
+            1,
+            color_format,
+            Texture::TextureType::TEXTURE_TYPE_2D,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            nullptr
+        ),
+        .image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_COLOR_BIT),
+        .sampler = std::make_unique<RendererSampler>(
+            Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
+            Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        )
+    });
 
-    VkSubpassDescription subpass_description{};
-    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass_description.pDepthStencilAttachment = nullptr;
+    /* Add depth attachment */
+    m_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
+        .attachment = std::make_unique<RendererAttachment>(
+            helpers::ToVkFormat(depth_format),
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            1,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+         ),
+        .is_depth_attachment = true
+    });
 
-    for (size_t i = 0; i < m_attachment_infos.size(); i++) {
-        auto &attachment_info = m_attachment_infos[i];
+    m_fbo_attachments.push_back(AttachmentImageInfo{
+        .image = std::make_unique<RendererImage>(
+            m_width,
+            m_height,
+            1,
+            depth_format,
+            Texture::TextureType::TEXTURE_TYPE_2D,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            nullptr
+        ),
+        .image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_DEPTH_BIT),
+        .sampler = std::make_unique<RendererSampler>(
+            Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
+            Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        )
+    });
 
-        HYPERION_BUBBLE_ERRORS(attachment_info->image.Create(device, VK_IMAGE_LAYOUT_UNDEFINED));
-        HYPERION_BUBBLE_ERRORS(attachment_info->image_view.Create(device, &attachment_info->image));
-        HYPERION_BUBBLE_ERRORS(attachment_info->sampler.Create(device, &attachment_info->image_view));
+    m_render_pass->AddDependency(VkSubpassDependency{
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+    });
 
-        if (attachment_info->image.IsDepthStencilImage()) {
-            attachments.push_back(VkAttachmentDescription{
-                .format = attachment_info->image.GetImageFormat(),
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-            });
+    m_render_pass->AddDependency(VkSubpassDependency{
+        .srcSubpass = 0,
+        .dstSubpass = VK_SUBPASS_EXTERNAL,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+    });
 
-            color_attachment_refs.push_back(VkAttachmentReference{
-                .attachment = uint32_t(i),
-                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL 
-            });
-        } else {
-            attachments.push_back(VkAttachmentDescription{
-                .format = attachment_info->image.GetImageFormat(),
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-            });
-
-            depth_attachment_ref = VkAttachmentReference{
-                .attachment = uint32_t(i),
-                .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-            };
-
-            subpass_description.pDepthStencilAttachment = &depth_attachment_ref;
-        }
+    for (auto &image_info : m_fbo_attachments) {
+        if (image_info.image != nullptr)
+            HYPERION_BUBBLE_ERRORS(image_info.image->Create(device, VK_IMAGE_LAYOUT_UNDEFINED));
+        if (image_info.image_view != nullptr)
+            HYPERION_BUBBLE_ERRORS(image_info.image_view->Create(device, image_info.image.get()));
+        if (image_info.sampler != nullptr)
+            HYPERION_BUBBLE_ERRORS(image_info.sampler->Create(device, image_info.image_view.get()));
     }
 
-    subpass_description.colorAttachmentCount = color_attachment_refs.size();
-    subpass_description.pColorAttachments = color_attachment_refs.data();
-
-    // Use subpass dependencies for layout transitions
-    std::array<VkSubpassDependency, 2> dependencies;
-
-    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[0].dstSubpass = 0;
-    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    dependencies[1].srcSubpass = 0;
-    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    // Create the actual renderpass
-    VkRenderPassCreateInfo render_pass_info{};
-    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    render_pass_info.attachmentCount = uint32_t(attachments.size());
-    render_pass_info.pAttachments = attachments.data();
-    render_pass_info.subpassCount = 1;
-    render_pass_info.pSubpasses = &subpass_description;
-    render_pass_info.dependencyCount = uint32_t(dependencies.size());
-    render_pass_info.pDependencies = dependencies.data();
-
-    HYPERION_VK_CHECK(vkCreateRenderPass(device->GetDevice(), &render_pass_info, nullptr, &m_render_pass));
+    HYPERION_BUBBLE_ERRORS(m_render_pass->Create(device));
 
     std::vector<VkImageView> attachment_image_views;
-    attachment_image_views.resize(m_attachment_infos.size());
+    { // linear layout of VkImageView data
+        attachment_image_views.resize(m_fbo_attachments.size());
 
-    for (size_t i = 0; i < m_attachment_infos.size(); i++) {
-        attachment_image_views[i] = m_attachment_infos[i]->image_view.GetImageView();
+        for (size_t i = 0; i < m_fbo_attachments.size(); i++) {
+            attachment_image_views[i] = m_fbo_attachments[i].image_view->GetImageView();
+        }
     }
 
     VkFramebufferCreateInfo framebuffer_create_info{};
     framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebuffer_create_info.renderPass = m_render_pass;
+    framebuffer_create_info.renderPass = m_render_pass->GetRenderPass();
     framebuffer_create_info.attachmentCount = attachment_image_views.size();
-    framebuffer_create_info.pAttachments = attachment_image_views.data();
+    framebuffer_create_info.pAttachments    = attachment_image_views.data();
     framebuffer_create_info.width = m_width;
     framebuffer_create_info.height = m_height;
     framebuffer_create_info.layers = 1;
@@ -142,22 +166,22 @@ RendererResult RendererFramebufferObject::Destroy(RendererDevice *device)
     RendererResult result = RendererResult::OK;
 
     vkDestroyFramebuffer(device->GetDevice(), m_framebuffer, nullptr);
-    vkDestroyRenderPass(device->GetDevice(), m_render_pass, nullptr);
 
-    for (size_t i = 0; i < m_attachment_infos.size(); i++) {
-        HYPERION_PASS_ERRORS(m_attachment_infos[i]->sampler.Destroy(device), result);
-        HYPERION_PASS_ERRORS(m_attachment_infos[i]->image_view.Destroy(device), result);
-        HYPERION_PASS_ERRORS(m_attachment_infos[i]->image.Destroy(device), result);
+    for (size_t i = 0; i < m_fbo_attachments.size(); i++) {
+        if (m_fbo_attachments[i].sampler != nullptr)
+            HYPERION_PASS_ERRORS(m_fbo_attachments[i].sampler->Destroy(device), result);
+        if (m_fbo_attachments[i].image_view != nullptr)
+            HYPERION_PASS_ERRORS(m_fbo_attachments[i].image_view->Destroy(device), result);
+        if (m_fbo_attachments[i].image != nullptr)
+            HYPERION_PASS_ERRORS(m_fbo_attachments[i].image->Destroy(device), result);
     }
 
-    m_attachment_infos.clear();
+    m_fbo_attachments.clear();
+
+    HYPERION_PASS_ERRORS(m_render_pass->Destroy(device), result);
+    m_render_pass.release();
 
     return result;
-}
-
-void RendererFramebufferObject::AddAttachment(std::unique_ptr<AttachmentInfo> &&attachment)
-{
-    m_attachment_infos.push_back(std::move(attachment));
 }
 
 } // namespace hyperion

@@ -63,9 +63,6 @@ void VkRenderer::StartFrame(RendererFrame *frame, RendererPipeline *pipeline) {
 void VkRenderer::EndFrame(RendererFrame *frame, RendererPipeline *pipeline) {
     pipeline->EndRenderPass(frame->command_buffer);
 
-    /* Render objects to the swapchain using our graphics pipeline */
-    //this->pipeline->DoRenderPass();
-
     VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
     VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 

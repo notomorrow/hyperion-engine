@@ -4,6 +4,7 @@
 #include "renderer_result.h"
 #include "renderer_device.h"
 #include "renderer_buffer.h"
+#include "renderer_helpers.h"
 #include "../texture.h"
 
 namespace hyperion {
@@ -37,8 +38,8 @@ public:
     inline Texture::TextureInternalFormat GetTextureFormat() const { return m_format; }
     inline Texture::TextureType GetTextureType() const { return m_type; }
 
-    inline VkFormat GetImageFormat() const { return ToVkFormat(m_format); }
-    inline VkImageType GetImageType() const { return ToVkType(m_type); }
+    inline VkFormat GetImageFormat() const { return helpers::ToVkFormat(m_format); }
+    inline VkImageType GetImageType() const { return helpers::ToVkType(m_type); }
     inline VkImageUsageFlags GetImageUsageFlags() const { return m_image_usage_flags; }
 
     struct LayoutTransferStateBase {
@@ -108,9 +109,6 @@ private:
     RendererResult CreateImage(RendererDevice *device,
         VkImageLayout initial_layout,
         VkImageCreateInfo *out_image_info);
-
-    static VkFormat ToVkFormat(Texture::TextureInternalFormat);
-    static VkImageType ToVkType(Texture::TextureType);
 
     RendererResult ConvertTo32Bpp(RendererDevice *device,
         VkImageType image_type,

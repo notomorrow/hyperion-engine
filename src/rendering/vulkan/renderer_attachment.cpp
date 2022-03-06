@@ -2,7 +2,7 @@
 
 namespace hyperion {
 
-RendererAttachment::RendererAttachment(VkFormat image_format,
+RendererAttachment::RendererAttachment(VkFormat format,
     VkAttachmentLoadOp load_op,
     VkAttachmentStoreOp store_op,
     VkAttachmentLoadOp stencil_load_op,
@@ -10,7 +10,7 @@ RendererAttachment::RendererAttachment(VkFormat image_format,
     VkImageLayout final_layout,
     uint32_t ref_attachment,
     VkImageLayout ref_layout)
-    : m_image_format(image_format),
+    : m_format(format),
       m_load_op(load_op),
       m_store_op(store_op),
       m_stencil_load_op(stencil_load_op),
@@ -18,7 +18,8 @@ RendererAttachment::RendererAttachment(VkFormat image_format,
       m_final_layout(final_layout),
       m_ref_attachment(ref_attachment),
       m_ref_layout(ref_layout),
-      m_attachment_reference{}
+      m_attachment_reference{},
+      m_attachment_description{}
 {
 }
 
@@ -30,16 +31,14 @@ RendererAttachment::~RendererAttachment()
 
 RendererResult RendererAttachment::Create(RendererDevice *device)
 {
-    VkAttachmentDescription attachment{};
-    attachment.format = m_image_format;
-    attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    attachment.loadOp = m_load_op;
-    attachment.storeOp = m_store_op;
-    attachment.stencilLoadOp = m_stencil_load_op;
-    attachment.stencilStoreOp = m_stencil_store_op;
-    attachment.finalLayout = m_final_layout;
+    m_attachment_description.format = m_format;
+    m_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+    m_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    m_attachment_description.loadOp = m_load_op;
+    m_attachment_description.storeOp = m_store_op;
+    m_attachment_description.stencilLoadOp = m_stencil_load_op;
+    m_attachment_description.stencilStoreOp = m_stencil_store_op;
+    m_attachment_description.finalLayout = m_final_layout;
 
     m_attachment_reference.attachment = m_ref_attachment;
     m_attachment_reference.layout = m_ref_layout;
