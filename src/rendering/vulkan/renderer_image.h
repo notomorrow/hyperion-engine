@@ -29,6 +29,8 @@ public:
         const LayoutTransferStateBase &transfer_to);
     RendererResult Destroy(RendererDevice *device);
 
+    bool IsDepthStencilImage() const;
+
     inline RendererGPUImage *GetGPUImage() { return m_image; }
     inline const RendererGPUImage *GetGPUImage() const { return m_image; }
 

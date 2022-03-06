@@ -288,8 +288,7 @@ void Mesh::SetVerticesFromFloatBuffer(const std::vector<float> &buffer)
 }
 
 RendererMeshBindingDescription Mesh::GetBindingDescription() {
-    auto desc = RendererMeshBindingDescription(0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX);
-    return desc;
+    return RendererMeshBindingDescription(0, sizeof(Vertex) /* TODO */, VK_VERTEX_INPUT_RATE_VERTEX);
 }
 
 void Mesh::Render(Renderer *renderer, Camera *cam) {
@@ -299,6 +298,7 @@ void Mesh::Render(Renderer *renderer, Camera *cam) {
 void Mesh::RenderVk(RendererFrame *frame, VkRenderer *vk_renderer, Camera *cam) {
     AssertThrow(frame != nullptr);
     VkCommandBuffer cmd = frame->command_buffer;
+
     if (!is_created) {
         _render_context = new RenderContext(this, vk_renderer);
         _render_context->Create(cmd);
