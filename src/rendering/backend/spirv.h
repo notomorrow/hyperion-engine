@@ -8,7 +8,7 @@
 
 namespace hyperion {
 
-struct SPIRVObject {
+struct SpirvObject {
     using Raw_t = std::vector<ubyte>;
 
     enum class Type : int {
@@ -34,11 +34,11 @@ struct SPIRVObject {
     Raw_t raw;
     Type type;
 
-    SPIRVObject() : type(Type::UNSET) {}
-    explicit SPIRVObject(Type type) : type(type) {}
-    explicit SPIRVObject(Type type, const Raw_t &raw) : type(type), raw(raw) {}
-    SPIRVObject(const SPIRVObject &other) : type(other.type), raw(other.raw) {}
-    ~SPIRVObject() = default;
+    SpirvObject() : type(Type::UNSET) {}
+    explicit SpirvObject(Type type) : type(type) {}
+    explicit SpirvObject(Type type, const Raw_t &raw) : type(type), raw(raw) {}
+    SpirvObject(const SpirvObject &other) : type(other.type), raw(other.raw) {}
+    ~SpirvObject() = default;
 
     inline const uint32_t *VkCode() const { return reinterpret_cast<const uint32_t*>(raw.data()); }
 
