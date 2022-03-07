@@ -8,7 +8,7 @@
 #include "../texture.h"
 
 namespace hyperion {
-class RendererPipeline;
+class VkRenderer;
 class RendererImage {
 public:
     struct LayoutTransferStateBase;
@@ -25,7 +25,7 @@ public:
     ~RendererImage();
 
     RendererResult Create(RendererDevice *device, VkImageLayout layout);
-    RendererResult Create(RendererDevice *device, RendererPipeline *pipeline,
+    RendererResult Create(RendererDevice *device, VkRenderer *renderer,
         const LayoutTransferStateBase &transfer_from,
         const LayoutTransferStateBase &transfer_to);
     RendererResult Destroy(RendererDevice *device);

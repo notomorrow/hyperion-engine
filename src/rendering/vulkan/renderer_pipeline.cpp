@@ -74,44 +74,6 @@ std::vector<VkDynamicState> RendererPipeline::GetDynamicStates() {
     return this->dynamic_states;
 }
 
-RendererResult RendererPipeline::CreateCommandPool() {
-    QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
-
-    VkCommandPoolCreateInfo pool_info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-    pool_info.queueFamilyIndex = family_indices.graphics_family.value();
-    /* TODO: look into VK_COMMAND_POOL_CREATE_TRANSIENT_BIT for constantly changing objects */
-    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-    HYPERION_VK_CHECK_MSG(
-        vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &this->command_pool),
-        "Could not create Vulkan command pool"
-    );
-
-    DebugLog(LogType::Debug, "Create Command pool\n");
-
-    HYPERION_RETURN_OK;
-}
-
-RendererResult RendererPipeline::CreateCommandBuffers(uint16_t count) {
-    AssertThrow(count >= 1);
-    //this->command_buffers.resize(this->swapchain->framebuffers.size());
-    this->command_buffers.resize(this->m_construction_info.fbos.size());
-
-    VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-    alloc_info.commandPool = this->command_pool;
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandBufferCount = uint32_t(this->command_buffers.size());
-
-    HYPERION_VK_CHECK_MSG(
-        vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data()),
-        "Could not create Vulkan command buffers"
-    );
-
-    DebugLog(LogType::Debug, "Allocate %d command buffers\n", this->command_buffers.size());
-
-    HYPERION_RETURN_OK;
-}
-
 void RendererPipeline::UpdateDynamicStates(VkCommandBuffer cmd) {
     vkCmdSetViewport(cmd, 0, 1, &this->viewport);
     vkCmdSetScissor(cmd, 0, 1, &this->scissor);
@@ -169,13 +131,6 @@ std::vector<VkVertexInputAttributeDescription> RendererPipeline::BuildVertexAttr
 }
 
 void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, size_t index) {
-    //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
-    VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    begin_info.pInheritanceInfo = nullptr;
-    /* Begin recording our command buffer */
-    auto result = vkBeginCommandBuffer(cmd, &begin_info);
-    AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer!\n");
 
     m_construction_info.render_pass->Begin(
         cmd,
@@ -192,9 +147,6 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, size_t index) {
 
 void RendererPipeline::EndRenderPass(VkCommandBuffer cmd, size_t index) {
     m_construction_info.render_pass->End(cmd);
-
-    auto result = vkEndCommandBuffer(cmd);
-    AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
 }
 
 /*RendererResult RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_count) {
@@ -415,25 +367,10 @@ void RendererPipeline::Destroy() {
         delete[] intern_vertex_buffers;
     }
 
-    vkFreeCommandBuffers(render_device, this->command_pool, this->command_buffers.size(), this->command_buffers.data());
-    vkDestroyCommandPool(render_device, this->command_pool, nullptr);
-
     DebugLog(LogType::Info, "Destroying pipeline!\n");
 
     vkDestroyPipeline(render_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(render_device, this->layout, nullptr);
-}
-
-helpers::SingleTimeCommands RendererPipeline::GetSingleTimeCommands()
-{
-    QueueFamilyIndices family_indices = this->device->FindQueueFamilies(); // TODO: this result should be cached
-
-    helpers::SingleTimeCommands single_time_commands{};
-    single_time_commands.cmd = nullptr;
-    single_time_commands.pool = this->command_pool;
-    single_time_commands.family_indices = family_indices;
-
-    return single_time_commands;
 }
 
 } /* namespace hyperion */

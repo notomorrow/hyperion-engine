@@ -579,10 +579,12 @@ int main()
     //RendererFramebufferObject test_fbo(1024, 768);// 512, 512);
 
     auto color_format = device->GetRendererFeatures().FindSupportedFormat(
-        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
+        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
         VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
     );
     
     auto depth_format = device->GetRendererFeatures().FindSupportedFormat(
@@ -592,53 +594,11 @@ int main()
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
     );
 
-    /*test_fbo.AddAttachment(RendererRenderPass::AttachmentInfo{
-        .attachment = std::make_unique<RendererAttachment>(
-            helpers::ToVkFormat(color_format),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            0,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-         ),
-        .is_depth_attachment = false
-    }, color_format);
-
-    test_fbo.AddAttachment(RendererRenderPass::AttachmentInfo{
-        .attachment = std::make_unique<RendererAttachment>(
-            helpers::ToVkFormat(depth_format),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            1,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-         ),
-        .is_depth_attachment = true
-    }, depth_format);
-
-        m_render_pass->AddDependency(VkSubpassDependency{
-            .srcSubpass = VK_SUBPASS_EXTERNAL,
-            .dstSubpass = 0,
-            .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-        });
-
-    auto fbo_result = test_fbo.Create(device);
-
-    AssertThrowMsg(fbo_result, "%s", fbo_result.message);*/
-
     /* Descriptor sets */
     RendererGPUBuffer test_gpu_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     // test image
-    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
+    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
     RendererImage image(
         texture->GetWidth(),
         texture->GetHeight(),
@@ -657,13 +617,19 @@ int main()
     shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/frag.spv").Read() });
     shader.CreateProgram("main");
 
-    std::array<RendererPipeline *, 1> pipelines{};
+    RendererShader mirror_shader;
+    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/mirror_vert.spv").Read() });
+    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/mirror_frag.spv").Read() });
+    mirror_shader.CreateProgram("main");
+
+    std::array<RendererPipeline *, 2> pipelines{};
 
     /* Add a "default" pipeline
      * we'll have to set up a framebuffer with attachments for any image views retrieved
      * from the swapchain */
 
-    auto root_pipeline_builder = RendererPipeline::Builder();
+    RendererPipeline::Builder root_pipeline_builder;
+
     root_pipeline_builder
         .Shader(&shader)
         .VertexAttributes(RendererMeshInputAttributeSet({
@@ -674,7 +640,7 @@ int main()
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
         }))
-        .RenderPass([&renderer, depth_format](RendererRenderPass &render_pass) {
+        .RenderPass([&renderer, color_format, depth_format](RendererRenderPass &render_pass) {
             /* For our color attachment */
             render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
                 .attachment = std::make_unique<RendererAttachment>(
@@ -705,14 +671,36 @@ int main()
                 .is_depth_attachment = true
             });
 
+
+
             render_pass.AddDependency(VkSubpassDependency{
                 .srcSubpass = VK_SUBPASS_EXTERNAL,
                 .dstSubpass = 0,
                 .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                 .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                 .srcAccessMask = 0,
-                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
             });
+
+            /*render_pass.AddDependency(VkSubpassDependency{
+                .srcSubpass = VK_SUBPASS_EXTERNAL,
+                .dstSubpass = 0,
+                .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            });
+            render_pass.AddDependency(VkSubpassDependency{
+                .srcSubpass = 0,
+                .dstSubpass = VK_SUBPASS_EXTERNAL,
+                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            });*/
         });
 
     for (auto img : renderer.swapchain->images) {
@@ -756,27 +744,103 @@ int main()
     auto add_pipeline_result = renderer.AddPipeline(std::move(root_pipeline_builder), &pipelines[0]);
     AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
 
-   /* add_pipeline_result = renderer.AddPipeline({
-        .vertex_attributes = RendererMeshInputAttributeSet({
+
+    RendererPipeline::Builder fbo_pipeline_builder;
+    
+    fbo_pipeline_builder
+        .Shader(&mirror_shader)
+        .VertexAttributes(RendererMeshInputAttributeSet({
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
-         }),
-        .shader = &shader,
-        .cull_mode = RendererPipeline::ConstructionInfo::CullMode::FRONT,
-        .depth_test = true,
-        .depth_write = true
-        }, &pipelines[1]);*/
+        }))
+        .RenderPass([&renderer, color_format, depth_format](RendererRenderPass &render_pass) {
+            /* For our color attachment */
+            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
+                .attachment = std::make_unique<RendererAttachment>(
+                    helpers::ToVkFormat(color_format),
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    0,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                ),
+                .is_depth_attachment = false
+            });
 
-    //AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
+            /* For our depth attachment */
+            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
+                .attachment = std::make_unique<RendererAttachment>(
+                    helpers::ToVkFormat(depth_format),
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    1,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+                ),
+                .is_depth_attachment = true
+            });
+
+            render_pass.AddDependency(VkSubpassDependency{
+                .srcSubpass = VK_SUBPASS_EXTERNAL,
+                .dstSubpass = 0,
+                .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            });
+
+            render_pass.AddDependency(VkSubpassDependency{
+                .srcSubpass = 0,
+                .dstSubpass = VK_SUBPASS_EXTERNAL,
+                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            });
+        })
+        .Framebuffer(
+            512,
+            512,
+            [color_format, depth_format](RendererFramebufferObject &fbo) {
+                /* Add color attachment */
+                fbo.AddAttachment(
+                    color_format,
+                    false
+                );
+
+                /* Now we add a depth buffer */
+                fbo.AddAttachment(
+                    depth_format,
+                    true
+                );
+            });
+
+    add_pipeline_result = renderer.AddPipeline(std::move(fbo_pipeline_builder), &pipelines[1]);
+    AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
 
     renderer.descriptor_pool
         .AddDescriptorSet()
         .AddDescriptor(std::make_unique<RendererBufferDescriptor>(0, non_owning_ptr(&test_gpu_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT))
         .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(1, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+    
+    renderer.descriptor_pool
+        .AddDescriptorSet()
+        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(
+            0,
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].image_view.get()),
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].sampler.get()),
+            VK_SHADER_STAGE_FRAGMENT_BIT
+        ));
 
     // test data for descriptors
     struct MainShaderData {
@@ -784,11 +848,10 @@ int main()
         Matrix4 pv;
     };
     test_gpu_buffer.Create(device, sizeof(MainShaderData));
-    //renderer.pipeline->CreateCommandPool();
 
     auto image_create_result = image.Create(
         device,
-        pipelines[0],
+        &renderer,
         RendererImage::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
         RendererImage::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
     );
@@ -804,9 +867,13 @@ int main()
     auto descriptor_pool_result = renderer.descriptor_pool.Create(renderer.GetRendererDevice());
     AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
 
+
+    // TODO: move out of here
     for (auto *pl : pipelines) {
         pl->Build(&renderer.descriptor_pool);
     }
+
+    //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
 
     float timer = 0.0;
 
@@ -866,20 +933,20 @@ int main()
 
 
         RendererPipeline *pl = pipelines[0];
-        //RendererPipeline *fbo_pl = pipelines[1];
+        RendererPipeline *fbo_pl = pipelines[1];
 
         frame = renderer.GetNextFrame();
         renderer.StartFrame(frame);
         
         test_gpu_buffer.Copy(device, sizeof(shad_data), (void *)&shad_data);
 
-        /*fbo_pl->StartRenderPass(frame->command_buffer);
-        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, fbo_pl->layout);
+        fbo_pl->StartRenderPass(frame->command_buffer, 0);
+        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, fbo_pl->layout, 0, 1);
         mesh->RenderVk(frame, &renderer, nullptr);
-        fbo_pl->EndRenderPass(frame->command_buffer);*/
+        fbo_pl->EndRenderPass(frame->command_buffer, 0);
 
         pl->StartRenderPass(frame->command_buffer, renderer.acquired_frames_index);
-        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, pl->layout);
+        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, pl->layout, 0, 2);
         mesh->RenderVk(frame, &renderer, nullptr);
         pl->EndRenderPass(frame->command_buffer, renderer.acquired_frames_index);
 
@@ -895,13 +962,13 @@ int main()
 
     mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
 
-
     test_gpu_buffer.Destroy(device);
     test_image_view.Destroy(device);
     test_sampler.Destroy(device);
     image.Destroy(device);
 
     shader.Destroy();
+    mirror_shader.Destroy();
     renderer.Destroy();
     delete window;
 

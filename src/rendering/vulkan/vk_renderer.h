@@ -65,8 +65,11 @@ class VkRenderer {
     /* Setup debug mode */
     RendererResult SetupDebug();
 
-    RendererResult AllocatePendingFrames(RendererPipeline *pipeline);
+    RendererResult AllocatePendingFrames();
     RendererResult CleanupPendingFrames();
+
+    RendererResult CreateCommandPool();
+    RendererResult CreateCommandBuffers();
 public:
     VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name);
     RendererResult Initialize(bool load_debug_layers=false);
@@ -94,6 +97,8 @@ public:
     SystemWindow *GetCurrentWindow();
     RendererResult Destroy();
 
+    helpers::SingleTimeCommands GetSingleTimeCommands();
+
     std::vector<const char *> requested_device_extensions;
 
     uint16_t frames_to_allocate = DEFAULT_PENDING_FRAMES_COUNT;
@@ -106,6 +111,10 @@ public:
 
     uint32_t acquired_frames_index = 0;
     RendererSwapchain *swapchain = nullptr;
+
+    /* Per frame data */
+    VkCommandPool command_pool;
+    std::vector<VkCommandBuffer> command_buffers;
 
 private:
     SystemWindow *window = nullptr;
