@@ -575,10 +575,53 @@ int main()
     RendererDevice *device = renderer.GetRendererDevice();
 
     /* Test fbo */
-    RendererFramebufferObject test_fbo(512, 512);
+    //RendererFramebufferObject test_fbo(1024, 768);// 512, 512);
+
+    auto color_format = device->GetRendererFeatures().FindSupportedFormat(
+        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+    );
+    
+    auto depth_format = device->GetRendererFeatures().FindSupportedFormat(
+        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+    );
+
+    /*test_fbo.AddAttachment(RendererRenderPass::AttachmentInfo{
+        .attachment = std::make_unique<RendererAttachment>(
+            helpers::ToVkFormat(color_format),
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            0,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+         ),
+        .is_depth_attachment = false
+    }, color_format);
+
+    test_fbo.AddAttachment(RendererRenderPass::AttachmentInfo{
+        .attachment = std::make_unique<RendererAttachment>(
+            helpers::ToVkFormat(depth_format),
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            1,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+         ),
+        .is_depth_attachment = true
+    }, depth_format);
+
     auto fbo_result = test_fbo.Create(device);
 
-    AssertThrowMsg(fbo_result, "%s", fbo_result.message);
+    AssertThrowMsg(fbo_result, "%s", fbo_result.message);*/
 
     /* Descriptor sets */
     RendererGPUBuffer test_gpu_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
@@ -603,7 +646,71 @@ int main()
     shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/frag.spv").Read() });
     shader.CreateProgram("main");
 
-    std::array<RendererPipeline *, 2> pipelines{};
+    std::array<RendererPipeline *, 1> pipelines{};
+
+    /* Add a "default" pipeline
+     * we'll have to set up a framebuffer with attachments for any image views retrieved
+     * from the swapchain */
+
+    RendererFramebufferObject root_fbo(renderer.swapchain->extent.width, renderer.swapchain->extent.height);
+    for (auto img : renderer.swapchain->images) {
+        auto image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_COLOR_BIT);
+
+        auto image_view_result = image_view->Create(
+            device,
+            img,
+            renderer.swapchain->image_format,
+            VK_IMAGE_VIEW_TYPE_2D
+        );
+
+        AssertThrowMsg(image_view_result, "%s", image_view_result.message);
+
+        root_fbo.AddAttachment(RendererRenderPass::AttachmentInfo{
+            .attachment = std::make_unique<RendererAttachment>(
+                renderer.swapchain->image_format,
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                0,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            ),
+            .is_depth_attachment = false
+        }, RendererFramebufferObject::AttachmentImageInfo{
+            .image = nullptr,
+            .image_view = std::move(image_view)
+        });
+    }
+
+    /* Now we add a depth buffer */
+    {
+        root_fbo.AddAttachment(RendererRenderPass::AttachmentInfo{
+            .attachment = std::make_unique<RendererAttachment>(
+                renderer.swapchain->image_format,
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                0,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            ),
+            .is_depth_attachment = true
+        }, depth_format);
+    }
+
+    root_fbo.GetRenderPass()->AddDependency(VkSubpassDependency{
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+    });
+    
+    auto fbo_result = root_fbo.Create(device);
+    AssertThrowMsg(fbo_result, "%s", fbo_result.message);
 
     auto add_pipeline_result = renderer.AddPipeline({
         .vertex_attributes = RendererMeshInputAttributeSet({
@@ -615,6 +722,7 @@ int main()
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
          }),
         .shader = &shader,
+        .fbo = &root_fbo,
         .cull_mode = RendererPipeline::ConstructionInfo::CullMode::BACK,
         .depth_test = true,
         .depth_write = true
@@ -622,7 +730,7 @@ int main()
 
     AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
 
-    add_pipeline_result = renderer.AddPipeline({
+   /* add_pipeline_result = renderer.AddPipeline({
         .vertex_attributes = RendererMeshInputAttributeSet({
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
             mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
@@ -635,9 +743,9 @@ int main()
         .cull_mode = RendererPipeline::ConstructionInfo::CullMode::FRONT,
         .depth_test = true,
         .depth_write = true
-        }, &pipelines[1]);
+        }, &pipelines[1]);*/
 
-    AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
+    //AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
 
     renderer.descriptor_pool
         .AddDescriptorSet()
@@ -732,15 +840,24 @@ int main()
 
 
         RendererPipeline *pl = pipelines[0];
+        //RendererPipeline *fbo_pl = pipelines[1];
 
         frame = renderer.GetNextFrame();
-        renderer.StartFrame(frame, pl);
-
+        renderer.StartFrame(frame);
+        
         test_gpu_buffer.Copy(device, sizeof(shad_data), (void *)&shad_data);
+
+        /*fbo_pl->StartRenderPass(frame->command_buffer);
+        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, fbo_pl->layout);
+        mesh->RenderVk(frame, &renderer, nullptr);
+        fbo_pl->EndRenderPass(frame->command_buffer);*/
+
+        pl->StartRenderPass(frame->command_buffer);
         renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, pl->layout);
         mesh->RenderVk(frame, &renderer, nullptr);
+        pl->EndRenderPass(frame->command_buffer);
 
-        renderer.EndFrame(frame, pl);
+        renderer.EndFrame(frame);
 
 
         //RendererPipeline *fbo_pl = pipelines[1];

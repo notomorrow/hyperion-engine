@@ -26,6 +26,7 @@ public:
     struct ConstructionInfo {
         RendererMeshInputAttributeSet vertex_attributes;
         RendererShader *shader;
+        RendererFramebufferObject *fbo;
 
         enum class CullMode : int {
             NONE,
@@ -41,6 +42,7 @@ public:
             HashCode hc;
 
             hc.Add((shader != nullptr) ? shader->GetHashCode().Value() : 0);
+            hc.Add((fbo != nullptr) ? intptr_t(fbo) : 0); // TODO
             hc.Add(vertex_attributes.GetHashCode());
             hc.Add(int(cull_mode));
             hc.Add(depth_test);
@@ -50,7 +52,7 @@ public:
         }
     };
 
-    RendererPipeline(RendererDevice *_device, RendererSwapchain *_swapchain, const ConstructionInfo &construction_info);
+    RendererPipeline(RendererDevice *_device, const ConstructionInfo &construction_info);
     void Destroy();
 
     void SetPrimitive(VkPrimitiveTopology _primitive);
@@ -68,14 +70,13 @@ public:
     void Rebuild(const ConstructionInfo &construction_info,
         RendererDescriptorPool *descriptor_pool);
 
-    RendererResult CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
+    //RendererResult CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
     // void DoRenderPass(void (*render_callback)(RendererPipeline *pl, VkCommandBuffer *cmd));
-    void StartRenderPass(VkCommandBuffer cmd, uint32_t image_index, RendererFramebufferObject *fbo = nullptr);
-    void EndRenderPass(VkCommandBuffer cmd, RendererFramebufferObject *fbo = nullptr);
+    void StartRenderPass(VkCommandBuffer cmd);
+    void EndRenderPass(VkCommandBuffer cmd);
 
     VkPrimitiveTopology GetPrimitive();
     std::vector<VkDynamicState> GetDynamicStates();
-    VkRenderPass *GetRenderPass();
 
     inline const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
 
@@ -102,12 +103,9 @@ private:
     VkRect2D scissor;
     VkPrimitiveTopology primitive;
 
-    RendererRenderPass *render_pass;
-
     std::vector<VkVertexInputBindingDescription>   vertex_binding_descriptions = { };
     std::vector<VkVertexInputAttributeDescription> vertex_attributes = { };
 
-    RendererSwapchain *swapchain;
     RendererDevice *device;
 
     ConstructionInfo m_construction_info;

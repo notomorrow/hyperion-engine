@@ -7,116 +7,79 @@ namespace hyperion {
 RendererFramebufferObject::RendererFramebufferObject(size_t width, size_t height)
     : m_width(width),
       m_height(height),
-      m_render_pass(nullptr),
+      m_render_pass(new RendererRenderPass()),
       m_framebuffer{}
 {
-
 }
 
 RendererFramebufferObject::~RendererFramebufferObject()
 {
-    AssertExitMsg(m_render_pass == nullptr, "render pass should have been released");
+}
+
+RendererResult RendererFramebufferObject::AddAttachment(RendererRenderPass::AttachmentInfo &&attachment_info, Texture::TextureInternalFormat format)
+{
+    VkImageUsageFlags image_usage_flags = 0;
+
+    if (attachment_info.is_depth_attachment) {
+        image_usage_flags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    } else {
+        image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    }
+
+    return AddAttachment(std::move(attachment_info), AttachmentImageInfo{
+        .image = std::make_unique<RendererImage>(
+            m_width,
+            m_height,
+            1,
+            format,
+            Texture::TextureType::TEXTURE_TYPE_2D,
+            VK_IMAGE_TILING_OPTIMAL,
+            image_usage_flags,
+            nullptr
+        ),
+        .image_view = nullptr,
+        .sampler = nullptr,
+        .image_needs_creation = true,
+        .image_view_needs_creation = true,
+        .sampler_needs_creation = true
+    });
+}
+
+RendererResult RendererFramebufferObject::AddAttachment(RendererRenderPass::AttachmentInfo &&attachment_info, AttachmentImageInfo &&image_info)
+{
+    VkImageAspectFlags image_aspect_flags = 0;
+
+    if (attachment_info.is_depth_attachment) {
+        image_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    } else {
+        image_aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+
+    if (image_info.image_view == nullptr) {
+        image_info.image_view = std::make_unique<RendererImageView>(image_aspect_flags);
+
+        image_info.image_view_needs_creation = true;
+    }
+
+    if (image_info.sampler == nullptr) {
+        image_info.sampler = std::make_unique<RendererSampler>(
+            Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
+            Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        );
+
+        image_info.sampler_needs_creation = true;
+    }
+
+    m_render_pass->AddAttachment(std::move(attachment_info));
+    m_fbo_attachments.push_back(std::move(image_info));
+
+    HYPERION_RETURN_OK;
 }
 
 RendererResult RendererFramebufferObject::Create(RendererDevice *device)
 {
-    m_render_pass = std::make_unique<RendererRenderPass>();
-
-    const auto color_format = device->GetRendererFeatures().FindSupportedFormat(
-        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
-    );
-
-    if (color_format == Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE) {
-        return RendererResult(
-            RendererResult::RENDERER_ERR,
-            "No RGBA color format was found with the required features; check debug log for info"
-        );
-    }
-
-    const auto depth_format = device->GetRendererFeatures().FindSupportedFormat(
-        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-    );
-
-    if (depth_format == Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE) {
-        return RendererResult(
-            RendererResult::RENDERER_ERR,
-            "No depth format was found; check debug log for info"
-        );
-    }
-
-    /* Add color attachment */
-    m_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
-        .attachment = std::make_unique<RendererAttachment>(
-            helpers::ToVkFormat(color_format),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            0,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-         ),
-        .is_depth_attachment = false
-    });
-
-    m_fbo_attachments.push_back(AttachmentImageInfo{
-        .image = std::make_unique<RendererImage>(
-            m_width,
-            m_height,
-            1,
-            color_format,
-            Texture::TextureType::TEXTURE_TYPE_2D,
-            VK_IMAGE_TILING_OPTIMAL,
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            nullptr
-        ),
-        .image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_COLOR_BIT),
-        .sampler = std::make_unique<RendererSampler>(
-            Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
-            Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
-        )
-    });
-
-    /* Add depth attachment */
-    m_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
-        .attachment = std::make_unique<RendererAttachment>(
-            helpers::ToVkFormat(depth_format),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            1,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-         ),
-        .is_depth_attachment = true
-    });
-
-    m_fbo_attachments.push_back(AttachmentImageInfo{
-        .image = std::make_unique<RendererImage>(
-            m_width,
-            m_height,
-            1,
-            depth_format,
-            Texture::TextureType::TEXTURE_TYPE_2D,
-            VK_IMAGE_TILING_OPTIMAL,
-            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            nullptr
-        ),
-        .image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_DEPTH_BIT),
-        .sampler = std::make_unique<RendererSampler>(
-            Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
-            Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
-        )
-    });
+    AssertThrow(m_fbo_attachments.size() == m_render_pass->GetAttachmentInfos().size());
+    AssertThrowMsg(m_fbo_attachments.size() != 0, "At least one attachment must be added");
 
     m_render_pass->AddDependency(VkSubpassDependency{
         .srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -128,7 +91,7 @@ RendererResult RendererFramebufferObject::Create(RendererDevice *device)
         .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
     });
 
-    m_render_pass->AddDependency(VkSubpassDependency{
+    /*m_render_pass->AddDependency(VkSubpassDependency{
         .srcSubpass = 0,
         .dstSubpass = VK_SUBPASS_EXTERNAL,
         .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -136,15 +99,19 @@ RendererResult RendererFramebufferObject::Create(RendererDevice *device)
         .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-    });
+    });*/
 
     for (auto &image_info : m_fbo_attachments) {
-        if (image_info.image != nullptr)
+        if (image_info.image != nullptr && image_info.image_needs_creation)
             HYPERION_BUBBLE_ERRORS(image_info.image->Create(device, VK_IMAGE_LAYOUT_UNDEFINED));
-        if (image_info.image_view != nullptr)
+        if (image_info.image_view != nullptr && image_info.image_view_needs_creation) {
+            AssertThrowMsg(image_info.image != nullptr, "If image_view is to be created, image needs to be valid.");
             HYPERION_BUBBLE_ERRORS(image_info.image_view->Create(device, image_info.image.get()));
-        if (image_info.sampler != nullptr)
+        }
+        if (image_info.sampler != nullptr && image_info.sampler_needs_creation) {
+            AssertThrowMsg(image_info.image_view != nullptr, "If sampler is to be created, image_view needs to be valid.");
             HYPERION_BUBBLE_ERRORS(image_info.sampler->Create(device, image_info.image_view.get()));
+        }
     }
 
     HYPERION_BUBBLE_ERRORS(m_render_pass->Create(device));
@@ -190,7 +157,6 @@ RendererResult RendererFramebufferObject::Destroy(RendererDevice *device)
     m_fbo_attachments.clear();
 
     HYPERION_PASS_ERRORS(m_render_pass->Destroy(device), result);
-    m_render_pass.release();
 
     return result;
 }

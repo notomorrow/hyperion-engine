@@ -77,8 +77,8 @@ public:
     HYP_FORCE_INLINE const RendererFrame *GetCurrentFrame() const { return this->current_frame; }
 
     VkResult AcquireNextImage(RendererFrame *frame);
-    void     StartFrame(RendererFrame *frame, RendererPipeline *pipeline);
-    void     EndFrame  (RendererFrame *frame, RendererPipeline *pipeline);
+    void     StartFrame(RendererFrame *frame);
+    void     EndFrame  (RendererFrame *frame);
     void     DrawFrame (RendererFrame *frame);
 
     void SetValidationLayers(std::vector<const char *> _layers);
@@ -104,6 +104,9 @@ public:
     std::vector<std::unique_ptr<RendererPipeline>> pipelines;
     RendererDescriptorPool descriptor_pool;
 
+    uint32_t acquired_frames_index = 0;
+    RendererSwapchain *swapchain = nullptr;
+
 private:
     SystemWindow *window = nullptr;
     SystemSDL    system;
@@ -115,13 +118,10 @@ private:
     RendererFrame *current_frame = nullptr;
     int frames_index = 0;
 
-    uint32_t acquired_frames_index = 0;
-
     VkQueue queue_graphics;
     VkQueue queue_present;
 
     RendererDevice    *device = nullptr;
-    RendererSwapchain *swapchain = nullptr;
 
     std::set<uint32_t> queue_families;
     std::vector<const char *> validation_layers;

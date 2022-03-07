@@ -45,9 +45,9 @@ void RendererSwapchain::RetrieveImageHandles() {
     DebugLog(LogType::Info, "Retrieved Swapchain images\n");
 }
 
-RendererResult RendererSwapchain::CreateImageViews()
+/*RendererResult RendererSwapchain::CreateImageViews()
 {
-    this->image_views.resize(this->images.size());
+    //this->image_views.resize(this->images.size());
 
     for (size_t i = 0; i < this->images.size(); i++) {
         VkImage image = this->images[i];
@@ -64,7 +64,6 @@ RendererResult RendererSwapchain::CreateImageViews()
         this->image_views[i] = std::move(image_view);
     }
 
-    /* create a depth buffer */
     this->depth_buffer.image = std::make_unique<RendererImage>(
         this->extent.width,
         this->extent.height,
@@ -92,9 +91,9 @@ RendererResult RendererSwapchain::CreateImageViews()
     ));
 
     HYPERION_RETURN_OK;
-}
+}*/
 
-RendererResult RendererSwapchain::DestroyImageViews()
+/*RendererResult RendererSwapchain::DestroyImageViews()
 {
     RendererResult result(RendererResult::OK);
 
@@ -111,9 +110,9 @@ RendererResult RendererSwapchain::DestroyImageViews()
     this->depth_buffer.image_view.release();
 
     return result;
-}
+}*/
 
-RendererResult RendererSwapchain::CreateFramebuffers(VkRenderPass *renderpass)
+/*RendererResult RendererSwapchain::CreateFramebuffers(VkRenderPass *renderpass)
 {
     this->framebuffers.resize(this->image_views.size());
     DebugLog(LogType::Debug, "[%d] image views found\n", this->image_views.size());
@@ -141,7 +140,7 @@ RendererResult RendererSwapchain::CreateFramebuffers(VkRenderPass *renderpass)
     }
 
     HYPERION_RETURN_OK;
-}
+}*/
 
 RendererResult RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices)
 {
@@ -194,7 +193,7 @@ RendererResult RendererSwapchain::Create(const VkSurfaceKHR &surface, QueueFamil
 
     this->RetrieveImageHandles();
 
-    HYPERION_BUBBLE_ERRORS(this->CreateImageViews());
+    //HYPERION_BUBBLE_ERRORS(this->CreateImageViews());
 
     HYPERION_RETURN_OK;
 }
@@ -204,11 +203,11 @@ RendererResult RendererSwapchain::Destroy() {
 
     RendererResult result(RendererResult::RENDERER_OK);
 
-    for (auto framebuffer : this->framebuffers) {
+    /*for (auto framebuffer : this->framebuffers) {
         vkDestroyFramebuffer(this->renderer_device->GetDevice(), framebuffer, nullptr);
     }
 
-    HYPERION_PASS_ERRORS(this->DestroyImageViews(), result);
+    HYPERION_PASS_ERRORS(this->DestroyImageViews(), result);*/
 
     vkDestroySwapchainKHR(this->renderer_device->GetDevice(), this->swapchain, nullptr);
 

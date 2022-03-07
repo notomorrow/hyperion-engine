@@ -15,25 +15,22 @@
 namespace hyperion {
 
 RendererPipeline::RendererPipeline(RendererDevice *_device,
-    RendererSwapchain *_swapchain,
     const ConstructionInfo &construction_info)
     : intern_vertex_buffers(nullptr),
       intern_vertex_buffers_size(0),
-      m_construction_info(construction_info),
-      render_pass(nullptr)
+      m_construction_info(construction_info)
 {
     AssertExit(construction_info.shader != nullptr);
 
     this->primitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    this->swapchain = _swapchain;
     this->device = _device;
     // this->intern_vertex_buffers = nullptr;
     // this->intern_vertex_buffers_size = 0;
 
-    auto width = (float) swapchain->extent.width;
-    auto height = (float) swapchain->extent.height;
-    this->SetViewport(0.0f, 0.0f, width, height, 0.0f, 1.0f);
-    this->SetScissor(0, 0, _swapchain->extent.width, _swapchain->extent.height);
+    size_t width  = construction_info.fbo->GetWidth();
+    size_t height = construction_info.fbo->GetHeight();
+    this->SetViewport(0.0f, 0.0f, float(width), float(height), 0.0f, 1.0f);
+    this->SetScissor(0, 0, width, height);
 
     std::vector<VkDynamicState> default_dynamic_states = {
             VK_DYNAMIC_STATE_VIEWPORT,
@@ -76,10 +73,6 @@ std::vector<VkDynamicState> RendererPipeline::GetDynamicStates() {
     return this->dynamic_states;
 }
 
-VkRenderPass *RendererPipeline::GetRenderPass() {
-    return &this->render_pass->m_render_pass;
-}
-
 RendererResult RendererPipeline::CreateCommandPool() {
     QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
 
@@ -100,12 +93,13 @@ RendererResult RendererPipeline::CreateCommandPool() {
 
 RendererResult RendererPipeline::CreateCommandBuffers(uint16_t count) {
     AssertThrow(count >= 1);
-    this->command_buffers.resize(this->swapchain->framebuffers.size());
+    //this->command_buffers.resize(this->swapchain->framebuffers.size());
+    this->command_buffers.resize(this->m_construction_info.fbo->GetAttachmentImageInfos().size());
 
     VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     alloc_info.commandPool = this->command_pool;
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandBufferCount = (uint32_t) this->command_buffers.size();
+    alloc_info.commandBufferCount = uint32_t(this->command_buffers.size());
 
     HYPERION_VK_CHECK_MSG(
         vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data()),
@@ -173,7 +167,7 @@ std::vector<VkVertexInputAttributeDescription> RendererPipeline::BuildVertexAttr
     return this->vertex_attributes;
 }
 
-void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index, RendererFramebufferObject *fbo) {
+void RendererPipeline::StartRenderPass(VkCommandBuffer cmd) {
     //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
     VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -182,11 +176,11 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index
     auto result = vkBeginCommandBuffer(cmd, &begin_info);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer!\n");
 
-    if (fbo != nullptr) {
-        fbo->GetRenderPass()->Begin(cmd, this->swapchain->framebuffers[image_index], this->swapchain->extent);
-    } else {
-        render_pass->Begin(cmd, this->swapchain->framebuffers[image_index], this->swapchain->extent);
-    }
+    m_construction_info.fbo->GetRenderPass()->Begin(
+        cmd,
+        m_construction_info.fbo->GetFramebuffer(),
+        VkExtent2D{ uint32_t(m_construction_info.fbo->GetWidth()), uint32_t(m_construction_info.fbo->GetHeight()) }
+    );
 
     this->UpdateDynamicStates(cmd);
 
@@ -195,18 +189,14 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, uint32_t image_index
     vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &push_constants);
 }
 
-void RendererPipeline::EndRenderPass(VkCommandBuffer cmd, RendererFramebufferObject *fbo) {
-    if (fbo != nullptr) {
-        fbo->GetRenderPass()->End(cmd);
-    } else {
-        render_pass->End(cmd);
-    }
+void RendererPipeline::EndRenderPass(VkCommandBuffer cmd) {
+    m_construction_info.fbo->GetRenderPass()->End(cmd);
 
     auto result = vkEndCommandBuffer(cmd);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
 }
 
-RendererResult RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_count) {
+/*RendererResult RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_count) {
     AssertExit(this->swapchain->depth_buffer.image != nullptr);
 
     AssertExit(render_pass == nullptr);
@@ -226,8 +216,6 @@ RendererResult RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_c
         ),
         .is_depth_attachment = false
     });
-
-    /* Add our main depth attachment */
 
     render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
         .attachment = std::make_unique<RendererAttachment>(
@@ -257,7 +245,7 @@ RendererResult RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_c
     DebugLog(LogType::Debug, "Renderpass created!\n");
 
     HYPERION_RETURN_OK;
-}
+}*/
 
 void RendererPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
                                           std::vector<VkVertexInputAttributeDescription> &attribs) {
@@ -399,7 +387,8 @@ void RendererPipeline::Rebuild(const ConstructionInfo &construction_info, Render
     pipeline_info.pDynamicState = &dynamic_state;
 
     pipeline_info.layout = layout;
-    pipeline_info.renderPass = render_pass->GetRenderPass();
+    pipeline_info.renderPass = m_construction_info.fbo->GetRenderPass()->GetRenderPass();
+
     pipeline_info.subpass = 0; /* Index of the subpass */
     pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex = -1;
@@ -427,9 +416,9 @@ void RendererPipeline::Destroy() {
     vkDestroyPipeline(render_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(render_device, this->layout, nullptr);
 
-    render_pass->Destroy(this->device);
+    /*render_pass->Destroy(this->device);
     delete render_pass;
-    render_pass = nullptr;
+    render_pass = nullptr;*/
 
     //vkDestroyRenderPass(render_device, this->render_pass, nullptr);
 }
