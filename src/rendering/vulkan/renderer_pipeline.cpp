@@ -20,16 +20,16 @@ RendererPipeline::RendererPipeline(RendererDevice *_device,
       intern_vertex_buffers_size(0),
       m_construction_info(std::move(construction_info))
 {
-    AssertExit(construction_info.shader != nullptr);
-    AssertExit(construction_info.fbos.size() != 0);
+    AssertExit(m_construction_info.shader != nullptr);
+    AssertExit(m_construction_info.fbos.size() != 0);
 
     this->primitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     this->device = _device;
     // this->intern_vertex_buffers = nullptr;
     // this->intern_vertex_buffers_size = 0;
 
-    size_t width  = construction_info.fbos[0]->GetWidth();
-    size_t height = construction_info.fbos[0]->GetHeight();
+    size_t width  = m_construction_info.fbos[0]->GetWidth();
+    size_t height = m_construction_info.fbos[0]->GetHeight();
     this->SetViewport(0.0f, 0.0f, float(width), float(height), 0.0f, 1.0f);
     this->SetScissor(0, 0, width, height);
 

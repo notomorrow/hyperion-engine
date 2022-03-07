@@ -42,10 +42,10 @@ RendererResult RendererFramebufferObject::AddAttachment(Texture::TextureInternal
         .image_needs_creation = true,
         .image_view_needs_creation = true,
         .sampler_needs_creation = true
-    }, is_depth_attachment);
+    }, format, is_depth_attachment);
 }
 
-RendererResult RendererFramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, bool is_depth_attachment)
+RendererResult RendererFramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, Texture::TextureInternalFormat format, bool is_depth_attachment)
 {
     VkImageAspectFlags image_aspect_flags = 0;
 
@@ -54,6 +54,21 @@ RendererResult RendererFramebufferObject::AddAttachment(AttachmentImageInfo &&im
     } else {
         image_aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
     }
+
+    /*if (image_info.image == nullptr) {
+        image_info.image = std::make_unique<RendererImage>(
+            m_width,
+            m_height,
+            1,
+            format,
+            Texture::TextureType::TEXTURE_TYPE_2D,
+            VK_IMAGE_TILING_OPTIMAL,
+            image_usage_flags,
+            nullptr
+        );
+
+        image_info.image_needs_creation = true;
+    }*/
 
     if (image_info.image_view == nullptr) {
         image_info.image_view = std::make_unique<RendererImageView>(image_aspect_flags);
@@ -80,8 +95,10 @@ RendererResult RendererFramebufferObject::Create(RendererDevice *device, Rendere
     AssertThrowMsg(m_fbo_attachments.size() != 0, "At least one attachment must be added");
 
     for (auto &image_info : m_fbo_attachments) {
-        if (image_info.image != nullptr && image_info.image_needs_creation)
+        if (image_info.image != nullptr && image_info.image_needs_creation) {
+
             HYPERION_BUBBLE_ERRORS(image_info.image->Create(device, VK_IMAGE_LAYOUT_UNDEFINED));
+        }
         if (image_info.image_view != nullptr && image_info.image_view_needs_creation) {
             AssertThrowMsg(image_info.image != nullptr, "If image_view is to be created, image needs to be valid.");
             HYPERION_BUBBLE_ERRORS(image_info.image_view->Create(device, image_info.image.get()));

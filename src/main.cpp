@@ -664,45 +664,47 @@ int main()
      * from the swapchain */
 
     auto root_render_pass = std::make_unique<RendererRenderPass>();
-    root_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
-        .attachment = std::make_unique<RendererAttachment>(
-            renderer.swapchain->image_format,
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            0,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        ),
-        .is_depth_attachment = false
-    });
+    {
+        root_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
+            .attachment = std::make_unique<RendererAttachment>(
+                renderer.swapchain->image_format,
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                0,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            ),
+            .is_depth_attachment = false
+            });
 
-    root_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
-        .attachment = std::make_unique<RendererAttachment>(
-            renderer.swapchain->image_format,
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            0,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        ),
-        .is_depth_attachment = true
-    });
+        root_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
+            .attachment = std::make_unique<RendererAttachment>(
+                helpers::ToVkFormat(depth_format),
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                1,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            ),
+            .is_depth_attachment = true
+            });
 
-    root_render_pass->AddDependency(VkSubpassDependency{
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        .srcAccessMask = 0,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
-    });
+        root_render_pass->AddDependency(VkSubpassDependency{
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+            });
 
-    auto root_render_pass_result = root_render_pass->Create(device);
-    AssertThrowMsg(root_render_pass_result, "%s", root_render_pass_result.message);
+        auto root_render_pass_result = root_render_pass->Create(device);
+        AssertThrowMsg(root_render_pass_result, "%s", root_render_pass_result.message);
+    }
 
     std::vector<std::unique_ptr<RendererFramebufferObject>> root_fbos;
     root_fbos.reserve(renderer.swapchain->images.size());
@@ -727,14 +729,19 @@ int main()
         root_fbo->AddAttachment(
             RendererFramebufferObject::AttachmentImageInfo{
                 .image = nullptr,
-                .image_view = std::move(image_view)
+                .image_view = std::move(image_view),
+                .sampler = nullptr,
+                .image_needs_creation = false,
+                .image_view_needs_creation = false,
+                .sampler_needs_creation = true
             },
+            color_format, // unused
             false
         );
 
         /* Now we add a depth buffer */
         root_fbo->AddAttachment(
-            RendererFramebufferObject::AttachmentImageInfo{},
+            depth_format,
             true
         );
 
