@@ -474,10 +474,10 @@ RendererResult VkRenderer::InitializeRendererDevice(VkPhysicalDevice physical_de
     HYPERION_RETURN_OK;
 }
 
-RendererResult VkRenderer::AddPipeline(RendererPipeline::ConstructionInfo &&construction_info,
+RendererResult VkRenderer::AddPipeline(RendererPipeline::Builder &&builder,
     RendererPipeline **out)
 {
-    HashCode::Value_t hash_code = construction_info.GetHashCode().Value();
+    HashCode::Value_t hash_code = builder.GetHashCode().Value();
 
     auto it = std::find_if(this->pipelines.begin(), this->pipelines.end(), [hash_code](const auto &pl) {
         return pl->GetConstructionInfo().GetHashCode().Value() == hash_code;
@@ -487,10 +487,7 @@ RendererResult VkRenderer::AddPipeline(RendererPipeline::ConstructionInfo &&cons
         HYPERION_RETURN_OK;
     }
 
-    auto pipeline = std::make_unique<RendererPipeline>(this->device, std::move(construction_info));
-
-    //HYPERION_BUBBLE_ERRORS(pipeline->CreateRenderPass());
-    //HYPERION_BUBBLE_ERRORS(this->swapchain->CreateFramebuffers(pipeline->GetRenderPass()));
+    auto pipeline = builder.Build(this->device);
 
     /* Create our synchronization objects */
     HYPERION_BUBBLE_ERRORS(pipeline->CreateCommandPool());

@@ -9,7 +9,7 @@ VkFormat ToVkFormat(Texture::TextureInternalFormat fmt)
     case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R8: return VK_FORMAT_R8_UNORM;
     case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG8: return VK_FORMAT_R8G8_UNORM;
     case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8: return VK_FORMAT_R8G8B8_UNORM;
-    case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8: return VK_FORMAT_B8G8R8A8_SRGB;//VK_FORMAT_R8G8B8A8_UNORM;
+    case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8: return VK_FORMAT_R8G8B8A8_UNORM;
     case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_R16: return VK_FORMAT_R16_UNORM;
     case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RG16: return VK_FORMAT_R16G16_UNORM;
     case Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16: return VK_FORMAT_R16G16B16_UNORM;

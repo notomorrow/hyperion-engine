@@ -36,7 +36,34 @@ public:
         } cull_mode;
 
         bool depth_test,
-             depth_write;
+            depth_write;
+
+        ConstructionInfo() : shader(nullptr) {}
+        ConstructionInfo(ConstructionInfo &&other)
+            : vertex_attributes(std::move(other.vertex_attributes)),
+              shader(other.shader),
+              render_pass(std::move(other.render_pass)),
+              fbos(std::move(other.fbos)),
+              cull_mode(other.cull_mode),
+              depth_test(other.depth_test),
+              depth_write(other.depth_write)
+        {
+        }
+
+        ConstructionInfo &operator=(ConstructionInfo &&other)
+        {
+            vertex_attributes = std::move(other.vertex_attributes);
+            shader = other.shader;
+            render_pass = std::move(other.render_pass);
+            fbos = std::move(other.fbos);
+            cull_mode = other.cull_mode;
+            depth_test = other.depth_test;
+            depth_write = other.depth_write;
+        }
+
+        ConstructionInfo(const ConstructionInfo &other) = delete;
+        ConstructionInfo &operator=(const ConstructionInfo &other) = delete;
+        ~ConstructionInfo() = default;
 
         inline HashCode GetHashCode() const
         {
@@ -54,6 +81,100 @@ public:
 
             return hc;
         }
+    };
+
+    class Builder {
+    public:
+        Builder()
+        {
+            CullMode(RendererPipeline::ConstructionInfo::CullMode::BACK);
+            DepthTest(true);
+            DepthWrite(true);
+        }
+
+        Builder(Builder &&other) = default;
+        Builder(const Builder &other) = delete;
+        Builder &operator=(const Builder &other) = delete;
+        ~Builder() = default;
+
+        Builder &VertexAttributes(const RendererMeshInputAttributeSet &vertex_attributes)
+        {
+            m_construction_info.vertex_attributes = vertex_attributes;
+
+            return *this;
+        }
+
+        Builder &CullMode(RendererPipeline::ConstructionInfo::CullMode cull_mode)
+        {
+            m_construction_info.cull_mode = cull_mode;
+
+            return *this;
+        }
+
+        Builder &DepthWrite(bool depth_write)
+        {
+            m_construction_info.depth_write = depth_write;
+
+            return *this;
+        }
+
+        Builder &DepthTest(bool depth_test)
+        {
+            m_construction_info.depth_test = depth_test;
+
+            return *this;
+        }
+
+        Builder &Shader(RendererShader *shader)
+        {
+            m_construction_info.shader = shader;
+
+            return *this;
+        }
+
+        Builder &RenderPass(std::function<void(RendererRenderPass &)> fn)
+        {
+            m_construction_info.render_pass = std::make_unique<RendererRenderPass>();
+
+            fn(*m_construction_info.render_pass);
+
+            return *this;
+        }
+
+        Builder &Framebuffer(size_t width, size_t height, std::function<void(RendererFramebufferObject &)> fn)
+        {
+            auto fbo = std::make_unique<RendererFramebufferObject>(width, height);
+
+            fn(*fbo);
+
+            m_construction_info.fbos.push_back(std::move(fbo));
+
+            return *this;
+        }
+
+        std::unique_ptr<RendererPipeline> Build(RendererDevice *device)
+        {
+            AssertThrow(m_construction_info.render_pass != nullptr);
+            AssertThrow(m_construction_info.fbos.size() != 0);
+
+            auto render_pass_result = m_construction_info.render_pass->Create(device);
+            AssertThrowMsg(render_pass_result, "%s", render_pass_result.message);
+
+            for (auto &fbo : m_construction_info.fbos) {
+                auto fbo_result = fbo->Create(device, m_construction_info.render_pass.get());
+                AssertThrowMsg(fbo_result, "%s", fbo_result.message);
+            }
+
+            return std::make_unique<RendererPipeline>(device, std::move(m_construction_info));
+        }
+
+        inline HashCode GetHashCode() const
+        {
+            return m_construction_info.GetHashCode();
+        }
+
+    private:
+        ConstructionInfo m_construction_info;
     };
 
     RendererPipeline(RendererDevice *_device, ConstructionInfo &&construction_info);
