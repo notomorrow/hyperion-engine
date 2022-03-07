@@ -401,11 +401,19 @@ void RendererPipeline::Rebuild(RendererDescriptorPool *descriptor_pool)
 }
 
 void RendererPipeline::Destroy() {
+    VkDevice render_device = this->device->GetDevice();
+
+    for (auto &fbo : m_construction_info.fbos) {
+        AssertThrow(fbo->Destroy(this->device));
+        fbo.release();
+    }
+
+    AssertThrow(m_construction_info.render_pass->Destroy(this->device));
+    m_construction_info.render_pass.release();
+
     if (intern_vertex_buffers != nullptr) {
         delete[] intern_vertex_buffers;
     }
-
-    VkDevice render_device = this->device->GetDevice();
 
     vkFreeCommandBuffers(render_device, this->command_pool, this->command_buffers.size(), this->command_buffers.data());
     vkDestroyCommandPool(render_device, this->command_pool, nullptr);
@@ -414,12 +422,6 @@ void RendererPipeline::Destroy() {
 
     vkDestroyPipeline(render_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(render_device, this->layout, nullptr);
-
-    /*render_pass->Destroy(this->device);
-    delete render_pass;
-    render_pass = nullptr;*/
-
-    //vkDestroyRenderPass(render_device, this->render_pass, nullptr);
 }
 
 helpers::SingleTimeCommands RendererPipeline::GetSingleTimeCommands()
