@@ -663,51 +663,57 @@ int main()
      * we'll have to set up a framebuffer with attachments for any image views retrieved
      * from the swapchain */
 
-    auto root_render_pass = std::make_unique<RendererRenderPass>();
-    {
-        root_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
-            .attachment = std::make_unique<RendererAttachment>(
-                renderer.swapchain->image_format,
-                VK_ATTACHMENT_LOAD_OP_CLEAR,
-                VK_ATTACHMENT_STORE_OP_STORE,
-                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                0,
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-            ),
-            .is_depth_attachment = false
+    auto root_pipeline_builder = RendererPipeline::Builder();
+    root_pipeline_builder
+        .Shader(&shader)
+        .VertexAttributes(RendererMeshInputAttributeSet({
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
+            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
+        }))
+        .RenderPass([&renderer, depth_format](RendererRenderPass &render_pass) {
+            /* For our color attachment */
+            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
+                .attachment = std::make_unique<RendererAttachment>(
+                    renderer.swapchain->image_format,
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                    0,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                ),
+                .is_depth_attachment = false
             });
 
-        root_render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
-            .attachment = std::make_unique<RendererAttachment>(
-                helpers::ToVkFormat(depth_format),
-                VK_ATTACHMENT_LOAD_OP_CLEAR,
-                VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                1,
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-            ),
-            .is_depth_attachment = true
+            /* For our depth attachment */
+            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
+                .attachment = std::make_unique<RendererAttachment>(
+                    helpers::ToVkFormat(depth_format),
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    1,
+                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+                ),
+                .is_depth_attachment = true
             });
 
-        root_render_pass->AddDependency(VkSubpassDependency{
-            .srcSubpass = VK_SUBPASS_EXTERNAL,
-            .dstSubpass = 0,
-            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-            .srcAccessMask = 0,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+            render_pass.AddDependency(VkSubpassDependency{
+                .srcSubpass = VK_SUBPASS_EXTERNAL,
+                .dstSubpass = 0,
+                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                .srcAccessMask = 0,
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
             });
-
-        auto root_render_pass_result = root_render_pass->Create(device);
-        AssertThrowMsg(root_render_pass_result, "%s", root_render_pass_result.message);
-    }
-
-    std::vector<std::unique_ptr<RendererFramebufferObject>> root_fbos;
-    root_fbos.reserve(renderer.swapchain->images.size());
+        });
 
     for (auto img : renderer.swapchain->images) {
         auto image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_COLOR_BIT);
@@ -721,53 +727,33 @@ int main()
 
         AssertThrowMsg(image_view_result, "%s", image_view_result.message);
 
+        root_pipeline_builder.Framebuffer(
+            renderer.swapchain->extent.width,
+            renderer.swapchain->extent.height,
+            [&image_view, color_format, depth_format](RendererFramebufferObject &fbo) {
+                /* Add color attachment */
+                fbo.AddAttachment(
+                    RendererFramebufferObject::AttachmentImageInfo{
+                        .image = nullptr,
+                        .image_view = std::move(image_view),
+                        .sampler = nullptr,
+                        .image_needs_creation = false,
+                        .image_view_needs_creation = false,
+                        .sampler_needs_creation = true
+                    },
+                    color_format, // unused
+                    false
+                );
 
-
-        auto root_fbo = std::make_unique<RendererFramebufferObject>(renderer.swapchain->extent.width, renderer.swapchain->extent.height);
-
-        /* Add color buffer with image view from swapchain */
-        root_fbo->AddAttachment(
-            RendererFramebufferObject::AttachmentImageInfo{
-                .image = nullptr,
-                .image_view = std::move(image_view),
-                .sampler = nullptr,
-                .image_needs_creation = false,
-                .image_view_needs_creation = false,
-                .sampler_needs_creation = true
-            },
-            color_format, // unused
-            false
-        );
-
-        /* Now we add a depth buffer */
-        root_fbo->AddAttachment(
-            depth_format,
-            true
-        );
-
-        auto fbo_result = root_fbo->Create(device, root_render_pass.get());
-        AssertThrowMsg(fbo_result, "%s", fbo_result.message);
-
-        root_fbos.push_back(std::move(root_fbo));
+                /* Now we add a depth buffer */
+                fbo.AddAttachment(
+                    depth_format,
+                    true
+                );
+            });
     }
 
-    auto add_pipeline_result = renderer.AddPipeline({
-        .vertex_attributes = RendererMeshInputAttributeSet({
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
-         }),
-        .shader = &shader,
-        .render_pass = std::move(root_render_pass),
-        .fbos = std::move(root_fbos),
-        .cull_mode = RendererPipeline::ConstructionInfo::CullMode::BACK,
-        .depth_test = true,
-        .depth_write = true
-    }, &pipelines[0]);
-
+    auto add_pipeline_result = renderer.AddPipeline(std::move(root_pipeline_builder), &pipelines[0]);
     AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
 
    /* add_pipeline_result = renderer.AddPipeline({
