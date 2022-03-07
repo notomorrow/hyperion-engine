@@ -1,14 +1,16 @@
 #ifndef HYPERION_RENDERER_FBO_H
 #define HYPERION_RENDERER_FBO_H
 
-#include "renderer_render_pass.h"
 #include "renderer_attachment.h"
+#include "renderer_image.h"
+#include "renderer_image_view.h"
+#include "renderer_sampler.h"
 
 #include <memory>
 #include <vector>
 
 namespace hyperion {
-
+class RendererRenderPass;
 class RendererFramebufferObject {
 public:
     struct AttachmentImageInfo {
@@ -25,12 +27,10 @@ public:
     RendererFramebufferObject &operator=(const RendererFramebufferObject &other) = delete;
     ~RendererFramebufferObject();
 
-    inline RendererRenderPass *GetRenderPass() { return m_render_pass.get(); }
-    inline const RendererRenderPass *GetRenderPass() const { return m_render_pass.get(); }
     inline VkFramebuffer GetFramebuffer() const { return m_framebuffer; }
 
-    RendererResult AddAttachment(RendererRenderPass::AttachmentInfo &&, Texture::TextureInternalFormat format);
-    RendererResult AddAttachment(RendererRenderPass::AttachmentInfo &&, AttachmentImageInfo &&);
+    RendererResult AddAttachment(Texture::TextureInternalFormat format, bool is_depth_attachment);
+    RendererResult AddAttachment(AttachmentImageInfo &&, bool is_depth_attachment);
     inline std::vector<AttachmentImageInfo> &GetAttachmentImageInfos() { return m_fbo_attachments; }
     inline const std::vector<AttachmentImageInfo> &GetAttachmentImageInfos() const
         { return m_fbo_attachments; }
@@ -38,7 +38,7 @@ public:
     inline size_t GetWidth() const { return m_width; }
     inline size_t GetHeight() const { return m_height; }
 
-    RendererResult Create(RendererDevice *device);
+    RendererResult Create(RendererDevice *device, RendererRenderPass *render_pass);
     RendererResult Destroy(RendererDevice *device);
 
 private:
@@ -46,7 +46,6 @@ private:
     size_t m_width,
            m_height;
 
-    std::unique_ptr<RendererRenderPass> m_render_pass;
     std::vector<AttachmentImageInfo> m_fbo_attachments;
 
     VkFramebuffer m_framebuffer;

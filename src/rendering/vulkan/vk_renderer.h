@@ -86,7 +86,7 @@ public:
     RendererResult InitializeRendererDevice(VkPhysicalDevice _physical_device = nullptr);
     RendererResult InitializeSwapchain();
 
-    RendererResult AddPipeline(const RendererPipeline::ConstructionInfo &construction_info, RendererPipeline **out = nullptr);
+    RendererResult AddPipeline(RendererPipeline::ConstructionInfo &&construction_info, RendererPipeline **out = nullptr);
 
     void SetQueueFamilies(std::set<uint32_t> queue_families);
     void SetCurrentWindow(SystemWindow *window);

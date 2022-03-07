@@ -11,6 +11,7 @@
 #include "renderer_swapchain.h"
 #include "renderer_buffer.h"
 #include "renderer_shader.h"
+#include "renderer_render_pass.h"
 #include "renderer_descriptor_pool.h"
 #include "renderer_descriptor_set.h"
 #include "renderer_descriptor.h"
@@ -19,14 +20,14 @@
 #include "../../hash_code.h"
 
 namespace hyperion {
-class RendererRenderPass;
 class RendererFramebufferObject;
 class RendererPipeline {
 public:
     struct ConstructionInfo {
         RendererMeshInputAttributeSet vertex_attributes;
         RendererShader *shader;
-        RendererFramebufferObject *fbo;
+        std::unique_ptr<RendererRenderPass> render_pass;
+        std::vector<std::unique_ptr<RendererFramebufferObject>> fbos;
 
         enum class CullMode : int {
             NONE,
@@ -42,7 +43,10 @@ public:
             HashCode hc;
 
             hc.Add((shader != nullptr) ? shader->GetHashCode().Value() : 0);
-            hc.Add((fbo != nullptr) ? intptr_t(fbo) : 0); // TODO
+            hc.Add(intptr_t(render_pass.get())); // TODO
+            for (auto &fbo : fbos) {
+                hc.Add(intptr_t(fbo.get()));
+            }
             hc.Add(vertex_attributes.GetHashCode());
             hc.Add(int(cull_mode));
             hc.Add(depth_test);
@@ -52,7 +56,7 @@ public:
         }
     };
 
-    RendererPipeline(RendererDevice *_device, const ConstructionInfo &construction_info);
+    RendererPipeline(RendererDevice *_device, ConstructionInfo &&construction_info);
     void Destroy();
 
     void SetPrimitive(VkPrimitiveTopology _primitive);
@@ -66,14 +70,14 @@ public:
     void SetScissor(int x, int y, uint32_t width, uint32_t height);
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
     inline void Build(RendererDescriptorPool *descriptor_pool)
-        { Rebuild(m_construction_info, descriptor_pool); }
-    void Rebuild(const ConstructionInfo &construction_info,
+        { Rebuild(std::move(m_construction_info), descriptor_pool); }
+    void Rebuild(ConstructionInfo &&construction_info,
         RendererDescriptorPool *descriptor_pool);
 
     //RendererResult CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
     // void DoRenderPass(void (*render_callback)(RendererPipeline *pl, VkCommandBuffer *cmd));
-    void StartRenderPass(VkCommandBuffer cmd);
-    void EndRenderPass(VkCommandBuffer cmd);
+    void StartRenderPass(VkCommandBuffer cmd, size_t index);
+    void EndRenderPass(VkCommandBuffer cmd, size_t index);
 
     VkPrimitiveTopology GetPrimitive();
     std::vector<VkDynamicState> GetDynamicStates();

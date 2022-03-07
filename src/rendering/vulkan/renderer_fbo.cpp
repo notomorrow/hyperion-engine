@@ -1,4 +1,5 @@
 #include "renderer_fbo.h"
+#include "renderer_render_pass.h"
 
 #include <vulkan/vulkan.h>
 
@@ -7,7 +8,6 @@ namespace hyperion {
 RendererFramebufferObject::RendererFramebufferObject(size_t width, size_t height)
     : m_width(width),
       m_height(height),
-      m_render_pass(new RendererRenderPass()),
       m_framebuffer{}
 {
 }
@@ -16,17 +16,17 @@ RendererFramebufferObject::~RendererFramebufferObject()
 {
 }
 
-RendererResult RendererFramebufferObject::AddAttachment(RendererRenderPass::AttachmentInfo &&attachment_info, Texture::TextureInternalFormat format)
+RendererResult RendererFramebufferObject::AddAttachment(Texture::TextureInternalFormat format, bool is_depth_attachment)
 {
     VkImageUsageFlags image_usage_flags = 0;
 
-    if (attachment_info.is_depth_attachment) {
+    if (is_depth_attachment) {
         image_usage_flags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     } else {
         image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     }
 
-    return AddAttachment(std::move(attachment_info), AttachmentImageInfo{
+    return AddAttachment(AttachmentImageInfo{
         .image = std::make_unique<RendererImage>(
             m_width,
             m_height,
@@ -42,14 +42,14 @@ RendererResult RendererFramebufferObject::AddAttachment(RendererRenderPass::Atta
         .image_needs_creation = true,
         .image_view_needs_creation = true,
         .sampler_needs_creation = true
-    });
+    }, is_depth_attachment);
 }
 
-RendererResult RendererFramebufferObject::AddAttachment(RendererRenderPass::AttachmentInfo &&attachment_info, AttachmentImageInfo &&image_info)
+RendererResult RendererFramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, bool is_depth_attachment)
 {
     VkImageAspectFlags image_aspect_flags = 0;
 
-    if (attachment_info.is_depth_attachment) {
+    if (is_depth_attachment) {
         image_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
     } else {
         image_aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -70,36 +70,14 @@ RendererResult RendererFramebufferObject::AddAttachment(RendererRenderPass::Atta
         image_info.sampler_needs_creation = true;
     }
 
-    m_render_pass->AddAttachment(std::move(attachment_info));
     m_fbo_attachments.push_back(std::move(image_info));
 
     HYPERION_RETURN_OK;
 }
 
-RendererResult RendererFramebufferObject::Create(RendererDevice *device)
+RendererResult RendererFramebufferObject::Create(RendererDevice *device, RendererRenderPass *render_pass)
 {
-    AssertThrow(m_fbo_attachments.size() == m_render_pass->GetAttachmentInfos().size());
     AssertThrowMsg(m_fbo_attachments.size() != 0, "At least one attachment must be added");
-
-    m_render_pass->AddDependency(VkSubpassDependency{
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-    });
-
-    /*m_render_pass->AddDependency(VkSubpassDependency{
-        .srcSubpass = 0,
-        .dstSubpass = VK_SUBPASS_EXTERNAL,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-    });*/
 
     for (auto &image_info : m_fbo_attachments) {
         if (image_info.image != nullptr && image_info.image_needs_creation)
@@ -114,8 +92,6 @@ RendererResult RendererFramebufferObject::Create(RendererDevice *device)
         }
     }
 
-    HYPERION_BUBBLE_ERRORS(m_render_pass->Create(device));
-
     std::vector<VkImageView> attachment_image_views;
     { // linear layout of VkImageView data
         attachment_image_views.resize(m_fbo_attachments.size());
@@ -127,7 +103,7 @@ RendererResult RendererFramebufferObject::Create(RendererDevice *device)
 
     VkFramebufferCreateInfo framebuffer_create_info{};
     framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebuffer_create_info.renderPass = m_render_pass->GetRenderPass();
+    framebuffer_create_info.renderPass = render_pass->GetRenderPass();
     framebuffer_create_info.attachmentCount = attachment_image_views.size();
     framebuffer_create_info.pAttachments    = attachment_image_views.data();
     framebuffer_create_info.width = m_width;
@@ -155,8 +131,6 @@ RendererResult RendererFramebufferObject::Destroy(RendererDevice *device)
     }
 
     m_fbo_attachments.clear();
-
-    HYPERION_PASS_ERRORS(m_render_pass->Destroy(device), result);
 
     return result;
 }
