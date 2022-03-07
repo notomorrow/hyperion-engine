@@ -66,7 +66,7 @@ class VkRenderer {
     RendererResult SetupDebug();
 
     RendererResult AllocatePendingFrames(RendererPipeline *pipeline);
-    void CleanupPendingFrames();
+    RendererResult CleanupPendingFrames();
 public:
     VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name);
     RendererResult Initialize(bool load_debug_layers=false);
