@@ -64,7 +64,7 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
 
 #define DebugLogAssertionMsg(level, cond, ...) \
     { \
-        DebugLog(level, "*** assertion failed: (" #cond ") ***\n\tMessage: ", __VA_ARGS__); \
+        DebugLog(level, "*** assertion failed: (" #cond ") ***\n\tMessage: %s\n", __VA_ARGS__); \
     }
 
 #define AssertOrElse(level, cond, stmt) \
