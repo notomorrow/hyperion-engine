@@ -40,29 +40,25 @@ VkResult VkRenderer::AcquireNextImage(RendererFrame *frame) {
 
     if (result != VK_SUCCESS) return result;
 
-    ;
     //if (this->GetCurrentPipeline()->command_pool != VK_NULL_HANDLE)
     //    vkResetCommandPool(render_device, this->GetCurrentPipeline()->command_pool, 0);
 
     return vkResetCommandBuffer(frame->command_buffer, 0);
 }
 
-void VkRenderer::StartFrame(RendererFrame *frame, RendererPipeline *pipeline) {
+void VkRenderer::StartFrame(RendererFrame *frame) {
     AssertThrow(frame != nullptr);
 
     auto new_image_result = this->AcquireNextImage(frame);
 
     if (new_image_result == VK_SUBOPTIMAL_KHR || new_image_result == VK_ERROR_OUT_OF_DATE_KHR) {
+        DebugLog(LogType::Debug, "Waiting -- image result was %d\n", new_image_result);
         vkDeviceWaitIdle(this->device->GetDevice());
         /* TODO: regenerate framebuffers and swapchain */
     }
-    
-    pipeline->StartRenderPass(frame->command_buffer, this->acquired_frames_index);
 }
 
-void VkRenderer::EndFrame(RendererFrame *frame, RendererPipeline *pipeline) {
-    pipeline->EndRenderPass(frame->command_buffer);
-
+void VkRenderer::EndFrame(RendererFrame *frame) {
     VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
     VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
@@ -482,10 +478,10 @@ RendererResult VkRenderer::AddPipeline(const RendererPipeline::ConstructionInfo 
         HYPERION_RETURN_OK;
     }
 
-    auto pipeline = std::make_unique<RendererPipeline>(this->device, this->swapchain, construction_info);
+    auto pipeline = std::make_unique<RendererPipeline>(this->device, construction_info);
 
-    HYPERION_BUBBLE_ERRORS(pipeline->CreateRenderPass());
-    HYPERION_BUBBLE_ERRORS(this->swapchain->CreateFramebuffers(pipeline->GetRenderPass()));
+    //HYPERION_BUBBLE_ERRORS(pipeline->CreateRenderPass());
+    //HYPERION_BUBBLE_ERRORS(this->swapchain->CreateFramebuffers(pipeline->GetRenderPass()));
 
     /* Create our synchronization objects */
     HYPERION_BUBBLE_ERRORS(pipeline->CreateCommandPool());
