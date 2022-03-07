@@ -207,11 +207,13 @@ RendererResult RendererFrame::CreateSyncObjects()
 
 RendererResult RendererFrame::DestroySyncObjects()
 {
+    RendererResult result = RendererResult::OK;
+
     AssertThrow(this->creation_device != nullptr);
 
     VkDevice rd_device = this->creation_device->GetDevice();
 
-    HYPERION_VK_CHECK(vkDeviceWaitIdle(rd_device));
+    HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(rd_device), result);
 
     vkDestroySemaphore(rd_device, this->sp_swap_acquire, nullptr);
     this->sp_swap_acquire = nullptr;
@@ -222,7 +224,7 @@ RendererResult RendererFrame::DestroySyncObjects()
     vkDestroyFence(rd_device, this->fc_queue_submit, nullptr);
     this->fc_queue_submit = nullptr;
 
-    HYPERION_RETURN_OK;
+    return result;
 }
 
 VkRenderer::VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name) {
@@ -312,12 +314,18 @@ RendererResult VkRenderer::Initialize(bool load_debug_layers) {
     HYPERION_RETURN_OK;
 }
 
-void VkRenderer::CleanupPendingFrames() {
+RendererResult VkRenderer::CleanupPendingFrames() {
+    RendererResult result = RendererResult::OK;
+
     for (auto &frame : this->pending_frames) {
-        frame->Destroy();
+        HYPERION_PASS_ERRORS(frame->Destroy(), result);
+
+        frame.release();
     }
 
     this->pending_frames.clear();
+
+    return result;
 }
 
 RendererResult VkRenderer::Destroy() {
@@ -326,11 +334,12 @@ RendererResult VkRenderer::Destroy() {
     /* Wait for the GPU to finish, we need to be in an idle state. */
     HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(this->device->GetDevice()), result);
     /* Cleanup our semaphores and fences! */
-    this->CleanupPendingFrames();
+    HYPERION_PASS_ERRORS(this->CleanupPendingFrames(), result);
 
     /* Destroy our pipeline(before everything else!) */
     for (auto &pipeline : this->pipelines) {
         pipeline->Destroy();
+        pipeline.release();
     }
 
     pipelines.clear();
