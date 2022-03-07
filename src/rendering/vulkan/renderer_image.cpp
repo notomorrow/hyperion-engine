@@ -1,5 +1,6 @@
 #include "renderer_image.h"
 #include "renderer_pipeline.h"
+#include "vk_renderer.h"
 #include <util/img/image_util.h>
 #include <system/debug.h>
 
@@ -134,7 +135,7 @@ RendererResult RendererImage::Create(RendererDevice *device, VkImageLayout layou
     return CreateImage(device, layout, &image_info);
 }
 
-RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *pipeline,
+RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *renderer,
     const LayoutTransferStateBase &transfer_from,
     const LayoutTransferStateBase &transfer_to)
 {
@@ -146,7 +147,7 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
     m_staging_buffer->Copy(device, m_size, m_bytes);
     // safe to delete m_bytes here?
 
-    auto commands = pipeline->GetSingleTimeCommands();
+    auto commands = renderer->GetSingleTimeCommands();
 
     { // transition from 'undefined' layout state into one optimal for transfer
         VkImageMemoryBarrier acquire_barrier{},
@@ -170,7 +171,7 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
             acquire_barrier.dstAccessMask = transfer_from.dst_access_mask;
 
             //barrier the image into the transfer-receive layout
-            vkCmdPipelineBarrier(cmd, transfer_from.src_stage_mask, transfer_from.dst_stage_mask, 0, 0, nullptr, 0, nullptr, 1, &acquire_barrier);
+            vkCmdPipelineBarrier(cmd, transfer_from.src_stage_mask, transfer_from.dst_stage_mask, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &acquire_barrier);
             
             HYPERION_RETURN_OK;
         });
@@ -210,7 +211,7 @@ RendererResult RendererImage::Create(RendererDevice *device, RendererPipeline *p
             release_barrier.dstAccessMask = transfer_to.dst_access_mask;
 
             //barrier the image into the shader readable layout
-            vkCmdPipelineBarrier(cmd, transfer_to.src_stage_mask, transfer_to.dst_stage_mask, 0, 0, nullptr, 0, nullptr, 1, &release_barrier);
+            vkCmdPipelineBarrier(cmd, transfer_to.src_stage_mask, transfer_to.dst_stage_mask, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &release_barrier);
             
             HYPERION_RETURN_OK;
         });

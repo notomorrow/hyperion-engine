@@ -19,11 +19,13 @@ RendererQueue::RendererQueue() {
 }
 
 void RendererQueue::GetQueueFromDevice(RendererDevice device, uint32_t queue_family_index,
-                                       uint32_t queue_index) {
+                                       uint32_t queue_index)
+{
     vkGetDeviceQueue(device.GetDevice(), queue_family_index, queue_index, &this->queue);
 }
 
-VkResult VkRenderer::AcquireNextImage(RendererFrame *frame) {
+VkResult VkRenderer::AcquireNextImage(RendererFrame *frame)
+{
     //const VkDevice render_device = this->device->GetDevice();
     AssertExit(frame != nullptr && this->swapchain != nullptr);
     VkDevice render_device = frame->creation_device->GetDevice();
@@ -46,7 +48,8 @@ VkResult VkRenderer::AcquireNextImage(RendererFrame *frame) {
     return vkResetCommandBuffer(frame->command_buffer, 0);
 }
 
-void VkRenderer::StartFrame(RendererFrame *frame) {
+void VkRenderer::StartFrame(RendererFrame *frame)
+{
     AssertThrow(frame != nullptr);
 
     auto new_image_result = this->AcquireNextImage(frame);
@@ -56,9 +59,21 @@ void VkRenderer::StartFrame(RendererFrame *frame) {
         vkDeviceWaitIdle(this->device->GetDevice());
         /* TODO: regenerate framebuffers and swapchain */
     }
+
+    //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
+    VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    begin_info.pInheritanceInfo = nullptr;
+    /* Begin recording our command buffer */
+    auto result = vkBeginCommandBuffer(frame->command_buffer, &begin_info);
+    AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer!\n");
 }
 
-void VkRenderer::EndFrame(RendererFrame *frame) {
+void VkRenderer::EndFrame(RendererFrame *frame)
+{
+    auto result = vkEndCommandBuffer(frame->command_buffer);
+    AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
+
     VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
     VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
@@ -72,13 +87,12 @@ void VkRenderer::EndFrame(RendererFrame *frame) {
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &frame->command_buffer;
 
-    auto result = vkQueueSubmit(this->queue_graphics, 1, &submit_info, frame->fc_queue_submit);
-
+    result = vkQueueSubmit(this->queue_graphics, 1, &submit_info, frame->fc_queue_submit);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");
 }
 
-
-void VkRenderer::DrawFrame(RendererFrame *frame) {
+void VkRenderer::DrawFrame(RendererFrame *frame)
+{
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores = &frame->sp_swap_release;
@@ -234,9 +248,9 @@ VkRenderer::VkRenderer(SystemSDL &_system, const char *app_name, const char *eng
     this->device = nullptr;
 }
 
-RendererResult VkRenderer::AllocatePendingFrames(RendererPipeline *pipeline) {
+RendererResult VkRenderer::AllocatePendingFrames() {
     AssertExit(this->frames_to_allocate >= 1);
-    AssertExitMsg(pipeline->command_buffers.size() >= this->frames_to_allocate,
+    AssertExitMsg(command_buffers.size() >= this->frames_to_allocate,
                    "Insufficient pipeline command buffers\n");
 
     this->pending_frames.reserve(this->frames_to_allocate);
@@ -245,7 +259,7 @@ RendererResult VkRenderer::AllocatePendingFrames(RendererPipeline *pipeline) {
     for (uint16_t i = 0; i < this->frames_to_allocate; i++) {
         auto frame = std::make_unique<RendererFrame>();
 
-        HYPERION_BUBBLE_ERRORS(frame->Create(non_owning_ptr(this->device), pipeline->command_buffers[i]));
+        HYPERION_BUBBLE_ERRORS(frame->Create(non_owning_ptr(this->device), command_buffers[i]));
 
         this->pending_frames.emplace_back(std::move(frame));
     }
@@ -261,6 +275,43 @@ RendererFrame *VkRenderer::GetNextFrame() {
     this->current_frame = this->pending_frames[this->frames_index].get();
     //this->current_frame = this->pending_frames[this->frames_index++].get();
     return this->current_frame;
+}
+
+
+RendererResult VkRenderer::CreateCommandPool() {
+    QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
+
+    VkCommandPoolCreateInfo pool_info{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+    pool_info.queueFamilyIndex = family_indices.graphics_family.value();
+    /* TODO: look into VK_COMMAND_POOL_CREATE_TRANSIENT_BIT for constantly changing objects */
+    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    HYPERION_VK_CHECK_MSG(
+        vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &this->command_pool),
+        "Could not create Vulkan command pool"
+    );
+
+    DebugLog(LogType::Debug, "Create Command pool\n");
+
+    HYPERION_RETURN_OK;
+}
+
+RendererResult VkRenderer::CreateCommandBuffers() {
+    this->command_buffers.resize(this->swapchain->images.size());
+
+    VkCommandBufferAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    alloc_info.commandPool = this->command_pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = uint32_t(this->command_buffers.size());
+
+    HYPERION_VK_CHECK_MSG(
+        vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data()),
+        "Could not create Vulkan command buffers"
+    );
+
+    DebugLog(LogType::Debug, "Allocate %d command buffers\n", this->command_buffers.size());
+
+    HYPERION_RETURN_OK;
 }
 
 RendererResult VkRenderer::Initialize(bool load_debug_layers) {
@@ -311,6 +362,13 @@ RendererResult VkRenderer::Initialize(bool load_debug_layers) {
      * This is essentially a "root" framebuffer. */
     HYPERION_BUBBLE_ERRORS(this->InitializeSwapchain());
 
+    /* Create our synchronization objects */
+    HYPERION_BUBBLE_ERRORS(CreateCommandPool());
+    /* Our command pool will have a command buffer for each frame we can render to. */
+    HYPERION_BUBBLE_ERRORS(CreateCommandBuffers());
+
+    HYPERION_BUBBLE_ERRORS(this->AllocatePendingFrames());
+
     HYPERION_RETURN_OK;
 }
 
@@ -320,7 +378,7 @@ RendererResult VkRenderer::CleanupPendingFrames() {
     for (auto &frame : this->pending_frames) {
         HYPERION_PASS_ERRORS(frame->Destroy(), result);
 
-        frame.release();
+        frame.reset();
     }
 
     this->pending_frames.clear();
@@ -339,10 +397,13 @@ RendererResult VkRenderer::Destroy() {
     /* Destroy our pipeline(before everything else!) */
     for (auto &pipeline : this->pipelines) {
         pipeline->Destroy();
-        pipeline.release();
+        pipeline.reset();
     }
 
     pipelines.clear();
+
+    vkFreeCommandBuffers(this->device->GetDevice(), this->command_pool, this->command_buffers.size(), this->command_buffers.data());
+    vkDestroyCommandPool(this->device->GetDevice(), this->command_pool, nullptr);
 
     /* Destroy descriptor pool */
     HYPERION_PASS_ERRORS(descriptor_pool.Destroy(this->device), result);
@@ -489,13 +550,6 @@ RendererResult VkRenderer::AddPipeline(RendererPipeline::Builder &&builder,
 
     auto pipeline = builder.Build(this->device);
 
-    /* Create our synchronization objects */
-    HYPERION_BUBBLE_ERRORS(pipeline->CreateCommandPool());
-    /* Our command pool will have a command buffer for each frame we can render to. */
-    HYPERION_BUBBLE_ERRORS(pipeline->CreateCommandBuffers(this->frames_to_allocate));
-
-    HYPERION_BUBBLE_ERRORS(this->AllocatePendingFrames(pipeline.get()));
-
     if (out != nullptr) {
         *out = pipeline.get();
     }
@@ -531,5 +585,16 @@ std::vector<VkPhysicalDevice> VkRenderer::EnumeratePhysicalDevices() {
     return devices;
 }
 
+helpers::SingleTimeCommands VkRenderer::GetSingleTimeCommands()
+{
+    QueueFamilyIndices family_indices = this->device->FindQueueFamilies(); // TODO: this result should be cached
+
+    helpers::SingleTimeCommands single_time_commands{};
+    single_time_commands.cmd = nullptr;
+    single_time_commands.pool = this->command_pool;
+    single_time_commands.family_indices = family_indices;
+
+    return single_time_commands;
+}
 
 } // namespace hyperion

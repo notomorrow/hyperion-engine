@@ -19,12 +19,9 @@ void RendererShader::AttachShader(RendererDevice *_device, const SpirvObject &sp
 
     VkShaderModule shader_module;
 
-    if (vkCreateShaderModule(device->GetDevice(), &create_info, nullptr, &shader_module) != VK_SUCCESS) {
-        DebugLog(LogType::Error, "Could not create Vulkan shader module!\n");
-        return;
-    }
+    AssertThrow(vkCreateShaderModule(device->GetDevice(), &create_info, nullptr, &shader_module) == VK_SUCCESS);
 
-    this->shader_modules.emplace_back(RendererShaderModule(spirv, shader_module));
+    this->shader_modules.emplace_back(spirv, shader_module);
 
     std::sort(this->shader_modules.begin(), this->shader_modules.end());
 }
@@ -84,8 +81,6 @@ RendererShader::CreateShaderStage(const RendererShaderModule &shader_module, con
 }
 
 void RendererShader::CreateProgram(const char *entry_point) {
-    std::vector<VkPipelineShaderStageCreateInfo> stages;
-
     for (auto &shader_module : this->shader_modules) {
         auto stage = this->CreateShaderStage(shader_module, entry_point);
 

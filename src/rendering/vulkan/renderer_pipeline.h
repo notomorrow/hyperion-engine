@@ -183,9 +183,6 @@ public:
     void SetPrimitive(VkPrimitiveTopology _primitive);
     void SetDynamicStates(const std::vector<VkDynamicState> &_states);
 
-    RendererResult CreateCommandPool();
-    RendererResult CreateCommandBuffers(uint16_t count);
-
     void UpdateDynamicStates(VkCommandBuffer cmd);
     void SetViewport(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
     void SetScissor(int x, int y, uint32_t width, uint32_t height);
@@ -208,12 +205,6 @@ public:
     std::vector<VkDynamicState> GetDynamicStates();
 
     inline const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
-
-    helpers::SingleTimeCommands GetSingleTimeCommands();
-
-    /* Per frame data */
-    VkCommandPool command_pool;
-    std::vector<VkCommandBuffer> command_buffers;
 
     VkPipeline pipeline;
     VkPipelineLayout layout;
