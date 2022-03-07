@@ -249,16 +249,14 @@ void RendererPipeline::EndRenderPass(VkCommandBuffer cmd, size_t index) {
 }*/
 
 void RendererPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
-                                          std::vector<VkVertexInputAttributeDescription> &attribs) {
+                                          std::vector<VkVertexInputAttributeDescription> &attribs)
+{
     this->vertex_binding_descriptions = binding_descs;
     this->vertex_attributes = attribs;
 }
 
-void RendererPipeline::Rebuild(ConstructionInfo &&construction_info, RendererDescriptorPool *descriptor_pool) {
-    AssertExit(construction_info.shader != nullptr);
-
-    m_construction_info = std::move(construction_info);
-
+void RendererPipeline::Rebuild(RendererDescriptorPool *descriptor_pool)
+{
     this->BuildVertexAttributes(m_construction_info.vertex_attributes);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
@@ -361,8 +359,8 @@ void RendererPipeline::Rebuild(ConstructionInfo &&construction_info, RendererDes
     /* Depth / stencil */
     VkPipelineDepthStencilStateCreateInfo depth_stencil{};
     depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_stencil.depthTestEnable = construction_info.depth_test;
-    depth_stencil.depthWriteEnable = construction_info.depth_write;
+    depth_stencil.depthTestEnable = m_construction_info.depth_test;
+    depth_stencil.depthWriteEnable = m_construction_info.depth_write;
     depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depth_stencil.depthBoundsTestEnable = VK_FALSE;
     depth_stencil.minDepthBounds = 0.0f; // Optional
@@ -373,7 +371,7 @@ void RendererPipeline::Rebuild(ConstructionInfo &&construction_info, RendererDes
 
     VkGraphicsPipelineCreateInfo pipeline_info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
 
-    auto stages = construction_info.shader->shader_stages;
+    auto stages = m_construction_info.shader->shader_stages;
     pipeline_info.stageCount = stages.size();
     pipeline_info.pStages = stages.data();
 
