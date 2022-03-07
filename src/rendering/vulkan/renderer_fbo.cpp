@@ -55,21 +55,6 @@ RendererResult RendererFramebufferObject::AddAttachment(AttachmentImageInfo &&im
         image_aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
-    /*if (image_info.image == nullptr) {
-        image_info.image = std::make_unique<RendererImage>(
-            m_width,
-            m_height,
-            1,
-            format,
-            Texture::TextureType::TEXTURE_TYPE_2D,
-            VK_IMAGE_TILING_OPTIMAL,
-            image_usage_flags,
-            nullptr
-        );
-
-        image_info.image_needs_creation = true;
-    }*/
-
     if (image_info.image_view == nullptr) {
         image_info.image_view = std::make_unique<RendererImageView>(image_aspect_flags);
 

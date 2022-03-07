@@ -80,8 +80,6 @@ public:
         Build(descriptor_pool);
     }
 
-    //RendererResult CreateRenderPass(VkSampleCountFlagBits sample_count=VK_SAMPLE_COUNT_1_BIT);
-    // void DoRenderPass(void (*render_callback)(RendererPipeline *pl, VkCommandBuffer *cmd));
     void StartRenderPass(VkCommandBuffer cmd, size_t index);
     void EndRenderPass(VkCommandBuffer cmd, size_t index);
 
