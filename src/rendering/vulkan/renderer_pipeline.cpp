@@ -15,20 +15,21 @@
 namespace hyperion {
 
 RendererPipeline::RendererPipeline(RendererDevice *_device,
-    const ConstructionInfo &construction_info)
+    ConstructionInfo &&construction_info)
     : intern_vertex_buffers(nullptr),
       intern_vertex_buffers_size(0),
-      m_construction_info(construction_info)
+      m_construction_info(std::move(construction_info))
 {
     AssertExit(construction_info.shader != nullptr);
+    AssertExit(construction_info.fbos.size() != 0);
 
     this->primitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     this->device = _device;
     // this->intern_vertex_buffers = nullptr;
     // this->intern_vertex_buffers_size = 0;
 
-    size_t width  = construction_info.fbo->GetWidth();
-    size_t height = construction_info.fbo->GetHeight();
+    size_t width  = construction_info.fbos[0]->GetWidth();
+    size_t height = construction_info.fbos[0]->GetHeight();
     this->SetViewport(0.0f, 0.0f, float(width), float(height), 0.0f, 1.0f);
     this->SetScissor(0, 0, width, height);
 
@@ -94,7 +95,7 @@ RendererResult RendererPipeline::CreateCommandPool() {
 RendererResult RendererPipeline::CreateCommandBuffers(uint16_t count) {
     AssertThrow(count >= 1);
     //this->command_buffers.resize(this->swapchain->framebuffers.size());
-    this->command_buffers.resize(this->m_construction_info.fbo->GetAttachmentImageInfos().size());
+    this->command_buffers.resize(this->m_construction_info.fbos.size());
 
     VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     alloc_info.commandPool = this->command_pool;
@@ -167,7 +168,7 @@ std::vector<VkVertexInputAttributeDescription> RendererPipeline::BuildVertexAttr
     return this->vertex_attributes;
 }
 
-void RendererPipeline::StartRenderPass(VkCommandBuffer cmd) {
+void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, size_t index) {
     //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
     VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -176,10 +177,10 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd) {
     auto result = vkBeginCommandBuffer(cmd, &begin_info);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer!\n");
 
-    m_construction_info.fbo->GetRenderPass()->Begin(
+    m_construction_info.render_pass->Begin(
         cmd,
-        m_construction_info.fbo->GetFramebuffer(),
-        VkExtent2D{ uint32_t(m_construction_info.fbo->GetWidth()), uint32_t(m_construction_info.fbo->GetHeight()) }
+        m_construction_info.fbos[index]->GetFramebuffer(),
+        VkExtent2D{ uint32_t(m_construction_info.fbos[index]->GetWidth()), uint32_t(m_construction_info.fbos[index]->GetHeight())}
     );
 
     this->UpdateDynamicStates(cmd);
@@ -189,8 +190,8 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd) {
     vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &push_constants);
 }
 
-void RendererPipeline::EndRenderPass(VkCommandBuffer cmd) {
-    m_construction_info.fbo->GetRenderPass()->End(cmd);
+void RendererPipeline::EndRenderPass(VkCommandBuffer cmd, size_t index) {
+    m_construction_info.render_pass->End(cmd);
 
     auto result = vkEndCommandBuffer(cmd);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
@@ -253,10 +254,10 @@ void RendererPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescri
     this->vertex_attributes = attribs;
 }
 
-void RendererPipeline::Rebuild(const ConstructionInfo &construction_info, RendererDescriptorPool *descriptor_pool) {
+void RendererPipeline::Rebuild(ConstructionInfo &&construction_info, RendererDescriptorPool *descriptor_pool) {
     AssertExit(construction_info.shader != nullptr);
 
-    m_construction_info = construction_info;
+    m_construction_info = std::move(construction_info);
 
     this->BuildVertexAttributes(m_construction_info.vertex_attributes);
 
@@ -387,7 +388,7 @@ void RendererPipeline::Rebuild(const ConstructionInfo &construction_info, Render
     pipeline_info.pDynamicState = &dynamic_state;
 
     pipeline_info.layout = layout;
-    pipeline_info.renderPass = m_construction_info.fbo->GetRenderPass()->GetRenderPass();
+    pipeline_info.renderPass = m_construction_info.render_pass->GetRenderPass();
 
     pipeline_info.subpass = 0; /* Index of the subpass */
     pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
