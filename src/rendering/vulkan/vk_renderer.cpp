@@ -48,10 +48,8 @@ VkResult VkRenderer::AcquireNextImage(RendererFrame *frame)
     return vkResetCommandBuffer(frame->command_buffer, 0);
 }
 
-void VkRenderer::StartFrame(RendererFrame *frame)
+void VkRenderer::WaitImageReady(RendererFrame *frame)
 {
-    AssertThrow(frame != nullptr);
-
     auto new_image_result = this->AcquireNextImage(frame);
 
     if (new_image_result == VK_SUBOPTIMAL_KHR || new_image_result == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -59,39 +57,32 @@ void VkRenderer::StartFrame(RendererFrame *frame)
         vkDeviceWaitIdle(this->device->GetDevice());
         /* TODO: regenerate framebuffers and swapchain */
     }
+}
 
-    //VkCommandBuffer *cmd = &this->command_buffers[frame_index];
-    VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    begin_info.pInheritanceInfo = nullptr;
-    /* Begin recording our command buffer */
-    auto result = vkBeginCommandBuffer(frame->command_buffer, &begin_info);
-    AssertThrowMsg(result == VK_SUCCESS, "Failed to start recording command buffer!\n");
+void VkRenderer::WaitDeviceIdle()
+{
+    vkDeviceWaitIdle(this->device->GetDevice());
+}
+
+void VkRenderer::BeginFrame(RendererFrame *frame)
+{
+    /* Assume `frame` is not nullptr */
+
+    this->WaitImageReady(frame);
+
+    frame->BeginCapture();
 }
 
 void VkRenderer::EndFrame(RendererFrame *frame)
 {
-    auto result = vkEndCommandBuffer(frame->command_buffer);
-    AssertThrowMsg(result == VK_SUCCESS, "Failed to record command buffer!\n");
+    /* Assume `frame` is not nullptr */
 
-    VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-    VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    frame->EndCapture();
 
-    submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &frame->sp_swap_acquire;
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &frame->sp_swap_release;
-
-    submit_info.pWaitDstStageMask = wait_stages;
-
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &frame->command_buffer;
-
-    result = vkQueueSubmit(this->queue_graphics, 1, &submit_info, frame->fc_queue_submit);
-    AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");
+    frame->Submit(this->queue_graphics);
 }
 
-void VkRenderer::DrawFrame(RendererFrame *frame)
+void VkRenderer::PresentFrame(RendererFrame *frame)
 {
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     present_info.waitSemaphoreCount = 1;
@@ -159,88 +150,6 @@ SystemWindow *VkRenderer::GetCurrentWindow() {
     return this->window;
 }
 
-
-RendererFrame::RendererFrame()
-    : creation_device(nullptr),
-      command_buffer(nullptr),
-      sp_swap_acquire(nullptr),
-      sp_swap_release(nullptr),
-      fc_queue_submit(nullptr)
-{
-}
-
-RendererFrame::~RendererFrame()
-{
-    AssertExitMsg(sp_swap_acquire == nullptr, "sp_swap_acquire should have been destroyed");
-    AssertExitMsg(sp_swap_release == nullptr, "sp_swap_release should have been destroyed");
-    AssertExitMsg(fc_queue_submit == nullptr, "fc_queue_submit should have been destroyed");
-}
-
-RendererResult RendererFrame::Create(non_owning_ptr<RendererDevice> device, VkCommandBuffer cmd)
-{
-    this->creation_device = device;
-    this->command_buffer = cmd;
-
-    return this->CreateSyncObjects();
-}
-
-RendererResult RendererFrame::Destroy()
-{
-    return this->DestroySyncObjects();
-}
-
-RendererResult RendererFrame::CreateSyncObjects()
-{
-    AssertThrow(this->creation_device != nullptr);
-
-    VkDevice rd_device = this->creation_device->GetDevice();
-    VkSemaphoreCreateInfo semaphore_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-
-    HYPERION_VK_CHECK_MSG(
-        vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_acquire),
-        "Error creating render swap acquire semaphore!"
-    );
-
-    HYPERION_VK_CHECK_MSG(
-        vkCreateSemaphore(rd_device, &semaphore_info, nullptr, &this->sp_swap_release),
-        "Error creating render swap release semaphore!"
-    );
-
-    VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    HYPERION_VK_CHECK_MSG(
-        vkCreateFence(rd_device, &fence_info, nullptr, &this->fc_queue_submit),
-        "Error creating render fence!"
-    );
-
-    DebugLog(LogType::Debug, "Create Sync objects!\n");
-
-    HYPERION_RETURN_OK;
-}
-
-RendererResult RendererFrame::DestroySyncObjects()
-{
-    RendererResult result = RendererResult::OK;
-
-    AssertThrow(this->creation_device != nullptr);
-
-    VkDevice rd_device = this->creation_device->GetDevice();
-
-    HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(rd_device), result);
-
-    vkDestroySemaphore(rd_device, this->sp_swap_acquire, nullptr);
-    this->sp_swap_acquire = nullptr;
-
-    vkDestroySemaphore(rd_device, this->sp_swap_release, nullptr);
-    this->sp_swap_release = nullptr;
-
-    vkDestroyFence(rd_device, this->fc_queue_submit, nullptr);
-    this->fc_queue_submit = nullptr;
-
-    return result;
-}
-
 VkRenderer::VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name) {
     this->system = _system;
     this->app_name = app_name;
@@ -268,12 +177,16 @@ RendererResult VkRenderer::AllocatePendingFrames() {
 }
 
 RendererFrame *VkRenderer::GetNextFrame() {
-    AssertThrow(this->pending_frames.size());
+    AssertThrow(this->pending_frames.size() == this->frames_to_allocate);
+
     ++this->frames_index;
-    if (this->frames_index >= this->frames_to_allocate)
+
+    if (this->frames_index >= this->frames_to_allocate) {
         this->frames_index = 0;
+    }
+
     this->current_frame = this->pending_frames[this->frames_index].get();
-    //this->current_frame = this->pending_frames[this->frames_index++].get();
+
     return this->current_frame;
 }
 

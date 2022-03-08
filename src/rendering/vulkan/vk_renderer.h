@@ -21,31 +21,13 @@
 #include "renderer_buffer.h"
 #include "renderer_pipeline.h"
 #include "renderer_descriptor_pool.h"
+#include "renderer_frame.h"
 
 #define VK_RENDERER_API_VERSION VK_API_VERSION_1_2
 
 namespace hyperion {
 
 #define DEFAULT_PENDING_FRAMES_COUNT 2
-
-class RendererFrame {
-    RendererResult CreateSyncObjects();
-    RendererResult DestroySyncObjects();
-public:
-    RendererFrame();
-    ~RendererFrame();
-
-    RendererResult Create(non_owning_ptr<RendererDevice> device, VkCommandBuffer cmd);
-    RendererResult Destroy();
-
-    VkCommandBuffer command_buffer;
-    /* Sync objects for each frame */
-    VkSemaphore sp_swap_acquire;
-    VkSemaphore sp_swap_release;
-    VkFence     fc_queue_submit;
-
-    non_owning_ptr<RendererDevice> creation_device;
-};
 
 
 class RendererQueue {
@@ -76,13 +58,16 @@ public:
     void CreateSurface();
 
     RendererFrame *GetNextFrame();
+    void WaitImageReady(RendererFrame *frame);
+    void WaitDeviceIdle();
+
     HYP_FORCE_INLINE RendererFrame *GetCurrentFrame() { return this->current_frame; }
     HYP_FORCE_INLINE const RendererFrame *GetCurrentFrame() const { return this->current_frame; }
 
     VkResult AcquireNextImage(RendererFrame *frame);
-    void     StartFrame(RendererFrame *frame);
-    void     EndFrame  (RendererFrame *frame);
-    void     DrawFrame (RendererFrame *frame);
+    void     BeginFrame      (RendererFrame *frame);
+    void     EndFrame        (RendererFrame *frame);
+    void     PresentFrame    (RendererFrame *frame);
 
     void SetValidationLayers(std::vector<const char *> _layers);
     RendererDevice *GetRendererDevice();

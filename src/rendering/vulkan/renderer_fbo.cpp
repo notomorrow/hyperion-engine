@@ -18,12 +18,12 @@ RendererFramebufferObject::~RendererFramebufferObject()
 
 RendererResult RendererFramebufferObject::AddAttachment(Texture::TextureInternalFormat format, bool is_depth_attachment)
 {
-    VkImageUsageFlags image_usage_flags = 0;
+    VkImageUsageFlags image_usage_flags = VK_IMAGE_USAGE_SAMPLED_BIT;
 
     if (is_depth_attachment) {
-        image_usage_flags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        image_usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     } else {
-        image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
 
     return AddAttachment(AttachmentImageInfo{
