@@ -25,7 +25,7 @@ RendererPipeline::RendererPipeline(RendererDevice *_device, ConstructionInfo &&c
 
     size_t width  = m_construction_info.fbos[0]->GetWidth();
     size_t height = m_construction_info.fbos[0]->GetHeight();
-    this->SetViewport(0.0f, 0.0f, float(width), float(height), 0.0f, 1.0f);
+    this->SetViewport(0.0f, float(height), float(width), -float(height), 0.0f, 1.0f);
     this->SetScissor(0, 0, width, height);
 
     std::vector<VkDynamicState> default_dynamic_states = {

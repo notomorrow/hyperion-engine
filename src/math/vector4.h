@@ -1,9 +1,10 @@
 #ifndef VECTOR4_H
 #define VECTOR4_H
+#include "matrix4.h"
+#include "../util.h"
 
 #include <cmath>
 #include <iostream>
-#include "matrix4.h"
 
 namespace hyperion {
 
@@ -12,7 +13,10 @@ class Vector3;
 class Vector4 {
     friend std::ostream &operator<<(std::ostream &out, const Vector4 &vec);
 public:
-    float x, y, z, w;
+    union {
+        struct { float x, y, z, w; };
+        float values[4];
+    };
 
     Vector4();
     Vector4(float x, float y, float z, float w);
@@ -31,6 +35,12 @@ public:
     inline float GetW() const { return w; }
     inline float &GetW() { return w; }
     inline Vector4 &SetW(float w) { this->w = w; return *this; }
+    
+    constexpr inline float operator[](size_t index) const
+        { return values[index]; }
+
+    constexpr inline float &operator[](size_t index)
+        { return values[index]; }
 
     Vector4 &operator=(const Vector4 &other);
     Vector4 operator+(const Vector4 &other) const;
