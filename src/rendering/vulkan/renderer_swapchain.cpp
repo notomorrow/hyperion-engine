@@ -104,10 +104,10 @@ void RendererSwapchain::RetrieveImageHandles() {
     this->image_views.clear();
 
     HYPERION_PASS_ERRORS(this->depth_buffer.image->Destroy(this->renderer_device), result);
-    this->depth_buffer.image.release();
+    this->depth_buffer.image.reset();
 
     HYPERION_PASS_ERRORS(this->depth_buffer.image_view->Destroy(this->renderer_device), result);
-    this->depth_buffer.image_view.release();
+    this->depth_buffer.image_view.reset();
 
     return result;
 }*/

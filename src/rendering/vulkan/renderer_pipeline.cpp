@@ -357,11 +357,11 @@ void RendererPipeline::Destroy() {
 
     for (auto &fbo : m_construction_info.fbos) {
         AssertThrow(fbo->Destroy(this->device));
-        fbo.release();
+        fbo.reset();
     }
 
     AssertThrow(m_construction_info.render_pass->Destroy(this->device));
-    m_construction_info.render_pass.release();
+    m_construction_info.render_pass.reset();
 
     if (intern_vertex_buffers != nullptr) {
         delete[] intern_vertex_buffers;
