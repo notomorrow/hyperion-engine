@@ -79,7 +79,7 @@ void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
     m_old_mag_x = m_mag_x;
     m_old_mag_y = m_mag_y;
 
-    m_dir_cross_y = Vector3(-m_direction).Cross(m_up);
+    m_dir_cross_y = Vector3(m_direction).Cross(m_up);
 
     Rotate(m_up, MathUtil::DegToRad(m_mag_x * sensitivity));
     Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag_y * sensitivity));
@@ -105,9 +105,9 @@ void FpsCamera::HandleKeyboardInput(double dt)
     }
 
     if (m_inputmgr->IsKeyDown(KEY_A)) {
-        m_next_translation += m_dir_cross_y * speed;
-    } else if (m_inputmgr->IsKeyDown(KEY_D)) {
         m_next_translation -= m_dir_cross_y * speed;
+    } else if (m_inputmgr->IsKeyDown(KEY_D)) {
+        m_next_translation += m_dir_cross_y * speed;
     }
 
     m_translation.Lerp(m_next_translation, MathUtil::Clamp(2.0 * dt, 0.0, 1.0));
