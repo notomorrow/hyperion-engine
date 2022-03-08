@@ -33,8 +33,10 @@ RendererResult RendererFramebufferObject::AddAttachment(Texture::TextureInternal
             1,
             format,
             Texture::TextureType::TEXTURE_TYPE_2D,
-            VK_IMAGE_TILING_OPTIMAL,
-            image_usage_flags,
+            RendererImage::InternalInfo{
+                .tiling = VK_IMAGE_TILING_OPTIMAL,
+                .usage_flags = image_usage_flags
+            },
             nullptr
         ),
         .image_view = nullptr,
