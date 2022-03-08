@@ -7,6 +7,8 @@
 #include "renderer_helpers.h"
 #include "../texture.h"
 
+#include <math/math_util.h>
+
 namespace hyperion {
 class VkRenderer;
 class RendererImage {
@@ -21,6 +23,7 @@ public:
     RendererImage(size_t width, size_t height, size_t depth,
         Texture::TextureInternalFormat format,
         Texture::TextureType type,
+        Texture::TextureFilterMode filter_mode,
         const InternalInfo &internal_info,
         unsigned char *bytes);
 
@@ -30,12 +33,22 @@ public:
 
     RendererResult Create(RendererDevice *device, VkImageLayout layout);
     RendererResult Create(RendererDevice *device, VkRenderer *renderer,
-        const LayoutTransferStateBase &transfer_from,
-        const LayoutTransferStateBase &transfer_to);
+        LayoutTransferStateBase transfer_from,
+        LayoutTransferStateBase transfer_to);
     RendererResult Destroy(RendererDevice *device);
 
     inline bool IsDepthStencilImage() const
         { return helpers::IsDepthTexture(m_format); }
+
+    inline bool IsMipmappedImage() const
+        { return m_filter_mode == Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
+
+    inline size_t GetNumMipmaps() const
+    {
+        return IsMipmappedImage()
+            ? MathUtil::FastLog2(MathUtil::Max(m_width, m_height, m_depth)) + 1
+            : 1;
+    }
 
     inline RendererGPUImage *GetGPUImage() { return m_image; }
     inline const RendererGPUImage *GetGPUImage() const { return m_image; }
@@ -47,19 +60,20 @@ public:
     inline VkImageType GetImageType() const { return helpers::ToVkType(m_type); }
     inline VkImageUsageFlags GetImageUsageFlags() const { return m_internal_info.usage_flags; }
 
+    struct LayoutState {
+        VkImageLayout layout;
+        VkAccessFlags access_mask;
+        VkPipelineStageFlags stage_mask;
+    };
+
     struct LayoutTransferStateBase {
-        VkImageLayout old_layout;
-        VkImageLayout new_layout;
-        VkAccessFlags src_access_mask;
-        VkAccessFlags dst_access_mask;
-        VkPipelineStageFlags src_stage_mask;
-        VkPipelineStageFlags dst_stage_mask;
+        LayoutState src;
+        LayoutState dst;
     };
 
     template <VkImageLayout OldLayout, VkImageLayout NewLayout>
     struct LayoutTransferState : public LayoutTransferStateBase {
         LayoutTransferState() = delete;
-        LayoutTransferState(const LayoutTransferState &other) = default;
     };
 
     /* layout transfer specialization structs */
@@ -70,12 +84,16 @@ public:
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     > : public LayoutTransferStateBase {
         LayoutTransferState() : LayoutTransferStateBase{
-            .old_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .new_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .src_access_mask = VK_IMAGE_LAYOUT_UNDEFINED,
-            .dst_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
-            .src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            .dst_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
+            .src = {
+                .layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .access_mask = VK_IMAGE_LAYOUT_UNDEFINED,
+                .stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+            },
+            .dst = {
+                .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                .access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                .stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
+            }
         } {}
     };
 
@@ -85,12 +103,16 @@ public:
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     > : public LayoutTransferStateBase {
         LayoutTransferState() : LayoutTransferStateBase{
-            .old_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .new_layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            .src_access_mask = VK_IMAGE_LAYOUT_UNDEFINED,
-            .dst_access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-            .src_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            .dst_stage_mask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+            .src = {
+                .layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .access_mask = VK_IMAGE_LAYOUT_UNDEFINED,
+                .stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+            },
+            .dst = {
+                .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                .access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .stage_mask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+            }
         } {}
     };
 
@@ -100,15 +122,18 @@ public:
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     >: public LayoutTransferStateBase {
         LayoutTransferState() : LayoutTransferStateBase{
-            .old_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .new_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
-            .dst_access_mask = VK_ACCESS_SHADER_READ_BIT,
-            .src_stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT,
-            .dst_stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+            .src = {
+                .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                .access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                .stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
+            },
+            .dst = {
+                .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                .access_mask = VK_ACCESS_SHADER_READ_BIT,
+                .stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+            }
         } {}
     };
-
 
 private:
     RendererResult CreateImage(RendererDevice *device,
@@ -126,6 +151,7 @@ private:
     size_t m_depth;
     Texture::TextureInternalFormat m_format;
     Texture::TextureType m_type;
+    Texture::TextureFilterMode m_filter_mode;
     unsigned char *m_bytes;
 
     InternalInfo m_internal_info;
@@ -142,6 +168,7 @@ public:
         size_t width, size_t height, size_t depth,
         Texture::TextureInternalFormat format,
         Texture::TextureType type,
+        Texture::TextureFilterMode filter_mode,
         unsigned char *bytes
     ) : RendererImage(
         width,
@@ -149,6 +176,7 @@ public:
         depth,
         format,
         type,
+        filter_mode,
         RendererImage::InternalInfo{
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
@@ -162,6 +190,7 @@ public:
     RendererTextureImage2D(
         size_t width, size_t height,
         Texture::TextureInternalFormat format,
+        Texture::TextureFilterMode filter_mode,
         unsigned char *bytes
     ) : RendererTextureImage(
         width,
@@ -169,6 +198,7 @@ public:
         1,
         format,
         Texture::TextureType::TEXTURE_TYPE_2D,
+        filter_mode,
         bytes
     ) {}
 };
@@ -178,6 +208,7 @@ public:
     RendererTextureImage3D(
         size_t width, size_t height, size_t depth,
         Texture::TextureInternalFormat format,
+        Texture::TextureFilterMode filter_mode,
         unsigned char *bytes
     ) : RendererTextureImage(
         width,
@@ -185,6 +216,7 @@ public:
         depth,
         format,
         Texture::TextureType::TEXTURE_TYPE_3D,
+        filter_mode,
         bytes
     ) {}
 };
@@ -202,6 +234,7 @@ public:
         depth,
         format,
         type,
+        Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
         RendererImage::InternalInfo{
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage_flags = VkImageUsageFlags(((Texture::GetBaseFormat(format) == Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH)

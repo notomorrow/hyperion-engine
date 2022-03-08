@@ -111,14 +111,12 @@ public:
     }
 
     template <typename T>
-    static inline constexpr T Max(const T &a, const T &b)
-    {
-        if (a > b) {
-            return a;
-        } else {
-            return b;
-        }
-    }
+    static inline constexpr T Max(T a, T b)
+        { return (a > b) ? a : b; }
+
+    template <typename T, typename... Args>
+    static inline constexpr T Max(T a, T b, Args... args)
+        { return Max(Max(a, b), args...); }
 
     template <typename T>
     static inline constexpr T Sign(const T &value)

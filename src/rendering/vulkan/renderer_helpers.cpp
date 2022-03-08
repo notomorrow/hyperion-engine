@@ -1,4 +1,5 @@
 #include "renderer_helpers.h"
+#include <math/math_util.h>
 
 namespace hyperion {
 namespace helpers {
@@ -12,6 +13,11 @@ bool IsDepthTexture(Texture::TextureInternalFormat fmt)
 bool IsDepthTexture(Texture::TextureBaseFormat fmt)
 {
     return fmt == Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH;
+}
+
+size_t MipmapSize(size_t src_size, int lod)
+{
+    return MathUtil::Max(src_size >> lod, 1ull);
 }
 
 VkFormat ToVkFormat(Texture::TextureInternalFormat fmt)

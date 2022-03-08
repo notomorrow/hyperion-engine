@@ -20,7 +20,8 @@ RendererImageView::~RendererImageView()
 RendererResult RendererImageView::Create(RendererDevice *device,
     VkImage image,
     VkFormat format,
-    VkImageViewType view_type)
+    VkImageViewType view_type,
+    size_t num_mipmaps)
 {
 
     VkImageViewCreateInfo view_info{};
@@ -36,7 +37,7 @@ RendererResult RendererImageView::Create(RendererDevice *device,
 
     view_info.subresourceRange.aspectMask = m_aspect_mask;
     view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.levelCount = 1;
+    view_info.subresourceRange.levelCount = num_mipmaps;
     view_info.subresourceRange.baseArrayLayer = 0;
     view_info.subresourceRange.layerCount = 1;
 
@@ -55,7 +56,8 @@ RendererResult RendererImageView::Create(RendererDevice *device,
         device,
         image->GetGPUImage()->image,
         image->GetImageFormat(),
-        ToVkImageViewType(image->GetTextureType())
+        ToVkImageViewType(image->GetTextureType()),
+        image->GetNumMipmaps()
     );
 }
 
