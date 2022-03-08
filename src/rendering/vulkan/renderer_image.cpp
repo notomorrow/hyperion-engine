@@ -13,6 +13,7 @@ namespace hyperion {
 RendererImage::RendererImage(size_t width, size_t height, size_t depth,
     Texture::TextureInternalFormat format,
     Texture::TextureType type,
+    Texture::TextureFilterMode filter_mode,
     const InternalInfo &internal_info,
     unsigned char *bytes)
     : m_width(width),
@@ -20,6 +21,7 @@ RendererImage::RendererImage(size_t width, size_t height, size_t depth,
       m_depth(depth),
       m_format(format),
       m_type(type),
+      m_filter_mode(filter_mode),
       m_internal_info(internal_info),
       m_image(nullptr),
       m_staging_buffer(nullptr),
@@ -49,7 +51,17 @@ RendererResult RendererImage::CreateImage(RendererDevice *device,
     VkFormat format = GetImageFormat();
     VkImageType image_type = GetImageType();
     VkImageCreateFlags image_create_flags = 0;
+    VkFormatFeatureFlags format_features = 0;
     VkImageFormatProperties image_format_properties{};
+
+    if (IsMipmappedImage()) {
+        /* Mipmapped image needs linear blitting. */
+        DebugLog(LogType::Info, "Mipmapped image needs linear blitting support. Checking...\n");
+
+        format_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+
+        m_internal_info.usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
 
     auto format_support_result = device->GetRendererFeatures().GetImageFormatProperties(
         format,
@@ -102,24 +114,30 @@ RendererResult RendererImage::CreateImage(RendererDevice *device,
         HYPERION_BUBBLE_ERRORS(format_support_result);
     }
 
+    if (format_features != 0) {
+        if (!device->GetRendererFeatures().IsSupportedFormat(format, m_internal_info.tiling, format_features)) {
+            return RendererResult(RendererResult::RENDERER_ERR, "Format does not support requested features.");
+        }
+    }
+
     VkImageCreateInfo image_info{};
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_info.imageType = image_type;
     image_info.extent.width = uint32_t(m_width);
     image_info.extent.height = uint32_t(m_height);
     image_info.extent.depth = uint32_t(m_depth);
-    image_info.mipLevels = 1; // TODO
+    image_info.mipLevels = GetNumMipmaps();
     image_info.arrayLayers = (m_type == Texture::TextureType::TEXTURE_TYPE_CUBEMAP) ? 6 : 1;
     image_info.format = format;
     image_info.tiling = m_internal_info.tiling;
-    image_info.initialLayout = initial_layout;//VK_IMAGE_LAYOUT_UNDEFINED;
+    image_info.initialLayout = initial_layout;
     image_info.usage = m_internal_info.usage_flags;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_info.flags = image_create_flags; // TODO: look into flags for sparse textures for VCT
     *out_image_info = image_info;
 
-    m_image = new RendererGPUImage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+    m_image = new RendererGPUImage(m_internal_info.usage_flags);
 
     HYPERION_BUBBLE_ERRORS(m_image->Create(device, m_size, &image_info));
 
@@ -134,11 +152,11 @@ RendererResult RendererImage::Create(RendererDevice *device, VkImageLayout layou
 }
 
 RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *renderer,
-    const LayoutTransferStateBase &transfer_from,
-    const LayoutTransferStateBase &transfer_to)
+    LayoutTransferStateBase transfer_from,
+    LayoutTransferStateBase transfer_to)
 {
     VkImageCreateInfo image_info;
-    HYPERION_BUBBLE_ERRORS(CreateImage(device, transfer_from.old_layout, &image_info));
+    HYPERION_BUBBLE_ERRORS(CreateImage(device, transfer_from.src.layout, &image_info));
 
     m_staging_buffer = new RendererStagingBuffer();
     m_staging_buffer->Create(device, m_size);
@@ -152,25 +170,25 @@ RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *rendere
                              release_barrier{};
 
         acquire_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        acquire_barrier.oldLayout = transfer_from.old_layout;
-        acquire_barrier.newLayout = transfer_from.new_layout;
+        acquire_barrier.oldLayout = transfer_from.src.layout;
+        acquire_barrier.newLayout = transfer_from.dst.layout;
         acquire_barrier.image = m_image->image;
 
         commands.Push([this, &image_info, &acquire_barrier, &transfer_from](VkCommandBuffer cmd) {
             VkImageSubresourceRange range{};
             range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             range.baseMipLevel = 0;
-            range.levelCount = 1;
+            range.levelCount = GetNumMipmaps(); /* all mip levels will be in `transfer_from.new_layout` */
             range.baseArrayLayer = 0;
             range.layerCount = 1;
 
             acquire_barrier.subresourceRange = range;
-            acquire_barrier.srcAccessMask = transfer_from.src_access_mask;
-            acquire_barrier.dstAccessMask = transfer_from.dst_access_mask;
+            acquire_barrier.srcAccessMask = transfer_from.src.access_mask;
+            acquire_barrier.dstAccessMask = transfer_from.dst.access_mask;
 
-            //barrier the image into the transfer-receive layout
-            vkCmdPipelineBarrier(cmd, transfer_from.src_stage_mask, transfer_from.dst_stage_mask, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &acquire_barrier);
-            
+            // barrier the image into the transfer-receive layout
+            vkCmdPipelineBarrier(cmd, transfer_from.src.stage_mask, transfer_from.dst.stage_mask, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &acquire_barrier);
+
             HYPERION_RETURN_OK;
         });
 
@@ -191,7 +209,7 @@ RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *rendere
                 cmd,
                 m_staging_buffer->buffer,
                 m_image->image,
-                transfer_from.new_layout,
+                transfer_from.dst.layout,
                 1,
                 &region
             );
@@ -199,18 +217,127 @@ RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *rendere
             HYPERION_RETURN_OK;
         });
 
+        /* Generate mipmaps if it applies */
+        if (IsMipmappedImage()) {
+            AssertThrowMsg(m_bytes != nullptr, "Cannot generate mipmaps on an image with no bytes set");
+
+            /* Assuming device supports this format with linear blitting -- check is done in CreateImage() */
+
+            /* Generate our mipmaps. We'll need to be doing it here as we need
+               the layout to be `transfer_from.new_layout`
+            */
+            commands.Push([this, &transfer_from, &transfer_to](VkCommandBuffer cmd) {
+                LayoutTransferStateBase intermediate{
+                    .src = transfer_from.dst, /* Use the output from the previous command as an input */
+                    .dst = {
+                        .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        .access_mask = VK_ACCESS_TRANSFER_READ_BIT,
+                        .stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
+                    }
+                };
+
+                const size_t num_mipmaps = GetNumMipmaps();
+
+                for (int i = 1; i < num_mipmaps + 1; i++) {
+                    int32_t mip_width = helpers::MipmapSize(m_width, i),
+                            mip_height = helpers::MipmapSize(m_height, i),
+                            mip_depth = helpers::MipmapSize(m_depth, i);
+
+                    /* Memory barrier for transfer - note that after generating the mipmaps,
+                        we'll still need to transfer into a layout primed for reading from shaders. */
+                    VkImageMemoryBarrier mipmap_barrier{};
+                    mipmap_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                    mipmap_barrier.image = m_image->image;
+                    mipmap_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    mipmap_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    mipmap_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                    mipmap_barrier.subresourceRange.baseArrayLayer = 0;
+                    mipmap_barrier.subresourceRange.layerCount = 1;
+                    mipmap_barrier.subresourceRange.levelCount = 1;
+                    mipmap_barrier.oldLayout = intermediate.src.layout;
+                    mipmap_barrier.newLayout = intermediate.dst.layout;
+                    mipmap_barrier.srcAccessMask = intermediate.src.access_mask;
+                    mipmap_barrier.dstAccessMask = intermediate.dst.access_mask;
+                    mipmap_barrier.subresourceRange.baseMipLevel = i - 1;
+
+                    /* Transfer the prev mipmap into a format for reading */
+                    vkCmdPipelineBarrier(
+                        cmd,
+                        intermediate.src.stage_mask,
+                        intermediate.dst.stage_mask,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &mipmap_barrier
+                    );
+
+                    if (i == num_mipmaps) {
+                        /*
+                         * Use the output from this intermediate step as an input
+                         * into the next stage
+                         */
+                        transfer_to.src = intermediate.dst;
+
+                        break;
+                    }
+
+                    /* We swap src and dst as we will use the newly transfered image as an input to our mipmap level */
+                    std::swap(intermediate.dst, intermediate.src);
+
+                    /* Blit the image into the subresource */
+                    VkImageBlit blit{};
+                    blit.srcOffsets[0] = { 0, 0, 0 };
+                    blit.srcOffsets[1] = {
+                        int32_t(helpers::MipmapSize(m_width, i - 1)),
+                        int32_t(helpers::MipmapSize(m_height, i - 1)),
+                        int32_t(helpers::MipmapSize(m_depth, i - 1))
+                    };
+                    blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                    blit.srcSubresource.mipLevel = i - 1; /* Read from previous mip level */
+                    blit.srcSubresource.baseArrayLayer = 0;
+                    blit.srcSubresource.layerCount = 1;
+                    blit.dstOffsets[0] = { 0, 0, 0 };
+                    blit.dstOffsets[1] = {
+                        mip_width,
+                        mip_height,
+                        mip_depth
+                    };
+                    blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                    blit.dstSubresource.mipLevel = i;
+                    blit.dstSubresource.baseArrayLayer = 0;
+                    blit.dstSubresource.layerCount = 1;
+
+                    vkCmdBlitImage(cmd,
+                        m_image->image,
+                        intermediate.src.layout,
+                        m_image->image,
+                        intermediate.dst.layout,
+                        1, &blit,
+                        VK_FILTER_LINEAR
+                    );
+
+                    /* We swap again, as we are using this as an input into the next iteration */
+                    std::swap(intermediate.src, intermediate.dst);
+                }
+
+                HYPERION_RETURN_OK;
+            });
+        }
+
         // transition from the previous layout state into a shader read-only state
         commands.Push([this, &acquire_barrier, &release_barrier, &transfer_to](VkCommandBuffer cmd) {
             release_barrier = acquire_barrier;
 
-            release_barrier.oldLayout = transfer_to.old_layout;
-            release_barrier.newLayout = transfer_to.new_layout;
-            release_barrier.srcAccessMask = transfer_to.src_access_mask;
-            release_barrier.dstAccessMask = transfer_to.dst_access_mask;
+            auto transfer_layout = transfer_to;
+
+            release_barrier.oldLayout = transfer_layout.src.layout;
+            release_barrier.newLayout = transfer_layout.dst.layout;
+            release_barrier.srcAccessMask = transfer_layout.src.access_mask;
+            release_barrier.dstAccessMask = transfer_layout.dst.access_mask;
 
             //barrier the image into the shader readable layout
-            vkCmdPipelineBarrier(cmd, transfer_to.src_stage_mask, transfer_to.dst_stage_mask, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &release_barrier);
-            
+            vkCmdPipelineBarrier(cmd, transfer_layout.src.stage_mask, transfer_layout.dst.stage_mask, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &release_barrier);
+
             HYPERION_RETURN_OK;
         });
 
@@ -224,21 +351,20 @@ RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *rendere
     m_staging_buffer->Destroy(device);
     delete m_staging_buffer;
     m_staging_buffer = nullptr;
-    
+
     HYPERION_RETURN_OK;
 }
 
 RendererResult RendererImage::Destroy(RendererDevice *device)
 {
-    {
-        auto destroy_image_result = m_image->Destroy(device);
-        delete m_image;
-        m_image = nullptr;
+    RendererResult result = RendererResult::OK;
 
-        if (!destroy_image_result) return destroy_image_result;
-    }
-    
-    HYPERION_RETURN_OK;
+    HYPERION_PASS_ERRORS(m_image->Destroy(device), result);
+
+    delete m_image;
+    m_image = nullptr;
+
+    return result;
 }
 
 RendererResult RendererImage::ConvertTo32Bpp(
@@ -265,7 +391,7 @@ RendererResult RendererImage::ConvertTo32Bpp(
     m_size = new_size;
 
     *out_format = GetImageFormat();
-    
+
     HYPERION_RETURN_OK;
 }
 

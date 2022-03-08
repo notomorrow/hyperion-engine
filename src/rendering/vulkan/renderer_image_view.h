@@ -23,7 +23,8 @@ public:
     RendererResult Create(RendererDevice *device,
         VkImage image,
         VkFormat format,
-        VkImageViewType view_type);
+        VkImageViewType view_type,
+        size_t num_mipmaps = 1);
     /* Create imageview referencing a RendererImage */
     RendererResult Create(RendererDevice *device,
         RendererImage *image);

@@ -606,13 +606,14 @@ int main()
         texture->GetWidth(),
         texture->GetHeight(),
         texture->GetInternalFormat(),
+        Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         texture->GetBytes()
     );
 
     RendererImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
     RendererSampler test_sampler(
-        Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
-        Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+        Texture::TextureWrapMode::TEXTURE_WRAP_REPEAT
     );
 
     RendererShader shader;

@@ -19,6 +19,8 @@ namespace helpers {
 bool IsDepthTexture(Texture::TextureInternalFormat fmt);
 bool IsDepthTexture(Texture::TextureBaseFormat fmt);
 
+size_t MipmapSize(size_t src_size, int lod);
+
 class SingleTimeCommands {
 public:
     inline void Push(const std::function<RendererResult(VkCommandBuffer)> &fn)
