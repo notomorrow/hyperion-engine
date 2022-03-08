@@ -50,6 +50,12 @@ public:
             : 1;
     }
 
+    inline bool IsCubemap() const
+        { return m_type == Texture::TextureType::TEXTURE_TYPE_CUBEMAP; }
+
+    inline size_t GetNumFaces() const
+        { return IsCubemap() ? 6 : 1; }
+
     inline RendererGPUImage *GetGPUImage() { return m_image; }
     inline const RendererGPUImage *GetGPUImage() const { return m_image; }
 
@@ -216,6 +222,24 @@ public:
         depth,
         format,
         Texture::TextureType::TEXTURE_TYPE_3D,
+        filter_mode,
+        bytes
+    ) {}
+};
+
+class RendererTextureImageCubemap : public RendererTextureImage {
+public:
+    RendererTextureImageCubemap(
+        size_t width, size_t height,
+        Texture::TextureInternalFormat format,
+        Texture::TextureFilterMode filter_mode,
+        unsigned char *bytes
+    ) : RendererTextureImage(
+        width,
+        height,
+        1,
+        format,
+        Texture::TextureType::TEXTURE_TYPE_CUBEMAP,
         filter_mode,
         bytes
     ) {}

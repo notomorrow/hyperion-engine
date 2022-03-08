@@ -27,7 +27,7 @@ RendererImage::RendererImage(size_t width, size_t height, size_t depth,
       m_staging_buffer(nullptr),
       m_bpp(Texture::NumComponents(Texture::GetBaseFormat(format)))
 {
-    m_size = width * height * depth * m_bpp;
+    m_size = width * height * depth * m_bpp * GetNumFaces();
 
     m_bytes = new unsigned char[m_size];
 
@@ -56,11 +56,19 @@ RendererResult RendererImage::CreateImage(RendererDevice *device,
 
     if (IsMipmappedImage()) {
         /* Mipmapped image needs linear blitting. */
-        DebugLog(LogType::Info, "Mipmapped image needs linear blitting support. Checking...\n");
+        DebugLog(LogType::Debug, "Mipmapped image needs linear blitting support. Checking...\n");
 
         format_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
 
         m_internal_info.usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if (IsCubemap()) {
+
+
+        DebugLog(LogType::Debug, "Creating cubemap texture, enabling VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT flag.\n");
+
+        image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
 
     auto format_support_result = device->GetRendererFeatures().GetImageFormatProperties(
@@ -127,7 +135,7 @@ RendererResult RendererImage::CreateImage(RendererDevice *device,
     image_info.extent.height = uint32_t(m_height);
     image_info.extent.depth = uint32_t(m_depth);
     image_info.mipLevels = GetNumMipmaps();
-    image_info.arrayLayers = (m_type == Texture::TextureType::TEXTURE_TYPE_CUBEMAP) ? 6 : 1;
+    image_info.arrayLayers = GetNumFaces();
     image_info.format = format;
     image_info.tiling = m_internal_info.tiling;
     image_info.initialLayout = initial_layout;
@@ -180,42 +188,57 @@ RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *rendere
             range.baseMipLevel = 0;
             range.levelCount = GetNumMipmaps(); /* all mip levels will be in `transfer_from.new_layout` */
             range.baseArrayLayer = 0;
-            range.layerCount = 1;
+            range.layerCount = GetNumFaces();
 
             acquire_barrier.subresourceRange = range;
             acquire_barrier.srcAccessMask = transfer_from.src.access_mask;
             acquire_barrier.dstAccessMask = transfer_from.dst.access_mask;
 
             // barrier the image into the transfer-receive layout
-            vkCmdPipelineBarrier(cmd, transfer_from.src.stage_mask, transfer_from.dst.stage_mask, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &acquire_barrier);
+            vkCmdPipelineBarrier(
+                cmd,
+                transfer_from.src.stage_mask,
+                transfer_from.dst.stage_mask,
+                0,
+                0, nullptr,
+                0, nullptr,
+                1,
+                &acquire_barrier
+            );
 
             HYPERION_RETURN_OK;
         });
 
         // copy from staging to image
-        commands.Push([this, &image_info, &transfer_from](VkCommandBuffer cmd) {
-            VkBufferImageCopy region{};
-            region.bufferOffset = 0;
-            region.bufferRowLength = 0;
-            region.bufferImageHeight = 0;
-            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.mipLevel = 0;
-            region.imageSubresource.baseArrayLayer = 0;
-            region.imageSubresource.layerCount = 1;
-            region.imageOffset = { 0, 0, 0 };
-            region.imageExtent = image_info.extent;
+        int num_faces = GetNumFaces();
+        size_t buffer_offset_step = m_size / num_faces;
 
-            vkCmdCopyBufferToImage(
-                cmd,
-                m_staging_buffer->buffer,
-                m_image->image,
-                transfer_from.dst.layout,
-                1,
-                &region
-            );
+        for (int i = 0; i < num_faces; i++) {
 
-            HYPERION_RETURN_OK;
-        });
+            commands.Push([this, &image_info, &transfer_from, i, buffer_offset_step](VkCommandBuffer cmd) {
+                VkBufferImageCopy region{};
+                region.bufferOffset = i * buffer_offset_step;
+                region.bufferRowLength = 0;
+                region.bufferImageHeight = 0;
+                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.imageSubresource.mipLevel = 0;
+                region.imageSubresource.baseArrayLayer = i;
+                region.imageSubresource.layerCount = 1;
+                region.imageOffset = { 0, 0, 0 };
+                region.imageExtent = image_info.extent;
+
+                vkCmdCopyBufferToImage(
+                    cmd,
+                    m_staging_buffer->buffer,
+                    m_image->image,
+                    transfer_from.dst.layout,
+                    1,
+                    &region
+                );
+
+                HYPERION_RETURN_OK;
+            });
+        }
 
         /* Generate mipmaps if it applies */
         if (IsMipmappedImage()) {
@@ -237,6 +260,7 @@ RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *rendere
                 };
 
                 const size_t num_mipmaps = GetNumMipmaps();
+                const size_t num_faces = GetNumFaces();
 
                 for (int i = 1; i < num_mipmaps + 1; i++) {
                     int32_t mip_width = helpers::MipmapSize(m_width, i),
@@ -328,15 +352,22 @@ RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *rendere
         commands.Push([this, &acquire_barrier, &release_barrier, &transfer_to](VkCommandBuffer cmd) {
             release_barrier = acquire_barrier;
 
-            auto transfer_layout = transfer_to;
-
-            release_barrier.oldLayout = transfer_layout.src.layout;
-            release_barrier.newLayout = transfer_layout.dst.layout;
-            release_barrier.srcAccessMask = transfer_layout.src.access_mask;
-            release_barrier.dstAccessMask = transfer_layout.dst.access_mask;
+            release_barrier.oldLayout = transfer_to.src.layout;
+            release_barrier.newLayout = transfer_to.dst.layout;
+            release_barrier.srcAccessMask = transfer_to.src.access_mask;
+            release_barrier.dstAccessMask = transfer_to.dst.access_mask;
 
             //barrier the image into the shader readable layout
-            vkCmdPipelineBarrier(cmd, transfer_layout.src.stage_mask, transfer_layout.dst.stage_mask, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &release_barrier);
+            vkCmdPipelineBarrier(
+                cmd,
+                transfer_to.src.stage_mask,
+                transfer_to.dst.stage_mask,
+                0,
+                0, nullptr,
+                0, nullptr,
+                1,
+                &release_barrier
+            );
 
             HYPERION_RETURN_OK;
         });
@@ -344,8 +375,6 @@ RendererResult RendererImage::Create(RendererDevice *device, VkRenderer *rendere
         // execute command stack
         HYPERION_BUBBLE_ERRORS(commands.Execute(device));
     }
-
-    // TODO: memory pool to re-use staging buffers
 
     // destroy staging buffer
     m_staging_buffer->Destroy(device);
@@ -376,12 +405,23 @@ RendererResult RendererImage::ConvertTo32Bpp(
 {
     RendererResult format_support_result(RendererResult::RENDERER_OK);
 
+    int num_faces = GetNumFaces();
+    size_t face_offset_step = m_size / num_faces;
+
     size_t new_bpp = 4;
-    size_t new_size = m_width * m_height * m_depth * new_bpp;
+    size_t new_size = m_width * m_height * m_depth * new_bpp * num_faces;
+    size_t new_face_offset_step = new_size / num_faces;
 
     unsigned char *new_bytes = new unsigned char[new_size];
 
-    ImageUtil::ConvertBpp(m_width, m_height, m_depth, m_bpp, new_bpp, m_bytes, new_bytes);
+    for (int i = 0; i < num_faces; i++) {
+        ImageUtil::ConvertBpp(
+            m_width, m_height, m_depth,
+            m_bpp, new_bpp,
+            &m_bytes[i * face_offset_step],
+            &new_bytes[i * new_face_offset_step]
+        );
+    }
 
     delete[] m_bytes;
     m_bytes = new_bytes;

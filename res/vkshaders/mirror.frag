@@ -9,7 +9,8 @@ layout(location=7) in vec3 v_camera_position;
 
 layout(location=0) out vec4 outColor;
 
-layout(binding = 2) uniform sampler2D tex;
+layout(binding = 2) uniform samplerCube tex;
+//layout(binding = 2) uniform sampler2D tex;
 
 void main() {
     vec3 view_vector = normalize(v_position - v_camera_position);
@@ -19,5 +20,6 @@ void main() {
     
     vec3 reflection_vector = reflect(view_vector, normal);
 
-    outColor = vec4(textureLod(tex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y), 6).rgb, 1.0);
+    outColor = vec4(texture(tex, reflection_vector).rgb, 1.0);
+    //outColor = vec4(textureLod(tex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y), 5).rgb, 1.0);
 }

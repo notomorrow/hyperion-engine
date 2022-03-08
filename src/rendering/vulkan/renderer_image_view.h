@@ -24,7 +24,8 @@ public:
         VkImage image,
         VkFormat format,
         VkImageViewType view_type,
-        size_t num_mipmaps = 1);
+        size_t num_mipmaps = 1,
+        size_t num_faces = 1);
     /* Create imageview referencing a RendererImage */
     RendererResult Create(RendererDevice *device,
         RendererImage *image);

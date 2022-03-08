@@ -550,6 +550,9 @@ public:
     }
 };
 
+#define HYPERION_VK_TEST_CUBEMAP 1
+#define HYPERION_VK_TEST_MIPMAP 0
+
 int main()
 {
     std::string base_path = HYP_ROOT_DIR;
@@ -600,6 +603,43 @@ int main()
     RendererGPUBuffer matrices_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT),
                       scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
+#if HYPERION_VK_TEST_CUBEMAP
+    std::vector<std::shared_ptr<Texture2D>> cubemap_faces;
+    cubemap_faces.resize(6);
+
+    cubemap_faces[0] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/posx.jpg");
+    cubemap_faces[1] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/negx.jpg");
+    cubemap_faces[2] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/posy.jpg");
+    cubemap_faces[3] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/negy.jpg");
+    cubemap_faces[4] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/posz.jpg");
+    cubemap_faces[5] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/negz.jpg");
+
+    size_t cubemap_face_bytesize = cubemap_faces[0]->GetWidth() * cubemap_faces[0]->GetHeight() * Texture::NumComponents(cubemap_faces[0]->GetFormat());
+
+    unsigned char *bytes = new unsigned char[cubemap_face_bytesize * 6];
+
+    for (int i = 0; i < cubemap_faces.size(); i++) {
+        std::memcpy(&bytes[i * cubemap_face_bytesize], cubemap_faces[i]->GetBytes(), cubemap_face_bytesize);
+    }
+
+
+    RendererImage *image = new RendererTextureImageCubemap(
+        cubemap_faces[0]->GetWidth(),
+        cubemap_faces[0]->GetHeight(),
+        cubemap_faces[0]->GetInternalFormat(),
+        Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR,
+        bytes
+    );
+
+    RendererImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
+    RendererSampler test_sampler(
+        Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR,
+        Texture::TextureWrapMode::TEXTURE_WRAP_REPEAT
+    );
+
+
+    delete[] bytes;
+#elif HYPERION_VK_TEST_MIPMAP
     // test image
     auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
     RendererImage *image = new RendererTextureImage2D(
@@ -615,6 +655,7 @@ int main()
         Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         Texture::TextureWrapMode::TEXTURE_WRAP_REPEAT
     );
+#endif
 
     RendererShader shader;
     shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
