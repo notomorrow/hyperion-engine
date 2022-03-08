@@ -131,6 +131,48 @@ void VkRenderer::SetValidationLayers(std::vector<const char *> _layers) {
     this->validation_layers = _layers;
 }
 
+#ifndef HYPERION_BUILD_RELEASE
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL RendererDebugCallback(
+        VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+        VkDebugUtilsMessageTypeFlagsEXT message_type,
+        const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+        void *user_data
+){
+    LogType lt = LogType::Info;
+    switch (severity) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            lt = LogType::Debug;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            lt = LogType::Warn;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            lt = LogType::Error;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            lt = LogType::Info;
+            break;
+        default:
+            break;
+    }
+    DebugLog(lt, "Vulkan: [%s, %d]:\n\t%s\n",
+             callback_data->pMessageIdName, callback_data->messageIdNumber, callback_data->pMessage);
+    return VK_FALSE;
+}
+
+VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+    } else {
+        DebugLog(LogType::Error, "vkCreateDebugUtilsMessengerExt not present! disabling message callback...\n");
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    }
+}
+
+#endif
+
 RendererResult VkRenderer::SetupDebug() {
     static const std::vector<const char *> layers {
         "VK_LAYER_KHRONOS_validation",
@@ -140,6 +182,8 @@ RendererResult VkRenderer::SetupDebug() {
     HYPERION_BUBBLE_ERRORS(this->CheckValidationLayerSupport(layers));
 
     this->SetValidationLayers(layers);
+
+    HYPERION_RETURN_OK;
 }
 
 void VkRenderer::SetCurrentWindow(SystemWindow *_window) {
@@ -212,18 +256,43 @@ RendererResult VkRenderer::CreateCommandPool() {
 RendererResult VkRenderer::CreateCommandBuffers() {
     this->command_buffers.resize(this->swapchain->images.size());
 
-    VkCommandBufferAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     alloc_info.commandPool = this->command_pool;
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = uint32_t(this->command_buffers.size());
 
     HYPERION_VK_CHECK_MSG(
-        vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data()),
-        "Could not create Vulkan command buffers"
+            vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data()),
+            "Could not create Vulkan command buffers"
     );
 
     DebugLog(LogType::Debug, "Allocate %d command buffers\n", this->command_buffers.size());
+    HYPERION_RETURN_OK;
+}
 
+
+RendererResult VkRenderer::SetupDebugMessenger() {
+#ifndef HYPERION_BUILD_RELEASE
+    VkDebugUtilsMessengerCreateInfoEXT messenger_info{VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+    messenger_info.messageSeverity = (
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT    |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT   |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
+    );
+    messenger_info.messageType = (
+            VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT     |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT  |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT
+    );
+    messenger_info.pfnUserCallback = &RendererDebugCallback;
+    messenger_info.pUserData       = nullptr;
+
+    auto result = CreateDebugUtilsMessengerEXT(this->instance, &messenger_info, nullptr, &this->debug_messenger);
+    if (result != VK_SUCCESS)
+        HYPERION_RETURN_OK;
+    DebugLog(LogType::Info, "=== Using Debug Messenger ===\n");
+#endif
     HYPERION_RETURN_OK;
 }
 
@@ -251,6 +320,10 @@ RendererResult VkRenderer::Initialize(bool load_debug_layers) {
     // Setup Vulkan extensions
     std::vector<const char *> extension_names;
     extension_names = this->system.GetVulkanExtensionNames();
+
+#ifndef HYPERION_BUILD_RELEASE
+    extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
 
     create_info.enabledExtensionCount = extension_names.size();
     create_info.ppEnabledExtensionNames = extension_names.data();
@@ -281,6 +354,7 @@ RendererResult VkRenderer::Initialize(bool load_debug_layers) {
     HYPERION_BUBBLE_ERRORS(CreateCommandBuffers());
 
     HYPERION_BUBBLE_ERRORS(this->AllocatePendingFrames());
+    this->SetupDebugMessenger();
 
     HYPERION_RETURN_OK;
 }
@@ -297,6 +371,16 @@ RendererResult VkRenderer::CleanupPendingFrames() {
     this->pending_frames.clear();
 
     return result;
+}
+
+static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        func(instance, debugMessenger, pAllocator);
+    }
+    else {
+        DebugLog(LogType::Error, "Extension for vkDestroyDebugUtilsMessengerEXT not supported!\n");
+    }
 }
 
 RendererResult VkRenderer::Destroy() {
@@ -335,6 +419,10 @@ RendererResult VkRenderer::Destroy() {
         this->device->Destroy();
     delete this->device;
     this->device = nullptr;
+
+#ifndef HYPERION_BUILD_RELEASE
+    DestroyDebugUtilsMessengerEXT(this->instance, this->debug_messenger, nullptr);
+#endif
 
     /* Destroy the Vulkan instance(this should always be last!) */
     vkDestroyInstance(this->instance, nullptr);
