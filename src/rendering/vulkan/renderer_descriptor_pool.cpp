@@ -54,7 +54,7 @@ RendererResult RendererDescriptorPool::Create(RendererDevice *device)
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     pool_info.maxSets = set_size;
-    pool_info.poolSizeCount = (uint32_t)pool_sizes.size();
+    pool_info.poolSizeCount = uint32_t(pool_sizes.size());
     pool_info.pPoolSizes = pool_sizes.data();
 
     if (vkCreateDescriptorPool(device->GetDevice(), &pool_info, nullptr, &m_descriptor_pool) != VK_SUCCESS) {

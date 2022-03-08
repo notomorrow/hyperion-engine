@@ -778,10 +778,10 @@ int main()
                 .attachment = std::make_unique<RendererAttachment>(
                     helpers::ToVkFormat(depth_format),
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_STORE,
                     VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     1,
                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
                 ),
@@ -837,8 +837,8 @@ int main()
         .AddDescriptorSet()
         .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(
             0,
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].image_view.get()),
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].sampler.get()),
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].image_view.get()),
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ));
 
@@ -936,7 +936,7 @@ int main()
         RendererPipeline *fbo_pl = pipelines[1];
 
         frame = renderer.GetNextFrame();
-        renderer.StartFrame(frame);
+        renderer.BeginFrame(frame);
         
         test_gpu_buffer.Copy(device, sizeof(shad_data), (void *)&shad_data);
 
@@ -957,8 +957,10 @@ int main()
         //fbo_pl->StartRenderPass(frame->command_buffer, )
 
 
-        renderer.DrawFrame(frame);
+        renderer.PresentFrame(frame);
     }
+
+    renderer.WaitDeviceIdle();
 
     mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
 
