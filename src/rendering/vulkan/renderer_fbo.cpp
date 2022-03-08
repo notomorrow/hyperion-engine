@@ -8,54 +8,32 @@ namespace hyperion {
 RendererFramebufferObject::RendererFramebufferObject(size_t width, size_t height)
     : m_width(width),
       m_height(height),
-      m_framebuffer{}
+      m_framebuffer(nullptr)
 {
 }
 
 RendererFramebufferObject::~RendererFramebufferObject()
 {
+    AssertExitMsg(m_framebuffer == nullptr, "framebuffer should have been destroyed");
 }
 
-RendererResult RendererFramebufferObject::AddAttachment(Texture::TextureInternalFormat format, bool is_depth_attachment)
+RendererResult RendererFramebufferObject::AddAttachment(Texture::TextureInternalFormat format)
 {
-    VkImageUsageFlags image_usage_flags = VK_IMAGE_USAGE_SAMPLED_BIT;
-
-    if (is_depth_attachment) {
-        image_usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    } else {
-        image_usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    }
-
     return AddAttachment(AttachmentImageInfo{
-        .image = std::make_unique<RendererImage>(
-            m_width,
-            m_height,
-            1,
-            format,
-            Texture::TextureType::TEXTURE_TYPE_2D,
-            RendererImage::InternalInfo{
-                .tiling = VK_IMAGE_TILING_OPTIMAL,
-                .usage_flags = image_usage_flags
-            },
-            nullptr
-        ),
+        .image = std::make_unique<RendererFramebufferImage2D>(m_width, m_height, format, nullptr),
         .image_view = nullptr,
         .sampler = nullptr,
         .image_needs_creation = true,
         .image_view_needs_creation = true,
         .sampler_needs_creation = true
-    }, format, is_depth_attachment);
+    }, format);
 }
 
-RendererResult RendererFramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, Texture::TextureInternalFormat format, bool is_depth_attachment)
+RendererResult RendererFramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, Texture::TextureInternalFormat format)
 {
-    VkImageAspectFlags image_aspect_flags = 0;
-
-    if (is_depth_attachment) {
-        image_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else {
-        image_aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
-    }
+    VkImageAspectFlags image_aspect_flags = (helpers::IsDepthTexture(format))
+        ? VK_IMAGE_ASPECT_DEPTH_BIT
+        : VK_IMAGE_ASPECT_COLOR_BIT;
 
     if (image_info.image_view == nullptr) {
         image_info.image_view = std::make_unique<RendererImageView>(image_aspect_flags);
@@ -124,6 +102,7 @@ RendererResult RendererFramebufferObject::Destroy(RendererDevice *device)
     RendererResult result = RendererResult::OK;
 
     vkDestroyFramebuffer(device->GetDevice(), m_framebuffer, nullptr);
+    m_framebuffer = nullptr;
 
     for (size_t i = 0; i < m_fbo_attachments.size(); i++) {
         if (m_fbo_attachments[i].sampler != nullptr)

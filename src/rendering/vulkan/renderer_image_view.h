@@ -19,10 +19,12 @@ public:
     inline VkImageView &GetImageView() { return m_image_view; }
     inline const VkImageView &GetImageView() const { return m_image_view; }
 
+    /* Create imageview independent of a RendererImage */
     RendererResult Create(RendererDevice *device,
         VkImage image,
         VkFormat format,
         VkImageViewType view_type);
+    /* Create imageview referencing a RendererImage */
     RendererResult Create(RendererDevice *device,
         RendererImage *image);
     RendererResult Destroy(RendererDevice *device);

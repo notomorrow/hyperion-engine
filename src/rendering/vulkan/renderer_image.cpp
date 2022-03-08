@@ -241,11 +241,6 @@ RendererResult RendererImage::Destroy(RendererDevice *device)
     HYPERION_RETURN_OK;
 }
 
-bool RendererImage::IsDepthStencilImage() const
-{
-    return Texture::GetBaseFormat(m_format) == Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH;
-}
-
 RendererResult RendererImage::ConvertTo32Bpp(
     RendererDevice *device,
     VkImageType image_type,

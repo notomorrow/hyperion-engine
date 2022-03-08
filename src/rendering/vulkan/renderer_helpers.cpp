@@ -3,6 +3,17 @@
 namespace hyperion {
 namespace helpers {
 
+
+bool IsDepthTexture(Texture::TextureInternalFormat fmt)
+{
+    return IsDepthTexture(Texture::GetBaseFormat(fmt));
+}
+
+bool IsDepthTexture(Texture::TextureBaseFormat fmt)
+{
+    return fmt == Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH;
+}
+
 VkFormat ToVkFormat(Texture::TextureInternalFormat fmt)
 {
     switch (fmt) {

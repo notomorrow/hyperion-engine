@@ -602,18 +602,13 @@ int main()
 
     // test image
     auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
-    RendererImage image(
+    RendererImage *image = new RendererTextureImage2D(
         texture->GetWidth(),
         texture->GetHeight(),
-        1,
         texture->GetInternalFormat(),
-        texture->GetTextureType(),
-        RendererImage::InternalInfo{
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        },
         texture->GetBytes()
     );
+
     RendererImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
     RendererSampler test_sampler(
         Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
@@ -693,6 +688,7 @@ int main()
     for (auto img : renderer.swapchain->images) {
         auto image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_COLOR_BIT);
 
+        /* Create imageview independent of a RendererImage */
         auto image_view_result = image_view->Create(
             device,
             img,
@@ -716,15 +712,11 @@ int main()
                         .image_view_needs_creation = false,
                         .sampler_needs_creation = true
                     },
-                    color_format, // unused
-                    false
+                    color_format // unused but will tell the fbo that it is not a depth texture
                 );
 
                 /* Now we add a depth buffer */
-                fbo.AddAttachment(
-                    depth_format,
-                    true
-                );
+                fbo.AddAttachment(depth_format);
             });
     }
 
@@ -800,16 +792,10 @@ int main()
             512,
             [color_format, depth_format](RendererFramebufferObject &fbo) {
                 /* Add color attachment */
-                fbo.AddAttachment(
-                    color_format,
-                    false
-                );
+                fbo.AddAttachment(color_format);
 
                 /* Now we add a depth buffer */
-                fbo.AddAttachment(
-                    depth_format,
-                    true
-                );
+                fbo.AddAttachment(depth_format);
             });
 
     add_pipeline_result = renderer.AddPipeline(std::move(fbo_pipeline_builder), &pipelines[1]);
@@ -846,7 +832,7 @@ int main()
 
     scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
 
-    auto image_create_result = image.Create(
+    auto image_create_result = image->Create(
         device,
         &renderer,
         RendererImage::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
@@ -854,7 +840,7 @@ int main()
     );
     AssertThrowMsg(image_create_result, "%s", image_create_result.message);
 
-    auto image_view_result = test_image_view.Create(device, &image);
+    auto image_view_result = test_image_view.Create(device, image);
     AssertThrowMsg(image_view_result, "%s", image_view_result.message);
 
     auto sampler_result = test_sampler.Create(device, &test_image_view);
@@ -965,7 +951,7 @@ int main()
     scene_data_descriptor_buffer.Destroy(device);
     test_image_view.Destroy(device);
     test_sampler.Destroy(device);
-    image.Destroy(device);
+    image->Destroy(device);
 
     shader.Destroy();
     mirror_shader.Destroy();

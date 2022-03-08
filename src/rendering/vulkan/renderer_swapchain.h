@@ -20,8 +20,6 @@ class RendererSwapchain {
     VkExtent2D ChooseSwapchainExtent();
 
     void RetrieveImageHandles();
-    //RendererResult CreateImageViews();
-    //RendererResult DestroyImageViews();
 
 public:
     struct DepthBuffer {
@@ -38,7 +36,6 @@ public:
     ~RendererSwapchain() = default;
 
     RendererResult Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices);
-    //RendererResult CreateFramebuffers(VkRenderPass *renderpass);
     RendererResult Destroy();
 
     std::vector<std::unique_ptr<RendererFramebufferObject>> framebuffers;
@@ -57,8 +54,6 @@ public:
 private:
     RendererDevice *renderer_device = nullptr;
     SwapchainSupportDetails support_details;
-
-    //std::vector<std::unique_ptr<RendererImageView>> image_views;
 };
 }; // namespace hyperion
 

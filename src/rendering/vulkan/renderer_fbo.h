@@ -29,8 +29,8 @@ public:
 
     inline VkFramebuffer GetFramebuffer() const { return m_framebuffer; }
 
-    RendererResult AddAttachment(Texture::TextureInternalFormat format, bool is_depth_attachment);
-    RendererResult AddAttachment(AttachmentImageInfo &&, Texture::TextureInternalFormat format, bool is_depth_attachment);
+    RendererResult AddAttachment(Texture::TextureInternalFormat format);
+    RendererResult AddAttachment(AttachmentImageInfo &&, Texture::TextureInternalFormat format);
     inline std::vector<AttachmentImageInfo> &GetAttachmentImageInfos() { return m_fbo_attachments; }
     inline const std::vector<AttachmentImageInfo> &GetAttachmentImageInfos() const
         { return m_fbo_attachments; }
