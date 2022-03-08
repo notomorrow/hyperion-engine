@@ -8,6 +8,8 @@
 #include <cstdlib>
 #include <cstddef>
 #include <cmath>
+#include <limits>
+#include <type_traits>
 
 namespace hyperion {
 
@@ -17,25 +19,33 @@ public:
     const static double EPSILON;
 
     static inline Vector2 SafeValue(const Vector2 &value)
-        { return Vector2::Max(Vector2::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest()); }
+        { return Vector2::Max(Vector2::Min(value, MaxSafeValue<decltype(value[0])>()), MinSafeValue<decltype(value[0])>()); }
 
     static inline Vector3 SafeValue(const Vector3 &value)
-        { return Vector3::Max(Vector3::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest()); }
+        { return Vector3::Max(Vector3::Min(value, MaxSafeValue<decltype(value[0])>()), MinSafeValue<decltype(value[0])>()); }
 
     static inline Vector4 SafeValue(const Vector4 &value)
-        { return Vector4::Max(Vector4::Min(value, std::numeric_limits<float>::max()), std::numeric_limits<float>::lowest()); }
+        { return Vector4::Max(Vector4::Min(value, MaxSafeValue<decltype(value[0])>()), MinSafeValue<decltype(value[0])>()); }
 
     template <typename T>
     static inline T SafeValue(const T &value)
         { return MathUtil::Max(MathUtil::Min(value, MathUtil::MaxSafeValue<T>()), MathUtil::MinSafeValue<T>()); }
 
     template <typename T>
-    static inline constexpr T MaxSafeValue()
-        { return std::numeric_limits<T>::max(); }
+    static inline constexpr typename std::enable_if_t<std::is_enum_v<T>, std::underlying_type_t<T>>
+    MaxSafeValue() { return std::numeric_limits<std::underlying_type_t<T>>::max(); }
 
     template <typename T>
-    static inline constexpr T MinSafeValue()
-        { return std::numeric_limits<T>::lowest(); }
+    static inline constexpr typename std::enable_if_t<std::is_enum_v<T>, std::underlying_type_t<T>>
+    MinSafeValue() { return std::numeric_limits<std::underlying_type_t<T>>::lowest(); }
+
+    template <typename T>
+    static inline constexpr typename std::enable_if_t<!std::is_enum_v<T>, T>
+    MaxSafeValue() { return std::numeric_limits<T>::max(); }
+
+    template <typename T>
+    static inline constexpr typename std::enable_if_t<!std::is_enum_v<T>, T>
+    MinSafeValue() { return std::numeric_limits<T>::lowest(); }
 
     template <typename T>
     static inline constexpr T NaN()

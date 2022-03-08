@@ -7,8 +7,7 @@ Matrix4::Matrix4()
 {
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            int index = i * 4 + j;
-            values[index] = !(j - i);
+            values[i * 4 + j] = !(j - i);
         }
     }
 }
@@ -19,8 +18,8 @@ Matrix4::Matrix4(float *v)
 }
 
 Matrix4::Matrix4(const Matrix4 &other)
+    : values(other.values)
 {
-    operator=(other);
 }
 
 float Matrix4::Determinant() const
@@ -124,17 +123,17 @@ Matrix4 &Matrix4::operator=(const Matrix4 &other)
 Matrix4 Matrix4::operator+(const Matrix4 &other) const
 {
     Matrix4 result(*this);
-    for (int i = 0; i < 16; i++) {
-        result.values[i] += other.values[i];
-    }
+    result += other;
+
     return result;
 }
 
 Matrix4 &Matrix4::operator+=(const Matrix4 &other)
 {
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < values.size(); i++) {
         values[i] += other.values[i];
     }
+
     return *this;
 }
 
@@ -149,21 +148,22 @@ Matrix4 Matrix4::operator*(const Matrix4 &other) const
             }
         }
     }
+
     return result;
 }
 
 Matrix4 &Matrix4::operator*=(const Matrix4 &other)
 {
     (*this) = operator*(other);
+
     return *this;
 }
 
 Matrix4 Matrix4::operator*(float scalar) const
 {
     Matrix4 result(*this);
-    for (int i = 0; i < 16; i++) {
-        result.values[i] *= scalar;
-    }
+    result *= scalar;
+
     return result;
 }
 
@@ -172,17 +172,13 @@ Matrix4 &Matrix4::operator*=(float scalar)
     for (int i = 0; i < 16; i++) {
         values[i] *= scalar;
     }
+
     return *this;
 }
 
 bool Matrix4::operator==(const Matrix4 &other) const
 {
-    for (int i = 0; i < 16; i++) {
-        if (values[i] != other.values[i]) {
-            return false;
-        }
-    }
-    return true;
+    return values == other.values;
 }
 
 Matrix4 Matrix4::Zeroes()
@@ -201,14 +197,7 @@ Matrix4 Matrix4::Ones()
 
 Matrix4 Matrix4::Identity()
 {
-    Matrix4 result;
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            int index = i * 4 + j;
-            result.values[index] = !(j - i);
-        }
-    }
-    return result;
+    return Matrix4(); // constructor fills out identity matrix
 }
 
 std::ostream &operator<<(std::ostream &os, const Matrix4 &mat)

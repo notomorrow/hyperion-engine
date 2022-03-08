@@ -78,7 +78,7 @@ void MatrixUtil::ToPerspective(Matrix4 &mat, float fov, int w, int h, float n, f
     mat(0, 3) = 0.0f;
 
     mat(1, 0) = 0.0f;
-    mat(1, 1) = -(1.0f / (tan_half_fov));
+    mat(1, 1) = (1.0f / (tan_half_fov));
     mat(1, 2) = 0.0f;
     mat(1, 3) = 0.0f;
 

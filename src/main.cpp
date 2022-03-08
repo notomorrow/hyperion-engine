@@ -561,8 +561,10 @@ int main()
 
     SystemEvent event;
 
-    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/monkey/monkey.obj");
-    auto mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
+    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/cube.obj");
+    auto monkey_mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
+    auto cube_mesh = MeshFactory::CreateCube();
+    Material my_material;
 
     /* Max frames/sync objects to have available to render to. This prevents the graphics
      * pipeline from stalling when waiting for device upload/download. */
@@ -595,10 +597,11 @@ int main()
     );
 
     /* Descriptor sets */
-    RendererGPUBuffer test_gpu_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    RendererGPUBuffer matrices_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT),
+                      scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     // test image
-    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
+    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
     RendererImage image(
         texture->GetWidth(),
         texture->GetHeight(),
@@ -623,7 +626,7 @@ int main()
     shader.CreateProgram("main");
 
     RendererShader mirror_shader;
-    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/mirror_vert.spv").Read() });
+    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
     mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/mirror_frag.spv").Read() });
     mirror_shader.CreateProgram("main");
 
@@ -638,12 +641,12 @@ int main()
     root_pipeline_builder
         .Shader(&shader)
         .VertexAttributes(RendererMeshInputAttributeSet({
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
+            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
+            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
+            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
+            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
+            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
+            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
         }))
         .RenderPass([&renderer, color_format, depth_format](RendererRenderPass &render_pass) {
             /* For our color attachment */
@@ -734,12 +737,12 @@ int main()
     fbo_pipeline_builder
         .Shader(&mirror_shader)
         .VertexAttributes(RendererMeshInputAttributeSet({
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
-            mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
+            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
+            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
+            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
+            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
+            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
+            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
         }))
         .RenderPass([&renderer, color_format, depth_format](RendererRenderPass &render_pass) {
             /* For our color attachment */
@@ -814,8 +817,9 @@ int main()
 
     renderer.descriptor_pool
         .AddDescriptorSet()
-        .AddDescriptor(std::make_unique<RendererBufferDescriptor>(0, non_owning_ptr(&test_gpu_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT))
-        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(1, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+        .AddDescriptor(std::make_unique<RendererBufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
+        .AddDescriptor(std::make_unique<RendererBufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
+        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
 
     renderer.descriptor_pool
         .AddDescriptorSet()
@@ -827,11 +831,20 @@ int main()
         ));
 
     // test data for descriptors
-    struct MainShaderData {
+    struct MatricesBlock {
         alignas(16) Matrix4 model;
-        alignas(16) Matrix4 pv;
-    };
-    test_gpu_buffer.Create(device, sizeof(MainShaderData));
+        alignas(16) Matrix4 view;
+        alignas(16) Matrix4 projection;
+    } matrices_block;
+
+    matrices_descriptor_buffer.Create(device, sizeof(MatricesBlock));
+
+    struct SceneDataBlock {
+        alignas(16) Vector3 camera_position;
+        alignas(16) Vector3 light_direction;
+    } scene_data_block;
+
+    scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
 
     auto image_create_result = image.Create(
         device,
@@ -863,9 +876,6 @@ int main()
 
     //float data[] = { 1.0f, 0.0f, 0.0f, 1.0f };
     //set.GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);
-
-    Transform tf;
-    tf.SetScale(Vector3(0.25f));
 
     auto *input_manager = new InputManager(window);
     input_manager->SetWindow(window);
@@ -907,14 +917,15 @@ int main()
         timer += delta_time;
 
         camera->Update(delta_time);
-        MainShaderData shad_data;
 
-        Transform tf2;
-        tf2.SetTranslation(Vector3(6, 0, 6));
+        Transform transform(Vector3(0, 0, 0), Vector3(1.0f), Quaternion(Vector3::UnitY(), timer));
 
-        shad_data.model = tf.GetMatrix();
-        shad_data.pv = camera->GetViewProjectionMatrix();
+        matrices_block.model = transform.GetMatrix();
+        matrices_block.view = camera->GetViewMatrix();
+        matrices_block.projection = camera->GetProjectionMatrix();
 
+        scene_data_block.camera_position = camera->GetTranslation();
+        scene_data_block.light_direction = Vector3(0.5, 0.5, 0).Normalize();
 
         RendererPipeline *pl = pipelines[0];
         RendererPipeline *fbo_pl = pipelines[1];
@@ -922,16 +933,17 @@ int main()
         frame = renderer.GetNextFrame();
         renderer.BeginFrame(frame);
         
-        test_gpu_buffer.Copy(device, sizeof(shad_data), (void *)&shad_data);
+        matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
+        scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
 
         fbo_pl->StartRenderPass(frame->command_buffer, 0);
         renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, fbo_pl->layout, 0, 1);
-        mesh->RenderVk(frame, &renderer, nullptr);
+        monkey_mesh->RenderVk(frame, &renderer, nullptr);
         fbo_pl->EndRenderPass(frame->command_buffer, 0);
 
         pl->StartRenderPass(frame->command_buffer, renderer.acquired_frames_index);
         renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, pl->layout);
-        mesh->RenderVk(frame, &renderer, nullptr);
+        cube_mesh->RenderVk(frame, &renderer, nullptr);
         pl->EndRenderPass(frame->command_buffer, renderer.acquired_frames_index);
 
         renderer.EndFrame(frame);
@@ -946,9 +958,11 @@ int main()
 
     renderer.WaitDeviceIdle();
 
-    mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
+    monkey_mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
+    cube_mesh.reset();
 
-    test_gpu_buffer.Destroy(device);
+    matrices_descriptor_buffer.Destroy(device);
+    scene_data_descriptor_buffer.Destroy(device);
     test_image_view.Destroy(device);
     test_sampler.Destroy(device);
     image.Destroy(device);

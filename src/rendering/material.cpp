@@ -106,10 +106,7 @@ Material::Material()
 {
     for (size_t i = 0; i < default_parameters.Size(); i++) {
         auto pair = default_parameters.KeyValueAt(i);
-
-        if (default_parameters.Has(pair.first)) {
-            m_params.Set(pair.first, pair.second);
-        }
+        m_params.Set(pair.first, pair.second);
     }
 }
 

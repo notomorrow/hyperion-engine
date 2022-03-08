@@ -2,6 +2,7 @@
 #define VECTOR2_H
 
 #include "../hash_code.h"
+#include "../util.h"
 
 #include <ostream>
 #include <cmath>
@@ -11,7 +12,10 @@ namespace hyperion {
 class Vector2 {
     friend std::ostream &operator<<(std::ostream &out, const Vector2 &vec);
 public:
-    float x, y;
+    union {
+        struct { float x, y; };
+        float values[2];
+    };
 
     Vector2();
     Vector2(float x, float y);
@@ -24,6 +28,12 @@ public:
     inline float GetY() const { return y; }
     inline float &GetY() { return y; }
     inline Vector2 &SetY(float y) { this->y = y; return *this; }
+    
+    constexpr inline float operator[](size_t index) const
+        { return values[index]; }
+
+    constexpr inline float &operator[](size_t index)
+        { return values[index]; }
 
     Vector2 &operator=(const Vector2 &other);
     Vector2 operator+(const Vector2 &other) const;

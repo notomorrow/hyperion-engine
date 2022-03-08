@@ -8,14 +8,13 @@
 #include <array>
 
 namespace hyperion {
-HYP_PACK_BEGIN
 class Matrix4 {
     friend std::ostream &operator<<(std::ostream &os, const Matrix4 &mat);
 public:
     std::array<float, 16> values;
 
     Matrix4();
-    Matrix4(float *v);
+    explicit Matrix4(float *v);
     Matrix4(const Matrix4 &other);
 
     float Determinant() const;
@@ -52,8 +51,7 @@ public:
 
         return hc;
     }
-}
-HYP_PACK_END
+};
 } // namespace hyperion
 
 #endif

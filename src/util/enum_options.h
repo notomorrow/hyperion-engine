@@ -19,28 +19,32 @@ public:
     using EnumValuePair_t = std::pair<EnumType, ValueType>;
 
     // convert from attachment (2^x) into ordinal (0-5) for use as an array index
-    static inline constexpr Ordinal_t EnumToOrdinal(EnumOption_t option)
+    static inline constexpr uint64_t EnumToOrdinal(uint64_t option)
         { return MathUtil::FastLog2(option); }
 
     // convert from ordinal (0-5) into power-of-two for use as bit flags
-    static inline constexpr EnumOption_t OrdinalToEnum(Ordinal_t ordinal)
-        { return EnumOption_t(1 << ordinal); }
+    static inline constexpr uint64_t OrdinalToEnum(uint64_t ordinal)
+        { return 1ULL << ordinal; }
+
+    static_assert(Sz != 0, "EnumOptions cannot have size of zero");
+    static_assert(
+        OrdinalToEnum(Sz - 1) < MathUtil::MaxSafeValue<EnumType>(),
+        "Size too large; enum conversion would cause overflow. "
+        "Try changing the enum's underlying type to a larger sized data type?"
+    );
 
     EnumOptions()
-        : m_flags(0)
+        : m_values{}
     {
-        static_assert(Sz != 0, "EnumOptions cannot have size of zero");
     }
 
     EnumOptions(const EnumValueArray_t &array)
-        : m_values(array),
-        m_flags(0)
+        : m_values(array)
     {
-        UpdateFlags();
     }
 
     EnumOptions(const std::vector<EnumValuePair_t> &pairs)
-        : m_flags(0)
+        : m_values{}
     {
         for (const auto &item : pairs) {
             Set(item.first, item.second);
@@ -48,8 +52,7 @@ public:
     }
 
     EnumOptions(const EnumOptions &other)
-        : m_values(other.m_values),
-        m_flags(other.m_flags)
+        : m_values(other.m_values)
     {
         static_assert(Sz != 0, "EnumOptions cannot have size of zero");
     }
@@ -57,20 +60,14 @@ public:
     EnumOptions &operator=(const EnumOptions &other)
     {
         m_values = other.m_values;
-        m_flags = other.m_flags;
 
         return *this;
     }
 
-    ~EnumOptions()
-    {
-    }
-
-    inline constexpr bool HasAt(size_t index) const
-        { return m_flags & OrdinalToEnum(index); }
+    ~EnumOptions() = default;
 
     inline constexpr EnumValuePair_t KeyValueAt(size_t index) const
-        { return std::make_pair(OrdinalToEnum(index), m_values[index]); }
+        { return std::make_pair(EnumOption_t(OrdinalToEnum(index)), m_values[index]); }
 
     inline constexpr EnumType KeyAt(size_t index) const
         { return OrdinalToEnum(index); }
@@ -94,7 +91,6 @@ public:
         AssertThrow(ord < m_values.size());
 
         m_values[ord] = value;
-        m_flags |= uint64_t(enum_key);
 
         return *this;
     }
@@ -106,13 +102,9 @@ public:
         AssertThrow(ord < m_values.size());
 
         m_values[ord] = ValueType();
-        m_flags &= ~uint64_t(enum_key);
 
         return *this;
     }
-
-    inline constexpr bool Has(EnumOption_t enum_key) const
-        { return m_flags & uint64_t(enum_key); }
 
     inline constexpr size_t Size() const
         { return m_values.size(); }
@@ -120,8 +112,6 @@ public:
     inline HashCode GetHashCode() const
     {
         HashCode hc;
-
-        hc.Add(m_flags);
 
         for (const auto &it : m_values) {
             hc.Add(it.GetHashCode());
@@ -132,16 +122,6 @@ public:
 
 private:
     EnumValueArray_t m_values;
-    uint64_t m_flags;
-
-    inline void UpdateFlags()
-    {
-        m_flags = 0;
-
-        for (int i = 0; i < m_values.size(); i++) {
-            m_flags |= OrdinalToEnum(i);
-        }
-    }
 };
 
 } // namespace hyperion

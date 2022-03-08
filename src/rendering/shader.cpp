@@ -94,14 +94,15 @@ void Shader::InitUniforms()
         std::make_pair(MaterialTextureKey::MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP, "HasTerrain2ParallaxMap")
     });
 
-    for (int i = 0; i < MATERIAL_MAX_TEXTURES; i++) {
-        if (!Material::material_texture_names.HasAt(i)) {
+    for (int i = 0; i < Material::material_texture_names.Size(); i++) {
+        auto pair = Material::material_texture_names.KeyValueAt(i);
+
+        if (pair.second == nullptr) {
             m_uniform_textures[i] = -1;
             m_uniform_has_textures[i] = -1;
             continue;
         }
 
-        auto pair = Material::material_texture_names.KeyValueAt(i);
         m_uniform_textures[i] = m_uniforms.Acquire(pair.second, Uniform((const Texture*)nullptr)).id;
         m_uniform_has_textures[i] = m_uniforms.Acquire(has_texture_names.Get(pair.first)).id;
     }
@@ -370,16 +371,10 @@ void Shader::ApplyMaterial(const Material &mat)
 
     SetUniform(m_uniform_uv_scale, Vector2(mat.GetParameter(MATERIAL_PARAMETER_UV_SCALE)[0], mat.GetParameter(MATERIAL_PARAMETER_UV_SCALE)[1]));
 
-    for (size_t i = 0; i < MATERIAL_MAX_TEXTURES; i++) {
-        bool has_texture = mat.GetTextures().HasAt(i);
+    for (size_t i = 0; i < mat.GetTextures().Size(); i++) {
+        auto texture = mat.GetTextures().ValueAt(i).m_texture.get();
 
-        if (has_texture) {
-            auto texture = mat.GetTextures().ValueAt(i).m_texture.get();
-
-            if (texture == nullptr) {
-                continue;
-            }
-
+        if (texture != nullptr) {
             texture->Prepare();
 
             if (m_uniform_textures[i] != -1) {
@@ -388,7 +383,7 @@ void Shader::ApplyMaterial(const Material &mat)
         }
 
         if (m_uniform_has_textures[i] != -1) {
-            SetUniform(m_uniform_has_textures[i], int(has_texture));
+            SetUniform(m_uniform_has_textures[i], int(texture != nullptr));
         }
     }
 }

@@ -16,7 +16,10 @@ class Quaternion;
 class Vector3 {
     friend std::ostream &operator<<(std::ostream &out, const Vector3 &vec);
 public:
-    float x, y, z;
+    union {
+        struct { float x, y, z; };
+        float values[3];
+    };
 
     Vector3();
     Vector3(float x, float y, float z);
@@ -33,24 +36,11 @@ public:
     inline float &GetZ() { return z; }
     inline Vector3 &SetZ(float z) { this->z = z; return *this; }
 
-
     constexpr inline float operator[](size_t index) const
-    {
-        if (index == 0) return x;
-        if (index == 1) return y;
-        if (index == 2) return z;
-
-        AssertThrowMsg(false, "Index out of bounds");
-    }
+        { return values[index]; }
 
     constexpr inline float &operator[](size_t index)
-    {
-        if (index == 0) return x;
-        if (index == 1) return y;
-        if (index == 2) return z;
-
-        AssertThrowMsg(false, "Index out of bounds");
-    }
+        { return values[index]; }
 
     Vector3 &operator=(const Vector3 &other);
     Vector3 operator+(const Vector3 &other) const;
