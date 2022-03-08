@@ -46,6 +46,7 @@ class VkRenderer {
 
     /* Setup debug mode */
     RendererResult SetupDebug();
+    RendererResult SetupDebugMessenger();
 
     RendererResult AllocatePendingFrames();
     RendererResult CleanupPendingFrames();
@@ -119,6 +120,10 @@ private:
 
     std::set<uint32_t> queue_families;
     std::vector<const char *> validation_layers;
+
+#ifndef HYPERION_BUILD_RELEASE
+    VkDebugUtilsMessengerEXT debug_messenger;
+#endif
 };
 
 } // namespace hyperion

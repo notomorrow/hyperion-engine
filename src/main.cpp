@@ -746,7 +746,7 @@ int main()
 
 
     RendererPipeline::Builder fbo_pipeline_builder;
-    
+
     fbo_pipeline_builder
         .Shader(&mirror_shader)
         .VertexAttributes(RendererMeshInputAttributeSet({
@@ -832,7 +832,7 @@ int main()
         .AddDescriptorSet()
         .AddDescriptor(std::make_unique<RendererBufferDescriptor>(0, non_owning_ptr(&test_gpu_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT))
         .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(1, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
-    
+
     renderer.descriptor_pool
         .AddDescriptorSet()
         .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(
@@ -946,7 +946,7 @@ int main()
         fbo_pl->EndRenderPass(frame->command_buffer, 0);
 
         pl->StartRenderPass(frame->command_buffer, renderer.acquired_frames_index);
-        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, pl->layout, 0, 2);
+        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, pl->layout);
         mesh->RenderVk(frame, &renderer, nullptr);
         pl->EndRenderPass(frame->command_buffer, renderer.acquired_frames_index);
 

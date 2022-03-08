@@ -43,6 +43,7 @@ InputManager::~InputManager()
 
 void InputManager::CheckEvent(SystemEvent *event) {
     switch (event->GetType()) {
+        DebugLog(LogType::Debug, "Recv event %d\n", event->GetType());
         case SystemEventType::EVENT_KEYDOWN:
             this->KeyDown(event->GetKeyCode());
             break;
@@ -57,6 +58,7 @@ void InputManager::CheckEvent(SystemEvent *event) {
             break;
         case SystemEventType::EVENT_MOUSEMOTION:
             this->UpdateMousePosition();
+            break;
         default:
             break;
     }
