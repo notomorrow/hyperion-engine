@@ -11,6 +11,5 @@ layout(binding = 1) uniform sampler2D tex;
 layout(set = 1, binding = 0) uniform sampler2D fboTex;
 
 void main() {
-    outColor = vec4(1.0, 0.0, 0.0, 1.0);
-    outColor = vec4(texture(fboTex, v_texcoord0).rgb, 1.0);
+    outColor = vec4(1.0, 0.0, 0.0, 1.0);//vec4(texture(fboTex, v_texcoord0).rgb, 1.0);
 }

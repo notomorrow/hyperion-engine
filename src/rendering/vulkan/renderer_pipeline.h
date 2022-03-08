@@ -214,9 +214,6 @@ public:
 private:
     void Rebuild(RendererDescriptorPool *descriptor_pool);
 
-    VkBuffer *intern_vertex_buffers = nullptr;
-    uint64_t  intern_vertex_buffers_size = 0;
-
     std::vector<VkDynamicState> dynamic_states;
 
     VkViewport viewport;
@@ -231,7 +228,6 @@ private:
     ConstructionInfo m_construction_info;
 
     std::vector<VkVertexInputAttributeDescription> BuildVertexAttributes(const RendererMeshInputAttributeSet &attribute_set);
-    void SetVertexBuffers(std::vector<RendererVertexBuffer> &vertex_buffers);
 };
 
 }; // namespace hyperion

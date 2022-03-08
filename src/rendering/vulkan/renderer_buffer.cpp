@@ -97,11 +97,11 @@ void RendererGPUBuffer::Destroy(RendererDevice *device)
 {
     VkDevice vk_device = device->GetDevice();
 
-    vkFreeMemory(vk_device, memory, nullptr);
-    memory = nullptr;
-
     vkDestroyBuffer(vk_device, buffer, nullptr);
     buffer = nullptr;
+
+    vkFreeMemory(vk_device, memory, nullptr);
+    memory = nullptr;
 }
 
 
@@ -161,11 +161,11 @@ RendererResult RendererGPUImage::Destroy(RendererDevice *device)
 {
     VkDevice vk_device = device->GetDevice();
 
-    vkFreeMemory(vk_device, memory, nullptr);
-    memory = nullptr;
-
     vkDestroyImage(vk_device, image, nullptr);
     image = nullptr;
+
+    vkFreeMemory(vk_device, memory, nullptr);
+    memory = nullptr;
 
     HYPERION_RETURN_OK;
 }

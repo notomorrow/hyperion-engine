@@ -14,19 +14,14 @@
 
 namespace hyperion {
 
-RendererPipeline::RendererPipeline(RendererDevice *_device,
-    ConstructionInfo &&construction_info)
-    : intern_vertex_buffers(nullptr),
-      intern_vertex_buffers_size(0),
-      m_construction_info(std::move(construction_info))
+RendererPipeline::RendererPipeline(RendererDevice *_device, ConstructionInfo &&construction_info)
+    : m_construction_info(std::move(construction_info))
 {
     AssertExit(m_construction_info.shader != nullptr);
     AssertExit(m_construction_info.fbos.size() != 0);
 
     this->primitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     this->device = _device;
-    // this->intern_vertex_buffers = nullptr;
-    // this->intern_vertex_buffers_size = 0;
 
     size_t width  = m_construction_info.fbos[0]->GetWidth();
     size_t height = m_construction_info.fbos[0]->GetHeight();
@@ -34,8 +29,8 @@ RendererPipeline::RendererPipeline(RendererDevice *_device,
     this->SetScissor(0, 0, width, height);
 
     std::vector<VkDynamicState> default_dynamic_states = {
-            VK_DYNAMIC_STATE_VIEWPORT,
-            VK_DYNAMIC_STATE_SCISSOR,
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
     };
     this->SetDynamicStates(default_dynamic_states);
 
@@ -77,23 +72,6 @@ std::vector<VkDynamicState> RendererPipeline::GetDynamicStates() {
 void RendererPipeline::UpdateDynamicStates(VkCommandBuffer cmd) {
     vkCmdSetViewport(cmd, 0, 1, &this->viewport);
     vkCmdSetScissor(cmd, 0, 1, &this->scissor);
-}
-
-void RendererPipeline::SetVertexBuffers(std::vector<RendererVertexBuffer> &vertex_buffers) {
-    if (intern_vertex_buffers != nullptr) {
-        delete[] intern_vertex_buffers;
-    }
-    /* Because C++ can have some overhead with vector implementations we'll just
-     * copy the direct VkBuffer's to a memory chunk so we are guaranteed to have near
-     * linear complexity. */
-    uint32_t size = vertex_buffers.size();
-    this->intern_vertex_buffers_size = size;
-    this->intern_vertex_buffers = new VkBuffer[size];
-    /* We should never run out of memory here... */
-    AssertThrowMsg(this->intern_vertex_buffers != nullptr, "Could not allocate memory!\n");
-    for (uint32_t i = 0; i < size; i++) {
-        memcpy(&this->intern_vertex_buffers[i], &vertex_buffers[i].memory, sizeof(VkBuffer));
-    }
 }
 
 std::vector<VkVertexInputAttributeDescription> RendererPipeline::BuildVertexAttributes(const RendererMeshInputAttributeSet &attribute_set)
@@ -148,57 +126,6 @@ void RendererPipeline::StartRenderPass(VkCommandBuffer cmd, size_t index) {
 void RendererPipeline::EndRenderPass(VkCommandBuffer cmd, size_t index) {
     m_construction_info.render_pass->End(cmd);
 }
-
-/*RendererResult RendererPipeline::CreateRenderPass(VkSampleCountFlagBits sample_count) {
-    AssertExit(this->swapchain->depth_buffer.image != nullptr);
-
-    AssertExit(render_pass == nullptr);
-
-    render_pass = new RendererRenderPass();
-
-    render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
-        .attachment = std::make_unique<RendererAttachment>(
-            this->swapchain->image_format,
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            0, 
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        ),
-        .is_depth_attachment = false
-    });
-
-    render_pass->AddAttachment(RendererRenderPass::AttachmentInfo{
-        .attachment = std::make_unique<RendererAttachment>(
-            this->swapchain->depth_buffer.image->GetImageFormat(),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            1,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        ),
-        .is_depth_attachment = true
-    });
-
-    render_pass->AddDependency(VkSubpassDependency{
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        .srcAccessMask = 0,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
-    });
-
-    HYPERION_BUBBLE_ERRORS(render_pass->Create(this->device));
-
-    DebugLog(LogType::Debug, "Renderpass created!\n");
-
-    HYPERION_RETURN_OK;
-}*/
 
 void RendererPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
                                           std::vector<VkVertexInputAttributeDescription> &attribs)
@@ -352,7 +279,8 @@ void RendererPipeline::Rebuild(RendererDescriptorPool *descriptor_pool)
     DebugLog(LogType::Info, "Created graphics pipeline!\n");
 }
 
-void RendererPipeline::Destroy() {
+void RendererPipeline::Destroy()
+{
     VkDevice render_device = this->device->GetDevice();
 
     for (auto &fbo : m_construction_info.fbos) {
@@ -362,10 +290,6 @@ void RendererPipeline::Destroy() {
 
     AssertThrow(m_construction_info.render_pass->Destroy(this->device));
     m_construction_info.render_pass.reset();
-
-    if (intern_vertex_buffers != nullptr) {
-        delete[] intern_vertex_buffers;
-    }
 
     DebugLog(LogType::Info, "Destroying pipeline!\n");
 
