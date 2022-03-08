@@ -16,6 +16,9 @@ namespace helpers {
 //static VkFormat ToVkFormat(Texture::TextureInternalFormat fmt);
 //static VkImageType ToVkType(Texture::TextureType type);
 
+bool IsDepthTexture(Texture::TextureInternalFormat fmt);
+bool IsDepthTexture(Texture::TextureBaseFormat fmt);
+
 class SingleTimeCommands {
 public:
     inline void Push(const std::function<RendererResult(VkCommandBuffer)> &fn)

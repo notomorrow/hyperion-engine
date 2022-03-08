@@ -34,7 +34,8 @@ public:
         const LayoutTransferStateBase &transfer_to);
     RendererResult Destroy(RendererDevice *device);
 
-    bool IsDepthStencilImage() const;
+    inline bool IsDepthStencilImage() const
+        { return helpers::IsDepthTexture(m_format); }
 
     inline RendererGPUImage *GetGPUImage() { return m_image; }
     inline const RendererGPUImage *GetGPUImage() const { return m_image; }
@@ -134,6 +135,101 @@ private:
     RendererStagingBuffer *m_staging_buffer;
     RendererGPUImage *m_image;
 };
+
+class RendererTextureImage : public RendererImage {
+public:
+    RendererTextureImage(
+        size_t width, size_t height, size_t depth,
+        Texture::TextureInternalFormat format,
+        Texture::TextureType type,
+        unsigned char *bytes
+    ) : RendererImage(
+        width,
+        height,
+        depth,
+        format,
+        type,
+        RendererImage::InternalInfo{
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+        },
+        bytes
+    ) {}
+};
+
+class RendererTextureImage2D : public RendererTextureImage {
+public:
+    RendererTextureImage2D(
+        size_t width, size_t height,
+        Texture::TextureInternalFormat format,
+        unsigned char *bytes
+    ) : RendererTextureImage(
+        width,
+        height,
+        1,
+        format,
+        Texture::TextureType::TEXTURE_TYPE_2D,
+        bytes
+    ) {}
+};
+
+class RendererTextureImage3D : public RendererTextureImage {
+public:
+    RendererTextureImage3D(
+        size_t width, size_t height, size_t depth,
+        Texture::TextureInternalFormat format,
+        unsigned char *bytes
+    ) : RendererTextureImage(
+        width,
+        height,
+        depth,
+        format,
+        Texture::TextureType::TEXTURE_TYPE_3D,
+        bytes
+    ) {}
+};
+
+class RendererFramebufferImage : public RendererImage {
+public:
+    RendererFramebufferImage(
+        size_t width, size_t height, size_t depth,
+        Texture::TextureInternalFormat format,
+        Texture::TextureType type,
+        unsigned char *bytes
+    ) : RendererImage(
+        width,
+        height,
+        depth,
+        format,
+        type,
+        RendererImage::InternalInfo{
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage_flags = VkImageUsageFlags(((Texture::GetBaseFormat(format) == Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH)
+                ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+                : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                | VK_IMAGE_USAGE_SAMPLED_BIT)
+        },
+        bytes
+    ) {}
+};
+
+class RendererFramebufferImage2D : public RendererFramebufferImage {
+public:
+    RendererFramebufferImage2D(
+        size_t width, size_t height,
+        Texture::TextureInternalFormat format,
+        unsigned char *bytes
+    ) : RendererFramebufferImage(
+        width,
+        height,
+        1,
+        format,
+        Texture::TextureType::TEXTURE_TYPE_2D,
+        bytes
+    ) {}
+};
+
+
 } // namespace hyperion
 
 #endif
