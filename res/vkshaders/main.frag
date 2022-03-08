@@ -8,7 +8,6 @@ layout(location=6) in vec3 v_light_direction;
 layout(location=7) in vec3 v_camera_position;
 
 layout(location=0) out vec4 outColor;
-layout(binding = 2) uniform sampler2D tex;
 
 layout(binding = 2) uniform MaterialBlock {
     vec3 camera_position;

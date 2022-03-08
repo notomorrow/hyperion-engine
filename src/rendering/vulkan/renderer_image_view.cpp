@@ -21,7 +21,8 @@ RendererResult RendererImageView::Create(RendererDevice *device,
     VkImage image,
     VkFormat format,
     VkImageViewType view_type,
-    size_t num_mipmaps)
+    size_t num_mipmaps,
+    size_t num_faces)
 {
 
     VkImageViewCreateInfo view_info{};
@@ -39,7 +40,7 @@ RendererResult RendererImageView::Create(RendererDevice *device,
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.levelCount = num_mipmaps;
     view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = 1;
+    view_info.subresourceRange.layerCount = num_faces;
 
     HYPERION_VK_CHECK_MSG(vkCreateImageView(device->GetDevice(), &view_info, nullptr, &m_image_view), "Failed to create image view");
 
@@ -57,7 +58,8 @@ RendererResult RendererImageView::Create(RendererDevice *device,
         image->GetGPUImage()->image,
         image->GetImageFormat(),
         ToVkImageViewType(image->GetTextureType()),
-        image->GetNumMipmaps()
+        image->GetNumMipmaps(),
+        image->GetNumFaces()
     );
 }
 
