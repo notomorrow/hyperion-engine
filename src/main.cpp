@@ -561,8 +561,8 @@ int main()
 
     SystemEvent event;
 
-
-    auto mesh = MeshFactory::CreateCube();
+    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/mitsuba.obj");
+    auto mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
 
     /* Max frames/sync objects to have available to render to. This prevents the graphics
      * pipeline from stalling when waiting for device upload/download. */
@@ -598,7 +598,7 @@ int main()
     RendererGPUBuffer test_gpu_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     // test image
-    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
+    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
     RendererImage image(
         texture->GetWidth(),
         texture->GetHeight(),
@@ -612,7 +612,10 @@ int main()
         texture->GetBytes()
     );
     RendererImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
-    RendererSampler test_sampler(Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR, Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE);
+    RendererSampler test_sampler(
+        Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
+        Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+    );
 
     RendererShader shader;
     shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
