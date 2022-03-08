@@ -142,21 +142,21 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL RendererDebugCallback(
     LogType lt = LogType::Info;
     switch (severity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            lt = LogType::Debug;
+            lt = LogType::RenDebug;
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            lt = LogType::Warn;
+            lt = LogType::RenWarn;
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            lt = LogType::Error;
+            lt = LogType::RenError;
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            lt = LogType::Info;
+            lt = LogType::RenInfo;
             break;
         default:
             break;
     }
-    DebugLog(lt, "Vulkan: [%s, %d]:\n\t%s\n",
+    DebugLogRaw(lt, "Vulkan: [%s, %d]:\n\t%s\n",
              callback_data->pMessageIdName, callback_data->messageIdNumber, callback_data->pMessage);
     return VK_FALSE;
 }
@@ -291,7 +291,7 @@ RendererResult VkRenderer::SetupDebugMessenger() {
     auto result = CreateDebugUtilsMessengerEXT(this->instance, &messenger_info, nullptr, &this->debug_messenger);
     if (result != VK_SUCCESS)
         HYPERION_RETURN_OK;
-    DebugLog(LogType::Info, "=== Using Debug Messenger ===\n");
+    DebugLog(LogType::Info, "Using Vulkan Debug Messenger\n");
 #endif
     HYPERION_RETURN_OK;
 }

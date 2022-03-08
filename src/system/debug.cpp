@@ -16,6 +16,11 @@ static const char *log_type_table[] = {
         "ERROR",
         "FATAL",
         "DEBUG",
+
+        "VKINFO",
+        "VKWARN",
+        "VKERROR",
+        "VKDEBUG",
         nullptr
 };
 
@@ -26,6 +31,12 @@ static const char *log_colour_table[] = {
         "\33[31m",
         "\33[31;4m",
         "\33[32;4m",
+
+        "\33[1;34m",
+        "\33[1;33m",
+        "\33[1;31m",
+        "\33[1;32m",
+
         nullptr
 };
 
@@ -49,11 +60,13 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
     const int type_n = static_cast<std::underlying_type<LogType>::type>(type);
     /* Coloured files are less than ideal */
     if (debug_output_stream == stdout)
-        printf("%s[%s]\33[0m", log_colour_table[type_n], log_type_table[type_n]);
+        printf("%s[%s]\33[0m ", log_colour_table[type_n], log_type_table[type_n]);
     else
-        fprintf(debug_output_stream, "[%s]", log_type_table[type_n]);
+        fprintf(debug_output_stream, "[%s] ", log_type_table[type_n]);
 
-    fprintf(debug_output_stream, " %s(line:%u): ", callee, line);
+    if (callee != nullptr)
+        fprintf(debug_output_stream, "%s(line:%u): ", callee, line);
+
     va_list args;
     va_start(args, fmt);
     vfprintf(debug_output_stream, fmt, args);

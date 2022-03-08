@@ -36,12 +36,20 @@ enum class LogType : int {
     Error,
     Fatal,
     Debug,
+
+    RenInfo,
+    RenWarn,
+    RenError,
+    RenDebug,
 };
 
 void DebugSetOutputStream(FILE *stream);
 
 /* To keep final executable size down and avoid extra calculations
  * the release build will have function naming disabled. */
+
+#define DebugLogRaw(type, ...) \
+    DebugLog_(type, nullptr, 0, __VA_ARGS__);
 
 #ifdef HYPERION_BUILD_RELEASE
 #define DebugLog(type, ...) \
