@@ -561,7 +561,7 @@ int main()
 
     SystemEvent event;
 
-    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/mitsuba.obj");
+    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/monkey/monkey.obj");
     auto mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
 
     /* Max frames/sync objects to have available to render to. This prevents the graphics
