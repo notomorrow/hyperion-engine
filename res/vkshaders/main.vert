@@ -1,7 +1,8 @@
 #version 450
 
-layout(location=0) out vec3 fragColor;
-layout(location=1) out vec2 v_texcoord0;
+layout(location=0) out vec3 v_position;
+layout(location=1) out vec3 v_normal;
+layout(location=2) out vec2 v_texcoord0;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -24,8 +25,9 @@ layout( push_constant ) uniform constants
 void main() {
     mat4 mvp = DescriptorData.pv*DescriptorData.model;
 
+    v_position = a_position;
+    v_normal = a_normal;
     v_texcoord0 = a_texcoord0;
-    fragColor = vec3(1.0, 0.0, 0.2);
 
     gl_Position = mvp * vec4(a_position, 1.0);
 } 

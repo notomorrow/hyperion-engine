@@ -164,7 +164,7 @@ void RendererPipeline::Rebuild(RendererDescriptorPool *descriptor_pool)
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     /* Backface culling */
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     switch (m_construction_info.cull_mode) {
     case ConstructionInfo::CullMode::BACK:
