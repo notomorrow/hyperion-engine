@@ -169,9 +169,7 @@ public:
         }
 
         inline HashCode GetHashCode() const
-        {
-            return m_construction_info.GetHashCode();
-        }
+            { return m_construction_info.GetHashCode(); }
 
     private:
         ConstructionInfo m_construction_info;

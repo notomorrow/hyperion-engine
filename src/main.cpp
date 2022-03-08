@@ -605,8 +605,10 @@ int main()
         1,
         texture->GetInternalFormat(),
         texture->GetTextureType(),
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        RendererImage::InternalInfo{
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        },
         texture->GetBytes()
     );
     RendererImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
@@ -671,8 +673,6 @@ int main()
                 .is_depth_attachment = true
             });
 
-
-
             render_pass.AddDependency(VkSubpassDependency{
                 .srcSubpass = VK_SUBPASS_EXTERNAL,
                 .dstSubpass = 0,
@@ -682,25 +682,6 @@ int main()
                 .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                 .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
             });
-
-            /*render_pass.AddDependency(VkSubpassDependency{
-                .srcSubpass = VK_SUBPASS_EXTERNAL,
-                .dstSubpass = 0,
-                .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-            });
-            render_pass.AddDependency(VkSubpassDependency{
-                .srcSubpass = 0,
-                .dstSubpass = VK_SUBPASS_EXTERNAL,
-                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-            });*/
         });
 
     for (auto img : renderer.swapchain->images) {
@@ -837,15 +818,15 @@ int main()
         .AddDescriptorSet()
         .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(
             0,
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].image_view.get()),
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].sampler.get()),
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].image_view.get()),
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ));
 
     // test data for descriptors
     struct MainShaderData {
-        Matrix4 model;
-        Matrix4 pv;
+        alignas(16) Matrix4 model;
+        alignas(16) Matrix4 pv;
     };
     test_gpu_buffer.Create(device, sizeof(MainShaderData));
 

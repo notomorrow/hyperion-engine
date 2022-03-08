@@ -13,11 +13,15 @@ class RendererImage {
 public:
     struct LayoutTransferStateBase;
 
+    struct InternalInfo {
+        VkImageTiling tiling;
+        VkImageUsageFlags usage_flags;
+    };
+
     RendererImage(size_t width, size_t height, size_t depth,
         Texture::TextureInternalFormat format,
         Texture::TextureType type,
-        VkImageTiling tiling,
-        VkImageUsageFlags image_usage_flags,
+        const InternalInfo &internal_info,
         unsigned char *bytes);
 
     RendererImage(const RendererImage &other) = delete;
@@ -40,7 +44,7 @@ public:
 
     inline VkFormat GetImageFormat() const { return helpers::ToVkFormat(m_format); }
     inline VkImageType GetImageType() const { return helpers::ToVkType(m_type); }
-    inline VkImageUsageFlags GetImageUsageFlags() const { return m_image_usage_flags; }
+    inline VkImageUsageFlags GetImageUsageFlags() const { return m_internal_info.usage_flags; }
 
     struct LayoutTransferStateBase {
         VkImageLayout old_layout;
@@ -121,31 +125,15 @@ private:
     size_t m_depth;
     Texture::TextureInternalFormat m_format;
     Texture::TextureType m_type;
-    VkImageTiling m_tiling;
-    VkImageUsageFlags m_image_usage_flags;
     unsigned char *m_bytes;
+
+    InternalInfo m_internal_info;
 
     size_t m_size;
     size_t m_bpp; // bytes per pixel
     RendererStagingBuffer *m_staging_buffer;
     RendererGPUImage *m_image;
 };
-
-/*class RendererSampledImage : public RendererImage {
-public:
-    RendererSampledImage(
-        size_t width, size_t height, size_t depth,
-        Texture::TextureInternalFormat format,
-        Texture::TextureType type,
-        VkImageTiling tiling,
-        VkImageUsageFlags image_usage_flags,
-        unsigned char *bytes
-    ) : RendererImage(
-        width, height, depth,
-        format, type,
-        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-};*/
-
 } // namespace hyperion
 
 #endif

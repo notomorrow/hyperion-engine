@@ -13,16 +13,14 @@ namespace hyperion {
 RendererImage::RendererImage(size_t width, size_t height, size_t depth,
     Texture::TextureInternalFormat format,
     Texture::TextureType type,
-    VkImageTiling tiling,
-    VkImageUsageFlags image_usage_flags,
+    const InternalInfo &internal_info,
     unsigned char *bytes)
     : m_width(width),
       m_height(height),
       m_depth(depth),
       m_format(format),
       m_type(type),
-      m_tiling(tiling),
-      m_image_usage_flags(image_usage_flags),
+      m_internal_info(internal_info),
       m_image(nullptr),
       m_staging_buffer(nullptr),
       m_bpp(Texture::NumComponents(Texture::GetBaseFormat(format)))
@@ -56,8 +54,8 @@ RendererResult RendererImage::CreateImage(RendererDevice *device,
     auto format_support_result = device->GetRendererFeatures().GetImageFormatProperties(
         format,
         image_type,
-        m_tiling,
-        m_image_usage_flags,
+        m_internal_info.tiling,
+        m_internal_info.usage_flags,
         image_create_flags,
         &image_format_properties
     );
@@ -93,7 +91,7 @@ RendererResult RendererImage::CreateImage(RendererDevice *device,
 
             // try checking format support result again
             if ((format_support_result = device->GetRendererFeatures().GetImageFormatProperties(
-                format, image_type, m_tiling, m_image_usage_flags, image_create_flags, &image_format_properties))) {
+                format, image_type, m_internal_info.tiling, m_internal_info.usage_flags, image_create_flags, &image_format_properties))) {
                 DebugLog(LogType::Debug, "Fix '%s' successful!\n", fix.first);
                 break;
             }
@@ -113,9 +111,9 @@ RendererResult RendererImage::CreateImage(RendererDevice *device,
     image_info.mipLevels = 1; // TODO
     image_info.arrayLayers = (m_type == Texture::TextureType::TEXTURE_TYPE_CUBEMAP) ? 6 : 1;
     image_info.format = format;
-    image_info.tiling = m_tiling;
+    image_info.tiling = m_internal_info.tiling;
     image_info.initialLayout = initial_layout;//VK_IMAGE_LAYOUT_UNDEFINED;
-    image_info.usage = m_image_usage_flags;
+    image_info.usage = m_internal_info.usage_flags;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_info.flags = image_create_flags; // TODO: look into flags for sparse textures for VCT

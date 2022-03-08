@@ -81,7 +81,7 @@ void RendererRenderPass::Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, V
     render_pass_info.renderArea.extent = extent;
 
     const std::array clear_values{
-        VkClearValue{.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+        VkClearValue{.color = {0.2f, 0.2f, 0.2f, 1.0f}},
         VkClearValue{.depthStencil = {1.0f, 0}}
     };
     render_pass_info.clearValueCount = clear_values.size();
