@@ -54,11 +54,6 @@ set(COMMON_LIBRARIES
     ${SDL2_LIBRARIES}
 )
 
-if(APPLE)
-  target_link_libraries(${BUILD_NAME} ${COMMON_LIBRARIES})
-elseif(MSVC)
-  target_link_libraries(${BUILD_NAME} ${COMMON_LIBRARIES})
-else()
-  target_link_libraries(${BUILD_NAME} ${COMMON_LIBRARIES})
-endif()
+target_link_libraries(${BUILD_NAME} ${COMMON_LIBRARIES})
+
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})

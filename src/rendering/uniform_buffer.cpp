@@ -5,7 +5,7 @@
 
 namespace hyperion {
 
-UniformBufferInternalsHolder::UniformBufferInternalsHolder(RendererDevice *device) : _device(device) {}
+UniformBufferInternalsHolder::UniformBufferInternalsHolder(renderer::Device *device) : _device(device) {}
 UniformBufferInternalsHolder::~UniformBufferInternalsHolder()
 {
     Reset();
@@ -30,7 +30,7 @@ UniformBuffer::Internal *UniformBufferInternalsHolder::CreateUniformBufferIntern
     UniformBuffer::Internal *_internal = new UniformBuffer::Internal;
     _internal->generated = false;
 
-    _internal->gpu_buffer = new RendererUniformBuffer();
+    _internal->gpu_buffer = new renderer::UniformBuffer();
     _internal->gpu_buffer->Create(_device.get(), total_size);
     _internal->gpu_buffer->Copy(_device.get(), total_size, raw_uniform_data);
 

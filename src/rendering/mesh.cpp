@@ -287,15 +287,15 @@ void Mesh::SetVerticesFromFloatBuffer(const std::vector<float> &buffer)
     SetVertices(result);
 }
 
-RendererMeshBindingDescription Mesh::GetBindingDescription() {
-    return RendererMeshBindingDescription(0, sizeof(Vertex) /* TODO */, VK_VERTEX_INPUT_RATE_VERTEX);
+renderer::MeshBindingDescription Mesh::GetBindingDescription() {
+    return renderer::MeshBindingDescription(0, sizeof(Vertex) /* TODO */, VK_VERTEX_INPUT_RATE_VERTEX);
 }
 
 void Mesh::Render(Renderer *renderer, Camera *cam) {
 
 }
 
-void Mesh::RenderVk(RendererFrame *frame, VkRenderer *vk_renderer, Camera *cam) {
+void Mesh::RenderVk(renderer::Frame *frame, renderer::VkRenderer *vk_renderer, Camera *cam) {
     AssertThrow(frame != nullptr);
     VkCommandBuffer cmd = frame->command_buffer;
 
