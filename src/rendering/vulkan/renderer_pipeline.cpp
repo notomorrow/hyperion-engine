@@ -20,7 +20,6 @@ RendererPipeline::RendererPipeline(RendererDevice *_device, ConstructionInfo &&c
     AssertExit(m_construction_info.shader != nullptr);
     AssertExit(m_construction_info.fbos.size() != 0);
 
-    this->primitive = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     this->device = _device;
 
     size_t width  = m_construction_info.fbos[0]->GetWidth();
@@ -36,14 +35,6 @@ RendererPipeline::RendererPipeline(RendererDevice *_device, ConstructionInfo &&c
 
     static int x = 0;
     DebugLog(LogType::Debug, "Create RendererPipeline [%d]\n", x++);
-}
-
-void RendererPipeline::SetPrimitive(VkPrimitiveTopology _primitive) {
-    this->primitive = _primitive;
-}
-
-VkPrimitiveTopology RendererPipeline::GetPrimitive() {
-    return this->primitive;
 }
 
 void RendererPipeline::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) {
@@ -145,7 +136,7 @@ void RendererPipeline::Rebuild(RendererDescriptorPool *descriptor_pool)
     vertex_input_info.pVertexAttributeDescriptions    = this->vertex_attributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo input_asm_info{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-    input_asm_info.topology = this->GetPrimitive();
+    input_asm_info.topology = m_construction_info.topology;
     input_asm_info.primitiveRestartEnable = VK_FALSE;
 
     VkPipelineViewportStateCreateInfo viewport_state{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
@@ -189,20 +180,22 @@ void RendererPipeline::Rebuild(RendererDescriptorPool *descriptor_pool)
     multisampling.pSampleMask = nullptr;
 
     /* TODO: enable multisampling and the GPU feature required for it.  */
+    std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;
+    color_blend_attachments.resize(this->m_construction_info.render_pass->GetColorAttachments().size());
 
-    VkPipelineColorBlendAttachmentState color_blend_attachment{
-            VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-    color_blend_attachment.colorWriteMask = (
-            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT);
-
-    /* TODO: with multiple framebuffers and post processing, we will need to enable colour blending */
-    color_blend_attachment.blendEnable = VK_FALSE;
+    for (size_t i = 0; i < color_blend_attachments.size(); i++) {
+        color_blend_attachments[i] = VkPipelineColorBlendAttachmentState{
+            .blendEnable = VK_FALSE,
+            .colorWriteMask = (
+                VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT)
+        };
+    }
 
     VkPipelineColorBlendStateCreateInfo color_blending{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
     color_blending.logicOpEnable = false;
-    color_blending.attachmentCount = 1;
-    color_blending.pAttachments = &color_blend_attachment;
+    color_blending.attachmentCount = color_blend_attachments.size();
+    color_blending.pAttachments = color_blend_attachments.data();
 
     /* Push constants */
     //setup push constants

@@ -28,8 +28,10 @@ public:
     inline void AddDependency(const VkSubpassDependency &dependency)
         { m_dependencies.push_back(dependency); }
 
-    inline std::vector<AttachmentInfo> &GetAttachmentInfos() { return m_attachment_infos; }
-    inline const std::vector<AttachmentInfo> &GetAttachmentInfos() const { return m_attachment_infos; }
+    inline std::vector<AttachmentInfo> &GetColorAttachments() { return m_color_attachments; }
+    inline const std::vector<AttachmentInfo> &GetColorAttachments() const { return m_color_attachments; }
+    inline std::vector<AttachmentInfo> &GetDepthAttachments() { return m_depth_attachments; }
+    inline const std::vector<AttachmentInfo> &GetDepthAttachments() const { return m_depth_attachments; }
 
     inline VkRenderPass GetRenderPass() const { return m_render_pass; }
 
@@ -41,7 +43,9 @@ public:
 
 private:
 
-    std::vector<AttachmentInfo> m_attachment_infos;
+    std::vector<AttachmentInfo> m_color_attachments;
+    std::vector<AttachmentInfo> m_depth_attachments;
+
     std::vector<VkSubpassDependency> m_dependencies;
     VkRenderPass m_render_pass;
 };

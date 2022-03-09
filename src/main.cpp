@@ -567,6 +567,7 @@ int main()
     auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/cube.obj");
     auto monkey_mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
     auto cube_mesh = MeshFactory::CreateCube();
+    auto full_screen_quad = MeshFactory::CreateQuad();
     Material my_material;
 
     /* Max frames/sync objects to have available to render to. This prevents the graphics
@@ -587,6 +588,14 @@ int main()
         std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
+    );
+
+    /* use floating point attachments for the gbuffer */
+    auto gbuffer_format = device->GetRendererFeatures().FindSupportedFormat(
+        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
@@ -658,8 +667,8 @@ int main()
 #endif
 
     RendererShader shader;
-    shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
-    shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/frag.spv").Read() });
+    shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/deferred_vert.spv").Read() });
+    shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/deferred_frag.spv").Read() });
     shader.CreateProgram("main");
 
     RendererShader mirror_shader;
@@ -673,9 +682,10 @@ int main()
      * we'll have to set up a framebuffer with attachments for any image views retrieved
      * from the swapchain */
 
-    RendererPipeline::Builder root_pipeline_builder;
+    RendererPipeline::Builder deferred_pipeline_builder;
 
-    root_pipeline_builder
+    deferred_pipeline_builder
+        .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
         .Shader(&shader)
         .VertexAttributes(RendererMeshInputAttributeSet({
             cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
@@ -740,7 +750,7 @@ int main()
 
         AssertThrowMsg(image_view_result, "%s", image_view_result.message);
 
-        root_pipeline_builder.Framebuffer(
+        deferred_pipeline_builder.Framebuffer(
             renderer.swapchain->extent.width,
             renderer.swapchain->extent.height,
             [&image_view, color_format, depth_format](RendererFramebufferObject &fbo) {
@@ -762,13 +772,13 @@ int main()
             });
     }
 
-    auto add_pipeline_result = renderer.AddPipeline(std::move(root_pipeline_builder), &pipelines[0]);
+    auto add_pipeline_result = renderer.AddPipeline(std::move(deferred_pipeline_builder), &pipelines[0]);
     AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
 
 
-    RendererPipeline::Builder fbo_pipeline_builder;
+    RendererPipeline::Builder scene_pass_pipeline_builder;
 
-    fbo_pipeline_builder
+    scene_pass_pipeline_builder
         .Shader(&mirror_shader)
         .VertexAttributes(RendererMeshInputAttributeSet({
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
@@ -778,7 +788,7 @@ int main()
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
         }))
-        .RenderPass([&renderer, color_format, depth_format](RendererRenderPass &render_pass) {
+        .RenderPass([&](RendererRenderPass &render_pass) {
             /* For our color attachment */
             render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
                 .attachment = std::make_unique<RendererAttachment>(
@@ -793,6 +803,34 @@ int main()
                 ),
                 .is_depth_attachment = false
             });
+            /* For our normals attachment */
+            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
+                .attachment = std::make_unique<RendererAttachment>(
+                    helpers::ToVkFormat(gbuffer_format),
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    1,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                ),
+                .is_depth_attachment = false
+            });
+            /* For our positions attachment */
+            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
+                .attachment = std::make_unique<RendererAttachment>(
+                    helpers::ToVkFormat(gbuffer_format),
+                    VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    VK_ATTACHMENT_STORE_OP_STORE,
+                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    2,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                ),
+                .is_depth_attachment = false
+            });
 
             /* For our depth attachment */
             render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
@@ -803,7 +841,7 @@ int main()
                     VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     VK_ATTACHMENT_STORE_OP_DONT_CARE,
                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    1,
+                    3,
                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
                 ),
                 .is_depth_attachment = true
@@ -830,17 +868,23 @@ int main()
             });
         })
         .Framebuffer(
-            512,
-            512,
-            [color_format, depth_format](RendererFramebufferObject &fbo) {
+            renderer.swapchain->extent.width,
+            renderer.swapchain->extent.height,
+            [&](RendererFramebufferObject &fbo) {
                 /* Add color attachment */
                 fbo.AddAttachment(color_format);
+
+                /* Normals attachment */
+                fbo.AddAttachment(gbuffer_format);
+
+                /* positions attachment */
+                fbo.AddAttachment(gbuffer_format);
 
                 /* Now we add a depth buffer */
                 fbo.AddAttachment(depth_format);
             });
 
-    add_pipeline_result = renderer.AddPipeline(std::move(fbo_pipeline_builder), &pipelines[1]);
+    add_pipeline_result = renderer.AddPipeline(std::move(scene_pass_pipeline_builder), &pipelines[1]);
     AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
 
     renderer.descriptor_pool
@@ -855,6 +899,18 @@ int main()
             0,
             non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].image_view.get()),
             non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].sampler.get()),
+            VK_SHADER_STAGE_FRAGMENT_BIT
+        ))
+        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(
+            1,
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].image_view.get()),
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].sampler.get()),
+            VK_SHADER_STAGE_FRAGMENT_BIT
+        ))
+        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(
+            2,
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[2].image_view.get()),
+            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[2].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ));
 
@@ -953,7 +1009,7 @@ int main()
         matrices_block.projection = camera->GetProjectionMatrix();
 
         scene_data_block.camera_position = camera->GetTranslation();
-        scene_data_block.light_direction = Vector3(0.5, 0.5, 0).Normalize();
+        scene_data_block.light_direction = Vector3(-0.5, -0.5, 0).Normalize();
 
         RendererPipeline *pl = pipelines[0];
         RendererPipeline *fbo_pl = pipelines[1];
@@ -971,7 +1027,7 @@ int main()
 
         pl->StartRenderPass(frame->command_buffer, renderer.acquired_frames_index);
         renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, pl->layout);
-        cube_mesh->RenderVk(frame, &renderer, nullptr);
+        full_screen_quad->RenderVk(frame, &renderer, nullptr);
         pl->EndRenderPass(frame->command_buffer, renderer.acquired_frames_index);
 
         renderer.EndFrame(frame);
@@ -988,6 +1044,7 @@ int main()
 
     monkey_mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
     cube_mesh.reset();
+    full_screen_quad.reset();
 
     matrices_descriptor_buffer.Destroy(device);
     scene_data_descriptor_buffer.Destroy(device);
