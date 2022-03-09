@@ -14,6 +14,8 @@
 
 namespace hyperion {
 
+using ::std::vector;
+
 enum SystemEventType {
     EVENT_WINDOW_EVENT  = SDL_WINDOWEVENT,
     EVENT_KEYDOWN       = SDL_KEYDOWN,
@@ -186,7 +188,7 @@ public:
     static uint64_t GetTicks();
     void SetCurrentWindow(SystemWindow *window);
     SystemWindow *GetCurrentWindow();
-    std::vector<const char *> GetVulkanExtensionNames();
+    vector<const char *> GetVulkanExtensionNames();
 
     ~SystemSDL();
 

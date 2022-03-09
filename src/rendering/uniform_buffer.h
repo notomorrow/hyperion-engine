@@ -5,8 +5,8 @@
 #include "declared_uniform.h"
 #include "../util/non_owning_ptr.h"
 
-#include "vulkan/renderer_buffer.h"
-#include "vulkan/renderer_device.h"
+#include "backend/renderer_buffer.h"
+#include "backend/renderer_device.h"
 
 #include <vulkan/vulkan.h>
 
@@ -31,7 +31,7 @@ struct UniformBuffer {
         size_t size;
         size_t index;
         bool generated;
-        RendererGPUBuffer *gpu_buffer;
+        renderer::GPUBuffer *gpu_buffer;
 
         Internal() = default;
         Internal(const Internal &other) = delete;
@@ -128,7 +128,7 @@ struct UniformBufferResult {
 
 class UniformBufferInternalsHolder {
 public:
-    UniformBufferInternalsHolder(RendererDevice *);
+    UniformBufferInternalsHolder(renderer::Device *);
     UniformBufferInternalsHolder(const UniformBufferInternalsHolder &other) = delete;
     UniformBufferInternalsHolder &operator=(const UniformBufferInternalsHolder &other) = delete;
     ~UniformBufferInternalsHolder();
@@ -138,7 +138,7 @@ public:
     void Reset();
 
     std::vector<UniformBuffer::Internal *> m_internals;
-    non_owning_ptr<RendererDevice> _device;
+    non_owning_ptr<renderer::Device> _device;
 };
 
 } // namespace hyperion

@@ -23,13 +23,13 @@
 
 #include "system/sdl_system.h"
 #include "system/debug.h"
-#include "rendering/vulkan/vk_renderer.h"
-#include "rendering/vulkan/renderer_descriptor_pool.h"
-#include "rendering/vulkan/renderer_descriptor_set.h"
-#include "rendering/vulkan/renderer_descriptor.h"
-#include "rendering/vulkan/renderer_image.h"
-#include "rendering/vulkan/renderer_fbo.h"
-#include "rendering/vulkan/renderer_render_pass.h"
+#include "rendering/backend/vk_renderer.h"
+#include "rendering/backend/renderer_descriptor_pool.h"
+#include "rendering/backend/renderer_descriptor_set.h"
+#include "rendering/backend/renderer_descriptor.h"
+#include "rendering/backend/renderer_image.h"
+#include "rendering/backend/renderer_fbo.h"
+#include "rendering/backend/renderer_render_pass.h"
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
@@ -555,6 +555,7 @@ public:
 
 int main()
 {
+    using namespace hyperion::renderer;
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
 
@@ -579,12 +580,12 @@ int main()
     auto renderer_initialize_result = renderer.Initialize(true);
     AssertThrowMsg(renderer_initialize_result, "%s", renderer_initialize_result.message);
 
-    RendererDevice *device = renderer.GetRendererDevice();
+    Device *device = renderer.GetDevice();
 
     /* Test fbo */
-    //RendererFramebufferObject test_fbo(1024, 768);// 512, 512);
+    //FramebufferObject test_fbo(1024, 768);// 512, 512);
 
-    auto color_format = device->GetRendererFeatures().FindSupportedFormat(
+    auto color_format = device->GetFeatures().FindSupportedFormat(
         std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
@@ -594,14 +595,14 @@ int main()
     );
 
     /* use floating point attachments for the gbuffer */
-    auto gbuffer_format = device->GetRendererFeatures().FindSupportedFormat(
+    auto gbuffer_format = device->GetFeatures().FindSupportedFormat(
         std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
     );
     
-    auto depth_format = device->GetRendererFeatures().FindSupportedFormat(
+    auto depth_format = device->GetFeatures().FindSupportedFormat(
         std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
                     Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
         VK_IMAGE_TILING_OPTIMAL,
@@ -609,7 +610,7 @@ int main()
     );
 
     /* Descriptor sets */
-    RendererGPUBuffer matrices_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT),
+    GPUBuffer matrices_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT),
                       scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
 #if HYPERION_VK_TEST_CUBEMAP
@@ -632,7 +633,7 @@ int main()
     }
 
 
-    RendererImage *image = new RendererTextureImageCubemap(
+    Image *image = new TextureImageCubemap(
         cubemap_faces[0]->GetWidth(),
         cubemap_faces[0]->GetHeight(),
         cubemap_faces[0]->GetInternalFormat(),
@@ -640,8 +641,8 @@ int main()
         bytes
     );
 
-    RendererImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
-    RendererSampler test_sampler(
+    ImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
+    Sampler test_sampler(
         Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR,
         Texture::TextureWrapMode::TEXTURE_WRAP_REPEAT
     );
@@ -651,7 +652,7 @@ int main()
 #elif HYPERION_VK_TEST_MIPMAP
     // test image
     auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
-    RendererImage *image = new RendererTextureImage2D(
+    Image *image = new TextureImage2D(
         texture->GetWidth(),
         texture->GetHeight(),
         texture->GetInternalFormat(),
@@ -659,35 +660,35 @@ int main()
         texture->GetBytes()
     );
 
-    RendererImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
-    RendererSampler test_sampler(
+    ImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
+    Sampler test_sampler(
         Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         Texture::TextureWrapMode::TEXTURE_WRAP_REPEAT
     );
 #endif
 
-    RendererShader shader;
+    renderer::Shader shader;
     shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/deferred_vert.spv").Read() });
     shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/deferred_frag.spv").Read() });
     shader.CreateProgram("main");
 
-    RendererShader mirror_shader;
+    renderer::Shader mirror_shader;
     mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
     mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/mirror_frag.spv").Read() });
     mirror_shader.CreateProgram("main");
 
-    std::array<RendererPipeline *, 2> pipelines{};
+    std::array<Pipeline *, 2> pipelines{};
 
     /* Add a "default" pipeline
      * we'll have to set up a framebuffer with attachments for any image views retrieved
      * from the swapchain */
 
-    RendererPipeline::Builder deferred_pipeline_builder;
+    Pipeline::Builder deferred_pipeline_builder;
 
     deferred_pipeline_builder
         .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
         .Shader(&shader)
-        .VertexAttributes(RendererMeshInputAttributeSet({
+        .VertexAttributes(MeshInputAttributeSet({
             cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
             cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
             cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
@@ -695,10 +696,10 @@ int main()
             cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
             cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
         }))
-        .RenderPass([&renderer, color_format, depth_format](RendererRenderPass &render_pass) {
+        .RenderPass([&renderer, color_format, depth_format](RenderPass &render_pass) {
             /* For our color attachment */
-            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
-                .attachment = std::make_unique<RendererAttachment>(
+            render_pass.AddAttachment(RenderPass::AttachmentInfo{
+                .attachment = std::make_unique<Attachment>(
                     renderer.swapchain->image_format,
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -712,8 +713,8 @@ int main()
             });
 
             /* For our depth attachment */
-            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
-                .attachment = std::make_unique<RendererAttachment>(
+            render_pass.AddAttachment(RenderPass::AttachmentInfo{
+                .attachment = std::make_unique<Attachment>(
                     helpers::ToVkFormat(depth_format),
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -738,9 +739,9 @@ int main()
         });
 
     for (auto img : renderer.swapchain->images) {
-        auto image_view = std::make_unique<RendererImageView>(VK_IMAGE_ASPECT_COLOR_BIT);
+        auto image_view = std::make_unique<ImageView>(VK_IMAGE_ASPECT_COLOR_BIT);
 
-        /* Create imageview independent of a RendererImage */
+        /* Create imageview independent of a Image */
         auto image_view_result = image_view->Create(
             device,
             img,
@@ -753,10 +754,10 @@ int main()
         deferred_pipeline_builder.Framebuffer(
             renderer.swapchain->extent.width,
             renderer.swapchain->extent.height,
-            [&image_view, color_format, depth_format](RendererFramebufferObject &fbo) {
+            [&image_view, color_format, depth_format](FramebufferObject &fbo) {
                 /* Add color attachment */
                 fbo.AddAttachment(
-                    RendererFramebufferObject::AttachmentImageInfo{
+                    FramebufferObject::AttachmentImageInfo{
                         .image = nullptr,
                         .image_view = std::move(image_view),
                         .sampler = nullptr,
@@ -776,11 +777,11 @@ int main()
     AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
 
 
-    RendererPipeline::Builder scene_pass_pipeline_builder;
+    Pipeline::Builder scene_pass_pipeline_builder;
 
     scene_pass_pipeline_builder
         .Shader(&mirror_shader)
-        .VertexAttributes(RendererMeshInputAttributeSet({
+        .VertexAttributes(MeshInputAttributeSet({
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
@@ -788,10 +789,10 @@ int main()
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
         }))
-        .RenderPass([&](RendererRenderPass &render_pass) {
+        .RenderPass([&](RenderPass &render_pass) {
             /* For our color attachment */
-            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
-                .attachment = std::make_unique<RendererAttachment>(
+            render_pass.AddAttachment(RenderPass::AttachmentInfo{
+                .attachment = std::make_unique<Attachment>(
                     helpers::ToVkFormat(color_format),
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -804,8 +805,8 @@ int main()
                 .is_depth_attachment = false
             });
             /* For our normals attachment */
-            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
-                .attachment = std::make_unique<RendererAttachment>(
+            render_pass.AddAttachment(RenderPass::AttachmentInfo{
+                .attachment = std::make_unique<Attachment>(
                     helpers::ToVkFormat(gbuffer_format),
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -818,8 +819,8 @@ int main()
                 .is_depth_attachment = false
             });
             /* For our positions attachment */
-            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
-                .attachment = std::make_unique<RendererAttachment>(
+            render_pass.AddAttachment(RenderPass::AttachmentInfo{
+                .attachment = std::make_unique<Attachment>(
                     helpers::ToVkFormat(gbuffer_format),
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -833,8 +834,8 @@ int main()
             });
 
             /* For our depth attachment */
-            render_pass.AddAttachment(RendererRenderPass::AttachmentInfo{
-                .attachment = std::make_unique<RendererAttachment>(
+            render_pass.AddAttachment(RenderPass::AttachmentInfo{
+                .attachment = std::make_unique<Attachment>(
                     helpers::ToVkFormat(depth_format),
                     VK_ATTACHMENT_LOAD_OP_CLEAR,
                     VK_ATTACHMENT_STORE_OP_STORE,
@@ -870,7 +871,7 @@ int main()
         .Framebuffer(
             renderer.swapchain->extent.width,
             renderer.swapchain->extent.height,
-            [&](RendererFramebufferObject &fbo) {
+            [&](FramebufferObject &fbo) {
                 /* Add color attachment */
                 fbo.AddAttachment(color_format);
 
@@ -889,25 +890,25 @@ int main()
 
     renderer.descriptor_pool
         .AddDescriptorSet()
-        .AddDescriptor(std::make_unique<RendererBufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
-        .AddDescriptor(std::make_unique<RendererBufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
-        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+        .AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
+        .AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
+        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
 
     renderer.descriptor_pool
         .AddDescriptorSet()
-        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(
+        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
             0,
             non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].image_view.get()),
             non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ))
-        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(
+        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
             1,
             non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].image_view.get()),
             non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ))
-        .AddDescriptor(std::make_unique<RendererImageSamplerDescriptor>(
+        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
             2,
             non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[2].image_view.get()),
             non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[2].sampler.get()),
@@ -933,8 +934,8 @@ int main()
     auto image_create_result = image->Create(
         device,
         &renderer,
-        RendererImage::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
-        RendererImage::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
+        Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
+        Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
     );
     AssertThrowMsg(image_create_result, "%s", image_create_result.message);
 
@@ -945,7 +946,7 @@ int main()
     AssertThrowMsg(sampler_result, "%s", sampler_result.message);
 
     /* Initialize descriptor pool */
-    auto descriptor_pool_result = renderer.descriptor_pool.Create(renderer.GetRendererDevice());
+    auto descriptor_pool_result = renderer.descriptor_pool.Create(renderer.GetDevice());
     AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
 
 
@@ -976,7 +977,7 @@ int main()
 
     bool running = true;
 
-    RendererFrame *frame = nullptr;
+    Frame *frame = nullptr;
 
     uint64_t tick_now = SDL_GetPerformanceCounter();
     uint64_t tick_last = 0;
@@ -1002,7 +1003,7 @@ int main()
 
         camera->Update(delta_time);
 
-        Transform transform(Vector3(0, 0, 0), Vector3(1.0f), Quaternion(Vector3::UnitY(), timer));
+        Transform transform(Vector3(0, 0, 0), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
         matrices_block.model = transform.GetMatrix();
         matrices_block.view = camera->GetViewMatrix();
@@ -1011,8 +1012,8 @@ int main()
         scene_data_block.camera_position = camera->GetTranslation();
         scene_data_block.light_direction = Vector3(-0.5, -0.5, 0).Normalize();
 
-        RendererPipeline *pl = pipelines[0];
-        RendererPipeline *fbo_pl = pipelines[1];
+        Pipeline *pl = pipelines[0];
+        Pipeline *fbo_pl = pipelines[1];
 
         frame = renderer.GetNextFrame();
         renderer.BeginFrame(frame);
@@ -1033,7 +1034,7 @@ int main()
         renderer.EndFrame(frame);
 
 
-        //RendererPipeline *fbo_pl = pipelines[1];
+        //Pipeline *fbo_pl = pipelines[1];
         //fbo_pl->StartRenderPass(frame->command_buffer, )
 
 

@@ -1,0 +1,73 @@
+#ifndef HYPERION_RENDERER_DESCRIPTOR_POOL_H
+#define HYPERION_RENDERER_DESCRIPTOR_POOL_H
+
+#include "renderer_result.h"
+
+#include "renderer_descriptor_set.h"
+
+#include <vulkan/vulkan.h>
+
+#include <unordered_map>
+#include <memory>
+
+namespace hyperion {
+namespace renderer {
+class Device;
+
+class DescriptorPool {
+    friend class DescriptorSet;
+public:
+    static const std::unordered_map<VkDescriptorType, size_t> items_per_set;
+    static const size_t max_descriptor_sets;
+
+    struct BufferInfo {
+        VkDescriptorImageInfo *image_info;
+        VkDescriptorBufferInfo *buffer_info;
+
+        BufferInfo()
+            : image_info(nullptr), buffer_info(nullptr) {}
+        BufferInfo(VkDescriptorImageInfo *image_info, VkDescriptorBufferInfo *buffer_info)
+            : image_info(image_info), buffer_info(buffer_info) {}
+        BufferInfo(const BufferInfo &other)
+            : image_info(other.image_info), buffer_info(other.buffer_info) {}
+        inline BufferInfo &operator=(const BufferInfo &other)
+        {
+            image_info = other.image_info; 
+            buffer_info = other.buffer_info;
+
+            return *this;
+        }
+    };
+
+    DescriptorPool();
+    DescriptorPool(const DescriptorPool &other) = delete;
+    DescriptorPool &operator=(const DescriptorPool &other) = delete;
+    ~DescriptorPool();
+
+    Result Create(Device *device);
+    Result Destroy(Device *device);
+    Result BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout, size_t start_index, size_t size);
+    Result BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout);
+
+    // return new descriptor set
+    DescriptorSet &AddDescriptorSet();
+    inline DescriptorSet *GetDescriptorSet(size_t index) { return m_descriptor_sets[index].get(); }
+    inline const DescriptorSet *GetDescriptorSet(size_t index) const { return m_descriptor_sets[index].get(); }
+
+    std::vector<std::unique_ptr<DescriptorSet>> m_descriptor_sets;
+    std::vector<VkDescriptorSetLayout> m_descriptor_set_layouts;
+    VkDescriptorPool m_descriptor_pool;
+
+private:
+
+    Result AllocateDescriptorSet(Device *device, VkDescriptorSetLayout *layout, DescriptorSet *out);
+    Result CreateDescriptorSetLayout(Device *device, VkDescriptorSetLayoutCreateInfo *layout_create_info, VkDescriptorSetLayout *out);
+    Result DestroyDescriptorSetLayout(Device *device, VkDescriptorSetLayout *layout);
+
+    VkDescriptorSet *m_descriptor_sets_view;
+};
+
+} // namespace renderer
+} // namespace hyperion
+
+#endif

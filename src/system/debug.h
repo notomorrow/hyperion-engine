@@ -91,8 +91,8 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
         }                                                         \
     }
 
-#define AssertThrow(cond) AssertOrElse(LogType::Error, cond, throw std::runtime_error("Assertion failed"))
-#define AssertThrowMsg(cond, ...) AssertOrElseMsg(LogType::Error, cond, throw std::runtime_error("Assertion failed"), __VA_ARGS__)
+#define AssertThrow(cond) AssertOrElse(LogType::Error, cond, throw ::std::runtime_error("Assertion failed"))
+#define AssertThrowMsg(cond, ...) AssertOrElseMsg(LogType::Error, cond, throw ::std::runtime_error("Assertion failed"), __VA_ARGS__)
 #define AssertSoft(cond) AssertOrElse(LogType::Warn, cond, return);
 #define AssertSoftMsg(cond, ...) AssertOrElseMsg(LogType::Warn, cond, return, __VA_ARGS__);
 #define AssertReturn(cond, value) AssertOrElse(LogType::Warn, cond, return (value));

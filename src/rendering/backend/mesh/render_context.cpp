@@ -1,18 +1,18 @@
 #include "../../mesh.h"
-#include "../../vulkan/renderer_buffer.h"
+#include "../../backend/renderer_buffer.h"
 
 namespace hyperion {
-Mesh::RenderContext::RenderContext(Mesh *mesh, VkRenderer *renderer)
+Mesh::RenderContext::RenderContext(Mesh *mesh, renderer::VkRenderer *renderer)
     : _mesh(mesh),
       _renderer(renderer),
-      _vbo(new RendererGPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)),
-      _ibo(new RendererGPUBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT))
+      _vbo(new renderer::GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)),
+      _ibo(new renderer::GPUBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT))
 {
 }
 
 Mesh::RenderContext::~RenderContext()
 {
-    RendererDevice *device = _renderer->GetRendererDevice();
+    renderer::Device *device = _renderer->GetDevice();
 
     _vbo->Destroy(device);
     delete _vbo;
@@ -23,7 +23,7 @@ Mesh::RenderContext::~RenderContext()
 
 void Mesh::RenderContext::Create(VkCommandBuffer cmd)
 {
-    RendererDevice *device = _renderer->GetRendererDevice();
+    renderer::Device *device = _renderer->GetDevice();
     VkDevice vk_device = device->GetDevice();
 }
 
@@ -31,7 +31,7 @@ void Mesh::RenderContext::Upload(VkCommandBuffer cmd)
 {
     const VkDeviceSize offsets[] = { 0 };
 
-    RendererDevice *device = _renderer->GetRendererDevice();
+    renderer::Device *device = _renderer->GetDevice();
     VkDevice vk_device = device->GetDevice();
 
     std::vector<float> buffer = _mesh->CreateBuffer();

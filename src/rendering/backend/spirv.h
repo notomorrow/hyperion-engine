@@ -7,9 +7,9 @@
 #include <vector>
 
 namespace hyperion {
-
+namespace renderer {
 struct SpirvObject {
-    using Raw_t = std::vector<ubyte>;
+    using Raw_t = ::std::vector<::hyperion::ubyte>;
 
     enum class Type : int {
         UNSET = 0,
@@ -56,6 +56,7 @@ struct SpirvObject {
     }
 };
 
+} // namespace renderer
 } // namespace hyperion
 
 #endif
