@@ -9,19 +9,26 @@ RendererRenderPass::RendererRenderPass()
 
 RendererRenderPass::~RendererRenderPass()
 {
+    AssertExitMsg(m_render_pass == nullptr, "render pass should have been destroyed");
 }
 
 void RendererRenderPass::AddAttachment(AttachmentInfo &&attachment)
 {
     AssertExit(attachment.attachment != nullptr);
 
-    m_attachment_infos.push_back(std::move(attachment));
+    if (attachment.is_depth_attachment) {
+        AssertThrowMsg(m_depth_attachments.empty(), "May only have one depth attachment in a renderpass!");
+
+        m_depth_attachments.push_back(std::move(attachment));
+    } else {
+        m_color_attachments.push_back(std::move(attachment));
+    }
 }
 
 RendererResult RendererRenderPass::Create(RendererDevice *device)
 {
     std::vector<VkAttachmentDescription> attachments;
-    attachments.reserve(m_attachment_infos.size());
+    attachments.reserve(m_color_attachments.size() + m_depth_attachments.size());
 
     VkAttachmentReference depth_attachment_ref{};
     std::vector<VkAttachmentReference> color_attachment_refs;
@@ -30,23 +37,30 @@ RendererResult RendererRenderPass::Create(RendererDevice *device)
     subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass_description.pDepthStencilAttachment = nullptr;
 
-    for (size_t i = 0; i < m_attachment_infos.size(); i++) {
-        auto &attachment_info = m_attachment_infos[i];
+    for (size_t i = 0; i < m_color_attachments.size(); i++) {
+        auto &attachment_info = m_color_attachments[i];
+
+        HYPERION_BUBBLE_ERRORS(attachment_info.attachment->Create(device));
+
+        attachments.push_back(attachment_info.attachment->m_attachment_description);
+        color_attachment_refs.push_back(attachment_info.attachment->m_attachment_reference);
+    }
+
+    /* Should only loop one time due to assertion in AddAttachment.
+     * Still, keeping it consistent. */
+    for (size_t i = 0; i < m_depth_attachments.size(); i++) {
+        auto &attachment_info = m_depth_attachments[i];
 
         HYPERION_BUBBLE_ERRORS(attachment_info.attachment->Create(device));
 
         attachments.push_back(attachment_info.attachment->m_attachment_description);
 
-        if (attachment_info.is_depth_attachment) {
-            depth_attachment_ref = attachment_info.attachment->m_attachment_reference;
-            subpass_description.pDepthStencilAttachment = &depth_attachment_ref;
-        } else {
-            color_attachment_refs.push_back(attachment_info.attachment->m_attachment_reference);
-        }
+        depth_attachment_ref = attachment_info.attachment->m_attachment_reference;
+        subpass_description.pDepthStencilAttachment = &depth_attachment_ref;
     }
 
     subpass_description.colorAttachmentCount = color_attachment_refs.size();
-    subpass_description.pColorAttachments = color_attachment_refs.data();
+    subpass_description.pColorAttachments    = color_attachment_refs.data();
 
     // Create the actual renderpass
     VkRenderPassCreateInfo render_pass_info{};
@@ -68,6 +82,7 @@ RendererResult RendererRenderPass::Destroy(RendererDevice *device)
     RendererResult result = RendererResult::OK;
 
     vkDestroyRenderPass(device->GetDevice(), m_render_pass, nullptr);
+    m_render_pass = nullptr;
 
     return result;
 }
@@ -80,10 +95,19 @@ void RendererRenderPass::Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, V
     render_pass_info.renderArea.offset = { 0, 0 };
     render_pass_info.renderArea.extent = extent;
 
-    const std::array clear_values{
-        VkClearValue{.color = {0.2f, 0.2f, 0.2f, 1.0f}},
-        VkClearValue{.depthStencil = {1.0f, 0}}
-    };
+    // TODO: pre-generate this data
+
+    std::vector<VkClearValue> clear_values;
+    clear_values.resize(m_color_attachments.size() + m_depth_attachments.size());
+
+    for (int i = 0; i < m_color_attachments.size(); i++) {
+        clear_values[i] = VkClearValue{.color = {0.0f, 0.0f, 0.0f, 1.0f}};
+    }
+
+    for (int i = 0; i < m_depth_attachments.size(); i++) {
+        clear_values[m_color_attachments.size() + i] = VkClearValue{.depthStencil = {1.0f, 0}};
+    }
+
     render_pass_info.clearValueCount = clear_values.size();
     render_pass_info.pClearValues = clear_values.data();
 

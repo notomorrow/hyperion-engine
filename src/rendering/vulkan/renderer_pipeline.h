@@ -29,6 +29,8 @@ public:
         std::unique_ptr<RendererRenderPass> render_pass;
         std::vector<std::unique_ptr<RendererFramebufferObject>> fbos;
 
+        VkPrimitiveTopology topology;
+
         enum class CullMode : int {
             NONE,
             BACK,
@@ -44,6 +46,7 @@ public:
               shader(other.shader),
               render_pass(std::move(other.render_pass)),
               fbos(std::move(other.fbos)),
+              topology(other.topology),
               cull_mode(other.cull_mode),
               depth_test(other.depth_test),
               depth_write(other.depth_write)
@@ -56,9 +59,12 @@ public:
             shader = other.shader;
             render_pass = std::move(other.render_pass);
             fbos = std::move(other.fbos);
+            topology = other.topology;
             cull_mode = other.cull_mode;
             depth_test = other.depth_test;
             depth_write = other.depth_write;
+
+            return *this;
         }
 
         ConstructionInfo(const ConstructionInfo &other) = delete;
@@ -75,6 +81,7 @@ public:
                 hc.Add(intptr_t(fbo.get()));
             }
             hc.Add(vertex_attributes.GetHashCode());
+            hc.Add(int(topology));
             hc.Add(int(cull_mode));
             hc.Add(depth_test);
             hc.Add(depth_write);
@@ -87,6 +94,7 @@ public:
     public:
         Builder()
         {
+            Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
             CullMode(RendererPipeline::ConstructionInfo::CullMode::BACK);
             DepthTest(true);
             DepthWrite(true);
@@ -100,6 +108,13 @@ public:
         Builder &VertexAttributes(const RendererMeshInputAttributeSet &vertex_attributes)
         {
             m_construction_info.vertex_attributes = vertex_attributes;
+
+            return *this;
+        }
+
+        Builder &Topology(VkPrimitiveTopology topology)
+        {
+            m_construction_info.topology = topology;
 
             return *this;
         }
@@ -178,7 +193,7 @@ public:
     RendererPipeline(RendererDevice *_device, ConstructionInfo &&construction_info);
     void Destroy();
 
-    void SetPrimitive(VkPrimitiveTopology _primitive);
+    std::vector<VkDynamicState> GetDynamicStates();
     void SetDynamicStates(const std::vector<VkDynamicState> &_states);
 
     void UpdateDynamicStates(VkCommandBuffer cmd);
@@ -199,9 +214,6 @@ public:
     void StartRenderPass(VkCommandBuffer cmd, size_t index);
     void EndRenderPass(VkCommandBuffer cmd, size_t index);
 
-    VkPrimitiveTopology GetPrimitive();
-    std::vector<VkDynamicState> GetDynamicStates();
-
     inline const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
 
     VkPipeline pipeline;
@@ -218,7 +230,6 @@ private:
 
     VkViewport viewport;
     VkRect2D scissor;
-    VkPrimitiveTopology primitive;
 
     std::vector<VkVertexInputBindingDescription>   vertex_binding_descriptions = { };
     std::vector<VkVertexInputAttributeDescription> vertex_attributes = { };
