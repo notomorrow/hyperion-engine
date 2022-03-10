@@ -17,11 +17,16 @@ public:
         RENDER_PASS_STAGE_SHADER = 2  /* for use as a sampled texture in a shader */
     };
 
+    enum Mode {
+        RENDER_PASS_INLINE = 0,
+        RENDER_PASS_SECONDARY_COMMAND_BUFFER = 1
+    };
+
     struct Attachment {
         Texture::TextureInternalFormat format;
     };
 
-    explicit RenderPass(Stage stage);
+    explicit RenderPass(Stage stage, Mode mode);
     RenderPass(const RenderPass &) = delete;
     RenderPass &operator=(const RenderPass &) = delete;
     ~RenderPass();
@@ -43,6 +48,7 @@ private:
     void CreateDependencies();
 
     Stage m_stage;
+    Mode m_mode;
     std::vector<Attachment> m_attachments;
 };
 

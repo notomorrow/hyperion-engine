@@ -22,12 +22,20 @@
 #include "renderer_pipeline.h"
 #include "renderer_descriptor_pool.h"
 #include "renderer_frame.h"
+#include "renderer_frame_handler.h"
 
 #define VK_RENDERER_API_VERSION VK_API_VERSION_1_2
 
+/* Max frames/sync objects to have available to render to. This prevents the graphics
+ * pipeline from stalling when waiting for device upload/download.
+ * It's possible a device will return 0 for maxImageCount which indicates
+ * there is no limit. So we cap it ourselves.
+ */
+
+#define NUM_MAX_PENDING_FRAMES uint32_t(8)
+
 namespace hyperion {
 namespace renderer {
-#define DEFAULT_PENDING_FRAMES_COUNT 2
 
 using ::std::vector,
       ::std::set;
@@ -51,7 +59,6 @@ class Instance {
     Result SetupDebugMessenger();
 
     Result AllocatePendingFrames();
-    Result CleanupPendingFrames();
 
     Result CreateCommandPool();
     Result CreateCommandBuffers();
@@ -64,16 +71,13 @@ public:
     void WaitImageReady(Frame *frame);
     void WaitDeviceIdle();
 
-    HYP_FORCE_INLINE Frame *GetCurrentFrame() { return this->current_frame; }
-    HYP_FORCE_INLINE const Frame *GetCurrentFrame() const { return this->current_frame; }
-
     HYP_FORCE_INLINE DescriptorPool &GetDescriptorPool() { return this->descriptor_pool; }
     HYP_FORCE_INLINE const DescriptorPool &GetDescriptorPool() const { return this->descriptor_pool; }
-
-    VkResult AcquireNextImage(Frame *frame);
+    
     void     BeginFrame      (Frame *frame);
     void     EndFrame        (Frame *frame);
-    void     PresentFrame    (Frame *frame);
+    void     SubmitFrame     (Frame *frame);
+    void     PresentFrame    (Frame *frame, const std::vector<VkSemaphore> &semaphores);
 
     void SetValidationLayers(vector<const char *> _layers);
     Device *GetDevice();
@@ -86,6 +90,10 @@ public:
     void SetQueueFamilies(set<uint32_t> queue_families);
     void SetCurrentWindow(SystemWindow *window);
 
+    inline size_t GetNumImages() const { return this->swapchain->GetNumImages(); }
+    inline FrameHandler *GetFrameHandler() { return this->frame_handler; }
+    inline const FrameHandler *GetFrameHandler() const { return this->frame_handler; }
+
     SystemWindow *GetCurrentWindow();
     Result Destroy();
 
@@ -93,21 +101,24 @@ public:
 
     vector<const char *> requested_device_extensions;
 
-    uint16_t frames_to_allocate = DEFAULT_PENDING_FRAMES_COUNT;
-
     const char *app_name;
     const char *engine_name;
 
     vector<std::unique_ptr<Pipeline>> pipelines;
-
-    uint32_t acquired_frames_index = 0;
+    
     Swapchain *swapchain = nullptr;
 
     /* Per frame data */
+    FrameHandler *frame_handler;
+
     VkCommandPool command_pool;
-    vector<VkCommandBuffer> command_buffers;
+
+    VkQueue queue_graphics;
+    VkQueue queue_present;
+
 
 private:
+
     SystemWindow *window = nullptr;
     SystemSDL    system;
 
@@ -115,13 +126,7 @@ private:
     VkSurfaceKHR surface = nullptr;
 
     DescriptorPool descriptor_pool;
-
-    vector<std::unique_ptr<Frame>> pending_frames;
-    Frame *current_frame = nullptr;
-    int frames_index = 0;
-
-    VkQueue queue_graphics;
-    VkQueue queue_present;
+    
 
     Device    *device = nullptr;
 
