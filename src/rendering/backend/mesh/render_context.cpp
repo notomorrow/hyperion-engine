@@ -2,7 +2,7 @@
 #include "../../backend/renderer_buffer.h"
 
 namespace hyperion {
-Mesh::RenderContext::RenderContext(Mesh *mesh, renderer::VkRenderer *renderer)
+Mesh::RenderContext::RenderContext(Mesh *mesh, renderer::Instance *renderer)
     : _mesh(mesh),
       _renderer(renderer),
       _vbo(new renderer::GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)),

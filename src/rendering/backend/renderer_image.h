@@ -11,7 +11,7 @@
 
 namespace hyperion {
 namespace renderer {
-class VkRenderer;
+class Instance;
 class Image {
 public:
     struct LayoutTransferStateBase;
@@ -33,7 +33,7 @@ public:
     ~Image();
 
     Result Create(Device *device, VkImageLayout layout);
-    Result Create(Device *device, VkRenderer *renderer,
+    Result Create(Device *device, Instance *renderer,
         LayoutTransferStateBase transfer_from,
         LayoutTransferStateBase transfer_to);
     Result Destroy(Device *device);

@@ -23,7 +23,7 @@
 
 #include "system/sdl_system.h"
 #include "system/debug.h"
-#include "rendering/backend/vk_renderer.h"
+#include "rendering/backend/renderer_instance.h"
 #include "rendering/backend/renderer_descriptor_pool.h"
 #include "rendering/backend/renderer_descriptor_set.h"
 #include "rendering/backend/renderer_descriptor.h"
@@ -550,6 +550,9 @@ public:
     }
 };
 
+#include <rendering/v2/engine.h>
+
+
 #define HYPERION_VK_TEST_CUBEMAP 1
 #define HYPERION_VK_TEST_MIPMAP 0
 
@@ -575,43 +578,29 @@ int main()
      * pipeline from stalling when waiting for device upload/download. */
     const uint16_t pending_frames = 2;
 
-    VkRenderer renderer(system, "Hyperion Vulkan Test", "HyperionEngine");
 
-    auto renderer_initialize_result = renderer.Initialize(true);
-    AssertThrowMsg(renderer_initialize_result, "%s", renderer_initialize_result.message);
+    v2::Engine engine(system, "My app");
 
-    Device *device = renderer.GetDevice();
 
-    /* Test fbo */
-    //FramebufferObject test_fbo(1024, 768);// 512, 512);
-
-    auto color_format = device->GetFeatures().FindSupportedFormat(
-        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
-    );
-
-    /* use floating point attachments for the gbuffer */
-    auto gbuffer_format = device->GetFeatures().FindSupportedFormat(
-        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
-    );
-    
-    auto depth_format = device->GetFeatures().FindSupportedFormat(
-        std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
-                    Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-    );
 
     /* Descriptor sets */
     GPUBuffer matrices_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT),
-                      scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    // test data for descriptors
+    struct MatricesBlock {
+        alignas(16) Matrix4 model;
+        alignas(16) Matrix4 view;
+        alignas(16) Matrix4 projection;
+    } matrices_block;
+
+
+    struct SceneDataBlock {
+        alignas(16) Vector3 camera_position;
+        alignas(16) Vector3 light_direction;
+    } scene_data_block;
+
+
+    std::array<Pipeline *, 2> pipelines{};
 
 #if HYPERION_VK_TEST_CUBEMAP
     std::vector<std::shared_ptr<Texture2D>> cubemap_faces;
@@ -667,114 +656,173 @@ int main()
     );
 #endif
 
-    renderer::Shader shader;
-    shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/deferred_vert.spv").Read() });
-    shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/deferred_frag.spv").Read() });
-    shader.CreateProgram("main");
+    engine.Initialize();
+
+    v2::Framebuffer::ID my_fbo_id = -1;
+
+    {
+        auto fbo = std::make_unique<v2::Framebuffer>(512, 512);
+        /* Add color attachment */
+        fbo->GetWrappedObject()->AddAttachment(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR));
+
+        /* Normals attachment */
+        fbo->GetWrappedObject()->AddAttachment(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER));
+
+        /* positions attachment */
+        fbo->GetWrappedObject()->AddAttachment(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER));
+
+        /* Now we add a depth buffer */
+        fbo->GetWrappedObject()->AddAttachment(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH));
+
+        my_fbo_id = engine.AddFramebuffer(std::move(fbo));
+    }
+
+    engine.GetInstance()->GetDescriptorPool()
+        .AddDescriptorSet()
+        .AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
+        .AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
+        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+
+    
+
+    engine.GetInstance()->GetDescriptorPool()
+        .AddDescriptorSet()
+        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+            0,
+            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
+            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
+            VK_SHADER_STAGE_FRAGMENT_BIT
+        ))
+        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+            1,
+            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
+            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
+            VK_SHADER_STAGE_FRAGMENT_BIT
+        ))
+        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+            2,
+            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
+            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
+            VK_SHADER_STAGE_FRAGMENT_BIT
+        ));
+
+
+    Device *device = engine.GetInstance()->GetDevice();
+
+    /* Initialize descriptor pool, has to be before any pipelines are created */
+
+    auto image_create_result = image->Create(
+        device,
+        engine.GetInstance(),
+        Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
+        Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
+    );
+    AssertThrowMsg(image_create_result, "%s", image_create_result.message);
+
+    auto image_view_result = test_image_view.Create(device, image);
+    AssertThrowMsg(image_view_result, "%s", image_view_result.message);
+
+    auto sampler_result = test_sampler.Create(device, &test_image_view);
+    AssertThrowMsg(sampler_result, "%s", sampler_result.message);
+
+    matrices_descriptor_buffer.Create(device, sizeof(MatricesBlock));
+    scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
+
+    auto descriptor_pool_result = engine.GetInstance()->GetDescriptorPool().Create(engine.GetInstance()->GetDevice());
+    AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
+
+    engine.PrepareSwapchain();
+
+
 
     renderer::Shader mirror_shader;
     mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
     mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/mirror_frag.spv").Read() });
     mirror_shader.CreateProgram("main");
 
-    std::array<Pipeline *, 2> pipelines{};
 
-    /* Add a "default" pipeline
-     * we'll have to set up a framebuffer with attachments for any image views retrieved
-     * from the swapchain */
+    auto render_pass = std::make_unique<v2::RenderPass>();
 
-    Pipeline::Builder deferred_pipeline_builder;
+    /* For our color attachment */
+    render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
+        .attachment = std::make_unique<Attachment>(
+            helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR)),
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            0,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        ),
+        .is_depth_attachment = false
+    });
+    /* For our normals attachment */
+    render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
+        .attachment = std::make_unique<Attachment>(
+            helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)),
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            1,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        ),
+        .is_depth_attachment = false
+    });
+    /* For our positions attachment */
+    render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
+        .attachment = std::make_unique<Attachment>(
+            helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)),
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            2,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        ),
+        .is_depth_attachment = false
+    });
 
-    deferred_pipeline_builder
-        .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
-        .Shader(&shader)
-        .VertexAttributes(MeshInputAttributeSet({
-            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
-            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
-            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
-            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
-            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
-            cube_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
-        }))
-        .RenderPass([&renderer, color_format, depth_format](RenderPass &render_pass) {
-            /* For our color attachment */
-            render_pass.AddAttachment(RenderPass::AttachmentInfo{
-                .attachment = std::make_unique<Attachment>(
-                    renderer.swapchain->image_format,
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                    0,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-                ),
-                .is_depth_attachment = false
-            });
+    /* For our depth attachment */
+    render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
+        .attachment = std::make_unique<Attachment>(
+            helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)),
+            VK_ATTACHMENT_LOAD_OP_CLEAR,
+            VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            3,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        ),
+        .is_depth_attachment = true
+    });
 
-            /* For our depth attachment */
-            render_pass.AddAttachment(RenderPass::AttachmentInfo{
-                .attachment = std::make_unique<Attachment>(
-                    helpers::ToVkFormat(depth_format),
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                    1,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-                ),
-                .is_depth_attachment = true
-            });
+    render_pass->GetWrappedObject()->AddDependency(VkSubpassDependency{
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+    });
 
-            render_pass.AddDependency(VkSubpassDependency{
-                .srcSubpass = VK_SUBPASS_EXTERNAL,
-                .dstSubpass = 0,
-                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                .srcAccessMask = 0,
-                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-            });
-        });
+    render_pass->GetWrappedObject()->AddDependency(VkSubpassDependency{
+        .srcSubpass = 0,
+        .dstSubpass = VK_SUBPASS_EXTERNAL,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+    });
 
-    for (auto img : renderer.swapchain->images) {
-        auto image_view = std::make_unique<ImageView>(VK_IMAGE_ASPECT_COLOR_BIT);
 
-        /* Create imageview independent of a Image */
-        auto image_view_result = image_view->Create(
-            device,
-            img,
-            renderer.swapchain->image_format,
-            VK_IMAGE_VIEW_TYPE_2D
-        );
-
-        AssertThrowMsg(image_view_result, "%s", image_view_result.message);
-
-        deferred_pipeline_builder.Framebuffer(
-            renderer.swapchain->extent.width,
-            renderer.swapchain->extent.height,
-            [&image_view, color_format, depth_format](FramebufferObject &fbo) {
-                /* Add color attachment */
-                fbo.AddAttachment(
-                    FramebufferObject::AttachmentImageInfo{
-                        .image = nullptr,
-                        .image_view = std::move(image_view),
-                        .sampler = nullptr,
-                        .image_needs_creation = false,
-                        .image_view_needs_creation = false,
-                        .sampler_needs_creation = true
-                    },
-                    color_format // unused but will tell the fbo that it is not a depth texture
-                );
-
-                /* Now we add a depth buffer */
-                fbo.AddAttachment(depth_format);
-            });
-    }
-
-    auto add_pipeline_result = renderer.AddPipeline(std::move(deferred_pipeline_builder), &pipelines[0]);
-    AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
+    v2::RenderPass::ID render_pass_id = engine.AddRenderPass(std::move(render_pass));
 
 
     Pipeline::Builder scene_pass_pipeline_builder;
@@ -789,171 +837,14 @@ int main()
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
         }))
-        .RenderPass([&](RenderPass &render_pass) {
-            /* For our color attachment */
-            render_pass.AddAttachment(RenderPass::AttachmentInfo{
-                .attachment = std::make_unique<Attachment>(
-                    helpers::ToVkFormat(color_format),
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    0,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-                ),
-                .is_depth_attachment = false
-            });
-            /* For our normals attachment */
-            render_pass.AddAttachment(RenderPass::AttachmentInfo{
-                .attachment = std::make_unique<Attachment>(
-                    helpers::ToVkFormat(gbuffer_format),
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    1,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-                ),
-                .is_depth_attachment = false
-            });
-            /* For our positions attachment */
-            render_pass.AddAttachment(RenderPass::AttachmentInfo{
-                .attachment = std::make_unique<Attachment>(
-                    helpers::ToVkFormat(gbuffer_format),
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    2,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-                ),
-                .is_depth_attachment = false
-            });
+        .RenderPass(render_pass_id)
+        .Framebuffer(my_fbo_id);
 
-            /* For our depth attachment */
-            render_pass.AddAttachment(RenderPass::AttachmentInfo{
-                .attachment = std::make_unique<Attachment>(
-                    helpers::ToVkFormat(depth_format),
-                    VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    VK_ATTACHMENT_STORE_OP_STORE,
-                    VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                    VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    3,
-                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-                ),
-                .is_depth_attachment = true
-            });
-
-            render_pass.AddDependency(VkSubpassDependency{
-                .srcSubpass = VK_SUBPASS_EXTERNAL,
-                .dstSubpass = 0,
-                .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
-                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-            });
-
-            render_pass.AddDependency(VkSubpassDependency{
-                .srcSubpass = 0,
-                .dstSubpass = VK_SUBPASS_EXTERNAL,
-                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-            });
-        })
-        .Framebuffer(
-            renderer.swapchain->extent.width,
-            renderer.swapchain->extent.height,
-            [&](FramebufferObject &fbo) {
-                /* Add color attachment */
-                fbo.AddAttachment(color_format);
-
-                /* Normals attachment */
-                fbo.AddAttachment(gbuffer_format);
-
-                /* positions attachment */
-                fbo.AddAttachment(gbuffer_format);
-
-                /* Now we add a depth buffer */
-                fbo.AddAttachment(depth_format);
-            });
-
-    add_pipeline_result = renderer.AddPipeline(std::move(scene_pass_pipeline_builder), &pipelines[1]);
-    AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
-
-    renderer.descriptor_pool
-        .AddDescriptorSet()
-        .AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
-        .AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
-
-    renderer.descriptor_pool
-        .AddDescriptorSet()
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            0,
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].image_view.get()),
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0].sampler.get()),
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ))
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            1,
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].image_view.get()),
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[1].sampler.get()),
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ))
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            2,
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[2].image_view.get()),
-            non_owning_ptr(pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[2].sampler.get()),
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ));
-
-    // test data for descriptors
-    struct MatricesBlock {
-        alignas(16) Matrix4 model;
-        alignas(16) Matrix4 view;
-        alignas(16) Matrix4 projection;
-    } matrices_block;
-
-    matrices_descriptor_buffer.Create(device, sizeof(MatricesBlock));
-
-    struct SceneDataBlock {
-        alignas(16) Vector3 camera_position;
-        alignas(16) Vector3 light_direction;
-    } scene_data_block;
-
-    scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
-
-    auto image_create_result = image->Create(
-        device,
-        &renderer,
-        Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
-        Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
-    );
-    AssertThrowMsg(image_create_result, "%s", image_create_result.message);
-
-    auto image_view_result = test_image_view.Create(device, image);
-    AssertThrowMsg(image_view_result, "%s", image_view_result.message);
-
-    auto sampler_result = test_sampler.Create(device, &test_image_view);
-    AssertThrowMsg(sampler_result, "%s", sampler_result.message);
-
-    /* Initialize descriptor pool */
-    auto descriptor_pool_result = renderer.descriptor_pool.Create(renderer.GetDevice());
-    AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
+    engine.AddPipeline(std::move(scene_pass_pipeline_builder), &pipelines[1]);
 
 
-    // TODO: move out of here
-    for (auto *pl : pipelines) {
-        pl->Build(&renderer.descriptor_pool);
-    }
+
+    pipelines[0] = engine.GetSwapchainData().pipeline;
 
     //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
 
@@ -1015,33 +906,34 @@ int main()
         Pipeline *pl = pipelines[0];
         Pipeline *fbo_pl = pipelines[1];
 
-        frame = renderer.GetNextFrame();
-        renderer.BeginFrame(frame);
+        frame = engine.GetInstance()->GetNextFrame();
+        engine.GetInstance()->BeginFrame(frame);
         
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
 
         fbo_pl->StartRenderPass(frame->command_buffer, 0);
-        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, fbo_pl->layout, 0, 1);
-        monkey_mesh->RenderVk(frame, &renderer, nullptr);
+
+        engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, fbo_pl->layout, 0, 1);
+        monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
         fbo_pl->EndRenderPass(frame->command_buffer, 0);
 
-        pl->StartRenderPass(frame->command_buffer, renderer.acquired_frames_index);
-        renderer.descriptor_pool.BindDescriptorSets(frame->command_buffer, pl->layout);
-        full_screen_quad->RenderVk(frame, &renderer, nullptr);
-        pl->EndRenderPass(frame->command_buffer, renderer.acquired_frames_index);
+        pl->StartRenderPass(frame->command_buffer, engine.GetInstance()->acquired_frames_index);
+        engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, pl->layout);
+        full_screen_quad->RenderVk(frame, engine.GetInstance(), nullptr);
+        pl->EndRenderPass(frame->command_buffer, engine.GetInstance()->acquired_frames_index);
 
-        renderer.EndFrame(frame);
+        engine.GetInstance()->EndFrame(frame);
 
 
         //Pipeline *fbo_pl = pipelines[1];
         //fbo_pl->StartRenderPass(frame->command_buffer, )
 
 
-        renderer.PresentFrame(frame);
+        engine.GetInstance()->PresentFrame(frame);
     }
 
-    renderer.WaitDeviceIdle();
+    engine.GetInstance()->WaitDeviceIdle();
 
     monkey_mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
     cube_mesh.reset();
@@ -1052,97 +944,10 @@ int main()
     test_image_view.Destroy(device);
     test_sampler.Destroy(device);
     image->Destroy(device);
-
-    shader.Destroy();
+    
     mirror_shader.Destroy();
-    renderer.Destroy();
+
     delete window;
-
-    return  0;
-
-
-    // timing test
-    /*{ // fbom
-        using namespace std;
-        using namespace std::chrono;
-        auto start = high_resolution_clock::now();
-    
-        // Call the function, here sort()
-        std::shared_ptr<Loadable> result;
-        for (int i = 0; i < 100; i++) {
-            result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
-        }
-    
-        // Get ending timepoint
-        auto stop = high_resolution_clock::now();
-    
-        // Get duration. Substart timepoints to 
-        // get durarion. To cast it to proper unit
-        // use duration cast method
-        auto duration = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(stop - start).count();
-
-        std::cout << "FBOM time: " << duration << "\n";
-    }
-    // timing test
-    { // obj
-        using namespace std;
-        using namespace std::chrono;
-        auto start = high_resolution_clock::now();
-    
-        // Call the function, here sort()
-        std::shared_ptr<Loadable> result;
-        for (int i = 0; i < 100; i++) {
-            result = asset_manager->LoadFromFile<Node>("models/sphere_hq.obj", false);
-        }
-    
-        // Get ending timepoint
-        auto stop = high_resolution_clock::now();
-    
-        // Get duration. Substart timepoints to 
-        // get durarion. To cast it to proper unit
-        // use duration cast method
-        auto duration = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(stop - start).count();
-
-        std::cout << "OBJ time: " << duration << "\n";
-    }*/
-
-
-    // std::shared_ptr<Node> my_entity = std::make_shared<Node>("FOO BAR");
-    // my_entity->AddControl(std::make_shared<NoiseTerrainControl>(nullptr, 12345));
-
-    // auto my_entity = asset_manager->LoadFromFile<Node>("models/sphere_hq.obj", true);
-    // my_entity->Scale(Vector3(0.2f));
-    // my_entity->Move(Vector3(0, 2, 0));
-
-    // FileByteWriter fbw("test.fbom");
-    // fbom::FBOMWriter writer;
-    // writer.Append(my_entity.get());
-    // auto res = writer.Emit(&fbw);
-    // fbw.Close();
-
-    // if (res != fbom::FBOMResult::FBOM_OK) {
-    //     throw std::runtime_error(std::string("FBOM Error: ") + res.message);
-    // }
-
-    // return 0;
-
-    /*std::shared_ptr<Loadable> result = fbom::FBOMLoader().LoadFromFile("./test.fbom");
-
-    if (auto entity = std::dynamic_pointer_cast<Node>(result)) {
-        std::cout << "Loaded entity name: " << entity->GetName() << "\n";
-    }
-
-    return 0;*/
-
-    CoreEngine *engine = new GlfwEngine();
-    CoreEngine::SetInstance(engine);
-
-    auto *game = new SceneEditor(window);
-
-    engine->InitializeGame(game);
-
-    delete game;
-    delete engine;
 
     return 0;
 }

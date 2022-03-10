@@ -77,7 +77,7 @@ std::vector<VkVertexInputAttributeDescription> Pipeline::BuildVertexAttributes(c
         this->vertex_attributes[i] = VkVertexInputAttributeDescription{
             .location = attribute.location,
             .binding = attribute.binding,
-            .format = attribute.format,
+            .format = attribute.GetFormat(),
             .offset = uint32_t(binding_sizes[attribute.binding])
         };
 
@@ -276,13 +276,7 @@ void Pipeline::Destroy()
 {
     VkDevice render_device = this->device->GetDevice();
 
-    for (auto &fbo : m_construction_info.fbos) {
-        AssertThrow(fbo->Destroy(this->device));
-        fbo.reset();
-    }
-
-    AssertThrow(m_construction_info.render_pass->Destroy(this->device));
-    m_construction_info.render_pass.reset();
+    m_construction_info.fbos.clear();
 
     DebugLog(LogType::Info, "Destroying pipeline!\n");
 
