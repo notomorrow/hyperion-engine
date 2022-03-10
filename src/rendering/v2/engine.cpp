@@ -23,15 +23,17 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
 
 Engine::~Engine()
 {
+    m_filter_stack.Destroy(this);
+
     // TODO: refactor
-    m_swapchain_data.shader->Destroy(m_instance.get());
+    m_swapchain_data.shader->Destroy(this);
 
     for (auto &it : m_framebuffers) {
-        it->Destroy(m_instance.get());
+        it->Destroy(this);
     }
 
     for (auto &it : m_render_passes) {
-        it->Destroy(m_instance.get());
+        it->Destroy(this);
     }
 
     /*for (auto &shader : m_shaders) {
@@ -57,7 +59,7 @@ Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffe
     AssertThrow(framebuffer != nullptr);
 
     Framebuffer::ID id(m_framebuffers.size());
-    framebuffer->Create(m_instance.get(), GetRenderPass(render_pass));
+    framebuffer->Create(this, GetRenderPass(render_pass));
 
     m_framebuffers.push_back(std::move(framebuffer));
 
@@ -85,7 +87,7 @@ RenderPass::ID Engine::AddRenderPass(std::unique_ptr<RenderPass> &&render_pass)
     AssertThrow(render_pass != nullptr);
 
     RenderPass::ID id(m_render_passes.size());
-    render_pass->Create(m_instance.get());
+    render_pass->Create(this);
 
     m_render_passes.push_back(std::move(render_pass));
 
@@ -157,14 +159,22 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
+
+
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
     m_swapchain_data.shader.reset(new Shader({
-        SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read() },
-        SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read() }
-    }));
+        SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read() },
+        SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read() }
+        }));
 
-    m_swapchain_data.shader->Create(m_instance.get());
+    m_swapchain_data.shader->Create(this);
 
+    m_filter_stack.Create(this);
+
+
+    
+
+    // TMP trying to update a descriptor set right on 
     const auto vertex_attributes = MeshInputAttributeSet(
         MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
         | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
@@ -235,5 +245,18 @@ void Engine::Initialize()
 {
     InitializeInstance();
     FindTextureFormatDefaults();
+}
+
+void Engine::RenderPostProcessing(Frame *frame)
+{
+    m_filter_stack.Render(this, frame);
+}
+
+void Engine::RenderSwapchain(Frame *frame)
+{
+    m_swapchain_data.pipeline->StartRenderPass(frame->command_buffer, m_instance->acquired_frames_index);
+    m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, m_swapchain_data.pipeline->layout);
+    m_filter_stack.GetFullScreenQuad()->RenderVk(frame, m_instance.get(), nullptr);
+    m_swapchain_data.pipeline->EndRenderPass(frame->command_buffer, m_instance->acquired_frames_index);
 }
 } // namespace hyperion::v2

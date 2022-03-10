@@ -59,8 +59,8 @@ public:
     Shader &operator=(const Shader &) = delete;
     ~Shader();
 
-    void Create(Instance *instance);
-    void Destroy(Instance *instance);
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
 
 private:
     std::vector<SpirvObject> m_spirv_objects;

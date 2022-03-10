@@ -85,5 +85,29 @@ Result DescriptorSet::Destroy(Device *device)
     HYPERION_RETURN_OK;
 }
 
+Result DescriptorSet::Update(Device *device)
+{
+    std::vector<VkWriteDescriptorSet> writes;
+    writes.reserve(m_descriptors.size());
+
+    for (auto &descriptor : m_descriptors) {
+        Descriptor::Info info{};
+
+        descriptor->Create(device, &info);
+        
+        writes.push_back(info.write);
+    }
+
+    //write descriptor
+    for (VkWriteDescriptorSet &w : writes) {
+        w.dstSet = m_set;
+    }
+
+    vkUpdateDescriptorSets(device->GetDevice(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+
+    HYPERION_RETURN_OK;
+}
+
+
 } // namespace renderer
 } // namespace hyperion

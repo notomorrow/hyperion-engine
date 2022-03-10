@@ -10,6 +10,8 @@ namespace hyperion::v2 {
 using renderer::Instance;
 using renderer::Device;
 
+class Engine;
+
 template <class WrappedType>
 class BaseComponent {
 public:
@@ -21,7 +23,7 @@ public:
     BaseComponent &operator=(const BaseComponent &other) = delete;
     ~BaseComponent()
     {
-        AssertExitMsg(
+        AssertThrowMsg(
             m_wrapped == nullptr,
             "Expected wrapped object of type %s to be destroyed before destructor, but it was not nullptr.",
             typeid(WrappedType).name()
@@ -31,8 +33,8 @@ public:
     inline WrappedType *GetWrappedObject() { return m_wrapped.get(); }
     inline const WrappedType *GetWrappedObject() const { return m_wrapped.get(); }
 
-    void Create(Instance *instance)  {}
-    void Destroy(Instance *instance) {}
+    void Create(Engine *engine)  {}
+    void Destroy(Engine *engine) {}
 
 protected:
     std::unique_ptr<WrappedType> m_wrapped;

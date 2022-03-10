@@ -1,4 +1,5 @@
 #include "render_pass.h"
+#include "../engine.h"
 
 namespace hyperion::v2 {
 
@@ -95,18 +96,18 @@ void RenderPass::CreateDependencies()
     }
 }
 
-void RenderPass::Create(Instance *instance)
+void RenderPass::Create(Engine *engine)
 {
     CreateAttachments();
     CreateDependencies();
 
-    auto result = m_wrapped->Create(instance->GetDevice());
+    auto result = m_wrapped->Create(engine->GetInstance()->GetDevice());
     AssertThrowMsg(result, "%s", result);
 }
 
-void RenderPass::Destroy(Instance *instance)
+void RenderPass::Destroy(Engine *engine)
 {
-    auto result = m_wrapped->Destroy(instance->GetDevice());
+    auto result = m_wrapped->Destroy(engine->GetInstance()->GetDevice());
     m_wrapped.reset();
 
     AssertThrowMsg(result, "%s", result);
