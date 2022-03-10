@@ -12,7 +12,7 @@
 
 namespace hyperion {
 const AssetLoader::Result AssetManager::ErrorList::no_error{ AssetLoader::Result::ASSET_OK };
-const int AssetManager::ErrorList::max_size = 16;
+const size_t AssetManager::ErrorList::max_size = 16;
 
 AssetManager *AssetManager::instance = nullptr;
 

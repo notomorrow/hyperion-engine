@@ -394,7 +394,7 @@ void Shader::ApplyTransforms(const Transform &transform, Camera *camera)
     SetUniform(m_uniform_view_matrix, camera->GetViewMatrix());
     SetUniform(m_uniform_proj_matrix, camera->GetProjectionMatrix());
     SetUniform(m_uniform_view_proj_matrix, camera->GetViewProjectionMatrix());
-    SetUniform(m_uniform_viewport, Vector2(camera->GetWidth(), camera->GetHeight()));
+    SetUniform(m_uniform_viewport, Vector2(float(camera->GetWidth()), float(camera->GetHeight())));
     SetUniform(m_uniform_num_point_lights, 0);
 }
 

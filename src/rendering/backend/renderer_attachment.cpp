@@ -2,7 +2,7 @@
 
 namespace hyperion {
 namespace renderer {
-Attachment::Attachment(VkFormat format,
+AttachmentBase::AttachmentBase(VkFormat format,
     VkAttachmentLoadOp load_op,
     VkAttachmentStoreOp store_op,
     VkAttachmentLoadOp stencil_load_op,
@@ -23,12 +23,12 @@ Attachment::Attachment(VkFormat format,
 {
 }
 
-Attachment::~Attachment()
+AttachmentBase::~AttachmentBase()
 {
 
 }
 
-Result Attachment::Create(Device *device)
+Result AttachmentBase::Create(Device *device)
 {
     m_attachment_description.format = m_format;
     m_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -46,7 +46,7 @@ Result Attachment::Create(Device *device)
 }
 
 
-Result Attachment::Destroy(Device *device)
+Result AttachmentBase::Destroy(Device *device)
 {
     HYPERION_RETURN_OK;
 }

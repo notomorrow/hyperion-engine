@@ -34,36 +34,33 @@ Keyframe AnimationTrack::GetPoseAt(float time) const
 {
     int first = 0, second = -1;
 
-    const Keyframe *current = nullptr;
-    const Keyframe *next = nullptr;
-
-    if (!frames.empty()) {
-        size_t n = frames.size() - 1;
-        for (size_t i = 0; i < n; i++) {
-            if (time >= frames[i].GetTime() && 
-                time <= frames[i + 1].GetTime()) {
-                first = i;
-                second = i + 1;
-                break;
-            }
-        }
-
-        current = &frames.at(first);
-
-        Vector3 tmp_trans = current->GetTranslation();
-        Quaternion tmp_rot = current->GetRotation();
-
-        if (second > first) {
-            next = &frames[second];
-
-            float fraction = (time - current->GetTime()) / 
-                (next->GetTime() - current->GetTime());
-
-            tmp_trans.Lerp(next->GetTranslation(), fraction);
-            tmp_rot.Slerp(next->GetRotation(), fraction);
-        }
-
-        return Keyframe(time, tmp_trans, tmp_rot);
+    if (frames.empty()) {
+        return Keyframe(time, Vector3(), Quaternion());
     }
+
+    for (int i = 0; i < int(frames.size() - 1); i++) {
+        if (MathUtil::InRange(time, { frames[i].GetTime(), frames[i + 1].GetTime() })) {
+            first = i;
+            second = i + 1;
+            break;
+        }
+    }
+
+    const Keyframe &current = frames.at(first);
+
+    Vector3 tmp_trans = current.GetTranslation();
+    Quaternion tmp_rot = current.GetRotation();
+
+    if (second > first) {
+        const Keyframe &next = frames[second];
+
+        float fraction = (time - current.GetTime()) / 
+            (next.GetTime() - current.GetTime());
+
+        tmp_trans.Lerp(next.GetTranslation(), fraction);
+        tmp_rot.Slerp(next.GetRotation(), fraction);
+    }
+
+    return Keyframe(time, tmp_trans, tmp_rot);
 }
 }

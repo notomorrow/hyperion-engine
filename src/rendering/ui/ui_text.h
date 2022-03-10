@@ -36,14 +36,14 @@ public:
 
     inline Vector2 GetCharOffset(unsigned char ch) const
     {
-        return m_char_texture_coords[ch] / Vector2(NumCharsPerRow(), NumCharsPerCol());
+        return m_char_texture_coords[ch] / Vector2(float(NumCharsPerRow()), float(NumCharsPerCol()));
     }
 
     inline Vector2 GetScaling() const
     {
         AssertThrow(m_texture != nullptr);
 
-        return m_char_size / Vector2(m_texture->GetWidth(), m_texture->GetHeight());
+        return m_char_size / Vector2(float(m_texture->GetWidth()), float(m_texture->GetHeight()));
     }
 
     inline int NumCharsPerRow() const

@@ -11,6 +11,7 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 using renderer::MeshInputAttributeSet;
+using renderer::AttachmentBase;
 using renderer::Attachment;
 using renderer::ImageView;
 using renderer::FramebufferObject;
@@ -61,6 +62,22 @@ Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffe
     m_framebuffers.push_back(std::move(framebuffer));
 
     return id;
+}
+
+Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass_id)
+{
+    RenderPass *render_pass = GetRenderPass(render_pass_id);
+
+    AssertThrow(render_pass != nullptr);
+
+    auto framebuffer = std::make_unique<Framebuffer>(width, height);
+
+    /* Add all attachments from the renderpass */
+    for (auto &it : render_pass->GetAttachments()) {
+        framebuffer->GetWrappedObject()->AddAttachment(it.format);
+    }
+
+    return AddFramebuffer(std::move(framebuffer), render_pass_id);
 }
 
 RenderPass::ID Engine::AddRenderPass(std::unique_ptr<RenderPass> &&render_pass)
@@ -138,14 +155,6 @@ void Engine::FindTextureFormatDefaults()
     );
 }
 
-
-/*void Engine::BuildShaders()
-{
-    for (auto &shader : m_shaders) {
-        shader->Create(m_instance.get(), m_instance->GetDevice());
-    }
-}*/
-
 void Engine::PrepareSwapchain()
 {
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
@@ -165,47 +174,18 @@ void Engine::PrepareSwapchain()
         | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT);
 
 
-    auto render_pass = std::make_unique<RenderPass>();
+    auto render_pass = std::make_unique<RenderPass>(RenderPass::RENDER_PASS_STAGE_PRESENT);
     /* For our color attachment */
     render_pass->GetWrappedObject()->AddAttachment(renderer::RenderPass::AttachmentInfo{
-        .attachment = std::make_unique<Attachment>(
-            m_instance->swapchain->image_format, /* use swapchain image format */
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            0,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        ),
+        .attachment = std::make_unique<Attachment<VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
+            (0, m_instance->swapchain->image_format),
         .is_depth_attachment = false
     });
 
-    /* For our depth attachment */
-    render_pass->GetWrappedObject()->AddAttachment(renderer::RenderPass::AttachmentInfo{
-        .attachment = std::make_unique<Attachment>(
-            renderer::helpers::ToVkFormat(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            1,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        ),
-        .is_depth_attachment = true
+    render_pass->AddAttachment({
+        .format = m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)
     });
-
-    render_pass->GetWrappedObject()->AddDependency(VkSubpassDependency{
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        .srcAccessMask = 0,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-    });
-
+    
     RenderPass::ID render_pass_id = AddRenderPass(std::move(render_pass));
 
     Pipeline::Builder builder;

@@ -11,7 +11,7 @@ public:
     std::array<float, 9> values;
 
     Matrix3();
-    Matrix3(float *v);
+    explicit Matrix3(float *v);
     Matrix3(const Matrix3 &other);
 
     float Determinant() const;
@@ -36,6 +36,9 @@ public:
     static Matrix3 Ones();
     static Matrix3 Identity();
 };
+
+static_assert(sizeof(Matrix3) == sizeof(float) * 9, "sizeof(Matrix3) must be equal to sizeof(float) * 9");
+
 }
 
 #endif

@@ -57,8 +57,8 @@ public:
     bool operator!=(const Vector4 &other) const;
     inline Vector4 operator-() const { return operator*(-1.0f); }
 
-    float Length() const;
-    float LengthSquared() const;
+    constexpr inline float LengthSquared() const { return x * x + y * y + z * z + w * w; }
+    inline float Length() const { return sqrt(LengthSquared()); }
 
     float DistanceSquared(const Vector4 &other) const;
     float Distance(const Vector4 &other) const;
@@ -93,6 +93,8 @@ public:
         return hc;
     }
 };
+
+static_assert(sizeof(Vector4) == sizeof(float) * 4, "sizeof(Vector4) must be equal to sizeof(float) * 4");
 
 } // namespace hyperion
 
