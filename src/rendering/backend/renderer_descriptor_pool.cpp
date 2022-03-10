@@ -46,7 +46,7 @@ Result DescriptorPool::Create(Device *device)
     std::vector<VkDescriptorPoolSize> pool_sizes;
     pool_sizes.reserve(items_per_set.size());
 
-    for (auto &it : DescriptorPool::items_per_set) {
+    for (auto &it : items_per_set) {
         pool_sizes.push_back({ it.first, uint32_t(it.second * set_size) });
     }
 

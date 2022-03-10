@@ -1,6 +1,6 @@
 #include "renderer_image.h"
 #include "renderer_pipeline.h"
-#include "vk_renderer.h"
+#include "renderer_instance.h"
 #include <util/img/image_util.h>
 #include <system/debug.h>
 
@@ -159,7 +159,7 @@ Result Image::Create(Device *device, VkImageLayout layout)
     return CreateImage(device, layout, &image_info);
 }
 
-Result Image::Create(Device *device, VkRenderer *renderer,
+Result Image::Create(Device *device, Instance *renderer,
     LayoutTransferStateBase transfer_from,
     LayoutTransferStateBase transfer_to)
 {

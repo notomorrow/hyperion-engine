@@ -138,6 +138,10 @@ public:
     static inline T Round(T a)
         { return std::round(a); }
 
+    template <typename T, typename U = T, typename V = U>
+    static inline bool InRange(T value, const std::pair<U, V> &range)
+        { return value >= range.first && value < range.second; }
+
     static inline constexpr bool IsPowerOfTwo(uint64_t value)
         { return (value & (value - 1)) == 0; }
 

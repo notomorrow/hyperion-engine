@@ -5,6 +5,8 @@
 #ifndef HYPERION_RENDERER_STRUCTS_H
 #define HYPERION_RENDERER_STRUCTS_H
 
+#include <util/enum_options.h>
+
 #include <vulkan/vulkan.h>
 #include <hash_code.h>
 
@@ -43,27 +45,34 @@ struct MeshBindingDescription {
 };
 
 struct MeshInputAttribute {
+    enum Type {
+        MESH_INPUT_ATTRIBUTE_UNDEFINED    = 0,
+        MESH_INPUT_ATTRIBUTE_POSITION     = 1,
+        MESH_INPUT_ATTRIBUTE_NORMAL       = 2,
+        MESH_INPUT_ATTRIBUTE_TEXCOORD0    = 4,
+        MESH_INPUT_ATTRIBUTE_TEXCOORD1    = 8,
+        MESH_INPUT_ATTRIBUTE_TANGENT      = 16,
+        MESH_INPUT_ATTRIBUTE_BITANGENT    = 32,
+        MESH_INPUT_ATTRIBUTE_BONE_INDICES = 64,
+        MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS = 128,
+    };
+
+    static const EnumOptions<Type, MeshInputAttribute, 16> mapping;
+
     uint32_t    location;
     uint32_t    binding;
     // total size -- num elements * sizeof(float)
     size_t      size;
-    // vk format
-    VkFormat    format;
 
-    MeshInputAttribute(uint32_t location, uint32_t binding, size_t size, VkFormat format)
-        : location(location),
-          binding(binding),
-          size(size),
-          format(format)
+    inline VkFormat GetFormat() const
     {
-    }
-
-    MeshInputAttribute(const MeshInputAttribute &other)
-        : location(other.location),
-          binding(other.binding),
-          size(other.size),
-          format(other.format)
-    {
+        switch (this->size) {
+        case sizeof(float): return VK_FORMAT_R32_SFLOAT;
+        case sizeof(float) * 2: return VK_FORMAT_R32G32_SFLOAT;
+        case sizeof(float) * 3: return VK_FORMAT_R32G32B32_SFLOAT;
+        case sizeof(float) * 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+        default: AssertThrowMsg(0, "Unsupported vertex attribute format!");
+        }
     }
 
     inline bool operator<(const MeshInputAttribute &other) const
@@ -73,7 +82,7 @@ struct MeshInputAttribute {
         VkVertexInputAttributeDescription attrib{};
         attrib.location = this->location;
         attrib.binding = this->binding;
-        attrib.format = this->format;
+        attrib.format = this->GetFormat();
 
         return attrib;
     }
@@ -81,9 +90,9 @@ struct MeshInputAttribute {
     inline HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(location);
-        hc.Add(binding);
-        hc.Add(uint32_t(format));
+        hc.Add(this->location);
+        hc.Add(this->binding);
+        hc.Add(this->size);
 
         return hc;
     }
@@ -93,13 +102,29 @@ struct MeshInputAttributeSet {
     std::vector<MeshInputAttribute> attributes;
 
     MeshInputAttributeSet() {}
+
     explicit MeshInputAttributeSet(const std::vector<MeshInputAttribute> &attributes)
         : attributes(attributes)
     {
         SortAttributes();
     }
+
+    explicit MeshInputAttributeSet(uint32_t type_flags)
+    {
+        for (uint32_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
+            uint64_t flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);
+
+            if (type_flags & flag_mask) {
+                attributes.push_back(MeshInputAttribute::mapping.Get(MeshInputAttribute::Type(flag_mask)));
+            }
+        }
+
+        SortAttributes();
+    }
+
     MeshInputAttributeSet(const MeshInputAttributeSet &other)
         : attributes(other.attributes) {}
+
     ~MeshInputAttributeSet() = default;
 
     void AddAttributes(const std::vector<MeshInputAttribute> &_attributes)
