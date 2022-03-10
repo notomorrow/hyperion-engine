@@ -2,7 +2,7 @@
 // Created by ethan on 2/5/22.
 //
 
-#include "vk_renderer.h"
+#include "renderer_instance.h"
 #include "renderer_device.h"
 
 #include "../../system/debug.h"
@@ -24,7 +24,7 @@ void Queue::GetQueueFromDevice(Device device, uint32_t queue_family_index,
     vkGetDeviceQueue(device.GetDevice(), queue_family_index, queue_index, &this->queue);
 }
 
-VkResult VkRenderer::AcquireNextImage(Frame *frame)
+VkResult Instance::AcquireNextImage(Frame *frame)
 {
     //const VkDevice render_device = this->device->GetDevice();
     AssertExit(frame != nullptr && this->swapchain != nullptr);
@@ -48,7 +48,7 @@ VkResult VkRenderer::AcquireNextImage(Frame *frame)
     return vkResetCommandBuffer(frame->command_buffer, 0);
 }
 
-void VkRenderer::WaitImageReady(Frame *frame)
+void Instance::WaitImageReady(Frame *frame)
 {
     auto new_image_result = this->AcquireNextImage(frame);
 
@@ -59,12 +59,12 @@ void VkRenderer::WaitImageReady(Frame *frame)
     }
 }
 
-void VkRenderer::WaitDeviceIdle()
+void Instance::WaitDeviceIdle()
 {
     vkDeviceWaitIdle(this->device->GetDevice());
 }
 
-void VkRenderer::BeginFrame(Frame *frame)
+void Instance::BeginFrame(Frame *frame)
 {
     /* Assume `frame` is not nullptr */
 
@@ -73,7 +73,7 @@ void VkRenderer::BeginFrame(Frame *frame)
     frame->BeginCapture();
 }
 
-void VkRenderer::EndFrame(Frame *frame)
+void Instance::EndFrame(Frame *frame)
 {
     /* Assume `frame` is not nullptr */
 
@@ -82,7 +82,7 @@ void VkRenderer::EndFrame(Frame *frame)
     frame->Submit(this->queue_graphics);
 }
 
-void VkRenderer::PresentFrame(Frame *frame)
+void Instance::PresentFrame(Frame *frame)
 {
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     present_info.waitSemaphoreCount = 1;
@@ -99,7 +99,7 @@ void VkRenderer::PresentFrame(Frame *frame)
     vkQueuePresentKHR(this->queue_present, &present_info);
 }
 
-Result VkRenderer::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers) {
+Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers) {
     uint32_t layers_count;
     vkEnumerateInstanceLayerProperties(&layers_count, nullptr);
 
@@ -127,7 +127,7 @@ Result VkRenderer::CheckValidationLayerSupport(const std::vector<const char *> &
     HYPERION_RETURN_OK;
 }
 
-void VkRenderer::SetValidationLayers(std::vector<const char *> _layers) {
+void Instance::SetValidationLayers(std::vector<const char *> _layers) {
     this->validation_layers = _layers;
 }
 
@@ -173,7 +173,7 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 
 #endif
 
-Result VkRenderer::SetupDebug() {
+Result Instance::SetupDebug() {
     static const std::vector<const char *> layers {
         "VK_LAYER_KHRONOS_validation",
         "VK_LAYER_LUNARG_monitor"
@@ -186,22 +186,22 @@ Result VkRenderer::SetupDebug() {
     HYPERION_RETURN_OK;
 }
 
-void VkRenderer::SetCurrentWindow(SystemWindow *_window) {
+void Instance::SetCurrentWindow(SystemWindow *_window) {
     this->window = _window;
 }
 
-SystemWindow *VkRenderer::GetCurrentWindow() {
+SystemWindow *Instance::GetCurrentWindow() {
     return this->window;
 }
 
-VkRenderer::VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name) {
+Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_name) {
     this->system = _system;
     this->app_name = app_name;
     this->engine_name = engine_name;
     this->device = nullptr;
 }
 
-Result VkRenderer::AllocatePendingFrames() {
+Result Instance::AllocatePendingFrames() {
     AssertExit(this->frames_to_allocate >= 1);
     AssertExitMsg(command_buffers.size() >= this->frames_to_allocate,
                    "Insufficient pipeline command buffers\n");
@@ -220,7 +220,7 @@ Result VkRenderer::AllocatePendingFrames() {
     HYPERION_RETURN_OK;
 }
 
-Frame *VkRenderer::GetNextFrame() {
+Frame *Instance::GetNextFrame() {
     AssertThrow(this->pending_frames.size() == this->frames_to_allocate);
 
     ++this->frames_index;
@@ -235,7 +235,7 @@ Frame *VkRenderer::GetNextFrame() {
 }
 
 
-Result VkRenderer::CreateCommandPool() {
+Result Instance::CreateCommandPool() {
     QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
 
     VkCommandPoolCreateInfo pool_info{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
@@ -253,7 +253,7 @@ Result VkRenderer::CreateCommandPool() {
     HYPERION_RETURN_OK;
 }
 
-Result VkRenderer::CreateCommandBuffers() {
+Result Instance::CreateCommandBuffers() {
     this->command_buffers.resize(this->swapchain->images.size());
 
     VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
@@ -271,7 +271,7 @@ Result VkRenderer::CreateCommandBuffers() {
 }
 
 
-Result VkRenderer::SetupDebugMessenger() {
+Result Instance::SetupDebugMessenger() {
 #ifndef HYPERION_BUILD_RELEASE
     VkDebugUtilsMessengerCreateInfoEXT messenger_info{VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
     messenger_info.messageSeverity = (
@@ -296,7 +296,7 @@ Result VkRenderer::SetupDebugMessenger() {
     HYPERION_RETURN_OK;
 }
 
-Result VkRenderer::Initialize(bool load_debug_layers) {
+Result Instance::Initialize(bool load_debug_layers) {
     // Application names/versions
     this->SetCurrentWindow(this->system.GetCurrentWindow());
 
@@ -359,7 +359,7 @@ Result VkRenderer::Initialize(bool load_debug_layers) {
     HYPERION_RETURN_OK;
 }
 
-Result VkRenderer::CleanupPendingFrames() {
+Result Instance::CleanupPendingFrames() {
     Result result = Result::OK;
 
     for (auto &frame : this->pending_frames) {
@@ -383,7 +383,7 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
     }
 }
 
-Result VkRenderer::Destroy() {
+Result Instance::Destroy() {
     Result result(Result::RENDERER_OK);
 
     /* Wait for the GPU to finish, we need to be in an idle state. */
@@ -431,20 +431,20 @@ Result VkRenderer::Destroy() {
     return result;
 }
 
-void VkRenderer::SetQueueFamilies(std::set<uint32_t> _queue_families) {
+void Instance::SetQueueFamilies(std::set<uint32_t> _queue_families) {
     this->queue_families = _queue_families;
 }
 
-Device *VkRenderer::GetDevice() {
+Device *Instance::GetDevice() {
     return this->device;
 }
 
-void VkRenderer::CreateSurface() {
+void Instance::CreateSurface() {
     this->surface = this->GetCurrentWindow()->CreateVulkanSurface(this->instance);
     DebugLog(LogType::Debug, "Created window surface\n");
 }
 
-VkPhysicalDevice VkRenderer::PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices)
+VkPhysicalDevice Instance::PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices)
 {
     Features::DeviceRequirementsResult device_requirements_result(
         Features::DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR,
@@ -495,7 +495,7 @@ VkPhysicalDevice VkRenderer::PickPhysicalDevice(std::vector<VkPhysicalDevice> _d
     return _device;
 }
 
-Result VkRenderer::InitializeDevice(VkPhysicalDevice physical_device) {
+Result Instance::InitializeDevice(VkPhysicalDevice physical_device) {
     /* If no physical device passed in, we select one */
     if (physical_device == nullptr) {
         std::vector<VkPhysicalDevice> physical_devices = this->EnumeratePhysicalDevices();
@@ -536,7 +536,7 @@ Result VkRenderer::InitializeDevice(VkPhysicalDevice physical_device) {
     HYPERION_RETURN_OK;
 }
 
-Result VkRenderer::AddPipeline(Pipeline::Builder &&builder,
+Result Instance::AddPipeline(Pipeline::Builder &&builder,
     Pipeline **out)
 {
     HashCode::Value_t hash_code = builder.GetHashCode().Value();
@@ -555,12 +555,23 @@ Result VkRenderer::AddPipeline(Pipeline::Builder &&builder,
         *out = pipeline.get();
     }
 
+    pipeline->Build(&this->descriptor_pool);
+
     this->pipelines.push_back(std::move(pipeline));
 
     HYPERION_RETURN_OK;
 }
 
-Result VkRenderer::InitializeSwapchain() {
+Result Instance::BuildPipelines()
+{
+    for (auto &pipeline : this->pipelines) {
+        pipeline->Build(&this->descriptor_pool);
+    }
+
+    HYPERION_RETURN_OK;
+}
+
+Result Instance::InitializeSwapchain() {
     SwapchainSupportDetails sc_support = this->device->QuerySwapchainSupport();
     QueueFamilyIndices      qf_indices = this->device->FindQueueFamilies();
 
@@ -570,7 +581,7 @@ Result VkRenderer::InitializeSwapchain() {
     HYPERION_RETURN_OK;
 }
 
-std::vector<VkPhysicalDevice> VkRenderer::EnumeratePhysicalDevices() {
+std::vector<VkPhysicalDevice> Instance::EnumeratePhysicalDevices() {
     uint32_t device_count = 0;
 
     vkEnumeratePhysicalDevices(this->instance, &device_count, nullptr);
@@ -586,7 +597,7 @@ std::vector<VkPhysicalDevice> VkRenderer::EnumeratePhysicalDevices() {
     return devices;
 }
 
-helpers::SingleTimeCommands VkRenderer::GetSingleTimeCommands()
+helpers::SingleTimeCommands Instance::GetSingleTimeCommands()
 {
     QueueFamilyIndices family_indices = this->device->FindQueueFamilies(); // TODO: this result should be cached
 

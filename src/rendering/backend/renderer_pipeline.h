@@ -27,8 +27,10 @@ public:
     struct ConstructionInfo {
         MeshInputAttributeSet vertex_attributes;
         Shader *shader;
-        std::unique_ptr<RenderPass> render_pass;
-        std::vector<std::unique_ptr<FramebufferObject>> fbos;
+        non_owning_ptr<RenderPass> render_pass;
+        int render_pass_id;
+        std::vector<non_owning_ptr<FramebufferObject>> fbos;
+        std::vector<int> fbo_ids; // unresolved fbo ids
 
         VkPrimitiveTopology topology;
 
@@ -39,14 +41,16 @@ public:
         } cull_mode;
 
         bool depth_test,
-            depth_write;
+             depth_write;
 
         ConstructionInfo() : shader(nullptr) {}
         ConstructionInfo(ConstructionInfo &&other)
             : vertex_attributes(std::move(other.vertex_attributes)),
               shader(other.shader),
-              render_pass(std::move(other.render_pass)),
+              render_pass(other.render_pass),
+              render_pass_id(other.render_pass_id),
               fbos(std::move(other.fbos)),
+              fbo_ids(std::move(other.fbo_ids)),
               topology(other.topology),
               cull_mode(other.cull_mode),
               depth_test(other.depth_test),
@@ -58,8 +62,10 @@ public:
         {
             vertex_attributes = std::move(other.vertex_attributes);
             shader = other.shader;
-            render_pass = std::move(other.render_pass);
+            render_pass = other.render_pass;
+            render_pass_id = other.render_pass_id;
             fbos = std::move(other.fbos);
+            fbo_ids = std::move(other.fbo_ids);
             topology = other.topology;
             cull_mode = other.cull_mode;
             depth_test = other.depth_test;
@@ -77,9 +83,12 @@ public:
             HashCode hc;
 
             hc.Add((shader != nullptr) ? shader->GetHashCode().Value() : 0);
-            hc.Add(intptr_t(render_pass.get())); // TODO
+            hc.Add(render_pass_id); // TODO
             for (auto &fbo : fbos) {
                 hc.Add(intptr_t(fbo.get()));
+            }
+            for (auto fbo_id : fbo_ids) {
+                hc.Add(fbo_id);
             }
             hc.Add(vertex_attributes.GetHashCode());
             hc.Add(int(topology));
@@ -148,16 +157,21 @@ public:
             return *this;
         }
 
-        Builder &RenderPass(std::function<void(RenderPass &)> fn)
+        Builder &RenderPass(int id)
         {
-            m_construction_info.render_pass = std::make_unique<renderer::RenderPass>();
-
-            fn(*m_construction_info.render_pass);
+            m_construction_info.render_pass_id = id;
 
             return *this;
         }
 
-        Builder &Framebuffer(size_t width, size_t height, std::function<void(FramebufferObject &)> fn)
+        Builder &Framebuffer(int id)
+        {
+            m_construction_info.fbo_ids.push_back(id);
+
+            return *this;
+        }
+
+        /*Builder &Framebuffer(size_t width, size_t height, std::function<void(FramebufferObject &)> fn)
         {
             auto fbo = std::make_unique<FramebufferObject>(width, height);
 
@@ -166,20 +180,11 @@ public:
             m_construction_info.fbos.push_back(std::move(fbo));
 
             return *this;
-        }
+        }*/
 
         std::unique_ptr<Pipeline> Build(Device *device)
         {
-            AssertThrow(m_construction_info.render_pass != nullptr);
             AssertThrow(!m_construction_info.fbos.empty());
-
-            auto render_pass_result = m_construction_info.render_pass->Create(device);
-            AssertThrowMsg(render_pass_result, "%s", render_pass_result.message);
-
-            for (auto &fbo : m_construction_info.fbos) {
-                const auto fbo_result = fbo->Create(device, m_construction_info.render_pass.get());
-                AssertThrowMsg(fbo_result, "%s", fbo_result.message);
-            }
 
             return std::make_unique<Pipeline>(device, std::move(m_construction_info));
         }
@@ -188,8 +193,7 @@ public:
         {
             return m_construction_info.GetHashCode();
         }
-
-    private:
+        
         ConstructionInfo m_construction_info;
     };
 

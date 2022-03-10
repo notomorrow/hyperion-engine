@@ -19,7 +19,7 @@
 #include "pipeline/render_queue.h"
 #include "pipeline/deferred_pipeline.h"
 
-#include "backend/vk_renderer.h"
+#include "backend/renderer_instance.h"
 
 namespace hyperion {
 
@@ -49,7 +49,7 @@ public:
     inline Bucket &GetBucket(Spatial::Bucket bucket)
         { return m_all_items.GetBucket(bucket); }
 
-    renderer::VkRenderer *vk_renderer;
+    renderer::Instance *vk_renderer;
 private:
     RenderQueue m_all_items;
     DeferredPipeline *m_deferred_pipeline;

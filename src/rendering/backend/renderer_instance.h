@@ -2,8 +2,8 @@
 // Created by ethan on 2/5/22.
 //
 
-#ifndef HYPERION_VK_RENDERER_H
-#define HYPERION_VK_RENDERER_H
+#ifndef HYPERION_RENDERER_INSTANCE_H
+#define HYPERION_RENDERER_INSTANCE_H
 
 #include <vector>
 #include <set>
@@ -40,7 +40,7 @@ private:
     VkQueue queue;
 };
 
-class VkRenderer {
+class Instance {
     static Result CheckValidationLayerSupport(const vector<const char *> &requested_layers);
 
     vector<VkPhysicalDevice> EnumeratePhysicalDevices();
@@ -56,7 +56,7 @@ class VkRenderer {
     Result CreateCommandPool();
     Result CreateCommandBuffers();
 public:
-    VkRenderer(SystemSDL &_system, const char *app_name, const char *engine_name);
+    Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
     Result Initialize(bool load_debug_layers=false);
     void CreateSurface();
 
@@ -66,6 +66,9 @@ public:
 
     HYP_FORCE_INLINE Frame *GetCurrentFrame() { return this->current_frame; }
     HYP_FORCE_INLINE const Frame *GetCurrentFrame() const { return this->current_frame; }
+
+    HYP_FORCE_INLINE DescriptorPool &GetDescriptorPool() { return this->descriptor_pool; }
+    HYP_FORCE_INLINE const DescriptorPool &GetDescriptorPool() const { return this->descriptor_pool; }
 
     VkResult AcquireNextImage(Frame *frame);
     void     BeginFrame      (Frame *frame);
@@ -78,6 +81,7 @@ public:
     Result InitializeSwapchain();
 
     Result AddPipeline(Pipeline::Builder &&builder, Pipeline **out = nullptr);
+    Result BuildPipelines();
 
     void SetQueueFamilies(set<uint32_t> queue_families);
     void SetCurrentWindow(SystemWindow *window);
@@ -95,7 +99,6 @@ public:
     const char *engine_name;
 
     vector<std::unique_ptr<Pipeline>> pipelines;
-    DescriptorPool descriptor_pool;
 
     uint32_t acquired_frames_index = 0;
     Swapchain *swapchain = nullptr;
@@ -110,6 +113,8 @@ private:
 
     VkInstance instance = nullptr;
     VkSurfaceKHR surface = nullptr;
+
+    DescriptorPool descriptor_pool;
 
     vector<std::unique_ptr<Frame>> pending_frames;
     Frame *current_frame = nullptr;
@@ -131,5 +136,4 @@ private:
 } // namespace renderer
 } // namespace hyperion
 
-
-#endif //HYPERION_VK_RENDERER_H
+#endif //!RENDERER_INSTANCE

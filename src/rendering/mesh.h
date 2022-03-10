@@ -6,7 +6,7 @@
 #include "../math/vertex.h"
 #include "../util/enum_options.h"
 
-#include "../rendering/backend/vk_renderer.h"
+#include "../rendering/backend/renderer_instance.h"
 
 #include <vector>
 #include <map>
@@ -71,28 +71,7 @@ public:
         }
 
         renderer::MeshInputAttribute GetAttributeDescription(uint32_t location, uint32_t binding = 0) const {
-            VkFormat vk_fmt = VK_FORMAT_UNDEFINED;
-
-            switch (this->size) {
-                case 2:
-                    /* R  G  B
-                     * 32 64 96 */
-                    vk_fmt = VK_FORMAT_R32G32_SFLOAT;
-                    break;
-                case 3:
-                    /* R  G  B
-                     * 32 64 96 */
-                    vk_fmt = VK_FORMAT_R32G32B32_SFLOAT;
-                    break;
-                case 4:
-                    /* R  G  B  A
-                     * 32 64 96 128 */
-                    vk_fmt = VK_FORMAT_R32G32B32A32_SFLOAT;
-                    break;
-                default: AssertThrowMsg(nullptr, "Unsupported vertex attribute format!");
-            }
-
-            return renderer::MeshInputAttribute(location, binding, this->size * sizeof(float), vk_fmt);
+            return renderer::MeshInputAttribute{location, binding, this->size * sizeof(float)};
         }
 
         bool operator==(const MeshAttribute &other) const
@@ -111,7 +90,7 @@ public:
     class RenderContext {
         friend class Mesh;
 
-        RenderContext(Mesh *, renderer::VkRenderer *);
+        RenderContext(Mesh *, renderer::Instance *);
         RenderContext(const RenderContext &other) = delete;
         RenderContext &operator=(const RenderContext &other) = delete;
         ~RenderContext();
@@ -121,7 +100,7 @@ public:
         void Draw(VkCommandBuffer cmd);
 
         non_owning_ptr<Mesh> _mesh;
-        non_owning_ptr<renderer::VkRenderer> _renderer;
+        non_owning_ptr<renderer::Instance> _renderer;
         renderer::GPUBuffer *_vbo;
         renderer::GPUBuffer *_ibo;
     } *_render_context;
@@ -149,7 +128,7 @@ public:
     renderer::MeshBindingDescription GetBindingDescription();
 
     void Render(Renderer *renderer, Camera *cam);
-    void RenderVk(renderer::Frame *frame, renderer::VkRenderer *vk_renderer, Camera *cam);
+    void RenderVk(renderer::Frame *frame, renderer::Instance *vk_renderer, Camera *cam);
 
 
 #pragma region serialization
