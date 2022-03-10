@@ -8,10 +8,10 @@
 
 namespace hyperion {
 namespace renderer {
-class Attachment {
+class AttachmentBase {
     friend class RenderPass;
 public:
-    Attachment(
+    AttachmentBase(
         VkFormat format,
         VkAttachmentLoadOp load_op,
         VkAttachmentStoreOp store_op,
@@ -21,9 +21,9 @@ public:
         uint32_t ref_attachment,
         VkImageLayout ref_layout
     );
-    Attachment(const Attachment &other) = delete;
-    Attachment &operator=(const Attachment &other) = delete;
-    ~Attachment();
+    AttachmentBase(const AttachmentBase &other) = delete;
+    AttachmentBase &operator=(const AttachmentBase &other) = delete;
+    ~AttachmentBase();
 
     Result Create(Device *device);
     Result Destroy(Device *device);
@@ -41,6 +41,85 @@ private:
     VkAttachmentDescription m_attachment_description;
     VkAttachmentReference m_attachment_reference;
 };
+
+template<VkImageLayout RefLayout, VkImageLayout FinalLayout>
+class Attachment : public AttachmentBase {
+public:
+    Attachment() = delete;
+};
+
+template<>
+class Attachment<
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+> : public AttachmentBase {
+public:
+    Attachment(uint32_t binding, VkFormat format) : AttachmentBase(
+        format,
+        VK_ATTACHMENT_LOAD_OP_CLEAR,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        binding,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    ) {}
+};
+
+template<>
+class Attachment<
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+> : public AttachmentBase {
+public:
+    Attachment(uint32_t binding, VkFormat format) : AttachmentBase(
+        format,
+        VK_ATTACHMENT_LOAD_OP_CLEAR,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        binding,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    ) {}
+};
+
+template<>
+class Attachment<
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+> : public AttachmentBase {
+public:
+    Attachment(uint32_t binding, VkFormat format) : AttachmentBase(
+        format,
+        VK_ATTACHMENT_LOAD_OP_CLEAR,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        binding,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    ) {}
+};
+
+template<>
+class Attachment<
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+> : public AttachmentBase {
+public:
+    Attachment(uint32_t binding, VkFormat format) : AttachmentBase(
+        format,
+        VK_ATTACHMENT_LOAD_OP_CLEAR,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        binding,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    ) {}
+};
+
 } // namespace renderer
 } // namespace hyperion
 

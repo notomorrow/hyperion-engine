@@ -17,9 +17,9 @@ public:
 
     struct ErrorList {
         static const AssetLoader::Result no_error;
-        static const int max_size;
+        static const size_t max_size;
 
-        inline int Size() const { return results.size(); }
+        inline size_t Size() const { return results.size(); }
 
         inline const AssetLoader::Result &Last() const
         {

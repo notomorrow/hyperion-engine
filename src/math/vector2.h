@@ -7,6 +7,8 @@
 #include <ostream>
 #include <cmath>
 
+#include "vector3.h"
+
 namespace hyperion {
 
 class Vector2 {
@@ -48,8 +50,8 @@ public:
     bool operator!=(const Vector2 &other) const;
     inline Vector2 operator-() const { return operator*(-1.0f); }
 
-    float Length() const;
-    float LengthSquared() const;
+    constexpr inline float LengthSquared() const { return x * x + y * y; }
+    inline float Length() const { return sqrt(LengthSquared()); }
 
     float Distance(const Vector2 &other) const;
     float DistanceSquared(const Vector2 &other) const;
@@ -78,6 +80,8 @@ public:
         return hc;
     }
 };
+
+static_assert(sizeof(Vector2) == sizeof(float) * 2, "sizeof(Vector2) must be equal to sizeof(float) * 2");
 
 } // namespace hyperion
 

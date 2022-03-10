@@ -91,16 +91,6 @@ bool Vector2::operator!=(const Vector2 &other) const
     return !((*this) == other);
 }
 
-float Vector2::Length() const
-{
-    return sqrt(LengthSquared());
-}
-
-float Vector2::LengthSquared() const
-{
-    return x * x + y * y;
-}
-
 float Vector2::Distance(const Vector2 &other) const
 {
     return sqrt(DistanceSquared(other));

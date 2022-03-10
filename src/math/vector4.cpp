@@ -129,16 +129,6 @@ bool Vector4::operator!=(const Vector4 &other) const
     return !((*this) == other);
 }
 
-float Vector4::Length() const
-{
-    return sqrt(LengthSquared());
-}
-
-float Vector4::LengthSquared() const
-{
-    return x * x + y * y + z * z + w * w;
-}
-
 float Vector4::DistanceSquared(const Vector4 &other) const
 {
     float dx = x - other.x;

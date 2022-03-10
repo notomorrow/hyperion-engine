@@ -75,7 +75,7 @@ public:
               width(width),
               length(length),
               max_distance(max_distance),
-              center(x + width / 2.0, z + width / 2.0)
+              center(x + width / 2.0f, z + width / 2.0f)
         {
         }
 

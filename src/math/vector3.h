@@ -64,13 +64,13 @@ public:
     inline bool operator<(const Vector3 &other) const
         { return x < other.x && y < other.y && z < other.z; }
 
-    float Length() const;
-    float LengthSquared() const;
+    constexpr inline float LengthSquared() const { return x * x + y * y + z * z; }
+    inline float Length() const { return sqrt(LengthSquared()); }
 
     float DistanceSquared(const Vector3 &other) const;
     float Distance(const Vector3 &other) const;
 
-    Vector3 &Normalize();
+    inline Vector3 &Normalize() { return operator/=(Length()); }
     Vector3 &Cross(const Vector3 &other);
     Vector3 &Rotate(const Vector3 &axis, float radians);
     Vector3 &Lerp(const Vector3 &to, const float amt);
@@ -99,6 +99,8 @@ public:
         return hc;
     }
 };
+
+static_assert(sizeof(Vector3) == sizeof(float) * 3, "sizeof(Vector3) must be equal to sizeof(float) * 3");
 
 } // namespace hyperion
 
