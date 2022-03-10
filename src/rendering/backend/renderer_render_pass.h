@@ -16,7 +16,7 @@ class RenderPass {
     friend class Pipeline;
 public:
     struct AttachmentInfo {
-        std::unique_ptr<Attachment> attachment;
+        std::unique_ptr<AttachmentBase> attachment;
         bool is_depth_attachment;
     };
 

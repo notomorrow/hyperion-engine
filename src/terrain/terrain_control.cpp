@@ -137,7 +137,7 @@ void TerrainControl::AddChunk(int x, int z)
             num_threads++;
 #endif
 
-            ChunkInfo height_info(Vector2(x, z), m_scale);
+            ChunkInfo height_info(Vector2(float(x), float(z)), m_scale);
             height_info.m_length = m_chunk_size;
             height_info.m_width = m_chunk_size;
             height_info.m_page_state = PageState::WAITING;

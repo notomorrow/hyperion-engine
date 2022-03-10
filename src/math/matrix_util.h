@@ -18,9 +18,6 @@ public:
     static void ToLookAt(Matrix4 &mat, const Vector3 &dir, const Vector3 &up);
     static void ToLookAt(Matrix4 &mat, const Vector3 &pos, const Vector3 &target, const Vector3 &up);
     static void ToOrtho(Matrix4 &mat, float left, float right, float bottom, float top, float n, float f);
-
-    /** Creates an inertia tensor matrix for a block shape */
-    static Matrix3 CreateInertiaTensor(const Vector3 &half_size, double mass);
 };
 } // namespace hyperion
 

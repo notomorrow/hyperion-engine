@@ -20,7 +20,11 @@ using renderer::Pipeline;
  */
 class Engine {
 public:
-    struct SwapchainData;
+    /* Our "root" shader/pipeline -- used for rendering a quad to the screen. */
+    struct SwapchainData {
+        std::unique_ptr<Shader> shader;
+        Pipeline *pipeline;
+    } m_swapchain_data;
 
     enum TextureFormatDefault {
         TEXTURE_FORMAT_DEFAULT_NONE    = 0,
@@ -53,6 +57,7 @@ public:
         { return const_cast<Engine*>(this)->GetShader(id); }
 
     Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
+    Framebuffer::ID AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass);
     inline Framebuffer *GetFramebuffer(Framebuffer::ID id)
     {
         return MathUtil::InRange(id, {0, m_framebuffers.size()})
@@ -80,12 +85,6 @@ public:
     void PrepareSwapchain();
 
 private:
-    /* Our "root" shader/pipeline -- used for rendering a quad to the screen. */
-    struct SwapchainData {
-        std::unique_ptr<Shader> shader;
-        Pipeline *pipeline;
-    } m_swapchain_data;
-
     void InitializeInstance();
     void FindTextureFormatDefaults();
 

@@ -170,16 +170,6 @@ bool Vector3::operator!=(const Vector3 &other) const
     return !((*this) == other);
 }
 
-float Vector3::Length() const
-{
-    return sqrt(LengthSquared());
-}
-
-float Vector3::LengthSquared() const
-{
-    return x * x + y * y + z * z;
-}
-
 float Vector3::DistanceSquared(const Vector3 &other) const
 {
     float dx = x - other.x;
@@ -191,16 +181,6 @@ float Vector3::DistanceSquared(const Vector3 &other) const
 float Vector3::Distance(const Vector3 &other) const
 {
     return sqrt(DistanceSquared(other));
-}
-
-Vector3 &Vector3::Normalize()
-{
-    float len = Length();
-    float len_sqr = MathUtil::Clamp(len * len, 0.0001f, 1.0f);
-
-    (*this) *= (1.0f / len);
-
-    return *this;
 }
 
 Vector3 &Vector3::Cross(const Vector3 &other)

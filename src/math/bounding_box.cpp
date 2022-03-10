@@ -53,12 +53,23 @@ void BoundingBox::SetDimensions(const Vector3 &dimensions)
     m_min = center - dimensions * 0.5f;
 }
 
-BoundingBox &BoundingBox::operator*=(double scalar)
+BoundingBox &BoundingBox::operator*=(float scalar)
 {
     m_min *= scalar;
     m_max *= scalar;
 
     return *this;
+}
+
+BoundingBox BoundingBox::operator*(float scalar) const
+{
+    BoundingBox other;
+
+    for (const Vector3 &corner : GetCorners()) {
+        other.Extend(corner * scalar);
+    }
+
+    return other;
 }
 
 BoundingBox &BoundingBox::operator*=(const Transform &transform)
@@ -73,17 +84,6 @@ BoundingBox &BoundingBox::operator*=(const Transform &transform)
     m_max += transform.GetTranslation();
 
     return *this;
-}
-
-BoundingBox BoundingBox::operator*(double scalar) const
-{
-    BoundingBox other;
-
-    for (const Vector3 &corner : GetCorners()) {
-        other.Extend(corner * scalar);
-    }
-
-    return other;
 }
 
 BoundingBox BoundingBox::operator*(const Transform &transform) const

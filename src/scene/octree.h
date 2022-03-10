@@ -163,8 +163,8 @@ public:
                     int index = 4 * x + 2 * y + z;
 
                     Octant octant(BoundingBox(
-                        m_aabb.GetMin() + (divided_aabb_dimensions * Vector3(x, y, z)),
-                        m_aabb.GetMin() + (divided_aabb_dimensions * (Vector3(x, y, z) + Vector3(1.0f)))
+                        m_aabb.GetMin() + (divided_aabb_dimensions * Vector3(float(x), float(y), float(z))),
+                        m_aabb.GetMin() + (divided_aabb_dimensions * (Vector3(float(x), float(y), float(z)) + Vector3(1.0f)))
                     ));
 
                     m_octants[index] = octant;

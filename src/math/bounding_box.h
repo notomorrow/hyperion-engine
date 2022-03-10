@@ -29,9 +29,9 @@ public:
     inline Vector3 GetDimensions() const { return m_max - m_min; }
     void SetDimensions(const Vector3 &dimensions);
 
-    BoundingBox operator*(double scalar) const;
+    BoundingBox operator*(float scalar) const;
+    BoundingBox &operator*=(float scalar);
     BoundingBox operator*(const Transform &transform) const;
-    BoundingBox &operator*=(double scalar);
     BoundingBox &operator*=(const Transform &transform);
     inline bool operator==(const BoundingBox &other) const
         { return m_min == other.m_min && m_max == other.m_max; }
