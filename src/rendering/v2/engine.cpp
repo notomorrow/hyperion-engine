@@ -28,6 +28,11 @@ Engine::~Engine()
     for (auto &it : m_framebuffers) {
         it->Destroy(m_instance.get());
     }
+
+    for (auto &it : m_render_passes) {
+        it->Destroy(m_instance.get());
+    }
+
     /*for (auto &shader : m_shaders) {
         shader->Destroy(m_instance.get(), m_instance->GetDevice());
     }*/
@@ -46,11 +51,12 @@ Shader::ID Engine::AddShader(std::unique_ptr<Shader> &&shader)
     return id;
 }
 
-Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer)
+Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass)
 {
     AssertThrow(framebuffer != nullptr);
 
     Framebuffer::ID id(m_framebuffers.size());
+    framebuffer->Create(m_instance.get(), GetRenderPass(render_pass));
 
     m_framebuffers.push_back(std::move(framebuffer));
 
@@ -62,6 +68,7 @@ RenderPass::ID Engine::AddRenderPass(std::unique_ptr<RenderPass> &&render_pass)
     AssertThrow(render_pass != nullptr);
 
     RenderPass::ID id(m_render_passes.size());
+    render_pass->Create(m_instance.get());
 
     m_render_passes.push_back(std::move(render_pass));
 
@@ -73,15 +80,12 @@ void Engine::AddPipeline(Pipeline::Builder &&builder, Pipeline **out)
     auto *render_pass = GetRenderPass(builder.m_construction_info.render_pass_id);
 
     AssertThrow(render_pass != nullptr);
-
-    render_pass->Create(m_instance.get());
+    // TODO: Assert that render_pass matches the layout of what the fbo was set up with
 
     builder.m_construction_info.render_pass = non_owning_ptr(render_pass->GetWrappedObject());
 
     for (int fbo_id : builder.m_construction_info.fbo_ids) {
         if (auto fbo = GetFramebuffer(fbo_id)) {
-            fbo->Create(m_instance.get(), render_pass);
-
             builder.m_construction_info.fbos.push_back(non_owning_ptr(fbo->GetWrappedObject()));
         }
     }
@@ -238,9 +242,10 @@ void Engine::PrepareSwapchain()
         );
 
         /* Now we add a depth buffer */
-        fbo->GetWrappedObject()->AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH));
-        
-        builder.Framebuffer(AddFramebuffer(std::move(fbo)));
+        auto result = fbo->GetWrappedObject()->AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH));
+        AssertThrowMsg(result, "%s", result.message);
+
+        builder.Framebuffer(AddFramebuffer(std::move(fbo), render_pass_id));
     }
 
     AddPipeline(std::move(builder), &m_swapchain_data.pipeline);

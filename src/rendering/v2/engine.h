@@ -52,7 +52,7 @@ public:
     inline const Shader *GetShader(Shader::ID id) const
         { return const_cast<Engine*>(this)->GetShader(id); }
 
-    Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer);
+    Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
     inline Framebuffer *GetFramebuffer(Framebuffer::ID id)
     {
         return MathUtil::InRange(id, {0, m_framebuffers.size()})
