@@ -658,6 +658,92 @@ int main()
 
     engine.Initialize();
 
+    v2::RenderPass::ID render_pass_id = -1;
+    {
+        auto render_pass = std::make_unique<v2::RenderPass>();
+
+        /* For our color attachment */
+        render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
+            .attachment = std::make_unique<Attachment>(
+                helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR)),
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                0,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            ),
+            .is_depth_attachment = false
+            });
+        /* For our normals attachment */
+        render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
+            .attachment = std::make_unique<Attachment>(
+                helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)),
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                1,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            ),
+            .is_depth_attachment = false
+            });
+        /* For our positions attachment */
+        render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
+            .attachment = std::make_unique<Attachment>(
+                helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)),
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                2,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            ),
+            .is_depth_attachment = false
+            });
+
+        /* For our depth attachment */
+        render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
+            .attachment = std::make_unique<Attachment>(
+                helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)),
+                VK_ATTACHMENT_LOAD_OP_CLEAR,
+                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                3,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            ),
+            .is_depth_attachment = true
+            });
+
+        render_pass->GetWrappedObject()->AddDependency(VkSubpassDependency{
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            });
+
+        render_pass->GetWrappedObject()->AddDependency(VkSubpassDependency{
+            .srcSubpass = 0,
+            .dstSubpass = VK_SUBPASS_EXTERNAL,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            });
+
+
+        render_pass_id = engine.AddRenderPass(std::move(render_pass));
+    }
+
     v2::Framebuffer::ID my_fbo_id = -1;
 
     {
@@ -674,7 +760,7 @@ int main()
         /* Now we add a depth buffer */
         fbo->GetWrappedObject()->AddAttachment(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH));
 
-        my_fbo_id = engine.AddFramebuffer(std::move(fbo));
+        my_fbo_id = engine.AddFramebuffer(std::move(fbo), render_pass_id);
     }
 
     engine.GetInstance()->GetDescriptorPool()
@@ -741,88 +827,7 @@ int main()
     mirror_shader.CreateProgram("main");
 
 
-    auto render_pass = std::make_unique<v2::RenderPass>();
-
-    /* For our color attachment */
-    render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
-        .attachment = std::make_unique<Attachment>(
-            helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR)),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            0,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        ),
-        .is_depth_attachment = false
-    });
-    /* For our normals attachment */
-    render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
-        .attachment = std::make_unique<Attachment>(
-            helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            1,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        ),
-        .is_depth_attachment = false
-    });
-    /* For our positions attachment */
-    render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
-        .attachment = std::make_unique<Attachment>(
-            helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            2,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        ),
-        .is_depth_attachment = false
-    });
-
-    /* For our depth attachment */
-    render_pass->GetWrappedObject()->AddAttachment(RenderPass::AttachmentInfo{
-        .attachment = std::make_unique<Attachment>(
-            helpers::ToVkFormat(engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)),
-            VK_ATTACHMENT_LOAD_OP_CLEAR,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            3,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        ),
-        .is_depth_attachment = true
-    });
-
-    render_pass->GetWrappedObject()->AddDependency(VkSubpassDependency{
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-    });
-
-    render_pass->GetWrappedObject()->AddDependency(VkSubpassDependency{
-        .srcSubpass = 0,
-        .dstSubpass = VK_SUBPASS_EXTERNAL,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
-    });
-
-
-    v2::RenderPass::ID render_pass_id = engine.AddRenderPass(std::move(render_pass));
+    
 
 
     Pipeline::Builder scene_pass_pipeline_builder;

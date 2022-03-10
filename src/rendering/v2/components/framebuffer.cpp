@@ -71,6 +71,8 @@ void Framebuffer::Create(Instance *instance, RenderPass *render_pass)
         render_pass->GetWrappedObject()->AddAttachment(std::move(depth_attachments[i]));
     }*/
 
+    m_render_pass = non_owning_ptr(render_pass);
+
     auto result = m_wrapped->Create(instance->GetDevice(), render_pass->GetWrappedObject());
     AssertThrowMsg(result, "%s", result);
 }
