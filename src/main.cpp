@@ -713,7 +713,7 @@ int main()
             non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ));
-
+    
 
     Device *device = engine.GetInstance()->GetDevice();
 
@@ -736,16 +736,13 @@ int main()
     matrices_descriptor_buffer.Create(device, sizeof(MatricesBlock));
     scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
 
-    auto descriptor_pool_result = engine.GetInstance()->GetDescriptorPool().Create(engine.GetInstance()->GetDevice());
-    AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
-
     engine.PrepareSwapchain();
 
 
 
     renderer::Shader mirror_shader;
     mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
-    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/mirror_frag.spv").Read() });
+    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() });
     mirror_shader.CreateProgram("main");
 
 
@@ -839,16 +836,15 @@ int main()
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
 
-        fbo_pl->StartRenderPass(frame->command_buffer, 0);
 
+        /* forward / albedo layer */
+        fbo_pl->StartRenderPass(frame->command_buffer, 0);
         engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, fbo_pl->layout, 0, 1);
         monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
         fbo_pl->EndRenderPass(frame->command_buffer, 0);
 
-        pl->StartRenderPass(frame->command_buffer, engine.GetInstance()->acquired_frames_index);
-        engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, pl->layout);
-        full_screen_quad->RenderVk(frame, engine.GetInstance(), nullptr);
-        pl->EndRenderPass(frame->command_buffer, engine.GetInstance()->acquired_frames_index);
+        engine.RenderPostProcessing(frame);
+        engine.RenderSwapchain(frame);
 
         engine.GetInstance()->EndFrame(frame);
 

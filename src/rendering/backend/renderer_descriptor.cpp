@@ -6,9 +6,9 @@ namespace hyperion {
 namespace renderer {
 Descriptor::Descriptor(uint32_t binding, const BufferInfo &info, VkDescriptorType type, VkShaderStageFlags stage_flags)
     : m_binding(binding),
-    m_info(info),
-    m_type(type),
-    m_stage_flags(stage_flags)
+      m_info(info),
+      m_type(type),
+      m_stage_flags(stage_flags)
 {
 }
 

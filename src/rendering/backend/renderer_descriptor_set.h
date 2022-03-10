@@ -23,9 +23,12 @@ public:
 
     inline Descriptor *GetDescriptor(size_t index) { return m_descriptors[index].get(); }
     inline const Descriptor *GetDescriptor(size_t index) const { return m_descriptors[index].get(); }
+    inline std::vector<std::unique_ptr<Descriptor>> &GetDescriptors() { return m_descriptors; }
+    inline const std::vector<std::unique_ptr<Descriptor>> &GetDescriptors() const { return m_descriptors; }
 
     Result Create(Device *device, DescriptorPool *pool);
     Result Destroy(Device *device);
+    Result Update(Device *device);
 
     VkDescriptorSet m_set;
 
