@@ -3,6 +3,7 @@
 
 #include "components/shader.h"
 #include "components/framebuffer.h"
+#include "components/filter_stack.h"
 #include <rendering/backend/renderer_pipeline.h>
 
 #include <util/enum_options.h>
@@ -41,6 +42,9 @@ public:
 
     inline SwapchainData &GetSwapchainData() { return m_swapchain_data; }
     inline const SwapchainData &GetSwapchainData() const { return m_swapchain_data; }
+
+    inline FilterStack &GetFilterStack() { return m_filter_stack; }
+    inline const FilterStack &GetFilterStack() const { return m_filter_stack; }
 
     inline Texture::TextureInternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
@@ -83,12 +87,16 @@ public:
 
     void Initialize();
     void PrepareSwapchain();
+    void RenderPostProcessing(Frame *frame);
+    void RenderSwapchain(Frame *frame);
 
 private:
     void InitializeInstance();
     void FindTextureFormatDefaults();
 
     EnumOptions<TextureFormatDefault, Texture::TextureInternalFormat, 4> m_texture_format_defaults;
+
+    FilterStack m_filter_stack;
 
     std::vector<std::unique_ptr<Shader>> m_shaders;
     std::vector<std::unique_ptr<Framebuffer>> m_framebuffers;

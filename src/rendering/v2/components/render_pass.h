@@ -35,8 +35,8 @@ public:
 
     inline const std::vector<Attachment> &GetAttachments() const { return m_attachments; }
 
-    void Create(Instance *instance);
-    void Destroy(Instance *instance);
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
 
 private:
     void CreateAttachments();

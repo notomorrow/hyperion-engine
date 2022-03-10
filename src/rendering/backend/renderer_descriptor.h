@@ -94,6 +94,9 @@ public:
     Descriptor &operator=(const Descriptor &other) = delete;
     ~Descriptor();
 
+    inline uint32_t GetBinding() const { return m_binding; }
+    inline void SetBinding(uint32_t binding) { m_binding = binding; }
+
     inline GPUBuffer *GetGPUBuffer() { return m_info.gpu_buffer.get(); }
     inline const GPUBuffer *GetGPUBuffer() const { return m_info.gpu_buffer.get(); }
     inline ImageView *GetImageView() { return m_info.image_view.get(); }

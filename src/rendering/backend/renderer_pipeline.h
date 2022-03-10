@@ -229,7 +229,12 @@ public:
     VkPipelineLayout layout;
 
     struct PushConstants {
-        unsigned char data[128];
+        union {
+            struct {
+                uint32_t filter_framebuffer_src;
+            };
+            unsigned char raw_data[64];
+        };
     } push_constants;
 
 private:

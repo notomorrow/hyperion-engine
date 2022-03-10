@@ -22,8 +22,8 @@ public:
     inline RenderPass *GetRenderPass() { return m_render_pass.get(); }
     inline const RenderPass *GetRenderPass() const { return m_render_pass.get(); }
 
-    void Create(Instance *instance, RenderPass *render_pass);
-    void Destroy(Instance *instance);
+    void Create(Engine *engine, RenderPass *render_pass);
+    void Destroy(Engine *engine);
 
 private:
     non_owning_ptr<RenderPass> m_render_pass;

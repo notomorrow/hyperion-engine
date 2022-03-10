@@ -18,7 +18,7 @@ class DescriptorPool {
     friend class DescriptorSet;
 public:
     static const std::unordered_map<VkDescriptorType, size_t> items_per_set;
-    static const size_t max_descriptor_sets;
+    static constexpr size_t max_descriptor_sets = 4;
 
     struct BufferInfo {
         VkDescriptorImageInfo *image_info;
@@ -54,9 +54,11 @@ public:
     inline DescriptorSet *GetDescriptorSet(size_t index) { return m_descriptor_sets[index].get(); }
     inline const DescriptorSet *GetDescriptorSet(size_t index) const { return m_descriptor_sets[index].get(); }
 
-    std::vector<std::unique_ptr<DescriptorSet>> m_descriptor_sets;
+    std::array<std::unique_ptr<DescriptorSet>, max_descriptor_sets> m_descriptor_sets;
+    uint8_t m_num_descriptor_sets;
     std::vector<VkDescriptorSetLayout> m_descriptor_set_layouts;
     VkDescriptorPool m_descriptor_pool;
+    VkDescriptorSet *m_descriptor_sets_view; // TMP
 
 private:
 
@@ -64,7 +66,6 @@ private:
     Result CreateDescriptorSetLayout(Device *device, VkDescriptorSetLayoutCreateInfo *layout_create_info, VkDescriptorSetLayout *out);
     Result DestroyDescriptorSetLayout(Device *device, VkDescriptorSetLayout *layout);
 
-    VkDescriptorSet *m_descriptor_sets_view;
 };
 
 } // namespace renderer

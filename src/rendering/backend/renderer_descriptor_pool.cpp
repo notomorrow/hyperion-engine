@@ -8,17 +8,16 @@
 namespace hyperion {
 namespace renderer {
 const std::unordered_map<VkDescriptorType, size_t> DescriptorPool::items_per_set{
-    { VK_DESCRIPTOR_TYPE_SAMPLER, 1 },
-    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 },
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 },
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2 },
-    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }
+    { VK_DESCRIPTOR_TYPE_SAMPLER, 10 },
+    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 40 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 20 },
+    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 20 },
+    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 20 }
 };
-
-const size_t DescriptorPool::max_descriptor_sets = 4;
 
 DescriptorPool::DescriptorPool()
     : m_descriptor_pool(nullptr),
+      m_num_descriptor_sets(0),
       m_descriptor_sets_view(new VkDescriptorSet[max_descriptor_sets])
 {
 }
@@ -32,28 +31,26 @@ DescriptorPool::~DescriptorPool()
 
 DescriptorSet &DescriptorPool::AddDescriptorSet()
 {
-    AssertThrowMsg(m_descriptor_sets.size() + 1 <= max_descriptor_sets, "Maximum number of descriptor sets added");
+    AssertThrowMsg(m_num_descriptor_sets + 1 <= max_descriptor_sets, "Maximum number of descriptor sets added");
 
-    m_descriptor_sets.emplace_back(std::make_unique<DescriptorSet>());
+    m_descriptor_sets[m_num_descriptor_sets++] = std::make_unique<DescriptorSet>();
 
-    return *m_descriptor_sets.back();
+    return *m_descriptor_sets[m_num_descriptor_sets - 1];
 }
 
 Result DescriptorPool::Create(Device *device)
 {
-    uint32_t set_size = uint32_t(m_descriptor_sets.size());
-
     std::vector<VkDescriptorPoolSize> pool_sizes;
     pool_sizes.reserve(items_per_set.size());
 
     for (auto &it : items_per_set) {
-        pool_sizes.push_back({ it.first, uint32_t(it.second * set_size) });
+        pool_sizes.push_back({ it.first, uint32_t(it.second * max_descriptor_sets) });
     }
 
     VkDescriptorPoolCreateInfo pool_info{};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    pool_info.maxSets = set_size;
+    pool_info.maxSets = max_descriptor_sets;
     pool_info.poolSizeCount = uint32_t(pool_sizes.size());
     pool_info.pPoolSizes = pool_sizes.data();
 
@@ -63,12 +60,14 @@ Result DescriptorPool::Create(Device *device)
 
     size_t index = 0;
 
-    for (const auto &set : m_descriptor_sets) {
-        auto descriptor_set_result = set->Create(device, this);
+    for (uint8_t i = 0; i < m_num_descriptor_sets; i++) {
+        AssertThrow(m_descriptor_sets[i] != nullptr);
+
+        auto descriptor_set_result = m_descriptor_sets[i]->Create(device, this);
 
         if (!descriptor_set_result) return descriptor_set_result;
 
-        m_descriptor_sets_view[index++] = set->m_set;
+        m_descriptor_sets_view[index++] = m_descriptor_sets[i]->m_set;
     }
 
     HYPERION_RETURN_OK;
@@ -86,12 +85,14 @@ Result DescriptorPool::Destroy(Device *device)
 
     {
         for (auto &set : m_descriptor_sets) {
-            set->Destroy(device);
+            if (set != nullptr) {
+                set->Destroy(device);
+            }
         }
 
-        vkFreeDescriptorSets(device->GetDevice(), m_descriptor_pool, m_descriptor_sets.size(), m_descriptor_sets_view);
+        vkFreeDescriptorSets(device->GetDevice(), m_descriptor_pool, m_num_descriptor_sets, m_descriptor_sets_view);
 
-        m_descriptor_sets.clear();
+        m_descriptor_sets = {};
 
         // set all to nullptr
         std::memset(m_descriptor_sets_view, 0, sizeof(VkDescriptorSet *) * max_descriptor_sets);
@@ -114,7 +115,7 @@ Result DescriptorPool::BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout 
 
 Result DescriptorPool::BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout)
 {
-    return BindDescriptorSets(cmd, layout, 0, m_descriptor_sets.size());
+    return BindDescriptorSets(cmd, layout, 0, m_num_descriptor_sets);
 }
 
 
