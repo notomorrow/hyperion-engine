@@ -73,7 +73,7 @@ public:
     VkResult AcquireNextImage(Frame *frame);
     void     BeginFrame      (Frame *frame);
     void     EndFrame        (Frame *frame);
-    void     PresentFrame    (Frame *frame);
+    void     PresentFrame    (Frame *frame, const std::vector<VkSemaphore> &semaphores);
 
     void SetValidationLayers(vector<const char *> _layers);
     Device *GetDevice();
@@ -107,6 +107,9 @@ public:
     VkCommandPool command_pool;
     vector<VkCommandBuffer> command_buffers;
 
+    VkQueue queue_graphics;
+    VkQueue queue_present;
+
 private:
     SystemWindow *window = nullptr;
     SystemSDL    system;
@@ -119,9 +122,6 @@ private:
     vector<std::unique_ptr<Frame>> pending_frames;
     Frame *current_frame = nullptr;
     int frames_index = 0;
-
-    VkQueue queue_graphics;
-    VkQueue queue_present;
 
     Device    *device = nullptr;
 

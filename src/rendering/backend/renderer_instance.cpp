@@ -82,11 +82,11 @@ void Instance::EndFrame(Frame *frame)
     frame->Submit(this->queue_graphics);
 }
 
-void Instance::PresentFrame(Frame *frame)
+void Instance::PresentFrame(Frame *frame, const std::vector<VkSemaphore> &semaphores)
 {
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &frame->sp_swap_release;
+    present_info.waitSemaphoreCount = semaphores.size();
+    present_info.pWaitSemaphores = semaphores.data();
 
     AssertThrow(this->swapchain != nullptr || this->swapchain->swapchain != nullptr);
 

@@ -798,6 +798,32 @@ int main()
     uint64_t tick_last = 0;
     double delta_time = 0;
 
+    VkCommandBuffer tmp_cmd;
+    VkCommandBufferAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    alloc_info.commandPool = engine.GetInstance()->command_pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+
+    if(vkAllocateCommandBuffers(engine.GetInstance()->GetDevice()->GetDevice(), &alloc_info, &tmp_cmd) != VK_SUCCESS) {
+        throw "could not allocate command buffer";
+    }
+
+
+    VkSemaphore fsq_sp;
+    VkSemaphoreCreateInfo semaphore_info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    if (vkCreateSemaphore(engine.GetInstance()->GetDevice()->GetDevice(), &semaphore_info, nullptr, &fsq_sp) != VK_SUCCESS) {
+        throw "could not create wait semaphore";
+    }
+
+    VkFence fsq_fc;
+    VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    if (vkCreateFence(engine.GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &fsq_fc) != VK_SUCCESS) {
+        throw "Failed to create fence";
+    }
+
+
     while (running) {
         tick_last = tick_now;
         tick_now = SDL_GetPerformanceCounter();
@@ -830,7 +856,18 @@ int main()
         Pipeline *pl = pipelines[0];
         Pipeline *fbo_pl = pipelines[1];
 
+
+
+        // waiting for tmp fence
+
+        vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq_fc, true, UINT64_MAX);
+        vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq_fc);
+
+
         frame = engine.GetInstance()->GetNextFrame();
+
+
+
         engine.GetInstance()->BeginFrame(frame);
         
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
@@ -843,17 +880,58 @@ int main()
         monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
         fbo_pl->EndRenderPass(frame->command_buffer, 0);
 
-        engine.RenderPostProcessing(frame);
-        engine.RenderSwapchain(frame);
-
         engine.GetInstance()->EndFrame(frame);
+        engine.RenderPostProcessing(frame);
+
+
+
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(tmp_cmd, &begin_info) != VK_SUCCESS) {
+            throw "Failed to begin cmd buffer";
+        }
+
+
+        Frame tmp_frame;
+        tmp_frame.command_buffer = tmp_cmd;
+        engine.RenderSwapchain(&tmp_frame);
+
+
+
+        if (vkEndCommandBuffer(tmp_cmd) != VK_SUCCESS) {
+            throw "Failed to end cmd buffer";
+        }
+
+
+        std::vector<VkSemaphore> semaphores;
+        semaphores.resize(2);
+        semaphores[0] = engine.GetFilterStack().m_filters[0].sp;
+        semaphores[1] = engine.GetFilterStack().m_filters[1].sp;
+
+
+        VkSubmitInfo submit_info{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        VkPipelineStageFlags wait_stages[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+        submit_info.waitSemaphoreCount = semaphores.size();
+        submit_info.pWaitSemaphores = semaphores.data();
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &fsq_sp;
+        submit_info.pWaitDstStageMask = wait_stages;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &tmp_cmd;
+
+        auto result = vkQueueSubmit(engine.GetInstance()->queue_graphics, 1, &submit_info, fsq_fc);
+        AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");
 
 
         //Pipeline *fbo_pl = pipelines[1];
         //fbo_pl->StartRenderPass(frame->command_buffer, )
 
-
-        engine.GetInstance()->PresentFrame(frame);
+        std::vector<VkSemaphore> fsq_sp_wrapper;
+        fsq_sp_wrapper.resize(1);
+        fsq_sp_wrapper[0] = fsq_sp;
+        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);
     }
 
     engine.GetInstance()->WaitDeviceIdle();
