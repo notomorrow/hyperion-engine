@@ -20,7 +20,7 @@ public:
     Frame();
     ~Frame();
 
-    Result Create(non_owning_ptr<Device> device, VkCommandBuffer cmd);
+    Result Create(Device *device, VkCommandBuffer cmd);
     Result Destroy();
 
     /* Start recording into the command buffer */

@@ -83,22 +83,6 @@ void FilterStack::Create(Engine *engine)
 
         filter.shader->Create(engine);
 
-        VkCommandBufferAllocateInfo alloc_info{};
-        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        alloc_info.commandPool = engine->GetInstance()->command_pool;
-        alloc_info.commandBufferCount = 1;
-
-        if (vkAllocateCommandBuffers(engine->GetInstance()->GetDevice()->GetDevice(), &alloc_info, &filter.cmd) != VK_SUCCESS) {
-            throw "Failed to allocate command buffers";
-        }
-
-
-        VkSemaphoreCreateInfo semaphore_info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-        if (vkCreateSemaphore(engine->GetInstance()->GetDevice()->GetDevice(), &semaphore_info, nullptr, &filter.sp) != VK_SUCCESS) {
-            throw "failed to create render semaphore";
-        }
-
         m_render_passes.push_back(engine->AddRenderPass(std::move(render_pass)));
         filter.framebuffer = engine->AddFramebuffer(
             engine->GetInstance()->swapchain->extent.width,
@@ -202,41 +186,37 @@ void FilterStack::Destroy(Engine *engine)
 
 void FilterStack::RecordFilters(Engine *engine)
 {
-    /* TODO: Our final pass HAS to end at framebuffer index 0,
-     * so we calculate the start index based on the final index.
-     */
-    uint8_t fbo_dst_index = 1;
-
     for (int i = 0; i < m_filters.size(); i++) {
-        const auto &filter = m_filters[i];
+        auto &filter = m_filters[i];
 
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+        auto command_buffer = std::make_unique<CommandBuffer>();
+        
+        auto command_buffer_result = command_buffer->Create(engine->GetInstance()->GetDevice(), engine->GetInstance()->command_pool);
+        AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
+        
+        command_buffer->Record(engine->GetInstance()->GetDevice(), [this, engine, &filter](VkCommandBuffer cmd) {
+            renderer::Result result = renderer::Result::OK;
 
-        if (vkBeginCommandBuffer(filter.cmd, &begin_info) != VK_SUCCESS) {
-            throw "failed to begin cmd buffer";
-        }
+            filter.pipeline->StartRenderPass(cmd, 0);
 
-        uint8_t filter_src_index = (fbo_dst_index + 1) % m_framebuffers.size();
+            HYPERION_PASS_ERRORS(
+                engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, filter.pipeline->layout, 0, 2),
+                result
+            );
 
-        filter.pipeline->push_constants.filter_framebuffer_src = filter_src_index;
+            // TMP
+            renderer::Frame frame;
+            frame.command_buffer = cmd;
 
-        filter.pipeline->StartRenderPass(filter.cmd, 0);
-        engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(filter.cmd, filter.pipeline->layout, 0, 2);
-        // TMP
-        renderer::Frame frame;
-        frame.command_buffer = filter.cmd;
-        m_quad->RenderVk(&frame, engine->GetInstance(), nullptr);
+            m_quad->RenderVk(&frame, engine->GetInstance(), nullptr);
 
-        filter.pipeline->EndRenderPass(filter.cmd, 0);
+            filter.pipeline->EndRenderPass(cmd, 0);
 
-        fbo_dst_index = filter_src_index;
+            return result;
+        });
 
-
-        if (vkEndCommandBuffer(filter.cmd) != VK_SUCCESS) {
-            throw "failed to end cmd buffer";
-        }
+        m_filter_semaphores.push_back(command_buffer->GetSemaphore());
+        m_filter_command_buffers.push_back(std::move(command_buffer));
     }
 }
 
@@ -245,44 +225,13 @@ void FilterStack::Render(Engine *engine, Frame *frame)
     vkWaitForFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_fc_submit, true, UINT64_MAX);
     vkResetFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_fc_submit);
 
-    VkCommandBuffer cmd_buffers[2] = { m_filters[0].cmd, m_filters[1].cmd };
-    VkSemaphore wait_semaphores[2] = { m_filters[0].sp, m_filters[1].sp };
+    auto result = CommandBuffer::Submit(
+        engine->GetInstance()->queue_graphics,
+        m_filter_command_buffers,
+        m_fc_submit,
+        &frame->sp_swap_release, 1
+    );
 
-
-    VkSubmitInfo submit_info{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
-    VkPipelineStageFlags wait_stages[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-    submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &frame->sp_swap_release;
-    submit_info.signalSemaphoreCount = 2;
-    submit_info.pSignalSemaphores = wait_semaphores;
-    submit_info.pWaitDstStageMask = wait_stages;
-    submit_info.commandBufferCount = 2;
-    submit_info.pCommandBuffers = cmd_buffers;
-
-    auto result = vkQueueSubmit(engine->GetInstance()->queue_graphics, 1, &submit_info, m_fc_submit);
-    AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");
-
-   /* VkCommandBufferBeginInfo begin_info{};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    if (vkBeginCommandBuffer(filter.cmd, &begin_info) != VK_SUCCESS) {
-        throw "failed to begin cmd buffer";
-    }
-    if (vkEndCommandBuffer(filter.cmd) != VK_SUCCESS) {
-        throw "failed to begin cmd buffer";
-    }
-    VkPipelineStageFlags wait_stages2[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    submit_info.waitSemaphoreCount = 2;
-    submit_info.pWaitSemaphores = wait_semaphores;
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &this->wait_sp;
-    submit_info.pWaitDstStageMask = wait_stages2;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &frame->command_buffer;
-
-    result = vkQueueSubmit(engine->GetInstance()->queue_graphics, 1, &submit_info, nullptr);
-    AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");*/
+    AssertThrowMsg(result, "%s", result.message);
 }
 } // namespace hyperion

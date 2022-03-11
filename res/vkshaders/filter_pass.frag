@@ -6,7 +6,6 @@ layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
 layout(location=6) in vec3 v_light_direction;
 layout(location=7) in vec3 v_camera_position;
-layout(location=8) in flat uint v_filter_frame_src;
 
 // TODO: read in from prev pass.
 

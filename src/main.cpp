@@ -860,8 +860,8 @@ int main()
 
         // waiting for tmp fence
 
-        vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq_fc, true, UINT64_MAX);
-        vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq_fc);
+        //vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq_fc, true, UINT64_MAX);
+        //vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq_fc);
 
 
         frame = engine.GetInstance()->GetNextFrame();
@@ -880,6 +880,22 @@ int main()
         monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
         fbo_pl->EndRenderPass(frame->command_buffer, 0);
 
+
+        // previous:
+        engine.RenderSwapchain(frame);
+        engine.GetInstance()->EndFrame(frame);
+
+
+        std::vector<VkSemaphore> fsq_sp_wrapper;
+        fsq_sp_wrapper.resize(1);
+        fsq_sp_wrapper[0] = frame->sp_swap_release;
+        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);
+
+
+
+
+
+        /*
         engine.GetInstance()->EndFrame(frame);
         engine.RenderPostProcessing(frame);
 
@@ -904,11 +920,7 @@ int main()
         }
 
 
-        std::vector<VkSemaphore> semaphores;
-        semaphores.resize(2);
-        semaphores[0] = engine.GetFilterStack().m_filters[0].sp;
-        semaphores[1] = engine.GetFilterStack().m_filters[1].sp;
-
+        const std::vector<VkSemaphore> &semaphores = engine.GetFilterStack().m_filter_semaphores;
 
         VkSubmitInfo submit_info{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
         VkPipelineStageFlags wait_stages[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -923,15 +935,12 @@ int main()
 
         auto result = vkQueueSubmit(engine.GetInstance()->queue_graphics, 1, &submit_info, fsq_fc);
         AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");
-
-
-        //Pipeline *fbo_pl = pipelines[1];
-        //fbo_pl->StartRenderPass(frame->command_buffer, )
+        
 
         std::vector<VkSemaphore> fsq_sp_wrapper;
         fsq_sp_wrapper.resize(1);
         fsq_sp_wrapper[0] = fsq_sp;
-        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);
+        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);*/
     }
 
     engine.GetInstance()->WaitDeviceIdle();
