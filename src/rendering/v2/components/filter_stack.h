@@ -40,7 +40,7 @@ public:
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    void Render(Engine *engine, Frame *frame);
+    void Render(Engine *engine, Frame *frame, uint32_t frame_index);
 
     std::vector<Filter> m_filters;
     std::vector<std::unique_ptr<CommandBuffer>> m_filter_command_buffers;
@@ -55,7 +55,7 @@ private:
     VkSemaphore wait_sp;
     VkCommandBuffer final_cmd_buffer;
 
-    VkFence m_fc_submit;
+    std::vector<VkFence> m_frame_fences;
     std::array<Framebuffer::ID, 2> m_framebuffers; /* ping, pong */
     std::vector<RenderPass::ID> m_render_passes; /* One per each filter */
 };

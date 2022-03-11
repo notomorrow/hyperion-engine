@@ -14,6 +14,20 @@
 
 namespace hyperion {
 namespace renderer {
+
+static void HandleNextFrame(Device *device, Swapchain *swapchain, Frame *frame, uint32_t *index)
+{
+    VkResult result = vkAcquireNextImageKHR(
+        device->GetDevice(),
+        swapchain->swapchain,
+        UINT64_MAX,
+        frame->sp_swap_acquire, 
+        VK_NULL_HANDLE,
+        index);
+
+    DebugLogAssertionMsg(LogType::Error, result == VK_SUCCESS, "acquiring next image did not return success result");
+}
+
 Queue::Queue() {
     this->queue = nullptr;
 }
@@ -194,7 +208,9 @@ SystemWindow *Instance::GetCurrentWindow() {
     return this->window;
 }
 
-Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_name) {
+Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_name)
+    : frame_handler(HandleNextFrame)
+{
     this->system = _system;
     this->app_name = app_name;
     this->engine_name = engine_name;
@@ -203,13 +219,13 @@ Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_
 
 Result Instance::AllocatePendingFrames() {
     AssertExit(this->frames_to_allocate >= 1);
-    AssertExitMsg(command_buffers.size() >= this->frames_to_allocate,
-                   "Insufficient pipeline command buffers\n");
+    AssertExitMsg(command_buffers.size() >= frames_to_allocate,
+                   "Insufficient command buffers\n");
 
-    this->pending_frames.reserve(this->frames_to_allocate);
-    DebugLog(LogType::Debug, "Allocating [%d] frames\n", this->frames_to_allocate);
+    this->pending_frames.reserve(frames_to_allocate);
+    DebugLog(LogType::Debug, "Allocating [%d] frames\n", frames_to_allocate);
 
-    for (uint16_t i = 0; i < this->frames_to_allocate; i++) {
+    for (uint16_t i = 0; i < frames_to_allocate; i++) {
         auto frame = std::make_unique<Frame>();
 
         HYPERION_BUBBLE_ERRORS(frame->Create(this->device, command_buffers[i]));
@@ -221,11 +237,11 @@ Result Instance::AllocatePendingFrames() {
 }
 
 Frame *Instance::GetNextFrame() {
-    AssertThrow(this->pending_frames.size() == this->frames_to_allocate);
+    AssertThrow(this->pending_frames.size() == frames_to_allocate);
 
     ++this->frames_index;
 
-    if (this->frames_index >= this->frames_to_allocate) {
+    if (this->frames_index >= frames_to_allocate) {
         this->frames_index = 0;
     }
 

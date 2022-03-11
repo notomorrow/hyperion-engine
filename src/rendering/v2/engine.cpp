@@ -163,7 +163,6 @@ void Engine::PrepareSwapchain()
     m_filter_stack.Create(this);
 
 
-
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
     m_swapchain_data.shader.reset(new Shader({
         SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read() },
@@ -246,9 +245,9 @@ void Engine::Initialize()
     FindTextureFormatDefaults();
 }
 
-void Engine::RenderPostProcessing(Frame *frame)
+void Engine::RenderPostProcessing(Frame *frame, uint32_t frame_index)
 {
-    m_filter_stack.Render(this, frame);
+    m_filter_stack.Render(this, frame, frame_index);
 }
 
 void Engine::RenderSwapchain(Frame *frame)

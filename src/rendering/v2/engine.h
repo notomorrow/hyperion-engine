@@ -87,7 +87,7 @@ public:
 
     void Initialize();
     void PrepareSwapchain();
-    void RenderPostProcessing(Frame *frame);
+    void RenderPostProcessing(Frame *frame, uint32_t frame_index);
     void RenderSwapchain(Frame *frame);
 
 private:

@@ -22,12 +22,16 @@
 #include "renderer_pipeline.h"
 #include "renderer_descriptor_pool.h"
 #include "renderer_frame.h"
+#include "renderer_frame_handler.h"
 
 #define VK_RENDERER_API_VERSION VK_API_VERSION_1_2
 
+/* Max frames/sync objects to have available to render to. This prevents the graphics
+ * pipeline from stalling when waiting for device upload/download. */
+#define DEFAULT_PENDING_FRAMES_COUNT 2
+
 namespace hyperion {
 namespace renderer {
-#define DEFAULT_PENDING_FRAMES_COUNT 2
 
 using ::std::vector,
       ::std::set;
@@ -56,6 +60,8 @@ class Instance {
     Result CreateCommandPool();
     Result CreateCommandBuffers();
 public:
+    static constexpr uint16_t frames_to_allocate = DEFAULT_PENDING_FRAMES_COUNT;
+
     Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
     Result Initialize(bool load_debug_layers=false);
     void CreateSurface();
@@ -93,14 +99,13 @@ public:
 
     vector<const char *> requested_device_extensions;
 
-    uint16_t frames_to_allocate = DEFAULT_PENDING_FRAMES_COUNT;
-
     const char *app_name;
     const char *engine_name;
 
     vector<std::unique_ptr<Pipeline>> pipelines;
 
     uint32_t acquired_frames_index = 0;
+    int frames_index = 0;
     Swapchain *swapchain = nullptr;
 
     /* Per frame data */
@@ -110,7 +115,10 @@ public:
     VkQueue queue_graphics;
     VkQueue queue_present;
 
+    FrameHandler frame_handler;
+
 private:
+
     SystemWindow *window = nullptr;
     SystemSDL    system;
 
@@ -121,7 +129,6 @@ private:
 
     vector<std::unique_ptr<Frame>> pending_frames;
     Frame *current_frame = nullptr;
-    int frames_index = 0;
 
     Device    *device = nullptr;
 
