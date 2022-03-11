@@ -656,7 +656,7 @@ int main()
 
     v2::RenderPass::ID render_pass_id = -1;
     {
-        auto render_pass = std::make_unique<v2::RenderPass>(v2::RenderPass::RENDER_PASS_STAGE_SHADER);
+        auto render_pass = std::make_unique<v2::RenderPass>(v2::RenderPass::RENDER_PASS_STAGE_SHADER, v2::RenderPass::RENDER_PASS_INLINE);
 
         /* For our color attachment */
         render_pass->AddAttachment({
@@ -795,18 +795,23 @@ int main()
     double delta_time = 0;
 
     struct FullScreenQuadFrame {
-        VkCommandBuffer cmd;
+        /*VkCommandBuffer cmd;
         VkSemaphore sp;
-        VkFence fc;
+        VkFence fc;*/
+        std::unique_ptr<CommandBuffer> cmd;
     };
 
     std::vector<FullScreenQuadFrame> fsq;
-    fsq.resize(DEFAULT_PENDING_FRAMES_COUNT);
+    fsq.resize(engine.GetInstance()->GetNumImages());
 
-    for (int i = 0; i < DEFAULT_PENDING_FRAMES_COUNT; i++) {
-        VkCommandBufferAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    for (int i = 0; i < fsq.size(); i++) {
+        fsq[i].cmd = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
+        auto command_buffer_result = fsq[i].cmd->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
+        AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
+
+        /*VkCommandBufferAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
         alloc_info.commandPool = engine.GetInstance()->command_pool;
-        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
         alloc_info.commandBufferCount = 1;
 
         if (vkAllocateCommandBuffers(engine.GetInstance()->GetDevice()->GetDevice(), &alloc_info, &fsq[i].cmd) != VK_SUCCESS) {
@@ -824,7 +829,7 @@ int main()
 
         if (vkCreateFence(engine.GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &fsq[i].fc) != VK_SUCCESS) {
             throw "Failed to create fence";
-        }
+        }*/
     }
 
 
@@ -864,11 +869,15 @@ int main()
 
         // waiting for tmp fence
 
-        vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc, true, UINT64_MAX);
-        vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc);
+        //vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc, true, UINT64_MAX);
+       // vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc);
 
 
         frame = engine.GetInstance()->GetNextFrame();
+
+
+
+
 
         engine.GetInstance()->BeginFrame(frame);
         
@@ -877,7 +886,8 @@ int main()
 
 
         /* forward / albedo layer */
-        fbo_pl->StartRenderPass(frame->command_buffer, 0);
+        fbo_pl->BeginRenderPass(frame->command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
+        fbo_pl->Bind(frame->command_buffer);
         engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, fbo_pl->layout, 0, 1);
         monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
         fbo_pl->EndRenderPass(frame->command_buffer, 0);
@@ -893,33 +903,31 @@ int main()
         fsq_sp_wrapper[0] = frame->sp_swap_release;
         engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);*/
 
-        engine.GetInstance()->EndFrame(frame);
 
         // TODO: needs/double tripple buffering so fences don't block
-        engine.RenderPostProcessing(frame, engine.GetInstance()->frames_index);
+        engine.RenderPostProcessing(frame, engine.GetInstance()->acquired_frames_index);
 
+        /* secondary cmd buffer */
+        engine.GetSwapchainData().pipeline->BeginRenderPass(frame->command_buffer, engine.GetInstance()->acquired_frames_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
+        fsq[engine.GetInstance()->acquired_frames_index].cmd->Reset(engine.GetInstance()->GetDevice());
+        fsq[engine.GetInstance()->acquired_frames_index].cmd->Record(
+            engine.GetInstance()->GetDevice(),
+            engine.GetSwapchainData().pipeline->GetConstructionInfo().render_pass.get(),
+            [&fsq, &engine](VkCommandBuffer cmd) {
+                Frame tmp_frame;
+                tmp_frame.command_buffer = cmd;
+                engine.RenderSwapchain(&tmp_frame);
 
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                HYPERION_RETURN_OK;
+            });
+        fsq[engine.GetInstance()->acquired_frames_index].cmd->SubmitSecondary(frame->command_buffer);
+        engine.GetSwapchainData().pipeline->EndRenderPass(frame->command_buffer, engine.GetInstance()->acquired_frames_index);
 
-        if (vkBeginCommandBuffer(fsq[engine.GetInstance()->frames_index].cmd, &begin_info) != VK_SUCCESS) {
-            throw "Failed to begin cmd buffer";
-        }
+        /* end secondary cmd buffer */
+        engine.GetInstance()->EndFrame(frame);
 
-
-        Frame tmp_frame;
-        tmp_frame.command_buffer = fsq[engine.GetInstance()->frames_index].cmd;
-        engine.RenderSwapchain(&tmp_frame);
-
-
-
-        if (vkEndCommandBuffer(fsq[engine.GetInstance()->frames_index].cmd) != VK_SUCCESS) {
-            throw "Failed to end cmd buffer";
-        }
-
-
-        const std::vector<VkSemaphore> &semaphores = engine.GetFilterStack().m_filter_semaphores;
+        /*const std::vector<VkSemaphore> &semaphor&s = engine.GetFilterStack().m_filter_semaphores;
 
         VkSubmitInfo submit_info{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
         VkPipelineStageFlags wait_stages[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -933,12 +941,17 @@ int main()
         submit_info.pCommandBuffers = &fsq[engine.GetInstance()->frames_index].cmd;
 
         auto result = vkQueueSubmit(engine.GetInstance()->queue_graphics, 1, &submit_info, fsq[engine.GetInstance()->frames_index].fc);
-        AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");
-        
+        AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");*/
+
+
+        engine.GetInstance()->SubmitFrame(frame);
+
 
         std::vector<VkSemaphore> fsq_sp_wrapper;
         fsq_sp_wrapper.resize(1);
-        fsq_sp_wrapper[0] = fsq[engine.GetInstance()->frames_index].sp;
+        fsq_sp_wrapper[0] = frame->sp_swap_release;//fsq[engine.GetInstance()->frames_index].sp;
+
+
         engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);
     }
 

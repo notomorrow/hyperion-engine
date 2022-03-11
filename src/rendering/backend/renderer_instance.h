@@ -27,8 +27,12 @@
 #define VK_RENDERER_API_VERSION VK_API_VERSION_1_2
 
 /* Max frames/sync objects to have available to render to. This prevents the graphics
- * pipeline from stalling when waiting for device upload/download. */
-#define DEFAULT_PENDING_FRAMES_COUNT 2
+ * pipeline from stalling when waiting for device upload/download.
+ * It's possible a device will return 0 for maxImageCount which indicates
+ * there is no limit. So we cap it ourselves.
+ */
+
+#define NUM_MAX_PENDING_FRAMES uint32_t(8)
 
 namespace hyperion {
 namespace renderer {
@@ -60,8 +64,6 @@ class Instance {
     Result CreateCommandPool();
     Result CreateCommandBuffers();
 public:
-    static constexpr uint16_t frames_to_allocate = DEFAULT_PENDING_FRAMES_COUNT;
-
     Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
     Result Initialize(bool load_debug_layers=false);
     void CreateSurface();
@@ -79,6 +81,7 @@ public:
     VkResult AcquireNextImage(Frame *frame);
     void     BeginFrame      (Frame *frame);
     void     EndFrame        (Frame *frame);
+    void     SubmitFrame     (Frame *frame);
     void     PresentFrame    (Frame *frame, const std::vector<VkSemaphore> &semaphores);
 
     void SetValidationLayers(vector<const char *> _layers);
@@ -91,6 +94,8 @@ public:
 
     void SetQueueFamilies(set<uint32_t> queue_families);
     void SetCurrentWindow(SystemWindow *window);
+
+    inline size_t GetNumImages() const { return this->swapchain->GetNumImages(); }
 
     SystemWindow *GetCurrentWindow();
     Result Destroy();

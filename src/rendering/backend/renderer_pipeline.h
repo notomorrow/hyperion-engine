@@ -171,17 +171,6 @@ public:
             return *this;
         }
 
-        /*Builder &Framebuffer(size_t width, size_t height, std::function<void(FramebufferObject &)> fn)
-        {
-            auto fbo = std::make_unique<FramebufferObject>(width, height);
-
-            fn(*fbo);
-
-            m_construction_info.fbos.push_back(std::move(fbo));
-
-            return *this;
-        }*/
-
         std::unique_ptr<Pipeline> Build(Device *device)
         {
             AssertThrow(!m_construction_info.fbos.empty());
@@ -220,8 +209,9 @@ public:
         Build(descriptor_pool);
     }
 
-    void StartRenderPass(VkCommandBuffer cmd, size_t index);
+    void BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubpassContents contents);
     void EndRenderPass(VkCommandBuffer cmd, size_t index);
+    void Bind(VkCommandBuffer cmd);
 
     inline const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
 

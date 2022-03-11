@@ -11,8 +11,7 @@ using renderer::MeshInputAttribute;
 using renderer::MeshInputAttributeSet;
 
 FilterStack::FilterStack()
-    : m_framebuffers{-1},
-      m_filters{}
+    : m_filters{}
 {
 }
 
@@ -20,33 +19,6 @@ FilterStack::~FilterStack() = default;
 
 void FilterStack::Create(Engine *engine)
 {
-    VkSemaphoreCreateInfo semaphore_info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-    if (vkCreateSemaphore(engine->GetInstance()->GetDevice()->GetDevice(), &semaphore_info, nullptr, &wait_sp) != VK_SUCCESS) {
-        throw "could not create wait semaphore";
-    }
-
-    this->m_frame_fences.resize(DEFAULT_PENDING_FRAMES_COUNT);
-
-    for (int i = 0; i < DEFAULT_PENDING_FRAMES_COUNT; i++) {
-        VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-        if (vkCreateFence(engine->GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &this->m_frame_fences[i]) != VK_SUCCESS) {
-            throw "Failed to create fence";
-        }
-    }
-
-
-
-    VkCommandBufferAllocateInfo alloc_info{};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandPool = engine->GetInstance()->command_pool;
-    alloc_info.commandBufferCount = 1;
-    if (vkAllocateCommandBuffers(engine->GetInstance()->GetDevice()->GetDevice(), &alloc_info, &final_cmd_buffer) != VK_SUCCESS) {
-        throw "Failed to allocate command buffers";
-    }
-
 
     // TMP
     m_quad = MeshFactory::CreateQuad();
@@ -57,7 +29,7 @@ void FilterStack::Create(Engine *engine)
 
     for (int i = 0; i < num_filters; i++) {
         /* Add the filters' renderpass */
-        auto render_pass = std::make_unique<v2::RenderPass>(v2::RenderPass::RENDER_PASS_STAGE_SHADER);
+        auto render_pass = std::make_unique<v2::RenderPass>(v2::RenderPass::RENDER_PASS_STAGE_SHADER, v2::RenderPass::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
 
         /* For our color attachment */
         render_pass->AddAttachment({
@@ -88,11 +60,29 @@ void FilterStack::Create(Engine *engine)
         filter.shader->Create(engine);
 
         m_render_passes.push_back(engine->AddRenderPass(std::move(render_pass)));
-        filter.framebuffer = engine->AddFramebuffer(
-            engine->GetInstance()->swapchain->extent.width,
-            engine->GetInstance()->swapchain->extent.height,
-            m_render_passes.back()
-        );
+
+        filter.frame_data.framebuffers.resize(engine->GetInstance()->GetNumImages());
+        filter.frame_data.command_buffers.resize(engine->GetInstance()->GetNumImages());
+
+        for (size_t j = 0; j < engine->GetInstance()->GetNumImages(); j++) {
+            filter.frame_data.framebuffers[j] = engine->AddFramebuffer(
+                engine->GetInstance()->swapchain->extent.width,
+                engine->GetInstance()->swapchain->extent.height,
+                m_render_passes.back()
+            );
+
+
+            auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+
+            auto command_buffer_result = command_buffer->Create(
+                engine->GetInstance()->GetDevice(),
+                engine->GetInstance()->command_pool
+            );
+
+            AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
+            
+            filter.frame_data.command_buffers[j] = std::move(command_buffer);
+        }
 
         m_filters.push_back(std::move(filter));
     }
@@ -105,38 +95,38 @@ void FilterStack::Create(Engine *engine)
     filter_descriptor_set
         .AddDescriptor(std::make_unique<renderer::ImageSamplerDescriptor>(
             0,
-            non_owning_ptr(engine->GetFramebuffer(m_filters[0].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
-            non_owning_ptr(engine->GetFramebuffer(m_filters[0].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[0].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[0].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ))
         .AddDescriptor(std::make_unique<renderer::ImageSamplerDescriptor>(
             1,
-            non_owning_ptr(engine->GetFramebuffer(m_filters[0].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
-            non_owning_ptr(engine->GetFramebuffer(m_filters[0].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[0].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[0].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ))
         .AddDescriptor(std::make_unique<renderer::ImageSamplerDescriptor>(
             2,
-            non_owning_ptr(engine->GetFramebuffer(m_filters[0].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
-            non_owning_ptr(engine->GetFramebuffer(m_filters[0].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[0].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[0].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ))
         .AddDescriptor(std::make_unique<renderer::ImageSamplerDescriptor>(
             3,
-            non_owning_ptr(engine->GetFramebuffer(m_filters[1].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
-            non_owning_ptr(engine->GetFramebuffer(m_filters[1].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[1].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[1].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ))
         .AddDescriptor(std::make_unique<renderer::ImageSamplerDescriptor>(
             4,
-            non_owning_ptr(engine->GetFramebuffer(m_filters[1].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
-            non_owning_ptr(engine->GetFramebuffer(m_filters[1].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[1].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[1].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ))
         .AddDescriptor(std::make_unique<renderer::ImageSamplerDescriptor>(
             5,
-            non_owning_ptr(engine->GetFramebuffer(m_filters[1].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
-            non_owning_ptr(engine->GetFramebuffer(m_filters[1].framebuffer)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[1].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_filters[1].frame_data.framebuffers[0])->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ));
 
@@ -167,13 +157,15 @@ void FilterStack::Create(Engine *engine)
             .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
             .Shader(m_filters[i].shader->GetWrappedObject())
             .VertexAttributes(vertex_attributes)
-            .RenderPass(m_render_passes[i])
-            .Framebuffer(m_filters[i].framebuffer);
+            .RenderPass(m_render_passes[i]);
+
+        for (int j = 0; j < m_filters[i].frame_data.framebuffers.size(); j++) {
+            builder.Framebuffer(m_filters[i].frame_data.framebuffers[j]);
+        }
 
         engine->AddPipeline(std::move(builder), &m_filters[i].pipeline);
     }
-
-    RecordFilters(engine);
+    
 }
 
 void FilterStack::Destroy(Engine *engine)
@@ -192,50 +184,56 @@ void FilterStack::RecordFilters(Engine *engine)
 {
     for (int i = 0; i < m_filters.size(); i++) {
         auto &filter = m_filters[i];
-
-        auto command_buffer = std::make_unique<CommandBuffer>();
         
-        auto command_buffer_result = command_buffer->Create(engine->GetInstance()->GetDevice(), engine->GetInstance()->command_pool);
-        AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
-        
-        command_buffer->Record(engine->GetInstance()->GetDevice(), [this, engine, &filter](VkCommandBuffer cmd) {
-            renderer::Result result = renderer::Result::OK;
-
-            filter.pipeline->StartRenderPass(cmd, 0);
-
-            HYPERION_PASS_ERRORS(
-                engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, filter.pipeline->layout, 0, 2),
-                result
-            );
-
-            // TMP
-            renderer::Frame frame;
-            frame.command_buffer = cmd;
-
-            m_quad->RenderVk(&frame, engine->GetInstance(), nullptr);
-
-            filter.pipeline->EndRenderPass(cmd, 0);
-
-            return result;
-        });
-
-        m_filter_semaphores.push_back(command_buffer->GetSemaphore());
-        m_filter_command_buffers.push_back(std::move(command_buffer));
     }
 }
 
 void FilterStack::Render(Engine *engine, Frame *frame, uint32_t frame_index)
 {
-    vkWaitForFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_frame_fences[frame_index], true, UINT64_MAX);
-    vkResetFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_frame_fences[frame_index]);
+    //vkWaitForFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_frame_fences[frame_index], true, UINT64_MAX);
+    //vkResetFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_frame_fences[frame_index]);
 
-    auto result = CommandBuffer::Submit(
-        engine->GetInstance()->queue_graphics,
-        m_filter_command_buffers,
-        this->m_frame_fences[frame_index],
-        &frame->sp_swap_release, 1
-    );
+    /*auto result = CommandBuffer::SubmitSecondary(
+        frame->command_buffer,
+        m_filter_command_buffers
+    );*/
 
-    AssertThrowMsg(result, "%s", result.message);
+    for (size_t i = 0; i < m_filters.size(); i++) {
+        auto &filter = m_filters[i];
+        filter.pipeline->BeginRenderPass(frame->command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+        /* TMP: we can pre-record this */
+        auto &command_buffer = filter.frame_data.command_buffers[frame_index];
+
+        command_buffer->Reset(engine->GetInstance()->GetDevice());
+
+        command_buffer->Record(
+            engine->GetInstance()->GetDevice(),
+            filter.pipeline->GetConstructionInfo().render_pass.get(),
+            [this, engine, &filter](VkCommandBuffer cmd) {
+                renderer::Result result = renderer::Result::OK;
+                
+                filter.pipeline->Bind(cmd);
+
+                HYPERION_PASS_ERRORS(
+                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, filter.pipeline->layout, 0, 2),
+                    result
+                );
+
+                // TMP
+                renderer::Frame tmp_frame;
+                tmp_frame.command_buffer = cmd;
+
+                m_quad->RenderVk(&tmp_frame, engine->GetInstance(), nullptr);
+                
+
+                return result;
+            });
+
+        auto result = command_buffer->SubmitSecondary(frame->command_buffer);
+        AssertThrowMsg(result, "%s", result.message);
+        filter.pipeline->EndRenderPass(frame->command_buffer, frame_index);
+    }
+
 }
 } // namespace hyperion

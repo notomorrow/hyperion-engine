@@ -92,9 +92,13 @@ void Instance::EndFrame(Frame *frame)
     /* Assume `frame` is not nullptr */
 
     frame->EndCapture();
+}
 
+void Instance::SubmitFrame(Frame *frame)
+{
     frame->Submit(this->queue_graphics);
 }
+
 
 void Instance::PresentFrame(Frame *frame, const std::vector<VkSemaphore> &semaphores)
 {
@@ -211,6 +215,7 @@ SystemWindow *Instance::GetCurrentWindow() {
 Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_name)
     : frame_handler(HandleNextFrame)
 {
+    this->swapchain = new Swapchain();
     this->system = _system;
     this->app_name = app_name;
     this->engine_name = engine_name;
@@ -218,32 +223,32 @@ Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_
 }
 
 Result Instance::AllocatePendingFrames() {
-    AssertExit(this->frames_to_allocate >= 1);
-    AssertExitMsg(command_buffers.size() >= frames_to_allocate,
+    size_t num_images = this->GetNumImages();
+
+    AssertExit(num_images >= 1);
+    AssertExitMsg(command_buffers.size() >= num_images,
                    "Insufficient command buffers\n");
 
-    this->pending_frames.reserve(frames_to_allocate);
-    DebugLog(LogType::Debug, "Allocating [%d] frames\n", frames_to_allocate);
+    this->pending_frames.resize(num_images);
+    DebugLog(LogType::Debug, "Allocating [%d] frames\n", num_images);
 
-    for (uint16_t i = 0; i < frames_to_allocate; i++) {
-        auto frame = std::make_unique<Frame>();
-
-        HYPERION_BUBBLE_ERRORS(frame->Create(this->device, command_buffers[i]));
-
-        this->pending_frames.emplace_back(std::move(frame));
+    for (size_t i = 0; i < num_images; i++) {
+        this->pending_frames[i] = std::make_unique<Frame>();
+        HYPERION_BUBBLE_ERRORS(this->pending_frames[i]->Create(this->device, command_buffers[i]));
     }
 
     HYPERION_RETURN_OK;
 }
 
 Frame *Instance::GetNextFrame() {
-    AssertThrow(this->pending_frames.size() == frames_to_allocate);
+    AssertThrow(this->pending_frames.size() == this->GetNumImages());
 
-    ++this->frames_index;
+    /*++this->frames_index;
 
-    if (this->frames_index >= frames_to_allocate) {
+    if (this->frames_index >= this->max_images) {
         this->frames_index = 0;
-    }
+    }*/
+    this->frames_index = this->acquired_frames_index;
 
     this->current_frame = this->pending_frames[this->frames_index].get();
 
@@ -422,10 +427,11 @@ Result Instance::Destroy() {
     HYPERION_PASS_ERRORS(descriptor_pool.Destroy(this->device), result);
 
     /* Destroy the vulkan swapchain */
-    if (this->swapchain != nullptr)
-        HYPERION_PASS_ERRORS(this->swapchain->Destroy(), result);
-    delete this->swapchain;
-    this->swapchain = nullptr;
+    if (this->swapchain != nullptr) {
+        HYPERION_PASS_ERRORS(this->swapchain->Destroy(this->device), result);
+        delete this->swapchain;
+        this->swapchain = nullptr;
+    }
 
     /* Destroy the surface from SDL */
     vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
@@ -588,11 +594,7 @@ Result Instance::BuildPipelines()
 }
 
 Result Instance::InitializeSwapchain() {
-    SwapchainSupportDetails sc_support = this->device->QuerySwapchainSupport();
-    QueueFamilyIndices      qf_indices = this->device->FindQueueFamilies();
-
-    this->swapchain = new Swapchain(this->device, sc_support);
-    HYPERION_BUBBLE_ERRORS(this->swapchain->Create(this->surface, qf_indices));
+    HYPERION_BUBBLE_ERRORS(this->swapchain->Create(this->device, this->surface));
 
     HYPERION_RETURN_OK;
 }

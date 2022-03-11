@@ -5,9 +5,10 @@ namespace hyperion::v2 {
 
 using renderer::AttachmentBase;
 
-RenderPass::RenderPass(Stage stage)
+RenderPass::RenderPass(Stage stage, Mode mode)
     : BaseComponent(std::make_unique<renderer::RenderPass>()),
-      m_stage(stage)
+      m_stage(stage),
+      m_mode(mode)
 {
 }
 
