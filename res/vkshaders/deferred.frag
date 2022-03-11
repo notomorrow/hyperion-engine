@@ -5,7 +5,6 @@ layout(location=0) in vec3 v_position;
 layout(location=1) in vec2 v_texcoord0;
 layout(location=2) in vec3 v_light_direction;
 layout(location=3) in vec3 v_camera_position;
-layout(location=8) flat in uint v_filter_frame_src;
 
 layout(location=0) out vec4 out_color;
 
@@ -20,15 +19,9 @@ void main() {
     vec4 normal;
     vec4 position;
     
-    //if (v_filter_frame_src == 0) {
-        albedo = texture(gbuffer_albedo_ping, texcoord);
-        normal = texture(gbuffer_normals_ping, texcoord);
-        position = texture(gbuffer_positions_ping, texcoord);
-    //} else {
-     //   albedo = texture(gbuffer_albedo_pong, texcoord);
-    //    normal = texture(gbuffer_normals_pong, texcoord);
-     //   position = texture(gbuffer_positions_pong, texcoord);
-    //}
+    albedo = texture(gbuffer_albedo_ping, texcoord);
+    normal = texture(gbuffer_normals_ping, texcoord);
+    position = texture(gbuffer_positions_ping, texcoord);
     
     float NdotL = dot(normal.xyz, v_light_direction);
 

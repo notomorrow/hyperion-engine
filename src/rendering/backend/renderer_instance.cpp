@@ -212,7 +212,7 @@ Result Instance::AllocatePendingFrames() {
     for (uint16_t i = 0; i < this->frames_to_allocate; i++) {
         auto frame = std::make_unique<Frame>();
 
-        HYPERION_BUBBLE_ERRORS(frame->Create(non_owning_ptr(this->device), command_buffers[i]));
+        HYPERION_BUBBLE_ERRORS(frame->Create(this->device, command_buffers[i]));
 
         this->pending_frames.emplace_back(std::move(frame));
     }

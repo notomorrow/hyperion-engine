@@ -18,9 +18,9 @@ Frame::~Frame()
     AssertExitMsg(fc_queue_submit == nullptr, "fc_queue_submit should have been destroyed");
 }
 
-Result Frame::Create(non_owning_ptr<Device> device, VkCommandBuffer cmd)
+Result Frame::Create(Device *device, VkCommandBuffer cmd)
 {
-    this->creation_device = device;
+    this->creation_device = non_owning_ptr(device);
     this->command_buffer = cmd;
 
     return this->CreateSyncObjects();

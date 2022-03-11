@@ -18,7 +18,7 @@ layout(set = 2, binding = 2) uniform sampler2D gbuffer_positions_2;
 void main() {
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
-    vec4 albedo = texture(gbuffer_albedo_2, texcoord);
+    vec4 albedo = texture(gbuffer_albedo, texcoord);
 
 
     out_color = albedo;
