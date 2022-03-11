@@ -63,6 +63,8 @@ class Instance {
     Result CreateCommandPool();
     Result CreateCommandBuffers();
 public:
+    static constexpr uint16_t frames_to_allocate = DEFAULT_PENDING_FRAMES_COUNT;
+
     Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
     Result Initialize(bool load_debug_layers=false);
     void CreateSurface();
@@ -118,6 +120,8 @@ public:
 
     VkQueue queue_graphics;
     VkQueue queue_present;
+
+    FrameHandler frame_handler;
 
 private:
 

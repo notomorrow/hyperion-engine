@@ -25,11 +25,15 @@ void FilterStack::Create(Engine *engine)
         throw "could not create wait semaphore";
     }
 
-    VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    this->m_frame_fences.resize(DEFAULT_PENDING_FRAMES_COUNT);
 
-    if (vkCreateFence(engine->GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &this->m_fc_submit) != VK_SUCCESS) {
-        throw "Failed to create fence";
+    for (int i = 0; i < DEFAULT_PENDING_FRAMES_COUNT; i++) {
+        VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        if (vkCreateFence(engine->GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &this->m_frame_fences[i]) != VK_SUCCESS) {
+            throw "Failed to create fence";
+        }
     }
 
 
@@ -220,15 +224,15 @@ void FilterStack::RecordFilters(Engine *engine)
     }
 }
 
-void FilterStack::Render(Engine *engine, Frame *frame)
+void FilterStack::Render(Engine *engine, Frame *frame, uint32_t frame_index)
 {
-    vkWaitForFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_fc_submit, true, UINT64_MAX);
-    vkResetFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_fc_submit);
+    vkWaitForFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_frame_fences[frame_index], true, UINT64_MAX);
+    vkResetFences(engine->GetInstance()->GetDevice()->GetDevice(), 1, &this->m_frame_fences[frame_index]);
 
     auto result = CommandBuffer::Submit(
         engine->GetInstance()->queue_graphics,
         m_filter_command_buffers,
-        m_fc_submit,
+        this->m_frame_fences[frame_index],
         &frame->sp_swap_release, 1
     );
 

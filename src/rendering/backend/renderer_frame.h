@@ -18,6 +18,8 @@ class Frame {
     Result DestroySyncObjects();
 public:
     Frame();
+    Frame(const Frame &other) = delete;
+    Frame &operator=(const Frame &other) = delete;
     ~Frame();
 
     Result Create(Device *device, VkCommandBuffer cmd);

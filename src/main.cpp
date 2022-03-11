@@ -574,10 +574,6 @@ int main()
     auto full_screen_quad = MeshFactory::CreateQuad();
     Material my_material;
 
-    /* Max frames/sync objects to have available to render to. This prevents the graphics
-     * pipeline from stalling when waiting for device upload/download. */
-    const uint16_t pending_frames = 2;
-
 
     v2::Engine engine(system, "My app");
 
@@ -798,29 +794,37 @@ int main()
     uint64_t tick_last = 0;
     double delta_time = 0;
 
-    VkCommandBuffer tmp_cmd;
-    VkCommandBufferAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-    alloc_info.commandPool = engine.GetInstance()->command_pool;
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandBufferCount = 1;
+    struct FullScreenQuadFrame {
+        VkCommandBuffer cmd;
+        VkSemaphore sp;
+        VkFence fc;
+    };
 
-    if(vkAllocateCommandBuffers(engine.GetInstance()->GetDevice()->GetDevice(), &alloc_info, &tmp_cmd) != VK_SUCCESS) {
-        throw "could not allocate command buffer";
-    }
+    std::vector<FullScreenQuadFrame> fsq;
+    fsq.resize(DEFAULT_PENDING_FRAMES_COUNT);
 
+    for (int i = 0; i < DEFAULT_PENDING_FRAMES_COUNT; i++) {
+        VkCommandBufferAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        alloc_info.commandPool = engine.GetInstance()->command_pool;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc_info.commandBufferCount = 1;
 
-    VkSemaphore fsq_sp;
-    VkSemaphoreCreateInfo semaphore_info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-    if (vkCreateSemaphore(engine.GetInstance()->GetDevice()->GetDevice(), &semaphore_info, nullptr, &fsq_sp) != VK_SUCCESS) {
-        throw "could not create wait semaphore";
-    }
+        if (vkAllocateCommandBuffers(engine.GetInstance()->GetDevice()->GetDevice(), &alloc_info, &fsq[i].cmd) != VK_SUCCESS) {
+            throw "could not allocate command buffer";
+        }
 
-    VkFence fsq_fc;
-    VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        
+        VkSemaphoreCreateInfo semaphore_info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+        if (vkCreateSemaphore(engine.GetInstance()->GetDevice()->GetDevice(), &semaphore_info, nullptr, &fsq[i].sp) != VK_SUCCESS) {
+            throw "could not create wait semaphore";
+        }
+        
+        VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    if (vkCreateFence(engine.GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &fsq_fc) != VK_SUCCESS) {
-        throw "Failed to create fence";
+        if (vkCreateFence(engine.GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &fsq[i].fc) != VK_SUCCESS) {
+            throw "Failed to create fence";
+        }
     }
 
 
@@ -860,13 +864,11 @@ int main()
 
         // waiting for tmp fence
 
-        //vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq_fc, true, UINT64_MAX);
-        //vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq_fc);
+        vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc, true, UINT64_MAX);
+        vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc);
 
 
         frame = engine.GetInstance()->GetNextFrame();
-
-
 
         engine.GetInstance()->BeginFrame(frame);
         
@@ -882,40 +884,37 @@ int main()
 
 
         // previous:
-        engine.RenderSwapchain(frame);
+        /*engine.RenderSwapchain(frame);
         engine.GetInstance()->EndFrame(frame);
 
 
         std::vector<VkSemaphore> fsq_sp_wrapper;
         fsq_sp_wrapper.resize(1);
         fsq_sp_wrapper[0] = frame->sp_swap_release;
-        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);
+        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);*/
 
-
-
-
-
-        /*
         engine.GetInstance()->EndFrame(frame);
-        engine.RenderPostProcessing(frame);
+
+        // TODO: needs/double tripple buffering so fences don't block
+        engine.RenderPostProcessing(frame, engine.GetInstance()->frames_index);
 
 
 
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-        if (vkBeginCommandBuffer(tmp_cmd, &begin_info) != VK_SUCCESS) {
+        if (vkBeginCommandBuffer(fsq[engine.GetInstance()->frames_index].cmd, &begin_info) != VK_SUCCESS) {
             throw "Failed to begin cmd buffer";
         }
 
 
         Frame tmp_frame;
-        tmp_frame.command_buffer = tmp_cmd;
+        tmp_frame.command_buffer = fsq[engine.GetInstance()->frames_index].cmd;
         engine.RenderSwapchain(&tmp_frame);
 
 
 
-        if (vkEndCommandBuffer(tmp_cmd) != VK_SUCCESS) {
+        if (vkEndCommandBuffer(fsq[engine.GetInstance()->frames_index].cmd) != VK_SUCCESS) {
             throw "Failed to end cmd buffer";
         }
 
@@ -928,19 +927,19 @@ int main()
         submit_info.waitSemaphoreCount = semaphores.size();
         submit_info.pWaitSemaphores = semaphores.data();
         submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &fsq_sp;
+        submit_info.pSignalSemaphores = &fsq[engine.GetInstance()->frames_index].sp;
         submit_info.pWaitDstStageMask = wait_stages;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &tmp_cmd;
+        submit_info.pCommandBuffers = &fsq[engine.GetInstance()->frames_index].cmd;
 
-        auto result = vkQueueSubmit(engine.GetInstance()->queue_graphics, 1, &submit_info, fsq_fc);
+        auto result = vkQueueSubmit(engine.GetInstance()->queue_graphics, 1, &submit_info, fsq[engine.GetInstance()->frames_index].fc);
         AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");
         
 
         std::vector<VkSemaphore> fsq_sp_wrapper;
         fsq_sp_wrapper.resize(1);
-        fsq_sp_wrapper[0] = fsq_sp;
-        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);*/
+        fsq_sp_wrapper[0] = fsq[engine.GetInstance()->frames_index].sp;
+        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);
     }
 
     engine.GetInstance()->WaitDeviceIdle();
