@@ -8,14 +8,18 @@ layout(location=3) in vec3 v_camera_position;
 
 layout(location=0) out vec4 out_color;
 
-layout(set = 2, binding = 0) uniform sampler2D gbuffer_albedo;
+layout(set = 1, binding = 0) uniform sampler2D gbuffer_albedo;
 layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals;
 layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions;
+layout(set = 2, binding = 0) uniform sampler2D gbuffer_albedo_2;
+layout(set = 2, binding = 1) uniform sampler2D gbuffer_normals_2;
+layout(set = 2, binding = 2) uniform sampler2D gbuffer_positions_2;
 
 void main() {
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
-    vec4 albedo = texture(gbuffer_albedo, texcoord);
+    vec4 albedo = texture(gbuffer_albedo_2, texcoord);
+
 
     out_color = albedo;
 }

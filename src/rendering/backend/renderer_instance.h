@@ -76,7 +76,6 @@ public:
     
     void     BeginFrame      (Frame *frame);
     void     EndFrame        (Frame *frame);
-    void     SubmitFrame     (Frame *frame);
     void     PresentFrame    (Frame *frame, const std::vector<VkSemaphore> &semaphores);
 
     void SetValidationLayers(vector<const char *> _layers);
@@ -116,6 +115,9 @@ public:
     VkQueue queue_graphics;
     VkQueue queue_present;
 
+
+    VkQueue queue_graphics;
+    VkQueue queue_present;
 
 private:
 

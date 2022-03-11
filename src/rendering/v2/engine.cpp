@@ -160,6 +160,9 @@ void Engine::FindTextureFormatDefaults()
 void Engine::PrepareSwapchain()
 {
 
+    m_filter_stack.Create(this);
+
+
 
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
     m_swapchain_data.shader.reset(new Shader({
@@ -168,10 +171,6 @@ void Engine::PrepareSwapchain()
         }));
 
     m_swapchain_data.shader->Create(this);
-
-    m_filter_stack.Create(this);
-
-
     
 
     // TMP trying to update a descriptor set right on 
