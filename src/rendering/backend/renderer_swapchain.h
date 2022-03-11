@@ -18,25 +18,18 @@ class Swapchain {
     VkSurfaceFormatKHR ChooseSurfaceFormat();
     VkPresentModeKHR GetPresentMode();
     VkExtent2D ChooseSwapchainExtent();
+    void RetrieveSupportDetails(Device *device);
 
-    void RetrieveImageHandles();
+    void RetrieveImageHandles(Device *device);
 
 public:
-    struct DepthBuffer {
-        std::unique_ptr<ImageView> image_view;
-        std::unique_ptr<Image> image;
-
-        DepthBuffer() : image_view{}, image{} {}
-        DepthBuffer(const DepthBuffer &other) = delete;
-        DepthBuffer &operator=(const DepthBuffer &other) = delete;
-        ~DepthBuffer() = default;
-    };
-
-    Swapchain(Device *_device, const SwapchainSupportDetails &_details);
+    Swapchain();
     ~Swapchain() = default;
 
-    Result Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices);
-    Result Destroy();
+    Result Create(Device *device, const VkSurfaceKHR &surface);
+    Result Destroy(Device *device);
+
+    inline size_t GetNumImages() const { return this->images.size(); }
 
     std::vector<std::unique_ptr<FramebufferObject>> framebuffers;
 
@@ -47,12 +40,10 @@ public:
     VkSurfaceFormatKHR surface_format;
 
     VkFormat image_format;
-
-    DepthBuffer depth_buffer;
+    
     std::vector<VkImage> images;
 
 private:
-    Device *renderer_device = nullptr;
     SwapchainSupportDetails support_details;
 };
 

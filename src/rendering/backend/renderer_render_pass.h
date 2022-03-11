@@ -39,7 +39,10 @@ public:
     Result Create(Device *device);
     Result Destroy(Device *device);
 
-    void Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, VkExtent2D extent);
+    void Begin(VkCommandBuffer cmd,
+        VkFramebuffer framebuffer,
+        VkExtent2D extent,
+        VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
     void End(VkCommandBuffer cmd);
 
 private:

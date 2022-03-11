@@ -4,8 +4,9 @@ namespace hyperion {
 namespace renderer {
 
 
-CommandBuffer::CommandBuffer()
-    : m_command_buffer(nullptr),
+CommandBuffer::CommandBuffer(Type type)
+    : m_type(type),
+      m_command_buffer(nullptr),
       m_signal(nullptr)
 {
 }
@@ -23,6 +24,19 @@ Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
         "Failed to create semaphore"
     );
 
+    VkCommandBufferLevel level;
+
+    switch (m_type) {
+    case COMMAND_BUFFER_PRIMARY:
+        level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        break;
+    case COMMAND_BUFFER_SECONDARY:
+        level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+        break;
+    default:
+        AssertThrowMsg(0, "Unsupported command buffer type");
+    }
+
     /*VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
@@ -33,7 +47,7 @@ Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
 
     VkCommandBufferAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.level = level;
     alloc_info.commandPool = command_pool;
     alloc_info.commandBufferCount = 1;
 
@@ -56,15 +70,27 @@ Result CommandBuffer::Destroy(Device *device, VkCommandPool command_pool)
     HYPERION_RETURN_OK;
 }
 
-Result CommandBuffer::Begin(Device *device)
+Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
 {
     HYPERION_VK_CHECK_MSG(
         vkResetCommandBuffer(m_command_buffer, 0),
         "Failed to reset command buffer"
     );
 
-    VkCommandBufferBeginInfo begin_info{};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+
+    if (m_type == COMMAND_BUFFER_SECONDARY) {
+        AssertThrowMsg(render_pass != nullptr, "Render pass not provided for secondary command buffer!");
+
+        VkCommandBufferInheritanceInfo inheritance_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
+        inheritance_info.renderPass = render_pass->GetRenderPass();
+        inheritance_info.subpass = 0;
+        inheritance_info.framebuffer = VK_NULL_HANDLE;
+
+        begin_info.pInheritanceInfo = &inheritance_info;
+        /* todo: make another flag */
+        begin_info.flags |= VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    }
 
     HYPERION_VK_CHECK_MSG(
         vkBeginCommandBuffer(m_command_buffer, &begin_info),
@@ -84,7 +110,43 @@ Result CommandBuffer::End(Device *device)
     HYPERION_RETURN_OK;
 }
 
-Result CommandBuffer::Submit(VkQueue queue,
+Result CommandBuffer::Reset(Device *device)
+{
+    HYPERION_VK_CHECK_MSG(
+        vkResetCommandBuffer(m_command_buffer, 0),
+        "Failed to reset command buffer"
+    );
+
+    HYPERION_RETURN_OK;
+}
+
+
+Result CommandBuffer::SubmitSecondary(VkCommandBuffer primary,
+    const std::vector<std::unique_ptr<CommandBuffer>> &command_buffers)
+{
+    AssertThrow(command_buffers.size() < 16);
+
+    VkCommandBuffer *command_buffers_raw = (VkCommandBuffer *)alloca(sizeof(VkCommandBuffer) * command_buffers.size());
+
+    for (uint8_t i = 0; i < command_buffers.size(); i++) {
+        command_buffers_raw[i] = command_buffers[i]->GetCommandBuffer();
+    }
+
+    return SubmitSecondary(primary,
+        command_buffers_raw,
+        command_buffers.size());
+}
+
+Result CommandBuffer::SubmitSecondary(VkCommandBuffer primary,
+    VkCommandBuffer *command_buffers,
+    size_t num_command_buffers)
+{
+    vkCmdExecuteCommands(primary, uint32_t(num_command_buffers), command_buffers);
+
+    HYPERION_RETURN_OK;
+}
+
+Result CommandBuffer::SubmitPrimary(VkQueue queue,
     const std::vector<std::unique_ptr<CommandBuffer>> &command_buffers,
     VkFence fence,
     VkSemaphore *wait_semaphores,
@@ -100,7 +162,7 @@ Result CommandBuffer::Submit(VkQueue queue,
         signal_semaphores[i] = command_buffers[i]->GetSemaphore();
     }
 
-    return Submit(queue,
+    return SubmitPrimary(queue,
         command_buffers_raw,
         command_buffers.size(),
         fence,
@@ -108,7 +170,7 @@ Result CommandBuffer::Submit(VkQueue queue,
         signal_semaphores, command_buffers.size());
 }
 
-Result CommandBuffer::Submit(VkQueue queue,
+Result CommandBuffer::SubmitPrimary(VkQueue queue,
     const std::vector<std::unique_ptr<CommandBuffer>> &command_buffers,
     VkFence fence,
     VkSemaphore *wait_semaphores,
@@ -124,7 +186,7 @@ Result CommandBuffer::Submit(VkQueue queue,
         command_buffers_raw[i] = command_buffers[i]->GetCommandBuffer();
     }
 
-    return Submit(queue,
+    return SubmitPrimary(queue,
         command_buffers_raw, 
         command_buffers.size(),
         fence,
@@ -132,7 +194,7 @@ Result CommandBuffer::Submit(VkQueue queue,
         signal_semaphores, num_signal_semaphores);
 }
 
-Result CommandBuffer::Submit(VkQueue queue,
+Result CommandBuffer::SubmitPrimary(VkQueue queue,
     VkCommandBuffer *command_buffers,
     size_t num_command_buffers,
     VkFence fence,
@@ -169,7 +231,7 @@ Result CommandBuffer::Submit(VkQueue queue,
     HYPERION_RETURN_OK;
 }
 
-Result CommandBuffer::Submit(VkQueue queue, VkFence fence, VkSemaphore *wait_semaphores, size_t num_wait_semaphores)
+Result CommandBuffer::SubmitPrimary(VkQueue queue, VkFence fence, VkSemaphore *wait_semaphores, size_t num_wait_semaphores)
 {
     VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
 
@@ -198,6 +260,14 @@ Result CommandBuffer::Submit(VkQueue queue, VkFence fence, VkSemaphore *wait_sem
 
     HYPERION_RETURN_OK;
 }
+
+Result CommandBuffer::SubmitSecondary(VkCommandBuffer primary)
+{
+    vkCmdExecuteCommands(primary, 1, &m_command_buffer);
+
+    HYPERION_RETURN_OK;
+}
+
 
 } // namespace renderer
 } // namespace hyperion

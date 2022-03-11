@@ -63,8 +63,6 @@ class Instance {
     Result CreateCommandPool();
     Result CreateCommandBuffers();
 public:
-    static constexpr uint16_t frames_to_allocate = DEFAULT_PENDING_FRAMES_COUNT;
-
     Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
     Result Initialize(bool load_debug_layers=false);
     void CreateSurface();
@@ -78,6 +76,7 @@ public:
     
     void     BeginFrame      (Frame *frame);
     void     EndFrame        (Frame *frame);
+    void     SubmitFrame     (Frame *frame);
     void     PresentFrame    (Frame *frame, const std::vector<VkSemaphore> &semaphores);
 
     void SetValidationLayers(vector<const char *> _layers);

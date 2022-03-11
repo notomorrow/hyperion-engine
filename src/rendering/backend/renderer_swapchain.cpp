@@ -8,12 +8,9 @@
 
 namespace hyperion {
 namespace renderer {
-Swapchain::Swapchain(Device *_device, const SwapchainSupportDetails &_details)
-    : depth_buffer{}
+Swapchain::Swapchain()
 {
     this->swapchain = nullptr;
-    this->renderer_device = _device;
-    this->support_details = _details;
 }
 
 VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat() {
@@ -34,25 +31,33 @@ VkExtent2D Swapchain::ChooseSwapchainExtent() {
     return this->support_details.capabilities.currentExtent;
 }
 
-void Swapchain::RetrieveImageHandles() {
+void Swapchain::RetrieveImageHandles(Device *device) {
     uint32_t image_count = 0;
     /* Query for the size, as we will need to create swap chains with more images
      * in the future for more complex applications. */
-    vkGetSwapchainImagesKHR(this->renderer_device->GetDevice(), this->swapchain, &image_count, nullptr);
+    vkGetSwapchainImagesKHR(device->GetDevice(), this->swapchain, &image_count, nullptr);
     DebugLog(LogType::Warn, "image count %d\n", image_count);
     this->images.resize(image_count);
-    vkGetSwapchainImagesKHR(this->renderer_device->GetDevice(), this->swapchain, &image_count, this->images.data());
+    vkGetSwapchainImagesKHR(device->GetDevice(), this->swapchain, &image_count, this->images.data());
     DebugLog(LogType::Info, "Retrieved Swapchain images\n");
 }
 
-Result Swapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indices)
+void Swapchain::RetrieveSupportDetails(Device *device)
 {
+    this->support_details = device->QuerySwapchainSupport();
+}
+
+
+Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
+{
+    this->RetrieveSupportDetails(device);
+
     this->surface_format = this->ChooseSurfaceFormat();
     this->present_mode = this->GetPresentMode();
     this->extent = this->ChooseSwapchainExtent();
     this->image_format = this->surface_format.format;
 
-    uint32_t image_count = this->support_details.capabilities.minImageCount + 1;
+    uint32_t image_count = this->support_details.capabilities.minImageCount + 1; // is this +1 going to cause problems?
     DebugLog(LogType::Debug, "Min images required: %d\n", this->support_details.capabilities.minImageCount);
 
     VkSwapchainCreateInfoKHR create_info{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
@@ -65,6 +70,8 @@ Result Swapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indi
     create_info.imageUsage = this->image_usage_flags;
 
     /* Graphics computations and presentation are done on separate hardware */
+    QueueFamilyIndices qf_indices = device->FindQueueFamilies();
+
     if (qf_indices.graphics_family != qf_indices.present_family) {
         DebugLog(LogType::Debug, "Swapchain sharing mode set to Concurrent\n");
         create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -88,20 +95,18 @@ Result Swapchain::Create(const VkSurfaceKHR &surface, QueueFamilyIndices qf_indi
     create_info.oldSwapchain = VK_NULL_HANDLE;
 
     HYPERION_VK_CHECK_MSG(
-        vkCreateSwapchainKHR(this->renderer_device->GetDevice(), &create_info, nullptr, &this->swapchain),
+        vkCreateSwapchainKHR(device->GetDevice(), &create_info, nullptr, &this->swapchain),
         "Failed to create Vulkan swapchain!"
     );
 
     DebugLog(LogType::Debug, "Created Swapchain!\n");
 
-    this->RetrieveImageHandles();
-
-    //HYPERION_BUBBLE_ERRORS(this->CreateImageViews());
+    this->RetrieveImageHandles(device);
 
     HYPERION_RETURN_OK;
 }
 
-Result Swapchain::Destroy() {
+Result Swapchain::Destroy(Device *device) {
     DebugLog(LogType::Debug, "Destroying swapchain\n");
 
     Result result(Result::RENDERER_OK);
@@ -112,7 +117,7 @@ Result Swapchain::Destroy() {
 
     HYPERION_PASS_ERRORS(this->DestroyImageViews(), result);*/
 
-    vkDestroySwapchainKHR(this->renderer_device->GetDevice(), this->swapchain, nullptr);
+    vkDestroySwapchainKHR(device->GetDevice(), this->swapchain, nullptr);
 
     return result;
 }

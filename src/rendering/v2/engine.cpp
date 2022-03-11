@@ -182,7 +182,7 @@ void Engine::PrepareSwapchain()
         | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT);
 
 
-    auto render_pass = std::make_unique<RenderPass>(RenderPass::RENDER_PASS_STAGE_PRESENT);
+    auto render_pass = std::make_unique<RenderPass>(RenderPass::RENDER_PASS_STAGE_PRESENT, RenderPass::RENDER_PASS_INLINE);
     /* For our color attachment */
     render_pass->GetWrappedObject()->AddAttachment(renderer::RenderPass::AttachmentInfo{
         .attachment = std::make_unique<Attachment<VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
@@ -252,9 +252,10 @@ void Engine::RenderPostProcessing(Frame *frame, uint32_t frame_index)
 
 void Engine::RenderSwapchain(Frame *frame)
 {
-    m_swapchain_data.pipeline->StartRenderPass(frame->command_buffer, m_instance->acquired_frames_index);
+    m_swapchain_data.pipeline->Bind(frame->command_buffer);
+    //m_swapchain_data.pipeline->StartRenderPass(frame->command_buffer, m_instance->acquired_frames_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, m_swapchain_data.pipeline->layout);
     m_filter_stack.GetFullScreenQuad()->RenderVk(frame, m_instance.get(), nullptr);
-    m_swapchain_data.pipeline->EndRenderPass(frame->command_buffer, m_instance->acquired_frames_index);
+    //m_swapchain_data.pipeline->EndRenderPass(frame->command_buffer, m_instance->acquired_frames_index);
 }
 } // namespace hyperion::v2
