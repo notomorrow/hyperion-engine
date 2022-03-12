@@ -24,6 +24,8 @@ size_t MipmapSize(size_t src_size, int lod);
 
 class SingleTimeCommands {
 public:
+    SingleTimeCommands() : cmd{}, pool{}, family_indices{} {}
+
     inline void Push(const std::function<Result(VkCommandBuffer)> &fn)
     {
         m_functions.push_back(fn);

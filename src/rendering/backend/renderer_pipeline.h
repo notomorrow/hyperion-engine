@@ -137,11 +137,11 @@ public:
             return *this;
         }
 
-        std::unique_ptr<Pipeline> Build(Device *device)
+        std::unique_ptr<Pipeline> Build()
         {
             AssertThrow(!m_construction_info.fbos.empty());
 
-            return std::make_unique<Pipeline>(device, std::move(m_construction_info));
+            return std::make_unique<Pipeline>(std::move(m_construction_info));
         }
 
         inline HashCode GetHashCode() const
@@ -152,8 +152,8 @@ public:
         ConstructionInfo m_construction_info;
     };
 
-    Pipeline(Device *_device, ConstructionInfo &&construction_info);
-    void Destroy();
+    Pipeline(ConstructionInfo &&construction_info);
+    void Destroy(Device *device);
 
     std::vector<VkDynamicState> GetDynamicStates();
     void SetDynamicStates(const std::vector<VkDynamicState> &_states);
@@ -163,16 +163,16 @@ public:
     void SetScissor(int x, int y, uint32_t width, uint32_t height);
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
 
-    inline void Build(DescriptorPool *descriptor_pool)
+    inline void Build(Device *device, DescriptorPool *descriptor_pool)
     {
-        Rebuild(descriptor_pool);
+        Rebuild(device, descriptor_pool);
     }
 
-    inline void Build(ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
+    inline void Build(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
     {
         m_construction_info = std::move(construction_info);
 
-        Build(descriptor_pool);
+        Build(device, descriptor_pool);
     }
 
     void BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubpassContents contents);
@@ -190,17 +190,15 @@ public:
     } push_constants;
 
 private:
-    void Rebuild(DescriptorPool *descriptor_pool);
+    void Rebuild(Device *device, DescriptorPool *descriptor_pool);
 
     std::vector<VkDynamicState> dynamic_states;
 
     VkViewport viewport;
     VkRect2D scissor;
 
-    std::vector<VkVertexInputBindingDescription>   vertex_binding_descriptions = { };
-    std::vector<VkVertexInputAttributeDescription> vertex_attributes = { };
-
-    Device *device;
+    std::vector<VkVertexInputBindingDescription>   vertex_binding_descriptions{};
+    std::vector<VkVertexInputAttributeDescription> vertex_attributes{};
 
     ConstructionInfo m_construction_info;
 

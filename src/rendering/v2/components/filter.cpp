@@ -23,7 +23,7 @@ const MeshInputAttributeSet Filter::vertex_attributes = MeshInputAttributeSet(
 const std::shared_ptr<Mesh> Filter::full_screen_quad = MeshFactory::CreateQuad();
 
 Filter::Filter(Shader::ID shader_id)
-    : m_pipeline(nullptr),
+    : m_pipeline_id{},
       m_framebuffer_id{},
       m_shader_id(shader_id),
       m_render_pass_id{},
@@ -41,18 +41,6 @@ void Filter::CreateRenderPass(Engine *engine)
     /* For our color attachment */
     render_pass->AddAttachment({
         .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
-    });
-    /* For our normals attachment */
-    render_pass->AddAttachment({
-        .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)
-    });
-    /* For our positions attachment */
-    render_pass->AddAttachment({
-        .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)
-    });
-
-    render_pass->AddAttachment({
-        .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)
     });
 
     m_render_pass_id = engine->AddRenderPass(std::move(render_pass));
@@ -103,7 +91,7 @@ void Filter::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 
 void Filter::CreatePipeline(Engine *engine)
 {
-    Pipeline::Builder builder;
+    renderer::Pipeline::Builder builder;
 
     builder
         .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
@@ -112,14 +100,15 @@ void Filter::CreatePipeline(Engine *engine)
         .RenderPass<RenderPass>(m_render_pass_id)
         .Framebuffer<Framebuffer>(m_framebuffer_id);
 
-    engine->AddPipeline(std::move(builder), &m_pipeline);
+    m_pipeline_id = engine->AddPipeline(std::move(builder));
 }
 
 void Filter::Destroy(Engine *engine)
 {
     // engine->RemoveShader(m_shader_id);
-    // engine->RemovePipeline(m_pipeline_id);
-    // engine->RemoveRenderPass(m_render_pass_id)
+    //engine->RemoveFramebuffer(m_framebuffer_id);
+    //engine->RemovePipeline(m_pipeline_id);
+    //engine->RemoveRenderPass(m_render_pass_id)
 }
 
 void Filter::Record(Engine *engine, uint32_t frame_index)
@@ -129,20 +118,21 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
     Result result = Result::OK;
 
     auto *command_buffer = m_frame_data->GetFrame(frame_index).GetCommandBuffer();
+    Pipeline *pipeline = engine->GetPipeline(m_pipeline_id);
 
     HYPERION_PASS_ERRORS(command_buffer->Reset(engine->GetInstance()->GetDevice()), result);
 
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
             engine->GetInstance()->GetDevice(),
-            m_pipeline->GetConstructionInfo().render_pass.get(),
-            [this, engine](VkCommandBuffer cmd) {
+            pipeline->GetWrappedObject()->GetConstructionInfo().render_pass.get(),
+            [this, engine, pipeline](VkCommandBuffer cmd) {
                 renderer::Result result = renderer::Result::OK;
 
-                m_pipeline->Bind(cmd);
+                pipeline->GetWrappedObject()->Bind(cmd);
 
                 HYPERION_PASS_ERRORS(
-                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, m_pipeline->layout, 0, 2),
+                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, pipeline->GetWrappedObject()->layout, 0, 2),
                     result
                 );
 
@@ -164,13 +154,15 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
 
 void Filter::Render(Engine *engine, Frame *frame, uint32_t frame_index)
 {
-    m_pipeline->BeginRenderPass(frame->command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    Pipeline *pipeline = engine->GetPipeline(m_pipeline_id);
+
+    pipeline->GetWrappedObject()->BeginRenderPass(frame->command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     
     auto *command_buffer = m_frame_data->GetFrame(frame_index).GetCommandBuffer();
 
     auto result = command_buffer->SubmitSecondary(frame->command_buffer);
     AssertThrowMsg(result, "%s", result.message);
 
-    m_pipeline->EndRenderPass(frame->command_buffer, 0);
+    pipeline->GetWrappedObject()->EndRenderPass(frame->command_buffer, 0);
 }
 } // namespace hyperion

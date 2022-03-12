@@ -14,13 +14,11 @@
 
 namespace hyperion {
 namespace renderer {
-Pipeline::Pipeline(Device *_device, ConstructionInfo &&construction_info)
+Pipeline::Pipeline(ConstructionInfo &&construction_info)
     : m_construction_info(std::move(construction_info))
 {
     AssertExit(m_construction_info.shader != nullptr);
     AssertExit(m_construction_info.fbos.size() != 0);
-
-    this->device = _device;
 
     size_t width = m_construction_info.fbos[0]->GetWidth();
     size_t height = m_construction_info.fbos[0]->GetHeight();
@@ -135,7 +133,7 @@ void Pipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &
     this->vertex_attributes = attribs;
 }
 
-void Pipeline::Rebuild(DescriptorPool *descriptor_pool)
+void Pipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool)
 {
     this->BuildVertexAttributes(m_construction_info.vertex_attributes);
 
@@ -229,7 +227,7 @@ void Pipeline::Rebuild(DescriptorPool *descriptor_pool)
     layout_info.pushConstantRangeCount = 1;
     layout_info.pPushConstantRanges = &push_constant;
 
-    if (vkCreatePipelineLayout(this->device->GetDevice(), &layout_info, nullptr, &this->layout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(device->GetDevice(), &layout_info, nullptr, &this->layout) != VK_SUCCESS) {
         DebugLog(LogType::Error, "Error creating pipeline layout!\n");
         throw std::runtime_error("Error creating pipeline layout");
     }
@@ -270,7 +268,7 @@ void Pipeline::Rebuild(DescriptorPool *descriptor_pool)
     pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex = -1;
 
-    if (vkCreateGraphicsPipelines(this->device->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr,
+    if (vkCreateGraphicsPipelines(device->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr,
         &this->pipeline) != VK_SUCCESS) {
         DebugLog(LogType::Error, "Could not create graphics pipeline!\n");
         throw std::runtime_error("Could not create pipeline");
@@ -278,9 +276,9 @@ void Pipeline::Rebuild(DescriptorPool *descriptor_pool)
     DebugLog(LogType::Info, "Created graphics pipeline!\n");
 }
 
-void Pipeline::Destroy()
+void Pipeline::Destroy(Device *device)
 {
-    VkDevice render_device = this->device->GetDevice();
+    VkDevice render_device = device->GetDevice();
 
     m_construction_info.fbos.clear();
 

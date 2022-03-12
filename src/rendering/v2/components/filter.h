@@ -4,6 +4,7 @@
 #include "render_pass.h"
 #include "framebuffer.h"
 #include "shader.h"
+#include "pipeline.h"
 
 #include <rendering/backend/renderer_frame_handler.h>
 
@@ -25,7 +26,6 @@ class Mesh;
 namespace hyperion::v2 {
 
 using renderer::Frame;
-using renderer::Pipeline;
 using renderer::CommandBuffer;
 using renderer::PerFrameData;
 using renderer::MeshInputAttributeSet;
@@ -62,7 +62,7 @@ private:
     Framebuffer::ID m_framebuffer_id;
     Shader::ID m_shader_id;
     RenderPass::ID m_render_pass_id;
-    Pipeline *m_pipeline;
+    Pipeline::ID m_pipeline_id;
     bool m_recorded;
 };
 

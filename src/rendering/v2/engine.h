@@ -5,7 +5,7 @@
 #include "components/framebuffer.h"
 #include "components/filter_stack.h"
 #include <rendering/backend/renderer_command_buffer.h>
-#include <rendering/backend/renderer_pipeline.h>
+#include "components/pipeline.h"
 
 #include <util/enum_options.h>
 
@@ -14,7 +14,6 @@
 namespace hyperion::v2 {
 
 using renderer::Instance;
-using renderer::Pipeline;
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
@@ -25,7 +24,7 @@ public:
     /* Our "root" shader/pipeline -- used for rendering a quad to the screen. */
     struct SwapchainData {
         Shader::ID shader_id;
-        Pipeline *pipeline;
+        Pipeline::ID pipeline_id;
     } m_swapchain_data;
 
     enum TextureFormatDefault {
@@ -70,11 +69,16 @@ public:
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
-    void AddPipeline(Pipeline::Builder &&builder, Pipeline **out = nullptr);
+    Pipeline::ID AddPipeline(renderer::Pipeline::Builder &&builder);
+    HYP_FORCE_INLINE Pipeline *GetPipeline(Pipeline::ID id)
+        { return GetObject(m_pipelines, id); }
+    HYP_FORCE_INLINE const Pipeline *GetPipeline(Pipeline::ID id) const
+        { return const_cast<Engine*>(this)->GetPipeline(id); }
 
 
     void Initialize();
     void PrepareSwapchain();
+    void BuildPipelines();
     void RenderPostProcessing(Frame *frame, uint32_t frame_index);
     void RenderSwapchain(Frame *frame);
 
@@ -83,9 +87,9 @@ private:
     void FindTextureFormatDefaults();
 
     template <class T>
-    inline constexpr T *GetObject(std::vector<std::unique_ptr<T>> &objects, const typename T::ID &id)
+    HYP_FORCE_INLINE constexpr T *GetObject(std::vector<std::unique_ptr<T>> &objects, const typename T::ID &id)
     {
-        return MathUtil::InRange(id.GetValue(), {0, objects.size() + 1})
+        return MathUtil::InRange(id.GetValue(), {1, objects.size() + 1})
             ? objects[id.GetValue() - 1].get()
             : nullptr;
     }
@@ -123,6 +127,7 @@ private:
     std::vector<std::unique_ptr<Shader>> m_shaders;
     std::vector<std::unique_ptr<Framebuffer>> m_framebuffers;
     std::vector<std::unique_ptr<RenderPass>> m_render_passes;
+    std::vector<std::unique_ptr<Pipeline>> m_pipelines;
     std::unique_ptr<Instance> m_instance;
 };
 

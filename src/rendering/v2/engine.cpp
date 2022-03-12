@@ -24,10 +24,9 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
 
 Engine::~Engine()
 {
-    m_filter_stack.Destroy(this);
+    m_instance->WaitDeviceIdle();
 
-    // TODO: refactor
-    //m_swapchain_data.shader->Destroy(this);
+    m_filter_stack.Destroy(this);
 
     for (auto &it : m_framebuffers) {
         it->Destroy(this);
@@ -39,6 +38,10 @@ Engine::~Engine()
 
     for (auto &shader : m_shaders) {
         shader->Destroy(this);
+    }
+    
+    for (auto &pipeline :m_pipelines) {
+        pipeline->Destroy(this);
     }
 
     m_instance->Destroy();
@@ -94,7 +97,7 @@ RenderPass::ID Engine::AddRenderPass(std::unique_ptr<RenderPass> &&render_pass)
     return RenderPass::ID{RenderPass::ID::InnerType_t(m_render_passes.size())};
 }
 
-void Engine::AddPipeline(Pipeline::Builder &&builder, Pipeline **out)
+Pipeline::ID Engine::AddPipeline(renderer::Pipeline::Builder &&builder)
 {
     auto *shader = GetShader(Shader::ID{builder.m_construction_info.shader_id});
 
@@ -114,8 +117,30 @@ void Engine::AddPipeline(Pipeline::Builder &&builder, Pipeline **out)
         }
     }
 
-    auto add_pipeline_result = m_instance->AddPipeline(std::move(builder), out);
-    AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
+    //auto add_pipeline_result = m_instance->AddPipeline(std::move(builder), out);
+    //AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
+
+    /* Cache pipeline objects */
+
+    HashCode::Value_t hash_code = builder.GetHashCode().Value();
+
+    auto it = std::find_if(m_pipelines.begin(), m_pipelines.end(), [hash_code](const auto &pl) {
+        return pl->GetWrappedObject()->GetConstructionInfo().GetHashCode().Value() == hash_code;
+    });
+
+    if (it != m_pipelines.end()) {
+        /* Return the index of the existing pipeline + 1,
+         * as ID objects are one more than their index in the array. */
+        return Pipeline::ID{Pipeline::ID::InnerType_t((it - m_pipelines.begin()) + 1)};
+    }
+    
+    /* Create the wrapper object around pipeline
+     * builder.m_construction_info is now invalidated */
+    auto pipeline = std::make_unique<Pipeline>(std::move(builder.m_construction_info));
+
+    m_pipelines.push_back(std::move(pipeline));
+
+    return Pipeline::ID{ Pipeline::ID::InnerType_t(m_pipelines.size())};
 }
 
 
@@ -164,7 +189,6 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
-
     m_filter_stack.Create(this);
 
 
@@ -203,7 +227,8 @@ void Engine::PrepareSwapchain()
     
     RenderPass::ID render_pass_id = AddRenderPass(std::move(render_pass));
 
-    Pipeline::Builder builder;
+    renderer::Pipeline::Builder builder;
+
     builder
         .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
         .Shader<Shader>(m_swapchain_data.shader_id)
@@ -243,7 +268,14 @@ void Engine::PrepareSwapchain()
         builder.Framebuffer<Framebuffer>(AddFramebuffer(std::move(fbo), render_pass_id));
     }
 
-    AddPipeline(std::move(builder), &m_swapchain_data.pipeline);
+    m_swapchain_data.pipeline_id = AddPipeline(std::move(builder));
+}
+
+void Engine::BuildPipelines()
+{
+    for (auto &pipeline : m_pipelines) {
+        pipeline->Create(this);
+    }
 }
 
 void Engine::Initialize()
@@ -259,9 +291,11 @@ void Engine::RenderPostProcessing(Frame *frame, uint32_t frame_index)
 
 void Engine::RenderSwapchain(Frame *frame)
 {
-    m_swapchain_data.pipeline->Bind(frame->command_buffer);
+    Pipeline *pipeline = GetPipeline(m_swapchain_data.pipeline_id);
 
-    m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, m_swapchain_data.pipeline->layout);
+    pipeline->GetWrappedObject()->Bind(frame->command_buffer);
+
+    m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, pipeline->GetWrappedObject()->layout);
 
     Filter::full_screen_quad->RenderVk(frame, m_instance.get(), nullptr);
 }

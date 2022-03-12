@@ -595,9 +595,6 @@ int main()
         alignas(16) Vector3 light_direction;
     } scene_data_block;
 
-
-    std::array<Pipeline *, 2> pipelines{};
-
 #if HYPERION_VK_TEST_CUBEMAP
     std::vector<std::shared_ptr<Texture2D>> cubemap_faces;
     cubemap_faces.resize(6);
@@ -699,6 +696,7 @@ int main()
         auto *descriptor_set_pass = engine.GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_PASS);
 
+        /* Albedo texture */
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 0,
@@ -706,6 +704,8 @@ int main()
                 non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
+
+        /* Normals texture*/
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 1,
@@ -714,11 +714,21 @@ int main()
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
 
+        /* Position texture */
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 2,
                 non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
                 non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
+                VK_SHADER_STAGE_FRAGMENT_BIT
+            ));
+
+        /* Depth texture */
+        descriptor_set_pass
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+                3,
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[3].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[3].sampler.get()),
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
     }
@@ -773,11 +783,8 @@ int main()
         .RenderPass<v2::RenderPass>(render_pass_id)
         .Framebuffer<v2::Framebuffer>(my_fbo_id);
 
-    engine.AddPipeline(std::move(scene_pass_pipeline_builder), &pipelines[1]);
+    v2::Pipeline::ID scene_pass_pipeline_id = engine.AddPipeline(std::move(scene_pass_pipeline_builder));
 
-
-
-    pipelines[0] = engine.GetSwapchainData().pipeline;
 
     //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
 
@@ -817,7 +824,7 @@ int main()
     std::vector<FullScreenQuadFrame> fsq;
     fsq.resize(engine.GetInstance()->GetNumImages());
 
-    engine.GetInstance()->BuildPipelines();
+    engine.BuildPipelines();
 
     for (int i = 0; i < fsq.size(); i++) {
         fsq[i].cmd = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
@@ -857,8 +864,8 @@ int main()
         scene_data_block.camera_position = camera->GetTranslation();
         scene_data_block.light_direction = Vector3(-0.5, -0.5, 0).Normalize();
 
-        Pipeline *pl = pipelines[0];
-        Pipeline *fbo_pl = pipelines[1];
+
+        v2::Pipeline *fbo_pl = engine.GetPipeline(scene_pass_pipeline_id);
 
 
 
@@ -881,36 +888,36 @@ int main()
 
 
         /* forward / albedo layer */
-        fbo_pl->BeginRenderPass(frame->command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
-        fbo_pl->Bind(frame->command_buffer);
-        engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, fbo_pl->layout, 0, 1);
+        fbo_pl->GetWrappedObject()->BeginRenderPass(frame->command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
+        fbo_pl->GetWrappedObject()->Bind(frame->command_buffer);
+        engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, fbo_pl->GetWrappedObject()->layout, 0, 1);
         monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
-        fbo_pl->EndRenderPass(frame->command_buffer, 0);
+        fbo_pl->GetWrappedObject()->EndRenderPass(frame->command_buffer, 0);
         
 
         const size_t frame_index = engine.GetInstance()->GetFrameHandler()->GetFrameIndex();
         engine.RenderPostProcessing(frame, frame_index);
 
         /* secondary cmd buffer */
-        engine.GetSwapchainData().pipeline->BeginRenderPass(frame->command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->BeginRenderPass(frame->command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
         fsq[frame_index].cmd->Reset(engine.GetInstance()->GetDevice());
         fsq[frame_index].cmd->Record(
             engine.GetInstance()->GetDevice(),
-            engine.GetSwapchainData().pipeline->GetConstructionInfo().render_pass.get(),
+            engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->GetConstructionInfo().render_pass.get(),
             [&engine, &frame_index, &previous_frame_index](VkCommandBuffer cmd) {
                 Frame tmp_frame;
                 tmp_frame.command_buffer = cmd;
 
-                engine.m_swapchain_data.pipeline->push_constants.previous_frame_index = previous_frame_index;
-                engine.m_swapchain_data.pipeline->push_constants.current_frame_index = frame_index;
+                engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->push_constants.previous_frame_index = previous_frame_index;
+                engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->push_constants.current_frame_index = frame_index;
 
                 engine.RenderSwapchain(&tmp_frame);
 
                 HYPERION_RETURN_OK;
             });
         fsq[frame_index].cmd->SubmitSecondary(frame->command_buffer);
-        engine.GetSwapchainData().pipeline->EndRenderPass(frame->command_buffer, frame_index);
+        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->EndRenderPass(frame->command_buffer, frame_index);
 
         /* end secondary cmd buffer */
 
