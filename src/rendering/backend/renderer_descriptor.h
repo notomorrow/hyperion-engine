@@ -14,8 +14,10 @@
 namespace hyperion {
 namespace renderer {
 class Device;
+class DescriptorSet;
 
 class Descriptor {
+    friend class DescriptorSet;
 public:
     enum class Mode {
         UNSET,
@@ -123,6 +125,9 @@ protected:
     uint32_t m_binding;
     VkDescriptorType m_type;
     VkShaderStageFlags m_stage_flags;
+
+private:
+    non_owning_ptr<DescriptorSet> m_descriptor_set;
 };
 
 class BufferDescriptor : public Descriptor {

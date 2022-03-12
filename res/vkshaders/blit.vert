@@ -12,7 +12,7 @@ layout(location = 3) in vec2 a_texcoord1;
 layout(location = 4) in vec3 a_tangent;
 layout(location = 5) in vec3 a_bitangent;
 
-layout(binding = 1, row_major) uniform SceneDataBlock {
+layout(set = 0, binding = 1, row_major) uniform SceneDataBlock {
     vec3 camera_position;
     vec3 light_direction;
 } SceneData;

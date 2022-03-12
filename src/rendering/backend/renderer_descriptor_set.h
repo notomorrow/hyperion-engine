@@ -12,6 +12,7 @@ namespace renderer {
 class Device;
 class DescriptorPool;
 class DescriptorSet {
+    friend class Descriptor;
 public:
     enum Index {
         DESCRIPTOR_SET_INDEX_GLOBALS  = 0, /* per frame */
@@ -24,6 +25,8 @@ public:
     DescriptorSet(const DescriptorSet &other) = delete;
     DescriptorSet &operator=(const DescriptorSet &other) = delete;
     ~DescriptorSet();
+
+    inline Descriptor::State GetState() const { return m_state; }
 
     // return this
     DescriptorSet &AddDescriptor(std::unique_ptr<Descriptor> &&);
@@ -41,6 +44,7 @@ public:
 
 private:
     std::vector<std::unique_ptr<Descriptor>> m_descriptors;
+    Descriptor::State m_state;
 
 };
 

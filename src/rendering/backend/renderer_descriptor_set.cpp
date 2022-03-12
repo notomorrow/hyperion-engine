@@ -4,6 +4,7 @@
 namespace hyperion {
 namespace renderer {
 DescriptorSet::DescriptorSet()
+    : m_state(Descriptor::DESCRIPTOR_DIRTY)
 {
 }
 
@@ -71,7 +72,10 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
 
     vkUpdateDescriptorSets(device->GetDevice(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 
+    m_state = Descriptor::DESCRIPTOR_CLEAN;
+
     for (auto &descriptor : m_descriptors) {
+        descriptor->m_descriptor_set = non_owning_ptr(this);
         descriptor->SetState(Descriptor::DESCRIPTOR_CLEAN);
     }
 

@@ -42,5 +42,5 @@ void main() {
     //    albedo = texture(gbuffer_normals_2, texcoord);
     //}
 
-    out_color = texture(gbuffer_depth_texture, texcoord);
+    out_color = texture(filter_1, texcoord);
 }

@@ -11,7 +11,7 @@ namespace hyperion::v2 {
 
 using renderer::SpirvObject;
 
-class Shader : public BaseComponent<renderer::Shader> {
+class Shader : public BaseComponent<renderer::ShaderProgram> {
 public:
     struct SubShader {
         SpirvObject::Type type;

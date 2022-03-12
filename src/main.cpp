@@ -568,7 +568,7 @@ int main()
 
     SystemEvent event;
 
-    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/cube.obj");
+    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/monkey/monkey.obj");
     auto monkey_mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
     auto cube_mesh = MeshFactory::CreateCube();
     auto full_screen_quad = MeshFactory::CreateQuad();
@@ -676,7 +676,7 @@ int main()
         render_pass_id = engine.AddRenderPass(std::move(render_pass));
     }
 
-    v2::Framebuffer::ID my_fbo_id = engine.AddFramebuffer(512, 512, render_pass_id);
+    v2::Framebuffer::ID my_fbo_id = engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
 
     {
         auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()

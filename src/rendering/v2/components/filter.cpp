@@ -36,11 +36,11 @@ Filter::~Filter() = default;
 void Filter::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
-    auto render_pass = std::make_unique<v2::RenderPass>(v2::RenderPass::RENDER_PASS_STAGE_SHADER, v2::RenderPass::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
+    auto render_pass = std::make_unique<RenderPass>(RenderPass::RENDER_PASS_STAGE_SHADER, RenderPass::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
 
     /* For our color attachment */
     render_pass->AddAttachment({
-        .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
+        .format = engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
     });
 
     m_render_pass_id = engine->AddRenderPass(std::move(render_pass));
@@ -147,7 +147,7 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
                 pipeline->GetWrappedObject()->Bind(cmd);
 
                 HYPERION_PASS_ERRORS(
-                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, pipeline->GetWrappedObject()->layout, 0, 2),
+                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, pipeline->GetWrappedObject()->layout, 0, 3),
                     result
                 );
 

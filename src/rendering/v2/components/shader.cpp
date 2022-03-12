@@ -3,7 +3,7 @@
 
 namespace hyperion::v2 {
 Shader::Shader(const std::vector<SpirvObject> &spirv_objects)
-    : BaseComponent(std::make_unique<renderer::Shader>()),
+    : BaseComponent(std::make_unique<renderer::ShaderProgram>()),
       m_spirv_objects(spirv_objects)
 {
 }
