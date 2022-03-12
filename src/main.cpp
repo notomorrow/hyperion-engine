@@ -681,35 +681,47 @@ int main()
 
     v2::Framebuffer::ID my_fbo_id = engine.AddFramebuffer(512, 512, render_pass_id);
 
-    engine.GetInstance()->GetDescriptorPool()
-        .AddDescriptorSet()
-        .AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
-        .AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+    {
+        auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBALS);
 
-    
+        descriptor_set_globals
+            ->AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
 
-    engine.GetInstance()->GetDescriptorPool()
-        .AddDescriptorSet()
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            0,
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ))
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            1,
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ))
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            2,
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ));
-    
+        descriptor_set_globals
+            ->AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
+
+        descriptor_set_globals
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+    }
+
+    {
+        auto *descriptor_set_pass = engine.GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_PASS);
+
+        descriptor_set_pass
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+                0,
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
+                VK_SHADER_STAGE_FRAGMENT_BIT
+            ));
+        descriptor_set_pass
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+                1,
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
+                VK_SHADER_STAGE_FRAGMENT_BIT
+            ));
+
+        descriptor_set_pass
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+                2,
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
+                VK_SHADER_STAGE_FRAGMENT_BIT
+            ));
+    }
 
     Device *device = engine.GetInstance()->GetDevice();
 
@@ -735,20 +747,21 @@ int main()
     engine.PrepareSwapchain();
 
 
+    v2::Shader::ID mirror_shader_id;
+    {
+        auto mirror_shader = std::make_unique<v2::Shader>(std::vector{
+            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() },
+            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }
+        });
 
-    renderer::Shader mirror_shader;
-    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
-    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() });
-    mirror_shader.CreateProgram("main");
-
-
-    
+        mirror_shader_id = engine.AddShader(std::move(mirror_shader));
+    }
 
 
     Pipeline::Builder scene_pass_pipeline_builder;
 
     scene_pass_pipeline_builder
-        .Shader(&mirror_shader)
+        .Shader(mirror_shader_id)
         .VertexAttributes(MeshInputAttributeSet({
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
@@ -804,33 +817,15 @@ int main()
     std::vector<FullScreenQuadFrame> fsq;
     fsq.resize(engine.GetInstance()->GetNumImages());
 
+    engine.GetInstance()->BuildPipelines();
+
     for (int i = 0; i < fsq.size(); i++) {
         fsq[i].cmd = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
         auto command_buffer_result = fsq[i].cmd->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
         AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
-
-        /*VkCommandBufferAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-        alloc_info.commandPool = engine.GetInstance()->command_pool;
-        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-        alloc_info.commandBufferCount = 1;
-
-        if (vkAllocateCommandBuffers(engine.GetInstance()->GetDevice()->GetDevice(), &alloc_info, &fsq[i].cmd) != VK_SUCCESS) {
-            throw "could not allocate command buffer";
-        }
-
-        
-        VkSemaphoreCreateInfo semaphore_info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-        if (vkCreateSemaphore(engine.GetInstance()->GetDevice()->GetDevice(), &semaphore_info, nullptr, &fsq[i].sp) != VK_SUCCESS) {
-            throw "could not create wait semaphore";
-        }
-        
-        VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-        if (vkCreateFence(engine.GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &fsq[i].fc) != VK_SUCCESS) {
-            throw "Failed to create fence";
-        }*/
     }
+
+    uint32_t previous_frame_index = 0;
 
 
     while (running) {
@@ -891,59 +886,36 @@ int main()
         engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, fbo_pl->layout, 0, 1);
         monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
         fbo_pl->EndRenderPass(frame->command_buffer, 0);
+        
 
-
-        // previous:
-        /*engine.RenderSwapchain(frame);
-        engine.GetInstance()->EndFrame(frame);
-
-
-        std::vector<VkSemaphore> fsq_sp_wrapper;
-        fsq_sp_wrapper.resize(1);
-        fsq_sp_wrapper[0] = frame->sp_swap_release;
-        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);*/
-
-
-        // TODO: needs/double tripple buffering so fences don't block
-        engine.RenderPostProcessing(frame, engine.GetInstance()->acquired_frames_index);
+        const size_t frame_index = engine.GetInstance()->GetFrameHandler()->GetFrameIndex();
+        engine.RenderPostProcessing(frame, frame_index);
 
         /* secondary cmd buffer */
-        engine.GetSwapchainData().pipeline->BeginRenderPass(frame->command_buffer, engine.GetInstance()->acquired_frames_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+        engine.GetSwapchainData().pipeline->BeginRenderPass(frame->command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-        fsq[engine.GetInstance()->acquired_frames_index].cmd->Reset(engine.GetInstance()->GetDevice());
-        fsq[engine.GetInstance()->acquired_frames_index].cmd->Record(
+        fsq[frame_index].cmd->Reset(engine.GetInstance()->GetDevice());
+        fsq[frame_index].cmd->Record(
             engine.GetInstance()->GetDevice(),
             engine.GetSwapchainData().pipeline->GetConstructionInfo().render_pass.get(),
-            [&fsq, &engine](VkCommandBuffer cmd) {
+            [&engine, &frame_index, &previous_frame_index](VkCommandBuffer cmd) {
                 Frame tmp_frame;
                 tmp_frame.command_buffer = cmd;
+
+                engine.m_swapchain_data.pipeline->push_constants.previous_frame_index = previous_frame_index;
+                engine.m_swapchain_data.pipeline->push_constants.current_frame_index = frame_index;
+
                 engine.RenderSwapchain(&tmp_frame);
 
                 HYPERION_RETURN_OK;
             });
-        fsq[engine.GetInstance()->acquired_frames_index].cmd->SubmitSecondary(frame->command_buffer);
-        engine.GetSwapchainData().pipeline->EndRenderPass(frame->command_buffer, engine.GetInstance()->acquired_frames_index);
+        fsq[frame_index].cmd->SubmitSecondary(frame->command_buffer);
+        engine.GetSwapchainData().pipeline->EndRenderPass(frame->command_buffer, frame_index);
 
         /* end secondary cmd buffer */
+
         engine.GetInstance()->EndFrame(frame);
-
-        /*const std::vector<VkSemaphore> &semaphor&s = engine.GetFilterStack().m_filter_semaphores;
-
-        VkSubmitInfo submit_info{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        VkPipelineStageFlags wait_stages[2] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-        submit_info.waitSemaphoreCount = semaphores.size();
-        submit_info.pWaitSemaphores = semaphores.data();
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &fsq[engine.GetInstance()->frames_index].sp;
-        submit_info.pWaitDstStageMask = wait_stages;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &fsq[engine.GetInstance()->frames_index].cmd;
-
-        auto result = vkQueueSubmit(engine.GetInstance()->queue_graphics, 1, &submit_info, fsq[engine.GetInstance()->frames_index].fc);
-        AssertThrowMsg(result == VK_SUCCESS, "Failed to submit draw command buffer!\n");*/
-
-
+        
         engine.GetInstance()->SubmitFrame(frame);
 
 
@@ -953,6 +925,8 @@ int main()
 
 
         engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);
+
+        previous_frame_index = frame_index;
     }
 
     engine.GetInstance()->WaitDeviceIdle();
@@ -966,8 +940,6 @@ int main()
     test_image_view.Destroy(device);
     test_sampler.Destroy(device);
     image->Destroy(device);
-    
-    mirror_shader.Destroy();
 
     delete window;
 

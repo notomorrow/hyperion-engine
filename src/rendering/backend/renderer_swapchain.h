@@ -31,8 +31,6 @@ public:
 
     inline size_t GetNumImages() const { return this->images.size(); }
 
-    std::vector<std::unique_ptr<FramebufferObject>> framebuffers;
-
     VkSwapchainKHR swapchain = nullptr;
     VkImageUsageFlags image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     VkPresentModeKHR present_mode;

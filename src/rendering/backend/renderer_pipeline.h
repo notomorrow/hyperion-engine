@@ -26,7 +26,8 @@ class Pipeline {
 public:
     struct ConstructionInfo {
         MeshInputAttributeSet vertex_attributes;
-        Shader *shader;
+        non_owning_ptr<Shader> shader;
+        int shader_id;
         non_owning_ptr<RenderPass> render_pass;
         int render_pass_id;
         std::vector<non_owning_ptr<FramebufferObject>> fbos;
@@ -43,10 +44,11 @@ public:
         bool depth_test,
              depth_write;
 
-        ConstructionInfo() : shader(nullptr) {}
+        ConstructionInfo() : shader_id(-1), render_pass_id(-1) {}
         ConstructionInfo(ConstructionInfo &&other)
             : vertex_attributes(std::move(other.vertex_attributes)),
               shader(other.shader),
+              shader_id(other.shader_id),
               render_pass(other.render_pass),
               render_pass_id(other.render_pass_id),
               fbos(std::move(other.fbos)),
@@ -62,6 +64,7 @@ public:
         {
             vertex_attributes = std::move(other.vertex_attributes);
             shader = other.shader;
+            shader_id = other.shader_id;
             render_pass = other.render_pass;
             render_pass_id = other.render_pass_id;
             fbos = std::move(other.fbos);
@@ -82,11 +85,8 @@ public:
         {
             HashCode hc;
 
-            hc.Add((shader != nullptr) ? shader->GetHashCode().Value() : 0);
+            hc.Add(shader_id);
             hc.Add(render_pass_id); // TODO
-            for (auto &fbo : fbos) {
-                hc.Add(intptr_t(fbo.get()));
-            }
             for (auto fbo_id : fbo_ids) {
                 hc.Add(fbo_id);
             }
@@ -150,9 +150,9 @@ public:
             return *this;
         }
 
-        Builder &Shader(Shader *shader)
+        Builder &Shader(int id)
         {
-            m_construction_info.shader = shader;
+            m_construction_info.shader_id = id;
 
             return *this;
         }
@@ -219,12 +219,8 @@ public:
     VkPipelineLayout layout;
 
     struct PushConstants {
-        union {
-            struct {
-                uint32_t filter_framebuffer_src;
-            };
-            unsigned char raw_data[64];
-        };
+        uint32_t previous_frame_index;
+        uint32_t current_frame_index;
     } push_constants;
 
 private:

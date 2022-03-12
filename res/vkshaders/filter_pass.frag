@@ -18,7 +18,7 @@ layout(location=2) out vec4 gbuffer_positions;
 layout(set = 1, binding = 0) uniform sampler2D tex;
 
 void main() {
-    gbuffer_albedo = vec4(0.0, 0.0, 1.0, 1.0);//vec4(textureLod(tex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y), 7).rgb, 1.0);
+    gbuffer_albedo = vec4(texture(tex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y)).rgb, 1.0);
     gbuffer_normals = vec4(v_normal, 1.0); // TODO: read in from texture
     gbuffer_positions = vec4(v_position, 1.0); // TODO: read in from texture
 }

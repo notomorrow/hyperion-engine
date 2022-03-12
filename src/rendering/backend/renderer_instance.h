@@ -117,11 +117,6 @@ public:
     VkQueue queue_present;
 
 
-    VkQueue queue_graphics;
-    VkQueue queue_present;
-
-    FrameHandler frame_handler;
-
 private:
 
     SystemWindow *window = nullptr;

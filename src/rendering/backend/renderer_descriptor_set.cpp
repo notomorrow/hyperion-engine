@@ -71,6 +71,10 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
 
     vkUpdateDescriptorSets(device->GetDevice(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 
+    for (auto &descriptor : m_descriptors) {
+        descriptor->SetState(Descriptor::DESCRIPTOR_CLEAN);
+    }
+
     HYPERION_RETURN_OK;
 }
 
@@ -87,15 +91,24 @@ Result DescriptorSet::Destroy(Device *device)
 
 Result DescriptorSet::Update(Device *device)
 {
+    DebugLog(LogType::Debug, "Update descriptor set\n");
+    // TODO: cache the writes array
     std::vector<VkWriteDescriptorSet> writes;
     writes.reserve(m_descriptors.size());
 
     for (auto &descriptor : m_descriptors) {
+        if (!(descriptor->GetState() & Descriptor::DESCRIPTOR_DIRTY)) {
+            continue;
+        }
+
         Descriptor::Info info{};
 
+        /* NOTE: This doesn't actually 'create' anything, just sets up the update structs */
         descriptor->Create(device, &info);
         
         writes.push_back(info.write);
+
+        descriptor->SetState(Descriptor::State(descriptor->GetState() & ~Descriptor::DESCRIPTOR_DIRTY));
     }
 
     //write descriptor

@@ -26,7 +26,7 @@ Engine::~Engine()
     m_filter_stack.Destroy(this);
 
     // TODO: refactor
-    m_swapchain_data.shader->Destroy(this);
+    //m_swapchain_data.shader->Destroy(this);
 
     for (auto &it : m_framebuffers) {
         it->Destroy(this);
@@ -36,9 +36,9 @@ Engine::~Engine()
         it->Destroy(this);
     }
 
-    /*for (auto &shader : m_shaders) {
-        shader->Destroy(m_instance.get(), m_instance->GetDevice());
-    }*/
+    for (auto &shader : m_shaders) {
+        shader->Destroy(this);
+    }
 
     m_instance->Destroy();
 }
@@ -48,6 +48,8 @@ Shader::ID Engine::AddShader(std::unique_ptr<Shader> &&shader)
     AssertThrow(shader != nullptr);
 
     Shader::ID id(m_shaders.size());
+
+    shader->Create(this);
 
     m_shaders.push_back(std::move(shader));
 
@@ -96,8 +98,13 @@ RenderPass::ID Engine::AddRenderPass(std::unique_ptr<RenderPass> &&render_pass)
 
 void Engine::AddPipeline(Pipeline::Builder &&builder, Pipeline **out)
 {
-    auto *render_pass = GetRenderPass(builder.m_construction_info.render_pass_id);
+    auto *shader = GetShader(builder.m_construction_info.shader_id);
 
+    AssertThrow(shader != nullptr);
+
+    builder.m_construction_info.shader = non_owning_ptr(shader->GetWrappedObject());
+
+    auto *render_pass = GetRenderPass(builder.m_construction_info.render_pass_id);
     AssertThrow(render_pass != nullptr);
     // TODO: Assert that render_pass matches the layout of what the fbo was set up with
 
@@ -164,12 +171,14 @@ void Engine::PrepareSwapchain()
 
 
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
-    m_swapchain_data.shader.reset(new Shader({
-        SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read() },
-        SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read() }
-        }));
+    {
+        auto blit_shader = std::make_unique<Shader>(std::vector{
+            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read() },
+            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read() }
+        });
 
-    m_swapchain_data.shader->Create(this);
+        m_swapchain_data.shader_id = AddShader(std::move(blit_shader));
+    }
     
 
     // TMP trying to update a descriptor set right on 
@@ -199,7 +208,7 @@ void Engine::PrepareSwapchain()
     Pipeline::Builder builder;
     builder
         .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
-        .Shader(m_swapchain_data.shader->GetWrappedObject())
+        .Shader(m_swapchain_data.shader_id)
         .VertexAttributes(vertex_attributes)
         .RenderPass(render_pass_id);
 
@@ -253,9 +262,9 @@ void Engine::RenderPostProcessing(Frame *frame, uint32_t frame_index)
 void Engine::RenderSwapchain(Frame *frame)
 {
     m_swapchain_data.pipeline->Bind(frame->command_buffer);
-    //m_swapchain_data.pipeline->StartRenderPass(frame->command_buffer, m_instance->acquired_frames_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
     m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, m_swapchain_data.pipeline->layout);
-    m_filter_stack.GetFullScreenQuad()->RenderVk(frame, m_instance.get(), nullptr);
-    //m_swapchain_data.pipeline->EndRenderPass(frame->command_buffer, m_instance->acquired_frames_index);
+
+    Filter::full_screen_quad->RenderVk(frame, m_instance.get(), nullptr);
 }
 } // namespace hyperion::v2

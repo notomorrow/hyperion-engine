@@ -16,7 +16,7 @@ struct Result {
     } result;
 
     const char *message;
-
+    
     Result(decltype(result) result, const char *message = "")
         : result(result), message(message) {}
     Result(const Result &other)

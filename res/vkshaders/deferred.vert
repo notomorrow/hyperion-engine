@@ -17,11 +17,6 @@ layout(binding = 1, row_major) uniform SceneDataBlock {
     vec3 light_direction;
 } SceneData;
 
-//push constants block
-layout( push_constant ) uniform constants
-{
-	uint filter_frame_src;
-} PushConstants;
 
 void main() {
     vec4 position = vec4(a_position, 1.0);

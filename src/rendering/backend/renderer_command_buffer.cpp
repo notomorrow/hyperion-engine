@@ -3,7 +3,6 @@
 namespace hyperion {
 namespace renderer {
 
-
 CommandBuffer::CommandBuffer(Type type)
     : m_type(type),
       m_command_buffer(nullptr),
@@ -14,6 +13,7 @@ CommandBuffer::CommandBuffer(Type type)
 CommandBuffer::~CommandBuffer()
 {
     AssertThrowMsg(m_command_buffer == nullptr, "command buffer should have been destroyed");
+    AssertThrowMsg(m_signal == nullptr, "signal should have been destroyed");
 }
 
 Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
@@ -62,7 +62,7 @@ Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
 Result CommandBuffer::Destroy(Device *device, VkCommandPool command_pool)
 {
     vkDestroySemaphore(device->GetDevice(), m_signal, nullptr);
-    /*vkDestroyFence(device->GetDevice(), m_fence, nullptr);*/
+    m_signal = nullptr;
 
     vkFreeCommandBuffers(device->GetDevice(), command_pool, 1, &m_command_buffer);
     m_command_buffer = nullptr;

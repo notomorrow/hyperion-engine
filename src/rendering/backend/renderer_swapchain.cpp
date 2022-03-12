@@ -13,7 +13,8 @@ Swapchain::Swapchain()
     this->swapchain = nullptr;
 }
 
-VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat() {
+VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat()
+{
     for (const auto &format : this->support_details.formats) {
         if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return format;
@@ -23,15 +24,18 @@ VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat() {
     return this->support_details.formats[0];
 }
 
-VkPresentModeKHR Swapchain::GetPresentMode() {
+VkPresentModeKHR Swapchain::GetPresentMode()
+{
     return VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
-VkExtent2D Swapchain::ChooseSwapchainExtent() {
+VkExtent2D Swapchain::ChooseSwapchainExtent()
+{
     return this->support_details.capabilities.currentExtent;
 }
 
-void Swapchain::RetrieveImageHandles(Device *device) {
+void Swapchain::RetrieveImageHandles(Device *device)
+{
     uint32_t image_count = 0;
     /* Query for the size, as we will need to create swap chains with more images
      * in the future for more complex applications. */
@@ -106,16 +110,11 @@ Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
     HYPERION_RETURN_OK;
 }
 
-Result Swapchain::Destroy(Device *device) {
+Result Swapchain::Destroy(Device *device)
+{
     DebugLog(LogType::Debug, "Destroying swapchain\n");
 
     Result result(Result::RENDERER_OK);
-
-    /*for (auto framebuffer : this->framebuffers) {
-        vkDestroyFramebuffer(this->renderer_device->GetDevice(), framebuffer, nullptr);
-    }
-
-    HYPERION_PASS_ERRORS(this->DestroyImageViews(), result);*/
 
     vkDestroySwapchainKHR(device->GetDevice(), this->swapchain, nullptr);
 
