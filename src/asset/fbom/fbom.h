@@ -32,11 +32,11 @@ namespace hyperion {
 class ByteReader;
 class ByteWriter;
 namespace fbom {
-class FBOMObjectType;
+struct FBOMObjectType;
 
-class FBOMObject;
-class FBOMLoader;
-class FBOMWriter;
+struct FBOMObject;
+struct FBOMLoader;
+struct FBOMWriter;
 
 
 enum FBOMCommand {

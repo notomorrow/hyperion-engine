@@ -6,7 +6,7 @@ layout(location=1) in vec2 v_texcoord0;
 layout(location=2) in vec3 v_light_direction;
 layout(location=3) in vec3 v_camera_position;
 
-layout(location=0) out vec4 out_color;
+layout(location=0) out vec4 color_output;
 
 layout(set = 1, binding = 0) uniform sampler2D gbuffer_albedo_ping;
 layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals_ping;
@@ -25,5 +25,5 @@ void main() {
     
     float NdotL = dot(normal.xyz, v_light_direction);
 
-    out_color = vec4(1.0, 0.0, 0.0, 1.0);//vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
+    color_output = vec4(1.0, 0.0, 0.0, 1.0);//vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
 }

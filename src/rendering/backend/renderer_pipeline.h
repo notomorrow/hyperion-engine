@@ -27,11 +27,11 @@ public:
     struct ConstructionInfo {
         MeshInputAttributeSet vertex_attributes;
         non_owning_ptr<Shader> shader;
-        int shader_id;
+        uint32_t shader_id;
         non_owning_ptr<RenderPass> render_pass;
-        int render_pass_id;
+        uint32_t render_pass_id;
         std::vector<non_owning_ptr<FramebufferObject>> fbos;
-        std::vector<int> fbo_ids; // unresolved fbo ids
+        std::vector<uint32_t> fbo_ids; // unresolved fbo ids
 
         VkPrimitiveTopology topology;
 
@@ -43,43 +43,6 @@ public:
 
         bool depth_test,
              depth_write;
-
-        ConstructionInfo() : shader_id(-1), render_pass_id(-1) {}
-        ConstructionInfo(ConstructionInfo &&other)
-            : vertex_attributes(std::move(other.vertex_attributes)),
-              shader(other.shader),
-              shader_id(other.shader_id),
-              render_pass(other.render_pass),
-              render_pass_id(other.render_pass_id),
-              fbos(std::move(other.fbos)),
-              fbo_ids(std::move(other.fbo_ids)),
-              topology(other.topology),
-              cull_mode(other.cull_mode),
-              depth_test(other.depth_test),
-              depth_write(other.depth_write)
-        {
-        }
-
-        ConstructionInfo &operator=(ConstructionInfo &&other)
-        {
-            vertex_attributes = std::move(other.vertex_attributes);
-            shader = other.shader;
-            shader_id = other.shader_id;
-            render_pass = other.render_pass;
-            render_pass_id = other.render_pass_id;
-            fbos = std::move(other.fbos);
-            fbo_ids = std::move(other.fbo_ids);
-            topology = other.topology;
-            cull_mode = other.cull_mode;
-            depth_test = other.depth_test;
-            depth_write = other.depth_write;
-
-            return *this;
-        }
-
-        ConstructionInfo(const ConstructionInfo &other) = delete;
-        ConstructionInfo &operator=(const ConstructionInfo &other) = delete;
-        ~ConstructionInfo() = default;
 
         inline HashCode GetHashCode() const
         {
@@ -150,32 +113,35 @@ public:
             return *this;
         }
 
-        Builder &Shader(int id)
+        template <class T>
+        Builder &Shader(typename T::ID id)
         {
-            m_construction_info.shader_id = id;
+            m_construction_info.shader_id = id.GetValue();
 
             return *this;
         }
 
-        Builder &RenderPass(int id)
+        template <class T>
+        Builder &RenderPass(typename T::ID id)
         {
-            m_construction_info.render_pass_id = id;
+            m_construction_info.render_pass_id = id.GetValue();
 
             return *this;
         }
 
-        Builder &Framebuffer(int id)
+        template <class T>
+        Builder &Framebuffer(typename T::ID id)
         {
-            m_construction_info.fbo_ids.push_back(id);
+            m_construction_info.fbo_ids.push_back(id.GetValue());
 
             return *this;
         }
 
-        std::unique_ptr<Pipeline> Build(Device *device)
+        std::unique_ptr<Pipeline> Build()
         {
             AssertThrow(!m_construction_info.fbos.empty());
 
-            return std::make_unique<Pipeline>(device, std::move(m_construction_info));
+            return std::make_unique<Pipeline>(std::move(m_construction_info));
         }
 
         inline HashCode GetHashCode() const
@@ -186,8 +152,8 @@ public:
         ConstructionInfo m_construction_info;
     };
 
-    Pipeline(Device *_device, ConstructionInfo &&construction_info);
-    void Destroy();
+    Pipeline(ConstructionInfo &&construction_info);
+    void Destroy(Device *device);
 
     std::vector<VkDynamicState> GetDynamicStates();
     void SetDynamicStates(const std::vector<VkDynamicState> &_states);
@@ -197,16 +163,16 @@ public:
     void SetScissor(int x, int y, uint32_t width, uint32_t height);
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
 
-    inline void Build(DescriptorPool *descriptor_pool)
+    inline void Build(Device *device, DescriptorPool *descriptor_pool)
     {
-        Rebuild(descriptor_pool);
+        Rebuild(device, descriptor_pool);
     }
 
-    inline void Build(ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
+    inline void Build(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
     {
         m_construction_info = std::move(construction_info);
 
-        Build(descriptor_pool);
+        Build(device, descriptor_pool);
     }
 
     void BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubpassContents contents);
@@ -224,17 +190,15 @@ public:
     } push_constants;
 
 private:
-    void Rebuild(DescriptorPool *descriptor_pool);
+    void Rebuild(Device *device, DescriptorPool *descriptor_pool);
 
     std::vector<VkDynamicState> dynamic_states;
 
     VkViewport viewport;
     VkRect2D scissor;
 
-    std::vector<VkVertexInputBindingDescription>   vertex_binding_descriptions = { };
-    std::vector<VkVertexInputAttributeDescription> vertex_attributes = { };
-
-    Device *device;
+    std::vector<VkVertexInputBindingDescription>   vertex_binding_descriptions{};
+    std::vector<VkVertexInputAttributeDescription> vertex_attributes{};
 
     ConstructionInfo m_construction_info;
 
