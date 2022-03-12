@@ -33,7 +33,7 @@ using renderer::MeshInputAttributeSet;
 class Filter {
 public:
     static const MeshInputAttributeSet vertex_attributes;
-    static const std::shared_ptr<Mesh> full_screen_quad;
+    static std::shared_ptr<Mesh> full_screen_quad;
 
     Filter(Shader::ID shader_id);
     Filter(const Filter &) = delete;

@@ -345,7 +345,8 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
     }
 }
 
-Result Instance::Destroy() {
+Result Instance::Destroy()
+{
     Result result(Result::RENDERER_OK);
 
     /* Wait for the GPU to finish, we need to be in an idle state. */
@@ -371,10 +372,13 @@ Result Instance::Destroy() {
     vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
 
     /* Destroy our device */
-    if (this->device != nullptr)
+    if (this->device != nullptr) {
         this->device->Destroy();
-    delete this->device;
-    this->device = nullptr;
+        delete this->device;
+        this->device = nullptr;
+    }
+
+    DebugLog(LogType::Debug, "Destroyed device!\n");
 
 #ifndef HYPERION_BUILD_RELEASE
     DestroyDebugUtilsMessengerEXT(this->instance, this->debug_messenger, nullptr);
@@ -383,6 +387,7 @@ Result Instance::Destroy() {
     /* Destroy the Vulkan instance(this should always be last!) */
     vkDestroyInstance(this->instance, nullptr);
     this->instance = nullptr;
+    DebugLog(LogType::Debug, "Destroyed instance\n");
 
     return result;
 }

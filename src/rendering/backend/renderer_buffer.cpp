@@ -26,11 +26,18 @@ GPUMemory::GPUMemory(
     uint32_t memory_property_flags,
     uint32_t sharing_mode)
     : memory_property_flags(memory_property_flags),
-    sharing_mode(sharing_mode),
-    size(0),
-    memory(nullptr)
+      sharing_mode(sharing_mode),
+      size(0),
+      memory(nullptr)
 {
 }
+
+GPUMemory::~GPUMemory()
+{
+    AssertThrowMsg(memory == nullptr, "memory should have been destroyed!");
+    DebugLog(LogType::Debug, "Destroy GPUMemory\n");
+}
+
 
 void GPUMemory::Map(Device *device, void **ptr) {
     vkMapMemory(device->GetDevice(), this->memory, 0, this->size, 0, ptr);
@@ -49,15 +56,14 @@ void GPUMemory::Copy(Device *device, size_t size, void *ptr) {
 
 GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
     : GPUMemory(memory_property_flags, sharing_mode),
-    usage_flags(usage_flags),
-    buffer(nullptr)
+      usage_flags(usage_flags),
+      buffer(nullptr)
 {
 }
 
 GPUBuffer::~GPUBuffer()
 {
-    AssertExitMsg(memory == nullptr, "memory should have been destroyed!");
-    AssertExitMsg(buffer == nullptr, "buffer should have been destroyed!");
+    AssertThrowMsg(buffer == nullptr, "buffer should have been destroyed!");
 }
 
 void GPUBuffer::Create(Device *device, size_t size) {
@@ -125,18 +131,18 @@ StagingBuffer::StagingBuffer(uint32_t memory_property_flags, uint32_t sharing_mo
 
 GPUImage::GPUImage(VkImageUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
     : GPUMemory(memory_property_flags, sharing_mode),
-    usage_flags(usage_flags),
-    image(nullptr)
+      usage_flags(usage_flags),
+      image(nullptr)
 {
 }
 
 GPUImage::~GPUImage()
 {
-    AssertExit(memory == nullptr);
-    AssertExit(image == nullptr);
+    AssertThrowMsg(image == nullptr, "image should have been destroyed!");
 }
 
-Result GPUImage::Create(Device *device, size_t size, VkImageCreateInfo *image_info) {
+Result GPUImage::Create(Device *device, size_t size, VkImageCreateInfo *image_info)
+{
     this->size = size;
 
     VkDevice vk_device = device->GetDevice();

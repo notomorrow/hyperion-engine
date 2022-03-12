@@ -403,14 +403,12 @@ Result Image::ConvertTo32Bpp(
     VkImageFormatProperties *out_image_format_properties,
     VkFormat *out_format)
 {
-    Result format_support_result(Result::RENDERER_OK);
+    const size_t num_faces = GetNumFaces();
+    const size_t face_offset_step = m_size / num_faces;
 
-    int num_faces = GetNumFaces();
-    size_t face_offset_step = m_size / num_faces;
-
-    size_t new_bpp = 4;
-    size_t new_size = m_width * m_height * m_depth * new_bpp * num_faces;
-    size_t new_face_offset_step = new_size / num_faces;
+    const size_t new_bpp = 4;
+    const size_t new_size = m_width * m_height * m_depth * new_bpp * num_faces;
+    const size_t new_face_offset_step = new_size / num_faces;
 
     unsigned char *new_bytes = new unsigned char[new_size];
 

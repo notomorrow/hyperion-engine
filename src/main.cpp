@@ -581,7 +581,7 @@ int main()
 
     /* Descriptor sets */
     GPUBuffer matrices_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT),
-        scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+              scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     // test data for descriptors
     struct MatricesBlock {
         alignas(16) Matrix4 model;
@@ -814,23 +814,14 @@ int main()
     uint64_t tick_last = 0;
     double delta_time = 0;
 
-    struct FullScreenQuadFrame {
-        /*VkCommandBuffer cmd;
-        VkSemaphore sp;
-        VkFence fc;*/
-        std::unique_ptr<CommandBuffer> cmd;
-    };
-
-    std::vector<FullScreenQuadFrame> fsq;
-    fsq.resize(engine.GetInstance()->GetNumImages());
+    PerFrameData<CommandBuffer> per_frame_data(engine.GetInstance()->GetNumImages());
+    for (size_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
+        auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+        AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool));
+        per_frame_data[i].SetCommandBuffer(std::move(cmd_buffer));
+    }
 
     engine.BuildPipelines();
-
-    for (int i = 0; i < fsq.size(); i++) {
-        fsq[i].cmd = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
-        auto command_buffer_result = fsq[i].cmd->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
-        AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
-    }
 
     uint32_t previous_frame_index = 0;
 
@@ -901,8 +892,8 @@ int main()
         /* secondary cmd buffer */
         engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->BeginRenderPass(frame->command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-        fsq[frame_index].cmd->Reset(engine.GetInstance()->GetDevice());
-        fsq[frame_index].cmd->Record(
+        per_frame_data[frame_index].GetCommandBuffer()->Reset(engine.GetInstance()->GetDevice());
+        per_frame_data[frame_index].GetCommandBuffer()->Record(
             engine.GetInstance()->GetDevice(),
             engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->GetConstructionInfo().render_pass.get(),
             [&engine, &frame_index, &previous_frame_index](VkCommandBuffer cmd) {
@@ -916,7 +907,7 @@ int main()
 
                 HYPERION_RETURN_OK;
             });
-        fsq[frame_index].cmd->SubmitSecondary(frame->command_buffer);
+        per_frame_data[frame_index].GetCommandBuffer()->SubmitSecondary(frame->command_buffer);
         engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->EndRenderPass(frame->command_buffer, frame_index);
 
         /* end secondary cmd buffer */
@@ -938,6 +929,9 @@ int main()
 
     engine.GetInstance()->WaitDeviceIdle();
 
+
+    v2::Filter::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
+
     monkey_mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
     cube_mesh.reset();
     full_screen_quad.reset();
@@ -947,6 +941,11 @@ int main()
     test_image_view.Destroy(device);
     test_sampler.Destroy(device);
     image->Destroy(device);
+
+    for (size_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
+        per_frame_data[i].GetCommandBuffer()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
+    }
+    per_frame_data.Reset();
 
     delete window;
 
