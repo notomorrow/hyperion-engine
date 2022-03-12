@@ -10,21 +10,9 @@
 #include <memory>
 
 namespace hyperion::renderer {
+
 class Instance;
 class Frame;
-
-/* template specialization for Framebuffer::ID */
-template<class ...Args>
-class FrameData<v2::Framebuffer::ID, Args...> : public FrameData<Args>... {
-public:
-    auto GetFramebufferId() const { return framebuffer_id; }
-    void SetFramebufferId(v2::Framebuffer::ID value)
-    {
-        framebuffer_id = value;
-    }
-
-    v2::Framebuffer::ID framebuffer_id = -1;
-};
 
 } // namespace hyperion::renderer
 
@@ -70,7 +58,8 @@ public:
     void Record(Engine *engine, uint32_t frame_index);
 
 private:
-    std::unique_ptr<PerFrameData<CommandBuffer, Framebuffer::ID>> m_frame_data;
+    std::unique_ptr<PerFrameData<CommandBuffer>> m_frame_data;
+    Framebuffer::ID m_framebuffer_id;
     Shader::ID m_shader_id;
     RenderPass::ID m_render_pass_id;
     Pipeline *m_pipeline;

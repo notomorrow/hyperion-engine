@@ -654,7 +654,7 @@ int main()
 
     engine.Initialize();
 
-    v2::RenderPass::ID render_pass_id = -1;
+    v2::RenderPass::ID render_pass_id{};
     {
         auto render_pass = std::make_unique<v2::RenderPass>(v2::RenderPass::RENDER_PASS_STAGE_SHADER, v2::RenderPass::RENDER_PASS_INLINE);
 
@@ -747,7 +747,7 @@ int main()
     engine.PrepareSwapchain();
 
 
-    v2::Shader::ID mirror_shader_id;
+    v2::Shader::ID mirror_shader_id{};
     {
         auto mirror_shader = std::make_unique<v2::Shader>(std::vector{
             SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() },
@@ -761,7 +761,7 @@ int main()
     Pipeline::Builder scene_pass_pipeline_builder;
 
     scene_pass_pipeline_builder
-        .Shader(mirror_shader_id)
+        .Shader<v2::Shader>(mirror_shader_id)
         .VertexAttributes(MeshInputAttributeSet({
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
@@ -770,8 +770,8 @@ int main()
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
         }))
-        .RenderPass(render_pass_id)
-        .Framebuffer(my_fbo_id);
+        .RenderPass<v2::RenderPass>(render_pass_id)
+        .Framebuffer<v2::Framebuffer>(my_fbo_id);
 
     engine.AddPipeline(std::move(scene_pass_pipeline_builder), &pipelines[1]);
 

@@ -16,14 +16,14 @@ layout(set = 2, binding = 0) uniform sampler2D gbuffer_albedo_0;
 layout(set = 2, binding = 1) uniform sampler2D gbuffer_normals_0;
 layout(set = 2, binding = 2) uniform sampler2D gbuffer_positions_0;
 layout(set = 2, binding = 3) uniform sampler2D gbuffer_depth_0;
-layout(set = 2, binding = 4) uniform sampler2D gbuffer_albedo_1;
+/*layout(set = 2, binding = 4) uniform sampler2D gbuffer_albedo_1;
 layout(set = 2, binding = 5) uniform sampler2D gbuffer_normals_1;
 layout(set = 2, binding = 6) uniform sampler2D gbuffer_positions_1;
 layout(set = 2, binding = 7) uniform sampler2D gbuffer_depth_1;
 layout(set = 2, binding = 8) uniform sampler2D gbuffer_albedo_2;
 layout(set = 2, binding = 9) uniform sampler2D gbuffer_normals_2;
 layout(set = 2, binding = 10) uniform sampler2D gbuffer_positions_2;
-layout(set = 2, binding = 11) uniform sampler2D gbuffer_depth_2;
+layout(set = 2, binding = 11) uniform sampler2D gbuffer_depth_2;*/
 
 
 /*layout(set = 2, binding = 13) uniform sampler2D gbuffer_albedo_0;
@@ -52,13 +52,13 @@ void main() {
     vec4 albedo = vec4(0.0);
 
     // TODO: #define for max # of frames
-    if (PushConstants.current_frame_index == 0) {
+    //if (PushConstants.current_frame_index == 0) {
         albedo = texture(gbuffer_albedo_0, texcoord);
-    } else if (PushConstants.current_frame_index == 1) {
-        albedo = texture(gbuffer_albedo_1, texcoord);
-    } else if (PushConstants.current_frame_index == 2) {
-        albedo = texture(gbuffer_albedo_2, texcoord);
-    }
+    //} else if (PushConstants.current_frame_index == 1) {
+    //    albedo = texture(gbuffer_normals_1, texcoord);
+    //} else if (PushConstants.current_frame_index == 2) {
+    //    albedo = texture(gbuffer_normals_2, texcoord);
+    //}
 
     out_color = albedo;
 }

@@ -52,34 +52,20 @@ public:
 
     Shader::ID AddShader(std::unique_ptr<Shader> &&shader);
     inline Shader *GetShader(Shader::ID id)
-    {
-        return MathUtil::InRange(id, {0, m_shaders.size()})
-            ? m_shaders[id].get()
-            : nullptr;
-    }
-
+        { return GetObject(m_shaders, id); }
     inline const Shader *GetShader(Shader::ID id) const
         { return const_cast<Engine*>(this)->GetShader(id); }
 
     Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
     Framebuffer::ID AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass);
     inline Framebuffer *GetFramebuffer(Framebuffer::ID id)
-    {
-        return MathUtil::InRange(id, {0, m_framebuffers.size()})
-            ? m_framebuffers[id].get()
-            : nullptr;
-    }
+        { return GetObject(m_framebuffers, id); }
     inline const Framebuffer *GetFramebuffer(Framebuffer::ID id) const
         { return const_cast<Engine*>(this)->GetFramebuffer(id); }
 
     RenderPass::ID AddRenderPass(std::unique_ptr<RenderPass> &&render_pass);
     inline RenderPass *GetRenderPass(RenderPass::ID id)
-    {
-        return MathUtil::InRange(id, {0, m_render_passes.size()})
-            ? m_render_passes[id].get()
-            : nullptr;
-    }
-
+        { return GetObject(m_render_passes, id); }
     inline const RenderPass *GetRenderPass(RenderPass::ID id) const
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
@@ -95,6 +81,16 @@ public:
 private:
     void InitializeInstance();
     void FindTextureFormatDefaults();
+
+    template <class T>
+    inline constexpr T *GetObject(std::vector<std::unique_ptr<T>> &objects, const typename T::ID &id)
+    {
+        const auto index = id.GetValue() - 1;
+
+        return MathUtil::InRange(index, {0, objects.size()})
+            ? objects[index].get()
+            : nullptr;
+    }
 
     template <class T>
     inline T::ID AddObject(std::vector<std::unique_ptr<T>> &objects, std::unique_ptr<T> &&object)

@@ -150,23 +150,26 @@ public:
             return *this;
         }
 
-        Builder &Shader(int id)
+        template <class T>
+        Builder &Shader(typename T::ID id)
         {
-            m_construction_info.shader_id = id;
+            m_construction_info.shader_id = id.GetValue();
 
             return *this;
         }
 
-        Builder &RenderPass(int id)
+        template <class T>
+        Builder &RenderPass(typename T::ID id)
         {
-            m_construction_info.render_pass_id = id;
+            m_construction_info.render_pass_id = id.GetValue();
 
             return *this;
         }
 
-        Builder &Framebuffer(int id)
+        template <class T>
+        Builder &Framebuffer(typename T::ID id)
         {
-            m_construction_info.fbo_ids.push_back(id);
+            m_construction_info.fbo_ids.push_back(id.GetValue());
 
             return *this;
         }

@@ -32,11 +32,14 @@ public:
 
     Result AddAttachment(Texture::TextureInternalFormat format);
     Result AddAttachment(AttachmentImageInfo &&, Texture::TextureInternalFormat format);
-    inline std::vector<AttachmentImageInfo> &GetAttachmentImageInfos() { return m_fbo_attachments; }
+
+    inline std::vector<AttachmentImageInfo> &GetAttachmentImageInfos()
+        { return m_fbo_attachments; }
     inline const std::vector<AttachmentImageInfo> &GetAttachmentImageInfos() const
-    {
-        return m_fbo_attachments;
-    }
+        { return m_fbo_attachments; }
+
+    inline uint32_t GetNumAttachments() const
+        { return uint32_t(m_fbo_attachments.size()); }
 
     inline size_t GetWidth() const { return m_width; }
     inline size_t GetHeight() const { return m_height; }
@@ -47,7 +50,7 @@ public:
 private:
 
     size_t m_width,
-        m_height;
+           m_height;
 
     std::vector<AttachmentImageInfo> m_fbo_attachments;
 
