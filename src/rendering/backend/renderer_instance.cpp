@@ -14,7 +14,20 @@
 
 namespace hyperion {
 namespace renderer {
-Queue::Queue() {
+
+static VkResult HandleNextFrame(Device *device, Swapchain *swapchain, Frame *frame, uint32_t *index)
+{
+    return vkAcquireNextImageKHR(
+        device->GetDevice(),
+        swapchain->swapchain,
+        UINT64_MAX,
+        frame->sp_swap_acquire, 
+        VK_NULL_HANDLE,
+        index);
+}
+
+Queue::Queue()
+{
     this->queue = nullptr;
 }
 
@@ -24,33 +37,10 @@ void Queue::GetQueueFromDevice(Device device, uint32_t queue_family_index,
     vkGetDeviceQueue(device.GetDevice(), queue_family_index, queue_index, &this->queue);
 }
 
-VkResult Instance::AcquireNextImage(Frame *frame)
-{
-    //const VkDevice render_device = this->device->GetDevice();
-    AssertExit(frame != nullptr && this->swapchain != nullptr);
-    VkDevice render_device = frame->creation_device->GetDevice();
-
-    if (frame->fc_queue_submit != VK_NULL_HANDLE) {
-        /* Wait for our queue fence which should have hopefully completed multiple frames
-         * earlier. This function should not block at all, but we do this as a precaution. */
-        vkWaitForFences(render_device, 1, &frame->fc_queue_submit, true, UINT64_MAX);
-        vkResetFences(render_device, 1, &frame->fc_queue_submit);
-    }
-
-    VkResult result = vkAcquireNextImageKHR(render_device, this->swapchain->swapchain, UINT64_MAX, frame->sp_swap_acquire, VK_NULL_HANDLE,
-                          &this->acquired_frames_index);
-
-    if (result != VK_SUCCESS) return result;
-
-    //if (this->GetCurrentPipeline()->command_pool != VK_NULL_HANDLE)
-    //    vkResetCommandPool(render_device, this->GetCurrentPipeline()->command_pool, 0);
-
-    return vkResetCommandBuffer(frame->command_buffer, 0);
-}
-
 void Instance::WaitImageReady(Frame *frame)
 {
-    auto new_image_result = this->AcquireNextImage(frame);
+    VkResult new_image_result;
+    this->frame_handler->AcquireNextImage(device, this->swapchain, &new_image_result);
 
     if (new_image_result == VK_SUBOPTIMAL_KHR || new_image_result == VK_ERROR_OUT_OF_DATE_KHR) {
         DebugLog(LogType::Debug, "Waiting -- image result was %d\n", new_image_result);
@@ -78,28 +68,33 @@ void Instance::EndFrame(Frame *frame)
     /* Assume `frame` is not nullptr */
 
     frame->EndCapture();
+}
 
+void Instance::SubmitFrame(Frame *frame)
+{
     frame->Submit(this->queue_graphics);
 }
 
-void Instance::PresentFrame(Frame *frame)
+void Instance::PresentFrame(Frame *frame, const std::vector<VkSemaphore> &semaphores)
 {
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &frame->sp_swap_release;
+    present_info.waitSemaphoreCount = semaphores.size();
+    present_info.pWaitSemaphores = semaphores.data();
 
     AssertThrow(this->swapchain != nullptr || this->swapchain->swapchain != nullptr);
 
+    uint32_t frame_index = this->frame_handler->GetFrameIndex();
+
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &this->swapchain->swapchain;
-    present_info.pImageIndices = &this->acquired_frames_index;
+    present_info.pImageIndices = &frame_index;
     present_info.pResults = nullptr;
-
-    //vkQueueWaitIdle(this->queue_present);
+    
     vkQueuePresentKHR(this->queue_present, &present_info);
 }
 
-Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers) {
+Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers)
+{
     uint32_t layers_count;
     vkEnumerateInstanceLayerProperties(&layers_count, nullptr);
 
@@ -127,7 +122,8 @@ Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &re
     HYPERION_RETURN_OK;
 }
 
-void Instance::SetValidationLayers(std::vector<const char *> _layers) {
+void Instance::SetValidationLayers(std::vector<const char *> _layers)
+{
     this->validation_layers = _layers;
 }
 
@@ -137,8 +133,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         VkDebugUtilsMessageTypeFlagsEXT message_type,
         const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
-        void *user_data
-){
+        void *user_data)
+{
     LogType lt = LogType::Info;
     switch (severity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
@@ -161,7 +157,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     return VK_FALSE;
 }
 
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
+{
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {
         return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
@@ -173,7 +170,8 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 
 #endif
 
-Result Instance::SetupDebug() {
+Result Instance::SetupDebug()
+{
     static const std::vector<const char *> layers {
         "VK_LAYER_KHRONOS_validation",
         "VK_LAYER_LUNARG_monitor"
@@ -194,48 +192,28 @@ SystemWindow *Instance::GetCurrentWindow() {
     return this->window;
 }
 
-Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_name) {
+Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_name)
+    : frame_handler(nullptr)
+{
+    this->swapchain = new Swapchain();
     this->system = _system;
     this->app_name = app_name;
     this->engine_name = engine_name;
     this->device = nullptr;
 }
 
-Result Instance::AllocatePendingFrames() {
-    AssertExit(this->frames_to_allocate >= 1);
-    AssertExitMsg(command_buffers.size() >= this->frames_to_allocate,
-                   "Insufficient pipeline command buffers\n");
-
-    this->pending_frames.reserve(this->frames_to_allocate);
-    DebugLog(LogType::Debug, "Allocating [%d] frames\n", this->frames_to_allocate);
-
-    for (uint16_t i = 0; i < this->frames_to_allocate; i++) {
-        auto frame = std::make_unique<Frame>();
-
-        HYPERION_BUBBLE_ERRORS(frame->Create(non_owning_ptr(this->device), command_buffers[i]));
-
-        this->pending_frames.emplace_back(std::move(frame));
-    }
-
-    HYPERION_RETURN_OK;
+Result Instance::AllocatePendingFrames()
+{
+    return this->frame_handler->CreateFrames(this->device);
 }
 
-Frame *Instance::GetNextFrame() {
-    AssertThrow(this->pending_frames.size() == this->frames_to_allocate);
-
-    ++this->frames_index;
-
-    if (this->frames_index >= this->frames_to_allocate) {
-        this->frames_index = 0;
-    }
-
-    this->current_frame = this->pending_frames[this->frames_index].get();
-
-    return this->current_frame;
+Frame *Instance::GetNextFrame()
+{
+    return this->frame_handler->GetCurrentFrameData().GetFrame();
 }
 
-
-Result Instance::CreateCommandPool() {
+Result Instance::CreateCommandPool()
+{
     QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
 
     VkCommandPoolCreateInfo pool_info{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
@@ -253,21 +231,9 @@ Result Instance::CreateCommandPool() {
     HYPERION_RETURN_OK;
 }
 
-Result Instance::CreateCommandBuffers() {
-    this->command_buffers.resize(this->swapchain->images.size());
-
-    VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-    alloc_info.commandPool = this->command_pool;
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandBufferCount = uint32_t(this->command_buffers.size());
-
-    HYPERION_VK_CHECK_MSG(
-            vkAllocateCommandBuffers(this->device->GetDevice(), &alloc_info, this->command_buffers.data()),
-            "Could not create Vulkan command buffers"
-    );
-
-    DebugLog(LogType::Debug, "Allocate %d command buffers\n", this->command_buffers.size());
-    HYPERION_RETURN_OK;
+Result Instance::CreateCommandBuffers()
+{
+    return this->frame_handler->CreateCommandBuffers(this->device, this->command_pool);
 }
 
 
@@ -348,29 +314,25 @@ Result Instance::Initialize(bool load_debug_layers) {
      * This is essentially a "root" framebuffer. */
     HYPERION_BUBBLE_ERRORS(this->InitializeSwapchain());
 
+    /* Set up our frame handler - this class lets us abstract
+     * away a little bit of the double/triple buffering stuff */
+    this->frame_handler = new FrameHandler(this->swapchain->GetNumImages(), HandleNextFrame);
+
     /* Create our synchronization objects */
     HYPERION_BUBBLE_ERRORS(CreateCommandPool());
     /* Our command pool will have a command buffer for each frame we can render to. */
     HYPERION_BUBBLE_ERRORS(CreateCommandBuffers());
 
     HYPERION_BUBBLE_ERRORS(this->AllocatePendingFrames());
+
+    /* init descriptor sets */
+    for (int i = 0; i < DescriptorPool::max_descriptor_sets; i++) {
+        this->descriptor_pool.AddDescriptorSet();
+    }
+
     this->SetupDebugMessenger();
 
     HYPERION_RETURN_OK;
-}
-
-Result Instance::CleanupPendingFrames() {
-    Result result = Result::OK;
-
-    for (auto &frame : this->pending_frames) {
-        HYPERION_PASS_ERRORS(frame->Destroy(), result);
-
-        frame.reset();
-    }
-
-    this->pending_frames.clear();
-
-    return result;
 }
 
 static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
@@ -388,8 +350,6 @@ Result Instance::Destroy() {
 
     /* Wait for the GPU to finish, we need to be in an idle state. */
     HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(this->device->GetDevice()), result);
-    /* Cleanup our semaphores and fences! */
-    HYPERION_PASS_ERRORS(this->CleanupPendingFrames(), result);
 
     /* Destroy our pipeline(before everything else!) */
     for (auto &pipeline : this->pipelines) {
@@ -399,17 +359,21 @@ Result Instance::Destroy() {
 
     pipelines.clear();
 
-    vkFreeCommandBuffers(this->device->GetDevice(), this->command_pool, this->command_buffers.size(), this->command_buffers.data());
+    this->frame_handler->Destroy(this->device, this->command_pool);
+    delete this->frame_handler;
+    this->frame_handler = nullptr;
+
     vkDestroyCommandPool(this->device->GetDevice(), this->command_pool, nullptr);
 
     /* Destroy descriptor pool */
     HYPERION_PASS_ERRORS(descriptor_pool.Destroy(this->device), result);
 
     /* Destroy the vulkan swapchain */
-    if (this->swapchain != nullptr)
-        HYPERION_PASS_ERRORS(this->swapchain->Destroy(), result);
-    delete this->swapchain;
-    this->swapchain = nullptr;
+    if (this->swapchain != nullptr) {
+        HYPERION_PASS_ERRORS(this->swapchain->Destroy(this->device), result);
+        delete this->swapchain;
+        this->swapchain = nullptr;
+    }
 
     /* Destroy the surface from SDL */
     vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
@@ -495,7 +459,8 @@ VkPhysicalDevice Instance::PickPhysicalDevice(std::vector<VkPhysicalDevice> _dev
     return _device;
 }
 
-Result Instance::InitializeDevice(VkPhysicalDevice physical_device) {
+Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
+{
     /* If no physical device passed in, we select one */
     if (physical_device == nullptr) {
         std::vector<VkPhysicalDevice> physical_devices = this->EnumeratePhysicalDevices();
@@ -555,8 +520,6 @@ Result Instance::AddPipeline(Pipeline::Builder &&builder,
         *out = pipeline.get();
     }
 
-    pipeline->Build(&this->descriptor_pool);
-
     this->pipelines.push_back(std::move(pipeline));
 
     HYPERION_RETURN_OK;
@@ -571,17 +534,15 @@ Result Instance::BuildPipelines()
     HYPERION_RETURN_OK;
 }
 
-Result Instance::InitializeSwapchain() {
-    SwapchainSupportDetails sc_support = this->device->QuerySwapchainSupport();
-    QueueFamilyIndices      qf_indices = this->device->FindQueueFamilies();
-
-    this->swapchain = new Swapchain(this->device, sc_support);
-    HYPERION_BUBBLE_ERRORS(this->swapchain->Create(this->surface, qf_indices));
+Result Instance::InitializeSwapchain()
+{
+    HYPERION_BUBBLE_ERRORS(this->swapchain->Create(this->device, this->surface));
 
     HYPERION_RETURN_OK;
 }
 
-std::vector<VkPhysicalDevice> Instance::EnumeratePhysicalDevices() {
+std::vector<VkPhysicalDevice> Instance::EnumeratePhysicalDevices()
+{
     uint32_t device_count = 0;
 
     vkEnumeratePhysicalDevices(this->instance, &device_count, nullptr);

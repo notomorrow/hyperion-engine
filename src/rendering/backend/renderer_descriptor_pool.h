@@ -51,8 +51,10 @@ public:
 
     // return new descriptor set
     DescriptorSet &AddDescriptorSet();
-    inline DescriptorSet *GetDescriptorSet(size_t index) { return m_descriptor_sets[index].get(); }
-    inline const DescriptorSet *GetDescriptorSet(size_t index) const { return m_descriptor_sets[index].get(); }
+    inline DescriptorSet *GetDescriptorSet(DescriptorSet::Index index)
+        { return m_descriptor_sets[index].get(); }
+    inline const DescriptorSet *GetDescriptorSet(DescriptorSet::Index index) const
+        { return m_descriptor_sets[index].get(); }
 
     std::array<std::unique_ptr<DescriptorSet>, max_descriptor_sets> m_descriptor_sets;
     uint8_t m_num_descriptor_sets;

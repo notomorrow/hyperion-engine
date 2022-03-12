@@ -18,9 +18,11 @@ class Frame {
     Result DestroySyncObjects();
 public:
     Frame();
+    Frame(const Frame &other) = delete;
+    Frame &operator=(const Frame &other) = delete;
     ~Frame();
 
-    Result Create(non_owning_ptr<Device> device, VkCommandBuffer cmd);
+    Result Create(Device *device, VkCommandBuffer cmd);
     Result Destroy();
 
     /* Start recording into the command buffer */
