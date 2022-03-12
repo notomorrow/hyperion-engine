@@ -20,6 +20,14 @@ using renderer::Instance;
  *
  */
 class Engine {
+    template <class T>
+    HYP_FORCE_INLINE constexpr T *GetObject(std::vector<std::unique_ptr<T>> &objects, const typename T::ID &id)
+    {
+        return MathUtil::InRange(id.GetValue(), {1, objects.size() + 1})
+               ? objects[id.GetValue() - 1].get()
+               : nullptr;
+    }
+
 public:
     /* Our "root" shader/pipeline -- used for rendering a quad to the screen. */
     struct SwapchainData {
@@ -38,16 +46,16 @@ public:
     ~Engine();
 
     inline Instance *GetInstance() { return m_instance.get(); }
-    inline const Instance *GetInstance() const { return m_instance.get(); }
+    inline const Instance *GetInstance() const { return m_instance.get(); } [[nodiscard]]
 
     inline SwapchainData &GetSwapchainData() { return m_swapchain_data; }
-    inline const SwapchainData &GetSwapchainData() const { return m_swapchain_data; }
+    inline const SwapchainData &GetSwapchainData() const { return m_swapchain_data; } [[nodiscard]]
 
     inline FilterStack &GetFilterStack() { return m_filter_stack; }
-    inline const FilterStack &GetFilterStack() const { return m_filter_stack; }
+    inline const FilterStack &GetFilterStack() const { return m_filter_stack; } [[nodiscard]]
 
     inline Texture::TextureInternalFormat GetDefaultFormat(TextureFormatDefault type) const
-        { return m_texture_format_defaults.Get(type); }
+        { return m_texture_format_defaults.Get(type); } [[nodiscard]]
 
     Shader::ID AddShader(std::unique_ptr<Shader> &&shader);
     HYP_FORCE_INLINE Shader *GetShader(Shader::ID id)
@@ -71,9 +79,10 @@ public:
     /* Pipelines will be deferred until descriptor sets are built */
     Pipeline::ID AddPipeline(renderer::Pipeline::Builder &&builder);
     HYP_FORCE_INLINE Pipeline *GetPipeline(Pipeline::ID id)
-        { return GetObject(m_pipelines, id); }
+        { return GetObject(m_pipelines, id); } [[nodiscard]]
     HYP_FORCE_INLINE const Pipeline *GetPipeline(Pipeline::ID id) const
         { return const_cast<Engine*>(this)->GetPipeline(id); }
+
 
     void Initialize();
     void PrepareSwapchain();
@@ -86,15 +95,7 @@ private:
     void FindTextureFormatDefaults();
 
     template <class T>
-    HYP_FORCE_INLINE constexpr T *GetObject(std::vector<std::unique_ptr<T>> &objects, const typename T::ID &id)
-    {
-        return MathUtil::InRange(id.GetValue(), {1, objects.size() + 1})
-            ? objects[id.GetValue() - 1].get()
-            : nullptr;
-    }
-
-    template <class T>
-    inline T::ID AddObject(std::vector<std::unique_ptr<T>> &objects, std::unique_ptr<T> &&object)
+    inline typename T::ID AddObject(std::vector<std::unique_ptr<T>> &objects, std::unique_ptr<T> &&object)
     {
         typename T::ID result{};
 
@@ -113,7 +114,7 @@ private:
     }
 
     template<class T>
-    inline void RemoveObjectById(std::vector<std::unique_ptr<T>> &objects, T::ID id)
+    inline void RemoveObjectById(std::vector<std::unique_ptr<T>> &objects, typename T::ID id)
     {
         /* Cannot simply erase, as that would invalidate existing IDs */
         objects[id] = {};
