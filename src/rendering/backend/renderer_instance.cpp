@@ -81,7 +81,7 @@ void Instance::PresentFrame(Frame *frame, const std::vector<VkSemaphore> &semaph
     present_info.waitSemaphoreCount = semaphores.size();
     present_info.pWaitSemaphores = semaphores.data();
 
-    AssertThrow(this->swapchain != nullptr || this->swapchain->swapchain != nullptr);
+    AssertThrow(this->swapchain != nullptr && this->swapchain->swapchain != nullptr);
 
     uint32_t frame_index = this->frame_handler->GetFrameIndex();
 
@@ -351,14 +351,6 @@ Result Instance::Destroy() {
     /* Wait for the GPU to finish, we need to be in an idle state. */
     HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(this->device->GetDevice()), result);
 
-    /* Destroy our pipeline(before everything else!) */
-    for (auto &pipeline : this->pipelines) {
-        pipeline->Destroy();
-        pipeline.reset();
-    }
-
-    pipelines.clear();
-
     this->frame_handler->Destroy(this->device, this->command_pool);
     delete this->frame_handler;
     this->frame_handler = nullptr;
@@ -497,39 +489,6 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
     /* Get the internal queues from our device */
     this->queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
     this->queue_present  = device->GetQueue(family_indices.present_family.value(), 0);
-
-    HYPERION_RETURN_OK;
-}
-
-Result Instance::AddPipeline(Pipeline::Builder &&builder,
-    Pipeline **out)
-{
-    HashCode::Value_t hash_code = builder.GetHashCode().Value();
-
-    auto it = std::find_if(this->pipelines.begin(), this->pipelines.end(), [hash_code](const auto &pl) {
-        return pl->GetConstructionInfo().GetHashCode().Value() == hash_code;
-    });
-
-    if (it != this->pipelines.end()) {
-        HYPERION_RETURN_OK;
-    }
-
-    auto pipeline = builder.Build(this->device);
-
-    if (out != nullptr) {
-        *out = pipeline.get();
-    }
-
-    this->pipelines.push_back(std::move(pipeline));
-
-    HYPERION_RETURN_OK;
-}
-
-Result Instance::BuildPipelines()
-{
-    for (auto &pipeline : this->pipelines) {
-        pipeline->Build(&this->descriptor_pool);
-    }
 
     HYPERION_RETURN_OK;
 }

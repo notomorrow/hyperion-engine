@@ -84,9 +84,6 @@ public:
     Result InitializeDevice(VkPhysicalDevice _physical_device = nullptr);
     Result InitializeSwapchain();
 
-    Result AddPipeline(Pipeline::Builder &&builder, Pipeline **out = nullptr);
-    Result BuildPipelines();
-
     void SetQueueFamilies(set<uint32_t> queue_families);
     void SetCurrentWindow(SystemWindow *window);
 
@@ -103,8 +100,6 @@ public:
 
     const char *app_name;
     const char *engine_name;
-
-    vector<std::unique_ptr<Pipeline>> pipelines;
     
     Swapchain *swapchain = nullptr;
 

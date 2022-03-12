@@ -17,16 +17,16 @@ using renderer::ImageView;
 using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
-    : m_instance(new Instance(_system, app_name, "HyperionEngine"))
+    : m_instance(new Instance(_system, app_name, "HyperionEngine")),
+      m_swapchain_data{}
 {
 }
 
 Engine::~Engine()
 {
-    m_filter_stack.Destroy(this);
+    m_instance->WaitDeviceIdle();
 
-    // TODO: refactor
-    //m_swapchain_data.shader->Destroy(this);
+    m_filter_stack.Destroy(this);
 
     for (auto &it : m_framebuffers) {
         it->Destroy(this);
@@ -39,6 +39,10 @@ Engine::~Engine()
     for (auto &shader : m_shaders) {
         shader->Destroy(this);
     }
+    
+    for (auto &pipeline :m_pipelines) {
+        pipeline->Destroy(this);
+    }
 
     m_instance->Destroy();
 }
@@ -47,25 +51,23 @@ Shader::ID Engine::AddShader(std::unique_ptr<Shader> &&shader)
 {
     AssertThrow(shader != nullptr);
 
-    Shader::ID id(m_shaders.size());
-
     shader->Create(this);
 
     m_shaders.push_back(std::move(shader));
+    
 
-    return id;
+    return Shader::ID{Shader::ID::InnerType_t(m_shaders.size())};
 }
 
 Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass)
 {
     AssertThrow(framebuffer != nullptr);
-
-    Framebuffer::ID id(m_framebuffers.size());
+    
     framebuffer->Create(this, GetRenderPass(render_pass));
 
     m_framebuffers.push_back(std::move(framebuffer));
 
-    return id;
+    return Framebuffer::ID{ Framebuffer::ID::InnerType_t(m_framebuffers.size())};
 }
 
 Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass_id)
@@ -87,37 +89,58 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
 RenderPass::ID Engine::AddRenderPass(std::unique_ptr<RenderPass> &&render_pass)
 {
     AssertThrow(render_pass != nullptr);
-
-    RenderPass::ID id(m_render_passes.size());
+    
     render_pass->Create(this);
 
     m_render_passes.push_back(std::move(render_pass));
 
-    return id;
+    return RenderPass::ID{RenderPass::ID::InnerType_t(m_render_passes.size())};
 }
 
-void Engine::AddPipeline(Pipeline::Builder &&builder, Pipeline **out)
+Pipeline::ID Engine::AddPipeline(renderer::Pipeline::Builder &&builder)
 {
-    auto *shader = GetShader(builder.m_construction_info.shader_id);
+    auto *shader = GetShader(Shader::ID{builder.m_construction_info.shader_id});
 
     AssertThrow(shader != nullptr);
 
     builder.m_construction_info.shader = non_owning_ptr(shader->GetWrappedObject());
 
-    auto *render_pass = GetRenderPass(builder.m_construction_info.render_pass_id);
+    auto *render_pass = GetRenderPass(RenderPass::ID{builder.m_construction_info.render_pass_id});
     AssertThrow(render_pass != nullptr);
     // TODO: Assert that render_pass matches the layout of what the fbo was set up with
 
     builder.m_construction_info.render_pass = non_owning_ptr(render_pass->GetWrappedObject());
 
-    for (int fbo_id : builder.m_construction_info.fbo_ids) {
-        if (auto fbo = GetFramebuffer(fbo_id)) {
+    for (auto fbo_id : builder.m_construction_info.fbo_ids) {
+        if (auto fbo = GetFramebuffer(Framebuffer::ID{fbo_id})) {
             builder.m_construction_info.fbos.push_back(non_owning_ptr(fbo->GetWrappedObject()));
         }
     }
 
-    auto add_pipeline_result = m_instance->AddPipeline(std::move(builder), out);
-    AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
+    //auto add_pipeline_result = m_instance->AddPipeline(std::move(builder), out);
+    //AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
+
+    /* Cache pipeline objects */
+
+    HashCode::Value_t hash_code = builder.GetHashCode().Value();
+
+    auto it = std::find_if(m_pipelines.begin(), m_pipelines.end(), [hash_code](const auto &pl) {
+        return pl->GetWrappedObject()->GetConstructionInfo().GetHashCode().Value() == hash_code;
+    });
+
+    if (it != m_pipelines.end()) {
+        /* Return the index of the existing pipeline + 1,
+         * as ID objects are one more than their index in the array. */
+        return Pipeline::ID{Pipeline::ID::InnerType_t((it - m_pipelines.begin()) + 1)};
+    }
+    
+    /* Create the wrapper object around pipeline
+     * builder.m_construction_info is now invalidated */
+    auto pipeline = std::make_unique<Pipeline>(std::move(builder.m_construction_info));
+
+    m_pipelines.push_back(std::move(pipeline));
+
+    return Pipeline::ID{ Pipeline::ID::InnerType_t(m_pipelines.size())};
 }
 
 
@@ -166,7 +189,6 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
-
     m_filter_stack.Create(this);
 
 
@@ -205,12 +227,13 @@ void Engine::PrepareSwapchain()
     
     RenderPass::ID render_pass_id = AddRenderPass(std::move(render_pass));
 
-    Pipeline::Builder builder;
+    renderer::Pipeline::Builder builder;
+
     builder
         .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
-        .Shader(m_swapchain_data.shader_id)
+        .Shader<Shader>(m_swapchain_data.shader_id)
         .VertexAttributes(vertex_attributes)
-        .RenderPass(render_pass_id);
+        .RenderPass<RenderPass>(render_pass_id);
 
     for (auto img : m_instance->swapchain->images) {
         auto image_view = std::make_unique<ImageView>(VK_IMAGE_ASPECT_COLOR_BIT);
@@ -242,10 +265,17 @@ void Engine::PrepareSwapchain()
         auto result = fbo->GetWrappedObject()->AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH));
         AssertThrowMsg(result, "%s", result.message);
 
-        builder.Framebuffer(AddFramebuffer(std::move(fbo), render_pass_id));
+        builder.Framebuffer<Framebuffer>(AddFramebuffer(std::move(fbo), render_pass_id));
     }
 
-    AddPipeline(std::move(builder), &m_swapchain_data.pipeline);
+    m_swapchain_data.pipeline_id = AddPipeline(std::move(builder));
+}
+
+void Engine::BuildPipelines()
+{
+    for (auto &pipeline : m_pipelines) {
+        pipeline->Create(this);
+    }
 }
 
 void Engine::Initialize()
@@ -261,9 +291,11 @@ void Engine::RenderPostProcessing(Frame *frame, uint32_t frame_index)
 
 void Engine::RenderSwapchain(Frame *frame)
 {
-    m_swapchain_data.pipeline->Bind(frame->command_buffer);
+    Pipeline *pipeline = GetPipeline(m_swapchain_data.pipeline_id);
 
-    m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, m_swapchain_data.pipeline->layout);
+    pipeline->GetWrappedObject()->Bind(frame->command_buffer);
+
+    m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, pipeline->GetWrappedObject()->layout);
 
     Filter::full_screen_quad->RenderVk(frame, m_instance.get(), nullptr);
 }

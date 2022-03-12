@@ -5,7 +5,7 @@
 #include "components/framebuffer.h"
 #include "components/filter_stack.h"
 #include <rendering/backend/renderer_command_buffer.h>
-#include <rendering/backend/renderer_pipeline.h>
+#include "components/pipeline.h"
 
 #include <util/enum_options.h>
 
@@ -14,7 +14,6 @@
 namespace hyperion::v2 {
 
 using renderer::Instance;
-using renderer::Pipeline;
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
@@ -25,7 +24,7 @@ public:
     /* Our "root" shader/pipeline -- used for rendering a quad to the screen. */
     struct SwapchainData {
         Shader::ID shader_id;
-        Pipeline *pipeline;
+        Pipeline::ID pipeline_id;
     } m_swapchain_data;
 
     enum TextureFormatDefault {
@@ -52,43 +51,34 @@ public:
 
     Shader::ID AddShader(std::unique_ptr<Shader> &&shader);
     inline Shader *GetShader(Shader::ID id)
-    {
-        return MathUtil::InRange(id, {0, m_shaders.size()})
-            ? m_shaders[id].get()
-            : nullptr;
-    }
-
+        { return GetObject(m_shaders, id); }
     inline const Shader *GetShader(Shader::ID id) const
         { return const_cast<Engine*>(this)->GetShader(id); }
 
     Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
     Framebuffer::ID AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass);
     inline Framebuffer *GetFramebuffer(Framebuffer::ID id)
-    {
-        return MathUtil::InRange(id, {0, m_framebuffers.size()})
-            ? m_framebuffers[id].get()
-            : nullptr;
-    }
+        { return GetObject(m_framebuffers, id); }
     inline const Framebuffer *GetFramebuffer(Framebuffer::ID id) const
         { return const_cast<Engine*>(this)->GetFramebuffer(id); }
 
     RenderPass::ID AddRenderPass(std::unique_ptr<RenderPass> &&render_pass);
     inline RenderPass *GetRenderPass(RenderPass::ID id)
-    {
-        return MathUtil::InRange(id, {0, m_render_passes.size()})
-            ? m_render_passes[id].get()
-            : nullptr;
-    }
-
+        { return GetObject(m_render_passes, id); }
     inline const RenderPass *GetRenderPass(RenderPass::ID id) const
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
-    void AddPipeline(Pipeline::Builder &&builder, Pipeline **out = nullptr);
+    Pipeline::ID AddPipeline(renderer::Pipeline::Builder &&builder);
+    HYP_FORCE_INLINE Pipeline *GetPipeline(Pipeline::ID id)
+        { return GetObject(m_pipelines, id); }
+    HYP_FORCE_INLINE const Pipeline *GetPipeline(Pipeline::ID id) const
+        { return const_cast<Engine*>(this)->GetPipeline(id); }
 
 
     void Initialize();
     void PrepareSwapchain();
+    void BuildPipelines();
     void RenderPostProcessing(Frame *frame, uint32_t frame_index);
     void RenderSwapchain(Frame *frame);
 
@@ -97,9 +87,17 @@ private:
     void FindTextureFormatDefaults();
 
     template <class T>
+    HYP_FORCE_INLINE constexpr T *GetObject(std::vector<std::unique_ptr<T>> &objects, const typename T::ID &id)
+    {
+        return MathUtil::InRange(id.GetValue(), {1, objects.size() + 1})
+            ? objects[id.GetValue() - 1].get()
+            : nullptr;
+    }
+
+    template <class T>
     inline T::ID AddObject(std::vector<std::unique_ptr<T>> &objects, std::unique_ptr<T> &&object)
     {
-        typename T::ID result = -1;
+        typename T::ID result{};
 
         /* Find an existing slot */
         auto it = std::find(objects.begin(), objects.end(), nullptr);
@@ -129,6 +127,7 @@ private:
     std::vector<std::unique_ptr<Shader>> m_shaders;
     std::vector<std::unique_ptr<Framebuffer>> m_framebuffers;
     std::vector<std::unique_ptr<RenderPass>> m_render_passes;
+    std::vector<std::unique_ptr<Pipeline>> m_pipelines;
     std::unique_ptr<Instance> m_instance;
 };
 

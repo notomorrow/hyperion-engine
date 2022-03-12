@@ -4,6 +4,7 @@
 #include <rendering/backend/renderer_instance.h>
 
 #include <memory>
+#include <initializer_list>
 
 namespace hyperion::v2 {
 
@@ -14,8 +15,18 @@ class Engine;
 
 template <class WrappedType>
 class BaseComponent {
+    template <class ObjectType, class InnerType>
+    struct IdWrapper {
+        using InnerType_t = InnerType;
+
+        explicit constexpr operator InnerType() const { return value; }
+        inline constexpr InnerType GetValue() const { return value; }
+
+        InnerType value;
+    };
+
 public:
-    using ID = int;
+    using ID = IdWrapper<WrappedType, uint32_t>;
 
     BaseComponent() = default;
     BaseComponent(std::unique_ptr<WrappedType> &&wrapped) : m_wrapped(std::move(wrapped)) {}
@@ -30,11 +41,8 @@ public:
         );
     }
 
-    inline WrappedType *GetWrappedObject() { return m_wrapped.get(); }
-    inline const WrappedType *GetWrappedObject() const { return m_wrapped.get(); }
-
-    void Create(Engine *engine)  {}
-    void Destroy(Engine *engine) {}
+    inline constexpr WrappedType *GetWrappedObject() { return m_wrapped.get(); }
+    inline constexpr const WrappedType *GetWrappedObject() const { return m_wrapped.get(); }
 
 protected:
     std::unique_ptr<WrappedType> m_wrapped;
