@@ -20,7 +20,7 @@ const MeshInputAttributeSet Filter::vertex_attributes = MeshInputAttributeSet(
     | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
     | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT);
 
-const std::shared_ptr<Mesh> Filter::full_screen_quad = MeshFactory::CreateQuad();
+std::shared_ptr<Mesh> Filter::full_screen_quad = MeshFactory::CreateQuad();
 
 Filter::Filter(Shader::ID shader_id)
     : m_pipeline_id{},
@@ -105,6 +105,21 @@ void Filter::CreatePipeline(Engine *engine)
 
 void Filter::Destroy(Engine *engine)
 {
+    renderer::Result result = renderer::Result::OK;
+
+    for (size_t i = 0; i < m_frame_data->GetNumFrames(); i++) {
+        auto &frame = m_frame_data->GetFrame(i);
+
+        HYPERION_PASS_ERRORS(
+            frame.GetCommandBuffer()->Destroy(engine->GetInstance()->GetDevice(), engine->GetInstance()->command_pool),
+            result
+        );
+    }
+
+    m_frame_data->Reset();
+
+    AssertThrowMsg(result, "%s", result.message);
+
     // engine->RemoveShader(m_shader_id);
     //engine->RemoveFramebuffer(m_framebuffer_id);
     //engine->RemovePipeline(m_pipeline_id);

@@ -67,7 +67,7 @@ Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffe
 
     m_framebuffers.push_back(std::move(framebuffer));
 
-    return Framebuffer::ID{ Framebuffer::ID::InnerType_t(m_framebuffers.size())};
+    return Framebuffer::ID{Framebuffer::ID::InnerType_t(m_framebuffers.size())};
 }
 
 Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass_id)

@@ -57,7 +57,7 @@ Result FramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, Textur
 
 Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
 {
-    AssertThrowMsg(m_fbo_attachments.size() != 0, "At least one attachment must be added");
+    AssertThrowMsg(!m_fbo_attachments.empty(), "At least one attachment must be added");
 
     for (auto &image_info : m_fbo_attachments) {
         if (image_info.image != nullptr && image_info.image_needs_creation) {
@@ -88,8 +88,8 @@ Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
     framebuffer_create_info.renderPass = render_pass->GetRenderPass();
     framebuffer_create_info.attachmentCount = uint32_t(attachment_image_views.size());
     framebuffer_create_info.pAttachments    = attachment_image_views.data();
-    framebuffer_create_info.width = m_width;
-    framebuffer_create_info.height = m_height;
+    framebuffer_create_info.width = uint32_t(m_width);
+    framebuffer_create_info.height = uint32_t(m_height);
     framebuffer_create_info.layers = 1;
 
     HYPERION_VK_CHECK(vkCreateFramebuffer(device->GetDevice(), &framebuffer_create_info, nullptr, &m_framebuffer));

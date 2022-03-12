@@ -20,7 +20,7 @@ public:
     );
     GPUMemory(const GPUMemory &other) = delete;
     GPUMemory &operator=(const GPUMemory &other) = delete;
-    ~GPUMemory() = default;
+    ~GPUMemory();
 
     VkDeviceMemory memory;
     VkDeviceSize size;
