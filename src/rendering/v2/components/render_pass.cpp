@@ -103,7 +103,7 @@ void RenderPass::Create(Engine *engine)
     CreateDependencies();
 
     auto result = m_wrapped->Create(engine->GetInstance()->GetDevice());
-    AssertThrowMsg(result, "%s", result);
+    AssertThrowMsg(result, "%s", result.message);
 }
 
 void RenderPass::Destroy(Engine *engine)
@@ -111,7 +111,7 @@ void RenderPass::Destroy(Engine *engine)
     auto result = m_wrapped->Destroy(engine->GetInstance()->GetDevice());
     m_wrapped.reset();
 
-    AssertThrowMsg(result, "%s", result);
+    AssertThrowMsg(result, "%s", result.message);
 }
 
 } // namespace hyperion::v2
