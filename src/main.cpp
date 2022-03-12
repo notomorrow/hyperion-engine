@@ -574,10 +574,6 @@ int main()
     auto full_screen_quad = MeshFactory::CreateQuad();
     Material my_material;
 
-    /* Max frames/sync objects to have available to render to. This prevents the graphics
-     * pipeline from stalling when waiting for device upload/download. */
-    const uint16_t pending_frames = 2;
-
 
     v2::Engine engine(system, "My app");
 
@@ -660,7 +656,7 @@ int main()
 
     v2::RenderPass::ID render_pass_id = -1;
     {
-        auto render_pass = std::make_unique<v2::RenderPass>(v2::RenderPass::RENDER_PASS_STAGE_SHADER);
+        auto render_pass = std::make_unique<v2::RenderPass>(v2::RenderPass::RENDER_PASS_STAGE_SHADER, v2::RenderPass::RENDER_PASS_INLINE);
 
         /* For our color attachment */
         render_pass->AddAttachment({
@@ -685,35 +681,47 @@ int main()
 
     v2::Framebuffer::ID my_fbo_id = engine.AddFramebuffer(512, 512, render_pass_id);
 
-    engine.GetInstance()->GetDescriptorPool()
-        .AddDescriptorSet()
-        .AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
-        .AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+    {
+        auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBALS);
 
-    
+        descriptor_set_globals
+            ->AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
 
-    engine.GetInstance()->GetDescriptorPool()
-        .AddDescriptorSet()
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            0,
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ))
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            1,
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ))
-        .AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            2,
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
-            non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ));
-    
+        descriptor_set_globals
+            ->AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
+
+        descriptor_set_globals
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+    }
+
+    {
+        auto *descriptor_set_pass = engine.GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_PASS);
+
+        descriptor_set_pass
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+                0,
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
+                VK_SHADER_STAGE_FRAGMENT_BIT
+            ));
+        descriptor_set_pass
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+                1,
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
+                VK_SHADER_STAGE_FRAGMENT_BIT
+            ));
+
+        descriptor_set_pass
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
+                2,
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
+                VK_SHADER_STAGE_FRAGMENT_BIT
+            ));
+    }
 
     Device *device = engine.GetInstance()->GetDevice();
 
@@ -739,20 +747,21 @@ int main()
     engine.PrepareSwapchain();
 
 
+    v2::Shader::ID mirror_shader_id;
+    {
+        auto mirror_shader = std::make_unique<v2::Shader>(std::vector{
+            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() },
+            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }
+        });
 
-    renderer::Shader mirror_shader;
-    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() });
-    mirror_shader.AttachShader(device, SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() });
-    mirror_shader.CreateProgram("main");
-
-
-    
+        mirror_shader_id = engine.AddShader(std::move(mirror_shader));
+    }
 
 
     Pipeline::Builder scene_pass_pipeline_builder;
 
     scene_pass_pipeline_builder
-        .Shader(&mirror_shader)
+        .Shader(mirror_shader_id)
         .VertexAttributes(MeshInputAttributeSet({
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
             monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
@@ -798,6 +807,27 @@ int main()
     uint64_t tick_last = 0;
     double delta_time = 0;
 
+    struct FullScreenQuadFrame {
+        /*VkCommandBuffer cmd;
+        VkSemaphore sp;
+        VkFence fc;*/
+        std::unique_ptr<CommandBuffer> cmd;
+    };
+
+    std::vector<FullScreenQuadFrame> fsq;
+    fsq.resize(engine.GetInstance()->GetNumImages());
+
+    engine.GetInstance()->BuildPipelines();
+
+    for (int i = 0; i < fsq.size(); i++) {
+        fsq[i].cmd = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
+        auto command_buffer_result = fsq[i].cmd->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
+        AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
+    }
+
+    uint32_t previous_frame_index = 0;
+
+
     while (running) {
         tick_last = tick_now;
         tick_now = SDL_GetPerformanceCounter();
@@ -830,7 +860,20 @@ int main()
         Pipeline *pl = pipelines[0];
         Pipeline *fbo_pl = pipelines[1];
 
+
+
+        // waiting for tmp fence
+
+        //vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc, true, UINT64_MAX);
+       // vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc);
+
+
         frame = engine.GetInstance()->GetNextFrame();
+
+
+
+
+
         engine.GetInstance()->BeginFrame(frame);
         
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
@@ -838,22 +881,52 @@ int main()
 
 
         /* forward / albedo layer */
-        fbo_pl->StartRenderPass(frame->command_buffer, 0);
+        fbo_pl->BeginRenderPass(frame->command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
+        fbo_pl->Bind(frame->command_buffer);
         engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, fbo_pl->layout, 0, 1);
         monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
         fbo_pl->EndRenderPass(frame->command_buffer, 0);
+        
 
-        engine.RenderPostProcessing(frame);
-        engine.RenderSwapchain(frame);
+        const size_t frame_index = engine.GetInstance()->GetFrameHandler()->GetFrameIndex();
+        engine.RenderPostProcessing(frame, frame_index);
+
+        /* secondary cmd buffer */
+        engine.GetSwapchainData().pipeline->BeginRenderPass(frame->command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+        fsq[frame_index].cmd->Reset(engine.GetInstance()->GetDevice());
+        fsq[frame_index].cmd->Record(
+            engine.GetInstance()->GetDevice(),
+            engine.GetSwapchainData().pipeline->GetConstructionInfo().render_pass.get(),
+            [&engine, &frame_index, &previous_frame_index](VkCommandBuffer cmd) {
+                Frame tmp_frame;
+                tmp_frame.command_buffer = cmd;
+
+                engine.m_swapchain_data.pipeline->push_constants.previous_frame_index = previous_frame_index;
+                engine.m_swapchain_data.pipeline->push_constants.current_frame_index = frame_index;
+
+                engine.RenderSwapchain(&tmp_frame);
+
+                HYPERION_RETURN_OK;
+            });
+        fsq[frame_index].cmd->SubmitSecondary(frame->command_buffer);
+        engine.GetSwapchainData().pipeline->EndRenderPass(frame->command_buffer, frame_index);
+
+        /* end secondary cmd buffer */
 
         engine.GetInstance()->EndFrame(frame);
+        
+        engine.GetInstance()->SubmitFrame(frame);
 
 
-        //Pipeline *fbo_pl = pipelines[1];
-        //fbo_pl->StartRenderPass(frame->command_buffer, )
+        std::vector<VkSemaphore> fsq_sp_wrapper;
+        fsq_sp_wrapper.resize(1);
+        fsq_sp_wrapper[0] = frame->sp_swap_release;//fsq[engine.GetInstance()->frames_index].sp;
 
 
-        engine.GetInstance()->PresentFrame(frame);
+        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);
+
+        previous_frame_index = frame_index;
     }
 
     engine.GetInstance()->WaitDeviceIdle();
@@ -867,8 +940,6 @@ int main()
     test_image_view.Destroy(device);
     test_sampler.Destroy(device);
     image->Destroy(device);
-    
-    mirror_shader.Destroy();
 
     delete window;
 

@@ -87,7 +87,7 @@ Result RenderPass::Destroy(Device *device)
     return result;
 }
 
-void RenderPass::Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, VkExtent2D extent)
+void RenderPass::Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, VkExtent2D extent, VkSubpassContents contents)
 {
     VkRenderPassBeginInfo render_pass_info{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     render_pass_info.renderPass = m_render_pass;
@@ -111,7 +111,7 @@ void RenderPass::Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, VkExtent2
     render_pass_info.clearValueCount = clear_values.size();
     render_pass_info.pClearValues = clear_values.data();
 
-    vkCmdBeginRenderPass(cmd, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(cmd, &render_pass_info, contents);
 }
 
 void RenderPass::End(VkCommandBuffer cmd)

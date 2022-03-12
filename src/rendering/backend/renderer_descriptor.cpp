@@ -8,7 +8,8 @@ Descriptor::Descriptor(uint32_t binding, const BufferInfo &info, VkDescriptorTyp
     : m_binding(binding),
       m_info(info),
       m_type(type),
-      m_stage_flags(stage_flags)
+      m_stage_flags(stage_flags),
+      m_state(DESCRIPTOR_DIRTY)
 {
 }
 
@@ -18,12 +19,12 @@ Descriptor::~Descriptor()
 
 void Descriptor::Create(Device *device, Descriptor::Info *out_info)
 {
-    AssertExit(m_info.mode != Mode::UNSET);
+    AssertThrow(m_info.mode != Mode::UNSET);
 
     switch (m_info.mode) {
     case Mode::BUFFER:
-        AssertExit(m_info.gpu_buffer != nullptr);
-        AssertExit(m_info.gpu_buffer->buffer != nullptr);
+        AssertThrow(m_info.gpu_buffer != nullptr);
+        AssertThrow(m_info.gpu_buffer->buffer != nullptr);
 
         m_info.buffer_info.buffer = m_info.gpu_buffer->buffer;
         m_info.buffer_info.offset = 0; // TODO: re-use of buffers and offsetting of data
@@ -31,8 +32,8 @@ void Descriptor::Create(Device *device, Descriptor::Info *out_info)
 
         break;
     case Mode::IMAGE:
-        AssertExit(m_info.image_view != nullptr);
-        AssertExit(m_info.sampler != nullptr);
+        AssertThrow(m_info.image_view != nullptr);
+        AssertThrow(m_info.sampler != nullptr);
 
         m_info.image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         m_info.image_info.imageView = m_info.image_view->GetImageView();
@@ -61,6 +62,19 @@ void Descriptor::Create(Device *device, Descriptor::Info *out_info)
 void Descriptor::Destroy(Device *device)
 {
 }
+
+void Descriptor::Update(Device *device, size_t size, void *ptr)
+{
+    AssertThrow(m_info.mode == Mode::BUFFER);
+    AssertThrow(m_info.gpu_buffer != nullptr);
+    AssertThrow(m_info.gpu_buffer->buffer != nullptr);
+    AssertThrow(size <= m_info.gpu_buffer->size);
+
+    m_info.gpu_buffer->Copy(device, size, ptr);
+
+    m_state = State::DESCRIPTOR_DIRTY;
+}
+
 
 } // namespace renderer
 } // namespace hyperion

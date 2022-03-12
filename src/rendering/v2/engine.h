@@ -4,6 +4,7 @@
 #include "components/shader.h"
 #include "components/framebuffer.h"
 #include "components/filter_stack.h"
+#include <rendering/backend/renderer_command_buffer.h>
 #include <rendering/backend/renderer_pipeline.h>
 
 #include <util/enum_options.h>
@@ -23,7 +24,7 @@ class Engine {
 public:
     /* Our "root" shader/pipeline -- used for rendering a quad to the screen. */
     struct SwapchainData {
-        std::unique_ptr<Shader> shader;
+        Shader::ID shader_id;
         Pipeline *pipeline;
     } m_swapchain_data;
 
@@ -82,17 +83,44 @@ public:
     inline const RenderPass *GetRenderPass(RenderPass::ID id) const
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
+    /* Pipelines will be deferred until descriptor sets are built */
     void AddPipeline(Pipeline::Builder &&builder, Pipeline **out = nullptr);
 
 
     void Initialize();
     void PrepareSwapchain();
-    void RenderPostProcessing(Frame *frame);
+    void RenderPostProcessing(Frame *frame, uint32_t frame_index);
     void RenderSwapchain(Frame *frame);
 
 private:
     void InitializeInstance();
     void FindTextureFormatDefaults();
+
+    template <class T>
+    inline T::ID AddObject(std::vector<std::unique_ptr<T>> &objects, std::unique_ptr<T> &&object)
+    {
+        typename T::ID result = -1;
+
+        /* Find an existing slot */
+        auto it = std::find(objects.begin(), objects.end(), nullptr);
+
+        if (it != objects.end()) {
+            result = T::ID(it - objects.begin());
+            objects[it] = std::move(object);
+        } else {
+            result = objects.size();
+            objects.push_back(std::move(object));
+        }
+
+        return result;
+    }
+
+    template<class T>
+    inline void RemoveObjectById(std::vector<std::unique_ptr<T>> &objects, T::ID id)
+    {
+        /* Cannot simply erase, as that would invalidate existing IDs */
+        objects[id] = {};
+    }
 
     EnumOptions<TextureFormatDefault, Texture::TextureInternalFormat, 4> m_texture_format_defaults;
 

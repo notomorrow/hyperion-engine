@@ -13,6 +13,13 @@ class Device;
 class DescriptorPool;
 class DescriptorSet {
 public:
+    enum Index {
+        DESCRIPTOR_SET_INDEX_GLOBALS  = 0, /* per frame */
+        DESCRIPTOR_SET_INDEX_PASS     = 1, /* per render pass */
+        DESCRIPTOR_SET_INDEX_MATERIAL = 2, /* per material */
+        DESCRIPTOR_SET_INDEX_OBJECT   = 3  /* per object */
+    };
+
     DescriptorSet();
     DescriptorSet(const DescriptorSet &other) = delete;
     DescriptorSet &operator=(const DescriptorSet &other) = delete;

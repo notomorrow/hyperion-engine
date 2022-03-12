@@ -89,6 +89,11 @@ public:
         VkWriteDescriptorSet write;
     };
 
+    enum State {
+        DESCRIPTOR_CLEAN = 0,
+        DESCRIPTOR_DIRTY = 1
+    };
+
     Descriptor(uint32_t binding, const BufferInfo &info, VkDescriptorType type, VkShaderStageFlags stage_flags);
     Descriptor(const Descriptor &other) = delete;
     Descriptor &operator=(const Descriptor &other) = delete;
@@ -96,6 +101,9 @@ public:
 
     inline uint32_t GetBinding() const { return m_binding; }
     inline void SetBinding(uint32_t binding) { m_binding = binding; }
+
+    inline State GetState() const { return m_state; }
+    inline void SetState(State state) { m_state = state; }
 
     inline GPUBuffer *GetGPUBuffer() { return m_info.gpu_buffer.get(); }
     inline const GPUBuffer *GetGPUBuffer() const { return m_info.gpu_buffer.get(); }
@@ -106,9 +114,11 @@ public:
 
     void Create(Device *device, Info *out_info);
     void Destroy(Device *device);
+    void Update(Device *device, size_t size, void *ptr);
 
 protected:
     BufferInfo m_info;
+    State m_state;
     
     uint32_t m_binding;
     VkDescriptorType m_type;
