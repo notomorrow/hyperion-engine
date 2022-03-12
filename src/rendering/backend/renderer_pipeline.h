@@ -27,11 +27,11 @@ public:
     struct ConstructionInfo {
         MeshInputAttributeSet vertex_attributes;
         non_owning_ptr<Shader> shader;
-        int shader_id;
+        uint32_t shader_id;
         non_owning_ptr<RenderPass> render_pass;
-        int render_pass_id;
+        uint32_t render_pass_id;
         std::vector<non_owning_ptr<FramebufferObject>> fbos;
-        std::vector<int> fbo_ids; // unresolved fbo ids
+        std::vector<uint32_t> fbo_ids; // unresolved fbo ids
 
         VkPrimitiveTopology topology;
 
@@ -43,43 +43,6 @@ public:
 
         bool depth_test,
              depth_write;
-
-        ConstructionInfo() : shader_id(-1), render_pass_id(-1) {}
-        ConstructionInfo(ConstructionInfo &&other)
-            : vertex_attributes(std::move(other.vertex_attributes)),
-              shader(other.shader),
-              shader_id(other.shader_id),
-              render_pass(other.render_pass),
-              render_pass_id(other.render_pass_id),
-              fbos(std::move(other.fbos)),
-              fbo_ids(std::move(other.fbo_ids)),
-              topology(other.topology),
-              cull_mode(other.cull_mode),
-              depth_test(other.depth_test),
-              depth_write(other.depth_write)
-        {
-        }
-
-        ConstructionInfo &operator=(ConstructionInfo &&other)
-        {
-            vertex_attributes = std::move(other.vertex_attributes);
-            shader = other.shader;
-            shader_id = other.shader_id;
-            render_pass = other.render_pass;
-            render_pass_id = other.render_pass_id;
-            fbos = std::move(other.fbos);
-            fbo_ids = std::move(other.fbo_ids);
-            topology = other.topology;
-            cull_mode = other.cull_mode;
-            depth_test = other.depth_test;
-            depth_write = other.depth_write;
-
-            return *this;
-        }
-
-        ConstructionInfo(const ConstructionInfo &other) = delete;
-        ConstructionInfo &operator=(const ConstructionInfo &other) = delete;
-        ~ConstructionInfo() = default;
 
         inline HashCode GetHashCode() const
         {

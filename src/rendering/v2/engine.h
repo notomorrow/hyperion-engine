@@ -85,17 +85,15 @@ private:
     template <class T>
     inline constexpr T *GetObject(std::vector<std::unique_ptr<T>> &objects, const typename T::ID &id)
     {
-        const auto index = id.GetValue() - 1;
-
-        return MathUtil::InRange(index, {0, objects.size()})
-            ? objects[index].get()
+        return MathUtil::InRange(id.GetValue(), {0, objects.size() + 1})
+            ? objects[id.GetValue() - 1].get()
             : nullptr;
     }
 
     template <class T>
     inline T::ID AddObject(std::vector<std::unique_ptr<T>> &objects, std::unique_ptr<T> &&object)
     {
-        typename T::ID result = -1;
+        typename T::ID result{};
 
         /* Find an existing slot */
         auto it = std::find(objects.begin(), objects.end(), nullptr);

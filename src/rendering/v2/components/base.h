@@ -26,7 +26,7 @@ class BaseComponent {
     };
 
 public:
-    using ID = IdWrapper<WrappedType, int>;
+    using ID = IdWrapper<WrappedType, uint32_t>;
 
     BaseComponent() = default;
     BaseComponent(std::unique_ptr<WrappedType> &&wrapped) : m_wrapped(std::move(wrapped)) {}

@@ -53,7 +53,7 @@ Shader::ID Engine::AddShader(std::unique_ptr<Shader> &&shader)
     m_shaders.push_back(std::move(shader));
     
 
-    return Shader::ID{int(m_shaders.size())};
+    return Shader::ID{Shader::ID::InnerType_t(m_shaders.size())};
 }
 
 Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass)
@@ -64,7 +64,7 @@ Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffe
 
     m_framebuffers.push_back(std::move(framebuffer));
 
-    return Framebuffer::ID{int(m_framebuffers.size())};
+    return Framebuffer::ID{ Framebuffer::ID::InnerType_t(m_framebuffers.size())};
 }
 
 Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass_id)
@@ -91,7 +91,7 @@ RenderPass::ID Engine::AddRenderPass(std::unique_ptr<RenderPass> &&render_pass)
 
     m_render_passes.push_back(std::move(render_pass));
 
-    return RenderPass::ID{int(m_render_passes.size())};
+    return RenderPass::ID{RenderPass::ID::InnerType_t(m_render_passes.size())};
 }
 
 void Engine::AddPipeline(Pipeline::Builder &&builder, Pipeline **out)
@@ -108,7 +108,7 @@ void Engine::AddPipeline(Pipeline::Builder &&builder, Pipeline **out)
 
     builder.m_construction_info.render_pass = non_owning_ptr(render_pass->GetWrappedObject());
 
-    for (int fbo_id : builder.m_construction_info.fbo_ids) {
+    for (auto fbo_id : builder.m_construction_info.fbo_ids) {
         if (auto fbo = GetFramebuffer(Framebuffer::ID{fbo_id})) {
             builder.m_construction_info.fbos.push_back(non_owning_ptr(fbo->GetWrappedObject()));
         }
