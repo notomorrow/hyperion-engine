@@ -119,7 +119,13 @@ void Pipeline::Bind(VkCommandBuffer cmd)
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
-    vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(push_constants), &push_constants);
+    vkCmdPushConstants(
+        cmd,
+        layout,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 
+        0, sizeof(push_constants),
+        &push_constants
+    );
 }
 
 void Pipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
@@ -202,14 +208,10 @@ void Pipeline::Rebuild(DescriptorPool *descriptor_pool)
     color_blending.pAttachments = color_blend_attachments.data();
 
     /* Push constants */
-    //setup push constants
     VkPushConstantRange push_constant{};
-    //this push constant range starts at the beginning
     push_constant.offset = 0;
-    //this push constant range takes up the size of a MeshPushConstants struct
     push_constant.size = sizeof(PushConstants);
-    //this push constant range is accessible only in the vertex shader
-    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
     /* Dynamic states; these are the values that can be changed without
      * rebuilding the rendering pipeline. */

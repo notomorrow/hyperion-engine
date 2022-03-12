@@ -34,6 +34,7 @@ void main() {
     vec4 position = vec4(a_position, 1.0);
     
     v_position = position.xyz;
+    v_normal = a_normal;
     v_texcoord0 = a_texcoord0;
     
     v_light_direction = SceneData.light_direction;
