@@ -16,8 +16,6 @@ Framebuffer::~Framebuffer()
 
 void Framebuffer::Create(Engine *engine, RenderPass *render_pass)
 {
-    m_render_pass = non_owning_ptr(render_pass);
-
     auto result = m_wrapped->Create(engine->GetInstance()->GetDevice(), render_pass->GetWrappedObject());
     AssertThrowMsg(result, "%s", result);
 }

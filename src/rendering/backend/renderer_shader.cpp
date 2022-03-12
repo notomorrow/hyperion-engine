@@ -10,7 +10,7 @@
 
 namespace hyperion {
 namespace renderer {
-void Shader::AttachShader(Device *_device, const SpirvObject &spirv) {
+void ShaderProgram::AttachShader(Device *_device, const SpirvObject &spirv) {
     this->device = _device;
 
     VkShaderModuleCreateInfo create_info{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -27,7 +27,7 @@ void Shader::AttachShader(Device *_device, const SpirvObject &spirv) {
 }
 
 VkPipelineShaderStageCreateInfo
-Shader::CreateShaderStage(const ShaderModule &shader_module, const char *entry_point) {
+ShaderProgram::CreateShaderStage(const ShaderModule &shader_module, const char *entry_point) {
     VkPipelineShaderStageCreateInfo create_info{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 
     create_info.module = shader_module.shader_module;
@@ -80,7 +80,7 @@ Shader::CreateShaderStage(const ShaderModule &shader_module, const char *entry_p
     return create_info;
 }
 
-void Shader::CreateProgram(const char *entry_point) {
+void ShaderProgram::CreateProgram(const char *entry_point) {
     for (auto &shader_module : this->shader_modules) {
         auto stage = this->CreateShaderStage(shader_module, entry_point);
 
@@ -88,7 +88,7 @@ void Shader::CreateProgram(const char *entry_point) {
     }
 }
 
-void Shader::Destroy() {
+void ShaderProgram::Destroy() {
     for (auto &shader_module : this->shader_modules) {
         vkDestroyShaderModule(this->device->GetDevice(), shader_module.shader_module, nullptr);
     }

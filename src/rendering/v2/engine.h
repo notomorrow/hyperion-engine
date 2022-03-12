@@ -50,22 +50,22 @@ public:
         { return m_texture_format_defaults.Get(type); }
 
     Shader::ID AddShader(std::unique_ptr<Shader> &&shader);
-    inline Shader *GetShader(Shader::ID id)
+    HYP_FORCE_INLINE Shader *GetShader(Shader::ID id)
         { return GetObject(m_shaders, id); }
-    inline const Shader *GetShader(Shader::ID id) const
+    HYP_FORCE_INLINE const Shader *GetShader(Shader::ID id) const
         { return const_cast<Engine*>(this)->GetShader(id); }
 
     Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
     Framebuffer::ID AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass);
-    inline Framebuffer *GetFramebuffer(Framebuffer::ID id)
+    HYP_FORCE_INLINE Framebuffer *GetFramebuffer(Framebuffer::ID id)
         { return GetObject(m_framebuffers, id); }
-    inline const Framebuffer *GetFramebuffer(Framebuffer::ID id) const
+    HYP_FORCE_INLINE const Framebuffer *GetFramebuffer(Framebuffer::ID id) const
         { return const_cast<Engine*>(this)->GetFramebuffer(id); }
 
     RenderPass::ID AddRenderPass(std::unique_ptr<RenderPass> &&render_pass);
-    inline RenderPass *GetRenderPass(RenderPass::ID id)
+    HYP_FORCE_INLINE RenderPass *GetRenderPass(RenderPass::ID id)
         { return GetObject(m_render_passes, id); }
-    inline const RenderPass *GetRenderPass(RenderPass::ID id) const
+    HYP_FORCE_INLINE const RenderPass *GetRenderPass(RenderPass::ID id) const
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
@@ -74,7 +74,6 @@ public:
         { return GetObject(m_pipelines, id); }
     HYP_FORCE_INLINE const Pipeline *GetPipeline(Pipeline::ID id) const
         { return const_cast<Engine*>(this)->GetPipeline(id); }
-
 
     void Initialize();
     void PrepareSwapchain();

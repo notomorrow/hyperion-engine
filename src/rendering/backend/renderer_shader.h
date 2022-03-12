@@ -29,7 +29,7 @@ struct ShaderModule {
     }
 };
 
-class Shader {
+class ShaderProgram {
 public:
     void AttachShader(Device *device, const SpirvObject &spirv);
     //void AttachShader(Device *device, ShaderType type, const uint32_t *code, const size_t code_size);
@@ -37,7 +37,7 @@ public:
     void CreateProgram(const char *entry_point);
     void Destroy();
 
-    ::std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
 
     inline HashCode GetHashCode() const
     {
@@ -51,7 +51,7 @@ public:
     }
 
 private:
-    ::std::vector<ShaderModule> shader_modules;
+    std::vector<ShaderModule> shader_modules;
     Device *device = nullptr;
 };
 

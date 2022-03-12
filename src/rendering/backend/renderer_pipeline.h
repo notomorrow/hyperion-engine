@@ -26,7 +26,7 @@ class Pipeline {
 public:
     struct ConstructionInfo {
         MeshInputAttributeSet vertex_attributes;
-        non_owning_ptr<Shader> shader;
+        non_owning_ptr<ShaderProgram> shader;
         uint32_t shader_id;
         non_owning_ptr<RenderPass> render_pass;
         uint32_t render_pass_id;

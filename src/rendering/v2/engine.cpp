@@ -117,11 +117,7 @@ Pipeline::ID Engine::AddPipeline(renderer::Pipeline::Builder &&builder)
         }
     }
 
-    //auto add_pipeline_result = m_instance->AddPipeline(std::move(builder), out);
-    //AssertThrowMsg(add_pipeline_result, "%s", add_pipeline_result.message);
-
     /* Cache pipeline objects */
-
     HashCode::Value_t hash_code = builder.GetHashCode().Value();
 
     auto it = std::find_if(m_pipelines.begin(), m_pipelines.end(), [hash_code](const auto &pl) {
@@ -142,7 +138,6 @@ Pipeline::ID Engine::AddPipeline(renderer::Pipeline::Builder &&builder)
 
     return Pipeline::ID{ Pipeline::ID::InnerType_t(m_pipelines.size())};
 }
-
 
 void Engine::InitializeInstance()
 {

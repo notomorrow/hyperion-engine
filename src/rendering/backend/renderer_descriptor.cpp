@@ -73,6 +73,8 @@ void Descriptor::Update(Device *device, size_t size, void *ptr)
     m_info.gpu_buffer->Copy(device, size, ptr);
 
     m_state = State::DESCRIPTOR_DIRTY;
+    AssertThrow(m_descriptor_set != nullptr);
+    m_descriptor_set->m_state = State::DESCRIPTOR_DIRTY;
 }
 
 

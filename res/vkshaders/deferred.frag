@@ -12,6 +12,8 @@ layout(set = 1, binding = 0) uniform sampler2D gbuffer_albedo_ping;
 layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals_ping;
 layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions_ping;
 
+layout(set = 2, binding = 0) uniform sampler2D filter_0;
+
 void main() {
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
@@ -25,5 +27,5 @@ void main() {
     
     float NdotL = dot(normal.xyz, v_light_direction);
 
-    color_output = vec4(1.0, 0.0, 0.0, 1.0);//vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
+    color_output = texture(filter_0, texcoord) * vec4(1.0, 0.0, 0.0, 1.0);//vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
 }

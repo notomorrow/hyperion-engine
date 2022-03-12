@@ -77,17 +77,18 @@ Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
         "Failed to reset command buffer"
     );
 
+    VkCommandBufferInheritanceInfo inheritance_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+    inheritance_info.renderPass = render_pass->GetRenderPass();
+    inheritance_info.subpass = 0;
+    inheritance_info.framebuffer = VK_NULL_HANDLE;
+
     VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
 
     if (m_type == COMMAND_BUFFER_SECONDARY) {
         AssertThrowMsg(render_pass != nullptr, "Render pass not provided for secondary command buffer!");
 
-        VkCommandBufferInheritanceInfo inheritance_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
-        inheritance_info.renderPass = render_pass->GetRenderPass();
-        inheritance_info.subpass = 0;
-        inheritance_info.framebuffer = VK_NULL_HANDLE;
-
         begin_info.pInheritanceInfo = &inheritance_info;
+
         /* todo: make another flag */
         begin_info.flags |= VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     }

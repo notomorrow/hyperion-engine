@@ -60,6 +60,15 @@ void Instance::BeginFrame(Frame *frame)
 
     this->WaitImageReady(frame);
 
+    /* Update descriptors */
+    for (int i = 0; i < this->descriptor_pool.m_num_descriptor_sets; i++) {
+        auto *descriptor_set = this->descriptor_pool.GetDescriptorSet(DescriptorSet::Index(i));
+
+        if (descriptor_set->GetState() & Descriptor::DESCRIPTOR_DIRTY) {
+            descriptor_set->Update(this->device);
+        }
+    }
+
     frame->BeginCapture();
 }
 

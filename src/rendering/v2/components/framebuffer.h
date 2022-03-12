@@ -19,14 +19,8 @@ public:
     Framebuffer &operator=(const Framebuffer &) = delete;
     ~Framebuffer();
 
-    inline RenderPass *GetRenderPass() { return m_render_pass.get(); }
-    inline const RenderPass *GetRenderPass() const { return m_render_pass.get(); }
-
     void Create(Engine *engine, RenderPass *render_pass);
     void Destroy(Engine *engine);
-
-private:
-    non_owning_ptr<RenderPass> m_render_pass;
 };
 
 } // namespace hyperion::v2
