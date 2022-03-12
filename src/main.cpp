@@ -568,7 +568,7 @@ int main()
 
     SystemEvent event;
 
-    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/monkey/monkey.obj");
+    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/cube.obj");
     auto monkey_mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
     auto cube_mesh = MeshFactory::CreateCube();
     auto full_screen_quad = MeshFactory::CreateQuad();
