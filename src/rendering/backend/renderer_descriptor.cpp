@@ -33,11 +33,16 @@ void Descriptor::Create(Device *device, Descriptor::Info *out_info)
         break;
     case Mode::IMAGE:
         AssertThrow(m_info.image_view != nullptr);
-        AssertThrow(m_info.sampler != nullptr);
-
-        m_info.image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         m_info.image_info.imageView = m_info.image_view->GetImageView();
-        m_info.image_info.sampler = m_info.sampler->GetSampler();
+        
+        if (m_info.storage_mode == StorageMode::STORAGE) {
+            m_info.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        } else { /* image sampler */
+            AssertThrow(m_info.sampler != nullptr);
+
+            m_info.image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            m_info.image_info.sampler = m_info.sampler->GetSampler();
+        }
 
         break;
     }

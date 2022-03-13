@@ -31,7 +31,8 @@ public:
         TEXTURE_FORMAT_DEFAULT_NONE    = 0,
         TEXTURE_FORMAT_DEFAULT_COLOR   = 1,
         TEXTURE_FORMAT_DEFAULT_DEPTH   = 2,
-        TEXTURE_FORMAT_DEFAULT_GBUFFER = 4
+        TEXTURE_FORMAT_DEFAULT_GBUFFER = 4,
+        TEXTURE_FORMAT_DEFAULT_STORAGE = 8
     };
 
     Engine(SystemSDL &, const char *app_name);
@@ -119,7 +120,7 @@ private:
         objects[id] = {};
     }
 
-    EnumOptions<TextureFormatDefault, Texture::TextureInternalFormat, 4> m_texture_format_defaults;
+    EnumOptions<TextureFormatDefault, Texture::TextureInternalFormat, 5> m_texture_format_defaults;
 
     FilterStack m_filter_stack;
 
