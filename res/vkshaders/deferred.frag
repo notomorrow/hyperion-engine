@@ -14,7 +14,10 @@ layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions_ping;
 
 layout(set = 2, binding = 0) uniform sampler2D filter_0;
 
-void main() {
+layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
+
+void main()
+{
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
     vec4 albedo;
@@ -28,10 +31,12 @@ void main() {
     float NdotL = dot(normal.xyz, v_light_direction);
     
     vec4 t0 = texture(filter_0, texcoord);
-    vec4 t1 = texture(filter_0, texcoord + vec2(0.001, 0.001));
-    vec4 t2 = texture(filter_0, texcoord + vec2(0.001, -0.01));
-    vec4 t3 = texture(filter_0, texcoord + vec2(-0.001, -0.001));
-    vec4 t4 = texture(filter_0, texcoord + vec2(-0.001, 0.001));
+    vec4 t1 = texture(filter_0, texcoord + vec2(0.002, 0.002));
+    vec4 t2 = texture(filter_0, texcoord + vec2(0.002, -0.02));
+    vec4 t3 = texture(filter_0, texcoord + vec2(-0.002, -0.002));
+    vec4 t4 = texture(filter_0, texcoord + vec2(-0.002, 0.002));
+    
+    imageStore(image_storage_test, ivec2(0, 0), vec4(1.0, 0.0, 0.0, 1.0));
 
     color_output = (t0 + t1 + t2 + t3 + t4) / 5.0;//vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
 }

@@ -75,12 +75,12 @@ Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
 
     /* Graphics computations and presentation are done on separate hardware */
     QueueFamilyIndices qf_indices = device->FindQueueFamilies();
+    const uint32_t families[] = { qf_indices.graphics_family.value(), qf_indices.present_family.value() };
 
     if (qf_indices.graphics_family != qf_indices.present_family) {
         DebugLog(LogType::Debug, "Swapchain sharing mode set to Concurrent\n");
         create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        create_info.queueFamilyIndexCount = 2; /* Two family indices(one for each process) */
-        const uint32_t families[] = { qf_indices.graphics_family.value(), qf_indices.present_family.value() };
+        create_info.queueFamilyIndexCount = std::size(families); /* Two family indices(one for each process) */
         create_info.pQueueFamilyIndices = families;
     } else {
         /* Computations and presentation are done on same hardware(most scenarios) */

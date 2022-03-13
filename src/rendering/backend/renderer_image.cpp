@@ -10,6 +10,69 @@
 
 namespace hyperion {
 namespace renderer {
+
+const Image::LayoutState Image::LayoutState::undefined = {
+    .layout = VK_IMAGE_LAYOUT_UNDEFINED,
+    .access_mask = 0,
+    .stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+};
+
+const Image::LayoutState Image::LayoutState::general = {
+    .layout = VK_IMAGE_LAYOUT_GENERAL,
+    .access_mask = 0,
+    .stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+        | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+        | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR
+};
+
+const Image::LayoutState Image::LayoutState::transfer_src = {
+    .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    .access_mask = VK_ACCESS_TRANSFER_READ_BIT,
+    .stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
+};
+
+const Image::LayoutState Image::LayoutState::transfer_dst = {
+    .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
+    .stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
+};
+
+Result Image::TransferLayout(VkCommandBuffer cmd, const Image *image, const LayoutTransferStateBase &transfer_state)
+{
+    VkImageMemoryBarrier barrier{};
+
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = transfer_state.src.layout;
+    barrier.newLayout = transfer_state.dst.layout;
+    barrier.image = image->GetGPUImage()->image;
+    
+    VkImageSubresourceRange range{
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = uint32_t(image->GetNumMipmaps()), /* all mip levels will be in `transfer_from.new_layout` in the case that we are doing an image data transfer */
+        .baseArrayLayer = 0,
+        .layerCount = uint32_t(image->GetNumFaces())
+    };
+
+    barrier.subresourceRange = range;
+    barrier.srcAccessMask = transfer_state.src.access_mask;
+    barrier.dstAccessMask = transfer_state.dst.access_mask;
+
+    // barrier the image into the transfer-receive layout
+    vkCmdPipelineBarrier(
+        cmd,
+        transfer_state.src.stage_mask,
+        transfer_state.dst.stage_mask,
+        0,
+        0, nullptr,
+        0, nullptr,
+        1,
+        &barrier
+    );
+
+    HYPERION_RETURN_OK;
+}
+
 Image::Image(size_t width, size_t height, size_t depth,
     Texture::TextureInternalFormat format,
     Texture::TextureType type,
@@ -107,7 +170,9 @@ Result Image::CreateImage(Device *device,
         for (auto &fix : potential_fixes) {
             DebugLog(LogType::Debug, "Attempting fix: '%s' ...\n", fix.first);
 
-            fix.second();
+            auto fix_result = fix.second();
+
+            AssertContinueMsg(fix_result, "Image fix function returned an invalid result: %s\n", fix_result.message);
 
             // try checking format support result again
             if ((format_support_result = device->GetFeatures().GetImageFormatProperties(
@@ -152,19 +217,39 @@ Result Image::CreateImage(Device *device,
     HYPERION_RETURN_OK;
 }
 
-Result Image::Create(Device *device, VkImageLayout layout)
+Result Image::Create(Device *device)
 {
     VkImageCreateInfo image_info;
 
-    return CreateImage(device, layout, &image_info);
+    return CreateImage(device, VK_IMAGE_LAYOUT_UNDEFINED, &image_info);
 }
 
 Result Image::Create(Device *device, Instance *renderer,
-    LayoutTransferStateBase transfer_from,
-    LayoutTransferStateBase transfer_to)
+    LayoutTransferStateBase transfer_state)
 {
     VkImageCreateInfo image_info;
-    HYPERION_BUBBLE_ERRORS(CreateImage(device, transfer_from.src.layout, &image_info));
+
+    HYPERION_BUBBLE_ERRORS(CreateImage(device, transfer_state.src.layout, &image_info));
+
+    auto commands = renderer->GetSingleTimeCommands();
+
+    commands.Push([this, &transfer_state](VkCommandBuffer cmd) {
+        return TransferLayout(cmd, this, transfer_state);
+    });
+
+    // execute command stack
+    HYPERION_BUBBLE_ERRORS(commands.Execute(device));
+
+    HYPERION_RETURN_OK;
+}
+
+Result Image::Create(Device *device, Instance *renderer,
+    LayoutTransferStateBase transfer_state_pre,
+    LayoutTransferStateBase transfer_state_post)
+{
+    VkImageCreateInfo image_info;
+
+    HYPERION_BUBBLE_ERRORS(CreateImage(device, transfer_state_pre.src.layout, &image_info));
 
     m_staging_buffer = new StagingBuffer();
     m_staging_buffer->Create(device, m_size);
@@ -178,11 +263,11 @@ Result Image::Create(Device *device, Instance *renderer,
                              release_barrier{};
 
         acquire_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        acquire_barrier.oldLayout = transfer_from.src.layout;
-        acquire_barrier.newLayout = transfer_from.dst.layout;
+        acquire_barrier.oldLayout = transfer_state_pre.src.layout;
+        acquire_barrier.newLayout = transfer_state_pre.dst.layout;
         acquire_barrier.image = m_image->image;
 
-        commands.Push([this, &image_info, &acquire_barrier, &transfer_from](VkCommandBuffer cmd) {
+        commands.Push([this, &image_info, &acquire_barrier, &transfer_state_pre](VkCommandBuffer cmd) {
             VkImageSubresourceRange range{};
             range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             range.baseMipLevel = 0;
@@ -191,14 +276,14 @@ Result Image::Create(Device *device, Instance *renderer,
             range.layerCount = GetNumFaces();
 
             acquire_barrier.subresourceRange = range;
-            acquire_barrier.srcAccessMask = transfer_from.src.access_mask;
-            acquire_barrier.dstAccessMask = transfer_from.dst.access_mask;
+            acquire_barrier.srcAccessMask = transfer_state_pre.src.access_mask;
+            acquire_barrier.dstAccessMask = transfer_state_pre.dst.access_mask;
 
             // barrier the image into the transfer-receive layout
             vkCmdPipelineBarrier(
                 cmd,
-                transfer_from.src.stage_mask,
-                transfer_from.dst.stage_mask,
+                transfer_state_pre.src.stage_mask,
+                transfer_state_pre.dst.stage_mask,
                 0,
                 0, nullptr,
                 0, nullptr,
@@ -215,7 +300,7 @@ Result Image::Create(Device *device, Instance *renderer,
 
         for (int i = 0; i < num_faces; i++) {
 
-            commands.Push([this, &image_info, &transfer_from, i, buffer_offset_step](VkCommandBuffer cmd) {
+            commands.Push([this, &image_info, &transfer_state_pre, i, buffer_offset_step](VkCommandBuffer cmd) {
                 VkBufferImageCopy region{};
                 region.bufferOffset = i * buffer_offset_step;
                 region.bufferRowLength = 0;
@@ -231,7 +316,7 @@ Result Image::Create(Device *device, Instance *renderer,
                     cmd,
                     m_staging_buffer->buffer,
                     m_image->image,
-                    transfer_from.dst.layout,
+                    transfer_state_pre.dst.layout,
                     1,
                     &region
                 );
@@ -249,9 +334,9 @@ Result Image::Create(Device *device, Instance *renderer,
             /* Generate our mipmaps. We'll need to be doing it here as we need
                the layout to be `transfer_from.new_layout`
             */
-            commands.Push([this, &transfer_from, &transfer_to](VkCommandBuffer cmd) {
+            commands.Push([this, &transfer_state_pre, &transfer_state_post](VkCommandBuffer cmd) {
                 LayoutTransferStateBase intermediate{
-                    .src = transfer_from.dst, /* Use the output from the previous command as an input */
+                    .src = transfer_state_pre.dst, /* Use the output from the previous command as an input */
                     .dst = {
                         .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                         .access_mask = VK_ACCESS_TRANSFER_READ_BIT,
@@ -300,7 +385,7 @@ Result Image::Create(Device *device, Instance *renderer,
                          * Use the output from this intermediate step as an input
                          * into the next stage
                          */
-                        transfer_to.src = intermediate.dst;
+                        transfer_state_post.src = intermediate.dst;
 
                         break;
                     }
@@ -349,19 +434,19 @@ Result Image::Create(Device *device, Instance *renderer,
         }
 
         // transition from the previous layout state into a shader read-only state
-        commands.Push([this, &acquire_barrier, &release_barrier, &transfer_to](VkCommandBuffer cmd) {
+        commands.Push([this, &acquire_barrier, &release_barrier, &transfer_state_post](VkCommandBuffer cmd) {
             release_barrier = acquire_barrier;
 
-            release_barrier.oldLayout = transfer_to.src.layout;
-            release_barrier.newLayout = transfer_to.dst.layout;
-            release_barrier.srcAccessMask = transfer_to.src.access_mask;
-            release_barrier.dstAccessMask = transfer_to.dst.access_mask;
+            release_barrier.oldLayout = transfer_state_post.src.layout;
+            release_barrier.newLayout = transfer_state_post.dst.layout;
+            release_barrier.srcAccessMask = transfer_state_post.src.access_mask;
+            release_barrier.dstAccessMask = transfer_state_post.dst.access_mask;
 
             //barrier the image into the shader readable layout
             vkCmdPipelineBarrier(
                 cmd,
-                transfer_to.src.stage_mask,
-                transfer_to.dst.stage_mask,
+                transfer_state_post.src.stage_mask,
+                transfer_state_post.dst.stage_mask,
                 0,
                 0, nullptr,
                 0, nullptr,

@@ -180,6 +180,16 @@ void Engine::FindTextureFormatDefaults()
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )
     );
+
+    m_texture_format_defaults.Set(
+        TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_STORAGE,
+        device->GetFeatures().FindSupportedFormat(
+            std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                        Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT
+        )
+    );
 }
 
 void Engine::PrepareSwapchain()
