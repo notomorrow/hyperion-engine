@@ -62,7 +62,8 @@ Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
     for (auto &image_info : m_fbo_attachments) {
         if (image_info.image != nullptr && image_info.image_needs_creation) {
 
-            HYPERION_BUBBLE_ERRORS(image_info.image->Create(device, VK_IMAGE_LAYOUT_UNDEFINED));
+            /* Create the image in gpu memory -- no texture data is copied */
+            HYPERION_BUBBLE_ERRORS(image_info.image->Create(device));
         }
         if (image_info.image_view != nullptr && image_info.image_view_needs_creation) {
             AssertThrowMsg(image_info.image != nullptr, "If image_view is to be created, image needs to be valid.");

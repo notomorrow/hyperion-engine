@@ -31,6 +31,8 @@
 #include "rendering/backend/renderer_fbo.h"
 #include "rendering/backend/renderer_render_pass.h"
 
+#include <rendering/v2/engine.h>
+
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
 #include "terrain/terrain_shader.h"
@@ -550,11 +552,10 @@ public:
     }
 };
 
-#include <rendering/v2/engine.h>
-
 
 #define HYPERION_VK_TEST_CUBEMAP 1
 #define HYPERION_VK_TEST_MIPMAP 0
+#define HYPERION_VK_TEST_IMAGE_STORE 1
 
 int main()
 {
@@ -568,7 +569,7 @@ int main()
 
     SystemEvent event;
 
-    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/cube.obj");
+    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/monkey/monkey.obj");
     auto monkey_mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
     auto cube_mesh = MeshFactory::CreateCube();
     auto full_screen_quad = MeshFactory::CreateQuad();
@@ -649,6 +650,20 @@ int main()
     );
 #endif
 
+#if HYPERION_VK_TEST_IMAGE_STORE
+    renderer::Image *image_storage = new renderer::StorageImage(
+        512,
+        512,
+        1,
+        Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+        Texture::TEXTURE_TYPE_2D,
+        nullptr
+    );
+
+    ImageView image_storage_view(VK_IMAGE_ASPECT_COLOR_BIT);
+#endif
+
+
     engine.Initialize();
 
     v2::RenderPass::ID render_pass_id{};
@@ -673,6 +688,7 @@ int main()
         });
 
 
+
         render_pass_id = engine.AddRenderPass(std::move(render_pass));
     }
 
@@ -690,6 +706,11 @@ int main()
 
         descriptor_set_globals
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+
+#if HYPERION_VK_TEST_IMAGE_STORE
+        descriptor_set_globals
+            ->AddDescriptor(std::make_unique<ImageStorageDescriptor>(3, non_owning_ptr(&image_storage_view), VK_SHADER_STAGE_FRAGMENT_BIT));
+#endif
     }
 
     {
@@ -736,20 +757,32 @@ int main()
     Device *device = engine.GetInstance()->GetDevice();
 
     /* Initialize descriptor pool, has to be before any pipelines are created */
+    {
+        auto image_create_result = image->Create(
+            device,
+            engine.GetInstance(),
+            Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
+            Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
+        );
+        AssertThrowMsg(image_create_result, "%s", image_create_result.message);
 
-    auto image_create_result = image->Create(
-        device,
-        engine.GetInstance(),
-        Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
-        Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
-    );
-    AssertThrowMsg(image_create_result, "%s", image_create_result.message);
+        auto image_view_result = test_image_view.Create(device, image);
+        AssertThrowMsg(image_view_result, "%s", image_view_result.message);
 
-    auto image_view_result = test_image_view.Create(device, image);
-    AssertThrowMsg(image_view_result, "%s", image_view_result.message);
+        auto sampler_result = test_sampler.Create(device, &test_image_view);
+        AssertThrowMsg(sampler_result, "%s", sampler_result.message);
+    }
+    {
+        auto image_create_result = image_storage->Create(
+            device,
+            engine.GetInstance(),
+            Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL>{}
+        );
+        AssertThrowMsg(image_create_result, "%s", image_create_result.message);
 
-    auto sampler_result = test_sampler.Create(device, &test_image_view);
-    AssertThrowMsg(sampler_result, "%s", sampler_result.message);
+        auto image_view_result = image_storage_view.Create(device, image_storage);
+        AssertThrowMsg(image_view_result, "%s", image_view_result.message);
+    }
 
     matrices_descriptor_buffer.Create(device, sizeof(MatricesBlock));
     scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
@@ -768,7 +801,7 @@ int main()
     }
 
 
-    Pipeline::Builder scene_pass_pipeline_builder;
+    GraphicsPipeline::Builder scene_pass_pipeline_builder;
 
     scene_pass_pipeline_builder
         .Shader<v2::Shader>(mirror_shader_id)

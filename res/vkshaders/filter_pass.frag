@@ -15,6 +15,7 @@ layout(location=0) out vec4 color_output;
 //layout(binding = 2) uniform sampler2D tex;
 layout(set = 1, binding = 0) uniform sampler2D tex;
 
-void main() {
-    color_output = vec4(texture(tex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y)).rgb, 1.0);
+void main()
+{
+    color_output = vec4(texture(tex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y)).rgb * vec3(0.0, 0.0, 1.0), 1.0);
 }

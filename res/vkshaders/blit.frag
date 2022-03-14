@@ -20,6 +20,7 @@ layout(set = 1, binding = 3) uniform sampler2D gbuffer_depth_texture;
 layout(set = 2, binding = 0) uniform sampler2D filter_0;
 layout(set = 2, binding = 1) uniform sampler2D filter_1;
 
+layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
 
 //push constants block
 layout( push_constant ) uniform constants
@@ -33,14 +34,7 @@ void main() {
 
     vec4 albedo = vec4(0.0);
 
-    // TODO: #define for max # of frames
-    //if (PushConstants.current_frame_index == 0) {
-    //    albedo = (texture(gbuffer_albedo_0, texcoord) + texture(gbuffer_albedo_1, texcoord)) * 0.5;
-    //} else if (PushConstants.current_frame_index == 1) {
-    //    albedo = texture(gbuffer_normals_1, texcoord);
-    //} else if (PushConstants.current_frame_index == 2) {
-    //    albedo = texture(gbuffer_normals_2, texcoord);
-    //}
-
-    out_color = texture(filter_1, texcoord);
+    /* render last filter in the stack */
+    out_color = imageLoad(image_storage_test, ivec2(0, 0));
+    //out_color = texture(filter_1, texcoord);
 }

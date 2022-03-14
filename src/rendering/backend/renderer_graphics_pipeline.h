@@ -22,7 +22,7 @@
 namespace hyperion {
 namespace renderer {
 class FramebufferObject;
-class Pipeline {
+class GraphicsPipeline {
 public:
     struct ConstructionInfo {
         MeshInputAttributeSet vertex_attributes;
@@ -68,7 +68,7 @@ public:
         Builder()
         {
             Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-            CullMode(Pipeline::ConstructionInfo::CullMode::BACK);
+            CullMode(ConstructionInfo::CullMode::BACK);
             DepthTest(true);
             DepthWrite(true);
         }
@@ -92,7 +92,7 @@ public:
             return *this;
         }
 
-        Builder &CullMode(Pipeline::ConstructionInfo::CullMode cull_mode)
+        Builder &CullMode(ConstructionInfo::CullMode cull_mode)
         {
             m_construction_info.cull_mode = cull_mode;
 
@@ -137,11 +137,11 @@ public:
             return *this;
         }
 
-        std::unique_ptr<Pipeline> Build()
+        std::unique_ptr<GraphicsPipeline> Build()
         {
             AssertThrow(!m_construction_info.fbos.empty());
 
-            return std::make_unique<Pipeline>(std::move(m_construction_info));
+            return std::make_unique<GraphicsPipeline>(std::move(m_construction_info));
         }
 
         inline HashCode GetHashCode() const
@@ -152,8 +152,7 @@ public:
         ConstructionInfo m_construction_info;
     };
 
-    Pipeline(ConstructionInfo &&construction_info);
-    void Destroy(Device *device);
+    GraphicsPipeline(ConstructionInfo &&construction_info);
 
     std::vector<VkDynamicState> GetDynamicStates();
     void SetDynamicStates(const std::vector<VkDynamicState> &_states);
@@ -163,17 +162,19 @@ public:
     void SetScissor(int x, int y, uint32_t width, uint32_t height);
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
 
-    inline void Build(Device *device, DescriptorPool *descriptor_pool)
+    inline Result Create(Device *device, DescriptorPool *descriptor_pool)
     {
-        Rebuild(device, descriptor_pool);
+        return Rebuild(device, descriptor_pool);
     }
 
-    inline void Build(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
+    inline Result Create(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
     {
         m_construction_info = std::move(construction_info);
 
-        Build(device, descriptor_pool);
+        return Create(device, descriptor_pool);
     }
+
+    Result Destroy(Device *device);
 
     void BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubpassContents contents);
     void EndRenderPass(VkCommandBuffer cmd, size_t index);
@@ -190,7 +191,7 @@ public:
     } push_constants;
 
 private:
-    void Rebuild(Device *device, DescriptorPool *descriptor_pool);
+    Result Rebuild(Device *device, DescriptorPool *descriptor_pool);
 
     std::vector<VkDynamicState> dynamic_states;
 

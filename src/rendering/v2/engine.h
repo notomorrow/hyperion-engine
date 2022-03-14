@@ -2,8 +2,8 @@
 #define HYPERION_V2_ENGINE_H
 
 #include "components/shader.h"
-#include "components/framebuffer.h"
 #include "components/filter_stack.h"
+#include "components/framebuffer.h"
 #include <rendering/backend/renderer_command_buffer.h>
 #include "components/pipeline.h"
 
@@ -14,6 +14,9 @@
 namespace hyperion::v2 {
 
 using renderer::Instance;
+using renderer::Device;
+
+class Engine;
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
@@ -39,7 +42,8 @@ public:
         TEXTURE_FORMAT_DEFAULT_NONE    = 0,
         TEXTURE_FORMAT_DEFAULT_COLOR   = 1,
         TEXTURE_FORMAT_DEFAULT_DEPTH   = 2,
-        TEXTURE_FORMAT_DEFAULT_GBUFFER = 4
+        TEXTURE_FORMAT_DEFAULT_GBUFFER = 4,
+        TEXTURE_FORMAT_DEFAULT_STORAGE = 8
     };
 
     Engine(SystemSDL &, const char *app_name);
@@ -77,7 +81,7 @@ public:
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
-    Pipeline::ID AddPipeline(renderer::Pipeline::Builder &&builder);
+    Pipeline::ID AddPipeline(renderer::GraphicsPipeline::Builder &&builder);
     HYP_FORCE_INLINE Pipeline *GetPipeline(Pipeline::ID id)
         { return GetObject(m_pipelines, id); } [[nodiscard]]
     HYP_FORCE_INLINE const Pipeline *GetPipeline(Pipeline::ID id) const
@@ -120,7 +124,7 @@ private:
         objects[id] = {};
     }
 
-    EnumOptions<TextureFormatDefault, Texture::TextureInternalFormat, 4> m_texture_format_defaults;
+    EnumOptions<TextureFormatDefault, Texture::TextureInternalFormat, 5> m_texture_format_defaults;
 
     FilterStack m_filter_stack;
 

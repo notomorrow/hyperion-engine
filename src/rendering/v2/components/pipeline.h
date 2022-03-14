@@ -2,23 +2,15 @@
 #define HYPERION_V2_PIPELINE_H
 
 #include "base.h"
+#include "simple_wrapped.h"
 
-#include <rendering/backend/renderer_pipeline.h>
+#include <rendering/backend/renderer_graphics_pipeline.h>
 
 #include <memory>
 
 namespace hyperion::v2 {
 
-class Pipeline : public BaseComponent<renderer::Pipeline> {
-public:
-    explicit Pipeline(renderer::Pipeline::ConstructionInfo &&construction_info);
-    Pipeline(const Pipeline &) = delete;
-    Pipeline &operator=(const Pipeline &) = delete;
-    ~Pipeline();
-
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
-};
+using Pipeline = SimpleWrapped<renderer::GraphicsPipeline>;
 
 } // namespace hyperion::v2
 

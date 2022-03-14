@@ -30,6 +30,8 @@ using renderer::CommandBuffer;
 using renderer::PerFrameData;
 using renderer::MeshInputAttributeSet;
 
+class Engine;
+
 class Filter {
 public:
     static const MeshInputAttributeSet vertex_attributes;
