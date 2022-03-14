@@ -16,6 +16,8 @@ class Image {
 public:
     struct LayoutTransferStateBase;
 
+    static Result TransferLayout(VkCommandBuffer cmd, const Image *image, const LayoutTransferStateBase &transfer_state);
+
     struct InternalInfo {
         VkImageTiling tiling;
         VkImageUsageFlags usage_flags;
@@ -32,10 +34,25 @@ public:
     Image &operator=(const Image &other) = delete;
     ~Image();
 
-    Result Create(Device *device, VkImageLayout layout);
+    /*
+     * Create the image. No texture data will be copied.
+     */
+    Result Create(Device *device);
+    /*
+     * Create the image and set it into the given state.
+     * No texture data will be copied.
+     */
     Result Create(Device *device, Instance *renderer,
-        LayoutTransferStateBase transfer_from,
-        LayoutTransferStateBase transfer_to);
+        LayoutTransferStateBase transfer_state);
+    /* Create the image and transfer the provided texture data into it.
+     * /Two/ transfer states should be given, as the image will have to be
+     * set to a state primed for transfer of data into it, then it will
+     * need to  be taken from that state into it's final state.
+     */
+    Result Create(Device *device, Instance *renderer,
+        LayoutTransferStateBase transfer_state_pre,
+        LayoutTransferStateBase transfer_state_post);
+
     Result Destroy(Device *device);
 
     inline bool IsDepthStencilImage() const
@@ -71,6 +88,11 @@ public:
         VkImageLayout layout;
         VkAccessFlags access_mask;
         VkPipelineStageFlags stage_mask;
+
+        static const LayoutState undefined,
+                                 general,
+                                 transfer_src,
+                                 transfer_dst;
     };
 
     struct LayoutTransferStateBase {
@@ -91,16 +113,8 @@ public:
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     > : public LayoutTransferStateBase {
         LayoutTransferState() : LayoutTransferStateBase{
-            .src = {
-                .layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .access_mask = VK_IMAGE_LAYOUT_UNDEFINED,
-                .stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
-            },
-            .dst = {
-                .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                .access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
-                .stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
-            }
+            .src = LayoutState::undefined,
+            .dst = LayoutState::transfer_dst
         } {}
     };
 
@@ -110,11 +124,7 @@ public:
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
     > : public LayoutTransferStateBase {
         LayoutTransferState() : LayoutTransferStateBase{
-            .src = {
-                .layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .access_mask = VK_IMAGE_LAYOUT_UNDEFINED,
-                .stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
-            },
+            .src = LayoutState::undefined,
             .dst = {
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                 .access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
@@ -125,15 +135,44 @@ public:
 
     template<>
     struct LayoutTransferState<
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_GENERAL
+    > : public LayoutTransferStateBase {
+        LayoutTransferState() : LayoutTransferStateBase{
+            .src = LayoutState::undefined,
+            .dst = LayoutState::general
+        } {}
+    };
+
+    template<>
+    struct LayoutTransferState<
+        VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+    > : public LayoutTransferStateBase {
+        LayoutTransferState() : LayoutTransferStateBase{
+            .src = LayoutState::general,
+            .dst = LayoutState::transfer_src
+        } {}
+    };
+
+    template<>
+    struct LayoutTransferState<
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VK_IMAGE_LAYOUT_GENERAL
+    > : public LayoutTransferStateBase {
+        LayoutTransferState() : LayoutTransferStateBase{
+            .src = LayoutState::transfer_src,
+            .dst = LayoutState::general
+        } {}
+    };
+
+    template<>
+    struct LayoutTransferState<
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    >: public LayoutTransferStateBase {
+    > : public LayoutTransferStateBase {
         LayoutTransferState() : LayoutTransferStateBase{
-            .src = {
-                .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                .access_mask = VK_ACCESS_TRANSFER_WRITE_BIT,
-                .stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
-            },
+            .src = LayoutState::transfer_dst,
             .dst = {
                 .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 .access_mask = VK_ACCESS_SHADER_READ_BIT,
@@ -167,6 +206,28 @@ private:
     size_t m_bpp; // bytes per pixel
     StagingBuffer *m_staging_buffer;
     GPUImage *m_image;
+};
+
+class StorageImage : public Image {
+public:
+    StorageImage(
+        size_t width, size_t height, size_t depth,
+        Texture::TextureInternalFormat format,
+        Texture::TextureType type,
+        unsigned char *bytes
+    ) : Image(
+        width,
+        height,
+        depth,
+        format,
+        type,
+        Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
+        Image::InternalInfo{
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage_flags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+        },
+        bytes
+    ) {}
 };
 
 class TextureImage : public Image {

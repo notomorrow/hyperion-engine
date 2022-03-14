@@ -25,8 +25,15 @@ public:
         IMAGE
     };
 
+    enum class StorageMode {
+        UNSET,
+        READ_ONLY,
+        STORAGE
+    };
+
     struct BufferInfo {
         Mode mode;
+        StorageMode storage_mode;
 
         VkDescriptorBufferInfo buffer_info;
         non_owning_ptr<GPUBuffer> gpu_buffer;
@@ -37,6 +44,7 @@ public:
 
         BufferInfo()
             : mode(Mode::UNSET),
+              storage_mode(StorageMode::UNSET),
               buffer_info{},
               gpu_buffer(nullptr),
               image_info{},
@@ -44,8 +52,9 @@ public:
               sampler(nullptr)
         {}
 
-        explicit BufferInfo(non_owning_ptr<GPUBuffer> gpu_buffer)
+        explicit BufferInfo(non_owning_ptr<GPUBuffer> gpu_buffer, StorageMode storage_mode)
             : mode(Mode::BUFFER),
+              storage_mode(storage_mode),
               buffer_info{},
               gpu_buffer(gpu_buffer),
               image_info{},
@@ -53,8 +62,19 @@ public:
               sampler(nullptr)
         {}
 
-        explicit BufferInfo(non_owning_ptr<ImageView> image_view, non_owning_ptr<Sampler> sampler)
+        explicit BufferInfo(non_owning_ptr<ImageView> image_view, StorageMode storage_mode)
             : mode(Mode::IMAGE),
+              storage_mode(storage_mode),
+              buffer_info{},
+              gpu_buffer(nullptr),
+              image_info{},
+              image_view(image_view),
+              sampler(nullptr)
+        {}
+
+        explicit BufferInfo(non_owning_ptr<ImageView> image_view, non_owning_ptr<Sampler> sampler, StorageMode storage_mode)
+            : mode(Mode::IMAGE),
+              storage_mode(storage_mode),
               buffer_info{},
               gpu_buffer(nullptr),
               image_info{},
@@ -64,6 +84,7 @@ public:
 
         BufferInfo(const BufferInfo &other)
             : mode(other.mode),
+              storage_mode(other.storage_mode),
               buffer_info(other.buffer_info),
               gpu_buffer(other.gpu_buffer),
               image_info(other.image_info),
@@ -74,6 +95,7 @@ public:
         BufferInfo &operator=(const BufferInfo &other)
         {
             mode = other.mode;
+            storage_mode = other.storage_mode;
             buffer_info = other.buffer_info;
             gpu_buffer = other.gpu_buffer;
             image_info = other.image_info;
@@ -138,15 +160,9 @@ public:
         VkShaderStageFlags stage_flags)
         : Descriptor(
             binding,
-            BufferInfo(gpu_buffer),
+            BufferInfo(gpu_buffer, StorageMode::READ_ONLY),
             type,
-            stage_flags
-        )
-    {}
-
-    BufferDescriptor(const BufferDescriptor &other) = delete;
-    BufferDescriptor &operator=(const BufferDescriptor &other) = delete;
-    ~BufferDescriptor() = default;
+            stage_flags) {}
 };
 
 class ImageSamplerDescriptor : public Descriptor {
@@ -157,12 +173,21 @@ public:
         VkShaderStageFlags stage_flags)
         : Descriptor(
             binding,
-            BufferInfo(image_view, sampler),
+            BufferInfo(image_view, sampler, StorageMode::READ_ONLY),
             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             stage_flags) {}
-    ImageSamplerDescriptor(const ImageSamplerDescriptor &other) = delete;
-    ImageSamplerDescriptor &operator=(const ImageSamplerDescriptor &other) = delete;
-    ~ImageSamplerDescriptor() = default;
+};
+
+class ImageStorageDescriptor : public Descriptor {
+public:
+    ImageStorageDescriptor(uint32_t binding,
+        non_owning_ptr<ImageView> image_view,
+        VkShaderStageFlags stage_flags)
+        : Descriptor(
+            binding,
+            BufferInfo(image_view, StorageMode::STORAGE),
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            stage_flags) {}
 };
 
 } // namespace renderer

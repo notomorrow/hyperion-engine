@@ -2,6 +2,7 @@
 #define HYPERION_V2_COMPUTE_SHADER_H
 
 #include "shader.h"
+#include "pipeline.h"
 
 #include <memory>
 
@@ -19,6 +20,9 @@ public:
     void Create(Engine *engine);
     void Destroy(Engine *engine);
     void Dispatch(Engine *engine);
+
+private:
+    Pipeline::ID m_pipeline_id;
 };
 
 } // namespace hyperion::v2

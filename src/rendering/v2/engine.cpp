@@ -3,6 +3,8 @@
 #include <asset/byte_reader.h>
 #include <asset/asset_manager.h>
 
+#include "components/filter.h"
+
 #include <rendering/backend/renderer_helpers.h>
 
 #include "rendering/mesh.h"
@@ -59,11 +61,14 @@ Shader::ID Engine::AddShader(std::unique_ptr<Shader> &&shader)
     return Shader::ID{Shader::ID::InnerType_t(m_shaders.size())};
 }
 
-Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass)
+Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass_id)
 {
     AssertThrow(framebuffer != nullptr);
+
+    RenderPass *render_pass = GetRenderPass(render_pass_id);
+    AssertThrow(render_pass != nullptr);
     
-    framebuffer->Create(this, GetRenderPass(render_pass));
+    framebuffer->Create(this, render_pass->GetWrappedObject());
 
     m_framebuffers.push_back(std::move(framebuffer));
 
@@ -73,7 +78,6 @@ Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffe
 Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass_id)
 {
     RenderPass *render_pass = GetRenderPass(render_pass_id);
-
     AssertThrow(render_pass != nullptr);
 
     auto framebuffer = std::make_unique<Framebuffer>(width, height);
@@ -97,7 +101,7 @@ RenderPass::ID Engine::AddRenderPass(std::unique_ptr<RenderPass> &&render_pass)
     return RenderPass::ID{RenderPass::ID::InnerType_t(m_render_passes.size())};
 }
 
-Pipeline::ID Engine::AddPipeline(renderer::Pipeline::Builder &&builder)
+Pipeline::ID Engine::AddPipeline(renderer::GraphicsPipeline::Builder &&builder)
 {
     auto *shader = GetShader(Shader::ID{builder.m_construction_info.shader_id});
 
@@ -180,6 +184,16 @@ void Engine::FindTextureFormatDefaults()
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )
     );
+
+    m_texture_format_defaults.Set(
+        TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_STORAGE,
+        device->GetFeatures().FindSupportedFormat(
+            std::array{ Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                        Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT
+        )
+    );
 }
 
 void Engine::PrepareSwapchain()
@@ -222,7 +236,7 @@ void Engine::PrepareSwapchain()
     
     RenderPass::ID render_pass_id = AddRenderPass(std::move(render_pass));
 
-    renderer::Pipeline::Builder builder;
+    renderer::GraphicsPipeline::Builder builder;
 
     builder
         .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
@@ -269,7 +283,7 @@ void Engine::PrepareSwapchain()
 void Engine::BuildPipelines()
 {
     for (auto &pipeline : m_pipelines) {
-        pipeline->Create(this);
+        pipeline->Create(this, &m_instance->GetDescriptorPool());
     }
 }
 

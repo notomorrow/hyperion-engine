@@ -17,14 +17,14 @@ Framebuffer::~Framebuffer()
 void Framebuffer::Create(Engine *engine, RenderPass *render_pass)
 {
     auto result = m_wrapped->Create(engine->GetInstance()->GetDevice(), render_pass->GetWrappedObject());
-    AssertThrowMsg(result, "%s", result.message);
+    AssertThrowMsg(result, "%s", result);
 }
 
 void Framebuffer::Destroy(Engine *engine)
 {
     auto result = m_wrapped->Destroy(engine->GetInstance()->GetDevice());
     m_wrapped.reset();
-    AssertThrowMsg(result, "%s", result.message);
+    AssertThrowMsg(result, "%s", result);
 }
 
 } // namespace hyperion::v2

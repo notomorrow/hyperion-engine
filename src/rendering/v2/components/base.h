@@ -4,7 +4,6 @@
 #include <rendering/backend/renderer_instance.h>
 
 #include <memory>
-#include <initializer_list>
 
 namespace hyperion::v2 {
 
@@ -29,9 +28,22 @@ public:
     using ID = IdWrapper<WrappedType, uint32_t>;
 
     BaseComponent() = default;
+
+    template <class ...Args>
+    BaseComponent(Args &&... args) : m_wrapped(std::make_unique<WrappedType>(std::move(args)...)) {}
+
     BaseComponent(std::unique_ptr<WrappedType> &&wrapped) : m_wrapped(std::move(wrapped)) {}
     BaseComponent(const BaseComponent &other) = delete;
     BaseComponent &operator=(const BaseComponent &other) = delete;
+    BaseComponent(BaseComponent &&other) : m_wrapped(std::move(other.m_wrapped)) {}
+
+    BaseComponent &operator=(BaseComponent &&other)
+    {
+        m_wrapped = std::move(other.m_wrapped);
+
+        return *this;
+    }
+
     ~BaseComponent()
     {
         AssertThrowMsg(

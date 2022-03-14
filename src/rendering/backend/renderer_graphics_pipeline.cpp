@@ -2,7 +2,7 @@
 // Created by emd22 on 2022-02-20.
 //
 
-#include "renderer_pipeline.h"
+#include "renderer_graphics_pipeline.h"
 #include "renderer_render_pass.h"
 #include "renderer_fbo.h"
 
@@ -14,7 +14,7 @@
 
 namespace hyperion {
 namespace renderer {
-Pipeline::Pipeline(ConstructionInfo &&construction_info)
+GraphicsPipeline::GraphicsPipeline(ConstructionInfo &&construction_info)
     : m_construction_info(std::move(construction_info))
 {
     AssertExit(m_construction_info.shader != nullptr);
@@ -35,7 +35,7 @@ Pipeline::Pipeline(ConstructionInfo &&construction_info)
     DebugLog(LogType::Debug, "Create Pipeline [%d]\n", x++);
 }
 
-void Pipeline::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) {
+void GraphicsPipeline::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) {
     VkViewport *vp = &this->viewport;
     vp->x = x;
     vp->y = y;
@@ -45,25 +45,25 @@ void Pipeline::SetViewport(float x, float y, float width, float height, float mi
     vp->maxDepth = max_depth;
 }
 
-void Pipeline::SetScissor(int x, int y, uint32_t width, uint32_t height) {
+void GraphicsPipeline::SetScissor(int x, int y, uint32_t width, uint32_t height) {
     this->scissor.offset = { x, y };
     this->scissor.extent = { width, height };
 }
 
-void Pipeline::SetDynamicStates(const std::vector<VkDynamicState> &_states) {
+void GraphicsPipeline::SetDynamicStates(const std::vector<VkDynamicState> &_states) {
     this->dynamic_states = _states;
 }
 
-std::vector<VkDynamicState> Pipeline::GetDynamicStates() {
+std::vector<VkDynamicState> GraphicsPipeline::GetDynamicStates() {
     return this->dynamic_states;
 }
 
-void Pipeline::UpdateDynamicStates(VkCommandBuffer cmd) {
+void GraphicsPipeline::UpdateDynamicStates(VkCommandBuffer cmd) {
     vkCmdSetViewport(cmd, 0, 1, &this->viewport);
     vkCmdSetScissor(cmd, 0, 1, &this->scissor);
 }
 
-std::vector<VkVertexInputAttributeDescription> Pipeline::BuildVertexAttributes(const MeshInputAttributeSet &attribute_set)
+std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttributes(const MeshInputAttributeSet &attribute_set)
 {
     std::unordered_map<uint32_t, size_t> binding_sizes{};
 
@@ -97,7 +97,7 @@ std::vector<VkVertexInputAttributeDescription> Pipeline::BuildVertexAttributes(c
     return this->vertex_attributes;
 }
 
-void Pipeline::BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubpassContents contents) {
+void GraphicsPipeline::BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubpassContents contents) {
 
     m_construction_info.render_pass->Begin(
         cmd,
@@ -107,11 +107,11 @@ void Pipeline::BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubpassConte
     );
 }
 
-void Pipeline::EndRenderPass(VkCommandBuffer cmd, size_t index) {
+void GraphicsPipeline::EndRenderPass(VkCommandBuffer cmd, size_t index) {
     m_construction_info.render_pass->End(cmd);
 }
 
-void Pipeline::Bind(VkCommandBuffer cmd)
+void GraphicsPipeline::Bind(VkCommandBuffer cmd)
 {
     this->UpdateDynamicStates(cmd);
 
@@ -126,14 +126,14 @@ void Pipeline::Bind(VkCommandBuffer cmd)
     );
 }
 
-void Pipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
+void GraphicsPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
     std::vector<VkVertexInputAttributeDescription> &attribs)
 {
     this->vertex_binding_descriptions = binding_descs;
     this->vertex_attributes = attribs;
 }
 
-void Pipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool)
+Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool)
 {
     this->BuildVertexAttributes(m_construction_info.vertex_attributes);
 
@@ -227,10 +227,10 @@ void Pipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool)
     layout_info.pushConstantRangeCount = 1;
     layout_info.pPushConstantRanges = &push_constant;
 
-    if (vkCreatePipelineLayout(device->GetDevice(), &layout_info, nullptr, &this->layout) != VK_SUCCESS) {
-        DebugLog(LogType::Error, "Error creating pipeline layout!\n");
-        throw std::runtime_error("Error creating pipeline layout");
-    }
+    HYPERION_VK_CHECK_MSG(
+        vkCreatePipelineLayout(device->GetDevice(), &layout_info, nullptr, &this->layout),
+        "Failed to create graphics pipeline layout",
+    );
 
     /* Depth / stencil */
     VkPipelineDepthStencilStateCreateInfo depth_stencil{};
@@ -268,15 +268,15 @@ void Pipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool)
     pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex = -1;
 
-    if (vkCreateGraphicsPipelines(device->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr,
-        &this->pipeline) != VK_SUCCESS) {
-        DebugLog(LogType::Error, "Could not create graphics pipeline!\n");
-        throw std::runtime_error("Could not create pipeline");
-    }
-    DebugLog(LogType::Info, "Created graphics pipeline!\n");
+    HYPERION_VK_CHECK_MSG(
+        vkCreateGraphicsPipelines(device->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &this->pipeline),
+        "Failed to create graphics pipeline"
+    );
+
+    HYPERION_RETURN_OK;
 }
 
-void Pipeline::Destroy(Device *device)
+Result GraphicsPipeline::Destroy(Device *device)
 {
     VkDevice render_device = device->GetDevice();
 
@@ -286,6 +286,8 @@ void Pipeline::Destroy(Device *device)
 
     vkDestroyPipeline(render_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(render_device, this->layout, nullptr);
+
+    HYPERION_RETURN_OK;
 }
 
 } // namespace renderer

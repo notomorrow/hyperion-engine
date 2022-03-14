@@ -1,5 +1,6 @@
 #include "filter_stack.h"
 #include "../engine.h"
+#include "filter.h"
 
 #include <asset/byte_reader.h>
 #include <asset/asset_manager.h>
