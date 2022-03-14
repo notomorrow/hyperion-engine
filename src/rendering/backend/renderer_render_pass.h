@@ -13,7 +13,7 @@ namespace renderer {
 
 class RenderPass {
     friend class FramebufferObject;
-    friend class Pipeline;
+    friend class GraphicsPipeline;
 public:
     struct AttachmentInfo {
         std::unique_ptr<AttachmentBase> attachment;
