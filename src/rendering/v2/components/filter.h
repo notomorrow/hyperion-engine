@@ -57,7 +57,7 @@ public:
     void Render(Engine *engine, Frame *frame, uint32_t frame_index);
     void Record(Engine *engine, uint32_t frame_index);
 
-private:
+//private:
     std::unique_ptr<PerFrameData<CommandBuffer>> m_frame_data;
     Framebuffer::ID m_framebuffer_id;
     Shader::ID m_shader_id;

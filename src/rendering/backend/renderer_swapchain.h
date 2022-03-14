@@ -42,6 +42,9 @@ public:
     std::vector<VkImage> images;
 
 private:
+    inline uint32_t GetMinImageCount() const { return this->support_details.capabilities.minImageCount; }
+    inline uint32_t GetMaxImageCount() const { return this->support_details.capabilities.maxImageCount; }
+
     SwapchainSupportDetails support_details;
 };
 

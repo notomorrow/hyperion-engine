@@ -38,12 +38,18 @@ Result FrameHandler::AcquireNextImage(Device *device, Swapchain *swapchain, VkRe
 {
     auto *frame = m_per_frame_data[m_frame_index].GetFrame();
 
-    HYPERION_VK_CHECK(*out_result = vkWaitForFences(device->GetDevice(), 1, &frame->fc_queue_submit, true, UINT64_MAX));
+    VkResult fence_result;
+    do {
+        fence_result = vkWaitForFences(device->GetDevice(), 1, &frame->fc_queue_submit, VK_TRUE, UINT64_MAX);
+    } while (fence_result == VK_TIMEOUT);
+
+    //(*out_result = vkWaitForFences(device->GetDevice(), 1, &frame->fc_queue_submit, true, UINT64_MAX));
+
     HYPERION_VK_CHECK(*out_result = vkResetFences(device->GetDevice(), 1, &frame->fc_queue_submit));
 
     HYPERION_VK_CHECK(*out_result = m_next_image(device, swapchain, frame, &m_frame_index));
 
-    HYPERION_VK_CHECK(*out_result = vkResetCommandBuffer(frame->command_buffer, 0));
+    //HYPERION_VK_CHECK(*out_result = vkResetCommandBuffer(frame->command_buffer, 0));
 
     HYPERION_RETURN_OK;
 }

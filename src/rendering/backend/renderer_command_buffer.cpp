@@ -72,17 +72,13 @@ Result CommandBuffer::Destroy(Device *device, VkCommandPool command_pool)
 
 Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
 {
-    HYPERION_VK_CHECK_MSG(
-        vkResetCommandBuffer(m_command_buffer, 0),
-        "Failed to reset command buffer"
-    );
-
     VkCommandBufferInheritanceInfo inheritance_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
     inheritance_info.renderPass = render_pass->GetRenderPass();
     inheritance_info.subpass = 0;
     inheritance_info.framebuffer = VK_NULL_HANDLE;
 
     VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     if (m_type == COMMAND_BUFFER_SECONDARY) {
         AssertThrowMsg(render_pass != nullptr, "Render pass not provided for secondary command buffer!");
@@ -113,10 +109,10 @@ Result CommandBuffer::End(Device *device)
 
 Result CommandBuffer::Reset(Device *device)
 {
-    HYPERION_VK_CHECK_MSG(
+    /*HYPERION_VK_CHECK_MSG(
         vkResetCommandBuffer(m_command_buffer, 0),
         "Failed to reset command buffer"
-    );
+    );*/
 
     HYPERION_RETURN_OK;
 }
