@@ -24,7 +24,7 @@ public:
     void Destroy(Engine *engine);
     void Render(Engine *engine, Frame *frame, uint32_t frame_index);
 
-private:
+//private:
     std::vector<std::unique_ptr<Filter>> m_filters;
 };
 

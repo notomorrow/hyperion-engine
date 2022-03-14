@@ -858,25 +858,21 @@ int main()
 
         v2::Pipeline *fbo_pl = engine.GetPipeline(scene_pass_pipeline_id);
 
-
-
         // waiting for tmp fence
 
         //vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc, true, UINT64_MAX);
-       // vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc);
-
+        //vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc);
 
         frame = engine.GetInstance()->GetNextFrame();
 
+        engine.GetInstance()->WaitImageReady(frame);
 
-
-
+        const size_t frame_index = engine.GetInstance()->GetFrameHandler()->GetFrameIndex();
 
         engine.GetInstance()->BeginFrame(frame);
         
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
-
 
         /* forward / albedo layer */
         fbo_pl->GetWrappedObject()->BeginRenderPass(frame->command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
@@ -884,15 +880,12 @@ int main()
         engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, fbo_pl->GetWrappedObject()->layout, 0, 1);
         monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
         fbo_pl->GetWrappedObject()->EndRenderPass(frame->command_buffer, 0);
-        
 
-        const size_t frame_index = engine.GetInstance()->GetFrameHandler()->GetFrameIndex();
+
         engine.RenderPostProcessing(frame, frame_index);
-
         /* secondary cmd buffer */
         engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->BeginRenderPass(frame->command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-        per_frame_data[frame_index].GetCommandBuffer()->Reset(engine.GetInstance()->GetDevice());
         per_frame_data[frame_index].GetCommandBuffer()->Record(
             engine.GetInstance()->GetDevice(),
             engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->GetConstructionInfo().render_pass.get(),

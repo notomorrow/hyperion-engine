@@ -26,14 +26,6 @@
 
 #define VK_RENDERER_API_VERSION VK_API_VERSION_1_2
 
-/* Max frames/sync objects to have available to render to. This prevents the graphics
- * pipeline from stalling when waiting for device upload/download.
- * It's possible a device will return 0 for maxImageCount which indicates
- * there is no limit. So we cap it ourselves.
- */
-
-#define NUM_MAX_PENDING_FRAMES uint32_t(8)
-
 namespace hyperion {
 namespace renderer {
 

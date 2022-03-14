@@ -36,6 +36,7 @@ public:
     /* Sync objects for each frame */
     VkSemaphore sp_swap_acquire;
     VkSemaphore sp_swap_release;
+
     VkFence     fc_queue_submit;
 
     non_owning_ptr<Device> creation_device;

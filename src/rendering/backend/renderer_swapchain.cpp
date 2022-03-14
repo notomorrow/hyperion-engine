@@ -41,6 +41,7 @@ void Swapchain::RetrieveImageHandles(Device *device)
      * in the future for more complex applications. */
     vkGetSwapchainImagesKHR(device->GetDevice(), this->swapchain, &image_count, nullptr);
     DebugLog(LogType::Warn, "image count %d\n", image_count);
+
     this->images.resize(image_count);
     vkGetSwapchainImagesKHR(device->GetDevice(), this->swapchain, &image_count, this->images.data());
     DebugLog(LogType::Info, "Retrieved Swapchain images\n");
@@ -49,6 +50,7 @@ void Swapchain::RetrieveImageHandles(Device *device)
 void Swapchain::RetrieveSupportDetails(Device *device)
 {
     this->support_details = device->QuerySwapchainSupport();
+
 }
 
 
@@ -61,12 +63,17 @@ Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
     this->extent = this->ChooseSwapchainExtent();
     this->image_format = this->surface_format.format;
 
-    uint32_t image_count = this->support_details.capabilities.minImageCount + 1; // is this +1 going to cause problems?
-    DebugLog(LogType::Debug, "Min images required: %d\n", this->support_details.capabilities.minImageCount);
+    const uint32_t selected_image_count = (GetMaxImageCount() != 0)
+        ? std::min(GetMaxImageCount(), GetMinImageCount())
+        : GetMinImageCount();
+
+    DebugLog(LogType::Debug, "Min images count: %d\n", GetMinImageCount());
+    DebugLog(LogType::Debug, "Max images count: %d\n", GetMaxImageCount());
+    DebugLog(LogType::Debug, "Selected images count: %d\n", selected_image_count);
 
     VkSwapchainCreateInfoKHR create_info{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
     create_info.surface = surface;
-    create_info.minImageCount = image_count;
+    create_info.minImageCount = selected_image_count;
     create_info.imageFormat = surface_format.format;
     create_info.imageColorSpace = surface_format.colorSpace;
     create_info.imageExtent = extent;
@@ -94,8 +101,8 @@ Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
     /* This can be used to blend with other windows in the windowing system, but we
      * simply leave it opaque.*/
     create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    create_info.presentMode = present_mode;
-    create_info.clipped = VK_TRUE;
+    create_info.presentMode  = present_mode;
+    create_info.clipped      = VK_TRUE;
     create_info.oldSwapchain = VK_NULL_HANDLE;
 
     HYPERION_VK_CHECK_MSG(

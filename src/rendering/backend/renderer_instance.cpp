@@ -39,11 +39,12 @@ void Queue::GetQueueFromDevice(Device device, uint32_t queue_family_index,
 
 void Instance::WaitImageReady(Frame *frame)
 {
-    VkResult new_image_result;
-    this->frame_handler->AcquireNextImage(device, this->swapchain, &new_image_result);
+    VkResult vk_result;
+    auto next_image_result = this->frame_handler->AcquireNextImage(device, this->swapchain, &vk_result);
+    AssertThrowMsg(next_image_result, "%s", next_image_result.message);
 
-    if (new_image_result == VK_SUBOPTIMAL_KHR || new_image_result == VK_ERROR_OUT_OF_DATE_KHR) {
-        DebugLog(LogType::Debug, "Waiting -- image result was %d\n", new_image_result);
+    if (vk_result == VK_SUBOPTIMAL_KHR || vk_result == VK_ERROR_OUT_OF_DATE_KHR) {
+        DebugLog(LogType::Debug, "Waiting -- image result was %d\n", vk_result);
         vkDeviceWaitIdle(this->device->GetDevice());
         /* TODO: regenerate framebuffers and swapchain */
     }
@@ -57,8 +58,6 @@ void Instance::WaitDeviceIdle()
 void Instance::BeginFrame(Frame *frame)
 {
     /* Assume `frame` is not nullptr */
-
-    this->WaitImageReady(frame);
 
     /* Update descriptors */
     for (int i = 0; i < this->descriptor_pool.m_num_descriptor_sets; i++) {
@@ -100,6 +99,8 @@ void Instance::PresentFrame(Frame *frame, const std::vector<VkSemaphore> &semaph
     present_info.pResults = nullptr;
     
     vkQueuePresentKHR(this->queue_present, &present_info);
+
+    vkQueueWaitIdle(this->queue_graphics);
 }
 
 Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers)
@@ -325,6 +326,7 @@ Result Instance::Initialize(bool load_debug_layers) {
 
     /* Set up our frame handler - this class lets us abstract
      * away a little bit of the double/triple buffering stuff */
+    DebugLog(LogType::RenDebug, "Num swapchain images: %d\n", this->swapchain->GetNumImages());
     this->frame_handler = new FrameHandler(this->swapchain->GetNumImages(), HandleNextFrame);
 
     /* Create our synchronization objects */

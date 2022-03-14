@@ -135,7 +135,8 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
     auto *command_buffer = m_frame_data->GetFrame(frame_index).GetCommandBuffer();
     Pipeline *pipeline = engine->GetPipeline(m_pipeline_id);
 
-    HYPERION_PASS_ERRORS(command_buffer->Reset(engine->GetInstance()->GetDevice()), result);
+    //vkDeviceWaitIdle(engine->GetInstance()->GetDevice()->GetDevice());
+    //HYPERION_PASS_ERRORS(command_buffer->Reset(engine->GetInstance()->GetDevice()), result);
 
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
