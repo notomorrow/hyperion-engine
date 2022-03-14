@@ -1,17 +1,18 @@
 #ifndef HYPERION_V2_FILTER_STACK_H
 #define HYPERION_V2_FILTER_STACK_H
 
-#include "render_pass.h"
-#include "framebuffer.h"
-#include "shader.h"
 #include "filter.h"
 
 #include <rendering/mesh.h>
-#include <rendering/backend/renderer_frame_handler.h>
+#include <rendering/backend/renderer_frame.h>
 
 #include <memory>
 
 namespace hyperion::v2 {
+
+using renderer::Frame;
+
+class Engine;
 
 class FilterStack {
 public:

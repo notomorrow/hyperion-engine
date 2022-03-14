@@ -2,8 +2,8 @@
 #define HYPERION_V2_ENGINE_H
 
 #include "components/shader.h"
-#include "components/framebuffer.h"
 #include "components/filter_stack.h"
+#include "components/framebuffer.h"
 #include <rendering/backend/renderer_command_buffer.h>
 #include "components/pipeline.h"
 
@@ -14,6 +14,9 @@
 namespace hyperion::v2 {
 
 using renderer::Instance;
+using renderer::Device;
+
+class Engine;
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
@@ -70,7 +73,7 @@ public:
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
-    Pipeline::ID AddPipeline(renderer::Pipeline::Builder &&builder);
+    Pipeline::ID AddPipeline(renderer::GraphicsPipeline::Builder &&builder);
     HYP_FORCE_INLINE Pipeline *GetPipeline(Pipeline::ID id)
         { return GetObject(m_pipelines, id); }
     HYP_FORCE_INLINE const Pipeline *GetPipeline(Pipeline::ID id) const

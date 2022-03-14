@@ -91,7 +91,7 @@ void Filter::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 
 void Filter::CreatePipeline(Engine *engine)
 {
-    renderer::Pipeline::Builder builder;
+    renderer::GraphicsPipeline::Builder builder;
 
     builder
         .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */

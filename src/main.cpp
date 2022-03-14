@@ -31,6 +31,8 @@
 #include "rendering/backend/renderer_fbo.h"
 #include "rendering/backend/renderer_render_pass.h"
 
+#include <rendering/v2/engine.h>
+
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
 #include "terrain/terrain_shader.h"
@@ -550,8 +552,6 @@ public:
     }
 };
 
-#include <rendering/v2/engine.h>
-
 
 #define HYPERION_VK_TEST_CUBEMAP 1
 #define HYPERION_VK_TEST_MIPMAP 0
@@ -801,7 +801,7 @@ int main()
     }
 
 
-    Pipeline::Builder scene_pass_pipeline_builder;
+    GraphicsPipeline::Builder scene_pass_pipeline_builder;
 
     scene_pass_pipeline_builder
         .Shader<v2::Shader>(mirror_shader_id)

@@ -1,5 +1,5 @@
 #include "renderer_image.h"
-#include "renderer_pipeline.h"
+#include "renderer_graphics_pipeline.h"
 #include "renderer_instance.h"
 #include <util/img/image_util.h>
 #include <system/debug.h>
