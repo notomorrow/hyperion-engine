@@ -5,8 +5,7 @@
 #include "simple_wrapped.h"
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
-
-#include <memory>
+#include <rendering/backend/renderer_compute_pipeline.h>
 
 namespace hyperion::v2 {
 

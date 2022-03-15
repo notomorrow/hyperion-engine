@@ -59,7 +59,7 @@ public:
     template <typename T>
     static inline T Random(const T &a, const T &b)
     {
-        T random = ((T)rand()) / (T)RAND_MAX;
+        T random = T(rand()) / T(RAND_MAX);
         T diff = b - a;
         T r = random * diff;
         return a + r;
@@ -67,15 +67,11 @@ public:
 
     template <typename T>
     static inline constexpr T RadToDeg(const T &rad)
-    {
-        return rad * (T)180 / (T)PI;
-    }
+        { return rad * T(180) / T(PI); }
 
     template <typename T>
     static inline constexpr T DegToRad(const T &deg)
-    {
-        return deg * (T)PI / (T)180;
-    }
+        { return deg * T(PI) / T(180); }
 
     template <typename T>
     static inline constexpr T Clamp(const T &val, const T &min, const T &max)
@@ -91,25 +87,15 @@ public:
 
     template <typename T>
     static inline constexpr T Lerp(const T &from, const T &to, const T &amt)
-    {
-        return from + amt * (to - from);
-    }
+        { return from + amt * (to - from); }
 
     template <typename T>
-    static inline T Fract(const T &f)
-    {
-        return f - floorf(f);
-    }
+    static inline T Fract(T f)
+        { return f - floorf(f); }
 
     template <typename T>
     static inline constexpr T Min(const T &a, const T &b)
-    {
-        if (a < b) {
-            return a;
-        } else {
-            return b;
-        }
-    }
+        { return (a < b) ? a : b; }
 
     template <typename T>
     static inline constexpr T Max(T a, T b)
@@ -123,13 +109,13 @@ public:
     static inline constexpr T Sign(const T &value)
         { return (T(0) < value) - (value < T(0)); }
 
-    template <typename T>
+    template <typename T, typename ReturnType = int>
     static inline int Floor(T a)
-        { return std::floor(a); }
+        { return ReturnType(std::floor(a)); }
 
-    template <typename T>
+    template <typename T, typename ReturnType = int>
     static inline int Ceil(T a)
-        { return std::ceil(a); }
+        { return ReturnType(std::ceil(a)); }
 
     template <typename T>
     static inline T Exp(T a)
@@ -167,7 +153,7 @@ public:
         value |= value >> 16;
         value |= value >> 32;
 
-        return tab64[((uint64_t)((value - (value >> 1)) * 0x07EDD5E59A4E28C2)) >> 58];
+        return tab64[(((static_cast<uint64_t>(value) - (value >> 1)) * 0x07EDD5E59A4E28C2)) >> 58];
     }
 
     // https://www.techiedelight.com/round-next-highest-power-2/

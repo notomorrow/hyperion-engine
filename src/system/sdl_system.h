@@ -182,7 +182,7 @@ class SystemSDL {
 public:
     SystemSDL();
 
-    static SystemWindow *CreateWindow(const char *title, int width, int height);
+    static SystemWindow *CreateSystemWindow(const char *title, int width, int height);
 
     static int PollEvent(SystemEvent *result);
     static uint64_t GetTicks();

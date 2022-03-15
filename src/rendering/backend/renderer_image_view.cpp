@@ -38,9 +38,9 @@ Result ImageView::Create(Device *device,
 
     view_info.subresourceRange.aspectMask = m_aspect_mask;
     view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.levelCount = num_mipmaps;
+    view_info.subresourceRange.levelCount = uint32_t(num_mipmaps);
     view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = num_faces;
+    view_info.subresourceRange.layerCount = uint32_t(num_faces);
 
     HYPERION_VK_CHECK_MSG(vkCreateImageView(device->GetDevice(), &view_info, nullptr, &m_image_view), "Failed to create image view");
 

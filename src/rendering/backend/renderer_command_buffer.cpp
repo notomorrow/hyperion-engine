@@ -5,25 +5,17 @@ namespace renderer {
 
 CommandBuffer::CommandBuffer(Type type)
     : m_type(type),
-      m_command_buffer(nullptr),
-      m_signal(nullptr)
+      m_command_buffer(nullptr)
 {
 }
 
 CommandBuffer::~CommandBuffer()
 {
     AssertThrowMsg(m_command_buffer == nullptr, "command buffer should have been destroyed");
-    AssertThrowMsg(m_signal == nullptr, "signal should have been destroyed");
 }
 
 Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
 {
-    VkSemaphoreCreateInfo semaphore_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-    HYPERION_VK_CHECK_MSG(
-        vkCreateSemaphore(device->GetDevice(), &semaphore_info, nullptr, &m_signal),
-        "Failed to create semaphore"
-    );
-
     VkCommandBufferLevel level;
 
     switch (m_type) {
@@ -36,14 +28,6 @@ Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
     default:
         AssertThrowMsg(0, "Unsupported command buffer type");
     }
-
-    /*VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    HYPERION_VK_CHECK_MSG(
-        vkCreateFence(device->GetDevice(), &fence_info, nullptr, &m_fence),
-        "Failed to create fence"
-    );*/
 
     VkCommandBufferAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -61,19 +45,17 @@ Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
 
 Result CommandBuffer::Destroy(Device *device, VkCommandPool command_pool)
 {
-    vkDestroySemaphore(device->GetDevice(), m_signal, nullptr);
-    m_signal = nullptr;
+    auto result = Result::OK;
 
     vkFreeCommandBuffers(device->GetDevice(), command_pool, 1, &m_command_buffer);
     m_command_buffer = nullptr;
 
-    HYPERION_RETURN_OK;
+    return result;
 }
 
 Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
 {
     VkCommandBufferInheritanceInfo inheritance_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
-    inheritance_info.renderPass = render_pass->GetRenderPass();
     inheritance_info.subpass = 0;
     inheritance_info.framebuffer = VK_NULL_HANDLE;
 
@@ -82,6 +64,7 @@ Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
 
     if (m_type == COMMAND_BUFFER_SECONDARY) {
         AssertThrowMsg(render_pass != nullptr, "Render pass not provided for secondary command buffer!");
+        inheritance_info.renderPass = render_pass->GetRenderPass();
 
         begin_info.pInheritanceInfo = &inheritance_info;
 
@@ -117,21 +100,14 @@ Result CommandBuffer::Reset(Device *device)
     HYPERION_RETURN_OK;
 }
 
-
-Result CommandBuffer::SubmitSecondary(VkCommandBuffer primary,
+Result CommandBuffer::SubmitSecondary(CommandBuffer *primary,
     const std::vector<std::unique_ptr<CommandBuffer>> &command_buffers)
 {
-    AssertThrow(command_buffers.size() < 16);
-
-    VkCommandBuffer *command_buffers_raw = (VkCommandBuffer *)alloca(sizeof(VkCommandBuffer) * command_buffers.size());
-
-    for (uint8_t i = 0; i < command_buffers.size(); i++) {
-        command_buffers_raw[i] = command_buffers[i]->GetCommandBuffer();
+    for (auto &command_buffer : command_buffers) {
+        vkCmdExecuteCommands(primary->GetCommandBuffer(), 1, &command_buffer->GetCommandBuffer());
     }
 
-    return SubmitSecondary(primary,
-        command_buffers_raw,
-        command_buffers.size());
+    HYPERION_RETURN_OK;
 }
 
 Result CommandBuffer::SubmitSecondary(VkCommandBuffer primary,
@@ -143,110 +119,24 @@ Result CommandBuffer::SubmitSecondary(VkCommandBuffer primary,
     HYPERION_RETURN_OK;
 }
 
-Result CommandBuffer::SubmitPrimary(VkQueue queue,
-    const std::vector<std::unique_ptr<CommandBuffer>> &command_buffers,
-    VkFence fence,
-    VkSemaphore *wait_semaphores,
-    size_t num_wait_semaphores)
-{
-    AssertThrow(command_buffers.size() < 16);
-
-    VkCommandBuffer *command_buffers_raw = (VkCommandBuffer *)alloca(sizeof(VkCommandBuffer) * command_buffers.size());
-    VkSemaphore *signal_semaphores = (VkSemaphore *)alloca(sizeof(VkSemaphore) * command_buffers.size());
-
-    for (uint8_t i = 0; i < command_buffers.size(); i++) {
-        command_buffers_raw[i] = command_buffers[i]->GetCommandBuffer();
-        signal_semaphores[i] = command_buffers[i]->GetSemaphore();
-    }
-
-    return SubmitPrimary(queue,
-        command_buffers_raw,
-        command_buffers.size(),
-        fence,
-        wait_semaphores, num_wait_semaphores,
-        signal_semaphores, command_buffers.size());
-}
-
-Result CommandBuffer::SubmitPrimary(VkQueue queue,
-    const std::vector<std::unique_ptr<CommandBuffer>> &command_buffers,
-    VkFence fence,
-    VkSemaphore *wait_semaphores,
-    size_t num_wait_semaphores,
-    VkSemaphore *signal_semaphores,
-    size_t num_signal_semaphores)
-{
-    AssertThrow(command_buffers.size() < 16);
-
-    VkCommandBuffer *command_buffers_raw = (VkCommandBuffer*)alloca(sizeof(VkCommandBuffer) * command_buffers.size());
-
-    for (uint8_t i = 0; i < command_buffers.size(); i++) {
-        command_buffers_raw[i] = command_buffers[i]->GetCommandBuffer();
-    }
-
-    return SubmitPrimary(queue,
-        command_buffers_raw, 
-        command_buffers.size(),
-        fence,
-        wait_semaphores, num_wait_semaphores,
-        signal_semaphores, num_signal_semaphores);
-}
-
-Result CommandBuffer::SubmitPrimary(VkQueue queue,
-    VkCommandBuffer *command_buffers,
-    size_t num_command_buffers,
-    VkFence fence,
-    VkSemaphore *wait_semaphores,
-    size_t num_wait_semaphores,
-    VkSemaphore *signal_semaphores,
-    size_t num_signal_semaphores)
+Result CommandBuffer::SubmitPrimary(VkQueue queue, VkFence fence, SemaphoreChain *semaphore_chain)
 {
     VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
 
-    std::vector<VkPipelineStageFlags> wait_stages;
-
-    if (num_wait_semaphores != 0) {
-        wait_stages.resize(num_wait_semaphores);
-
-        for (int i = 0; i < num_wait_semaphores; i++) {
-            wait_stages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // TODO: take in parameter
-        }
+    if (semaphore_chain != nullptr) {
+        submit_info.waitSemaphoreCount = uint32_t(semaphore_chain->m_wait_semaphores_view.size());
+        submit_info.pWaitSemaphores = semaphore_chain->m_wait_semaphores_view.data();
+        submit_info.signalSemaphoreCount = uint32_t(semaphore_chain->m_signal_semaphores_view.size());
+        submit_info.pSignalSemaphores = semaphore_chain->m_signal_semaphores_view.data();
+        submit_info.pWaitDstStageMask = semaphore_chain->m_wait_semaphores_stage_view.data();
+    } else {
+        submit_info.waitSemaphoreCount = uint32_t(0);
+        submit_info.pWaitSemaphores = nullptr;
+        submit_info.signalSemaphoreCount = uint32_t(0);
+        submit_info.pSignalSemaphores = nullptr;
+        submit_info.pWaitDstStageMask = nullptr;
     }
 
-    submit_info.waitSemaphoreCount = num_wait_semaphores;
-    submit_info.pWaitSemaphores = wait_semaphores;
-    submit_info.signalSemaphoreCount = num_signal_semaphores;
-    submit_info.pSignalSemaphores = signal_semaphores;
-    submit_info.pWaitDstStageMask = wait_stages.data();
-    submit_info.commandBufferCount = num_command_buffers;
-    submit_info.pCommandBuffers = command_buffers;
-
-    HYPERION_VK_CHECK_MSG(
-        vkQueueSubmit(queue, 1, &submit_info, fence),
-        "Failed to submit command"
-    );
-
-    HYPERION_RETURN_OK;
-}
-
-Result CommandBuffer::SubmitPrimary(VkQueue queue, VkFence fence, VkSemaphore *wait_semaphores, size_t num_wait_semaphores)
-{
-    VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-
-    std::vector<VkPipelineStageFlags> wait_stages;
-
-    if (num_wait_semaphores != 0) {
-        wait_stages.resize(num_wait_semaphores);
-
-        for (int i = 0; i < num_wait_semaphores; i++) {
-            wait_stages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // TODO: take in parameter
-        }
-    }
-
-    submit_info.waitSemaphoreCount = num_wait_semaphores;
-    submit_info.pWaitSemaphores = wait_semaphores;
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &m_signal;
-    submit_info.pWaitDstStageMask = wait_stages.data();
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_command_buffer;
 
@@ -264,7 +154,6 @@ Result CommandBuffer::SubmitSecondary(VkCommandBuffer primary)
 
     HYPERION_RETURN_OK;
 }
-
 
 } // namespace renderer
 } // namespace hyperion

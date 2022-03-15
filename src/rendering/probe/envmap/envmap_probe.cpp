@@ -13,12 +13,12 @@
 #include "../../../gl_util.h"
 
 namespace hyperion {
-EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int width, int height, float near, float far)
+EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int width, int height, float _near, float _far)
     : Probe(fbom::FBOMObjectType("ENVMAP_PROBE"), ProbeType::PROBE_TYPE_ENVMAP, origin, bounds),
       m_width(width),
       m_height(height),
-      m_near(near),
-      m_far(far),
+      m_near(_near),
+      m_far(_far),
       m_render_tick(0.0),
       m_render_index(0),
       m_is_first_run(true)
@@ -37,7 +37,7 @@ EnvMapProbe::EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int w
         region.up_vector = m_directions[i].second;
         region.index = i;
 
-        auto *cam = new EnvMapProbeCamera(region, width, height, near, far);
+        auto *cam = new EnvMapProbeCamera(region, width, height, _near, _far);
         cam->SetTexture(m_rendered_texture.get());
         m_cameras[i] = cam;
     }

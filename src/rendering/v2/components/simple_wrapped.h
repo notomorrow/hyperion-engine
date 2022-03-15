@@ -31,7 +31,7 @@ public:
     }
 
     template <class ...Args>
-    void Create(Engine *engine, Args&&...args)
+    void Create(Engine *engine, Args &&... args)
     {
         const char *wrapped_type_name = typeid(WrappedType).name();
 
@@ -50,7 +50,7 @@ public:
     }
 
     template <class ...Args>
-    void Destroy(Engine *engine, Args&&...args)
+    void Destroy(Engine *engine, Args &&... args)
     {
         const char *wrapped_type_name = typeid(WrappedType).name();
 

@@ -8,7 +8,7 @@
 namespace hyperion {
 class Camera {
 public:
-    Camera(int width, int height, float near, float far);
+    Camera(int width, int height, float _near, float _far);
     virtual ~Camera() = default;
 
     inline int GetWidth() const       { return m_width; }
@@ -16,9 +16,9 @@ public:
     inline int GetHeight() const      { return m_height; }
     inline void SetHeight(int height) { m_height = height; }
     inline float GetNear() const      { return m_near; }
-    inline void SetNear(float near)   { m_near = near; }
+    inline void SetNear(float _near)   { m_near = _near; }
     inline float GetFar() const       { return m_far; }
-    inline void SetFar(float far)     { m_far = far; }
+    inline void SetFar(float _far)     { m_far = _far; }
 
     inline const Vector3 &GetTranslation() const           { return m_translation; }
     virtual void SetTranslation(const Vector3 &translation);

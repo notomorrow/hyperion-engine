@@ -23,7 +23,7 @@ public:
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    void Render(Engine *engine, Frame *frame, uint32_t frame_index);
+    void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
 
 //private:
     std::vector<std::unique_ptr<Filter>> m_filters;

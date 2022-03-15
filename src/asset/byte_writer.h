@@ -25,7 +25,7 @@ public:
 
     void WriteString(const std::string &str)
     {
-        uint32_t len = str.size() + 1;
+        uint32_t len = uint32_t(str.size()) + 1;
         char *tmp = new char[len];
         memset(tmp, 0, len);
         memcpy(tmp, str.c_str(), str.size());

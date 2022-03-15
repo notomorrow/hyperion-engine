@@ -2,8 +2,8 @@
 // Created by emd22 on 2022-02-20.
 //
 
-#ifndef HYPERION_RENDERER_PIPELINE_H
-#define HYPERION_RENDERER_PIPELINE_H
+#ifndef HYPERION_RENDERER_GRAPHICS_PIPELINE_H
+#define HYPERION_RENDERER_GRAPHICS_PIPELINE_H
 
 #include <vulkan/vulkan.h>
 
@@ -15,6 +15,7 @@
 #include "renderer_descriptor_pool.h"
 #include "renderer_descriptor_set.h"
 #include "renderer_descriptor.h"
+#include "renderer_command_buffer.h"
 #include "renderer_helpers.h"
 
 #include "../../hash_code.h"
@@ -157,7 +158,6 @@ public:
     std::vector<VkDynamicState> GetDynamicStates();
     void SetDynamicStates(const std::vector<VkDynamicState> &_states);
 
-    void UpdateDynamicStates(VkCommandBuffer cmd);
     void SetViewport(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
     void SetScissor(int x, int y, uint32_t width, uint32_t height);
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
@@ -176,9 +176,9 @@ public:
 
     Result Destroy(Device *device);
 
-    void BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubpassContents contents);
-    void EndRenderPass(VkCommandBuffer cmd, size_t index);
-    void Bind(VkCommandBuffer cmd);
+    void BeginRenderPass(CommandBuffer *cmd, size_t index, VkSubpassContents contents);
+    void EndRenderPass(CommandBuffer *cmd, size_t index);
+    void Bind(CommandBuffer *cmd);
 
     inline const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
 
@@ -192,6 +192,7 @@ public:
 
 private:
     Result Rebuild(Device *device, DescriptorPool *descriptor_pool);
+    void UpdateDynamicStates(VkCommandBuffer cmd);
 
     std::vector<VkDynamicState> dynamic_states;
 
@@ -209,4 +210,4 @@ private:
 } // namespace renderer
 }; // namespace hyperion
 
-#endif //HYPERION_RENDERER_PIPELINE_H
+#endif //HYPERION_RENDERER_GRAPHICS_PIPELINE_H

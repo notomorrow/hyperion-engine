@@ -17,7 +17,7 @@ class Cubemap;
 
 class EnvMapProbe : public Probe {
 public:
-    EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int width, int height, float near, float far);
+    EnvMapProbe(const Vector3 &origin, const BoundingBox &bounds, int width, int height, float _near, float _far);
     EnvMapProbe(const EnvMapProbe &other) = delete;
     EnvMapProbe &operator=(const EnvMapProbe &other) = delete;
     virtual ~EnvMapProbe();

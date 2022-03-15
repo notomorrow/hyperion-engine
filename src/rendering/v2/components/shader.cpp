@@ -22,6 +22,5 @@ void Shader::Create(Engine *engine)
 void Shader::Destroy(Engine *engine)
 {
     m_wrapped->Destroy();
-    m_wrapped.reset();
 }
 } // namespace hyperion

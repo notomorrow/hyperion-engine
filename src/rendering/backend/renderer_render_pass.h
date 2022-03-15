@@ -11,6 +11,8 @@
 namespace hyperion {
 namespace renderer {
 
+class CommandBuffer;
+
 class RenderPass {
     friend class FramebufferObject;
     friend class GraphicsPipeline;
@@ -39,11 +41,11 @@ public:
     Result Create(Device *device);
     Result Destroy(Device *device);
 
-    void Begin(VkCommandBuffer cmd,
+    void Begin(CommandBuffer *cmd,
         VkFramebuffer framebuffer,
         VkExtent2D extent,
         VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
-    void End(VkCommandBuffer cmd);
+    void End(CommandBuffer *cmd);
 
 private:
 
@@ -51,6 +53,9 @@ private:
     std::vector<AttachmentInfo> m_depth_attachments;
 
     std::vector<VkSubpassDependency> m_dependencies;
+
+    std::vector<VkClearValue> m_clear_values;
+
     VkRenderPass m_render_pass;
 };
 

@@ -564,7 +564,7 @@ int main()
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
 
     SystemSDL system;
-    SystemWindow *window = SystemSDL::CreateWindow("Hyperion Engine", 1024, 768);
+    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
     system.SetCurrentWindow(window);
 
     SystemEvent event;
@@ -699,17 +699,17 @@ int main()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBALS);
 
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
+            ->AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
 
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT));
+            ->AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
 
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT));
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<ImageStorageDescriptor>(3, non_owning_ptr(&image_storage_view), VK_SHADER_STAGE_FRAGMENT_BIT));
+            ->AddDescriptor(std::make_unique<ImageStorageDescriptor>(3, non_owning_ptr(&image_storage_view), VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
 #endif
     }
 
@@ -819,6 +819,19 @@ int main()
     v2::Pipeline::ID scene_pass_pipeline_id = engine.AddPipeline(std::move(scene_pass_pipeline_builder));
 
 
+    /* Compute shaders */
+    v2::Shader::ID compute_shader_id{};
+    {
+        auto compute_shader = std::make_unique<v2::Shader>(std::vector{
+            SpirvObject{ SpirvObject::Type::COMPUTE, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read() }
+        });
+
+        compute_shader_id = engine.AddShader(std::move(compute_shader));
+    }
+
+    v2::ComputePipeline::ID compute_pipeline_id = engine.AddComputePipeline(std::make_unique<v2::ComputePipeline>(compute_shader_id));
+
+
     //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
 
     float timer = 0.0;
@@ -847,22 +860,98 @@ int main()
     uint64_t tick_last = 0;
     double delta_time = 0;
 
+
+    /* Compute */
+    /* auto compute_command_buffer = std::make_unique<CommandBuffer>(
+        CommandBuffer::Type::COMMAND_BUFFER_PRIMARY,
+        std::make_unique<SemaphoreChain>(0, 1)
+    );
+
+    compute_command_buffer->GetSemaphoreChain()->debug_name = "compute signal semaphore";
+
+    auto compute_cmd_result = compute_command_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
+    AssertThrow(compute_cmd_result, "Failed to create compute commandbuffer: %s\n", compute_cmd_result.message);
+    
+    for (size_t i = 0; i < engine.GetInstance()->GetNumImages(); i++) {
+        engine.GetInstance()->GetFrameHandler()->GetPerFrameData().GetFrame(i)
+            .GetCommandBuffer()->GetSemaphoreChain()->debug_name = "frame semaphore " + std::to_string(i);
+
+
+        //compute_command_buffer->GetSemaphoreChain()->WaitsFor(
+        //    *(engine.GetInstance()->GetFrameHandler()->GetPerFrameData().GetFrame(i)
+        //        .GetCommandBuffer()->GetSemaphoreChain()), VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+       // compute_command_buffer->GetSemaphoreChain()->Signals(
+       //     *(engine.GetInstance()->GetFrameHandler()->GetPerFrameData().GetFrame(i)
+        //        .GetCommandBuffer()->GetSemaphoreChain()));
+
+        //engine.GetInstance()->GetFrameHandler()->GetPerFrameData().GetFrame(i)
+        //    .GetCommandBuffer()->GetSemaphoreChain()->WaitsFor(*compute_command_buffer->GetSemaphoreChain(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    }*/
+
+    
+
     PerFrameData<CommandBuffer> per_frame_data(engine.GetInstance()->GetNumImages());
+
+    SemaphoreChain graphics_semaphore_chain({}, {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT});
+    AssertThrow(graphics_semaphore_chain.Create(engine.GetInstance()->GetDevice()));
+
+    SemaphoreChain::Link(
+        graphics_semaphore_chain,
+        engine.GetInstance()->GetSwapchain()->GetPresentSemaphores()
+    );
+    
     for (size_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
-        auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+
+        //auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+        auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_PRIMARY);
         AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool));
         per_frame_data[i].SetCommandBuffer(std::move(cmd_buffer));
-    }
 
+        /*
+
+        per_frame_data[i].SetSemaphoreChain(std::make_unique<SemaphoreChain>(0, 1));
+        per_frame_data[i].GetSemaphoreChain()->debug_name = std::string(" render semaphore " + std::to_string(i));
+        AssertThrow(per_frame_data[i].GetSemaphoreChain()->Create(engine.GetInstance()->GetDevice()));
+
+        per_frame_data[i].GetSemaphoreChain()->WaitsFor(engine.GetInstance()->GetFrameHandler()->GetPerFrameData()[i]
+            .GetFrame()->present_chain->GetWaitSemaphores()[0], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, "middleman 0");
+
+
+        engine.GetInstance()->GetFrameHandler()->GetPerFrameData()[i]
+            .GetFrame()->present_chain->WaitsFor(*per_frame_data[i].GetSemaphoreChain(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);*/
+
+
+        //per_frame_data[i].GetSemaphoreChain()->Signals(engine.GetInstance()->GetFrameHandler()->GetPerFrameData()[i]
+        //    .GetFrame()->present_chain->GetWaitSemaphores()[1], "middleman 1");
+        //pre_blit[i].SetSemaphoreChain(std::make_unique<SemaphoreChain>(0, 0));
+        //AssertThrow(pre_blit[i].GetSemaphoreChain()->Create(engine.GetInstance()->GetDevice()));
+
+        //post_blit[i].SetSemaphoreChain(std::make_unique<SemaphoreChain>(1, 0));
+        //AssertThrow(post_blit[i].GetSemaphoreChain()->Create(engine.GetInstance()->GetDevice()));
+
+        //pre_blit[i].GetSemaphoreChain()->WaitsFor(*compute_command_buffer->GetSemaphoreChain(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        //pre_blit[i].GetSemaphoreChain()->Signals(*post_blit[i].GetSemaphoreChain());
+        //post_blit[i].GetSemaphoreChain()->WaitsFor(*pre_blit[i].GetSemaphoreChain(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+    }
+    
     engine.BuildPipelines();
 
     uint32_t previous_frame_index = 0;
 
+    VkFence compute_fc;
+    VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    if (vkCreateFence(engine.GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &compute_fc) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create compute fence!");
+    }
+    
 
     while (running) {
         tick_last = tick_now;
         tick_now = SDL_GetPerformanceCounter();
-        delta_time = ((double)tick_now-(double)tick_last) / (double)SDL_GetPerformanceFrequency();
+        delta_time = (double(tick_now)-double(tick_last)) / double(SDL_GetPerformanceFrequency());
 
         while (SystemSDL::PollEvent(&event)) {
             input_manager->CheckEvent(&event);
@@ -889,42 +978,91 @@ int main()
         scene_data_block.light_direction = Vector3(-0.5, -0.5, 0).Normalize();
 
 
+        frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().GetFrame();
+
+        engine.GetInstance()->PrepareFrame(frame);
+
+        /* Compute */
+        /*vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(),
+            1, &compute_fc, true, UINT64_MAX);
+        vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(),
+            1, &compute_fc);*/
+#if 0
+        vkQueueWaitIdle(engine.GetInstance()->queue_compute);
+        compute_command_buffer->Reset(engine.GetInstance()->GetDevice());
+        compute_cmd_result = compute_command_buffer->Record(engine.GetInstance()->GetDevice(), nullptr, [&](CommandBuffer *cmd) {
+            engine.GetComputePipeline(compute_pipeline_id)->Dispatch(&engine, cmd,
+                8, 8, 1);
+
+            HYPERION_RETURN_OK;
+        });
+        AssertThrowMsg(compute_cmd_result, "Failed to record compute cmd buffer: %s\n", compute_cmd_result.message);
+        compute_command_buffer->SubmitPrimary(engine.GetInstance()->queue_compute, VK_NULL_HANDLE);
+#endif
+
         v2::Pipeline *fbo_pl = engine.GetPipeline(scene_pass_pipeline_id);
 
-        // waiting for tmp fence
 
-        //vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc, true, UINT64_MAX);
-        //vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(), 1, &fsq[engine.GetInstance()->frames_index].fc);
-
-        frame = engine.GetInstance()->GetNextFrame();
-
-        engine.GetInstance()->WaitImageReady(frame);
-
-        const size_t frame_index = engine.GetInstance()->GetFrameHandler()->GetFrameIndex();
-
-        engine.GetInstance()->BeginFrame(frame);
-        
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
 
-        /* forward / albedo layer */
-        fbo_pl->GetWrappedObject()->BeginRenderPass(frame->command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
-        fbo_pl->GetWrappedObject()->Bind(frame->command_buffer);
-        engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, fbo_pl->GetWrappedObject()->layout, 0, 1);
-        monkey_mesh->RenderVk(frame, engine.GetInstance(), nullptr);
-        fbo_pl->GetWrappedObject()->EndRenderPass(frame->command_buffer, 0);
+        
+        const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetFrameIndex();
 
-
-        engine.RenderPostProcessing(frame, frame_index);
-        /* secondary cmd buffer */
-        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->BeginRenderPass(frame->command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
+        per_frame_data[frame_index].GetCommandBuffer()->Reset(engine.GetInstance()->GetDevice());
         per_frame_data[frame_index].GetCommandBuffer()->Record(
             engine.GetInstance()->GetDevice(),
-            engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->GetConstructionInfo().render_pass.get(),
-            [&engine, &frame_index, &previous_frame_index](VkCommandBuffer cmd) {
+            nullptr,
+            [&](CommandBuffer *command_buffer) {
+                /* forward / albedo layer */
+                fbo_pl->GetWrappedObject()->BeginRenderPass(command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
+                fbo_pl->GetWrappedObject()->Bind(command_buffer);
+                engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(command_buffer, fbo_pl->GetWrappedObject(), 0, 1);
+                renderer::Frame tmp_frame;
+                tmp_frame.command_buffer = non_owning_ptr(command_buffer);
+                monkey_mesh->RenderVk(&tmp_frame, engine.GetInstance(), nullptr);
+                fbo_pl->GetWrappedObject()->EndRenderPass(command_buffer, 0);
+
+
+                engine.RenderPostProcessing(command_buffer, frame_index);
+
+                HYPERION_RETURN_OK;
+            });
+        
+        per_frame_data[frame_index].GetCommandBuffer()->SubmitPrimary(
+            engine.GetInstance()->queue_graphics, VK_NULL_HANDLE, &graphics_semaphore_chain
+        );
+
+
+        //renderer::SemaphoreChain sc(std::vector<std::tuple<VkPipelineStageFlags>>{ {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } }, { {VK_SHADER_STAGE_COMPUTE_BIT} });
+
+        /*VkImageMemoryBarrier imageMemoryBarrier = {};
+        imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        // We won't be changing the layout of the image
+        imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageMemoryBarrier.image = image_storage->GetGPUImage()->image;
+        imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+        imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        vkCmdPipelineBarrier(
+            frame->command_buffer->GetCommandBuffer(),
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &imageMemoryBarrier);*/
+
+        frame->BeginCapture();
+        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
+        
+        frame->GetCommandBuffer()->RecordCommandsWithContext(
+            [&engine, &frame_index, &previous_frame_index](CommandBuffer *cmd) {
                 Frame tmp_frame;
-                tmp_frame.command_buffer = cmd;
+                tmp_frame.command_buffer = non_owning_ptr(cmd);
 
                 engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->push_constants.previous_frame_index = previous_frame_index;
                 engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->push_constants.current_frame_index = frame_index;
@@ -933,28 +1071,19 @@ int main()
 
                 HYPERION_RETURN_OK;
             });
-        per_frame_data[frame_index].GetCommandBuffer()->SubmitSecondary(frame->command_buffer);
-        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->EndRenderPass(frame->command_buffer, frame_index);
+        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->EndRenderPass(frame->command_buffer.get(), frame_index);
+        frame->EndCapture();
 
-        /* end secondary cmd buffer */
+        frame->Submit(engine.GetInstance()->queue_graphics, &engine.GetInstance()->GetSwapchain()->GetPresentSemaphores());
 
-        engine.GetInstance()->EndFrame(frame);
-        
-        engine.GetInstance()->SubmitFrame(frame);
-
-
-        std::vector<VkSemaphore> fsq_sp_wrapper;
-        fsq_sp_wrapper.resize(1);
-        fsq_sp_wrapper[0] = frame->sp_swap_release;//fsq[engine.GetInstance()->frames_index].sp;
-
-
-        engine.GetInstance()->PresentFrame(frame, fsq_sp_wrapper);
+        engine.GetInstance()->PresentFrame(frame, &engine.GetInstance()->GetSwapchain()->GetPresentSemaphores());
 
         previous_frame_index = frame_index;
     }
 
-    engine.GetInstance()->WaitDeviceIdle();
+    AssertThrow(engine.GetInstance()->GetDevice()->Wait());
 
+    graphics_semaphore_chain.Destroy(engine.GetInstance()->GetDevice());
 
     v2::Filter::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
 

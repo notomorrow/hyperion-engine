@@ -4,34 +4,110 @@
 #include "components/shader.h"
 #include "components/filter_stack.h"
 #include "components/framebuffer.h"
-#include <rendering/backend/renderer_command_buffer.h>
 #include "components/pipeline.h"
+#include "components/compute.h"
+
+#include <rendering/backend/renderer_semaphore.h>
+#include <rendering/backend/renderer_command_buffer.h>
 
 #include <util/enum_options.h>
 
 #include <memory>
 
+#define HYPERION_V2_ADD_OBJECT_SPARSE 0
+
 namespace hyperion::v2 {
 
 using renderer::Instance;
 using renderer::Device;
-
-class Engine;
+using renderer::Semaphore;
+using renderer::SemaphoreChain;
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
  *
  */
 class Engine {
-    template <class T>
-    HYP_FORCE_INLINE constexpr T *GetObject(std::vector<std::unique_ptr<T>> &objects, const typename T::ID &id)
-    {
-        return MathUtil::InRange(id.GetValue(), {1, objects.size() + 1})
-               ? objects[id.GetValue() - 1].get()
-               : nullptr;
-    }
-
 public:
+    
+    template <class T>
+    struct ObjectHolder {
+        bool defer_create = false;
+        std::vector<std::unique_ptr<T>> objects;
+
+        HYP_FORCE_INLINE constexpr
+        T *Get(const typename T::ID &id)
+        {
+            return MathUtil::InRange(id.GetValue(), { 1, objects.size() + 1 })
+                ? objects[id.GetValue() - 1].get()
+                : nullptr;
+        }
+
+        HYP_FORCE_INLINE constexpr
+        const T *Get(const typename T::ID &id) const
+            { return const_cast<ObjectHolder<T> *>(this)->Get(id); }
+
+        template <class ...Args>
+        auto Add(Engine *engine, std::unique_ptr<T> &&object, Args &&... args) -> typename T::ID
+        {
+            typename T::ID result{};
+
+            if (!defer_create) {
+                object->Create(engine, std::move(args)...);
+            }
+
+#if HYPERION_V2_ADD_OBJECT_SPARSE
+            /* Find an existing slot */
+            auto it = std::find(objects.begin(), objects.end(), nullptr);
+
+            if (it != objects.end()) {
+                result = T::ID(it - objects.begin() + 1);
+                objects[it] = std::move(object);
+
+                return result;
+            }
+#endif
+
+            objects.push_back(std::move(object));
+
+            return typename T::ID{typename T::ID::InnerType_t(objects.size())};
+        }
+
+        template<class ...Args>
+        HYP_FORCE_INLINE
+        void Remove(Engine *engine, T::ID id, Args &&... args)
+        {
+            auto &object = objects[id];
+
+            AssertThrowMsg(object != nullptr, "Failed to remove object with id %d -- object was nullptr.", id.GetValue());
+
+            object->Destroy(engine, std::move(args)...);
+
+            /* Cannot simply erase from vector, as that would invalidate existing IDs */
+            objects[id].reset();
+        }
+        
+        template<class ...Args>
+        void RemoveAll(Engine *engine, Args &&...args)
+        {
+            for (auto &object : objects) {
+                object->Destroy(engine, args...);
+                object.reset();
+            }
+        }
+
+        template <class ...Args>
+        void CreateAll(Engine *engine, Args &&... args)
+        {
+            AssertThrowMsg(defer_create, "Expected defer_create to be true, "
+                "otherwise objects are automatically have Create() called when added.");
+            
+            for (auto &object : objects) {
+                object->Create(engine, args...);
+            }
+        }
+    };
+
     /* Our "root" shader/pipeline -- used for rendering a quad to the screen. */
     struct SwapchainData {
         Shader::ID shader_id;
@@ -59,79 +135,86 @@ public:
     inline const FilterStack &GetFilterStack() const { return m_filter_stack; } [[nodiscard]]
 
     inline Texture::TextureInternalFormat GetDefaultFormat(TextureFormatDefault type) const
-        { return m_texture_format_defaults.Get(type); } [[nodiscard]]
-
-    Shader::ID AddShader(std::unique_ptr<Shader> &&shader);
+        { return m_texture_format_defaults.Get(type); }
+    
+    template <class ...Args>
+    Shader::ID AddShader(std::unique_ptr<Shader> &&shader, Args &&... args)
+        { return Objects<Shader>().Add(this, std::move(shader), std::move(args)...); }
     HYP_FORCE_INLINE Shader *GetShader(Shader::ID id)
-        { return GetObject(m_shaders, id); }
+        { return Objects<Shader>().Get(id); }
     HYP_FORCE_INLINE const Shader *GetShader(Shader::ID id) const
         { return const_cast<Engine*>(this)->GetShader(id); }
 
     Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
     Framebuffer::ID AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass);
     HYP_FORCE_INLINE Framebuffer *GetFramebuffer(Framebuffer::ID id)
-        { return GetObject(m_framebuffers, id); }
+        { return Objects<Framebuffer>().Get(id); }
     HYP_FORCE_INLINE const Framebuffer *GetFramebuffer(Framebuffer::ID id) const
         { return const_cast<Engine*>(this)->GetFramebuffer(id); }
-
-    RenderPass::ID AddRenderPass(std::unique_ptr<RenderPass> &&render_pass);
+    
+    template <class ...Args>
+    RenderPass::ID AddRenderPass(std::unique_ptr<RenderPass> &&render_pass, Args &&... args)
+        { return Objects<RenderPass>().Add(this, std::move(render_pass), std::move(args)...); }
     HYP_FORCE_INLINE RenderPass *GetRenderPass(RenderPass::ID id)
-        { return GetObject(m_render_passes, id); }
+        { return Objects<RenderPass>().Get(id); }
     HYP_FORCE_INLINE const RenderPass *GetRenderPass(RenderPass::ID id) const
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
     Pipeline::ID AddPipeline(renderer::GraphicsPipeline::Builder &&builder);
     HYP_FORCE_INLINE Pipeline *GetPipeline(Pipeline::ID id)
-        { return GetObject(m_pipelines, id); } [[nodiscard]]
+        { return Objects<Pipeline>().Get(id); }
     HYP_FORCE_INLINE const Pipeline *GetPipeline(Pipeline::ID id) const
         { return const_cast<Engine*>(this)->GetPipeline(id); }
 
+    /* Pipelines will be deferred until descriptor sets are built */
+    template <class ...Args>
+    ComputePipeline::ID AddComputePipeline(std::unique_ptr<ComputePipeline> &&compute_pipeline, Args &&... args)
+        { return Objects<ComputePipeline>().Add(this, std::move(compute_pipeline), std::move(args)...); }
+    HYP_FORCE_INLINE ComputePipeline *GetComputePipeline(ComputePipeline::ID id)
+        { return Objects<ComputePipeline>().Get(id); }
+    HYP_FORCE_INLINE const ComputePipeline *GetComputePipeline(ComputePipeline::ID id) const
+        { return const_cast<Engine*>(this)->GetComputePipeline(id); }
+
+
+    template <class T>
+    HYP_FORCE_INLINE constexpr
+    ObjectHolder<T> &Objects()
+    {
+        if constexpr(std::is_same_v<T, Shader>) return m_shaders;
+        if constexpr(std::is_same_v<T, Framebuffer>) return m_framebuffers;
+        if constexpr(std::is_same_v<T, RenderPass>) return m_render_passes;
+        if constexpr(std::is_same_v<T, Pipeline>) return m_pipelines;
+        if constexpr(std::is_same_v<T, ComputePipeline>) return m_compute_pipelines;
+
+        throw std::logic_error("Unsupported object holder type given");
+    }
+
+    template <class T>
+    HYP_FORCE_INLINE constexpr
+    const ObjectHolder<T> &Objects() const
+        { return const_cast<Engine *>(this)->Objects<T>(); }
 
     void Initialize();
     void PrepareSwapchain();
     void BuildPipelines();
-    void RenderPostProcessing(Frame *frame, uint32_t frame_index);
+    void RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index);
     void RenderSwapchain(Frame *frame);
 
 private:
     void InitializeInstance();
     void FindTextureFormatDefaults();
 
-    template <class T>
-    inline typename T::ID AddObject(std::vector<std::unique_ptr<T>> &objects, std::unique_ptr<T> &&object)
-    {
-        typename T::ID result{};
-
-        /* Find an existing slot */
-        auto it = std::find(objects.begin(), objects.end(), nullptr);
-
-        if (it != objects.end()) {
-            result = T::ID(it - objects.begin());
-            objects[it] = std::move(object);
-        } else {
-            result = objects.size();
-            objects.push_back(std::move(object));
-        }
-
-        return result;
-    }
-
-    template<class T>
-    inline void RemoveObjectById(std::vector<std::unique_ptr<T>> &objects, typename T::ID id)
-    {
-        /* Cannot simply erase, as that would invalidate existing IDs */
-        objects[id] = {};
-    }
-
     EnumOptions<TextureFormatDefault, Texture::TextureInternalFormat, 5> m_texture_format_defaults;
 
     FilterStack m_filter_stack;
 
-    std::vector<std::unique_ptr<Shader>> m_shaders;
-    std::vector<std::unique_ptr<Framebuffer>> m_framebuffers;
-    std::vector<std::unique_ptr<RenderPass>> m_render_passes;
-    std::vector<std::unique_ptr<Pipeline>> m_pipelines;
+    ObjectHolder<Shader> m_shaders;
+    ObjectHolder<Framebuffer> m_framebuffers;
+    ObjectHolder<RenderPass> m_render_passes;
+    ObjectHolder<Pipeline> m_pipelines{.defer_create = true};
+    ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
+    
     std::unique_ptr<Instance> m_instance;
 };
 
