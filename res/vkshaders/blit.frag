@@ -35,6 +35,6 @@ void main() {
     vec4 albedo = vec4(0.0);
 
     /* render last filter in the stack */
-    out_color = imageLoad(image_storage_test, ivec2(0, 0));
-    //out_color = texture(filter_1, texcoord);
+    //out_color = imageLoad(image_storage_test, ivec2(0, 0));
+    out_color = texture(filter_1, texcoord);
 }

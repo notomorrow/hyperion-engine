@@ -6,6 +6,7 @@
 #include "renderer_device.h"
 
 #include "../../system/debug.h"
+#include "../../system/vma/vma_usage.h"
 
 #include <vector>
 #include <iostream>
@@ -342,6 +343,7 @@ Result Instance::Initialize(bool load_debug_layers) {
     }
 
     this->SetupDebugMessenger();
+    this->device->SetupAllocator(this);
 
     HYPERION_RETURN_OK;
 }
@@ -372,6 +374,8 @@ Result Instance::Destroy()
     /* Destroy descriptor pool */
     HYPERION_PASS_ERRORS(descriptor_pool.Destroy(this->device), result);
 
+    this->device->DestroyAllocator();
+
     /* Destroy the vulkan swapchain */
     if (this->swapchain != nullptr) {
         HYPERION_PASS_ERRORS(this->swapchain->Destroy(this->device), result);
@@ -394,7 +398,6 @@ Result Instance::Destroy()
 #ifndef HYPERION_BUILD_RELEASE
     DestroyDebugUtilsMessengerEXT(this->instance, this->debug_messenger, nullptr);
 #endif
-
     /* Destroy the Vulkan instance(this should always be last!) */
     vkDestroyInstance(this->instance, nullptr);
     this->instance = nullptr;

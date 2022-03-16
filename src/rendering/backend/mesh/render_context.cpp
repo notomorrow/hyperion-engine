@@ -42,19 +42,22 @@ void Mesh::RenderContext::Upload(VkCommandBuffer cmd)
     vkCmdBindVertexBuffers(cmd, 0, 1, &_vbo->buffer, offsets);
 
     void *memory_buffer = nullptr;
-    vkMapMemory(vk_device, _vbo->memory, 0, gpu_buffer_size, 0, &memory_buffer);
+    _vbo->Copy(device, gpu_buffer_size, &buffer[0]);
+    /*vkMapMemory(vk_device, _vbo->memory, 0, gpu_buffer_size, 0, &memory_buffer);
     memcpy(memory_buffer, &buffer[0], gpu_buffer_size);
-    vkUnmapMemory(vk_device, _vbo->memory);
+    vkUnmapMemory(vk_device, _vbo->memory);*/
 
     /* Bind and copy index buffer */
     size_t gpu_indices_size = _mesh->indices.size() * sizeof(MeshIndex);
+
     _ibo->Create(device, gpu_indices_size);
     vkCmdBindIndexBuffer(cmd, _ibo->buffer, 0, VK_INDEX_TYPE_UINT32);
 
     memory_buffer = nullptr;
-    vkMapMemory(vk_device, _ibo->memory, 0, gpu_indices_size, 0, &memory_buffer);
+    _ibo->Copy(device, gpu_indices_size, _mesh->indices.data());
+    /*vkMapMemory(vk_device, _ibo->memory, 0, gpu_indices_size, 0, &memory_buffer);
     memcpy(memory_buffer, _mesh->indices.data(), gpu_indices_size);
-    vkUnmapMemory(vk_device, _ibo->memory);
+    vkUnmapMemory(vk_device, _ibo->memory);*/
 }
 
 void Mesh::RenderContext::Draw(VkCommandBuffer cmd)

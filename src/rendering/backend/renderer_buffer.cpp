@@ -30,28 +30,33 @@ GPUMemory::GPUMemory(
       size(0),
       memory(nullptr)
 {
+    static unsigned allocations = 0;
+    DebugLog(LogType::Debug, "Allocate GPUMemory %d\n", allocations++);
 }
 
 GPUMemory::~GPUMemory()
 {
+    static unsigned destructions = 0;
+    DebugLog(LogType::Debug, "Destroy GPUMemory %d\n", destructions++);
     AssertThrowMsg(memory == nullptr, "memory should have been destroyed!");
-    DebugLog(LogType::Debug, "Destroy GPUMemory\n");
 }
 
 
 void GPUMemory::Map(Device *device, void **ptr) {
-    vkMapMemory(device->GetDevice(), this->memory, 0, this->size, 0, ptr);
+    //vkMapMemory(device->GetDevice(), this->memory, 0, this->size, 0, ptr);
+    vmaMapMemory(*device->GetAllocator(), this->allocation, ptr);
 }
 
 void GPUMemory::Unmap(Device *device) {
-    vkUnmapMemory(device->GetDevice(), this->memory);
+    //vkUnmapMemory(device->GetDevice(), this->memory);
+    vmaUnmapMemory(*device->GetAllocator(), this->allocation);
 }
 
 void GPUMemory::Copy(Device *device, size_t size, void *ptr) {
     void *map;
-    Map(device, &map);
+    this->Map(device, &map);
     memcpy(map, ptr, size);
-    Unmap(device);
+    this->Unmap(device);
 }
 
 GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
@@ -67,13 +72,23 @@ GPUBuffer::~GPUBuffer()
 }
 
 void GPUBuffer::Create(Device *device, size_t size) {
-    VkDevice vk_device = device->GetDevice();
+    VkBufferCreateInfo vk_buffer_info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    this->size = size;
+
+    vk_buffer_info.size  = size;
+    vk_buffer_info.usage = (VkBufferUsageFlags)this->usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    VmaAllocationCreateInfo alloc_info{};
+    alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+    vmaCreateBuffer(*device->GetAllocator(), &vk_buffer_info, &alloc_info, &this->buffer, &this->allocation, nullptr);
+    /*VkDevice vk_device = device->GetDevice();
 
     VkBufferCreateInfo buffer_info{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     buffer_info.size = size;
     buffer_info.usage = (VkBufferUsageFlags)usage_flags;
     buffer_info.sharingMode = (VkSharingMode)this->sharing_mode;
-
 
     QueueFamilyIndices family_indices = device->FindQueueFamilies();
 
@@ -96,18 +111,21 @@ void GPUBuffer::Create(Device *device, size_t size) {
     AssertThrowMsg(result == VK_SUCCESS, "Could not allocate video memory!\n");
 
     vkBindBufferMemory(vk_device, this->buffer, this->memory, 0);
-    this->size = buffer_info.size;
+    this->size = buffer_info.size;*/
 }
 
 void GPUBuffer::Destroy(Device *device)
 {
     VkDevice vk_device = device->GetDevice();
-
+    vmaDestroyBuffer(*device->GetAllocator(), this->buffer, this->allocation);
+    this->buffer = nullptr;
+    this->allocation = nullptr;
+    /*
     vkDestroyBuffer(vk_device, buffer, nullptr);
     buffer = nullptr;
 
     vkFreeMemory(vk_device, memory, nullptr);
-    memory = nullptr;
+    memory = nullptr;*/
 }
 
 
@@ -147,7 +165,12 @@ Result GPUImage::Create(Device *device, size_t size, VkImageCreateInfo *image_in
 
     VkDevice vk_device = device->GetDevice();
 
-    HYPERION_VK_CHECK_MSG(vkCreateImage(device->GetDevice(), image_info, nullptr, &image), "Could not create image!");
+    VmaAllocationCreateInfo alloc_info{};
+    alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+    auto result = vmaCreateImage(*device->GetAllocator(), image_info, &alloc_info, &this->image, &this->allocation, nullptr);
+
+    /*HYPERION_VK_CHECK_MSG(vkCreateImage(device->GetDevice(), image_info, nullptr, &image), "Could not create image!");
 
     VkMemoryRequirements requirements;
     vkGetImageMemoryRequirements(vk_device, image, &requirements);
@@ -159,7 +182,7 @@ Result GPUImage::Create(Device *device, size_t size, VkImageCreateInfo *image_in
 
     HYPERION_VK_CHECK_MSG(vkAllocateMemory(vk_device, &alloc_info, nullptr, &this->memory), "Could not allocate image memory!");
     HYPERION_VK_CHECK_MSG(vkBindImageMemory(vk_device, this->image, this->memory, 0), "Could not bind image memory!");
-
+    */
     HYPERION_RETURN_OK;
 }
 
@@ -167,12 +190,16 @@ Result GPUImage::Destroy(Device *device)
 {
     VkDevice vk_device = device->GetDevice();
 
+    vmaDestroyImage(*device->GetAllocator(), this->image, this->allocation);
+    this->image = nullptr;
+    this->allocation = nullptr;
+    /*
     vkDestroyImage(vk_device, image, nullptr);
     image = nullptr;
 
     vkFreeMemory(vk_device, memory, nullptr);
     memory = nullptr;
-
+    */
     HYPERION_RETURN_OK;
 }
 

@@ -964,7 +964,10 @@ int main()
 
     matrices_descriptor_buffer.Destroy(device);
     scene_data_descriptor_buffer.Destroy(device);
+
+    image_storage_view.Destroy(device);
     test_image_view.Destroy(device);
+
     test_sampler.Destroy(device);
     image->Destroy(device);
 

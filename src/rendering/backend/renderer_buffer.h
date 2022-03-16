@@ -7,6 +7,7 @@
 
 #include "renderer_device.h"
 #include "renderer_result.h"
+#include "../../system/vma/vma_usage.h"
 
 namespace hyperion {
 namespace renderer {
@@ -23,6 +24,7 @@ public:
     ~GPUMemory();
 
     VkDeviceMemory memory;
+    VmaAllocation allocation;
     VkDeviceSize size;
 
     void Map(Device *device, void **ptr);
