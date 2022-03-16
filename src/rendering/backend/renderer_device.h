@@ -12,11 +12,15 @@
 #include "renderer_structs.h"
 #include "renderer_features.h"
 
+#include "../../system/vma/vma_usage.h"
+
 namespace hyperion {
 namespace renderer {
 
 using ::std::vector,
       ::std::set;
+
+struct Instance;
 
 class Device {
 public:
@@ -33,6 +37,9 @@ public:
     VkPhysicalDevice GetPhysicalDevice();
     vector<const char *> GetRequiredExtensions();
 
+    Result SetupAllocator(Instance *instance);
+    Result DestroyAllocator();
+
     QueueFamilyIndices FindQueueFamilies();
     SwapchainSupportDetails QuerySwapchainSupport();
 
@@ -44,6 +51,8 @@ public:
 
     Result CheckDeviceSuitable();
 
+    VmaAllocator *GetAllocator() { return &this->allocator; }
+
     vector<const char *> CheckExtensionSupport(vector<const char *> _extensions);
     vector<const char *> CheckExtensionSupport();
 
@@ -53,6 +62,8 @@ private:
     VkDevice                   device;
     VkSurfaceKHR               surface;
     VkPhysicalDevice           physical;
+
+    VmaAllocator allocator;
 
     Features renderer_features;
 

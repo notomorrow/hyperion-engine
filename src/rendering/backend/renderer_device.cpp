@@ -3,6 +3,7 @@
 //
 
 #include "renderer_device.h"
+#include "renderer_instance.h"
 
 #include <cstring>
 #include <algorithm>
@@ -188,6 +189,29 @@ Result Device::CheckDeviceSuitable() {
     HYPERION_RETURN_OK;
 }
 
+Result Device::SetupAllocator(Instance *instance) {
+    VmaVulkanFunctions vkfuncs{};
+    vkfuncs.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+    vkfuncs.vkGetDeviceProcAddr   = &vkGetDeviceProcAddr;
+
+    VmaAllocatorCreateInfo create_info{};
+    create_info.vulkanApiVersion = VK_RENDERER_API_VERSION;
+    create_info.physicalDevice   = this->GetPhysicalDevice();
+    create_info.device           = this->GetDevice();
+    create_info.instance         = instance->GetInstance();
+    create_info.pVulkanFunctions = &vkfuncs;
+
+    vmaCreateAllocator(&create_info, this->GetAllocator());
+
+    HYPERION_RETURN_OK;
+}
+
+Result Device::DestroyAllocator() {
+
+    if (this->allocator != nullptr)
+        vmaDestroyAllocator(this->allocator);
+    HYPERION_RETURN_OK;
+}
 
 Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions) {
     this->SetRequiredExtensions(required_extensions);

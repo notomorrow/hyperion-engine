@@ -16,4 +16,3 @@ using Framebuffer = SimpleWrapped<renderer::FramebufferObject>;
 } // namespace hyperion::v2
 
 #endif // !HYPERION_V2_FRAMEBUFFER_H
-

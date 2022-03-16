@@ -229,7 +229,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     HYPERION_VK_CHECK_MSG(
         vkCreatePipelineLayout(device->GetDevice(), &layout_info, nullptr, &this->layout),
-        "Failed to create graphics pipeline layout",
+        "Failed to create graphics pipeline layout"
     );
 
     /* Depth / stencil */

@@ -14,6 +14,7 @@
 
 #include <util/non_owning_ptr.h>
 #include "../../system/sdl_system.h"
+#include "../../system/vma/vma_usage.h"
 
 #include "renderer_device.h"
 #include "renderer_swapchain.h"
@@ -51,6 +52,8 @@ class Instance {
     Result SetupDebugMessenger();
 
     Result AllocatePendingFrames();
+    Result SetupAllocator();
+    Result DestroyAllocator();
 
     Result CreateCommandPool();
     Result CreateCommandBuffers();
@@ -65,7 +68,8 @@ public:
 
     HYP_FORCE_INLINE DescriptorPool &GetDescriptorPool() { return this->descriptor_pool; }
     HYP_FORCE_INLINE const DescriptorPool &GetDescriptorPool() const { return this->descriptor_pool; }
-    
+    VkInstance GetInstance() { return this->instance; }
+
     void     BeginFrame      (Frame *frame);
     void     EndFrame        (Frame *frame);
     void     SubmitFrame     (Frame *frame);
@@ -82,6 +86,7 @@ public:
     inline size_t GetNumImages() const { return this->swapchain->GetNumImages(); }
     inline FrameHandler *GetFrameHandler() { return this->frame_handler; }
     inline const FrameHandler *GetFrameHandler() const { return this->frame_handler; }
+    inline VmaAllocator *GetAllocator() { return &this->allocator; }
 
     SystemWindow *GetCurrentWindow();
     Result Destroy();
@@ -103,7 +108,6 @@ public:
     VkQueue queue_graphics;
     VkQueue queue_present;
 
-
 private:
 
     SystemWindow *window = nullptr;
@@ -113,7 +117,8 @@ private:
     VkSurfaceKHR surface = nullptr;
 
     DescriptorPool descriptor_pool;
-    
+
+    VmaAllocator allocator = nullptr;
 
     Device    *device = nullptr;
 
