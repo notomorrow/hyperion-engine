@@ -9,8 +9,12 @@
 namespace hyperion {
 namespace renderer {
 Swapchain::Swapchain()
+    : swapchain(nullptr),
+      present_semaphores(
+          {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
+          {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}
+      )
 {
-    this->swapchain = nullptr;
 }
 
 VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat()
@@ -34,6 +38,11 @@ VkExtent2D Swapchain::ChooseSwapchainExtent()
     return this->support_details.capabilities.currentExtent;
 }
 
+void Swapchain::RetrieveSupportDetails(Device *device)
+{
+    this->support_details = device->QuerySwapchainSupport();
+}
+
 void Swapchain::RetrieveImageHandles(Device *device)
 {
     uint32_t image_count = 0;
@@ -47,48 +56,44 @@ void Swapchain::RetrieveImageHandles(Device *device)
     DebugLog(LogType::Info, "Retrieved Swapchain images\n");
 }
 
-void Swapchain::RetrieveSupportDetails(Device *device)
+Result Swapchain::CreateSemaphores(Device *device)
 {
-    this->support_details = device->QuerySwapchainSupport();
-
+    return present_semaphores.Create(device);
 }
-
 
 Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
 {
     this->RetrieveSupportDetails(device);
+
+    HYPERION_BUBBLE_ERRORS(CreateSemaphores(device));
+    DebugLog(LogType::Debug, "Created swapchain semaphores\n");
 
     this->surface_format = this->ChooseSurfaceFormat();
     this->present_mode = this->GetPresentMode();
     this->extent = this->ChooseSwapchainExtent();
     this->image_format = this->surface_format.format;
 
-    const uint32_t selected_image_count = (GetMaxImageCount() != 0)
-        ? std::min(GetMaxImageCount(), GetMinImageCount())
-        : GetMinImageCount();
-
-    DebugLog(LogType::Debug, "Min images count: %d\n", GetMinImageCount());
-    DebugLog(LogType::Debug, "Max images count: %d\n", GetMaxImageCount());
-    DebugLog(LogType::Debug, "Selected images count: %d\n", selected_image_count);
+    uint32_t image_count = this->support_details.capabilities.minImageCount + 1;
+    DebugLog(LogType::Debug, "Min images required: %d\n", this->support_details.capabilities.minImageCount);
 
     VkSwapchainCreateInfoKHR create_info{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
     create_info.surface = surface;
-    create_info.minImageCount = selected_image_count;
+    create_info.minImageCount = image_count;
     create_info.imageFormat = surface_format.format;
     create_info.imageColorSpace = surface_format.colorSpace;
     create_info.imageExtent = extent;
     create_info.imageArrayLayers = 1; /* This is always 1 unless we make a stereoscopic/VR application */
-    create_info.imageUsage = this->image_usage_flags;
+    create_info.imageUsage = image_usage_flags;
 
     /* Graphics computations and presentation are done on separate hardware */
-    QueueFamilyIndices qf_indices = device->FindQueueFamilies();
-    const uint32_t families[] = { qf_indices.graphics_family.value(), qf_indices.present_family.value() };
+    const QueueFamilyIndices &qf_indices = device->GetQueueFamilyIndices();
+    const uint32_t concurrent_families[] = { qf_indices.graphics_family.value(), qf_indices.present_family.value() };
 
     if (qf_indices.graphics_family != qf_indices.present_family) {
         DebugLog(LogType::Debug, "Swapchain sharing mode set to Concurrent\n");
         create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        create_info.queueFamilyIndexCount = std::size(families); /* Two family indices(one for each process) */
-        create_info.pQueueFamilyIndices = families;
+        create_info.queueFamilyIndexCount = uint32_t(std::size(concurrent_families)); /* Two family indices(one for each process) */
+        create_info.pQueueFamilyIndices = concurrent_families;
     } else {
         /* Computations and presentation are done on same hardware(most scenarios) */
         DebugLog(LogType::Debug, "Swapchain sharing mode set to Exclusive\n");
@@ -96,6 +101,7 @@ Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
         create_info.queueFamilyIndexCount = 0;       /* Optional */
         create_info.pQueueFamilyIndices = nullptr; /* Optional */
     }
+
     /* For transformations such as rotations, etc. */
     create_info.preTransform = this->support_details.capabilities.currentTransform;
     /* This can be used to blend with other windows in the windowing system, but we
@@ -121,7 +127,9 @@ Result Swapchain::Destroy(Device *device)
 {
     DebugLog(LogType::Debug, "Destroying swapchain\n");
 
-    Result result(Result::RENDERER_OK);
+    auto result = Result::OK;
+
+    HYPERION_PASS_ERRORS(present_semaphores.Destroy(device), result);
 
     vkDestroySwapchainKHR(device->GetDevice(), this->swapchain, nullptr);
 

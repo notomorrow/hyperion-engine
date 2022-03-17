@@ -2,8 +2,8 @@
 #include "../../math/matrix_util.h"
 
 namespace hyperion {
-PerspectiveCamera::PerspectiveCamera(float fov, int width, int height, float near, float far)
-    : Camera(width, height, near, far)
+PerspectiveCamera::PerspectiveCamera(float fov, int width, int height, float _near, float _far)
+    : Camera(width, height, _near, _far)
 {
     m_fov = fov;
 }

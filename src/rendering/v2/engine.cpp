@@ -4,6 +4,7 @@
 #include <asset/asset_manager.h>
 
 #include "components/filter.h"
+#include "components/compute.h"
 
 #include <rendering/backend/renderer_helpers.h>
 
@@ -26,39 +27,17 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
 
 Engine::~Engine()
 {
-    m_instance->WaitDeviceIdle();
+    (void)m_instance->GetDevice()->Wait();
 
     m_filter_stack.Destroy(this);
 
-    for (auto &it : m_framebuffers) {
-        it->Destroy(this);
-    }
-
-    for (auto &it : m_render_passes) {
-        it->Destroy(this);
-    }
-
-    for (auto &shader : m_shaders) {
-        shader->Destroy(this);
-    }
-    
-    for (auto &pipeline :m_pipelines) {
-        pipeline->Destroy(this);
-    }
+    m_framebuffers.RemoveAll(this);
+    m_render_passes.RemoveAll(this);
+    m_shaders.RemoveAll(this);
+    m_pipelines.RemoveAll(this);
+    m_compute_pipelines.RemoveAll(this);
 
     m_instance->Destroy();
-}
-
-Shader::ID Engine::AddShader(std::unique_ptr<Shader> &&shader)
-{
-    AssertThrow(shader != nullptr);
-
-    shader->Create(this);
-
-    m_shaders.push_back(std::move(shader));
-    
-
-    return Shader::ID{Shader::ID::InnerType_t(m_shaders.size())};
 }
 
 Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass_id)
@@ -67,12 +46,8 @@ Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffe
 
     RenderPass *render_pass = GetRenderPass(render_pass_id);
     AssertThrow(render_pass != nullptr);
-    
-    framebuffer->Create(this, render_pass->GetWrappedObject());
 
-    m_framebuffers.push_back(std::move(framebuffer));
-
-    return Framebuffer::ID{Framebuffer::ID::InnerType_t(m_framebuffers.size())};
+    return Objects<Framebuffer>().Add(this, std::move(framebuffer), render_pass->GetWrappedObject());
 }
 
 Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass_id)
@@ -88,17 +63,6 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
     }
 
     return AddFramebuffer(std::move(framebuffer), render_pass_id);
-}
-
-RenderPass::ID Engine::AddRenderPass(std::unique_ptr<RenderPass> &&render_pass)
-{
-    AssertThrow(render_pass != nullptr);
-    
-    render_pass->Create(this);
-
-    m_render_passes.push_back(std::move(render_pass));
-
-    return RenderPass::ID{RenderPass::ID::InnerType_t(m_render_passes.size())};
 }
 
 Pipeline::ID Engine::AddPipeline(renderer::GraphicsPipeline::Builder &&builder)
@@ -124,23 +88,23 @@ Pipeline::ID Engine::AddPipeline(renderer::GraphicsPipeline::Builder &&builder)
     /* Cache pipeline objects */
     HashCode::Value_t hash_code = builder.GetHashCode().Value();
 
-    auto it = std::find_if(m_pipelines.begin(), m_pipelines.end(), [hash_code](const auto &pl) {
+    auto it = std::find_if(m_pipelines.objects.begin(), m_pipelines.objects.end(), [hash_code](const auto &pl) {
         return pl->GetWrappedObject()->GetConstructionInfo().GetHashCode().Value() == hash_code;
     });
 
-    if (it != m_pipelines.end()) {
+    if (it != m_pipelines.objects.end()) {
         /* Return the index of the existing pipeline + 1,
          * as ID objects are one more than their index in the array. */
-        return Pipeline::ID{Pipeline::ID::InnerType_t((it - m_pipelines.begin()) + 1)};
+        return Pipeline::ID{Pipeline::ID::InnerType_t((it - m_pipelines.objects.begin()) + 1)};
     }
     
     /* Create the wrapper object around pipeline
      * builder.m_construction_info is now invalidated */
     auto pipeline = std::make_unique<Pipeline>(std::move(builder.m_construction_info));
 
-    m_pipelines.push_back(std::move(pipeline));
+    m_pipelines.objects.push_back(std::move(pipeline));
 
-    return Pipeline::ID{ Pipeline::ID::InnerType_t(m_pipelines.size())};
+    return Pipeline::ID{ Pipeline::ID::InnerType_t(m_pipelines.objects.size())};
 }
 
 void Engine::InitializeInstance()
@@ -221,7 +185,6 @@ void Engine::PrepareSwapchain()
         | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
         | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT);
 
-
     auto render_pass = std::make_unique<RenderPass>(RenderPass::RENDER_PASS_STAGE_PRESENT, RenderPass::RENDER_PASS_INLINE);
     /* For our color attachment */
     render_pass->GetWrappedObject()->AddAttachment(renderer::RenderPass::AttachmentInfo{
@@ -282,9 +245,8 @@ void Engine::PrepareSwapchain()
 
 void Engine::BuildPipelines()
 {
-    for (auto &pipeline : m_pipelines) {
-        pipeline->Create(this, &m_instance->GetDescriptorPool());
-    }
+    m_pipelines.CreateAll(this, &m_instance->GetDescriptorPool());
+    m_compute_pipelines.CreateAll(this);
 }
 
 void Engine::Initialize()
@@ -293,18 +255,18 @@ void Engine::Initialize()
     FindTextureFormatDefaults();
 }
 
-void Engine::RenderPostProcessing(Frame *frame, uint32_t frame_index)
+void Engine::RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index)
 {
-    m_filter_stack.Render(this, frame, frame_index);
+    m_filter_stack.Render(this, primary_command_buffer, frame_index);
 }
 
 void Engine::RenderSwapchain(Frame *frame)
 {
     Pipeline *pipeline = GetPipeline(m_swapchain_data.pipeline_id);
 
-    pipeline->GetWrappedObject()->Bind(frame->command_buffer);
+    pipeline->GetWrappedObject()->Bind(frame->command_buffer.get());
 
-    m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer, pipeline->GetWrappedObject()->layout);
+    m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer.get(), pipeline->GetWrappedObject());
 
     Filter::full_screen_quad->RenderVk(frame, m_instance.get(), nullptr);
 }

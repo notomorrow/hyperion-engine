@@ -59,14 +59,11 @@ void FilterStack::Destroy(Engine *engine)
     }
 }
 
-void FilterStack::Render(Engine *engine, Frame *frame, uint32_t frame_index)
+void FilterStack::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
 {
     for (auto &filter : m_filters) {
-        //if (!filter->IsRecorded()) {
-            filter->Record(engine, frame_index);
-        //}
-
-        filter->Render(engine, frame, frame_index);
+        filter->Record(engine, frame_index);
+        filter->Render(engine, primary_command_buffer, frame_index);
     }
 }
 } // namespace hyperion

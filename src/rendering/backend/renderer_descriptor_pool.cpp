@@ -1,6 +1,9 @@
 #include "renderer_descriptor_pool.h"
 #include "renderer_device.h"
 #include "renderer_descriptor_set.h"
+#include "renderer_command_buffer.h"
+#include "renderer_graphics_pipeline.h"
+#include "renderer_compute_pipeline.h"
 #include "../../util.h"
 
 #include <vector>
@@ -108,18 +111,29 @@ Result DescriptorPool::Destroy(Device *device)
     HYPERION_RETURN_OK;
 }
 
-Result DescriptorPool::BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout, size_t start_index, size_t size)
+Result DescriptorPool::BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *pipeline)
 {
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, size, &m_descriptor_sets_view[start_index], 0, nullptr);
+    return BindDescriptorSets(cmd, pipeline, 0, m_num_descriptor_sets);
+}
+
+Result DescriptorPool::BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *pipeline, uint32_t start_index, uint32_t size)
+{
+    vkCmdBindDescriptorSets(cmd->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, size, &m_descriptor_sets_view[start_index], 0, nullptr);
 
     HYPERION_RETURN_OK;
 }
 
-Result DescriptorPool::BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout)
+Result DescriptorPool::BindDescriptorSets(CommandBuffer *cmd, ComputePipeline *pipeline)
 {
-    return BindDescriptorSets(cmd, layout, 0, m_num_descriptor_sets);
+    return BindDescriptorSets(cmd, pipeline, 0, m_num_descriptor_sets);
 }
 
+Result DescriptorPool::BindDescriptorSets(CommandBuffer *cmd, ComputePipeline *pipeline, uint32_t start_index, uint32_t size)
+{
+    vkCmdBindDescriptorSets(cmd->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->layout, 0, size, &m_descriptor_sets_view[start_index], 0, nullptr);
+
+    HYPERION_RETURN_OK;
+}
 
 Result DescriptorPool::CreateDescriptorSetLayout(Device *device, VkDescriptorSetLayoutCreateInfo *layout_create_info, VkDescriptorSetLayout *out)
 {

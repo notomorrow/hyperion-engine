@@ -12,7 +12,7 @@ public:
     virtual ~ByteReader() {}
 
     template <typename T>
-    void Read(T *ptr, unsigned size = sizeof(T))
+    void Read(T *ptr, size_t size = sizeof(T))
     {
         if (size == 0) {
             return;
@@ -34,7 +34,7 @@ public:
     }
     
     template <typename T>
-    void Peek(T *ptr, unsigned size = sizeof(T))
+    void Peek(T *ptr, size_t size = sizeof(T))
     {
         Read(ptr, size);
         Rewind(size);
@@ -52,7 +52,7 @@ public:
     }
 
 protected:
-    virtual void ReadBytes(char *ptr, unsigned size) = 0;
+    virtual void ReadBytes(char *ptr, size_t size) = 0;
 };
 
 class MemoryByteReader : public ByteReader {
@@ -98,7 +98,7 @@ private:
     size_t m_size;
     size_t m_pos;
 
-    void ReadBytes(char *ptr, unsigned size)
+    void ReadBytes(char *ptr, size_t size)
     {
         memcpy(ptr, m_data + m_pos, size);
         m_pos += size;
@@ -153,7 +153,7 @@ private:
     std::streampos pos;
     std::streampos max_pos;
 
-    void ReadBytes(char *ptr, unsigned size)
+    void ReadBytes(char *ptr, size_t size)
     {
         file->read(ptr, size);
         pos += size;

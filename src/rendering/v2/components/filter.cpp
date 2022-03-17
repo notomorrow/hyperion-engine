@@ -142,19 +142,19 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
         command_buffer->Record(
             engine->GetInstance()->GetDevice(),
             pipeline->GetWrappedObject()->GetConstructionInfo().render_pass.get(),
-            [this, engine, pipeline](VkCommandBuffer cmd) {
+            [this, engine, pipeline](CommandBuffer *cmd) {
                 renderer::Result result = renderer::Result::OK;
 
                 pipeline->GetWrappedObject()->Bind(cmd);
 
                 HYPERION_PASS_ERRORS(
-                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, pipeline->GetWrappedObject()->layout, 0, 3),
+                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, pipeline->GetWrappedObject(), 0, 3),
                     result
                 );
 
                 // TMP
                 renderer::Frame tmp_frame;
-                tmp_frame.command_buffer = cmd;
+                tmp_frame.command_buffer = non_owning_ptr(cmd);
 
                 full_screen_quad->RenderVk(&tmp_frame, engine->GetInstance(), nullptr);
 
@@ -168,17 +168,17 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
     m_recorded = true;
 }
 
-void Filter::Render(Engine *engine, Frame *frame, uint32_t frame_index)
+void Filter::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
 {
     Pipeline *pipeline = engine->GetPipeline(m_pipeline_id);
 
-    pipeline->GetWrappedObject()->BeginRenderPass(frame->command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    pipeline->GetWrappedObject()->BeginRenderPass(primary_command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     
-    auto *command_buffer = m_frame_data->GetFrame(frame_index).GetCommandBuffer();
+    auto *secondary_command_buffer = m_frame_data->GetFrame(frame_index).GetCommandBuffer();
 
-    auto result = command_buffer->SubmitSecondary(frame->command_buffer);
+    auto result = secondary_command_buffer->SubmitSecondary(primary_command_buffer);
     AssertThrowMsg(result, "%s", result.message);
 
-    pipeline->GetWrappedObject()->EndRenderPass(frame->command_buffer, 0);
+    pipeline->GetWrappedObject()->EndRenderPass(primary_command_buffer, 0);
 }
 } // namespace hyperion

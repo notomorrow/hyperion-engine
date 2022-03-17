@@ -2,8 +2,8 @@
 #include "../../math/matrix_util.h"
 
 namespace hyperion {
-OrthoCamera::OrthoCamera(float left, float right, float bottom, float top, float near, float far)
-    : Camera(512, 512, near, far),
+OrthoCamera::OrthoCamera(float left, float right, float bottom, float top, float _near, float _far)
+    : Camera(512, 512, _near, _far),
       m_left(left),
       m_right(right),
       m_bottom(bottom),

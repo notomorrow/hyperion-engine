@@ -464,8 +464,8 @@ MeshFactory::VoxelGrid MeshFactory::BuildVoxels(const std::shared_ptr<Mesh> &mes
                 size_t index = (z * num_voxels_x * num_voxels_y) + (y * num_voxels_y) + x;
                 grid.voxels[index] = Voxel(
                     BoundingBox(
-                        Vector3(x, y, z) * voxel_size,
-                        Vector3(x + 1, y + 1, z + 1) * voxel_size
+                        Vector3(float(x), float(y), float(z)) * voxel_size,
+                        Vector3(float(x + 1), float(y + 1), float(z + 1)) * voxel_size
                     ),
                     false
                 );
@@ -507,7 +507,7 @@ std::shared_ptr<Mesh> MeshFactory::DebugVoxelMesh(const VoxelGrid &grid)
                     mesh,
                     CreateCube(),
                     Transform(),
-                    Transform(Vector3(x, y, z) * grid.voxel_size, grid.voxel_size, Quaternion::Identity())
+                    Transform(Vector3(float(x), float(y), float(z)) * grid.voxel_size, grid.voxel_size, Quaternion::Identity())
                 );
             }
         }

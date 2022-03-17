@@ -253,7 +253,7 @@ public:
         }
 
         { // write number of attributes
-            int32_t num_attributes = mesh->attribs.size();
+            int32_t num_attributes = int32_t(mesh->attribs.size());
 
             out->SetProperty("num_attributes", FBOMInt(), &num_attributes);
         }

@@ -176,16 +176,19 @@ struct QueueFamilyIndices {
     optional<Index_t> graphics_family;
     optional<Index_t> transfer_family;
     optional<Index_t> present_family;
+    optional<Index_t> compute_family;
 
     const bool IsComplete() {
         return this->graphics_family.has_value()
             && this->transfer_family.has_value()
-            && this->present_family.has_value();
+            && this->present_family.has_value()
+            && this->compute_family.has_value();
     }
 };
 
 struct SwapchainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
+    std::vector<VkQueueFamilyProperties> queue_family_properties;
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> present_modes;
 };

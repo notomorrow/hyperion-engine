@@ -17,7 +17,7 @@ bool IsDepthTexture(Texture::TextureBaseFormat fmt)
 
 size_t MipmapSize(size_t src_size, int lod)
 {
-    return MathUtil::Max(src_size >> lod, 1ul);
+    return MathUtil::Max(src_size >> lod, size_t(1));
 }
 
 VkFormat ToVkFormat(Texture::TextureInternalFormat fmt)

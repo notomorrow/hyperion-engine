@@ -30,22 +30,11 @@
 namespace hyperion {
 namespace renderer {
 
-using ::std::vector,
-      ::std::set;
-
-class Queue {
-public:
-    Queue();
-    void GetQueueFromDevice(Device device, uint32_t queue_family_index, uint32_t queue_index=0);
-private:
-    VkQueue queue;
-};
-
 class Instance {
-    static Result CheckValidationLayerSupport(const vector<const char *> &requested_layers);
+    static Result CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
 
-    vector<VkPhysicalDevice> EnumeratePhysicalDevices();
-    VkPhysicalDevice PickPhysicalDevice(vector<VkPhysicalDevice> _devices);
+    std::vector<VkPhysicalDevice> EnumeratePhysicalDevices();
+    VkPhysicalDevice PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices);
 
     /* Setup debug mode */
     Result SetupDebug();
@@ -61,24 +50,26 @@ public:
     Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
     Result Initialize(bool load_debug_layers=false);
     void CreateSurface();
-
-    Frame *GetNextFrame();
+    
     void WaitImageReady(Frame *frame);
-    void WaitDeviceIdle();
 
-    HYP_FORCE_INLINE DescriptorPool &GetDescriptorPool() { return this->descriptor_pool; }
-    HYP_FORCE_INLINE const DescriptorPool &GetDescriptorPool() const { return this->descriptor_pool; }
-    VkInstance GetInstance() { return this->instance; }
+    inline DescriptorPool &GetDescriptorPool() { return this->descriptor_pool; }
+    inline const DescriptorPool &GetDescriptorPool() const { return this->descriptor_pool; }
 
-    void     BeginFrame      (Frame *frame);
-    void     EndFrame        (Frame *frame);
-    void     SubmitFrame     (Frame *frame);
-    void     PresentFrame    (Frame *frame, const std::vector<VkSemaphore> &semaphores);
+    inline VkInstance &GetInstance() { return this->instance; }
+    inline VkInstance GetInstance() const { return this->instance; }
+    
+    void PrepareFrame(Frame *frame);
+    void PresentFrame(Frame *frame, SemaphoreChain *semaphore_chain);
 
-    void SetValidationLayers(vector<const char *> _layers);
+    void SetValidationLayers(std::vector<const char *> _layers);
+
     Device *GetDevice();
     Result InitializeDevice(VkPhysicalDevice _physical_device = nullptr);
     Result InitializeSwapchain();
+
+    inline Swapchain *GetSwapchain() { return swapchain; }
+    inline const Swapchain *GetSwapchain() const { return swapchain; }
 
     void SetQueueFamilies(set<uint32_t> queue_families);
     void SetCurrentWindow(SystemWindow *window);
@@ -93,7 +84,7 @@ public:
 
     helpers::SingleTimeCommands GetSingleTimeCommands();
 
-    vector<const char *> requested_device_extensions;
+    std::vector<const char *> requested_device_extensions;
 
     const char *app_name;
     const char *engine_name;
@@ -105,8 +96,10 @@ public:
 
     VkCommandPool command_pool;
 
-    VkQueue queue_graphics;
-    VkQueue queue_present;
+    VkQueue queue_graphics,
+            queue_transfer,
+            queue_present,
+            queue_compute;
 
 private:
 
@@ -122,8 +115,8 @@ private:
 
     Device    *device = nullptr;
 
-    set<uint32_t> queue_families;
-    vector<const char *> validation_layers;
+    std::set<uint32_t> queue_families;
+    std::vector<const char *> validation_layers;
 
 #ifndef HYPERION_BUILD_RELEASE
     VkDebugUtilsMessengerEXT debug_messenger;

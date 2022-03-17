@@ -12,21 +12,20 @@
 
 namespace hyperion {
 namespace renderer {
-Device::Device()
+Device::Device(VkPhysicalDevice physical, VkSurfaceKHR surface)
     : device(nullptr),
-      physical(nullptr),
-      surface(nullptr)
+      physical(physical),
+      surface(surface)
 {
+    this->renderer_features.SetPhysicalDevice(physical);
+    this->queue_family_indices = FindQueueFamilies(this->physical, this->surface);
+
     static int x = 0;
     DebugLog(LogType::Debug, "Created Device [%d]\n", x++);
 }
 
 Device::~Device()
 {
-}
-
-void Device::SetDevice(const VkDevice &device) {
-    this->device = device;
 }
 void Device::SetPhysicalDevice(VkPhysicalDevice physical)
 {
@@ -58,51 +57,128 @@ std::vector<const char *> Device::GetRequiredExtensions() {
     return this->required_extensions;
 }
 
-QueueFamilyIndices Device::FindQueueFamilies() {
-    VkPhysicalDevice _physical_device = this->GetPhysicalDevice();
+QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface) {
     QueueFamilyIndices indices;
 
     uint32_t queue_family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(_physical_device, &queue_family_count, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
     std::vector<VkQueueFamilyProperties> families(queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(_physical_device, &queue_family_count, families.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, families.data());
 
-    int index = 0;
+    constexpr auto possible_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_COMPUTE_BIT;
 
-    for (const auto &queue_family : families) {
-        VkBool32 supports_presentation = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(_physical_device, index, this->GetRenderSurface(), &supports_presentation);
-
-        if (supports_presentation)
-            indices.present_family = index;
-
-        if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) && supports_presentation)
-            indices.graphics_family = index;
-
-        /* For the transfer bit, use a separate queue family than the graphics bit */
-        if ((queue_family.queueFlags & VK_QUEUE_TRANSFER_BIT) && !(queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) && supports_presentation)
-            indices.transfer_family = index;
-
-        /* Some devices appear only to compute and are not graphical,
+    const auto predicate = [&](uint32_t index, VkQueueFlagBits expected_bits, bool expect_dedicated) -> bool {
+        const auto masked_bits = families[index].queueFlags & possible_flags;
+        
+        /* When looking for a dedicate graphics queue, we'll make sure it supports presentation.
+         * Some devices appear only to compute and are not graphical,
          * so we need to make sure it supports presenting to the user. */
+        if (expected_bits == VK_QUEUE_GRAPHICS_BIT) {
+            VkBool32 supports_presentation = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, index, surface, &supports_presentation);
 
-        /* Everything was found, return the indices */
-        if (indices.IsComplete())
-            break;
+            if (!supports_presentation) {
+                return false;
+            }
+        }
 
-        index++;
-    }
+        if (masked_bits & expected_bits) {
+            if (!expect_dedicated) {
+                return true;
+            }
 
-    if (!indices.IsComplete()) {
-        /* if a graphics family has been found but a transfer family has /not/ been found,
-         * set the transfer family to just use the graphics family. */
+            return ((masked_bits & expected_bits) == expected_bits);
+        }
 
-        if (indices.graphics_family.has_value() && !indices.transfer_family.has_value()) {
-            DebugLog(LogType::Info, "No dedicated transfer family, using graphics family.\n");
+        return false;
+    };
 
-            indices.transfer_family = indices.graphics_family;
+    /* Find dedicated queues */
+    for (uint32_t i = 0; i < families.size() && !indices.IsComplete(); i++) {
+        AssertContinueMsg(
+            families[i].queueCount != 0,
+            "Queue family %d supports no queues, skipping\n",
+            i
+        );
+
+        if (!indices.present_family.has_value()) {
+            VkBool32 supports_presentation = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &supports_presentation);
+
+            if (supports_presentation) {
+                DebugLog(LogType::Debug, "Found presentation queue (%d)\n", i);
+                indices.present_family = i;
+            }
+        }
+
+        if (!indices.graphics_family.has_value()) {
+            if (predicate(i, VK_QUEUE_GRAPHICS_BIT, true)) {
+                DebugLog(LogType::Debug, "Found dedicated graphics presentation queue (%d)\n", i);
+                indices.graphics_family = i;
+                continue;
+            }
+        }
+
+        if (!indices.transfer_family.has_value()) {
+            if (predicate(i, VK_QUEUE_TRANSFER_BIT, true)) {
+                DebugLog(LogType::Debug, "Found dedicated transfer queue (%d)\n", i);
+                indices.transfer_family = i;
+                continue;
+            }
+        }
+
+        if (!indices.compute_family.has_value()) {
+            if (predicate(i, VK_QUEUE_COMPUTE_BIT, true)) {
+                DebugLog(LogType::Debug, "Found dedicated compute queue (%d)\n", i);
+                indices.compute_family = i;
+                continue;
+            }
         }
     }
+
+    AssertThrowMsg(indices.present_family.has_value(), "No present queue family found!");
+    AssertThrowMsg(indices.graphics_family.has_value(), "No graphics queue family found that supports presentation!");
+
+    if (!indices.transfer_family.has_value()) {
+        DebugLog(LogType::Warn, "No dedicated transfer queue family found!\n");
+    }
+
+    if (!indices.compute_family.has_value()) {
+        DebugLog(LogType::Warn, "No dedicated compute queue family found!\n");
+    }
+
+    /* Fallback -- find queue families (non-dedicated) */
+    for (uint32_t i = 0; i < families.size() && !indices.IsComplete(); i++) {
+        AssertContinueMsg(
+            families[i].queueCount != 0,
+            "Queue family %d supports no queues, skipping\n",
+            i
+        );
+
+        if (!indices.transfer_family.has_value()) {
+            if (predicate(i, VK_QUEUE_TRANSFER_BIT, false)) {
+                DebugLog(LogType::Debug, "Found non-dedicated transfer queue (%d)\n", i);
+                indices.transfer_family = i;
+            }
+        }
+
+        if (!indices.compute_family.has_value()) {
+            if (predicate(i, VK_QUEUE_COMPUTE_BIT, false)) {
+                DebugLog(LogType::Debug, "Found non-dedicated transfer queue (%d)\n", i);
+                indices.compute_family = i;
+            }
+        }
+    }
+
+    AssertThrowMsg(indices.IsComplete(), "Queue indices could not be created! Indices were:\n"
+        "\tGraphics: %d\n"
+        "\tTransfer: %d\n"
+        "\tPresent: %d\n",
+        "\tCompute: %d\n",
+        indices.graphics_family.value_or(0xBEEF),
+        indices.transfer_family.value_or(0xBEEF),
+        indices.present_family.value_or(0xBEEF),
+        indices.compute_family.value_or(0xBEEF));
 
     return indices;
 }
@@ -139,6 +215,12 @@ SwapchainSupportDetails Device::QuerySwapchainSupport() {
     VkSurfaceKHR     _surface = this->GetRenderSurface();
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physical, _surface, &details.capabilities);
+
+    uint32_t queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(_physical, &queue_family_count, nullptr);
+    std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(_physical, &queue_family_count, queue_family_properties.data());
+
     uint32_t count = 0;
     /* Get device surface formats */
     vkGetPhysicalDeviceSurfaceFormatsKHR(_physical, _surface, &count, nullptr);
@@ -153,6 +235,7 @@ SwapchainSupportDetails Device::QuerySwapchainSupport() {
     if (count == 0)
         DebugLog(LogType::Warn, "No present modes available!\n");
 
+    details.queue_family_properties = queue_family_properties;
     details.formats = surface_formats;
     details.present_modes = present_modes;
 
@@ -160,8 +243,8 @@ SwapchainSupportDetails Device::QuerySwapchainSupport() {
 }
 
 Result Device::CheckDeviceSuitable() {
-    QueueFamilyIndices indices = this->FindQueueFamilies();
-    std::vector<const char *> unsupported_extensions = this->CheckExtensionSupport();
+    const std::vector<const char *> unsupported_extensions = this->CheckExtensionSupport();
+
     if (!unsupported_extensions.empty()) {
         DebugLog(LogType::Warn, "--- Unsupported Extensions ---\n");
         for (const auto &extension : unsupported_extensions) {
@@ -177,7 +260,7 @@ Result Device::CheckDeviceSuitable() {
     SwapchainSupportDetails swapchain_support = this->QuerySwapchainSupport();
     bool swapchains_available = (!swapchain_support.formats.empty() && !swapchain_support.present_modes.empty());
 
-    if (!indices.IsComplete())
+    if (!this->queue_family_indices.IsComplete())
         return Result(Result::RENDERER_ERR, "Device not supported -- indices setup was not complete.");
 
     if (!extensions_available)
@@ -189,7 +272,8 @@ Result Device::CheckDeviceSuitable() {
     HYPERION_RETURN_OK;
 }
 
-Result Device::SetupAllocator(Instance *instance) {
+Result Device::SetupAllocator(Instance *instance)
+{
     VmaVulkanFunctions vkfuncs{};
     vkfuncs.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
     vkfuncs.vkGetDeviceProcAddr   = &vkGetDeviceProcAddr;
@@ -206,10 +290,19 @@ Result Device::SetupAllocator(Instance *instance) {
     HYPERION_RETURN_OK;
 }
 
-Result Device::DestroyAllocator() {
-
-    if (this->allocator != nullptr)
+Result Device::DestroyAllocator()
+{
+    if (this->allocator != nullptr) {
         vmaDestroyAllocator(this->allocator);
+        this->allocator = nullptr;
+    }
+
+    HYPERION_RETURN_OK;
+}
+Result Device::Wait() const
+{
+    HYPERION_VK_CHECK(vkDeviceWaitIdle(this->device));
+
     HYPERION_RETURN_OK;
 }
 
@@ -240,14 +333,10 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
     // Setup Device Features
     create_info.pEnabledFeatures = &this->renderer_features.GetPhysicalDeviceFeatures();
 
-    VkDevice _device;
-
     HYPERION_VK_CHECK_MSG(
-        vkCreateDevice(this->physical, &create_info, nullptr, &_device),
+        vkCreateDevice(this->physical, &create_info, nullptr, &this->device),
         "Could not create Device!"
     );
-
-    this->SetDevice(_device);
 
     HYPERION_RETURN_OK;
 }
@@ -258,13 +347,14 @@ VkQueue Device::GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_
     return queue;
 }
 
-
 void Device::Destroy() {
-    /* By the time this destructor is called there should never
-     * be a running queue, but just in case we will wait until
-     * all the queues on our device are stopped. */
-    vkDeviceWaitIdle(this->device);
-    vkDestroyDevice(this->device, nullptr);
+    if (this->device != nullptr) {
+        /* By the time this destructor is called there should never
+         * be a running queue, but just in case we will wait until
+         * all the queues on our device are stopped. */
+        vkDeviceWaitIdle(this->device);
+        vkDestroyDevice(this->device, nullptr);
+    }
 }
 
 } // namespace renderer
