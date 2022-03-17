@@ -58,7 +58,7 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
     auto framebuffer = std::make_unique<Framebuffer>(width, height);
 
     /* Add all attachments from the renderpass */
-    for (auto &it : render_pass->GetAttachments()) {
+    for (auto &it : render_pass->GetWrappedObject()->GetAttachments()) {
         framebuffer->GetWrappedObject()->AddAttachment(it.format);
     }
 
@@ -185,19 +185,21 @@ void Engine::PrepareSwapchain()
         | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
         | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT);
 
-    auto render_pass = std::make_unique<RenderPass>(RenderPass::RENDER_PASS_STAGE_PRESENT, RenderPass::RENDER_PASS_INLINE);
-    /* For our color attachment */
-    render_pass->GetWrappedObject()->AddAttachment(renderer::RenderPass::AttachmentInfo{
-        .attachment = std::make_unique<Attachment<VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
-            (0, m_instance->swapchain->image_format),
-        .is_depth_attachment = false
-    });
+    RenderPass::ID render_pass_id{};
 
-    render_pass->AddAttachment({
-        .format = m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)
-    });
-    
-    RenderPass::ID render_pass_id = AddRenderPass(std::move(render_pass));
+    {
+        auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::RENDER_PASS_STAGE_PRESENT, renderer::RenderPass::RENDER_PASS_INLINE);
+        /* For our color attachment */
+        render_pass->GetWrappedObject()->AddColorAttachment(
+            std::make_unique<Attachment<VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
+                (0, m_instance->swapchain->image_format));
+
+        render_pass->GetWrappedObject()->AddAttachment({
+            .format = m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)
+        });
+        
+        render_pass_id = AddRenderPass(std::move(render_pass));
+    }
 
     renderer::GraphicsPipeline::Builder builder;
 

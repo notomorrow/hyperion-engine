@@ -4,8 +4,10 @@
 
 namespace hyperion {
 namespace renderer {
-RenderPass::RenderPass()
-    : m_render_pass{}
+RenderPass::RenderPass(Stage stage, Mode mode)
+    : m_stage(stage),
+      m_mode(mode),
+      m_render_pass{}
 {
 }
 
@@ -14,21 +16,111 @@ RenderPass::~RenderPass()
     AssertExitMsg(m_render_pass == nullptr, "render pass should have been destroyed");
 }
 
-void RenderPass::AddAttachment(AttachmentInfo &&attachment)
+
+void RenderPass::AddDepthAttachment(std::unique_ptr<AttachmentBase> &&attachment)
 {
-    AssertExit(attachment.attachment != nullptr);
+    AssertThrowMsg(m_depth_attachments.empty(), "May only have one depth attachment in a renderpass!");
 
-    if (attachment.is_depth_attachment) {
-        AssertThrowMsg(m_depth_attachments.empty(), "May only have one depth attachment in a renderpass!");
+    m_depth_attachments.push_back(std::move(attachment));
+}
 
-        m_depth_attachments.push_back(std::move(attachment));
-    } else {
-        m_color_attachments.push_back(std::move(attachment));
+void RenderPass::AddColorAttachment(std::unique_ptr<AttachmentBase> &&attachment)
+{
+    m_color_attachments.push_back(std::move(attachment));
+}
+
+void RenderPass::CreateAttachments()
+{
+    /* Start our binding index at the point where any existing attachments end */
+    uint32_t binding_index(m_color_attachments.size() + m_depth_attachments.size());
+
+    for (auto &it : m_attachments) {
+        const bool is_depth_attachment = renderer::helpers::IsDepthTexture(it.format);
+        std::unique_ptr<AttachmentBase> attachment;
+
+        switch (m_stage) {
+        case RENDER_PASS_STAGE_PRESENT:
+            if (is_depth_attachment) {
+                attachment = std::make_unique<renderer::Attachment
+                    <VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL>>
+                    (binding_index, renderer::helpers::ToVkFormat(it.format));
+            } else {
+                attachment = std::make_unique<renderer::Attachment
+                    <VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
+                    (binding_index, renderer::helpers::ToVkFormat(it.format));
+            }
+            break;
+        case RENDER_PASS_STAGE_SHADER:
+            if (is_depth_attachment) {
+                attachment = std::make_unique<renderer::Attachment
+                    <VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>>
+                    (binding_index, renderer::helpers::ToVkFormat(it.format));
+            } else {
+                attachment = std::make_unique<renderer::Attachment
+                    <VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>>
+                    (binding_index, renderer::helpers::ToVkFormat(it.format));
+            }
+            break;
+        default:
+            AssertThrowMsg(0, "Unsupported stage type %d", m_stage);
+        }
+
+        if (is_depth_attachment) {
+            AddDepthAttachment(std::move(attachment));
+        } else {
+            AddColorAttachment(std::move(attachment));
+        }
+
+        binding_index++;
+    }
+}
+void RenderPass::CreateDependencies()
+{
+    switch (m_stage) {
+    case RENDER_PASS_STAGE_PRESENT:
+        AddDependency(VkSubpassDependency{
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+        });
+
+        break;
+    case RENDER_PASS_STAGE_SHADER:
+        AddDependency(VkSubpassDependency{
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+        });
+
+        AddDependency(VkSubpassDependency{
+            .srcSubpass = 0,
+            .dstSubpass = VK_SUBPASS_EXTERNAL,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+        });
+
+        break;
+    default:
+        AssertThrowMsg(0, "Unsupported stage type %d", m_stage);
     }
 }
 
 Result RenderPass::Create(Device *device)
 {
+    CreateAttachments();
+    CreateDependencies();
+
     std::vector<VkAttachmentDescription> attachments;
     attachments.reserve(m_color_attachments.size() + m_depth_attachments.size());
 
@@ -40,12 +132,12 @@ Result RenderPass::Create(Device *device)
     subpass_description.pDepthStencilAttachment = nullptr;
 
     for (size_t i = 0; i < m_color_attachments.size(); i++) {
-        auto &attachment_info = m_color_attachments[i];
+        auto &attachment = m_color_attachments[i];
 
-        HYPERION_BUBBLE_ERRORS(attachment_info.attachment->Create(device));
+        HYPERION_BUBBLE_ERRORS(attachment->Create(device));
 
-        attachments.push_back(attachment_info.attachment->m_attachment_description);
-        color_attachment_refs.push_back(attachment_info.attachment->m_attachment_reference);
+        attachments.push_back(attachment->m_attachment_description);
+        color_attachment_refs.push_back(attachment->m_attachment_reference);
 
         m_clear_values.push_back(VkClearValue{.color = {0.0f, 0.0f, 0.0f, 1.0f}});
     }
@@ -53,13 +145,13 @@ Result RenderPass::Create(Device *device)
     /* Should only loop one time due to assertion in AddAttachment.
      * Still, keeping it consistent. */
     for (size_t i = 0; i < m_depth_attachments.size(); i++) {
-        const auto &attachment_info = m_depth_attachments[i];
+        const auto &attachment = m_depth_attachments[i];
 
-        HYPERION_BUBBLE_ERRORS(attachment_info.attachment->Create(device));
+        HYPERION_BUBBLE_ERRORS(attachment->Create(device));
 
-        attachments.push_back(attachment_info.attachment->m_attachment_description);
+        attachments.push_back(attachment->m_attachment_description);
 
-        depth_attachment_ref = attachment_info.attachment->m_attachment_reference;
+        depth_attachment_ref = attachment->m_attachment_reference;
         subpass_description.pDepthStencilAttachment = &depth_attachment_ref;
 
         m_clear_values.push_back(VkClearValue{.depthStencil = {1.0f, 0}});

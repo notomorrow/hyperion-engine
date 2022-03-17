@@ -668,7 +668,7 @@ int main()
 
     v2::RenderPass::ID render_pass_id{};
     {
-        auto render_pass = std::make_unique<v2::RenderPass>(v2::RenderPass::RENDER_PASS_STAGE_SHADER, v2::RenderPass::RENDER_PASS_INLINE);
+        auto render_pass = std::make_unique<RenderPass>(RenderPass::RENDER_PASS_STAGE_SHADER, RenderPass::RENDER_PASS_INLINE);
 
         /* For our color attachment */
         render_pass->AddAttachment({
@@ -686,10 +686,8 @@ int main()
         render_pass->AddAttachment({
             .format = engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)
         });
-
-
-
-        render_pass_id = engine.AddRenderPass(std::move(render_pass));
+        
+        render_pass_id = engine.AddRenderPass(std::make_unique<v2::RenderPass>(std::move(render_pass)));
     }
 
     v2::Framebuffer::ID my_fbo_id = engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);

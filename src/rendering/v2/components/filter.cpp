@@ -36,10 +36,10 @@ Filter::~Filter() = default;
 void Filter::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
-    auto render_pass = std::make_unique<RenderPass>(RenderPass::RENDER_PASS_STAGE_SHADER, RenderPass::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
+    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::RENDER_PASS_STAGE_SHADER, renderer::RenderPass::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
 
     /* For our color attachment */
-    render_pass->AddAttachment({
+    render_pass->GetWrappedObject()->AddAttachment({
         .format = engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
     });
 
