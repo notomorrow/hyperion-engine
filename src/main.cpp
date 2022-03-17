@@ -891,21 +891,20 @@ int main()
 
     
 
-    PerFrameData<CommandBuffer> per_frame_data(engine.GetInstance()->GetNumImages());
+    PerFrameData<CommandBuffer, Semaphore> per_frame_data(engine.GetInstance()->GetFrameHandler()->GetNumFrames());
 
     SemaphoreChain graphics_semaphore_chain({}, {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT});
     AssertThrow(graphics_semaphore_chain.Create(engine.GetInstance()->GetDevice()));
 
-    for (size_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
+    for (uint32_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
         auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_PRIMARY);
         AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool));
-        per_frame_data[i].SetCommandBuffer(std::move(cmd_buffer));
 
+        per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
+        
         graphics_semaphore_chain >> engine.GetInstance()->GetFrameHandler()
-            ->GetPerFrameData()[i]
-            .GetFrame()
+            ->GetPerFrameData()[i].Get<Frame>()
             ->GetPresentSemaphores();
-
     }
     
     engine.BuildPipelines();
@@ -950,7 +949,7 @@ int main()
         scene_data_block.light_direction = Vector3(-0.5, -0.5, 0).Normalize();
 
 
-        frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().GetFrame();
+        frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
 
         engine.GetInstance()->PrepareFrame(frame);
 
@@ -978,10 +977,10 @@ int main()
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
 
         
-        const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetFrameIndex();
+        const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
-        per_frame_data[frame_index].GetCommandBuffer()->Reset(engine.GetInstance()->GetDevice());
-        per_frame_data[frame_index].GetCommandBuffer()->Record(
+        per_frame_data[frame_index].Get<CommandBuffer>()->Reset(engine.GetInstance()->GetDevice());
+        per_frame_data[frame_index].Get<CommandBuffer>()->Record(
             engine.GetInstance()->GetDevice(),
             nullptr,
             [&](CommandBuffer *command_buffer) {
@@ -1000,7 +999,7 @@ int main()
                 HYPERION_RETURN_OK;
             });
         
-        per_frame_data[frame_index].GetCommandBuffer()->SubmitPrimary(
+        per_frame_data[frame_index].Get<CommandBuffer>()->SubmitPrimary(
             engine.GetInstance()->queue_graphics, VK_NULL_HANDLE, &graphics_semaphore_chain
         );
 
@@ -1072,7 +1071,7 @@ int main()
     image->Destroy(device);
 
     for (size_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
-        per_frame_data[i].GetCommandBuffer()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
+        per_frame_data[i].Get<CommandBuffer>()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
     }
     per_frame_data.Reset();
 

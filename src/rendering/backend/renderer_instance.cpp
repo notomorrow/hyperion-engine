@@ -66,11 +66,11 @@ void Instance::PresentFrame(Frame *frame)
 
     AssertThrow(this->swapchain != nullptr && this->swapchain->swapchain != nullptr);
 
-    const uint32_t frame_index = this->frame_handler->GetFrameIndex();
+    const uint32_t image_index = this->frame_handler->GetAcquiredImageIndex();
 
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &this->swapchain->swapchain;
-    present_info.pImageIndices = &frame_index;
+    present_info.pImageIndices = &image_index;
     present_info.pResults = nullptr;
     
     vkQueuePresentKHR(this->queue_present, &present_info);
@@ -95,10 +95,9 @@ Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &re
         }
 
         if (!layer_found) {
-            // TODO: disable debug mode/validation layers instead of causing a runtime error
             DebugLog(LogType::Warn, "Validation layer %s is unavailable!\n", request);
 
-            return Result(Result::RENDERER_ERR, "Requested validation layer was unavailable; check debug log for the name of the requested layer");
+            return {Result::RENDERER_ERR, "Requested validation layer was unavailable; check debug log for the name of the requested layer"};
         }
     }
 

@@ -48,8 +48,9 @@ void Filter::CreateRenderPass(Engine *engine)
 
 void Filter::CreateFrameData(Engine *engine)
 {
-    m_frame_data = std::make_unique<PerFrameData<CommandBuffer>>(
-        engine->GetInstance()->GetFrameHandler()->GetNumFrames());
+    const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->GetNumFrames();
+
+    m_frame_data = std::make_unique<PerFrameData<CommandBuffer>>(num_frames);
 
     m_framebuffer_id = engine->AddFramebuffer(
         engine->GetInstance()->swapchain->extent.width,
@@ -57,7 +58,7 @@ void Filter::CreateFrameData(Engine *engine)
         m_render_pass_id
     );
 
-    for (size_t j = 0; j < engine->GetInstance()->GetNumImages(); j++) {
+    for (uint32_t i = 0; i < num_frames; i++) {
         auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
 
         auto command_buffer_result = command_buffer->Create(
@@ -67,7 +68,7 @@ void Filter::CreateFrameData(Engine *engine)
 
         AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
 
-        m_frame_data->GetFrame(j).SetCommandBuffer(std::move(command_buffer));
+        (*m_frame_data)[i].Set<CommandBuffer>(std::move(command_buffer));
     }
 }
 
@@ -79,11 +80,11 @@ void Filter::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 
     const uint32_t num_attachments = engine->GetFramebuffer(m_framebuffer_id)->GetWrappedObject()->GetNumAttachments();
 
-    for (uint32_t j = 0; j < num_attachments; j++) {
+    for (uint32_t i = 0; i < num_attachments; i++) {
         descriptor_set->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
             binding_offset++,
-            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->GetWrappedObject()->GetAttachmentImageInfos()[j].image_view.get()),
-            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->GetWrappedObject()->GetAttachmentImageInfos()[j].sampler.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->GetWrappedObject()->GetAttachmentImageInfos()[i].image_view.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->GetWrappedObject()->GetAttachmentImageInfos()[i].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ));
     }
@@ -105,13 +106,15 @@ void Filter::CreatePipeline(Engine *engine)
 
 void Filter::Destroy(Engine *engine)
 {
-    renderer::Result result = renderer::Result::OK;
+    auto result = renderer::Result::OK;
 
-    for (size_t i = 0; i < m_frame_data->GetNumFrames(); i++) {
-        auto &frame = m_frame_data->GetFrame(i);
+    AssertThrow(m_frame_data != nullptr);
 
+    auto &frame_data = *m_frame_data;
+
+    for (uint32_t i = 0; i < frame_data.GetNumFrames(); i++) {
         HYPERION_PASS_ERRORS(
-            frame.GetCommandBuffer()->Destroy(engine->GetInstance()->GetDevice(), engine->GetInstance()->command_pool),
+            frame_data[i].Get<CommandBuffer>()->Destroy(engine->GetInstance()->GetDevice(), engine->GetInstance()->command_pool),
             result
         );
     }
@@ -130,13 +133,10 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
 {
     using renderer::Result;
 
-    Result result = Result::OK;
+    auto result = Result::OK;
 
-    auto *command_buffer = m_frame_data->GetFrame(frame_index).GetCommandBuffer();
+    auto *command_buffer = (*m_frame_data)[frame_index].Get<CommandBuffer>();
     Pipeline *pipeline = engine->GetPipeline(m_pipeline_id);
-
-    //vkDeviceWaitIdle(engine->GetInstance()->GetDevice()->GetDevice());
-    //HYPERION_PASS_ERRORS(command_buffer->Reset(engine->GetInstance()->GetDevice()), result);
 
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
@@ -174,7 +174,7 @@ void Filter::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint3
 
     pipeline->GetWrappedObject()->BeginRenderPass(primary_command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     
-    auto *secondary_command_buffer = m_frame_data->GetFrame(frame_index).GetCommandBuffer();
+    auto *secondary_command_buffer = (*m_frame_data)[frame_index].Get<CommandBuffer>();
 
     auto result = secondary_command_buffer->SubmitSecondary(primary_command_buffer);
     AssertThrowMsg(result, "%s", result.message);
