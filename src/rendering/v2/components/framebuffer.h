@@ -3,10 +3,7 @@
 
 #include "base.h"
 
-#include "render_pass.h"
 #include <rendering/backend/renderer_fbo.h>
-
-#include <memory>
 
 namespace hyperion::v2 {
 

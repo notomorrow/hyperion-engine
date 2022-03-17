@@ -17,24 +17,47 @@ class RenderPass {
     friend class FramebufferObject;
     friend class GraphicsPipeline;
 public:
-    struct AttachmentInfo {
-        std::unique_ptr<AttachmentBase> attachment;
-        bool is_depth_attachment;
+    enum Stage {
+        RENDER_PASS_STAGE_NONE = 0,
+        RENDER_PASS_STAGE_PRESENT = 1, /* for presentation on screen */
+        RENDER_PASS_STAGE_SHADER = 2  /* for use as a sampled texture in a shader */
     };
 
-    RenderPass();
+    enum Mode {
+        RENDER_PASS_INLINE = 0,
+        RENDER_PASS_SECONDARY_COMMAND_BUFFER = 1
+    };
+
+    struct Attachment {
+        Texture::TextureInternalFormat format;
+    };
+
+    RenderPass(Stage stage, Mode mode);
     RenderPass(const RenderPass &other) = delete;
     RenderPass &operator=(const RenderPass &other) = delete;
     ~RenderPass();
 
-    void AddAttachment(AttachmentInfo &&attachment);
-    inline void AddDependency(const VkSubpassDependency &dependency)
-        { m_dependencies.push_back(dependency); }
+    inline Stage GetStage() const
+        { return m_stage; }
 
-    inline std::vector<AttachmentInfo> &GetColorAttachments() { return m_color_attachments; }
-    inline const std::vector<AttachmentInfo> &GetColorAttachments() const { return m_color_attachments; }
-    inline std::vector<AttachmentInfo> &GetDepthAttachments() { return m_depth_attachments; }
-    inline const std::vector<AttachmentInfo> &GetDepthAttachments() const { return m_depth_attachments; }
+    /* Pre-defined attachments */
+
+    inline void AddAttachment(const Attachment &attachment)
+        { m_attachments.push_back(attachment); }
+
+    inline auto &GetAttachments() { return m_attachments; }
+    inline const auto &GetAttachments() const { return m_attachments; }
+
+    /* Renderer attachments - the defined attachments get added this way,
+     * as well as any custom attachments */
+
+    void AddDepthAttachment(std::unique_ptr<AttachmentBase> &&);
+    void AddColorAttachment(std::unique_ptr<AttachmentBase> &&);
+
+    inline auto &GetColorAttachments() { return m_color_attachments; }
+    inline const auto &GetColorAttachments() const { return m_color_attachments; }
+    inline auto &GetDepthAttachments() { return m_depth_attachments; }
+    inline const auto &GetDepthAttachments() const { return m_depth_attachments; }
 
     inline VkRenderPass GetRenderPass() const { return m_render_pass; }
 
@@ -48,12 +71,20 @@ public:
     void End(CommandBuffer *cmd);
 
 private:
+    void CreateAttachments();
+    void CreateDependencies();
 
-    std::vector<AttachmentInfo> m_color_attachments;
-    std::vector<AttachmentInfo> m_depth_attachments;
+    inline void AddDependency(const VkSubpassDependency &dependency)
+        { m_dependencies.push_back(dependency); }
+
+    Stage m_stage;
+    Mode m_mode;
+    std::vector<Attachment> m_attachments;
+
+    std::vector<std::unique_ptr<AttachmentBase>> m_color_attachments;
+    std::vector<std::unique_ptr<AttachmentBase>> m_depth_attachments;
 
     std::vector<VkSubpassDependency> m_dependencies;
-
     std::vector<VkClearValue> m_clear_values;
 
     VkRenderPass m_render_pass;
