@@ -73,8 +73,7 @@ public:
 
     void SetQueueFamilies(set<uint32_t> queue_families);
     void SetCurrentWindow(SystemWindow *window);
-
-    inline size_t GetNumImages() const { return this->swapchain->GetNumImages(); }
+    
     inline FrameHandler *GetFrameHandler() { return this->frame_handler; }
     inline const FrameHandler *GetFrameHandler() const { return this->frame_handler; }
     inline VmaAllocator *GetAllocator() { return &this->allocator; }
