@@ -12,8 +12,10 @@ using renderer::Device;
 
 class Engine;
 
+Device *GetEngineDevice(Engine *engine);
+
 template <class WrappedType>
-class BaseComponent {
+class EngineComponent {
     template <class ObjectType, class InnerType>
     struct IdWrapper {
         using InnerType_t = InnerType;
@@ -27,37 +29,99 @@ class BaseComponent {
 public:
     using ID = IdWrapper<WrappedType, uint32_t>;
 
-    BaseComponent() = default;
+    EngineComponent()
+        : m_wrapped(nullptr),
+          m_is_created(false)
+    {}
 
     template <class ...Args>
-    BaseComponent(Args &&... args) : m_wrapped(std::make_unique<WrappedType>(std::move(args)...)) {}
+    EngineComponent(Args &&... args)
+        : m_wrapped(std::make_unique<WrappedType>(std::move(args)...)),
+          m_is_created(false)
+    {}
 
-    BaseComponent(std::unique_ptr<WrappedType> &&wrapped) : m_wrapped(std::move(wrapped)) {}
-    BaseComponent(const BaseComponent &other) = delete;
-    BaseComponent &operator=(const BaseComponent &other) = delete;
-    BaseComponent(BaseComponent &&other) : m_wrapped(std::move(other.m_wrapped)) {}
-
-    BaseComponent &operator=(BaseComponent &&other)
+    EngineComponent(std::unique_ptr<WrappedType> &&wrapped)
+        : m_wrapped(std::move(wrapped)),
+          m_is_created(false)
+    {}
+    EngineComponent(EngineComponent &&other) noexcept
+        : m_wrapped(std::move(other.m_wrapped)),
+          m_is_created(other.m_is_created)
     {
-        m_wrapped = std::move(other.m_wrapped);
+        other.m_is_created = false;
+    }
+
+    EngineComponent &operator=(EngineComponent &&other) noexcept
+    {
+        this->m_wrapped = std::move(other.m_wrapped);
+        this->m_is_created = other.m_is_created;
+        other.m_is_created = false;
 
         return *this;
     }
 
-    ~BaseComponent()
+    EngineComponent(const EngineComponent &other) = delete;
+    EngineComponent &operator=(const EngineComponent &other) = delete;
+
+    ~EngineComponent()
     {
-        AssertThrowMsg(
-            m_wrapped == nullptr,
-            "Expected wrapped object of type %s to be destroyed before destructor, but it was not nullptr.",
-            typeid(WrappedType).name()
-        );
+        if (m_is_created) {
+            AssertThrowMsg(
+                m_wrapped == nullptr,
+                "Expected wrapped object of type %s to be destroyed before destructor, but it was not nullptr.",
+                typeid(WrappedType).name()
+            );
+        }
     }
 
     inline constexpr WrappedType *GetWrappedObject() { return m_wrapped.get(); }
     inline constexpr const WrappedType *GetWrappedObject() const { return m_wrapped.get(); }
 
+    /* Standard non-specialized initialization function */
+    template <class ...Args>
+    void Create(Engine *engine, Args &&... args)
+    {
+        const char *wrapped_type_name = typeid(WrappedType).name();
+
+        AssertThrow(this->m_wrapped != nullptr);
+
+        AssertThrowMsg(
+            !m_is_created,
+            "Expected wrapped object of type %s to have not already been created, but it was already created.",
+            wrapped_type_name
+        );
+
+        auto result = this->m_wrapped->Create(GetEngineDevice(engine), std::move(args)...);
+        AssertThrowMsg(result, "Creation of object of type %s failed: %s", wrapped_type_name, result.message);
+
+        m_is_created = true;
+    }
+
+    /* Standard non-specialized destruction function */
+    template <class ...Args>
+    void Destroy(Engine *engine, Args &&... args)
+    {
+        const char *wrapped_type_name = typeid(WrappedType).name();
+
+        AssertThrow(this->m_wrapped != nullptr);
+
+        AssertThrowMsg(
+            m_is_created,
+            "Expected wrapped object of type %s to have been created, but it was not yet created.",
+            wrapped_type_name
+        );
+
+        auto result = this->m_wrapped->Destroy(GetEngineDevice(engine), std::move(args)...);
+        AssertThrowMsg(result, "Destruction of object of type %s failed: %s", wrapped_type_name, result.message);
+
+        this->m_wrapped.reset();
+
+        m_is_created = false;
+    }
+
 protected:
     std::unique_ptr<WrappedType> m_wrapped;
+    bool m_is_created;
 };
 
 } // namespace hyperion::v2

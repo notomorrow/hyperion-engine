@@ -3,7 +3,7 @@
 
 namespace hyperion::v2 {
 ComputePipeline::ComputePipeline(Shader::ID shader_id)
-    : BaseComponent(std::make_unique<renderer::ComputePipeline>()),
+    : EngineComponent(std::make_unique<renderer::ComputePipeline>()),
       m_shader_id(shader_id)
 {
 }

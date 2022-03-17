@@ -39,11 +39,17 @@ private:
 };
 
 struct SemaphoreRef {
-    Semaphore *semaphore;
+    Semaphore semaphore;
     mutable uint32_t count;
 
+    SemaphoreRef(VkPipelineStageFlags pipeline_stage)
+        : semaphore(pipeline_stage),
+          count(0)
+    {
+    }
+
     inline bool operator<(const SemaphoreRef &other) const
-        { return intptr_t(semaphore) < intptr_t(other.semaphore); }
+        { return intptr_t(semaphore.GetSemaphore()) < intptr_t(other.semaphore.GetSemaphore()); }
 };
 
 enum class SemaphoreType {
@@ -54,35 +60,62 @@ enum class SemaphoreType {
 template <SemaphoreType Type>
 struct SemaphoreRefHolder {
     friend class SemaphoreChain;
-    
-    SemaphoreRefHolder(SemaphoreRef *ref) : ref(ref) { ++ref->count; }
-    SemaphoreRefHolder(SemaphoreRefHolder &&other) : ref(std::move(other.ref)) {}
-    SemaphoreRefHolder(const SemaphoreRefHolder &other) : ref(other.ref) { ++ref->count; }
 
-    SemaphoreRefHolder &operator=(const SemaphoreRefHolder &other)
-    {
-        /* Do not increase counter on self-assignment */
+    explicit SemaphoreRefHolder(std::nullptr_t) : ref(nullptr) {}
+    SemaphoreRefHolder(SemaphoreRef *ref) : ref(ref) { ++ref->count; }
+    SemaphoreRefHolder(const SemaphoreRefHolder &other) : ref(other.ref) { ++ref->count; }
+    SemaphoreRefHolder(SemaphoreRefHolder &&other) : ref(std::move(other.ref))
+        { other.ref = nullptr; }
+
+    SemaphoreRefHolder &operator=(const SemaphoreRefHolder &other) = delete;
+    /*{
         if (this == &other) {
             return *this;
+        }
+
+        if (this->ref != nullptr) {
+            --this->ref->count;
         }
 
         ref = other.ref;
         ++ref->count;
 
         return *this;
-    }
+    }*/
 
     ~SemaphoreRefHolder()
-        { --ref->count; }
+        { Reset(); }
 
     bool operator==(const SemaphoreRefHolder &other) const
         { return ref == other.ref; }
 
-    inline Semaphore *Get() { return ref->semaphore; }
-    inline const Semaphore *Get() const { return ref->semaphore; }
-    inline VkSemaphore &GetSemaphore() { return ref->semaphore->GetSemaphore(); }
-    inline const VkSemaphore &GetSemaphore() const { return ref->semaphore->GetSemaphore(); }
-    inline VkPipelineStageFlags GetStageFlags() const { return ref->semaphore->GetStageFlags(); }
+    inline void Reset()
+    {
+        if (ref != nullptr && !--ref->count) {
+            /* ref->semaphore should have had Destroy() called on it by now,
+             * or else an assertion error will be thrown on destructor call. */
+            delete ref;
+        }
+    }
+
+    /*inline void DecRef()
+    {
+        if (ref == nullptr) {
+            return;
+        }
+
+        if (!--ref->count) {
+            
+            delete ref;
+            ref = nullptr;
+        }
+    }*/
+
+    inline Semaphore &Get() { return ref->semaphore; }
+    inline const Semaphore &Get() const { return ref->semaphore; }
+    inline VkSemaphore &GetSemaphore() { return ref->semaphore.GetSemaphore(); }
+    inline const VkSemaphore &GetSemaphore() const { return ref->semaphore.GetSemaphore(); }
+    inline VkPipelineStageFlags GetStageFlags() const { return ref->semaphore.GetStageFlags(); }
 
     template <SemaphoreType ToType>
     SemaphoreRefHolder<ToType> ConvertHeldType() const
@@ -95,16 +128,6 @@ private:
 
 using WaitSemaphore = SemaphoreRefHolder<SemaphoreType::WAIT>;
 using SignalSemaphore = SemaphoreRefHolder<SemaphoreType::SIGNAL>;
-
-struct OwnedSemaphoreHolder {
-    std::vector<std::unique_ptr<WaitSemaphore>> wait_semaphores;
-    std::vector<std::unique_ptr<SignalSemaphore>> signal_semaphores;
-};
-
-struct RefSemaphoreHolder {
-    std::vector<non_owning_ptr<const WaitSemaphore>> wait_semaphores;
-    std::vector<non_owning_ptr<const SignalSemaphore>> signal_semaphores;
-};
 
 class SemaphoreChain {
     friend class CommandBuffer;

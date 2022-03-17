@@ -154,12 +154,8 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
                     engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, pipeline->GetWrappedObject(), 0, 3),
                     result
                 );
-
-                // TMP
-                renderer::Frame tmp_frame;
-                tmp_frame.command_buffer = non_owning_ptr(cmd);
-
-                full_screen_quad->RenderVk(&tmp_frame, engine->GetInstance(), nullptr);
+                
+                full_screen_quad->RenderVk(cmd, engine->GetInstance(), nullptr);
 
                 return result;
             }),

@@ -9,7 +9,7 @@
 
 namespace hyperion::v2 {
 
-class RenderPass : public BaseComponent<renderer::RenderPass> {
+class RenderPass : public EngineComponent<renderer::RenderPass> {
 public:
     enum Stage {
         RENDER_PASS_STAGE_NONE = 0,
