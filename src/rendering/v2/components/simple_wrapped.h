@@ -20,7 +20,7 @@ public:
     SimpleWrapped(std::unique_ptr<WrappedType> &&wrapped) : BaseComponent<WrappedType>(std::move(wrapped)), m_is_created(false) {}
     SimpleWrapped(const SimpleWrapped &other) = delete;
     SimpleWrapped &operator=(const SimpleWrapped &other) = delete;
-    SimpleWrapped(SimpleWrapped &&other) : BaseComponent<WrappedType>(std::move(other)), m_is_created(false) {}
+    SimpleWrapped(SimpleWrapped &&other) : BaseComponent<WrappedType>(std::move(other.m_wrapped)), m_is_created(other.m_is_created) {}
 
     SimpleWrapped &operator=(SimpleWrapped &&other) noexcept
     {
