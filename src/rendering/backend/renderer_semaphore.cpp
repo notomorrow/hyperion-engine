@@ -43,28 +43,6 @@ void SemaphoreChain::Link(SemaphoreChain &signaler, SemaphoreChain &waitee)
     for (auto &signal_semaphore : signaler.GetSignalSemaphores()) {
         waitee.WaitsFor(signal_semaphore);
     }
-
-    /*std::set<WaitSemaphore> waitee_wait_semaphores;
-    waitee_wait_semaphores.insert(waitee.m_wait_semaphores.begin(), waitee.m_wait_semaphores.end());
-
-    std::set<SignalSemaphore> signaler_signal_semaphores;
-    signaler_signal_semaphores.insert(signaler.m_signal_semaphores.begin(), signaler.m_signal_semaphores.end());
-
-    const auto waitee_wait_semaphores_before = waitee_wait_semaphores;
-
-    for (auto &signal_semaphore : signaler_signal_semaphores) {
-        waitee_wait_semaphores.insert(signal_semaphore.ToWaitSemaphore());
-    }
-
-    for (const auto &wait_semaphore : waitee_wait_semaphores_before) {
-        signaler_signal_semaphores.insert(wait_semaphore.ToSignalSemaphore());
-    }
-
-    signaler.m_signal_semaphores.assign(signaler_signal_semaphores.begin(), signaler_signal_semaphores.end());
-    signaler.UpdateViews();
-
-    waitee.m_wait_semaphores.assign(waitee_wait_semaphores.begin(), waitee_wait_semaphores.end());
-    waitee.UpdateViews();*/
 }
 
 SemaphoreChain::SemaphoreChain(const std::vector<VkPipelineStageFlags> &wait_stage_flags,

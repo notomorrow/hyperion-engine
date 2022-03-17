@@ -60,7 +60,7 @@ public:
     inline VkInstance GetInstance() const { return this->instance; }
     
     void PrepareFrame(Frame *frame);
-    void PresentFrame(Frame *frame, SemaphoreChain *semaphore_chain);
+    void PresentFrame(Frame *frame);
 
     void SetValidationLayers(std::vector<const char *> _layers);
 

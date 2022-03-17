@@ -47,7 +47,7 @@ Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffe
     RenderPass *render_pass = GetRenderPass(render_pass_id);
     AssertThrow(render_pass != nullptr);
 
-    return Objects<Framebuffer>().Add(this, std::move(framebuffer), render_pass->GetWrappedObject());
+    return m_framebuffers.Add(this, std::move(framebuffer), render_pass->GetWrappedObject());
 }
 
 Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass_id)

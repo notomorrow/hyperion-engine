@@ -30,15 +30,19 @@ public:
     inline CommandBuffer *GetCommandBuffer() { return command_buffer.get(); }
     inline const CommandBuffer *GetCommandBuffer() const { return command_buffer.get(); }
 
+    inline SemaphoreChain &GetPresentSemaphores() { return present_semaphores; }
+    inline const SemaphoreChain &GetPresentSemaphores() const { return present_semaphores; }
+
     /* Start recording into the command buffer */
     void BeginCapture();
     /* Stop recording into the command buffer */
     void EndCapture();
     /* Submit command buffer to the given queue */
-    void Submit(VkQueue queue_submit, SemaphoreChain *semaphore_chain);
+    void Submit(VkQueue queue_submit);
     
     non_owning_ptr<CommandBuffer> command_buffer;
-    VkFence     fc_queue_submit;
+    VkFence        fc_queue_submit;
+    SemaphoreChain present_semaphores;
 
     non_owning_ptr<Device> creation_device;
 };

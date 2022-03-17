@@ -896,43 +896,15 @@ int main()
     SemaphoreChain graphics_semaphore_chain({}, {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT});
     AssertThrow(graphics_semaphore_chain.Create(engine.GetInstance()->GetDevice()));
 
-    SemaphoreChain::Link(
-        graphics_semaphore_chain,
-        engine.GetInstance()->GetSwapchain()->GetPresentSemaphores()
-    );
-    
     for (size_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
-
-        //auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
         auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_PRIMARY);
         AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool));
         per_frame_data[i].SetCommandBuffer(std::move(cmd_buffer));
 
-        /*
-
-        per_frame_data[i].SetSemaphoreChain(std::make_unique<SemaphoreChain>(0, 1));
-        per_frame_data[i].GetSemaphoreChain()->debug_name = std::string(" render semaphore " + std::to_string(i));
-        AssertThrow(per_frame_data[i].GetSemaphoreChain()->Create(engine.GetInstance()->GetDevice()));
-
-        per_frame_data[i].GetSemaphoreChain()->WaitsFor(engine.GetInstance()->GetFrameHandler()->GetPerFrameData()[i]
-            .GetFrame()->present_chain->GetWaitSemaphores()[0], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, "middleman 0");
-
-
-        engine.GetInstance()->GetFrameHandler()->GetPerFrameData()[i]
-            .GetFrame()->present_chain->WaitsFor(*per_frame_data[i].GetSemaphoreChain(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);*/
-
-
-        //per_frame_data[i].GetSemaphoreChain()->Signals(engine.GetInstance()->GetFrameHandler()->GetPerFrameData()[i]
-        //    .GetFrame()->present_chain->GetWaitSemaphores()[1], "middleman 1");
-        //pre_blit[i].SetSemaphoreChain(std::make_unique<SemaphoreChain>(0, 0));
-        //AssertThrow(pre_blit[i].GetSemaphoreChain()->Create(engine.GetInstance()->GetDevice()));
-
-        //post_blit[i].SetSemaphoreChain(std::make_unique<SemaphoreChain>(1, 0));
-        //AssertThrow(post_blit[i].GetSemaphoreChain()->Create(engine.GetInstance()->GetDevice()));
-
-        //pre_blit[i].GetSemaphoreChain()->WaitsFor(*compute_command_buffer->GetSemaphoreChain(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-        //pre_blit[i].GetSemaphoreChain()->Signals(*post_blit[i].GetSemaphoreChain());
-        //post_blit[i].GetSemaphoreChain()->WaitsFor(*pre_blit[i].GetSemaphoreChain(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        graphics_semaphore_chain >> engine.GetInstance()->GetFrameHandler()
+            ->GetPerFrameData()[i]
+            .GetFrame()
+            ->GetPresentSemaphores();
 
     }
     
@@ -982,13 +954,13 @@ int main()
 
         engine.GetInstance()->PrepareFrame(frame);
 
+#if 0
         /* Compute */
-        /*vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(),
+        vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(),
             1, &compute_fc, true, UINT64_MAX);
         vkResetFences(engine.GetInstance()->GetDevice()->GetDevice(),
-            1, &compute_fc);*/
-#if 0
-        vkQueueWaitIdle(engine.GetInstance()->queue_compute);
+            1, &compute_fc);
+        
         compute_command_buffer->Reset(engine.GetInstance()->GetDevice());
         compute_cmd_result = compute_command_buffer->Record(engine.GetInstance()->GetDevice(), nullptr, [&](CommandBuffer *cmd) {
             engine.GetComputePipeline(compute_pipeline_id)->Dispatch(&engine, cmd,
@@ -1001,8 +973,7 @@ int main()
 #endif
 
         v2::Pipeline *fbo_pl = engine.GetPipeline(scene_pass_pipeline_id);
-
-
+        
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
 
@@ -1074,9 +1045,9 @@ int main()
         engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->EndRenderPass(frame->command_buffer.get(), frame_index);
         frame->EndCapture();
 
-        frame->Submit(engine.GetInstance()->queue_graphics, &engine.GetInstance()->GetSwapchain()->GetPresentSemaphores());
+        frame->Submit(engine.GetInstance()->queue_graphics);
 
-        engine.GetInstance()->PresentFrame(frame, &engine.GetInstance()->GetSwapchain()->GetPresentSemaphores());
+        engine.GetInstance()->PresentFrame(frame);
 
         previous_frame_index = frame_index;
     }

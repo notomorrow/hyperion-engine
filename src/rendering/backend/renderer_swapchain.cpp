@@ -9,11 +9,7 @@
 namespace hyperion {
 namespace renderer {
 Swapchain::Swapchain()
-    : swapchain(nullptr),
-      present_semaphores(
-          {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
-          {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}
-      )
+    : swapchain(nullptr)
 {
 }
 
@@ -56,17 +52,9 @@ void Swapchain::RetrieveImageHandles(Device *device)
     DebugLog(LogType::Info, "Retrieved Swapchain images\n");
 }
 
-Result Swapchain::CreateSemaphores(Device *device)
-{
-    return present_semaphores.Create(device);
-}
-
 Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
 {
     this->RetrieveSupportDetails(device);
-
-    HYPERION_BUBBLE_ERRORS(CreateSemaphores(device));
-    DebugLog(LogType::Debug, "Created swapchain semaphores\n");
 
     this->surface_format = this->ChooseSurfaceFormat();
     this->present_mode = this->GetPresentMode();
@@ -127,13 +115,9 @@ Result Swapchain::Destroy(Device *device)
 {
     DebugLog(LogType::Debug, "Destroying swapchain\n");
 
-    auto result = Result::OK;
-
-    HYPERION_PASS_ERRORS(present_semaphores.Destroy(device), result);
-
     vkDestroySwapchainKHR(device->GetDevice(), this->swapchain, nullptr);
 
-    return result;
+    HYPERION_RETURN_OK;
 }
 
 } // namespace renderer

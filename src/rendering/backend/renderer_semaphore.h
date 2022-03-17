@@ -54,8 +54,7 @@ enum class SemaphoreType {
 template <SemaphoreType Type>
 struct SemaphoreRefHolder {
     friend class SemaphoreChain;
-
-    //SemaphoreRefHolder() : ref(nullptr) {}
+    
     SemaphoreRefHolder(SemaphoreRef *ref) : ref(ref) { ++ref->count; }
     SemaphoreRefHolder(SemaphoreRefHolder &&other) : ref(std::move(other.ref)) {}
     SemaphoreRefHolder(const SemaphoreRefHolder &other) : ref(other.ref) { ++ref->count; }
@@ -74,14 +73,10 @@ struct SemaphoreRefHolder {
     }
 
     ~SemaphoreRefHolder()
-    {
-        --ref->count;
-    }
+        { --ref->count; }
 
     bool operator==(const SemaphoreRefHolder &other) const
-    {
-        return ref == other.ref;
-    }
+        { return ref == other.ref; }
 
     inline Semaphore *Get() { return ref->semaphore; }
     inline const Semaphore *Get() const { return ref->semaphore; }
@@ -91,9 +86,7 @@ struct SemaphoreRefHolder {
 
     template <SemaphoreType ToType>
     SemaphoreRefHolder<ToType> ConvertHeldType() const
-    {
-        return SemaphoreRefHolder<ToType>(ref);
-    }
+        { return SemaphoreRefHolder<ToType>(ref); }
 
 private:
     mutable SemaphoreRef *ref;
@@ -196,6 +189,16 @@ public:
         return *this;
     }
 
+    /* Make `waitee` wait on all signals from this */
+    inline SemaphoreChain &operator>>(SemaphoreChain &waitee)
+    {
+        for (auto &signal_semaphore : GetSignalSemaphores()) {
+            waitee.WaitsFor(signal_semaphore);
+        }
+
+        return waitee;
+    }
+
     Result Create(Device *device);
     Result Destroy(Device *device);
 
@@ -203,12 +206,10 @@ private:
     using SemaphoreView = std::vector<VkSemaphore>;
     using SemaphoreStageView = std::vector<VkPipelineStageFlags>;
 
+    static std::set<SemaphoreRef *> refs;
+
     void UpdateViews();
-
-    static std::set<SemaphoreRef*> refs;
-
-    //OwnedSemaphoreHolder m_owned;
-    //RefSemaphoreHolder   m_refs;
+    
     std::vector<SignalSemaphore> m_signal_semaphores;
     std::vector<WaitSemaphore> m_wait_semaphores;
 
