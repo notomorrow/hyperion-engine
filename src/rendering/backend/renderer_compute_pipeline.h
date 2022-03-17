@@ -35,7 +35,9 @@ public:
     VkPipeline pipeline;
     VkPipelineLayout layout;
 
-private:
+    struct PushConstants {
+        uint32_t counter;
+    } push_constants;
 };
 
 } // namespace renderer

@@ -818,19 +818,7 @@ int main()
 
     v2::Pipeline::ID scene_pass_pipeline_id = engine.AddPipeline(std::move(scene_pass_pipeline_builder));
 
-
-    /* Compute shaders */
-    v2::Shader::ID compute_shader_id{};
-    {
-        auto compute_shader = std::make_unique<v2::Shader>(std::vector{
-            SpirvObject{ SpirvObject::Type::COMPUTE, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read() }
-        });
-
-        compute_shader_id = engine.AddShader(std::move(compute_shader));
-    }
-
-    v2::ComputePipeline::ID compute_pipeline_id = engine.AddComputePipeline(std::make_unique<v2::ComputePipeline>(compute_shader_id));
-
+    
 
     //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
 
@@ -862,32 +850,32 @@ int main()
 
 
     /* Compute */
-    /* auto compute_command_buffer = std::make_unique<CommandBuffer>(
-        CommandBuffer::Type::COMMAND_BUFFER_PRIMARY,
-        std::make_unique<SemaphoreChain>(0, 1)
-    );
 
-    compute_command_buffer->GetSemaphoreChain()->debug_name = "compute signal semaphore";
+    v2::Shader::ID compute_shader_id{};
+    {
+        auto compute_shader = std::make_unique<v2::Shader>(std::vector{
+            SpirvObject{ SpirvObject::Type::COMPUTE, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read() }
+            });
 
-    auto compute_cmd_result = compute_command_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
+        compute_shader_id = engine.AddShader(std::move(compute_shader));
+    }
+
+    v2::ComputePipeline::ID compute_pipeline_id = engine.AddComputePipeline(std::make_unique<v2::ComputePipeline>(compute_shader_id));
+
+
+    auto compute_command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_PRIMARY);
+
+    SemaphoreChain compute_semaphore_chain({}, { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT });
+    AssertThrow(compute_semaphore_chain.Create(engine.GetInstance()->GetDevice()));
+
+    auto compute_cmd_result = compute_command_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetComputeCommandPool());
     AssertThrow(compute_cmd_result, "Failed to create compute commandbuffer: %s\n", compute_cmd_result.message);
     
-    for (size_t i = 0; i < engine.GetInstance()->GetNumImages(); i++) {
-        engine.GetInstance()->GetFrameHandler()->GetPerFrameData().GetFrame(i)
-            .GetCommandBuffer()->GetSemaphoreChain()->debug_name = "frame semaphore " + std::to_string(i);
-
-
-        //compute_command_buffer->GetSemaphoreChain()->WaitsFor(
-        //    *(engine.GetInstance()->GetFrameHandler()->GetPerFrameData().GetFrame(i)
-        //        .GetCommandBuffer()->GetSemaphoreChain()), VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-
-       // compute_command_buffer->GetSemaphoreChain()->Signals(
-       //     *(engine.GetInstance()->GetFrameHandler()->GetPerFrameData().GetFrame(i)
-        //        .GetCommandBuffer()->GetSemaphoreChain()));
-
-        //engine.GetInstance()->GetFrameHandler()->GetPerFrameData().GetFrame(i)
-        //    .GetCommandBuffer()->GetSemaphoreChain()->WaitsFor(*compute_command_buffer->GetSemaphoreChain(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    }*/
+    for (size_t i = 0; i < engine.GetInstance()->GetFrameHandler()->GetNumFrames(); i++) {
+        compute_semaphore_chain >> engine.GetInstance()->GetFrameHandler()
+            ->GetPerFrameData()[i].Get<Frame>()
+            ->GetPresentSemaphores();
+    }
 
     
 
@@ -898,7 +886,7 @@ int main()
 
     for (uint32_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
         auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_PRIMARY);
-        AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool));
+        AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsQueueData().command_pool));
 
         per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
         
@@ -953,7 +941,10 @@ int main()
 
         engine.GetInstance()->PrepareFrame(frame);
 
-#if 0
+#if 1
+        auto *compute_pipeline = engine.GetComputePipeline(compute_pipeline_id);
+        compute_pipeline->GetWrappedObject()->push_constants.counter = timer;
+
         /* Compute */
         vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(),
             1, &compute_fc, true, UINT64_MAX);
@@ -962,13 +953,13 @@ int main()
         
         compute_command_buffer->Reset(engine.GetInstance()->GetDevice());
         compute_cmd_result = compute_command_buffer->Record(engine.GetInstance()->GetDevice(), nullptr, [&](CommandBuffer *cmd) {
-            engine.GetComputePipeline(compute_pipeline_id)->Dispatch(&engine, cmd,
+            compute_pipeline->Dispatch(&engine, cmd,
                 8, 8, 1);
 
             HYPERION_RETURN_OK;
         });
         AssertThrowMsg(compute_cmd_result, "Failed to record compute cmd buffer: %s\n", compute_cmd_result.message);
-        compute_command_buffer->SubmitPrimary(engine.GetInstance()->queue_compute, VK_NULL_HANDLE);
+        compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
 #endif
 
         v2::Pipeline *fbo_pl = engine.GetPipeline(scene_pass_pipeline_id);
@@ -1000,7 +991,7 @@ int main()
             });
         
         per_frame_data[frame_index].Get<CommandBuffer>()->SubmitPrimary(
-            engine.GetInstance()->queue_graphics, VK_NULL_HANDLE, &graphics_semaphore_chain
+            engine.GetInstance()->GetGraphicsQueue(), VK_NULL_HANDLE, &graphics_semaphore_chain
         );
 
 
@@ -1044,7 +1035,7 @@ int main()
         engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->EndRenderPass(frame->command_buffer.get(), frame_index);
         frame->EndCapture();
 
-        frame->Submit(engine.GetInstance()->queue_graphics);
+        frame->Submit(engine.GetInstance()->GetGraphicsQueue());
 
         engine.GetInstance()->PresentFrame(frame);
 
@@ -1071,7 +1062,7 @@ int main()
     image->Destroy(device);
 
     for (size_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
-        per_frame_data[i].Get<CommandBuffer>()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->command_pool);
+        per_frame_data[i].Get<CommandBuffer>()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsCommandPool());
     }
     per_frame_data.Reset();
 

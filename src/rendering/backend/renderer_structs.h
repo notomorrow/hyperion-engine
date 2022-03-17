@@ -172,7 +172,7 @@ struct MeshInputAttributeSet {
 
 struct QueueFamilyIndices {
     using Index_t = uint32_t;
-
+    
     optional<Index_t> graphics_family;
     optional<Index_t> transfer_family;
     optional<Index_t> present_family;

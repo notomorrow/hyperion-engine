@@ -63,7 +63,7 @@ void Filter::CreateFrameData(Engine *engine)
 
         auto command_buffer_result = command_buffer->Create(
             engine->GetInstance()->GetDevice(),
-            engine->GetInstance()->command_pool
+            engine->GetInstance()->GetGraphicsCommandPool()
         );
 
         AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
@@ -114,7 +114,10 @@ void Filter::Destroy(Engine *engine)
 
     for (uint32_t i = 0; i < frame_data.GetNumFrames(); i++) {
         HYPERION_PASS_ERRORS(
-            frame_data[i].Get<CommandBuffer>()->Destroy(engine->GetInstance()->GetDevice(), engine->GetInstance()->command_pool),
+            frame_data[i].Get<CommandBuffer>()->Destroy(
+                engine->GetInstance()->GetDevice(),
+                engine->GetInstance()->GetGraphicsCommandPool()
+            ),
             result
         );
     }
