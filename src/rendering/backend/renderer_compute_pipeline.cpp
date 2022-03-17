@@ -10,7 +10,8 @@ namespace hyperion {
 namespace renderer {
 ComputePipeline::ComputePipeline()
     : pipeline{},
-      layout{}
+      layout{},
+      push_constants{}
 {
     static int x = 0;
     DebugLog(LogType::Debug, "Create Compute Pipeline [%d]\n", x++);
@@ -25,6 +26,14 @@ ComputePipeline::~ComputePipeline()
 void ComputePipeline::Bind(VkCommandBuffer cmd) const
 {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, this->pipeline);
+
+    vkCmdPushConstants(
+        cmd,
+        layout,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        0, sizeof(push_constants),
+        &push_constants
+    );
 }
 
 void ComputePipeline::Dispatch(VkCommandBuffer cmd, size_t num_groups_x, size_t num_groups_y, size_t num_groups_z) const
@@ -34,10 +43,18 @@ void ComputePipeline::Dispatch(VkCommandBuffer cmd, size_t num_groups_x, size_t 
 
 Result ComputePipeline::Create(Device *device, ShaderProgram *shader, DescriptorPool *descriptor_pool)
 {
+    /* Push constants */
+    VkPushConstantRange push_constant{};
+    push_constant.offset = 0;
+    push_constant.size = sizeof(PushConstants);
+    push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
     layout_info.setLayoutCount = descriptor_pool->m_descriptor_set_layouts.size();
     layout_info.pSetLayouts = descriptor_pool->m_descriptor_set_layouts.data();
+    layout_info.pushConstantRangeCount = 1;
+    layout_info.pPushConstantRanges = &push_constant;
 
     HYPERION_VK_CHECK_MSG(
         vkCreatePipelineLayout(device->GetDevice(), &layout_info, nullptr, &this->layout),

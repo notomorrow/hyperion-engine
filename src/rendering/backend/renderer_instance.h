@@ -31,6 +31,8 @@ namespace hyperion {
 namespace renderer {
 
 class Instance {
+    struct QueueData;
+
     static Result CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
 
     std::vector<VkPhysicalDevice> EnumeratePhysicalDevices();
@@ -44,8 +46,7 @@ class Instance {
     Result SetupAllocator();
     Result DestroyAllocator();
 
-    Result CreateCommandPool();
-    Result CreateCommandBuffers();
+    Result CreateCommandPool(QueueData &queue_data);
 public:
     Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
     Result Initialize(bool load_debug_layers=false);
@@ -55,6 +56,23 @@ public:
 
     inline DescriptorPool &GetDescriptorPool() { return this->descriptor_pool; }
     inline const DescriptorPool &GetDescriptorPool() const { return this->descriptor_pool; }
+
+    inline QueueData &GetGraphicsQueueData() { return this->queue_graphics; }
+    inline const QueueData &GetGraphicsQueueData() const { return this->queue_graphics; }
+    inline QueueData &GetTransferQueueData() { return this->queue_transfer; }
+    inline const QueueData &GetTransferQueueData() const { return this->queue_transfer; }
+    inline QueueData &GetPresentQueueData() { return this->queue_present; }
+    inline const QueueData &GetPresentQueueData() const { return this->queue_present; }
+    inline QueueData &GetComputeQueueData() { return this->queue_compute; }
+    inline const QueueData &GetComputeQueueData() const { return this->queue_compute; }
+
+    inline VkQueue GetGraphicsQueue() const { return this->queue_graphics.queue; }
+    inline VkQueue GetTransferQueue() const { return this->queue_transfer.queue; }
+    inline VkQueue GetPresentQueue() const { return this->queue_present.queue; }
+    inline VkQueue GetComputeQueue() const { return this->queue_compute.queue; }
+
+    inline VkCommandPool GetGraphicsCommandPool() const { return this->queue_graphics.command_pool; }
+    inline VkCommandPool GetComputeCommandPool() const { return this->queue_compute.command_pool; }
 
     inline VkInstance &GetInstance() { return this->instance; }
     inline VkInstance GetInstance() const { return this->instance; }
@@ -70,8 +88,7 @@ public:
 
     inline Swapchain *GetSwapchain() { return swapchain; }
     inline const Swapchain *GetSwapchain() const { return swapchain; }
-
-    void SetQueueFamilies(set<uint32_t> queue_families);
+    
     void SetCurrentWindow(SystemWindow *window);
     
     inline FrameHandler *GetFrameHandler() { return this->frame_handler; }
@@ -93,13 +110,6 @@ public:
     /* Per frame data */
     FrameHandler *frame_handler;
 
-    VkCommandPool command_pool;
-
-    VkQueue queue_graphics,
-            queue_transfer,
-            queue_present,
-            queue_compute;
-
 private:
 
     SystemWindow *window = nullptr;
@@ -114,7 +124,15 @@ private:
 
     Device    *device = nullptr;
 
-    std::set<uint32_t> queue_families;
+    struct QueueData {
+        uint32_t family;
+        VkQueue queue;
+        VkCommandPool command_pool;
+    } queue_graphics,
+      queue_transfer,
+      queue_present,
+      queue_compute;
+    
     std::vector<const char *> validation_layers;
 
 #ifndef HYPERION_BUILD_RELEASE

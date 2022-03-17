@@ -73,7 +73,7 @@ void Instance::PresentFrame(Frame *frame)
     present_info.pImageIndices = &image_index;
     present_info.pResults = nullptr;
     
-    vkQueuePresentKHR(this->queue_present, &present_info);
+    vkQueuePresentKHR(this->queue_present.queue, &present_info);
 }
 
 Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers)
@@ -186,30 +186,22 @@ Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_
     this->device = nullptr;
 }
 
-Result Instance::CreateCommandPool()
+Result Instance::CreateCommandPool(QueueData &queue_data)
 {
-    const QueueFamilyIndices &family_indices = this->device->GetQueueFamilyIndices();
-
     VkCommandPoolCreateInfo pool_info{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-    pool_info.queueFamilyIndex = family_indices.graphics_family.value();
+    pool_info.queueFamilyIndex = queue_data.family;
     /* TODO: look into VK_COMMAND_POOL_CREATE_TRANSIENT_BIT for constantly changing objects */
     pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
     HYPERION_VK_CHECK_MSG(
-        vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &this->command_pool),
+        vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &queue_data.command_pool),
         "Could not create Vulkan command pool"
     );
 
-    DebugLog(LogType::Debug, "Create Command pool\n");
+    DebugLog(LogType::Debug, "Create command pool for queue %d\n", queue_data.family);
 
     HYPERION_RETURN_OK;
 }
-
-Result Instance::CreateCommandBuffers()
-{
-    return this->frame_handler->CreateCommandBuffers(this->device, this->command_pool);
-}
-
 
 Result Instance::SetupDebugMessenger() {
 #ifndef HYPERION_BUILD_RELEASE
@@ -292,12 +284,9 @@ Result Instance::Initialize(bool load_debug_layers) {
      * away a little bit of the double/triple buffering stuff */
     DebugLog(LogType::RenDebug, "Num swapchain images: %d\n", this->swapchain->GetNumImages());
     this->frame_handler = new FrameHandler(this->swapchain->GetNumImages(), HandleNextFrame);
-
-    /* Create our synchronization objects */
-    HYPERION_BUBBLE_ERRORS(CreateCommandPool());
+    
     /* Our command pool will have a command buffer for each frame we can render to. */
-    HYPERION_BUBBLE_ERRORS(CreateCommandBuffers());
-
+    HYPERION_BUBBLE_ERRORS(this->frame_handler->CreateCommandBuffers(this->device, this->queue_graphics.command_pool));
     HYPERION_BUBBLE_ERRORS(this->frame_handler->CreateFrames(this->device));
 
     /* init descriptor sets */
@@ -327,11 +316,15 @@ Result Instance::Destroy()
     /* Wait for the GPU to finish, we need to be in an idle state. */
     HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(this->device->GetDevice()), result);
 
-    this->frame_handler->Destroy(this->device, this->command_pool);
+    this->frame_handler->Destroy(this->device, this->queue_graphics.command_pool);
     delete this->frame_handler;
     this->frame_handler = nullptr;
 
-    vkDestroyCommandPool(this->device->GetDevice(), this->command_pool, nullptr);
+    HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(this->queue_graphics.queue), result);
+    HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(this->queue_compute.queue), result);
+
+    vkDestroyCommandPool(this->device->GetDevice(), this->queue_graphics.command_pool, nullptr);
+    vkDestroyCommandPool(this->device->GetDevice(), this->queue_compute.command_pool, nullptr);
 
     /* Destroy descriptor pool */
     HYPERION_PASS_ERRORS(descriptor_pool.Destroy(this->device), result);
@@ -366,10 +359,6 @@ Result Instance::Destroy()
     DebugLog(LogType::Debug, "Destroyed instance\n");
 
     return result;
-}
-
-void Instance::SetQueueFamilies(std::set<uint32_t> _queue_families) {
-    this->queue_families = _queue_families;
 }
 
 Device *Instance::GetDevice() {
@@ -448,30 +437,49 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
 
     const QueueFamilyIndices &family_indices = this->device->GetQueueFamilyIndices();
 
-    /* No user specified queue families to create, so we just use the defaults */
-    DebugLog(LogType::Debug, "Found queue family indices\n");
-
-    if (this->queue_families.empty()) {
-        DebugLog(LogType::Debug, "queue_families is empty! setting to defaults\n");
-
-        this->SetQueueFamilies({
-            family_indices.graphics_family.value(),
-            family_indices.transfer_family.value(),
-            family_indices.present_family.value(),
-            family_indices.compute_family.value()
-        });
-    }
-
+    /* Put into a set so we don't have any duplicate indices */
+    const std::set<uint32_t> required_queue_family_indices{
+        family_indices.graphics_family.value(),
+        family_indices.transfer_family.value(),
+        family_indices.present_family.value(),
+        family_indices.compute_family.value()
+    };
+    
     /* Create a logical device to operate on */
     HYPERION_BUBBLE_ERRORS(
-        this->device->CreateLogicalDevice(this->queue_families, this->requested_device_extensions)
+        this->device->CreateLogicalDevice(required_queue_family_indices, this->requested_device_extensions)
     );
 
     /* Get the internal queues from our device */
-    this->queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
-    this->queue_transfer = device->GetQueue(family_indices.transfer_family.value(), 0);
-    this->queue_present  = device->GetQueue(family_indices.present_family.value(), 0);
-    this->queue_compute = device->GetQueue(family_indices.compute_family.value(), 0);
+
+
+    this->queue_graphics = {
+        .family = family_indices.graphics_family.value(),
+        .queue = device->GetQueue(family_indices.graphics_family.value(), 0),
+        .command_pool = VK_NULL_HANDLE
+    };
+
+    this->queue_transfer = {
+        .family = family_indices.transfer_family.value(),
+        .queue = device->GetQueue(family_indices.transfer_family.value(), 0),
+        .command_pool = VK_NULL_HANDLE
+    };
+
+    this->queue_present = {
+        .family = family_indices.present_family.value(),
+        .queue = device->GetQueue(family_indices.present_family.value(), 0),
+        .command_pool = VK_NULL_HANDLE
+    };
+
+    this->queue_compute = {
+        .family = family_indices.compute_family.value(),
+        .queue = device->GetQueue(family_indices.compute_family.value(), 0),
+        .command_pool = VK_NULL_HANDLE
+    };
+
+    /* Create command pools for queues that require one */
+    HYPERION_BUBBLE_ERRORS(this->CreateCommandPool(this->queue_graphics));
+    HYPERION_BUBBLE_ERRORS(this->CreateCommandPool(this->queue_compute));
 
     HYPERION_RETURN_OK;
 }
@@ -506,7 +514,7 @@ helpers::SingleTimeCommands Instance::GetSingleTimeCommands()
 
     helpers::SingleTimeCommands single_time_commands{};
     single_time_commands.cmd = nullptr;
-    single_time_commands.pool = this->command_pool;
+    single_time_commands.pool = this->queue_graphics.command_pool;
     single_time_commands.family_indices = family_indices;
 
     return single_time_commands;
