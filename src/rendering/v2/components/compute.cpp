@@ -23,6 +23,7 @@ void ComputePipeline::Destroy(Engine *engine)
 {
     auto result = m_wrapped->Destroy(engine->GetInstance()->GetDevice());
     AssertThrowMsg(result, "%s", result.message);
+    m_wrapped.reset();
 }
 
 void ComputePipeline::Dispatch(Engine *engine, CommandBuffer *command_buffer, size_t num_groups_x, size_t num_groups_y, size_t num_groups_z)

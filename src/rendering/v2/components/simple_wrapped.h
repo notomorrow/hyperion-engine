@@ -65,6 +65,8 @@ public:
         auto result = this->m_wrapped->Destroy(GetEngineDevice(engine), std::move(args)...);
         AssertThrowMsg(result, "Destruction of object of type %s failed: %s", wrapped_type_name, result.message);
 
+        this->m_wrapped.reset();
+
         m_is_created = false;
     }
 

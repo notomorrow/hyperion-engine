@@ -1066,6 +1066,8 @@ int main()
     }
     per_frame_data.Reset();
 
+    compute_command_buffer->Destroy(device, engine.GetInstance()->GetComputeCommandPool());
+
     delete window;
 
     return 0;
