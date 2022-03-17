@@ -186,7 +186,7 @@ AssetLoader::Result ObjLoader::LoadFromFile(const std::string &path)
             }
 
             Vertex vertex;
-            MeshIndex mesh_index = mesh_vertices.size();
+            MeshIndex mesh_index = uint32_t(mesh_vertices.size());
 
             if (idc.vertex_idx >= 0) {
                 AssertThrow(idc.vertex_idx < model.positions.size());

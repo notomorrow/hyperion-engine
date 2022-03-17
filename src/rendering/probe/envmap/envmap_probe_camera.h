@@ -9,7 +9,7 @@ namespace hyperion {
 class EnvMapProbeCamera : public ProbeCamera {
     friend class EnvMapProbe;
 public:
-    EnvMapProbeCamera(const ProbeRegion &region, int width, int height, float near, float far);
+    EnvMapProbeCamera(const ProbeRegion &region, int width, int height, float _near, float _far);
     EnvMapProbeCamera(const EnvMapProbeCamera &other) = delete;
     EnvMapProbeCamera &operator=(const EnvMapProbeCamera &other) = delete;
     ~EnvMapProbeCamera();

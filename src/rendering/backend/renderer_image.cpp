@@ -127,8 +127,6 @@ Result Image::CreateImage(Device *device,
     }
 
     if (IsCubemap()) {
-
-
         DebugLog(LogType::Debug, "Creating cubemap texture, enabling VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT flag.\n");
 
         image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -199,8 +197,8 @@ Result Image::CreateImage(Device *device,
     image_info.extent.width = uint32_t(m_width);
     image_info.extent.height = uint32_t(m_height);
     image_info.extent.depth = uint32_t(m_depth);
-    image_info.mipLevels = GetNumMipmaps();
-    image_info.arrayLayers = GetNumFaces();
+    image_info.mipLevels = uint32_t(GetNumMipmaps());
+    image_info.arrayLayers = uint32_t(GetNumFaces());
     image_info.format = format;
     image_info.tiling = m_internal_info.tiling;
     image_info.initialLayout = initial_layout;
@@ -337,11 +335,7 @@ Result Image::Create(Device *device, Instance *renderer,
             commands.Push([this, &transfer_state_pre, &transfer_state_post](VkCommandBuffer cmd) {
                 LayoutTransferStateBase intermediate{
                     .src = transfer_state_pre.dst, /* Use the output from the previous command as an input */
-                    .dst = {
-                        .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        .access_mask = VK_ACCESS_TRANSFER_READ_BIT,
-                        .stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
-                    }
+                    .dst = LayoutState::transfer_src
                 };
 
                 const size_t num_mipmaps = GetNumMipmaps();
@@ -433,7 +427,7 @@ Result Image::Create(Device *device, Instance *renderer,
             });
         }
 
-        // transition from the previous layout state into a shader read-only state
+        /* Transition from the previous layout state into a shader readonly state */
         commands.Push([this, &acquire_barrier, &release_barrier, &transfer_state_post](VkCommandBuffer cmd) {
             release_barrier = acquire_barrier;
 
@@ -491,7 +485,8 @@ Result Image::ConvertTo32Bpp(
     const size_t num_faces = GetNumFaces();
     const size_t face_offset_step = m_size / num_faces;
 
-    const size_t new_bpp = 4;
+    constexpr size_t new_bpp = 4;
+
     const size_t new_size = m_width * m_height * m_depth * new_bpp * num_faces;
     const size_t new_face_offset_step = new_size / num_faces;
 

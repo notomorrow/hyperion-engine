@@ -43,12 +43,10 @@ GPUMemory::~GPUMemory()
 
 
 void GPUMemory::Map(Device *device, void **ptr) {
-    //vkMapMemory(device->GetDevice(), this->memory, 0, this->size, 0, ptr);
     vmaMapMemory(*device->GetAllocator(), this->allocation, ptr);
 }
 
 void GPUMemory::Unmap(Device *device) {
-    //vkUnmapMemory(device->GetDevice(), this->memory);
     vmaUnmapMemory(*device->GetAllocator(), this->allocation);
 }
 
@@ -83,35 +81,6 @@ void GPUBuffer::Create(Device *device, size_t size) {
     alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 
     vmaCreateBuffer(*device->GetAllocator(), &vk_buffer_info, &alloc_info, &this->buffer, &this->allocation, nullptr);
-    /*VkDevice vk_device = device->GetDevice();
-
-    VkBufferCreateInfo buffer_info{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    buffer_info.size = size;
-    buffer_info.usage = (VkBufferUsageFlags)usage_flags;
-    buffer_info.sharingMode = (VkSharingMode)this->sharing_mode;
-
-    QueueFamilyIndices family_indices = device->FindQueueFamilies();
-
-    uint32_t indices_array[] = { family_indices.graphics_family.value(), family_indices.transfer_family.value() };
-    buffer_info.pQueueFamilyIndices = indices_array;
-    buffer_info.queueFamilyIndexCount = sizeof(indices_array) / sizeof(indices_array[0]);
-
-    auto result = vkCreateBuffer(vk_device, &buffer_info, nullptr, &this->buffer);
-    AssertThrowMsg(result == VK_SUCCESS, "Could not create vulkan vertex buffer!\n");
-
-    VkMemoryRequirements requirements;
-    vkGetBufferMemoryRequirements(vk_device, this->buffer, &requirements);
-
-    VkMemoryAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    alloc_info.allocationSize = requirements.size;
-    //this->memory_property_flags = (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    alloc_info.memoryTypeIndex = FindMemoryType(device, requirements.memoryTypeBits, this->memory_property_flags);
-
-    result = vkAllocateMemory(vk_device, &alloc_info, nullptr, &this->memory);
-    AssertThrowMsg(result == VK_SUCCESS, "Could not allocate video memory!\n");
-
-    vkBindBufferMemory(vk_device, this->buffer, this->memory, 0);
-    this->size = buffer_info.size;*/
 }
 
 void GPUBuffer::Destroy(Device *device)
@@ -120,12 +89,6 @@ void GPUBuffer::Destroy(Device *device)
     vmaDestroyBuffer(*device->GetAllocator(), this->buffer, this->allocation);
     this->buffer = nullptr;
     this->allocation = nullptr;
-    /*
-    vkDestroyBuffer(vk_device, buffer, nullptr);
-    buffer = nullptr;
-
-    vkFreeMemory(vk_device, memory, nullptr);
-    memory = nullptr;*/
 }
 
 
@@ -170,19 +133,6 @@ Result GPUImage::Create(Device *device, size_t size, VkImageCreateInfo *image_in
 
     auto result = vmaCreateImage(*device->GetAllocator(), image_info, &alloc_info, &this->image, &this->allocation, nullptr);
 
-    /*HYPERION_VK_CHECK_MSG(vkCreateImage(device->GetDevice(), image_info, nullptr, &image), "Could not create image!");
-
-    VkMemoryRequirements requirements;
-    vkGetImageMemoryRequirements(vk_device, image, &requirements);
-
-    VkMemoryAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    alloc_info.allocationSize = requirements.size;
-    //this->memory_property_flags = (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    alloc_info.memoryTypeIndex = FindMemoryType(device, requirements.memoryTypeBits, this->memory_property_flags);
-
-    HYPERION_VK_CHECK_MSG(vkAllocateMemory(vk_device, &alloc_info, nullptr, &this->memory), "Could not allocate image memory!");
-    HYPERION_VK_CHECK_MSG(vkBindImageMemory(vk_device, this->image, this->memory, 0), "Could not bind image memory!");
-    */
     HYPERION_RETURN_OK;
 }
 
@@ -193,13 +143,7 @@ Result GPUImage::Destroy(Device *device)
     vmaDestroyImage(*device->GetAllocator(), this->image, this->allocation);
     this->image = nullptr;
     this->allocation = nullptr;
-    /*
-    vkDestroyImage(vk_device, image, nullptr);
-    image = nullptr;
 
-    vkFreeMemory(vk_device, memory, nullptr);
-    memory = nullptr;
-    */
     HYPERION_RETURN_OK;
 }
 

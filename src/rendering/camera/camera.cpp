@@ -2,11 +2,11 @@
 
 namespace hyperion {
 
-Camera::Camera(int width, int height, float near, float far)
+Camera::Camera(int width, int height, float _near, float _far)
     : m_width(width),
       m_height(height),
-      m_near(near),
-      m_far(far),
+      m_near(_near),
+      m_far(_far),
       m_translation(Vector3::Zero()),
       m_direction(Vector3::UnitZ()),
       m_up(Vector3::UnitY())

@@ -1,5 +1,7 @@
 #include "renderer_render_pass.h"
 
+#include "renderer_command_buffer.h"
+
 namespace hyperion {
 namespace renderer {
 RenderPass::RenderPass()
@@ -44,12 +46,14 @@ Result RenderPass::Create(Device *device)
 
         attachments.push_back(attachment_info.attachment->m_attachment_description);
         color_attachment_refs.push_back(attachment_info.attachment->m_attachment_reference);
+
+        m_clear_values.push_back(VkClearValue{.color = {0.0f, 0.0f, 0.0f, 1.0f}});
     }
 
     /* Should only loop one time due to assertion in AddAttachment.
      * Still, keeping it consistent. */
     for (size_t i = 0; i < m_depth_attachments.size(); i++) {
-        auto &attachment_info = m_depth_attachments[i];
+        const auto &attachment_info = m_depth_attachments[i];
 
         HYPERION_BUBBLE_ERRORS(attachment_info.attachment->Create(device));
 
@@ -57,9 +61,11 @@ Result RenderPass::Create(Device *device)
 
         depth_attachment_ref = attachment_info.attachment->m_attachment_reference;
         subpass_description.pDepthStencilAttachment = &depth_attachment_ref;
+
+        m_clear_values.push_back(VkClearValue{.depthStencil = {1.0f, 0}});
     }
 
-    subpass_description.colorAttachmentCount = color_attachment_refs.size();
+    subpass_description.colorAttachmentCount = uint32_t(color_attachment_refs.size());
     subpass_description.pColorAttachments    = color_attachment_refs.data();
 
     // Create the actual renderpass
@@ -87,36 +93,22 @@ Result RenderPass::Destroy(Device *device)
     return result;
 }
 
-void RenderPass::Begin(VkCommandBuffer cmd, VkFramebuffer framebuffer, VkExtent2D extent, VkSubpassContents contents)
+void RenderPass::Begin(CommandBuffer *cmd, VkFramebuffer framebuffer, VkExtent2D extent, VkSubpassContents contents)
 {
     VkRenderPassBeginInfo render_pass_info{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     render_pass_info.renderPass = m_render_pass;
     render_pass_info.framebuffer = framebuffer;
-    render_pass_info.renderArea.offset = { 0, 0 };
+    render_pass_info.renderArea.offset = {0, 0};
     render_pass_info.renderArea.extent = extent;
+    render_pass_info.clearValueCount = uint32_t(m_clear_values.size());
+    render_pass_info.pClearValues = m_clear_values.data();
 
-    // TODO: pre-generate this data
-
-    std::vector<VkClearValue> clear_values;
-    clear_values.resize(m_color_attachments.size() + m_depth_attachments.size());
-
-    for (int i = 0; i < m_color_attachments.size(); i++) {
-        clear_values[i] = VkClearValue{.color = {0.0f, 0.0f, 0.0f, 1.0f}};
-    }
-
-    for (int i = 0; i < m_depth_attachments.size(); i++) {
-        clear_values[m_color_attachments.size() + i] = VkClearValue{.depthStencil = {1.0f, 0}};
-    }
-
-    render_pass_info.clearValueCount = clear_values.size();
-    render_pass_info.pClearValues = clear_values.data();
-
-    vkCmdBeginRenderPass(cmd, &render_pass_info, contents);
+    vkCmdBeginRenderPass(cmd->GetCommandBuffer(), &render_pass_info, contents);
 }
 
-void RenderPass::End(VkCommandBuffer cmd)
+void RenderPass::End(CommandBuffer *cmd)
 {
-    vkCmdEndRenderPass(cmd);
+    vkCmdEndRenderPass(cmd->GetCommandBuffer());
 }
 
 } // namespace renderer

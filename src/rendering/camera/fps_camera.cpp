@@ -1,8 +1,8 @@
 #include "fps_camera.h"
 
 namespace hyperion {
-FpsCamera::FpsCamera(InputManager *inputmgr, SystemWindow *window, int width, int height, float fov, float near, float far)
-    : PerspectiveCamera(fov, width, height, near, far),
+FpsCamera::FpsCamera(InputManager *inputmgr, SystemWindow *window, int width, int height, float fov, float _near, float _far)
+    : PerspectiveCamera(fov, width, height, _near, _far),
       m_inputmgr(inputmgr),
       m_window(window),
       m_mag_x(0.0),

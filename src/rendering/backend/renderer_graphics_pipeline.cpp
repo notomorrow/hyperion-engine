@@ -97,7 +97,7 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
     return this->vertex_attributes;
 }
 
-void GraphicsPipeline::BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubpassContents contents) {
+void GraphicsPipeline::BeginRenderPass(CommandBuffer *cmd, size_t index, VkSubpassContents contents) {
 
     m_construction_info.render_pass->Begin(
         cmd,
@@ -107,18 +107,18 @@ void GraphicsPipeline::BeginRenderPass(VkCommandBuffer cmd, size_t index, VkSubp
     );
 }
 
-void GraphicsPipeline::EndRenderPass(VkCommandBuffer cmd, size_t index) {
+void GraphicsPipeline::EndRenderPass(CommandBuffer *cmd, size_t index) {
     m_construction_info.render_pass->End(cmd);
 }
 
-void GraphicsPipeline::Bind(VkCommandBuffer cmd)
+void GraphicsPipeline::Bind(CommandBuffer *cmd)
 {
-    this->UpdateDynamicStates(cmd);
+    this->UpdateDynamicStates(cmd->GetCommandBuffer());
 
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
+    vkCmdBindPipeline(cmd->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
     vkCmdPushConstants(
-        cmd,
+        cmd->GetCommandBuffer(),
         layout,
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 
         0, sizeof(push_constants),
@@ -202,7 +202,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     VkPipelineColorBlendStateCreateInfo color_blending{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
     color_blending.logicOpEnable = false;
-    color_blending.attachmentCount = color_blend_attachments.size();
+    color_blending.attachmentCount = uint32_t(color_blend_attachments.size());
     color_blending.pAttachments = color_blend_attachments.data();
 
     /* Push constants */
@@ -216,14 +216,14 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     VkPipelineDynamicStateCreateInfo dynamic_state{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
     const auto states = this->GetDynamicStates();
 
-    dynamic_state.dynamicStateCount = states.size();
+    dynamic_state.dynamicStateCount = uint32_t(states.size());
     dynamic_state.pDynamicStates = states.data();
     DebugLog(LogType::Info, "Enabling [%d] dynamic states\n", dynamic_state.dynamicStateCount);
 
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-    layout_info.setLayoutCount = descriptor_pool->m_descriptor_set_layouts.size();
-    layout_info.pSetLayouts = descriptor_pool->m_descriptor_set_layouts.data();
+    layout_info.setLayoutCount = uint32_t(descriptor_pool->m_descriptor_set_layouts.size());
+    layout_info.pSetLayouts    = descriptor_pool->m_descriptor_set_layouts.data();
     layout_info.pushConstantRangeCount = 1;
     layout_info.pPushConstantRanges = &push_constant;
 

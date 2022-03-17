@@ -12,13 +12,17 @@
 
 namespace hyperion {
 namespace renderer {
+
 class Device;
+class CommandBuffer;
+class GraphicsPipeline;
+class ComputePipeline;
 
 class DescriptorPool {
     friend class DescriptorSet;
 public:
     static const std::unordered_map<VkDescriptorType, size_t> items_per_set;
-    static constexpr size_t max_descriptor_sets = 4;
+    static constexpr uint8_t max_descriptor_sets = 4;
 
     struct BufferInfo {
         VkDescriptorImageInfo *image_info;
@@ -46,8 +50,10 @@ public:
 
     Result Create(Device *device);
     Result Destroy(Device *device);
-    Result BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout, size_t start_index, size_t size);
-    Result BindDescriptorSets(VkCommandBuffer cmd, VkPipelineLayout layout);
+    Result BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *pipeline);
+    Result BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *pipeline, uint32_t start_index, uint32_t size);
+    Result BindDescriptorSets(CommandBuffer *cmd, ComputePipeline *pipeline);
+    Result BindDescriptorSets(CommandBuffer *cmd, ComputePipeline *pipeline, uint32_t start_index, uint32_t size);
 
     // return new descriptor set
     DescriptorSet &AddDescriptorSet();

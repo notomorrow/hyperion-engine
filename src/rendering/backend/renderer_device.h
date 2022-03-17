@@ -23,12 +23,13 @@ using ::std::vector,
 struct Instance;
 
 class Device {
+    static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
+
 public:
-    Device();
+    Device(VkPhysicalDevice physical, VkSurfaceKHR surface);
     ~Device();
     void Destroy();
-
-    void SetDevice(const VkDevice &_device);
+    
     void SetPhysicalDevice(VkPhysicalDevice);
     void SetRenderSurface(const VkSurfaceKHR &_surface);
     void SetRequiredExtensions(const vector<const char *> &_extensions);
@@ -40,16 +41,18 @@ public:
     Result SetupAllocator(Instance *instance);
     Result DestroyAllocator();
 
-    QueueFamilyIndices FindQueueFamilies();
     SwapchainSupportDetails QuerySwapchainSupport();
 
+    inline const QueueFamilyIndices &GetQueueFamilyIndices() const { return queue_family_indices; }
     inline const Features &GetFeatures() const { return renderer_features; }
 
     VkQueue GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index = 0);
 
     Result CreateLogicalDevice(const set<uint32_t> &required_queue_families, const vector<const char *> &required_extensions);
-
     Result CheckDeviceSuitable();
+
+    /*  Wait for the device to be idle */
+    Result Wait() const;
 
     VmaAllocator *GetAllocator() { return &this->allocator; }
 
@@ -63,9 +66,9 @@ private:
     VkSurfaceKHR               surface;
     VkPhysicalDevice           physical;
 
-    VmaAllocator allocator;
-
-    Features renderer_features;
+    Features           renderer_features;
+    QueueFamilyIndices queue_family_indices;
+    VmaAllocator       allocator;
 
     vector<const char *> required_extensions;
 };

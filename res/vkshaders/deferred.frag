@@ -36,7 +36,7 @@ void main()
     vec4 t3 = texture(filter_0, texcoord + vec2(-0.002, -0.002));
     vec4 t4 = texture(filter_0, texcoord + vec2(-0.002, 0.002));
     
-    imageStore(image_storage_test, ivec2(0, 0), vec4(1.0, 0.0, 0.0, 1.0));
+    //imageStore(image_storage_test, ivec2(0, 0), vec4(1.0, 0.0, 0.0, 1.0));
 
     color_output = (t0 + t1 + t2 + t3 + t4) / 5.0;//vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
 }

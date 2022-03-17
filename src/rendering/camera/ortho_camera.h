@@ -6,7 +6,7 @@
 namespace hyperion {
 class OrthoCamera : public Camera {
 public:
-    OrthoCamera(float left, float right, float bottom, float top, float near, float far);
+    OrthoCamera(float left, float right, float bottom, float top, float _near, float _far);
     virtual ~OrthoCamera() = default;
 
     inline float GetLeft() const        { return m_left; }

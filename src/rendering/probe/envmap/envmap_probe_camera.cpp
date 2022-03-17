@@ -4,11 +4,11 @@
 #include "../../camera/perspective_camera.h"
 
 namespace hyperion {
-EnvMapProbeCamera::EnvMapProbeCamera(const ProbeRegion &region, int width, int height, float near, float far)
+EnvMapProbeCamera::EnvMapProbeCamera(const ProbeRegion &region, int width, int height, float _near, float _far)
     : ProbeCamera(fbom::FBOMObjectType("ENVMAP_PROBE_CAMERA"), region),
       m_texture(nullptr)
 {
-    m_camera = new PerspectiveCamera(90.0f, width, height, near, far);
+    m_camera = new PerspectiveCamera(90.0f, width, height, _near, _far);
 }
 
 EnvMapProbeCamera::~EnvMapProbeCamera()

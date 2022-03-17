@@ -13,8 +13,8 @@ namespace hyperion {
 
 static inline Vector3 MapXYSToDirection(int x, int y, int s, int width, int height)
 {
-    float u = ((float(x) + 0.5) / float(width)) * 2.0 - 1.0;
-    float v = ((float(y) + 0.5) / float(height)) * 2.0 - 1.0;
+    float u = ((float(x) + 0.5f) / float(width)) * 2.0f - 1.0f;
+    float v = ((float(y) + 0.5f) / float(height)) * 2.0f - 1.0f;
     v *= -1.0;
 
     Vector3 dir;
@@ -38,6 +38,8 @@ static inline Vector3 MapXYSToDirection(int x, int y, int s, int width, int heig
         break;
     case 5:
         dir = Vector3(-u, v, -1.0);
+        break;
+    default:
         break;
     }
 

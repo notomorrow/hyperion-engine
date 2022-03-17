@@ -8,7 +8,7 @@
 namespace hyperion {
 class FpsCamera : public PerspectiveCamera {
 public:
-    FpsCamera(InputManager *inputmgr, SystemWindow *window, int width, int height, float fov, float near, float far);
+    FpsCamera(InputManager *inputmgr, SystemWindow *window, int width, int height, float fov, float _near, float _far);
     virtual ~FpsCamera() = default;
 
     virtual void SetTranslation(const Vector3 &vec) override;

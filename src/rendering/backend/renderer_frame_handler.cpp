@@ -3,7 +3,7 @@
 namespace hyperion {
 namespace renderer {
 
-FrameHandler::FrameHandler(size_t num_frames, NextImageFunction_t next_image)
+FrameHandler::FrameHandler(size_t num_frames, NextImageFunction next_image)
     : m_next_image(next_image),
       m_num_frames(num_frames),
       m_per_frame_data(num_frames),
@@ -24,7 +24,7 @@ Result FrameHandler::CreateFrames(Device *device)
     for (size_t i = 0; i < m_per_frame_data.GetNumFrames(); i++) {
         auto frame = std::make_unique<Frame>();
 
-        HYPERION_BUBBLE_ERRORS(frame->Create(device, m_per_frame_data[i].GetCommandBuffer()->GetCommandBuffer()));
+        HYPERION_BUBBLE_ERRORS(frame->Create(device, non_owning_ptr(m_per_frame_data[i].GetCommandBuffer())));
 
         m_per_frame_data[i].SetFrame(std::move(frame));
     }
@@ -43,7 +43,7 @@ Result FrameHandler::AcquireNextImage(Device *device, Swapchain *swapchain, VkRe
         fence_result = vkWaitForFences(device->GetDevice(), 1, &frame->fc_queue_submit, VK_TRUE, UINT64_MAX);
     } while (fence_result == VK_TIMEOUT);
 
-    //(*out_result = vkWaitForFences(device->GetDevice(), 1, &frame->fc_queue_submit, true, UINT64_MAX));
+    HYPERION_VK_CHECK(*out_result = fence_result);
 
     HYPERION_VK_CHECK(*out_result = vkResetFences(device->GetDevice(), 1, &frame->fc_queue_submit));
 
@@ -59,7 +59,9 @@ Result FrameHandler::CreateCommandBuffers(Device *device, VkCommandPool pool)
     Result result = Result::OK;
 
     for (size_t i = 0; i < m_per_frame_data.GetNumFrames(); i++) {
-        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_PRIMARY);
+        auto command_buffer = std::make_unique<CommandBuffer>(
+            CommandBuffer::COMMAND_BUFFER_PRIMARY
+        );
 
         HYPERION_PASS_ERRORS(command_buffer->Create(device, pool), result);
 

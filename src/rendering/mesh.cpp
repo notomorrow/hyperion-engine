@@ -297,7 +297,7 @@ void Mesh::Render(Renderer *renderer, Camera *cam) {
 
 void Mesh::RenderVk(renderer::Frame *frame, renderer::Instance *vk_renderer, Camera *cam) {
     AssertThrow(frame != nullptr);
-    VkCommandBuffer cmd = frame->command_buffer;
+    VkCommandBuffer cmd = frame->command_buffer->GetCommandBuffer();
 
     if (!is_created) {
         _render_context = new RenderContext(this, vk_renderer);

@@ -51,6 +51,34 @@ private:
 };
 
 template<class ...Args>
+class FrameData<SemaphoreChain, Args...> : public FrameData<Args>... {
+public:
+    SemaphoreChain *GetSemaphoreChain()
+        { return m_semaphore_chain.get(); }
+    const SemaphoreChain *GetSemaphoreChain() const
+        { return m_semaphore_chain.get(); }
+    void SetSemaphoreChain(std::unique_ptr<SemaphoreChain> &&semaphore_chain)
+        { m_semaphore_chain = std::move(semaphore_chain); }
+
+private:
+    std::unique_ptr<SemaphoreChain> m_semaphore_chain;
+};
+
+template<class ...Args>
+class FrameData<Semaphore, Args...> : public FrameData<Args>... {
+public:
+    Semaphore *GetSemaphore()
+        { return m_semaphore.get(); }
+    const Semaphore *GetSemaphore() const
+        { return m_semaphore.get(); }
+    void SetSemaphore(std::unique_ptr<Semaphore> &&semaphore)
+        { m_semaphore = std::move(semaphore); }
+
+private:
+    std::unique_ptr<Semaphore> m_semaphore;
+};
+
+template<class ...Args>
 class PerFrameData {
     using FrameData_t = FrameData<Args...>;
 public:
@@ -68,15 +96,15 @@ public:
     PerFrameData &operator=(PerFrameData &&) = default;
     ~PerFrameData() = default;
 
-    FrameData_t &operator[](uint32_t index)
+    FrameData_t &operator[](size_t index)
         { return m_data[index]; }
-    const FrameData_t &operator[](uint32_t index) const
+    const FrameData_t &operator[](size_t index) const
         { return m_data[index]; }
 
-    FrameData_t &GetFrame(uint32_t index)
+    FrameData_t &GetFrame(size_t index)
         { return operator[](index); }
 
-    const FrameData_t &GetFrame(uint32_t index) const
+    const FrameData_t &GetFrame(size_t index) const
         { return operator[](index); }
 
     inline size_t GetNumFrames() const
@@ -92,9 +120,9 @@ protected:
 
 class FrameHandler {
 public:
-    using NextImageFunction_t = std::add_pointer_t<VkResult(Device *device, Swapchain *swapchain, Frame *frame, uint32_t *image_index)>;
+    using NextImageFunction = std::add_pointer_t<VkResult(Device *device, Swapchain *swapchain, Frame *frame, uint32_t *image_index)>;
 
-    FrameHandler(size_t num_frames, NextImageFunction_t next_image);
+    FrameHandler(size_t num_frames, NextImageFunction next_image);
     FrameHandler(const FrameHandler &other) = delete;
     FrameHandler &operator=(const FrameHandler &other) = delete;
     ~FrameHandler();
@@ -121,7 +149,7 @@ public:
 private:
     PerFrameData<CommandBuffer, Frame> m_per_frame_data;
 
-    NextImageFunction_t m_next_image;
+    NextImageFunction m_next_image;
     uint32_t m_frame_index;
     size_t m_num_frames;
 };

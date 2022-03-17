@@ -4,6 +4,7 @@
 
 #include "renderer_instance.h"
 #include "renderer_device.h"
+#include "renderer_semaphore.h"
 
 #include "../../system/debug.h"
 #include "../../system/vma/vma_usage.h"
@@ -22,20 +23,9 @@ static VkResult HandleNextFrame(Device *device, Swapchain *swapchain, Frame *fra
         device->GetDevice(),
         swapchain->swapchain,
         UINT64_MAX,
-        frame->sp_swap_acquire, 
+        swapchain->GetPresentSemaphores().GetWaitSemaphores()[0].GetSemaphore(),
         VK_NULL_HANDLE,
         index);
-}
-
-Queue::Queue()
-{
-    this->queue = nullptr;
-}
-
-void Queue::GetQueueFromDevice(Device device, uint32_t queue_family_index,
-                                       uint32_t queue_index)
-{
-    vkGetDeviceQueue(device.GetDevice(), queue_family_index, queue_index, &this->queue);
 }
 
 void Instance::WaitImageReady(Frame *frame)
@@ -51,48 +41,32 @@ void Instance::WaitImageReady(Frame *frame)
     }
 }
 
-void Instance::WaitDeviceIdle()
-{
-    vkDeviceWaitIdle(this->device->GetDevice());
-}
-
-void Instance::BeginFrame(Frame *frame)
+void Instance::PrepareFrame(Frame *frame)
 {
     /* Assume `frame` is not nullptr */
 
+    this->WaitImageReady(frame);
+
     /* Update descriptors */
-    for (int i = 0; i < this->descriptor_pool.m_num_descriptor_sets; i++) {
+    for (uint8_t i = 0; i < this->descriptor_pool.m_num_descriptor_sets; i++) {
         auto *descriptor_set = this->descriptor_pool.GetDescriptorSet(DescriptorSet::Index(i));
 
         if (descriptor_set->GetState() & Descriptor::DESCRIPTOR_DIRTY) {
             descriptor_set->Update(this->device);
         }
     }
-
-    frame->BeginCapture();
 }
 
-void Instance::EndFrame(Frame *frame)
-{
-    /* Assume `frame` is not nullptr */
-
-    frame->EndCapture();
-}
-
-void Instance::SubmitFrame(Frame *frame)
-{
-    frame->Submit(this->queue_graphics);
-}
-
-void Instance::PresentFrame(Frame *frame, const std::vector<VkSemaphore> &semaphores)
+void Instance::PresentFrame(Frame *frame, SemaphoreChain *semaphore_chain)
 {
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-    present_info.waitSemaphoreCount = semaphores.size();
-    present_info.pWaitSemaphores = semaphores.data();
+
+    present_info.waitSemaphoreCount = uint32_t(semaphore_chain->m_signal_semaphores_view.size());
+    present_info.pWaitSemaphores    = semaphore_chain->m_signal_semaphores_view.data();
 
     AssertThrow(this->swapchain != nullptr && this->swapchain->swapchain != nullptr);
 
-    uint32_t frame_index = this->frame_handler->GetFrameIndex();
+    const uint32_t frame_index = this->frame_handler->GetFrameIndex();
 
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &this->swapchain->swapchain;
@@ -100,8 +74,6 @@ void Instance::PresentFrame(Frame *frame, const std::vector<VkSemaphore> &semaph
     present_info.pResults = nullptr;
     
     vkQueuePresentKHR(this->queue_present, &present_info);
-
-    vkQueueWaitIdle(this->queue_graphics);
 }
 
 Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers)
@@ -195,11 +167,13 @@ Result Instance::SetupDebug()
     HYPERION_RETURN_OK;
 }
 
-void Instance::SetCurrentWindow(SystemWindow *_window) {
+void Instance::SetCurrentWindow(SystemWindow *_window)
+{
     this->window = _window;
 }
 
-SystemWindow *Instance::GetCurrentWindow() {
+SystemWindow *Instance::GetCurrentWindow()
+{
     return this->window;
 }
 
@@ -213,19 +187,9 @@ Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_
     this->device = nullptr;
 }
 
-Result Instance::AllocatePendingFrames()
-{
-    return this->frame_handler->CreateFrames(this->device);
-}
-
-Frame *Instance::GetNextFrame()
-{
-    return this->frame_handler->GetCurrentFrameData().GetFrame();
-}
-
 Result Instance::CreateCommandPool()
 {
-    QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
+    const QueueFamilyIndices &family_indices = this->device->GetQueueFamilyIndices();
 
     VkCommandPoolCreateInfo pool_info{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     pool_info.queueFamilyIndex = family_indices.graphics_family.value();
@@ -292,7 +256,7 @@ Result Instance::Initialize(bool load_debug_layers) {
     create_info.pApplicationInfo = &app_info;
 
     // Setup validation layers
-    create_info.enabledLayerCount = (uint32_t)(this->validation_layers.size());
+    create_info.enabledLayerCount = uint32_t(this->validation_layers.size());
     create_info.ppEnabledLayerNames = this->validation_layers.data();
     // Setup Vulkan extensions
     std::vector<const char *> extension_names;
@@ -302,7 +266,7 @@ Result Instance::Initialize(bool load_debug_layers) {
     extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
-    create_info.enabledExtensionCount = extension_names.size();
+    create_info.enabledExtensionCount = uint32_t(extension_names.size());
     create_info.ppEnabledExtensionNames = extension_names.data();
 
     DebugLog(LogType::Info, "Loading [%d] Instance extensions...\n", extension_names.size());
@@ -335,7 +299,7 @@ Result Instance::Initialize(bool load_debug_layers) {
     /* Our command pool will have a command buffer for each frame we can render to. */
     HYPERION_BUBBLE_ERRORS(CreateCommandBuffers());
 
-    HYPERION_BUBBLE_ERRORS(this->AllocatePendingFrames());
+    HYPERION_BUBBLE_ERRORS(this->frame_handler->CreateFrames(this->device));
 
     /* init descriptor sets */
     for (int i = 0; i < DescriptorPool::max_descriptor_sets; i++) {
@@ -352,8 +316,7 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr) {
         func(instance, debugMessenger, pAllocator);
-    }
-    else {
+    } else {
         DebugLog(LogType::Error, "Extension for vkDestroyDebugUtilsMessengerEXT not supported!\n");
     }
 }
@@ -479,14 +442,12 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
     }
 
     if (this->device == nullptr) {
-        this->device = new Device();
+        this->device = new Device(physical_device, this->surface);
     }
 
     this->device->SetRequiredExtensions(this->requested_device_extensions);
-    this->device->SetPhysicalDevice(physical_device);
-    this->device->SetRenderSurface(this->surface);
 
-    QueueFamilyIndices family_indices = this->device->FindQueueFamilies();
+    const QueueFamilyIndices &family_indices = this->device->GetQueueFamilyIndices();
 
     /* No user specified queue families to create, so we just use the defaults */
     DebugLog(LogType::Debug, "Found queue family indices\n");
@@ -496,7 +457,9 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
 
         this->SetQueueFamilies({
             family_indices.graphics_family.value(),
-            family_indices.present_family.value()
+            family_indices.transfer_family.value(),
+            family_indices.present_family.value(),
+            family_indices.compute_family.value()
         });
     }
 
@@ -507,7 +470,9 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
 
     /* Get the internal queues from our device */
     this->queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
+    this->queue_transfer = device->GetQueue(family_indices.transfer_family.value(), 0);
     this->queue_present  = device->GetQueue(family_indices.present_family.value(), 0);
+    this->queue_compute = device->GetQueue(family_indices.compute_family.value(), 0);
 
     HYPERION_RETURN_OK;
 }
@@ -538,7 +503,7 @@ std::vector<VkPhysicalDevice> Instance::EnumeratePhysicalDevices()
 
 helpers::SingleTimeCommands Instance::GetSingleTimeCommands()
 {
-    QueueFamilyIndices family_indices = this->device->FindQueueFamilies(); // TODO: this result should be cached
+    const QueueFamilyIndices &family_indices = this->device->GetQueueFamilyIndices();
 
     helpers::SingleTimeCommands single_time_commands{};
     single_time_commands.cmd = nullptr;

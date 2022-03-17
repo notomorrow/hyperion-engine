@@ -35,8 +35,8 @@ namespace fbom {
 struct FBOMObjectType;
 
 struct FBOMObject;
-struct FBOMLoader;
-struct FBOMWriter;
+class FBOMLoader;
+class FBOMWriter;
 
 
 enum FBOMCommand {
