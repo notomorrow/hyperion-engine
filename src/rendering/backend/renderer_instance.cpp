@@ -23,7 +23,7 @@ static VkResult HandleNextFrame(Device *device, Swapchain *swapchain, Frame *fra
         device->GetDevice(),
         swapchain->swapchain,
         UINT64_MAX,
-        swapchain->GetPresentSemaphores().GetWaitSemaphores()[0].GetSemaphore(),
+        frame->GetPresentSemaphores().GetWaitSemaphores()[0].GetSemaphore(),
         VK_NULL_HANDLE,
         index);
 }
@@ -57,12 +57,12 @@ void Instance::PrepareFrame(Frame *frame)
     }
 }
 
-void Instance::PresentFrame(Frame *frame, SemaphoreChain *semaphore_chain)
+void Instance::PresentFrame(Frame *frame)
 {
     VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
 
-    present_info.waitSemaphoreCount = uint32_t(semaphore_chain->m_signal_semaphores_view.size());
-    present_info.pWaitSemaphores    = semaphore_chain->m_signal_semaphores_view.data();
+    present_info.waitSemaphoreCount = uint32_t(frame->GetPresentSemaphores().m_signal_semaphores_view.size());
+    present_info.pWaitSemaphores    = frame->GetPresentSemaphores().m_signal_semaphores_view.data();
 
     AssertThrow(this->swapchain != nullptr && this->swapchain->swapchain != nullptr);
 

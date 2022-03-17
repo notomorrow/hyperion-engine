@@ -139,61 +139,42 @@ public:
     
     template <class ...Args>
     Shader::ID AddShader(std::unique_ptr<Shader> &&shader, Args &&... args)
-        { return Objects<Shader>().Add(this, std::move(shader), std::move(args)...); }
+        { return m_shaders.Add(this, std::move(shader), std::move(args)...); }
     HYP_FORCE_INLINE Shader *GetShader(Shader::ID id)
-        { return Objects<Shader>().Get(id); }
+        { return m_shaders.Get(id); }
     HYP_FORCE_INLINE const Shader *GetShader(Shader::ID id) const
         { return const_cast<Engine*>(this)->GetShader(id); }
 
     Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
     Framebuffer::ID AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass);
     HYP_FORCE_INLINE Framebuffer *GetFramebuffer(Framebuffer::ID id)
-        { return Objects<Framebuffer>().Get(id); }
+        { return m_framebuffers.Get(id); }
     HYP_FORCE_INLINE const Framebuffer *GetFramebuffer(Framebuffer::ID id) const
         { return const_cast<Engine*>(this)->GetFramebuffer(id); }
     
     template <class ...Args>
     RenderPass::ID AddRenderPass(std::unique_ptr<RenderPass> &&render_pass, Args &&... args)
-        { return Objects<RenderPass>().Add(this, std::move(render_pass), std::move(args)...); }
+        { return m_render_passes.Add(this, std::move(render_pass), std::move(args)...); }
     HYP_FORCE_INLINE RenderPass *GetRenderPass(RenderPass::ID id)
-        { return Objects<RenderPass>().Get(id); }
+        { return m_render_passes.Get(id); }
     HYP_FORCE_INLINE const RenderPass *GetRenderPass(RenderPass::ID id) const
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
     Pipeline::ID AddPipeline(renderer::GraphicsPipeline::Builder &&builder);
     HYP_FORCE_INLINE Pipeline *GetPipeline(Pipeline::ID id)
-        { return Objects<Pipeline>().Get(id); }
+        { return m_pipelines.Get(id); }
     HYP_FORCE_INLINE const Pipeline *GetPipeline(Pipeline::ID id) const
         { return const_cast<Engine*>(this)->GetPipeline(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
     template <class ...Args>
     ComputePipeline::ID AddComputePipeline(std::unique_ptr<ComputePipeline> &&compute_pipeline, Args &&... args)
-        { return Objects<ComputePipeline>().Add(this, std::move(compute_pipeline), std::move(args)...); }
+        { return m_compute_pipelines.Add(this, std::move(compute_pipeline), std::move(args)...); }
     HYP_FORCE_INLINE ComputePipeline *GetComputePipeline(ComputePipeline::ID id)
-        { return Objects<ComputePipeline>().Get(id); }
+        { return m_compute_pipelines.Get(id); }
     HYP_FORCE_INLINE const ComputePipeline *GetComputePipeline(ComputePipeline::ID id) const
         { return const_cast<Engine*>(this)->GetComputePipeline(id); }
-
-
-    template <class T>
-    HYP_FORCE_INLINE constexpr
-    ObjectHolder<T> &Objects()
-    {
-        if constexpr(std::is_same_v<T, Shader>) return m_shaders;
-        if constexpr(std::is_same_v<T, Framebuffer>) return m_framebuffers;
-        if constexpr(std::is_same_v<T, RenderPass>) return m_render_passes;
-        if constexpr(std::is_same_v<T, Pipeline>) return m_pipelines;
-        if constexpr(std::is_same_v<T, ComputePipeline>) return m_compute_pipelines;
-
-        throw std::logic_error("Unsupported object holder type given");
-    }
-
-    template <class T>
-    HYP_FORCE_INLINE constexpr
-    const ObjectHolder<T> &Objects() const
-        { return const_cast<Engine *>(this)->Objects<T>(); }
 
     void Initialize();
     void PrepareSwapchain();

@@ -23,7 +23,6 @@ class Swapchain {
     VkExtent2D ChooseSwapchainExtent();
     void RetrieveSupportDetails(Device *device);
     void RetrieveImageHandles(Device *device);
-    Result CreateSemaphores(Device *device);
 
 public:
     Swapchain();
@@ -33,8 +32,6 @@ public:
     Result Destroy(Device *device);
 
     inline size_t GetNumImages() const { return this->images.size(); }
-    inline SemaphoreChain &GetPresentSemaphores() { return present_semaphores; }
-    inline const SemaphoreChain &GetPresentSemaphores() const { return present_semaphores; }
 
     VkSwapchainKHR swapchain;
     VkExtent2D extent;
@@ -46,7 +43,6 @@ private:
     inline uint32_t GetMinImageCount() const { return this->support_details.capabilities.minImageCount; }
     inline uint32_t GetMaxImageCount() const { return this->support_details.capabilities.maxImageCount; }
 
-    SemaphoreChain          present_semaphores;
     SwapchainSupportDetails support_details;
     VkPresentModeKHR        present_mode;
 };

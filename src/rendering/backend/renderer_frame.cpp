@@ -5,7 +5,11 @@ namespace renderer {
 Frame::Frame()
     : creation_device(nullptr),
       command_buffer(nullptr),
-      fc_queue_submit(nullptr)
+      fc_queue_submit(nullptr),
+      present_semaphores(
+          { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT },
+          { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }
+      )
 {
 }
 
@@ -33,6 +37,8 @@ Result Frame::CreateSyncObjects()
 
     VkDevice rd_device = this->creation_device->GetDevice();
 
+    HYPERION_BUBBLE_ERRORS(present_semaphores.Create(this->creation_device.get()));
+
     VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
@@ -52,6 +58,8 @@ Result Frame::DestroySyncObjects()
 
     AssertThrow(this->creation_device != nullptr);
 
+    HYPERION_PASS_ERRORS(present_semaphores.Destroy(this->creation_device.get()), result);
+
     vkDestroyFence(this->creation_device->GetDevice(), this->fc_queue_submit, nullptr);
     this->fc_queue_submit = nullptr;
 
@@ -70,9 +78,9 @@ void Frame::EndCapture()
     AssertThrowMsg(result, "Failed to finish recording command buffer: %s", result.message);
 }
 
-void Frame::Submit(VkQueue queue_submit, SemaphoreChain *semaphore_chain)
+void Frame::Submit(VkQueue queue_submit)
 {
-    auto result = this->command_buffer->SubmitPrimary(queue_submit, this->fc_queue_submit, semaphore_chain);
+    auto result = this->command_buffer->SubmitPrimary(queue_submit, this->fc_queue_submit, &this->present_semaphores);
     AssertThrowMsg(result, "Failed to submit draw command buffer: %s", result.message);
 }
 
