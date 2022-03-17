@@ -979,9 +979,8 @@ int main()
                 fbo_pl->GetWrappedObject()->BeginRenderPass(command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
                 fbo_pl->GetWrappedObject()->Bind(command_buffer);
                 engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(command_buffer, fbo_pl->GetWrappedObject(), 0, 1);
-                renderer::Frame tmp_frame;
-                tmp_frame.command_buffer = non_owning_ptr(command_buffer);
-                monkey_mesh->RenderVk(&tmp_frame, engine.GetInstance(), nullptr);
+
+                monkey_mesh->RenderVk(command_buffer, engine.GetInstance(), nullptr);
                 fbo_pl->GetWrappedObject()->EndRenderPass(command_buffer, 0);
 
 
@@ -1022,13 +1021,10 @@ int main()
         
         frame->GetCommandBuffer()->RecordCommandsWithContext(
             [&engine, &frame_index, &previous_frame_index](CommandBuffer *cmd) {
-                Frame tmp_frame;
-                tmp_frame.command_buffer = non_owning_ptr(cmd);
-
                 engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->push_constants.previous_frame_index = previous_frame_index;
                 engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->push_constants.current_frame_index = frame_index;
 
-                engine.RenderSwapchain(&tmp_frame);
+                engine.RenderSwapchain(cmd);
 
                 HYPERION_RETURN_OK;
             });

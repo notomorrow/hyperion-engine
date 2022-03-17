@@ -180,7 +180,7 @@ public:
     void PrepareSwapchain();
     void BuildPipelines();
     void RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index);
-    void RenderSwapchain(Frame *frame);
+    void RenderSwapchain(CommandBuffer *command_buffer);
 
 private:
     void InitializeInstance();

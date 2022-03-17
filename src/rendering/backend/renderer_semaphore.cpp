@@ -3,6 +3,8 @@
 
 #include <util.h>
 
+#include <functional>
+
 namespace hyperion {
 namespace renderer {
 Semaphore::Semaphore(VkPipelineStageFlags pipeline_stage)
@@ -52,9 +54,7 @@ SemaphoreChain::SemaphoreChain(const std::vector<VkPipelineStageFlags> &wait_sta
     m_signal_semaphores.reserve(signal_stage_flags.size());
 
     for (size_t i = 0; i < wait_stage_flags.size(); i++) {
-        auto *ref = new SemaphoreRef;
-        ref->count = 0;
-        ref->semaphore = new Semaphore(wait_stage_flags[i]);
+        auto *ref = new SemaphoreRef(wait_stage_flags[i]);
 
         refs.insert(ref);
 
@@ -62,21 +62,31 @@ SemaphoreChain::SemaphoreChain(const std::vector<VkPipelineStageFlags> &wait_sta
     }
 
     for (size_t i = 0; i < signal_stage_flags.size(); i++) {
-        auto *ref = new SemaphoreRef;
-        ref->count = 0;
-        ref->semaphore = new Semaphore(signal_stage_flags[i]);
+        auto *ref = new SemaphoreRef(signal_stage_flags[i]);
 
         refs.insert(ref);
 
         m_signal_semaphores.emplace_back(ref);
     }
-
+    
     UpdateViews();
 }
 
-
 SemaphoreChain::~SemaphoreChain()
 {
+    AssertThrowMsg(
+        std::all_of(m_signal_semaphores.begin(), m_signal_semaphores.end(), [](SignalSemaphore &semaphore) {
+            return semaphore.ref == nullptr;
+        }),
+        "All semaphores must have ref counts decremented via Destroy() before destructor call"
+    );
+
+    AssertThrowMsg(
+        std::all_of(m_wait_semaphores.begin(), m_wait_semaphores.end(), [](WaitSemaphore &semaphore) {
+            return semaphore.ref == nullptr;
+        }),
+        "All semaphores must have ref counts decremented via Destroy() before destructor call"
+    );
 }
 
 Result SemaphoreChain::Create(Device *device)
@@ -84,7 +94,7 @@ Result SemaphoreChain::Create(Device *device)
     for (size_t i = 0; i < m_signal_semaphores.size(); i++) {
         auto &ref = m_signal_semaphores[i];
         
-        HYPERION_BUBBLE_ERRORS(ref.Get()->Create(device));
+        HYPERION_BUBBLE_ERRORS(ref.Get().Create(device));
 
         m_signal_semaphores_view[i] = ref.GetSemaphore();
     }
@@ -92,7 +102,7 @@ Result SemaphoreChain::Create(Device *device)
     for (size_t i = 0; i < m_wait_semaphores.size(); i++) {
         auto &ref = m_wait_semaphores[i];
 
-        HYPERION_BUBBLE_ERRORS(ref.Get()->Create(device));
+        HYPERION_BUBBLE_ERRORS(ref.Get().Create(device));
 
         m_wait_semaphores_view[i] = ref.GetSemaphore();
     }
@@ -104,22 +114,34 @@ Result SemaphoreChain::Destroy(Device *device)
 {
     auto result = Result::OK;
 
-    for (auto &semaphore : m_signal_semaphores) {
+    const auto dec_ref = [&](auto &semaphore) {
+        auto *ref = semaphore.ref;
 
-        if (!--semaphore.ref->count) {
-            HYPERION_PASS_ERRORS(semaphore.ref->semaphore->Destroy(device), result);
+        if (ref == nullptr) {
+            return;
+        }
 
-            auto it = refs.find(semaphore.ref);
+        if (!--ref->count) {
+            HYPERION_PASS_ERRORS(ref->semaphore.Destroy(device), result);
+
+            auto it = refs.find(ref);
             AssertThrow(it != refs.end());
-
-            AssertThrow((*it)->semaphore != nullptr);
-            delete (*it)->semaphore;
 
             delete *it;
             refs.erase(it);
         }
+
+        semaphore.ref = nullptr;
+    };
+
+    for (auto &semaphore : m_signal_semaphores) {
+        dec_ref(semaphore);
     }
 
+    for (auto &semaphore : m_wait_semaphores) {
+        dec_ref(semaphore);
+    }
+    
     return result;
 }
 

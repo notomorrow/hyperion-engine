@@ -13,7 +13,7 @@ namespace hyperion::v2 {
 
 using renderer::CommandBuffer;
 
-class ComputePipeline : public BaseComponent<renderer::ComputePipeline> {
+class ComputePipeline : public EngineComponent<renderer::ComputePipeline> {
 public:
     explicit ComputePipeline(Shader::ID shader_id);
     ComputePipeline(const ComputePipeline &) = delete;

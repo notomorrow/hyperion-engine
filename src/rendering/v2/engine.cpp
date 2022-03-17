@@ -260,14 +260,14 @@ void Engine::RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_
     m_filter_stack.Render(this, primary_command_buffer, frame_index);
 }
 
-void Engine::RenderSwapchain(Frame *frame)
+void Engine::RenderSwapchain(CommandBuffer *command_buffer)
 {
     Pipeline *pipeline = GetPipeline(m_swapchain_data.pipeline_id);
 
-    pipeline->GetWrappedObject()->Bind(frame->command_buffer.get());
+    pipeline->GetWrappedObject()->Bind(command_buffer);
 
-    m_instance->GetDescriptorPool().BindDescriptorSets(frame->command_buffer.get(), pipeline->GetWrappedObject());
+    m_instance->GetDescriptorPool().BindDescriptorSets(command_buffer, pipeline->GetWrappedObject());
 
-    Filter::full_screen_quad->RenderVk(frame, m_instance.get(), nullptr);
+    Filter::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
 }
 } // namespace hyperion::v2

@@ -128,7 +128,7 @@ public:
     renderer::MeshBindingDescription GetBindingDescription();
 
     void Render(Renderer *renderer, Camera *cam);
-    void RenderVk(renderer::Frame *frame, renderer::Instance *vk_renderer, Camera *cam);
+    void RenderVk(renderer::CommandBuffer *command_buffer, renderer::Instance *vk_renderer, Camera *cam);
 
 
 #pragma region serialization
