@@ -42,10 +42,6 @@ public:
 
             std::vector<SpirvObject> spirv_objects(std::move(m_spirv_objects));
 
-            for (const auto &sub_shader : m_sub_shaders) {
-                // TODO
-            }
-
             return std::make_unique<Shader>(spirv_objects);
         }
 

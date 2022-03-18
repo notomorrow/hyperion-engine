@@ -668,26 +668,26 @@ int main()
 
     v2::RenderPass::ID render_pass_id{};
     {
-        auto render_pass = std::make_unique<RenderPass>(RenderPass::RENDER_PASS_STAGE_SHADER, RenderPass::RENDER_PASS_INLINE);
+        auto render_pass = std::make_unique<v2::RenderPass>(RenderPass::RENDER_PASS_STAGE_SHADER, RenderPass::RENDER_PASS_INLINE);
 
         /* For our color attachment */
-        render_pass->AddAttachment({
+        render_pass->Get().AddAttachment({
             .format = engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
         });
         /* For our normals attachment */
-        render_pass->AddAttachment({
+        render_pass->Get().AddAttachment({
             .format = engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)
         });
         /* For our positions attachment */
-        render_pass->AddAttachment({
+        render_pass->Get().AddAttachment({
             .format = engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)
         });
 
-        render_pass->AddAttachment({
+        render_pass->Get().AddAttachment({
             .format = engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)
         });
         
-        render_pass_id = engine.AddRenderPass(std::make_unique<v2::RenderPass>(std::move(render_pass)));
+        render_pass_id = engine.AddRenderPass(std::move(render_pass));
     }
 
     v2::Framebuffer::ID my_fbo_id = engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
@@ -719,8 +719,8 @@ int main()
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 0,
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].image_view.get()),
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[0].sampler.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].sampler.get()),
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
 
@@ -728,8 +728,8 @@ int main()
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 1,
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].image_view.get()),
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[1].sampler.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].sampler.get()),
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
 
@@ -737,8 +737,8 @@ int main()
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 2,
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].image_view.get()),
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[2].sampler.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].sampler.get()),
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
 
@@ -746,8 +746,8 @@ int main()
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 3,
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[3].image_view.get()),
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->GetWrappedObject()->GetAttachmentImageInfos()[3].sampler.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].image_view.get()),
+                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get()),
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
     }
@@ -786,8 +786,7 @@ int main()
     scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
 
     engine.PrepareSwapchain();
-
-
+    
     v2::Shader::ID mirror_shader_id{};
     {
         auto mirror_shader = std::make_unique<v2::Shader>(std::vector{
@@ -853,7 +852,7 @@ int main()
     {
         auto compute_shader = std::make_unique<v2::Shader>(std::vector{
             SpirvObject{ SpirvObject::Type::COMPUTE, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read() }
-            });
+        });
 
         compute_shader_id = engine.AddShader(std::move(compute_shader));
     }
@@ -941,7 +940,7 @@ int main()
 
 #if 1
         auto *compute_pipeline = engine.GetComputePipeline(compute_pipeline_id);
-        compute_pipeline->GetWrappedObject()->push_constants.counter = timer;
+        compute_pipeline->Get().push_constants.counter = timer;
 
         /* Compute */
         vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(),
@@ -974,12 +973,12 @@ int main()
             nullptr,
             [&](CommandBuffer *command_buffer) {
                 /* forward / albedo layer */
-                fbo_pl->GetWrappedObject()->BeginRenderPass(command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
-                fbo_pl->GetWrappedObject()->Bind(command_buffer);
-                engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(command_buffer, fbo_pl->GetWrappedObject(), 0, 1);
+                fbo_pl->Get().BeginRenderPass(command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
+                fbo_pl->Get().Bind(command_buffer);
+                engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(command_buffer, &fbo_pl->Get(), 0, 1);
 
                 monkey_mesh->RenderVk(command_buffer, engine.GetInstance(), nullptr);
-                fbo_pl->GetWrappedObject()->EndRenderPass(command_buffer, 0);
+                fbo_pl->Get().EndRenderPass(command_buffer, 0);
 
 
                 engine.RenderPostProcessing(command_buffer, frame_index);
@@ -1015,18 +1014,18 @@ int main()
             1, &imageMemoryBarrier);*/
 
         frame->BeginCapture();
-        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
+        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->Get().BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
         
         frame->GetCommandBuffer()->RecordCommandsWithContext(
             [&engine, &frame_index, &previous_frame_index](CommandBuffer *cmd) {
-                engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->push_constants.previous_frame_index = previous_frame_index;
-                engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->push_constants.current_frame_index = frame_index;
+                engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->Get().push_constants.previous_frame_index = previous_frame_index;
+                engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->Get().push_constants.current_frame_index = frame_index;
 
                 engine.RenderSwapchain(cmd);
 
                 HYPERION_RETURN_OK;
             });
-        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->GetWrappedObject()->EndRenderPass(frame->command_buffer.get(), frame_index);
+        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->Get().EndRenderPass(frame->command_buffer.get(), frame_index);
         frame->EndCapture();
 
         frame->Submit(engine.GetInstance()->GetGraphicsQueue());
@@ -1061,6 +1060,7 @@ int main()
     per_frame_data.Reset();
 
     compute_command_buffer->Destroy(device, engine.GetInstance()->GetComputeCommandPool());
+    compute_semaphore_chain.Destroy(engine.GetInstance()->GetDevice());
 
     delete window;
 

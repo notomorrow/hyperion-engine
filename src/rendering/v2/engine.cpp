@@ -47,7 +47,7 @@ Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffe
     RenderPass *render_pass = GetRenderPass(render_pass_id);
     AssertThrow(render_pass != nullptr);
 
-    return m_framebuffers.Add(this, std::move(framebuffer), render_pass->GetWrappedObject());
+    return m_framebuffers.Add(this, std::move(framebuffer), &render_pass->Get());
 }
 
 Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass_id)
@@ -58,8 +58,8 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
     auto framebuffer = std::make_unique<Framebuffer>(width, height);
 
     /* Add all attachments from the renderpass */
-    for (auto &it : render_pass->GetWrappedObject()->GetAttachments()) {
-        framebuffer->GetWrappedObject()->AddAttachment(it.format);
+    for (auto &it : render_pass->Get().GetAttachments()) {
+        framebuffer->Get().AddAttachment(it.format);
     }
 
     return AddFramebuffer(std::move(framebuffer), render_pass_id);
@@ -71,25 +71,25 @@ Pipeline::ID Engine::AddPipeline(renderer::GraphicsPipeline::Builder &&builder)
 
     AssertThrow(shader != nullptr);
 
-    builder.m_construction_info.shader = non_owning_ptr(shader->GetWrappedObject());
+    builder.m_construction_info.shader = non_owning_ptr(&shader->Get());
 
     auto *render_pass = GetRenderPass(RenderPass::ID{builder.m_construction_info.render_pass_id});
     AssertThrow(render_pass != nullptr);
     // TODO: Assert that render_pass matches the layout of what the fbo was set up with
 
-    builder.m_construction_info.render_pass = non_owning_ptr(render_pass->GetWrappedObject());
+    builder.m_construction_info.render_pass = non_owning_ptr(&render_pass->Get());
 
     for (auto fbo_id : builder.m_construction_info.fbo_ids) {
         if (auto fbo = GetFramebuffer(Framebuffer::ID{fbo_id})) {
-            builder.m_construction_info.fbos.push_back(non_owning_ptr(fbo->GetWrappedObject()));
+            builder.m_construction_info.fbos.push_back(non_owning_ptr(&fbo->Get()));
         }
     }
 
     /* Cache pipeline objects */
-    HashCode::Value_t hash_code = builder.GetHashCode().Value();
+    const HashCode::Value_t hash_code = builder.GetHashCode().Value();
 
-    auto it = std::find_if(m_pipelines.objects.begin(), m_pipelines.objects.end(), [hash_code](const auto &pl) {
-        return pl->GetWrappedObject()->GetConstructionInfo().GetHashCode().Value() == hash_code;
+    const auto it = std::find_if(m_pipelines.objects.begin(), m_pipelines.objects.end(), [hash_code](const auto &pl) {
+        return pl->Get().GetConstructionInfo().GetHashCode().Value() == hash_code;
     });
 
     if (it != m_pipelines.objects.end()) {
@@ -98,13 +98,10 @@ Pipeline::ID Engine::AddPipeline(renderer::GraphicsPipeline::Builder &&builder)
         return Pipeline::ID{Pipeline::ID::InnerType_t((it - m_pipelines.objects.begin()) + 1)};
     }
     
-    /* Create the wrapper object around pipeline
-     * builder.m_construction_info is now invalidated */
-    auto pipeline = std::make_unique<Pipeline>(std::move(builder.m_construction_info));
+    /* Create the wrapper object around pipeline */
+    m_pipelines.objects.push_back(std::make_unique<Pipeline>(std::move(builder.m_construction_info)));
 
-    m_pipelines.objects.push_back(std::move(pipeline));
-
-    return Pipeline::ID{ Pipeline::ID::InnerType_t(m_pipelines.objects.size())};
+    return Pipeline::ID{Pipeline::ID::InnerType_t(m_pipelines.objects.size())};
 }
 
 void Engine::InitializeInstance()
@@ -167,12 +164,10 @@ void Engine::PrepareSwapchain()
 
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
     {
-        auto blit_shader = std::make_unique<Shader>(std::vector{
-            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read() },
-            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read() }
-        });
-
-        m_swapchain_data.shader_id = AddShader(std::move(blit_shader));
+        m_swapchain_data.shader_id = AddShader(std::make_unique<Shader>(std::vector{
+            SpirvObject{SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()},
+            SpirvObject{SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}
+        }));
     }
     
 
@@ -190,11 +185,11 @@ void Engine::PrepareSwapchain()
     {
         auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::RENDER_PASS_STAGE_PRESENT, renderer::RenderPass::RENDER_PASS_INLINE);
         /* For our color attachment */
-        render_pass->GetWrappedObject()->AddColorAttachment(
+        render_pass->Get().AddColorAttachment(
             std::make_unique<Attachment<VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
                 (0, m_instance->swapchain->image_format));
 
-        render_pass->GetWrappedObject()->AddAttachment({
+        render_pass->Get().AddAttachment({
             .format = m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)
         });
         
@@ -223,7 +218,7 @@ void Engine::PrepareSwapchain()
         AssertThrowMsg(image_view_result, "%s", image_view_result.message);
 
         auto fbo = std::make_unique<Framebuffer>(m_instance->swapchain->extent.width, m_instance->swapchain->extent.height);
-        fbo->GetWrappedObject()->AddAttachment(
+        fbo->Get().AddAttachment(
             FramebufferObject::AttachmentImageInfo{
                 .image = nullptr,
                 .image_view = std::move(image_view),
@@ -236,7 +231,7 @@ void Engine::PrepareSwapchain()
         );
 
         /* Now we add a depth buffer */
-        auto result = fbo->GetWrappedObject()->AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH));
+        auto result = fbo->Get().AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH));
         AssertThrowMsg(result, "%s", result.message);
 
         builder.Framebuffer<Framebuffer>(AddFramebuffer(std::move(fbo), render_pass_id));
@@ -266,9 +261,9 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer)
 {
     Pipeline *pipeline = GetPipeline(m_swapchain_data.pipeline_id);
 
-    pipeline->GetWrappedObject()->Bind(command_buffer);
+    pipeline->Get().Bind(command_buffer);
 
-    m_instance->GetDescriptorPool().BindDescriptorSets(command_buffer, pipeline->GetWrappedObject());
+    m_instance->GetDescriptorPool().BindDescriptorSets(command_buffer, &pipeline->Get());
 
     Filter::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
 }

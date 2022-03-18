@@ -39,7 +39,7 @@ void Filter::CreateRenderPass(Engine *engine)
     auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::RENDER_PASS_STAGE_SHADER, renderer::RenderPass::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
 
     /* For our color attachment */
-    render_pass->GetWrappedObject()->AddAttachment({
+    render_pass->Get().AddAttachment({
         .format = engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
     });
 
@@ -78,13 +78,13 @@ void Filter::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
     // TEMP: change index
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL);
 
-    const uint32_t num_attachments = engine->GetFramebuffer(m_framebuffer_id)->GetWrappedObject()->GetNumAttachments();
+    const uint32_t num_attachments = engine->GetFramebuffer(m_framebuffer_id)->Get().GetNumAttachments();
 
     for (uint32_t i = 0; i < num_attachments; i++) {
         descriptor_set->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
             binding_offset++,
-            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->GetWrappedObject()->GetAttachmentImageInfos()[i].image_view.get()),
-            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->GetWrappedObject()->GetAttachmentImageInfos()[i].sampler.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i].image_view.get()),
+            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i].sampler.get()),
             VK_SHADER_STAGE_FRAGMENT_BIT
         ));
     }
@@ -144,14 +144,14 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
             engine->GetInstance()->GetDevice(),
-            pipeline->GetWrappedObject()->GetConstructionInfo().render_pass.get(),
+            pipeline->Get().GetConstructionInfo().render_pass.get(),
             [this, engine, pipeline](CommandBuffer *cmd) {
                 renderer::Result result = renderer::Result::OK;
 
-                pipeline->GetWrappedObject()->Bind(cmd);
+                pipeline->Get().Bind(cmd);
 
                 HYPERION_PASS_ERRORS(
-                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, pipeline->GetWrappedObject(), 0, 3),
+                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, &pipeline->Get(), 0, 3),
                     result
                 );
                 
@@ -171,13 +171,13 @@ void Filter::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint3
 {
     Pipeline *pipeline = engine->GetPipeline(m_pipeline_id);
 
-    pipeline->GetWrappedObject()->BeginRenderPass(primary_command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    pipeline->Get().BeginRenderPass(primary_command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     
     auto *secondary_command_buffer = (*m_frame_data)[frame_index].Get<CommandBuffer>();
 
     auto result = secondary_command_buffer->SubmitSecondary(primary_command_buffer);
     AssertThrowMsg(result, "%s", result.message);
 
-    pipeline->GetWrappedObject()->EndRenderPass(primary_command_buffer, 0);
+    pipeline->Get().EndRenderPass(primary_command_buffer, 0);
 }
 } // namespace hyperion

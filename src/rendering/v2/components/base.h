@@ -29,21 +29,12 @@ class EngineComponent {
 public:
     using ID = IdWrapper<WrappedType, uint32_t>;
 
-    EngineComponent()
-        : m_wrapped(nullptr),
-          m_is_created(false)
-    {}
-
     template <class ...Args>
     EngineComponent(Args &&... args)
-        : m_wrapped(std::make_unique<WrappedType>(std::move(args)...)),
+        : m_wrapped(std::move(args)...),
           m_is_created(false)
     {}
-
-    EngineComponent(std::unique_ptr<WrappedType> &&wrapped)
-        : m_wrapped(std::move(wrapped)),
-          m_is_created(false)
-    {}
+    
     EngineComponent(EngineComponent &&other) noexcept
         : m_wrapped(std::move(other.m_wrapped)),
           m_is_created(other.m_is_created)
@@ -67,15 +58,15 @@ public:
     {
         if (m_is_created) {
             AssertThrowMsg(
-                m_wrapped == nullptr,
+                !m_is_created,
                 "Expected wrapped object of type %s to be destroyed before destructor, but it was not nullptr.",
                 typeid(WrappedType).name()
             );
         }
     }
 
-    inline constexpr WrappedType *GetWrappedObject() { return m_wrapped.get(); }
-    inline constexpr const WrappedType *GetWrappedObject() const { return m_wrapped.get(); }
+    inline WrappedType &Get() { return m_wrapped; }
+    inline const WrappedType &Get() const { return m_wrapped; }
 
     /* Standard non-specialized initialization function */
     template <class ...Args>
@@ -83,15 +74,13 @@ public:
     {
         const char *wrapped_type_name = typeid(WrappedType).name();
 
-        AssertThrow(this->m_wrapped != nullptr);
-
         AssertThrowMsg(
             !m_is_created,
             "Expected wrapped object of type %s to have not already been created, but it was already created.",
             wrapped_type_name
         );
 
-        auto result = this->m_wrapped->Create(GetEngineDevice(engine), std::move(args)...);
+        auto result = m_wrapped.Create(GetEngineDevice(engine), std::move(args)...);
         AssertThrowMsg(result, "Creation of object of type %s failed: %s", wrapped_type_name, result.message);
 
         m_is_created = true;
@@ -103,24 +92,20 @@ public:
     {
         const char *wrapped_type_name = typeid(WrappedType).name();
 
-        AssertThrow(this->m_wrapped != nullptr);
-
         AssertThrowMsg(
             m_is_created,
             "Expected wrapped object of type %s to have been created, but it was not yet created.",
             wrapped_type_name
         );
 
-        auto result = this->m_wrapped->Destroy(GetEngineDevice(engine), std::move(args)...);
+        auto result = m_wrapped.Destroy(GetEngineDevice(engine), std::move(args)...);
         AssertThrowMsg(result, "Destruction of object of type %s failed: %s", wrapped_type_name, result.message);
-
-        this->m_wrapped.reset();
 
         m_is_created = false;
     }
 
 protected:
-    std::unique_ptr<WrappedType> m_wrapped;
+    WrappedType m_wrapped;
     bool m_is_created;
 };
 
