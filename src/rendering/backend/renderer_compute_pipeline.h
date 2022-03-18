@@ -24,6 +24,8 @@ namespace renderer {
 class ComputePipeline {
 public:
     ComputePipeline();
+    ComputePipeline(const ComputePipeline &other) = delete;
+    ComputePipeline &operator=(const ComputePipeline &other) = delete;
     ~ComputePipeline();
 
     Result Create(Device *device, ShaderProgram *shader, DescriptorPool *pool);

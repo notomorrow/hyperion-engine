@@ -10,9 +10,17 @@
 
 namespace hyperion {
 namespace renderer {
-void ShaderProgram::AttachShader(Device *_device, const SpirvObject &spirv) {
-    this->device = _device;
+ShaderProgram::ShaderProgram()
+{
+}
 
+ShaderProgram::~ShaderProgram()
+{
+}
+
+
+void ShaderProgram::AttachShader(Device *device, const SpirvObject &spirv)
+{
     VkShaderModuleCreateInfo create_info{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
     create_info.codeSize = spirv.raw.size();
     create_info.pCode = spirv.VkCode();
@@ -27,7 +35,8 @@ void ShaderProgram::AttachShader(Device *_device, const SpirvObject &spirv) {
 }
 
 VkPipelineShaderStageCreateInfo
-ShaderProgram::CreateShaderStage(const ShaderModule &shader_module, const char *entry_point) {
+ShaderProgram::CreateShaderStage(const ShaderModule &shader_module, const char *entry_point)
+{
     VkPipelineShaderStageCreateInfo create_info{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 
     create_info.module = shader_module.shader_module;
@@ -88,10 +97,13 @@ void ShaderProgram::CreateProgram(const char *entry_point) {
     }
 }
 
-void ShaderProgram::Destroy() {
+Result ShaderProgram::Destroy(Device *device)
+{
     for (auto &shader_module : this->shader_modules) {
-        vkDestroyShaderModule(this->device->GetDevice(), shader_module.shader_module, nullptr);
+        vkDestroyShaderModule(device->GetDevice(), shader_module.shader_module, nullptr);
     }
+
+    HYPERION_RETURN_OK;
 }
 
 } // namespace renderer

@@ -18,7 +18,7 @@ struct ObjectHolder {
     bool defer_create = false;
     std::vector<std::unique_ptr<T>> objects;
 
-    HYP_FORCE_INLINE constexpr
+    inline constexpr
         T *Get(const typename T::ID &id)
     {
         return MathUtil::InRange(id.GetValue(), { 1, objects.size() + 1 })
@@ -26,7 +26,7 @@ struct ObjectHolder {
             : nullptr;
     }
 
-    HYP_FORCE_INLINE constexpr
+    inline constexpr
         const T *Get(const typename T::ID &id) const
     {
         return const_cast<ObjectHolder<T> *>(this)->Get(id);
@@ -59,8 +59,7 @@ struct ObjectHolder {
     }
 
     template<class ...Args>
-    HYP_FORCE_INLINE
-        void Remove(Engine *engine, typename T::ID id, Args &&... args)
+    inline void Remove(Engine *engine, typename T::ID id, Args &&... args)
     {
         auto &object = objects[id];
 

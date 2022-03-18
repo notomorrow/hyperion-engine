@@ -66,7 +66,7 @@ public:
     uint8_t m_num_descriptor_sets;
     std::vector<VkDescriptorSetLayout> m_descriptor_set_layouts;
     VkDescriptorPool m_descriptor_pool;
-    VkDescriptorSet *m_descriptor_sets_view; // TMP
+    VkDescriptorSet *m_descriptor_sets_view;
 
 private:
 

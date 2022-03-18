@@ -31,11 +31,16 @@ struct ShaderModule {
 
 class ShaderProgram {
 public:
+    ShaderProgram();
+    ShaderProgram(const ShaderProgram &other) = delete;
+    ShaderProgram &operator=(const ShaderProgram &other) = delete;
+    ~ShaderProgram();
+
     void AttachShader(Device *device, const SpirvObject &spirv);
     //void AttachShader(Device *device, ShaderType type, const uint32_t *code, const size_t code_size);
     VkPipelineShaderStageCreateInfo CreateShaderStage(const ShaderModule &module, const char *entry_point);
     void CreateProgram(const char *entry_point);
-    void Destroy();
+    Result Destroy(Device *device);
 
     std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
 
@@ -52,7 +57,6 @@ public:
 
 private:
     std::vector<ShaderModule> shader_modules;
-    Device *device = nullptr;
 };
 
 } // namespace renderer

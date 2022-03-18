@@ -98,26 +98,26 @@ public:
             float x = std::stof(attributes.at("x"));
             float y = std::stof(attributes.at("y"));
             float z = std::stof(attributes.at("z"));
-            positions.push_back(Vector3(x, y, z));
+            positions.emplace_back(x, y, z);
         } else if (name == "normal") {
             float x = std::stof(attributes.at("x"));
             float y = std::stof(attributes.at("y"));
             float z = std::stof(attributes.at("z"));
-            normals.push_back(Vector3(x, y, z));
+            normals.emplace_back(x, y, z);
         } else if (name == "texcoord") {
             float x = std::stof(attributes.at("u"));
             float y = std::stof(attributes.at("v"));
-            texcoords.push_back(Vector2(x, y));
+            texcoords.emplace_back(x, y);
         } else if (name == "face") {
             AssertThrow(attributes.size() == 3);
 
             if (!has_submeshes) {
                 for (auto &&it : attributes) {
-                    faces.push_back(std::stof(it.second));
+                    faces.push_back(std::stoull(it.second));
                 }
             } else {
                 for (auto &&it : attributes) {
-                    CurrentSubmesh().faces.push_back(std::stof(it.second));
+                    CurrentSubmesh().faces.push_back(std::stoull(it.second));
                 }
             }
         } else if (name == "skeletonlink") {
@@ -129,22 +129,23 @@ public:
             }
             current += "/" + skel_name + ".xml";
 
-            if (auto skeleton = AssetManager::GetInstance()->LoadFromFile<Skeleton>(current)) {
+            if (const auto skeleton = AssetManager::GetInstance()->LoadFromFile<Skeleton>(current)) {
                 for (auto &&bone : skeleton->bones) {
                     bones.push_back(bone);
                 }
+
                 for (auto &&anim : skeleton->animations) {
                     animations.push_back(anim);
                 }
             }
         } else if (name == "vertexboneassignment") {
-            size_t vidx = (size_t)std::stol(attributes.at("vertexindex"));
-            size_t bidx = (size_t)std::stol(attributes.at("boneindex"));
-            float bweight = std::stof(attributes.at("weight"));
+            size_t vidx(std::stoull(attributes.at("vertexindex")));
+            size_t bidx(std::stoull(attributes.at("boneindex")));
+            float bweight(std::stod(attributes.at("weight")));
             AddBoneAssign(vidx, { vidx, bidx, bweight });
         } else if (name == "submesh") {
             has_submeshes = submeshes_enabled;
-            submeshes.push_back(OgreSubmesh());
+            submeshes.emplace_back();
         } else if (name == "vertexbuffer") {
             auto it = attributes.find("normals");
 
@@ -190,9 +191,10 @@ AssetLoader::Result OgreLoader::LoadFromFile(const std::string &path)
 
     auto final_node = std::make_shared<Node>();
 
-    std::string current = std::string(path);
+    const std::string &current(path);
+
     std::string node_filepath = current.substr(current.find_last_of("\\/") + 1);
-    node_filepath = node_filepath.substr(0, node_filepath.find_first_of(".")); // trim extension
+    node_filepath = node_filepath.substr(0, node_filepath.find_first_of('.')); // trim extension
     final_node->SetName(node_filepath);
 
     std::vector<Vertex> vertices;

@@ -59,7 +59,7 @@ public:
     void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
     void Record(Engine *engine, uint32_t frame_index);
 
-//private:
+private:
     std::unique_ptr<PerFrameData<CommandBuffer>> m_frame_data;
     Framebuffer::ID m_framebuffer_id;
     Shader::ID m_shader_id;
@@ -70,5 +70,5 @@ public:
 
 } // namespace hyperion::v2
 
-#endif // !HYPERION_V2_FILTER_STACK_H
+#endif // !HYPERION_V2_FILTER_H
 
