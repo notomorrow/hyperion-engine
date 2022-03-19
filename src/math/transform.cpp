@@ -31,13 +31,13 @@ Transform::Transform(const Transform &other)
 
 void Transform::UpdateMatrix()
 {
-    Matrix4 S, R, T;
+    Matrix4 s, r, t;
 
-    MatrixUtil::ToTranslation(T, m_translation);
-    MatrixUtil::ToRotation(R, m_rotation);
-    MatrixUtil::ToScaling(S, m_scale);
+    MatrixUtil::ToTranslation(t, m_translation);
+    MatrixUtil::ToRotation(r, m_rotation);
+    MatrixUtil::ToScaling(s, m_scale);
 
-    m_matrix = S * R * T;
+    m_matrix = s * r * t;
 }
 
 Transform Transform::operator*(const Transform &other) const

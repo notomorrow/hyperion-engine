@@ -27,6 +27,6 @@ void main() {
     
     vec3 reflection_vector = reflect(view_vector, normal);
 
-    outColor = vec4(texture(fboTex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y)).rgb, 1.0);
+    outColor = vec4(1.0, 0.0, 0.0, 1.0);//vec4(texture(fboTex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y)).rgb, 1.0);
     //outColor = vec4(vec3(NdotL), 1.0);
 }

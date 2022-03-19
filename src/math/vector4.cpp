@@ -98,11 +98,7 @@ Vector4 Vector4::operator*(const Matrix4 &mat) const
 
 Vector4 &Vector4::operator*=(const Matrix4 &mat)
 {
-    operator=(Vector4(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + w * mat(0, 3),
-        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + w * mat(1, 3),
-        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + w * mat(2, 3),
-        x * mat(3, 0) + y * mat(3, 1) + z * mat(3, 2) + w * mat(3, 3)));
-    return *this;
+    return operator=(operator*(mat));
 }
 
 Vector4 Vector4::operator/(const Vector4 &other) const

@@ -90,25 +90,19 @@ Vector3 Vector3::operator*(const Matrix3 &mat) const
 
 Vector3 &Vector3::operator*=(const Matrix3 &mat)
 {
-    operator=(Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2),
-        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2),
-        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2)));
-    return *this;
+    return operator=(operator*(mat));
 }
 
 Vector3 Vector3::operator*(const Matrix4 &mat) const
 {
-    return Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + 1.0 * mat(0, 3),
-        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + 1.0 * mat(1, 3),
-        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + 1.0 * mat(2, 3));
+    return Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + 1.0f * mat(0, 3),
+        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + 1.0f * mat(1, 3),
+        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + 1.0f * mat(2, 3));
 }
 
 Vector3 &Vector3::operator*=(const Matrix4 &mat)
 {
-    operator=(Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + 1.0 * mat(0, 3),
-        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + 1.0 * mat(1, 3),
-        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + 1.0 * mat(2, 3)));
-    return *this;
+    return operator=(operator*(mat));
 }
 
 Vector3 Vector3::operator*(const Quaternion &quat) const
@@ -144,7 +138,7 @@ Vector3 Vector3::operator*(const Quaternion &quat) const
 
 Vector3 &Vector3::operator*=(const Quaternion &quat)
 {
-    return operator=((*this) * quat);
+    return operator=(operator*(quat));
 }
 
 Vector3 Vector3::operator/(const Vector3 &other) const
@@ -188,8 +182,8 @@ Vector3 &Vector3::Cross(const Vector3 &other)
     float x1 = y * other.z - z * other.y;
     float y1 = z * other.x - x * other.z;
     float z1 = x * other.y - y * other.x;
-    operator=(Vector3(x1, y1, z1));
-    return *this;
+
+    return operator=(Vector3(x1, y1, z1));
 }
 
 Vector3 &Vector3::Rotate(const Vector3 &axis, float radians)

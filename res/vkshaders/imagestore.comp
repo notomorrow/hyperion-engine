@@ -14,16 +14,16 @@ layout(set = 2, binding = 1) uniform sampler2D filter_1;
 layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
 
 //push constants block
-layout( push_constant ) uniform constants
-{
-	uint counter;
+layout( push_constant ) uniform constants {
+	uint counter_x;
+	uint counter_y;
 } PushConstants;
 
 void main()
 {
     uvec2 instance_id = gl_WorkGroupID.xy;
-    instance_id.x = (instance_id.x + PushConstants.counter) % gl_WorkGroupSize.x;
-    instance_id.y = (instance_id.y + PushConstants.counter) % gl_WorkGroupSize.y;
+    instance_id.x = (instance_id.x + PushConstants.counter_x) % gl_WorkGroupSize.x;
+    instance_id.y = (instance_id.y + PushConstants.counter_y) % gl_WorkGroupSize.y;
     uvec2 size = gl_WorkGroupSize.xy;
     vec2 uv = vec2(instance_id) / vec2(size);
     vec4 color = vec4(uv, 0.0, 1.0);

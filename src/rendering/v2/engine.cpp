@@ -65,7 +65,7 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
     return AddFramebuffer(std::move(framebuffer), render_pass_id);
 }
 
-Pipeline::ID Engine::AddPipeline(renderer::GraphicsPipeline::Builder &&builder)
+GraphicsPipeline::ID Engine::AddGraphicsPipeline(renderer::GraphicsPipeline::Builder &&builder)
 {
     auto *shader = GetShader(Shader::ID{builder.m_construction_info.shader_id});
 
@@ -95,13 +95,17 @@ Pipeline::ID Engine::AddPipeline(renderer::GraphicsPipeline::Builder &&builder)
     if (it != m_pipelines.objects.end()) {
         /* Return the index of the existing pipeline + 1,
          * as ID objects are one more than their index in the array. */
-        return Pipeline::ID{Pipeline::ID::InnerType_t((it - m_pipelines.objects.begin()) + 1)};
+        const auto reused_id = GraphicsPipeline::ID{GraphicsPipeline::ID::InnerType_t((it - m_pipelines.objects.begin()) + 1)};
+
+        DebugLog(LogType::Debug, "Re-use graphics pipeline %d\n", reused_id.GetValue());
+
+        return reused_id;
     }
     
     /* Create the wrapper object around pipeline */
-    m_pipelines.objects.push_back(std::make_unique<Pipeline>(std::move(builder.m_construction_info)));
+    m_pipelines.objects.push_back(std::make_unique<GraphicsPipeline>(std::move(builder.m_construction_info)));
 
-    return Pipeline::ID{Pipeline::ID::InnerType_t(m_pipelines.objects.size())};
+    return GraphicsPipeline::ID{GraphicsPipeline::ID::InnerType_t(m_pipelines.objects.size())};
 }
 
 void Engine::InitializeInstance()
@@ -160,7 +164,6 @@ void Engine::FindTextureFormatDefaults()
 void Engine::PrepareSwapchain()
 {
     m_filter_stack.Create(this);
-
 
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
     {
@@ -237,11 +240,17 @@ void Engine::PrepareSwapchain()
         builder.Framebuffer<Framebuffer>(AddFramebuffer(std::move(fbo), render_pass_id));
     }
 
-    m_swapchain_data.pipeline_id = AddPipeline(std::move(builder));
+    m_swapchain_data.pipeline_id = AddGraphicsPipeline(std::move(builder));
 }
 
 void Engine::BuildPipelines()
 {
+    /* Finalize descriptor pool */
+    auto descriptor_pool_result = m_instance->GetDescriptorPool().Create(m_instance->GetDevice());
+    AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
+
+    //m_filter_stack.BuildPipelines(this);
+
     m_pipelines.CreateAll(this, &m_instance->GetDescriptorPool());
     m_compute_pipelines.CreateAll(this);
 }
@@ -259,7 +268,7 @@ void Engine::RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_
 
 void Engine::RenderSwapchain(CommandBuffer *command_buffer)
 {
-    Pipeline *pipeline = GetPipeline(m_swapchain_data.pipeline_id);
+    GraphicsPipeline *pipeline = GetGraphicsPipeline(m_swapchain_data.pipeline_id);
 
     pipeline->Get().Bind(command_buffer);
 

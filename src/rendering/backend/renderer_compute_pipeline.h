@@ -38,7 +38,8 @@ public:
     VkPipelineLayout layout;
 
     struct PushConstants {
-        uint32_t counter;
+        uint32_t counter_x;
+        uint32_t counter_y;
     } push_constants;
 };
 
