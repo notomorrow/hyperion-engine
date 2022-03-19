@@ -64,7 +64,7 @@ private:
     Framebuffer::ID m_framebuffer_id;
     Shader::ID m_shader_id;
     RenderPass::ID m_render_pass_id;
-    Pipeline::ID m_pipeline_id;
+    GraphicsPipeline::ID m_pipeline_id;
     bool m_recorded;
 };
 

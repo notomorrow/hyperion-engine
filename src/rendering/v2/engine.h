@@ -32,7 +32,7 @@ public:
     /* Our "root" shader/pipeline -- used for rendering a quad to the screen. */
     struct SwapchainData {
         Shader::ID shader_id;
-        Pipeline::ID pipeline_id;
+        GraphicsPipeline::ID pipeline_id;
     } m_swapchain_data;
 
     enum TextureFormatDefault {
@@ -68,7 +68,10 @@ public:
     inline const Shader *GetShader(Shader::ID id) const
         { return const_cast<Engine*>(this)->GetShader(id); }
 
+    /* Initialize the FBO based on the given RenderPass's attachments */
     Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
+
+    /* Construct and initialize a FBO based on the given RenderPass's attachments */
     Framebuffer::ID AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass);
 
     inline Framebuffer *GetFramebuffer(Framebuffer::ID id)
@@ -87,14 +90,17 @@ public:
     inline const RenderPass *GetRenderPass(RenderPass::ID id) const
         { return const_cast<Engine*>(this)->GetRenderPass(id); }
 
-    /* Pipelines will be deferred until descriptor sets are built */
-    Pipeline::ID AddPipeline(renderer::GraphicsPipeline::Builder &&builder);
+    /* Pipelines will be deferred until descriptor sets are built
+     * We take in the builder object rather than a unique_ptr,
+     * so that we can reuse pipelines
+     */
+    GraphicsPipeline::ID AddGraphicsPipeline(renderer::GraphicsPipeline::Builder &&builder);
 
-    inline Pipeline *GetPipeline(Pipeline::ID id)
+    inline GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id)
         { return m_pipelines.Get(id); }
 
-    inline const Pipeline *GetPipeline(Pipeline::ID id) const
-        { return const_cast<Engine*>(this)->GetPipeline(id); }
+    inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
+        { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
     template <class ...Args>
@@ -124,7 +130,7 @@ private:
     ObjectHolder<Shader> m_shaders;
     ObjectHolder<Framebuffer> m_framebuffers;
     ObjectHolder<RenderPass> m_render_passes;
-    ObjectHolder<Pipeline> m_pipelines{.defer_create = true};
+    ObjectHolder<GraphicsPipeline> m_pipelines{.defer_create = true};
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
     
     std::unique_ptr<Instance> m_instance;

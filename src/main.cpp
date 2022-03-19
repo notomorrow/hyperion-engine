@@ -596,6 +596,7 @@ int main()
         alignas(16) Vector3 light_direction;
     } scene_data_block;
 
+
 #if HYPERION_VK_TEST_CUBEMAP
     std::vector<std::shared_ptr<Texture2D>> cubemap_faces;
     cubemap_faces.resize(6);
@@ -785,6 +786,21 @@ int main()
     matrices_descriptor_buffer.Create(device, sizeof(MatricesBlock));
     scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
 
+
+    /* Filters */
+    /*engine.GetFilterStack().AddFilter(std::make_unique<v2::Filter>(engine.AddShader(std::make_unique<v2::Shader>(
+        std::vector<SpirvObject>{
+            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read() },
+            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read() }
+        }
+    ))));
+    engine.GetFilterStack().AddFilter(std::make_unique<v2::Filter>(engine.AddShader(std::make_unique<v2::Shader>(
+        std::vector<SpirvObject>{
+            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/filter_pass_vert.spv").Read() },
+            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/filter_pass_frag.spv").Read() }
+        }
+    ))));*/
+
     engine.PrepareSwapchain();
     
     v2::Shader::ID mirror_shader_id{};
@@ -813,7 +829,7 @@ int main()
         .RenderPass<v2::RenderPass>(render_pass_id)
         .Framebuffer<v2::Framebuffer>(my_fbo_id);
 
-    v2::Pipeline::ID scene_pass_pipeline_id = engine.AddPipeline(std::move(scene_pass_pipeline_builder));
+    v2::GraphicsPipeline::ID scene_pass_pipeline_id = engine.AddGraphicsPipeline(std::move(scene_pass_pipeline_builder));
 
     
 
@@ -940,7 +956,8 @@ int main()
 
 #if 1
         auto *compute_pipeline = engine.GetComputePipeline(compute_pipeline_id);
-        compute_pipeline->Get().push_constants.counter = timer;
+        compute_pipeline->Get().push_constants.counter_x = std::sin(timer) * 20.0f;
+        compute_pipeline->Get().push_constants.counter_y = std::cos(timer) * 20.0f;
 
         /* Compute */
         vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(),
@@ -959,7 +976,7 @@ int main()
         compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
 #endif
 
-        v2::Pipeline *fbo_pl = engine.GetPipeline(scene_pass_pipeline_id);
+        v2::GraphicsPipeline *fbo_pl = engine.GetGraphicsPipeline(scene_pass_pipeline_id);
         
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
@@ -1014,18 +1031,18 @@ int main()
             1, &imageMemoryBarrier);*/
 
         frame->BeginCapture();
-        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->Get().BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
+        engine.GetGraphicsPipeline(engine.GetSwapchainData().pipeline_id)->Get().BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
         
         frame->GetCommandBuffer()->RecordCommandsWithContext(
             [&engine, &frame_index, &previous_frame_index](CommandBuffer *cmd) {
-                engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->Get().push_constants.previous_frame_index = previous_frame_index;
-                engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->Get().push_constants.current_frame_index = frame_index;
+                engine.GetGraphicsPipeline(engine.GetSwapchainData().pipeline_id)->Get().push_constants.previous_frame_index = previous_frame_index;
+                engine.GetGraphicsPipeline(engine.GetSwapchainData().pipeline_id)->Get().push_constants.current_frame_index = frame_index;
 
                 engine.RenderSwapchain(cmd);
 
                 HYPERION_RETURN_OK;
             });
-        engine.GetPipeline(engine.GetSwapchainData().pipeline_id)->Get().EndRenderPass(frame->command_buffer.get(), frame_index);
+        engine.GetGraphicsPipeline(engine.GetSwapchainData().pipeline_id)->Get().EndRenderPass(frame->command_buffer.get(), frame_index);
         frame->EndCapture();
 
         frame->Submit(engine.GetInstance()->GetGraphicsQueue());

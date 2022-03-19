@@ -101,7 +101,7 @@ void Filter::CreatePipeline(Engine *engine)
         .RenderPass<RenderPass>(m_render_pass_id)
         .Framebuffer<Framebuffer>(m_framebuffer_id);
 
-    m_pipeline_id = engine->AddPipeline(std::move(builder));
+    m_pipeline_id = engine->AddGraphicsPipeline(std::move(builder));
 }
 
 void Filter::Destroy(Engine *engine)
@@ -139,7 +139,7 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
     auto result = Result::OK;
 
     auto *command_buffer = (*m_frame_data)[frame_index].Get<CommandBuffer>();
-    Pipeline *pipeline = engine->GetPipeline(m_pipeline_id);
+    GraphicsPipeline *pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
 
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
@@ -169,7 +169,7 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
 
 void Filter::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
 {
-    Pipeline *pipeline = engine->GetPipeline(m_pipeline_id);
+    GraphicsPipeline *pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
 
     pipeline->Get().BeginRenderPass(primary_command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
     

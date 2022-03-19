@@ -8,7 +8,7 @@
 
 namespace hyperion::v2 {
 
-using Pipeline = EngineComponent<renderer::GraphicsPipeline>;
+using GraphicsPipeline = EngineComponent<renderer::GraphicsPipeline>;
 
 } // namespace hyperion::v2
 

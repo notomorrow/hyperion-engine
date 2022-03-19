@@ -19,6 +19,15 @@ FilterStack::FilterStack()
 
 FilterStack::~FilterStack() = default;
 
+/*void FilterStack::AddFilter(int priority, std::unique_ptr<Filter> &&filter)
+{
+    m_filters.emplace_back(priority, std::move(filter));
+
+    std::sort(m_filters.begin(), m_filters.end(), [](const auto &a, const auto &b) {
+        return a.first < b.first;
+    });
+}*/
+
 void FilterStack::Create(Engine *engine)
 {
     /* Add a renderpass per each filter */
@@ -61,7 +70,7 @@ void FilterStack::Destroy(Engine *engine)
 
 void FilterStack::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
 {
-    for (auto &filter : m_filters) {
+    for (const auto &filter : m_filters) {
         filter->Record(engine, frame_index);
         filter->Render(engine, primary_command_buffer, frame_index);
     }

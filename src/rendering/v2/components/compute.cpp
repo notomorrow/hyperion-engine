@@ -15,7 +15,7 @@ void ComputePipeline::Create(Engine *engine)
     auto *shader = engine->GetShader(m_shader_id);
     AssertThrow(shader != nullptr);
 
-    auto result = m_wrapped.Create(engine->GetInstance()->GetDevice(), &shader->GetWrappedObject(), &engine->GetInstance()->GetDescriptorPool());
+    auto result = m_wrapped.Create(engine->GetInstance()->GetDevice(), &shader->Get(), &engine->GetInstance()->GetDescriptorPool());
     AssertThrowMsg(result, "%s", result.message);
 
     m_is_created = true;
