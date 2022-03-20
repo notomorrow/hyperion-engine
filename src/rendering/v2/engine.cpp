@@ -208,13 +208,14 @@ void Engine::PrepareSwapchain()
         .RenderPass<RenderPass>(render_pass_id);
 
     for (auto img : m_instance->swapchain->images) {
-        auto image_view = std::make_unique<ImageView>(VK_IMAGE_ASPECT_COLOR_BIT);
+        auto image_view = std::make_unique<ImageView>();
 
         /* Create imageview independent of a Image */
         auto image_view_result = image_view->Create(
             m_instance->GetDevice(),
             img,
             m_instance->swapchain->image_format,
+            VK_IMAGE_ASPECT_COLOR_BIT,
             VK_IMAGE_VIEW_TYPE_2D
         );
 

@@ -6,9 +6,8 @@
 
 namespace hyperion {
 namespace renderer {
-ImageView::ImageView(VkImageAspectFlags aspect_mask)
-    : m_aspect_mask(aspect_mask),
-      m_image_view(nullptr)
+ImageView::ImageView()
+    : m_image_view(nullptr)
 {
 }
 
@@ -20,6 +19,7 @@ ImageView::~ImageView()
 Result ImageView::Create(Device *device,
     VkImage image,
     VkFormat format,
+    VkImageAspectFlags aspect_flags,
     VkImageViewType view_type,
     size_t num_mipmaps,
     size_t num_faces)
@@ -36,7 +36,7 @@ Result ImageView::Create(Device *device,
     view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
     view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-    view_info.subresourceRange.aspectMask = m_aspect_mask;
+    view_info.subresourceRange.aspectMask = aspect_flags;
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.levelCount = uint32_t(num_mipmaps);
     view_info.subresourceRange.baseArrayLayer = 0;
@@ -57,6 +57,7 @@ Result ImageView::Create(Device *device,
         device,
         image->GetGPUImage()->image,
         image->GetImageFormat(),
+        ToVkImageAspect(image->GetTextureFormat()),
         ToVkImageViewType(image->GetType()),
         image->GetNumMipmaps(),
         image->GetNumFaces()
@@ -69,6 +70,13 @@ Result ImageView::Destroy(Device *device)
     m_image_view = nullptr;
 
     HYPERION_RETURN_OK;
+}
+
+VkImageAspectFlags ImageView::ToVkImageAspect(Image::InternalFormat internal_format)
+{
+    return Image::IsDepthTexture(internal_format)
+        ? VK_IMAGE_ASPECT_DEPTH_BIT
+        : VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
 VkImageViewType ImageView::ToVkImageViewType(Image::Type type)
