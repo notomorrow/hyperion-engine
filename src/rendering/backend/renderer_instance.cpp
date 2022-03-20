@@ -5,12 +5,12 @@
 #include "renderer_instance.h"
 #include "renderer_device.h"
 #include "renderer_semaphore.h"
+#include "renderer_features.h"
 
 #include "../../system/debug.h"
 #include "../../system/vma/vma_usage.h"
 
 #include <vector>
-#include <iostream>
 #include <optional>
 #include <cstring>
 

@@ -26,7 +26,7 @@ public:
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    //void BuildPipelines(Engine *engine);
+    void BuildPipelines(Engine *engine);
     void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
 
 private:

@@ -50,21 +50,20 @@ void FilterStack::Create(Engine *engine)
         m_filters[i]->CreateFrameData(engine);
         m_filters[i]->CreateDescriptors(engine, binding_index);
     }
-
-    /* Finalize descriptor pool */
-    auto descriptor_pool_result = engine->GetInstance()->GetDescriptorPool().Create(engine->GetInstance()->GetDevice());
-    AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
-
-    for (int i = 0; i < num_filters; i++) {
-        m_filters[i]->CreatePipeline(engine);
-    }
 }
 
 void FilterStack::Destroy(Engine *engine)
 {
     /* Render passes + framebuffer cleanup are handled by the engine */
-    for (const auto &filter : m_filters) {
+    for (auto &filter : m_filters) {
         filter->Destroy(engine);
+    }
+}
+
+void FilterStack::BuildPipelines(Engine *engine)
+{
+    for (auto &m_filter : m_filters) {
+        m_filter->CreatePipeline(engine);
     }
 }
 

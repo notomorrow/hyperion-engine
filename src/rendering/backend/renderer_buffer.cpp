@@ -3,6 +3,7 @@
 //
 
 #include "renderer_buffer.h"
+#include "renderer_device.h"
 
 #include "../../system/debug.h"
 #include <cstring>

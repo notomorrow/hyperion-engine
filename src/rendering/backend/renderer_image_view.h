@@ -3,7 +3,6 @@
 
 #include "renderer_result.h"
 #include "renderer_image.h"
-#include "../texture.h"
 
 #include <vulkan/vulkan.h>
 
@@ -33,7 +32,7 @@ public:
     Result Destroy(Device *device);
 
 private:
-    static VkImageViewType ToVkImageViewType(Texture::TextureType);
+    static VkImageViewType ToVkImageViewType(Image::Type);
 
     VkImageAspectFlags m_aspect_mask;
     VkImageView m_image_view;

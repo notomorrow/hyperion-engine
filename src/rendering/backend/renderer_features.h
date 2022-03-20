@@ -2,7 +2,7 @@
 #define HYPERION_RENDERER_FEATURES_H
 
 #include "renderer_result.h"
-#include "../texture.h"
+#include "renderer_image.h"
 
 #include <vulkan/vulkan.h>
 
@@ -10,11 +10,6 @@
 
 namespace hyperion {
 namespace renderer {
-namespace helpers {
-// forward decl's
-VkFormat ToVkFormat(Texture::TextureInternalFormat fmt);
-VkImageType ToVkType(Texture::TextureType type);
-} // namespace helpers
 
 class Features {
 public:
@@ -26,6 +21,7 @@ public:
     ~Features() = default;
 
     void SetPhysicalDevice(VkPhysicalDevice);
+    inline VkPhysicalDevice GetPhysicalDevice() const { return m_physical_device; }
 
     inline bool IsDiscreteGpu() const { return m_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU; }
 
@@ -120,7 +116,35 @@ public:
 
     /* get the first supported format out of the provided list of format choices. */
     template <size_t Size>
-    inline VkFormat FindSupportedFormat(std::array<VkFormat, Size> possible_formats, VkImageTiling tiling, VkFormatFeatureFlags features) const
+    inline Image::InternalFormat FindSupportedFormat(const std::array<Image::InternalFormat, Size> &possible_formats, VkImageTiling tiling, VkFormatFeatureFlags features) const
+    {
+        static_assert(Size > 0, "Size must be greater than zero!");
+
+        DebugLog(
+            LogType::Debug,
+            "Looking for format to use with tiling option %d and format features %d. First choice: %d\n",
+            tiling,
+            features,
+            Image::ToVkFormat(possible_formats[0])
+        );
+
+        if (m_physical_device == nullptr) {
+            DebugLog(LogType::Debug, "No physical device set -- cannot find supported format!\n");
+            return Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
+        }
+
+        for (size_t i = 0; i < Size; i++) {
+            if (IsSupportedFormat(Image::ToVkFormat(possible_formats[i]), tiling, features) != VK_FORMAT_UNDEFINED) {
+                return possible_formats[i];
+            }
+        }
+
+        return Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
+    }
+
+    /* get the first supported format out of the provided list of format choices. */
+    template <size_t Size>
+    inline VkFormat FindSupportedFormat(const std::array<VkFormat, Size> &possible_formats, VkImageTiling tiling, VkFormatFeatureFlags features) const
     {
         static_assert(Size > 0, "Size must be greater than zero!");
 
@@ -146,34 +170,6 @@ public:
         }
 
         return VK_FORMAT_UNDEFINED;
-    }
-
-    /* get the first supported format out of the provided list of format choices. */
-    template <size_t Size>
-    inline Texture::TextureInternalFormat FindSupportedFormat(std::array<Texture::TextureInternalFormat, Size> possible_formats, VkImageTiling tiling, VkFormatFeatureFlags features) const
-    {
-        static_assert(Size > 0, "Size must be greater than zero!");
-
-        DebugLog(
-            LogType::Debug,
-            "Looking for format to use with tiling option %d and format features %d. First choice: %d\n",
-            tiling,
-            features,
-            helpers::ToVkFormat(possible_formats[0])
-        );
-
-        if (m_physical_device == nullptr) {
-            DebugLog(LogType::Debug, "No physical device set -- cannot find supported format!\n");
-            return Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
-        }
-
-        for (size_t i = 0; i < Size; i++) {
-            if (IsSupportedFormat(helpers::ToVkFormat(possible_formats[i]), tiling, features) != VK_FORMAT_UNDEFINED) {
-                return possible_formats[i];
-            }
-        }
-
-        return Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
     }
 
     inline Result GetImageFormatProperties(VkFormat format,

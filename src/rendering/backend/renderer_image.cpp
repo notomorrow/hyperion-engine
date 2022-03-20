@@ -1,6 +1,10 @@
 #include "renderer_image.h"
 #include "renderer_graphics_pipeline.h"
 #include "renderer_instance.h"
+#include "renderer_helpers.h"
+#include "renderer_device.h"
+#include "renderer_features.h"
+
 #include <util/img/image_util.h>
 #include <system/debug.h>
 
@@ -73,10 +77,145 @@ Result Image::TransferLayout(VkCommandBuffer cmd, const Image *image, const Layo
     HYPERION_RETURN_OK;
 }
 
+Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
+{
+    switch (fmt) {
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R8:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R16:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R32:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R16F:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R32F:
+        return BaseFormat::TEXTURE_FORMAT_R;
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F:
+        return BaseFormat::TEXTURE_FORMAT_RG;
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16F:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F:
+        return BaseFormat::TEXTURE_FORMAT_RGB;
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F:
+        return BaseFormat::TEXTURE_FORMAT_RGBA;
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F:
+        return BaseFormat::TEXTURE_FORMAT_DEPTH;
+    }
+
+    unexpected_value_msg(format, "Unhandled image format case");
+}
+
+Image::InternalFormat Image::FormatChangeNumComponents(InternalFormat fmt, uint8_t new_num_components)
+{
+    if (new_num_components == 0) {
+        return InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
+    }
+
+    new_num_components = MathUtil::Clamp(new_num_components, uint8_t(1), uint8_t(4));
+
+    int current_num_components = int(NumComponents(GetBaseFormat(fmt)));
+
+    return InternalFormat(int(fmt) + int(new_num_components) - current_num_components);
+}
+
+size_t Image::NumComponents(BaseFormat format)
+{
+    switch (format) {
+    case BaseFormat::TEXTURE_FORMAT_NONE: return 0;
+    case BaseFormat::TEXTURE_FORMAT_R: return 1;
+    case BaseFormat::TEXTURE_FORMAT_RG: return 2;
+    case BaseFormat::TEXTURE_FORMAT_RGB: return 3;
+    case BaseFormat::TEXTURE_FORMAT_RGBA: return 4;
+    case BaseFormat::TEXTURE_FORMAT_DEPTH: return 1;
+    }
+
+    unexpected_value_msg(format, "Unknown number of components for format");
+}
+
+bool Image::IsDepthTexture(InternalFormat fmt)
+{
+    return IsDepthTexture(GetBaseFormat(fmt));
+}
+
+bool Image::IsDepthTexture(BaseFormat fmt)
+{
+    return fmt == BaseFormat::TEXTURE_FORMAT_DEPTH;
+}
+
+VkFormat Image::ToVkFormat(InternalFormat fmt)
+{
+    switch (fmt) {
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8: return VK_FORMAT_R8_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8: return VK_FORMAT_R8G8_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8: return VK_FORMAT_R8G8B8_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8: return VK_FORMAT_R8G8B8A8_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16: return VK_FORMAT_R16_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16: return VK_FORMAT_R16G16_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16: return VK_FORMAT_R16G16B16_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16: return VK_FORMAT_R16G16B16A16_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16F: return VK_FORMAT_R16_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F: return VK_FORMAT_R16G16_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16F: return VK_FORMAT_R16G16B16_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F: return VK_FORMAT_R16G16B16A16_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R32F: return VK_FORMAT_R32_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F: return VK_FORMAT_R32G32_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F: return VK_FORMAT_R32G32B32_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F: return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16: return VK_FORMAT_D16_UNORM;
+        //case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24: return VK_FORMAT_D24_UNORM_S8_UINT;
+        //case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32: return VK_FORMAT_D32_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F: return VK_FORMAT_D32_SFLOAT;
+    }
+
+    unexpected_value_msg(format, "Unhandled texture format case");
+}
+
+VkImageType Image::ToVkType(Type type)
+{
+    switch (type) {
+    case Image::Type::TEXTURE_TYPE_2D: return VK_IMAGE_TYPE_2D;
+    case Image::Type::TEXTURE_TYPE_3D: return VK_IMAGE_TYPE_3D;
+    case Image::Type::TEXTURE_TYPE_CUBEMAP: return VK_IMAGE_TYPE_2D;
+    }
+
+    unexpected_value_msg(format, "Unhandled texture type case");
+}
+
+VkFilter Image::ToVkFilter(FilterMode filter_mode)
+{
+    switch (filter_mode) {
+    case FilterMode::TEXTURE_FILTER_NEAREST: return VK_FILTER_NEAREST;
+    case FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP: // fallthrough
+    case FilterMode::TEXTURE_FILTER_LINEAR: return VK_FILTER_LINEAR;
+    }
+
+    unexpected_value_msg(format, "Unhandled texture filter mode case");
+}
+
+VkSamplerAddressMode Image::ToVkSamplerAddressMode(WrapMode texture_wrap_mode)
+{
+    switch (texture_wrap_mode) {
+    case WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    case WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    case WrapMode::TEXTURE_WRAP_REPEAT: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    }
+
+    unexpected_value_msg(format, "Unhandled texture wrap mode case");
+}
+
 Image::Image(size_t width, size_t height, size_t depth,
-    Texture::TextureInternalFormat format,
-    Texture::TextureType type,
-    Texture::TextureFilterMode filter_mode,
+    Image::InternalFormat format,
+    Image::Type type,
+    Image::FilterMode filter_mode,
     const InternalInfo &internal_info,
     unsigned char *bytes)
     : m_width(width),
@@ -88,7 +227,7 @@ Image::Image(size_t width, size_t height, size_t depth,
       m_internal_info(internal_info),
       m_image(nullptr),
       m_staging_buffer(nullptr),
-      m_bpp(Texture::NumComponents(Texture::GetBaseFormat(format)))
+      m_bpp(NumComponents(GetBaseFormat(format)))
 {
     m_size = width * height * depth * m_bpp * GetNumFaces();
 
@@ -106,6 +245,10 @@ Image::~Image()
 
     delete[] m_bytes;
 }
+
+bool Image::IsDepthStencilImage() const { return IsDepthTexture(m_format); }
+VkFormat Image::GetImageFormat() const { return ToVkFormat(m_format); }
+VkImageType Image::GetImageType() const { return ToVkType(m_type); }
 
 Result Image::CreateImage(Device *device,
     VkImageLayout initial_layout,
@@ -127,7 +270,7 @@ Result Image::CreateImage(Device *device,
     }
 
     if (IsCubemap()) {
-        DebugLog(LogType::Debug, "Creating cubemap texture, enabling VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT flag.\n");
+        DebugLog(LogType::Debug, "Creating cubemap , enabling VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT flag.\n");
 
         image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
@@ -205,7 +348,7 @@ Result Image::CreateImage(Device *device,
     image_info.usage = m_internal_info.usage_flags;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_info.flags = image_create_flags; // TODO: look into flags for sparse textures for VCT
+    image_info.flags = image_create_flags; // TODO: look into flags for sparse s for VCT
     *out_image_info = image_info;
 
     m_image = new GPUImage(m_internal_info.usage_flags);
@@ -504,7 +647,7 @@ Result Image::ConvertTo32Bpp(
     delete[] m_bytes;
     m_bytes = new_bytes;
 
-    m_format = Texture::FormatChangeNumComponents(m_format, new_bpp);
+    m_format = FormatChangeNumComponents(m_format, new_bpp);
     m_bpp = new_bpp;
     m_size = new_size;
 

@@ -2,7 +2,7 @@
 #define RENDERER_SAMPLER_H
 
 #include "renderer_result.h"
-#include "../texture.h"
+#include "renderer_image.h"
 
 #include <vulkan/vulkan.h>
 
@@ -12,7 +12,7 @@ class ImageView;
 class Device;
 class Sampler {
 public:
-    Sampler(Texture::TextureFilterMode filter_mode, Texture::TextureWrapMode wrap_mode);
+    Sampler(Image::FilterMode filter_mode, Image::WrapMode wrap_mode);
     Sampler(const Sampler &other) = delete;
     Sampler &operator=(const Sampler &other) = delete;
     ~Sampler();
@@ -24,12 +24,9 @@ public:
     Result Destroy(Device *device);
 
 private:
-    static VkFilter ToVkFilter(Texture::TextureFilterMode);
-    static VkSamplerAddressMode ToVkSamplerAddressMode(Texture::TextureWrapMode);
-
     VkSampler m_sampler;
-    Texture::TextureFilterMode m_filter_mode;
-    Texture::TextureWrapMode m_wrap_mode;
+    Image::FilterMode m_filter_mode;
+    Image::WrapMode m_wrap_mode;
 };
 
 } // namespace renderer

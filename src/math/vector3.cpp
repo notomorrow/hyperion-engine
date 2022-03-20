@@ -172,6 +172,7 @@ float Vector3::DistanceSquared(const Vector3 &other) const
     return dx * dx + dy * dy + dz * dz;
 }
 
+/* Euclidean distance */
 float Vector3::Distance(const Vector3 &other) const
 {
     return sqrt(DistanceSquared(other));
