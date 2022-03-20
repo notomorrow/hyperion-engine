@@ -31,12 +31,8 @@ Result FramebufferObject::AddAttachment(Image::InternalFormat format)
 
 Result FramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, Image::InternalFormat format)
 {
-    VkImageAspectFlags image_aspect_flags = Image::IsDepthTexture(format)
-        ? VK_IMAGE_ASPECT_DEPTH_BIT
-        : VK_IMAGE_ASPECT_COLOR_BIT;
-
     if (image_info.image_view == nullptr) {
-        image_info.image_view = std::make_unique<ImageView>(image_aspect_flags);
+        image_info.image_view = std::make_unique<ImageView>();
 
         image_info.image_view_needs_creation = true;
     }

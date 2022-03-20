@@ -11,7 +11,7 @@ namespace renderer {
 class Device;
 class ImageView {
 public:
-    ImageView(VkImageAspectFlags aspect_mask);
+    ImageView();
     ImageView(const ImageView &other) = delete;
     ImageView &operator=(const ImageView &other) = delete;
     ~ImageView();
@@ -23,18 +23,20 @@ public:
     Result Create(Device *device,
         VkImage image,
         VkFormat format,
+        VkImageAspectFlags aspect_flags,
         VkImageViewType view_type,
         size_t num_mipmaps = 1,
         size_t num_faces = 1);
+
     /* Create imageview referencing a Image */
     Result Create(Device *device,
         Image *image);
     Result Destroy(Device *device);
 
 private:
+    static VkImageAspectFlags ToVkImageAspect(Image::InternalFormat);
     static VkImageViewType ToVkImageViewType(Image::Type);
-
-    VkImageAspectFlags m_aspect_mask;
+    
     VkImageView m_image_view;
 };
 

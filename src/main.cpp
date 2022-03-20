@@ -575,7 +575,6 @@ int main()
     auto full_screen_quad = MeshFactory::CreateQuad();
     Material my_material;
 
-
     v2::Engine engine(system, "My app");
 
 
@@ -625,7 +624,7 @@ int main()
         bytes
     );
 
-    ImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
+    ImageView test_image_view;
     Sampler test_sampler(
         Image::FilterMode::TEXTURE_FILTER_LINEAR,
         Image::WrapMode::TEXTURE_WRAP_REPEAT
@@ -661,7 +660,7 @@ int main()
         nullptr
     );
 
-    ImageView image_storage_view(VK_IMAGE_ASPECT_COLOR_BIT);
+    ImageView image_storage_view;
 #endif
 
 
