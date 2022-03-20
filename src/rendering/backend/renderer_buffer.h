@@ -5,12 +5,14 @@
 #ifndef HYPERION_RENDERER_BUFFER_H
 #define HYPERION_RENDERER_BUFFER_H
 
-#include "renderer_device.h"
 #include "renderer_result.h"
 #include "../../system/vma/vma_usage.h"
 
 namespace hyperion {
 namespace renderer {
+
+class Device;
+
 class GPUMemory {
 public:
     static uint32_t FindMemoryType(Device *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties);

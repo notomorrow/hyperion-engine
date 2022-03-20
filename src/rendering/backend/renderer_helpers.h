@@ -3,6 +3,7 @@
 
 #include "renderer_result.h"
 #include "renderer_device.h"
+#include "renderer_image.h"
 
 #include <vulkan/vulkan.h>
 
@@ -13,12 +14,6 @@
 namespace hyperion {
 namespace renderer {
 namespace helpers {
-
-//static VkFormat ToVkFormat(Texture::TextureInternalFormat fmt);
-//static VkImageType ToVkType(Texture::TextureType type);
-
-bool IsDepthTexture(Texture::TextureInternalFormat fmt);
-bool IsDepthTexture(Texture::TextureBaseFormat fmt);
 
 size_t MipmapSize(size_t src_size, int lod);
 

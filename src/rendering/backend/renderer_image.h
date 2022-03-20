@@ -2,21 +2,102 @@
 #define RENDERER_IMAGE_H
 
 #include "renderer_result.h"
-#include "renderer_device.h"
 #include "renderer_buffer.h"
-#include "renderer_helpers.h"
-#include "../texture.h"
 
 #include <math/math_util.h>
 
 namespace hyperion {
 namespace renderer {
+
 class Instance;
+class Device;
+
 class Image {
 public:
     struct LayoutTransferStateBase;
 
+    enum Type {
+        TEXTURE_TYPE_2D = 0,
+        TEXTURE_TYPE_3D = 1,
+        TEXTURE_TYPE_CUBEMAP = 2
+    };
+
+    enum class DatumType {
+        TEXTURE_DATUM_UNSIGNED_BYTE,
+        TEXTURE_DATUM_SIGNED_BYTE,
+        TEXTURE_DATUM_UNSIGNED_INT,
+        TEXTURE_DATUM_SIGNED_INT,
+        TEXTURE_DATUM_FLOAT
+    };
+
+    enum class BaseFormat {
+        TEXTURE_FORMAT_NONE,
+        TEXTURE_FORMAT_R,
+        TEXTURE_FORMAT_RG,
+        TEXTURE_FORMAT_RGB,
+        TEXTURE_FORMAT_RGBA,
+
+        TEXTURE_FORMAT_DEPTH
+    };
+
+    enum class InternalFormat {
+        TEXTURE_INTERNAL_FORMAT_NONE,
+        TEXTURE_INTERNAL_FORMAT_R8,
+        TEXTURE_INTERNAL_FORMAT_RG8,
+        TEXTURE_INTERNAL_FORMAT_RGB8,
+        TEXTURE_INTERNAL_FORMAT_RGBA8,
+        TEXTURE_INTERNAL_FORMAT_R16,
+        TEXTURE_INTERNAL_FORMAT_RG16,
+        TEXTURE_INTERNAL_FORMAT_RGB16,
+        TEXTURE_INTERNAL_FORMAT_RGBA16,
+        TEXTURE_INTERNAL_FORMAT_R32,
+        TEXTURE_INTERNAL_FORMAT_RG32,
+        TEXTURE_INTERNAL_FORMAT_RGB32,
+        TEXTURE_INTERNAL_FORMAT_RGBA32,
+        TEXTURE_INTERNAL_FORMAT_R16F,
+        TEXTURE_INTERNAL_FORMAT_RG16F,
+        TEXTURE_INTERNAL_FORMAT_RGB16F,
+        TEXTURE_INTERNAL_FORMAT_RGBA16F,
+        TEXTURE_INTERNAL_FORMAT_R32F,
+        TEXTURE_INTERNAL_FORMAT_RG32F,
+        TEXTURE_INTERNAL_FORMAT_RGB32F,
+        TEXTURE_INTERNAL_FORMAT_RGBA32F,
+
+        TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+        TEXTURE_INTERNAL_FORMAT_DEPTH_24,
+        TEXTURE_INTERNAL_FORMAT_DEPTH_32,
+        TEXTURE_INTERNAL_FORMAT_DEPTH_32F
+    };
+
+    enum class FilterMode {
+        TEXTURE_FILTER_NEAREST,
+        TEXTURE_FILTER_LINEAR,
+        TEXTURE_FILTER_LINEAR_MIPMAP
+    };
+
+    enum class WrapMode {
+        TEXTURE_WRAP_CLAMP_TO_EDGE,
+        TEXTURE_WRAP_CLAMP_TO_BORDER,
+        TEXTURE_WRAP_REPEAT
+    };
+
     static Result TransferLayout(VkCommandBuffer cmd, const Image *image, const LayoutTransferStateBase &transfer_state);
+
+    static BaseFormat GetBaseFormat(InternalFormat);
+    /* returns a texture format that has a shifted bytes-per-pixel count
+     * e.g calling with RGB16 and num components = 4 --> RGBA16 */
+    static InternalFormat FormatChangeNumComponents(InternalFormat, uint8_t new_num_components);
+
+    /* Get number of components (bytes-per-pixel) of a texture format */
+    static size_t NumComponents(BaseFormat format);
+
+    static bool IsDepthTexture(InternalFormat fmt);
+    static bool IsDepthTexture(BaseFormat fmt);
+
+    static VkFormat ToVkFormat(InternalFormat fmt);
+    static VkImageType ToVkType(Type type);
+    static VkFilter ToVkFilter(FilterMode);
+    static VkSamplerAddressMode ToVkSamplerAddressMode(WrapMode);
 
     struct InternalInfo {
         VkImageTiling tiling;
@@ -24,9 +105,9 @@ public:
     };
 
     Image(size_t width, size_t height, size_t depth,
-        Texture::TextureInternalFormat format,
-        Texture::TextureType type,
-        Texture::TextureFilterMode filter_mode,
+        InternalFormat format,
+        Type type,
+        FilterMode filter_mode,
         const InternalInfo &internal_info,
         unsigned char *bytes);
 
@@ -55,11 +136,10 @@ public:
 
     Result Destroy(Device *device);
 
-    inline bool IsDepthStencilImage() const
-        { return helpers::IsDepthTexture(m_format); }
+    bool IsDepthStencilImage() const;
 
     inline bool IsMipmappedImage() const
-        { return m_filter_mode == Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
+        { return m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
 
     inline size_t GetNumMipmaps() const
     {
@@ -69,7 +149,7 @@ public:
     }
 
     inline bool IsCubemap() const
-        { return m_type == Texture::TextureType::TEXTURE_TYPE_CUBEMAP; }
+        { return m_type == TEXTURE_TYPE_CUBEMAP; }
 
     inline size_t GetNumFaces() const
         { return IsCubemap() ? 6 : 1; }
@@ -77,11 +157,11 @@ public:
     inline GPUImage *GetGPUImage() { return m_image; }
     inline const GPUImage *GetGPUImage() const { return m_image; }
 
-    inline Texture::TextureInternalFormat GetTextureFormat() const { return m_format; }
-    inline Texture::TextureType GetTextureType() const { return m_type; }
+    inline InternalFormat GetTextureFormat() const { return m_format; }
+    inline Type GetType() const { return m_type; }
 
-    inline VkFormat GetImageFormat() const { return helpers::ToVkFormat(m_format); }
-    inline VkImageType GetImageType() const { return helpers::ToVkType(m_type); }
+    VkFormat GetImageFormat() const;
+    VkImageType GetImageType() const;
     inline VkImageUsageFlags GetImageUsageFlags() const { return m_internal_info.usage_flags; }
 
     struct LayoutState {
@@ -195,9 +275,9 @@ private:
     size_t m_width;
     size_t m_height;
     size_t m_depth;
-    Texture::TextureInternalFormat m_format;
-    Texture::TextureType m_type;
-    Texture::TextureFilterMode m_filter_mode;
+    InternalFormat m_format;
+    Type m_type;
+    FilterMode m_filter_mode;
     unsigned char *m_bytes;
 
     InternalInfo m_internal_info;
@@ -212,8 +292,8 @@ class StorageImage : public Image {
 public:
     StorageImage(
         size_t width, size_t height, size_t depth,
-        Texture::TextureInternalFormat format,
-        Texture::TextureType type,
+        InternalFormat format,
+        Type type,
         unsigned char *bytes
     ) : Image(
         width,
@@ -221,7 +301,7 @@ public:
         depth,
         format,
         type,
-        Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
+        FilterMode::TEXTURE_FILTER_NEAREST,
         Image::InternalInfo{
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage_flags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
@@ -234,9 +314,9 @@ class TextureImage : public Image {
 public:
     TextureImage(
         size_t width, size_t height, size_t depth,
-        Texture::TextureInternalFormat format,
-        Texture::TextureType type,
-        Texture::TextureFilterMode filter_mode,
+        InternalFormat format,
+        Type type,
+        FilterMode filter_mode,
         unsigned char *bytes
     ) : Image(
         width,
@@ -257,15 +337,15 @@ class TextureImage2D : public TextureImage {
 public:
     TextureImage2D(
         size_t width, size_t height,
-        Texture::TextureInternalFormat format,
-        Texture::TextureFilterMode filter_mode,
+        InternalFormat format,
+        FilterMode filter_mode,
         unsigned char *bytes
     ) : TextureImage(
         width,
         height,
         1,
         format,
-        Texture::TextureType::TEXTURE_TYPE_2D,
+        Type::TEXTURE_TYPE_2D,
         filter_mode,
         bytes
     ) {}
@@ -275,15 +355,15 @@ class TextureImage3D : public TextureImage {
 public:
     TextureImage3D(
         size_t width, size_t height, size_t depth,
-        Texture::TextureInternalFormat format,
-        Texture::TextureFilterMode filter_mode,
+        InternalFormat format,
+        FilterMode filter_mode,
         unsigned char *bytes
     ) : TextureImage(
         width,
         height,
         depth,
         format,
-        Texture::TextureType::TEXTURE_TYPE_3D,
+        Type::TEXTURE_TYPE_3D,
         filter_mode,
         bytes
     ) {}
@@ -293,15 +373,15 @@ class TextureImageCubemap : public TextureImage {
 public:
     TextureImageCubemap(
         size_t width, size_t height,
-        Texture::TextureInternalFormat format,
-        Texture::TextureFilterMode filter_mode,
+        InternalFormat format,
+        FilterMode filter_mode,
         unsigned char *bytes
     ) : TextureImage(
         width,
         height,
         1,
         format,
-        Texture::TextureType::TEXTURE_TYPE_CUBEMAP,
+        Type::TEXTURE_TYPE_CUBEMAP,
         filter_mode,
         bytes
     ) {}
@@ -311,8 +391,8 @@ class FramebufferImage : public Image {
 public:
     FramebufferImage(
         size_t width, size_t height, size_t depth,
-        Texture::TextureInternalFormat format,
-        Texture::TextureType type,
+        InternalFormat format,
+        Type type,
         unsigned char *bytes
     ) : Image(
         width,
@@ -320,10 +400,10 @@ public:
         depth,
         format,
         type,
-        Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
+        FilterMode::TEXTURE_FILTER_NEAREST,
         Image::InternalInfo{
             .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage_flags = VkImageUsageFlags(((Texture::GetBaseFormat(format) == Texture::TextureBaseFormat::TEXTURE_FORMAT_DEPTH)
+            .usage_flags = VkImageUsageFlags(((GetBaseFormat(format) == BaseFormat::TEXTURE_FORMAT_DEPTH)
                 ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
                 : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
                 | VK_IMAGE_USAGE_SAMPLED_BIT)
@@ -336,14 +416,14 @@ class FramebufferImage2D : public FramebufferImage {
 public:
     FramebufferImage2D(
         size_t width, size_t height,
-        Texture::TextureInternalFormat format,
+        InternalFormat format,
         unsigned char *bytes
     ) : FramebufferImage(
         width,
         height,
         1,
         format,
-        Texture::TextureType::TEXTURE_TYPE_2D,
+        Type::TEXTURE_TYPE_2D,
         bytes
     ) {}
 };

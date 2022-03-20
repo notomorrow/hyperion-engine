@@ -57,7 +57,7 @@ Result ImageView::Create(Device *device,
         device,
         image->GetGPUImage()->image,
         image->GetImageFormat(),
-        ToVkImageViewType(image->GetTextureType()),
+        ToVkImageViewType(image->GetType()),
         image->GetNumMipmaps(),
         image->GetNumFaces()
     );
@@ -71,12 +71,12 @@ Result ImageView::Destroy(Device *device)
     HYPERION_RETURN_OK;
 }
 
-VkImageViewType ImageView::ToVkImageViewType(Texture::TextureType type)
+VkImageViewType ImageView::ToVkImageViewType(Image::Type type)
 {
     switch (type) {
-    case Texture::TextureType::TEXTURE_TYPE_2D: return VK_IMAGE_VIEW_TYPE_2D;
-    case Texture::TextureType::TEXTURE_TYPE_3D: return VK_IMAGE_VIEW_TYPE_3D;
-    case Texture::TextureType::TEXTURE_TYPE_CUBEMAP: return VK_IMAGE_VIEW_TYPE_CUBE;
+    case Image::Type::TEXTURE_TYPE_2D: return VK_IMAGE_VIEW_TYPE_2D;
+    case Image::Type::TEXTURE_TYPE_3D: return VK_IMAGE_VIEW_TYPE_3D;
+    case Image::Type::TEXTURE_TYPE_CUBEMAP: return VK_IMAGE_VIEW_TYPE_CUBE;
     }
 
     unexpected_value_msg(format, "Unhandled texture type case");

@@ -620,15 +620,15 @@ int main()
     Image *image = new TextureImageCubemap(
         cubemap_faces[0]->GetWidth(),
         cubemap_faces[0]->GetHeight(),
-        cubemap_faces[0]->GetInternalFormat(),
-        Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR,
+        Image::InternalFormat(cubemap_faces[0]->GetInternalFormat()),
+        Image::FilterMode::TEXTURE_FILTER_LINEAR,
         bytes
     );
 
     ImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
     Sampler test_sampler(
-        Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR,
-        Texture::TextureWrapMode::TEXTURE_WRAP_REPEAT
+        Image::FilterMode::TEXTURE_FILTER_LINEAR,
+        Image::WrapMode::TEXTURE_WRAP_REPEAT
     );
 
 
@@ -656,8 +656,8 @@ int main()
         512,
         512,
         1,
-        Texture::TextureInternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
-        Texture::TEXTURE_TYPE_2D,
+        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+        Image::Type::TEXTURE_TYPE_2D,
         nullptr
     );
 

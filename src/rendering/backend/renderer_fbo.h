@@ -30,8 +30,8 @@ public:
 
     inline VkFramebuffer GetFramebuffer() const { return m_framebuffer; }
 
-    Result AddAttachment(Texture::TextureInternalFormat format);
-    Result AddAttachment(AttachmentImageInfo &&, Texture::TextureInternalFormat format);
+    Result AddAttachment(Image::InternalFormat format);
+    Result AddAttachment(AttachmentImageInfo &&, Image::InternalFormat format);
 
     inline std::vector<AttachmentImageInfo> &GetAttachmentImageInfos()
         { return m_fbo_attachments; }

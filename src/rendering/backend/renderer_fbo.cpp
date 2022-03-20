@@ -17,7 +17,7 @@ FramebufferObject::~FramebufferObject()
     AssertExitMsg(m_framebuffer == nullptr, "framebuffer should have been destroyed");
 }
 
-Result FramebufferObject::AddAttachment(Texture::TextureInternalFormat format)
+Result FramebufferObject::AddAttachment(Image::InternalFormat format)
 {
     return AddAttachment(AttachmentImageInfo{
         .image = std::make_unique<FramebufferImage2D>(m_width, m_height, format, nullptr),
@@ -29,9 +29,9 @@ Result FramebufferObject::AddAttachment(Texture::TextureInternalFormat format)
     }, format);
 }
 
-Result FramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, Texture::TextureInternalFormat format)
+Result FramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, Image::InternalFormat format)
 {
-    VkImageAspectFlags image_aspect_flags = (helpers::IsDepthTexture(format))
+    VkImageAspectFlags image_aspect_flags = Image::IsDepthTexture(format)
         ? VK_IMAGE_ASPECT_DEPTH_BIT
         : VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -43,8 +43,8 @@ Result FramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, Textur
 
     if (image_info.sampler == nullptr) {
         image_info.sampler = std::make_unique<Sampler>(
-            Texture::TextureFilterMode::TEXTURE_FILTER_NEAREST,
-            Texture::TextureWrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+            Image::FilterMode::TEXTURE_FILTER_NEAREST,
+            Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
         );
 
         image_info.sampler_needs_creation = true;

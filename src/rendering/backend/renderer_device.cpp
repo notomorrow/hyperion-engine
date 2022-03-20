@@ -4,6 +4,7 @@
 
 #include "renderer_device.h"
 #include "renderer_instance.h"
+#include "renderer_features.h"
 
 #include <cstring>
 #include <algorithm>
@@ -15,9 +16,10 @@ namespace renderer {
 Device::Device(VkPhysicalDevice physical, VkSurfaceKHR surface)
     : device(nullptr),
       physical(physical),
-      surface(surface)
+      surface(surface),
+      features(new Features())
 {
-    this->renderer_features.SetPhysicalDevice(physical);
+    this->features->SetPhysicalDevice(physical);
     this->queue_family_indices = FindQueueFamilies(this->physical, this->surface);
 
     static int x = 0;
@@ -26,15 +28,19 @@ Device::Device(VkPhysicalDevice physical, VkSurfaceKHR surface)
 
 Device::~Device()
 {
+    delete features;
 }
+
 void Device::SetPhysicalDevice(VkPhysicalDevice physical)
 {
     this->physical = physical;
-    this->renderer_features.SetPhysicalDevice(physical);
+    this->features->SetPhysicalDevice(physical);
 }
+
 void Device::SetRenderSurface(const VkSurfaceKHR &surface) {
     this->surface = surface;
 }
+
 void Device::SetRequiredExtensions(const std::vector<const char *> &extensions) {
     this->required_extensions = extensions;
 }
@@ -331,7 +337,7 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
     create_info.enabledExtensionCount = (uint32_t)(required_extensions.size());
     create_info.ppEnabledExtensionNames = required_extensions.data();
     // Setup Device Features
-    create_info.pEnabledFeatures = &this->renderer_features.GetPhysicalDeviceFeatures();
+    create_info.pEnabledFeatures = &this->features->GetPhysicalDeviceFeatures();
 
     HYPERION_VK_CHECK_MSG(
         vkCreateDevice(this->physical, &create_info, nullptr, &this->device),

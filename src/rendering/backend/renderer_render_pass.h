@@ -29,7 +29,7 @@ public:
     };
 
     struct Attachment {
-        Texture::TextureInternalFormat format;
+        Image::InternalFormat format;
     };
 
     RenderPass(Stage stage, Mode mode);

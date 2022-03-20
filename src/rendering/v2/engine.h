@@ -7,7 +7,9 @@
 #include "components/pipeline.h"
 #include "components/compute.h"
 #include "components/util.h"
+#include "components/material.h"
 
+#include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
 #include <rendering/backend/renderer_command_buffer.h>
 
@@ -21,6 +23,7 @@ using renderer::Instance;
 using renderer::Device;
 using renderer::Semaphore;
 using renderer::SemaphoreChain;
+using renderer::Image;
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
@@ -55,7 +58,7 @@ public:
     inline FilterStack &GetFilterStack() { return m_filter_stack; }
     inline const FilterStack &GetFilterStack() const { return m_filter_stack; } [[nodiscard]]
 
-    inline Texture::TextureInternalFormat GetDefaultFormat(TextureFormatDefault type) const
+    inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
     
     template <class ...Args>
@@ -123,7 +126,7 @@ private:
     void InitializeInstance();
     void FindTextureFormatDefaults();
 
-    EnumOptions<TextureFormatDefault, Texture::TextureInternalFormat, 5> m_texture_format_defaults;
+    EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
     FilterStack m_filter_stack;
 

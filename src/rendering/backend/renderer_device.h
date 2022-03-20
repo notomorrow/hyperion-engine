@@ -7,15 +7,16 @@
 
 #include <vector>
 #include <set>
-#include <optional>
 
+#include "renderer_result.h"
 #include "renderer_structs.h"
-#include "renderer_features.h"
 
 #include "../../system/vma/vma_usage.h"
 
 namespace hyperion {
 namespace renderer {
+
+class Features;
 
 using ::std::vector,
       ::std::set;
@@ -28,6 +29,7 @@ class Device {
 public:
     Device(VkPhysicalDevice physical, VkSurfaceKHR surface);
     ~Device();
+
     void Destroy();
     
     void SetPhysicalDevice(VkPhysicalDevice);
@@ -44,7 +46,7 @@ public:
     SwapchainSupportDetails QuerySwapchainSupport();
 
     inline const QueueFamilyIndices &GetQueueFamilyIndices() const { return queue_family_indices; }
-    inline const Features &GetFeatures() const { return renderer_features; }
+    inline const Features &GetFeatures() const { return *features; }
 
     VkQueue GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index = 0);
 
@@ -63,10 +65,10 @@ public:
 
 private:
     VkDevice                   device;
-    VkSurfaceKHR               surface;
     VkPhysicalDevice           physical;
+    VkSurfaceKHR               surface;
 
-    Features           renderer_features;
+    Features           *features;
     QueueFamilyIndices queue_family_indices;
     VmaAllocator       allocator;
 
