@@ -25,6 +25,8 @@ namespace renderer {
 class FramebufferObject;
 class GraphicsPipeline {
 public:
+    static constexpr uint32_t max_dynamic_textures = 8;
+
     struct ConstructionInfo {
         MeshInputAttributeSet vertex_attributes;
         non_owning_ptr<ShaderProgram> shader;
@@ -188,6 +190,7 @@ public:
     struct PushConstants {
         uint32_t previous_frame_index;
         uint32_t current_frame_index;
+        uint32_t texture_set_index[max_dynamic_textures];
     } push_constants;
 
 private:
