@@ -62,6 +62,8 @@ public:
     DeviceRequirementsResult SatisfiesMinimumRequirements()
     {
         REQUIRES_VK_FEATURE(m_features.geometryShader);
+        REQUIRES_VK_FEATURE(m_features.fragmentStoresAndAtomics); /* for imageStore() in fragment shaders */
+        REQUIRES_VK_FEATURE(m_features.shaderSampledImageArrayDynamicIndexing); /* for accessing textures based on dynamic index (push constant) */
         REQUIRES_VK_FEATURE(m_properties.limits.maxDescriptorSetSamplers >= 16);
         REQUIRES_VK_FEATURE(m_properties.limits.maxDescriptorSetUniformBuffers >= 16);
 

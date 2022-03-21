@@ -8,6 +8,52 @@
 
 namespace hyperion::v2 {
 
+class TextureSet {
+public:
+    static constexpr size_t max_textures = 32;
+
+    enum TextureKey : uint64_t {
+        MATERIAL_TEXTURE_NONE = 0,
+
+        MATERIAL_TEXTURE_DIFFUSE_MAP = 1 << 0,
+        MATERIAL_TEXTURE_NORMAL_MAP = 1 << 1,
+        MATERIAL_TEXTURE_AO_MAP = 1 << 2,
+        MATERIAL_TEXTURE_PARALLAX_MAP = 1 << 3,
+        MATERIAL_TEXTURE_METALNESS_MAP = 1 << 4,
+        MATERIAL_TEXTURE_ROUGHNESS_MAP = 1 << 5,
+        MATERIAL_TEXTURE_SKYBOX_MAP = 1 << 6,
+        MATERIAL_TEXTURE_COLOR_MAP = 1 << 7,
+        MATERIAL_TEXTURE_POSITION_MAP = 1 << 8,
+        MATERIAL_TEXTURE_DATA_MAP = 1 << 9,
+        MATERIAL_TEXTURE_SSAO_MAP = 1 << 10,
+        MATERIAL_TEXTURE_TANGENT_MAP = 1 << 11,
+        MATERIAL_TEXTURE_BITANGENT_MAP = 1 << 12,
+        MATERIAL_TEXTURE_DEPTH_MAP = 1 << 13,
+
+        // terrain
+
+        MATERIAL_TEXTURE_SPLAT_MAP = 1 << 14,
+
+        MATERIAL_TEXTURE_BASE_TERRAIN_COLOR_MAP = 1 << 15,
+        MATERIAL_TEXTURE_BASE_TERRAIN_NORMAL_MAP = 1 << 16,
+        MATERIAL_TEXTURE_BASE_TERRAIN_AO_MAP = 1 << 17,
+        MATERIAL_TEXTURE_BASE_TERRAIN_PARALLAX_MAP = 1 << 18,
+
+        MATERIAL_TEXTURE_TERRAIN_LEVEL1_COLOR_MAP = 1 << 19,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL1_NORMAL_MAP = 1 << 20,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL1_AO_MAP = 1 << 21,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL1_PARALLAX_MAP = 1 << 22,
+
+        MATERIAL_TEXTURE_TERRAIN_LEVEL2_COLOR_MAP = 1 << 23,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL2_NORMAL_MAP = 1 << 24,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP = 1 << 25,
+        MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP = 1 << 26
+    };
+
+
+    EnumOptions<TextureKey, Texture::ID, max_textures> m_textures;
+};
+
 class Material {
 public:
     static constexpr size_t max_parameters = 32;
@@ -102,44 +148,6 @@ public:
         MATERIAL_KEY_TERRAIN_LEVEL_3_HEIGHT = 1 << 21
     };
 
-    enum TextureKey : uint64_t {
-        MATERIAL_TEXTURE_NONE = 0,
-
-        MATERIAL_TEXTURE_DIFFUSE_MAP   = 1 << 0,
-        MATERIAL_TEXTURE_NORMAL_MAP    = 1 << 1,
-        MATERIAL_TEXTURE_AO_MAP        = 1 << 2,
-        MATERIAL_TEXTURE_PARALLAX_MAP  = 1 << 3,
-        MATERIAL_TEXTURE_METALNESS_MAP = 1 << 4,
-        MATERIAL_TEXTURE_ROUGHNESS_MAP = 1 << 5,
-        MATERIAL_TEXTURE_SKYBOX_MAP    = 1 << 6,
-        MATERIAL_TEXTURE_COLOR_MAP     = 1 << 7,
-        MATERIAL_TEXTURE_POSITION_MAP  = 1 << 8,
-        MATERIAL_TEXTURE_DATA_MAP      = 1 << 9,
-        MATERIAL_TEXTURE_SSAO_MAP      = 1 << 10,
-        MATERIAL_TEXTURE_TANGENT_MAP   = 1 << 11,
-        MATERIAL_TEXTURE_BITANGENT_MAP = 1 << 12,
-        MATERIAL_TEXTURE_DEPTH_MAP     = 1 << 13,
-
-        // terrain
-
-        MATERIAL_TEXTURE_SPLAT_MAP = 1 << 14,
-
-        MATERIAL_TEXTURE_BASE_TERRAIN_COLOR_MAP      = 1 << 15,
-        MATERIAL_TEXTURE_BASE_TERRAIN_NORMAL_MAP     = 1 << 16,
-        MATERIAL_TEXTURE_BASE_TERRAIN_AO_MAP         = 1 << 17,
-        MATERIAL_TEXTURE_BASE_TERRAIN_PARALLAX_MAP   = 1 << 18,
-
-        MATERIAL_TEXTURE_TERRAIN_LEVEL1_COLOR_MAP    = 1 << 19,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL1_NORMAL_MAP   = 1 << 20,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL1_AO_MAP       = 1 << 21,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL1_PARALLAX_MAP = 1 << 22,
-
-        MATERIAL_TEXTURE_TERRAIN_LEVEL2_COLOR_MAP    = 1 << 23,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL2_NORMAL_MAP   = 1 << 24,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP       = 1 << 25,
-        MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP = 1 << 26
-    };
-
     Material();
     Material(const Material &other) = delete;
     Material &operator=(const Material &other) = delete;
@@ -152,7 +160,6 @@ private:
     State m_state;
 
     EnumOptions<MaterialKey, Parameter, max_parameters> m_parameters;
-    EnumOptions<TextureKey, Texture::ID, max_parameters> m_textures;
 };
 
 } // namespace hyperion::v2
