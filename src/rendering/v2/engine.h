@@ -4,9 +4,9 @@
 #include "components/shader.h"
 #include "components/filter_stack.h"
 #include "components/framebuffer.h"
-#include "components/pipeline.h"
 #include "components/compute.h"
 #include "components/util.h"
+#include "components/render_container.h"
 #include "components/material.h"
 #include "components/texture.h"
 #include "components/render_container.h"
@@ -34,12 +34,6 @@ using renderer::Image;
 class Engine {
 public:
 
-    /* Our "root" shader/pipeline -- used for rendering a quad to the screen. */
-    struct SwapchainData {
-        Shader::ID shader_id;
-        GraphicsPipeline::ID pipeline_id;
-    } m_swapchain_data;
-
     enum TextureFormatDefault {
         TEXTURE_FORMAT_DEFAULT_NONE    = 0,
         TEXTURE_FORMAT_DEFAULT_COLOR   = 1,
@@ -53,9 +47,6 @@ public:
 
     inline Instance *GetInstance() { return m_instance.get(); }
     inline const Instance *GetInstance() const { return m_instance.get(); } [[nodiscard]]
-
-    inline SwapchainData &GetSwapchainData() { return m_swapchain_data; }
-    inline const SwapchainData &GetSwapchainData() const { return m_swapchain_data; } [[nodiscard]]
 
     inline FilterStack &GetFilterStack() { return m_filter_stack; }
     inline const FilterStack &GetFilterStack() const { return m_filter_stack; } [[nodiscard]]
@@ -109,13 +100,19 @@ public:
      * We take in the builder object rather than a unique_ptr,
      * so that we can reuse pipelines
      */
-    GraphicsPipeline::ID AddGraphicsPipeline(renderer::GraphicsPipeline::Builder &&builder);
+    template <class ...Args>
+    RenderContainer::ID AddRenderContainer(std::unique_ptr<RenderContainer> &&render_container, Args &&... args)
+    {
+        render_container->PrepareDescriptors(this);
 
-    inline GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id)
-        { return m_pipelines.Get(id); }
+        return m_render_containers.Add(this, std::move(render_container), std::move(args)...);
+    }
 
-    inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
-        { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
+    inline RenderContainer *GetRenderContainer(RenderContainer::ID id)
+        { return m_render_containers.Get(id); }
+
+    inline const RenderContainer *GetRenderContainer(RenderContainer::ID id) const
+        { return const_cast<Engine*>(this)->GetRenderContainer(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
     template <class ...Args>
@@ -134,6 +131,8 @@ public:
     void RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer);
 
+    std::unique_ptr<RenderContainer> m_swapchain_render_container;
+
 private:
     void InitializeInstance();
     void FindTextureFormatDefaults();
@@ -146,7 +145,7 @@ private:
     ObjectHolder<Texture> m_textures;
     ObjectHolder<Framebuffer> m_framebuffers;
     ObjectHolder<RenderPass> m_render_passes;
-    ObjectHolder<GraphicsPipeline> m_pipelines{.defer_create = true};
+    ObjectHolder<RenderContainer> m_render_containers{.defer_create = true};
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
     
     std::unique_ptr<Instance> m_instance;

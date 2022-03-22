@@ -14,6 +14,7 @@
 #include <vector>
 #include <algorithm>
 #include <optional>
+#include <set>
 
 namespace hyperion {
 namespace renderer {
@@ -64,6 +65,9 @@ struct MeshInputAttribute {
     // total size -- num elements * sizeof(float)
     size_t      size;
 
+    inline bool operator<(const MeshInputAttribute &other) const
+        { return location < other.location; }
+
     inline VkFormat GetFormat() const
     {
         switch (this->size) {
@@ -74,9 +78,6 @@ struct MeshInputAttribute {
         default: AssertThrowMsg(0, "Unsupported vertex attribute format!");
         }
     }
-
-    inline bool operator<(const MeshInputAttribute &other) const
-        { return location < other.location; }
 
     VkVertexInputAttributeDescription GetAttributeDescription() {
         VkVertexInputAttributeDescription attrib{};
@@ -102,6 +103,15 @@ struct MeshInputAttributeSet {
     std::vector<MeshInputAttribute> attributes;
 
     MeshInputAttributeSet() {}
+    MeshInputAttributeSet(const MeshInputAttributeSet &other)
+        : attributes(other.attributes) {}
+
+    MeshInputAttributeSet &operator=(const MeshInputAttributeSet &other)
+    {
+        attributes = other.attributes;
+
+        return *this;
+    }
 
     explicit MeshInputAttributeSet(const std::vector<MeshInputAttribute> &attributes)
         : attributes(attributes)
@@ -109,9 +119,9 @@ struct MeshInputAttributeSet {
         SortAttributes();
     }
 
-    explicit MeshInputAttributeSet(uint32_t type_flags)
+    explicit MeshInputAttributeSet(uint64_t type_flags)
     {
-        for (uint32_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
+        for (size_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
             uint64_t flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);
 
             if (type_flags & flag_mask) {
@@ -122,10 +132,22 @@ struct MeshInputAttributeSet {
         SortAttributes();
     }
 
-    MeshInputAttributeSet(const MeshInputAttributeSet &other)
-        : attributes(other.attributes) {}
-
     ~MeshInputAttributeSet() = default;
+
+    /*uint64_t GetBitMask() const
+    {
+        uint64_t bit_mask = 0;
+
+        for (uint32_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
+            uint64_t flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);
+
+            if (type_flags & flag_mask) {
+                attributes.push_back(MeshInputAttribute::mapping.Get(MeshInputAttribute::Type(flag_mask)));
+            }
+        }
+
+        return bit_mask;
+    }*/
 
     void AddAttributes(const std::vector<MeshInputAttribute> &_attributes)
     {
@@ -139,6 +161,16 @@ struct MeshInputAttributeSet {
     void AddAttribute(const MeshInputAttribute &attribute)
     {
         attributes.push_back(attribute);
+
+        SortAttributes();
+    }
+
+    void Merge(const MeshInputAttributeSet &other)
+    {
+        std::set<MeshInputAttribute> merged_attributes(attributes.begin(), attributes.end());
+        merged_attributes.insert(other.attributes.begin(), other.attributes.end());
+        std::copy(merged_attributes.begin(), merged_attributes.end(), attributes.begin());
+
         SortAttributes();
     }
 

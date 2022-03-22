@@ -18,10 +18,10 @@ namespace renderer {
 
 class Features;
 
-using ::std::vector,
-      ::std::set;
+using std::vector,
+      std::set;
 
-struct Instance;
+class Instance;
 
 class Device {
     static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
