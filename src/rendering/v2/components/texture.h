@@ -8,6 +8,7 @@
 #include <rendering/backend/renderer_sampler.h>
 
 #include <memory>
+#include <map>
 
 namespace hyperion::v2 {
 
@@ -28,6 +29,12 @@ public:
     Texture(const Texture &other) = delete;
     Texture &operator=(const Texture &other) = delete;
     ~Texture();
+
+    inline ImageView *GetImageView() { return m_image_view.get(); }
+    inline const ImageView *GetImageView() const { return m_image_view.get(); }
+
+    inline Sampler *GetSampler() { return m_sampler.get(); }
+    inline const Sampler *GetSampler() const { return m_sampler.get(); }
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
@@ -85,6 +92,35 @@ public:
         wrap_mode,
         bytes
     ) {}
+};
+
+class TextureArray {
+public:
+    TextureArray(size_t width, size_t height, size_t depth,
+        Image::InternalFormat format,
+        Image::Type type,
+        Image::FilterMode filter_mode,
+        Image::WrapMode wrap_mode);
+    TextureArray(const TextureArray &other);
+    TextureArray &operator=(const TextureArray &other);
+    ~TextureArray();
+
+    void AddTexture(Engine *engine, Texture::ID texture_id);
+    void RemoveTexture(Texture::ID texture_id);
+
+private:
+    size_t m_width;
+    size_t m_height;
+    size_t m_depth;
+    Image::InternalFormat m_format;
+    Image::Type m_type;
+    Image::FilterMode m_filter_mode;
+    Image::WrapMode m_wrap_mode;
+
+    std::vector<Image *> m_images;
+    std::vector<ImageView *> m_image_views;
+    std::vector<Sampler *> m_samplers;
+    std::map<Texture::ID, size_t> m_index_map;
 };
 
 } // namespace hyperion::v2

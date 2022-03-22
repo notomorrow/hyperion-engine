@@ -34,6 +34,7 @@ Engine::~Engine()
     m_framebuffers.RemoveAll(this);
     m_render_passes.RemoveAll(this);
     m_shaders.RemoveAll(this);
+    m_textures.RemoveAll(this);
     m_pipelines.RemoveAll(this);
     m_compute_pipelines.RemoveAll(this);
 

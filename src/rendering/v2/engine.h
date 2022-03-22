@@ -8,6 +8,8 @@
 #include "components/compute.h"
 #include "components/util.h"
 #include "components/material.h"
+#include "components/texture.h"
+#include "components/render_container.h"
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
@@ -70,6 +72,16 @@ public:
 
     inline const Shader *GetShader(Shader::ID id) const
         { return const_cast<Engine*>(this)->GetShader(id); }
+    
+    template <class ...Args>
+    Texture::ID AddTexture(std::unique_ptr<Texture> &&texture, Args &&... args)
+        { return m_textures.Add(this, std::move(texture), std::move(args)...); }
+
+    inline Texture *GetTexture(Texture::ID id)
+        { return m_textures.Get(id); }
+
+    inline const Texture *GetTexture(Texture::ID id) const
+        { return const_cast<Engine*>(this)->GetTexture(id); }
 
     /* Initialize the FBO based on the given RenderPass's attachments */
     Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
@@ -131,6 +143,7 @@ private:
     FilterStack m_filter_stack;
 
     ObjectHolder<Shader> m_shaders;
+    ObjectHolder<Texture> m_textures;
     ObjectHolder<Framebuffer> m_framebuffers;
     ObjectHolder<RenderPass> m_render_passes;
     ObjectHolder<GraphicsPipeline> m_pipelines{.defer_create = true};
