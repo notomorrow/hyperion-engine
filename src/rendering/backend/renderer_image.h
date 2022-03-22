@@ -154,6 +154,10 @@ public:
     inline size_t GetNumFaces() const
         { return IsCubemap() ? 6 : 1; }
 
+    inline size_t GetWidth() const { return m_width; }
+    inline size_t GetHeight() const { return m_height; }
+    inline size_t GetDepth() const { return m_depth; }
+
     inline GPUImage *GetGPUImage() { return m_image; }
     inline const GPUImage *GetGPUImage() const { return m_image; }
 

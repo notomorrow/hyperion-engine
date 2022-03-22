@@ -5,6 +5,7 @@
 
 #include <memory>
 
+
 namespace hyperion::v2 {
 
 using renderer::Instance;
@@ -14,21 +15,71 @@ class Engine;
 
 Device *GetEngineDevice(Engine *engine);
 
-template <class WrappedType>
-class EngineComponent {
+struct Stub {
+    Stub() = default;
+    ~Stub() = default;
+
+    renderer::Result Create(Engine *engine) { return renderer::Result::OK; }
+    renderer::Result Destroy(Engine *engine) { return renderer::Result::OK; }
+};
+
+#define STUB_NAME(name) \
+    name##_stub
+#define STUB_COMPONENT(name) \
+    struct STUB_NAME(name) { \
+        STUB_NAME(name) () {} \
+        renderer::Result Create(Engine *engine) const { return renderer::Result::OK; } \
+        renderer::Result Destroy(Engine *engine) const { return renderer::Result::OK; } \
+    }
+
+template <class Type, class ...Args>
+struct ID {
+    using InnerType = uint32_t;
+
+    explicit constexpr operator InnerType() const { return value; }
+    inline constexpr InnerType GetValue() const { return value; }
+
+    inline constexpr bool operator==(const ID &other) const
+    {
+        return value == other.value;
+    }
+
+    inline constexpr bool operator<(const ID &other) const
+    {
+        return value < other.value;
+    }
+
+    std::tuple<InnerType, ID<Args>...> value;
+};
+
+template <class Type>
+class EngineComponentBase {
+protected:
     template <class ObjectType, class InnerType>
     struct IdWrapper {
         using InnerType_t = InnerType;
 
         explicit constexpr operator InnerType() const { return value; }
+        explicit constexpr operator bool() const { return !!value; }
+
         inline constexpr InnerType GetValue() const { return value; }
+
+        inline constexpr bool operator==(const IdWrapper &other) const
+            { return value == other.value; }
+
+        inline constexpr bool operator<(const IdWrapper &other) const
+            { return value < other.value; }
 
         InnerType value;
     };
 
 public:
-    using ID = IdWrapper<WrappedType, uint32_t>;
+    using ID = IdWrapper<Type, uint32_t>;
+};
 
+template <class WrappedType>
+class EngineComponent : public EngineComponentBase<WrappedType> {
+public:
     template <class ...Args>
     EngineComponent(Args &&... args)
         : m_wrapped(std::move(args)...),

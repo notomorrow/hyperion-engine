@@ -36,11 +36,11 @@ public:
         StorageMode storage_mode;
 
         VkDescriptorBufferInfo buffer_info;
-        non_owning_ptr<GPUBuffer> gpu_buffer;
+        GPUBuffer *gpu_buffer;
 
-        VkDescriptorImageInfo image_info;
-        non_owning_ptr<ImageView> image_view;
-        non_owning_ptr<Sampler> sampler;
+        std::vector<VkDescriptorImageInfo> image_info;
+        std::vector<ImageView *> image_views;
+        std::vector<Sampler *> samplers;
 
         BufferInfo()
             : mode(Mode::UNSET),
@@ -48,38 +48,38 @@ public:
               buffer_info{},
               gpu_buffer(nullptr),
               image_info{},
-              image_view(nullptr),
-              sampler(nullptr)
+              image_views{},
+              samplers{}
         {}
 
-        explicit BufferInfo(non_owning_ptr<GPUBuffer> gpu_buffer, StorageMode storage_mode)
+        explicit BufferInfo(GPUBuffer *gpu_buffer, StorageMode storage_mode)
             : mode(Mode::BUFFER),
               storage_mode(storage_mode),
               buffer_info{},
               gpu_buffer(gpu_buffer),
               image_info{},
-              image_view(nullptr),
-              sampler(nullptr)
+              image_views{},
+              samplers{}
         {}
 
-        explicit BufferInfo(non_owning_ptr<ImageView> image_view, StorageMode storage_mode)
+        explicit BufferInfo(const std::vector<ImageView *> &image_views, StorageMode storage_mode)
             : mode(Mode::IMAGE),
               storage_mode(storage_mode),
               buffer_info{},
               gpu_buffer(nullptr),
               image_info{},
-              image_view(image_view),
-              sampler(nullptr)
+              image_views(image_views),
+              samplers{}
         {}
 
-        explicit BufferInfo(non_owning_ptr<ImageView> image_view, non_owning_ptr<Sampler> sampler, StorageMode storage_mode)
+        explicit BufferInfo(const std::vector<ImageView *> &image_views, const std::vector<Sampler *> &samplers, StorageMode storage_mode)
             : mode(Mode::IMAGE),
               storage_mode(storage_mode),
               buffer_info{},
               gpu_buffer(nullptr),
               image_info{},
-              image_view(image_view),
-              sampler(sampler)
+              image_views(image_views),
+              samplers(samplers)
         {}
 
         BufferInfo(const BufferInfo &other)
@@ -88,8 +88,8 @@ public:
               buffer_info(other.buffer_info),
               gpu_buffer(other.gpu_buffer),
               image_info(other.image_info),
-              image_view(other.image_view),
-              sampler(other.sampler)
+              image_views(other.image_views),
+              samplers(other.samplers)
         {}
 
         BufferInfo &operator=(const BufferInfo &other)
@@ -99,8 +99,8 @@ public:
             buffer_info = other.buffer_info;
             gpu_buffer = other.gpu_buffer;
             image_info = other.image_info;
-            image_view = other.image_view;
-            sampler = other.sampler;
+            image_views = other.image_views;
+            samplers = other.samplers;
 
             return *this;
         }
@@ -129,12 +129,12 @@ public:
     inline State GetState() const { return m_state; }
     inline void SetState(State state) { m_state = state; }
 
-    inline GPUBuffer *GetGPUBuffer() { return m_info.gpu_buffer.get(); }
-    inline const GPUBuffer *GetGPUBuffer() const { return m_info.gpu_buffer.get(); }
-    inline ImageView *GetImageView() { return m_info.image_view.get(); }
-    inline const ImageView *GetImageView() const { return m_info.image_view.get(); }
-    inline Sampler *GetSampler() { return m_info.sampler.get(); }
-    inline const Sampler *GetSampler() const { return m_info.sampler.get(); }
+    inline GPUBuffer *GetGPUBuffer() { return m_info.gpu_buffer; }
+    inline const GPUBuffer *GetGPUBuffer() const { return m_info.gpu_buffer; }
+    inline std::vector<ImageView *> &GetImageViews() { return m_info.image_views; }
+    inline const std::vector<ImageView *> &GetImageView() const { return m_info.image_views; }
+    inline std::vector<Sampler *> &GetSamplers() { return m_info.samplers; }
+    inline const std::vector<Sampler *> &GetSamplers() const { return m_info.samplers; }
 
     void Create(Device *device, Info *out_info);
     void Destroy(Device *device);
@@ -155,7 +155,7 @@ private:
 class BufferDescriptor : public Descriptor {
 public:
     BufferDescriptor(uint32_t binding,
-        non_owning_ptr<GPUBuffer> gpu_buffer,
+        GPUBuffer *gpu_buffer,
         VkDescriptorType type,
         VkShaderStageFlags stage_flags)
         : Descriptor(
@@ -168,12 +168,12 @@ public:
 class ImageSamplerDescriptor : public Descriptor {
 public:
     ImageSamplerDescriptor(uint32_t binding,
-        non_owning_ptr<ImageView> image_view,
-        non_owning_ptr<Sampler> sampler,
+        const std::vector<ImageView *> &image_views,
+        const std::vector<Sampler *> &samplers,
         VkShaderStageFlags stage_flags)
         : Descriptor(
             binding,
-            BufferInfo(image_view, sampler, StorageMode::READ_ONLY),
+            BufferInfo(image_views, samplers, StorageMode::READ_ONLY),
             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             stage_flags) {}
 };
@@ -185,7 +185,7 @@ public:
         VkShaderStageFlags stage_flags)
         : Descriptor(
             binding,
-            BufferInfo(image_view, StorageMode::STORAGE),
+            BufferInfo({image_view.get()}, StorageMode::STORAGE),
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             stage_flags) {}
 };

@@ -20,6 +20,9 @@ public:
     inline VkSampler &GetSampler() { return m_sampler; }
     inline const VkSampler &GetSampler() const { return m_sampler; }
 
+    inline Image::FilterMode GetFilterMode() const { return m_filter_mode; }
+    inline Image::WrapMode GetWrapMode() const { return m_wrap_mode; }
+
     Result Create(Device *device, ImageView *image_view);
     Result Destroy(Device *device);
 

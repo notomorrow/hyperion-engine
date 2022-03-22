@@ -18,6 +18,9 @@ struct ObjectHolder {
     bool defer_create = false;
     std::vector<std::unique_ptr<T>> objects;
 
+    inline constexpr size_t Size() const
+        { return objects.size(); }
+
     inline constexpr
         T *Get(const typename T::ID &id)
     {
@@ -30,6 +33,19 @@ struct ObjectHolder {
         const T *Get(const typename T::ID &id) const
     {
         return const_cast<ObjectHolder<T> *>(this)->Get(id);
+    }
+
+    template <class LambdaFunction>
+    inline constexpr
+        typename T::ID Find(LambdaFunction lambda) const
+    {
+        const auto it = std::find_if(objects.begin(), objects.end(), lambda);
+
+        if (it != objects.end()) {
+            return typename T::ID{typename T::ID::InnerType_t(it - objects.begin() + 1)};
+        }
+
+        return typename T::ID{0};
     }
 
     template <class ...Args>
@@ -55,7 +71,7 @@ struct ObjectHolder {
 
         objects.push_back(std::move(object));
 
-        return typename T::ID{ typename T::ID::InnerType_t(objects.size()) };
+        return typename T::ID{typename T::ID::InnerType_t(objects.size())};
     }
 
     template<class ...Args>

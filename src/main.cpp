@@ -553,13 +553,14 @@ public:
 };
 
 
-#define HYPERION_VK_TEST_CUBEMAP 1
-#define HYPERION_VK_TEST_MIPMAP 0
+#define HYPERION_VK_TEST_CUBEMAP 0
+#define HYPERION_VK_TEST_MIPMAP 1
 #define HYPERION_VK_TEST_IMAGE_STORE 1
 
 int main()
 {
     using namespace hyperion::renderer;
+
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
 
@@ -638,15 +639,32 @@ int main()
     Image *image = new TextureImage2D(
         texture->GetWidth(),
         texture->GetHeight(),
-        texture->GetInternalFormat(),
-        Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+        Image::InternalFormat(texture->GetInternalFormat()),
+        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         texture->GetBytes()
     );
 
-    ImageView test_image_view(VK_IMAGE_ASPECT_COLOR_BIT);
+    ImageView test_image_view;
     Sampler test_sampler(
-        Texture::TextureFilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        Texture::TextureWrapMode::TEXTURE_WRAP_REPEAT
+        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+        Image::WrapMode::TEXTURE_WRAP_REPEAT
+    );
+
+
+    // test image
+    auto texture2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/grass.jpg");
+    Image *image2 = new TextureImage2D(
+        texture2->GetWidth(),
+        texture2->GetHeight(),
+        Image::InternalFormat(texture2->GetInternalFormat()),
+        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+        texture2->GetBytes()
+    );
+
+    ImageView test_image_view2;
+    Sampler test_sampler2(
+        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+        Image::WrapMode::TEXTURE_WRAP_REPEAT
     );
 #endif
 
@@ -697,13 +715,13 @@ int main()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBALS);
 
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<BufferDescriptor>(0, non_owning_ptr(&matrices_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
+            ->AddDescriptor(std::make_unique<BufferDescriptor>(0, &matrices_descriptor_buffer, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
 
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<BufferDescriptor>(1, non_owning_ptr(&scene_data_descriptor_buffer), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
+            ->AddDescriptor(std::make_unique<BufferDescriptor>(1, &scene_data_descriptor_buffer, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
 
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, non_owning_ptr(&test_image_view), non_owning_ptr(&test_sampler), VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
+            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, std::vector{ &test_image_view, &test_image_view2 }, std::vector{ &test_sampler, &test_sampler2 }, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         descriptor_set_globals
@@ -719,8 +737,8 @@ int main()
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 0,
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].image_view.get()),
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].sampler.get()),
+                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].image_view.get() },
+                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].sampler.get() },
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
 
@@ -728,8 +746,8 @@ int main()
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 1,
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].image_view.get()),
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].sampler.get()),
+                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].image_view.get() },
+                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].sampler.get() },
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
 
@@ -737,8 +755,8 @@ int main()
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 2,
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].image_view.get()),
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].sampler.get()),
+                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].image_view.get() },
+                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].sampler.get() },
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
 
@@ -746,8 +764,8 @@ int main()
         descriptor_set_pass
             ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
                 3,
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].image_view.get()),
-                non_owning_ptr(engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get()),
+                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].image_view.get() },
+                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get() },
                 VK_SHADER_STAGE_FRAGMENT_BIT
             ));
     }
@@ -768,6 +786,21 @@ int main()
         AssertThrowMsg(image_view_result, "%s", image_view_result.message);
 
         auto sampler_result = test_sampler.Create(device, &test_image_view);
+        AssertThrowMsg(sampler_result, "%s", sampler_result.message);
+    }
+    {
+        auto image_create_result = image2->Create(
+            device,
+            engine.GetInstance(),
+            Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
+            Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
+        );
+        AssertThrowMsg(image_create_result, "%s", image_create_result.message);
+
+        auto image_view_result = test_image_view2.Create(device, image2);
+        AssertThrowMsg(image_view_result, "%s", image_view_result.message);
+
+        auto sampler_result = test_sampler2.Create(device, &test_image_view2);
         AssertThrowMsg(sampler_result, "%s", sampler_result.message);
     }
     {
@@ -906,6 +939,18 @@ int main()
             ->GetPerFrameData()[i].Get<Frame>()
             ->GetPresentSemaphores();
     }
+
+    v2::RenderContainer container(std::make_unique<v2::Shader>(std::vector{
+        SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() },
+        SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }
+    }));
+    auto mat1 = std::make_unique<v2::Material>();
+    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 0.0f, 0.0f, 1.0f }));
+    container.AddMaterial(&engine, std::move(mat1));
+    auto mat2 = std::make_unique<v2::Material>();
+    mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 1.0f, 0.0f, 1.0f }));
+    container.AddMaterial(&engine, std::move(mat2));
+    container.Create(&engine);
     
     engine.BuildPipelines();
 

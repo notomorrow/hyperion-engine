@@ -21,6 +21,9 @@ struct HashCode {
     {
     }
 
+    inline constexpr bool operator==(const HashCode &other) const
+        { return hash == other.hash; }
+
     template<class T>
     typename std::enable_if<std::is_same<T, HashCode>::value || std::is_base_of<HashCode, T>::value>::type
     Add(const T &hash_code)
@@ -35,15 +38,13 @@ struct HashCode {
         HashCombine(std::hash<T>()(value));
     }
 
-    Value_t Value() const
-    {
-        return hash;
-    }
+    inline constexpr Value_t Value() const
+        { return hash; }
 
 private:
     Value_t hash;
 
-    void HashCombine(Value_t other)
+    inline constexpr void HashCombine(Value_t other)
     {
         hash ^= other + 0x9e3779b9 + (hash << 6) + (hash >> 2);
     }

@@ -83,8 +83,8 @@ void Filter::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
     for (uint32_t i = 0; i < num_attachments; i++) {
         descriptor_set->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
             binding_offset++,
-            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i].image_view.get()),
-            non_owning_ptr(engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i].sampler.get()),
+            std::vector{ engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i].image_view.get() },
+            std::vector{ engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i].sampler.get() },
             VK_SHADER_STAGE_FRAGMENT_BIT
         ));
     }
@@ -151,7 +151,7 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
                 pipeline->Get().Bind(cmd);
 
                 HYPERION_PASS_ERRORS(
-                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, &pipeline->Get(), 0, 3),
+                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, &pipeline->Get()),
                     result
                 );
                 

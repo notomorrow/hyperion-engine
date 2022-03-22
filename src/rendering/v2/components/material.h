@@ -54,7 +54,9 @@ public:
     EnumOptions<TextureKey, Texture::ID, max_textures> m_textures;
 };
 
-class Material {
+STUB_COMPONENT(Material);
+
+class Material : public EngineComponentBase<STUB_NAME(Material)> {
 public:
     static constexpr size_t max_parameters = 32;
 
@@ -78,6 +80,24 @@ public:
 
         Parameter() : type(MATERIAL_PARAMETER_TYPE_NONE) {}
 
+        template <size_t Size>
+        explicit Parameter(const std::array<float, Size> &v)
+            : type(Type(MATERIAL_PARAMETER_TYPE_FLOAT_1 + (Size - 1)))
+        {
+            static_assert(Size >= 1 && Size <= 4);
+
+            std::memcpy(values.float_values, v.data(), Size * sizeof(float));
+        }
+
+        template <size_t Size>
+        explicit Parameter(const std::array<int, Size> &v)
+            : type(Type(MATERIAL_PARAMETER_TYPE_INT_1 + (Size - 1)))
+        {
+            static_assert(Size >= 1 && Size <= 4);
+
+            std::memcpy(values.int_values, v.data(), Size * sizeof(int));
+        }
+
         Parameter(const Parameter &other)
             : type(other.type)
         {
@@ -93,6 +113,12 @@ public:
         }
 
         ~Parameter() = default;
+
+        inline bool IsIntType() const
+            { return type >= MATERIAL_PARAMETER_TYPE_INT_1 && type <= MATERIAL_PARAMETER_TYPE_INT_4; }
+
+        inline bool IsFloatType() const
+            { return type >= MATERIAL_PARAMETER_TYPE_FLOAT_1 && type <= MATERIAL_PARAMETER_TYPE_FLOAT_4; }
 
         inline uint8_t Size() const
         {
@@ -110,6 +136,27 @@ public:
         inline void Copy(unsigned char dst[4]) const
         {
             std::memcpy(dst, &values, Size());
+        }
+
+        inline HashCode GetHashCode() const
+        {
+            HashCode hc;
+
+            hc.Add(int(type));
+
+            if (IsIntType()) {
+                hc.Add(values.int_values[0]);
+                hc.Add(values.int_values[1]);
+                hc.Add(values.int_values[2]);
+                hc.Add(values.int_values[3]);
+            } else if (IsFloatType()) {
+                hc.Add(values.float_values[0]);
+                hc.Add(values.float_values[1]);
+                hc.Add(values.float_values[2]);
+                hc.Add(values.float_values[3]);
+            }
+
+            return hc;
         }
     };
 
@@ -148,18 +195,53 @@ public:
         MATERIAL_KEY_TERRAIN_LEVEL_3_HEIGHT = 1 << 21
     };
 
+    using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
+
     Material();
     Material(const Material &other) = delete;
     Material &operator=(const Material &other) = delete;
     ~Material();
-    
+
+    inline const Parameter &GetParameter(MaterialKey key) const
+        { return m_parameters.Get(key); }
+
+    template <class T>
+    typename std::enable_if_t<std::is_same_v<std::decay_t<T>, float>, std::decay_t<T>>
+    GetParameter(MaterialKey key) const
+        { return m_parameters.Get(key).values.float_values[0]; }
+
+    template <class T>
+    typename std::enable_if_t<std::is_same_v<std::decay_t<T>, int>, std::decay_t<T>>
+    GetParameter(MaterialKey key) const
+        { return m_parameters.Get(key).values.int_values[0]; }
+
+    template <class T>
+    typename std::enable_if_t<std::is_same_v<std::decay_t<decltype(T::values[0])>, float>, std::decay_t<T>>
+    GetParameter(MaterialKey key) const
+    {
+        T result;
+        std::memcpy(&result.values[0], &m_parameters.Get(key).values.float_values[0], sizeof(float) * std::size(result.values));
+        return result;
+    }
+
     void SetParameter(MaterialKey key, const Parameter &value);
-    void SetTexture(TextureKey key, Texture::ID id);
+    void SetTexture(TextureSet::TextureKey key, Texture::ID id);
+
+    void Create(Engine *engine) {}
+    void Destroy(Engine *engine) {}
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(m_parameters.GetHashCode());
+
+        return hc;
+    }
 
 private:
     State m_state;
 
-    EnumOptions<MaterialKey, Parameter, max_parameters> m_parameters;
+    ParameterTable m_parameters;
 };
 
 } // namespace hyperion::v2

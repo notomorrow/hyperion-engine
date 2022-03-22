@@ -21,6 +21,8 @@ void Descriptor::Create(Device *device, Descriptor::Info *out_info)
 {
     AssertThrow(m_info.mode != Mode::UNSET);
 
+    uint32_t num_descriptors = 0;
+
     switch (m_info.mode) {
     case Mode::BUFFER:
         AssertThrow(m_info.gpu_buffer != nullptr);
@@ -30,25 +32,38 @@ void Descriptor::Create(Device *device, Descriptor::Info *out_info)
         m_info.buffer_info.offset = 0; // TODO: re-use of buffers and offsetting of data
         m_info.buffer_info.range = m_info.gpu_buffer->size;
 
+        ++num_descriptors;
+
         break;
     case Mode::IMAGE:
-        AssertThrow(m_info.image_view != nullptr);
-        m_info.image_info.imageView = m_info.image_view->GetImageView();
-        
-        if (m_info.storage_mode == StorageMode::STORAGE) {
-            m_info.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        } else { /* image sampler */
-            AssertThrow(m_info.sampler != nullptr);
+        m_info.image_info.resize(m_info.image_views.size());
 
-            m_info.image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            m_info.image_info.sampler = m_info.sampler->GetSampler();
+        if (m_info.storage_mode != StorageMode::STORAGE) {
+            AssertThrow(m_info.image_views.size() == m_info.samplers.size());
+        }
+
+        for (size_t i = 0; i < m_info.image_info.size(); i++) {
+            AssertThrow(m_info.image_views[i] != nullptr);
+
+            m_info.image_info[i].imageView = m_info.image_views[i]->GetImageView();
+        
+            if (m_info.storage_mode == StorageMode::STORAGE) {
+                m_info.image_info[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            } else { /* image sampler */
+                AssertThrow(m_info.samplers[i] != nullptr);
+
+                m_info.image_info[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                m_info.image_info[i].sampler = m_info.samplers[i]->GetSampler();
+            }
+
+            ++num_descriptors;
         }
 
         break;
     }
 
     out_info->binding = VkDescriptorSetLayoutBinding{};
-    out_info->binding.descriptorCount = 1;
+    out_info->binding.descriptorCount = num_descriptors;
     out_info->binding.descriptorType = m_type;
     out_info->binding.pImmutableSamplers = nullptr;
     out_info->binding.stageFlags = m_stage_flags;
@@ -57,10 +72,10 @@ void Descriptor::Create(Device *device, Descriptor::Info *out_info)
     out_info->write = VkWriteDescriptorSet{};
     out_info->write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     out_info->write.pNext = nullptr;
-    out_info->write.descriptorCount = 1;
+    out_info->write.descriptorCount = num_descriptors;
     out_info->write.descriptorType = m_type;
     out_info->write.pBufferInfo = &m_info.buffer_info;
-    out_info->write.pImageInfo = &m_info.image_info;
+    out_info->write.pImageInfo = m_info.image_info.data();
     out_info->write.dstBinding = m_binding;
 }
 

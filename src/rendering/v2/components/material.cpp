@@ -20,9 +20,9 @@ void Material::SetParameter(MaterialKey key, const Parameter &value)
     m_state = MATERIAL_STATE_DIRTY;
 }
 
-void Material::SetTexture(TextureKey key, Texture::ID id)
+void Material::SetTexture(TextureSet::TextureKey key, Texture::ID id)
 {
-    m_textures.Set(key, id);
+    //m_textures.Set(key, id);
 
     m_state = MATERIAL_STATE_DIRTY;
 }

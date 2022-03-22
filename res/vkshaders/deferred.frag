@@ -1,5 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_scalar_block_layout : enable
 
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec2 v_texcoord0;
@@ -14,6 +15,17 @@ layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions_ping;
 
 layout(set = 2, binding = 0) uniform sampler2D filter_0;
 
+
+struct Material {
+    vec4 albedo;
+    float metalness;
+    float roughness;
+};
+
+layout(std430, set = 3, binding = 0) uniform UniformBufferObject {
+    Material materials[16];
+} ubo;
+
 layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
 
 void main()
@@ -24,20 +36,20 @@ void main()
     vec4 normal;
     vec4 position;
     
-    albedo = texture(gbuffer_albedo_ping, texcoord);
+    albedo = texture(filter_0, texcoord);
     normal = texture(gbuffer_normals_ping, texcoord);
     position = texture(gbuffer_positions_ping, texcoord);
     
     float NdotL = dot(normal.xyz, v_light_direction);
     
-    vec4 t0 = texture(filter_0, texcoord);
-    vec4 t1 = texture(filter_0, texcoord + vec2(0.002, 0.002));
-    vec4 t2 = texture(filter_0, texcoord + vec2(0.002, -0.02));
-    vec4 t3 = texture(filter_0, texcoord + vec2(-0.002, -0.002));
-    vec4 t4 = texture(filter_0, texcoord + vec2(-0.002, 0.002));
+    //vec4 t0 = texture(filter_0, texcoord);
+    //vec4 t1 = texture(filter_0, texcoord + vec2(0.002, 0.002));
+    //vec4 t2 = texture(filter_0, texcoord + vec2(0.002, -0.02));
+   // vec4 t3 = texture(filter_0, texcoord + vec2(-0.002, -0.002));
+    //vec4 t4 = texture(filter_0, texcoord + vec2(-0.002, 0.002));
     
     //imageStore(image_storage_test, ivec2(0, 0), vec4(1.0, 0.0, 0.0, 1.0));
 
     //color_output = (t0 + t1 + t2 + t3 + t4) / 5.0;//
-    color_output = vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
+    color_output = vec4(vec3(max(NdotL, 0.025)) * albedo.rgb * ubo.materials[1].albedo.rgb, 1.0);
 }

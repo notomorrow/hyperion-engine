@@ -45,7 +45,6 @@ public:
 private:
     std::vector<std::unique_ptr<Descriptor>> m_descriptors;
     Descriptor::State m_state;
-
 };
 
 } // namespace renderer

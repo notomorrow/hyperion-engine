@@ -4,7 +4,6 @@
 #include "base.h"
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
-#include <rendering/backend/renderer_compute_pipeline.h>
 
 namespace hyperion::v2 {
 
