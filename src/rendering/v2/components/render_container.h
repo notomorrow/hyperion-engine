@@ -4,7 +4,13 @@
 #include "material.h"
 #include "shader.h"
 #include "texture.h"
+#include "framebuffer.h"
+#include "render_pass.h"
 #include "util.h"
+
+/* TMP */
+#include <rendering/mesh.h>
+#include <math/transform.h>
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
 
@@ -17,30 +23,45 @@ using renderer::CommandBuffer;
 using renderer::DescriptorSet;
 using renderer::GPUBuffer;
 using renderer::UniformBuffer;
+using renderer::MeshInputAttributeSet;
 
 class Engine;
 
-class RenderContainer {
+class RenderContainer : public EngineComponent<renderer::GraphicsPipeline> {
 public:
     static constexpr size_t max_materials = 16;
 
-    RenderContainer(std::unique_ptr<Shader> &&shader);
+    struct Spatial {
+        std::shared_ptr<Mesh> mesh; /* TMP */
+        MeshInputAttributeSet attributes;
+        Transform transform;
+        Material::ID material_id;
+    };
+
+    RenderContainer(Shader::ID shader_id, RenderPass::ID render_pass_id);
     RenderContainer(const RenderContainer &other) = delete;
     RenderContainer &operator=(const RenderContainer &other) = delete;
     ~RenderContainer();
 
+    inline VkPrimitiveTopology GetTopology() const
+        { return m_topology; }
+    inline void SetTopology(VkPrimitiveTopology topology)
+        { m_topology = topology; }
+
+    void AddSpatial(Spatial &&spatial);
+
+    /* Materials (owned) */
     Material::ID AddMaterial(Engine *engine, std::unique_ptr<Material> &&material);
+    inline constexpr const Material *GetMaterial(Material::ID id) const
+        { return m_materials.Get(id); }
+
+    /* Non-owned objects - owned by `engine`, used by the pipeline */
+
+    inline void AddFramebuffer(Framebuffer::ID id) { m_fbo_ids.Add(id); }
+    inline void RemoveFramebuffer(Framebuffer::ID id) { m_fbo_ids.Remove(id); }
     
-    template <class ...Args>
-    Texture::ID AddTexture(Engine *engine, std::unique_ptr<Texture> &&texture, Args &&... args)
-        { return m_textures.Add(engine, std::move(texture), std::move(args)...); }
-
-    inline Texture *GetTexture(Texture::ID id)
-        { return m_textures.Get(id); }
-
-    inline const Texture *GetTexture(Texture::ID id) const
-        { return const_cast<RenderContainer *>(this)->GetTexture(id); }
-
+    void PrepareDescriptors(Engine *engine);
+    /* Build pipeline */
     void Create(Engine *engine);
     void Destroy(Engine *engine);
 
@@ -51,9 +72,16 @@ private:
     void DestroyMaterialUniformBuffer(Engine *engine);
     void UpdateDescriptorSet(DescriptorSet *);
 
-    std::unique_ptr<Shader> m_shader;
+    Shader::ID m_shader_id;
+    RenderPass::ID m_render_pass_id;
+    MeshInputAttributeSet m_vertex_attributes;
+    VkPrimitiveTopology m_topology;
     ObjectHolder<Material> m_materials;
-    ObjectHolder<Texture> m_textures;
+
+    ObjectIdHolder<Texture> m_texture_ids;
+    ObjectIdHolder<Framebuffer> m_fbo_ids;
+
+    std::vector<Spatial> m_spatials;
 
     struct InternalData {
         struct alignas(16) MaterialData {
@@ -65,8 +93,6 @@ private:
         std::array<MaterialData, max_materials> material_parameters;
         UniformBuffer *material_uniform_buffer = nullptr;
     } m_internal;
-
-    std::unique_ptr<renderer::GraphicsPipeline> m_pipeline;
 };
 
 } // namespace hyperion::v2

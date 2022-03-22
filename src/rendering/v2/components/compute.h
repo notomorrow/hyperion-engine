@@ -2,7 +2,6 @@
 #define HYPERION_V2_COMPUTE_H
 
 #include "shader.h"
-#include "pipeline.h"
 
 #include <rendering/backend/renderer_command_buffer.h>
 #include <rendering/backend/renderer_compute_pipeline.h>

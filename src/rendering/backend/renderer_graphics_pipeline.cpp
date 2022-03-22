@@ -14,28 +14,32 @@
 
 namespace hyperion {
 namespace renderer {
-GraphicsPipeline::GraphicsPipeline(ConstructionInfo &&construction_info)
-    : m_construction_info(std::move(construction_info))
+GraphicsPipeline::GraphicsPipeline()
+    : pipeline{},
+      layout{},
+      push_constants{},
+      viewport{},
+      scissor{}
 {
-    AssertExit(m_construction_info.shader != nullptr);
-    AssertExit(m_construction_info.fbos.size() != 0);
-
-    size_t width = m_construction_info.fbos[0]->GetWidth();
-    size_t height = m_construction_info.fbos[0]->GetHeight();
-    this->SetViewport(0.0f, float(height), float(width), -float(height), 0.0f, 1.0f);
-    this->SetScissor(0, 0, width, height);
-
-    std::vector<VkDynamicState> default_dynamic_states = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR,
-    };
-    this->SetDynamicStates(default_dynamic_states);
-
-    static int x = 0;
-    DebugLog(LogType::Debug, "Create Pipeline [%d]\n", x++);
+}
+GraphicsPipeline::GraphicsPipeline(ConstructionInfo &&construction_info)
+    : m_construction_info(std::move(construction_info)),
+      pipeline{},
+      layout{},
+      push_constants{},
+      viewport{},
+      scissor{}
+{
 }
 
-void GraphicsPipeline::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) {
+GraphicsPipeline::~GraphicsPipeline()
+{
+    AssertThrowMsg(this->pipeline == nullptr, "Expected pipeline to have been destroyed");
+    AssertThrowMsg(this->layout == nullptr, "Expected layout to have been destroyed");
+}
+
+void GraphicsPipeline::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth)
+{
     VkViewport *vp = &this->viewport;
     vp->x = x;
     vp->y = y;
@@ -45,20 +49,24 @@ void GraphicsPipeline::SetViewport(float x, float y, float width, float height, 
     vp->maxDepth = max_depth;
 }
 
-void GraphicsPipeline::SetScissor(int x, int y, uint32_t width, uint32_t height) {
+void GraphicsPipeline::SetScissor(int x, int y, uint32_t width, uint32_t height)
+{
     this->scissor.offset = { x, y };
     this->scissor.extent = { width, height };
 }
 
-void GraphicsPipeline::SetDynamicStates(const std::vector<VkDynamicState> &_states) {
+void GraphicsPipeline::SetDynamicStates(const std::vector<VkDynamicState> &_states)
+{
     this->dynamic_states = _states;
 }
 
-std::vector<VkDynamicState> GraphicsPipeline::GetDynamicStates() {
+std::vector<VkDynamicState> GraphicsPipeline::GetDynamicStates()
+{
     return this->dynamic_states;
 }
 
-void GraphicsPipeline::UpdateDynamicStates(VkCommandBuffer cmd) {
+void GraphicsPipeline::UpdateDynamicStates(VkCommandBuffer cmd)
+{
     vkCmdSetViewport(cmd, 0, 1, &this->viewport);
     vkCmdSetScissor(cmd, 0, 1, &this->scissor);
 }
@@ -97,7 +105,8 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
     return this->vertex_attributes;
 }
 
-void GraphicsPipeline::BeginRenderPass(CommandBuffer *cmd, size_t index, VkSubpassContents contents) {
+void GraphicsPipeline::BeginRenderPass(CommandBuffer *cmd, size_t index, VkSubpassContents contents)
+{
 
     m_construction_info.render_pass->Begin(
         cmd,
@@ -107,8 +116,20 @@ void GraphicsPipeline::BeginRenderPass(CommandBuffer *cmd, size_t index, VkSubpa
     );
 }
 
-void GraphicsPipeline::EndRenderPass(CommandBuffer *cmd, size_t index) {
+void GraphicsPipeline::EndRenderPass(CommandBuffer *cmd, size_t index)
+{
     m_construction_info.render_pass->End(cmd);
+}
+
+void GraphicsPipeline::SubmitPushConstants(CommandBuffer *cmd) const
+{
+    vkCmdPushConstants(
+        cmd->GetCommandBuffer(),
+        layout,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        0, sizeof(push_constants),
+        &push_constants
+    );
 }
 
 void GraphicsPipeline::Bind(CommandBuffer *cmd)
@@ -117,13 +138,7 @@ void GraphicsPipeline::Bind(CommandBuffer *cmd)
 
     vkCmdBindPipeline(cmd->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
-    vkCmdPushConstants(
-        cmd->GetCommandBuffer(),
-        layout,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 
-        0, sizeof(push_constants),
-        &push_constants
-    );
+    this->SubmitPushConstants(cmd);
 }
 
 void GraphicsPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
@@ -131,6 +146,37 @@ void GraphicsPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescri
 {
     this->vertex_binding_descriptions = binding_descs;
     this->vertex_attributes = attribs;
+}
+
+Result GraphicsPipeline::Create(Device *device, DescriptorPool *descriptor_pool)
+{
+    auto construction_info = std::move(m_construction_info);
+
+    return Create(device, std::move(construction_info), descriptor_pool);
+}
+
+Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
+{
+    m_construction_info = std::move(construction_info);
+
+    AssertExit(m_construction_info.shader != nullptr);
+    AssertExit(m_construction_info.fbos.size() != 0);
+
+    size_t width = m_construction_info.fbos[0]->GetWidth();
+    size_t height = m_construction_info.fbos[0]->GetHeight();
+    this->SetViewport(0.0f, float(height), float(width), -float(height), 0.0f, 1.0f);
+    this->SetScissor(0, 0, width, height);
+
+    std::vector<VkDynamicState> default_dynamic_states = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
+    };
+    this->SetDynamicStates(default_dynamic_states);
+
+    static int x = 0;
+    DebugLog(LogType::Debug, "Create Pipeline [%d]\n", x++);
+
+    return Rebuild(device, descriptor_pool);
 }
 
 Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool)
@@ -208,7 +254,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     /* Push constants */
     VkPushConstantRange push_constant{};
     push_constant.offset = 0;
-    push_constant.size = sizeof(PushConstants);
+    push_constant.size = sizeof(push_constants);
     push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
     /* Dynamic states; these are the values that can be changed without
@@ -285,7 +331,10 @@ Result GraphicsPipeline::Destroy(Device *device)
     DebugLog(LogType::Info, "Destroying pipeline!\n");
 
     vkDestroyPipeline(render_device, this->pipeline, nullptr);
+    this->pipeline = nullptr;
+
     vkDestroyPipelineLayout(render_device, this->layout, nullptr);
+    this->layout = nullptr;
 
     HYPERION_RETURN_OK;
 }

@@ -20,8 +20,7 @@ using renderer::ImageView;
 using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
-    : m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      m_swapchain_data{}
+    : m_instance(new Instance(_system, app_name, "HyperionEngine"))
 {
 }
 
@@ -35,8 +34,10 @@ Engine::~Engine()
     m_render_passes.RemoveAll(this);
     m_shaders.RemoveAll(this);
     m_textures.RemoveAll(this);
-    m_pipelines.RemoveAll(this);
     m_compute_pipelines.RemoveAll(this);
+
+    m_swapchain_render_container->Destroy(this);
+    m_render_containers.RemoveAll(this);
 
     m_instance->Destroy();
 }
@@ -64,49 +65,6 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
     }
 
     return AddFramebuffer(std::move(framebuffer), render_pass_id);
-}
-
-GraphicsPipeline::ID Engine::AddGraphicsPipeline(renderer::GraphicsPipeline::Builder &&builder)
-{
-    auto *shader = GetShader(Shader::ID{builder.m_construction_info.shader_id});
-
-    AssertThrow(shader != nullptr);
-
-    builder.m_construction_info.shader = non_owning_ptr(&shader->Get());
-
-    auto *render_pass = GetRenderPass(RenderPass::ID{builder.m_construction_info.render_pass_id});
-    AssertThrow(render_pass != nullptr);
-    // TODO: Assert that render_pass matches the layout of what the fbo was set up with
-
-    builder.m_construction_info.render_pass = non_owning_ptr(&render_pass->Get());
-
-    for (auto fbo_id : builder.m_construction_info.fbo_ids) {
-        if (auto fbo = GetFramebuffer(Framebuffer::ID{fbo_id})) {
-            builder.m_construction_info.fbos.push_back(non_owning_ptr(&fbo->Get()));
-        }
-    }
-
-    /* Cache pipeline objects */
-    const HashCode::Value_t hash_code = builder.GetHashCode().Value();
-
-    const auto it = std::find_if(m_pipelines.objects.begin(), m_pipelines.objects.end(), [hash_code](const auto &pl) {
-        return pl->Get().GetConstructionInfo().GetHashCode().Value() == hash_code;
-    });
-
-    if (it != m_pipelines.objects.end()) {
-        /* Return the index of the existing pipeline + 1,
-         * as ID objects are one more than their index in the array. */
-        const auto reused_id = GraphicsPipeline::ID{GraphicsPipeline::ID::InnerType_t((it - m_pipelines.objects.begin()) + 1)};
-
-        DebugLog(LogType::Debug, "Re-use graphics pipeline %d\n", reused_id.GetValue());
-
-        return reused_id;
-    }
-    
-    /* Create the wrapper object around pipeline */
-    m_pipelines.objects.push_back(std::make_unique<GraphicsPipeline>(std::move(builder.m_construction_info)));
-
-    return GraphicsPipeline::ID{GraphicsPipeline::ID::InnerType_t(m_pipelines.objects.size())};
 }
 
 void Engine::InitializeInstance()
@@ -166,23 +124,15 @@ void Engine::PrepareSwapchain()
 {
     m_filter_stack.Create(this);
 
+    Shader::ID shader_id{};
+
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
     {
-        m_swapchain_data.shader_id = AddShader(std::make_unique<Shader>(std::vector{
+        shader_id = AddShader(std::make_unique<Shader>(std::vector{
             SpirvObject{SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()},
             SpirvObject{SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}
         }));
     }
-    
-
-    // TMP trying to update a descriptor set right on 
-    const auto vertex_attributes = MeshInputAttributeSet(
-        MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
-        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
-        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
-        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
-        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
-        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT);
 
     RenderPass::ID render_pass_id{};
 
@@ -200,14 +150,9 @@ void Engine::PrepareSwapchain()
         render_pass_id = AddRenderPass(std::move(render_pass));
     }
 
-    renderer::GraphicsPipeline::Builder builder;
+    m_swapchain_render_container = std::make_unique<RenderContainer>(shader_id, render_pass_id);
 
-    builder
-        .Topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) /* full screen quad is a triangle fan */
-        .Shader<Shader>(m_swapchain_data.shader_id)
-        .VertexAttributes(vertex_attributes)
-        .RenderPass<RenderPass>(render_pass_id);
-
+    
     for (auto img : m_instance->swapchain->images) {
         auto image_view = std::make_unique<ImageView>();
 
@@ -239,10 +184,11 @@ void Engine::PrepareSwapchain()
         auto result = fbo->Get().AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH));
         AssertThrowMsg(result, "%s", result.message);
 
-        builder.Framebuffer<Framebuffer>(AddFramebuffer(std::move(fbo), render_pass_id));
+        m_swapchain_render_container->AddFramebuffer(AddFramebuffer(std::move(fbo), render_pass_id));
     }
 
-    m_swapchain_data.pipeline_id = AddGraphicsPipeline(std::move(builder));
+    m_swapchain_render_container->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+    m_swapchain_render_container->PrepareDescriptors(this);
 }
 
 void Engine::BuildPipelines()
@@ -253,7 +199,8 @@ void Engine::BuildPipelines()
 
     m_filter_stack.BuildPipelines(this);
 
-    m_pipelines.CreateAll(this, &m_instance->GetDescriptorPool());
+    m_swapchain_render_container->Create(this);
+    m_render_containers.CreateAll(this);
     m_compute_pipelines.CreateAll(this);
 }
 
@@ -270,11 +217,11 @@ void Engine::RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_
 
 void Engine::RenderSwapchain(CommandBuffer *command_buffer)
 {
-    GraphicsPipeline *pipeline = GetGraphicsPipeline(m_swapchain_data.pipeline_id);
+    renderer::GraphicsPipeline &pipeline = m_swapchain_render_container->Get();
 
-    pipeline->Get().Bind(command_buffer);
+    pipeline.Bind(command_buffer);
 
-    m_instance->GetDescriptorPool().BindDescriptorSets(command_buffer, &pipeline->Get());
+    m_instance->GetDescriptorPool().BindDescriptorSets(command_buffer, &pipeline);
 
     Filter::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
 }

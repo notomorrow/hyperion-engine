@@ -33,15 +33,26 @@ public:
         "Try changing the enum's underlying type to a larger sized data type?"
     );
 
-    EnumOptions()
-        : m_values{}
+    EnumOptions() : m_values{} {}
+    EnumOptions(const EnumOptions &other) : m_values(other.m_values) {}
+
+    EnumOptions &operator=(const EnumOptions &other)
     {
+        m_values = other.m_values;
+
+        return *this;
     }
 
-    EnumOptions(const EnumValueArray_t &array)
-        : m_values(array)
+    EnumOptions(EnumOptions &&other) : m_values(std::move(other.m_values)) {}
+
+    EnumOptions &operator=(EnumOptions &&other) noexcept
     {
+        m_values = std::move(other.m_values);
+
+        return *this;
     }
+
+    EnumOptions(const EnumValueArray_t &array) : m_values(array) {}
 
     EnumOptions(const std::vector<EnumValuePair_t> &pairs)
         : m_values{}
@@ -49,19 +60,6 @@ public:
         for (const auto &item : pairs) {
             Set(item.first, item.second);
         }
-    }
-
-    EnumOptions(const EnumOptions &other)
-        : m_values(other.m_values)
-    {
-        static_assert(Sz != 0, "EnumOptions cannot have size of zero");
-    }
-
-    EnumOptions &operator=(const EnumOptions &other)
-    {
-        m_values = other.m_values;
-
-        return *this;
     }
 
     ~EnumOptions() = default;

@@ -198,8 +198,10 @@ public:
     using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
 
     Material();
-    Material(const Material &other) = delete;
-    Material &operator=(const Material &other) = delete;
+    Material(const Material &other);
+    Material &operator=(const Material &other);
+    Material(Material &&other);
+    Material &operator=(Material &&other);
     ~Material();
 
     inline const Parameter &GetParameter(MaterialKey key) const
@@ -239,9 +241,8 @@ public:
     }
 
 private:
-    State m_state;
-
     ParameterTable m_parameters;
+    State m_state;
 };
 
 } // namespace hyperion::v2

@@ -14,6 +14,33 @@ namespace hyperion::v2 {
 class Engine;
 
 template <class T>
+struct ObjectIdHolder {
+    std::vector<typename T::ID> ids;
+
+    inline constexpr size_t Size() const
+        { return ids.size(); }
+    
+    void Add(typename T::ID id)
+    {
+        ids.push_back(id);
+    }
+
+    void Remove(typename T::ID id)
+    {
+        const auto it = std::find(ids.begin(), ids.end(), id);
+
+        if (it != ids.end()) {
+            ids.erase(it);
+        }
+    }
+
+    bool Has(typename T::ID id) const
+    {
+        return std::any_of(ids.begin(), ids.end(), [id](auto &it) { return it == id; });
+    }
+};
+
+template <class T>
 struct ObjectHolder {
     bool defer_create = false;
     std::vector<std::unique_ptr<T>> objects;
@@ -91,7 +118,7 @@ struct ObjectHolder {
     void RemoveAll(Engine *engine, Args &&...args)
     {
         for (auto &object : objects) {
-            object->Destroy(engine, args...);
+            object->Destroy(engine, std::move(args)...);
             object.reset();
         }
     }
@@ -103,7 +130,7 @@ struct ObjectHolder {
             "otherwise objects are automatically have Create() called when added.");
 
         for (auto &object : objects) {
-            object->Create(engine, args...);
+            object->Create(engine, std::move(args)...);
         }
     }
 };

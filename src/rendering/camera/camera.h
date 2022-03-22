@@ -36,7 +36,7 @@ public:
     inline Matrix4 GetViewProjectionMatrix() const { return m_view_mat * m_proj_mat; }
     inline const Frustum &GetFrustum() const { return m_frustum; }
 
-    inline int GetFov() const { return m_fov; }
+    inline float GetFov() const { return m_fov; }
 
     void Rotate(const Vector3 &axis, float radians);
     void Update(double dt);

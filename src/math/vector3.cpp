@@ -161,7 +161,7 @@ bool Vector3::operator==(const Vector3 &other) const
 
 bool Vector3::operator!=(const Vector3 &other) const
 {
-    return !((*this) == other);
+    return !operator==(other);
 }
 
 float Vector3::DistanceSquared(const Vector3 &other) const

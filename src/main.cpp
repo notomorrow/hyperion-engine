@@ -845,23 +845,10 @@ int main()
         mirror_shader_id = engine.AddShader(std::move(mirror_shader));
     }
 
+    auto scene_pass_container = std::make_unique<v2::RenderContainer>(mirror_shader_id, render_pass_id);
+    scene_pass_container->AddFramebuffer(my_fbo_id);
 
-    GraphicsPipeline::Builder scene_pass_pipeline_builder;
-
-    scene_pass_pipeline_builder
-        .Shader<v2::Shader>(mirror_shader_id)
-        .VertexAttributes(MeshInputAttributeSet({
-            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_POSITIONS).GetAttributeDescription(0),
-            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_NORMALS).GetAttributeDescription(1),
-            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS0).GetAttributeDescription(2),
-            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TEXCOORDS1).GetAttributeDescription(3),
-            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_TANGENTS).GetAttributeDescription(4),
-            monkey_mesh->GetAttributes().at(Mesh::MeshAttributeType::ATTR_BITANGENTS).GetAttributeDescription(5)
-        }))
-        .RenderPass<v2::RenderPass>(render_pass_id)
-        .Framebuffer<v2::Framebuffer>(my_fbo_id);
-
-    v2::GraphicsPipeline::ID scene_pass_pipeline_id = engine.AddGraphicsPipeline(std::move(scene_pass_pipeline_builder));
+    auto scene_pass_pipeline_id = engine.AddRenderContainer(std::move(scene_pass_container));
 
     
 
@@ -940,17 +927,20 @@ int main()
             ->GetPresentSemaphores();
     }
 
-    v2::RenderContainer container(std::make_unique<v2::Shader>(std::vector{
-        SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() },
-        SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }
-    }));
-    auto mat1 = std::make_unique<v2::Material>();
-    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 0.0f, 0.0f, 1.0f }));
-    container.AddMaterial(&engine, std::move(mat1));
-    auto mat2 = std::make_unique<v2::Material>();
-    mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 1.0f, 0.0f, 1.0f }));
-    container.AddMaterial(&engine, std::move(mat2));
-    container.Create(&engine);
+
+
+    {
+        auto container = std::make_unique<v2::RenderContainer>(mirror_shader_id, render_pass_id);
+        auto mat1 = std::make_unique<v2::Material>();
+        mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 0.0f, 0.0f, 1.0f }));
+        container->AddMaterial(&engine, std::move(mat1));
+        auto mat2 = std::make_unique<v2::Material>();
+        mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 1.0f, 0.0f, 1.0f }));
+        container->AddMaterial(&engine, std::move(mat2));
+        container->AddFramebuffer(my_fbo_id);
+        engine.AddRenderContainer(std::move(container));
+    }
+    //container.Create(&engine);
     
     engine.BuildPipelines();
 
@@ -1020,7 +1010,7 @@ int main()
         compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
 #endif
 
-        v2::GraphicsPipeline *fbo_pl = engine.GetGraphicsPipeline(scene_pass_pipeline_id);
+        auto *fbo_pl = engine.GetRenderContainer(scene_pass_pipeline_id);
         
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
@@ -1037,6 +1027,9 @@ int main()
                 fbo_pl->Get().BeginRenderPass(command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
                 fbo_pl->Get().Bind(command_buffer);
                 engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(command_buffer, &fbo_pl->Get(), 0, 1);
+
+                fbo_pl->Get().push_constants.material_index = 0;
+                fbo_pl->Get().SubmitPushConstants(command_buffer);
 
                 monkey_mesh->RenderVk(command_buffer, engine.GetInstance(), nullptr);
                 fbo_pl->Get().EndRenderPass(command_buffer, 0);
@@ -1075,18 +1068,18 @@ int main()
             1, &imageMemoryBarrier);*/
 
         frame->BeginCapture();
-        engine.GetGraphicsPipeline(engine.GetSwapchainData().pipeline_id)->Get().BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
+        engine.m_swapchain_render_container->Get().BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
         
         frame->GetCommandBuffer()->RecordCommandsWithContext(
             [&engine, &frame_index, &previous_frame_index](CommandBuffer *cmd) {
-                engine.GetGraphicsPipeline(engine.GetSwapchainData().pipeline_id)->Get().push_constants.previous_frame_index = previous_frame_index;
-                engine.GetGraphicsPipeline(engine.GetSwapchainData().pipeline_id)->Get().push_constants.current_frame_index = frame_index;
+                engine.m_swapchain_render_container->Get().push_constants.previous_frame_index = previous_frame_index;
+                engine.m_swapchain_render_container->Get().push_constants.current_frame_index = frame_index;
 
                 engine.RenderSwapchain(cmd);
 
                 HYPERION_RETURN_OK;
             });
-        engine.GetGraphicsPipeline(engine.GetSwapchainData().pipeline_id)->Get().EndRenderPass(frame->command_buffer.get(), frame_index);
+        engine.m_swapchain_render_container->Get().EndRenderPass(frame->command_buffer.get(), frame_index);
         frame->EndCapture();
 
         frame->Submit(engine.GetInstance()->GetGraphicsQueue());

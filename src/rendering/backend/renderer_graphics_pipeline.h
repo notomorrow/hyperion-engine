@@ -140,13 +140,6 @@ public:
             return *this;
         }
 
-        std::unique_ptr<GraphicsPipeline> Build()
-        {
-            AssertThrow(!m_construction_info.fbos.empty());
-
-            return std::make_unique<GraphicsPipeline>(std::move(m_construction_info));
-        }
-
         inline HashCode GetHashCode() const
         {
             return m_construction_info.GetHashCode();
@@ -155,7 +148,11 @@ public:
         ConstructionInfo m_construction_info;
     };
 
+    GraphicsPipeline();
     GraphicsPipeline(ConstructionInfo &&construction_info);
+    GraphicsPipeline(const GraphicsPipeline &other) = delete;
+    GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
+    ~GraphicsPipeline();
 
     std::vector<VkDynamicState> GetDynamicStates();
     void SetDynamicStates(const std::vector<VkDynamicState> &_states);
@@ -164,33 +161,25 @@ public:
     void SetScissor(int x, int y, uint32_t width, uint32_t height);
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
 
-    inline Result Create(Device *device, DescriptorPool *descriptor_pool)
-    {
-        return Rebuild(device, descriptor_pool);
-    }
-
-    inline Result Create(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
-    {
-        m_construction_info = std::move(construction_info);
-
-        return Create(device, descriptor_pool);
-    }
+    Result Create(Device *device, DescriptorPool *descriptor_pool);
+    Result Create(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool);
 
     Result Destroy(Device *device);
 
     void BeginRenderPass(CommandBuffer *cmd, size_t index, VkSubpassContents contents);
     void EndRenderPass(CommandBuffer *cmd, size_t index);
     void Bind(CommandBuffer *cmd);
+    void SubmitPushConstants(CommandBuffer *cmd) const;
 
     inline const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
 
     VkPipeline pipeline;
     VkPipelineLayout layout;
 
-    struct PushConstants {
+    struct PushConstantData {
         uint32_t previous_frame_index;
         uint32_t current_frame_index;
-        uint32_t texture_set_index[max_dynamic_textures];
+        uint32_t material_index;
     } push_constants;
 
 private:
