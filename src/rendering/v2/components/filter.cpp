@@ -139,7 +139,7 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
             engine->GetInstance()->GetDevice(),
-            pipeline->Get().GetConstructionInfo().render_pass.get(),
+            pipeline->Get().GetConstructionInfo().render_pass,
             [this, engine, pipeline](CommandBuffer *cmd) {
                 renderer::Result result = renderer::Result::OK;
 

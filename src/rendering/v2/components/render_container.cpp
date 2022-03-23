@@ -86,7 +86,9 @@ void RenderContainer::DestroyMaterialUniformBuffer(Engine *engine)
 
 void RenderContainer::UpdateDescriptorSet(DescriptorSet *descriptor_set)
 {
-    /* TODO: make this dynamically set */
+    /* TODO: move to somewhere in Engine, after all material structs
+     * are added
+     * */
     descriptor_set->AddDescriptor(std::make_unique<renderer::BufferDescriptor>(
         0,
         m_internal.material_uniform_buffer,
@@ -106,30 +108,32 @@ void RenderContainer::PrepareDescriptors(Engine *engine)
 
 void RenderContainer::Create(Engine *engine)
 {
-    renderer::GraphicsPipeline::Builder builder;
-
-    builder.VertexAttributes(m_vertex_attributes);
-    builder.Topology(m_topology);
-
     auto *shader = engine->GetShader(m_shader_id);
     AssertThrow(shader != nullptr);
 
-    builder.m_construction_info.shader = non_owning_ptr(&shader->Get());
-
+    // TODO: Assert that render_pass matches the layout of what the fbo was set up with
     auto *render_pass = engine->GetRenderPass(m_render_pass_id);
     AssertThrow(render_pass != nullptr);
-    // TODO: Assert that render_pass matches the layout of what the fbo was set up with
 
-    builder.m_construction_info.render_pass = non_owning_ptr(&render_pass->Get());
+    renderer::GraphicsPipeline::ConstructionInfo construction_info{
+        .vertex_attributes = m_vertex_attributes,
+        .topology = m_topology,
+        .cull_mode = renderer::GraphicsPipeline::ConstructionInfo::CullMode::BACK,
+        .depth_test = true,
+        .depth_write = true,
+        .shader = &shader->Get(),
+        .render_pass = &render_pass->Get()
+    };
 
     for (const auto &fbo_id : m_fbo_ids.ids) {
         if (auto *fbo = engine->GetFramebuffer(fbo_id)) {
             AssertThrow(fbo != nullptr);
-            builder.m_construction_info.fbos.push_back(non_owning_ptr(&fbo->Get()));
+
+            construction_info.fbos.push_back(&fbo->Get());
         }
     }
 
-    EngineComponent::Create(engine, std::move(builder.m_construction_info), &engine->GetInstance()->GetDescriptorPool());
+    EngineComponent::Create(engine, std::move(construction_info), &engine->GetInstance()->GetDescriptorPool());
 }
 
 void RenderContainer::Destroy(Engine *engine)
