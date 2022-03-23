@@ -12,6 +12,7 @@ namespace hyperion {
 namespace renderer {
 
 class Device;
+class CommandBuffer;
 
 class GPUMemory {
 public:
@@ -67,7 +68,23 @@ public:
         uint32_t sharing_mode = VK_SHARING_MODE_EXCLUSIVE
     );
 
-    void BindBuffer(VkCommandBuffer *command_buffer);
+    void Bind(CommandBuffer *command_buffer);
+};
+
+class IndexBuffer : public GPUBuffer {
+public:
+    IndexBuffer(
+        uint32_t memory_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        uint32_t sharing_mode = VK_SHARING_MODE_EXCLUSIVE
+    );
+
+    void Bind(CommandBuffer *command_buffer);
+
+    inline VkIndexType GetIndexType() { return m_index_type; }
+    inline void SetIndexType(VkIndexType index_type) { m_index_type = index_type; }
+
+private:
+    VkIndexType m_index_type = VK_INDEX_TYPE_UINT32;
 };
 
 class UniformBuffer : public GPUBuffer {

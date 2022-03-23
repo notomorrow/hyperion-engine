@@ -35,10 +35,10 @@ public:
 
     enum MeshAttributeType {
         ATTR_POSITIONS = 0x01,
-        ATTR_NORMALS = 0x02,
+        ATTR_NORMALS    = 0x02,
         ATTR_TEXCOORDS0 = 0x04,
         ATTR_TEXCOORDS1 = 0x08,
-        ATTR_TANGENTS = 0x10,
+        ATTR_TANGENTS   = 0x10,
         ATTR_BITANGENTS = 0x20,
         ATTR_BONEWEIGHTS = 0x40,
         ATTR_BONEINDICES = 0x80,

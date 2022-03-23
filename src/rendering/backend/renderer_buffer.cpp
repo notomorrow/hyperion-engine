@@ -3,6 +3,7 @@
 //
 
 #include "renderer_buffer.h"
+#include "renderer_command_buffer.h"
 #include "renderer_device.h"
 
 #include "../../system/debug.h"
@@ -113,11 +114,20 @@ void GPUBuffer::Destroy(Device *device)
 VertexBuffer::VertexBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
     : GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, memory_property_flags, sharing_mode) {}
 
-void VertexBuffer::BindBuffer(VkCommandBuffer *cmd) {
+void VertexBuffer::Bind(CommandBuffer *cmd) {
     const VkBuffer vertex_buffers[] = { buffer };
     const VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(*cmd, 0, 1, vertex_buffers, offsets);
+    vkCmdBindVertexBuffers(cmd->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
 }
+
+IndexBuffer::IndexBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
+        : GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, memory_property_flags, sharing_mode) {}
+
+void IndexBuffer::Bind(CommandBuffer *cmd) {
+    const VkDeviceSize offsets[] = { 0 };
+    vkCmdBindIndexBuffer(cmd->GetCommandBuffer(), this->buffer, 0, this->GetIndexType());
+}
+
 
 UniformBuffer::UniformBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
     : GPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memory_property_flags, sharing_mode) {}
