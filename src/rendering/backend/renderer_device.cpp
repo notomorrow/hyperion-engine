@@ -74,6 +74,9 @@ QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, V
 
     constexpr auto possible_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_COMPUTE_BIT;
 
+    /* TODO: move over to QueueFamilyIndices */
+    std::vector<uint32_t> found_indices;
+
     const auto predicate = [&](uint32_t index, VkQueueFlagBits expected_bits, bool expect_dedicated) -> bool {
         const auto masked_bits = families[index].queueFlags & possible_flags;
         
@@ -94,7 +97,7 @@ QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, V
                 return true;
             }
 
-            return ((masked_bits & expected_bits) == expected_bits);
+            return std::find(found_indices.begin(), found_indices.end(), index) == found_indices.end();
         }
 
         return false;
@@ -122,6 +125,7 @@ QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, V
             if (predicate(i, VK_QUEUE_GRAPHICS_BIT, true)) {
                 DebugLog(LogType::Debug, "Found dedicated graphics presentation queue (%d)\n", i);
                 indices.graphics_family = i;
+                found_indices.push_back(i);
                 continue;
             }
         }
@@ -130,6 +134,7 @@ QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, V
             if (predicate(i, VK_QUEUE_TRANSFER_BIT, true)) {
                 DebugLog(LogType::Debug, "Found dedicated transfer queue (%d)\n", i);
                 indices.transfer_family = i;
+                found_indices.push_back(i);
                 continue;
             }
         }
@@ -138,6 +143,7 @@ QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, V
             if (predicate(i, VK_QUEUE_COMPUTE_BIT, true)) {
                 DebugLog(LogType::Debug, "Found dedicated compute queue (%d)\n", i);
                 indices.compute_family = i;
+                found_indices.push_back(i);
                 continue;
             }
         }
@@ -171,7 +177,7 @@ QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, V
 
         if (!indices.compute_family.has_value()) {
             if (predicate(i, VK_QUEUE_COMPUTE_BIT, false)) {
-                DebugLog(LogType::Debug, "Found non-dedicated transfer queue (%d)\n", i);
+                DebugLog(LogType::Debug, "Found non-dedicated compute queue (%d)\n", i);
                 indices.compute_family = i;
             }
         }

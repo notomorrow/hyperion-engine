@@ -24,8 +24,7 @@ public:
     GPUMemory(const GPUMemory &other) = delete;
     GPUMemory &operator=(const GPUMemory &other) = delete;
     ~GPUMemory();
-
-    VkDeviceMemory memory;
+    
     VmaAllocation allocation;
     VkDeviceSize size;
 

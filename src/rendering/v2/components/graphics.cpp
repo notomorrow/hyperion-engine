@@ -85,4 +85,33 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *command_buffer, uin
     m_wrapped.EndRenderPass(command_buffer, frame_index);
 }
 
+void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buffer, CommandBuffer *secondary_command_buffer, uint32_t frame_index)
+{
+    auto *instance = engine->GetInstance();
+
+    m_wrapped.BeginRenderPass(primary_command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+    secondary_command_buffer->Record(
+        instance->GetDevice(),
+        m_wrapped.GetConstructionInfo().render_pass,
+        [this, instance, primary_command_buffer](CommandBuffer *secondary) {
+            m_wrapped.Bind(secondary);
+
+            instance->GetDescriptorPool().BindDescriptorSets(secondary, &m_wrapped, 0, 3);
+
+            /* TMP */
+            for (auto &spatial : m_spatials) {
+                m_wrapped.push_constants.material_index = spatial.material_id.value;
+                m_wrapped.SubmitPushConstants(secondary);
+                spatial.mesh->RenderVk(secondary, instance, nullptr);
+            }
+
+            HYPERION_RETURN_OK;
+        });
+    
+    secondary_command_buffer->SubmitSecondary(primary_command_buffer);
+
+    m_wrapped.EndRenderPass(primary_command_buffer, frame_index);
+}
+
 } // namespace hyperion::v2

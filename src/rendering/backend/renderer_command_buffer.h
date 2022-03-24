@@ -29,6 +29,8 @@ public:
     CommandBuffer &operator=(const CommandBuffer &other) = delete;
     ~CommandBuffer();
 
+    inline Type GetType() const { return m_type; }
+
     inline VkCommandBuffer &GetCommandBuffer() { return m_command_buffer; }
     inline const VkCommandBuffer &GetCommandBuffer() const { return m_command_buffer; }
 

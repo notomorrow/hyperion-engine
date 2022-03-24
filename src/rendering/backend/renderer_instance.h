@@ -49,7 +49,7 @@ class Instance {
     Result CreateCommandPool(QueueData &queue_data);
 public:
     Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
-    Result Initialize(bool load_debug_layers=false);
+    Result Initialize(bool load_debug_layers = false);
     void CreateSurface();
     
     void WaitImageReady(Frame *frame);

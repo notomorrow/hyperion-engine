@@ -158,10 +158,10 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     this->BuildVertexAttributes(m_construction_info.vertex_attributes);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    vertex_input_info.vertexBindingDescriptionCount = uint32_t(this->vertex_binding_descriptions.size());
-    vertex_input_info.pVertexBindingDescriptions = this->vertex_binding_descriptions.data();
+    vertex_input_info.vertexBindingDescriptionCount   = uint32_t(this->vertex_binding_descriptions.size());
+    vertex_input_info.pVertexBindingDescriptions      = this->vertex_binding_descriptions.data();
     vertex_input_info.vertexAttributeDescriptionCount = uint32_t(this->vertex_attributes.size());
-    vertex_input_info.pVertexAttributeDescriptions = this->vertex_attributes.data();
+    vertex_input_info.pVertexAttributeDescriptions    = this->vertex_attributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo input_asm_info{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
     input_asm_info.topology = m_construction_info.topology;
@@ -170,11 +170,11 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     VkPipelineViewportStateCreateInfo viewport_state{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
     VkViewport viewports[] = { this->viewport };
     viewport_state.viewportCount = 1;
-    viewport_state.pViewports = viewports;
+    viewport_state.pViewports    = viewports;
 
     VkRect2D scissors[] = { this->scissor };
     viewport_state.scissorCount = 1;
-    viewport_state.pScissors = scissors;
+    viewport_state.pScissors    = scissors;
 
     VkPipelineRasterizationStateCreateInfo rasterizer{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
     /* TODO: Revisit this for shadow maps! */

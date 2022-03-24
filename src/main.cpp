@@ -414,18 +414,18 @@ int main()
 
     PerFrameData<CommandBuffer, Semaphore> per_frame_data(engine.GetInstance()->GetFrameHandler()->GetNumFrames());
 
-    SemaphoreChain graphics_semaphore_chain({}, {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT});
-    AssertThrow(graphics_semaphore_chain.Create(engine.GetInstance()->GetDevice()));
+    //SemaphoreChain graphics_semaphore_chain({}, {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT});
+    //AssertThrow(graphics_semaphore_chain.Create(engine.GetInstance()->GetDevice()));
 
     for (uint32_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
-        auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_PRIMARY);
+        auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
         AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsQueueData().command_pool));
 
         per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
         
-        graphics_semaphore_chain >> engine.GetInstance()->GetFrameHandler()
-            ->GetPerFrameData()[i].Get<Frame>()
-            ->GetPresentSemaphores();
+        //graphics_semaphore_chain >> engine.GetInstance()->GetFrameHandler()
+        //    ->GetPerFrameData()[i].Get<Frame>()
+        //    ->GetPresentSemaphores();
     }
 
     auto mat1 = std::make_unique<v2::Material>();
@@ -521,43 +521,27 @@ int main()
         
         const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
-        per_frame_data[frame_index].Get<CommandBuffer>()->Reset(engine.GetInstance()->GetDevice());
-        per_frame_data[frame_index].Get<CommandBuffer>()->Record(
-            engine.GetInstance()->GetDevice(),
-            nullptr,
-            [&](CommandBuffer *command_buffer) {
 
-                engine.GetGraphicsPipeline(render_container_id)->Render(&engine, command_buffer, 0);
-                engine.RenderPostProcessing(command_buffer, frame_index);
+        frame->BeginCapture();
 
-                /* forward / albedo layer */
+        frame->GetCommandBuffer()->RecordCommandsWithContext(
+            [&](CommandBuffer *primary) {
+                auto *secondary = per_frame_data[frame_index].Get<CommandBuffer>();
+                secondary->Reset(engine.GetInstance()->GetDevice());
 
-
-                /*fbo_pl->Get().BeginRenderPass(command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
-                fbo_pl->Get().Bind(command_buffer);
-                
-                engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(command_buffer, &fbo_pl->Get(), 0, 1);
-
-                fbo_pl->Get().push_constants.material_index = 0;
-                fbo_pl->Get().SubmitPushConstants(command_buffer);
-
-                monkey_mesh->RenderVk(command_buffer, engine.GetInstance(), nullptr);
-                fbo_pl->Get().EndRenderPass(command_buffer, 0);
-
-
-                engine.RenderPostProcessing(command_buffer, frame_index);*/
+                engine.GetGraphicsPipeline(render_container_id)->Render(&engine, primary, secondary, 0);
+                engine.RenderPostProcessing(primary, frame_index);
 
                 HYPERION_RETURN_OK;
             });
         
-        per_frame_data[frame_index].Get<CommandBuffer>()->SubmitPrimary(
+        /*per_frame_data[frame_index].Get<CommandBuffer>()->SubmitPrimary(
             engine.GetInstance()->GetGraphicsQueue(), VK_NULL_HANDLE, &graphics_semaphore_chain
-        );
+        );*/
 
 
-        //renderer::SemaphoreChain sc(std::vector<std::tuple<VkPipelineStageFlags>>{ {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }, { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } }, { {VK_SHADER_STAGE_COMPUTE_BIT} });
-
-        /*VkImageMemoryBarrier imageMemoryBarrier = {};
+#if HYPERION_VK_TEST_IMAGE_STORE
+        VkImageMemoryBarrier imageMemoryBarrier = {};
         imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         // We won't be changing the layout of the image
         imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -569,19 +553,20 @@ int main()
         imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         vkCmdPipelineBarrier(
-            frame->command_buffer->GetCommandBuffer(),
+            frame->GetCommandBuffer()->GetCommandBuffer(),
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             0,
             0, nullptr,
             0, nullptr,
-            1, &imageMemoryBarrier);*/
+            1, &imageMemoryBarrier);
+#endif
 
-        frame->BeginCapture();
         engine.m_swapchain_render_container->Get().BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
         
         frame->GetCommandBuffer()->RecordCommandsWithContext(
-            [&engine, &frame_index, &previous_frame_index](CommandBuffer *cmd) {
+            [&](CommandBuffer *cmd) {
+                
                 engine.m_swapchain_render_container->Get().push_constants.previous_frame_index = previous_frame_index;
                 engine.m_swapchain_render_container->Get().push_constants.current_frame_index = frame_index;
 
@@ -601,7 +586,7 @@ int main()
 
     AssertThrow(engine.GetInstance()->GetDevice()->Wait());
 
-    graphics_semaphore_chain.Destroy(engine.GetInstance()->GetDevice());
+    //graphics_semaphore_chain.Destroy(engine.GetInstance()->GetDevice());
 
     v2::Filter::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
 

@@ -28,8 +28,7 @@ GPUMemory::GPUMemory(
     uint32_t sharing_mode)
     : memory_property_flags(memory_property_flags),
       sharing_mode(sharing_mode),
-      size(0),
-      memory(nullptr)
+      size(0)
 {
     static unsigned allocations = 0;
     DebugLog(LogType::Debug, "Allocate GPUMemory %d\n", allocations++);
@@ -39,7 +38,6 @@ GPUMemory::~GPUMemory()
 {
     static unsigned destructions = 0;
     DebugLog(LogType::Debug, "Destroy GPUMemory %d\n", destructions++);
-    AssertThrowMsg(memory == nullptr, "memory should have been destroyed!");
 }
 
 
@@ -86,7 +84,8 @@ void GPUBuffer::Create(Device *device, size_t size) {
     alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 
-    vmaCreateBuffer(*device->GetAllocator(), &vk_buffer_info, &alloc_info, &this->buffer, &this->allocation, nullptr);
+    auto result = vmaCreateBuffer(*device->GetAllocator(), &vk_buffer_info, &alloc_info, &this->buffer, &this->allocation, nullptr);
+    AssertThrowMsg(result == VK_SUCCESS, "Failed to create gpu buffer");
 }
 
 void GPUBuffer::Destroy(Device *device)
@@ -140,7 +139,7 @@ Result GPUImage::Create(Device *device, size_t size, VkImageCreateInfo *image_in
     VmaAllocationCreateInfo alloc_info{};
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-    auto result = vmaCreateImage(*device->GetAllocator(), image_info, &alloc_info, &this->image, &this->allocation, nullptr);
+    HYPERION_VK_CHECK(vmaCreateImage(*device->GetAllocator(), image_info, &alloc_info, &this->image, &this->allocation, nullptr));
 
     HYPERION_RETURN_OK;
 }
