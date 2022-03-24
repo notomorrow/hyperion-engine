@@ -20,7 +20,9 @@ using renderer::ImageView;
 using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
-    : m_instance(new Instance(_system, app_name, "HyperionEngine"))
+    : m_instance(new Instance(_system, app_name, "HyperionEngine")),
+      m_material_storage_buffer(nullptr),
+      m_object_storage_buffer(nullptr)
 {
 }
 
@@ -40,8 +42,15 @@ Engine::~Engine()
     m_swapchain_render_container->Destroy(this);
     m_graphics_pipelines.RemoveAll(this);
 
-    m_material_uniform_buffer->Destroy(m_instance->GetDevice());
-    delete m_material_uniform_buffer;
+    if (m_material_storage_buffer != nullptr) {
+        m_material_storage_buffer->Destroy(m_instance->GetDevice());
+        delete m_material_storage_buffer;
+    }
+
+    if (m_object_storage_buffer != nullptr) {
+        m_object_storage_buffer->Destroy(m_instance->GetDevice());
+        delete m_object_storage_buffer;
+    }
 
     m_instance->Destroy();
 }
@@ -202,26 +211,37 @@ void Engine::Initialize()
     /* Material uniform buffer - all materials are added into
      * this buffer and will be dynamically swapped in and out
      */
-    AssertThrow(m_material_buffer.m_material_data.size() * sizeof(MaterialData) <= max_materials_bytes);
 
-    m_material_uniform_buffer = new StorageBuffer();
-    m_material_uniform_buffer->Create(m_instance->GetDevice(), max_materials_bytes);
-    /* for render container materials */
+    m_material_storage_buffer = new StorageBuffer();
+    m_material_storage_buffer->Create(m_instance->GetDevice(), ShaderStorageData::max_materials_bytes);
+
+    m_object_storage_buffer = new StorageBuffer();
+    m_object_storage_buffer->Create(m_instance->GetDevice(), ShaderStorageData::max_objects_bytes);
+
+    /* for materials */
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
-        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0, VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
-            .gpu_buffer = m_material_uniform_buffer,
-            .range = sizeof(MaterialData)
+            .gpu_buffer = m_material_storage_buffer,
+            .range = sizeof(MaterialShaderData)
+        });
+
+    /* for objects */
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddSubDescriptor({
+            .gpu_buffer = m_object_storage_buffer,
+            .range = sizeof(ObjectShaderData)
         });
 }
 
 void Engine::Compile()
 {
     /* Finalize materials */
-    m_material_uniform_buffer->Copy(
+    m_material_storage_buffer->Copy(
         m_instance->GetDevice(),
-        m_material_buffer.m_material_data.size() * sizeof(MaterialData),
-        m_material_buffer.m_material_data.data()
+        m_shader_storage_data.materials.Size() * sizeof(MaterialShaderData),
+        m_shader_storage_data.materials.Data()
     );
 
     /* Finalize descriptor pool */

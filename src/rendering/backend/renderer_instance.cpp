@@ -454,25 +454,25 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
 
     this->queue_graphics = {
         .family = family_indices.graphics_family.value(),
-        .queue = device->GetQueue(family_indices.graphics_family.value(), 0),
+        .queue = device->GetQueue(family_indices.graphics_family.value()),
         .command_pool = VK_NULL_HANDLE
     };
 
     this->queue_transfer = {
         .family = family_indices.transfer_family.value(),
-        .queue = device->GetQueue(family_indices.transfer_family.value(), 0),
+        .queue = device->GetQueue(family_indices.transfer_family.value()),
         .command_pool = VK_NULL_HANDLE
     };
 
     this->queue_present = {
         .family = family_indices.present_family.value(),
-        .queue = device->GetQueue(family_indices.present_family.value(), 0),
+        .queue = device->GetQueue(family_indices.present_family.value()),
         .command_pool = VK_NULL_HANDLE
     };
 
     this->queue_compute = {
         .family = family_indices.compute_family.value(),
-        .queue = device->GetQueue(family_indices.compute_family.value(), 0),
+        .queue = device->GetQueue(family_indices.compute_family.value()),
         .command_pool = VK_NULL_HANDLE
     };
 

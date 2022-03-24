@@ -405,6 +405,7 @@ int main()
     AssertThrow(compute_cmd_result, "Failed to create compute commandbuffer: %s\n", compute_cmd_result.message);
     
     for (size_t i = 0; i < engine.GetInstance()->GetFrameHandler()->GetNumFrames(); i++) {
+        /* Wait for compute to finish */
         compute_semaphore_chain >> engine.GetInstance()->GetFrameHandler()
             ->GetPerFrameData()[i].Get<Frame>()
             ->GetPresentSemaphores();
@@ -439,8 +440,13 @@ int main()
     {
         auto container = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, render_pass_id);
         container->AddFramebuffer(my_fbo_id);
-        container->AddSpatial(v2::GraphicsPipeline::Spatial{
+        container->AddSpatial(&engine, v2::Spatial{
+            .id = 0,
             .mesh = monkey_mesh
+        });
+        container->AddSpatial(&engine, v2::Spatial{
+            .id = 1,
+            .mesh = cube_mesh
         });
         render_container_id = engine.AddGraphicsPipeline(std::move(container));
     }
@@ -562,7 +568,7 @@ int main()
             1, &imageMemoryBarrier);
 #endif
 
-        engine.m_swapchain_render_container->Get().BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);// Image memory barrier to make sure that compute shader writes are finished before sampling from the texture
+        engine.m_swapchain_render_container->Get().BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);
         
         frame->GetCommandBuffer()->RecordCommandsWithContext(
             [&](CommandBuffer *cmd) {

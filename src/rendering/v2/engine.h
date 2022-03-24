@@ -26,16 +26,12 @@ using renderer::Semaphore;
 using renderer::SemaphoreChain;
 using renderer::Image;
 using renderer::StorageBuffer;
-
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
  *
  */
 class Engine {
 public:
-
-    static constexpr size_t max_materials = 65536 / sizeof(MaterialData);
-    static constexpr size_t max_materials_bytes = max_materials * sizeof(MaterialData);
 
     enum TextureFormatDefault {
         TEXTURE_FORMAT_DEFAULT_NONE    = 0,
@@ -118,7 +114,15 @@ public:
     /* Materials - will all be jammed into a shader storage buffer object */
     template <class ...Args>
     Material::ID AddMaterial(std::unique_ptr<Material> &&material, Args &&... args)
-        { return m_materials.Add(this, std::move(material), &m_material_buffer, std::move(args)...); }
+    {
+        const auto id = m_materials.NextId();
+
+        AssertThrow(id.value - 1 < m_shader_storage_data.materials.Size());
+
+        m_materials.Add(this, std::move(material), &m_shader_storage_data.materials[id.value - 1], std::move(args)...);
+
+        return id;
+    }
 
     template <class ...Args>
     void RemoveMaterial(Material::ID id, Args &&... args)
@@ -171,6 +175,12 @@ public:
 
     std::unique_ptr<GraphicsPipeline> m_swapchain_render_container;
 
+
+    ShaderStorageData m_shader_storage_data;
+
+    StorageBuffer *m_material_storage_buffer;
+    StorageBuffer *m_object_storage_buffer;
+
 private:
     void InitializeInstance();
     void FindTextureFormatDefaults();
@@ -186,9 +196,6 @@ private:
     ObjectHolder<Material> m_materials;
     ObjectHolder<GraphicsPipeline> m_graphics_pipelines{.defer_create = true};
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
-
-    MaterialBuffer m_material_buffer;
-    StorageBuffer *m_material_uniform_buffer;
     
     std::unique_ptr<Instance> m_instance;
 };

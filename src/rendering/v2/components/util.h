@@ -75,10 +75,15 @@ struct ObjectHolder {
         return typename T::ID{0};
     }
 
+    auto NextId() const -> typename T::ID
+    {
+        return typename T::ID{typename T::ID::InnerType_t(objects.size() + 1)};
+    }
+
     template <class ...Args>
     auto Add(Engine *engine, std::unique_ptr<T> &&object, Args &&... args) -> typename T::ID
     {
-        typename T::ID result{};
+        auto result = NextId();
 
         if (!defer_create) {
             object->Create(engine, std::move(args)...);
@@ -98,7 +103,7 @@ struct ObjectHolder {
 
         objects.push_back(std::move(object));
 
-        return typename T::ID{typename T::ID::InnerType_t(objects.size())};
+        return result;
     }
 
     template<class ...Args>
