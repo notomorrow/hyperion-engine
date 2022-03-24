@@ -54,6 +54,16 @@ public:
     EnumOptions<TextureKey, Texture::ID, max_textures> m_textures;
 };
 
+struct alignas(256) MaterialData {
+    Vector4 albedo;
+    float metalness;
+    float roughness;
+};
+
+struct MaterialBuffer {
+    std::vector<MaterialData> m_material_data;
+};
+
 STUB_COMPONENT(Material);
 
 class Material : public EngineComponentBase<STUB_NAME(Material)> {
@@ -229,8 +239,8 @@ public:
     void SetParameter(MaterialKey key, const Parameter &value);
     void SetTexture(TextureSet::TextureKey key, Texture::ID id);
 
-    void Create(Engine *engine) {}
-    void Destroy(Engine *engine) {}
+    void Create(Engine *engine, MaterialBuffer *material_buffer);
+    void Destroy(Engine *engine);
 
     inline HashCode GetHashCode() const
     {

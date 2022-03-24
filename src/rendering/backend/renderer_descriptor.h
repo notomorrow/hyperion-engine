@@ -21,91 +21,18 @@ class Descriptor {
 public:
     enum class Mode {
         UNSET,
-        BUFFER,
-        IMAGE
+        UNIFORM_BUFFER,
+        UNIFORM_BUFFER_DYNAMIC,
+        IMAGE_SAMPLER,
+        IMAGE_STORAGE
     };
 
-    enum class StorageMode {
-        UNSET,
-        READ_ONLY,
-        STORAGE
-    };
+    struct SubDescriptor {
+        GPUBuffer *gpu_buffer = nullptr;
+        uint32_t range = 0; /* 0 --> gpu_buffer->size*/
 
-    struct BufferInfo {
-        Mode mode;
-        StorageMode storage_mode;
-
-        VkDescriptorBufferInfo buffer_info;
-        GPUBuffer *gpu_buffer;
-
-        std::vector<VkDescriptorImageInfo> image_info;
-        std::vector<ImageView *> image_views;
-        std::vector<Sampler *> samplers;
-
-        BufferInfo()
-            : mode(Mode::UNSET),
-              storage_mode(StorageMode::UNSET),
-              buffer_info{},
-              gpu_buffer(nullptr),
-              image_info{},
-              image_views{},
-              samplers{}
-        {}
-
-        explicit BufferInfo(GPUBuffer *gpu_buffer, StorageMode storage_mode)
-            : mode(Mode::BUFFER),
-              storage_mode(storage_mode),
-              buffer_info{},
-              gpu_buffer(gpu_buffer),
-              image_info{},
-              image_views{},
-              samplers{}
-        {}
-
-        explicit BufferInfo(const std::vector<ImageView *> &image_views, StorageMode storage_mode)
-            : mode(Mode::IMAGE),
-              storage_mode(storage_mode),
-              buffer_info{},
-              gpu_buffer(nullptr),
-              image_info{},
-              image_views(image_views),
-              samplers{}
-        {}
-
-        explicit BufferInfo(const std::vector<ImageView *> &image_views, const std::vector<Sampler *> &samplers, StorageMode storage_mode)
-            : mode(Mode::IMAGE),
-              storage_mode(storage_mode),
-              buffer_info{},
-              gpu_buffer(nullptr),
-              image_info{},
-              image_views(image_views),
-              samplers(samplers)
-        {}
-
-        BufferInfo(const BufferInfo &other)
-            : mode(other.mode),
-              storage_mode(other.storage_mode),
-              buffer_info(other.buffer_info),
-              gpu_buffer(other.gpu_buffer),
-              image_info(other.image_info),
-              image_views(other.image_views),
-              samplers(other.samplers)
-        {}
-
-        BufferInfo &operator=(const BufferInfo &other)
-        {
-            mode = other.mode;
-            storage_mode = other.storage_mode;
-            buffer_info = other.buffer_info;
-            gpu_buffer = other.gpu_buffer;
-            image_info = other.image_info;
-            image_views = other.image_views;
-            samplers = other.samplers;
-
-            return *this;
-        }
-
-        ~BufferInfo() = default;
+        ImageView *image_view = nullptr;
+        Sampler *sampler = nullptr;
     };
 
     struct Info {
@@ -118,7 +45,7 @@ public:
         DESCRIPTOR_DIRTY = 1
     };
 
-    Descriptor(uint32_t binding, const BufferInfo &info, VkDescriptorType type, VkShaderStageFlags stage_flags);
+    Descriptor(uint32_t binding, Mode mode, VkShaderStageFlags stage_flags);
     Descriptor(const Descriptor &other) = delete;
     Descriptor &operator=(const Descriptor &other) = delete;
     ~Descriptor();
@@ -129,23 +56,44 @@ public:
     inline State GetState() const { return m_state; }
     inline void SetState(State state) { m_state = state; }
 
-    inline GPUBuffer *GetGPUBuffer() { return m_info.gpu_buffer; }
+    inline const std::vector<SubDescriptor> &GetSubDescriptors() const { return m_sub_descriptors; }
+    inline Descriptor *AddSubDescriptor(SubDescriptor &&sub_descriptor)
+    {
+        m_sub_descriptors.push_back(std::move(sub_descriptor));
+
+        return this;
+    }
+
+    /*inline GPUBuffer *GetGPUBuffer() { return m_info.gpu_buffer; }
     inline const GPUBuffer *GetGPUBuffer() const { return m_info.gpu_buffer; }
     inline std::vector<ImageView *> &GetImageViews() { return m_info.image_views; }
     inline const std::vector<ImageView *> &GetImageView() const { return m_info.image_views; }
     inline std::vector<Sampler *> &GetSamplers() { return m_info.samplers; }
-    inline const std::vector<Sampler *> &GetSamplers() const { return m_info.samplers; }
+    inline const std::vector<Sampler *> &GetSamplers() const { return m_info.samplers; }*/
+
+    template <class Struct>
+    uint32_t GetDynamicOffset(size_t index) const
+    {
+        
+    }
 
     void Create(Device *device, Info *out_info);
     void Destroy(Device *device);
-    void Update(Device *device, size_t size, void *ptr);
 
 protected:
-    BufferInfo m_info;
+    struct BufferInfo {
+        std::vector<VkDescriptorBufferInfo> buffers;
+        std::vector<VkDescriptorImageInfo> images;
+    };
+
+    static VkDescriptorType GetDescriptorType(Mode mode);
+
+    std::vector<SubDescriptor> m_sub_descriptors;
+    BufferInfo m_sub_descriptor_buffer;
     State m_state;
     
     uint32_t m_binding;
-    VkDescriptorType m_type;
+    Mode m_mode;
     VkShaderStageFlags m_stage_flags;
 
 private:
@@ -155,38 +103,40 @@ private:
 class BufferDescriptor : public Descriptor {
 public:
     BufferDescriptor(uint32_t binding,
-        GPUBuffer *gpu_buffer,
-        VkDescriptorType type,
         VkShaderStageFlags stage_flags)
         : Descriptor(
             binding,
-            BufferInfo(gpu_buffer, StorageMode::READ_ONLY),
-            type,
+            Mode::UNIFORM_BUFFER,
+            stage_flags) {}
+};
+
+class DynamicBufferDescriptor : public Descriptor {
+public:
+    DynamicBufferDescriptor(uint32_t binding,
+        VkShaderStageFlags stage_flags)
+        : Descriptor(
+            binding,
+            Mode::UNIFORM_BUFFER_DYNAMIC,
             stage_flags) {}
 };
 
 class ImageSamplerDescriptor : public Descriptor {
 public:
     ImageSamplerDescriptor(uint32_t binding,
-        const std::vector<ImageView *> &image_views,
-        const std::vector<Sampler *> &samplers,
         VkShaderStageFlags stage_flags)
         : Descriptor(
             binding,
-            BufferInfo(image_views, samplers, StorageMode::READ_ONLY),
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            Mode::IMAGE_SAMPLER,
             stage_flags) {}
 };
 
 class ImageStorageDescriptor : public Descriptor {
 public:
     ImageStorageDescriptor(uint32_t binding,
-        non_owning_ptr<ImageView> image_view,
         VkShaderStageFlags stage_flags)
         : Descriptor(
             binding,
-            BufferInfo({image_view.get()}, StorageMode::STORAGE),
-            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            Mode::IMAGE_STORAGE,
             stage_flags) {}
 };
 

@@ -29,8 +29,6 @@ class Engine;
 
 class RenderContainer : public EngineComponent<renderer::GraphicsPipeline> {
 public:
-    static constexpr size_t max_materials = 16;
-
     struct Spatial {
         std::shared_ptr<Mesh> mesh; /* TMP */
         MeshInputAttributeSet attributes;
@@ -50,17 +48,11 @@ public:
 
     void AddSpatial(Spatial &&spatial);
 
-    /* Materials (owned) */
-    Material::ID AddMaterial(Engine *engine, std::unique_ptr<Material> &&material);
-    inline constexpr const Material *GetMaterial(Material::ID id) const
-        { return m_materials.Get(id); }
-
     /* Non-owned objects - owned by `engine`, used by the pipeline */
 
     inline void AddFramebuffer(Framebuffer::ID id) { m_fbo_ids.Add(id); }
     inline void RemoveFramebuffer(Framebuffer::ID id) { m_fbo_ids.Remove(id); }
     
-    void PrepareDescriptors(Engine *engine);
     /* Build pipeline */
     void Create(Engine *engine);
     void Destroy(Engine *engine);
@@ -68,31 +60,15 @@ public:
     void Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
 
 private:
-    void CreateMaterialUniformBuffer(Engine *engine);
-    void DestroyMaterialUniformBuffer(Engine *engine);
-    void UpdateDescriptorSet(DescriptorSet *);
-
     Shader::ID m_shader_id;
     RenderPass::ID m_render_pass_id;
     MeshInputAttributeSet m_vertex_attributes;
     VkPrimitiveTopology m_topology;
-    ObjectHolder<Material> m_materials;
 
     ObjectIdHolder<Texture> m_texture_ids;
     ObjectIdHolder<Framebuffer> m_fbo_ids;
 
     std::vector<Spatial> m_spatials;
-
-    struct InternalData {
-        struct alignas(16) MaterialData {
-            Vector4 albedo;
-            float metalness;
-            float roughness;
-        };
-
-        std::array<MaterialData, max_materials> material_parameters;
-        UniformBuffer *material_uniform_buffer = nullptr;
-    } m_internal;
 };
 
 } // namespace hyperion::v2

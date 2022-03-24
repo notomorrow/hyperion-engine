@@ -34,10 +34,14 @@ Engine::~Engine()
     m_render_passes.RemoveAll(this);
     m_shaders.RemoveAll(this);
     m_textures.RemoveAll(this);
+    m_materials.RemoveAll(this);
     m_compute_pipelines.RemoveAll(this);
 
     m_swapchain_render_container->Destroy(this);
     m_render_containers.RemoveAll(this);
+
+    m_material_uniform_buffer->Destroy(m_instance->GetDevice());
+    delete m_material_uniform_buffer;
 
     m_instance->Destroy();
 }
@@ -188,11 +192,38 @@ void Engine::PrepareSwapchain()
     }
 
     m_swapchain_render_container->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
-    m_swapchain_render_container->PrepareDescriptors(this);
 }
 
-void Engine::BuildPipelines()
+void Engine::Initialize()
 {
+    InitializeInstance();
+    FindTextureFormatDefaults();
+
+    /* Material uniform buffer - all materials are added into
+     * this buffer and will be dynamically swapped in and out
+     */
+    AssertThrow(m_material_buffer.m_material_data.size() * sizeof(MaterialData) <= max_materials_bytes);
+
+    m_material_uniform_buffer = new UniformBuffer();
+    m_material_uniform_buffer->Create(m_instance->GetDevice(), max_materials_bytes);
+    /* for render container materials */
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
+        ->AddDescriptor<renderer::DynamicBufferDescriptor>(0, VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddSubDescriptor({
+            .gpu_buffer = m_material_uniform_buffer,
+            .range = sizeof(MaterialData)
+        });
+}
+
+void Engine::Compile()
+{
+    /* Finalize materials */
+    m_material_uniform_buffer->Copy(
+        m_instance->GetDevice(),
+        m_material_buffer.m_material_data.size() * sizeof(MaterialData),
+        m_material_buffer.m_material_data.data()
+    );
+
     /* Finalize descriptor pool */
     auto descriptor_pool_result = m_instance->GetDescriptorPool().Create(m_instance->GetDevice());
     AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
@@ -202,12 +233,6 @@ void Engine::BuildPipelines()
     m_swapchain_render_container->Create(this);
     m_render_containers.CreateAll(this);
     m_compute_pipelines.CreateAll(this);
-}
-
-void Engine::Initialize()
-{
-    InitializeInstance();
-    FindTextureFormatDefaults();
 }
 
 void Engine::RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index)
@@ -221,7 +246,7 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer)
 
     pipeline.Bind(command_buffer);
 
-    m_instance->GetDescriptorPool().BindDescriptorSets(command_buffer, &pipeline);
+    m_instance->GetDescriptorPool().BindDescriptorSets(command_buffer, &pipeline, 0, 3);
 
     Filter::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
 }

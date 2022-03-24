@@ -28,8 +28,13 @@ public:
 
     inline Descriptor::State GetState() const { return m_state; }
 
-    // return this
-    DescriptorSet &AddDescriptor(std::unique_ptr<Descriptor> &&);
+    template <class DescriptorType, class ...Args>
+    Descriptor *AddDescriptor(Args &&... args)
+    {
+        m_descriptors.push_back(std::make_unique<DescriptorType>(std::move(args)...));
+
+        return m_descriptors.back().get();
+    }
 
     inline Descriptor *GetDescriptor(size_t index) { return m_descriptors[index].get(); }
     inline const Descriptor *GetDescriptor(size_t index) const { return m_descriptors[index].get(); }

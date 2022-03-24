@@ -51,7 +51,7 @@ public:
     Result Create(Device *device);
     Result Destroy(Device *device);
     Result BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *pipeline);
-    Result BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *pipeline, uint32_t start_index, uint32_t size);
+    Result BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *pipeline, uint32_t start_index, uint32_t size, uint32_t num_dynamic_offets = 0, const uint32_t *dynamic_offsets = nullptr);
     Result BindDescriptorSets(CommandBuffer *cmd, ComputePipeline *pipeline);
     Result BindDescriptorSets(CommandBuffer *cmd, ComputePipeline *pipeline, uint32_t start_index, uint32_t size);
 

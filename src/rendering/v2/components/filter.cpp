@@ -81,12 +81,14 @@ void Filter::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
     const uint32_t num_attachments = engine->GetFramebuffer(m_framebuffer_id)->Get().GetNumAttachments();
 
     for (uint32_t i = 0; i < num_attachments; i++) {
-        descriptor_set->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-            binding_offset++,
-            std::vector{ engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i].image_view.get() },
-            std::vector{ engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i].sampler.get() },
-            VK_SHADER_STAGE_FRAGMENT_BIT
-        ));
+        const auto &attachment_info = engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i];
+
+        descriptor_set
+            ->AddDescriptor<ImageSamplerDescriptor>(binding_offset++, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddSubDescriptor({
+                .image_view = attachment_info.image_view.get(),
+                .sampler = attachment_info.sampler.get()
+            });
     }
 }
 
@@ -95,6 +97,10 @@ void Filter::CreatePipeline(Engine *engine)
     auto render_container = std::make_unique<RenderContainer>(m_shader_id, m_render_pass_id);
     render_container->AddFramebuffer(m_framebuffer_id);
     render_container->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+
+    /*auto mat1 = std::make_unique<v2::Material>();
+    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 1.0f, 0.0f, 1.0f }));
+    render_container->AddMaterial(engine, std::move(mat1));*/
 
     m_pipeline_id = engine->AddRenderContainer(std::move(render_container));
 }
@@ -121,10 +127,10 @@ void Filter::Destroy(Engine *engine)
 
     AssertThrowMsg(result, "%s", result.message);
 
-    // engine->RemoveShader(m_shader_id);
-    //engine->RemoveFramebuffer(m_framebuffer_id);
-    //engine->RemovePipeline(m_pipeline_id);
-    //engine->RemoveRenderPass(m_render_pass_id)
+    engine->RemoveShader(m_shader_id);
+    engine->RemoveFramebuffer(m_framebuffer_id);
+    engine->RemoveRenderContainer(m_pipeline_id);
+    engine->RemoveRenderPass(m_render_pass_id);
 }
 
 void Filter::Record(Engine *engine, uint32_t frame_index)
@@ -145,8 +151,11 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
 
                 pipeline->Get().Bind(cmd);
 
+                /* TODO: for testing. multiply by 0 for a red material, 1 for blue */
+                uint32_t offsets[] = { 0 * sizeof(MaterialData) };
+
                 HYPERION_PASS_ERRORS(
-                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, &pipeline->Get()),
+                    engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, &pipeline->Get(), 0, 4, 1, offsets),
                     result
                 );
                 

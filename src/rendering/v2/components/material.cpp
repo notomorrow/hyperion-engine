@@ -34,6 +34,20 @@ Material &Material::operator=(Material &&other)
 
 Material::~Material() = default;
 
+void Material::Create(Engine *engine, MaterialBuffer *material_buffer)
+{
+    material_buffer->m_material_data.push_back(MaterialData{
+        .albedo = GetParameter<Vector4>(Material::MATERIAL_KEY_ALBEDO),
+        .metalness = GetParameter<float>(Material::MATERIAL_KEY_METALNESS),
+        .roughness = GetParameter<float>(Material::MATERIAL_KEY_ROUGHNESS)
+    });
+}
+
+void Material::Destroy(Engine *engine)
+{
+    
+}
+
 void Material::SetParameter(MaterialKey key, const Parameter &value)
 {
     m_parameters.Set(key, value);
