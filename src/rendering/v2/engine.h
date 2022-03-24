@@ -26,6 +26,7 @@ using renderer::Device;
 using renderer::Semaphore;
 using renderer::SemaphoreChain;
 using renderer::Image;
+using renderer::StorageBuffer;
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
@@ -189,7 +190,7 @@ private:
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
 
     MaterialBuffer m_material_buffer;
-    UniformBuffer *m_material_uniform_buffer;
+    StorageBuffer *m_material_uniform_buffer;
     
     std::unique_ptr<Instance> m_instance;
 };

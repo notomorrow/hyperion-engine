@@ -204,11 +204,11 @@ void Engine::Initialize()
      */
     AssertThrow(m_material_buffer.m_material_data.size() * sizeof(MaterialData) <= max_materials_bytes);
 
-    m_material_uniform_buffer = new UniformBuffer();
+    m_material_uniform_buffer = new StorageBuffer();
     m_material_uniform_buffer->Create(m_instance->GetDevice(), max_materials_bytes);
     /* for render container materials */
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
-        ->AddDescriptor<renderer::DynamicBufferDescriptor>(0, VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0, VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
             .gpu_buffer = m_material_uniform_buffer,
             .range = sizeof(MaterialData)

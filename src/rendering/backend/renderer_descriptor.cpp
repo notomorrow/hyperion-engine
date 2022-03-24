@@ -24,6 +24,8 @@ void Descriptor::Create(Device *device, Descriptor::Info *out_info)
         switch (m_mode) {
         case Mode::UNIFORM_BUFFER: /* fallthrough */
         case Mode::UNIFORM_BUFFER_DYNAMIC:
+        case Mode::STORAGE_BUFFER:
+        case Mode::STORAGE_BUFFER_DYNAMIC:
             AssertThrow(sub.gpu_buffer != nullptr);
             AssertThrow(sub.gpu_buffer->buffer != nullptr);
 
@@ -66,6 +68,8 @@ void Descriptor::Create(Device *device, Descriptor::Info *out_info)
 
 
             break;
+        default:
+            AssertThrowMsg(false, "unhandled descriptor type");
         }
     }
 
@@ -97,6 +101,8 @@ VkDescriptorType Descriptor::GetDescriptorType(Mode mode)
     switch (mode) {
     case Mode::UNIFORM_BUFFER: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     case Mode::UNIFORM_BUFFER_DYNAMIC: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    case Mode::STORAGE_BUFFER: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case Mode::STORAGE_BUFFER_DYNAMIC: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
     case Mode::IMAGE_SAMPLER: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     case Mode::IMAGE_STORAGE: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     default:
