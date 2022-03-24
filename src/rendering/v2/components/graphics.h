@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_RENDER_CONTAINER_H
-#define HYPERION_V2_RENDER_CONTAINER_H
+#ifndef HYPERION_V2_GRAPHICS_H
+#define HYPERION_V2_GRAPHICS_H
 
 #include "material.h"
 #include "shader.h"
@@ -27,7 +27,7 @@ using renderer::MeshInputAttributeSet;
 
 class Engine;
 
-class RenderContainer : public EngineComponent<renderer::GraphicsPipeline> {
+class GraphicsPipeline : public EngineComponent<renderer::GraphicsPipeline> {
 public:
     struct Spatial {
         std::shared_ptr<Mesh> mesh; /* TMP */
@@ -36,10 +36,10 @@ public:
         Material::ID material_id;
     };
 
-    RenderContainer(Shader::ID shader_id, RenderPass::ID render_pass_id);
-    RenderContainer(const RenderContainer &other) = delete;
-    RenderContainer &operator=(const RenderContainer &other) = delete;
-    ~RenderContainer();
+    GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_pass_id);
+    GraphicsPipeline(const GraphicsPipeline &other) = delete;
+    GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
+    ~GraphicsPipeline();
 
     inline VkPrimitiveTopology GetTopology() const
         { return m_topology; }

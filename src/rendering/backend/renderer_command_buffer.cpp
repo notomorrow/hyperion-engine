@@ -92,10 +92,10 @@ Result CommandBuffer::End(Device *device)
 
 Result CommandBuffer::Reset(Device *device)
 {
-    /*HYPERION_VK_CHECK_MSG(
+    HYPERION_VK_CHECK_MSG(
         vkResetCommandBuffer(m_command_buffer, 0),
         "Failed to reset command buffer"
-    );*/
+    );
 
     HYPERION_RETURN_OK;
 }

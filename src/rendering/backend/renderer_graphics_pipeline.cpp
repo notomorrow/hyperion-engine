@@ -22,15 +22,6 @@ GraphicsPipeline::GraphicsPipeline()
       scissor{}
 {
 }
-GraphicsPipeline::GraphicsPipeline(ConstructionInfo &&construction_info)
-    : m_construction_info(std::move(construction_info)),
-      pipeline{},
-      layout{},
-      push_constants{},
-      viewport{},
-      scissor{}
-{
-}
 
 GraphicsPipeline::~GraphicsPipeline()
 {
@@ -53,16 +44,6 @@ void GraphicsPipeline::SetScissor(int x, int y, uint32_t width, uint32_t height)
 {
     this->scissor.offset = { x, y };
     this->scissor.extent = { width, height };
-}
-
-void GraphicsPipeline::SetDynamicStates(const std::vector<VkDynamicState> &_states)
-{
-    this->dynamic_states = _states;
-}
-
-std::vector<VkDynamicState> GraphicsPipeline::GetDynamicStates()
-{
-    return this->dynamic_states;
 }
 
 void GraphicsPipeline::UpdateDynamicStates(VkCommandBuffer cmd)
@@ -148,13 +129,6 @@ void GraphicsPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescri
     this->vertex_attributes = attribs;
 }
 
-Result GraphicsPipeline::Create(Device *device, DescriptorPool *descriptor_pool)
-{
-    auto construction_info = std::move(m_construction_info);
-
-    return Create(device, std::move(construction_info), descriptor_pool);
-}
-
 Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool)
 {
     m_construction_info = std::move(construction_info);
@@ -212,10 +186,10 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     switch (m_construction_info.cull_mode) {
-    case ConstructionInfo::CullMode::BACK:
+    case CullMode::BACK:
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
         break;
-    case ConstructionInfo::CullMode::FRONT:
+    case CullMode::FRONT:
         rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
         break;
     default:
@@ -260,7 +234,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     /* Dynamic states; these are the values that can be changed without
      * rebuilding the rendering pipeline. */
     VkPipelineDynamicStateCreateInfo dynamic_state{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-    const auto states = this->GetDynamicStates();
+    const auto &states = this->GetDynamicStates();
 
     dynamic_state.dynamicStateCount = uint32_t(states.size());
     dynamic_state.pDynamicStates = states.data();

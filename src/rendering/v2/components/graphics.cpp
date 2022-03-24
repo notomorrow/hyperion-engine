@@ -1,4 +1,4 @@
-#include "render_container.h"
+#include "graphics.h"
 #include "../engine.h"
 
 #include <rendering/backend/renderer_descriptor.h>
@@ -7,7 +7,7 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 
-RenderContainer::RenderContainer(Shader::ID shader_id, RenderPass::ID render_pass_id)
+GraphicsPipeline::GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_pass_id)
     : m_shader_id(shader_id),
       m_render_pass_id(render_pass_id),
       m_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
@@ -19,14 +19,13 @@ RenderContainer::RenderContainer(Shader::ID shader_id, RenderPass::ID render_pas
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT))
 {
-    /* TMP */
 }
 
-RenderContainer::~RenderContainer()
+GraphicsPipeline::~GraphicsPipeline()
 {
 }
 
-void RenderContainer::AddSpatial(Spatial &&spatial)
+void GraphicsPipeline::AddSpatial(Spatial &&spatial)
 {
     /* append any attributes not yet added */
     m_vertex_attributes.Merge(spatial.attributes);
@@ -34,7 +33,7 @@ void RenderContainer::AddSpatial(Spatial &&spatial)
     m_spatials.push_back(std::move(spatial));
 }
 
-void RenderContainer::Create(Engine *engine)
+void GraphicsPipeline::Create(Engine *engine)
 {
     auto *shader = engine->GetShader(m_shader_id);
     AssertThrow(shader != nullptr);
@@ -46,7 +45,7 @@ void RenderContainer::Create(Engine *engine)
     renderer::GraphicsPipeline::ConstructionInfo construction_info{
         .vertex_attributes = m_vertex_attributes,
         .topology = m_topology,
-        .cull_mode = renderer::GraphicsPipeline::ConstructionInfo::CullMode::BACK,
+        .cull_mode = renderer::GraphicsPipeline::CullMode::BACK,
         .depth_test = true,
         .depth_write = true,
         .shader = &shader->Get(),
@@ -55,8 +54,6 @@ void RenderContainer::Create(Engine *engine)
 
     for (const auto &fbo_id : m_fbo_ids.ids) {
         if (auto *fbo = engine->GetFramebuffer(fbo_id)) {
-            AssertThrow(fbo != nullptr);
-
             construction_info.fbos.push_back(&fbo->Get());
         }
     }
@@ -64,19 +61,19 @@ void RenderContainer::Create(Engine *engine)
     EngineComponent::Create(engine, std::move(construction_info), &engine->GetInstance()->GetDescriptorPool());
 }
 
-void RenderContainer::Destroy(Engine *engine)
+void GraphicsPipeline::Destroy(Engine *engine)
 {
     EngineComponent::Destroy(engine);
 }
 
-void RenderContainer::Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
+void GraphicsPipeline::Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
 {
     auto *instance = engine->GetInstance();
 
     m_wrapped.BeginRenderPass(command_buffer, frame_index, VK_SUBPASS_CONTENTS_INLINE);
     m_wrapped.Bind(command_buffer);
 
-    instance->GetDescriptorPool().BindDescriptorSets(command_buffer, &m_wrapped);
+    instance->GetDescriptorPool().BindDescriptorSets(command_buffer, &m_wrapped, 0, 3);
 
     /* TMP */
     for (auto &spatial : m_spatials) {

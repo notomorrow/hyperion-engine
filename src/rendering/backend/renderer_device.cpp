@@ -63,7 +63,8 @@ std::vector<const char *> Device::GetRequiredExtensions() {
     return this->required_extensions;
 }
 
-QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface) {
+QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+{
     QueueFamilyIndices indices;
 
     uint32_t queue_family_count = 0;

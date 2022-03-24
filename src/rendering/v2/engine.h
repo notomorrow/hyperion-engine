@@ -6,10 +6,9 @@
 #include "components/framebuffer.h"
 #include "components/compute.h"
 #include "components/util.h"
-#include "components/render_container.h"
+#include "components/graphics.h"
 #include "components/material.h"
 #include "components/texture.h"
-#include "components/render_container.h"
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
@@ -35,7 +34,6 @@ using renderer::StorageBuffer;
 class Engine {
 public:
 
-    /* 64kb maximum size, until materials are stored in SSBO rather than UBO */
     static constexpr size_t max_materials = 65536 / sizeof(MaterialData);
     static constexpr size_t max_materials_bytes = max_materials * sizeof(MaterialData);
 
@@ -137,18 +135,18 @@ public:
      * so that we can reuse pipelines
      */
     template <class ...Args>
-    RenderContainer::ID AddRenderContainer(std::unique_ptr<RenderContainer> &&render_container, Args &&... args)
-        { return m_render_containers.Add(this, std::move(render_container), std::move(args)...); }
+    GraphicsPipeline::ID AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&render_container, Args &&... args)
+        { return m_graphics_pipelines.Add(this, std::move(render_container), std::move(args)...); }
 
     template <class ...Args>
-    void RemoveRenderContainer(RenderContainer::ID id, Args &&... args)
-        { return m_render_containers.Remove(this, id, std::move(args)...); }
+    void RemoveGraphicsPipeline(GraphicsPipeline::ID id, Args &&... args)
+        { return m_graphics_pipelines.Remove(this, id, std::move(args)...); }
 
-    inline RenderContainer *GetRenderContainer(RenderContainer::ID id)
-        { return m_render_containers.Get(id); }
+    inline GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id)
+        { return m_graphics_pipelines.Get(id); }
 
-    inline const RenderContainer *GetRenderContainer(RenderContainer::ID id) const
-        { return const_cast<Engine*>(this)->GetRenderContainer(id); }
+    inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
+        { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
 
     /* Pipelines will be deferred until descriptor sets are built */
     template <class ...Args>
@@ -171,7 +169,7 @@ public:
     void RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer);
 
-    std::unique_ptr<RenderContainer> m_swapchain_render_container;
+    std::unique_ptr<GraphicsPipeline> m_swapchain_render_container;
 
 private:
     void InitializeInstance();
@@ -186,7 +184,7 @@ private:
     ObjectHolder<Framebuffer> m_framebuffers;
     ObjectHolder<RenderPass> m_render_passes;
     ObjectHolder<Material> m_materials;
-    ObjectHolder<RenderContainer> m_render_containers{.defer_create = true};
+    ObjectHolder<GraphicsPipeline> m_graphics_pipelines{.defer_create = true};
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
 
     MaterialBuffer m_material_buffer;
