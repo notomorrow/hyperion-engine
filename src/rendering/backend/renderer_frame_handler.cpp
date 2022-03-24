@@ -18,7 +18,7 @@ Result FrameHandler::CreateFrames(Device *device)
 {
     AssertThrow(m_per_frame_data.GetNumFrames() >= 1);
     
-    for (size_t i = 0; i < m_per_frame_data.GetNumFrames(); i++) {
+    for (uint32_t i = 0; i < m_per_frame_data.GetNumFrames(); i++) {
         auto frame = std::make_unique<Frame>();
 
         HYPERION_BUBBLE_ERRORS(frame->Create(device, non_owning_ptr(m_per_frame_data[i].Get<CommandBuffer>())));
@@ -35,7 +35,8 @@ Result FrameHandler::AcquireNextImage(Device *device, Swapchain *swapchain, VkRe
 {
     auto *frame = GetCurrentFrameData().Get<Frame>();
 
-    VkResult fence_result;
+    VkResult fence_result{};
+
     do {
         fence_result = vkWaitForFences(device->GetDevice(), 1, &frame->fc_queue_submit, VK_TRUE, UINT64_MAX);
     } while (fence_result == VK_TIMEOUT);
@@ -53,7 +54,7 @@ Result FrameHandler::AcquireNextImage(Device *device, Swapchain *swapchain, VkRe
 
 Result FrameHandler::CreateCommandBuffers(Device *device, VkCommandPool pool)
 {
-    Result result = Result::OK;
+    auto result = Result::OK;
 
     for (uint32_t i = 0; i < m_per_frame_data.GetNumFrames(); i++) {
         auto command_buffer = std::make_unique<CommandBuffer>(
@@ -72,7 +73,7 @@ Result FrameHandler::CreateCommandBuffers(Device *device, VkCommandPool pool)
 
 Result FrameHandler::Destroy(Device *device, VkCommandPool pool)
 {
-    Result result = Result::OK;
+    auto result = Result::OK;
 
     for (uint32_t i = 0; i < m_per_frame_data.GetNumFrames(); i++) {
         HYPERION_PASS_ERRORS(m_per_frame_data[i].Get<CommandBuffer>()->Destroy(device, pool), result);

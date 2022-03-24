@@ -220,9 +220,8 @@ Result Instance::SetupDebugMessenger() {
     messenger_info.pfnUserCallback = &DebugCallback;
     messenger_info.pUserData       = nullptr;
 
-    auto result = CreateDebugUtilsMessengerEXT(this->instance, &messenger_info, nullptr, &this->debug_messenger);
-    if (result != VK_SUCCESS)
-        HYPERION_RETURN_OK;
+    HYPERION_VK_CHECK(CreateDebugUtilsMessengerEXT(this->instance, &messenger_info, nullptr, &this->debug_messenger));
+
     DebugLog(LogType::Info, "Using Vulkan Debug Messenger\n");
 #endif
     HYPERION_RETURN_OK;
@@ -233,7 +232,7 @@ Result Instance::Initialize(bool load_debug_layers) {
     this->SetCurrentWindow(this->system.GetCurrentWindow());
 
     /* Set up our debug and validation layers */
-    if (load_debug_layers) HYPERION_IGNORE_ERRORS(this->SetupDebug());
+    if (load_debug_layers) HYPERION_BUBBLE_ERRORS(this->SetupDebug());
 
     VkApplicationInfo app_info{VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app_info.pApplicationName = app_name;
@@ -479,7 +478,9 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
 
     /* Create command pools for queues that require one */
     HYPERION_BUBBLE_ERRORS(this->CreateCommandPool(this->queue_graphics));
+    DebugLog(LogType::Debug, "gfx QUEUE INDEX %p\n",(void *)(queue_graphics.command_pool));
     HYPERION_BUBBLE_ERRORS(this->CreateCommandPool(this->queue_compute));
+    DebugLog(LogType::Debug, "compute QUEUE INDEX %p\n", (void *)(queue_compute.command_pool));
 
     HYPERION_RETURN_OK;
 }

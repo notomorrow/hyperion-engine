@@ -41,6 +41,10 @@ public:
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();
 
+    inline Shader::ID GetShaderID() const { return m_shader_id; }
+    inline RenderPass::ID GetRenderPassID() const { return m_render_pass_id; }
+    inline const MeshInputAttributeSet &GetVertexAttributes() const { return m_vertex_attributes; }
+
     inline VkPrimitiveTopology GetTopology() const
         { return m_topology; }
     inline void SetTopology(VkPrimitiveTopology topology)
@@ -58,6 +62,7 @@ public:
     void Destroy(Engine *engine);
 
     void Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
+    void Render(Engine *engine, CommandBuffer *primary_command_buffer, CommandBuffer *secondary_command_buffer, uint32_t frame_index);
 
 private:
     Shader::ID m_shader_id;
