@@ -650,22 +650,6 @@ int main()
         Image::WrapMode::TEXTURE_WRAP_REPEAT
     );
 
-
-    // test image
-    auto texture2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/grass.jpg");
-    Image *image2 = new TextureImage2D(
-        texture2->GetWidth(),
-        texture2->GetHeight(),
-        Image::InternalFormat(texture2->GetInternalFormat()),
-        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        texture2->GetBytes()
-    );
-
-    ImageView test_image_view2;
-    Sampler test_sampler2(
-        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        Image::WrapMode::TEXTURE_WRAP_REPEAT
-    );
 #endif
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -790,21 +774,6 @@ int main()
         AssertThrowMsg(sampler_result, "%s", sampler_result.message);
     }
     {
-        auto image_create_result = image2->Create(
-            device,
-            engine.GetInstance(),
-            Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
-            Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
-        );
-        AssertThrowMsg(image_create_result, "%s", image_create_result.message);
-
-        auto image_view_result = test_image_view2.Create(device, image2);
-        AssertThrowMsg(image_view_result, "%s", image_view_result.message);
-
-        auto sampler_result = test_sampler2.Create(device, &test_image_view2);
-        AssertThrowMsg(sampler_result, "%s", sampler_result.message);
-    }
-    {
         auto image_create_result = image_storage->Create(
             device,
             engine.GetInstance(),
@@ -835,9 +804,6 @@ int main()
     scene_pass_container->AddFramebuffer(my_fbo_id);
 
     auto scene_pass_pipeline_id = engine.AddRenderContainer(std::move(scene_pass_container));
-
-    
-
     //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
 
     float timer = 0.0;
