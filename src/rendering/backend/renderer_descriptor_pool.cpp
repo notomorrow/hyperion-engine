@@ -116,9 +116,9 @@ Result DescriptorPool::BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *
     return BindDescriptorSets(cmd, pipeline, 0, m_num_descriptor_sets);
 }
 
-Result DescriptorPool::BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *pipeline, uint32_t start_index, uint32_t size)
+Result DescriptorPool::BindDescriptorSets(CommandBuffer *cmd, GraphicsPipeline *pipeline, uint32_t start_index, uint32_t size, uint32_t num_dynamic_offets, const uint32_t *dynamic_offsets)
 {
-    vkCmdBindDescriptorSets(cmd->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, size, &m_descriptor_sets_view[start_index], 0, nullptr);
+    vkCmdBindDescriptorSets(cmd->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->layout, 0, size, &m_descriptor_sets_view[start_index], num_dynamic_offets, dynamic_offsets);
 
     HYPERION_RETURN_OK;
 }

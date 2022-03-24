@@ -31,7 +31,7 @@ struct Material {
 };
 
 layout(std430, set = 3, binding = 0) uniform UniformBufferObject {
-    Material materials[16];
+    Material materials;
 } ubo;
 
 layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
@@ -59,5 +59,5 @@ void main()
     //imageStore(image_storage_test, ivec2(0, 0), vec4(1.0, 0.0, 0.0, 1.0));
 
     //color_output = (t0 + t1 + t2 + t3 + t4) / 5.0;//
-    color_output = vec4(vec3(max(NdotL, 0.025)) * albedo.rgb * ubo.materials[push_constants.material_index].albedo.rgb, 1.0);
+    color_output = vec4(vec3(max(NdotL, 0.025)) * albedo.rgb * ubo.materials.albedo.rgb, 1.0);
 }

@@ -12,13 +12,6 @@ DescriptorSet::~DescriptorSet()
 {
 }
 
-DescriptorSet &DescriptorSet::AddDescriptor(std::unique_ptr<Descriptor> &&descriptor)
-{
-    m_descriptors.emplace_back(std::move(descriptor));
-
-    return *this;
-}
-
 Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
 {
     std::vector<VkWriteDescriptorSet> writes;

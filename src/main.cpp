@@ -715,17 +715,22 @@ int main()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBALS);
 
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<BufferDescriptor>(0, &matrices_descriptor_buffer, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
+            ->AddDescriptor<BufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddSubDescriptor({ .gpu_buffer = &matrices_descriptor_buffer });
 
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<BufferDescriptor>(1, &scene_data_descriptor_buffer, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
+            ->AddDescriptor<BufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddSubDescriptor({ .gpu_buffer = &scene_data_descriptor_buffer });
 
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(2, std::vector{ &test_image_view, &test_image_view2 }, std::vector{ &test_sampler, &test_sampler2 }, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
+            ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler })
+            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         descriptor_set_globals
-            ->AddDescriptor(std::make_unique<ImageStorageDescriptor>(3, non_owning_ptr(&image_storage_view), VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT));
+            ->AddDescriptor<ImageStorageDescriptor>(3, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddSubDescriptor({ .image_view = &image_storage_view });
 #endif
     }
 
@@ -735,39 +740,35 @@ int main()
 
         /* Albedo texture */
         descriptor_set_pass
-            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-                0,
-                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].image_view.get() },
-                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].sampler.get() },
-                VK_SHADER_STAGE_FRAGMENT_BIT
-            ));
+            ->AddDescriptor<ImageSamplerDescriptor>(0, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddSubDescriptor({
+                .image_view = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].image_view.get(),
+                .sampler = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[0].sampler.get()
+            });
 
         /* Normals texture*/
         descriptor_set_pass
-            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-                1,
-                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].image_view.get() },
-                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].sampler.get() },
-                VK_SHADER_STAGE_FRAGMENT_BIT
-            ));
+            ->AddDescriptor<ImageSamplerDescriptor>(1, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddSubDescriptor({
+                .image_view = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].image_view.get(),
+                .sampler = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].sampler.get()
+            });
 
         /* Position texture */
         descriptor_set_pass
-            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-                2,
-                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].image_view.get() },
-                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].sampler.get() },
-                VK_SHADER_STAGE_FRAGMENT_BIT
-            ));
+            ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddSubDescriptor({
+                .image_view = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].image_view.get(),
+                .sampler = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].sampler.get()
+            });
 
         /* Depth texture */
         descriptor_set_pass
-            ->AddDescriptor(std::make_unique<ImageSamplerDescriptor>(
-                3,
-                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].image_view.get() },
-                std::vector{ engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get() },
-                VK_SHADER_STAGE_FRAGMENT_BIT
-            ));
+            ->AddDescriptor<ImageSamplerDescriptor>(3, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddSubDescriptor({
+                .image_view = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].image_view.get(),
+                .sampler = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get()
+            });
     }
 
     Device *device = engine.GetInstance()->GetDevice();
@@ -927,22 +928,26 @@ int main()
             ->GetPresentSemaphores();
     }
 
+    auto mat1 = std::make_unique<v2::Material>();
+    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 0.0f, 0.0f, 1.0f }));
+    engine.AddMaterial(std::move(mat1));
+    auto mat2 = std::make_unique<v2::Material>();
+    mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 0.0f, 1.0f, 1.0f }));
+    engine.AddMaterial(std::move(mat2));
 
-
-    {
+    /*{
         auto container = std::make_unique<v2::RenderContainer>(mirror_shader_id, render_pass_id);
         auto mat1 = std::make_unique<v2::Material>();
         mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 0.0f, 0.0f, 1.0f }));
         container->AddMaterial(&engine, std::move(mat1));
-        auto mat2 = std::make_unique<v2::Material>();
-        mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 1.0f, 0.0f, 1.0f }));
-        container->AddMaterial(&engine, std::move(mat2));
+        //auto mat2 = std::make_unique<v2::Material>();
+        //mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 1.0f, 0.0f, 1.0f }));
+        //container->AddMaterial(&engine, std::move(mat2));
         container->AddFramebuffer(my_fbo_id);
         engine.AddRenderContainer(std::move(container));
-    }
-    //container.Create(&engine);
+    }*/
     
-    engine.BuildPipelines();
+    engine.Compile();
 
     uint32_t previous_frame_index = 0;
 
@@ -1026,6 +1031,7 @@ int main()
                 /* forward / albedo layer */
                 fbo_pl->Get().BeginRenderPass(command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
                 fbo_pl->Get().Bind(command_buffer);
+                
                 engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(command_buffer, &fbo_pl->Get(), 0, 1);
 
                 fbo_pl->Get().push_constants.material_index = 0;

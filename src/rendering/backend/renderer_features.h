@@ -203,6 +203,21 @@ public:
         return GetImageFormatProperties(format, type, tiling, usage, flags, &tmp).result == Result::RENDERER_OK;
     }
 
+    template <class StructType>
+    constexpr size_t PaddedSize() const
+    {
+        // Calculate required alignment based on minimum device offset alignment
+        constexpr size_t alignment = m_properties.limits.minUniformBufferOffsetAlignment;
+        size_t size = sizeof(StructType);
+
+        if (alignment != 0) {
+            size = (size + alignment - 1) & ~(alignment - 1);
+        }
+
+        return size;
+
+    }
+
 private:
     VkPhysicalDevice m_physical_device;
     VkPhysicalDeviceProperties m_properties;

@@ -104,14 +104,14 @@ struct ObjectHolder {
     template<class ...Args>
     inline void Remove(Engine *engine, typename T::ID id, Args &&... args)
     {
-        auto &object = objects[id];
+        auto &object = objects[id.value];
 
         AssertThrowMsg(object != nullptr, "Failed to remove object with id %d -- object was nullptr.", id.GetValue());
 
         object->Destroy(engine, std::move(args)...);
 
         /* Cannot simply erase from vector, as that would invalidate existing IDs */
-        objects[id].reset();
+        objects[id.value].reset();
     }
 
     template<class ...Args>
