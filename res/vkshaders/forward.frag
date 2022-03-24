@@ -11,8 +11,8 @@ layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
-layout(binding = 2) uniform samplerCube tex;
-//layout(binding = 2) uniform sampler2D tex[2];
+//layout(binding = 2) uniform samplerCube tex;
+layout(binding = 2) uniform sampler2D tex;
 
 void main() {
     vec3 view_vector = normalize(v_position - v_camera_position);
@@ -22,7 +22,8 @@ void main() {
     
     vec3 reflection_vector = reflect(view_vector, normal);
     
-    gbuffer_albedo = vec4(texture(tex, reflection_vector).rgb, 1.0); //vec4(textureLod(tex[1], vec2(v_texcoord0.x, 1.0 - v_texcoord0.y), 7).rgb, 1.0); //vec4(1.0, 0.0, 0.0, 1.0); 
+    //gbuffer_albedo = vec4(texture(tex, reflection_vector).rgb, 1.0);
+    gbuffer_albedo = vec4(textureLod(tex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y), 1).rgb, 1.0);
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }

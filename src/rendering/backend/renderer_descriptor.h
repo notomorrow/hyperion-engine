@@ -23,6 +23,8 @@ public:
         UNSET,
         UNIFORM_BUFFER,
         UNIFORM_BUFFER_DYNAMIC,
+        STORAGE_BUFFER,
+        STORAGE_BUFFER_DYNAMIC,
         IMAGE_SAMPLER,
         IMAGE_STORAGE
     };
@@ -56,26 +58,12 @@ public:
     inline State GetState() const { return m_state; }
     inline void SetState(State state) { m_state = state; }
 
-    inline const std::vector<SubDescriptor> &GetSubDescriptors() const { return m_sub_descriptors; }
+    inline const std::vector<SubDescriptor> &GetSubDescriptors() const
+        { return m_sub_descriptors; }
+
     inline Descriptor *AddSubDescriptor(SubDescriptor &&sub_descriptor)
-    {
-        m_sub_descriptors.push_back(std::move(sub_descriptor));
+        { m_sub_descriptors.push_back(sub_descriptor); return this; }
 
-        return this;
-    }
-
-    /*inline GPUBuffer *GetGPUBuffer() { return m_info.gpu_buffer; }
-    inline const GPUBuffer *GetGPUBuffer() const { return m_info.gpu_buffer; }
-    inline std::vector<ImageView *> &GetImageViews() { return m_info.image_views; }
-    inline const std::vector<ImageView *> &GetImageView() const { return m_info.image_views; }
-    inline std::vector<Sampler *> &GetSamplers() { return m_info.samplers; }
-    inline const std::vector<Sampler *> &GetSamplers() const { return m_info.samplers; }*/
-
-    template <class Struct>
-    uint32_t GetDynamicOffset(size_t index) const
-    {
-        
-    }
 
     void Create(Device *device, Info *out_info);
     void Destroy(Device *device);
@@ -83,7 +71,7 @@ public:
 protected:
     struct BufferInfo {
         std::vector<VkDescriptorBufferInfo> buffers;
-        std::vector<VkDescriptorImageInfo> images;
+        std::vector<VkDescriptorImageInfo>  images;
     };
 
     static VkDescriptorType GetDescriptorType(Mode mode);
@@ -102,42 +90,74 @@ private:
 
 class BufferDescriptor : public Descriptor {
 public:
-    BufferDescriptor(uint32_t binding,
-        VkShaderStageFlags stage_flags)
-        : Descriptor(
-            binding,
-            Mode::UNIFORM_BUFFER,
-            stage_flags) {}
+    BufferDescriptor(
+        uint32_t binding,
+        VkShaderStageFlags stage_flags
+    ) : Descriptor(
+        binding,
+        Mode::UNIFORM_BUFFER,
+        stage_flags)
+    {}
 };
 
 class DynamicBufferDescriptor : public Descriptor {
 public:
-    DynamicBufferDescriptor(uint32_t binding,
-        VkShaderStageFlags stage_flags)
-        : Descriptor(
-            binding,
-            Mode::UNIFORM_BUFFER_DYNAMIC,
-            stage_flags) {}
+    DynamicBufferDescriptor(
+        uint32_t binding,
+        VkShaderStageFlags stage_flags
+    ) : Descriptor(
+        binding,
+        Mode::UNIFORM_BUFFER_DYNAMIC,
+        stage_flags)
+    {}
+};
+
+class StorageBufferDescriptor : public Descriptor {
+public:
+    StorageBufferDescriptor(
+        uint32_t binding,
+        VkShaderStageFlags stage_flags
+    ) : Descriptor(
+        binding,
+        Mode::STORAGE_BUFFER,
+        stage_flags)
+    {}
+};
+
+class DynamicStorageBufferDescriptor : public Descriptor {
+public:
+    DynamicStorageBufferDescriptor(
+        uint32_t binding,
+        VkShaderStageFlags stage_flags
+    ) : Descriptor(
+        binding,
+        Mode::STORAGE_BUFFER_DYNAMIC,
+        stage_flags)
+    {}
 };
 
 class ImageSamplerDescriptor : public Descriptor {
 public:
-    ImageSamplerDescriptor(uint32_t binding,
-        VkShaderStageFlags stage_flags)
-        : Descriptor(
-            binding,
-            Mode::IMAGE_SAMPLER,
-            stage_flags) {}
+    ImageSamplerDescriptor(
+        uint32_t binding,
+        VkShaderStageFlags stage_flags
+    ) : Descriptor(
+        binding,
+        Mode::IMAGE_SAMPLER,
+        stage_flags)
+    {}
 };
 
 class ImageStorageDescriptor : public Descriptor {
 public:
-    ImageStorageDescriptor(uint32_t binding,
-        VkShaderStageFlags stage_flags)
-        : Descriptor(
-            binding,
-            Mode::IMAGE_STORAGE,
-            stage_flags) {}
+    ImageStorageDescriptor(
+        uint32_t binding,
+        VkShaderStageFlags stage_flags
+    ) : Descriptor(
+        binding,
+        Mode::IMAGE_STORAGE,
+        stage_flags)
+    {}
 };
 
 } // namespace renderer

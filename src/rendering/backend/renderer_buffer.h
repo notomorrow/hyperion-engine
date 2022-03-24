@@ -78,6 +78,14 @@ public:
     );
 };
 
+class StorageBuffer : public GPUBuffer {
+public:
+    StorageBuffer(
+        uint32_t memory_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        uint32_t sharing_mode = VK_SHARING_MODE_EXCLUSIVE
+    );
+};
+
 class StagingBuffer : public GPUBuffer {
 public:
     StagingBuffer(

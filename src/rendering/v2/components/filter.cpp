@@ -98,10 +98,6 @@ void Filter::CreatePipeline(Engine *engine)
     render_container->AddFramebuffer(m_framebuffer_id);
     render_container->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 
-    /*auto mat1 = std::make_unique<v2::Material>();
-    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 1.0f, 0.0f, 1.0f }));
-    render_container->AddMaterial(engine, std::move(mat1));*/
-
     m_pipeline_id = engine->AddRenderContainer(std::move(render_container));
 }
 
@@ -152,7 +148,7 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
                 pipeline->Get().Bind(cmd);
 
                 /* TODO: for testing. multiply by 0 for a red material, 1 for blue */
-                uint32_t offsets[] = { 0 * sizeof(MaterialData) };
+                uint32_t offsets[] = { 1 * sizeof(MaterialData) };
 
                 HYPERION_PASS_ERRORS(
                     engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, &pipeline->Get(), 0, 4, 1, offsets),

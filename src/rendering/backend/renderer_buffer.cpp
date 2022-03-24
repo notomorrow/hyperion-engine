@@ -105,6 +105,9 @@ void VertexBuffer::BindBuffer(VkCommandBuffer *cmd) {
 UniformBuffer::UniformBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
     : GPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memory_property_flags, sharing_mode) {}
 
+StorageBuffer::StorageBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
+    : GPUBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, memory_property_flags, sharing_mode) {}
+
 
 StagingBuffer::StagingBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
     : GPUBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, memory_property_flags, sharing_mode) {}

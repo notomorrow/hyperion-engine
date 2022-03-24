@@ -30,7 +30,7 @@ struct Material {
     float roughness;
 };
 
-layout(std430, set = 3, binding = 0) uniform UniformBufferObject {
+layout(std430, set = 3, binding = 0) readonly buffer UniformBufferObject {
     Material materials;
 } ubo;
 
