@@ -5,50 +5,96 @@
 #ifndef HYPERION_RENDERER_SHADER_H
 #define HYPERION_RENDERER_SHADER_H
 
-#include "./spirv.h"
-#include "../../hash_code.h"
 #include "renderer_device.h"
+
+#include <hash_code.h>
 
 namespace hyperion {
 namespace renderer {
-struct ShaderModule {
-    SpirvObject spirv;
-    VkShaderModule shader_module;
-
-    ShaderModule()
-        : spirv{}, shader_module{} {}
-    ShaderModule(const SpirvObject &spirv, VkShaderModule shader_module = nullptr)
-        : spirv(spirv), shader_module(shader_module) {}
-    ShaderModule(const ShaderModule &other)
-        : spirv(other.spirv), shader_module(other.shader_module) {}
-    ~ShaderModule() = default;
-
-    inline bool operator<(const ShaderModule &other) const
-    {
-        return spirv.type < other.spirv.type;
-    }
-};
-
-class ShaderProgram {
-public:
-    ShaderProgram();
-    ShaderProgram(const ShaderProgram &other) = delete;
-    ShaderProgram &operator=(const ShaderProgram &other) = delete;
-    ~ShaderProgram();
-
-    void AttachShader(Device *device, const SpirvObject &spirv);
-    //void AttachShader(Device *device, ShaderType type, const uint32_t *code, const size_t code_size);
-    VkPipelineShaderStageCreateInfo CreateShaderStage(const ShaderModule &module, const char *entry_point);
-    void CreateProgram(const char *entry_point);
-    Result Destroy(Device *device);
-
-    std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
+struct ShaderObject {
+    std::vector<unsigned char> bytes;
 
     inline HashCode GetHashCode() const
     {
         HashCode hc;
 
-        for (const auto &shader_module : shader_modules) {
+        for (size_t i = 0; i < bytes.size(); i++) {
+            hc.Add(bytes[i]);
+        }
+
+        return hc;
+    }
+};
+
+struct ShaderModule {
+    enum class Type : int {
+        UNSET = 0,
+        VERTEX,
+        FRAGMENT,
+        GEOMETRY,
+        COMPUTE,
+        /* Mesh shaders */
+        TASK,
+        MESH,
+        /* Tesselation */
+        TESS_CONTROL,
+        TESS_EVAL,
+        /* Raytracing */
+        RAY_GEN,
+        RAY_INTERSECT,
+        RAY_ANY_HIT,
+        RAY_CLOSEST_HIT,
+        RAY_MISS,
+    } type;
+
+    ShaderObject spirv;
+    VkShaderModule shader_module;
+
+    ShaderModule(Type type)
+        : type(type),
+          spirv{},
+          shader_module{}
+    {}
+
+    ShaderModule(Type type, const ShaderObject &spirv, VkShaderModule shader_module = nullptr)
+        : type(type),
+          spirv(spirv),
+          shader_module(shader_module)
+    {}
+
+    ShaderModule(const ShaderModule &other) = default;
+    ~ShaderModule() = default;
+
+    inline bool operator<(const ShaderModule &other) const
+        { return type < other.type; }
+};
+
+class ShaderProgram {
+public:
+    static constexpr const char *entry_point = "main";
+
+    ShaderProgram();
+    ShaderProgram(const ShaderProgram &other) = delete;
+    ShaderProgram &operator=(const ShaderProgram &other) = delete;
+    ~ShaderProgram();
+
+    inline const std::vector<ShaderModule> &GetShaderModules() const
+        { return m_shader_modules; }
+
+    inline const std::vector<VkPipelineShaderStageCreateInfo> &GetShaderStages() const
+        { return m_shader_stages; }
+
+    Result AttachShader(Device *device, ShaderModule::Type type, const ShaderObject &spirv);
+
+    Result Create(Device *device);
+    Result Destroy(Device *device);
+
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        for (const auto &shader_module : m_shader_modules) {
+            hc.Add(int(shader_module.type));
             hc.Add(shader_module.spirv.GetHashCode());
         }
 
@@ -56,7 +102,11 @@ public:
     }
 
 private:
-    std::vector<ShaderModule> shader_modules;
+    VkPipelineShaderStageCreateInfo CreateShaderStage(const ShaderModule &module);
+
+    std::vector<ShaderModule> m_shader_modules;
+
+    std::vector<VkPipelineShaderStageCreateInfo> m_shader_stages;
 };
 
 } // namespace renderer

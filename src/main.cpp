@@ -819,28 +819,13 @@ int main()
     matrices_descriptor_buffer.Create(device, sizeof(MatricesBlock));
     scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
 
-
-    /* Filters */
-    /*engine.GetFilterStack().AddFilter(std::make_unique<v2::Filter>(engine.AddShader(std::make_unique<v2::Shader>(
-        std::vector<SpirvObject>{
-            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read() },
-            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read() }
-        }
-    ))));
-    engine.GetFilterStack().AddFilter(std::make_unique<v2::Filter>(engine.AddShader(std::make_unique<v2::Shader>(
-        std::vector<SpirvObject>{
-            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/filter_pass_vert.spv").Read() },
-            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/filter_pass_frag.spv").Read() }
-        }
-    ))));*/
-
     engine.PrepareSwapchain();
     
     v2::Shader::ID mirror_shader_id{};
     {
-        auto mirror_shader = std::make_unique<v2::Shader>(std::vector{
-            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() },
-            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }
+        auto mirror_shader = std::make_unique<v2::Shader>(std::vector<v2::SubShader>{
+            {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() }},
+            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }}
         });
 
         mirror_shader_id = engine.AddShader(std::move(mirror_shader));
@@ -886,8 +871,8 @@ int main()
 
     v2::Shader::ID compute_shader_id{};
     {
-        auto compute_shader = std::make_unique<v2::Shader>(std::vector{
-            SpirvObject{ SpirvObject::Type::COMPUTE, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read() }
+        auto compute_shader = std::make_unique<v2::Shader>(std::vector<v2::SubShader>{
+            { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read()}}
         });
 
         compute_shader_id = engine.AddShader(std::move(compute_shader));

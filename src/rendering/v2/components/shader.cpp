@@ -2,9 +2,9 @@
 #include "../engine.h"
 
 namespace hyperion::v2 {
-Shader::Shader(const std::vector<SpirvObject> &spirv_objects)
+Shader::Shader(const std::vector<SubShader> &sub_shaders)
     : EngineComponent(),
-      m_spirv_objects(spirv_objects)
+      m_sub_shaders(sub_shaders)
 {
 }
 
@@ -12,13 +12,22 @@ Shader::~Shader() = default;
 
 void Shader::Create(Engine *engine)
 {
-    for (const auto &spriv : m_spirv_objects) {
-        m_wrapped.AttachShader(engine->GetInstance()->GetDevice(), spriv);
+    auto create_shader_result = renderer::Result::OK;
+
+    for (const auto &sub_shader : m_sub_shaders) {
+        HYPERION_PASS_ERRORS(
+            m_wrapped.AttachShader(
+                engine->GetInstance()->GetDevice(),
+                sub_shader.type,
+                sub_shader.spirv
+            ),
+            create_shader_result
+        );
     }
 
-    m_wrapped.CreateProgram("main");
+    AssertThrowMsg(create_shader_result, "%s", create_shader_result.message);
 
-    m_is_created = true;
+    EngineComponent::Create(engine);
 }
 
 void Shader::Destroy(Engine *engine)

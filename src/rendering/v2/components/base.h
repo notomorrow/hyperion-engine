@@ -15,6 +15,7 @@ class Engine;
 
 Device *GetEngineDevice(Engine *engine);
 
+template <class T>
 struct Stub {
     Stub() = default;
     ~Stub() = default;
@@ -23,14 +24,7 @@ struct Stub {
     renderer::Result Destroy(Engine *engine) { return renderer::Result::OK; }
 };
 
-#define STUB_NAME(name) \
-    name##_stub
-#define STUB_COMPONENT(name) \
-    struct STUB_NAME(name) { \
-        STUB_NAME(name) () {} \
-        renderer::Result Create(Engine *engine) const { return renderer::Result::OK; } \
-        renderer::Result Destroy(Engine *engine) const { return renderer::Result::OK; } \
-    }
+#define STUB_CLASS(name) ::hyperion::v2::Stub<name>
 
 template <class Type, class ...Args>
 struct ID {
