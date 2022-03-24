@@ -34,13 +34,13 @@ Material &Material::operator=(Material &&other)
 
 Material::~Material() = default;
 
-void Material::Create(Engine *engine, MaterialBuffer *material_buffer)
+void Material::Create(Engine *engine, MaterialShaderData *out)
 {
-    material_buffer->m_material_data.push_back(MaterialData{
+    *out = MaterialShaderData{
         .albedo = GetParameter<Vector4>(Material::MATERIAL_KEY_ALBEDO),
         .metalness = GetParameter<float>(Material::MATERIAL_KEY_METALNESS),
         .roughness = GetParameter<float>(Material::MATERIAL_KEY_ROUGHNESS)
-    });
+    };
 }
 
 void Material::Destroy(Engine *engine)

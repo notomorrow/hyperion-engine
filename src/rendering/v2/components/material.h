@@ -2,6 +2,7 @@
 #define HYPERION_V2_MATERIAL_H
 
 #include "texture.h"
+#include "shader.h"
 
 #include <util/enum_options.h>
 #include <hash_code.h>
@@ -52,16 +53,6 @@ public:
 
 
     EnumOptions<TextureKey, Texture::ID, max_textures> m_textures;
-};
-
-struct alignas(256) MaterialData {
-    Vector4 albedo;
-    float metalness;
-    float roughness;
-};
-
-struct MaterialBuffer {
-    std::vector<MaterialData> m_material_data;
 };
 
 class Material : public EngineComponentBase<STUB_CLASS(Material)> {
@@ -237,7 +228,7 @@ public:
     void SetParameter(MaterialKey key, const Parameter &value);
     void SetTexture(TextureSet::TextureKey key, Texture::ID id);
 
-    void Create(Engine *engine, MaterialBuffer *material_buffer);
+    void Create(Engine *engine, MaterialShaderData *out);
     void Destroy(Engine *engine);
 
     inline HashCode GetHashCode() const

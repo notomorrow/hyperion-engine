@@ -30,8 +30,15 @@ struct Material {
     float roughness;
 };
 
-layout(std430, set = 3, binding = 0) readonly buffer PerObjectData {
+struct Object {
+    mat4 model_matrix;
+};
+
+layout(std430, set = 3, binding = 0) readonly buffer MaterialData {
     Material material;
+} material_data;
+layout(std430, set = 3, binding = 1) readonly buffer ObjectData {
+    Object object;
 } object_data;
 
 layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
@@ -51,5 +58,5 @@ void main()
     float NdotL = dot(normal.xyz, v_light_direction);
 
     //color_output = (t0 + t1 + t2 + t3 + t4) / 5.0;//
-    color_output = vec4(vec3(max(NdotL, 0.025)) * albedo.rgb * object_data.material.albedo.rgb, 1.0);
+    color_output = vec4(vec3(max(NdotL, 0.025)) * albedo.rgb * material_data.material.albedo.rgb, 1.0);
 }

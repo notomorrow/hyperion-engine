@@ -73,8 +73,7 @@ public:
 
     inline VkCommandPool GetGraphicsCommandPool() const { return this->queue_graphics.command_pool; }
     inline VkCommandPool GetComputeCommandPool() const { return this->queue_compute.command_pool; }
-
-    inline VkInstance &GetInstance() { return this->instance; }
+    
     inline VkInstance GetInstance() const { return this->instance; }
     
     void PrepareFrame(Frame *frame);

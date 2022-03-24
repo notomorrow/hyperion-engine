@@ -25,10 +25,17 @@ GraphicsPipeline::~GraphicsPipeline()
 {
 }
 
-void GraphicsPipeline::AddSpatial(Spatial &&spatial)
+void GraphicsPipeline::AddSpatial(Engine *engine, Spatial &&spatial)
 {
     /* append any attributes not yet added */
     m_vertex_attributes.Merge(spatial.attributes);
+
+    AssertThrow(spatial.id < engine->m_shader_storage_data.objects.Size());
+
+    engine->m_shader_storage_data.objects[spatial.id] = ObjectShaderData{
+        .model_matrix = spatial.transform.GetMatrix()
+
+    };
 
     m_spatials.push_back(std::move(spatial));
 }

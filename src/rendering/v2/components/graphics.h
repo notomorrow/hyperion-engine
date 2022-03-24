@@ -1,16 +1,12 @@
 #ifndef HYPERION_V2_GRAPHICS_H
 #define HYPERION_V2_GRAPHICS_H
 
-#include "material.h"
 #include "shader.h"
+#include "spatial.h"
 #include "texture.h"
 #include "framebuffer.h"
 #include "render_pass.h"
 #include "util.h"
-
-/* TMP */
-#include <rendering/mesh.h>
-#include <math/transform.h>
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
 
@@ -29,12 +25,6 @@ class Engine;
 
 class GraphicsPipeline : public EngineComponent<renderer::GraphicsPipeline> {
 public:
-    struct Spatial {
-        std::shared_ptr<Mesh> mesh; /* TMP */
-        MeshInputAttributeSet attributes;
-        Transform transform;
-        Material::ID material_id;
-    };
 
     GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_pass_id);
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
@@ -50,7 +40,7 @@ public:
     inline void SetTopology(VkPrimitiveTopology topology)
         { m_topology = topology; }
 
-    void AddSpatial(Spatial &&spatial);
+    void AddSpatial(Engine *engine, Spatial &&spatial);
 
     /* Non-owned objects - owned by `engine`, used by the pipeline */
 
