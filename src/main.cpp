@@ -553,8 +553,8 @@ public:
 };
 
 
-#define HYPERION_VK_TEST_CUBEMAP 0
-#define HYPERION_VK_TEST_MIPMAP 1
+#define HYPERION_VK_TEST_CUBEMAP 1
+#define HYPERION_VK_TEST_MIPMAP 0
 #define HYPERION_VK_TEST_IMAGE_STORE 1
 
 int main()
@@ -708,8 +708,7 @@ int main()
 
         descriptor_set_globals
             ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
-            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler })
-            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
+            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler });
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         descriptor_set_globals
@@ -773,6 +772,7 @@ int main()
         auto sampler_result = test_sampler.Create(device, &test_image_view);
         AssertThrowMsg(sampler_result, "%s", sampler_result.message);
     }
+
     {
         auto image_create_result = image_storage->Create(
             device,
