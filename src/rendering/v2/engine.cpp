@@ -132,9 +132,9 @@ void Engine::PrepareSwapchain()
 
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
     {
-        shader_id = AddShader(std::make_unique<Shader>(std::vector{
-            SpirvObject{SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()},
-            SpirvObject{SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}
+        shader_id = AddShader(std::make_unique<Shader>(std::vector<SubShader>{
+            {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()}},
+            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}}
         }));
     }
 

@@ -63,7 +63,7 @@ Result ComputePipeline::Create(Device *device, ShaderProgram *shader, Descriptor
 
     VkComputePipelineCreateInfo pipeline_info{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
 
-    const auto &stages = shader->shader_stages;
+    const auto &stages = shader->GetShaderStages();
     AssertThrowMsg(stages.size() == 1, "Compute pipelines must have only one shader stage");
 
     pipeline_info.stage = stages.front();

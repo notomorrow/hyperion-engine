@@ -64,9 +64,7 @@ struct MaterialBuffer {
     std::vector<MaterialData> m_material_data;
 };
 
-STUB_COMPONENT(Material);
-
-class Material : public EngineComponentBase<STUB_NAME(Material)> {
+class Material : public EngineComponentBase<STUB_CLASS(Material)> {
 public:
     static constexpr size_t max_parameters = 32;
 

@@ -293,7 +293,8 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     VkGraphicsPipelineCreateInfo pipeline_info{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 
-    auto stages = m_construction_info.shader->shader_stages;
+    const auto &stages = m_construction_info.shader->GetShaderStages();
+
     pipeline_info.stageCount = uint32_t(stages.size());
     pipeline_info.pStages = stages.data();
 

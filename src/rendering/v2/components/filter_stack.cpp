@@ -40,9 +40,9 @@ void FilterStack::Create(Engine *engine)
 
     /* TODO: use subpasses for gbuffer so we only have num_filters * num_frames descriptors */
     for (int i = 0; i < num_filters; i++) {
-        Shader::ID shader_id = engine->AddShader(std::make_unique<Shader>(std::vector<SpirvObject>{
-            SpirvObject{ SpirvObject::Type::VERTEX, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read() },
-            SpirvObject{ SpirvObject::Type::FRAGMENT, FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read() }
+        Shader::ID shader_id = engine->AddShader(std::make_unique<Shader>(std::vector<SubShader>{
+            SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read()}},
+            SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read()}}
         }));
 
         m_filters[i] = std::make_unique<Filter>(shader_id);
