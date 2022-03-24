@@ -100,9 +100,9 @@
 using namespace hyperion;
 
 
-#define HYPERION_VK_TEST_CUBEMAP 0
-#define HYPERION_VK_TEST_MIPMAP 1
-#define HYPERION_VK_TEST_IMAGE_STORE 1
+#define HYPERION_VK_TEST_CUBEMAP 1
+#define HYPERION_VK_TEST_MIPMAP 0
+#define HYPERION_VK_TEST_IMAGE_STORE 0
 
 int main()
 {
@@ -320,6 +320,7 @@ int main()
         AssertThrowMsg(sampler_result, "%s", sampler_result.message);
     }
 
+#if HYPERION_VK_TEST_IMAGE_STORE
     {
         auto image_create_result = image_storage->Create(
             device,
@@ -331,6 +332,7 @@ int main()
         auto image_view_result = image_storage_view.Create(device, image_storage);
         AssertThrowMsg(image_view_result, "%s", image_view_result.message);
     }
+#endif
 
     matrices_descriptor_buffer.Create(device, sizeof(MatricesBlock));
     scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
@@ -347,10 +349,10 @@ int main()
         mirror_shader_id = engine.AddShader(std::move(mirror_shader));
     }
 
-    auto scene_pass_container = std::make_unique<v2::RenderContainer>(mirror_shader_id, render_pass_id);
+    auto scene_pass_container = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, render_pass_id);
     scene_pass_container->AddFramebuffer(my_fbo_id);
 
-    auto scene_pass_pipeline_id = engine.AddRenderContainer(std::move(scene_pass_container));
+    auto scene_pass_pipeline_id = engine.AddGraphicsPipeline(std::move(scene_pass_container));
     //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
 
     float timer = 0.0;
@@ -379,7 +381,7 @@ int main()
     uint64_t tick_last = 0;
     double delta_time = 0;
 
-
+#if HYPERION_VK_TEST_IMAGE_STORE
     /* Compute */
 
     v2::Shader::ID compute_shader_id{};
@@ -407,7 +409,7 @@ int main()
             ->GetPerFrameData()[i].Get<Frame>()
             ->GetPresentSemaphores();
     }
-
+#endif
     
 
     PerFrameData<CommandBuffer, Semaphore> per_frame_data(engine.GetInstance()->GetFrameHandler()->GetNumFrames());
@@ -433,17 +435,15 @@ int main()
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 0.0f, 1.0f, 1.0f }));
     engine.AddMaterial(std::move(mat2));
 
-    /*{
-        auto container = std::make_unique<v2::RenderContainer>(mirror_shader_id, render_pass_id);
-        auto mat1 = std::make_unique<v2::Material>();
-        mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 0.0f, 0.0f, 1.0f }));
-        container->AddMaterial(&engine, std::move(mat1));
-        //auto mat2 = std::make_unique<v2::Material>();
-        //mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 1.0f, 0.0f, 1.0f }));
-        //container->AddMaterial(&engine, std::move(mat2));
+    v2::GraphicsPipeline::ID render_container_id;
+    {
+        auto container = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, render_pass_id);
         container->AddFramebuffer(my_fbo_id);
-        engine.AddRenderContainer(std::move(container));
-    }*/
+        container->AddSpatial(v2::GraphicsPipeline::Spatial{
+            .mesh = monkey_mesh
+        });
+        render_container_id = engine.AddGraphicsPipeline(std::move(container));
+    }
     
     engine.Compile();
 
@@ -491,7 +491,7 @@ int main()
 
         engine.GetInstance()->PrepareFrame(frame);
 
-#if 1
+#if HYPERION_VK_TEST_IMAGE_STORE
         auto *compute_pipeline = engine.GetComputePipeline(compute_pipeline_id);
         compute_pipeline->Get().push_constants.counter_x = std::sin(timer) * 20.0f;
         compute_pipeline->Get().push_constants.counter_y = std::cos(timer) * 20.0f;
@@ -513,7 +513,7 @@ int main()
         compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
 #endif
 
-        auto *fbo_pl = engine.GetRenderContainer(scene_pass_pipeline_id);
+        auto *fbo_pl = engine.GetGraphicsPipeline(scene_pass_pipeline_id);
         
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
@@ -526,8 +526,14 @@ int main()
             engine.GetInstance()->GetDevice(),
             nullptr,
             [&](CommandBuffer *command_buffer) {
+
+                engine.GetGraphicsPipeline(render_container_id)->Render(&engine, command_buffer, 0);
+                engine.RenderPostProcessing(command_buffer, frame_index);
+
                 /* forward / albedo layer */
-                fbo_pl->Get().BeginRenderPass(command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
+
+
+                /*fbo_pl->Get().BeginRenderPass(command_buffer, 0, VK_SUBPASS_CONTENTS_INLINE);
                 fbo_pl->Get().Bind(command_buffer);
                 
                 engine.GetInstance()->GetDescriptorPool().BindDescriptorSets(command_buffer, &fbo_pl->Get(), 0, 1);
@@ -539,7 +545,7 @@ int main()
                 fbo_pl->Get().EndRenderPass(command_buffer, 0);
 
 
-                engine.RenderPostProcessing(command_buffer, frame_index);
+                engine.RenderPostProcessing(command_buffer, frame_index);*/
 
                 HYPERION_RETURN_OK;
             });
@@ -605,8 +611,9 @@ int main()
 
     matrices_descriptor_buffer.Destroy(device);
     scene_data_descriptor_buffer.Destroy(device);
-
+#if HYPERION_VK_TEST_IMAGE_STORE
     image_storage_view.Destroy(device);
+#endif
     test_image_view.Destroy(device);
 
     test_sampler.Destroy(device);
@@ -617,8 +624,10 @@ int main()
     }
     per_frame_data.Reset();
 
+#if HYPERION_VK_TEST_IMAGE_STORE
     compute_command_buffer->Destroy(device, engine.GetInstance()->GetComputeCommandPool());
     compute_semaphore_chain.Destroy(engine.GetInstance()->GetDevice());
+#endif
 
     delete window;
 

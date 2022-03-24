@@ -14,7 +14,7 @@ layout(set = 1, binding = 3) uniform sampler2D gbuffer_depth_texture;
 layout(set = 2, binding = 0) uniform sampler2D filter_0;
 layout(set = 2, binding = 1) uniform sampler2D filter_1;
 
-layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
+//layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
 
 layout(location=0) out vec4 out_color;
 
@@ -33,9 +33,9 @@ void main() {
     vec4 albedo = vec4(0.0);
 
     /* render last filter in the stack */
-    out_color = imageLoad(image_storage_test, ivec2(int(v_texcoord0.x * 512.0), int(v_texcoord0.y * 512.0)));
+    //out_color = imageLoad(image_storage_test, ivec2(int(v_texcoord0.x * 512.0), int(v_texcoord0.y * 512.0)));
     
-    if (out_color.a < 0.2) {
+    //if (out_color.a < 0.2) {
         out_color = texture(filter_1, texcoord);
-    }
+    //}
 }

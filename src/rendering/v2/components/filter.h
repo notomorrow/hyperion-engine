@@ -4,7 +4,7 @@
 #include "render_pass.h"
 #include "framebuffer.h"
 #include "shader.h"
-#include "render_container.h"
+#include "graphics.h"
 
 #include <rendering/backend/renderer_frame_handler.h>
 
@@ -64,7 +64,7 @@ private:
     Framebuffer::ID m_framebuffer_id;
     Shader::ID m_shader_id;
     RenderPass::ID m_render_pass_id;
-    RenderContainer::ID m_pipeline_id;
+    GraphicsPipeline::ID m_pipeline_id;
     bool m_recorded;
 };
 

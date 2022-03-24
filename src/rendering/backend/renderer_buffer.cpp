@@ -71,11 +71,16 @@ GPUBuffer::~GPUBuffer()
 }
 
 void GPUBuffer::Create(Device *device, size_t size) {
-    VkBufferCreateInfo vk_buffer_info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     this->size = size;
 
+    const QueueFamilyIndices &qf_indices = device->GetQueueFamilyIndices();
+    const uint32_t buffer_family_indices[] = { qf_indices.graphics_family.value(), qf_indices.compute_family.value() };
+
+    VkBufferCreateInfo vk_buffer_info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     vk_buffer_info.size  = size;
-    vk_buffer_info.usage = (VkBufferUsageFlags)this->usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    vk_buffer_info.usage = usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    vk_buffer_info.pQueueFamilyIndices = buffer_family_indices;
+    vk_buffer_info.queueFamilyIndexCount = uint32_t(std::size(buffer_family_indices));
 
     VmaAllocationCreateInfo alloc_info{};
     alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;

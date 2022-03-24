@@ -38,7 +38,7 @@ Engine::~Engine()
     m_compute_pipelines.RemoveAll(this);
 
     m_swapchain_render_container->Destroy(this);
-    m_render_containers.RemoveAll(this);
+    m_graphics_pipelines.RemoveAll(this);
 
     m_material_uniform_buffer->Destroy(m_instance->GetDevice());
     delete m_material_uniform_buffer;
@@ -154,7 +154,7 @@ void Engine::PrepareSwapchain()
         render_pass_id = AddRenderPass(std::move(render_pass));
     }
 
-    m_swapchain_render_container = std::make_unique<RenderContainer>(shader_id, render_pass_id);
+    m_swapchain_render_container = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id);
 
     
     for (auto img : m_instance->swapchain->images) {
@@ -231,7 +231,7 @@ void Engine::Compile()
     m_filter_stack.BuildPipelines(this);
 
     m_swapchain_render_container->Create(this);
-    m_render_containers.CreateAll(this);
+    m_graphics_pipelines.CreateAll(this);
     m_compute_pipelines.CreateAll(this);
 }
 
