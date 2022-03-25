@@ -179,6 +179,7 @@ public:
 
     ShaderStorageData m_shader_storage_data;
 
+    UniformBuffer *m_scene_uniform_buffer;
     StorageBuffer *m_material_storage_buffer;
     StorageBuffer *m_object_storage_buffer;
 

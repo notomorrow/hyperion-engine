@@ -88,9 +88,9 @@ private:
     non_owning_ptr<DescriptorSet> m_descriptor_set;
 };
 
-class BufferDescriptor : public Descriptor {
+class UniformBufferDescriptor : public Descriptor {
 public:
-    BufferDescriptor(
+    UniformBufferDescriptor(
         uint32_t binding,
         VkShaderStageFlags stage_flags
     ) : Descriptor(
@@ -100,9 +100,9 @@ public:
     {}
 };
 
-class DynamicBufferDescriptor : public Descriptor {
+class DynamicUniformBufferDescriptor : public Descriptor {
 public:
-    DynamicBufferDescriptor(
+    DynamicUniformBufferDescriptor(
         uint32_t binding,
         VkShaderStageFlags stage_flags
     ) : Descriptor(

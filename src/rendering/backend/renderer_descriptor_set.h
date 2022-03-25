@@ -17,7 +17,7 @@ public:
     enum Index {
         DESCRIPTOR_SET_INDEX_GLOBALS  = 0, /* per frame */
         DESCRIPTOR_SET_INDEX_PASS     = 1, /* per render pass */
-        DESCRIPTOR_SET_INDEX_MATERIAL = 2, /* per material */
+        DESCRIPTOR_SET_INDEX_SCENE    = 2, /* per scene */
         DESCRIPTOR_SET_INDEX_OBJECT   = 3  /* per object */
     };
 
