@@ -21,7 +21,7 @@
 #include "renderer_shader.h"
 #include "renderer_buffer.h"
 #include "renderer_graphics_pipeline.h"
-#include "renderer_descriptor_pool.h"
+#include "renderer_descriptor_set.h"
 #include "renderer_frame.h"
 #include "renderer_frame_handler.h"
 

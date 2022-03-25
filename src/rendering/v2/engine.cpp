@@ -313,7 +313,7 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer)
 
     pipeline.Bind(command_buffer);
 
-    m_instance->GetDescriptorPool().BindDescriptorSets(command_buffer, &pipeline, 0, 3);
+    m_instance->GetDescriptorPool().Bind(command_buffer, &pipeline, {{ .count = 3 }});
 
     Filter::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
 }
