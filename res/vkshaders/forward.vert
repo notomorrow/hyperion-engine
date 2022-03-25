@@ -10,10 +10,18 @@ layout (location = 3) in vec2 a_texcoord1;
 layout (location = 4) in vec3 a_tangent;
 layout (location = 5) in vec3 a_bitangent;
 
+struct Object {
+    mat4 model_matrix;
+};
+
 layout(binding = 0, row_major) uniform TestDescriptor {
     mat4 model;
 	mat4 pv;
 } DescriptorData;
+
+layout(set = 3, binding = 1, row_major) readonly buffer ObjectBuffer {
+    Object object;
+} object_data;
 
 //push constants block
 layout( push_constant ) uniform constants
@@ -22,7 +30,7 @@ layout( push_constant ) uniform constants
 } PushConstants;
 
 void main() {
-    mat4 mvp = DescriptorData.pv*DescriptorData.model;
+    mat4 mvp = DescriptorData.pv * object_data.object.model_matrix;
 
     v_texcoord0 = a_texcoord0;
     fragColor = vec3(1.0, 0.0, 0.2);

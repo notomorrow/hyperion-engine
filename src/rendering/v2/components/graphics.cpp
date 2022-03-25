@@ -34,10 +34,19 @@ void GraphicsPipeline::AddSpatial(Engine *engine, Spatial &&spatial)
 
     engine->m_shader_storage_data.objects[spatial.id] = ObjectShaderData{
         .model_matrix = spatial.transform.GetMatrix()
-
     };
 
     m_spatials.push_back(std::move(spatial));
+}
+
+void GraphicsPipeline::SetSpatialTransform(Engine *engine, uint32_t index, const Transform &transform)
+{
+    Spatial &spatial = m_spatials[index];
+    spatial.transform = transform;
+
+    engine->m_shader_storage_data.objects[spatial.id].model_matrix = transform.GetMatrix();
+    engine->m_shader_storage_data.dirty_object_range_start = MathUtil::Min(uint32_t(engine->m_shader_storage_data.dirty_object_range_start), spatial.id);
+    engine->m_shader_storage_data.dirty_object_range_end   = MathUtil::Max(uint32_t(engine->m_shader_storage_data.dirty_object_range_end), spatial.id + 1);
 }
 
 void GraphicsPipeline::Create(Engine *engine)
@@ -104,12 +113,22 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
         [this, instance, primary_command_buffer](CommandBuffer *secondary) {
             m_wrapped.Bind(secondary);
 
-            instance->GetDescriptorPool().BindDescriptorSets(secondary, &m_wrapped, 0, 3);
-
             /* TMP */
             for (auto &spatial : m_spatials) {
                 m_wrapped.push_constants.material_index = spatial.material_id.value;
                 m_wrapped.SubmitPushConstants(secondary);
+
+                /* Per-object buffer data */
+                const uint32_t dynamic_offsets[] = {
+                    uint32_t(spatial.material_id.value * sizeof(MaterialShaderData)),
+                    uint32_t(spatial.id * sizeof(ObjectShaderData))
+                };
+
+                /* TODO: refactor BindDescriptorSets() to allow us to offset the binding points,
+                 * so we can bind 0-3 only once per Render() call and only bind 4 per object.
+                 */
+                instance->GetDescriptorPool().BindDescriptorSets(secondary, &m_wrapped, 0, 4, std::size(dynamic_offsets), dynamic_offsets);
+
                 spatial.mesh->RenderVk(secondary, instance, nullptr);
             }
 

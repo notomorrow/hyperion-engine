@@ -442,11 +442,13 @@ int main()
         container->AddFramebuffer(my_fbo_id);
         container->AddSpatial(&engine, v2::Spatial{
             .id = 0,
-            .mesh = monkey_mesh
+            .mesh = monkey_mesh,
+            .material_id = v2::Material::ID{v2::Material::ID::InnerType_t(1)}
         });
         container->AddSpatial(&engine, v2::Spatial{
             .id = 1,
-            .mesh = cube_mesh
+            .mesh = cube_mesh,
+            .transform = Transform(Vector3(-4.0f, 0.0f, 4.0f), Vector3(0.8f), Quaternion::Identity())
         });
         render_container_id = engine.AddGraphicsPipeline(std::move(container));
     }
@@ -485,6 +487,8 @@ int main()
 
         Transform transform(Vector3(0, 0, 0), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
+        engine.GetGraphicsPipeline(render_container_id)->SetSpatialTransform(&engine, 0, transform);
+
         matrices_block.model = transform.GetMatrix();
         matrices_block.view = camera->GetViewMatrix();
         matrices_block.projection = camera->GetProjectionMatrix();
@@ -519,11 +523,11 @@ int main()
         compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
 #endif
 
-        auto *fbo_pl = engine.GetGraphicsPipeline(scene_pass_pipeline_id);
         
         matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
 
+        engine.UpdateDescriptorData();
         
         const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 

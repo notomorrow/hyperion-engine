@@ -41,6 +41,7 @@ public:
         { m_topology = topology; }
 
     void AddSpatial(Engine *engine, Spatial &&spatial);
+    void SetSpatialTransform(Engine *engine, uint32_t index, const Transform &transform);
 
     /* Non-owned objects - owned by `engine`, used by the pipeline */
 

@@ -240,8 +240,15 @@ void Engine::Compile()
     /* Finalize materials */
     m_material_storage_buffer->Copy(
         m_instance->GetDevice(),
-        m_shader_storage_data.materials.Size() * sizeof(MaterialShaderData),
+        m_shader_storage_data.materials.ByteSize(),
         m_shader_storage_data.materials.Data()
+    );
+
+    /* Finalize per-object data */
+    m_object_storage_buffer->Copy(
+        m_instance->GetDevice(),
+        m_shader_storage_data.objects.ByteSize(),
+        m_shader_storage_data.objects.Data()
     );
 
     /* Finalize descriptor pool */
@@ -254,6 +261,24 @@ void Engine::Compile()
     m_graphics_pipelines.CreateAll(this);
     m_compute_pipelines.CreateAll(this);
 }
+
+void Engine::UpdateDescriptorData()
+{
+    if (m_shader_storage_data.dirty_object_range_end) {
+        AssertThrow(m_shader_storage_data.dirty_object_range_end > m_shader_storage_data.dirty_object_range_start);
+
+        m_object_storage_buffer->Copy(
+            m_instance->GetDevice(),
+            m_shader_storage_data.dirty_object_range_start * sizeof(ObjectShaderData),
+            (m_shader_storage_data.dirty_object_range_end - m_shader_storage_data.dirty_object_range_start) * sizeof(ObjectShaderData),
+            m_shader_storage_data.objects.Data() + m_shader_storage_data.dirty_object_range_start
+        );
+    }
+
+    m_shader_storage_data.dirty_object_range_start = 0;
+    m_shader_storage_data.dirty_object_range_end = 0;
+}
+
 
 void Engine::RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index)
 {

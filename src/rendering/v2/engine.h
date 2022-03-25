@@ -170,6 +170,7 @@ public:
     void Initialize();
     void PrepareSwapchain();
     void Compile();
+    void UpdateDescriptorData();
     void RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer);
 
