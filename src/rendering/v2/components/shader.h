@@ -25,6 +25,13 @@ struct alignas(256) MaterialShaderData {
     float roughness;
 };
 
+struct alignas(256) SceneShaderData {
+    Matrix4 view;
+    Matrix4 projection;
+    Vector4 camera_position;
+    Vector4 light_direction;
+};
+
 struct ShaderStorageData {
     /* max number of materials, based on size in mb */
     static constexpr size_t max_materials = (1ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
@@ -35,13 +42,13 @@ struct ShaderStorageData {
 
     HeapArray<ObjectShaderData, max_objects> objects;
     HeapArray<MaterialShaderData, max_materials> materials;
+    SceneShaderData scene_shader_data;
 
     size_t material_index = 0;
 
     size_t dirty_object_range_start = 0,
            dirty_object_range_end = 0;
 };
-
 
 struct SubShader {
     ShaderModule::Type type;

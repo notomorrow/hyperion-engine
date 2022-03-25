@@ -76,7 +76,7 @@ void Filter::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
     // TEMP: change index
-    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL);
+    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE);
 
     const uint32_t num_attachments = engine->GetFramebuffer(m_framebuffer_id)->Get().GetNumAttachments();
 

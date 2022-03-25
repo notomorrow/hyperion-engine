@@ -27,6 +27,13 @@ Vector3::Vector3(float xyz)
 {
 }
 
+Vector3::Vector3(const Vector2 &xy, float z)
+    : x(xy.x),
+      y(xy.y),
+      z(z)
+{
+}
+
 Vector3::Vector3(const Vector3 &other)
     : x(other.x), 
       y(other.y), 

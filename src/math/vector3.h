@@ -12,6 +12,7 @@
 namespace hyperion {
 
 class Quaternion;
+class Vector2;
 
 class Vector3 {
     friend std::ostream &operator<<(std::ostream &out, const Vector3 &vec);
@@ -24,6 +25,7 @@ public:
     Vector3();
     Vector3(float x, float y, float z);
     Vector3(float xyz);
+    Vector3(const Vector2 &xy, float z);
     Vector3(const Vector3 &other);
 
     inline float GetX() const { return x; }

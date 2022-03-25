@@ -17,20 +17,17 @@ struct Object {
     mat4 model_matrix;
 };
 
-layout(binding = 0, row_major) uniform MatrixBlock {
-    mat4 model;
-	mat4 view;
-	mat4 projection;
-} Matrix;
 
 layout(std140, set = 3, binding = 1, row_major) readonly buffer ObjectBuffer {
     Object object;
 };
 
-layout(binding = 1, row_major) uniform SceneDataBlock {
-    vec3 camera_position;
-    vec3 light_direction;
-} SceneData;
+layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
+    mat4 view;
+    mat4 projection;
+    vec4 camera_position;
+    vec4 light_direction;
+} scene;
 
 //push constants block
 layout( push_constant ) uniform constants
@@ -45,8 +42,8 @@ void main() {
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = a_texcoord0;
-    v_light_direction = SceneData.light_direction;
-    v_camera_position = SceneData.camera_position;
+    v_light_direction = scene.light_direction.xyz;
+    v_camera_position = scene.camera_position.xyz;
 
-    gl_Position = Matrix.projection * Matrix.view * position;
+    gl_Position = scene.projection * scene.view * position;
 } 

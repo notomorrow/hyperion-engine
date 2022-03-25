@@ -21,6 +21,7 @@ using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : m_instance(new Instance(_system, app_name, "HyperionEngine")),
+      m_scene_uniform_buffer(nullptr),
       m_material_storage_buffer(nullptr),
       m_object_storage_buffer(nullptr)
 {
@@ -41,6 +42,11 @@ Engine::~Engine()
 
     m_swapchain_render_container->Destroy(this);
     m_graphics_pipelines.RemoveAll(this);
+
+    if (m_scene_uniform_buffer != nullptr) {
+        m_scene_uniform_buffer->Destroy(m_instance->GetDevice());
+        delete m_scene_uniform_buffer;
+    }
 
     if (m_material_storage_buffer != nullptr) {
         m_material_storage_buffer->Destroy(m_instance->GetDevice());
@@ -208,6 +214,9 @@ void Engine::Initialize()
     InitializeInstance();
     FindTextureFormatDefaults();
 
+    m_scene_uniform_buffer = new UniformBuffer();
+    m_scene_uniform_buffer->Create(m_instance->GetDevice(), sizeof(SceneShaderData));
+
     /* Material uniform buffer - all materials are added into
      * this buffer and will be dynamically swapped in and out
      */
@@ -217,6 +226,13 @@ void Engine::Initialize()
 
     m_object_storage_buffer = new StorageBuffer();
     m_object_storage_buffer->Create(m_instance->GetDevice(), ShaderStorageData::max_objects_bytes);
+    
+    /* for scene data */
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
+        ->AddDescriptor<renderer::UniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddSubDescriptor({
+            .gpu_buffer = m_scene_uniform_buffer
+        });
 
     /* for materials */
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
@@ -264,6 +280,12 @@ void Engine::Compile()
 
 void Engine::UpdateDescriptorData()
 {
+    m_scene_uniform_buffer->Copy(
+        m_instance->GetDevice(),
+        sizeof(SceneShaderData),
+        &m_shader_storage_data.scene_shader_data
+    );
+
     if (m_shader_storage_data.dirty_object_range_end) {
         AssertThrow(m_shader_storage_data.dirty_object_range_end > m_shader_storage_data.dirty_object_range_start);
 

@@ -8,6 +8,7 @@
 
 namespace hyperion {
 
+class Vector2;
 class Vector3;
 
 class Vector4 {
@@ -21,6 +22,8 @@ public:
     Vector4();
     Vector4(float x, float y, float z, float w);
     Vector4(float xyzw);
+    Vector4(const Vector2 &xy, float z, float w);
+    Vector4(const Vector3 &xyz, float w);
     Vector4(const Vector4 &other);
 
     inline float GetX() const { return x; }

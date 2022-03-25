@@ -131,17 +131,6 @@ int main()
     GPUBuffer matrices_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT),
               scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     // test data for descriptors
-    struct MatricesBlock {
-        alignas(16) Matrix4 model;
-        alignas(16) Matrix4 view;
-        alignas(16) Matrix4 projection;
-    } matrices_block;
-
-
-    struct SceneDataBlock {
-        alignas(16) Vector3 camera_position;
-        alignas(16) Vector3 light_direction;
-    } scene_data_block;
 
 
 #if HYPERION_VK_TEST_CUBEMAP
@@ -246,11 +235,11 @@ int main()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBALS);
 
         descriptor_set_globals
-            ->AddDescriptor<BufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddDescriptor<UniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
             ->AddSubDescriptor({ .gpu_buffer = &matrices_descriptor_buffer });
 
         descriptor_set_globals
-            ->AddDescriptor<BufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddDescriptor<UniformBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
             ->AddSubDescriptor({ .gpu_buffer = &scene_data_descriptor_buffer });
 
         descriptor_set_globals
@@ -334,8 +323,8 @@ int main()
     }
 #endif
 
-    matrices_descriptor_buffer.Create(device, sizeof(MatricesBlock));
-    scene_data_descriptor_buffer.Create(device, sizeof(SceneDataBlock));
+    matrices_descriptor_buffer.Create(device, 8);
+    scene_data_descriptor_buffer.Create(device, 8);
 
     engine.PrepareSwapchain();
     
@@ -488,13 +477,11 @@ int main()
         Transform transform(Vector3(0, 0, 0), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
         engine.GetGraphicsPipeline(render_container_id)->SetSpatialTransform(&engine, 0, transform);
-
-        matrices_block.model = transform.GetMatrix();
-        matrices_block.view = camera->GetViewMatrix();
-        matrices_block.projection = camera->GetProjectionMatrix();
-
-        scene_data_block.camera_position = camera->GetTranslation();
-        scene_data_block.light_direction = Vector3(-0.5, -0.5, 0).Normalize();
+        
+        engine.m_shader_storage_data.scene_shader_data.view            = camera->GetViewMatrix();
+        engine.m_shader_storage_data.scene_shader_data.projection      = camera->GetProjectionMatrix();
+        engine.m_shader_storage_data.scene_shader_data.camera_position = Vector4(camera->GetTranslation(), 1.0f);
+        engine.m_shader_storage_data.scene_shader_data.light_direction = Vector4(Vector3(-0.5f, -0.5f, 0).Normalize(), 1.0f);
 
 
         frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
@@ -524,8 +511,8 @@ int main()
 #endif
 
         
-        matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
-        scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
+        //matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
+        //scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
 
         engine.UpdateDescriptorData();
         

@@ -35,8 +35,7 @@ void FilterStack::Create(Engine *engine)
     static const std::array<std::string, 2> filter_shader_names = {  "filter_pass", "deferred" };
     m_filters.resize(num_filters);
 
-    uint32_t binding_index = engine->GetInstance()->GetDescriptorPool()
-        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL)->GetDescriptors().size();
+    uint32_t binding_index = 5; /* hardcoded for now - start filters at binding 5 */
 
     /* TODO: use subpasses for gbuffer so we only have num_filters * num_frames descriptors */
     for (int i = 0; i < num_filters; i++) {
