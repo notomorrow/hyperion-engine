@@ -51,7 +51,7 @@ void Instance::PrepareFrame(Frame *frame)
     for (uint8_t i = 0; i < this->descriptor_pool.m_num_descriptor_sets; i++) {
         auto *descriptor_set = this->descriptor_pool.GetDescriptorSet(DescriptorSet::Index(i));
 
-        if (descriptor_set->GetState() & Descriptor::DESCRIPTOR_DIRTY) {
+        if (descriptor_set->GetState() == DescriptorSetState::DESCRIPTOR_DIRTY) {
             descriptor_set->Update(this->device);
         }
     }
@@ -289,7 +289,7 @@ Result Instance::Initialize(bool load_debug_layers) {
     HYPERION_BUBBLE_ERRORS(this->frame_handler->CreateFrames(this->device));
 
     /* init descriptor sets */
-    for (int i = 0; i < DescriptorPool::max_descriptor_sets; i++) {
+    for (int i = 0; i < DescriptorSet::max_descriptor_sets; i++) {
         this->descriptor_pool.AddDescriptorSet();
     }
 

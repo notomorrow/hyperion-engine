@@ -1,7 +1,7 @@
 #include "graphics.h"
 #include "../engine.h"
 
-#include <rendering/backend/renderer_descriptor.h>
+#include <rendering/backend/renderer_descriptor_set.h>
 
 namespace hyperion::v2 {
 
@@ -89,7 +89,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *command_buffer, uin
     m_wrapped.BeginRenderPass(command_buffer, frame_index, VK_SUBPASS_CONTENTS_INLINE);
     m_wrapped.Bind(command_buffer);
 
-    instance->GetDescriptorPool().BindDescriptorSets(command_buffer, &m_wrapped, 0, 3);
+    instance->GetDescriptorPool().Bind(command_buffer, &m_wrapped, {{ .count = 3 }});
 
     /* TMP */
     for (auto &spatial : m_spatials) {
@@ -113,21 +113,27 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
         [this, instance, primary_command_buffer](CommandBuffer *secondary) {
             m_wrapped.Bind(secondary);
 
-            /* TMP */
+            /* Bind scene data */
+            instance->GetDescriptorPool().Bind(
+                secondary,
+                &m_wrapped,
+                {{ .set = 0, .count = 3 }}
+            );
+            
             for (auto &spatial : m_spatials) {
-                m_wrapped.push_constants.material_index = spatial.material_id.value;
-                m_wrapped.SubmitPushConstants(secondary);
-
-                /* Per-object buffer data */
-                const uint32_t dynamic_offsets[] = {
-                    uint32_t(spatial.material_id.value * sizeof(MaterialShaderData)),
-                    uint32_t(spatial.id * sizeof(ObjectShaderData))
-                };
-
-                /* TODO: refactor BindDescriptorSets() to allow us to offset the binding points,
-                 * so we can bind 0-3 only once per Render() call and only bind 4 per object.
-                 */
-                instance->GetDescriptorPool().BindDescriptorSets(secondary, &m_wrapped, 0, 4, std::size(dynamic_offsets), dynamic_offsets);
+                /* Bind per-object / material data separately */
+                instance->GetDescriptorPool().Bind(
+                    secondary,
+                    &m_wrapped,
+                    {
+                        { .set = 3, .count = 1 },
+                        { .binding = 3 },
+                        { .offsets = {
+                            uint32_t(spatial.material_id.value * sizeof(MaterialShaderData)),
+                            uint32_t(spatial.id * sizeof(ObjectShaderData))
+                        }}
+                    }
+                );
 
                 spatial.mesh->RenderVk(secondary, instance, nullptr);
             }
