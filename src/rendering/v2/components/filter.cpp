@@ -148,7 +148,7 @@ void Filter::Record(Engine *engine, uint32_t frame_index)
                 pipeline->Get().Bind(cmd);
 
                 /* TODO: for testing. multiply by 0 for a red material, 1 for blue */
-                uint32_t offsets[] = { 1 * sizeof(MaterialShaderData), 0 * sizeof(ObjectShaderData)};
+                uint32_t offsets[] = { 0 * sizeof(MaterialShaderData), 0 * sizeof(ObjectShaderData)};
 
                 HYPERION_PASS_ERRORS(
                     engine->GetInstance()->GetDescriptorPool().BindDescriptorSets(cmd, &pipeline->Get(), 0, 4, std::size(offsets), offsets),

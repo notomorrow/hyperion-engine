@@ -30,7 +30,8 @@ public:
 
     void Map(Device *device, void **ptr);
     void Unmap(Device *device);
-    void Copy(Device *device, size_t size, void *ptr);
+    void Copy(Device *device, size_t count, void *ptr);
+    void Copy(Device *device, size_t offset, size_t count, void *ptr);
 
 protected:
     uint32_t sharing_mode;

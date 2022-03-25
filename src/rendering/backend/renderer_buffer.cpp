@@ -41,19 +41,30 @@ GPUMemory::~GPUMemory()
 }
 
 
-void GPUMemory::Map(Device *device, void **ptr) {
+void GPUMemory::Map(Device *device, void **ptr)
+{
     vmaMapMemory(*device->GetAllocator(), this->allocation, ptr);
 }
 
-void GPUMemory::Unmap(Device *device) {
+void GPUMemory::Unmap(Device *device)
+{
     vmaUnmapMemory(*device->GetAllocator(), this->allocation);
 }
 
-void GPUMemory::Copy(Device *device, size_t size, void *ptr) {
+void GPUMemory::Copy(Device *device, size_t count, void *ptr)
+{
     void *map;
-    this->Map(device, &map);
-    memcpy(map, ptr, size);
-    this->Unmap(device);
+    Map(device, &map);
+    memcpy(map, ptr, count);
+    Unmap(device);
+}
+
+void GPUMemory::Copy(Device *device, size_t offset, size_t count, void *ptr)
+{
+    void *map;
+    Map(device, &map);
+    memcpy((void *)(intptr_t(map) + offset), ptr, count);
+    Unmap(device);
 }
 
 GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)

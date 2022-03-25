@@ -14,6 +14,16 @@ layout(location=2) out vec4 gbuffer_positions;
 layout(binding = 2) uniform samplerCube tex;
 //layout(binding = 2) uniform sampler2D tex;
 
+struct Material {
+    vec4 albedo;
+    float metalness;
+    float roughness;
+};
+
+layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
+    Material material;
+};
+
 void main() {
     vec3 view_vector = normalize(v_position - v_camera_position);
     vec3 normal = normalize(v_normal);
@@ -22,8 +32,7 @@ void main() {
     
     vec3 reflection_vector = reflect(view_vector, normal);
     
-    gbuffer_albedo = vec4(texture(tex, reflection_vector).rgb, 1.0);
-    //gbuffer_albedo = vec4(textureLod(tex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y), 1).rgb, 1.0);
+    gbuffer_albedo = vec4(texture(tex, reflection_vector).rgb * material.albedo.rgb, 1.0);
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }
