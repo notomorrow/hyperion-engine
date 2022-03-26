@@ -6,6 +6,7 @@
 #define HYPERION_RENDERER_BUFFER_H
 
 #include "renderer_result.h"
+#include "renderer_structs.h"
 #include "../../system/vma/vma_usage.h"
 
 namespace hyperion {
@@ -80,11 +81,11 @@ public:
 
     void Bind(CommandBuffer *command_buffer);
 
-    inline VkIndexType GetIndexType() { return m_index_type; }
-    inline void SetIndexType(VkIndexType index_type) { m_index_type = index_type; }
+    inline DatumType GetDatumType() const { return m_datum_type; }
+    inline void SetDatumType(DatumType datum_type) { m_datum_type = datum_type; }
 
 private:
-    VkIndexType m_index_type = VK_INDEX_TYPE_UINT32;
+    DatumType m_datum_type = DatumType::UNSIGNED_INT;
 };
 
 class UniformBuffer : public GPUBuffer {

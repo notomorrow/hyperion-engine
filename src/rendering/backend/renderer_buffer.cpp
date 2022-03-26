@@ -5,6 +5,7 @@
 #include "renderer_buffer.h"
 #include "renderer_command_buffer.h"
 #include "renderer_device.h"
+#include "renderer_helpers.h"
 
 #include "../../system/debug.h"
 #include <cstring>
@@ -82,7 +83,8 @@ GPUBuffer::~GPUBuffer()
     AssertThrowMsg(buffer == nullptr, "buffer should have been destroyed!");
 }
 
-void GPUBuffer::Create(Device *device, size_t size) {
+void GPUBuffer::Create(Device *device, size_t size)
+{
     this->size = size;
 
     const QueueFamilyIndices &qf_indices = device->GetQueueFamilyIndices();
@@ -114,18 +116,20 @@ void GPUBuffer::Destroy(Device *device)
 VertexBuffer::VertexBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
     : GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, memory_property_flags, sharing_mode) {}
 
-void VertexBuffer::Bind(CommandBuffer *cmd) {
+void VertexBuffer::Bind(CommandBuffer *cmd)
+{
     const VkBuffer vertex_buffers[] = { buffer };
     const VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(cmd->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
 }
 
 IndexBuffer::IndexBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
-        : GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, memory_property_flags, sharing_mode) {}
+    : GPUBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, memory_property_flags, sharing_mode) {}
 
-void IndexBuffer::Bind(CommandBuffer *cmd) {
+void IndexBuffer::Bind(CommandBuffer *cmd)
+{
     const VkDeviceSize offsets[] = { 0 };
-    vkCmdBindIndexBuffer(cmd->GetCommandBuffer(), this->buffer, 0, this->GetIndexType());
+    vkCmdBindIndexBuffer(cmd->GetCommandBuffer(), this->buffer, 0, helpers::ToVkIndexType(GetDatumType()));
 }
 
 

@@ -3,7 +3,7 @@
 
 #include "renderer_result.h"
 #include "renderer_device.h"
-#include "renderer_image.h"
+#include "renderer_structs.h"
 
 #include <vulkan/vulkan.h>
 
@@ -16,6 +16,8 @@ namespace renderer {
 namespace helpers {
 
 size_t MipmapSize(size_t src_size, int lod);
+
+VkIndexType ToVkIndexType(DatumType);
 
 class SingleTimeCommands {
 public:

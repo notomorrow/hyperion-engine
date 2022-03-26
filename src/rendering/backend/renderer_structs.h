@@ -24,6 +24,16 @@ namespace renderer {
 
 using ::std::optional;
 
+enum class DatumType {
+    UNSIGNED_BYTE,
+    SIGNED_BYTE,
+    UNSIGNED_SHORT,
+    SIGNED_SHORT,
+    UNSIGNED_INT,
+    SIGNED_INT,
+    FLOAT
+};
+
 struct MeshBindingDescription {
     uint32_t binding;
     uint32_t stride;
