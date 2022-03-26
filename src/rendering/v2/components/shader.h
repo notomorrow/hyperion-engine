@@ -4,6 +4,7 @@
 #include "base.h"
 
 #include <rendering/backend/renderer_shader.h>
+#include <rendering/backend/renderer_buffer.h>
 
 #include <math/transform.h>
 #include <util/heap_array.h>
@@ -14,6 +15,8 @@ namespace hyperion::v2 {
 
 using renderer::ShaderObject;
 using renderer::ShaderModule;
+using renderer::UniformBuffer;
+using renderer::StorageBuffer;
 
 struct alignas(256) ObjectShaderData {
     Matrix4 model_matrix;
@@ -43,6 +46,10 @@ struct ShaderStorageData {
     HeapArray<ObjectShaderData, max_objects> objects;
     HeapArray<MaterialShaderData, max_materials> materials;
     SceneShaderData scene_shader_data;
+
+    UniformBuffer *m_scene_uniform_buffer;
+    StorageBuffer *m_material_storage_buffer;
+    StorageBuffer *m_object_storage_buffer;
 
     size_t material_index = 0;
 

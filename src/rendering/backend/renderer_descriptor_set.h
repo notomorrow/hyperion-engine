@@ -37,10 +37,12 @@ public:
         DESCRIPTOR_SET_INDEX_GLOBALS  = 0, /* per frame */
         DESCRIPTOR_SET_INDEX_PASS     = 1, /* per render pass */
         DESCRIPTOR_SET_INDEX_SCENE    = 2, /* per scene */
-        DESCRIPTOR_SET_INDEX_OBJECT   = 3  /* per object */
+        DESCRIPTOR_SET_INDEX_OBJECT   = 3, /* per object */
+        DESCRIPTOR_SET_INDEX_SCENE_FRAME_1  = 4,
+        DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1 = 5
     };
 
-    static constexpr uint8_t max_descriptor_sets = 4;
+    static constexpr uint8_t max_descriptor_sets = 6;
 
     DescriptorSet();
     DescriptorSet(const DescriptorSet &other) = delete;

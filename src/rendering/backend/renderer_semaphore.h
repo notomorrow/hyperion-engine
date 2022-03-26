@@ -133,6 +133,8 @@ class SemaphoreChain {
     friend class CommandBuffer;
     friend class Instance;
 public:
+    using SemaphoreView = std::vector<VkSemaphore>;
+    using SemaphoreStageView = std::vector<VkPipelineStageFlags>;
 
     static void Link(SemaphoreChain &signaler, SemaphoreChain &waitee);
     
@@ -178,9 +180,7 @@ public:
     }
 
     inline SemaphoreChain &WaitsFor(const SignalSemaphore &signal_semaphore)
-    {
-        return WaitsFor(signal_semaphore.ConvertHeldType<SemaphoreType::WAIT>());
-    }
+        { return WaitsFor(signal_semaphore.ConvertHeldType<SemaphoreType::WAIT>()); }
 
     inline SemaphoreChain &SignalsTo(const SignalSemaphore &signal_semaphore)
     {
@@ -198,9 +198,7 @@ public:
     }
 
     inline SemaphoreChain &SignalsTo(const WaitSemaphore &wait_semaphore)
-    {
-        return SignalsTo(wait_semaphore.ConvertHeldType<SemaphoreType::SIGNAL>());
-    }
+        { return SignalsTo(wait_semaphore.ConvertHeldType<SemaphoreType::SIGNAL>()); }
 
     /* Wait on all signals from `other` */
     inline SemaphoreChain &operator<<(const SemaphoreChain &signaler)
@@ -222,13 +220,22 @@ public:
         return waitee;
     }
 
+    inline const SemaphoreView &GetSignalSemaphoresView() const
+        { return m_signal_semaphores_view; }
+
+    inline const SemaphoreStageView &GetSignalSemaphoreStagesView() const
+        { return m_signal_semaphores_stage_view; }
+
+    inline const SemaphoreView &GetWaitSemaphoresView() const
+        { return m_wait_semaphores_view; }
+
+    inline const SemaphoreStageView &GetWaitSemaphoreStagesView() const
+        { return m_wait_semaphores_stage_view; }
+
     Result Create(Device *device);
     Result Destroy(Device *device);
 
 private:
-    using SemaphoreView = std::vector<VkSemaphore>;
-    using SemaphoreStageView = std::vector<VkPipelineStageFlags>;
-
     static std::set<SemaphoreRef *> refs;
 
     void UpdateViews();

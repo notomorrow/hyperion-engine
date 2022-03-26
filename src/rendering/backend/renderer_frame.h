@@ -5,6 +5,7 @@
 #include "renderer_device.h"
 #include "renderer_command_buffer.h"
 #include "renderer_semaphore.h"
+#include "renderer_queue.h"
 
 #include <util/non_owning_ptr.h>
 
@@ -12,6 +13,8 @@
 
 namespace hyperion {
 namespace renderer {
+
+class Swapchain;
 
 using ::hyperion::non_owning_ptr;
 
@@ -34,11 +37,11 @@ public:
     inline const SemaphoreChain &GetPresentSemaphores() const { return present_semaphores; }
 
     /* Start recording into the command buffer */
-    void BeginCapture();
+    Result BeginCapture();
     /* Stop recording into the command buffer */
-    void EndCapture();
+    Result EndCapture();
     /* Submit command buffer to the given queue */
-    void Submit(VkQueue queue_submit);
+    Result Submit(Queue *queue);
     
     non_owning_ptr<CommandBuffer> command_buffer;
     VkFence        fc_queue_submit;

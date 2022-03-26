@@ -407,7 +407,7 @@ int main()
 
     for (uint32_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
         auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
-        AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsQueueData().command_pool));
+        AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsQueue().command_pool));
 
         per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
         
@@ -482,9 +482,15 @@ int main()
         engine.m_shader_storage_data.scene_shader_data.light_direction = Vector4(Vector3(-0.5f, -0.5f, 0).Normalize(), 1.0f);
 
 
-        frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
 
-        engine.GetInstance()->PrepareFrame(frame);
+        HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
+            engine.GetInstance()->GetDevice(),
+            engine.GetInstance()->GetSwapchain()
+        ));
+
+
+        frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
+        const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         auto *compute_pipeline = engine.GetComputePipeline(compute_pipeline_id);
@@ -512,12 +518,14 @@ int main()
         //matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
         //scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
 
-        engine.UpdateDescriptorData();
+
+        /* TODO: Updates of descriptor set should only update sets that are double-buffered so we don't
+         * end up updating data that is in use by the gpu!
+         */
+        engine.UpdateDescriptorData(frame_index);
+        engine.GetInstance()->UpdateDescriptorSets();
         
-        const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
-
-
-        frame->BeginCapture();
+        HYPERION_ASSERT_RESULT(frame->BeginCapture());
 
         frame->GetCommandBuffer()->RecordCommandsWithContext(
             [&](CommandBuffer *primary) {
@@ -557,24 +565,13 @@ int main()
             1, &imageMemoryBarrier);
 #endif
 
-        engine.m_swapchain_render_container->Get().BeginRenderPass(frame->command_buffer.get(), frame_index, VK_SUBPASS_CONTENTS_INLINE);
+        engine.RenderSwapchain(frame->GetCommandBuffer());
+
+        HYPERION_ASSERT_RESULT(frame->EndCapture());
+        HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));
         
-        frame->GetCommandBuffer()->RecordCommandsWithContext(
-            [&](CommandBuffer *cmd) {
-                
-                engine.m_swapchain_render_container->Get().push_constants.previous_frame_index = previous_frame_index;
-                engine.m_swapchain_render_container->Get().push_constants.current_frame_index = frame_index;
-
-                engine.RenderSwapchain(cmd);
-
-                HYPERION_RETURN_OK;
-            });
-        engine.m_swapchain_render_container->Get().EndRenderPass(frame->command_buffer.get(), frame_index);
-        frame->EndCapture();
-
-        frame->Submit(engine.GetInstance()->GetGraphicsQueue());
-
-        engine.GetInstance()->PresentFrame(frame);
+        engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
+        engine.GetInstance()->GetFrameHandler()->NextFrame();
 
         previous_frame_index = frame_index;
     }
@@ -583,7 +580,7 @@ int main()
 
     //graphics_semaphore_chain.Destroy(engine.GetInstance()->GetDevice());
 
-    v2::Filter::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
+    v2::PostEffect::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
 
     monkey_mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
     cube_mesh.reset();

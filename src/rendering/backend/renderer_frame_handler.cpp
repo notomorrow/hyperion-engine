@@ -3,13 +3,12 @@
 namespace hyperion {
 namespace renderer {
 
-FrameHandler::FrameHandler(uint8_t num_images, NextImageFunction next_image)
-    : m_per_frame_data(num_images),
+FrameHandler::FrameHandler(uint32_t num_frames, NextImageFunction next_image)
+    : m_per_frame_data(MathUtil::Min(num_frames, Swapchain::max_frames_in_flight)),
       m_next_image(next_image),
-      m_acquired_image_index(0)
+      m_acquired_image_index(0),
+      m_current_frame_index(0)
 {
-    /* Will be set to 0 on first call to AcquireNextImage() */
-    m_current_frame_index = (GetNumFrames() - 1) % GetNumFrames();  // NOLINT(cppcoreguidelines-prefer-member-initializer)
 }
 
 FrameHandler::~FrameHandler() = default;
@@ -31,7 +30,7 @@ Result FrameHandler::CreateFrames(Device *device)
     HYPERION_RETURN_OK;
 }
 
-Result FrameHandler::AcquireNextImage(Device *device, Swapchain *swapchain, VkResult *out_result)
+Result FrameHandler::PrepareFrame(Device *device, Swapchain *swapchain)
 {
     auto *frame = GetCurrentFrameData().Get<Frame>();
 
@@ -41,16 +40,48 @@ Result FrameHandler::AcquireNextImage(Device *device, Swapchain *swapchain, VkRe
         fence_result = vkWaitForFences(device->GetDevice(), 1, &frame->fc_queue_submit, VK_TRUE, UINT64_MAX);
     } while (fence_result == VK_TIMEOUT);
 
-    HYPERION_VK_CHECK(*out_result = fence_result);
-    HYPERION_VK_CHECK(*out_result = vkResetFences(device->GetDevice(), 1, &frame->fc_queue_submit));
+    if (fence_result == VK_SUBOPTIMAL_KHR || fence_result == VK_ERROR_OUT_OF_DATE_KHR) {
+        DebugLog(LogType::Debug, "Waiting -- image result was %d\n", fence_result);
 
-    HYPERION_VK_CHECK(*out_result = m_next_image(device, swapchain, frame, &m_acquired_image_index));
+        vkDeviceWaitIdle(device->GetDevice());
 
-    m_current_frame_index = (m_current_frame_index + 1) % GetNumFrames();
-    //HYPERION_VK_CHECK(*out_result = vkResetCommandBuffer(frame->command_buffer, 0));
+        /* TODO: regenerate framebuffers and swapchain */
+    }
+
+    HYPERION_VK_CHECK(fence_result);
+    HYPERION_VK_CHECK(vkResetFences(device->GetDevice(), 1, &frame->fc_queue_submit));
+
+    HYPERION_VK_CHECK(m_next_image(device, swapchain, frame, &m_acquired_image_index));
 
     HYPERION_RETURN_OK;
 }
+
+void FrameHandler::NextFrame()
+{
+    m_current_frame_index = (m_current_frame_index + 1) % GetNumFrames();
+}
+
+Result FrameHandler::PresentFrame(Queue *queue, Swapchain *swapchain) const
+{
+    auto *frame = GetCurrentFrameData().Get<Frame>();
+
+    const auto &signal_semaphores = frame->GetPresentSemaphores().GetSignalSemaphoresView();
+
+    VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+
+    present_info.waitSemaphoreCount = uint32_t(signal_semaphores.size());
+    present_info.pWaitSemaphores    = signal_semaphores.data();
+
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains    = &swapchain->swapchain;
+    present_info.pImageIndices  = &m_acquired_image_index;
+    present_info.pResults       = nullptr;
+
+    HYPERION_VK_CHECK(vkQueuePresentKHR(queue->queue, &present_info));
+
+    HYPERION_RETURN_OK;
+}
+
 
 Result FrameHandler::CreateCommandBuffers(Device *device, VkCommandPool pool)
 {
