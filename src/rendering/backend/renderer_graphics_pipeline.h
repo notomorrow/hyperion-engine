@@ -61,7 +61,6 @@ public:
     void SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs, std::vector<VkVertexInputAttributeDescription> &vertex_attribs);
     
     Result Create(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool);
-
     Result Destroy(Device *device);
 
     void BeginRenderPass(CommandBuffer *cmd, size_t index, VkSubpassContents contents);

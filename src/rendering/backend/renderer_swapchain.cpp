@@ -61,8 +61,13 @@ Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
     this->extent = this->ChooseSwapchainExtent();
     this->image_format = this->surface_format.format;
 
-    uint32_t image_count = this->support_details.capabilities.minImageCount + 1;
-    DebugLog(LogType::Debug, "Min images required: %d\n", this->support_details.capabilities.minImageCount);
+    uint32_t image_count = support_details.capabilities.minImageCount + 1;
+
+    if (support_details.capabilities.maxImageCount > 0 && image_count > support_details.capabilities.maxImageCount) {
+        image_count = support_details.capabilities.maxImageCount;
+    }
+
+    DebugLog(LogType::Debug, "Swapchain image count: %d\n", image_count);
 
     VkSwapchainCreateInfoKHR create_info{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
     create_info.surface = surface;

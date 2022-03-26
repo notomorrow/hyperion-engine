@@ -3,7 +3,7 @@
 #include <asset/byte_reader.h>
 #include <asset/asset_manager.h>
 
-#include "components/filter.h"
+#include "components/post_fx.h"
 #include "components/compute.h"
 
 #include <rendering/backend/renderer_features.h>
@@ -21,9 +21,7 @@ using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      m_scene_uniform_buffer(nullptr),
-      m_material_storage_buffer(nullptr),
-      m_object_storage_buffer(nullptr)
+      m_shader_storage_data{}
 {
 }
 
@@ -31,7 +29,7 @@ Engine::~Engine()
 {
     (void)m_instance->GetDevice()->Wait();
 
-    m_filter_stack.Destroy(this);
+    m_post_processing.Destroy(this);
 
     m_framebuffers.RemoveAll(this);
     m_render_passes.RemoveAll(this);
@@ -43,19 +41,19 @@ Engine::~Engine()
     m_swapchain_render_container->Destroy(this);
     m_graphics_pipelines.RemoveAll(this);
 
-    if (m_scene_uniform_buffer != nullptr) {
-        m_scene_uniform_buffer->Destroy(m_instance->GetDevice());
-        delete m_scene_uniform_buffer;
+    if (m_shader_storage_data.m_scene_uniform_buffer != nullptr) {
+        m_shader_storage_data.m_scene_uniform_buffer->Destroy(m_instance->GetDevice());
+        delete m_shader_storage_data.m_scene_uniform_buffer;
     }
 
-    if (m_material_storage_buffer != nullptr) {
-        m_material_storage_buffer->Destroy(m_instance->GetDevice());
-        delete m_material_storage_buffer;
+    if (m_shader_storage_data.m_material_storage_buffer != nullptr) {
+        m_shader_storage_data.m_material_storage_buffer->Destroy(m_instance->GetDevice());
+        delete m_shader_storage_data.m_material_storage_buffer;
     }
 
-    if (m_object_storage_buffer != nullptr) {
-        m_object_storage_buffer->Destroy(m_instance->GetDevice());
-        delete m_object_storage_buffer;
+    if (m_shader_storage_data.m_object_storage_buffer != nullptr) {
+        m_shader_storage_data.m_object_storage_buffer->Destroy(m_instance->GetDevice());
+        delete m_shader_storage_data.m_object_storage_buffer;
     }
 
     m_instance->Destroy();
@@ -141,7 +139,7 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
-    m_filter_stack.Create(this);
+    m_post_processing.Create(this);
 
     Shader::ID shader_id{};
 
@@ -172,7 +170,7 @@ void Engine::PrepareSwapchain()
     m_swapchain_render_container = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id);
 
     
-    for (auto img : m_instance->swapchain->images) {
+    for (VkImage img : m_instance->swapchain->images) {
         auto image_view = std::make_unique<ImageView>();
 
         /* Create imageview independent of a Image */
@@ -214,31 +212,31 @@ void Engine::Initialize()
     InitializeInstance();
     FindTextureFormatDefaults();
 
-    m_scene_uniform_buffer = new UniformBuffer();
-    m_scene_uniform_buffer->Create(m_instance->GetDevice(), sizeof(SceneShaderData));
+    m_shader_storage_data.m_scene_uniform_buffer = new UniformBuffer();
+    m_shader_storage_data.m_scene_uniform_buffer->Create(m_instance->GetDevice(), sizeof(SceneShaderData));
 
     /* Material uniform buffer - all materials are added into
      * this buffer and will be dynamically swapped in and out
      */
 
-    m_material_storage_buffer = new StorageBuffer();
-    m_material_storage_buffer->Create(m_instance->GetDevice(), ShaderStorageData::max_materials_bytes);
+    m_shader_storage_data.m_material_storage_buffer = new StorageBuffer();
+    m_shader_storage_data.m_material_storage_buffer->Create(m_instance->GetDevice(), ShaderStorageData::max_materials_bytes);
 
-    m_object_storage_buffer = new StorageBuffer();
-    m_object_storage_buffer->Create(m_instance->GetDevice(), ShaderStorageData::max_objects_bytes);
+    m_shader_storage_data.m_object_storage_buffer = new StorageBuffer();
+    m_shader_storage_data.m_object_storage_buffer->Create(m_instance->GetDevice(), ShaderStorageData::max_objects_bytes);
     
     /* for scene data */
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->AddDescriptor<renderer::UniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
-            .gpu_buffer = m_scene_uniform_buffer
+            .gpu_buffer = m_shader_storage_data.m_scene_uniform_buffer
         });
 
     /* for materials */
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
-            .gpu_buffer = m_material_storage_buffer,
+            .gpu_buffer = m_shader_storage_data.m_material_storage_buffer,
             .range = sizeof(MaterialShaderData)
         });
 
@@ -246,7 +244,7 @@ void Engine::Initialize()
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
-            .gpu_buffer = m_object_storage_buffer,
+            .gpu_buffer = m_shader_storage_data.m_object_storage_buffer,
             .range = sizeof(ObjectShaderData)
         });
 }
@@ -254,14 +252,14 @@ void Engine::Initialize()
 void Engine::Compile()
 {
     /* Finalize materials */
-    m_material_storage_buffer->Copy(
+    m_shader_storage_data.m_material_storage_buffer->Copy(
         m_instance->GetDevice(),
         m_shader_storage_data.materials.ByteSize(),
         m_shader_storage_data.materials.Data()
     );
 
     /* Finalize per-object data */
-    m_object_storage_buffer->Copy(
+    m_shader_storage_data.m_object_storage_buffer->Copy(
         m_instance->GetDevice(),
         m_shader_storage_data.objects.ByteSize(),
         m_shader_storage_data.objects.Data()
@@ -271,16 +269,16 @@ void Engine::Compile()
     auto descriptor_pool_result = m_instance->GetDescriptorPool().Create(m_instance->GetDevice());
     AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
 
-    m_filter_stack.BuildPipelines(this);
+    m_post_processing.BuildPipelines(this);
 
     m_swapchain_render_container->Create(this);
     m_graphics_pipelines.CreateAll(this);
     m_compute_pipelines.CreateAll(this);
 }
 
-void Engine::UpdateDescriptorData()
+void Engine::UpdateDescriptorData(uint32_t frame_index)
 {
-    m_scene_uniform_buffer->Copy(
+    m_shader_storage_data.m_scene_uniform_buffer->Copy(
         m_instance->GetDevice(),
         sizeof(SceneShaderData),
         &m_shader_storage_data.scene_shader_data
@@ -289,7 +287,7 @@ void Engine::UpdateDescriptorData()
     if (m_shader_storage_data.dirty_object_range_end) {
         AssertThrow(m_shader_storage_data.dirty_object_range_end > m_shader_storage_data.dirty_object_range_start);
 
-        m_object_storage_buffer->Copy(
+        m_shader_storage_data.m_object_storage_buffer->Copy(
             m_instance->GetDevice(),
             m_shader_storage_data.dirty_object_range_start * sizeof(ObjectShaderData),
             (m_shader_storage_data.dirty_object_range_end - m_shader_storage_data.dirty_object_range_start) * sizeof(ObjectShaderData),
@@ -301,20 +299,24 @@ void Engine::UpdateDescriptorData()
     m_shader_storage_data.dirty_object_range_end = 0;
 }
 
-
 void Engine::RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index)
 {
-    m_filter_stack.Render(this, primary_command_buffer, frame_index);
+    m_post_processing.Render(this, primary_command_buffer, frame_index);
 }
 
-void Engine::RenderSwapchain(CommandBuffer *command_buffer)
+void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
 {
-    renderer::GraphicsPipeline &pipeline = m_swapchain_render_container->Get();
+    auto &pipeline = m_swapchain_render_container->Get();
+    const uint32_t acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 
+    pipeline.BeginRenderPass(command_buffer, acquired_image_index, VK_SUBPASS_CONTENTS_INLINE);
     pipeline.Bind(command_buffer);
 
-    m_instance->GetDescriptorPool().Bind(command_buffer, &pipeline, {{ .count = 3 }});
+    m_instance->GetDescriptorPool().Bind(command_buffer, &pipeline, {{.count = 3}});
 
-    Filter::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
+    /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
+    PostEffect::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
+
+    pipeline.EndRenderPass(command_buffer, acquired_image_index);
 }
 } // namespace hyperion::v2

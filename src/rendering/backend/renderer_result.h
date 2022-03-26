@@ -49,6 +49,12 @@ struct Result {
         (void)_result; \
     } while (0)
 
+#define HYPERION_ASSERT_RESULT(result) \
+    { \
+        auto _result = (result); \
+        AssertThrowMsg(_result == ::hyperion::renderer::Result::OK, "%s", _result.message); \
+    }
+
 #define HYPERION_VK_CHECK(vk_result) \
     do { \
         if ((vk_result) != VK_SUCCESS) \

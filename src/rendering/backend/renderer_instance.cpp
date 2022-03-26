@@ -28,25 +28,8 @@ static VkResult HandleNextFrame(Device *device, Swapchain *swapchain, Frame *fra
         index);
 }
 
-void Instance::WaitImageReady(Frame *frame)
+void Instance::UpdateDescriptorSets()
 {
-    VkResult vk_result;
-    auto next_image_result = this->frame_handler->AcquireNextImage(device, this->swapchain, &vk_result);
-    AssertThrowMsg(next_image_result, "%s", next_image_result.message);
-
-    if (vk_result == VK_SUBOPTIMAL_KHR || vk_result == VK_ERROR_OUT_OF_DATE_KHR) {
-        DebugLog(LogType::Debug, "Waiting -- image result was %d\n", vk_result);
-        vkDeviceWaitIdle(this->device->GetDevice());
-        /* TODO: regenerate framebuffers and swapchain */
-    }
-}
-
-void Instance::PrepareFrame(Frame *frame)
-{
-    /* Assume `frame` is not nullptr */
-
-    this->WaitImageReady(frame);
-
     /* Update descriptors */
     for (uint8_t i = 0; i < this->descriptor_pool.m_num_descriptor_sets; i++) {
         auto *descriptor_set = this->descriptor_pool.GetDescriptorSet(DescriptorSet::Index(i));
@@ -55,25 +38,6 @@ void Instance::PrepareFrame(Frame *frame)
             descriptor_set->Update(this->device);
         }
     }
-}
-
-void Instance::PresentFrame(Frame *frame)
-{
-    VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-
-    present_info.waitSemaphoreCount = uint32_t(frame->GetPresentSemaphores().m_signal_semaphores_view.size());
-    present_info.pWaitSemaphores    = frame->GetPresentSemaphores().m_signal_semaphores_view.data();
-
-    AssertThrow(this->swapchain != nullptr && this->swapchain->swapchain != nullptr);
-
-    const uint32_t image_index = this->frame_handler->GetAcquiredImageIndex();
-
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &this->swapchain->swapchain;
-    present_info.pImageIndices = &image_index;
-    present_info.pResults = nullptr;
-    
-    vkQueuePresentKHR(this->queue_present.queue, &present_info);
 }
 
 Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers)
@@ -186,24 +150,25 @@ Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_
     this->device = nullptr;
 }
 
-Result Instance::CreateCommandPool(QueueData &queue_data)
+Result Instance::CreateCommandPool(Queue &queue)
 {
     VkCommandPoolCreateInfo pool_info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-    pool_info.queueFamilyIndex = queue_data.family;
+    pool_info.queueFamilyIndex = queue.family;
     /* TODO: look into VK_COMMAND_POOL_CREATE_TRANSIENT_BIT for constantly changing objects */
     pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
     HYPERION_VK_CHECK_MSG(
-        vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &queue_data.command_pool),
+        vkCreateCommandPool(this->device->GetDevice(), &pool_info, nullptr, &queue.command_pool),
         "Could not create Vulkan command pool"
     );
 
-    DebugLog(LogType::Debug, "Create command pool for queue %d\n", queue_data.family);
+    DebugLog(LogType::Debug, "Create command pool for queue %d\n", queue.family);
 
     HYPERION_RETURN_OK;
 }
 
-Result Instance::SetupDebugMessenger() {
+Result Instance::SetupDebugMessenger()
+{
 #ifndef HYPERION_BUILD_RELEASE
     VkDebugUtilsMessengerCreateInfoEXT messenger_info{VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
     messenger_info.messageSeverity = (
@@ -227,7 +192,8 @@ Result Instance::SetupDebugMessenger() {
     HYPERION_RETURN_OK;
 }
 
-Result Instance::Initialize(bool load_debug_layers) {
+Result Instance::Initialize(bool load_debug_layers)
+{
     // Application names/versions
     this->SetCurrentWindow(this->system.GetCurrentWindow());
 
@@ -299,8 +265,10 @@ Result Instance::Initialize(bool load_debug_layers) {
     HYPERION_RETURN_OK;
 }
 
-static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
+static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
+{
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+
     if (func != nullptr) {
         func(instance, debugMessenger, pAllocator);
     } else {
@@ -310,7 +278,7 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
 
 Result Instance::Destroy()
 {
-    Result result(Result::RENDERER_OK);
+    auto result = Result::OK;
 
     /* Wait for the GPU to finish, we need to be in an idle state. */
     HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(this->device->GetDevice()), result);
@@ -360,11 +328,13 @@ Result Instance::Destroy()
     return result;
 }
 
-Device *Instance::GetDevice() {
+Device *Instance::GetDevice()
+{
     return this->device;
 }
 
-void Instance::CreateSurface() {
+void Instance::CreateSurface()
+{
     this->surface = this->GetCurrentWindow()->CreateVulkanSurface(this->instance);
     DebugLog(LogType::Debug, "Created window surface\n");
 }
@@ -477,9 +447,9 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
     };
 
     /* Create command pools for queues that require one */
-    HYPERION_BUBBLE_ERRORS(this->CreateCommandPool(this->queue_graphics));
+    HYPERION_BUBBLE_ERRORS(CreateCommandPool(this->queue_graphics));
     DebugLog(LogType::Debug, "gfx QUEUE INDEX %p\n",(void *)(queue_graphics.command_pool));
-    HYPERION_BUBBLE_ERRORS(this->CreateCommandPool(this->queue_compute));
+    HYPERION_BUBBLE_ERRORS(CreateCommandPool(this->queue_compute));
     DebugLog(LogType::Debug, "compute QUEUE INDEX %p\n", (void *)(queue_compute.command_pool));
 
     HYPERION_RETURN_OK;

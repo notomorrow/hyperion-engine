@@ -2,7 +2,7 @@
 #define HYPERION_V2_ENGINE_H
 
 #include "components/shader.h"
-#include "components/filter_stack.h"
+#include "components/post_fx.h"
 #include "components/framebuffer.h"
 #include "components/compute.h"
 #include "components/util.h"
@@ -45,10 +45,10 @@ public:
     ~Engine();
 
     inline Instance *GetInstance() { return m_instance.get(); }
-    inline const Instance *GetInstance() const { return m_instance.get(); } [[nodiscard]]
+    inline const Instance *GetInstance() const { return m_instance.get(); }
 
-    inline FilterStack &GetFilterStack() { return m_filter_stack; }
-    inline const FilterStack &GetFilterStack() const { return m_filter_stack; } [[nodiscard]]
+    inline PostProcessing &GetPostProcessing() { return m_post_processing; }
+    inline const PostProcessing &GetPostProcessing() const { return m_post_processing; }
 
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
@@ -170,18 +170,14 @@ public:
     void Initialize();
     void PrepareSwapchain();
     void Compile();
-    void UpdateDescriptorData();
+    void UpdateDescriptorData(uint32_t frame_index);
     void RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index);
-    void RenderSwapchain(CommandBuffer *command_buffer);
+    void RenderSwapchain(CommandBuffer *command_buffer) const;
 
     std::unique_ptr<GraphicsPipeline> m_swapchain_render_container;
 
 
     ShaderStorageData m_shader_storage_data;
-
-    UniformBuffer *m_scene_uniform_buffer;
-    StorageBuffer *m_material_storage_buffer;
-    StorageBuffer *m_object_storage_buffer;
 
 private:
     void InitializeInstance();
@@ -189,7 +185,7 @@ private:
 
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
-    FilterStack m_filter_stack;
+    PostProcessing m_post_processing;
 
     ObjectHolder<Shader> m_shaders;
     ObjectHolder<Texture> m_textures;
@@ -204,5 +200,5 @@ private:
 
 } // namespace hyperion::v2
 
-#endif // !HYPERION_V2_SHADER_H
+#endif
 

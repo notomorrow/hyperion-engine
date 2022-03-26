@@ -34,14 +34,10 @@ struct ID {
     inline constexpr InnerType GetValue() const { return value; }
 
     inline constexpr bool operator==(const ID &other) const
-    {
-        return value == other.value;
-    }
+        { return value == other.value; }
 
     inline constexpr bool operator<(const ID &other) const
-    {
-        return value < other.value;
-    }
+        { return value < other.value; }
 
     std::tuple<InnerType, ID<Args>...> value;
 };

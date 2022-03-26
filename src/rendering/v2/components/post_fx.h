@@ -1,27 +1,18 @@
-#ifndef HYPERION_V2_FILTER_H
-#define HYPERION_V2_FILTER_H
+#ifndef HYPERION_V2_POST_FX_H
+#define HYPERION_V2_POST_FX_H
 
 #include "render_pass.h"
 #include "framebuffer.h"
 #include "shader.h"
 #include "graphics.h"
 
-#include <rendering/backend/renderer_frame_handler.h>
+#include <rendering/mesh.h>
+#include <rendering/backend/renderer_frame.h>
+#include <rendering/backend/renderer_structs.h>
+#include <rendering/backend/renderer_command_buffer.h>
 
 #include <memory>
-
-namespace hyperion::renderer {
-
-class Instance;
-class Frame;
-
-} // namespace hyperion::renderer
-
-/* forward declaration of mesh class */
-
-namespace hyperion {
-class Mesh;
-} // namespace hyperion
+#include <utility>
 
 namespace hyperion::v2 {
 
@@ -32,15 +23,15 @@ using renderer::MeshInputAttributeSet;
 
 class Engine;
 
-class Filter {
+class PostEffect {
 public:
     static const MeshInputAttributeSet vertex_attributes;
     static std::shared_ptr<Mesh> full_screen_quad;
 
-    Filter(Shader::ID shader_id);
-    Filter(const Filter &) = delete;
-    Filter &operator=(const Filter &) = delete;
-    ~Filter();
+    PostEffect(Shader::ID shader_id);
+    PostEffect(const PostEffect &) = delete;
+    PostEffect &operator=(const PostEffect &) = delete;
+    ~PostEffect();
 
     inline bool IsRecorded() const
         { return m_recorded; }
@@ -68,7 +59,25 @@ private:
     bool m_recorded;
 };
 
+class PostProcessing {
+public:
+    PostProcessing();
+    PostProcessing(const PostProcessing &) = delete;
+    PostProcessing &operator=(const PostProcessing &) = delete;
+    ~PostProcessing();
+
+    void AddFilter(std::unique_ptr<PostEffect> &&filter);
+
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
+    void BuildPipelines(Engine *engine);
+    void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
+
+private:
+    std::vector<std::unique_ptr<PostEffect>> m_filters;
+};
+
 } // namespace hyperion::v2
 
-#endif // !HYPERION_V2_FILTER_H
+#endif // HYPERION_V2_POST_FX_H
 

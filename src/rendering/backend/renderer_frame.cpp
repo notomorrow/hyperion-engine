@@ -66,22 +66,19 @@ Result Frame::DestroySyncObjects()
     return result;
 }
 
-void Frame::BeginCapture()
+Result Frame::BeginCapture()
 {
-    auto result = this->command_buffer->Begin(this->creation_device.get());
-    AssertThrowMsg(result, "Failed to start recording command buffer: %s", result.message);
+    return command_buffer->Begin(this->creation_device.get());
 }
 
-void Frame::EndCapture()
+Result Frame::EndCapture()
 {
-    auto result = this->command_buffer->End(this->creation_device.get());
-    AssertThrowMsg(result, "Failed to finish recording command buffer: %s", result.message);
+    return command_buffer->End(this->creation_device.get());
 }
 
-void Frame::Submit(VkQueue queue_submit)
+Result Frame::Submit(Queue *queue)
 {
-    auto result = this->command_buffer->SubmitPrimary(queue_submit, this->fc_queue_submit, &this->present_semaphores);
-    AssertThrowMsg(result, "Failed to submit draw command buffer: %s", result.message);
+    return command_buffer->SubmitPrimary(queue->queue, fc_queue_submit, &present_semaphores);
 }
 
 } // namespace renderer
