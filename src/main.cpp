@@ -268,7 +268,7 @@ int main()
             ->AddDescriptor<ImageSamplerDescriptor>(1, VK_SHADER_STAGE_FRAGMENT_BIT)
             ->AddSubDescriptor({
                 .image_view = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].image_view.get(),
-                .sampler = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].sampler.get()
+                .sampler    = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[1].sampler.get()
             });
 
         /* Position texture */
@@ -276,7 +276,7 @@ int main()
             ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT)
             ->AddSubDescriptor({
                 .image_view = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].image_view.get(),
-                .sampler = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].sampler.get()
+                .sampler    = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[2].sampler.get()
             });
 
         /* Depth texture */
@@ -284,7 +284,7 @@ int main()
             ->AddDescriptor<ImageSamplerDescriptor>(3, VK_SHADER_STAGE_FRAGMENT_BIT)
             ->AddSubDescriptor({
                 .image_view = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].image_view.get(),
-                .sampler = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get()
+                .sampler    = engine.GetFramebuffer(my_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get()
             });
     }
 
@@ -292,32 +292,26 @@ int main()
 
     /* Initialize descriptor pool, has to be before any pipelines are created */
     {
-        auto image_create_result = image->Create(
+        HYPERION_ASSERT_RESULT(image->Create(
             device,
             engine.GetInstance(),
             Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
             Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
-        );
-        AssertThrowMsg(image_create_result, "%s", image_create_result.message);
+        ));
 
-        auto image_view_result = test_image_view.Create(device, image);
-        AssertThrowMsg(image_view_result, "%s", image_view_result.message);
-
-        auto sampler_result = test_sampler.Create(device, &test_image_view);
-        AssertThrowMsg(sampler_result, "%s", sampler_result.message);
+        HYPERION_ASSERT_RESULT(test_image_view.Create(device, image));
+        HYPERION_ASSERT_RESULT(test_sampler.Create(device, &test_image_view));
     }
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     {
-        auto image_create_result = image_storage->Create(
+        HYPERION_ASSERT_RESULT(image_storage->Create(
             device,
             engine.GetInstance(),
             Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL>{}
-        );
-        AssertThrowMsg(image_create_result, "%s", image_create_result.message);
+        ));
 
-        auto image_view_result = image_storage_view.Create(device, image_storage);
-        AssertThrowMsg(image_view_result, "%s", image_view_result.message);
+        HYPERION_ASSERT_RESULT(image_storage_view.Create(device, image_storage));
     }
 #endif
 
@@ -388,8 +382,7 @@ int main()
     SemaphoreChain compute_semaphore_chain({}, { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT });
     AssertThrow(compute_semaphore_chain.Create(engine.GetInstance()->GetDevice()));
 
-    auto compute_cmd_result = compute_command_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetComputeCommandPool());
-    AssertThrow(compute_cmd_result, "Failed to create compute commandbuffer: %s\n", compute_cmd_result.message);
+    HYPERION_ASSERT_RESULT(compute_command_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetComputeCommandPool()));
     
     for (size_t i = 0; i < engine.GetInstance()->GetFrameHandler()->GetNumFrames(); i++) {
         /* Wait for compute to finish */
@@ -481,8 +474,6 @@ int main()
         engine.m_shader_storage_data.scene_shader_data.camera_position = Vector4(camera->GetTranslation(), 1.0f);
         engine.m_shader_storage_data.scene_shader_data.light_direction = Vector4(Vector3(-0.5f, -0.5f, 0).Normalize(), 1.0f);
 
-
-
         HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
             engine.GetInstance()->GetDevice(),
             engine.GetInstance()->GetSwapchain()
@@ -504,20 +495,15 @@ int main()
             1, &compute_fc);
         
         compute_command_buffer->Reset(engine.GetInstance()->GetDevice());
-        compute_cmd_result = compute_command_buffer->Record(engine.GetInstance()->GetDevice(), nullptr, [&](CommandBuffer *cmd) {
+        HYPERION_ASSERT_RESULT(compute_command_buffer->Record(engine.GetInstance()->GetDevice(), nullptr, [&](CommandBuffer *cmd) {
             compute_pipeline->Dispatch(&engine, cmd,
                 8, 8, 1);
 
             HYPERION_RETURN_OK;
-        });
+        }));
         AssertThrowMsg(compute_cmd_result, "Failed to record compute cmd buffer: %s\n", compute_cmd_result.message);
         compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
 #endif
-
-        
-        //matrices_descriptor_buffer.Copy(device, sizeof(matrices_block), (void *)&matrices_block);
-        //scene_data_descriptor_buffer.Copy(device, sizeof(scene_data_block), (void *)&scene_data_block);
-
 
         /* TODO: Updates of descriptor set should only update sets that are double-buffered so we don't
          * end up updating data that is in use by the gpu!

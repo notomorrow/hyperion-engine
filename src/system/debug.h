@@ -65,31 +65,31 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
 #endif
 
 #define DebugLogAssertion(level, cond) \
-    { \
+    do { \
         const char *s = "*** assertion failed: (" #cond ") ***"; \
         DebugLog(level, "%s", s); \
-    }
+    } while (0)
 
 #define DebugLogAssertionMsg(level, cond, ...) \
-    { \
+    do { \
         DebugLog(level, "*** assertion failed: (" #cond ") ***\n\tMessage: %s\n", __VA_ARGS__); \
-    }
+    } while (0)
 
 #define AssertOrElse(level, cond, stmt) \
-    { \
+    do { \
         if (!(cond)) { \
             DebugLogAssertion(level, cond); \
             { stmt; } \
         } \
-    }
+    } while (0)
 
 #define AssertOrElseMsg(level, cond, stmt, ...) \
-    { \
+    do { \
         if (!(cond)) { \
             DebugLogAssertionMsg(level, cond, __VA_ARGS__); \
             { stmt; } \
         } \
-    }
+    } while (0)
 
 #define AssertThrow(cond) AssertOrElse(LogType::Error, cond, throw ::std::runtime_error("Assertion failed"))
 #define AssertThrowMsg(cond, ...) AssertOrElseMsg(LogType::Error, cond, throw ::std::runtime_error("Assertion failed"), __VA_ARGS__)
