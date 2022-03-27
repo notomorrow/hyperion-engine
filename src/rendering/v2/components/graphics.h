@@ -58,8 +58,8 @@ public:
 private:
     Shader::ID m_shader_id;
     RenderPass::ID m_render_pass_id;
-    MeshInputAttributeSet m_vertex_attributes;
     VkPrimitiveTopology m_topology;
+    MeshInputAttributeSet m_vertex_attributes;
 
     ObjectIdHolder<Texture> m_texture_ids;
     ObjectIdHolder<Framebuffer> m_fbo_ids;

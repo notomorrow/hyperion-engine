@@ -15,15 +15,6 @@ layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions_ping;
 
 layout(set = 2, binding = 5) uniform sampler2D filter_0;
 
-//push constants block
-layout( push_constant ) uniform constants
-{
-	layout(offset = 0) uint previous_frame_index;
-    layout(offset = 4) uint current_frame_index;
-    layout(offset = 8) uint material_index;
-    
-} push_constants;
-
 
 layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
 

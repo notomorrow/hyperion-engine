@@ -21,7 +21,7 @@ using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      m_shader_storage_data{}
+      m_shader_globals(nullptr)
 {
 }
 
@@ -41,19 +41,12 @@ Engine::~Engine()
     m_swapchain_render_container->Destroy(this);
     m_graphics_pipelines.RemoveAll(this);
 
-    if (m_shader_storage_data.m_scene_uniform_buffer != nullptr) {
-        m_shader_storage_data.m_scene_uniform_buffer->Destroy(m_instance->GetDevice());
-        delete m_shader_storage_data.m_scene_uniform_buffer;
-    }
+    if (m_shader_globals != nullptr) {
+        m_shader_globals->scene.Destroy(m_instance->GetDevice());
+        m_shader_globals->objects.Destroy(m_instance->GetDevice());
+        m_shader_globals->materials.Destroy(m_instance->GetDevice());
 
-    if (m_shader_storage_data.m_material_storage_buffer != nullptr) {
-        m_shader_storage_data.m_material_storage_buffer->Destroy(m_instance->GetDevice());
-        delete m_shader_storage_data.m_material_storage_buffer;
-    }
-
-    if (m_shader_storage_data.m_object_storage_buffer != nullptr) {
-        m_shader_storage_data.m_object_storage_buffer->Destroy(m_instance->GetDevice());
-        delete m_shader_storage_data.m_object_storage_buffer;
+        delete m_shader_globals;
     }
 
     m_instance->Destroy();
@@ -212,39 +205,54 @@ void Engine::Initialize()
     InitializeInstance();
     FindTextureFormatDefaults();
 
-    m_shader_storage_data.m_scene_uniform_buffer = new UniformBuffer();
-    m_shader_storage_data.m_scene_uniform_buffer->Create(m_instance->GetDevice(), sizeof(SceneShaderData));
-
-    /* Material uniform buffer - all materials are added into
-     * this buffer and will be dynamically swapped in and out
-     */
-
-    m_shader_storage_data.m_material_storage_buffer = new StorageBuffer();
-    m_shader_storage_data.m_material_storage_buffer->Create(m_instance->GetDevice(), ShaderStorageData::max_materials_bytes);
-
-    m_shader_storage_data.m_object_storage_buffer = new StorageBuffer();
-    m_shader_storage_data.m_object_storage_buffer->Create(m_instance->GetDevice(), ShaderStorageData::max_objects_bytes);
+    m_shader_globals = new ShaderGlobals(m_instance->GetFrameHandler()->NumFrames());
     
     /* for scene data */
+    m_shader_globals->scene.Create(m_instance->GetDevice());
+    /* for materials */
+    m_shader_globals->materials.Create(m_instance->GetDevice());
+    /* for objects */
+    m_shader_globals->objects.Create(m_instance->GetDevice());
+
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->AddDescriptor<renderer::UniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_storage_data.m_scene_uniform_buffer
+            .gpu_buffer = m_shader_globals->scene.GetBuffers()[0].get()
         });
-
-    /* for materials */
+    
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_storage_data.m_material_storage_buffer,
+            .gpu_buffer = m_shader_globals->materials.GetBuffers()[0].get(),
             .range = sizeof(MaterialShaderData)
         });
 
-    /* for objects */
+
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_storage_data.m_object_storage_buffer,
+            .gpu_buffer = m_shader_globals->objects.GetBuffers()[0].get(),
+            .range = sizeof(ObjectShaderData)
+        });
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
+        ->AddDescriptor<renderer::UniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddSubDescriptor({
+            .gpu_buffer = m_shader_globals->scene.GetBuffers()[1].get()
+        });
+    
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddSubDescriptor({
+            .gpu_buffer = m_shader_globals->materials.GetBuffers()[1].get(),
+            .range = sizeof(MaterialShaderData)
+        });
+
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddSubDescriptor({
+            .gpu_buffer = m_shader_globals->objects.GetBuffers()[1].get(),
             .range = sizeof(ObjectShaderData)
         });
 }
@@ -252,18 +260,12 @@ void Engine::Initialize()
 void Engine::Compile()
 {
     /* Finalize materials */
-    m_shader_storage_data.m_material_storage_buffer->Copy(
-        m_instance->GetDevice(),
-        m_shader_storage_data.materials.ByteSize(),
-        m_shader_storage_data.materials.Data()
-    );
+    for (size_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
+        m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), i);
 
-    /* Finalize per-object data */
-    m_shader_storage_data.m_object_storage_buffer->Copy(
-        m_instance->GetDevice(),
-        m_shader_storage_data.objects.ByteSize(),
-        m_shader_storage_data.objects.Data()
-    );
+        /* Finalize per-object data */
+        m_shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), i);
+    }
 
     /* Finalize descriptor pool */
     auto descriptor_pool_result = m_instance->GetDescriptorPool().Create(m_instance->GetDevice());
@@ -278,25 +280,9 @@ void Engine::Compile()
 
 void Engine::UpdateDescriptorData(uint32_t frame_index)
 {
-    m_shader_storage_data.m_scene_uniform_buffer->Copy(
-        m_instance->GetDevice(),
-        sizeof(SceneShaderData),
-        &m_shader_storage_data.scene_shader_data
-    );
-
-    if (m_shader_storage_data.dirty_object_range_end) {
-        AssertThrow(m_shader_storage_data.dirty_object_range_end > m_shader_storage_data.dirty_object_range_start);
-
-        m_shader_storage_data.m_object_storage_buffer->Copy(
-            m_instance->GetDevice(),
-            m_shader_storage_data.dirty_object_range_start * sizeof(ObjectShaderData),
-            (m_shader_storage_data.dirty_object_range_end - m_shader_storage_data.dirty_object_range_start) * sizeof(ObjectShaderData),
-            m_shader_storage_data.objects.Data() + m_shader_storage_data.dirty_object_range_start
-        );
-    }
-
-    m_shader_storage_data.dirty_object_range_start = 0;
-    m_shader_storage_data.dirty_object_range_end = 0;
+    m_shader_globals->scene.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    m_shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
 }
 
 void Engine::RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index)

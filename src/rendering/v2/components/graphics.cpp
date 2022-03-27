@@ -30,11 +30,7 @@ void GraphicsPipeline::AddSpatial(Engine *engine, Spatial &&spatial)
     /* append any attributes not yet added */
     m_vertex_attributes.Merge(spatial.attributes);
 
-    AssertThrow(spatial.id < engine->m_shader_storage_data.objects.Size());
-
-    engine->m_shader_storage_data.objects[spatial.id] = ObjectShaderData{
-        .model_matrix = spatial.transform.GetMatrix()
-    };
+    engine->m_shader_globals->objects.Set(spatial.id, { .model_matrix = spatial.transform.GetMatrix() });
 
     m_spatials.push_back(std::move(spatial));
 }
@@ -44,9 +40,7 @@ void GraphicsPipeline::SetSpatialTransform(Engine *engine, uint32_t index, const
     Spatial &spatial = m_spatials[index];
     spatial.transform = transform;
 
-    engine->m_shader_storage_data.objects[spatial.id].model_matrix = transform.GetMatrix();
-    engine->m_shader_storage_data.dirty_object_range_start = MathUtil::Min(uint32_t(engine->m_shader_storage_data.dirty_object_range_start), spatial.id);
-    engine->m_shader_storage_data.dirty_object_range_end   = MathUtil::Max(uint32_t(engine->m_shader_storage_data.dirty_object_range_end), spatial.id + 1);
+    engine->m_shader_globals->objects.Set(spatial.id, { .model_matrix = transform.GetMatrix() });
 }
 
 void GraphicsPipeline::Create(Engine *engine)
@@ -110,14 +104,27 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
     secondary_command_buffer->Record(
         instance->GetDevice(),
         m_wrapped.GetConstructionInfo().render_pass,
-        [this, instance, primary_command_buffer](CommandBuffer *secondary) {
+        [this, instance, frame_index](CommandBuffer *secondary) {
             m_wrapped.Bind(secondary);
 
-            /* Bind scene data */
+            /* Bind global data */
             instance->GetDescriptorPool().Bind(
                 secondary,
                 &m_wrapped,
-                {{ .set = 0, .count = 3 }}
+                {{ .set = 0, .count = 2 }}
+            );
+
+            static constexpr uint32_t frame_index_scene_buffer_mapping[]  = { 2, 4 };
+            static constexpr uint32_t frame_index_object_buffer_mapping[] = { 3, 5 };
+
+            /* Bind scene data - */
+            instance->GetDescriptorPool().Bind(
+                secondary,
+                &m_wrapped,
+                {
+                    { .set = frame_index_scene_buffer_mapping[frame_index], .count = 1 },
+                    { .binding = 2 }
+                }
             );
             
             for (auto &spatial : m_spatials) {
@@ -126,7 +133,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
                     secondary,
                     &m_wrapped,
                     {
-                        { .set = 3, .count = 1 },
+                        { .set = frame_index_object_buffer_mapping[frame_index], .count = 1 },
                         { .binding = 3 },
                         { .offsets = {
                             uint32_t(spatial.material_id.value * sizeof(MaterialShaderData)),

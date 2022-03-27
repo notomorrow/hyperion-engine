@@ -97,13 +97,13 @@ void TextureArray::AddTexture(Engine *engine, Texture::ID texture_id)
     Texture *texture = engine->GetTexture(texture_id);
     AssertThrow(texture != nullptr);
 
-    AssertThrowMsg(texture->Get().GetWidth() == m_width, "sizes must match");
-    AssertThrowMsg(texture->Get().GetHeight() == m_height, "sizes must match");
-    AssertThrowMsg(texture->Get().GetDepth() == m_depth, "sizes must match");
-    AssertThrowMsg(texture->Get().GetTextureFormat() == m_format, "formats must match");
-    AssertThrowMsg(texture->Get().GetType() == m_type, "types must match");
+    AssertThrowMsg(texture->Get().GetWidth() == m_width,                    "sizes must match");
+    AssertThrowMsg(texture->Get().GetHeight() == m_height,                  "sizes must match");
+    AssertThrowMsg(texture->Get().GetDepth() == m_depth,                    "sizes must match");
+    AssertThrowMsg(texture->Get().GetTextureFormat() == m_format,           "formats must match");
+    AssertThrowMsg(texture->Get().GetType() == m_type,                      "types must match");
     AssertThrowMsg(texture->GetSampler()->GetFilterMode() == m_filter_mode, "filter modes must match");
-    AssertThrowMsg(texture->GetSampler()->GetWrapMode() == m_wrap_mode, "wrap modes must match");
+    AssertThrowMsg(texture->GetSampler()->GetWrapMode() == m_wrap_mode,     "wrap modes must match");
 
     m_images.push_back(&texture->Get());
     m_image_views.push_back(texture->GetImageView());

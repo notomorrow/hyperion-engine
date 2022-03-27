@@ -48,7 +48,7 @@ public:
     PerFrameData &operator=(PerFrameData &&) = default;
     ~PerFrameData() = default;
 
-    inline uint32_t GetNumFrames() const
+    inline uint32_t NumFrames() const
         { return m_num_frames; }
 
     FrameDataWrapper &operator[](uint32_t index)
@@ -79,7 +79,7 @@ public:
     inline auto &GetCurrentFrameData() { return m_per_frame_data[m_current_frame_index]; }
     inline const auto &GetCurrentFrameData() const { return m_per_frame_data[m_current_frame_index]; }
 
-    inline uint32_t GetNumFrames() const { return m_per_frame_data.GetNumFrames(); }
+    inline uint32_t NumFrames() const { return m_per_frame_data.NumFrames(); }
     inline uint32_t GetAcquiredImageIndex() const { return m_acquired_image_index; }
     inline uint32_t GetCurrentFrameIndex() const { return m_current_frame_index; }
 
