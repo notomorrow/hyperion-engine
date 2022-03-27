@@ -384,7 +384,7 @@ int main()
 
     HYPERION_ASSERT_RESULT(compute_command_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetComputeCommandPool()));
     
-    for (size_t i = 0; i < engine.GetInstance()->GetFrameHandler()->GetNumFrames(); i++) {
+    for (size_t i = 0; i < engine.GetInstance()->GetFrameHandler()->NumFrames(); i++) {
         /* Wait for compute to finish */
         compute_semaphore_chain >> engine.GetInstance()->GetFrameHandler()
             ->GetPerFrameData()[i].Get<Frame>()
@@ -393,12 +393,12 @@ int main()
 #endif
     
 
-    PerFrameData<CommandBuffer, Semaphore> per_frame_data(engine.GetInstance()->GetFrameHandler()->GetNumFrames());
+    PerFrameData<CommandBuffer, Semaphore> per_frame_data(engine.GetInstance()->GetFrameHandler()->NumFrames());
 
     //SemaphoreChain graphics_semaphore_chain({}, {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT});
     //AssertThrow(graphics_semaphore_chain.Create(engine.GetInstance()->GetDevice()));
 
-    for (uint32_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
+    for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
         auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
         AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsQueue().command_pool));
 
@@ -469,10 +469,12 @@ int main()
 
         engine.GetGraphicsPipeline(render_container_id)->SetSpatialTransform(&engine, 0, transform);
         
-        engine.m_shader_storage_data.scene_shader_data.view            = camera->GetViewMatrix();
-        engine.m_shader_storage_data.scene_shader_data.projection      = camera->GetProjectionMatrix();
-        engine.m_shader_storage_data.scene_shader_data.camera_position = Vector4(camera->GetTranslation(), 1.0f);
-        engine.m_shader_storage_data.scene_shader_data.light_direction = Vector4(Vector3(-0.5f, -0.5f, 0).Normalize(), 1.0f);
+        engine.m_shader_globals->scene.Set(0, {
+            .view = camera->GetViewMatrix(),
+            .projection = camera->GetProjectionMatrix(),
+            .camera_position = Vector4(camera->GetTranslation(), 1.0f),
+            .light_direction = Vector4(Vector3(-0.5f, -0.5f, 0).Normalize(), 1.0f)
+        });
 
         HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
             engine.GetInstance()->GetDevice(),
@@ -582,7 +584,7 @@ int main()
     test_sampler.Destroy(device);
     image->Destroy(device);
 
-    for (size_t i = 0; i < per_frame_data.GetNumFrames(); i++) {
+    for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
         per_frame_data[i].Get<CommandBuffer>()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsCommandPool());
     }
     per_frame_data.Reset();

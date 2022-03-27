@@ -49,7 +49,7 @@ void PostEffect::CreateRenderPass(Engine * engine)
 
 void PostEffect::CreateFrameData(Engine * engine)
 {
-    const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->GetNumFrames();
+    const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
 
     m_frame_data = std::make_unique<PerFrameData<CommandBuffer>>(num_frames);
 
@@ -110,7 +110,7 @@ void PostEffect::Destroy(Engine * engine)
 
     auto &frame_data = *m_frame_data;
 
-    for (uint32_t i = 0; i < frame_data.GetNumFrames(); i++) {
+    for (uint32_t i = 0; i < frame_data.NumFrames(); i++) {
         HYPERION_PASS_ERRORS(
             frame_data[i].Get<CommandBuffer>()->Destroy(
                 engine->GetInstance()->GetDevice(),
@@ -147,11 +147,16 @@ void PostEffect::Record(Engine * engine, uint32_t frame_index)
                 renderer::Result result = renderer::Result::OK;
 
                 pipeline->Get().Bind(cmd);
-
-                /* TODO: for testing. multiply by 0 for a red material, 1 for blue */
-
+                
                 HYPERION_PASS_ERRORS(
-                    engine->GetInstance()->GetDescriptorPool().Bind(cmd, &pipeline->Get(), { {}, {}, {.offsets = { uint32_t(0 * sizeof(MaterialShaderData)), uint32_t(0 * sizeof(ObjectShaderData)) }} }),
+                    engine->GetInstance()->GetDescriptorPool().Bind(
+                        cmd,
+                        &pipeline->Get(),
+                        {
+                            { .set = 0, .count = 3 },
+                            { .binding = 0 }
+                        }
+                    ),
                     result
                 );
 
@@ -160,7 +165,7 @@ void PostEffect::Record(Engine * engine, uint32_t frame_index)
                 return result;
             }),
         result
-                );
+    );
 
     AssertThrowMsg(result, "Failed to record command buffer. Message: %s", result.message);
 

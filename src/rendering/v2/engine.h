@@ -115,11 +115,11 @@ public:
     template <class ...Args>
     Material::ID AddMaterial(std::unique_ptr<Material> &&material, Args &&... args)
     {
-        const auto id = m_materials.NextId();
+        MaterialShaderData material_shader_data;
 
-        AssertThrow(id.value - 1 < m_shader_storage_data.materials.Size());
+        const Material::ID id = m_materials.Add(this, std::move(material), &material_shader_data, std::move(args)...);
 
-        m_materials.Add(this, std::move(material), &m_shader_storage_data.materials[id.value - 1], std::move(args)...);
+        m_shader_globals->materials.Set(id.value - 1, std::move(material_shader_data));
 
         return id;
     }
@@ -177,7 +177,7 @@ public:
     std::unique_ptr<GraphicsPipeline> m_swapchain_render_container;
 
 
-    ShaderStorageData m_shader_storage_data;
+    ShaderGlobals *m_shader_globals;
 
 private:
     void InitializeInstance();
