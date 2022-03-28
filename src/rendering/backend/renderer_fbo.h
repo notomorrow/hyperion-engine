@@ -30,8 +30,10 @@ public:
 
     inline VkFramebuffer GetFramebuffer() const { return m_framebuffer; }
 
+    /* Add an attachment for a new image (i.e for writing to for a g-buffer) */
     Result AddAttachment(Image::InternalFormat format);
-    Result AddAttachment(AttachmentImageInfo &&, Image::InternalFormat format);
+    /* Add an attachment optionally as a view of an existing image */
+    Result AddAttachment(AttachmentImageInfo &&attachment);
 
     inline std::vector<AttachmentImageInfo> &GetAttachmentImageInfos()
         { return m_fbo_attachments; }

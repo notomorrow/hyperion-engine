@@ -19,7 +19,7 @@ public:
     inline VkImageView &GetImageView() { return m_image_view; }
     inline const VkImageView &GetImageView() const { return m_image_view; }
 
-    /* Create imageview independent of a Image */
+    /* Create imageview independent of an Image */
     Result Create(Device *device,
         VkImage image,
         VkFormat format,
@@ -28,7 +28,7 @@ public:
         size_t num_mipmaps = 1,
         size_t num_faces = 1);
 
-    /* Create imageview referencing a Image */
+    /* Create imageview referencing an Image */
     Result Create(Device *device,
         Image *image);
     Result Destroy(Device *device);

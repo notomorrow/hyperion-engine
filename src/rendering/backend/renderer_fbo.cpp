@@ -26,10 +26,10 @@ Result FramebufferObject::AddAttachment(Image::InternalFormat format)
         .image_needs_creation = true,
         .image_view_needs_creation = true,
         .sampler_needs_creation = true
-    }, format);
+    });
 }
 
-Result FramebufferObject::AddAttachment(AttachmentImageInfo &&image_info, Image::InternalFormat format)
+Result FramebufferObject::AddAttachment(AttachmentImageInfo &&image_info)
 {
     if (image_info.image_view == nullptr) {
         image_info.image_view = std::make_unique<ImageView>();
@@ -71,8 +71,9 @@ Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
         }
     }
 
+    // linear layout of VkImageView data
     std::vector<VkImageView> attachment_image_views;
-    { // linear layout of VkImageView data
+    {
         attachment_image_views.resize(m_fbo_attachments.size());
 
         for (size_t i = 0; i < m_fbo_attachments.size(); i++) {
@@ -80,8 +81,7 @@ Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
         }
     }
 
-    VkFramebufferCreateInfo framebuffer_create_info{};
-    framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    VkFramebufferCreateInfo framebuffer_create_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
     framebuffer_create_info.renderPass = render_pass->GetRenderPass();
     framebuffer_create_info.attachmentCount = uint32_t(attachment_image_views.size());
     framebuffer_create_info.pAttachments    = attachment_image_views.data();

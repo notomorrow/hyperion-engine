@@ -7,6 +7,7 @@
 
 #include <math/matrix4.h>
 #include <math/transform.h>
+#include <math/bounding_box.h>
 
 /* TMP */
 #include "../../mesh.h"
@@ -26,6 +27,7 @@ public:
     Spatial(const std::shared_ptr<Mesh> &mesh,
         const MeshInputAttributeSet &attributes,
         const Transform &transform,
+        const BoundingBox &aabb,
         Material::ID material_id);
     Spatial(const Spatial &other) = delete;
     Spatial &operator=(const Spatial &other) = delete;
@@ -36,6 +38,8 @@ public:
 
     const Transform &GetTransform() const { return m_transform; }
     inline void SetTransform(const Transform &transform) { m_transform = transform; /* TODO: mark dirty */ }
+
+    const BoundingBox &GetAabb() const { return m_aabb; }
 
     const Material::ID &GetMaterialId() const { return m_material_id; }
 
@@ -51,6 +55,7 @@ private:
     std::shared_ptr<Mesh> m_mesh;
     MeshInputAttributeSet m_attributes;
     Transform m_transform;
+    BoundingBox m_aabb;
     Material::ID m_material_id;
 
     /* Retains a list of pointers to pipelines that this Spatial is used by,

@@ -31,11 +31,9 @@ void RenderPass::AddColorAttachment(std::unique_ptr<AttachmentBase> &&attachment
 
 void RenderPass::CreateAttachments()
 {
-    /* Start our binding index at the point where any existing attachments end */
-    uint32_t binding_index(m_color_attachments.size() + m_depth_attachments.size());
+    for (const auto &it : m_attachments) {
+        const bool is_depth_attachment = Image::IsDepthTexture(it.second.format);
 
-    for (auto &it : m_attachments) {
-        const bool is_depth_attachment = Image::IsDepthTexture(it.format);
         std::unique_ptr<AttachmentBase> attachment;
 
         switch (m_stage) {
@@ -43,26 +41,26 @@ void RenderPass::CreateAttachments()
             if (is_depth_attachment) {
                 attachment = std::make_unique<renderer::Attachment
                     <VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL>>
-                    (binding_index, Image::ToVkFormat(it.format));
+                    (it.first, Image::ToVkFormat(it.second.format));
             } else {
                 attachment = std::make_unique<renderer::Attachment
                     <VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
-                    (binding_index, Image::ToVkFormat(it.format));
+                    (it.first, Image::ToVkFormat(it.second.format));
             }
             break;
         case RENDER_PASS_STAGE_SHADER:
             if (is_depth_attachment) {
                 attachment = std::make_unique<renderer::Attachment
                     <VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>>
-                    (binding_index, Image::ToVkFormat(it.format));
+                    (it.first, Image::ToVkFormat(it.second.format));
             } else {
                 attachment = std::make_unique<renderer::Attachment
                     <VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>>
-                    (binding_index, Image::ToVkFormat(it.format));
+                    (it.first, Image::ToVkFormat(it.second.format));
             }
             break;
         default:
-            AssertThrowMsg(0, "Unsupported stage type %d", m_stage);
+            AssertThrowMsg(false, "Unsupported stage type %d", m_stage);
         }
 
         if (is_depth_attachment) {
@@ -70,8 +68,6 @@ void RenderPass::CreateAttachments()
         } else {
             AddColorAttachment(std::move(attachment));
         }
-
-        binding_index++;
     }
 }
 void RenderPass::CreateDependencies()

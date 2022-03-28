@@ -219,6 +219,8 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     multisampling.minSampleShading = 1.0f;
     multisampling.pSampleMask = nullptr;
+    multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+    multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
     /* TODO: enable multisampling and the GPU feature required for it.  */
     std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;
@@ -226,17 +228,26 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     for (size_t i = 0; i < color_blend_attachments.size(); i++) {
         color_blend_attachments[i] = VkPipelineColorBlendAttachmentState{
-            .blendEnable = VK_FALSE,
-            .colorWriteMask = (
-                VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT)
+            .blendEnable         = m_construction_info.blend_enabled,
+            .srcColorBlendFactor = m_construction_info.blend_enabled ? VK_BLEND_FACTOR_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
+            .dstColorBlendFactor = m_construction_info.blend_enabled ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ZERO,
+            .colorBlendOp        = VK_BLEND_OP_ADD,
+            .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, 
+            .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+            .alphaBlendOp        = VK_BLEND_OP_ADD,
+            .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                   VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
         };
     }
 
     VkPipelineColorBlendStateCreateInfo color_blending{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-    color_blending.logicOpEnable   = false;
-    color_blending.attachmentCount = uint32_t(color_blend_attachments.size());
-    color_blending.pAttachments    = color_blend_attachments.data();
+    color_blending.logicOpEnable     = false;
+    color_blending.attachmentCount   = uint32_t(color_blend_attachments.size());
+    color_blending.pAttachments      = color_blend_attachments.data();
+    color_blending.blendConstants[0] = 0.0f;
+    color_blending.blendConstants[1] = 0.0f;
+    color_blending.blendConstants[2] = 0.0f;
+    color_blending.blendConstants[3] = 0.0f;
 
     /* Dynamic states; these are the values that can be changed without
      * rebuilding the rendering pipeline. */

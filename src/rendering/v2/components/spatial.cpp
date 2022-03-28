@@ -6,10 +6,12 @@ namespace hyperion::v2 {
 Spatial::Spatial(const std::shared_ptr<Mesh> &mesh,
     const MeshInputAttributeSet &attributes,
     const Transform &transform,
+    const BoundingBox &aabb,
     Material::ID material_id)
     : m_mesh(mesh),
       m_attributes(attributes),
       m_transform(transform),
+      m_aabb(aabb),
       m_material_id(material_id)
 {
 }
