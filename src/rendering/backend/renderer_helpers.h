@@ -98,25 +98,22 @@ private:
         fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fence_create_info.flags = 0;
 
+        auto result = Result::OK;
+
         VkFence fence;
-        if (vkCreateFence(device->GetDevice(), &fence_create_info, nullptr, &fence) != VK_SUCCESS) {
-            return Result(Result::RENDERER_ERR, "Failed to create fence");
-        }
+
+        HYPERION_VK_CHECK(vkCreateFence(device->GetDevice(), &fence_create_info, nullptr, &fence));
 
         // Submit to the queue
-        if (vkQueueSubmit(queue_graphics, 1, &submit_info, fence) != VK_SUCCESS) {
-            return Result(Result::RENDERER_ERR, "Failed to submit fence to queue");
-        }
+        HYPERION_VK_PASS_ERRORS(vkQueueSubmit(queue_graphics, 1, &submit_info, fence), result);
 
         // Wait for the fence to signal that command buffer has finished executing
-        if (vkWaitForFences(device->GetDevice(), 1, &fence, true, DEFAULT_FENCE_TIMEOUT) != VK_SUCCESS) {
-            return Result(Result::RENDERER_ERR, "Failed to wait for fences");
-        }
+        HYPERION_VK_PASS_ERRORS(vkWaitForFences(device->GetDevice(), 1, &fence, true, DEFAULT_FENCE_TIMEOUT), result);
 
         vkDestroyFence(device->GetDevice(), fence, nullptr);
         vkFreeCommandBuffers(device->GetDevice(), pool, 1, &cmd);
 
-        HYPERION_RETURN_OK;
+        return result;
     }
 };
 

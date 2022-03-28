@@ -183,7 +183,8 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
                 &m_wrapped,
                 {
                     {.set = frame_index_scene_buffer_mapping[frame_index], .count = 1},
-                    {.binding = 2}
+                    {.binding = 2},
+                    {.offsets = {uint32_t(0 /* scene index */ * sizeof(SceneShaderData))}}
                 }
             );
             

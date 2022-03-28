@@ -10,7 +10,8 @@
 
 namespace hyperion {
 namespace renderer {
-uint32_t GPUMemory::FindMemoryType(Device *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties) {
+uint32_t GPUMemory::FindMemoryType(Device *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties)
+{
     VkPhysicalDeviceMemoryProperties mem_properties;
     vkGetPhysicalDeviceMemoryProperties(device->GetPhysicalDevice(), &mem_properties);
 
@@ -20,6 +21,7 @@ uint32_t GPUMemory::FindMemoryType(Device *device, uint32_t vk_type_filter, VkMe
             return i;
         }
     }
+
     AssertThrowMsg(nullptr, "Could not find suitable memory type!\n");
 }
 

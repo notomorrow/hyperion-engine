@@ -84,7 +84,7 @@ private:
     std::string root_path = "./";
 
     std::unordered_map<std::string, std::unique_ptr<AssetLoader>> loaders;
-    std::unordered_map<std::string, std::shared_ptr<Loadable>> loaded_assets;
+    std::unordered_map<std::string, std::weak_ptr<Loadable>> loaded_assets;
 };
 }
 
