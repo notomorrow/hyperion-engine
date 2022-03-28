@@ -39,7 +39,7 @@ Engine::~Engine()
     m_compute_pipelines.RemoveAll(this);
 
     m_swapchain_render_container->Destroy(this);
-    m_graphics_pipelines.RemoveAll(this);
+    m_render_bucket_container.Destroy(this);
 
     if (m_shader_globals != nullptr) {
         m_shader_globals->scene.Destroy(m_instance->GetDevice());
@@ -79,8 +79,7 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
 
 void Engine::InitializeInstance()
 {
-    auto renderer_initialize_result = m_instance->Initialize(true);
-    AssertThrowMsg(renderer_initialize_result, "%s", renderer_initialize_result.message);
+    HYPERION_ASSERT_RESULT(m_instance->Initialize(true));
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -160,22 +159,19 @@ void Engine::PrepareSwapchain()
         render_pass_id = AddRenderPass(std::move(render_pass));
     }
 
-    m_swapchain_render_container = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id);
+    m_swapchain_render_container = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_BUFFER);
 
-    
     for (VkImage img : m_instance->swapchain->images) {
         auto image_view = std::make_unique<ImageView>();
 
         /* Create imageview independent of a Image */
-        auto image_view_result = image_view->Create(
+        HYPERION_ASSERT_RESULT(image_view->Create(
             m_instance->GetDevice(),
             img,
             m_instance->swapchain->image_format,
             VK_IMAGE_ASPECT_COLOR_BIT,
             VK_IMAGE_VIEW_TYPE_2D
-        );
-
-        AssertThrowMsg(image_view_result, "%s", image_view_result.message);
+        ));
 
         auto fbo = std::make_unique<Framebuffer>(m_instance->swapchain->extent.width, m_instance->swapchain->extent.height);
         fbo->Get().AddAttachment(
@@ -191,8 +187,7 @@ void Engine::PrepareSwapchain()
         );
 
         /* Now we add a depth buffer */
-        auto result = fbo->Get().AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH));
-        AssertThrowMsg(result, "%s", result.message);
+        HYPERION_ASSERT_RESULT(fbo->Get().AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)));
 
         m_swapchain_render_container->AddFramebuffer(AddFramebuffer(std::move(fbo), render_pass_id));
     }
@@ -268,13 +263,12 @@ void Engine::Compile()
     }
 
     /* Finalize descriptor pool */
-    auto descriptor_pool_result = m_instance->GetDescriptorPool().Create(m_instance->GetDevice());
-    AssertThrowMsg(descriptor_pool_result, "%s", descriptor_pool_result.message);
+    HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
 
     m_post_processing.BuildPipelines(this);
 
     m_swapchain_render_container->Create(this);
-    m_graphics_pipelines.CreateAll(this);
+    m_render_bucket_container.Create(this);
     m_compute_pipelines.CreateAll(this);
 }
 
@@ -285,9 +279,9 @@ void Engine::UpdateDescriptorData(uint32_t frame_index)
     m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
 }
 
-void Engine::RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index)
+void Engine::RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index)
 {
-    m_post_processing.Render(this, primary_command_buffer, frame_index);
+    m_post_processing.Render(this, primary, frame_index);
 }
 
 void Engine::RenderSwapchain(CommandBuffer *command_buffer) const

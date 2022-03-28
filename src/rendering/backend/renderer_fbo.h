@@ -23,7 +23,7 @@ public:
         bool sampler_needs_creation; // is `sampler` newly constructed?
     };
 
-    FramebufferObject(size_t width, size_t height);
+    FramebufferObject(uint32_t width, uint32_t height);
     FramebufferObject(const FramebufferObject &other) = delete;
     FramebufferObject &operator=(const FramebufferObject &other) = delete;
     ~FramebufferObject();
@@ -41,16 +41,16 @@ public:
     inline uint32_t GetNumAttachments() const
         { return uint32_t(m_fbo_attachments.size()); }
 
-    inline size_t GetWidth() const { return m_width; }
-    inline size_t GetHeight() const { return m_height; }
+    inline uint32_t GetWidth() const { return m_width; }
+    inline uint32_t GetHeight() const { return m_height; }
 
     Result Create(Device *device, RenderPass *render_pass);
     Result Destroy(Device *device);
 
 private:
 
-    size_t m_width,
-           m_height;
+    uint32_t m_width,
+             m_height;
 
     std::vector<AttachmentImageInfo> m_fbo_attachments;
 

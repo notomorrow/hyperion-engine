@@ -25,10 +25,10 @@ std::shared_ptr<Mesh> PostEffect::full_screen_quad = MeshFactory::CreateQuad();
 
 PostEffect::PostEffect(Shader::ID shader_id)
     : m_pipeline_id{},
-    m_framebuffer_id{},
-    m_shader_id(shader_id),
-    m_render_pass_id{},
-    m_recorded(false)
+      m_framebuffer_id{},
+      m_shader_id(shader_id),
+      m_render_pass_id{},
+      m_recorded(false)
 {
 }
 
@@ -42,7 +42,7 @@ void PostEffect::CreateRenderPass(Engine * engine)
     /* For our color attachment */
     render_pass->Get().AddAttachment({
         .format = engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
-        });
+    });
 
     m_render_pass_id = engine->AddRenderPass(std::move(render_pass));
 }
@@ -62,12 +62,10 @@ void PostEffect::CreateFrameData(Engine * engine)
     for (uint32_t i = 0; i < num_frames; i++) {
         auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
 
-        auto command_buffer_result = command_buffer->Create(
+        HYPERION_ASSERT_RESULT(command_buffer->Create(
             engine->GetInstance()->GetDevice(),
             engine->GetInstance()->GetGraphicsCommandPool()
-        );
-
-        AssertThrowMsg(command_buffer_result, "%s", command_buffer_result.message);
+        ));
 
         (*m_frame_data)[i].Set<CommandBuffer>(std::move(command_buffer));
     }
@@ -89,13 +87,13 @@ void PostEffect::CreateDescriptors(Engine * engine, uint32_t & binding_offset)
             ->AddSubDescriptor({
                 .image_view = attachment_info.image_view.get(),
                 .sampler = attachment_info.sampler.get()
-                });
+            });
     }
 }
 
 void PostEffect::CreatePipeline(Engine * engine)
 {
-    auto pipeline = std::make_unique<GraphicsPipeline>(m_shader_id, m_render_pass_id);
+    auto pipeline = std::make_unique<GraphicsPipeline>(m_shader_id, m_render_pass_id, GraphicsPipeline::Bucket::BUCKET_BUFFER);
     pipeline->AddFramebuffer(m_framebuffer_id);
     pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 
@@ -153,8 +151,8 @@ void PostEffect::Record(Engine * engine, uint32_t frame_index)
                         cmd,
                         &pipeline->Get(),
                         {
-                            { .set = 0, .count = 3 },
-                            { .binding = 0 }
+                            {.set = 0, .count = 3},
+                            {.binding = 0}
                         }
                     ),
                     result
@@ -241,11 +239,11 @@ void PostProcessing::BuildPipelines(Engine *engine)
     }
 }
 
-void PostProcessing::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
+void PostProcessing::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index) const
 {
     for (const auto &filter : m_filters) {
         filter->Record(engine, frame_index);
-        filter->Render(engine, primary_command_buffer, frame_index);
+        filter->Render(engine, primary, frame_index);
     }
 }
 } // namespace hyperion

@@ -73,8 +73,6 @@ public:
     Result InitializeDevice(VkPhysicalDevice _physical_device = nullptr);
     Result InitializeSwapchain();
 
-    void UpdateDescriptorSets();
-
     inline Swapchain *GetSwapchain() { return swapchain; }
     inline const Swapchain *GetSwapchain() const { return swapchain; }
     

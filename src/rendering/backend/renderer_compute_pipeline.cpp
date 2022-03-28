@@ -6,6 +6,8 @@
 
 #include <cstring>
 
+#include "renderer_features.h"
+
 namespace hyperion {
 namespace renderer {
 ComputePipeline::ComputePipeline()
@@ -44,17 +46,21 @@ void ComputePipeline::Dispatch(VkCommandBuffer cmd, size_t num_groups_x, size_t 
 Result ComputePipeline::Create(Device *device, ShaderProgram *shader, DescriptorPool *descriptor_pool)
 {
     /* Push constants */
-    VkPushConstantRange push_constant{};
-    push_constant.offset = 0;
-    push_constant.size = sizeof(PushConstants);
-    push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    const VkPushConstantRange push_constant_ranges[] = {
+        {
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+            .offset = 0,
+            .size = uint32_t(device->GetFeatures().PaddedSize<PushConstantData>())
+        }
+    };
 
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-    layout_info.setLayoutCount = descriptor_pool->m_descriptor_set_layouts.size();
-    layout_info.pSetLayouts = descriptor_pool->m_descriptor_set_layouts.data();
-    layout_info.pushConstantRangeCount = 1;
-    layout_info.pPushConstantRanges = &push_constant;
+    layout_info.setLayoutCount = uint32_t(descriptor_pool->GetDescriptorSetLayouts().size());
+    layout_info.pSetLayouts    = descriptor_pool->GetDescriptorSetLayouts().data();
+
+    layout_info.pushConstantRangeCount = uint32_t(std::size(push_constant_ranges));
+    layout_info.pPushConstantRanges    = push_constant_ranges;
 
     HYPERION_VK_CHECK_MSG(
         vkCreatePipelineLayout(device->GetDevice(), &layout_info, nullptr, &this->layout),

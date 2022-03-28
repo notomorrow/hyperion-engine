@@ -71,7 +71,7 @@ public:
     void Create(Engine *engine);
     void Destroy(Engine *engine);
     void BuildPipelines(Engine *engine);
-    void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
+    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index) const;
 
 private:
     std::vector<std::unique_ptr<PostEffect>> m_filters;

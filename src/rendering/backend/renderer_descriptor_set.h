@@ -123,6 +123,11 @@ struct DescriptorSetBinding {
 
 class DescriptorPool {
     friend class DescriptorSet;
+
+    Result AllocateDescriptorSet(Device *device, VkDescriptorSetLayout *layout, DescriptorSet *out);
+    Result CreateDescriptorSetLayout(Device *device, VkDescriptorSetLayoutCreateInfo *layout_create_info, VkDescriptorSetLayout *out);
+    Result DestroyDescriptorSetLayout(Device *device, VkDescriptorSetLayout *layout);
+
 public:
     static const std::unordered_map<VkDescriptorType, size_t> items_per_set;
 
@@ -150,28 +155,31 @@ public:
     DescriptorPool &operator=(const DescriptorPool &other) = delete;
     ~DescriptorPool();
 
+    inline uint8_t NumDescriptorSets() const { return m_num_descriptor_sets; }
+
+    inline const std::vector<VkDescriptorSetLayout> &GetDescriptorSetLayouts() const
+        { return m_descriptor_set_layouts; }
+
+    // return new descriptor set
+    DescriptorSet &AddDescriptorSet();
+
+    inline DescriptorSet *GetDescriptorSet(DescriptorSet::Index index)
+        { return m_descriptor_sets[index].get(); }
+
+    inline const DescriptorSet *GetDescriptorSet(DescriptorSet::Index index) const
+        { return m_descriptor_sets[index].get(); }
+
     Result Create(Device *device);
     Result Destroy(Device *device);
     Result Bind(CommandBuffer *cmd, GraphicsPipeline *pipeline, DescriptorSetBinding &&) const;
     Result Bind(CommandBuffer *cmd, ComputePipeline *pipeline, DescriptorSetBinding &&) const;
 
-    // return new descriptor set
-    DescriptorSet &AddDescriptorSet();
-    inline DescriptorSet *GetDescriptorSet(DescriptorSet::Index index)
-        { return m_descriptor_sets[index].get(); }
-    inline const DescriptorSet *GetDescriptorSet(DescriptorSet::Index index) const
-        { return m_descriptor_sets[index].get(); }
-
+private:
     std::array<std::unique_ptr<DescriptorSet>, DescriptorSet::max_descriptor_sets> m_descriptor_sets;
     uint8_t m_num_descriptor_sets;
     std::vector<VkDescriptorSetLayout> m_descriptor_set_layouts;
     VkDescriptorPool m_descriptor_pool;
     VkDescriptorSet *m_descriptor_sets_view;
-
-private:
-    Result AllocateDescriptorSet(Device *device, VkDescriptorSetLayout *layout, DescriptorSet *out);
-    Result CreateDescriptorSetLayout(Device *device, VkDescriptorSetLayoutCreateInfo *layout_create_info, VkDescriptorSetLayout *out);
-    Result DestroyDescriptorSetLayout(Device *device, VkDescriptorSetLayout *layout);
 };
 
 class Descriptor {

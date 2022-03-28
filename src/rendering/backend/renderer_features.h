@@ -207,15 +207,12 @@ public:
     constexpr size_t PaddedSize() const
     {
         // Calculate required alignment based on minimum device offset alignment
-        constexpr size_t alignment = m_properties.limits.minUniformBufferOffsetAlignment;
-        size_t size = sizeof(StructType);
+        const size_t alignment = m_properties.limits.minUniformBufferOffsetAlignment;
+        constexpr size_t size = sizeof(StructType);
 
-        if (alignment != 0) {
-            size = (size + alignment - 1) & ~(alignment - 1);
-        }
-
-        return size;
-
+        return alignment
+            ? (size + alignment - 1) & ~(alignment - 1)
+            : size;
     }
 
 private:
