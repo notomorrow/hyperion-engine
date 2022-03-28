@@ -71,11 +71,10 @@ void PostEffect::CreateFrameData(Engine * engine)
     }
 }
 
-void PostEffect::CreateDescriptors(Engine * engine, uint32_t & binding_offset)
+void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
-    // TEMP: change index
-    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE);
+    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_PASS);
 
     const uint32_t num_attachments = engine->GetFramebuffer(m_framebuffer_id)->Get().GetNumAttachments();
 

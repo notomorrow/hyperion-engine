@@ -20,6 +20,7 @@ using renderer::DescriptorSet;
 using renderer::GPUBuffer;
 using renderer::UniformBuffer;
 using renderer::MeshInputAttributeSet;
+using renderer::PerFrameData;
 
 class Engine;
 
@@ -33,8 +34,8 @@ public:
         /* === Scene objects === */
         BUCKET_OPAQUE      = 1, /* Opaque items */
         BUCKET_TRANSLUCENT = 2, /* Transparent - rendering on top of opaque objects */
-        BUCKET_PARTICLE    = 4, /* Specialized particle bucket */
-        BUCKET_SKYBOX      = 8 /* Rendered without depth testing/writing, and rendered first */
+        BUCKET_PARTICLE    = 3, /* Specialized particle bucket */
+        BUCKET_SKYBOX      = 4 /* Rendered without depth testing/writing, and rendered first */
     };
 
     struct ID : EngineComponent::ID {
@@ -85,7 +86,7 @@ public:
     void Create(Engine *engine);
     void Destroy(Engine *engine);
     
-    void Render(Engine *engine, CommandBuffer *primary_command_buffer, CommandBuffer *secondary_command_buffer, uint32_t frame_index);
+    void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
 
 private:
     /* Called from Spatial - remove the pointer */
@@ -103,6 +104,8 @@ private:
     ObjectIdHolder<Framebuffer> m_fbo_ids;
 
     std::vector<std::pair<Spatial::ID, Spatial *>> m_spatials;
+
+    PerFrameData<CommandBuffer> *m_per_frame_data;
 };
 
 } // namespace hyperion::v2

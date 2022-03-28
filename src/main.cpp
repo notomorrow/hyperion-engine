@@ -390,18 +390,11 @@ int main()
 
     PerFrameData<CommandBuffer, Semaphore> per_frame_data(engine.GetInstance()->GetFrameHandler()->NumFrames());
 
-    //SemaphoreChain graphics_semaphore_chain({}, {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT});
-    //AssertThrow(graphics_semaphore_chain.Create(engine.GetInstance()->GetDevice()));
-
     for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
         auto cmd_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
         AssertThrow(cmd_buffer->Create(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsQueue().command_pool));
 
         per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
-        
-        //graphics_semaphore_chain >> engine.GetInstance()->GetFrameHandler()
-        //    ->GetPerFrameData()[i].Get<Frame>()
-        //    ->GetPresentSemaphores();
     }
 
     auto mat1 = std::make_unique<v2::Material>();
@@ -410,32 +403,55 @@ int main()
     auto mat2 = std::make_unique<v2::Material>();
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 0.0f, 1.0f, 1.0f }));
     v2::Material::ID mat2_id = engine.AddMaterial(std::move(mat2));
+    auto skybox_material = std::make_unique<v2::Material>();
+    skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 1.0f, 1.0f, 1.0f }));
+    v2::Material::ID skybox_material_id = engine.AddMaterial(std::move(skybox_material));
 
-    v2::GraphicsPipeline::ID render_container_id;
+    v2::GraphicsPipeline::ID main_pipeline_id;
     {
-        auto container = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
-        container->AddFramebuffer(my_fbo_id);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
+        pipeline->AddFramebuffer(my_fbo_id);
         
-        container->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
+        pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
             monkey_mesh,
-            container->GetVertexAttributes(),
+            pipeline->GetVertexAttributes(),
             Transform(),
             mat1_id
         )));
 
-        container->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
+        pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
             cube_mesh,
-            container->GetVertexAttributes(),
+            pipeline->GetVertexAttributes(),
             Transform(Vector3(-4.0f, 0.0f, 4.0f), Vector3(0.8f), Quaternion::Identity()),
             mat2_id
         )));
         
-        render_container_id = engine.AddGraphicsPipeline(std::move(container));
+        main_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
+    }
+
+    v2::GraphicsPipeline::ID skybox_pipeline_id{};
+    {
+
+        v2::Shader::ID shader_id = engine.AddShader(std::make_unique<v2::Shader>(std::vector<v2::SubShader>{
+            {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
+            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
+        }));
+
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(shader_id, render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX);
+        pipeline->SetCullMode(GraphicsPipeline::CullMode::FRONT);
+        pipeline->AddFramebuffer(my_fbo_id);
+
+        pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
+            cube_mesh,
+            pipeline->GetVertexAttributes(),
+            Transform(Vector3(), Vector3(1.5f), Quaternion::Identity()),
+            skybox_material_id
+        )));
+        
+        skybox_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
     
     engine.Compile();
-
-    uint32_t previous_frame_index = 0;
 
     VkFence compute_fc;
     VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -467,7 +483,8 @@ int main()
 
         Transform transform(Vector3(0, 0, 0), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
-        engine.GetGraphicsPipeline(render_container_id)->SetSpatialTransform(&engine, 0, transform);
+        engine.GetGraphicsPipeline(main_pipeline_id)->SetSpatialTransform(&engine, 0, transform);
+        engine.GetGraphicsPipeline(skybox_pipeline_id)->SetSpatialTransform(&engine, 0, Transform(camera->GetTranslation(), {1.0f, 1.0f, 1.0f}, Quaternion()));
         
         engine.m_shader_globals->scene.Set(0, {
             .view = camera->GetViewMatrix(),
@@ -516,10 +533,13 @@ int main()
 
         frame->GetCommandBuffer()->RecordCommandsWithContext(
             [&](CommandBuffer *primary) {
-                auto *secondary = per_frame_data[frame_index].Get<CommandBuffer>();
-                secondary->Reset(engine.GetInstance()->GetDevice());
+                //auto *secondary = per_frame_data[frame_index].Get<CommandBuffer>();
+                //secondary->Reset(engine.GetInstance()->GetDevice());
 
-                engine.GetGraphicsPipeline(render_container_id)->Render(&engine, primary, secondary, 0);
+                engine.Render(primary, frame_index);
+
+                //engine.GetGraphicsPipeline(skybox_pipeline_id)->Render(&engine, primary, frame_index);
+                //engine.GetGraphicsPipeline(main_pipeline_id)->Render(&engine, primary, frame_index);
                 engine.RenderPostProcessing(primary, frame_index);
 
                 HYPERION_RETURN_OK;
@@ -559,8 +579,6 @@ int main()
         
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
         engine.GetInstance()->GetFrameHandler()->NextFrame();
-
-        previous_frame_index = frame_index;
     }
 
     AssertThrow(engine.GetInstance()->GetDevice()->Wait());

@@ -13,7 +13,7 @@ layout(set = 1, binding = 0) uniform sampler2D gbuffer_albedo_ping;
 layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals_ping;
 layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions_ping;
 
-layout(set = 2, binding = 5) uniform sampler2D filter_0;
+layout(set = 1, binding = 5) uniform sampler2D filter_0;
 
 
 layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;

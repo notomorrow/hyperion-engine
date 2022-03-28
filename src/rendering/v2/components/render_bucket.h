@@ -17,11 +17,15 @@ public:
     RenderBucketContainer &operator=(const RenderBucketContainer &other) = delete;
     ~RenderBucketContainer() = default;
 
-    inline auto &GetBuckets() { return m_buckets; }
-    inline const auto &GetBuckets() const { return m_buckets; }
+    inline auto &GetBuckets()
+        { return m_buckets; }
+    inline const auto &GetBuckets() const
+        { return m_buckets; }
 
-    inline Bucket &GetBucket(GraphicsPipeline::Bucket bucket) { return m_buckets[int(bucket)]; }
-    inline const Bucket &GetBucket(GraphicsPipeline::Bucket bucket) const { return m_buckets[int(bucket)]; }
+    inline Bucket &GetBucket(GraphicsPipeline::Bucket bucket)
+        { return m_buckets[int(bucket)]; }
+    inline const Bucket &GetBucket(GraphicsPipeline::Bucket bucket) const
+        { return m_buckets[int(bucket)]; }
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
