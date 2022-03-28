@@ -141,25 +141,17 @@ void PostEffect::Record(Engine * engine, uint32_t frame_index)
             engine->GetInstance()->GetDevice(),
             pipeline->Get().GetConstructionInfo().render_pass,
             [this, engine, pipeline](CommandBuffer *cmd) {
-                renderer::Result result = renderer::Result::OK;
-
                 pipeline->Get().Bind(cmd);
                 
-                HYPERION_PASS_ERRORS(
-                    engine->GetInstance()->GetDescriptorPool().Bind(
-                        cmd,
-                        &pipeline->Get(),
-                        {
-                            {.set = 0, .count = 3},
-                            {.binding = 0}
-                        }
-                    ),
-                    result
-                );
+                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+                    cmd,
+                    &pipeline->Get(),
+                    {{.count = 2}}
+                ));
 
                 full_screen_quad->RenderVk(cmd, engine->GetInstance(), nullptr);
 
-                return result;
+                HYPERION_RETURN_OK;
             }),
         result
     );
@@ -177,8 +169,7 @@ void PostEffect::Render(Engine * engine, CommandBuffer * primary_command_buffer,
 
     auto *secondary_command_buffer = (*m_frame_data)[frame_index].Get<CommandBuffer>();
 
-    auto result = secondary_command_buffer->SubmitSecondary(primary_command_buffer);
-    AssertThrowMsg(result, "%s", result.message);
+    HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(primary_command_buffer));
 
     pipeline->Get().EndRenderPass(primary_command_buffer, 0);
 }

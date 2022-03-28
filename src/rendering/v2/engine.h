@@ -198,6 +198,7 @@ public:
         { return const_cast<Engine*>(this)->GetSpatial(id); }
 
     void Initialize();
+    void Destroy();
     void PrepareSwapchain();
     void Compile();
     void UpdateDescriptorData(uint32_t frame_index);

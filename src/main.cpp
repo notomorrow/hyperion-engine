@@ -118,7 +118,6 @@ int main()
     auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/monkey/monkey.obj");
     auto monkey_mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
     auto cube_mesh = MeshFactory::CreateCube();
-    auto full_screen_quad = MeshFactory::CreateQuad();
     Material my_material;
 
     v2::Engine engine(system, "My app");
@@ -453,13 +452,14 @@ int main()
     
     engine.Compile();
 
+#if HYPERION_VK_TEST_IMAGE_STORE
     VkFence compute_fc;
     VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     if (vkCreateFence(engine.GetInstance()->GetDevice()->GetDevice(), &fence_info, nullptr, &compute_fc) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create compute fence!");
     }
-    
+#endif
 
     while (running) {
         tick_last = tick_now;
@@ -485,8 +485,9 @@ int main()
 
         engine.GetGraphicsPipeline(main_pipeline_id)->SetSpatialTransform(&engine, 0, transform);
         engine.GetGraphicsPipeline(skybox_pipeline_id)->SetSpatialTransform(&engine, 0, Transform(camera->GetTranslation(), {1.0f, 1.0f, 1.0f}, Quaternion()));
-        
-        engine.m_shader_globals->scene.Set(0, {
+
+        /* 0 is the index of our "main" scene/camera */
+        engine.m_shader_globals->scenes.Set(0, {
             .view = camera->GetViewMatrix(),
             .projection = camera->GetProjectionMatrix(),
             .camera_position = Vector4(camera->GetTranslation(), 1.0f),
@@ -530,24 +531,9 @@ int main()
         engine.UpdateDescriptorData(frame_index);
         
         HYPERION_ASSERT_RESULT(frame->BeginCapture());
-
-        frame->GetCommandBuffer()->RecordCommandsWithContext(
-            [&](CommandBuffer *primary) {
-                //auto *secondary = per_frame_data[frame_index].Get<CommandBuffer>();
-                //secondary->Reset(engine.GetInstance()->GetDevice());
-
-                engine.Render(primary, frame_index);
-
-                //engine.GetGraphicsPipeline(skybox_pipeline_id)->Render(&engine, primary, frame_index);
-                //engine.GetGraphicsPipeline(main_pipeline_id)->Render(&engine, primary, frame_index);
-                engine.RenderPostProcessing(primary, frame_index);
-
-                HYPERION_RETURN_OK;
-            });
         
-        /*per_frame_data[frame_index].Get<CommandBuffer>()->SubmitPrimary(
-            engine.GetInstance()->GetGraphicsQueue(), VK_NULL_HANDLE, &graphics_semaphore_chain
-        );*/
+        engine.Render(frame->GetCommandBuffer(), frame_index);
+        engine.RenderPostProcessing(frame->GetCommandBuffer(), frame_index);
 
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -584,10 +570,8 @@ int main()
     AssertThrow(engine.GetInstance()->GetDevice()->Wait());
 
     v2::PostEffect::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
-
     monkey_mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
     cube_mesh.reset();
-    full_screen_quad.reset();
 
     matrices_descriptor_buffer.Destroy(device);
     scene_data_descriptor_buffer.Destroy(device);
@@ -608,6 +592,8 @@ int main()
     compute_command_buffer->Destroy(device, engine.GetInstance()->GetComputeCommandPool());
     compute_semaphore_chain.Destroy(engine.GetInstance()->GetDevice());
 #endif
+
+    engine.Destroy();
 
     delete window;
 

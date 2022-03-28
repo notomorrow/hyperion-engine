@@ -76,19 +76,21 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
 
         for (const auto &path : try_paths) {
             auto it = loaded_assets.find(path);
-            if (it != loaded_assets.end() && it->second != nullptr) {
-                // reuse already loaded asset
-                const auto clone = it->second->Clone();
+            if (it != loaded_assets.end()) {
+                if (auto cached = it->second.lock()) {
+                    // reuse already loaded asset
+                    const auto clone = cached->Clone();
 
-                if (clone == nullptr) { // no implementation; return shared ptr
-                    std::cout << "Use cached object (direct) " << path << "\n";
+                    if (clone == nullptr) { // no implementation; return shared ptr
+                        std::cout << "Use cached object (direct) " << path << "\n";
 
-                    return it->second;
+                        return cached;
+                    }
+
+                    std::cout << "Use cached object (clone) " << path << "\n";
+
+                    return clone;
                 }
-
-                std::cout << "Use cached object (clone) " << path << "\n";
-
-                return clone;
             }
         }
     }

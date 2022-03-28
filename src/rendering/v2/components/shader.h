@@ -123,16 +123,19 @@ struct ShaderGlobals {
     /* max number of objects, based on size in mb */
     static constexpr size_t max_objects = (1ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
     static constexpr size_t max_objects_bytes = max_materials * sizeof(ObjectShaderData);
+    /* max number of scenes (cameras, essentially), based on size in kb */
+    static constexpr size_t max_scenes = (16ull * 1024ull) / sizeof(SceneShaderData);
+    static constexpr size_t max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
 
     ShaderGlobals(size_t num_buffers)
-        : scene(num_buffers),
+        : scenes(num_buffers),
           objects(num_buffers),
           materials(num_buffers)
     {
     }
 
-    ShaderData<UniformBuffer, SceneShaderData, 1> scene;
-    ShaderData<StorageBuffer, ObjectShaderData, max_objects> objects;
+    ShaderData<UniformBuffer, SceneShaderData, max_scenes>       scenes;
+    ShaderData<StorageBuffer, ObjectShaderData, max_objects>     objects;
     ShaderData<StorageBuffer, MaterialShaderData, max_materials> materials;
 };
 

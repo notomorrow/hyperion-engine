@@ -27,29 +27,7 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
 
 Engine::~Engine()
 {
-    (void)m_instance->GetDevice()->Wait();
-
-    m_post_processing.Destroy(this);
-
-    m_framebuffers.RemoveAll(this);
-    m_render_passes.RemoveAll(this);
-    m_shaders.RemoveAll(this);
-    m_textures.RemoveAll(this);
-    m_materials.RemoveAll(this);
-    m_compute_pipelines.RemoveAll(this);
-
-    m_swapchain_render_container->Destroy(this);
-    m_render_bucket_container.Destroy(this);
-
-    if (m_shader_globals != nullptr) {
-        m_shader_globals->scene.Destroy(m_instance->GetDevice());
-        m_shader_globals->objects.Destroy(m_instance->GetDevice());
-        m_shader_globals->materials.Destroy(m_instance->GetDevice());
-
-        delete m_shader_globals;
-    }
-
-    m_instance->Destroy();
+    AssertThrowMsg(m_instance == nullptr, "Instance should have been destroyed");
 }
 
 Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass_id)
@@ -203,16 +181,17 @@ void Engine::Initialize()
     m_shader_globals = new ShaderGlobals(m_instance->GetFrameHandler()->NumFrames());
     
     /* for scene data */
-    m_shader_globals->scene.Create(m_instance->GetDevice());
+    m_shader_globals->scenes.Create(m_instance->GetDevice());
     /* for materials */
     m_shader_globals->materials.Create(m_instance->GetDevice());
     /* for objects */
     m_shader_globals->objects.Create(m_instance->GetDevice());
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
-        ->AddDescriptor<renderer::UniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_globals->scene.GetBuffers()[0].get()
+            .gpu_buffer = m_shader_globals->scenes.GetBuffers()[0].get(),
+            .range = sizeof(SceneShaderData)
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
@@ -231,9 +210,10 @@ void Engine::Initialize()
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
-        ->AddDescriptor<renderer::UniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_globals->scene.GetBuffers()[1].get()
+            .gpu_buffer = m_shader_globals->scenes.GetBuffers()[1].get(),
+            .range = sizeof(SceneShaderData)
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
@@ -250,6 +230,36 @@ void Engine::Initialize()
             .gpu_buffer = m_shader_globals->objects.GetBuffers()[1].get(),
             .range = sizeof(ObjectShaderData)
         });
+}
+
+void Engine::Destroy()
+{
+    AssertThrow(m_instance != nullptr);
+
+    (void)m_instance->GetDevice()->Wait();
+
+    m_post_processing.Destroy(this);
+
+    m_framebuffers.RemoveAll(this);
+    m_render_passes.RemoveAll(this);
+    m_shaders.RemoveAll(this);
+    m_textures.RemoveAll(this);
+    m_materials.RemoveAll(this);
+    m_compute_pipelines.RemoveAll(this);
+
+    m_swapchain_render_container->Destroy(this);
+    m_render_bucket_container.Destroy(this);
+
+    if (m_shader_globals != nullptr) {
+        m_shader_globals->scenes.Destroy(m_instance->GetDevice());
+        m_shader_globals->objects.Destroy(m_instance->GetDevice());
+        m_shader_globals->materials.Destroy(m_instance->GetDevice());
+
+        delete m_shader_globals;
+    }
+
+    m_instance->Destroy();
+    m_instance.reset();
 }
 
 void Engine::Compile()
@@ -274,7 +284,7 @@ void Engine::Compile()
 
 void Engine::UpdateDescriptorData(uint32_t frame_index)
 {
-    m_shader_globals->scene.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    m_shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
 }
@@ -303,7 +313,7 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
     pipeline.BeginRenderPass(command_buffer, acquired_image_index, VK_SUBPASS_CONTENTS_INLINE);
     pipeline.Bind(command_buffer);
 
-    m_instance->GetDescriptorPool().Bind(command_buffer, &pipeline, {{.count = 3}});
+    m_instance->GetDescriptorPool().Bind(command_buffer, &pipeline, {{.count = 2}});
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
     PostEffect::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
