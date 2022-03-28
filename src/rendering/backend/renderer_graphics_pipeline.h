@@ -31,17 +31,23 @@ public:
         FRONT
     };
 
+    enum class FillMode {
+        FILL,
+        LINE
+    };
+
     struct ConstructionInfo {
         MeshInputAttributeSet vertex_attributes;
-        VkPrimitiveTopology topology;
+        VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-        CullMode cull_mode;
+        CullMode cull_mode = CullMode::BACK;
+        FillMode fill_mode = FillMode::FILL;
 
-        bool depth_test,
-             depth_write;
+        bool depth_test = true,
+             depth_write = true;
 
-        ShaderProgram *shader;
-        RenderPass *render_pass;
+        ShaderProgram *shader = nullptr;
+        RenderPass *render_pass = nullptr;
         std::vector<FramebufferObject *> fbos;
     };
 

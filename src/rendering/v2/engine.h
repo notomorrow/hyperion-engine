@@ -9,6 +9,7 @@
 #include "components/graphics.h"
 #include "components/material.h"
 #include "components/texture.h"
+#include "components/render_bucket.h"
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
@@ -52,7 +53,9 @@ public:
 
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
-    
+
+    /* Shaders */
+
     template <class ...Args>
     Shader::ID AddShader(std::unique_ptr<Shader> &&shader, Args &&... args)
         { return m_shaders.Add(this, std::move(shader), std::move(args)...); }
@@ -66,7 +69,9 @@ public:
 
     inline const Shader *GetShader(Shader::ID id) const
         { return const_cast<Engine*>(this)->GetShader(id); }
-    
+
+    /* Textures */
+
     template <class ...Args>
     Texture::ID AddTexture(std::unique_ptr<Texture> &&texture, Args &&... args)
         { return m_textures.Add(this, std::move(texture), std::move(args)...); }
@@ -139,15 +144,24 @@ public:
      * so that we can reuse pipelines
      */
     template <class ...Args>
-    GraphicsPipeline::ID AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&render_container, Args &&... args)
-        { return m_graphics_pipelines.Add(this, std::move(render_container), std::move(args)...); }
+    GraphicsPipeline::ID AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline, Args &&... args)
+    {
+        const auto bucket = pipeline->GetBucket();
+
+        GraphicsPipeline::ID id = m_render_bucket_container.GetBucket(bucket)
+            .Add(this, std::move(pipeline), std::move(args)...);
+
+        id.bucket = bucket;
+
+        return id;
+    }
 
     template <class ...Args>
     void RemoveGraphicsPipeline(GraphicsPipeline::ID id, Args &&... args)
-        { return m_graphics_pipelines.Remove(this, id, std::move(args)...); }
+        { return m_render_bucket_container.GetBucket(id.bucket).Remove(this, id, std::move(args)...); }
 
     inline GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id)
-        { return m_graphics_pipelines.Get(id); }
+        { return m_render_bucket_container.GetBucket(id.bucket).Get(id); }
 
     inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
         { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
@@ -167,11 +181,28 @@ public:
     inline const ComputePipeline *GetComputePipeline(ComputePipeline::ID id) const
         { return const_cast<Engine*>(this)->GetComputePipeline(id); }
 
+    /* Spatials */
+
+    template <class ...Args>
+    Spatial::ID AddSpatial(std::unique_ptr<Spatial> &&spatial, Args &&... args)
+        { return m_spatials.Add(this, std::move(spatial), std::move(args)...); }
+
+    template <class ...Args>
+    void RemoveSpatial(Spatial::ID id, Args &&... args)
+        { return m_spatials.Remove(this, id, std::move(args)...); }
+
+    inline Spatial *GetSpatial(Spatial::ID id)
+        { return m_spatials.Get(id); }
+
+    inline const Spatial *GetSpatial(Spatial::ID id) const
+        { return const_cast<Engine*>(this)->GetSpatial(id); }
+
     void Initialize();
     void PrepareSwapchain();
     void Compile();
     void UpdateDescriptorData(uint32_t frame_index);
-    void RenderPostProcessing(CommandBuffer *primary_command_buffer, uint32_t frame_index);
+    // void Render(CommandBuffer *primary, CommandBuffer *secondary, uint32_t frame_index);
+    void RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
     std::unique_ptr<GraphicsPipeline> m_swapchain_render_container;
@@ -192,8 +223,10 @@ private:
     ObjectHolder<Framebuffer> m_framebuffers;
     ObjectHolder<RenderPass> m_render_passes;
     ObjectHolder<Material> m_materials;
-    ObjectHolder<GraphicsPipeline> m_graphics_pipelines{.defer_create = true};
+    ObjectHolder<Spatial> m_spatials;
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
+
+    RenderBucketContainer m_render_bucket_container;
     
     std::unique_ptr<Instance> m_instance;
 };

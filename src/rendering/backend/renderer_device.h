@@ -18,9 +18,6 @@ namespace renderer {
 
 class Features;
 
-using std::vector,
-      std::set;
-
 class Instance;
 
 class Device {
@@ -33,12 +30,13 @@ public:
     void Destroy();
     
     void SetPhysicalDevice(VkPhysicalDevice);
-    void SetRenderSurface(const VkSurfaceKHR &_surface);
-    void SetRequiredExtensions(const vector<const char *> &_extensions);
+    void SetRenderSurface(const VkSurfaceKHR &surface);
+    void SetRequiredExtensions(const std::vector<const char *> &extensions);
+
     VkDevice         GetDevice();
     VkSurfaceKHR     GetRenderSurface();
     VkPhysicalDevice GetPhysicalDevice();
-    vector<const char *> GetRequiredExtensions();
+    std::vector<const char *> GetRequiredExtensions();
 
     Result SetupAllocator(Instance *instance);
     Result DestroyAllocator();
@@ -50,7 +48,7 @@ public:
 
     VkQueue GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index = 0);
 
-    Result CreateLogicalDevice(const set<uint32_t> &required_queue_families, const vector<const char *> &required_extensions);
+    Result CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions);
     Result CheckDeviceSuitable();
 
     /*  Wait for the device to be idle */
@@ -58,10 +56,10 @@ public:
 
     VmaAllocator *GetAllocator() { return &this->allocator; }
 
-    vector<const char *> CheckExtensionSupport(vector<const char *> _extensions);
-    vector<const char *> CheckExtensionSupport();
+    std::vector<const char *> CheckExtensionSupport(const std::vector<const char *> &extensions);
+    std::vector<const char *> CheckExtensionSupport();
 
-    vector<VkExtensionProperties> GetSupportedExtensions();
+    std::vector<VkExtensionProperties> GetSupportedExtensions();
 
 private:
     VkDevice                   device;
@@ -72,7 +70,7 @@ private:
     QueueFamilyIndices queue_family_indices;
     VmaAllocator       allocator;
 
-    vector<const char *> required_extensions;
+    std::vector<const char *> required_extensions;
 };
 
 } // namespace renderer

@@ -3,6 +3,7 @@
 //
 
 #include "renderer_graphics_pipeline.h"
+#include "renderer_features.h"
 #include "renderer_render_pass.h"
 #include "renderer_fbo.h"
 
@@ -42,8 +43,8 @@ void GraphicsPipeline::SetViewport(float x, float y, float width, float height, 
 
 void GraphicsPipeline::SetScissor(int x, int y, uint32_t width, uint32_t height)
 {
-    this->scissor.offset = { x, y };
-    this->scissor.extent = { width, height };
+    this->scissor.offset = {x, y};
+    this->scissor.extent = {width, height};
 }
 
 void GraphicsPipeline::UpdateDynamicStates(VkCommandBuffer cmd)
@@ -54,7 +55,7 @@ void GraphicsPipeline::UpdateDynamicStates(VkCommandBuffer cmd)
 
 std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttributes(const MeshInputAttributeSet &attribute_set)
 {
-    std::unordered_map<uint32_t, size_t> binding_sizes{};
+    std::unordered_map<uint32_t, uint32_t> binding_sizes{};
 
     this->vertex_attributes = std::vector<VkVertexInputAttributeDescription>(attribute_set.attributes.size());
 
@@ -65,7 +66,7 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
             .location = attribute.location,
             .binding = attribute.binding,
             .format = attribute.GetFormat(),
-            .offset = uint32_t(binding_sizes[attribute.binding])
+            .offset = binding_sizes[attribute.binding]
         };
 
         binding_sizes[attribute.binding] += attribute.size;
@@ -74,13 +75,12 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
     this->vertex_binding_descriptions.clear();
     this->vertex_binding_descriptions.reserve(binding_sizes.size());
 
-    for (auto &it : binding_sizes) {
-        VkVertexInputBindingDescription binding_desc{};
-        binding_desc.binding = it.first;
-        binding_desc.stride = it.second;
-        binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        this->vertex_binding_descriptions.push_back(binding_desc);
+    for (const auto &it : binding_sizes) {
+        this->vertex_binding_descriptions.push_back(VkVertexInputBindingDescription{
+            .binding = it.first,
+            .stride = it.second,
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
     }
 
     return this->vertex_attributes;
@@ -115,11 +115,11 @@ void GraphicsPipeline::SubmitPushConstants(CommandBuffer *cmd) const
 
 void GraphicsPipeline::Bind(CommandBuffer *cmd)
 {
-    this->UpdateDynamicStates(cmd->GetCommandBuffer());
+    UpdateDynamicStates(cmd->GetCommandBuffer());
 
     vkCmdBindPipeline(cmd->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
-    this->SubmitPushConstants(cmd);
+    SubmitPushConstants(cmd);
 }
 
 void GraphicsPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
@@ -134,18 +134,18 @@ Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_
     m_construction_info = std::move(construction_info);
 
     AssertExit(m_construction_info.shader != nullptr);
-    AssertExit(m_construction_info.fbos.size() != 0);
+    AssertExit(!m_construction_info.fbos.empty());
 
-    size_t width = m_construction_info.fbos[0]->GetWidth();
-    size_t height = m_construction_info.fbos[0]->GetHeight();
-    this->SetViewport(0.0f, float(height), float(width), -float(height), 0.0f, 1.0f);
-    this->SetScissor(0, 0, width, height);
+    const uint32_t width = m_construction_info.fbos[0]->GetWidth();
+    const uint32_t height = m_construction_info.fbos[0]->GetHeight();
 
-    std::vector<VkDynamicState> default_dynamic_states = {
+    SetViewport(0.0f, float(height), float(width), -float(height), 0.0f, 1.0f);
+    SetScissor(0, 0, width, height);
+    
+    SetDynamicStates({
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR,
-    };
-    this->SetDynamicStates(default_dynamic_states);
+    });
 
     static int x = 0;
     DebugLog(LogType::Debug, "Create Pipeline [%d]\n", x++);
@@ -155,19 +155,19 @@ Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_
 
 Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool)
 {
-    this->BuildVertexAttributes(m_construction_info.vertex_attributes);
+    BuildVertexAttributes(m_construction_info.vertex_attributes);
 
-    VkPipelineVertexInputStateCreateInfo vertex_input_info{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    VkPipelineVertexInputStateCreateInfo vertex_input_info{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
     vertex_input_info.vertexBindingDescriptionCount   = uint32_t(this->vertex_binding_descriptions.size());
     vertex_input_info.pVertexBindingDescriptions      = this->vertex_binding_descriptions.data();
     vertex_input_info.vertexAttributeDescriptionCount = uint32_t(this->vertex_attributes.size());
     vertex_input_info.pVertexAttributeDescriptions    = this->vertex_attributes.data();
 
-    VkPipelineInputAssemblyStateCreateInfo input_asm_info{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+    VkPipelineInputAssemblyStateCreateInfo input_asm_info{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
     input_asm_info.topology = m_construction_info.topology;
     input_asm_info.primitiveRestartEnable = VK_FALSE;
 
-    VkPipelineViewportStateCreateInfo viewport_state{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    VkPipelineViewportStateCreateInfo viewport_state{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
     VkViewport viewports[] = { this->viewport };
     viewport_state.viewportCount = 1;
     viewport_state.pViewports    = viewports;
@@ -176,12 +176,10 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     viewport_state.scissorCount = 1;
     viewport_state.pScissors    = scissors;
 
-    VkPipelineRasterizationStateCreateInfo rasterizer{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+    VkPipelineRasterizationStateCreateInfo rasterizer{VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
     /* TODO: Revisit this for shadow maps! */
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 1.0f;
     /* Backface culling */
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
@@ -197,6 +195,21 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
         break;
     }
 
+    switch (m_construction_info.fill_mode) {
+    case FillMode::FILL:
+        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+        rasterizer.lineWidth = 1.0f;
+        break;
+    case FillMode::LINE:
+        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+        rasterizer.lineWidth = 5.0f;
+        break;
+    default:
+        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+        rasterizer.lineWidth = 1.0f;
+        break;
+    }
+
     /* Also visit for shadow mapping! Along with other optional parameters such as
      * depthBiasClamp, slopeFactor etc. */
     rasterizer.depthBiasEnable = VK_FALSE;
@@ -209,7 +222,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     /* TODO: enable multisampling and the GPU feature required for it.  */
     std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;
-    color_blend_attachments.resize(this->m_construction_info.render_pass->GetColorAttachments().size());
+    color_blend_attachments.resize(m_construction_info.render_pass->GetColorAttachments().size());
 
     for (size_t i = 0; i < color_blend_attachments.size(); i++) {
         color_blend_attachments[i] = VkPipelineColorBlendAttachmentState{
@@ -220,32 +233,37 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
         };
     }
 
-    VkPipelineColorBlendStateCreateInfo color_blending{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-    color_blending.logicOpEnable = false;
+    VkPipelineColorBlendStateCreateInfo color_blending{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
+    color_blending.logicOpEnable   = false;
     color_blending.attachmentCount = uint32_t(color_blend_attachments.size());
-    color_blending.pAttachments = color_blend_attachments.data();
-
-    /* Push constants */
-    VkPushConstantRange push_constant{};
-    push_constant.offset = 0;
-    push_constant.size = sizeof(push_constants);
-    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    color_blending.pAttachments    = color_blend_attachments.data();
 
     /* Dynamic states; these are the values that can be changed without
      * rebuilding the rendering pipeline. */
-    VkPipelineDynamicStateCreateInfo dynamic_state{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-    const auto &states = this->GetDynamicStates();
+    VkPipelineDynamicStateCreateInfo dynamic_state{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
+    const auto &states = GetDynamicStates();
 
     dynamic_state.dynamicStateCount = uint32_t(states.size());
-    dynamic_state.pDynamicStates = states.data();
+    dynamic_state.pDynamicStates    = states.data();
     DebugLog(LogType::Info, "Enabling [%d] dynamic states\n", dynamic_state.dynamicStateCount);
 
     /* Pipeline layout */
-    VkPipelineLayoutCreateInfo layout_info{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-    layout_info.setLayoutCount = uint32_t(descriptor_pool->m_descriptor_set_layouts.size());
-    layout_info.pSetLayouts    = descriptor_pool->m_descriptor_set_layouts.data();
-    layout_info.pushConstantRangeCount = 1;
-    layout_info.pPushConstantRanges = &push_constant;
+    VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+
+    layout_info.setLayoutCount = uint32_t(descriptor_pool->GetDescriptorSetLayouts().size());
+    layout_info.pSetLayouts    = descriptor_pool->GetDescriptorSetLayouts().data();
+
+    /* Push constants */
+    const VkPushConstantRange push_constant_ranges[] = {
+        {
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .offset = 0,
+            .size = uint32_t(device->GetFeatures().PaddedSize<PushConstantData>())
+        }
+    };
+
+    layout_info.pushConstantRangeCount = uint32_t(std::size(push_constant_ranges));
+    layout_info.pPushConstantRanges    = push_constant_ranges;
 
     HYPERION_VK_CHECK_MSG(
         vkCreatePipelineLayout(device->GetDevice(), &layout_info, nullptr, &this->layout),

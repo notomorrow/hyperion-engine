@@ -25,20 +25,14 @@ void Texture::Create(Engine *engine)
 {
     EngineComponent::Create(engine);
 
-    auto image_view_result = m_image_view->Create(engine->GetInstance()->GetDevice(), &m_wrapped);
-    AssertThrowMsg(image_view_result, "%s", image_view_result.message);
-
-    auto sampler_result = m_sampler->Create(engine->GetInstance()->GetDevice(), m_image_view.get());
-    AssertThrowMsg(sampler_result, "%s", sampler_result.message);
+    HYPERION_ASSERT_RESULT(m_image_view->Create(engine->GetInstance()->GetDevice(), &m_wrapped));
+    HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetInstance()->GetDevice(), m_image_view.get()));
 }
 
 void Texture::Destroy(Engine *engine)
 {
-    auto sampler_result = m_sampler->Destroy(engine->GetInstance()->GetDevice());
-    AssertThrowMsg(sampler_result, "%s", sampler_result.message);
-
-    auto image_view_result = m_image_view->Destroy(engine->GetInstance()->GetDevice());
-    AssertThrowMsg(image_view_result, "%s", image_view_result.message);
+    HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetInstance()->GetDevice()));
+    HYPERION_ASSERT_RESULT(m_image_view->Destroy(engine->GetInstance()->GetDevice()));
 
     EngineComponent::Destroy(engine);
 }

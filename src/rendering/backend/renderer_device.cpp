@@ -37,29 +37,38 @@ void Device::SetPhysicalDevice(VkPhysicalDevice physical)
     this->features->SetPhysicalDevice(physical);
 }
 
-void Device::SetRenderSurface(const VkSurfaceKHR &surface) {
+void Device::SetRenderSurface(const VkSurfaceKHR &surface)
+{
     this->surface = surface;
 }
 
-void Device::SetRequiredExtensions(const std::vector<const char *> &extensions) {
+void Device::SetRequiredExtensions(const std::vector<const char *> &extensions)
+{
     this->required_extensions = extensions;
 }
 
-VkDevice Device::GetDevice() {
+VkDevice Device::GetDevice()
+{
     AssertThrow(this->device != nullptr);
     return this->device;
 }
-VkPhysicalDevice Device::GetPhysicalDevice() {
+
+VkPhysicalDevice Device::GetPhysicalDevice()
+{
     return this->physical;
 }
-VkSurfaceKHR Device::GetRenderSurface() {
+
+VkSurfaceKHR Device::GetRenderSurface()
+{
     if (this->surface == nullptr) {
         DebugLog(LogType::Fatal, "Device render surface is null!\n");
         throw std::runtime_error("Device render surface not set");
     }
     return this->surface;
 }
-std::vector<const char *> Device::GetRequiredExtensions() {
+
+std::vector<const char *> Device::GetRequiredExtensions()
+{
     return this->required_extensions;
 }
 
@@ -196,16 +205,19 @@ QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, V
     return indices;
 }
 
-std::vector<VkExtensionProperties> Device::GetSupportedExtensions() {
+std::vector<VkExtensionProperties> Device::GetSupportedExtensions()
+{
     uint32_t extension_count = 0;
     vkEnumerateDeviceExtensionProperties(this->physical, nullptr, &extension_count, nullptr);
     std::vector<VkExtensionProperties> supported_extensions(extension_count);
     vkEnumerateDeviceExtensionProperties(this->physical, nullptr, &extension_count, supported_extensions.data());
+
     return supported_extensions;
 }
 
-std::vector<const char *> Device::CheckExtensionSupport(std::vector<const char *> required_extensions) {
-    auto extensions_supported = this->GetSupportedExtensions();
+std::vector<const char *> Device::CheckExtensionSupport(const std::vector<const char *> &required_extensions)
+{
+    const auto extensions_supported = this->GetSupportedExtensions();
     std::vector<const char *> unsupported_extensions = required_extensions;
 
     for (const char *required_ext_name : required_extensions) {
@@ -218,11 +230,14 @@ std::vector<const char *> Device::CheckExtensionSupport(std::vector<const char *
     }
     return unsupported_extensions;
 }
-std::vector<const char *> Device::CheckExtensionSupport() {
+
+std::vector<const char *> Device::CheckExtensionSupport()
+{
     return this->CheckExtensionSupport(this->GetRequiredExtensions());
 }
 
-SwapchainSupportDetails Device::QuerySwapchainSupport() {
+SwapchainSupportDetails Device::QuerySwapchainSupport()
+{
     SwapchainSupportDetails details;
     VkPhysicalDevice _physical = this->GetPhysicalDevice();
     VkSurfaceKHR     _surface = this->GetRenderSurface();
@@ -255,7 +270,8 @@ SwapchainSupportDetails Device::QuerySwapchainSupport() {
     return details;
 }
 
-Result Device::CheckDeviceSuitable() {
+Result Device::CheckDeviceSuitable()
+{
     const std::vector<const char *> unsupported_extensions = this->CheckExtensionSupport();
 
     if (!unsupported_extensions.empty()) {
@@ -319,7 +335,8 @@ Result Device::Wait() const
     HYPERION_RETURN_OK;
 }
 
-Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions) {
+Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions)
+{
     this->SetRequiredExtensions(required_extensions);
 
     std::vector<VkDeviceQueueCreateInfo> queue_create_info_vec;
@@ -354,13 +371,15 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
     HYPERION_RETURN_OK;
 }
 
-VkQueue Device::GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index) {
+VkQueue Device::GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index)
+{
     VkQueue queue;
     vkGetDeviceQueue(this->GetDevice(), queue_family_index, queue_index, &queue);
     return queue;
 }
 
-void Device::Destroy() {
+void Device::Destroy()
+{
     if (this->device != nullptr) {
         /* By the time this destructor is called there should never
          * be a running queue, but just in case we will wait until

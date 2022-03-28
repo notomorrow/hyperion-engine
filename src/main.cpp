@@ -329,11 +329,6 @@ int main()
 
         mirror_shader_id = engine.AddShader(std::move(mirror_shader));
     }
-
-    auto scene_pass_container = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, render_pass_id);
-    scene_pass_container->AddFramebuffer(my_fbo_id);
-
-    auto scene_pass_pipeline_id = engine.AddGraphicsPipeline(std::move(scene_pass_container));
     //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
 
     float timer = 0.0;
@@ -411,25 +406,30 @@ int main()
 
     auto mat1 = std::make_unique<v2::Material>();
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 0.0f, 0.0f, 1.0f }));
-    engine.AddMaterial(std::move(mat1));
+    v2::Material::ID mat1_id = engine.AddMaterial(std::move(mat1));
     auto mat2 = std::make_unique<v2::Material>();
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 0.0f, 1.0f, 1.0f }));
-    engine.AddMaterial(std::move(mat2));
+    v2::Material::ID mat2_id = engine.AddMaterial(std::move(mat2));
 
     v2::GraphicsPipeline::ID render_container_id;
     {
-        auto container = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, render_pass_id);
+        auto container = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
         container->AddFramebuffer(my_fbo_id);
-        container->AddSpatial(&engine, v2::Spatial{
-            .id = 0,
-            .mesh = monkey_mesh,
-            .material_id = v2::Material::ID{v2::Material::ID::InnerType_t(1)}
-        });
-        container->AddSpatial(&engine, v2::Spatial{
-            .id = 1,
-            .mesh = cube_mesh,
-            .transform = Transform(Vector3(-4.0f, 0.0f, 4.0f), Vector3(0.8f), Quaternion::Identity())
-        });
+        
+        container->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
+            monkey_mesh,
+            container->GetVertexAttributes(),
+            Transform(),
+            mat1_id
+        )));
+
+        container->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
+            cube_mesh,
+            container->GetVertexAttributes(),
+            Transform(Vector3(-4.0f, 0.0f, 4.0f), Vector3(0.8f), Quaternion::Identity()),
+            mat2_id
+        )));
+        
         render_container_id = engine.AddGraphicsPipeline(std::move(container));
     }
     
@@ -507,11 +507,10 @@ int main()
         compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
 #endif
 
-        /* TODO: Updates of descriptor set should only update sets that are double-buffered so we don't
-         * end up updating data that is in use by the gpu!
+        /* Only update sets that are double - buffered so we don't
+         * end up updating data that is in use by the gpu
          */
         engine.UpdateDescriptorData(frame_index);
-        engine.GetInstance()->UpdateDescriptorSets();
         
         HYPERION_ASSERT_RESULT(frame->BeginCapture());
 
@@ -565,8 +564,6 @@ int main()
     }
 
     AssertThrow(engine.GetInstance()->GetDevice()->Wait());
-
-    //graphics_semaphore_chain.Destroy(engine.GetInstance()->GetDevice());
 
     v2::PostEffect::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
 

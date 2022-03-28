@@ -3,14 +3,19 @@
 
 #include <rendering/backend/renderer_descriptor_set.h>
 
+#include "rendering/backend/renderer_graphics_pipeline.h"
+
 namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 
-GraphicsPipeline::GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_pass_id)
+GraphicsPipeline::GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_pass_id, Bucket bucket)
     : m_shader_id(shader_id),
       m_render_pass_id(render_pass_id),
+      m_bucket(bucket),
       m_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
+      m_cull_mode(renderer::GraphicsPipeline::CullMode::BACK),
+      m_fill_mode(renderer::GraphicsPipeline::FillMode::FILL),
       m_vertex_attributes(MeshInputAttributeSet(
           MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
@@ -25,22 +30,55 @@ GraphicsPipeline::~GraphicsPipeline()
 {
 }
 
-void GraphicsPipeline::AddSpatial(Engine *engine, Spatial &&spatial)
+void GraphicsPipeline::AddSpatial(Engine *engine, Spatial::ID id)
 {
+    Spatial *spatial = engine->GetSpatial(id);
+
+    AssertThrow(spatial != nullptr);
+
     /* append any attributes not yet added */
-    m_vertex_attributes.Merge(spatial.attributes);
+    m_vertex_attributes.Merge(spatial->GetVertexAttributes());
 
-    engine->m_shader_globals->objects.Set(spatial.id, { .model_matrix = spatial.transform.GetMatrix() });
+    /* Update object data */
+    engine->m_shader_globals->objects.Set(id.value - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
 
-    m_spatials.push_back(std::move(spatial));
+    spatial->OnAddedToPipeline(this);
+
+    m_spatials.emplace_back(id, spatial);
+}
+
+void GraphicsPipeline::RemoveSpatial(Engine *engine, Spatial::ID id)
+{
+    const auto it = std::find_if(m_spatials.begin(), m_spatials.end(), [id](const auto &it) {
+        return it.first == id;
+    });
+
+    if (it != m_spatials.end()) {
+        it->second->OnRemovedFromPipeline(this);
+
+        m_spatials.erase(it);
+    }
+}
+
+void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
+{
+    const auto it = std::find_if(m_spatials.begin(), m_spatials.end(), [spatial](const auto &it) {
+        return it.second == spatial;
+    });
+
+    if (it != m_spatials.end()) {
+        m_spatials.erase(it);
+    }
 }
 
 void GraphicsPipeline::SetSpatialTransform(Engine *engine, uint32_t index, const Transform &transform)
 {
-    Spatial &spatial = m_spatials[index];
-    spatial.transform = transform;
+    const auto &item = m_spatials[index];
 
-    engine->m_shader_globals->objects.Set(spatial.id, { .model_matrix = transform.GetMatrix() });
+    Spatial *spatial = item.second;
+    spatial->SetTransform(transform);
+
+    engine->m_shader_globals->objects.Set(item.first.value - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
 }
 
 void GraphicsPipeline::Create(Engine *engine)
@@ -55,7 +93,8 @@ void GraphicsPipeline::Create(Engine *engine)
     renderer::GraphicsPipeline::ConstructionInfo construction_info{
         .vertex_attributes = m_vertex_attributes,
         .topology = m_topology,
-        .cull_mode = renderer::GraphicsPipeline::CullMode::BACK,
+        .cull_mode = m_cull_mode,
+        .fill_mode = m_fill_mode,
         .depth_test = true,
         .depth_write = true,
         .shader = &shader->Get(),
@@ -73,26 +112,13 @@ void GraphicsPipeline::Create(Engine *engine)
 
 void GraphicsPipeline::Destroy(Engine *engine)
 {
-    EngineComponent::Destroy(engine);
-}
-
-void GraphicsPipeline::Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
-{
-    auto *instance = engine->GetInstance();
-
-    m_wrapped.BeginRenderPass(command_buffer, frame_index, VK_SUBPASS_CONTENTS_INLINE);
-    m_wrapped.Bind(command_buffer);
-
-    instance->GetDescriptorPool().Bind(command_buffer, &m_wrapped, {{ .count = 3 }});
-
-    /* TMP */
-    for (auto &spatial : m_spatials) {
-        m_wrapped.push_constants.material_index = spatial.material_id.value;
-        m_wrapped.SubmitPushConstants(command_buffer);
-        spatial.mesh->RenderVk(command_buffer, instance, nullptr);
+    for (auto &it : m_spatials) {
+        it.second->OnRemovedFromPipeline(this);
     }
 
-    m_wrapped.EndRenderPass(command_buffer, frame_index);
+    m_spatials.clear();
+
+    EngineComponent::Destroy(engine);
 }
 
 void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buffer, CommandBuffer *secondary_command_buffer, uint32_t frame_index)
@@ -111,38 +137,38 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
             instance->GetDescriptorPool().Bind(
                 secondary,
                 &m_wrapped,
-                {{ .set = 0, .count = 2 }}
+                {{.set = 0, .count = 2}}
             );
 
-            static constexpr uint32_t frame_index_scene_buffer_mapping[]  = { 2, 4 };
-            static constexpr uint32_t frame_index_object_buffer_mapping[] = { 3, 5 };
+            static constexpr uint32_t frame_index_scene_buffer_mapping[]  = {2, 4};
+            static constexpr uint32_t frame_index_object_buffer_mapping[] = {3, 5};
 
             /* Bind scene data - */
             instance->GetDescriptorPool().Bind(
                 secondary,
                 &m_wrapped,
                 {
-                    { .set = frame_index_scene_buffer_mapping[frame_index], .count = 1 },
-                    { .binding = 2 }
+                    {.set = frame_index_scene_buffer_mapping[frame_index], .count = 1},
+                    {.binding = 2}
                 }
             );
             
-            for (auto &spatial : m_spatials) {
+            for (const auto &spatial : m_spatials) {
                 /* Bind per-object / material data separately */
                 instance->GetDescriptorPool().Bind(
                     secondary,
                     &m_wrapped,
                     {
-                        { .set = frame_index_object_buffer_mapping[frame_index], .count = 1 },
-                        { .binding = 3 },
-                        { .offsets = {
-                            uint32_t(spatial.material_id.value * sizeof(MaterialShaderData)),
-                            uint32_t(spatial.id * sizeof(ObjectShaderData))
+                        {.set = frame_index_object_buffer_mapping[frame_index], .count = 1},
+                        {.binding = 3},
+                        {.offsets = {
+                            uint32_t((spatial.second->GetMaterialId().value - 1) * sizeof(MaterialShaderData)),
+                            uint32_t((spatial.first.value - 1) * sizeof(ObjectShaderData))
                         }}
                     }
                 );
 
-                spatial.mesh->RenderVk(secondary, instance, nullptr);
+                spatial.second->GetMesh()->RenderVk(secondary, instance, nullptr);
             }
 
             HYPERION_RETURN_OK;

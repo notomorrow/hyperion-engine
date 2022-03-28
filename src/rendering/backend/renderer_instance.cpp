@@ -28,18 +28,6 @@ static VkResult HandleNextFrame(Device *device, Swapchain *swapchain, Frame *fra
         index);
 }
 
-void Instance::UpdateDescriptorSets()
-{
-    /* Update descriptors */
-    for (uint8_t i = 0; i < this->descriptor_pool.m_num_descriptor_sets; i++) {
-        auto *descriptor_set = this->descriptor_pool.GetDescriptorSet(DescriptorSet::Index(i));
-
-        if (descriptor_set->GetState() == DescriptorSetState::DESCRIPTOR_DIRTY) {
-            descriptor_set->Update(this->device);
-        }
-    }
-}
-
 Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers)
 {
     uint32_t layers_count;
