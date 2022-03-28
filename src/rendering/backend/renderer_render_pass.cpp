@@ -138,7 +138,7 @@ Result RenderPass::Create(Device *device)
 
         attachments.push_back(attachment->m_attachment_description);
         color_attachment_refs.push_back(attachment->m_attachment_reference);
-
+        
         m_clear_values.push_back(VkClearValue{.color = {0.0f, 0.0f, 0.0f, 1.0f}});
     }
 
@@ -153,7 +153,7 @@ Result RenderPass::Create(Device *device)
 
         depth_attachment_ref = attachment->m_attachment_reference;
         subpass_description.pDepthStencilAttachment = &depth_attachment_ref;
-
+        
         m_clear_values.push_back(VkClearValue{.depthStencil = {1.0f, 0}});
     }
 

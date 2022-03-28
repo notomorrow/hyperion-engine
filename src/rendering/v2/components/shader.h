@@ -5,6 +5,7 @@
 
 #include <rendering/backend/renderer_shader.h>
 #include <rendering/backend/renderer_buffer.h>
+#include <rendering/backend/renderer_structs.h>
 
 #include <math/transform.h>
 #include <util/heap_array.h>
@@ -19,6 +20,7 @@ using renderer::ShaderModule;
 using renderer::GPUBuffer;
 using renderer::UniformBuffer;
 using renderer::StorageBuffer;
+using renderer::PerFrameData;
 
 struct alignas(256) ObjectShaderData {
     Matrix4 model_matrix;
@@ -43,9 +45,11 @@ public:
     ShaderData(size_t num_buffers)
     {
         m_buffers.resize(num_buffers);
+        m_dirty.resize(num_buffers);
 
         for (size_t i = 0; i < num_buffers; i++) {
             m_buffers[i] = std::make_unique<Buffer>();
+            m_dirty[i] = {0, Size};
         }
     }
 
@@ -71,20 +75,22 @@ public:
 
     void UpdateBuffer(Device *device, size_t buffer_index)
     {
-        if (!m_dirty.GetEnd()) {
+        auto &dirty = m_dirty[buffer_index];
+
+        if (!dirty.GetEnd()) {
             return;
         }
 
-        AssertThrow(m_dirty.GetEnd() > m_dirty.GetStart());
+        AssertThrow(dirty.GetEnd() > dirty.GetStart());
 
         m_buffers[buffer_index]->Copy(
             device,
-            m_dirty.GetStart() * sizeof(StructType),
-            m_dirty.GetDistance() * sizeof(StructType),
-            m_objects.Data() + m_dirty.GetStart()
+            dirty.GetStart() * sizeof(StructType),
+            dirty.GetDistance() * sizeof(StructType),
+            m_objects.Data() + dirty.GetStart()
         );
 
-        m_dirty = {0, 0};
+        dirty = {0, 0};
     }
 
     inline StructType &Get(size_t index) { return m_objects[index]; }
@@ -96,15 +102,18 @@ public:
 
         m_objects[index] = std::move(value);
 
-        m_dirty.SetStart(MathUtil::Min(m_dirty.GetStart(), index));
-        m_dirty.SetEnd(MathUtil::Max(m_dirty.GetEnd(), index + 1));
+        for (size_t i = 0; i < m_dirty.size(); i++) {
+            m_dirty[i] = {
+                MathUtil::Min(m_dirty[i].GetStart(), index),
+                MathUtil::Max(m_dirty[i].GetEnd(), index + 1)
+            };
+        }
     }
-
-
+    
 private:
     std::vector<std::unique_ptr<Buffer>> m_buffers;
+    std::vector<Range<size_t>> m_dirty;
     HeapArray<StructType, Size> m_objects;
-    Range<size_t> m_dirty;
 };
 
 struct ShaderGlobals {

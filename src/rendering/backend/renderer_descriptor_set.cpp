@@ -256,10 +256,12 @@ Result DescriptorPool::Bind(CommandBuffer *cmd, ComputePipeline *pipeline, Descr
 
 Result DescriptorPool::CreateDescriptorSetLayout(Device *device, VkDescriptorSetLayoutCreateInfo *layout_create_info, VkDescriptorSetLayout *out)
 {
-    // TODO: caching
     if (vkCreateDescriptorSetLayout(device->GetDevice(), layout_create_info, nullptr, out) != VK_SUCCESS) {
         return Result(Result::RENDERER_ERR, "Could not create descriptor set layout");
     }
+
+    //AssertThrowMsg(m_descriptor_set_layouts.size() < 4, "Maximum number of descriptor sets (to be used) surpassed: " \
+    //                                                    "For compatibility, maintain a limit of 4 descriptor sets in use.");
 
     m_descriptor_set_layouts.push_back(*out);
 

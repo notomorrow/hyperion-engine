@@ -15,6 +15,9 @@
 #include <algorithm>
 #include <optional>
 #include <set>
+#include <memory>
+#include <utility>
+#include <tuple>
 
 namespace hyperion {
 namespace renderer {
@@ -223,6 +226,65 @@ struct SwapchainSupportDetails {
     std::vector<VkQueueFamilyProperties> queue_family_properties;
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> present_modes;
+};
+
+
+
+template<class ...Args>
+class PerFrameData {
+    struct FrameDataWrapper {
+        std::tuple<std::unique_ptr<Args>...> tup;
+
+        template <class T>
+        T *Get()
+        {
+            return std::get<std::unique_ptr<T>>(tup).get();
+        }
+
+        template <class T>
+        const T *Get() const
+        {
+            return std::get<std::unique_ptr<T>>(tup).get();
+        }
+
+        template <class T>
+        void Set(std::unique_ptr<T> &&value)
+        {
+            std::get<std::unique_ptr<T>>(tup) = std::move(value);
+        }
+    };
+
+public:
+    PerFrameData(uint32_t num_frames) : m_num_frames(num_frames)
+        { m_data.resize(num_frames); }
+
+    PerFrameData(const PerFrameData &other) = delete;
+    PerFrameData &operator=(const PerFrameData &other) = delete;
+    PerFrameData(PerFrameData &&) = default;
+    PerFrameData &operator=(PerFrameData &&) = default;
+    ~PerFrameData() = default;
+
+    inline uint32_t NumFrames() const
+        { return m_num_frames; }
+
+    inline FrameDataWrapper &operator[](uint32_t index)
+        { return m_data[index]; }
+
+    inline const FrameDataWrapper &operator[](uint32_t index) const
+        { return m_data[index]; }
+
+    inline FrameDataWrapper &At(uint32_t index)
+        { return m_data[index]; }
+
+    inline const FrameDataWrapper &At(uint32_t index) const
+        { return m_data[index]; }
+
+    inline void Reset()
+        { m_data = std::vector<FrameDataWrapper>(m_num_frames); }
+
+protected:
+    uint32_t m_num_frames;
+    std::vector<FrameDataWrapper> m_data;
 };
 
 } // namespace renderer

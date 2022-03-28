@@ -22,12 +22,14 @@ GraphicsPipeline::GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_p
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT))
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT)),
+      m_per_frame_data(nullptr)
 {
 }
 
 GraphicsPipeline::~GraphicsPipeline()
 {
+    AssertThrowMsg(m_per_frame_data == nullptr, "per-frame data should have been destroyed");
 }
 
 void GraphicsPipeline::AddSpatial(Engine *engine, Spatial::ID id)
@@ -107,11 +109,40 @@ void GraphicsPipeline::Create(Engine *engine)
         }
     }
 
+    AssertThrow(m_per_frame_data == nullptr);
+    m_per_frame_data = new PerFrameData<CommandBuffer>(engine->GetInstance()->GetFrameHandler()->NumFrames());
+
+    auto &per_frame_data = *m_per_frame_data;
+
+    for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
+        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
+        HYPERION_ASSERT_RESULT(command_buffer->Create(
+            engine->GetInstance()->GetDevice(),
+            engine->GetInstance()->GetGraphicsCommandPool()
+        ));
+
+        per_frame_data[i].Set<CommandBuffer>(std::move(command_buffer));
+    }
+
     EngineComponent::Create(engine, std::move(construction_info), &engine->GetInstance()->GetDescriptorPool());
 }
 
 void GraphicsPipeline::Destroy(Engine *engine)
 {
+    if (m_per_frame_data != nullptr) {
+        auto &per_frame_data = *m_per_frame_data;
+
+        for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
+            HYPERION_ASSERT_RESULT(per_frame_data[i].Get<CommandBuffer>()->Destroy(
+                engine->GetInstance()->GetDevice(),
+                engine->GetInstance()->GetGraphicsCommandPool()
+            ));
+        }
+
+        delete m_per_frame_data;
+        m_per_frame_data = nullptr;
+    }
+
     for (auto &it : m_spatials) {
         it.second->OnRemovedFromPipeline(this);
     }
@@ -121,11 +152,14 @@ void GraphicsPipeline::Destroy(Engine *engine)
     EngineComponent::Destroy(engine);
 }
 
-void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buffer, CommandBuffer *secondary_command_buffer, uint32_t frame_index)
+void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
 {
     auto *instance = engine->GetInstance();
+    auto *secondary_command_buffer = m_per_frame_data->At(frame_index).Get<CommandBuffer>();
 
-    m_wrapped.BeginRenderPass(primary_command_buffer, frame_index, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    //HYPERION_ASSERT_RESULT(secondary_command_buffer->Reset(engine->GetInstance()->GetDevice()));
+
+    m_wrapped.BeginRenderPass(primary_command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     secondary_command_buffer->Record(
         instance->GetDevice(),
@@ -176,7 +210,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
     
     secondary_command_buffer->SubmitSecondary(primary_command_buffer);
 
-    m_wrapped.EndRenderPass(primary_command_buffer, frame_index);
+    m_wrapped.EndRenderPass(primary_command_buffer, 0);
 }
 
 } // namespace hyperion::v2

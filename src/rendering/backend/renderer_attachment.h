@@ -48,6 +48,8 @@ public:
     Attachment() = delete;
 };
 
+/* === Presentation === */
+
 template<>
 class Attachment<
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -84,6 +86,8 @@ public:
     ) {}
 };
 
+/* Render-to-texture passes */
+
 template<>
 class Attachment<
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -110,7 +114,7 @@ class Attachment<
 public:
     Attachment(uint32_t binding, VkFormat format) : AttachmentBase(
         format,
-        VK_ATTACHMENT_LOAD_OP_CLEAR,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         VK_ATTACHMENT_STORE_OP_STORE,
         VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         VK_ATTACHMENT_STORE_OP_DONT_CARE,

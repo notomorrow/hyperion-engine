@@ -279,6 +279,17 @@ void Engine::UpdateDescriptorData(uint32_t frame_index)
     m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
 }
 
+void Engine::Render(CommandBuffer *primary, uint32_t frame_index)
+{
+    for (const auto &pipeline : m_render_bucket_container.GetBucket(GraphicsPipeline::Bucket::BUCKET_SKYBOX).objects) {
+        pipeline->Render(this, primary, frame_index);
+    }
+
+    for (const auto &pipeline : m_render_bucket_container.GetBucket(GraphicsPipeline::Bucket::BUCKET_OPAQUE).objects) {
+        pipeline->Render(this, primary, frame_index);
+    }
+}
+
 void Engine::RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index)
 {
     m_post_processing.Render(this, primary, frame_index);

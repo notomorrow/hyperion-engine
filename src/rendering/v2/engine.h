@@ -201,7 +201,7 @@ public:
     void PrepareSwapchain();
     void Compile();
     void UpdateDescriptorData(uint32_t frame_index);
-    // void Render(CommandBuffer *primary, CommandBuffer *secondary, uint32_t frame_index);
+    void Render(CommandBuffer *primary, uint32_t frame_index);
     void RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
