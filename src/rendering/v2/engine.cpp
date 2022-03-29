@@ -49,10 +49,18 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
 
     /* Add all attachments from the renderpass */
     for (auto &it : render_pass->Get().GetAttachments()) {
-        framebuffer->Get().AddAttachment(it.format);
+        framebuffer->Get().AddAttachment(it.second.format);
     }
 
     return AddFramebuffer(std::move(framebuffer), render_pass_id);
+}
+
+void Engine::SetSpatialTransform(Spatial::ID id, const Transform &transform)
+{
+    Spatial *spatial = GetSpatial(id);
+    spatial->SetTransform(transform);
+
+    m_shader_globals->objects.Set(id.value - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
 }
 
 void Engine::InitializeInstance()
@@ -109,6 +117,13 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
+    m_deferred_rendering.CreateShader(this);
+    m_deferred_rendering.CreateRenderPass(this);
+    m_deferred_rendering.CreateFrameData(this);
+
+    uint32_t binding_index = 4; /* TMP */
+    m_deferred_rendering.CreateDescriptors(this, binding_index);
+
     m_post_processing.Create(this);
 
     Shader::ID shader_id{};
@@ -160,8 +175,7 @@ void Engine::PrepareSwapchain()
                 .image_needs_creation = false,
                 .image_view_needs_creation = false,
                 .sampler_needs_creation = true
-            },
-            m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_COLOR) // unused but will tell the fbo that it is not a depth texture
+            }
         );
 
         /* Now we add a depth buffer */
@@ -238,6 +252,8 @@ void Engine::Destroy()
 
     (void)m_instance->GetDevice()->Wait();
 
+    m_deferred_rendering.Destroy(this);
+
     m_post_processing.Destroy(this);
 
     m_framebuffers.RemoveAll(this);
@@ -275,6 +291,8 @@ void Engine::Compile()
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
 
+    m_deferred_rendering.CreatePipeline(this);
+
     m_post_processing.BuildPipelines(this);
 
     m_swapchain_render_container->Create(this);
@@ -296,6 +314,16 @@ void Engine::Render(CommandBuffer *primary, uint32_t frame_index)
     }
 
     for (const auto &pipeline : m_render_bucket_container.GetBucket(GraphicsPipeline::Bucket::BUCKET_OPAQUE).objects) {
+        pipeline->Render(this, primary, frame_index);
+    }
+}
+
+void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
+{
+    m_deferred_rendering.Record(this, frame_index);
+    m_deferred_rendering.Render(this, primary, frame_index);
+
+    for (const auto &pipeline : m_render_bucket_container.GetBucket(GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT).objects) {
         pipeline->Render(this, primary, frame_index);
     }
 }
