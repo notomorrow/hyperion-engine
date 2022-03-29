@@ -41,8 +41,6 @@ public:
     Result SetupAllocator(Instance *instance);
     Result DestroyAllocator();
 
-    SwapchainSupportDetails QuerySwapchainSupport();
-
     inline const QueueFamilyIndices &GetQueueFamilyIndices() const { return queue_family_indices; }
     inline const Features &GetFeatures() const { return *features; }
 

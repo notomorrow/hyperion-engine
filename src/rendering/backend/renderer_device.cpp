@@ -236,40 +236,6 @@ std::vector<const char *> Device::CheckExtensionSupport()
     return this->CheckExtensionSupport(this->GetRequiredExtensions());
 }
 
-SwapchainSupportDetails Device::QuerySwapchainSupport()
-{
-    SwapchainSupportDetails details;
-    VkPhysicalDevice _physical = this->GetPhysicalDevice();
-    VkSurfaceKHR     _surface = this->GetRenderSurface();
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physical, _surface, &details.capabilities);
-
-    uint32_t queue_family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(_physical, &queue_family_count, nullptr);
-    std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(_physical, &queue_family_count, queue_family_properties.data());
-
-    uint32_t count = 0;
-    /* Get device surface formats */
-    vkGetPhysicalDeviceSurfaceFormatsKHR(_physical, _surface, &count, nullptr);
-    std::vector<VkSurfaceFormatKHR> surface_formats(count);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(_physical, _surface, &count, surface_formats.data());
-    if (count == 0)
-        DebugLog(LogType::Warn, "No surface formats available!\n");
-
-    vkGetPhysicalDeviceSurfacePresentModesKHR(_physical, _surface, &count, nullptr);
-    std::vector<VkPresentModeKHR> present_modes(count);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(_physical, _surface, &count, present_modes.data());
-    if (count == 0)
-        DebugLog(LogType::Warn, "No present modes available!\n");
-
-    details.queue_family_properties = queue_family_properties;
-    details.formats = surface_formats;
-    details.present_modes = present_modes;
-
-    return details;
-}
-
 Result Device::CheckDeviceSuitable()
 {
     const std::vector<const char *> unsupported_extensions = this->CheckExtensionSupport();
@@ -286,7 +252,7 @@ Result Device::CheckDeviceSuitable()
     }
     bool extensions_available = unsupported_extensions.empty();
 
-    SwapchainSupportDetails swapchain_support = this->QuerySwapchainSupport();
+    const SwapchainSupportDetails swapchain_support = features->QuerySwapchainSupport(surface);
     bool swapchains_available = (!swapchain_support.formats.empty() && !swapchain_support.present_modes.empty());
 
     if (!this->queue_family_indices.IsComplete())
