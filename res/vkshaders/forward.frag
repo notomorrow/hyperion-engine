@@ -32,7 +32,7 @@ void main() {
     
     vec3 reflection_vector = reflect(view_vector, normal);
     
-    gbuffer_albedo = vec4(texture(tex, reflection_vector).rgb * material.albedo.rgb, 1.0);
+    gbuffer_albedo = material.albedo;
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }

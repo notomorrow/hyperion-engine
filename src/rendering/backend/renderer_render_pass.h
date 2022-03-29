@@ -20,7 +20,8 @@ public:
     enum Stage {
         RENDER_PASS_STAGE_NONE = 0,
         RENDER_PASS_STAGE_PRESENT = 1, /* for presentation on screen */
-        RENDER_PASS_STAGE_SHADER = 2  /* for use as a sampled texture in a shader */
+        RENDER_PASS_STAGE_SHADER = 2,  /* for use as a sampled texture in a shader */
+        RENDER_PASS_STAGE_BLIT = 3     /* for blitting into another framebuffer in a later stage */
     };
 
     enum Mode {
@@ -43,7 +44,12 @@ public:
     /* Pre-defined attachments */
 
     inline void AddAttachment(const Attachment &attachment)
-        { m_attachments.push_back(attachment); }
+    {
+        m_attachments.push_back(std::make_pair(uint32_t(m_color_attachments.size() + m_depth_attachments.size() + m_attachments.size()), attachment));
+        std::sort(m_attachments.begin(), m_attachments.end(), [](const auto &a, const auto &b) {
+            return a.first < b.first;
+        });
+    }
 
     inline auto &GetAttachments() { return m_attachments; }
     inline const auto &GetAttachments() const { return m_attachments; }
@@ -79,7 +85,7 @@ private:
 
     Stage m_stage;
     Mode m_mode;
-    std::vector<Attachment> m_attachments;
+    std::vector<std::pair<uint32_t, Attachment>> m_attachments;
 
     std::vector<std::unique_ptr<AttachmentBase>> m_color_attachments;
     std::vector<std::unique_ptr<AttachmentBase>> m_depth_attachments;

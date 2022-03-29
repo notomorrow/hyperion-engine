@@ -68,14 +68,29 @@ public:
         { return m_fill_mode; }
     inline void SetFillMode(renderer::GraphicsPipeline::FillMode fill_mode)
         { m_fill_mode = fill_mode; }
+
     inline auto GetCullMode() const
         { return m_cull_mode; }
     inline void SetCullMode(renderer::GraphicsPipeline::CullMode cull_mode)
         { m_cull_mode = cull_mode; }
 
+    inline bool GetDepthTest() const
+        { return m_depth_test; }
+    inline void SetDepthTest(bool depth_test)
+        { m_depth_test = depth_test; }
+
+    inline bool GetDepthWrite() const
+        { return m_depth_write; }
+    inline void SetDepthWrite(bool depth_write)
+        { m_depth_write = depth_write; }
+
+    inline bool GetBlendEnabled() const
+        { return m_blend_enabled; }
+    inline void SetBlendEnabled(bool blend_enabled)
+        { m_blend_enabled = blend_enabled; }
+
     void AddSpatial(Engine *engine, Spatial::ID id);
     void RemoveSpatial(Engine *engine, Spatial::ID id);
-    void SetSpatialTransform(Engine *engine, uint32_t index, const Transform &transform);
 
     /* Non-owned objects - owned by `engine`, used by the pipeline */
 
@@ -98,6 +113,9 @@ private:
     VkPrimitiveTopology m_topology;
     renderer::GraphicsPipeline::CullMode m_cull_mode;
     renderer::GraphicsPipeline::FillMode m_fill_mode;
+    bool m_depth_test;
+    bool m_depth_write;
+    bool m_blend_enabled;
     MeshInputAttributeSet m_vertex_attributes;
 
     ObjectIdHolder<Texture> m_texture_ids;

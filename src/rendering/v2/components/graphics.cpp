@@ -16,6 +16,9 @@ GraphicsPipeline::GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_p
       m_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
       m_cull_mode(renderer::GraphicsPipeline::CullMode::BACK),
       m_fill_mode(renderer::GraphicsPipeline::FillMode::FILL),
+      m_depth_test(true),
+      m_depth_write(true),
+      m_blend_enabled(false),
       m_vertex_attributes(MeshInputAttributeSet(
           MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
@@ -73,16 +76,6 @@ void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
     }
 }
 
-void GraphicsPipeline::SetSpatialTransform(Engine *engine, uint32_t index, const Transform &transform)
-{
-    const auto &item = m_spatials[index];
-
-    Spatial *spatial = item.second;
-    spatial->SetTransform(transform);
-
-    engine->m_shader_globals->objects.Set(item.first.value - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
-}
-
 void GraphicsPipeline::Create(Engine *engine)
 {
     auto *shader = engine->GetShader(m_shader_id);
@@ -94,13 +87,14 @@ void GraphicsPipeline::Create(Engine *engine)
 
     renderer::GraphicsPipeline::ConstructionInfo construction_info{
         .vertex_attributes = m_vertex_attributes,
-        .topology = m_topology,
-        .cull_mode = m_cull_mode,
-        .fill_mode = m_fill_mode,
-        .depth_test = true,
-        .depth_write = true,
-        .shader = &shader->Get(),
-        .render_pass = &render_pass->Get()
+        .topology          = m_topology,
+        .cull_mode         = m_cull_mode,
+        .fill_mode         = m_fill_mode,
+        .depth_test        = m_depth_test,
+        .depth_write       = m_depth_write,
+        .blend_enabled     = m_blend_enabled,
+        .shader            = &shader->Get(),
+        .render_pass       = &render_pass->Get()
     };
 
     for (const auto &fbo_id : m_fbo_ids.ids) {

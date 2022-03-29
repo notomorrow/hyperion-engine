@@ -12,10 +12,14 @@ layout(location = 3) in vec2 a_texcoord1;
 layout(location = 4) in vec3 a_tangent;
 layout(location = 5) in vec3 a_bitangent;
 
-layout(binding = 1, row_major) uniform SceneDataBlock {
-    vec3 camera_position;
-    vec3 light_direction;
-} SceneData;
+
+
+layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
+    mat4 view;
+    mat4 projection;
+    vec4 camera_position;
+    vec4 light_direction;
+} scene;
 
 
 void main() {
@@ -23,8 +27,8 @@ void main() {
 
     v_position = position.xyz;
     v_texcoord0 = a_texcoord0;
-    v_light_direction = SceneData.light_direction;
-    v_camera_position = SceneData.camera_position;
+    v_light_direction = scene.light_direction.xyz;
+    v_camera_position = scene.camera_position.xyz;
 
     gl_Position = position;
 } 

@@ -44,7 +44,8 @@ public:
         FillMode fill_mode = FillMode::FILL;
 
         bool depth_test = true,
-             depth_write = true;
+             depth_write = true,
+             blend_enabled = false;
 
         ShaderProgram *shader = nullptr;
         RenderPass *render_pass = nullptr;

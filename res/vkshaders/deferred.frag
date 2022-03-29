@@ -9,11 +9,9 @@ layout(location=3) in vec3 v_camera_position;
 
 layout(location=0) out vec4 color_output;
 
-layout(set = 1, binding = 0) uniform sampler2D gbuffer_albedo_ping;
-layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals_ping;
-layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions_ping;
-
-layout(set = 1, binding = 5) uniform sampler2D filter_0;
+layout(set = 1, binding = 0) uniform sampler2D gbuffer_albedo;
+layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals;
+layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions;
 
 
 layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
@@ -26,12 +24,12 @@ void main()
     vec4 normal;
     vec4 position;
     
-    albedo = texture(filter_0, texcoord);
-    normal = texture(gbuffer_normals_ping, texcoord);
-    position = texture(gbuffer_positions_ping, texcoord);
+    albedo = texture(gbuffer_albedo, texcoord);
+    normal = texture(gbuffer_normals, texcoord);
+    position = texture(gbuffer_positions, texcoord);
     
     float NdotL = dot(normal.xyz, v_light_direction);
     
-    color_output = vec4(albedo.rgb, 1.0);
-    //color_output = vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
+    //color_output = vec4(albedo.rgb, 1.0);
+    color_output = vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
 }

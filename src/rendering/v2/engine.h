@@ -10,6 +10,7 @@
 #include "components/material.h"
 #include "components/texture.h"
 #include "components/render_bucket.h"
+#include "components/deferred.h"
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
@@ -50,6 +51,9 @@ public:
 
     inline PostProcessing &GetPostProcessing() { return m_post_processing; }
     inline const PostProcessing &GetPostProcessing() const { return m_post_processing; }
+
+    inline DeferredRendering &GetDeferredRenderer() { return m_deferred_rendering; }
+    inline const DeferredRendering &GetDeferredRenderer() const { return m_deferred_rendering; }
 
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
@@ -197,12 +201,15 @@ public:
     inline const Spatial *GetSpatial(Spatial::ID id) const
         { return const_cast<Engine*>(this)->GetSpatial(id); }
 
+    void SetSpatialTransform(Spatial::ID id, const Transform &transform);
+
     void Initialize();
     void Destroy();
     void PrepareSwapchain();
     void Compile();
     void UpdateDescriptorData(uint32_t frame_index);
     void Render(CommandBuffer *primary, uint32_t frame_index);
+    void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
     void RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
@@ -215,9 +222,12 @@ private:
     void InitializeInstance();
     void FindTextureFormatDefaults();
 
+    std::unique_ptr<Instance> m_instance;
+
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
     PostProcessing m_post_processing;
+    DeferredRendering m_deferred_rendering;
 
     ObjectHolder<Shader> m_shaders;
     ObjectHolder<Texture> m_textures;
@@ -228,8 +238,6 @@ private:
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
 
     RenderBucketContainer m_render_bucket_container;
-    
-    std::unique_ptr<Instance> m_instance;
 };
 
 } // namespace hyperion::v2
