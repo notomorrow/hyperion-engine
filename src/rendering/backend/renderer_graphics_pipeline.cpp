@@ -64,9 +64,9 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
 
         this->vertex_attributes[i] = VkVertexInputAttributeDescription{
             .location = attribute.location,
-            .binding = attribute.binding,
-            .format = attribute.GetFormat(),
-            .offset = binding_sizes[attribute.binding]
+            .binding  = attribute.binding,
+            .format   = attribute.GetFormat(),
+            .offset   = binding_sizes[attribute.binding]
         };
 
         binding_sizes[attribute.binding] += attribute.size;
@@ -86,14 +86,13 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
     return this->vertex_attributes;
 }
 
-void GraphicsPipeline::BeginRenderPass(CommandBuffer *cmd, size_t index, VkSubpassContents contents)
+void GraphicsPipeline::BeginRenderPass(CommandBuffer *cmd, size_t index)
 {
 
     m_construction_info.render_pass->Begin(
         cmd,
         m_construction_info.fbos[index]->GetFramebuffer(),
-        VkExtent2D{ uint32_t(m_construction_info.fbos[index]->GetWidth()), uint32_t(m_construction_info.fbos[index]->GetHeight()) },
-        contents
+        VkExtent2D{ uint32_t(m_construction_info.fbos[index]->GetWidth()), uint32_t(m_construction_info.fbos[index]->GetHeight()) }
     );
 }
 
@@ -122,7 +121,8 @@ void GraphicsPipeline::Bind(CommandBuffer *cmd)
     SubmitPushConstants(cmd);
 }
 
-void GraphicsPipeline::SetVertexInputMode(std::vector<VkVertexInputBindingDescription> &binding_descs,
+void GraphicsPipeline::SetVertexInputMode(
+    std::vector<VkVertexInputBindingDescription> &binding_descs,
     std::vector<VkVertexInputAttributeDescription> &attribs)
 {
     this->vertex_binding_descriptions = binding_descs;

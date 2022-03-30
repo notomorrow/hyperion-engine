@@ -17,14 +17,14 @@ class RenderPass {
     friend class FramebufferObject;
     friend class GraphicsPipeline;
 public:
-    enum Stage {
-        RENDER_PASS_STAGE_NONE = 0,
+    enum class Stage {
+        RENDER_PASS_STAGE_NONE    = 0,
         RENDER_PASS_STAGE_PRESENT = 1, /* for presentation on screen */
-        RENDER_PASS_STAGE_SHADER = 2,  /* for use as a sampled texture in a shader */
-        RENDER_PASS_STAGE_BLIT = 3     /* for blitting into another framebuffer in a later stage */
+        RENDER_PASS_STAGE_SHADER  = 2, /* for use as a sampled texture in a shader */
+        RENDER_PASS_STAGE_BLIT    = 3  /* for blitting into another framebuffer in a later stage */
     };
 
-    enum Mode {
+    enum class Mode {
         RENDER_PASS_INLINE = 0,
         RENDER_PASS_SECONDARY_COMMAND_BUFFER = 1
     };
@@ -72,8 +72,7 @@ public:
 
     void Begin(CommandBuffer *cmd,
         VkFramebuffer framebuffer,
-        VkExtent2D extent,
-        VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
+        VkExtent2D extent);
     void End(CommandBuffer *cmd);
 
 private:

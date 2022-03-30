@@ -87,6 +87,8 @@
 #include "asset/fbom/fbom.h"
 #include "asset/byte_writer.h"
 
+#include "util/profile.h"
+
 /* Standard library */
 #include <cstdlib>
 #include <ctime>
@@ -106,6 +108,7 @@ using namespace hyperion;
 int main()
 {
     using namespace hyperion::renderer;
+
 
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
@@ -202,31 +205,11 @@ int main()
 
     engine.Initialize();
 
-    v2::RenderPass::ID render_pass_id{};
-    {
-        auto render_pass = std::make_unique<v2::RenderPass>(RenderPass::RENDER_PASS_STAGE_SHADER, RenderPass::RENDER_PASS_INLINE);
+    auto opaque_fbo_id = engine.GetDeferredRenderer().GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0];//v2::Framebuffer::ID{1};//engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
+    auto *opaque_fbo = engine.GetFramebuffer(opaque_fbo_id);
 
-        /* For our color attachment */
-        render_pass->Get().AddAttachment({
-            .format = engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
-        });
-        /* For our normals attachment */
-        render_pass->Get().AddAttachment({
-            .format = engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)
-        });
-        /* For our positions attachment */
-        render_pass->Get().AddAttachment({
-            .format = engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)
-        });
 
-        render_pass->Get().AddAttachment({
-            .format = engine.GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)
-        });
-        
-        render_pass_id = engine.AddRenderPass(std::move(render_pass));
-    }
-
-    v2::Framebuffer::ID opaque_fbo_id = engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
+    //auto *opaque_fbo = engine.GetFramebuffer(engine.GetRenderBucketContainer().Get(v2::GraphicsPipeline::BUCKET_OPAQUE).framebuffer_ids[0]);  //engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
 
     {
         auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
@@ -259,32 +242,32 @@ int main()
         descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(0, VK_SHADER_STAGE_FRAGMENT_BIT)
             ->AddSubDescriptor({
-                .image_view = engine.GetFramebuffer(opaque_fbo_id)->Get().GetAttachmentImageInfos()[0].image_view.get(),
-                .sampler = engine.GetFramebuffer(opaque_fbo_id)->Get().GetAttachmentImageInfos()[0].sampler.get()
+                .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[0].image_view.get(),
+                .sampler = opaque_fbo->Get().GetAttachmentImageInfos()[0].sampler.get()
             });
 
         /* Normals texture*/
         descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(1, VK_SHADER_STAGE_FRAGMENT_BIT)
             ->AddSubDescriptor({
-                .image_view = engine.GetFramebuffer(opaque_fbo_id)->Get().GetAttachmentImageInfos()[1].image_view.get(),
-                .sampler    = engine.GetFramebuffer(opaque_fbo_id)->Get().GetAttachmentImageInfos()[1].sampler.get()
+                .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[1].image_view.get(),
+                .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[1].sampler.get()
             });
 
         /* Position texture */
         descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT)
             ->AddSubDescriptor({
-                .image_view = engine.GetFramebuffer(opaque_fbo_id)->Get().GetAttachmentImageInfos()[2].image_view.get(),
-                .sampler    = engine.GetFramebuffer(opaque_fbo_id)->Get().GetAttachmentImageInfos()[2].sampler.get()
+                .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[2].image_view.get(),
+                .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[2].sampler.get()
             });
 
         /* Depth texture */
         descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(3, VK_SHADER_STAGE_FRAGMENT_BIT)
             ->AddSubDescriptor({
-                .image_view = engine.GetFramebuffer(opaque_fbo_id)->Get().GetAttachmentImageInfos()[3].image_view.get(),
-                .sampler    = engine.GetFramebuffer(opaque_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get()
+                .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[3].image_view.get(),
+                .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[3].sampler.get()
             });
 
         /* translucent - Albedo texture */
@@ -417,21 +400,24 @@ int main()
 
 
     auto mat1 = std::make_unique<v2::Material>();
-    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 0.0f, 0.0f, 1.0f }));
+    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
     v2::Material::ID mat1_id = engine.AddMaterial(std::move(mat1));
+
     auto mat2 = std::make_unique<v2::Material>();
-    mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 0.0f, 1.0f, 1.0f }));
+    mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
     v2::Material::ID mat2_id = engine.AddMaterial(std::move(mat2));
+
     auto skybox_material = std::make_unique<v2::Material>();
-    skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 1.0f, 1.0f, 1.0f, 1.0f }));
+    skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
     v2::Material::ID skybox_material_id = engine.AddMaterial(std::move(skybox_material));
+
     auto translucent_material = std::make_unique<v2::Material>();
-    translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(std::array{ 0.0f, 1.0f, 0.0f, 0.4f }));
+    translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
     v2::Material::ID translucent_material_id = engine.AddMaterial(std::move(translucent_material));
 
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
         pipeline->AddFramebuffer(opaque_fbo_id);
 
         auto monkey_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
@@ -467,7 +453,7 @@ int main()
             {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
         }));
 
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(shader_id, render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(shader_id, engine.GetDeferredRenderer().GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX);
         pipeline->SetCullMode(GraphicsPipeline::CullMode::FRONT);
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
@@ -486,8 +472,8 @@ int main()
 
     v2::GraphicsPipeline::ID translucent_pipeline_id{};
     {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderPassId(), v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
-        pipeline->AddFramebuffer(engine.GetDeferredRenderer().GetFramebufferId());
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
+        pipeline->AddFramebuffer(engine.GetDeferredRenderer().GetEffect().GetFramebufferId());
         pipeline->SetBlendEnabled(true);
 
         pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
@@ -542,7 +528,7 @@ int main()
             .view = camera->GetViewMatrix(),
             .projection = camera->GetProjectionMatrix(),
             .camera_position = Vector4(camera->GetTranslation(), 1.0f),
-            .light_direction = Vector4(Vector3(-0.5f, -0.5f, 0.0f).Normalize(), 1.0f)
+            .light_direction = Vector4(Vector3(0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
         });
 
         HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
@@ -583,7 +569,6 @@ int main()
         
         HYPERION_ASSERT_RESULT(frame->BeginCapture());
         
-        engine.Render(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
         engine.RenderPostProcessing(frame->GetCommandBuffer(), frame_index);
 

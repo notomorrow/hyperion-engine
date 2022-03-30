@@ -12,16 +12,23 @@
 
 #ifndef HYPERION_BUILD_RELEASE
 
+#define HYPERION_ENABLE_BREAKPOINTS 1
+
 #if defined(__GNUC__) || defined(__GNUG__) || defined(__clang__)
 #define HYP_DEBUG_FUNC_SHORT (__FUNCTION__)
 #define HYP_DEBUG_FUNC       (__PRETTY_FUNCTION__)
 #define HYP_DEBUG_LINE       (__LINE__)
+#ifdef HYPERION_ENABLE_BREAKPOINTS
+#define HYP_BREAKPOINT       (__asm__("int $3"))
+#endif
 
 #elif defined(_MSC_VER)
 #define HYP_DEBUG_FUNC_SHORT (__FUNCTION__)
 #define HYP_DEBUG_FUNC       (__FUNCSIG__)
 #define HYP_DEBUG_LINE       (__LINE__)
-
+#ifdef HYPERION_ENABLE_BREAKPOINTS
+#define HYP_BREAKPOINT       (__debugbreak())
+#endif
 #else
 #define HYP_DEBUG_FUNC_SHORT ""
 #define HYP_DEBUG_FUNC ""
@@ -29,6 +36,10 @@
 
 #endif
 #endif /* HYPERION_BUILD_RELEASE */
+
+#if !HYPERION_ENABLE_BREAKPOINTS
+#define HYP_BREAKPOINT       (void(0))
+#endif
 
 enum class LogType : int {
     Info,

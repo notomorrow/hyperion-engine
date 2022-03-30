@@ -6,15 +6,15 @@
 
 namespace hyperion::v2 {
 
-DeferredRendering::DeferredRendering()
+DeferredRenderingEffect::DeferredRenderingEffect()
     : PostEffect(Shader::ID{})
 {
     
 }
 
-DeferredRendering::~DeferredRendering() = default;
+DeferredRenderingEffect::~DeferredRenderingEffect() = default;
 
-void DeferredRendering::CreateShader(Engine *engine)
+void DeferredRenderingEffect::CreateShader(Engine *engine)
 {
     m_shader_id = engine->AddShader(std::make_unique<Shader>(std::vector<SubShader>{
         SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read()}},
@@ -22,73 +22,92 @@ void DeferredRendering::CreateShader(Engine *engine)
     }));
 }
 
-void DeferredRendering::CreateRenderPass(Engine *engine)
+void DeferredRenderingEffect::CreateRenderPass(Engine *engine)
 {
-    /* Add the filters' renderpass */
-    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::RENDER_PASS_STAGE_SHADER, renderer::RenderPass::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
-
-    /* For our color attachment */
-    render_pass->Get().AddAttachment({
-        .format = engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
-    });
-
-    /* Add depth attachment for reading the forward renderer's depth buffer before we render transparent objects */
-    render_pass->Get().AddDepthAttachment(
-        std::make_unique<renderer::AttachmentBase>(
-        
-            renderer::Image::ToVkFormat(engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)),
-            VK_ATTACHMENT_LOAD_OP_LOAD,
-            VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            1,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        ));
-
-    m_render_pass_id = engine->AddRenderPass(std::move(render_pass));
+    m_render_pass_id = engine->GetDeferredRenderer().GetRenderList()[GraphicsPipeline::BUCKET_TRANSLUCENT].render_pass_id;
 }
 
-void DeferredRendering::CreateFrameData(Engine *engine)
+void DeferredRenderingEffect::Create(Engine *engine)
 {
-    const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
+    m_framebuffer_id = engine->GetDeferredRenderer().GetRenderList()[GraphicsPipeline::BUCKET_TRANSLUCENT].framebuffer_ids[0];
 
-    m_frame_data = std::make_unique<PerFrameData<CommandBuffer>>(num_frames);
+    CreatePerFrameData(engine);
 
-    auto fbo = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent.width, engine->GetInstance()->swapchain->extent.height);
-    fbo->Get().AddAttachment(engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR));
-    
-
-    /* Add depth attachment */
-    auto forward_fbo = engine->GetFramebuffer(Framebuffer::ID{1});
-    auto image_view = std::make_unique<ImageView>();
-    HYPERION_ASSERT_RESULT(image_view->Create(engine->GetInstance()->GetDevice(), forward_fbo->Get().GetAttachmentImageInfos()[3].image.get()));
-    fbo->Get().AddAttachment({
-        .image_view = std::move(image_view)
-    });
-
-    m_framebuffer_id = engine->AddFramebuffer(std::move(fbo), m_render_pass_id);
-
-    for (uint32_t i = 0; i < num_frames; i++) {
-        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
-
-        HYPERION_ASSERT_RESULT(command_buffer->Create(
-            engine->GetInstance()->GetDevice(),
-            engine->GetInstance()->GetGraphicsCommandPool()
-        ));
-
-        m_frame_data->At(i).Set<CommandBuffer>(std::move(command_buffer));
-    }
+    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
+        CreatePipeline(engine);
+    };
 }
 
-void DeferredRendering::Destroy(Engine *engine)
+void DeferredRenderingEffect::Destroy(Engine *engine)
 {
     PostEffect::Destroy(engine);
 }
 
-void DeferredRendering::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
+void DeferredRenderingEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    PostEffect::Render(engine, primary_command_buffer, frame_index);
+}
+
+DeferredRenderer::DeferredRenderer()
+{
+    
+}
+
+DeferredRenderer::~DeferredRenderer()
+{
+    
+}
+
+void DeferredRenderer::Create(Engine *engine)
+{
+    m_effect.CreateShader(engine);
+    m_effect.CreateRenderPass(engine);
+    m_effect.Create(engine);
+
+    uint32_t binding_index = 4; /* TMP */
+    m_effect.CreateDescriptors(engine, binding_index);
+
+    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
+        m_effect.CreatePipeline(engine);
+        m_render_list.CreatePipelines(engine);
+    };
+
+    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
+        m_effect.Destroy(engine);
+        m_render_list.Destroy(engine);
+    };
+}
+
+void DeferredRenderer::CreateRenderList(Engine *engine)
+{
+    m_render_list.Create(engine);
+}
+
+void DeferredRenderer::CreatePipeline(Engine *engine)
+{
+}
+
+void DeferredRenderer::Destroy(Engine *engine)
+{
+}
+
+
+void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+{
+    m_effect.Record(engine, frame_index);
+    
+    RenderOpaqueObjects(engine, primary, frame_index);
+
+    auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
+
+    pipeline->Get().BeginRenderPass(primary, 0);
+
+    auto *secondary_command_buffer = m_effect.GetFrameData()->At(frame_index).Get<CommandBuffer>();
+
+    HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(primary));
+
+    RenderTransparentObjects(engine, primary, frame_index);
+
+    pipeline->Get().EndRenderPass(primary, 0);
 }
 
 } // namespace hyperion::v2

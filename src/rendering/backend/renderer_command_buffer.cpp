@@ -60,7 +60,6 @@ Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
     inheritance_info.framebuffer = VK_NULL_HANDLE;
 
     VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    //begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     if (m_type == COMMAND_BUFFER_SECONDARY) {
         AssertThrowMsg(render_pass != nullptr, "Render pass not provided for secondary command buffer!");

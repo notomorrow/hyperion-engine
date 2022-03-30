@@ -20,7 +20,7 @@ public:
 
     // convert from attachment (2^x) into ordinal (0-5) for use as an array index
     static inline constexpr uint64_t EnumToOrdinal(uint64_t option)
-        { return MathUtil::FastLog2(option); }
+        { return MathUtil::FastLog2_Pow2(option); }
 
     // convert from ordinal (0-5) into power-of-two for use as bit flags
     static inline constexpr uint64_t OrdinalToEnum(uint64_t ordinal)
@@ -80,6 +80,12 @@ public:
         { return m_values[EnumToOrdinal(enum_key)]; }
 
     inline constexpr const ValueType &Get(EnumOption_t enum_key) const
+        { return m_values[EnumToOrdinal(enum_key)]; }
+
+    inline constexpr ValueType &operator[](EnumOption_t enum_key)
+        { return m_values[EnumToOrdinal(enum_key)]; }
+
+    inline constexpr const ValueType &operator[](EnumOption_t enum_key) const
         { return m_values[EnumToOrdinal(enum_key)]; }
 
     inline EnumOptions &Set(EnumOption_t enum_key, const ValueType &value)

@@ -25,17 +25,19 @@ using renderer::PerFrameData;
 class Engine;
 
 class GraphicsPipeline : public EngineComponent<renderer::GraphicsPipeline> {
+    friend class Engine;
     friend class Spatial;
 
 public:
     enum Bucket {
-        BUCKET_BUFFER      = 0, /* Pre-pass / buffer items */
-
+        BUCKET_SWAPCHAIN = 0, /* Main swapchain */
+        BUCKET_PREPASS,       /* Pre-pass / buffer items */
         /* === Scene objects === */
-        BUCKET_OPAQUE      = 1, /* Opaque items */
-        BUCKET_TRANSLUCENT = 2, /* Transparent - rendering on top of opaque objects */
-        BUCKET_PARTICLE    = 3, /* Specialized particle bucket */
-        BUCKET_SKYBOX      = 4 /* Rendered without depth testing/writing, and rendered first */
+        BUCKET_OPAQUE,        /* Opaque items */
+        BUCKET_TRANSLUCENT,   /* Transparent - rendering on top of opaque objects */
+        BUCKET_PARTICLE,      /* Specialized particle bucket */
+        BUCKET_SKYBOX,        /* Rendered without depth testing/writing, and rendered first */
+        BUCKET_MAX
     };
 
     struct ID : EngineComponent::ID {
@@ -100,7 +102,6 @@ public:
     /* Build pipeline */
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    
     void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
 
 private:

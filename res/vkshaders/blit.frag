@@ -12,9 +12,8 @@ layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions_texture;
 layout(set = 1, binding = 3) uniform sampler2D gbuffer_depth_texture;
 
 layout(set = 1, binding = 4) uniform sampler2D deferred_result;
-layout(set = 1, binding = 5) uniform sampler2D deferred_depth;
 
-layout(set = 1, binding = 6) uniform sampler2D filter_0;
+layout(set = 1, binding = 8) uniform sampler2D filter_0;
 
 //layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
 

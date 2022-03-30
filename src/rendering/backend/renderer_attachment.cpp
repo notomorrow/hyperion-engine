@@ -9,7 +9,8 @@ AttachmentBase::AttachmentBase(VkFormat format,
     VkAttachmentStoreOp stencil_store_op,
     VkImageLayout final_layout,
     uint32_t ref_attachment,
-    VkImageLayout ref_layout)
+    VkImageLayout ref_layout,
+    VkImageLayout initial_layout)
     : m_format(format),
       m_load_op(load_op),
       m_store_op(store_op),
@@ -18,6 +19,7 @@ AttachmentBase::AttachmentBase(VkFormat format,
       m_final_layout(final_layout),
       m_ref_attachment(ref_attachment),
       m_ref_layout(ref_layout),
+      m_initial_layout(initial_layout),
       m_attachment_reference{},
       m_attachment_description{}
 {
@@ -32,7 +34,7 @@ Result AttachmentBase::Create(Device *device)
 {
     m_attachment_description.format = m_format;
     m_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-    m_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    m_attachment_description.initialLayout = m_initial_layout;
     m_attachment_description.loadOp = m_load_op;
     m_attachment_description.storeOp = m_store_op;
     m_attachment_description.stencilLoadOp = m_stencil_load_op;

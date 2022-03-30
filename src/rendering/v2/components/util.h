@@ -40,6 +40,42 @@ struct ObjectIdHolder {
     }
 };
 
+struct Callbacks {
+    using CallbackFunction = std::function<void(Engine *)>;
+
+    std::vector<CallbackFunction> callbacks;
+
+    template <class ...Args>
+    void operator()(Args &&... args)
+    {
+        for (auto &callback : callbacks) {
+            callback(args...);
+        }
+
+        callbacks.clear();
+    }
+
+    Callbacks &operator+=(const CallbackFunction &callback)
+    {
+        callbacks.push_back(callback);
+
+        return *this;
+    }
+
+    Callbacks &operator+=(CallbackFunction &&callback)
+    {
+        callbacks.push_back(std::move(callback));
+
+        return *this;
+    }
+};
+
+struct ComponentEvents {
+    Callbacks on_init,
+              on_deinit,
+              on_update;
+};
+
 template <class T>
 struct ObjectHolder {
     bool defer_create = false;
@@ -61,6 +97,9 @@ struct ObjectHolder {
     {
         return const_cast<ObjectHolder<T> *>(this)->Get(id);
     }
+
+    inline constexpr T *operator[](const typename T::ID &id) { return Get(id); }
+    inline constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }
 
     template <class LambdaFunction>
     inline constexpr

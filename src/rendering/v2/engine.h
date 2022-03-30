@@ -9,7 +9,7 @@
 #include "components/graphics.h"
 #include "components/material.h"
 #include "components/texture.h"
-#include "components/render_bucket.h"
+#include "components/render_list.h"
 #include "components/deferred.h"
 
 #include <rendering/backend/renderer_image.h>
@@ -19,6 +19,8 @@
 #include <util/enum_options.h>
 
 #include <memory>
+#include <map>
+#include <typeindex>
 
 namespace hyperion::v2 {
 
@@ -34,6 +36,12 @@ using renderer::StorageBuffer;
  */
 class Engine {
 public:
+
+    enum EventKey {
+        EVENT_KEY_ENGINE             = 0,
+        EVENT_KEY_GRAPHICS_PIPELINES = 1,
+        EVENT_KEY_DESCRIPTOR_SETS    = 2
+    };
 
     enum TextureFormatDefault {
         TEXTURE_FORMAT_DEFAULT_NONE    = 0,
@@ -52,8 +60,8 @@ public:
     inline PostProcessing &GetPostProcessing() { return m_post_processing; }
     inline const PostProcessing &GetPostProcessing() const { return m_post_processing; }
 
-    inline DeferredRendering &GetDeferredRenderer() { return m_deferred_rendering; }
-    inline const DeferredRendering &GetDeferredRenderer() const { return m_deferred_rendering; }
+    inline DeferredRenderer &GetDeferredRenderer() { return m_deferred_rendering; }
+    inline const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_rendering; }
 
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
@@ -152,8 +160,8 @@ public:
     {
         const auto bucket = pipeline->GetBucket();
 
-        GraphicsPipeline::ID id = m_render_bucket_container.GetBucket(bucket)
-            .Add(this, std::move(pipeline), std::move(args)...);
+        GraphicsPipeline::ID id = m_deferred_rendering.GetRenderList()[bucket]
+            .pipelines.Add(this, std::move(pipeline), std::move(args)...);
 
         id.bucket = bucket;
 
@@ -162,13 +170,25 @@ public:
 
     template <class ...Args>
     void RemoveGraphicsPipeline(GraphicsPipeline::ID id, Args &&... args)
-        { return m_render_bucket_container.GetBucket(id.bucket).Remove(this, id, std::move(args)...); }
+        { return m_deferred_rendering.GetRenderList()[id.bucket].pipelines.Remove(this, id, std::move(args)...); }
 
     inline GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id)
-        { return m_render_bucket_container.GetBucket(id.bucket).Get(id); }
+        { return m_deferred_rendering.GetRenderList()[id.bucket].pipelines.Get(id); }
 
     inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
         { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
+
+    inline auto &GetEvents()
+        { return m_events; }
+
+    inline const auto &GetEvents() const
+        { return m_events; }
+    
+    inline auto &GetEvents(EventKey key)
+        { return m_events[key]; }
+    
+    inline const auto &GetEvents(EventKey key) const
+        { return const_cast<Engine*>(this)->GetEvents(key); }
 
     /* Pipelines will be deferred until descriptor sets are built */
     template <class ...Args>
@@ -208,18 +228,16 @@ public:
     void PrepareSwapchain();
     void Compile();
     void UpdateDescriptorData(uint32_t frame_index);
-    void Render(CommandBuffer *primary, uint32_t frame_index);
     void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
     void RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
-    std::unique_ptr<GraphicsPipeline> m_swapchain_render_container;
+    std::unique_ptr<GraphicsPipeline> m_swapchain_pipeline;
 
 
     ShaderGlobals *m_shader_globals;
 
 private:
-    void InitializeInstance();
     void FindTextureFormatDefaults();
 
     std::unique_ptr<Instance> m_instance;
@@ -227,7 +245,7 @@ private:
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
     PostProcessing m_post_processing;
-    DeferredRendering m_deferred_rendering;
+    DeferredRenderer m_deferred_rendering;
 
     ObjectHolder<Shader> m_shaders;
     ObjectHolder<Texture> m_textures;
@@ -237,7 +255,7 @@ private:
     ObjectHolder<Spatial> m_spatials;
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
 
-    RenderBucketContainer m_render_bucket_container;
+    EnumOptions<EventKey, ComponentEvents, 3> m_events;
 };
 
 } // namespace hyperion::v2
