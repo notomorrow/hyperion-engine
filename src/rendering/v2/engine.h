@@ -70,6 +70,18 @@ public:
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
 
+    inline auto &GetEvents()
+        { return m_events; }
+
+    inline const auto &GetEvents() const
+        { return m_events; }
+    
+    inline auto &GetEvents(EventKey key)
+        { return m_events[key]; }
+    
+    inline const auto &GetEvents(EventKey key) const
+        { return const_cast<Engine*>(this)->GetEvents(key); }
+
     /* Shaders */
 
     template <class ...Args>
@@ -181,18 +193,6 @@ public:
 
     inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
         { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
-
-    inline auto &GetEvents()
-        { return m_events; }
-
-    inline const auto &GetEvents() const
-        { return m_events; }
-    
-    inline auto &GetEvents(EventKey key)
-        { return m_events[key]; }
-    
-    inline const auto &GetEvents(EventKey key) const
-        { return const_cast<Engine*>(this)->GetEvents(key); }
 
     /* Pipelines will be deferred until descriptor sets are built */
     template <class ...Args>

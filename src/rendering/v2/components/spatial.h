@@ -16,6 +16,8 @@
 
 namespace hyperion::v2 {
 
+class Octree;
+
 using renderer::MeshInputAttributeSet;
 
 class GraphicsPipeline;
@@ -64,6 +66,8 @@ private:
     BoundingBox m_local_aabb;
     BoundingBox m_world_aabb;
     Material::ID m_material_id;
+
+    Octree *m_octree;
 
     /* Retains a list of pointers to pipelines that this Spatial is used by,
      * for easy removal when RemoveSpatial() is called.

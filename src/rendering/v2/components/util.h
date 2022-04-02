@@ -6,8 +6,9 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <queue>
 
-#define HYPERION_V2_ADD_OBJECT_SPARSE 0
+#define HYP_ADD_OBJECT_USE_QUEUE 1
 
 namespace hyperion::v2 {
 
@@ -73,10 +74,7 @@ struct ComponentEvents {
             return *this;
         }
 
-        void Clear()
-        {
-            callbacks.clear();
-        }
+        inline void Clear() { callbacks.clear(); }
     };
 
     Callbacks on_init,
@@ -88,6 +86,10 @@ template <class T>
 struct ObjectHolder {
     bool defer_create = false;
     std::vector<std::unique_ptr<T>> objects;
+
+#if HYP_ADD_OBJECT_USE_QUEUE
+    std::queue<size_t> free_slots;
+#endif
 
     inline constexpr size_t Size() const
         { return objects.size(); }
@@ -121,38 +123,39 @@ struct ObjectHolder {
 
         return typename T::ID{0};
     }
-
-    auto NextId() const -> typename T::ID
-    {
-        return typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
-    }
-
+    
     template <class ...Args>
     auto Add(Engine *engine, std::unique_ptr<T> &&object, Args &&... args) -> typename T::ID
     {
-        auto result = NextId();
+#if HYP_ADD_OBJECT_USE_QUEUE
+        if (!free_slots.empty()) {
+            const auto next_id = typename T::ID{typename T::ID::ValueType(free_slots.front() + 1)};
 
-        object->SetId(result);
+            object->SetId(next_id);
+
+            if (!defer_create) {
+                object->Create(engine, std::move(args)...);
+            }
+
+            objects[free_slots.front()] = std::move(object);
+
+            free_slots.pop();
+
+            return next_id;
+        }
+#endif
+
+        const auto next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
+
+        object->SetId(next_id);
 
         if (!defer_create) {
             object->Create(engine, std::move(args)...);
         }
 
-#if HYPERION_V2_ADD_OBJECT_SPARSE
-        /* Find an existing slot */
-        auto it = std::find(objects.begin(), objects.end(), nullptr);
-
-        if (it != objects.end()) {
-            result = T::ID(it - objects.begin() + 1);
-            objects[it] = std::move(object);
-
-            return result;
-        }
-#endif
-
         objects.push_back(std::move(object));
-
-        return result;
+            
+        return next_id;
     }
 
     template<class ...Args>
@@ -163,6 +166,10 @@ struct ObjectHolder {
 
             /* Cannot simply erase from vector, as that would invalidate existing IDs */
             objects[id.value - 1].reset();
+
+#if HYP_ADD_OBJECT_USE_QUEUE
+            free_slots.push(id.value - 1);
+#endif
         }
     }
 

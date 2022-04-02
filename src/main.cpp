@@ -104,6 +104,7 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_CUBEMAP 1
 #define HYPERION_VK_TEST_MIPMAP 0
 #define HYPERION_VK_TEST_IMAGE_STORE 0
+#define HYPERION_VK_TEST_OCTREE 0
 
 int main()
 {
@@ -415,20 +416,20 @@ int main()
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
     v2::Material::ID translucent_material_id = engine.AddMaterial(std::move(translucent_material));
 
-    v2::Spatial::ID monkey_spatial_id;
+    v2::Spatial::ID monkey_spatial_id, cube_spatial_id;
 
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
         pipeline->AddFramebuffer(opaque_fbo_id);
 
-        Transform monkey_transform(Vector3(9.0f), Vector3(1.0f), Quaternion());
+        //Transform monkey_transform(Vector3(9.0f), Vector3(1.0f), Quaternion());
 
         monkey_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
             monkey_mesh,
             pipeline->GetVertexAttributes(),
-            monkey_transform,
-            monkey_mesh->GetAABB() * monkey_transform,
+            Transform(),
+            monkey_mesh->GetAABB(),
             mat1_id
         ));
 
@@ -438,13 +439,14 @@ int main()
         
         pipeline->AddSpatial(&engine, monkey_spatial_id);
 
-        pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
+        cube_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
             cube_mesh,
             pipeline->GetVertexAttributes(),
             Transform(Vector3(-4.0f, 0.0f, 4.0f), Vector3(0.8f), Quaternion::Identity()),
             cube_mesh->GetAABB(),
             mat2_id
-        )));
+        ));
+        pipeline->AddSpatial(&engine, cube_spatial_id);
         
         main_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
@@ -498,9 +500,11 @@ int main()
         pipeline->SetBlendEnabled(false);
         pipeline->SetFillMode(GraphicsPipeline::FillMode::LINE);
         pipeline->SetCullMode(GraphicsPipeline::CullMode::NONE);
+        pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
         wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
+#if HYPERION_VK_TEST_OCTREE
     std::unordered_map<v2::Octree *, v2::Spatial::ID> octree_debug_nodes;
 
     engine.GetOctree().GetEvents().on_insert_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
@@ -528,11 +532,10 @@ int main()
 
         auto mesh = MeshFactory::CreateCube(octree->GetAabb());
 
-        std::cout << "remove octant " << octree->GetAabb() << "\n";
-
         auto it = octree_debug_nodes.find(octree);
 
         if (it != octree_debug_nodes.end()) {
+            vkQueueWaitIdle(engine->GetInstance()->GetGraphicsQueue().queue);
             pipeline->RemoveSpatial(engine, it->second);
             engine->RemoveSpatial(it->second);
 
@@ -540,14 +543,11 @@ int main()
         }
     };
 
+
+#endif
+
     engine.GetOctree().Insert(&engine, engine.GetSpatial(monkey_spatial_id));
-    //engine.GetOctree().Remove(&engine, engine.GetSpatial(monkey_spatial_id));
-    //engine.GetOctree().Insert(&engine, engine.GetSpatial(monkey_spatial_id));
-
-    Transform transform(Vector3(-17, 6, -17), Vector3(1.0f), Quaternion(Vector3::One(), timer));
-    engine.SetSpatialTransform(monkey_spatial_id, transform);
-
-    engine.GetOctree().Update(&engine, engine.GetSpatial(monkey_spatial_id));
+    engine.GetOctree().Insert(&engine, engine.GetSpatial(cube_spatial_id));
     
     engine.Compile();
 
@@ -579,11 +579,6 @@ int main()
         timer += delta_time;
 
         camera->Update(delta_time);
-
-        Transform transform(Vector3(0, 0, 0), Vector3(1.0f), Quaternion(Vector3::One(), timer));
-
-        //engine.SetSpatialTransform(v2::Spatial::ID{ 1 }, transform);
-        engine.SetSpatialTransform(v2::Spatial::ID{ 3 }, Transform(camera->GetTranslation(), {1.0f, 1.0f, 1.0f}, Quaternion()));
 
         /* 0 is the index of our "main" scene/camera */
         engine.m_shader_globals->scenes.Set(0, {
@@ -623,6 +618,15 @@ int main()
         AssertThrowMsg(compute_cmd_result, "Failed to record compute cmd buffer: %s\n", compute_cmd_result.message);
         compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
 #endif
+
+#if HYPERION_VK_TEST_OCTREE
+        Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
+
+        engine.SetSpatialTransform(v2::Spatial::ID{ 1 }, transform);
+        engine.GetOctree().Update(&engine, engine.GetSpatial(monkey_spatial_id));
+#endif
+
+        engine.SetSpatialTransform(v2::Spatial::ID{ 3 }, Transform(camera->GetTranslation(), { 1.0f, 1.0f, 1.0f }, Quaternion()));
 
         /* Only update sets that are double - buffered so we don't
          * end up updating data that is in use by the gpu
