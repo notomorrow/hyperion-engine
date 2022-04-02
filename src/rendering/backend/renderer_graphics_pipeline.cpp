@@ -190,20 +190,18 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     case CullMode::FRONT:
         rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
         break;
+    case CullMode::NONE:
     default:
         rasterizer.cullMode = VK_CULL_MODE_NONE;
         break;
     }
 
     switch (m_construction_info.fill_mode) {
-    case FillMode::FILL:
-        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-        rasterizer.lineWidth = 1.0f;
-        break;
     case FillMode::LINE:
-        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-        rasterizer.lineWidth = 5.0f;
+        rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+        rasterizer.lineWidth = 2.5f;
         break;
+    case FillMode::FILL:
     default:
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;

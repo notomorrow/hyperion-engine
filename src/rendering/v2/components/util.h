@@ -40,37 +40,45 @@ struct ObjectIdHolder {
     }
 };
 
-struct Callbacks {
+struct EngineCallbacks {
     using CallbackFunction = std::function<void(Engine *)>;
-
-    std::vector<CallbackFunction> callbacks;
-
-    template <class ...Args>
-    void operator()(Args &&... args)
-    {
-        for (auto &callback : callbacks) {
-            callback(args...);
-        }
-
-        callbacks.clear();
-    }
-
-    Callbacks &operator+=(const CallbackFunction &callback)
-    {
-        callbacks.push_back(callback);
-
-        return *this;
-    }
-
-    Callbacks &operator+=(CallbackFunction &&callback)
-    {
-        callbacks.push_back(std::move(callback));
-
-        return *this;
-    }
 };
 
+template <class CallbacksClass>
 struct ComponentEvents {
+    struct Callbacks {
+        using CallbackFunction = typename CallbacksClass::CallbackFunction;
+
+        std::vector<CallbackFunction> callbacks;
+
+        template <class ...Args>
+        void operator()(Args &&... args)
+        {
+            for (auto &callback : callbacks) {
+                callback(args...);
+            }
+        }
+
+        Callbacks &operator+=(const CallbackFunction &callback)
+        {
+            callbacks.push_back(callback);
+
+            return *this;
+        }
+
+        Callbacks &operator+=(CallbackFunction &&callback)
+        {
+            callbacks.push_back(std::move(callback));
+
+            return *this;
+        }
+
+        void Clear()
+        {
+            callbacks.clear();
+        }
+    };
+
     Callbacks on_init,
               on_deinit,
               on_update;

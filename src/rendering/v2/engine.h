@@ -11,6 +11,7 @@
 #include "components/texture.h"
 #include "components/render_list.h"
 #include "components/deferred.h"
+#include "components/octree.h"
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
@@ -62,6 +63,9 @@ public:
 
     inline DeferredRenderer &GetDeferredRenderer() { return m_deferred_rendering; }
     inline const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_rendering; }
+
+    inline Octree &GetOctree() { return m_octree; }
+    inline const Octree &GetOctree() const { return m_octree; }
 
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
@@ -247,6 +251,9 @@ private:
     PostProcessing m_post_processing;
     DeferredRenderer m_deferred_rendering;
 
+    Octree::Root m_octree_root;
+    Octree m_octree;
+
     ObjectHolder<Shader> m_shaders;
     ObjectHolder<Texture> m_textures;
     ObjectHolder<Framebuffer> m_framebuffers;
@@ -255,7 +262,7 @@ private:
     ObjectHolder<Spatial> m_spatials;
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
 
-    EnumOptions<EventKey, ComponentEvents, 3> m_events;
+    EnumOptions<EventKey, ComponentEvents<EngineCallbacks>, 3> m_events;
 };
 
 } // namespace hyperion::v2

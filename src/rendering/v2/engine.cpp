@@ -21,8 +21,10 @@ using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      m_shader_globals(nullptr)
+      m_shader_globals(nullptr),
+      m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f)))
 {
+    m_octree.m_root = &m_octree_root;
 }
 
 Engine::~Engine()

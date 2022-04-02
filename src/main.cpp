@@ -415,16 +415,20 @@ int main()
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
     v2::Material::ID translucent_material_id = engine.AddMaterial(std::move(translucent_material));
 
+    v2::Spatial::ID monkey_spatial_id;
+
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
         pipeline->AddFramebuffer(opaque_fbo_id);
 
-        auto monkey_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
+        Transform monkey_transform(Vector3(9.0f), Vector3(1.0f), Quaternion());
+
+        monkey_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
             monkey_mesh,
             pipeline->GetVertexAttributes(),
-            Transform(),
-            monkey_mesh->GetAABB(),
+            monkey_transform,
+            monkey_mesh->GetAABB() * monkey_transform,
             mat1_id
         ));
 
@@ -486,6 +490,32 @@ int main()
         
         translucent_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
+
+    v2::GraphicsPipeline::ID wire_pipeline_id{};
+    {
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
+        pipeline->AddFramebuffer(engine.GetDeferredRenderer().GetEffect().GetFramebufferId());
+        pipeline->SetBlendEnabled(false);
+        pipeline->SetFillMode(GraphicsPipeline::FillMode::LINE);
+        pipeline->SetCullMode(GraphicsPipeline::CullMode::NONE);
+        wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
+    }
+
+    engine.GetOctree().GetEvents().on_insert_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
+        auto *pipeline = engine->GetGraphicsPipeline(wire_pipeline_id);
+
+        auto mesh = MeshFactory::CreateCube(octree->GetAabb());
+
+        pipeline->AddSpatial(engine, engine->AddSpatial(std::make_unique<v2::Spatial>(
+            mesh,
+            pipeline->GetVertexAttributes(),
+            Transform(),
+            mesh->GetAABB(),
+            translucent_material_id
+        )));
+    };
+
+    engine.GetOctree().Insert(&engine, engine.GetSpatial(monkey_spatial_id));
     
     engine.Compile();
 
@@ -520,7 +550,7 @@ int main()
 
         Transform transform(Vector3(0, 0, 0), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
-        engine.SetSpatialTransform(v2::Spatial::ID{ 1 }, transform);
+        //engine.SetSpatialTransform(v2::Spatial::ID{ 1 }, transform);
         engine.SetSpatialTransform(v2::Spatial::ID{ 3 }, Transform(camera->GetTranslation(), {1.0f, 1.0f, 1.0f}, Quaternion()));
 
         /* 0 is the index of our "main" scene/camera */
