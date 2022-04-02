@@ -27,7 +27,7 @@ public:
     Spatial(const std::shared_ptr<Mesh> &mesh,
         const MeshInputAttributeSet &attributes,
         const Transform &transform,
-        const BoundingBox &aabb,
+        const BoundingBox &local_aabb,
         Material::ID material_id);
     Spatial(const Spatial &other) = delete;
     Spatial &operator=(const Spatial &other) = delete;
@@ -37,9 +37,15 @@ public:
     const MeshInputAttributeSet &GetVertexAttributes() const { return m_attributes; }
 
     const Transform &GetTransform() const { return m_transform; }
-    inline void SetTransform(const Transform &transform) { m_transform = transform; /* TODO: mark dirty */ }
+    inline void SetTransform(const Transform &transform)
+    {
+        m_transform = transform;
 
-    const BoundingBox &GetAabb() const { return m_aabb; }
+        m_world_aabb = m_local_aabb * transform;
+    }
+
+    const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
+    const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
 
     const Material::ID &GetMaterialId() const { return m_material_id; }
 
@@ -55,7 +61,8 @@ private:
     std::shared_ptr<Mesh> m_mesh;
     MeshInputAttributeSet m_attributes;
     Transform m_transform;
-    BoundingBox m_aabb;
+    BoundingBox m_local_aabb;
+    BoundingBox m_world_aabb;
     Material::ID m_material_id;
 
     /* Retains a list of pointers to pipelines that this Spatial is used by,

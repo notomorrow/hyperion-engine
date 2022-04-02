@@ -501,21 +501,53 @@ int main()
         wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
+    std::unordered_map<v2::Octree *, v2::Spatial::ID> octree_debug_nodes;
+
     engine.GetOctree().GetEvents().on_insert_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
         auto *pipeline = engine->GetGraphicsPipeline(wire_pipeline_id);
 
         auto mesh = MeshFactory::CreateCube(octree->GetAabb());
 
-        pipeline->AddSpatial(engine, engine->AddSpatial(std::make_unique<v2::Spatial>(
+        std::cout << "add octant " << octree->GetAabb() << "\n";
+
+        auto spatial_id = engine->AddSpatial(std::make_unique<v2::Spatial>(
             mesh,
             pipeline->GetVertexAttributes(),
             Transform(),
             mesh->GetAABB(),
             translucent_material_id
-        )));
+        ));
+
+        octree_debug_nodes[octree] = spatial_id;
+
+        pipeline->AddSpatial(engine, spatial_id);
+    };
+
+    engine.GetOctree().GetEvents().on_remove_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
+        auto *pipeline = engine->GetGraphicsPipeline(wire_pipeline_id);
+
+        auto mesh = MeshFactory::CreateCube(octree->GetAabb());
+
+        std::cout << "remove octant " << octree->GetAabb() << "\n";
+
+        auto it = octree_debug_nodes.find(octree);
+
+        if (it != octree_debug_nodes.end()) {
+            pipeline->RemoveSpatial(engine, it->second);
+            engine->RemoveSpatial(it->second);
+
+            octree_debug_nodes.erase(it);
+        }
     };
 
     engine.GetOctree().Insert(&engine, engine.GetSpatial(monkey_spatial_id));
+    //engine.GetOctree().Remove(&engine, engine.GetSpatial(monkey_spatial_id));
+    //engine.GetOctree().Insert(&engine, engine.GetSpatial(monkey_spatial_id));
+
+    Transform transform(Vector3(-17, 6, -17), Vector3(1.0f), Quaternion(Vector3::One(), timer));
+    engine.SetSpatialTransform(monkey_spatial_id, transform);
+
+    engine.GetOctree().Update(&engine, engine.GetSpatial(monkey_spatial_id));
     
     engine.Compile();
 

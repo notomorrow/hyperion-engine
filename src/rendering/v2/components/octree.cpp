@@ -19,6 +19,25 @@ void Octree::SetParent(Octree *parent)
     }
 }
 
+bool Octree::EmptyDeep(int depth) const
+{
+    if (!Empty()) {
+        return false;
+    }
+
+    if (!m_is_divided) {
+        return true;
+    }
+
+    if (depth != 0) {
+        return std::all_of(m_octants.begin(), m_octants.end(), [depth](const Octant &octant) {
+            return octant.octree->EmptyDeep(depth - 1);
+        });
+    }
+
+    return true;
+}
+
 void Octree::InitOctants()
 {
     const Vector3 divided_aabb_dimensions = m_aabb.GetDimensions() / 2;
@@ -41,10 +60,10 @@ void Octree::InitOctants()
 
 void Octree::Divide(Engine *engine)
 {
-    AssertExit(!m_is_divided);
+    AssertThrow(!m_is_divided);
 
     for (auto &octant : m_octants) {
-        AssertExit(octant.octree == nullptr);
+        AssertThrow(octant.octree == nullptr);
 
         octant.octree = std::make_unique<Octree>(octant.aabb);
         octant.octree->SetParent(this);
@@ -59,12 +78,15 @@ void Octree::Divide(Engine *engine)
 
 void Octree::Undivide(Engine *engine)
 {
-    AssertExit(m_is_divided);
+    AssertThrow(m_is_divided);
+    AssertThrowMsg(m_nodes.empty(), "Undivide() should be called on octrees with no remaining nodes");
 
     for (auto &octant : m_octants) {
-        AssertExit(octant.octree != nullptr);
+        AssertThrow(octant.octree != nullptr);
 
-        octant.octree->Clear(engine);
+        if (octant.octree->m_is_divided) {
+            octant.octree->Undivide(engine);
+        }
         
         if (m_root != nullptr) {
             m_root->events.on_remove_octant(engine, octant.octree.get(), nullptr);
@@ -74,6 +96,43 @@ void Octree::Undivide(Engine *engine)
     }
 
     m_is_divided = false;
+}
+
+void Octree::CollapseParents(Engine *engine)
+{
+    if (m_is_divided || !Empty()) {
+        return;
+    }
+
+    Octree *iteration = m_parent,
+           *highest_empty = nullptr;
+
+    while (iteration != nullptr && iteration->Empty()) {
+        for (const Octant &octant : iteration->m_octants) {
+            AssertThrow(octant.octree != nullptr);
+
+            if (octant.octree.get() == highest_empty) {
+                /* Do not perform a check on our node, as we've already
+                 * checked it by going up the chain.
+                 * As `iter` becomes the parent of this node we're currently working with,
+                 * we will not have to perform duplicate EmptyDeep() checks on any octants because of this check.
+                 */
+                continue;
+            }
+
+            if (!octant.octree->EmptyDeep()) {
+                goto undivide;
+            }
+        }
+
+        highest_empty = iteration;
+        iteration = iteration->m_parent;
+    }
+
+undivide:
+    if (highest_empty != nullptr) {
+        highest_empty->Undivide(engine);
+    }
 }
 
 void Octree::Clear(Engine *engine)
@@ -95,24 +154,18 @@ void Octree::Clear(Engine *engine)
     }
 
     for (auto &octant : m_octants) {
-        AssertExit(octant.octree != nullptr);
+        AssertThrow(octant.octree != nullptr);
 
         octant.octree->Clear(engine);
-        
-        if (m_root != nullptr) {
-            m_root->events.on_remove_octant(engine, octant.octree.get(), nullptr);
-        }
-
-        octant.octree.reset();
     }
 
-    m_is_divided = false;
+    Undivide(engine);
 }
 
 bool Octree::Insert(Engine *engine, Spatial *spatial)
 {
     for (Octant &octant : m_octants) {
-        if (octant.aabb.Contains(spatial->GetAabb())) {
+        if (octant.aabb.Contains(spatial->GetWorldAabb())) {
             if (!m_is_divided) {
                 Divide(engine);
             }
@@ -130,7 +183,7 @@ bool Octree::InsertInternal(Engine *engine, Spatial *spatial)
 {
     m_nodes.push_back(Node{
         .spatial = spatial,
-        .aabb = spatial->GetAabb()
+        .aabb = spatial->GetWorldAabb()
     });
 
     /* TODO: Inc ref count */
@@ -165,7 +218,7 @@ bool Octree::Remove(Engine *engine, Spatial *spatial)
 
     /* TODO: Dec ref count */
 
-    if (!m_aabb.Contains(spatial->GetAabb())) {
+    if (!m_aabb.Contains(spatial->GetWorldAabb())) {
         return false;
     }
 
@@ -185,15 +238,30 @@ bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
                     return true;
                 }
             }
-        } else {
-            return false;
         }
+
+        return false;
+    }
+
+    if (m_root != nullptr) {
+        m_root->events.on_remove_node(engine, this, spatial);
     }
 
     m_nodes.erase(it);
 
-    if (m_root != nullptr) {
-        m_root->events.on_remove_node(engine, this, spatial);
+    if (!m_is_divided && m_nodes.empty()) {
+        if (Octree *parent = m_parent) {
+            while (parent->m_nodes.empty()) {
+                if (parent->m_parent == nullptr) {
+                    /* At root, call Undivide() to collapse nodes */
+                    parent->Undivide(engine);
+
+                    break;
+                }
+
+                parent = parent->m_parent;
+            }
+        }
     }
 
     return true;
@@ -231,12 +299,12 @@ bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
                     return true;
                 }
             }
-        } else {
-            return false;
         }
+
+        return false;
     }
 
-    const auto &new_aabb = spatial->GetAabb();
+    const auto &new_aabb = spatial->GetWorldAabb();
     const auto &old_aabb = it->aabb;
 
     if (new_aabb == old_aabb) {
@@ -244,7 +312,7 @@ bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
         return true;
     }
 
-    /*Aabb has changed to we remove it from this octree and either:
+    /* Aabb has changed to we remove it from this octree and either:
      * If we don't contain it anymore - insert it from the highest level octree that still contains the aabb and then walking down from there
      * If we do still contain it - we will remove it from this octree and re-insert it to find the deepest child octant
      */
@@ -260,39 +328,25 @@ bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
         return Insert(engine, spatial);
     }
 
-    Octree *parent = m_parent;
-
+    bool inserted = false;
+    
     /* Contains is false at this point */
+    Octree *parent = m_parent;
 
     while (parent != nullptr) {
         if (parent->m_aabb.Contains(new_aabb)) {
+            inserted = parent->Insert(engine, spatial);
+
             break;
         }
 
         parent = parent->m_parent;
-    } ;
-
-    if (parent != nullptr) {
-        AssertThrow(parent->InsertInternal(engine, spatial));
     }
 
-    /* Node has now been added -- remove any potential empty octants */
-    if (!m_is_divided && m_nodes.empty()) {
-        if (Octree *parent = m_parent) {
-            while (parent->m_nodes.empty()) {
-                AssertThrowMsg(parent->m_is_divided, "Should not have undivided octants throughout the octree");
+    /* Node has now been added to it's appropriate octant -- remove any potential empty octants */
+    CollapseParents(engine);
 
-                if (parent->m_parent == nullptr) {
-                    /* At top level -- will be no more iterations after this, so undivide here. */
-                    parent->Undivide(engine);
-
-                    break;
-                }
-            }
-        }
-    }
-
-    return true;
+    return inserted;
 }
 
 

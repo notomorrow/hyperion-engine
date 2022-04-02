@@ -108,7 +108,7 @@ void Node::SetSpatial(Engine *engine, Spatial::ID id)
     m_spatial_id = id;
 
     if (const Spatial *spatial = engine->GetSpatial(id)) {
-        m_local_aabb = spatial->GetAabb();
+        m_local_aabb = spatial->GetLocalAabb();
     } else {
         m_local_aabb = BoundingBox();
     }

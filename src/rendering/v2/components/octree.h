@@ -77,12 +77,16 @@ private:
     }
 
     inline bool IsRoot() const { return m_parent == nullptr; }
-
+    inline bool Empty() const { return m_nodes.empty(); }
+    
     void SetParent(Octree *parent);
+    bool EmptyDeep(int depth = -1) const;
 
     void InitOctants();
     void Divide(Engine *engine);
     void Undivide(Engine *engine);
+    /* Remove any potentially empty octants above the node */
+    void CollapseParents(Engine *engine);
     bool InsertInternal(Engine *engine, Spatial *spatial);
     bool UpdateInternal(Engine *engine, Spatial *spatial);
     bool RemoveInternal(Engine *engine, Spatial *spatial);
