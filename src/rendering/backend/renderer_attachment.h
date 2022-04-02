@@ -19,7 +19,8 @@ public:
         VkAttachmentStoreOp stencil_store_op,
         VkImageLayout final_layout,
         uint32_t ref_attachment,
-        VkImageLayout ref_layout
+        VkImageLayout ref_layout,
+        VkImageLayout initial_layout = VK_IMAGE_LAYOUT_UNDEFINED
     );
     AttachmentBase(const AttachmentBase &other) = delete;
     AttachmentBase &operator=(const AttachmentBase &other) = delete;
@@ -38,6 +39,9 @@ private:
     uint32_t m_ref_attachment;
 
     VkImageLayout m_ref_layout;
+
+    VkImageLayout m_initial_layout;
+
     VkAttachmentDescription m_attachment_description;
     VkAttachmentReference m_attachment_reference;
 };
@@ -114,7 +118,7 @@ class Attachment<
 public:
     Attachment(uint32_t binding, VkFormat format) : AttachmentBase(
         format,
-        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_LOAD_OP_CLEAR,
         VK_ATTACHMENT_STORE_OP_STORE,
         VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         VK_ATTACHMENT_STORE_OP_DONT_CARE,

@@ -36,7 +36,7 @@ PostEffect::~PostEffect() = default;
 void PostEffect::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
-    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::RENDER_PASS_STAGE_SHADER, renderer::RenderPass::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
+    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::Stage::RENDER_PASS_STAGE_SHADER, renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
 
     /* For our color attachment */
     render_pass->Get().AddAttachment({
@@ -46,17 +46,22 @@ void PostEffect::CreateRenderPass(Engine *engine)
     m_render_pass_id = engine->AddRenderPass(std::move(render_pass));
 }
 
-void PostEffect::CreateFrameData(Engine *engine)
+void PostEffect::Create(Engine *engine)
 {
-    const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
-
-    m_frame_data = std::make_unique<PerFrameData<CommandBuffer>>(num_frames);
-
     m_framebuffer_id = engine->AddFramebuffer(
         engine->GetInstance()->swapchain->extent.width,
         engine->GetInstance()->swapchain->extent.height,
         m_render_pass_id
     );
+
+    CreatePerFrameData(engine);
+}
+
+void PostEffect::CreatePerFrameData(Engine *engine)
+{
+    const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
+
+    m_frame_data = std::make_unique<PerFrameData<CommandBuffer>>(num_frames);
 
     for (uint32_t i = 0; i < num_frames; i++) {
         auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
@@ -73,12 +78,13 @@ void PostEffect::CreateFrameData(Engine *engine)
 void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
+    auto &framebuffer = engine->GetFramebuffer(m_framebuffer_id)->Get();
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_PASS);
 
-    const uint32_t num_attachments = engine->GetFramebuffer(m_framebuffer_id)->Get().GetNumAttachments();
+    const uint32_t num_attachments = framebuffer.GetNumAttachments();
     
     for (uint32_t i = 0; i < num_attachments; i++) {
-        const auto &attachment_info = engine->GetFramebuffer(m_framebuffer_id)->Get().GetAttachmentImageInfos()[i];
+        const auto &attachment_info = framebuffer.GetAttachmentImageInfos()[i];
 
         descriptor_set
             ->AddDescriptor<ImageSamplerDescriptor>(binding_offset++, VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -91,7 +97,7 @@ void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 
 void PostEffect::CreatePipeline(Engine *engine)
 {
-    auto pipeline = std::make_unique<GraphicsPipeline>(m_shader_id, m_render_pass_id, GraphicsPipeline::Bucket::BUCKET_BUFFER);
+    auto pipeline = std::make_unique<GraphicsPipeline>(m_shader_id, m_render_pass_id, GraphicsPipeline::Bucket::BUCKET_PREPASS);
     pipeline->AddFramebuffer(m_framebuffer_id);
     pipeline->SetDepthWrite(false);
     pipeline->SetDepthTest(false);
@@ -99,6 +105,7 @@ void PostEffect::CreatePipeline(Engine *engine)
 
     m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
 }
+
 
 void PostEffect::Destroy(Engine *engine)
 {
@@ -124,8 +131,12 @@ void PostEffect::Destroy(Engine *engine)
 
     engine->RemoveShader(m_shader_id);
     engine->RemoveFramebuffer(m_framebuffer_id);
-    engine->RemoveGraphicsPipeline(m_pipeline_id);
     engine->RemoveRenderPass(m_render_pass_id);
+}
+
+void PostEffect::DestroyPipeline(Engine *engine)
+{
+    engine->RemoveGraphicsPipeline(m_pipeline_id);
 }
 
 void PostEffect::Record(Engine * engine, uint32_t frame_index)
@@ -134,7 +145,7 @@ void PostEffect::Record(Engine * engine, uint32_t frame_index)
 
     auto result = Result::OK;
 
-    auto *command_buffer = (*m_frame_data)[frame_index].Get<CommandBuffer>();
+    auto *command_buffer = m_frame_data->At(frame_index).Get<CommandBuffer>();
     auto *pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
 
     HYPERION_PASS_ERRORS(
@@ -168,7 +179,7 @@ void PostEffect::Render(Engine * engine, CommandBuffer *primary_command_buffer, 
 {
     auto *pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
 
-    pipeline->Get().BeginRenderPass(primary_command_buffer, 0, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    pipeline->Get().BeginRenderPass(primary_command_buffer, 0);
 
     auto *secondary_command_buffer = m_frame_data->At(frame_index).Get<CommandBuffer>();
 
@@ -191,7 +202,7 @@ void PostProcessing::Create(Engine *engine)
     static const std::array<std::string, 1> filter_shader_names = {  "filter_pass" };
     m_filters.resize(filter_shader_names.size());
 
-    uint32_t binding_index = 6; /* hardcoded for now - start filters at this binding */
+    uint32_t binding_index = 8; /* hardcoded for now - start filters at this binding */
 
     /* TODO: use subpasses for gbuffer so we only have num_filters * num_frames descriptors */
     for (int i = 0; i < filter_shader_names.size(); i++) {
@@ -202,29 +213,33 @@ void PostProcessing::Create(Engine *engine)
 
         m_filters[i] = std::make_unique<PostEffect>(shader_id);
         m_filters[i]->CreateRenderPass(engine);
-        m_filters[i]->CreateFrameData(engine);
+        m_filters[i]->Create(engine);
         m_filters[i]->CreateDescriptors(engine, binding_index);
     }
+
+    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
+        for (auto &m_filter : m_filters) {
+            m_filter->CreatePipeline(engine);
+        }
+    };
+
+    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
+        for (auto &filter : m_filters) {
+            filter->DestroyPipeline(engine);
+        }
+    };
 }
 
 void PostProcessing::Destroy(Engine *engine)
 {
-    /* Render passes + framebuffer cleanup are handled by the engine */
     for (auto &filter : m_filters) {
         filter->Destroy(engine);
     }
 }
 
-void PostProcessing::BuildPipelines(Engine *engine)
-{
-    for (auto &m_filter : m_filters) {
-        m_filter->CreatePipeline(engine);
-    }
-}
-
 void PostProcessing::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index) const
 {
-    for (const auto &filter : m_filters) {
+    for (auto &filter : m_filters) {
         filter->Record(engine, frame_index);
         filter->Render(engine, primary, frame_index);
     }

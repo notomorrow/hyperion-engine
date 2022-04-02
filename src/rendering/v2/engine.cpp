@@ -21,8 +21,10 @@ using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      m_shader_globals(nullptr)
+      m_shader_globals(nullptr),
+      m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f)))
 {
+    m_octree.m_root = &m_octree_root;
 }
 
 Engine::~Engine()
@@ -61,11 +63,6 @@ void Engine::SetSpatialTransform(Spatial::ID id, const Transform &transform)
     spatial->SetTransform(transform);
 
     m_shader_globals->objects.Set(id.value - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
-}
-
-void Engine::InitializeInstance()
-{
-    HYPERION_ASSERT_RESULT(m_instance->Initialize(true));
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -117,14 +114,8 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
-    m_deferred_rendering.CreateShader(this);
-    m_deferred_rendering.CreateRenderPass(this);
-    m_deferred_rendering.CreateFrameData(this);
-
-    uint32_t binding_index = 4; /* TMP */
-    m_deferred_rendering.CreateDescriptors(this, binding_index);
-
     m_post_processing.Create(this);
+    m_deferred_rendering.Create(this);
 
     Shader::ID shader_id{};
 
@@ -139,7 +130,7 @@ void Engine::PrepareSwapchain()
     RenderPass::ID render_pass_id{};
 
     {
-        auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::RENDER_PASS_STAGE_PRESENT, renderer::RenderPass::RENDER_PASS_INLINE);
+        auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::Stage::RENDER_PASS_STAGE_PRESENT, renderer::RenderPass::Mode::RENDER_PASS_INLINE);
         /* For our color attachment */
         render_pass->Get().AddColorAttachment(
             std::make_unique<Attachment<VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
@@ -152,7 +143,7 @@ void Engine::PrepareSwapchain()
         render_pass_id = AddRenderPass(std::move(render_pass));
     }
 
-    m_swapchain_render_container = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_BUFFER);
+    m_swapchain_pipeline = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN);
 
     for (VkImage img : m_instance->swapchain->images) {
         auto image_view = std::make_unique<ImageView>();
@@ -167,6 +158,7 @@ void Engine::PrepareSwapchain()
         ));
 
         auto fbo = std::make_unique<Framebuffer>(m_instance->swapchain->extent.width, m_instance->swapchain->extent.height);
+
         fbo->Get().AddAttachment(
             FramebufferObject::AttachmentImageInfo{
                 .image = nullptr,
@@ -181,15 +173,24 @@ void Engine::PrepareSwapchain()
         /* Now we add a depth buffer */
         HYPERION_ASSERT_RESULT(fbo->Get().AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)));
 
-        m_swapchain_render_container->AddFramebuffer(AddFramebuffer(std::move(fbo), render_pass_id));
+        m_swapchain_pipeline->AddFramebuffer(AddFramebuffer(std::move(fbo), render_pass_id));
     }
 
-    m_swapchain_render_container->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+    m_swapchain_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+
+    m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_init += [this](Engine *engine) {
+        m_swapchain_pipeline->Create(engine);
+    };
+
+    m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_deinit += [this](Engine *engine) {
+        m_swapchain_pipeline->Destroy(engine);
+    };
 }
 
 void Engine::Initialize()
 {
-    InitializeInstance();
+    HYPERION_ASSERT_RESULT(m_instance->Initialize(true));
+
     FindTextureFormatDefaults();
 
     m_shader_globals = new ShaderGlobals(m_instance->GetFrameHandler()->NumFrames());
@@ -244,6 +245,8 @@ void Engine::Initialize()
             .gpu_buffer = m_shader_globals->objects.GetBuffers()[1].get(),
             .range = sizeof(ObjectShaderData)
         });
+
+    m_deferred_rendering.CreateRenderList(this);
 }
 
 void Engine::Destroy()
@@ -252,9 +255,8 @@ void Engine::Destroy()
 
     (void)m_instance->GetDevice()->Wait();
 
-    m_deferred_rendering.Destroy(this);
+    //m_deferred_rendering.Destroy(this);
 
-    m_post_processing.Destroy(this);
 
     m_framebuffers.RemoveAll(this);
     m_render_passes.RemoveAll(this);
@@ -263,8 +265,7 @@ void Engine::Destroy()
     m_materials.RemoveAll(this);
     m_compute_pipelines.RemoveAll(this);
 
-    m_swapchain_render_container->Destroy(this);
-    m_render_bucket_container.Destroy(this);
+    m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_deinit(this);
 
     if (m_shader_globals != nullptr) {
         m_shader_globals->scenes.Destroy(m_instance->GetDevice());
@@ -281,7 +282,7 @@ void Engine::Destroy()
 void Engine::Compile()
 {
     /* Finalize materials */
-    for (size_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
+    for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
         m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), i);
 
         /* Finalize per-object data */
@@ -290,13 +291,9 @@ void Engine::Compile()
 
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
+    
+    m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_init(this);
 
-    m_deferred_rendering.CreatePipeline(this);
-
-    m_post_processing.BuildPipelines(this);
-
-    m_swapchain_render_container->Create(this);
-    m_render_bucket_container.Create(this);
     m_compute_pipelines.CreateAll(this);
 }
 
@@ -307,25 +304,9 @@ void Engine::UpdateDescriptorData(uint32_t frame_index)
     m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
 }
 
-void Engine::Render(CommandBuffer *primary, uint32_t frame_index)
-{
-    for (const auto &pipeline : m_render_bucket_container.GetBucket(GraphicsPipeline::Bucket::BUCKET_SKYBOX).objects) {
-        pipeline->Render(this, primary, frame_index);
-    }
-
-    for (const auto &pipeline : m_render_bucket_container.GetBucket(GraphicsPipeline::Bucket::BUCKET_OPAQUE).objects) {
-        pipeline->Render(this, primary, frame_index);
-    }
-}
-
 void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
 {
-    m_deferred_rendering.Record(this, frame_index);
     m_deferred_rendering.Render(this, primary, frame_index);
-
-    for (const auto &pipeline : m_render_bucket_container.GetBucket(GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT).objects) {
-        pipeline->Render(this, primary, frame_index);
-    }
 }
 
 void Engine::RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index)
@@ -335,10 +316,10 @@ void Engine::RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index)
 
 void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
 {
-    auto &pipeline = m_swapchain_render_container->Get();
+    auto &pipeline = m_swapchain_pipeline->Get();
     const uint32_t acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 
-    pipeline.BeginRenderPass(command_buffer, acquired_image_index, VK_SUBPASS_CONTENTS_INLINE);
+    pipeline.BeginRenderPass(command_buffer, acquired_image_index);
     pipeline.Bind(command_buffer);
 
     m_instance->GetDescriptorPool().Bind(command_buffer, &pipeline, {{.count = 2}});

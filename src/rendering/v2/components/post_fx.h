@@ -51,15 +51,19 @@ public:
         { return m_pipeline_id; }
 
     void CreateRenderPass(Engine *engine);
-    void CreateFrameData(Engine *engine);
+    void Create(Engine *engine);
     void CreateDescriptors(Engine *engine, uint32_t &binding_offset);
     void CreatePipeline(Engine *engine);
 
     void Destroy(Engine *engine);
+    void DestroyPipeline(Engine *engine);
+
     void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
     void Record(Engine *engine, uint32_t frame_index);
 
 protected:
+    void CreatePerFrameData(Engine *engine);
+
     std::unique_ptr<PerFrameData<CommandBuffer>> m_frame_data;
     Framebuffer::ID m_framebuffer_id;
     Shader::ID m_shader_id;
@@ -79,7 +83,6 @@ public:
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    void BuildPipelines(Engine *engine);
     void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index) const;
 
 private:

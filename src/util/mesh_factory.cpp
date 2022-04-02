@@ -258,12 +258,16 @@ std::shared_ptr<Mesh> MeshFactory::CreateCube(const BoundingBox &aabb)
 
 #define MESH_FACTORY_QUAD_INDICES(a, b, c, d) a, b, c, a, c, d
     const std::vector<MeshIndex> indices = {
-        MESH_FACTORY_QUAD_INDICES(1, 0, 3, 2),
+        0, 1, 1, 2, 2, 3,
+        3, 0, 0, 4, 4, 5,
+        5, 3, 5, 6, 6, 7,
+        4, 7, 7, 1, 6, 2
+        /*MESH_FACTORY_QUAD_INDICES(1, 0, 3, 2),
         MESH_FACTORY_QUAD_INDICES(2, 3, 7, 6),
         MESH_FACTORY_QUAD_INDICES(3, 0, 4, 7),
         MESH_FACTORY_QUAD_INDICES(6, 5, 1, 2),
         MESH_FACTORY_QUAD_INDICES(4, 5, 6, 7),
-        MESH_FACTORY_QUAD_INDICES(5, 4, 0, 1)
+        MESH_FACTORY_QUAD_INDICES(5, 4, 0, 1)*/
     };
 #undef MESH_FACTORY_QUAD_INDICES
 

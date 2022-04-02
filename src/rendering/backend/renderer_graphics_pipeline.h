@@ -70,7 +70,7 @@ public:
     Result Create(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool);
     Result Destroy(Device *device);
 
-    void BeginRenderPass(CommandBuffer *cmd, size_t index, VkSubpassContents contents);
+    void BeginRenderPass(CommandBuffer *cmd, size_t index);
     void EndRenderPass(CommandBuffer *cmd, size_t index);
     void Bind(CommandBuffer *cmd);
     void SubmitPushConstants(CommandBuffer *cmd) const;

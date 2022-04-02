@@ -132,6 +132,16 @@ public:
     static inline constexpr bool IsPowerOfTwo(uint64_t value)
         { return (value & (value - 1)) == 0; }
 
+    /* Fast log2 for power-of-2 numbers */
+    static inline uint64_t FastLog2_Pow2(uint64_t value)
+    {
+#ifdef _MSC_VER
+        return _tzcnt_u64(value);
+#else
+        return __builtin_ctzll(value);
+#endif
+    }
+
     // https://stackoverflow.com/questions/11376288/fast-computing-of-log2-for-64-bit-integers
     static inline constexpr uint64_t FastLog2(uint64_t value)
     {
