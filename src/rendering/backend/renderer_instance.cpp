@@ -88,6 +88,12 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     }
     DebugLogRaw(lt, "Vulkan: [%s, %d]:\n\t%s\n",
              callback_data->pMessageIdName, callback_data->messageIdNumber, callback_data->pMessage);
+
+#if HYPERION_ENABLE_BREAKPOINTS
+    if (lt == LogType::RenError) {
+        HYP_BREAKPOINT;
+    }
+#endif
     return VK_FALSE;
 }
 

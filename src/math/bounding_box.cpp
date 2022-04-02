@@ -88,11 +88,10 @@ BoundingBox &BoundingBox::operator*=(const Transform &transform)
 
 BoundingBox BoundingBox::operator*(const Transform &transform) const
 {
-    BoundingBox other;
+    BoundingBox other(*this);
 
-    for (const Vector3 &corner : GetCorners()) {
-        other.Extend(corner * transform.GetMatrix());
-    }
+    other.m_max *= transform.GetMatrix();
+    other.m_min *= transform.GetMatrix();
 
     return other;
 }

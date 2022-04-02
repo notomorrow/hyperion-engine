@@ -47,24 +47,37 @@ class EngineComponentBase {
 protected:
     template <class ObjectType, class InnerType>
     struct IdWrapper {
-        using InnerType_t = InnerType;
+        using ValueType = InnerType;
 
-        explicit constexpr operator InnerType() const { return value; }
+        explicit constexpr operator ValueType() const { return value; }
         explicit constexpr operator bool() const { return !!value; }
 
-        inline constexpr InnerType GetValue() const { return value; }
+        inline constexpr ValueType GetValue() const { return value; }
 
         inline constexpr bool operator==(const IdWrapper &other) const
             { return value == other.value; }
 
+        inline constexpr bool operator!=(const IdWrapper &other) const
+            { return value != other.value; }
+
         inline constexpr bool operator<(const IdWrapper &other) const
             { return value < other.value; }
 
-        InnerType value;
+        ValueType value{};
     };
 
 public:
     using ID = IdWrapper<Type, uint32_t>;
+
+    inline const ID &GetId() const
+        { return m_id; }
+
+    /* To be called from ObjectHolder<Type> */
+    inline void SetId(const ID &id)
+        { m_id = id; }
+
+protected:
+    typename EngineComponentBase<Type>::ID m_id;
 };
 
 template <class WrappedType>

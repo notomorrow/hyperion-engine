@@ -52,7 +52,7 @@ struct Result {
 #define HYPERION_ASSERT_RESULT(result) \
     do { \
         auto _result = (result); \
-        AssertThrowMsg(_result == ::hyperion::renderer::Result::OK, "%s", _result.message); \
+        AssertThrowMsg(_result == ::hyperion::renderer::Result::OK, _result.message); \
     } while (0)
 
 #define HYPERION_VK_CHECK(vk_result) \
