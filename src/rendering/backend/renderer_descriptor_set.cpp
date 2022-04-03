@@ -21,23 +21,28 @@ DescriptorSet::~DescriptorSet()
 
 Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
 {
+    std::vector<Descriptor::Info> descriptor_info;
+    descriptor_info.reserve(m_descriptors.size());
+
+    for (const auto &descriptor : m_descriptors) {
+        descriptor->Create(device, descriptor_info);
+    }
+
     std::vector<VkWriteDescriptorSet> writes;
-    writes.reserve(m_descriptors.size());
+    writes.resize(m_descriptors.size());
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
-    bindings.reserve(m_descriptors.size());
-
-    for (auto &descriptor : m_descriptors) {
-        Descriptor::Info info{};
-
-        descriptor->Create(device, &info);
+    bindings.resize(m_descriptors.size());
+    
+    for (size_t i = 0; i < descriptor_info.size(); i++) {
+        auto &info = descriptor_info[i];
 
         if (m_bindless) {
             info.binding.descriptorCount = max_bindless_resources;
         }
 
-        bindings.push_back(info.binding);
-        writes.push_back(info.write);
+        bindings[i] = info.binding;
+        writes[i] = info.write;
     }
 
     //build layout first
@@ -105,40 +110,6 @@ Result DescriptorSet::Destroy(Device *device)
     for (auto &descriptor : m_descriptors) {
         descriptor->Destroy(device);
     }
-
-    // TODO: clear descriptor set
-
-    HYPERION_RETURN_OK;
-}
-
-Result DescriptorSet::Update(Device *device)
-{
-    DebugLog(LogType::Debug, "Update descriptor set\n");
-    // TODO: cache the writes array
-    std::vector<VkWriteDescriptorSet> writes;
-    writes.reserve(m_descriptors.size());
-
-    for (auto &descriptor : m_descriptors) {
-        if (descriptor->GetState() != DescriptorSetState::DESCRIPTOR_DIRTY) {
-            continue;
-        }
-
-        Descriptor::Info info{};
-
-        /* NOTE: This doesn't actually 'create' anything, just sets up the update structs */
-        descriptor->Create(device, &info);
-        
-        writes.push_back(info.write);
-
-        descriptor->SetState(DescriptorSetState::DESCRIPTOR_DIRTY);
-    }
-
-    //write descriptor
-    for (VkWriteDescriptorSet &w : writes) {
-        w.dstSet = m_set;
-    }
-
-    vkUpdateDescriptorSets(device->GetDevice(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 
     HYPERION_RETURN_OK;
 }
@@ -345,11 +316,16 @@ Result DescriptorPool::AllocateDescriptorSet(Device *device, VkDescriptorSetLayo
     }
 }
 
-Descriptor::Descriptor(uint32_t binding, Mode mode, VkShaderStageFlags stage_flags)
+Descriptor::Descriptor(uint32_t binding, uint32_t array_index, Mode mode)
     : m_binding(binding),
+      m_array_index(array_index),
       m_mode(mode),
-      m_stage_flags(stage_flags),
       m_state(DescriptorSetState::DESCRIPTOR_DIRTY)
+{
+}
+
+Descriptor::Descriptor(uint32_t binding, Mode mode)
+    : Descriptor(binding, 0, mode)
 {
 }
 
@@ -357,95 +333,145 @@ Descriptor::~Descriptor()
 {
 }
 
-void Descriptor::Create(Device *device, Descriptor::Info *out_info)
+void Descriptor::Create(Device *device, std::vector<Descriptor::Info> &out)
 {
-    uint32_t num_descriptors = 0;
+    m_sub_descriptor_buffer.buffers.resize(m_sub_descriptors.size());
+    m_sub_descriptor_buffer.images.resize(m_sub_descriptors.size());
 
-    for (auto &sub : m_sub_descriptors) {
-        switch (m_mode) {
-        case Mode::UNIFORM_BUFFER: /* fallthrough */
-        case Mode::UNIFORM_BUFFER_DYNAMIC:
-        case Mode::STORAGE_BUFFER:
-        case Mode::STORAGE_BUFFER_DYNAMIC:
-            AssertThrow(sub.gpu_buffer != nullptr);
-            AssertThrow(sub.gpu_buffer->buffer != nullptr);
-
-            m_sub_descriptor_buffer.buffers.push_back(VkDescriptorBufferInfo{
-                .buffer = sub.gpu_buffer->buffer,
-                .offset = 0,
-                .range = sub.range ? sub.range : sub.gpu_buffer->size
-            });
-
-            ++num_descriptors;
-
-            break;
-        case Mode::IMAGE_SAMPLER:
-            AssertThrow(sub.image_view != nullptr);
-            AssertThrow(sub.image_view->GetImageView() != nullptr);
-
-            AssertThrow(sub.sampler != nullptr);
-            AssertThrow(sub.sampler->GetSampler() != nullptr);
-
-            m_sub_descriptor_buffer.images.push_back(VkDescriptorImageInfo{
-                .sampler = sub.sampler->GetSampler(),
-                .imageView = sub.image_view->GetImageView(),
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-            });
-
-            ++num_descriptors;
-
-            break;
-        case Mode::IMAGE_STORAGE:
-            AssertThrow(sub.image_view != nullptr);
-            AssertThrow(sub.image_view->GetImageView() != nullptr);
-
-            m_sub_descriptor_buffer.images.push_back(VkDescriptorImageInfo{
-                .sampler = nullptr,
-                .imageView = sub.image_view->GetImageView(),
-                .imageLayout = VK_IMAGE_LAYOUT_GENERAL
-            });
-
-            ++num_descriptors;
-
-
-            break;
-        default:
-            AssertThrowMsg(false, "unhandled descriptor type");
-        }
+    for (size_t i = 0; i < m_sub_descriptors.size(); i++) {
+        UpdateSubDescriptorBuffer(
+            m_sub_descriptors[i],
+            m_sub_descriptor_buffer.buffers[i],
+            m_sub_descriptor_buffer.images[i]
+        );
     }
 
     const auto descriptor_type = GetDescriptorType(m_mode);
 
-    out_info->binding = VkDescriptorSetLayoutBinding{};
-    out_info->binding.descriptorCount = num_descriptors;
-    out_info->binding.descriptorType = descriptor_type;
-    out_info->binding.pImmutableSamplers = nullptr;
-    out_info->binding.stageFlags = m_stage_flags;
-    out_info->binding.binding = m_binding;
+    VkDescriptorSetLayoutBinding binding{};
+    binding.descriptorCount    = uint32_t(m_sub_descriptors.size());
+    binding.descriptorType     = descriptor_type;
+    binding.pImmutableSamplers = nullptr;
+    binding.stageFlags         = VK_SHADER_STAGE_ALL;
+    binding.binding            = m_binding;
 
-    out_info->write = VkWriteDescriptorSet{};
-    out_info->write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    out_info->write.pNext = nullptr;
-    out_info->write.descriptorCount = num_descriptors;
-    out_info->write.descriptorType = descriptor_type;
-    out_info->write.pBufferInfo = m_sub_descriptor_buffer.buffers.data();
-    out_info->write.pImageInfo = m_sub_descriptor_buffer.images.data();
-    out_info->write.dstBinding = m_binding;
+    VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    write.pNext           = nullptr;
+    write.dstBinding      = m_binding;
+    write.dstArrayElement = m_array_index;
+    write.descriptorCount = uint32_t(m_sub_descriptors.size());
+    write.descriptorType  = descriptor_type;
+    write.pBufferInfo     = m_sub_descriptor_buffer.buffers.data();
+    write.pImageInfo      = m_sub_descriptor_buffer.images.data();
+
+    out.emplace_back(binding, write);
 }
 
 void Descriptor::Destroy(Device *device)
 {
 }
 
+void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const
+{
+    switch (m_mode) {
+    case Mode::UNIFORM_BUFFER: /* fallthrough */
+    case Mode::UNIFORM_BUFFER_DYNAMIC:
+    case Mode::STORAGE_BUFFER:
+    case Mode::STORAGE_BUFFER_DYNAMIC:
+        AssertThrow(sub_descriptor.gpu_buffer != nullptr);
+        AssertThrow(sub_descriptor.gpu_buffer->buffer != nullptr);
+
+        out_buffer = {
+            .buffer = sub_descriptor.gpu_buffer->buffer,
+            .offset = 0,
+            .range = sub_descriptor.range ? sub_descriptor.range : sub_descriptor.gpu_buffer->size
+        };
+
+        break;
+    case Mode::IMAGE_SAMPLER:
+        AssertThrow(sub_descriptor.image_view != nullptr);
+        AssertThrow(sub_descriptor.image_view->GetImageView() != nullptr);
+
+        AssertThrow(sub_descriptor.sampler != nullptr);
+        AssertThrow(sub_descriptor.sampler->GetSampler() != nullptr);
+
+        out_image = {
+            .sampler = sub_descriptor.sampler->GetSampler(),
+            .imageView = sub_descriptor.image_view->GetImageView(),
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        };
+
+        break;
+    case Mode::IMAGE_STORAGE:
+        AssertThrow(sub_descriptor.image_view != nullptr);
+        AssertThrow(sub_descriptor.image_view->GetImageView() != nullptr);
+
+        out_image = {
+            .sampler = nullptr,
+            .imageView = sub_descriptor.image_view->GetImageView(),
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL
+        };
+
+        break;
+    default:
+        AssertThrowMsg(false, "unhandled descriptor type");
+    }
+}
+
+void Descriptor::PerformFrameUpdate(Device *engine, std::array<Info, DescriptorSet::max_sub_descriptor_updates_per_frame> &out)
+{
+    uint32_t iteration = 0;
+
+    while (!m_sub_descriptor_update_indices.empty()) {
+        if (iteration == DescriptorSet::max_sub_descriptor_updates_per_frame) {
+            break;
+        }
+
+        const size_t sub_descriptor_index = m_sub_descriptor_update_indices.front();
+
+        UpdateSubDescriptorBuffer(
+            m_sub_descriptors[sub_descriptor_index],
+            m_sub_descriptor_buffer.buffers[sub_descriptor_index],
+            m_sub_descriptor_buffer.images[sub_descriptor_index]
+        );
+
+
+        const auto descriptor_type = GetDescriptorType(m_mode);
+
+        auto &out_info = out[iteration];
+
+        out_info.binding = VkDescriptorSetLayoutBinding{};
+        out_info.binding.descriptorCount    = 1;
+        out_info.binding.descriptorType     = descriptor_type;
+        out_info.binding.pImmutableSamplers = nullptr;
+        out_info.binding.stageFlags         = VK_SHADER_STAGE_ALL;
+        out_info.binding.binding            = m_binding;
+
+        out_info.write = VkWriteDescriptorSet{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        out_info.write.dstBinding      = m_binding;
+        out_info.write.dstArrayElement = uint32_t(sub_descriptor_index);
+        out_info.write.descriptorCount = 1;
+        out_info.write.descriptorType  = descriptor_type;
+        out_info.write.pBufferInfo     = &m_sub_descriptor_buffer.buffers[sub_descriptor_index];
+        out_info.write.pImageInfo      = &m_sub_descriptor_buffer.images[sub_descriptor_index];
+
+        m_sub_descriptor_update_indices.pop();
+
+        iteration++;
+    }
+
+    m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
+}
+
 VkDescriptorType Descriptor::GetDescriptorType(Mode mode)
 {
     switch (mode) {
-    case Mode::UNIFORM_BUFFER: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case Mode::UNIFORM_BUFFER:         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     case Mode::UNIFORM_BUFFER_DYNAMIC: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-    case Mode::STORAGE_BUFFER: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case Mode::STORAGE_BUFFER:         return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     case Mode::STORAGE_BUFFER_DYNAMIC: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-    case Mode::IMAGE_SAMPLER: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case Mode::IMAGE_STORAGE: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case Mode::IMAGE_SAMPLER:          return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case Mode::IMAGE_STORAGE:          return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     default:
         AssertThrowMsg(false, "Unsupported descriptor type");
     }

@@ -87,7 +87,7 @@ void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
         const auto &attachment_info = framebuffer.GetAttachmentImageInfos()[i];
 
         descriptor_set
-            ->AddDescriptor<ImageSamplerDescriptor>(binding_offset++, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(binding_offset++)
             ->AddSubDescriptor({
                 .image_view = attachment_info.image_view.get(),
                 .sampler = attachment_info.sampler.get()

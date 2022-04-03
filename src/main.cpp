@@ -233,27 +233,27 @@ int main()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBALS);
 
         descriptor_set_globals
-            ->AddDescriptor<UniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddDescriptor<UniformBufferDescriptor>(0)
             ->AddSubDescriptor({ .gpu_buffer = &matrices_descriptor_buffer });
 
         descriptor_set_globals
-            ->AddDescriptor<UniformBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddDescriptor<UniformBufferDescriptor>(1)
             ->AddSubDescriptor({ .gpu_buffer = &scene_data_descriptor_buffer });
 
 #if HYPERION_VK_TEST_MIPMAP
         descriptor_set_globals
-            ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(2)
             ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler })
             ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
 #else
         descriptor_set_globals
-            ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(2)
             ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler });
 #endif
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         descriptor_set_globals
-            ->AddDescriptor<ImageStorageDescriptor>(3, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
+            ->AddDescriptor<ImageStorageDescriptor>(3)
             ->AddSubDescriptor({ .image_view = &image_storage_view });
 #endif
     }
@@ -264,7 +264,7 @@ int main()
 
         /* Albedo texture */
         descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(0, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(0)
             ->AddSubDescriptor({
                 .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[0].image_view.get(),
                 .sampler = opaque_fbo->Get().GetAttachmentImageInfos()[0].sampler.get()
@@ -272,7 +272,7 @@ int main()
 
         /* Normals texture*/
         descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(1, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(1)
             ->AddSubDescriptor({
                 .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[1].image_view.get(),
                 .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[1].sampler.get()
@@ -280,7 +280,7 @@ int main()
 
         /* Position texture */
         descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(2)
             ->AddSubDescriptor({
                 .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[2].image_view.get(),
                 .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[2].sampler.get()
@@ -288,7 +288,7 @@ int main()
 
         /* Depth texture */
         descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(3, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(3)
             ->AddSubDescriptor({
                 .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[3].image_view.get(),
                 .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[3].sampler.get()
@@ -297,14 +297,25 @@ int main()
         
         engine.GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
-            ->AddDescriptor<ImageSamplerDescriptor>(0, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(0)
             ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler })
             ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
+
+        
+        /*engine.GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
+            ->AddDescriptor<ImageSamplerDescriptor>(0, 0)
+            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler });
+
+        engine.GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
+            ->AddDescriptor<ImageSamplerDescriptor>(0, 1)
+            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });*/
         
 
         /* translucent - Albedo texture */
         /*descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(4, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(4)
             ->AddSubDescriptor({
                 .image_view = engine.GetFramebuffer(translucent_fbo_id)->Get().GetAttachmentImageInfos()[0].image_view.get(),
                 .sampler = engine.GetFramebuffer(translucent_fbo_id)->Get().GetAttachmentImageInfos()[0].sampler.get()
@@ -312,7 +323,7 @@ int main()
 
         /* translucent - Depth texture */
         /*descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(5, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddDescriptor<ImageSamplerDescriptor>(5)
             ->AddSubDescriptor({
                 .image_view = engine.GetFramebuffer(translucent_fbo_id)->Get().GetAttachmentImageInfos()[3].image_view.get(),
                 .sampler    = engine.GetFramebuffer(translucent_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get()
@@ -464,8 +475,6 @@ int main()
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
-        pipeline->AddFramebuffer(opaque_fbo_id);
-
         //Transform monkey_transform(Vector3(9.0f), Vector3(1.0f), Quaternion());
 
         monkey_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
@@ -506,7 +515,7 @@ int main()
         pipeline->SetCullMode(GraphicsPipeline::CullMode::FRONT);
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
-        pipeline->AddFramebuffer(opaque_fbo_id);
+        //pipeline->AddFramebuffer(opaque_fbo_id);
 
         pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
             cube_mesh,
@@ -522,7 +531,6 @@ int main()
     v2::GraphicsPipeline::ID translucent_pipeline_id{};
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
-        pipeline->AddFramebuffer(engine.GetDeferredRenderer().GetEffect().GetFramebufferId());
         pipeline->SetBlendEnabled(true);
 
         pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
@@ -539,7 +547,6 @@ int main()
     v2::GraphicsPipeline::ID wire_pipeline_id{};
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
-        pipeline->AddFramebuffer(engine.GetDeferredRenderer().GetEffect().GetFramebufferId());
         pipeline->SetBlendEnabled(false);
         pipeline->SetFillMode(GraphicsPipeline::FillMode::LINE);
         pipeline->SetCullMode(GraphicsPipeline::CullMode::NONE);

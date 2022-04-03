@@ -169,6 +169,8 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
             static constexpr uint32_t frame_index_scene_buffer_mapping[]  = {2, 4};
             static constexpr uint32_t frame_index_object_buffer_mapping[] = {3, 5};
 
+            static_assert(std::size(frame_index_object_buffer_mapping) == renderer::Swapchain::max_frames_in_flight);
+
             /* Bind scene data - */
             instance->GetDescriptorPool().Bind(
                 device,

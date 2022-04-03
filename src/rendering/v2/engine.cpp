@@ -205,14 +205,14 @@ void Engine::Initialize()
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
-        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
         ->AddSubDescriptor({
             .gpu_buffer = m_shader_globals->scenes.GetBuffers()[0].get(),
             .range = sizeof(SceneShaderData)
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
-        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
             .gpu_buffer = m_shader_globals->materials.GetBuffers()[0].get(),
             .range = sizeof(MaterialShaderData)
@@ -220,7 +220,7 @@ void Engine::Initialize()
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
-        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
             .gpu_buffer = m_shader_globals->objects.GetBuffers()[0].get(),
             .range = sizeof(ObjectShaderData)
@@ -229,21 +229,21 @@ void Engine::Initialize()
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
-        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
         ->AddSubDescriptor({
             .gpu_buffer = m_shader_globals->scenes.GetBuffers()[1].get(),
             .range = sizeof(SceneShaderData)
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
-        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
             .gpu_buffer = m_shader_globals->materials.GetBuffers()[1].get(),
             .range = sizeof(MaterialShaderData)
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
-        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
             .gpu_buffer = m_shader_globals->objects.GetBuffers()[1].get(),
             .range = sizeof(ObjectShaderData)

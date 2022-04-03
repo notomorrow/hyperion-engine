@@ -60,7 +60,7 @@ void DebugSetOutputStream(FILE *stream);
  * the release build will have function naming disabled. */
 
 #define DebugLogRaw(type, ...) \
-    DebugLog_(type, nullptr, 0, __VA_ARGS__);
+    DebugLog_(type, nullptr, 0, __VA_ARGS__)
 
 #ifdef HYPERION_BUILD_RELEASE
 #define DebugLog(type, ...) \
@@ -70,7 +70,7 @@ void DebugLog_(LogType type, const char *fmt, ...);
 #else
 //#define DebugLog(type, fmt) DebugLog(type, HYP_DEBUG_FUNC_SHORT, HYP_DEBUG_LINE, fmt)
 #define DebugLog(type, ...) \
-    DebugLog_(type, HYP_DEBUG_FUNC_SHORT, HYP_DEBUG_LINE, __VA_ARGS__);
+    DebugLog_(type, HYP_DEBUG_FUNC_SHORT, HYP_DEBUG_LINE, __VA_ARGS__)
 
 void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt, ...);
 #endif
@@ -106,11 +106,11 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
 #define AssertThrowMsg(cond, ...) AssertOrElseMsg(LogType::Error, cond, throw ::std::runtime_error("Assertion failed"), __VA_ARGS__)
 #define AssertSoft(cond) AssertOrElse(LogType::Warn, cond, return)
 #define AssertSoftMsg(cond, ...) AssertOrElseMsg(LogType::Warn, cond, return, __VA_ARGS__)
-#define AssertReturn(cond, value) AssertOrElse(LogType::Warn, cond, return (value));
+#define AssertReturn(cond, value) AssertOrElse(LogType::Warn, cond, return (value))
 #define AssertReturnMsg(cond, value, ...) AssertOrElseMsg(LogType::Warn, cond, return value, __VA_ARGS__)
 #define AssertBreak(cond) AssertOrElse(LogType::Warn, cond, break)
 #define AssertBreakMsg(cond, ...) AssertOrElseMsg(LogType::Warn, cond, break, __VA_ARGS__)
-#define AssertContinue(cond) AssertOrElse(LogType::Warn, cond, continue);
+#define AssertContinue(cond) AssertOrElse(LogType::Warn, cond, continue)
 #define AssertContinueMsg(cond, ...) AssertOrElseMsg(LogType::Warn, cond, continue, __VA_ARGS__)
 #define AssertExit(cond) AssertOrElse(LogType::Fatal, cond, exit(1))
 #define AssertExitMsg(cond, ...) AssertOrElseMsg(LogType::Fatal, cond, exit(1), __VA_ARGS__)
