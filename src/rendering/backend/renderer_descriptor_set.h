@@ -31,6 +31,7 @@ enum class DescriptorSetState {
     DESCRIPTOR_DIRTY = 1
 };
 
+
 class DescriptorSet {
     friend class Descriptor;
 public:
@@ -57,13 +58,13 @@ public:
     ~DescriptorSet();
 
     inline DescriptorSetState GetState() const { return m_state; }
-
     inline bool IsBindless() const { return m_bindless; }
 
     template <class DescriptorType, class ...Args>
     Descriptor *AddDescriptor(Args &&... args)
     {
         m_descriptors.push_back(std::make_unique<DescriptorType>(std::move(args)...));
+        m_descriptor_bindings.push_back({});
 
         return m_descriptors.back().get();
     }
@@ -76,10 +77,14 @@ public:
     Result Create(Device *device, DescriptorPool *pool);
     Result Destroy(Device *device);
 
+    void ApplyUpdates(Device *device);
+
     VkDescriptorSet m_set;
 
 private:
     std::vector<std::unique_ptr<Descriptor>> m_descriptors;
+    std::vector<VkDescriptorSetLayoutBinding> m_descriptor_bindings; /* one per each descriptor */
+    std::vector<VkWriteDescriptorSet> m_descriptor_writes; /* any number of per descriptor - reset after each update */
     DescriptorSetState m_state;
     bool m_bindless;
 };
@@ -223,11 +228,6 @@ public:
         Sampler *sampler = nullptr;
     };
 
-    struct Info {
-        VkDescriptorSetLayoutBinding binding;
-        std::vector<VkWriteDescriptorSet> writes;
-    };
-
     Descriptor(uint32_t binding, uint32_t array_index, Mode mode);
     Descriptor(uint32_t binding, Mode mode);
     Descriptor(const Descriptor &other) = delete;
@@ -241,18 +241,32 @@ public:
     inline void SetState(DescriptorSetState state) { m_state = state; }
 
     /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
+    inline std::vector<SubDescriptor> &GetSubDescriptors()
+        { return m_sub_descriptors; }
+
+    /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
     inline const std::vector<SubDescriptor> &GetSubDescriptors() const
         { return m_sub_descriptors; }
+
+    inline SubDescriptor &GetSubDescriptor(size_t index)
+        { return m_sub_descriptors[index]; }
+
+    inline const SubDescriptor &GetSubDescriptor(size_t index) const
+        { return m_sub_descriptors[index]; }
 
     inline Descriptor *AddSubDescriptor(SubDescriptor &&sub_descriptor)
         {  m_sub_descriptors.push_back(sub_descriptor); return this; }
 
     /* Mark a subdescriptor as dirty */
-    inline void UpdateSubDescriptor(size_t index)
-        { m_sub_descriptor_update_indices.push(index); }
+    inline void MarkDirty(size_t sub_descriptor_index)
+    {
+        m_sub_descriptor_update_indices.push(sub_descriptor_index);
 
-    void Create(Device *device, std::vector<Descriptor::Info> &out);
-    void Destroy(Device *device);
+        m_state = DescriptorSetState::DESCRIPTOR_DIRTY;
+        m_descriptor_set->m_state = DescriptorSetState::DESCRIPTOR_DIRTY;
+    }
+
+    void Create(Device *device, VkDescriptorSetLayoutBinding &binding, std::vector<VkWriteDescriptorSet> &writes);
 
 protected:
     struct BufferInfo {
@@ -262,8 +276,8 @@ protected:
 
     static VkDescriptorType GetDescriptorType(Mode mode);
 
+    void BuildUpdates(Device *device, std::vector<VkWriteDescriptorSet> &writes);
     void UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const;
-    void PerformFrameUpdate(Device *engine, std::array<Info, DescriptorSet::max_sub_descriptor_updates_per_frame> &out);
 
     std::vector<SubDescriptor> m_sub_descriptors;
     std::queue<size_t> m_sub_descriptor_update_indices;

@@ -609,6 +609,8 @@ int main()
     }
 #endif
 
+    bool updated_descriptor = false;
+
     while (running) {
         tick_last = tick_now;
         tick_now = SDL_GetPerformanceCounter();
@@ -626,6 +628,17 @@ int main()
         }
 
         timer += delta_time;
+
+        if (timer > 2.0 && !updated_descriptor) {
+            auto *desc = engine.GetInstance()->GetDescriptorPool()
+                .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
+                ->GetDescriptor(0);
+
+            desc->GetSubDescriptors()[0] = Descriptor::SubDescriptor{ .image_view = &test_image_view2, .sampler = &test_sampler2 };
+            desc->MarkDirty(0);
+
+            updated_descriptor = true;
+        }
 
         camera->Update(delta_time);
 

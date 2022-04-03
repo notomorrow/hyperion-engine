@@ -11,7 +11,8 @@ namespace hyperion {
 namespace renderer {
 DescriptorSet::DescriptorSet(bool bindless)
     : m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
-      m_bindless(bindless)
+      m_bindless(bindless),
+      m_set(nullptr)
 {
 }
 
@@ -21,41 +22,26 @@ DescriptorSet::~DescriptorSet()
 
 Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
 {
-    std::vector<Descriptor::Info> descriptor_info;
-    descriptor_info.reserve(m_descriptors.size());
+    AssertThrow(m_descriptor_bindings.size() == m_descriptors.size());
 
-    for (const auto &descriptor : m_descriptors) {
+    m_descriptor_writes.clear();
+    m_descriptor_writes.reserve(m_descriptors.size());
+
+    for (size_t i = 0; i < m_descriptors.size(); i++) {
+        auto &descriptor = m_descriptors[i];
         descriptor->m_descriptor_set = this;
 
-        descriptor->Create(device, descriptor_info);
-    }
-
-    std::vector<VkWriteDescriptorSet> writes;
-    writes.reserve(descriptor_info.size());
-
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
-    bindings.resize(descriptor_info.size());
-    
-    for (size_t i = 0; i < descriptor_info.size(); i++) {
-        auto &info = descriptor_info[i];
-
-        bindings[i] = info.binding;
-
-        if (m_bindless) {
-            bindings[i].descriptorCount = max_bindless_resources;
-        }
-
-        writes.insert(writes.end(), info.writes.begin(), info.writes.end());
+        descriptor->Create(device, m_descriptor_bindings[i], m_descriptor_writes);
     }
 
     //build layout first
     VkDescriptorSetLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-    layout_info.pBindings    = bindings.data();
-    layout_info.bindingCount = uint32_t(bindings.size());
+    layout_info.pBindings    = m_descriptor_bindings.data();
+    layout_info.bindingCount = uint32_t(m_descriptor_bindings.size());
     layout_info.flags        = 0;
 
     const std::vector<VkDescriptorBindingFlags> bindless_flags(
-        bindings.size(),
+        m_descriptor_bindings.size(),
         VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
         | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
         | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
@@ -66,7 +52,7 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
     extended_info.pBindingFlags = bindless_flags.data();
 
     if (m_bindless) {
-        layout_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        layout_info.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
         layout_info.pNext = &extended_info;
     }
 
@@ -91,13 +77,12 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
             return allocate_result;
         }
     }
-
-    //write descriptor
-    for (VkWriteDescriptorSet &w : writes) {
-        w.dstSet = m_set;
+    
+    for (VkWriteDescriptorSet &write : m_descriptor_writes) {
+        write.dstSet = m_set;
     }
 
-    vkUpdateDescriptorSets(device->GetDevice(), uint32_t(writes.size()), writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(device->GetDevice(), uint32_t(m_descriptor_writes.size()), m_descriptor_writes.data(), 0, nullptr);
 
     m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
 
@@ -105,16 +90,35 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
         descriptor->SetState(DescriptorSetState::DESCRIPTOR_CLEAN);
     }
 
+    m_descriptor_writes.clear();
+
     HYPERION_RETURN_OK;
 }
 
 Result DescriptorSet::Destroy(Device *device)
 {
-    for (auto &descriptor : m_descriptors) {
-        descriptor->Destroy(device);
+    HYPERION_RETURN_OK;
+}
+
+void DescriptorSet::ApplyUpdates(Device *device)
+{
+    for (size_t i = 0; i < m_descriptors.size(); i++) {
+        auto &descriptor = m_descriptors[i];
+
+        if (descriptor->GetState() == DescriptorSetState::DESCRIPTOR_CLEAN) {
+            continue;
+        }
+
+        descriptor->BuildUpdates(device, m_descriptor_writes);
+    }
+    
+    for (VkWriteDescriptorSet &write : m_descriptor_writes) {
+        write.dstSet = m_set;
     }
 
-    HYPERION_RETURN_OK;
+    vkUpdateDescriptorSets(device->GetDevice(), uint32_t(m_descriptor_writes.size()), m_descriptor_writes.data(), 0, nullptr);
+
+    m_descriptor_writes.clear();
 }
 
 const std::unordered_map<VkDescriptorType, size_t> DescriptorPool::items_per_set{
@@ -293,7 +297,7 @@ Result DescriptorPool::AllocateDescriptorSet(Device *device, VkDescriptorSetLayo
     alloc_info.descriptorPool = m_descriptor_pool;
     alloc_info.descriptorSetCount = 1;
 
-    VkDescriptorSetVariableDescriptorCountAllocateInfoEXT count_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT};
+    VkDescriptorSetVariableDescriptorCountAllocateInfoEXT count_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO};
     constexpr uint32_t max_binding = DescriptorSet::max_bindless_resources - 1;
     count_info.descriptorSetCount = 1;
     // This number is the max allocatable count
@@ -334,7 +338,7 @@ Descriptor::~Descriptor()
 {
 }
 
-void Descriptor::Create(Device *device, std::vector<Info> &out)
+void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, std::vector<VkWriteDescriptorSet> &writes)
 {
     AssertThrow(m_descriptor_set != nullptr);
 
@@ -342,15 +346,12 @@ void Descriptor::Create(Device *device, std::vector<Info> &out)
 
     m_sub_descriptor_buffer.buffers.resize(m_sub_descriptors.size());
     m_sub_descriptor_buffer.images.resize(m_sub_descriptors.size());
-
-    VkDescriptorSetLayoutBinding binding{};
-    binding.descriptorCount    = 1;
+    
+    binding.descriptorCount    = m_descriptor_set->IsBindless() ? DescriptorSet::max_bindless_resources : uint32_t(m_sub_descriptors.size());
     binding.descriptorType     = descriptor_type;
     binding.pImmutableSamplers = nullptr;
     binding.stageFlags         = VK_SHADER_STAGE_ALL;
     binding.binding            = m_binding;
-
-    std::vector<VkWriteDescriptorSet> writes;
 
     for (size_t i = 0; i < m_sub_descriptors.size(); i++) {
         UpdateSubDescriptorBuffer(
@@ -361,19 +362,73 @@ void Descriptor::Create(Device *device, std::vector<Info> &out)
 
         if (m_descriptor_set->IsBindless()) {
             VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-            write.pNext = nullptr;
-            write.dstBinding = m_binding;
+            write.pNext           = nullptr;
+            write.dstBinding      = m_binding;
             write.dstArrayElement = uint32_t(i);
             write.descriptorCount = 1;
-            write.descriptorType = descriptor_type;
-            write.pBufferInfo = &m_sub_descriptor_buffer.buffers[i];
-            write.pImageInfo = &m_sub_descriptor_buffer.images[i];
+            write.descriptorType  = descriptor_type;
+            write.pBufferInfo     = &m_sub_descriptor_buffer.buffers[i];
+            write.pImageInfo      = &m_sub_descriptor_buffer.images[i];
 
             writes.push_back(write);
         }
     }
 
     if (!m_descriptor_set->IsBindless()) {
+        VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        write.pNext           = nullptr;
+        write.dstBinding      = m_binding;
+
+        write.dstArrayElement = m_array_index;
+        write.descriptorCount = uint32_t(m_sub_descriptors.size());
+        write.descriptorType  = descriptor_type;
+        write.pBufferInfo     = m_sub_descriptor_buffer.buffers.data();
+        write.pImageInfo      = m_sub_descriptor_buffer.images.data();
+
+        writes.push_back(write);
+    }
+}
+
+void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &writes)
+{
+    const auto descriptor_type = GetDescriptorType(m_mode);
+
+    if (m_descriptor_set->IsBindless()) {
+        uint32_t iteration = 0;
+        
+        while (!m_sub_descriptor_update_indices.empty()) {
+            if (iteration == DescriptorSet::max_sub_descriptor_updates_per_frame) {
+                break;
+            }
+
+            const size_t sub_descriptor_index = m_sub_descriptor_update_indices.front();
+
+            UpdateSubDescriptorBuffer(
+                m_sub_descriptors[sub_descriptor_index],
+                m_sub_descriptor_buffer.buffers[sub_descriptor_index],
+                m_sub_descriptor_buffer.images[sub_descriptor_index]
+            );
+            
+            VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+            write.pNext           = nullptr;
+            write.dstBinding      = m_binding;
+            write.dstArrayElement = uint32_t(sub_descriptor_index);
+            write.descriptorCount = 1;
+            write.descriptorType  = descriptor_type;
+            write.pBufferInfo     = &m_sub_descriptor_buffer.buffers[sub_descriptor_index];
+            write.pImageInfo      = &m_sub_descriptor_buffer.images[sub_descriptor_index];
+
+            writes.push_back(write);
+
+            m_sub_descriptor_update_indices.pop();
+
+            iteration++;
+        }
+
+        if (m_sub_descriptor_update_indices.empty()) {
+            m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
+        }
+    } else {
         VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
         write.pNext           = nullptr;
         write.dstBinding      = m_binding;
@@ -384,14 +439,11 @@ void Descriptor::Create(Device *device, std::vector<Info> &out)
         write.pImageInfo      = m_sub_descriptor_buffer.images.data();
 
         writes.push_back(write);
+        
+        m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
     }
-
-    out.emplace_back(binding, writes);
 }
 
-void Descriptor::Destroy(Device *device)
-{
-}
 
 void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const
 {
@@ -438,51 +490,6 @@ void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, 
     default:
         AssertThrowMsg(false, "unhandled descriptor type");
     }
-}
-
-void Descriptor::PerformFrameUpdate(Device *engine, std::array<Info, DescriptorSet::max_sub_descriptor_updates_per_frame> &out)
-{
-    uint32_t iteration = 0;
-
-    while (!m_sub_descriptor_update_indices.empty()) {
-        if (iteration == DescriptorSet::max_sub_descriptor_updates_per_frame) {
-            break;
-        }
-
-        const size_t sub_descriptor_index = m_sub_descriptor_update_indices.front();
-
-        UpdateSubDescriptorBuffer(
-            m_sub_descriptors[sub_descriptor_index],
-            m_sub_descriptor_buffer.buffers[sub_descriptor_index],
-            m_sub_descriptor_buffer.images[sub_descriptor_index]
-        );
-
-
-        const auto descriptor_type = GetDescriptorType(m_mode);
-
-        auto &out_info = out[iteration];
-
-        /*out_info.binding = VkDescriptorSetLayoutBinding{};
-        out_info.binding.descriptorCount    = 1;
-        out_info.binding.descriptorType     = descriptor_type;
-        out_info.binding.pImmutableSamplers = nullptr;
-        out_info.binding.stageFlags         = VK_SHADER_STAGE_ALL;
-        out_info.binding.binding            = m_binding;
-
-        out_info.write = VkWriteDescriptorSet{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        out_info.write.dstBinding      = m_binding;
-        out_info.write.dstArrayElement = uint32_t(sub_descriptor_index);
-        out_info.write.descriptorCount = 1;
-        out_info.write.descriptorType  = descriptor_type;
-        out_info.write.pBufferInfo     = &m_sub_descriptor_buffer.buffers[sub_descriptor_index];
-        out_info.write.pImageInfo      = &m_sub_descriptor_buffer.images[sub_descriptor_index];*/
-
-        m_sub_descriptor_update_indices.pop();
-
-        iteration++;
-    }
-
-    m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
 }
 
 VkDescriptorType Descriptor::GetDescriptorType(Mode mode)
