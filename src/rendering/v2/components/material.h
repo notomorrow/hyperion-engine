@@ -9,14 +9,13 @@
 
 namespace hyperion::v2 {
 
-class TextureSet {
-public:
+struct TextureSet {
     static constexpr size_t max_textures = 32;
 
     enum TextureKey : uint64_t {
         MATERIAL_TEXTURE_NONE = 0,
 
-        MATERIAL_TEXTURE_DIFFUSE_MAP = 1 << 0,
+        MATERIAL_TEXTURE_ALBEDO_MAP = 1 << 0,
         MATERIAL_TEXTURE_NORMAL_MAP = 1 << 1,
         MATERIAL_TEXTURE_AO_MAP = 1 << 2,
         MATERIAL_TEXTURE_PARALLAX_MAP = 1 << 3,
@@ -50,9 +49,8 @@ public:
         MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP = 1 << 25,
         MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP = 1 << 26
     };
-
-
-    EnumOptions<TextureKey, Texture::ID, max_textures> m_textures;
+    
+    EnumOptions<TextureKey, Texture::ID, max_textures> textures;
 };
 
 class Material : public EngineComponentBase<STUB_CLASS(Material)> {
@@ -265,7 +263,8 @@ public:
 
 private:
     ParameterTable m_parameters;
-    State m_state;
+    TextureSet     m_textures;
+    State          m_state;
 };
 
 } // namespace hyperion::v2

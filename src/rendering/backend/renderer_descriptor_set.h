@@ -148,31 +148,12 @@ class DescriptorPool {
 public:
     static const std::unordered_map<VkDescriptorType, size_t> items_per_set;
 
-    struct BufferInfo {
-        VkDescriptorImageInfo *image_info;
-        VkDescriptorBufferInfo *buffer_info;
-
-        BufferInfo()
-            : image_info(nullptr), buffer_info(nullptr) {}
-        BufferInfo(VkDescriptorImageInfo *image_info, VkDescriptorBufferInfo *buffer_info)
-            : image_info(image_info), buffer_info(buffer_info) {}
-        BufferInfo(const BufferInfo &other)
-            : image_info(other.image_info), buffer_info(other.buffer_info) {}
-        inline BufferInfo &operator=(const BufferInfo &other)
-        {
-            image_info = other.image_info;
-            buffer_info = other.buffer_info;
-
-            return *this;
-        }
-    };
-
     DescriptorPool();
     DescriptorPool(const DescriptorPool &other) = delete;
     DescriptorPool &operator=(const DescriptorPool &other) = delete;
     ~DescriptorPool();
 
-    inline uint8_t NumDescriptorSets() const { return m_num_descriptor_sets; }
+    inline size_t NumDescriptorSets() const { return m_num_descriptor_sets; }
 
     inline const std::vector<VkDescriptorSetLayout> &GetDescriptorSetLayouts() const
         { return m_descriptor_set_layouts; }
@@ -262,9 +243,9 @@ public:
      * @param sub_descriptor An object containing buffer or image info about the sub descriptor to be added.
      * @returns index of descriptor
      */
-    inline size_t AddSubDescriptor(SubDescriptor &&sub_descriptor)
+    inline uint32_t AddSubDescriptor(SubDescriptor &&sub_descriptor)
     {
-        const size_t index = m_sub_descriptors.size();
+        const auto index = uint32_t(m_sub_descriptors.size());
 
         m_sub_descriptors.push_back(sub_descriptor);
 
@@ -273,9 +254,8 @@ public:
         return index;
     }
 
-    /*! \brief Remove the sub-descriptor at the given index.
-     */
-    inline void RemoveSubDescriptor(size_t index)
+    /*! \brief Remove the sub-descriptor at the given index. */
+    inline void RemoveSubDescriptor(uint32_t index)
     {
         if (index == m_sub_descriptors.size() - 1) {
             m_sub_descriptors.pop_back();
@@ -285,8 +265,8 @@ public:
         m_sub_descriptors[index] = {};
     }
 
-    /* Mark a subdescriptor as dirty */
-    inline void MarkDirty(size_t sub_descriptor_index)
+    /*! \brief Mark a sub-descriptor as dirty */
+    inline void MarkDirty(uint32_t sub_descriptor_index)
     {
         m_sub_descriptor_update_indices.push(sub_descriptor_index);
 

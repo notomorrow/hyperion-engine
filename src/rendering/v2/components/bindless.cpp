@@ -23,7 +23,7 @@ void BindlessStorage::Destroy(Engine *engine)
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(0);
 
-        for (const size_t sub_descriptor_index : m_texture_sub_descriptors) {
+        for (const auto sub_descriptor_index : m_texture_sub_descriptors) {
             descriptor->RemoveSubDescriptor(sub_descriptor_index);
         }
     }
@@ -36,13 +36,13 @@ void BindlessStorage::ApplyUpdates(Engine *engine, uint32_t frame_index)
     descriptor_set->ApplyUpdates(engine->GetInstance()->GetDevice());
 }
 
-void BindlessStorage::AddResource(Texture *texture)
+void BindlessStorage::AddResource(const Texture *texture)
 {
     AssertThrow(texture != nullptr);
     AssertThrow(texture->GetImageView() != nullptr);
     AssertThrow(texture->GetSampler() != nullptr);
 
-    size_t indices[2] = {};
+    uint32_t indices[2] = {};
     
     for (size_t i = 0; i < m_descriptor_sets.size(); i++) {
         auto *descriptor_set = m_descriptor_sets[i];
@@ -59,11 +59,11 @@ void BindlessStorage::AddResource(Texture *texture)
     m_texture_sub_descriptors.Set(texture->GetId(), std::move(indices[0]));
 }
 
-void BindlessStorage::RemoveResource(Texture *texture)
+void BindlessStorage::RemoveResource(const Texture *texture)
 {
     AssertThrow(texture != nullptr);
 
-    const size_t sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
+    const auto sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
     
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(0);
@@ -74,14 +74,30 @@ void BindlessStorage::RemoveResource(Texture *texture)
     m_texture_sub_descriptors.Remove(texture->GetId());
 }
 
-void BindlessStorage::MarkResourceChanged(Texture *texture)
+void BindlessStorage::MarkResourceChanged(const Texture *texture)
 {
     const auto id_value = texture->GetId().Value() - 1;
-    const size_t sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
+    const auto sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
 
     for (auto *descriptor_set : m_descriptor_sets) {
         descriptor_set->GetDescriptor(0)->MarkDirty(sub_descriptor_index);
     }
+}
+
+bool BindlessStorage::GetResourceIndex(const Texture *texture, uint32_t *out_index) const
+{
+    return GetResourceIndex(texture->GetId(), out_index);
+}
+
+bool BindlessStorage::GetResourceIndex(Texture::ID id, uint32_t *out_index) const
+{
+    if (!m_texture_sub_descriptors.Has(id)) {
+        return false;
+    }
+
+    *out_index = m_texture_sub_descriptors.Get(id);
+
+    return true;
 }
 
 } // namespace hyperion::v2

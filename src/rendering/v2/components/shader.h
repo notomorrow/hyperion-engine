@@ -28,10 +28,34 @@ struct alignas(256) ObjectShaderData {
 };
 
 struct alignas(256) MaterialShaderData {
+    static constexpr size_t max_bound_textures = 32;
+
     Vector4 albedo;
+
     float metalness;
     float roughness;
+    float subsurface;
+    float specular;
+
+    float specular_tint;
+    float anisotropic;
+    float sheen;
+    float sheen_tint;
+
+    float clearcoat;
+    float clearcoat_gloss;
+    float emissiveness;
+    float _padding0;
+
+    uint32_t uv_flip_s;
+    uint32_t uv_flip_t;
+    float uv_scale;
+    float parallax_height;
+    
+    uint32_t texture_index[max_bound_textures];
 };
+
+static_assert(sizeof(MaterialShaderData) == 256);
 
 struct alignas(256) SceneShaderData {
     Matrix4 view;

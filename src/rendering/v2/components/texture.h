@@ -30,11 +30,8 @@ public:
     Texture &operator=(const Texture &other) = delete;
     ~Texture();
 
-    inline ImageView *GetImageView() { return m_image_view.get(); }
-    inline const ImageView *GetImageView() const { return m_image_view.get(); }
-
-    inline Sampler *GetSampler() { return m_sampler.get(); }
-    inline const Sampler *GetSampler() const { return m_sampler.get(); }
+    inline ImageView *GetImageView() const { return m_image_view.get(); }
+    inline Sampler *GetSampler() const { return m_sampler.get(); }
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
