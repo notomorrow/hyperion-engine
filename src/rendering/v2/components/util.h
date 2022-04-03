@@ -170,19 +170,23 @@ public:
             m_values.erase(m_values.begin() + index_value - 1);
         }
 
-        /* If our index is the last in the list, remove any indices below that may be pending removal to shrink the vector. */
-        if (index == m_max_index) {
-            Range<size_t> index_remove_range{MathUtil::MaxSafeValue<size_t>(), m_index_map.size()};
+        m_index_map[index] = 0;
 
-            do {
+        /* If our index is the last in the list, remove any indices below that may be pending removal to shrink the vector. */
+        if (m_max_index == index) {
+            Range<size_t> index_remove_range{index, m_index_map.size()};
+
+            while (m_index_map[m_max_index] == 0) {
                 index_remove_range |= {m_max_index, m_max_index + 1};
+
+                if (m_max_index == 0) {
+                    break;
+                }
                 
                 --m_max_index;
-            } while (m_max_index != 0 && m_index_map[m_max_index] == 0);
+            }
 
             m_index_map.erase(m_index_map.begin() + index_remove_range.GetStart(), m_index_map.end());
-        } else {
-            m_index_map[index] = 0;
         }
     }
 

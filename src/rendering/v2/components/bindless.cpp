@@ -19,7 +19,14 @@ void BindlessStorage::Create(Engine *engine)
 
 void BindlessStorage::Destroy(Engine *engine)
 {
-    /* no-op */
+    /* Remove all texture sub-descriptors */
+    for (auto *descriptor_set : m_descriptor_sets) {
+        auto *descriptor = descriptor_set->GetDescriptor(0);
+
+        for (const size_t sub_descriptor_index : m_texture_sub_descriptors) {
+            descriptor->RemoveSubDescriptor(sub_descriptor_index);
+        }
+    }
 }
 
 void BindlessStorage::ApplyUpdates(Engine *engine, uint32_t frame_index)
@@ -35,45 +42,45 @@ void BindlessStorage::AddResource(Texture *texture)
     AssertThrow(texture->GetImageView() != nullptr);
     AssertThrow(texture->GetSampler() != nullptr);
 
-    const auto id_value = texture->GetId().Value() - 1;
+    size_t indices[2] = {};
     
-    for (auto *descriptor_set : m_descriptor_sets) {
+    for (size_t i = 0; i < m_descriptor_sets.size(); i++) {
+        auto *descriptor_set = m_descriptor_sets[i];
         auto *descriptor = descriptor_set->GetDescriptor(0);
 
-        /* for now */
-        AssertThrow(id_value == descriptor->GetSubDescriptors().size());
-
-        descriptor->AddSubDescriptor({
+        indices[i] = descriptor->AddSubDescriptor({
             .image_view = texture->GetImageView(),
             .sampler    = texture->GetSampler()
         });
     }
-}
 
+    AssertThrow(indices[0] == indices[1]);
+
+    m_texture_sub_descriptors.Set(texture->GetId(), std::move(indices[0]));
+}
 
 void BindlessStorage::RemoveResource(Texture *texture)
 {
     AssertThrow(texture != nullptr);
 
-    const auto id_value = texture->GetId().Value() - 1;
+    const size_t sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
     
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(0);
 
-        /* for now */
-        AssertThrow(id_value < descriptor->GetSubDescriptors().size());
-
-        descriptor->RemoveSubDescriptor(id_value);
+        descriptor->RemoveSubDescriptor(sub_descriptor_index);
     }
+
+    m_texture_sub_descriptors.Remove(texture->GetId());
 }
 
 void BindlessStorage::MarkResourceChanged(Texture *texture)
 {
     const auto id_value = texture->GetId().Value() - 1;
+    const size_t sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
 
     for (auto *descriptor_set : m_descriptor_sets) {
-        /* tmp */
-        descriptor_set->GetDescriptor(0)->MarkDirty(id_value);
+        descriptor_set->GetDescriptor(0)->MarkDirty(sub_descriptor_index);
     }
 }
 

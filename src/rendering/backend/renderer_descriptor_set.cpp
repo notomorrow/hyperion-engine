@@ -320,23 +320,15 @@ Result DescriptorPool::AllocateDescriptorSet(Device *device, VkDescriptorSetLayo
     }
 }
 
-Descriptor::Descriptor(uint32_t binding, uint32_t array_index, Mode mode)
+Descriptor::Descriptor(uint32_t binding, Mode mode)
     : m_binding(binding),
-      m_array_index(array_index),
-      m_mode(mode),
       m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
+      m_mode(mode),
       m_descriptor_set(nullptr)
 {
 }
 
-Descriptor::Descriptor(uint32_t binding, Mode mode)
-    : Descriptor(binding, 0, mode)
-{
-}
-
-Descriptor::~Descriptor()
-{
-}
+Descriptor::~Descriptor() = default;
 
 void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, std::vector<VkWriteDescriptorSet> &writes)
 {
@@ -381,7 +373,7 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
         write.pNext           = nullptr;
         write.dstBinding      = m_binding;
 
-        write.dstArrayElement = m_array_index;
+        write.dstArrayElement = 0;
         write.descriptorCount = uint32_t(m_sub_descriptors.size());
         write.descriptorType  = descriptor_type;
         write.pBufferInfo     = m_sub_descriptor_buffer.buffers.data();
@@ -434,7 +426,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
         VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
         write.pNext           = nullptr;
         write.dstBinding      = m_binding;
-        write.dstArrayElement = m_array_index;
+        write.dstArrayElement = 0;
         write.descriptorCount = uint32_t(m_sub_descriptors.size());
         write.descriptorType  = descriptor_type;
         write.pBufferInfo     = m_sub_descriptor_buffer.buffers.data();
@@ -445,7 +437,6 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
         m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
     }
 }
-
 
 void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const
 {
