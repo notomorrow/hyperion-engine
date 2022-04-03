@@ -2,6 +2,7 @@
 #define HYPERION_V2_UTIL_H
 
 #include <math/math_util.h>
+#include <util/range.h>
 
 #include <vector>
 #include <memory>
@@ -80,6 +81,147 @@ struct ComponentEvents {
     Callbacks on_init,
               on_deinit,
               on_update;
+};
+
+/* Map from ObjectType::ID to another resource */
+template <class ObjectType, class ValueType>
+class ObjectIdMap {
+public:
+    ObjectIdMap() = default;
+    ObjectIdMap(const ObjectIdMap &other) = delete;
+    ObjectIdMap &operator=(const ObjectIdMap &other) = delete;
+    ObjectIdMap(ObjectIdMap &&other) noexcept
+        : m_index_map(std::move(other.m_index_map)),
+          m_values(std::move(other.m_values)),
+          m_max_index(other.m_max_index)
+    {}
+    ~ObjectIdMap() = default;
+
+    ObjectIdMap &operator=(ObjectIdMap &&other) noexcept
+    {
+        m_index_map = std::move(other.m_index_map);
+        m_values = std::move(other.m_values);
+        m_max_index = other.m_max_index;
+
+        return *this;
+    }
+
+    bool Has(typename ObjectType::ID id) const
+    {
+        const size_t index = id.Value() - 1;
+
+        return MathUtil::InRange(index, {0, m_max_index + 1}) && m_index_map[index] != 0;
+    }
+
+    ValueType &Get(typename ObjectType::ID id)
+    {
+        if (!Has(id)) {
+            Set(id, ValueType());
+        }
+
+        return m_values[m_index_map[id.Value() - 1] - 1];
+    }
+
+    const ValueType &Get(typename ObjectType::ID id) const
+    {
+        if (!Has(id)) {
+            Set(id, ValueType());
+        }
+
+        return m_values[m_index_map[id.Value() - 1] - 1];
+    }
+
+    void Set(typename ObjectType::ID id, ValueType &&value)
+    {
+        EnsureIndexMapIncludes(id);
+
+        const size_t id_index = id.Value() - 1;
+        size_t &index = m_index_map[id_index];
+
+        if (index == 0) {
+            m_values.push_back(std::move(value));
+
+            index = m_values.size();
+        } else {
+            m_values[index - 1] = std::move(value);
+        }
+
+        m_max_index = MathUtil::Max(m_max_index, id_index);
+    }
+
+    void Remove(typename ObjectType::ID id)
+    {
+        if (!Has(id)) {
+            return;
+        }
+
+        const size_t index = id.Value() - 1;
+        const size_t index_value = m_index_map[index];
+
+        if (index_value != 0) {
+            /* For all indices proceeding the index of the removed item, we'll have to set their index to (current - 1) */
+            for (size_t i = index; i <= m_max_index; ++i) {
+                if (m_index_map[i] != 0) {
+                    --m_index_map[i];
+                }
+            }
+
+            /* Remove our value */
+            m_values.erase(m_values.begin() + index_value - 1);
+        }
+
+        /* If our index is the last in the list, remove any indices below that may be pending removal to shrink the vector. */
+        if (index == m_max_index) {
+            Range<size_t> index_remove_range{MathUtil::MaxSafeValue<size_t>(), m_index_map.size()};
+
+            do {
+                index_remove_range |= {m_max_index, m_max_index + 1};
+                
+                --m_max_index;
+            } while (m_max_index != 0 && m_index_map[m_max_index] == 0);
+
+            m_index_map.erase(m_index_map.begin() + index_remove_range.GetStart(), m_index_map.end());
+        } else {
+            m_index_map[index] = 0;
+        }
+    }
+
+    void Clear()
+    {
+        m_max_index = 0;
+        m_index_map.clear();
+        m_values.clear();
+    }
+
+    ValueType *Data() const { return m_values.data(); }
+    size_t Size() const { return m_values.size(); }
+
+    auto begin() const { return m_values.begin(); }
+    auto end() const { return m_values.end(); }
+
+private:
+    bool HasId(typename ObjectType::ID id)
+    {
+        const auto id_value = id.Value() - 1;
+
+        return MathUtil::InRange(id_value, {0, m_index_map.size()});
+    }
+
+    void EnsureIndexMapIncludes(typename ObjectType::ID id)
+    {
+        const auto id_value = id.Value() - 1;
+
+        if (!MathUtil::InRange(id_value, {0, m_index_map.size()})) {
+            /* Resize to next power of 2 of the INDEX we will need. */
+            const auto next_power_of_2 = MathUtil::NextPowerOf2(id_value + 1);
+
+            m_index_map.resize(next_power_of_2);
+        }
+    }
+
+    std::vector<size_t> m_index_map;
+    std::vector<ValueType> m_values;
+    size_t m_max_index = 0;
 };
 
 template <class T>
