@@ -1,6 +1,8 @@
 #ifndef HYPERION_RANGE_H
 #define HYPERION_RANGE_H
 
+#include <math/math_util.h>
+
 namespace hyperion {
 
 template <class T>
@@ -21,6 +23,31 @@ public:
     inline const T &GetEnd()   const     { return m_end; }
     inline void SetEnd(const T &end)     { m_end = end; }
     inline T GetDistance() const         { return m_end - m_start; }
+
+    Range operator|(const Range &other) const
+    {
+        return {MathUtil::Min(m_start, other.m_start), MathUtil::Max(m_end, other.m_end)};
+    }
+
+    Range &operator|=(const Range &other)
+    {
+        m_start = MathUtil::Min(m_start, other.m_start);
+        m_end   = MathUtil::Max(m_end, other.m_end);
+
+        return *this;
+    }
+
+    bool operator<(const Range &other) const { return GetDistance() < other.GetDistance(); }
+    bool operator>(const Range &other) const { return GetDistance() > other.GetDistance(); }
+    bool operator==(const Range &other) const
+    {
+        if (this == &other) {
+            return true;
+        }
+
+        return m_start == other.m_start
+            && m_end == other.m_end;
+    }
 
     iterator begin() const { return m_start; }
     iterator end() const { return m_end; }

@@ -563,6 +563,62 @@ int main()
 #endif
 
     bool updated_descriptor = false;
+    
+    auto profiler_results = Profile::RunInterleved({
+        Profile([]() {
+            v2::ObjectIdMap<v2::Texture, std::string> my_map;
+            my_map.Set(v2::Texture::ID{ v2::Texture::ID::ValueType(1) }, "hello world");
+            my_map.Set(v2::Texture::ID{ v2::Texture::ID::ValueType(2) }, "item 2");
+            my_map.Set(v2::Texture::ID{ v2::Texture::ID::ValueType(3) }, "item 3");
+            my_map.Set(v2::Texture::ID{ v2::Texture::ID::ValueType(2) }, "reset item");
+            my_map.Remove(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
+            my_map.Remove(v2::Texture::ID{ v2::Texture::ID::ValueType(3) });
+
+            std::cout << "my_map[1] = " << my_map.Get(v2::Texture::ID{ v2::Texture::ID::ValueType(1) }) << "\n";
+            std::cout << "my_map[2] = " << my_map.Get(v2::Texture::ID{ v2::Texture::ID::ValueType(2) }) << "\n";
+            std::cout << "my_map[3] = " << my_map.Get(v2::Texture::ID{ v2::Texture::ID::ValueType(3) }) << "\n";
+            std::cout << "my_map[1] = " << my_map.Get(v2::Texture::ID{ v2::Texture::ID::ValueType(1) }) << "\n";
+            std::cout << "my_map[2] = " << my_map.Get(v2::Texture::ID{ v2::Texture::ID::ValueType(2) }) << "\n";
+            std::cout << "my_map[3] = " << my_map.Get(v2::Texture::ID{ v2::Texture::ID::ValueType(3) }) << "\n";
+        }),
+        Profile([]() {
+            std::map<v2::Texture::ID, std::string> my_map;
+            my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(1) }] = "hello world";
+            my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(2) }] = "item 2";
+            my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(3) }] = "item 3";
+            my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(2) }] = "reset item";
+            my_map.erase(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
+            my_map.erase(v2::Texture::ID{ v2::Texture::ID::ValueType(3) });
+
+            std::cout << "my_map[1] = " << my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(1) }] << "\n";
+            std::cout << "my_map[2] = " << my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(2) }] << "\n";
+            std::cout << "my_map[3] = " << my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(3) }] << "\n";
+            std::cout << "my_map[1] = " << my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(1) }] << "\n";
+            std::cout << "my_map[2] = " << my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(2) }] << "\n";
+            std::cout << "my_map[3] = " << my_map[v2::Texture::ID{ v2::Texture::ID::ValueType(3) }] << "\n";
+        }),
+        Profile([]() {
+            std::unordered_map<v2::Texture::ID::ValueType, std::string> my_map;
+            my_map[v2::Texture::ID::ValueType(1)] = "hello world";
+            my_map[v2::Texture::ID::ValueType(2)] = "item 2";
+            my_map[v2::Texture::ID::ValueType(3)] = "item 3";
+            my_map[v2::Texture::ID::ValueType(2)] = "reset item";
+            my_map.erase(v2::Texture::ID::ValueType(2));
+            my_map.erase(v2::Texture::ID::ValueType(3));
+
+            std::cout << "my_map[1] = " << my_map[v2::Texture::ID::ValueType(1)] << "\n";
+            std::cout << "my_map[2] = " << my_map[v2::Texture::ID::ValueType(2)] << "\n";
+            std::cout << "my_map[3] = " << my_map[v2::Texture::ID::ValueType(3)] << "\n";
+            std::cout << "my_map[1] = " << my_map[v2::Texture::ID::ValueType(1)] << "\n";
+            std::cout << "my_map[2] = " << my_map[v2::Texture::ID::ValueType(2)] << "\n";
+            std::cout << "my_map[3] = " << my_map[v2::Texture::ID::ValueType(3)] << "\n";
+        })
+    }, 1);
+
+    std::cout << "Profiler results:\n"
+        "\tMy map: " << profiler_results[0] << "\n"
+        "\tC++ map: " << profiler_results[1] << "\n"
+        "\tC++ unordered_map: " << profiler_results[2] << "\n";
 
     while (running) {
         tick_last = tick_now;
