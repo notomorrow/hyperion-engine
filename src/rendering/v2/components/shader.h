@@ -2,6 +2,7 @@
 #define HYPERION_V2_SHADER_H
 
 #include "base.h"
+#include "bindless.h"
 
 #include <rendering/backend/renderer_shader.h>
 #include <rendering/backend/renderer_buffer.h>
@@ -39,17 +40,54 @@ struct alignas(256) SceneShaderData {
     Vector4 light_direction;
 };
 
+template <class StructType>
+class BufferRangeUpdater {
+protected:
+    template <class BufferContainer>
+    void PerformUpdate(Device *device, BufferContainer &buffer_container, size_t buffer_index, StructType *ptr)
+    {
+        auto &dirty = m_dirty[buffer_index];
+
+        if (!dirty.GetEnd()) {
+            return;
+        }
+
+        AssertThrow(dirty.GetEnd() > dirty.GetStart());
+
+        buffer_container[buffer_index]->Copy(
+            device,
+            dirty.GetStart()    * sizeof(StructType),
+            dirty.GetDistance() * sizeof(StructType),
+            ptr + dirty.GetStart()
+        );
+
+        dirty = { 0, 0 };
+    }
+
+    void MarkDirty(size_t index)
+    {
+        for (size_t i = 0; i < m_dirty.size(); i++) {
+            m_dirty[i] = {
+                MathUtil::Min(m_dirty[i].GetStart(), index),
+                MathUtil::Max(m_dirty[i].GetEnd(), index + 1)
+            };
+        }
+    }
+
+    std::vector<Range<size_t>> m_dirty;
+};
+
 template <class Buffer, class StructType, size_t Size>
-class ShaderData {
+class ShaderData : public BufferRangeUpdater<StructType> {
 public:
     ShaderData(size_t num_buffers)
     {
         m_buffers.resize(num_buffers);
-        m_dirty.resize(num_buffers);
+        this->m_dirty.resize(num_buffers);
 
         for (size_t i = 0; i < num_buffers; i++) {
             m_buffers[i] = std::make_unique<Buffer>();
-            m_dirty[i] = {0, Size};
+            this->m_dirty[i] = {0, Size};
         }
     }
 
@@ -58,6 +96,9 @@ public:
     ~ShaderData() = default;
 
     inline const auto &GetBuffers() const { return m_buffers; }
+
+    inline StructType &Get(size_t index) { return m_objects[index]; }
+    inline const StructType &Get(size_t index) const { return m_objects[index]; }
     
     void Create(Device *device)
     {
@@ -75,26 +116,8 @@ public:
 
     void UpdateBuffer(Device *device, size_t buffer_index)
     {
-        auto &dirty = m_dirty[buffer_index];
-
-        if (!dirty.GetEnd()) {
-            return;
-        }
-
-        AssertThrow(dirty.GetEnd() > dirty.GetStart());
-
-        m_buffers[buffer_index]->Copy(
-            device,
-            dirty.GetStart() * sizeof(StructType),
-            dirty.GetDistance() * sizeof(StructType),
-            m_objects.Data() + dirty.GetStart()
-        );
-
-        dirty = {0, 0};
+        this->PerformUpdate(device, m_buffers, buffer_index, m_objects.Data());
     }
-
-    inline StructType &Get(size_t index) { return m_objects[index]; }
-    inline const StructType &Get(size_t index) const { return m_objects[index]; }
 
     void Set(size_t index, StructType &&value)
     {
@@ -102,17 +125,11 @@ public:
 
         m_objects[index] = std::move(value);
 
-        for (size_t i = 0; i < m_dirty.size(); i++) {
-            m_dirty[i] = {
-                MathUtil::Min(m_dirty[i].GetStart(), index),
-                MathUtil::Max(m_dirty[i].GetEnd(), index + 1)
-            };
-        }
+        this->MarkDirty(index);
     }
     
 private:
     std::vector<std::unique_ptr<Buffer>> m_buffers;
-    std::vector<Range<size_t>> m_dirty;
     HeapArray<StructType, Size> m_objects;
 };
 
@@ -134,9 +151,10 @@ struct ShaderGlobals {
     {
     }
 
-    ShaderData<UniformBuffer, SceneShaderData, max_scenes>       scenes;
-    ShaderData<StorageBuffer, ObjectShaderData, max_objects>     objects;
-    ShaderData<StorageBuffer, MaterialShaderData, max_materials> materials;
+    ShaderData<UniformBuffer, SceneShaderData, max_scenes>        scenes;
+    ShaderData<StorageBuffer, ObjectShaderData, max_objects>      objects;
+    ShaderData<StorageBuffer, MaterialShaderData, max_materials>  materials;
+    BindlessStorage                                               textures;
 };
 
 struct SubShader {

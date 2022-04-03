@@ -344,6 +344,8 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
 
     const auto descriptor_type = GetDescriptorType(m_mode);
 
+    m_sub_descriptor_update_indices = {};
+
     m_sub_descriptor_buffer.buffers.resize(m_sub_descriptors.size());
     m_sub_descriptor_buffer.images.resize(m_sub_descriptors.size());
     

@@ -173,35 +173,25 @@ int main()
     delete[] bytes;
 #elif HYPERION_VK_TEST_MIPMAP
     // test image
-    auto texture = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
-    Image *image = new TextureImage2D(
-        texture->GetWidth(),
-        texture->GetHeight(),
-        Image::InternalFormat(texture->GetInternalFormat()),
+    auto tex = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
+    auto *texture = new v2::Texture2D(
+        tex->GetWidth(),
+        tex->GetHeight(),
+        Image::InternalFormat(tex->GetInternalFormat()),
         Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        texture->GetBytes()
-    );
-
-    ImageView test_image_view;
-    Sampler test_sampler(
-        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        Image::WrapMode::TEXTURE_WRAP_REPEAT
+        Image::WrapMode::TEXTURE_WRAP_REPEAT,
+        tex->GetBytes()
     );
 
     // test image
-    auto texture2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
-    Image *image2 = new TextureImage2D(
-        texture2->GetWidth(),
-        texture2->GetHeight(),
-        Image::InternalFormat(texture2->GetInternalFormat()),
+    auto tex2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
+    auto *texture2 = new v2::Texture2D(
+        tex2->GetWidth(),
+        tex2->GetHeight(),
+        Image::InternalFormat(tex2->GetInternalFormat()),
         Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        texture2->GetBytes()
-    );
-
-    ImageView test_image_view2;
-    Sampler test_sampler2(
-        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        Image::WrapMode::TEXTURE_WRAP_REPEAT
+        Image::WrapMode::TEXTURE_WRAP_REPEAT,
+        tex2->GetBytes()
     );
 
 #endif
@@ -243,7 +233,7 @@ int main()
 #if HYPERION_VK_TEST_MIPMAP
         descriptor_set_globals
             ->AddDescriptor<ImageSamplerDescriptor>(2)
-            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler });
+            ->AddSubDescriptor({ .image_view = texture->GetImageView(), .sampler = texture->GetSampler() });
 #else
         descriptor_set_globals
             ->AddDescriptor<ImageSamplerDescriptor>(2)
@@ -292,67 +282,31 @@ int main()
                 .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[3].image_view.get(),
                 .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[3].sampler.get()
             });
-
-        
-        engine.GetInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
-            ->AddDescriptor<ImageSamplerDescriptor>(0)
-            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler })
-            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
-
         
         /*engine.GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
-            ->AddDescriptor<ImageSamplerDescriptor>(0, 0)
-            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler });
+            ->GetDescriptor(0)
+            ->AddSubDescriptor({ .image_view = texture->GetImageView(), .sampler = texture->GetSampler() })
+            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
 
         engine.GetInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
-            ->AddDescriptor<ImageSamplerDescriptor>(0, 1)
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1)
+            ->GetDescriptor(0)
+            ->AddSubDescriptor({ .image_view = texture->GetImageView(), .sampler = texture->GetSampler() })
             ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });*/
-        
-
-        /* translucent - Albedo texture */
-        /*descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(4)
-            ->AddSubDescriptor({
-                .image_view = engine.GetFramebuffer(translucent_fbo_id)->Get().GetAttachmentImageInfos()[0].image_view.get(),
-                .sampler = engine.GetFramebuffer(translucent_fbo_id)->Get().GetAttachmentImageInfos()[0].sampler.get()
-            });*/
-
-        /* translucent - Depth texture */
-        /*descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(5)
-            ->AddSubDescriptor({
-                .image_view = engine.GetFramebuffer(translucent_fbo_id)->Get().GetAttachmentImageInfos()[3].image_view.get(),
-                .sampler    = engine.GetFramebuffer(translucent_fbo_id)->Get().GetAttachmentImageInfos()[3].sampler.get()
-            }); */
     }
 
     Device *device = engine.GetInstance()->GetDevice();
 
     /* Initialize descriptor pool, has to be before any pipelines are created */
     {
-        HYPERION_ASSERT_RESULT(image->Create(
-            device,
-            engine.GetInstance(),
-            Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
-            Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
-        ));
-
-        HYPERION_ASSERT_RESULT(test_image_view.Create(device, image));
-        HYPERION_ASSERT_RESULT(test_sampler.Create(device, &test_image_view));
+        texture->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
+        texture->Create(&engine);
+        engine.m_shader_globals->textures.AddResource(texture);
 
 #if HYPERION_VK_TEST_MIPMAP
-        HYPERION_ASSERT_RESULT(image2->Create(
-            device,
-            engine.GetInstance(),
-            Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
-            Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
-        ));
-
-        HYPERION_ASSERT_RESULT(test_image_view2.Create(device, image2));
-        HYPERION_ASSERT_RESULT(test_sampler2.Create(device, &test_image_view2));
+        texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
+        texture2->Create(&engine);
 #endif
     }
 
@@ -514,7 +468,6 @@ int main()
         pipeline->SetCullMode(GraphicsPipeline::CullMode::FRONT);
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
-        //pipeline->AddFramebuffer(opaque_fbo_id);
 
         pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
             cube_mesh,
@@ -630,12 +583,22 @@ int main()
         timer += delta_time;
 
         if (timer > 2.0 && !updated_descriptor) {
-            auto *desc = engine.GetInstance()->GetDescriptorPool()
+            /*auto *desc = engine.GetInstance()->GetDescriptorPool()
                 .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
                 ->GetDescriptor(0);
 
-            desc->GetSubDescriptors()[0] = Descriptor::SubDescriptor{ .image_view = &test_image_view2, .sampler = &test_sampler2 };
-            desc->MarkDirty(0);
+            desc->GetSubDescriptors()[0] = Descriptor::SubDescriptor{
+                .image_view = &test_image_view2,
+                .sampler = &test_sampler2
+            };
+            desc->MarkDirty(0);*/
+
+            //engine.m_shader_globals->textures.MarkResourceChanged(texture);
+
+            engine.m_shader_globals->textures.RemoveResource(texture);
+            texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
+            engine.m_shader_globals->textures.AddResource(texture2);
+
 
             updated_descriptor = true;
         }
@@ -740,15 +703,13 @@ int main()
 #if HYPERION_VK_TEST_IMAGE_STORE
     image_storage_view.Destroy(device);
 #endif
-
-    test_image_view.Destroy(device);
-    test_sampler.Destroy(device);
-    image->Destroy(device);
+    
+    texture->Destroy(&engine);
+    delete texture;
 
 #if HYPERION_VK_TEST_MIPMAP
-    test_image_view2.Destroy(device);
-    test_sampler2.Destroy(device);
-    image2->Destroy(device);
+    texture2->Destroy(&engine);
+    delete texture2;
 #endif
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {

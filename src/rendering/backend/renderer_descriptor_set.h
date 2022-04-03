@@ -36,19 +36,22 @@ class DescriptorSet {
     friend class Descriptor;
 public:
     enum Index {
-        DESCRIPTOR_SET_INDEX_GLOBALS        = 0, /* per frame */
-        DESCRIPTOR_SET_INDEX_PASS           = 1, /* per render pass */
+        DESCRIPTOR_SET_INDEX_GLOBALS,       /* per frame */
+        DESCRIPTOR_SET_INDEX_PASS,          /* per render pass */
 
-        DESCRIPTOR_SET_INDEX_SCENE          = 2, /* per scene */
-        DESCRIPTOR_SET_INDEX_OBJECT         = 3, /* per object */
+        DESCRIPTOR_SET_INDEX_SCENE,         /* per scene */
+        DESCRIPTOR_SET_INDEX_OBJECT,        /* per object */
 
-        DESCRIPTOR_SET_INDEX_SCENE_FRAME_1  = 4, /* per scene - frame #2 (frames in flight) */
-        DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1 = 5, /* per object - frame #2 (frames in flight) */
+        DESCRIPTOR_SET_INDEX_SCENE_FRAME_1, /* per scene - frame #2 (frames in flight) */
+        DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1   = 5, /* per object - frame #2 (frames in flight) */
 
-        DESCRIPTOR_SET_INDEX_BINDLESS       = 6
+        DESCRIPTOR_SET_INDEX_BINDLESS,
+        DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1,
+
+        DESCRIPTOR_SET_INDEX_MAX
     };
 
-    static constexpr uint32_t max_descriptor_sets = 7;
+    static constexpr uint32_t max_descriptor_sets = DESCRIPTOR_SET_INDEX_MAX;
     static constexpr uint32_t max_bindless_resources = 16536;
     static constexpr uint32_t max_sub_descriptor_updates_per_frame = 16;
 
@@ -255,7 +258,22 @@ public:
         { return m_sub_descriptors[index]; }
 
     inline Descriptor *AddSubDescriptor(SubDescriptor &&sub_descriptor)
-        {  m_sub_descriptors.push_back(sub_descriptor); return this; }
+    {
+        m_sub_descriptors.push_back(sub_descriptor);
+        MarkDirty(m_sub_descriptors.size() - 1);
+
+        return this;
+    }
+
+    inline void RemoveSubDescriptor(size_t index)
+    {
+        if (index == m_sub_descriptors.size() - 1) {
+            m_sub_descriptors.pop_back();
+            return;
+        }
+
+        m_sub_descriptors[index] = {};
+    }
 
     /* Mark a subdescriptor as dirty */
     inline void MarkDirty(size_t sub_descriptor_index)
@@ -263,7 +281,10 @@ public:
         m_sub_descriptor_update_indices.push(sub_descriptor_index);
 
         m_state = DescriptorSetState::DESCRIPTOR_DIRTY;
-        m_descriptor_set->m_state = DescriptorSetState::DESCRIPTOR_DIRTY;
+
+        if (m_descriptor_set != nullptr) {
+            m_descriptor_set->m_state = DescriptorSetState::DESCRIPTOR_DIRTY;
+        }
     }
 
     void Create(Device *device, VkDescriptorSetLayoutBinding &binding, std::vector<VkWriteDescriptorSet> &writes);
