@@ -17,8 +17,28 @@ layout(binding = 2) uniform sampler2D tex;
 
 struct Material {
     vec4 albedo;
+    
     float metalness;
     float roughness;
+    float subsurface;
+    float specular;
+    
+    float specular_tint;
+    float anisotropic;
+    float sheen;
+    float sheen_tint;
+    
+    float clearcoat;
+    float clearcoat_gloss;
+    float emissiveness;
+    float _padding0;
+    
+    uint uv_flip_s;
+    uint uv_flip_t;
+    float uv_scale;
+    float parallax_height;
+    
+    uint texture_index[32];
 };
 
 layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
@@ -35,7 +55,7 @@ void main() {
     
     vec3 reflection_vector = reflect(view_vector, normal);
     
-    gbuffer_albedo = texture(textures[0], v_texcoord0) * material.albedo;
+    gbuffer_albedo = texture(textures[material.texture_index[0]], v_texcoord0) * material.albedo;
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }

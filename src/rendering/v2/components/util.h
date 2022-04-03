@@ -113,23 +113,20 @@ public:
         return MathUtil::InRange(index, {0, m_max_index + 1}) && m_index_map[index] != 0;
     }
 
-    ValueType &Get(typename ObjectType::ID id)
+    ValueType &GetOrInsert(typename ObjectType::ID id, ValueType &&value = ValueType())
     {
         if (!Has(id)) {
-            Set(id, ValueType());
+            Set(id, std::move(value));
         }
 
         return m_values[m_index_map[id.Value() - 1] - 1];
     }
+
+    ValueType &Get(typename ObjectType::ID id)
+        { return m_values[m_index_map[id.Value() - 1] - 1]; }
 
     const ValueType &Get(typename ObjectType::ID id) const
-    {
-        if (!Has(id)) {
-            Set(id, ValueType());
-        }
-
-        return m_values[m_index_map[id.Value() - 1] - 1];
-    }
+        { return m_values[m_index_map[id.Value() - 1] - 1]; }
 
     void Set(typename ObjectType::ID id, ValueType &&value)
     {

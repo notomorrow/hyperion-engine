@@ -297,8 +297,7 @@ int main()
     }
 
     Device *device = engine.GetInstance()->GetDevice();
-
-    /* Initialize descriptor pool, has to be before any pipelines are created */
+    
     {
         texture->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
         texture->Create(&engine);
@@ -307,6 +306,7 @@ int main()
 #if HYPERION_VK_TEST_MIPMAP
         texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
         texture2->Create(&engine);
+        engine.m_shader_globals->textures.AddResource(texture2);
 #endif
     }
 
@@ -409,10 +409,12 @@ int main()
 
     auto mat1 = std::make_unique<v2::Material>();
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
+    mat1->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     v2::Material::ID mat1_id = engine.AddMaterial(std::move(mat1));
 
     auto mat2 = std::make_unique<v2::Material>();
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
+    mat2->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     v2::Material::ID mat2_id = engine.AddMaterial(std::move(mat2));
 
     auto skybox_material = std::make_unique<v2::Material>();
@@ -583,21 +585,9 @@ int main()
         timer += delta_time;
 
         if (timer > 2.0 && !updated_descriptor) {
-            /*auto *desc = engine.GetInstance()->GetDescriptorPool()
-                .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
-                ->GetDescriptor(0);
-
-            desc->GetSubDescriptors()[0] = Descriptor::SubDescriptor{
-                .image_view = &test_image_view2,
-                .sampler = &test_sampler2
-            };
-            desc->MarkDirty(0);*/
-
-            //engine.m_shader_globals->textures.MarkResourceChanged(texture);
-
-            engine.m_shader_globals->textures.RemoveResource(texture);
-            texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
-            engine.m_shader_globals->textures.AddResource(texture2);
+            //engine.m_shader_globals->textures.RemoveResource(texture);
+            //texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
+            //engine.m_shader_globals->textures.AddResource(texture2);
 
 
             updated_descriptor = true;

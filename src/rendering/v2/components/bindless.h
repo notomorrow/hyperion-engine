@@ -33,14 +33,21 @@ public:
     void ApplyUpdates(Engine *engine, uint32_t frame_index);
 
     /*! \brief Add a texture to the bindless descriptor set. */
-    void AddResource(Texture *texture);
+    void AddResource(const Texture *texture);
     /*! \brief Remove the given texture from the bindless descriptor set. */
-    void RemoveResource(Texture *texture);
+    void RemoveResource(const Texture *texture);
     /*! \brief Mark a resource as having changed, to be queued for update. */
-    void MarkResourceChanged(Texture *texture);
+    void MarkResourceChanged(const Texture *texture);
+
+    /*! \brief Get the index of the sub-descriptor for the given texture.
+     * @returns whether the texture was found or not */
+    bool GetResourceIndex(const Texture *texture, uint32_t *out_index) const;
+    /*! \brief Get the index of the sub-descriptor for the texture with the given ID.
+     * @returns whether the texture was found or not */
+    bool GetResourceIndex(Texture::ID id, uint32_t *out_index) const;
 
 private:
-    ObjectIdMap<Texture, size_t> m_texture_sub_descriptors;
+    ObjectIdMap<Texture, uint32_t> m_texture_sub_descriptors;
     std::array<DescriptorSet *, Swapchain::max_frames_in_flight> m_descriptor_sets;
 };
 
