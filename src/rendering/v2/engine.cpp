@@ -305,6 +305,9 @@ void Engine::UpdateDescriptorData(uint32_t frame_index)
     m_shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
+        ->ApplyUpdates(m_instance->GetDevice());
 }
 
 void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
