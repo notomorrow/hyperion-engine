@@ -231,7 +231,6 @@ public:
         Sampler *sampler = nullptr;
     };
 
-    Descriptor(uint32_t binding, uint32_t array_index, Mode mode);
     Descriptor(uint32_t binding, Mode mode);
     Descriptor(const Descriptor &other) = delete;
     Descriptor &operator=(const Descriptor &other) = delete;
@@ -257,14 +256,25 @@ public:
     inline const SubDescriptor &GetSubDescriptor(size_t index) const
         { return m_sub_descriptors[index]; }
 
-    inline Descriptor *AddSubDescriptor(SubDescriptor &&sub_descriptor)
+    /*! \brief Add a sub-descriptor to this descriptor.
+     *  Records that a sub-descriptor at the index has been changed,
+     *  so you can call this after the descriptor has been initialized.
+     * @param sub_descriptor An object containing buffer or image info about the sub descriptor to be added.
+     * @returns index of descriptor
+     */
+    inline size_t AddSubDescriptor(SubDescriptor &&sub_descriptor)
     {
-        m_sub_descriptors.push_back(sub_descriptor);
-        MarkDirty(m_sub_descriptors.size() - 1);
+        const size_t index = m_sub_descriptors.size();
 
-        return this;
+        m_sub_descriptors.push_back(sub_descriptor);
+
+        MarkDirty(index);
+
+        return index;
     }
 
+    /*! \brief Remove the sub-descriptor at the given index.
+     */
     inline void RemoveSubDescriptor(size_t index)
     {
         if (index == m_sub_descriptors.size() - 1) {
@@ -307,7 +317,6 @@ protected:
     DescriptorSetState m_state;
 
     uint32_t m_binding;
-    uint32_t m_array_index;
     Mode m_mode;
 
 private:
@@ -323,15 +332,6 @@ private:
             uint32_t binding \
         ) : Descriptor( \
             binding, \
-            mode) \
-        {} \
-        \
-        class_name( \
-            uint32_t binding, \
-            uint32_t array_index \
-        ) : Descriptor( \
-            binding, \
-            array_index, \
             mode) \
         {} \
     }
