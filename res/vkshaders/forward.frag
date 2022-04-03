@@ -13,7 +13,7 @@ layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
 //layout(binding = 2) uniform samplerCube tex;
-layout(binding = 2) uniform sampler2D tex[2];
+layout(binding = 2) uniform sampler2D tex;
 
 struct Material {
     vec4 albedo;
@@ -35,7 +35,7 @@ void main() {
     
     vec3 reflection_vector = reflect(view_vector, normal);
     
-    gbuffer_albedo = texture(textures[1], v_texcoord0) * material.albedo;
+    gbuffer_albedo = texture(textures[0], v_texcoord0) * material.albedo;
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }

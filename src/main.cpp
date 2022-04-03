@@ -243,8 +243,7 @@ int main()
 #if HYPERION_VK_TEST_MIPMAP
         descriptor_set_globals
             ->AddDescriptor<ImageSamplerDescriptor>(2)
-            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler })
-            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
+            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler });
 #else
         descriptor_set_globals
             ->AddDescriptor<ImageSamplerDescriptor>(2)

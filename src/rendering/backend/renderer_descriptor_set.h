@@ -225,7 +225,7 @@ public:
 
     struct Info {
         VkDescriptorSetLayoutBinding binding;
-        VkWriteDescriptorSet write;
+        std::vector<VkWriteDescriptorSet> writes;
     };
 
     Descriptor(uint32_t binding, uint32_t array_index, Mode mode);
@@ -276,7 +276,7 @@ protected:
     Mode m_mode;
 
 private:
-    non_owning_ptr<DescriptorSet> m_descriptor_set;
+    DescriptorSet *m_descriptor_set;
 };
 
 /* Convenience descriptor classes */
