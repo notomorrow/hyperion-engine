@@ -42,7 +42,7 @@ void RenderList::Bucket::CreatePipelines(Engine *engine)
 {
     for (auto &pipeline : pipelines.objects) {
         for (auto &framebuffer_id : framebuffer_ids) {
-            //pipeline->AddFramebuffer(framebuffer_id);
+            pipeline->AddFramebuffer(framebuffer_id);
         }
     }
 
@@ -179,9 +179,7 @@ void RenderList::Bucket::EndRenderPass(Engine *engine, CommandBuffer *command_bu
         AssertThrowMsg(pipelines.objects[0]->Get().GetConstructionInfo().render_pass == &render_pass, "Render pass for pipeline does not match render bucket renderpass");
     }
 
-    render_pass.End(
-        command_buffer
-    );
+    render_pass.End(command_buffer);
 }
 
 

@@ -11,6 +11,7 @@
 #include <array>
 #include <memory>
 #include <unordered_map>
+#include <queue>
 
 namespace hyperion {
 namespace renderer {
@@ -48,6 +49,7 @@ public:
 
     static constexpr uint32_t max_descriptor_sets = 7;
     static constexpr uint32_t max_bindless_resources = 16536;
+    static constexpr uint32_t max_sub_descriptor_updates_per_frame = 16;
 
     DescriptorSet(bool bindless);
     DescriptorSet(const DescriptorSet &other) = delete;
@@ -73,7 +75,6 @@ public:
 
     Result Create(Device *device, DescriptorPool *pool);
     Result Destroy(Device *device);
-    Result Update(Device *device);
 
     VkDescriptorSet m_set;
 
@@ -203,6 +204,7 @@ private:
 class Descriptor {
     friend class DescriptorSet;
 public:
+
     enum class Mode {
         UNSET,
         UNIFORM_BUFFER,
@@ -226,7 +228,8 @@ public:
         VkWriteDescriptorSet write;
     };
 
-    Descriptor(uint32_t binding, Mode mode, VkShaderStageFlags stage_flags);
+    Descriptor(uint32_t binding, uint32_t array_index, Mode mode);
+    Descriptor(uint32_t binding, Mode mode);
     Descriptor(const Descriptor &other) = delete;
     Descriptor &operator=(const Descriptor &other) = delete;
     ~Descriptor();
@@ -244,7 +247,11 @@ public:
     inline Descriptor *AddSubDescriptor(SubDescriptor &&sub_descriptor)
         {  m_sub_descriptors.push_back(sub_descriptor); return this; }
 
-    void Create(Device *device, Info *out_info);
+    /* Mark a subdescriptor as dirty */
+    inline void UpdateSubDescriptor(size_t index)
+        { m_sub_descriptor_update_indices.push(index); }
+
+    void Create(Device *device, std::vector<Descriptor::Info> &out);
     void Destroy(Device *device);
 
 protected:
@@ -255,13 +262,18 @@ protected:
 
     static VkDescriptorType GetDescriptorType(Mode mode);
 
+    void UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const;
+    void PerformFrameUpdate(Device *engine, std::array<Info, DescriptorSet::max_sub_descriptor_updates_per_frame> &out);
+
     std::vector<SubDescriptor> m_sub_descriptors;
+    std::queue<size_t> m_sub_descriptor_update_indices;
+
     BufferInfo m_sub_descriptor_buffer;
     DescriptorSetState m_state;
 
     uint32_t m_binding;
+    uint32_t m_array_index;
     Mode m_mode;
-    VkShaderStageFlags m_stage_flags;
 
 private:
     non_owning_ptr<DescriptorSet> m_descriptor_set;
@@ -269,77 +281,34 @@ private:
 
 /* Convenience descriptor classes */
 
-class UniformBufferDescriptor : public Descriptor {
-public:
-    UniformBufferDescriptor(
-        uint32_t binding,
-        VkShaderStageFlags stage_flags
-    ) : Descriptor(
-        binding,
-        Mode::UNIFORM_BUFFER,
-        stage_flags)
-    {}
-};
+#define HYP_DEFINE_DESCRIPTOR(class_name, mode) \
+    class class_name : public Descriptor { \
+    public: \
+        class_name( \
+            uint32_t binding \
+        ) : Descriptor( \
+            binding, \
+            mode) \
+        {} \
+        \
+        class_name( \
+            uint32_t binding, \
+            uint32_t array_index \
+        ) : Descriptor( \
+            binding, \
+            array_index, \
+            mode) \
+        {} \
+    }
 
-class DynamicUniformBufferDescriptor : public Descriptor {
-public:
-    DynamicUniformBufferDescriptor(
-        uint32_t binding,
-        VkShaderStageFlags stage_flags
-    ) : Descriptor(
-        binding,
-        Mode::UNIFORM_BUFFER_DYNAMIC,
-        stage_flags)
-    {}
-};
+HYP_DEFINE_DESCRIPTOR(UniformBufferDescriptor,        Mode::UNIFORM_BUFFER);
+HYP_DEFINE_DESCRIPTOR(DynamicUniformBufferDescriptor, Mode::UNIFORM_BUFFER_DYNAMIC);
+HYP_DEFINE_DESCRIPTOR(StorageBufferDescriptor,        Mode::STORAGE_BUFFER);
+HYP_DEFINE_DESCRIPTOR(DynamicStorageBufferDescriptor, Mode::STORAGE_BUFFER_DYNAMIC);
+HYP_DEFINE_DESCRIPTOR(ImageSamplerDescriptor,         Mode::IMAGE_SAMPLER);
+HYP_DEFINE_DESCRIPTOR(ImageStorageDescriptor,         Mode::IMAGE_STORAGE);
 
-class StorageBufferDescriptor : public Descriptor {
-public:
-    StorageBufferDescriptor(
-        uint32_t binding,
-        VkShaderStageFlags stage_flags
-    ) : Descriptor(
-        binding,
-        Mode::STORAGE_BUFFER,
-        stage_flags)
-    {}
-};
-
-class DynamicStorageBufferDescriptor : public Descriptor {
-public:
-    DynamicStorageBufferDescriptor(
-        uint32_t binding,
-        VkShaderStageFlags stage_flags
-    ) : Descriptor(
-        binding,
-        Mode::STORAGE_BUFFER_DYNAMIC,
-        stage_flags)
-    {}
-};
-
-class ImageSamplerDescriptor : public Descriptor {
-public:
-    ImageSamplerDescriptor(
-        uint32_t binding,
-        VkShaderStageFlags stage_flags
-    ) : Descriptor(
-        binding,
-        Mode::IMAGE_SAMPLER,
-        stage_flags)
-    {}
-};
-
-class ImageStorageDescriptor : public Descriptor {
-public:
-    ImageStorageDescriptor(
-        uint32_t binding,
-        VkShaderStageFlags stage_flags
-    ) : Descriptor(
-        binding,
-        Mode::IMAGE_STORAGE,
-        stage_flags)
-    {}
-};
+#undef HYP_DEFINE_DESCRIPTOR
 
 } // namespace renderer
 } // namespace hyperion
