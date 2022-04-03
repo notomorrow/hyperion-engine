@@ -97,8 +97,8 @@ struct ObjectHolder {
     inline constexpr
         T *Get(const typename T::ID &id)
     {
-        return MathUtil::InRange(id.GetValue(), { 1, objects.size() + 1 })
-            ? objects[id.GetValue() - 1].get()
+        return MathUtil::InRange(id.Value(), { 1, objects.size() + 1 })
+            ? objects[id.Value() - 1].get()
             : nullptr;
     }
 

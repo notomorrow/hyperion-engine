@@ -168,6 +168,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
 
             static constexpr uint32_t frame_index_scene_buffer_mapping[]  = {2, 4};
             static constexpr uint32_t frame_index_object_buffer_mapping[] = {3, 5};
+            static constexpr uint32_t frame_index_bindless_textures_mapping[] = { DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS, DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1 };
 
             static_assert(std::size(frame_index_object_buffer_mapping) == renderer::Swapchain::max_frames_in_flight);
 
@@ -189,8 +190,8 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
                 secondary,
                 &m_wrapped,
                 {
-                    {.set = 6, .count = 1},
-                    {.binding = 6}
+                    {.set = frame_index_bindless_textures_mapping[frame_index], .count = 1},
+                    {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
                 }
             );
             

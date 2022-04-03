@@ -52,7 +52,7 @@ protected:
         explicit constexpr operator ValueType() const { return value; }
         explicit constexpr operator bool() const { return !!value; }
 
-        inline constexpr ValueType GetValue() const { return value; }
+        inline constexpr ValueType Value() const { return value; }
 
         inline constexpr bool operator==(const IdWrapper &other) const
             { return value == other.value; }

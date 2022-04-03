@@ -264,6 +264,9 @@ Result Instance::Initialize(bool load_debug_layers)
     this->descriptor_pool.AddDescriptorSet(false);
     this->descriptor_pool.AddDescriptorSet(false);
     this->descriptor_pool.AddDescriptorSet(true);
+    this->descriptor_pool.AddDescriptorSet(true);
+
+    AssertThrow(descriptor_pool.NumDescriptorSets() == DescriptorSet::max_descriptor_sets);
 
     SetupDebugMessenger();
     this->device->SetupAllocator(this);

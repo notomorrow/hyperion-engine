@@ -102,7 +102,13 @@ public:
 
     template <class ...Args>
     Texture::ID AddTexture(std::unique_ptr<Texture> &&texture, Args &&... args)
-        { return m_textures.Add(this, std::move(texture), std::move(args)...); }
+    {
+        const Texture::ID id = m_textures.Add(this, std::move(texture), std::move(args)...);
+
+        m_shader_globals->textures.AddResource(m_textures.Get(id));
+
+        return id;
+    }
 
     template <class ...Args>
     void RemoveTexture(Texture::ID id, Args &&... args)

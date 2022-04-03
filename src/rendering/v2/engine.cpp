@@ -249,6 +249,17 @@ void Engine::Initialize()
             .range = sizeof(ObjectShaderData)
         });
 
+    m_instance->GetDescriptorPool()
+        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
+        ->AddDescriptor<renderer::ImageSamplerDescriptor>(0);
+
+    m_instance->GetDescriptorPool()
+        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1)
+        ->AddDescriptor<renderer::ImageSamplerDescriptor>(0);
+
+    /* for textures */
+    m_shader_globals->textures.Create(this);
+
     m_deferred_rendering.CreateRenderList(this);
 }
 
@@ -306,8 +317,12 @@ void Engine::UpdateDescriptorData(uint32_t frame_index)
     m_shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
-    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
+    static constexpr DescriptorSet::Index bindless_descriptor_set_index[] = { DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS, DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1 };
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(bindless_descriptor_set_index[frame_index])
         ->ApplyUpdates(m_instance->GetDevice());
+
+    m_shader_globals->textures.ApplyUpdates(this, frame_index);
 }
 
 void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
