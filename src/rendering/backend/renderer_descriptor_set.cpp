@@ -25,44 +25,48 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
     descriptor_info.reserve(m_descriptors.size());
 
     for (const auto &descriptor : m_descriptors) {
+        descriptor->m_descriptor_set = this;
+
         descriptor->Create(device, descriptor_info);
     }
 
     std::vector<VkWriteDescriptorSet> writes;
-    writes.resize(m_descriptors.size());
+    writes.reserve(descriptor_info.size());
 
     std::vector<VkDescriptorSetLayoutBinding> bindings;
-    bindings.resize(m_descriptors.size());
+    bindings.resize(descriptor_info.size());
     
     for (size_t i = 0; i < descriptor_info.size(); i++) {
         auto &info = descriptor_info[i];
 
+        bindings[i] = info.binding;
+
         if (m_bindless) {
-            info.binding.descriptorCount = max_bindless_resources;
+            bindings[i].descriptorCount = max_bindless_resources;
         }
 
-        bindings[i] = info.binding;
-        writes[i] = info.write;
+        writes.insert(writes.end(), info.writes.begin(), info.writes.end());
     }
 
     //build layout first
     VkDescriptorSetLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
     layout_info.pBindings    = bindings.data();
     layout_info.bindingCount = uint32_t(bindings.size());
+    layout_info.flags        = 0;
 
     const std::vector<VkDescriptorBindingFlags> bindless_flags(
         bindings.size(),
-        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT
-        | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT
-        | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT
+        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
+        | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
+        | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
     );
 
-    VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT};
+    VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO};
     extended_info.bindingCount  = uint32_t(bindless_flags.size());
     extended_info.pBindingFlags = bindless_flags.data();
 
     if (m_bindless) {
-        layout_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+        layout_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
         layout_info.pNext = &extended_info;
     }
 
@@ -93,12 +97,11 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
         w.dstSet = m_set;
     }
 
-    vkUpdateDescriptorSets(device->GetDevice(), static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(device->GetDevice(), uint32_t(writes.size()), writes.data(), 0, nullptr);
 
     m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
 
     for (auto &descriptor : m_descriptors) {
-        descriptor->m_descriptor_set = non_owning_ptr(this);
         descriptor->SetState(DescriptorSetState::DESCRIPTOR_CLEAN);
     }
 
@@ -262,10 +265,7 @@ Result DescriptorPool::CreateDescriptorSetLayout(Device *device, VkDescriptorSet
     if (vkCreateDescriptorSetLayout(device->GetDevice(), layout_create_info, nullptr, out) != VK_SUCCESS) {
         return Result(Result::RENDERER_ERR, "Could not create descriptor set layout");
     }
-
-    //AssertThrowMsg(m_descriptor_set_layouts.size() < 4, "Maximum number of descriptor sets (to be used) surpassed: " \
-    //                                                    "For compatibility, maintain a limit of 4 descriptor sets in use.");
-
+    
     m_descriptor_set_layouts.push_back(*out);
 
     HYPERION_RETURN_OK;
@@ -320,7 +320,8 @@ Descriptor::Descriptor(uint32_t binding, uint32_t array_index, Mode mode)
     : m_binding(binding),
       m_array_index(array_index),
       m_mode(mode),
-      m_state(DescriptorSetState::DESCRIPTOR_DIRTY)
+      m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
+      m_descriptor_set(nullptr)
 {
 }
 
@@ -333,10 +334,23 @@ Descriptor::~Descriptor()
 {
 }
 
-void Descriptor::Create(Device *device, std::vector<Descriptor::Info> &out)
+void Descriptor::Create(Device *device, std::vector<Info> &out)
 {
+    AssertThrow(m_descriptor_set != nullptr);
+
+    const auto descriptor_type = GetDescriptorType(m_mode);
+
     m_sub_descriptor_buffer.buffers.resize(m_sub_descriptors.size());
     m_sub_descriptor_buffer.images.resize(m_sub_descriptors.size());
+
+    VkDescriptorSetLayoutBinding binding{};
+    binding.descriptorCount    = 1;
+    binding.descriptorType     = descriptor_type;
+    binding.pImmutableSamplers = nullptr;
+    binding.stageFlags         = VK_SHADER_STAGE_ALL;
+    binding.binding            = m_binding;
+
+    std::vector<VkWriteDescriptorSet> writes;
 
     for (size_t i = 0; i < m_sub_descriptors.size(); i++) {
         UpdateSubDescriptorBuffer(
@@ -344,27 +358,35 @@ void Descriptor::Create(Device *device, std::vector<Descriptor::Info> &out)
             m_sub_descriptor_buffer.buffers[i],
             m_sub_descriptor_buffer.images[i]
         );
+
+        if (m_descriptor_set->IsBindless()) {
+            VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+            write.pNext = nullptr;
+            write.dstBinding = m_binding;
+            write.dstArrayElement = uint32_t(i);
+            write.descriptorCount = 1;
+            write.descriptorType = descriptor_type;
+            write.pBufferInfo = &m_sub_descriptor_buffer.buffers[i];
+            write.pImageInfo = &m_sub_descriptor_buffer.images[i];
+
+            writes.push_back(write);
+        }
     }
 
-    const auto descriptor_type = GetDescriptorType(m_mode);
+    if (!m_descriptor_set->IsBindless()) {
+        VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        write.pNext           = nullptr;
+        write.dstBinding      = m_binding;
+        write.dstArrayElement = m_array_index;
+        write.descriptorCount = uint32_t(m_sub_descriptors.size());
+        write.descriptorType  = descriptor_type;
+        write.pBufferInfo     = m_sub_descriptor_buffer.buffers.data();
+        write.pImageInfo      = m_sub_descriptor_buffer.images.data();
 
-    VkDescriptorSetLayoutBinding binding{};
-    binding.descriptorCount    = uint32_t(m_sub_descriptors.size());
-    binding.descriptorType     = descriptor_type;
-    binding.pImmutableSamplers = nullptr;
-    binding.stageFlags         = VK_SHADER_STAGE_ALL;
-    binding.binding            = m_binding;
+        writes.push_back(write);
+    }
 
-    VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    write.pNext           = nullptr;
-    write.dstBinding      = m_binding;
-    write.dstArrayElement = m_array_index;
-    write.descriptorCount = uint32_t(m_sub_descriptors.size());
-    write.descriptorType  = descriptor_type;
-    write.pBufferInfo     = m_sub_descriptor_buffer.buffers.data();
-    write.pImageInfo      = m_sub_descriptor_buffer.images.data();
-
-    out.emplace_back(binding, write);
+    out.emplace_back(binding, writes);
 }
 
 void Descriptor::Destroy(Device *device)
@@ -440,7 +462,7 @@ void Descriptor::PerformFrameUpdate(Device *engine, std::array<Info, DescriptorS
 
         auto &out_info = out[iteration];
 
-        out_info.binding = VkDescriptorSetLayoutBinding{};
+        /*out_info.binding = VkDescriptorSetLayoutBinding{};
         out_info.binding.descriptorCount    = 1;
         out_info.binding.descriptorType     = descriptor_type;
         out_info.binding.pImmutableSamplers = nullptr;
@@ -453,7 +475,7 @@ void Descriptor::PerformFrameUpdate(Device *engine, std::array<Info, DescriptorS
         out_info.write.descriptorCount = 1;
         out_info.write.descriptorType  = descriptor_type;
         out_info.write.pBufferInfo     = &m_sub_descriptor_buffer.buffers[sub_descriptor_index];
-        out_info.write.pImageInfo      = &m_sub_descriptor_buffer.images[sub_descriptor_index];
+        out_info.write.pImageInfo      = &m_sub_descriptor_buffer.images[sub_descriptor_index];*/
 
         m_sub_descriptor_update_indices.pop();
 
