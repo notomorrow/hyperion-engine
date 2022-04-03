@@ -3,13 +3,15 @@
 #include "renderer_graphics_pipeline.h"
 #include "renderer_compute_pipeline.h"
 #include "renderer_buffer.h"
+#include "renderer_features.h"
 #include "renderer_image_view.h"
 #include "renderer_sampler.h"
 
 namespace hyperion {
 namespace renderer {
-DescriptorSet::DescriptorSet()
-    : m_state(DescriptorSetState::DESCRIPTOR_DIRTY)
+DescriptorSet::DescriptorSet(bool bindless)
+    : m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
+      m_bindless(bindless)
 {
 }
 
@@ -30,16 +32,34 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
 
         descriptor->Create(device, &info);
 
+        if (m_bindless) {
+            info.binding.descriptorCount = max_bindless_resources;
+        }
+
         bindings.push_back(info.binding);
         writes.push_back(info.write);
     }
 
     //build layout first
-    VkDescriptorSetLayoutCreateInfo layout_info{};
-    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_info.pNext = nullptr;
-    layout_info.pBindings = bindings.data();
+    VkDescriptorSetLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+    layout_info.pBindings    = bindings.data();
     layout_info.bindingCount = uint32_t(bindings.size());
+
+    const std::vector<VkDescriptorBindingFlags> bindless_flags(
+        bindings.size(),
+        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT
+        | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT
+        | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT
+    );
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT};
+    extended_info.bindingCount  = uint32_t(bindless_flags.size());
+    extended_info.pBindingFlags = bindless_flags.data();
+
+    if (m_bindless) {
+        layout_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+        layout_info.pNext = &extended_info;
+    }
 
     VkDescriptorSetLayout layout;
 
@@ -135,24 +155,13 @@ const std::unordered_map<VkDescriptorType, size_t> DescriptorPool::items_per_set
 DescriptorPool::DescriptorPool()
     : m_descriptor_pool(nullptr),
       m_num_descriptor_sets(0),
-      m_descriptor_sets_view(new VkDescriptorSet[DescriptorSet::max_descriptor_sets])
+      m_descriptor_sets_view{}
 {
 }
 
 DescriptorPool::~DescriptorPool()
 {
     AssertExitMsg(m_descriptor_pool == nullptr, "descriptor pool should have been destroyed!");
-
-    delete[] m_descriptor_sets_view;
-}
-
-DescriptorSet &DescriptorPool::AddDescriptorSet()
-{
-    AssertThrowMsg(m_num_descriptor_sets + 1 <= DescriptorSet::max_descriptor_sets, "Maximum number of descriptor sets added");
-
-    m_descriptor_sets[m_num_descriptor_sets++] = std::make_unique<DescriptorSet>();
-
-    return *m_descriptor_sets[m_num_descriptor_sets - 1];
 }
 
 Result DescriptorPool::Create(Device *device)
@@ -161,31 +170,28 @@ Result DescriptorPool::Create(Device *device)
     pool_sizes.reserve(items_per_set.size());
 
     for (auto &it : items_per_set) {
-        pool_sizes.push_back({ it.first, uint32_t(it.second * DescriptorSet::max_descriptor_sets) });
+        pool_sizes.push_back({ it.first, uint32_t(it.second * m_num_descriptor_sets) });
     }
 
-    VkDescriptorPoolCreateInfo pool_info{};
-    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    pool_info.maxSets = DescriptorSet::max_descriptor_sets;
+    VkDescriptorPoolCreateInfo pool_info{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+    pool_info.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+    pool_info.maxSets       = DescriptorSet::max_descriptor_sets;
     pool_info.poolSizeCount = uint32_t(pool_sizes.size());
-    pool_info.pPoolSizes = pool_sizes.data();
+    pool_info.pPoolSizes    = pool_sizes.data();
 
     HYPERION_VK_CHECK_MSG(
         vkCreateDescriptorPool(device->GetDevice(), &pool_info, nullptr, &m_descriptor_pool),
         "Could not create descriptor pool!"
     );
 
-    size_t index = 0;
+    m_descriptor_sets_view.resize(m_num_descriptor_sets);
 
-    for (uint8_t i = 0; i < m_num_descriptor_sets; i++) {
+    for (size_t i = 0; i < m_descriptor_sets_view.size(); i++) {
         AssertThrow(m_descriptor_sets[i] != nullptr);
 
-        auto descriptor_set_result = m_descriptor_sets[i]->Create(device, this);
+        HYPERION_BUBBLE_ERRORS(m_descriptor_sets[i]->Create(device, this));
 
-        if (!descriptor_set_result) return descriptor_set_result;
-
-        m_descriptor_sets_view[index++] = m_descriptor_sets[i]->m_set;
+        m_descriptor_sets_view[i] = m_descriptor_sets[i]->m_set;
     }
 
     HYPERION_RETURN_OK;
@@ -193,6 +199,8 @@ Result DescriptorPool::Create(Device *device)
 
 Result DescriptorPool::Destroy(Device *device)
 {
+    auto result = Result::OK;
+
     /* Destroy set layouts */
     for (auto &layout : m_descriptor_set_layouts) {
         vkDestroyDescriptorSetLayout(device->GetDevice(), layout, nullptr);
@@ -204,26 +212,43 @@ Result DescriptorPool::Destroy(Device *device)
 
     for (auto &set : m_descriptor_sets) {
         if (set != nullptr) {
-            set->Destroy(device);
+            HYPERION_PASS_ERRORS(set->Destroy(device), result);
         }
     }
 
-    vkFreeDescriptorSets(device->GetDevice(), m_descriptor_pool, m_num_descriptor_sets, m_descriptor_sets_view);
+    HYPERION_VK_PASS_ERRORS(
+        vkFreeDescriptorSets(
+            device->GetDevice(),
+            m_descriptor_pool,
+            uint32_t(m_descriptor_sets_view.size()),
+            m_descriptor_sets_view.data()
+        ),
+        result
+    );
 
     m_descriptor_sets = {};
 
     // set all to nullptr
-    std::memset(m_descriptor_sets_view, 0, sizeof(VkDescriptorSet *) * DescriptorSet::max_descriptor_sets);
+    m_descriptor_sets_view.clear();
 
     /* Destroy pool */
     vkDestroyDescriptorPool(device->GetDevice(), m_descriptor_pool, nullptr);
     m_descriptor_pool = nullptr;
 
-    HYPERION_RETURN_OK;
+    return result;
 }
 
-Result DescriptorPool::Bind(CommandBuffer *cmd, GraphicsPipeline *pipeline, DescriptorSetBinding &&binding) const
+Result DescriptorPool::Bind(Device *device, CommandBuffer *cmd, GraphicsPipeline *pipeline, DescriptorSetBinding &&binding) const
 {
+    const size_t max_bound_descriptor_sets = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+
+    AssertThrowMsg(
+        binding.declaration.count <= max_bound_descriptor_sets,
+        "Requested binding of %d descriptor sets, but maximum bound is %d",
+        binding.declaration.count,
+        max_bound_descriptor_sets
+    );
+
     vkCmdBindDescriptorSets(
         cmd->GetCommandBuffer(),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -238,8 +263,15 @@ Result DescriptorPool::Bind(CommandBuffer *cmd, GraphicsPipeline *pipeline, Desc
     HYPERION_RETURN_OK;
 }
 
-Result DescriptorPool::Bind(CommandBuffer *cmd, ComputePipeline *pipeline, DescriptorSetBinding &&binding) const
+Result DescriptorPool::Bind(Device *device, CommandBuffer *cmd, ComputePipeline *pipeline, DescriptorSetBinding &&binding) const
 {
+    AssertThrowMsg(
+        binding.declaration.count <= device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets,
+        "Requested binding of %d descriptor sets, but maximum bound is %d",
+        binding.declaration.count,
+        device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets
+    );
+
     vkCmdBindDescriptorSets(
         cmd->GetCommandBuffer(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -285,14 +317,22 @@ Result DescriptorPool::DestroyDescriptorSetLayout(Device *device, VkDescriptorSe
 
 Result DescriptorPool::AllocateDescriptorSet(Device *device, VkDescriptorSetLayout *layout, DescriptorSet *out)
 {
-    VkDescriptorSetAllocateInfo alloc_info{};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.pNext = nullptr;
+    VkDescriptorSetAllocateInfo alloc_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
     alloc_info.pSetLayouts = layout;
     alloc_info.descriptorPool = m_descriptor_pool;
     alloc_info.descriptorSetCount = 1;
 
-    VkResult alloc_result = vkAllocateDescriptorSets(device->GetDevice(), &alloc_info, &out->m_set);
+    VkDescriptorSetVariableDescriptorCountAllocateInfoEXT count_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT};
+    constexpr uint32_t max_binding = DescriptorSet::max_bindless_resources - 1;
+    count_info.descriptorSetCount = 1;
+    // This number is the max allocatable count
+    count_info.pDescriptorCounts = &max_binding;
+
+    if (out->IsBindless()) {
+        alloc_info.pNext = &count_info;
+    }
+
+    const VkResult alloc_result = vkAllocateDescriptorSets(device->GetDevice(), &alloc_info, &out->m_set);
 
     switch (alloc_result) {
     case VK_SUCCESS: return Result::OK;

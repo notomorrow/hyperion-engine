@@ -28,14 +28,13 @@ public:
     inline const char *GetDeviceName() const { return m_properties.deviceName; }
 
     inline const VkPhysicalDeviceProperties &GetPhysicalDeviceProperties() const
-    {
-        return m_properties;
-    }
+        { return m_properties; }
 
     inline const VkPhysicalDeviceFeatures &GetPhysicalDeviceFeatures() const
-    {
-        return m_features;
-    }
+        { return m_features; }
+
+    inline const VkPhysicalDeviceFeatures2 &GetPhysicalDeviceFeatures2() const
+        { return m_features2; }
 
     struct DeviceRequirementsResult {
         enum {
@@ -52,18 +51,26 @@ public:
         inline operator bool() const { return result == DEVICE_REQUIREMENTS_OK; }
     };
 
-#define REQUIRES_VK_FEATURE(feature) \
+#define REQUIRES_VK_FEATURE_MSG(cond, feature) \
     do { \
-        if (!(feature)) { \
-            return DeviceRequirementsResult(DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR, "Feature constraint " #feature " not satisfied."); \
+        if (!(cond)) { \
+            return DeviceRequirementsResult(DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR, "Feature constraint '" #feature "' not satisfied."); \
+        } \
+    } while (0)
+
+#define REQUIRES_VK_FEATURE(cond) \
+    do { \
+        if (!(cond)) { \
+            return DeviceRequirementsResult(DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR, "Feature constraint '" #cond "' not satisfied."); \
         } \
     } while (0)
 
     DeviceRequirementsResult SatisfiesMinimumRequirements()
     {
-        REQUIRES_VK_FEATURE(m_features.geometryShader);
-        REQUIRES_VK_FEATURE(m_features.fragmentStoresAndAtomics); /* for imageStore() in fragment shaders */
-        REQUIRES_VK_FEATURE(m_features.shaderSampledImageArrayDynamicIndexing); /* for accessing textures based on dynamic index (push constant) */
+        REQUIRES_VK_FEATURE_MSG(m_features.geometryShader, "Geometry shaders");
+        REQUIRES_VK_FEATURE_MSG(m_features.fragmentStoresAndAtomics, "Image stores and atomics in fragment shaders"); /* for imageStore() in fragment shaders */
+        REQUIRES_VK_FEATURE_MSG(m_features.shaderSampledImageArrayDynamicIndexing, "Dynamic sampler / image array indexing"); /* for accessing textures based on dynamic index (push constant) */
+        REQUIRES_VK_FEATURE_MSG(m_indexing_features.descriptorBindingPartiallyBound && m_indexing_features.runtimeDescriptorArray, "Bindless descriptors"); /* bindless support */
         REQUIRES_VK_FEATURE(m_properties.limits.maxDescriptorSetSamplers >= 16);
         REQUIRES_VK_FEATURE(m_properties.limits.maxDescriptorSetUniformBuffers >= 16);
 
@@ -219,6 +226,9 @@ private:
     VkPhysicalDevice m_physical_device;
     VkPhysicalDeviceProperties m_properties;
     VkPhysicalDeviceFeatures m_features;
+
+    VkPhysicalDeviceDescriptorIndexingFeatures m_indexing_features;
+    VkPhysicalDeviceFeatures2 m_features2;
 };
 
 } // namespace renderer

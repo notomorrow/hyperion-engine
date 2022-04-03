@@ -149,16 +149,18 @@ void GraphicsPipeline::Destroy(Engine *engine)
 void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
 {
     auto *instance = engine->GetInstance();
+    auto *device = instance->GetDevice();
     auto *secondary_command_buffer = m_per_frame_data->At(frame_index).Get<CommandBuffer>();
 
     secondary_command_buffer->Record(
-        instance->GetDevice(),
+        device,
         m_wrapped.GetConstructionInfo().render_pass,
-        [this, instance, frame_index](CommandBuffer *secondary) {
+        [this, instance, device, frame_index](CommandBuffer *secondary) {
             m_wrapped.Bind(secondary);
 
             /* Bind global data */
             instance->GetDescriptorPool().Bind(
+                device,
                 secondary,
                 &m_wrapped,
                 {{.set = 0, .count = 2}}
@@ -169,6 +171,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
 
             /* Bind scene data - */
             instance->GetDescriptorPool().Bind(
+                device,
                 secondary,
                 &m_wrapped,
                 {
@@ -177,10 +180,22 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
                     {.offsets = {uint32_t(0 /* scene index */ * sizeof(SceneShaderData))}}
                 }
             );
+
+            /* Bindless textures */
+            instance->GetDescriptorPool().Bind(
+                device,
+                secondary,
+                &m_wrapped,
+                {
+                    {.set = 6, .count = 1},
+                    {.binding = 6}
+                }
+            );
             
             for (const auto &spatial : m_spatials) {
                 /* Bind per-object / material data separately */
                 instance->GetDescriptorPool().Bind(
+                    device,
                     secondary,
                     &m_wrapped,
                     {

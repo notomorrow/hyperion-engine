@@ -33,7 +33,7 @@ public:
     Result Create(Device *device, const VkSurfaceKHR &surface);
     Result Destroy(Device *device);
 
-    inline size_t GetNumImages() const { return this->images.size(); }
+    inline size_t NumImages() const { return this->images.size(); }
 
     VkSwapchainKHR swapchain;
     VkExtent2D extent;

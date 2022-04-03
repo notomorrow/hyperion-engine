@@ -354,14 +354,15 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
 
     HYPERION_BUBBLE_ERRORS(this->CheckDeviceSuitable());
 
-    VkDeviceCreateInfo create_info{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-    create_info.pQueueCreateInfos = queue_create_info_vec.data();
-    create_info.queueCreateInfoCount = (uint32_t)(queue_create_info_vec.size());
+    VkDeviceCreateInfo create_info{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+    create_info.pQueueCreateInfos       = queue_create_info_vec.data();
+    create_info.queueCreateInfoCount    = (uint32_t)(queue_create_info_vec.size());
     // Setup Device extensions
-    create_info.enabledExtensionCount = (uint32_t)(required_extensions.size());
+    create_info.enabledExtensionCount   = (uint32_t)(required_extensions.size());
     create_info.ppEnabledExtensionNames = required_extensions.data();
     // Setup Device Features
-    create_info.pEnabledFeatures = &this->features->GetPhysicalDeviceFeatures();
+    create_info.pEnabledFeatures        = &features->GetPhysicalDeviceFeatures();
+    create_info.pNext                   = &features->GetPhysicalDeviceFeatures2();
 
     HYPERION_VK_CHECK_MSG(
         vkCreateDevice(this->physical, &create_info, nullptr, &this->device),
@@ -375,6 +376,7 @@ VkQueue Device::GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_
 {
     VkQueue queue;
     vkGetDeviceQueue(this->GetDevice(), queue_family_index, queue_index, &queue);
+
     return queue;
 }
 
