@@ -17,17 +17,17 @@ struct Object {
     mat4 model_matrix;
 };
 
-
-layout(std140, set = 3, binding = 1, row_major) readonly buffer ObjectBuffer {
-    Object object;
-};
-
 layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
     mat4 view;
     mat4 projection;
     vec4 camera_position;
     vec4 light_direction;
 } scene;
+
+layout(std140, set = 3, binding = 1, row_major) readonly buffer ObjectBuffer {
+    Object object;
+};
+
 
 //push constants block
 layout( push_constant ) uniform constants

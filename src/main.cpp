@@ -101,10 +101,10 @@
 using namespace hyperion;
 
 
-#define HYPERION_VK_TEST_CUBEMAP 1
-#define HYPERION_VK_TEST_MIPMAP 0
+#define HYPERION_VK_TEST_CUBEMAP 0
+#define HYPERION_VK_TEST_MIPMAP 1
 #define HYPERION_VK_TEST_IMAGE_STORE 0
-#define HYPERION_VK_TEST_OCTREE 0
+#define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 
 int main()
 {
@@ -188,6 +188,22 @@ int main()
         Image::WrapMode::TEXTURE_WRAP_REPEAT
     );
 
+    // test image
+    auto texture2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
+    Image *image2 = new TextureImage2D(
+        texture2->GetWidth(),
+        texture2->GetHeight(),
+        Image::InternalFormat(texture2->GetInternalFormat()),
+        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+        texture2->GetBytes()
+    );
+
+    ImageView test_image_view2;
+    Sampler test_sampler2(
+        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+        Image::WrapMode::TEXTURE_WRAP_REPEAT
+    );
+
 #endif
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -224,9 +240,16 @@ int main()
             ->AddDescriptor<UniformBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
             ->AddSubDescriptor({ .gpu_buffer = &scene_data_descriptor_buffer });
 
+#if HYPERION_VK_TEST_MIPMAP
+        descriptor_set_globals
+            ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler })
+            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
+#else
         descriptor_set_globals
             ->AddDescriptor<ImageSamplerDescriptor>(2, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT)
             ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler });
+#endif
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         descriptor_set_globals
@@ -271,6 +294,14 @@ int main()
                 .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[3].sampler.get()
             });
 
+        
+        engine.GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
+            ->AddDescriptor<ImageSamplerDescriptor>(0, VK_SHADER_STAGE_FRAGMENT_BIT)
+            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler })
+            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
+        
+
         /* translucent - Albedo texture */
         /*descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(4, VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -301,6 +332,18 @@ int main()
 
         HYPERION_ASSERT_RESULT(test_image_view.Create(device, image));
         HYPERION_ASSERT_RESULT(test_sampler.Create(device, &test_image_view));
+
+#if HYPERION_VK_TEST_MIPMAP
+        HYPERION_ASSERT_RESULT(image2->Create(
+            device,
+            engine.GetInstance(),
+            Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
+            Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
+        ));
+
+        HYPERION_ASSERT_RESULT(test_image_view2.Create(device, image2));
+        HYPERION_ASSERT_RESULT(test_sampler2.Create(device, &test_image_view2));
+#endif
     }
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -504,7 +547,7 @@ int main()
         wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
-#if HYPERION_VK_TEST_OCTREE
+#if HYPERION_VK_TEST_VISUALIZE_OCTREE
     std::unordered_map<v2::Octree *, v2::Spatial::ID> octree_debug_nodes;
 
     engine.GetOctree().GetEvents().on_insert_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
@@ -619,13 +662,10 @@ int main()
         compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
 #endif
 
-#if HYPERION_VK_TEST_OCTREE
         Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
         engine.SetSpatialTransform(v2::Spatial::ID{ 1 }, transform);
         engine.GetOctree().Update(&engine, engine.GetSpatial(monkey_spatial_id));
-#endif
-
         engine.SetSpatialTransform(v2::Spatial::ID{ 3 }, Transform(camera->GetTranslation(), { 1.0f, 1.0f, 1.0f }, Quaternion()));
 
         /* Only update sets that are double - buffered so we don't
@@ -681,10 +721,16 @@ int main()
 #if HYPERION_VK_TEST_IMAGE_STORE
     image_storage_view.Destroy(device);
 #endif
-    test_image_view.Destroy(device);
 
+    test_image_view.Destroy(device);
     test_sampler.Destroy(device);
     image->Destroy(device);
+
+#if HYPERION_VK_TEST_MIPMAP
+    test_image_view2.Destroy(device);
+    test_sampler2.Destroy(device);
+    image2->Destroy(device);
+#endif
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
         per_frame_data[i].Get<CommandBuffer>()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsCommandPool());

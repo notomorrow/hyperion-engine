@@ -11,12 +11,13 @@ layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
-layout(binding = 2) uniform samplerCube tex;
+//layout(binding = 2) uniform samplerCube tex;
+layout(binding = 2) uniform sampler2D tex[2];
 
 void main() {
     vec3 normal = normalize(v_normal);
     
-    gbuffer_albedo = vec4(texture(tex, v_position).rgb, 1.0);
+    gbuffer_albedo = vec4(0.2, 0.4, 0.6, 1.0); //vec4(texture(tex, v_position).rgb, 1.0);
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }

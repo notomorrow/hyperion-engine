@@ -34,22 +34,29 @@ class DescriptorSet {
     friend class Descriptor;
 public:
     enum Index {
-        DESCRIPTOR_SET_INDEX_GLOBALS  = 0, /* per frame */
-        DESCRIPTOR_SET_INDEX_PASS     = 1, /* per render pass */
-        DESCRIPTOR_SET_INDEX_SCENE    = 2, /* per scene */
-        DESCRIPTOR_SET_INDEX_OBJECT   = 3, /* per object */
-        DESCRIPTOR_SET_INDEX_SCENE_FRAME_1  = 4,
-        DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1 = 5
+        DESCRIPTOR_SET_INDEX_GLOBALS        = 0, /* per frame */
+        DESCRIPTOR_SET_INDEX_PASS           = 1, /* per render pass */
+
+        DESCRIPTOR_SET_INDEX_SCENE          = 2, /* per scene */
+        DESCRIPTOR_SET_INDEX_OBJECT         = 3, /* per object */
+
+        DESCRIPTOR_SET_INDEX_SCENE_FRAME_1  = 4, /* per scene - frame #2 (frames in flight) */
+        DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1 = 5, /* per object - frame #2 (frames in flight) */
+
+        DESCRIPTOR_SET_INDEX_BINDLESS       = 6
     };
 
-    static constexpr uint8_t max_descriptor_sets = 6;
+    static constexpr uint32_t max_descriptor_sets = 7;
+    static constexpr uint32_t max_bindless_resources = 16536;
 
-    DescriptorSet();
+    DescriptorSet(bool bindless);
     DescriptorSet(const DescriptorSet &other) = delete;
     DescriptorSet &operator=(const DescriptorSet &other) = delete;
     ~DescriptorSet();
 
     inline DescriptorSetState GetState() const { return m_state; }
+
+    inline bool IsBindless() const { return m_bindless; }
 
     template <class DescriptorType, class ...Args>
     Descriptor *AddDescriptor(Args &&... args)
@@ -73,6 +80,7 @@ public:
 private:
     std::vector<std::unique_ptr<Descriptor>> m_descriptors;
     DescriptorSetState m_state;
+    bool m_bindless;
 };
 
 struct DescriptorSetBinding {
@@ -161,7 +169,17 @@ public:
         { return m_descriptor_set_layouts; }
 
     // return new descriptor set
-    DescriptorSet &AddDescriptorSet();
+    template <class ...Args>
+    DescriptorSet &AddDescriptorSet(Args &&... args)
+    {
+        const size_t index = m_num_descriptor_sets++;
+
+        AssertThrow(index < m_descriptor_sets.size());
+
+        m_descriptor_sets[index] = std::make_unique<DescriptorSet>(std::move(args)...);
+
+        return *m_descriptor_sets[index];
+    }
 
     inline DescriptorSet *GetDescriptorSet(DescriptorSet::Index index)
         { return m_descriptor_sets[index].get(); }
@@ -171,15 +189,15 @@ public:
 
     Result Create(Device *device);
     Result Destroy(Device *device);
-    Result Bind(CommandBuffer *cmd, GraphicsPipeline *pipeline, DescriptorSetBinding &&) const;
-    Result Bind(CommandBuffer *cmd, ComputePipeline *pipeline, DescriptorSetBinding &&) const;
+    Result Bind(Device *device, CommandBuffer *cmd, GraphicsPipeline *pipeline, DescriptorSetBinding &&) const;
+    Result Bind(Device *device, CommandBuffer *cmd, ComputePipeline *pipeline, DescriptorSetBinding &&) const;
 
 private:
     std::array<std::unique_ptr<DescriptorSet>, DescriptorSet::max_descriptor_sets> m_descriptor_sets;
-    uint8_t m_num_descriptor_sets;
+    size_t m_num_descriptor_sets;
     std::vector<VkDescriptorSetLayout> m_descriptor_set_layouts;
     VkDescriptorPool m_descriptor_pool;
-    VkDescriptorSet *m_descriptor_sets_view;
+    std::vector<VkDescriptorSet> m_descriptor_sets_view;
 };
 
 class Descriptor {

@@ -202,6 +202,8 @@ void Engine::Initialize()
     /* for objects */
     m_shader_globals->objects.Create(m_instance->GetDevice());
 
+
+
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
@@ -224,6 +226,8 @@ void Engine::Initialize()
             .range = sizeof(ObjectShaderData)
         });
 
+
+
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
         ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         ->AddSubDescriptor({
@@ -237,7 +241,6 @@ void Engine::Initialize()
             .gpu_buffer = m_shader_globals->materials.GetBuffers()[1].get(),
             .range = sizeof(MaterialShaderData)
         });
-
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -322,7 +325,12 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
     pipeline.BeginRenderPass(command_buffer, acquired_image_index);
     pipeline.Bind(command_buffer);
 
-    m_instance->GetDescriptorPool().Bind(command_buffer, &pipeline, {{.count = 2}});
+    m_instance->GetDescriptorPool().Bind(
+        m_instance->GetDevice(),
+        command_buffer,
+        &pipeline,
+        {{.count = 2}}
+    );
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
     PostEffect::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);

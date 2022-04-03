@@ -70,6 +70,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
         void *user_data)
 {
     LogType lt = LogType::Info;
+
     switch (severity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
             lt = LogType::RenDebug;
@@ -86,6 +87,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
         default:
             break;
     }
+
     DebugLogRaw(lt, "Vulkan: [%s, %d]:\n\t%s\n",
              callback_data->pMessageIdName, callback_data->messageIdNumber, callback_data->pMessage);
 
@@ -99,7 +101,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {
         return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
     } else {
@@ -117,9 +119,9 @@ Result Instance::SetupDebug()
         "VK_LAYER_LUNARG_monitor"
     };
 
-    HYPERION_BUBBLE_ERRORS(this->CheckValidationLayerSupport(layers));
+    HYPERION_BUBBLE_ERRORS(CheckValidationLayerSupport(layers));
 
-    this->SetValidationLayers(layers);
+    SetValidationLayers(layers);
 
     HYPERION_RETURN_OK;
 }
@@ -189,10 +191,12 @@ Result Instance::SetupDebugMessenger()
 Result Instance::Initialize(bool load_debug_layers)
 {
     // Application names/versions
-    this->SetCurrentWindow(this->system.GetCurrentWindow());
+    SetCurrentWindow(this->system.GetCurrentWindow());
 
     /* Set up our debug and validation layers */
-    if (load_debug_layers) HYPERION_BUBBLE_ERRORS(this->SetupDebug());
+    if (load_debug_layers) {
+        HYPERION_BUBBLE_ERRORS(SetupDebug());
+    }
 
     VkApplicationInfo app_info{VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app_info.pApplicationName = app_name;
@@ -206,17 +210,19 @@ Result Instance::Initialize(bool load_debug_layers)
     create_info.pApplicationInfo = &app_info;
 
     // Setup validation layers
-    create_info.enabledLayerCount = uint32_t(this->validation_layers.size());
+    create_info.enabledLayerCount   = uint32_t(this->validation_layers.size());
     create_info.ppEnabledLayerNames = this->validation_layers.data();
     // Setup Vulkan extensions
     std::vector<const char *> extension_names;
     extension_names = this->system.GetVulkanExtensionNames();
 
+    //extension_names.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+
 #ifndef HYPERION_BUILD_RELEASE
     extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
-    create_info.enabledExtensionCount = uint32_t(extension_names.size());
+    create_info.enabledExtensionCount   = uint32_t(extension_names.size());
     create_info.ppEnabledExtensionNames = extension_names.data();
 
     DebugLog(LogType::Info, "Loading [%d] Instance extensions...\n", extension_names.size());
@@ -232,28 +238,34 @@ Result Instance::Initialize(bool load_debug_layers)
     };
 
     /* Create our renderable surface from SDL */
-    this->CreateSurface();
+    CreateSurface();
     /* Find and set up an adequate GPU for rendering and presentation */
-    HYPERION_BUBBLE_ERRORS(this->InitializeDevice());
+    HYPERION_BUBBLE_ERRORS(InitializeDevice());
     /* Set up our swapchain for our GPU to present our image.
      * This is essentially a "root" framebuffer. */
-    HYPERION_BUBBLE_ERRORS(this->InitializeSwapchain());
+    HYPERION_BUBBLE_ERRORS(InitializeSwapchain());
 
     /* Set up our frame handler - this class lets us abstract
      * away a little bit of the double/triple buffering stuff */
-    DebugLog(LogType::RenDebug, "Num swapchain images: %d\n", this->swapchain->GetNumImages());
-    this->frame_handler = new FrameHandler(this->swapchain->GetNumImages(), HandleNextFrame);
+    DebugLog(LogType::RenDebug, "Num swapchain images: %d\n", this->swapchain->NumImages());
+    this->frame_handler = new FrameHandler(this->swapchain->NumImages(), HandleNextFrame);
     
     /* Our command pool will have a command buffer for each frame we can render to. */
     HYPERION_BUBBLE_ERRORS(this->frame_handler->CreateCommandBuffers(this->device, this->queue_graphics.command_pool));
     HYPERION_BUBBLE_ERRORS(this->frame_handler->CreateFrames(this->device));
 
     /* init descriptor sets */
-    for (int i = 0; i < DescriptorSet::max_descriptor_sets; i++) {
-        this->descriptor_pool.AddDescriptorSet();
-    }
 
-    this->SetupDebugMessenger();
+    /* TMP */
+    this->descriptor_pool.AddDescriptorSet(false);
+    this->descriptor_pool.AddDescriptorSet(false);
+    this->descriptor_pool.AddDescriptorSet(false);
+    this->descriptor_pool.AddDescriptorSet(false);
+    this->descriptor_pool.AddDescriptorSet(false);
+    this->descriptor_pool.AddDescriptorSet(false);
+    this->descriptor_pool.AddDescriptorSet(true);
+
+    SetupDebugMessenger();
     this->device->SetupAllocator(this);
 
     HYPERION_RETURN_OK;
@@ -329,7 +341,7 @@ Device *Instance::GetDevice()
 
 void Instance::CreateSurface()
 {
-    this->surface = this->GetCurrentWindow()->CreateVulkanSurface(this->instance);
+    this->surface = GetCurrentWindow()->CreateVulkanSurface(this->instance);
     DebugLog(LogType::Debug, "Created window surface\n");
 }
 
@@ -388,8 +400,7 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
 {
     /* If no physical device passed in, we select one */
     if (physical_device == nullptr) {
-        std::vector<VkPhysicalDevice> physical_devices = this->EnumeratePhysicalDevices();
-        physical_device = this->PickPhysicalDevice(physical_devices);
+        physical_device = PickPhysicalDevice(EnumeratePhysicalDevices());
     }
 
     if (this->device == nullptr) {

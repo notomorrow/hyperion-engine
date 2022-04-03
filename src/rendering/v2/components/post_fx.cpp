@@ -139,7 +139,7 @@ void PostEffect::DestroyPipeline(Engine *engine)
     engine->RemoveGraphicsPipeline(m_pipeline_id);
 }
 
-void PostEffect::Record(Engine * engine, uint32_t frame_index)
+void PostEffect::Record(Engine *engine, uint32_t frame_index)
 {
     using renderer::Result;
 
@@ -156,6 +156,7 @@ void PostEffect::Record(Engine * engine, uint32_t frame_index)
                 pipeline->Get().Bind(cmd);
                 
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+                    engine->GetInstance()->GetDevice(),
                     cmd,
                     &pipeline->Get(),
                     {
