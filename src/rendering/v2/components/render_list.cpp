@@ -80,7 +80,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
             std::make_unique<renderer::AttachmentBase>(
                 Image::ToVkFormat(engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)),
                 VK_ATTACHMENT_LOAD_OP_LOAD,
-                VK_ATTACHMENT_STORE_OP_STORE,
+                VK_ATTACHMENT_STORE_OP_NONE_EXT,
                 VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                 VK_ATTACHMENT_STORE_OP_DONT_CARE,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

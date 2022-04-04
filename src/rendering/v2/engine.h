@@ -221,7 +221,7 @@ public:
 
     template <class ...Args>
     Spatial *AddSpatial(Args &&... args)
-        { return GetSpatial(m_spatials.Add(this, std::make_unique<Spatial>(std::move(args)...))); }
+        { return GetSpatial(m_spatials.Add(this, std::make_unique<Spatial>(std::forward<Args>(args)...))); }
 
     template <class ...Args>
     void RemoveSpatial(Spatial::ID id, Args &&... args)
