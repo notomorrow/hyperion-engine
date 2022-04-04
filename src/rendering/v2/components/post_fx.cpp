@@ -13,14 +13,6 @@ using renderer::Descriptor;
 using renderer::DescriptorSet;
 using renderer::ImageSamplerDescriptor;
 
-const MeshInputAttributeSet PostEffect::vertex_attributes = MeshInputAttributeSet(
-    MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
-    | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
-    | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
-    | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
-    | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
-    | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT);
-
 std::shared_ptr<Mesh> PostEffect::full_screen_quad = MeshFactory::CreateQuad();
 
 PostEffect::PostEffect(Shader::ID shader_id)

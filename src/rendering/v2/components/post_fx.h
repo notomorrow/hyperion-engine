@@ -25,7 +25,6 @@ class Engine;
 
 class PostEffect {
 public:
-    static const MeshInputAttributeSet vertex_attributes;
     static std::shared_ptr<Mesh> full_screen_quad;
 
     PostEffect(Shader::ID shader_id);

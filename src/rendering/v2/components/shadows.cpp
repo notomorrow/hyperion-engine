@@ -38,6 +38,7 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
 void ShadowEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(m_shader_id, m_render_pass_id, GraphicsPipeline::Bucket::BUCKET_PREPASS);
+    pipeline->SetCullMode(renderer::GraphicsPipeline::CullMode::FRONT);
     pipeline->AddFramebuffer(m_framebuffer_id);
     pipeline->SetSceneIndex(1);
 
