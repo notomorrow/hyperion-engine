@@ -36,7 +36,7 @@ Material &Material::operator=(Material &&other)
 
 Material::~Material() = default;
 
-void Material::Create(Engine *engine, MaterialShaderData *out)
+void Material::UpdateShaderData(Engine *engine) const
 {
     MaterialShaderData shader_data{
         .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
@@ -74,7 +74,15 @@ void Material::Create(Engine *engine, MaterialShaderData *out)
         shader_data.texture_index[i].used = 0;
     }
 
-    *out = shader_data;
+    engine->m_shader_globals->materials.Set(m_id.Value() - 1, std::move(shader_data));
+}
+
+
+void Material::Create(Engine *engine)
+{
+    engine->GetEvents(Engine::EVENT_KEY_SHADER_DATA).on_init += [this](Engine *engine) {
+        UpdateShaderData(engine);
+    };
 }
 
 void Material::Destroy(Engine *engine)

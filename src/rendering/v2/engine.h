@@ -40,9 +40,12 @@ class Engine {
 public:
 
     enum EventKey {
-        EVENT_KEY_ENGINE             = 0,
-        EVENT_KEY_GRAPHICS_PIPELINES = 1,
-        EVENT_KEY_DESCRIPTOR_SETS    = 2
+        EVENT_KEY_GENERAL,
+        EVENT_KEY_GRAPHICS_PIPELINES,
+        EVENT_KEY_DESCRIPTOR_SETS,
+        EVENT_KEY_SHADER_DATA,
+
+        EVENT_KEY_MAX
     };
 
     enum TextureFormatDefault {
@@ -157,15 +160,7 @@ public:
     /* Materials - will all be jammed into a shader storage buffer object */
     template <class ...Args>
     Material::ID AddMaterial(std::unique_ptr<Material> &&material, Args &&... args)
-    {
-        MaterialShaderData material_shader_data;
-
-        const Material::ID id = m_materials.Add(this, std::move(material), &material_shader_data, std::move(args)...);
-
-        m_shader_globals->materials.Set(id.value - 1, std::move(material_shader_data));
-
-        return id;
-    }
+        { return m_materials.Add(this, std::move(material), std::move(args)...); }
 
     template <class ...Args>
     void RemoveMaterial(Material::ID id, Args &&... args)
@@ -276,7 +271,7 @@ private:
     ObjectHolder<Spatial> m_spatials;
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
 
-    EnumOptions<EventKey, ComponentEvents<EngineCallbacks>, 3> m_events;
+    std::array<ComponentEvents<EngineCallbacks>,EVENT_KEY_MAX> m_events;
 };
 
 } // namespace hyperion::v2
