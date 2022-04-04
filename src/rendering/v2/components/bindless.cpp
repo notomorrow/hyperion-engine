@@ -42,6 +42,12 @@ void BindlessStorage::AddResource(const Texture *texture)
     AssertThrow(texture->GetImageView() != nullptr);
     AssertThrow(texture->GetSampler() != nullptr);
 
+    AssertThrowMsg(
+        m_texture_sub_descriptors.Size() < DescriptorSet::max_bindless_resources,
+        "Number of bound textures must not exceed limit of %ul",
+        DescriptorSet::max_bindless_resources
+    );
+
     uint32_t indices[2] = {};
     
     for (size_t i = 0; i < m_descriptor_sets.size(); i++) {

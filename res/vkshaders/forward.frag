@@ -15,6 +15,11 @@ layout(location=2) out vec4 gbuffer_positions;
 //layout(binding = 2) uniform samplerCube tex;
 layout(binding = 2) uniform sampler2D tex;
 
+struct TextureRef {
+    uint index;
+    uint used;
+};
+
 struct Material {
     vec4 albedo;
     
@@ -38,7 +43,14 @@ struct Material {
     float uv_scale;
     float parallax_height;
     
-    uint texture_index[32];
+    TextureRef texture_index[8];
+    /* Texture schema:
+       0 - albedo
+       1 - normals
+       2 - ao
+       3 - parallax
+       4 - metalness
+       5 - roughness */
 };
 
 layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
@@ -55,7 +67,7 @@ void main() {
     
     vec3 reflection_vector = reflect(view_vector, normal);
     
-    gbuffer_albedo = texture(textures[material.texture_index[0]], v_texcoord0) * material.albedo;
+    gbuffer_albedo = texture(textures[material.texture_index[0].index], v_texcoord0) * material.albedo;
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }
