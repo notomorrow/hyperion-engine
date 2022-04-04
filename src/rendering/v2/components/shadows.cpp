@@ -54,11 +54,11 @@ void ShadowEffect::Create(Engine *engine)
 
     CreatePerFrameData(engine);
     
-    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
+    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
         CreatePipeline(engine);
     };
 
-    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
+    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
         DestroyPipeline(engine);
     };
 }
@@ -85,7 +85,7 @@ void ShadowRenderer::Create(Engine *engine)
     m_effect.CreateDescriptors(engine, binding_index);
 
     /* TMP */
-    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
+    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
         auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
 
         for (auto &opaque_pipeline : engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].pipelines.objects) {

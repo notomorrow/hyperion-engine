@@ -9,21 +9,16 @@
 
 namespace hyperion::v2 {
 
-class Octree;
-
-struct OctreeCallback {
-    using CallbackFunction = std::function<void(Engine *, Octree *, Spatial *)>;
-};
-
-struct OctreeEvents : ComponentEvents<OctreeCallback> {
-    Callbacks on_insert_octant, on_remove_octant, on_insert_node, on_remove_node;
-};
-
 class Octree {
     friend class Engine;
+
+    struct Callback {
+        using CallbackFunction = std::function<void(Engine *, Octree *, Spatial *)>;
+    };
+
 public:
     struct Octant {
-        std::unique_ptr<Octree> octree; /* non-owning */
+        std::unique_ptr<Octree> octree;
         BoundingBox aabb;
     };
 
@@ -33,7 +28,12 @@ public:
     };
 
     struct Root {
-        OctreeEvents events;
+        struct Events : ComponentEvents<Callback> {
+            CallbackGroup on_insert_octant,
+                          on_remove_octant,
+                          on_insert_node,
+                          on_remove_node;
+        } events;
         std::unordered_map<Spatial *, Octree *> node_to_octree;
     };
 
@@ -53,15 +53,15 @@ public:
     inline BoundingBox &GetAabb() { return m_aabb; }
     inline const BoundingBox &GetAabb() const { return m_aabb; }
 
-    inline OctreeEvents &GetEvents()
+    inline auto &GetCallbacks()
     {
         AssertThrow(m_root != nullptr);
 
         return m_root->events;
     }
 
-    inline const OctreeEvents &GetEvents() const
-        { return const_cast<Octree *>(this)->GetEvents(); }
+    inline const auto &GetCallbacks() const
+        { return const_cast<Octree *>(this)->GetCallbacks(); }
 
     void Clear(Engine *engine);
     bool Insert(Engine *engine, Spatial *spatial);

@@ -101,7 +101,7 @@
 using namespace hyperion;
 
 
-#define HYPERION_VK_TEST_CUBEMAP 0
+#define HYPERION_VK_TEST_CUBEMAP 1
 #define HYPERION_VK_TEST_MIPMAP 1
 #define HYPERION_VK_TEST_IMAGE_STORE 0
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
@@ -155,23 +155,19 @@ int main()
     }
 
 
-    Image *image = new TextureImageCubemap(
+    auto *cubemap = new v2::TextureCube(
         cubemap_faces[0]->GetWidth(),
         cubemap_faces[0]->GetHeight(),
         Image::InternalFormat(cubemap_faces[0]->GetInternalFormat()),
         Image::FilterMode::TEXTURE_FILTER_LINEAR,
+        Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
         bytes
     );
 
-    ImageView test_image_view;
-    Sampler test_sampler(
-        Image::FilterMode::TEXTURE_FILTER_LINEAR,
-        Image::WrapMode::TEXTURE_WRAP_REPEAT
-    );
-
-
     delete[] bytes;
-#elif HYPERION_VK_TEST_MIPMAP
+#endif
+
+#if HYPERION_VK_TEST_MIPMAP
     // test image
     auto tex = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
     auto *texture = new v2::Texture2D(
@@ -230,14 +226,10 @@ int main()
             ->AddDescriptor<UniformBufferDescriptor>(1)
             ->AddSubDescriptor({ .gpu_buffer = &scene_data_descriptor_buffer });
 
-#if HYPERION_VK_TEST_MIPMAP
+#if HYPERION_VK_TEST_CUBEMAP
         descriptor_set_globals
             ->AddDescriptor<ImageSamplerDescriptor>(2)
-            ->AddSubDescriptor({ .image_view = texture->GetImageView(), .sampler = texture->GetSampler() });
-#else
-        descriptor_set_globals
-            ->AddDescriptor<ImageSamplerDescriptor>(2)
-            ->AddSubDescriptor({ .image_view = &test_image_view, .sampler = &test_sampler });
+            ->AddSubDescriptor({ .image_view = cubemap->GetImageView(), .sampler = cubemap->GetSampler() });
 #endif
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -307,6 +299,12 @@ int main()
         texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
         texture2->Create(&engine);
         engine.m_shader_globals->textures.AddResource(texture2);
+#endif
+
+#if HYPERION_VK_TEST_CUBEMAP
+        cubemap->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(3) });
+        cubemap->Create(&engine);
+        //engine.m_shader_globals->textures.AddResource(texture2);
 #endif
     }
 
@@ -515,7 +513,7 @@ int main()
 #if HYPERION_VK_TEST_VISUALIZE_OCTREE
     std::unordered_map<v2::Octree *, v2::Spatial *> octree_debug_nodes;
 
-    engine.GetOctree().GetEvents().on_insert_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
+    engine.GetOctree().GetCallbacks().on_insert_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
         auto *pipeline = engine->GetGraphicsPipeline(wire_pipeline_id);
 
         auto mesh = MeshFactory::CreateCube(octree->GetAabb());
@@ -535,7 +533,7 @@ int main()
         pipeline->AddSpatial(engine, spatial);
     };
 
-    engine.GetOctree().GetEvents().on_remove_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
+    engine.GetOctree().GetCallbacks().on_remove_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
         auto *pipeline = engine->GetGraphicsPipeline(wire_pipeline_id);
 
         auto mesh = MeshFactory::CreateCube(octree->GetAabb());
@@ -720,6 +718,11 @@ int main()
 #if HYPERION_VK_TEST_MIPMAP
     texture2->Destroy(&engine);
     delete texture2;
+#endif
+
+#if HYPERION_VK_TEST_CUBEMAP
+    cubemap->Destroy(&engine);
+    delete cubemap;
 #endif
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {

@@ -80,7 +80,7 @@ void Material::UpdateShaderData(Engine *engine) const
 
 void Material::Create(Engine *engine)
 {
-    engine->GetEvents(Engine::EVENT_KEY_SHADER_DATA).on_init += [this](Engine *engine) {
+    engine->GetCallbacks(Engine::CALLBACK_SHADER_DATA).on_init += [this](Engine *engine) {
         UpdateShaderData(engine);
     };
 }

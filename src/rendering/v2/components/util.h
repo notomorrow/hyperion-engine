@@ -42,13 +42,9 @@ struct ObjectIdHolder {
     }
 };
 
-struct EngineCallbacks {
-    using CallbackFunction = std::function<void(Engine *)>;
-};
-
 template <class CallbacksClass>
 struct ComponentEvents {
-    struct Callbacks {
+    struct CallbackGroup {
         using CallbackFunction = typename CallbacksClass::CallbackFunction;
 
         std::vector<CallbackFunction> callbacks;
@@ -61,14 +57,14 @@ struct ComponentEvents {
             }
         }
 
-        Callbacks &operator+=(const CallbackFunction &callback)
+        CallbackGroup &operator+=(const CallbackFunction &callback)
         {
             callbacks.push_back(callback);
 
             return *this;
         }
 
-        Callbacks &operator+=(CallbackFunction &&callback)
+        CallbackGroup &operator+=(CallbackFunction &&callback)
         {
             callbacks.push_back(std::move(callback));
 
@@ -78,9 +74,9 @@ struct ComponentEvents {
         inline void Clear() { callbacks.clear(); }
     };
 
-    Callbacks on_init,
-              on_deinit,
-              on_update;
+    CallbackGroup on_init,
+                  on_deinit,
+                  on_update;
 };
 
 /* Map from ObjectType::ID to another resource */
