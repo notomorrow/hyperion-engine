@@ -23,8 +23,8 @@ public:
     const char *GetTag() const { return m_tag; }
     inline Node *GetParent() const { return m_parent_node; }
 
-    inline Spatial::ID GetSpatialId() const { return m_spatial_id; }
-    void SetSpatial(Engine *engine, Spatial::ID id);
+    inline Spatial *GetSpatial() const { return m_spatial; }
+    void SetSpatial(Engine *engine, Spatial *spatial);
 
     void AddChild(std::unique_ptr<Node> &&);
     void RemoveChild(NodeList::iterator);
@@ -69,7 +69,7 @@ private:
     BoundingBox m_local_aabb;
     BoundingBox m_world_aabb;
 
-    Spatial::ID m_spatial_id;
+    Spatial *m_spatial;
 
     std::vector<Node *> m_internal_nested_children;
 };

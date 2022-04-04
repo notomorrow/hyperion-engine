@@ -39,6 +39,7 @@ void ShadowEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(m_shader_id, m_render_pass_id, GraphicsPipeline::Bucket::BUCKET_PREPASS);
     pipeline->AddFramebuffer(m_framebuffer_id);
+    pipeline->SetSceneIndex(1);
 
     m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
 }

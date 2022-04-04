@@ -26,7 +26,8 @@ GraphicsPipeline::GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_p
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT)),
-      m_per_frame_data(nullptr)
+      m_per_frame_data(nullptr),
+      m_scene_index(0)
 {
 }
 
@@ -180,7 +181,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 {
                     {.set = frame_index_scene_buffer_mapping[frame_index], .count = 1},
                     {.binding = 2},
-                    {.offsets = {uint32_t(0 /* scene index */ * sizeof(SceneShaderData))}}
+                    {.offsets = {uint32_t(m_scene_index * sizeof(SceneShaderData))}}
                 }
             );
 

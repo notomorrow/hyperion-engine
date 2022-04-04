@@ -57,12 +57,13 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
     return AddFramebuffer(std::move(framebuffer), render_pass_id);
 }
 
-void Engine::SetSpatialTransform(Spatial::ID id, const Transform &transform)
+void Engine::SetSpatialTransform(Spatial *spatial, const Transform &transform)
 {
-    Spatial *spatial = GetSpatial(id);
+    AssertThrow(spatial != nullptr);
+    
     spatial->SetTransform(transform);
 
-    m_shader_globals->objects.Set(id.value - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
+    m_shader_globals->objects.Set(spatial->GetId().Value() - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
 }
 
 void Engine::FindTextureFormatDefaults()
