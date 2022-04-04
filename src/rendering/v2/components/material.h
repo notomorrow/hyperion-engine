@@ -250,7 +250,7 @@ public:
     void SetParameter(MaterialKey key, const Parameter &value);
     void SetTexture(TextureSet::TextureKey key, Texture::ID id);
 
-    void Create(Engine *engine, MaterialShaderData *out);
+    void Create(Engine *engine);
     void Destroy(Engine *engine);
 
     inline HashCode GetHashCode() const
@@ -262,6 +262,8 @@ public:
     }
 
 private:
+    void UpdateShaderData(Engine *engine) const;
+
     ParameterTable m_parameters;
     TextureSet     m_textures;
     State          m_state;

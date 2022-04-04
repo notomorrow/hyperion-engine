@@ -18,6 +18,24 @@ layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions;
 
 layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
 
+
+layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
+    mat4 view;
+    mat4 projection;
+    vec4 camera_position;
+    vec4 light_direction;
+} scene;
+
+vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos) {
+  vec4 shadow_position = shadow_matrix * vec4(pos, 1.0);
+  
+  shadow_position *= vec4(0.5);
+  shadow_position += vec4(0.5);
+  shadow_position.xyz /= shadowPos.w;
+  
+  return shadow_position.xyz;
+}
+
 void main()
 {
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);

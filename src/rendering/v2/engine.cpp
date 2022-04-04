@@ -280,6 +280,7 @@ void Engine::Destroy()
     m_materials.RemoveAll(this);
     m_compute_pipelines.RemoveAll(this);
 
+    m_events[EVENT_KEY_SHADER_DATA].on_deinit(this);
     m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_deinit(this);
 
     m_deferred_renderer.Destroy(this);
@@ -299,6 +300,8 @@ void Engine::Destroy()
 
 void Engine::Compile()
 {
+    m_events[EVENT_KEY_SHADER_DATA].on_init(this);
+
     /* Finalize materials */
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
         m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), i);

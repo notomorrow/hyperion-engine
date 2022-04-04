@@ -21,15 +21,6 @@ layout(set = 1, binding = 9) uniform sampler2D shadow_map;
 
 layout(location=0) out vec4 out_color;
 
-//push constants block
-layout( push_constant ) uniform constants
-{
-	layout(offset = 0) uint previous_frame_index;
-    layout(offset = 4) uint current_frame_index;
-    layout(offset = 8) uint material_index;
-    
-} PushConstants;
-
 void main() {
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
@@ -40,7 +31,7 @@ void main() {
     
     //if (out_color.a < 0.2) {
         
-    //out_color = vec4(texture(deferred_result, texcoord).rgb, 1.0);
-    out_color = vec4(texture(shadow_map, texcoord).rgb, 1.0);
+    out_color = vec4(texture(deferred_result, texcoord).rgb, 1.0);
+    //out_color = vec4(texture(shadow_map, texcoord).rgb, 1.0);
     //}
 }
