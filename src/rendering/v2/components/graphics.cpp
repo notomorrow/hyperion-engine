@@ -35,31 +35,29 @@ GraphicsPipeline::~GraphicsPipeline()
     AssertThrowMsg(m_per_frame_data == nullptr, "per-frame data should have been destroyed");
 }
 
-void GraphicsPipeline::AddSpatial(Engine *engine, Spatial::ID id)
+void GraphicsPipeline::AddSpatial(Engine *engine, Spatial *spatial)
 {
-    Spatial *spatial = engine->GetSpatial(id);
-
     AssertThrow(spatial != nullptr);
 
     /* append any attributes not yet added */
     m_vertex_attributes.Merge(spatial->GetVertexAttributes());
 
     /* Update object data */
-    engine->m_shader_globals->objects.Set(id.value - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
+    engine->m_shader_globals->objects.Set(spatial->GetId().Value() - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
 
     spatial->OnAddedToPipeline(this);
 
-    m_spatials.emplace_back(id, spatial);
+    m_spatials.push_back(spatial);
 }
 
-void GraphicsPipeline::RemoveSpatial(Engine *engine, Spatial::ID id)
+void GraphicsPipeline::RemoveSpatial(Engine *engine, Spatial *spatial)
 {
-    const auto it = std::find_if(m_spatials.begin(), m_spatials.end(), [id](const auto &it) {
-        return it.first == id;
-    });
+    const auto it = std::find(m_spatials.begin(), m_spatials.end(), spatial);
 
     if (it != m_spatials.end()) {
-        it->second->OnRemovedFromPipeline(this);
+        if (spatial != nullptr) {
+            spatial->OnRemovedFromPipeline(this);
+        }
 
         m_spatials.erase(it);
     }
@@ -67,9 +65,7 @@ void GraphicsPipeline::RemoveSpatial(Engine *engine, Spatial::ID id)
 
 void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
 {
-    const auto it = std::find_if(m_spatials.begin(), m_spatials.end(), [spatial](const auto &it) {
-        return it.second == spatial;
-    });
+    const auto it = std::find(m_spatials.begin(), m_spatials.end(), spatial);
 
     if (it != m_spatials.end()) {
         m_spatials.erase(it);
@@ -137,8 +133,12 @@ void GraphicsPipeline::Destroy(Engine *engine)
         m_per_frame_data = nullptr;
     }
 
-    for (auto &it : m_spatials) {
-        it.second->OnRemovedFromPipeline(this);
+    for (auto *spatial : m_spatials) {
+        if (spatial == nullptr) {
+            continue;
+        }
+
+        spatial->OnRemovedFromPipeline(this);
     }
 
     m_spatials.clear();
@@ -146,7 +146,7 @@ void GraphicsPipeline::Destroy(Engine *engine)
     EngineComponent::Destroy(engine);
 }
 
-void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
+void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
     auto *instance = engine->GetInstance();
     auto *device = instance->GetDevice();
@@ -195,7 +195,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
                 }
             );
             
-            for (const auto &spatial : m_spatials) {
+            for (const Spatial *spatial : m_spatials) {
                 /* Bind per-object / material data separately */
                 instance->GetDescriptorPool().Bind(
                     device,
@@ -205,19 +205,19 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary_command_buf
                         {.set = frame_index_object_buffer_mapping[frame_index], .count = 1},
                         {.binding = 3},
                         {.offsets = {
-                            uint32_t((spatial.second->GetMaterialId().value - 1) * sizeof(MaterialShaderData)),
-                            uint32_t((spatial.first.value - 1) * sizeof(ObjectShaderData))
+                            uint32_t((spatial->GetMaterialId().Value() - 1) * sizeof(MaterialShaderData)),
+                            uint32_t((spatial->GetId().Value() - 1) * sizeof(ObjectShaderData))
                         }}
                     }
                 );
 
-                spatial.second->GetMesh()->RenderVk(secondary, instance, nullptr);
+                spatial->GetMesh()->RenderVk(secondary, instance, nullptr);
             }
 
             HYPERION_RETURN_OK;
         });
     
-    secondary_command_buffer->SubmitSecondary(primary_command_buffer);
+    secondary_command_buffer->SubmitSecondary(primary);
 }
 
 } // namespace hyperion::v2

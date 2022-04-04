@@ -32,13 +32,10 @@ public:
     inline const DeferredRenderingEffect &GetEffect() const { return m_effect; }
 
     void Create(Engine *engine);
-    void CreateRenderList(Engine *engine);
-    void CreatePipeline(Engine *engine);
     void Destroy(Engine *engine);
     void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
 
 private:
-
     DeferredRenderingEffect m_effect;
 };
 

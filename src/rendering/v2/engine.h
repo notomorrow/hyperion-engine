@@ -11,6 +11,7 @@
 #include "components/texture.h"
 #include "components/render_list.h"
 #include "components/deferred.h"
+#include "components/shadows.h"
 #include "components/octree.h"
 
 #include <rendering/backend/renderer_image.h>
@@ -61,8 +62,11 @@ public:
     inline PostProcessing &GetPostProcessing() { return m_post_processing; }
     inline const PostProcessing &GetPostProcessing() const { return m_post_processing; }
 
-    inline DeferredRenderer &GetDeferredRenderer() { return m_deferred_rendering; }
-    inline const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_rendering; }
+    inline DeferredRenderer &GetDeferredRenderer() { return m_deferred_renderer; }
+    inline const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_renderer; }
+
+    inline RenderList &GetRenderList() { return m_render_list; }
+    inline const RenderList &GetRenderList() const { return m_render_list; }
 
     inline Octree &GetOctree() { return m_octree; }
     inline const Octree &GetOctree() const { return m_octree; }
@@ -182,7 +186,7 @@ public:
     {
         const auto bucket = pipeline->GetBucket();
 
-        GraphicsPipeline::ID id = m_deferred_rendering.GetRenderList()[bucket]
+        GraphicsPipeline::ID id = m_render_list[bucket]
             .pipelines.Add(this, std::move(pipeline), std::move(args)...);
 
         id.bucket = bucket;
@@ -192,10 +196,10 @@ public:
 
     template <class ...Args>
     void RemoveGraphicsPipeline(GraphicsPipeline::ID id, Args &&... args)
-        { return m_deferred_rendering.GetRenderList()[id.bucket].pipelines.Remove(this, id, std::move(args)...); }
+        { return m_render_list[id.bucket].pipelines.Remove(this, id, std::move(args)...); }
 
     inline GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id)
-        { return m_deferred_rendering.GetRenderList()[id.bucket].pipelines.Get(id); }
+        { return m_render_list[id.bucket].pipelines.Get(id); }
 
     inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
         { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
@@ -238,6 +242,8 @@ public:
     void PrepareSwapchain();
     void Compile();
     void UpdateDescriptorData(uint32_t frame_index);
+
+    void RenderShadows(CommandBuffer *primary, uint32_t frame_index);
     void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
     void RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
@@ -255,7 +261,9 @@ private:
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
     PostProcessing m_post_processing;
-    DeferredRenderer m_deferred_rendering;
+    DeferredRenderer m_deferred_renderer;
+    ShadowRenderer m_shadow_renderer;
+    RenderList m_render_list;
 
     Octree::Root m_octree_root;
     Octree m_octree;

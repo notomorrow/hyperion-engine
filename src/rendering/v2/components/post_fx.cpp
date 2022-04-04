@@ -55,6 +55,14 @@ void PostEffect::Create(Engine *engine)
     );
 
     CreatePerFrameData(engine);
+    
+    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
+        CreatePipeline(engine);
+    };
+
+    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
+        DestroyPipeline(engine);
+    };
 }
 
 void PostEffect::CreatePerFrameData(Engine *engine)
@@ -105,7 +113,6 @@ void PostEffect::CreatePipeline(Engine *engine)
 
     m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
 }
-
 
 void PostEffect::Destroy(Engine *engine)
 {
@@ -162,7 +169,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                     {
                         {.count = 3},
                         {},
-                        {.offsets = { uint32_t(0)}}
+                        {.offsets = {uint32_t(0)}}
                     }
                 ));
 
@@ -217,18 +224,6 @@ void PostProcessing::Create(Engine *engine)
         m_filters[i]->Create(engine);
         m_filters[i]->CreateDescriptors(engine, binding_index);
     }
-
-    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
-        for (auto &m_filter : m_filters) {
-            m_filter->CreatePipeline(engine);
-        }
-    };
-
-    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
-        for (auto &filter : m_filters) {
-            filter->DestroyPipeline(engine);
-        }
-    };
 }
 
 void PostProcessing::Destroy(Engine *engine)

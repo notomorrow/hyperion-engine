@@ -35,15 +35,13 @@ Result Frame::CreateSyncObjects()
 {
     AssertThrow(this->creation_device != nullptr);
 
-    VkDevice rd_device = this->creation_device->GetDevice();
-
     HYPERION_BUBBLE_ERRORS(present_semaphores.Create(this->creation_device.get()));
 
     VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     HYPERION_VK_CHECK_MSG(
-        vkCreateFence(rd_device, &fence_info, nullptr, &this->fc_queue_submit),
+        vkCreateFence(creation_device->GetDevice(), &fence_info, nullptr, &this->fc_queue_submit),
         "Error creating render fence!"
     );
 

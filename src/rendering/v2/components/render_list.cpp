@@ -119,10 +119,10 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
         }
 
         if (bucket == GraphicsPipeline::BUCKET_TRANSLUCENT) {
-            auto *forward_fbo = engine->GetFramebuffer(engine->GetDeferredRenderer().GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].framebuffer_ids[0]);
+            /* Reference depth image from the opaque layer */
+            auto *forward_fbo = engine->GetFramebuffer(engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].framebuffer_ids[0]);
             AssertThrow(forward_fbo != nullptr);
 
-            /* Reference depth image from the opaque layer */
             auto image_view = std::make_unique<ImageView>();
             HYPERION_ASSERT_RESULT(image_view->Create(engine->GetInstance()->GetDevice(), forward_fbo->Get().GetAttachmentImageInfos()[3].image.get()));
 
@@ -137,7 +137,6 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
         ));
     }
 }
-
 
 void RenderList::Bucket::Destroy(Engine *engine)
 {
@@ -162,12 +161,12 @@ void RenderList::Bucket::BeginRenderPass(Engine *engine, CommandBuffer *command_
         AssertThrowMsg(pipelines.objects[0]->Get().GetConstructionInfo().render_pass == &render_pass, "Render pass for pipeline does not match render bucket renderpass");
     }
 
-    auto &fbo = *pipelines.objects[0]->Get().GetConstructionInfo().fbos[frame_index];//engine->GetFramebuffer(framebuffer_ids[/*frame_index*/ 0])->Get(); //
+    auto &framebuffer = engine->GetFramebuffer(framebuffer_ids[frame_index])->Get();
 
     render_pass.Begin(
         command_buffer,
-        fbo.GetFramebuffer(),
-        VkExtent2D{ uint32_t(fbo.GetWidth()), uint32_t(fbo.GetHeight()) }
+        framebuffer.GetFramebuffer(),
+        VkExtent2D{ uint32_t(framebuffer.GetWidth()), uint32_t(framebuffer.GetHeight()) }
     );
 }
 
