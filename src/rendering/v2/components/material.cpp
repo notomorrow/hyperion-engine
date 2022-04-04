@@ -62,10 +62,16 @@ void Material::Create(Engine *engine, MaterialShaderData *out)
 
     for (size_t i = 0; i < num_bound_textures; i++) {
         if (const auto &texture_id = m_textures.textures.ValueAt(i)) {
-            if (!engine->m_shader_globals->textures.GetResourceIndex(texture_id, &shader_data.texture_index[i])) {
-                DebugLog(LogType::Warn, "Texture %d could not be bound for material %d because it is not found in the bindless texture store\n", texture_id.value, m_id.value);
+            if (engine->m_shader_globals->textures.GetResourceIndex(texture_id, &shader_data.texture_index[i].index)) {
+                shader_data.texture_index[i].used = 1;
+
+                continue;
             }
+
+            DebugLog(LogType::Warn, "Texture %d could not be bound for material %d because it is not found in the bindless texture store\n", texture_id.value, m_id.value);
         }
+
+        shader_data.texture_index[i].used = false;
     }
 
     *out = shader_data;

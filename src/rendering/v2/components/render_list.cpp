@@ -53,7 +53,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
 {
     AssertThrow(render_pass_id.value == 0);
 
-    renderer::RenderPass::Mode mode = renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER;
+    auto mode = renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER;
 
     if (bucket == GraphicsPipeline::BUCKET_SWAPCHAIN) {
         mode = renderer::RenderPass::Mode::RENDER_PASS_INLINE;
@@ -162,7 +162,7 @@ void RenderList::Bucket::BeginRenderPass(Engine *engine, CommandBuffer *command_
         AssertThrowMsg(pipelines.objects[0]->Get().GetConstructionInfo().render_pass == &render_pass, "Render pass for pipeline does not match render bucket renderpass");
     }
 
-    auto &fbo =  *pipelines.objects[0]->Get().GetConstructionInfo().fbos[frame_index];//engine->GetFramebuffer(framebuffer_ids[/*frame_index*/ 0])->Get(); //
+    auto &fbo = *pipelines.objects[0]->Get().GetConstructionInfo().fbos[frame_index];//engine->GetFramebuffer(framebuffer_ids[/*frame_index*/ 0])->Get(); //
 
     render_pass.Begin(
         command_buffer,
