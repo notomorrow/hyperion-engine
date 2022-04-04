@@ -15,6 +15,8 @@ layout(set = 1, binding = 4) uniform sampler2D deferred_result;
 
 layout(set = 1, binding = 8) uniform sampler2D filter_0;
 
+layout(set = 1, binding = 9) uniform sampler2D shadow_map;
+
 //layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
 
 layout(location=0) out vec4 out_color;
@@ -38,6 +40,7 @@ void main() {
     
     //if (out_color.a < 0.2) {
         
-    out_color = vec4(texture(deferred_result, texcoord).rgb, 1.0);
+    //out_color = vec4(texture(deferred_result, texcoord).rgb, 1.0);
+    out_color = vec4(texture(shadow_map, texcoord).rgb, 1.0);
     //}
 }

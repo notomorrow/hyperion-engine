@@ -1,6 +1,5 @@
 #include "renderer.h"
-
-#include "deferred.h"
+#include "../engine.h"
 
 namespace hyperion::v2 {
 
@@ -14,23 +13,23 @@ Renderer::~Renderer()
 
 void Renderer::RenderOpaqueObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    m_render_list.Get(GraphicsPipeline::Bucket::BUCKET_OPAQUE).BeginRenderPass(engine, primary, 0);
+    auto &render_list = engine->GetRenderList();
 
-    for (const auto &pipeline : m_render_list.Get(GraphicsPipeline::Bucket::BUCKET_SKYBOX).pipelines.objects) {
+    for (const auto &pipeline : render_list.Get(GraphicsPipeline::Bucket::BUCKET_SKYBOX).pipelines.objects) {
         pipeline->Render(engine, primary, frame_index);
     }
 
 
-    for (const auto &pipeline : m_render_list.Get(GraphicsPipeline::Bucket::BUCKET_OPAQUE).pipelines.objects) {
+    for (const auto &pipeline : render_list.Get(GraphicsPipeline::Bucket::BUCKET_OPAQUE).pipelines.objects) {
         pipeline->Render(engine, primary, frame_index);
     }
-
-    m_render_list.Get(GraphicsPipeline::Bucket::BUCKET_OPAQUE).EndRenderPass(engine, primary);
 }
 
 void Renderer::RenderTransparentObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    for (const auto &pipeline : m_render_list[GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT].pipelines.objects) {
+    const auto &render_list = engine->GetRenderList();
+
+    for (const auto &pipeline : render_list[GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT].pipelines.objects) {
         pipeline->Render(engine, primary, frame_index);
     }
 }

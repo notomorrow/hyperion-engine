@@ -68,10 +68,10 @@ void Material::Create(Engine *engine, MaterialShaderData *out)
                 continue;
             }
 
-            DebugLog(LogType::Warn, "Texture %d could not be bound for material %d because it is not found in the bindless texture store\n", texture_id.value, m_id.value);
+            DebugLog(LogType::Warn, "Texture %d could not be bound for Material %d because it is not found in the bindless texture store\n", texture_id.value, m_id.value);
         }
 
-        shader_data.texture_index[i].used = false;
+        shader_data.texture_index[i].used = 0;
     }
 
     *out = shader_data;

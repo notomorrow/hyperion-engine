@@ -212,7 +212,7 @@ int main()
 
     engine.Initialize();
 
-    auto opaque_fbo_id = engine.GetDeferredRenderer().GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0];//v2::Framebuffer::ID{1};//engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
+    auto opaque_fbo_id = engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0];//v2::Framebuffer::ID{1};//engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
     auto *opaque_fbo = engine.GetFramebuffer(opaque_fbo_id);
 
 
@@ -429,7 +429,7 @@ int main()
 
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
         //Transform monkey_transform(Vector3(9.0f), Vector3(1.0f), Quaternion());
 
         monkey_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
@@ -444,7 +444,7 @@ int main()
         monkey_node->SetSpatial(&engine, monkey_spatial_id);
         new_root.AddChild(std::move(monkey_node));
         
-        pipeline->AddSpatial(&engine, monkey_spatial_id);
+        pipeline->AddSpatial(&engine, engine.GetSpatial(monkey_spatial_id));
 
         cube_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
             cube_mesh,
@@ -453,7 +453,7 @@ int main()
             cube_mesh->GetAABB(),
             mat2_id
         ));
-        pipeline->AddSpatial(&engine, cube_spatial_id);
+        pipeline->AddSpatial(&engine, engine.GetSpatial(cube_spatial_id));
         
         main_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
@@ -466,41 +466,45 @@ int main()
             {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
         }));
 
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(shader_id, engine.GetDeferredRenderer().GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(shader_id, engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX);
         pipeline->SetCullMode(GraphicsPipeline::CullMode::FRONT);
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
 
-        pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
+        auto skybox_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
             cube_mesh,
             pipeline->GetVertexAttributes(),
             Transform(Vector3(), Vector3(5.0f), Quaternion::Identity()),
             cube_mesh->GetAABB(),
             skybox_material_id
-        )));
+        ));
+
+        pipeline->AddSpatial(&engine, engine.GetSpatial(skybox_spatial_id));
         
         skybox_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
     v2::GraphicsPipeline::ID translucent_pipeline_id{};
     {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
         pipeline->SetBlendEnabled(true);
 
-        pipeline->AddSpatial(&engine, engine.AddSpatial(std::make_unique<v2::Spatial>(
+        auto translucent_spatial_id = engine.AddSpatial(std::make_unique<v2::Spatial>(
             cube_mesh,
             pipeline->GetVertexAttributes(),
             Transform(Vector3(4.0f, -0.35f, 2.0f), Vector3(1.0f), Quaternion(Vector3::One(), 0.25f)),
             cube_mesh->GetAABB(),
             translucent_material_id
-        )));
+        ));
+
+        pipeline->AddSpatial(&engine, engine.GetSpatial(translucent_spatial_id));
         
         translucent_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
     v2::GraphicsPipeline::ID wire_pipeline_id{};
     {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetDeferredRenderer().GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
         pipeline->SetBlendEnabled(false);
         pipeline->SetFillMode(GraphicsPipeline::FillMode::LINE);
         pipeline->SetCullMode(GraphicsPipeline::CullMode::NONE);
@@ -646,7 +650,8 @@ int main()
         engine.UpdateDescriptorData(frame_index);
         
         HYPERION_ASSERT_RESULT(frame->BeginCapture());
-        
+
+        engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
         engine.RenderPostProcessing(frame->GetCommandBuffer(), frame_index);
 

@@ -115,7 +115,8 @@ void Engine::FindTextureFormatDefaults()
 void Engine::PrepareSwapchain()
 {
     m_post_processing.Create(this);
-    m_deferred_rendering.Create(this);
+    m_deferred_renderer.Create(this);
+    m_shadow_renderer.Create(this);
 
     Shader::ID shader_id{};
 
@@ -179,10 +180,12 @@ void Engine::PrepareSwapchain()
     m_swapchain_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 
     m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_init += [this](Engine *engine) {
+        m_render_list.CreatePipelines(this);
         m_swapchain_pipeline->Create(engine);
     };
 
     m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_deinit += [this](Engine *engine) {
+        m_render_list.Destroy(this);
         m_swapchain_pipeline->Destroy(engine);
     };
 }
@@ -260,7 +263,7 @@ void Engine::Initialize()
     /* for textures */
     m_shader_globals->textures.Create(this);
 
-    m_deferred_rendering.CreateRenderList(this);
+    m_render_list.Create(this);
 }
 
 void Engine::Destroy()
@@ -268,10 +271,7 @@ void Engine::Destroy()
     AssertThrow(m_instance != nullptr);
 
     (void)m_instance->GetDevice()->Wait();
-
-    //m_deferred_rendering.Destroy(this);
-
-
+    
     m_framebuffers.RemoveAll(this);
     m_render_passes.RemoveAll(this);
     m_shaders.RemoveAll(this);
@@ -280,6 +280,9 @@ void Engine::Destroy()
     m_compute_pipelines.RemoveAll(this);
 
     m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_deinit(this);
+
+    m_deferred_renderer.Destroy(this);
+    m_shadow_renderer.Destroy(this);
 
     if (m_shader_globals != nullptr) {
         m_shader_globals->scenes.Destroy(m_instance->GetDevice());
@@ -325,9 +328,14 @@ void Engine::UpdateDescriptorData(uint32_t frame_index)
     m_shader_globals->textures.ApplyUpdates(this, frame_index);
 }
 
+void Engine::RenderShadows(CommandBuffer *primary, uint32_t frame_index)
+{
+    m_shadow_renderer.Render(this, primary, frame_index);
+}
+
 void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
 {
-    m_deferred_rendering.Render(this, primary, frame_index);
+    m_deferred_renderer.Render(this, primary, frame_index);
 }
 
 void Engine::RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index)

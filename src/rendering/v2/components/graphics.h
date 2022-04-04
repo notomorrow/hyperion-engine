@@ -91,8 +91,9 @@ public:
     inline void SetBlendEnabled(bool blend_enabled)
         { m_blend_enabled = blend_enabled; }
 
-    void AddSpatial(Engine *engine, Spatial::ID id);
-    void RemoveSpatial(Engine *engine, Spatial::ID id);
+    void AddSpatial(Engine *engine, Spatial *spatial);
+    void RemoveSpatial(Engine *engine, Spatial *spatial);
+    inline const auto &GetSpatials() const { return m_spatials; }
 
     /* Non-owned objects - owned by `engine`, used by the pipeline */
 
@@ -102,7 +103,7 @@ public:
     /* Build pipeline */
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
+    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
 
 private:
     /* Called from Spatial - remove the pointer */
@@ -122,7 +123,7 @@ private:
     ObjectIdHolder<Texture> m_texture_ids;
     ObjectIdHolder<Framebuffer> m_fbo_ids;
 
-    std::vector<std::pair<Spatial::ID, Spatial *>> m_spatials;
+    std::vector<Spatial *> m_spatials;
 
     PerFrameData<CommandBuffer> *m_per_frame_data;
 };
