@@ -180,12 +180,12 @@ void Engine::PrepareSwapchain()
 
     m_swapchain_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 
-    m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_init += [this](Engine *engine) {
+    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_init += [this](Engine *engine) {
         m_render_list.CreatePipelines(this);
         m_swapchain_pipeline->Create(engine);
     };
 
-    m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_deinit += [this](Engine *engine) {
+    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_deinit += [this](Engine *engine) {
         m_render_list.Destroy(this);
         m_swapchain_pipeline->Destroy(engine);
     };
@@ -280,8 +280,8 @@ void Engine::Destroy()
     m_materials.RemoveAll(this);
     m_compute_pipelines.RemoveAll(this);
 
-    m_events[EVENT_KEY_SHADER_DATA].on_deinit(this);
-    m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_deinit(this);
+    m_callbacks[CALLBACK_SHADER_DATA].on_deinit(this);
+    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_deinit(this);
 
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
@@ -300,7 +300,7 @@ void Engine::Destroy()
 
 void Engine::Compile()
 {
-    m_events[EVENT_KEY_SHADER_DATA].on_init(this);
+    m_callbacks[CALLBACK_SHADER_DATA].on_init(this);
 
     /* Finalize materials */
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
@@ -313,7 +313,7 @@ void Engine::Compile()
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
     
-    m_events[EVENT_KEY_GRAPHICS_PIPELINES].on_init(this);
+    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_init(this);
 
     m_compute_pipelines.CreateAll(this);
 }

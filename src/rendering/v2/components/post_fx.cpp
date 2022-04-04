@@ -56,11 +56,11 @@ void PostEffect::Create(Engine *engine)
 
     CreatePerFrameData(engine);
     
-    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
+    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
         CreatePipeline(engine);
     };
 
-    engine->GetEvents(Engine::EVENT_KEY_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
+    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
         DestroyPipeline(engine);
     };
 }

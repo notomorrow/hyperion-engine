@@ -32,6 +32,9 @@ using renderer::Semaphore;
 using renderer::SemaphoreChain;
 using renderer::Image;
 using renderer::StorageBuffer;
+
+
+
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
  *
@@ -39,13 +42,13 @@ using renderer::StorageBuffer;
 class Engine {
 public:
 
-    enum EventKey {
-        EVENT_KEY_GENERAL,
-        EVENT_KEY_GRAPHICS_PIPELINES,
-        EVENT_KEY_DESCRIPTOR_SETS,
-        EVENT_KEY_SHADER_DATA,
+    enum CallbackKey {
+        CALLBACK_GENERAL,
+        CALLBACK_GRAPHICS_PIPELINES,
+        CALLBACK_DESCRIPTOR_SETS,
+        CALLBACK_SHADER_DATA,
 
-        EVENT_KEY_MAX
+        CALLBACK_MAX
     };
 
     enum TextureFormatDefault {
@@ -77,17 +80,17 @@ public:
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
 
-    inline auto &GetEvents()
-        { return m_events; }
+    inline auto &GetCallbacks()
+        { return m_callbacks; }
 
-    inline const auto &GetEvents() const
-        { return m_events; }
+    inline const auto &GetCallbacks() const
+        { return m_callbacks; }
     
-    inline auto &GetEvents(EventKey key)
-        { return m_events[key]; }
+    inline auto &GetCallbacks(CallbackKey key)
+        { return m_callbacks[key]; }
     
-    inline const auto &GetEvents(EventKey key) const
-        { return const_cast<Engine*>(this)->GetEvents(key); }
+    inline const auto &GetCallbacks(CallbackKey key) const
+        { return const_cast<Engine*>(this)->GetCallbacks(key); }
 
     /* Shaders */
 
@@ -249,6 +252,10 @@ public:
     ShaderGlobals *m_shader_globals;
 
 private:
+    struct Callbacks {
+        using CallbackFunction = std::function<void(Engine *)>;
+    };
+
     void FindTextureFormatDefaults();
 
     std::unique_ptr<Instance> m_instance;
@@ -271,7 +278,7 @@ private:
     ObjectHolder<Spatial> m_spatials;
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
 
-    std::array<ComponentEvents<EngineCallbacks>,EVENT_KEY_MAX> m_events;
+    std::array<ComponentEvents<Callbacks>, CALLBACK_MAX> m_callbacks;
 };
 
 } // namespace hyperion::v2

@@ -12,9 +12,6 @@ layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
-//layout(binding = 2) uniform samplerCube tex;
-layout(binding = 2) uniform sampler2D tex;
-
 struct TextureRef {
     uint index;
     uint used;
