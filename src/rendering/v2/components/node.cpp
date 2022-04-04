@@ -7,7 +7,7 @@ namespace hyperion::v2 {
 
 Node::Node(const char *tag)
     : m_parent_node(nullptr),
-      m_spatial_id{}
+      m_spatial(nullptr)
 {
     size_t len = std::strlen(tag);
     m_tag = new char[len + 1];
@@ -99,15 +99,15 @@ void Node::SetLocalTransform(const Transform &transform)
     UpdateWorldTransform();
 }
 
-void Node::SetSpatial(Engine *engine, Spatial::ID id)
+void Node::SetSpatial(Engine *engine, Spatial *spatial)
 {
-    if (m_spatial_id == id) {
+    if (m_spatial == spatial) {
         return;
     }
 
-    m_spatial_id = id;
+    m_spatial = spatial;
 
-    if (const Spatial *spatial = engine->GetSpatial(id)) {
+    if (spatial != nullptr) {
         m_local_aabb = spatial->GetLocalAabb();
     } else {
         m_local_aabb = BoundingBox();
@@ -118,7 +118,7 @@ void Node::SetSpatial(Engine *engine, Spatial::ID id)
 
 void Node::UpdateSpatialTransform(Engine *engine)
 {
-    engine->SetSpatialTransform(m_spatial_id, m_world_transform);
+    engine->SetSpatialTransform(m_spatial, m_world_transform);
 }
 
 void Node::Update(Engine *engine)

@@ -222,8 +222,8 @@ public:
     /* Spatials */
 
     template <class ...Args>
-    Spatial::ID AddSpatial(std::unique_ptr<Spatial> &&spatial, Args &&... args)
-        { return m_spatials.Add(this, std::move(spatial), std::move(args)...); }
+    Spatial *AddSpatial(Args &&... args)
+        { return GetSpatial(m_spatials.Add(this, std::make_unique<Spatial>(std::move(args)...))); }
 
     template <class ...Args>
     void RemoveSpatial(Spatial::ID id, Args &&... args)
@@ -235,7 +235,7 @@ public:
     inline const Spatial *GetSpatial(Spatial::ID id) const
         { return const_cast<Engine*>(this)->GetSpatial(id); }
 
-    void SetSpatialTransform(Spatial::ID id, const Transform &transform);
+    void SetSpatialTransform(Spatial *spatial, const Transform &transform);
 
     void Initialize();
     void Destroy();

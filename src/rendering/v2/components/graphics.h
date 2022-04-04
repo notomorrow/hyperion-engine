@@ -99,6 +99,9 @@ public:
 
     inline void AddFramebuffer(Framebuffer::ID id) { m_fbo_ids.Add(id); }
     inline void RemoveFramebuffer(Framebuffer::ID id) { m_fbo_ids.Remove(id); }
+
+    inline uint32_t GetSceneIndex() const { return m_scene_index; }
+    inline void SetSceneIndex(uint32_t scene_index) { m_scene_index = scene_index; }
     
     /* Build pipeline */
     void Create(Engine *engine);
@@ -124,6 +127,8 @@ private:
     ObjectIdHolder<Framebuffer> m_fbo_ids;
 
     std::vector<Spatial *> m_spatials;
+
+    uint32_t m_scene_index;
 
     PerFrameData<CommandBuffer> *m_per_frame_data;
 };

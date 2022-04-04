@@ -9,5 +9,6 @@ layout(location=6) in vec3 v_light_direction;
 layout(location=7) in vec3 v_camera_position;
 
 
-void main() {
+void main()
+{
 }

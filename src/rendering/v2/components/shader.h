@@ -152,7 +152,7 @@ public:
 
     void Set(size_t index, StructType &&value)
     {
-        AssertThrow(index < m_objects.Size());
+        AssertThrowMsg(index < m_objects.Size(), "Cannot set shader data out of bounds");
 
         m_objects[index] = std::move(value);
 
@@ -169,7 +169,7 @@ struct ShaderGlobals {
     static constexpr size_t max_materials = (1ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
     static constexpr size_t max_materials_bytes = max_materials * sizeof(MaterialShaderData);
     /* max number of objects, based on size in mb */
-    static constexpr size_t max_objects = (1ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
+    static constexpr size_t max_objects = (8ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
     static constexpr size_t max_objects_bytes = max_materials * sizeof(ObjectShaderData);
     /* max number of scenes (cameras, essentially), based on size in kb */
     static constexpr size_t max_scenes = (16ull * 1024ull) / sizeof(SceneShaderData);
