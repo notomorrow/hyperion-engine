@@ -15,45 +15,15 @@ FramebufferObject::FramebufferObject(uint32_t width, uint32_t height)
 FramebufferObject::~FramebufferObject()
 {
     AssertExitMsg(m_framebuffer == nullptr, "framebuffer should have been destroyed");
-}
 
-Result FramebufferObject::AddAttachment(Image::InternalFormat format)
-{
-    return AddAttachment({
-        .image = std::make_unique<FramebufferImage2D>(m_width, m_height, format, nullptr),
-        .image_view = nullptr,
-        .sampler = nullptr,
-        .image_needs_creation = true,
-        .image_view_needs_creation = true,
-        .sampler_needs_creation = true
-    });
-}
-
-Result FramebufferObject::AddAttachment(AttachmentImageInfo &&image_info)
-{
-    if (image_info.image_view == nullptr) {
-        image_info.image_view = std::make_unique<ImageView>();
-
-        image_info.image_view_needs_creation = true;
+    for (auto *attachment_ref : m_render_pass_attachment_refs) {
+        attachment_ref->DecRef();
     }
-
-    if (image_info.sampler == nullptr) {
-        image_info.sampler = std::make_unique<Sampler>(
-            Image::FilterMode::TEXTURE_FILTER_NEAREST,
-            Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
-        );
-
-        image_info.sampler_needs_creation = true;
-    }
-
-    m_fbo_attachments.push_back(std::move(image_info));
-
-    HYPERION_RETURN_OK;
 }
 
 Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
 {
-    AssertThrowMsg(!m_fbo_attachments.empty(), "At least one attachment must be added");
+    AssertThrowMsg(!m_fbo_attachments.empty() || !m_render_pass_attachment_refs.empty(), "At least one attachment must be added");
 
     for (auto &image_info : m_fbo_attachments) {
         if (image_info.image != nullptr && image_info.image_needs_creation) {
@@ -73,12 +43,19 @@ Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
 
     // linear layout of VkImageView data
     std::vector<VkImageView> attachment_image_views;
-    {
-        attachment_image_views.resize(m_fbo_attachments.size());
+    attachment_image_views.resize(m_fbo_attachments.size());
 
-        for (size_t i = 0; i < m_fbo_attachments.size(); i++) {
-            attachment_image_views[i] = m_fbo_attachments[i].image_view->GetImageView();
-        }
+    for (size_t i = 0; i < m_fbo_attachments.size(); i++) {
+        attachment_image_views[i] = m_fbo_attachments[i].image_view->GetImageView();
+    }
+
+    /* NEW */
+    for (auto *attachment_ref : m_render_pass_attachment_refs) {
+        AssertThrow(attachment_ref != nullptr);
+        AssertThrow(attachment_ref->GetImageView() != nullptr);
+        AssertThrow(attachment_ref->GetImageView()->GetImageView() != nullptr);
+
+        attachment_image_views.push_back(attachment_ref->GetImageView()->GetImageView());
     }
 
     VkFramebufferCreateInfo framebuffer_create_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};

@@ -247,32 +247,32 @@ int main()
         descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(0)
             ->AddSubDescriptor({
-                .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[0].image_view.get(),
-                .sampler = opaque_fbo->Get().GetAttachmentImageInfos()[0].sampler.get()
+                .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetImageView(),
+                .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetSampler()
             });
 
         /* Normals texture*/
         descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(1)
             ->AddSubDescriptor({
-                .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[1].image_view.get(),
-                .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[1].sampler.get()
+                .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetImageView(),
+                .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetSampler()
             });
 
         /* Position texture */
         descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(2)
             ->AddSubDescriptor({
-                .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[2].image_view.get(),
-                .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[2].sampler.get()
+                .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetImageView(),
+                .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetSampler()
             });
 
         /* Depth texture */
         descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(3)
             ->AddSubDescriptor({
-                .image_view = opaque_fbo->Get().GetAttachmentImageInfos()[3].image_view.get(),
-                .sampler    = opaque_fbo->Get().GetAttachmentImageInfos()[3].sampler.get()
+                .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetImageView(),
+                .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetSampler()
             });
         
         /*engine.GetInstance()->GetDescriptorPool()
@@ -322,6 +322,20 @@ int main()
 
     matrices_descriptor_buffer.Create(device, 8);
     scene_data_descriptor_buffer.Create(device, 8);
+
+    /*auto attachment = std::make_unique<RenderPassAttachment>(
+        std::make_unique<FramebufferImage2D>(512, 512, Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F, nullptr),
+        Stage::RENDER_PASS_STAGE_PRESENT
+    );
+
+    RenderPassAttachmentRef *attachment_ref = nullptr;
+    attachment->AddAttachmentRef(device, StoreOperation::STORE, &attachment_ref);
+    RenderPassAttachmentRef *attachment_ref2 = nullptr;
+    attachment_ref->AddAttachmentRef(device, StoreOperation::STORE, &attachment_ref2);
+
+    auto vk_desc = attachment_ref->GetAttachmentDescription();
+    auto vk_ref = attachment_ref->GetAttachmentReference();*/
+
 
     engine.PrepareSwapchain();
     

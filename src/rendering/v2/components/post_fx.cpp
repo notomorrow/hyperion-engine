@@ -28,12 +28,32 @@ PostEffect::~PostEffect() = default;
 void PostEffect::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
-    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::Stage::RENDER_PASS_STAGE_SHADER, renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
+    auto render_pass = std::make_unique<RenderPass>(renderer::Stage::RENDER_PASS_STAGE_SHADER, renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
 
-    /* For our color attachment */
-    render_pass->Get().AddAttachment({
-        .format = engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
-    });
+    renderer::RenderPassAttachmentRef *attachment_ref;
+
+    m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+        std::make_unique<renderer::FramebufferImage2D>(
+            engine->GetInstance()->swapchain->extent.width,
+            engine->GetInstance()->swapchain->extent.height,
+            engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
+            nullptr
+        ),
+        renderer::Stage::RENDER_PASS_STAGE_SHADER
+    ));
+
+    HYPERION_ASSERT_RESULT(m_render_pass_attachments.back()->AddAttachmentRef(
+        engine->GetInstance()->GetDevice(),
+        renderer::LoadOperation::CLEAR,
+        renderer::StoreOperation::STORE,
+        &attachment_ref
+    ));
+
+    render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+
+    for (auto &attachment : m_render_pass_attachments) {
+        HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
+    }
 
     m_render_pass_id = engine->AddRenderPass(std::move(render_pass));
 }
@@ -80,17 +100,13 @@ void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
     /* set descriptor */
     auto &framebuffer = engine->GetFramebuffer(m_framebuffer_id)->Get();
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_PASS);
-
-    const uint32_t num_attachments = framebuffer.GetNumAttachments();
     
-    for (uint32_t i = 0; i < num_attachments; i++) {
-        const auto &attachment_info = framebuffer.GetAttachmentImageInfos()[i];
-
+    for (auto *attachment_ref : framebuffer.GetRenderPassAttachmentRefs()) {
         descriptor_set
             ->AddDescriptor<ImageSamplerDescriptor>(binding_offset++)
             ->AddSubDescriptor({
-                .image_view = attachment_info.image_view.get(),
-                .sampler = attachment_info.sampler.get()
+                .image_view = attachment_ref->GetImageView(),
+                .sampler    = attachment_ref->GetSampler()
             });
    }
 }

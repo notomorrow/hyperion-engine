@@ -50,8 +50,8 @@ Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::
     auto framebuffer = std::make_unique<Framebuffer>(width, height);
 
     /* Add all attachments from the renderpass */
-    for (auto &it : render_pass->Get().GetAttachments()) {
-        framebuffer->Get().AddAttachment(it.second.format);
+    for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
+        framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
     }
 
     return AddFramebuffer(std::move(framebuffer), render_pass_id);
@@ -129,39 +129,99 @@ void Engine::PrepareSwapchain()
         }));
     }
 
+    uint32_t iteration = 0;
+
+    auto render_pass = std::make_unique<RenderPass>(renderer::Stage::RENDER_PASS_STAGE_PRESENT, renderer::RenderPass::Mode::RENDER_PASS_INLINE);
     RenderPass::ID render_pass_id{};
 
-    {
-        auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::Stage::RENDER_PASS_STAGE_PRESENT, renderer::RenderPass::Mode::RENDER_PASS_INLINE);
-        /* For our color attachment */
-        render_pass->Get().AddColorAttachment(
-            std::make_unique<Attachment<VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
-                (0, m_instance->swapchain->image_format));
 
-        render_pass->Get().AddAttachment({
-            .format = m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)
-        });
-        
-        render_pass_id = AddRenderPass(std::move(render_pass));
+    m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+        std::make_unique<renderer::FramebufferImage2D>(
+            m_instance->swapchain->extent.width,
+            m_instance->swapchain->extent.height,
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB,/* TMP Till I recover the code for automatically detecting this*/
+            nullptr
+        ),
+        renderer::Stage::RENDER_PASS_STAGE_PRESENT
+    ));
+
+    m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+        std::make_unique<renderer::FramebufferImage2D>(
+            m_instance->swapchain->extent.width,
+            m_instance->swapchain->extent.height,
+            m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH),
+            nullptr
+        ),
+        renderer::Stage::RENDER_PASS_STAGE_PRESENT
+    ));
+    
+    for (auto &attachment : m_render_pass_attachments) {
+        HYPERION_ASSERT_RESULT(attachment->Create(m_instance->GetDevice()));
     }
 
-    m_swapchain_pipeline = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN);
-
     for (VkImage img : m_instance->swapchain->images) {
-        auto image_view = std::make_unique<ImageView>();
+        auto fbo = std::make_unique<Framebuffer>(
+            m_instance->swapchain->extent.width,
+            m_instance->swapchain->extent.height
+        );
+            
+            /* For our color attachment */
+            /*render_pass->Get().AddColorAttachment(
+                std::make_unique<Attachment<VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
+                    (0, m_instance->swapchain->image_format));
+
+            render_pass->Get().AddAttachment({
+                .format = m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)
+            });*/
+
+        renderer::RenderPassAttachmentRef *attachment_ref[2];
+
+        HYPERION_ASSERT_RESULT(m_render_pass_attachments[0]->AddAttachmentRef(
+            m_instance->GetDevice(),
+            img,
+            m_instance->swapchain->image_format,
+            VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
+            1, 1,
+            renderer::LoadOperation::CLEAR,
+            renderer::StoreOperation::STORE,
+            &attachment_ref[0]
+        ));
+
+        attachment_ref[0]->SetBinding(0);
+
+        fbo->Get().AddRenderPassAttachmentRef(attachment_ref[0]);
+
+        HYPERION_ASSERT_RESULT(m_render_pass_attachments[1]->AddAttachmentRef(
+            m_instance->GetDevice(),
+            renderer::LoadOperation::CLEAR,
+            renderer::StoreOperation::STORE,
+            &attachment_ref[1]
+        ));
+
+        fbo->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
+
+        attachment_ref[1]->SetBinding(1);
+
+        if (iteration == 0) {
+            render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[0]);
+            render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
+
+            render_pass_id = AddRenderPass(std::move(render_pass));
+            m_swapchain_pipeline = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN);
+        }
+            
+
 
         /* Create imageview independent of a Image */
-        HYPERION_ASSERT_RESULT(image_view->Create(
+        /*HYPERION_ASSERT_RESULT(image_view->Create(
             m_instance->GetDevice(),
             img,
             m_instance->swapchain->image_format,
             VK_IMAGE_ASPECT_COLOR_BIT,
             VK_IMAGE_VIEW_TYPE_2D
-        ));
+        ));*/
 
-        auto fbo = std::make_unique<Framebuffer>(m_instance->swapchain->extent.width, m_instance->swapchain->extent.height);
-
-        fbo->Get().AddAttachment(
+        /*fbo->Get().AddAttachment(
             FramebufferObject::AttachmentImageInfo{
                 .image = nullptr,
                 .image_view = std::move(image_view),
@@ -171,12 +231,17 @@ void Engine::PrepareSwapchain()
                 .sampler_needs_creation = true
             }
         );
-
-        /* Now we add a depth buffer */
+        
         HYPERION_ASSERT_RESULT(fbo->Get().AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)));
+        */
+        m_swapchain_pipeline->AddFramebuffer(AddFramebuffer(
+            std::move(fbo),
+            render_pass_id
+        ));
 
-        m_swapchain_pipeline->AddFramebuffer(AddFramebuffer(std::move(fbo), render_pass_id));
+        ++iteration;
     }
+
 
     m_swapchain_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 
