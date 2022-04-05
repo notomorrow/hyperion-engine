@@ -38,7 +38,7 @@ void Node::UpdateWorldTransform()
 
 void Node::OnNestedNodeAdded(Node *node)
 {
-    m_internal_nested_children.push_back(node);
+    m_descendents.push_back(node);
     
     if (m_parent_node != nullptr) {
         m_parent_node->OnNestedNodeAdded(node);
@@ -47,10 +47,10 @@ void Node::OnNestedNodeAdded(Node *node)
 
 void Node::OnNestedNodeRemoved(Node *node)
 {
-    const auto it = std::find(m_internal_nested_children.begin(), m_internal_nested_children.end(), node);
+    const auto it = std::find(m_descendents.begin(), m_descendents.end(), node);
 
-    if (it != m_internal_nested_children.end()) {
-        m_internal_nested_children.erase(it);
+    if (it != m_descendents.end()) {
+        m_descendents.erase(it);
     }
 
     if (m_parent_node != nullptr) {
@@ -131,7 +131,7 @@ void Node::Update(Engine *engine)
 {
     UpdateSpatialTransform(engine);
 
-    for (auto *node : m_internal_nested_children) {
+    for (auto *node : m_descendents) {
         node->UpdateSpatialTransform(engine);
     }
 }

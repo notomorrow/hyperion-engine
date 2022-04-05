@@ -19,11 +19,11 @@ class Octree {
 public:
     struct Octant {
         std::unique_ptr<Octree> octree;
-        BoundingBox aabb;
+        BoundingBox             aabb;
     };
 
     struct Node {
-        Spatial *spatial;
+        Spatial     *spatial;
         BoundingBox aabb;
     };
 

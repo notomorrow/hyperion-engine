@@ -196,8 +196,8 @@ public:
     ValueType *Data() const { return m_values.data(); }
     size_t Size() const { return m_values.size(); }
 
-    auto begin() const { return m_values.begin(); }
-    auto end() const { return m_values.end(); }
+    auto begin() { return m_values.begin(); }
+    auto end() { return m_values.end(); }
 
 private:
     bool HasId(typename ObjectType::ID id)
@@ -354,7 +354,7 @@ public:
     RefCountedObjectHolder() = default;
     ~RefCountedObjectHolder()
     {
-        for (const RefCount &rc : m_ref_counts) {
+        for (RefCount &rc : m_ref_counts) {
             --rc.count;
 
             AssertThrowMsg(rc.count == 0, "Destructor called while object still in use elsewhere");

@@ -53,7 +53,7 @@ public:
 
     inline NodeList &GetChildren() { return m_child_nodes; }
     inline const NodeList &GetChildren() const { return m_child_nodes; }
-    inline const std::vector<Node *> &GetNestedChildren() const { return m_internal_nested_children; }
+    inline const std::vector<Node *> &GetNestedChildren() const { return m_descendents; }
 
     /*! \brief Set the local-space translation, scale, rotation of this Node (not influenced by the parent Node) */
     void SetLocalTransform(const Transform &);
@@ -107,7 +107,7 @@ private:
 
     Spatial *m_spatial;
 
-    std::vector<Node *> m_internal_nested_children;
+    std::vector<Node *> m_descendents;
 };
 
 } // namespace hyperion::v2

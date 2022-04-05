@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_ENGINE_H
 #define HYPERION_V2_ENGINE_H
 
+#include "asset/assets.h"
+
 #include "components/shader.h"
 #include "components/post_fx.h"
 #include "components/framebuffer.h"

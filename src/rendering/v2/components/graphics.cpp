@@ -196,7 +196,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 }
             );
             
-            for (const Spatial *spatial : m_spatials) {
+            for (Spatial *spatial : m_spatials) {
                 /* Bind per-object / material data separately */
                 instance->GetDescriptorPool().Bind(
                     device,

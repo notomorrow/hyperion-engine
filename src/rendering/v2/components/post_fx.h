@@ -25,7 +25,7 @@ class Engine;
 
 class PostEffect {
 public:
-    static std::shared_ptr<Mesh> full_screen_quad;
+    static std::shared_ptr<hyperion::Mesh> full_screen_quad;
 
     PostEffect(Shader::ID shader_id);
     PostEffect(const PostEffect &) = delete;
