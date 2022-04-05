@@ -14,7 +14,6 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 using renderer::MeshInputAttributeSet;
-using renderer::AttachmentBase;
 using renderer::Attachment;
 using renderer::ImageView;
 using renderer::FramebufferObject;
@@ -131,28 +130,28 @@ void Engine::PrepareSwapchain()
 
     uint32_t iteration = 0;
 
-    auto render_pass = std::make_unique<RenderPass>(renderer::Stage::RENDER_PASS_STAGE_PRESENT, renderer::RenderPass::Mode::RENDER_PASS_INLINE);
+    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPassStage::PRESENT, renderer::RenderPass::Mode::RENDER_PASS_INLINE);
     RenderPass::ID render_pass_id{};
 
 
-    m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+    m_render_pass_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
             m_instance->swapchain->extent.width,
             m_instance->swapchain->extent.height,
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB,/* TMP Till I recover the code for automatically detecting this*/
             nullptr
         ),
-        renderer::Stage::RENDER_PASS_STAGE_PRESENT
+        renderer::RenderPassStage::PRESENT
     ));
 
-    m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+    m_render_pass_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
             m_instance->swapchain->extent.width,
             m_instance->swapchain->extent.height,
             m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
         ),
-        renderer::Stage::RENDER_PASS_STAGE_PRESENT
+        renderer::RenderPassStage::PRESENT
     ));
     
     for (auto &attachment : m_render_pass_attachments) {
@@ -174,7 +173,7 @@ void Engine::PrepareSwapchain()
                 .format = m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)
             });*/
 
-        renderer::RenderPassAttachmentRef *attachment_ref[2];
+        renderer::AttachmentRef *attachment_ref[2];
 
         HYPERION_ASSERT_RESULT(m_render_pass_attachments[0]->AddAttachmentRef(
             m_instance->GetDevice(),

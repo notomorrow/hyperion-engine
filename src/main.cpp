@@ -325,12 +325,12 @@ int main()
 
     /*auto attachment = std::make_unique<RenderPassAttachment>(
         std::make_unique<FramebufferImage2D>(512, 512, Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F, nullptr),
-        Stage::RENDER_PASS_STAGE_PRESENT
+        RenderPassStage::RENDER_PASS_STAGE_PRESENT
     );
 
-    RenderPassAttachmentRef *attachment_ref = nullptr;
+    AttachmentRef *attachment_ref = nullptr;
     attachment->AddAttachmentRef(device, StoreOperation::STORE, &attachment_ref);
-    RenderPassAttachmentRef *attachment_ref2 = nullptr;
+    AttachmentRef *attachment_ref2 = nullptr;
     attachment_ref->AddAttachmentRef(device, StoreOperation::STORE, &attachment_ref2);
 
     auto vk_desc = attachment_ref->GetAttachmentDescription();

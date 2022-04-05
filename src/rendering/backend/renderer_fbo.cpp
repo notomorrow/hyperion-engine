@@ -15,41 +15,15 @@ FramebufferObject::FramebufferObject(uint32_t width, uint32_t height)
 FramebufferObject::~FramebufferObject()
 {
     AssertExitMsg(m_framebuffer == nullptr, "framebuffer should have been destroyed");
-
-    for (auto *attachment_ref : m_render_pass_attachment_refs) {
-        attachment_ref->DecRef();
-    }
 }
 
 Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
 {
-    AssertThrowMsg(!m_fbo_attachments.empty() || !m_render_pass_attachment_refs.empty(), "At least one attachment must be added");
-
-    for (auto &image_info : m_fbo_attachments) {
-        if (image_info.image != nullptr && image_info.image_needs_creation) {
-
-            /* Create the image in gpu memory -- no texture data is copied */
-            HYPERION_BUBBLE_ERRORS(image_info.image->Create(device));
-        }
-        if (image_info.image_view != nullptr && image_info.image_view_needs_creation) {
-            AssertThrowMsg(image_info.image != nullptr, "If image_view is to be created, image needs to be valid.");
-            HYPERION_BUBBLE_ERRORS(image_info.image_view->Create(device, image_info.image.get()));
-        }
-        if (image_info.sampler != nullptr && image_info.sampler_needs_creation) {
-            AssertThrowMsg(image_info.image_view != nullptr, "If sampler is to be created, image_view needs to be valid.");
-            HYPERION_BUBBLE_ERRORS(image_info.sampler->Create(device, image_info.image_view.get()));
-        }
-    }
-
-    // linear layout of VkImageView data
+    AssertThrowMsg(!m_render_pass_attachment_refs.empty(), "At least one attachment must be added");
+    
     std::vector<VkImageView> attachment_image_views;
-    attachment_image_views.resize(m_fbo_attachments.size());
-
-    for (size_t i = 0; i < m_fbo_attachments.size(); i++) {
-        attachment_image_views[i] = m_fbo_attachments[i].image_view->GetImageView();
-    }
-
-    /* NEW */
+    attachment_image_views.reserve(m_render_pass_attachment_refs.size());
+    
     for (auto *attachment_ref : m_render_pass_attachment_refs) {
         AssertThrow(attachment_ref != nullptr);
         AssertThrow(attachment_ref->GetImageView() != nullptr);
@@ -77,17 +51,12 @@ Result FramebufferObject::Destroy(Device *device)
 
     vkDestroyFramebuffer(device->GetDevice(), m_framebuffer, nullptr);
     m_framebuffer = nullptr;
-
-    for (auto &attachment : m_fbo_attachments) {
-        if (attachment.sampler != nullptr)
-            HYPERION_PASS_ERRORS(attachment.sampler->Destroy(device), result);
-        if (attachment.image_view != nullptr)
-            HYPERION_PASS_ERRORS(attachment.image_view->Destroy(device), result);
-        if (attachment.image != nullptr)
-            HYPERION_PASS_ERRORS(attachment.image->Destroy(device), result);
+    
+    for (auto *attachment_ref : m_render_pass_attachment_refs) {
+        attachment_ref->DecRef();
     }
 
-    m_fbo_attachments.clear();
+    m_render_pass_attachment_refs.clear();
 
     return result;
 }

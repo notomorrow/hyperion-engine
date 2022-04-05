@@ -9,7 +9,6 @@ namespace hyperion::v2 {
 ShadowEffect::ShadowEffect()
     : PostEffect(Shader::ID{})
 {
-
 }
 
 ShadowEffect::~ShadowEffect() = default;
@@ -25,21 +24,21 @@ void ShadowEffect::CreateShader(Engine *engine)
 void ShadowEffect::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
-    auto render_pass = std::make_unique<RenderPass>(renderer::Stage::RENDER_PASS_STAGE_SHADER, renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
+    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPassStage::SHADER, renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
 
-    renderer::RenderPassAttachmentRef *attachment_ref;
+    renderer::AttachmentRef *attachment_ref;
 
-    m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+    m_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
             engine->GetInstance()->swapchain->extent.width,
             engine->GetInstance()->swapchain->extent.height,
             engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
         ),
-        renderer::Stage::RENDER_PASS_STAGE_SHADER
+        renderer::RenderPassStage::SHADER
     ));
 
-    HYPERION_ASSERT_RESULT(m_render_pass_attachments.back()->AddAttachmentRef(
+    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
         engine->GetInstance()->GetDevice(),
         renderer::LoadOperation::CLEAR,
         renderer::StoreOperation::STORE,
@@ -48,7 +47,7 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
 
     render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
 
-    for (auto &attachment : m_render_pass_attachments) {
+    for (auto &attachment : m_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
     }
 

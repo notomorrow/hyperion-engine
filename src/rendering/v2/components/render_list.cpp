@@ -59,22 +59,22 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
         mode = renderer::RenderPass::Mode::RENDER_PASS_INLINE;
     }
     
-    auto render_pass = std::make_unique<RenderPass>(renderer::Stage::RENDER_PASS_STAGE_SHADER, mode);
+    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPassStage::SHADER, mode);
 
 
-    renderer::RenderPassAttachmentRef *attachment_ref;
+    renderer::AttachmentRef *attachment_ref;
 
-    m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+    m_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
             engine->GetInstance()->swapchain->extent.width,
             engine->GetInstance()->swapchain->extent.height,
             engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
             nullptr
         ),
-        renderer::Stage::RENDER_PASS_STAGE_SHADER
+        renderer::RenderPassStage::SHADER
     ));
 
-    HYPERION_ASSERT_RESULT(m_render_pass_attachments.back()->AddAttachmentRef(
+    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
         engine->GetInstance()->GetDevice(),
         renderer::LoadOperation::CLEAR,
         renderer::StoreOperation::STORE,
@@ -84,17 +84,17 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
     render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
 
     for (int i = 0; i < 2; i++) {
-        m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+        m_attachments.push_back(std::make_unique<renderer::Attachment>(
             std::make_unique<renderer::FramebufferImage2D>(
                 engine->GetInstance()->swapchain->extent.width,
                 engine->GetInstance()->swapchain->extent.height,
                 engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER),
                 nullptr
             ),
-            renderer::Stage::RENDER_PASS_STAGE_SHADER
+            renderer::RenderPassStage::SHADER
         ));
 
-        HYPERION_ASSERT_RESULT(m_render_pass_attachments.back()->AddAttachmentRef(
+        HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
             engine->GetInstance()->GetDevice(),
             renderer::LoadOperation::CLEAR,
             renderer::StoreOperation::STORE,
@@ -108,7 +108,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
         auto *forward_fbo = engine->GetFramebuffer(engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].framebuffer_ids[0]);
         AssertThrow(forward_fbo != nullptr);
 
-        renderer::RenderPassAttachmentRef *depth_attachment;
+        renderer::AttachmentRef *depth_attachment;
 
         HYPERION_ASSERT_RESULT(forward_fbo->Get().GetRenderPassAttachmentRefs().at(3)->AddAttachmentRef(
             engine->GetInstance()->GetDevice(),
@@ -120,17 +120,17 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
 
         render_pass->Get().AddRenderPassAttachmentRef(depth_attachment);
     } else {
-        m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+        m_attachments.push_back(std::make_unique<renderer::Attachment>(
             std::make_unique<renderer::FramebufferImage2D>(
                 engine->GetInstance()->swapchain->extent.width,
                 engine->GetInstance()->swapchain->extent.height,
                 engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
                 nullptr
             ),
-            renderer::Stage::RENDER_PASS_STAGE_SHADER
+            renderer::RenderPassStage::SHADER
         ));
 
-        HYPERION_ASSERT_RESULT(m_render_pass_attachments.back()->AddAttachmentRef(
+        HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
             engine->GetInstance()->GetDevice(),
             renderer::LoadOperation::CLEAR,
             renderer::StoreOperation::STORE,
@@ -140,44 +140,9 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
         render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
     }
 
-    for (auto &attachment : m_render_pass_attachments) {
+    for (auto &attachment : m_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
     }
-
-#if 0
-    /* For our color attachment */
-    render_pass->Get().AddAttachment({
-        .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
-    });
-    /* For our normals attachment */
-    render_pass->Get().AddAttachment({
-        .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)
-    });
-    /* For our positions attachment */
-    render_pass->Get().AddAttachment({
-        .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER)
-    });
-
-    if (bucket == GraphicsPipeline::BUCKET_TRANSLUCENT) {
-        /* Add depth attachment for reading the forward renderer's depth buffer before we render transparent objects */
-        render_pass->Get().AddDepthAttachment(
-            std::make_unique<renderer::AttachmentBase>(
-                Image::ToVkFormat(engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)),
-                VK_ATTACHMENT_LOAD_OP_LOAD,
-                VK_ATTACHMENT_STORE_OP_NONE_EXT,
-                VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                3,
-                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-            ));
-    } else {
-        render_pass->Get().AddAttachment({
-            .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)
-        });
-    }
-#endif
 
     render_pass_id = engine->AddRenderPass(std::move(render_pass));
 }
@@ -204,26 +169,6 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
 
             framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
         }
-
-#if 0
-        /* Add all attachments from the renderpass */
-        for (auto &it : render_pass->Get().GetAttachments()) {
-            framebuffer->Get().AddAttachment(it.second.format);
-        }
-
-        if (bucket == GraphicsPipeline::BUCKET_TRANSLUCENT) {
-            /* Reference depth image from the opaque layer */
-            auto *forward_fbo = engine->GetFramebuffer(engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].framebuffer_ids[0]);
-            AssertThrow(forward_fbo != nullptr);
-
-            auto image_view = std::make_unique<ImageView>();
-            HYPERION_ASSERT_RESULT(image_view->Create(engine->GetInstance()->GetDevice(), forward_fbo->Get().GetAttachmentImageInfos()[3].image.get()));
-
-            framebuffer->Get().AddAttachment({
-                .image_view = std::move(image_view)
-            });
-        }
-#endif
         
         framebuffer_ids.push_back(engine->AddFramebuffer(
             std::move(framebuffer),
@@ -257,11 +202,7 @@ void RenderList::Bucket::BeginRenderPass(Engine *engine, CommandBuffer *command_
 
     auto &framebuffer = engine->GetFramebuffer(framebuffer_ids[frame_index])->Get();
 
-    render_pass.Begin(
-        command_buffer,
-        framebuffer.GetFramebuffer(),
-        VkExtent2D{ uint32_t(framebuffer.GetWidth()), uint32_t(framebuffer.GetHeight()) }
-    );
+    render_pass.Begin(command_buffer, &framebuffer);
 }
 
 void RenderList::Bucket::EndRenderPass(Engine *engine, CommandBuffer *command_buffer)

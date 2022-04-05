@@ -88,11 +88,9 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
 
 void GraphicsPipeline::BeginRenderPass(CommandBuffer *cmd, size_t index)
 {
-
     m_construction_info.render_pass->Begin(
         cmd,
-        m_construction_info.fbos[index]->GetFramebuffer(),
-        VkExtent2D{ uint32_t(m_construction_info.fbos[index]->GetWidth()), uint32_t(m_construction_info.fbos[index]->GetHeight()) }
+        m_construction_info.fbos[index]
     );
 }
 

@@ -69,7 +69,7 @@ protected:
     RenderPass::ID m_render_pass_id;
     GraphicsPipeline::ID m_pipeline_id;
 
-    std::vector<std::unique_ptr<renderer::RenderPassAttachment>> m_render_pass_attachments;
+    std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
 };
 
 class PostProcessing {
