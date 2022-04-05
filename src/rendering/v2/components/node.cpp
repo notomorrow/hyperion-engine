@@ -74,8 +74,12 @@ void Node::AddChild(std::unique_ptr<Node> &&node)
     m_child_nodes.push_back(std::move(node));
 }
 
-void Node::RemoveChild(NodeList::iterator iter)
+bool Node::RemoveChild(NodeList::iterator iter)
 {
+    if (iter == m_child_nodes.end()) {
+        return false;
+    }
+
     Node *node = iter->get();
 
     AssertThrow(node != nullptr);
@@ -90,6 +94,8 @@ void Node::RemoveChild(NodeList::iterator iter)
     }
 
     m_child_nodes.erase(iter);
+
+    return true;
 }
 
 void Node::SetLocalTransform(const Transform &transform)

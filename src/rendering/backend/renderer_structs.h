@@ -84,7 +84,7 @@ struct MeshInputAttribute {
     inline VkFormat GetFormat() const
     {
         switch (this->size) {
-        case sizeof(float): return VK_FORMAT_R32_SFLOAT;
+        case sizeof(float):     return VK_FORMAT_R32_SFLOAT;
         case sizeof(float) * 2: return VK_FORMAT_R32G32_SFLOAT;
         case sizeof(float) * 3: return VK_FORMAT_R32G32B32_SFLOAT;
         case sizeof(float) * 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -92,7 +92,7 @@ struct MeshInputAttribute {
         }
     }
 
-    VkVertexInputAttributeDescription GetAttributeDescription() {
+    VkVertexInputAttributeDescription GetAttributeDescription() const {
         VkVertexInputAttributeDescription attrib{};
         attrib.location = this->location;
         attrib.binding = this->binding;
@@ -113,91 +113,76 @@ struct MeshInputAttribute {
 };
 
 struct MeshInputAttributeSet {
-    std::vector<MeshInputAttribute> attributes;
+    uint64_t flag_mask;
 
-    MeshInputAttributeSet() {}
+    MeshInputAttributeSet()
+        : flag_mask(0) {}
     MeshInputAttributeSet(const MeshInputAttributeSet &other)
-        : attributes(other.attributes) {}
+        : flag_mask(other.flag_mask) {}
 
     MeshInputAttributeSet &operator=(const MeshInputAttributeSet &other)
     {
-        attributes = other.attributes;
+        flag_mask = other.flag_mask;
 
         return *this;
     }
 
-    explicit MeshInputAttributeSet(const std::vector<MeshInputAttribute> &attributes)
-        : attributes(attributes)
+    explicit MeshInputAttributeSet(uint64_t flag_mask)
+        : flag_mask(flag_mask)
     {
-        SortAttributes();
-    }
-
-    explicit MeshInputAttributeSet(uint64_t type_flags)
-    {
-        for (size_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
-            uint64_t flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);
-
-            if (type_flags & flag_mask) {
-                attributes.push_back(MeshInputAttribute::mapping.Get(MeshInputAttribute::Type(flag_mask)));
-            }
-        }
-
-        SortAttributes();
     }
 
     ~MeshInputAttributeSet() = default;
 
-    /*uint64_t GetBitMask() const
+    inline uint64_t operator&(uint64_t flags) const { return flag_mask & flags; }
+    inline uint64_t operator|(uint64_t flags) const { return flag_mask | flags; }
+    inline bool Has(MeshInputAttribute::Type type) const { return bool(operator&(uint64_t(type))); }
+
+    void Set(uint64_t flags, bool enable = true)
     {
-        uint64_t bit_mask = 0;
-
-        for (uint32_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
-            uint64_t flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);
-
-            if (type_flags & flag_mask) {
-                attributes.push_back(MeshInputAttribute::mapping.Get(MeshInputAttribute::Type(flag_mask)));
-            }
+        if (enable) {
+            flag_mask |= flags;
+        } else {
+            flag_mask &= ~flags;
         }
-
-        return bit_mask;
-    }*/
-
-    void AddAttributes(const std::vector<MeshInputAttribute> &_attributes)
-    {
-        for (const auto &attribute : _attributes) {
-            attributes.push_back(attribute);
-        }
-
-        SortAttributes();
     }
 
-    void AddAttribute(const MeshInputAttribute &attribute)
+    void Set(MeshInputAttribute::Type type, bool enable = true)
     {
-        attributes.push_back(attribute);
-
-        SortAttributes();
+        Set(uint64_t(type), enable);
     }
 
     void Merge(const MeshInputAttributeSet &other)
     {
-        std::set<MeshInputAttribute> merged_attributes(attributes.begin(), attributes.end());
-        merged_attributes.insert(other.attributes.begin(), other.attributes.end());
-        std::copy(merged_attributes.begin(), merged_attributes.end(), attributes.begin());
-
-        SortAttributes();
+        flag_mask |= other.flag_mask;
     }
 
-    void SortAttributes()
+    std::vector<MeshInputAttribute> BuildAttributes() const
     {
-        std::sort(attributes.begin(), attributes.end());
+        std::vector<MeshInputAttribute> attributes;
+        attributes.reserve(MeshInputAttribute::mapping.Size());
+
+        for (size_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
+            const uint64_t iter_flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
+
+            if (flag_mask & iter_flag_mask) {
+                attributes.push_back(MeshInputAttribute::mapping[MeshInputAttribute::Type(iter_flag_mask)]);
+            }
+        }
+
+        return attributes;
     }
 
-    inline size_t TotalSize() const
+    inline size_t VertexSize() const
     {
         size_t size = 0;
 
-        for (auto &attribute : attributes) {
-            size += attribute.size;
+        for (size_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
+            const uint64_t iter_flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
+
+            if (flag_mask & iter_flag_mask) {
+                size += MeshInputAttribute::mapping[MeshInputAttribute::Type(iter_flag_mask)].size;
+            }
         }
 
         return size;
@@ -206,10 +191,7 @@ struct MeshInputAttributeSet {
     inline HashCode GetHashCode() const
     {
         HashCode hc;
-        
-        for (auto &attribute : attributes) {
-            hc.Add(attribute.GetHashCode());
-        }
+        hc.Add(flag_mask);
 
         return hc;
     }

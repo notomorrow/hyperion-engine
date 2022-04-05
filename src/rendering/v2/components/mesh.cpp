@@ -16,38 +16,30 @@ namespace hyperion::v2 {
 
 
 Mesh::Mesh(renderer::Instance *renderer_instance)
-    : m_renderer(renderer_instance)
+    : m_renderer(renderer_instance),
+      m_vertex_attributes(
+          MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
+      ),
+      m_vbo(std::make_unique<renderer::VertexBuffer>()),
+      m_ibo(std::make_unique<renderer::IndexBuffer>())
 {
-    this->m_vbo = std::make_unique<renderer::VertexBuffer>();
-    this->m_ibo = std::make_unique<renderer::IndexBuffer>();
-}
-
-
-uint16_t Mesh::GetVertexSize(AttributeFlags vertex_attrs) {
-    uint16_t vertex_size = 0;
-    if (vertex_attrs & Attribute::POSITIONS) vertex_size  += 3;
-    if (vertex_attrs & Attribute::NORMALS)   vertex_size  += 3;
-    if (vertex_attrs & Attribute::TEXCOORDS0) vertex_size += 2;
-    if (vertex_attrs & Attribute::TEXCOORDS1) vertex_size += 2;
-    if (vertex_attrs & Attribute::TANGENTS)   vertex_size += 3;
-    if (vertex_attrs & Attribute::BITANGENTS) vertex_size += 3;
-
-    if (vertex_attrs & Attribute::BONEWEIGHTS) vertex_size += 4;
-    if (vertex_attrs & Attribute::BONEINDICES) vertex_size += 4;
-
-    return vertex_size;
 }
 
 /* Copy our values into the packed vertex buffer, and increase the index for the next possible
  * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
-#define PACKED_SET_ATTR(raw_values, arg_size)                               \
-    {                                                                       \
-        memcpy((void *)(raw_buffer + current_offset), (raw_values), (arg_size)); \
-        current_offset += (arg_size);                                            \
+#define PACKED_SET_ATTR(raw_values, arg_size)                                   \
+    {                                                                           \
+        memcpy((void *)(raw_buffer + current_offset), (raw_values), (arg_size));\
+        current_offset += (arg_size);                                           \
     }
 
 std::vector<float> Mesh::CreatePackedBuffer() {
-    const uint16_t vertex_size = Mesh::GetVertexSize(m_vertex_attributes);
+    const size_t vertex_size = m_vertex_attributes.VertexSize();
 
     std::vector<float> packed_buffer(vertex_size * m_vertices.size());
 
@@ -58,37 +50,38 @@ std::vector<float> Mesh::CreatePackedBuffer() {
     for (size_t i = 0; i < m_vertices.size(); i++) {
         auto &vertex = m_vertices[i];
         /* Offset aligned to the current vertex */
-        current_offset = (i * vertex_size);
+        current_offset = i * vertex_size;
 
         /* Position and normals */
-        if (m_vertex_attributes & Attribute::POSITIONS) PACKED_SET_ATTR(vertex.GetPosition().values, 3 * sizeof(float));
-        if (m_vertex_attributes & Attribute::NORMALS)   PACKED_SET_ATTR(vertex.GetNormal().values,   3 * sizeof(float));
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION)  PACKED_SET_ATTR(vertex.GetPosition().values, 3 * sizeof(float));
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL)    PACKED_SET_ATTR(vertex.GetNormal().values,   3 * sizeof(float));
         /* Texture coordinates */
-        if (m_vertex_attributes & Attribute::TEXCOORDS0) PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2 * sizeof(float));
-        if (m_vertex_attributes & Attribute::TEXCOORDS1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2 * sizeof(float))
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0) PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2 * sizeof(float));
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2 * sizeof(float))
         /* Tangents and Bitangents */
-        if (m_vertex_attributes & Attribute::TANGENTS)   PACKED_SET_ATTR(vertex.GetTangent().values,   3 * sizeof(float));
-        if (m_vertex_attributes & Attribute::BITANGENTS) PACKED_SET_ATTR(vertex.GetBitangent().values, 3 * sizeof(float));
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT)   PACKED_SET_ATTR(vertex.GetTangent().values,   3 * sizeof(float));
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT) PACKED_SET_ATTR(vertex.GetBitangent().values, 3 * sizeof(float));
 
         /* TODO: modify GetBoneIndex/GetBoneWeight to return a Vector4. */
-        if (m_vertex_attributes & Attribute::BONEINDICES) {
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES) {
             float indices[4] = {
                     (float)vertex.GetBoneIndex(0), (float)vertex.GetBoneIndex(1),
                     (float)vertex.GetBoneIndex(2), (float)vertex.GetBoneIndex(3)
             };
-            PACKED_SET_ATTR(indices, 4 * sizeof(float));
+            PACKED_SET_ATTR(indices, std::size(indices) * sizeof(float));
         }
-        if (m_vertex_attributes & Attribute::BONEWEIGHTS) {
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS) {
             float weights[4] = {
                     (float)vertex.GetBoneWeight(0), (float)vertex.GetBoneWeight(1),
                     (float)vertex.GetBoneWeight(2), (float)vertex.GetBoneWeight(3)
             };
-            PACKED_SET_ATTR(weights, 4 * sizeof(float));
+            PACKED_SET_ATTR(weights, std::size(weights) * sizeof(float));
         }
     }
     return packed_buffer;
 }
 
+#undef PACKED_SET_ATTR
 
 void Mesh::UploadToDevice(renderer::CommandBuffer *cmd)
 {

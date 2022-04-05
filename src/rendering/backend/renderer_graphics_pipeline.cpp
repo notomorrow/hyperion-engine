@@ -57,10 +57,11 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
 {
     std::unordered_map<uint32_t, uint32_t> binding_sizes{};
 
-    this->vertex_attributes = std::vector<VkVertexInputAttributeDescription>(attribute_set.attributes.size());
+    const auto attributes = attribute_set.BuildAttributes();
+    this->vertex_attributes = std::vector<VkVertexInputAttributeDescription>(attributes.size());
 
-    for (size_t i = 0; i < attribute_set.attributes.size(); i++) {
-        const auto &attribute = attribute_set.attributes[i];
+    for (size_t i = 0; i < attributes.size(); i++) {
+        const auto &attribute = attributes[i];
 
         this->vertex_attributes[i] = VkVertexInputAttributeDescription{
             .location = attribute.location,
