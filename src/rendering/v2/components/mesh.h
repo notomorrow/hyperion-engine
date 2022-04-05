@@ -16,33 +16,37 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 using renderer::MeshInputAttributeSet;
+using renderer::CommandBuffer;
+using renderer::Device;
+using renderer::VertexBuffer;
+using renderer::IndexBuffer;
 
 class Mesh {
     using Index          = uint32_t;
 
     void CalculateIndices();
     std::vector<float> CreatePackedBuffer();
-    void UploadToDevice(renderer::CommandBuffer *cmd);
+    void UploadToDevice(Device *device, CommandBuffer *cmd);
+
 public:
-    Mesh(renderer::Instance *renderer_instance);
-    inline void SetVertices(const std::vector<Vertex> &vertices);
-    inline void SetVertices(const std::vector<Vertex> &vertices, const std::vector<Index> &indices);
+    Mesh();
+    ~Mesh();
+
+    void SetVertices(const std::vector<Vertex> &vertices);
+    void SetVertices(const std::vector<Vertex> &vertices, const std::vector<Index> &indices);
     void CalculateTangents();
     void CalculateNormals();
     void InvertNormals();
 
-    void Create(renderer::CommandBuffer *cmd);
-    inline void Draw(renderer::CommandBuffer *cmd);
-    void Destroy();
+    void Create(Device *device, CommandBuffer *cmd);
+    void Destroy(Device *device);
+    void Render(Device *device, CommandBuffer *cmd) const;
 
-    ~Mesh();
 private:
-    std::unique_ptr<renderer::VertexBuffer> m_vbo = nullptr;
-    std::unique_ptr<renderer::IndexBuffer>  m_ibo = nullptr;
+    std::unique_ptr<VertexBuffer> m_vbo;
+    std::unique_ptr<IndexBuffer>  m_ibo;
 
     MeshInputAttributeSet m_vertex_attributes;
-
-    renderer::Instance *m_renderer;
 
     std::vector<Vertex> m_vertices;
     std::vector<Index>  m_indices;

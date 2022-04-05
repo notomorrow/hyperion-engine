@@ -14,20 +14,22 @@
 
 namespace hyperion::v2 {
 
-
-Mesh::Mesh(renderer::Instance *renderer_instance)
-    : m_renderer(renderer_instance),
-      m_vertex_attributes(
+Mesh::Mesh()
+    : m_vertex_attributes(
           MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
-      ),
-      m_vbo(std::make_unique<renderer::VertexBuffer>()),
-      m_ibo(std::make_unique<renderer::IndexBuffer>())
+      )
 {
+}
+
+Mesh::~Mesh()
+{
+    AssertThrowMsg(m_vbo == nullptr, "Expected vbo to be destroyed before destructor call");
+    AssertThrowMsg(m_ibo == nullptr, "Expected vbo to be destroyed before destructor call");
 }
 
 /* Copy our values into the packed vertex buffer, and increase the index for the next possible
@@ -83,9 +85,14 @@ std::vector<float> Mesh::CreatePackedBuffer() {
 
 #undef PACKED_SET_ATTR
 
-void Mesh::UploadToDevice(renderer::CommandBuffer *cmd)
+void Mesh::UploadToDevice(Device *device, CommandBuffer *cmd)
 {
-    renderer::Device *device = m_renderer->GetDevice();
+    AssertThrow(m_vbo == nullptr);
+    AssertThrow(m_ibo == nullptr);
+    
+    m_vbo = std::make_unique<VertexBuffer>();
+    m_ibo = std::make_unique<IndexBuffer>();
+
     std::vector<float> packed_buffer = this->CreatePackedBuffer();
 
     /* Create and upload the VBO */
@@ -108,10 +115,9 @@ void Mesh::CalculateIndices()
 
     /* This will be our resulting buffer with only the vertices we need. */
     std::vector<Vertex> new_vertices;
-    new_vertices.reserve(this->m_vertices.size());
+    new_vertices.reserve(m_vertices.size());
 
-    for (size_t i = 0; i < this->m_vertices.size(); i++) {
-        const Vertex &vertex = this->m_vertices[i];
+    for (const auto &vertex : m_vertices) {
         /* Check if the vertex already exists in our map */
         auto it = index_map.find(vertex);
 
@@ -126,42 +132,62 @@ void Mesh::CalculateIndices()
         index_map[vertex] = mesh_index;
         new_vertices.push_back(vertex);
 
-        this->m_indices.push_back(mesh_index);
+        m_indices.push_back(mesh_index);
     }
 
-    this->m_vertices = new_vertices;
+    m_vertices = new_vertices;
 }
 
 
-inline void Mesh::SetVertices(const std::vector<Vertex> &vertices)
+void Mesh::SetVertices(const std::vector<Vertex> &vertices)
 {
-    this->m_vertices = vertices;
-    this->CalculateIndices();
+    m_vertices = vertices;
+    CalculateIndices();
 }
 
-inline void Mesh::SetVertices(const std::vector<Vertex> &vertices, const std::vector<Index> &indices)
+void Mesh::SetVertices(const std::vector<Vertex> &vertices, const std::vector<Index> &indices)
 {
-    this->m_vertices = vertices;
-    this->m_indices  = indices;
+    m_vertices = vertices;
+    m_indices  = indices;
 }
 
-void Mesh::Create(renderer::CommandBuffer *cmd) {
-    this->UploadToDevice(cmd);
+void Mesh::Create(Device *device, CommandBuffer *cmd)
+{
+    UploadToDevice(device, cmd);
 }
 
+void Mesh::Destroy(Device *device)
+{
+    AssertThrow(m_vbo != nullptr);
+    AssertThrow(m_ibo != nullptr);
 
-inline void Mesh::Draw(renderer::CommandBuffer *cmd)
+    m_vbo->Destroy(device);
+    m_vbo.reset();
+
+    m_ibo->Destroy(device);
+    m_ibo.reset();
+}
+
+void Mesh::Render(Device *device, CommandBuffer *cmd) const
 {
     m_vbo->Bind(cmd);
     m_ibo->Bind(cmd);
 
-    vkCmdDrawIndexed(cmd->GetCommandBuffer(), m_indices.size(), 1, 0, 0, 0);
+    vkCmdDrawIndexed(
+        cmd->GetCommandBuffer(),
+        uint32_t(m_indices.size()),
+        1,
+        0,
+        0,
+        0
+    );
 }
 
 void Mesh::CalculateNormals()
 {
     if (m_indices.empty()) {
         DebugLog(LogType::Warn, "Cannot calculate normals before indices are generated!\n");
+
         return;
     }
 
@@ -262,15 +288,5 @@ void Mesh::InvertNormals()
     }
 }
 
-void Mesh::Destroy() {
-    renderer::Device *device = m_renderer->GetDevice();
-    m_vbo->Destroy(device);
-    m_ibo->Destroy(device);
-}
-
-
-Mesh::~Mesh()
-{
-}
 
 }
