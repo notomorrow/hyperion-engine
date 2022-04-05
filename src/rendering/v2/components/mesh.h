@@ -5,12 +5,15 @@
 #ifndef HYPERION_MESH_H
 #define HYPERION_MESH_H
 
-#include <cstdint>
-#include <vector>
+#include "base.h"
 
 #include <rendering/backend/renderer_buffer.h>
 #include <rendering/backend/renderer_command_buffer.h>
+
 #include <math/vertex.h>
+
+#include <cstdint>
+#include <vector>
 
 namespace hyperion::v2 {
 
@@ -21,7 +24,7 @@ using renderer::Device;
 using renderer::VertexBuffer;
 using renderer::IndexBuffer;
 
-class Mesh {
+class Mesh : public EngineComponentBase<STUB_CLASS(Mesh)> {
     using Index          = uint32_t;
 
     void CalculateIndices();

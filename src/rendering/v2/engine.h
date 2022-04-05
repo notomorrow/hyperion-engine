@@ -13,6 +13,7 @@
 #include "components/deferred.h"
 #include "components/shadows.h"
 #include "components/octree.h"
+#include "components/mesh.h"
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
@@ -21,8 +22,6 @@
 #include <util/enum_options.h>
 
 #include <memory>
-#include <map>
-#include <typeindex>
 
 namespace hyperion::v2 {
 
@@ -235,6 +234,10 @@ public:
 
     void SetSpatialTransform(Spatial *spatial, const Transform &transform);
 
+    /* Meshes */
+    auto &GetMeshes() { return m_meshes; }
+    const auto &GetMeshes() const { return m_meshes; }
+
     void Initialize();
     void Destroy();
     void PrepareSwapchain();
@@ -270,13 +273,15 @@ private:
     Octree::Root m_octree_root;
     Octree m_octree;
 
-    ObjectHolder<Shader> m_shaders;
-    ObjectHolder<Texture> m_textures;
-    ObjectHolder<Framebuffer> m_framebuffers;
-    ObjectHolder<RenderPass> m_render_passes;
-    ObjectHolder<Material> m_materials;
-    ObjectHolder<Spatial> m_spatials;
+    ObjectHolder<Shader>          m_shaders;
+    ObjectHolder<Texture>         m_textures;
+    ObjectHolder<Framebuffer>     m_framebuffers;
+    ObjectHolder<RenderPass>      m_render_passes;
+    ObjectHolder<Material>        m_materials;
+    ObjectHolder<Spatial>         m_spatials;
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
+
+    RefCountedObjectHolder<Mesh>  m_meshes;
 
     /* TMP */
     std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;

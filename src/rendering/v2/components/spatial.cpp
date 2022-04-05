@@ -1,9 +1,11 @@
 #include "spatial.h"
 #include "graphics.h"
+#include "../engine.h"
 
 namespace hyperion::v2 {
 
-Spatial::Spatial(const std::shared_ptr<Mesh> &mesh,
+Spatial::Spatial(
+    Mesh *mesh,
     const MeshInputAttributeSet &attributes,
     const Transform &transform,
     const BoundingBox &local_aabb,
@@ -54,11 +56,13 @@ void Spatial::RemoveFromPipeline(GraphicsPipeline *pipeline)
 
 void Spatial::Create(Engine *engine)
 {
-    /* TODO */
+    engine->GetMeshes().Acquire(m_mesh);
 }
 
 void Spatial::Destroy(Engine *engine)
 {
+    engine->GetMeshes().Release(engine, m_mesh);
+
     RemoveFromPipelines();
 }
 
