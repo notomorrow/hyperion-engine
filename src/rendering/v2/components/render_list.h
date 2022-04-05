@@ -15,6 +15,7 @@ public:
         ObjectHolder<GraphicsPipeline> pipelines;
         RenderPass::ID render_pass_id;
         std::vector<Framebuffer::ID> framebuffer_ids;
+        std::vector<std::unique_ptr<renderer::RenderPassAttachment>> m_render_pass_attachments;
 
         void CreatePipelines(Engine *engine);
         void CreateRenderPass(Engine *engine);

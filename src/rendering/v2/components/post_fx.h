@@ -68,6 +68,8 @@ protected:
     Shader::ID m_shader_id;
     RenderPass::ID m_render_pass_id;
     GraphicsPipeline::ID m_pipeline_id;
+
+    std::vector<std::unique_ptr<renderer::RenderPassAttachment>> m_render_pass_attachments;
 };
 
 class PostProcessing {

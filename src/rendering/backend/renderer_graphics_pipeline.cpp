@@ -222,10 +222,14 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     /* TODO: enable multisampling and the GPU feature required for it.  */
     std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;
-    color_blend_attachments.resize(m_construction_info.render_pass->GetColorAttachments().size());
+    color_blend_attachments.reserve(m_construction_info.render_pass->GetRenderPassAttachmentRefs().size());
 
-    for (size_t i = 0; i < color_blend_attachments.size(); i++) {
-        color_blend_attachments[i] = VkPipelineColorBlendAttachmentState{
+    for (const auto *attachment_ref : m_construction_info.render_pass->GetRenderPassAttachmentRefs()) {
+        if (attachment_ref->IsDepthAttachment()) {
+            continue;
+        }
+
+        color_blend_attachments.push_back(VkPipelineColorBlendAttachmentState{
             .blendEnable         = m_construction_info.blend_enabled,
             .srcColorBlendFactor = m_construction_info.blend_enabled ? VK_BLEND_FACTOR_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
             .dstColorBlendFactor = m_construction_info.blend_enabled ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ZERO,
@@ -235,7 +239,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
             .alphaBlendOp        = VK_BLEND_OP_ADD,
             .colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                    VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-        };
+        });
     }
 
     VkPipelineColorBlendStateCreateInfo color_blending{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
@@ -266,8 +270,8 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     const VkPushConstantRange push_constant_ranges[] = {
         {
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-            .offset = 0,
-            .size = uint32_t(device->GetFeatures().PaddedSize<PushConstantData>())
+            .offset     = 0,
+            .size       = uint32_t(device->GetFeatures().PaddedSize<PushConstantData>())
         }
     };
 
@@ -280,41 +284,36 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     );
 
     /* Depth / stencil */
-    VkPipelineDepthStencilStateCreateInfo depth_stencil{};
-    depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_stencil.depthTestEnable = m_construction_info.depth_test;
-    depth_stencil.depthWriteEnable = m_construction_info.depth_write;
-    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    VkPipelineDepthStencilStateCreateInfo depth_stencil{VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
+    depth_stencil.depthTestEnable       = m_construction_info.depth_test;
+    depth_stencil.depthWriteEnable      = m_construction_info.depth_write;
+    depth_stencil.depthCompareOp        = VK_COMPARE_OP_LESS;
     depth_stencil.depthBoundsTestEnable = VK_FALSE;
-    depth_stencil.minDepthBounds = 0.0f; // Optional
-    depth_stencil.maxDepthBounds = 1.0f; // Optional
-    depth_stencil.stencilTestEnable = VK_FALSE;
-    depth_stencil.front = {}; // Optional
-    depth_stencil.back = {}; // Optional
+    depth_stencil.minDepthBounds        = 0.0f; // Optional
+    depth_stencil.maxDepthBounds        = 1.0f; // Optional
+    depth_stencil.stencilTestEnable     = VK_FALSE;
+    depth_stencil.front               = {}; // Optional
+    depth_stencil.back                = {}; // Optional
 
     VkGraphicsPipelineCreateInfo pipeline_info{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 
     const auto &stages = m_construction_info.shader->GetShaderStages();
 
-    pipeline_info.stageCount = uint32_t(stages.size());
-    pipeline_info.pStages = stages.data();
-
-    pipeline_info.pVertexInputState = &vertex_input_info;
+    pipeline_info.stageCount          = uint32_t(stages.size());
+    pipeline_info.pStages             = stages.data();
+    pipeline_info.pVertexInputState   = &vertex_input_info;
     pipeline_info.pInputAssemblyState = &input_asm_info;
-    pipeline_info.pViewportState = &viewport_state;
+    pipeline_info.pViewportState      = &viewport_state;
     pipeline_info.pRasterizationState = &rasterizer;
-    pipeline_info.pMultisampleState = &multisampling;
-    pipeline_info.pDepthStencilState = &depth_stencil;
-    pipeline_info.pColorBlendState = &color_blending;
-    /* TODO: reimplement dynamic states! */
-    pipeline_info.pDynamicState = &dynamic_state;
-
-    pipeline_info.layout = layout;
-    pipeline_info.renderPass = m_construction_info.render_pass->GetRenderPass();
-
-    pipeline_info.subpass = 0; /* Index of the subpass */
-    pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
-    pipeline_info.basePipelineIndex = -1;
+    pipeline_info.pMultisampleState   = &multisampling;
+    pipeline_info.pDepthStencilState  = &depth_stencil;
+    pipeline_info.pColorBlendState    = &color_blending;
+    pipeline_info.pDynamicState       = &dynamic_state;
+    pipeline_info.layout              = layout;
+    pipeline_info.renderPass          = m_construction_info.render_pass->GetRenderPass();
+    pipeline_info.subpass             = 0; /* Index of the subpass */
+    pipeline_info.basePipelineHandle  = VK_NULL_HANDLE;
+    pipeline_info.basePipelineIndex   = -1;
 
     HYPERION_VK_CHECK_MSG(
         vkCreateGraphicsPipelines(device->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &this->pipeline),

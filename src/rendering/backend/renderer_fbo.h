@@ -5,6 +5,7 @@
 #include "renderer_image.h"
 #include "renderer_image_view.h"
 #include "renderer_sampler.h"
+#include "renderer_render_pass.h"
 
 #include <memory>
 #include <vector>
@@ -30,18 +31,15 @@ public:
 
     inline VkFramebuffer GetFramebuffer() const { return m_framebuffer; }
 
-    /* Add an attachment for a new image (i.e for writing to for a g-buffer) */
-    Result AddAttachment(Image::InternalFormat format);
-    /* Add an attachment optionally as a view of an existing image */
-    Result AddAttachment(AttachmentImageInfo &&attachment);
+    void AddRenderPassAttachmentRef(RenderPassAttachmentRef *attachment_ref)
+    {
+        attachment_ref->IncRef();
 
-    inline std::vector<AttachmentImageInfo> &GetAttachmentImageInfos()
-        { return m_fbo_attachments; }
-    inline const std::vector<AttachmentImageInfo> &GetAttachmentImageInfos() const
-        { return m_fbo_attachments; }
+        m_render_pass_attachment_refs.push_back(attachment_ref);
+    }
 
-    inline uint32_t GetNumAttachments() const
-        { return uint32_t(m_fbo_attachments.size()); }
+    inline auto &GetRenderPassAttachmentRefs() { return m_render_pass_attachment_refs; }
+    inline const auto &GetRenderPassAttachmentRefs() const { return m_render_pass_attachment_refs; }
 
     inline uint32_t GetWidth() const { return m_width; }
     inline uint32_t GetHeight() const { return m_height; }
@@ -55,6 +53,8 @@ private:
              m_height;
 
     std::vector<AttachmentImageInfo> m_fbo_attachments;
+
+    std::vector<RenderPassAttachmentRef *> m_render_pass_attachment_refs;
 
     VkFramebuffer m_framebuffer;
 };

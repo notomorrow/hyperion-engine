@@ -68,20 +68,6 @@ struct SemaphoreRefHolder {
         { other.ref = nullptr; }
 
     SemaphoreRefHolder &operator=(const SemaphoreRefHolder &other) = delete;
-    /*{
-        if (this == &other) {
-            return *this;
-        }
-
-        if (this->ref != nullptr) {
-            --this->ref->count;
-        }
-
-        ref = other.ref;
-        ++ref->count;
-
-        return *this;
-    }*/
 
     ~SemaphoreRefHolder()
         { Reset(); }
@@ -97,19 +83,6 @@ struct SemaphoreRefHolder {
             delete ref;
         }
     }
-
-    /*inline void DecRef()
-    {
-        if (ref == nullptr) {
-            return;
-        }
-
-        if (!--ref->count) {
-            
-            delete ref;
-            ref = nullptr;
-        }
-    }*/
 
     inline Semaphore &Get() { return ref->semaphore; }
     inline const Semaphore &Get() const { return ref->semaphore; }

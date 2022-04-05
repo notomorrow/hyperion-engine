@@ -6,12 +6,15 @@
 
 #include <vulkan/vulkan.h>
 
+#include <optional>
+
 namespace hyperion {
 namespace renderer {
 class Device;
 class ImageView {
 public:
     ImageView();
+    ImageView(VkImage image);
     ImageView(const ImageView &other) = delete;
     ImageView &operator=(const ImageView &other) = delete;
     ~ImageView();
@@ -29,8 +32,8 @@ public:
         size_t num_faces = 1);
 
     /* Create imageview referencing an Image */
-    Result Create(Device *device,
-        Image *image);
+    Result Create(Device *device, Image *image);
+
     Result Destroy(Device *device);
 
 private:
@@ -38,6 +41,7 @@ private:
     static VkImageViewType ToVkImageViewType(Image::Type);
     
     VkImageView m_image_view;
+    std::optional<VkImage> m_image;
 };
 
 } // namespace renderer

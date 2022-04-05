@@ -59,8 +59,92 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
         mode = renderer::RenderPass::Mode::RENDER_PASS_INLINE;
     }
     
-    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPass::Stage::RENDER_PASS_STAGE_SHADER, mode);
+    auto render_pass = std::make_unique<RenderPass>(renderer::Stage::RENDER_PASS_STAGE_SHADER, mode);
 
+
+    renderer::RenderPassAttachmentRef *attachment_ref;
+
+    m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+        std::make_unique<renderer::FramebufferImage2D>(
+            engine->GetInstance()->swapchain->extent.width,
+            engine->GetInstance()->swapchain->extent.height,
+            engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
+            nullptr
+        ),
+        renderer::Stage::RENDER_PASS_STAGE_SHADER
+    ));
+
+    HYPERION_ASSERT_RESULT(m_render_pass_attachments.back()->AddAttachmentRef(
+        engine->GetInstance()->GetDevice(),
+        renderer::LoadOperation::CLEAR,
+        renderer::StoreOperation::STORE,
+        &attachment_ref
+    ));
+
+    render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+
+    for (int i = 0; i < 2; i++) {
+        m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+            std::make_unique<renderer::FramebufferImage2D>(
+                engine->GetInstance()->swapchain->extent.width,
+                engine->GetInstance()->swapchain->extent.height,
+                engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER),
+                nullptr
+            ),
+            renderer::Stage::RENDER_PASS_STAGE_SHADER
+        ));
+
+        HYPERION_ASSERT_RESULT(m_render_pass_attachments.back()->AddAttachmentRef(
+            engine->GetInstance()->GetDevice(),
+            renderer::LoadOperation::CLEAR,
+            renderer::StoreOperation::STORE,
+            &attachment_ref
+        ));
+
+        render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+    }
+
+    if (bucket == GraphicsPipeline::BUCKET_TRANSLUCENT) {
+        auto *forward_fbo = engine->GetFramebuffer(engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].framebuffer_ids[0]);
+        AssertThrow(forward_fbo != nullptr);
+
+        renderer::RenderPassAttachmentRef *depth_attachment;
+
+        HYPERION_ASSERT_RESULT(forward_fbo->Get().GetRenderPassAttachmentRefs().at(3)->AddAttachmentRef(
+            engine->GetInstance()->GetDevice(),
+            renderer::StoreOperation::STORE,
+            &depth_attachment
+        ));
+
+        depth_attachment->SetBinding(3);
+
+        render_pass->Get().AddRenderPassAttachmentRef(depth_attachment);
+    } else {
+        m_render_pass_attachments.push_back(std::make_unique<renderer::RenderPassAttachment>(
+            std::make_unique<renderer::FramebufferImage2D>(
+                engine->GetInstance()->swapchain->extent.width,
+                engine->GetInstance()->swapchain->extent.height,
+                engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
+                nullptr
+            ),
+            renderer::Stage::RENDER_PASS_STAGE_SHADER
+        ));
+
+        HYPERION_ASSERT_RESULT(m_render_pass_attachments.back()->AddAttachmentRef(
+            engine->GetInstance()->GetDevice(),
+            renderer::LoadOperation::CLEAR,
+            renderer::StoreOperation::STORE,
+            &attachment_ref
+        ));
+
+        render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+    }
+
+    for (auto &attachment : m_render_pass_attachments) {
+        HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
+    }
+
+#if 0
     /* For our color attachment */
     render_pass->Get().AddAttachment({
         .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR)
@@ -93,6 +177,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
             .format = engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH)
         });
     }
+#endif
 
     render_pass_id = engine->AddRenderPass(std::move(render_pass));
 }
@@ -113,6 +198,14 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
             engine->GetInstance()->swapchain->extent.height
         );
 
+        for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
+            auto vk_desc = attachment_ref->GetAttachmentDescription();
+            auto vk_ref = attachment_ref->GetAttachmentReference();
+
+            framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+        }
+
+#if 0
         /* Add all attachments from the renderpass */
         for (auto &it : render_pass->Get().GetAttachments()) {
             framebuffer->Get().AddAttachment(it.second.format);
@@ -130,6 +223,7 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
                 .image_view = std::move(image_view)
             });
         }
+#endif
         
         framebuffer_ids.push_back(engine->AddFramebuffer(
             std::move(framebuffer),

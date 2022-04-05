@@ -11,12 +11,18 @@ ImageView::ImageView()
 {
 }
 
+ImageView::ImageView(VkImage image)
+    : m_image(image)
+{
+}
+
 ImageView::~ImageView()
 {
     AssertExitMsg(m_image_view == nullptr, "image view should have been destroyed");
 }
 
-Result ImageView::Create(Device *device,
+Result ImageView::Create(
+    Device *device,
     VkImage image,
     VkFormat format,
     VkImageAspectFlags aspect_flags,
@@ -25,11 +31,10 @@ Result ImageView::Create(Device *device,
     size_t num_faces)
 {
 
-    VkImageViewCreateInfo view_info{};
-    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    view_info.image = image;
+    VkImageViewCreateInfo view_info{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    view_info.image    = image;
     view_info.viewType = view_type;
-    view_info.format = format;
+    view_info.format   = format;
 
     view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -47,8 +52,7 @@ Result ImageView::Create(Device *device,
     HYPERION_RETURN_OK;
 }
 
-Result ImageView::Create(Device *device,
-    Image *image)
+Result ImageView::Create(Device *device, Image *image)
 {
     AssertThrow(image != nullptr);
     AssertThrow(image->GetGPUImage() != nullptr);

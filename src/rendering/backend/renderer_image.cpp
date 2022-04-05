@@ -104,6 +104,9 @@ Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F:
         return BaseFormat::TEXTURE_FORMAT_RGBA;
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB:
+        return BaseFormat::TEXTURE_FORMAT_BGRA;
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32:
@@ -130,11 +133,12 @@ Image::InternalFormat Image::FormatChangeNumComponents(InternalFormat fmt, uint8
 size_t Image::NumComponents(BaseFormat format)
 {
     switch (format) {
-    case BaseFormat::TEXTURE_FORMAT_NONE: return 0;
-    case BaseFormat::TEXTURE_FORMAT_R: return 1;
-    case BaseFormat::TEXTURE_FORMAT_RG: return 2;
-    case BaseFormat::TEXTURE_FORMAT_RGB: return 3;
-    case BaseFormat::TEXTURE_FORMAT_RGBA: return 4;
+    case BaseFormat::TEXTURE_FORMAT_NONE:  return 0;
+    case BaseFormat::TEXTURE_FORMAT_R:     return 1;
+    case BaseFormat::TEXTURE_FORMAT_RG:    return 2;
+    case BaseFormat::TEXTURE_FORMAT_RGB:   return 3;
+    case BaseFormat::TEXTURE_FORMAT_RGBA:  return 4;
+    case BaseFormat::TEXTURE_FORMAT_BGRA:  return 4;
     case BaseFormat::TEXTURE_FORMAT_DEPTH: return 1;
     }
 
@@ -170,6 +174,8 @@ VkFormat Image::ToVkFormat(InternalFormat fmt)
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F: return VK_FORMAT_R32G32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F: return VK_FORMAT_R32G32B32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F: return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB: return VK_FORMAT_B8G8R8A8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16: return VK_FORMAT_D16_UNORM;
         //case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24: return VK_FORMAT_D24_UNORM_S8_UINT;
         //case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32: return VK_FORMAT_D32_UNORM;
@@ -304,9 +310,6 @@ Result Image::CreateImage(Device *device,
                 }
             ));
         }
-
-        // try a different format
-        // TODO
 
         for (auto &fix : potential_fixes) {
             DebugLog(LogType::Debug, "Attempting fix: '%s' ...\n", fix.first);
