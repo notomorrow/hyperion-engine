@@ -15,15 +15,6 @@ namespace renderer {
 class RenderPass;
 class FramebufferObject {
 public:
-    struct AttachmentImageInfo {
-        std::unique_ptr<Image> image;
-        std::unique_ptr<ImageView> image_view;
-        std::unique_ptr<Sampler> sampler;
-        bool image_needs_creation; // is `image` newly constructed?
-        bool image_view_needs_creation; // is `image_view` newly constructed?
-        bool sampler_needs_creation; // is `sampler` newly constructed?
-    };
-
     FramebufferObject(uint32_t width, uint32_t height);
     FramebufferObject(const FramebufferObject &other) = delete;
     FramebufferObject &operator=(const FramebufferObject &other) = delete;
@@ -31,7 +22,7 @@ public:
 
     inline VkFramebuffer GetFramebuffer() const { return m_framebuffer; }
 
-    void AddRenderPassAttachmentRef(RenderPassAttachmentRef *attachment_ref)
+    void AddRenderPassAttachmentRef(AttachmentRef *attachment_ref)
     {
         attachment_ref->IncRef();
 
@@ -52,9 +43,7 @@ private:
     uint32_t m_width,
              m_height;
 
-    std::vector<AttachmentImageInfo> m_fbo_attachments;
-
-    std::vector<RenderPassAttachmentRef *> m_render_pass_attachment_refs;
+    std::vector<AttachmentRef *> m_render_pass_attachment_refs;
 
     VkFramebuffer m_framebuffer;
 };

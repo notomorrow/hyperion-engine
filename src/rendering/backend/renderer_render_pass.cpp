@@ -1,216 +1,11 @@
 #include "renderer_render_pass.h"
-
+#include "renderer_fbo.h"
 #include "renderer_command_buffer.h"
 
 namespace hyperion {
 namespace renderer {
 
-RenderPassAttachmentRef::~RenderPassAttachmentRef()
-{
-    AssertThrowMsg(
-        !m_is_created,
-        "Expected render pass attachment reference to not be in `created` state on destructor call"
-    );
-}
-
-RenderPassAttachmentRef::RenderPassAttachmentRef(
-    RenderPassAttachment *attachment,
-    LoadOperation load_operation,
-    StoreOperation store_operation
-) : RenderPassAttachmentRef(
-        attachment,
-        std::make_unique<ImageView>(),
-        std::make_unique<Sampler>(),
-        load_operation,
-        store_operation
-    )
-{
-}
-
-RenderPassAttachmentRef::RenderPassAttachmentRef(
-    RenderPassAttachment *attachment,
-    std::unique_ptr<ImageView> &&image_view,
-    std::unique_ptr<Sampler> &&sampler,
-    LoadOperation load_operation,
-    StoreOperation store_operation
-) : m_attachment(attachment),
-    m_load_operation(load_operation),
-    m_store_operation(store_operation),
-    m_binding{},
-    m_initial_layout(attachment->GetInitialLayout()),
-    m_final_layout(attachment->GetFinalLayout()),
-    m_image_view(std::move(image_view)),
-    m_sampler(std::move(sampler))
-{
-}
-
-VkAttachmentLoadOp RenderPassAttachmentRef::ToVkLoadOp(LoadOperation load_operation)
-{
-    switch (load_operation) {
-    case LoadOperation::UNDEFINED:
-        return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    case LoadOperation::NONE:
-        return VK_ATTACHMENT_LOAD_OP_NONE_EXT;
-    case LoadOperation::CLEAR:
-        return VK_ATTACHMENT_LOAD_OP_CLEAR;
-    case LoadOperation::LOAD:
-        return VK_ATTACHMENT_LOAD_OP_LOAD;
-    default:
-        return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    }
-}
-
-VkAttachmentStoreOp RenderPassAttachmentRef::ToVkStoreOp(StoreOperation store_operation)
-{
-    switch (store_operation) {
-    case StoreOperation::UNDEFINED:
-        return VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    case StoreOperation::NONE:
-        return VK_ATTACHMENT_STORE_OP_NONE_EXT;
-    case StoreOperation::STORE:
-        return VK_ATTACHMENT_STORE_OP_STORE;
-    default:
-        return VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    }
-}
-
-VkImageLayout RenderPassAttachmentRef::GetIntermediateLayout() const
-{
-    return m_attachment->IsDepthAttachment()
-        ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-}
-
-Image::InternalFormat RenderPassAttachmentRef::GetFormat() const
-{
-    if (m_attachment == nullptr) {
-        DebugLog(LogType::Warn, "No attachment set on attachment ref, cannot check format\n");
-
-        return Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
-    }
-
-    return m_attachment->GetFormat();
-}
-
-bool RenderPassAttachmentRef::IsDepthAttachment() const
-{
-    if (m_attachment == nullptr) {
-        DebugLog(LogType::Warn, "No attachment set on attachment ref, cannot check format\n");
-
-        return false;
-    }
-
-    return m_attachment->IsDepthAttachment();
-}
-
-VkAttachmentDescription RenderPassAttachmentRef::GetAttachmentDescription() const
-{
-    return VkAttachmentDescription{
-        .format         = Image::ToVkFormat(m_attachment->GetFormat()),
-        .samples        = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp         = ToVkLoadOp(m_load_operation),
-        .storeOp        = ToVkStoreOp(m_store_operation),
-        .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        /* TODO: Image should hold initial and final layouts */
-        .initialLayout  = m_initial_layout,
-        .finalLayout    = m_final_layout
-    };
-}
-
-VkAttachmentReference RenderPassAttachmentRef::GetAttachmentReference() const
-{
-    if (!HasBinding()) {
-        DebugLog(LogType::Warn, "Calling GetAttachmentReference() without a binding set on attachment ref -- binding will be set to %ul\n", GetBinding());
-    }
-
-    return VkAttachmentReference{
-        .attachment = GetBinding(),
-        .layout     = GetIntermediateLayout()
-    };
-}
-
-void RenderPassAttachmentRef::IncRef() const
-{
-    AssertThrow(m_ref_count != nullptr);
-
-    ++m_ref_count->count;
-}
-
-void RenderPassAttachmentRef::DecRef() const
-{
-    AssertThrow(m_ref_count != nullptr);
-    AssertThrow(m_ref_count->count != 0);
-
-    --m_ref_count->count;
-}
-
-Result RenderPassAttachmentRef::Create(Device *device)
-{
-    AssertThrow(!m_is_created);
-
-    HYPERION_BUBBLE_ERRORS(m_image_view->Create(device, m_attachment->GetImage()));
-    HYPERION_BUBBLE_ERRORS(m_sampler->Create(device, m_image_view.get()));
-
-    m_is_created = true;
-
-    HYPERION_RETURN_OK;
-}
-
-
-Result RenderPassAttachmentRef::Create(
-    Device *device,
-    VkImage image,
-    VkFormat format,
-    VkImageAspectFlags aspect_flags,
-    VkImageViewType view_type,
-    size_t num_mipmaps,
-    size_t num_faces)
-{
-    AssertThrow(!m_is_created);
-    
-    HYPERION_BUBBLE_ERRORS(m_image_view->Create(
-        device,
-        image,
-        format,
-        aspect_flags,
-        view_type,
-        num_mipmaps,
-        num_faces
-    ));
-
-    HYPERION_BUBBLE_ERRORS(m_sampler->Create(device, m_image_view.get()));
-
-    m_is_created = true;
-
-    HYPERION_RETURN_OK;
-}
-
-Result RenderPassAttachmentRef::Destroy(Device *device)
-{
-    AssertThrow(m_is_created);
-
-    HYPERION_BUBBLE_ERRORS(m_image_view->Destroy(device));
-    HYPERION_BUBBLE_ERRORS(m_sampler->Destroy(device));
-
-    m_is_created = false;
-
-    HYPERION_RETURN_OK;
-}
-
-Result RenderPassAttachmentRef::AddAttachmentRef(Device *device, StoreOperation store_operation, RenderPassAttachmentRef **out)
-{
-    auto result = Result::OK;
-
-    HYPERION_BUBBLE_ERRORS(result = m_attachment->AddAttachmentRef(device, LoadOperation::LOAD, store_operation, out));
-
-    (*out)->m_initial_layout = m_final_layout;
-    (*out)->m_final_layout   = m_final_layout;
-
-    return result;
-}
-
-RenderPass::RenderPass(Stage stage, Mode mode)
+RenderPass::RenderPass(RenderPassStage stage, Mode mode)
     : m_stage(stage),
       m_mode(mode),
       m_render_pass{}
@@ -219,17 +14,13 @@ RenderPass::RenderPass(Stage stage, Mode mode)
 
 RenderPass::~RenderPass()
 {
-    for (const auto *attachment_ref : m_render_pass_attachment_refs) {
-        attachment_ref->DecRef();
-    }
-
     AssertThrowMsg(m_render_pass == nullptr, "render pass should have been destroyed");
 }
 
 void RenderPass::CreateDependencies()
 {
     switch (m_stage) {
-    case Stage::RENDER_PASS_STAGE_PRESENT:
+    case RenderPassStage::PRESENT:
         AddDependency(VkSubpassDependency{
             .srcSubpass = VK_SUBPASS_EXTERNAL,
             .dstSubpass = 0,
@@ -241,7 +32,7 @@ void RenderPass::CreateDependencies()
         });
 
         break;
-    case Stage::RENDER_PASS_STAGE_SHADER:
+    case RenderPassStage::SHADER:
         AddDependency(VkSubpassDependency{
             .srcSubpass = VK_SUBPASS_EXTERNAL,
             .dstSubpass = 0,
@@ -352,18 +143,22 @@ Result RenderPass::Destroy(Device *device)
     vkDestroyRenderPass(device->GetDevice(), m_render_pass, nullptr);
     m_render_pass = nullptr;
 
+    for (const auto *attachment_ref : m_render_pass_attachment_refs) {
+        attachment_ref->DecRef();
+    }
+
     return result;
 }
 
-void RenderPass::Begin(CommandBuffer *cmd, VkFramebuffer framebuffer, VkExtent2D extent)
+void RenderPass::Begin(CommandBuffer *cmd, FramebufferObject *framebuffer)
 {
-    VkRenderPassBeginInfo render_pass_info{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-    render_pass_info.renderPass = m_render_pass;
-    render_pass_info.framebuffer = framebuffer;
+    VkRenderPassBeginInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+    render_pass_info.renderPass          = m_render_pass;
+    render_pass_info.framebuffer         = framebuffer->GetFramebuffer();
     render_pass_info.renderArea.offset = {0, 0};
-    render_pass_info.renderArea.extent = extent;
-    render_pass_info.clearValueCount = uint32_t(m_clear_values.size());
-    render_pass_info.pClearValues = m_clear_values.data();
+    render_pass_info.renderArea.extent   = VkExtent2D{framebuffer->GetWidth(), framebuffer->GetHeight()};
+    render_pass_info.clearValueCount     = uint32_t(m_clear_values.size());
+    render_pass_info.pClearValues        = m_clear_values.data();
 
     VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE;
 

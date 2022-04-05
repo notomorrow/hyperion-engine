@@ -279,7 +279,7 @@ private:
     ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
 
     /* TMP */
-    std::vector<std::unique_ptr<renderer::RenderPassAttachment>> m_render_pass_attachments;
+    std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;
 
     std::array<ComponentEvents<Callbacks>, CALLBACK_MAX> m_callbacks;
 };
