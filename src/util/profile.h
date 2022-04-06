@@ -2,18 +2,16 @@
 #define HYPERION_PROFILE_H
 
 #include <vector>
-#include <type_traits>
+#include <functional>
 
 namespace hyperion {
 
 class Profile {
 public:
-    using LambdaFunction = std::add_pointer_t<void()>;
-
     static std::vector<double> RunInterleved(std::vector<Profile> &&, size_t runs_per = 5, size_t num_iterations = 100, size_t runs_per_iteration = 100);
     
-    Profile(LambdaFunction lambda)
-        : m_lambda(lambda),
+    Profile(std::function<void()> &&lambda)
+        : m_lambda(std::move(lambda)),
           m_result(0.0),
           m_iteration(0)
     {
@@ -39,7 +37,7 @@ public:
     }
 
 private:
-    LambdaFunction m_lambda;
+    std::function<void()> m_lambda;
     double m_result;
     size_t m_iteration;
 };

@@ -36,7 +36,7 @@ Mesh::~Mesh()
  * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
 #define PACKED_SET_ATTR(raw_values, arg_size)                                   \
     {                                                                           \
-        memcpy((void *)(raw_buffer + current_offset), (raw_values), (arg_size));\
+        memcpy((void *)(raw_buffer + current_offset), (raw_values), (arg_size) * sizeof(float));\
         current_offset += (arg_size);                                           \
     }
 
@@ -52,17 +52,17 @@ std::vector<float> Mesh::CreatePackedBuffer() {
     for (size_t i = 0; i < m_vertices.size(); i++) {
         auto &vertex = m_vertices[i];
         /* Offset aligned to the current vertex */
-        current_offset = i * vertex_size;
+        //current_offset = i * vertex_size;
 
         /* Position and normals */
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION)  PACKED_SET_ATTR(vertex.GetPosition().values, 3 * sizeof(float));
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL)    PACKED_SET_ATTR(vertex.GetNormal().values,   3 * sizeof(float));
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION)  PACKED_SET_ATTR(vertex.GetPosition().values, 3);
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL)    PACKED_SET_ATTR(vertex.GetNormal().values,   3);
         /* Texture coordinates */
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0) PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2 * sizeof(float));
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2 * sizeof(float))
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0) PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2);
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2)
         /* Tangents and Bitangents */
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT)   PACKED_SET_ATTR(vertex.GetTangent().values,   3 * sizeof(float));
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT) PACKED_SET_ATTR(vertex.GetBitangent().values, 3 * sizeof(float));
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT)   PACKED_SET_ATTR(vertex.GetTangent().values,   3);
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT) PACKED_SET_ATTR(vertex.GetBitangent().values, 3);
 
         /* TODO: modify GetBoneIndex/GetBoneWeight to return a Vector4. */
         if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES) {
@@ -70,14 +70,14 @@ std::vector<float> Mesh::CreatePackedBuffer() {
                     (float)vertex.GetBoneIndex(0), (float)vertex.GetBoneIndex(1),
                     (float)vertex.GetBoneIndex(2), (float)vertex.GetBoneIndex(3)
             };
-            PACKED_SET_ATTR(indices, std::size(indices) * sizeof(float));
+            PACKED_SET_ATTR(indices, std::size(indices));
         }
         if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS) {
             float weights[4] = {
                     (float)vertex.GetBoneWeight(0), (float)vertex.GetBoneWeight(1),
                     (float)vertex.GetBoneWeight(2), (float)vertex.GetBoneWeight(3)
             };
-            PACKED_SET_ATTR(weights, std::size(weights) * sizeof(float));
+            PACKED_SET_ATTR(weights, std::size(weights));
         }
     }
     return packed_buffer;
@@ -85,7 +85,7 @@ std::vector<float> Mesh::CreatePackedBuffer() {
 
 #undef PACKED_SET_ATTR
 
-void Mesh::UploadToDevice(Device *device, CommandBuffer *cmd)
+void Mesh::UploadToDevice(Device *device)
 {
     AssertThrow(m_vbo == nullptr);
     AssertThrow(m_ibo == nullptr);
@@ -98,13 +98,11 @@ void Mesh::UploadToDevice(Device *device, CommandBuffer *cmd)
     /* Create and upload the VBO */
     const size_t packed_buffer_size = (packed_buffer.size() * sizeof(float));
     m_vbo->Create(device, packed_buffer_size);
-    m_vbo->Bind(cmd);
     m_vbo->Copy(device, packed_buffer_size, packed_buffer.data());
 
     /* Create and upload the indices */
     const size_t packed_indices_size = (m_indices.size() * sizeof(Index));
     m_ibo->Create(device, packed_indices_size);
-    m_ibo->Bind(cmd);
     m_ibo->Copy(device, packed_indices_size, m_indices.data());
 }
 
@@ -151,15 +149,17 @@ void Mesh::SetVertices(const std::vector<Vertex> &vertices, const std::vector<In
     m_indices  = indices;
 }
 
-void Mesh::Create(Device *device, CommandBuffer *cmd)
+void Mesh::Create(Engine *engine)
 {
-    UploadToDevice(device, cmd);
+    UploadToDevice(engine->GetInstance()->GetDevice());
 }
 
-void Mesh::Destroy(Device *device)
+void Mesh::Destroy(Engine *engine)
 {
     AssertThrow(m_vbo != nullptr);
     AssertThrow(m_ibo != nullptr);
+
+    Device *device = engine->GetInstance()->GetDevice();
 
     m_vbo->Destroy(device);
     m_vbo.reset();
@@ -168,7 +168,7 @@ void Mesh::Destroy(Device *device)
     m_ibo.reset();
 }
 
-void Mesh::Render(Device *device, CommandBuffer *cmd) const
+void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
 {
     m_vbo->Bind(cmd);
     m_ibo->Bind(cmd);

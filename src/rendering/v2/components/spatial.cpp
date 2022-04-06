@@ -5,7 +5,7 @@
 namespace hyperion::v2 {
 
 Spatial::Spatial(
-    std::shared_ptr<hyperion::Mesh> mesh,
+    Mesh *mesh,
     const MeshInputAttributeSet &attributes,
     const Transform &transform,
     const BoundingBox &local_aabb,
@@ -56,12 +56,12 @@ void Spatial::RemoveFromPipeline(GraphicsPipeline *pipeline)
 
 void Spatial::Create(Engine *engine)
 {
-    //engine->GetMeshes().Acquire(m_mesh);
+    engine->GetMeshes().Acquire(engine, m_mesh);
 }
 
 void Spatial::Destroy(Engine *engine)
 {
-    //engine->GetMeshes().Release(engine, m_mesh);
+    engine->GetMeshes().Release(engine, m_mesh);
 
     RemoveFromPipelines();
 }

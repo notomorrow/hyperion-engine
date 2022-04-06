@@ -7,8 +7,16 @@
 #include <vector>
 
 #define HYP_V2_LOADER_BUFFER_SIZE 2048
+#define HYP_V2_LOADER_THREADED 1
+
+#if HYP_V2_LOADER_THREADED
+#include <thread>
+#include <mutex>
+#endif
 
 namespace hyperion::v2 {
+
+class Engine;
 
 using LoaderStream = BufferedTextReader<HYP_V2_LOADER_BUFFER_SIZE>;
 
@@ -32,114 +40,125 @@ struct LoaderResource {
     LoaderResult result;
 };
 
-class LoaderBase {};
-
-template <class FinalType, class T = FinalType>
-class Loader : public LoaderBase {
-public:
-    using Object  = LoaderObject<T>;
+template <class Object, class Handler>
+class LoaderImpl {
     using Results = std::vector<std::pair<LoaderResult, Object>>;
+
+public:
+    LoaderImpl(const Handler &handler)
+        : m_handler(handler) {}
+
+    LoaderImpl &Enqueue(const LoaderResourceKey &key, LoaderResource &&resource)
+    {
+        m_resources.push_back(std::move(resource));
+
+        return *this;
+    }
     
-    struct Handler {
-        std::function<LoaderResult(LoaderStream *, LoaderObject<T> &)>     load_fn;
-        std::function<std::unique_ptr<FinalType>(const LoaderObject<T> &)> build_fn;
-    };
+    Results Load()
+    {
+        Results results;
+        results.resize(m_resources.size());
 
-private:
-    class Impl {
-    public:
-        Impl(const Handler &handler)
-            : m_handler(handler) {}
+        std::vector<std::thread> threads;
+        threads.resize(m_resources.size());
 
-        Impl &Enqueue(const LoaderResourceKey &key, LoaderResource &&resource)
-        {
-            m_resources.push_back(std::move(resource));
+        for (size_t i = 0; i < m_resources.size(); i++) {
+            threads[i] = std::thread([index = i, &resources = m_resources, &handler = m_handler, &results] {
+                const auto &resource = resources[index];
 
-            return *this;
-        }
-        
-        Results Load()
-        {
-            Results results;
-            results.reserve(m_resources.size());
-
-            for (auto &resource : m_resources) {
                 if (resource.stream == nullptr) {
-                    results.push_back(std::make_pair(
+                    results[index] = std::make_pair(
                         LoaderResult{LoaderResult::Status::ERR, "No byte stream provided"},
                         Object{}
-                    ));
+                    );
 
-                    continue;
+                    return;
                 }
 
                 if (!resource.stream->IsOpen()) {
-                    results.push_back(std::make_pair(
+                    results[index] = std::make_pair(
                         LoaderResult{LoaderResult::Status::ERR, "Failed to open file"},
                         Object{}
-                    ));
+                    );
 
-                    continue;
+                    return;
                 }
 
                 if (resource.stream->Eof()) {
-                    results.push_back(std::make_pair(
+                    results[index] = std::make_pair(
                         LoaderResult{LoaderResult::Status::ERR, "Byte stream in EOF state"},
                         Object{}
-                    ));
+                    );
 
-                    continue;
+                    return;
                 }
 
                 Object object;
-                LoaderResult result = m_handler.load_fn(resource.stream.get(), object);
+                LoaderResult result = handler.load_fn(resource.stream.get(), object);
             
-                results.push_back(std::make_pair(result, std::move(object)));
-            }
-
-            m_resources.clear();
-
-            return results;
+                results[index] = std::make_pair(result, std::move(object));
+            });
         }
 
-    private:
-        Handler m_handler;
+        for (auto &thread : threads) {
+            thread.join();
+        }
 
-        std::vector<LoaderResource> m_resources;
+        m_resources.clear();
+
+        return results;
+    }
+
+private:
+    Handler m_handler;
+
+    std::vector<LoaderResource> m_resources;
+};
+
+template <class T, LoaderFormat Format>
+class LoaderBase {
+public:
+    using FinalType = T;
+    using Object  = LoaderObject<T, Format>;
+    
+    struct Handler {
+        std::function<LoaderResult(LoaderStream *, Object &)>     load_fn;
+        std::function<std::unique_ptr<FinalType>(Engine *engine, const Object &)> build_fn;
     };
 
 public:
 
-    Loader(Handler &&handler)
+    LoaderBase(Handler &&handler)
         : m_handler(std::move(handler))
     {
     }
 
-    Loader(const Loader &other) = delete;
-    Loader &operator=(const Loader &other) = delete;
+    LoaderBase(const LoaderBase &other) = delete;
+    LoaderBase &operator=(const LoaderBase &other) = delete;
 
-    Loader(Loader &&other) noexcept
+    LoaderBase(LoaderBase &&other) noexcept
         : m_handler(std::move(other.m_handler))
     {
     }
 
-    Loader &operator=(Loader &&other) noexcept
+    LoaderBase &operator=(LoaderBase &&other) noexcept
     {
         m_handler = std::move(other.m_handler);
 
         return *this;
     }
 
-    ~Loader() = default;
+    ~LoaderBase() = default;
 
-    Impl Instance() const
-        { return Impl(m_handler); }
+    LoaderImpl<Object, Handler> Instance() const
+        { return LoaderImpl<Object, Handler>(m_handler); }
 
-    std::unique_ptr<FinalType> Build(const Object &object) const
+    std::unique_ptr<FinalType> Build(Engine *engine, const Object &object) const
     {
         AssertThrowMsg(m_handler.build_fn, "No object build function set");
 
-        return std::move(m_handler.build_fn(object));
+        return std::move(m_handler.build_fn(engine, object));
     }
 
 private:

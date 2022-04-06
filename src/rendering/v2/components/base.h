@@ -69,6 +69,8 @@ protected:
 public:
     using ID = IdWrapper<Type, uint32_t>;
 
+    static constexpr ID bad_id = ID{0};
+
     inline const ID &GetId() const
         { return m_id; }
 
@@ -118,6 +120,8 @@ public:
             );
         }
     }
+
+    inline bool IsInitialized() const { return m_is_created; }
 
     inline WrappedType &Get() { return m_wrapped; }
     inline const WrappedType &Get() const { return m_wrapped; }

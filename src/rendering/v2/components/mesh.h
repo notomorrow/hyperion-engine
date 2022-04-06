@@ -25,15 +25,18 @@ using renderer::VertexBuffer;
 using renderer::IndexBuffer;
 
 class Mesh : public EngineComponentBase<STUB_CLASS(Mesh)> {
-    using Index          = uint32_t;
-
     void CalculateIndices();
     std::vector<float> CreatePackedBuffer();
-    void UploadToDevice(Device *device, CommandBuffer *cmd);
+    void UploadToDevice(Device *device);
 
 public:
+    using Index = uint32_t;
+
     Mesh();
     ~Mesh();
+
+    inline const MeshInputAttributeSet &GetVertexAttributes() const
+        { return m_vertex_attributes; }
 
     void SetVertices(const std::vector<Vertex> &vertices);
     void SetVertices(const std::vector<Vertex> &vertices, const std::vector<Index> &indices);
@@ -41,9 +44,9 @@ public:
     void CalculateNormals();
     void InvertNormals();
 
-    void Create(Device *device, CommandBuffer *cmd);
-    void Destroy(Device *device);
-    void Render(Device *device, CommandBuffer *cmd) const;
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
+    void Render(Engine *engine, CommandBuffer *cmd) const;
 
 private:
     std::unique_ptr<VertexBuffer> m_vbo;

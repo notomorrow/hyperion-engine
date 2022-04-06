@@ -106,10 +106,10 @@ public:
     {
         const size_t index = id.Value() - 1;
 
-        return MathUtil::InRange(index, {0, m_max_index + 1}) && m_index_map[index] != 0;
+        return MathUtil::InRange(index, {0, m_index_map.size()}) && m_index_map[index] != 0;
     }
 
-    ValueType &GetOrInsert(typename ObjectType::ID id, ValueType &&value = ValueType())
+    ValueType &GetOrInsert(typename ObjectType::ID id, ValueType &&value = {})
     {
         if (!Has(id)) {
             Set(id, std::move(value));
@@ -129,6 +129,7 @@ public:
         EnsureIndexMapIncludes(id);
 
         const size_t id_index = id.Value() - 1;
+
         size_t &index = m_index_map[id_index];
 
         if (index == 0) {
@@ -234,29 +235,26 @@ struct ObjectHolder {
     std::queue<size_t> free_slots;
 #endif
 
-    inline constexpr size_t Size() const
+    constexpr size_t Size() const
         { return objects.size(); }
 
-    inline constexpr
-        T *Get(const typename T::ID &id)
+    constexpr T *Get(const typename T::ID &id)
     {
-        return MathUtil::InRange(id.Value(), { 1, objects.size() + 1 })
+        return MathUtil::InRange(id.Value(), {1, objects.size() + 1})
             ? objects[id.Value() - 1].get()
             : nullptr;
     }
 
-    inline constexpr
-        const T *Get(const typename T::ID &id) const
+    constexpr const T *Get(const typename T::ID &id) const
     {
         return const_cast<ObjectHolder<T> *>(this)->Get(id);
     }
 
-    inline constexpr T *operator[](const typename T::ID &id) { return Get(id); }
-    inline constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }
+    constexpr T *operator[](const typename T::ID &id) { return Get(id); }
+    constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }
 
     template <class LambdaFunction>
-    inline constexpr
-        typename T::ID Find(LambdaFunction lambda) const
+    constexpr typename T::ID Find(LambdaFunction lambda) const
     {
         const auto it = std::find_if(objects.begin(), objects.end(), lambda);
 
@@ -264,7 +262,32 @@ struct ObjectHolder {
             return typename T::ID{typename T::ID::ValueType(it - objects.begin() + 1)};
         }
 
-        return typename T::ID{0};
+        return T::bad_id;
+    }
+    
+    T *Allot(std::unique_ptr<T> &&object)
+    {
+#if HYP_ADD_OBJECT_USE_QUEUE
+        if (!free_slots.empty()) {
+            const auto next_id = typename T::ID{typename T::ID::ValueType(free_slots.front() + 1)};
+
+            object->SetId(next_id);
+
+            objects[free_slots.front()] = std::move(object);
+
+            free_slots.pop();
+
+            return objects[next_id.Value() - 1].get();
+        }
+#endif
+
+        const auto next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
+
+        object->SetId(next_id);
+
+        objects.push_back(std::move(object));
+
+        return objects[next_id.Value() - 1].get();
     }
     
     template <class ...Args>
@@ -351,27 +374,78 @@ class RefCountedObjectHolder {
     ObjectHolder<T> m_holder;
 
 public:
+    struct RefWrapper {
+        operator T *()             { return ptr; }
+        operator const T *() const { return ptr; }
+        operator bool() const      { return ptr != nullptr; }
+
+        bool operator==(const RefWrapper &other) const
+            { return &other == this || other.ptr == ptr; }
+
+        bool operator!=(const RefWrapper &other) const
+            { return !operator==(other); }
+
+        T *operator->() { return ptr; }
+        const T *operator->() const { return ptr; }
+
+        T &operator*() { return *ptr; }
+        const T &operator*() const { return *ptr; }
+
+        template <class ...Args>
+        void Acquire(Engine *engine, Args &&... args)
+        {
+            ref_holder.Acquire(engine, ptr, std::move(args)...);
+        }
+
+        template <class ...Args>
+        void Release(Engine *engine, Args &&... args)
+        {
+            ref_holder.Release(engine, ptr, std::move(args)...);
+
+            ptr = nullptr;
+        }
+        
+        RefCountedObjectHolder &ref_holder;
+        T *ptr = nullptr;
+    };
+
     RefCountedObjectHolder() = default;
     ~RefCountedObjectHolder()
     {
         for (RefCount &rc : m_ref_counts) {
-            --rc.count;
+            if (rc.count == 0) { /* not yet initialized */
+                DebugLog(
+                    LogType::Warn,
+                    "Ref to object of type %s was never initialized\n",
+                    typeid(T).name()
+                );
+            } else {
+                --rc.count;
+            }
 
             AssertThrowMsg(rc.count == 0, "Destructor called while object still in use elsewhere");
         }
     }
 
-    T *Acquire(const T *ptr)
+    template <class ...Args>
+    T *Acquire(Engine *engine, T *ptr, Args &&... args)
     {
         AssertThrow(ptr != nullptr);
 
-        ++m_ref_counts[ptr->GetId()];
+        auto &ref_count = m_ref_counts[ptr->GetId()].count;
+
+        if (ref_count == 0) {// && !ptr->IsInitialized()) {
+            ptr->Create(engine, std::move(args)...);
+        }
+
+        ++ref_count;
 
         return ptr;
     }
 
-    T *Acquire(const typename T::ID &id)
-        { return Acquire(m_holder.Get(id)); }
+    template <class ...Args>
+    T *Acquire(Engine *engine, const typename T::ID &id, Args &&... args)
+        { return Acquire(engine, m_holder.Get(id), std::move(args)...); }
 
     template <class ...Args>
     void Release(Engine *engine, const T *ptr, Args &&... args)
@@ -380,9 +454,9 @@ public:
 
         const auto id = ptr->GetId();
 
-        AssertThrowMsg(m_ref_counts[id] != 0, "Cannot decrement refcount when already at zero (or not set)");
-
-        if (!--m_ref_counts[id]) {
+        AssertThrowMsg(m_ref_counts[id].count != 0, "Cannot decrement refcount when already at zero (or not set)");
+        
+        if (!--m_ref_counts[id].count) {
             m_holder.Remove(engine, id, std::forward<Args>(args)...);
             m_ref_counts.Remove(id);
         }
@@ -392,20 +466,25 @@ public:
         { return Release(engine, m_holder.Get(id)); }
 
     template <class ...Args>
-    T *Add(Engine *engine, std::unique_ptr<T> &&object, Args &&... args)
+    RefWrapper Add(Args &&... args)
     {
-        T *ptr = m_holder.Add(engine, std::move(object), std::forward<Args>(args)...);
-
-        if (ptr == nullptr) {
-            return ptr;
-        }
-
-        /* Set ref count to 1 */
-        return Acquire(ptr);
+        return RefWrapper{
+            .ref_holder = *this,
+            .ptr        = m_holder.Allot(std::make_unique<T>(std::forward<Args>(args)...))
+        };
     }
 
     T *Get(const typename T::ID &id) const
         { return m_holder.Get(id); }
+
+    size_t GetRefCount(const typename T::ID &id) const
+    {
+        if (!m_ref_counts.Has(id)) {
+            return 0;
+        }
+
+        return m_ref_counts.Get(id).count;
+    }
 };
 
 } // namespace hyperion::v2

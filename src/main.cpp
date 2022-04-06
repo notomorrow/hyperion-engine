@@ -105,7 +105,7 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_CUBEMAP 1
 #define HYPERION_VK_TEST_MIPMAP 1
 #define HYPERION_VK_TEST_IMAGE_STORE 0
-#define HYPERION_VK_TEST_VISUALIZE_OCTREE 1
+#define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 
 int main()
 {
@@ -117,9 +117,6 @@ int main()
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
 
 
-
-    v2::Assets assets;
-    auto obj_result = assets.LoadModel(base_path + "/res/models/monkey/monkey.obj");
 
 
     
@@ -217,6 +214,17 @@ int main()
 
 
     engine.Initialize();
+
+    v2::Assets assets(&engine);
+    auto monkey_obj = assets.Load<v2::Node>(base_path + "/res/models/monkey/monkey.obj");
+    auto cube_obj = assets.Load<v2::Node>(base_path + "/res/models/cube.obj");
+
+    monkey_obj->GetChild(0)->AddChild("Foobar");
+    monkey_obj->GetChild(0)->GetChild(0)->AddChild("Nuts");
+    monkey_obj->Translate({2.0f, 0.0f, 5.0f});
+    monkey_obj->Scale(0.35f);
+    monkey_obj->Update(&engine);
+
 
     auto opaque_fbo_id = engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0];//v2::Framebuffer::ID{1};//engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
     auto *opaque_fbo = engine.GetFramebuffer(opaque_fbo_id);
@@ -454,27 +462,15 @@ int main()
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
         //Transform monkey_transform(Vector3(9.0f), Vector3(1.0f), Quaternion());
 
-        monkey_spatial = engine.AddSpatial(
-            monkey_mesh,
-            pipeline->GetVertexAttributes(),
-            Transform(),
-            monkey_mesh->GetAABB(),
-            mat1_id
-        );
+        monkey_spatial = monkey_obj->GetChild(0)->GetSpatial();
 
         auto monkey_node = std::make_unique<v2::Node>("monkey");
-        monkey_node->SetSpatial(&engine, monkey_spatial);
+        monkey_node->SetSpatial(monkey_spatial);
         new_root.AddChild(std::move(monkey_node));
         
         pipeline->AddSpatial(&engine, monkey_spatial);
 
-        cube_spatial = engine.AddSpatial(
-            cube_mesh,
-            pipeline->GetVertexAttributes(),
-            Transform(Vector3(-4.0f, 0.0f, 4.0f), Vector3(0.8f), Quaternion::Identity()),
-            cube_mesh->GetAABB(),
-            mat2_id
-        );
+        cube_spatial = cube_obj->GetChild(0)->GetSpatial();
         pipeline->AddSpatial(&engine, cube_spatial);
         
         main_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
@@ -493,13 +489,7 @@ int main()
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
 
-        v2::Spatial *skybox_spatial = engine.AddSpatial(
-            cube_mesh,
-            pipeline->GetVertexAttributes(),
-            Transform(Vector3(), Vector3(5.0f), Quaternion::Identity()),
-            cube_mesh->GetAABB(),
-            skybox_material_id
-        );
+        v2::Spatial *skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
 
         pipeline->AddSpatial(&engine, skybox_spatial);
         
@@ -511,13 +501,7 @@ int main()
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
         pipeline->SetBlendEnabled(true);
 
-        v2::Spatial *translucent_spatial = engine.AddSpatial(
-            cube_mesh,
-            pipeline->GetVertexAttributes(),
-            Transform(Vector3(4.0f, -0.35f, 2.0f), Vector3(1.0f), Quaternion(Vector3::One(), 0.25f)),
-            cube_mesh->GetAABB(),
-            translucent_material_id
-        );
+        v2::Spatial *translucent_spatial = cube_obj->GetChild(0)->GetSpatial();
 
         pipeline->AddSpatial(&engine, translucent_spatial);
         
@@ -545,7 +529,7 @@ int main()
         std::cout << "add octant " << octree->GetAabb() << "\n";
 
         auto *spatial = engine->AddSpatial(
-            mesh,
+            nullptr,//mesh,
             pipeline->GetVertexAttributes(),
             Transform(),
             mesh->GetAABB(),
@@ -677,9 +661,9 @@ int main()
 
         Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
-        engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{1}), transform);
-        engine.GetOctree().Update(&engine, monkey_spatial);
-        engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{3}), Transform(camera->GetTranslation(), { 1.0f, 1.0f, 1.0f }, Quaternion()));
+        //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{1}), transform);
+        //engine.GetOctree().Update(&engine, monkey_spatial);
+        //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{3}), Transform(camera->GetTranslation(), { 1.0f, 1.0f, 1.0f }, Quaternion()));
 
         /* Only update sets that are double - buffered so we don't
          * end up updating data that is in use by the gpu

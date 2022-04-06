@@ -18,8 +18,9 @@ public:
     /*! \brief Construct the node, optionally taking in a string tag to improve identification.
      * @param tag A c-string representing the name of the Node. The memory is copied internally so the string can be safely deleted
      * after use.
+     * @param transform An optional parameter representing the local-space transform of this Node.
      */
-    Node(const char *tag = "");
+    Node(const char *tag = "", const Transform &local_transform = Transform());
     Node(const Node &other) = delete;
     Node &operator=(const Node &other) = delete;
     ~Node();
@@ -30,7 +31,7 @@ public:
     inline Node *GetParent() const { return m_parent_node; }
 
     inline Spatial *GetSpatial() const { return m_spatial; }
-    void SetSpatial(Engine *engine, Spatial *spatial);
+    void SetSpatial(Spatial *spatial);
 
     /*! \brief Add the Node as a child of this object, taking ownership over the given Node.
      * @param node The Node to be added as achild of this Node
@@ -50,6 +51,14 @@ public:
     }
 
     bool RemoveChild(NodeList::iterator);
+    bool RemoveChild(size_t index);
+
+    /*! \brief Remove this node from the parent Node's list of child Nodes. */
+    bool Remove();
+
+    Node *GetChild(size_t index) const;
+
+    NodeList::iterator FindChild(Node *node);
 
     inline NodeList &GetChildren() { return m_child_nodes; }
     inline const NodeList &GetChildren() const { return m_child_nodes; }
@@ -71,6 +80,12 @@ public:
     /*! \brief Set the local-space translation of this Node (not influenced by the parent Node) */
     inline void SetLocalTranslation(const Vector3 &translation)
         { SetLocalTransform({translation, m_local_transform.GetScale(), m_local_transform.GetRotation()}); }
+
+    /*! \brief Move the Node in local-space by adding the given vector to the current local-space translation.
+     * @param translation The vector to translate this Node by
+     */
+    inline void Translate(const Vector3 &translation)
+        { SetLocalTranslation(m_local_transform.GetTranslation() + translation); }
     
     /*! @returns The local-space scale of this Node. */
     inline const Vector3 &GetLocalScale() const
@@ -79,6 +94,12 @@ public:
     /*! \brief Set the local-space scale of this Node (not influenced by the parent Node) */
     inline void SetLocalScale(const Vector3 &scale)
         { SetLocalTransform({m_local_transform.GetTranslation(), scale, m_local_transform.GetRotation()}); }
+
+    /*! \brief Scale the Node in local-space by multiplying the current local-space scale by the given scale vector.
+     * @param scale The vector to scale this Node by
+     */
+    inline void Scale(const Vector3 &scale)
+        { SetLocalScale(m_local_transform.GetScale() * scale); }
     
     /*! @returns The local-space rotation of this Node. */
     inline const Quaternion &GetLocalRotation() const
@@ -87,6 +108,12 @@ public:
     /*! \brief Set the local-space rotation of this Node (not influenced by the parent Node) */
     inline void SetLocalRotation(const Quaternion &rotation)
         { SetLocalTransform({m_local_transform.GetTranslation(), m_local_transform.GetScale(), rotation}); }
+
+    /*! \brief Rotate the Node by multiplying the current local-space rotation by the given quaternion.
+     * @param rotation The quaternion to rotate this Node by
+     */
+    inline void Rotate(const Quaternion &rotation)
+        { SetLocalRotation(m_local_transform.GetRotation() * rotation); }
     
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
     void Update(Engine *engine);

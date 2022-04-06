@@ -156,7 +156,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
     secondary_command_buffer->Record(
         device,
         m_wrapped.GetConstructionInfo().render_pass,
-        [this, instance, device, frame_index](CommandBuffer *secondary) {
+        [this, engine, instance, device, frame_index](CommandBuffer *secondary) {
             m_wrapped.Bind(secondary);
 
             /* Bind global data */
@@ -212,7 +212,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                     }
                 );
 
-                spatial->GetMesh()->RenderVk(secondary, instance, nullptr);
+                spatial->GetMesh()->Render(engine, secondary);
             }
 
             HYPERION_RETURN_OK;
