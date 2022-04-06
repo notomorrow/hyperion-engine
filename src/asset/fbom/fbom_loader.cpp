@@ -12,10 +12,10 @@ namespace hyperion {
 namespace fbom {
 
 decltype(FBOMLoader::loaders) FBOMLoader::loaders = {
-    { "ENTITY", FBOM_MARSHAL_CLASS(Node) },
+    { "ENTITY",                FBOM_MARSHAL_CLASS(Node) },
     { "NOISE_TERRAIN_CONTROL", FBOM_MARSHAL_CLASS(NoiseTerrainControl) },
-    { "MESH", FBOM_MARSHAL_CLASS(Mesh) },
-    { "MATERIAL", FBOM_MARSHAL_CLASS(Material) }
+    { "MESH",                  FBOM_MARSHAL_CLASS(Mesh) },
+    { "MATERIAL",              FBOM_MARSHAL_CLASS(Material) }
 };
 
 FBOMLoader::FBOMLoader()

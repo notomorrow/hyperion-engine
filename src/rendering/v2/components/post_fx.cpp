@@ -13,7 +13,7 @@ using renderer::Descriptor;
 using renderer::DescriptorSet;
 using renderer::ImageSamplerDescriptor;
 
-std::shared_ptr<Mesh> PostEffect::full_screen_quad = MeshFactory::CreateQuad();
+std::shared_ptr<hyperion::Mesh> PostEffect::full_screen_quad = MeshFactory::CreateQuad();
 
 PostEffect::PostEffect(Shader::ID shader_id)
     : m_pipeline_id{},

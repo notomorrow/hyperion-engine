@@ -13,7 +13,7 @@ namespace hyperion {
 
 class StringUtil {
 public:
-    static inline bool StartsWith(const std::string &text, const std::string &token)
+    static constexpr bool StartsWith(const std::string &text, const std::string &token)
     {
         if (text.length() < token.length()) {
             return false;
@@ -21,7 +21,7 @@ public:
         return (text.compare(0, token.length(), token) == 0);
     }
 
-    static inline bool EndsWith(const std::string &text, const std::string &token)
+    static constexpr bool EndsWith(const std::string &text, const std::string &token)
     {
         if (text.length() < token.length()) {
             return false;

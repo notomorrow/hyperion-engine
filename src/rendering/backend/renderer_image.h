@@ -22,14 +22,6 @@ public:
         TEXTURE_TYPE_CUBEMAP = 2
     };
 
-    enum class DatumType {
-        TEXTURE_DATUM_UNSIGNED_BYTE,
-        TEXTURE_DATUM_SIGNED_BYTE,
-        TEXTURE_DATUM_UNSIGNED_INT,
-        TEXTURE_DATUM_SIGNED_INT,
-        TEXTURE_DATUM_FLOAT
-    };
-
     enum class BaseFormat {
         TEXTURE_FORMAT_NONE,
         TEXTURE_FORMAT_R,

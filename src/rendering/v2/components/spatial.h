@@ -1,7 +1,9 @@
 #ifndef HYPERION_V2_SPATIAL_H
 #define HYPERION_V2_SPATIAL_H
 
+#include "base.h"
 #include "material.h"
+//#include "mesh.h"
 
 #include <rendering/backend/renderer_structs.h>
 
@@ -9,8 +11,7 @@
 #include <math/transform.h>
 #include <math/bounding_box.h>
 
-/* TMP */
-#include "../../mesh.h"
+#include <rendering/mesh.h>
 
 #include <vector>
 
@@ -26,7 +27,7 @@ class Spatial : public EngineComponent<STUB_CLASS(Spatial)> {
     friend class Engine;
     friend class GraphicsPipeline;
 public:
-    Spatial(const std::shared_ptr<Mesh> &mesh,
+    Spatial(std::shared_ptr<Mesh> mesh,
         const MeshInputAttributeSet &attributes,
         const Transform &transform,
         const BoundingBox &local_aabb,
@@ -35,7 +36,7 @@ public:
     Spatial &operator=(const Spatial &other) = delete;
     ~Spatial();
     
-    const std::shared_ptr<Mesh> &GetMesh() const { return m_mesh; }
+    hyperion::Mesh *GetMesh() { return m_mesh.get(); }
     const MeshInputAttributeSet &GetVertexAttributes() const { return m_attributes; }
 
     const Transform &GetTransform() const { return m_transform; }
@@ -60,7 +61,7 @@ private:
     void RemoveFromPipelines();
     void RemoveFromPipeline(GraphicsPipeline *pipeline);
 
-    std::shared_ptr<Mesh> m_mesh;
+    std::shared_ptr<hyperion::Mesh> m_mesh;
     MeshInputAttributeSet m_attributes;
     Transform m_transform;
     BoundingBox m_local_aabb;

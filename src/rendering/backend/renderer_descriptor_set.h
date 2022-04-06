@@ -171,10 +171,7 @@ public:
         return *m_descriptor_sets[index];
     }
 
-    inline DescriptorSet *GetDescriptorSet(DescriptorSet::Index index)
-        { return m_descriptor_sets[index].get(); }
-
-    inline const DescriptorSet *GetDescriptorSet(DescriptorSet::Index index) const
+    inline DescriptorSet *GetDescriptorSet(DescriptorSet::Index index) const
         { return m_descriptor_sets[index].get(); }
 
     Result Create(Device *device);

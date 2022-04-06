@@ -1,6 +1,7 @@
 #ifndef BUFFERED_TEXT_READER_H
 #define BUFFERED_TEXT_READER_H
 
+#include "../types.h"
 #include "../util.h"
 #include "../util/string_util.h"
 
@@ -12,35 +13,40 @@ template <size_t BufferSize>
 class BufferedTextReader {
 public:
     BufferedTextReader(const std::string &filepath, std::streampos begin = 0)
+        : file(nullptr)
     {
-        file = new std::ifstream(filepath, std::ifstream::in |
-            std::ifstream::binary);
+        file = new std::ifstream(filepath, std::ifstream::in | std::ifstream::ate | std::ifstream::binary);
 
         max_pos = file->tellg();
         file->seekg(begin);
         pos = file->tellg();
-
-        std::memset(buffer, 0, BufferSize);
     }
+
+    BufferedTextReader(const BufferedTextReader &other) = delete;
+    BufferedTextReader &operator=(const BufferedTextReader &other) = delete;
 
     ~BufferedTextReader()
     {
         delete file;
     }
 
-    inline bool IsOpen() const { return file->good(); }
+    inline bool IsOpen() const
+        { return file->good(); }
 
     inline std::streampos Position() const
         { return pos; }
 
-    inline void Rewind(unsigned long amount)
+    bool Eof() const
+        { return file->eof(); }
+
+    void Rewind(unsigned long amount)
     {
         AssertThrow(amount <= pos);
 
         file->seekg(pos -= amount);
     }
 
-    inline void Seek(unsigned long where_to)
+    void Seek(unsigned long where_to)
     {
         AssertThrow(where_to <= pos);
 
@@ -49,12 +55,11 @@ public:
 
     size_t Read()
     {
-        if (file->eof()) {
+        if (Eof()) {
             return 0;
         }
 
-        file->read(buffer, BufferSize);
-        buffer[BufferSize] = '\0';
+        file->read((char *)&buffer[0], BufferSize);
 
         size_t count = file->gcount();
 
@@ -69,11 +74,11 @@ public:
     {
         AssertThrow(sz <= BufferSize);
 
-        if (file->eof()) {
+        if (Eof()) {
             return 0;
         }
 
-        file->read(buffer, BufferSize);
+        file->read((char *)&buffer[0], BufferSize);
 
         size_t count = file->gcount();
 
@@ -118,10 +123,10 @@ public:
     }
 
 private:
-    std::istream *file;
+    std::ifstream *file;
     std::streampos pos;
     std::streampos max_pos;
-    char buffer[BufferSize + 1];
+    std::array<ubyte, BufferSize> buffer{};
 
     void ReadBytes(char *ptr, unsigned size)
     {

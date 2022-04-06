@@ -104,6 +104,7 @@ public:
     inline float GetBoneWeight(int i) const { return bone_weights[i]; }
     inline void SetBoneIndex(int i, int val) { bone_indices[i] = val; }
     inline int GetBoneIndex(int i) const { return bone_indices[i]; }
+
     inline void AddBoneWeight(float val) { if (nboneweights < MAX_BONE_WEIGHTS) bone_weights[nboneweights++] = val; }
     inline void AddBoneIndex(int val) { if (nboneindices < MAX_BONE_INDICES) bone_indices[nboneindices++] = val; }
 

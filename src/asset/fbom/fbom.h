@@ -76,17 +76,17 @@ struct FBOMMarshal {
 
 
 enum FBOMDataLocation {
-    FBOM_DATA_LOCATION_NONE = 0x00,
-    FBOM_DATA_LOCATION_STATIC = 0x01,
+    FBOM_DATA_LOCATION_NONE    = 0x00,
+    FBOM_DATA_LOCATION_STATIC  = 0x01,
     FBOM_DATA_LOCATION_INPLACE = 0x02
 };
 
 struct FBOMStaticData {
     enum {
-        FBOM_STATIC_DATA_NONE = 0x00,
+        FBOM_STATIC_DATA_NONE   = 0x00,
         FBOM_STATIC_DATA_OBJECT = 0x01,
-        FBOM_STATIC_DATA_TYPE = 0x02,
-        FBOM_STATIC_DATA_DATA = 0x04
+        FBOM_STATIC_DATA_TYPE   = 0x02,
+        FBOM_STATIC_DATA_DATA   = 0x04
     } type;
 
     int64_t offset;

@@ -38,7 +38,7 @@ void Node::UpdateWorldTransform()
 
 void Node::OnNestedNodeAdded(Node *node)
 {
-    m_internal_nested_children.push_back(node);
+    m_descendents.push_back(node);
     
     if (m_parent_node != nullptr) {
         m_parent_node->OnNestedNodeAdded(node);
@@ -47,10 +47,10 @@ void Node::OnNestedNodeAdded(Node *node)
 
 void Node::OnNestedNodeRemoved(Node *node)
 {
-    const auto it = std::find(m_internal_nested_children.begin(), m_internal_nested_children.end(), node);
+    const auto it = std::find(m_descendents.begin(), m_descendents.end(), node);
 
-    if (it != m_internal_nested_children.end()) {
-        m_internal_nested_children.erase(it);
+    if (it != m_descendents.end()) {
+        m_descendents.erase(it);
     }
 
     if (m_parent_node != nullptr) {
@@ -74,8 +74,12 @@ void Node::AddChild(std::unique_ptr<Node> &&node)
     m_child_nodes.push_back(std::move(node));
 }
 
-void Node::RemoveChild(NodeList::iterator iter)
+bool Node::RemoveChild(NodeList::iterator iter)
 {
+    if (iter == m_child_nodes.end()) {
+        return false;
+    }
+
     Node *node = iter->get();
 
     AssertThrow(node != nullptr);
@@ -90,6 +94,8 @@ void Node::RemoveChild(NodeList::iterator iter)
     }
 
     m_child_nodes.erase(iter);
+
+    return true;
 }
 
 void Node::SetLocalTransform(const Transform &transform)
@@ -125,7 +131,7 @@ void Node::Update(Engine *engine)
 {
     UpdateSpatialTransform(engine);
 
-    for (auto *node : m_internal_nested_children) {
+    for (auto *node : m_descendents) {
         node->UpdateSpatialTransform(engine);
     }
 }
