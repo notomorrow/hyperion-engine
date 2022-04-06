@@ -3,25 +3,73 @@
 //
 
 #include "renderer_swapchain.h"
+#include "renderer_device.h"
+#include "renderer_features.h"
+#include "renderer_image.h"
 
 #include "../../system/debug.h"
 
 namespace hyperion {
 namespace renderer {
 Swapchain::Swapchain()
-    : swapchain(nullptr)
+    : swapchain(nullptr),
+      image_format(Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE)
 {
 }
 
-VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat()
+VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat(Device *device)
 {
-    for (const auto &format : this->support_details.formats) {
+    DebugLog(LogType::Debug, "Looking for SRGB surface format\n");
+
+    /* look for srgb format */
+    this->image_format = device->GetFeatures().FindSupportedSurfaceFormat(
+        this->support_details,
+        std::array{
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB
+        },
+        [this](const VkSurfaceFormatKHR &format) {
+            if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                return false;
+            }
+
+            this->surface_format = format;
+
+            return true;
+        }
+    );
+
+    if (this->image_format != Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE) {
+        return this->surface_format;
+    }
+
+    DebugLog(LogType::Debug, "Could not find SRGB surface format, looking for non-srgb format\n");
+
+    /* look for non-srgb format */
+    this->image_format = device->GetFeatures().FindSupportedSurfaceFormat(
+        this->support_details,
+        std::array{
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F
+        },
+        [this](const VkSurfaceFormatKHR &format) {
+            this->surface_format = format;
+
+            return true;
+        }
+    );
+
+    AssertThrowMsg(this->image_format != Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE, "Failed to find a surface format!");
+
+    return this->surface_format;
+
+    /*for (const auto &format : this->support_details.formats) {
         if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return format;
         }
     }
     DebugLog(LogType::Warn, "Swapchain format sRGB is not supported, going with defaults...\n");
-    return this->support_details.formats[0];
+    return this->support_details.formats[0];*/
 }
 
 VkPresentModeKHR Swapchain::GetPresentMode()
@@ -36,7 +84,7 @@ VkExtent2D Swapchain::ChooseSwapchainExtent()
 
 void Swapchain::RetrieveSupportDetails(Device *device)
 {
-    this->support_details = device->QuerySwapchainSupport();
+    this->support_details = device->GetFeatures().QuerySwapchainSupport(device->GetRenderSurface());
 }
 
 void Swapchain::RetrieveImageHandles(Device *device)
@@ -56,10 +104,9 @@ Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
 {
     this->RetrieveSupportDetails(device);
 
-    this->surface_format = this->ChooseSurfaceFormat();
+    this->surface_format = this->ChooseSurfaceFormat(device);
     this->present_mode = this->GetPresentMode();
     this->extent = this->ChooseSwapchainExtent();
-    this->image_format = this->surface_format.format;
 
     uint32_t image_count = support_details.capabilities.minImageCount + 1;
 

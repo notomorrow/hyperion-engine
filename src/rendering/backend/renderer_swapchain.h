@@ -18,7 +18,7 @@ namespace renderer {
 class Swapchain {
     static constexpr VkImageUsageFlags image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    VkSurfaceFormatKHR ChooseSurfaceFormat();
+    VkSurfaceFormatKHR ChooseSurfaceFormat(Device *device);
     VkPresentModeKHR GetPresentMode();
     VkExtent2D ChooseSwapchainExtent();
     void RetrieveSupportDetails(Device *device);
@@ -38,7 +38,7 @@ public:
     VkSwapchainKHR swapchain;
     VkExtent2D extent;
     VkSurfaceFormatKHR surface_format;
-    VkFormat image_format;
+    Image::InternalFormat image_format;
     std::vector<VkImage> images;
 
 private:

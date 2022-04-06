@@ -163,22 +163,13 @@ void Engine::PrepareSwapchain()
             m_instance->swapchain->extent.width,
             m_instance->swapchain->extent.height
         );
-            
-            /* For our color attachment */
-            /*render_pass->Get().AddColorAttachment(
-                std::make_unique<Attachment<VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR>>
-                    (0, m_instance->swapchain->image_format));
-
-            render_pass->Get().AddAttachment({
-                .format = m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)
-            });*/
 
         renderer::AttachmentRef *attachment_ref[2];
 
         HYPERION_ASSERT_RESULT(m_render_pass_attachments[0]->AddAttachmentRef(
             m_instance->GetDevice(),
             img,
-            m_instance->swapchain->image_format,
+            renderer::Image::ToVkFormat(m_instance->swapchain->image_format),
             VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
             1, 1,
             renderer::LoadOperation::CLEAR,
@@ -208,31 +199,7 @@ void Engine::PrepareSwapchain()
             render_pass_id = AddRenderPass(std::move(render_pass));
             m_swapchain_pipeline = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN);
         }
-            
 
-
-        /* Create imageview independent of a Image */
-        /*HYPERION_ASSERT_RESULT(image_view->Create(
-            m_instance->GetDevice(),
-            img,
-            m_instance->swapchain->image_format,
-            VK_IMAGE_ASPECT_COLOR_BIT,
-            VK_IMAGE_VIEW_TYPE_2D
-        ));*/
-
-        /*fbo->Get().AddAttachment(
-            FramebufferObject::AttachmentImageInfo{
-                .image = nullptr,
-                .image_view = std::move(image_view),
-                .sampler = nullptr,
-                .image_needs_creation = false,
-                .image_view_needs_creation = false,
-                .sampler_needs_creation = true
-            }
-        );
-        
-        HYPERION_ASSERT_RESULT(fbo->Get().AddAttachment(m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH)));
-        */
         m_swapchain_pipeline->AddFramebuffer(AddFramebuffer(
             std::move(fbo),
             render_pass_id
