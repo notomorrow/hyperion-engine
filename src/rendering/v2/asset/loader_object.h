@@ -20,15 +20,15 @@ enum class LoaderFormat {
     IMAGE_2D
 };
 
+template <class T, LoaderFormat Format>
+struct VoidLoader {};
+
 /* Raw data representing a deserialized form of the resource
  * Not the final result - can be a simple struct overloaded to add members
  */
-template <class T>
-struct LoaderObject {};
-
-template <>
-struct LoaderObject<void> {
-    LoaderObject() = delete;
+template <class T, LoaderFormat Format>
+struct LoaderObject {
+    //using Loader = VoidLoader<T, Format>;
 };
 
 } // namespace hyperion::v2

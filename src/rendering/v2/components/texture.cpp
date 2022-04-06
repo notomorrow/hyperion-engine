@@ -37,7 +37,10 @@ void Texture::Create(Engine *engine)
 void Texture::Destroy(Engine *engine)
 {
     HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetInstance()->GetDevice()));
+    m_sampler.reset();
+
     HYPERION_ASSERT_RESULT(m_image_view->Destroy(engine->GetInstance()->GetDevice()));
+    m_image_view.reset();
 
     EngineComponent::Destroy(engine);
 }

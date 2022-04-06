@@ -2,7 +2,8 @@
 
 namespace hyperion::v2 {
 
-Assets::Assets()
+Assets::Assets(Engine *engine)
+    : m_engine(engine)
 {
 }
 

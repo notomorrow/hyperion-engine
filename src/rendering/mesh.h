@@ -287,6 +287,7 @@ public:
     }
 #pragma endregion
 
+    std::vector<float> CreateBuffer();
 protected:
     virtual std::shared_ptr<Renderable> CloneImpl() override;
 
@@ -308,7 +309,6 @@ private:
     // note: also sets offset in attributes
     void CalculateVertexSize();
 
-    std::vector<float> CreateBuffer();
     // use mesh attributes to determine vertices
     void SetVerticesFromFloatBuffer(const std::vector<float> &buffer);
 };

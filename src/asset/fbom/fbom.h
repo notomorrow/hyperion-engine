@@ -34,10 +34,9 @@ class ByteWriter;
 namespace fbom {
 struct FBOMObjectType;
 
-struct FBOMObject;
+class FBOMObject;
 class FBOMLoader;
 class FBOMWriter;
-
 
 enum FBOMCommand {
     FBOM_NONE = 0,

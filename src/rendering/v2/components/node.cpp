@@ -5,8 +5,9 @@
 
 namespace hyperion::v2 {
 
-Node::Node(const char *tag)
-    : m_parent_node(nullptr),
+Node::Node(const char *tag, const Transform &local_transform)
+    : m_local_transform(local_transform),
+      m_parent_node(nullptr),
       m_spatial(nullptr)
 {
     size_t len = std::strlen(tag);
@@ -80,22 +81,58 @@ bool Node::RemoveChild(NodeList::iterator iter)
         return false;
     }
 
-    Node *node = iter->get();
+    if (Node *node = iter->get()) {
+        AssertThrow(node->m_parent_node == this);
 
-    AssertThrow(node != nullptr);
-    AssertThrow(node->m_parent_node == this);
+        for (Node *nested : node->GetNestedChildren()) {
+            OnNestedNodeRemoved(nested);
+        }
 
-    node->m_parent_node = nullptr;
+        OnNestedNodeRemoved(node);
 
-    OnNestedNodeRemoved(node);
-
-    for (Node *nested : node->GetNestedChildren()) {
-        OnNestedNodeRemoved(nested);
+        node->m_parent_node = nullptr;
     }
 
     m_child_nodes.erase(iter);
 
     return true;
+}
+
+bool Node::RemoveChild(size_t index)
+{
+    if (index >= m_child_nodes.size()) {
+        return false;
+    }
+
+    return RemoveChild(m_child_nodes.begin() + index);
+}
+
+bool Node::Remove()
+{
+    if (m_parent_node == nullptr) {
+        return false;
+    }
+
+    return m_parent_node->RemoveChild(m_parent_node->FindChild(this));
+}
+
+Node *Node::GetChild(size_t index) const
+{
+    if (index >= m_child_nodes.size()) {
+        return nullptr;
+    }
+
+    return m_child_nodes[index].get();
+}
+
+Node::NodeList::iterator Node::FindChild(Node *node)
+{
+    return std::find_if(
+        m_child_nodes.begin(),
+        m_child_nodes.end(),
+        [node](const auto &it) {
+            return it.get() == node;
+        });
 }
 
 void Node::SetLocalTransform(const Transform &transform)
@@ -105,7 +142,7 @@ void Node::SetLocalTransform(const Transform &transform)
     UpdateWorldTransform();
 }
 
-void Node::SetSpatial(Engine *engine, Spatial *spatial)
+void Node::SetSpatial(Spatial *spatial)
 {
     if (m_spatial == spatial) {
         return;
@@ -124,7 +161,9 @@ void Node::SetSpatial(Engine *engine, Spatial *spatial)
 
 void Node::UpdateSpatialTransform(Engine *engine)
 {
-    engine->SetSpatialTransform(m_spatial, m_world_transform);
+    if (m_spatial != nullptr) {
+        engine->SetSpatialTransform(m_spatial, m_world_transform);
+    }
 }
 
 void Node::Update(Engine *engine)

@@ -6,14 +6,29 @@
 
 namespace hyperion::v2 {
 
-struct ObjNodeStub {};
-
 template <>
-struct LoaderObject<ObjNodeStub> {
+struct LoaderObject<Node, LoaderFormat::MODEL_OBJ> {
+    class Loader : public LoaderBase<Node, LoaderFormat::MODEL_OBJ> {
+        static LoaderResult LoadFn(LoaderStream *stream, Object &);
+        static std::unique_ptr<Node> BuildFn(Engine *engine, const Object &);
+
+    public:
+        Loader()
+            : LoaderBase({
+                .load_fn = LoadFn,
+                .build_fn = BuildFn
+            })
+        {
+        }
+    };
+
     struct ObjIndex {
-        size_t vertex,
-               normal,
-               texcoord;
+        int64_t vertex,
+                normal,
+                texcoord;
+
+        bool operator<(const ObjIndex &other) const
+            { return std::tie(vertex, normal, texcoord) < std::tie(other.vertex, other.normal, other.texcoord); }
     };
 
     struct ObjMesh {
@@ -29,20 +44,23 @@ struct LoaderObject<ObjNodeStub> {
     std::string          material_library;
 };
 
-class ObjModelLoader : public Loader<Node, ObjNodeStub> {
-    static LoaderResult LoadFn(LoaderStream *stream, Object &);
-    static std::unique_ptr<Node> BuildFn(const Object &);
-
-public:
-    ObjModelLoader()
-        : Loader({
-            .load_fn = LoadFn,
-            .build_fn = BuildFn
-        })
-    {
-    }
-};
+using ObjIndex = LoaderObject<Node, LoaderFormat::MODEL_OBJ>::ObjIndex;
 
 } // namespace hyperion::v2
+
+namespace std {
+template<>
+struct hash<hyperion::v2::ObjIndex> {
+    inline size_t operator()(const hyperion::v2::ObjIndex &obj) const
+    {
+        hyperion::HashCode hc;
+        hc.Add(obj.vertex);
+        hc.Add(obj.normal);
+        hc.Add(obj.texcoord);
+
+        return hc.Value();
+    }
+};
+} // namespace std
 
 #endif
