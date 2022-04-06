@@ -3,6 +3,7 @@
 
 #include "renderer_result.h"
 #include "renderer_image.h"
+#include "renderer_structs.h"
 
 #include <vulkan/vulkan.h>
 
@@ -78,6 +79,43 @@ public:
     }
 
 #undef REQUIRES_VK_FEATURE
+
+    SwapchainSupportDetails QuerySwapchainSupport(VkSurfaceKHR _surface) const
+    {
+        SwapchainSupportDetails details{};
+
+        if (m_physical_device == nullptr) {
+            DebugLog(LogType::Debug, "No physical device set -- cannot query swapchain support!\n");
+            return details;
+        }
+
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physical_device, _surface, &details.capabilities);
+
+        uint32_t queue_family_count = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(m_physical_device, &queue_family_count, nullptr);
+        std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
+        vkGetPhysicalDeviceQueueFamilyProperties(m_physical_device, &queue_family_count, queue_family_properties.data());
+
+        uint32_t count = 0;
+        /* Get device surface formats */
+        vkGetPhysicalDeviceSurfaceFormatsKHR(m_physical_device, _surface, &count, nullptr);
+        std::vector<VkSurfaceFormatKHR> surface_formats(count);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(m_physical_device, _surface, &count, surface_formats.data());
+        if (count == 0)
+            DebugLog(LogType::Warn, "No surface formats available!\n");
+
+        vkGetPhysicalDeviceSurfacePresentModesKHR(m_physical_device, _surface, &count, nullptr);
+        std::vector<VkPresentModeKHR> present_modes(count);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(m_physical_device, _surface, &count, present_modes.data());
+        if (count == 0)
+            DebugLog(LogType::Warn, "No present modes available!\n");
+
+        details.queue_family_properties = queue_family_properties;
+        details.formats = surface_formats;
+        details.present_modes = present_modes;
+
+        return details;
+    }
 
     inline bool IsSupportedFormat(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features) const
     {
@@ -179,6 +217,63 @@ public:
         }
 
         return VK_FORMAT_UNDEFINED;
+    }
+
+    /* get the first supported format out of the provided list of format choices. */
+    template <size_t Size, class LambdaFunction>
+    inline Image::InternalFormat FindSupportedSurfaceFormat(const SwapchainSupportDetails &details, const std::array<Image::InternalFormat, Size> &possible_formats, LambdaFunction predicate) const
+    {
+        static_assert(Size > 0, "Size must be greater than zero!");
+
+        DebugLog(
+            LogType::Debug,
+            "Looking for format to use for surface. First choice: %d\n",
+            possible_formats[0]
+        );
+
+        DebugLog(LogType::Debug, "Available options:\n");
+
+        for (const VkSurfaceFormatKHR &surface_format : details.formats) {
+            DebugLog(
+                LogType::Debug,
+                "\tFormat: %d\tColor space: %d\n",
+                surface_format.format,
+                surface_format.colorSpace
+            );
+        }
+
+        for (auto wanted_format : possible_formats) {
+            DebugLog(
+                LogType::Debug,
+                "Try format: %d\n",
+                wanted_format
+            );
+
+            const VkFormat wanted_vk_format = Image::ToVkFormat(wanted_format);
+
+            if (std::any_of(
+                details.formats.begin(),
+                details.formats.end(),
+                [wanted_vk_format, &predicate](const VkSurfaceFormatKHR &surface_format) {
+                    return surface_format.format == wanted_vk_format && predicate(surface_format);
+                }
+            )) {
+                DebugLog(
+                    LogType::Debug,
+                    "Found surface format: %d\n",
+                    wanted_format
+                );
+
+                return wanted_format;
+            }
+        }
+
+        DebugLog(
+            LogType::Debug,
+            "No surface format found out of the selected options!\n"
+        );
+
+        return Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE;
     }
 
     inline Result GetImageFormatProperties(VkFormat format,
