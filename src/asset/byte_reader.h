@@ -9,6 +9,8 @@
 namespace hyperion {
 class ByteReader {
 public:
+    using Bytes = std::vector<ubyte>;
+
     virtual ~ByteReader() {}
 
     template <typename T>
@@ -23,9 +25,9 @@ public:
         ReadBytes(reinterpret_cast<char*>(ptr), size);
     }
 
-    inline std::vector<ubyte> Read()
+    inline Bytes Read()
     {
-        std::vector<ubyte> data;
+        Bytes data;
         data.resize(Max());
 
         Read(data.data(), data.size());

@@ -31,6 +31,7 @@
 
 #include <rendering/v2/engine.h>
 #include <rendering/v2/components/node.h>
+#include <rendering/v2/asset/model_loaders/obj_model_loader.h>
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
@@ -104,15 +105,24 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_CUBEMAP 1
 #define HYPERION_VK_TEST_MIPMAP 1
 #define HYPERION_VK_TEST_IMAGE_STORE 0
-#define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
+#define HYPERION_VK_TEST_VISUALIZE_OCTREE 1
 
 int main()
 {
     using namespace hyperion::renderer;
 
 
+
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
+
+
+
+    v2::Assets assets;
+    auto obj_result = assets.LoadModel(base_path + "/res/models/monkey/monkey.obj");
+
+
+    
 
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);

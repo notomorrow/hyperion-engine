@@ -68,7 +68,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
         std::make_unique<renderer::FramebufferImage2D>(
             engine->GetInstance()->swapchain->extent.width,
             engine->GetInstance()->swapchain->extent.height,
-            engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
+            engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
             nullptr
         ),
         renderer::RenderPassStage::SHADER
@@ -124,7 +124,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
             std::make_unique<renderer::FramebufferImage2D>(
                 engine->GetInstance()->swapchain->extent.width,
                 engine->GetInstance()->swapchain->extent.height,
-                engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
+                engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
                 nullptr
             ),
             renderer::RenderPassStage::SHADER

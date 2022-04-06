@@ -190,11 +190,14 @@ public:
         m_values.clear();
     }
 
+    inline ValueType &operator[](typename ObjectType::ID id)
+        { return GetOrInsert(id); }
+
     ValueType *Data() const { return m_values.data(); }
     size_t Size() const { return m_values.size(); }
 
-    auto begin() const { return m_values.begin(); }
-    auto end() const { return m_values.end(); }
+    auto begin() { return m_values.begin(); }
+    auto end() { return m_values.end(); }
 
 private:
     bool HasId(typename ObjectType::ID id)
@@ -220,6 +223,7 @@ private:
     std::vector<ValueType> m_values;
     size_t m_max_index = 0;
 };
+
 
 template <class T>
 struct ObjectHolder {
@@ -335,6 +339,73 @@ struct ObjectHolder {
             object->Create(engine, std::move(args)...);
         }
     }
+};
+
+template <class T>
+class RefCountedObjectHolder {
+    struct RefCount {
+        uint32_t count = 0;
+    };
+
+    ObjectIdMap<T, RefCount> m_ref_counts;
+    ObjectHolder<T> m_holder;
+
+public:
+    RefCountedObjectHolder() = default;
+    ~RefCountedObjectHolder()
+    {
+        for (RefCount &rc : m_ref_counts) {
+            --rc.count;
+
+            AssertThrowMsg(rc.count == 0, "Destructor called while object still in use elsewhere");
+        }
+    }
+
+    T *Acquire(const T *ptr)
+    {
+        AssertThrow(ptr != nullptr);
+
+        ++m_ref_counts[ptr->GetId()];
+
+        return ptr;
+    }
+
+    T *Acquire(const typename T::ID &id)
+        { return Acquire(m_holder.Get(id)); }
+
+    template <class ...Args>
+    void Release(Engine *engine, const T *ptr, Args &&... args)
+    {
+        AssertThrow(ptr != nullptr);
+
+        const auto id = ptr->GetId();
+
+        AssertThrowMsg(m_ref_counts[id] != 0, "Cannot decrement refcount when already at zero (or not set)");
+
+        if (!--m_ref_counts[id]) {
+            m_holder.Remove(engine, id, std::forward<Args>(args)...);
+            m_ref_counts.Remove(id);
+        }
+    }
+
+    void Release(Engine *engine, const typename T::ID &id)
+        { return Release(engine, m_holder.Get(id)); }
+
+    template <class ...Args>
+    T *Add(Engine *engine, std::unique_ptr<T> &&object, Args &&... args)
+    {
+        T *ptr = m_holder.Add(engine, std::move(object), std::forward<Args>(args)...);
+
+        if (ptr == nullptr) {
+            return ptr;
+        }
+
+        /* Set ref count to 1 */
+        return Acquire(ptr);
+    }
+
+    T *Get(const typename T::ID &id) const
+        { return m_holder.Get(id); }
 };
 
 } // namespace hyperion::v2
