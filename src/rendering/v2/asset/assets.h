@@ -8,6 +8,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <thread>
 
 namespace hyperion::v2 {
 
@@ -56,19 +57,23 @@ class Assets {
             { return typename LoaderObject<T, Format>::Loader(); }
         
         template <class Loader>
-        auto LoadResource(Engine *engine, const Loader &loader)
+        auto LoadResource(Engine *engine, const Loader &loader) -> std::unique_ptr<typename Loader::FinalType>
         {
-            auto results = loader.Instance()
-                .Enqueue(filepath, {
-                    .stream = std::make_unique<LoaderStream>(filepath)
-                })
-                .Load();
+            auto result = loader.Instance().Load({
+                .stream = std::make_unique<LoaderStream>(filepath)
+            });
 
-            /* TODO: deal with cache here */
+            if (result.first) {
+                /* TODO: deal with cache here */
 
-            DebugLog(LogType::Info, "Constructing loaded asset %s...\n", filepath.c_str());
+                DebugLog(LogType::Info, "Constructing loaded asset %s...\n", filepath.c_str());
 
-            return loader.Build(engine, results.front().second);
+                return loader.Build(engine, result.second);
+            } else {
+                DebugLog(LogType::Error, "Failed to load asset %s: %s\n", filepath.c_str(), result.first.message.c_str());
+
+                return nullptr;
+            }
         }
     };
 

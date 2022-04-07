@@ -34,7 +34,7 @@ struct LoaderObject<Node, LoaderFormat::MODEL_OBJ> {
     struct ObjMesh {
         std::string           tag;
         std::string           material;
-        std::vector<ObjIndex>  indices;
+        std::vector<ObjIndex> indices;
     };
 
     std::vector<Vector3> positions;
