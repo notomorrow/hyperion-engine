@@ -96,7 +96,7 @@ TextureArray::~TextureArray() = default;
 
 void TextureArray::AddTexture(Engine *engine, Texture::ID texture_id)
 {
-    Texture *texture = engine->GetTexture(texture_id);
+    Texture *texture = engine->resources.textures[texture_id];
     AssertThrow(texture != nullptr);
 
     AssertThrowMsg(texture->Get().GetWidth() == m_width,                    "sizes must match");

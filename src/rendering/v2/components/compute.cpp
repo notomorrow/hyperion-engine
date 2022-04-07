@@ -12,7 +12,7 @@ ComputePipeline::~ComputePipeline() = default;
 
 void ComputePipeline::Create(Engine *engine)
 {
-    auto *shader = engine->GetShader(m_shader_id);
+    auto *shader = engine->resources.shaders[m_shader_id];
     AssertThrow(shader != nullptr);
 
     HYPERION_ASSERT_RESULT(m_wrapped.Create(

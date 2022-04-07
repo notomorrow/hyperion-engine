@@ -148,12 +148,18 @@ void Node::SetSpatial(Spatial *spatial)
         return;
     }
 
+    if (m_spatial != nullptr) {
+        /* TODO: dec ref count */
+    }
+
     m_spatial = spatial;
 
     if (spatial != nullptr) {
         m_local_aabb = spatial->GetLocalAabb();
     } else {
         m_local_aabb = BoundingBox();
+
+        /* TODO: inc ref count */
     }
 
     UpdateWorldTransform();

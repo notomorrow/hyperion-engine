@@ -75,11 +75,11 @@ void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
 
 void GraphicsPipeline::Create(Engine *engine)
 {
-    auto *shader = engine->GetShader(m_shader_id);
+    auto *shader = engine->resources.shaders[m_shader_id];
     AssertThrow(shader != nullptr);
 
     // TODO: Assert that render_pass matches the layout of what the fbo was set up with
-    auto *render_pass = engine->GetRenderPass(m_render_pass_id);
+    auto *render_pass = engine->resources.render_passes[m_render_pass_id];
     AssertThrow(render_pass != nullptr);
 
     renderer::GraphicsPipeline::ConstructionInfo construction_info{
@@ -95,7 +95,7 @@ void GraphicsPipeline::Create(Engine *engine)
     };
 
     for (const auto &fbo_id : m_fbo_ids.ids) {
-        if (auto *fbo = engine->GetFramebuffer(fbo_id)) {
+        if (auto *fbo = engine->resources.framebuffers[fbo_id]) {
             construction_info.fbos.push_back(&fbo->Get());
         }
     }

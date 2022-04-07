@@ -2,6 +2,7 @@
 #define HYPERION_V2_NODE_H
 
 #include "spatial.h"
+#include "util.h"
 #include <math/transform.h>
 
 #include <vector>

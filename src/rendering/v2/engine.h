@@ -3,19 +3,12 @@
 
 #include "asset/assets.h"
 
-#include "components/shader.h"
 #include "components/post_fx.h"
-#include "components/framebuffer.h"
-#include "components/compute.h"
-#include "components/util.h"
-#include "components/graphics.h"
-#include "components/material.h"
-#include "components/texture.h"
 #include "components/render_list.h"
 #include "components/deferred.h"
 #include "components/shadows.h"
 #include "components/octree.h"
-#include "components/mesh.h"
+#include "components/resources.h"
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
@@ -46,6 +39,7 @@ public:
     enum CallbackKey {
         CALLBACK_GENERAL,
         CALLBACK_GRAPHICS_PIPELINES,
+        CALLBACK_COMPUTE_PIPELINES,
         CALLBACK_DESCRIPTOR_SETS,
         CALLBACK_SHADER_DATA,
 
@@ -92,89 +86,8 @@ public:
     
     inline const auto &GetCallbacks(CallbackKey key) const
         { return const_cast<Engine*>(this)->GetCallbacks(key); }
-
-    /* Shaders */
-
-    template <class ...Args>
-    Shader::ID AddShader(std::unique_ptr<Shader> &&shader, Args &&... args)
-        { return m_shaders.Add(this, std::move(shader), std::move(args)...); }
-
-    template <class ...Args>
-    void RemoveShader(Shader::ID id, Args &&... args)
-        { return m_shaders.Remove(this, id, std::move(args)...); }
-
-    inline Shader *GetShader(Shader::ID id)
-        { return m_shaders.Get(id); }
-
-    inline const Shader *GetShader(Shader::ID id) const
-        { return const_cast<Engine*>(this)->GetShader(id); }
-
-    /* Textures */
-
-    template <class ...Args>
-    Texture::ID AddTexture(std::unique_ptr<Texture> &&texture, Args &&... args)
-    {
-        const Texture::ID id = m_textures.Add(this, std::move(texture), std::move(args)...);
-
-        m_shader_globals->textures.AddResource(m_textures.Get(id));
-
-        return id;
-    }
-
-    template <class ...Args>
-    void RemoveTexture(Texture::ID id, Args &&... args)
-        { return m_textures.Remove(this, id, std::move(args)...); }
-
-    inline Texture *GetTexture(Texture::ID id)
-        { return m_textures.Get(id); }
-
-    inline const Texture *GetTexture(Texture::ID id) const
-        { return const_cast<Engine*>(this)->GetTexture(id); }
-
-    /* Initialize the FBO based on the given RenderPass's attachments */
-    Framebuffer::ID AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass);
-
-    /* Construct and initialize a FBO based on the given RenderPass's attachments */
-    Framebuffer::ID AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass);
-
-    template <class ...Args>
-    void RemoveFramebuffer(Framebuffer::ID id, Args &&... args)
-        { return m_framebuffers.Remove(this, id, std::move(args)...); }
-
-    inline Framebuffer *GetFramebuffer(Framebuffer::ID id)
-        { return m_framebuffers.Get(id); }
-
-    inline const Framebuffer *GetFramebuffer(Framebuffer::ID id) const
-        { return const_cast<Engine*>(this)->GetFramebuffer(id); }
     
-    template <class ...Args>
-    RenderPass::ID AddRenderPass(std::unique_ptr<RenderPass> &&render_pass, Args &&... args)
-        { return m_render_passes.Add(this, std::move(render_pass), std::move(args)...); }
-
-    template <class ...Args>
-    void RemoveRenderPass(RenderPass::ID id, Args &&... args)
-        { return m_render_passes.Remove(this, id, std::move(args)...); }
-
-    inline RenderPass *GetRenderPass(RenderPass::ID id)
-        { return m_render_passes.Get(id); }
-
-    inline const RenderPass *GetRenderPass(RenderPass::ID id) const
-        { return const_cast<Engine*>(this)->GetRenderPass(id); }
-
-    /* Materials - will all be jammed into a shader storage buffer object */
-    template <class ...Args>
-    Material::ID AddMaterial(std::unique_ptr<Material> &&material, Args &&... args)
-        { return m_materials.Add(this, std::move(material), std::move(args)...); }
-
-    template <class ...Args>
-    void RemoveMaterial(Material::ID id, Args &&... args)
-        { return m_materials.Remove(this, id, std::move(args)...); }
-
-    inline Material *GetMaterial(Material::ID id)
-        { return m_materials.Get(id); }
-
-    inline const Material *GetMaterial(Material::ID id) const
-        { return const_cast<Engine*>(this)->GetMaterial(id); }
+    
 
     /* Pipelines will be deferred until descriptor sets are built
      * We take in the builder object rather than a unique_ptr,
@@ -202,25 +115,10 @@ public:
 
     inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
         { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
-
-    /* Pipelines will be deferred until descriptor sets are built */
-    template <class ...Args>
-    ComputePipeline::ID AddComputePipeline(std::unique_ptr<ComputePipeline> &&compute_pipeline, Args &&... args)
-        { return m_compute_pipelines.Add(this, std::move(compute_pipeline), std::move(args)...); }
-
-    template <class ...Args>
-    void RemoveComputePipeline(ComputePipeline::ID id, Args &&... args)
-        { return m_compute_pipelines.Remove(this, id, std::move(args)...); }
-
-    inline ComputePipeline *GetComputePipeline(ComputePipeline::ID id)
-        { return m_compute_pipelines.Get(id); }
-
-    inline const ComputePipeline *GetComputePipeline(ComputePipeline::ID id) const
-        { return const_cast<Engine*>(this)->GetComputePipeline(id); }
-
+    
     /* Spatials */
 
-    template <class ...Args>
+    /*template <class ...Args>
     Spatial *AddSpatial(Args &&... args)
         { return GetSpatial(m_spatials.Add(this, std::make_unique<Spatial>(std::forward<Args>(args)...))); }
 
@@ -232,13 +130,10 @@ public:
         { return m_spatials.Get(id); }
 
     inline const Spatial *GetSpatial(Spatial::ID id) const
-        { return const_cast<Engine*>(this)->GetSpatial(id); }
+        { return const_cast<Engine*>(this)->GetSpatial(id); }*/
 
     void SetSpatialTransform(Spatial *spatial, const Transform &transform);
-
-    /* Meshes */
-    auto &GetMeshes() { return m_meshes; }
-    const auto &GetMeshes() const { return m_meshes; }
+    
 
     void Initialize();
     void Destroy();
@@ -256,6 +151,9 @@ public:
 
     ShaderGlobals *m_shader_globals;
 
+    Resources resources;
+    Assets    assets;
+
 private:
     struct Callbacks {
         using CallbackFunction = std::function<void(Engine *)>;
@@ -267,23 +165,13 @@ private:
 
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
-    PostProcessing m_post_processing;
+    PostProcessing   m_post_processing;
     DeferredRenderer m_deferred_renderer;
-    ShadowRenderer m_shadow_renderer;
-    RenderList m_render_list;
+    ShadowRenderer   m_shadow_renderer;
+    RenderList       m_render_list;
 
     Octree::Root m_octree_root;
     Octree m_octree;
-
-    ObjectHolder<Shader>          m_shaders;
-    ObjectHolder<Texture>         m_textures;
-    ObjectHolder<Framebuffer>     m_framebuffers;
-    ObjectHolder<RenderPass>      m_render_passes;
-    ObjectHolder<Material>        m_materials;
-    ObjectHolder<Spatial>         m_spatials;
-    ObjectHolder<ComputePipeline> m_compute_pipelines{.defer_create = true};
-
-    RefCountedObjectHolder<Mesh>  m_meshes;
 
     /* TMP */
     std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;

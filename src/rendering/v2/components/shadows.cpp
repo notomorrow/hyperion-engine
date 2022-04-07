@@ -15,7 +15,7 @@ ShadowEffect::~ShadowEffect() = default;
 
 void ShadowEffect::CreateShader(Engine *engine)
 {
-    m_shader_id = engine->AddShader(std::make_unique<Shader>(std::vector<SubShader>{
+    m_shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(std::vector<SubShader>{
         SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/vert.spv").Read()} },
         SubShader{ ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/shadow_frag.spv").Read()} }
     }));
@@ -51,7 +51,7 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
     }
 
-    m_render_pass_id = engine->AddRenderPass(std::move(render_pass));
+    m_render_pass_id = engine->resources.render_passes.Add(engine, std::move(render_pass));
 }
 
 void ShadowEffect::CreatePipeline(Engine *engine)
@@ -66,10 +66,24 @@ void ShadowEffect::CreatePipeline(Engine *engine)
 
 void ShadowEffect::Create(Engine *engine)
 {
-    m_framebuffer_id = engine->AddFramebuffer(
+    auto *render_pass = engine->resources.render_passes[m_render_pass_id];
+
+    AssertThrow(render_pass != nullptr);
+
+    auto framebuffer = std::make_unique<Framebuffer>(
         engine->GetInstance()->swapchain->extent.width,
-        engine->GetInstance()->swapchain->extent.height,
-        m_render_pass_id
+        engine->GetInstance()->swapchain->extent.height
+    );
+
+    /* Add all attachments from the renderpass */
+    for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
+        framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+    }
+
+    m_framebuffer_id = engine->resources.framebuffers.Add(
+        engine,
+        std::move(framebuffer),
+        &render_pass->Get()
     );
 
     CreatePerFrameData(engine);

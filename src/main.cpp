@@ -214,10 +214,29 @@ int main()
 
 
     engine.Initialize();
+    
+    auto obj_models = engine.assets.Load<v2::Node>(
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/sponza/sponza.obj",
+        base_path + "/res/models/cube.obj"
+    );
 
-    v2::Assets assets(&engine);
-    auto monkey_obj = assets.Load<v2::Node>(base_path + "/res/models/monkey/monkey.obj");
-    auto cube_obj = assets.Load<v2::Node>(base_path + "/res/models/cube.obj");
+    auto monkey_obj = std::move(obj_models[0]);
+    auto cube_obj = std::move(obj_models[1]);
+
 
     monkey_obj->GetChild(0)->AddChild("Foobar");
     monkey_obj->GetChild(0)->GetChild(0)->AddChild("Nuts");
@@ -227,7 +246,7 @@ int main()
 
 
     auto opaque_fbo_id = engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0];//v2::Framebuffer::ID{1};//engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
-    auto *opaque_fbo = engine.GetFramebuffer(opaque_fbo_id);
+    auto *opaque_fbo = engine.resources.framebuffers[opaque_fbo_id];
 
 
     //auto *opaque_fbo = engine.GetFramebuffer(engine.GetRenderBucketContainer().Get(v2::GraphicsPipeline::BUCKET_OPAQUE).framebuffer_ids[0]);  //engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
@@ -364,7 +383,7 @@ int main()
             {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }}
         });
 
-        mirror_shader_id = engine.AddShader(std::move(mirror_shader));
+        mirror_shader_id = engine.resources.shaders.Add(&engine, std::move(mirror_shader));
     }
     //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
 
@@ -440,20 +459,20 @@ int main()
     auto mat1 = std::make_unique<v2::Material>();
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
     mat1->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
-    v2::Material::ID mat1_id = engine.AddMaterial(std::move(mat1));
+    v2::Material::ID mat1_id = engine.resources.materials.Add(&engine, std::move(mat1));
 
     auto mat2 = std::make_unique<v2::Material>();
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
     mat2->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
-    v2::Material::ID mat2_id = engine.AddMaterial(std::move(mat2));
+    v2::Material::ID mat2_id = engine.resources.materials.Add(&engine, std::move(mat2));
 
     auto skybox_material = std::make_unique<v2::Material>();
     skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-    v2::Material::ID skybox_material_id = engine.AddMaterial(std::move(skybox_material));
+    v2::Material::ID skybox_material_id = engine.resources.materials.Add(&engine, std::move(skybox_material));
 
     auto translucent_material = std::make_unique<v2::Material>();
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
-    v2::Material::ID translucent_material_id = engine.AddMaterial(std::move(translucent_material));
+    v2::Material::ID translucent_material_id = engine.resources.materials.Add(&engine, std::move(translucent_material));
 
     v2::Spatial *monkey_spatial{}, *cube_spatial{};
 
@@ -479,7 +498,7 @@ int main()
     v2::GraphicsPipeline::ID skybox_pipeline_id{};
     {
 
-        v2::Shader::ID shader_id = engine.AddShader(std::make_unique<v2::Shader>(std::vector<v2::SubShader>{
+        v2::Shader::ID shader_id = engine.resources.shaders.Add(&engine, std::make_unique<v2::Shader>(std::vector<v2::SubShader>{
             {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
             {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
         }));
