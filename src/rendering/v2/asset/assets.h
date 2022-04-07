@@ -53,9 +53,7 @@ class Assets {
 
         template <class T, LoaderFormat Format>
         auto GetLoader() const -> typename LoaderObject<T, Format>::Loader
-        {
-            return typename LoaderObject<T, Format>::Loader();
-        }
+            { return typename LoaderObject<T, Format>::Loader(); }
         
         template <class Loader>
         auto LoadResource(Engine *engine, const Loader &loader)
@@ -67,38 +65,10 @@ class Assets {
                 .Load();
 
             /* TODO: deal with cache here */
-            
+
+            DebugLog(LogType::Info, "Constructing loaded asset %s...\n", filepath.c_str());
+
             return loader.Build(engine, results.front().second);
-        }
-
-        template <class Loader, class ...Args>
-        auto LoadResources(Engine *engine, const Loader &loader, Args &&... args)
-        {
-            auto instance = loader.Instance();
-
-            const std::array<std::string, sizeof...(args)> filepaths{args...};
-
-            for (const auto &filepath : filepaths) {
-                instance.Enqueue(filepath, {
-                    .stream = std::make_unique<LoaderStream>(filepath)
-                });
-            }
-
-            auto results = instance.Load();
-
-            /* TODO: deal with cache here */
-
-            std::array<std::unique_ptr<typename Loader::FinalType>, sizeof...(args)> constructed_objects;
-
-            for (size_t i = 0; i < results.size(); i++) {
-                if (!results[i].first) {
-                    continue;
-                }
-
-                constructed_objects[i] = loader.Build(engine, results[i].second);
-            }
-
-            return std::move(constructed_objects);
         }
     };
 
@@ -126,15 +96,23 @@ class Assets {
     };
 
     template <class Type, class ...Args>
-    auto LoadMultiple(Args &&... paths)
+    auto LoadAsync(Args &&... paths)
     {
-        const std::array<std::string, sizeof...(paths)> filepaths{paths...};
+        const std::array<std::string,     sizeof...(paths)> filepaths{paths...};
         std::array<std::unique_ptr<Type>, sizeof...(paths)> results{};
 
+        std::vector<std::thread> threads;
+        threads.reserve(results.size());
+        
         for (size_t i = 0; i < filepaths.size(); i++) {
-            const std::string &filepath = filepaths[i];
+            threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
+                DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
+                results[index] = Functor<Type>(filepaths[index])(engine);
+            });
+        }
 
-            results[i] = std::move(Functor<Type>(filepath)(m_engine));
+        for (auto &thread : threads) {
+            thread.join();
         }
 
         return std::move(results);
@@ -149,13 +127,13 @@ public:
     template <class Type>
     auto Load(const std::string &filepath) -> std::unique_ptr<Type>
     {
-        return std::move(LoadMultiple<Type>(filepath).front());
+        return std::move(LoadAsync<Type>(filepath).front());
     }
 
     template <class Type, class ...Args>
     auto Load(const std::string &filepath, Args &&... other_paths)
     {
-        return std::move(LoadMultiple<Type>(filepath, std::move(other_paths)...));
+        return std::move(LoadAsync<Type>(filepath, std::move(other_paths)...));
     }
 
 private:

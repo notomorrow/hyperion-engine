@@ -153,10 +153,14 @@ LoaderResult ObjModelLoader::LoadFn(LoaderStream *stream, Object &object)
         }
 
         if (tokens[0] == "f") {
+
             auto &last_mesh = LastMesh(object);
 
-            for (size_t i = 1; i < tokens.size(); i++) {
-                last_mesh.indices.push_back(ParseObjIndex(tokens[i]));
+            /* Performs simple triangulation on quad faces */
+            for (size_t i = 0; i < tokens.size() - 3; i++) {
+                last_mesh.indices.push_back(ParseObjIndex(tokens[1]));
+                last_mesh.indices.push_back(ParseObjIndex(tokens[2 + i]));
+                last_mesh.indices.push_back(ParseObjIndex(tokens[3 + i]));
             }
 
             return;
@@ -234,27 +238,44 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
             index_map[obj_index] = index;
         }
+
+        /* TODO: These Add() functions need to be thread-safe */
+
+        engine->resources.Lock([&](Resources &resources) {
+            auto mesh = resources.meshes.Add();
+            mesh->SetVertices(vertices, indices);
+
+            if (!has_normals) {
+                mesh->CalculateNormals();
+            }
+
+            mesh->CalculateTangents();
             
-        auto mesh = engine->GetMeshes().Add();
-        mesh->SetVertices(vertices, indices);
+            /*auto spatial = engine->resources.spatials.Add(
+                mesh,
+                mesh->GetVertexAttributes(),
+                Transform(),
+                BoundingBox(),
+                Material::ID{Material::ID::ValueType{1}} 
+            );*/
 
-        if (!has_normals) {
-            mesh->CalculateNormals();
-        }
+            auto spatial_id = resources.spatials.Add(
+                engine,
+                std::make_unique<Spatial>(
+                    mesh,
+                    mesh->GetVertexAttributes(),
+                    Transform(),
+                    BoundingBox(),
+                    Material::ID{ Material::ID::ValueType{1} }
+                )
+            );
 
-        mesh->CalculateTangents();
-        
-        auto *spatial = engine->AddSpatial(
-            mesh,
-            mesh->GetVertexAttributes(),
-            Transform(),
-            BoundingBox(), /* TODO */
-            Material::ID{Material::ID::ValueType{1}} /* TODO */
-        );
+            auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
 
-        auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
-        node->SetSpatial(spatial);
-        top->AddChild(std::move(node));
+            node->SetSpatial(resources.spatials[spatial_id]);
+
+            top->AddChild(std::move(node));
+        });
     }
 
     return std::move(top);

@@ -371,8 +371,7 @@ class RefCountedObjectHolder {
     };
 
     ObjectIdMap<T, RefCount> m_ref_counts;
-    ObjectHolder<T> m_holder;
-
+    ObjectHolder<T>          m_holder;
 public:
     struct RefWrapper {
         operator T *()             { return ptr; }
@@ -486,6 +485,9 @@ public:
         return m_ref_counts.Get(id).count;
     }
 };
+
+template <class T>
+using RefWrapper = typename RefCountedObjectHolder<T>::RefWrapper;
 
 } // namespace hyperion::v2
 

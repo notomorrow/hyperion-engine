@@ -16,7 +16,7 @@ DeferredRenderingEffect::~DeferredRenderingEffect() = default;
 
 void DeferredRenderingEffect::CreateShader(Engine *engine)
 {
-    m_shader_id = engine->AddShader(std::make_unique<Shader>(std::vector<SubShader>{
+    m_shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(std::vector<SubShader>{
         SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read()}},
         SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read()}}
     }));

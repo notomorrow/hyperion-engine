@@ -56,12 +56,12 @@ void Spatial::RemoveFromPipeline(GraphicsPipeline *pipeline)
 
 void Spatial::Create(Engine *engine)
 {
-    engine->GetMeshes().Acquire(engine, m_mesh);
+    engine->resources.meshes.Acquire(engine, m_mesh);
 }
 
 void Spatial::Destroy(Engine *engine)
 {
-    engine->GetMeshes().Release(engine, m_mesh);
+    engine->resources.meshes.Release(engine, m_mesh);
 
     RemoveFromPipelines();
 }

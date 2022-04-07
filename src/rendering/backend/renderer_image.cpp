@@ -340,22 +340,21 @@ Result Image::CreateImage(Device *device,
     const QueueFamilyIndices &qf_indices = device->GetQueueFamilyIndices();
     const uint32_t image_family_indices[] = { qf_indices.graphics_family.value(), qf_indices.compute_family.value() };
 
-    VkImageCreateInfo image_info{};
-    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.imageType = image_type;
-    image_info.extent.width = uint32_t(m_width);
-    image_info.extent.height = uint32_t(m_height);
-    image_info.extent.depth = uint32_t(m_depth);
-    image_info.mipLevels = uint32_t(GetNumMipmaps());
-    image_info.arrayLayers = uint32_t(GetNumFaces());
-    image_info.format = format;
-    image_info.tiling = m_internal_info.tiling;
-    image_info.initialLayout = initial_layout;
-    image_info.usage = m_internal_info.usage_flags;
-    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_info.flags = image_create_flags; // TODO: look into flags for sparse s for VCT
-    image_info.pQueueFamilyIndices = image_family_indices;
+    VkImageCreateInfo image_info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    image_info.imageType             = image_type;
+    image_info.extent.width          = uint32_t(m_width);
+    image_info.extent.height         = uint32_t(m_height);
+    image_info.extent.depth          = uint32_t(m_depth);
+    image_info.mipLevels             = uint32_t(GetNumMipmaps());
+    image_info.arrayLayers           = uint32_t(GetNumFaces());
+    image_info.format                = format;
+    image_info.tiling                = m_internal_info.tiling;
+    image_info.initialLayout         = initial_layout;
+    image_info.usage                 = m_internal_info.usage_flags;
+    image_info.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
+    image_info.samples               = VK_SAMPLE_COUNT_1_BIT;
+    image_info.flags                 = image_create_flags; // TODO: look into flags for sparse s for VCT
+    image_info.pQueueFamilyIndices   = image_family_indices;
     image_info.queueFamilyIndexCount = uint32_t(std::size(image_family_indices));
 
     *out_image_info = image_info;

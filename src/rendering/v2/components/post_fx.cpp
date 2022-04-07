@@ -58,15 +58,29 @@ void PostEffect::CreateRenderPass(Engine *engine)
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
     }
 
-    m_render_pass_id = engine->AddRenderPass(std::move(render_pass));
+    m_render_pass_id = engine->resources.render_passes.Add(engine, std::move(render_pass));
 }
 
 void PostEffect::Create(Engine *engine)
 {
-    m_framebuffer_id = engine->AddFramebuffer(
+    auto *render_pass = engine->resources.render_passes[m_render_pass_id];
+
+    AssertThrow(render_pass != nullptr);
+
+    auto framebuffer = std::make_unique<Framebuffer>(
         engine->GetInstance()->swapchain->extent.width,
-        engine->GetInstance()->swapchain->extent.height,
-        m_render_pass_id
+        engine->GetInstance()->swapchain->extent.height
+    );
+
+    /* Add all attachments from the renderpass */
+    for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
+        framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+    }
+
+    m_framebuffer_id = engine->resources.framebuffers.Add(
+        engine,
+        std::move(framebuffer),
+        &render_pass->Get()
     );
 
     CreatePerFrameData(engine);
@@ -101,7 +115,7 @@ void PostEffect::CreatePerFrameData(Engine *engine)
 void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
-    auto &framebuffer = engine->GetFramebuffer(m_framebuffer_id)->Get();
+    auto &framebuffer = engine->resources.framebuffers[m_framebuffer_id]->Get();
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_PASS);
     
     for (auto *attachment_ref : framebuffer.GetRenderPassAttachmentRefs()) {
@@ -147,9 +161,9 @@ void PostEffect::Destroy(Engine *engine)
 
     AssertThrowMsg(result, "%s", result.message);
 
-    engine->RemoveShader(m_shader_id);
-    engine->RemoveFramebuffer(m_framebuffer_id);
-    engine->RemoveRenderPass(m_render_pass_id);
+    engine->resources.shaders.Remove(engine, m_shader_id);
+    engine->resources.framebuffers.Remove(engine, m_framebuffer_id);
+    engine->resources.render_passes.Remove(engine, m_render_pass_id);
 }
 
 void PostEffect::DestroyPipeline(Engine *engine)
@@ -225,7 +239,7 @@ void PostProcessing::Create(Engine *engine)
 
     /* TODO: use subpasses for gbuffer so we only have num_filters * num_frames descriptors */
     for (int i = 0; i < filter_shader_names.size(); i++) {
-        Shader::ID shader_id = engine->AddShader(std::make_unique<Shader>(std::vector<SubShader>{
+        Shader::ID shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(std::vector<SubShader>{
             SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read()}},
             SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read()}}
         }));

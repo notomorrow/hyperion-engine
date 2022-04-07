@@ -21,7 +21,8 @@ using renderer::FramebufferObject;
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : m_instance(new Instance(_system, app_name, "HyperionEngine")),
       m_shader_globals(nullptr),
-      m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f)))
+      m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
+      assets(this)
 {
     m_octree.m_root = &m_octree_root;
 }
@@ -29,31 +30,6 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
 Engine::~Engine()
 {
     AssertThrowMsg(m_instance == nullptr, "Instance should have been destroyed");
-}
-
-Framebuffer::ID Engine::AddFramebuffer(std::unique_ptr<Framebuffer> &&framebuffer, RenderPass::ID render_pass_id)
-{
-    AssertThrow(framebuffer != nullptr);
-
-    RenderPass *render_pass = GetRenderPass(render_pass_id);
-    AssertThrow(render_pass != nullptr);
-
-    return m_framebuffers.Add(this, std::move(framebuffer), &render_pass->Get());
-}
-
-Framebuffer::ID Engine::AddFramebuffer(size_t width, size_t height, RenderPass::ID render_pass_id)
-{
-    RenderPass *render_pass = GetRenderPass(render_pass_id);
-    AssertThrow(render_pass != nullptr);
-
-    auto framebuffer = std::make_unique<Framebuffer>(width, height);
-
-    /* Add all attachments from the renderpass */
-    for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
-        framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
-    }
-
-    return AddFramebuffer(std::move(framebuffer), render_pass_id);
 }
 
 void Engine::SetSpatialTransform(Spatial *spatial, const Transform &transform)
@@ -122,7 +98,7 @@ void Engine::PrepareSwapchain()
 
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
     {
-        shader_id = AddShader(std::make_unique<Shader>(std::vector<SubShader>{
+        shader_id = resources.shaders.Add(this, std::make_unique<Shader>(std::vector<SubShader>{
             {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()}},
             {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}}
         }));
@@ -196,13 +172,14 @@ void Engine::PrepareSwapchain()
             render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[0]);
             render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
 
-            render_pass_id = AddRenderPass(std::move(render_pass));
+            render_pass_id = resources.render_passes.Add(this, std::move(render_pass));
             m_swapchain_pipeline = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN);
         }
 
-        m_swapchain_pipeline->AddFramebuffer(AddFramebuffer(
+        m_swapchain_pipeline->AddFramebuffer(resources.framebuffers.Add(
+            this,
             std::move(fbo),
-            render_pass_id
+            &resources.render_passes[render_pass_id]->Get()
         ));
 
         ++iteration;
@@ -211,14 +188,22 @@ void Engine::PrepareSwapchain()
 
     m_swapchain_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 
-    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_init += [this](Engine *engine) {
+    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_init += [this](...) {
         m_render_list.CreatePipelines(this);
-        m_swapchain_pipeline->Create(engine);
+        m_swapchain_pipeline->Create(this);
     };
 
-    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_deinit += [this](Engine *engine) {
+    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_deinit += [this](...) {
         m_render_list.Destroy(this);
-        m_swapchain_pipeline->Destroy(engine);
+        m_swapchain_pipeline->Destroy(this);
+    };
+
+    m_callbacks[CALLBACK_COMPUTE_PIPELINES].on_init += [this](...) {
+        resources.compute_pipelines.CreateAll(this);
+    };
+
+    m_callbacks[CALLBACK_COMPUTE_PIPELINES].on_deinit += [this](...) {
+        resources.compute_pipelines.RemoveAll(this);
     };
 }
 
@@ -304,15 +289,11 @@ void Engine::Destroy()
 
     (void)m_instance->GetDevice()->Wait();
     
-    m_framebuffers.RemoveAll(this);
-    m_render_passes.RemoveAll(this);
-    m_shaders.RemoveAll(this);
-    m_textures.RemoveAll(this);
-    m_materials.RemoveAll(this);
-    m_compute_pipelines.RemoveAll(this);
+    resources.Destroy(this);
 
     m_callbacks[CALLBACK_SHADER_DATA].on_deinit(this);
     m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_deinit(this);
+    m_callbacks[CALLBACK_COMPUTE_PIPELINES].on_deinit(this);
 
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
@@ -345,8 +326,7 @@ void Engine::Compile()
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
     
     m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_init(this);
-
-    m_compute_pipelines.CreateAll(this);
+    m_callbacks[CALLBACK_COMPUTE_PIPELINES].on_init(this);
 }
 
 void Engine::UpdateDescriptorData(uint32_t frame_index)
