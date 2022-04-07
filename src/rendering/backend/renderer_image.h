@@ -101,7 +101,7 @@ public:
         VkImageUsageFlags usage_flags;
     };
 
-    Image(size_t width, size_t height, size_t depth,
+    Image(Extent3D extent,
         InternalFormat format,
         Type type,
         FilterMode filter_mode,
@@ -141,7 +141,7 @@ public:
     inline size_t GetNumMipmaps() const
     {
         return IsMipmappedImage()
-            ? MathUtil::FastLog2(MathUtil::Max(m_width, m_height, m_depth)) + 1
+            ? MathUtil::FastLog2(MathUtil::Max(m_extent.width, m_extent.height, m_extent.depth)) + 1
             : 1;
     }
 
@@ -151,9 +151,7 @@ public:
     inline size_t GetNumFaces() const
         { return IsCubemap() ? 6 : 1; }
 
-    inline size_t GetWidth() const { return m_width; }
-    inline size_t GetHeight() const { return m_height; }
-    inline size_t GetDepth() const { return m_depth; }
+    inline const Extent3D &GetExtent() const { return m_extent; }
 
     inline GPUImage *GetGPUImage() { return m_image; }
     inline const GPUImage *GetGPUImage() const { return m_image; }
@@ -273,9 +271,7 @@ private:
         VkImageFormatProperties *out_image_format_properties,
         VkFormat *out_format);
 
-    size_t m_width;
-    size_t m_height;
-    size_t m_depth;
+    Extent3D m_extent;
     InternalFormat m_format;
     Type m_type;
     FilterMode m_filter_mode;
@@ -292,14 +288,12 @@ private:
 class StorageImage : public Image {
 public:
     StorageImage(
-        size_t width, size_t height, size_t depth,
+        Extent3D extent,
         InternalFormat format,
         Type type,
         unsigned char *bytes
     ) : Image(
-        width,
-        height,
-        depth,
+        extent,
         format,
         type,
         FilterMode::TEXTURE_FILTER_NEAREST,
@@ -314,15 +308,13 @@ public:
 class TextureImage : public Image {
 public:
     TextureImage(
-        size_t width, size_t height, size_t depth,
+        Extent3D extent,
         InternalFormat format,
         Type type,
         FilterMode filter_mode,
         unsigned char *bytes
     ) : Image(
-        width,
-        height,
-        depth,
+        extent,
         format,
         type,
         filter_mode,
@@ -337,14 +329,12 @@ public:
 class TextureImage2D : public TextureImage {
 public:
     TextureImage2D(
-        size_t width, size_t height,
+        Extent2D extent,
         InternalFormat format,
         FilterMode filter_mode,
         unsigned char *bytes
     ) : TextureImage(
-        width,
-        height,
-        1,
+        Extent3D(extent),
         format,
         Type::TEXTURE_TYPE_2D,
         filter_mode,
@@ -355,14 +345,12 @@ public:
 class TextureImage3D : public TextureImage {
 public:
     TextureImage3D(
-        size_t width, size_t height, size_t depth,
+        Extent3D extent,
         InternalFormat format,
         FilterMode filter_mode,
         unsigned char *bytes
     ) : TextureImage(
-        width,
-        height,
-        depth,
+        extent,
         format,
         Type::TEXTURE_TYPE_3D,
         filter_mode,
@@ -373,14 +361,12 @@ public:
 class TextureImageCubemap : public TextureImage {
 public:
     TextureImageCubemap(
-        size_t width, size_t height,
+        Extent2D extent,
         InternalFormat format,
         FilterMode filter_mode,
         unsigned char *bytes
     ) : TextureImage(
-        width,
-        height,
-        1,
+        Extent3D(extent),
         format,
         Type::TEXTURE_TYPE_CUBEMAP,
         filter_mode,
@@ -391,14 +377,12 @@ public:
 class FramebufferImage : public Image {
 public:
     FramebufferImage(
-        size_t width, size_t height, size_t depth,
+        Extent3D extent,
         InternalFormat format,
         Type type,
         unsigned char *bytes
     ) : Image(
-        width,
-        height,
-        depth,
+        extent,
         format,
         type,
         FilterMode::TEXTURE_FILTER_NEAREST,
@@ -416,13 +400,11 @@ public:
 class FramebufferImage2D : public FramebufferImage {
 public:
     FramebufferImage2D(
-        size_t width, size_t height,
+        Extent2D extent,
         InternalFormat format,
         unsigned char *bytes
     ) : FramebufferImage(
-        width,
-        height,
-        1,
+        Extent3D(extent),
         format,
         Type::TEXTURE_TYPE_2D,
         bytes

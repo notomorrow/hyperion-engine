@@ -66,8 +66,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
 
     m_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
-            engine->GetInstance()->swapchain->extent.width,
-            engine->GetInstance()->swapchain->extent.height,
+            engine->GetInstance()->swapchain->extent,
             engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
             nullptr
         ),
@@ -86,8 +85,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
     for (int i = 0; i < 2; i++) {
         m_attachments.push_back(std::make_unique<renderer::Attachment>(
             std::make_unique<renderer::FramebufferImage2D>(
-                engine->GetInstance()->swapchain->extent.width,
-                engine->GetInstance()->swapchain->extent.height,
+                engine->GetInstance()->swapchain->extent,
                 engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER),
                 nullptr
             ),
@@ -122,8 +120,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
     } else {
         m_attachments.push_back(std::make_unique<renderer::Attachment>(
             std::make_unique<renderer::FramebufferImage2D>(
-                engine->GetInstance()->swapchain->extent.width,
-                engine->GetInstance()->swapchain->extent.height,
+                engine->GetInstance()->swapchain->extent,
                 engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
                 nullptr
             ),
@@ -158,10 +155,7 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
     const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
 
     for (uint32_t i = 0; i < 1/*num_frames*/; i++) {
-        auto framebuffer = std::make_unique<Framebuffer>(
-            engine->GetInstance()->swapchain->extent.width,
-            engine->GetInstance()->swapchain->extent.height
-        );
+        auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent);
 
         for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
             auto vk_desc = attachment_ref->GetAttachmentDescription();

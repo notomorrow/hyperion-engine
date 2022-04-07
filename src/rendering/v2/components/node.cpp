@@ -68,7 +68,7 @@ void Node::AddChild(std::unique_ptr<Node> &&node)
 
     OnNestedNodeAdded(node.get());
 
-    for (Node *nested : node->GetNestedChildren()) {
+    for (Node *nested : node->GetDescendents()) {
         OnNestedNodeAdded(nested);
     }
 
@@ -84,7 +84,7 @@ bool Node::RemoveChild(NodeList::iterator iter)
     if (Node *node = iter->get()) {
         AssertThrow(node->m_parent_node == this);
 
-        for (Node *nested : node->GetNestedChildren()) {
+        for (Node *nested : node->GetDescendents()) {
             OnNestedNodeRemoved(nested);
         }
 

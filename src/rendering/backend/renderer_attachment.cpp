@@ -406,7 +406,7 @@ AttachmentRef *AttachmentSet::Get(uint32_t binding) const
 
 Result AttachmentSet::Add(Device *device, uint32_t binding, Image::InternalFormat format)
 {
-    return Add(device, binding, std::make_unique<FramebufferImage2D>(m_width, m_height, format, nullptr));
+    return Add(device, binding, std::make_unique<FramebufferImage2D>(Extent2D{uint32_t(m_width), uint32_t(m_height)}, format, nullptr));
 }
 
 Result AttachmentSet::Add(Device *device, uint32_t binding, std::unique_ptr<Image> &&image)

@@ -30,8 +30,7 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
 
     m_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
-            engine->GetInstance()->swapchain->extent.width,
-            engine->GetInstance()->swapchain->extent.height,
+            engine->GetInstance()->swapchain->extent,
             engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
         ),
@@ -70,10 +69,7 @@ void ShadowEffect::Create(Engine *engine)
 
     AssertThrow(render_pass != nullptr);
 
-    auto framebuffer = std::make_unique<Framebuffer>(
-        engine->GetInstance()->swapchain->extent.width,
-        engine->GetInstance()->swapchain->extent.height
-    );
+    auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent);
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {

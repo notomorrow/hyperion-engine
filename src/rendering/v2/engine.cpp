@@ -112,8 +112,7 @@ void Engine::PrepareSwapchain()
 
     m_render_pass_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
-            m_instance->swapchain->extent.width,
-            m_instance->swapchain->extent.height,
+            m_instance->swapchain->extent,
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB,/* TMP Till I recover the code for automatically detecting this*/
             nullptr
         ),
@@ -122,8 +121,7 @@ void Engine::PrepareSwapchain()
 
     m_render_pass_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
-            m_instance->swapchain->extent.width,
-            m_instance->swapchain->extent.height,
+            m_instance->swapchain->extent,
             m_texture_format_defaults.Get(TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
         ),
@@ -135,10 +133,7 @@ void Engine::PrepareSwapchain()
     }
 
     for (VkImage img : m_instance->swapchain->images) {
-        auto fbo = std::make_unique<Framebuffer>(
-            m_instance->swapchain->extent.width,
-            m_instance->swapchain->extent.height
-        );
+        auto fbo = std::make_unique<Framebuffer>(m_instance->swapchain->extent);
 
         renderer::AttachmentRef *attachment_ref[2];
 

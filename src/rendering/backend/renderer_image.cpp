@@ -218,15 +218,13 @@ VkSamplerAddressMode Image::ToVkSamplerAddressMode(WrapMode texture_wrap_mode)
     unexpected_value_msg(format, "Unhandled texture wrap mode case");
 }
 
-Image::Image(size_t width, size_t height, size_t depth,
+Image::Image(Extent3D extent,
     Image::InternalFormat format,
     Image::Type type,
     Image::FilterMode filter_mode,
     const InternalInfo &internal_info,
     unsigned char *bytes)
-    : m_width(width),
-      m_height(height),
-      m_depth(depth),
+    : m_extent(extent),
       m_format(format),
       m_type(type),
       m_filter_mode(filter_mode),
@@ -235,7 +233,7 @@ Image::Image(size_t width, size_t height, size_t depth,
       m_staging_buffer(nullptr),
       m_bpp(NumComponents(GetBaseFormat(format)))
 {
-    m_size = width * height * depth * m_bpp * GetNumFaces();
+    m_size = m_extent.width * m_extent.height * m_extent.depth * m_bpp * GetNumFaces();
 
     m_bytes = new unsigned char[m_size];
 
@@ -342,9 +340,9 @@ Result Image::CreateImage(Device *device,
 
     VkImageCreateInfo image_info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     image_info.imageType             = image_type;
-    image_info.extent.width          = uint32_t(m_width);
-    image_info.extent.height         = uint32_t(m_height);
-    image_info.extent.depth          = uint32_t(m_depth);
+    image_info.extent.width          = m_extent.width;
+    image_info.extent.height         = m_extent.height;
+    image_info.extent.depth          = m_extent.depth;
     image_info.mipLevels             = uint32_t(GetNumMipmaps());
     image_info.arrayLayers           = uint32_t(GetNumFaces());
     image_info.format                = format;
@@ -493,9 +491,9 @@ Result Image::Create(Device *device, Instance *renderer,
                 const size_t num_faces = GetNumFaces();
 
                 for (int i = 1; i < num_mipmaps + 1; i++) {
-                    int32_t mip_width = helpers::MipmapSize(m_width, i),
-                            mip_height = helpers::MipmapSize(m_height, i),
-                            mip_depth = helpers::MipmapSize(m_depth, i);
+                    int32_t mip_width  = helpers::MipmapSize(m_extent.width, i),
+                            mip_height = helpers::MipmapSize(m_extent.height, i),
+                            mip_depth  = helpers::MipmapSize(m_extent.depth, i);
 
                     /* Memory barrier for transfer - note that after generating the mipmaps,
                         we'll still need to transfer into a layout primed for reading from shaders. */
@@ -542,9 +540,9 @@ Result Image::Create(Device *device, Instance *renderer,
                     VkImageBlit blit{};
                     blit.srcOffsets[0] = { 0, 0, 0 };
                     blit.srcOffsets[1] = {
-                        int32_t(helpers::MipmapSize(m_width, i - 1)),
-                        int32_t(helpers::MipmapSize(m_height, i - 1)),
-                        int32_t(helpers::MipmapSize(m_depth, i - 1))
+                        int32_t(helpers::MipmapSize(m_extent.width, i - 1)),
+                        int32_t(helpers::MipmapSize(m_extent.height, i - 1)),
+                        int32_t(helpers::MipmapSize(m_extent.depth, i - 1))
                     };
                     blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                     blit.srcSubresource.mipLevel = i - 1; /* Read from previous mip level */
@@ -638,14 +636,14 @@ Result Image::ConvertTo32Bpp(
 
     constexpr size_t new_bpp = 4;
 
-    const size_t new_size = m_width * m_height * m_depth * new_bpp * num_faces;
+    const size_t new_size = m_extent.width * m_extent.height * m_extent.depth * new_bpp * num_faces;
     const size_t new_face_offset_step = new_size / num_faces;
 
     unsigned char *new_bytes = new unsigned char[new_size];
 
     for (int i = 0; i < num_faces; i++) {
         ImageUtil::ConvertBpp(
-            m_width, m_height, m_depth,
+            m_extent.width, m_extent.height, m_extent.depth,
             m_bpp, new_bpp,
             &m_bytes[i * face_offset_step],
             &new_bytes[i * new_face_offset_step]

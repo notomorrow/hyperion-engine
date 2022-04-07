@@ -16,10 +16,12 @@ using renderer::Image;
 using renderer::TextureImage;
 using renderer::ImageView;
 using renderer::Sampler;
+using renderer::Extent2D;
+using renderer::Extent3D;
 
 class Texture : public EngineComponent<TextureImage> {
 public:
-    Texture(size_t width, size_t height, size_t depth,
+    Texture(Extent3D extent,
         Image::InternalFormat format,
         Image::Type type,
         Image::FilterMode filter_mode,
@@ -43,13 +45,13 @@ private:
 
 class Texture2D : public Texture {
 public:
-    Texture2D(size_t width, size_t height,
+    Texture2D(Extent2D extent,
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
         unsigned char *bytes
     ) : Texture(
-        width, height, 1,
+        Extent3D(extent),
         format,
         Image::Type::TEXTURE_TYPE_2D,
         filter_mode,
@@ -60,13 +62,13 @@ public:
 
 class Texture3D : public Texture {
 public:
-    Texture3D(size_t width, size_t height, size_t depth,
+    Texture3D(Extent3D extent,
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
         unsigned char *bytes
     ) : Texture(
-        width, height, depth,
+        extent,
         format,
         Image::Type::TEXTURE_TYPE_3D,
         filter_mode,
@@ -77,12 +79,13 @@ public:
 
 class TextureCube : public Texture {
 public:
-    TextureCube(size_t face_width, size_t face_height,
+    TextureCube(Extent2D extent,
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
         unsigned char *bytes
-    ) : Texture(face_width, face_height, 1,
+    ) : Texture(
+        Extent3D(extent),
         format,
         Image::Type::TEXTURE_TYPE_CUBEMAP,
         filter_mode,
@@ -93,7 +96,7 @@ public:
 
 class TextureArray {
 public:
-    TextureArray(size_t width, size_t height, size_t depth,
+    TextureArray(Extent3D extent,
         Image::InternalFormat format,
         Image::Type type,
         Image::FilterMode filter_mode,
@@ -106,9 +109,7 @@ public:
     void RemoveTexture(Texture::ID texture_id);
 
 private:
-    size_t m_width;
-    size_t m_height;
-    size_t m_depth;
+    Extent3D m_extent;
     Image::InternalFormat m_format;
     Image::Type m_type;
     Image::FilterMode m_filter_mode;

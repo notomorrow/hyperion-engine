@@ -51,19 +51,42 @@ public:
         return m_child_nodes.back().get();
     }
 
-    bool RemoveChild(NodeList::iterator);
+    /*! \brief Remove a child using the given iterator (i.e from FindChild())
+     * @param iter The iterator from this Node's child list
+     * @returns Whether then removal was successful
+     */
+    bool RemoveChild(NodeList::iterator iter);
+
+    /*! \brief Remove a child at the given index
+     * @param index The index of the child element to remove
+     * @returns Whether then removal was successful
+     */
     bool RemoveChild(size_t index);
 
     /*! \brief Remove this node from the parent Node's list of child Nodes. */
     bool Remove();
-
+    
+    /*! \brief Get a child Node from this Node's child list at the given index.
+     * @param index The index of the child element to return
+     * @returns The child node at the given index. If the index is out of bounds, nullptr
+     * will be returned.
+     */
     Node *GetChild(size_t index) const;
 
+    /*! \brief Get an iterator for the given child Node from this Node's child list
+     * @param index The node to find in this Node's child list
+     * @returns The resulting iterator
+     */
     NodeList::iterator FindChild(Node *node);
 
     inline NodeList &GetChildren() { return m_child_nodes; }
     inline const NodeList &GetChildren() const { return m_child_nodes; }
-    inline const std::vector<Node *> &GetNestedChildren() const { return m_descendents; }
+
+    /*! \brief Get all descendent child Nodes from this Node. This vector is pre-calculated,
+     * so no calculation happens when calling this method.
+     * @returns A vector of raw pointers to descendent Nodes
+     */
+    inline const std::vector<Node *> &GetDescendents() const { return m_descendents; }
 
     /*! \brief Set the local-space translation, scale, rotation of this Node (not influenced by the parent Node) */
     void SetLocalTransform(const Transform &);

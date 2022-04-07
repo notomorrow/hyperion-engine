@@ -2,7 +2,7 @@
 #define HYPERION_V2_LOADER_H
 
 #include <asset/byte_reader.h>
-#include <asset/buffered_text_reader.h>
+#include <asset/buffered_byte_reader.h>
 
 #include <vector>
 
@@ -12,7 +12,7 @@ namespace hyperion::v2 {
 
 class Engine;
 
-using LoaderStream = BufferedTextReader<HYP_V2_LOADER_BUFFER_SIZE>;
+using LoaderStream = BufferedByteReader<HYP_V2_LOADER_BUFFER_SIZE>;
 
 struct LoaderResult {
     enum class Status {
@@ -27,13 +27,6 @@ struct LoaderResult {
         { return status == Status::OK; }
 };
 
-using LoaderResourceKey = std::string;
-
-struct LoaderResource {
-    std::unique_ptr<LoaderStream> stream;
-    LoaderResult result;
-};
-
 template <class Object, class Handler>
 class LoaderImpl {
     using Results = std::vector<std::pair<LoaderResult, Object>>;
@@ -42,31 +35,24 @@ public:
     LoaderImpl(const Handler &handler)
         : m_handler(handler) {}
 
-    std::pair<LoaderResult, Object> Load(LoaderResource &&resource)
+    std::pair<LoaderResult, Object> Load(LoaderStream &&stream)
     {
-        if (resource.stream == nullptr) {
+        if (!stream.IsOpen()) {
             return std::make_pair(
-                LoaderResult{ LoaderResult::Status::ERR, "No byte stream provided" },
+                LoaderResult{LoaderResult::Status::ERR, "Failed to open file"},
                 Object{}
             );
         }
 
-        if (!resource.stream->IsOpen()) {
+        if (stream.Eof()) {
             return std::make_pair(
-                LoaderResult{ LoaderResult::Status::ERR, "Failed to open file" },
-                Object{}
-            );
-        }
-
-        if (resource.stream->Eof()) {
-            return std::make_pair(
-                LoaderResult{ LoaderResult::Status::ERR, "Byte stream in EOF state" },
+                LoaderResult{LoaderResult::Status::ERR, "Byte stream in EOF state"},
                 Object{}
             );
         }
 
         Object object;
-        LoaderResult result = m_handler.load_fn(resource.stream.get(), object);
+        LoaderResult result = m_handler.load_fn(&stream, object);
 
         return std::make_pair(result, std::move(object));
     }

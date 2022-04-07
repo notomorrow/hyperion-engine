@@ -22,8 +22,6 @@
 namespace hyperion {
 namespace renderer {
 
-using ::std::optional;
-
 enum class DatumType {
     UNSIGNED_BYTE,
     SIGNED_BYTE,
@@ -198,18 +196,18 @@ struct MeshInputAttributeSet {
 };
 
 struct QueueFamilyIndices {
-    using Index_t = uint32_t;
+    using Index = uint32_t;
     
-    optional<Index_t> graphics_family;
-    optional<Index_t> transfer_family;
-    optional<Index_t> present_family;
-    optional<Index_t> compute_family;
+    std::optional<Index> graphics_family;
+    std::optional<Index> transfer_family;
+    std::optional<Index> present_family;
+    std::optional<Index> compute_family;
 
-    const bool IsComplete() {
-        return this->graphics_family.has_value()
-            && this->transfer_family.has_value()
-            && this->present_family.has_value()
-            && this->compute_family.has_value();
+    bool IsComplete() const {
+        return graphics_family.has_value()
+            && transfer_family.has_value()
+            && present_family.has_value()
+            && compute_family.has_value();
     }
 };
 
@@ -220,7 +218,71 @@ struct SwapchainSupportDetails {
     std::vector<VkPresentModeKHR> present_modes;
 };
 
+struct Extent2D {
+    uint32_t width, height;
 
+    Extent2D()
+        : width(0),
+          height(0)
+    {
+    }
+
+    Extent2D(uint32_t width, uint32_t height)
+        : width(width),
+          height(height)
+    {
+    }
+
+    Extent2D(const Extent2D &other) = default;
+    Extent2D &operator=(const Extent2D &other) = default;
+    Extent2D(Extent2D &&other) noexcept = default;
+    Extent2D &operator=(Extent2D &&other) noexcept = default;
+    ~Extent2D() = default;
+
+    bool operator==(const Extent2D &other) const
+    {
+        return width == other.width
+            && height == other.height;
+    }
+};
+
+struct Extent3D {
+    uint32_t width, height, depth;
+
+    Extent3D()
+        : width(0),
+          height(0),
+          depth(0)
+    {
+    }
+
+    Extent3D(uint32_t width, uint32_t height, uint32_t depth)
+        : width(width),
+          height(height),
+          depth(depth)
+    {
+    }
+
+    explicit Extent3D(const Extent2D &extent_2d, uint32_t depth = 1)
+        : width(extent_2d.width),
+          height(extent_2d.height),
+          depth(depth)
+    {
+    }
+
+    Extent3D(const Extent3D &other) = default;
+    Extent3D &operator=(const Extent3D &other) = default;
+    Extent3D(Extent3D &&other) noexcept = default;
+    Extent3D &operator=(Extent3D &&other) noexcept = default;
+    ~Extent3D() = default;
+
+    bool operator==(const Extent3D &other) const
+    {
+        return width == other.width
+            && height == other.height
+            && depth == other.depth;
+    }
+};
 
 template<class ...Args>
 class PerFrameData {

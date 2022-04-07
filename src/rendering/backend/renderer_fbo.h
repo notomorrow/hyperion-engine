@@ -15,7 +15,7 @@ namespace renderer {
 
 class FramebufferObject {
 public:
-    FramebufferObject(uint32_t width, uint32_t height);
+    FramebufferObject(Extent2D extent);
     FramebufferObject(const FramebufferObject &other) = delete;
     FramebufferObject &operator=(const FramebufferObject &other) = delete;
     ~FramebufferObject();
@@ -32,16 +32,14 @@ public:
     inline auto &GetRenderPassAttachmentRefs() { return m_render_pass_attachment_refs; }
     inline const auto &GetRenderPassAttachmentRefs() const { return m_render_pass_attachment_refs; }
 
-    inline uint32_t GetWidth() const { return m_width; }
-    inline uint32_t GetHeight() const { return m_height; }
+    inline uint32_t GetWidth()  const { return m_extent.width; }
+    inline uint32_t GetHeight() const { return m_extent.height; }
 
     Result Create(Device *device, RenderPass *render_pass);
     Result Destroy(Device *device);
 
 private:
-
-    uint32_t m_width,
-             m_height;
+    Extent2D m_extent;
 
     std::vector<AttachmentRef *> m_render_pass_attachment_refs;
 

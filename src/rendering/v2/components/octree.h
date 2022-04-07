@@ -24,7 +24,7 @@ public:
 
     struct Node {
         Spatial     *spatial;
-        BoundingBox aabb;
+        BoundingBox  aabb;
     };
 
     struct Root {

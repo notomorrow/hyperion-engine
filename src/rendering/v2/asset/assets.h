@@ -59,9 +59,7 @@ class Assets {
         template <class Loader>
         auto LoadResource(Engine *engine, const Loader &loader) -> std::unique_ptr<typename Loader::FinalType>
         {
-            auto result = loader.Instance().Load({
-                .stream = std::make_unique<LoaderStream>(filepath)
-            });
+            auto result = loader.Instance().Load({filepath});
 
             if (result.first) {
                 /* TODO: deal with cache here */
@@ -112,6 +110,7 @@ class Assets {
         for (size_t i = 0; i < filepaths.size(); i++) {
             threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
                 DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
+
                 results[index] = Functor<Type>(filepaths[index])(engine);
             });
         }
@@ -129,12 +128,23 @@ public:
     Assets &operator=(const Assets &other) = delete;
     ~Assets();
 
+    /*! \brief Load a single asset from the given path. If no asset could be loaded, nullptr is returned.
+     * @param filepath The path of the asset
+     * @returns A unique pointer to Type
+     */
     template <class Type>
     auto Load(const std::string &filepath) -> std::unique_ptr<Type>
     {
         return std::move(LoadAsync<Type>(filepath).front());
     }
 
+    /*! \brief Loads a collection of assets asynchornously from one another (the function returns when all have
+     *   been loaded). For any assets that could not be loaded, nullptr will be in the array in place of the
+     *   asset.
+     * @param filepath The path of the first asset to be loaded
+     * @param other_paths Argument pack of assets 1..n to be loaded
+     * @returns An array of unique pointers to Type
+     */
     template <class Type, class ...Args>
     auto Load(const std::string &filepath, Args &&... other_paths)
     {

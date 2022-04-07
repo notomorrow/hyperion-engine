@@ -338,7 +338,7 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
     HYPERION_RETURN_OK;
 }
 
-VkQueue Device::GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index)
+VkQueue Device::GetQueue(QueueFamilyIndices::Index queue_family_index, uint32_t queue_index)
 {
     VkQueue queue;
     vkGetDeviceQueue(this->GetDevice(), queue_family_index, queue_index, &queue);

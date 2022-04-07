@@ -5,9 +5,8 @@
 
 namespace hyperion {
 namespace renderer {
-FramebufferObject::FramebufferObject(uint32_t width, uint32_t height)
-    : m_width(width),
-      m_height(height),
+FramebufferObject::FramebufferObject(Extent2D extent)
+    : m_extent(extent),
       m_framebuffer(nullptr)
 {
 }
@@ -36,8 +35,8 @@ Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
     framebuffer_create_info.renderPass      = render_pass->GetRenderPass();
     framebuffer_create_info.attachmentCount = uint32_t(attachment_image_views.size());
     framebuffer_create_info.pAttachments    = attachment_image_views.data();
-    framebuffer_create_info.width           = m_width;
-    framebuffer_create_info.height          = m_height;
+    framebuffer_create_info.width           = m_extent.width;
+    framebuffer_create_info.height          = m_extent.height;
     framebuffer_create_info.layers          = 1;
 
     HYPERION_VK_CHECK(vkCreateFramebuffer(device->GetDevice(), &framebuffer_create_info, nullptr, &m_framebuffer));
@@ -47,7 +46,7 @@ Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
 
 Result FramebufferObject::Destroy(Device *device)
 {
-    Result result = Result::OK;
+    auto result = Result::OK;
 
     vkDestroyFramebuffer(device->GetDevice(), m_framebuffer, nullptr);
     m_framebuffer = nullptr;
