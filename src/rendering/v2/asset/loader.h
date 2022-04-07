@@ -7,12 +7,6 @@
 #include <vector>
 
 #define HYP_V2_LOADER_BUFFER_SIZE 2048
-#define HYP_V2_LOADER_THREADED 1
-
-#if HYP_V2_LOADER_THREADED
-#include <thread>
-#include <mutex>
-#endif
 
 namespace hyperion::v2 {
 
@@ -48,72 +42,37 @@ public:
     LoaderImpl(const Handler &handler)
         : m_handler(handler) {}
 
-    LoaderImpl &Enqueue(const LoaderResourceKey &key, LoaderResource &&resource)
+    std::pair<LoaderResult, Object> Load(LoaderResource &&resource)
     {
-        m_resources.push_back(std::move(resource));
-
-        return *this;
-    }
-    
-    Results Load()
-    {
-        Results results;
-        results.resize(m_resources.size());
-
-        std::vector<std::thread> threads;
-        threads.resize(m_resources.size());
-
-        for (size_t i = 0; i < m_resources.size(); i++) {
-            threads[i] = std::thread([index = i, &resources = m_resources, &handler = m_handler, &results] {
-                const auto &resource = resources[index];
-
-                if (resource.stream == nullptr) {
-                    results[index] = std::make_pair(
-                        LoaderResult{LoaderResult::Status::ERR, "No byte stream provided"},
-                        Object{}
-                    );
-
-                    return;
-                }
-
-                if (!resource.stream->IsOpen()) {
-                    results[index] = std::make_pair(
-                        LoaderResult{LoaderResult::Status::ERR, "Failed to open file"},
-                        Object{}
-                    );
-
-                    return;
-                }
-
-                if (resource.stream->Eof()) {
-                    results[index] = std::make_pair(
-                        LoaderResult{LoaderResult::Status::ERR, "Byte stream in EOF state"},
-                        Object{}
-                    );
-
-                    return;
-                }
-
-                Object object;
-                LoaderResult result = handler.load_fn(resource.stream.get(), object);
-            
-                results[index] = std::make_pair(result, std::move(object));
-            });
+        if (resource.stream == nullptr) {
+            return std::make_pair(
+                LoaderResult{ LoaderResult::Status::ERR, "No byte stream provided" },
+                Object{}
+            );
         }
 
-        for (auto &thread : threads) {
-            thread.join();
+        if (!resource.stream->IsOpen()) {
+            return std::make_pair(
+                LoaderResult{ LoaderResult::Status::ERR, "Failed to open file" },
+                Object{}
+            );
         }
 
-        m_resources.clear();
+        if (resource.stream->Eof()) {
+            return std::make_pair(
+                LoaderResult{ LoaderResult::Status::ERR, "Byte stream in EOF state" },
+                Object{}
+            );
+        }
 
-        return results;
+        Object object;
+        LoaderResult result = m_handler.load_fn(resource.stream.get(), object);
+
+        return std::make_pair(result, std::move(object));
     }
 
 private:
     Handler m_handler;
-
-    std::vector<LoaderResource> m_resources;
 };
 
 template <class T, LoaderFormat Format>
