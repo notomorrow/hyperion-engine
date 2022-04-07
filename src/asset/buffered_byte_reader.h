@@ -1,5 +1,5 @@
-#ifndef BUFFERED_TEXT_READER_H
-#define BUFFERED_TEXT_READER_H
+#ifndef BUFFERED_BYTE_READER_H
+#define BUFFERED_BYTE_READER_H
 
 #include "../types.h"
 #include "../util.h"
@@ -10,9 +10,9 @@
 
 namespace hyperion {
 template <size_t BufferSize>
-class BufferedTextReader {
+class BufferedByteReader {
 public:
-    BufferedTextReader(const std::string &filepath, std::streampos begin = 0)
+    BufferedByteReader(const std::string &filepath, std::streampos begin = 0)
         : file(nullptr)
     {
         file = new std::ifstream(filepath, std::ifstream::in | std::ifstream::ate | std::ifstream::binary);
@@ -22,10 +22,10 @@ public:
         pos = file->tellg();
     }
 
-    BufferedTextReader(const BufferedTextReader &other) = delete;
-    BufferedTextReader &operator=(const BufferedTextReader &other) = delete;
+    BufferedByteReader(const BufferedByteReader &other) = delete;
+    BufferedByteReader &operator=(const BufferedByteReader &other) = delete;
 
-    ~BufferedTextReader()
+    ~BufferedByteReader()
     {
         delete file;
     }

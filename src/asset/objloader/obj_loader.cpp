@@ -8,7 +8,7 @@
 #include "../../math/vertex.h"
 #include "../../util/string_util.h"
 #include "../../scene/node.h"
-#include "../../asset/buffered_text_reader.h"
+#include "../../asset/buffered_byte_reader.h"
 #include "mtl_loader.h"
 
 #include <unordered_map>
@@ -106,7 +106,7 @@ AssetLoader::Result ObjLoader::LoadFromFile(const std::string &path)
   
     int line_no = 0;
 
-    BufferedTextReader<2048> buf(path);
+    BufferedByteReader<2048> buf(path);
 
     std::vector<std::string> tokens;
     tokens.reserve(5);

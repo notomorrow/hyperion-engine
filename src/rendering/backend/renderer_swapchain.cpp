@@ -77,11 +77,6 @@ VkPresentModeKHR Swapchain::GetPresentMode()
     return VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
-VkExtent2D Swapchain::ChooseSwapchainExtent()
-{
-    return this->support_details.capabilities.currentExtent;
-}
-
 void Swapchain::RetrieveSupportDetails(Device *device)
 {
     this->support_details = device->GetFeatures().QuerySwapchainSupport(device->GetRenderSurface());
@@ -106,7 +101,10 @@ Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
 
     this->surface_format = this->ChooseSurfaceFormat(device);
     this->present_mode = this->GetPresentMode();
-    this->extent = this->ChooseSwapchainExtent();
+    this->extent = {
+        support_details.capabilities.currentExtent.width,
+        support_details.capabilities.currentExtent.height
+    };
 
     uint32_t image_count = support_details.capabilities.minImageCount + 1;
 
@@ -117,17 +115,20 @@ Result Swapchain::Create(Device *device, const VkSurfaceKHR &surface)
     DebugLog(LogType::Debug, "Swapchain image count: %d\n", image_count);
 
     VkSwapchainCreateInfoKHR create_info{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
-    create_info.surface = surface;
-    create_info.minImageCount = image_count;
-    create_info.imageFormat = surface_format.format;
-    create_info.imageColorSpace = surface_format.colorSpace;
-    create_info.imageExtent = extent;
+    create_info.surface          = surface;
+    create_info.minImageCount    = image_count;
+    create_info.imageFormat      = surface_format.format;
+    create_info.imageColorSpace  = surface_format.colorSpace;
+    create_info.imageExtent    = {extent.width, extent.height};
     create_info.imageArrayLayers = 1; /* This is always 1 unless we make a stereoscopic/VR application */
-    create_info.imageUsage = image_usage_flags;
+    create_info.imageUsage       = image_usage_flags;
 
     /* Graphics computations and presentation are done on separate hardware */
     const QueueFamilyIndices &qf_indices = device->GetQueueFamilyIndices();
-    const uint32_t concurrent_families[] = { qf_indices.graphics_family.value(), qf_indices.present_family.value() };
+    const uint32_t concurrent_families[] = {
+        qf_indices.graphics_family.value(),
+        qf_indices.present_family.value()
+    };
 
     if (qf_indices.graphics_family != qf_indices.present_family) {
         DebugLog(LogType::Debug, "Swapchain sharing mode set to Concurrent\n");

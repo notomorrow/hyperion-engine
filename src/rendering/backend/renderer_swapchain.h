@@ -20,7 +20,6 @@ class Swapchain {
 
     VkSurfaceFormatKHR ChooseSurfaceFormat(Device *device);
     VkPresentModeKHR GetPresentMode();
-    VkExtent2D ChooseSwapchainExtent();
     void RetrieveSupportDetails(Device *device);
     void RetrieveImageHandles(Device *device);
 
@@ -36,7 +35,7 @@ public:
     inline size_t NumImages() const { return this->images.size(); }
 
     VkSwapchainKHR swapchain;
-    VkExtent2D extent;
+    Extent2D extent;
     VkSurfaceFormatKHR surface_format;
     Image::InternalFormat image_format;
     std::vector<VkImage> images;

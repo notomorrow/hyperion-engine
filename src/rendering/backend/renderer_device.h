@@ -44,7 +44,7 @@ public:
     inline const QueueFamilyIndices &GetQueueFamilyIndices() const { return queue_family_indices; }
     inline const Features &GetFeatures() const { return *features; }
 
-    VkQueue GetQueue(QueueFamilyIndices::Index_t queue_family_index, uint32_t queue_index = 0);
+    VkQueue GetQueue(QueueFamilyIndices::Index queue_family_index, uint32_t queue_index = 0);
 
     Result CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions);
     Result CheckDeviceSuitable();

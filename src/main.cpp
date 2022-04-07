@@ -163,8 +163,10 @@ int main()
 
 
     auto *cubemap = new v2::TextureCube(
-        cubemap_faces[0]->GetWidth(),
-        cubemap_faces[0]->GetHeight(),
+        Extent2D{
+            uint32_t(cubemap_faces[0]->GetWidth()),
+            uint32_t(cubemap_faces[0]->GetHeight())
+        },
         Image::InternalFormat(cubemap_faces[0]->GetInternalFormat()),
         Image::FilterMode::TEXTURE_FILTER_LINEAR,
         Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
@@ -178,8 +180,10 @@ int main()
     // test image
     auto tex = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
     auto *texture = new v2::Texture2D(
-        tex->GetWidth(),
-        tex->GetHeight(),
+        Extent2D{
+            uint32_t(tex->GetWidth()),
+            uint32_t(tex->GetHeight())
+        },
         Image::InternalFormat(tex->GetInternalFormat()),
         Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         Image::WrapMode::TEXTURE_WRAP_REPEAT,
@@ -189,8 +193,10 @@ int main()
     // test image
     auto tex2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
     auto *texture2 = new v2::Texture2D(
-        tex2->GetWidth(),
-        tex2->GetHeight(),
+        Extent2D{
+            uint32_t(tex2->GetWidth()),
+            uint32_t(tex2->GetHeight())
+        },
         Image::InternalFormat(tex2->GetInternalFormat()),
         Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         Image::WrapMode::TEXTURE_WRAP_REPEAT,
@@ -201,9 +207,7 @@ int main()
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     renderer::Image *image_storage = new renderer::StorageImage(
-        512,
-        512,
-        1,
+        Extent2D{512, 512, 1},
         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
         Image::Type::TEXTURE_TYPE_2D,
         nullptr
@@ -215,28 +219,10 @@ int main()
 
     engine.Initialize();
     
-    auto obj_models = engine.assets.Load<v2::Node>(
+    auto [monkey_obj, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/monkey/monkey.obj",
-        base_path + "/res/models/sponza/sponza.obj",
         base_path + "/res/models/cube.obj"
     );
-
-    auto monkey_obj = std::move(obj_models[0]);
-    auto cube_obj = std::move(obj_models[1]);
-
 
     monkey_obj->GetChild(0)->AddChild("Foobar");
     monkey_obj->GetChild(0)->GetChild(0)->AddChild("Nuts");
@@ -247,9 +233,6 @@ int main()
 
     auto opaque_fbo_id = engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0];//v2::Framebuffer::ID{1};//engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
     auto *opaque_fbo = engine.resources.framebuffers[opaque_fbo_id];
-
-
-    //auto *opaque_fbo = engine.GetFramebuffer(engine.GetRenderBucketContainer().Get(v2::GraphicsPipeline::BUCKET_OPAQUE).framebuffer_ids[0]);  //engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
 
     {
         auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
@@ -359,21 +342,7 @@ int main()
 
     matrices_descriptor_buffer.Create(device, 8);
     scene_data_descriptor_buffer.Create(device, 8);
-
-    /*auto attachment = std::make_unique<RenderPassAttachment>(
-        std::make_unique<FramebufferImage2D>(512, 512, Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F, nullptr),
-        RenderPassStage::RENDER_PASS_STAGE_PRESENT
-    );
-
-    AttachmentRef *attachment_ref = nullptr;
-    attachment->AddAttachmentRef(device, StoreOperation::STORE, &attachment_ref);
-    AttachmentRef *attachment_ref2 = nullptr;
-    attachment_ref->AddAttachmentRef(device, StoreOperation::STORE, &attachment_ref2);
-
-    auto vk_desc = attachment_ref->GetAttachmentDescription();
-    auto vk_ref = attachment_ref->GetAttachmentReference();*/
-
-
+    
     engine.PrepareSwapchain();
     
     v2::Shader::ID mirror_shader_id{};

@@ -3,13 +3,13 @@
 
 namespace hyperion::v2 {
 
-Texture::Texture(size_t width, size_t height, size_t depth,
+Texture::Texture(Extent3D extent,
     Image::InternalFormat format,
     Image::Type type,
     Image::FilterMode filter_mode,
     Image::WrapMode wrap_mode,
     unsigned char *bytes)
-    : EngineComponent(width, height, depth, format, type, filter_mode, bytes),
+    : EngineComponent(extent, format, type, filter_mode, bytes),
       m_image_view(std::make_unique<ImageView>()),
       m_sampler(std::make_unique<Sampler>(filter_mode, wrap_mode))
 {
@@ -46,14 +46,12 @@ void Texture::Destroy(Engine *engine)
 }
 
 
-TextureArray::TextureArray(size_t width, size_t height, size_t depth,
+TextureArray::TextureArray(Extent3D extent,
     Image::InternalFormat format,
     Image::Type type,
     Image::FilterMode filter_mode,
     Image::WrapMode wrap_mode
-) : m_width(width),
-    m_height(height),
-    m_depth(depth),
+) : m_extent(extent),
     m_format(format),
     m_type(type),
     m_filter_mode(filter_mode),
@@ -62,9 +60,7 @@ TextureArray::TextureArray(size_t width, size_t height, size_t depth,
 }
 
 TextureArray::TextureArray(const TextureArray &other)
-    : m_width(other.m_width),
-      m_height(other.m_height),
-      m_depth(other.m_depth),
+    : m_extent(other.m_extent),
       m_format(other.m_format),
       m_type(other.m_type),
       m_filter_mode(other.m_filter_mode),
@@ -77,9 +73,7 @@ TextureArray::TextureArray(const TextureArray &other)
 }
 TextureArray &TextureArray::operator=(const TextureArray &other)
 {
-    m_width = other.m_width;
-    m_height = other.m_height;
-    m_depth = other.m_depth;
+    m_extent = other.m_extent;
     m_format = other.m_format;
     m_type = other.m_type;
     m_filter_mode = other.m_filter_mode;
@@ -99,9 +93,7 @@ void TextureArray::AddTexture(Engine *engine, Texture::ID texture_id)
     Texture *texture = engine->resources.textures[texture_id];
     AssertThrow(texture != nullptr);
 
-    AssertThrowMsg(texture->Get().GetWidth() == m_width,                    "sizes must match");
-    AssertThrowMsg(texture->Get().GetHeight() == m_height,                  "sizes must match");
-    AssertThrowMsg(texture->Get().GetDepth() == m_depth,                    "sizes must match");
+    AssertThrowMsg(texture->Get().GetExtent() == m_extent,                  "sizes must match");
     AssertThrowMsg(texture->Get().GetTextureFormat() == m_format,           "formats must match");
     AssertThrowMsg(texture->Get().GetType() == m_type,                      "types must match");
     AssertThrowMsg(texture->GetSampler()->GetFilterMode() == m_filter_mode, "filter modes must match");

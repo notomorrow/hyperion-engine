@@ -42,18 +42,13 @@ struct Resources {
         const auto thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
 
         DebugLog(LogType::Debug, "Locking resource mutex in thread %llu\n", thread_id);
-
         m_mtx.lock();
-
         DebugLog(LogType::Debug, "Locked resource mutex in thread %llu\n", thread_id);
-
-
+        
         lambda(*this);
 
         DebugLog(LogType::Debug, "Unlocking resource mutex in thread %llu\n", thread_id);
-
         m_mtx.unlock();
-
         DebugLog(LogType::Debug, "Unlocked resource mutex in thread %llu\n", thread_id);
     }
 
