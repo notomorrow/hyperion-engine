@@ -106,7 +106,7 @@ AssetLoader::Result ObjLoader::LoadFromFile(const std::string &path)
   
     int line_no = 0;
 
-    BufferedByteReader<2048> buf(path);
+    BufferedReader<2048> buf(path);
 
     std::vector<std::string> tokens;
     tokens.reserve(5);

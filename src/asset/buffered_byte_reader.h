@@ -9,10 +9,12 @@
 #include <cstring>
 
 namespace hyperion {
-template <size_t BufferSize>
-class BufferedByteReader {
+template <size_t BufferSize, class Byte = ubyte>
+class BufferedReader {
 public:
-    BufferedByteReader(const std::string &filepath, std::streampos begin = 0)
+    static_assert(sizeof(Byte) == 1);
+
+    BufferedReader(const std::string &filepath, std::streampos begin = 0)
         : file(nullptr)
     {
         file = new std::ifstream(filepath, std::ifstream::in | std::ifstream::ate | std::ifstream::binary);
@@ -22,10 +24,10 @@ public:
         pos = file->tellg();
     }
 
-    BufferedByteReader(const BufferedByteReader &other) = delete;
-    BufferedByteReader &operator=(const BufferedByteReader &other) = delete;
+    BufferedReader(const BufferedReader &other) = delete;
+    BufferedReader &operator=(const BufferedReader &other) = delete;
 
-    ~BufferedByteReader()
+    ~BufferedReader()
     {
         delete file;
     }
@@ -37,58 +39,86 @@ public:
         { return pos; }
 
     bool Eof() const
-        { return file->eof(); }
+        { return pos >= max_pos; }
 
     void Rewind(unsigned long amount)
     {
-        AssertThrow(amount <= pos);
+        if (amount > pos) {
+            pos = 0;
+        } else {
+            pos -= amount;
+        }
 
-        file->seekg(pos -= amount);
+        if (!Eof()) {
+            file->seekg(pos -= amount);
+        }
+    }
+
+    void Skip(unsigned long amount)
+    {
+        pos += amount;
+
+        if (!Eof()) {
+            file->seekg(pos);
+        }
     }
 
     void Seek(unsigned long where_to)
     {
-        AssertThrow(where_to <= pos);
+        pos = where_to;
 
-        file->seekg(pos = where_to);
+        if (!Eof()) {
+            file->seekg(pos);
+        }
     }
 
-    size_t Read()
+    /*! \brief Reads the entirety of the remaining bytes in file and returns a vector of
+     * unsigned bytes. Note that using this method to read the whole file in one call bypasses
+     * the intention of having a buffered reader. */
+    std::vector<Byte> ReadAll()
+    {
+        if (Eof()) {
+            return {};
+        }
+
+        const size_t remaining = max_pos - pos;
+        
+        std::vector<Byte> bytes;
+        bytes.resize(remaining);
+
+        file->read(reinterpret_cast<char *>(&bytes[0]), bytes.size());
+        pos += bytes.size();
+
+        return bytes;
+    }
+
+    /*! @returns The total number of bytes read */
+    template <class LambdaFunction>
+    size_t ReadChunked(size_t count, LambdaFunction func)
     {
         if (Eof()) {
             return 0;
         }
 
-        file->read((char *)&buffer[0], BufferSize);
+        size_t total_read = 0;
 
-        size_t count = file->gcount();
+        while (count) {
+            const size_t chunk_requested = MathUtil::Min(count, BufferSize);
+            const size_t chunk_returned = Read(chunk_requested);
 
-        AssertThrow(count <= BufferSize);
+            func(&buffer[0], chunk_returned);
 
-        pos += count;
+            total_read += chunk_returned;
 
-        return count;
-    }
+            if (chunk_returned < chunk_requested) {
+                /* File ended */
+                break;
+            }
 
-    size_t Read(char *out, size_t sz)
-    {
-        AssertThrow(sz <= BufferSize);
-
-        if (Eof()) {
-            return 0;
+            count -= chunk_returned;
         }
 
-        file->read((char *)&buffer[0], BufferSize);
-
-        size_t count = file->gcount();
-
-        AssertExit(count <= BufferSize);
-
-        pos += count;
-
-        memcpy(out, buffer, sz);
-
-        return count;
+        return total_read;
     }
 
     template <class LambdaFunction>
@@ -126,11 +156,62 @@ private:
     std::ifstream *file;
     std::streampos pos;
     std::streampos max_pos;
-    std::array<ubyte, BufferSize> buffer{};
+    std::array<Byte, BufferSize> buffer{};
 
-    void ReadBytes(char *ptr, unsigned size)
+    size_t Read()
     {
-        file->read(ptr, size);
+        if (Eof()) {
+            return 0;
+        }
+
+        file->read(reinterpret_cast<char *>(&buffer[0]), BufferSize);
+
+        const size_t count = file->gcount();
+
+        AssertThrow(count <= BufferSize);
+
+        pos += count;
+
+        return count;
+    }
+
+    size_t Read(size_t sz)
+    {
+        AssertThrow(sz <= BufferSize);
+
+        if (Eof()) {
+            return 0;
+        }
+
+        file->read(reinterpret_cast<char *>(&buffer[0]), sz);
+
+        const size_t count = file->gcount();
+        pos += count;
+
+        return count;
+    }
+
+    size_t Read(Byte *out, size_t sz)
+    {
+        AssertThrow(sz <= BufferSize);
+
+        if (Eof()) {
+            return 0;
+        }
+
+        file->read(reinterpret_cast<char *>(&buffer[0]), BufferSize);
+
+        const size_t count = file->gcount();
+        pos += count;
+
+        memcpy(reinterpret_cast<void *>(out), buffer, sz);
+
+        return count;
+    }
+
+    void ReadBytes(Byte *ptr, unsigned size)
+    {
+        file->read(reinterpret_cast<char *>(ptr), size);
         pos += size;
     }
 };

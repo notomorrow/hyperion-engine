@@ -26,7 +26,7 @@ public:
         Image::Type type,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        unsigned char *bytes);
+        const unsigned char *bytes);
 
     Texture(const Texture &other) = delete;
     Texture &operator=(const Texture &other) = delete;
@@ -49,7 +49,7 @@ public:
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : Texture(
         Extent3D(extent),
         format,
@@ -66,7 +66,7 @@ public:
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : Texture(
         extent,
         format,
@@ -83,7 +83,7 @@ public:
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : Texture(
         Extent3D(extent),
         format,

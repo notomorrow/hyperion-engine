@@ -3,7 +3,6 @@
 
 #include <math/vector2.h>
 #include <math/vector3.h>
-#include <rendering/v2/components/node.h>
 
 #include <string>
 #include <vector>

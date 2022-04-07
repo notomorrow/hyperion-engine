@@ -8,7 +8,7 @@ Texture::Texture(Extent3D extent,
     Image::Type type,
     Image::FilterMode filter_mode,
     Image::WrapMode wrap_mode,
-    unsigned char *bytes)
+    const unsigned char *bytes)
     : EngineComponent(extent, format, type, filter_mode, bytes),
       m_image_view(std::make_unique<ImageView>()),
       m_sampler(std::make_unique<Sampler>(filter_mode, wrap_mode))

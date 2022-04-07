@@ -1,6 +1,5 @@
 #include "texture_loader.h"
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "../util/img/stb_image.h"
 
 #include "../math/math_util.h"

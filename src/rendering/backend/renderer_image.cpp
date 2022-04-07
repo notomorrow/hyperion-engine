@@ -223,7 +223,7 @@ Image::Image(Extent3D extent,
     Image::Type type,
     Image::FilterMode filter_mode,
     const InternalInfo &internal_info,
-    unsigned char *bytes)
+    const unsigned char *bytes)
     : m_extent(extent),
       m_format(format),
       m_type(type),
