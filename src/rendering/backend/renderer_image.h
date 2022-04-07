@@ -106,7 +106,7 @@ public:
         Type type,
         FilterMode filter_mode,
         const InternalInfo &internal_info,
-        unsigned char *bytes);
+        const unsigned char *bytes);
 
     Image(const Image &other) = delete;
     Image &operator=(const Image &other) = delete;
@@ -291,7 +291,7 @@ public:
         Extent3D extent,
         InternalFormat format,
         Type type,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : Image(
         extent,
         format,
@@ -312,7 +312,7 @@ public:
         InternalFormat format,
         Type type,
         FilterMode filter_mode,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : Image(
         extent,
         format,
@@ -332,7 +332,7 @@ public:
         Extent2D extent,
         InternalFormat format,
         FilterMode filter_mode,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : TextureImage(
         Extent3D(extent),
         format,
@@ -348,7 +348,7 @@ public:
         Extent3D extent,
         InternalFormat format,
         FilterMode filter_mode,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : TextureImage(
         extent,
         format,
@@ -364,7 +364,7 @@ public:
         Extent2D extent,
         InternalFormat format,
         FilterMode filter_mode,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : TextureImage(
         Extent3D(extent),
         format,
@@ -380,7 +380,7 @@ public:
         Extent3D extent,
         InternalFormat format,
         Type type,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : Image(
         extent,
         format,
@@ -402,7 +402,7 @@ public:
     FramebufferImage2D(
         Extent2D extent,
         InternalFormat format,
-        unsigned char *bytes
+        const unsigned char *bytes
     ) : FramebufferImage(
         Extent3D(extent),
         format,

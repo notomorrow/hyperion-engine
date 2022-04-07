@@ -3,6 +3,7 @@
 
 #include <rendering/v2/asset/loader_object.h>
 #include <rendering/v2/asset/loader.h>
+#include <rendering/v2/components/node.h>
 
 namespace hyperion::v2 {
 
@@ -41,6 +42,7 @@ struct LoaderObject<Node, LoaderFormat::MODEL_OBJ> {
     std::vector<Vector3> normals;
     std::vector<Vector2> texcoords;
     std::vector<ObjMesh> meshes;
+    std::string          tag;
     std::string          material_library;
 };
 

@@ -12,7 +12,7 @@ namespace hyperion::v2 {
 
 class Engine;
 
-using LoaderStream = BufferedByteReader<HYP_V2_LOADER_BUFFER_SIZE>;
+using LoaderStream = BufferedReader<HYP_V2_LOADER_BUFFER_SIZE>;
 
 struct LoaderResult {
     enum class Status {

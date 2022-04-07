@@ -244,6 +244,9 @@ struct Extent2D {
         return width == other.width
             && height == other.height;
     }
+
+    bool operator!=(const Extent2D &other) const
+        { return !operator==(other); }
 };
 
 struct Extent3D {
@@ -282,6 +285,9 @@ struct Extent3D {
             && height == other.height
             && depth == other.depth;
     }
+
+    bool operator!=(const Extent3D &other) const
+        { return !operator==(other); }
 };
 
 template<class ...Args>

@@ -47,8 +47,7 @@ static void AddMesh(ObjModelLoader::Object &object, const std::string &tag)
     }
 
     object.meshes.push_back({
-        .tag = unique_tag,
-        .material = tag
+        .tag = unique_tag
     });
 }
 
@@ -119,6 +118,8 @@ LoaderResult ObjModelLoader::LoadFn(LoaderStream *stream, Object &object)
         }
     };
 
+    object.tag = "unnamed";
+
     stream->ReadLines([&](const std::string &line) {
         tokens.clear();
 
@@ -153,8 +154,11 @@ LoaderResult ObjModelLoader::LoadFn(LoaderStream *stream, Object &object)
         }
 
         if (tokens[0] == "f") {
-
             auto &last_mesh = LastMesh(object);
+
+            if (tokens.size() > 5) {
+                DebugLog(LogType::Warn, "Faces with more than 4 vertices are not supported by the OBJ model loader\n");
+            }
 
             /* Performs simple triangulation on quad faces */
             for (size_t i = 0; i < tokens.size() - 3; i++) {
@@ -166,22 +170,47 @@ LoaderResult ObjModelLoader::LoadFn(LoaderStream *stream, Object &object)
             return;
         }
 
+        if (tokens[0] == "o") {
+            if (tokens.size() != 1) {
+                object.tag = tokens[1];
+            }
+
+            return;
+        }
+
+        if (tokens[0] == "s") {
+            /* smooth shading; ignore */
+            return;
+        }
+
         if (tokens[0] == "mtllib") {
-            if (tokens.size() > 1) {
+            if (tokens.size() != 1) {
                 object.material_library = tokens[1];
             }
 
             return;
         }
 
-        if (tokens[0] == "usemtl") {
+        if (tokens[0] == "g") {
             std::string tag = "default";
 
-            if (tokens.size() > 1) {
+            if (tokens.size() != 1) {
                 tag = tokens[1];
             }
-
+            
             AddMesh(object, tag);
+
+            return;
+        }
+
+        if (tokens[0] == "usemtl") {
+            if (tokens.size() == 1) {
+                DebugLog(LogType::Warn, "Cannot set obj model material -- no material provided");
+
+                return;
+            }
+
+            LastMesh(object).material = tokens[1];
 
             return;
         }
@@ -194,7 +223,7 @@ LoaderResult ObjModelLoader::LoadFn(LoaderStream *stream, Object &object)
 
 std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &object)
 {
-    auto top = std::make_unique<Node>(object.material_library.c_str()); /* TODO */
+    auto top = std::make_unique<Node>(object.tag.c_str());
 
     const bool has_vertices  = !object.positions.empty(),
                has_normals   = !object.normals.empty(),
