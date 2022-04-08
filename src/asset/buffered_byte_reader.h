@@ -1,6 +1,8 @@
 #ifndef BUFFERED_BYTE_READER_H
 #define BUFFERED_BYTE_READER_H
 
+#include <math/math_util.h>
+
 #include "../types.h"
 #include "../util.h"
 #include "../util/string_util.h"

@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_COMPONENTS_BASE_H
 #define HYPERION_V2_COMPONENTS_BASE_H
 
+#include "util.h"
 #include <rendering/backend/renderer_instance.h>
 
 #include <memory>
@@ -71,6 +72,13 @@ public:
 
     static constexpr ID bad_id = ID{0};
 
+    ~EngineComponentBase()
+    {
+        for (auto &callback_ref : m_callback_refs) {
+            callback_ref.remove();
+        }
+    }
+
     inline const ID &GetId() const
         { return m_id; }
 
@@ -79,7 +87,24 @@ public:
         { m_id = id; }
 
 protected:
+    /*! \brief Add the given callback reference to this object's internal
+     * list of callback refs it is responsible for. On destructor call, all remaining
+     * callback refs will be removed, so as to not have a dangling callback.
+     */
+    template <class ...Args>
+    void Track(Args &&... args)
+    {
+        std::array<CallbackRef, sizeof...(args)> callback_refs{args...};
+
+        m_callback_refs.insert(
+            m_callback_refs.end(),
+            callback_refs.begin(),
+            callback_refs.end()
+        );
+    }
+
     typename EngineComponentBase<Type>::ID m_id;
+    std::vector<CallbackRef> m_callback_refs;
 };
 
 template <class WrappedType>
