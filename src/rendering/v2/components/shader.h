@@ -195,15 +195,16 @@ struct SubShader {
 
 class Shader : public EngineComponent<renderer::ShaderProgram> {
 public:
-    Shader(EngineCallbacks &callbacks, const std::vector<SubShader> &sub_shaders);
+    Shader(const std::vector<SubShader> &sub_shaders);
     Shader(const Shader &) = delete;
     Shader &operator=(const Shader &) = delete;
     ~Shader();
 
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
+    void Init(Engine *engine);
 
 private:
+    void Destroy(Engine *engine);
+
     std::vector<SubShader> m_sub_shaders;
 };
 

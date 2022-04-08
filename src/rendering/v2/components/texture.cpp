@@ -4,14 +4,13 @@
 namespace hyperion::v2 {
 
 Texture::Texture(
-    EngineCallbacks &callbacks,
     Extent3D extent,
     Image::InternalFormat format,
     Image::Type type,
     Image::FilterMode filter_mode,
     Image::WrapMode wrap_mode,
     const unsigned char *bytes)
-    : EngineComponent(callbacks, extent, format, type, filter_mode, bytes),
+    : EngineComponent(extent, format, type, filter_mode, bytes),
       m_image_view(std::make_unique<ImageView>()),
       m_sampler(std::make_unique<Sampler>(filter_mode, wrap_mode))
 {

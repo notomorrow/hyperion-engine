@@ -7,7 +7,7 @@
 namespace hyperion::v2 {
 
 ShadowEffect::ShadowEffect()
-    : PostEffect(Shader::ID{})
+    : PostEffect({})
 {
 }
 
@@ -15,20 +15,18 @@ ShadowEffect::~ShadowEffect() = default;
 
 void ShadowEffect::CreateShader(Engine *engine)
 {
-    m_shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(
-        engine->callbacks,
+    m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
             SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/vert.spv").Read()} },
             SubShader{ ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/shadow_frag.spv").Read()} }
         }
-    ));
+    )).Acquire(engine);
 }
 
 void ShadowEffect::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
     auto render_pass = std::make_unique<RenderPass>(
-        engine->callbacks,
         renderer::RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
@@ -63,8 +61,7 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
 void ShadowEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
-        engine->callbacks,
-        m_shader_id,
+        std::move(m_shader),
         m_render_pass_id,
         GraphicsPipeline::Bucket::BUCKET_PREPASS
     );
@@ -82,7 +79,6 @@ void ShadowEffect::Create(Engine *engine)
     AssertThrow(render_pass != nullptr);
 
     auto framebuffer = std::make_unique<Framebuffer>(
-        engine->callbacks,
         engine->GetInstance()->swapchain->extent
     );
 
@@ -154,10 +150,10 @@ void ShadowRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t fra
     
     auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
 
+    AssertThrow(pipeline != nullptr);
+
     pipeline->Get().BeginRenderPass(primary, 0);
-
     pipeline->Render(engine, primary, frame_index);
-
     pipeline->Get().EndRenderPass(primary, 0);
 }
 

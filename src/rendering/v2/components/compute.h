@@ -14,7 +14,7 @@ using renderer::CommandBuffer;
 
 class ComputePipeline : public EngineComponent<renderer::ComputePipeline> {
 public:
-    explicit ComputePipeline(EngineCallbacks &callbacks, Shader::ID shader_id);
+    explicit ComputePipeline(Ref<Shader> &&shader);
     ComputePipeline(const ComputePipeline &) = delete;
     ComputePipeline &operator=(const ComputePipeline &) = delete;
     ~ComputePipeline();
@@ -24,7 +24,7 @@ public:
     void Dispatch(Engine *engine, CommandBuffer *command_buffer, size_t num_groups_x, size_t num_groups_y, size_t num_groups_z);
 
 private:
-    Shader::ID m_shader_id;
+    Ref<Shader> m_shader;
 };
 
 } // namespace hyperion::v2

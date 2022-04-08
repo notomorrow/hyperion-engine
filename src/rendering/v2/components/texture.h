@@ -21,7 +21,7 @@ using renderer::Extent3D;
 
 class Texture : public EngineComponent<TextureImage> {
 public:
-    Texture(EngineCallbacks &callbacks,
+    Texture(
         Extent3D extent,
         Image::InternalFormat format,
         Image::Type type,
@@ -47,14 +47,12 @@ private:
 class Texture2D : public Texture {
 public:
     Texture2D(
-        EngineCallbacks &callbacks,
         Extent2D extent,
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
         const unsigned char *bytes
     ) : Texture(
-        callbacks,
         Extent3D(extent),
         format,
         Image::Type::TEXTURE_TYPE_2D,
@@ -67,14 +65,12 @@ public:
 class Texture3D : public Texture {
 public:
     Texture3D(
-        EngineCallbacks &callbacks,
         Extent3D extent,
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
         const unsigned char *bytes
     ) : Texture(
-        callbacks,
         extent,
         format,
         Image::Type::TEXTURE_TYPE_3D,
@@ -87,14 +83,12 @@ public:
 class TextureCube : public Texture {
 public:
     TextureCube(
-        EngineCallbacks &callbacks,
         Extent2D extent,
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
         const unsigned char *bytes
     ) : Texture(
-        callbacks,
         Extent3D(extent),
         format,
         Image::Type::TEXTURE_TYPE_CUBEMAP,

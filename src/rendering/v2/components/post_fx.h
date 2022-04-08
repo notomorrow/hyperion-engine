@@ -27,7 +27,7 @@ class PostEffect {
 public:
     static std::shared_ptr<hyperion::Mesh> full_screen_quad;
 
-    PostEffect(Shader::ID shader_id);
+    PostEffect(Ref<Shader> &&shader);
     PostEffect(const PostEffect &) = delete;
     PostEffect &operator=(const PostEffect &) = delete;
     ~PostEffect();
@@ -40,8 +40,8 @@ public:
     inline Framebuffer::ID GetFramebufferId() const
         { return m_framebuffer_id; }
 
-    inline Shader::ID GetShaderId() const
-        { return m_shader_id; }
+    inline Shader *GetShader() const
+        { return m_shader.ptr; }
 
     inline RenderPass::ID GetRenderPassId() const
         { return m_render_pass_id; }
@@ -65,7 +65,7 @@ protected:
 
     std::unique_ptr<PerFrameData<CommandBuffer>> m_frame_data;
     Framebuffer::ID m_framebuffer_id;
-    Shader::ID m_shader_id;
+    Ref<Shader> m_shader;
     RenderPass::ID m_render_pass_id;
     GraphicsPipeline::ID m_pipeline_id;
 

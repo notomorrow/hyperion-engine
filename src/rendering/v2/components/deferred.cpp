@@ -7,7 +7,7 @@
 namespace hyperion::v2 {
 
 DeferredRenderingEffect::DeferredRenderingEffect()
-    : PostEffect(Shader::ID{})
+    : PostEffect({})
 {
     
 }
@@ -16,13 +16,12 @@ DeferredRenderingEffect::~DeferredRenderingEffect() = default;
 
 void DeferredRenderingEffect::CreateShader(Engine *engine)
 {
-    m_shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(
-        engine->callbacks,
+    m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
             SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read()}},
             SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read()}}
         }
-    ));
+    )).Acquire(engine);
 }
 
 void DeferredRenderingEffect::CreateRenderPass(Engine *engine)

@@ -4,8 +4,8 @@
 
 namespace hyperion::v2 {
 
-Material::Material(EngineCallbacks &callbacks)
-    : EngineComponentBase(callbacks),
+Material::Material()
+    : EngineComponentBase(),
       m_state(MATERIAL_STATE_DIRTY)
 {
 }

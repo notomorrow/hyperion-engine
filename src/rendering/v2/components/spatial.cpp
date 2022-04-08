@@ -5,14 +5,13 @@
 namespace hyperion::v2 {
 
 Spatial::Spatial(
-    EngineCallbacks &callbacks,
-    Mesh *mesh,
+    Ref<Mesh> &&mesh,
     const MeshInputAttributeSet &attributes,
     const Transform &transform,
     const BoundingBox &local_aabb,
     Material::ID material_id)
-    : EngineComponent(callbacks),
-      m_mesh(mesh),
+    : EngineComponentBase(),
+      m_mesh(std::move(mesh)),
       m_attributes(attributes),
       m_transform(transform),
       m_local_aabb(local_aabb),
@@ -23,7 +22,7 @@ Spatial::Spatial(
 
 Spatial::~Spatial()
 {
-    RemoveFromPipelines();
+    Teardown();
 }
 
 void Spatial::OnAddedToPipeline(GraphicsPipeline *pipeline)
@@ -56,16 +55,20 @@ void Spatial::RemoveFromPipeline(GraphicsPipeline *pipeline)
     OnRemovedFromPipeline(pipeline);
 }
 
-void Spatial::Create(Engine *engine)
+void Spatial::Init(Engine *engine)
 {
-    engine->resources.meshes.Acquire(engine, m_mesh);
+    EngineComponentBase::Init();
+
+    Track(engine->callbacks.Once(EngineCallback::CREATE_SPATIALS, [this](Engine *engine) {
+        m_mesh = m_mesh.Acquire(engine);
+        std::cout << "Ref count : " << m_mesh.GetRefCount() << "\n";
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
+            m_mesh = nullptr;
+
+            RemoveFromPipelines();
+        }), engine);
+    }));
 }
 
-void Spatial::Destroy(Engine *engine)
-{
-    engine->resources.meshes.Release(engine, m_mesh);
-
-    RemoveFromPipelines();
-}
 
 } // namespace hyperion::v2

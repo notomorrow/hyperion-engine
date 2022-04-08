@@ -50,12 +50,12 @@ public:
             { return value < other.value && bucket < other.bucket; }
     };
 
-    GraphicsPipeline(EngineCallbacks &callbacks, Shader::ID shader_id, RenderPass::ID render_pass_id, Bucket bucket);
+    GraphicsPipeline(Ref<Shader> &&shader, RenderPass::ID render_pass_id, Bucket bucket);
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();
 
-    inline Shader::ID GetShaderID() const { return m_shader_id; }
+    inline Shader *GetShader() const { return m_shader.ptr; }
     inline RenderPass::ID GetRenderPassID() const { return m_render_pass_id; }
     inline Bucket GetBucket() const { return m_bucket; }
 
@@ -112,7 +112,7 @@ private:
     /* Called from Spatial - remove the pointer */
     void OnSpatialRemoved(Spatial *spatial);
 
-    Shader::ID m_shader_id;
+    Ref<Shader> m_shader;
     RenderPass::ID m_render_pass_id;
     Bucket m_bucket;
     VkPrimitiveTopology m_topology;

@@ -268,32 +268,26 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             index_map[obj_index] = index;
         }
 
-        /* TODO: These Add() functions need to be thread-safe */
-
         engine->resources.Lock([&](Resources &resources) {
-            auto mesh = resources.meshes.Add(engine->callbacks);
-            mesh->SetVertices(vertices, indices);
+            auto mesh = resources.meshes.Add(
+                std::make_unique<Mesh>(
+                    vertices, 
+                    indices
+                )
+            );
 
             if (!has_normals) {
                 mesh->CalculateNormals();
             }
 
             mesh->CalculateTangents();
-            
-            /*auto spatial = engine->resources.spatials.Add(
-                mesh,
-                mesh->GetVertexAttributes(),
-                Transform(),
-                BoundingBox(),
-                Material::ID{Material::ID::ValueType{1}} 
-            );*/
 
-            auto spatial_id = resources.spatials.Add(
-                engine,
+            auto vertex_attributes = mesh->GetVertexAttributes();
+
+            auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
-                    engine->callbacks,
-                    mesh,
-                    mesh->GetVertexAttributes(),
+                    std::move(mesh),
+                    vertex_attributes,
                     Transform(),
                     BoundingBox(),
                     Material::ID{ Material::ID::ValueType{1} }
@@ -302,7 +296,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
             auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
 
-            node->SetSpatial(resources.spatials[spatial_id]);
+            node->SetSpatial(engine, spatial);
 
             top->AddChild(std::move(node));
         });

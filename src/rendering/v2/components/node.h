@@ -31,8 +31,8 @@ public:
     /*! @returns A pointer to the parent Node of this Node. May be null. */
     inline Node *GetParent() const { return m_parent_node; }
 
-    inline Spatial *GetSpatial() const { return m_spatial; }
-    void SetSpatial(Spatial *spatial);
+    inline Spatial *GetSpatial() const { return m_spatial.ptr; }
+    void SetSpatial(Engine *engine, Spatial *spatial);
 
     /*! \brief Add the Node as a child of this object, taking ownership over the given Node.
      * @param node The Node to be added as achild of this Node
@@ -156,7 +156,7 @@ private:
     BoundingBox m_local_aabb;
     BoundingBox m_world_aabb;
 
-    Spatial *m_spatial;
+    Ref<Spatial> m_spatial;
 
     std::vector<Node *> m_descendents;
 };

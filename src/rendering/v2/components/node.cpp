@@ -6,9 +6,8 @@
 namespace hyperion::v2 {
 
 Node::Node(const char *tag, const Transform &local_transform)
-    : m_local_transform(local_transform),
-      m_parent_node(nullptr),
-      m_spatial(nullptr)
+    : m_parent_node(nullptr),
+      m_local_transform(local_transform)
 {
     size_t len = std::strlen(tag);
     m_tag = new char[len + 1];
@@ -142,24 +141,24 @@ void Node::SetLocalTransform(const Transform &transform)
     UpdateWorldTransform();
 }
 
-void Node::SetSpatial(Spatial *spatial)
+void Node::SetSpatial(Engine *engine, Spatial *spatial)
 {
     if (m_spatial == spatial) {
         return;
     }
 
-    if (m_spatial != nullptr) {
-        /* TODO: dec ref count */
-    }
-
-    m_spatial = spatial;
+    //if (m_spatial != nullptr) {
+    //    m_spatial.Release();
+    //}
 
     if (spatial != nullptr) {
-        m_local_aabb = spatial->GetLocalAabb();
+        m_spatial = engine->resources.spatials.Acquire(engine, spatial);
+
+        m_local_aabb = m_spatial->GetLocalAabb();
     } else {
         m_local_aabb = BoundingBox();
 
-        /* TODO: inc ref count */
+        m_spatial = nullptr;
     }
 
     UpdateWorldTransform();
