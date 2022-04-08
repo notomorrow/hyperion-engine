@@ -69,7 +69,7 @@ public:
     bool Update(Engine *engine, Spatial *spatial);
 
 private:
-    inline const auto FindNode(Spatial *spatial)
+    inline auto FindNode(Spatial *spatial)
     {
         return std::find_if(m_nodes.begin(), m_nodes.end(), [spatial](const Node &node) {
             return node.spatial == spatial;
@@ -85,6 +85,7 @@ private:
     void InitOctants();
     void Divide(Engine *engine);
     void Undivide(Engine *engine);
+
     /* Remove any potentially empty octants above the node */
     void CollapseParents(Engine *engine);
     bool InsertInternal(Engine *engine, Spatial *spatial);

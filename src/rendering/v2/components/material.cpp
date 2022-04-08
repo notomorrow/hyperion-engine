@@ -80,9 +80,9 @@ void Material::UpdateShaderData(Engine *engine) const
 
 void Material::Create(Engine *engine)
 {
-    engine->GetCallbacks(Engine::CALLBACK_SHADER_DATA).on_init += [this](Engine *engine) {
+    Track(engine->callbacks.Once(Engine::CallbackType::CREATE_MATERIALS, [this, engine](...) {
         UpdateShaderData(engine);
-    };
+    }));
 }
 
 void Material::Destroy(Engine *engine)

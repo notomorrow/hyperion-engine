@@ -33,13 +33,13 @@ void DeferredRenderingEffect::Create(Engine *engine)
 
     CreatePerFrameData(engine);
 
-    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
+    engine->callbacks.Once(Engine::CallbackType::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
         CreatePipeline(engine);
-    };
+    });
 
-    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
+    engine->callbacks.Once(Engine::CallbackType::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
         DestroyPipeline(engine);
-    };
+    });
 }
 
 void DeferredRenderingEffect::Destroy(Engine *engine)

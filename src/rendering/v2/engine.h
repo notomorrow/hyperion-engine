@@ -35,15 +35,20 @@ using renderer::StorageBuffer;
  */
 class Engine {
 public:
+    enum class CallbackType {
+        NONE,
 
-    enum CallbackKey {
-        CALLBACK_GENERAL,
-        CALLBACK_GRAPHICS_PIPELINES,
-        CALLBACK_COMPUTE_PIPELINES,
-        CALLBACK_DESCRIPTOR_SETS,
-        CALLBACK_SHADER_DATA,
+        CREATE_MESHES,
+        DESTROY_MESHES,
 
-        CALLBACK_MAX
+        CREATE_MATERIALS,
+        DESTROY_MATERIALS,
+
+        CREATE_GRAPHICS_PIPELINES,
+        DESTROY_GRAPHICS_PIPELINES,
+
+        CREATE_COMPUTE_PIPELINES,
+        DESTROY_COMPUTE_PIPELINES
     };
 
     enum TextureFormatDefault {
@@ -74,18 +79,6 @@ public:
 
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
-
-    inline auto &GetCallbacks()
-        { return m_callbacks; }
-
-    inline const auto &GetCallbacks() const
-        { return m_callbacks; }
-    
-    inline auto &GetCallbacks(CallbackKey key)
-        { return m_callbacks[key]; }
-    
-    inline const auto &GetCallbacks(CallbackKey key) const
-        { return const_cast<Engine*>(this)->GetCallbacks(key); }
     
     
 
@@ -115,22 +108,6 @@ public:
 
     inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
         { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
-    
-    /* Spatials */
-
-    /*template <class ...Args>
-    Spatial *AddSpatial(Args &&... args)
-        { return GetSpatial(m_spatials.Add(this, std::make_unique<Spatial>(std::forward<Args>(args)...))); }
-
-    template <class ...Args>
-    void RemoveSpatial(Spatial::ID id, Args &&... args)
-        { return m_spatials.Remove(this, id, std::move(args)...); }
-
-    inline Spatial *GetSpatial(Spatial::ID id)
-        { return m_spatials.Get(id); }
-
-    inline const Spatial *GetSpatial(Spatial::ID id) const
-        { return const_cast<Engine*>(this)->GetSpatial(id); }*/
 
     void SetSpatialTransform(Spatial *spatial, const Transform &transform);
     
@@ -146,22 +123,18 @@ public:
     void RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
-    std::unique_ptr<GraphicsPipeline> m_swapchain_pipeline;
-
 
     ShaderGlobals *m_shader_globals;
 
-    Resources resources;
-    Assets    assets;
+    Resources               resources;
+    Assets                  assets;
+    Callbacks<CallbackType> callbacks;
 
 private:
-    struct Callbacks {
-        using CallbackFunction = std::function<void(Engine *)>;
-    };
-
     void FindTextureFormatDefaults();
 
-    std::unique_ptr<Instance> m_instance;
+    std::unique_ptr<Instance>         m_instance;
+    std::unique_ptr<GraphicsPipeline> m_root_pipeline;
 
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
@@ -170,13 +143,12 @@ private:
     ShadowRenderer   m_shadow_renderer;
     RenderList       m_render_list;
 
+
     Octree::Root m_octree_root;
     Octree m_octree;
 
     /* TMP */
     std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;
-
-    std::array<ComponentEvents<Callbacks>, CALLBACK_MAX> m_callbacks;
 };
 
 } // namespace hyperion::v2

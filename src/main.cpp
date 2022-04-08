@@ -216,7 +216,6 @@ int main()
     ImageView image_storage_view;
 #endif
 
-
     engine.Initialize();
     
     auto [monkey_obj, cube_obj] = engine.assets.Load<v2::Node>(
@@ -229,6 +228,7 @@ int main()
     monkey_obj->Translate({2.0f, 0.0f, 5.0f});
     monkey_obj->Scale(0.35f);
     monkey_obj->Update(&engine);
+
 
 
     auto opaque_fbo_id = engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0];//v2::Framebuffer::ID{1};//engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);

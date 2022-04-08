@@ -93,22 +93,22 @@ void Mesh::UploadToDevice(Device *device)
     m_vbo = std::make_unique<VertexBuffer>();
     m_ibo = std::make_unique<IndexBuffer>();
 
-    std::vector<float> packed_buffer = this->CreatePackedBuffer();
+    std::vector<float> packed_buffer = CreatePackedBuffer();
 
     /* Create and upload the VBO */
-    const size_t packed_buffer_size = (packed_buffer.size() * sizeof(float));
+    const size_t packed_buffer_size = packed_buffer.size() * sizeof(float);
     m_vbo->Create(device, packed_buffer_size);
     m_vbo->Copy(device, packed_buffer_size, packed_buffer.data());
 
     /* Create and upload the indices */
-    const size_t packed_indices_size = (m_indices.size() * sizeof(Index));
+    const size_t packed_indices_size = m_indices.size() * sizeof(Index);
     m_ibo->Create(device, packed_indices_size);
     m_ibo->Copy(device, packed_indices_size, m_indices.data());
 }
 
 void Mesh::CalculateIndices()
 {
-    this->m_indices.clear();
+    m_indices.clear();
     std::map<Vertex, Index> index_map;
 
     /* This will be our resulting buffer with only the vertices we need. */
@@ -121,10 +121,12 @@ void Mesh::CalculateIndices()
 
         /* If it does, push to our indices */
         if (it != index_map.end()) {
-            this->m_indices.push_back(it->second);
+            m_indices.push_back(it->second);
+
             continue;
         }
-        Index mesh_index = new_vertices.size();
+
+        Index mesh_index = static_cast<Index>(new_vertices.size());
 
         /* The vertex is unique, so we push it. */
         index_map[vertex] = mesh_index;
@@ -136,10 +138,10 @@ void Mesh::CalculateIndices()
     m_vertices = new_vertices;
 }
 
-
 void Mesh::SetVertices(const std::vector<Vertex> &vertices)
 {
     m_vertices = vertices;
+
     CalculateIndices();
 }
 
@@ -151,7 +153,14 @@ void Mesh::SetVertices(const std::vector<Vertex> &vertices, const std::vector<In
 
 void Mesh::Create(Engine *engine)
 {
-    UploadToDevice(engine->GetInstance()->GetDevice());
+    Track(
+        engine->callbacks.Once(Engine::CallbackType::CREATE_MESHES, [this, engine](...) {
+            UploadToDevice(engine->GetInstance()->GetDevice());
+        }),
+        engine->callbacks.Once(Engine::CallbackType::DESTROY_MESHES, [this, engine](...) {
+            Destroy(engine);
+        })
+    );
 }
 
 void Mesh::Destroy(Engine *engine)

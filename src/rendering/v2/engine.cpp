@@ -168,10 +168,10 @@ void Engine::PrepareSwapchain()
             render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
 
             render_pass_id = resources.render_passes.Add(this, std::move(render_pass));
-            m_swapchain_pipeline = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN);
+            m_root_pipeline = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN);
         }
 
-        m_swapchain_pipeline->AddFramebuffer(resources.framebuffers.Add(
+        m_root_pipeline->AddFramebuffer(resources.framebuffers.Add(
             this,
             std::move(fbo),
             &resources.render_passes[render_pass_id]->Get()
@@ -181,25 +181,25 @@ void Engine::PrepareSwapchain()
     }
 
 
-    m_swapchain_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+    m_root_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 
-    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_init += [this](...) {
+    callbacks.Once(CallbackType::CREATE_GRAPHICS_PIPELINES, [this](...) {
         m_render_list.CreatePipelines(this);
-        m_swapchain_pipeline->Create(this);
-    };
+        m_root_pipeline->Create(this);
+    });
 
-    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_deinit += [this](...) {
+    callbacks.Once(CallbackType::DESTROY_GRAPHICS_PIPELINES, [this](...) {
         m_render_list.Destroy(this);
-        m_swapchain_pipeline->Destroy(this);
-    };
-
-    m_callbacks[CALLBACK_COMPUTE_PIPELINES].on_init += [this](...) {
+        m_root_pipeline->Destroy(this);
+    });
+    
+    callbacks.Once(CallbackType::CREATE_COMPUTE_PIPELINES, [this](...) {
         resources.compute_pipelines.CreateAll(this);
-    };
+    });
 
-    m_callbacks[CALLBACK_COMPUTE_PIPELINES].on_deinit += [this](...) {
+    callbacks.Once(CallbackType::DESTROY_COMPUTE_PIPELINES, [this](...) {
         resources.compute_pipelines.RemoveAll(this);
-    };
+    });
 }
 
 void Engine::Initialize()
@@ -276,6 +276,8 @@ void Engine::Initialize()
     m_shader_globals->textures.Create(this);
 
     m_render_list.Create(this);
+
+    callbacks.TriggerPersisted(CallbackType::CREATE_MESHES);
 }
 
 void Engine::Destroy()
@@ -286,9 +288,9 @@ void Engine::Destroy()
     
     resources.Destroy(this);
 
-    m_callbacks[CALLBACK_SHADER_DATA].on_deinit(this);
-    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_deinit(this);
-    m_callbacks[CALLBACK_COMPUTE_PIPELINES].on_deinit(this);
+    callbacks.Trigger(CallbackType::DESTROY_MATERIALS);
+    callbacks.Trigger(CallbackType::DESTROY_GRAPHICS_PIPELINES);
+    callbacks.Trigger(CallbackType::DESTROY_COMPUTE_PIPELINES);
 
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
@@ -307,7 +309,7 @@ void Engine::Destroy()
 
 void Engine::Compile()
 {
-    m_callbacks[CALLBACK_SHADER_DATA].on_init(this);
+    callbacks.TriggerPersisted(CallbackType::CREATE_MATERIALS);
 
     /* Finalize materials */
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
@@ -319,9 +321,9 @@ void Engine::Compile()
 
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
-    
-    m_callbacks[CALLBACK_GRAPHICS_PIPELINES].on_init(this);
-    m_callbacks[CALLBACK_COMPUTE_PIPELINES].on_init(this);
+
+    callbacks.TriggerPersisted(CallbackType::CREATE_GRAPHICS_PIPELINES);
+    callbacks.TriggerPersisted(CallbackType::CREATE_COMPUTE_PIPELINES);
 }
 
 void Engine::UpdateDescriptorData(uint32_t frame_index)
@@ -355,7 +357,7 @@ void Engine::RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index)
 
 void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
 {
-    auto &pipeline = m_swapchain_pipeline->Get();
+    auto &pipeline = m_root_pipeline->Get();
     const uint32_t acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 
     pipeline.BeginRenderPass(command_buffer, acquired_image_index);

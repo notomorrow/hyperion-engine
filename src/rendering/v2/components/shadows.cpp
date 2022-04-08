@@ -83,14 +83,14 @@ void ShadowEffect::Create(Engine *engine)
     );
 
     CreatePerFrameData(engine);
-    
-    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
-        CreatePipeline(engine);
-    };
 
-    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_deinit += [this](Engine *engine) {
+    engine->callbacks.Once(Engine::CallbackType::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
+        CreatePipeline(engine);
+    });
+
+    engine->callbacks.Once(Engine::CallbackType::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
         DestroyPipeline(engine);
-    };
+    });
 }
 
 void ShadowEffect::Destroy(Engine *engine)
@@ -115,7 +115,7 @@ void ShadowRenderer::Create(Engine *engine)
     m_effect.CreateDescriptors(engine, binding_index);
 
     /* TMP */
-    engine->GetCallbacks(Engine::CALLBACK_GRAPHICS_PIPELINES).on_init += [this](Engine *engine) {
+    engine->callbacks.Once(Engine::CallbackType::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
         auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
 
         for (auto &opaque_pipeline : engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].pipelines.objects) {
@@ -125,7 +125,7 @@ void ShadowRenderer::Create(Engine *engine)
                 }
             }
         }
-    };
+    });
 }
 
 void ShadowRenderer::Destroy(Engine *engine)

@@ -8,6 +8,7 @@
 #include <memory>
 #include <algorithm>
 #include <queue>
+#include <unordered_map>
 
 #define HYP_ADD_OBJECT_USE_QUEUE 1
 
@@ -42,6 +43,138 @@ struct ObjectIdHolder {
     }
 };
 
+struct CallbackRef {
+    using RemoveFunction = std::function<void()>;
+
+    uint32_t id;
+    RemoveFunction remove;
+};
+
+template <class Enum, class ...Args>
+class Callbacks {
+public:
+    struct Callback {
+        using Function = std::function<void(Args...)>;
+
+        uint32_t id;
+        Function function;
+    };
+
+    struct Holder {
+        std::vector<Callback>  once_callbacks;
+        std::vector<Callback>  on_callbacks;
+
+        struct TriggerState {
+            bool triggered = false;
+            std::tuple<Args...> args;
+        } trigger_state;
+    };
+
+    CallbackRef Once(Enum key, typename Callback::Function &&function)
+    {
+        auto &holder = m_holders[key];
+
+        const auto id = ++m_id_counter;
+        
+        Callback callback{
+            .id = id,
+            .function = std::move(function)
+        };
+
+        if (holder.trigger_state.triggered) {
+            callback.function(std::get<Args>(holder.trigger_state.args)...);
+        } else {
+            holder.once_callbacks.push_back(std::move(callback));
+        }
+
+        return {
+            .id = id,
+            .remove = [this, id, &holder = m_holders[key]] {
+                RemoveCallback(id, holder.once_callbacks);
+            }
+        };
+    }
+
+    CallbackRef On(Enum key, typename Callback::Function &&function)
+    {
+        auto &holder = m_holders[key];
+
+        const auto id = ++m_id_counter;
+        
+        Callback callback{
+            .id = id,
+            .function = std::move(function)
+        };
+
+        if (holder.trigger_state.triggered) {
+            callback.function(std::get<Args>(holder.trigger_state.args)...);
+        }
+
+        holder.on_callbacks.push_back(std::move(callback));
+
+        return {
+            .id = id,
+            .remove = [this, id, &holder = m_holders[key]] {
+                RemoveCallback(id, holder.on_callbacks);
+            }
+        };
+    }
+
+    void Trigger(Enum key, Args &&... args)
+    {
+        TriggerCallbacks(false, key, std::move(args)...);
+    }
+
+    void TriggerPersisted(Enum key, Args &&... args)
+    {
+        TriggerCallbacks(true, key, std::move(args)...);
+    }
+
+private:
+    uint32_t m_id_counter = 0;
+    std::unordered_map<Enum, Holder> m_holders;
+
+    void RemoveCallback(uint32_t id, std::vector<Callback> &callbacks)
+    {
+        auto it = std::find_if(
+            callbacks.begin(),
+            callbacks.end(),
+            [id](auto &other) { return other.id == id; }
+        );
+
+        if (it != callbacks.end()) {
+            callbacks.erase(it);
+        }
+    }
+    
+    void TriggerCallbacks(bool persist, Enum key, Args &&... args)
+    {
+        auto &holder = m_holders[key];
+
+        /* make copies so that callbacks can call Remove() without invalidation... */
+        auto once_callbacks = holder.once_callbacks;
+        auto on_callbacks   = holder.on_callbacks;
+
+        const bool previous_triggered_state = holder.trigger_state.triggered;
+
+        holder.trigger_state.triggered = true;
+        holder.trigger_state.args = std::tie(args...);
+
+        for (auto &callback : once_callbacks) {
+            callback.function(std::forward<Args>(args)...);
+        }
+
+        holder.once_callbacks.clear();
+
+        for (auto &callback : on_callbacks) {
+            callback.function(std::forward<Args>(args)...);
+        }
+        
+        holder.trigger_state.triggered = previous_triggered_state || persist;
+    }
+};
+
+/* v1 callback utility still used by octree */
 template <class CallbacksClass>
 struct ComponentEvents {
     struct CallbackGroup {
