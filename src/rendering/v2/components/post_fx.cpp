@@ -29,6 +29,7 @@ void PostEffect::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
     auto render_pass = std::make_unique<RenderPass>(
+        engine->callbacks,
         renderer::RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
@@ -66,7 +67,10 @@ void PostEffect::Create(Engine *engine)
 
     AssertThrow(render_pass != nullptr);
 
-    auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent);
+    auto framebuffer = std::make_unique<Framebuffer>(
+        engine->callbacks,
+        engine->GetInstance()->swapchain->extent
+    );
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
@@ -81,11 +85,11 @@ void PostEffect::Create(Engine *engine)
 
     CreatePerFrameData(engine);
 
-    engine->callbacks.Once(Engine::CallbackType::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
+    engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
         CreatePipeline(engine);
     });
 
-    engine->callbacks.Once(Engine::CallbackType::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
+    engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
         DestroyPipeline(engine);
     });
 }
@@ -126,7 +130,12 @@ void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 
 void PostEffect::CreatePipeline(Engine *engine)
 {
-    auto pipeline = std::make_unique<GraphicsPipeline>(m_shader_id, m_render_pass_id, GraphicsPipeline::Bucket::BUCKET_PREPASS);
+    auto pipeline = std::make_unique<GraphicsPipeline>(
+        engine->callbacks,
+        m_shader_id,
+        m_render_pass_id,
+        GraphicsPipeline::Bucket::BUCKET_PREPASS
+    );
     pipeline->AddFramebuffer(m_framebuffer_id);
     pipeline->SetDepthWrite(false);
     pipeline->SetDepthTest(false);
@@ -235,10 +244,13 @@ void PostProcessing::Create(Engine *engine)
 
     /* TODO: use subpasses for gbuffer so we only have num_filters * num_frames descriptors */
     for (int i = 0; i < filter_shader_names.size(); i++) {
-        Shader::ID shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(std::vector<SubShader>{
-            SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read()}},
-            SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read()}}
-        }));
+        Shader::ID shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(
+            engine->callbacks,
+            std::vector<SubShader>{
+                SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read()}},
+                SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read()}}
+            }
+        ));
 
         m_filters[i] = std::make_unique<PostEffect>(shader_id);
         m_filters[i]->CreateRenderPass(engine);

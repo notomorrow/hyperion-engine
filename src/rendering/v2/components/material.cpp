@@ -4,34 +4,10 @@
 
 namespace hyperion::v2 {
 
-Material::Material()
-    : m_state(MATERIAL_STATE_DIRTY)
+Material::Material(EngineCallbacks &callbacks)
+    : EngineComponentBase(callbacks),
+      m_state(MATERIAL_STATE_DIRTY)
 {
-    
-}
-
-Material::Material(const Material &other)
-    : m_parameters(other.m_parameters),
-      m_state(other.m_state)
-{
-}
-
-Material &Material::operator=(const Material &other) = default;
-
-Material::Material(Material &&other)
-    : m_parameters(std::move(other.m_parameters)),
-      m_state(other.m_state)
-{
-    other.m_state = MATERIAL_STATE_DIRTY;
-}
-
-Material &Material::operator=(Material &&other)
-{
-    m_parameters = std::move(other.m_parameters);
-    m_state = other.m_state;
-    other.m_state = MATERIAL_STATE_DIRTY;
-
-    return *this;
 }
 
 Material::~Material() = default;
@@ -80,7 +56,7 @@ void Material::UpdateShaderData(Engine *engine) const
 
 void Material::Create(Engine *engine)
 {
-    Track(engine->callbacks.Once(Engine::CallbackType::CREATE_MATERIALS, [this, engine](...) {
+    Track(engine->callbacks.Once(EngineCallback::CREATE_MATERIALS, [this, engine](...) {
         UpdateShaderData(engine);
     }));
 }

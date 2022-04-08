@@ -15,16 +15,23 @@ ShadowEffect::~ShadowEffect() = default;
 
 void ShadowEffect::CreateShader(Engine *engine)
 {
-    m_shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(std::vector<SubShader>{
-        SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/vert.spv").Read()} },
-        SubShader{ ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/shadow_frag.spv").Read()} }
-    }));
+    m_shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(
+        engine->callbacks,
+        std::vector<SubShader>{
+            SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/vert.spv").Read()} },
+            SubShader{ ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/shadow_frag.spv").Read()} }
+        }
+    ));
 }
 
 void ShadowEffect::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
-    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPassStage::SHADER, renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER);
+    auto render_pass = std::make_unique<RenderPass>(
+        engine->callbacks,
+        renderer::RenderPassStage::SHADER,
+        renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
+    );
 
     renderer::AttachmentRef *attachment_ref;
 
@@ -55,7 +62,12 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
 
 void ShadowEffect::CreatePipeline(Engine *engine)
 {
-    auto pipeline = std::make_unique<GraphicsPipeline>(m_shader_id, m_render_pass_id, GraphicsPipeline::Bucket::BUCKET_PREPASS);
+    auto pipeline = std::make_unique<GraphicsPipeline>(
+        engine->callbacks,
+        m_shader_id,
+        m_render_pass_id,
+        GraphicsPipeline::Bucket::BUCKET_PREPASS
+    );
     pipeline->SetCullMode(renderer::GraphicsPipeline::CullMode::FRONT);
     pipeline->AddFramebuffer(m_framebuffer_id);
     pipeline->SetSceneIndex(1);
@@ -69,7 +81,10 @@ void ShadowEffect::Create(Engine *engine)
 
     AssertThrow(render_pass != nullptr);
 
-    auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent);
+    auto framebuffer = std::make_unique<Framebuffer>(
+        engine->callbacks,
+        engine->GetInstance()->swapchain->extent
+    );
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
@@ -84,11 +99,11 @@ void ShadowEffect::Create(Engine *engine)
 
     CreatePerFrameData(engine);
 
-    engine->callbacks.Once(Engine::CallbackType::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
+    engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
         CreatePipeline(engine);
     });
 
-    engine->callbacks.Once(Engine::CallbackType::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
+    engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
         DestroyPipeline(engine);
     });
 }
@@ -115,7 +130,7 @@ void ShadowRenderer::Create(Engine *engine)
     m_effect.CreateDescriptors(engine, binding_index);
 
     /* TMP */
-    engine->callbacks.Once(Engine::CallbackType::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
+    engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
         auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
 
         for (auto &opaque_pipeline : engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].pipelines.objects) {

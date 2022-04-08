@@ -14,15 +14,15 @@
 
 namespace hyperion::v2 {
 
-Mesh::Mesh()
-    : m_vertex_attributes(
+Mesh::Mesh(EngineCallbacks &callbacks)
+    : EngineComponentBase(callbacks),
+      m_vertex_attributes(
           MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
-      )
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT)
 {
 }
 
@@ -154,10 +154,10 @@ void Mesh::SetVertices(const std::vector<Vertex> &vertices, const std::vector<In
 void Mesh::Create(Engine *engine)
 {
     Track(
-        engine->callbacks.Once(Engine::CallbackType::CREATE_MESHES, [this, engine](...) {
+        engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this, engine](...) {
             UploadToDevice(engine->GetInstance()->GetDevice());
         }),
-        engine->callbacks.Once(Engine::CallbackType::DESTROY_MESHES, [this, engine](...) {
+        engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this, engine](...) {
             Destroy(engine);
         })
     );

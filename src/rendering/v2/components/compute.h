@@ -14,7 +14,7 @@ using renderer::CommandBuffer;
 
 class ComputePipeline : public EngineComponent<renderer::ComputePipeline> {
 public:
-    explicit ComputePipeline(Shader::ID shader_id);
+    explicit ComputePipeline(EngineCallbacks &callbacks, Shader::ID shader_id);
     ComputePipeline(const ComputePipeline &) = delete;
     ComputePipeline &operator=(const ComputePipeline &) = delete;
     ~ComputePipeline();

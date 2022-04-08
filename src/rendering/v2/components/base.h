@@ -72,6 +72,9 @@ public:
 
     static constexpr ID bad_id = ID{0};
 
+    EngineComponentBase(EngineCallbacks &) {}
+    EngineComponentBase(const EngineComponentBase &other) = delete;
+    EngineComponentBase &operator=(const EngineComponentBase &other) = delete;
     ~EngineComponentBase()
     {
         for (auto &callback_ref : m_callback_refs) {
@@ -103,20 +106,23 @@ protected:
         );
     }
 
-    typename EngineComponentBase<Type>::ID m_id;
+    ID m_id;
     std::vector<CallbackRef> m_callback_refs;
 };
 
 template <class WrappedType>
 class EngineComponent : public EngineComponentBase<WrappedType> {
 public:
+
     template <class ...Args>
-    EngineComponent(Args &&... args)
-        : m_wrapped(std::move(args)...),
+    EngineComponent(EngineCallbacks &callbacks, Args &&... args)
+        : EngineComponentBase<WrappedType>(callbacks),
+          m_wrapped(std::move(args)...),
           m_is_created(false)
-    {}
+    {
+    }
     
-    EngineComponent(EngineComponent &&other) noexcept
+    /*EngineComponent(EngineComponent &&other) noexcept
         : m_wrapped(std::move(other.m_wrapped)),
           m_is_created(other.m_is_created)
     {
@@ -130,7 +136,7 @@ public:
         other.m_is_created = false;
 
         return *this;
-    }
+    }*/
 
     EngineComponent(const EngineComponent &other) = delete;
     EngineComponent &operator=(const EngineComponent &other) = delete;
@@ -188,6 +194,8 @@ public:
     }
 
 protected:
+    using ThisComponent = EngineComponent<WrappedType>;
+
     WrappedType m_wrapped;
     bool m_is_created;
 };

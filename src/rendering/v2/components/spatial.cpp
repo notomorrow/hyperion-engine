@@ -5,12 +5,14 @@
 namespace hyperion::v2 {
 
 Spatial::Spatial(
+    EngineCallbacks &callbacks,
     Mesh *mesh,
     const MeshInputAttributeSet &attributes,
     const Transform &transform,
     const BoundingBox &local_aabb,
     Material::ID material_id)
-    : m_mesh(mesh),
+    : EngineComponent(callbacks),
+      m_mesh(mesh),
       m_attributes(attributes),
       m_transform(transform),
       m_local_aabb(local_aabb),

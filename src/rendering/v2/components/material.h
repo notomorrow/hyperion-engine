@@ -218,11 +218,7 @@ public:
 
     using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
 
-    Material();
-    Material(const Material &other);
-    Material &operator=(const Material &other);
-    Material(Material &&other);
-    Material &operator=(Material &&other);
+    Material(EngineCallbacks &callbacks);
     ~Material();
 
     inline const Parameter &GetParameter(MaterialKey key) const

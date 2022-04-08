@@ -9,8 +9,9 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 
-GraphicsPipeline::GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_pass_id, Bucket bucket)
-    : m_shader_id(shader_id),
+GraphicsPipeline::GraphicsPipeline(EngineCallbacks &callbacks, Shader::ID shader_id, RenderPass::ID render_pass_id, Bucket bucket)
+    : EngineComponent(callbacks),
+      m_shader_id(shader_id),
       m_render_pass_id(render_pass_id),
       m_bucket(bucket),
       m_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
@@ -29,6 +30,7 @@ GraphicsPipeline::GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_p
       m_per_frame_data(nullptr),
       m_scene_index(0)
 {
+    /* TODO: callbacks */
 }
 
 GraphicsPipeline::~GraphicsPipeline()

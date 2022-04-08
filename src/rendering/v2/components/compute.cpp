@@ -2,8 +2,8 @@
 #include "../engine.h"
 
 namespace hyperion::v2 {
-ComputePipeline::ComputePipeline(Shader::ID shader_id)
-    : EngineComponent(),
+ComputePipeline::ComputePipeline(EngineCallbacks &callbacks, Shader::ID shader_id)
+    : EngineComponent(callbacks),
       m_shader_id(shader_id)
 {
 }

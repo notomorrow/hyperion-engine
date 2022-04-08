@@ -35,22 +35,6 @@ using renderer::StorageBuffer;
  */
 class Engine {
 public:
-    enum class CallbackType {
-        NONE,
-
-        CREATE_MESHES,
-        DESTROY_MESHES,
-
-        CREATE_MATERIALS,
-        DESTROY_MATERIALS,
-
-        CREATE_GRAPHICS_PIPELINES,
-        DESTROY_GRAPHICS_PIPELINES,
-
-        CREATE_COMPUTE_PIPELINES,
-        DESTROY_COMPUTE_PIPELINES
-    };
-
     enum TextureFormatDefault {
         TEXTURE_FORMAT_DEFAULT_NONE    = 0,
         TEXTURE_FORMAT_DEFAULT_COLOR   = 1,
@@ -128,7 +112,7 @@ public:
 
     Resources               resources;
     Assets                  assets;
-    Callbacks<CallbackType> callbacks;
+    EngineCallbacks         callbacks;
 
 private:
     void FindTextureFormatDefaults();

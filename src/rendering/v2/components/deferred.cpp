@@ -16,10 +16,13 @@ DeferredRenderingEffect::~DeferredRenderingEffect() = default;
 
 void DeferredRenderingEffect::CreateShader(Engine *engine)
 {
-    m_shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(std::vector<SubShader>{
-        SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read()}},
-        SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read()}}
-    }));
+    m_shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(
+        engine->callbacks,
+        std::vector<SubShader>{
+            SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read()}},
+            SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read()}}
+        }
+    ));
 }
 
 void DeferredRenderingEffect::CreateRenderPass(Engine *engine)
@@ -33,11 +36,11 @@ void DeferredRenderingEffect::Create(Engine *engine)
 
     CreatePerFrameData(engine);
 
-    engine->callbacks.Once(Engine::CallbackType::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
+    engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
         CreatePipeline(engine);
     });
 
-    engine->callbacks.Once(Engine::CallbackType::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
+    engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
         DestroyPipeline(engine);
     });
 }

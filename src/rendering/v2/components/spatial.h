@@ -27,7 +27,7 @@ class Spatial : public EngineComponent<STUB_CLASS(Spatial)> {
     friend class Engine;
     friend class GraphicsPipeline;
 public:
-    Spatial(
+    Spatial(EngineCallbacks &callbacks,
         Mesh *mesh,
         const MeshInputAttributeSet &attributes,
         const Transform &transform,
