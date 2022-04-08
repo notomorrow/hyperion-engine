@@ -32,7 +32,7 @@ class Mesh : public EngineComponentBase<STUB_CLASS(Mesh)> {
 public:
     using Index = uint32_t;
 
-    Mesh();
+    Mesh(EngineCallbacks &callbacks);
     ~Mesh();
 
     inline const MeshInputAttributeSet &GetVertexAttributes() const

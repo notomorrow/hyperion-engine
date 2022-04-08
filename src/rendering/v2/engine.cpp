@@ -98,15 +98,22 @@ void Engine::PrepareSwapchain()
 
     // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
     {
-        shader_id = resources.shaders.Add(this, std::make_unique<Shader>(std::vector<SubShader>{
-            {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()}},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}}
-        }));
+        shader_id = resources.shaders.Add(this, std::make_unique<Shader>(
+            callbacks,
+            std::vector<SubShader>{
+                {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()}},
+                {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}}
+            }
+        ));
     }
 
     uint32_t iteration = 0;
 
-    auto render_pass = std::make_unique<RenderPass>(renderer::RenderPassStage::PRESENT, renderer::RenderPass::Mode::RENDER_PASS_INLINE);
+    auto render_pass = std::make_unique<RenderPass>(
+        callbacks,
+        renderer::RenderPassStage::PRESENT,
+        renderer::RenderPass::Mode::RENDER_PASS_INLINE
+    );
     RenderPass::ID render_pass_id{};
 
 
@@ -133,7 +140,10 @@ void Engine::PrepareSwapchain()
     }
 
     for (VkImage img : m_instance->swapchain->images) {
-        auto fbo = std::make_unique<Framebuffer>(m_instance->swapchain->extent);
+        auto fbo = std::make_unique<Framebuffer>(
+            callbacks,
+            m_instance->swapchain->extent
+        );
 
         renderer::AttachmentRef *attachment_ref[2];
 
@@ -168,7 +178,12 @@ void Engine::PrepareSwapchain()
             render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
 
             render_pass_id = resources.render_passes.Add(this, std::move(render_pass));
-            m_root_pipeline = std::make_unique<GraphicsPipeline>(shader_id, render_pass_id, GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN);
+            m_root_pipeline = std::make_unique<GraphicsPipeline>(
+                callbacks,
+                shader_id,
+                render_pass_id,
+                GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN
+            );
         }
 
         m_root_pipeline->AddFramebuffer(resources.framebuffers.Add(
@@ -183,21 +198,21 @@ void Engine::PrepareSwapchain()
 
     m_root_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 
-    callbacks.Once(CallbackType::CREATE_GRAPHICS_PIPELINES, [this](...) {
+    callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
         m_render_list.CreatePipelines(this);
         m_root_pipeline->Create(this);
     });
 
-    callbacks.Once(CallbackType::DESTROY_GRAPHICS_PIPELINES, [this](...) {
+    callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](...) {
         m_render_list.Destroy(this);
         m_root_pipeline->Destroy(this);
     });
     
-    callbacks.Once(CallbackType::CREATE_COMPUTE_PIPELINES, [this](...) {
+    callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](...) {
         resources.compute_pipelines.CreateAll(this);
     });
 
-    callbacks.Once(CallbackType::DESTROY_COMPUTE_PIPELINES, [this](...) {
+    callbacks.Once(EngineCallback::DESTROY_COMPUTE_PIPELINES, [this](...) {
         resources.compute_pipelines.RemoveAll(this);
     });
 }
@@ -277,7 +292,7 @@ void Engine::Initialize()
 
     m_render_list.Create(this);
 
-    callbacks.TriggerPersisted(CallbackType::CREATE_MESHES);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES);
 }
 
 void Engine::Destroy()
@@ -288,9 +303,9 @@ void Engine::Destroy()
     
     resources.Destroy(this);
 
-    callbacks.Trigger(CallbackType::DESTROY_MATERIALS);
-    callbacks.Trigger(CallbackType::DESTROY_GRAPHICS_PIPELINES);
-    callbacks.Trigger(CallbackType::DESTROY_COMPUTE_PIPELINES);
+    callbacks.Trigger(EngineCallback::DESTROY_MATERIALS);
+    callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES);
+    callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES);
 
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
@@ -309,7 +324,7 @@ void Engine::Destroy()
 
 void Engine::Compile()
 {
-    callbacks.TriggerPersisted(CallbackType::CREATE_MATERIALS);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS);
 
     /* Finalize materials */
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
@@ -322,8 +337,8 @@ void Engine::Compile()
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
 
-    callbacks.TriggerPersisted(CallbackType::CREATE_GRAPHICS_PIPELINES);
-    callbacks.TriggerPersisted(CallbackType::CREATE_COMPUTE_PIPELINES);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES);
 }
 
 void Engine::UpdateDescriptorData(uint32_t frame_index)

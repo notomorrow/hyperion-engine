@@ -271,7 +271,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
         /* TODO: These Add() functions need to be thread-safe */
 
         engine->resources.Lock([&](Resources &resources) {
-            auto mesh = resources.meshes.Add();
+            auto mesh = resources.meshes.Add(engine->callbacks);
             mesh->SetVertices(vertices, indices);
 
             if (!has_normals) {
@@ -291,6 +291,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             auto spatial_id = resources.spatials.Add(
                 engine,
                 std::make_unique<Spatial>(
+                    engine->callbacks,
                     mesh,
                     mesh->GetVertexAttributes(),
                     Transform(),

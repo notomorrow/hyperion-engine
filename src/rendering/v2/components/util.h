@@ -174,6 +174,24 @@ private:
     }
 };
 
+enum class EngineCallback {
+    NONE,
+
+    CREATE_MESHES,
+    DESTROY_MESHES,
+
+    CREATE_MATERIALS,
+    DESTROY_MATERIALS,
+
+    CREATE_GRAPHICS_PIPELINES,
+    DESTROY_GRAPHICS_PIPELINES,
+
+    CREATE_COMPUTE_PIPELINES,
+    DESTROY_COMPUTE_PIPELINES
+};
+
+using EngineCallbacks = Callbacks<EngineCallback>;
+
 /* v1 callback utility still used by octree */
 template <class CallbacksClass>
 struct ComponentEvents {

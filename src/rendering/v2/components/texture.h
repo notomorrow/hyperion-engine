@@ -21,7 +21,8 @@ using renderer::Extent3D;
 
 class Texture : public EngineComponent<TextureImage> {
 public:
-    Texture(Extent3D extent,
+    Texture(EngineCallbacks &callbacks,
+        Extent3D extent,
         Image::InternalFormat format,
         Image::Type type,
         Image::FilterMode filter_mode,
@@ -45,12 +46,15 @@ private:
 
 class Texture2D : public Texture {
 public:
-    Texture2D(Extent2D extent,
+    Texture2D(
+        EngineCallbacks &callbacks,
+        Extent2D extent,
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
         const unsigned char *bytes
     ) : Texture(
+        callbacks,
         Extent3D(extent),
         format,
         Image::Type::TEXTURE_TYPE_2D,
@@ -62,12 +66,15 @@ public:
 
 class Texture3D : public Texture {
 public:
-    Texture3D(Extent3D extent,
+    Texture3D(
+        EngineCallbacks &callbacks,
+        Extent3D extent,
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
         const unsigned char *bytes
     ) : Texture(
+        callbacks,
         extent,
         format,
         Image::Type::TEXTURE_TYPE_3D,
@@ -79,12 +86,15 @@ public:
 
 class TextureCube : public Texture {
 public:
-    TextureCube(Extent2D extent,
+    TextureCube(
+        EngineCallbacks &callbacks,
+        Extent2D extent,
         Image::InternalFormat format,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
         const unsigned char *bytes
     ) : Texture(
+        callbacks,
         Extent3D(extent),
         format,
         Image::Type::TEXTURE_TYPE_CUBEMAP,
@@ -92,33 +102,6 @@ public:
         wrap_mode,
         bytes
     ) {}
-};
-
-class TextureArray {
-public:
-    TextureArray(Extent3D extent,
-        Image::InternalFormat format,
-        Image::Type type,
-        Image::FilterMode filter_mode,
-        Image::WrapMode wrap_mode);
-    TextureArray(const TextureArray &other);
-    TextureArray &operator=(const TextureArray &other);
-    ~TextureArray();
-
-    void AddTexture(Engine *engine, Texture::ID texture_id);
-    void RemoveTexture(Texture::ID texture_id);
-
-private:
-    Extent3D m_extent;
-    Image::InternalFormat m_format;
-    Image::Type m_type;
-    Image::FilterMode m_filter_mode;
-    Image::WrapMode m_wrap_mode;
-
-    std::vector<Image *> m_images;
-    std::vector<ImageView *> m_image_views;
-    std::vector<Sampler *> m_samplers;
-    std::map<Texture::ID, size_t> m_index_map;
 };
 
 } // namespace hyperion::v2

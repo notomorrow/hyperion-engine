@@ -50,7 +50,7 @@ public:
             { return value < other.value && bucket < other.bucket; }
     };
 
-    GraphicsPipeline(Shader::ID shader_id, RenderPass::ID render_pass_id, Bucket bucket);
+    GraphicsPipeline(EngineCallbacks &callbacks, Shader::ID shader_id, RenderPass::ID render_pass_id, Bucket bucket);
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();

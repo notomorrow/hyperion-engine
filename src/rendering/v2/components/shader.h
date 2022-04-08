@@ -195,7 +195,7 @@ struct SubShader {
 
 class Shader : public EngineComponent<renderer::ShaderProgram> {
 public:
-    explicit Shader(const std::vector<SubShader> &sub_shaders);
+    Shader(EngineCallbacks &callbacks, const std::vector<SubShader> &sub_shaders);
     Shader(const Shader &) = delete;
     Shader &operator=(const Shader &) = delete;
     ~Shader();

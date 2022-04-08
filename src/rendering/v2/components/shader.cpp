@@ -2,8 +2,8 @@
 #include "../engine.h"
 
 namespace hyperion::v2 {
-Shader::Shader(const std::vector<SubShader> &sub_shaders)
-    : EngineComponent(),
+Shader::Shader(EngineCallbacks &callbacks, const std::vector<SubShader> &sub_shaders)
+    : EngineComponent(callbacks),
       m_sub_shaders(sub_shaders)
 {
 }

@@ -163,6 +163,7 @@ int main()
 
 
     auto *cubemap = new v2::TextureCube(
+        engine.callbacks,
         Extent2D{
             uint32_t(cubemap_faces[0]->GetWidth()),
             uint32_t(cubemap_faces[0]->GetHeight())
@@ -180,6 +181,7 @@ int main()
     // test image
     auto tex = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
     auto *texture = new v2::Texture2D(
+        engine.callbacks,
         Extent2D{
             uint32_t(tex->GetWidth()),
             uint32_t(tex->GetHeight())
@@ -193,6 +195,7 @@ int main()
     // test image
     auto tex2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
     auto *texture2 = new v2::Texture2D(
+        engine.callbacks,
         Extent2D{
             uint32_t(tex2->GetWidth()),
             uint32_t(tex2->GetHeight())
@@ -347,10 +350,13 @@ int main()
     
     v2::Shader::ID mirror_shader_id{};
     {
-        auto mirror_shader = std::make_unique<v2::Shader>(std::vector<v2::SubShader>{
-            {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() }},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }}
-        });
+        auto mirror_shader = std::make_unique<v2::Shader>(
+            engine.callbacks,
+            std::vector<v2::SubShader>{
+                {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() }},
+                {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }}
+            }
+        );
 
         mirror_shader_id = engine.resources.shaders.Add(&engine, std::move(mirror_shader));
     }
@@ -387,14 +393,17 @@ int main()
 
     v2::Shader::ID compute_shader_id{};
     {
-        auto compute_shader = std::make_unique<v2::Shader>(std::vector<v2::SubShader>{
-            { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read()}}
-        });
+        auto compute_shader = std::make_unique<v2::Shader>(
+            engine.callbacks,
+            std::vector<v2::SubShader>{
+                { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read()}}
+            }
+        );
 
         compute_shader_id = engine.AddShader(std::move(compute_shader));
     }
 
-    v2::ComputePipeline::ID compute_pipeline_id = engine.AddComputePipeline(std::make_unique<v2::ComputePipeline>(compute_shader_id));
+    v2::ComputePipeline::ID compute_pipeline_id = engine.AddComputePipeline(std::make_unique<v2::ComputePipeline>(engine.callbacks, compute_shader_id));
 
 
     auto compute_command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_PRIMARY);
@@ -425,21 +434,21 @@ int main()
     v2::Node new_root("root");
 
 
-    auto mat1 = std::make_unique<v2::Material>();
+    auto mat1 = std::make_unique<v2::Material>(engine.callbacks);
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
     mat1->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     v2::Material::ID mat1_id = engine.resources.materials.Add(&engine, std::move(mat1));
 
-    auto mat2 = std::make_unique<v2::Material>();
+    auto mat2 = std::make_unique<v2::Material>(engine.callbacks);
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
     mat2->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     v2::Material::ID mat2_id = engine.resources.materials.Add(&engine, std::move(mat2));
 
-    auto skybox_material = std::make_unique<v2::Material>();
+    auto skybox_material = std::make_unique<v2::Material>(engine.callbacks);
     skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
     v2::Material::ID skybox_material_id = engine.resources.materials.Add(&engine, std::move(skybox_material));
 
-    auto translucent_material = std::make_unique<v2::Material>();
+    auto translucent_material = std::make_unique<v2::Material>(engine.callbacks);
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
     v2::Material::ID translucent_material_id = engine.resources.materials.Add(&engine, std::move(translucent_material));
 
@@ -447,8 +456,12 @@ int main()
 
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE);
-        //Transform monkey_transform(Vector3(9.0f), Vector3(1.0f), Quaternion());
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(
+            engine.callbacks,
+            mirror_shader_id,
+            engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id,
+            v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
+        );
 
         monkey_spatial = monkey_obj->GetChild(0)->GetSpatial();
 
@@ -467,12 +480,20 @@ int main()
     v2::GraphicsPipeline::ID skybox_pipeline_id{};
     {
 
-        v2::Shader::ID shader_id = engine.resources.shaders.Add(&engine, std::make_unique<v2::Shader>(std::vector<v2::SubShader>{
-            {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
-        }));
+        v2::Shader::ID shader_id = engine.resources.shaders.Add(&engine, std::make_unique<v2::Shader>(
+            engine.callbacks,
+            std::vector<v2::SubShader>{
+                {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
+                {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
+            }
+        ));
 
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(shader_id, engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(
+            engine.callbacks,
+            shader_id,
+            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass_id,
+            v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX
+        );
         pipeline->SetCullMode(GraphicsPipeline::CullMode::FRONT);
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
@@ -486,7 +507,12 @@ int main()
 
     v2::GraphicsPipeline::ID translucent_pipeline_id{};
     {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(
+            engine.callbacks,
+            mirror_shader_id,
+            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
+            v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
+        );
         pipeline->SetBlendEnabled(true);
 
         v2::Spatial *translucent_spatial = cube_obj->GetChild(0)->GetSpatial();
@@ -498,7 +524,12 @@ int main()
 
     v2::GraphicsPipeline::ID wire_pipeline_id{};
     {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(mirror_shader_id, engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id, v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT);
+        auto pipeline = std::make_unique<v2::GraphicsPipeline>(
+            engine.callbacks,
+            mirror_shader_id,
+            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
+            v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
+        );
         pipeline->SetBlendEnabled(false);
         pipeline->SetFillMode(GraphicsPipeline::FillMode::LINE);
         pipeline->SetCullMode(GraphicsPipeline::CullMode::NONE);
