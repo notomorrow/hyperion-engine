@@ -110,27 +110,17 @@ using namespace hyperion;
 int main()
 {
     using namespace hyperion::renderer;
-
-
-
+    
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
 
 
-
-
     
-
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
     system.SetCurrentWindow(window);
 
     SystemEvent event;
-
-    auto my_node = AssetManager::GetInstance()->LoadFromFile<Node>("models/monkey/monkey.obj");
-    auto monkey_mesh = std::dynamic_pointer_cast<Mesh>(my_node->GetChild(0)->GetRenderable());
-    auto cube_mesh = MeshFactory::CreateCube();
-    Material my_material;
 
     v2::Engine engine(system, "My app");
 
@@ -163,7 +153,6 @@ int main()
 
 
     auto *cubemap = new v2::TextureCube(
-        engine.callbacks,
         Extent2D{
             uint32_t(cubemap_faces[0]->GetWidth()),
             uint32_t(cubemap_faces[0]->GetHeight())
@@ -181,7 +170,6 @@ int main()
     // test image
     auto tex = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
     auto *texture = new v2::Texture2D(
-        engine.callbacks,
         Extent2D{
             uint32_t(tex->GetWidth()),
             uint32_t(tex->GetHeight())
@@ -195,7 +183,6 @@ int main()
     // test image
     auto tex2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
     auto *texture2 = new v2::Texture2D(
-        engine.callbacks,
         Extent2D{
             uint32_t(tex2->GetWidth()),
             uint32_t(tex2->GetHeight())
@@ -348,19 +335,12 @@ int main()
     
     engine.PrepareSwapchain();
     
-    v2::Shader::ID mirror_shader_id{};
-    {
-        auto mirror_shader = std::make_unique<v2::Shader>(
-            engine.callbacks,
-            std::vector<v2::SubShader>{
-                {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() }},
-                {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() }}
-            }
-        );
-
-        mirror_shader_id = engine.resources.shaders.Add(&engine, std::move(mirror_shader));
-    }
-    //pipelines[1]->GetConstructionInfo().fbos[0]->GetAttachmentImageInfos()[0]->image->GetGPUImage()->Map();
+    auto mirror_shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
+        std::vector<v2::SubShader>{
+            {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() }},
+            { ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() } }
+        }
+    ));
 
     float timer = 0.0;
 
@@ -394,7 +374,6 @@ int main()
     v2::Shader::ID compute_shader_id{};
     {
         auto compute_shader = std::make_unique<v2::Shader>(
-            engine.callbacks,
             std::vector<v2::SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read()}}
             }
@@ -434,21 +413,21 @@ int main()
     v2::Node new_root("root");
 
 
-    auto mat1 = std::make_unique<v2::Material>(engine.callbacks);
+    auto mat1 = std::make_unique<v2::Material>();
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
     mat1->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     v2::Material::ID mat1_id = engine.resources.materials.Add(&engine, std::move(mat1));
 
-    auto mat2 = std::make_unique<v2::Material>(engine.callbacks);
+    auto mat2 = std::make_unique<v2::Material>();
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
     mat2->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     v2::Material::ID mat2_id = engine.resources.materials.Add(&engine, std::move(mat2));
 
-    auto skybox_material = std::make_unique<v2::Material>(engine.callbacks);
+    auto skybox_material = std::make_unique<v2::Material>();
     skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
     v2::Material::ID skybox_material_id = engine.resources.materials.Add(&engine, std::move(skybox_material));
 
-    auto translucent_material = std::make_unique<v2::Material>(engine.callbacks);
+    auto translucent_material = std::make_unique<v2::Material>();
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
     v2::Material::ID translucent_material_id = engine.resources.materials.Add(&engine, std::move(translucent_material));
 
@@ -457,8 +436,7 @@ int main()
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            engine.callbacks,
-            mirror_shader_id,
+            mirror_shader.Acquire(&engine),
             engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
         );
@@ -466,7 +444,7 @@ int main()
         monkey_spatial = monkey_obj->GetChild(0)->GetSpatial();
 
         auto monkey_node = std::make_unique<v2::Node>("monkey");
-        monkey_node->SetSpatial(monkey_spatial);
+        monkey_node->SetSpatial(&engine, monkey_spatial);
         new_root.AddChild(std::move(monkey_node));
         
         pipeline->AddSpatial(&engine, monkey_spatial);
@@ -480,8 +458,7 @@ int main()
     v2::GraphicsPipeline::ID skybox_pipeline_id{};
     {
 
-        v2::Shader::ID shader_id = engine.resources.shaders.Add(&engine, std::make_unique<v2::Shader>(
-            engine.callbacks,
+        auto shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
             std::vector<v2::SubShader>{
                 {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
                 {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
@@ -489,8 +466,7 @@ int main()
         ));
 
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            engine.callbacks,
-            shader_id,
+            std::move(shader),
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX
         );
@@ -508,8 +484,7 @@ int main()
     v2::GraphicsPipeline::ID translucent_pipeline_id{};
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            engine.callbacks,
-            mirror_shader_id,
+            mirror_shader.Acquire(&engine),
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
         );
@@ -525,8 +500,7 @@ int main()
     v2::GraphicsPipeline::ID wire_pipeline_id{};
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            engine.callbacks,
-            mirror_shader_id,
+            mirror_shader.Acquire(&engine),
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
         );
@@ -730,8 +704,9 @@ int main()
     AssertThrow(engine.GetInstance()->GetDevice()->Wait());
 
     v2::PostEffect::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
-    monkey_mesh.reset(); // TMP: here to delete the mesh, so that it doesn't crash when renderer is disposed before the vbo + ibo
-    cube_mesh.reset();
+
+    monkey_obj.reset();
+    cube_obj.reset();
 
     matrices_descriptor_buffer.Destroy(device);
     scene_data_descriptor_buffer.Destroy(device);

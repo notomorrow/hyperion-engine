@@ -75,7 +75,6 @@ std::unique_ptr<Texture> TextureLoader::BuildFn(Engine *engine, const Object &ob
         auto texture_id = resources.textures.Add(
             engine,
             std::make_unique<Texture2D>(
-                engine->callbacks,
                 Extent2D{
                     uint32_t(object.width),
                     uint32_t(object.height)

@@ -9,8 +9,8 @@
 #include <algorithm>
 #include <queue>
 #include <unordered_map>
-
-#define HYP_ADD_OBJECT_USE_QUEUE 1
+#include <functional>
+#include <tuple>
 
 namespace hyperion::v2 {
 
@@ -43,11 +43,93 @@ struct ObjectIdHolder {
     }
 };
 
+template <class Bucket>
 struct CallbackRef {
     using RemoveFunction = std::function<void()>;
 
     uint32_t id;
-    RemoveFunction remove;
+    Bucket *bucket;
+    typename Bucket::ArgsTuple bound_args;
+
+    CallbackRef()
+        : id(0),
+          bucket(nullptr),
+          bound_args{}
+    {
+    }
+
+    CallbackRef(uint32_t id, Bucket *bucket)
+        : id(id),
+          bucket(bucket),
+          bound_args{}
+    {
+    }
+
+    CallbackRef(const CallbackRef &other) = delete;
+    CallbackRef &operator=(const CallbackRef &other) = delete;
+
+    CallbackRef(CallbackRef &&other) noexcept
+        : id(other.id),
+          bucket(other.bucket),
+          bound_args(std::move(other.bound_args))
+    {
+        other.id = 0;
+        other.bucket = nullptr;
+    }
+    
+    CallbackRef &operator=(CallbackRef &&other) noexcept
+    {
+        if (&other == this) {
+            return *this;
+        }
+
+        if (Valid()) {
+            Remove();
+        }
+
+        id = other.id;
+        bucket = other.bucket;
+        bound_args = std::move(other.bound_args);
+
+        other.id = 0;
+        other.bucket = nullptr;
+
+        return *this;
+    }
+
+    ~CallbackRef() { /*Remove();*/ }
+
+    bool Valid() const { return id != 0 && bucket != nullptr; }
+
+    bool Remove()
+    {
+        const bool result = Valid() && bucket->Remove(id);
+
+        id = 0;
+        bucket = nullptr;
+        bound_args = {};
+
+        return result;
+    }
+
+    CallbackRef &Bind(typename Bucket::ArgsTuple &&args)
+    {
+        bound_args = std::move(args);
+
+        return *this;
+    }
+
+    bool Trigger()
+    {
+        if (!Valid()) {
+            return false;
+        }
+
+        /* expand bound_args tuple into Trigger() function args */
+        return std::apply([this]<class ...Args>(Args ... args) -> bool {
+            return bucket->Trigger(id, std::forward<Args>(args)...);
+        }, bound_args);
+    }
 };
 
 template <class Enum, class ...Args>
@@ -57,45 +139,82 @@ public:
         using Function = std::function<void(Args...)>;
 
         uint32_t id;
-        Function function;
+        Function fn;
+
+        bool Valid() const { return id != 0; }
     };
 
-    struct Holder {
-        std::vector<Callback>  once_callbacks;
-        std::vector<Callback>  on_callbacks;
+    struct Bucket {
+        using ArgsTuple = std::tuple<Args...>;
+
+        std::vector<Callback> once_callbacks;
+        std::vector<Callback> on_callbacks;
 
         struct TriggerState {
             bool triggered = false;
-            std::tuple<Args...> args;
-        } trigger_state;
-    };
+            ArgsTuple args;
+        } trigger_state = {};
 
-    CallbackRef Once(Enum key, typename Callback::Function &&function)
-    {
-        auto &holder = m_holders[key];
-
-        const auto id = ++m_id_counter;
-        
-        Callback callback{
-            .id = id,
-            .function = std::move(function)
-        };
-
-        if (holder.trigger_state.triggered) {
-            callback.function(std::get<Args>(holder.trigger_state.args)...);
-        } else {
-            holder.once_callbacks.push_back(std::move(callback));
+        auto Find(uint32_t id, std::vector<Callback> &callbacks) -> typename std::vector<Callback>::iterator
+        {
+            return std::find_if(
+                callbacks.begin(),
+                callbacks.end(),
+                [id](auto &other) { return other.id == id; }
+            );
         }
 
-        return {
-            .id = id,
-            .remove = [this, id, &holder = m_holders[key]] {
-                RemoveCallback(id, holder.once_callbacks);
-            }
-        };
-    }
+        bool Remove(uint32_t id)
+        {
+            auto once_it = Find(id, once_callbacks);
 
-    CallbackRef On(Enum key, typename Callback::Function &&function)
+            if (once_it != once_callbacks.end()) {
+                once_callbacks.erase(once_it);
+
+                return true;
+            }
+
+            auto on_it = Find(id, on_callbacks);
+
+            if (on_it != on_callbacks.end()) {
+                on_callbacks.erase(on_it);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /*! \brief Trigger a specific callback, removing it if it is a `once` callback. */
+        bool Trigger(uint32_t id, Args &&... args)
+        {
+            auto once_it = Find(id, once_callbacks);
+
+            if (once_it != once_callbacks.end()) {
+                once_it->fn(std::forward<Args>(args)...);
+                once_callbacks.erase(once_it);
+
+                return true;
+            }
+
+            auto on_it = Find(id, on_callbacks);
+
+            if (on_it != on_callbacks.end()) {
+                on_it->fn(std::forward<Args>(args)...);
+
+                return true;
+            }
+
+            return false;
+        }
+    };
+
+    Callbacks() = default;
+    Callbacks(const Callbacks &other) = delete;
+    Callbacks &operator=(const Callbacks &other) = delete;
+    ~Callbacks() = default;
+
+    auto Once(Enum key, typename Callback::Function &&function)
     {
         auto &holder = m_holders[key];
 
@@ -103,21 +222,38 @@ public:
         
         Callback callback{
             .id = id,
-            .function = std::move(function)
+            .fn = std::move(function)
         };
 
         if (holder.trigger_state.triggered) {
-            callback.function(std::get<Args>(holder.trigger_state.args)...);
+            callback.fn(std::get<Args>(holder.trigger_state.args)...);
+
+            return CallbackRef<Bucket>();
+        }
+
+        holder.once_callbacks.push_back(std::move(callback));
+
+        return CallbackRef<Bucket>(id, &holder);
+    }
+
+    auto On(Enum key, typename Callback::Function &&function)
+    {
+        auto &holder = m_holders[key];
+
+        const auto id = ++m_id_counter;
+        
+        Callback callback{
+            .id = id,
+            .fn = std::move(function)
+        };
+
+        if (holder.trigger_state.triggered) {
+            callback.fn(std::get<Args>(holder.trigger_state.args)...);
         }
 
         holder.on_callbacks.push_back(std::move(callback));
 
-        return {
-            .id = id,
-            .remove = [this, id, &holder = m_holders[key]] {
-                RemoveCallback(id, holder.on_callbacks);
-            }
-        };
+        return CallbackRef<Bucket>(id, &holder);
     }
 
     void Trigger(Enum key, Args &&... args)
@@ -125,27 +261,29 @@ public:
         TriggerCallbacks(false, key, std::move(args)...);
     }
 
+    /* \brief Trigger all `once` and `on` events for the given key,
+     * keeping the holder of all callbacks in that key in the triggered state,
+     * so that any newly added callbacks will be executed immediately.
+     */
     void TriggerPersisted(Enum key, Args &&... args)
     {
         TriggerCallbacks(true, key, std::move(args)...);
     }
 
+    /*! \brief Trigger a specific callback (by the given ID).
+     * The callback can either be a `once` or `on` callback.
+     * @returns A boolean stating whether the callback was executed or not
+     */
+    bool TriggerSpecific(Enum key, uint32_t id, Args &&... args)
+    {
+        auto &holder = m_holders[key];
+
+        return holder.Trigger(id, std::forward<Args>(args)...);
+    }
+
 private:
     uint32_t m_id_counter = 0;
-    std::unordered_map<Enum, Holder> m_holders;
-
-    void RemoveCallback(uint32_t id, std::vector<Callback> &callbacks)
-    {
-        auto it = std::find_if(
-            callbacks.begin(),
-            callbacks.end(),
-            [id](auto &other) { return other.id == id; }
-        );
-
-        if (it != callbacks.end()) {
-            callbacks.erase(it);
-        }
-    }
+    std::unordered_map<Enum, Bucket> m_holders;
     
     void TriggerCallbacks(bool persist, Enum key, Args &&... args)
     {
@@ -161,27 +299,96 @@ private:
         holder.trigger_state.args = std::tie(args...);
 
         for (auto &callback : once_callbacks) {
-            callback.function(std::forward<Args>(args)...);
+            callback.fn(std::forward<Args>(args)...);
         }
 
         holder.once_callbacks.clear();
 
         for (auto &callback : on_callbacks) {
-            callback.function(std::forward<Args>(args)...);
+            callback.fn(std::forward<Args>(args)...);
         }
         
         holder.trigger_state.triggered = previous_triggered_state || persist;
     }
 };
 
+template <class CallbacksClass>
+class CallbackTrackable {
+public:
+    using Callbacks = CallbacksClass;
+    using CallbackRef = CallbackRef<typename Callbacks::Bucket>;
+
+    CallbackTrackable() = default;
+    CallbackTrackable(const CallbackTrackable &other) = delete;
+    CallbackTrackable &operator=(const CallbackTrackable &other) = delete;
+    ~CallbackTrackable() { }
+
+protected:
+    struct CallbackTracker {
+        std::vector<CallbackRef> refs;
+    };
+
+    /*! \brief Triggers the destroy callback (if present) and
+     * removes all existing callbacks from the callback holder
+     */
+    void Teardown()
+    {
+        if (m_destroy_callback.Valid()) {
+            m_destroy_callback.Trigger();
+            m_destroy_callback.Remove();
+        }
+
+        for (auto &callback_ref : m_callback_refs) {
+            if (!callback_ref.Valid()) {
+                continue;
+            }
+
+            callback_ref.Remove();
+        }
+    }
+
+    /*! \brief Add the given callback reference to this object's internal
+     * list of callback refs it is responsible for. On destructor call, all remaining
+     * callback refs will be removed, so as to not have a dangling callback.
+     * @param callback_ref The callback reference, obtained via Once() or On()
+     */
+    void Track(CallbackRef &&callback_ref)
+    {
+        m_callback_refs.push_back(std::move(callback_ref));
+    }
+
+    /*! \brief Set the action to be triggered on teardown
+     * @param callback_ref The callback reference, obtained via Once() or On()
+     * @param bind_args Arguments to bind to the call
+     */
+    template <class ...Args>
+    void OnTeardown(CallbackRef &&callback_ref, Args &&... bind_args)
+    {
+        callback_ref.Bind(std::tie(std::forward<Args>(bind_args)...));
+
+        m_destroy_callback = std::move(callback_ref);
+    }
+
+    std::vector<CallbackRef> m_callback_refs;
+    CallbackRef m_destroy_callback;
+
+private:
+};
+
 enum class EngineCallback {
     NONE,
+
+    CREATE_SPATIALS,
+    DESTROY_SPATIALS,
 
     CREATE_MESHES,
     DESTROY_MESHES,
 
     CREATE_MATERIALS,
     DESTROY_MATERIALS,
+
+    CREATE_SHADERS,
+    DESTROY_SHADERS,
 
     CREATE_GRAPHICS_PIPELINES,
     DESTROY_GRAPHICS_PIPELINES,
@@ -190,7 +397,7 @@ enum class EngineCallback {
     DESTROY_COMPUTE_PIPELINES
 };
 
-using EngineCallbacks = Callbacks<EngineCallback>;
+using EngineCallbacks = Callbacks<EngineCallback, Engine *>;
 
 /* v1 callback utility still used by octree */
 template <class CallbacksClass>
@@ -381,10 +588,8 @@ template <class T>
 struct ObjectHolder {
     bool defer_create = false;
     std::vector<std::unique_ptr<T>> objects;
-
-#if HYP_ADD_OBJECT_USE_QUEUE
+    
     std::queue<size_t> free_slots;
-#endif
 
     constexpr size_t Size() const
         { return objects.size(); }
@@ -418,7 +623,6 @@ struct ObjectHolder {
     
     T *Allot(std::unique_ptr<T> &&object)
     {
-#if HYP_ADD_OBJECT_USE_QUEUE
         if (!free_slots.empty()) {
             const auto next_id = typename T::ID{typename T::ID::ValueType(free_slots.front() + 1)};
 
@@ -430,7 +634,6 @@ struct ObjectHolder {
 
             return objects[next_id.Value() - 1].get();
         }
-#endif
 
         const auto next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
 
@@ -444,7 +647,6 @@ struct ObjectHolder {
     template <class ...Args>
     auto Add(Engine *engine, std::unique_ptr<T> &&object, Args &&... args) -> typename T::ID
     {
-#if HYP_ADD_OBJECT_USE_QUEUE
         if (!free_slots.empty()) {
             const auto next_id = typename T::ID{typename T::ID::ValueType(free_slots.front() + 1)};
 
@@ -460,7 +662,6 @@ struct ObjectHolder {
 
             return next_id;
         }
-#endif
 
         const auto next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
 
@@ -483,10 +684,8 @@ struct ObjectHolder {
 
             /* Cannot simply erase from vector, as that would invalidate existing IDs */
             objects[id.value - 1].reset();
-
-#if HYP_ADD_OBJECT_USE_QUEUE
+            
             free_slots.push(id.value - 1);
-#endif
         }
     }
 
@@ -515,54 +714,224 @@ struct ObjectHolder {
     }
 };
 
-template <class T>
-class RefCountedObjectHolder {
+/* New ObjectHolder class that does not call Destroy,
+ * as new component types will not have Destroy() rather using
+ * a teardown method which is defined in CallbackTrackable.
+ */
+template <class T, class CallbacksClass>
+struct ObjectHolder2 {
+    std::vector<std::unique_ptr<T>> objects;
+    std::queue<size_t> free_slots;
+    CallbacksClass &callbacks;
+
+    ObjectHolder2(CallbacksClass &callbacks)
+        : callbacks(callbacks)
+    {
+    }
+
+    ObjectHolder2(const ObjectHolder2 &other) = delete;
+    ObjectHolder2 &operator=(const ObjectHolder2 &other) = delete;
+    ~ObjectHolder2() {}
+
+    constexpr size_t Size() const
+        { return objects.size(); }
+
+    auto &Objects() { return objects; }
+    const auto &Objects() const { return objects; }
+
+    constexpr T *Get(const typename T::ID &id)
+    {
+        return MathUtil::InRange(id.Value(), {1, objects.size() + 1})
+            ? objects[id.Value() - 1].get()
+            : nullptr;
+    }
+
+    constexpr const T *Get(const typename T::ID &id) const
+        { return const_cast<ObjectHolder2<T, CallbacksClass> *>(this)->Get(id); }
+
+    constexpr T *operator[](const typename T::ID &id) { return Get(id); }
+    constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }
+
+    template <class LambdaFunction>
+    constexpr const T *Find(LambdaFunction lambda) const
+    {
+        const auto it = std::find_if(objects.begin(), objects.end(), lambda);
+
+        if (it != objects.end()) {
+            return *it;
+        }
+
+        return nullptr;
+    }
+    
+    T *Add(std::unique_ptr<T> &&object)
+    {
+        AssertThrow(object != nullptr);
+        AssertThrowMsg(object->GetId() == T::bad_id, "Adding object that already has id set");
+
+        typename T::ID next_id;
+
+        if (!free_slots.empty()) {
+            next_id = typename T::ID{typename T::ID::ValueType(free_slots.front() + 1)};
+            object->SetId(next_id);
+
+            objects[free_slots.front()] = std::move(object);
+            free_slots.pop();
+        } else {
+            next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
+            object->SetId(next_id);
+
+            objects.push_back(std::move(object));
+        }
+
+        return objects[next_id.value - 1].get();
+    }
+    
+    void Remove(typename T::ID id)
+    {
+        if (id.value == objects.size()) {
+            objects.pop_back();
+
+            return;
+        }
+        
+        /* Cannot simply erase from vector, as that would invalidate existing IDs */
+        objects[id.value - 1].reset();
+        
+        free_slots.push(id.value - 1);
+    }
+    
+    void RemoveAll() { objects.clear(); }
+};
+
+template <class T, class CallbacksClass>
+class RefCounter {
     struct RefCount {
         uint32_t count = 0;
     };
 
-    ObjectIdMap<T, RefCount> m_ref_counts;
-    ObjectHolder<T>          m_holder;
+    ObjectHolder2<T, CallbacksClass>  m_holder;
+    ObjectIdMap<T, RefCount>          m_ref_map;
+
 public:
-    struct RefWrapper {
-        operator T *()             { return ptr; }
-        operator const T *() const { return ptr; }
-        operator bool() const      { return ptr != nullptr; }
+    class RefWrapper {
+    public:
+        RefWrapper()
+            : RefWrapper(nullptr)
+        {
+        }
+
+        RefWrapper(std::nullptr_t)
+            : ptr(nullptr),
+              m_ref_counter(nullptr)
+        {
+        }
+
+        RefWrapper(T *ptr, RefCounter *ref_counter)
+            : ptr(ptr),
+              m_ref_counter(ref_counter)
+        {
+        }
+
+        RefWrapper(const RefWrapper &other) = delete;
+        RefWrapper &operator=(const RefWrapper &other) = delete;
+
+        RefWrapper(RefWrapper &&other) noexcept
+            : ptr(other.ptr),
+              m_ref_counter(other.m_ref_counter)
+        {
+            other.ptr = nullptr;
+            other.m_ref_counter = nullptr;
+        }
+
+        RefWrapper &operator=(RefWrapper &&other) noexcept
+        {
+            if (&other == this) {
+                return *this;
+            }
+
+            std::swap(ptr, other.ptr);
+            std::swap(m_ref_counter, other.m_ref_counter);
+
+            if (other && !operator==(other)) {
+                other.Release();
+            }
+
+            return *this;
+        }
+
+        ~RefWrapper()
+        {
+            if (ptr != nullptr) {
+                Release();
+            }
+        }
+
+        operator T *()              { return ptr; }
+        operator const T *() const  { return ptr; }
+        operator bool() const       { return ptr != nullptr; }
+
+        T *operator->()             { return ptr; }
+        const T *operator->() const { return ptr; }
+
+        T &operator*()              { return *ptr; }
+        const T &operator*() const  { return *ptr; }
+        
+        bool operator==(std::nullptr_t) const
+            { return ptr == nullptr; }
+
+        bool operator!=(std::nullptr_t) const
+            { return ptr != nullptr; }
 
         bool operator==(const RefWrapper &other) const
-            { return &other == this || other.ptr == ptr; }
+            { return &other == this || (ptr == other.ptr && m_ref_counter == other.m_ref_counter); }
 
         bool operator!=(const RefWrapper &other) const
             { return !operator==(other); }
-
-        T *operator->() { return ptr; }
-        const T *operator->() const { return ptr; }
-
-        T &operator*() { return *ptr; }
-        const T &operator*() const { return *ptr; }
-
-        template <class ...Args>
-        void Acquire(Engine *engine, Args &&... args)
+        
+        auto Acquire(Engine *engine)
         {
-            ref_holder.Acquire(engine, ptr, std::move(args)...);
+            AssertThrowMsg(ptr != nullptr,           "invalid state");
+            AssertThrowMsg(m_ref_counter != nullptr, "invalid state");
+
+            return m_ref_counter->Acquire(engine, ptr);
         }
 
-        template <class ...Args>
-        void Release(Engine *engine, Args &&... args)
+        size_t GetRefCount() const
         {
-            ref_holder.Release(engine, ptr, std::move(args)...);
+            if (!ptr || !m_ref_counter) {
+                return 0;
+            }
+
+            return m_ref_counter->GetRefCount(ptr->GetId());
+        }
+
+        T *ptr;
+
+    private:
+        void Release()
+        {
+            AssertThrowMsg(ptr != nullptr,           "invalid state");
+            AssertThrowMsg(m_ref_counter != nullptr, "invalid state");
+
+            m_ref_counter->Release(ptr);
 
             ptr = nullptr;
+            m_ref_counter = nullptr;
         }
-        
-        RefCountedObjectHolder &ref_holder;
-        T *ptr = nullptr;
+
+        RefCounter *m_ref_counter;
     };
 
-    RefCountedObjectHolder() = default;
-    ~RefCountedObjectHolder()
+    RefCounter(CallbacksClass &callbacks)
+        : m_holder(callbacks),
+          m_ref_map{}
     {
-        for (RefCount &rc : m_ref_counts) {
+    }
+
+    ~RefCounter()
+    {
+        for (RefCount &rc : m_ref_map) {
             if (rc.count == 0) { /* not yet initialized */
                 DebugLog(
                     LogType::Warn,
@@ -576,69 +945,68 @@ public:
             AssertThrowMsg(rc.count == 0, "Destructor called while object still in use elsewhere");
         }
     }
+    
+    [[nodiscard]] RefWrapper Add(std::unique_ptr<T> &&object)
+    {
+        AssertThrow(object != nullptr);
 
-    template <class ...Args>
-    T *Acquire(Engine *engine, T *ptr, Args &&... args)
+        T *ptr = m_holder.Add(std::move(object));
+        m_ref_map[ptr->GetId()] = {.count = 1};
+        
+        return RefWrapper(ptr, this);
+    }
+    
+    [[nodiscard]] RefWrapper Acquire(Engine *engine, T *ptr)
     {
         AssertThrow(ptr != nullptr);
 
-        auto &ref_count = m_ref_counts[ptr->GetId()].count;
+        auto &ref_count = m_ref_map[ptr->GetId()].count;
 
-        if (ref_count == 0) {// && !ptr->IsInitialized()) {
-            ptr->Create(engine, std::move(args)...);
+        if (!ptr->IsInit()) {
+            ptr->Init(engine);
         }
 
         ++ref_count;
-
-        return ptr;
+        
+        return RefWrapper(ptr, this);
     }
 
     template <class ...Args>
-    T *Acquire(Engine *engine, const typename T::ID &id, Args &&... args)
-        { return Acquire(engine, m_holder.Get(id), std::move(args)...); }
-
-    template <class ...Args>
-    void Release(Engine *engine, const T *ptr, Args &&... args)
+    void Release(const T *ptr)
     {
         AssertThrow(ptr != nullptr);
 
         const auto id = ptr->GetId();
 
-        AssertThrowMsg(m_ref_counts[id].count != 0, "Cannot decrement refcount when already at zero (or not set)");
+        AssertThrowMsg(m_ref_map[id].count != 0, "Cannot decrement refcount when already at zero (or not set)");
         
-        if (!--m_ref_counts[id].count) {
-            m_holder.Remove(engine, id, std::forward<Args>(args)...);
-            m_ref_counts.Remove(id);
+        if (!--m_ref_map[id].count) {
+            m_holder.Remove(id);
+            m_ref_map.Remove(id);
         }
-    }
-
-    void Release(Engine *engine, const typename T::ID &id)
-        { return Release(engine, m_holder.Get(id)); }
-
-    template <class ...Args>
-    RefWrapper Add(Args &&... args)
-    {
-        return RefWrapper{
-            .ref_holder = *this,
-            .ptr        = m_holder.Allot(std::make_unique<T>(std::forward<Args>(args)...))
-        };
     }
 
     T *Get(const typename T::ID &id) const
         { return m_holder.Get(id); }
 
+    constexpr T *operator[](const typename T::ID &id) { return Get(id); }
+    constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }
+
     size_t GetRefCount(const typename T::ID &id) const
     {
-        if (!m_ref_counts.Has(id)) {
+        if (!m_ref_map.Has(id)) {
             return 0;
         }
 
-        return m_ref_counts.Get(id).count;
+        return m_ref_map.Get(id).count;
     }
+
+    auto &Objects() { return m_holder.objects; }
+    const auto &Objects() const { return m_holder.objects; }
 };
 
 template <class T>
-using RefWrapper = typename RefCountedObjectHolder<T>::RefWrapper;
+using Ref = typename RefCounter<T, EngineCallbacks>::RefWrapper;
 
 } // namespace hyperion::v2
 

@@ -60,7 +60,6 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
     }
     
     auto render_pass = std::make_unique<RenderPass>(
-        engine->callbacks,
         renderer::RenderPassStage::SHADER,
         mode
     );
@@ -159,10 +158,7 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
     const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
 
     for (uint32_t i = 0; i < 1/*num_frames*/; i++) {
-        auto framebuffer = std::make_unique<Framebuffer>(
-            engine->callbacks,
-            engine->GetInstance()->swapchain->extent
-        );
+        auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent);
 
         for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
             auto vk_desc = attachment_ref->GetAttachmentDescription();

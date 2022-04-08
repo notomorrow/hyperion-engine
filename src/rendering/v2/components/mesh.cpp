@@ -14,8 +14,11 @@
 
 namespace hyperion::v2 {
 
-Mesh::Mesh(EngineCallbacks &callbacks)
-    : EngineComponentBase(callbacks),
+Mesh::Mesh(const std::vector<Vertex> &vertices,
+    const std::vector<Index> &indices)
+    : EngineComponentBase(),
+      m_vertices(std::move(vertices)),
+      m_indices(std::move(indices)),
       m_vertex_attributes(
           MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
@@ -28,8 +31,7 @@ Mesh::Mesh(EngineCallbacks &callbacks)
 
 Mesh::~Mesh()
 {
-    AssertThrowMsg(m_vbo == nullptr, "Expected vbo to be destroyed before destructor call");
-    AssertThrowMsg(m_ibo == nullptr, "Expected vbo to be destroyed before destructor call");
+    Teardown();
 }
 
 /* Copy our values into the packed vertex buffer, and increase the index for the next possible
@@ -106,79 +108,67 @@ void Mesh::UploadToDevice(Device *device)
     m_ibo->Copy(device, packed_indices_size, m_indices.data());
 }
 
-void Mesh::CalculateIndices()
+std::pair<std::vector<Vertex>, std::vector<Mesh::Index>>
+Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
 {
-    m_indices.clear();
     std::map<Vertex, Index> index_map;
+
+    std::vector<Index> indices;
+    indices.reserve(vertices.size());
 
     /* This will be our resulting buffer with only the vertices we need. */
     std::vector<Vertex> new_vertices;
-    new_vertices.reserve(m_vertices.size());
+    new_vertices.reserve(vertices.size());
 
-    for (const auto &vertex : m_vertices) {
+    for (const auto &vertex : vertices) {
         /* Check if the vertex already exists in our map */
         auto it = index_map.find(vertex);
 
         /* If it does, push to our indices */
         if (it != index_map.end()) {
-            m_indices.push_back(it->second);
+            indices.push_back(it->second);
 
             continue;
         }
 
-        Index mesh_index = static_cast<Index>(new_vertices.size());
+        const auto mesh_index = static_cast<Index>(new_vertices.size());
 
         /* The vertex is unique, so we push it. */
         index_map[vertex] = mesh_index;
         new_vertices.push_back(vertex);
 
-        m_indices.push_back(mesh_index);
+        indices.push_back(mesh_index);
     }
 
-    m_vertices = new_vertices;
+    return std::make_pair(new_vertices, indices);
 }
 
-void Mesh::SetVertices(const std::vector<Vertex> &vertices)
+void Mesh::Init(Engine *engine)
 {
-    m_vertices = vertices;
+    EngineComponentBase::Init();
 
-    CalculateIndices();
-}
+    Track(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](Engine *engine) {
+        UploadToDevice(engine->GetInstance()->GetDevice());
 
-void Mesh::SetVertices(const std::vector<Vertex> &vertices, const std::vector<Index> &indices)
-{
-    m_vertices = vertices;
-    m_indices  = indices;
-}
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
+            AssertThrow(m_vbo != nullptr);
+            AssertThrow(m_ibo != nullptr);
 
-void Mesh::Create(Engine *engine)
-{
-    Track(
-        engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this, engine](...) {
-            UploadToDevice(engine->GetInstance()->GetDevice());
-        }),
-        engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this, engine](...) {
-            Destroy(engine);
-        })
-    );
-}
+            Device *device = engine->GetInstance()->GetDevice();
 
-void Mesh::Destroy(Engine *engine)
-{
-    AssertThrow(m_vbo != nullptr);
-    AssertThrow(m_ibo != nullptr);
+            m_vbo->Destroy(device);
+            m_vbo.reset();
 
-    Device *device = engine->GetInstance()->GetDevice();
-
-    m_vbo->Destroy(device);
-    m_vbo.reset();
-
-    m_ibo->Destroy(device);
-    m_ibo.reset();
+            m_ibo->Destroy(device);
+            m_ibo.reset();
+        }), engine);
+    }));
 }
 
 void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
 {
+    AssertThrow(m_vbo != nullptr && m_ibo != nullptr);
+
     m_vbo->Bind(cmd);
     m_ibo->Bind(cmd);
 

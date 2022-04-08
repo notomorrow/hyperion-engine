@@ -17,18 +17,19 @@ namespace hyperion::v2 {
 class Engine;
 
 struct Resources {
-    ObjectHolder<Shader>            shaders;
-    ObjectHolder<Texture>           textures;
-    ObjectHolder<Framebuffer>       framebuffers;
-    ObjectHolder<RenderPass>        render_passes;
-    ObjectHolder<Material>          materials;
-    ObjectHolder<ComputePipeline>   compute_pipelines{.defer_create = true};
+    using Callbacks = EngineCallbacks;
 
-    //RefCountedObjectHolder<Spatial> spatials;
-    ObjectHolder<Spatial>           spatials;
-    RefCountedObjectHolder<Mesh>    meshes;
+    RefCounter<Shader,  Callbacks>          shaders;
+    ObjectHolder<Texture>                   textures;
+    ObjectHolder<Framebuffer>               framebuffers;
+    ObjectHolder<RenderPass>                render_passes;
+    ObjectHolder<Material>                  materials;
+    ObjectHolder<ComputePipeline>           compute_pipelines{.defer_create = true};
+    
+    RefCounter<Spatial, Callbacks>          spatials;
+    RefCounter<Mesh,    Callbacks>          meshes;
 
-    Resources();
+    Resources(EngineCallbacks &);
     Resources(const Resources &other) = delete;
     Resources &operator=(const Resources &other) = delete;
     ~Resources();

@@ -23,12 +23,12 @@ using renderer::MeshInputAttributeSet;
 
 class GraphicsPipeline;
 
-class Spatial : public EngineComponent<STUB_CLASS(Spatial)> {
+class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
     friend class Engine;
     friend class GraphicsPipeline;
 public:
-    Spatial(EngineCallbacks &callbacks,
-        Mesh *mesh,
+    Spatial(
+        Ref<Mesh> &&mesh,
         const MeshInputAttributeSet &attributes,
         const Transform &transform,
         const BoundingBox &local_aabb,
@@ -37,7 +37,7 @@ public:
     Spatial &operator=(const Spatial &other) = delete;
     ~Spatial();
     
-    Mesh *GetMesh() { return m_mesh; }
+    Mesh *GetMesh() { return m_mesh.ptr; }
     const MeshInputAttributeSet &GetVertexAttributes() const { return m_attributes; }
 
     const Transform &GetTransform() const { return m_transform; }
@@ -53,8 +53,7 @@ public:
 
     const Material::ID &GetMaterialId() const { return m_material_id; }
 
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
+    void Init(Engine *engine);
 
 private:
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
@@ -62,7 +61,7 @@ private:
     void RemoveFromPipelines();
     void RemoveFromPipeline(GraphicsPipeline *pipeline);
 
-    Mesh *m_mesh;
+    Ref<Mesh> m_mesh;
     MeshInputAttributeSet m_attributes;
     Transform m_transform;
     BoundingBox m_local_aabb;

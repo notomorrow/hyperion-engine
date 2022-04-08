@@ -218,7 +218,7 @@ public:
 
     using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
 
-    Material(EngineCallbacks &callbacks);
+    Material();
     ~Material();
 
     inline const Parameter &GetParameter(MaterialKey key) const

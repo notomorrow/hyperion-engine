@@ -2,9 +2,9 @@
 #include "../engine.h"
 
 namespace hyperion::v2 {
-ComputePipeline::ComputePipeline(EngineCallbacks &callbacks, Shader::ID shader_id)
-    : EngineComponent(callbacks),
-      m_shader_id(shader_id)
+ComputePipeline::ComputePipeline(Ref<Shader> &&shader)
+    : EngineComponent(),
+      m_shader(std::move(shader))
 {
 }
 
@@ -12,12 +12,12 @@ ComputePipeline::~ComputePipeline() = default;
 
 void ComputePipeline::Create(Engine *engine)
 {
-    auto *shader = engine->resources.shaders[m_shader_id];
-    AssertThrow(shader != nullptr);
+    m_shader = m_shader.Acquire(engine);
+    AssertThrow(m_shader != nullptr);
 
     HYPERION_ASSERT_RESULT(m_wrapped.Create(
         engine->GetInstance()->GetDevice(),
-        &shader->Get(),
+        &m_shader->Get(),
         &engine->GetInstance()->GetDescriptorPool()
     ));
 

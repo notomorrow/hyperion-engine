@@ -22,6 +22,7 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
     : m_instance(new Instance(_system, app_name, "HyperionEngine")),
       m_shader_globals(nullptr),
       m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
+      resources(callbacks),
       assets(this)
 {
     m_octree.m_root = &m_octree_root;
@@ -94,23 +95,16 @@ void Engine::PrepareSwapchain()
     m_deferred_renderer.Create(this);
     m_shadow_renderer.Create(this);
 
-    Shader::ID shader_id{};
-
-    // TODO: should be moved elsewhere. SPIR-V for rendering quad could be static
-    {
-        shader_id = resources.shaders.Add(this, std::make_unique<Shader>(
-            callbacks,
-            std::vector<SubShader>{
-                {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()}},
-                {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}}
-            }
-        ));
-    }
+    auto shader = resources.shaders.Add(std::make_unique<Shader>(
+        std::vector<SubShader>{
+            {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()}},
+            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}}
+        }
+    ));
 
     uint32_t iteration = 0;
-
+    
     auto render_pass = std::make_unique<RenderPass>(
-        callbacks,
         renderer::RenderPassStage::PRESENT,
         renderer::RenderPass::Mode::RENDER_PASS_INLINE
     );
@@ -120,7 +114,7 @@ void Engine::PrepareSwapchain()
     m_render_pass_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
             m_instance->swapchain->extent,
-            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB,/* TMP Till I recover the code for automatically detecting this*/
+            m_instance->swapchain->image_format,
             nullptr
         ),
         renderer::RenderPassStage::PRESENT
@@ -141,7 +135,6 @@ void Engine::PrepareSwapchain()
 
     for (VkImage img : m_instance->swapchain->images) {
         auto fbo = std::make_unique<Framebuffer>(
-            callbacks,
             m_instance->swapchain->extent
         );
 
@@ -179,8 +172,7 @@ void Engine::PrepareSwapchain()
 
             render_pass_id = resources.render_passes.Add(this, std::move(render_pass));
             m_root_pipeline = std::make_unique<GraphicsPipeline>(
-                callbacks,
-                shader_id,
+                shader.Acquire(this),
                 render_pass_id,
                 GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN
             );
@@ -292,7 +284,9 @@ void Engine::Initialize()
 
     m_render_list.Create(this);
 
-    callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_SHADERS, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_SPATIALS, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES, this);
 }
 
 void Engine::Destroy()
@@ -300,12 +294,15 @@ void Engine::Destroy()
     AssertThrow(m_instance != nullptr);
 
     (void)m_instance->GetDevice()->Wait();
-    
-    resources.Destroy(this);
 
-    callbacks.Trigger(EngineCallback::DESTROY_MATERIALS);
-    callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES);
-    callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES);
+    callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_MATERIALS, this);
+    callbacks.Trigger(EngineCallback::DESTROY_SPATIALS, this);
+    callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_SHADERS, this);
+
+    resources.Destroy(this);
 
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
@@ -324,7 +321,7 @@ void Engine::Destroy()
 
 void Engine::Compile()
 {
-    callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
 
     /* Finalize materials */
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
@@ -337,8 +334,8 @@ void Engine::Compile()
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
 
-    callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES);
-    callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
 }
 
 void Engine::UpdateDescriptorData(uint32_t frame_index)

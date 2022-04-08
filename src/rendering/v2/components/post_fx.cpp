@@ -15,10 +15,10 @@ using renderer::ImageSamplerDescriptor;
 
 std::shared_ptr<hyperion::Mesh> PostEffect::full_screen_quad = MeshFactory::CreateQuad();
 
-PostEffect::PostEffect(Shader::ID shader_id)
+PostEffect::PostEffect(Ref<Shader> &&shader)
     : m_pipeline_id{},
       m_framebuffer_id{},
-      m_shader_id(shader_id),
+      m_shader(std::move(shader)),
       m_render_pass_id{}
 {
 }
@@ -29,7 +29,6 @@ void PostEffect::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
     auto render_pass = std::make_unique<RenderPass>(
-        engine->callbacks,
         renderer::RenderPassStage::SHADER,
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
@@ -64,13 +63,9 @@ void PostEffect::CreateRenderPass(Engine *engine)
 void PostEffect::Create(Engine *engine)
 {
     auto *render_pass = engine->resources.render_passes[m_render_pass_id];
-
     AssertThrow(render_pass != nullptr);
 
-    auto framebuffer = std::make_unique<Framebuffer>(
-        engine->callbacks,
-        engine->GetInstance()->swapchain->extent
-    );
+    auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent);
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
@@ -131,8 +126,7 @@ void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 void PostEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
-        engine->callbacks,
-        m_shader_id,
+        std::move(m_shader),
         m_render_pass_id,
         GraphicsPipeline::Bucket::BUCKET_PREPASS
     );
@@ -166,7 +160,6 @@ void PostEffect::Destroy(Engine *engine)
 
     AssertThrowMsg(result, "%s", result.message);
 
-    engine->resources.shaders.Remove(engine, m_shader_id);
     engine->resources.framebuffers.Remove(engine, m_framebuffer_id);
     engine->resources.render_passes.Remove(engine, m_render_pass_id);
 }
@@ -243,16 +236,15 @@ void PostProcessing::Create(Engine *engine)
     uint32_t binding_index = 8; /* hardcoded for now - start filters at this binding */
 
     /* TODO: use subpasses for gbuffer so we only have num_filters * num_frames descriptors */
+
     for (int i = 0; i < filter_shader_names.size(); i++) {
-        Shader::ID shader_id = engine->resources.shaders.Add(engine, std::make_unique<Shader>(
-            engine->callbacks,
+        m_filters[i] = std::make_unique<PostEffect>(engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read()}},
                 SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read()}}
             }
-        ));
+        )));
 
-        m_filters[i] = std::make_unique<PostEffect>(shader_id);
         m_filters[i]->CreateRenderPass(engine);
         m_filters[i]->Create(engine);
         m_filters[i]->CreateDescriptors(engine, binding_index);

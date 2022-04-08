@@ -9,9 +9,9 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 
-GraphicsPipeline::GraphicsPipeline(EngineCallbacks &callbacks, Shader::ID shader_id, RenderPass::ID render_pass_id, Bucket bucket)
-    : EngineComponent(callbacks),
-      m_shader_id(shader_id),
+GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, RenderPass::ID render_pass_id, Bucket bucket)
+    : EngineComponent(),
+      m_shader(std::move(shader)),
       m_render_pass_id(render_pass_id),
       m_bucket(bucket),
       m_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
@@ -30,7 +30,6 @@ GraphicsPipeline::GraphicsPipeline(EngineCallbacks &callbacks, Shader::ID shader
       m_per_frame_data(nullptr),
       m_scene_index(0)
 {
-    /* TODO: callbacks */
 }
 
 GraphicsPipeline::~GraphicsPipeline()
@@ -69,18 +68,16 @@ void GraphicsPipeline::RemoveSpatial(Engine *engine, Spatial *spatial)
 void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
 {
     const auto it = std::find(m_spatials.begin(), m_spatials.end(), spatial);
+    AssertThrow(it != m_spatials.end());
 
-    if (it != m_spatials.end()) {
-        m_spatials.erase(it);
-    }
+    m_spatials.erase(it);
 }
 
 void GraphicsPipeline::Create(Engine *engine)
 {
-    auto *shader = engine->resources.shaders[m_shader_id];
-    AssertThrow(shader != nullptr);
-
-    // TODO: Assert that render_pass matches the layout of what the fbo was set up with
+    m_shader = m_shader.Acquire(engine);
+    AssertThrow(m_shader != nullptr);
+    
     auto *render_pass = engine->resources.render_passes[m_render_pass_id];
     AssertThrow(render_pass != nullptr);
 
@@ -92,7 +89,7 @@ void GraphicsPipeline::Create(Engine *engine)
         .depth_test        = m_depth_test,
         .depth_write       = m_depth_write,
         .blend_enabled     = m_blend_enabled,
-        .shader            = &shader->Get(),
+        .shader            = &m_shader->Get(),
         .render_pass       = &render_pass->Get()
     };
 

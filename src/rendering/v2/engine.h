@@ -110,9 +110,9 @@ public:
 
     ShaderGlobals *m_shader_globals;
 
+    EngineCallbacks         callbacks;
     Resources               resources;
     Assets                  assets;
-    EngineCallbacks         callbacks;
 
 private:
     void FindTextureFormatDefaults();
