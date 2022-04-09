@@ -104,7 +104,7 @@ using namespace hyperion;
 
 #define HYPERION_VK_TEST_CUBEMAP 1
 #define HYPERION_VK_TEST_MIPMAP 1
-#define HYPERION_VK_TEST_IMAGE_STORE 0
+#define HYPERION_VK_TEST_IMAGE_STORE 1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 
 int main()
@@ -197,7 +197,7 @@ int main()
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     renderer::Image *image_storage = new renderer::StorageImage(
-        Extent2D{512, 512, 1},
+        Extent3D{512, 512, 1},
         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
         Image::Type::TEXTURE_TYPE_2D,
         nullptr
@@ -370,20 +370,16 @@ int main()
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     /* Compute */
-
-    v2::Shader::ID compute_shader_id{};
-    {
-        auto compute_shader = std::make_unique<v2::Shader>(
-            std::vector<v2::SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read()}}
-            }
-        );
-
-        compute_shader_id = engine.AddShader(std::move(compute_shader));
-    }
-
-    v2::ComputePipeline::ID compute_pipeline_id = engine.AddComputePipeline(std::make_unique<v2::ComputePipeline>(engine.callbacks, compute_shader_id));
-
+    v2::ComputePipeline::ID compute_pipeline_id = engine.resources.compute_pipelines.Add(
+        &engine,
+        std::make_unique<v2::ComputePipeline>(
+            engine.resources.shaders.Add(std::make_unique<v2::Shader>(
+                std::vector<v2::SubShader>{
+                    { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read()}}
+                }
+            ))
+        )
+    );
 
     auto compute_command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_PRIMARY);
 
@@ -630,7 +626,7 @@ int main()
         const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
 #if HYPERION_VK_TEST_IMAGE_STORE
-        auto *compute_pipeline = engine.GetComputePipeline(compute_pipeline_id);
+        auto *compute_pipeline = engine.resources.compute_pipelines[compute_pipeline_id];
         compute_pipeline->Get().push_constants.counter_x = std::sin(timer) * 20.0f;
         compute_pipeline->Get().push_constants.counter_y = std::cos(timer) * 20.0f;
 
@@ -647,8 +643,11 @@ int main()
 
             HYPERION_RETURN_OK;
         }));
-        AssertThrowMsg(compute_cmd_result, "Failed to record compute cmd buffer: %s\n", compute_cmd_result.message);
-        compute_command_buffer->SubmitPrimary(engine.GetInstance()->GetComputeQueue(), compute_fc, &compute_semaphore_chain);
+        HYPERION_ASSERT_RESULT(compute_command_buffer->SubmitPrimary(
+            engine.GetInstance()->GetComputeQueue().queue,
+            compute_fc,
+            &compute_semaphore_chain
+        ));
 #endif
 
         Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
@@ -709,8 +708,13 @@ int main()
 
     matrices_descriptor_buffer.Destroy(device);
     scene_data_descriptor_buffer.Destroy(device);
+
 #if HYPERION_VK_TEST_IMAGE_STORE
-    image_storage_view.Destroy(device);
+    HYPERION_ASSERT_RESULT(image_storage_view.Destroy(device));
+    HYPERION_ASSERT_RESULT(image_storage->Destroy(device));
+
+    delete image_storage;
+
 #endif
     
     //texture->Destroy(&engine);
