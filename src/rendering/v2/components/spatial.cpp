@@ -9,20 +9,43 @@ Spatial::Spatial(
     const MeshInputAttributeSet &attributes,
     const Transform &transform,
     const BoundingBox &local_aabb,
-    Material::ID material_id)
+    Ref<Material> &&material)
     : EngineComponentBase(),
       m_mesh(std::move(mesh)),
       m_attributes(attributes),
       m_transform(transform),
       m_local_aabb(local_aabb),
       m_world_aabb(local_aabb * transform),
-      m_material_id(material_id)
+      m_material(std::move(material))
 {
 }
 
 Spatial::~Spatial()
 {
     Teardown();
+}
+
+void Spatial::Init(Engine *engine)
+{
+    if (IsInit()) {
+        return;
+    }
+
+    EngineComponentBase::Init();
+
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SPATIALS, [this](Engine *engine) {
+        if (m_mesh) {
+            m_mesh.Init();
+        }
+
+        if (m_material) {
+            m_material.Init();
+        }
+
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
+            RemoveFromPipelines();
+        }), engine);
+    }));
 }
 
 void Spatial::OnAddedToPipeline(GraphicsPipeline *pipeline)
@@ -54,21 +77,5 @@ void Spatial::RemoveFromPipeline(GraphicsPipeline *pipeline)
 
     OnRemovedFromPipeline(pipeline);
 }
-
-void Spatial::Init(Engine *engine)
-{
-    EngineComponentBase::Init();
-
-    Track(engine->callbacks.Once(EngineCallback::CREATE_SPATIALS, [this](Engine *engine) {
-        m_mesh = m_mesh.Acquire();
-
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
-            m_mesh = nullptr;
-
-            RemoveFromPipelines();
-        }), engine);
-    }));
-}
-
 
 } // namespace hyperion::v2

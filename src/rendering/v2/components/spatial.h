@@ -32,12 +32,14 @@ public:
         const MeshInputAttributeSet &attributes,
         const Transform &transform,
         const BoundingBox &local_aabb,
-        Material::ID material_id);
+        Ref<Material> &&material);
     Spatial(const Spatial &other) = delete;
     Spatial &operator=(const Spatial &other) = delete;
     ~Spatial();
     
-    Mesh *GetMesh() { return m_mesh.ptr; }
+    Mesh *GetMesh() const { return m_mesh.ptr; }
+    Material *GetMaterial() const { return m_material.ptr; }
+
     const MeshInputAttributeSet &GetVertexAttributes() const { return m_attributes; }
 
     const Transform &GetTransform() const { return m_transform; }
@@ -50,8 +52,6 @@ public:
 
     const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
     const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
-
-    const Material::ID &GetMaterialId() const { return m_material_id; }
 
     void Init(Engine *engine);
 
@@ -66,7 +66,7 @@ private:
     Transform m_transform;
     BoundingBox m_local_aabb;
     BoundingBox m_world_aabb;
-    Material::ID m_material_id;
+    Ref<Material> m_material;
 
     Octree *m_octree;
 

@@ -2,7 +2,7 @@
 #define HYPERION_V2_BINDLESS_H
 
 #include "texture.h"
-#include "util.h"
+#include "containers.h"
 
 #include <rendering/backend/renderer_descriptor_set.h>
 #include <rendering/backend/renderer_swapchain.h>
@@ -47,7 +47,7 @@ public:
     bool GetResourceIndex(Texture::ID id, uint32_t *out_index) const;
 
 private:
-    ObjectIdMap<Texture, uint32_t> m_texture_sub_descriptors;
+    ObjectMap<Texture, uint32_t> m_texture_sub_descriptors;
     std::array<DescriptorSet *, Swapchain::max_frames_in_flight> m_descriptor_sets;
 };
 

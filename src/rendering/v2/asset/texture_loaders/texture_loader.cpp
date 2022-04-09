@@ -72,8 +72,7 @@ LoaderResult TextureLoader::LoadFn(LoaderStream *stream, Object &object)
 std::unique_ptr<Texture> TextureLoader::BuildFn(Engine *engine, const Object &object)
 {
     engine->resources.Lock([&](Resources &resources) {
-        auto texture_id = resources.textures.Add(
-            engine,
+        auto texture = resources.textures.Add(
             std::make_unique<Texture2D>(
                 Extent2D{
                     uint32_t(object.width),
@@ -86,6 +85,8 @@ std::unique_ptr<Texture> TextureLoader::BuildFn(Engine *engine, const Object &ob
             )
         );
     });
+
+    /* TODO */
 
     return nullptr;
 }

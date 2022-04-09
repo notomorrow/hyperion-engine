@@ -141,18 +141,15 @@ void Node::SetLocalTransform(const Transform &transform)
     UpdateWorldTransform();
 }
 
-void Node::SetSpatial(Engine *engine, Spatial *spatial)
+void Node::SetSpatial(Ref<Spatial> &&spatial)
 {
     if (m_spatial == spatial) {
         return;
     }
 
-    //if (m_spatial != nullptr) {
-    //    m_spatial.Release();
-    //}
-
     if (spatial != nullptr) {
-        m_spatial = engine->resources.spatials.Acquire(spatial);
+        m_spatial = std::move(spatial);
+        m_spatial.Init();
 
         m_local_aabb = m_spatial->GetLocalAabb();
     } else {

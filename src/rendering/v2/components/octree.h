@@ -2,7 +2,7 @@
 #define HYPERION_V2_OCTREE_H
 
 #include "spatial.h"
-#include "util.h"
+#include "containers.h"
 
 #include <math/vector3.h>
 #include <math/bounding_box.h>

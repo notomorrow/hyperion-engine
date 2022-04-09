@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_UTIL_H
-#define HYPERION_V2_UTIL_H
+#ifndef HYPERION_V2_CONTAINERS_H
+#define HYPERION_V2_CONTAINERS_H
 
 #include <math/math_util.h>
 #include <util/range.h>
@@ -334,17 +334,13 @@ protected:
      */
     void Teardown()
     {
+        if (m_init_callback.Valid()) {
+            m_init_callback.Remove();
+        }
+
         if (m_destroy_callback.Valid()) {
             m_destroy_callback.Trigger();
             m_destroy_callback.Remove();
-        }
-
-        for (auto &callback_ref : m_callback_refs) {
-            if (!callback_ref.Valid()) {
-                continue;
-            }
-
-            callback_ref.Remove();
         }
     }
 
@@ -353,9 +349,13 @@ protected:
      * callback refs will be removed, so as to not have a dangling callback.
      * @param callback_ref The callback reference, obtained via Once() or On()
      */
-    void Track(CallbackRef &&callback_ref)
+    void OnInit(CallbackRef &&callback_ref)
     {
-        m_callback_refs.push_back(std::move(callback_ref));
+        if (m_init_callback.Valid()) {
+            DebugLog(LogType::Warn, "OnInit callback overwritten\n");
+        }
+
+        m_init_callback = std::move(callback_ref);
     }
 
     /*! \brief Set the action to be triggered on teardown
@@ -370,7 +370,7 @@ protected:
         m_destroy_callback = std::move(callback_ref);
     }
 
-    std::vector<CallbackRef> m_callback_refs;
+    CallbackRef m_init_callback;
     CallbackRef m_destroy_callback;
 
 private:
@@ -384,6 +384,9 @@ enum class EngineCallback {
 
     CREATE_MESHES,
     DESTROY_MESHES,
+
+    CREATE_TEXTURES,
+    DESTROY_TEXTURES,
 
     CREATE_MATERIALS,
     DESTROY_MATERIALS,
@@ -440,19 +443,19 @@ struct ComponentEvents {
 
 /* Map from ObjectType::ID to another resource */
 template <class ObjectType, class ValueType>
-class ObjectIdMap {
+class ObjectMap {
 public:
-    ObjectIdMap() = default;
-    ObjectIdMap(const ObjectIdMap &other) = delete;
-    ObjectIdMap &operator=(const ObjectIdMap &other) = delete;
-    ObjectIdMap(ObjectIdMap &&other) noexcept
+    ObjectMap() = default;
+    ObjectMap(const ObjectMap &other) = delete;
+    ObjectMap &operator=(const ObjectMap &other) = delete;
+    ObjectMap(ObjectMap &&other) noexcept
         : m_index_map(std::move(other.m_index_map)),
           m_values(std::move(other.m_values)),
           m_max_index(other.m_max_index)
     {}
-    ~ObjectIdMap() = default;
+    ~ObjectMap() = default;
 
-    ObjectIdMap &operator=(ObjectIdMap &&other) noexcept
+    ObjectMap &operator=(ObjectMap &&other) noexcept
     {
         m_index_map = std::move(other.m_index_map);
         m_values = std::move(other.m_values);
@@ -720,19 +723,19 @@ struct ObjectHolder {
  * a teardown method which is defined in CallbackTrackable.
  */
 template <class T, class CallbacksClass>
-struct ObjectHolder2 {
+struct ObjectVector {
     std::vector<std::unique_ptr<T>> objects;
     std::queue<size_t> free_slots;
     CallbacksClass &callbacks;
 
-    ObjectHolder2(CallbacksClass &callbacks)
+    ObjectVector(CallbacksClass &callbacks)
         : callbacks(callbacks)
     {
     }
 
-    ObjectHolder2(const ObjectHolder2 &other) = delete;
-    ObjectHolder2 &operator=(const ObjectHolder2 &other) = delete;
-    ~ObjectHolder2() {}
+    ObjectVector(const ObjectVector &other) = delete;
+    ObjectVector &operator=(const ObjectVector &other) = delete;
+    ~ObjectVector() {}
 
     constexpr size_t Size() const
         { return objects.size(); }
@@ -748,7 +751,7 @@ struct ObjectHolder2 {
     }
 
     constexpr const T *Get(const typename T::ID &id) const
-        { return const_cast<ObjectHolder2<T, CallbacksClass> *>(this)->Get(id); }
+        { return const_cast<ObjectVector<T, CallbacksClass> *>(this)->Get(id); }
 
     constexpr T *operator[](const typename T::ID &id) { return Get(id); }
     constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }
@@ -813,8 +816,8 @@ class RefCounter {
         uint32_t count = 0;
     };
 
-    ObjectHolder2<T, CallbacksClass>  m_holder;
-    ObjectIdMap<T, RefCount>          m_ref_map;
+    ObjectVector<T, CallbacksClass>   m_holder;
+    ObjectMap<T, RefCount>            m_ref_map;
 
     ArgsTuple                         m_init_args{};
 
@@ -874,7 +877,7 @@ public:
 
         operator T *()              { return ptr; }
         operator const T *() const  { return ptr; }
-        operator bool() const       { return ptr != nullptr; }
+        operator bool() const       { return Valid(); }
 
         T *operator->()             { return ptr; }
         const T *operator->() const { return ptr; }
@@ -894,17 +897,46 @@ public:
         bool operator!=(const RefWrapper &other) const
             { return !operator==(other); }
         
+        /*! \brief _If_ ptr has not had Init() performed yet (checked via IsInit()), call it, using
+         * the pre-bound arguments from the reference counter this wrapper was acquired from.
+         * Throws an assertion error if state is invalid.
+         */
+        void Init()
+        {
+            AssertState();
+            
+            if (!ptr->IsInit()) {
+                /* Call ptr->Init() with the ref counter's pre-bound args */
+                std::apply(&T::Init, std::tuple_cat(std::make_tuple(ptr), m_ref_counter->m_init_args));
+            }
+        }
+
+        /*! \brief _If_ ptr has not had Init() performed yet (checked via IsInit()), call it.
+         * Throws an assertion error if state is invalid.
+         * @param args The arguments to be forwarded to Init()
+         */
+        template <class ...Args>
+        void Init(Args &&... args)
+        {
+            AssertState();
+            
+            if (!ptr->IsInit()) {
+                /* Call ptr->Init() with the provided args */
+                ptr->Init(std::forward<Args>(args)...);
+            }
+        }
+
+        /*! \brief Acquire a new reference from this one. Increments the reference counter. */
         auto Acquire()
         {
-            AssertThrowMsg(ptr != nullptr,           "invalid state");
-            AssertThrowMsg(m_ref_counter != nullptr, "invalid state");
+            AssertState();
 
             return m_ref_counter->Acquire(ptr);
         }
 
         size_t GetRefCount() const
         {
-            if (!ptr || !m_ref_counter) {
+            if (!Valid()) {
                 return 0;
             }
 
@@ -914,10 +946,18 @@ public:
         T *ptr;
 
     private:
-        void Release()
+        bool Valid() const
+            { return ptr != nullptr && m_ref_counter != nullptr; }
+
+        void AssertState()
         {
             AssertThrowMsg(ptr != nullptr,           "invalid state");
             AssertThrowMsg(m_ref_counter != nullptr, "invalid state");
+        }
+
+        void Release()
+        {
+            AssertState();
 
             m_ref_counter->Release(ptr);
 
@@ -978,16 +1018,26 @@ public:
     {
         AssertThrow(ptr != nullptr);
 
-        auto &ref_count = m_ref_map[ptr->GetId()].count;
-
-        if (!ptr->IsInit()) {
-            std::apply(&T::Init, std::tuple_cat(std::make_tuple(ptr), m_init_args));
-        }
-
-        ++ref_count;
+        ++m_ref_map[ptr->GetId()].count;
         
         return RefWrapper(ptr, this);
     }
+
+    [[nodiscard]] RefWrapper Get(const typename T::ID &id)
+    {
+        T *ptr = m_holder.Get(id);
+
+        if (ptr == nullptr) {
+            return nullptr;
+        }
+
+        ++m_ref_map[ptr->GetId()].count;
+
+        return RefWrapper(ptr, this);
+    }
+
+    [[nodiscard]] RefWrapper Get(const typename T::ID &id) const
+        { return const_cast<const RefCounter *>(this)->Get(id); }
 
     template <class ...Args>
     void Release(const T *ptr)
@@ -1003,9 +1053,6 @@ public:
             m_ref_map.Remove(id);
         }
     }
-
-    T *Get(const typename T::ID &id) const
-        { return m_holder.Get(id); }
 
     constexpr T *operator[](const typename T::ID &id) { return Get(id); }
     constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }

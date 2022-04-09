@@ -2,7 +2,7 @@
 #define HYPERION_V2_NODE_H
 
 #include "spatial.h"
-#include "util.h"
+#include "containers.h"
 #include <math/transform.h>
 
 #include <vector>
@@ -32,7 +32,7 @@ public:
     inline Node *GetParent() const { return m_parent_node; }
 
     inline Spatial *GetSpatial() const { return m_spatial.ptr; }
-    void SetSpatial(Engine *engine, Spatial *spatial);
+    void SetSpatial(Ref<Spatial> &&spatial);
 
     /*! \brief Add the Node as a child of this object, taking ownership over the given Node.
      * @param node The Node to be added as achild of this Node

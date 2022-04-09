@@ -246,8 +246,7 @@ public:
     void SetParameter(MaterialKey key, const Parameter &value);
     void SetTexture(TextureSet::TextureKey key, Texture::ID id);
 
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
+    void Init(Engine *engine);
 
     inline HashCode GetHashCode() const
     {
