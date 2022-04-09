@@ -614,7 +614,7 @@ Result Image::Create(Device *device, Instance *renderer,
 
 Result Image::Destroy(Device *device)
 {
-    Result result = Result::OK;
+    auto result = Result::OK;
 
     HYPERION_PASS_ERRORS(m_image->Destroy(device), result);
 

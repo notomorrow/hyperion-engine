@@ -158,10 +158,14 @@ void PostEffect::Destroy(Engine *engine)
 
     m_frame_data->Reset();
 
-    AssertThrowMsg(result, "%s", result.message);
-
     engine->resources.framebuffers.Remove(engine, m_framebuffer_id);
     engine->resources.render_passes.Remove(engine, m_render_pass_id);
+
+    for (auto &attachment : m_attachments) {
+        HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
+    }
+
+    HYPERION_ASSERT_RESULT(result);
 }
 
 void PostEffect::DestroyPipeline(Engine *engine)

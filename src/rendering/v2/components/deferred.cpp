@@ -21,7 +21,7 @@ void DeferredRenderingEffect::CreateShader(Engine *engine)
             SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read()}},
             SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read()}}
         }
-    )).Acquire(engine);
+    )).Acquire();
 }
 
 void DeferredRenderingEffect::CreateRenderPass(Engine *engine)

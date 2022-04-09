@@ -60,8 +60,8 @@ void Spatial::Init(Engine *engine)
     EngineComponentBase::Init();
 
     Track(engine->callbacks.Once(EngineCallback::CREATE_SPATIALS, [this](Engine *engine) {
-        m_mesh = m_mesh.Acquire(engine);
-        std::cout << "Ref count : " << m_mesh.GetRefCount() << "\n";
+        m_mesh = m_mesh.Acquire();
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
             m_mesh = nullptr;
 

@@ -22,7 +22,7 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
     : m_instance(new Instance(_system, app_name, "HyperionEngine")),
       m_shader_globals(nullptr),
       m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
-      resources(callbacks),
+      resources(this),
       assets(this)
 {
     m_octree.m_root = &m_octree_root;
@@ -172,7 +172,7 @@ void Engine::PrepareSwapchain()
 
             render_pass_id = resources.render_passes.Add(this, std::move(render_pass));
             m_root_pipeline = std::make_unique<GraphicsPipeline>(
-                shader.Acquire(this),
+                shader.Acquire(),
                 render_pass_id,
                 GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN
             );
@@ -187,7 +187,6 @@ void Engine::PrepareSwapchain()
         ++iteration;
     }
 
-
     m_root_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
 
     callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
@@ -198,6 +197,10 @@ void Engine::PrepareSwapchain()
     callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](...) {
         m_render_list.Destroy(this);
         m_root_pipeline->Destroy(this);
+
+        for (auto &attachment : m_render_pass_attachments) {
+            HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
+        }
     });
     
     callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](...) {
@@ -306,6 +309,7 @@ void Engine::Destroy()
 
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
+    m_post_processing.Destroy(this);
 
     if (m_shader_globals != nullptr) {
         m_shader_globals->scenes.Destroy(m_instance->GetDevice());

@@ -35,24 +35,24 @@ GPUMemory::GPUMemory(
       size(0)
 {
     static unsigned allocations = 0;
-    DebugLog(LogType::Debug, "Allocate GPUMemory %d\n", allocations++);
+    index = allocations++;
+    DebugLog(LogType::Debug, "Allocate GPUMemory %u\n", index);
 }
 
 GPUMemory::~GPUMemory()
 {
-    static unsigned destructions = 0;
-    DebugLog(LogType::Debug, "Destroy GPUMemory %d\n", destructions++);
+    DebugLog(LogType::Debug, "Destroy GPUMemory %u\n", index);
 }
 
 
 void GPUMemory::Map(Device *device, void **ptr)
 {
-    vmaMapMemory(*device->GetAllocator(), this->allocation, ptr);
+    vmaMapMemory(device->GetAllocator(), this->allocation, ptr);
 }
 
 void GPUMemory::Unmap(Device *device)
 {
-    vmaUnmapMemory(*device->GetAllocator(), this->allocation);
+    vmaUnmapMemory(device->GetAllocator(), this->allocation);
 }
 
 void GPUMemory::Copy(Device *device, size_t count, void *ptr)
@@ -73,8 +73,8 @@ void GPUMemory::Copy(Device *device, size_t offset, size_t count, void *ptr)
 
 GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
     : GPUMemory(memory_property_flags, sharing_mode),
-      usage_flags(usage_flags),
-      buffer(nullptr)
+      buffer(nullptr),
+      usage_flags(usage_flags)
 {
 }
 
@@ -99,15 +99,15 @@ void GPUBuffer::Create(Device *device, size_t size)
     VmaAllocationCreateInfo alloc_info{};
     alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+    alloc_info.pUserData = reinterpret_cast<void *>(index);
 
-    auto result = vmaCreateBuffer(*device->GetAllocator(), &vk_buffer_info, &alloc_info, &this->buffer, &this->allocation, nullptr);
+    auto result = vmaCreateBuffer(device->GetAllocator(), &vk_buffer_info, &alloc_info, &this->buffer, &this->allocation, nullptr);
     AssertThrowMsg(result == VK_SUCCESS, "Failed to create gpu buffer");
 }
 
 void GPUBuffer::Destroy(Device *device)
 {
-    VkDevice vk_device = device->GetDevice();
-    vmaDestroyBuffer(*device->GetAllocator(), this->buffer, this->allocation);
+    vmaDestroyBuffer(device->GetAllocator(), this->buffer, this->allocation);
     this->buffer = nullptr;
     this->allocation = nullptr;
 }
@@ -128,7 +128,6 @@ IndexBuffer::IndexBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
 
 void IndexBuffer::Bind(CommandBuffer *cmd)
 {
-    const VkDeviceSize offsets[] = { 0 };
     vkCmdBindIndexBuffer(cmd->GetCommandBuffer(), this->buffer, 0, helpers::ToVkIndexType(GetDatumType()));
 }
 
@@ -147,13 +146,19 @@ StagingBuffer::StagingBuffer(uint32_t memory_property_flags, uint32_t sharing_mo
 
 GPUImage::GPUImage(VkImageUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
     : GPUMemory(memory_property_flags, sharing_mode),
-      usage_flags(usage_flags),
-      image(nullptr)
+      image(nullptr),
+      usage_flags(usage_flags)
 {
+    std::cout << "Alloc image\n";
+
+    if (index == 41) {
+       // HYP_BREAKPOINT;
+    }
 }
 
 GPUImage::~GPUImage()
 {
+    std::cout << "Dealloc image\n";
     AssertThrowMsg(image == nullptr, "image should have been destroyed!");
 }
 
@@ -161,21 +166,18 @@ Result GPUImage::Create(Device *device, size_t size, VkImageCreateInfo *image_in
 {
     this->size = size;
 
-    VkDevice vk_device = device->GetDevice();
-
     VmaAllocationCreateInfo alloc_info{};
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    alloc_info.pUserData = reinterpret_cast<void *>(index);
 
-    HYPERION_VK_CHECK(vmaCreateImage(*device->GetAllocator(), image_info, &alloc_info, &this->image, &this->allocation, nullptr));
+    HYPERION_VK_CHECK(vmaCreateImage(device->GetAllocator(), image_info, &alloc_info, &this->image, &this->allocation, nullptr));
 
     HYPERION_RETURN_OK;
 }
 
 Result GPUImage::Destroy(Device *device)
 {
-    VkDevice vk_device = device->GetDevice();
-
-    vmaDestroyImage(*device->GetAllocator(), this->image, this->allocation);
+    vmaDestroyImage(device->GetAllocator(), this->image, this->allocation);
     this->image = nullptr;
     this->allocation = nullptr;
 

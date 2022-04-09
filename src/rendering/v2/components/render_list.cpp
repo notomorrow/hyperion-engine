@@ -177,7 +177,9 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
 
 void RenderList::Bucket::Destroy(Engine *engine)
 {
-    AssertThrow(render_pass_id.value != 0);
+    auto result = renderer::Result::OK;
+
+    AssertThrow(render_pass_id != RenderPass::bad_id);
 
     for (const auto &framebuffer_id : framebuffer_ids) {
         engine->resources.framebuffers.Remove(engine, framebuffer_id);
@@ -187,7 +189,13 @@ void RenderList::Bucket::Destroy(Engine *engine)
 
     engine->resources.render_passes.Remove(engine, render_pass_id);
 
+    for (auto &attachment : m_attachments) {
+        HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
+    }
+
     pipelines.RemoveAll(engine);
+
+    HYPERION_ASSERT_RESULT(result);
 }
 
 void RenderList::Bucket::BeginRenderPass(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)

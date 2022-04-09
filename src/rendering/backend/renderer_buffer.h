@@ -38,6 +38,8 @@ public:
 protected:
     uint32_t sharing_mode;
     uint32_t memory_property_flags;
+
+    uint32_t index;
 };
 
 /* buffers */

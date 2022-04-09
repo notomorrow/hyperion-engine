@@ -73,14 +73,15 @@ public:
     Result InitializeDevice(VkPhysicalDevice _physical_device = nullptr);
     Result InitializeSwapchain();
 
+    void SetCurrentWindow(SystemWindow *window);
+
     inline Swapchain *GetSwapchain() { return swapchain; }
     inline const Swapchain *GetSwapchain() const { return swapchain; }
     
-    void SetCurrentWindow(SystemWindow *window);
-    
-    inline FrameHandler *GetFrameHandler() { return this->frame_handler; }
-    inline const FrameHandler *GetFrameHandler() const { return this->frame_handler; }
-    inline VmaAllocator *GetAllocator() { return &this->allocator; }
+    inline FrameHandler *GetFrameHandler() { return frame_handler; }
+    inline const FrameHandler *GetFrameHandler() const { return frame_handler; }
+
+    inline VmaAllocator GetAllocator() const { return allocator; }
 
     SystemWindow *GetCurrentWindow();
     Result Destroy();

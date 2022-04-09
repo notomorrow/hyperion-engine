@@ -29,7 +29,7 @@ struct Resources {
     RefCounter<Spatial, Callbacks>          spatials;
     RefCounter<Mesh,    Callbacks>          meshes;
 
-    Resources(EngineCallbacks &);
+    Resources(Engine *);
     Resources(const Resources &other) = delete;
     Resources &operator=(const Resources &other) = delete;
     ~Resources();

@@ -3,10 +3,10 @@
 
 namespace hyperion::v2 {
 
-Resources::Resources(EngineCallbacks &callbacks)
-    : shaders(callbacks),
-      spatials(callbacks),
-      meshes(callbacks)
+Resources::Resources(Engine *engine)
+    : shaders(engine->callbacks, {engine}),
+      spatials(engine->callbacks, {engine}),
+      meshes(engine->callbacks, {engine})
 {
 }
 

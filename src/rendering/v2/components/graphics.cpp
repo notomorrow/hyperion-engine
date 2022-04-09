@@ -75,7 +75,7 @@ void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
 
 void GraphicsPipeline::Create(Engine *engine)
 {
-    m_shader = m_shader.Acquire(engine);
+    m_shader = m_shader.Acquire();
     AssertThrow(m_shader != nullptr);
     
     auto *render_pass = engine->resources.render_passes[m_render_pass_id];
