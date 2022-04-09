@@ -15,7 +15,11 @@ Shader::~Shader()
 
 void Shader::Init(Engine *engine)
 {
-    Track(engine->callbacks.Once(EngineCallback::CREATE_SHADERS, [this](Engine *engine) {
+    if (IsInit()) {
+        return;
+    }
+
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SHADERS, [this](Engine *engine) {
         auto create_shader_result = renderer::Result::OK;
 
         for (const auto &sub_shader : m_sub_shaders) {

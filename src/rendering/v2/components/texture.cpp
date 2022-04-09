@@ -18,32 +18,39 @@ Texture::Texture(
 
 Texture::~Texture()
 {
-    AssertThrowMsg(m_image_view == nullptr, "image view should have been destroyed");
-    AssertThrowMsg(m_sampler == nullptr, "sampler should have been destroyed");
+    Teardown();
 }
 
-void Texture::Create(Engine *engine)
+void Texture::Init(Engine *engine)
 {
-    EngineComponent::Create(
-        engine,
-        engine->GetInstance(),
-        Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
-        Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
-    );
+    if (IsInit()) {
+        return;
+    }
 
-    HYPERION_ASSERT_RESULT(m_image_view->Create(engine->GetInstance()->GetDevice(), &m_wrapped));
-    HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetInstance()->GetDevice(), m_image_view.get()));
-}
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_TEXTURES, [this](Engine *engine) {
+        EngineComponent::Create(
+            engine,
+            engine->GetInstance(),
+            Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL>{},
+            Image::LayoutTransferState<VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL>{}
+        );
 
-void Texture::Destroy(Engine *engine)
-{
-    HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetInstance()->GetDevice()));
-    m_sampler.reset();
+        HYPERION_ASSERT_RESULT(m_image_view->Create(engine->GetInstance()->GetDevice(), &m_wrapped));
+        HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetInstance()->GetDevice(), m_image_view.get()));
 
-    HYPERION_ASSERT_RESULT(m_image_view->Destroy(engine->GetInstance()->GetDevice()));
-    m_image_view.reset();
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_TEXTURES, [this](Engine *engine) {
+            AssertThrow(m_image_view != nullptr);
+            AssertThrow(m_sampler != nullptr);
 
-    EngineComponent::Destroy(engine);
+            HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetInstance()->GetDevice()));
+            m_sampler.reset();
+
+            HYPERION_ASSERT_RESULT(m_image_view->Destroy(engine->GetInstance()->GetDevice()));
+            m_image_view.reset();
+
+            EngineComponent::Destroy(engine);
+        }), engine);
+    }));
 }
 
 } // namespace hyperion::v2

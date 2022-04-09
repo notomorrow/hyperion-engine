@@ -10,7 +10,23 @@ Material::Material()
 {
 }
 
-Material::~Material() = default;
+Material::~Material()
+{
+    Teardown();
+}
+
+void Material::Init(Engine *engine)
+{
+    if (IsInit()) {
+        return;
+    }
+
+    EngineComponentBase::Init();
+
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_MATERIALS, [this](Engine *engine) {
+        UpdateShaderData(engine);
+    }));
+}
 
 void Material::UpdateShaderData(Engine *engine) const
 {
@@ -51,18 +67,6 @@ void Material::UpdateShaderData(Engine *engine) const
     }
 
     engine->m_shader_globals->materials.Set(m_id.Value() - 1, std::move(shader_data));
-}
-
-
-void Material::Create(Engine *engine)
-{
-    Track(engine->callbacks.Once(EngineCallback::CREATE_MATERIALS, [this, engine](...) {
-        UpdateShaderData(engine);
-    }));
-}
-
-void Material::Destroy(Engine *engine)
-{
 }
 
 void Material::SetParameter(MaterialKey key, const Parameter &value)

@@ -290,13 +290,13 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
                     vertex_attributes,
                     Transform(),
                     BoundingBox(),
-                    Material::ID{ Material::ID::ValueType{1} }
+                    engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
                 )
             );
 
             auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
 
-            node->SetSpatial(engine, spatial);
+            node->SetSpatial(std::move(spatial));
 
             top->AddChild(std::move(node));
         });

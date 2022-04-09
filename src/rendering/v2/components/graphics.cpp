@@ -75,8 +75,8 @@ void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
 
 void GraphicsPipeline::Create(Engine *engine)
 {
-    m_shader = m_shader.Acquire();
     AssertThrow(m_shader != nullptr);
+    m_shader->Init(engine);
     
     auto *render_pass = engine->resources.render_passes[m_render_pass_id];
     AssertThrow(render_pass != nullptr);
@@ -195,7 +195,17 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 }
             );
             
-            for (Spatial *spatial : m_spatials) {
+            for (const Spatial *spatial : m_spatials) {
+                if (spatial->GetMesh() == nullptr) {
+                    continue;
+                }
+
+                const auto spatial_index = spatial->GetId().value - 1;
+
+                const auto material_index = spatial->GetMaterial() != nullptr
+                    ? spatial->GetMaterial()->GetId().value - 1
+                    : 0;
+
                 /* Bind per-object / material data separately */
                 instance->GetDescriptorPool().Bind(
                     device,
@@ -205,8 +215,8 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                         {.set = frame_index_object_buffer_mapping[frame_index], .count = 1},
                         {.binding = 3},
                         {.offsets = {
-                            uint32_t((spatial->GetMaterialId().Value() - 1) * sizeof(MaterialShaderData)),
-                            uint32_t((spatial->GetId().Value() - 1) * sizeof(ObjectShaderData))
+                            uint32_t(material_index * sizeof(MaterialShaderData)),
+                            uint32_t(spatial_index * sizeof(ObjectShaderData))
                         }}
                     }
                 );

@@ -36,8 +36,7 @@ public:
     inline ImageView *GetImageView() const { return m_image_view.get(); }
     inline Sampler *GetSampler() const { return m_sampler.get(); }
 
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
+    void Init(Engine *engine);
 
 private:
     std::unique_ptr<ImageView> m_image_view;

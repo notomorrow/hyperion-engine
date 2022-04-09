@@ -102,6 +102,8 @@ void Engine::PrepareSwapchain()
         }
     ));
 
+    shader->Init(this);
+
     uint32_t iteration = 0;
     
     auto render_pass = std::make_unique<RenderPass>(
@@ -287,6 +289,7 @@ void Engine::Initialize()
 
     m_render_list.Create(this);
 
+    callbacks.TriggerPersisted(EngineCallback::CREATE_TEXTURES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SHADERS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SPATIALS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES, this);
@@ -304,6 +307,7 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SHADERS, this);
+    callbacks.Trigger(EngineCallback::DESTROY_TEXTURES, this);
 
     resources.Destroy(this);
 

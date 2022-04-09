@@ -20,7 +20,9 @@ void ShadowEffect::CreateShader(Engine *engine)
             SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/vert.spv").Read()} },
             SubShader{ ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/shadow_frag.spv").Read()} }
         }
-    )).Acquire();
+    ));
+
+    m_shader->Init(engine);
 }
 
 void ShadowEffect::CreateRenderPass(Engine *engine)

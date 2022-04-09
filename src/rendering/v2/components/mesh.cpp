@@ -34,6 +34,32 @@ Mesh::~Mesh()
     Teardown();
 }
 
+void Mesh::Init(Engine *engine)
+{
+    if (IsInit()) {
+        return;
+    }
+
+    EngineComponentBase::Init();
+
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](Engine *engine) {
+        UploadToDevice(engine->GetInstance()->GetDevice());
+
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
+            AssertThrow(m_vbo != nullptr);
+            AssertThrow(m_ibo != nullptr);
+
+            Device *device = engine->GetInstance()->GetDevice();
+
+            m_vbo->Destroy(device);
+            m_vbo.reset();
+
+            m_ibo->Destroy(device);
+            m_ibo.reset();
+        }), engine);
+    }));
+}
+
 /* Copy our values into the packed vertex buffer, and increase the index for the next possible
  * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
 #define PACKED_SET_ATTR(raw_values, arg_size)                                   \
@@ -141,29 +167,6 @@ Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
     }
 
     return std::make_pair(new_vertices, indices);
-}
-
-void Mesh::Init(Engine *engine)
-{
-    EngineComponentBase::Init();
-
-    Track(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](Engine *engine) {
-        UploadToDevice(engine->GetInstance()->GetDevice());
-
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
-            std::cout << "Teardown mesh " << m_id.value << "\n";
-            AssertThrow(m_vbo != nullptr);
-            AssertThrow(m_ibo != nullptr);
-
-            Device *device = engine->GetInstance()->GetDevice();
-
-            m_vbo->Destroy(device);
-            m_vbo.reset();
-
-            m_ibo->Destroy(device);
-            m_ibo.reset();
-        }), engine);
-    }));
 }
 
 void Mesh::Render(Engine *engine, CommandBuffer *cmd) const

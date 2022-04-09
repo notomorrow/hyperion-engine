@@ -302,18 +302,18 @@ int main()
     
     {
         texture->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
-        texture->Create(&engine);
+        texture->Init(&engine);
         engine.m_shader_globals->textures.AddResource(texture);
 
 #if HYPERION_VK_TEST_MIPMAP
         texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
-        texture2->Create(&engine);
+        texture2->Init(&engine);
         engine.m_shader_globals->textures.AddResource(texture2);
 #endif
 
 #if HYPERION_VK_TEST_CUBEMAP
         cubemap->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(3) });
-        cubemap->Create(&engine);
+        cubemap->Init(&engine);
         //engine.m_shader_globals->textures.AddResource(texture2);
 #endif
     }
@@ -411,27 +411,27 @@ int main()
     }
 
     v2::Node new_root("root");
-
-
-    auto mat1 = std::make_unique<v2::Material>();
+    
+    auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
     mat1->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
-    v2::Material::ID mat1_id = engine.resources.materials.Add(&engine, std::move(mat1));
-
-    auto mat2 = std::make_unique<v2::Material>();
+    mat1.Init();
+    
+    auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
     mat2->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
-    v2::Material::ID mat2_id = engine.resources.materials.Add(&engine, std::move(mat2));
+    mat2.Init();
 
-    auto skybox_material = std::make_unique<v2::Material>();
+    auto skybox_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
     skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-    v2::Material::ID skybox_material_id = engine.resources.materials.Add(&engine, std::move(skybox_material));
+    mat1.Init();
 
-    auto translucent_material = std::make_unique<v2::Material>();
+    auto translucent_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
-    v2::Material::ID translucent_material_id = engine.resources.materials.Add(&engine, std::move(translucent_material));
+    mat1.Init();
 
-    v2::Spatial *monkey_spatial{}, *cube_spatial{};
+    v2::Spatial *cube_spatial{};
+    auto monkey_spatial = engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial());
 
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
@@ -441,10 +441,9 @@ int main()
             v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
         );
 
-        monkey_spatial = monkey_obj->GetChild(0)->GetSpatial();
 
         auto monkey_node = std::make_unique<v2::Node>("monkey");
-        monkey_node->SetSpatial(&engine, monkey_spatial);
+        monkey_node->SetSpatial(monkey_spatial.Acquire());
         new_root.AddChild(std::move(monkey_node));
         
         pipeline->AddSpatial(&engine, monkey_spatial);
@@ -714,16 +713,16 @@ int main()
     image_storage_view.Destroy(device);
 #endif
     
-    texture->Destroy(&engine);
+    //texture->Destroy(&engine);
     delete texture;
 
 #if HYPERION_VK_TEST_MIPMAP
-    texture2->Destroy(&engine);
+    //texture2->Destroy(&engine);
     delete texture2;
 #endif
 
 #if HYPERION_VK_TEST_CUBEMAP
-    cubemap->Destroy(&engine);
+    //cubemap->Destroy(&engine);
     delete cubemap;
 #endif
 

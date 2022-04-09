@@ -8,7 +8,7 @@
 #include "material.h"
 #include "texture.h"
 #include "mesh.h"
-#include "util.h"
+#include "containers.h"
 
 #include <mutex>
 
@@ -19,15 +19,15 @@ class Engine;
 struct Resources {
     using Callbacks = EngineCallbacks;
 
-    RefCounter<Shader,  Callbacks>          shaders;
-    ObjectHolder<Texture>                   textures;
+    RefCounter<Shader,   Callbacks>         shaders;
+    RefCounter<Texture,  Callbacks>         textures;
     ObjectHolder<Framebuffer>               framebuffers;
     ObjectHolder<RenderPass>                render_passes;
-    ObjectHolder<Material>                  materials;
+    RefCounter<Material, Callbacks>         materials;
     ObjectHolder<ComputePipeline>           compute_pipelines{.defer_create = true};
     
-    RefCounter<Spatial, Callbacks>          spatials;
-    RefCounter<Mesh,    Callbacks>          meshes;
+    RefCounter<Spatial,  Callbacks>         spatials;
+    RefCounter<Mesh,     Callbacks>         meshes;
 
     Resources(Engine *);
     Resources(const Resources &other) = delete;
@@ -37,6 +37,10 @@ struct Resources {
     void Create(Engine *engine);
     void Destroy(Engine *engine);
 
+    /*! \brief Guard the given lambda with a lock/unlock of the resources'
+     *  internal mutex for the purposes of asset loading.
+     *  @param lambda The lambda function to execute within the guard
+     */
     template <class LambdaFunction>
     void Lock(LambdaFunction lambda)
     {
