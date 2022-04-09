@@ -465,7 +465,7 @@ int main()
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX
         );
-        pipeline->SetCullMode(GraphicsPipeline::CullMode::FRONT);
+        pipeline->SetCullMode(CullMode::FRONT);
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
 
@@ -500,9 +500,9 @@ int main()
             v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
         );
         pipeline->SetBlendEnabled(false);
-        pipeline->SetFillMode(GraphicsPipeline::FillMode::LINE);
-        pipeline->SetCullMode(GraphicsPipeline::CullMode::NONE);
-        pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+        pipeline->SetFillMode(FillMode::LINE);
+        pipeline->SetCullMode(CullMode::NONE);
+        pipeline->SetTopology(Topology::LINES);
         wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
@@ -738,7 +738,10 @@ int main()
 #if HYPERION_VK_TEST_IMAGE_STORE
     compute_command_buffer->Destroy(device, engine.GetInstance()->GetComputeCommandPool());
     compute_semaphore_chain.Destroy(engine.GetInstance()->GetDevice());
+
+    vkDestroyFence(engine.GetInstance()->GetDevice()->GetDevice(), compute_fc, VK_NULL_HANDLE);
 #endif
+
 
     engine.Destroy();
 

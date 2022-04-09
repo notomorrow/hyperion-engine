@@ -32,6 +32,27 @@ enum class DatumType {
     FLOAT
 };
 
+enum class CullMode {
+    NONE,
+    BACK,
+    FRONT
+};
+
+enum class FillMode {
+    FILL,
+    LINE
+};
+
+enum class Topology {
+    TRIANGLES,
+    TRIANGLE_FAN,
+    TRIANGLE_STRIP,
+
+    LINES,
+
+    POINTS
+};
+
 struct MeshBindingDescription {
     uint32_t binding;
     uint32_t stride;

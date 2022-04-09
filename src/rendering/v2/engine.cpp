@@ -189,7 +189,7 @@ void Engine::PrepareSwapchain()
         ++iteration;
     }
 
-    m_root_pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+    m_root_pipeline->SetTopology(Topology::TRIANGLE_FAN);
 
     callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
         m_render_list.CreatePipelines(this);

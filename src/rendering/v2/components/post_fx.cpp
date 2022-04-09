@@ -133,7 +133,7 @@ void PostEffect::CreatePipeline(Engine *engine)
     pipeline->AddFramebuffer(m_framebuffer_id);
     pipeline->SetDepthWrite(false);
     pipeline->SetDepthTest(false);
-    pipeline->SetTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+    pipeline->SetTopology(Topology::TRIANGLE_FAN);
 
     m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
 }

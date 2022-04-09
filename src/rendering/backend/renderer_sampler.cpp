@@ -21,17 +21,16 @@ Sampler::~Sampler()
 
 Result Sampler::Create(Device *device, ImageView *image_view)
 {
-    VkSamplerCreateInfo sampler_info{};
-    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_info.magFilter = Image::ToVkFilter(m_filter_mode);
-    sampler_info.minFilter = Image::ToVkFilter(m_filter_mode);
+    VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    sampler_info.magFilter    = Image::ToVkFilter(m_filter_mode);
+    sampler_info.minFilter    = Image::ToVkFilter(m_filter_mode);
 
     sampler_info.addressModeU = Image::ToVkSamplerAddressMode(m_wrap_mode);
     sampler_info.addressModeV = Image::ToVkSamplerAddressMode(m_wrap_mode);
     sampler_info.addressModeW = Image::ToVkSamplerAddressMode(m_wrap_mode);
 
     sampler_info.anisotropyEnable = true;
-    sampler_info.maxAnisotropy = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
+    sampler_info.maxAnisotropy    = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
 
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = false;

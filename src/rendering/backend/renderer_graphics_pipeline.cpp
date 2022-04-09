@@ -163,8 +163,30 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     vertex_input_info.pVertexAttributeDescriptions    = this->vertex_attributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo input_asm_info{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-    input_asm_info.topology = m_construction_info.topology;
     input_asm_info.primitiveRestartEnable = VK_FALSE;
+
+    switch (m_construction_info.topology) {
+    case Topology::TRIANGLES:
+        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        break;
+    case Topology::TRIANGLE_FAN:
+        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+        break;
+    case Topology::TRIANGLE_STRIP:
+        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        break;
+    case Topology::LINES:
+        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        break;
+    case Topology::POINTS:
+        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        break;
+    default:
+        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        break;
+    }
+
+
 
     VkPipelineViewportStateCreateInfo viewport_state{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
     VkViewport viewports[] = { this->viewport };

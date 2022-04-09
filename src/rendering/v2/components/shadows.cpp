@@ -67,7 +67,7 @@ void ShadowEffect::CreatePipeline(Engine *engine)
         m_render_pass_id,
         GraphicsPipeline::Bucket::BUCKET_PREPASS
     );
-    pipeline->SetCullMode(renderer::GraphicsPipeline::CullMode::FRONT);
+    pipeline->SetCullMode(CullMode::FRONT);
     pipeline->AddFramebuffer(m_framebuffer_id);
     pipeline->SetSceneIndex(1);
 
