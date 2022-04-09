@@ -5,7 +5,7 @@ namespace hyperion::v2 {
 
 Octree::~Octree()
 {
-    AssertThrowMsg(m_nodes.empty(), "Expected nodes to be emptied before octree destructor");
+    //AssertThrowMsg(m_nodes.empty(), "Expected nodes to be emptied before octree destructor");
 }
 
 void Octree::SetParent(Octree *parent)

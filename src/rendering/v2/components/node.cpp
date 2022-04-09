@@ -152,7 +152,7 @@ void Node::SetSpatial(Engine *engine, Spatial *spatial)
     //}
 
     if (spatial != nullptr) {
-        m_spatial = engine->resources.spatials.Acquire(engine, spatial);
+        m_spatial = engine->resources.spatials.Acquire(spatial);
 
         m_local_aabb = m_spatial->GetLocalAabb();
     } else {

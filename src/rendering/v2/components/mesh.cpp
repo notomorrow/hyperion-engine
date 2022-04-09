@@ -151,6 +151,7 @@ void Mesh::Init(Engine *engine)
         UploadToDevice(engine->GetInstance()->GetDevice());
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
+            std::cout << "Teardown mesh " << m_id.value << "\n";
             AssertThrow(m_vbo != nullptr);
             AssertThrow(m_ibo != nullptr);
 

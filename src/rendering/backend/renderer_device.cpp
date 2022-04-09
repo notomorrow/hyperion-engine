@@ -14,9 +14,10 @@
 namespace hyperion {
 namespace renderer {
 Device::Device(VkPhysicalDevice physical, VkSurfaceKHR surface)
-    : device(nullptr),
+    : device(VK_NULL_HANDLE),
       physical(physical),
       surface(surface),
+      allocator(VK_NULL_HANDLE),
       features(new Features())
 {
     this->features->SetPhysicalDevice(physical);
@@ -280,7 +281,7 @@ Result Device::SetupAllocator(Instance *instance)
     create_info.instance         = instance->GetInstance();
     create_info.pVulkanFunctions = &vkfuncs;
 
-    vmaCreateAllocator(&create_info, this->GetAllocator());
+    vmaCreateAllocator(&create_info, &allocator);
 
     HYPERION_RETURN_OK;
 }
@@ -288,6 +289,13 @@ Result Device::SetupAllocator(Instance *instance)
 Result Device::DestroyAllocator()
 {
     if (this->allocator != nullptr) {
+        char *stats_string;
+        vmaBuildStatsString(this->allocator, &stats_string, true);
+
+        DebugLog(LogType::RenInfo, "Pre-destruction VMA stats:\n%s\n", stats_string);
+
+        vmaFreeStatsString(this->allocator, stats_string);
+
         vmaDestroyAllocator(this->allocator);
         this->allocator = nullptr;
     }

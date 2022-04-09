@@ -208,6 +208,7 @@ public:
             return false;
         }
     };
+    using ArgsTuple = std::tuple<Args...>;
 
     Callbacks() = default;
     Callbacks(const Callbacks &other) = delete;
@@ -806,12 +807,16 @@ struct ObjectHolder2 {
 
 template <class T, class CallbacksClass>
 class RefCounter {
+    using ArgsTuple = typename CallbacksClass::ArgsTuple;
+
     struct RefCount {
         uint32_t count = 0;
     };
 
     ObjectHolder2<T, CallbacksClass>  m_holder;
     ObjectIdMap<T, RefCount>          m_ref_map;
+
+    ArgsTuple                         m_init_args{};
 
 public:
     class RefWrapper {
@@ -889,12 +894,12 @@ public:
         bool operator!=(const RefWrapper &other) const
             { return !operator==(other); }
         
-        auto Acquire(Engine *engine)
+        auto Acquire()
         {
             AssertThrowMsg(ptr != nullptr,           "invalid state");
             AssertThrowMsg(m_ref_counter != nullptr, "invalid state");
 
-            return m_ref_counter->Acquire(engine, ptr);
+            return m_ref_counter->Acquire(ptr);
         }
 
         size_t GetRefCount() const
@@ -929,6 +934,13 @@ public:
     {
     }
 
+    RefCounter(CallbacksClass &callbacks, ArgsTuple &&bind_init_args)
+        : m_holder(callbacks),
+          m_ref_map{},
+          m_init_args(std::move(bind_init_args))
+    {
+    }
+
     ~RefCounter()
     {
         for (RefCount &rc : m_ref_map) {
@@ -945,6 +957,12 @@ public:
             AssertThrowMsg(rc.count == 0, "Destructor called while object still in use elsewhere");
         }
     }
+
+    /*! \brief Sets the args tuple that is passed to Init() for any newly acquired object. */
+    void BindInitArguments(ArgsTuple &&args)
+    {
+        m_init_args = std::move(args);
+    }
     
     [[nodiscard]] RefWrapper Add(std::unique_ptr<T> &&object)
     {
@@ -956,14 +974,14 @@ public:
         return RefWrapper(ptr, this);
     }
     
-    [[nodiscard]] RefWrapper Acquire(Engine *engine, T *ptr)
+    [[nodiscard]] RefWrapper Acquire(T *ptr)
     {
         AssertThrow(ptr != nullptr);
 
         auto &ref_count = m_ref_map[ptr->GetId()].count;
 
         if (!ptr->IsInit()) {
-            ptr->Init(engine);
+            std::apply(&T::Init, std::tuple_cat(std::make_tuple(ptr), m_init_args));
         }
 
         ++ref_count;

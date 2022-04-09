@@ -40,6 +40,7 @@ public:
 
     Result SetupAllocator(Instance *instance);
     Result DestroyAllocator();
+    VmaAllocator GetAllocator() const { return allocator; }
 
     inline const QueueFamilyIndices &GetQueueFamilyIndices() const { return queue_family_indices; }
     inline const Features &GetFeatures() const { return *features; }
@@ -52,7 +53,6 @@ public:
     /*  Wait for the device to be idle */
     Result Wait() const;
 
-    VmaAllocator *GetAllocator() { return &this->allocator; }
 
     std::vector<const char *> CheckExtensionSupport(const std::vector<const char *> &extensions);
     std::vector<const char *> CheckExtensionSupport();
@@ -63,10 +63,10 @@ private:
     VkDevice                   device;
     VkPhysicalDevice           physical;
     VkSurfaceKHR               surface;
+    VmaAllocator               allocator;
 
     Features           *features;
     QueueFamilyIndices queue_family_indices;
-    VmaAllocator       allocator;
 
     std::vector<const char *> required_extensions;
 };

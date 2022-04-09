@@ -33,6 +33,7 @@ Mesh::Mesh()
 
 Mesh::~Mesh()
 {
+    std::cout << "Destroy old mesh \n";
     if (_render_context != nullptr) {
         delete _render_context;
     }

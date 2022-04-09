@@ -436,7 +436,7 @@ int main()
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            mirror_shader.Acquire(&engine),
+            mirror_shader.Acquire(),
             engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
         );
@@ -484,7 +484,7 @@ int main()
     v2::GraphicsPipeline::ID translucent_pipeline_id{};
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            mirror_shader.Acquire(&engine),
+            mirror_shader.Acquire(),
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
         );
@@ -500,7 +500,7 @@ int main()
     v2::GraphicsPipeline::ID wire_pipeline_id{};
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            mirror_shader.Acquire(&engine),
+            mirror_shader.Acquire(),
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
         );

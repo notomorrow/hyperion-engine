@@ -110,7 +110,7 @@ std::shared_ptr<Loadable> AssetManager::LoadFromFile(const std::string &path, bo
             } else {
                 result.loadable->SetFilePath(p);
 
-                loaded_assets[p] = result.loadable;
+                //loaded_assets[p] = result.loadable;
 
                 return result.loadable;
             }
