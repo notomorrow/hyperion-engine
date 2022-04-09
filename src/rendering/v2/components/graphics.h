@@ -21,6 +21,9 @@ using renderer::GPUBuffer;
 using renderer::UniformBuffer;
 using renderer::MeshInputAttributeSet;
 using renderer::PerFrameData;
+using renderer::Topology;
+using renderer::FillMode;
+using renderer::CullMode;
 
 class Engine;
 
@@ -61,19 +64,19 @@ public:
 
     inline const MeshInputAttributeSet &GetVertexAttributes() const { return m_vertex_attributes; }
 
-    inline VkPrimitiveTopology GetTopology() const
+    inline Topology GetTopology() const
         { return m_topology; }
-    inline void SetTopology(VkPrimitiveTopology topology)
+    inline void SetTopology(Topology topology)
         { m_topology = topology; }
 
     inline auto GetFillMode() const
         { return m_fill_mode; }
-    inline void SetFillMode(renderer::GraphicsPipeline::FillMode fill_mode)
+    inline void SetFillMode(FillMode fill_mode)
         { m_fill_mode = fill_mode; }
 
     inline auto GetCullMode() const
         { return m_cull_mode; }
-    inline void SetCullMode(renderer::GraphicsPipeline::CullMode cull_mode)
+    inline void SetCullMode(CullMode cull_mode)
         { m_cull_mode = cull_mode; }
 
     inline bool GetDepthTest() const
@@ -115,9 +118,9 @@ private:
     Ref<Shader> m_shader;
     RenderPass::ID m_render_pass_id;
     Bucket m_bucket;
-    VkPrimitiveTopology m_topology;
-    renderer::GraphicsPipeline::CullMode m_cull_mode;
-    renderer::GraphicsPipeline::FillMode m_fill_mode;
+    Topology m_topology;
+    CullMode m_cull_mode;
+    FillMode m_fill_mode;
     bool m_depth_test;
     bool m_depth_write;
     bool m_blend_enabled;

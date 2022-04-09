@@ -63,11 +63,35 @@ struct SemaphoreRefHolder {
 
     explicit SemaphoreRefHolder(std::nullptr_t) : ref(nullptr) {}
     SemaphoreRefHolder(SemaphoreRef *ref) : ref(ref) { ++ref->count; }
-    SemaphoreRefHolder(const SemaphoreRefHolder &other) : ref(other.ref) { ++ref->count; }
-    SemaphoreRefHolder(SemaphoreRefHolder &&other) : ref(std::move(other.ref))
-        { other.ref = nullptr; }
+
+    SemaphoreRefHolder(const SemaphoreRefHolder &other)
+        : ref(other.ref)
+    {
+        if (ref != nullptr) {
+            ++ref->count;
+        }
+    }
 
     SemaphoreRefHolder &operator=(const SemaphoreRefHolder &other) = delete;
+
+    SemaphoreRefHolder(SemaphoreRefHolder &&other) noexcept
+        : ref(std::move(other.ref))
+    {
+        other.ref = nullptr;
+    }
+
+
+    SemaphoreRefHolder &operator=(SemaphoreRefHolder &&other) noexcept
+    {
+        if (&other == this) {
+            return *this;
+        }
+
+        std::swap(ref, other.ref);
+        other.Reset();
+
+        return *this;
+    }
 
     ~SemaphoreRefHolder()
         { Reset(); }
@@ -81,6 +105,7 @@ struct SemaphoreRefHolder {
             /* ref->semaphore should have had Destroy() called on it by now,
              * or else an assertion error will be thrown on destructor call. */
             delete ref;
+            /* ref = nullptr; ?? */
         }
     }
 
@@ -137,43 +162,13 @@ public:
         });
     }
 
-    inline SemaphoreChain &WaitsFor(const WaitSemaphore &wait_semaphore)
-    {
-        if (HasWaitSemaphore(wait_semaphore)) {
-            return *this;
-        }
-
-        m_wait_semaphores.push_back(wait_semaphore);
-        m_wait_semaphores_view.push_back(wait_semaphore.GetSemaphore());
-        m_wait_semaphores_stage_view.push_back(wait_semaphore.GetStageFlags());
-
-        ++wait_semaphore.ref->count;
-
-        return *this;
-    }
-
-    inline SemaphoreChain &WaitsFor(const SignalSemaphore &signal_semaphore)
-        { return WaitsFor(signal_semaphore.ConvertHeldType<SemaphoreType::WAIT>()); }
-
-    inline SemaphoreChain &SignalsTo(const SignalSemaphore &signal_semaphore)
-    {
-        if (HasSignalSemaphore(signal_semaphore)) {
-            return *this;
-        }
-
-        m_signal_semaphores.push_back(signal_semaphore);
-        m_signal_semaphores_view.push_back(signal_semaphore.GetSemaphore());
-        m_signal_semaphores_stage_view.push_back(signal_semaphore.GetStageFlags());
-
-        ++signal_semaphore.ref->count;
-
-        return *this;
-    }
-
-    inline SemaphoreChain &SignalsTo(const WaitSemaphore &wait_semaphore)
-        { return SignalsTo(wait_semaphore.ConvertHeldType<SemaphoreType::SIGNAL>()); }
-
-    /* Wait on all signals from `other` */
+    SemaphoreChain &WaitsFor(const SignalSemaphore &signal_semaphore);
+    SemaphoreChain &SignalsTo(const WaitSemaphore &wait_semaphore);
+    
+    /*! \brief Make this wait on all signal semaphores that `signaler` has.
+     * @param signaler The chain to wait on
+     * @returns this
+     */
     inline SemaphoreChain &operator<<(const SemaphoreChain &signaler)
     {
         for (auto &signal_semaphore : signaler.GetSignalSemaphores()) {
@@ -183,7 +178,10 @@ public:
         return *this;
     }
 
-    /* Make `waitee` wait on all signals from this */
+    /*! \brief Make `waitee` wait on all signal semaphores that this chain has.
+     * @param waitee The chain to have waiting on this chain
+     * @returns this
+     */
     inline SemaphoreChain &operator>>(SemaphoreChain &waitee)
     {
         for (auto &signal_semaphore : GetSignalSemaphores()) {

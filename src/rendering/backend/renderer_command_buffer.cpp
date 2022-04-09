@@ -29,8 +29,7 @@ Result CommandBuffer::Create(Device *device, VkCommandPool command_pool)
         AssertThrowMsg(0, "Unsupported command buffer type");
     }
 
-    VkCommandBufferAllocateInfo alloc_info{};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    VkCommandBufferAllocateInfo alloc_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     alloc_info.level = level;
     alloc_info.commandPool = command_pool;
     alloc_info.commandBufferCount = 1;

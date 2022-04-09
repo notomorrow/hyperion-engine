@@ -114,7 +114,7 @@ Result SemaphoreChain::Destroy(Device *device)
 {
     auto result = Result::OK;
 
-    const auto dec_ref = [&](auto &semaphore) {
+    const auto dec_ref = [this, &result, device](auto &semaphore) {
         auto *ref = semaphore.ref;
 
         if (ref == nullptr) {
@@ -145,6 +145,36 @@ Result SemaphoreChain::Destroy(Device *device)
     return result;
 }
 
+SemaphoreChain &SemaphoreChain::WaitsFor(const SignalSemaphore &signal_semaphore)
+{
+    auto wait_semaphore = signal_semaphore.ConvertHeldType<SemaphoreType::WAIT>();
+
+    if (HasWaitSemaphore(wait_semaphore)) {
+        return *this;
+    }
+
+    m_wait_semaphores.push_back(wait_semaphore);
+    m_wait_semaphores_view.push_back(wait_semaphore.GetSemaphore());
+    m_wait_semaphores_stage_view.push_back(wait_semaphore.GetStageFlags());
+
+    return *this;
+}
+
+ SemaphoreChain &SemaphoreChain::SignalsTo(const WaitSemaphore &wait_semaphore)
+{
+    auto signal_semaphore = wait_semaphore.ConvertHeldType<SemaphoreType::SIGNAL>();
+    
+    if (HasSignalSemaphore(signal_semaphore)) {
+        return *this;
+    }
+
+    m_signal_semaphores.push_back(signal_semaphore);
+    m_signal_semaphores_view.push_back(signal_semaphore.GetSemaphore());
+    m_signal_semaphores_stage_view.push_back(signal_semaphore.GetStageFlags());
+
+    return *this;
+}
+
 void SemaphoreChain::UpdateViews()
 {
     m_signal_semaphores_view.resize(m_signal_semaphores.size());
@@ -166,7 +196,6 @@ void SemaphoreChain::UpdateViews()
         m_wait_semaphores_stage_view[i] = semaphore.GetStageFlags();
     }
 }
-
 
 } // namespace renderer
 } // namespace hyperion

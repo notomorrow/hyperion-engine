@@ -14,6 +14,7 @@
 #include "renderer_render_pass.h"
 #include "renderer_descriptor_set.h"
 #include "renderer_command_buffer.h"
+#include "renderer_structs.h"
 #include "renderer_helpers.h"
 
 #include "../../hash_code.h"
@@ -25,21 +26,10 @@ class GraphicsPipeline {
 public:
     static constexpr uint32_t max_dynamic_textures = 8;
 
-    enum class CullMode {
-        NONE,
-        BACK,
-        FRONT
-    };
-
-    enum class FillMode {
-        FILL,
-        LINE
-    };
-
     struct ConstructionInfo {
         MeshInputAttributeSet vertex_attributes;
-        VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
+        Topology topology = Topology::TRIANGLES;
         CullMode cull_mode = CullMode::BACK;
         FillMode fill_mode = FillMode::FILL;
 
