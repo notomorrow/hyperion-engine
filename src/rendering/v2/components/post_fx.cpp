@@ -111,7 +111,7 @@ void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
     auto &framebuffer = engine->resources.framebuffers[m_framebuffer_id]->Get();
-    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_PASS);
+    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
     
     for (auto *attachment_ref : framebuffer.GetRenderPassAttachmentRefs()) {
         descriptor_set

@@ -66,9 +66,49 @@ DeferredRenderer::~DeferredRenderer() = default;
 
 void DeferredRenderer::Create(Engine *engine)
 {
+    using renderer::ImageSamplerDescriptor;
+
     m_effect.CreateShader(engine);
     m_effect.CreateRenderPass(engine);
     m_effect.Create(engine);
+
+    auto *opaque_fbo = engine->resources.framebuffers[engine->GetRenderList()[GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0]];
+
+    /* Add our gbuffer textures */
+    auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()
+        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
+
+    /* Albedo texture */
+    descriptor_set_pass
+        ->AddDescriptor<ImageSamplerDescriptor>(0)
+        ->AddSubDescriptor({
+            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetImageView(),
+            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetSampler()
+        });
+
+    /* Normals texture*/
+    descriptor_set_pass
+        ->AddDescriptor<ImageSamplerDescriptor>(1)
+        ->AddSubDescriptor({
+            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetImageView(),
+            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetSampler()
+        });
+
+    /* Position texture */
+    descriptor_set_pass
+        ->AddDescriptor<ImageSamplerDescriptor>(2)
+        ->AddSubDescriptor({
+            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetImageView(),
+            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetSampler()
+        });
+
+    /* Depth texture */
+    descriptor_set_pass
+        ->AddDescriptor<ImageSamplerDescriptor>(3)
+        ->AddSubDescriptor({
+            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetImageView(),
+            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetSampler()
+        });
 
     uint32_t binding_index = 4; /* TMP */
     m_effect.CreateDescriptors(engine, binding_index);

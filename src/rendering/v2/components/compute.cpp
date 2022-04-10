@@ -37,7 +37,7 @@ void ComputePipeline::Dispatch(Engine *engine, CommandBuffer *command_buffer, si
         engine->GetInstance()->GetDevice(),
         command_buffer,
         &m_wrapped,
-        {{.set = 0, .count = 1}}
+        {{.set = 1, .count = 1}}
     );
 
     m_wrapped.Dispatch(command_buffer->GetCommandBuffer(), num_groups_x, num_groups_y, num_groups_z);

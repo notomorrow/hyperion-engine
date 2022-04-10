@@ -218,7 +218,14 @@ Result DescriptorPool::Destroy(Device *device)
 
 Result DescriptorPool::Bind(Device *device, CommandBuffer *cmd, GraphicsPipeline *pipeline, DescriptorSetBinding &&binding) const
 {
-    const size_t max_bound_descriptor_sets = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+    const auto device_max_bound_descriptor_sets = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+
+    const size_t max_bound_descriptor_sets = DescriptorSet::max_bound_descriptor_sets != 0
+        ? MathUtil::Min(
+            DescriptorSet::max_bound_descriptor_sets,
+            device_max_bound_descriptor_sets
+        )
+        : device_max_bound_descriptor_sets;
 
     AssertThrowMsg(
         binding.declaration.count <= max_bound_descriptor_sets,
@@ -482,6 +489,51 @@ void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, 
         break;
     default:
         AssertThrowMsg(false, "unhandled descriptor type");
+    }
+}
+
+uint32_t Descriptor::AddSubDescriptor(SubDescriptor &&sub_descriptor)
+{
+    const auto index = uint32_t(m_sub_descriptors.size());
+
+    sub_descriptor.valid = true;
+
+    m_sub_descriptors.push_back(sub_descriptor);
+
+    MarkDirty(index);
+
+    return index;
+}
+
+void Descriptor::RemoveSubDescriptor(uint32_t index)
+{
+    m_sub_descriptors[index] = {.valid = false};
+
+    if (index == m_sub_descriptors.size() - 1) {
+        auto &sub_descriptor = m_sub_descriptors[index];
+
+        /* pop any sub descriptors marked for deletion */
+        while (!sub_descriptor.valid) {
+            sub_descriptor = m_sub_descriptors[index];
+            m_sub_descriptors.pop_back();
+
+            --index;
+
+            if (index == 0) {
+                break;
+            }
+        }
+    }
+}
+
+void Descriptor::MarkDirty(uint32_t sub_descriptor_index)
+{
+    m_sub_descriptor_update_indices.push(sub_descriptor_index);
+
+    m_state = DescriptorSetState::DESCRIPTOR_DIRTY;
+
+    if (m_descriptor_set != nullptr) {
+        m_descriptor_set->m_state = DescriptorSetState::DESCRIPTOR_DIRTY;
     }
 }
 

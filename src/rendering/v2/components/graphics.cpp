@@ -166,7 +166,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 device,
                 secondary,
                 &m_wrapped,
-                {{.set = 0, .count = 2}}
+                {{.set = 1, .count = 1}}
             );
 
             static constexpr uint32_t frame_index_scene_buffer_mapping[]  = {2, 4};
