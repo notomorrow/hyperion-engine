@@ -53,16 +53,16 @@ SemaphoreChain::SemaphoreChain(const std::vector<VkPipelineStageFlags> &wait_sta
     m_wait_semaphores.reserve(wait_stage_flags.size());
     m_signal_semaphores.reserve(signal_stage_flags.size());
 
-    for (size_t i = 0; i < wait_stage_flags.size(); i++) {
-        auto *ref = new SemaphoreRef(wait_stage_flags[i]);
+    for (const VkPipelineStageFlags wait_stage_flag : wait_stage_flags) {
+        auto *ref = new SemaphoreRef(wait_stage_flag);
 
         refs.insert(ref);
 
         m_wait_semaphores.emplace_back(ref);
     }
 
-    for (size_t i = 0; i < signal_stage_flags.size(); i++) {
-        auto *ref = new SemaphoreRef(signal_stage_flags[i]);
+    for (const VkPipelineStageFlags signal_stage_flag : signal_stage_flags) {
+        auto *ref = new SemaphoreRef(signal_stage_flag);
 
         refs.insert(ref);
 
@@ -75,14 +75,14 @@ SemaphoreChain::SemaphoreChain(const std::vector<VkPipelineStageFlags> &wait_sta
 SemaphoreChain::~SemaphoreChain()
 {
     AssertThrowMsg(
-        std::all_of(m_signal_semaphores.begin(), m_signal_semaphores.end(), [](SignalSemaphore &semaphore) {
+        std::all_of(m_signal_semaphores.begin(), m_signal_semaphores.end(), [](const SignalSemaphore &semaphore) {
             return semaphore.ref == nullptr;
         }),
         "All semaphores must have ref counts decremented via Destroy() before destructor call"
     );
 
     AssertThrowMsg(
-        std::all_of(m_wait_semaphores.begin(), m_wait_semaphores.end(), [](WaitSemaphore &semaphore) {
+        std::all_of(m_wait_semaphores.begin(), m_wait_semaphores.end(), [](const WaitSemaphore &semaphore) {
             return semaphore.ref == nullptr;
         }),
         "All semaphores must have ref counts decremented via Destroy() before destructor call"
@@ -160,7 +160,16 @@ SemaphoreChain &SemaphoreChain::WaitsFor(const SignalSemaphore &signal_semaphore
     return *this;
 }
 
- SemaphoreChain &SemaphoreChain::SignalsTo(const WaitSemaphore &wait_semaphore)
+SemaphoreChain &SemaphoreChain::WaitsFor(const SemaphoreChain &signaler)
+{
+    for (auto &signal_semaphore : signaler.GetSignalSemaphores()) {
+        WaitsFor(signal_semaphore);
+    }
+
+    return *this;
+}
+
+SemaphoreChain &SemaphoreChain::SignalsTo(const WaitSemaphore &wait_semaphore)
 {
     auto signal_semaphore = wait_semaphore.ConvertHeldType<SemaphoreType::SIGNAL>();
     
@@ -173,6 +182,15 @@ SemaphoreChain &SemaphoreChain::WaitsFor(const SignalSemaphore &signal_semaphore
     m_signal_semaphores_stage_view.push_back(signal_semaphore.GetStageFlags());
 
     return *this;
+}
+
+SemaphoreChain &SemaphoreChain::SignalsTo(SemaphoreChain &waitee)
+{
+    for (auto &signal_semaphore : GetSignalSemaphores()) {
+        waitee.WaitsFor(signal_semaphore);
+    }
+
+    return waitee;
 }
 
 void SemaphoreChain::UpdateViews()

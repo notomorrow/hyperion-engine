@@ -108,12 +108,11 @@ public:
     inline void SetSceneIndex(uint32_t scene_index) { m_scene_index = scene_index; }
     
     /* Build pipeline */
-    void Init(Engine *engine);
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
     void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
 
 private:
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
     /* Called from Spatial - remove the pointer */
     void OnSpatialRemoved(Spatial *spatial);
 

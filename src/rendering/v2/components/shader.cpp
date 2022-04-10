@@ -41,10 +41,6 @@ void Shader::Init(Engine *engine)
             EngineComponent::Destroy(engine);
         }), engine);
     }));
-
 }
 
-void Shader::Destroy(Engine *engine)
-{
-}
 } // namespace hyperion
