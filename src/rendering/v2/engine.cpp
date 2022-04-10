@@ -39,7 +39,10 @@ void Engine::SetSpatialTransform(Spatial *spatial, const Transform &transform)
     
     spatial->SetTransform(transform);
 
-    shader_globals->objects.Set(spatial->GetId().value - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
+    shader_globals->objects.Set(
+        spatial->GetId().value - 1,
+        {.model_matrix = spatial->GetTransform().GetMatrix()}
+    );
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -95,7 +98,7 @@ void Engine::PrepareSwapchain()
     m_deferred_renderer.Create(this);
     m_shadow_renderer.Create(this);
 
-    auto shader = resources.shaders.Create(std::make_unique<Shader>(
+    auto shader = resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
             {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()}},
             {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}}
@@ -304,10 +307,10 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MATERIALS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SPATIALS, this);
-    callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
-    callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SHADERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_TEXTURES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
 
     resources.Destroy(this);
 

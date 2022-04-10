@@ -23,10 +23,12 @@ void BindlessStorage::Destroy(Engine *engine)
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
 
-        for (const auto sub_descriptor_index : m_texture_sub_descriptors) {
-            descriptor->RemoveSubDescriptor(sub_descriptor_index);
+        for (const auto &it : m_texture_sub_descriptors) {
+            descriptor->RemoveSubDescriptor(it.second);
         }
     }
+
+    m_texture_sub_descriptors.Clear();
 }
 
 void BindlessStorage::ApplyUpdates(Engine *engine, uint32_t frame_index)
@@ -69,7 +71,7 @@ void BindlessStorage::RemoveResource(const Texture *texture)
 {
     AssertThrow(texture != nullptr);
 
-    const auto sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
+    const auto sub_descriptor_index = m_texture_sub_descriptors[texture->GetId()];
     
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
@@ -83,7 +85,7 @@ void BindlessStorage::RemoveResource(const Texture *texture)
 void BindlessStorage::MarkResourceChanged(const Texture *texture)
 {
     const auto id_value = texture->GetId().Value() - 1;
-    const auto sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
+    const auto sub_descriptor_index = m_texture_sub_descriptors[texture->GetId()];
 
     for (auto *descriptor_set : m_descriptor_sets) {
         descriptor_set->GetDescriptor(bindless_descriptor_index)->MarkDirty(sub_descriptor_index);

@@ -442,6 +442,8 @@ struct ComponentEvents {
                   on_update;
 };
 
+
+
 /* Map from ObjectType::ID to another resource */
 template <class ObjectType, class ValueType>
 class ObjectMap {
@@ -450,144 +452,57 @@ public:
     ObjectMap(const ObjectMap &other) = delete;
     ObjectMap &operator=(const ObjectMap &other) = delete;
     ObjectMap(ObjectMap &&other) noexcept
-        : m_index_map(std::move(other.m_index_map)),
-          m_values(std::move(other.m_values)),
-          m_max_index(other.m_max_index)
+        : m_map(std::move(other.m_map))
     {}
     ~ObjectMap() = default;
 
     ObjectMap &operator=(ObjectMap &&other) noexcept
     {
-        m_index_map = std::move(other.m_index_map);
-        m_values = std::move(other.m_values);
-        m_max_index = other.m_max_index;
+        m_map = std::move(other.m_map);
 
         return *this;
     }
 
     bool Has(typename ObjectType::ID id) const
     {
-        const size_t index = id.value - 1;
-
-        return MathUtil::InRange(index, {0, m_index_map.size()}) && m_index_map[index] != 0;
-    }
-
-    ValueType &GetOrInsert(typename ObjectType::ID id, ValueType &&value = {})
-    {
-        if (!Has(id)) {
-            Set(id, std::move(value));
-        }
-
-        return m_values[m_index_map[id.value - 1] - 1];
+        return m_map.find(id.value) != m_map.end();
     }
 
     ValueType &Get(typename ObjectType::ID id)
-        { return m_values[m_index_map[id.value - 1] - 1]; }
+        { return m_map.at(id.value); }
 
     const ValueType &Get(typename ObjectType::ID id) const
-        { return m_values[m_index_map[id.value - 1] - 1]; }
+        { return m_map.at(id.value); }
 
     void Set(typename ObjectType::ID id, ValueType &&value)
     {
-        EnsureIndexMapIncludes(id);
-
-        const size_t id_index = id.value - 1;
-
-        size_t &index = m_index_map[id_index];
-
-        if (index == 0) {
-            m_values.push_back(std::move(value));
-
-            index = m_values.size();
-        } else {
-            m_values[index - 1] = std::move(value);
-        }
-
-        m_max_index = MathUtil::Max(m_max_index, id_index);
+        m_map[id.value] = value;
     }
 
     void Remove(typename ObjectType::ID id)
     {
-        if (!Has(id)) {
-            return;
-        }
-
-        const size_t index = id.value - 1;
-        const size_t index_value = m_index_map[index];
-
-        if (index_value != 0) {
-            /* For all indices proceeding the index of the removed item, we'll have to set their index to (current - 1) */
-            for (size_t i = index; i <= m_max_index; ++i) {
-                if (m_index_map[i] != 0) {
-                    --m_index_map[i];
-                }
-            }
-
-            /* Remove our value */
-            m_values.erase(m_values.begin() + index_value - 1);
-        }
-
-        m_index_map[index] = 0;
-
-        /* If our index is the last in the list, remove any indices below that may be pending removal to shrink the vector. */
-        if (m_max_index == index) {
-            Range<size_t> index_remove_range{index, m_index_map.size()};
-
-            while (m_index_map[m_max_index] == 0) {
-                index_remove_range |= {m_max_index, m_max_index + 1};
-
-                if (m_max_index == 0) {
-                    break;
-                }
-                
-                --m_max_index;
-            }
-
-            m_index_map.erase(m_index_map.begin() + index_remove_range.GetStart(), m_index_map.end());
-        }
+        m_map.erase(id.value);
     }
 
     void Clear()
     {
-        m_max_index = 0;
-        m_index_map.clear();
-        m_values.clear();
+        m_map.clear();
+    }
+
+    size_t Size() const
+    {
+        return m_map.size();
     }
 
     inline ValueType &operator[](typename ObjectType::ID id)
-        { return GetOrInsert(id); }
+        { return m_map[id.value]; }
 
-    ValueType *Data() const { return m_values.data(); }
-    size_t Size() const { return m_values.size(); }
-
-    auto begin() { return m_values.begin(); }
-    auto end() { return m_values.end(); }
+    auto begin() { return m_map.begin(); }
+    auto end() { return m_map.end(); }
 
 private:
-    bool HasId(typename ObjectType::ID id)
-    {
-        const auto id_value = id.value - 1;
-
-        return MathUtil::InRange(id_value, {0, m_index_map.size()});
-    }
-
-    void EnsureIndexMapIncludes(typename ObjectType::ID id)
-    {
-        const auto id_value = id.value - 1;
-
-        if (!MathUtil::InRange(id_value, {0, m_index_map.size()})) {
-            /* Resize to next power of 2 of the INDEX we will need. */
-            const auto next_power_of_2 = MathUtil::NextPowerOf2(id_value + 1);
-
-            m_index_map.resize(next_power_of_2);
-        }
-    }
-
-    std::vector<size_t> m_index_map;
-    std::vector<ValueType> m_values;
-    size_t m_max_index = 0;
+    std::unordered_map<typename ObjectType::ID::ValueType, ValueType> m_map;
 };
-
 
 template <class T>
 struct ObjectHolder {
@@ -984,7 +899,9 @@ public:
 
     ~RefCounter()
     {
-        for (RefCount &rc : m_ref_map) {
+        for (auto &it : m_ref_map) {
+            auto &rc = it.second;
+
             if (rc.count == 0) { /* not yet initialized */
                 DebugLog(
                     LogType::Warn,
@@ -1005,9 +922,11 @@ public:
         m_init_args = std::move(args);
     }
     
-    [[nodiscard]] RefWrapper Create(std::unique_ptr<T> &&object)
+    [[nodiscard]] RefWrapper Add(std::unique_ptr<T> &&object)
     {
-        AssertThrow(object != nullptr);
+        if (object == nullptr) {
+            return nullptr;
+        }
 
         T *ptr = m_holder.Add(std::move(object));
         m_ref_map[ptr->GetId()] = {.count = 1};

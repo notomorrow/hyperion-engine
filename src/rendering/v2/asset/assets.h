@@ -2,6 +2,7 @@
 #define HYPERION_V2_ASSETS_H
 
 #include "model_loaders/obj_model_loader.h"
+#include "texture_loaders/texture_loader.h"
 #include "../components/node.h"
 
 #include <util/static_map.h>
@@ -36,8 +37,9 @@ class Assets {
 
         LoaderFormat GetResourceFormat() const
         {
-            constexpr StaticMap<const char *, LoaderFormat, 1> extensions{
-                std::make_pair("obj", LoaderFormat::MODEL_OBJ)
+            constexpr StaticMap<const char *, LoaderFormat, 2> extensions{
+                std::make_pair("obj", LoaderFormat::MODEL_OBJ),
+                std::make_pair("png", LoaderFormat::IMAGE_2D)
             };
 
             std::string path_lower(filepath);
@@ -95,6 +97,14 @@ class Assets {
             default:
                 return nullptr;
             }
+        }
+    };
+
+    template <>
+    struct Functor<Texture> : FunctorBase {
+        std::unique_ptr<Texture> operator()(Engine *engine)
+        {
+            return LoadResource(engine, GetLoader<Texture, LoaderFormat::IMAGE_2D>());
         }
     };
 
