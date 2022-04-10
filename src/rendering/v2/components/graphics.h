@@ -94,8 +94,9 @@ public:
     inline void SetBlendEnabled(bool blend_enabled)
         { m_blend_enabled = blend_enabled; }
 
-    void AddSpatial(Engine *engine, Spatial *spatial);
-    void RemoveSpatial(Engine *engine, Spatial *spatial);
+    void AddSpatial(Ref<Spatial> &&spatial);
+    void RemoveSpatial(Spatial::ID id);
+    inline auto &GetSpatials() { return m_spatials; }
     inline const auto &GetSpatials() const { return m_spatials; }
 
     /* Non-owned objects - owned by `engine`, used by the pipeline */
@@ -107,11 +108,12 @@ public:
     inline void SetSceneIndex(uint32_t scene_index) { m_scene_index = scene_index; }
     
     /* Build pipeline */
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
+    void Init(Engine *engine);
     void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
 
 private:
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
     /* Called from Spatial - remove the pointer */
     void OnSpatialRemoved(Spatial *spatial);
 
@@ -125,11 +127,10 @@ private:
     bool m_depth_write;
     bool m_blend_enabled;
     MeshInputAttributeSet m_vertex_attributes;
-
-    ObjectIdHolder<Texture> m_texture_ids;
+    
     ObjectIdHolder<Framebuffer> m_fbo_ids;
 
-    std::vector<Spatial *> m_spatials;
+    std::vector<Ref<Spatial>> m_spatials;
 
     uint32_t m_scene_index;
 

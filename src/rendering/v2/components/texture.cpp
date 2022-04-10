@@ -38,9 +38,13 @@ void Texture::Init(Engine *engine)
         HYPERION_ASSERT_RESULT(m_image_view->Create(engine->GetInstance()->GetDevice(), &m_wrapped));
         HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetInstance()->GetDevice(), m_image_view.get()));
 
+        engine->shader_globals->textures.AddResource(this);
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_TEXTURES, [this](Engine *engine) {
             AssertThrow(m_image_view != nullptr);
             AssertThrow(m_sampler != nullptr);
+
+            engine->shader_globals->textures.RemoveResource(this);
 
             HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetInstance()->GetDevice()));
             m_sampler.reset();

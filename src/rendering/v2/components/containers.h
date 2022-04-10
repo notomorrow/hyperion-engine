@@ -466,7 +466,7 @@ public:
 
     bool Has(typename ObjectType::ID id) const
     {
-        const size_t index = id.Value() - 1;
+        const size_t index = id.value - 1;
 
         return MathUtil::InRange(index, {0, m_index_map.size()}) && m_index_map[index] != 0;
     }
@@ -477,20 +477,20 @@ public:
             Set(id, std::move(value));
         }
 
-        return m_values[m_index_map[id.Value() - 1] - 1];
+        return m_values[m_index_map[id.value - 1] - 1];
     }
 
     ValueType &Get(typename ObjectType::ID id)
-        { return m_values[m_index_map[id.Value() - 1] - 1]; }
+        { return m_values[m_index_map[id.value - 1] - 1]; }
 
     const ValueType &Get(typename ObjectType::ID id) const
-        { return m_values[m_index_map[id.Value() - 1] - 1]; }
+        { return m_values[m_index_map[id.value - 1] - 1]; }
 
     void Set(typename ObjectType::ID id, ValueType &&value)
     {
         EnsureIndexMapIncludes(id);
 
-        const size_t id_index = id.Value() - 1;
+        const size_t id_index = id.value - 1;
 
         size_t &index = m_index_map[id_index];
 
@@ -511,7 +511,7 @@ public:
             return;
         }
 
-        const size_t index = id.Value() - 1;
+        const size_t index = id.value - 1;
         const size_t index_value = m_index_map[index];
 
         if (index_value != 0) {
@@ -565,14 +565,14 @@ public:
 private:
     bool HasId(typename ObjectType::ID id)
     {
-        const auto id_value = id.Value() - 1;
+        const auto id_value = id.value - 1;
 
         return MathUtil::InRange(id_value, {0, m_index_map.size()});
     }
 
     void EnsureIndexMapIncludes(typename ObjectType::ID id)
     {
-        const auto id_value = id.Value() - 1;
+        const auto id_value = id.value - 1;
 
         if (!MathUtil::InRange(id_value, {0, m_index_map.size()})) {
             /* Resize to next power of 2 of the INDEX we will need. */
@@ -600,8 +600,8 @@ struct ObjectHolder {
 
     constexpr T *Get(const typename T::ID &id)
     {
-        return MathUtil::InRange(id.Value(), {1, objects.size() + 1})
-            ? objects[id.Value() - 1].get()
+        return MathUtil::InRange(id.value, {1, objects.size() + 1})
+            ? objects[id.value - 1].get()
             : nullptr;
     }
 
@@ -636,7 +636,7 @@ struct ObjectHolder {
 
             free_slots.pop();
 
-            return objects[next_id.Value() - 1].get();
+            return objects[next_id.value - 1].get();
         }
 
         const auto next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
@@ -645,7 +645,7 @@ struct ObjectHolder {
 
         objects.push_back(std::move(object));
 
-        return objects[next_id.Value() - 1].get();
+        return objects[next_id.value - 1].get();
     }
     
     template <class ...Args>
@@ -743,18 +743,18 @@ struct ObjectVector {
     auto &Objects() { return objects; }
     const auto &Objects() const { return objects; }
 
-    constexpr T *Get(const typename T::ID &id)
+    constexpr T *Get(typename T::ID id)
     {
-        return MathUtil::InRange(id.Value(), {1, objects.size() + 1})
-            ? objects[id.Value() - 1].get()
+        return MathUtil::InRange(id.value, {1, objects.size() + 1})
+            ? objects[id.value - 1].get()
             : nullptr;
     }
 
-    constexpr const T *Get(const typename T::ID &id) const
+    constexpr const T *Get(typename T::ID id) const
         { return const_cast<ObjectVector<T, CallbacksClass> *>(this)->Get(id); }
 
-    constexpr T *operator[](const typename T::ID &id) { return Get(id); }
-    constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }
+    constexpr T *operator[](typename T::ID id)             { return Get(id); }
+    constexpr const T *operator[](typename T::ID id) const { return Get(id); }
 
     template <class LambdaFunction>
     constexpr const T *Find(LambdaFunction lambda) const
@@ -817,7 +817,7 @@ class RefCounter {
     };
 
     ObjectVector<T, CallbacksClass>   m_holder;
-    ObjectMap<T, RefCount>            m_ref_map;
+    mutable ObjectMap<T, RefCount>    m_ref_map;
 
     ArgsTuple                         m_init_args{};
 

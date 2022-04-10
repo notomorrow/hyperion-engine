@@ -42,10 +42,20 @@ void Spatial::Init(Engine *engine)
             m_material.Init();
         }
 
+        UpdateShaderData(engine);
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
             RemoveFromPipelines();
         }), engine);
     }));
+}
+
+void Spatial::UpdateShaderData(Engine *engine) const
+{
+    engine->shader_globals->objects.Set(
+        m_id.value - 1,
+        {.model_matrix = m_transform.GetMatrix()}
+    );
 }
 
 void Spatial::OnAddedToPipeline(GraphicsPipeline *pipeline)

@@ -20,7 +20,7 @@ using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      m_shader_globals(nullptr),
+      shader_globals(nullptr),
       m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
       resources(this),
       assets(this)
@@ -39,7 +39,7 @@ void Engine::SetSpatialTransform(Spatial *spatial, const Transform &transform)
     
     spatial->SetTransform(transform);
 
-    m_shader_globals->objects.Set(spatial->GetId().Value() - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
+    shader_globals->objects.Set(spatial->GetId().value - 1, {.model_matrix = spatial->GetTransform().GetMatrix()});
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -220,28 +220,28 @@ void Engine::Initialize()
 
     FindTextureFormatDefaults();
 
-    m_shader_globals = new ShaderGlobals(m_instance->GetFrameHandler()->NumFrames());
+    shader_globals = new ShaderGlobals(m_instance->GetFrameHandler()->NumFrames());
     
     /* for scene data */
-    m_shader_globals->scenes.Create(m_instance->GetDevice());
+    shader_globals->scenes.Create(m_instance->GetDevice());
     /* for materials */
-    m_shader_globals->materials.Create(m_instance->GetDevice());
+    shader_globals->materials.Create(m_instance->GetDevice());
     /* for objects */
-    m_shader_globals->objects.Create(m_instance->GetDevice());
+    shader_globals->objects.Create(m_instance->GetDevice());
 
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_globals->scenes.GetBuffers()[0].get(),
+            .gpu_buffer = shader_globals->scenes.GetBuffers()[0].get(),
             .range = sizeof(SceneShaderData)
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_globals->materials.GetBuffers()[0].get(),
+            .gpu_buffer = shader_globals->materials.GetBuffers()[0].get(),
             .range = sizeof(MaterialShaderData)
         });
 
@@ -249,7 +249,7 @@ void Engine::Initialize()
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_globals->objects.GetBuffers()[0].get(),
+            .gpu_buffer = shader_globals->objects.GetBuffers()[0].get(),
             .range = sizeof(ObjectShaderData)
         });
 
@@ -258,21 +258,21 @@ void Engine::Initialize()
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
         ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_globals->scenes.GetBuffers()[1].get(),
+            .gpu_buffer = shader_globals->scenes.GetBuffers()[1].get(),
             .range = sizeof(SceneShaderData)
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_globals->materials.GetBuffers()[1].get(),
+            .gpu_buffer = shader_globals->materials.GetBuffers()[1].get(),
             .range = sizeof(MaterialShaderData)
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
-            .gpu_buffer = m_shader_globals->objects.GetBuffers()[1].get(),
+            .gpu_buffer = shader_globals->objects.GetBuffers()[1].get(),
             .range = sizeof(ObjectShaderData)
         });
 
@@ -285,7 +285,7 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::ImageSamplerDescriptor>(0);
 
     /* for textures */
-    m_shader_globals->textures.Create(this);
+    shader_globals->textures.Create(this);
 
     m_render_list.Create(this);
 
@@ -315,12 +315,12 @@ void Engine::Destroy()
     m_shadow_renderer.Destroy(this);
     m_post_processing.Destroy(this);
 
-    if (m_shader_globals != nullptr) {
-        m_shader_globals->scenes.Destroy(m_instance->GetDevice());
-        m_shader_globals->objects.Destroy(m_instance->GetDevice());
-        m_shader_globals->materials.Destroy(m_instance->GetDevice());
+    if (shader_globals != nullptr) {
+        shader_globals->scenes.Destroy(m_instance->GetDevice());
+        shader_globals->objects.Destroy(m_instance->GetDevice());
+        shader_globals->materials.Destroy(m_instance->GetDevice());
 
-        delete m_shader_globals;
+        delete shader_globals;
     }
 
     m_instance->Destroy();
@@ -333,10 +333,10 @@ void Engine::Compile()
 
     /* Finalize materials */
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
-        m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), i);
+        shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), i);
 
         /* Finalize per-object data */
-        m_shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), i);
+        shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), i);
     }
 
     /* Finalize descriptor pool */
@@ -348,16 +348,16 @@ void Engine::Compile()
 
 void Engine::UpdateDescriptorData(uint32_t frame_index)
 {
-    m_shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
     static constexpr DescriptorSet::Index bindless_descriptor_set_index[] = { DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS, DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1 };
 
     m_instance->GetDescriptorPool().GetDescriptorSet(bindless_descriptor_set_index[frame_index])
         ->ApplyUpdates(m_instance->GetDevice());
 
-    m_shader_globals->textures.ApplyUpdates(this, frame_index);
+    shader_globals->textures.ApplyUpdates(this, frame_index);
 }
 
 void Engine::RenderShadows(CommandBuffer *primary, uint32_t frame_index)

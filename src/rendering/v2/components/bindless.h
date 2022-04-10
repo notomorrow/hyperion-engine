@@ -18,6 +18,9 @@ using renderer::DescriptorSet;
 using renderer::Swapchain;
 
 class BindlessStorage {
+    /* The index of the descriptor we work on, /within/ the "bindless descriptor set" */
+    static constexpr uint32_t bindless_descriptor_index = 0;
+
 public:
     BindlessStorage();
     BindlessStorage(const BindlessStorage &other) = delete;
