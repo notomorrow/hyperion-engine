@@ -230,13 +230,6 @@ int main()
         auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBALS);
 
-        descriptor_set_globals
-            ->AddDescriptor<UniformBufferDescriptor>(0)
-            ->AddSubDescriptor({ .gpu_buffer = &matrices_descriptor_buffer });
-
-        descriptor_set_globals
-            ->AddDescriptor<UniformBufferDescriptor>(1)
-            ->AddSubDescriptor({ .gpu_buffer = &scene_data_descriptor_buffer });
 
 #if HYPERION_VK_TEST_CUBEMAP
         descriptor_set_globals
@@ -337,8 +330,18 @@ int main()
     
     auto mirror_shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
         std::vector<v2::SubShader>{
-            {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() }},
-            { ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() } }
+            {
+                ShaderModule::Type::VERTEX, {
+                    FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read(),
+                    {.name = "main vert"}
+                }
+            },
+            {
+                ShaderModule::Type::FRAGMENT, {
+                    FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read(),
+                    {.name = "forward frag"}
+                }
+            }
         }
     ));
 
@@ -420,7 +423,8 @@ int main()
 
     auto skybox_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
     skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-    mat1.Init();
+    skybox_material->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap->GetId());
+    skybox_material.Init();
 
     auto translucent_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
@@ -469,6 +473,7 @@ int main()
         pipeline->SetDepthWrite(false);
 
         auto skybox_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
+        skybox_spatial->SetMaterial(std::move(skybox_material));
         pipeline->AddSpatial(std::move(skybox_spatial));
         
         skybox_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));

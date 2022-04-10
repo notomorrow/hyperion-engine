@@ -1,5 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_nonuniform_qualifier : enable
 
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
@@ -11,13 +12,54 @@ layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
-layout(binding = 2) uniform samplerCube tex;
-//layout(binding = 2) uniform sampler2D tex[2];
+struct TextureRef {
+    uint index;
+    uint used;
+};
+
+struct Material {
+    vec4 albedo;
+    
+    float metalness;
+    float roughness;
+    float subsurface;
+    float specular;
+    
+    float specular_tint;
+    float anisotropic;
+    float sheen;
+    float sheen_tint;
+    
+    float clearcoat;
+    float clearcoat_gloss;
+    float emissiveness;
+    float _padding0;
+    
+    uint uv_flip_s;
+    uint uv_flip_t;
+    float uv_scale;
+    float parallax_height;
+    
+    TextureRef texture_index[8];
+    /* Texture schema:
+       0 - albedo
+       1 - normals
+       2 - ao
+       3 - parallax
+       4 - metalness
+       5 - roughness */
+};
+
+layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
+    Material material;
+};
+
+layout(set = 6, binding = 0) uniform samplerCube textures[];
 
 void main() {
     vec3 normal = normalize(v_normal);
     
-    gbuffer_albedo = vec4(texture(tex, v_position).rgb, 1.0);
+    gbuffer_albedo = vec4(texture(textures[material.texture_index[0].index], v_position).rgb, 1.0);
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }

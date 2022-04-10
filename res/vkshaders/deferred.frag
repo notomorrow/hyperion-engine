@@ -16,9 +16,6 @@ layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals;
 layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions;
 
 
-layout(set = 0, binding = 3, rgba16f) uniform image2D image_storage_test;
-
-
 layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
     mat4 view;
     mat4 projection;
@@ -31,7 +28,7 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos) {
   
   shadow_position *= vec4(0.5);
   shadow_position += vec4(0.5);
-  shadow_position.xyz /= shadowPos.w;
+  shadow_position.xyz /= shadow_position.w;
   
   return shadow_position.xyz;
 }

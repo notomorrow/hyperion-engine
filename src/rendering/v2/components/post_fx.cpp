@@ -244,8 +244,14 @@ void PostProcessing::Create(Engine *engine)
     for (int i = 0; i < filter_shader_names.size(); i++) {
         m_filters[i] = std::make_unique<PostEffect>(engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
-                SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read()}},
-                SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read()}}
+                SubShader{ShaderModule::Type::VERTEX, {
+                    FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read(),
+                    {.name = "filter vert"}
+                }},
+                SubShader{ShaderModule::Type::FRAGMENT, {
+                    FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read(),
+                    {.name = "filter frag"}
+                }}
             }
         )));
 

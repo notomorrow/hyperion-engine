@@ -51,7 +51,7 @@ void Material::UpdateShaderData(Engine *engine) const
         m_textures.textures.Size(),
         MaterialShaderData::max_bound_textures
     );
-
+    
     for (size_t i = 0; i < num_bound_textures; i++) {
         if (const auto &texture_id = m_textures.textures.ValueAt(i)) {
             if (engine->shader_globals->textures.GetResourceIndex(texture_id, &shader_data.texture_index[i].index)) {
