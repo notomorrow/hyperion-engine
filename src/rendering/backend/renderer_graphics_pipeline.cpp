@@ -154,6 +154,26 @@ Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_
 
 Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool)
 {
+    DebugLog(LogType::Debug, "Initializing graphics pipeline with shader:\n");
+
+    if (m_construction_info.shader != nullptr) {
+        for (const auto &shader_module : m_construction_info.shader->GetShaderModules()) {
+            DebugLog(
+                LogType::Debug,
+                "\tType: %d\tName: %s\tPath: %s\n",
+                int(shader_module.type),
+                shader_module.spirv.metadata.name.empty()
+                    ? "<not set>"
+                    : shader_module.spirv.metadata.name.c_str(),
+                shader_module.spirv.metadata.path.empty()
+                    ? "<not set>"
+                    : shader_module.spirv.metadata.path.c_str()
+            );
+        }
+    } else {
+        DebugLog(LogType::Debug, "\tNULL\n");
+    }
+
     BuildVertexAttributes(m_construction_info.vertex_attributes);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};

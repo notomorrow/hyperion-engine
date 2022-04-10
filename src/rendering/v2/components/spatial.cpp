@@ -50,6 +50,19 @@ void Spatial::Init(Engine *engine)
     }));
 }
 
+void Spatial::SetMaterial(Ref<Material> &&material)
+{
+    if (m_material == material) {
+        return;
+    }
+
+    m_material = std::move(material);
+
+    if (IsInit() && m_material != nullptr) {
+        m_material.Init();
+    }
+}
+
 void Spatial::UpdateShaderData(Engine *engine) const
 {
     engine->shader_globals->objects.Set(

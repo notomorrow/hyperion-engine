@@ -38,7 +38,9 @@ public:
     ~Spatial();
     
     Mesh *GetMesh() const { return m_mesh.ptr; }
+
     Material *GetMaterial() const { return m_material.ptr; }
+    void SetMaterial(Ref<Material> &&material);
 
     const MeshInputAttributeSet &GetVertexAttributes() const { return m_attributes; }
 

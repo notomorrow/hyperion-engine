@@ -18,8 +18,14 @@ void DeferredRenderingEffect::CreateShader(Engine *engine)
 {
     m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
-            SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read()}},
-            SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read()}}
+            SubShader{ShaderModule::Type::VERTEX, {
+                FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read(),
+                {.name = "deferred vert"}
+            }},
+            SubShader{ShaderModule::Type::FRAGMENT, {
+                FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read(),
+            {.name = "deferred frag"}
+            }}
         }
     ));
 

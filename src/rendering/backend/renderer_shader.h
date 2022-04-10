@@ -7,12 +7,20 @@
 
 #include "renderer_device.h"
 
+#include <asset/byte_reader.h>
+
 #include <hash_code.h>
+#include <types.h>
 
 namespace hyperion {
 namespace renderer {
 struct ShaderObject {
-    std::vector<unsigned char> bytes;
+    std::vector<ubyte> bytes;
+
+    struct Metadata {
+        std::string name;
+        std::string path;
+    } metadata;
 
     inline HashCode GetHashCode() const
     {
@@ -21,6 +29,9 @@ struct ShaderObject {
         for (size_t i = 0; i < bytes.size(); i++) {
             hc.Add(bytes[i]);
         }
+
+        hc.Add(metadata.name);
+        hc.Add(metadata.path);
 
         return hc;
     }
