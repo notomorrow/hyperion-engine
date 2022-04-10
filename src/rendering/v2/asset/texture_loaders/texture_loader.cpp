@@ -4,7 +4,7 @@
 
 namespace hyperion::v2 {
 
-using TextureLoader = LoaderObject<Texture, LoaderFormat::IMAGE_2D>::Loader;
+using TextureLoader = LoaderObject<Texture2D, LoaderFormat::TEXTURE_2D>::Loader;
 
 static const stbi_io_callbacks callbacks{
     .read = [](void *user, char *data, int size) -> int {
@@ -69,7 +69,7 @@ LoaderResult TextureLoader::LoadFn(LoaderStream *stream, Object &object)
     return {};
 }
 
-std::unique_ptr<Texture> TextureLoader::BuildFn(Engine *engine, const Object &object)
+std::unique_ptr<Texture2D> TextureLoader::BuildFn(Engine *engine, const Object &object)
 {
     return std::make_unique<Texture2D>(
         Extent2D{

@@ -102,8 +102,6 @@
 using namespace hyperion;
 
 
-#define HYPERION_VK_TEST_CUBEMAP 1
-#define HYPERION_VK_TEST_MIPMAP 1
 #define HYPERION_VK_TEST_IMAGE_STORE 1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 
@@ -130,8 +128,7 @@ int main()
               scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     // test data for descriptors
 
-
-#if HYPERION_VK_TEST_CUBEMAP
+    
     std::vector<std::shared_ptr<Texture2D>> cubemap_faces;
     cubemap_faces.resize(6);
 
@@ -163,39 +160,15 @@ int main()
     );
 
     delete[] bytes;
-#endif
 
-#if HYPERION_VK_TEST_MIPMAP
-    // test image
-    auto tex = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dummy.jpg");
-    auto *texture = new v2::Texture2D(
-        Extent2D{
-            uint32_t(tex->GetWidth()),
-            uint32_t(tex->GetHeight())
-        },
-        Image::InternalFormat(tex->GetInternalFormat()),
-        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        Image::WrapMode::TEXTURE_WRAP_REPEAT,
-        tex->GetBytes()
+
+    auto texture = engine.resources.textures.Add(
+        engine.assets.Load<v2::Texture2D>(base_path + "/res/textures/dirt.jpg")
     );
 
-    // test image
-    auto tex2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
-    auto texture2 = engine.resources.textures.Add(engine.assets.Load<v2::Texture>(base_path + "/res/textures/dummy.jpg"));
-
-        
-        /*new v2::Texture2D(
-        Extent2D{
-            uint32_t(tex2->GetWidth()),
-            uint32_t(tex2->GetHeight())
-        },
-        Image::InternalFormat(tex2->GetInternalFormat()),
-        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        Image::WrapMode::TEXTURE_WRAP_REPEAT,
-        tex2->GetBytes()
-    );*/
-
-#endif
+    auto texture2 = engine.resources.textures.Add(
+        engine.assets.Load<v2::Texture2D>(base_path + "/res/textures/dummy.jpg")
+    );
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     renderer::Image *image_storage = new renderer::StorageImage(
@@ -216,14 +189,11 @@ int main()
     );
 
     monkey_obj->GetChild(0)->AddChild("Foobar");
-    monkey_obj->GetChild(0)->GetChild(0)->AddChild("Nuts");
+    monkey_obj->GetChild(0)->GetChild(0)->AddChild("Baz");
     monkey_obj->Translate({2.0f, 0.0f, 5.0f});
     monkey_obj->Scale(0.35f);
     monkey_obj->Update(&engine);
-
-    auto opaque_fbo_id = engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0];//v2::Framebuffer::ID{1};//engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
-    auto *opaque_fbo = engine.resources.framebuffers[opaque_fbo_id];
-
+    
     {
         auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
@@ -239,19 +209,11 @@ int main()
     Device *device = engine.GetInstance()->GetDevice();
     
     {
-        texture->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
-        texture->Init(&engine);
-
-#if HYPERION_VK_TEST_MIPMAP
+        texture.Init();
         texture2.Init();
-        //texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
-        //texture2->Init(&engine);
-#endif
-
-#if HYPERION_VK_TEST_CUBEMAP
+        
         cubemap->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(3) });
         cubemap->Init(&engine);
-#endif
     }
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -356,7 +318,7 @@ int main()
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
-    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
+    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture->GetId());
     mat1.Init();
     
     auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
@@ -597,6 +559,9 @@ int main()
 
         Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
+        monkey_obj->SetLocalTransform(transform);
+        monkey_obj->Update(&engine);
+
         cube_obj->SetLocalTranslation(camera->GetTranslation());
         cube_obj->Update(&engine);
         //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{1}), transform);
@@ -664,18 +629,8 @@ int main()
 
 #endif
     
-    //texture->Destroy(&engine);
-    delete texture;
-
-#if HYPERION_VK_TEST_MIPMAP
-    //texture2->Destroy(&engine);
-    //delete texture2;
-#endif
-
-#if HYPERION_VK_TEST_CUBEMAP
-    //cubemap->Destroy(&engine);
+    
     delete cubemap;
-#endif
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
         per_frame_data[i].Get<CommandBuffer>()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsCommandPool());

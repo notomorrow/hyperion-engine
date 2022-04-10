@@ -16,19 +16,14 @@ enum class LoaderFormat {
     MODEL_OGRE_XML,
     MODEL_FBOM,
 
-    IMAGE_2D
+    TEXTURE_2D
 };
-
-template <class T, LoaderFormat Format>
-struct VoidLoader {};
 
 /* Raw data representing a deserialized form of the resource
  * Not the final result - can be a simple struct overloaded to add members
  */
 template <class T, LoaderFormat Format>
-struct LoaderObject {
-    //using Loader = VoidLoader<T, Format>;
-};
+struct LoaderObject {};
 
 } // namespace hyperion::v2
 

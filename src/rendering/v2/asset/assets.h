@@ -37,9 +37,15 @@ class Assets {
 
         LoaderFormat GetResourceFormat() const
         {
-            constexpr StaticMap<const char *, LoaderFormat, 2> extensions{
+            constexpr StaticMap<const char *, LoaderFormat, 8> extensions{
                 std::make_pair("obj", LoaderFormat::MODEL_OBJ),
-                std::make_pair("png", LoaderFormat::IMAGE_2D)
+                std::make_pair("png", LoaderFormat::TEXTURE_2D),
+                std::make_pair("jpg", LoaderFormat::TEXTURE_2D),
+                std::make_pair("jpeg", LoaderFormat::TEXTURE_2D),
+                std::make_pair("bmp", LoaderFormat::TEXTURE_2D),
+                std::make_pair("psd", LoaderFormat::TEXTURE_2D),
+                std::make_pair("gif", LoaderFormat::TEXTURE_2D),
+                std::make_pair("hdr", LoaderFormat::TEXTURE_2D)
             };
 
             std::string path_lower(filepath);
@@ -101,10 +107,10 @@ class Assets {
     };
 
     template <>
-    struct Functor<Texture> : FunctorBase {
-        std::unique_ptr<Texture> operator()(Engine *engine)
+    struct Functor<Texture2D> : FunctorBase {
+        std::unique_ptr<Texture2D> operator()(Engine *engine)
         {
-            return LoadResource(engine, GetLoader<Texture, LoaderFormat::IMAGE_2D>());
+            return LoadResource(engine, GetLoader<Texture2D, LoaderFormat::TEXTURE_2D>());
         }
     };
 

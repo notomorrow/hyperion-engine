@@ -514,14 +514,15 @@ void Descriptor::RemoveSubDescriptor(uint32_t index)
 
         /* pop any sub descriptors marked for deletion */
         while (!sub_descriptor.valid) {
-            sub_descriptor = m_sub_descriptors[index];
             m_sub_descriptors.pop_back();
-
-            --index;
 
             if (index == 0) {
                 break;
             }
+
+            --index;
+
+            sub_descriptor = m_sub_descriptors[index];
         }
     }
 }
