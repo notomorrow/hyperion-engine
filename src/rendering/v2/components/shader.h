@@ -92,7 +92,7 @@ protected:
             ptr + dirty.GetStart()
         );
 
-        dirty = { 0, 0 };
+        dirty = {0, 0};
     }
 
     void MarkDirty(size_t index)
@@ -203,8 +203,6 @@ public:
     void Init(Engine *engine);
 
 private:
-    void Destroy(Engine *engine);
-
     std::vector<SubShader> m_sub_shaders;
 };
 

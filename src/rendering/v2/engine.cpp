@@ -95,7 +95,7 @@ void Engine::PrepareSwapchain()
     m_deferred_renderer.Create(this);
     m_shadow_renderer.Create(this);
 
-    auto shader = resources.shaders.Add(std::make_unique<Shader>(
+    auto shader = resources.shaders.Create(std::make_unique<Shader>(
         std::vector<SubShader>{
             {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()}},
             {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}}

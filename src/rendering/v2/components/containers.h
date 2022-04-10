@@ -208,6 +208,7 @@ public:
             return false;
         }
     };
+
     using ArgsTuple = std::tuple<Args...>;
 
     Callbacks() = default;
@@ -1004,7 +1005,7 @@ public:
         m_init_args = std::move(args);
     }
     
-    [[nodiscard]] RefWrapper Add(std::unique_ptr<T> &&object)
+    [[nodiscard]] RefWrapper Create(std::unique_ptr<T> &&object)
     {
         AssertThrow(object != nullptr);
 

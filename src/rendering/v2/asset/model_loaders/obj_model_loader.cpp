@@ -269,7 +269,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
         }
 
         engine->resources.Lock([&](Resources &resources) {
-            auto mesh = resources.meshes.Add(
+            auto mesh = resources.meshes.Create(
                 std::make_unique<Mesh>(
                     vertices, 
                     indices
@@ -284,7 +284,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
             auto vertex_attributes = mesh->GetVertexAttributes();
 
-            auto spatial = resources.spatials.Add(
+            auto spatial = resources.spatials.Create(
                 std::make_unique<Spatial>(
                     std::move(mesh),
                     vertex_attributes,
@@ -293,7 +293,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
                     engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
                 )
             );
-
+            
             auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
 
             node->SetSpatial(std::move(spatial));

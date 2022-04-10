@@ -332,7 +332,7 @@ int main()
     
     engine.PrepareSwapchain();
     
-    auto mirror_shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
+    auto mirror_shader = engine.resources.shaders.Create(std::make_unique<v2::Shader>(
         std::vector<v2::SubShader>{
             {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() }},
             { ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() } }
@@ -370,7 +370,7 @@ int main()
     v2::ComputePipeline::ID compute_pipeline_id = engine.resources.compute_pipelines.Add(
         &engine,
         std::make_unique<v2::ComputePipeline>(
-            engine.resources.shaders.Add(std::make_unique<v2::Shader>(
+            engine.resources.shaders.Create(std::make_unique<v2::Shader>(
                 std::vector<v2::SubShader>{
                     { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read()}}
                 }
@@ -387,9 +387,9 @@ int main()
     
     for (size_t i = 0; i < engine.GetInstance()->GetFrameHandler()->NumFrames(); i++) {
         /* Wait for compute to finish */
-        compute_semaphore_chain >> engine.GetInstance()->GetFrameHandler()
+        compute_semaphore_chain.SignalsTo(engine.GetInstance()->GetFrameHandler()
             ->GetPerFrameData()[i].Get<Frame>()
-            ->GetPresentSemaphores();
+            ->GetPresentSemaphores());
     }
 #endif
     
@@ -405,21 +405,21 @@ int main()
 
     v2::Node new_root("root");
     
-    auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
+    auto mat1 = engine.resources.materials.Create(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
     mat1->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     mat1.Init();
     
-    auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
+    auto mat2 = engine.resources.materials.Create(std::make_unique<v2::Material>());
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
     mat2->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     mat2.Init();
 
-    auto skybox_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
+    auto skybox_material = engine.resources.materials.Create(std::make_unique<v2::Material>());
     skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
     mat1.Init();
 
-    auto translucent_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
+    auto translucent_material = engine.resources.materials.Create(std::make_unique<v2::Material>());
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
     mat1.Init();
 
@@ -449,7 +449,7 @@ int main()
     v2::GraphicsPipeline::ID skybox_pipeline_id{};
     {
 
-        auto shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
+        auto shader = engine.resources.shaders.Create(std::make_unique<v2::Shader>(
             std::vector<v2::SubShader>{
                 {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
                 {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}

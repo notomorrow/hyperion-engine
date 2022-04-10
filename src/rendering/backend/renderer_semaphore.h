@@ -169,27 +169,13 @@ public:
      * @param signaler The chain to wait on
      * @returns this
      */
-    inline SemaphoreChain &operator<<(const SemaphoreChain &signaler)
-    {
-        for (auto &signal_semaphore : signaler.GetSignalSemaphores()) {
-            WaitsFor(signal_semaphore);
-        }
-
-        return *this;
-    }
+    SemaphoreChain &WaitsFor(const SemaphoreChain &signaler);
 
     /*! \brief Make `waitee` wait on all signal semaphores that this chain has.
      * @param waitee The chain to have waiting on this chain
      * @returns this
      */
-    inline SemaphoreChain &operator>>(SemaphoreChain &waitee)
-    {
-        for (auto &signal_semaphore : GetSignalSemaphores()) {
-            waitee.WaitsFor(signal_semaphore);
-        }
-
-        return waitee;
-    }
+    SemaphoreChain &SignalsTo(SemaphoreChain &waitee);
 
     inline const SemaphoreView &GetSignalSemaphoresView() const
         { return m_signal_semaphores_view; }
