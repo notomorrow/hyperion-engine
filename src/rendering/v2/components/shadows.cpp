@@ -132,9 +132,9 @@ void ShadowRenderer::Create(Engine *engine)
         auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
 
         for (auto &opaque_pipeline : engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].pipelines.objects) {
-            for (Spatial *spatial : opaque_pipeline->GetSpatials()) {
+            for (auto &spatial : opaque_pipeline->GetSpatials()) {
                 if (spatial != nullptr) {
-                    pipeline->AddSpatial(engine, spatial);
+                    pipeline->AddSpatial(spatial.Acquire());
                 }
             }
         }

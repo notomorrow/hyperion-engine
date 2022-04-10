@@ -56,6 +56,8 @@ public:
     void Init(Engine *engine);
 
 private:
+    void UpdateShaderData(Engine *engine) const;
+
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
     void RemoveFromPipelines();

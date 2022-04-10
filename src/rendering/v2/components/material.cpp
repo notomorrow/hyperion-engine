@@ -54,7 +54,7 @@ void Material::UpdateShaderData(Engine *engine) const
 
     for (size_t i = 0; i < num_bound_textures; i++) {
         if (const auto &texture_id = m_textures.textures.ValueAt(i)) {
-            if (engine->m_shader_globals->textures.GetResourceIndex(texture_id, &shader_data.texture_index[i].index)) {
+            if (engine->shader_globals->textures.GetResourceIndex(texture_id, &shader_data.texture_index[i].index)) {
                 shader_data.texture_index[i].used = 1;
 
                 continue;
@@ -66,7 +66,7 @@ void Material::UpdateShaderData(Engine *engine) const
         shader_data.texture_index[i].used = 0;
     }
 
-    engine->m_shader_globals->materials.Set(m_id.Value() - 1, std::move(shader_data));
+    engine->shader_globals->materials.Set(m_id.value - 1, std::move(shader_data));
 }
 
 void Material::SetParameter(MaterialKey key, const Parameter &value)

@@ -303,18 +303,15 @@ int main()
     {
         texture->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
         texture->Init(&engine);
-        engine.m_shader_globals->textures.AddResource(texture);
 
 #if HYPERION_VK_TEST_MIPMAP
         texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
         texture2->Init(&engine);
-        engine.m_shader_globals->textures.AddResource(texture2);
 #endif
 
 #if HYPERION_VK_TEST_CUBEMAP
         cubemap->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(3) });
         cubemap->Init(&engine);
-        //engine.m_shader_globals->textures.AddResource(texture2);
 #endif
     }
 
@@ -426,7 +423,8 @@ int main()
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
     mat1.Init();
 
-    v2::Spatial *cube_spatial{};
+    //v2::Spatial *cube_spatial{};
+    auto cube_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
     auto monkey_spatial = engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial());
 
     v2::GraphicsPipeline::ID main_pipeline_id;
@@ -442,10 +440,8 @@ int main()
         monkey_node->SetSpatial(monkey_spatial.Acquire());
         new_root.AddChild(std::move(monkey_node));
         
-        pipeline->AddSpatial(&engine, monkey_spatial);
-
-        cube_spatial = cube_obj->GetChild(0)->GetSpatial();
-        pipeline->AddSpatial(&engine, cube_spatial);
+        pipeline->AddSpatial(monkey_spatial.Acquire());
+        pipeline->AddSpatial(cube_spatial.Acquire());
         
         main_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
@@ -469,9 +465,8 @@ int main()
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
 
-        v2::Spatial *skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
-
-        pipeline->AddSpatial(&engine, skybox_spatial);
+        auto skybox_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
+        pipeline->AddSpatial(std::move(skybox_spatial));
         
         skybox_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
@@ -485,9 +480,8 @@ int main()
         );
         pipeline->SetBlendEnabled(true);
 
-        v2::Spatial *translucent_spatial = cube_obj->GetChild(0)->GetSpatial();
-
-        pipeline->AddSpatial(&engine, translucent_spatial);
+        auto translucent_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
+        pipeline->AddSpatial(std::move(translucent_spatial));
         
         translucent_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
@@ -570,7 +564,7 @@ int main()
     Matrix4 shadow_proj;
     MatrixUtil::ToOrtho(shadow_proj, -100, 100, -100, 100, -100, 100);
 
-    engine.m_shader_globals->scenes.Set(1, {
+    engine.shader_globals->scenes.Set(1, {
         .view = shadow_view,
         .projection = shadow_proj,
         .camera_position = {9, 9, 9, 1},
@@ -598,9 +592,9 @@ int main()
         timer += delta_time;
 
         if (timer > 2.0 && !updated_descriptor) {
-            //engine.m_shader_globals->textures.RemoveResource(texture);
+            //engine.shader_globals->textures.RemoveResource(texture);
             //texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
-            //engine.m_shader_globals->textures.AddResource(texture2);
+            //engine.shader_globals->textures.AddResource(texture2);
 
 
             updated_descriptor = true;
@@ -609,7 +603,7 @@ int main()
         camera->Update(delta_time);
 
         /* 0 is the index of our "main" scene/camera */
-        engine.m_shader_globals->scenes.Set(0, {
+        engine.shader_globals->scenes.Set(0, {
             .view = camera->GetViewMatrix(),
             .projection = camera->GetProjectionMatrix(),
             .camera_position = Vector4(camera->GetTranslation(), 1.0f),

@@ -21,7 +21,7 @@ void BindlessStorage::Destroy(Engine *engine)
 {
     /* Remove all texture sub-descriptors */
     for (auto *descriptor_set : m_descriptor_sets) {
-        auto *descriptor = descriptor_set->GetDescriptor(0);
+        auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
 
         for (const auto sub_descriptor_index : m_texture_sub_descriptors) {
             descriptor->RemoveSubDescriptor(sub_descriptor_index);
@@ -52,7 +52,7 @@ void BindlessStorage::AddResource(const Texture *texture)
     
     for (size_t i = 0; i < m_descriptor_sets.size(); i++) {
         auto *descriptor_set = m_descriptor_sets[i];
-        auto *descriptor = descriptor_set->GetDescriptor(0);
+        auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
 
         indices[i] = descriptor->AddSubDescriptor({
             .image_view = texture->GetImageView(),
@@ -72,7 +72,7 @@ void BindlessStorage::RemoveResource(const Texture *texture)
     const auto sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
     
     for (auto *descriptor_set : m_descriptor_sets) {
-        auto *descriptor = descriptor_set->GetDescriptor(0);
+        auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
 
         descriptor->RemoveSubDescriptor(sub_descriptor_index);
     }
@@ -86,7 +86,7 @@ void BindlessStorage::MarkResourceChanged(const Texture *texture)
     const auto sub_descriptor_index = m_texture_sub_descriptors.Get(texture->GetId());
 
     for (auto *descriptor_set : m_descriptor_sets) {
-        descriptor_set->GetDescriptor(0)->MarkDirty(sub_descriptor_index);
+        descriptor_set->GetDescriptor(bindless_descriptor_index)->MarkDirty(sub_descriptor_index);
     }
 }
 

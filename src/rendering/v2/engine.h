@@ -108,7 +108,7 @@ public:
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
 
-    ShaderGlobals *m_shader_globals;
+    ShaderGlobals          *shader_globals;
 
     EngineCallbacks         callbacks;
     Resources               resources;
@@ -129,7 +129,7 @@ private:
 
 
     Octree::Root m_octree_root;
-    Octree m_octree;
+    Octree       m_octree;
 
     /* TMP */
     std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;
