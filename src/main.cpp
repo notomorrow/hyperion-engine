@@ -114,7 +114,6 @@ int main()
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
 
-
     
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
@@ -182,7 +181,10 @@ int main()
 
     // test image
     auto tex2 = AssetManager::GetInstance()->LoadFromFile<Texture>("textures/dirt.jpg");
-    auto *texture2 = new v2::Texture2D(
+    auto texture2 = engine.resources.textures.Add(engine.assets.Load<v2::Texture>(base_path + "/res/textures/dummy.jpg"));
+
+        
+        /*new v2::Texture2D(
         Extent2D{
             uint32_t(tex2->GetWidth()),
             uint32_t(tex2->GetHeight())
@@ -191,7 +193,7 @@ int main()
         Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         Image::WrapMode::TEXTURE_WRAP_REPEAT,
         tex2->GetBytes()
-    );
+    );*/
 
 #endif
 
@@ -301,12 +303,13 @@ int main()
     Device *device = engine.GetInstance()->GetDevice();
     
     {
-        texture->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
+        texture->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
         texture->Init(&engine);
 
 #if HYPERION_VK_TEST_MIPMAP
-        texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
-        texture2->Init(&engine);
+        texture2.Init();
+        //texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(2) });
+        //texture2->Init(&engine);
 #endif
 
 #if HYPERION_VK_TEST_CUBEMAP
@@ -332,7 +335,7 @@ int main()
     
     engine.PrepareSwapchain();
     
-    auto mirror_shader = engine.resources.shaders.Create(std::make_unique<v2::Shader>(
+    auto mirror_shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
         std::vector<v2::SubShader>{
             {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read() }},
             { ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read() } }
@@ -370,7 +373,7 @@ int main()
     v2::ComputePipeline::ID compute_pipeline_id = engine.resources.compute_pipelines.Add(
         &engine,
         std::make_unique<v2::ComputePipeline>(
-            engine.resources.shaders.Create(std::make_unique<v2::Shader>(
+            engine.resources.shaders.Add(std::make_unique<v2::Shader>(
                 std::vector<v2::SubShader>{
                     { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read()}}
                 }
@@ -405,21 +408,21 @@ int main()
 
     v2::Node new_root("root");
     
-    auto mat1 = engine.resources.materials.Create(std::make_unique<v2::Material>());
+    auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
     mat1->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     mat1.Init();
     
-    auto mat2 = engine.resources.materials.Create(std::make_unique<v2::Material>());
+    auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
     mat2->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     mat2.Init();
 
-    auto skybox_material = engine.resources.materials.Create(std::make_unique<v2::Material>());
+    auto skybox_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
     skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
     mat1.Init();
 
-    auto translucent_material = engine.resources.materials.Create(std::make_unique<v2::Material>());
+    auto translucent_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
     mat1.Init();
 
@@ -449,7 +452,7 @@ int main()
     v2::GraphicsPipeline::ID skybox_pipeline_id{};
     {
 
-        auto shader = engine.resources.shaders.Create(std::make_unique<v2::Shader>(
+        auto shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
             std::vector<v2::SubShader>{
                 {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
                 {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
@@ -646,6 +649,8 @@ int main()
 
         Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
+        cube_obj->SetLocalTranslation(camera->GetTranslation());
+        cube_obj->Update(&engine);
         //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{1}), transform);
         //engine.GetOctree().Update(&engine, monkey_spatial);
         //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{3}), Transform(camera->GetTranslation(), { 1.0f, 1.0f, 1.0f }, Quaternion()));
@@ -716,7 +721,7 @@ int main()
 
 #if HYPERION_VK_TEST_MIPMAP
     //texture2->Destroy(&engine);
-    delete texture2;
+    //delete texture2;
 #endif
 
 #if HYPERION_VK_TEST_CUBEMAP

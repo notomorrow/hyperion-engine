@@ -242,7 +242,7 @@ void PostProcessing::Create(Engine *engine)
     /* TODO: use subpasses for gbuffer so we only have num_filters * num_frames descriptors */
 
     for (int i = 0; i < filter_shader_names.size(); i++) {
-        m_filters[i] = std::make_unique<PostEffect>(engine->resources.shaders.Create(std::make_unique<Shader>(
+        m_filters[i] = std::make_unique<PostEffect>(engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read()}},
                 SubShader{ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read()}}

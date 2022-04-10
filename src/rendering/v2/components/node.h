@@ -19,9 +19,10 @@ public:
     /*! \brief Construct the node, optionally taking in a string tag to improve identification.
      * @param tag A c-string representing the name of the Node. The memory is copied internally so the string can be safely deleted
      * after use.
-     * @param transform An optional parameter representing the local-space transform of this Node.
+     * @param local_transform An optional parameter representing the local-space transform of this Node.
      */
     Node(const char *tag = "", const Transform &local_transform = Transform());
+    Node(const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform = Transform());
     Node(const Node &other) = delete;
     Node &operator=(const Node &other) = delete;
     ~Node();

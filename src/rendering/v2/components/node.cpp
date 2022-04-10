@@ -6,9 +6,16 @@
 namespace hyperion::v2 {
 
 Node::Node(const char *tag, const Transform &local_transform)
+    : Node(tag, nullptr, local_transform)
+{
+}
+
+Node::Node(const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform)
     : m_parent_node(nullptr),
       m_local_transform(local_transform)
 {
+    SetSpatial(std::move(spatial));
+
     size_t len = std::strlen(tag);
     m_tag = new char[len + 1];
     std::strcpy(m_tag, tag);

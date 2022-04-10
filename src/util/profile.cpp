@@ -10,8 +10,15 @@ std::vector<double> Profile::RunInterleved(std::vector<Profile> &&profiles, size
     results.resize(profiles.size());
 
     for (size_t i = 0; i < runs_per; i++) {
-        for (size_t j = 0; j < profiles.size(); j++) {
-            profiles[j].Run(num_iterations, runs_per_iteration);
+        size_t index = std::rand() % profiles.size();
+        size_t counter = 0;
+
+        while (counter < profiles.size()) {
+            profiles[index].Run(num_iterations, runs_per_iteration);
+
+            index = ++index % profiles.size();
+
+            ++counter;
         }
     }
 
