@@ -48,12 +48,12 @@ void Material::UpdateShaderData(Engine *engine) const
     };
 
     const size_t num_bound_textures = MathUtil::Min(
-        m_textures.textures.Size(),
+        m_textures.Size(),
         MaterialShaderData::max_bound_textures
     );
     
     for (size_t i = 0; i < num_bound_textures; i++) {
-        if (const auto &texture_id = m_textures.textures.ValueAt(i)) {
+        if (const auto &texture_id = m_textures.ValueAt(i)) {
             if (engine->shader_globals->textures.GetResourceIndex(texture_id, &shader_data.texture_index[i].index)) {
                 shader_data.texture_index[i].used = 1;
 
@@ -76,9 +76,9 @@ void Material::SetParameter(MaterialKey key, const Parameter &value)
     m_state = MATERIAL_STATE_DIRTY;
 }
 
-void Material::SetTexture(TextureSet::TextureKey key, Texture::ID id)
+void Material::SetTexture(TextureKey key, Texture::ID id)
 {
-    m_textures.textures.Set(key, id);
+    m_textures.Set(key, id);
 
     m_state = MATERIAL_STATE_DIRTY;
 }

@@ -221,76 +221,19 @@ int main()
     monkey_obj->Scale(0.35f);
     monkey_obj->Update(&engine);
 
-
-
     auto opaque_fbo_id = engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0];//v2::Framebuffer::ID{1};//engine.AddFramebuffer(engine.GetInstance()->swapchain->extent.width, engine.GetInstance()->swapchain->extent.height, render_pass_id);
     auto *opaque_fbo = engine.resources.framebuffers[opaque_fbo_id];
 
     {
         auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBALS);
+            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
 
-
-#if HYPERION_VK_TEST_CUBEMAP
-        descriptor_set_globals
-            ->AddDescriptor<ImageSamplerDescriptor>(2)
-            ->AddSubDescriptor({ .image_view = cubemap->GetImageView(), .sampler = cubemap->GetSampler() });
-#endif
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         descriptor_set_globals
-            ->AddDescriptor<ImageStorageDescriptor>(3)
+            ->AddDescriptor<ImageStorageDescriptor>(16)
             ->AddSubDescriptor({ .image_view = &image_storage_view });
 #endif
-    }
-
-    {
-        auto *descriptor_set_pass = engine.GetInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_PASS);
-
-        /* Albedo texture */
-        descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(0)
-            ->AddSubDescriptor({
-                .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetImageView(),
-                .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetSampler()
-            });
-
-        /* Normals texture*/
-        descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(1)
-            ->AddSubDescriptor({
-                .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetImageView(),
-                .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetSampler()
-            });
-
-        /* Position texture */
-        descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(2)
-            ->AddSubDescriptor({
-                .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetImageView(),
-                .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetSampler()
-            });
-
-        /* Depth texture */
-        descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(3)
-            ->AddSubDescriptor({
-                .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetImageView(),
-                .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetSampler()
-            });
-        
-        /*engine.GetInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
-            ->GetDescriptor(0)
-            ->AddSubDescriptor({ .image_view = texture->GetImageView(), .sampler = texture->GetSampler() })
-            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });
-
-        engine.GetInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1)
-            ->GetDescriptor(0)
-            ->AddSubDescriptor({ .image_view = texture->GetImageView(), .sampler = texture->GetSampler() })
-            ->AddSubDescriptor({ .image_view = &test_image_view2, .sampler = &test_sampler2 });*/
     }
 
     Device *device = engine.GetInstance()->GetDevice();
@@ -413,17 +356,17 @@ int main()
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
-    mat1->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
+    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     mat1.Init();
     
     auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
-    mat2->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
+    mat2->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
     mat2.Init();
 
     auto skybox_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
     skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-    skybox_material->SetTexture(v2::TextureSet::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap->GetId());
+    skybox_material->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap->GetId());
     skybox_material.Init();
 
     auto translucent_material = engine.resources.materials.Add(std::make_unique<v2::Material>());

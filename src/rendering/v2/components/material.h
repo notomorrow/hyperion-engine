@@ -9,7 +9,9 @@
 
 namespace hyperion::v2 {
 
-struct TextureSet {
+class Material : public EngineComponentBase<STUB_CLASS(Material)> {
+public:
+    static constexpr size_t max_parameters = 32;
     static constexpr size_t max_textures = 32;
 
     enum TextureKey : uint64_t {
@@ -49,13 +51,6 @@ struct TextureSet {
         MATERIAL_TEXTURE_TERRAIN_LEVEL2_AO_MAP       = 1 << 25,
         MATERIAL_TEXTURE_TERRAIN_LEVEL2_PARALLAX_MAP = 1 << 26
     };
-    
-    EnumOptions<TextureKey, Texture::ID, max_textures> textures;
-};
-
-class Material : public EngineComponentBase<STUB_CLASS(Material)> {
-public:
-    static constexpr size_t max_parameters = 32;
 
     struct Parameter {
         union {
@@ -217,6 +212,7 @@ public:
     };
 
     using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
+    using TextureSet = EnumOptions<TextureKey, Texture::ID, max_textures>;
 
     Material();
     ~Material();
@@ -244,7 +240,7 @@ public:
     }
 
     void SetParameter(MaterialKey key, const Parameter &value);
-    void SetTexture(TextureSet::TextureKey key, Texture::ID id);
+    void SetTexture(TextureKey key, Texture::ID id);
 
     void Init(Engine *engine);
 

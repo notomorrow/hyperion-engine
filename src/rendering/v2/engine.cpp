@@ -390,7 +390,7 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
         m_instance->GetDevice(),
         command_buffer,
         &pipeline,
-        {{.count = 2}}
+        {{.set = 1, .count = 1}}
     );
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
