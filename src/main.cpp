@@ -112,6 +112,9 @@ int main()
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
 
+   // auto old_ogre = AssetManager::GetInstance()->LoadFromFile<Node>("models/ogrexml/dragger_Body.mesh.xml");
+
+
     
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
@@ -184,7 +187,7 @@ int main()
     engine.Initialize();
     
     auto [monkey_obj, cube_obj] = engine.assets.Load<v2::Node>(
-        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
         base_path + "/res/models/cube.obj"
     );
 
@@ -559,8 +562,8 @@ int main()
 
         Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
 
-        monkey_obj->SetLocalTransform(transform);
-        monkey_obj->Update(&engine);
+        //monkey_obj->SetLocalTransform(transform);
+        //monkey_obj->Update(&engine);
 
         cube_obj->SetLocalTranslation(camera->GetTranslation());
         cube_obj->Update(&engine);

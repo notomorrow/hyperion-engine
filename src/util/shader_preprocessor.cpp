@@ -63,15 +63,15 @@ std::string ShaderPreprocessor::ProcessInner(std::istringstream &ss,
                 ShaderProperties::ShaderProperty::Value result;
 
                 if (new_components.size() == 2) {
-                    if (StringUtil::ParseNumber<float>(value, &result.float_value)) {
+                    if (StringUtil::Parse<float>(value, &result.float_value)) {
                         if (MathUtil::Round(result.float_value) == result.float_value) {
                             defines.Define(key, int(result.float_value));
                         } else {
                             defines.Define(key, result.float_value);
                         }
-                    } else if (StringUtil::ParseNumber<int>(value, &result.int_value)) {
+                    } else if (StringUtil::Parse<int>(value, &result.int_value)) {
                         defines.Define(key, result.int_value);
-                    } else if (StringUtil::ParseNumber<bool>(value, &result.bool_value)) {
+                    } else if (StringUtil::Parse<bool>(value, &result.bool_value)) {
                         defines.Define(key, result.bool_value);
                     } else {
                         defines.Define(key, value);

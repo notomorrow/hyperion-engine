@@ -1,6 +1,8 @@
 #ifndef SAXPARSER_H
 #define SAXPARSER_H
 
+#include <asset/buffered_byte_reader.h>
+
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -48,9 +50,9 @@ public:
 
     SaxParser(SaxHandler *handler);
     Result Parse(const std::string &filepath);
+    Result Parse(BufferedReader<2048> *reader);
 
 private:
-    std::ifstream file;
     SaxHandler *handler;
 };
 

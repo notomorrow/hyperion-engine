@@ -154,6 +154,16 @@ public:
         }
     }
 
+    template <class LambdaFunction>
+    void ReadChars(LambdaFunction func)
+    {
+        while (size_t count = Read()) {
+            for (size_t i = 0; i < count; i++) {
+                func(static_cast<char>(buffer[i]));
+            }
+        }
+    }
+
 private:
     std::ifstream *file;
     std::streampos pos;
@@ -189,24 +199,6 @@ private:
 
         const size_t count = file->gcount();
         pos += count;
-
-        return count;
-    }
-
-    size_t Read(Byte *out, size_t sz)
-    {
-        AssertThrow(sz <= BufferSize);
-
-        if (Eof()) {
-            return 0;
-        }
-
-        file->read(reinterpret_cast<char *>(&buffer[0]), BufferSize);
-
-        const size_t count = file->gcount();
-        pos += count;
-
-        memcpy(reinterpret_cast<void *>(out), buffer, sz);
 
         return count;
     }

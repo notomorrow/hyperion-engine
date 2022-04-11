@@ -42,8 +42,9 @@ public:
     void Init(Engine *engine);
     void Render(Engine *engine, CommandBuffer *cmd) const;
 
-private:
     static std::pair<std::vector<Vertex>, std::vector<Index>> CalculateIndices(const std::vector<Vertex> &vertices);
+
+private:
     std::vector<float> CreatePackedBuffer();
     void UploadToDevice(Device *device);
 
