@@ -43,6 +43,10 @@ void Mesh::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](Engine *engine) {
+        if (m_vertices.empty() || m_indices.empty()) {
+            DebugLog(LogType::Warn, "Create mesh with empty vertices or indices list\n");
+        }
+
         UploadToDevice(engine->GetInstance()->GetDevice());
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {

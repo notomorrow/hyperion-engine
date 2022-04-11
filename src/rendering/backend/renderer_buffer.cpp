@@ -85,6 +85,10 @@ GPUBuffer::~GPUBuffer()
 
 void GPUBuffer::Create(Device *device, size_t size)
 {
+    if (size == 0) {
+        DebugLog(LogType::Warn, "Creating empty gpu buffer\n");
+    }
+
     this->size = size;
 
     const QueueFamilyIndices &qf_indices = device->GetQueueFamilyIndices();
@@ -101,7 +105,15 @@ void GPUBuffer::Create(Device *device, size_t size)
     alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
     alloc_info.pUserData = reinterpret_cast<void *>(index);
 
-    auto result = vmaCreateBuffer(device->GetAllocator(), &vk_buffer_info, &alloc_info, &this->buffer, &this->allocation, nullptr);
+    auto result = vmaCreateBuffer(
+        device->GetAllocator(),
+        &vk_buffer_info,
+        &alloc_info,
+        &this->buffer,
+        &this->allocation,
+        nullptr
+    );
+
     AssertThrowMsg(result == VK_SUCCESS, "Failed to create gpu buffer");
 }
 

@@ -10,10 +10,19 @@ SaxParser::SaxParser(SaxHandler *handler)
 
 SaxParser::Result SaxParser::Parse(const std::string &filepath)
 {
-    file.open(filepath);
+    BufferedReader<2048> reader(filepath);
 
-    if (!file.is_open()) {
-        return SaxParser::Result(SaxParser::Result::SAX_ERR, "File could not be read.");
+    return Parse(&reader);
+}
+
+SaxParser::Result SaxParser::Parse(BufferedReader<2048> *reader)
+{
+    if (reader == nullptr) {
+        return Result(Result::SAX_ERR, "Reader was null");
+    }
+
+    if (!reader->IsOpen()) {
+        return Result(Result::SAX_ERR, "File could not be read.");
     }
 
     bool is_reading = false,
@@ -33,8 +42,8 @@ SaxParser::Result SaxParser::Parse(const std::string &filepath)
 
     // shield your eyes
     // 2022-02-09: wtf
-    char ch;
-    while (file.get(ch)) {
+    // 2022-04-10: still lookin' good
+    reader->ReadChars([&](char ch) {
         if (ch != '\t' && ch != '\n') {
             if (ch == '<') {
                 element_str.clear();
@@ -125,9 +134,9 @@ SaxParser::Result SaxParser::Parse(const std::string &filepath)
             }
         }
         last_char = ch;
-    }
+    });
 
-    return SaxParser::Result(SaxParser::Result::SAX_OK);
+    return Result(Result::SAX_OK);
 }
 
 } // namespace xml

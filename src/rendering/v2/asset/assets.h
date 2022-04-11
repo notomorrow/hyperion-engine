@@ -2,6 +2,7 @@
 #define HYPERION_V2_ASSETS_H
 
 #include "model_loaders/obj_model_loader.h"
+#include "model_loaders/ogre_xml_model_loader.h"
 #include "texture_loaders/texture_loader.h"
 #include "../components/node.h"
 
@@ -35,15 +36,16 @@ class Assets {
 
         LoaderFormat GetResourceFormat() const
         {
-            constexpr StaticMap<const char *, LoaderFormat, 8> extensions{
-                std::make_pair("obj", LoaderFormat::MODEL_OBJ),
-                std::make_pair("png", LoaderFormat::TEXTURE_2D),
-                std::make_pair("jpg", LoaderFormat::TEXTURE_2D),
-                std::make_pair("jpeg", LoaderFormat::TEXTURE_2D),
-                std::make_pair("bmp", LoaderFormat::TEXTURE_2D),
-                std::make_pair("psd", LoaderFormat::TEXTURE_2D),
-                std::make_pair("gif", LoaderFormat::TEXTURE_2D),
-                std::make_pair("hdr", LoaderFormat::TEXTURE_2D)
+            constexpr StaticMap<const char *, LoaderFormat, 9> extensions{
+                std::make_pair(".obj",      LoaderFormat::MODEL_OBJ),
+                std::make_pair(".mesh.xml", LoaderFormat::MODEL_OGRE_XML),
+                std::make_pair(".png",      LoaderFormat::TEXTURE_2D),
+                std::make_pair(".jpg",      LoaderFormat::TEXTURE_2D),
+                std::make_pair(".jpeg",     LoaderFormat::TEXTURE_2D),
+                std::make_pair(".bmp",      LoaderFormat::TEXTURE_2D),
+                std::make_pair(".psd",      LoaderFormat::TEXTURE_2D),
+                std::make_pair(".gif",      LoaderFormat::TEXTURE_2D),
+                std::make_pair(".hdr",      LoaderFormat::TEXTURE_2D)
             };
 
             std::string path_lower(filepath);
@@ -98,6 +100,8 @@ class Assets {
             switch (GetResourceFormat()) {
             case LoaderFormat::MODEL_OBJ:
                 return LoadResource(engine, GetLoader<Node, LoaderFormat::MODEL_OBJ>());
+            case LoaderFormat::MODEL_OGRE_XML:
+                return LoadResource(engine, GetLoader<Node, LoaderFormat::MODEL_OGRE_XML>());
             default:
                 return nullptr;
             }

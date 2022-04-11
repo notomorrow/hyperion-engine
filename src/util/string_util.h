@@ -131,7 +131,7 @@ public:
     }
 
     template <typename T>
-    static inline bool ParseNumber(const std::string &str, T *out_value)
+    static inline bool Parse(const std::string &str, T *out_value)
     {
         std::istringstream ss(str);
         T value;
@@ -146,20 +146,20 @@ public:
     }
 
     template <typename T>
-    static inline T ParseNumber(const std::string &str)
+    static inline T Parse(const std::string &str)
     {
-        T value;
+        T value{};
 
-        ParseNumber(str, &value);
+        Parse(str, &value);
 
         return value;
     }
 
     template <typename T>
     static inline bool IsNumber(const std::string &str) {
-        T value;
+        T value{};
 
-        return ParseNumber(str, &value);
+        return Parse(str, &value);
     }
 };
 
