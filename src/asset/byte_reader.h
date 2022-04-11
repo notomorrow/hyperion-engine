@@ -5,6 +5,7 @@
 #include "../util.h"
 
 #include <fstream>
+#include <cstring>
 
 namespace hyperion {
 class ByteReader {

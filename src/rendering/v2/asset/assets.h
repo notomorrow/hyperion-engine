@@ -10,6 +10,7 @@
 #include <string>
 #include <unordered_map>
 #include <thread>
+#include <algorithm>
 
 namespace hyperion::v2 {
 
@@ -32,9 +33,6 @@ class Assets {
     struct FunctorBase {
         std::string filepath;
 
-        FunctorBase() = delete;
-        FunctorBase(const std::string &filepath) : filepath(filepath) {}
-
         LoaderFormat GetResourceFormat() const
         {
             constexpr StaticMap<const char *, LoaderFormat, 8> extensions{
@@ -49,7 +47,7 @@ class Assets {
             };
 
             std::string path_lower(filepath);
-            std::transform(path_lower.begin(), path_lower.end(), path_lower.begin(), std::tolower);
+            std::transform(path_lower.begin(), path_lower.end(), path_lower.begin(), [](char ch){ return std::tolower(ch); });
 
             for (const auto &it : extensions.pairs) {
                 if (StringUtil::EndsWith(path_lower, it.first)) {
@@ -127,7 +125,10 @@ class Assets {
             threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
                 DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
 
-                results[index] = Functor<Type>(filepaths[index])(engine);
+                auto functor = Functor<Type>{};
+                functor.filepath = filepaths[index];
+
+                results[index] = functor(engine);
             });
         }
 

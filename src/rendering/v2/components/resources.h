@@ -11,6 +11,7 @@
 #include "containers.h"
 
 #include <mutex>
+#include <thread>
 
 namespace hyperion::v2 {
 

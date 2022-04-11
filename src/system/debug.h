@@ -9,6 +9,8 @@
 #include <string>
 #include <iostream>
 
+#include <csignal>
+
 
 #ifndef HYPERION_BUILD_RELEASE
 
@@ -19,7 +21,7 @@
 #define HYP_DEBUG_FUNC       (__PRETTY_FUNCTION__)
 #define HYP_DEBUG_LINE       (__LINE__)
 #ifdef HYPERION_ENABLE_BREAKPOINTS
-#define HYP_BREAKPOINT       (__asm__("int $3"))
+#define HYP_BREAKPOINT       (raise(SIGTERM))
 #endif
 
 #elif defined(_MSC_VER)

@@ -307,7 +307,7 @@ Result Attachment::AddAttachmentRef(
 
 Result Attachment::RemoveAttachmentRef(Device *device, AttachmentRef *attachment_ref)
 {
-    AssertThrow(attachment_ref != nullptr, "Attachment reference cannot be null");
+    AssertThrowMsg(attachment_ref != nullptr, "Attachment reference cannot be null");
 
     const auto it = std::find_if(m_attachment_refs.begin(), m_attachment_refs.end(), [attachment_ref](const auto &item) {
         return item.get() == attachment_ref;
