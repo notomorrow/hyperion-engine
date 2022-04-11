@@ -37,12 +37,7 @@ void Engine::SetSpatialTransform(Spatial *spatial, const Transform &transform)
 {
     AssertThrow(spatial != nullptr);
     
-    spatial->SetTransform(transform);
-
-    shader_globals->objects.Set(
-        spatial->GetId().value - 1,
-        {.model_matrix = spatial->GetTransform().GetMatrix()}
-    );
+    spatial->UpdateShaderData(this);
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -231,6 +226,8 @@ void Engine::Initialize()
     shader_globals->materials.Create(m_instance->GetDevice());
     /* for objects */
     shader_globals->objects.Create(m_instance->GetDevice());
+    /* for skeletons */
+    shader_globals->skeletons.Create(m_instance->GetDevice());
 
 
 
@@ -256,6 +253,13 @@ void Engine::Initialize()
             .range = sizeof(ObjectShaderData)
         });
 
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
+        ->AddSubDescriptor({
+            .gpu_buffer = shader_globals->skeletons.GetBuffers()[0].get(),
+            .range = sizeof(SkeletonShaderData)
+        });
+
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
@@ -277,6 +281,13 @@ void Engine::Initialize()
         ->AddSubDescriptor({
             .gpu_buffer = shader_globals->objects.GetBuffers()[1].get(),
             .range = sizeof(ObjectShaderData)
+        });
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
+        ->AddSubDescriptor({
+            .gpu_buffer = shader_globals->skeletons.GetBuffers()[1].get(),
+            .range = sizeof(SkeletonShaderData)
         });
 
     m_instance->GetDescriptorPool()
@@ -306,6 +317,7 @@ void Engine::Destroy()
 
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MATERIALS, this);
+    callbacks.Trigger(EngineCallback::DESTROY_SKELETONS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SPATIALS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SHADERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_TEXTURES, this);
@@ -322,6 +334,7 @@ void Engine::Destroy()
         shader_globals->scenes.Destroy(m_instance->GetDevice());
         shader_globals->objects.Destroy(m_instance->GetDevice());
         shader_globals->materials.Destroy(m_instance->GetDevice());
+        shader_globals->skeletons.Destroy(m_instance->GetDevice());
 
         delete shader_globals;
     }
@@ -332,10 +345,14 @@ void Engine::Destroy()
 
 void Engine::Compile()
 {
+    callbacks.TriggerPersisted(EngineCallback::CREATE_SKELETONS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
 
-    /* Finalize materials */
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
+        /* Finalize skeletons */
+        shader_globals->skeletons.UpdateBuffer(m_instance->GetDevice(), i);
+
+        /* Finalize materials */
         shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), i);
 
         /* Finalize per-object data */
@@ -354,6 +371,7 @@ void Engine::UpdateDescriptorData(uint32_t frame_index)
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    shader_globals->skeletons.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
     static constexpr DescriptorSet::Index bindless_descriptor_set_index[] = { DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS, DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1 };
 

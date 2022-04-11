@@ -392,6 +392,9 @@ enum class EngineCallback {
     CREATE_MATERIALS,
     DESTROY_MATERIALS,
 
+    CREATE_SKELETONS,
+    DESTROY_SKELETONS,
+
     CREATE_SHADERS,
     DESTROY_SHADERS,
 
@@ -514,7 +517,7 @@ struct ObjectHolder {
     constexpr size_t Size() const
         { return objects.size(); }
 
-    constexpr T *Get(const typename T::ID &id)
+    constexpr T *Get(typename T::ID id)
     {
         return MathUtil::InRange(id.value, {1, objects.size() + 1})
             ? objects[id.value - 1].get()
@@ -526,8 +529,8 @@ struct ObjectHolder {
         return const_cast<ObjectHolder<T> *>(this)->Get(id);
     }
 
-    constexpr T *operator[](const typename T::ID &id) { return Get(id); }
-    constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }
+    constexpr T *operator[](typename T::ID id) { return Get(id); }
+    constexpr const T *operator[](typename T::ID id) const { return Get(id); }
 
     template <class LambdaFunction>
     constexpr typename T::ID Find(LambdaFunction lambda) const
@@ -867,8 +870,8 @@ public:
 
         void AssertState()
         {
-            AssertThrowMsg(ptr != nullptr,           "invalid state");
-            AssertThrowMsg(m_ref_counter != nullptr, "invalid state");
+            AssertThrowMsg(ptr != nullptr,           "invalid state -- underlying pointer was null");
+            AssertThrowMsg(m_ref_counter != nullptr, "invalid state -- ref counter not set");
         }
 
         void Release()

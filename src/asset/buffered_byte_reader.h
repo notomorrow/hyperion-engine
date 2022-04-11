@@ -17,7 +17,8 @@ public:
     static_assert(sizeof(Byte) == 1);
 
     BufferedReader(const std::string &filepath, std::streampos begin = 0)
-        : file(nullptr)
+        : filepath(filepath),
+          file(nullptr)
     {
         file = new std::ifstream(filepath, std::ifstream::in | std::ifstream::ate | std::ifstream::binary);
 
@@ -33,6 +34,9 @@ public:
     {
         delete file;
     }
+
+    inline const std::string &GetFilepath() const
+        { return filepath; }
 
     inline bool IsOpen() const
         { return file->good(); }
@@ -165,6 +169,7 @@ public:
     }
 
 private:
+    std::string filepath;
     std::ifstream *file;
     std::streampos pos;
     std::streampos max_pos;

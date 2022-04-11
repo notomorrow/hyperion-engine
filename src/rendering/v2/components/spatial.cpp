@@ -16,7 +16,8 @@ Spatial::Spatial(
       m_transform(transform),
       m_local_aabb(local_aabb),
       m_world_aabb(local_aabb * transform),
-      m_material(std::move(material))
+      m_material(std::move(material)),
+      m_shader_data_state(ShaderDataState::DIRTY)
 {
 }
 
@@ -42,12 +43,33 @@ void Spatial::Init(Engine *engine)
             m_material.Init();
         }
 
+        if (m_skeleton) {
+            m_skeleton.Init();
+        }
+
         UpdateShaderData(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
             RemoveFromPipelines();
         }), engine);
     }));
+}
+
+void Spatial::UpdateShaderData(Engine *engine) const
+{
+    if (m_skeleton != nullptr && m_skeleton->GetShaderDataState().IsDirty()) {
+        m_skeleton->UpdateShaderData(engine);
+    }
+
+    engine->shader_globals->objects.Set(
+        m_id.value - 1,
+        {
+            .model_matrix = m_transform.GetMatrix(),
+            .has_skinning = m_skeleton != nullptr
+        }
+    );
+
+    m_shader_data_state = ShaderDataState::CLEAN;
 }
 
 void Spatial::SetMaterial(Ref<Material> &&material)
@@ -63,12 +85,25 @@ void Spatial::SetMaterial(Ref<Material> &&material)
     }
 }
 
-void Spatial::UpdateShaderData(Engine *engine) const
+void Spatial::SetSkeleton(Ref<Skeleton> &&skeleton)
 {
-    engine->shader_globals->objects.Set(
-        m_id.value - 1,
-        {.model_matrix = m_transform.GetMatrix()}
-    );
+    if (m_skeleton == skeleton) {
+        return;
+    }
+
+    m_skeleton = std::move(skeleton);
+
+    if (IsInit() && m_skeleton != nullptr) {
+        m_skeleton.Init();
+    }
+}
+
+void Spatial::SetTransform(const Transform &transform)
+{
+    m_transform = transform;
+    m_shader_data_state |= ShaderDataState::DIRTY;
+
+    m_world_aabb = m_local_aabb * transform;
 }
 
 void Spatial::OnAddedToPipeline(GraphicsPipeline *pipeline)

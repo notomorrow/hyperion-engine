@@ -8,9 +8,9 @@
 namespace hyperion::v2 {
 
 template <>
-struct LoaderObject<Node, LoaderFormat::MODEL_OBJ> {
-    class Loader : public LoaderBase<Node, LoaderFormat::MODEL_OBJ> {
-        static LoaderResult LoadFn(LoaderStream *stream, Object &);
+struct LoaderObject<Node, LoaderFormat::OBJ_MODEL> {
+    class Loader : public LoaderBase<Node, LoaderFormat::OBJ_MODEL> {
+        static LoaderResult LoadFn(LoaderState *state, Object &);
         static std::unique_ptr<Node> BuildFn(Engine *engine, const Object &);
 
     public:
@@ -46,7 +46,7 @@ struct LoaderObject<Node, LoaderFormat::MODEL_OBJ> {
     std::string          material_library;
 };
 
-using ObjIndex = LoaderObject<Node, LoaderFormat::MODEL_OBJ>::ObjIndex;
+using ObjIndex = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::ObjIndex;
 
 } // namespace hyperion::v2
 

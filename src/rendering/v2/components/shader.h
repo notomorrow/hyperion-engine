@@ -23,8 +23,60 @@ using renderer::UniformBuffer;
 using renderer::StorageBuffer;
 using renderer::PerFrameData;
 
+struct ShaderDataState {
+    enum State {
+        CLEAN,
+        DIRTY
+    };
+
+    ShaderDataState(State value = CLEAN) : state(value) {}
+    ShaderDataState(const ShaderDataState &other) = default;
+    ShaderDataState &operator=(const ShaderDataState &other) = default;
+
+    ShaderDataState &operator=(State value)
+    {
+        state = value;
+
+        return *this;
+    }
+
+    operator bool() const { return state == CLEAN; }
+
+    bool operator==(const ShaderDataState &other) const { return state == other.state; }
+    bool operator!=(const ShaderDataState &other) const { return state != other.state; }
+
+    ShaderDataState &operator|=(State value)
+    {
+        state |= uint32_t(value);
+
+        return *this;
+    }
+
+    ShaderDataState &operator&=(State value)
+    {
+        state &= uint32_t(value);
+
+        return *this;
+    }
+
+    bool IsClean() const{ return state == CLEAN; }
+    bool IsDirty() const { return state == DIRTY; }
+
+private:
+    uint32_t state;
+};
+
+struct alignas(256) SkeletonShaderData {
+    static constexpr size_t max_bones = 128;
+
+    Matrix4 bones[max_bones];
+};
+
 struct alignas(256) ObjectShaderData {
     Matrix4 model_matrix;
+    uint32_t has_skinning;
+
+    uint32_t _padding[3];
 };
 
 HYP_PACK_BEGIN
@@ -165,6 +217,9 @@ private:
 };
 
 struct ShaderGlobals {
+    /* max number of skeletons, based on size in mb */
+    static constexpr size_t max_skeletons = (1ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
+    static constexpr size_t max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
     /* max number of materials, based on size in mb */
     static constexpr size_t max_materials = (1ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
     static constexpr size_t max_materials_bytes = max_materials * sizeof(MaterialShaderData);
@@ -178,13 +233,15 @@ struct ShaderGlobals {
     ShaderGlobals(size_t num_buffers)
         : scenes(num_buffers),
           objects(num_buffers),
-          materials(num_buffers)
+          materials(num_buffers),
+          skeletons(num_buffers)
     {
     }
 
     ShaderData<UniformBuffer, SceneShaderData, max_scenes>        scenes;
     ShaderData<StorageBuffer, ObjectShaderData, max_objects>      objects;
     ShaderData<StorageBuffer, MaterialShaderData, max_materials>  materials;
+    ShaderData<StorageBuffer, SkeletonShaderData, max_skeletons>  skeletons;
     BindlessStorage                                               textures;
 };
 

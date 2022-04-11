@@ -12,9 +12,20 @@ layout (location = 2) in vec2 a_texcoord0;
 layout (location = 3) in vec2 a_texcoord1;
 layout (location = 4) in vec3 a_tangent;
 layout (location = 5) in vec3 a_bitangent;
+layout (location = 6) in vec4 a_bone_weights;
+layout (location = 7) in vec4 a_bone_indices;
+
+struct SkeletonRef {
+    uint index;
+    uint used;
+};
 
 struct Object {
     mat4 model_matrix;
+    SkeletonRef skeleton;
+    
+    uint _padding1;
+    uint _padding2;
 };
 
 layout(std140, set = 3, binding = 1, row_major) readonly buffer ObjectBuffer {

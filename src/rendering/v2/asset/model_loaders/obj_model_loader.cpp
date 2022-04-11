@@ -7,7 +7,7 @@
 namespace hyperion::v2 {
 
 using Tokens = std::vector<std::string>;
-using ObjModelLoader = LoaderObject<Node, LoaderFormat::MODEL_OBJ>::Loader;
+using ObjModelLoader = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::Loader;
 
 template <class Vector>
 static Vector ReadVector(const Tokens &tokens, size_t offset = 1)
@@ -107,7 +107,7 @@ Vector GetIndexedVertexProperty(int64_t vertex_index, const std::vector<Vector> 
     return vectors[vertex_absolute];
 }
 
-LoaderResult ObjModelLoader::LoadFn(LoaderStream *stream, Object &object)
+LoaderResult ObjModelLoader::LoadFn(LoaderState *state, Object &object)
 {
     Tokens tokens;
     tokens.reserve(5);
@@ -120,7 +120,7 @@ LoaderResult ObjModelLoader::LoadFn(LoaderStream *stream, Object &object)
 
     object.tag = "unnamed";
 
-    stream->ReadLines([&](const std::string &line) {
+    state->stream.ReadLines([&](const std::string &line) {
         tokens.clear();
 
         const auto trimmed = StringUtil::Trim(line);

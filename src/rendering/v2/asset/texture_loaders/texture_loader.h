@@ -10,7 +10,7 @@ namespace hyperion::v2 {
 template <>
 struct LoaderObject<Texture2D, LoaderFormat::TEXTURE_2D> {
     class Loader : public LoaderBase<Texture2D, LoaderFormat::TEXTURE_2D> {
-        static LoaderResult LoadFn(LoaderStream *stream, Object &);
+        static LoaderResult LoadFn(LoaderState *state, Object &);
         static std::unique_ptr<Texture2D> BuildFn(Engine *engine, const Object &);
 
     public:

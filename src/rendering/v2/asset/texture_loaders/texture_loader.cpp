@@ -8,34 +8,34 @@ using TextureLoader = LoaderObject<Texture2D, LoaderFormat::TEXTURE_2D>::Loader;
 
 static const stbi_io_callbacks callbacks{
     .read = [](void *user, char *data, int size) -> int {
-        auto *loader_stream = static_cast<LoaderStream *>(user);
+        auto *state = static_cast<LoaderState *>(user);
 
-        return int(loader_stream->ReadChunked(size_t(size), [&data](unsigned char *buffer, size_t chunk_size) {
+        return int(state->stream.ReadChunked(size_t(size), [&data](unsigned char *buffer, size_t chunk_size) {
             std::memcpy(data, buffer, chunk_size);
             data += chunk_size;
         }));
     },
     .skip = [](void *user, int n) {
-        auto *loader_stream = static_cast<LoaderStream *>(user);
+        auto *state = static_cast<LoaderState *>(user);
 
         if (n < 0) {
-            loader_stream->Rewind(-n);
+            state->stream.Rewind(-n);
         } else {
-            loader_stream->Skip(n);
+            state->stream.Skip(n);
         }
     },
     .eof = [](void *user) -> int {
-        const auto *loader_stream = static_cast<LoaderStream *>(user);
+        const auto *state = static_cast<LoaderState *>(user);
 
-        return int(loader_stream->Eof());
+        return int(state->stream.Eof());
     }
 };
 
-LoaderResult TextureLoader::LoadFn(LoaderStream *stream, Object &object)
+LoaderResult TextureLoader::LoadFn(LoaderState *state, Object &object)
 {
     unsigned char *image_bytes = stbi_load_from_callbacks(
         &callbacks,
-        (void *)stream,
+        (void *)state,
         &object.width,
         &object.height,
         &object.num_components,

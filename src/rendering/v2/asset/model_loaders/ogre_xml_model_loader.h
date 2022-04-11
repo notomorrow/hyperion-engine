@@ -9,9 +9,9 @@
 namespace hyperion::v2 {
 
 template <>
-struct LoaderObject<Node, LoaderFormat::MODEL_OGRE_XML> {
-    class Loader : public LoaderBase<Node, LoaderFormat::MODEL_OGRE_XML> {
-        static LoaderResult LoadFn(LoaderStream *stream, Object &);
+struct LoaderObject<Node, LoaderFormat::OGRE_XML_MODEL> {
+    class Loader : public LoaderBase<Node, LoaderFormat::OGRE_XML_MODEL> {
+        static LoaderResult LoadFn(LoaderState *state, Object &);
         static std::unique_ptr<Node> BuildFn(Engine *engine, const Object &);
 
     public:
@@ -33,6 +33,8 @@ struct LoaderObject<Node, LoaderFormat::MODEL_OGRE_XML> {
         float  weight;
     };
 
+    std::string filepath;
+
     std::vector<Vector3> positions;
     std::vector<Vector3> normals;
     std::vector<Vector2> texcoords;
@@ -41,6 +43,8 @@ struct LoaderObject<Node, LoaderFormat::MODEL_OGRE_XML> {
 
     std::vector<OgreSubMesh> submeshes;
     std::unordered_map<size_t, std::vector<BoneAssignment>> bone_assignments;
+
+    std::string skeleton_name;
 };
 
 } // namespace hyperion::v2

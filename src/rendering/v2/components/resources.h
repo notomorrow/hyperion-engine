@@ -8,6 +8,7 @@
 #include "material.h"
 #include "texture.h"
 #include "mesh.h"
+#include "skeleton.h"
 #include "containers.h"
 
 #include <mutex>
@@ -29,6 +30,7 @@ struct Resources {
     
     RefCounter<Spatial,  Callbacks>         spatials;
     RefCounter<Mesh,     Callbacks>         meshes;
+    RefCounter<Skeleton, Callbacks>         skeletons;
 
     Resources(Engine *);
     Resources(const Resources &other) = delete;

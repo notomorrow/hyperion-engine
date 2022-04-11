@@ -3,6 +3,7 @@
 
 #include "model_loaders/obj_model_loader.h"
 #include "model_loaders/ogre_xml_model_loader.h"
+#include "model_loaders/ogre_xml_skeleton_loader.h"
 #include "texture_loaders/texture_loader.h"
 #include "../components/node.h"
 
@@ -36,16 +37,17 @@ class Assets {
 
         LoaderFormat GetResourceFormat() const
         {
-            constexpr StaticMap<const char *, LoaderFormat, 9> extensions{
-                std::make_pair(".obj",      LoaderFormat::MODEL_OBJ),
-                std::make_pair(".mesh.xml", LoaderFormat::MODEL_OGRE_XML),
-                std::make_pair(".png",      LoaderFormat::TEXTURE_2D),
-                std::make_pair(".jpg",      LoaderFormat::TEXTURE_2D),
-                std::make_pair(".jpeg",     LoaderFormat::TEXTURE_2D),
-                std::make_pair(".bmp",      LoaderFormat::TEXTURE_2D),
-                std::make_pair(".psd",      LoaderFormat::TEXTURE_2D),
-                std::make_pair(".gif",      LoaderFormat::TEXTURE_2D),
-                std::make_pair(".hdr",      LoaderFormat::TEXTURE_2D)
+            constexpr StaticMap<const char *, LoaderFormat, 10> extensions{
+                std::make_pair(".obj",          LoaderFormat::OBJ_MODEL),
+                std::make_pair(".mesh.xml",     LoaderFormat::OGRE_XML_MODEL),
+                std::make_pair(".skeleton.xml", LoaderFormat::OGRE_XML_SKELETON),
+                std::make_pair(".png",          LoaderFormat::TEXTURE_2D),
+                std::make_pair(".jpg",          LoaderFormat::TEXTURE_2D),
+                std::make_pair(".jpeg",         LoaderFormat::TEXTURE_2D),
+                std::make_pair(".bmp",          LoaderFormat::TEXTURE_2D),
+                std::make_pair(".psd",          LoaderFormat::TEXTURE_2D),
+                std::make_pair(".gif",          LoaderFormat::TEXTURE_2D),
+                std::make_pair(".hdr",          LoaderFormat::TEXTURE_2D)
             };
 
             std::string path_lower(filepath);
@@ -67,7 +69,11 @@ class Assets {
         template <class Loader>
         auto LoadResource(Engine *engine, const Loader &loader) -> std::unique_ptr<typename Loader::FinalType>
         {
-            auto result = loader.Instance().Load({filepath});
+            auto result = loader.Instance().Load(LoaderState{
+                .filepath = filepath,
+                .stream = {filepath},
+                .engine = engine
+            });
 
             if (result.first) {
                 /* TODO: deal with cache here */
@@ -98,10 +104,23 @@ class Assets {
         std::unique_ptr<Node> operator()(Engine *engine)
         {
             switch (GetResourceFormat()) {
-            case LoaderFormat::MODEL_OBJ:
-                return LoadResource(engine, GetLoader<Node, LoaderFormat::MODEL_OBJ>());
-            case LoaderFormat::MODEL_OGRE_XML:
-                return LoadResource(engine, GetLoader<Node, LoaderFormat::MODEL_OGRE_XML>());
+            case LoaderFormat::OBJ_MODEL:
+                return LoadResource(engine, GetLoader<Node, LoaderFormat::OBJ_MODEL>());
+            case LoaderFormat::OGRE_XML_MODEL:
+                return LoadResource(engine, GetLoader<Node, LoaderFormat::OGRE_XML_MODEL>());
+            default:
+                return nullptr;
+            }
+        }
+    };
+
+    template <>
+    struct Functor<Skeleton> : FunctorBase {
+        std::unique_ptr<Skeleton> operator()(Engine *engine)
+        {
+            switch (GetResourceFormat()) {
+            case LoaderFormat::OGRE_XML_SKELETON:
+                return LoadResource(engine, GetLoader<Skeleton, LoaderFormat::OGRE_XML_SKELETON>());
             default:
                 return nullptr;
             }

@@ -209,6 +209,10 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                     ? spatial->GetMaterial()->GetId().value - 1
                     : 0;
 
+                const auto skeleton_index = spatial->GetSkeleton() != nullptr
+                    ? spatial->GetSkeleton()->GetId().value - 1
+                    : 0;
+
                 /* Bind per-object / material data separately */
                 instance->GetDescriptorPool().Bind(
                     device,
@@ -219,7 +223,8 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                         {.binding = 3},
                         {.offsets = {
                             uint32_t(material_index * sizeof(MaterialShaderData)),
-                            uint32_t(spatial_index * sizeof(ObjectShaderData))
+                            uint32_t(spatial_index * sizeof(ObjectShaderData)),
+                            uint32_t(skeleton_index * sizeof(SkeletonShaderData))
                         }}
                     }
                 );
