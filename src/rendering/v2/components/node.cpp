@@ -11,7 +11,13 @@ Node::Node(const char *tag, const Transform &local_transform)
 }
 
 Node::Node(const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform)
-    : m_parent_node(nullptr),
+    : Node(Type::NODE, tag, std::move(spatial), local_transform)
+{
+}
+
+Node::Node(Type type, const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform)
+    : m_type(type),
+      m_parent_node(nullptr),
       m_local_transform(local_transform)
 {
     SetSpatial(std::move(spatial));
@@ -32,6 +38,10 @@ void Node::UpdateWorldTransform()
         m_world_transform = m_parent_node->GetWorldTransform() * m_local_transform;
     } else {
         m_world_transform = m_local_transform;
+    }
+
+    if (m_spatial != nullptr) {
+        m_spatial->SetTransform(m_world_transform);
     }
 
     m_world_aabb = m_local_aabb * m_world_transform;
@@ -168,19 +178,19 @@ void Node::SetSpatial(Ref<Spatial> &&spatial)
     UpdateWorldTransform();
 }
 
-void Node::UpdateSpatialTransform(Engine *engine)
+void Node::UpdateInternal(Engine *engine)
 {
-    if (m_spatial != nullptr) {
-        engine->SetSpatialTransform(m_spatial, m_world_transform);
+    if (m_spatial != nullptr && m_spatial->GetShaderDataState().IsDirty()) {
+        m_spatial->UpdateShaderData(engine);
     }
 }
 
 void Node::Update(Engine *engine)
 {
-    UpdateSpatialTransform(engine);
+    UpdateInternal(engine);
 
     for (auto *node : m_descendents) {
-        node->UpdateSpatialTransform(engine);
+        node->UpdateInternal(engine);
     }
 }
 

@@ -60,21 +60,21 @@ public:
 
         enum Type {
             MATERIAL_PARAMETER_TYPE_NONE,
-            MATERIAL_PARAMETER_TYPE_FLOAT_1,
-            MATERIAL_PARAMETER_TYPE_FLOAT_2,
-            MATERIAL_PARAMETER_TYPE_FLOAT_3,
-            MATERIAL_PARAMETER_TYPE_FLOAT_4,
-            MATERIAL_PARAMETER_TYPE_INT_1,
-            MATERIAL_PARAMETER_TYPE_INT_2,
-            MATERIAL_PARAMETER_TYPE_INT_3,
-            MATERIAL_PARAMETER_TYPE_INT_4
+            MATERIAL_PARAMETER_TYPE_FLOAT,
+            MATERIAL_PARAMETER_TYPE_FLOAT2,
+            MATERIAL_PARAMETER_TYPE_FLOAT3,
+            MATERIAL_PARAMETER_TYPE_FLOAT4,
+            MATERIAL_PARAMETER_TYPE_INT,
+            MATERIAL_PARAMETER_TYPE_INT2,
+            MATERIAL_PARAMETER_TYPE_INT3,
+            MATERIAL_PARAMETER_TYPE_INT4
         } type;
 
         Parameter() : type(MATERIAL_PARAMETER_TYPE_NONE) {}
 
         template <size_t Size>
         explicit Parameter(std::array<float, Size> &&v)
-            : type(Type(MATERIAL_PARAMETER_TYPE_FLOAT_1 + (Size - 1)))
+            : type(Type(MATERIAL_PARAMETER_TYPE_FLOAT + (Size - 1)))
         {
             static_assert(Size >= 1 && Size <= 4);
 
@@ -82,32 +82,32 @@ public:
         }
         
         explicit Parameter(float value)
-            : type(MATERIAL_PARAMETER_TYPE_FLOAT_1)
+            : type(MATERIAL_PARAMETER_TYPE_FLOAT)
         {
             std::memcpy(values.float_values, &value, sizeof(float));
         }
 
         explicit Parameter(const Vector2 &xy)
-            : type(MATERIAL_PARAMETER_TYPE_FLOAT_2)
+            : type(MATERIAL_PARAMETER_TYPE_FLOAT2)
         {
             std::memcpy(values.float_values, &xy.values, 2 * sizeof(float));
         }
 
         explicit Parameter(const Vector3 &xyz)
-            : type(MATERIAL_PARAMETER_TYPE_FLOAT_3)
+            : type(MATERIAL_PARAMETER_TYPE_FLOAT3)
         {
             std::memcpy(values.float_values, &xyz.values, 3 * sizeof(float));
         }
 
         explicit Parameter(const Vector4 &xyzw)
-            : type(MATERIAL_PARAMETER_TYPE_FLOAT_4)
+            : type(MATERIAL_PARAMETER_TYPE_FLOAT4)
         {
             std::memcpy(values.float_values, &xyzw.values, 4 * sizeof(float));
         }
 
         template <size_t Size>
         explicit Parameter(std::array<int, Size> &&v)
-            : type(Type(MATERIAL_PARAMETER_TYPE_INT_1 + (Size - 1)))
+            : type(Type(MATERIAL_PARAMETER_TYPE_INT + (Size - 1)))
         {
             static_assert(Size >= 1 && Size <= 4);
 
@@ -131,10 +131,10 @@ public:
         ~Parameter() = default;
 
         inline bool IsIntType() const
-            { return type >= MATERIAL_PARAMETER_TYPE_INT_1 && type <= MATERIAL_PARAMETER_TYPE_INT_4; }
+            { return type >= MATERIAL_PARAMETER_TYPE_INT && type <= MATERIAL_PARAMETER_TYPE_INT4; }
 
         inline bool IsFloatType() const
-            { return type >= MATERIAL_PARAMETER_TYPE_FLOAT_1 && type <= MATERIAL_PARAMETER_TYPE_FLOAT_4; }
+            { return type >= MATERIAL_PARAMETER_TYPE_FLOAT && type <= MATERIAL_PARAMETER_TYPE_FLOAT4; }
 
         inline uint8_t Size() const
         {
@@ -142,8 +142,8 @@ public:
                 return uint8_t(0);
             }
 
-            if (type >= MATERIAL_PARAMETER_TYPE_INT_1) {
-                return uint8_t(type - MATERIAL_PARAMETER_TYPE_INT_1) + 1;
+            if (type >= MATERIAL_PARAMETER_TYPE_INT) {
+                return uint8_t(type - MATERIAL_PARAMETER_TYPE_INT) + 1;
             }
 
             return uint8_t(type);

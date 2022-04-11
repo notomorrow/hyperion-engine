@@ -16,6 +16,11 @@ class Node {
 public:
     using NodeList = std::vector<std::unique_ptr<Node>>;
 
+    enum class Type {
+        NODE,
+        BONE
+    };
+
     /*! \brief Construct the node, optionally taking in a string tag to improve identification.
      * @param tag A c-string representing the name of the Node. The memory is copied internally so the string can be safely deleted
      * after use.
@@ -29,6 +34,8 @@ public:
 
     /*! @returns The string tag that was given to the Node on creation. */
     const char *GetTag() const { return m_tag; }
+    /*! @returns The type of the node. By default, it will just be NODE. */
+    Type GetType() const { return m_type; }
     /*! @returns A pointer to the parent Node of this Node. May be null. */
     inline Node *GetParent() const { return m_parent_node; }
 
@@ -39,18 +46,6 @@ public:
      * @param node The Node to be added as achild of this Node
      */
     void AddChild(std::unique_ptr<Node> &&node);
-
-    /*! \brief Add a new child Node to this object, using the passed arguments as constructor arguments.
-     * @param args The arguments to be passed to the new Node's constructor
-     * @returns A pointer to the child Node, owned by this Node.
-     */
-    template <class ...Args>
-    Node *AddChild(Args &&... args)
-    {
-        AddChild(std::make_unique<Node>(std::forward<Args>(args)...));
-
-        return m_child_nodes.back().get();
-    }
 
     /*! \brief Remove a child using the given iterator (i.e from FindChild())
      * @param iter The iterator from this Node's child list
@@ -143,12 +138,15 @@ public:
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
     void Update(Engine *engine);
 
-private:
+protected:
+    Node(Type type, const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform = Transform());
+
+    void UpdateInternal(Engine *engine);
     void UpdateWorldTransform();
     void OnNestedNodeAdded(Node *node);
     void OnNestedNodeRemoved(Node *node);
-    void UpdateSpatialTransform(Engine *engine);
 
+    Type m_type = Type::NODE;
     char *m_tag;
     Node *m_parent_node;
     NodeList m_child_nodes;

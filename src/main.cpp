@@ -31,6 +31,7 @@
 
 #include <rendering/v2/engine.h>
 #include <rendering/v2/components/node.h>
+#include <rendering/v2/components/bone.h>
 #include <rendering/v2/asset/model_loaders/obj_model_loader.h>
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
@@ -191,9 +192,12 @@ int main()
         base_path + "/res/models/cube.obj"
     );
 
-    monkey_obj->GetChild(0)->AddChild("Foobar");
-    monkey_obj->GetChild(0)->GetChild(0)->AddChild("Baz");
-    monkey_obj->Translate({2.0f, 0.0f, 5.0f});
+    monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("upper_arm.L")->m_pose_rotation = Quaternion({1.0f, 1.0f, 1.0f}, 3.14f);
+    monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateBoneTransform();
+
+    monkey_obj->GetChild(0)->AddChild(std::make_unique<v2::Node>("Foobar"));
+    monkey_obj->GetChild(0)->GetChild(0)->AddChild(std::make_unique<v2::Node>("Baz"));
+    //monkey_obj->Translate({2.0f, 0.0f, 5.0f});
     monkey_obj->Scale(0.35f);
     monkey_obj->Update(&engine);
     
@@ -254,9 +258,6 @@ int main()
     ));
 
     float timer = 0.0;
-
-    //float data[] = { 1.0f, 0.0f, 0.0f, 1.0f };
-    //set.GetDescriptor(0)->GetBuffer()->Copy(device, sizeof(data), data);
 
     auto *input_manager = new InputManager(window);
     input_manager->SetWindow(window);
@@ -402,7 +403,7 @@ int main()
         translucent_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
-    v2::GraphicsPipeline::ID wire_pipeline_id{};
+    /*v2::GraphicsPipeline::ID wire_pipeline_id{};
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
@@ -414,7 +415,7 @@ int main()
         pipeline->SetCullMode(CullMode::NONE);
         pipeline->SetTopology(Topology::LINES);
         wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
-    }
+    }*/
 
 #if HYPERION_VK_TEST_VISUALIZE_OCTREE
     std::unordered_map<v2::Octree *, v2::Spatial *> octree_debug_nodes;
@@ -564,6 +565,11 @@ int main()
 
         //monkey_obj->SetLocalTransform(transform);
         //monkey_obj->Update(&engine);
+        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_rotation = Quaternion({0, 1, 0}, timer * 0.35f);
+        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateBoneTransform();
+        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
+        monkey_obj->GetChild(0)->GetSpatial()->SetShaderDataState(v2::ShaderDataState::DIRTY);
+        monkey_obj->Update(&engine);
 
         cube_obj->SetLocalTranslation(camera->GetTranslation());
         cube_obj->Update(&engine);

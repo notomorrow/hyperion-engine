@@ -12,7 +12,11 @@ namespace hyperion::v2 {
 
 class Engine;
 
-using LoaderStream = BufferedReader<HYP_V2_LOADER_BUFFER_SIZE>;
+struct LoaderState {
+    std::string filepath;
+    BufferedReader<HYP_V2_LOADER_BUFFER_SIZE> stream;
+    Engine *engine;
+};
 
 struct LoaderResult {
     enum class Status {
@@ -35,16 +39,16 @@ public:
     LoaderImpl(const Handler &handler)
         : m_handler(handler) {}
 
-    std::pair<LoaderResult, Object> Load(LoaderStream &&stream)
+    std::pair<LoaderResult, Object> Load(LoaderState &&state)
     {
-        if (!stream.IsOpen()) {
+        if (!state.stream.IsOpen()) {
             return std::make_pair(
                 LoaderResult{LoaderResult::Status::ERR, "Failed to open file"},
                 Object{}
             );
         }
 
-        if (stream.Eof()) {
+        if (state.stream.Eof()) {
             return std::make_pair(
                 LoaderResult{LoaderResult::Status::ERR, "Byte stream in EOF state"},
                 Object{}
@@ -52,7 +56,7 @@ public:
         }
 
         Object object;
-        LoaderResult result = m_handler.load_fn(&stream, object);
+        LoaderResult result = m_handler.load_fn(&state, object);
 
         return std::make_pair(result, std::move(object));
     }
@@ -68,7 +72,7 @@ public:
     using Object  = LoaderObject<T, Format>;
     
     struct Handler {
-        std::function<LoaderResult(LoaderStream *, Object &)>     load_fn;
+        std::function<LoaderResult(LoaderState *, Object &)>     load_fn;
         std::function<std::unique_ptr<FinalType>(Engine *engine, const Object &)> build_fn;
     };
 

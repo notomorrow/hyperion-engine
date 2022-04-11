@@ -25,7 +25,9 @@ Mesh::Mesh(const std::vector<Vertex> &vertices,
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT)
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS)
 {
 }
 
@@ -66,11 +68,11 @@ void Mesh::Init(Engine *engine)
 
 /* Copy our values into the packed vertex buffer, and increase the index for the next possible
  * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
-#define PACKED_SET_ATTR(raw_values, arg_size)                                   \
-    {                                                                           \
-        memcpy((void *)(raw_buffer + current_offset), (raw_values), (arg_size) * sizeof(float));\
-        current_offset += (arg_size);                                           \
-    }
+#define PACKED_SET_ATTR(raw_values, arg_size)                                                    \
+    do {                                                                                         \
+        memcpy((void *)(raw_buffer + current_offset), (raw_values), (arg_size) * sizeof(float)); \
+        current_offset += (arg_size);                                                            \
+    } while (0)
 
 std::vector<float> Mesh::CreatePackedBuffer() {
     const size_t vertex_size = m_vertex_attributes.VertexSize();
@@ -91,12 +93,20 @@ std::vector<float> Mesh::CreatePackedBuffer() {
         if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL)    PACKED_SET_ATTR(vertex.GetNormal().values,   3);
         /* Texture coordinates */
         if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0) PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2);
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2)
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2);
         /* Tangents and Bitangents */
         if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT)   PACKED_SET_ATTR(vertex.GetTangent().values,   3);
         if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT) PACKED_SET_ATTR(vertex.GetBitangent().values, 3);
 
         /* TODO: modify GetBoneIndex/GetBoneWeight to return a Vector4. */
+        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS) {
+            float weights[4] = {
+                vertex.GetBoneWeight(0), vertex.GetBoneWeight(1),
+                vertex.GetBoneWeight(2), vertex.GetBoneWeight(3)
+            };
+            PACKED_SET_ATTR(weights, std::size(weights));
+        }
+
         if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES) {
             float indices[4] = {
                     (float)vertex.GetBoneIndex(0), (float)vertex.GetBoneIndex(1),
@@ -104,14 +114,8 @@ std::vector<float> Mesh::CreatePackedBuffer() {
             };
             PACKED_SET_ATTR(indices, std::size(indices));
         }
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS) {
-            float weights[4] = {
-                    (float)vertex.GetBoneWeight(0), (float)vertex.GetBoneWeight(1),
-                    (float)vertex.GetBoneWeight(2), (float)vertex.GetBoneWeight(3)
-            };
-            PACKED_SET_ATTR(weights, std::size(weights));
-        }
     }
+
     return packed_buffer;
 }
 

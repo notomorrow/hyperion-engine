@@ -12,9 +12,10 @@ namespace hyperion::v2 {
 enum class LoaderFormat {
     NONE,
 
-    MODEL_OBJ,
-    MODEL_OGRE_XML,
-    MODEL_FBOM,
+    OBJ_MODEL,
+    OGRE_XML_MODEL,
+    OGRE_XML_SKELETON,
+    FBOM_MODEL,
 
     TEXTURE_2D
 };

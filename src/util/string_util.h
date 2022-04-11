@@ -130,6 +130,15 @@ public:
         return result;
     }
 
+    static inline std::string BasePath(const std::string &filepath)
+    {
+        if (!Contains(filepath, "/") && !Contains(filepath, "\\")) {
+            return "";
+        }
+
+        return filepath.substr(0, filepath.find_last_of("\\/"));
+    }
+
     template <typename T>
     static inline bool Parse(const std::string &str, T *out_value)
     {

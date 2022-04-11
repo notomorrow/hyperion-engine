@@ -8,7 +8,8 @@ Resources::Resources(Engine *engine)
       textures(engine->callbacks, {engine}),
       materials(engine->callbacks, {engine}),
       spatials(engine->callbacks, {engine}),
-      meshes(engine->callbacks, {engine})
+      meshes(engine->callbacks, {engine}),
+      skeletons(engine->callbacks, {engine})
 {
 }
 

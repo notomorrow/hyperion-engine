@@ -7,12 +7,13 @@
 
 namespace hyperion::v2 {
 
-using OgreXmlModelLoader = LoaderObject<Node, LoaderFormat::MODEL_OGRE_XML>::Loader;
+using OgreXmlModelLoader = LoaderObject<Node, LoaderFormat::OGRE_XML_MODEL>::Loader;
 
 class OgreXmlSaxHandler : public xml::SaxHandler {
 public:
-    OgreXmlSaxHandler(OgreXmlModelLoader::Object &object)
-        : m_object(object)
+    OgreXmlSaxHandler(LoaderState *state, OgreXmlModelLoader::Object &object)
+        : m_state(state),
+          m_object(object)
     {
     }
 
@@ -58,7 +59,7 @@ public:
                 LastSubMesh().indices.push_back(StringUtil::Parse<Mesh::Index>(it.second));
             }
         } else if (name == "skeletonlink") {
-            
+            m_object.skeleton_name = attributes.at("name");
         } else if (name == "vertexboneassignment") {
             const auto vertex_index = StringUtil::Parse<uint32_t>(attributes.at("vertexindex"));
             const auto bone_index = StringUtil::Parse<uint32_t>(attributes.at("boneindex"));
@@ -79,6 +80,7 @@ public:
     virtual void Comment(const std::string &comment) override {}
 
 private:
+    LoaderState *m_state;
     OgreXmlModelLoader::Object &m_object;
 };
 
@@ -157,12 +159,14 @@ void BuildVertices(OgreXmlModelLoader::Object &object)
     object.vertices = std::move(vertices);
 }
 
-LoaderResult OgreXmlModelLoader::LoadFn(LoaderStream *stream, Object &object)
+LoaderResult OgreXmlModelLoader::LoadFn(LoaderState *state, Object &object)
 {
-    OgreXmlSaxHandler handler(object);
+    object.filepath = state->filepath;
+
+    OgreXmlSaxHandler handler(state, object);
 
     xml::SaxParser parser(&handler);
-    auto sax_result = parser.Parse(stream);
+    auto sax_result = parser.Parse(&state->stream);
 
     if (!sax_result) {
         return {LoaderResult::Status::ERR, sax_result.message};
@@ -177,7 +181,23 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
 {
     auto top = std::make_unique<Node>();
 
+    std::unique_ptr<Skeleton> skeleton;
+
+    if (!object.skeleton_name.empty()) {
+        const auto skeleton_path = StringUtil::BasePath(object.filepath) + "/" + object.skeleton_name + ".xml";
+
+        skeleton = engine->assets.Load<Skeleton>(skeleton_path);
+
+        if (skeleton == nullptr) {
+            DebugLog(LogType::Warn, "Ogre XML parser: Failed to load skeleton at %s\n", skeleton_path.c_str());
+        }
+    }
+
     engine->resources.Lock([&](Resources &resources) {
+        auto skeleton_ref = skeleton != nullptr
+            ? resources.skeletons.Add(std::move(skeleton))
+            : nullptr;
+
         for (auto &sub_mesh : object.submeshes) {
             if (sub_mesh.indices.empty()) {
                 DebugLog(LogType::Warn, "Ogre XML parser: Skipping submesh with empty indices\n");
@@ -209,6 +229,10 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
                     engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
                 )
             );
+
+            if (skeleton_ref != nullptr) {
+                spatial->SetSkeleton(skeleton_ref.Acquire());
+            }
             
             auto node = std::make_unique<Node>();
 
