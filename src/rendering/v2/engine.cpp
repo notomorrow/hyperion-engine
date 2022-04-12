@@ -302,7 +302,8 @@ void Engine::Initialize()
     shader_globals->textures.Create(this);
 
     m_render_list.Create(this);
-
+    
+    callbacks.TriggerPersisted(EngineCallback::CREATE_SCENES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_TEXTURES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SHADERS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SPATIALS, this);
@@ -323,6 +324,7 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_TEXTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
 
     resources.Destroy(this);
 

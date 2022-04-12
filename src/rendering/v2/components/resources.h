@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_RESOURCES_H
 #define HYPERION_V2_RESOURCES_H
 
+#include "containers.h"
 #include "shader.h"
 #include "framebuffer.h"
 #include "compute.h"
@@ -9,7 +10,7 @@
 #include "texture.h"
 #include "mesh.h"
 #include "skeleton.h"
-#include "containers.h"
+#include "scene.h"
 
 #include <mutex>
 #include <thread>
@@ -31,6 +32,8 @@ struct Resources {
     RefCounter<Spatial,  Callbacks>         spatials;
     RefCounter<Mesh,     Callbacks>         meshes;
     RefCounter<Skeleton, Callbacks>         skeletons;
+
+    RefCounter<Scene,    Callbacks>         scenes;
 
     Resources(Engine *);
     Resources(const Resources &other) = delete;

@@ -380,6 +380,9 @@ private:
 enum class EngineCallback {
     NONE,
 
+    CREATE_SCENES,
+    DESTROY_SCENES,
+
     CREATE_SPATIALS,
     DESTROY_SPATIALS,
 
@@ -946,7 +949,7 @@ public:
         return RefWrapper(ptr, this);
     }
 
-    [[nodiscard]] RefWrapper Get(const typename T::ID &id)
+    [[nodiscard]] RefWrapper Get(typename T::ID id)
     {
         T *ptr = m_holder.Get(id);
 
@@ -959,10 +962,9 @@ public:
         return RefWrapper(ptr, this);
     }
 
-    [[nodiscard]] RefWrapper Get(const typename T::ID &id) const
+    [[nodiscard]] RefWrapper Get(typename T::ID id) const
         { return const_cast<const RefCounter *>(this)->Get(id); }
-
-    template <class ...Args>
+    
     void Release(const T *ptr)
     {
         AssertThrow(ptr != nullptr);
@@ -975,6 +977,11 @@ public:
             m_holder.Remove(id);
             m_ref_map.Remove(id);
         }
+    }
+
+    void Release(typename T::ID id)
+    {
+        Release(Get(id));
     }
 
     constexpr T *operator[](const typename T::ID &id) { return Get(id); }

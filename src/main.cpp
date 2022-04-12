@@ -268,7 +268,8 @@ int main()
     auto *input_manager = new InputManager(window);
     input_manager->SetWindow(window);
 
-    auto *camera = new FpsCamera(
+    auto scene = engine.resources.scenes.Add(std::make_unique<v2::Scene>(
+        std::make_unique<FpsCamera>(
             input_manager,
             window,
             1024,
@@ -276,7 +277,8 @@ int main()
             70.0f,
             0.05f,
             250.0f
-    );
+        )
+    ));
 
     bool running = true;
 
@@ -327,7 +329,7 @@ int main()
     v2::Node new_root("root");
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
-    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 1.0f }));
+    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 0.6f }));
     mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture->GetId());
     mat1.Init();
     
@@ -357,12 +359,7 @@ int main()
             v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
         );
 
-
-        auto monkey_node = std::make_unique<v2::Node>("monkey");
-        monkey_node->SetSpatial(monkey_spatial.Acquire());
-        new_root.AddChild(std::move(monkey_node));
         
-        pipeline->AddSpatial(monkey_spatial.Acquire());
         pipeline->AddSpatial(cube_spatial.Acquire());
         
         main_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
@@ -405,64 +402,70 @@ int main()
 
         auto translucent_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
         pipeline->AddSpatial(std::move(translucent_spatial));
+
+        auto monkey_node = std::make_unique<v2::Node>("monkey");
+        monkey_node->SetSpatial(monkey_spatial.Acquire());
+        pipeline->AddSpatial(monkey_spatial.Acquire());
         
         translucent_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
-    /*v2::GraphicsPipeline::ID wire_pipeline_id{};
-    {
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            mirror_shader.Acquire(),
-            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
-            v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
-        );
-        pipeline->SetBlendEnabled(false);
-        pipeline->SetFillMode(FillMode::LINE);
-        pipeline->SetCullMode(CullMode::NONE);
-        pipeline->SetTopology(Topology::LINES);
-        wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
-    }*/
-
 #if HYPERION_VK_TEST_VISUALIZE_OCTREE
-    std::unordered_map<v2::Octree *, v2::Spatial *> octree_debug_nodes;
+    v2::GraphicsPipeline::ID wire_pipeline_id{};
+
+    auto pipeline = std::make_unique<v2::GraphicsPipeline>(
+        mirror_shader.Acquire(),
+        engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
+        v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
+    );
+    pipeline->SetBlendEnabled(false);
+    pipeline->SetFillMode(FillMode::LINE);
+    pipeline->SetCullMode(CullMode::NONE);
+    pipeline->SetTopology(Topology::TRIANGLES);
+    pipeline->SetDepthTest(false);
+    pipeline->SetDepthWrite(false);
+
+    pipeline->GetVertexAttributes() |= MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES /* until we have dynamic shader compilation based on vertex attribs */
+      | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS;
+
+    std::unordered_map<v2::Octree *, v2::Spatial::ID> octree_debug_nodes;
 
     engine.GetOctree().GetCallbacks().on_insert_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
-        auto *pipeline = engine->GetGraphicsPipeline(wire_pipeline_id);
+        auto *pl = engine->GetGraphicsPipeline(wire_pipeline_id);
 
         auto mesh = MeshFactory::CreateCube(octree->GetAabb());
 
-        std::cout << "add octant " << octree->GetAabb() << "\n";
-
-        auto *spatial = engine->AddSpatial(
-            nullptr,//mesh,
-            pipeline->GetVertexAttributes(),
+        auto spat = engine->resources.spatials.Add(std::make_unique<v2::Spatial>(
+            engine->resources.meshes.Add(std::make_unique<v2::Mesh>(
+                mesh->GetVertices(),
+                mesh->GetIndices()
+            )),
+            pl->GetVertexAttributes(),
             Transform(),
             mesh->GetAABB(),
-            translucent_material_id
-        );
+            engine->resources.materials.Get(v2::Material::ID{3})
+        ));
 
-        octree_debug_nodes[octree] = spatial;
+        octree_debug_nodes[octree] = spat->GetId();
 
-        pipeline->AddSpatial(engine, spatial);
+        pl->AddSpatial(std::move(spat));
     };
 
     engine.GetOctree().GetCallbacks().on_remove_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
-        auto *pipeline = engine->GetGraphicsPipeline(wire_pipeline_id);
-
-        auto mesh = MeshFactory::CreateCube(octree->GetAabb());
+        auto *pl = engine->GetGraphicsPipeline(wire_pipeline_id);
 
         auto it = octree_debug_nodes.find(octree);
 
         if (it != octree_debug_nodes.end()) {
             vkQueueWaitIdle(engine->GetInstance()->GetGraphicsQueue().queue);
-            pipeline->RemoveSpatial(engine, it->second);
-            engine->RemoveSpatial(it->second->GetId());
+            pl->RemoveSpatial(it->second);
 
             octree_debug_nodes.erase(it);
         }
     };
 
-
+    wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
+        
 #endif
 
     engine.GetOctree().Insert(&engine, monkey_spatial);
@@ -523,15 +526,7 @@ int main()
             updated_descriptor = true;
         }
 
-        camera->Update(delta_time);
-
-        /* 0 is the index of our "main" scene/camera */
-        engine.shader_globals->scenes.Set(0, {
-            .view = camera->GetViewMatrix(),
-            .projection = camera->GetProjectionMatrix(),
-            .camera_position = Vector4(camera->GetTranslation(), 1.0f),
-            .light_direction = Vector4(Vector3(0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
-        });
+        scene->Update(&engine, delta_time);
 
         HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
             engine.GetInstance()->GetDevice(),
@@ -567,18 +562,23 @@ int main()
 #endif
 
         Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
-
+        
         //monkey_obj->SetLocalTransform(transform);
         //monkey_obj->Update(&engine);
         monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_transform.SetRotation(Quaternion({0, 1, 0}, timer * 0.35f));
         monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
         monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
+        monkey_obj->SetLocalTransform(transform);
         monkey_obj->Update(&engine);
-
-        cube_obj->SetLocalTranslation(camera->GetTranslation());
+        
+        cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         cube_obj->Update(&engine);
         //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{1}), transform);
-        //engine.GetOctree().Update(&engine, monkey_spatial);
+
+
+        if (!engine.GetOctree().Update(&engine, monkey_obj->GetChild(0)->GetSpatial())) {
+            std::cout << "failed to update in octree\n";
+        }
         //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{3}), Transform(camera->GetTranslation(), { 1.0f, 1.0f, 1.0f }, Quaternion()));
 
         /* Only update sets that are double - buffered so we don't
