@@ -3,6 +3,16 @@
 
 namespace hyperion::v2 {
 
+Octree::Octree(const BoundingBox &aabb)
+    : m_aabb(aabb),
+      m_parent(nullptr),
+      m_is_divided(false),
+      m_root(nullptr),
+      m_visibility_state({.scene_visibility = {{}}})
+{
+    InitOctants();
+}
+
 Octree::~Octree()
 {
     //AssertThrowMsg(m_nodes.empty(), "Expected nodes to be emptied before octree destructor");
@@ -183,10 +193,11 @@ bool Octree::InsertInternal(Engine *engine, Spatial *spatial)
 {
     m_nodes.push_back(Node{
         .spatial = spatial,
-        .aabb = spatial->GetWorldAabb()
+        .aabb = spatial->GetWorldAabb(),
+        .visibility_state = &m_visibility_state
     });
 
-    /* TODO: Inc ref count */
+    spatial->OnAddedToOctree(this);
 
     if (m_root != nullptr) {
         AssertThrowMsg(m_root->node_to_octree[spatial] == nullptr, "Spatial must not already be in octree hierarchy.");
@@ -242,6 +253,8 @@ bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
 
         return false;
     }
+
+    spatial->OnRemovedFromOctree(this);
 
     if (m_root != nullptr) {
         m_root->events.on_remove_node(engine, this, spatial);
@@ -317,6 +330,8 @@ bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
      * If we do still contain it - we will remove it from this octree and re-insert it to find the deepest child octant
      */
 
+    spatial->OnRemovedFromOctree(this);
+
     if (m_root != nullptr) {
         m_root->events.on_remove_node(engine, this, spatial);
         m_root->node_to_octree[spatial] = nullptr;
@@ -348,6 +363,61 @@ bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
 
     return inserted;
 }
+
+void Octree::CalculateVisibility(Scene *scene)
+{
+    if (scene == nullptr) {
+        return;
+    }
+
+    if (scene->GetId().value - 1 >= m_visibility_state.scene_visibility.size()) {
+        DebugLog(
+            LogType::Error,
+            "Scene #%lu out of bounds of octree scene visibility array. Cannot update visibility state.\n",
+            scene->GetId().value
+        );
+
+        return;
+    }
+
+    const auto &frustum = scene->GetCamera()->GetFrustum();
+
+    if (frustum.BoundingBoxInFrustum(m_aabb)) {
+        UpdateVisibilityState(scene);
+    }
+}
+
+void Octree::UpdateVisibilityState(Scene *scene)
+{
+    /* assume we are already visible from CalculateVisibility() check */
+    const auto &frustum = scene->GetCamera()->GetFrustum();
+
+    m_visibility_state.scene_visibility[scene->GetId().value - 1].fill(true);
+
+    if (!m_is_divided) {
+        return;
+    }
+
+    for (auto &octant : m_octants) {
+        if (!frustum.BoundingBoxInFrustum(octant.aabb)) {
+            continue;
+        }
+
+        octant.octree->UpdateVisibilityState(scene);
+    }
+}
+
+void Octree::OnSpatialRemoved(Engine *engine, Spatial *spatial)
+{
+    if (spatial == nullptr) {
+        return;
+    }
+    
+    if (!RemoveInternal(engine, spatial)) {
+        DebugLog(LogType::Error, "Failed to find Spatial #%lu in octree\n", spatial->GetId().value);
+    }
+}
+
 
 
 } // namespace hyperion::v2

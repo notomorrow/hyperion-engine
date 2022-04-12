@@ -225,7 +225,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
                     std::move(mesh),
                     vertex_attributes,
                     Transform(),
-                    BoundingBox(-3, 3), /* TODO */
+                    BoundingBox(-0.25f, 0.25f), /* TODO */
                     engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
                 )
             );

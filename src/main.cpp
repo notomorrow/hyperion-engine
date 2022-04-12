@@ -562,9 +562,8 @@ int main()
 #endif
 
         Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
+
         
-        //monkey_obj->SetLocalTransform(transform);
-        //monkey_obj->Update(&engine);
         monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_transform.SetRotation(Quaternion({0, 1, 0}, timer * 0.35f));
         monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
         monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
@@ -573,12 +572,9 @@ int main()
         
         cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         cube_obj->Update(&engine);
-        //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{1}), transform);
 
 
-        if (!engine.GetOctree().Update(&engine, monkey_obj->GetChild(0)->GetSpatial())) {
-            std::cout << "failed to update in octree\n";
-        }
+
         //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{3}), Transform(camera->GetTranslation(), { 1.0f, 1.0f, 1.0f }, Quaternion()));
 
         /* Only update sets that are double - buffered so we don't
@@ -591,6 +587,10 @@ int main()
         engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
         engine.RenderPostProcessing(frame->GetCommandBuffer(), frame_index);
+
+
+        /* has to go after rendering happens */
+        engine.GetOctree().CalculateVisibility(scene.ptr);
 
 
 #if HYPERION_VK_TEST_IMAGE_STORE

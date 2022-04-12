@@ -7,6 +7,7 @@
 #include <rendering/backend/renderer_shader.h>
 #include <rendering/backend/renderer_buffer.h>
 #include <rendering/backend/renderer_structs.h>
+#include <rendering/backend/renderer_swapchain.h>
 
 #include <math/transform.h>
 #include <util/heap_array.h>
@@ -22,6 +23,8 @@ using renderer::GPUBuffer;
 using renderer::UniformBuffer;
 using renderer::StorageBuffer;
 using renderer::PerFrameData;
+
+constexpr uint32_t max_frames_in_flight = Swapchain::max_frames_in_flight;
 
 struct ShaderDataState {
     enum State {
