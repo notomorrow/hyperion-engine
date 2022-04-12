@@ -2,10 +2,15 @@
 #define HYPERION_V2_OCTREE_H
 
 #include "spatial.h"
+#include "scene.h"
 #include "containers.h"
+
+#include <rendering/backend/renderer_swapchain.h>
 
 #include <math/vector3.h>
 #include <math/bounding_box.h>
+
+#include <array>
 
 namespace hyperion {
 
@@ -24,14 +29,44 @@ class Octree {
     };
 
 public:
+    static constexpr uint32_t max_scenes = 32;
+
     struct Octant {
         std::unique_ptr<Octree> octree;
         BoundingBox             aabb;
     };
 
+    struct VisibilityState {
+        /* map from scene index (id - 1) -> visibility boolean for each frame in flight.
+         * when visiblity is scanned, both values per frame in flight are set accordingly,
+         * but are only set to false after the corresponding frame is rendered.
+         */
+        std::array<std::array<bool, Swapchain::max_frames_in_flight>, max_scenes> scene_visibility;
+
+        HYP_FORCE_INLINE bool Get(Scene::ID scene, uint32_t frame_index) const
+        {
+            AssertThrow(scene.value - 1 < scene_visibility.size());
+            auto &states = scene_visibility[scene.value - 1];
+
+            AssertThrow(frame_index < states.size());
+            return states[frame_index];
+        }
+
+        HYP_FORCE_INLINE void Set(Scene::ID scene, uint32_t frame_index, bool visible)
+        {
+            AssertThrow(scene.value - 1 < scene_visibility.size());
+            auto &states = scene_visibility[scene.value - 1];
+
+            AssertThrow(frame_index < states.size());
+            states[frame_index] = visible;
+        }
+    };
+
     struct Node {
         Spatial     *spatial;
         BoundingBox  aabb;
+
+        VisibilityState *visibility_state = nullptr;
     };
 
     struct Root {
@@ -44,15 +79,7 @@ public:
         std::unordered_map<Spatial *, Octree *> node_to_octree;
     };
 
-    Octree(const BoundingBox &aabb)
-        : m_aabb(aabb),
-          m_parent(nullptr),
-          m_is_divided(false),
-          m_root(nullptr)
-    {
-        InitOctants();
-    }
-
+    Octree(const BoundingBox &aabb);
     ~Octree();
 
     inline Root *GetRoot() const { return m_root; }
@@ -70,11 +97,14 @@ public:
     inline const auto &GetCallbacks() const
         { return const_cast<Octree *>(this)->GetCallbacks(); }
 
+    inline auto &GetVisibilityState() { return m_visibility_state; }
+    inline const auto &GetVisibilityState() const { return m_visibility_state; }
+
     void Clear(Engine *engine);
     bool Insert(Engine *engine, Spatial *spatial);
     bool Remove(Engine *engine, Spatial *spatial);
     bool Update(Engine *engine, Spatial *spatial);
-    void CalculateVisibility(Camera *camera, uint32_t scene_slot);
+    void CalculateVisibility(Scene *scene);
 
 private:
     inline auto FindNode(Spatial *spatial)
@@ -99,13 +129,18 @@ private:
     bool InsertInternal(Engine *engine, Spatial *spatial);
     bool UpdateInternal(Engine *engine, Spatial *spatial);
     bool RemoveInternal(Engine *engine, Spatial *spatial);
+    void UpdateVisibilityState(Scene *scene);
 
+    /* Called from Spatial - remove the pointer */
+    void OnSpatialRemoved(Engine *engine, Spatial *spatial);
+    
     std::vector<Node> m_nodes;
     Octree *m_parent;
     BoundingBox m_aabb;
     std::array<Octant, 8> m_octants;
     bool m_is_divided;
     Root *m_root;
+    VisibilityState m_visibility_state;
 };
 
 } // namespace hyperion::v2

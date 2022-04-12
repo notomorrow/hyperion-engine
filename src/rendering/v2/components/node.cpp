@@ -186,7 +186,7 @@ void Node::UpdateWorldTransform()
 void Node::UpdateInternal(Engine *engine)
 {
     if (m_spatial != nullptr) {
-        m_spatial->UpdateShaderData(engine);
+        m_spatial->Update(engine);
     }
 }
 

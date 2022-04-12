@@ -52,11 +52,15 @@ void Spatial::Init(Engine *engine)
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
             RemoveFromPipelines();
+
+            if (m_octree != nullptr) {
+                RemoveFromOctree(engine);
+            }
         }), engine);
     }));
 }
 
-void Spatial::UpdateShaderData(Engine *engine) const
+void Spatial::Update(Engine *engine)
 {
     if (m_skeleton != nullptr) {
         m_skeleton->UpdateShaderData(engine);
@@ -66,6 +70,21 @@ void Spatial::UpdateShaderData(Engine *engine) const
         return;
     }
 
+    UpdateShaderData(engine);
+
+    if (m_octree != nullptr) {
+        if (!m_octree->Update(engine, this)) {
+            DebugLog(
+                LogType::Warn,
+                "Could not update Spatial #%lu in octree\n",
+                m_id.value
+            );
+        }
+    }
+}
+
+void Spatial::UpdateShaderData(Engine *engine) const
+{
     engine->shader_globals->objects.Set(
         m_id.value - 1,
         {
@@ -139,6 +158,28 @@ void Spatial::RemoveFromPipeline(GraphicsPipeline *pipeline)
     pipeline->OnSpatialRemoved(this);
 
     OnRemovedFromPipeline(pipeline);
+}
+
+void Spatial::OnAddedToOctree(Octree *octree)
+{
+    AssertThrow(m_octree == nullptr);
+
+    m_octree = octree;
+}
+
+void Spatial::OnRemovedFromOctree(Octree *octree)
+{
+    AssertThrow(m_octree != nullptr);
+
+    m_octree = nullptr;
+}
+
+void Spatial::RemoveFromOctree(Engine *engine)
+{
+    AssertThrow(m_octree != nullptr);
+
+    m_octree->OnSpatialRemoved(engine, this);
+    m_octree = nullptr;
 }
 
 } // namespace hyperion::v2

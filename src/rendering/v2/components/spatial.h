@@ -25,6 +25,7 @@ class GraphicsPipeline;
 
 class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
     friend class Engine;
+    friend class Octree;
     friend class GraphicsPipeline;
 
 public:
@@ -42,13 +43,14 @@ public:
     void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
     
     Mesh *GetMesh() const { return m_mesh.ptr; }
+    Octree *GetOctree() const { return m_octree; }
 
     Material *GetMaterial() const { return m_material.ptr; }
     void SetMaterial(Ref<Material> &&material);
 
     Skeleton *GetSkeleton() const { return m_skeleton.ptr; }
     void SetSkeleton(Ref<Skeleton> &&skeleton);
-
+    
     const MeshInputAttributeSet &GetVertexAttributes() const { return m_attributes; }
 
     const Transform &GetTransform() const { return m_transform; }
@@ -58,14 +60,19 @@ public:
     const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
 
     void Init(Engine *engine);
-    void UpdateShaderData(Engine *engine) const;
+    void Update(Engine *engine);
 
 private:
+    void UpdateShaderData(Engine *engine) const;
 
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
     void RemoveFromPipelines();
     void RemoveFromPipeline(GraphicsPipeline *pipeline);
+    
+    void OnAddedToOctree(Octree *octree);
+    void OnRemovedFromOctree(Octree *octree);
+    void RemoveFromOctree(Engine *engine);
 
     Ref<Mesh> m_mesh;
     MeshInputAttributeSet m_attributes;
