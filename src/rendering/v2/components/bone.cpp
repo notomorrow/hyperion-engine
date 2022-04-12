@@ -136,23 +136,9 @@ void Bone::CalculateBoneRotation()
 
 void Bone::UpdateBoneTransform()
 {
-    Matrix4 tmp;
-
-    Vector3 inv_translation = m_world_bone_translation * -1.0f;
-    
-    MatrixUtil::ToTranslation(m_bone_matrix, inv_translation);
-    MatrixUtil::ToRotation(tmp, m_world_bone_rotation * m_pose_rotation * GetOffsetRotation() * m_inv_binding_rotation);
-    m_bone_matrix *= tmp;
-
-    inv_translation *= -1.0f;
-    MatrixUtil::ToTranslation(tmp, inv_translation);
-    m_bone_matrix *= tmp;
-
-    MatrixUtil::ToTranslation(tmp, m_pose_translation);
-    m_bone_matrix *= tmp;
-
-    MatrixUtil::ToTranslation(tmp, GetOffsetTranslation());
-    m_bone_matrix *= tmp;
+    m_bone_matrix = Matrix4::Translation(m_world_bone_translation * -1.0f);
+    m_bone_matrix *= Matrix4::Rotation(m_world_bone_rotation * m_pose_rotation * GetOffsetRotation() * m_inv_binding_rotation);
+    m_bone_matrix *= Matrix4::Translation(m_world_bone_translation + m_pose_translation + GetOffsetTranslation());
 
     if (m_parent_node != nullptr) {
         if (m_parent_node->GetType() == Type::BONE) {
