@@ -19,7 +19,7 @@ ParticleEmitterControl::ParticleEmitterControl(Camera *camera, const ParticleCon
 
 void ParticleEmitterControl::ResetParticle(Particle &particle)
 {
-    double lifespan_random = MathUtil::EPSILON +
+    double lifespan_random = MathUtil::epsilon +
         MathUtil::Random(0.0, fabs(m_particle_renderer->m_info.m_lifespan_randomness));
 
     particle.m_origin = (((m_particle_renderer->m_info.m_origin + Vector3(

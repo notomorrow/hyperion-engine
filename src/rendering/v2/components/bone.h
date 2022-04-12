@@ -26,6 +26,7 @@ private:
 };
 
 class Bone : public Node {
+    friend class Skeleton;
 public:
     Bone(const char *tag = "");
     Bone(const Bone &other) = delete;
@@ -42,8 +43,7 @@ public:
 
     const Matrix4 &GetBoneMatrix() const { return m_bone_matrix; }
 
-    void SetBindingTranslation(const Vector3 &translation) { m_binding_translation = translation; }
-    void SetBindingRotation(const Quaternion &rotation) { m_binding_rotation = rotation; }
+    void SetBindingTransform(const Transform &transform) { m_binding_transform = transform; }
 
     void SetToBindingPose();
     void StoreBindingPose();
@@ -53,18 +53,20 @@ public:
 
     void UpdateBoneTransform();
 
+    Transform m_binding_transform,
+              m_pose_transform;
+
     Vector3 m_world_bone_translation,
-            m_binding_translation,
-            m_inv_binding_translation,
-            m_pose_translation;
+            m_inv_binding_translation;
 
     Quaternion m_world_bone_rotation,
-               m_binding_rotation,
-               m_inv_binding_rotation,
-               m_pose_rotation;
+               m_inv_binding_rotation;
 
 private:
+    void SetSkeleton(Skeleton *skeleton);
+    Skeleton *GetSkeleton() const { return m_skeleton; }
 
+    Skeleton *m_skeleton;
     Matrix4 m_bone_matrix;
     Keyframe m_keyframe;
 };

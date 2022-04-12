@@ -31,6 +31,11 @@ void Skeleton::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SKELETONS, [this](Engine *engine) {
+        /* Set all bone's skeletons to be this. */
+        if (m_root_bone != nullptr) {
+            m_root_bone->SetSkeleton(this);
+        }
+
         UpdateShaderData(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SKELETONS, [this](Engine *engine) {
@@ -41,6 +46,10 @@ void Skeleton::Init(Engine *engine)
 
 void Skeleton::UpdateShaderData(Engine *engine) const
 {
+    if (!m_shader_data_state.IsDirty()) {
+        return;
+    }
+
     const size_t num_bones = MathUtil::Min(SkeletonShaderData::max_bones, NumBones());
 
     if (num_bones != 0) {

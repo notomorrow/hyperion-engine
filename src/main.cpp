@@ -192,14 +192,20 @@ int main()
         base_path + "/res/models/cube.obj"
     );
 
-    monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("upper_arm.L")->m_pose_rotation = Quaternion({1.0f, 1.0f, 1.0f}, 3.14f);
-    monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateBoneTransform();
-
     monkey_obj->GetChild(0)->AddChild(std::make_unique<v2::Node>("Foobar"));
     monkey_obj->GetChild(0)->GetChild(0)->AddChild(std::make_unique<v2::Node>("Baz"));
     //monkey_obj->Translate({2.0f, 0.0f, 5.0f});
     monkey_obj->Scale(0.35f);
     monkey_obj->Update(&engine);
+
+
+    Transform t(Vector3(5,4,3), Vector3(1,1.5,1), Quaternion(Vector3(1, 0, 0), 0.53f));
+    Matrix4 m = t.GetMatrix();
+    m.Invert();
+
+    t.Invert();
+    Matrix4 m2 = t.GetMatrix();
+
     
     {
         auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
@@ -564,10 +570,9 @@ int main()
 
         //monkey_obj->SetLocalTransform(transform);
         //monkey_obj->Update(&engine);
-        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_rotation = Quaternion({0, 1, 0}, timer * 0.35f);
-        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateBoneTransform();
+        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_transform.SetRotation(Quaternion({0, 1, 0}, timer * 0.35f));
+        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
         monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
-        monkey_obj->GetChild(0)->GetSpatial()->SetShaderDataState(v2::ShaderDataState::DIRTY);
         monkey_obj->Update(&engine);
 
         cube_obj->SetLocalTranslation(camera->GetTranslation());

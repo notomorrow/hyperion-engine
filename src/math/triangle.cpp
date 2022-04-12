@@ -78,7 +78,7 @@ bool Triangle::IntersectRay(const Ray &ray, RaytestHit &out) const
 	float det = v0v1.Dot(pvec);
 
 	// ray and triangle are parallel if det is close to 0
-	if (fabs(det) < MathUtil::EPSILON) return false;
+	if (std::fabs(det) < MathUtil::epsilon) return false;
 
 	float invDet = 1.0 / det;
 

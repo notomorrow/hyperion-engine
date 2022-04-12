@@ -134,7 +134,9 @@ public:
      */
     inline void Rotate(const Quaternion &rotation)
         { SetLocalRotation(m_local_transform.GetRotation() * rotation); }
+
     
+    void UpdateWorldTransform();
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
     void Update(Engine *engine);
 
@@ -142,7 +144,6 @@ protected:
     Node(Type type, const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform = Transform());
 
     void UpdateInternal(Engine *engine);
-    void UpdateWorldTransform();
     void OnNestedNodeAdded(Node *node);
     void OnNestedNodeRemoved(Node *node);
 

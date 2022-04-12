@@ -195,8 +195,7 @@ std::unique_ptr<Skeleton> OgreXmlSkeletonLoader::BuildFn(Engine *engine, const O
     for (const auto &item : object.bones) {
         auto bone = std::make_unique<v2::Bone>(item.name.c_str());
 
-        bone->SetBindingTranslation(item.binding_translation);
-        bone->SetBindingRotation(item.binding_rotation);
+        bone->SetBindingTransform(Transform(item.binding_translation, Vector3::One(), item.binding_rotation));
 
         if (!item.parent_name.empty()) {
             if (auto *parent_bone = skeleton->FindBone(item.parent_name.c_str())) {
