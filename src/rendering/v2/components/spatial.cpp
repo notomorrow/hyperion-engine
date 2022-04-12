@@ -57,8 +57,12 @@ void Spatial::Init(Engine *engine)
 
 void Spatial::UpdateShaderData(Engine *engine) const
 {
-    if (m_skeleton != nullptr && m_skeleton->GetShaderDataState().IsDirty()) {
+    if (m_skeleton != nullptr) {
         m_skeleton->UpdateShaderData(engine);
+    }
+
+    if (!m_shader_data_state.IsDirty()) {
+        return;
     }
 
     engine->shader_globals->objects.Set(

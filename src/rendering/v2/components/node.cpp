@@ -1,6 +1,7 @@
 #include "node.h"
 #include <system/debug.h>
 
+#include "bone.h"
 #include "rendering/v2/engine.h"
 
 namespace hyperion::v2 {
@@ -30,27 +31,6 @@ Node::Node(Type type, const char *tag, Ref<Spatial> &&spatial, const Transform &
 Node::~Node()
 {
     delete[] m_tag;
-}
-
-void Node::UpdateWorldTransform()
-{
-    if (m_parent_node != nullptr) {
-        m_world_transform = m_parent_node->GetWorldTransform() * m_local_transform;
-    } else {
-        m_world_transform = m_local_transform;
-    }
-
-    if (m_spatial != nullptr) {
-        m_spatial->SetTransform(m_world_transform);
-    }
-
-    m_world_aabb = m_local_aabb * m_world_transform;
-
-    for (auto &node : m_child_nodes) {
-        node->UpdateWorldTransform();
-
-        m_world_aabb.Extend(node->m_world_aabb);
-    }
 }
 
 void Node::OnNestedNodeAdded(Node *node)
@@ -178,9 +158,34 @@ void Node::SetSpatial(Ref<Spatial> &&spatial)
     UpdateWorldTransform();
 }
 
+void Node::UpdateWorldTransform()
+{
+    if (m_type == Type::BONE) {
+        static_cast<Bone *>(this)->UpdateBoneTransform();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    }
+
+    if (m_parent_node != nullptr) {
+        m_world_transform = m_parent_node->GetWorldTransform() * m_local_transform;
+    } else {
+        m_world_transform = m_local_transform;
+    }
+
+    if (m_spatial != nullptr) {
+        m_spatial->SetTransform(m_world_transform);
+    }
+
+    m_world_aabb = m_local_aabb * m_world_transform;
+
+    for (auto &node : m_child_nodes) {
+        node->UpdateWorldTransform();
+
+        m_world_aabb.Extend(node->m_world_aabb);
+    }
+}
+
 void Node::UpdateInternal(Engine *engine)
 {
-    if (m_spatial != nullptr && m_spatial->GetShaderDataState().IsDirty()) {
+    if (m_spatial != nullptr) {
         m_spatial->UpdateShaderData(engine);
     }
 }

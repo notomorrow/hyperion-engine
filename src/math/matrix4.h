@@ -1,6 +1,7 @@
 #ifndef MATRIX4_H
 #define MATRIX4_H
 
+#include "vector4.h"
 #include "../hash_code.h"
 #include "../util.h"
 
@@ -24,7 +25,11 @@ public:
     static Matrix4 LookAt(const Vector3 &dir, const Vector3 &up);
     static Matrix4 LookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up);
 
-    std::array<float, 16> values;
+
+    union {
+        Vector4 rows[4];
+        float values[16];
+    };
 
     Matrix4();
     explicit Matrix4(float *v);
@@ -45,10 +50,12 @@ public:
 
     constexpr float operator()(int i, int j) const { return values[i * 4 + j]; }
     constexpr float &operator()(int i, int j) { return values[i * 4 + j]; }
-    constexpr float At(int i, int j) const { return operator()(i, j); }
-    constexpr float &At(int i, int j) { return operator()(i, j); }
-    constexpr float operator[](int index) const { return values[index]; }
-    constexpr float &operator[](int index) { return values[index]; }
+
+    constexpr float At(int i, int j) const { return rows[i][j]; }
+    constexpr float &At(int i, int j) { return rows[i][j]; }
+
+    constexpr Vector4 &operator[](uint32_t row) { return rows[row]; }
+    constexpr const Vector4 &operator[](uint32_t row) const { return rows[row]; }
 
     static Matrix4 Zeroes();
     static Matrix4 Ones();

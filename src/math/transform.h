@@ -37,6 +37,17 @@ public:
     Transform operator*(const Transform &other) const;
     Transform &operator*=(const Transform &other);
 
+    Transform &Invert()
+    {
+        m_translation *= -1.0f;
+        m_scale = Vector3(1.0f) / m_scale;
+        m_rotation.Invert();
+
+        UpdateMatrix();
+
+        return *this;
+    }
+
     inline bool operator==(const Transform &other) const
         { return m_matrix == other.m_matrix; }
 

@@ -222,22 +222,25 @@ Quaternion &Quaternion::Slerp(const Quaternion &to, float amt)
 
 int Quaternion::GimbalPole() const
 {
-    float amt = y * x + z * w;
+    const float amt = y * x + z * w;
+
     return amt > 0.499f ? 1 : (amt < -0.499f ? -1 : 0);
 }
 
 float Quaternion::Roll() const
 {
-    int pole = GimbalPole();
+    const int pole = GimbalPole();
+
     return pole == 0 ? atan2(2.0f * (w * z + y * x), 1.0f - 2.0f * (x * x + z * z)) : pole * 2.0f * atan2(y, w);
 }
 
 float Quaternion::Pitch() const
 {
-    int pole = GimbalPole();
+    const int pole = GimbalPole();
+
     return pole == 0 ?
-        asin(MathUtil::Clamp(2.0f * (w * x - z * y), -1.0f, 1.0f)) :
-        pole * MathUtil::PI * 0.5f;
+        std::asin(MathUtil::Clamp(2.0f * (w * x - z * y), -1.0f, 1.0f)) :
+        pole * MathUtil::pi * 0.5f;
 }
 
 float Quaternion::Yaw() const

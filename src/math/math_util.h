@@ -15,8 +15,8 @@ namespace hyperion {
 
 class MathUtil {
 public:
-    const static double PI;
-    const static double EPSILON;
+    static constexpr float pi = 3.14159265358979f;
+    static constexpr float epsilon = 0.0001f;
 
     template <typename T>
     static inline constexpr typename std::enable_if_t<std::is_enum_v<T>, std::underlying_type_t<T>>
@@ -54,7 +54,7 @@ public:
 
     template <typename T>
     static inline constexpr bool Approximately(const T &a, const T &b)
-        { return std::abs(a - b) <= T(EPSILON); }
+        { return std::abs(a - b) <= T(epsilon); }
 
     template <typename T>
     static inline T Random(const T &a, const T &b)
@@ -67,11 +67,11 @@ public:
 
     template <typename T>
     static inline constexpr T RadToDeg(const T &rad)
-        { return rad * T(180) / T(PI); }
+        { return rad * T(180) / T(pi); }
 
     template <typename T>
     static inline constexpr T DegToRad(const T &deg)
-        { return deg * T(PI) / T(180); }
+        { return deg * T(pi) / T(180); }
 
     template <typename T>
     static inline constexpr T Clamp(const T &val, const T &min, const T &max)

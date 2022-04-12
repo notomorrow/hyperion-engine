@@ -1,6 +1,6 @@
 #ifndef VECTOR4_H
 #define VECTOR4_H
-#include "matrix4.h"
+#include "../hash_code.h"
 #include "../util.h"
 
 #include <cmath>
@@ -10,6 +10,7 @@ namespace hyperion {
 
 class Vector2;
 class Vector3;
+class Matrix4;
 
 class Vector4 {
     friend std::ostream &operator<<(std::ostream &out, const Vector4 &vec);

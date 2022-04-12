@@ -98,7 +98,7 @@ public:
 
     explicit Uniform(const Matrix4 &value)
     {
-        std::memcpy(&data.mat4[0], &value.values[0], value.values.size() * sizeof(float));
+        std::memcpy(&data.mat4[0], &value.values[0], sizeof(data.mat4));
         type = UniformType::UNIFORM_TYPE_MAT4;
     }
 
