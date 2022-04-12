@@ -29,7 +29,7 @@ void ComputePipeline::Destroy(Engine *engine)
     EngineComponent::Destroy(engine);
 }
 
-void ComputePipeline::Dispatch(Engine *engine, CommandBuffer *command_buffer, size_t num_groups_x, size_t num_groups_y, size_t num_groups_z)
+void ComputePipeline::Dispatch(Engine *engine, CommandBuffer *command_buffer,  Extent3D group_size)
 {
     m_wrapped.Bind(command_buffer->GetCommandBuffer());
 
@@ -40,6 +40,6 @@ void ComputePipeline::Dispatch(Engine *engine, CommandBuffer *command_buffer, si
         {{.set = 1, .count = 1}}
     );
 
-    m_wrapped.Dispatch(command_buffer->GetCommandBuffer(), num_groups_x, num_groups_y, num_groups_z);
+    m_wrapped.Dispatch(command_buffer->GetCommandBuffer(), group_size);
 }
 } // namespace hyperion::v2

@@ -38,9 +38,9 @@ void ComputePipeline::Bind(VkCommandBuffer cmd) const
     );
 }
 
-void ComputePipeline::Dispatch(VkCommandBuffer cmd, size_t num_groups_x, size_t num_groups_y, size_t num_groups_z) const
+void ComputePipeline::Dispatch(VkCommandBuffer cmd, Extent3D group_size) const
 {
-    vkCmdDispatch(cmd, num_groups_x, num_groups_y, num_groups_z);
+    vkCmdDispatch(cmd, group_size.width, group_size.height, group_size.depth);
 }
 
 Result ComputePipeline::Create(Device *device, ShaderProgram *shader, DescriptorPool *descriptor_pool)

@@ -549,8 +549,7 @@ int main()
         
         compute_command_buffer->Reset(engine.GetInstance()->GetDevice());
         HYPERION_ASSERT_RESULT(compute_command_buffer->Record(engine.GetInstance()->GetDevice(), nullptr, [&](CommandBuffer *cmd) {
-            compute_pipeline->Dispatch(&engine, cmd,
-                8, 8, 1);
+            compute_pipeline->Dispatch(&engine, cmd, {8, 8, 1});
 
             HYPERION_RETURN_OK;
         }));

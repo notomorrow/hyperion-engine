@@ -179,9 +179,6 @@ public:
     ~ShaderData() = default;
 
     inline const auto &GetBuffers() const { return m_buffers; }
-
-    inline StructType &Get(size_t index) { return m_objects[index]; }
-    inline const StructType &Get(size_t index) const { return m_objects[index]; }
     
     void Create(Device *device)
     {
@@ -209,6 +206,15 @@ public:
         m_objects[index] = std::move(value);
 
         this->MarkDirty(index);
+    }
+
+    StructType &At(size_t index)
+    {
+        AssertThrowMsg(index < m_objects.Size(), "Cannot set shader data out of bounds");
+        
+        this->MarkDirty(index);
+
+        return m_objects[index];
     }
     
 private:

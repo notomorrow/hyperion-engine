@@ -41,14 +41,11 @@ void Skeleton::Init(Engine *engine)
 
 void Skeleton::UpdateShaderData(Engine *engine) const
 {
-    /* TODO: store somewhere rather than allocing on stack
-     * as this struct can get large
-     */
-    SkeletonShaderData shader_data{};
-
     const size_t num_bones = MathUtil::Min(SkeletonShaderData::max_bones, NumBones());
 
     if (num_bones != 0) {
+        SkeletonShaderData &shader_data = engine->shader_globals->skeletons.At(m_id.value - 1);
+
         shader_data.bones[0] = m_root_bone->GetBoneMatrix();
 
         for (size_t i = 1; i < num_bones; i++) {
@@ -60,8 +57,6 @@ void Skeleton::UpdateShaderData(Engine *engine) const
                 shader_data.bones[i] = static_cast<Bone *>(descendent)->GetBoneMatrix();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
             }
         }
-
-        engine->shader_globals->skeletons.Set(m_id.value - 1, std::move(shader_data));
     }
     
     m_shader_data_state = ShaderDataState::CLEAN;
@@ -82,7 +77,7 @@ Bone *Skeleton::FindBone(const char *name) const
             continue;
         }
 
-        Bone *bone = static_cast<Bone *>(node);
+        auto *bone = static_cast<Bone *>(node);  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 
         if (!std::strcmp(bone->GetTag(), name)) {
             return bone;
