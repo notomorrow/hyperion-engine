@@ -12,6 +12,12 @@
 #include <map>
 #include <cstring>
 
+#define HYP_MESH_AABB_USE_MULTITHREADING 1
+
+#if HYP_MESH_AABB_USE_MULTITHREADING
+#include <thread>
+#endif
+
 namespace hyperion::v2 {
 
 Mesh::Mesh(const std::vector<Vertex> &vertices,
@@ -302,5 +308,49 @@ void Mesh::InvertNormals()
     }
 }
 
+BoundingBox Mesh::CalculateAabb() const
+{
+    BoundingBox aabb;
+
+#if HYP_MESH_AABB_USE_MULTITHREADING
+    constexpr size_t max_threads = 8;
+    constexpr size_t vertex_count_threshold = 512;
+
+    if (m_vertices.size() > vertex_count_threshold) {
+        std::vector<std::thread> threads;
+        threads.reserve(max_threads);
+
+        const int vertex_stride = MathUtil::Ceil(double(m_vertices.size()) / double(max_threads));
+
+        std::array<BoundingBox, max_threads> working_aabbs;
+
+        for (size_t i = 0; i < max_threads; i++) {
+            const size_t vertex_offset = vertex_stride * i;
+
+            threads.emplace_back([this, &working_aabbs, vertex_offset, vertex_stride, i] {
+                const size_t vertex_end = MathUtil::Min(m_vertices.size(), vertex_offset + vertex_stride);
+                
+                for (size_t j = vertex_offset; j < vertex_end; j++) {
+                    working_aabbs[i].Extend(m_vertices[j].GetPosition());
+                }
+            });
+        }
+
+        for (size_t i = 0; i < threads.size(); i++) {
+            threads[i].join();
+
+            aabb.Extend(working_aabbs[i]);
+        }
+    } else {
+#endif
+        for (const Vertex &vertex : m_vertices) {
+            aabb.Extend(vertex.GetPosition());
+        }
+#if HYP_MESH_AABB_USE_MULTITHREADING
+    }
+#endif
+
+    return aabb;
+}
 
 }

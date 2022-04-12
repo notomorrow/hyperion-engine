@@ -7,19 +7,18 @@ namespace hyperion::v2 {
 Spatial::Spatial(
     Ref<Mesh> &&mesh,
     const MeshInputAttributeSet &attributes,
-    const Transform &transform,
-    const BoundingBox &local_aabb,
     Ref<Material> &&material)
     : EngineComponentBase(),
       m_mesh(std::move(mesh)),
       m_attributes(attributes),
-      m_transform(transform),
-      m_local_aabb(local_aabb),
-      m_world_aabb(local_aabb * transform),
       m_material(std::move(material)),
       m_octree(nullptr),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
+    if (m_mesh) {
+        m_local_aabb = m_mesh->CalculateAabb();
+        m_world_aabb = m_local_aabb * m_transform;
+    }
 }
 
 Spatial::~Spatial()
@@ -67,19 +66,17 @@ void Spatial::Update(Engine *engine)
     }
 
     if (!m_shader_data_state.IsDirty()) {
+        if (m_octree != nullptr) {
+            m_visibility_state = m_octree->GetVisibilityState();
+        }
+
         return;
     }
 
     UpdateShaderData(engine);
 
     if (m_octree != nullptr) {
-        if (!m_octree->Update(engine, this)) {
-            DebugLog(
-                LogType::Warn,
-                "Could not update Spatial #%lu in octree\n",
-                m_id.value
-            );
-        }
+        UpdateOctree(engine);
     }
 }
 
@@ -94,6 +91,21 @@ void Spatial::UpdateShaderData(Engine *engine) const
     );
 
     m_shader_data_state = ShaderDataState::CLEAN;
+}
+
+void Spatial::UpdateOctree(Engine *engine)
+{
+    if (!m_octree->Update(engine, this)) {
+        DebugLog(
+            LogType::Warn,
+            "Could not update Spatial #%lu in octree\n",
+            m_id.value
+        );
+    }
+
+    if (m_octree != nullptr) {
+        m_visibility_state = m_octree->GetVisibilityState();
+    }
 }
 
 void Spatial::SetMaterial(Ref<Material> &&material)
@@ -179,7 +191,6 @@ void Spatial::RemoveFromOctree(Engine *engine)
     AssertThrow(m_octree != nullptr);
 
     m_octree->OnSpatialRemoved(engine, this);
-    m_octree = nullptr;
 }
 
 } // namespace hyperion::v2

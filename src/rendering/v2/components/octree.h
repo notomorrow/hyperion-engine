@@ -1,7 +1,6 @@
 #ifndef HYPERION_V2_OCTREE_H
 #define HYPERION_V2_OCTREE_H
 
-#include "spatial.h"
 #include "scene.h"
 #include "containers.h"
 
@@ -20,9 +19,18 @@ class Camera;
 
 namespace hyperion::v2 {
 
+using renderer::Swapchain;
+
+class Spatial;
+
 class Octree {
     friend class Engine;
     friend class Spatial;
+
+    enum {
+        DEPTH_SEARCH_INF = -1,
+        DEPTH_SEARCH_ONLY_THIS = 0
+    };
 
     struct Callback {
         using CallbackFunction = std::function<void(Engine *, Octree *, Spatial *)>;
@@ -41,6 +49,8 @@ public:
          * when visiblity is scanned, both values per frame in flight are set accordingly,
          * but are only set to false after the corresponding frame is rendered.
          */
+
+        /* TODO: we could simply use 2 uint64_ts and bitshift based on scene ID */
         std::array<std::array<bool, Swapchain::max_frames_in_flight>, max_scenes> scene_visibility;
 
         HYP_FORCE_INLINE bool Get(Scene::ID scene, uint32_t frame_index) const
@@ -97,8 +107,8 @@ public:
     inline const auto &GetCallbacks() const
         { return const_cast<Octree *>(this)->GetCallbacks(); }
 
-    inline auto &GetVisibilityState() { return m_visibility_state; }
-    inline const auto &GetVisibilityState() const { return m_visibility_state; }
+    inline VisibilityState &GetVisibilityState() { return m_visibility_state; }
+    inline const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
 
     void Clear(Engine *engine);
     bool Insert(Engine *engine, Spatial *spatial);

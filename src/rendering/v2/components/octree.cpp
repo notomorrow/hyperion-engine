@@ -1,4 +1,5 @@
 #include "octree.h"
+#include "spatial.h"
 #include "scene/octree.h"
 
 namespace hyperion::v2 {
@@ -15,7 +16,7 @@ Octree::Octree(const BoundingBox &aabb)
 
 Octree::~Octree()
 {
-    //AssertThrowMsg(m_nodes.empty(), "Expected nodes to be emptied before octree destructor");
+    AssertThrowMsg(m_nodes.empty(), "Expected nodes to be emptied before octree destructor");
 }
 
 void Octree::SetParent(Octree *parent)
@@ -147,8 +148,10 @@ undivide:
 
 void Octree::Clear(Engine *engine)
 {
-    if (m_root != nullptr) {
-        for (const auto &node : m_nodes) {
+    for (auto &node : m_nodes) {
+        node.spatial->OnRemovedFromOctree(this);
+
+        if (m_root != nullptr) {
             auto it = m_root->node_to_octree.find(node.spatial);
 
             if (it != m_root->node_to_octree.end()) {
@@ -254,8 +257,6 @@ bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
         return false;
     }
 
-    spatial->OnRemovedFromOctree(this);
-
     if (m_root != nullptr) {
         m_root->events.on_remove_node(engine, this, spatial);
     }
@@ -264,7 +265,9 @@ bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
 
     if (!m_is_divided && m_nodes.empty()) {
         if (Octree *parent = m_parent) {
-            while (parent->m_nodes.empty()) {
+            int depth = DEPTH_SEARCH_INF; /* first time, bite the bullet and search all nested octants. after that we only search the next layer */
+
+            while (parent->EmptyDeep(depth)) {
                 if (parent->m_parent == nullptr) {
                     /* At root, call Undivide() to collapse nodes */
                     parent->Undivide(engine);
@@ -273,9 +276,12 @@ bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
                 }
 
                 parent = parent->m_parent;
+                depth = 1; /* only search next layer */
             }
         }
     }
+
+    spatial->OnRemovedFromOctree(this);
 
     return true;
 }
@@ -413,7 +419,7 @@ void Octree::OnSpatialRemoved(Engine *engine, Spatial *spatial)
         return;
     }
     
-    if (!RemoveInternal(engine, spatial)) {
+    if (!Remove(engine, spatial)) {
         DebugLog(LogType::Error, "Failed to find Spatial #%lu in octree\n", spatial->GetId().value);
     }
 }
