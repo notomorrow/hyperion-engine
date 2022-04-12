@@ -21,7 +21,7 @@ public:
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    void Dispatch(Engine *engine, CommandBuffer *command_buffer, size_t num_groups_x, size_t num_groups_y, size_t num_groups_z);
+    void Dispatch(Engine *engine, CommandBuffer *command_buffer, Extent3D group_size);
 
 private:
     Ref<Shader> m_shader;

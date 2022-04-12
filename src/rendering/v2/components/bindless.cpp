@@ -84,7 +84,6 @@ void BindlessStorage::RemoveResource(const Texture *texture)
 
 void BindlessStorage::MarkResourceChanged(const Texture *texture)
 {
-    const auto id_value = texture->GetId().Value() - 1;
     const auto sub_descriptor_index = m_texture_sub_descriptors[texture->GetId()];
 
     for (auto *descriptor_set : m_descriptor_sets) {

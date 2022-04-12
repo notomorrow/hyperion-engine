@@ -6,7 +6,7 @@ namespace hyperion::v2 {
 
 Material::Material()
     : EngineComponentBase(),
-      m_state(MATERIAL_STATE_DIRTY)
+      m_shader_data_state(ShaderDataState::DIRTY)
 {
 }
 
@@ -67,20 +67,22 @@ void Material::UpdateShaderData(Engine *engine) const
     }
 
     engine->shader_globals->materials.Set(m_id.value - 1, std::move(shader_data));
+
+    m_shader_data_state = ShaderDataState::CLEAN;
 }
 
 void Material::SetParameter(MaterialKey key, const Parameter &value)
 {
     m_parameters.Set(key, value);
 
-    m_state = MATERIAL_STATE_DIRTY;
+    m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 void Material::SetTexture(TextureKey key, Texture::ID id)
 {
     m_textures.Set(key, id);
 
-    m_state = MATERIAL_STATE_DIRTY;
+    m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 } // namespace hyperion::v2

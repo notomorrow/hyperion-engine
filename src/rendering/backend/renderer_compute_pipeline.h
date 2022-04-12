@@ -30,7 +30,7 @@ public:
     Result Destroy(Device *device);
 
     void Bind(VkCommandBuffer cmd) const;
-    void Dispatch(VkCommandBuffer cmd, size_t num_groups_x, size_t num_groups_y, size_t num_groups_z) const;
+    void Dispatch(VkCommandBuffer cmd, Extent3D group_size) const;
 
     VkPipeline pipeline;
     VkPipelineLayout layout;

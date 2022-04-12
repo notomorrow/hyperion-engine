@@ -217,6 +217,9 @@ public:
     Material();
     ~Material();
 
+    ShaderDataState GetShaderDataState() const { return m_shader_data_state; }
+    void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
+
     inline const Parameter &GetParameter(MaterialKey key) const
         { return m_parameters.Get(key); }
 
@@ -243,6 +246,7 @@ public:
     void SetTexture(TextureKey key, Texture::ID id);
 
     void Init(Engine *engine);
+    void UpdateShaderData(Engine *engine) const;
 
     inline HashCode GetHashCode() const
     {
@@ -253,11 +257,9 @@ public:
     }
 
 private:
-    void UpdateShaderData(Engine *engine) const;
-
-    ParameterTable m_parameters;
-    TextureSet     m_textures;
-    State          m_state;
+    ParameterTable  m_parameters;
+    TextureSet      m_textures;
+    mutable ShaderDataState m_shader_data_state;
 };
 
 } // namespace hyperion::v2
