@@ -3,6 +3,8 @@
 
 #include "base.h"
 
+#include <math/bounding_box.h>
+
 #include <rendering/backend/renderer_buffer.h>
 #include <rendering/backend/renderer_command_buffer.h>
 
@@ -36,6 +38,8 @@ public:
     void CalculateTangents();
     void CalculateNormals();
     void InvertNormals();
+
+    BoundingBox CalculateAabb() const;
 
     void Init(Engine *engine);
     void Render(Engine *engine, CommandBuffer *cmd) const;

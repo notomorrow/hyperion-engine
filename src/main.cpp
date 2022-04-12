@@ -198,7 +198,6 @@ int main()
     monkey_obj->Scale(0.35f);
     monkey_obj->Update(&engine);
 
-
     Transform t(Vector3(5,4,3), Vector3(1,1.5,1), Quaternion(Vector3(1, 0, 0), 0.53f));
     Matrix4 m = t.GetMatrix();
     m.Invert();
@@ -561,7 +560,9 @@ int main()
         ));
 #endif
 
-        Transform transform(Vector3(std::sin(timer) * 25.0f, 18.0f, std::cos(timer) * 25.0f), Vector3(1.0f), Quaternion(Vector3::One(), timer));
+        Transform transform(Vector3(7, 2, 7), Vector3(1.0f), Quaternion());
+
+        engine.GetOctree().CalculateVisibility(scene.ptr);
 
         
         monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_transform.SetRotation(Quaternion({0, 1, 0}, timer * 0.35f));
@@ -573,7 +574,9 @@ int main()
         cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         cube_obj->Update(&engine);
 
-
+        //if (monkey_obj->GetChild(0)->GetSpatial()->GetOctree() != nullptr) {
+        //    std::cout << "visible ? " << monkey_obj->GetChild(0)->GetSpatial()->GetVisibilityState().Get(scene->GetId(), 0) << "  for  " << monkey_obj->GetChild(0)->GetSpatial()->GetOctree()->GetAabb() << "\n";
+        //}
 
         //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{3}), Transform(camera->GetTranslation(), { 1.0f, 1.0f, 1.0f }, Quaternion()));
 
@@ -587,10 +590,6 @@ int main()
         engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
         engine.RenderPostProcessing(frame->GetCommandBuffer(), frame_index);
-
-
-        /* has to go after rendering happens */
-        engine.GetOctree().CalculateVisibility(scene.ptr);
 
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -622,6 +621,7 @@ int main()
         
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
         engine.GetInstance()->GetFrameHandler()->NextFrame();
+
     }
 
     AssertThrow(engine.GetInstance()->GetDevice()->Wait());

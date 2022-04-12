@@ -198,17 +198,15 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                     {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
                 }
             );
-
-            const auto next_frame_index = (frame_index + 1) % m_per_frame_data->NumFrames();
             
-            for (const auto &spatial : m_spatials) {
+            for (auto &spatial : m_spatials) {
                 if (spatial->GetMesh() == nullptr) {
                     continue;
                 }
 
-                auto *octree = spatial->GetOctree();
+                auto &visibility_state = spatial->GetVisibilityState();
 
-                if (octree == nullptr || !octree->GetVisibilityState().Get(Scene::ID{m_scene_index + 1}, frame_index)) {
+                if (!visibility_state.Get(Scene::ID{m_scene_index + 1}, 0)) {
                     continue;
                 }
 
@@ -240,8 +238,8 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
 
                 spatial->GetMesh()->Render(engine, secondary);
 
-                if (octree != nullptr) {
-                    octree->GetVisibilityState().Set(Scene::ID{m_scene_index + 1}, next_frame_index, false);
+                if (auto *octree = spatial->GetOctree()) {
+                    octree->GetVisibilityState().Set(Scene::ID{m_scene_index + 1}, 0, false);
                 }
             }
 

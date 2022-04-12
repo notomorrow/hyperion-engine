@@ -288,8 +288,6 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
                 std::make_unique<Spatial>(
                     std::move(mesh),
                     vertex_attributes,
-                    Transform(),
-                    BoundingBox(),
                     engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
                 )
             );
