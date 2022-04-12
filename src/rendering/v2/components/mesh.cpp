@@ -45,6 +45,9 @@ void Mesh::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](Engine *engine) {
+
+        DebugLog(LogType::Info, "Init mesh with %llu vertices and %llu indices\n", m_vertices.size(), m_indices.size());
+
         if (m_vertices.empty() || m_indices.empty()) {
             DebugLog(LogType::Warn, "Create mesh with empty vertices or indices list\n");
         }

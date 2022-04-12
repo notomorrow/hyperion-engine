@@ -9,8 +9,8 @@ public:
     PerspectiveCamera(float fov, int width, int height, float _near, float _far);
     virtual ~PerspectiveCamera() = default;
 
-    virtual void UpdateLogic(double dt);
-    void UpdateMatrices();
+    virtual void UpdateLogic(double dt) override;
+    virtual void UpdateMatrices() override;
 };
 } // namespace hyperion
 

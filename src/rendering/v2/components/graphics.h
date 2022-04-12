@@ -62,6 +62,7 @@ public:
     inline RenderPass::ID GetRenderPassID() const { return m_render_pass_id; }
     inline Bucket GetBucket() const { return m_bucket; }
 
+    inline MeshInputAttributeSet &GetVertexAttributes() { return m_vertex_attributes; }
     inline const MeshInputAttributeSet &GetVertexAttributes() const { return m_vertex_attributes; }
 
     inline Topology GetTopology() const

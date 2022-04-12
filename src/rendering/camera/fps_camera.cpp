@@ -5,24 +5,19 @@ FpsCamera::FpsCamera(InputManager *inputmgr, SystemWindow *window, int width, in
     : PerspectiveCamera(fov, width, height, _near, _far),
       m_inputmgr(inputmgr),
       m_window(window),
-      m_mag_x(0.0),
-      m_mag_y(0.0),
-      m_old_mag_x(0.0),
-      m_old_mag_y(0.0),
       m_mouse_x(0.0),
       m_mouse_y(0.0),
       m_is_mouse_captured(false)
 {
     m_dir_cross_y = Vector3(m_direction).Cross(m_up);
 
-    m_inputmgr->RegisterKeyEvent(SystemKey::KEY_LEFT_ALT, InputEvent([&](bool pressed) {
+    m_inputmgr->RegisterKeyEvent(SystemKey::KEY_LEFT_ALT, InputEvent([&](SystemWindow *window, bool pressed) {
         if (pressed) {
             CenterMouse();
             m_is_mouse_captured = !m_is_mouse_captured;
-            DebugLog(LogType::Info, "Mouse state switched [%d]\n", m_is_mouse_captured);
+            DebugLog(LogType::Info, "Mouse state switched [%d]  %s\n", m_is_mouse_captured, typeid(*this).name());
 
             window->LockMouse(m_is_mouse_captured);
-            //CoreEngine::GetInstance()->SetCursorLocked(m_is_mouse_captured);
         }
     }));
 }
@@ -35,9 +30,7 @@ void FpsCamera::SetTranslation(const Vector3 &vec)
 
 void FpsCamera::UpdateLogic(double dt)
 {
-    this->m_window->GetSize(&m_width, &m_height);
-    //m_width = m_window->GetScaledWidth();
-    //m_height = m_window->GetScaledHeight();
+    m_window->GetSize(&m_width, &m_height);
 
     if (m_is_mouse_captured) {
         m_inputmgr->GetMousePosition(&m_mouse_x, &m_mouse_y);
@@ -52,50 +45,35 @@ void FpsCamera::UpdateLogic(double dt)
 
 void FpsCamera::CenterMouse()
 {
-    this->m_window->GetSize(&m_width, &m_height);
+    m_window->GetSize(&m_width, &m_height);
     m_inputmgr->SetMousePosition(m_width / 2, m_height / 2);
 }
 
 void FpsCamera::HandleMouseInput(double dt, int half_width, int half_height)
 {
-    const double sensitivity = 0.1;
-    const double smoothing = 15.0;
-
-    m_mag_x = m_mouse_x - half_width;
-    m_mag_y = m_mouse_y - half_height;
-
-    /*m_mag_x = MathUtil::Lerp(
-        m_old_mag_x,
-        m_mag_x,
-        MathUtil::Clamp(smoothing * dt, 0.0, 1.0)
-    );
-
-    m_mag_y = MathUtil::Lerp(
-        m_old_mag_y,
-        m_mag_y,
-        MathUtil::Clamp(smoothing * dt, 0.0, 1.0)
-    );*/
-
-    m_old_mag_x = m_mag_x;
-    m_old_mag_y = m_mag_y;
+    m_mag = {
+        static_cast<float>(m_mouse_x - half_width),
+        static_cast<float>(m_mouse_y - half_height)
+    };
 
     m_dir_cross_y = Vector3(m_direction).Cross(m_up);
 
-    Rotate(m_up, MathUtil::DegToRad(m_mag_x * sensitivity));
-    Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag_y * sensitivity));
+    Rotate(m_up, MathUtil::DegToRad(m_mag.x * mouse_sensitivity));
+    Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag.y * mouse_sensitivity));
 
     if (m_direction.y > 0.97f || m_direction.y < -0.97f) {
-        m_mag_y *= -1.0f;
-        Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag_y * sensitivity));
+        m_mag.y *= -1.0f;
+
+        Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag.y * mouse_sensitivity));
     }
 }
 
 void FpsCamera::HandleKeyboardInput(double dt)
 {
-    double speed = dt * 5.0;
+    float speed = movement_speed * static_cast<float>(dt);
 
     if (m_inputmgr->IsKeyDown(KEY_LEFT_SHIFT) || m_inputmgr->IsKeyDown(KEY_RIGHT_SHIFT)) {
-        speed *= 2.0;
+        speed = movement_speed_2 * static_cast<float>(dt);
     }
 
     if (m_inputmgr->IsKeyDown(KEY_W)) {
@@ -110,6 +88,17 @@ void FpsCamera::HandleKeyboardInput(double dt)
         m_next_translation += m_dir_cross_y * speed;
     }
 
-    m_translation.Lerp(m_next_translation, MathUtil::Clamp(2.0 * dt, 0.0, 1.0));
+    constexpr float blending = (movement_blending > 0.0f)
+        ? 1.0f / movement_blending
+        : 1.0f;
+
+    m_translation.Lerp(
+        m_next_translation,
+        MathUtil::Clamp(
+            blending * static_cast<float>(dt),
+            0.0f,
+            1.0f
+        )
+    );
 }
 } // namespace hyperion

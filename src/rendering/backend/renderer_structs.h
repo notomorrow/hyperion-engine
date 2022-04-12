@@ -136,6 +136,8 @@ struct MeshInputAttributeSet {
 
     MeshInputAttributeSet()
         : flag_mask(0) {}
+    MeshInputAttributeSet(uint64_t flag_mask)
+        : flag_mask(flag_mask) {}
     MeshInputAttributeSet(const MeshInputAttributeSet &other)
         : flag_mask(other.flag_mask) {}
 
@@ -146,16 +148,17 @@ struct MeshInputAttributeSet {
         return *this;
     }
 
-    explicit MeshInputAttributeSet(uint64_t flag_mask)
-        : flag_mask(flag_mask)
-    {
-    }
-
     ~MeshInputAttributeSet() = default;
 
-    inline uint64_t operator&(uint64_t flags) const { return flag_mask & flags; }
-    inline uint64_t operator|(uint64_t flags) const { return flag_mask | flags; }
-    inline bool Has(MeshInputAttribute::Type type) const { return bool(operator&(uint64_t(type))); }
+    explicit operator bool() const { return bool(flag_mask); }
+
+    MeshInputAttributeSet operator~() const { return ~flag_mask; }
+    MeshInputAttributeSet operator&(uint64_t flags) const { return {flag_mask & flags}; }
+    MeshInputAttributeSet &operator&=(uint64_t flags) { flag_mask &= flags; return *this; }
+    MeshInputAttributeSet operator|(uint64_t flags) const { return {flag_mask | flags}; }
+    MeshInputAttributeSet &operator|=(uint64_t flags) { flag_mask |= flags; return *this; }
+
+    bool Has(MeshInputAttribute::Type type) const { return bool(operator&(uint64_t(type))); }
 
     void Set(uint64_t flags, bool enable = true)
     {

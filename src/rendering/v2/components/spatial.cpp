@@ -17,6 +17,7 @@ Spatial::Spatial(
       m_local_aabb(local_aabb),
       m_world_aabb(local_aabb * transform),
       m_material(std::move(material)),
+      m_octree(nullptr),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
 }

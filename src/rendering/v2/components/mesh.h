@@ -1,9 +1,5 @@
-//
-// Created by emd22 on 2022-03-19.
-//
-
-#ifndef HYPERION_MESH_H
-#define HYPERION_MESH_H
+#ifndef HYPERION_V2_MESH_H
+#define HYPERION_V2_MESH_H
 
 #include "base.h"
 
@@ -30,9 +26,11 @@ public:
 
     Mesh(const std::vector<Vertex> &vertices,
         const std::vector<Index> &indices);
+    Mesh(const Mesh &other) = delete;
+    Mesh &operator=(const Mesh &other) = delete;
     ~Mesh();
 
-    inline const MeshInputAttributeSet &GetVertexAttributes() const
+    const MeshInputAttributeSet &GetVertexAttributes() const
         { return m_vertex_attributes; }
     
     void CalculateTangents();

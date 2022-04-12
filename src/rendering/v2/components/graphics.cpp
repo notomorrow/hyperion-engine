@@ -44,6 +44,7 @@ void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
     /* append any attributes not yet added */
     m_vertex_attributes.Merge(spatial->GetVertexAttributes());
 
+    spatial.Init();
     spatial->OnAddedToPipeline(this);
 
     m_spatials.push_back(std::move(spatial));

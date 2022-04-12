@@ -7,10 +7,17 @@
 #include <math/vector3.h>
 #include <math/bounding_box.h>
 
+namespace hyperion {
+
+class Camera;
+
+} // namespace hyperion
+
 namespace hyperion::v2 {
 
 class Octree {
     friend class Engine;
+    friend class Spatial;
 
     struct Callback {
         using CallbackFunction = std::function<void(Engine *, Octree *, Spatial *)>;
@@ -67,6 +74,7 @@ public:
     bool Insert(Engine *engine, Spatial *spatial);
     bool Remove(Engine *engine, Spatial *spatial);
     bool Update(Engine *engine, Spatial *spatial);
+    void CalculateVisibility(Camera *camera, uint32_t scene_slot);
 
 private:
     inline auto FindNode(Spatial *spatial)

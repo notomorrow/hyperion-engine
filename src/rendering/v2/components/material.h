@@ -215,6 +215,8 @@ public:
     using TextureSet = EnumOptions<TextureKey, Texture::ID, max_textures>;
 
     Material();
+    Material(const Material &other) = delete;
+    Material &operator=(const Material &other) = delete;
     ~Material();
 
     ShaderDataState GetShaderDataState() const { return m_shader_data_state; }

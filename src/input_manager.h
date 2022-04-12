@@ -13,25 +13,29 @@ namespace hyperion {
 
 class InputEvent {
 public:
+    using Callback = std::function<void(SystemWindow *window, bool pressed)>;
+
     InputEvent();
-    InputEvent(std::function<void(bool)> handler);
+    InputEvent(Callback &&handler);
     InputEvent(const InputEvent &other);
 
-    inline bool IsEmpty() const { return m_is_empty; }
-    inline void Trigger(bool pressed)
+    bool IsEmpty() const { return m_is_empty; }
+
+    template <class ...Args>
+    void Trigger(Args &&... args)
     {
         if (m_is_empty) {
             return;
         }
 
-        m_handler(pressed);
+        m_handler(std::forward<Args>(args)...);
     }
 
-    inline void SetHandler(const std::function<void(bool)> &handler) { m_handler = handler; }
+    inline void SetHandler(Callback &&handler) { m_handler = std::move(handler); }
 
 private:
+    Callback m_handler;
     bool m_is_empty;
-    std::function<void(bool)> m_handler;
 };
 
 class InputManager {

@@ -43,20 +43,12 @@ void Frustum::SetViewProjectionMatrix(const Matrix4 &view_proj)
 {
     Matrix4 mat = view_proj;
 
-    Vector4 rows[6];
-    for (int i = 0; i < 4; i++) {
-        rows[i].x = mat(i, 0);
-        rows[i].y = mat(i, 1);
-        rows[i].z = mat(i, 2);
-        rows[i].w = mat(i, 3);
-    }
-
-    m_planes[0] = (rows[3] + rows[0]).Normalize();
-    m_planes[1] = (rows[3] - rows[0]).Normalize();
-    m_planes[2] = (rows[3] + rows[1]).Normalize();
-    m_planes[3] = (rows[3] - rows[1]).Normalize();
-    m_planes[4] = (rows[3] + rows[2]).Normalize();
-    m_planes[5] = (rows[3] - rows[2]).Normalize();
+    m_planes[0] = (mat.rows[3] + mat.rows[0]).Normalize();
+    m_planes[1] = (mat.rows[3] - mat.rows[0]).Normalize();
+    m_planes[2] = (mat.rows[3] + mat.rows[1]).Normalize();
+    m_planes[3] = (mat.rows[3] - mat.rows[1]).Normalize();
+    m_planes[4] = (mat.rows[3] + mat.rows[2]).Normalize();
+    m_planes[5] = (mat.rows[3] - mat.rows[2]).Normalize();
 
     mat.Transpose();
     

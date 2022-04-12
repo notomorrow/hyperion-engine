@@ -189,7 +189,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
         skeleton = engine->assets.Load<Skeleton>(skeleton_path);
 
         if (skeleton == nullptr) {
-            DebugLog(LogType::Warn, "Ogre XML parser: Failed to load skeleton at %s\n", skeleton_path.c_str());
+            DebugLog(LogType::Warn, "Ogre XML parser: Could not load skeleton at %s\n", skeleton_path.c_str());
         }
     }
 
@@ -200,7 +200,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
 
         for (auto &sub_mesh : object.submeshes) {
             if (sub_mesh.indices.empty()) {
-                DebugLog(LogType::Warn, "Ogre XML parser: Skipping submesh with empty indices\n");
+                DebugLog(LogType::Info, "Ogre XML parser: Skipping submesh with empty indices\n");
 
                 continue;
             }
@@ -225,7 +225,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
                     std::move(mesh),
                     vertex_attributes,
                     Transform(),
-                    BoundingBox(),
+                    BoundingBox(-3, 3), /* TODO */
                     engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
                 )
             );

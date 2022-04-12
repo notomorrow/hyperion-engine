@@ -170,16 +170,16 @@ void Node::UpdateWorldTransform()
         m_world_transform = m_local_transform;
     }
 
-    if (m_spatial != nullptr) {
-        m_spatial->SetTransform(m_world_transform);
-    }
-
     m_world_aabb = m_local_aabb * m_world_transform;
 
     for (auto &node : m_child_nodes) {
         node->UpdateWorldTransform();
 
         m_world_aabb.Extend(node->m_world_aabb);
+    }
+
+    if (m_spatial != nullptr) {
+        m_spatial->SetTransform(m_world_transform);
     }
 }
 

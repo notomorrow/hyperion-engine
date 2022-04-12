@@ -6,7 +6,7 @@ UIManager::UIManager(InputManager *input_manager)
       m_input_event(new InputEvent),
       m_mouse_pressed(false)
 {
-    m_input_event->SetHandler([&](bool pressed) {
+    m_input_event->SetHandler([&](SystemWindow *window, bool pressed) {
         m_mouse_pressed = pressed;
         // process click event on all ui objects
         HandleMouseEvent();
@@ -38,7 +38,7 @@ void UIManager::HandleMouseEvent()
         // std::cout << "update " << object->GetName() << "\n";
         if (object->IsMouseOver((float)mouse_x, (float)mouse_y)) {
             std::cout << "mouseover " << object->GetName() << "\n";
-            object->GetClickEvent().Trigger(m_mouse_pressed);
+            object->GetClickEvent().Trigger(nullptr, m_mouse_pressed);
         }
     }
 }
