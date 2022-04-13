@@ -134,9 +134,31 @@ void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t f
     auto *secondary_command_buffer = m_effect.GetFrameData()->At(frame_index).Get<CommandBuffer>();
     HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(primary));
 
-    RenderTransparentObjects(engine, primary, frame_index);
+    RenderTranslucentObjects(engine, primary, frame_index);
 
     pipeline->Get().EndRenderPass(primary, 0);
+}
+
+void DeferredRenderer::RenderOpaqueObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+{
+    auto &render_list = engine->GetRenderList();
+
+    for (const auto &pipeline : render_list.Get(GraphicsPipeline::Bucket::BUCKET_SKYBOX).pipelines.objects) {
+        pipeline->Render(engine, primary, frame_index);
+    }
+
+    for (const auto &pipeline : render_list.Get(GraphicsPipeline::Bucket::BUCKET_OPAQUE).pipelines.objects) {
+        pipeline->Render(engine, primary, frame_index);
+    }
+}
+
+void DeferredRenderer::RenderTranslucentObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+{
+    const auto &render_list = engine->GetRenderList();
+
+    for (const auto &pipeline : render_list[GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT].pipelines.objects) {
+        pipeline->Render(engine, primary, frame_index);
+    }
 }
 
 } // namespace hyperion::v2

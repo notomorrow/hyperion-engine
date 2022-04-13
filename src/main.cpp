@@ -178,14 +178,15 @@ int main()
     
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/television/Television_01_4k.obj",
+        base_path + "/res/models/sponza/sponza.obj",
         base_path + "/res/models/cube.obj"
     );
 
 
     zombie->Scale(0.35f);
 
-    sponza->Scale(2.5f);
+    sponza->Scale(0.1f);
+    //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
     sponza->Update(&engine);
     
 
@@ -320,6 +321,7 @@ int main()
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
+            scene.Acquire(),
             engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
         );
@@ -353,6 +355,7 @@ int main()
 
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             std::move(shader),
+            scene.Acquire(),
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX
         );
@@ -371,6 +374,7 @@ int main()
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
+            scene.Acquire(),
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
         );

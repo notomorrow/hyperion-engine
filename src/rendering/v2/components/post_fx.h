@@ -26,7 +26,8 @@ class Engine;
 class PostEffect {
 public:
     static std::shared_ptr<hyperion::Mesh> full_screen_quad;
-
+    
+    PostEffect();
     PostEffect(Ref<Shader> &&shader);
     PostEffect(const PostEffect &) = delete;
     PostEffect &operator=(const PostEffect &) = delete;

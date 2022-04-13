@@ -15,6 +15,11 @@ using renderer::ImageSamplerDescriptor;
 
 std::shared_ptr<hyperion::Mesh> PostEffect::full_screen_quad = MeshFactory::CreateQuad();
 
+PostEffect::PostEffect()
+    : PostEffect(nullptr)
+{
+}
+
 PostEffect::PostEffect(Ref<Shader> &&shader)
     : m_pipeline_id{},
       m_framebuffer_id{},
@@ -62,6 +67,8 @@ void PostEffect::CreateRenderPass(Engine *engine)
 
 void PostEffect::Create(Engine *engine)
 {
+    CreateRenderPass(engine);
+
     auto *render_pass = engine->resources.render_passes[m_render_pass_id];
     AssertThrow(render_pass != nullptr);
 
@@ -127,9 +134,11 @@ void PostEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
+        nullptr,
         m_render_pass_id,
         GraphicsPipeline::Bucket::BUCKET_PREPASS
     );
+
     pipeline->AddFramebuffer(m_framebuffer_id);
     pipeline->SetDepthWrite(false);
     pipeline->SetDepthTest(false);
@@ -254,8 +263,7 @@ void PostProcessing::Create(Engine *engine)
                 }}
             }
         )));
-
-        m_filters[i]->CreateRenderPass(engine);
+        
         m_filters[i]->Create(engine);
         m_filters[i]->CreateDescriptors(engine, binding_index);
     }
