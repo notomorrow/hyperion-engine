@@ -1,6 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : enable
 
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
@@ -11,11 +12,6 @@ layout(location=7) in vec3 v_camera_position;
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
-
-struct TextureRef {
-    uint index;
-    uint used;
-};
 
 struct Material {
     vec4 albedo;
@@ -40,7 +36,9 @@ struct Material {
     float uv_scale;
     float parallax_height;
     
-    TextureRef texture_index[8];
+    uint texture_index[2];
+    uint texture_usage[2];
+    
     /* Texture schema:
        0 - albedo
        1 - normals
@@ -50,7 +48,7 @@ struct Material {
        5 - roughness */
 };
 
-layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
+layout(std430, set = 3, binding = 0) readonly buffer MaterialBuffer {
     Material material;
 };
 
@@ -64,7 +62,11 @@ void main() {
     
     vec3 reflection_vector = reflect(view_vector, normal);
     
-    gbuffer_albedo = texture(textures[material.texture_index[0].index], v_texcoord0) * material.albedo;
+    gbuffer_albedo = material.albedo;
+    gbuffer_albedo *= bool(material.texture_usage[0])
+        ? texture(textures[material.texture_index[0]], v_texcoord0)
+        : vec4(1.0);
+    
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }

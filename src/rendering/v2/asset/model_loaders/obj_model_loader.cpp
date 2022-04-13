@@ -164,6 +164,13 @@ LoaderResult ObjModelLoader::LoadFn(LoaderState *state, Object &object)
         if (tokens[0] == "f") {
             auto &last_mesh = LastMesh(object);
 
+            /* we don't support per-face material so we compromise by setting the mesh's material
+             * to the last 'usemtl' value when we hit the face command.
+             */
+            if (!active_material.empty()) {
+                last_mesh.material = active_material;
+            }
+
             if (tokens.size() > 5) {
                 DebugLog(LogType::Warn, "Faces with more than 4 vertices are not supported by the OBJ model loader\n");
             }

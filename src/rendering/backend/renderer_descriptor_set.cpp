@@ -510,19 +510,17 @@ void Descriptor::RemoveSubDescriptor(uint32_t index)
     m_sub_descriptors[index] = {.valid = false};
 
     if (index == m_sub_descriptors.size() - 1) {
-        auto &sub_descriptor = m_sub_descriptors[index];
+        const auto *sub_descriptor = &m_sub_descriptors[index];
 
         /* pop any sub descriptors marked for deletion */
-        while (!sub_descriptor.valid) {
+        while (!sub_descriptor->valid) {
             m_sub_descriptors.pop_back();
 
             if (index == 0) {
                 break;
             }
-
-            --index;
-
-            sub_descriptor = m_sub_descriptors[index];
+            
+            sub_descriptor = &m_sub_descriptors[--index];
         }
     }
 }
