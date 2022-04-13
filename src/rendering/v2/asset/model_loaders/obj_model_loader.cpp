@@ -1,6 +1,7 @@
 #include "obj_model_loader.h"
 #include <rendering/v2/engine.h>
 #include <rendering/v2/components/mesh.h>
+#include <rendering/v2/components/material.h>
 
 #include <algorithm>
 
@@ -109,6 +110,8 @@ Vector GetIndexedVertexProperty(int64_t vertex_index, const std::vector<Vector> 
 
 LoaderResult ObjModelLoader::LoadFn(LoaderState *state, Object &object)
 {
+    object.filepath = state->filepath;
+
     Tokens tokens;
     tokens.reserve(5);
 
@@ -225,6 +228,22 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 {
     auto top = std::make_unique<Node>(object.tag.c_str());
 
+    std::unique_ptr<MaterialLibrary> material_library;
+    
+    if (!object.material_library.empty()) {
+        auto material_library_path = StringUtil::BasePath(object.filepath) + "/" + object.material_library;
+
+        if (!StringUtil::EndsWith(material_library_path, ".mtl")) {
+            material_library_path += ".mtl";
+        }
+
+        material_library = engine->assets.Load<MaterialLibrary>(material_library_path);
+
+        if (material_library == nullptr) {
+            DebugLog(LogType::Warn, "Obj model loader: Could not load material library at %s\n", material_library_path.c_str());
+        }
+    }
+
     const bool has_vertices  = !object.positions.empty(),
                has_normals   = !object.normals.empty(),
                has_texcoords = !object.texcoords.empty();
@@ -248,7 +267,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             }
 
             Vertex vertex;
-            const Mesh::Index index = Mesh::Index(vertices.size());
+            const auto index = Mesh::Index(vertices.size());
 
             if (has_vertices) {
                 vertex.SetPosition(GetIndexedVertexProperty(obj_index.vertex, object.positions));
@@ -266,6 +285,20 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             indices.push_back(index);
 
             index_map[obj_index] = index;
+        }
+
+        Ref<Material> material;
+
+        if (!obj_mesh.material.empty() && material_library != nullptr) {
+            if (material_library->Has(obj_mesh.material)) {
+                material = material_library->Get(obj_mesh.material).Acquire();
+            } else {
+                DebugLog(
+                    LogType::Warn,
+                    "Material %s could not be found in material library\n",
+                    obj_mesh.material.c_str()
+                );
+            }
         }
 
         engine->resources.Lock([&](Resources &resources) {
@@ -288,14 +321,12 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
                 std::make_unique<Spatial>(
                     std::move(mesh),
                     vertex_attributes,
-                    engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
+                    std::move(material)
                 )
             );
             
             auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
-
             node->SetSpatial(std::move(spatial));
-
             top->AddChild(std::move(node));
         });
     }

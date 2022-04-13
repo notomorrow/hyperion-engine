@@ -17,6 +17,8 @@ enum class LoaderFormat {
     OGRE_XML_SKELETON,
     FBOM_MODEL,
 
+    MTL_MATERIAL_LIBRARY,
+
     TEXTURE_2D
 };
 

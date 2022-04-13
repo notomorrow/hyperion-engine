@@ -85,4 +85,10 @@ void Material::SetTexture(TextureKey key, Texture::ID id)
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
+MaterialLibrary::MaterialLibrary()
+{
+}
+
+MaterialLibrary::~MaterialLibrary() = default;
+
 } // namespace hyperion::v2

@@ -47,6 +47,8 @@ public:
     inline const Octree::VisibilityState &GetVisibilityState() const { return m_visibility_state; }
     
     Mesh *GetMesh() const { return m_mesh.ptr; }
+    void SetMesh(Ref<Mesh> &&mesh);
+
     Octree *GetOctree() const { return m_octree; }
 
     Material *GetMaterial() const { return m_material.ptr; }
@@ -77,6 +79,7 @@ private:
     
     void OnAddedToOctree(Octree *octree);
     void OnRemovedFromOctree(Octree *octree);
+    void AddToOctree(Engine *engine);
     void RemoveFromOctree(Engine *engine);
 
     Ref<Mesh> m_mesh;

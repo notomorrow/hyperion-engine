@@ -47,6 +47,10 @@ void Spatial::Init(Engine *engine)
             m_skeleton.Init();
         }
 
+        if (m_octree == nullptr) {
+            AddToOctree(engine);
+        }
+
         UpdateShaderData(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
@@ -106,6 +110,15 @@ void Spatial::UpdateOctree(Engine *engine)
     if (m_octree != nullptr) {
         m_visibility_state = m_octree->GetVisibilityState();
     }
+}
+
+void Spatial::SetMesh(Ref<Mesh> &&mesh)
+{
+    if (m_mesh == mesh) {
+        return;
+    }
+
+
 }
 
 void Spatial::SetMaterial(Ref<Material> &&material)
@@ -184,6 +197,15 @@ void Spatial::OnRemovedFromOctree(Octree *octree)
     AssertThrow(m_octree != nullptr);
 
     m_octree = nullptr;
+}
+
+void Spatial::AddToOctree(Engine *engine)
+{
+    AssertThrow(m_octree == nullptr);
+
+    if (!engine->GetOctree().Insert(engine, this)) {
+        DebugLog(LogType::Warn, "Spatial #%lu could not be added to octree\n", m_id.value);
+    }
 }
 
 void Spatial::RemoveFromOctree(Engine *engine)

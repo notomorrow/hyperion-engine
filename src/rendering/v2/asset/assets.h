@@ -2,8 +2,9 @@
 #define HYPERION_V2_ASSETS_H
 
 #include "model_loaders/obj_model_loader.h"
+#include "material_loaders/mtl_material_loader.h"
 #include "model_loaders/ogre_xml_model_loader.h"
-#include "model_loaders/ogre_xml_skeleton_loader.h"
+#include "skeleton_loaders/ogre_xml_skeleton_loader.h"
 #include "texture_loaders/texture_loader.h"
 #include "../components/node.h"
 
@@ -37,8 +38,9 @@ class Assets {
 
         LoaderFormat GetResourceFormat() const
         {
-            constexpr StaticMap<const char *, LoaderFormat, 10> extensions{
+            constexpr StaticMap<const char *, LoaderFormat, 11> extensions{
                 std::make_pair(".obj",          LoaderFormat::OBJ_MODEL),
+                std::make_pair(".mtl",          LoaderFormat::MTL_MATERIAL_LIBRARY),
                 std::make_pair(".mesh.xml",     LoaderFormat::OGRE_XML_MODEL),
                 std::make_pair(".skeleton.xml", LoaderFormat::OGRE_XML_SKELETON),
                 std::make_pair(".png",          LoaderFormat::TEXTURE_2D),
@@ -135,11 +137,46 @@ class Assets {
         }
     };
 
+    template <>
+    struct Functor<MaterialLibrary> : FunctorBase {
+        std::unique_ptr<MaterialLibrary> operator()(Engine *engine)
+        {
+            return LoadResource(engine, GetLoader<MaterialLibrary, LoaderFormat::MTL_MATERIAL_LIBRARY>());
+        }
+    };
+
     template <class Type, class ...Args>
     auto LoadAsync(Args &&... paths)
     {
         const std::array<std::string,     sizeof...(paths)> filepaths{paths...};
         std::array<std::unique_ptr<Type>, sizeof...(paths)> results{};
+
+        std::vector<std::thread> threads;
+        threads.reserve(results.size());
+        
+        for (size_t i = 0; i < filepaths.size(); i++) {
+            threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
+                DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
+
+                auto functor = Functor<Type>{};
+                functor.filepath = filepaths[index];
+
+                results[index] = functor(engine);
+            });
+        }
+
+        for (auto &thread : threads) {
+            thread.join();
+        }
+
+        return std::move(results);
+    }
+
+    template <class Type>
+    auto LoadAsyncVector(std::vector<std::string> &&filepaths) -> std::vector<std::unique_ptr<Type>>
+    {
+        std::vector<std::unique_ptr<Type>> results{};
+        results.resize(filepaths.size());
 
         std::vector<std::thread> threads;
         threads.reserve(results.size());
@@ -178,7 +215,7 @@ public:
         return std::move(LoadAsync<Type>(filepath).front());
     }
 
-    /*! \brief Loads a collection of assets asynchornously from one another (the function returns when all have
+    /*! \brief Loads a collection of assets asynchronously from one another (the function returns when all have
      *   been loaded). For any assets that could not be loaded, nullptr will be in the array in place of the
      *   asset.
      * @param filepath The path of the first asset to be loaded
@@ -189,6 +226,18 @@ public:
     auto Load(const std::string &filepath, Args &&... other_paths)
     {
         return std::move(LoadAsync<Type>(filepath, std::move(other_paths)...));
+    }
+
+    /*! \brief Loads a collection of assets asynchronously from one another (the function returns when all have
+     *   been loaded). For any assets that could not be loaded, nullptr will be in the vector in place of the
+     *   asset.
+     * @param filepaths A vector of filepaths of files to load
+     * @returns A vector of unique pointers to Type
+     */
+    template <class Type>
+    auto Load(std::vector<std::string> &&filepaths) -> std::vector<std::unique_ptr<Type>>
+    {
+        return std::move(LoadAsyncVector<Type>(std::move(filepaths)));
     }
 
 private:
