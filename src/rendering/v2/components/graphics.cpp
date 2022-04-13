@@ -206,9 +206,9 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
 
                 auto &visibility_state = spatial->GetVisibilityState();
 
-                if (!visibility_state.Get(Scene::ID{m_scene_index + 1}, 0)) {
-                    continue;
-                }
+                //if (!visibility_state.Get(Scene::ID{m_scene_index + 1})) {
+               //     continue;
+               // }
 
                 const auto spatial_index = spatial->GetId().value - 1;
 
@@ -239,7 +239,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 spatial->GetMesh()->Render(engine, secondary);
 
                 if (auto *octree = spatial->GetOctree()) {
-                    octree->GetVisibilityState().Set(Scene::ID{m_scene_index + 1}, 0, false);
+                    octree->GetVisibilityState().Set(Scene::ID{m_scene_index + 1}, false);
                 }
             }
 

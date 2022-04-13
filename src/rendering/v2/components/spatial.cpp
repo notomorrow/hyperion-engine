@@ -118,7 +118,11 @@ void Spatial::SetMesh(Ref<Mesh> &&mesh)
         return;
     }
 
+    m_mesh = std::move(mesh);
 
+    if (m_mesh != nullptr && IsInit()) {
+        m_mesh.Init();
+    }
 }
 
 void Spatial::SetMaterial(Ref<Material> &&material)
@@ -129,7 +133,7 @@ void Spatial::SetMaterial(Ref<Material> &&material)
 
     m_material = std::move(material);
 
-    if (IsInit() && m_material != nullptr) {
+    if (m_material != nullptr && IsInit()) {
         m_material.Init();
     }
 }
@@ -142,7 +146,7 @@ void Spatial::SetSkeleton(Ref<Skeleton> &&skeleton)
 
     m_skeleton = std::move(skeleton);
 
-    if (IsInit() && m_skeleton != nullptr) {
+    if (m_skeleton != nullptr && IsInit()) {
         m_skeleton.Init();
     }
 }

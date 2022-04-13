@@ -127,7 +127,7 @@ void ShadowRenderer::Create(Engine *engine)
     uint32_t binding_index = 9; /* TMP */
     m_effect.CreateDescriptors(engine, binding_index);
 
-    /* TMP */
+    /* TMP: will have to be dynamic because objects will be added and removed */
     engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
         auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
 

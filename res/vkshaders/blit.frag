@@ -29,6 +29,6 @@ void main() {
     if (out_color.a < 0.2) {
         
         out_color = vec4(texture(deferred_result, texcoord).rgb, 1.0);
-    //out_color = vec4(texture(shadow_map, texcoord).rgb, 1.0);
+        //out_color = vec4(texture(shadow_map, texcoord).rgb, 1.0);
     }
 }
