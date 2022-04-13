@@ -13,8 +13,6 @@ public:
     ~Renderer();
 
 protected:
-    void RenderOpaqueObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
-    void RenderTransparentObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
 };
 
 } // namespace hyperion::v2

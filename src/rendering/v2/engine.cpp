@@ -8,7 +8,7 @@
 
 #include <rendering/backend/renderer_features.h>
 
-#include "rendering/mesh.h"
+#include <rendering/camera/ortho_camera.h>
 
 namespace hyperion::v2 {
 
@@ -23,7 +23,8 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
       shader_globals(nullptr),
       m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
       resources(this),
-      assets(this)
+      assets(this),
+      m_shadow_renderer(std::make_unique<OrthoCamera>(-50, 50, -50, 50, -50, 50))
 {
     m_octree.m_root = &m_octree_root;
 }
@@ -173,6 +174,7 @@ void Engine::PrepareSwapchain()
             render_pass_id = resources.render_passes.Add(this, std::move(render_pass));
             m_root_pipeline = std::make_unique<GraphicsPipeline>(
                 shader.Acquire(),
+                nullptr,
                 render_pass_id,
                 GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN
             );

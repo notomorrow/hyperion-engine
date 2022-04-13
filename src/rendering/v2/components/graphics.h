@@ -3,6 +3,7 @@
 
 #include "shader.h"
 #include "spatial.h"
+#include "scene.h"
 #include "texture.h"
 #include "framebuffer.h"
 #include "render_pass.h"
@@ -53,12 +54,13 @@ public:
             { return value < other.value && bucket < other.bucket; }
     };
 
-    GraphicsPipeline(Ref<Shader> &&shader, RenderPass::ID render_pass_id, Bucket bucket);
+    GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, RenderPass::ID render_pass_id, Bucket bucket);
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();
 
     inline Shader *GetShader() const { return m_shader.ptr; }
+    inline Scene *GetScene() const { return m_scene.ptr; }
     inline RenderPass::ID GetRenderPassID() const { return m_render_pass_id; }
     inline Bucket GetBucket() const { return m_bucket; }
 
@@ -104,9 +106,6 @@ public:
 
     inline void AddFramebuffer(Framebuffer::ID id) { m_fbo_ids.Add(id); }
     inline void RemoveFramebuffer(Framebuffer::ID id) { m_fbo_ids.Remove(id); }
-
-    inline uint32_t GetSceneIndex() const { return m_scene_index; }
-    inline void SetSceneIndex(uint32_t scene_index) { m_scene_index = scene_index; }
     
     /* Build pipeline */
     void Create(Engine *engine);
@@ -118,6 +117,7 @@ private:
     void OnSpatialRemoved(Spatial *spatial);
 
     Ref<Shader> m_shader;
+    Ref<Scene> m_scene;
     RenderPass::ID m_render_pass_id;
     Bucket m_bucket;
     Topology m_topology;
@@ -131,8 +131,6 @@ private:
     ObjectIdHolder<Framebuffer> m_fbo_ids;
 
     std::vector<Ref<Spatial>> m_spatials;
-
-    uint32_t m_scene_index;
 
     PerFrameData<CommandBuffer> *m_per_frame_data;
 };

@@ -9,9 +9,10 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 
-GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, RenderPass::ID render_pass_id, Bucket bucket)
+GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, RenderPass::ID render_pass_id, Bucket bucket)
     : EngineComponent(),
       m_shader(std::move(shader)),
+      m_scene(std::move(scene)),
       m_render_pass_id(render_pass_id),
       m_bucket(bucket),
       m_topology(Topology::TRIANGLES),
@@ -27,8 +28,7 @@ GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, RenderPass::ID render_p
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT)),
-      m_per_frame_data(nullptr),
-      m_scene_index(0)
+      m_per_frame_data(nullptr)
 {
 }
 
@@ -81,6 +81,10 @@ void GraphicsPipeline::Create(Engine *engine)
 {
     AssertThrow(m_shader != nullptr);
     m_shader->Init(engine);
+
+    if (m_scene != nullptr) {
+        m_scene->Init(engine);
+    }
     
     auto *render_pass = engine->resources.render_passes[m_render_pass_id];
     AssertThrow(render_pass != nullptr);
@@ -167,14 +171,29 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 device,
                 secondary,
                 &m_wrapped,
-                {{.set = 1, .count = 1}}
+                {{.set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, .count = 1}}
             );
 
-            static constexpr uint32_t frame_index_scene_buffer_mapping[]  = {2, 4};
-            static constexpr uint32_t frame_index_object_buffer_mapping[] = {3, 5};
-            static constexpr uint32_t frame_index_bindless_textures_mapping[] = { DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS, DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1 };
+            static constexpr uint32_t frame_index_scene_buffer_mapping[]  = {
+                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
+                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1
+            };
 
-            static_assert(std::size(frame_index_object_buffer_mapping) == renderer::Swapchain::max_frames_in_flight);
+            static constexpr uint32_t frame_index_object_buffer_mapping[] = {
+                DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT,
+                DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1
+            };
+
+            static constexpr uint32_t frame_index_bindless_textures_mapping[] = {
+                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS,
+                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1
+            };
+
+            static_assert(std::size(frame_index_object_buffer_mapping) == Swapchain::max_frames_in_flight);
+
+            const auto scene_index = m_scene != nullptr
+                ? m_scene->GetId().value - 1
+                : 0;
 
             /* Bind scene data - */
             instance->GetDescriptorPool().Bind(
@@ -183,8 +202,8 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 &m_wrapped,
                 {
                     {.set = frame_index_scene_buffer_mapping[frame_index], .count = 1},
-                    {.binding = 2},
-                    {.offsets = {uint32_t(m_scene_index * sizeof(SceneShaderData))}}
+                    {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+                    {.offsets = {uint32_t(scene_index * sizeof(SceneShaderData))}}
                 }
             );
 
@@ -204,11 +223,13 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                     continue;
                 }
 
-                auto &visibility_state = spatial->GetVisibilityState();
+                if (m_scene != nullptr) {
+                    auto &visibility_state = spatial->GetVisibilityState();
 
-                //if (!visibility_state.Get(Scene::ID{m_scene_index + 1})) {
-               //     continue;
-               // }
+                    if (!visibility_state.Get(m_scene->GetId())) {
+                        continue;
+                    }
+                }
 
                 const auto spatial_index = spatial->GetId().value - 1;
 
@@ -227,7 +248,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                     &m_wrapped,
                     {
                         {.set = frame_index_object_buffer_mapping[frame_index], .count = 1},
-                        {.binding = 3},
+                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT},
                         {.offsets = {
                             uint32_t(material_index * sizeof(MaterialShaderData)),
                             uint32_t(spatial_index * sizeof(ObjectShaderData)),
@@ -238,8 +259,10 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
 
                 spatial->GetMesh()->Render(engine, secondary);
 
-                if (auto *octree = spatial->GetOctree()) {
-                    octree->GetVisibilityState().Set(Scene::ID{m_scene_index + 1}, false);
+                if (m_scene != nullptr) {
+                    if (auto *octree = spatial->GetOctree()) {
+                        octree->GetVisibilityState().Set(m_scene->GetId(), false);
+                    }
                 }
             }
 

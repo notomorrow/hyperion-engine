@@ -71,7 +71,7 @@ static auto &LastMaterial(MtlMaterialLoader::Object &object)
     return object.materials.back();
 }
 
-static bool IsTransparencyModel(int illum_model)
+static bool IsTransparencyModel(IlluminationModel illum_model)
 {
     return illum_model == ILLUM_TRANSPARENT_GLASS_RAYTRACED
         || illum_model == ILLUM_TRANSPARENT_REFRACTION_RAYTRACED
@@ -86,6 +86,7 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
     const std::unordered_map<std::string, Material::TextureKey> texture_keys{
         std::make_pair("map_kd",   Material::MATERIAL_TEXTURE_ALBEDO_MAP),
         std::make_pair("map_bump", Material::MATERIAL_TEXTURE_NORMAL_MAP),
+        std::make_pair("bump",     Material::MATERIAL_TEXTURE_NORMAL_MAP),
         std::make_pair("map_ka",   Material::MATERIAL_TEXTURE_METALNESS_MAP),
         std::make_pair("map_ks",   Material::MATERIAL_TEXTURE_METALNESS_MAP),
         std::make_pair("map_ns",   Material::MATERIAL_TEXTURE_ROUGHNESS_MAP)
@@ -177,30 +178,13 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
             return;
         }
 
-        if (tokens[0] == "bump") {
-            if (tokens.size() < 2) {
-                DebugLog(LogType::Warn, "Obj Mtl loader: bump value missing\n");
-
-                return;
-            }
-
-            std::string bump_name = tokens[tokens.size() - 1];
-            
-            LastMaterial(object).textures.push_back({
-                .key = Material::MATERIAL_TEXTURE_NORMAL_MAP,
-                .name = bump_name
-            });
-
-            return;
-        }
-
         const auto texture_it = texture_keys.find(tokens[0]);
 
         if (texture_it != texture_keys.end()) {
             std::string name;
 
             if (tokens.size() >= 2) {
-                name = tokens[1];
+                name = tokens[tokens.size() - 1];
             } else {
                 DebugLog(LogType::Warn, "Obj Mtl loader: texture arg name missing\n");
             }

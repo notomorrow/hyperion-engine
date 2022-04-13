@@ -36,6 +36,9 @@ public:
     void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
 
 private:
+    void RenderOpaqueObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
+    void RenderTranslucentObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
+
     DeferredRenderingEffect m_effect;
 };
 

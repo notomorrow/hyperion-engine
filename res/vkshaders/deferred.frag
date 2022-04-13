@@ -4,8 +4,8 @@
 
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec2 v_texcoord0;
-layout(location=2) in vec3 v_light_direction;
-layout(location=3) in vec3 v_camera_position;
+layout(location=2) in flat vec3 v_light_direction;
+layout(location=3) in flat vec3 v_camera_position;
 
 layout(location=0) out vec4 output_color;
 layout(location=1) out vec4 output_normals;
@@ -42,12 +42,12 @@ void main()
     vec4 position;
     
     albedo = texture(gbuffer_albedo, texcoord);
-    normal = texture(gbuffer_normals, texcoord);
+    normal = texture(gbuffer_normals, texcoord) * 2.0 - 1.0;
     position = texture(gbuffer_positions, texcoord);
     
     float NdotL = dot(normal.xyz, v_light_direction);
     
-    output_color = vec4(vec3(max(NdotL, 0.025)) * albedo.rgb, 1.0);
+    output_color = vec4(vec3(max(NdotL, 0.0)) * albedo.rgb, 1.0);
     output_normals = normal;
     output_positions = position;
 }

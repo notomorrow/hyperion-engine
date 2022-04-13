@@ -1,13 +1,15 @@
 #include "shadows.h"
 #include "../engine.h"
 
+#include <rendering/camera/ortho_camera.h>
+
 #include <asset/byte_reader.h>
 #include <asset/asset_manager.h>
 
 namespace hyperion::v2 {
 
 ShadowEffect::ShadowEffect()
-    : PostEffect({})
+    : PostEffect()
 {
 }
 
@@ -64,18 +66,22 @@ void ShadowEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
+        m_scene.Acquire(),
         m_render_pass_id,
         GraphicsPipeline::Bucket::BUCKET_PREPASS
     );
+
     pipeline->SetCullMode(CullMode::FRONT);
     pipeline->AddFramebuffer(m_framebuffer_id);
-    pipeline->SetSceneIndex(1);
-
+    
     m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
 }
 
-void ShadowEffect::Create(Engine *engine)
+void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
 {
+    m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(std::move(camera)));
+    m_scene.Init();
+
     auto *render_pass = engine->resources.render_passes[m_render_pass_id];
 
     AssertThrow(render_pass != nullptr);
@@ -115,14 +121,20 @@ void ShadowEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame
 {
 }
 
-ShadowRenderer::ShadowRenderer() = default;
+ShadowRenderer::ShadowRenderer(std::unique_ptr<Camera> &&camera)
+    : m_camera(std::move(camera))
+{
+}
+
 ShadowRenderer::~ShadowRenderer() = default;
 
 void ShadowRenderer::Create(Engine *engine)
 {
+    AssertThrow(m_camera != nullptr);
+
     m_effect.CreateShader(engine);
     m_effect.CreateRenderPass(engine);
-    m_effect.Create(engine);
+    m_effect.Create(engine, std::move(m_camera));
 
     uint32_t binding_index = 9; /* TMP */
     m_effect.CreateDescriptors(engine, binding_index);
