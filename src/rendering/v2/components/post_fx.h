@@ -44,8 +44,8 @@ public:
     inline Shader *GetShader() const
         { return m_shader.ptr; }
 
-    inline RenderPass::ID GetRenderPassId() const
-        { return m_render_pass_id; }
+    inline RenderPass *GetRenderPass() const
+        { return m_render_pass.ptr; }
 
     inline GraphicsPipeline::ID GetGraphicsPipelineId() const
         { return m_pipeline_id; }
@@ -67,7 +67,7 @@ protected:
     std::unique_ptr<PerFrameData<CommandBuffer>> m_frame_data;
     Framebuffer::ID m_framebuffer_id;
     Ref<Shader> m_shader;
-    RenderPass::ID m_render_pass_id;
+    Ref<RenderPass> m_render_pass;
     GraphicsPipeline::ID m_pipeline_id;
 
     std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;

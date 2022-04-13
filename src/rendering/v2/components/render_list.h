@@ -13,7 +13,7 @@ public:
     struct Bucket {
         GraphicsPipeline::Bucket bucket;
         ObjectHolder<GraphicsPipeline> pipelines;
-        RenderPass::ID render_pass_id;
+        Ref<RenderPass> render_pass;
         std::vector<Framebuffer::ID> framebuffer_ids;
         std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
 

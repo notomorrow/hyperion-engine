@@ -10,7 +10,8 @@ Resources::Resources(Engine *engine)
       spatials(engine->callbacks, {engine}),
       meshes(engine->callbacks, {engine}),
       skeletons(engine->callbacks, {engine}),
-      scenes(engine->callbacks, {engine})
+      scenes(engine->callbacks, {engine}),
+      render_passes(engine->callbacks, {engine})
 {
 }
 
@@ -25,7 +26,6 @@ void Resources::Create(Engine *engine)
 void Resources::Destroy(Engine *engine)
 {
     framebuffers.RemoveAll(engine);
-    render_passes.RemoveAll(engine);
     compute_pipelines.RemoveAll(engine);
 }
 

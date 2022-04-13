@@ -54,14 +54,14 @@ public:
             { return value < other.value && bucket < other.bucket; }
     };
 
-    GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, RenderPass::ID render_pass_id, Bucket bucket);
+    GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, Ref<RenderPass> &&render_pass, Bucket bucket);
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();
 
     inline Shader *GetShader() const { return m_shader.ptr; }
     inline Scene *GetScene() const { return m_scene.ptr; }
-    inline RenderPass::ID GetRenderPassID() const { return m_render_pass_id; }
+    inline RenderPass *GetRenderPassID() const { return m_render_pass.ptr; }
     inline Bucket GetBucket() const { return m_bucket; }
 
     inline MeshInputAttributeSet &GetVertexAttributes() { return m_vertex_attributes; }
@@ -118,7 +118,7 @@ private:
 
     Ref<Shader> m_shader;
     Ref<Scene> m_scene;
-    RenderPass::ID m_render_pass_id;
+    Ref<RenderPass> m_render_pass;
     Bucket m_bucket;
     Topology m_topology;
     CullMode m_cull_mode;

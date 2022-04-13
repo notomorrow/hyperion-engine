@@ -105,10 +105,11 @@ void Engine::PrepareSwapchain()
 
     uint32_t iteration = 0;
     
-    auto render_pass = std::make_unique<RenderPass>(
+    auto render_pass = resources.render_passes.Add(std::make_unique<RenderPass>(
         renderer::RenderPassStage::PRESENT,
         renderer::RenderPass::Mode::RENDER_PASS_INLINE
-    );
+    ));
+
     RenderPass::ID render_pass_id{};
 
 
@@ -171,11 +172,12 @@ void Engine::PrepareSwapchain()
             render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[0]);
             render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
 
-            render_pass_id = resources.render_passes.Add(this, std::move(render_pass));
+            render_pass.Init();
+
             m_root_pipeline = std::make_unique<GraphicsPipeline>(
                 shader.Acquire(),
                 nullptr,
-                render_pass_id,
+                render_pass.Acquire(),
                 GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN
             );
         }
@@ -183,7 +185,7 @@ void Engine::PrepareSwapchain()
         m_root_pipeline->AddFramebuffer(resources.framebuffers.Add(
             this,
             std::move(fbo),
-            &resources.render_passes[render_pass_id]->Get()
+            &render_pass->Get()
         ));
 
         ++iteration;
@@ -303,6 +305,8 @@ void Engine::Initialize()
     /* for textures */
     shader_globals->textures.Create(this);
 
+    callbacks.TriggerPersisted(EngineCallback::CREATE_RENDER_PASSES, this);
+
     m_render_list.Create(this);
     
     callbacks.TriggerPersisted(EngineCallback::CREATE_SCENES, this);
@@ -328,11 +332,13 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
 
-    resources.Destroy(this);
-
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
     m_post_processing.Destroy(this);
+
+    callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
+
+    resources.Destroy(this);
 
     if (shader_globals != nullptr) {
         shader_globals->scenes.Destroy(m_instance->GetDevice());
