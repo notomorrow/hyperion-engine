@@ -21,7 +21,7 @@ public:
         for (size_t x = 0; x < width; x++) {
             for (size_t y = 0; y < height; y++) {
                 for (size_t z = 0; z < depth; z++) {
-                    const size_t idx = ((z * width * height) + (y * height) + x);
+                    const size_t idx = x * height * depth + y * depth + z; //((z * width * height) + (y * height) + x);
                     const size_t in_index  = idx * in_bpp;
                     const size_t out_index = idx * out_bpp;
 

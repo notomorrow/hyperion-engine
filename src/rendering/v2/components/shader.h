@@ -82,15 +82,8 @@ struct alignas(256) ObjectShaderData {
     uint32_t _padding[3];
 };
 
-HYP_PACK_BEGIN
-struct TextureRef {
-    uint32_t index;
-    uint32_t used;
-}
-HYP_PACK_END
-
 struct alignas(256) MaterialShaderData {
-    static constexpr size_t max_bound_textures = 8;
+    static constexpr size_t max_bound_textures = 2;
 
     Vector4 albedo;
 
@@ -113,8 +106,9 @@ struct alignas(256) MaterialShaderData {
     uint32_t uv_flip_t;
     float uv_scale;
     float parallax_height;
-    
-    TextureRef texture_index[max_bound_textures];
+
+    uint32_t texture_index[max_bound_textures];
+    uint32_t texture_usage[max_bound_textures];
 };
 
 static_assert(sizeof(MaterialShaderData) == 256);

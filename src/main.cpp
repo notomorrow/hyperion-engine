@@ -178,14 +178,14 @@ int main()
     
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/sponza/sponza.obj",
+        base_path + "/res/models/living_room/living_room.obj",
         base_path + "/res/models/cube.obj"
     );
 
 
     zombie->Scale(0.35f);
 
-    sponza->Scale(0.01f);
+    sponza->Scale(0.5f);
     sponza->Update(&engine);
     
 
@@ -522,7 +522,7 @@ int main()
         ));
 #endif
 
-        Transform transform(Vector3(7, 2, 7), Vector3(1.0f), Quaternion());
+        Transform transform(Vector3(-4, -7, -2), Vector3(0.35f), Quaternion());
 
         engine.GetOctree().CalculateVisibility(scene.ptr);
 
@@ -536,13 +536,6 @@ int main()
         
         cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         cube_obj->Update(&engine);
-        
-
-        //if (monkey_obj->GetChild(0)->GetSpatial()->GetOctree() != nullptr) {
-        //    std::cout << "visible ? " << monkey_obj->GetChild(0)->GetSpatial()->GetVisibilityState().Get(scene->GetId(), 0) << "  for  " << monkey_obj->GetChild(0)->GetSpatial()->GetOctree()->GetAabb() << "\n";
-        //}
-
-        //engine.SetSpatialTransform(engine.GetSpatial(v2::Spatial::ID{3}), Transform(camera->GetTranslation(), { 1.0f, 1.0f, 1.0f }, Quaternion()));
 
         /* Only update sets that are double - buffered so we don't
          * end up updating data that is in use by the gpu
@@ -550,24 +543,24 @@ int main()
         engine.UpdateDescriptorData(frame_index);
         
         HYPERION_ASSERT_RESULT(frame->BeginCapture());
-
         engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
         engine.RenderPostProcessing(frame->GetCommandBuffer(), frame_index);
 
 
 #if HYPERION_VK_TEST_IMAGE_STORE
-        VkImageMemoryBarrier imageMemoryBarrier = {};
-        imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        /* TODO: where should this go? find a way to abstract this */
+        VkImageMemoryBarrier image_memory_barrier = {};
+        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         // We won't be changing the layout of the image
-        imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageMemoryBarrier.image = image_storage->GetGPUImage()->image;
-        imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-        imageMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_memory_barrier.oldLayout        = VK_IMAGE_LAYOUT_GENERAL;
+        image_memory_barrier.newLayout        = VK_IMAGE_LAYOUT_GENERAL;
+        image_memory_barrier.image            = image_storage->GetGPUImage()->image;
+        image_memory_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+        image_memory_barrier.srcAccessMask    = VK_ACCESS_SHADER_WRITE_BIT;
+        image_memory_barrier.dstAccessMask     = VK_ACCESS_SHADER_READ_BIT;
+        image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         vkCmdPipelineBarrier(
             frame->GetCommandBuffer()->GetCommandBuffer(),
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -575,7 +568,7 @@ int main()
             0,
             0, nullptr,
             0, nullptr,
-            1, &imageMemoryBarrier);
+            1, &image_memory_barrier);
 #endif
 
         engine.RenderSwapchain(frame->GetCommandBuffer());

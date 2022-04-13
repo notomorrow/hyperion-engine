@@ -64,6 +64,7 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
     const std::unordered_map<std::string, Material::TextureKey> texture_keys{
         std::make_pair("map_kd",   Material::MATERIAL_TEXTURE_ALBEDO_MAP),
         std::make_pair("map_bump", Material::MATERIAL_TEXTURE_NORMAL_MAP),
+        std::make_pair("map_ka",   Material::MATERIAL_TEXTURE_METALNESS_MAP),
         std::make_pair("map_ks",   Material::MATERIAL_TEXTURE_METALNESS_MAP),
         std::make_pair("map_ns",   Material::MATERIAL_TEXTURE_ROUGHNESS_MAP)
     };
