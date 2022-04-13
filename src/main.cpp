@@ -112,10 +112,7 @@ int main()
     
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
-
-   // auto old_ogre = AssetManager::GetInstance()->LoadFromFile<Node>("models/ogrexml/dragger_Body.mesh.xml");
-
-
+    
     
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
@@ -124,14 +121,7 @@ int main()
     SystemEvent event;
 
     v2::Engine engine(system, "My app");
-
-
-
-    /* Descriptor sets */
-    GPUBuffer matrices_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT),
-              scene_data_descriptor_buffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    // test data for descriptors
-
+    
     
     std::vector<std::shared_ptr<Texture2D>> cubemap_faces;
     cubemap_faces.resize(6);
@@ -186,52 +176,38 @@ int main()
 
     engine.Initialize();
     
-    auto [zombie, monkey, cube_obj] = engine.assets.Load<v2::Node>(
+    auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/sheen/sheen.obj",
+        base_path + "/res/models/sponza/sponza.obj",
         base_path + "/res/models/cube.obj"
     );
 
 
     zombie->Scale(0.35f);
-    
-    
-    {
-        auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
 
-
-#if HYPERION_VK_TEST_IMAGE_STORE
-        descriptor_set_globals
-            ->AddDescriptor<ImageStorageDescriptor>(16)
-            ->AddSubDescriptor({ .image_view = &image_storage_view });
-#endif
-    }
+    sponza->Scale(0.01f);
+    sponza->Update(&engine);
+    
 
     Device *device = engine.GetInstance()->GetDevice();
     
-    {
-        //texture.Init();
-        //texture2.Init();
-        
-        //cubemap->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(3) });
-        //cubemap->Init(&engine);
-    }
-
 #if HYPERION_VK_TEST_IMAGE_STORE
-    {
-        HYPERION_ASSERT_RESULT(image_storage->Create(
-            device,
-            engine.GetInstance(),
-            Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL>{}
-        ));
+    auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
+        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
 
-        HYPERION_ASSERT_RESULT(image_storage_view.Create(device, image_storage));
-    }
+
+    descriptor_set_globals
+        ->AddDescriptor<ImageStorageDescriptor>(16)
+        ->AddSubDescriptor({ .image_view = &image_storage_view });
+
+    HYPERION_ASSERT_RESULT(image_storage->Create(
+        device,
+        engine.GetInstance(),
+        Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL>{}
+    ));
+
+    HYPERION_ASSERT_RESULT(image_storage_view.Create(device, image_storage));
 #endif
-
-    matrices_descriptor_buffer.Create(device, 8);
-    scene_data_descriptor_buffer.Create(device, 8);
     
     engine.PrepareSwapchain();
     
@@ -349,7 +325,18 @@ int main()
         );
         
         pipeline->AddSpatial(cube_spatial.Acquire());
-        pipeline->AddSpatial(engine.resources.spatials.Acquire(monkey->GetChild(0)->GetSpatial()));
+
+        std::function<void(v2::Node *)> find_spatials = [&](v2::Node *node) {
+            if (auto *spatial = node->GetSpatial()) {
+                pipeline->AddSpatial(engine.resources.spatials.Acquire(spatial));
+            }
+
+            for (auto &child : node->GetChildren()) {
+                find_spatials(child.get());
+            }
+        };
+
+        find_spatials(sponza.get());
         
         main_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
@@ -500,15 +487,6 @@ int main()
 
         timer += delta_time;
 
-        if (timer > 2.0 && !updated_descriptor) {
-            //engine.shader_globals->textures.RemoveResource(texture);
-            //texture2->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(1) });
-            //engine.shader_globals->textures.AddResource(texture2);
-
-
-            updated_descriptor = true;
-        }
-
         scene->Update(&engine, delta_time);
 
         HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
@@ -548,9 +526,7 @@ int main()
 
         engine.GetOctree().CalculateVisibility(scene.ptr);
 
-        monkey->SetLocalScale(Vector3(2.2f));
-        monkey->SetLocalTranslation(Vector3(5.0f, 0.0f, 2.0f));
-        monkey->Update(&engine);
+        sponza->Update(&engine);
         
         zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_transform.SetRotation(Quaternion({0, 1, 0}, timer * 0.35f));
         zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
@@ -618,9 +594,6 @@ int main()
 
     zombie.reset();
     cube_obj.reset();
-
-    matrices_descriptor_buffer.Destroy(device);
-    scene_data_descriptor_buffer.Destroy(device);
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     HYPERION_ASSERT_RESULT(image_storage_view.Destroy(device));

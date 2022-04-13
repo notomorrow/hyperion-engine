@@ -78,7 +78,7 @@ std::unique_ptr<Texture> TextureLoader::BuildFn(Engine *engine, const Object &ob
         },
         object.format,
         Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
+        Image::WrapMode::TEXTURE_WRAP_REPEAT,
         &object.data[0]
     );
 }
