@@ -42,6 +42,8 @@ struct LoaderObject<MaterialLibrary, LoaderFormat::MTL_MATERIAL_LIBRARY> {
         std::unordered_map<Material::MaterialKey, ParameterDef> parameters;
     };
 
+    std::string filepath;
+
     std::vector<MaterialDef> materials;
 };
 

@@ -4,10 +4,13 @@
 
 namespace hyperion::v2 {
 
-Material::Material()
+Material::Material(const char *tag)
     : EngineComponentBase(),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
+    size_t len = std::strlen(tag);
+    m_tag = new char[len + 1];
+    std::strcpy(m_tag, tag);
 }
 
 Material::~Material()
@@ -24,7 +27,21 @@ void Material::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_MATERIALS, [this](Engine *engine) {
+        for (size_t i = 0; i < m_textures.Size(); i++) {
+            if (auto &texture = m_textures.ValueAt(i)) {
+                if (texture == nullptr) {
+                    continue;
+                }
+
+                texture.Init();
+            }
+        }
+
         UpdateShaderData(engine);
+
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
+            m_textures.Clear();
+        }), engine);
     }));
 }
 
@@ -53,14 +70,29 @@ void Material::UpdateShaderData(Engine *engine) const
     );
     
     for (size_t i = 0; i < num_bound_textures; i++) {
-        if (const auto &texture_id = m_textures.ValueAt(i)) {
-            if (engine->shader_globals->textures.GetResourceIndex(texture_id, &shader_data.texture_index[i].index)) {
+        if (const auto &texture = m_textures.ValueAt(i)) {
+            if (texture == nullptr) {
+                DebugLog(
+                    LogType::Warn,
+                    "Texture could not be bound for Material %d because it is null\n",
+                    m_id.value
+                );
+
+                continue;
+            }
+
+            if (engine->shader_globals->textures.GetResourceIndex(texture->GetId(), &shader_data.texture_index[i].index)) {
                 shader_data.texture_index[i].used = 1;
 
                 continue;
             }
 
-            DebugLog(LogType::Warn, "Texture %d could not be bound for Material %d because it is not found in the bindless texture store\n", texture_id.value, m_id.value);
+            DebugLog(
+                LogType::Warn,
+                "Texture #%d could not be bound for Material %d because it is not found in the bindless texture store\n",
+                texture->GetId().value,
+                m_id.value
+            );
         }
 
         shader_data.texture_index[i].used = 0;
@@ -78,17 +110,18 @@ void Material::SetParameter(MaterialKey key, const Parameter &value)
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Material::SetTexture(TextureKey key, Texture::ID id)
+void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
 {
-    m_textures.Set(key, id);
+    if (texture && IsInit()) {
+        texture.Init();
+    }
+
+    m_textures.Set(key, std::move(texture));
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-MaterialLibrary::MaterialLibrary()
-{
-}
-
+MaterialLibrary::MaterialLibrary() = default;
 MaterialLibrary::~MaterialLibrary() = default;
 
 } // namespace hyperion::v2

@@ -55,7 +55,11 @@ void Mesh::Init(Engine *engine)
         DebugLog(LogType::Info, "Init mesh with %llu vertices and %llu indices\n", m_vertices.size(), m_indices.size());
 
         if (m_vertices.empty() || m_indices.empty()) {
-            DebugLog(LogType::Warn, "Create mesh with empty vertices or indices list\n");
+            DebugLog(LogType::Warn, "Attempt to create Mesh #%lu with empty vertices or indices list\n", m_id.value);
+
+            /* set to 1 vertex / index */
+            m_vertices = {Vertex()};
+            m_indices  = {0};
         }
 
         UploadToDevice(engine->GetInstance()->GetDevice());

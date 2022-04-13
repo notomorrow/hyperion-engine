@@ -130,10 +130,10 @@ class Assets {
     };
 
     template <>
-    struct Functor<Texture2D> : FunctorBase {
-        std::unique_ptr<Texture2D> operator()(Engine *engine)
+    struct Functor<Texture> : FunctorBase {
+        std::unique_ptr<Texture> operator()(Engine *engine)
         {
-            return LoadResource(engine, GetLoader<Texture2D, LoaderFormat::TEXTURE_2D>());
+            return LoadResource(engine, GetLoader<Texture, LoaderFormat::TEXTURE_2D>());
         }
     };
 
@@ -173,7 +173,7 @@ class Assets {
     }
 
     template <class Type>
-    auto LoadAsyncVector(std::vector<std::string> &&filepaths) -> std::vector<std::unique_ptr<Type>>
+    auto LoadAsyncVector(std::vector<std::string> filepaths) -> std::vector<std::unique_ptr<Type>>
     {
         std::vector<std::unique_ptr<Type>> results{};
         results.resize(filepaths.size());
@@ -196,7 +196,7 @@ class Assets {
             thread.join();
         }
 
-        return std::move(results);
+        return results;
     }
 
 public:
@@ -235,9 +235,9 @@ public:
      * @returns A vector of unique pointers to Type
      */
     template <class Type>
-    auto Load(std::vector<std::string> &&filepaths) -> std::vector<std::unique_ptr<Type>>
+    auto Load(const std::vector<std::string> &filepaths)
     {
-        return std::move(LoadAsyncVector<Type>(std::move(filepaths)));
+        return LoadAsyncVector<Type>(filepaths);
     }
 
 private:

@@ -151,8 +151,7 @@ int main()
         std::memcpy(&bytes[i * cubemap_face_bytesize], cubemap_faces[i]->GetBytes(), cubemap_face_bytesize);
     }
 
-
-    auto *cubemap = new v2::TextureCube(
+    auto cubemap = engine.resources.textures.Add(std::make_unique<v2::TextureCube>(
         Extent2D{
             uint32_t(cubemap_faces[0]->GetWidth()),
             uint32_t(cubemap_faces[0]->GetHeight())
@@ -161,17 +160,17 @@ int main()
         Image::FilterMode::TEXTURE_FILTER_LINEAR,
         Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
         bytes
-    );
+    ));
 
     delete[] bytes;
 
 
     auto texture = engine.resources.textures.Add(
-        engine.assets.Load<v2::Texture2D>(base_path + "/res/textures/dirt.jpg")
+        engine.assets.Load<v2::Texture>(base_path + "/res/textures/dirt.jpg")
     );
 
     auto texture2 = engine.resources.textures.Add(
-        engine.assets.Load<v2::Texture2D>(base_path + "/res/textures/dummy.jpg")
+        engine.assets.Load<v2::Texture>(base_path + "/res/textures/dummy.jpg")
     );
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -189,7 +188,7 @@ int main()
     
     auto [zombie, monkey, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/monkey/monkey.obj",
+        base_path + "/res/models/sheen/sheen.obj",
         base_path + "/res/models/cube.obj"
     );
 
@@ -212,11 +211,11 @@ int main()
     Device *device = engine.GetInstance()->GetDevice();
     
     {
-        texture.Init();
-        texture2.Init();
+        //texture.Init();
+        //texture2.Init();
         
-        cubemap->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(3) });
-        cubemap->Init(&engine);
+        //cubemap->SetId(v2::Texture::ID{ v2::Texture::ID::ValueType(3) });
+        //cubemap->Init(&engine);
     }
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -320,22 +319,22 @@ int main()
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 0.5f }));
-    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture->GetId());
+    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
     mat1.Init();
     
     auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
-    mat2->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture2->GetId());
+    mat2->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture2.Acquire());
     mat2.Init();
 
     auto skybox_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
     skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-    skybox_material->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap->GetId());
+    skybox_material->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.Acquire());
     skybox_material.Init();
 
     auto translucent_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
     translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
-    mat1.Init();
+   // mat1.Init();
 
     //v2::Spatial *cube_spatial{};
     auto cube_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
@@ -632,7 +631,7 @@ int main()
 #endif
     
     
-    delete cubemap;
+    //delete cubemap;
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
         per_frame_data[i].Get<CommandBuffer>()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsCommandPool());

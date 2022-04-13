@@ -59,6 +59,8 @@ static auto &LastMaterial(MtlMaterialLoader::Object &object)
 
 LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
 {
+    object.filepath = state->filepath;
+
     const std::unordered_map<std::string, Material::TextureKey> texture_keys{
         std::make_pair("map_Kd", Material::MATERIAL_TEXTURE_ALBEDO_MAP),
         std::make_pair("map_bump", Material::MATERIAL_TEXTURE_NORMAL_MAP),
@@ -178,37 +180,60 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
 std::unique_ptr<MaterialLibrary> MtlMaterialLoader::BuildFn(Engine *engine, const Object &object)
 {
     auto material_library = std::make_unique<MaterialLibrary>();
-
-    std::set<std::string> texture_filepaths;
+    
+    std::unordered_map<std::string, std::string> texture_names_to_path;
 
     for (const auto &item : object.materials) {
         for (const auto &it : item.textures) {
-            texture_filepaths.insert(it.name);
+            const auto texture_path = StringUtil::BasePath(object.filepath) + "/" + it.name;
+
+            texture_names_to_path[it.name] = texture_path;
         }
     }
-
+    
     std::vector<std::string> all_filepaths;
-    all_filepaths.insert(all_filepaths.end(), texture_filepaths.begin(), texture_filepaths.end());
+    std::vector<std::unique_ptr<Texture>> loaded_textures;
 
-    auto loaded_textures = engine->assets.Load<Texture2D>(std::vector<std::string>(all_filepaths));
+    if (!texture_names_to_path.empty()) {
+        for (auto &it : texture_names_to_path) {
+            all_filepaths.push_back(it.second);
+        }
 
-    std::unordered_map<std::string, Ref<Texture>> texture_refs;
-
-    for (size_t i = 0; i < loaded_textures.size(); i++) {
-        texture_refs[all_filepaths[i]] = engine->resources.textures.Add(std::move(loaded_textures[i]));
+        loaded_textures = engine->assets.Load<Texture>(all_filepaths);
     }
 
     engine->resources.Lock([&](Resources &resources) {
+        std::unordered_map<std::string, Ref<Texture>> texture_refs;
+
+        for (size_t i = 0; i < loaded_textures.size(); i++) {
+            if (loaded_textures[i] == nullptr) {
+                texture_refs[all_filepaths[i]] = nullptr;
+
+                continue;
+            }
+
+            texture_refs[all_filepaths[i]] = engine->resources.textures.Add(std::move(loaded_textures[i]));
+        }
+
         for (auto &item : object.materials) {
-            auto material = std::make_unique<Material>();
+            auto material = std::make_unique<Material>(item.tag.c_str());
 
             for (auto &it : item.parameters) {
                 material->SetParameter(it.first, Material::Parameter(it.second.values.data(), it.second.values.size()));
             }
 
             for (auto &it : item.textures) {
-                /* TODO */
-                //material->SetTexture(it.key, texture_refs[it.name].Acquire());
+                if (texture_refs[texture_names_to_path[it.name]] == nullptr) {
+                    DebugLog(
+                        LogType::Warn,
+                        "Obj Mtl loader: Texture %s could not be used because it could not be loaded\n",
+                        it.name.c_str()
+                    );
+
+                    continue;
+                }
+                
+                material->SetTexture(it.key, texture_refs[texture_names_to_path[it.name]].Acquire());
             }
 
             material_library->Add(item.tag, resources.materials.Add(std::move(material)));
