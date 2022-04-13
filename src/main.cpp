@@ -322,7 +322,7 @@ int main()
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
             scene.Acquire(),
-            engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id,
+            engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass.Acquire(),
             v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
         );
         
@@ -356,7 +356,7 @@ int main()
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             std::move(shader),
             scene.Acquire(),
-            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass_id,
+            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass.Acquire(),
             v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX
         );
         pipeline->SetCullMode(CullMode::FRONT);
@@ -375,7 +375,7 @@ int main()
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
             scene.Acquire(),
-            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
+            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass.Acquire(),
             v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
         );
         pipeline->SetBlendEnabled(true);

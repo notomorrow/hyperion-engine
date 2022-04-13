@@ -9,11 +9,11 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 
-GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, RenderPass::ID render_pass_id, Bucket bucket)
+GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, Ref<RenderPass> &&render_pass, Bucket bucket)
     : EngineComponent(),
       m_shader(std::move(shader)),
       m_scene(std::move(scene)),
-      m_render_pass_id(render_pass_id),
+      m_render_pass(std::move(render_pass)),
       m_bucket(bucket),
       m_topology(Topology::TRIANGLES),
       m_cull_mode(CullMode::BACK),
@@ -85,9 +85,6 @@ void GraphicsPipeline::Create(Engine *engine)
     if (m_scene != nullptr) {
         m_scene->Init(engine);
     }
-    
-    auto *render_pass = engine->resources.render_passes[m_render_pass_id];
-    AssertThrow(render_pass != nullptr);
 
     renderer::GraphicsPipeline::ConstructionInfo construction_info{
         .vertex_attributes = m_vertex_attributes,
@@ -98,7 +95,7 @@ void GraphicsPipeline::Create(Engine *engine)
         .depth_write       = m_depth_write,
         .blend_enabled     = m_blend_enabled,
         .shader            = &m_shader->Get(),
-        .render_pass       = &render_pass->Get()
+        .render_pass       = &m_render_pass->Get()
     };
 
     for (const auto &fbo_id : m_fbo_ids.ids) {

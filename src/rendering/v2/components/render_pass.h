@@ -7,18 +7,17 @@
 
 namespace hyperion::v2 {
 
-using RenderPass = EngineComponent<renderer::RenderPass>;
+using renderer::RenderPassStage;
 
-/*class RenderPass : public EngineComponent<renderer::RenderPass> {
+class RenderPass : public EngineComponent<renderer::RenderPass> {
 public:
-    RenderPass();
+    RenderPass(RenderPassStage stage, renderer::RenderPass::Mode mode);
     RenderPass(const RenderPass &other) = delete;
     RenderPass &operator=(const RenderPass &other) = delete;
     ~RenderPass();
 
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
-};*/
+    void Init(Engine *engine);
+};
 
 } // namespace hyperion::v2
 

@@ -34,7 +34,7 @@ void DeferredRenderingEffect::CreateShader(Engine *engine)
 
 void DeferredRenderingEffect::CreateRenderPass(Engine *engine)
 {
-    m_render_pass_id = engine->GetRenderList()[GraphicsPipeline::BUCKET_TRANSLUCENT].render_pass_id;
+    m_render_pass = engine->GetRenderList()[GraphicsPipeline::BUCKET_TRANSLUCENT].render_pass.Acquire();
 }
 
 void DeferredRenderingEffect::Create(Engine *engine)

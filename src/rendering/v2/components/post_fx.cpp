@@ -24,7 +24,7 @@ PostEffect::PostEffect(Ref<Shader> &&shader)
     : m_pipeline_id{},
       m_framebuffer_id{},
       m_shader(std::move(shader)),
-      m_render_pass_id{}
+      m_render_pass(nullptr)
 {
 }
 
@@ -62,27 +62,25 @@ void PostEffect::CreateRenderPass(Engine *engine)
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
     }
 
-    m_render_pass_id = engine->resources.render_passes.Add(engine, std::move(render_pass));
+    m_render_pass = engine->resources.render_passes.Add(std::move(render_pass));
+    m_render_pass.Init();
 }
 
 void PostEffect::Create(Engine *engine)
 {
     CreateRenderPass(engine);
 
-    auto *render_pass = engine->resources.render_passes[m_render_pass_id];
-    AssertThrow(render_pass != nullptr);
-
     auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent);
 
     /* Add all attachments from the renderpass */
-    for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
+    for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
         framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
     }
 
     m_framebuffer_id = engine->resources.framebuffers.Add(
         engine,
         std::move(framebuffer),
-        &render_pass->Get()
+        &m_render_pass->Get()
     );
 
     CreatePerFrameData(engine);
@@ -135,7 +133,7 @@ void PostEffect::CreatePipeline(Engine *engine)
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
         nullptr,
-        m_render_pass_id,
+        m_render_pass.Acquire(),
         GraphicsPipeline::Bucket::BUCKET_PREPASS
     );
 
@@ -168,7 +166,6 @@ void PostEffect::Destroy(Engine *engine)
     m_frame_data->Reset();
 
     engine->resources.framebuffers.Remove(engine, m_framebuffer_id);
-    engine->resources.render_passes.Remove(engine, m_render_pass_id);
 
     for (auto &attachment : m_attachments) {
         HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
