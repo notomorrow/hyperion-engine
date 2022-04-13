@@ -19,12 +19,12 @@ public:
     using EnumValuePair_t = std::pair<EnumType, ValueType>;
 
     // convert from attachment (2^x) into ordinal (0-5) for use as an array index
-    static inline constexpr uint64_t EnumToOrdinal(uint64_t option)
+    static constexpr uint64_t EnumToOrdinal(uint64_t option)
         { return MathUtil::FastLog2_Pow2(option); }
 
     // convert from ordinal (0-5) into power-of-two for use as bit flags
-    static inline constexpr uint64_t OrdinalToEnum(uint64_t ordinal)
-        { return 1ULL << ordinal; }
+    static constexpr uint64_t OrdinalToEnum(uint64_t ordinal)
+        { return 1ull << ordinal; }
 
     static_assert(Sz != 0, "EnumOptions cannot have size of zero");
     static_assert(
@@ -88,10 +88,19 @@ public:
     inline constexpr const ValueType &operator[](EnumOption_t enum_key) const
         { return m_values[EnumToOrdinal(enum_key)]; }
 
+    inline EnumOptions &Set(EnumOption_t enum_key, ValueType &&value)
+    {
+        auto ord = EnumToOrdinal(enum_key);
+        AssertThrow(ord < m_values.size());
+
+        m_values[ord] = std::move(value);
+
+        return *this;
+    }
+
     inline EnumOptions &Set(EnumOption_t enum_key, const ValueType &value)
     {
         auto ord = EnumToOrdinal(enum_key);
-
         AssertThrow(ord < m_values.size());
 
         m_values[ord] = value;
@@ -102,16 +111,21 @@ public:
     inline EnumOptions &Unset(EnumOption_t enum_key)
     {
         auto ord = EnumToOrdinal(enum_key);
-
         AssertThrow(ord < m_values.size());
 
-        m_values[ord] = ValueType();
+        m_values[ord] = {};
 
         return *this;
     }
 
-    inline constexpr size_t Size() const
-        { return m_values.size(); }
+    inline constexpr size_t Size() const { return m_values.size(); }
+
+    inline void Clear()
+    {
+        for (auto &value : m_values) {
+            value = std::move(ValueType{});
+        }
+    }
 
     inline HashCode GetHashCode() const
     {

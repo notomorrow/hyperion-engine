@@ -222,9 +222,9 @@ public:
     };
 
     using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
-    using TextureSet = EnumOptions<TextureKey, Texture::ID, max_textures>;
+    using TextureSet     = EnumOptions<TextureKey, Ref<Texture>, max_textures>;
 
-    Material();
+    Material(const char *tag = "");
     Material(const Material &other) = delete;
     Material &operator=(const Material &other) = delete;
     ~Material();
@@ -255,7 +255,7 @@ public:
     }
 
     void SetParameter(MaterialKey key, const Parameter &value);
-    void SetTexture(TextureKey key, Texture::ID id);
+    void SetTexture(TextureKey key, Ref<Texture> &&texture);
 
     void Init(Engine *engine);
     void UpdateShaderData(Engine *engine) const;
@@ -269,6 +269,8 @@ public:
     }
 
 private:
+    char *m_tag;
+
     ParameterTable  m_parameters;
     TextureSet      m_textures;
     mutable ShaderDataState m_shader_data_state;

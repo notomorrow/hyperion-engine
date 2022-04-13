@@ -86,7 +86,7 @@ GPUBuffer::~GPUBuffer()
 void GPUBuffer::Create(Device *device, size_t size)
 {
     if (size == 0) {
-        DebugLog(LogType::Warn, "Creating empty gpu buffer\n");
+        DebugLog(LogType::Warn, "Creating empty gpu buffer -- this will likely result in errors \n");
     }
 
     this->size = size;

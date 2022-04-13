@@ -353,7 +353,9 @@ protected:
     void OnInit(CallbackRef &&callback_ref)
     {
         if (m_init_callback.Valid()) {
-            DebugLog(LogType::Warn, "OnInit callback overwritten\n");
+            DebugLog(LogType::Warn, "OnInit callback overwritten!\n");
+
+            AssertThrow(m_init_callback.Remove());
         }
 
         m_init_callback = std::move(callback_ref);
@@ -366,6 +368,12 @@ protected:
     template <class ...Args>
     void OnTeardown(CallbackRef &&callback_ref, Args &&... bind_args)
     {
+        if (m_destroy_callback.Valid()) {
+            DebugLog(LogType::Warn, "OnTeardown callback overwritten!\n");
+
+            AssertThrow(m_destroy_callback.Remove());
+        }
+
         callback_ref.Bind(std::tie(std::forward<Args>(bind_args)...));
 
         m_destroy_callback = std::move(callback_ref);
@@ -774,16 +782,16 @@ public:
             other.m_ref_counter = nullptr;
         }
 
-        RefWrapper &operator=(RefWrapper &&other) noexcept
+        RefWrapper &operator=(RefWrapper &&other)
         {
-            if (&other == this) {
+            if (std::addressof(other) == this) {
                 return *this;
             }
 
             std::swap(ptr, other.ptr);
             std::swap(m_ref_counter, other.m_ref_counter);
 
-            if (other && !operator==(other)) {
+            if (other.Valid() && !operator==(other)) {
                 other.Release();
             }
 
@@ -970,10 +978,13 @@ public:
         AssertThrow(ptr != nullptr);
 
         const auto id = ptr->GetId();
-
-        AssertThrowMsg(m_ref_map[id].count != 0, "Cannot decrement refcount when already at zero (or not set)");
         
-        if (!--m_ref_map[id].count) {
+        AssertThrowMsg(m_ref_map.Has(id), "Refcount not set");
+
+        auto &counter = m_ref_map[id];
+        AssertThrowMsg(counter.count != 0, "Cannot decrement refcount when already at zero");
+        
+        if (!--counter.count) {
             m_holder.Remove(id);
             m_ref_map.Remove(id);
         }
