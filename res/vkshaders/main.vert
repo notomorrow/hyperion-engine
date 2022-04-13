@@ -81,7 +81,7 @@ void main() {
 
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
-    v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
+    v_texcoord0 = vec2(a_texcoord0.x, a_texcoord0.y);
     v_light_direction = scene.light_direction.xyz;
     v_camera_position = scene.camera_position.xyz;
     

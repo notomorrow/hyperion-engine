@@ -13,6 +13,24 @@ namespace hyperion {
 
 class StringUtil {
 public:
+    static constexpr std::string ToLower(const std::string &str)
+    {
+        std::string result(str);
+
+        std::transform(result.begin(), result.end(), result.begin(), std::tolower);
+
+        return result;
+    }
+
+    static constexpr std::string ToUpper(const std::string &str)
+    {
+        std::string result(str);
+
+        std::transform(result.begin(), result.end(), result.begin(), std::toupper);
+
+        return result;
+    }
+
     static constexpr bool StartsWith(const std::string &text, const std::string &token)
     {
         if (text.length() < token.length()) {

@@ -62,10 +62,10 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
     object.filepath = state->filepath;
 
     const std::unordered_map<std::string, Material::TextureKey> texture_keys{
-        std::make_pair("map_Kd", Material::MATERIAL_TEXTURE_ALBEDO_MAP),
+        std::make_pair("map_kd",   Material::MATERIAL_TEXTURE_ALBEDO_MAP),
         std::make_pair("map_bump", Material::MATERIAL_TEXTURE_NORMAL_MAP),
-        std::make_pair("map_Ks", Material::MATERIAL_TEXTURE_METALNESS_MAP),
-        std::make_pair("map_Ns", Material::MATERIAL_TEXTURE_ROUGHNESS_MAP)
+        std::make_pair("map_ks",   Material::MATERIAL_TEXTURE_METALNESS_MAP),
+        std::make_pair("map_ns",   Material::MATERIAL_TEXTURE_ROUGHNESS_MAP)
     };
 
     Tokens tokens;
@@ -92,6 +92,8 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
             return;
         }
 
+        tokens[0] = StringUtil::ToLower(tokens[0]);
+
         if (tokens[0] == "newmtl") {
             std::string name = "default";
 
@@ -106,7 +108,7 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
             return;
         }
 
-        if (tokens[0] == "Kd") {
+        if (tokens[0] == "kd") {
             auto color = ReadVector<Vector4>(tokens);
 
             if (tokens.size() < 5) {
@@ -120,7 +122,7 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
             return;
         }
 
-        if (tokens[0] == "Ns") {
+        if (tokens[0] == "ns") {
             if (tokens.size() < 2) {
                 DebugLog(LogType::Warn, "Obj Mtl loader: spec value missing\n");
 
@@ -152,6 +154,23 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
             return;
         }
 
+        if (tokens[0] == "bump") {
+            if (tokens.size() < 2) {
+                DebugLog(LogType::Warn, "Obj Mtl loader: bump value missing\n");
+
+                return;
+            }
+
+            std::string bump_name = tokens[tokens.size() - 1];
+            
+            LastMaterial(object).textures.push_back({
+                .key = Material::MATERIAL_TEXTURE_NORMAL_MAP,
+                .name = bump_name
+            });
+
+            return;
+        }
+
         const auto texture_it = texture_keys.find(tokens[0]);
 
         if (texture_it != texture_keys.end()) {
@@ -171,7 +190,7 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
             return;
         }
 
-        DebugLog(LogType::Warn, "Unable to parse mtl material line: %s\n", trimmed.c_str());
+        DebugLog(LogType::Warn, "Obj Mtl loader: Unable to parse mtl material line: %s\n", trimmed.c_str());
     });
 
     return {};
