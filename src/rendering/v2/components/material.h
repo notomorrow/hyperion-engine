@@ -74,11 +74,16 @@ public:
 
         template <size_t Size>
         explicit Parameter(std::array<float, Size> &&v)
-            : type(Type(MATERIAL_PARAMETER_TYPE_FLOAT + (Size - 1)))
+            : Parameter(v.data(), v.size())
         {
-            static_assert(Size >= 1 && Size <= 4);
+        }
+        
+        explicit Parameter(const float *v, size_t count)
+            : type(Type(MATERIAL_PARAMETER_TYPE_FLOAT + (count - 1)))
+        {
+            AssertThrow(count >= 1 && count <= 4);
 
-            std::memcpy(values.float_values, v, Size * sizeof(float));
+            std::memcpy(values.float_values, v, count * sizeof(float));
         }
         
         explicit Parameter(float value)
@@ -107,11 +112,16 @@ public:
 
         template <size_t Size>
         explicit Parameter(std::array<int, Size> &&v)
-            : type(Type(MATERIAL_PARAMETER_TYPE_INT + (Size - 1)))
+            : Parameter(v.data(), v.size())
         {
-            static_assert(Size >= 1 && Size <= 4);
+        }
+        
+        explicit Parameter(const int *v, size_t count)
+            : type(Type(MATERIAL_PARAMETER_TYPE_INT + (count - 1)))
+        {
+            AssertThrow(count >= 1 && count <= 4);
 
-            std::memcpy(values.int_values, v.data(), Size * sizeof(int));
+            std::memcpy(values.int_values, v, count * sizeof(int));
         }
 
         explicit Parameter(const Parameter &other)
@@ -262,6 +272,45 @@ private:
     ParameterTable  m_parameters;
     TextureSet      m_textures;
     mutable ShaderDataState m_shader_data_state;
+};
+
+class MaterialLibrary {
+public:
+    MaterialLibrary();
+    MaterialLibrary(const MaterialLibrary &other) = delete;
+    MaterialLibrary &operator=(const MaterialLibrary &other) = delete;
+    ~MaterialLibrary();
+
+    void Add(const std::string &name, Ref<Material> &&material)
+        { m_materials[name] = std::move(material); }
+
+    bool Remove(const std::string &name)
+    {
+        const auto it = m_materials.find(name);
+
+        if (it != m_materials.end()) {
+            m_materials.erase(it);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    Ref<Material> &Get(const std::string &name)
+        { return m_materials[name]; }
+
+    const Ref<Material> &Get(const std::string &name) const
+        { return m_materials.at(name); }
+
+    bool Has(const std::string &name) const
+        { return m_materials.find(name) != m_materials.end(); }
+
+
+
+
+private:
+    std::unordered_map<std::string, Ref<Material>> m_materials;
 };
 
 } // namespace hyperion::v2

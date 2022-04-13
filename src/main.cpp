@@ -187,24 +187,15 @@ int main()
 
     engine.Initialize();
     
-    auto [monkey_obj, cube_obj] = engine.assets.Load<v2::Node>(
+    auto [zombie, monkey, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
+        base_path + "/res/models/monkey/monkey.obj",
         base_path + "/res/models/cube.obj"
     );
 
-    monkey_obj->GetChild(0)->AddChild(std::make_unique<v2::Node>("Foobar"));
-    monkey_obj->GetChild(0)->GetChild(0)->AddChild(std::make_unique<v2::Node>("Baz"));
-    //monkey_obj->Translate({2.0f, 0.0f, 5.0f});
-    monkey_obj->Scale(0.35f);
-    monkey_obj->Update(&engine);
 
-    Transform t(Vector3(5,4,3), Vector3(1,1.5,1), Quaternion(Vector3(1, 0, 0), 0.53f));
-    Matrix4 m = t.GetMatrix();
-    m.Invert();
-
-    t.Invert();
-    Matrix4 m2 = t.GetMatrix();
-
+    zombie->Scale(0.35f);
+    
     
     {
         auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
@@ -328,7 +319,7 @@ int main()
     v2::Node new_root("root");
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
-    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 0.6f }));
+    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 0.5f }));
     mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture->GetId());
     mat1.Init();
     
@@ -348,7 +339,7 @@ int main()
 
     //v2::Spatial *cube_spatial{};
     auto cube_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
-    auto monkey_spatial = engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial());
+    auto zombie_spatial = engine.resources.spatials.Acquire(zombie->GetChild(0)->GetSpatial());
 
     v2::GraphicsPipeline::ID main_pipeline_id;
     {
@@ -357,9 +348,9 @@ int main()
             engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass_id,
             v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
         );
-
         
         pipeline->AddSpatial(cube_spatial.Acquire());
+        pipeline->AddSpatial(engine.resources.spatials.Acquire(monkey->GetChild(0)->GetSpatial()));
         
         main_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
@@ -399,12 +390,9 @@ int main()
         );
         pipeline->SetBlendEnabled(true);
 
-        auto translucent_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
-        pipeline->AddSpatial(std::move(translucent_spatial));
-
-        auto monkey_node = std::make_unique<v2::Node>("monkey");
-        monkey_node->SetSpatial(monkey_spatial.Acquire());
-        pipeline->AddSpatial(monkey_spatial.Acquire());
+        auto zombie_node = std::make_unique<v2::Node>("monkey");
+        zombie_node->SetSpatial(zombie_spatial.Acquire());
+        pipeline->AddSpatial(zombie_spatial.Acquire());
         
         translucent_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
     }
@@ -466,9 +454,6 @@ int main()
     wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
         
 #endif
-
-    engine.GetOctree().Insert(&engine, monkey_spatial);
-    engine.GetOctree().Insert(&engine, cube_spatial);
     
     engine.Compile();
 
@@ -564,15 +549,19 @@ int main()
 
         engine.GetOctree().CalculateVisibility(scene.ptr);
 
+        monkey->SetLocalScale(Vector3(2.2f));
+        monkey->SetLocalTranslation(Vector3(5.0f, 0.0f, 2.0f));
+        monkey->Update(&engine);
         
-        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_transform.SetRotation(Quaternion({0, 1, 0}, timer * 0.35f));
-        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
-        monkey_obj->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
-        monkey_obj->SetLocalTransform(transform);
-        monkey_obj->Update(&engine);
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_transform.SetRotation(Quaternion({0, 1, 0}, timer * 0.35f));
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
+        zombie->SetLocalTransform(transform);
+        zombie->Update(&engine);
         
         cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         cube_obj->Update(&engine);
+        
 
         //if (monkey_obj->GetChild(0)->GetSpatial()->GetOctree() != nullptr) {
         //    std::cout << "visible ? " << monkey_obj->GetChild(0)->GetSpatial()->GetVisibilityState().Get(scene->GetId(), 0) << "  for  " << monkey_obj->GetChild(0)->GetSpatial()->GetOctree()->GetAabb() << "\n";
@@ -628,7 +617,7 @@ int main()
 
     v2::PostEffect::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
 
-    monkey_obj.reset();
+    zombie.reset();
     cube_obj.reset();
 
     matrices_descriptor_buffer.Destroy(device);

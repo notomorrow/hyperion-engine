@@ -38,6 +38,8 @@ struct LoaderObject<Node, LoaderFormat::OBJ_MODEL> {
         std::vector<ObjIndex> indices;
     };
 
+    std::string filepath;
+
     std::vector<Vector3> positions;
     std::vector<Vector3> normals;
     std::vector<Vector2> texcoords;
