@@ -50,25 +50,19 @@ public:
          * but are only set to false after the corresponding frame is rendered.
          */
 
-        /* TODO: we could simply use 2 uint64_ts and bitshift based on scene ID */
-        std::array<std::array<bool, Swapchain::max_frames_in_flight>, max_scenes> scene_visibility;
+        /* TODO: we could simply use a uint64_ts and bitshift based on scene ID */
+        std::array<bool, max_scenes> scene_visibility;
 
-        HYP_FORCE_INLINE bool Get(Scene::ID scene, uint32_t frame_index) const
+        HYP_FORCE_INLINE bool Get(Scene::ID scene) const
         {
             AssertThrow(scene.value - 1 < scene_visibility.size());
-            auto &states = scene_visibility[scene.value - 1];
-
-            AssertThrow(frame_index < states.size());
-            return states[frame_index];
+            return scene_visibility[scene.value - 1];
         }
 
-        HYP_FORCE_INLINE void Set(Scene::ID scene, uint32_t frame_index, bool visible)
+        HYP_FORCE_INLINE void Set(Scene::ID scene, bool visible)
         {
             AssertThrow(scene.value - 1 < scene_visibility.size());
-            auto &states = scene_visibility[scene.value - 1];
-
-            AssertThrow(frame_index < states.size());
-            states[frame_index] = visible;
+            scene_visibility[scene.value - 1] = visible;
         }
     };
 

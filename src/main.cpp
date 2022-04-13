@@ -178,14 +178,14 @@ int main()
     
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/living_room/living_room.obj",
+        base_path + "/res/models/television/Television_01_4k.obj",
         base_path + "/res/models/cube.obj"
     );
 
 
     zombie->Scale(0.35f);
 
-    sponza->Scale(0.5f);
+    sponza->Scale(2.5f);
     sponza->Update(&engine);
     
 
@@ -456,14 +456,14 @@ int main()
     /* Shadow cam test */
 
     Matrix4 shadow_view;
-    MatrixUtil::ToLookAt(shadow_view, {9, 9, 9}, {0, 0, 0}, {0, 1, 0});
+    MatrixUtil::ToLookAt(shadow_view, {5, 5, 5}, {0, 0, 0}, {0, 1, 0});
     Matrix4 shadow_proj;
-    MatrixUtil::ToOrtho(shadow_proj, -100, 100, -100, 100, -100, 100);
+    MatrixUtil::ToOrtho(shadow_proj, -5, 5, -5, 5, -5, 5);
 
     engine.shader_globals->scenes.Set(1, {
         .view = shadow_view,
         .projection = shadow_proj,
-        .camera_position = {9, 9, 9, 1},
+        .camera_position = {5, 5, 5, 1},
         .light_direction = Vector4(Vector3(0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
     });
 

@@ -398,7 +398,7 @@ void Octree::UpdateVisibilityState(Scene *scene)
     /* assume we are already visible from CalculateVisibility() check */
     const auto &frustum = scene->GetCamera()->GetFrustum();
 
-    m_visibility_state.scene_visibility[scene->GetId().value - 1].fill(true);
+    m_visibility_state.scene_visibility[scene->GetId().value - 1] = true;
 
     if (!m_is_divided) {
         return;

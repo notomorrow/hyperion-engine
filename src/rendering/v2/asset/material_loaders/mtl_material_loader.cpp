@@ -6,6 +6,20 @@ namespace hyperion::v2 {
 using Tokens = std::vector<std::string>;
 using MtlMaterialLoader = LoaderObject<MaterialLibrary, LoaderFormat::MTL_MATERIAL_LIBRARY>::Loader;
 
+enum IlluminationModel {
+    ILLUM_COLOR,
+    ILLUM_COLOR_AMBIENT,
+    ILLUM_HIGHLIGHT,
+    ILLUM_REFLECTIVE_RAYTRACED,
+    ILLUM_TRANSPARENT_GLASS_RAYTRACED,
+    ILLUM_FRESNEL_RAYTRACED,
+    ILLUM_TRANSPARENT_REFRACTION_RAYTRACED,
+    ILLUM_TRANSPARENT_FRESNEL_REFRACTION_RAYTRACED,
+    ILLUM_REFLECTIVE,
+    ILLUM_TRANSPARENT_REFLECTIVE_GLASS,
+    ILLUM_SHADOWS
+};
+
 template <class Vector>
 static Vector ReadVector(const Tokens &tokens, size_t offset = 1)
 {
@@ -55,6 +69,14 @@ static auto &LastMaterial(MtlMaterialLoader::Object &object)
     }
 
     return object.materials.back();
+}
+
+static bool IsTransparencyModel(int illum_model)
+{
+    return illum_model == ILLUM_TRANSPARENT_GLASS_RAYTRACED
+        || illum_model == ILLUM_TRANSPARENT_REFRACTION_RAYTRACED
+        || illum_model == ILLUM_TRANSPARENT_FRESNEL_REFRACTION_RAYTRACED
+        || illum_model == ILLUM_TRANSPARENT_REFLECTIVE_GLASS;
 }
 
 LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
