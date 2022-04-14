@@ -70,7 +70,7 @@ void PostEffect::Create(Engine *engine)
 {
     CreateRenderPass(engine);
 
-    auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent);
+    auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, m_render_pass.Acquire());
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
@@ -79,8 +79,7 @@ void PostEffect::Create(Engine *engine)
 
     m_framebuffer_id = engine->resources.framebuffers.Add(
         engine,
-        std::move(framebuffer),
-        &m_render_pass->Get()
+        std::move(framebuffer)
     );
 
     CreatePerFrameData(engine);
