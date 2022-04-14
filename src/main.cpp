@@ -147,7 +147,7 @@ int main()
             uint32_t(cubemap_faces[0]->GetHeight())
         },
         Image::InternalFormat(cubemap_faces[0]->GetInternalFormat()),
-        Image::FilterMode::TEXTURE_FILTER_LINEAR,
+        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
         bytes
     ));

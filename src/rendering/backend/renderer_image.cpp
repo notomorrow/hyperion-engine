@@ -41,7 +41,7 @@ const Image::LayoutState Image::LayoutState::transfer_dst = {
     .stage_mask = VK_PIPELINE_STAGE_TRANSFER_BIT
 };
 
-Result Image::TransferLayout(VkCommandBuffer cmd, const Image *image, const LayoutTransferStateBase &transfer_state)
+Result Image::TransferLayout(CommandBuffer *command_buffer, const Image *image, const LayoutTransferStateBase &transfer_state)
 {
     VkImageMemoryBarrier barrier{};
 
@@ -53,9 +53,9 @@ Result Image::TransferLayout(VkCommandBuffer cmd, const Image *image, const Layo
     VkImageSubresourceRange range{
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
         .baseMipLevel = 0,
-        .levelCount = uint32_t(image->GetNumMipmaps()), /* all mip levels will be in `transfer_from.new_layout` in the case that we are doing an image data transfer */
+        .levelCount = uint32_t(image->NumMipmaps()), /* all mip levels will be in `transfer_from.new_layout` in the case that we are doing an image data transfer */
         .baseArrayLayer = 0,
-        .layerCount = uint32_t(image->GetNumFaces())
+        .layerCount = uint32_t(image->NumFaces())
     };
 
     barrier.subresourceRange = range;
@@ -64,7 +64,7 @@ Result Image::TransferLayout(VkCommandBuffer cmd, const Image *image, const Layo
 
     // barrier the image into the transfer-receive layout
     vkCmdPipelineBarrier(
-        cmd,
+        command_buffer->GetCommandBuffer(),
         transfer_state.src.stage_mask,
         transfer_state.dst.stage_mask,
         0,
@@ -232,7 +232,7 @@ Image::Image(Extent3D extent,
       m_staging_buffer(nullptr),
       m_bpp(NumComponents(GetBaseFormat(format)))
 {
-    m_size = m_extent.width * m_extent.height * m_extent.depth * m_bpp * GetNumFaces();
+    m_size = m_extent.width * m_extent.height * m_extent.depth * m_bpp * NumFaces();
 
     m_bytes = new unsigned char[m_size];
 
@@ -342,8 +342,8 @@ Result Image::CreateImage(Device *device,
     image_info.extent.width          = m_extent.width;
     image_info.extent.height         = m_extent.height;
     image_info.extent.depth          = m_extent.depth;
-    image_info.mipLevels             = uint32_t(GetNumMipmaps());
-    image_info.arrayLayers           = uint32_t(GetNumFaces());
+    image_info.mipLevels             = uint32_t(NumMipmaps());
+    image_info.arrayLayers           = uint32_t(NumFaces());
     image_info.format                = format;
     image_info.tiling                = m_internal_info.tiling;
     image_info.initialLayout         = initial_layout;
@@ -379,8 +379,8 @@ Result Image::Create(Device *device, Instance *renderer,
 
     auto commands = renderer->GetSingleTimeCommands();
 
-    commands.Push([this, &transfer_state](VkCommandBuffer cmd) {
-        return TransferLayout(cmd, this, transfer_state);
+    commands.Push([this, &transfer_state](CommandBuffer *command_buffer) {
+        return TransferLayout(command_buffer, this, transfer_state);
     });
 
     // execute command stack
@@ -413,13 +413,13 @@ Result Image::Create(Device *device, Instance *renderer,
         acquire_barrier.newLayout = transfer_state_pre.dst.layout;
         acquire_barrier.image = m_image->image;
 
-        commands.Push([this, &image_info, &acquire_barrier, &transfer_state_pre](VkCommandBuffer cmd) {
+        commands.Push([this, &image_info, &acquire_barrier, &transfer_state_pre](CommandBuffer *command_buffer) {
             VkImageSubresourceRange range{};
             range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             range.baseMipLevel = 0;
-            range.levelCount = GetNumMipmaps(); /* all mip levels will be in `transfer_from.new_layout` */
+            range.levelCount = NumMipmaps(); /* all mip levels will be in `transfer_from.new_layout` */
             range.baseArrayLayer = 0;
-            range.layerCount = GetNumFaces();
+            range.layerCount = NumFaces();
 
             acquire_barrier.subresourceRange = range;
             acquire_barrier.srcAccessMask = transfer_state_pre.src.access_mask;
@@ -427,7 +427,7 @@ Result Image::Create(Device *device, Instance *renderer,
 
             // barrier the image into the transfer-receive layout
             vkCmdPipelineBarrier(
-                cmd,
+                command_buffer->GetCommandBuffer(),
                 transfer_state_pre.src.stage_mask,
                 transfer_state_pre.dst.stage_mask,
                 0,
@@ -441,12 +441,13 @@ Result Image::Create(Device *device, Instance *renderer,
         });
 
         // copy from staging to image
-        int num_faces = GetNumFaces();
+        const auto num_faces = NumFaces();
+        const auto num_mipmaps = NumMipmaps();
+
         size_t buffer_offset_step = m_size / num_faces;
 
-        for (int i = 0; i < num_faces; i++) {
-
-            commands.Push([this, &image_info, &transfer_state_pre, i, buffer_offset_step](VkCommandBuffer cmd) {
+        for (uint32_t i = 0; i < num_faces; i++) {
+            commands.Push([this, &image_info, &transfer_state_pre, i, buffer_offset_step](CommandBuffer *command_buffer) {
                 VkBufferImageCopy region{};
                 region.bufferOffset = i * buffer_offset_step;
                 region.bufferRowLength = 0;
@@ -459,7 +460,7 @@ Result Image::Create(Device *device, Instance *renderer,
                 region.imageExtent = image_info.extent;
 
                 vkCmdCopyBufferToImage(
-                    cmd,
+                    command_buffer->GetCommandBuffer(),
                     m_staging_buffer->buffer,
                     m_image->image,
                     transfer_state_pre.dst.layout,
@@ -480,103 +481,13 @@ Result Image::Create(Device *device, Instance *renderer,
             /* Generate our mipmaps. We'll need to be doing it here as we need
                the layout to be `transfer_from.new_layout`
             */
-            commands.Push([this, &transfer_state_pre, &transfer_state_post](VkCommandBuffer cmd) {
-                LayoutTransferStateBase intermediate{
-                    .src = transfer_state_pre.dst, /* Use the output from the previous command as an input */
-                    .dst = LayoutState::transfer_src
-                };
-
-                const size_t num_mipmaps = GetNumMipmaps();
-                const size_t num_faces = GetNumFaces();
-
-                for (int i = 1; i < num_mipmaps + 1; i++) {
-                    int32_t mip_width  = helpers::MipmapSize(m_extent.width, i),
-                            mip_height = helpers::MipmapSize(m_extent.height, i),
-                            mip_depth  = helpers::MipmapSize(m_extent.depth, i);
-
-                    /* Memory barrier for transfer - note that after generating the mipmaps,
-                        we'll still need to transfer into a layout primed for reading from shaders. */
-                    VkImageMemoryBarrier mipmap_barrier{};
-                    mipmap_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-                    mipmap_barrier.image = m_image->image;
-                    mipmap_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    mipmap_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                    mipmap_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    mipmap_barrier.subresourceRange.baseArrayLayer = 0;
-                    mipmap_barrier.subresourceRange.layerCount = 1;
-                    mipmap_barrier.subresourceRange.levelCount = 1;
-                    mipmap_barrier.oldLayout = intermediate.src.layout;
-                    mipmap_barrier.newLayout = intermediate.dst.layout;
-                    mipmap_barrier.srcAccessMask = intermediate.src.access_mask;
-                    mipmap_barrier.dstAccessMask = intermediate.dst.access_mask;
-                    mipmap_barrier.subresourceRange.baseMipLevel = i - 1;
-
-                    /* Transfer the prev mipmap into a format for reading */
-                    vkCmdPipelineBarrier(
-                        cmd,
-                        intermediate.src.stage_mask,
-                        intermediate.dst.stage_mask,
-                        0,
-                        0, nullptr,
-                        0, nullptr,
-                        1, &mipmap_barrier
-                    );
-
-                    if (i == num_mipmaps) {
-                        /*
-                         * Use the output from this intermediate step as an input
-                         * into the next stage
-                         */
-                        transfer_state_post.src = intermediate.dst;
-
-                        break;
-                    }
-
-                    /* We swap src and dst as we will use the newly transfered image as an input to our mipmap level */
-                    std::swap(intermediate.dst, intermediate.src);
-
-                    /* Blit the image into the subresource */
-                    VkImageBlit blit{};
-                    blit.srcOffsets[0] = { 0, 0, 0 };
-                    blit.srcOffsets[1] = {
-                        int32_t(helpers::MipmapSize(m_extent.width, i - 1)),
-                        int32_t(helpers::MipmapSize(m_extent.height, i - 1)),
-                        int32_t(helpers::MipmapSize(m_extent.depth, i - 1))
-                    };
-                    blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    blit.srcSubresource.mipLevel = i - 1; /* Read from previous mip level */
-                    blit.srcSubresource.baseArrayLayer = 0;
-                    blit.srcSubresource.layerCount = 1;
-                    blit.dstOffsets[0] = { 0, 0, 0 };
-                    blit.dstOffsets[1] = {
-                        mip_width,
-                        mip_height,
-                        mip_depth
-                    };
-                    blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    blit.dstSubresource.mipLevel = i;
-                    blit.dstSubresource.baseArrayLayer = 0;
-                    blit.dstSubresource.layerCount = 1;
-
-                    vkCmdBlitImage(cmd,
-                        m_image->image,
-                        intermediate.src.layout,
-                        m_image->image,
-                        intermediate.dst.layout,
-                        1, &blit,
-                        VK_FILTER_LINEAR
-                    );
-
-                    /* We swap again, as we are using this as an input into the next iteration */
-                    std::swap(intermediate.src, intermediate.dst);
-                }
-
-                HYPERION_RETURN_OK;
+            commands.Push([this, device, &transfer_state_pre, &transfer_state_post](CommandBuffer *command_buffer) {
+                return GenerateMipMaps(device, command_buffer, transfer_state_pre, transfer_state_post);
             });
         }
 
         /* Transition from the previous layout state into a shader readonly state */
-        commands.Push([this, &acquire_barrier, &release_barrier, &transfer_state_post](VkCommandBuffer cmd) {
+        commands.Push([this, &acquire_barrier, &release_barrier, &transfer_state_post](CommandBuffer *command_buffer) {
             release_barrier = acquire_barrier;
 
             release_barrier.oldLayout = transfer_state_post.src.layout;
@@ -586,7 +497,7 @@ Result Image::Create(Device *device, Instance *renderer,
 
             //barrier the image into the shader readable layout
             vkCmdPipelineBarrier(
-                cmd,
+                command_buffer->GetCommandBuffer(),
                 transfer_state_post.src.stage_mask,
                 transfer_state_post.dst.stage_mask,
                 0,
@@ -623,6 +534,107 @@ Result Image::Destroy(Device *device)
     return result;
 }
 
+Result Image::GenerateMipMaps(Device *device,
+    CommandBuffer *command_buffer,
+    const LayoutTransferStateBase &transfer_state_pre,
+    LayoutTransferStateBase &transfer_state_post)
+{
+    const auto num_faces = NumFaces();
+    const auto num_mipmaps = NumMipmaps();
+
+    LayoutTransferStateBase intermediate{
+        .src = transfer_state_pre.dst, /* Use the output from the previous command as an input */
+        .dst = LayoutState::transfer_src
+    };
+
+    for (uint32_t face = 0; face < num_faces; face++) {
+        for (int32_t i = 1; i < static_cast<int32_t>(num_mipmaps + 1); i++) {
+            const auto mip_width  = static_cast<int32_t>(helpers::MipmapSize(m_extent.width, i)),
+                       mip_height = static_cast<int32_t>(helpers::MipmapSize(m_extent.height, i)),
+                       mip_depth  = static_cast<int32_t>(helpers::MipmapSize(m_extent.depth, i));
+
+            /* Memory barrier for transfer - note that after generating the mipmaps,
+                we'll still need to transfer into a layout primed for reading from shaders. */
+            VkImageMemoryBarrier mipmap_barrier{};
+            mipmap_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            mipmap_barrier.image = m_image->image;
+            mipmap_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            mipmap_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            mipmap_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            mipmap_barrier.subresourceRange.baseArrayLayer = face;
+            mipmap_barrier.subresourceRange.layerCount = 1;
+            mipmap_barrier.subresourceRange.levelCount = 1;
+            mipmap_barrier.oldLayout     = intermediate.src.layout;
+            mipmap_barrier.newLayout     = intermediate.dst.layout;
+            mipmap_barrier.srcAccessMask = intermediate.src.access_mask;
+            mipmap_barrier.dstAccessMask = intermediate.dst.access_mask;
+            mipmap_barrier.subresourceRange.baseMipLevel = i - 1;
+
+            /* Transfer the prev mipmap into a format for reading */
+            vkCmdPipelineBarrier(
+                command_buffer->GetCommandBuffer(),
+                intermediate.src.stage_mask,
+                intermediate.dst.stage_mask,
+                0,
+                0, nullptr,
+                0, nullptr,
+                1, &mipmap_barrier
+            );
+
+            if (i == static_cast<int32_t>(num_mipmaps)) {
+                /*
+                 * Use the output from this intermediate step as an input
+                 * into the next stage
+                 */
+                transfer_state_post.src = intermediate.dst;
+
+                break;
+            }
+
+            /* We swap src and dst as we will use the newly transfered image as an input to our mipmap level */
+            std::swap(intermediate.dst, intermediate.src);
+
+            /* Blit the image into the subresource */
+            VkImageBlit blit{};
+            blit.srcOffsets[0] = {0, 0, 0};
+            blit.srcOffsets[1] = {
+                static_cast<int32_t>(helpers::MipmapSize(m_extent.width, i - 1)),
+                static_cast<int32_t>(helpers::MipmapSize(m_extent.height, i - 1)),
+                static_cast<int32_t>(helpers::MipmapSize(m_extent.depth, i - 1))
+            };
+            blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            blit.srcSubresource.mipLevel = i - 1; /* Read from previous mip level */
+            blit.srcSubresource.baseArrayLayer = face;
+            blit.srcSubresource.layerCount = 1;
+            blit.dstOffsets[0] = {0, 0, 0};
+            blit.dstOffsets[1] = {
+                mip_width,
+                mip_height,
+                mip_depth
+            };
+
+            blit.dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            blit.dstSubresource.mipLevel       = i;
+            blit.dstSubresource.baseArrayLayer = face;
+            blit.dstSubresource.layerCount     = 1;
+
+            vkCmdBlitImage(command_buffer->GetCommandBuffer(),
+                m_image->image,
+                intermediate.src.layout,
+                m_image->image,
+                intermediate.dst.layout,
+                1, &blit,
+                VK_FILTER_LINEAR
+            );
+
+            /* We swap again, as we are using this as an input into the next iteration */
+            std::swap(intermediate.src, intermediate.dst);
+        }
+    }
+
+    HYPERION_RETURN_OK;
+}
+
 Result Image::ConvertTo32Bpp(
     Device *device,
     VkImageType image_type,
@@ -630,15 +642,15 @@ Result Image::ConvertTo32Bpp(
     VkImageFormatProperties *out_image_format_properties,
     VkFormat *out_format)
 {
-    const size_t num_faces = GetNumFaces();
-    const size_t face_offset_step = m_size / num_faces;
-
     constexpr size_t new_bpp = 4;
 
-    const size_t new_size = m_extent.width * m_extent.height * m_extent.depth * new_bpp * num_faces;
+    const size_t num_faces = NumFaces();
+    const size_t face_offset_step = m_size / num_faces;
+
+    const size_t new_size = num_faces * new_bpp * m_extent.width * m_extent.height * m_extent.depth;
     const size_t new_face_offset_step = new_size / num_faces;
 
-    unsigned char *new_bytes = new unsigned char[new_size];
+    auto *new_bytes = new unsigned char[new_size];
 
     for (int i = 0; i < num_faces; i++) {
         ImageUtil::ConvertBpp(

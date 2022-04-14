@@ -4,6 +4,7 @@
 #include "renderer_result.h"
 #include "renderer_device.h"
 #include "renderer_structs.h"
+#include "renderer_command_buffer.h"
 
 #include <vulkan/vulkan.h>
 
@@ -15,28 +16,27 @@ namespace hyperion {
 namespace renderer {
 namespace helpers {
 
-size_t MipmapSize(size_t src_size, int lod);
+uint32_t MipmapSize(uint32_t src_size, int lod);
 
 VkIndexType ToVkIndexType(DatumType);
 
 class SingleTimeCommands {
 public:
-    SingleTimeCommands() : cmd{}, pool{}, family_indices{} {}
+    SingleTimeCommands() : command_buffer{}, pool{}, family_indices{} {}
 
-    inline void Push(const std::function<Result(VkCommandBuffer)> &fn)
+    inline void Push(const std::function<Result(CommandBuffer *)> &fn)
     {
         m_functions.push_back(fn);
     }
 
     inline Result Execute(Device *device)
     {
-        auto begin_result = Begin(device);
-        if (!begin_result) return begin_result;
+        HYPERION_BUBBLE_ERRORS(Begin(device));
 
-        Result result(Result::RENDERER_OK);
+        auto result = Result::OK;
 
         for (auto &fn : m_functions) {
-            result = fn(cmd);
+            HYPERION_PASS_ERRORS(fn(command_buffer.get()), result);
 
             if (!result) {
                 break;
@@ -45,75 +45,51 @@ public:
 
         m_functions.clear();
 
-        auto end_result = End(device);
-        if (!end_result) return end_result;
+        HYPERION_BUBBLE_ERRORS(End(device), result);
 
         return result;
     }
 
-    VkCommandBuffer cmd;
+    std::unique_ptr<CommandBuffer> command_buffer;
     VkCommandPool pool;
     QueueFamilyIndices family_indices;
 
 private:
-    std::vector<std::function<Result(VkCommandBuffer)>> m_functions;
+    std::vector<std::function<Result(CommandBuffer *)>> m_functions;
 
     inline Result Begin(Device *device)
     {
-        VkCommandBufferAllocateInfo alloc_info{};
-        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        alloc_info.commandPool = pool;
-        alloc_info.commandBufferCount = 1;
+        command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_PRIMARY);
 
-        if (vkAllocateCommandBuffers(device->GetDevice(), &alloc_info, &cmd) != VK_SUCCESS) {
-            return Result(Result::RENDERER_ERR, "Failed to allocate command buffers");
-        }
+        HYPERION_BUBBLE_ERRORS(command_buffer->Create(device, pool));
 
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        if (vkBeginCommandBuffer(cmd, &begin_info) != VK_SUCCESS) {
-            vkFreeCommandBuffers(device->GetDevice(), pool, 1, &cmd);
-            return Result(Result::RENDERER_ERR, "Failed to begin command buffer");
-        }
-
-        HYPERION_RETURN_OK;
+        return command_buffer->Begin(device);
     }
 
     inline Result End(Device *device)
     {
-        auto queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
+        auto result = Result::OK;
 
-        if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
-            return Result(Result::RENDERER_ERR, "Failed to end command buffer");
-        }
-
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &cmd;
+        HYPERION_PASS_ERRORS(command_buffer->End(device), result);
 
         // Create fence to ensure that the command buffer has finished executing
-        VkFenceCreateInfo fence_create_info{};
-        fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fence_create_info.flags = 0;
-
-        auto result = Result::OK;
+        VkFenceCreateInfo fence_create_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
 
         VkFence fence;
 
         HYPERION_VK_CHECK(vkCreateFence(device->GetDevice(), &fence_create_info, nullptr, &fence));
 
         // Submit to the queue
-        HYPERION_VK_PASS_ERRORS(vkQueueSubmit(queue_graphics, 1, &submit_info, fence), result);
+        auto queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
 
+        HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(queue_graphics, fence, nullptr), result);
+        
         // Wait for the fence to signal that command buffer has finished executing
         HYPERION_VK_PASS_ERRORS(vkWaitForFences(device->GetDevice(), 1, &fence, true, DEFAULT_FENCE_TIMEOUT), result);
 
         vkDestroyFence(device->GetDevice(), fence, nullptr);
-        vkFreeCommandBuffers(device->GetDevice(), pool, 1, &cmd);
+
+        HYPERION_PASS_ERRORS(command_buffer->Destroy(device, pool), result);
 
         return result;
     }

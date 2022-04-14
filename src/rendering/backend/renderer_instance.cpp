@@ -492,7 +492,6 @@ helpers::SingleTimeCommands Instance::GetSingleTimeCommands()
     const QueueFamilyIndices &family_indices = this->device->GetQueueFamilyIndices();
 
     helpers::SingleTimeCommands single_time_commands{};
-    single_time_commands.cmd = nullptr;
     single_time_commands.pool = this->queue_graphics.command_pool;
     single_time_commands.family_indices = family_indices;
 

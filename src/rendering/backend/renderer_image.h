@@ -78,7 +78,7 @@ public:
         TEXTURE_WRAP_REPEAT
     };
 
-    static Result TransferLayout(VkCommandBuffer cmd, const Image *image, const LayoutTransferStateBase &transfer_state);
+    static Result TransferLayout(CommandBuffer *command_buffer, const Image *image, const LayoutTransferStateBase &transfer_state);
 
     static BaseFormat GetBaseFormat(InternalFormat);
     /* returns a texture format that has a shifted bytes-per-pixel count
@@ -138,17 +138,17 @@ public:
     inline bool IsMipmappedImage() const
         { return m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
 
-    inline size_t GetNumMipmaps() const
+    inline uint32_t NumMipmaps() const
     {
         return IsMipmappedImage()
-            ? MathUtil::FastLog2(MathUtil::Max(m_extent.width, m_extent.height, m_extent.depth)) + 1
+            ? static_cast<uint32_t>(MathUtil::FastLog2(MathUtil::Max(m_extent.width, m_extent.height, m_extent.depth))) + 1
             : 1;
     }
 
     inline bool IsCubemap() const
         { return m_type == TEXTURE_TYPE_CUBEMAP; }
 
-    inline size_t GetNumFaces() const
+    inline uint32_t NumFaces() const
         { return IsCubemap() ? 6 : 1; }
 
     inline const Extent3D &GetExtent() const { return m_extent; }
@@ -264,6 +264,11 @@ private:
     Result CreateImage(Device *device,
         VkImageLayout initial_layout,
         VkImageCreateInfo *out_image_info);
+
+    Result GenerateMipMaps(Device *device,
+        CommandBuffer *command_buffer,
+        const LayoutTransferStateBase &transfer_state_pre,
+        LayoutTransferStateBase &transfer_state_post);
 
     Result ConvertTo32Bpp(Device *device,
         VkImageType image_type,
