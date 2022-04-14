@@ -98,10 +98,9 @@ void GraphicsPipeline::Create(Engine *engine)
         .render_pass       = &m_render_pass->Get()
     };
 
-    for (const auto &fbo_id : m_fbo_ids.ids) {
-        if (auto *fbo = engine->resources.framebuffers[fbo_id]) {
-            construction_info.fbos.push_back(&fbo->Get());
-        }
+    for (auto &fbo : m_fbos) {
+        fbo.Init();
+        construction_info.fbos.push_back(&fbo->Get());
     }
 
     AssertThrow(m_per_frame_data == nullptr);

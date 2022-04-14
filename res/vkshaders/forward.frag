@@ -36,8 +36,8 @@ struct Material {
     float uv_scale;
     float parallax_height;
     
-    uint texture_index[2];
-    uint texture_usage[2];
+    uint texture_index[8];
+    uint texture_usage[8];
     
     /* Texture schema:
        0 - albedo

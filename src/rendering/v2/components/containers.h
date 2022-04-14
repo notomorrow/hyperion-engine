@@ -43,24 +43,24 @@ struct ObjectIdHolder {
     }
 };
 
-template <class Bucket>
+template <class Group>
 struct CallbackRef {
     using RemoveFunction = std::function<void()>;
 
     uint32_t id;
-    Bucket *bucket;
-    typename Bucket::ArgsTuple bound_args;
+    Group *group;
+    typename Group::ArgsTuple bound_args;
 
     CallbackRef()
         : id(0),
-          bucket(nullptr),
+          group(nullptr),
           bound_args{}
     {
     }
 
-    CallbackRef(uint32_t id, Bucket *bucket)
+    CallbackRef(uint32_t id, Group *group)
         : id(id),
-          bucket(bucket),
+          group(group),
           bound_args{}
     {
     }
@@ -70,11 +70,11 @@ struct CallbackRef {
 
     CallbackRef(CallbackRef &&other) noexcept
         : id(other.id),
-          bucket(other.bucket),
+          group(other.group),
           bound_args(std::move(other.bound_args))
     {
         other.id = 0;
-        other.bucket = nullptr;
+        other.group = nullptr;
     }
     
     CallbackRef &operator=(CallbackRef &&other) noexcept
@@ -88,31 +88,31 @@ struct CallbackRef {
         }
 
         id = other.id;
-        bucket = other.bucket;
+        group = other.group;
         bound_args = std::move(other.bound_args);
 
         other.id = 0;
-        other.bucket = nullptr;
+        other.group = nullptr;
 
         return *this;
     }
 
-    ~CallbackRef() { /*Remove();*/ }
+    ~CallbackRef() = default;
 
-    bool Valid() const { return id != 0 && bucket != nullptr; }
+    bool Valid() const { return id != 0 && group != nullptr; }
 
     bool Remove()
     {
-        const bool result = Valid() && bucket->Remove(id);
+        const bool result = Valid() && group->Remove(id);
 
         id = 0;
-        bucket = nullptr;
+        group = nullptr;
         bound_args = {};
 
         return result;
     }
 
-    CallbackRef &Bind(typename Bucket::ArgsTuple &&args)
+    CallbackRef &Bind(typename Group::ArgsTuple &&args)
     {
         bound_args = std::move(args);
 
@@ -127,15 +127,14 @@ struct CallbackRef {
 
         /* expand bound_args tuple into Trigger() function args */
         return std::apply([this]<class ...Args>(Args ... args) -> bool {
-            return bucket->Trigger(id, std::forward<Args>(args)...);
+            return group->Trigger(id, std::forward<Args>(args)...);
         }, bound_args);
     }
 };
 
 template <class Enum, class ...Args>
 class Callbacks {
-public:
-    struct Callback {
+    struct CallbackInstance {
         using Function = std::function<void(Args...)>;
 
         uint32_t id;
@@ -144,18 +143,19 @@ public:
         bool Valid() const { return id != 0; }
     };
 
-    struct Bucket {
+public:
+    struct CallbackGroup {
         using ArgsTuple = std::tuple<Args...>;
 
-        std::vector<Callback> once_callbacks;
-        std::vector<Callback> on_callbacks;
+        std::vector<CallbackInstance> once_callbacks;
+        std::vector<CallbackInstance> on_callbacks;
 
         struct TriggerState {
             bool triggered = false;
             ArgsTuple args;
         } trigger_state = {};
 
-        auto Find(uint32_t id, std::vector<Callback> &callbacks) -> typename std::vector<Callback>::iterator
+        auto Find(uint32_t id, std::vector<CallbackInstance> &callbacks) -> typename std::vector<CallbackInstance>::iterator
         {
             return std::find_if(
                 callbacks.begin(),
@@ -216,46 +216,46 @@ public:
     Callbacks &operator=(const Callbacks &other) = delete;
     ~Callbacks() = default;
 
-    auto Once(Enum key, typename Callback::Function &&function)
+    auto Once(Enum key, typename CallbackInstance::Function &&function)
     {
         auto &holder = m_holders[key];
 
         const auto id = ++m_id_counter;
         
-        Callback callback{
+        CallbackInstance callback_instance{
             .id = id,
             .fn = std::move(function)
         };
 
         if (holder.trigger_state.triggered) {
-            callback.fn(std::get<Args>(holder.trigger_state.args)...);
+            callback_instance.fn(std::get<Args>(holder.trigger_state.args)...);
 
-            return CallbackRef<Bucket>();
+            return CallbackRef<CallbackGroup>();
         }
 
-        holder.once_callbacks.push_back(std::move(callback));
+        holder.once_callbacks.push_back(std::move(callback_instance));
 
-        return CallbackRef<Bucket>(id, &holder);
+        return CallbackRef<CallbackGroup>(id, &holder);
     }
 
-    auto On(Enum key, typename Callback::Function &&function)
+    auto On(Enum key, typename CallbackInstance::Function &&function)
     {
         auto &holder = m_holders[key];
 
         const auto id = ++m_id_counter;
         
-        Callback callback{
+        CallbackInstance callback_instance{
             .id = id,
             .fn = std::move(function)
         };
 
         if (holder.trigger_state.triggered) {
-            callback.fn(std::get<Args>(holder.trigger_state.args)...);
+            callback_instance.fn(std::get<Args>(holder.trigger_state.args)...);
         }
 
-        holder.on_callbacks.push_back(std::move(callback));
+        holder.on_callbacks.push_back(std::move(callback_instance));
 
-        return CallbackRef<Bucket>(id, &holder);
+        return CallbackRef<CallbackGroup>(id, &holder);
     }
 
     void Trigger(Enum key, Args &&... args)
@@ -285,7 +285,7 @@ public:
 
 private:
     uint32_t m_id_counter = 0;
-    std::unordered_map<Enum, Bucket> m_holders;
+    std::unordered_map<Enum, CallbackGroup> m_holders;
     
     void TriggerCallbacks(bool persist, Enum key, Args &&... args)
     {
@@ -300,14 +300,14 @@ private:
         holder.trigger_state.triggered = true;
         holder.trigger_state.args = std::tie(args...);
 
-        for (auto &callback : once_callbacks) {
-            callback.fn(std::forward<Args>(args)...);
+        for (CallbackInstance &callback_instance : once_callbacks) {
+            callback_instance.fn(std::forward<Args>(args)...);
         }
 
         holder.once_callbacks.clear();
 
-        for (auto &callback : on_callbacks) {
-            callback.fn(std::forward<Args>(args)...);
+        for (CallbackInstance &callback_instance : on_callbacks) {
+            callback_instance.fn(std::forward<Args>(args)...);
         }
         
         holder.trigger_state.triggered = previous_triggered_state || persist;
@@ -318,12 +318,12 @@ template <class CallbacksClass>
 class CallbackTrackable {
 public:
     using Callbacks = CallbacksClass;
-    using CallbackRef = CallbackRef<typename Callbacks::Bucket>;
+    using CallbackRef = CallbackRef<typename Callbacks::CallbackGroup>;
 
     CallbackTrackable() = default;
     CallbackTrackable(const CallbackTrackable &other) = delete;
     CallbackTrackable &operator=(const CallbackTrackable &other) = delete;
-    ~CallbackTrackable() { }
+    ~CallbackTrackable() = default;
 
 protected:
     struct CallbackTracker {
@@ -379,10 +379,9 @@ protected:
         m_destroy_callback = std::move(callback_ref);
     }
 
+private:
     CallbackRef m_init_callback;
     CallbackRef m_destroy_callback;
-
-private:
 };
 
 enum class EngineCallback {

@@ -175,8 +175,7 @@ VkFormat Image::ToVkFormat(InternalFormat fmt)
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F:      return VK_FORMAT_R32G32B32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F:     return VK_FORMAT_R32G32B32A32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:    return VK_FORMAT_D16_UNORM;
-        //case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24: return VK_FORMAT_D24_UNORM_S8_UINT;
-        //case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32: return VK_FORMAT_D32_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:    return VK_FORMAT_D24_UNORM_S8_UINT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F:   return VK_FORMAT_D32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB:  return VK_FORMAT_B8G8R8A8_SRGB;

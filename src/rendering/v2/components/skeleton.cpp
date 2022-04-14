@@ -39,7 +39,7 @@ void Skeleton::Init(Engine *engine)
         UpdateShaderData(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SKELETONS, [this](Engine *engine) {
-
+            /* no-op */
         }), engine);
     }));
 }

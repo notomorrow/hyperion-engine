@@ -83,7 +83,7 @@ struct alignas(256) ObjectShaderData {
 };
 
 struct alignas(256) MaterialShaderData {
-    static constexpr size_t max_bound_textures = 2;
+    static constexpr size_t max_bound_textures = 8;
 
     Vector4 albedo;
 

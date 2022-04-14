@@ -104,8 +104,10 @@ public:
 
     /* Non-owned objects - owned by `engine`, used by the pipeline */
 
-    inline void AddFramebuffer(Framebuffer::ID id) { m_fbo_ids.Add(id); }
-    inline void RemoveFramebuffer(Framebuffer::ID id) { m_fbo_ids.Remove(id); }
+    inline void AddFramebuffer(Ref<Framebuffer> &&fbo)
+    {
+        m_fbos.push_back(std::move(fbo));
+    }
     
     /* Build pipeline */
     void Create(Engine *engine);
@@ -128,7 +130,7 @@ private:
     bool m_blend_enabled;
     MeshInputAttributeSet m_vertex_attributes;
     
-    ObjectIdHolder<Framebuffer> m_fbo_ids;
+    std::vector<Ref<Framebuffer>> m_fbos;
 
     std::vector<Ref<Spatial>> m_spatials;
 

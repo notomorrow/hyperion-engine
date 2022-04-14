@@ -40,8 +40,8 @@ void RenderList::Destroy(Engine *engine)
 void RenderList::Bucket::CreatePipelines(Engine *engine)
 {
     for (auto &pipeline : pipelines.objects) {
-        for (auto &framebuffer_id : framebuffer_ids) {
-            pipeline->AddFramebuffer(framebuffer_id);
+        for (auto &framebuffer : framebuffers) {
+            pipeline->AddFramebuffer(framebuffer.Acquire());
         }
     }
 
@@ -105,7 +105,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
     }
 
     if (bucket == GraphicsPipeline::BUCKET_TRANSLUCENT) {
-        auto *forward_fbo = engine->resources.framebuffers[engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].framebuffer_ids[0]];
+        auto &forward_fbo = engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].framebuffers[0];
         AssertThrow(forward_fbo != nullptr);
 
         renderer::AttachmentRef *depth_attachment;
@@ -149,7 +149,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
 
 void RenderList::Bucket::CreateFramebuffers(Engine *engine)
 {
-    AssertThrow(framebuffer_ids.empty());
+    AssertThrow(framebuffers.empty());
 
     const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
 
@@ -162,23 +162,20 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
 
             framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
         }
-        
-        framebuffer_ids.push_back(engine->resources.framebuffers.Add(
-            engine,
+
+        framebuffers.push_back(engine->resources.framebuffers.Add(
             std::move(framebuffer)
         ));
+
+        framebuffers.back().Init();
     }
 }
 
 void RenderList::Bucket::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
-
-    for (const auto &framebuffer_id : framebuffer_ids) {
-        engine->resources.framebuffers.Remove(engine, framebuffer_id);
-    }
-
-    framebuffer_ids.clear();
+    
+    framebuffers.clear();
 
     for (auto &attachment : m_attachments) {
         HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
@@ -195,7 +192,7 @@ void RenderList::Bucket::BeginRenderPass(Engine *engine, CommandBuffer *command_
         AssertThrowMsg(pipelines.objects[0]->Get().GetConstructionInfo().render_pass == &render_pass->Get(), "Render pass for pipeline does not match render bucket renderpass");
     }
 
-    auto &framebuffer = engine->resources.framebuffers[framebuffer_ids[frame_index]]->Get();
+    auto &framebuffer = framebuffers[frame_index]->Get();
 
     render_pass->Get().Begin(command_buffer, &framebuffer);
 }

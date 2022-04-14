@@ -7,7 +7,7 @@
 namespace hyperion::v2 {
 
 DeferredRenderingEffect::DeferredRenderingEffect()
-    : PostEffect({})
+    : PostEffect()
 {
     
 }
@@ -39,7 +39,7 @@ void DeferredRenderingEffect::CreateRenderPass(Engine *engine)
 
 void DeferredRenderingEffect::Create(Engine *engine)
 {
-    m_framebuffer_id = engine->GetRenderList()[GraphicsPipeline::BUCKET_TRANSLUCENT].framebuffer_ids[0];
+    m_framebuffer = engine->GetRenderList()[GraphicsPipeline::BUCKET_TRANSLUCENT].framebuffers[0].Acquire();
 
     CreatePerFrameData(engine);
 
@@ -72,7 +72,7 @@ void DeferredRenderer::Create(Engine *engine)
     m_effect.CreateRenderPass(engine);
     m_effect.Create(engine);
 
-    auto *opaque_fbo = engine->resources.framebuffers[engine->GetRenderList()[GraphicsPipeline::BUCKET_OPAQUE].framebuffer_ids[0]];
+    auto &opaque_fbo = engine->GetRenderList()[GraphicsPipeline::BUCKET_OPAQUE].framebuffers[0];
 
     /* Add our gbuffer textures */
     auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()

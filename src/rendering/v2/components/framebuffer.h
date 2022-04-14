@@ -19,9 +19,7 @@ public:
 
     RenderPass *GetRenderPass() const { return m_render_pass.ptr; }
 
-    //void Init(Engine *engine);
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
+    void Init(Engine *engine);
 
 private:
     Ref<RenderPass> m_render_pass;
