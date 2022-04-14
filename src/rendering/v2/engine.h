@@ -28,6 +28,29 @@ using renderer::Image;
 using renderer::StorageBuffer;
 
 
+/* Current descriptor / attachment layout */
+
+/*
+ * | ====== Set 0 ====== | ====== Set 1 ====== | ====== Set 2 ====== | ====== Set 3 ====== | ====== Set 4 ====== |
+ * | (UNUSED)            | GBuffer: color      | Scene data SSBO     | Material data SSBO  | Bindless textures   |
+ * |                     | Gbuffer: normals    | empty               | Object data SSBO    | empty               |
+ * |                     | Gbuffer: position   | empty               | Skeleton data SSBO  |                     |
+ * |                     | Gbuffer: depth      | empty               | empty               | empty               |
+ * |                     | Deferred result     | empty               | empty               | empty               |
+ * |                     | empty               | empty               | empty               | empty               |
+ * |                     | empty               | empty               | empty               | empty               |
+ * |                     | empty               | empty               | empty               | empty               |
+ * |                     | Post effect 0       | empty               | empty               | empty               |
+ * |                     | empty               | empty               | empty               | empty               |
+ * |                     | empty               | empty               | empty               | empty               |
+ * |                     | empty               | empty               | empty               | empty               |
+ * |                     | Shadow map          | empty               | empty               | empty               |
+ * |                     | empty               | empty               | empty               | empty               |
+ * |                     | empty               | empty               | empty               | empty               |
+ * |                     | empty               | empty               | empty               | empty               |
+ * |                     | Image storage test  | empty               | empty               | empty               |
+ */
+
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)

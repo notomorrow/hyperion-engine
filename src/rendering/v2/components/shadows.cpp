@@ -90,6 +90,7 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
+        attachment_ref->SetBinding(12);
         framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
     }
 
@@ -134,7 +135,7 @@ void ShadowRenderer::Create(Engine *engine)
     m_effect.CreateRenderPass(engine);
     m_effect.Create(engine, std::move(m_camera));
 
-    uint32_t binding_index = 9; /* TMP */
+    uint32_t binding_index = 12; /* TMP */
     m_effect.CreateDescriptors(engine, binding_index);
 
     /* TMP: will have to be dynamic because objects will be added and removed */
