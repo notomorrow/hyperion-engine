@@ -154,7 +154,7 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
     const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
 
     for (uint32_t i = 0; i < 1/*num_frames*/; i++) {
-        auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent);
+        auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.Acquire());
 
         for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
             auto vk_desc = attachment_ref->GetAttachmentDescription();
@@ -165,8 +165,7 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
         
         framebuffer_ids.push_back(engine->resources.framebuffers.Add(
             engine,
-            std::move(framebuffer),
-            &render_pass->Get()
+            std::move(framebuffer)
         ));
     }
 }

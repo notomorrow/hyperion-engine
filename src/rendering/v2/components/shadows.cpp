@@ -84,7 +84,8 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
     m_scene.Init();
 
     auto framebuffer = std::make_unique<Framebuffer>(
-        engine->GetInstance()->swapchain->extent
+        engine->GetInstance()->swapchain->extent,
+        m_render_pass.Acquire()
     );
 
     /* Add all attachments from the renderpass */
@@ -94,8 +95,7 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
 
     m_framebuffer_id = engine->resources.framebuffers.Add(
         engine,
-        std::move(framebuffer),
-        &m_render_pass->Get()
+        std::move(framebuffer)
     );
 
     CreatePerFrameData(engine);

@@ -178,7 +178,7 @@ int main()
     
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/sponza/sponza.obj",
+        base_path + "/res/models/television/Television_01_4k.obj",
         base_path + "/res/models/cube.obj"
     );
 

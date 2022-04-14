@@ -137,7 +137,8 @@ void Engine::PrepareSwapchain()
 
     for (VkImage img : m_instance->swapchain->images) {
         auto fbo = std::make_unique<Framebuffer>(
-            m_instance->swapchain->extent
+            m_instance->swapchain->extent,
+            render_pass.Acquire()
         );
 
         renderer::AttachmentRef *attachment_ref[2];
@@ -184,8 +185,7 @@ void Engine::PrepareSwapchain()
 
         m_root_pipeline->AddFramebuffer(resources.framebuffers.Add(
             this,
-            std::move(fbo),
-            &render_pass->Get()
+            std::move(fbo)
         ));
 
         ++iteration;

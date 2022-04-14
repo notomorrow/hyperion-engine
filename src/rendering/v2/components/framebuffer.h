@@ -2,12 +2,30 @@
 #define HYPERION_V2_FRAMEBUFFER_H
 
 #include "base.h"
+#include "render_pass.h"
 
 #include <rendering/backend/renderer_fbo.h>
 
 namespace hyperion::v2 {
 
-using Framebuffer = EngineComponent<renderer::FramebufferObject>;
+using renderer::Extent2D;
+
+class Framebuffer : public EngineComponent<renderer::FramebufferObject> {
+public:
+    Framebuffer(Extent2D extent, Ref<RenderPass> &&render_pass);
+    Framebuffer(const Framebuffer &other) = delete;
+    Framebuffer &operator=(const Framebuffer &other) = delete;
+    ~Framebuffer();
+
+    RenderPass *GetRenderPass() const { return m_render_pass.ptr; }
+
+    //void Init(Engine *engine);
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
+
+private:
+    Ref<RenderPass> m_render_pass;
+};
 
 } // namespace hyperion::v2
 
