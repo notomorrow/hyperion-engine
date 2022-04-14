@@ -85,8 +85,8 @@ Result RenderPass::Create(Device *device)
 {
     CreateDependencies();
 
-    std::vector<VkAttachmentDescription> attachments;
-    attachments.reserve(m_render_pass_attachment_refs.size());
+    std::vector<VkAttachmentDescription> attachment_descriptions;
+    attachment_descriptions.reserve(m_render_pass_attachment_refs.size());
 
     VkAttachmentReference depth_attachment_ref{};
     std::vector<VkAttachmentReference> color_attachment_refs;
@@ -94,8 +94,7 @@ Result RenderPass::Create(Device *device)
     VkSubpassDescription subpass_description{};
     subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass_description.pDepthStencilAttachment = nullptr;
-
-    /* NEW */
+    
     uint32_t next_binding = 0;
 
     for (auto *attachment_ref : m_render_pass_attachment_refs) {
@@ -105,7 +104,7 @@ Result RenderPass::Create(Device *device)
 
         next_binding = attachment_ref->GetBinding() + 1;
 
-        attachments.push_back(attachment_ref->GetAttachmentDescription());
+        attachment_descriptions.push_back(attachment_ref->GetAttachmentDescription());
 
         if (attachment_ref->IsDepthAttachment()) {
             depth_attachment_ref = attachment_ref->GetAttachmentReference();
@@ -124,8 +123,8 @@ Result RenderPass::Create(Device *device)
 
     // Create the actual renderpass
     VkRenderPassCreateInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    render_pass_info.attachmentCount = uint32_t(attachments.size());
-    render_pass_info.pAttachments    = attachments.data();
+    render_pass_info.attachmentCount = uint32_t(attachment_descriptions.size());
+    render_pass_info.pAttachments    = attachment_descriptions.data();
     render_pass_info.subpassCount    = 1;
     render_pass_info.pSubpasses      = &subpass_description;
     render_pass_info.dependencyCount = uint32_t(m_dependencies.size());
@@ -138,7 +137,7 @@ Result RenderPass::Create(Device *device)
 
 Result RenderPass::Destroy(Device *device)
 {
-    Result result = Result::OK;
+    auto result = Result::OK;
 
     vkDestroyRenderPass(device->GetDevice(), m_render_pass, nullptr);
     m_render_pass = nullptr;
