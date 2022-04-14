@@ -219,7 +219,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                     continue;
                 }
 
-                if (m_scene != nullptr) {
+                if (m_scene != nullptr && m_bucket != BUCKET_SKYBOX) {
                     auto &visibility_state = spatial->GetVisibilityState();
 
                     if (!visibility_state.Get(m_scene->GetId())) {

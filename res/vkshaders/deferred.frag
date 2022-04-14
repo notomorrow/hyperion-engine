@@ -47,7 +47,7 @@ void main()
     
     float NdotL = dot(normal.xyz, v_light_direction);
     
-    output_color = vec4(vec3(max(NdotL, 0.0)) * albedo.rgb, 1.0);
+    output_color = vec4(vec3(max(NdotL, 0.1)) * albedo.rgb, 1.0);
     output_normals = normal;
     output_positions = position;
 }
