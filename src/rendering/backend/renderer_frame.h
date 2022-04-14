@@ -4,6 +4,7 @@
 #include "renderer_result.h"
 #include "renderer_device.h"
 #include "renderer_command_buffer.h"
+#include "renderer_fence.h"
 #include "renderer_semaphore.h"
 #include "renderer_queue.h"
 
@@ -28,7 +29,7 @@ public:
     ~Frame();
 
     Result Create(Device *device, const non_owning_ptr<CommandBuffer> &cmd);
-    Result Destroy();
+    Result Destroy(Device *device);
 
     inline CommandBuffer *GetCommandBuffer() { return command_buffer.get(); }
     inline const CommandBuffer *GetCommandBuffer() const { return command_buffer.get(); }
@@ -37,17 +38,15 @@ public:
     inline const SemaphoreChain &GetPresentSemaphores() const { return present_semaphores; }
 
     /* Start recording into the command buffer */
-    Result BeginCapture();
+    Result BeginCapture(Device *device);
     /* Stop recording into the command buffer */
-    Result EndCapture();
+    Result EndCapture(Device *device);
     /* Submit command buffer to the given queue */
     Result Submit(Queue *queue);
     
     non_owning_ptr<CommandBuffer> command_buffer;
-    VkFence        fc_queue_submit;
+    std::unique_ptr<Fence>        fc_queue_submit;
     SemaphoreChain present_semaphores;
-
-    non_owning_ptr<Device> creation_device;
 };
 
 } // namespace renderer

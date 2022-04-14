@@ -265,7 +265,7 @@ private:
         VkImageLayout initial_layout,
         VkImageCreateInfo *out_image_info);
 
-    Result GenerateMipMaps(Device *device,
+    Result GenerateMipmaps(Device *device,
         CommandBuffer *command_buffer,
         const LayoutTransferStateBase &transfer_state_pre,
         LayoutTransferStateBase &transfer_state_post);

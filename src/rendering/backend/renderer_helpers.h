@@ -3,14 +3,13 @@
 
 #include "renderer_result.h"
 #include "renderer_device.h"
+#include "renderer_fence.h"
 #include "renderer_structs.h"
 #include "renderer_command_buffer.h"
 
 #include <vulkan/vulkan.h>
 
 #include <vector>
-
-#define DEFAULT_FENCE_TIMEOUT 100000000000
 
 namespace hyperion {
 namespace renderer {
@@ -56,10 +55,12 @@ public:
 
 private:
     std::vector<std::function<Result(CommandBuffer *)>> m_functions;
+    std::unique_ptr<Fence> m_fence;
 
     inline Result Begin(Device *device)
     {
         command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_PRIMARY);
+        m_fence = std::make_unique<Fence>();
 
         HYPERION_BUBBLE_ERRORS(command_buffer->Create(device, pool));
 
@@ -72,22 +73,15 @@ private:
 
         HYPERION_PASS_ERRORS(command_buffer->End(device), result);
 
-        // Create fence to ensure that the command buffer has finished executing
-        VkFenceCreateInfo fence_create_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-
-        VkFence fence;
-
-        HYPERION_VK_CHECK(vkCreateFence(device->GetDevice(), &fence_create_info, nullptr, &fence));
+        HYPERION_PASS_ERRORS(m_fence->Create(device), result);
 
         // Submit to the queue
         auto queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
 
-        HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(queue_graphics, fence, nullptr), result);
+        HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(queue_graphics, m_fence->GetFence(), nullptr), result);
         
-        // Wait for the fence to signal that command buffer has finished executing
-        HYPERION_VK_PASS_ERRORS(vkWaitForFences(device->GetDevice(), 1, &fence, true, DEFAULT_FENCE_TIMEOUT), result);
-
-        vkDestroyFence(device->GetDevice(), fence, nullptr);
+        HYPERION_PASS_ERRORS(m_fence->WaitForGpu(device), result);
+        HYPERION_PASS_ERRORS(m_fence->Destroy(device), result);
 
         HYPERION_PASS_ERRORS(command_buffer->Destroy(device, pool), result);
 

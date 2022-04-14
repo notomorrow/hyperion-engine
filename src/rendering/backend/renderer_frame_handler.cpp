@@ -34,11 +34,9 @@ Result FrameHandler::PrepareFrame(Device *device, Swapchain *swapchain)
 {
     auto *frame = GetCurrentFrameData().Get<Frame>();
 
-    VkResult fence_result{};
+    VkResult fence_result;
 
-    do {
-        fence_result = vkWaitForFences(device->GetDevice(), 1, &frame->fc_queue_submit, VK_TRUE, UINT64_MAX);
-    } while (fence_result == VK_TIMEOUT);
+    frame->fc_queue_submit->WaitForGpu(device, true, &fence_result);
 
     if (fence_result == VK_SUBOPTIMAL_KHR || fence_result == VK_ERROR_OUT_OF_DATE_KHR) {
         DebugLog(LogType::Debug, "Waiting -- image result was %d\n", fence_result);
@@ -49,7 +47,7 @@ Result FrameHandler::PrepareFrame(Device *device, Swapchain *swapchain)
     }
 
     HYPERION_VK_CHECK(fence_result);
-    HYPERION_VK_CHECK(vkResetFences(device->GetDevice(), 1, &frame->fc_queue_submit));
+    HYPERION_BUBBLE_ERRORS(frame->fc_queue_submit->Reset(device));
 
     HYPERION_VK_CHECK(m_next_image(device, swapchain, frame, &m_acquired_image_index));
 
@@ -108,7 +106,7 @@ Result FrameHandler::Destroy(Device *device, VkCommandPool pool)
 
     for (uint32_t i = 0; i < m_per_frame_data.NumFrames(); i++) {
         HYPERION_PASS_ERRORS(m_per_frame_data[i].Get<CommandBuffer>()->Destroy(device, pool), result);
-        HYPERION_PASS_ERRORS(m_per_frame_data[i].Get<Frame>()->Destroy(), result);
+        HYPERION_PASS_ERRORS(m_per_frame_data[i].Get<Frame>()->Destroy(device), result);
     }
 
     m_per_frame_data.Reset();

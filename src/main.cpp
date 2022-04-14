@@ -546,7 +546,7 @@ int main()
          */
         engine.UpdateDescriptorData(frame_index);
         
-        HYPERION_ASSERT_RESULT(frame->BeginCapture());
+        HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
         engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
         engine.RenderPostProcessing(frame->GetCommandBuffer(), frame_index);
@@ -577,7 +577,7 @@ int main()
 
         engine.RenderSwapchain(frame->GetCommandBuffer());
 
-        HYPERION_ASSERT_RESULT(frame->EndCapture());
+        HYPERION_ASSERT_RESULT(frame->EndCapture(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));
         
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());

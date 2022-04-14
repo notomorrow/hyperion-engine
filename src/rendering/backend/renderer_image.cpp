@@ -482,7 +482,7 @@ Result Image::Create(Device *device, Instance *renderer,
                the layout to be `transfer_from.new_layout`
             */
             commands.Push([this, device, &transfer_state_pre, &transfer_state_post](CommandBuffer *command_buffer) {
-                return GenerateMipMaps(device, command_buffer, transfer_state_pre, transfer_state_post);
+                return GenerateMipmaps(device, command_buffer, transfer_state_pre, transfer_state_post);
             });
         }
 
@@ -534,7 +534,7 @@ Result Image::Destroy(Device *device)
     return result;
 }
 
-Result Image::GenerateMipMaps(Device *device,
+Result Image::GenerateMipmaps(Device *device,
     CommandBuffer *command_buffer,
     const LayoutTransferStateBase &transfer_state_pre,
     LayoutTransferStateBase &transfer_state_post)
