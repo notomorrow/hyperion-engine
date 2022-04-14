@@ -24,7 +24,7 @@ struct Resources {
 
     RefCounter<Shader,   Callbacks>         shaders;
     RefCounter<Texture,  Callbacks>         textures;
-    ObjectHolder<Framebuffer>               framebuffers;
+    RefCounter<Framebuffer, Callbacks>      framebuffers;
     RefCounter<RenderPass, Callbacks>       render_passes;
     RefCounter<Material, Callbacks>         materials;
     ObjectHolder<ComputePipeline>           compute_pipelines{.defer_create = true};

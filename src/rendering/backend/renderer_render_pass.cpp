@@ -152,6 +152,8 @@ Result RenderPass::Destroy(Device *device)
 
 void RenderPass::Begin(CommandBuffer *cmd, FramebufferObject *framebuffer)
 {
+    AssertThrow(framebuffer != nullptr && framebuffer->GetFramebuffer() != nullptr);
+
     VkRenderPassBeginInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
     render_pass_info.renderPass          = m_render_pass;
     render_pass_info.framebuffer         = framebuffer->GetFramebuffer();

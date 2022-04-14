@@ -183,10 +183,7 @@ void Engine::PrepareSwapchain()
             );
         }
 
-        m_root_pipeline->AddFramebuffer(resources.framebuffers.Add(
-            this,
-            std::move(fbo)
-        ));
+        m_root_pipeline->AddFramebuffer(resources.framebuffers.Add(std::move(fbo)));
 
         ++iteration;
     }
@@ -304,7 +301,8 @@ void Engine::Initialize()
 
     /* for textures */
     shader_globals->textures.Create(this);
-
+    
+    callbacks.TriggerPersisted(EngineCallback::CREATE_FRAMEBUFFERS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RENDER_PASSES, this);
 
     m_render_list.Create(this);
@@ -335,7 +333,8 @@ void Engine::Destroy()
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
     m_post_processing.Destroy(this);
-
+    
+    callbacks.Trigger(EngineCallback::DESTROY_FRAMEBUFFERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
 
     resources.Destroy(this);

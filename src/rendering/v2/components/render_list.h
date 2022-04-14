@@ -14,7 +14,7 @@ public:
         GraphicsPipeline::Bucket bucket;
         ObjectHolder<GraphicsPipeline> pipelines;
         Ref<RenderPass> render_pass;
-        std::vector<Framebuffer::ID> framebuffer_ids;
+        std::vector<Ref<Framebuffer>> framebuffers;
         std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
 
         void CreatePipelines(Engine *engine);
