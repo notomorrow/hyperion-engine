@@ -48,10 +48,11 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_COLOR,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F,
+            std::array{ 
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8 },
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )
@@ -60,8 +61,9 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_DEPTH,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16 },
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
         )
@@ -70,8 +72,8 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_GBUFFER,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F },
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )
