@@ -14,7 +14,7 @@ Framebuffer::~Framebuffer()
     Teardown();
 }
 
-/*void Framebuffer::Init(Engine *engine)
+void Framebuffer::Init(Engine *engine)
 {
     if (IsInit()) {
         return;
@@ -31,18 +31,6 @@ Framebuffer::~Framebuffer()
             EngineComponent::Destroy(engine);
         }), engine);
     }));
-}*/
-
-void Framebuffer::Create(Engine *engine)
-{
-    m_render_pass.Init();
-
-    EngineComponent::Create(engine, &m_render_pass->Get());
-}
-
-void Framebuffer::Destroy(Engine *engine)
-{
-    EngineComponent::Destroy(engine);
 }
 
 } // namespace hyperion::v2

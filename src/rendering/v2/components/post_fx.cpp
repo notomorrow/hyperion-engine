@@ -22,7 +22,6 @@ PostEffect::PostEffect()
 
 PostEffect::PostEffect(Ref<Shader> &&shader)
     : m_pipeline_id{},
-      m_framebuffer_id{},
       m_shader(std::move(shader)),
       m_render_pass(nullptr)
 {
@@ -77,10 +76,11 @@ void PostEffect::Create(Engine *engine)
         framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
     }
 
-    m_framebuffer_id = engine->resources.framebuffers.Add(
-        engine,
+    m_framebuffer = engine->resources.framebuffers.Add(
         std::move(framebuffer)
     );
+
+    m_framebuffer.Init();
 
     CreatePerFrameData(engine);
 
@@ -114,7 +114,7 @@ void PostEffect::CreatePerFrameData(Engine *engine)
 void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
-    auto &framebuffer = engine->resources.framebuffers[m_framebuffer_id]->Get();
+    auto &framebuffer = m_framebuffer->Get();
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
     
     for (auto *attachment_ref : framebuffer.GetRenderPassAttachmentRefs()) {
@@ -136,7 +136,7 @@ void PostEffect::CreatePipeline(Engine *engine)
         GraphicsPipeline::Bucket::BUCKET_PREPASS
     );
 
-    pipeline->AddFramebuffer(m_framebuffer_id);
+    pipeline->AddFramebuffer(m_framebuffer.Acquire());
     pipeline->SetDepthWrite(false);
     pipeline->SetDepthTest(false);
     pipeline->SetTopology(Topology::TRIANGLE_FAN);
@@ -164,7 +164,7 @@ void PostEffect::Destroy(Engine *engine)
 
     m_frame_data->Reset();
 
-    engine->resources.framebuffers.Remove(engine, m_framebuffer_id);
+    m_framebuffer = nullptr;
 
     for (auto &attachment : m_attachments) {
         HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);

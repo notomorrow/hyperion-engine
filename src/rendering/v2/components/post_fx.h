@@ -38,8 +38,8 @@ public:
     inline const auto &GetFrameData() const
         { return m_frame_data; }
 
-    inline Framebuffer::ID GetFramebufferId() const
-        { return m_framebuffer_id; }
+    inline Framebuffer *GetFramebuffer() const
+        { return m_framebuffer.ptr; }
 
     inline Shader *GetShader() const
         { return m_shader.ptr; }
@@ -65,7 +65,7 @@ protected:
     void CreatePerFrameData(Engine *engine);
 
     std::unique_ptr<PerFrameData<CommandBuffer>> m_frame_data;
-    Framebuffer::ID m_framebuffer_id;
+    Ref<Framebuffer> m_framebuffer;
     Ref<Shader> m_shader;
     Ref<RenderPass> m_render_pass;
     GraphicsPipeline::ID m_pipeline_id;

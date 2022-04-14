@@ -73,7 +73,7 @@ void ShadowEffect::CreatePipeline(Engine *engine)
     );
 
     pipeline->SetCullMode(CullMode::FRONT);
-    pipeline->AddFramebuffer(m_framebuffer_id);
+    pipeline->AddFramebuffer(m_framebuffer.Acquire());
     
     m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
 }
@@ -93,10 +93,11 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
         framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
     }
 
-    m_framebuffer_id = engine->resources.framebuffers.Add(
-        engine,
+    m_framebuffer = engine->resources.framebuffers.Add(
         std::move(framebuffer)
     );
+
+    m_framebuffer.Init();
 
     CreatePerFrameData(engine);
 
