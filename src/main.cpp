@@ -174,18 +174,33 @@ int main()
     ImageView image_storage_view;
 #endif
 
+    auto *input_manager = new InputManager(window);
+    input_manager->SetWindow(window);
+
+    auto scene = engine.resources.scenes.Add(std::make_unique<v2::Scene>(
+        std::make_unique<FpsCamera>(
+            input_manager,
+            window,
+            1024,
+            768,
+            70.0f,
+            0.05f,
+            250.0f
+        )
+    ));
+
     engine.Initialize();
     
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/sponza/sponza.obj",
+        base_path + "/res/models/conference/conference.obj",
         base_path + "/res/models/cube.obj"
     );
 
 
     zombie->Scale(0.35f);
-
-    sponza->Scale(0.1f);
+    sponza->Scale(0.01f);
+    //sponza->Scale(0.1f);
     //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
     sponza->Update(&engine);
     
@@ -230,21 +245,6 @@ int main()
     ));
 
     float timer = 0.0;
-
-    auto *input_manager = new InputManager(window);
-    input_manager->SetWindow(window);
-
-    auto scene = engine.resources.scenes.Add(std::make_unique<v2::Scene>(
-        std::make_unique<FpsCamera>(
-            input_manager,
-            window,
-            1024,
-            768,
-            70.0f,
-            0.05f,
-            250.0f
-        )
-    ));
 
     bool running = true;
 

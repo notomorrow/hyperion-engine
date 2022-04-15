@@ -148,7 +148,10 @@ Result DescriptorPool::Create(Device *device)
     pool_sizes.reserve(items_per_set.size());
 
     for (auto &it : items_per_set) {
-        pool_sizes.push_back({ it.first, uint32_t(it.second * m_num_descriptor_sets) });
+        pool_sizes.push_back({
+            it.first,
+            uint32_t(it.second * m_num_descriptor_sets)
+        });
     }
 
     VkDescriptorPoolCreateInfo pool_info{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
@@ -423,7 +426,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
 
             m_sub_descriptor_update_indices.pop();
 
-            iteration++;
+            ++iteration;
         }
 
         if (m_sub_descriptor_update_indices.empty()) {

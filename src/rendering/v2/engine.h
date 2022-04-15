@@ -34,7 +34,7 @@ using renderer::StorageBuffer;
  * | ====== Set 0 ====== | ====== Set 1 ====== | ====== Set 2 ====== | ====== Set 3 ====== | ====== Set 4 ====== |
  * | (UNUSED)            | GBuffer: color      | Scene data SSBO     | Material data SSBO  | Bindless textures   |
  * |                     | Gbuffer: normals    | empty               | Object data SSBO    | empty               |
- * |                     | Gbuffer: position   | empty               | Skeleton data SSBO  |                     |
+ * |                     | Gbuffer: position   | empty               | Skeleton data SSBO  | empty               |
  * |                     | Gbuffer: depth      | empty               | empty               | empty               |
  * |                     | Deferred result     | empty               | empty               | empty               |
  * |                     | empty               | empty               | empty               | empty               |

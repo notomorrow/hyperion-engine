@@ -50,6 +50,21 @@ public:
 
         DESCRIPTOR_SET_INDEX_MAX
     };
+    
+    static constexpr Index scene_buffer_mapping[]  = {
+        DESCRIPTOR_SET_INDEX_SCENE,
+        DESCRIPTOR_SET_INDEX_SCENE_FRAME_1
+    };
+
+    static constexpr Index object_buffer_mapping[] = {
+        DESCRIPTOR_SET_INDEX_OBJECT,
+        DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1
+    };
+
+    static constexpr Index bindless_textures_mapping[] = {
+        DESCRIPTOR_SET_INDEX_BINDLESS,
+        DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1
+    };
 
     static constexpr uint32_t max_descriptor_sets = DESCRIPTOR_SET_INDEX_MAX;
     static constexpr uint32_t max_bindless_resources = 4096;
@@ -95,13 +110,13 @@ private:
 
 struct DescriptorSetBinding {
     struct Declaration {
-        uint32_t set;
+        DescriptorSet::Index set;
         uint32_t count; /* default to num total sets - set */
     } declaration;
 
     /* where we bind to in the shader program */
     struct Locations {
-        uint32_t binding; /* defaults to first_set_index */
+        DescriptorSet::Index binding; /* defaults to `set` */
     } locations;
 
     struct DynamicOffsets {
@@ -109,17 +124,24 @@ struct DescriptorSetBinding {
     } offsets;
 
     DescriptorSetBinding()
-        : declaration({ .set = 0, .count = DescriptorSet::max_descriptor_sets }),
-          locations({ .binding = 0 })
+        : declaration({
+              .set = DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED,
+              .count = DescriptorSet::max_descriptor_sets
+          }),
+          locations({
+              .binding = DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED
+          })
     {
     }
 
     DescriptorSetBinding(Declaration &&dec)
         : declaration(std::move(dec)),
-          locations({ .binding = dec.set })
+          locations({})
     {
+        locations.binding = declaration.set;
+
         if (declaration.count == 0) {
-            declaration.count = DescriptorSet::max_descriptor_sets - declaration.set;
+            declaration.count = DescriptorSet::DESCRIPTOR_SET_INDEX_MAX - declaration.set;
         }
     }
 
@@ -128,7 +150,7 @@ struct DescriptorSetBinding {
           locations(std::move(loc))
     {
         if (declaration.count == 0) {
-            declaration.count = DescriptorSet::max_descriptor_sets - declaration.set;
+            declaration.count = DescriptorSet::DESCRIPTOR_SET_INDEX_MAX - declaration.set;
         }
     }
 

@@ -69,17 +69,16 @@ void PostEffect::Create(Engine *engine)
 {
     CreateRenderPass(engine);
 
-    auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, m_render_pass.Acquire());
+    m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+        engine->GetInstance()->swapchain->extent,
+        m_render_pass.Acquire()
+    ));
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
-        framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+        m_framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
     }
-
-    m_framebuffer = engine->resources.framebuffers.Add(
-        std::move(framebuffer)
-    );
-
+    
     m_framebuffer.Init();
 
     CreatePerFrameData(engine);
@@ -191,7 +190,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
         command_buffer->Record(
             engine->GetInstance()->GetDevice(),
             pipeline->Get().GetConstructionInfo().render_pass,
-            [this, engine, pipeline](CommandBuffer *cmd) {
+            [this, engine, pipeline, frame_index](CommandBuffer *cmd) {
                 pipeline->Get().Bind(cmd);
                 
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
@@ -199,9 +198,29 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                     cmd,
                     &pipeline->Get(),
                     {
-                        {.count = 3},
-                        {},
-                        {.offsets = {uint32_t(0)}}
+                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, .count = 1},
+                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+                    }
+                ));
+                
+                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+                    engine->GetInstance()->GetDevice(),
+                    cmd,
+                    &pipeline->Get(),
+                    {
+                        {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
+                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+                        {.offsets = {uint32_t(0 * sizeof(SceneShaderData))}} /* TODO: scene index */
+                    }
+                ));
+                
+                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+                    engine->GetInstance()->GetDevice(),
+                    cmd,
+                    &pipeline->Get(),
+                    {
+                        {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
+                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
                     }
                 ));
 

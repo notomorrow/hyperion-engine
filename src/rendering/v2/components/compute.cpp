@@ -37,7 +37,10 @@ void ComputePipeline::Dispatch(Engine *engine, CommandBuffer *command_buffer,  E
         engine->GetInstance()->GetDevice(),
         command_buffer,
         &m_wrapped,
-        {{.set = 1, .count = 1}}
+        {{
+            .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
+            .count = 1
+        }}
     );
 
     m_wrapped.Dispatch(command_buffer->GetCommandBuffer(), group_size);

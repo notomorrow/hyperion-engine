@@ -810,8 +810,7 @@ public:
             }
         }
 
-        operator T *()              { return ptr; }
-        operator const T *() const  { return ptr; }
+        operator T * const() const  { return ptr; }
         operator bool() const       { return Valid(); }
 
         T *operator->()             { return ptr; }

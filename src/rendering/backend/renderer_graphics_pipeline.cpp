@@ -333,8 +333,8 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     depth_stencil.minDepthBounds        = 0.0f; // Optional
     depth_stencil.maxDepthBounds        = 1.0f; // Optional
     depth_stencil.stencilTestEnable     = VK_FALSE;
-    depth_stencil.front               = {}; // Optional
-    depth_stencil.back                = {}; // Optional
+    depth_stencil.front                 = {}; // Optional
+    depth_stencil.back                  = {}; // Optional
 
     VkGraphicsPipelineCreateInfo pipeline_info{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 

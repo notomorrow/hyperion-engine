@@ -167,25 +167,13 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 device,
                 secondary,
                 &m_wrapped,
-                {{.set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, .count = 1}}
+                {{
+                    .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
+                    .count = 1
+                }}
             );
 
-            static constexpr uint32_t frame_index_scene_buffer_mapping[]  = {
-                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1
-            };
-
-            static constexpr uint32_t frame_index_object_buffer_mapping[] = {
-                DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT,
-                DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1
-            };
-
-            static constexpr uint32_t frame_index_bindless_textures_mapping[] = {
-                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS,
-                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1
-            };
-
-            static_assert(std::size(frame_index_object_buffer_mapping) == Swapchain::max_frames_in_flight);
+            static_assert(std::size(DescriptorSet::object_buffer_mapping) == Swapchain::max_frames_in_flight);
 
             const auto scene_index = m_scene != nullptr
                 ? m_scene->GetId().value - 1
@@ -197,7 +185,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 secondary,
                 &m_wrapped,
                 {
-                    {.set = frame_index_scene_buffer_mapping[frame_index], .count = 1},
+                    {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
                     {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
                     {.offsets = {uint32_t(scene_index * sizeof(SceneShaderData))}}
                 }
@@ -209,7 +197,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 secondary,
                 &m_wrapped,
                 {
-                    {.set = frame_index_bindless_textures_mapping[frame_index], .count = 1},
+                    {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
                     {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
                 }
             );
@@ -243,7 +231,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                     secondary,
                     &m_wrapped,
                     {
-                        {.set = frame_index_object_buffer_mapping[frame_index], .count = 1},
+                        {.set = DescriptorSet::object_buffer_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT},
                         {.offsets = {
                             uint32_t(material_index * sizeof(MaterialShaderData)),

@@ -24,7 +24,7 @@ void DeferredRenderingEffect::CreateShader(Engine *engine)
             }},
             SubShader{ShaderModule::Type::FRAGMENT, {
                 FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read(),
-            {.name = "deferred frag"}
+                {.name = "deferred frag"}
             }}
         }
     ));

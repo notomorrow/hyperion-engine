@@ -368,6 +368,9 @@ void Engine::Compile()
 
         /* Finalize per-object data */
         shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), i);
+
+        /* Finalize per-object data */
+        shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), i);
     }
 
     /* Finalize descriptor pool */
@@ -419,7 +422,10 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
         m_instance->GetDevice(),
         command_buffer,
         &pipeline,
-        {{.set = 1, .count = 1}}
+        {{
+            .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
+            .count = 1
+        }}
     );
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */

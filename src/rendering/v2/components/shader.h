@@ -128,7 +128,7 @@ protected:
     {
         auto &dirty = m_dirty[buffer_index];
 
-        if (!dirty.GetEnd()) {
+        if (dirty.GetEnd() == 0) {
             return;
         }
 
@@ -138,7 +138,7 @@ protected:
             device,
             dirty.GetStart()    * sizeof(StructType),
             dirty.GetDistance() * sizeof(StructType),
-            ptr + dirty.GetStart()
+            &ptr[dirty.GetStart()]
         );
 
         dirty = {0, 0};

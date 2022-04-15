@@ -15,19 +15,19 @@ layout (location = 5) in vec3 a_bitangent;
 layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
-struct Object {
-    mat4 model_matrix;
-    uint has_skinning;
-    
-    uint _padding[3];
-};
-
 layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
     mat4 view;
     mat4 projection;
     vec4 camera_position;
     vec4 light_direction;
 } scene;
+
+struct Object {
+    mat4 model_matrix;
+    uint has_skinning;
+    
+    uint _padding[3];
+};
 
 layout(std140, set = 3, binding = 1, row_major) readonly buffer ObjectBuffer {
     Object object;
