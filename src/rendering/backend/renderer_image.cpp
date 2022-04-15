@@ -405,10 +405,9 @@ Result Image::Create(Device *device, Instance *renderer,
     auto commands = renderer->GetSingleTimeCommands();
 
     { // transition from 'undefined' layout state into one optimal for transfer
-        VkImageMemoryBarrier acquire_barrier{},
-                             release_barrier{};
-
-        acquire_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        VkImageMemoryBarrier acquire_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER},
+                             release_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+        
         acquire_barrier.oldLayout = transfer_state_pre.src.layout;
         acquire_barrier.newLayout = transfer_state_pre.dst.layout;
         acquire_barrier.image = m_image->image;

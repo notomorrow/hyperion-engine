@@ -69,7 +69,7 @@ void main() {
         ? texture(textures[material.texture_index[0]], v_texcoord0)
         : vec4(1.0);
     gbuffer_albedo *= bool(material.texture_usage[6])
-        ? textureLod(cubemap_textures[material.texture_index[6]], reflection_vector, 7.0)
+        ? textureLod(cubemap_textures[material.texture_index[6]], reflection_vector, 12.0)
         : vec4(1.0);
     
     gbuffer_normals = vec4(normal * 0.5 + 0.5, 1.0);
