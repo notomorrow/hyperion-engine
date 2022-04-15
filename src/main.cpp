@@ -197,14 +197,16 @@ int main()
     mat1.Init();
 
     scene->SetEnvironmentTexture(0, cubemap.Acquire());
-    
+
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/sponza/sponza.obj",
+        base_path + "/res/models/material_sphere/material_sphere.obj",
         base_path + "/res/models/cube.obj"
     );
 
-    sponza->Scale(0.02f);
+    sponza->Translate({0, 0, 5});
+
+    //sponza->Scale(0.02f);
     //sponza->Scale(0.1f);
     //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
     sponza->Update(&engine);

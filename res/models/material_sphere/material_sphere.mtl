@@ -8,4 +8,6 @@ Kd 0.511863 0.621656 0.640000
 Ks 0.500000 0.500000 0.500000
 Ni 1.000000
 d 1.000000
+map_kD dirty-red-bricks_albedo.png
+map_bump dirty-red-bricks_normal-ogl.png
 illum 2

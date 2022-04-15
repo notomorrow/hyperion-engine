@@ -62,7 +62,7 @@ void Mesh::Init(Engine *engine)
             m_indices  = {0};
         }
 
-        UploadToDevice(engine->GetInstance()->GetDevice());
+        Upload(engine->GetInstance());
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
             AssertThrow(m_vbo != nullptr);
@@ -134,8 +134,12 @@ std::vector<float> Mesh::CreatePackedBuffer() {
 
 #undef PACKED_SET_ATTR
 
-void Mesh::UploadToDevice(Device *device)
+void Mesh::Upload(Instance *instance)
 {
+    using renderer::StagingBuffer;
+
+    auto *device = instance->GetDevice();
+
     AssertThrow(m_vbo == nullptr);
     AssertThrow(m_ibo == nullptr);
     
@@ -143,16 +147,35 @@ void Mesh::UploadToDevice(Device *device)
     m_ibo = std::make_unique<IndexBuffer>();
 
     std::vector<float> packed_buffer = CreatePackedBuffer();
-
-    /* Create and upload the VBO */
-    const size_t packed_buffer_size = packed_buffer.size() * sizeof(float);
-    m_vbo->Create(device, packed_buffer_size);
-    m_vbo->Copy(device, packed_buffer_size, packed_buffer.data());
-
-    /* Create and upload the indices */
+    const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
     const size_t packed_indices_size = m_indices.size() * sizeof(Index);
-    m_ibo->Create(device, packed_indices_size);
-    m_ibo->Copy(device, packed_indices_size, m_indices.data());
+
+    /* using a staging buffer to copy the data */
+    StagingBuffer staging_buffer_vertices;
+    HYPERION_ASSERT_RESULT(staging_buffer_vertices.Create(device, packed_buffer_size));
+    staging_buffer_vertices.Copy(device, packed_buffer_size, packed_buffer.data());
+
+    StagingBuffer staging_buffer_indices;
+    HYPERION_ASSERT_RESULT(staging_buffer_indices.Create(device, packed_indices_size));
+    staging_buffer_indices.Copy(device, packed_indices_size, m_indices.data());
+
+    auto commands = instance->GetSingleTimeCommands();
+
+    commands.Push([&](CommandBuffer *cmd) {
+        /* Create and upload the VBO */
+        HYPERION_BUBBLE_ERRORS(m_vbo->Create(device, packed_buffer_size));
+        m_vbo->CopyFrom(cmd, &staging_buffer_vertices, packed_buffer_size);
+
+        HYPERION_BUBBLE_ERRORS(m_ibo->Create(device, packed_indices_size));
+        m_ibo->CopyFrom(cmd, &staging_buffer_indices, packed_indices_size);
+
+        HYPERION_RETURN_OK;
+    });
+    
+    HYPERION_ASSERT_RESULT(commands.Execute(device));
+
+    HYPERION_ASSERT_RESULT(staging_buffer_vertices.Destroy(device));
+    HYPERION_ASSERT_RESULT(staging_buffer_indices.Destroy(device));
 }
 
 std::pair<std::vector<Vertex>, std::vector<Mesh::Index>>

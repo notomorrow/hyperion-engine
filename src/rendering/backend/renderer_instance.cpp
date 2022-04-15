@@ -25,7 +25,8 @@ static VkResult HandleNextFrame(Device *device, Swapchain *swapchain, Frame *fra
         UINT64_MAX,
         frame->GetPresentSemaphores().GetWaitSemaphores()[0].GetSemaphore(),
         VK_NULL_HANDLE,
-        index);
+        index
+    );
 }
 
 Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers)
@@ -405,7 +406,7 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
     if (physical_device == nullptr) {
         physical_device = PickPhysicalDevice(EnumeratePhysicalDevices());
     }
-
+    
     if (this->device == nullptr) {
         this->device = new Device(physical_device, this->surface);
     }

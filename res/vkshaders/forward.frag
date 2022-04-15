@@ -8,6 +8,7 @@ layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
 layout(location=6) in flat vec3 v_light_direction;
 layout(location=7) in flat vec3 v_camera_position;
+layout(location=8) in mat3 v_tbn_matrix;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
@@ -83,10 +84,22 @@ void main()
     vec3 reflection_vector = reflect(view_vector, normal);
     
     gbuffer_albedo = material.albedo;
+    if (HasMaterialTexture(0)) {
+        vec4 albedo_texture = texture(textures[material.texture_index[0]], v_texcoord0);
+        
+        if (albedo_texture.a < 0.2) {
+            discard;
+        }
+        
+        gbuffer_albedo *= albedo_texture;
+    }
+        
     
-    gbuffer_albedo *= HasMaterialTexture(0)
-        ? texture(textures[material.texture_index[0]], v_texcoord0)
-        : vec4(1.0);
+        
+    if (HasMaterialTexture(1)) {
+        vec4 normals_texture = texture(textures[material.texture_index[1]], v_texcoord0) * 2.0 - 1.0;
+        normal = normalize(v_tbn_matrix * normals_texture.rgb);
+    }
     
     gbuffer_normals = vec4(normal * 0.5 + 0.5, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);

@@ -311,6 +311,20 @@ Result Device::Wait() const
 
 Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions)
 {
+    DebugLog(LogType::Debug, "Memory properties:\n");
+    const auto &memory_properties = features->GetPhysicalDeviceMemoryProperties();
+
+    for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
+        const auto &memory_type = memory_properties.memoryTypes[i];
+        const uint32_t heap_index =  memory_type.heapIndex;
+
+        DebugLog(LogType::Debug, "Memory type %lu:\t(index: %lu, flags: %lu)\n", i, heap_index, memory_type.propertyFlags);
+
+        const VkMemoryHeap &heap = memory_properties.memoryHeaps[heap_index];
+
+        DebugLog(LogType::Debug, "\tHeap:\t\t(size: %llu, flags: %lu)\n", heap.size, heap.flags);
+    }
+
     this->SetRequiredExtensions(required_extensions);
 
     std::vector<VkDeviceQueueCreateInfo> queue_create_info_vec;

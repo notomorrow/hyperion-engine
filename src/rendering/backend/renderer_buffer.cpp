@@ -10,6 +10,8 @@
 #include "../../system/debug.h"
 #include <cstring>
 
+#include "renderer_features.h"
+
 namespace hyperion {
 namespace renderer {
 uint32_t GPUMemory::FindMemoryType(Device *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties)
@@ -27,11 +29,8 @@ uint32_t GPUMemory::FindMemoryType(Device *device, uint32_t vk_type_filter, VkMe
     AssertThrowMsg(nullptr, "Could not find suitable memory type!\n");
 }
 
-GPUMemory::GPUMemory(
-    uint32_t memory_property_flags,
-    uint32_t sharing_mode)
-    : memory_property_flags(memory_property_flags),
-      sharing_mode(sharing_mode),
+GPUMemory::GPUMemory()
+    : sharing_mode(VK_SHARING_MODE_EXCLUSIVE),
       size(0)
 {
     static unsigned allocations = 0;
@@ -71,10 +70,15 @@ void GPUMemory::Copy(Device *device, size_t offset, size_t count, void *ptr)
     Unmap(device);
 }
 
-GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
-    : GPUMemory(memory_property_flags, sharing_mode),
+GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags,
+    VmaMemoryUsage vma_usage,
+    VmaAllocationCreateFlags vma_allocation_create_flags
+)
+    : GPUMemory(),
       buffer(nullptr),
-      usage_flags(usage_flags)
+      usage_flags(usage_flags),
+      vma_usage(vma_usage),
+      vma_allocation_create_flags(vma_allocation_create_flags)
 {
 }
 
@@ -83,14 +87,8 @@ GPUBuffer::~GPUBuffer()
     AssertThrowMsg(buffer == nullptr, "buffer should have been destroyed!");
 }
 
-void GPUBuffer::Create(Device *device, size_t size)
+VkBufferCreateInfo GPUBuffer::GetBufferCreateInfo(Device *device) const
 {
-    if (size == 0) {
-        DebugLog(LogType::Warn, "Creating empty gpu buffer -- this will likely result in errors \n");
-    }
-
-    this->size = size;
-
     const QueueFamilyIndices &qf_indices = device->GetQueueFamilyIndices();
     const uint32_t buffer_family_indices[] = { qf_indices.graphics_family.value(), qf_indices.compute_family.value() };
 
@@ -100,33 +98,125 @@ void GPUBuffer::Create(Device *device, size_t size)
     vk_buffer_info.pQueueFamilyIndices = buffer_family_indices;
     vk_buffer_info.queueFamilyIndexCount = uint32_t(std::size(buffer_family_indices));
 
+    return vk_buffer_info;
+}
+
+VmaAllocationCreateInfo GPUBuffer::GetAllocationCreateInfo(Device *device) const
+{
     VmaAllocationCreateInfo alloc_info{};
-    alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-    alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+    alloc_info.flags = vma_allocation_create_flags;
+    alloc_info.usage = vma_usage;
     alloc_info.pUserData = reinterpret_cast<void *>(index);
 
-    auto result = vmaCreateBuffer(
+    return alloc_info;
+}
+
+Result GPUBuffer::CheckCanAllocate(Device *device, size_t size) const
+{
+    const auto create_info = GetBufferCreateInfo(device);
+    const auto alloc_info = GetAllocationCreateInfo(device);
+
+    return CheckCanAllocate(device, create_info, alloc_info, this->size);
+}
+
+Result GPUBuffer::CheckCanAllocate(Device *device,
+    const VkBufferCreateInfo &buffer_create_info,
+    const VmaAllocationCreateInfo &allocation_create_info,
+    size_t size) const
+{
+    const Features &features = device->GetFeatures();
+
+    auto result = Result::OK;
+
+    uint32_t memory_type_index = UINT32_MAX;
+
+    HYPERION_VK_PASS_ERRORS(
+        vmaFindMemoryTypeIndexForBufferInfo(
+            device->GetAllocator(),
+            &buffer_create_info,
+            &allocation_create_info,
+            &memory_type_index
+        ),
+        result
+    );
+
+    /* check that we have enough space in the memory type */
+    const auto &memory_properties = features.GetPhysicalDeviceMemoryProperties();
+
+    AssertThrow(memory_type_index < memory_properties.memoryTypeCount);
+
+    const auto heap_index = memory_properties.memoryTypes[memory_type_index].heapIndex;
+    const auto &heap = memory_properties.memoryHeaps[heap_index];
+
+    if (heap.size < size) {
+        return {Result::RENDERER_ERR, "Heap size is less than requested size. "
+            "Maybe the wrong memory type is being used, or the device is simply out of memory."};
+    }
+
+    return result;
+}
+
+void GPUBuffer::CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buffer, size_t count)
+{
+    VkBufferCopy region{};
+    region.size = count;
+
+    vkCmdCopyBuffer(
+        command_buffer->GetCommandBuffer(),
+        src_buffer->buffer,
+        buffer,
+        1,
+        &region
+    );
+}
+
+Result GPUBuffer::Create(Device *device, size_t size)
+{
+    this->size = size;
+
+    if (size == 0) {
+        return {Result::RENDERER_ERR, "Creating empty gpu buffer will result in errors \n"};
+    }
+
+    DebugLog(
+        LogType::Debug,
+        "Allocating GPU buffer with flags:\t(buffer usage: %lu, alloc create: %lu, alloc usage: %lu)\n",
+        usage_flags,
+        vma_allocation_create_flags,
+        vma_usage
+    );
+
+    const auto create_info = GetBufferCreateInfo(device);
+    const auto alloc_info = GetAllocationCreateInfo(device);
+
+    HYPERION_BUBBLE_ERRORS(CheckCanAllocate(device, create_info, alloc_info, this->size));
+
+    HYPERION_VK_CHECK_MSG(vmaCreateBuffer(
         device->GetAllocator(),
-        &vk_buffer_info,
+        &create_info,
         &alloc_info,
         &this->buffer,
         &this->allocation,
         nullptr
-    );
+    ), "Failed to create gpu buffer");
 
-    AssertThrowMsg(result == VK_SUCCESS, "Failed to create gpu buffer");
+    HYPERION_RETURN_OK;
 }
 
-void GPUBuffer::Destroy(Device *device)
+Result GPUBuffer::Destroy(Device *device)
 {
     vmaDestroyBuffer(device->GetAllocator(), this->buffer, this->allocation);
     this->buffer = nullptr;
     this->allocation = nullptr;
+
+    HYPERION_RETURN_OK;
 }
 
 
-VertexBuffer::VertexBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
-    : GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, memory_property_flags, sharing_mode) {}
+VertexBuffer::VertexBuffer()
+    : GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY)
+{
+}
 
 void VertexBuffer::Bind(CommandBuffer *cmd)
 {
@@ -135,8 +225,10 @@ void VertexBuffer::Bind(CommandBuffer *cmd)
     vkCmdBindVertexBuffers(cmd->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
 }
 
-IndexBuffer::IndexBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
-    : GPUBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, memory_property_flags, sharing_mode) {}
+IndexBuffer::IndexBuffer()
+    : GPUBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY)
+{
+}
 
 void IndexBuffer::Bind(CommandBuffer *cmd)
 {
@@ -144,28 +236,23 @@ void IndexBuffer::Bind(CommandBuffer *cmd)
 }
 
 
-UniformBuffer::UniformBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
-    : GPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, memory_property_flags, sharing_mode) {}
+UniformBuffer::UniformBuffer()
+    : GPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {}
 
-StorageBuffer::StorageBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
-    : GPUBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, memory_property_flags, sharing_mode) {}
-
-
-StagingBuffer::StagingBuffer(uint32_t memory_property_flags, uint32_t sharing_mode)
-    : GPUBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, memory_property_flags, sharing_mode) {}
+StorageBuffer::StorageBuffer()
+    : GPUBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {}
 
 
+StagingBuffer::StagingBuffer()
+    : GPUBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT) {}
 
-GPUImage::GPUImage(VkImageUsageFlags usage_flags, uint32_t memory_property_flags, uint32_t sharing_mode)
-    : GPUMemory(memory_property_flags, sharing_mode),
+
+
+GPUImage::GPUImage(VkImageUsageFlags usage_flags)
+    : GPUMemory(),
       image(nullptr),
       usage_flags(usage_flags)
 {
-    std::cout << "Alloc image\n";
-
-    if (index == 41) {
-       // HYP_BREAKPOINT;
-    }
 }
 
 GPUImage::~GPUImage()
