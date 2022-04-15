@@ -45,6 +45,15 @@ void Material::Init(Engine *engine)
     }));
 }
 
+void Material::Update(Engine *engine)
+{
+    if (!m_shader_data_state.IsDirty()) {
+        return;
+    }
+
+    UpdateShaderData(engine);
+}
+
 void Material::UpdateShaderData(Engine *engine) const
 {
     MaterialShaderData shader_data{
@@ -119,6 +128,11 @@ void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
     m_textures.Set(key, std::move(texture));
 
     m_shader_data_state |= ShaderDataState::DIRTY;
+}
+
+Texture *Material::GetTexture(TextureKey key) const
+{
+    return m_textures.Get(key).ptr;
 }
 
 MaterialLibrary::MaterialLibrary() = default;

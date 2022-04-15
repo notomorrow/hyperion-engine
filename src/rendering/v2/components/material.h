@@ -255,10 +255,24 @@ public:
     }
 
     void SetParameter(MaterialKey key, const Parameter &value);
+
+    /* \brief Sets the texture with the given key on this Material.
+     * If the Material has already been initialized, the Texture is initialized.
+     * Otherwise, it will be initialized when the Material's init callback is fired off.
+     * @param key The texture slot to set the texture on
+     * @param texture A Texture resource
+     */
     void SetTexture(TextureKey key, Ref<Texture> &&texture);
 
+    /* \brief Return a pointer to a Texture set on this Material by the given
+     * texture key. If no Texture was set, nullptr is returned.
+     * @param key The key of the texture to find
+     * @returns Pointer to the found Texture, or nullptr.
+     */
+    Texture *GetTexture(TextureKey key) const;
+
     void Init(Engine *engine);
-    void UpdateShaderData(Engine *engine) const;
+    void Update(Engine *engine); /* TODO: call from Engine? */
 
     inline HashCode GetHashCode() const
     {
@@ -269,6 +283,8 @@ public:
     }
 
 private:
+    void UpdateShaderData(Engine *engine) const;
+
     char *m_tag;
 
     ParameterTable  m_parameters;

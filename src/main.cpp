@@ -191,14 +191,18 @@ int main()
 
     engine.Initialize();
     
+    auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
+    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.95f }));
+    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
+    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_SKYBOX_MAP, cubemap.Acquire());
+    mat1.Init();
+    
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/conference/conference.obj",
+        base_path + "/res/models/sponza/sponza.obj",
         base_path + "/res/models/cube.obj"
     );
 
-
-    zombie->Scale(0.35f);
     sponza->Scale(0.01f);
     //sponza->Scale(0.1f);
     //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
@@ -294,11 +298,6 @@ int main()
 
     v2::Node new_root("root");
     
-    auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
-    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 0.5f }));
-    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
-    mat1.Init();
-    
     auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
     mat2->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture2.Acquire());
@@ -382,6 +381,8 @@ int main()
 
         auto zombie_node = std::make_unique<v2::Node>("monkey");
         zombie_node->SetSpatial(zombie_spatial.Acquire());
+        zombie_node->Scale(0.15f);
+
         pipeline->AddSpatial(zombie_spatial.Acquire());
         
         translucent_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
@@ -491,6 +492,20 @@ int main()
 
         timer += delta_time;
 
+        if (MathUtil::Approximately(std::fmod(timer, 1.0f), 0.0f)) {
+            if (auto *tex = mat1->GetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP)) {
+                if (tex->GetId() == texture->GetId()) {
+                    mat1->SetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, texture2.Acquire());
+                } else {
+                    mat1->SetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
+                }
+            } else {
+                mat1->SetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
+            }
+
+            DebugLog(LogType::Info, "Switch textures\n");
+        }
+
         scene->Update(&engine, delta_time);
 
         HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
@@ -532,10 +547,10 @@ int main()
 
         sponza->Update(&engine);
         
-        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_transform.SetRotation(Quaternion({0, 1, 0}, timer * 0.35f));
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
         zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
         zombie->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
-        zombie->SetLocalTransform(transform);
         zombie->Update(&engine);
         
         cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
@@ -599,9 +614,6 @@ int main()
     delete image_storage;
 
 #endif
-    
-    
-    //delete cubemap;
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
         per_frame_data[i].Get<CommandBuffer>()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsCommandPool());

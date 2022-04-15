@@ -69,6 +69,10 @@ void Spatial::Update(Engine *engine)
         m_skeleton->UpdateShaderData(engine);
     }
 
+    if (m_material != nullptr) {
+        m_material->Update(engine);
+    }
+
     if (!m_shader_data_state.IsDirty()) {
         if (m_octree != nullptr) {
             m_visibility_state = m_octree->GetVisibilityState();

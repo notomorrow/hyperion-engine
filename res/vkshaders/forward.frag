@@ -45,7 +45,8 @@ struct Material {
        2 - ao
        3 - parallax
        4 - metalness
-       5 - roughness */
+       5 - roughness
+       6 - envmap */
 };
 
 layout(std430, set = 3, binding = 0) readonly buffer MaterialBuffer {
@@ -53,6 +54,7 @@ layout(std430, set = 3, binding = 0) readonly buffer MaterialBuffer {
 };
 
 layout(set = 6, binding = 0) uniform sampler2D textures[];
+layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 
 void main() {
     vec3 view_vector = normalize(v_position - v_camera_position);
@@ -65,6 +67,9 @@ void main() {
     gbuffer_albedo = material.albedo;
     gbuffer_albedo *= bool(material.texture_usage[0])
         ? texture(textures[material.texture_index[0]], v_texcoord0)
+        : vec4(1.0);
+    gbuffer_albedo *= bool(material.texture_usage[6])
+        ? textureLod(cubemap_textures[material.texture_index[6]], reflection_vector, 7.0)
         : vec4(1.0);
     
     gbuffer_normals = vec4(normal * 0.5 + 0.5, 1.0);
