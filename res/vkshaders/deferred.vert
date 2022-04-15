@@ -18,12 +18,13 @@ layout(location = 5) in vec3 a_bitangent;
 
 
 
-layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
+layout(std430, set = 2, binding = 0, row_major) uniform SceneDataBlock {
     mat4 view;
     mat4 projection;
     vec4 camera_position;
     vec4 light_direction;
 } scene;
+
 struct Skeleton {
     mat4 bones[128];
 };

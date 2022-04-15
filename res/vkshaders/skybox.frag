@@ -56,7 +56,11 @@ layout(set = 6, binding = 0) uniform samplerCube textures[];
 void main() {
     vec3 normal = normalize(v_normal);
     
-    gbuffer_albedo = vec4(textureLod(textures[material.texture_index[0]], v_position, 7.0).rgb, 1.0);
+    gbuffer_albedo = vec4(0.0); /* for now until we have
+        an attachment for txcoord / material idx
+        that can show the deferred renderer we
+        don't want env mapping on this */   //vec4(textureLod(textures[material.texture_index[0]], v_position, 7.0).rgb, 1.0);
+    
     gbuffer_normals = vec4(normal * 0.5 + 0.5, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }

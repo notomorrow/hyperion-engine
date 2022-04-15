@@ -83,7 +83,7 @@ struct alignas(256) ObjectShaderData {
 };
 
 struct alignas(256) MaterialShaderData {
-    static constexpr size_t max_bound_textures = 8;
+    static constexpr size_t max_bound_textures = sizeof(uint32_t) * CHAR_BIT;
 
     Vector4 albedo;
 
@@ -108,17 +108,29 @@ struct alignas(256) MaterialShaderData {
     float parallax_height;
 
     uint32_t texture_index[max_bound_textures];
-    uint32_t texture_usage[max_bound_textures];
+    uint32_t texture_usage;
+    uint32_t _padding1;
+    uint32_t _padding2;
 };
 
 static_assert(sizeof(MaterialShaderData) == 256);
 
 struct alignas(256) SceneShaderData {
+    static constexpr uint32_t max_environment_textures = 1;
+
     Matrix4 view;
     Matrix4 projection;
     Vector4 camera_position;
     Vector4 light_direction;
+
+    uint32_t environment_texture_index;
+    uint32_t environment_texture_usage;
+    uint32_t _padding1;
+    uint32_t _padding2;
+    uint32_t _padding3;
 };
+
+static_assert(sizeof(SceneShaderData) == 256);
 
 template <class StructType>
 class BufferRangeUpdater {

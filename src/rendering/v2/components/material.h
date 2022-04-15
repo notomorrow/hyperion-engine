@@ -324,9 +324,6 @@ public:
     bool Has(const std::string &name) const
         { return m_materials.find(name) != m_materials.end(); }
 
-
-
-
 private:
     std::unordered_map<std::string, Ref<Material>> m_materials;
 };

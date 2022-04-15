@@ -1,4 +1,7 @@
 #version 450
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : enable
 
 layout(location=0) out vec3 v_position;
 layout(location=1) out vec3 v_normal;
@@ -15,7 +18,7 @@ layout (location = 5) in vec3 a_bitangent;
 layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
-layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
+layout(std430, set = 2, binding = 0, row_major) uniform SceneDataBlock {
     mat4 view;
     mat4 projection;
     vec4 camera_position;

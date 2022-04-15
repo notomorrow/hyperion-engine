@@ -194,8 +194,9 @@ int main()
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.95f }));
     mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
-    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_SKYBOX_MAP, cubemap.Acquire());
     mat1.Init();
+
+    scene->SetEnvironmentTexture(0, cubemap.Acquire());
     
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
@@ -203,7 +204,7 @@ int main()
         base_path + "/res/models/cube.obj"
     );
 
-    sponza->Scale(0.01f);
+    sponza->Scale(0.02f);
     //sponza->Scale(0.1f);
     //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
     sponza->Update(&engine);
