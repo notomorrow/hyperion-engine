@@ -88,6 +88,9 @@ public:
 
     helpers::SingleTimeCommands GetSingleTimeCommands();
 
+    inline StagingBufferPool &GetStagingBufferPool() { return m_staging_buffer_pool; }
+    inline const StagingBufferPool &GetStagingBufferPool() const { return m_staging_buffer_pool; }
+
     std::vector<const char *> requested_device_extensions;
 
     const char *app_name;
@@ -118,6 +121,8 @@ private:
           queue_compute;
     
     std::vector<const char *> validation_layers;
+
+    StagingBufferPool m_staging_buffer_pool;
 
 #ifndef HYPERION_BUILD_RELEASE
     VkDebugUtilsMessengerEXT debug_messenger;

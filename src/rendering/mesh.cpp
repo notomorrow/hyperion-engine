@@ -288,10 +288,6 @@ void Mesh::SetVerticesFromFloatBuffer(const std::vector<float> &buffer)
     SetVertices(result);
 }
 
-renderer::MeshBindingDescription Mesh::GetBindingDescription() {
-    return renderer::MeshBindingDescription(0, sizeof(Vertex) /* TODO */, VK_VERTEX_INPUT_RATE_VERTEX);
-}
-
 void Mesh::Render(Renderer *renderer, Camera *cam) {
 
 }

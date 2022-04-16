@@ -98,6 +98,26 @@ public:
         return bytes;
     }
 
+    /*! \brief Reads the entirety of the remaining bytes in file PER LINE and returns a vector of
+     * string. Note that using this method to read the whole file in one call bypasses
+     * the intention of having a buffered reader. */
+    std::vector<std::string> ReadAllLines()
+    {
+        if (Eof()) {
+            return {};
+        }
+
+        const size_t remaining = max_pos - pos;
+        
+        std::vector<std::string> lines;
+
+        ReadLines([&lines](const std::string &line) {
+            lines.push_back(line);
+        });
+
+        return lines;
+    }
+
     /*! @returns The total number of bytes read */
     template <class LambdaFunction>
     size_t ReadChunked(size_t count, LambdaFunction func)

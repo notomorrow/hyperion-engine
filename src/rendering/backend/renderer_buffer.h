@@ -9,11 +9,69 @@
 #include "renderer_structs.h"
 #include "../../system/vma/vma_usage.h"
 
+#include <functional>
+#include <unordered_set>
+
 namespace hyperion {
 namespace renderer {
 
 class Device;
 class CommandBuffer;
+class StagingBuffer;
+
+class StagingBufferPool {
+    struct StagingBufferRecord {
+        size_t size;
+        std::unique_ptr<StagingBuffer> buffer;
+        std::time_t last_used;
+    };
+
+public:
+    class Context {
+        friend class StagingBufferPool;
+
+        StagingBufferPool *m_pool;
+        Device            *m_device;
+        std::vector<StagingBufferRecord>    m_staging_buffers;
+        std::unordered_set<StagingBuffer *> m_used;
+
+        Context(StagingBufferPool *pool, Device *device)
+            : m_pool(pool),
+              m_device(device)
+        {
+        }
+
+        StagingBuffer *CreateStagingBuffer(size_t size);
+
+    public:
+        /* \brief Acquire a staging buffer from the pool of at least \ref required_size bytes,
+         * creating one if it does not exist yet. */
+        StagingBuffer *Acquire(size_t required_size);
+    };
+
+    using UseFunction = std::function<Result(Context &context)>;
+
+    static constexpr time_t hold_time = 1000;
+    static constexpr uint32_t gc_threshold = 5; /* run every 5 Use() calls */
+
+    /* \brief Use the staging buffer pool. GC will not run until after the given function
+     * is called, and the staging buffers created will not be able to be reused.
+     * This will allow the staging buffer(s) acquired by this to be used in sequence
+     * in a single time command buffer
+     */
+    Result Use(Device *device, UseFunction &&fn);
+
+    Result GC(Device *device);
+
+    /* \brief Destroy all remaining staging buffers in the pool */
+    Result Destroy(Device *device);
+
+private:
+    StagingBuffer *FindStagingBuffer(size_t size);
+
+    std::vector<StagingBufferRecord> m_staging_buffers;
+    uint32_t use_calls = 0;
+};
 
 class GPUMemory {
 public:
@@ -34,8 +92,8 @@ public:
 
 protected:
     uint32_t sharing_mode;
-
     uint32_t index;
+    void    *map;
 };
 
 /* buffers */

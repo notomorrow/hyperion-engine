@@ -293,6 +293,8 @@ Result Instance::Destroy()
     /* Wait for the GPU to finish, we need to be in an idle state. */
     HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(this->device->GetDevice()), result);
 
+    HYPERION_PASS_ERRORS(m_staging_buffer_pool.Destroy(device), result);
+
     this->frame_handler->Destroy(this->device, this->queue_graphics.command_pool);
     delete this->frame_handler;
     this->frame_handler = nullptr;
