@@ -14,8 +14,6 @@ class Device;
 
 class Image {
 public:
-    struct LayoutTransferStateBase;
-
     enum Type {
         TEXTURE_TYPE_2D = 0,
         TEXTURE_TYPE_3D = 1,
@@ -77,9 +75,7 @@ public:
         TEXTURE_WRAP_CLAMP_TO_BORDER,
         TEXTURE_WRAP_REPEAT
     };
-
-    static Result TransferLayout(CommandBuffer *command_buffer, const Image *image, const LayoutTransferStateBase &transfer_state);
-
+    
     static BaseFormat GetBaseFormat(InternalFormat);
     /* returns a texture format that has a shifted bytes-per-pixel count
      * e.g calling with RGB16 and num components = 4 --> RGBA16 */
@@ -116,31 +112,22 @@ public:
      * Create the image. No texture data will be copied.
      */
     Result Create(Device *device);
-    /*
-     * Create the image and set it into the given state.
-     * No texture data will be copied.
+
+    /* Create the image and transfer the provided texture data into it if given.
+     * The image is transitioned into the given state.
      */
-    Result Create(Device *device, Instance *renderer,
-        LayoutTransferStateBase transfer_state);
-    /* Create the image and transfer the provided texture data into it.
-     * /Two/ transfer states should be given, as the image will have to be
-     * set to a state primed for transfer of data into it, then it will
-     * need to  be taken from that state into it's final state.
-     */
-    Result Create(Device *device, Instance *renderer,
-        LayoutTransferStateBase transfer_state_pre,
-        LayoutTransferStateBase transfer_state_post);
+    Result Create(Device *device, Instance *renderer, GPUMemory::ResourceState state);
 
     Result Destroy(Device *device);
 
     bool IsDepthStencilImage() const;
 
-    inline bool IsMipmappedImage() const
+    inline bool HasMipmaps() const
         { return m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
 
     inline uint32_t NumMipmaps() const
     {
-        return IsMipmappedImage()
+        return HasMipmaps()
             ? static_cast<uint32_t>(MathUtil::FastLog2(MathUtil::Max(m_extent.width, m_extent.height, m_extent.depth))) + 1
             : 1;
     }
@@ -153,8 +140,8 @@ public:
 
     inline const Extent3D &GetExtent() const { return m_extent; }
 
-    inline GPUImage *GetGPUImage() { return m_image; }
-    inline const GPUImage *GetGPUImage() const { return m_image; }
+    inline GPUImageMemory *GetGPUImage() { return m_image; }
+    inline const GPUImageMemory *GetGPUImage() const { return m_image; }
 
     inline InternalFormat GetTextureFormat() const { return m_format; }
     inline Type GetType() const { return m_type; }
@@ -162,113 +149,14 @@ public:
     VkFormat GetImageFormat() const;
     VkImageType GetImageType() const;
     inline VkImageUsageFlags GetImageUsageFlags() const { return m_internal_info.usage_flags; }
-
-    struct LayoutState {
-        VkImageLayout layout;
-        VkAccessFlags access_mask;
-        VkPipelineStageFlags stage_mask;
-
-        static const LayoutState undefined,
-                                 general,
-                                 transfer_src,
-                                 transfer_dst;
-    };
-
-    struct LayoutTransferStateBase {
-        LayoutState src;
-        LayoutState dst;
-    };
-
-    template <VkImageLayout OldLayout, VkImageLayout NewLayout>
-    struct LayoutTransferState : public LayoutTransferStateBase {
-        LayoutTransferState() = delete;
-    };
-
-    /* layout transfer specialization structs */
-
-    template<>
-    struct LayoutTransferState<
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-    > : public LayoutTransferStateBase {
-        LayoutTransferState() : LayoutTransferStateBase{
-            .src = LayoutState::undefined,
-            .dst = LayoutState::transfer_dst
-        } {}
-    };
-
-    template<>
-    struct LayoutTransferState<
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-    > : public LayoutTransferStateBase {
-        LayoutTransferState() : LayoutTransferStateBase{
-            .src = LayoutState::undefined,
-            .dst = {
-                .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                .access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                .stage_mask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
-            }
-        } {}
-    };
-
-    template<>
-    struct LayoutTransferState<
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_GENERAL
-    > : public LayoutTransferStateBase {
-        LayoutTransferState() : LayoutTransferStateBase{
-            .src = LayoutState::undefined,
-            .dst = LayoutState::general
-        } {}
-    };
-
-    template<>
-    struct LayoutTransferState<
-        VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-    > : public LayoutTransferStateBase {
-        LayoutTransferState() : LayoutTransferStateBase{
-            .src = LayoutState::general,
-            .dst = LayoutState::transfer_src
-        } {}
-    };
-
-    template<>
-    struct LayoutTransferState<
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        VK_IMAGE_LAYOUT_GENERAL
-    > : public LayoutTransferStateBase {
-        LayoutTransferState() : LayoutTransferStateBase{
-            .src = LayoutState::transfer_src,
-            .dst = LayoutState::general
-        } {}
-    };
-
-    template<>
-    struct LayoutTransferState<
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    > : public LayoutTransferStateBase {
-        LayoutTransferState() : LayoutTransferStateBase{
-            .src = LayoutState::transfer_dst,
-            .dst = {
-                .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                .access_mask = VK_ACCESS_SHADER_READ_BIT,
-                .stage_mask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-            }
-        } {}
-    };
-
+    
 private:
     Result CreateImage(Device *device,
         VkImageLayout initial_layout,
         VkImageCreateInfo *out_image_info);
 
     Result GenerateMipmaps(Device *device,
-        CommandBuffer *command_buffer,
-        const LayoutTransferStateBase &transfer_state_pre,
-        LayoutTransferStateBase &transfer_state_post);
+        CommandBuffer *command_buffer);
 
     Result ConvertTo32Bpp(Device *device,
         VkImageType image_type,
@@ -281,13 +169,13 @@ private:
     Type m_type;
     FilterMode m_filter_mode;
     unsigned char *m_bytes;
+    bool m_assigned_image_data;
 
     InternalInfo m_internal_info;
 
     size_t m_size;
     size_t m_bpp; // bytes per pixel
-    StagingBuffer *m_staging_buffer;
-    GPUImage *m_image;
+    GPUImageMemory *m_image;
 };
 
 class StorageImage : public Image {

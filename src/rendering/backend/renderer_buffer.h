@@ -7,10 +7,12 @@
 
 #include "renderer_result.h"
 #include "renderer_structs.h"
+#include "renderer_shader.h"
 #include "../../system/vma/vma_usage.h"
 
 #include <functional>
 #include <unordered_set>
+#include <map>
 
 namespace hyperion {
 namespace renderer {
@@ -75,25 +77,61 @@ private:
 
 class GPUMemory {
 public:
+    enum class ResourceState : uint32_t {
+        UNDEFINED,
+        PRE_INITIALIZED,
+        COMMON,
+        VERTEX_BUFFER,
+        CONSTANT_BUFFER,
+        INDEX_BUFFER,
+        RENDER_TARGET,
+        UNORDERED_ACCESS,
+        DEPTH_STENCIL,
+        SHADER_RESOURCE,
+        STREAM_OUT,
+        INDIRECT_ARG,
+        COPY_DST,
+        COPY_SRC,
+        RESOLVE_DST,
+        RESOLVE_SRC,
+        PRESENT,
+        READ_GENERIC,
+        PREDICATION
+    };
+
     static uint32_t FindMemoryType(Device *device, uint32_t vk_type_filter, VkMemoryPropertyFlags properties);
+    static VkImageLayout GetImageLayout(ResourceState state);
+    static VkAccessFlags GetAccessMask(ResourceState state);
+    static VkPipelineStageFlags GetShaderStageMask(
+        ResourceState state,
+        bool src,
+        ShaderModule::Type shader_type = ShaderModule::Type::UNSET);
 
     GPUMemory();
     GPUMemory(const GPUMemory &other) = delete;
     GPUMemory &operator=(const GPUMemory &other) = delete;
     ~GPUMemory();
-    
-    VmaAllocation allocation;
-    VkDeviceSize size;
+
+    inline ResourceState GetResourceState() const
+        { return resource_state; }
+
+    inline void SetResourceState(ResourceState new_state)
+        { resource_state = new_state; }
 
     void Map(Device *device, void **ptr);
     void Unmap(Device *device);
     void Copy(Device *device, size_t count, void *ptr);
     void Copy(Device *device, size_t offset, size_t count, void *ptr);
+    
+    
+    VmaAllocation allocation;
+    VkDeviceSize size;
 
 protected:
     uint32_t sharing_mode;
     uint32_t index;
     void    *map;
+    mutable ResourceState resource_state;
 };
 
 /* buffers */
@@ -109,6 +147,7 @@ public:
     GPUBuffer &operator=(const GPUBuffer &other) = delete;
     ~GPUBuffer();
 
+    void InsertBarrier(CommandBuffer *command_buffer, ResourceState new_state) const;
     void CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buffer, size_t count);
 
     Result CheckCanAllocate(Device *device, size_t size) const;
@@ -168,22 +207,44 @@ public:
 };
 
 /* images */
+struct ImageSubResource {
+    VkImageAspectFlags aspect_mask;
+    uint32_t base_array_layer;
+    uint32_t base_mip_level;
 
+    inline bool operator<(const ImageSubResource &other) const
+        { return std::tie(aspect_mask, base_array_layer, base_mip_level) < std::tie(other.aspect_mask, other.base_array_layer, other.base_mip_level); }
+};
 
-class GPUImage : public GPUMemory {
+class GPUImageMemory : public GPUMemory {
 public:
-    GPUImage(VkImageUsageFlags usage_flags);
-    GPUImage(const GPUImage &other) = delete;
-    GPUImage &operator=(const GPUImage &other) = delete;
-    ~GPUImage();
 
-    Result Create(Device *device, size_t size, VkImageCreateInfo *image_info);
-    Result Destroy(Device *device);
+    GPUImageMemory(VkImageUsageFlags usage_flags);
+    GPUImageMemory(const GPUImageMemory &other) = delete;
+    GPUImageMemory &operator=(const GPUImageMemory &other) = delete;
+    ~GPUImageMemory();
+
+    ResourceState GetSubResourceState(const ImageSubResource &sub_resource) const;
+    void SetSubResourceState(const ImageSubResource &sub_resource, ResourceState new_state);
+
+    void SetResourceState(ResourceState new_state);
+
+    void InsertBarrier(CommandBuffer *command_buffer,
+        const VkImageSubresourceRange &range,
+        ResourceState new_state);
+
+    void InsertSubResourceBarrier(CommandBuffer *command_buffer,
+        ImageSubResource &&sub_resource,
+        ResourceState new_state);
+
+    [[nodiscard]] Result Create(Device *device, size_t size, VkImageCreateInfo *image_info);
+    [[nodiscard]] Result Destroy(Device *device);
 
     VkImage image;
 
 private:
     VkImageUsageFlags usage_flags;
+    std::map<ImageSubResource, ResourceState> sub_resources;
 };
 
 } // namespace renderer

@@ -192,7 +192,7 @@ int main()
     engine.Initialize();
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
-    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.95f }));
+    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.6f }));
     mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
     mat1.Init();
 
@@ -200,13 +200,13 @@ int main()
 
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/San_Miguel/san-miguel-low-poly.obj",
+        base_path + "/res/models/sponza/sponza.obj", //San_Miguel/san-miguel-low-poly.obj",
         base_path + "/res/models/cube.obj"
     );
 
     //sponza->Translate({0, 0, 5});
 
-    //sponza->Scale(0.02f);
+    sponza->Scale(0.02f);
     //sponza->Scale(0.1f);
     //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
     sponza->Update(&engine);
@@ -226,7 +226,7 @@ int main()
     HYPERION_ASSERT_RESULT(image_storage->Create(
         device,
         engine.GetInstance(),
-        Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL>{}
+        GPUMemory::ResourceState::UNORDERED_ACCESS
     ));
 
     HYPERION_ASSERT_RESULT(image_storage_view.Create(device, image_storage));
@@ -569,28 +569,12 @@ int main()
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
         engine.RenderPostProcessing(frame->GetCommandBuffer(), frame_index);
 
-
 #if HYPERION_VK_TEST_IMAGE_STORE
-        /* TODO: where should this go? find a way to abstract this */
-        VkImageMemoryBarrier image_memory_barrier = {};
-        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        // We won't be changing the layout of the image
-        image_memory_barrier.oldLayout        = VK_IMAGE_LAYOUT_GENERAL;
-        image_memory_barrier.newLayout        = VK_IMAGE_LAYOUT_GENERAL;
-        image_memory_barrier.image            = image_storage->GetGPUImage()->image;
-        image_memory_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-        image_memory_barrier.srcAccessMask    = VK_ACCESS_SHADER_WRITE_BIT;
-        image_memory_barrier.dstAccessMask     = VK_ACCESS_SHADER_READ_BIT;
-        image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        vkCmdPipelineBarrier(
-            frame->GetCommandBuffer()->GetCommandBuffer(),
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &image_memory_barrier);
+        image_storage->GetGPUImage()->InsertBarrier(
+            frame->GetCommandBuffer(),
+            { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+            GPUMemory::ResourceState::UNORDERED_ACCESS
+        );
 #endif
 
         engine.RenderSwapchain(frame->GetCommandBuffer());

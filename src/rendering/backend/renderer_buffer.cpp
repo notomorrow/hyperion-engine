@@ -186,10 +186,146 @@ uint32_t GPUMemory::FindMemoryType(Device *device, uint32_t vk_type_filter, VkMe
     AssertThrowMsg(nullptr, "Could not find suitable memory type!\n");
 }
 
+VkImageLayout GPUMemory::GetImageLayout(ResourceState state)
+{
+    switch (state) {
+    case ResourceState::UNDEFINED:
+        return VK_IMAGE_LAYOUT_UNDEFINED;
+    case ResourceState::PRE_INITIALIZED:
+        return VK_IMAGE_LAYOUT_PREINITIALIZED;
+    case ResourceState::COMMON:
+    case ResourceState::UNORDERED_ACCESS:
+        return VK_IMAGE_LAYOUT_GENERAL;
+    case ResourceState::RENDER_TARGET:
+    case ResourceState::RESOLVE_DST:
+        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;            
+    case ResourceState::DEPTH_STENCIL:
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    case ResourceState::SHADER_RESOURCE:
+    case ResourceState::RESOLVE_SRC:
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    case ResourceState::COPY_DST:
+        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    case ResourceState::COPY_SRC:
+        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        break;
+    case ResourceState::PRESENT:
+        return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    default:
+        AssertThrowMsg(false, "Unknown resource state");
+        return VkImageLayout(-1);
+    }
+}
+
+VkAccessFlags GPUMemory::GetAccessMask(ResourceState state)
+{
+    switch (state) {
+    case ResourceState::UNDEFINED:
+    case ResourceState::PRESENT:
+    case ResourceState::COMMON:
+    case ResourceState::PRE_INITIALIZED:
+        return VkAccessFlagBits(0);
+    case ResourceState::VERTEX_BUFFER:
+        return VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+    case ResourceState::CONSTANT_BUFFER:
+        return VK_ACCESS_UNIFORM_READ_BIT;
+    case ResourceState::INDEX_BUFFER:
+        return VK_ACCESS_INDEX_READ_BIT;
+    case ResourceState::RENDER_TARGET:
+        return VkAccessFlagBits(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+    case ResourceState::UNORDERED_ACCESS:
+        return VK_ACCESS_SHADER_WRITE_BIT;
+    case ResourceState::DEPTH_STENCIL:
+        return VkAccessFlagBits(VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+    case ResourceState::SHADER_RESOURCE:
+        return VK_ACCESS_SHADER_READ_BIT;
+    case ResourceState::INDIRECT_ARG:
+        return VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+    case ResourceState::COPY_DST:
+        return VK_ACCESS_TRANSFER_WRITE_BIT;
+    case ResourceState::COPY_SRC:
+        return VK_ACCESS_TRANSFER_READ_BIT;
+    case ResourceState::RESOLVE_DST:
+        return VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    case ResourceState::RESOLVE_SRC:
+        return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    default:
+        AssertThrowMsg(false, "Unknown resource state");
+        return VkAccessFlagBits(-1);
+    }
+}
+
+VkPipelineStageFlags GPUMemory::GetShaderStageMask(ResourceState state, bool src, ShaderModule::Type shader_type)
+{
+    switch (state) {
+    case ResourceState::UNDEFINED:
+    case ResourceState::PRE_INITIALIZED:
+    case ResourceState::COMMON:
+        if (!src) {
+            DebugLog(LogType::Warn, "Attempt to get shader stage mask for resource state %d but `src` was set to false. Falling back to all commands.\n");
+
+            return VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        }
+
+        return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    case ResourceState::VERTEX_BUFFER:
+    case ResourceState::INDEX_BUFFER:
+        return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+    case ResourceState::UNORDERED_ACCESS:
+    case ResourceState::CONSTANT_BUFFER:
+    case ResourceState::SHADER_RESOURCE:
+        switch (shader_type) {
+        case ShaderModule::Type::VERTEX:
+            return VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+        case ShaderModule::Type::FRAGMENT:
+            return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        case ShaderModule::Type::COMPUTE:
+            return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        case ShaderModule::Type::RAY_ANY_HIT:
+        case ShaderModule::Type::RAY_CLOSEST_HIT:
+        case ShaderModule::Type::RAY_GEN:
+        case ShaderModule::Type::RAY_INTERSECT:
+        case ShaderModule::Type::RAY_MISS:
+            return VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+        case ShaderModule::Type::GEOMETRY:
+            return VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+        case ShaderModule::Type::TESS_CONTROL:
+            return VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
+        case ShaderModule::Type::TESS_EVAL:
+            return VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+        case ShaderModule::Type::MESH:
+            return VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
+        case ShaderModule::Type::TASK:
+            return VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV;
+        case ShaderModule::Type::UNSET:
+            return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                 | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+                 | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+        }
+    case ResourceState::RENDER_TARGET:
+        return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    case ResourceState::DEPTH_STENCIL:
+        return src ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT : VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    case ResourceState::INDIRECT_ARG:
+        return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+    case ResourceState::COPY_DST:
+    case ResourceState::COPY_SRC:
+    case ResourceState::RESOLVE_DST:
+    case ResourceState::RESOLVE_SRC:
+        return VK_PIPELINE_STAGE_TRANSFER_BIT;
+    case ResourceState::PRESENT:
+        return src ? (VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    default:
+        AssertThrowMsg(false, "Unknown resource state");
+        return VkPipelineStageFlags(-1);
+    }
+}
+
 GPUMemory::GPUMemory()
     : sharing_mode(VK_SHARING_MODE_EXCLUSIVE),
       size(0),
-      map(nullptr)
+      map(nullptr),
+      resource_state(ResourceState::UNDEFINED)
 {
     static unsigned allocations = 0;
     index = allocations++;
@@ -316,25 +452,47 @@ Result GPUBuffer::CheckCanAllocate(Device *device,
     return result;
 }
 
-void GPUBuffer::CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buffer, size_t count)
+void GPUBuffer::InsertBarrier(CommandBuffer *command_buffer, ResourceState new_state) const
 {
-    VkBufferMemoryBarrier staging_barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-    staging_barrier.buffer = src_buffer->buffer;
-    staging_barrier.size = count;
-    staging_barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-    staging_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    staging_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    staging_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    if (resource_state == new_state) {
+        return;
+    }
+
+    if (buffer == nullptr) {
+        DebugLog(
+            LogType::Warn,
+            "Attempt to insert a resource barrier but buffer was not defined\n"
+        );
+
+        return;
+    }
+
+    VkBufferMemoryBarrier barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+    barrier.srcAccessMask       = GetAccessMask(resource_state);
+    barrier.dstAccessMask       = GetAccessMask(new_state);
+    barrier.buffer              = buffer;
+    barrier.offset              = 0;
+    barrier.size                = size;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
     vkCmdPipelineBarrier(
         command_buffer->GetCommandBuffer(),
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        GetShaderStageMask(resource_state, true),
+        GetShaderStageMask(new_state, false),
         0,
         0, nullptr,
-        1, &staging_barrier,
+        1, &barrier,
         0, nullptr
     );
+
+    resource_state = new_state;
+}
+
+void GPUBuffer::CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buffer, size_t count)
+{
+    InsertBarrier(command_buffer, ResourceState::COPY_DST);
+    src_buffer->InsertBarrier(command_buffer, ResourceState::COPY_SRC);
 
     VkBufferCopy region{};
     region.size = count;
@@ -345,24 +503,6 @@ void GPUBuffer::CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buf
         buffer,
         1,
         &region
-    );
-    
-    VkBufferMemoryBarrier dst_barrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-    dst_barrier.buffer = buffer;
-    dst_barrier.size = count;
-    dst_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    dst_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    dst_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    dst_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    vkCmdPipelineBarrier(
-        command_buffer->GetCommandBuffer(),
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0,
-        0, nullptr,
-        1, &dst_barrier,
-        0, nullptr
     );
 }
 
@@ -452,20 +592,127 @@ StagingBuffer::StagingBuffer()
 {
 }
 
-GPUImage::GPUImage(VkImageUsageFlags usage_flags)
+GPUImageMemory::GPUImageMemory(VkImageUsageFlags usage_flags)
     : GPUMemory(),
       image(nullptr),
       usage_flags(usage_flags)
 {
 }
 
-GPUImage::~GPUImage()
+GPUImageMemory::~GPUImageMemory()
 {
     std::cout << "Dealloc image\n";
     AssertThrowMsg(image == nullptr, "image should have been destroyed!");
 }
 
-Result GPUImage::Create(Device *device, size_t size, VkImageCreateInfo *image_info)
+void GPUImageMemory::SetResourceState(ResourceState new_state)
+{
+    resource_state = new_state;
+
+    sub_resources.clear();
+}
+
+void GPUImageMemory::InsertBarrier(CommandBuffer *command_buffer,
+    const VkImageSubresourceRange &range,
+    ResourceState new_state)
+{
+    /* Clear any sub-resources that are in a separate state */
+    if (!sub_resources.empty()) {
+        sub_resources.clear();
+    }
+
+    if (image == nullptr) {
+        DebugLog(
+            LogType::Warn,
+            "Attempt to insert a resource barrier but image was not defined\n"
+        );
+
+        return;
+    }
+
+    VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+    barrier.oldLayout           = GetImageLayout(resource_state);
+    barrier.newLayout           = GetImageLayout(new_state);
+    barrier.srcAccessMask       = GetAccessMask(resource_state);
+    barrier.dstAccessMask       = GetAccessMask(new_state);
+    barrier.image               = image;
+    barrier.subresourceRange    = range;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    vkCmdPipelineBarrier(
+        command_buffer->GetCommandBuffer(),
+        GetShaderStageMask(resource_state, true),
+        GetShaderStageMask(new_state, false),
+        0,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier
+    );
+
+    resource_state = new_state;
+}
+
+void GPUImageMemory::InsertSubResourceBarrier(CommandBuffer *command_buffer,
+    ImageSubResource &&sub_resource,
+    ResourceState new_state)
+{
+    if (image == nullptr) {
+        DebugLog(
+            LogType::Warn,
+            "Attempt to insert a resource barrier but image was not defined\n"
+        );
+
+        return;
+    }
+
+    VkImageSubresourceRange range{};
+    range.aspectMask = sub_resource.aspect_mask;
+    range.baseArrayLayer = sub_resource.base_array_layer;
+    range.layerCount = 1;
+    range.levelCount = 1;
+    range.baseMipLevel = sub_resource.base_mip_level;
+
+    VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+    barrier.oldLayout           = GetImageLayout(resource_state);
+    barrier.newLayout           = GetImageLayout(new_state);
+    barrier.srcAccessMask       = GetAccessMask(resource_state);
+    barrier.dstAccessMask       = GetAccessMask(new_state);
+    barrier.image               = image;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.subresourceRange    = range;
+
+    vkCmdPipelineBarrier(
+        command_buffer->GetCommandBuffer(),
+        GetShaderStageMask(resource_state, true),
+        GetShaderStageMask(new_state, false),
+        0,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier
+    );
+
+    sub_resources.emplace(sub_resource, new_state);
+}
+
+auto GPUImageMemory::GetSubResourceState(const ImageSubResource &sub_resource) const -> ResourceState
+{
+    const auto it = sub_resources.find(sub_resource);
+
+    if (it != sub_resources.end()) {
+        return it->second;
+    }
+
+    return ResourceState::UNDEFINED;
+}
+
+void GPUImageMemory::SetSubResourceState(const ImageSubResource &sub_resource, ResourceState new_state)
+{
+    sub_resources[sub_resource] = new_state;
+}
+
+Result GPUImageMemory::Create(Device *device, size_t size, VkImageCreateInfo *image_info)
 {
     this->size = size;
 
@@ -478,7 +725,7 @@ Result GPUImage::Create(Device *device, size_t size, VkImageCreateInfo *image_in
     HYPERION_RETURN_OK;
 }
 
-Result GPUImage::Destroy(Device *device)
+Result GPUImageMemory::Destroy(Device *device)
 {
     if (map != nullptr) {
         Unmap(device);
