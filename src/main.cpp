@@ -200,14 +200,14 @@ int main()
 
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/fireplace_room/fireplace_room.obj",//sponza/sponza.obj", //San_Miguel/san-miguel-low-poly.obj",
+        base_path + "/res/models/material_sphere/material_sphere.obj", //San_Miguel/san-miguel-low-poly.obj",
         base_path + "/res/models/cube.obj"
     );
 
-    //sponza->Translate({0, 0, 5});
+    sponza->Translate({0, 0, 5});
 
-    sponza->Scale(0.5f);
-    //sponza->Scale(0.1f);
+    //sponza->Scale(0.05f);
+    sponza->Scale(5.0f);
     //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
     sponza->Update(&engine);
     

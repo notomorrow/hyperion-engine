@@ -9,6 +9,8 @@
 
 namespace hyperion::v2 {
 
+constexpr bool create_obj_indices = false;
+
 using Tokens = std::vector<std::string>;
 using ObjModelLoader = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::Loader;
 
@@ -275,10 +277,12 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             for (const ObjIndex &obj_index : obj_mesh.indices) {
                 const auto it = index_map.find(obj_index);
 
-                if (it != index_map.end()) {
-                    indices.push_back(it->second);
+                if (create_obj_indices) {
+                    if (it != index_map.end()) {
+                        indices.push_back(it->second);
 
-                    continue;
+                        continue;
+                    }
                 }
 
                 Vertex vertex;

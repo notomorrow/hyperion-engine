@@ -6,9 +6,12 @@
 layout(location=0) out vec3 v_position;
 layout(location=1) out vec3 v_normal;
 layout(location=2) out vec2 v_texcoord0;
+layout(location=4) out vec3 v_tangent;
+layout(location=5) out vec3 v_bitangent;
 layout(location=6) out flat vec3 v_light_direction;
 layout(location=7) out flat vec3 v_camera_position;
 layout(location=8) out mat3 v_tbn_matrix;
+layout(location=12) out vec3 v_view_space_position;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -80,13 +83,15 @@ void main() {
 
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
-    v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
+    v_texcoord0 = vec2(a_texcoord0.x, a_texcoord0.y);
     v_light_direction = scene.light_direction.xyz;
     v_camera_position = scene.camera_position.xyz;
     
-    vec3 tangent   = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
-	vec3 bitangent = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
-	v_tbn_matrix   = mat3(tangent, bitangent, v_normal);
+    v_tangent   = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
+	v_bitangent = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
+	v_tbn_matrix   = mat3(v_tangent, v_bitangent, v_normal);
+    
+    v_view_space_position = (scene.view * position).xyz;
 
     gl_Position = scene.projection * scene.view * position;
 } 
