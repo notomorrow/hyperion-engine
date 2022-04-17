@@ -68,6 +68,8 @@ void DeferredRenderer::Create(Engine *engine)
 {
     using renderer::ImageSamplerDescriptor;
 
+    m_post_processing.Create(engine);
+
     m_effect.CreateShader(engine);
     m_effect.CreateRenderPass(engine);
     m_effect.Create(engine);
@@ -116,6 +118,7 @@ void DeferredRenderer::Create(Engine *engine)
 
 void DeferredRenderer::Destroy(Engine *engine)
 {
+    m_post_processing.Destroy(engine);
     m_effect.Destroy(engine);
 }
 
@@ -128,9 +131,14 @@ void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t f
     RenderOpaqueObjects(engine, primary, frame_index);
     render_list.Get(GraphicsPipeline::Bucket::BUCKET_OPAQUE).EndRenderPass(engine, primary);
 
+    /* TODO: render SSAO here? */
+    
+    m_post_processing.Render(engine, primary, frame_index);
+
     auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
     pipeline->Get().BeginRenderPass(primary, 0);
 
+    /* Render deferred shading onto full screen quad */
     auto *secondary_command_buffer = m_effect.GetFrameData()->At(frame_index).Get<CommandBuffer>();
     HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(primary));
 

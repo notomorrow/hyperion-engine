@@ -92,7 +92,6 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
-    m_post_processing.Create(this);
     m_deferred_renderer.Create(this);
     m_shadow_renderer.Create(this);
 
@@ -334,7 +333,6 @@ void Engine::Destroy()
 
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
-    m_post_processing.Destroy(this);
     
     callbacks.Trigger(EngineCallback::DESTROY_FRAMEBUFFERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
@@ -403,11 +401,6 @@ void Engine::RenderShadows(CommandBuffer *primary, uint32_t frame_index)
 void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
 {
     m_deferred_renderer.Render(this, primary, frame_index);
-}
-
-void Engine::RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index)
-{
-    m_post_processing.Render(this, primary, frame_index);
 }
 
 void Engine::RenderSwapchain(CommandBuffer *command_buffer) const

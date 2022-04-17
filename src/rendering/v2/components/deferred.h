@@ -40,6 +40,7 @@ private:
     void RenderTranslucentObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
 
     DeferredRenderingEffect m_effect;
+    PostProcessing          m_post_processing;
 };
 
 } // namespace hyperion::v2

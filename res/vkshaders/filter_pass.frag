@@ -9,7 +9,10 @@ layout(location=2) in vec2 v_texcoord0;
 
 layout(location=0) out vec4 color_output;
 
-layout(set = 1, binding = 0) uniform sampler2D tex;
+layout(set = 1, binding = 0) uniform sampler2D gbuffer_albedo_texture;
+layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals_texture;
+layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions_texture;
+layout(set = 1, binding = 3) uniform sampler2D gbuffer_depth_texture;
 
 layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
     mat4 view;
@@ -21,5 +24,5 @@ layout(std140, set = 2, binding = 0, row_major) uniform SceneDataBlock {
 
 void main()
 {
-    color_output = vec4(texture(tex, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y)).rgb, 1.0);
+    color_output = vec4(texture(gbuffer_depth_texture, vec2(v_texcoord0.x, 1.0 - v_texcoord0.y)).rgb, 1.0);
 }

@@ -16,6 +16,8 @@ layout(set = 1, binding = 0) uniform sampler2D gbuffer_albedo;
 layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals;
 layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions;
 
+layout(set = 1, binding = 8) uniform sampler2D filter_ssao;
+
 
 layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 
@@ -173,7 +175,7 @@ float SpecularAO_Lagarde(float NoV, float visibility, float roughness)
 
 /* Begin main shader program */
 
-const float IBL_INTENSITY = 10000.0;
+const float IBL_INTENSITY = 4000.0;
 
 void main()
 {
@@ -188,7 +190,7 @@ void main()
     position = texture(gbuffer_positions, texcoord);
     
     float metallic = 0.1;
-    float roughness = 0.1;
+    float roughness = 0.7;
     
     vec3 N = normal.xyz;
     vec3 L = v_light_direction;
@@ -235,7 +237,7 @@ void main()
     float ao = 1.0;
     vec3 shadowColor = vec3(1.0);
     vec3 light_color = vec3(1.0);
-    float light_intensity = 400000.0;
+    float light_intensity = 500000.0;
     
     
     vec3 specularDFG = mix(vec3(AB.x), vec3(AB.y), F0);
