@@ -15,64 +15,12 @@ layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
 
+#include "include/scene.inc"
+#include "include/material.inc"
 
-layout(std430, set = 2, binding = 0, row_major) uniform SceneDataBlock {
-    mat4 view;
-    mat4 projection;
-    vec4 camera_position;
-    vec4 light_direction;
-} scene;
-
-
-struct Material {
-    vec4 albedo;
-    
-    float metalness;
-    float roughness;
-    float subsurface;
-    float specular;
-    
-    float specular_tint;
-    float anisotropic;
-    float sheen;
-    float sheen_tint;
-    
-    float clearcoat;
-    float clearcoat_gloss;
-    float emissiveness;
-    float _padding0;
-    
-    uint uv_flip_s;
-    uint uv_flip_t;
-    float uv_scale;
-    float parallax_height;
-    
-    uint texture_index[32];
-    uint texture_usage;
-    uint _padding1;
-    uint _padding2;
-    
-    /* Texture schema:
-       0 - albedo
-       1 - normals
-       2 - ao
-       3 - parallax
-       4 - metalness
-       5 - roughness
-       6 - envmap */
-};
-
-layout(std430, set = 3, binding = 0) readonly buffer MaterialBuffer {
-    Material material;
-};
 
 layout(set = 6, binding = 0) uniform sampler2D textures[];
 layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
-
-bool HasMaterialTexture(uint index)
-{
-    return bool(material.texture_usage & (1 << index));
-}
 
 void main()
 {
@@ -101,6 +49,6 @@ void main()
         normal = normalize(v_tbn_matrix * normals_texture.rgb);
     }
     
-    gbuffer_normals = vec4(normal * 0.5 + 0.5, 1.0);
+    gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
 }

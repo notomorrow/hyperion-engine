@@ -111,9 +111,6 @@ void Engine::PrepareSwapchain()
         renderer::RenderPass::Mode::RENDER_PASS_INLINE
     ));
 
-    RenderPass::ID render_pass_id{};
-
-
     m_render_pass_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
             m_instance->swapchain->extent,
@@ -408,7 +405,8 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
     auto &pipeline = m_root_pipeline->Get();
     const uint32_t acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 
-    pipeline.BeginRenderPass(command_buffer, acquired_image_index);
+    m_root_pipeline->GetFramebuffers()[acquired_image_index]->BeginCapture(command_buffer);
+    
     pipeline.Bind(command_buffer);
 
     m_instance->GetDescriptorPool().Bind(
@@ -423,7 +421,7 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
     PostEffect::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
-
-    pipeline.EndRenderPass(command_buffer, acquired_image_index);
+    
+    m_root_pipeline->GetFramebuffers()[acquired_image_index]->EndCapture(command_buffer);
 }
 } // namespace hyperion::v2

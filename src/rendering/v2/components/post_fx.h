@@ -58,7 +58,7 @@ public:
     void Destroy(Engine *engine);
     void DestroyPipeline(Engine *engine);
 
-    void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
+    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
     void Record(Engine *engine, uint32_t frame_index);
 
 protected:

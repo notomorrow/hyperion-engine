@@ -234,17 +234,15 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
     AssertThrowMsg(result, "Failed to record command buffer. Message: %s", result.message);
 }
 
-void PostEffect::Render(Engine * engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
+void PostEffect::Render(Engine * engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    auto *pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
-
-    pipeline->Get().BeginRenderPass(primary_command_buffer, 0);
+    m_framebuffer->BeginCapture(primary);
 
     auto *secondary_command_buffer = m_frame_data->At(frame_index).Get<CommandBuffer>();
 
-    HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(primary_command_buffer));
+    HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(primary));
 
-    pipeline->Get().EndRenderPass(primary_command_buffer, 0);
+    m_framebuffer->EndCapture(primary);
 }
 
 

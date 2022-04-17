@@ -165,9 +165,11 @@ void ShadowRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t fra
 
     AssertThrow(pipeline != nullptr);
 
-    pipeline->Get().BeginRenderPass(primary, 0);
+    m_effect.GetFramebuffer()->BeginCapture(primary);
+
     pipeline->Render(engine, primary, frame_index);
-    pipeline->Get().EndRenderPass(primary, 0);
+
+    m_effect.GetFramebuffer()->EndCapture(primary);
 }
 
 } // namespace hyperion::v2

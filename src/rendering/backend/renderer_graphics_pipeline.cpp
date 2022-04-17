@@ -87,19 +87,6 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
     return this->vertex_attributes;
 }
 
-void GraphicsPipeline::BeginRenderPass(CommandBuffer *cmd, size_t index)
-{
-    m_construction_info.render_pass->Begin(
-        cmd,
-        m_construction_info.fbos[index]
-    );
-}
-
-void GraphicsPipeline::EndRenderPass(CommandBuffer *cmd, size_t index)
-{
-    m_construction_info.render_pass->End(cmd);
-}
-
 void GraphicsPipeline::SubmitPushConstants(CommandBuffer *cmd) const
 {
     vkCmdPushConstants(

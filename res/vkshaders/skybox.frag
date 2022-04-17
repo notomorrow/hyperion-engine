@@ -13,43 +13,7 @@ layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
-struct Material {
-    vec4 albedo;
-    
-    float metalness;
-    float roughness;
-    float subsurface;
-    float specular;
-    
-    float specular_tint;
-    float anisotropic;
-    float sheen;
-    float sheen_tint;
-    
-    float clearcoat;
-    float clearcoat_gloss;
-    float emissiveness;
-    float _padding0;
-    
-    uint uv_flip_s;
-    uint uv_flip_t;
-    float uv_scale;
-    float parallax_height;
-        
-    uint texture_index[8];
-    uint texture_usage[8];
-    /* Texture schema:
-       0 - albedo
-       1 - normals
-       2 - ao
-       3 - parallax
-       4 - metalness
-       5 - roughness */
-};
-
-layout(std430, set = 3, binding = 0) readonly buffer MaterialBuffer {
-    Material material;
-};
+#include "include/material.inc"
 
 layout(set = 6, binding = 0) uniform samplerCube textures[];
 

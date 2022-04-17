@@ -59,9 +59,11 @@ void Scene::UpdateShaderData(Engine *engine) const
         shader_data.view            = m_camera->GetViewMatrix();
         shader_data.projection      = m_camera->GetProjectionMatrix();
         shader_data.camera_position = Vector4(m_camera->GetTranslation(), 1.0f);
+        shader_data.resolution_x    = static_cast<uint32_t>(m_camera->GetWidth());
+        shader_data.resolution_y    = static_cast<uint32_t>(m_camera->GetHeight());
     }
 
-    shader_data.light_direction = Vector4(Vector3(1.0f, 1.0f, 0.0f).Normalize(), 1.0f);
+    shader_data.light_direction = Vector4(Vector3(0.5f, 1.0f, 0.0f).Normalize(), 1.0f);
     shader_data.environment_texture_usage = 0;
 
     for (uint32_t i = 0; i < static_cast<uint32_t>(m_environment_textures.size()); i++) {

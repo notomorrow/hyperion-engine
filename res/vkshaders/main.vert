@@ -19,12 +19,7 @@ layout (location = 5) in vec3 a_bitangent;
 layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
-layout(std430, set = 2, binding = 0, row_major) uniform SceneDataBlock {
-    mat4 view;
-    mat4 projection;
-    vec4 camera_position;
-    vec4 light_direction;
-} scene;
+#include "include/scene.inc"
 
 struct Object {
     mat4 model_matrix;

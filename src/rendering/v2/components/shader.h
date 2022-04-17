@@ -125,9 +125,8 @@ struct alignas(256) SceneShaderData {
 
     uint32_t environment_texture_index;
     uint32_t environment_texture_usage;
-    uint32_t _padding1;
-    uint32_t _padding2;
-    uint32_t _padding3;
+    uint32_t resolution_x;
+    uint32_t resolution_y;
 };
 
 static_assert(sizeof(SceneShaderData) == 256);

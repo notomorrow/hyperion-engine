@@ -4,10 +4,7 @@
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec2 v_texcoord0;
 
-layout(set = 1, binding = 0) uniform sampler2D gbuffer_albedo_texture;
-layout(set = 1, binding = 1) uniform sampler2D gbuffer_normals_texture;
-layout(set = 1, binding = 2) uniform sampler2D gbuffer_positions_texture;
-layout(set = 1, binding = 3) uniform sampler2D gbuffer_depth_texture;
+#include "include/gbuffer.inc"
 
 layout(set = 1, binding = 4) uniform sampler2D deferred_result;
 

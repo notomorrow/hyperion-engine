@@ -105,9 +105,10 @@ public:
     /* Non-owned objects - owned by `engine`, used by the pipeline */
 
     inline void AddFramebuffer(Ref<Framebuffer> &&fbo)
-    {
-        m_fbos.push_back(std::move(fbo));
-    }
+        { m_fbos.push_back(std::move(fbo)); }
+
+    inline auto &GetFramebuffers() { return m_fbos; } 
+    inline const auto &GetFramebuffers() const { return m_fbos; }
     
     /* Build pipeline */
     void Create(Engine *engine);

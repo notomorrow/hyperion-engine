@@ -22,8 +22,8 @@ public:
         void CreateFramebuffers(Engine *engine);
         void Destroy(Engine *engine);
 
-        void BeginRenderPass(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
-        void EndRenderPass(Engine *engine, CommandBuffer *command_buffer);
+        void Begin(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
+        void End(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
     };
 
     RenderList();
