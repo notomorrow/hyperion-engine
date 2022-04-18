@@ -120,9 +120,9 @@ public:
 
     void Map(Device *device, void **ptr);
     void Unmap(Device *device);
-    void Copy(Device *device, size_t count, void *ptr);
-    void Copy(Device *device, size_t offset, size_t count, void *ptr);
-    
+    void Copy(Device *device, size_t count, const void *ptr);
+    void Copy(Device *device, size_t offset, size_t count, const void *ptr);
+    void Read(Device *device, size_t count, void *out_ptr);
     
     VmaAllocation allocation;
     VkDeviceSize size;
@@ -199,6 +199,11 @@ public:
 class StorageBuffer : public GPUBuffer {
 public:
     StorageBuffer();
+};
+
+class AtomicCounterBuffer : public GPUBuffer {
+public:
+    AtomicCounterBuffer();
 };
 
 class StagingBuffer : public GPUBuffer {

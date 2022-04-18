@@ -349,22 +349,31 @@ void GPUMemory::Unmap(Device *device)
     map = nullptr;
 }
 
-void GPUMemory::Copy(Device *device, size_t count, void *ptr)
+void GPUMemory::Copy(Device *device, size_t count, const void *ptr)
 {
     if (map == nullptr) {
         Map(device, &map);
     }
 
-    memcpy(map, ptr, count);
+    std::memcpy(map, ptr, count);
 }
 
-void GPUMemory::Copy(Device *device, size_t offset, size_t count, void *ptr)
+void GPUMemory::Copy(Device *device, size_t offset, size_t count, const void *ptr)
 {
     if (map == nullptr) {
         Map(device, &map);
     }
 
-    memcpy((void *)(intptr_t(map) + offset), ptr, count);
+    std::memcpy((void *)(intptr_t(map) + offset), ptr, count);
+}
+
+void GPUMemory::Read(Device *device, size_t count, void *out_ptr)
+{
+    if (map == nullptr) {
+        Map(device, &map);
+    }
+
+    std::memcpy(out_ptr, map, count);
 }
 
 GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags,
@@ -584,6 +593,14 @@ UniformBuffer::UniformBuffer()
 
 StorageBuffer::StorageBuffer()
     : GPUBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+{
+}
+
+AtomicCounterBuffer::AtomicCounterBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+          VMA_MEMORY_USAGE_GPU_ONLY
+      )
 {
 }
 

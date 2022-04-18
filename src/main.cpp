@@ -31,6 +31,7 @@
 
 #include <rendering/v2/engine.h>
 #include <rendering/v2/components/node.h>
+#include <rendering/v2/components/atomics.h>
 #include <rendering/v2/components/bone.h>
 #include <rendering/v2/asset/model_loaders/obj_model_loader.h>
 
@@ -104,6 +105,7 @@ using namespace hyperion;
 
 
 #define HYPERION_VK_TEST_IMAGE_STORE 1
+#define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 
 int main()
@@ -190,6 +192,15 @@ int main()
     ));
 
     engine.Initialize();
+
+#if HYPERION_VK_TEST_ATOMICS
+    v2::AtomicCounter atomic_counter[Swapchain::max_frames_in_flight];
+
+    for (uint32_t i = 0; i < std::size(atomic_counter); i++) {
+        atomic_counter[i].Create(&engine);
+        atomic_counter[i].Reset(&engine);
+    }
+#endif
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.6f }));
@@ -213,12 +224,15 @@ int main()
     
 
     Device *device = engine.GetInstance()->GetDevice();
-    
-#if HYPERION_VK_TEST_IMAGE_STORE
+
     auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
+    auto *descriptor_set_scene = engine.GetInstance()->GetDescriptorPool()
+        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE);
+    auto *descriptor_set_scene_1 = engine.GetInstance()->GetDescriptorPool()
+        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1);
 
-
+#if HYPERION_VK_TEST_IMAGE_STORE
     descriptor_set_globals
         ->AddDescriptor<ImageStorageDescriptor>(16)
         ->AddSubDescriptor({ .image_view = &image_storage_view });
@@ -231,7 +245,16 @@ int main()
 
     HYPERION_ASSERT_RESULT(image_storage_view.Create(device, image_storage));
 #endif
-    
+
+#if HYPERION_VK_TEST_ATOMICS
+    descriptor_set_scene
+        ->AddDescriptor<StorageBufferDescriptor>(24)
+        ->AddSubDescriptor({.gpu_buffer = atomic_counter[0].GetBuffer()});
+    descriptor_set_scene_1
+        ->AddDescriptor<StorageBufferDescriptor>(24)
+        ->AddSubDescriptor({.gpu_buffer = atomic_counter[1].GetBuffer()});
+#endif
+
     engine.PrepareSwapchain();
     
     auto mirror_shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
@@ -559,6 +582,7 @@ int main()
         cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         cube_obj->Update(&engine);
 
+
         /* Only update sets that are double - buffered so we don't
          * end up updating data that is in use by the gpu
          */
@@ -567,6 +591,11 @@ int main()
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
         engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
+
+#if HYPERION_VK_TEST_ATOMICS
+        DebugLog(LogType::Debug, "Read %lu from counter\n", atomic_counter[frame_index].Read(&engine));
+        atomic_counter[frame_index].Reset(&engine);
+#endif
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         image_storage->GetGPUImage()->InsertBarrier(
@@ -580,6 +609,8 @@ int main()
 
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));
+
+        
         
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
         engine.GetInstance()->GetFrameHandler()->NextFrame();
@@ -599,6 +630,12 @@ int main()
 
     delete image_storage;
 
+#endif
+
+#if HYPERION_VK_TEST_ATOMICS
+    for (uint32_t i = 0; i < std::size(atomic_counter); i++) {
+        atomic_counter[i].Destroy(&engine);
+    }
 #endif
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
