@@ -27,6 +27,10 @@ struct Stub {
 
 #define STUB_CLASS(name) ::hyperion::v2::Stub<name>
 
+#define ENGINE_COMPONENT_DELEGATE_METHODS \
+    inline decltype(m_wrapped) *operator->()             { return &m_wrapped; } \
+    inline const decltype(m_wrapped) *operator->() const { return &m_wrapped; }
+
 template <class Type, class ...Args>
 struct ID {
     using InnerType = uint32_t;

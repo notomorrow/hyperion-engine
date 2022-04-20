@@ -9,7 +9,7 @@
 
 namespace hyperion::v2 {
 
-constexpr bool create_obj_indices = false;
+constexpr bool create_obj_indices = true;
 
 using Tokens = std::vector<std::string>;
 using ObjModelLoader = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::Loader;

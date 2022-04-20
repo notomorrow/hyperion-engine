@@ -434,12 +434,9 @@ void Mesh::CalculateNormals()
         const Vector3 &p1 = vertices[i1].GetPosition();
         const Vector3 &p2 = vertices[i2].GetPosition();
 
-        Vector3 u = p2 - p0;
-        Vector3 v = p1 - p0;
-        Vector3 n = v;
-
-        n.Cross(u);
-        n.Normalize();
+        const Vector3 u = p2 - p0;
+        const Vector3 v = p1 - p0;
+        const Vector3 n = v.Cross(u).Normalize();
 
         normals[i0].push_back(n);
         normals[i1].push_back(n);
@@ -505,7 +502,8 @@ void Mesh::CalculateTangents()
     }
 
     for (size_t i = 0; i < vertices.size(); i++) {
-        Vector3 n = vertices[i].GetNormal();
+        const Vector3 n = vertices[i].GetNormal();
+
         Vector3 tangent = (new_tangents[i] - (n * n.Dot(new_tangents[i])));
         Vector3 cross = n.Cross(new_tangents[i]);
 

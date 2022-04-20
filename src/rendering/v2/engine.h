@@ -68,9 +68,9 @@ public:
 
     Engine(SystemSDL &, const char *app_name);
     ~Engine();
-
-    inline Instance *GetInstance() { return m_instance.get(); }
-    inline const Instance *GetInstance() const { return m_instance.get(); }
+    
+    inline Instance *GetInstance() const { return m_instance.get(); }
+    inline Device   *GetDevice() const { return m_instance ? m_instance->GetDevice() : nullptr; }
 
     inline DeferredRenderer &GetDeferredRenderer() { return m_deferred_renderer; }
     inline const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_renderer; }
@@ -95,8 +95,7 @@ public:
     {
         const auto bucket = pipeline->GetBucket();
 
-        GraphicsPipeline::ID id = m_render_list[bucket]
-            .pipelines.Add(this, std::move(pipeline), std::move(args)...);
+        GraphicsPipeline::ID id = resources.graphics_pipelines.Add(this, std::move(pipeline), std::move(args)...);
 
         id.bucket = bucket;
 
@@ -105,10 +104,10 @@ public:
 
     template <class ...Args>
     void RemoveGraphicsPipeline(GraphicsPipeline::ID id, Args &&... args)
-        { return m_render_list[id.bucket].pipelines.Remove(this, id, std::move(args)...); }
+        { return resources.graphics_pipelines.Remove(this, id, std::move(args)...); }
 
     inline GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id)
-        { return m_render_list[id.bucket].pipelines.Get(id); }
+        { return resources.graphics_pipelines.Get(id); }
 
     inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
         { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }

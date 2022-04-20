@@ -8,16 +8,15 @@ RenderList::RenderList()
 {
     for (size_t i = 0; i < m_buckets.size(); i++) {
         m_buckets[i] = {
-            .bucket = GraphicsPipeline::Bucket(i),
-            .pipelines = {.defer_create = true}
+            .bucket = GraphicsPipeline::Bucket(i)
         };
     }
 }
 
-void RenderList::CreatePipelines(Engine *engine)
+void RenderList::AddFramebuffersToPipelines(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
-        bucket.CreatePipelines(engine);
+        bucket.AddFramebuffersToPipelines(engine);
     }
 }
 
@@ -37,15 +36,17 @@ void RenderList::Destroy(Engine *engine)
     }
 }
 
-void RenderList::Bucket::CreatePipelines(Engine *engine)
+void RenderList::Bucket::AddFramebuffersToPipelines(Engine *engine)
 {
-    for (auto &pipeline : pipelines.objects) {
+    for (auto &pipeline : engine->resources.graphics_pipelines.objects) {
+        if (pipeline->GetBucket() != bucket) {
+            continue;
+        }
+
         for (auto &framebuffer : framebuffers) {
             pipeline->AddFramebuffer(framebuffer.Acquire());
         }
     }
-
-    pipelines.CreateAll(engine);
 }
 
 void RenderList::Bucket::CreateRenderPass(Engine *engine)
@@ -181,28 +182,7 @@ void RenderList::Bucket::Destroy(Engine *engine)
         HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
     }
 
-    pipelines.RemoveAll(engine);
-
     HYPERION_ASSERT_RESULT(result);
 }
-
-void RenderList::Bucket::Begin(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
-{
-    if (!pipelines.objects.empty()) {
-        AssertThrowMsg(pipelines.objects[0]->Get().GetConstructionInfo().render_pass == &render_pass->Get(), "Render pass for pipeline does not match render bucket renderpass");
-    }
-
-    framebuffers[frame_index]->BeginCapture(command_buffer);
-}
-
-void RenderList::Bucket::End(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
-{
-    if (!pipelines.objects.empty()) {
-        AssertThrowMsg(pipelines.objects[0]->Get().GetConstructionInfo().render_pass == &render_pass->Get(), "Render pass for pipeline does not match render bucket renderpass");
-    }
-    
-    framebuffers[frame_index]->EndCapture(command_buffer);
-}
-
 
 } // namespace hyperion::v2

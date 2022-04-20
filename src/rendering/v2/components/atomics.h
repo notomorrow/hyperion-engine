@@ -11,6 +11,7 @@ using renderer::Fence;
 using renderer::CommandBuffer;
 using renderer::GPUBuffer;
 using renderer::AtomicCounterBuffer;
+using renderer::StagingBuffer;
 
 class Engine;
 
@@ -31,6 +32,7 @@ public:
 
 private:
     std::unique_ptr<AtomicCounterBuffer> m_buffer;
+    std::unique_ptr<StagingBuffer> m_staging_buffer;
 };
 
 } // namespace hyperion::v2

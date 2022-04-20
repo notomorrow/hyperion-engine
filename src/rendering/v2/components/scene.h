@@ -28,6 +28,8 @@ public:
     void Init(Engine *engine);
     void Update(Engine *engine, double delta_time);
 
+    BoundingBox aabb;
+
 private:
     void UpdateShaderData(Engine *engine) const;
 

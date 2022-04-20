@@ -189,7 +189,8 @@ void Engine::PrepareSwapchain()
     m_root_pipeline->SetTopology(Topology::TRIANGLE_FAN);
 
     callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
-        m_render_list.CreatePipelines(this);
+        m_render_list.AddFramebuffersToPipelines(this);
+        resources.graphics_pipelines.CreateAll(this);
         m_root_pipeline->Create(this);
     });
 
@@ -200,6 +201,8 @@ void Engine::PrepareSwapchain()
         for (auto &attachment : m_render_pass_attachments) {
             HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
         }
+
+        resources.graphics_pipelines.RemoveAll(this);
     });
     
     callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](...) {
@@ -324,6 +327,8 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_SPATIALS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SHADERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_TEXTURES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_VOXELIZER, this);
+    callbacks.Trigger(EngineCallback::DESTROY_DESCRIPTOR_SETS, this);
     callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
@@ -368,9 +373,12 @@ void Engine::Compile()
         shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), i);
     }
 
+    callbacks.TriggerPersisted(EngineCallback::CREATE_DESCRIPTOR_SETS, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_VOXELIZER, this);
+
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
-
+    
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
 }

@@ -92,7 +92,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     DebugLogRaw(lt, "Vulkan: [%s, %d]:\n\t%s\n",
              callback_data->pMessageIdName, callback_data->messageIdNumber, callback_data->pMessage);
 
-#if HYPERION_ENABLE_BREAKPOINTS
+#if HYP_ENABLE_BREAKPOINTS
     if (lt == LogType::RenError) {
         HYP_BREAKPOINT;
     }
@@ -266,6 +266,7 @@ Result Instance::Initialize(bool load_debug_layers)
     this->descriptor_pool.AddDescriptorSet(false);
     this->descriptor_pool.AddDescriptorSet(true);
     this->descriptor_pool.AddDescriptorSet(true);
+    this->descriptor_pool.AddDescriptorSet(false);
 
     AssertThrow(descriptor_pool.NumDescriptorSets() == DescriptorSet::max_descriptor_sets);
 

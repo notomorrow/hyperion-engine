@@ -22,18 +22,20 @@ class Engine;
 struct Resources {
     using Callbacks = EngineCallbacks;
 
-    RefCounter<Shader,   Callbacks>         shaders;
-    RefCounter<Texture,  Callbacks>         textures;
+    RefCounter<Shader,      Callbacks>      shaders;
+    RefCounter<Texture,     Callbacks>      textures;
     RefCounter<Framebuffer, Callbacks>      framebuffers;
-    RefCounter<RenderPass, Callbacks>       render_passes;
-    RefCounter<Material, Callbacks>         materials;
+    RefCounter<RenderPass,  Callbacks>      render_passes;
+    RefCounter<Material,    Callbacks>      materials;
+
+    ObjectHolder<GraphicsPipeline>          graphics_pipelines{.defer_create = true};
     ObjectHolder<ComputePipeline>           compute_pipelines{.defer_create = true};
     
-    RefCounter<Spatial,  Callbacks>         spatials;
-    RefCounter<Mesh,     Callbacks>         meshes;
-    RefCounter<Skeleton, Callbacks>         skeletons;
+    RefCounter<Spatial,     Callbacks>      spatials;
+    RefCounter<Mesh,        Callbacks>      meshes;
+    RefCounter<Skeleton,    Callbacks>      skeletons;
 
-    RefCounter<Scene,    Callbacks>         scenes;
+    RefCounter<Scene,       Callbacks>      scenes;
 
     Resources(Engine *);
     Resources(const Resources &other) = delete;

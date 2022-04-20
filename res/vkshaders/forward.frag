@@ -26,8 +26,6 @@ layout(location=2) out vec4 gbuffer_positions;
 layout(set = 6, binding = 0) uniform sampler2D textures[];
 layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 
-layout(std140, set = 2, binding = 24) buffer AtomicCounter { uint atomic_counter; };
-
 void main()
 {
     vec3 L = normalize(v_light_direction);
@@ -73,8 +71,6 @@ void main()
         vec4 normals_texture = texture(textures[material.texture_index[1]], texcoord) * 2.0 - 1.0;
         normal = normalize(v_tbn_matrix * normals_texture.rgb);
     }
-    
-    uint current_index = atomicAdd(atomic_counter, 1u);
     
     gbuffer_normals = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);

@@ -36,7 +36,7 @@ void AtomicCounter::Reset(Engine *engine, uint32_t value)
             auto *staging_buffer = context.Acquire(sizeof(value));
             
             staging_buffer->Copy(engine->GetInstance()->GetDevice(), sizeof(value), (void *)&value);
-            
+   
             auto commands = engine->GetInstance()->GetSingleTimeCommands();
 
             commands.Push([&](CommandBuffer *command_buffer) {
@@ -45,11 +45,7 @@ void AtomicCounter::Reset(Engine *engine, uint32_t value)
                 HYPERION_RETURN_OK;
             });
 
-            HYPERION_BUBBLE_ERRORS(commands.Execute(engine->GetInstance()->GetDevice()));
-            
-            /*m_buffer->CopyFrom(primary, staging_buffer, sizeof(value));*/
-
-            HYPERION_RETURN_OK;
+            return commands.Execute(engine->GetInstance()->GetDevice());
         }
     ));
 }

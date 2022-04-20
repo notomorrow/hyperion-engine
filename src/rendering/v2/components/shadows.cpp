@@ -140,12 +140,17 @@ void ShadowRenderer::Create(Engine *engine)
 
     /* TMP: will have to be dynamic because objects will be added and removed */
     engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
-        auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
+        auto *effect_pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
 
-        for (auto &opaque_pipeline : engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].pipelines.objects) {
-            for (auto &spatial : opaque_pipeline->GetSpatials()) {
+        /* TODO: just hold ref<> on renderlist and loop through those */
+        for (const auto &pipeline : engine->resources.graphics_pipelines.objects) {
+            if (pipeline->GetBucket() != GraphicsPipeline::Bucket::BUCKET_OPAQUE) {
+                continue;
+            }
+            
+            for (auto &spatial : pipeline->GetSpatials()) {
                 if (spatial != nullptr) {
-                    pipeline->AddSpatial(spatial.Acquire());
+                    effect_pipeline->AddSpatial(spatial.Acquire());
                 }
             }
         }
@@ -159,10 +164,7 @@ void ShadowRenderer::Destroy(Engine *engine)
 
 void ShadowRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    using renderer::Result;
-    
     auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
-
     AssertThrow(pipeline != nullptr);
 
     m_effect.GetFramebuffer()->BeginCapture(primary);

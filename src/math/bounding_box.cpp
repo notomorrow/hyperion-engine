@@ -6,34 +6,34 @@
 namespace hyperion {
 
 BoundingBox::BoundingBox()
-    : m_min(std::numeric_limits<float>::max()), 
-      m_max(std::numeric_limits<float>::lowest())
+    : min(std::numeric_limits<float>::max()), 
+      max(std::numeric_limits<float>::lowest())
 {
 }
 
 BoundingBox::BoundingBox(const Vector3 &min, const Vector3 &max)
-    : m_min(min), 
-      m_max(max)
+    : min(min), 
+      max(max)
 {
 }
 
 BoundingBox::BoundingBox(const BoundingBox &other)
-    : m_min(other.m_min), 
-      m_max(other.m_max)
+    : min(other.min), 
+      max(other.max)
 {
 }
 
 std::array<Vector3, 8> BoundingBox::GetCorners() const
 {
     return std::array<Vector3, 8> {
-        Vector3(m_min.x, m_min.y, m_min.z),
-        Vector3(m_max.x, m_min.y, m_min.z),
-        Vector3(m_max.x, m_max.y, m_min.z),
-        Vector3(m_min.x, m_max.y, m_min.z),
-        Vector3(m_min.x, m_min.y, m_max.z),
-        Vector3(m_min.x, m_max.y, m_max.z),
-        Vector3(m_max.x, m_max.y, m_max.z),
-        Vector3(m_max.x, m_min.y, m_max.z)
+        Vector3(min.x, min.y, min.z),
+        Vector3(max.x, min.y, min.z),
+        Vector3(max.x, max.y, min.z),
+        Vector3(min.x, max.y, min.z),
+        Vector3(min.x, min.y, max.z),
+        Vector3(min.x, max.y, max.z),
+        Vector3(max.x, max.y, max.z),
+        Vector3(max.x, min.y, max.z)
     };
 }
 
@@ -41,22 +41,22 @@ void BoundingBox::SetCenter(const Vector3 &center)
 {
     Vector3 dimensions = GetDimensions();
 
-    m_max = center + dimensions * 0.5f;
-    m_min = center - dimensions * 0.5f;
+    max = center + dimensions * 0.5f;
+    min = center - dimensions * 0.5f;
 }
 
 void BoundingBox::SetDimensions(const Vector3 &dimensions)
 {
     Vector3 center = GetCenter();
 
-    m_max = center + dimensions * 0.5f;
-    m_min = center - dimensions * 0.5f;
+    max = center + dimensions * 0.5f;
+    min = center - dimensions * 0.5f;
 }
 
 BoundingBox &BoundingBox::operator*=(float scalar)
 {
-    m_min *= scalar;
-    m_max *= scalar;
+    min *= scalar;
+    max *= scalar;
 
     return *this;
 }
@@ -74,14 +74,14 @@ BoundingBox BoundingBox::operator*(float scalar) const
 
 BoundingBox &BoundingBox::operator*=(const Transform &transform)
 {
-    m_min *= transform.GetScale();
-    m_max *= transform.GetScale();
+    min *= transform.GetScale();
+    max *= transform.GetScale();
 
-    m_min *= transform.GetRotation();
-    m_max *= transform.GetRotation();
+    min *= transform.GetRotation();
+    max *= transform.GetRotation();
 
-    m_min += transform.GetTranslation();
-    m_max += transform.GetTranslation();
+    min += transform.GetTranslation();
+    max += transform.GetTranslation();
 
     return *this;
 }
@@ -90,37 +90,37 @@ BoundingBox BoundingBox::operator*(const Transform &transform) const
 {
     BoundingBox other(*this);
 
-    other.m_max *= transform.GetMatrix();
-    other.m_min *= transform.GetMatrix();
+    other.max *= transform.GetMatrix();
+    other.min *= transform.GetMatrix();
 
     return other;
 }
 
 BoundingBox &BoundingBox::Clear()
 {
-    m_min = Vector3(std::numeric_limits<float>::max());
-    m_max = Vector3(std::numeric_limits<float>::lowest());
+    min = Vector3(std::numeric_limits<float>::max());
+    max = Vector3(std::numeric_limits<float>::lowest());
     return *this;
 }
 
 BoundingBox &BoundingBox::Extend(const Vector3 &vec)
 {
-    m_min = Vector3::Min(m_min, vec);
-    m_max = Vector3::Max(m_max, vec);
+    min = Vector3::Min(min, vec);
+    max = Vector3::Max(max, vec);
     return *this;
 }
 
 BoundingBox &BoundingBox::Extend(const BoundingBox &bb)
 {
-    m_min = Vector3::Min(m_min, bb.m_min);
-    m_max = Vector3::Max(m_max, bb.m_max);
+    min = Vector3::Min(min, bb.min);
+    max = Vector3::Max(max, bb.max);
     return *this;
 }
 
 bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const
 {
-    if (m_max == Vector3(std::numeric_limits<float>::lowest()) && 
-        m_min == Vector3(std::numeric_limits<float>::max())) {
+    if (max == Vector3(std::numeric_limits<float>::lowest()) && 
+        min == Vector3(std::numeric_limits<float>::max())) {
         // early detect if box is empty
         return false;
     }
@@ -129,25 +129,25 @@ bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const
     Vector3 hit_max(std::numeric_limits<float>::max());
 
     if (std::fabs(ray.m_direction.x) < MathUtil::epsilon) {
-        if (ray.m_position.x < m_min.x || ray.m_position.x > m_max.x) {
+        if (ray.m_position.x < min.x || ray.m_position.x > max.x) {
             return false; // no collision
         }
     } else {
-        hit_min.x = (m_min.x - ray.m_position.x) / ray.m_direction.x;
-        hit_max.x = (m_max.x - ray.m_position.x) / ray.m_direction.x;
+        hit_min.x = (min.x - ray.m_position.x) / ray.m_direction.x;
+        hit_max.x = (max.x - ray.m_position.x) / ray.m_direction.x;
         if (hit_min.x > hit_max.x) {
             std::swap(hit_min.x, hit_max.x);
         }
     }
 
     if (std::fabs(ray.m_direction.y) < MathUtil::epsilon) {
-        if (ray.m_position.y < m_min.y ||
-            ray.m_position.y > m_max.y) {
+        if (ray.m_position.y < min.y ||
+            ray.m_position.y > max.y) {
             return false; // no collision
         }
     } else {
-        hit_min.y = (m_min.y - ray.m_position.y) / ray.m_direction.y;
-        hit_max.y = (m_max.y - ray.m_position.y) / ray.m_direction.y;
+        hit_min.y = (min.y - ray.m_position.y) / ray.m_direction.y;
+        hit_max.y = (max.y - ray.m_position.y) / ray.m_direction.y;
 
         if (hit_min.y > hit_max.y) {
             std::swap(hit_min.y, hit_max.y);
@@ -162,12 +162,12 @@ bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const
     }
 
     if (std::fabs(ray.m_direction.z) < MathUtil::epsilon) {
-        if (ray.m_position.z < m_min.z || ray.m_position.z > m_max.z) {
+        if (ray.m_position.z < min.z || ray.m_position.z > max.z) {
             return false; // no collision
         }
     } else {
-        hit_min.z = (m_min.z - ray.m_position.z) / ray.m_direction.z;
-        hit_max.z = (m_max.z - ray.m_position.z) / ray.m_direction.z;
+        hit_min.z = (min.z - ray.m_position.z) / ray.m_direction.z;
+        hit_max.z = (max.z - ray.m_position.z) / ray.m_direction.z;
 
         if (hit_min.z > hit_max.z) {
             std::swap(hit_min.z, hit_max.z);
@@ -210,19 +210,19 @@ bool BoundingBox::Contains(const BoundingBox &other) const
 
 bool BoundingBox::ContainsPoint(const Vector3 &vec) const
 {
-    if (vec.x < m_min.x) return false;
-    if (vec.y < m_min.y) return false;
-    if (vec.z < m_min.z) return false;
-    if (vec.x > m_max.x) return false;
-    if (vec.y > m_max.y) return false;
-    if (vec.z > m_max.z) return false;
+    if (vec.x < min.x) return false;
+    if (vec.y < min.y) return false;
+    if (vec.z < min.z) return false;
+    if (vec.x > max.x) return false;
+    if (vec.y > max.y) return false;
+    if (vec.z > max.z) return false;
 
     return true;
 }
 
 double BoundingBox::Area() const
 {
-    Vector3 dimensions(m_max - m_min);
+    Vector3 dimensions(max - min);
     return dimensions.x * dimensions.y * dimensions.z;
 }
 

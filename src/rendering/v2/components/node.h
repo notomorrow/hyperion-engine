@@ -135,6 +135,16 @@ public:
     inline void Rotate(const Quaternion &rotation)
         { SetLocalRotation(m_local_transform.GetRotation() * rotation); }
 
+    /*! @returns The local-space (model) of the node's aabb. Only includes
+     * the Spatial's aabb.
+     */
+    inline const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
+
+    /*! @returns The world-space aabb of the node. Includes the transforms of all
+     * parent nodes.
+     */
+    inline const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
+
     
     void UpdateWorldTransform();
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */

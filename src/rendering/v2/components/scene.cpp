@@ -53,7 +53,10 @@ void Scene::Update(Engine *engine, double delta_time)
 
 void Scene::UpdateShaderData(Engine *engine) const
 {
-    SceneShaderData shader_data{};
+    SceneShaderData shader_data{
+        .aabb_max = Vector4(aabb.max, 1.0f),
+        .aabb_min = Vector4(aabb.min, 1.0f)
+    };
 
     if (m_camera != nullptr) {
         shader_data.view            = m_camera->GetViewMatrix();

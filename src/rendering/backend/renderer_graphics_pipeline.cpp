@@ -16,9 +16,7 @@
 namespace hyperion {
 namespace renderer {
 GraphicsPipeline::GraphicsPipeline()
-    : pipeline{},
-      layout{},
-      push_constants{},
+    : Pipeline(),
       viewport{},
       scissor{}
 {
@@ -26,8 +24,6 @@ GraphicsPipeline::GraphicsPipeline()
 
 GraphicsPipeline::~GraphicsPipeline()
 {
-    AssertThrowMsg(this->pipeline == nullptr, "Expected pipeline to have been destroyed");
-    AssertThrowMsg(this->layout == nullptr, "Expected layout to have been destroyed");
 }
 
 void GraphicsPipeline::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth)
@@ -124,7 +120,7 @@ Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_
 
     const uint32_t width = m_construction_info.fbos[0]->GetWidth();
     const uint32_t height = m_construction_info.fbos[0]->GetHeight();
-
+    
     SetViewport(0.0f, float(height), float(width), -float(height), 0.0f, 1.0f);
     SetScissor(0, 0, width, height);
     

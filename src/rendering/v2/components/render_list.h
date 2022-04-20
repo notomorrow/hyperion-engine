@@ -12,18 +12,14 @@ class RenderList {
 public:
     struct Bucket {
         GraphicsPipeline::Bucket bucket;
-        ObjectHolder<GraphicsPipeline> pipelines;
         Ref<RenderPass> render_pass;
         std::vector<Ref<Framebuffer>> framebuffers;
         std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
 
-        void CreatePipelines(Engine *engine);
+        void AddFramebuffersToPipelines(Engine *engine);
         void CreateRenderPass(Engine *engine);
         void CreateFramebuffers(Engine *engine);
         void Destroy(Engine *engine);
-
-        void Begin(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
-        void End(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
     };
 
     RenderList();
@@ -47,7 +43,7 @@ public:
     inline const Bucket &operator[](GraphicsPipeline::Bucket bucket) const
         { return Get(bucket); }
 
-    void CreatePipelines(Engine *engine);
+    void AddFramebuffersToPipelines(Engine *engine);
     void Create(Engine *engine);
     void Destroy(Engine *engine);
 

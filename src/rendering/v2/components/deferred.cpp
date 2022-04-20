@@ -129,9 +129,9 @@ void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t f
     auto &render_list = engine->GetRenderList();
     auto &bucket = render_list.Get(GraphicsPipeline::Bucket::BUCKET_OPAQUE);
 
-    bucket.Begin(engine, primary, 0);
+    bucket.framebuffers[0]->BeginCapture(primary); /* TODO: frame index? */
     RenderOpaqueObjects(engine, primary, frame_index);
-    bucket.End(engine, primary, 0);
+    bucket.framebuffers[0]->EndCapture(primary); /* TODO: frame index? */
 
     /* TODO: render SSAO here? */
     
@@ -152,11 +152,21 @@ void DeferredRenderer::RenderOpaqueObjects(Engine *engine, CommandBuffer *primar
 {
     auto &render_list = engine->GetRenderList();
 
-    for (const auto &pipeline : render_list.Get(GraphicsPipeline::Bucket::BUCKET_SKYBOX).pipelines.objects) {
+    /* TODO: just loop through Ref<> stored on renderlist */
+
+    for (auto &pipeline : engine->resources.graphics_pipelines.objects) {
+        if (pipeline->GetBucket() != GraphicsPipeline::Bucket::BUCKET_SKYBOX) {
+            continue;
+        }
+
         pipeline->Render(engine, primary, frame_index);
     }
 
-    for (const auto &pipeline : render_list.Get(GraphicsPipeline::Bucket::BUCKET_OPAQUE).pipelines.objects) {
+    for (auto &pipeline : engine->resources.graphics_pipelines.objects) {
+        if (pipeline->GetBucket() != GraphicsPipeline::Bucket::BUCKET_OPAQUE) {
+            continue;
+        }
+
         pipeline->Render(engine, primary, frame_index);
     }
 }
@@ -165,7 +175,13 @@ void DeferredRenderer::RenderTranslucentObjects(Engine *engine, CommandBuffer *p
 {
     const auto &render_list = engine->GetRenderList();
 
-    for (const auto &pipeline : render_list[GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT].pipelines.objects) {
+    /* TODO: just loop through Ref<> stored on renderlist */
+
+    for (auto &pipeline : engine->resources.graphics_pipelines.objects) {
+        if (pipeline->GetBucket() != GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT) {
+            continue;
+        }
+
         pipeline->Render(engine, primary, frame_index);
     }
 }

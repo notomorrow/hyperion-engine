@@ -15,6 +15,8 @@
 #include <queue>
 #include <cstring>
 
+#include "renderer_instance.h"
+
 namespace hyperion {
 namespace renderer {
 
@@ -234,13 +236,13 @@ VkAccessFlags GPUMemory::GetAccessMask(ResourceState state)
     case ResourceState::RENDER_TARGET:
         return VkAccessFlagBits(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
     case ResourceState::UNORDERED_ACCESS:
-        return VK_ACCESS_SHADER_WRITE_BIT;
+        return VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
     case ResourceState::DEPTH_STENCIL:
         return VkAccessFlagBits(VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
     case ResourceState::SHADER_RESOURCE:
         return VK_ACCESS_SHADER_READ_BIT;
     case ResourceState::INDIRECT_ARG:
-        return VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+        return VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
     case ResourceState::COPY_DST:
         return VK_ACCESS_TRANSFER_WRITE_BIT;
     case ResourceState::COPY_SRC:
@@ -307,7 +309,7 @@ VkPipelineStageFlags GPUMemory::GetShaderStageMask(ResourceState state, bool src
     case ResourceState::DEPTH_STENCIL:
         return src ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT : VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     case ResourceState::INDIRECT_ARG:
-        return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+        return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     case ResourceState::COPY_DST:
     case ResourceState::COPY_SRC:
     case ResourceState::RESOLVE_DST:
@@ -338,12 +340,12 @@ GPUMemory::~GPUMemory()
 }
 
 
-void GPUMemory::Map(Device *device, void **ptr)
+void GPUMemory::Map(Device *device, void **ptr) const
 {
     vmaMapMemory(device->GetAllocator(), this->allocation, ptr);
 }
 
-void GPUMemory::Unmap(Device *device)
+void GPUMemory::Unmap(Device *device) const
 {
     vmaUnmapMemory(device->GetAllocator(), this->allocation);
     map = nullptr;
@@ -367,10 +369,11 @@ void GPUMemory::Copy(Device *device, size_t offset, size_t count, const void *pt
     std::memcpy((void *)(intptr_t(map) + offset), ptr, count);
 }
 
-void GPUMemory::Read(Device *device, size_t count, void *out_ptr)
+void GPUMemory::Read(Device *device, size_t count, void *out_ptr) const
 {
     if (map == nullptr) {
         Map(device, &map);
+        DebugLog(LogType::Warn, "Attempt to Read() from buffer but data has not been mapped previously\n");
     }
 
     std::memcpy(out_ptr, map, count);
@@ -463,10 +466,6 @@ Result GPUBuffer::CheckCanAllocate(Device *device,
 
 void GPUBuffer::InsertBarrier(CommandBuffer *command_buffer, ResourceState new_state) const
 {
-    if (resource_state == new_state) {
-        return;
-    }
-
     if (buffer == nullptr) {
         DebugLog(
             LogType::Warn,
@@ -540,8 +539,8 @@ Result GPUBuffer::Create(Device *device, size_t size)
         device->GetAllocator(),
         &create_info,
         &alloc_info,
-        &this->buffer,
-        &this->allocation,
+        &buffer,
+        &allocation,
         nullptr
     ), "Failed to create gpu buffer");
 
@@ -562,6 +561,39 @@ Result GPUBuffer::Destroy(Device *device)
     HYPERION_RETURN_OK;
 }
 
+#if HYP_DEBUG_MODE
+
+void GPUBuffer::DebugLogBuffer(Device *device) const
+{
+    if (size % sizeof(uint32_t) == 0) {
+        const auto data = DebugReadBytes<uint32_t>(device);
+
+        for (size_t i = 0; i < data.size();) {
+            const size_t dist = MathUtil::Min(data.size() - i, 4ull);
+
+            if (dist == 4) {
+                DebugLog(LogType::Debug, "%lu\t%lu\t%lu\t%lu\n", data[i], data[i + 1], data[i + 2], data[i + 3]);
+            } else if (dist == 3) {
+                DebugLog(LogType::Debug, "%lu\t%lu\t%lu\n", data[i], data[i + 1], data[i + 2]);
+            } else if (dist == 2) {
+                DebugLog(LogType::Debug, "%lu\t%lu\n", data[i], data[i + 1]);
+            } else {
+                DebugLog(LogType::Debug, "%lu\n", data[i]);
+            }
+
+            i += dist;
+        }
+    } else {
+        const auto data = DebugReadBytes(device);
+
+        for (const auto byte : data) {
+            DebugLog(LogType::Debug, "0x%.12\n", byte);
+        }
+    }
+}
+
+#endif
+
 
 VertexBuffer::VertexBuffer()
     : GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY)
@@ -570,8 +602,9 @@ VertexBuffer::VertexBuffer()
 
 void VertexBuffer::Bind(CommandBuffer *cmd)
 {
-    const VkBuffer vertex_buffers[] = { buffer };
-    const VkDeviceSize offsets[] = { 0 };
+    const VkBuffer vertex_buffers[] = {buffer};
+    const VkDeviceSize offsets[] = {0};
+
     vkCmdBindVertexBuffers(cmd->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
 }
 
@@ -584,7 +617,6 @@ void IndexBuffer::Bind(CommandBuffer *cmd)
 {
     vkCmdBindIndexBuffer(cmd->GetCommandBuffer(), this->buffer, 0, helpers::ToVkIndexType(GetDatumType()));
 }
-
 
 UniformBuffer::UniformBuffer()
     : GPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
@@ -605,8 +637,28 @@ AtomicCounterBuffer::AtomicCounterBuffer()
 }
 
 StagingBuffer::StagingBuffer()
-    : GPUBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY)
+    : GPUBuffer(
+          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+          VMA_MEMORY_USAGE_CPU_ONLY
+      )
 {
+}
+
+IndirectBuffer::IndirectBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+          VMA_MEMORY_USAGE_GPU_ONLY
+      )
+{
+}
+
+void IndirectBuffer::DispatchIndirect(CommandBuffer *command_buffer, size_t offset) const
+{
+    vkCmdDispatchIndirect(
+        command_buffer->GetCommandBuffer(),
+        buffer,
+        offset
+    );
 }
 
 GPUImageMemory::GPUImageMemory(VkImageUsageFlags usage_flags)

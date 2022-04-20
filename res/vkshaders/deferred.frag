@@ -14,13 +14,11 @@ layout(location=2) out vec4 output_positions;
 
 layout(set = 1, binding = 8) uniform sampler2D filter_ssao;
 
-
 layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 
 #include "include/scene.inc"
 #include "include/brdf.inc"
 #include "include/tonemap.inc"
-
 
 vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos) {
   vec4 shadow_position = shadow_matrix * vec4(pos, 1.0);
@@ -34,8 +32,11 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos) {
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 10000.0
+#define IBL_INTENSITY 7000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 200000.0
+
+#include "include/voxel/vct.inc"
+
 
 void main()
 {
@@ -56,20 +57,24 @@ void main()
 
     /* Physical camera */
     float aperture = 16.0;
-    float shutterSpeed = 1.0/125.0;
+    float shutter = 1.0/125.0;
     float sensitivity = 100.0;
-    float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
-    float exposure = 1.0f / (1.2f * pow(2.0f, ev100)); 
+    float ev100 = log2((aperture * aperture) / shutter * 100.0f / sensitivity);
+    float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
+    
+    
+	vec3 o = scene.camera_position.xyz,
+         d = (inverse(scene.projection * scene.view) * vec4(v_texcoord0 * 2.0 - 1.0, 1.0, 1.0)).xyz;
+
+    vec3 N = normal.xyz;
+    vec3 L = normalize(scene.light_direction.xyz);
+    vec3 V = normalize(scene.camera_position.xyz - position.xyz);
+    vec3 R = reflect(-V, N);
+    vec3 H = normalize(L + V);
     
     if (perform_lighting) {
         float metallic = 0.9;
         float roughness = 0.1;
-        
-        vec3 N = normal.xyz;
-        vec3 L = normalize(scene.light_direction.xyz);
-        vec3 V = normalize(scene.camera_position.xyz - position.xyz);
-        vec3 R = reflect(-V, N);
-        vec3 H = normalize(L + V);
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -89,11 +94,23 @@ void main()
         
         vec2 AB = vec2(1.0, 1.0) - BRDFMap(NdotV, perceptual_roughness);
         
-        vec3 irradiance = vec3(1.0); /* TODO */
+        vec3 irradiance;
         
-        vec3 ibl = HasEnvironmentTexture(0)
+        vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0 , 5.0);
+        vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 5.0);
+        
+        float minLevel = calcMinLevel(position.xyz, aabb_max, aabb_min);
+        float voxelSize = uVoxelSize * exp2(minLevel);
+        vec3 startPos = position.xyz + N * voxelSize * uTraceStartOffset; 
+        irradiance = traceCone(startPos, N, aabb_max, aabb_min, 0.65,
+                               VCT_MAX_DISTANCE, minLevel, VCT_STEP_FACTOR).xyz;
+        
+        /*vec3 ibl = HasEnvironmentTexture(0)
             ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
-            : vec3(1.0);
+            : vec3(1.0);*/
+            
+        vec3 ibl = traceCone(startPos, R, aabb_max, aabb_min, 0.05,
+                             VCT_MAX_DISTANCE, minLevel, VCT_STEP_FACTOR).xyz;
         
 
         float ao = texture(filter_ssao, texcoord).r;
@@ -127,7 +144,6 @@ void main()
         result = albedo_linear * DIRECTIONAL_LIGHT_INTENSITY * exposure;
     }
 
-    
     output_color = vec4(Tonemap(result), 1.0);
     output_normals = normal;
     output_positions = position;

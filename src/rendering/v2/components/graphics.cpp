@@ -9,6 +9,12 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 
+bool GraphicsPipeline::BucketSupportsCulling(Bucket bucket)
+{
+    return bucket != BUCKET_SKYBOX
+        && bucket != BUCKET_VOXELIZER;
+}
+
 GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, Ref<RenderPass> &&render_pass, Bucket bucket)
     : EngineComponent(),
       m_shader(std::move(shader)),
@@ -150,8 +156,12 @@ void GraphicsPipeline::Destroy(Engine *engine)
     EngineComponent::Destroy(engine);
 }
 
-void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+void GraphicsPipeline::Render(Engine *engine,
+                              CommandBuffer *primary,
+                              uint32_t frame_index)
 {
+    AssertThrow(m_per_frame_data != nullptr);
+
     auto *instance = engine->GetInstance();
     auto *device = instance->GetDevice();
     auto *secondary_command_buffer = m_per_frame_data->At(frame_index).Get<CommandBuffer>();
@@ -201,13 +211,27 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                     {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
                 }
             );
+
+            /* TODO: move elsewhere, we don't want to be binding > 4 sets */
+            if (m_bucket == BUCKET_VOXELIZER) {
+                /* Voxelizer data */
+                instance->GetDescriptorPool().Bind(
+                    device,
+                    secondary,
+                    &m_wrapped,
+                    {
+                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1},
+                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER}
+                    }
+                );
+            }
             
             for (auto &spatial : m_spatials) {
                 if (spatial->GetMesh() == nullptr) {
                     continue;
                 }
 
-                if (m_scene != nullptr && m_bucket != BUCKET_SKYBOX) {
+                if (m_scene != nullptr && BucketSupportsCulling(m_bucket)) {
                     auto &visibility_state = spatial->GetVisibilityState();
 
                     if (!visibility_state.Get(m_scene->GetId())) {

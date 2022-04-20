@@ -33,7 +33,7 @@ public:
 };
 
 class Assets {
-    struct FunctorBase {
+    struct HandleAssetFunctorBase {
         std::string filepath;
 
         LoaderFormat GetResourceFormat() const
@@ -93,7 +93,7 @@ class Assets {
     };
 
     template <class T>
-    struct Functor : FunctorBase {
+    struct HandleAssetFunctor : HandleAssetFunctorBase {
         std::unique_ptr<T> operator()(Engine *engine)
         {
             static_assert(resolution_failure<T>, "No handler defined for the given type");
@@ -103,7 +103,7 @@ class Assets {
     };
 
     template <>
-    struct Functor<Node> : FunctorBase {
+    struct HandleAssetFunctor<Node> : HandleAssetFunctorBase {
         std::unique_ptr<Node> operator()(Engine *engine)
         {
             switch (GetResourceFormat()) {
@@ -118,7 +118,7 @@ class Assets {
     };
 
     template <>
-    struct Functor<Skeleton> : FunctorBase {
+    struct HandleAssetFunctor<Skeleton> : HandleAssetFunctorBase {
         std::unique_ptr<Skeleton> operator()(Engine *engine)
         {
             switch (GetResourceFormat()) {
@@ -131,7 +131,7 @@ class Assets {
     };
 
     template <>
-    struct Functor<Texture> : FunctorBase {
+    struct HandleAssetFunctor<Texture> : HandleAssetFunctorBase {
         std::unique_ptr<Texture> operator()(Engine *engine)
         {
             return LoadResource(engine, GetLoader<Texture, LoaderFormat::TEXTURE_2D>());
@@ -139,7 +139,7 @@ class Assets {
     };
 
     template <>
-    struct Functor<MaterialLibrary> : FunctorBase {
+    struct HandleAssetFunctor<MaterialLibrary> : HandleAssetFunctorBase {
         std::unique_ptr<MaterialLibrary> operator()(Engine *engine)
         {
             return LoadResource(engine, GetLoader<MaterialLibrary, LoaderFormat::MTL_MATERIAL_LIBRARY>());
@@ -159,7 +159,7 @@ class Assets {
             threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
                 DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
 
-                auto functor = Functor<Type>{};
+                auto functor = HandleAssetFunctor<Type>{};
                 functor.filepath = filepaths[index];
 
                 results[index] = functor(engine);
@@ -186,7 +186,7 @@ class Assets {
             threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
                 DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
 
-                auto functor = Functor<Type>{};
+                auto functor = HandleAssetFunctor<Type>{};
                 functor.filepath = filepaths[index];
 
                 results[index] = functor(engine);

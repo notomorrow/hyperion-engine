@@ -224,6 +224,16 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                     }
                 ));
 
+                /* TMP */
+                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+                    engine->GetInstance()->GetDevice(),
+                    cmd,
+                    &pipeline->Get(),
+                    {
+                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1}
+                    }
+                ));
+
                 full_screen_quad->RenderVk(cmd, engine->GetInstance(), nullptr);
 
                 HYPERION_RETURN_OK;

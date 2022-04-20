@@ -31,36 +31,6 @@ void TerrainChunk::AddNormal(Vertex &vertex, const Vector3 &normal)
     vertex.SetNormal(before + normal);
 }
 
-void TerrainChunk::CalculateNormals(std::vector<Vertex> &vertices, const std::vector<MeshIndex> &indices)
-{
-    for (size_t i = 0; i < indices.size(); i += 3) {
-        MeshIndex i0 = indices[i];
-        MeshIndex i1 = indices[i + 1];
-        MeshIndex i2 = indices[i + 2];
-
-        const Vector3 &p0 = vertices[i0].GetPosition();
-        const Vector3 &p1 = vertices[i1].GetPosition();
-        const Vector3 &p2 = vertices[i2].GetPosition();
-
-        Vector3 u = p2 - p0;
-        Vector3 v = p1 - p0;
-        Vector3 n = v;
-
-        n.Cross(u);
-        n.Normalize();
-
-        AddNormal(vertices[i0], n);
-        AddNormal(vertices[i1], n);
-        AddNormal(vertices[i2], n);
-    }
-
-    for (Vertex &vert : vertices) {
-        Vector3 tmp(vert.GetNormal());
-        tmp.Normalize();
-        vert.SetNormal(tmp);
-    }
-}
-
 std::vector<Vertex> TerrainChunk::BuildVertices(const std::vector<double> &heights)
 {
     std::vector<Vertex> vertices;

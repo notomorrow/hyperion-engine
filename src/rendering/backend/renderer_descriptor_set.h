@@ -3,7 +3,7 @@
 
 #include "renderer_result.h"
 
-#include <util/non_owning_ptr.h>
+#include <util/range.h>
 
 #include <vulkan/vulkan.h>
 
@@ -47,6 +47,8 @@ public:
 
         DESCRIPTOR_SET_INDEX_BINDLESS,
         DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1,
+
+        DESCRIPTOR_SET_INDEX_VOXELIZER,
 
         DESCRIPTOR_SET_INDEX_MAX
     };
@@ -241,10 +243,7 @@ public:
 
     inline uint32_t GetBinding() const { return m_binding; }
     inline void SetBinding(uint32_t binding) { m_binding = binding; }
-
-    inline DescriptorSetState GetState() const { return m_state; }
-    inline void SetState(DescriptorSetState state) { m_state = state; }
-
+    
     /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
     inline std::vector<SubDescriptor> &GetSubDescriptors()
         { return m_sub_descriptors; }
@@ -284,11 +283,11 @@ protected:
     void BuildUpdates(Device *device, std::vector<VkWriteDescriptorSet> &writes);
     void UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const;
 
+    Range<uint32_t> m_dirty_sub_descriptors;
     std::vector<SubDescriptor> m_sub_descriptors;
     std::queue<size_t> m_sub_descriptor_update_indices;
 
-    BufferInfo m_sub_descriptor_buffer;
-    DescriptorSetState m_state;
+    BufferInfo m_sub_descriptors_raw;
 
     uint32_t m_binding;
     Mode m_mode;

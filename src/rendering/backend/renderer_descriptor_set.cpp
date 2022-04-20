@@ -87,7 +87,7 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
     m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
 
     for (auto &descriptor : m_descriptors) {
-        descriptor->SetState(DescriptorSetState::DESCRIPTOR_CLEAN);
+        descriptor->m_dirty_sub_descriptors = {};
     }
 
     m_descriptor_writes.clear();
@@ -105,7 +105,7 @@ void DescriptorSet::ApplyUpdates(Device *device)
     for (size_t i = 0; i < m_descriptors.size(); i++) {
         auto &descriptor = m_descriptors[i];
 
-        if (descriptor->GetState() == DescriptorSetState::DESCRIPTOR_CLEAN) {
+        if (!descriptor->m_dirty_sub_descriptors) {
             continue;
         }
 
@@ -260,6 +260,8 @@ Result DescriptorPool::Bind(Device *device, CommandBuffer *cmd, ComputePipeline 
         device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets
     );
 
+    /* TODO:::: BIND should be moved to ComputePipeline & GraphicsPipeline classes -- we can get rid of private access to `layout` */
+
     vkCmdBindDescriptorSets(
         cmd->GetCommandBuffer(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -322,9 +324,10 @@ Result DescriptorPool::AllocateDescriptorSet(Device *device, VkDescriptorSetLayo
     switch (alloc_result) {
     case VK_SUCCESS: return Result::OK;
     case VK_ERROR_FRAGMENTED_POOL:
+        return Result(Result::RENDERER_ERR_NEEDS_REALLOCATION, "Fragmented pool");
     case VK_ERROR_OUT_OF_POOL_MEMORY:
         // TODO: re-allocation
-        return Result(Result::RENDERER_ERR_NEEDS_REALLOCATION, "Needs reallocation");
+        return Result(Result::RENDERER_ERR_NEEDS_REALLOCATION, "Out of pool memory");
     default:
         return Result(Result::RENDERER_ERR, "Unknown error");
     }
@@ -332,7 +335,6 @@ Result DescriptorPool::AllocateDescriptorSet(Device *device, VkDescriptorSetLayo
 
 Descriptor::Descriptor(uint32_t binding, Mode mode)
     : m_binding(binding),
-      m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
       m_mode(mode),
       m_descriptor_set(nullptr)
 {
@@ -348,8 +350,8 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
 
     m_sub_descriptor_update_indices = {};
 
-    m_sub_descriptor_buffer.buffers.resize(m_sub_descriptors.size());
-    m_sub_descriptor_buffer.images.resize(m_sub_descriptors.size());
+    m_sub_descriptors_raw.buffers.resize(m_sub_descriptors.size());
+    m_sub_descriptors_raw.images.resize(m_sub_descriptors.size());
     
     binding.descriptorCount    = m_descriptor_set->IsBindless() ? DescriptorSet::max_bindless_resources : uint32_t(m_sub_descriptors.size());
     binding.descriptorType     = descriptor_type;
@@ -360,8 +362,8 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
     for (size_t i = 0; i < m_sub_descriptors.size(); i++) {
         UpdateSubDescriptorBuffer(
             m_sub_descriptors[i],
-            m_sub_descriptor_buffer.buffers[i],
-            m_sub_descriptor_buffer.images[i]
+            m_sub_descriptors_raw.buffers[i],
+            m_sub_descriptors_raw.images[i]
         );
 
         if (m_descriptor_set->IsBindless()) {
@@ -371,8 +373,8 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
             write.dstArrayElement = uint32_t(i);
             write.descriptorCount = 1;
             write.descriptorType  = descriptor_type;
-            write.pBufferInfo     = &m_sub_descriptor_buffer.buffers[i];
-            write.pImageInfo      = &m_sub_descriptor_buffer.images[i];
+            write.pBufferInfo     = &m_sub_descriptors_raw.buffers[i];
+            write.pImageInfo      = &m_sub_descriptors_raw.images[i];
 
             writes.push_back(write);
         }
@@ -386,8 +388,8 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
         write.dstArrayElement = 0;
         write.descriptorCount = uint32_t(m_sub_descriptors.size());
         write.descriptorType  = descriptor_type;
-        write.pBufferInfo     = m_sub_descriptor_buffer.buffers.data();
-        write.pImageInfo      = m_sub_descriptor_buffer.images.data();
+        write.pBufferInfo     = m_sub_descriptors_raw.buffers.data();
+        write.pImageInfo      = m_sub_descriptors_raw.images.data();
 
         writes.push_back(write);
     }
@@ -396,55 +398,61 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
 void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &writes)
 {
     const auto descriptor_type = GetDescriptorType(m_mode);
+    
+    uint32_t iteration = 0;
 
-    if (m_descriptor_set->IsBindless()) {
-        uint32_t iteration = 0;
+    Range<uint32_t> changed;
         
-        while (!m_sub_descriptor_update_indices.empty()) {
-            if (iteration == DescriptorSet::max_sub_descriptor_updates_per_frame) {
-                break;
-            }
+    while (!m_sub_descriptor_update_indices.empty()) {
+        if (iteration == DescriptorSet::max_sub_descriptor_updates_per_frame) {
+            break;
+        }
 
-            const size_t sub_descriptor_index = m_sub_descriptor_update_indices.front();
+        const size_t sub_descriptor_index = m_sub_descriptor_update_indices.front();
 
-            UpdateSubDescriptorBuffer(
-                m_sub_descriptors[sub_descriptor_index],
-                m_sub_descriptor_buffer.buffers[sub_descriptor_index],
-                m_sub_descriptor_buffer.images[sub_descriptor_index]
-            );
-            
+        UpdateSubDescriptorBuffer(
+            m_sub_descriptors[sub_descriptor_index],
+            m_sub_descriptors_raw.buffers[sub_descriptor_index],
+            m_sub_descriptors_raw.images[sub_descriptor_index]
+        );
+
+        if (m_descriptor_set->IsBindless()) {
             VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
             write.pNext           = nullptr;
             write.dstBinding      = m_binding;
             write.dstArrayElement = uint32_t(sub_descriptor_index);
             write.descriptorCount = 1;
             write.descriptorType  = descriptor_type;
-            write.pBufferInfo     = &m_sub_descriptor_buffer.buffers[sub_descriptor_index];
-            write.pImageInfo      = &m_sub_descriptor_buffer.images[sub_descriptor_index];
+            write.pBufferInfo     = &m_sub_descriptors_raw.buffers[sub_descriptor_index];
+            write.pImageInfo      = &m_sub_descriptors_raw.images[sub_descriptor_index];
 
             writes.push_back(write);
-
-            m_sub_descriptor_update_indices.pop();
-
-            ++iteration;
         }
 
-        if (m_sub_descriptor_update_indices.empty()) {
-            m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
-        }
-    } else {
+        changed |= {static_cast<uint32_t>(sub_descriptor_index), static_cast<uint32_t>(sub_descriptor_index) + 1};
+
+        m_dirty_sub_descriptors = m_dirty_sub_descriptors.Without(sub_descriptor_index);
+
+        m_sub_descriptor_update_indices.pop();
+
+        ++iteration;
+    }
+
+    if (m_sub_descriptor_update_indices.empty()) {
+        m_dirty_sub_descriptors = {};
+    }
+
+    if (!m_descriptor_set->IsBindless()) {
         VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
         write.pNext           = nullptr;
         write.dstBinding      = m_binding;
         write.dstArrayElement = 0;
-        write.descriptorCount = uint32_t(m_sub_descriptors.size());
+        write.descriptorCount = changed.GetDistance();
         write.descriptorType  = descriptor_type;
-        write.pBufferInfo     = m_sub_descriptor_buffer.buffers.data();
-        write.pImageInfo      = m_sub_descriptor_buffer.images.data();
+        write.pBufferInfo     = &m_sub_descriptors_raw.buffers[changed.GetStart()];
+        write.pImageInfo      = &m_sub_descriptors_raw.images[changed.GetStart()];
 
         writes.push_back(write);
-        
-        m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
     }
 }
 
@@ -461,7 +469,9 @@ void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, 
         out_buffer = {
             .buffer = sub_descriptor.gpu_buffer->buffer,
             .offset = 0,
-            .range = sub_descriptor.range ? sub_descriptor.range : sub_descriptor.gpu_buffer->size
+            .range = sub_descriptor.range != 0
+                ? sub_descriptor.range
+                : sub_descriptor.gpu_buffer->size
         };
 
         break;
@@ -502,6 +512,8 @@ uint32_t Descriptor::AddSubDescriptor(SubDescriptor &&sub_descriptor)
     sub_descriptor.valid = true;
 
     m_sub_descriptors.push_back(sub_descriptor);
+    m_sub_descriptors_raw.buffers.emplace_back();
+    m_sub_descriptors_raw.images.emplace_back();
 
     MarkDirty(index);
 
@@ -510,14 +522,17 @@ uint32_t Descriptor::AddSubDescriptor(SubDescriptor &&sub_descriptor)
 
 void Descriptor::RemoveSubDescriptor(uint32_t index)
 {
-    m_sub_descriptors[index] = {.valid = false};
+    /*m_sub_descriptors[index] = {.valid = false};
+    m_sub_descriptors_raw.buffers[index] = {};
+    m_sub_descriptors_raw.images[index] = {};
 
     if (index == m_sub_descriptors.size() - 1) {
         const auto *sub_descriptor = &m_sub_descriptors[index];
-
-        /* pop any sub descriptors marked for deletion */
+        
         while (!sub_descriptor->valid) {
             m_sub_descriptors.pop_back();
+            m_sub_descriptors_raw.buffers.pop_back();
+            m_sub_descriptors_raw.images.pop_back();
 
             if (index == 0) {
                 break;
@@ -525,14 +540,18 @@ void Descriptor::RemoveSubDescriptor(uint32_t index)
             
             sub_descriptor = &m_sub_descriptors[--index];
         }
-    }
+    }*/
+
+    m_sub_descriptors.erase(m_sub_descriptors.begin() + index);
+    m_sub_descriptors_raw.buffers.erase(m_sub_descriptors_raw.buffers.begin() + index);
+    m_sub_descriptors_raw.images.erase(m_sub_descriptors_raw.images.begin() + index);
 }
 
 void Descriptor::MarkDirty(uint32_t sub_descriptor_index)
 {
     m_sub_descriptor_update_indices.push(sub_descriptor_index);
 
-    m_state = DescriptorSetState::DESCRIPTOR_DIRTY;
+    m_dirty_sub_descriptors |= {sub_descriptor_index, sub_descriptor_index + 1};
 
     if (m_descriptor_set != nullptr) {
         m_descriptor_set->m_state = DescriptorSetState::DESCRIPTOR_DIRTY;

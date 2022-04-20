@@ -11,6 +11,7 @@ layout(set = 1, binding = 4) uniform sampler2D deferred_result;
 layout(set = 1, binding = 12) uniform sampler2D shadow_map;
 
 layout(set = 1, binding = 16, rgba16f) uniform image2D image_storage_test;
+layout(set = 1, binding = 26) uniform sampler2D voxelizer_image;
 
 layout(location=0) out vec4 out_color;
 
@@ -23,8 +24,6 @@ void main() {
     out_color = imageLoad(image_storage_test, ivec2(int(v_texcoord0.x * 512.0), int(v_texcoord0.y * 512.0)));
     
     if (out_color.a < 0.2) {
-        
         out_color = vec4(texture(deferred_result, texcoord).rgb, 1.0);
-        //out_color = vec4(texture(shadow_map, texcoord).rgb, 1.0);
     }
 }

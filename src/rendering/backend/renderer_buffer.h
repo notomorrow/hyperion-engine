@@ -118,11 +118,11 @@ public:
     inline void SetResourceState(ResourceState new_state)
         { resource_state = new_state; }
 
-    void Map(Device *device, void **ptr);
-    void Unmap(Device *device);
+    void Map(Device *device, void **ptr) const;
+    void Unmap(Device *device) const;
     void Copy(Device *device, size_t count, const void *ptr);
     void Copy(Device *device, size_t offset, size_t count, const void *ptr);
-    void Read(Device *device, size_t count, void *out_ptr);
+    void Read(Device *device, size_t count, void *out_ptr) const;
     
     VmaAllocation allocation;
     VkDeviceSize size;
@@ -130,7 +130,7 @@ public:
 protected:
     uint32_t sharing_mode;
     uint32_t index;
-    void    *map;
+    mutable void *map;
     mutable ResourceState resource_state;
 };
 
@@ -154,6 +154,21 @@ public:
 
     [[nodiscard]] Result Create(Device *device, size_t buffer_size);
     [[nodiscard]] Result Destroy(Device *device);
+
+#if HYP_DEBUG_MODE
+    void DebugLogBuffer(Device *device) const;
+
+    template <class T = uint8_t>
+    std::vector<T> DebugReadBytes(Device *device) const
+    {
+        std::vector<T> data;
+        data.resize(size / sizeof(T));
+
+        Read(device, size, &data[0]);
+
+        return data;
+    }
+#endif
 
     VkBuffer buffer;
 
@@ -209,6 +224,13 @@ public:
 class StagingBuffer : public GPUBuffer {
 public:
     StagingBuffer();
+};
+
+class IndirectBuffer : public GPUBuffer {
+public:
+    IndirectBuffer();
+
+    void DispatchIndirect(CommandBuffer *command_buffer, size_t offset = 0) const;
 };
 
 /* images */

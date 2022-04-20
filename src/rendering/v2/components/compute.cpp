@@ -29,10 +29,30 @@ void ComputePipeline::Destroy(Engine *engine)
     EngineComponent::Destroy(engine);
 }
 
-void ComputePipeline::Dispatch(Engine *engine, CommandBuffer *command_buffer,  Extent3D group_size)
+/*void ComputePipeline::Dispatch(Engine *engine,
+                               CommandBuffer *command_buffer,
+                               Extent3D group_size)
 {
-    m_wrapped.Bind(command_buffer->GetCommandBuffer());
+    m_wrapped.Bind(command_buffer);
 
+    BindDescriptorSets(engine, command_buffer);
+
+    m_wrapped.Dispatch(command_buffer, group_size);
+}
+
+void ComputePipeline::DispatchIndirect(Engine *engine,
+                                       CommandBuffer *command_buffer,
+                                       IndirectBuffer *indirect,
+                                       size_t offset)
+{
+    m_wrapped.Bind(command_buffer);
+
+
+}
+
+void ComputePipeline::BindDescriptorSets(Engine *engine,
+                                         CommandBuffer *command_buffer)
+{
     engine->GetInstance()->GetDescriptorPool().Bind(
         engine->GetInstance()->GetDevice(),
         command_buffer,
@@ -42,7 +62,6 @@ void ComputePipeline::Dispatch(Engine *engine, CommandBuffer *command_buffer,  E
             .count = 1
         }}
     );
+}*/
 
-    m_wrapped.Dispatch(command_buffer->GetCommandBuffer(), group_size);
-}
 } // namespace hyperion::v2
