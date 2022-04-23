@@ -2,13 +2,35 @@ layout(std430, set = 8, binding = 2) readonly buffer uuOctree { uvec2 uOctree[];
 
 #include "shared.inc"
 
-const float uVoxelSize = 1.0;
-const float uTraceStartOffset = 0.7;
-const float uVolumeDimension = 64.0;
-const float uOcclusionDecay = 0.1;
+const float uVoxelSize = 0.5;
+const float uTraceStartOffset = 0.2;
+const float uVolumeDimension = 1024.0;
+const float uOcclusionDecay = 2.5;
 #define CLIP_LEVEL_COUNT 6
 #define VCT_STEP_FACTOR 0.5
 #define VCT_MAX_DISTANCE 3.0
+
+const int 	DIFFUSE_CONE_COUNT_16 		= 16;
+const float DIFFUSE_CONE_APERTURE_16 	= 0.872665;
+
+const vec3 DIFFUSE_CONE_DIRECTIONS_16[16] = {
+    vec3( 0.57735,   0.57735,   0.57735  ),
+    vec3( 0.57735,  -0.57735,  -0.57735  ),
+    vec3(-0.57735,   0.57735,  -0.57735  ),
+    vec3(-0.57735,  -0.57735,   0.57735  ),
+    vec3(-0.903007, -0.182696, -0.388844 ),
+    vec3(-0.903007,  0.182696,  0.388844 ),
+    vec3( 0.903007, -0.182696,  0.388844 ),
+    vec3( 0.903007,  0.182696, -0.388844 ),
+    vec3(-0.388844, -0.903007, -0.182696 ),
+    vec3( 0.388844, -0.903007,  0.182696 ),
+    vec3( 0.388844,  0.903007, -0.182696 ),
+    vec3(-0.388844,  0.903007,  0.182696 ),
+    vec3(-0.182696, -0.388844, -0.903007 ),
+    vec3( 0.182696,  0.388844, -0.903007 ),
+    vec3(-0.182696,  0.388844,  0.903007 ),
+    vec3( 0.182696, -0.388844,  0.903007 )
+};
 
 vec4 sampleSVO(vec3 position, vec3 aabb_max, vec3 aabb_min, uint level, vec3 weight)
 {
@@ -50,7 +72,7 @@ vec4 sampleSVOLinear(vec3 position, vec3 aabb_max, vec3 aabb_min, float level, v
 
 float calcMinLevel(vec3 worldPos, vec3 aabb_max, vec3 aabb_min)
 {
-    vec3 uVolumeCenter = vec3(0.0);//((aabb_min + aabb_max) / 2.0) * uVoxelSize;
+    vec3 uVolumeCenter = ((aabb_min + aabb_max) / 2.0) * uVoxelSize;
     
 	float distanceToVoxelCenter = length(uVolumeCenter - worldPos);
 	float minRadius = uVoxelSize * uVolumeDimension * 0.5;
@@ -62,12 +84,9 @@ float calcMinLevel(vec3 worldPos, vec3 aabb_max, vec3 aabb_min)
 	const float transitionStart = 0.5;
 	float c = 1.0 / (1.0 - transitionStart);
 
-	if (f > transitionStart)
-	{
+	if (f > transitionStart) {
 		return ceil(minLevel) + (f - transitionStart) * c;
-	}
-	else 
-	{
+	} else  {
 		return ceil(minLevel);
 	}
 }
@@ -91,10 +110,9 @@ vec4 traceCone(vec3 startPos, vec3 direction, vec3 aabb_max, vec3 aabb_min, floa
 	float curSegmentLength 	= voxelSize;
 	float minRadius 		= uVoxelSize * uVolumeDimension * 0.5;
     
-    vec3 uVolumeCenter = vec3(0.0);//((aabb_min + aabb_max) / 2.0) * uVoxelSize;
+    vec3 uVolumeCenter = ((aabb_min + aabb_max) / 2.0) * uVoxelSize;
 
-	for( ; step < maxDistance && occlusion < 1.0; )
-	{
+	for(; step < maxDistance && occlusion < 1.0;) {
 		vec3  position 				= startPos + direction * step;
 		float distanceToVoxelCenter = length(uVolumeCenter - position);
 		float minLevel 				= ceil(log2(distanceToVoxelCenter / minRadius));

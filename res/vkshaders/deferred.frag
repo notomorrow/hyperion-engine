@@ -32,8 +32,9 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos) {
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 7000.0
+#define IBL_INTENSITY 12000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 200000.0
+#define GI_INTENSITY 20.0
 
 #include "include/voxel/vct.inc"
 
@@ -73,7 +74,7 @@ void main()
     vec3 H = normalize(L + V);
     
     if (perform_lighting) {
-        float metallic = 0.9;
+        float metallic = 0.2;
         float roughness = 0.1;
         
         float NdotL = max(0.0001, dot(N, L));
@@ -94,22 +95,38 @@ void main()
         
         vec2 AB = vec2(1.0, 1.0) - BRDFMap(NdotV, perceptual_roughness);
         
-        vec3 irradiance;
+        vec3 irradiance = vec3(0.0);
         
         vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0 , 5.0);
         vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 5.0);
         
-        float minLevel = calcMinLevel(position.xyz, aabb_max, aabb_min);
+        float minLevel = 0;
         float voxelSize = uVoxelSize * exp2(minLevel);
-        vec3 startPos = position.xyz + N * voxelSize * uTraceStartOffset; 
-        irradiance = traceCone(startPos, N, aabb_max, aabb_min, 0.65,
-                               VCT_MAX_DISTANCE, minLevel, VCT_STEP_FACTOR).xyz;
+        vec3 startPos = position.xyz + N * voxelSize * uTraceStartOffset;
         
-        /*vec3 ibl = HasEnvironmentTexture(0)
-            ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
-            : vec3(1.0);*/
+        vec3 vct_diffuse = vec3(0.0);
+        float vct_cone_count = 0.0;
+        
+        for (int i = 0; i < DIFFUSE_CONE_COUNT_16; i++) {
+			float cosTheta = dot(N, DIFFUSE_CONE_DIRECTIONS_16[i]);
             
-        vec3 ibl = traceCone(startPos, R, aabb_max, aabb_min, 0.05,
+			if (cosTheta < 0.0) {
+				continue;
+            }
+            
+            vct_diffuse += traceCone(startPos, DIFFUSE_CONE_DIRECTIONS_16[i], aabb_max, aabb_min, DIFFUSE_CONE_APERTURE_16,
+                                     VCT_MAX_DISTANCE * 0.25, minLevel, VCT_STEP_FACTOR).xyz * cosTheta;
+            vct_cone_count += cosTheta;
+        }
+        
+        vct_diffuse /= max(0.0001, vct_cone_count);
+        irradiance += vct_diffuse;
+        
+        //vec3 ibl = HasEnvironmentTexture(0)
+         //   ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
+        //    : vec3(0.0);
+        vec3 ibl = vec3(0.0);
+        ibl += traceCone(startPos, R, aabb_max, aabb_min, max(perceptual_roughness, 0.1),
                              VCT_MAX_DISTANCE, minLevel, VCT_STEP_FACTOR).xyz;
         
 
@@ -140,6 +157,7 @@ void main()
         surface *= exposure * DIRECTIONAL_LIGHT_INTENSITY;
         
         result += surface;
+        result = ibl;
     } else {
         result = albedo_linear * DIRECTIONAL_LIGHT_INTENSITY * exposure;
     }

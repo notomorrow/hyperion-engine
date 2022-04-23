@@ -23,7 +23,7 @@ class Voxelizer : public EngineComponentBase<STUB_CLASS(Voxelizer)> {
     };
 
 public:
-    static constexpr size_t octree_depth = 9;
+    static constexpr size_t octree_depth = 10;
     static constexpr size_t voxel_map_size = 1 << octree_depth;
     static constexpr size_t default_fragment_list_buffer_size = 20000 * sizeof(Fragment);
 

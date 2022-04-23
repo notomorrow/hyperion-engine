@@ -10,10 +10,10 @@ layout(location=0) in vec3 v_position[];
 layout(location=1) in vec3 v_normal[];
 layout(location=2) in vec2 v_texcoord0[];
 
-layout(location = 0) out vec3 position;
-layout(location = 1) out vec3 normal;
-layout(location = 2) out vec2 texcoord;
-layout(location = 3) out vec3 voxel_pos;
+layout(location=0) out vec3 position;
+layout(location=1) out vec3 normal;
+layout(location=2) out vec2 texcoord;
+layout(location=3) out vec3 voxel_pos;
 
 vec2 Project(in vec3 v, in uint axis) { return axis == 0 ? v.yz : (axis == 1 ? v.xz : v.xy); }
 

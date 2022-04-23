@@ -39,19 +39,27 @@ void main()
 {
     uint current_fragment = atomicAdd(counter, 1u);
     
-    fragment_color = vec4(g_voxel_pos, 1.0);
-    
-    vec4 frag_color = material.albedo;
-    
-    if (HasMaterialTexture(0)) {
-        vec4 albedo_texture = texture(textures[material.texture_index[0]], g_texcoord);
-        
-        frag_color *= albedo_texture;
-    }
-
-    uint voxel_color = Vec4ToRGBA8Raw(frag_color * 255.0);
-    
     if (!bool(count_mode)) {
+        fragment_color = vec4(g_voxel_pos, 1.0);
+        
+        vec4 frag_color = material.albedo;
+        
+        if (HasMaterialTexture(0)) {
+            vec4 albedo_texture = texture(textures[material.texture_index[0]], g_texcoord);
+            
+            frag_color *= albedo_texture;
+        }
+        
+        /* basic n•l */
+        vec3 L = normalize(scene.light_direction.xyz);
+        vec3 N = normalize(g_normal);
+        
+        float NdotL = max(0.0001, dot(N, L));
+        
+        //frag_color.rgb *= NdotL;
+
+        uint voxel_color = Vec4ToRGBA8Raw(frag_color * 255.0);
+        
 		uvec3 voxel = clamp(uvec3(g_voxel_pos * grid_size), uvec3(0u), uvec3(grid_size - 1u));
 		fragments[current_fragment].x = voxel.x | (voxel.y << 12u) | ((voxel.z & 0xffu) << 24u); // only have the last 8 bits of voxel.z
 		fragments[current_fragment].y = ((voxel.z >> 8u) << 28u) | (voxel_color & 0x00ffffffu);

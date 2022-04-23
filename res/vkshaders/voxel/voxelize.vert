@@ -24,7 +24,7 @@ void main()
 {
     vec4 position = object.model_matrix * vec4(a_position, 1.0);
     v_position = position.xyz;
-    v_normal = a_normal;
+    v_normal = (transpose(inverse(object.model_matrix)) * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = a_texcoord0;
     
     vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0 , 5.0);  //object.local_aabb_max.xyz; //scene.aabb_max.xyz;  //;
