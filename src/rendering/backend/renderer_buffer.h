@@ -155,6 +155,9 @@ public:
 
     Result CheckCanAllocate(Device *device, size_t size) const;
 
+    /* \brief Calls vkGetBufferDeviceAddressKHR. Only use this if the extension is enabled */
+    uint64_t GetBufferDeviceAddress(Device *device) const;
+
     [[nodiscard]] Result Create(Device *device, size_t buffer_size);
     [[nodiscard]] Result Destroy(Device *device);
 
@@ -234,6 +237,23 @@ public:
     IndirectBuffer();
 
     void DispatchIndirect(CommandBuffer *command_buffer, size_t offset = 0) const;
+};
+
+class ShaderBindingTableBuffer : public GPUBuffer {
+public:
+    ShaderBindingTableBuffer();
+
+    VkStridedDeviceAddressRegionKHR region;
+};
+
+class AccelerationStructureBuffer : public GPUBuffer {
+public:
+    AccelerationStructureBuffer();
+};
+
+class ScratchBuffer : public GPUBuffer {
+public:
+    ScratchBuffer();
 };
 
 /* images */

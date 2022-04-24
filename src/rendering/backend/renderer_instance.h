@@ -33,6 +33,7 @@ namespace renderer {
 
 class Instance {
     static Result CheckValidationLayerSupport(const std::vector<const char *> &requested_layers);
+    static ExtensionMap GetExtensionMap();
 
     std::vector<VkPhysicalDevice> EnumeratePhysicalDevices();
     VkPhysicalDevice PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices);
@@ -90,8 +91,6 @@ public:
 
     inline StagingBufferPool &GetStagingBufferPool() { return m_staging_buffer_pool; }
     inline const StagingBufferPool &GetStagingBufferPool() const { return m_staging_buffer_pool; }
-
-    std::vector<const char *> requested_device_extensions;
 
     const char *app_name;
     const char *engine_name;

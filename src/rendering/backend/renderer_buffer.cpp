@@ -437,6 +437,22 @@ Result GPUBuffer::CheckCanAllocate(Device *device, size_t size) const
     return CheckCanAllocate(device, create_info, alloc_info, this->size);
 }
 
+uint64_t GPUBuffer::GetBufferDeviceAddress(Device *device) const
+{
+    AssertThrowMsg(
+        device->GetFeatures().GetBufferDeviceAddressFeatures().bufferDeviceAddress,
+        "Called GetBufferDeviceAddress() but the buffer device address extension feature is not supported or enabled!"
+    );
+    
+	VkBufferDeviceAddressInfoKHR info{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
+	info.buffer = buffer;
+
+	return device->GetFeatures().dyn_functions.vkGetBufferDeviceAddressKHR(
+        device->GetDevice(),
+        &info
+    );
+}
+
 Result GPUBuffer::CheckCanAllocate(Device *device,
     const VkBufferCreateInfo &buffer_create_info,
     const VmaAllocationCreateInfo &allocation_create_info,
@@ -689,6 +705,30 @@ void IndirectBuffer::DispatchIndirect(CommandBuffer *command_buffer, size_t offs
         offset
     );
 }
+
+ShaderBindingTableBuffer::ShaderBindingTableBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+      ),
+      region{}
+{
+}
+
+AccelerationStructureBuffer::AccelerationStructureBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+      )
+{
+}
+
+ScratchBuffer::ScratchBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+      )
+{
+}
+
+
 
 GPUImageMemory::GPUImageMemory(VkImageUsageFlags usage_flags)
     : GPUMemory(),

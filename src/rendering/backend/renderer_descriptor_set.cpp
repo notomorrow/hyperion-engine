@@ -124,12 +124,13 @@ void DescriptorSet::ApplyUpdates(Device *device)
 }
 
 const std::unordered_map<VkDescriptorType, size_t> DescriptorPool::items_per_set{
-    { VK_DESCRIPTOR_TYPE_SAMPLER, 20 },
-    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 40 }, /* sampling imageviews in shader */
-    { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 20 },          /* imageStore, imageLoad etc */
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 20 },         /* standard uniform buffer */
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 20 },
-    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 20 }
+    {VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1},
+    {VK_DESCRIPTOR_TYPE_SAMPLER, 20},
+    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 40}, /* sampling imageviews in shader */
+    {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 20},          /* imageStore, imageLoad etc */
+    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 20},         /* standard uniform buffer */
+    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 20},
+    {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 20}
 };
 
 DescriptorPool::DescriptorPool()
@@ -208,10 +209,10 @@ Result DescriptorPool::Destroy(Device *device)
         ),
         result
     );
-
+    
+    // set all to nullptr
     m_descriptor_sets = {};
 
-    // set all to nullptr
     m_descriptor_sets_view.clear();
 
     /* Destroy pool */

@@ -78,6 +78,15 @@ struct ShaderModule {
 
     inline bool operator<(const ShaderModule &other) const
         { return type < other.type; }
+
+    inline bool IsRaytracing() const
+    {
+        return type == Type::RAY_GEN
+            || type == Type::RAY_INTERSECT
+            || type == Type::RAY_ANY_HIT
+            || type == Type::RAY_CLOSEST_HIT
+            || type == Type::RAY_MISS;
+    }
 };
 
 class ShaderProgram {
@@ -94,6 +103,21 @@ public:
 
     inline const std::vector<VkPipelineShaderStageCreateInfo> &GetShaderStages() const
         { return m_shader_stages; }
+
+    /* For raytracing only */
+    inline const std::vector<VkRayTracingShaderGroupCreateInfoKHR> &GetShaderGroups() const
+        { return m_shader_groups; }
+
+    inline bool IsRaytracing() const
+    {
+        return std::any_of(
+            m_shader_modules.begin(),
+            m_shader_modules.end(),
+            [](const ShaderModule &it) {
+                return it.IsRaytracing();
+            }
+        );
+    }
 
     Result AttachShader(Device *device, ShaderModule::Type type, const ShaderObject &spirv);
 
@@ -113,11 +137,13 @@ public:
     }
 
 private:
-    VkPipelineShaderStageCreateInfo CreateShaderStage(const ShaderModule &module);
+    VkPipelineShaderStageCreateInfo CreateShaderStage(const ShaderModule &);
+    Result CreateShaderGroups();
 
     std::vector<ShaderModule> m_shader_modules;
 
-    std::vector<VkPipelineShaderStageCreateInfo> m_shader_stages;
+    std::vector<VkPipelineShaderStageCreateInfo>      m_shader_stages;
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_shader_groups;
 };
 
 } // namespace renderer

@@ -1,19 +1,12 @@
 #ifndef HYPERION_RENDERER_COMPUTE_PIPELINE_H
 #define HYPERION_RENDERER_COMPUTE_PIPELINE_H
 
-#include <vulkan/vulkan.h>
-
 #include "renderer_pipeline.h"
 #include "renderer_device.h"
 #include "renderer_swapchain.h"
 #include "renderer_buffer.h"
 #include "renderer_shader.h"
-#include "renderer_render_pass.h"
 #include "renderer_descriptor_set.h"
-#include "renderer_command_buffer.h"
-#include "renderer_helpers.h"
-
-#include "../../hash_code.h"
 
 namespace hyperion {
 namespace renderer {

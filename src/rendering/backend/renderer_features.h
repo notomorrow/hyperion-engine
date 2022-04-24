@@ -14,6 +14,23 @@ namespace renderer {
 
 class Features {
 public:
+    struct {
+#define HYP_DECL_FN(name) PFN_##name name = nullptr
+
+        HYP_DECL_FN(vkGetBufferDeviceAddressKHR);
+        HYP_DECL_FN(vkCmdBuildAccelerationStructuresKHR);
+        HYP_DECL_FN(vkBuildAccelerationStructuresKHR);
+        HYP_DECL_FN(vkCreateAccelerationStructureKHR);
+        HYP_DECL_FN(vkDestroyAccelerationStructureKHR);
+        HYP_DECL_FN(vkGetAccelerationStructureBuildSizesKHR);
+        HYP_DECL_FN(vkGetAccelerationStructureDeviceAddressKHR);
+        HYP_DECL_FN(vkCmdTraceRaysKHR);
+        HYP_DECL_FN(vkGetRayTracingShaderGroupHandlesKHR);
+        HYP_DECL_FN(vkCreateRayTracingPipelinesKHR);
+
+#undef HYP_DECL_FN
+    } dyn_functions;
+
     Features();
     Features(VkPhysicalDevice);
 
@@ -39,6 +56,15 @@ public:
 
     inline const VkPhysicalDeviceMemoryProperties &GetPhysicalDeviceMemoryProperties() const
         { return m_memory_properties; }
+
+    inline const VkPhysicalDeviceRayTracingPipelineFeaturesKHR &GetRaytracingPipelineFeatures() const
+        { return m_raytracing_pipeline_features; }
+
+    inline const VkPhysicalDeviceRayTracingPipelinePropertiesKHR &GetRaytracingPipelineProperties() const
+        { return m_raytracing_pipeline_properties; }
+
+    inline const VkPhysicalDeviceBufferDeviceAddressFeatures &GetBufferDeviceAddressFeatures() const
+        { return m_buffer_device_address_features; }
 
     struct DeviceRequirementsResult {
         enum {
@@ -82,6 +108,8 @@ public:
     }
 
 #undef REQUIRES_VK_FEATURE
+
+    void LoadDynamicFunctions(Device *device);
 
     SwapchainSupportDetails QuerySwapchainSupport(VkSurfaceKHR _surface) const
     {
@@ -311,13 +339,27 @@ public:
     template <class StructType>
     constexpr size_t PaddedSize() const
     {
-        // Calculate required alignment based on minimum device offset alignment
-        const size_t alignment = m_properties.limits.minUniformBufferOffsetAlignment;
-        constexpr size_t size = sizeof(StructType);
+        return PaddedSize<StructType>(m_properties.limits.minUniformBufferOffsetAlignment);
+    }
 
+    template <class StructType>
+    constexpr size_t PaddedSize(size_t alignment) const
+    {
+        return PaddedSize(sizeof(StructType), alignment);
+    }
+    
+    constexpr size_t PaddedSize(size_t size, size_t alignment) const
+    {
         return alignment
             ? (size + alignment - 1) & ~(alignment - 1)
             : size;
+    }
+
+    inline bool SupportsRaytracing() const
+    {
+        return m_raytracing_pipeline_features.rayTracingPipeline
+            && m_acceleration_structure_features.accelerationStructure
+            && m_buffer_device_address_features.bufferDeviceAddress;
     }
 
 private:
@@ -325,8 +367,13 @@ private:
     VkPhysicalDeviceProperties m_properties;
     VkPhysicalDeviceFeatures m_features;
 
-    VkPhysicalDeviceDescriptorIndexingFeatures m_indexing_features;
-    VkPhysicalDeviceFeatures2 m_features2;
+    VkPhysicalDeviceBufferDeviceAddressFeatures      m_buffer_device_address_features;
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_raytracing_pipeline_features;
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR  m_raytracing_pipeline_properties;
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR m_acceleration_structure_features;
+    VkPhysicalDeviceDescriptorIndexingFeatures       m_indexing_features;
+    VkPhysicalDeviceFeatures2                        m_features2;
+    VkPhysicalDeviceProperties2                      m_properties2;
 
     VkPhysicalDeviceMemoryProperties m_memory_properties;
 };
