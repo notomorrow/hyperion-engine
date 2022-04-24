@@ -115,8 +115,6 @@ float CalculateAO(float depth, float dw, float dh)
 
 void main()
 {
-    color_output = vec4(1.0);
-    return;
     float width = float(scene.resolution_x);
     float height = float(scene.resolution_y);
 

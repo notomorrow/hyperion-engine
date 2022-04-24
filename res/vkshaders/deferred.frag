@@ -33,8 +33,8 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 7000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
+#define IBL_INTENSITY 6000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 150000.0
 #define GI_INTENSITY 20.0
 #define VCT_ENABLED 0
 
@@ -57,7 +57,7 @@ void main()
     
     bool perform_lighting = albedo.a > 0.0;
     
-    vec3 albedo_linear = albedo.rgb;//mon2lin(albedo.rgb);
+    vec3 albedo_linear = mon2lin(albedo.rgb);
 	vec3 result;
 
     /* Physical camera */
@@ -74,12 +74,12 @@ void main()
     vec3 N = normal.xyz;
     vec3 L = normalize(scene.light_direction.xyz);
     vec3 V = normalize(scene.camera_position.xyz - position.xyz);
-    vec3 R = reflect(-V, N);
+    vec3 R = normalize(reflect(-V, N));
     vec3 H = normalize(L + V);
     
     if (perform_lighting) {
-        float metallic = 0.01;
-        float roughness = 0.8;
+        float metallic = 0.05;
+        float roughness = 0.5;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -99,7 +99,7 @@ void main()
         
         vec2 AB = vec2(1.0, 1.0) - BRDFMap(NdotV, perceptual_roughness);
         
-        vec3 irradiance = vec3(0.0);
+        vec3 irradiance = vec3(1.0);
         vec3 ibl = HasEnvironmentTexture(0)
             ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
             : vec3(0.0);
@@ -111,19 +111,19 @@ void main()
         //vec3 vct_irradiance = vec3(0.0);
         
         //for (int i = 0; i < 16; i++) {
-        irradiance += voxelTraceCone(position.xyz, N, aabb_max, aabb_min, lod, 0.3).rgb;
+        irradiance += voxelTraceCone(position.xyz, N, aabb_max, aabb_min, lod, 1.0).rgb;
         //}
         
         //irradiance += vct_irradiance / 16.0;
         
-        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, lod, 0.4).rgb;
+        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, 0.25 + roughness, 2.0).rgb;
 #endif
 
         float ao = texture(filter_ssao, texcoord).r;
         vec3 shadow = vec3(1.0);
         vec3 light_color = vec3(1.0);
         
-        
+        // ibl
         vec3 dfg = mix(vec3(AB.x), vec3(AB.y), F0);
         vec3 specular_ao = vec3(SpecularAO_Cones(N, ao, roughness, R));
         vec3 radiance = dfg * ibl * specular_ao;
@@ -131,11 +131,11 @@ void main()
         result *= exposure * IBL_INTENSITY;
 
         // surface
-        vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
+        vec3 F90 = vec3(0.5 + 2.0 * roughness * LdotH * LdotH);//vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
         float D = DistributionGGX(N, H, roughness);
         float G = CookTorranceG(NdotL, NdotV, LdotH, NdotH);
         vec3 F = SchlickFresnel(F0, F90, LdotH);
-        vec3 specular = D * G * F * NdotL;
+        vec3 specular = D * G * F;
         
         vec3 light_scatter = SchlickFresnel(vec3(1.0), F90, NdotL);
         vec3 view_scatter  = SchlickFresnel(vec3(1.0), F90, NdotV);
@@ -146,8 +146,9 @@ void main()
         surface *= exposure * DIRECTIONAL_LIGHT_INTENSITY;
         
         result += surface;
+
     } else {
-        result = albedo_linear * DIRECTIONAL_LIGHT_INTENSITY * exposure;
+        result = albedo_linear * IBL_INTENSITY * exposure;
     }
 
     output_color = vec4(Tonemap(result), 1.0);

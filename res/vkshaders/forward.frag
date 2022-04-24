@@ -18,10 +18,14 @@ layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
 
+#define PARALLAX_ENABLED 1
+
 #include "include/scene.inc"
 #include "include/material.inc"
-#include "include/parallax.inc"
 
+#if PARALLAX_ENABLED
+#include "include/parallax.inc"
+#endif
 
 layout(set = 6, binding = 0) uniform sampler2D textures[];
 layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
@@ -43,8 +47,8 @@ void main()
     gbuffer_albedo = material.albedo;
     
     vec2 texcoord = v_texcoord0;
-    //texcoord.y = 1.0 - texcoord.y;
     
+#if PARALLAX_ENABLED
     if (HasMaterialTexture(3)) {
         vec2 parallax_texcoord = ParallaxMappedTexCoords(
             textures[material.texture_index[3]],
@@ -55,6 +59,7 @@ void main()
         
         texcoord = parallax_texcoord;
     }
+#endif
     
     if (HasMaterialTexture(0)) {
         vec4 albedo_texture = texture(textures[material.texture_index[0]], texcoord);

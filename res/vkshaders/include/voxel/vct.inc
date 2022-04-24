@@ -29,19 +29,23 @@ const vec3 DIFFUSE_CONE_DIRECTIONS_16[16] = {
 
 vec4 sampleSVO(vec3 position, vec3 aabb_max, vec3 aabb_min, float lod)
 {
-	vec3 extent = aabb_max - aabb_min;
+	/*vec3 extent = aabb_max - aabb_min;
     float extentValue = max(extent.x, max(extent.y, extent.z)) * 0.5;
     vec3 center = (aabb_min + aabb_max) * 0.5;
 
 	uint resolution = uint(uVolumeDimension);
-	vec3  scaledPos = (position - center) / extentValue;
+	vec3  scaledPos = (position - center) / extentValue;*/
+	
+	uint resolution = uint(uVolumeDimension);
 
-    uvec3 fragPos = clamp(uvec3(((scaledPos + 1.0) * 0.5) * resolution), 
+	vec3 scaled_pos = ScaleToAabb(aabb_max, aabb_min, position);
+
+    uvec3 fragPos = clamp(uvec3(OffsetVoxelPosition(scaled_pos) * resolution), 
 						  uvec3(0u), 
-						  uvec3(resolution));
+						  uvec3(resolution - 1.0));
 
 
-    uint targetResolution = 0;//uint(mix(0, 1 << 3, clamp(lod, 0.0, 7.0) / 7.0));
+    uint targetResolution = uint(mix(0, 1 << 3, clamp(lod, 0.0, 7.0) / 7.0));
 	uint idx = 0, cur = 0; 
 	uvec3 cmp;
 	do {
@@ -53,6 +57,16 @@ vec4 sampleSVO(vec3 position, vec3 aabb_max, vec3 aabb_min, float lod)
 	} while (cur != 0u && resolution > targetResolution);
 
 	return RGBA8ToVec4Raw(uOctree[idx].y) / 255.0;
+}
+vec4 sampleSVOLinear(vec3 position, vec3 aabb_max, vec3 aabb_min, float lod)
+{
+	float lowerLevel = float(floor(lod));
+	float upperLevel = float( ceil(lod));
+
+	vec4 lowerSample = sampleSVO(position, aabb_max, aabb_min, lowerLevel);
+	vec4 upperSample = sampleSVO(position, aabb_max, aabb_min, upperLevel);
+
+	return mix(lowerSample, upperSample, fract(lod));
 }
 
 vec4 voxelTraceCone(vec3 origin, vec3 dir, vec3 aabb_max, vec3 aabb_min, float coneRatio, float maxDist)
@@ -72,7 +86,7 @@ vec4 voxelTraceCone(vec3 origin, vec3 dir, vec3 aabb_max, vec3 aabb_min, float c
 		float sampleDiameter = max(minDiameter, coneRatio * dist);
 		float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
 		samplePos = origin + dir * dist;
-		vec4 sampleValue = sampleSVO(samplePos, aabb_max, aabb_min, sampleLOD);
+		vec4 sampleValue = sampleSVOLinear(samplePos, aabb_max, aabb_min, sampleLOD);
 		sampleValue = mix(sampleValue, vec4(sampleValue.rgb, 0.0), clamp(dist / maxDist, 0.0, 1.0));
 		float sampleWeight = (1.0 - accum.w);
 		accum += sampleValue * sampleWeight;
