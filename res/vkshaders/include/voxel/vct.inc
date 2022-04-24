@@ -2,13 +2,8 @@ layout(std430, set = 8, binding = 2) readonly buffer uuOctree { uvec2 uOctree[];
 
 #include "shared.inc"
 
-const float uVoxelSize = 0.5;
-const float uTraceStartOffset = 0.2;
 const float uVolumeDimension = 1024.0;
-const float uOcclusionDecay = 2.5;
-#define CLIP_LEVEL_COUNT 6
-#define VCT_STEP_FACTOR 0.5
-#define VCT_MAX_DISTANCE 3.0
+#define VCT_ORIGIN_OFFSET 0.4
 
 const int 	DIFFUSE_CONE_COUNT_16 		= 16;
 const float DIFFUSE_CONE_APERTURE_16 	= 0.872665;
@@ -32,7 +27,7 @@ const vec3 DIFFUSE_CONE_DIRECTIONS_16[16] = {
     vec3( 0.182696, -0.388844,  0.903007 )
 };
 
-vec4 sampleSVO(vec3 position, vec3 aabb_max, vec3 aabb_min, uint level, vec3 weight)
+vec4 sampleSVO(vec3 position, vec3 aabb_max, vec3 aabb_min, float lod)
 {
 	vec3 extent = aabb_max - aabb_min;
     float extentValue = max(extent.x, max(extent.y, extent.z)) * 0.5;
@@ -45,7 +40,8 @@ vec4 sampleSVO(vec3 position, vec3 aabb_max, vec3 aabb_min, uint level, vec3 wei
 						  uvec3(0u), 
 						  uvec3(resolution));
 
-    uint targetResolution = 1 << level;
+
+    uint targetResolution = 0;//uint(mix(0, 1 << 3, clamp(lod, 0.0, 7.0) / 7.0));
 	uint idx = 0, cur = 0; 
 	uvec3 cmp;
 	do {
@@ -59,87 +55,29 @@ vec4 sampleSVO(vec3 position, vec3 aabb_max, vec3 aabb_min, uint level, vec3 wei
 	return RGBA8ToVec4Raw(uOctree[idx].y) / 255.0;
 }
 
-vec4 sampleSVOLinear(vec3 position, vec3 aabb_max, vec3 aabb_min, float level, vec3 weight)
+vec4 voxelTraceCone(vec3 origin, vec3 dir, vec3 aabb_max, vec3 aabb_min, float coneRatio, float maxDist)
 {
-	uint lowerLevel = uint(floor(level));
-	uint upperLevel = uint( ceil(level));
+	float minVoxelDiameter = 1.0 / uVolumeDimension;
+	float minVoxelDiameterInv = 1.0 / minVoxelDiameter;
+	vec3 samplePos;
+	vec4 accum = vec4(0.0);
+	float minDiameter = minVoxelDiameter;
+	float startDist = minDiameter;
+	float dist = startDist;
+	vec4 fadeCol = vec4(0.0, 0.0, 0.0, 0.0);
 
-	vec4 lowerSample = sampleSVO(position, aabb_max, aabb_min, lowerLevel, weight);
-	vec4 upperSample = sampleSVO(position, aabb_max, aabb_min, upperLevel, weight);
+	origin += dir * VCT_ORIGIN_OFFSET;
 
-	return mix(lowerSample, upperSample, fract(level));
-}
-
-float calcMinLevel(vec3 worldPos, vec3 aabb_max, vec3 aabb_min)
-{
-    vec3 uVolumeCenter = ((aabb_min + aabb_max) / 2.0) * uVoxelSize;
-    
-	float distanceToVoxelCenter = length(uVolumeCenter - worldPos);
-	float minRadius = uVoxelSize * uVolumeDimension * 0.5;
-	float minLevel = max(log2(distanceToVoxelCenter / minRadius), 0.0);
-
-	float radius = minRadius * exp2(ceil(minLevel));
-	float f = distanceToVoxelCenter / radius;
-
-	const float transitionStart = 0.5;
-	float c = 1.0 / (1.0 - transitionStart);
-
-	if (f > transitionStart) {
-		return ceil(minLevel) + (f - transitionStart) * c;
-	} else  {
-		return ceil(minLevel);
-	}
-}
-
-vec4 traceCone(vec3 startPos, vec3 direction, vec3 aabb_max, vec3 aabb_min, float aperture, float maxDistance, float startLevel, float stepFactor)
-{
-	vec4 result = vec4(0.0);
-	float coneCoefficient = 2.0 * tan(aperture * 0.5);
-
-	float curLevel = startLevel;
-	float voxelSize = uVoxelSize * exp2(curLevel);
-
-	startPos += direction * voxelSize * uTraceStartOffset * 0.5;
-
-	float step 		 = 0.0;
-	float diameter 	 = max(step * coneCoefficient, uVoxelSize);
-	float occlusion  = 0.0;
-
-	vec3  weight 	 = direction * direction;
-
-	float curSegmentLength 	= voxelSize;
-	float minRadius 		= uVoxelSize * uVolumeDimension * 0.5;
-    
-    vec3 uVolumeCenter = ((aabb_min + aabb_max) / 2.0) * uVoxelSize;
-
-	for(; step < maxDistance && occlusion < 1.0;) {
-		vec3  position 				= startPos + direction * step;
-		float distanceToVoxelCenter = length(uVolumeCenter - position);
-		float minLevel 				= ceil(log2(distanceToVoxelCenter / minRadius));
-
-		curLevel = log2(diameter / uVoxelSize);
-		curLevel = min(max(max(startLevel, curLevel), minLevel), CLIP_LEVEL_COUNT - 1);
-
-		vec4 clipmapSample = sampleSVOLinear(position, aabb_max, aabb_min, curLevel, weight);
-		vec3 radiance = clipmapSample.rgb;
-		float opacity = clipmapSample.a;
-
-		voxelSize = uVoxelSize * exp2(curLevel);
-
-		float correction = curSegmentLength / voxelSize;
-		radiance = radiance * correction;
-		opacity  = clamp(1.0 - pow(1.0 - opacity, correction), 0.0, 1.0);
-
-		vec4 src = vec4(radiance.rgb, opacity);
-		// Alpha blending
-		result 	  += clamp(1.0 - result.a, 0.0, 1.0) * src;
-		occlusion += (1.0 - occlusion) * opacity / (1.0 + (step + voxelSize) * uOcclusionDecay);
-
-		float prevStep = step;
-		step += max(diameter, uVoxelSize) * stepFactor;
-		curSegmentLength = (step - prevStep);
-		diameter = step * coneCoefficient;
+	while (dist <= maxDist && accum.w < 1.0) {
+		float sampleDiameter = max(minDiameter, coneRatio * dist);
+		float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
+		samplePos = origin + dir * dist;
+		vec4 sampleValue = sampleSVO(samplePos, aabb_max, aabb_min, sampleLOD);
+		sampleValue = mix(sampleValue, vec4(sampleValue.rgb, 0.0), clamp(dist / maxDist, 0.0, 1.0));
+		float sampleWeight = (1.0 - accum.w);
+		accum += sampleValue * sampleWeight;
+		dist += sampleDiameter;
 	}
 
-	return clamp(vec4(result.rgb, 1.0 - occlusion), 0.0, 1.0);
+	return accum;
 }

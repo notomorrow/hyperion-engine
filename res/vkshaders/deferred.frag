@@ -74,8 +74,8 @@ void main()
     vec3 H = normalize(L + V);
     
     if (perform_lighting) {
-        float metallic = 0.2;
-        float roughness = 0.1;
+        float metallic = 0.01;
+        float roughness = 0.8;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -100,34 +100,18 @@ void main()
         vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0 , 5.0);
         vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 5.0);
         
-        float minLevel = 0;
-        float voxelSize = uVoxelSize * exp2(minLevel);
-        vec3 startPos = position.xyz + N * voxelSize * uTraceStartOffset;
+        //vec3 vct_irradiance = vec3(0.0);
         
-        vec3 vct_diffuse = vec3(0.0);
-        float vct_cone_count = 0.0;
+        //for (int i = 0; i < 16; i++) {
+        irradiance += voxelTraceCone(position.xyz, N, aabb_max, aabb_min, lod, 2.0).rgb;
+        //}
         
-        for (int i = 0; i < DIFFUSE_CONE_COUNT_16; i++) {
-			float cosTheta = dot(N, DIFFUSE_CONE_DIRECTIONS_16[i]);
-            
-			if (cosTheta < 0.0) {
-				continue;
-            }
-            
-            vct_diffuse += traceCone(startPos, DIFFUSE_CONE_DIRECTIONS_16[i], aabb_max, aabb_min, DIFFUSE_CONE_APERTURE_16,
-                                     VCT_MAX_DISTANCE * 0.25, minLevel, VCT_STEP_FACTOR).xyz * cosTheta;
-            vct_cone_count += cosTheta;
-        }
+        //irradiance += vct_irradiance / 16.0;
         
-        vct_diffuse /= max(0.0001, vct_cone_count);
-        irradiance += vct_diffuse;
-        
-        //vec3 ibl = HasEnvironmentTexture(0)
-         //   ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
-        //    : vec3(0.0);
-        vec3 ibl = vec3(0.0);
-        ibl += traceCone(startPos, R, aabb_max, aabb_min, max(perceptual_roughness, 0.1),
-                             VCT_MAX_DISTANCE, minLevel, VCT_STEP_FACTOR).xyz;
+        vec3 ibl = HasEnvironmentTexture(0)
+            ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
+            : vec3(0.0);
+        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, 0.1, 6.0).rgb;
         
 
         float ao = texture(filter_ssao, texcoord).r;
@@ -157,7 +141,7 @@ void main()
         surface *= exposure * DIRECTIONAL_LIGHT_INTENSITY;
         
         result += surface;
-        result = ibl;
+        result = irradiance;
     } else {
         result = albedo_linear * DIRECTIONAL_LIGHT_INTENSITY * exposure;
     }

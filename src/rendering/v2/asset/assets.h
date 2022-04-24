@@ -162,7 +162,10 @@ class Assets {
                 auto functor = HandleAssetFunctor<Type>{};
                 functor.filepath = filepaths[index];
 
-                results[index] = functor(engine);
+                if (!(results[index] = functor(engine))) {
+                    DebugLog(LogType::Warn, "%s: The asset could not be loaded and will be returned as null.\n\t"
+                        "Any usages or indirection may result in the application crashing!\n", functor.filepath.c_str());
+                }
             });
         }
 
