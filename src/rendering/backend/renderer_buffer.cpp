@@ -325,20 +325,19 @@ VkPipelineStageFlags GPUMemory::GetShaderStageMask(ResourceState state, bool src
 
 GPUMemory::GPUMemory()
     : sharing_mode(VK_SHARING_MODE_EXCLUSIVE),
+      index(0),
       size(0),
       map(nullptr),
       resource_state(ResourceState::UNDEFINED)
 {
-    static unsigned allocations = 0;
+    static uint32_t allocations = 0;
+
     index = allocations++;
-    DebugLog(LogType::Debug, "Allocate GPUMemory %u\n", index);
 }
 
 GPUMemory::~GPUMemory()
 {
-    DebugLog(LogType::Debug, "Destroy GPUMemory %u\n", index);
 }
-
 
 void GPUMemory::Map(Device *device, void **ptr) const
 {
@@ -378,6 +377,17 @@ void GPUMemory::Read(Device *device, size_t count, void *out_ptr) const
 
     std::memcpy(out_ptr, map, count);
 }
+
+void GPUMemory::Create()
+{
+    DebugLog(LogType::Debug, "Allocate GPUMemory %u\n", index);
+}
+
+void GPUMemory::Destroy()
+{
+    DebugLog(LogType::Debug, "Destroy GPUMemory %u\n", index);
+}
+
 
 GPUBuffer::GPUBuffer(VkBufferUsageFlags usage_flags,
     VmaMemoryUsage vma_usage,
@@ -516,6 +526,24 @@ void GPUBuffer::CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buf
 
 Result GPUBuffer::Create(Device *device, size_t size)
 {
+    if (buffer != nullptr) {
+        DebugLog(
+            LogType::Warn,
+            "Create() called on a buffer (memory #%lu) that has not been destroyed!\n"
+            "\tYou should explicitly call Destroy() on the object before reallocating it.\n"
+            "\tTo prevent memory leaks, calling Destroy() before allocating the memory...\n",
+            index
+        );
+
+#if HYP_DEBUG_MODE
+        HYP_BREAKPOINT;
+#endif
+
+        HYPERION_BUBBLE_ERRORS(Destroy(device));
+    }
+
+    GPUMemory::Create();
+
     this->size = size;
 
     if (size == 0) {
@@ -549,14 +577,15 @@ Result GPUBuffer::Create(Device *device, size_t size)
 
 Result GPUBuffer::Destroy(Device *device)
 {
+    GPUMemory::Destroy();
+
     if (map != nullptr) {
         Unmap(device);
-        map = nullptr;
     }
 
-    vmaDestroyBuffer(device->GetAllocator(), this->buffer, this->allocation);
-    this->buffer = nullptr;
-    this->allocation = nullptr;
+    vmaDestroyBuffer(device->GetAllocator(), buffer, allocation);
+    buffer = nullptr;
+    allocation = nullptr;
 
     HYPERION_RETURN_OK;
 }
@@ -783,6 +812,24 @@ void GPUImageMemory::SetSubResourceState(const ImageSubResource &sub_resource, R
 
 Result GPUImageMemory::Create(Device *device, size_t size, VkImageCreateInfo *image_info)
 {
+    if (image != nullptr) {
+        DebugLog(
+            LogType::Warn,
+            "Create() called on an image (memory #%lu) that has not been destroyed!\n"
+            "\tYou should explicitly call Destroy() on the object before reallocating it.\n"
+            "\tTo prevent memory leaks, calling Destroy() before allocating the memory...\n",
+            index
+        );
+
+#if HYP_DEBUG_MODE
+        HYP_BREAKPOINT;
+#endif
+
+        HYPERION_BUBBLE_ERRORS(Destroy(device));
+    }
+
+    GPUMemory::Create();
+
     this->size = size;
 
     VmaAllocationCreateInfo alloc_info{};
@@ -796,13 +843,15 @@ Result GPUImageMemory::Create(Device *device, size_t size, VkImageCreateInfo *im
 
 Result GPUImageMemory::Destroy(Device *device)
 {
+    GPUMemory::Destroy();
+
     if (map != nullptr) {
         Unmap(device);
     }
 
-    vmaDestroyImage(device->GetAllocator(), this->image, this->allocation);
-    this->image = nullptr;
-    this->allocation = nullptr;
+    vmaDestroyImage(device->GetAllocator(), image, allocation);
+    image = nullptr;
+    allocation = nullptr;
 
     HYPERION_RETURN_OK;
 }

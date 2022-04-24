@@ -91,8 +91,6 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
-    m_deferred_renderer.Create(this);
-    m_shadow_renderer.Create(this);
 
     auto shader = resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
@@ -189,19 +187,7 @@ void Engine::PrepareSwapchain()
 
     callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
         m_render_list.AddFramebuffersToPipelines(this);
-        resources.graphics_pipelines.CreateAll(this);
-        m_root_pipeline->Create(this);
-    });
-
-    callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](...) {
-        m_render_list.Destroy(this);
-        m_root_pipeline->Destroy(this);
-
-        for (auto &attachment : m_render_pass_attachments) {
-            HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
-        }
-
-        resources.graphics_pipelines.RemoveAll(this);
+        m_root_pipeline->Init(this);
     });
     
     callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](...) {
@@ -328,12 +314,19 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_TEXTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_VOXELIZER, this);
     callbacks.Trigger(EngineCallback::DESTROY_DESCRIPTOR_SETS, this);
+    
+    m_render_list.Destroy(this);
+
     callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
 
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
+
+    for (auto &attachment : m_render_pass_attachments) {
+        HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
+    }
     
     callbacks.Trigger(EngineCallback::DESTROY_FRAMEBUFFERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
@@ -355,6 +348,9 @@ void Engine::Destroy()
 
 void Engine::Compile()
 {
+    m_deferred_renderer.Create(this);
+    m_shadow_renderer.Create(this);
+
     callbacks.TriggerPersisted(EngineCallback::CREATE_SKELETONS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
 

@@ -42,14 +42,7 @@ void DeferredRenderingEffect::Create(Engine *engine)
     m_framebuffer = engine->GetRenderList()[GraphicsPipeline::BUCKET_TRANSLUCENT].framebuffers[0].Acquire();
 
     CreatePerFrameData(engine);
-
-    engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
-        CreatePipeline(engine);
-    });
-
-    engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
-        DestroyPipeline(engine);
-    });
+    CreatePipeline(engine);
 }
 
 void DeferredRenderingEffect::Destroy(Engine *engine)
@@ -150,38 +143,18 @@ void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t f
 
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    auto &render_list = engine->GetRenderList();
-
-    /* TODO: just loop through Ref<> stored on renderlist */
-
-    for (auto &pipeline : engine->resources.graphics_pipelines.objects) {
-        if (pipeline->GetBucket() != GraphicsPipeline::Bucket::BUCKET_SKYBOX) {
-            continue;
-        }
-
+    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_SKYBOX).m_graphics_pipelines) {
         pipeline->Render(engine, primary, frame_index);
     }
-
-    for (auto &pipeline : engine->resources.graphics_pipelines.objects) {
-        if (pipeline->GetBucket() != GraphicsPipeline::Bucket::BUCKET_OPAQUE) {
-            continue;
-        }
-
+    
+    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_OPAQUE).m_graphics_pipelines) {
         pipeline->Render(engine, primary, frame_index);
     }
 }
 
 void DeferredRenderer::RenderTranslucentObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    const auto &render_list = engine->GetRenderList();
-
-    /* TODO: just loop through Ref<> stored on renderlist */
-
-    for (auto &pipeline : engine->resources.graphics_pipelines.objects) {
-        if (pipeline->GetBucket() != GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT) {
-            continue;
-        }
-
+    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_TRANSLUCENT).m_graphics_pipelines) {
         pipeline->Render(engine, primary, frame_index);
     }
 }

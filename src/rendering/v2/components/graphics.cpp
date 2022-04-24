@@ -40,7 +40,7 @@ GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, Ref
 
 GraphicsPipeline::~GraphicsPipeline()
 {
-    AssertThrowMsg(m_per_frame_data == nullptr, "per-frame data should have been destroyed");
+    Teardown();
 }
 
 void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
@@ -83,77 +83,82 @@ void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
     m_spatials.erase(it);
 }
 
-void GraphicsPipeline::Create(Engine *engine)
+void GraphicsPipeline::Init(Engine *engine)
 {
-    AssertThrow(m_shader != nullptr);
-    m_shader->Init(engine);
-
-    if (m_scene != nullptr) {
-        m_scene->Init(engine);
+    if (IsInit()) {
+        return;
     }
 
-    renderer::GraphicsPipeline::ConstructionInfo construction_info{
-        .vertex_attributes = m_vertex_attributes,
-        .topology          = m_topology,
-        .cull_mode         = m_cull_mode,
-        .fill_mode         = m_fill_mode,
-        .depth_test        = m_depth_test,
-        .depth_write       = m_depth_write,
-        .blend_enabled     = m_blend_enabled,
-        .shader            = &m_shader->Get(),
-        .render_pass       = &m_render_pass->Get()
-    };
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](Engine *engine) {
+        AssertThrow(m_shader != nullptr);
+        m_shader.Init();
 
-    for (auto &fbo : m_fbos) {
-        fbo.Init();
-        construction_info.fbos.push_back(&fbo->Get());
-    }
+        if (m_scene != nullptr) {
+            m_scene.Init();
+        }
 
-    AssertThrow(m_per_frame_data == nullptr);
-    m_per_frame_data = new PerFrameData<CommandBuffer>(engine->GetInstance()->GetFrameHandler()->NumFrames());
+        renderer::GraphicsPipeline::ConstructionInfo construction_info{
+            .vertex_attributes = m_vertex_attributes,
+            .topology          = m_topology,
+            .cull_mode         = m_cull_mode,
+            .fill_mode         = m_fill_mode,
+            .depth_test        = m_depth_test,
+            .depth_write       = m_depth_write,
+            .blend_enabled     = m_blend_enabled,
+            .shader            = &m_shader->Get(),
+            .render_pass       = &m_render_pass->Get()
+        };
 
-    auto &per_frame_data = *m_per_frame_data;
+        for (auto &fbo : m_fbos) {
+            fbo.Init();
+            construction_info.fbos.push_back(&fbo->Get());
+        }
 
-    for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
-        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
-        HYPERION_ASSERT_RESULT(command_buffer->Create(
-            engine->GetInstance()->GetDevice(),
-            engine->GetInstance()->GetGraphicsCommandPool()
-        ));
+        AssertThrow(m_per_frame_data == nullptr);
+        m_per_frame_data = new PerFrameData<CommandBuffer>(engine->GetInstance()->GetFrameHandler()->NumFrames());
 
-        per_frame_data[i].Set<CommandBuffer>(std::move(command_buffer));
-    }
-
-    EngineComponent::Create(engine, std::move(construction_info), &engine->GetInstance()->GetDescriptorPool());
-}
-
-void GraphicsPipeline::Destroy(Engine *engine)
-{
-    if (m_per_frame_data != nullptr) {
         auto &per_frame_data = *m_per_frame_data;
 
         for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
-            HYPERION_ASSERT_RESULT(per_frame_data[i].Get<CommandBuffer>()->Destroy(
+            auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
+            HYPERION_ASSERT_RESULT(command_buffer->Create(
                 engine->GetInstance()->GetDevice(),
                 engine->GetInstance()->GetGraphicsCommandPool()
             ));
+
+            per_frame_data[i].Set<CommandBuffer>(std::move(command_buffer));
         }
 
-        delete m_per_frame_data;
-        m_per_frame_data = nullptr;
-    }
+        EngineComponent::Create(engine, std::move(construction_info), &engine->GetInstance()->GetDescriptorPool());
 
-    for (auto &spatial : m_spatials) {
-        if (spatial == nullptr) {
-            continue;
-        }
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](Engine *engine) {
+            if (m_per_frame_data != nullptr) {
+                auto &per_frame_data = *m_per_frame_data;
 
-        spatial->OnRemovedFromPipeline(this);
-    }
+                for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
+                    HYPERION_ASSERT_RESULT(per_frame_data[i].Get<CommandBuffer>()->Destroy(
+                        engine->GetInstance()->GetDevice(),
+                        engine->GetInstance()->GetGraphicsCommandPool()
+                    ));
+                }
 
-    m_spatials.clear();
+                delete m_per_frame_data;
+                m_per_frame_data = nullptr;
+            }
 
-    EngineComponent::Destroy(engine);
+            for (auto &spatial : m_spatials) {
+                if (spatial == nullptr) {
+                    continue;
+                }
+
+                spatial->OnRemovedFromPipeline(this);
+            }
+
+            m_spatials.clear();
+
+            EngineComponent::Destroy(engine);
+        }), engine);
+    }));
 }
 
 void GraphicsPipeline::Render(Engine *engine,

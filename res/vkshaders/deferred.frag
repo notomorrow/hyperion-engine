@@ -20,14 +20,15 @@ layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 #include "include/brdf.inc"
 #include "include/tonemap.inc"
 
-vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos) {
-  vec4 shadow_position = shadow_matrix * vec4(pos, 1.0);
+vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
+{
+    vec4 shadow_position = shadow_matrix * vec4(pos, 1.0);
   
-  shadow_position *= vec4(0.5);
-  shadow_position += vec4(0.5);
-  shadow_position.xyz /= shadow_position.w;
+    shadow_position *= vec4(0.5);
+    shadow_position += vec4(0.5);
+    shadow_position.xyz /= shadow_position.w;
   
-  return shadow_position.xyz;
+    return shadow_position.xyz;
 }
 
 /* Begin main shader program */

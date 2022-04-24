@@ -15,6 +15,14 @@ public:
         Ref<RenderPass> render_pass;
         std::vector<Ref<Framebuffer>> framebuffers;
         std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
+        std::vector<Ref<GraphicsPipeline>> m_graphics_pipelines;
+
+        inline void AddGraphicsPipeline(Ref<GraphicsPipeline> &&graphics_pipeline)
+        {
+            graphics_pipeline.Init();
+
+            m_graphics_pipelines.push_back(std::move(graphics_pipeline));
+        }
 
         void AddFramebuffersToPipelines(Engine *engine);
         void CreateRenderPass(Engine *engine);

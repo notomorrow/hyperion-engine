@@ -21,9 +21,7 @@ PostEffect::PostEffect()
 }
 
 PostEffect::PostEffect(Ref<Shader> &&shader)
-    : m_pipeline_id{},
-      m_shader(std::move(shader)),
-      m_render_pass(nullptr)
+    : m_shader(std::move(shader))
 {
 }
 
@@ -82,14 +80,7 @@ void PostEffect::Create(Engine *engine)
     m_framebuffer.Init();
 
     CreatePerFrameData(engine);
-
-    engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
-        CreatePipeline(engine);
-    });
-
-    engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
-        DestroyPipeline(engine);
-    });
+    CreatePipeline(engine);
 }
 
 void PostEffect::CreatePerFrameData(Engine *engine)
@@ -140,7 +131,8 @@ void PostEffect::CreatePipeline(Engine *engine)
     pipeline->SetDepthTest(false);
     pipeline->SetTopology(Topology::TRIANGLE_FAN);
 
-    m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline.Init();
 }
 
 void PostEffect::Destroy(Engine *engine)
@@ -164,17 +156,13 @@ void PostEffect::Destroy(Engine *engine)
     m_frame_data->Reset();
 
     m_framebuffer = nullptr;
+    m_pipeline = nullptr;
 
     for (auto &attachment : m_attachments) {
         HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
     }
 
     HYPERION_ASSERT_RESULT(result);
-}
-
-void PostEffect::DestroyPipeline(Engine *engine)
-{
-    engine->RemoveGraphicsPipeline(m_pipeline_id);
 }
 
 void PostEffect::Record(Engine *engine, uint32_t frame_index)
@@ -184,19 +172,18 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
     auto result = Result::OK;
 
     auto *command_buffer = m_frame_data->At(frame_index).Get<CommandBuffer>();
-    auto *pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
 
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
             engine->GetInstance()->GetDevice(),
-            pipeline->Get().GetConstructionInfo().render_pass,
-            [this, engine, pipeline, frame_index](CommandBuffer *cmd) {
-                pipeline->Get().Bind(cmd);
+            m_pipeline->Get().GetConstructionInfo().render_pass,
+            [this, engine, frame_index](CommandBuffer *cmd) {
+                m_pipeline->Get().Bind(cmd);
                 
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &pipeline->Get(),
+                    &m_pipeline->Get(),
                     {
                         {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
@@ -206,7 +193,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &pipeline->Get(),
+                    &m_pipeline->Get(),
                     {
                         {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
@@ -217,7 +204,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &pipeline->Get(),
+                    &m_pipeline->Get(),
                     {
                         {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
@@ -228,7 +215,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &pipeline->Get(),
+                    &m_pipeline->Get(),
                     {
                         {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1}
                     }

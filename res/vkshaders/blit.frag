@@ -11,11 +11,11 @@ layout(set = 1, binding = 4) uniform sampler2D deferred_result;
 layout(set = 1, binding = 12) uniform sampler2D shadow_map;
 
 layout(set = 1, binding = 16, rgba16f) uniform image2D image_storage_test;
-layout(set = 1, binding = 26) uniform sampler2D voxelizer_image;
 
 layout(location=0) out vec4 out_color;
 
-void main() {
+void main()
+{
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
     vec4 albedo = vec4(0.0);

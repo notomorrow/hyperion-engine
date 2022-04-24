@@ -38,11 +38,7 @@ void RenderList::Destroy(Engine *engine)
 
 void RenderList::Bucket::AddFramebuffersToPipelines(Engine *engine)
 {
-    for (auto &pipeline : engine->resources.graphics_pipelines.objects) {
-        if (pipeline->GetBucket() != bucket) {
-            continue;
-        }
-
+    for (auto &pipeline : m_graphics_pipelines) {
         for (auto &framebuffer : framebuffers) {
             pipeline->AddFramebuffer(framebuffer.Acquire());
         }
@@ -158,9 +154,6 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
         auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.Acquire());
 
         for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
-            auto vk_desc = attachment_ref->GetAttachmentDescription();
-            auto vk_ref = attachment_ref->GetAttachmentReference();
-
             framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
         }
 
@@ -175,7 +168,8 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
 void RenderList::Bucket::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
-    
+
+    m_graphics_pipelines.clear();
     framebuffers.clear();
 
     for (auto &attachment : m_attachments) {

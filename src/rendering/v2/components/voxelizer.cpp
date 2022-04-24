@@ -10,7 +10,6 @@ namespace hyperion::v2 {
 
 Voxelizer::Voxelizer()
     : EngineComponentBase(),
-      m_pipeline_id{},
       m_num_fragments(0)
 {
 }
@@ -58,8 +57,6 @@ void Voxelizer::Init(Engine *engine)
         //});
         
         CreatePipeline(engine);
-        
-        AddSpatialsToPipeline(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](Engine *engine) {
             auto result = renderer::Result::OK;
@@ -91,32 +88,13 @@ void Voxelizer::Init(Engine *engine)
 
             m_attachments.clear();
 
-            engine->RemoveGraphicsPipeline(m_pipeline_id);
-            m_pipeline_id = GraphicsPipeline::ID{};
+            m_pipeline = nullptr;
 
             m_num_fragments = 0;
 
             HYPERION_ASSERT_RESULT(result);
         }), engine);
     }));
-}
-
-void Voxelizer::AddSpatialsToPipeline(Engine *engine)
-{
-    auto *effect_pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
-
-    /* TODO: just hold ref<> on renderlist and loop through those */
-    for (const auto &pipeline : engine->resources.graphics_pipelines.objects) {
-        if (pipeline->GetBucket() != GraphicsPipeline::Bucket::BUCKET_OPAQUE) {
-            continue;
-        }
-        
-        for (auto &spatial : pipeline->GetSpatials()) {
-            if (spatial != nullptr) {
-                effect_pipeline->AddSpatial(spatial.Acquire());
-            }
-        }
-    }
 }
 
 void Voxelizer::CreatePipeline(Engine *engine)
@@ -134,7 +112,17 @@ void Voxelizer::CreatePipeline(Engine *engine)
     
     pipeline->AddFramebuffer(m_framebuffer.Acquire());
     
-    m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    
+    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_OPAQUE).m_graphics_pipelines) {
+        for (auto &spatial : pipeline->GetSpatials()) {
+            if (spatial != nullptr) {
+                m_pipeline->AddSpatial(spatial.Acquire());
+            }
+        }
+    }
+
+    m_pipeline.Init();
 }
 
 void Voxelizer::CreateShader(Engine *engine)
@@ -157,30 +145,6 @@ void Voxelizer::CreateRenderPass(Engine *engine)
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     ));
 
-    renderer::AttachmentRef *attachment_ref;
-
-    m_attachments.push_back(std::make_unique<renderer::Attachment>(
-        std::make_unique<renderer::FramebufferImage2D>(
-            Extent2D{voxel_map_size, voxel_map_size},
-            engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
-            nullptr
-        ),
-        RenderPassStage::SHADER
-    ));
-
-    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
-        engine->GetInstance()->GetDevice(),
-        renderer::LoadOperation::CLEAR,
-        renderer::StoreOperation::STORE,
-        &attachment_ref
-    ));
-
-    m_render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
-
-    for (auto &attachment : m_attachments) {
-        HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
-    }
-
     m_render_pass.Init();
 }
 
@@ -190,10 +154,6 @@ void Voxelizer::CreateFramebuffer(Engine *engine)
         Extent2D{voxel_map_size, voxel_map_size},
         m_render_pass.Acquire()
     ));
-    
-    for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
-        m_framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
-    }
     
     m_framebuffer.Init();
 }
@@ -210,16 +170,6 @@ void Voxelizer::CreateDescriptors(Engine *engine)
     descriptor_set
         ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
         ->AddSubDescriptor({.gpu_buffer = m_fragment_list_buffer.get()});
-
-    auto *descriptor_set_global = engine->GetInstance()->GetDescriptorPool()
-        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
-
-    descriptor_set_global
-        ->AddDescriptor<renderer::ImageSamplerDescriptor>(26)
-        ->AddSubDescriptor({
-            .image_view = m_framebuffer->Get().GetRenderPassAttachmentRefs()[0]->GetImageView(),
-            .sampler    = m_framebuffer->Get().GetRenderPassAttachmentRefs()[0]->GetSampler()
-        });
 }
 
 /* We only reconstruct the buffer if the number of rendered fragments is
@@ -268,16 +218,13 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
 
     /* count number of fragments */
     commands.Push([this, engine, count_mode](CommandBuffer *command_buffer) {
-        auto *pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
-        AssertThrow(pipeline != nullptr);
-        
-        pipeline->Get().push_constants.voxelizer_data = {
+        m_pipeline->Get().push_constants.voxelizer_data = {
             .grid_size = voxel_map_size,
             .count_mode = count_mode
         };
 
         m_framebuffer->BeginCapture(command_buffer);
-        pipeline->Render(engine, command_buffer, 0);
+        m_pipeline->Render(engine, command_buffer, 0);
         m_framebuffer->EndCapture(command_buffer);
 
         HYPERION_RETURN_OK;
@@ -288,8 +235,6 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
 
 void Voxelizer::Render(Engine *engine)
 {
-    AssertThrow(m_pipeline_id);
-
     m_scene->GetCamera()->UpdateMatrices();
 
     m_counter->Reset(engine);

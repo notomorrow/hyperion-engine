@@ -28,7 +28,7 @@ struct Resources {
     RefCounter<RenderPass,  Callbacks>      render_passes;
     RefCounter<Material,    Callbacks>      materials;
 
-    ObjectHolder<GraphicsPipeline>          graphics_pipelines{.defer_create = true};
+    RefCounter<GraphicsPipeline, Callbacks> graphics_pipelines;
     ObjectHolder<ComputePipeline>           compute_pipelines{.defer_create = true};
     
     RefCounter<Spatial,     Callbacks>      spatials;

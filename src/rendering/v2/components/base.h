@@ -78,7 +78,7 @@ public:
 
     EngineComponentBase()
         : CallbackTrackable(),
-          m_is_created(false)
+          m_init_called(false)
     {
     }
 
@@ -93,21 +93,21 @@ public:
     inline void SetId(const ID &id)
         { m_id = id; }
 
-    inline bool IsInit() const { return m_is_created; }
+    inline bool IsInit() const { return m_init_called; }
 
     void Init()
     {
-        m_is_created = true;
+        m_init_called = true;
     }
 
 protected:
     void Destroy()
     {
-        m_is_created = false;
+        m_init_called = false;
     }
 
     ID m_id;
-    bool m_is_created;
+    bool m_init_called;
 };
 
 template <class WrappedType>
@@ -116,25 +116,10 @@ public:
     template <class ...Args>
     EngineComponent(Args &&... args)
         : EngineComponentBase<WrappedType>(),
-          m_wrapped(std::move(args)...)
+          m_wrapped(std::move(args)...),
+          m_wrapped_created(false)
     {
     }
-    
-    /*EngineComponent(EngineComponent &&other) noexcept
-        : m_wrapped(std::move(other.m_wrapped)),
-          m_is_created(other.m_is_created)
-    {
-        other.m_is_created = false;
-    }
-
-    EngineComponent &operator=(EngineComponent &&other) noexcept
-    {
-        this->m_wrapped = std::move(other.m_wrapped);
-        this->m_is_created = other.m_is_created;
-        other.m_is_created = false;
-
-        return *this;
-    }*/
 
     EngineComponent(const EngineComponent &other) = delete;
     EngineComponent &operator=(const EngineComponent &other) = delete;
@@ -142,7 +127,7 @@ public:
     ~EngineComponent()
     {
         AssertThrowMsg(
-            !this->m_is_created,
+            !m_wrapped_created,
             "Expected wrapped object of type %s to be destroyed before destructor, but it was not nullptr.",
             typeid(WrappedType).name()
         );
@@ -158,13 +143,15 @@ public:
         const char *wrapped_type_name = typeid(WrappedType).name();
 
         AssertThrowMsg(
-            !this->m_is_created,
+            !m_wrapped_created,
             "Expected wrapped object of type %s to have not already been created, but it was already created.",
             wrapped_type_name
         );
 
         auto result = m_wrapped.Create(GetEngineDevice(engine), std::move(args)...);
         AssertThrowMsg(result, "Creation of object of type %s failed: %s", wrapped_type_name, result.message);
+
+        m_wrapped_created = true;
 
         EngineComponentBase<WrappedType>::Init();
     }
@@ -176,13 +163,15 @@ public:
         const char *wrapped_type_name = typeid(WrappedType).name();
 
         AssertThrowMsg(
-            this->m_is_created,
+            m_wrapped_created,
             "Expected wrapped object of type %s to have been created, but it was not yet created.",
             wrapped_type_name
         );
 
         auto result = m_wrapped.Destroy(GetEngineDevice(engine), std::move(args)...);
         AssertThrowMsg(result, "Destruction of object of type %s failed: %s", wrapped_type_name, result.message);
+
+        m_wrapped_created = false;
 
         EngineComponentBase<WrappedType>::Destroy();
     }
@@ -191,6 +180,7 @@ protected:
     using ThisComponent = EngineComponent<WrappedType>;
 
     WrappedType m_wrapped;
+    bool m_wrapped_created;
 };
 
 } // namespace hyperion::v2

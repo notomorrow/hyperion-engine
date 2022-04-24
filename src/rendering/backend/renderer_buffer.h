@@ -128,6 +128,9 @@ public:
     VkDeviceSize size;
 
 protected:
+    void Create();
+    void Destroy();
+
     uint32_t sharing_mode;
     uint32_t index;
     mutable void *map;

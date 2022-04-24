@@ -542,6 +542,8 @@ void Descriptor::RemoveSubDescriptor(uint32_t index)
         }
     }*/
 
+    AssertThrow(index < m_sub_descriptors.size());
+
     m_sub_descriptors.erase(m_sub_descriptors.begin() + index);
     m_sub_descriptors_raw.buffers.erase(m_sub_descriptors_raw.buffers.begin() + index);
     m_sub_descriptors_raw.images.erase(m_sub_descriptors_raw.images.begin() + index);

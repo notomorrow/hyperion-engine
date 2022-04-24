@@ -46,16 +46,6 @@ public:
         BUCKET_MAX
     };
 
-    struct ID : EngineComponent::ID {
-        Bucket bucket;
-
-        inline bool operator==(const ID &other) const
-            { return value == other.value && bucket == other.bucket; }
-
-        inline bool operator<(const ID &other) const
-            { return value < other.value && bucket < other.bucket; }
-    };
-
     GraphicsPipeline(Ref<Shader> &&shader,
         Ref<Scene> &&scene,
         Ref<RenderPass> &&render_pass,
@@ -117,8 +107,7 @@ public:
     inline const auto &GetFramebuffers() const { return m_fbos; }
     
     /* Build pipeline */
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
+    void Init(Engine *engine);
     void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
 
 private:

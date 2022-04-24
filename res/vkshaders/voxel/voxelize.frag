@@ -31,8 +31,6 @@ layout(push_constant) uniform Constants {
     uint count_mode;
 };
 
-layout(location=0) out vec4 fragment_color;
-
 #define VOXEL_GRID_SCALE 1.0
 
 void main()
@@ -40,8 +38,6 @@ void main()
     uint current_fragment = atomicAdd(counter, 1u);
     
     if (!bool(count_mode)) {
-        fragment_color = vec4(g_voxel_pos, 1.0);
-        
         vec4 frag_color = material.albedo;
         
         if (HasMaterialTexture(0)) {

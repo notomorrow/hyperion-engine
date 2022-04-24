@@ -13,6 +13,7 @@ using Context = renderer::StagingBufferPool::Context;
 inline static constexpr uint32_t group_x_64(uint32_t x) { return (x >> 6u) + ((x & 0x3fu) ? 1u : 0u); }
 
 SparseVoxelOctree::SparseVoxelOctree()
+    : EngineComponentBase()
 {
 }
 
@@ -102,6 +103,11 @@ void SparseVoxelOctree::Init(Engine *engine)
                 m_modify_args = ComputePipeline::bad_id;
             }
 
+            if (m_write_mipmaps) {
+                engine->resources.compute_pipelines.Remove(engine, m_write_mipmaps);
+                m_write_mipmaps = ComputePipeline::bad_id;
+            }
+
             HYPERION_ASSERT_RESULT(result);
         }), engine);
     }));
@@ -163,23 +169,28 @@ void SparseVoxelOctree::CreateBuffers(Engine *engine)
         m_octree_buffer->Create(engine->GetInstance()->GetDevice(), num_nodes * sizeof(OctreeNode)),
         result
     );
-    
-    HYPERION_PASS_ERRORS(
-        m_indirect_buffer->Create(engine->GetInstance()->GetDevice(), 3 * sizeof(uint32_t)),
-        result
-    );
-
 
     if (!result) {
+        HYPERION_PASS_ERRORS(
+            m_octree_buffer->Destroy(engine->GetInstance()->GetDevice()),
+            result
+        );
+
+        m_octree_buffer.reset(nullptr);
+
         HYPERION_PASS_ERRORS(
             m_build_info_buffer->Destroy(engine->GetInstance()->GetDevice()),
             result
         );
 
+        m_build_info_buffer.reset(nullptr);
+
         HYPERION_PASS_ERRORS(
             m_indirect_buffer->Destroy(engine->GetInstance()->GetDevice()),
             result
         );
+
+        m_indirect_buffer.reset(nullptr);
 
         HYPERION_ASSERT_RESULT(result);
     }

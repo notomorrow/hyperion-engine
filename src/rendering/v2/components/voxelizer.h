@@ -33,7 +33,7 @@ public:
     ~Voxelizer();
 
     Scene *GetScene() const { return m_scene.ptr; }
-    GraphicsPipeline::ID GetGraphicsPipelineId() const { return m_pipeline_id; }
+    GraphicsPipeline *GetGraphicsPipeline() const { return m_pipeline.ptr; }
 
     uint32_t NumFragments() const { return m_num_fragments; }
 
@@ -41,7 +41,6 @@ public:
     void Render(Engine *engine);
 
 private:
-    void AddSpatialsToPipeline(Engine *engine);
     void CreatePipeline(Engine *engine);
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
@@ -60,7 +59,7 @@ private:
     Ref<Framebuffer> m_framebuffer;
     Ref<Shader> m_shader;
     Ref<RenderPass> m_render_pass;
-    GraphicsPipeline::ID m_pipeline_id;
+    Ref<GraphicsPipeline> m_pipeline;
 
     std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
 

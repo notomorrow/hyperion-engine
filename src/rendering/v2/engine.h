@@ -83,34 +83,19 @@ public:
 
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
-    
-    
 
-    /* Pipelines will be deferred until descriptor sets are built
-     * We take in the builder object rather than a unique_ptr,
-     * so that we can reuse pipelines
-     */
-    template <class ...Args>
-    GraphicsPipeline::ID AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline, Args &&... args)
+
+    
+    Ref<GraphicsPipeline> AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline)
     {
         const auto bucket = pipeline->GetBucket();
 
-        GraphicsPipeline::ID id = resources.graphics_pipelines.Add(this, std::move(pipeline), std::move(args)...);
+        auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
 
-        id.bucket = bucket;
+        m_render_list.Get(bucket).AddGraphicsPipeline(graphics_pipeline.Acquire());
 
-        return id;
+        return std::move(graphics_pipeline);
     }
-
-    template <class ...Args>
-    void RemoveGraphicsPipeline(GraphicsPipeline::ID id, Args &&... args)
-        { return resources.graphics_pipelines.Remove(this, id, std::move(args)...); }
-
-    inline GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id)
-        { return resources.graphics_pipelines.Get(id); }
-
-    inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
-        { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
 
     void SetSpatialTransform(Spatial *spatial, const Transform &transform);
     
