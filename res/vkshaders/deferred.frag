@@ -32,11 +32,14 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos) {
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 12000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 200000.0
+#define IBL_INTENSITY 7000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
 #define GI_INTENSITY 20.0
+#define VCT_ENABLED 0
 
+#if VCT_ENABLED
 #include "include/voxel/vct.inc"
+#endif
 
 
 void main()
@@ -53,7 +56,7 @@ void main()
     
     bool perform_lighting = albedo.a > 0.0;
     
-    vec3 albedo_linear = mon2lin(albedo.rgb);
+    vec3 albedo_linear = albedo.rgb;//mon2lin(albedo.rgb);
 	vec3 result;
 
     /* Physical camera */
@@ -96,23 +99,24 @@ void main()
         vec2 AB = vec2(1.0, 1.0) - BRDFMap(NdotV, perceptual_roughness);
         
         vec3 irradiance = vec3(0.0);
+        vec3 ibl = HasEnvironmentTexture(0)
+            ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
+            : vec3(0.0);
         
+#if VCT_ENABLED
         vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0 , 5.0);
         vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 5.0);
         
         //vec3 vct_irradiance = vec3(0.0);
         
         //for (int i = 0; i < 16; i++) {
-        irradiance += voxelTraceCone(position.xyz, N, aabb_max, aabb_min, lod, 2.0).rgb;
+        irradiance += voxelTraceCone(position.xyz, N, aabb_max, aabb_min, lod, 0.3).rgb;
         //}
         
         //irradiance += vct_irradiance / 16.0;
         
-        vec3 ibl = HasEnvironmentTexture(0)
-            ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
-            : vec3(0.0);
-        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, 0.1, 6.0).rgb;
-        
+        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, lod, 0.4).rgb;
+#endif
 
         float ao = texture(filter_ssao, texcoord).r;
         vec3 shadow = vec3(1.0);
@@ -141,7 +145,6 @@ void main()
         surface *= exposure * DIRECTIONAL_LIGHT_INTENSITY;
         
         result += surface;
-        result = irradiance;
     } else {
         result = albedo_linear * DIRECTIONAL_LIGHT_INTENSITY * exposure;
     }
