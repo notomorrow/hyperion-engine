@@ -40,20 +40,28 @@ private:
 };
 
 class AccelerationStructure {
+    static VkAccelerationStructureTypeKHR GetType(AccelerationStructureType);
+    
 public:
-    AccelerationStructure(AccelerationStructureType type);
+    AccelerationStructure();
     AccelerationStructure(const AccelerationStructure &other) = delete;
     AccelerationStructure &operator=(const AccelerationStructure &other) = delete;
     ~AccelerationStructure();
 
     void AddGeometry(std::unique_ptr<AccelerationGeometry> &&geometry)
         { m_geometries.push_back(std::move(geometry)); }
-
-    Result Create(Instance *instance);
+    
+    Result CreateTopLevel(Instance *instance, AccelerationStructure *bottom_level);
+    Result CreateBottomLevel(Instance *instance);
     Result Destroy(Device *device);
 
 private:
-    AccelerationStructureType m_type;
+    Result CreateAccelerationStructure(Instance *instance,
+        AccelerationStructureType type,
+        const VkAccelerationStructureBuildSizesInfoKHR &build_sizes_info,
+        std::vector<VkAccelerationStructureGeometryKHR> &&geometries,
+        std::vector<uint32_t> &&primitive_counts);
+    
     std::unique_ptr<AccelerationStructureBuffer> m_buffer;
     std::vector<std::unique_ptr<AccelerationGeometry>> m_geometries;
     VkAccelerationStructureKHR m_acceleration_structure;

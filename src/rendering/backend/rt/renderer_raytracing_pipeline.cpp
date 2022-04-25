@@ -110,6 +110,10 @@ Result RaytracingPipeline::Destroy(Device *device)
 
     auto result = Result::OK;
 
+    for (auto &table : m_shader_binding_table_buffers) {
+        HYPERION_PASS_ERRORS(table->Destroy(device), result);
+    }
+
     if (m_shader_program != nullptr) {
         HYPERION_PASS_ERRORS(m_shader_program->Destroy(device), result);
     }

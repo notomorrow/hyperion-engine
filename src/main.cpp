@@ -588,7 +588,7 @@ int main()
 
     vkDestroyFence(engine.GetInstance()->GetDevice()->GetDevice(), compute_fc, VK_NULL_HANDLE);
 #endif
-
+    rt->Destroy(engine.GetDevice());
 
     engine.Destroy();
 

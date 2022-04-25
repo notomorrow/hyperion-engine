@@ -251,6 +251,11 @@ public:
     AccelerationStructureBuffer();
 };
 
+class AccelerationStructureInstancesBuffer : public GPUBuffer {
+public:
+    AccelerationStructureInstancesBuffer();
+};
+
 class ScratchBuffer : public GPUBuffer {
 public:
     ScratchBuffer();
