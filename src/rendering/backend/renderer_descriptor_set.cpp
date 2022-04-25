@@ -80,7 +80,7 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
         }
     }
     
-    for (VkWriteDescriptorSet &write : m_descriptor_writes) {
+    for (auto &write : m_descriptor_writes) {
         write.dstSet = m_set;
     }
 
@@ -434,7 +434,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
 
         changed |= {static_cast<uint32_t>(sub_descriptor_index), static_cast<uint32_t>(sub_descriptor_index) + 1};
 
-        m_dirty_sub_descriptors = m_dirty_sub_descriptors.Without(sub_descriptor_index);
+        m_dirty_sub_descriptors = m_dirty_sub_descriptors.Excluding(sub_descriptor_index);
 
         m_sub_descriptor_update_indices.pop();
 
@@ -450,7 +450,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
         write.pNext           = nullptr;
         write.dstBinding      = m_binding;
         write.dstArrayElement = 0;
-        write.descriptorCount = changed.GetDistance();
+        write.descriptorCount = changed.Distance();
         write.descriptorType  = descriptor_type;
         write.pBufferInfo     = &m_sub_descriptors_raw.buffers[changed.GetStart()];
         write.pImageInfo      = &m_sub_descriptors_raw.images[changed.GetStart()];

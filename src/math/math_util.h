@@ -105,17 +105,17 @@ public:
     static inline constexpr T Max(T a, T b, Args... args)
         { return Max(Max(a, b), args...); }
 
-    template <typename T>
-    static inline constexpr T Sign(const T &value)
-        { return (T(0) < value) - (value < T(0)); }
+    template <typename T, typename SignedType = int>
+    static inline constexpr SignedType Sign(const T &value)
+        { return SignedType(T(0) < value) - SignedType(value < T(0)); }
 
-    template <typename T, typename ReturnType = int>
-    static inline int Floor(T a)
-        { return ReturnType(std::floor(a)); }
+    template <typename T, typename SignedType = int>
+    static inline SignedType Floor(T a)
+        { return SignedType(std::floor(a)); }
 
-    template <typename T, typename ReturnType = int>
-    static inline int Ceil(T a)
-        { return ReturnType(std::ceil(a)); }
+    template <typename T, typename SignedType = int>
+    static inline SignedType Ceil(T a)
+        { return SignedType(std::ceil(a)); }
 
     template <typename T>
     static inline T Exp(T a)
