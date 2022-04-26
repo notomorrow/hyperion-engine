@@ -15,7 +15,12 @@ bool GraphicsPipeline::BucketSupportsCulling(Bucket bucket)
         && bucket != BUCKET_VOXELIZER;
 }
 
-GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, Ref<RenderPass> &&render_pass, Bucket bucket)
+GraphicsPipeline::GraphicsPipeline(
+    Ref<Shader> &&shader,
+    Ref<Scene> &&scene,
+    Ref<RenderPass> &&render_pass,
+    Bucket bucket
+)
     : EngineComponent(),
       m_shader(std::move(shader)),
       m_scene(std::move(scene)),
@@ -61,7 +66,9 @@ void GraphicsPipeline::RemoveSpatial(Spatial::ID id)
     const auto it = std::find_if(
         m_spatials.begin(),
         m_spatials.end(),
-        [&id](const auto &item) { return item->GetId() == id; }
+        [&id](const auto &item) {
+            return item->GetId() == id;
+        }
     );
 
     if (it != m_spatials.end()) {

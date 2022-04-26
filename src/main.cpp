@@ -106,6 +106,7 @@ using namespace hyperion;
 
 #define HYPERION_VK_TEST_IMAGE_STORE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
+#define HYPERION_RUN_TESTS 1
 
 int main()
 {
@@ -397,6 +398,11 @@ int main()
     }
     
     engine.Compile();
+
+#if HYPERION_RUN_TESTS
+    AssertThrow(test::GlobalTestManager::PrintReport(test::GlobalTestManager::Instance()->RunAll()));
+    HYP_BREAKPOINT;
+#endif
 
     auto rt_shader = std::make_unique<ShaderProgram>();
     rt_shader->AttachShader(engine.GetDevice(), ShaderModule::Type::RAY_GEN, {

@@ -2,6 +2,7 @@
 #define HYPERION_RANGE_H
 
 #include <math/math_util.h>
+#include <util/test/htest.h>
 
 namespace hyperion {
 
@@ -75,17 +76,20 @@ public:
     }
 
     bool operator!=(const Range &other) const { return !operator==(other); }
-
-    /* \brief Return a range equal to this range BUT:
-     * If value is <= the start value, have the resulting range start at value+step.
-     * If the value is >= the end value, have the resulting range end at value.
-     */
-    Range Excluding(const T &value, T step = 1) const
+    
+    Range Excluding(const T &value) const
     {
-        return {
-            MathUtil::Max(m_start, value + step),
-            MathUtil::Min(m_end, value)
-        };
+        const auto step = Step();
+
+        if (value == m_start + step) {
+            return {T(m_start + step), m_end};
+        }
+
+        if (value == m_end - step) {
+            return {m_start, T(m_end - step)};
+        }
+
+        return *this;
     }
     
     iterator begin() const { return m_start; }
@@ -95,6 +99,33 @@ private:
     T m_start, m_end;
 };
 
+namespace test {
+
+template<>
+class TestClass<Range<int>> : public TestClassBase {
+public:
+    TestClass()
+    {
+        Describe(&Range<int>::Distance, [](auto &it) {
+            it("returns false if the given element is out of range", [](auto &expect) {
+               HYP_EXPECT(!(Range<int>{5, 12}).Includes(2));
+               HYP_EXPECT((Range<int>{5, 12}).Includes(8));
+            });
+        });
+
+        Describe(&Range<int>::Excluding, [](Unit &it) -> void {
+            it("removes value from inclusive range", [](Case &expect) {
+                HYP_EXPECT((Range<int>{0, 9}).Excluding(8) == (Range<int>{0, 8}));
+                HYP_EXPECT((Range<int>{0, 9}).Excluding(7) != (Range<int>{0, 7}));
+            });
+        });
+    }
+};
+
+} // namespace test
+
 } // namespace hyperion
+
+
 
 #endif
