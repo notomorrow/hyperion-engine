@@ -196,7 +196,7 @@ struct MeshInputAttributeSet {
         return attributes;
     }
 
-    inline size_t VertexSize() const
+    inline size_t CalculateVertexSize() const
     {
         size_t size = 0;
 

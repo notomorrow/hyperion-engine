@@ -106,14 +106,14 @@ class TestClass<Range<int>> : public TestClassBase {
 public:
     TestClass()
     {
-        Describe(&Range<int>::Distance, [](auto &it) {
+        Describe(HYP_METHOD(Range<int>::Distance), [](auto &it) {
             it("returns false if the given element is out of range", [](auto &expect) {
                HYP_EXPECT(!(Range<int>{5, 12}).Includes(2));
                HYP_EXPECT((Range<int>{5, 12}).Includes(8));
             });
         });
 
-        Describe(&Range<int>::Excluding, [](Unit &it) -> void {
+        Describe(HYP_METHOD(Range<int>::Excluding), [](Unit &it) -> void {
             it("removes value from inclusive range", [](Case &expect) {
                 HYP_EXPECT((Range<int>{0, 9}).Excluding(8) == (Range<int>{0, 8}));
                 HYP_EXPECT((Range<int>{0, 9}).Excluding(7) != (Range<int>{0, 7}));

@@ -401,7 +401,6 @@ int main()
 
 #if HYPERION_RUN_TESTS
     AssertThrow(test::GlobalTestManager::PrintReport(test::GlobalTestManager::Instance()->RunAll()));
-    HYP_BREAKPOINT;
 #endif
 
     auto rt_shader = std::make_unique<ShaderProgram>();
@@ -411,6 +410,10 @@ int main()
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
     HYPERION_ASSERT_RESULT(rt->Create(engine.GetDevice(), &engine.GetInstance()->GetDescriptorPool()));
+
+    auto tlas = std::make_unique<TopLevelAccelerationStructure>();
+    auto blas = std::make_unique<BottomLevelAccelerationStructure>();
+    //blas->AddGeometry()
 
 #if HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE
     svo.Build(&engine);

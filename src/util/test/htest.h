@@ -9,7 +9,7 @@
 #include <type_traits>
 
 #define HYP_STR(x) #x
-#define HYP_METHOD(class_name, method) HYP_STR(class_name::##method)
+#define HYP_METHOD(method) HYP_STR(method)
 
 namespace hyperion::test {
 

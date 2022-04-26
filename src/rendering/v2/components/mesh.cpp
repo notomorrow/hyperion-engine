@@ -20,8 +20,46 @@
 
 namespace hyperion::v2 {
 
-Mesh::Mesh(const std::vector<Vertex> &vertices,
-    const std::vector<Index> &indices)
+std::pair<std::vector<Vertex>, std::vector<Mesh::Index>>
+Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
+{
+    std::map<Vertex, Index> index_map;
+
+    std::vector<Index> indices;
+    indices.reserve(vertices.size());
+
+    /* This will be our resulting buffer with only the vertices we need. */
+    std::vector<Vertex> new_vertices;
+    new_vertices.reserve(vertices.size());
+
+    for (const auto &vertex : vertices) {
+        /* Check if the vertex already exists in our map */
+        auto it = index_map.find(vertex);
+
+        /* If it does, push to our indices */
+        if (it != index_map.end()) {
+            indices.push_back(it->second);
+
+            continue;
+        }
+
+        const auto mesh_index = static_cast<Index>(new_vertices.size());
+
+        /* The vertex is unique, so we push it. */
+        index_map[vertex] = mesh_index;
+        new_vertices.push_back(vertex);
+
+        indices.push_back(mesh_index);
+    }
+
+    return std::make_pair(new_vertices, indices);
+}
+
+Mesh::Mesh(
+    const std::vector<Vertex> &vertices,
+    const std::vector<Index> &indices,
+    Flags flags
+)
     : EngineComponentBase(),
       m_vertices(std::move(vertices)),
       m_indices(std::move(indices)),
@@ -33,7 +71,8 @@ Mesh::Mesh(const std::vector<Vertex> &vertices,
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS)
+          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS),
+      m_flags(flags)
 {
 }
 
@@ -51,18 +90,21 @@ void Mesh::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](Engine *engine) {
-
         DebugLog(LogType::Info, "Init mesh with %llu vertices and %llu indices\n", m_vertices.size(), m_indices.size());
 
         if (m_vertices.empty() || m_indices.empty()) {
             DebugLog(LogType::Warn, "Attempt to create Mesh #%lu with empty vertices or indices list\n", m_id.value);
 
-            /* set to 1 vertex / index */
+            /* set to 1 vertex / index to prevent explosions */
             m_vertices = {Vertex()};
             m_indices  = {0};
         }
 
         Upload(engine->GetInstance());
+
+        if (m_flags & MESH_FLAGS_HAS_ACCELERATION_GEOMETRY) {
+            CreateAccelerationGeometry(engine);
+        }
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
             AssertThrow(m_vbo != nullptr);
@@ -70,6 +112,11 @@ void Mesh::Init(Engine *engine)
 
             Device *device = engine->GetInstance()->GetDevice();
 
+            if (m_acceleration_geometry != nullptr) {
+                m_acceleration_geometry->Destroy(device);
+                m_acceleration_geometry.reset();
+            }
+            
             m_vbo->Destroy(device);
             m_vbo.reset();
 
@@ -88,7 +135,7 @@ void Mesh::Init(Engine *engine)
     } while (0)
 
 std::vector<float> Mesh::CreatePackedBuffer() {
-    const size_t vertex_size = m_vertex_attributes.VertexSize();
+    const size_t vertex_size = m_vertex_attributes.CalculateVertexSize();
 
     std::vector<float> packed_buffer(vertex_size * m_vertices.size());
 
@@ -182,41 +229,6 @@ void Mesh::Upload(Instance *instance)
     }));
 }
 
-std::pair<std::vector<Vertex>, std::vector<Mesh::Index>>
-Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
-{
-    std::map<Vertex, Index> index_map;
-
-    std::vector<Index> indices;
-    indices.reserve(vertices.size());
-
-    /* This will be our resulting buffer with only the vertices we need. */
-    std::vector<Vertex> new_vertices;
-    new_vertices.reserve(vertices.size());
-
-    for (const auto &vertex : vertices) {
-        /* Check if the vertex already exists in our map */
-        auto it = index_map.find(vertex);
-
-        /* If it does, push to our indices */
-        if (it != index_map.end()) {
-            indices.push_back(it->second);
-
-            continue;
-        }
-
-        const auto mesh_index = static_cast<Index>(new_vertices.size());
-
-        /* The vertex is unique, so we push it. */
-        index_map[vertex] = mesh_index;
-        new_vertices.push_back(vertex);
-
-        indices.push_back(mesh_index);
-    }
-
-    return std::make_pair(new_vertices, indices);
-}
-
 void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
 {
     AssertThrow(m_vbo != nullptr && m_ibo != nullptr);
@@ -227,10 +239,31 @@ void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
     vkCmdDrawIndexed(
         cmd->GetCommandBuffer(),
         uint32_t(m_indices.size()),
-        1,
-        0,
-        0,
-        0
+        1, 0, 0, 0
+    );
+}
+
+void Mesh::CreateAccelerationGeometry(Engine *engine)
+{
+    if (m_acceleration_geometry != nullptr) {
+        HYPERION_ASSERT_RESULT(
+            m_acceleration_geometry->Destroy(engine->GetDevice())
+        );
+    }
+    
+    AssertThrow(m_vbo != nullptr);
+    AssertThrow(m_ibo != nullptr);
+
+    m_acceleration_geometry = std::make_unique<AccelerationGeometry>(
+        m_vbo.get(),
+        m_vertices.size(),
+        m_vertex_attributes.CalculateVertexSize(),
+        m_ibo.get(),
+        m_indices.size()
+    );
+    
+    HYPERION_ASSERT_RESULT(
+        m_acceleration_geometry->Create(engine->GetDevice())
     );
 }
 

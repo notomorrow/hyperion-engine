@@ -459,7 +459,9 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
     }
 }
 
-void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const
+void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor,
+    VkDescriptorBufferInfo &out_buffer,
+    VkDescriptorImageInfo &out_image) const
 {
     switch (m_mode) {
     case Mode::UNIFORM_BUFFER: /* fallthrough */

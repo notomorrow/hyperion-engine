@@ -225,7 +225,8 @@ public:
         STORAGE_BUFFER,
         STORAGE_BUFFER_DYNAMIC,
         IMAGE_SAMPLER,
-        IMAGE_STORAGE
+        IMAGE_STORAGE,
+        TOP_LEVEL_ACCELERATION_STRUCTURE
     };
 
     struct SubDescriptor {
@@ -243,7 +244,7 @@ public:
     Descriptor &operator=(const Descriptor &other) = delete;
     ~Descriptor();
 
-    inline uint32_t GetBinding() const { return m_binding; }
+    inline uint32_t GetBinding() const       { return m_binding; }
     inline void SetBinding(uint32_t binding) { m_binding = binding; }
     
     /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
@@ -272,7 +273,9 @@ public:
     /*! \brief Mark a sub-descriptor as dirty */
     void MarkDirty(uint32_t sub_descriptor_index);
 
-    void Create(Device *device, VkDescriptorSetLayoutBinding &binding, std::vector<VkWriteDescriptorSet> &writes);
+    void Create(Device *device,
+        VkDescriptorSetLayoutBinding &binding,
+        std::vector<VkWriteDescriptorSet> &writes);
 
 protected:
     struct BufferInfo {
@@ -317,6 +320,7 @@ HYP_DEFINE_DESCRIPTOR(StorageBufferDescriptor,        Mode::STORAGE_BUFFER);
 HYP_DEFINE_DESCRIPTOR(DynamicStorageBufferDescriptor, Mode::STORAGE_BUFFER_DYNAMIC);
 HYP_DEFINE_DESCRIPTOR(ImageSamplerDescriptor,         Mode::IMAGE_SAMPLER);
 HYP_DEFINE_DESCRIPTOR(ImageStorageDescriptor,         Mode::IMAGE_STORAGE);
+HYP_DEFINE_DESCRIPTOR(TlasDescriptor,                 Mode::TOP_LEVEL_ACCELERATION_STRUCTURE);
 
 #undef HYP_DEFINE_DESCRIPTOR
 
