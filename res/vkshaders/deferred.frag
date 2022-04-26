@@ -78,8 +78,8 @@ void main()
     vec3 H = normalize(L + V);
     
     if (perform_lighting) {
-        float metallic = 0.05;
-        float roughness = 0.5;
+        float metallic = 0.9;
+        float roughness = 0.1;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -116,7 +116,7 @@ void main()
         
         //irradiance += vct_irradiance / 16.0;
         
-        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, 0.25 + roughness, 2.0).rgb;
+        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, 0.1 + roughness, 5.0).rgb;
 #endif
 
         float ao = texture(filter_ssao, texcoord).r;

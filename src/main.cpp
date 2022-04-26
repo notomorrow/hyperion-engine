@@ -108,6 +108,7 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_IMAGE_STORE 1
 #define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
+#define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
 
 int main()
 {
@@ -233,8 +234,10 @@ int main()
     HYPERION_ASSERT_RESULT(image_storage_view.Create(device, image_storage));
 #endif
 
+#if HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE
     v2::SparseVoxelOctree svo;
     svo.Init(&engine);
+#endif
 
     engine.PrepareSwapchain();
     
@@ -454,7 +457,9 @@ int main()
     
     engine.Compile();
 
+#if HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE
     svo.Build(&engine);
+#endif
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     VkFence compute_fc;
