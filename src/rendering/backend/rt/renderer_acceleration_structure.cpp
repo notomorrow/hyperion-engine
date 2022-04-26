@@ -18,6 +18,16 @@ VkAccelerationStructureTypeKHR AccelerationStructure::ToVkAccelerationStructureT
 	}
 }
 
+AccelerationGeometry::AccelerationGeometry()
+    : m_vertex_buffer(nullptr),
+      m_num_vertices(0),
+      m_vertex_stride(0),
+      m_index_buffer(nullptr),
+      m_num_indices(0),
+      m_geometry{}
+{
+}
+
 AccelerationGeometry::AccelerationGeometry(VertexBuffer *vertex_buffer,
     size_t num_vertices, size_t vertex_stride,
     IndexBuffer *index_buffer,
@@ -35,6 +45,9 @@ AccelerationGeometry::~AccelerationGeometry() {}
 
 Result AccelerationGeometry::Create(Device *device)
 {
+	AssertThrow(m_vertex_buffer != nullptr);
+	AssertThrow(m_index_buffer != nullptr);
+
     VkDeviceOrHostAddressConstKHR vertices_address{
         .deviceAddress = m_vertex_buffer->GetBufferDeviceAddress(device)
     };

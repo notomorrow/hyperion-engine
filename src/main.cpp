@@ -412,6 +412,7 @@ int main()
     HYPERION_ASSERT_RESULT(rt->Create(engine.GetDevice(), &engine.GetInstance()->GetDescriptorPool()));
 
     auto tlas = std::make_unique<TopLevelAccelerationStructure>();
+    
     auto blas = std::make_unique<BottomLevelAccelerationStructure>();
     //blas->AddGeometry()
 

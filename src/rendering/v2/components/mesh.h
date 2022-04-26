@@ -60,12 +60,11 @@ public:
     void Render(Engine *engine, CommandBuffer *cmd) const;
 
 private:
-    void CreateAccelerationGeometry(Engine *engine);
     std::vector<float> CreatePackedBuffer();
     void Upload(Instance *instance);
 
-    std::unique_ptr<VertexBuffer> m_vbo;
-    std::unique_ptr<IndexBuffer>  m_ibo;
+    std::unique_ptr<VertexBuffer>         m_vbo;
+    std::unique_ptr<IndexBuffer>          m_ibo;
     std::unique_ptr<AccelerationGeometry> m_acceleration_geometry;
 
     MeshInputAttributeSet m_vertex_attributes;

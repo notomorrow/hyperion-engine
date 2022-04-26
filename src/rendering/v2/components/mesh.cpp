@@ -63,6 +63,7 @@ Mesh::Mesh(
     : EngineComponentBase(),
       m_vertices(std::move(vertices)),
       m_indices(std::move(indices)),
+      m_acceleration_geometry(std::make_unique<AccelerationGeometry>()),
       m_vertex_attributes(
           MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
@@ -103,7 +104,18 @@ void Mesh::Init(Engine *engine)
         Upload(engine->GetInstance());
 
         if (m_flags & MESH_FLAGS_HAS_ACCELERATION_GEOMETRY) {
-            CreateAccelerationGeometry(engine);
+            m_acceleration_geometry->SetVertices(
+                m_vbo.get(),
+                m_vertices.size(),
+                m_vertex_attributes.CalculateVertexSize()
+            );
+
+            m_acceleration_geometry->SetIndices(
+                m_ibo.get(),
+                m_indices.size()
+            );
+
+            HYPERION_ASSERT_RESULT(m_acceleration_geometry->Create(engine->GetDevice()));
         }
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
@@ -240,30 +252,6 @@ void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
         cmd->GetCommandBuffer(),
         uint32_t(m_indices.size()),
         1, 0, 0, 0
-    );
-}
-
-void Mesh::CreateAccelerationGeometry(Engine *engine)
-{
-    if (m_acceleration_geometry != nullptr) {
-        HYPERION_ASSERT_RESULT(
-            m_acceleration_geometry->Destroy(engine->GetDevice())
-        );
-    }
-    
-    AssertThrow(m_vbo != nullptr);
-    AssertThrow(m_ibo != nullptr);
-
-    m_acceleration_geometry = std::make_unique<AccelerationGeometry>(
-        m_vbo.get(),
-        m_vertices.size(),
-        m_vertex_attributes.CalculateVertexSize(),
-        m_ibo.get(),
-        m_indices.size()
-    );
-    
-    HYPERION_ASSERT_RESULT(
-        m_acceleration_geometry->Create(engine->GetDevice())
     );
 }
 

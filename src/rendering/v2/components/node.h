@@ -3,6 +3,7 @@
 
 #include "spatial.h"
 #include "containers.h"
+#include "mixins.h"
 #include <math/transform.h>
 
 #include <vector>
@@ -12,13 +13,18 @@ namespace hyperion::v2 {
 
 class Engine;
 
-class Node {
+class Node : public mixins::HasAccelerationStructure<Node> {
 public:
     using NodeList = std::vector<std::unique_ptr<Node>>;
 
     enum class Type {
         NODE,
         BONE
+    };
+
+    enum Flags {
+        NODE_FLAGS_NONE = 0,
+        NODE_FLAGS_HAS_ACCELERATION_STRUCTURE = 1
     };
 
     /*! \brief Construct the node, optionally taking in a string tag to improve identification.

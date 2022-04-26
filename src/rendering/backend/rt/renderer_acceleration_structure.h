@@ -31,13 +31,32 @@ class AccelerationGeometry {
     friend class BottomLevelAccelerationStructure;
 
 public:
-    AccelerationGeometry(VertexBuffer *vertex_buffer,
+    AccelerationGeometry();
+    AccelerationGeometry(
+        VertexBuffer *vertex_buffer,
         size_t num_vertices, size_t vertex_stride,
         IndexBuffer *index_buffer,
         size_t num_indices);
+
     AccelerationGeometry(const AccelerationGeometry &other) = delete;
     AccelerationGeometry &operator=(const AccelerationGeometry &other) = delete;
     ~AccelerationGeometry();
+
+    void SetVertices(VertexBuffer *vertex_buffer,
+        size_t num_vertices,
+        size_t vertex_stride)
+    {
+        m_vertex_buffer = vertex_buffer;
+        m_num_vertices = num_vertices;
+        m_vertex_stride = vertex_stride;
+    }
+
+    void SetIndices(IndexBuffer *index_buffer,
+        size_t num_indices)
+    {
+        m_index_buffer = index_buffer;
+        m_num_indices = num_indices;
+    }
 
     Result Create(Device *device);
     /* Remove from the parent acceleration structure */

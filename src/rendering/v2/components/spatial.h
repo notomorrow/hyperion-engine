@@ -23,6 +23,8 @@ namespace hyperion::v2 {
 class Octree;
 
 using renderer::MeshInputAttributeSet;
+using renderer::AccelerationStructure;
+using renderer::AccelerationGeometry;
 
 class GraphicsPipeline;
 
@@ -35,7 +37,9 @@ public:
     Spatial(
         Ref<Mesh> &&mesh,
         const MeshInputAttributeSet &attributes,
-        Ref<Material> &&material);
+        Ref<Material> &&material
+    );
+
     Spatial(const Spatial &other) = delete;
     Spatial &operator=(const Spatial &other) = delete;
     ~Spatial();
@@ -43,8 +47,22 @@ public:
     ShaderDataState GetShaderDataState() const { return m_shader_data_state; }
     void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
     
-    inline Octree::VisibilityState &GetVisibilityState() { return m_visibility_state; }
-    inline const Octree::VisibilityState &GetVisibilityState() const { return m_visibility_state; }
+    Octree::VisibilityState &GetVisibilityState() { return m_visibility_state; }
+    const Octree::VisibilityState &GetVisibilityState() const { return m_visibility_state; }
+
+    AccelerationGeometry *GetAccelerationGeometry() const
+    {
+        return HasAccelerationGeometry
+            ? m_mesh->GetAccelerationGeometry()
+            : nullptr;
+    }
+
+    bool HasAccelerationGeometry() const
+    {
+        return m_mesh != nullptr
+            && m_mesh->GetFlags() & Mesh::Flags::MESH_FLAGS_HAS_ACCELERATION_GEOMETRY
+            && m_mesh->GetAccelerationGeometry() != nullptr;
+    }
     
     Mesh *GetMesh() const { return m_mesh.ptr; }
     void SetMesh(Ref<Mesh> &&mesh);
