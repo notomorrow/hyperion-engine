@@ -27,10 +27,11 @@ vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 #define SSAO_MIST_END 0.01
 #define CAP_MIN_DISTANCE 0.0001
 #define CAP_MAX_DISTANCE 0.01
-#define SSAO_SAMPLES 64
+#define SSAO_SAMPLES 15
 #define SSAO_STRENGTH 1.0
 #define SSAO_CLAMP_AMOUNT 0.125
-#define SSAO_RADIUS 6.0
+#define SSAO_RADIUS 8.0
+#define SSAO_ENABLED 1
 
 vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
 {

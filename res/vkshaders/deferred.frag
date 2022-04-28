@@ -37,6 +37,8 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 #define DIRECTIONAL_LIGHT_INTENSITY 150000.0
 #define GI_INTENSITY 20.0
 #define VCT_ENABLED 0
+#define PBR_ENABLED 1
+#define SSAO_DEBUG 0
 
 #if VCT_ENABLED
 #include "include/voxel/vct.inc"
@@ -77,6 +79,9 @@ void main()
     vec3 R = normalize(reflect(-V, N));
     vec3 H = normalize(L + V);
     
+    float ao = 1.0;
+    
+#if PBR_ENABLED
     if (perform_lighting) {
         float metallic = 0.9;
         float roughness = 0.1;
@@ -119,7 +124,7 @@ void main()
         ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, 0.1 + roughness, 5.0).rgb;
 #endif
 
-        float ao = texture(filter_ssao, texcoord).r;
+        ao = texture(filter_ssao, texcoord).r;
         vec3 shadow = vec3(1.0);
         vec3 light_color = vec3(1.0);
         
@@ -150,6 +155,10 @@ void main()
     } else {
         result = albedo_linear * IBL_INTENSITY * exposure;
     }
+
+#if SSAO_DEBUG
+    result = vec3(ao);
+#endif
 
     output_color = vec4(Tonemap(result), 1.0);
     output_normals = normal;
