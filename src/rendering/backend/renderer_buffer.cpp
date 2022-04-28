@@ -411,9 +411,9 @@ VkBufferCreateInfo GPUBuffer::GetBufferCreateInfo(Device *device) const
     const uint32_t buffer_family_indices[] = { qf_indices.graphics_family.value(), qf_indices.compute_family.value() };
 
     VkBufferCreateInfo vk_buffer_info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    vk_buffer_info.size  = size;
-    vk_buffer_info.usage = usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    vk_buffer_info.pQueueFamilyIndices = buffer_family_indices;
+    vk_buffer_info.size                  = size;
+    vk_buffer_info.usage                 = usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    vk_buffer_info.pQueueFamilyIndices   = buffer_family_indices;
     vk_buffer_info.queueFamilyIndexCount = uint32_t(std::size(buffer_family_indices));
 
     return vk_buffer_info;
@@ -443,7 +443,9 @@ uint64_t GPUBuffer::GetBufferDeviceAddress(Device *device) const
         device->GetFeatures().GetBufferDeviceAddressFeatures().bufferDeviceAddress,
         "Called GetBufferDeviceAddress() but the buffer device address extension feature is not supported or enabled!"
     );
-    
+
+    AssertThrow(buffer != VK_NULL_HANDLE);
+
 	VkBufferDeviceAddressInfoKHR info{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
 	info.buffer = buffer;
 
@@ -579,14 +581,17 @@ Result GPUBuffer::Create(Device *device, size_t size)
 
     HYPERION_BUBBLE_ERRORS(CheckCanAllocate(device, create_info, alloc_info, this->size));
 
-    HYPERION_VK_CHECK_MSG(vmaCreateBuffer(
-        device->GetAllocator(),
-        &create_info,
-        &alloc_info,
-        &buffer,
-        &allocation,
-        nullptr
-    ), "Failed to create gpu buffer");
+    HYPERION_VK_CHECK_MSG(
+        vmaCreateBuffer(
+            device->GetAllocator(),
+            &create_info,
+            &alloc_info,
+            &buffer,
+            &allocation,
+            nullptr
+        ),
+        "Failed to create gpu buffer!"
+    );
 
     HYPERION_RETURN_OK;
 }
@@ -641,7 +646,10 @@ void GPUBuffer::DebugLogBuffer(Device *device) const
 
 
 VertexBuffer::VertexBuffer()
-    : GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY)
+    : GPUBuffer(
+          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+          VMA_MEMORY_USAGE_GPU_ONLY
+      )
 {
 }
 
@@ -654,13 +662,21 @@ void VertexBuffer::Bind(CommandBuffer *cmd)
 }
 
 IndexBuffer::IndexBuffer()
-    : GPUBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY)
+    : GPUBuffer(
+          VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+          VMA_MEMORY_USAGE_GPU_ONLY
+      )
 {
 }
 
 void IndexBuffer::Bind(CommandBuffer *cmd)
 {
-    vkCmdBindIndexBuffer(cmd->GetCommandBuffer(), this->buffer, 0, helpers::ToVkIndexType(GetDatumType()));
+    vkCmdBindIndexBuffer(
+        cmd->GetCommandBuffer(),
+        buffer,
+        0,
+        helpers::ToVkIndexType(GetDatumType())
+    );
 }
 
 UniformBuffer::UniformBuffer()
@@ -883,7 +899,17 @@ Result GPUImageMemory::Create(Device *device, size_t size, VkImageCreateInfo *im
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     alloc_info.pUserData = reinterpret_cast<void *>(index);
 
-    HYPERION_VK_CHECK(vmaCreateImage(device->GetAllocator(), image_info, &alloc_info, &this->image, &this->allocation, nullptr));
+    HYPERION_VK_CHECK_MSG(
+        vmaCreateImage(
+            device->GetAllocator(),
+            image_info,
+            &alloc_info,
+            &image,
+            &allocation,
+            nullptr
+        ),
+        "Failed to create gpu image!"
+    );
 
     HYPERION_RETURN_OK;
 }
@@ -897,6 +923,7 @@ Result GPUImageMemory::Destroy(Device *device)
     }
 
     vmaDestroyImage(device->GetAllocator(), image, allocation);
+
     image = nullptr;
     allocation = nullptr;
 

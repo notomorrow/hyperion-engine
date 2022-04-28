@@ -218,7 +218,8 @@ public:
     Callbacks &operator=(const Callbacks &other) = delete;
     ~Callbacks() = default;
 
-    auto Once(Enum key, typename CallbackInstance::Function &&function)
+    CallbackRef<CallbackGroup>
+    Once(Enum key, typename CallbackInstance::Function &&function)
     {
         auto &holder = m_holders[key];
 
@@ -240,7 +241,8 @@ public:
         return CallbackRef<CallbackGroup>(id, &holder);
     }
 
-    auto On(Enum key, typename CallbackInstance::Function &&function)
+    CallbackRef<CallbackGroup>
+    On(Enum key, typename CallbackInstance::Function &&function)
     {
         auto &holder = m_holders[key];
 

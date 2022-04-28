@@ -42,8 +42,7 @@ void Texture::Init(Engine *engine)
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_TEXTURES, [this](Engine *engine) {
             AssertThrow(m_image_view != nullptr);
             AssertThrow(m_sampler != nullptr);
-
-            std::cout << "!! REMOVE " << m_id.value << "\n";
+            
             engine->shader_globals->textures.RemoveResource(this);
 
             HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetInstance()->GetDevice()));

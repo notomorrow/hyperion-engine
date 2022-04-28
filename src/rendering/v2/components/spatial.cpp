@@ -54,6 +54,7 @@ void Spatial::Init(Engine *engine)
         UpdateShaderData(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
+            DestroyAccelerationGeometry(engine);
             RemoveFromPipelines();
 
             if (m_octree != nullptr) {
@@ -130,6 +131,8 @@ void Spatial::SetMesh(Ref<Mesh> &&mesh)
     }
 
     m_mesh = std::move(mesh);
+
+    /* TODO : destroy/create acceleration geom */
 
     if (m_mesh != nullptr && IsInit()) {
         m_mesh.Init();
@@ -228,6 +231,47 @@ void Spatial::RemoveFromOctree(Engine *engine)
     AssertThrow(m_octree != nullptr);
 
     m_octree->OnSpatialRemoved(engine, this);
+}
+
+AccelerationGeometry *Spatial::CreateAccelerationGeometry(Engine *engine)
+{
+    if (m_acceleration_geometry != nullptr) {
+        DestroyAccelerationGeometry(engine);
+    }
+
+    if (m_mesh == nullptr) {
+        return nullptr;
+    }
+
+    m_acceleration_geometry = std::make_unique<AccelerationGeometry>(
+        m_mesh->GetVertexBuffer(),
+        m_mesh->GetVertices().size(),
+        m_mesh->GetVertexAttributes().CalculateVertexSize(),
+        m_mesh->GetIndexBuffer(),
+        m_mesh->GetIndices().size()
+    );
+
+    HYPERION_ASSERT_RESULT(m_acceleration_geometry->Create(engine->GetDevice()));
+
+    return m_acceleration_geometry.get();
+}
+
+void Spatial::DestroyAccelerationGeometry(Engine *engine)
+{
+    auto result = renderer::Result::OK;
+
+    if (m_acceleration_geometry == nullptr) {
+        return;
+    }
+    
+    HYPERION_PASS_ERRORS(
+        m_acceleration_geometry->Destroy(engine->GetDevice()),
+        result
+    );
+
+    m_acceleration_geometry.reset();
+
+    HYPERION_ASSERT_RESULT(result);
 }
 
 } // namespace hyperion::v2

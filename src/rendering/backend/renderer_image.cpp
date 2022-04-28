@@ -332,7 +332,7 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
         if (!result) {
             HYPERION_IGNORE_ERRORS(Destroy(device));
 
-            return result;
+            return result;            
         }
 
         staging_buffer.Copy(device, m_size, m_bytes);
@@ -346,7 +346,6 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
 
         // copy from staging to image
         const auto num_faces = NumFaces();
-        const auto num_mipmaps = NumMipmaps();
 
         size_t buffer_offset_step = m_size / num_faces;
 
@@ -403,8 +402,12 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
     HYPERION_PASS_ERRORS(commands.Execute(device), result);
 
     if (m_assigned_image_data) {
-        // destroy staging buffer
-        HYPERION_PASS_ERRORS(staging_buffer.Destroy(device), result);
+        if (result) {
+            // destroy staging buffer
+            HYPERION_PASS_ERRORS(staging_buffer.Destroy(device), result);
+        } else {
+            HYPERION_IGNORE_ERRORS(staging_buffer.Destroy(device));
+        }
 
         m_assigned_image_data = false;
     }
@@ -416,10 +419,12 @@ Result Image::Destroy(Device *device)
 {
     auto result = Result::OK;
 
-    HYPERION_PASS_ERRORS(m_image->Destroy(device), result);
+    if (m_image != nullptr) {
+        HYPERION_PASS_ERRORS(m_image->Destroy(device), result);
 
-    delete m_image;
-    m_image = nullptr;
+        delete m_image;
+        m_image = nullptr;
+    }
 
     return result;
 }

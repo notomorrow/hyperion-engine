@@ -23,14 +23,14 @@ vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 #define SSAO_NOISE 1
 #define SSAO_NOISE_AMOUNT 0.0002
 #define SSAO_MIST 1
-#define SSAO_MIST_START 0.0
-#define SSAO_MIST_END 0.01
+#define SSAO_MIST_START 0.001
+#define SSAO_MIST_END 0.06
 #define CAP_MIN_DISTANCE 0.0001
-#define CAP_MAX_DISTANCE 0.01
+#define CAP_MAX_DISTANCE 0.1
 #define SSAO_SAMPLES 15
 #define SSAO_STRENGTH 1.0
-#define SSAO_CLAMP_AMOUNT 0.125
-#define SSAO_RADIUS 8.0
+#define SSAO_CLAMP_AMOUNT 0.05
+#define SSAO_RADIUS 1.5
 #define SSAO_ENABLED 1
 
 vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
@@ -61,14 +61,15 @@ float CalculateMist()
 
 float ReadDepth(vec2 coord)
 {
-    if (texcoord.x < 0.0 || texcoord.y < 0.0) {
+    float depth = texture(gbuffer_depth_texture, coord).r;
+    
+    if (coord.x < 0.0 || coord.y < 0.0) {
         return 1.0;
-    } else {
-        float depth = texture(gbuffer_depth_texture, coord).r;
-        float z_n = 2.0 * depth - 1.0;
-        
-        return (2.0 * CAP_MIN_DISTANCE) / (CAP_MAX_DISTANCE + CAP_MIN_DISTANCE - z_n * (CAP_MAX_DISTANCE - CAP_MIN_DISTANCE));
     }
+    
+    float z_n = 2.0 * depth - 1.0;
+        
+    return (2.0 * CAP_MIN_DISTANCE) / (CAP_MAX_DISTANCE + CAP_MIN_DISTANCE - z_n * (CAP_MAX_DISTANCE - CAP_MIN_DISTANCE));
 }
 
 int CompareDepthsFar(float depth1, float depth2)
@@ -116,6 +117,8 @@ float CalculateAO(float depth, float dw, float dh)
 
 void main()
 {
+#if SSAO_ENABLED
+    
     float width = float(scene.resolution_x);
     float height = float(scene.resolution_y);
 
@@ -151,6 +154,10 @@ void main()
 
 #if SSAO_MIST
     ao = mix(ao, 1.0, CalculateMist());
+#endif
+    
+#else
+    float ao = 1.0;
 #endif
     
     color_output = vec4(ao, 0.0, 0.0, 1.0);

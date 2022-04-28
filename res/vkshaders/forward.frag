@@ -18,7 +18,7 @@ layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
 
-#define PARALLAX_ENABLED 1
+#define PARALLAX_ENABLED 0
 
 #include "include/scene.inc"
 #include "include/material.inc"

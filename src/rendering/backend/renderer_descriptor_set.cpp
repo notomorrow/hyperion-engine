@@ -468,15 +468,15 @@ void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor,
     case Mode::UNIFORM_BUFFER_DYNAMIC:
     case Mode::STORAGE_BUFFER:
     case Mode::STORAGE_BUFFER_DYNAMIC:
-        AssertThrow(sub_descriptor.gpu_buffer != nullptr);
-        AssertThrow(sub_descriptor.gpu_buffer->buffer != nullptr);
+        AssertThrow(sub_descriptor.buffer != nullptr);
+        AssertThrow(sub_descriptor.buffer->buffer != nullptr);
 
         out_buffer = {
-            .buffer = sub_descriptor.gpu_buffer->buffer,
+            .buffer = sub_descriptor.buffer->buffer,
             .offset = 0,
             .range = sub_descriptor.range != 0
                 ? sub_descriptor.range
-                : sub_descriptor.gpu_buffer->size
+                : sub_descriptor.buffer->size
         };
 
         break;

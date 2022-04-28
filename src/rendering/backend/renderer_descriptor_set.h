@@ -230,8 +230,8 @@ public:
     };
 
     struct SubDescriptor {
-        GPUBuffer *gpu_buffer = nullptr;
-        uint32_t range = 0; /* if 0 then it is set to gpu_buffer->size */
+        GPUBuffer *buffer = nullptr;
+        uint32_t range = 0; /* if 0 then it is set to buffer->size */
 
         ImageView *image_view = nullptr;
         Sampler *sampler = nullptr;

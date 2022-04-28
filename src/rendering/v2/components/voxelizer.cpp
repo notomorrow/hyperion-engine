@@ -165,11 +165,11 @@ void Voxelizer::CreateDescriptors(Engine *engine)
 
     descriptor_set
         ->AddDescriptor<renderer::StorageBufferDescriptor>(0)
-        ->AddSubDescriptor({.gpu_buffer = m_counter->GetBuffer()});
+        ->AddSubDescriptor({.buffer = m_counter->GetBuffer()});
 
     descriptor_set
         ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
-        ->AddSubDescriptor({.gpu_buffer = m_fragment_list_buffer.get()});
+        ->AddSubDescriptor({.buffer = m_fragment_list_buffer.get()});
 }
 
 /* We only reconstruct the buffer if the number of rendered fragments is
@@ -207,7 +207,7 @@ void Voxelizer::ResizeFragmentListBuffer(Engine *engine)
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
     descriptor_set->GetDescriptor(1)->RemoveSubDescriptor(0);
-    descriptor_set->GetDescriptor(1)->AddSubDescriptor({.gpu_buffer = m_fragment_list_buffer.get()});
+    descriptor_set->GetDescriptor(1)->AddSubDescriptor({.buffer = m_fragment_list_buffer.get()});
 
     descriptor_set->ApplyUpdates(engine->GetInstance()->GetDevice());
 }

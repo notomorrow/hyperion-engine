@@ -61,9 +61,10 @@ Mesh::Mesh(
     Flags flags
 )
     : EngineComponentBase(),
+      m_vbo(std::make_unique<VertexBuffer>()),
+      m_ibo(std::make_unique<IndexBuffer>()),
       m_vertices(std::move(vertices)),
       m_indices(std::move(indices)),
-      m_acceleration_geometry(std::make_unique<AccelerationGeometry>()),
       m_vertex_attributes(
           MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
           | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
@@ -94,7 +95,11 @@ void Mesh::Init(Engine *engine)
         DebugLog(LogType::Info, "Init mesh with %llu vertices and %llu indices\n", m_vertices.size(), m_indices.size());
 
         if (m_vertices.empty() || m_indices.empty()) {
-            DebugLog(LogType::Warn, "Attempt to create Mesh #%lu with empty vertices or indices list\n", m_id.value);
+            DebugLog(
+                LogType::Warn,
+                "Attempt to create Mesh #%lu with empty vertices or indices list; setting vertices to be 1 empty vertex\n",
+                m_id.value
+            );
 
             /* set to 1 vertex / index to prevent explosions */
             m_vertices = {Vertex()};
@@ -103,37 +108,15 @@ void Mesh::Init(Engine *engine)
 
         Upload(engine->GetInstance());
 
-        if (m_flags & MESH_FLAGS_HAS_ACCELERATION_GEOMETRY) {
-            m_acceleration_geometry->SetVertices(
-                m_vbo.get(),
-                m_vertices.size(),
-                m_vertex_attributes.CalculateVertexSize()
-            );
-
-            m_acceleration_geometry->SetIndices(
-                m_ibo.get(),
-                m_indices.size()
-            );
-
-            HYPERION_ASSERT_RESULT(m_acceleration_geometry->Create(engine->GetDevice()));
-        }
-
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
-            AssertThrow(m_vbo != nullptr);
-            AssertThrow(m_ibo != nullptr);
+            auto result = renderer::Result::OK;
 
             Device *device = engine->GetInstance()->GetDevice();
-
-            if (m_acceleration_geometry != nullptr) {
-                m_acceleration_geometry->Destroy(device);
-                m_acceleration_geometry.reset();
-            }
             
-            m_vbo->Destroy(device);
-            m_vbo.reset();
+            HYPERION_PASS_ERRORS(m_vbo->Destroy(device), result);
+            HYPERION_PASS_ERRORS(m_ibo->Destroy(device), result);
 
-            m_ibo->Destroy(device);
-            m_ibo.reset();
+            HYPERION_ASSERT_RESULT(result);
         }), engine);
     }));
 }
@@ -198,12 +181,6 @@ void Mesh::Upload(Instance *instance)
     using renderer::StagingBuffer;
 
     auto *device = instance->GetDevice();
-
-    AssertThrow(m_vbo == nullptr);
-    AssertThrow(m_ibo == nullptr);
-    
-    m_vbo = std::make_unique<VertexBuffer>();
-    m_ibo = std::make_unique<IndexBuffer>();
 
     std::vector<float> packed_buffer = CreatePackedBuffer();
     const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);

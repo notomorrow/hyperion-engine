@@ -33,11 +33,11 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 20000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 200000.0
+#define IBL_INTENSITY 5000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
 #define GI_INTENSITY 20.0
 #define VCT_ENABLED 0
-#define SSAO_DEBUG 0
+#define PBR_ENABLED 1
 
 #if VCT_ENABLED
 #include "include/voxel/vct.inc"
@@ -58,7 +58,7 @@ void main()
     
     bool perform_lighting = albedo.a > 0.0;
     
-    vec3 albedo_linear = mon2lin(albedo.rgb);
+    vec3 albedo_linear = albedo.rgb;//mon2lin(albedo.rgb);
 	vec3 result;
 
     /* Physical camera */
@@ -78,11 +78,10 @@ void main()
     vec3 R = normalize(reflect(-V, N));
     vec3 H = normalize(L + V);
     
-    float ao = 1.0;
-    
+#if PBR_ENABLED
     if (perform_lighting) {
-        float metallic = 0.7; /* TODO: add an attachment that will hold material ids, and just grab the material at that index. */
-        float roughness = 0.4;
+        float metallic = 0.9;
+        float roughness = 0.1;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -110,19 +109,11 @@ void main()
 #if VCT_ENABLED
         vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0 , 5.0);
         vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 5.0);
-        
-        //vec3 vct_irradiance = vec3(0.0);
-        
-        //for (int i = 0; i < 16; i++) {
         irradiance += voxelTraceCone(position.xyz, N, aabb_max, aabb_min, lod, 1.0).rgb;
-        //}
-        
-        //irradiance += vct_irradiance / 16.0;
-        
-        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, 0.1 + roughness, 5.0).rgb;
+        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, 0.25 + roughness, 2.0).rgb;
 #endif
 
-        ao = texture(filter_ssao, texcoord).r;
+        float ao = texture(filter_ssao, texcoord).r;
         vec3 shadow = vec3(1.0);
         vec3 light_color = vec3(1.0);
         
@@ -153,9 +144,8 @@ void main()
     } else {
         result = albedo.rgb * IBL_INTENSITY * exposure;
     }
-
-#if SSAO_DEBUG
-    result = vec3(ao);
+#else
+    result = albedo.rgb * max(0.0001, dot(N, L));
 #endif
 
     output_color = vec4(Tonemap(result), 1.0);

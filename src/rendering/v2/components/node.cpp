@@ -6,20 +6,38 @@
 
 namespace hyperion::v2 {
 
-Node::Node(const char *tag, const Transform &local_transform)
-    : Node(tag, nullptr, local_transform)
+Node::Node(
+    const char *tag,
+    const Transform &local_transform
+) : Node(
+        tag,
+        nullptr,
+        local_transform
+    )
 {
 }
 
-Node::Node(const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform)
-    : Node(Type::NODE, tag, std::move(spatial), local_transform)
+Node::Node(
+    const char *tag,
+    Ref<Spatial> &&spatial,
+    const Transform &local_transform
+) : Node(
+        Type::NODE,
+        tag,
+        std::move(spatial),
+        local_transform
+    )
 {
 }
 
-Node::Node(Type type, const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform)
-    : m_type(type),
-      m_parent_node(nullptr),
-      m_local_transform(local_transform)
+Node::Node(
+    Type type,
+    const char *tag,
+    Ref<Spatial> &&spatial,
+    const Transform &local_transform
+) : m_type(type),
+    m_parent_node(nullptr),
+    m_local_transform(local_transform)
 {
     SetSpatial(std::move(spatial));
 
@@ -144,11 +162,21 @@ void Node::SetSpatial(Ref<Spatial> &&spatial)
         return;
     }
 
+    if (m_spatial != nullptr && m_acceleration_structure != nullptr) {
+        if (auto *acceleration_geometry = m_spatial->GetAccelerationGeometry()) {
+            m_acceleration_structure->RemoveGeometry(acceleration_geometry);
+        }
+    }
+
     if (spatial != nullptr) {
         m_spatial = std::move(spatial);
         m_spatial.Init();
 
         m_local_aabb = m_spatial->GetLocalAabb();
+
+        //if (m_acceleration_structure != nullptr) {
+        //    m_acceleration_structure->AddGeometry(GetOrCreateSpatialAccelerationGeometry(engine));
+        //}
     } else {
         m_local_aabb = BoundingBox();
 
@@ -198,6 +226,41 @@ void Node::Update(Engine *engine)
     for (auto *node : m_descendents) {
         node->UpdateInternal(engine);
     }
+}
+
+AccelerationGeometry *Node::GetOrCreateSpatialAccelerationGeometry(Engine *engine)
+{
+    if (m_spatial == nullptr) {
+        return nullptr;
+    }
+
+    AccelerationGeometry *acceleration_geometry = m_spatial->GetAccelerationGeometry();
+
+    if (acceleration_geometry == nullptr) {
+        acceleration_geometry = m_spatial->CreateAccelerationGeometry(engine);
+    }
+
+    return acceleration_geometry;
+}
+
+void Node::CreateAccelerationStructure(Engine *engine)
+{
+    if (auto *acceleration_geometry = GetOrCreateSpatialAccelerationGeometry(engine)) {
+        m_acceleration_structure->AddGeometry(acceleration_geometry);
+    }
+
+    for (Node *descendent : m_descendents) {
+        if (auto *acceleration_geometry = descendent->GetOrCreateSpatialAccelerationGeometry(engine)) {
+            m_acceleration_structure->AddGeometry(acceleration_geometry);
+        }
+    }
+
+    HYPERION_ASSERT_RESULT(HasAccelerationStructure::Create(engine->GetInstance()));
+}
+
+void Node::DestroyAccelerationStructure(Engine *engine)
+{
+    HYPERION_ASSERT_RESULT(HasAccelerationStructure::Destroy(engine->GetInstance()));
 }
 
 } // namespace hyperion::v2

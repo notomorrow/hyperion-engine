@@ -23,8 +23,7 @@ public:
     };
 
     enum Flags {
-        NODE_FLAGS_NONE = 0,
-        NODE_FLAGS_HAS_ACCELERATION_STRUCTURE = 1
+        NODE_FLAGS_NONE = 0
     };
 
     /*! \brief Construct the node, optionally taking in a string tag to improve identification.
@@ -32,8 +31,17 @@ public:
      * after use.
      * @param local_transform An optional parameter representing the local-space transform of this Node.
      */
-    Node(const char *tag = "", const Transform &local_transform = Transform());
-    Node(const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform = Transform());
+    Node(
+        const char *tag = "",
+        const Transform &local_transform = Transform()
+    );
+
+    Node(
+        const char *tag,
+        Ref<Spatial> &&spatial,
+        const Transform &local_transform = Transform()
+    );
+
     Node(const Node &other) = delete;
     Node &operator=(const Node &other) = delete;
     ~Node();
@@ -155,13 +163,23 @@ public:
     void UpdateWorldTransform();
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
     void Update(Engine *engine);
+    
+    void CreateAccelerationStructure(Engine *engine);
+    void DestroyAccelerationStructure(Engine *engine);
 
 protected:
-    Node(Type type, const char *tag, Ref<Spatial> &&spatial, const Transform &local_transform = Transform());
+    Node(
+        Type type,
+        const char *tag,
+        Ref<Spatial> &&spatial,
+        const Transform &local_transform = Transform()
+    );
 
     void UpdateInternal(Engine *engine);
     void OnNestedNodeAdded(Node *node);
     void OnNestedNodeRemoved(Node *node);
+
+    AccelerationGeometry *GetOrCreateSpatialAccelerationGeometry(Engine *engine);
 
     Type m_type = Type::NODE;
     char *m_tag;

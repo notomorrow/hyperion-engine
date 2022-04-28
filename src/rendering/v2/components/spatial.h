@@ -49,20 +49,6 @@ public:
     
     Octree::VisibilityState &GetVisibilityState() { return m_visibility_state; }
     const Octree::VisibilityState &GetVisibilityState() const { return m_visibility_state; }
-
-    AccelerationGeometry *GetAccelerationGeometry() const
-    {
-        return HasAccelerationGeometry
-            ? m_mesh->GetAccelerationGeometry()
-            : nullptr;
-    }
-
-    bool HasAccelerationGeometry() const
-    {
-        return m_mesh != nullptr
-            && m_mesh->GetFlags() & Mesh::Flags::MESH_FLAGS_HAS_ACCELERATION_GEOMETRY
-            && m_mesh->GetAccelerationGeometry() != nullptr;
-    }
     
     Mesh *GetMesh() const { return m_mesh.ptr; }
     void SetMesh(Ref<Mesh> &&mesh);
@@ -83,13 +69,18 @@ public:
     const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
     const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
 
+    bool HasAccelerationGeometry() const { return m_acceleration_geometry != nullptr; }
+    AccelerationGeometry *GetAccelerationGeometry() const { return m_acceleration_geometry.get(); }
+    AccelerationGeometry *CreateAccelerationGeometry(Engine *engine);
+    void DestroyAccelerationGeometry(Engine *engine);
+
     void Init(Engine *engine);
     void Update(Engine *engine);
 
 private:
     void UpdateShaderData(Engine *engine) const;
     void UpdateOctree(Engine *engine);
-
+    
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
     void RemoveFromPipelines();
@@ -107,6 +98,8 @@ private:
     BoundingBox m_world_aabb;
     Ref<Material> m_material;
     Ref<Skeleton> m_skeleton;
+    
+    std::unique_ptr<AccelerationGeometry> m_acceleration_geometry;
 
     Octree *m_octree;
     Octree::VisibilityState m_visibility_state;

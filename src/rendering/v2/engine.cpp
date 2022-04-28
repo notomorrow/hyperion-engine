@@ -48,9 +48,9 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_COLOR,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8 },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
@@ -221,14 +221,14 @@ void Engine::Initialize()
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->scenes.GetBuffers()[0].get(),
+            .buffer = shader_globals->scenes.GetBuffers()[0].get(),
             .range = sizeof(SceneShaderData)
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->materials.GetBuffers()[0].get(),
+            .buffer = shader_globals->materials.GetBuffers()[0].get(),
             .range = sizeof(MaterialShaderData)
         });
 
@@ -236,14 +236,14 @@ void Engine::Initialize()
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->objects.GetBuffers()[0].get(),
+            .buffer = shader_globals->objects.GetBuffers()[0].get(),
             .range = sizeof(ObjectShaderData)
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->skeletons.GetBuffers()[0].get(),
+            .buffer = shader_globals->skeletons.GetBuffers()[0].get(),
             .range = sizeof(SkeletonShaderData)
         });
 
@@ -252,28 +252,28 @@ void Engine::Initialize()
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
         ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->scenes.GetBuffers()[1].get(),
+            .buffer = shader_globals->scenes.GetBuffers()[1].get(),
             .range = sizeof(SceneShaderData)
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->materials.GetBuffers()[1].get(),
+            .buffer = shader_globals->materials.GetBuffers()[1].get(),
             .range = sizeof(MaterialShaderData)
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->objects.GetBuffers()[1].get(),
+            .buffer = shader_globals->objects.GetBuffers()[1].get(),
             .range = sizeof(ObjectShaderData)
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->skeletons.GetBuffers()[1].get(),
+            .buffer = shader_globals->skeletons.GetBuffers()[1].get(),
             .range = sizeof(SkeletonShaderData)
         });
 

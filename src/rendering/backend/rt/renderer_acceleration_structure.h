@@ -32,30 +32,35 @@ class AccelerationGeometry {
 
 public:
     AccelerationGeometry();
+
     AccelerationGeometry(
         VertexBuffer *vertex_buffer,
-        size_t num_vertices, size_t vertex_stride,
+        size_t num_vertices,
+        size_t vertex_stride,
         IndexBuffer *index_buffer,
-        size_t num_indices);
+        size_t num_indices
+    );
 
     AccelerationGeometry(const AccelerationGeometry &other) = delete;
     AccelerationGeometry &operator=(const AccelerationGeometry &other) = delete;
     ~AccelerationGeometry();
 
-    void SetVertices(VertexBuffer *vertex_buffer,
+    void SetVertices(
+        VertexBuffer *vertex_buffer,
         size_t num_vertices,
         size_t vertex_stride)
     {
         m_vertex_buffer = vertex_buffer;
-        m_num_vertices = num_vertices;
+        m_num_vertices  = num_vertices;
         m_vertex_stride = vertex_stride;
     }
 
-    void SetIndices(IndexBuffer *index_buffer,
+    void SetIndices(
+        IndexBuffer *index_buffer,
         size_t num_indices)
     {
         m_index_buffer = index_buffer;
-        m_num_indices = num_indices;
+        m_num_indices  = num_indices;
     }
 
     Result Create(Device *device);
@@ -63,7 +68,6 @@ public:
     Result Destroy(Device *device);
 
 private:
-    AccelerationStructureType          m_type;
     VertexBuffer                      *m_vertex_buffer;
     size_t                             m_num_vertices;
     size_t                             m_vertex_stride;
@@ -71,7 +75,7 @@ private:
     size_t                             m_num_indices;
     VkAccelerationStructureGeometryKHR m_geometry;
 
-    AccelerationStructure *m_acceleration_structure;
+    AccelerationStructure             *m_acceleration_structure;
 };
 
 class AccelerationStructure {
@@ -89,14 +93,22 @@ public:
     inline void SetFlags(AccelerationStructureFlags flags) { m_flags = flags; }
 
     inline void AddGeometry(AccelerationGeometry *geometry)
-        { m_geometries.push_back(geometry); }
+    {
+        AssertThrow(geometry->m_acceleration_structure == nullptr);
+        geometry->m_acceleration_structure = this;
+
+        m_geometries.push_back(geometry);
+    }
+
+    inline const std::vector<AccelerationGeometry *> &GetGeometries() const
+        { return m_geometries; }
 
     /*! \brief Remove the geometry from the internal list of Nodes and set a flag that the
      * structure needs to be rebuilt. Will not automatically rebuild.
      */
     void RemoveGeometry(AccelerationGeometry *geometry);
 
-    Result Destroy(Device *device);
+    Result Destroy(Instance *instance);
 
 protected:
     static VkAccelerationStructureTypeKHR ToVkAccelerationStructureType(AccelerationStructureType);
@@ -107,11 +119,12 @@ protected:
         std::vector<VkAccelerationStructureGeometryKHR> &&geometries,
         std::vector<uint32_t> &&primitive_counts);
     
-    std::unique_ptr<AccelerationStructureBuffer>       m_buffer;
-    std::vector<AccelerationGeometry *>                m_geometries;
-    VkAccelerationStructureKHR                         m_acceleration_structure;
-    uint64_t                                           m_device_address;
-    AccelerationStructureFlags                         m_flags;
+    std::unique_ptr<AccelerationStructureBuffer>          m_buffer;
+    std::unique_ptr<AccelerationStructureInstancesBuffer> m_instances_buffer;
+    std::vector<AccelerationGeometry *>                   m_geometries;
+    VkAccelerationStructureKHR                            m_acceleration_structure;
+    uint64_t                                              m_device_address;
+    AccelerationStructureFlags                            m_flags;
 };
 
 class TopLevelAccelerationStructure : public AccelerationStructure {

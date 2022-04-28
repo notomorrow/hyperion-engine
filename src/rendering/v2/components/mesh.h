@@ -45,13 +45,17 @@ public:
 
     inline VertexBuffer *GetVertexBuffer() const                 { return m_vbo.get(); }
     inline IndexBuffer *GetIndexBuffer() const                   { return m_ibo.get(); }
-    inline AccelerationGeometry *GetAccelerationGeometry() const { return m_acceleration_geometry.get(); }
+
+    inline const std::vector<Vertex> &GetVertices() const        { return m_vertices; }
+    inline const std::vector<Index> &GetIndices() const          { return m_indices; }
+
     const MeshInputAttributeSet &GetVertexAttributes() const     { return m_vertex_attributes; }
+
     Flags GetFlags() const                                       { return m_flags; }
     inline void SetFlags(Flags flags)                            { m_flags = flags; }
     
-    void CalculateTangents();
     void CalculateNormals();
+    void CalculateTangents();
     void InvertNormals();
 
     BoundingBox CalculateAabb() const;
@@ -65,7 +69,6 @@ private:
 
     std::unique_ptr<VertexBuffer>         m_vbo;
     std::unique_ptr<IndexBuffer>          m_ibo;
-    std::unique_ptr<AccelerationGeometry> m_acceleration_geometry;
 
     MeshInputAttributeSet m_vertex_attributes;
 
