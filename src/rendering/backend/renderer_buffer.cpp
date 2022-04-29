@@ -525,7 +525,9 @@ void GPUBuffer::InsertBarrier(CommandBuffer *command_buffer, ResourceState new_s
     resource_state = new_state;
 }
 
-void GPUBuffer::CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buffer, size_t count)
+void GPUBuffer::CopyFrom(CommandBuffer *command_buffer,
+    const GPUBuffer *src_buffer,
+    size_t count)
 {
     InsertBarrier(command_buffer, ResourceState::COPY_DST);
     src_buffer->InsertBarrier(command_buffer, ResourceState::COPY_SRC);
@@ -540,6 +542,28 @@ void GPUBuffer::CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buf
         1,
         &region
     );
+}
+
+Result GPUBuffer::CopyStaged(Instance *instance,
+    const void *ptr,
+    size_t count)
+{
+    Device *device = instance->GetDevice();
+
+    return instance->GetStagingBufferPool().Use(device, [&](StagingBufferPool::Context &holder) {
+        auto commands = instance->GetSingleTimeCommands();
+
+        auto *staging_buffer = holder.Acquire(count);
+        staging_buffer->Copy(device, count, ptr);
+        
+        commands.Push([&](CommandBuffer *cmd) {
+            CopyFrom(cmd, staging_buffer, count);
+
+            HYPERION_RETURN_OK;
+        });
+    
+        return commands.Execute(device);
+    });
 }
 
 Result GPUBuffer::Create(Device *device, size_t size)
@@ -647,7 +671,7 @@ void GPUBuffer::DebugLogBuffer(Device *device) const
 
 VertexBuffer::VertexBuffer()
     : GPUBuffer(
-          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
           VMA_MEMORY_USAGE_GPU_ONLY
       )
 {
@@ -663,7 +687,7 @@ void VertexBuffer::Bind(CommandBuffer *cmd)
 
 IndexBuffer::IndexBuffer()
     : GPUBuffer(
-          VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+          VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
           VMA_MEMORY_USAGE_GPU_ONLY
       )
 {
@@ -740,6 +764,28 @@ AccelerationStructureBuffer::AccelerationStructureBuffer()
 AccelerationStructureInstancesBuffer::AccelerationStructureInstancesBuffer()
     : GPUBuffer(
           VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+      )
+{
+}
+
+PackedVertexStorageBuffer::PackedVertexStorageBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* } for rt */
+            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* } for rt */
+            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* } for rt */
+          VMA_MEMORY_USAGE_GPU_ONLY
+      )
+{
+}
+
+PackedIndexStorageBuffer::PackedIndexStorageBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* } for rt */
+            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* } for rt */
+            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* } for rt */
+          VMA_MEMORY_USAGE_GPU_ONLY
       )
 {
 }

@@ -2,6 +2,7 @@
 #define HYPERION_V2_MESH_H
 
 #include "base.h"
+#include "shader.h"
 
 #include <math/bounding_box.h>
 
@@ -22,6 +23,8 @@ using renderer::CommandBuffer;
 using renderer::Device;
 using renderer::VertexBuffer;
 using renderer::IndexBuffer;
+using renderer::PackedVertex;
+using renderer::PackedIndex;
 using renderer::AccelerationStructure;
 using renderer::AccelerationGeometry;
 
@@ -53,6 +56,9 @@ public:
 
     Flags GetFlags() const                                       { return m_flags; }
     inline void SetFlags(Flags flags)                            { m_flags = flags; }
+
+    std::vector<PackedVertex> BuildPackedVertices() const;
+    std::vector<PackedIndex> BuildPackedIndices() const;
     
     void CalculateNormals();
     void CalculateTangents();
@@ -64,7 +70,7 @@ public:
     void Render(Engine *engine, CommandBuffer *cmd) const;
 
 private:
-    std::vector<float> CreatePackedBuffer();
+    std::vector<float> BuildVertexBuffer();
     void Upload(Instance *instance);
 
     std::unique_ptr<VertexBuffer>         m_vbo;

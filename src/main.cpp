@@ -203,15 +203,16 @@ int main()
 
     scene->SetEnvironmentTexture(0, cubemap.Acquire());
 
-    auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
+    auto [zombie, sponza, cube_obj, monkey_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/sponza/sponza.obj",//material_sphere/material_sphere.obj", //San_Miguel/san-miguel-low-poly.obj", //,//"
-        base_path + "/res/models/cube.obj"
+        base_path + "/res/models/material_sphere/material_sphere.obj", //San_Miguel/san-miguel-low-poly.obj", //,//"
+        base_path + "/res/models/cube.obj",
+        base_path + "/res/models/monkey/monkey.obj"
     );
 
     sponza->Translate({0, 0, 5});
 
-    sponza->Scale(0.02f);
+    //sponza->Scale(0.02f);
     //sponza->Scale(0.45f);
     //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
     sponza->Update(&engine);
@@ -459,6 +460,12 @@ int main()
     rt_shader->AttachShader(engine.GetDevice(), ShaderModule::Type::RAY_GEN, {
         FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/rt/test.rgen.spv").Read()
     });
+    rt_shader->AttachShader(engine.GetDevice(), ShaderModule::Type::RAY_MISS, {
+        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/rt/test.rmiss.spv").Read()
+    });
+    rt_shader->AttachShader(engine.GetDevice(), ShaderModule::Type::RAY_CLOSEST_HIT, {
+        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/rt/test.rchit.spv").Read()
+    });
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
@@ -468,18 +475,45 @@ int main()
         Transform()
     );
 
-    blas_node->SetSpatial(cube_spatial.Acquire());//engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));
+    blas_node->SetSpatial(engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial()));//engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));
 
     auto tlas = std::make_unique<TopLevelAccelerationStructure>();
+    
+    blas_node->CreateAccelerationStructure(&engine);
+    HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), blas_node->GetAccelerationStructure()));
 
-    //engine.callbacks.Once(v2::EngineCallback::CREATE_MATERIALS, [&tlas, &blas_node](v2::Engine *engine) {
-        blas_node->CreateAccelerationStructure(&engine);
-        HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), blas_node->GetAccelerationStructure()));
-   // });
+    Image *rt_image_storage = new StorageImage(
+        Extent3D{512, 512, 1},
+        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+        Image::Type::TEXTURE_TYPE_2D,
+        nullptr
+    );
+
+    ImageView rt_image_storage_view;
 
     auto *rt_descriptor_set = engine.GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_RAYTRACING);
     rt_descriptor_set->AddDescriptor<TlasDescriptor>(0)
         ->AddSubDescriptor({.acceleration_structure = tlas.get()});
+    rt_descriptor_set->AddDescriptor<ImageStorageDescriptor>(1)
+        ->AddSubDescriptor({.image_view = &rt_image_storage_view});
+
+    for (auto *geom : blas_node->GetAccelerationStructure()->GetGeometries()) {
+        if (geom == nullptr) {
+            continue;
+        }
+
+        rt_descriptor_set->GetDescriptor(3)->AddSubDescriptor({.buffer = geom->GetPackedVertexStorageBuffer()});
+        rt_descriptor_set->GetDescriptor(4)->AddSubDescriptor({.buffer = geom->GetPackedIndexStorageBuffer()});
+    }
+
+    HYPERION_ASSERT_RESULT(rt_image_storage->Create(
+        device,
+        engine.GetInstance(),
+        GPUMemory::ResourceState::UNORDERED_ACCESS
+    ));
+    HYPERION_ASSERT_RESULT(rt_image_storage_view.Create(engine.GetDevice(), rt_image_storage));
+
+
     //rt_descriptor_set->AddDescriptor<Im>()
 #endif
 
@@ -624,15 +658,20 @@ int main()
         engine.UpdateDescriptorData(frame_index);
 
         /* === rendering === */
-        
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
-        engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
-        engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
-
-        
 
 #if HYPERION_VK_TEST_RAYTRACING
         rt->Bind(frame->GetCommandBuffer());
+        engine.GetInstance()->GetDescriptorPool().Bind(
+            engine.GetDevice(),
+            frame->GetCommandBuffer(),
+            rt.get(),
+            {
+                {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE, .count = 1},
+                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+                {.offsets = {0}}
+            }
+        );
         engine.GetInstance()->GetDescriptorPool().Bind(
             engine.GetDevice(),
             frame->GetCommandBuffer(),
@@ -643,7 +682,16 @@ int main()
             }}
         );
         rt->TraceRays(engine.GetDevice(), frame->GetCommandBuffer(), {512, 512});
+        rt_image_storage->GetGPUImage()->InsertBarrier(
+            frame->GetCommandBuffer(),
+            { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+            GPUMemory::ResourceState::UNORDERED_ACCESS
+        );
 #endif
+        engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
+        engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
+
+        
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         image_storage->GetGPUImage()->InsertBarrier(

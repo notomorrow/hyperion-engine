@@ -315,6 +315,21 @@ struct Extent3D {
         { return !operator==(other); }
 };
 
+struct PackedVertex {
+    float position_x,
+          position_y,
+          position_z,
+          normal_x,
+          normal_y,
+          normal_z,
+          texcoord0_x,
+          texcoord0_y;
+};
+
+static_assert(sizeof(PackedVertex) % 16 == 0);
+
+using PackedIndex = uint32_t;
+
 template<class ...Args>
 class PerFrameData {
     struct FrameDataWrapper {

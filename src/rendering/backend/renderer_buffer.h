@@ -118,16 +118,26 @@ public:
     inline void SetResourceState(ResourceState new_state)
         { resource_state = new_state; }
 
-    void Map(Device *device, void **ptr) const;
-    void Unmap(Device *device) const;
+    inline void *GetMapping(Device *device) const
+    {
+        if (!map) {
+            Map(device, &map);
+        }
+
+        return map;
+    }
+
     void Copy(Device *device, size_t count, const void *ptr);
     void Copy(Device *device, size_t offset, size_t count, const void *ptr);
+
     void Read(Device *device, size_t count, void *out_ptr) const;
     
     VmaAllocation allocation;
     VkDeviceSize size;
 
 protected:
+    void Map(Device *device, void **ptr) const;
+    void Unmap(Device *device) const;
     void Create();
     void Destroy();
 
@@ -151,7 +161,14 @@ public:
     ~GPUBuffer();
 
     void InsertBarrier(CommandBuffer *command_buffer, ResourceState new_state) const;
-    void CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buffer, size_t count);
+
+    void CopyFrom(CommandBuffer *command_buffer,
+        const GPUBuffer *src_buffer,
+        size_t count);
+
+    [[nodiscard]] Result CopyStaged(Instance *instance,
+        const void *ptr,
+        size_t count);
 
     Result CheckCanAllocate(Device *device, size_t size) const;
 
@@ -254,6 +271,16 @@ public:
 class AccelerationStructureInstancesBuffer : public GPUBuffer {
 public:
     AccelerationStructureInstancesBuffer();
+};
+
+class PackedVertexStorageBuffer : public GPUBuffer {
+public:
+    PackedVertexStorageBuffer();
+};
+
+class PackedIndexStorageBuffer : public GPUBuffer {
+public:
+    PackedIndexStorageBuffer();
 };
 
 class ScratchBuffer : public GPUBuffer {

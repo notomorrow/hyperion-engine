@@ -18,27 +18,11 @@ VkAccelerationStructureTypeKHR AccelerationStructure::ToVkAccelerationStructureT
 	}
 }
 
-AccelerationGeometry::AccelerationGeometry()
-    : m_vertex_buffer(nullptr),
-      m_num_vertices(0),
-      m_vertex_stride(0),
-      m_index_buffer(nullptr),
-      m_num_indices(0),
-      m_geometry{},
-      m_acceleration_structure(nullptr)
-{
-}
-
 AccelerationGeometry::AccelerationGeometry(
-	VertexBuffer *vertex_buffer,
-    size_t num_vertices, size_t vertex_stride,
-    IndexBuffer *index_buffer,
-    size_t num_indices
-) : m_vertex_buffer(vertex_buffer),
-    m_num_vertices(num_vertices),
-    m_vertex_stride(vertex_stride),
-    m_index_buffer(index_buffer),
-    m_num_indices(num_indices),
+    std::vector<PackedVertex> &&packed_vertices,
+    std::vector<PackedIndex>  &&packed_indices
+) : m_packed_vertices(std::move(packed_vertices)),
+    m_packed_indices(std::move(packed_indices)),
     m_geometry{},
     m_acceleration_structure(nullptr)
 {
@@ -46,21 +30,68 @@ AccelerationGeometry::AccelerationGeometry(
 
 AccelerationGeometry::~AccelerationGeometry() {}
 
-Result AccelerationGeometry::Create(Device *device)
+Result AccelerationGeometry::Create(Instance *instance)
 {
-	AssertThrow(m_vertex_buffer != nullptr);
-	AssertThrow(m_index_buffer != nullptr);
+	AssertThrow(m_packed_vertex_buffer == nullptr);
+	AssertThrow(m_packed_index_buffer == nullptr);
 
-	if (m_num_vertices == 0 || m_num_indices == 0 || m_vertex_stride == 0) {
+	if (m_packed_vertices.empty() || m_packed_indices.empty()) {
 	    return {Result::RENDERER_ERR, "An acceleration geometry must have nonzero vertex count, index count, and vertex size."};
 	}
 
+	auto result = Result::OK;
+
+	Device *device = instance->GetDevice();
+
+	m_packed_vertex_buffer = std::make_unique<PackedVertexStorageBuffer>();
+
+	HYPERION_BUBBLE_ERRORS(
+		m_packed_vertex_buffer->Create(device, m_packed_vertices.size() * sizeof(PackedVertex))
+	);
+
+	m_packed_index_buffer = std::make_unique<PackedIndexStorageBuffer>();
+
+	HYPERION_PASS_ERRORS(
+		m_packed_index_buffer->Create(device, m_packed_indices.size() * sizeof(PackedIndex)),
+		result
+	);
+
+	if (!result) {
+	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+
+		return result;
+	}
+
+	HYPERION_PASS_ERRORS(
+		m_packed_vertex_buffer->CopyStaged(
+		    instance,
+		    m_packed_vertices.data(),
+		    m_packed_vertices.size() * sizeof(PackedVertex)
+	    ),
+		result
+	);
+
+	HYPERION_PASS_ERRORS(
+        m_packed_index_buffer->CopyStaged(
+		    instance,
+			m_packed_indices.data(),
+		    m_packed_indices.size() * sizeof(PackedIndex)
+	    ),
+		result
+	);
+
+	if (!result) {
+	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+
+		return result;
+	}
+
     VkDeviceOrHostAddressConstKHR vertices_address{
-        .deviceAddress = m_vertex_buffer->GetBufferDeviceAddress(device)
+        .deviceAddress = m_packed_vertex_buffer->GetBufferDeviceAddress(device)
     };
 
 	VkDeviceOrHostAddressConstKHR indices_address{
-        .deviceAddress = m_index_buffer->GetBufferDeviceAddress(device)
+        .deviceAddress = m_packed_index_buffer->GetBufferDeviceAddress(device)
 	};
 
 	m_geometry = VkAccelerationStructureGeometryKHR{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
@@ -71,8 +102,8 @@ Result AccelerationGeometry::Create(Device *device)
 			.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 			.vertexFormat  = VK_FORMAT_R32G32B32_SFLOAT,
 			.vertexData    = vertices_address,
-			.vertexStride  = m_vertex_stride,
-			.maxVertex     = static_cast<uint32_t>(m_num_vertices),
+			.vertexStride  = sizeof(PackedVertex),
+			.maxVertex     = static_cast<uint32_t>(m_packed_vertices.size()),
 			.indexType     = VK_INDEX_TYPE_UINT32,
 			.indexData     = indices_address,
 			.transformData = {{}}
@@ -82,7 +113,7 @@ Result AccelerationGeometry::Create(Device *device)
     HYPERION_RETURN_OK;
 }
 
-Result AccelerationGeometry::Destroy(Device *)
+Result AccelerationGeometry::Destroy(Instance *)
 {
     if (m_acceleration_structure != nullptr) {
         m_acceleration_structure->RemoveGeometry(this);
@@ -401,7 +432,7 @@ Result BottomLevelAccelerationStructure::Create(Instance *instance)
 		}*/
 
 		geometries[i]       = geometry->m_geometry;
-		primitive_counts[i] = static_cast<uint32_t>(geometry->m_num_indices / 3);
+		primitive_counts[i] = static_cast<uint32_t>(geometry->GetPackedIndices().size() / 3);
 	}
 	
 	VkAccelerationStructureBuildGeometryInfoKHR geometry_info{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};

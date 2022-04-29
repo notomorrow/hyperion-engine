@@ -26,5 +26,7 @@ glslc --target-env=$VULKAN_TARGET voxel/voxelize.geom -o voxel/voxelize.geom.spv
 glslc --target-env=$VULKAN_TARGET voxel/voxelize.vert -o voxel/voxelize.vert.spv
 
 glslc --target-env=$VULKAN_TARGET rt/test.rgen -o rt/test.rgen.spv
+glslc --target-env=$VULKAN_TARGET rt/test.rmiss -o rt/test.rmiss.spv
+glslc --target-env=$VULKAN_TARGET rt/test.rchit -o rt/test.rchit.spv
 
 popd

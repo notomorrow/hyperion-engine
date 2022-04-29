@@ -157,7 +157,7 @@ protected:
 
         buffer_container[buffer_index]->Copy(
             device,
-            dirty.GetStart()    * sizeof(StructType),
+            dirty.GetStart() * sizeof(StructType),
             dirty.Distance() * sizeof(StructType),
             &ptr[dirty.GetStart()]
         );

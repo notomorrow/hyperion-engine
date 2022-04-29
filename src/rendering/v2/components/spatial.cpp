@@ -244,14 +244,11 @@ AccelerationGeometry *Spatial::CreateAccelerationGeometry(Engine *engine)
     }
 
     m_acceleration_geometry = std::make_unique<AccelerationGeometry>(
-        m_mesh->GetVertexBuffer(),
-        m_mesh->GetVertices().size(),
-        m_mesh->GetVertexAttributes().CalculateVertexSize(),
-        m_mesh->GetIndexBuffer(),
-        m_mesh->GetIndices().size()
+        m_mesh->BuildPackedVertices(),
+        m_mesh->BuildPackedIndices()
     );
 
-    HYPERION_ASSERT_RESULT(m_acceleration_geometry->Create(engine->GetDevice()));
+    HYPERION_ASSERT_RESULT(m_acceleration_geometry->Create(engine->GetInstance()));
 
     return m_acceleration_geometry.get();
 }
@@ -265,7 +262,7 @@ void Spatial::DestroyAccelerationGeometry(Engine *engine)
     }
     
     HYPERION_PASS_ERRORS(
-        m_acceleration_geometry->Destroy(engine->GetDevice()),
+        m_acceleration_geometry->Destroy(engine->GetInstance()),
         result
     );
 

@@ -3,16 +3,16 @@
 
 #include "../renderer_result.h"
 #include "../renderer_buffer.h"
+#include "../renderer_structs.h"
 
 #include <vector>
 
-#include "renderer_acceleration_structure.h"
 #include "renderer_acceleration_structure.h"
 
 namespace hyperion {
 namespace renderer {
 
-class Device;
+class Instance;
 class AccelerationStructure;
 
 enum class AccelerationStructureType {
@@ -31,48 +31,32 @@ class AccelerationGeometry {
     friend class BottomLevelAccelerationStructure;
 
 public:
-    AccelerationGeometry();
-
     AccelerationGeometry(
-        VertexBuffer *vertex_buffer,
-        size_t num_vertices,
-        size_t vertex_stride,
-        IndexBuffer *index_buffer,
-        size_t num_indices
+        std::vector<PackedVertex> &&packed_vertices,
+        std::vector<PackedIndex>  &&packed_indices
     );
 
     AccelerationGeometry(const AccelerationGeometry &other) = delete;
     AccelerationGeometry &operator=(const AccelerationGeometry &other) = delete;
     ~AccelerationGeometry();
 
-    void SetVertices(
-        VertexBuffer *vertex_buffer,
-        size_t num_vertices,
-        size_t vertex_stride)
-    {
-        m_vertex_buffer = vertex_buffer;
-        m_num_vertices  = num_vertices;
-        m_vertex_stride = vertex_stride;
-    }
+    inline const std::vector<PackedVertex> &GetPackedVertices() const { return m_packed_vertices; }
+    inline const std::vector<PackedIndex> &GetPackedIndices() const   { return m_packed_indices; }
 
-    void SetIndices(
-        IndexBuffer *index_buffer,
-        size_t num_indices)
-    {
-        m_index_buffer = index_buffer;
-        m_num_indices  = num_indices;
-    }
+    inline PackedVertexStorageBuffer *GetPackedVertexStorageBuffer() const { return m_packed_vertex_buffer.get(); }
+    inline PackedIndexStorageBuffer  *GetPackedIndexStorageBuffer() const  { return m_packed_index_buffer.get(); }
 
-    Result Create(Device *device);
+    Result Create(Instance *instance);
     /* Remove from the parent acceleration structure */
-    Result Destroy(Device *device);
+    Result Destroy(Instance *instance);
 
 private:
-    VertexBuffer                      *m_vertex_buffer;
-    size_t                             m_num_vertices;
-    size_t                             m_vertex_stride;
-    IndexBuffer                       *m_index_buffer;
-    size_t                             m_num_indices;
+    std::vector<PackedVertex> m_packed_vertices;
+    std::vector<PackedIndex>  m_packed_indices;
+
+    std::unique_ptr<PackedVertexStorageBuffer> m_packed_vertex_buffer;
+    std::unique_ptr<PackedIndexStorageBuffer>  m_packed_index_buffer;
+
     VkAccelerationStructureGeometryKHR m_geometry;
 
     AccelerationStructure             *m_acceleration_structure;

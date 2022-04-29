@@ -538,8 +538,8 @@ void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor,
         AssertThrow(sub_descriptor.sampler->GetSampler() != nullptr);
 
         out_image = {
-            .sampler = sub_descriptor.sampler->GetSampler(),
-            .imageView = sub_descriptor.image_view->GetImageView(),
+            .sampler     = sub_descriptor.sampler->GetSampler(),
+            .imageView   = sub_descriptor.image_view->GetImageView(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
 
@@ -549,8 +549,8 @@ void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor,
         AssertThrow(sub_descriptor.image_view->GetImageView() != nullptr);
 
         out_image = {
-            .sampler = nullptr,
-            .imageView = sub_descriptor.image_view->GetImageView(),
+            .sampler     = VK_NULL_HANDLE,
+            .imageView   = sub_descriptor.image_view->GetImageView(),
             .imageLayout = VK_IMAGE_LAYOUT_GENERAL
         };
 

@@ -129,7 +129,8 @@ void Mesh::Init(Engine *engine)
         current_offset += (arg_size);                                                            \
     } while (0)
 
-std::vector<float> Mesh::CreatePackedBuffer() {
+std::vector<float> Mesh::BuildVertexBuffer()
+{
     const size_t vertex_size = m_vertex_attributes.CalculateVertexSize();
 
     std::vector<float> packed_buffer(vertex_size * m_vertices.size());
@@ -182,7 +183,7 @@ void Mesh::Upload(Instance *instance)
 
     auto *device = instance->GetDevice();
 
-    std::vector<float> packed_buffer = CreatePackedBuffer();
+    std::vector<float> packed_buffer = BuildVertexBuffer();
     const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
     const size_t packed_indices_size = m_indices.size() * sizeof(Index);
 
@@ -230,6 +231,34 @@ void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
         uint32_t(m_indices.size()),
         1, 0, 0, 0
     );
+}
+
+std::vector<PackedVertex> Mesh::BuildPackedVertices() const
+{
+    std::vector<PackedVertex> packed_vertices;
+    packed_vertices.resize(m_vertices.size());
+
+    for (size_t i = 0; i < m_vertices.size(); i++) {
+        const auto &vertex = m_vertices[i];
+
+        packed_vertices[i] = PackedVertex{
+            .position_x  = vertex.GetPosition().x,
+            .position_y  = vertex.GetPosition().y,
+            .position_z  = vertex.GetPosition().z,
+            .normal_x    = vertex.GetNormal().x,
+            .normal_y    = vertex.GetNormal().y,
+            .normal_z    = vertex.GetNormal().z,
+            .texcoord0_x = vertex.GetTexCoord0().x,
+            .texcoord0_y = vertex.GetTexCoord0().y
+        };
+    }
+
+    return packed_vertices;
+}
+
+std::vector<PackedIndex> Mesh::BuildPackedIndices() const
+{
+    return std::vector<PackedIndex>(m_indices.begin(), m_indices.end());
 }
 
 void Mesh::CalculateNormals()
