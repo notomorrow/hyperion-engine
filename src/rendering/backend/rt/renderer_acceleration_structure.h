@@ -85,12 +85,14 @@ public:
     AccelerationStructure &operator=(const AccelerationStructure &other) = delete;
     ~AccelerationStructure();
 
-    inline AccelerationStructureBuffer *GetBuffer() const  { return m_buffer.get(); }
+    inline AccelerationStructureBuffer *GetBuffer() const                     { return m_buffer.get(); }
+    inline VkAccelerationStructureKHR &GetAccelerationStructure()             { return m_acceleration_structure; }
+    inline const VkAccelerationStructureKHR &GetAccelerationStructure() const { return m_acceleration_structure; }
 
-    inline uint64_t GetDeviceAddress() const               { return m_device_address; }
+    inline uint64_t GetDeviceAddress() const                                  { return m_device_address; }
 
-    inline AccelerationStructureFlags GetFlags() const     { return m_flags; }
-    inline void SetFlags(AccelerationStructureFlags flags) { m_flags = flags; }
+    inline AccelerationStructureFlags GetFlags() const                        { return m_flags; }
+    inline void SetFlags(AccelerationStructureFlags flags)                    { m_flags = flags; }
 
     inline void AddGeometry(AccelerationGeometry *geometry)
     {

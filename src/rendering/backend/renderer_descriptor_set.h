@@ -18,11 +18,14 @@ namespace renderer {
 
 class Device;
 class CommandBuffer;
+class Pipeline;
 class GraphicsPipeline;
 class ComputePipeline;
+class RaytracingPipeline;
 class ImageView;
 class Sampler;
 class GPUBuffer;
+class AccelerationStructure;
 class Descriptor;
 class DescriptorPool;
 
@@ -203,10 +206,17 @@ public:
 
     Result Create(Device *device);
     Result Destroy(Device *device);
-    Result Bind(Device *device, CommandBuffer *cmd, GraphicsPipeline *pipeline, DescriptorSetBinding &&) const;
-    Result Bind(Device *device, CommandBuffer *cmd, ComputePipeline *pipeline, DescriptorSetBinding &&) const;
+    Result Bind(Device *device, CommandBuffer *cmd, GraphicsPipeline *pipeline, const DescriptorSetBinding &) const;
+    Result Bind(Device *device, CommandBuffer *cmd, ComputePipeline *pipeline, const DescriptorSetBinding &) const;
+    Result Bind(Device *device, CommandBuffer *cmd, RaytracingPipeline *pipeline, const DescriptorSetBinding &) const;
 
 private:
+    void BindDescriptorSets(Device *device,
+        CommandBuffer *cmd,
+        VkPipelineBindPoint bind_point,
+        Pipeline *pipeline,
+        const DescriptorSetBinding &binding) const;
+
     std::array<std::unique_ptr<DescriptorSet>, DescriptorSet::max_descriptor_sets> m_descriptor_sets;
     size_t m_num_descriptor_sets;
     std::vector<VkDescriptorSetLayout> m_descriptor_set_layouts;
@@ -226,15 +236,25 @@ public:
         STORAGE_BUFFER_DYNAMIC,
         IMAGE_SAMPLER,
         IMAGE_STORAGE,
-        TOP_LEVEL_ACCELERATION_STRUCTURE
+        ACCELERATION_STRUCTURE
     };
 
     struct SubDescriptor {
-        GPUBuffer *buffer = nullptr;
-        uint32_t range = 0; /* if 0 then it is set to buffer->size */
+        union {
+            struct /* BufferData */ {
+                GPUBuffer *buffer;
+                uint32_t range; /* if 0 then it is set to buffer->size */
+            };
 
-        ImageView *image_view = nullptr;
-        Sampler *sampler = nullptr;
+            struct /* ImageData */ {
+                ImageView *image_view;
+                Sampler *sampler;
+            };
+
+            struct /* AccelerationStructureData */ {
+                AccelerationStructure *acceleration_structure;
+            };
+        };
 
         bool valid = false; /* set internally to mark objects ready to be popped */
     };
@@ -281,12 +301,16 @@ protected:
     struct BufferInfo {
         std::vector<VkDescriptorBufferInfo> buffers;
         std::vector<VkDescriptorImageInfo>  images;
+        std::vector<VkWriteDescriptorSetAccelerationStructureKHR> acceleration_structures;
     };
 
     static VkDescriptorType GetDescriptorType(Mode mode);
 
     void BuildUpdates(Device *device, std::vector<VkWriteDescriptorSet> &writes);
-    void UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const;
+    void UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor,
+        VkDescriptorBufferInfo &out_buffer,
+        VkDescriptorImageInfo &out_image,
+        VkWriteDescriptorSetAccelerationStructureKHR &out_acceleration_structure) const;
 
     Range<uint32_t> m_dirty_sub_descriptors;
     std::vector<SubDescriptor> m_sub_descriptors;
@@ -320,7 +344,7 @@ HYP_DEFINE_DESCRIPTOR(StorageBufferDescriptor,        Mode::STORAGE_BUFFER);
 HYP_DEFINE_DESCRIPTOR(DynamicStorageBufferDescriptor, Mode::STORAGE_BUFFER_DYNAMIC);
 HYP_DEFINE_DESCRIPTOR(ImageSamplerDescriptor,         Mode::IMAGE_SAMPLER);
 HYP_DEFINE_DESCRIPTOR(ImageStorageDescriptor,         Mode::IMAGE_STORAGE);
-HYP_DEFINE_DESCRIPTOR(TlasDescriptor,                 Mode::TOP_LEVEL_ACCELERATION_STRUCTURE);
+HYP_DEFINE_DESCRIPTOR(TlasDescriptor,                 Mode::ACCELERATION_STRUCTURE);
 
 #undef HYP_DEFINE_DESCRIPTOR
 

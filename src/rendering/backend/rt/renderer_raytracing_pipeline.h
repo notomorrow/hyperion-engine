@@ -23,16 +23,33 @@ public:
     Result Destroy(Device *device);
 
     void Bind(CommandBuffer *command_buffer);
+    void TraceRays(Device *device,
+        CommandBuffer *command_buffer,
+        Extent2D extent) const;
 
 private:
+    struct ShaderBindingTableEntry {
+        std::unique_ptr<ShaderBindingTableBuffer> buffer;
+        VkStridedDeviceAddressRegionKHR           strided_device_address_region;
+    };
+
+    struct {
+        VkStridedDeviceAddressRegionKHR ray_gen{};
+        VkStridedDeviceAddressRegionKHR ray_miss{};
+        VkStridedDeviceAddressRegionKHR closest_hit{};
+        VkStridedDeviceAddressRegionKHR callable{};
+    } m_shader_binding_table_entries;
+
+    using ShaderBindingTableMap = std::unordered_map<ShaderModule::Type, ShaderBindingTableEntry>;
+
     Result CreateShaderBindingTables(Device *device);
 
-    Result CreateShaderBindingTable(Device *device,
+    Result CreateShaderBindingTableEntry(Device *device,
         uint32_t num_shaders,
-        std::unique_ptr<ShaderBindingTableBuffer> &out_buffer);
+        ShaderBindingTableEntry &out);
 
     std::unique_ptr<ShaderProgram> m_shader_program;
-    std::vector<std::unique_ptr<ShaderBindingTableBuffer>> m_shader_binding_table_buffers;
+    ShaderBindingTableMap m_shader_binding_table_buffers;
 };
 
 } // namespace renderer

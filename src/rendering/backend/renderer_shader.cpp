@@ -92,52 +92,45 @@ ShaderProgram::CreateShaderStage(const ShaderModule &shader_module)
 
 Result ShaderProgram::CreateShaderGroups()
 {
-    VkRayTracingShaderGroupCreateInfoKHR generation_group{
-        .sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
-        .type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR,
-        .generalShader      = VK_SHADER_UNUSED_KHR,
-        .closestHitShader   = VK_SHADER_UNUSED_KHR,
-        .anyHitShader       = VK_SHADER_UNUSED_KHR,
-        .intersectionShader = VK_SHADER_UNUSED_KHR
-    };
-
-    VkRayTracingShaderGroupCreateInfoKHR miss_group{
-        .sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
-        .type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR,
-        .generalShader      = VK_SHADER_UNUSED_KHR,
-        .closestHitShader   = VK_SHADER_UNUSED_KHR,
-        .anyHitShader       = VK_SHADER_UNUSED_KHR,
-        .intersectionShader = VK_SHADER_UNUSED_KHR
-    };
-
-    VkRayTracingShaderGroupCreateInfoKHR closest_hit_group{
-        .sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
-        .type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
-        .generalShader      = VK_SHADER_UNUSED_KHR,
-        .closestHitShader   = VK_SHADER_UNUSED_KHR,
-        .anyHitShader       = VK_SHADER_UNUSED_KHR,
-        .intersectionShader = VK_SHADER_UNUSED_KHR
-    };
+    m_shader_groups.clear();
 
     for (size_t i = 0; i < m_shader_modules.size(); i++) {
         const auto &shader_module = m_shader_modules[i];
         
         switch (shader_module.type) {
+        case ShaderModule::Type::RAY_MISS: /* fallthrough */
         case ShaderModule::Type::RAY_GEN:
-            generation_group.generalShader = static_cast<uint32_t>(i);
+            m_shader_groups.push_back({
+                shader_module.type,
+                VkRayTracingShaderGroupCreateInfoKHR{
+                    .sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+                    .type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR,
+                    .generalShader      = static_cast<uint32_t>(i),
+                    .closestHitShader   = VK_SHADER_UNUSED_KHR,
+                    .anyHitShader       = VK_SHADER_UNUSED_KHR,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                }
+            });
+
             break;
         case ShaderModule::Type::RAY_CLOSEST_HIT:
-            closest_hit_group.closestHitShader = static_cast<uint32_t>(i);
-            break;
-        case ShaderModule::Type::RAY_MISS:
-            miss_group.generalShader = static_cast<uint32_t>(i);
+            m_shader_groups.push_back({
+                shader_module.type,
+                VkRayTracingShaderGroupCreateInfoKHR{
+                    .sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+                    .type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
+                    .generalShader      = VK_SHADER_UNUSED_KHR,
+                    .closestHitShader   = static_cast<uint32_t>(i),
+                    .anyHitShader       = VK_SHADER_UNUSED_KHR,
+                    .intersectionShader = VK_SHADER_UNUSED_KHR
+                }
+            });
+
             break;
         default:
             return {Result::RENDERER_ERR, "Unimplemented shader group type"};
         }
     }
-
-    m_shader_groups = {generation_group, miss_group, closest_hit_group};
 
     HYPERION_RETURN_OK;
 }

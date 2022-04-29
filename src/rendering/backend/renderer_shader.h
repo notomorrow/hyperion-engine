@@ -89,6 +89,11 @@ struct ShaderModule {
     }
 };
 
+struct ShaderGroup {
+    ShaderModule::Type type;
+    VkRayTracingShaderGroupCreateInfoKHR raytracing_group_create_info;
+};
+
 class ShaderProgram {
 public:
     static constexpr const char *entry_point = "main";
@@ -105,7 +110,7 @@ public:
         { return m_shader_stages; }
 
     /* For raytracing only */
-    inline const std::vector<VkRayTracingShaderGroupCreateInfoKHR> &GetShaderGroups() const
+    inline const std::vector<ShaderGroup> &GetShaderGroups() const
         { return m_shader_groups; }
 
     inline bool IsRaytracing() const
@@ -143,7 +148,7 @@ private:
     std::vector<ShaderModule> m_shader_modules;
 
     std::vector<VkPipelineShaderStageCreateInfo>      m_shader_stages;
-    std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_shader_groups;
+    std::vector<ShaderGroup>                          m_shader_groups;
 };
 
 } // namespace renderer

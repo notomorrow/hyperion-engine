@@ -453,7 +453,6 @@ int main()
     wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
         
 #endif
-
     
 #if HYPERION_VK_TEST_RAYTRACING
     auto rt_shader = std::make_unique<ShaderProgram>();
@@ -462,7 +461,6 @@ int main()
     });
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
-    HYPERION_ASSERT_RESULT(rt->Create(engine.GetDevice(), &engine.GetInstance()->GetDescriptorPool()));
 
 
     std::unique_ptr<v2::Node> blas_node = std::make_unique<v2::Node>(
@@ -479,12 +477,17 @@ int main()
         HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), blas_node->GetAccelerationStructure()));
    // });
 
-    ///auto *rt_descriptor_set = engine.GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_RAYTRACING);
-    //rt_descriptor_set->AddDescriptor<TlasDescriptor>(0)
-    //    ->AddSubDescriptor({.buffer = tlas->GetBuffer()});
+    auto *rt_descriptor_set = engine.GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_RAYTRACING);
+    rt_descriptor_set->AddDescriptor<TlasDescriptor>(0)
+        ->AddSubDescriptor({.acceleration_structure = tlas.get()});
+    //rt_descriptor_set->AddDescriptor<Im>()
 #endif
-    
+
     engine.Compile();
+
+#if HYPERION_VK_TEST_RAYTRACING
+    HYPERION_ASSERT_RESULT(rt->Create(engine.GetDevice(), &engine.GetInstance()->GetDescriptorPool()));
+#endif
 
 #if HYPERION_RUN_TESTS
     AssertThrow(test::GlobalTestManager::PrintReport(test::GlobalTestManager::Instance()->RunAll()));
@@ -601,9 +604,6 @@ int main()
             &compute_semaphore_chain
         ));
 #endif
-
-        Transform transform(Vector3(-4, -7, -2), Vector3(0.35f), Quaternion());
-
         engine.GetOctree().CalculateVisibility(scene.ptr);
 
         sponza->Update(&engine);
@@ -622,10 +622,28 @@ int main()
          * end up updating data that is in use by the gpu
          */
         engine.UpdateDescriptorData(frame_index);
+
+        /* === rendering === */
         
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
         engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
+
+        
+
+#if HYPERION_VK_TEST_RAYTRACING
+        rt->Bind(frame->GetCommandBuffer());
+        engine.GetInstance()->GetDescriptorPool().Bind(
+            engine.GetDevice(),
+            frame->GetCommandBuffer(),
+            rt.get(),
+            {{
+                .set = DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING,
+                .count = 1
+            }}
+        );
+        rt->TraceRays(engine.GetDevice(), frame->GetCommandBuffer(), {512, 512});
+#endif
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         image_storage->GetGPUImage()->InsertBarrier(

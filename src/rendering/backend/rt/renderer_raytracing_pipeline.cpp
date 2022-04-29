@@ -21,15 +21,6 @@ RaytracingPipeline::RaytracingPipeline(std::unique_ptr<ShaderProgram> &&shader_p
 
 RaytracingPipeline::~RaytracingPipeline() = default;
 
-void RaytracingPipeline::Bind(CommandBuffer *command_buffer)
-{
-    vkCmdBindPipeline(
-        command_buffer->GetCommandBuffer(),
-        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-        pipeline
-    );
-}
-
 Result RaytracingPipeline::Create(Device *device,
                                   DescriptorPool *descriptor_pool)
 {
@@ -65,11 +56,17 @@ Result RaytracingPipeline::Create(Device *device,
     const auto &stages        = m_shader_program->GetShaderStages();
     const auto &shader_groups = m_shader_program->GetShaderGroups();
 
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR> shader_group_create_infos;
+    shader_group_create_infos.resize(shader_groups.size());
+
+    for (size_t i = 0; i < shader_groups.size(); i++) {
+        shader_group_create_infos[i] = shader_groups[i].raytracing_group_create_info;
+    }
 
     pipeline_info.stageCount          = uint32_t(stages.size());
     pipeline_info.pStages             = stages.data();
-    pipeline_info.groupCount          = uint32_t(shader_groups.size());
-    pipeline_info.pGroups             = shader_groups.data();
+    pipeline_info.groupCount          = uint32_t(shader_group_create_infos.size());
+    pipeline_info.pGroups             = shader_group_create_infos.data();
     pipeline_info.layout              = layout;
     pipeline_info.basePipelineHandle  = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex   = -1;
@@ -110,8 +107,8 @@ Result RaytracingPipeline::Destroy(Device *device)
 
     auto result = Result::OK;
 
-    for (auto &table : m_shader_binding_table_buffers) {
-        HYPERION_PASS_ERRORS(table->Destroy(device), result);
+    for (auto &it : m_shader_binding_table_buffers) {
+        HYPERION_PASS_ERRORS(it.second.buffer->Destroy(device), result);
     }
 
     if (m_shader_program != nullptr) {
@@ -129,6 +126,29 @@ Result RaytracingPipeline::Destroy(Device *device)
     }
 
     return result;
+}
+
+void RaytracingPipeline::Bind(CommandBuffer *command_buffer)
+{
+    vkCmdBindPipeline(
+        command_buffer->GetCommandBuffer(),
+        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+        pipeline
+    );
+}
+
+void RaytracingPipeline::TraceRays(Device *device,
+    CommandBuffer *command_buffer,
+    Extent2D extent) const
+{
+    device->GetFeatures().dyn_functions.vkCmdTraceRaysKHR(
+        command_buffer->GetCommandBuffer(),
+        &m_shader_binding_table_entries.ray_gen,
+        &m_shader_binding_table_entries.ray_miss,
+        &m_shader_binding_table_entries.closest_hit,
+        &m_shader_binding_table_entries.callable,
+        extent.width, extent.height, 1
+    );
 }
 
 Result RaytracingPipeline::CreateShaderBindingTables(Device *device)
@@ -156,30 +176,39 @@ Result RaytracingPipeline::CreateShaderBindingTables(Device *device)
 
     auto result = Result::OK;
 
-    std::vector<std::unique_ptr<ShaderBindingTableBuffer>> buffers;
-    buffers.reserve(shader_groups.size());
-
     size_t offset = 0;
 
-    for (size_t i = 0; i < shader_groups.size(); i++) {
-        const auto &group = shader_groups[i];
+    ShaderBindingTableMap buffers;
 
-        std::unique_ptr<ShaderBindingTableBuffer> buffer;
+    for (const auto &group : shader_groups) {
+        const auto &create_info = group.raytracing_group_create_info;
+
+        ShaderBindingTableEntry entry;
+
+#define SHADER_PRESENT_IN_GROUP(type) (create_info.type != VK_SHADER_UNUSED_KHR ? 1 : 0)
+
+        const uint32_t shader_count = SHADER_PRESENT_IN_GROUP(generalShader)
+            + SHADER_PRESENT_IN_GROUP(closestHitShader)
+            + SHADER_PRESENT_IN_GROUP(anyHitShader)
+            + SHADER_PRESENT_IN_GROUP(intersectionShader);
+
+#undef SHADER_PRESENT_IN_GROUP
+
+        if (shader_count == 0) {
+            HYP_BREAKPOINT;
+        }
 
         HYPERION_PASS_ERRORS(
-            CreateShaderBindingTable(
+            CreateShaderBindingTableEntry(
                 device,
-                (group.generalShader        ? 1 : 0)
-                + (group.closestHitShader   ? 1 : 0)
-                + (group.anyHitShader       ? 1 : 0)
-                + (group.intersectionShader ? 1 : 0),
-                buffer
+                shader_count,
+                entry
             ),
             result
         );
 
         if (result) {
-            buffer->Copy(
+            entry.buffer->Copy(
                 device,
                 handle_size,
                 &shader_handle_storage[offset]
@@ -187,39 +216,70 @@ Result RaytracingPipeline::CreateShaderBindingTables(Device *device)
 
             offset += handle_size;
         } else {
-            for (auto j = static_cast<int64_t>(i - 1); j >= 0; j--) {
-                HYPERION_IGNORE_ERRORS(buffers[j]->Destroy(device));
+            for (auto &it : buffers) {
+                HYPERION_IGNORE_ERRORS(it.second.buffer->Destroy(device));
             }
 
             return result;
         }
 
-        buffers.push_back(std::move(buffer));
+        buffers[group.type] = std::move(entry);
     }
 
     m_shader_binding_table_buffers = std::move(buffers);
 
+#define GET_STRIDED_DEVICE_ADDRESS_REGION(type, out) \
+    do { \
+        auto it = m_shader_binding_table_buffers.find(type); \
+        if (it != m_shader_binding_table_buffers.end()) { \
+            m_shader_binding_table_entries.out = it->second.strided_device_address_region; \
+        } \
+    } while (0)
+
+    GET_STRIDED_DEVICE_ADDRESS_REGION(ShaderModule::Type::RAY_GEN, ray_gen);
+    GET_STRIDED_DEVICE_ADDRESS_REGION(ShaderModule::Type::RAY_MISS, ray_miss);
+    GET_STRIDED_DEVICE_ADDRESS_REGION(ShaderModule::Type::RAY_CLOSEST_HIT, closest_hit);
+
+#undef GET_STRIDED_DEVICE_ADDRESS_REGION
+
     return result;
 }
 
-Result RaytracingPipeline::CreateShaderBindingTable(Device *device,
+Result RaytracingPipeline::CreateShaderBindingTableEntry(Device *device,
     uint32_t num_shaders,
-    std::unique_ptr<ShaderBindingTableBuffer> &out_buffer)
+    ShaderBindingTableEntry &out)
 {
+    const auto &properties = device->GetFeatures().GetRaytracingPipelineProperties();
+
+    AssertThrow(properties.shaderGroupHandleSize != 0);
+
+    if (num_shaders == 0) {
+        return {Result::RENDERER_ERR, "Creating shader binding table entry with zero shader count"};
+    }
+
     auto result = Result::OK;
 
-    out_buffer.reset(new ShaderBindingTableBuffer());
+    out.buffer.reset(new ShaderBindingTableBuffer());
 
     HYPERION_PASS_ERRORS(
-        out_buffer->Create(
+        out.buffer->Create(
             device,
-            device->GetFeatures().GetRaytracingPipelineProperties().shaderGroupHandleSize * num_shaders
+            properties.shaderGroupHandleSize * num_shaders
         ),
         result
     );
 
-    if (!result) {
-        out_buffer.reset();
+    if (result) {
+        /* Get strided device address region */
+        const uint32_t handle_size = device->GetFeatures().PaddedSize(properties.shaderGroupHandleSize, properties.shaderGroupHandleAlignment);
+
+        out.strided_device_address_region = VkStridedDeviceAddressRegionKHR{
+            .deviceAddress = out.buffer->GetBufferDeviceAddress(device),
+            .stride        = handle_size,
+            .size          = num_shaders * handle_size
+        };
+    } else {
+        out.buffer.reset();
     }
 
     return result;

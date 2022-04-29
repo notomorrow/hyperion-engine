@@ -33,7 +33,7 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 5000.0
+#define IBL_INTENSITY 8000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 100000.0
 #define GI_INTENSITY 20.0
 #define VCT_ENABLED 0
@@ -59,7 +59,7 @@ void main()
     
     bool perform_lighting = albedo.a > 0.0;
     
-    vec3 albedo_linear = albedo.rgb;//mon2lin(albedo.rgb);
+    vec3 albedo_linear = mon2lin(albedo.rgb);
 	vec3 result;
 
     /* Physical camera */
