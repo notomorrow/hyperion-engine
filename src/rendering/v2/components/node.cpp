@@ -73,7 +73,12 @@ void Node::OnNestedNodeRemoved(Node *node)
     }
 }
 
-void Node::AddChild(std::unique_ptr<Node> &&node)
+Node *Node::AddChild()
+{
+    return AddChild(std::make_unique<Node>());
+}
+
+Node *Node::AddChild(std::unique_ptr<Node> &&node)
 {
     AssertThrow(node != nullptr);
     AssertThrow(node->m_parent_node == nullptr);
@@ -87,6 +92,8 @@ void Node::AddChild(std::unique_ptr<Node> &&node)
     }
 
     m_child_nodes.push_back(std::move(node));
+
+    return m_child_nodes.back().get();
 }
 
 bool Node::RemoveChild(NodeList::iterator iter)
@@ -162,21 +169,11 @@ void Node::SetSpatial(Ref<Spatial> &&spatial)
         return;
     }
 
-    if (m_spatial != nullptr && m_acceleration_structure != nullptr) {
-        if (auto *acceleration_geometry = m_spatial->GetAccelerationGeometry()) {
-            m_acceleration_structure->RemoveGeometry(acceleration_geometry);
-        }
-    }
-
     if (spatial != nullptr) {
         m_spatial = std::move(spatial);
         m_spatial.Init();
 
         m_local_aabb = m_spatial->GetLocalAabb();
-
-        //if (m_acceleration_structure != nullptr) {
-        //    m_acceleration_structure->AddGeometry(GetOrCreateSpatialAccelerationGeometry(engine));
-        //}
     } else {
         m_local_aabb = BoundingBox();
 
@@ -226,41 +223,6 @@ void Node::Update(Engine *engine)
     for (auto *node : m_descendents) {
         node->UpdateInternal(engine);
     }
-}
-
-AccelerationGeometry *Node::GetOrCreateSpatialAccelerationGeometry(Engine *engine)
-{
-    if (m_spatial == nullptr) {
-        return nullptr;
-    }
-
-    AccelerationGeometry *acceleration_geometry = m_spatial->GetAccelerationGeometry();
-
-    if (acceleration_geometry == nullptr) {
-        acceleration_geometry = m_spatial->CreateAccelerationGeometry(engine);
-    }
-
-    return acceleration_geometry;
-}
-
-void Node::CreateAccelerationStructure(Engine *engine)
-{
-    if (auto *acceleration_geometry = GetOrCreateSpatialAccelerationGeometry(engine)) {
-        m_acceleration_structure->AddGeometry(acceleration_geometry);
-    }
-
-    for (Node *descendent : m_descendents) {
-        if (auto *acceleration_geometry = descendent->GetOrCreateSpatialAccelerationGeometry(engine)) {
-            m_acceleration_structure->AddGeometry(acceleration_geometry);
-        }
-    }
-
-    HYPERION_ASSERT_RESULT(HasAccelerationStructure::Create(engine->GetInstance()));
-}
-
-void Node::DestroyAccelerationStructure(Engine *engine)
-{
-    HYPERION_ASSERT_RESULT(HasAccelerationStructure::Destroy(engine->GetInstance()));
 }
 
 } // namespace hyperion::v2

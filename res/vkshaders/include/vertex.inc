@@ -1,5 +1,4 @@
-struct Vertex
-{
+struct Vertex {
     vec3 position;
     vec3 normal;
     vec2 texcoord0;

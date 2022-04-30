@@ -1,17 +1,16 @@
 #version 460
-#extension GL_EXT_ray_tracing : require
-#extension GL_EXT_nonuniform_qualifier : enable
-#extension GL_EXT_scalar_block_layout : enable
+#extension GL_EXT_ray_tracing          : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_scalar_block_layout  : require
+#extension GL_EXT_buffer_reference2    : require
 
-struct RayPayload {
-	vec3 color;
-	float distance;
-	vec3 normal;
-	float reflector;
-};
+#include "../include/scene.inc"
+#include "../include/vertex.inc"
+#include "../include/rt/mesh.inc"
+#include "../include/rt/payload.inc"
 
-layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
 
+layout(location = 0) rayPayloadInEXT RayPayload payload;
 hitAttributeEXT vec2 attribs;
 
 struct PackedVertex {
@@ -26,16 +25,13 @@ struct PackedVertex {
 };
 
 layout(set = 9, binding = 0) uniform accelerationStructureEXT topLevelAS;
-layout(std430, set = 9, binding = 3) buffer Vertices {
-    PackedVertex vertices[];
-};
 
-layout(set = 9, binding = 4) buffer Indices {
-    uint indices[];
-};
+layout(buffer_reference, scalar) buffer PackedVertexBuffer { PackedVertex vertices[]; };
+layout(buffer_reference, scalar) buffer IndexBuffer        { uint indices[]; };
 
-#include "../include/scene.inc"
-#include "../include/vertex.inc"
+layout(set = 9, binding = 3) buffer Meshes {
+    Mesh meshes[];
+};
 
 Vertex UnpackVertex(PackedVertex packed_vertex)
 {
@@ -63,27 +59,31 @@ Vertex UnpackVertex(PackedVertex packed_vertex)
 
 void main()
 {
+    Mesh mesh = meshes[gl_InstanceCustomIndexEXT];
+    
+    PackedVertexBuffer vertex_buffer = PackedVertexBuffer(mesh.vertex_buffer_address);
+    IndexBuffer index_buffer         = IndexBuffer(mesh.index_buffer_address);
+    
     ivec3 index = ivec3(
-        indices[3 * gl_PrimitiveID],
-        indices[3 * gl_PrimitiveID + 1],
-        indices[3 * gl_PrimitiveID + 2]
+        index_buffer.indices[3 * gl_PrimitiveID],
+        index_buffer.indices[3 * gl_PrimitiveID + 1],
+        index_buffer.indices[3 * gl_PrimitiveID + 2]
     );
 
-    Vertex v0 = UnpackVertex(vertices[index.x]);
-    Vertex v1 = UnpackVertex(vertices[index.y]);
-    Vertex v2 = UnpackVertex(vertices[index.z]);
+    Vertex v0 = UnpackVertex(vertex_buffer.vertices[index.x]);
+    Vertex v1 = UnpackVertex(vertex_buffer.vertices[index.y]);
+    Vertex v2 = UnpackVertex(vertex_buffer.vertices[index.z]);
 
     // Interpolate normal
-    const vec3 barycentricCoords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
-    vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
+    const vec3 barycentric_coords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
+    vec3 normal = normalize(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z);
 
     // Basic lighting
-    vec3 lightVector = normalize(scene.light_direction.xyz);
-    float dot_product = max(dot(lightVector, normal), 0.6);
-    rayPayload.color = vec3(1.0, 0.0, 0.0) * vec3(dot_product);
-    rayPayload.distance = gl_RayTmaxEXT;
-    rayPayload.normal = normal;
-
-    // Objects with full white vertex color are treated as reflectors
-    rayPayload.reflector = 0.2f; 
+    vec3 lightVector    = normalize(scene.light_direction.xyz);
+    float dot_product   = max(dot(lightVector, normal), 0.6);
+    
+    payload.color     = vec3(1.0, 0.0, 0.0) * vec3(dot_product);
+    payload.distance  = gl_RayTmaxEXT;
+    payload.normal    = normal;
+    payload.roughness = 0.0f; 
 }

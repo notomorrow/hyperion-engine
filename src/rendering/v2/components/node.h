@@ -13,7 +13,7 @@ namespace hyperion::v2 {
 
 class Engine;
 
-class Node : public mixins::HasAccelerationStructure<Node> {
+class Node {
 public:
     using NodeList = std::vector<std::unique_ptr<Node>>;
 
@@ -56,10 +56,16 @@ public:
     inline Spatial *GetSpatial() const { return m_spatial.ptr; }
     void SetSpatial(Ref<Spatial> &&spatial);
 
+    /*! \brief Add a new child Node to this object
+     * @returns The added Node
+     */
+    Node *AddChild();
+
     /*! \brief Add the Node as a child of this object, taking ownership over the given Node.
      * @param node The Node to be added as achild of this Node
+     * @returns The added Node
      */
-    void AddChild(std::unique_ptr<Node> &&node);
+    Node *AddChild(std::unique_ptr<Node> &&node);
 
     /*! \brief Remove a child using the given iterator (i.e from FindChild())
      * @param iter The iterator from this Node's child list
@@ -163,9 +169,6 @@ public:
     void UpdateWorldTransform();
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
     void Update(Engine *engine);
-    
-    void CreateAccelerationStructure(Engine *engine);
-    void DestroyAccelerationStructure(Engine *engine);
 
 protected:
     Node(
@@ -178,8 +181,6 @@ protected:
     void UpdateInternal(Engine *engine);
     void OnNestedNodeAdded(Node *node);
     void OnNestedNodeRemoved(Node *node);
-
-    AccelerationGeometry *GetOrCreateSpatialAccelerationGeometry(Engine *engine);
 
     Type m_type = Type::NODE;
     char *m_tag;

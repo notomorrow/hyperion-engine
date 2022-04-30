@@ -69,11 +69,6 @@ public:
     const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
     const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
 
-    bool HasAccelerationGeometry() const { return m_acceleration_geometry != nullptr; }
-    AccelerationGeometry *GetAccelerationGeometry() const { return m_acceleration_geometry.get(); }
-    AccelerationGeometry *CreateAccelerationGeometry(Engine *engine);
-    void DestroyAccelerationGeometry(Engine *engine);
-
     void Init(Engine *engine);
     void Update(Engine *engine);
 
@@ -98,8 +93,6 @@ private:
     BoundingBox m_world_aabb;
     Ref<Material> m_material;
     Ref<Skeleton> m_skeleton;
-    
-    std::unique_ptr<AccelerationGeometry> m_acceleration_geometry;
 
     Octree *m_octree;
     Octree::VisibilityState m_visibility_state;

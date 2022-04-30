@@ -58,8 +58,6 @@ private:
     std::unique_ptr<PackedIndexStorageBuffer>  m_packed_index_buffer;
 
     VkAccelerationStructureGeometryKHR m_geometry;
-
-    AccelerationStructure             *m_acceleration_structure;
 };
 
 class AccelerationStructure {
@@ -70,6 +68,8 @@ public:
     ~AccelerationStructure();
 
     inline AccelerationStructureBuffer *GetBuffer() const                     { return m_buffer.get(); }
+    inline AccelerationStructureInstancesBuffer *GetInstancesBuffer() const   { return m_instances_buffer.get(); }
+
     inline VkAccelerationStructureKHR &GetAccelerationStructure()             { return m_acceleration_structure; }
     inline const VkAccelerationStructureKHR &GetAccelerationStructure() const { return m_acceleration_structure; }
 
@@ -78,16 +78,14 @@ public:
     inline AccelerationStructureFlags GetFlags() const                        { return m_flags; }
     inline void SetFlags(AccelerationStructureFlags flags)                    { m_flags = flags; }
 
-    inline void AddGeometry(AccelerationGeometry *geometry)
-    {
-        AssertThrow(geometry->m_acceleration_structure == nullptr);
-        geometry->m_acceleration_structure = this;
-
-        m_geometries.push_back(geometry);
-    }
-
-    inline const std::vector<AccelerationGeometry *> &GetGeometries() const
+    inline const std::vector<std::unique_ptr<AccelerationGeometry>> &GetGeometries() const
         { return m_geometries; }
+
+    inline void AddGeometry(std::unique_ptr<AccelerationGeometry> &&geometry)
+        { m_geometries.push_back(std::move(geometry)); SetNeedsUpdateFlag(); }
+
+    inline const Matrix4 &GetTransform() const         { return m_transform; }
+    inline void SetTransform(const Matrix4 &transform) { m_transform = transform; SetNeedsUpdateFlag(); }
 
     /*! \brief Remove the geometry from the internal list of Nodes and set a flag that the
      * structure needs to be rebuilt. Will not automatically rebuild.
@@ -99,15 +97,23 @@ public:
 protected:
     static VkAccelerationStructureTypeKHR ToVkAccelerationStructureType(AccelerationStructureType);
 
+    inline void SetFlag(AccelerationStructureFlags flag)   { m_flags = AccelerationStructureFlags(m_flags | flag); }
+    inline void ClearFlag(AccelerationStructureFlags flag) { m_flags = AccelerationStructureFlags(m_flags & ~flag); }
+    inline void SetNeedsUpdateFlag()                       { SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING); }
+    
+    Result CreateMeshDescriptionsBuffer(Instance *instance, const std::vector<AccelerationStructure *> &blas);
+    Result RebuildMeshDescriptionsBuffer(Instance *instance, const std::vector<AccelerationStructure *> &blas);
+
     Result CreateAccelerationStructure(Instance *instance,
         AccelerationStructureType type,
-        const VkAccelerationStructureBuildSizesInfoKHR &build_sizes_info,
         std::vector<VkAccelerationStructureGeometryKHR> &&geometries,
         std::vector<uint32_t> &&primitive_counts);
     
     std::unique_ptr<AccelerationStructureBuffer>          m_buffer;
     std::unique_ptr<AccelerationStructureInstancesBuffer> m_instances_buffer;
-    std::vector<AccelerationGeometry *>                   m_geometries;
+    std::unique_ptr<StorageBuffer>                        m_mesh_descriptions_buffer;
+    std::vector<std::unique_ptr<AccelerationGeometry>>    m_geometries;
+    Matrix4                                               m_transform;
     VkAccelerationStructureKHR                            m_acceleration_structure;
     uint64_t                                              m_device_address;
     AccelerationStructureFlags                            m_flags;
@@ -120,9 +126,11 @@ public:
     TopLevelAccelerationStructure &operator=(const TopLevelAccelerationStructure &other) = delete;
     ~TopLevelAccelerationStructure();
 
-    inline AccelerationStructureType GetType() const { return AccelerationStructureType::TOP_LEVEL; }
+    inline AccelerationStructureType GetType() const                          { return AccelerationStructureType::TOP_LEVEL; }
+    inline StorageBuffer *GetMeshDescriptionsBuffer() const                   { return m_mesh_descriptions_buffer.get(); }
     
-    Result Create(Instance *instance, AccelerationStructure *bottom_level);
+    Result Create(Instance *instance,
+        const std::vector<AccelerationStructure *> &bottom_levels);
 
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
     Result UpdateStructure(Instance *instance, AccelerationStructure *bottom_level);

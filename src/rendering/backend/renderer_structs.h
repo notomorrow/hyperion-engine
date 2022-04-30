@@ -313,6 +313,8 @@ struct Extent3D {
 
     bool operator!=(const Extent3D &other) const
         { return !operator==(other); }
+
+    Extent2D ToExtent2D() const { return Extent2D(width, height); }
 };
 
 struct PackedVertex {
@@ -327,6 +329,13 @@ struct PackedVertex {
 };
 
 static_assert(sizeof(PackedVertex) % 16 == 0);
+
+struct MeshDescription {
+    uint64_t vertex_buffer_address;
+    uint64_t index_buffer_address;
+};
+
+static_assert(sizeof(MeshDescription) % 16 == 0);
 
 using PackedIndex = uint32_t;
 

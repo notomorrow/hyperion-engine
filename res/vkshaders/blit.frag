@@ -22,7 +22,7 @@ void main()
     vec4 albedo = vec4(0.0);
 
     /* render last filter in the stack */
-    out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * 512.0), int(v_texcoord0.y * 512.0)));
+    out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * 1024.0), int(v_texcoord0.y * 1024.0)));
     
     //if (out_color.a < 0.2) {
      //   out_color = vec4(texture(deferred_result, texcoord).rgb, 1.0);

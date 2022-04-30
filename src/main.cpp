@@ -34,6 +34,7 @@
 #include <rendering/v2/components/atomics.h>
 #include <rendering/v2/components/bone.h>
 #include <rendering/v2/asset/model_loaders/obj_model_loader.h>
+#include <rendering/v2/rt/acceleration_structure_builder.h>
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
@@ -470,20 +471,32 @@ int main()
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
 
-    std::unique_ptr<v2::Node> blas_node = std::make_unique<v2::Node>(
+    /*std::unique_ptr<v2::Node> blas_node = std::make_unique<v2::Node>(
         "blasnode",
         Transform()
     );
 
-    blas_node->SetSpatial(engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial()));//engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));
+    blas_node->SetSpatial(engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial()));
+    blas_node->AddChild()->SetSpatial(engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));*/
+
 
     auto tlas = std::make_unique<TopLevelAccelerationStructure>();
-    
-    blas_node->CreateAccelerationStructure(&engine);
-    HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), blas_node->GetAccelerationStructure()));
 
+    monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{ -5, 0, 0 }});
+    
+    std::array<std::unique_ptr<BottomLevelAccelerationStructure>, 2> blas {
+        v2::AccelerationStructureBuilder(monkey_obj->GetChild(0)->GetSpatial()).Build(&engine),
+        v2::AccelerationStructureBuilder(cube_obj->GetChild(0)->GetSpatial()).Build(&engine)
+    };
+
+
+   // blas_node->CreateAccelerationStructure(&engine);
+    HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), std::vector<AccelerationStructure *>{
+        blas[0].get(), blas[1].get()
+    }));
+    
     Image *rt_image_storage = new StorageImage(
-        Extent3D{512, 512, 1},
+        Extent3D{1024, 1024, 1},
         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
         Image::Type::TEXTURE_TYPE_2D,
         nullptr
@@ -497,14 +510,17 @@ int main()
     rt_descriptor_set->AddDescriptor<ImageStorageDescriptor>(1)
         ->AddSubDescriptor({.image_view = &rt_image_storage_view});
 
-    for (auto *geom : blas_node->GetAccelerationStructure()->GetGeometries()) {
+   /* for (auto *geom : blas_node->GetAccelerationStructure()->GetGeometries()) {
         if (geom == nullptr) {
             continue;
         }
 
         rt_descriptor_set->GetDescriptor(3)->AddSubDescriptor({.buffer = geom->GetPackedVertexStorageBuffer()});
         rt_descriptor_set->GetDescriptor(4)->AddSubDescriptor({.buffer = geom->GetPackedIndexStorageBuffer()});
-    }
+    }*/
+    auto rt_storage_buffer = rt_descriptor_set->AddDescriptor<StorageBufferDescriptor>(3);
+    rt_storage_buffer->AddSubDescriptor({.buffer = tlas->GetMeshDescriptionsBuffer()});
+   // rt_storage_buffer->AddSubDescriptor({.buffer = blas[1]->GetMeshDescriptionsBuffer()});
 
     HYPERION_ASSERT_RESULT(rt_image_storage->Create(
         device,
@@ -681,7 +697,7 @@ int main()
                 .count = 1
             }}
         );
-        rt->TraceRays(engine.GetDevice(), frame->GetCommandBuffer(), {512, 512});
+        rt->TraceRays(engine.GetDevice(), frame->GetCommandBuffer(), rt_image_storage->GetExtent().ToExtent2D());
         rt_image_storage->GetGPUImage()->InsertBarrier(
             frame->GetCommandBuffer(),
             { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
@@ -741,8 +757,13 @@ int main()
 #endif
 
 #if HYPERION_VK_TEST_RAYTRACING
+    for (auto &it : blas) {
+        HYPERION_IGNORE_ERRORS(it->Destroy(engine.GetInstance()));
+    }
+
+    rt_image_storage->Destroy(engine.GetDevice());
+    rt_image_storage_view.Destroy(engine.GetDevice());
     tlas->Destroy(engine.GetInstance());
-    blas_node->DestroyAccelerationStructure(&engine);
     rt->Destroy(engine.GetDevice());
 #endif
 

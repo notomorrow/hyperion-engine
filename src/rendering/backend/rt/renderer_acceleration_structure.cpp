@@ -6,6 +6,14 @@
 namespace hyperion {
 namespace renderer {
 
+static VkTransformMatrixKHR ToVkTransform(const Matrix4 &matrix)
+{
+    VkTransformMatrixKHR transform;
+	std::memcpy(&transform, &matrix, sizeof(VkTransformMatrixKHR));
+
+	return transform;
+}
+
 VkAccelerationStructureTypeKHR AccelerationStructure::ToVkAccelerationStructureType(AccelerationStructureType type)
 {
 	switch (type) {
@@ -23,12 +31,13 @@ AccelerationGeometry::AccelerationGeometry(
     std::vector<PackedIndex>  &&packed_indices
 ) : m_packed_vertices(std::move(packed_vertices)),
     m_packed_indices(std::move(packed_indices)),
-    m_geometry{},
-    m_acceleration_structure(nullptr)
+    m_geometry{}
 {
 }
 
-AccelerationGeometry::~AccelerationGeometry() {}
+AccelerationGeometry::~AccelerationGeometry()
+{
+}
 
 Result AccelerationGeometry::Create(Instance *instance)
 {
@@ -113,13 +122,23 @@ Result AccelerationGeometry::Create(Instance *instance)
     HYPERION_RETURN_OK;
 }
 
-Result AccelerationGeometry::Destroy(Instance *)
+Result AccelerationGeometry::Destroy(Instance *instance)
 {
-    if (m_acceleration_structure != nullptr) {
-        m_acceleration_structure->RemoveGeometry(this);
-    }
+	auto result = Result::OK;
 
-	HYPERION_RETURN_OK;
+	auto *device = instance->GetDevice();
+
+	if (m_packed_vertex_buffer != nullptr) {
+	    HYPERION_PASS_ERRORS(m_packed_vertex_buffer->Destroy(device), result);
+		m_packed_vertex_buffer.reset();
+	}
+
+	if (m_packed_index_buffer != nullptr) {
+	    HYPERION_PASS_ERRORS(m_packed_index_buffer->Destroy(device), result);
+		m_packed_index_buffer.reset();
+	}
+
+	return result;
 }
 
 AccelerationStructure::AccelerationStructure()
@@ -134,10 +153,68 @@ AccelerationStructure::~AccelerationStructure()
     AssertThrow(m_acceleration_structure == VK_NULL_HANDLE, "Expected acceleration structure to have been destroyed before destructor call");
 }
 
+Result AccelerationStructure::CreateMeshDescriptionsBuffer(Instance *instance,
+	const std::vector<AccelerationStructure *> &blas)
+{
+	AssertThrow(m_mesh_descriptions_buffer == nullptr);
+
+	Device *device = instance->GetDevice();
+
+	std::vector<MeshDescription> mesh_descriptions;
+	mesh_descriptions.resize(blas.size());
+
+	m_mesh_descriptions_buffer = std::make_unique<StorageBuffer>();
+	HYPERION_BUBBLE_ERRORS(m_mesh_descriptions_buffer->Create(
+		device,
+		sizeof(MeshDescription) * mesh_descriptions.size()
+	));
+
+	for (size_t i = 0; i < mesh_descriptions.size(); i++) {
+	    const auto &blas_instance = blas[i];
+
+		uint64_t vertex_buffer_address = 0,
+		         index_buffer_address = 0;
+
+		if (blas_instance->GetGeometries().empty()) {
+			DebugLog(
+				LogType::Warn,
+				"No geometries added to BLAS node %lu. Setting vertex buffer address and index buffer address to zero.\n",
+				i
+			);
+		} else {
+		    vertex_buffer_address = blas_instance->GetGeometries()[0]->GetPackedVertexStorageBuffer()->GetBufferDeviceAddress(device);
+		    index_buffer_address  = blas_instance->GetGeometries()[0]->GetPackedIndexStorageBuffer()->GetBufferDeviceAddress(device);
+		}
+
+		mesh_descriptions[i] = MeshDescription{
+			.vertex_buffer_address = vertex_buffer_address,
+			.index_buffer_address  = index_buffer_address
+		};
+	}
+
+	m_mesh_descriptions_buffer->Copy(
+		device,
+		sizeof(MeshDescription) * mesh_descriptions.size(),
+		mesh_descriptions.data()
+	);
+
+    HYPERION_RETURN_OK;
+}
+
+Result AccelerationStructure::RebuildMeshDescriptionsBuffer(Instance *instance,
+	const std::vector<AccelerationStructure *> &blas)
+{
+    if (m_mesh_descriptions_buffer != nullptr) {
+		HYPERION_BUBBLE_ERRORS(m_mesh_descriptions_buffer->Destroy(instance->GetDevice()));
+		m_mesh_descriptions_buffer.reset();
+    }
+
+	return CreateMeshDescriptionsBuffer(instance, blas);
+}
+
 Result AccelerationStructure::CreateAccelerationStructure(
     Instance *instance,
     AccelerationStructureType type,
-    const VkAccelerationStructureBuildSizesInfoKHR &build_sizes_info,
     std::vector<VkAccelerationStructureGeometryKHR> &&geometries,
     std::vector<uint32_t> &&primitive_counts)
 {
@@ -146,6 +223,29 @@ Result AccelerationStructure::CreateAccelerationStructure(
     auto result = Result::OK;
 
     Device *device = instance->GetDevice();
+	
+	std::vector<VkAccelerationStructureBuildGeometryInfoKHR> geometry_infos;
+	geometry_infos.resize(geometries.size());
+	
+    for (size_t i = 0; i < geometries.size(); i++) {
+		auto &geometry_info = geometry_infos[i];
+        geometry_info = VkAccelerationStructureBuildGeometryInfoKHR{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};
+        geometry_info.type                     = ToVkAccelerationStructureType(type);
+        geometry_info.flags                    = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+        geometry_info.mode                     = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+        geometry_info.geometryCount            = static_cast<uint32_t>(geometries.size());
+        geometry_info.pGeometries              = geometries.data();
+    }
+
+	VkAccelerationStructureBuildSizesInfoKHR build_sizes_info{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
+
+	device->GetFeatures().dyn_functions.vkGetAccelerationStructureBuildSizesKHR(
+	    device->GetDevice(),
+		VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+		geometry_infos.data(),
+		primitive_counts.data(),
+		&build_sizes_info
+	);
 
     m_buffer = std::make_unique<AccelerationStructureBuffer>();
     HYPERION_BUBBLE_ERRORS(m_buffer->Create(device, build_sizes_info.accelerationStructureSize));
@@ -179,32 +279,33 @@ Result AccelerationStructure::CreateAccelerationStructure(
         &address_info
     );
 
-    auto scratch_buffer = std::make_unique<ScratchBuffer>();
+	std::vector<std::unique_ptr<ScratchBuffer>> scratch_buffers(geometries.size()); /* Do we need 1 per geometry? */
 
-    HYPERION_PASS_ERRORS(
-        scratch_buffer->Create(device, build_sizes_info.buildScratchSize),
-        result
-    );
+	for (size_t i = 0; i < scratch_buffers.size(); i++) {
+		auto &scratch_buffer = scratch_buffers[i];
+		scratch_buffer = std::make_unique<ScratchBuffer>();
 
-    if (!result) {
-        HYPERION_IGNORE_ERRORS(Destroy(instance));
+	    HYPERION_PASS_ERRORS(scratch_buffer->Create(device, build_sizes_info.buildScratchSize), result);
 
-        return result;
-    }
+		if (!result) {
+		    for (auto j = static_cast<int64_t>(i - 1); j >= 0; --j) {
+		        HYPERION_IGNORE_ERRORS(scratch_buffers[j]->Destroy(device));
+		    }
+			
+            HYPERION_IGNORE_ERRORS(Destroy(instance));
 
-    VkAccelerationStructureBuildGeometryInfoKHR geometry_info{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};
-    geometry_info.type                     = ToVkAccelerationStructureType(type);
-    geometry_info.flags                    = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-    geometry_info.mode                     = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-    geometry_info.dstAccelerationStructure = m_acceleration_structure;
-    geometry_info.geometryCount            = static_cast<uint32_t>(geometries.size());
-    geometry_info.pGeometries              = geometries.data();
-	geometry_info.scratchData              = {.deviceAddress = {scratch_buffer->GetBufferDeviceAddress(device)}};
+			return result;
+		}
+
+		auto &geometry_info = geometry_infos[i];
+        geometry_info.dstAccelerationStructure = m_acceleration_structure;
+	    geometry_info.scratchData              = {.deviceAddress = {scratch_buffer->GetBufferDeviceAddress(device)}};
+	}
 
     std::vector<VkAccelerationStructureBuildRangeInfoKHR *> range_infos;
-    range_infos.resize(primitive_counts.size());
+    range_infos.resize(geometries.size());
 
-    for (size_t i = 0; i < primitive_counts.size(); i++) {
+    for (size_t i = 0; i < geometries.size(); i++) {
         range_infos[i] = new VkAccelerationStructureBuildRangeInfoKHR{
             .primitiveCount  = primitive_counts[i],
             .primitiveOffset = 0,
@@ -219,7 +320,7 @@ Result AccelerationStructure::CreateAccelerationStructure(
         device->GetFeatures().dyn_functions.vkCmdBuildAccelerationStructuresKHR(
             command_buffer->GetCommandBuffer(),
             static_cast<uint32_t>(range_infos.size()),
-            &geometry_info,
+            geometry_infos.data(),
             range_infos.data()
         );
 
@@ -233,10 +334,16 @@ Result AccelerationStructure::CreateAccelerationStructure(
     }
 
     if (result) {
-        HYPERION_PASS_ERRORS(scratch_buffer->Destroy(device), result);
+        for (auto &scratch_buffer : scratch_buffers) {
+		    HYPERION_PASS_ERRORS(scratch_buffer->Destroy(device), result);
+		}
     } else {
-        HYPERION_IGNORE_ERRORS(scratch_buffer->Destroy(device));
+        for (auto &scratch_buffer : scratch_buffers) {
+		    HYPERION_IGNORE_ERRORS(scratch_buffer->Destroy(device));
+		}
     }
+
+	ClearFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
 
     HYPERION_RETURN_OK;
 }
@@ -248,6 +355,10 @@ Result AccelerationStructure::Destroy(Instance *instance)
 
 	auto result = Result::OK;
 
+	for (auto &geometry : m_geometries) {
+	    HYPERION_PASS_ERRORS(geometry->Destroy(instance), result);
+	}
+
 	Device *device = instance->GetDevice();
 
 	HYPERION_PASS_ERRORS(m_buffer->Destroy(device), result);
@@ -256,7 +367,12 @@ Result AccelerationStructure::Destroy(Instance *instance)
 	    HYPERION_PASS_ERRORS(m_instances_buffer->Destroy(device), result);
 		m_instances_buffer.reset();
 	}
-	
+
+	if (m_mesh_descriptions_buffer != nullptr) {
+	    HYPERION_PASS_ERRORS(m_mesh_descriptions_buffer->Destroy(device), result);
+		m_mesh_descriptions_buffer.reset();
+	}
+
 	device->GetFeatures().dyn_functions.vkDestroyAccelerationStructureKHR(
 		device->GetDevice(),
 		m_acceleration_structure,
@@ -274,20 +390,22 @@ void AccelerationStructure::RemoveGeometry(AccelerationGeometry *geometry)
 	    return;
 	}
 
-	auto it = std::find(
+	auto it = std::find_if(
 		m_geometries.begin(),
 		m_geometries.end(),
-		geometry
+		[geometry](const auto &other) {
+		    return other.get() == geometry;
+		}
 	);
 
 	if (it == m_geometries.end()) {
 		return;
 	}
 
+	/* Todo: Destroy() ? */
+
 	m_geometries.erase(it);
 	m_flags = AccelerationStructureFlags(m_flags | ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
-
-	geometry->m_acceleration_structure = nullptr;
 }
 
 TopLevelAccelerationStructure::TopLevelAccelerationStructure()
@@ -300,7 +418,8 @@ TopLevelAccelerationStructure::~TopLevelAccelerationStructure()
 	AssertThrowMsg(m_acceleration_structure == VK_NULL_HANDLE, "Acceleration structure should have been destroyed before destructor call");
 }
     
-Result TopLevelAccelerationStructure::Create(Instance *instance, AccelerationStructure *bottom_level)
+Result TopLevelAccelerationStructure::Create(Instance *instance,
+	const std::vector<AccelerationStructure *> &bottom_levels)
 {
 	AssertThrow(m_acceleration_structure == VK_NULL_HANDLE);
 	AssertThrow(m_instances_buffer == nullptr);
@@ -309,22 +428,21 @@ Result TopLevelAccelerationStructure::Create(Instance *instance, AccelerationStr
 
 	Device *device = instance->GetDevice();
 
-	std::vector<VkAccelerationStructureInstanceKHR> instances = {
-	    {
-		    .transform = VkTransformMatrixKHR{
-		        1.0f, 0.0f, 0.0f, 0.0f,
-		        0.0f, 1.0f, 0.0f, 0.0f,
-		        0.0f, 0.0f, 1.0f, 0.0f
-	        },
-		    .instanceCustomIndex                    = 0,
+	std::vector<VkAccelerationStructureInstanceKHR> instances;
+	instances.resize(bottom_levels.size());
+
+	for (size_t i = 0; i < bottom_levels.size(); i++) {
+		const auto instance_index = static_cast<uint32_t>(i); /* Index of mesh in mesh descriptions buffer. */
+
+	    instances[i] = VkAccelerationStructureInstanceKHR{
+		    .transform                              = ToVkTransform(bottom_levels[i]->GetTransform()),
+		    .instanceCustomIndex                    = instance_index,
 		    .mask                                   = 0xff,
 		    .instanceShaderBindingTableRecordOffset = 0,
 		    .flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR,
-		    .accelerationStructureReference         = bottom_level->GetDeviceAddress()
-	    }
-	};
-
-	std::vector<uint32_t> primitive_counts = {1};
+		    .accelerationStructureReference         = bottom_levels[i]->GetDeviceAddress()
+	    };
+	}
 
 	m_instances_buffer = std::make_unique<AccelerationStructureInstancesBuffer>();
 
@@ -348,6 +466,8 @@ Result TopLevelAccelerationStructure::Create(Instance *instance, AccelerationStr
 	VkDeviceOrHostAddressConstKHR instances_buffer_address{
 		.deviceAddress = m_instances_buffer->GetBufferDeviceAddress(device)
 	};
+	
+	std::vector<uint32_t> primitive_counts = {static_cast<uint32_t>(instances.size())};
 
 	std::vector<VkAccelerationStructureGeometryKHR> geometries = {
 	    {
@@ -363,30 +483,26 @@ Result TopLevelAccelerationStructure::Create(Instance *instance, AccelerationStr
 			.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
 	    }
 	};
-	
-	VkAccelerationStructureBuildGeometryInfoKHR geometry_info{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};
-	geometry_info.type          = ToVkAccelerationStructureType(GetType());
-	geometry_info.flags         = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-	geometry_info.geometryCount = static_cast<uint32_t>(geometries.size());
-	geometry_info.pGeometries   = geometries.data();
 
-	VkAccelerationStructureBuildSizesInfoKHR build_sizes_info{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-
-	device->GetFeatures().dyn_functions.vkGetAccelerationStructureBuildSizesKHR(
-	    device->GetDevice(),
-		VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-		&geometry_info,
-		primitive_counts.data(),
-		&build_sizes_info
+	HYPERION_PASS_ERRORS(
+		CreateAccelerationStructure(
+		    instance,
+		    GetType(),
+		    std::move(geometries),
+		    std::move(primitive_counts)
+	    ),
+		result
 	);
 
-	return CreateAccelerationStructure(
-		instance,
-		GetType(),
-		build_sizes_info,
-		std::move(geometries),
-		std::move(primitive_counts)
+	HYPERION_PASS_ERRORS(
+		CreateMeshDescriptionsBuffer(
+		    instance,
+			bottom_levels
+	    ),
+		result
 	);
+
+	return result;
 }
 
 Result TopLevelAccelerationStructure::UpdateStructure(Instance *instance, AccelerationStructure *bottom_level)
@@ -414,7 +530,7 @@ BottomLevelAccelerationStructure::~BottomLevelAccelerationStructure() = default;
 
 Result BottomLevelAccelerationStructure::Create(Instance *instance)
 {
-	Device *device = instance->GetDevice();
+	auto result = Result::OK;
 
 	std::vector<VkAccelerationStructureGeometryKHR> geometries;
 	geometries.resize(m_geometries.size());
@@ -423,41 +539,41 @@ Result BottomLevelAccelerationStructure::Create(Instance *instance)
 	primitive_counts.resize(m_geometries.size());
 
 	for (size_t i = 0; i < m_geometries.size(); i++) {
-	    auto *geometry = m_geometries[i];
+	    const auto &geometry = m_geometries[i];
 
-		/*HYPERION_PASS_ERRORS(geometry->Create(device), result);
+		HYPERION_PASS_ERRORS(geometry->Create(instance), result);
 
 		if (!result) {
 		    return result;
-		}*/
+		}
 
 		geometries[i]       = geometry->m_geometry;
 		primitive_counts[i] = static_cast<uint32_t>(geometry->GetPackedIndices().size() / 3);
 	}
-	
-	VkAccelerationStructureBuildGeometryInfoKHR geometry_info{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR};
-	geometry_info.type          = ToVkAccelerationStructureType(GetType());
-	geometry_info.flags         = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-	geometry_info.geometryCount = static_cast<uint32_t>(geometries.size());
-	geometry_info.pGeometries   = geometries.data();
 
-	VkAccelerationStructureBuildSizesInfoKHR build_sizes_info{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-
-	device->GetFeatures().dyn_functions.vkGetAccelerationStructureBuildSizesKHR(
-	    device->GetDevice(),
-		VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-		&geometry_info,
-		primitive_counts.data(),
-		&build_sizes_info
+	HYPERION_PASS_ERRORS(
+		CreateAccelerationStructure(
+		    instance,
+		    GetType(),
+		    std::move(geometries),
+		    std::move(primitive_counts)
+	    ),
+		result
 	);
 
-	return CreateAccelerationStructure(
-		instance,
-		GetType(),
-		build_sizes_info,
-		std::move(geometries),
-		std::move(primitive_counts)
-	);
+	if (!result) {
+	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+
+		return result;
+	}
+
+	if (!result) {
+	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+
+		return result;
+	}
+
+	return result;
 }
 
 Result BottomLevelAccelerationStructure::UpdateStructure(Instance *instance)

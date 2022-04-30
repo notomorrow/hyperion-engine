@@ -6,23 +6,16 @@ layout(set = 9, binding = 0) uniform accelerationStructureEXT tlas;
 layout(set = 9, binding = 1, rgba8) uniform image2D image;
 
 #include "../include/scene.inc"
+#include "../include/rt/payload.inc"
 
-struct RayPayload {
-	vec3  color;
-	float distance;
-	vec3  normal;
-	float reflector;
-};
-
-layout(location = 0) rayPayloadEXT RayPayload rayPayload;
-
-#define MAX_RECURSION 2
+layout(location = 0) rayPayloadEXT RayPayload payload;
+#define MAX_RECURSION 3
 
 void main() 
 {
-    const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-    const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
-    vec2 d = inUV * 2.0 - 1.0;
+    const vec2 pixel_center = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+    const vec2 uv = pixel_center / vec2(gl_LaunchSizeEXT.xy);
+    vec2 d = uv * 2.0 - 1.0;
     
     mat4 view_inverse = inverse(scene.view);
     mat4 projection_inverse = inverse(scene.projection);
@@ -31,29 +24,29 @@ void main()
     vec4 target = projection_inverse * vec4(d.x, d.y, 1, 1) ;
     vec4 direction = view_inverse * vec4(normalize(target.xyz / target.w), 0);
 
-    uint rayFlags = gl_RayFlagsOpaqueEXT;
-    uint cullMask = 0xff;
+    uint flags = gl_RayFlagsOpaqueEXT;
+    uint mask = 0xff;
     float tmin = 0.001;
     float tmax = 10000.0;
 
     vec3 color = vec3(0.0);
 
     for (int i = 0; i < MAX_RECURSION; i++) {
-        traceRayEXT(tlas, rayFlags, cullMask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
-        vec3 hitColor = rayPayload.color;
+        traceRayEXT(tlas, flags, mask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
+        vec3 hit_color = payload.color;
 
-        if (rayPayload.distance < 0.0f) {
-            color += hitColor;
+        if (payload.distance < 0.0) {
+            color += hit_color;
             break;
-        } else if (rayPayload.reflector == 1.0f) {
-            const vec4 hitPos = origin + direction * rayPayload.distance;
-            origin.xyz = hitPos.xyz + rayPayload.normal * 0.001f;
-            direction.xyz = reflect(direction.xyz, rayPayload.normal);
+        } else if (payload.roughness < 1.0) {
+            const vec4 hit_position = origin + direction * payload.distance;
+            origin.xyz = hit_position.xyz + payload.normal * 0.001f;
+            direction.xyz = reflect(direction.xyz, payload.normal);
         } else {
-            color += hitColor;
+            color += hit_color;
             break;
         }
-	}
+    }
 
     imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(color, 1.0));
 }

@@ -20,13 +20,17 @@ Transform::Transform(const Vector3 &translation, const Vector3 &scale, const Qua
     UpdateMatrix();
 }
 
+Transform::Transform(const Vector3 &translation)
+    : Transform(translation, Vector3::One(), Quaternion::Identity())
+{
+}
+
 Transform::Transform(const Transform &other)
     : m_translation(other.m_translation),
       m_scale(other.m_scale),
       m_rotation(other.m_rotation),
       m_matrix(other.m_matrix)
 {
-    UpdateMatrix();
 }
 
 void Transform::UpdateMatrix()
@@ -42,11 +46,11 @@ void Transform::UpdateMatrix()
 
 Transform Transform::operator*(const Transform &other) const
 {
-    return Transform(
+    return {
         m_translation + other.m_translation,
         m_scale * other.m_scale,
         m_rotation * other.m_rotation
-    );
+    };
 }
 
 Transform &Transform::operator*=(const Transform &other)
