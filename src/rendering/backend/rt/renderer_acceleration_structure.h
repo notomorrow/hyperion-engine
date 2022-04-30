@@ -6,6 +6,7 @@
 #include "../renderer_structs.h"
 
 #include <vector>
+#include <memory>
 
 #include "renderer_acceleration_structure.h"
 
@@ -100,43 +101,20 @@ protected:
     inline void SetFlag(AccelerationStructureFlags flag)   { m_flags = AccelerationStructureFlags(m_flags | flag); }
     inline void ClearFlag(AccelerationStructureFlags flag) { m_flags = AccelerationStructureFlags(m_flags & ~flag); }
     inline void SetNeedsUpdateFlag()                       { SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING); }
-    
-    Result CreateMeshDescriptionsBuffer(Instance *instance, const std::vector<AccelerationStructure *> &blas);
-    Result RebuildMeshDescriptionsBuffer(Instance *instance, const std::vector<AccelerationStructure *> &blas);
 
     Result CreateAccelerationStructure(Instance *instance,
         AccelerationStructureType type,
         std::vector<VkAccelerationStructureGeometryKHR> &&geometries,
-        std::vector<uint32_t> &&primitive_counts);
+        std::vector<uint32_t> &&primitive_counts,
+        bool update = false);
     
     std::unique_ptr<AccelerationStructureBuffer>          m_buffer;
     std::unique_ptr<AccelerationStructureInstancesBuffer> m_instances_buffer;
-    std::unique_ptr<StorageBuffer>                        m_mesh_descriptions_buffer;
     std::vector<std::unique_ptr<AccelerationGeometry>>    m_geometries;
     Matrix4                                               m_transform;
     VkAccelerationStructureKHR                            m_acceleration_structure;
     uint64_t                                              m_device_address;
     AccelerationStructureFlags                            m_flags;
-};
-
-class TopLevelAccelerationStructure : public AccelerationStructure {
-public:
-    TopLevelAccelerationStructure();
-    TopLevelAccelerationStructure(const TopLevelAccelerationStructure &other) = delete;
-    TopLevelAccelerationStructure &operator=(const TopLevelAccelerationStructure &other) = delete;
-    ~TopLevelAccelerationStructure();
-
-    inline AccelerationStructureType GetType() const                          { return AccelerationStructureType::TOP_LEVEL; }
-    inline StorageBuffer *GetMeshDescriptionsBuffer() const                   { return m_mesh_descriptions_buffer.get(); }
-    
-    Result Create(Instance *instance,
-        const std::vector<AccelerationStructure *> &bottom_levels);
-
-    /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
-    Result UpdateStructure(Instance *instance, AccelerationStructure *bottom_level);
-
-private:
-    Result Rebuild(Instance *instance, AccelerationStructure *bottom_level);
 };
 
 class BottomLevelAccelerationStructure : public AccelerationStructure {
@@ -155,6 +133,37 @@ public:
 
 private:
     Result Rebuild(Instance *instance);
+};
+
+class TopLevelAccelerationStructure : public AccelerationStructure {
+public:
+    TopLevelAccelerationStructure();
+    TopLevelAccelerationStructure(const TopLevelAccelerationStructure &other) = delete;
+    TopLevelAccelerationStructure &operator=(const TopLevelAccelerationStructure &other) = delete;
+    ~TopLevelAccelerationStructure();
+
+    inline AccelerationStructureType GetType() const                          { return AccelerationStructureType::TOP_LEVEL; }
+
+    inline StorageBuffer *GetMeshDescriptionsBuffer() const                   { return m_mesh_descriptions_buffer.get(); }
+    
+    Result Create(Instance *instance,
+        std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> &&blas);
+
+    Result Destroy(Instance *instance);
+
+    /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
+    Result UpdateStructure(Instance *instance);
+
+private:
+    Result Rebuild(Instance *instance);
+
+    Result CreateInstancesBuffer(Instance *instance);
+    
+    Result CreateMeshDescriptionsBuffer(Instance *instance);
+    Result RebuildMeshDescriptionsBuffer(Instance *instance);
+
+    std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> m_blas;
+    std::unique_ptr<StorageBuffer>                                 m_mesh_descriptions_buffer;
 };
 
 } // namespace renderer

@@ -44,6 +44,7 @@ public:
         if (text.length() < token.length()) {
             return false;
         }
+
         return std::equal(text.begin() + text.size() - token.size(),
             text.end(), token.begin());
     }

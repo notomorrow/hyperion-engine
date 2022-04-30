@@ -135,7 +135,7 @@ Texture *Material::GetTexture(TextureKey key) const
     return m_textures.Get(key).ptr;
 }
 
-MaterialLibrary::MaterialLibrary() = default;
-MaterialLibrary::~MaterialLibrary() = default;
+MaterialGroup::MaterialGroup() = default;
+MaterialGroup::~MaterialGroup() = default;
 
 } // namespace hyperion::v2

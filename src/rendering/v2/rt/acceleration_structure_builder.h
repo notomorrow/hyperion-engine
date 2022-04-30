@@ -16,19 +16,18 @@ class Engine;
 
 class AccelerationStructureBuilder {
 public:
-    AccelerationStructureBuilder(const Spatial *spatial);
+    AccelerationStructureBuilder() = default;
+    AccelerationStructureBuilder(std::vector<Ref<Spatial>> &&spatials);
     AccelerationStructureBuilder(const AccelerationStructureBuilder &other) = delete;
     AccelerationStructureBuilder &operator=(const AccelerationStructureBuilder &other) = delete;
     ~AccelerationStructureBuilder() = default;
 
-    std::unique_ptr<BottomLevelAccelerationStructure> Build(Engine *engine);
+    void AddSpatial(Ref<Spatial> &&spatial) { m_spatials.push_back(std::move(spatial)); }
+
+    std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> Build(Engine *engine);
 
 private:
-    void CreateGeometry(Engine *engine);
-    void DestroyGeometry(Engine *engine);
-
-    const Spatial *m_spatial;
-    std::unique_ptr<AccelerationGeometry> m_geometry;
+    std::vector<Ref<Spatial>> m_spatials;
 };
 
 } // namespace hyperion::v2

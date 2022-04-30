@@ -635,6 +635,41 @@ Result GPUBuffer::Destroy(Device *device)
     HYPERION_RETURN_OK;
 }
 
+Result GPUBuffer::EnsureCapacity(Device *device,
+    size_t minimum_size,
+    bool *out_size_changed)
+{
+    auto result = Result::OK;
+
+    if (minimum_size <= size) {
+        if (out_size_changed != nullptr) {
+            *out_size_changed = false;
+        }
+
+        HYPERION_RETURN_OK;
+    }
+
+    if (buffer != VK_NULL_HANDLE) {
+        HYPERION_PASS_ERRORS(Destroy(device), result);
+
+        if (!result) {
+            if (out_size_changed != nullptr) {
+                *out_size_changed = false;
+            }
+
+            return result;
+        }
+    }
+
+    HYPERION_PASS_ERRORS(Create(device, minimum_size), result);
+
+    if (out_size_changed != nullptr) {
+        *out_size_changed = bool(result);
+    }
+
+    return result;
+}
+
 #if HYP_DEBUG_MODE
 
 void GPUBuffer::DebugLogBuffer(Device *device) const

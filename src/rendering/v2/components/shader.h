@@ -128,6 +128,7 @@ struct alignas(256) SceneShaderData {
     Matrix4 view;
     Matrix4 projection;
     Vector4 camera_position;
+    Vector4 camera_direction;
     Vector4 light_direction;
 
     uint32_t environment_texture_index;

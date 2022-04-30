@@ -177,6 +177,9 @@ public:
 
     [[nodiscard]] Result Create(Device *device, size_t buffer_size);
     [[nodiscard]] Result Destroy(Device *device);
+    [[nodiscard]] Result EnsureCapacity(Device *device,
+        size_t minimum_size,
+        bool *out_size_changed = nullptr);
 
 #if HYP_DEBUG_MODE
     void DebugLogBuffer(Device *device) const;

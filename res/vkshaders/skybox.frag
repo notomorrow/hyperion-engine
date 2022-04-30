@@ -1,13 +1,11 @@
 #version 450
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_EXT_nonuniform_qualifier : enable
-#extension GL_EXT_scalar_block_layout : enable
+#extension GL_ARB_separate_shader_objects : require
+#extension GL_EXT_nonuniform_qualifier    : require
+#extension GL_EXT_scalar_block_layout     : require
 
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
-layout(location=6) in vec3 v_light_direction;
-layout(location=7) in vec3 v_camera_position;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;

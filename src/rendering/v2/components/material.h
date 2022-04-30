@@ -292,12 +292,12 @@ private:
     mutable ShaderDataState m_shader_data_state;
 };
 
-class MaterialLibrary {
+class MaterialGroup {
 public:
-    MaterialLibrary();
-    MaterialLibrary(const MaterialLibrary &other) = delete;
-    MaterialLibrary &operator=(const MaterialLibrary &other) = delete;
-    ~MaterialLibrary();
+    MaterialGroup();
+    MaterialGroup(const MaterialGroup &other) = delete;
+    MaterialGroup &operator=(const MaterialGroup &other) = delete;
+    ~MaterialGroup();
 
     void Add(const std::string &name, Ref<Material> &&material)
         { m_materials[name] = std::move(material); }

@@ -3,62 +3,42 @@
 
 namespace hyperion::v2 {
 
-AccelerationStructureBuilder::AccelerationStructureBuilder(const Spatial *spatial)
-    : m_spatial(spatial)
+AccelerationStructureBuilder::AccelerationStructureBuilder(std::vector<Ref<Spatial>> &&spatials)
+    : m_spatials(std::move(spatials))
 {
 }
 
-std::unique_ptr<BottomLevelAccelerationStructure> AccelerationStructureBuilder::Build(Engine *engine)
+std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> AccelerationStructureBuilder::Build(Engine *engine)
 {
-    if (m_spatial == nullptr) {
-        return nullptr;
+    if (m_spatials.empty()) {
+        return {};
     }
 
-    CreateGeometry(engine);
+    std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> acceleration_structures;
+    acceleration_structures.reserve(m_spatials.size());
 
-    auto acceleration_structure = std::make_unique<BottomLevelAccelerationStructure>();
-    acceleration_structure->SetTransform(m_spatial->GetTransform().GetMatrix());
-    acceleration_structure->AddGeometry(std::move(m_geometry));
+    for (auto &spatial : m_spatials) {
+        std::unique_ptr<AccelerationGeometry> geometry;
 
-    HYPERION_ASSERT_RESULT(acceleration_structure->Create(engine->GetInstance()));
+        if (auto *mesh = spatial->GetMesh()) {
+            geometry = std::make_unique<AccelerationGeometry>(
+                mesh->BuildPackedVertices(),
+                mesh->BuildPackedIndices()
+            );
+        }
 
-    return std::move(acceleration_structure);
-}
+        auto acceleration_structure = std::make_unique<BottomLevelAccelerationStructure>();
+        acceleration_structure->SetTransform(spatial->GetTransform().GetMatrix());
+        acceleration_structure->AddGeometry(std::move(geometry));
 
-void AccelerationStructureBuilder::CreateGeometry(Engine *engine)
-{
-    const auto *mesh = m_spatial->GetMesh();
+        HYPERION_ASSERT_RESULT(acceleration_structure->Create(engine->GetInstance()));
 
-    if (m_geometry != nullptr) {
-        DestroyGeometry(engine);
+        acceleration_structures.push_back(std::move(acceleration_structure));
     }
 
-    if (mesh == nullptr) {
-        return;
-    }
+    m_spatials.clear();
 
-    m_geometry = std::make_unique<AccelerationGeometry>(
-        mesh->BuildPackedVertices(),
-        mesh->BuildPackedIndices()
-    );
-}
-
-void AccelerationStructureBuilder::DestroyGeometry(Engine *engine)
-{
-    auto result = renderer::Result::OK;
-
-    if (m_geometry == nullptr) {
-        return;
-    }
-    
-    HYPERION_PASS_ERRORS(
-        m_geometry->Destroy(engine->GetInstance()),
-        result
-    );
-
-    m_geometry.reset();
-
-    HYPERION_ASSERT_RESULT(result);
+    return acceleration_structures;
 }
 
 } // namespace hyperion::v2

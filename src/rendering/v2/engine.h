@@ -92,7 +92,7 @@ public:
 
         m_render_list.Get(bucket).AddGraphicsPipeline(graphics_pipeline.Acquire());
 
-        return std::move(graphics_pipeline);
+        return graphics_pipeline;
     }
 
     void SetSpatialTransform(Spatial *spatial, const Transform &transform);

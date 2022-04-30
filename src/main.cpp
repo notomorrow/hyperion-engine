@@ -482,18 +482,15 @@ int main()
 
     auto tlas = std::make_unique<TopLevelAccelerationStructure>();
 
-    monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{ -5, 0, 0 }});
-    
-    std::array<std::unique_ptr<BottomLevelAccelerationStructure>, 2> blas {
-        v2::AccelerationStructureBuilder(monkey_obj->GetChild(0)->GetSpatial()).Build(&engine),
-        v2::AccelerationStructureBuilder(cube_obj->GetChild(0)->GetSpatial()).Build(&engine)
-    };
+    monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 5, 0 }});
 
 
    // blas_node->CreateAccelerationStructure(&engine);
-    HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), std::vector<AccelerationStructure *>{
-        blas[0].get(), blas[1].get()
-    }));
+    v2::AccelerationStructureBuilder blas_builder;
+    blas_builder.AddSpatial(engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial()));
+    blas_builder.AddSpatial(engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));
+
+    HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), blas_builder.Build(&engine)));
     
     Image *rt_image_storage = new StorageImage(
         Extent3D{1024, 1024, 1},
@@ -757,9 +754,6 @@ int main()
 #endif
 
 #if HYPERION_VK_TEST_RAYTRACING
-    for (auto &it : blas) {
-        HYPERION_IGNORE_ERRORS(it->Destroy(engine.GetInstance()));
-    }
 
     rt_image_storage->Destroy(engine.GetDevice());
     rt_image_storage_view.Destroy(engine.GetDevice());

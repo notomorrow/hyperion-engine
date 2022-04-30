@@ -22,27 +22,6 @@ class Engine;
 template <class ...T>
 constexpr bool resolution_failure = false;
 
-class AssetBase {
-protected:
-    struct Result {
-        enum class Status {
-            OK,
-            ERR
-        };
-
-        Status status = Status::OK;
-        const char *message = "";
-    };
-};
-
-template <class T>
-class Asset : public AssetBase {
-public:
-    struct Result : AssetBase::Result {};
-
-    AssetCallbacks<Result, T> callbacks;
-};
-
 class Assets {
     struct HandleAssetFunctorBase {
         std::string filepath;
@@ -150,10 +129,10 @@ class Assets {
     };
 
     template <>
-    struct HandleAssetFunctor<MaterialLibrary> : HandleAssetFunctorBase {
-        std::unique_ptr<MaterialLibrary> operator()(Engine *engine)
+    struct HandleAssetFunctor<MaterialGroup> : HandleAssetFunctorBase {
+        std::unique_ptr<MaterialGroup> operator()(Engine *engine)
         {
-            return LoadResource(engine, GetLoader<MaterialLibrary, LoaderFormat::MTL_MATERIAL_LIBRARY>());
+            return LoadResource(engine, GetLoader<MaterialGroup, LoaderFormat::MTL_MATERIAL_LIBRARY>());
         }
     };
 
