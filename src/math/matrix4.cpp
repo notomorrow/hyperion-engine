@@ -119,17 +119,10 @@ Matrix4 Matrix4::LookAt(const Vector3 &dir, const Vector3 &up)
 {
     auto mat = Identity();
 
-    Vector3 z(dir);
-    z.Normalize();
+    const Vector3 z = Vector3(dir).Normalize();
+    const Vector3 x = Vector3(dir).Normalize().Cross(up).Normalize();
 
-    Vector3 x(dir);
-    x.Normalize();
-    x.Cross(up);
-    x.Normalize();
-
-    Vector3 y(x);
-    y.Cross(z);
-    y.Normalize();
+    const Vector3 y = x.Cross(z).Normalize();
 
     mat[0] = Vector4(x, 0.0f);
     mat[1] = Vector4(y, 0.0f);

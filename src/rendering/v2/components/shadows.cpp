@@ -75,7 +75,17 @@ void ShadowEffect::CreatePipeline(Engine *engine)
     pipeline->SetCullMode(CullMode::FRONT);
     pipeline->AddFramebuffer(m_framebuffer.Acquire());
     
-    m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    
+    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_OPAQUE).m_graphics_pipelines) {
+        for (auto &spatial : pipeline->GetSpatials()) {
+            if (spatial != nullptr) {
+                m_pipeline->AddSpatial(spatial.Acquire());
+            }
+        }
+    }
+
+    m_pipeline.Init();
 }
 
 void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
@@ -101,14 +111,7 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
     m_framebuffer.Init();
 
     CreatePerFrameData(engine);
-
-    engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
-        CreatePipeline(engine);
-    });
-
-    engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
-        DestroyPipeline(engine);
-    });
+    CreatePipeline(engine);
 }
 
 void ShadowEffect::Destroy(Engine *engine)
@@ -137,19 +140,6 @@ void ShadowRenderer::Create(Engine *engine)
 
     uint32_t binding_index = 12; /* TMP */
     m_effect.CreateDescriptors(engine, binding_index);
-
-    /* TMP: will have to be dynamic because objects will be added and removed */
-    engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
-        auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
-
-        for (auto &opaque_pipeline : engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].pipelines.objects) {
-            for (auto &spatial : opaque_pipeline->GetSpatials()) {
-                if (spatial != nullptr) {
-                    pipeline->AddSpatial(spatial.Acquire());
-                }
-            }
-        }
-    });
 }
 
 void ShadowRenderer::Destroy(Engine *engine)
@@ -159,15 +149,9 @@ void ShadowRenderer::Destroy(Engine *engine)
 
 void ShadowRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    using renderer::Result;
-    
-    auto *pipeline = engine->GetGraphicsPipeline(m_effect.GetGraphicsPipelineId());
-
-    AssertThrow(pipeline != nullptr);
-
-    pipeline->Get().BeginRenderPass(primary, 0);
-    pipeline->Render(engine, primary, frame_index);
-    pipeline->Get().EndRenderPass(primary, 0);
+    m_effect.GetFramebuffer()->BeginCapture(primary);
+    m_effect.GetGraphicsPipeline()->Render(engine, primary, frame_index);
+    m_effect.GetFramebuffer()->EndCapture(primary);
 }
 
 } // namespace hyperion::v2

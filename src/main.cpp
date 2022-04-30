@@ -31,6 +31,8 @@
 
 #include <rendering/v2/engine.h>
 #include <rendering/v2/components/node.h>
+#include <rendering/v2/components/atomics.h>
+#include <rendering/v2/components/svo.h>
 #include <rendering/v2/components/bone.h>
 #include <rendering/v2/asset/model_loaders/obj_model_loader.h>
 
@@ -104,7 +106,9 @@ using namespace hyperion;
 
 
 #define HYPERION_VK_TEST_IMAGE_STORE 1
+#define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
+#define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
 
 int main()
 {
@@ -147,7 +151,7 @@ int main()
             uint32_t(cubemap_faces[0]->GetHeight())
         },
         Image::InternalFormat(cubemap_faces[0]->GetInternalFormat()),
-        Image::FilterMode::TEXTURE_FILTER_LINEAR,
+        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
         bytes
     ));
@@ -174,29 +178,49 @@ int main()
     ImageView image_storage_view;
 #endif
 
+    auto *input_manager = new InputManager(window);
+    input_manager->SetWindow(window);
+
+    auto scene = engine.resources.scenes.Add(std::make_unique<v2::Scene>(
+        std::make_unique<FpsCamera>(
+            input_manager,
+            window,
+            1024,
+            768,
+            70.0f,
+            0.05f,
+            250.0f
+        )
+    ));
+
     engine.Initialize();
     
+    auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
+    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.6f }));
+    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
+    mat1.Init();
+
+    scene->SetEnvironmentTexture(0, cubemap.Acquire());
+
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/sponza/sponza.obj",
+        base_path + "/res/models/sponza/sponza.obj", //San_Miguel/san-miguel-low-poly.obj", //,//"
         base_path + "/res/models/cube.obj"
     );
 
+    sponza->Translate({0, 0, 5});
 
-    zombie->Scale(0.35f);
-
-    sponza->Scale(0.1f);
+    sponza->Scale(0.02f);
+    //sponza->Scale(0.45f);
     //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
     sponza->Update(&engine);
-    
 
     Device *device = engine.GetInstance()->GetDevice();
-    
-#if HYPERION_VK_TEST_IMAGE_STORE
+
     auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
 
-
+#if HYPERION_VK_TEST_IMAGE_STORE
     descriptor_set_globals
         ->AddDescriptor<ImageStorageDescriptor>(16)
         ->AddSubDescriptor({ .image_view = &image_storage_view });
@@ -204,12 +228,17 @@ int main()
     HYPERION_ASSERT_RESULT(image_storage->Create(
         device,
         engine.GetInstance(),
-        Image::LayoutTransferState<VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL>{}
+        GPUMemory::ResourceState::UNORDERED_ACCESS
     ));
 
     HYPERION_ASSERT_RESULT(image_storage_view.Create(device, image_storage));
 #endif
-    
+
+#if HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE
+    v2::SparseVoxelOctree svo;
+    svo.Init(&engine);
+#endif
+
     engine.PrepareSwapchain();
     
     auto mirror_shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
@@ -230,21 +259,6 @@ int main()
     ));
 
     float timer = 0.0;
-
-    auto *input_manager = new InputManager(window);
-    input_manager->SetWindow(window);
-
-    auto scene = engine.resources.scenes.Add(std::make_unique<v2::Scene>(
-        std::make_unique<FpsCamera>(
-            input_manager,
-            window,
-            1024,
-            768,
-            70.0f,
-            0.05f,
-            250.0f
-        )
-    ));
 
     bool running = true;
 
@@ -294,11 +308,6 @@ int main()
 
     v2::Node new_root("root");
     
-    auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
-    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 0.0f, 0.0f, 0.5f }));
-    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
-    mat1.Init();
-    
     auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
     mat2->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture2.Acquire());
@@ -316,8 +325,7 @@ int main()
     //v2::Spatial *cube_spatial{};
     auto cube_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
     auto zombie_spatial = engine.resources.spatials.Acquire(zombie->GetChild(0)->GetSpatial());
-
-    v2::GraphicsPipeline::ID main_pipeline_id;
+    
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
@@ -330,6 +338,8 @@ int main()
 
         std::function<void(v2::Node *)> find_spatials = [&](v2::Node *node) {
             if (auto *spatial = node->GetSpatial()) {
+                // engine.GetGraphicsPipeline(svo.GetVoxelizer()->GetGraphicsPipelineId())->AddSpatial(engine.resources.spatials.Acquire(spatial));
+
                 pipeline->AddSpatial(engine.resources.spatials.Acquire(spatial));
             }
 
@@ -340,12 +350,11 @@ int main()
 
         find_spatials(sponza.get());
         
-        main_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
+        engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
-    v2::GraphicsPipeline::ID skybox_pipeline_id{};
-    {
 
+    {
         auto shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
             std::vector<v2::SubShader>{
                 {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
@@ -367,10 +376,9 @@ int main()
         skybox_spatial->SetMaterial(std::move(skybox_material));
         pipeline->AddSpatial(std::move(skybox_spatial));
         
-        skybox_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
+        engine.AddGraphicsPipeline(std::move(pipeline));
     }
-
-    v2::GraphicsPipeline::ID translucent_pipeline_id{};
+    
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
@@ -382,9 +390,11 @@ int main()
 
         auto zombie_node = std::make_unique<v2::Node>("monkey");
         zombie_node->SetSpatial(zombie_spatial.Acquire());
+        zombie_node->Scale(0.15f);
+
         pipeline->AddSpatial(zombie_spatial.Acquire());
         
-        translucent_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
+        engine.AddGraphicsPipeline(std::move(pipeline));
     }
 
 #if HYPERION_VK_TEST_VISUALIZE_OCTREE
@@ -447,6 +457,10 @@ int main()
     
     engine.Compile();
 
+#if HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE
+    svo.Build(&engine);
+#endif
+
 #if HYPERION_VK_TEST_IMAGE_STORE
     VkFence compute_fc;
     VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -471,8 +485,6 @@ int main()
         .light_direction = Vector4(Vector3(0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
     });
 
-    bool updated_descriptor = false;
-
     while (running) {
         tick_last = tick_now;
         tick_now = SDL_GetPerformanceCounter();
@@ -491,6 +503,20 @@ int main()
 
         timer += delta_time;
 
+        if (MathUtil::Approximately(std::fmod(timer, 1.0f), 0.0f)) {
+            if (auto *tex = mat1->GetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP)) {
+                if (tex->GetId() == texture->GetId()) {
+                    mat1->SetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, texture2.Acquire());
+                } else {
+                    mat1->SetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
+                }
+            } else {
+                mat1->SetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
+            }
+
+            DebugLog(LogType::Info, "Switch textures\n");
+        }
+
         scene->Update(&engine, delta_time);
 
         HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
@@ -503,9 +529,13 @@ int main()
         const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
 #if HYPERION_VK_TEST_IMAGE_STORE
-        auto *compute_pipeline = engine.resources.compute_pipelines[compute_pipeline_id];
-        compute_pipeline->Get().push_constants.counter_x = std::sin(timer) * 20.0f;
-        compute_pipeline->Get().push_constants.counter_y = std::cos(timer) * 20.0f;
+        auto &compute_pipeline = *engine.resources.compute_pipelines[compute_pipeline_id];
+        compute_pipeline->push_constants = {
+            .counter = {
+                .x = static_cast<uint32_t>(std::sin(timer) * 20.0f),
+                .y = static_cast<uint32_t>(std::cos(timer) * 20.0f)
+            }
+        };
 
         /* Compute */
         vkWaitForFences(engine.GetInstance()->GetDevice()->GetDevice(),
@@ -515,7 +545,19 @@ int main()
         
         compute_command_buffer->Reset(engine.GetInstance()->GetDevice());
         HYPERION_ASSERT_RESULT(compute_command_buffer->Record(engine.GetInstance()->GetDevice(), nullptr, [&](CommandBuffer *cmd) {
-            compute_pipeline->Dispatch(&engine, cmd, {8, 8, 1});
+            compute_pipeline->Bind(cmd);
+
+            engine.GetInstance()->GetDescriptorPool().Bind(
+                engine.GetInstance()->GetDevice(),
+                cmd,
+                &compute_pipeline.Get(),
+                {{
+                    .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
+                    .count = 1
+                }}
+            );
+
+            compute_pipeline->Dispatch(cmd, {8, 8, 1});
 
             HYPERION_RETURN_OK;
         }));
@@ -532,53 +574,39 @@ int main()
 
         sponza->Update(&engine);
         
-        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->m_pose_transform.SetRotation(Quaternion({0, 1, 0}, timer * 0.35f));
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
         zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
         zombie->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
-        zombie->SetLocalTransform(transform);
         zombie->Update(&engine);
         
         cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         cube_obj->Update(&engine);
+
 
         /* Only update sets that are double - buffered so we don't
          * end up updating data that is in use by the gpu
          */
         engine.UpdateDescriptorData(frame_index);
         
-        HYPERION_ASSERT_RESULT(frame->BeginCapture());
+        HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
         engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
-        engine.RenderPostProcessing(frame->GetCommandBuffer(), frame_index);
-
 
 #if HYPERION_VK_TEST_IMAGE_STORE
-        /* TODO: where should this go? find a way to abstract this */
-        VkImageMemoryBarrier image_memory_barrier = {};
-        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        // We won't be changing the layout of the image
-        image_memory_barrier.oldLayout        = VK_IMAGE_LAYOUT_GENERAL;
-        image_memory_barrier.newLayout        = VK_IMAGE_LAYOUT_GENERAL;
-        image_memory_barrier.image            = image_storage->GetGPUImage()->image;
-        image_memory_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-        image_memory_barrier.srcAccessMask    = VK_ACCESS_SHADER_WRITE_BIT;
-        image_memory_barrier.dstAccessMask     = VK_ACCESS_SHADER_READ_BIT;
-        image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        vkCmdPipelineBarrier(
-            frame->GetCommandBuffer()->GetCommandBuffer(),
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &image_memory_barrier);
+        image_storage->GetGPUImage()->InsertBarrier(
+            frame->GetCommandBuffer(),
+            { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+            GPUMemory::ResourceState::UNORDERED_ACCESS
+        );
 #endif
 
         engine.RenderSwapchain(frame->GetCommandBuffer());
 
-        HYPERION_ASSERT_RESULT(frame->EndCapture());
+        HYPERION_ASSERT_RESULT(frame->EndCapture(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));
+
+        
         
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
         engine.GetInstance()->GetFrameHandler()->NextFrame();
@@ -599,9 +627,6 @@ int main()
     delete image_storage;
 
 #endif
-    
-    
-    //delete cubemap;
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
         per_frame_data[i].Get<CommandBuffer>()->Destroy(engine.GetInstance()->GetDevice(), engine.GetInstance()->GetGraphicsCommandPool());

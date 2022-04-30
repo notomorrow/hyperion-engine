@@ -69,6 +69,10 @@ void Spatial::Update(Engine *engine)
         m_skeleton->UpdateShaderData(engine);
     }
 
+    if (m_material != nullptr) {
+        m_material->Update(engine);
+    }
+
     if (!m_shader_data_state.IsDirty()) {
         if (m_octree != nullptr) {
             m_visibility_state = m_octree->GetVisibilityState();
@@ -89,8 +93,15 @@ void Spatial::UpdateShaderData(Engine *engine) const
     engine->shader_globals->objects.Set(
         m_id.value - 1,
         {
-            .model_matrix = m_transform.GetMatrix(),
-            .has_skinning = m_skeleton != nullptr
+            .model_matrix   = m_transform.GetMatrix(),
+            .has_skinning   = m_skeleton != nullptr,
+            .material_index = m_material != nullptr
+                ? m_material->GetId().value - 1
+                : 0,
+            .local_aabb_max         = Vector4(m_local_aabb.max, 1.0f),
+            .local_aabb_min         = Vector4(m_local_aabb.min, 1.0f),
+            .world_aabb_max         = Vector4(m_world_aabb.max, 1.0f),
+            .world_aabb_min         = Vector4(m_world_aabb.min, 1.0f)
         }
     );
 

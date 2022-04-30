@@ -3,8 +3,7 @@
 namespace hyperion {
 namespace renderer {
 Frame::Frame()
-    : creation_device(nullptr),
-      command_buffer(nullptr),
+    : command_buffer(nullptr),
       fc_queue_submit(nullptr),
       present_semaphores(
           { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT },
@@ -20,63 +19,46 @@ Frame::~Frame()
 
 Result Frame::Create(Device *device, const non_owning_ptr<CommandBuffer> &cmd)
 {
-    this->creation_device = non_owning_ptr(device);
     this->command_buffer = cmd;
+    
+    HYPERION_BUBBLE_ERRORS(present_semaphores.Create(device));
 
-    return this->CreateSyncObjects();
-}
+    fc_queue_submit = std::make_unique<Fence>(true);
 
-Result Frame::Destroy()
-{
-    return this->DestroySyncObjects();
-}
-
-Result Frame::CreateSyncObjects()
-{
-    AssertThrow(this->creation_device != nullptr);
-
-    HYPERION_BUBBLE_ERRORS(present_semaphores.Create(this->creation_device.get()));
-
-    VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    HYPERION_VK_CHECK_MSG(
-        vkCreateFence(creation_device->GetDevice(), &fence_info, nullptr, &this->fc_queue_submit),
-        "Error creating render fence!"
-    );
+    HYPERION_BUBBLE_ERRORS(fc_queue_submit->Create(device));
 
     DebugLog(LogType::Debug, "Create Sync objects!\n");
 
     HYPERION_RETURN_OK;
 }
 
-Result Frame::DestroySyncObjects()
+Result Frame::Destroy(Device *device)
 {
-    Result result = Result::OK;
+    auto result = Result::OK;
 
-    AssertThrow(this->creation_device != nullptr);
+    HYPERION_PASS_ERRORS(present_semaphores.Destroy(device), result);
 
-    HYPERION_PASS_ERRORS(present_semaphores.Destroy(this->creation_device.get()), result);
+    AssertThrow(fc_queue_submit != nullptr);
 
-    vkDestroyFence(this->creation_device->GetDevice(), this->fc_queue_submit, nullptr);
-    this->fc_queue_submit = nullptr;
+    HYPERION_PASS_ERRORS(fc_queue_submit->Destroy(device), result);
+    fc_queue_submit = nullptr;
 
     return result;
 }
 
-Result Frame::BeginCapture()
+Result Frame::BeginCapture(Device *device)
 {
-    return command_buffer->Begin(this->creation_device.get());
+    return command_buffer->Begin(device);
 }
 
-Result Frame::EndCapture()
+Result Frame::EndCapture(Device *device)
 {
-    return command_buffer->End(this->creation_device.get());
+    return command_buffer->End(device);
 }
 
 Result Frame::Submit(Queue *queue)
 {
-    return command_buffer->SubmitPrimary(queue->queue, fc_queue_submit, &present_semaphores);
+    return command_buffer->SubmitPrimary(queue->queue, fc_queue_submit->GetFence(), &present_semaphores);
 }
 
 } // namespace renderer

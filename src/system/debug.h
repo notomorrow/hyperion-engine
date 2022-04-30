@@ -14,13 +14,17 @@
 
 #ifndef HYPERION_BUILD_RELEASE
 
-#define HYPERION_ENABLE_BREAKPOINTS 1
+#define HYP_DEBUG_MODE 1
+
+#if HYP_DEBUG_MODE
+#define HYP_ENABLE_BREAKPOINTS 1
+#endif
 
 #if defined(__GNUC__) || defined(__GNUG__) || defined(__clang__)
 #define HYP_DEBUG_FUNC_SHORT (__FUNCTION__)
 #define HYP_DEBUG_FUNC       (__PRETTY_FUNCTION__)
 #define HYP_DEBUG_LINE       (__LINE__)
-#ifdef HYPERION_ENABLE_BREAKPOINTS
+#ifdef HYP_ENABLE_BREAKPOINTS
 #define HYP_BREAKPOINT       (raise(SIGTERM))
 #endif
 
@@ -28,7 +32,7 @@
 #define HYP_DEBUG_FUNC_SHORT (__FUNCTION__)
 #define HYP_DEBUG_FUNC       (__FUNCSIG__)
 #define HYP_DEBUG_LINE       (__LINE__)
-#ifdef HYPERION_ENABLE_BREAKPOINTS
+#ifdef HYP_ENABLE_BREAKPOINTS
 #define HYP_BREAKPOINT       (__debugbreak())
 #endif
 #else
@@ -39,7 +43,7 @@
 #endif
 #endif /* HYPERION_BUILD_RELEASE */
 
-#if !HYPERION_ENABLE_BREAKPOINTS
+#if !HYP_ENABLE_BREAKPOINTS
 #define HYP_BREAKPOINT       (void(0))
 #endif
 

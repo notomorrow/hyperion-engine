@@ -78,12 +78,19 @@ struct alignas(256) SkeletonShaderData {
 struct alignas(256) ObjectShaderData {
     Matrix4 model_matrix;
     uint32_t has_skinning;
+    uint32_t material_index;
+    uint32_t _padding[2];
 
-    uint32_t _padding[3];
+    Vector4 local_aabb_max;
+    Vector4 local_aabb_min;
+    Vector4 world_aabb_max;
+    Vector4 world_aabb_min;
 };
 
+static_assert(sizeof(ObjectShaderData) == 256);
+
 struct alignas(256) MaterialShaderData {
-    static constexpr size_t max_bound_textures = 8;
+    static constexpr size_t max_bound_textures = sizeof(uint32_t) * CHAR_BIT;
 
     Vector4 albedo;
 
@@ -108,17 +115,31 @@ struct alignas(256) MaterialShaderData {
     float parallax_height;
 
     uint32_t texture_index[max_bound_textures];
-    uint32_t texture_usage[max_bound_textures];
+    uint32_t texture_usage;
+    uint32_t _padding1;
+    uint32_t _padding2;
 };
 
 static_assert(sizeof(MaterialShaderData) == 256);
 
 struct alignas(256) SceneShaderData {
+    static constexpr uint32_t max_environment_textures = 1;
+
     Matrix4 view;
     Matrix4 projection;
     Vector4 camera_position;
     Vector4 light_direction;
+
+    uint32_t environment_texture_index;
+    uint32_t environment_texture_usage;
+    uint32_t resolution_x;
+    uint32_t resolution_y;
+    
+    Vector4 aabb_max;
+    Vector4 aabb_min;
 };
+
+static_assert(sizeof(SceneShaderData) == 256);
 
 template <class StructType>
 class BufferRangeUpdater {
@@ -128,7 +149,7 @@ protected:
     {
         auto &dirty = m_dirty[buffer_index];
 
-        if (!dirty.GetEnd()) {
+        if (dirty.GetEnd() == 0) {
             return;
         }
 
@@ -138,7 +159,7 @@ protected:
             device,
             dirty.GetStart()    * sizeof(StructType),
             dirty.GetDistance() * sizeof(StructType),
-            ptr + dirty.GetStart()
+            &ptr[dirty.GetStart()]
         );
 
         dirty = {0, 0};

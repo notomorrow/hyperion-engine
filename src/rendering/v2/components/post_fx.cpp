@@ -21,9 +21,7 @@ PostEffect::PostEffect()
 }
 
 PostEffect::PostEffect(Ref<Shader> &&shader)
-    : m_pipeline_id{},
-      m_shader(std::move(shader)),
-      m_render_pass(nullptr)
+    : m_shader(std::move(shader))
 {
 }
 
@@ -69,28 +67,20 @@ void PostEffect::Create(Engine *engine)
 {
     CreateRenderPass(engine);
 
-    auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, m_render_pass.Acquire());
+    m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+        engine->GetInstance()->swapchain->extent,
+        m_render_pass.Acquire()
+    ));
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
-        framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+        m_framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
     }
-
-    m_framebuffer = engine->resources.framebuffers.Add(
-        std::move(framebuffer)
-    );
-
+    
     m_framebuffer.Init();
 
     CreatePerFrameData(engine);
-
-    engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this, engine](...) {
-        CreatePipeline(engine);
-    });
-
-    engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this, engine](...) {
-        DestroyPipeline(engine);
-    });
+    CreatePipeline(engine);
 }
 
 void PostEffect::CreatePerFrameData(Engine *engine)
@@ -141,7 +131,8 @@ void PostEffect::CreatePipeline(Engine *engine)
     pipeline->SetDepthTest(false);
     pipeline->SetTopology(Topology::TRIANGLE_FAN);
 
-    m_pipeline_id = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline.Init();
 }
 
 void PostEffect::Destroy(Engine *engine)
@@ -165,17 +156,13 @@ void PostEffect::Destroy(Engine *engine)
     m_frame_data->Reset();
 
     m_framebuffer = nullptr;
+    m_pipeline = nullptr;
 
     for (auto &attachment : m_attachments) {
         HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
     }
 
     HYPERION_ASSERT_RESULT(result);
-}
-
-void PostEffect::DestroyPipeline(Engine *engine)
-{
-    engine->RemoveGraphicsPipeline(m_pipeline_id);
 }
 
 void PostEffect::Record(Engine *engine, uint32_t frame_index)
@@ -185,23 +172,52 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
     auto result = Result::OK;
 
     auto *command_buffer = m_frame_data->At(frame_index).Get<CommandBuffer>();
-    auto *pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
 
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
             engine->GetInstance()->GetDevice(),
-            pipeline->Get().GetConstructionInfo().render_pass,
-            [this, engine, pipeline](CommandBuffer *cmd) {
-                pipeline->Get().Bind(cmd);
+            m_pipeline->Get().GetConstructionInfo().render_pass,
+            [this, engine, frame_index](CommandBuffer *cmd) {
+                m_pipeline->Get().Bind(cmd);
                 
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &pipeline->Get(),
+                    &m_pipeline->Get(),
                     {
-                        {.count = 3},
-                        {},
-                        {.offsets = {uint32_t(0)}}
+                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, .count = 1},
+                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+                    }
+                ));
+                
+                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+                    engine->GetInstance()->GetDevice(),
+                    cmd,
+                    &m_pipeline->Get(),
+                    {
+                        {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
+                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+                        {.offsets = {uint32_t(0 * sizeof(SceneShaderData))}} /* TODO: scene index */
+                    }
+                ));
+                
+                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+                    engine->GetInstance()->GetDevice(),
+                    cmd,
+                    &m_pipeline->Get(),
+                    {
+                        {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
+                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
+                    }
+                ));
+
+                /* TMP */
+                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+                    engine->GetInstance()->GetDevice(),
+                    cmd,
+                    &m_pipeline->Get(),
+                    {
+                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1}
                     }
                 ));
 
@@ -215,17 +231,15 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
     AssertThrowMsg(result, "Failed to record command buffer. Message: %s", result.message);
 }
 
-void PostEffect::Render(Engine * engine, CommandBuffer *primary_command_buffer, uint32_t frame_index)
+void PostEffect::Render(Engine * engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    auto *pipeline = engine->GetGraphicsPipeline(m_pipeline_id);
-
-    pipeline->Get().BeginRenderPass(primary_command_buffer, 0);
+    m_framebuffer->BeginCapture(primary);
 
     auto *secondary_command_buffer = m_frame_data->At(frame_index).Get<CommandBuffer>();
 
-    HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(primary_command_buffer));
+    HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(primary));
 
-    pipeline->Get().EndRenderPass(primary_command_buffer, 0);
+    m_framebuffer->EndCapture(primary);
 }
 
 

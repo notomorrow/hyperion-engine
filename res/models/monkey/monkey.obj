@@ -1,6 +1,8 @@
 # Blender v2.74 (sub 0) OBJ File: ''
 # www.blender.org
 o Suzanne
+mtllib monkey
+usemtl None
 v 0.490583 0.186287 0.719791
 v 0.475731 0.192902 0.737549
 v 0.476952 0.160851 0.722916

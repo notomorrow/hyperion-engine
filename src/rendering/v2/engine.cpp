@@ -48,11 +48,10 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_COLOR,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ 
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8 },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )
@@ -92,9 +91,6 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
-    m_post_processing.Create(this);
-    m_deferred_renderer.Create(this);
-    m_shadow_renderer.Create(this);
 
     auto shader = resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
@@ -111,9 +107,6 @@ void Engine::PrepareSwapchain()
         renderer::RenderPassStage::PRESENT,
         renderer::RenderPass::Mode::RENDER_PASS_INLINE
     ));
-
-    RenderPass::ID render_pass_id{};
-
 
     m_render_pass_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
@@ -193,17 +186,8 @@ void Engine::PrepareSwapchain()
     m_root_pipeline->SetTopology(Topology::TRIANGLE_FAN);
 
     callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
-        m_render_list.CreatePipelines(this);
-        m_root_pipeline->Create(this);
-    });
-
-    callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](...) {
-        m_render_list.Destroy(this);
-        m_root_pipeline->Destroy(this);
-
-        for (auto &attachment : m_render_pass_attachments) {
-            HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
-        }
+        m_render_list.AddFramebuffersToPipelines(this);
+        m_root_pipeline->Init(this);
     });
     
     callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](...) {
@@ -328,13 +312,21 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_SPATIALS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SHADERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_TEXTURES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_VOXELIZER, this);
+    callbacks.Trigger(EngineCallback::DESTROY_DESCRIPTOR_SETS, this);
+    
+    m_render_list.Destroy(this);
+
     callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
 
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
-    m_post_processing.Destroy(this);
+
+    for (auto &attachment : m_render_pass_attachments) {
+        HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
+    }
     
     callbacks.Trigger(EngineCallback::DESTROY_FRAMEBUFFERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
@@ -356,6 +348,9 @@ void Engine::Destroy()
 
 void Engine::Compile()
 {
+    m_deferred_renderer.Create(this);
+    m_shadow_renderer.Create(this);
+
     callbacks.TriggerPersisted(EngineCallback::CREATE_SKELETONS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
 
@@ -368,11 +363,17 @@ void Engine::Compile()
 
         /* Finalize per-object data */
         shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), i);
+
+        /* Finalize per-object data */
+        shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), i);
     }
+
+    callbacks.TriggerPersisted(EngineCallback::CREATE_DESCRIPTOR_SETS, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_VOXELIZER, this);
 
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
-
+    
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
 }
@@ -402,29 +403,28 @@ void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
     m_deferred_renderer.Render(this, primary, frame_index);
 }
 
-void Engine::RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index)
-{
-    m_post_processing.Render(this, primary, frame_index);
-}
-
 void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
 {
     auto &pipeline = m_root_pipeline->Get();
     const uint32_t acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 
-    pipeline.BeginRenderPass(command_buffer, acquired_image_index);
+    m_root_pipeline->GetFramebuffers()[acquired_image_index]->BeginCapture(command_buffer);
+    
     pipeline.Bind(command_buffer);
 
     m_instance->GetDescriptorPool().Bind(
         m_instance->GetDevice(),
         command_buffer,
         &pipeline,
-        {{.set = 1, .count = 1}}
+        {{
+            .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
+            .count = 1
+        }}
     );
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
     PostEffect::full_screen_quad->RenderVk(command_buffer, m_instance.get(), nullptr);
-
-    pipeline.EndRenderPass(command_buffer, acquired_image_index);
+    
+    m_root_pipeline->GetFramebuffers()[acquired_image_index]->EndCapture(command_buffer);
 }
 } // namespace hyperion::v2

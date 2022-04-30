@@ -11,26 +11,24 @@
 namespace hyperion {
 namespace renderer {
 ComputePipeline::ComputePipeline()
-    : pipeline{},
-      layout{},
-      push_constants{}
+    : Pipeline()
 {
     static int x = 0;
     DebugLog(LogType::Debug, "Create Compute Pipeline [%d]\n", x++);
 }
 
-ComputePipeline::~ComputePipeline()
-{
-    AssertThrowMsg(this->pipeline == nullptr, "Compute pipeline should have been destroyed");
-    AssertThrowMsg(this->layout == nullptr, "Compute pipeline should have been destroyed");
-}
+ComputePipeline::~ComputePipeline() = default;
 
-void ComputePipeline::Bind(VkCommandBuffer cmd) const
+void ComputePipeline::Bind(CommandBuffer *command_buffer) const
 {
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, this->pipeline);
+    vkCmdBindPipeline(
+        command_buffer->GetCommandBuffer(),
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        pipeline
+    );
 
     vkCmdPushConstants(
-        cmd,
+        command_buffer->GetCommandBuffer(),
         layout,
         VK_SHADER_STAGE_COMPUTE_BIT,
         0, sizeof(push_constants),
@@ -38,12 +36,33 @@ void ComputePipeline::Bind(VkCommandBuffer cmd) const
     );
 }
 
-void ComputePipeline::Dispatch(VkCommandBuffer cmd, Extent3D group_size) const
+void ComputePipeline::Bind(CommandBuffer *command_buffer,
+                           const PushConstantData &push_constant_data)
 {
-    vkCmdDispatch(cmd, group_size.width, group_size.height, group_size.depth);
+    push_constants = push_constant_data;
+
+    Bind(command_buffer);
 }
 
-Result ComputePipeline::Create(Device *device, ShaderProgram *shader, DescriptorPool *descriptor_pool)
+void ComputePipeline::Dispatch(CommandBuffer *command_buffer,
+                               Extent3D group_size) const
+{
+    vkCmdDispatch(
+        command_buffer->GetCommandBuffer(),
+        group_size.width, group_size.height, group_size.depth
+    );
+}
+
+void ComputePipeline::DispatchIndirect(CommandBuffer *command_buffer,
+                                       const IndirectBuffer *indirect,
+                                       size_t offset) const
+{
+    indirect->DispatchIndirect(command_buffer, offset);
+}
+
+Result ComputePipeline::Create(Device *device,
+                               ShaderProgram *shader,
+                               DescriptorPool *descriptor_pool)
 {
     /* Push constants */
     const VkPushConstantRange push_constant_ranges[] = {

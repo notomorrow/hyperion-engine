@@ -25,7 +25,8 @@ static VkResult HandleNextFrame(Device *device, Swapchain *swapchain, Frame *fra
         UINT64_MAX,
         frame->GetPresentSemaphores().GetWaitSemaphores()[0].GetSemaphore(),
         VK_NULL_HANDLE,
-        index);
+        index
+    );
 }
 
 Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &requested_layers)
@@ -91,7 +92,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     DebugLogRaw(lt, "Vulkan: [%s, %d]:\n\t%s\n",
              callback_data->pMessageIdName, callback_data->messageIdNumber, callback_data->pMessage);
 
-#if HYPERION_ENABLE_BREAKPOINTS
+#if HYP_ENABLE_BREAKPOINTS
     if (lt == LogType::RenError) {
         HYP_BREAKPOINT;
     }
@@ -265,6 +266,7 @@ Result Instance::Initialize(bool load_debug_layers)
     this->descriptor_pool.AddDescriptorSet(false);
     this->descriptor_pool.AddDescriptorSet(true);
     this->descriptor_pool.AddDescriptorSet(true);
+    this->descriptor_pool.AddDescriptorSet(false);
 
     AssertThrow(descriptor_pool.NumDescriptorSets() == DescriptorSet::max_descriptor_sets);
 
@@ -291,6 +293,8 @@ Result Instance::Destroy()
 
     /* Wait for the GPU to finish, we need to be in an idle state. */
     HYPERION_VK_PASS_ERRORS(vkDeviceWaitIdle(this->device->GetDevice()), result);
+
+    HYPERION_PASS_ERRORS(m_staging_buffer_pool.Destroy(device), result);
 
     this->frame_handler->Destroy(this->device, this->queue_graphics.command_pool);
     delete this->frame_handler;
@@ -405,7 +409,7 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
     if (physical_device == nullptr) {
         physical_device = PickPhysicalDevice(EnumeratePhysicalDevices());
     }
-
+    
     if (this->device == nullptr) {
         this->device = new Device(physical_device, this->surface);
     }
@@ -492,7 +496,6 @@ helpers::SingleTimeCommands Instance::GetSingleTimeCommands()
     const QueueFamilyIndices &family_indices = this->device->GetQueueFamilyIndices();
 
     helpers::SingleTimeCommands single_time_commands{};
-    single_time_commands.cmd = nullptr;
     single_time_commands.pool = this->queue_graphics.command_pool;
     single_time_commands.family_indices = family_indices;
 

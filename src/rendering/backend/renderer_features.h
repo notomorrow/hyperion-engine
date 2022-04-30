@@ -37,6 +37,9 @@ public:
     inline const VkPhysicalDeviceFeatures2 &GetPhysicalDeviceFeatures2() const
         { return m_features2; }
 
+    inline const VkPhysicalDeviceMemoryProperties &GetPhysicalDeviceMemoryProperties() const
+        { return m_memory_properties; }
+
     struct DeviceRequirementsResult {
         enum {
             DEVICE_REQUIREMENTS_OK = 0,
@@ -324,6 +327,8 @@ private:
 
     VkPhysicalDeviceDescriptorIndexingFeatures m_indexing_features;
     VkPhysicalDeviceFeatures2 m_features2;
+
+    VkPhysicalDeviceMemoryProperties m_memory_properties;
 };
 
 } // namespace renderer

@@ -16,9 +16,7 @@
 namespace hyperion {
 namespace renderer {
 GraphicsPipeline::GraphicsPipeline()
-    : pipeline{},
-      layout{},
-      push_constants{},
+    : Pipeline(),
       viewport{},
       scissor{}
 {
@@ -26,8 +24,6 @@ GraphicsPipeline::GraphicsPipeline()
 
 GraphicsPipeline::~GraphicsPipeline()
 {
-    AssertThrowMsg(this->pipeline == nullptr, "Expected pipeline to have been destroyed");
-    AssertThrowMsg(this->layout == nullptr, "Expected layout to have been destroyed");
 }
 
 void GraphicsPipeline::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth)
@@ -87,19 +83,6 @@ std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttr
     return this->vertex_attributes;
 }
 
-void GraphicsPipeline::BeginRenderPass(CommandBuffer *cmd, size_t index)
-{
-    m_construction_info.render_pass->Begin(
-        cmd,
-        m_construction_info.fbos[index]
-    );
-}
-
-void GraphicsPipeline::EndRenderPass(CommandBuffer *cmd, size_t index)
-{
-    m_construction_info.render_pass->End(cmd);
-}
-
 void GraphicsPipeline::SubmitPushConstants(CommandBuffer *cmd) const
 {
     vkCmdPushConstants(
@@ -137,7 +120,7 @@ Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_
 
     const uint32_t width = m_construction_info.fbos[0]->GetWidth();
     const uint32_t height = m_construction_info.fbos[0]->GetHeight();
-
+    
     SetViewport(0.0f, float(height), float(width), -float(height), 0.0f, 1.0f);
     SetScissor(0, 0, width, height);
     
@@ -333,8 +316,8 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     depth_stencil.minDepthBounds        = 0.0f; // Optional
     depth_stencil.maxDepthBounds        = 1.0f; // Optional
     depth_stencil.stencilTestEnable     = VK_FALSE;
-    depth_stencil.front               = {}; // Optional
-    depth_stencil.back                = {}; // Optional
+    depth_stencil.front                 = {}; // Optional
+    depth_stencil.back                  = {}; // Optional
 
     VkGraphicsPipelineCreateInfo pipeline_info{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 

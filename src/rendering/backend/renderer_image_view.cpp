@@ -63,8 +63,8 @@ Result ImageView::Create(Device *device, Image *image)
         image->GetImageFormat(),
         ToVkImageAspect(image->GetTextureFormat()),
         ToVkImageViewType(image->GetType()),
-        image->GetNumMipmaps(),
-        image->GetNumFaces()
+        image->NumMipmaps(),
+        image->NumFaces()
     );
 }
 

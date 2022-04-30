@@ -54,7 +54,7 @@ Result CommandBuffer::Destroy(Device *device, VkCommandPool command_pool)
 
 Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
 {
-    VkCommandBufferInheritanceInfo inheritance_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+    VkCommandBufferInheritanceInfo inheritance_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
     inheritance_info.subpass = 0;
     inheritance_info.framebuffer = VK_NULL_HANDLE;
 
