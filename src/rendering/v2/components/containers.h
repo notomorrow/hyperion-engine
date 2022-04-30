@@ -414,11 +414,17 @@ enum class EngineCallback {
     CREATE_FRAMEBUFFERS,
     DESTROY_FRAMEBUFFERS,
 
+    CREATE_DESCRIPTOR_SETS,
+    DESTROY_DESCRIPTOR_SETS,
+
     CREATE_GRAPHICS_PIPELINES,
     DESTROY_GRAPHICS_PIPELINES,
 
     CREATE_COMPUTE_PIPELINES,
-    DESTROY_COMPUTE_PIPELINES
+    DESTROY_COMPUTE_PIPELINES,
+
+    CREATE_VOXELIZER,
+    DESTROY_VOXELIZER
 };
 
 using EngineCallbacks = Callbacks<EngineCallback, Engine *>;
@@ -810,8 +816,7 @@ public:
             }
         }
 
-        operator T *()              { return ptr; }
-        operator const T *() const  { return ptr; }
+        operator T const * () const { return ptr; }
         operator bool() const       { return Valid(); }
 
         T *operator->()             { return ptr; }
@@ -1000,10 +1005,10 @@ public:
         Release(Get(id));
     }
 
-    constexpr T *operator[](const typename T::ID &id) { return Get(id); }
-    constexpr const T *operator[](const typename T::ID &id) const { return Get(id); }
+    constexpr T *operator[](typename T::ID id) { return m_holder.Get(id); }
+    constexpr const T *operator[](typename T::ID id) const { return m_holder.Get(id); }
 
-    size_t GetRefCount(const typename T::ID &id) const
+    size_t GetRefCount(typename T::ID id) const
     {
         if (!m_ref_map.Has(id)) {
             return 0;

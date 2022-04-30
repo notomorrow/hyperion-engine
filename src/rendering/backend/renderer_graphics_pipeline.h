@@ -1,12 +1,9 @@
-//
-// Created by emd22 on 2022-02-20.
-//
-
 #ifndef HYPERION_RENDERER_GRAPHICS_PIPELINE_H
 #define HYPERION_RENDERER_GRAPHICS_PIPELINE_H
 
 #include <vulkan/vulkan.h>
 
+#include "renderer_pipeline.h"
 #include "renderer_device.h"
 #include "renderer_swapchain.h"
 #include "renderer_buffer.h"
@@ -21,8 +18,10 @@
 
 namespace hyperion {
 namespace renderer {
+
 class FramebufferObject;
-class GraphicsPipeline {
+
+class GraphicsPipeline : public Pipeline {
 public:
     static constexpr uint32_t max_dynamic_textures = 8;
 
@@ -59,26 +58,16 @@ public:
     
     Result Create(Device *device, ConstructionInfo &&construction_info, DescriptorPool *descriptor_pool);
     Result Destroy(Device *device);
-
-    void BeginRenderPass(CommandBuffer *cmd, size_t index);
-    void EndRenderPass(CommandBuffer *cmd, size_t index);
+    
     void Bind(CommandBuffer *cmd);
     void SubmitPushConstants(CommandBuffer *cmd) const;
 
     inline const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
 
-    VkPipeline pipeline;
-    VkPipelineLayout layout;
-
-    struct PushConstantData {
-        uint32_t previous_frame_index;
-        uint32_t current_frame_index;
-        uint32_t material_index;
-    } push_constants;
-
 private:
     Result Rebuild(Device *device, DescriptorPool *descriptor_pool);
     void UpdateDynamicStates(VkCommandBuffer cmd);
+    std::vector<VkVertexInputAttributeDescription> BuildVertexAttributes(const MeshInputAttributeSet &attribute_set);
 
     std::vector<VkDynamicState> dynamic_states;
 
@@ -90,7 +79,6 @@ private:
 
     ConstructionInfo m_construction_info;
 
-    std::vector<VkVertexInputAttributeDescription> BuildVertexAttributes(const MeshInputAttributeSet &attribute_set);
 };
 
 } // namespace renderer

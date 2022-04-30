@@ -71,9 +71,12 @@ public:
 
     float DistanceSquared(const Vector3 &other) const;
     float Distance(const Vector3 &other) const;
+    
+    inline Vector3 Normalized() const { return *this / Length(); }
+    inline Vector3 &Normalize()       { return *this /= Length(); }
 
-    inline Vector3 &Normalize() { return operator/=(Length()); }
-    Vector3 &Cross(const Vector3 &other);
+    Vector3 Cross(const Vector3 &other) const;
+
     Vector3 &Rotate(const Vector3 &axis, float radians);
     Vector3 &Lerp(const Vector3 &to, const float amt);
     float Dot(const Vector3 &other) const;

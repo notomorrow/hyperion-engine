@@ -47,8 +47,8 @@ public:
     inline RenderPass *GetRenderPass() const
         { return m_render_pass.ptr; }
 
-    inline GraphicsPipeline::ID GetGraphicsPipelineId() const
-        { return m_pipeline_id; }
+    inline GraphicsPipeline *GetGraphicsPipeline() const
+        { return m_pipeline.ptr; }
 
     void CreateRenderPass(Engine *engine);
     void Create(Engine *engine);
@@ -56,9 +56,8 @@ public:
     void CreatePipeline(Engine *engine);
 
     void Destroy(Engine *engine);
-    void DestroyPipeline(Engine *engine);
 
-    void Render(Engine *engine, CommandBuffer *primary_command_buffer, uint32_t frame_index);
+    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
     void Record(Engine *engine, uint32_t frame_index);
 
 protected:
@@ -68,7 +67,7 @@ protected:
     Ref<Framebuffer> m_framebuffer;
     Ref<Shader> m_shader;
     Ref<RenderPass> m_render_pass;
-    GraphicsPipeline::ID m_pipeline_id;
+    Ref<GraphicsPipeline> m_pipeline;
 
     std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
 };

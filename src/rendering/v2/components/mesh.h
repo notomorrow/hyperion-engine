@@ -48,7 +48,7 @@ public:
 
 private:
     std::vector<float> CreatePackedBuffer();
-    void UploadToDevice(Device *device);
+    void Upload(Instance *instance);
 
     std::unique_ptr<VertexBuffer> m_vbo;
     std::unique_ptr<IndexBuffer>  m_ibo;

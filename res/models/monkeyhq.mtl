@@ -8,3 +8,7 @@ Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
 illum 2
+map_kD ornate-celtic-gold-ue/ornate-celtic-gold-albedo.png
+map_bump ornate-celtic-gold-ue/ornate-celtic-gold-normal-dx.png
+map_kS ornate-celtic-gold-ue/ornate-celtic-gold-metallic.png
+map_nS ornate-celtic-gold-ue/ornate-celtic-gold-roughness.png

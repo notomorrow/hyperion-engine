@@ -37,7 +37,7 @@ class Octree {
     };
 
 public:
-    static constexpr uint32_t max_scenes = 32;
+    static constexpr uint32_t max_scenes = sizeof(uint64_t) * CHAR_BIT;
 
     struct Octant {
         std::unique_ptr<Octree> octree;
@@ -49,20 +49,25 @@ public:
          * when visiblity is scanned, both values per frame in flight are set accordingly,
          * but are only set to false after the corresponding frame is rendered.
          */
-
-        /* TODO: we could simply use a uint64_ts and bitshift based on scene ID */
-        std::array<bool, max_scenes> scene_visibility;
+        
+        uint64_t scene_visibility = 0;
 
         HYP_FORCE_INLINE bool Get(Scene::ID scene) const
         {
-            AssertThrow(scene.value - 1 < scene_visibility.size());
-            return scene_visibility[scene.value - 1];
+            AssertThrow(scene.value - 1 < max_scenes);
+            
+            return scene_visibility & (1 << (scene.value - 1));
         }
 
         HYP_FORCE_INLINE void Set(Scene::ID scene, bool visible)
         {
-            AssertThrow(scene.value - 1 < scene_visibility.size());
-            scene_visibility[scene.value - 1] = visible;
+            AssertThrow(scene.value - 1 < max_scenes);
+
+            if (visible) {
+                scene_visibility |= (1 << (scene.value - 1));
+            } else {
+                scene_visibility &= ~(1 << (scene.value - 1));
+            }
         }
     };
 

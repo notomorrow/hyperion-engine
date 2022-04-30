@@ -68,7 +68,8 @@ struct MeshBindingDescription {
     {
     }
 
-    VkVertexInputBindingDescription GetBindingDescription() {
+    VkVertexInputBindingDescription GetBindingDescription()
+    {
         VkVertexInputBindingDescription bind;
         bind.binding = this->binding;
         bind.stride = this->stride;

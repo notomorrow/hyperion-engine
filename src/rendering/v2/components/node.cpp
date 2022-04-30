@@ -186,6 +186,7 @@ void Node::UpdateWorldTransform()
 void Node::UpdateInternal(Engine *engine)
 {
     if (m_spatial != nullptr) {
+        /* TODO: Only update() if visibility state is visible for a given scene */
         m_spatial->Update(engine);
     }
 }

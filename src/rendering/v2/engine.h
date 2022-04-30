@@ -34,7 +34,7 @@ using renderer::StorageBuffer;
  * | ====== Set 0 ====== | ====== Set 1 ====== | ====== Set 2 ====== | ====== Set 3 ====== | ====== Set 4 ====== |
  * | (UNUSED)            | GBuffer: color      | Scene data SSBO     | Material data SSBO  | Bindless textures   |
  * |                     | Gbuffer: normals    | empty               | Object data SSBO    | empty               |
- * |                     | Gbuffer: position   | empty               | Skeleton data SSBO  |                     |
+ * |                     | Gbuffer: position   | empty               | Skeleton data SSBO  | empty               |
  * |                     | Gbuffer: depth      | empty               | empty               | empty               |
  * |                     | Deferred result     | empty               | empty               | empty               |
  * |                     | empty               | empty               | empty               | empty               |
@@ -68,12 +68,9 @@ public:
 
     Engine(SystemSDL &, const char *app_name);
     ~Engine();
-
-    inline Instance *GetInstance() { return m_instance.get(); }
-    inline const Instance *GetInstance() const { return m_instance.get(); }
-
-    inline PostProcessing &GetPostProcessing() { return m_post_processing; }
-    inline const PostProcessing &GetPostProcessing() const { return m_post_processing; }
+    
+    inline Instance *GetInstance() const { return m_instance.get(); }
+    inline Device   *GetDevice() const { return m_instance ? m_instance->GetDevice() : nullptr; }
 
     inline DeferredRenderer &GetDeferredRenderer() { return m_deferred_renderer; }
     inline const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_renderer; }
@@ -86,35 +83,19 @@ public:
 
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
-    
-    
 
-    /* Pipelines will be deferred until descriptor sets are built
-     * We take in the builder object rather than a unique_ptr,
-     * so that we can reuse pipelines
-     */
-    template <class ...Args>
-    GraphicsPipeline::ID AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline, Args &&... args)
+
+    
+    Ref<GraphicsPipeline> AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline)
     {
         const auto bucket = pipeline->GetBucket();
 
-        GraphicsPipeline::ID id = m_render_list[bucket]
-            .pipelines.Add(this, std::move(pipeline), std::move(args)...);
+        auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
 
-        id.bucket = bucket;
+        m_render_list.Get(bucket).AddGraphicsPipeline(graphics_pipeline.Acquire());
 
-        return id;
+        return std::move(graphics_pipeline);
     }
-
-    template <class ...Args>
-    void RemoveGraphicsPipeline(GraphicsPipeline::ID id, Args &&... args)
-        { return m_render_list[id.bucket].pipelines.Remove(this, id, std::move(args)...); }
-
-    inline GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id)
-        { return m_render_list[id.bucket].pipelines.Get(id); }
-
-    inline const GraphicsPipeline *GetGraphicsPipeline(GraphicsPipeline::ID id) const
-        { return const_cast<Engine*>(this)->GetGraphicsPipeline(id); }
 
     void SetSpatialTransform(Spatial *spatial, const Transform &transform);
     
@@ -127,7 +108,6 @@ public:
 
     void RenderShadows(CommandBuffer *primary, uint32_t frame_index);
     void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
-    void RenderPostProcessing(CommandBuffer *primary, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
 
@@ -145,7 +125,6 @@ private:
 
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
-    PostProcessing   m_post_processing;
     DeferredRenderer m_deferred_renderer;
     ShadowRenderer   m_shadow_renderer;
     RenderList       m_render_list;

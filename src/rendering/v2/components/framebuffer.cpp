@@ -33,4 +33,14 @@ void Framebuffer::Init(Engine *engine)
     }));
 }
 
+void Framebuffer::BeginCapture(CommandBuffer *command_buffer)
+{
+    m_render_pass->Get().Begin(command_buffer, &m_wrapped);
+}
+
+void Framebuffer::EndCapture(CommandBuffer *command_buffer)
+{
+    m_render_pass->Get().End(command_buffer);
+}
+
 } // namespace hyperion::v2

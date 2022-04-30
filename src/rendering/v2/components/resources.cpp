@@ -12,7 +12,8 @@ Resources::Resources(Engine *engine)
       skeletons(engine->callbacks, {engine}),
       scenes(engine->callbacks, {engine}),
       render_passes(engine->callbacks, {engine}),
-      framebuffers(engine->callbacks, {engine})
+      framebuffers(engine->callbacks, {engine}),
+      graphics_pipelines(engine->callbacks, {engine})
 {
 }
 

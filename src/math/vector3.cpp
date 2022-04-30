@@ -185,13 +185,13 @@ float Vector3::Distance(const Vector3 &other) const
     return sqrt(DistanceSquared(other));
 }
 
-Vector3 &Vector3::Cross(const Vector3 &other)
+Vector3 Vector3::Cross(const Vector3 &other) const
 {
-    float x1 = y * other.z - z * other.y;
-    float y1 = z * other.x - x * other.z;
-    float z1 = x * other.y - y * other.x;
-
-    return operator=(Vector3(x1, y1, z1));
+    return {
+        y * other.z - z * other.y,
+        z * other.x - x * other.z,
+        x * other.y - y * other.x
+    };
 }
 
 Vector3 &Vector3::Rotate(const Vector3 &axis, float radians)

@@ -97,17 +97,9 @@ void MatrixUtil::ToLookAt(Matrix4 &mat, const Vector3 &dir, const Vector3 &up)
 {
     mat = Matrix4::Identity();
 
-    Vector3 l_vez = dir;
-    l_vez.Normalize();
-
-    Vector3 l_vex = dir;
-    l_vex.Normalize();
-    l_vex.Cross(up);
-    l_vex.Normalize();
-
-    Vector3 l_vey = l_vex;
-    l_vey.Cross(l_vez);
-    l_vey.Normalize();
+    const Vector3 l_vez = Vector3(dir).Normalize();
+    const Vector3 l_vex = Vector3(dir).Normalize().Cross(up).Normalize();
+    const Vector3 l_vey = l_vex.Cross(l_vez).Normalize();
 
     mat(0, 0) = l_vex.x;
     mat(0, 1) = l_vex.y;

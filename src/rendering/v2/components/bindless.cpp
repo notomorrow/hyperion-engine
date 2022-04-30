@@ -70,6 +70,7 @@ void BindlessStorage::AddResource(const Texture *texture)
 void BindlessStorage::RemoveResource(const Texture *texture)
 {
     AssertThrow(texture != nullptr);
+    AssertThrow(m_texture_sub_descriptors.Has(texture->GetId()));
 
     const auto sub_descriptor_index = m_texture_sub_descriptors[texture->GetId()];
     
@@ -80,6 +81,17 @@ void BindlessStorage::RemoveResource(const Texture *texture)
     }
 
     m_texture_sub_descriptors.Remove(texture->GetId());
+
+    /* Have to update indices of all other known subdescriptor indices that are
+     * greater than `sub_descriptor_index`, as the indices would have changed
+     * TODO: Use a sorted vector or something, maintained with upper_bound
+     */
+
+    for (auto &it : m_texture_sub_descriptors) {
+        if (it.second > sub_descriptor_index) {
+            --it.second;
+        }
+    }
 }
 
 void BindlessStorage::MarkResourceChanged(const Texture *texture)

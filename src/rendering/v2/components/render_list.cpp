@@ -8,16 +8,15 @@ RenderList::RenderList()
 {
     for (size_t i = 0; i < m_buckets.size(); i++) {
         m_buckets[i] = {
-            .bucket = GraphicsPipeline::Bucket(i),
-            .pipelines = {.defer_create = true}
+            .bucket = GraphicsPipeline::Bucket(i)
         };
     }
 }
 
-void RenderList::CreatePipelines(Engine *engine)
+void RenderList::AddFramebuffersToPipelines(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
-        bucket.CreatePipelines(engine);
+        bucket.AddFramebuffersToPipelines(engine);
     }
 }
 
@@ -37,15 +36,13 @@ void RenderList::Destroy(Engine *engine)
     }
 }
 
-void RenderList::Bucket::CreatePipelines(Engine *engine)
+void RenderList::Bucket::AddFramebuffersToPipelines(Engine *engine)
 {
-    for (auto &pipeline : pipelines.objects) {
+    for (auto &pipeline : m_graphics_pipelines) {
         for (auto &framebuffer : framebuffers) {
             pipeline->AddFramebuffer(framebuffer.Acquire());
         }
     }
-
-    pipelines.CreateAll(engine);
 }
 
 void RenderList::Bucket::CreateRenderPass(Engine *engine)
@@ -157,9 +154,6 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
         auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.Acquire());
 
         for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
-            auto vk_desc = attachment_ref->GetAttachmentDescription();
-            auto vk_ref = attachment_ref->GetAttachmentReference();
-
             framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
         }
 
@@ -174,37 +168,15 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
 void RenderList::Bucket::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
-    
+
+    m_graphics_pipelines.clear();
     framebuffers.clear();
 
     for (auto &attachment : m_attachments) {
         HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
     }
 
-    pipelines.RemoveAll(engine);
-
     HYPERION_ASSERT_RESULT(result);
 }
-
-void RenderList::Bucket::BeginRenderPass(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
-{
-    if (!pipelines.objects.empty()) {
-        AssertThrowMsg(pipelines.objects[0]->Get().GetConstructionInfo().render_pass == &render_pass->Get(), "Render pass for pipeline does not match render bucket renderpass");
-    }
-
-    auto &framebuffer = framebuffers[frame_index]->Get();
-
-    render_pass->Get().Begin(command_buffer, &framebuffer);
-}
-
-void RenderList::Bucket::EndRenderPass(Engine *engine, CommandBuffer *command_buffer)
-{
-    if (!pipelines.objects.empty()) {
-        AssertThrowMsg(pipelines.objects[0]->Get().GetConstructionInfo().render_pass == &render_pass->Get(), "Render pass for pipeline does not match render bucket renderpass");
-    }
-
-    render_pass->Get().End(command_buffer);
-}
-
 
 } // namespace hyperion::v2

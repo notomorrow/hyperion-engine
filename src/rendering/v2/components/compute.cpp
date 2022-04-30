@@ -12,16 +12,14 @@ ComputePipeline::~ComputePipeline() = default;
 
 void ComputePipeline::Create(Engine *engine)
 {
+    if (IsInit()) {
+        return;
+    }
+
     AssertThrow(m_shader != nullptr);
     m_shader->Init(engine);
 
-    HYPERION_ASSERT_RESULT(m_wrapped.Create(
-        engine->GetInstance()->GetDevice(),
-        &m_shader->Get(),
-        &engine->GetInstance()->GetDescriptorPool()
-    ));
-
-    m_is_created = true;
+    EngineComponent::Create(engine, &m_shader->Get(), &engine->GetInstance()->GetDescriptorPool());
 }
 
 void ComputePipeline::Destroy(Engine *engine)
@@ -29,17 +27,4 @@ void ComputePipeline::Destroy(Engine *engine)
     EngineComponent::Destroy(engine);
 }
 
-void ComputePipeline::Dispatch(Engine *engine, CommandBuffer *command_buffer,  Extent3D group_size)
-{
-    m_wrapped.Bind(command_buffer->GetCommandBuffer());
-
-    engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetInstance()->GetDevice(),
-        command_buffer,
-        &m_wrapped,
-        {{.set = 1, .count = 1}}
-    );
-
-    m_wrapped.Dispatch(command_buffer->GetCommandBuffer(), group_size);
-}
 } // namespace hyperion::v2

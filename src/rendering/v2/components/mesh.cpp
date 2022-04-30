@@ -62,7 +62,7 @@ void Mesh::Init(Engine *engine)
             m_indices  = {0};
         }
 
-        UploadToDevice(engine->GetInstance()->GetDevice());
+        Upload(engine->GetInstance());
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
             AssertThrow(m_vbo != nullptr);
@@ -134,8 +134,12 @@ std::vector<float> Mesh::CreatePackedBuffer() {
 
 #undef PACKED_SET_ATTR
 
-void Mesh::UploadToDevice(Device *device)
+void Mesh::Upload(Instance *instance)
 {
+    using renderer::StagingBuffer;
+
+    auto *device = instance->GetDevice();
+
     AssertThrow(m_vbo == nullptr);
     AssertThrow(m_ibo == nullptr);
     
@@ -143,16 +147,39 @@ void Mesh::UploadToDevice(Device *device)
     m_ibo = std::make_unique<IndexBuffer>();
 
     std::vector<float> packed_buffer = CreatePackedBuffer();
-
-    /* Create and upload the VBO */
-    const size_t packed_buffer_size = packed_buffer.size() * sizeof(float);
-    m_vbo->Create(device, packed_buffer_size);
-    m_vbo->Copy(device, packed_buffer_size, packed_buffer.data());
-
-    /* Create and upload the indices */
+    const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
     const size_t packed_indices_size = m_indices.size() * sizeof(Index);
-    m_ibo->Create(device, packed_indices_size);
-    m_ibo->Copy(device, packed_indices_size, m_indices.data());
+
+    HYPERION_ASSERT_RESULT(m_vbo->Create(device, packed_buffer_size));
+    HYPERION_ASSERT_RESULT(m_ibo->Create(device, packed_indices_size));
+
+    HYPERION_ASSERT_RESULT(instance->GetStagingBufferPool().Use(device, [&](renderer::StagingBufferPool::Context &holder) {
+        auto commands = instance->GetSingleTimeCommands();
+
+        auto *staging_buffer_vertices = holder.Acquire(packed_buffer_size);
+        /* Create and upload the VBO */
+        staging_buffer_vertices->Copy(device, packed_buffer_size, packed_buffer.data());
+
+        auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
+        staging_buffer_indices->Copy(device, packed_indices_size, m_indices.data());
+
+
+        commands.Push([&](CommandBuffer *cmd) {
+            m_vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
+
+            HYPERION_RETURN_OK;
+        });
+    
+        commands.Push([&](CommandBuffer *cmd) {
+            m_ibo->CopyFrom(cmd, staging_buffer_indices, packed_indices_size);
+
+            HYPERION_RETURN_OK;
+        });
+    
+        HYPERION_BUBBLE_ERRORS(commands.Execute(device));
+
+        HYPERION_RETURN_OK;
+    }));
 }
 
 std::pair<std::vector<Vertex>, std::vector<Mesh::Index>>
@@ -227,12 +254,9 @@ void Mesh::CalculateNormals()
         const Vector3 &p1 = m_vertices[i1].GetPosition();
         const Vector3 &p2 = m_vertices[i2].GetPosition();
 
-        Vector3 u = p2 - p0;
-        Vector3 v = p1 - p0;
-        Vector3 n = v;
-
-        n.Cross(u);
-        n.Normalize();
+        const Vector3 u = p2 - p0;
+        const Vector3 v = p1 - p0;
+        const Vector3 n = v.Cross(u).Normalize();
 
         normals[i0].push_back(n);
         normals[i1].push_back(n);

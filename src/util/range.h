@@ -18,6 +18,8 @@ public:
     Range &operator=(Range &&other) = default;
     ~Range() = default;
 
+    inline explicit operator bool() const { return bool(GetDistance() > 0); }
+
     inline const T &GetStart() const     { return m_start; }
     inline void SetStart(const T &start) { m_start = start; }
     inline const T &GetEnd()   const     { return m_end; }
@@ -47,6 +49,14 @@ public:
 
         return m_start == other.m_start
             && m_end == other.m_end;
+    }
+
+    Range Without(T value, T step = 1) const
+    {
+        return {
+            MathUtil::Max(m_start, value + step),
+            MathUtil::Min(m_end, value - step)
+        };
     }
 
     iterator begin() const { return m_start; }

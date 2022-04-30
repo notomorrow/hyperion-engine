@@ -19,14 +19,14 @@ public:
     BoundingBox(const Vector3 &min, const Vector3 &max);
     BoundingBox(const BoundingBox &other);
 
-    inline const Vector3 &GetMin() const { return m_min; }
-    inline void SetMin(const Vector3 &min) { m_min = min; }
-    inline const Vector3 &GetMax() const { return m_max; }
-    inline void SetMax(const Vector3 &max) { m_max = max; }
+    inline const Vector3 &GetMin() const { return min; }
+    inline void SetMin(const Vector3 &min) { this->min = min; }
+    inline const Vector3 &GetMax() const { return max; }
+    inline void SetMax(const Vector3 &max) { this->max = max; }
     std::array<Vector3, 8> GetCorners() const;
-    inline Vector3 GetCenter() const { return (m_max + m_min) / Vector3(2.0f); }
+    inline Vector3 GetCenter() const { return (max + min) / Vector3(2.0f); }
     void SetCenter(const Vector3 &center);
-    inline Vector3 GetDimensions() const { return m_max - m_min; }
+    inline Vector3 GetDimensions() const { return max - min; }
     void SetDimensions(const Vector3 &dimensions);
 
     BoundingBox operator*(float scalar) const;
@@ -34,7 +34,7 @@ public:
     BoundingBox operator*(const Transform &transform) const;
     BoundingBox &operator*=(const Transform &transform);
     inline bool operator==(const BoundingBox &other) const
-        { return m_min == other.m_min && m_max == other.m_max; }
+        { return min == other.min && max == other.max; }
     inline bool operator!=(const BoundingBox &other) const
         { return !operator==(other); }
 
@@ -42,8 +42,8 @@ public:
     
     inline bool Empty() const 
     { 
-        return m_min == Vector3(std::numeric_limits<float>::max()) && 
-               m_max == Vector3(std::numeric_limits<float>::lowest());
+        return min == Vector3(std::numeric_limits<float>::max()) && 
+               max == Vector3(std::numeric_limits<float>::lowest());
     }
 
     BoundingBox &Extend(const Vector3 &vec);
@@ -61,15 +61,14 @@ public:
     {
         HashCode hc;
 
-        hc.Add(m_min.GetHashCode());
-        hc.Add(m_max.GetHashCode());
+        hc.Add(min.GetHashCode());
+        hc.Add(max.GetHashCode());
 
         return hc;
     }
 
-private:
-    Vector3 m_min;
-    Vector3 m_max;
+    Vector3 min;
+    Vector3 max;
 };
 
 } // namespace hyperion

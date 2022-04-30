@@ -9,7 +9,7 @@ Octree::Octree(const BoundingBox &aabb)
       m_parent(nullptr),
       m_is_divided(false),
       m_root(nullptr),
-      m_visibility_state({.scene_visibility = {{}}})
+      m_visibility_state{}
 {
     InitOctants();
 }
@@ -376,7 +376,7 @@ void Octree::CalculateVisibility(Scene *scene)
         return;
     }
 
-    if (scene->GetId().value - 1 >= m_visibility_state.scene_visibility.size()) {
+    if (scene->GetId().value - 1 >= max_scenes) {
         DebugLog(
             LogType::Error,
             "Scene #%lu out of bounds of octree scene visibility array. Cannot update visibility state.\n",
@@ -387,7 +387,7 @@ void Octree::CalculateVisibility(Scene *scene)
     }
 
     const auto &frustum = scene->GetCamera()->GetFrustum();
-
+     
     if (frustum.BoundingBoxInFrustum(m_aabb)) {
         UpdateVisibilityState(scene);
     }
@@ -398,7 +398,7 @@ void Octree::UpdateVisibilityState(Scene *scene)
     /* assume we are already visible from CalculateVisibility() check */
     const auto &frustum = scene->GetCamera()->GetFrustum();
 
-    m_visibility_state.scene_visibility[scene->GetId().value - 1] = true;
+    m_visibility_state.Set(scene->GetId(), true);
 
     if (!m_is_divided) {
         return;

@@ -18,8 +18,6 @@ FramebufferObject::~FramebufferObject()
 
 Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
 {
-    AssertThrowMsg(!m_render_pass_attachment_refs.empty(), "At least one attachment must be added");
-    
     std::vector<VkImageView> attachment_image_views;
     attachment_image_views.reserve(m_render_pass_attachment_refs.size());
     

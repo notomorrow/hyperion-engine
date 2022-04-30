@@ -18,6 +18,7 @@ namespace hyperion::v2 {
 
 using renderer::CommandBuffer;
 using renderer::DescriptorSet;
+using renderer::DescriptorSetBinding;
 using renderer::GPUBuffer;
 using renderer::UniformBuffer;
 using renderer::MeshInputAttributeSet;
@@ -36,6 +37,7 @@ public:
     enum Bucket {
         BUCKET_SWAPCHAIN = 0, /* Main swapchain */
         BUCKET_PREPASS,       /* Pre-pass / buffer items */
+        BUCKET_VOXELIZER,
         /* === Scene objects === */
         BUCKET_OPAQUE,        /* Opaque items */
         BUCKET_TRANSLUCENT,   /* Transparent - rendering on top of opaque objects */
@@ -44,17 +46,11 @@ public:
         BUCKET_MAX
     };
 
-    struct ID : EngineComponent::ID {
-        Bucket bucket;
+    GraphicsPipeline(Ref<Shader> &&shader,
+        Ref<Scene> &&scene,
+        Ref<RenderPass> &&render_pass,
+        Bucket bucket);
 
-        inline bool operator==(const ID &other) const
-            { return value == other.value && bucket == other.bucket; }
-
-        inline bool operator<(const ID &other) const
-            { return value < other.value && bucket < other.bucket; }
-    };
-
-    GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, Ref<RenderPass> &&render_pass, Bucket bucket);
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();
@@ -105,16 +101,18 @@ public:
     /* Non-owned objects - owned by `engine`, used by the pipeline */
 
     inline void AddFramebuffer(Ref<Framebuffer> &&fbo)
-    {
-        m_fbos.push_back(std::move(fbo));
-    }
+        { m_fbos.push_back(std::move(fbo)); }
+
+    inline auto &GetFramebuffers() { return m_fbos; } 
+    inline const auto &GetFramebuffers() const { return m_fbos; }
     
     /* Build pipeline */
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
+    void Init(Engine *engine);
     void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
 
 private:
+    static bool BucketSupportsCulling(Bucket bucket);
+
     /* Called from Spatial - remove the pointer */
     void OnSpatialRemoved(Spatial *spatial);
 

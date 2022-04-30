@@ -9,6 +9,12 @@ namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
 
+bool GraphicsPipeline::BucketSupportsCulling(Bucket bucket)
+{
+    return bucket != BUCKET_SKYBOX
+        && bucket != BUCKET_VOXELIZER;
+}
+
 GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, Ref<RenderPass> &&render_pass, Bucket bucket)
     : EngineComponent(),
       m_shader(std::move(shader)),
@@ -34,7 +40,7 @@ GraphicsPipeline::GraphicsPipeline(Ref<Shader> &&shader, Ref<Scene> &&scene, Ref
 
 GraphicsPipeline::~GraphicsPipeline()
 {
-    AssertThrowMsg(m_per_frame_data == nullptr, "per-frame data should have been destroyed");
+    Teardown();
 }
 
 void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
@@ -77,81 +83,90 @@ void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
     m_spatials.erase(it);
 }
 
-void GraphicsPipeline::Create(Engine *engine)
+void GraphicsPipeline::Init(Engine *engine)
 {
-    AssertThrow(m_shader != nullptr);
-    m_shader->Init(engine);
-
-    if (m_scene != nullptr) {
-        m_scene->Init(engine);
+    if (IsInit()) {
+        return;
     }
 
-    renderer::GraphicsPipeline::ConstructionInfo construction_info{
-        .vertex_attributes = m_vertex_attributes,
-        .topology          = m_topology,
-        .cull_mode         = m_cull_mode,
-        .fill_mode         = m_fill_mode,
-        .depth_test        = m_depth_test,
-        .depth_write       = m_depth_write,
-        .blend_enabled     = m_blend_enabled,
-        .shader            = &m_shader->Get(),
-        .render_pass       = &m_render_pass->Get()
-    };
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](Engine *engine) {
+        AssertThrow(m_shader != nullptr);
+        m_shader.Init();
 
-    for (auto &fbo : m_fbos) {
-        fbo.Init();
-        construction_info.fbos.push_back(&fbo->Get());
-    }
+        if (m_scene != nullptr) {
+            m_scene.Init();
+        }
 
-    AssertThrow(m_per_frame_data == nullptr);
-    m_per_frame_data = new PerFrameData<CommandBuffer>(engine->GetInstance()->GetFrameHandler()->NumFrames());
+        renderer::GraphicsPipeline::ConstructionInfo construction_info{
+            .vertex_attributes = m_vertex_attributes,
+            .topology          = m_topology,
+            .cull_mode         = m_cull_mode,
+            .fill_mode         = m_fill_mode,
+            .depth_test        = m_depth_test,
+            .depth_write       = m_depth_write,
+            .blend_enabled     = m_blend_enabled,
+            .shader            = &m_shader->Get(),
+            .render_pass       = &m_render_pass->Get()
+        };
 
-    auto &per_frame_data = *m_per_frame_data;
+        for (auto &fbo : m_fbos) {
+            fbo.Init();
+            construction_info.fbos.push_back(&fbo->Get());
+        }
 
-    for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
-        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
-        HYPERION_ASSERT_RESULT(command_buffer->Create(
-            engine->GetInstance()->GetDevice(),
-            engine->GetInstance()->GetGraphicsCommandPool()
-        ));
+        AssertThrow(m_per_frame_data == nullptr);
+        m_per_frame_data = new PerFrameData<CommandBuffer>(engine->GetInstance()->GetFrameHandler()->NumFrames());
 
-        per_frame_data[i].Set<CommandBuffer>(std::move(command_buffer));
-    }
-
-    EngineComponent::Create(engine, std::move(construction_info), &engine->GetInstance()->GetDescriptorPool());
-}
-
-void GraphicsPipeline::Destroy(Engine *engine)
-{
-    if (m_per_frame_data != nullptr) {
         auto &per_frame_data = *m_per_frame_data;
 
         for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
-            HYPERION_ASSERT_RESULT(per_frame_data[i].Get<CommandBuffer>()->Destroy(
+            auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_SECONDARY);
+            HYPERION_ASSERT_RESULT(command_buffer->Create(
                 engine->GetInstance()->GetDevice(),
                 engine->GetInstance()->GetGraphicsCommandPool()
             ));
+
+            per_frame_data[i].Set<CommandBuffer>(std::move(command_buffer));
         }
 
-        delete m_per_frame_data;
-        m_per_frame_data = nullptr;
-    }
+        EngineComponent::Create(engine, std::move(construction_info), &engine->GetInstance()->GetDescriptorPool());
 
-    for (auto &spatial : m_spatials) {
-        if (spatial == nullptr) {
-            continue;
-        }
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](Engine *engine) {
+            if (m_per_frame_data != nullptr) {
+                auto &per_frame_data = *m_per_frame_data;
 
-        spatial->OnRemovedFromPipeline(this);
-    }
+                for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
+                    HYPERION_ASSERT_RESULT(per_frame_data[i].Get<CommandBuffer>()->Destroy(
+                        engine->GetInstance()->GetDevice(),
+                        engine->GetInstance()->GetGraphicsCommandPool()
+                    ));
+                }
 
-    m_spatials.clear();
+                delete m_per_frame_data;
+                m_per_frame_data = nullptr;
+            }
 
-    EngineComponent::Destroy(engine);
+            for (auto &spatial : m_spatials) {
+                if (spatial == nullptr) {
+                    continue;
+                }
+
+                spatial->OnRemovedFromPipeline(this);
+            }
+
+            m_spatials.clear();
+
+            EngineComponent::Destroy(engine);
+        }), engine);
+    }));
 }
 
-void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+void GraphicsPipeline::Render(Engine *engine,
+                              CommandBuffer *primary,
+                              uint32_t frame_index)
 {
+    AssertThrow(m_per_frame_data != nullptr);
+
     auto *instance = engine->GetInstance();
     auto *device = instance->GetDevice();
     auto *secondary_command_buffer = m_per_frame_data->At(frame_index).Get<CommandBuffer>();
@@ -167,25 +182,13 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 device,
                 secondary,
                 &m_wrapped,
-                {{.set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, .count = 1}}
+                {{
+                    .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
+                    .count = 1
+                }}
             );
 
-            static constexpr uint32_t frame_index_scene_buffer_mapping[]  = {
-                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1
-            };
-
-            static constexpr uint32_t frame_index_object_buffer_mapping[] = {
-                DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT,
-                DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1
-            };
-
-            static constexpr uint32_t frame_index_bindless_textures_mapping[] = {
-                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS,
-                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1
-            };
-
-            static_assert(std::size(frame_index_object_buffer_mapping) == Swapchain::max_frames_in_flight);
+            static_assert(std::size(DescriptorSet::object_buffer_mapping) == Swapchain::max_frames_in_flight);
 
             const auto scene_index = m_scene != nullptr
                 ? m_scene->GetId().value - 1
@@ -197,7 +200,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 secondary,
                 &m_wrapped,
                 {
-                    {.set = frame_index_scene_buffer_mapping[frame_index], .count = 1},
+                    {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
                     {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
                     {.offsets = {uint32_t(scene_index * sizeof(SceneShaderData))}}
                 }
@@ -209,17 +212,31 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                 secondary,
                 &m_wrapped,
                 {
-                    {.set = frame_index_bindless_textures_mapping[frame_index], .count = 1},
+                    {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
                     {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
                 }
             );
+
+            /* TODO: move elsewhere, we don't want to be binding > 4 sets */
+            if (m_bucket == BUCKET_VOXELIZER) {
+                /* Voxelizer data */
+                instance->GetDescriptorPool().Bind(
+                    device,
+                    secondary,
+                    &m_wrapped,
+                    {
+                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1},
+                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER}
+                    }
+                );
+            }
             
             for (auto &spatial : m_spatials) {
                 if (spatial->GetMesh() == nullptr) {
                     continue;
                 }
 
-                if (m_scene != nullptr && m_bucket != BUCKET_SKYBOX) {
+                if (m_scene != nullptr && BucketSupportsCulling(m_bucket)) {
                     auto &visibility_state = spatial->GetVisibilityState();
 
                     if (!visibility_state.Get(m_scene->GetId())) {
@@ -243,7 +260,7 @@ void GraphicsPipeline::Render(Engine *engine, CommandBuffer *primary, uint32_t f
                     secondary,
                     &m_wrapped,
                     {
-                        {.set = frame_index_object_buffer_mapping[frame_index], .count = 1},
+                        {.set = DescriptorSet::object_buffer_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT},
                         {.offsets = {
                             uint32_t(material_index * sizeof(MaterialShaderData)),

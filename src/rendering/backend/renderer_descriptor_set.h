@@ -3,7 +3,7 @@
 
 #include "renderer_result.h"
 
-#include <util/non_owning_ptr.h>
+#include <util/range.h>
 
 #include <vulkan/vulkan.h>
 
@@ -48,7 +48,24 @@ public:
         DESCRIPTOR_SET_INDEX_BINDLESS,
         DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1,
 
+        DESCRIPTOR_SET_INDEX_VOXELIZER,
+
         DESCRIPTOR_SET_INDEX_MAX
+    };
+    
+    static constexpr Index scene_buffer_mapping[]  = {
+        DESCRIPTOR_SET_INDEX_SCENE,
+        DESCRIPTOR_SET_INDEX_SCENE_FRAME_1
+    };
+
+    static constexpr Index object_buffer_mapping[] = {
+        DESCRIPTOR_SET_INDEX_OBJECT,
+        DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1
+    };
+
+    static constexpr Index bindless_textures_mapping[] = {
+        DESCRIPTOR_SET_INDEX_BINDLESS,
+        DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1
     };
 
     static constexpr uint32_t max_descriptor_sets = DESCRIPTOR_SET_INDEX_MAX;
@@ -95,13 +112,13 @@ private:
 
 struct DescriptorSetBinding {
     struct Declaration {
-        uint32_t set;
+        DescriptorSet::Index set;
         uint32_t count; /* default to num total sets - set */
     } declaration;
 
     /* where we bind to in the shader program */
     struct Locations {
-        uint32_t binding; /* defaults to first_set_index */
+        DescriptorSet::Index binding; /* defaults to `set` */
     } locations;
 
     struct DynamicOffsets {
@@ -109,17 +126,24 @@ struct DescriptorSetBinding {
     } offsets;
 
     DescriptorSetBinding()
-        : declaration({ .set = 0, .count = DescriptorSet::max_descriptor_sets }),
-          locations({ .binding = 0 })
+        : declaration({
+              .set = DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED,
+              .count = DescriptorSet::max_descriptor_sets
+          }),
+          locations({
+              .binding = DescriptorSet::DESCRIPTOR_SET_INDEX_UNUSED
+          })
     {
     }
 
     DescriptorSetBinding(Declaration &&dec)
         : declaration(std::move(dec)),
-          locations({ .binding = dec.set })
+          locations({})
     {
+        locations.binding = declaration.set;
+
         if (declaration.count == 0) {
-            declaration.count = DescriptorSet::max_descriptor_sets - declaration.set;
+            declaration.count = DescriptorSet::DESCRIPTOR_SET_INDEX_MAX - declaration.set;
         }
     }
 
@@ -128,7 +152,7 @@ struct DescriptorSetBinding {
           locations(std::move(loc))
     {
         if (declaration.count == 0) {
-            declaration.count = DescriptorSet::max_descriptor_sets - declaration.set;
+            declaration.count = DescriptorSet::DESCRIPTOR_SET_INDEX_MAX - declaration.set;
         }
     }
 
@@ -219,10 +243,7 @@ public:
 
     inline uint32_t GetBinding() const { return m_binding; }
     inline void SetBinding(uint32_t binding) { m_binding = binding; }
-
-    inline DescriptorSetState GetState() const { return m_state; }
-    inline void SetState(DescriptorSetState state) { m_state = state; }
-
+    
     /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
     inline std::vector<SubDescriptor> &GetSubDescriptors()
         { return m_sub_descriptors; }
@@ -262,11 +283,11 @@ protected:
     void BuildUpdates(Device *device, std::vector<VkWriteDescriptorSet> &writes);
     void UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const;
 
+    Range<uint32_t> m_dirty_sub_descriptors;
     std::vector<SubDescriptor> m_sub_descriptors;
     std::queue<size_t> m_sub_descriptor_update_indices;
 
-    BufferInfo m_sub_descriptor_buffer;
-    DescriptorSetState m_state;
+    BufferInfo m_sub_descriptors_raw;
 
     uint32_t m_binding;
     Mode m_mode;
