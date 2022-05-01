@@ -11,6 +11,8 @@
 #include "mesh.h"
 #include "skeleton.h"
 #include "scene.h"
+#include "../rt/blas.h"
+#include "../rt/tlas.h"
 
 #include <mutex>
 #include <thread>
@@ -36,6 +38,8 @@ struct Resources {
     RefCounter<Skeleton,    Callbacks>      skeletons;
 
     RefCounter<Scene,       Callbacks>      scenes;
+
+    RefCounter<Blas,        Callbacks>      blas;
 
     Resources(Engine *);
     Resources(const Resources &other) = delete;

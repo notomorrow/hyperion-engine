@@ -45,8 +45,6 @@ struct ObjectIdHolder {
 
 template <class Group>
 struct CallbackRef {
-    using RemoveFunction = std::function<void()>;
-
     uint32_t id;
     Group *group;
     typename Group::ArgsTuple bound_args;
@@ -99,7 +97,8 @@ struct CallbackRef {
 
     ~CallbackRef() = default;
 
-    bool Valid() const { return id != 0 && group != nullptr; }
+    auto *GetCallbackInstance() const { return id != 0 && group != nullptr ? group->GetCallbackInstance(id) : nullptr; }
+    bool Valid() const                { return id != 0 && group != nullptr && group->CheckValid(id); }
 
     bool Remove()
     {
@@ -139,8 +138,18 @@ class Callbacks {
 
         uint32_t id;
         Function fn;
+        uint32_t num_calls = 0;
 
-        bool Valid() const { return id != 0; }
+        bool Valid() const         { return id != 0; }
+        bool HasBeenCalled() const { return bool(num_calls); }
+
+        template <class ...OtherArgs>
+        void Call(OtherArgs &&... args)
+        {
+            fn(std::forward<OtherArgs>(args)...);
+
+            ++num_calls;
+        }
     };
 
 public:
@@ -160,10 +169,34 @@ public:
             return std::find_if(
                 callbacks.begin(),
                 callbacks.end(),
-                [id](auto &other) {
-                    return other.id == id;
-                }
+                [id](const auto &other) { return other.id == id; }
             );
+        }
+
+        CallbackInstance *GetCallbackInstance(uint32_t id)
+        {
+            auto once_it = Find(id, once_callbacks);
+
+            if (once_it != once_callbacks.end()) {
+                return &(*once_it);
+            }
+
+            auto on_it = Find(id, on_callbacks);
+
+            if (on_it != on_callbacks.end()) {
+                return &(*on_it);
+            }
+
+            return nullptr;
+        }
+
+        bool CheckValid(uint32_t id)
+        {
+            if (CallbackInstance *instance = GetCallbackInstance(id)) {
+                return instance->Valid();
+            }
+
+            return false;
         }
 
         bool Remove(uint32_t id)
@@ -193,7 +226,10 @@ public:
             auto once_it = Find(id, once_callbacks);
 
             if (once_it != once_callbacks.end()) {
-                once_it->fn(std::forward<Args>(args)...);
+                AssertThrowMsg(!once_it->HasBeenCalled(), "'once' callback has already been called!");
+
+                once_it->Call(std::forward<Args>(args)...);
+
                 once_callbacks.erase(once_it);
 
                 return true;
@@ -202,7 +238,7 @@ public:
             auto on_it = Find(id, on_callbacks);
 
             if (on_it != on_callbacks.end()) {
-                on_it->fn(std::forward<Args>(args)...);
+                on_it->Call(std::forward<Args>(args)...);
 
                 return true;
             }
@@ -231,7 +267,7 @@ public:
         };
 
         if (holder.trigger_state.triggered) {
-            callback_instance.fn(std::get<Args>(holder.trigger_state.args)...);
+            callback_instance.Call(std::get<Args>(holder.trigger_state.args)...);
 
             return CallbackRef<CallbackGroup>();
         }
@@ -254,7 +290,7 @@ public:
         };
 
         if (holder.trigger_state.triggered) {
-            callback_instance.fn(std::get<Args>(holder.trigger_state.args)...);
+            callback_instance.Call(std::get<Args>(holder.trigger_state.args)...);
         }
 
         holder.on_callbacks.push_back(std::move(callback_instance));
@@ -305,13 +341,13 @@ private:
         holder.trigger_state.args = std::tie(args...);
 
         for (CallbackInstance &callback_instance : once_callbacks) {
-            callback_instance.fn(std::forward<Args>(args)...);
+            callback_instance.Call(std::forward<Args>(args)...);
         }
 
         holder.once_callbacks.clear();
 
         for (CallbackInstance &callback_instance : on_callbacks) {
-            callback_instance.fn(std::forward<Args>(args)...);
+            callback_instance.Call(std::forward<Args>(args)...);
         }
         
         holder.trigger_state.triggered = previous_triggered_state || persist;
@@ -360,7 +396,7 @@ protected:
     void OnInit(CallbackRef &&callback_ref)
     {
         if (m_init_callback.Valid()) {
-            DebugLog(LogType::Warn, "OnInit callback overwritten!\n");
+            DebugLog(LogType::Warn, "OnInit callback overwritten.\n");
 
             AssertThrow(m_init_callback.Remove());
         }
@@ -376,7 +412,11 @@ protected:
     void OnTeardown(CallbackRef &&callback_ref, Args &&... bind_args)
     {
         if (m_destroy_callback.Valid()) {
-            DebugLog(LogType::Warn, "OnTeardown callback overwritten!\n");
+            DebugLog(LogType::Warn, "OnTeardown callback overwritten! This may be unintentional and ideally should not happen.\n");
+
+#if HYP_DEBUG_MODE
+            HYP_BREAKPOINT;
+#endif
 
             AssertThrow(m_destroy_callback.Remove());
         }
@@ -440,6 +480,12 @@ enum class EngineCallback {
 
     CREATE_COMPUTE_PIPELINES,
     DESTROY_COMPUTE_PIPELINES,
+
+    CREATE_RAYTRACING_PIPELINES,
+    DESTROY_RAYTRACING_PIPELINES,
+    
+    CREATE_ACCELERATION_STRUCTURES,
+    DESTROY_ACCELERATION_STRUCTURES,
 
     CREATE_VOXELIZER,
     DESTROY_VOXELIZER
@@ -1036,7 +1082,7 @@ public:
         Release(Get(id));
     }
 
-    constexpr T *operator[](typename T::ID id) { return m_holder.Get(id); }
+    constexpr T *operator[](typename T::ID id)             { return m_holder.Get(id); }
     constexpr const T *operator[](typename T::ID id) const { return m_holder.Get(id); }
 
     size_t GetRefCount(typename T::ID id) const

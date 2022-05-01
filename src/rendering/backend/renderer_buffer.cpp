@@ -544,9 +544,11 @@ void GPUBuffer::CopyFrom(CommandBuffer *command_buffer,
     );
 }
 
-Result GPUBuffer::CopyStaged(Instance *instance,
+Result GPUBuffer::CopyStaged(
+    Instance *instance,
     const void *ptr,
-    size_t count)
+    size_t count
+)
 {
     Device *device = instance->GetDevice();
 

@@ -298,6 +298,7 @@ void Engine::Initialize()
     callbacks.TriggerPersisted(EngineCallback::CREATE_SHADERS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SPATIALS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_ACCELERATION_STRUCTURES, this);
 }
 
 void Engine::Destroy()
@@ -305,7 +306,8 @@ void Engine::Destroy()
     AssertThrow(m_instance != nullptr);
 
     (void)m_instance->GetDevice()->Wait();
-
+    
+    callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MATERIALS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SKELETONS, this);
@@ -319,6 +321,7 @@ void Engine::Destroy()
 
     callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_RAYTRACING_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
 
     m_deferred_renderer.Destroy(this);
@@ -376,6 +379,7 @@ void Engine::Compile()
     
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
 }
 
 void Engine::UpdateDescriptorData(uint32_t frame_index)

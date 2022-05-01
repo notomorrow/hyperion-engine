@@ -480,19 +480,31 @@ int main()
     blas_node->AddChild()->SetSpatial(engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));*/
 
 
-    auto tlas = std::make_unique<TopLevelAccelerationStructure>();
-
     monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 5, 0 }});
 
     std::cout << MathUtil::Random<Vector3>(0.2f, 8.0f);
 
 
    // blas_node->CreateAccelerationStructure(&engine);
-    v2::AccelerationStructureBuilder blas_builder;
-    blas_builder.AddSpatial(engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial()));
-    blas_builder.AddSpatial(engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));
+    //v2::AccelerationStructureBuilder blas_builder;
+    //blas_builder.AddSpatial(engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial()));
+    //blas_builder.AddSpatial(engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));
 
-    HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), blas_builder.Build(&engine)));
+    auto my_tlas = std::make_unique<v2::Tlas>();
+
+    my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
+        engine.resources.meshes.Acquire(monkey_obj->GetChild(0)->GetSpatial()->GetMesh()),
+        monkey_obj->GetChild(0)->GetSpatial()->GetTransform()
+    )));
+
+    my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
+        engine.resources.meshes.Acquire(cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
+        cube_obj->GetChild(0)->GetSpatial()->GetTransform()
+    )));
+
+    my_tlas->Init(&engine);
+
+    //HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), blas_builder.Build(&engine)));
     
     Image *rt_image_storage = new StorageImage(
         Extent3D{1024, 1024, 1},
@@ -505,12 +517,12 @@ int main()
 
     auto *rt_descriptor_set = engine.GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_RAYTRACING);
     rt_descriptor_set->AddDescriptor<TlasDescriptor>(0)
-        ->AddSubDescriptor({.acceleration_structure = tlas.get()});
+        ->AddSubDescriptor({.acceleration_structure = &my_tlas->Get()});
     rt_descriptor_set->AddDescriptor<ImageStorageDescriptor>(1)
         ->AddSubDescriptor({.image_view = &rt_image_storage_view});
     
     auto rt_storage_buffer = rt_descriptor_set->AddDescriptor<StorageBufferDescriptor>(3);
-    rt_storage_buffer->AddSubDescriptor({.buffer = tlas->GetMeshDescriptionsBuffer()});
+    rt_storage_buffer->AddSubDescriptor({.buffer = my_tlas->Get().GetMeshDescriptionsBuffer()});
    // rt_storage_buffer->AddSubDescriptor({.buffer = blas[1]->GetMeshDescriptionsBuffer()});
 
     HYPERION_ASSERT_RESULT(rt_image_storage->Create(
@@ -520,12 +532,12 @@ int main()
     ));
     HYPERION_ASSERT_RESULT(rt_image_storage_view.Create(engine.GetDevice(), rt_image_storage));
 
-    monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{5, 2, 0}});
-    tlas->GetBlas()[0]->SetTransform(monkey_obj->GetChild(0)->GetSpatial()->GetTransform().GetMatrix());
-    tlas->SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
-    tlas->UpdateStructure(engine.GetInstance());
-    rt_storage_buffer->RemoveSubDescriptor(0);
-    rt_storage_buffer->AddSubDescriptor({.buffer = tlas->GetMeshDescriptionsBuffer()});
+    //monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{5, 2, 0}});
+    //tlas->GetBlas()[0]->SetTransform(monkey_obj->GetChild(0)->GetSpatial()->GetTransform().GetMatrix());
+    //tlas->SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
+    //tlas->UpdateStructure(engine.GetInstance());
+    //rt_storage_buffer->RemoveSubDescriptor(0);
+    //rt_storage_buffer->AddSubDescriptor({.buffer = tlas->GetMeshDescriptionsBuffer()});
 
     //rt_descriptor_set->AddDescriptor<Im>()
 #endif
@@ -757,7 +769,7 @@ int main()
 
     rt_image_storage->Destroy(engine.GetDevice());
     rt_image_storage_view.Destroy(engine.GetDevice());
-    tlas->Destroy(engine.GetInstance());
+    //tlas->Destroy(engine.GetInstance());
     rt->Destroy(engine.GetDevice());
 #endif
 

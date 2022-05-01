@@ -68,7 +68,7 @@ public:
         { return x < other.x && y < other.y && z < other.z; }
 
     constexpr inline float LengthSquared() const { return x * x + y * y + z * z; }
-    inline float Length() const { return sqrt(LengthSquared()); }
+    inline float Length() const { return std::sqrt(LengthSquared()); }
 
     float DistanceSquared(const Vector3 &other) const;
     float Distance(const Vector3 &other) const;

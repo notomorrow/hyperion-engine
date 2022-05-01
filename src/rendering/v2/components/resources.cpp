@@ -13,7 +13,8 @@ Resources::Resources(Engine *engine)
       scenes(engine->callbacks, {engine}),
       render_passes(engine->callbacks, {engine}),
       framebuffers(engine->callbacks, {engine}),
-      graphics_pipelines(engine->callbacks, {engine})
+      graphics_pipelines(engine->callbacks, {engine}),
+      blas(engine->callbacks, {engine})
 {
 }
 

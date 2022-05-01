@@ -85,5 +85,5 @@ void main()
     payload.color     = vec3(1.0, 0.0, 0.0) * vec3(dot_product);
     payload.distance  = gl_RayTmaxEXT;
     payload.normal    = normal;
-    payload.roughness = 0.0f;//gl_InstanceCustomIndexEXT == 1 ? 0.0f : 1.0f; 
+    payload.roughness = gl_InstanceCustomIndexEXT == 1 ? 0.0f : 1.0f; 
 }

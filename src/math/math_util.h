@@ -142,11 +142,35 @@ public:
         { return IntegralType(T(0) < value) - IntegralType(value < T(0)); }
 
     template <typename T, typename IntegralType = int>
-    static IntegralType Floor(T a)
+    static HYP_ENABLE_IF(is_math_vector_v) Floor(T a)
+    {
+        T result;
+
+        for (int i = 0; i < std::size(result.values); i++) {
+            result.values[i] = Floor<decltype(T::values[0]), IntegralType>(a.values[i]);
+        }
+
+        return result;
+    }
+
+    template <typename T, typename IntegralType = int>
+    static HYP_ENABLE_IF(is_math_vector_v) Ceil(T a)
+    {
+        T result;
+
+        for (int i = 0; i < std::size(result.values); i++) {
+            result.values[i] = Ceil<decltype(T::values[0]), IntegralType>(a.values[i]);
+        }
+
+        return result;
+    }
+
+    template <typename T, typename IntegralType = int>
+    static HYP_ENABLE_IF_R(!is_math_vector_v, IntegralType) Floor(T a)
         { return IntegralType(std::floor(a)); }
 
     template <typename T, typename IntegralType = int>
-    static IntegralType Ceil(T a)
+    static HYP_ENABLE_IF_R(!is_math_vector_v, IntegralType) Ceil(T a)
         { return IntegralType(std::ceil(a)); }
 
     template <typename T>

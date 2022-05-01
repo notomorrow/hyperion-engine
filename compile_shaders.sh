@@ -29,4 +29,8 @@ glslc --target-env=$VULKAN_TARGET rt/test.rgen -o rt/test.rgen.spv
 glslc --target-env=$VULKAN_TARGET rt/test.rmiss -o rt/test.rmiss.spv
 glslc --target-env=$VULKAN_TARGET rt/test.rchit -o rt/test.rchit.spv
 
+# glslc --target-env=$VULKAN_TARGET rt/probe.rgen -o rt/probe.rgen.spv
+# glslc --target-env=$VULKAN_TARGET rt/probe.rmiss -o rt/probe.rmiss.spv
+# glslc --target-env=$VULKAN_TARGET rt/probe.rchit -o rt/probe.rchit.spv
+
 popd

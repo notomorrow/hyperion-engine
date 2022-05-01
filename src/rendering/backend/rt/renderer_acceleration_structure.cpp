@@ -39,7 +39,7 @@ AccelerationGeometry::~AccelerationGeometry()
 {
 }
 
-Result AccelerationGeometry::Create(Instance *instance)
+Result AccelerationGeometry::Create(Device *device, Instance *instance)
 {
 	AssertThrow(m_packed_vertex_buffer == nullptr);
 	AssertThrow(m_packed_index_buffer == nullptr);
@@ -49,8 +49,6 @@ Result AccelerationGeometry::Create(Instance *instance)
 	}
 
 	auto result = Result::OK;
-
-	Device *device = instance->GetDevice();
 
 	m_packed_vertex_buffer = std::make_unique<PackedVertexStorageBuffer>();
 
@@ -66,7 +64,7 @@ Result AccelerationGeometry::Create(Instance *instance)
 	);
 
 	if (!result) {
-	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+	    HYPERION_IGNORE_ERRORS(Destroy(device));
 
 		return result;
 	}
@@ -90,7 +88,7 @@ Result AccelerationGeometry::Create(Instance *instance)
 	);
 
 	if (!result) {
-	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+	    HYPERION_IGNORE_ERRORS(Destroy(device));
 
 		return result;
 	}
@@ -122,11 +120,9 @@ Result AccelerationGeometry::Create(Instance *instance)
     HYPERION_RETURN_OK;
 }
 
-Result AccelerationGeometry::Destroy(Instance *instance)
+Result AccelerationGeometry::Destroy(Device *device)
 {
 	auto result = Result::OK;
-
-	auto *device = instance->GetDevice();
 
 	if (m_packed_vertex_buffer != nullptr) {
 	    HYPERION_PASS_ERRORS(m_packed_vertex_buffer->Destroy(device), result);
@@ -231,7 +227,7 @@ Result AccelerationStructure::CreateAccelerationStructure(
 	    );
 
 	    if (!result) {
-            HYPERION_IGNORE_ERRORS(Destroy(instance));
+            HYPERION_IGNORE_ERRORS(Destroy(device));
 
             return result;
 	    }
@@ -249,7 +245,7 @@ Result AccelerationStructure::CreateAccelerationStructure(
 	HYPERION_PASS_ERRORS(scratch_buffer->Create(device, build_sizes_info.buildScratchSize), result);
 
 	if (!result) {
-        HYPERION_IGNORE_ERRORS(Destroy(instance));
+        HYPERION_IGNORE_ERRORS(Destroy(device));
 
 		return result;
 	}
@@ -301,17 +297,15 @@ Result AccelerationStructure::CreateAccelerationStructure(
 }
 
 
-Result AccelerationStructure::Destroy(Instance *instance)
+Result AccelerationStructure::Destroy(Device *device)
 {
 	AssertThrow(m_acceleration_structure != VK_NULL_HANDLE);
 
 	auto result = Result::OK;
 
 	for (auto &geometry : m_geometries) {
-	    HYPERION_PASS_ERRORS(geometry->Destroy(instance), result);
+	    HYPERION_PASS_ERRORS(geometry->Destroy(device), result);
 	}
-
-	Device *device = instance->GetDevice();
 
 	HYPERION_PASS_ERRORS(m_buffer->Destroy(device), result);
 
@@ -388,8 +382,11 @@ std::vector<uint32_t> TopLevelAccelerationStructure::GetPrimitiveCounts() const
     return {static_cast<uint32_t>(m_blas.size())};
 }
     
-Result TopLevelAccelerationStructure::Create(Instance *instance,
-	std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> &&blas)
+Result TopLevelAccelerationStructure::Create(
+	Device *device,
+	Instance *instance,
+	std::vector<BottomLevelAccelerationStructure *> &&blas
+)
 {
 	AssertThrow(m_acceleration_structure == VK_NULL_HANDLE);
 	AssertThrow(m_instances_buffer == nullptr);
@@ -411,7 +408,7 @@ Result TopLevelAccelerationStructure::Create(Instance *instance,
 	);
 
 	if (!result) {
-	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+	    HYPERION_IGNORE_ERRORS(Destroy(device));
 
 		return result;
 	}
@@ -426,30 +423,28 @@ Result TopLevelAccelerationStructure::Create(Instance *instance,
 	return result;
 }
 
-Result TopLevelAccelerationStructure::Destroy(Instance *instance)
+Result TopLevelAccelerationStructure::Destroy(Device *device)
 {
 	auto result = Result::OK;
-
-	Device *device = instance->GetDevice();
 
 	if (m_mesh_descriptions_buffer != nullptr) {
 	    HYPERION_PASS_ERRORS(m_mesh_descriptions_buffer->Destroy(device), result);
 		m_mesh_descriptions_buffer.reset();
 	}
 
-	for (auto &blas : m_blas) {
+	/*for (auto &blas : m_blas) {
 	    if (blas == nullptr) {
-	        continue; /* really should not be */
+	        continue;
 	    }
 
 		HYPERION_PASS_ERRORS(
-			blas->Destroy(instance),
+			blas->Destroy(device),
 			result
 		);
-	}
+	}*/
 
     HYPERION_PASS_ERRORS(
-		AccelerationStructure::Destroy(instance),
+		AccelerationStructure::Destroy(device),
 		result
 	);
 
@@ -460,11 +455,11 @@ Result TopLevelAccelerationStructure::CreateOrRebuildInstancesBuffer(Instance *i
 {
 	Device *device = instance->GetDevice();
 
-	std::vector<VkAccelerationStructureInstanceKHR> instances;
-	instances.resize(m_blas.size());
+	std::vector<VkAccelerationStructureInstanceKHR> instances(m_blas.size());
 
 	for (size_t i = 0; i < m_blas.size(); i++) {
-		const auto &blas = m_blas[i];
+		const BottomLevelAccelerationStructure *blas = m_blas[i];
+
 		const auto instance_index = static_cast<uint32_t>(i); /* Index of mesh in mesh descriptions buffer. */
 
 	    instances[i] = VkAccelerationStructureInstanceKHR{
@@ -512,8 +507,7 @@ Result TopLevelAccelerationStructure::CreateMeshDescriptionsBuffer(Instance *ins
 
 	Device *device = instance->GetDevice();
 
-	std::vector<MeshDescription> mesh_descriptions;
-	mesh_descriptions.resize(m_blas.size());
+	std::vector<MeshDescription> mesh_descriptions(m_blas.size());
 
 	m_mesh_descriptions_buffer = std::make_unique<StorageBuffer>();
 	HYPERION_BUBBLE_ERRORS(m_mesh_descriptions_buffer->Create(
@@ -522,7 +516,7 @@ Result TopLevelAccelerationStructure::CreateMeshDescriptionsBuffer(Instance *ins
 	));
 
 	for (size_t i = 0; i < mesh_descriptions.size(); i++) {
-	    const auto &blas = m_blas[i];
+	    const BottomLevelAccelerationStructure *blas = m_blas[i];
 
 		uint64_t vertex_buffer_address = 0,
 		         index_buffer_address = 0;
@@ -578,6 +572,8 @@ Result TopLevelAccelerationStructure::Rebuild(Instance *instance)
 
     auto result = Result::OK;
 
+	Device *device = instance->GetDevice();
+
 	HYPERION_BUBBLE_ERRORS(CreateOrRebuildInstancesBuffer(instance));
 
 	HYPERION_PASS_ERRORS(
@@ -592,7 +588,7 @@ Result TopLevelAccelerationStructure::Rebuild(Instance *instance)
 	);
 
 	if (!result) {
-	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+	    HYPERION_IGNORE_ERRORS(Destroy(device));
 
 		return result;
 	}
@@ -614,7 +610,7 @@ BottomLevelAccelerationStructure::BottomLevelAccelerationStructure()
 
 BottomLevelAccelerationStructure::~BottomLevelAccelerationStructure() = default;
 
-Result BottomLevelAccelerationStructure::Create(Instance *instance)
+Result BottomLevelAccelerationStructure::Create(Device *device, Instance *instance)
 {
 	auto result = Result::OK;
 
@@ -624,7 +620,7 @@ Result BottomLevelAccelerationStructure::Create(Instance *instance)
 	for (size_t i = 0; i < m_geometries.size(); i++) {
 	    const auto &geometry = m_geometries[i];
 
-		HYPERION_PASS_ERRORS(geometry->Create(instance), result);
+		HYPERION_PASS_ERRORS(geometry->Create(device, instance), result);
 
 		if (!result) {
 		    return result;
@@ -645,7 +641,7 @@ Result BottomLevelAccelerationStructure::Create(Instance *instance)
 	);
 
 	if (!result) {
-	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+	    HYPERION_IGNORE_ERRORS(Destroy(device));
 
 		return result;
 	}
@@ -665,6 +661,7 @@ Result BottomLevelAccelerationStructure::UpdateStructure(Instance *instance)
 Result BottomLevelAccelerationStructure::Rebuild(Instance *instance)
 {
 	auto result = Result::OK;
+	Device *device = instance->GetDevice();
 
 	std::vector<VkAccelerationStructureGeometryKHR> geometries(m_geometries.size());
 	std::vector<uint32_t> primitive_counts(m_geometries.size());
@@ -672,7 +669,7 @@ Result BottomLevelAccelerationStructure::Rebuild(Instance *instance)
 	for (size_t i = 0; i < m_geometries.size(); i++) {
 	    const auto &geometry = m_geometries[i];
 
-		HYPERION_PASS_ERRORS(geometry->Create(instance), result);
+		HYPERION_PASS_ERRORS(geometry->Create(device, instance), result);
 
 		if (!result) {
 		    return result;
@@ -694,7 +691,7 @@ Result BottomLevelAccelerationStructure::Rebuild(Instance *instance)
 	);
 
 	if (!result) {
-	    HYPERION_IGNORE_ERRORS(Destroy(instance));
+	    HYPERION_IGNORE_ERRORS(Destroy(device));
 
 		return result;
 	}

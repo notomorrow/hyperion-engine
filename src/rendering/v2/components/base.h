@@ -119,6 +119,9 @@ public:
           m_wrapped(std::move(args)...),
           m_wrapped_created(false)
     {
+#if HYP_DEBUG_MODE
+        m_wrapped_destroyed = false;
+#endif
     }
 
     EngineComponent(const EngineComponent &other) = delete;
@@ -126,10 +129,20 @@ public:
 
     ~EngineComponent()
     {
+        const char *type_name = typeid(WrappedType).name();
+
+#if HYP_DEBUG_MODE
+        AssertThrowMsg(
+            m_wrapped_destroyed,
+            "Expected wrapepd object of type %s to have been destroyed before destructor",
+            type_name
+        );
+#endif
+
         AssertThrowMsg(
             !m_wrapped_created,
-            "Expected wrapped object of type %s to be destroyed before destructor, but it was not nullptr.",
-            typeid(WrappedType).name()
+            "Expected wrapped object of type %s to be destroyed before destructor, but it was not nullptr",
+            type_name
         );
     }
 
@@ -148,7 +161,7 @@ public:
             wrapped_type_name
         );
 
-        auto result = m_wrapped.Create(GetEngineDevice(engine), std::move(args)...);
+        auto result = m_wrapped.Create(GetEngineDevice(engine), std::forward<Args>(args)...);
         AssertThrowMsg(
             result,
             "Creation of object of type %s failed.\n\tError Code: %d\n\tMessage: %s",
@@ -159,6 +172,10 @@ public:
 
         m_wrapped_created = true;
 
+#if HYP_DEBUG_MODE
+        m_wrapped_destroyed = false;
+#endif
+
         EngineComponentBase<WrappedType>::Init();
     }
 
@@ -168,9 +185,17 @@ public:
     {
         const char *wrapped_type_name = typeid(WrappedType).name();
 
+#if HYP_DEBUG_MODE
+        AssertThrowMsg(
+            !m_wrapped_destroyed,
+            "Wrapped object of type %s was already destroyed",
+            wrapped_type_name
+        );
+#endif
+
         AssertThrowMsg(
             m_wrapped_created,
-            "Expected wrapped object of type %s to have been created, but it was not yet created.",
+            "Expected wrapped object of type %s to have been created, but it was not yet created (or it was already destroyed)",
             wrapped_type_name
         );
 
@@ -178,6 +203,10 @@ public:
         AssertThrowMsg(result, "Destruction of object of type %s failed: %s", wrapped_type_name, result.message);
 
         m_wrapped_created = false;
+        
+#if HYP_DEBUG_MODE
+        m_wrapped_destroyed = true;
+#endif
 
         EngineComponentBase<WrappedType>::Destroy();
     }
@@ -187,6 +216,7 @@ protected:
 
     WrappedType m_wrapped;
     bool m_wrapped_created;
+    bool m_wrapped_destroyed; /* for debug purposes; not really used for anything outside (as objects should be able to be destroyed then recreated) */
 };
 
 } // namespace hyperion::v2

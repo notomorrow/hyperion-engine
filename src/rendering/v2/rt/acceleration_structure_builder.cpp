@@ -31,7 +31,7 @@ std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> AccelerationStruc
         acceleration_structure->SetTransform(spatial->GetTransform().GetMatrix());
         acceleration_structure->AddGeometry(std::move(geometry));
 
-        HYPERION_ASSERT_RESULT(acceleration_structure->Create(engine->GetInstance()));
+        HYPERION_ASSERT_RESULT(acceleration_structure->Create(engine->GetDevice(), engine->GetInstance()));
 
         acceleration_structures.push_back(std::move(acceleration_structure));
     }
