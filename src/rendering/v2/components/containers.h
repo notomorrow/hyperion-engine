@@ -160,7 +160,9 @@ public:
             return std::find_if(
                 callbacks.begin(),
                 callbacks.end(),
-                [id](auto &other) { return other.id == id; }
+                [id](auto &other) {
+                    return other.id == id;
+                }
             );
         }
 
@@ -326,9 +328,6 @@ public:
     ~CallbackTrackable() = default;
 
 protected:
-    struct CallbackTracker {
-        std::vector<CallbackRef> refs;
-    };
 
     /*! \brief Triggers the destroy callback (if present) and
      * removes all existing callbacks from the callback holder
@@ -337,6 +336,12 @@ protected:
     {
         if (m_init_callback.Valid()) {
             m_init_callback.Remove();
+        }
+
+        for (auto &callback : m_owned_callbacks) {
+            if (callback.Valid()) {
+                callback.Remove();
+            }
         }
 
         if (m_destroy_callback.Valid()) {
@@ -379,9 +384,20 @@ protected:
         m_destroy_callback = std::move(callback_ref);
     }
 
+    /*! \brief Add an owned callback to this object. Note, this does not create a callback,
+     * but is instead used to track ownership. This is necessary if you have a callback that
+     * needs to perform some operation on this object.
+     * @param callback_ref The callback reference, obtained via Once() or On()
+     */
+    void AttachCallback(CallbackRef &&callback_ref)
+    {
+        m_owned_callbacks.push_back(std::move(callback_ref));
+    }
+
 private:
-    CallbackRef m_init_callback;
-    CallbackRef m_destroy_callback;
+    CallbackRef              m_init_callback;
+    CallbackRef              m_destroy_callback;
+    std::vector<CallbackRef> m_owned_callbacks;
 };
 
 enum class EngineCallback {
@@ -428,6 +444,19 @@ enum class EngineCallback {
 };
 
 using EngineCallbacks = Callbacks<EngineCallback, Engine *>;
+
+enum class AssetCallback {
+    NONE,
+
+    ON_LOAD_START,
+    ON_LOAD_FAIL,
+    ON_LOAD,
+
+    ON_UNLOAD
+};
+
+template <class Result, class T>
+using AssetCallbacks = Callbacks<AssetCallback, Result, T *>;
 
 /* v1 callback utility still used by octree */
 template <class CallbacksClass>
