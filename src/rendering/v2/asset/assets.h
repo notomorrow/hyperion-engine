@@ -22,14 +22,25 @@ class Engine;
 template <class ...T>
 constexpr bool resolution_failure = false;
 
-class AssetCacheStore {
-public:
-    AssetCacheStore();
-    AssetCacheStore(const AssetCacheStore &other) = delete;
-    AssetCacheStore &operator=(const AssetCacheStore &other) = delete;
-    ~AssetCacheStore();
+class AssetBase {
+protected:
+    struct Result {
+        enum class Status {
+            OK,
+            ERR
+        };
 
-    void GC();
+        Status status = Status::OK;
+        const char *message = "";
+    };
+};
+
+template <class T>
+class Asset : public AssetBase {
+public:
+    struct Result : AssetBase::Result {};
+
+    AssetCallbacks<Result, T> callbacks;
 };
 
 class Assets {
