@@ -23,7 +23,8 @@ enum class AccelerationStructureType {
 
 enum AccelerationStructureFlags {
     ACCELERATION_STRUCTURE_FLAGS_NONE = 0,
-    ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING = 1
+    ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING = 1,
+    ACCELERATION_STRUCTURE_FLAGS_TRANSFORM_UPDATE = 2
 };
 
 class AccelerationGeometry {
@@ -77,13 +78,14 @@ public:
     inline uint64_t GetDeviceAddress() const                                  { return m_device_address; }
 
     inline AccelerationStructureFlags GetFlags() const                        { return m_flags; }
-    inline void SetFlags(AccelerationStructureFlags flags)                    { m_flags = flags; }
+    inline void SetFlag(AccelerationStructureFlags flag)                      { m_flags = AccelerationStructureFlags(m_flags | flag); }
+    inline void ClearFlag(AccelerationStructureFlags flag)                    { m_flags = AccelerationStructureFlags(m_flags & ~flag); }
 
     inline const std::vector<std::unique_ptr<AccelerationGeometry>> &GetGeometries() const
         { return m_geometries; }
 
     inline void AddGeometry(std::unique_ptr<AccelerationGeometry> &&geometry)
-        { m_geometries.push_back(std::move(geometry)); SetNeedsUpdateFlag(); }
+        { m_geometries.push_back(std::move(geometry)); SetNeedsRebuildFlag(); }
 
     inline const Matrix4 &GetTransform() const         { return m_transform; }
     inline void SetTransform(const Matrix4 &transform) { m_transform = transform; SetNeedsUpdateFlag(); }
@@ -97,10 +99,9 @@ public:
 
 protected:
     static VkAccelerationStructureTypeKHR ToVkAccelerationStructureType(AccelerationStructureType);
-
-    inline void SetFlag(AccelerationStructureFlags flag)   { m_flags = AccelerationStructureFlags(m_flags | flag); }
-    inline void ClearFlag(AccelerationStructureFlags flag) { m_flags = AccelerationStructureFlags(m_flags & ~flag); }
-    inline void SetNeedsUpdateFlag()                       { SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING); }
+    
+    inline void SetNeedsRebuildFlag()                      { SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING); }
+    inline void SetNeedsUpdateFlag()                       { SetFlag(ACCELERATION_STRUCTURE_FLAGS_TRANSFORM_UPDATE); }
 
     Result CreateAccelerationStructure(Instance *instance,
         AccelerationStructureType type,
@@ -143,8 +144,10 @@ public:
     ~TopLevelAccelerationStructure();
 
     inline AccelerationStructureType GetType() const                          { return AccelerationStructureType::TOP_LEVEL; }
-
     inline StorageBuffer *GetMeshDescriptionsBuffer() const                   { return m_mesh_descriptions_buffer.get(); }
+    
+    inline std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> &GetBlas()             { return m_blas; }
+    inline const std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> &GetBlas() const { return m_blas; }
     
     Result Create(Instance *instance,
         std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> &&blas);
@@ -157,7 +160,10 @@ public:
 private:
     Result Rebuild(Instance *instance);
 
-    Result CreateInstancesBuffer(Instance *instance);
+    std::vector<VkAccelerationStructureGeometryKHR> GetGeometries(Instance *instance) const;
+    std::vector<uint32_t> GetPrimitiveCounts() const;
+
+    Result CreateOrRebuildInstancesBuffer(Instance *instance);
     
     Result CreateMeshDescriptionsBuffer(Instance *instance);
     Result RebuildMeshDescriptionsBuffer(Instance *instance);

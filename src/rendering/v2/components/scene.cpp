@@ -54,15 +54,15 @@ void Scene::Update(Engine *engine, double delta_time)
 void Scene::UpdateShaderData(Engine *engine) const
 {
     SceneShaderData shader_data{
-        .aabb_max = Vector4(aabb.max, 1.0f),
-        .aabb_min = Vector4(aabb.min, 1.0f)
+        .aabb_max = aabb.max.ToVector4(),
+        .aabb_min = aabb.min.ToVector4()
     };
 
     if (m_camera != nullptr) {
         shader_data.view             = m_camera->GetViewMatrix();
         shader_data.projection       = m_camera->GetProjectionMatrix();
-        shader_data.camera_position  = Vector4(m_camera->GetTranslation(), 1.0f);
-        shader_data.camera_direction = Vector4(m_camera->GetDirection(), 1.0f);
+        shader_data.camera_position  = m_camera->GetTranslation().ToVector4();
+        shader_data.camera_direction = m_camera->GetDirection().ToVector4();
         shader_data.resolution_x     = static_cast<uint32_t>(m_camera->GetWidth());
         shader_data.resolution_y     = static_cast<uint32_t>(m_camera->GetHeight());
     }

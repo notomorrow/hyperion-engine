@@ -20,26 +20,25 @@ GraphicsPipeline::GraphicsPipeline(
     Ref<Scene> &&scene,
     Ref<RenderPass> &&render_pass,
     Bucket bucket
-)
-    : EngineComponent(),
-      m_shader(std::move(shader)),
-      m_scene(std::move(scene)),
-      m_render_pass(std::move(render_pass)),
-      m_bucket(bucket),
-      m_topology(Topology::TRIANGLES),
-      m_cull_mode(CullMode::BACK),
-      m_fill_mode(FillMode::FILL),
-      m_depth_test(true),
-      m_depth_write(true),
-      m_blend_enabled(false),
-      m_vertex_attributes(MeshInputAttributeSet(
-          MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT)),
-      m_per_frame_data(nullptr)
+) : EngineComponent(),
+    m_shader(std::move(shader)),
+    m_scene(std::move(scene)),
+    m_render_pass(std::move(render_pass)),
+    m_bucket(bucket),
+    m_topology(Topology::TRIANGLES),
+    m_cull_mode(CullMode::BACK),
+    m_fill_mode(FillMode::FILL),
+    m_depth_test(true),
+    m_depth_write(true),
+    m_blend_enabled(false),
+    m_vertex_attributes(MeshInputAttributeSet(
+        MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
+        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
+        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
+        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
+        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
+        | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT)),
+    m_per_frame_data(nullptr)
 {
 }
 
@@ -169,8 +168,8 @@ void GraphicsPipeline::Init(Engine *engine)
 }
 
 void GraphicsPipeline::Render(Engine *engine,
-                              CommandBuffer *primary,
-                              uint32_t frame_index)
+    CommandBuffer *primary,
+    uint32_t frame_index)
 {
     AssertThrow(m_per_frame_data != nullptr);
 

@@ -26,7 +26,7 @@ void Camera::Rotate(const Vector3 &axis, float radians)
 
 void Camera::UpdateFrustum()
 {
-    m_frustum.SetViewProjectionMatrix(m_view_proj_mat);
+    m_frustum = Frustum(m_view_proj_mat);
 }
 
 void Camera::Update(double dt)

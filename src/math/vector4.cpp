@@ -176,7 +176,7 @@ Vector4 &Vector4::Rotate(const Vector3 &axis, float radians)
     return *this;
 }
 
-Vector4 &Vector4::Lerp(const Vector4 &to, const float amt)
+Vector4 &Vector4::Lerp(const Vector4 &to, float amt)
 {
     x = MathUtil::Lerp(x, to.x, amt);
     y = MathUtil::Lerp(y, to.y, amt);
@@ -192,12 +192,22 @@ float Vector4::Dot(const Vector4 &other) const
 
 Vector4 Vector4::Abs(const Vector4 &vec)
 {
-    return Vector4(vec.x, vec.y, vec.z, vec.w);
+    return {
+        MathUtil::Abs(vec.x),
+        MathUtil::Abs(vec.y),
+        MathUtil::Abs(vec.z),
+        MathUtil::Abs(vec.w)
+    };
 }
 
 Vector4 Vector4::Round(const Vector4 &vec)
 {
-    return Vector4(std::round(vec.x), std::round(vec.y), std::round(vec.z), std::round(vec.w));
+    return {
+        MathUtil::Round(vec.x),
+        MathUtil::Round(vec.y),
+        MathUtil::Round(vec.z),
+        MathUtil::Round(vec.w)
+    };
 }
 
 Vector4 Vector4::Clamp(const Vector4 &vec, float min_value, float max_value)

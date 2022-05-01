@@ -112,7 +112,7 @@ void Environment::CollectVisiblePointLights(Camera *camera)
         // NOTE: we could also maybe just do a simple "behind camera" check?
         // also, if the frustum route does work then maybe it makes sense to refactor lights into being
         // some sorta Renderable?
-        if (point_light == nullptr || !frustum.BoundingBoxInFrustum(point_light->GetAABB())) {
+        if (point_light == nullptr || !frustum.ContainsAabb(point_light->GetAABB())) {
             continue;
         }
 

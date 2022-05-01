@@ -17,10 +17,11 @@ public:
     inline Vector4 &GetPlane(size_t index) { return m_planes[index]; }
     inline const Vector4 &GetPlane(size_t index) const { return m_planes[index]; }
 
-    bool BoundingBoxInFrustum(const BoundingBox &bounding_box) const;
-    void SetViewProjectionMatrix(const Matrix4 &view_proj);
+    bool ContainsAabb(const BoundingBox &aabb) const;
 
 private:
+    void SetViewProjectionMatrix(const Matrix4 &view_proj);
+
     std::array<Vector4, 6> m_planes;
 };
 } // namespace hyperion

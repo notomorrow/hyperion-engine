@@ -11,70 +11,106 @@
 #include <limits>
 #include <type_traits>
 
+#define HYP_ENABLE_IF(cond) \
+    typename std::enable_if_t<cond##<T>, T>
+
+#define HYP_ENABLE_IF_R(cond, return_type) \
+    typename std::enable_if_t<cond##<T>, return_type>
+
 namespace hyperion {
+
+template <class T>
+constexpr bool is_math_vector_v = std::is_base_of_v<T, Vector2>
+                               || std::is_base_of_v<T, Vector3>
+                               || std::is_base_of_v<T, Vector4>;
 
 class MathUtil {
 public:
-    static constexpr float pi = 3.14159265358979f;
-    static constexpr float epsilon = 0.0001f;
+    template <class T>
+    static constexpr T pi = T(3.14159265358979);
+
+    template <class T>
+    static constexpr T epsilon;// = T(EPSILON0.0001f;
+
+    template<>
+    static constexpr float epsilon<float> = FLT_EPSILON;
+
+    template<>
+    static constexpr float epsilon<double> = DBL_EPSILON;
+    
+    template <typename T>
+    static constexpr HYP_ENABLE_IF_R(std::is_enum_v, std::underlying_type_t<T>) MaxSafeValue()
+        { return std::numeric_limits<std::underlying_type_t<T>>::max(); }
 
     template <typename T>
-    static inline constexpr typename std::enable_if_t<std::is_enum_v<T>, std::underlying_type_t<T>>
-    MaxSafeValue() { return std::numeric_limits<std::underlying_type_t<T>>::max(); }
+    static constexpr HYP_ENABLE_IF_R(std::is_enum_v, std::underlying_type_t<T>) MinSafeValue()
+        { return std::numeric_limits<std::underlying_type_t<T>>::lowest(); }
 
     template <typename T>
-    static inline constexpr typename std::enable_if_t<std::is_enum_v<T>, std::underlying_type_t<T>>
-    MinSafeValue() { return std::numeric_limits<std::underlying_type_t<T>>::lowest(); }
+    static constexpr HYP_ENABLE_IF(!std::is_enum_v) MaxSafeValue()
+        { return std::numeric_limits<T>::max(); }
 
     template <typename T>
-    static inline constexpr typename std::enable_if_t<!std::is_enum_v<T>, T>
-    MaxSafeValue() { return std::numeric_limits<T>::max(); }
-
-    template <typename T>
-    static inline constexpr typename std::enable_if_t<!std::is_enum_v<T>, T>
-    MinSafeValue() { return std::numeric_limits<T>::lowest(); }
-
-
-    static inline Vector2 SafeValue(const Vector2 &value)
+    static constexpr HYP_ENABLE_IF(!std::is_enum_v) MinSafeValue()
+        { return std::numeric_limits<T>::lowest(); }
+    
+    static Vector2 SafeValue(const Vector2 &value)
         { return Vector2::Max(Vector2::Min(value, MaxSafeValue<decltype(value[0])>()), MinSafeValue<decltype(value[0])>()); }
 
-    static inline Vector3 SafeValue(const Vector3 &value)
+    static Vector3 SafeValue(const Vector3 &value)
         { return Vector3::Max(Vector3::Min(value, MaxSafeValue<decltype(value[0])>()), MinSafeValue<decltype(value[0])>()); }
 
-    static inline Vector4 SafeValue(const Vector4 &value)
+    static Vector4 SafeValue(const Vector4 &value)
         { return Vector4::Max(Vector4::Min(value, MaxSafeValue<decltype(value[0])>()), MinSafeValue<decltype(value[0])>()); }
 
     template <typename T>
-    static inline T SafeValue(const T &value)
+    static T SafeValue(const T &value)
         { return MathUtil::Max(MathUtil::Min(value, MathUtil::MaxSafeValue<T>()), MathUtil::MinSafeValue<T>()); }
 
     template <typename T>
-    static inline constexpr T NaN()
+    static constexpr T NaN()
         { return std::numeric_limits<T>::quiet_NaN(); }
 
     template <typename T>
-    static inline constexpr bool Approximately(const T &a, const T &b)
-        { return std::abs(a - b) <= T(epsilon); }
+    static constexpr HYP_ENABLE_IF_R(is_math_vector_v, bool) Approximately(const T &a, const T &b)
+        { return Abs(a.Distance(b)) <= epsilon<decltype(T::values[0])>; }
 
     template <typename T>
-    static inline T Random(const T &a, const T &b)
+    static constexpr HYP_ENABLE_IF_R(!is_math_vector_v, bool) Approximately(const T &a, const T &b)
+        { return Abs(a - b) <= epsilon<T>; }
+
+    template <typename T>
+    static HYP_ENABLE_IF(is_math_vector_v) Random(const T &a, const T &b)
+    {
+        T result;
+
+        for (int i = 0; i < std::size(result.values); i++) {
+            result.values[i] = Random(a.values[i], b.values[i]);
+        }
+
+        return result;
+    }
+
+    template <typename T>
+    static HYP_ENABLE_IF(!is_math_vector_v) Random(const T &a, const T &b)
     {
         T random = T(rand()) / T(RAND_MAX);
         T diff = b - a;
         T r = random * diff;
+
         return a + r;
     }
 
     template <typename T>
-    static inline constexpr T RadToDeg(const T &rad)
-        { return rad * T(180) / T(pi); }
+    static constexpr T RadToDeg(const T &rad)
+        { return rad * T(180) / pi<T>; }
 
     template <typename T>
-    static inline constexpr T DegToRad(const T &deg)
-        { return deg * T(pi) / T(180); }
+    static constexpr T DegToRad(const T &deg)
+        { return deg * pi<T> / T(180); }
 
     template <typename T>
-    static inline constexpr T Clamp(const T &val, const T &min, const T &max)
+    static constexpr T Clamp(const T &val, const T &min, const T &max)
     {
         if (val > max) {
             return max;
@@ -86,54 +122,57 @@ public:
     }
 
     template <typename T>
-    static inline constexpr T Lerp(const T &from, const T &to, const T &amt)
+    static constexpr T Lerp(const T &from, const T &to, const T &amt)
         { return from + amt * (to - from); }
 
     template <typename T>
-    static inline T Fract(T f)
-        { return f - floorf(f); }
-
-    template <typename T>
-    static inline constexpr T Min(const T &a, const T &b)
+    static constexpr T Min(const T &a, const T &b)
         { return (a < b) ? a : b; }
 
     template <typename T>
-    static inline constexpr T Max(T a, T b)
+    static constexpr T Max(T a, T b)
         { return (a > b) ? a : b; }
 
     template <typename T, typename... Args>
-    static inline constexpr T Max(T a, T b, Args... args)
+    static constexpr T Max(T a, T b, Args... args)
         { return Max(Max(a, b), args...); }
 
-    template <typename T, typename SignedType = int>
-    static inline constexpr SignedType Sign(const T &value)
-        { return SignedType(T(0) < value) - SignedType(value < T(0)); }
+    template <typename T, typename IntegralType = int>
+    static constexpr IntegralType Sign(const T &value)
+        { return IntegralType(T(0) < value) - IntegralType(value < T(0)); }
 
-    template <typename T, typename SignedType = int>
-    static inline SignedType Floor(T a)
-        { return SignedType(std::floor(a)); }
+    template <typename T, typename IntegralType = int>
+    static IntegralType Floor(T a)
+        { return IntegralType(std::floor(a)); }
 
-    template <typename T, typename SignedType = int>
-    static inline SignedType Ceil(T a)
-        { return SignedType(std::ceil(a)); }
-
-    template <typename T>
-    static inline T Exp(T a)
-        { return std::exp(a); }
+    template <typename T, typename IntegralType = int>
+    static IntegralType Ceil(T a)
+        { return IntegralType(std::ceil(a)); }
 
     template <typename T>
-    static inline T Round(T a)
-        { return std::round(a); }
+    static T Fract(T a) { return a - Floor<T, T>(a); }
+
+    template <typename T>
+    static T Exp(T a) { std::exp(a); }
+    
+    template <typename T>
+    static constexpr HYP_ENABLE_IF(!std::is_floating_point_v) Abs(T a) { return std::abs(a); }
+    
+    template <typename T>
+    static constexpr HYP_ENABLE_IF(std::is_floating_point_v) Abs(T a) { return std::fabs(a); }
+
+    template <typename T>
+    static T Round(T a) { return std::round(a); }
 
     template <typename T, typename U = T, typename V = U>
-    static inline constexpr bool InRange(T value, const std::pair<U, V> &range)
+    static constexpr bool InRange(T value, const std::pair<U, V> &range)
         { return value >= range.first && value < range.second; }
 
-    static inline constexpr bool IsPowerOfTwo(uint64_t value)
+    static constexpr bool IsPowerOfTwo(uint64_t value)
         { return (value & (value - 1)) == 0; }
 
     /* Fast log2 for power-of-2 numbers */
-    static inline uint64_t FastLog2_Pow2(uint64_t value)
+    static uint64_t FastLog2_Pow2(uint64_t value)
     {
 #ifdef _MSC_VER
         return _tzcnt_u64(value);

@@ -388,7 +388,7 @@ void Octree::CalculateVisibility(Scene *scene)
 
     const auto &frustum = scene->GetCamera()->GetFrustum();
      
-    if (frustum.BoundingBoxInFrustum(m_aabb)) {
+    if (frustum.ContainsAabb(m_aabb)) {
         UpdateVisibilityState(scene);
     }
 }
@@ -405,7 +405,7 @@ void Octree::UpdateVisibilityState(Scene *scene)
     }
 
     for (auto &octant : m_octants) {
-        if (!frustum.BoundingBoxInFrustum(octant.aabb)) {
+        if (!frustum.ContainsAabb(octant.aabb)) {
             continue;
         }
 

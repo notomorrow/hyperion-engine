@@ -6,6 +6,7 @@
 
 #include "matrix3.h"
 #include "matrix4.h"
+#include "vector4.h"
 #include "../hash_code.h"
 #include "../util.h"
 
@@ -80,6 +81,8 @@ public:
     Vector3 &Rotate(const Vector3 &axis, float radians);
     Vector3 &Lerp(const Vector3 &to, const float amt);
     float Dot(const Vector3 &other) const;
+
+    inline Vector4 ToVector4() const { return Vector4(*this, 1.0f); }
 
     static Vector3 Abs(const Vector3 &);
     static Vector3 Round(const Vector3 &);

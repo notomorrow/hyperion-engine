@@ -69,7 +69,7 @@ public:
 
     Vector4 &Normalize();
     Vector4 &Rotate(const Vector3 &axis, float radians);
-    Vector4 &Lerp(const Vector4 &to, const float amt);
+    Vector4 &Lerp(const Vector4 &to, float amt);
     float Dot(const Vector4 &other) const;
 
     static Vector4 Abs(const Vector4 &);
