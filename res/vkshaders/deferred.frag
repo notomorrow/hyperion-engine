@@ -33,11 +33,10 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 6000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 150000.0
+#define IBL_INTENSITY 25000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 80000.0
 #define GI_INTENSITY 20.0
 #define VCT_ENABLED 0
-#define PBR_ENABLED 1
 #define SSAO_DEBUG 0
 
 #if VCT_ENABLED
@@ -81,10 +80,9 @@ void main()
     
     float ao = 1.0;
     
-#if PBR_ENABLED
     if (perform_lighting) {
-        float metallic = 0.9;
-        float roughness = 0.1;
+        float metallic = 0.7; /* TODO: add an attachment that will hold material ids, and just grab the material at that index. */
+        float roughness = 0.4;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -153,7 +151,7 @@ void main()
         result += surface;
 
     } else {
-        result = albedo_linear * IBL_INTENSITY * exposure;
+        result = albedo.rgb * IBL_INTENSITY * exposure;
     }
 
 #if SSAO_DEBUG
