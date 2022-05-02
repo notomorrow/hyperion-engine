@@ -10,6 +10,7 @@ namespace hyperion::v2 {
 
 using renderer::ShaderProgram;
 using renderer::ImageStorageDescriptor;
+using renderer::StorageBufferDescriptor;
 using renderer::UniformBufferDescriptor;
 using renderer::GPUMemory;
 
@@ -43,7 +44,7 @@ void ProbeSystem::Init(Engine *engine)
         }
     }
 
-    CreateStorageImages(engine);
+    CreateStorageBuffers(engine);
     CreateUniformBuffer(engine);
     AddDescriptors(engine);
 
@@ -78,6 +79,7 @@ void ProbeSystem::CreateUniformBuffer(Engine *engine)
         .aabb_min           = m_setup.aabb.min.ToVector4(),
         .probe_border       = m_setup.probe_border,
         .probe_counts       = m_setup.NumProbesPerDimension(),
+        .image_dimensions   = m_setup.GetImageDimensions(),
         .probe_distance     = m_setup.probe_distance,
         .num_rays_per_probe = m_setup.num_rays_per_probe
     };
@@ -88,19 +90,10 @@ void ProbeSystem::CreateUniformBuffer(Engine *engine)
     m_uniform_buffer->Copy(engine->GetDevice(), sizeof(ProbeSystemUniforms), &uniforms);
 }
 
-void ProbeSystem::CreateStorageImages(Engine *engine)
+void ProbeSystem::CreateStorageBuffers(Engine *engine)
 {
-    m_radiance_image = std::make_unique<StorageImage>(
-        Extent3D({m_setup.NumProbes(), m_setup.num_rays_per_probe}),
-        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-        Image::Type::TEXTURE_TYPE_2D,
-        nullptr
-    );
-
-    HYPERION_ASSERT_RESULT(m_radiance_image->Create(engine->GetDevice()));
-
-    m_radiance_image_view = std::make_unique<ImageView>();
-    HYPERION_ASSERT_RESULT(m_radiance_image_view->Create(engine->GetDevice(), m_radiance_image.get()));
+    m_radiance_buffer = std::make_unique<StorageBuffer>();
+    HYPERION_ASSERT_RESULT(m_radiance_buffer->Create(engine->GetDevice(), m_setup.GetImageDimensions().Size() * sizeof(ProbeRayData)));
 }
 
 void ProbeSystem::AddDescriptors(Engine *engine)
@@ -108,12 +101,12 @@ void ProbeSystem::AddDescriptors(Engine *engine)
     /* TMP, have to set this up in a way such that it's not relying on something else to populate the other RT stuff */
 
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_RAYTRACING);
-  
-    auto *radiance_storage = descriptor_set->AddDescriptor<ImageStorageDescriptor>(5);
-    radiance_storage->AddSubDescriptor({.image_view = m_radiance_image_view.get()});
 
     auto *probe_uniforms = descriptor_set->AddDescriptor<UniformBufferDescriptor>(9);
     probe_uniforms->AddSubDescriptor({.buffer = m_uniform_buffer.get()});
+
+    auto *probe_ray_data = descriptor_set->AddDescriptor<StorageBufferDescriptor>(10);
+    probe_ray_data->AddSubDescriptor({.buffer = m_radiance_buffer.get()});
 }
 
 void ProbeSystem::SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer)
@@ -133,11 +126,7 @@ void ProbeSystem::SubmitPushConstants(Engine *engine, CommandBuffer *command_buf
 
 void ProbeSystem::RenderProbes(Engine *engine, CommandBuffer *command_buffer)
 {
-    m_radiance_image->GetGPUImage()->InsertBarrier(
-        command_buffer,
-        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
-        GPUMemory::ResourceState::UNORDERED_ACCESS
-    );
+    m_radiance_buffer->InsertBarrier(command_buffer, GPUMemory::ResourceState::UNORDERED_ACCESS);
 
     SubmitPushConstants(engine, command_buffer);
 
@@ -166,14 +155,10 @@ void ProbeSystem::RenderProbes(Engine *engine, CommandBuffer *command_buffer)
     m_pipeline->TraceRays(
         engine->GetDevice(),
         command_buffer,
-        Extent3D({m_setup.NumProbes(), m_setup.num_rays_per_probe})
+        Extent3D(m_setup.GetImageDimensions())
     );
 
-    m_radiance_image->GetGPUImage()->InsertBarrier(
-        command_buffer,
-        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
-        GPUMemory::ResourceState::UNORDERED_ACCESS
-    );
+    m_radiance_buffer->InsertBarrier(command_buffer, GPUMemory::ResourceState::UNORDERED_ACCESS);
 }
 
 } // namespace hyperion::v2

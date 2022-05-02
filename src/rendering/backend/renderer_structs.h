@@ -273,7 +273,9 @@ struct alignas(8) Extent2D {
     bool operator!=(const Extent2D &other) const
         { return !operator==(other); }
 
-    Vector2 ToVector2() const   { return Vector2(static_cast<float>(width), static_cast<float>(height)); }
+    Vector2 ToVector2() const { return Vector2(static_cast<float>(width), static_cast<float>(height)); }
+
+    uint32_t Size() const { return width * height; }
 };
 
 struct alignas(16) Extent3D {
@@ -318,6 +320,8 @@ struct alignas(16) Extent3D {
 
     Extent2D ToExtent2D() const { return Extent2D(width, height); }
     Vector3 ToVector3() const   { return Vector3(static_cast<float>(width), static_cast<float>(height), static_cast<float>(depth)); }
+
+    uint32_t Size() const { return width * height * depth; }
 };
 
 struct PackedVertex {

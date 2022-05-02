@@ -24,8 +24,14 @@ struct alignas(256) ProbeSystemUniforms {
     Vector4  aabb_min;
     Extent3D probe_border;
     Extent3D probe_counts;
+    Extent2D image_dimensions;
     float    probe_distance;
     uint32_t num_rays_per_probe;
+};
+
+struct ProbeRayData {
+    uint32_t color_packed;
+    float    hit_distance;
 };
 
 struct ProbeSystemSetup {
@@ -35,7 +41,7 @@ struct ProbeSystemSetup {
 
     BoundingBox aabb;
     Extent3D    probe_border   = {2, 0, 2};
-    float       probe_distance = 2.5f;
+    float       probe_distance = 4.0f;
 
     const Vector3 &GetOrigin() const
         { return aabb.min; }
@@ -56,6 +62,11 @@ struct ProbeSystemSetup {
         const Extent3D per_dimension = NumProbesPerDimension();
 
         return per_dimension.width * per_dimension.height * per_dimension.depth;
+    }
+
+    Extent2D GetImageDimensions() const
+    {
+        return Extent2D(MathUtil::NextPowerOf2(NumProbes()), num_rays_per_probe);
     }
 };
 
@@ -86,8 +97,7 @@ public:
     ProbeSystem &operator=(const ProbeSystem &other) = delete;
     ~ProbeSystem();
 
-    inline StorageImage *GetRadianceImage() const   { return m_radiance_image.get(); }
-    inline ImageView *GetRadianceImageView() const  { return m_radiance_image_view.get(); }
+    inline StorageBuffer *GetRadianceBuffer() const { return m_radiance_buffer.get(); }
     inline StorageImage *GetIradianceImage() const  { return m_iradiance_image.get(); }
     inline ImageView *GetIradianceImageView() const { return m_iradiance_image_view.get(); }
 
@@ -97,7 +107,7 @@ public:
 private:
     void CreatePipeline(Engine *engine);
     void CreateUniformBuffer(Engine *engine);
-    void CreateStorageImages(Engine *engine);
+    void CreateStorageBuffers(Engine *engine);
     void AddDescriptors(Engine *engine);
     void SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer);
 
@@ -106,8 +116,9 @@ private:
 
     std::unique_ptr<RaytracingPipeline> m_pipeline;
     std::unique_ptr<UniformBuffer>      m_uniform_buffer;
-    std::unique_ptr<StorageImage>       m_radiance_image;
-    std::unique_ptr<ImageView>          m_radiance_image_view;
+
+    std::unique_ptr<StorageBuffer>      m_radiance_buffer;
+
     std::unique_ptr<StorageImage>       m_iradiance_image;
     std::unique_ptr<ImageView>          m_iradiance_image_view;
 
