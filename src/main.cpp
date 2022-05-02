@@ -105,9 +105,7 @@
 using namespace hyperion;
 
 
-#define HYPERION_VK_TEST_IMAGE_STORE 1
-#define HYPERION_VK_TEST_ATOMICS     1
-#define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
+#define HYPERION_VK_TEST_IMAGE_STORE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
 
 int main()
@@ -181,6 +179,9 @@ int main()
     auto *input_manager = new InputManager(window);
     input_manager->SetWindow(window);
 
+    /* Scene contains the camera and environment info.
+     * Root node will soon exist in Scene
+     */
     auto scene = engine.resources.scenes.Add(std::make_unique<v2::Scene>(
         std::make_unique<FpsCamera>(
             input_manager,
@@ -202,17 +203,16 @@ int main()
 
     scene->SetEnvironmentTexture(0, cubemap.Acquire());
 
+    /* All will load sync with one another */
     auto [zombie, sponza, cube_obj] = engine.assets.Load<v2::Node>(
         base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/sponza/sponza.obj", //San_Miguel/san-miguel-low-poly.obj", //,//"
+        base_path + "/res/models/material_sphere/material_sphere.obj",
         base_path + "/res/models/cube.obj"
     );
 
     sponza->Translate({0, 0, 5});
 
-    sponza->Scale(0.02f);
-    //sponza->Scale(0.45f);
-    //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
+    sponza->Scale(2.5f);
     sponza->Update(&engine);
 
     Device *device = engine.GetInstance()->GetDevice();
@@ -396,64 +396,6 @@ int main()
         
         engine.AddGraphicsPipeline(std::move(pipeline));
     }
-
-#if HYPERION_VK_TEST_VISUALIZE_OCTREE
-    v2::GraphicsPipeline::ID wire_pipeline_id{};
-
-    auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-        mirror_shader.Acquire(),
-        engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
-        v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
-    );
-    pipeline->SetBlendEnabled(false);
-    pipeline->SetFillMode(FillMode::LINE);
-    pipeline->SetCullMode(CullMode::NONE);
-    pipeline->SetTopology(Topology::TRIANGLES);
-    pipeline->SetDepthTest(false);
-    pipeline->SetDepthWrite(false);
-
-    pipeline->GetVertexAttributes() |= MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES /* until we have dynamic shader compilation based on vertex attribs */
-      | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS;
-
-    std::unordered_map<v2::Octree *, v2::Spatial::ID> octree_debug_nodes;
-
-    engine.GetOctree().GetCallbacks().on_insert_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
-        auto *pl = engine->GetGraphicsPipeline(wire_pipeline_id);
-
-        auto mesh = MeshFactory::CreateCube(octree->GetAabb());
-
-        auto spat = engine->resources.spatials.Add(std::make_unique<v2::Spatial>(
-            engine->resources.meshes.Add(std::make_unique<v2::Mesh>(
-                mesh->GetVertices(),
-                mesh->GetIndices()
-            )),
-            pl->GetVertexAttributes(),
-            Transform(),
-            mesh->GetAABB(),
-            engine->resources.materials.Get(v2::Material::ID{3})
-        ));
-
-        octree_debug_nodes[octree] = spat->GetId();
-
-        pl->AddSpatial(std::move(spat));
-    };
-
-    engine.GetOctree().GetCallbacks().on_remove_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
-        auto *pl = engine->GetGraphicsPipeline(wire_pipeline_id);
-
-        auto it = octree_debug_nodes.find(octree);
-
-        if (it != octree_debug_nodes.end()) {
-            vkQueueWaitIdle(engine->GetInstance()->GetGraphicsQueue().queue);
-            pl->RemoveSpatial(it->second);
-
-            octree_debug_nodes.erase(it);
-        }
-    };
-
-    wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
-        
-#endif
     
     engine.Compile();
 
