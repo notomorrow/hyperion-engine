@@ -11,6 +11,13 @@
 
 namespace hyperion {
 namespace renderer {
+
+static constexpr VkShaderStageFlags push_constant_stage_flags = VK_SHADER_STAGE_RAYGEN_BIT_KHR
+                                                              | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR
+                                                              | VK_SHADER_STAGE_ANY_HIT_BIT_KHR
+                                                              | VK_SHADER_STAGE_MISS_BIT_KHR
+                                                              | VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+
 RaytracingPipeline::RaytracingPipeline(std::unique_ptr<ShaderProgram> &&shader_program)
     : Pipeline(),
       m_shader_program(std::move(shader_program))
@@ -37,8 +44,18 @@ Result RaytracingPipeline::Create(Device *device,
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
     layout_info.setLayoutCount         = uint32_t(descriptor_pool->GetDescriptorSetLayouts().size());
     layout_info.pSetLayouts            = descriptor_pool->GetDescriptorSetLayouts().data();
-    layout_info.pushConstantRangeCount = 0;
-    layout_info.pPushConstantRanges    = VK_NULL_HANDLE;
+    
+    /* Push constants */
+    const VkPushConstantRange push_constant_ranges[] = {
+        {
+            .stageFlags = push_constant_stage_flags,
+            .offset     = 0,
+            .size       = uint32_t(device->GetFeatures().PaddedSize<PushConstantData>())
+        }
+    };
+
+    layout_info.pushConstantRangeCount = uint32_t(std::size(push_constant_ranges));
+    layout_info.pPushConstantRanges    = push_constant_ranges;
 
     HYPERION_VK_PASS_ERRORS(
         vkCreatePipelineLayout(device->GetDevice(), &layout_info, VK_NULL_HANDLE, &layout),
@@ -137,9 +154,20 @@ void RaytracingPipeline::Bind(CommandBuffer *command_buffer)
     );
 }
 
+void RaytracingPipeline::SubmitPushConstants(CommandBuffer *cmd) const
+{
+    vkCmdPushConstants(
+        cmd->GetCommandBuffer(),
+        layout,
+        push_constant_stage_flags,
+        0, sizeof(push_constants),
+        &push_constants
+    );
+}
+
 void RaytracingPipeline::TraceRays(Device *device,
     CommandBuffer *command_buffer,
-    Extent2D extent) const
+    Extent3D extent) const
 {
     device->GetFeatures().dyn_functions.vkCmdTraceRaysKHR(
         command_buffer->GetCommandBuffer(),
@@ -147,7 +175,7 @@ void RaytracingPipeline::TraceRays(Device *device,
         &m_shader_binding_table_entries.ray_miss,
         &m_shader_binding_table_entries.closest_hit,
         &m_shader_binding_table_entries.callable,
-        extent.width, extent.height, 1
+        extent.width, extent.height, extent.depth
     );
 }
 

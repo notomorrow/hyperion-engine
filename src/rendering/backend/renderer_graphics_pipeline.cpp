@@ -88,7 +88,7 @@ void GraphicsPipeline::SubmitPushConstants(CommandBuffer *cmd) const
     vkCmdPushConstants(
         cmd->GetCommandBuffer(),
         layout,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_SHADER_STAGE_ALL_GRAPHICS,
         0, sizeof(push_constants),
         &push_constants
     );
@@ -293,7 +293,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     /* Push constants */
     const VkPushConstantRange push_constant_ranges[] = {
         {
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS,
             .offset     = 0,
             .size       = uint32_t(device->GetFeatures().PaddedSize<PushConstantData>())
         }

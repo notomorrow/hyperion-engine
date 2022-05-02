@@ -243,7 +243,7 @@ struct SwapchainSupportDetails {
     std::vector<VkPresentModeKHR> present_modes;
 };
 
-struct Extent2D {
+struct alignas(8) Extent2D {
     uint32_t width, height;
 
     Extent2D()
@@ -272,9 +272,11 @@ struct Extent2D {
 
     bool operator!=(const Extent2D &other) const
         { return !operator==(other); }
+
+    Vector2 ToVector2() const   { return Vector2(static_cast<float>(width), static_cast<float>(height)); }
 };
 
-struct Extent3D {
+struct alignas(16) Extent3D {
     uint32_t width, height, depth;
 
     Extent3D()
@@ -315,6 +317,7 @@ struct Extent3D {
         { return !operator==(other); }
 
     Extent2D ToExtent2D() const { return Extent2D(width, height); }
+    Vector3 ToVector3() const   { return Vector3(static_cast<float>(width), static_cast<float>(height), static_cast<float>(depth)); }
 };
 
 struct PackedVertex {

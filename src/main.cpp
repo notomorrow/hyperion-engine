@@ -35,6 +35,7 @@
 #include <rendering/v2/components/bone.h>
 #include <rendering/v2/asset/model_loaders/obj_model_loader.h>
 #include <rendering/v2/rt/acceleration_structure_builder.h>
+#include <rendering/v2/components/probe_system.h>
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
@@ -482,7 +483,11 @@ int main()
 
     monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 5, 0 }});
 
-    std::cout << MathUtil::Random<Vector3>(0.2f, 8.0f);
+
+    v2::ProbeSystem probe_system({
+        .aabb = {{-20.0f, -5.0f, -20.0f}, {20.0f, 5.0f, 20.0f}}
+    });
+    probe_system.Init(&engine);
 
 
    // blas_node->CreateAccelerationStructure(&engine);
@@ -686,7 +691,7 @@ int main()
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
 
 #if HYPERION_VK_TEST_RAYTRACING
-        rt->Bind(frame->GetCommandBuffer());
+        /*rt->Bind(frame->GetCommandBuffer());
         engine.GetInstance()->GetDescriptorPool().Bind(
             engine.GetDevice(),
             frame->GetCommandBuffer(),
@@ -706,12 +711,15 @@ int main()
                 .count = 1
             }}
         );
-        rt->TraceRays(engine.GetDevice(), frame->GetCommandBuffer(), rt_image_storage->GetExtent().ToExtent2D());
+        rt->TraceRays(engine.GetDevice(), frame->GetCommandBuffer(), rt_image_storage->GetExtent());
         rt_image_storage->GetGPUImage()->InsertBarrier(
             frame->GetCommandBuffer(),
             { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
             GPUMemory::ResourceState::UNORDERED_ACCESS
-        );
+        );*/
+
+        
+        probe_system.RenderProbes(&engine, frame->GetCommandBuffer());
 #endif
         engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);

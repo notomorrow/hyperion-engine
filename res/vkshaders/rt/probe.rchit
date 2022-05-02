@@ -10,7 +10,7 @@
 #include "../include/rt/payload.inc"
 
 
-layout(location = 0) rayPayloadInEXT RayPayload payload;
+layout(location = 0) rayPayloadInEXT RayProbePayload payload;
 hitAttributeEXT vec2 attribs;
 
 struct PackedVertex {
@@ -82,8 +82,7 @@ void main()
     vec3 lightVector    = normalize(scene.light_direction.xyz);
     float dot_product   = max(dot(lightVector, normal), 0.6);
     
-    payload.color     = vec3(1.0, 0.0, 0.0) * vec3(dot_product);
+    payload.diffuse   = vec3(1.0, 0.0, 0.0);//vec3(dot_product); /* TODO material albedo */
     payload.distance  = gl_RayTmaxEXT;
     payload.normal    = normal;
-    payload.roughness = gl_InstanceCustomIndexEXT == 1 ? 0.0f : 1.0f; 
 }

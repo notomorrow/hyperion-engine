@@ -14,8 +14,7 @@ std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> AccelerationStruc
         return {};
     }
 
-    std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> acceleration_structures;
-    acceleration_structures.reserve(m_spatials.size());
+    std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> acceleration_structures(m_spatials.size());
 
     for (auto &spatial : m_spatials) {
         std::unique_ptr<AccelerationGeometry> geometry;

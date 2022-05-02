@@ -23,9 +23,10 @@ public:
     Result Destroy(Device *device);
 
     void Bind(CommandBuffer *command_buffer);
+    void SubmitPushConstants(CommandBuffer *cmd) const;
     void TraceRays(Device *device,
         CommandBuffer *command_buffer,
-        Extent2D extent) const;
+        Extent3D extent) const;
 
 private:
     struct ShaderBindingTableEntry {

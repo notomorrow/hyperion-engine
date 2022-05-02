@@ -106,7 +106,7 @@ public:
 protected:
     static VkAccelerationStructureTypeKHR ToVkAccelerationStructureType(AccelerationStructureType);
     
-    inline void SetNeedsRebuildFlag()                      { SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING); }
+    inline void SetNeedsRebuildFlag() { SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING); }
 
     Result CreateAccelerationStructure(
         Instance *instance,

@@ -10,9 +10,12 @@ namespace hyperion::v2 {
 
 using renderer::ShaderProgram;
 using renderer::ImageStorageDescriptor;
+using renderer::UniformBufferDescriptor;
+using renderer::GPUMemory;
 
 ProbeSystem::ProbeSystem(ProbeSystemSetup &&setup)
-    : m_setup(std::move(setup))
+    : m_setup(std::move(setup)),
+      m_time(0)
 {
 }
 
@@ -34,7 +37,7 @@ void ProbeSystem::Init(Engine *engine)
                                      + z;
 
                 m_probes[index] = Probe{
-                    .position = (Vector3(static_cast<float>(grid.width), static_cast<float>(grid.height), static_cast<float>(grid.depth)) - (m_setup.probe_border * 0.5f)) * m_setup.probe_distance
+                    .position = (Vector3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)) - (m_setup.probe_border.ToVector3() * 0.5f)) * m_setup.probe_distance
                 };
             }
         }
@@ -43,7 +46,11 @@ void ProbeSystem::Init(Engine *engine)
     CreateStorageImages(engine);
     CreateUniformBuffer(engine);
     AddDescriptors(engine);
-    CreatePipeline(engine);
+
+    /* TMP */
+    engine->callbacks.Once(EngineCallback::CREATE_RAYTRACING_PIPELINES, [this](Engine *engine) {
+        CreatePipeline(engine);
+    });
 }
 
 void ProbeSystem::CreatePipeline(Engine *engine)
@@ -67,20 +74,19 @@ void ProbeSystem::CreatePipeline(Engine *engine)
 void ProbeSystem::CreateUniformBuffer(Engine *engine)
 {
     ProbeSystemUniforms uniforms{
-        .aabb_max = m_setup.aabb.max.ToVector4(),
-        .aabb_min = m_setup.aabb.min.ToVector4(),
-        .probe_border_x = static_cast<uint32_t>(m_setup.probe_border.x),
-        .probe_border_y = static_cast<uint32_t>(m_setup.probe_border.y),
-        .probe_border_z = static_cast<uint32_t>(m_setup.probe_border.z),
-        .probe_distance = m_setup.probe_distance
+        .aabb_max           = m_setup.aabb.max.ToVector4(),
+        .aabb_min           = m_setup.aabb.min.ToVector4(),
+        .probe_border       = m_setup.probe_border,
+        .probe_counts       = m_setup.NumProbesPerDimension(),
+        .probe_distance     = m_setup.probe_distance,
+        .num_rays_per_probe = m_setup.num_rays_per_probe
     };
 
-    m_probe_system_uniforms = std::make_unique<UniformBuffer>();
-    HYPERION_ASSERT_RESULT(m_probe_system_uniforms->Create(engine->GetDevice(), sizeof(ProbeSystemUniforms)));
+    m_uniform_buffer = std::make_unique<UniformBuffer>();
+    HYPERION_ASSERT_RESULT(m_uniform_buffer->Create(engine->GetDevice(), sizeof(ProbeSystemUniforms)));
 
-    m_probe_system_uniforms->Copy(engine->GetDevice(), sizeof(ProbeSystemUniforms), &uniforms);
+    m_uniform_buffer->Copy(engine->GetDevice(), sizeof(ProbeSystemUniforms), &uniforms);
 }
-
 
 void ProbeSystem::CreateStorageImages(Engine *engine)
 {
@@ -105,17 +111,69 @@ void ProbeSystem::AddDescriptors(Engine *engine)
   
     auto *radiance_storage = descriptor_set->AddDescriptor<ImageStorageDescriptor>(5);
     radiance_storage->AddSubDescriptor({.image_view = m_radiance_image_view.get()});
+
+    auto *probe_uniforms = descriptor_set->AddDescriptor<UniformBufferDescriptor>(9);
+    probe_uniforms->AddSubDescriptor({.buffer = m_uniform_buffer.get()});
 }
 
-
-void ProbeSystem::RenderProbes(Engine *engine)
+void ProbeSystem::SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer)
 {
-    
+    m_random_generator.Next();
+
+    std::memcpy(
+        m_pipeline->push_constants.probe_data.matrix,
+        m_random_generator.matrix.values,
+        std::size(m_pipeline->push_constants.probe_data.matrix) * sizeof(m_pipeline->push_constants.probe_data.matrix[0])
+    );
+
+    m_pipeline->push_constants.probe_data.time = m_time++;
+
+    m_pipeline->SubmitPushConstants(command_buffer);
 }
 
-void Probe::Render(Engine *engine)
+void ProbeSystem::RenderProbes(Engine *engine, CommandBuffer *command_buffer)
 {
+    m_radiance_image->GetGPUImage()->InsertBarrier(
+        command_buffer,
+        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+        GPUMemory::ResourceState::UNORDERED_ACCESS
+    );
+
+    SubmitPushConstants(engine, command_buffer);
+
+    m_pipeline->Bind(command_buffer);
     
+    engine->GetInstance()->GetDescriptorPool().Bind(
+        engine->GetDevice(),
+        command_buffer,
+        m_pipeline.get(),
+        {
+            {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE, .count = 1},
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+            {.offsets = {0}}
+        }
+    );
+
+    engine->GetInstance()->GetDescriptorPool().Bind(
+        engine->GetDevice(),
+        command_buffer,
+        m_pipeline.get(),
+        {
+            {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING, .count = 1}
+        }
+    );
+
+    m_pipeline->TraceRays(
+        engine->GetDevice(),
+        command_buffer,
+        Extent3D({m_setup.NumProbes(), m_setup.num_rays_per_probe})
+    );
+
+    m_radiance_image->GetGPUImage()->InsertBarrier(
+        command_buffer,
+        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+        GPUMemory::ResourceState::UNORDERED_ACCESS
+    );
 }
 
 } // namespace hyperion::v2

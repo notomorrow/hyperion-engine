@@ -7,37 +7,42 @@
 
 #include <math/bounding_box.h>
 
+#include <random>
+
 namespace hyperion::v2 {
 
 using renderer::RaytracingPipeline;
 using renderer::StorageImage;
 using renderer::ImageView;
 using renderer::UniformBuffer;
+using renderer::CommandBuffer;
 
 class Engine;
 
 struct alignas(256) ProbeSystemUniforms {
     Vector4  aabb_max;
     Vector4  aabb_min;
-    uint32_t probe_border_x;
-    uint32_t probe_border_y;
-    uint32_t probe_border_z;
+    Extent3D probe_border;
+    Extent3D probe_counts;
     float    probe_distance;
+    uint32_t num_rays_per_probe;
 };
 
 struct ProbeSystemSetup {
-    static constexpr uint8_t num_rays_per_probe = 128;
+    static constexpr uint16_t num_rays_per_probe        = 128;
+    static constexpr uint8_t irradiance_octahedron_size = 8;
+    static constexpr uint8_t depth_octahedron_size      = 16;
 
     BoundingBox aabb;
-    Vector3     probe_border{2, 0, 2};
-    float       probe_distance;
+    Extent3D    probe_border   = {2, 0, 2};
+    float       probe_distance = 2.5f;
 
     const Vector3 &GetOrigin() const
         { return aabb.min; }
 
     Extent3D NumProbesPerDimension() const
     {
-        const auto probes_per_dimension = MathUtil::Ceil((aabb.GetDimensions() / probe_distance) + probe_border);
+        const auto probes_per_dimension = MathUtil::Ceil((aabb.GetDimensions() / probe_distance) + probe_border.ToVector3());
 
         return {
             static_cast<decltype(Extent3D::width)>(probes_per_dimension.x),
@@ -54,10 +59,24 @@ struct ProbeSystemSetup {
     }
 };
 
+struct RotationMatrixGenerator {
+    Matrix4                               matrix;
+    std::random_device                    random_device;
+    std::mt19937                          mt{random_device()};
+    std::uniform_real_distribution<float> angle{0.0f, 1.0f};
+    std::uniform_real_distribution<float> axis{-1.0f, 1.0f};
+
+    const Matrix4 &Next()
+    {
+        return matrix = Matrix4::Rotation({
+            Vector3{axis(mt), axis(mt), axis(mt)}.Normalize(),
+            angle(mt) * MathUtil::pi<float> * 2.0f
+        });
+    }
+};
+
 struct Probe {
     Vector3 position;
-
-    void Render(Engine *engine);
 };
 
 class ProbeSystem {
@@ -67,22 +86,33 @@ public:
     ProbeSystem &operator=(const ProbeSystem &other) = delete;
     ~ProbeSystem();
 
+    inline StorageImage *GetRadianceImage() const   { return m_radiance_image.get(); }
+    inline ImageView *GetRadianceImageView() const  { return m_radiance_image_view.get(); }
+    inline StorageImage *GetIradianceImage() const  { return m_iradiance_image.get(); }
+    inline ImageView *GetIradianceImageView() const { return m_iradiance_image_view.get(); }
+
     void Init(Engine *engine);
-    void RenderProbes(Engine *engine);
+    void RenderProbes(Engine *engine, CommandBuffer *command_buffer);
 
 private:
     void CreatePipeline(Engine *engine);
     void CreateUniformBuffer(Engine *engine);
     void CreateStorageImages(Engine *engine);
     void AddDescriptors(Engine *engine);
+    void SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer);
 
     ProbeSystemSetup   m_setup;
     std::vector<Probe> m_probes;
 
     std::unique_ptr<RaytracingPipeline> m_pipeline;
-    std::unique_ptr<UniformBuffer>      m_probe_system_uniforms;
+    std::unique_ptr<UniformBuffer>      m_uniform_buffer;
     std::unique_ptr<StorageImage>       m_radiance_image;
     std::unique_ptr<ImageView>          m_radiance_image_view;
+    std::unique_ptr<StorageImage>       m_iradiance_image;
+    std::unique_ptr<ImageView>          m_iradiance_image_view;
+
+    RotationMatrixGenerator m_random_generator;
+    uint32_t                m_time;
 };
 
 } // namespace hyperion::v2
