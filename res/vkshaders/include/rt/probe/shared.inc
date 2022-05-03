@@ -23,6 +23,14 @@ vec3 GridPositionToWorldPosition(uvec3 pos)
     return (vec3(pos) - half_border) * probe_system.probe_distance;
 }
 
+uint GridPositionToProbeIndex(uvec3 pos)
+{
+    return pos.x
+        + probe_system.probe_counts.x * pos.y
+        + probe_system.probe_counts.x * probe_system.probe_counts.y * pos.z;
+}
+
+
 vec3 ProbeIndexToWorldPosition(uint index)
 {
     return GridPositionToWorldPosition(ProbeIndexToGridPosition(index));

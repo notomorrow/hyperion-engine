@@ -346,6 +346,24 @@ static_assert(sizeof(MeshDescription) % 16 == 0);
 
 using PackedIndex = uint32_t;
 
+/* images */
+struct ImageSubResource {
+    VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    uint32_t base_array_layer      = 0;
+    uint32_t base_mip_level        = 0;
+    uint32_t num_layers            = 1;
+    uint32_t num_levels            = 1;
+
+    bool operator==(const ImageSubResource &other) const
+    {
+        return aspect_mask == other.aspect_mask
+            && base_array_layer == other.base_array_layer
+            && num_layers == other.num_layers
+            && base_mip_level == other.base_mip_level
+            && num_levels == other.num_levels;
+    }
+};
+
 template<class ...Args>
 class PerFrameData {
     struct FrameDataWrapper {
@@ -405,5 +423,20 @@ protected:
 
 } // namespace renderer
 } // namespace hyperion
+
+template <>
+struct ::std::hash<hyperion::renderer::ImageSubResource> {
+    inline size_t operator()(const hyperion::renderer::ImageSubResource &sub_resource) const
+    {
+        hyperion::HashCode hc;
+        hc.Add(sub_resource.aspect_mask);
+        hc.Add(sub_resource.base_array_layer);
+        hc.Add(sub_resource.num_layers);
+        hc.Add(sub_resource.base_mip_level);
+        hc.Add(sub_resource.num_levels);
+
+        return hc.Value();
+    }
+};
 
 #endif //HYPERION_RENDERER_STRUCTS_H

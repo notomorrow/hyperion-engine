@@ -49,7 +49,7 @@ public:
     Matrix4 &operator*=(float scalar);
 
     inline bool operator==(const Matrix4 &other) const
-    {  return values == other.values || !std::memcmp(values, other.values, std::size(values) * sizeof(values[0])); }
+    {  return &values[0] == &other.values[0] || !std::memcmp(values, other.values, std::size(values) * sizeof(values[0])); }
 
     inline bool operator!=(const Matrix4 &other) const { return !operator==(other); }
 

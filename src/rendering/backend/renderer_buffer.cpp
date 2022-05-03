@@ -856,8 +856,20 @@ void GPUImageMemory::SetResourceState(ResourceState new_state)
     sub_resources.clear();
 }
 
-void GPUImageMemory::InsertBarrier(CommandBuffer *command_buffer,
-    const VkImageSubresourceRange &range,
+void GPUImageMemory::InsertBarrier(
+    CommandBuffer *command_buffer,
+    ResourceState new_state)
+{
+    InsertBarrier(
+        command_buffer,
+        ImageSubResource{},
+        new_state
+    );
+}
+
+void GPUImageMemory::InsertBarrier(
+    CommandBuffer *command_buffer,
+    const ImageSubResource &sub_resource,
     ResourceState new_state)
 {
     /* Clear any sub-resources that are in a separate state */
@@ -873,6 +885,13 @@ void GPUImageMemory::InsertBarrier(CommandBuffer *command_buffer,
 
         return;
     }
+
+    VkImageSubresourceRange range{};
+    range.aspectMask     = sub_resource.aspect_mask;
+    range.baseArrayLayer = sub_resource.base_array_layer;
+    range.layerCount     = sub_resource.num_layers;
+    range.baseMipLevel   = sub_resource.base_mip_level;
+    range.levelCount     = sub_resource.num_levels;
 
     VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     barrier.oldLayout           = GetImageLayout(resource_state);
@@ -897,8 +916,9 @@ void GPUImageMemory::InsertBarrier(CommandBuffer *command_buffer,
     resource_state = new_state;
 }
 
-void GPUImageMemory::InsertSubResourceBarrier(CommandBuffer *command_buffer,
-    ImageSubResource &&sub_resource,
+void GPUImageMemory::InsertSubResourceBarrier(
+    CommandBuffer *command_buffer,
+    const ImageSubResource &sub_resource,
     ResourceState new_state)
 {
     if (image == nullptr) {
@@ -911,11 +931,11 @@ void GPUImageMemory::InsertSubResourceBarrier(CommandBuffer *command_buffer,
     }
 
     VkImageSubresourceRange range{};
-    range.aspectMask = sub_resource.aspect_mask;
+    range.aspectMask     = sub_resource.aspect_mask;
     range.baseArrayLayer = sub_resource.base_array_layer;
-    range.layerCount = 1;
-    range.levelCount = 1;
-    range.baseMipLevel = sub_resource.base_mip_level;
+    range.layerCount     = sub_resource.num_layers;
+    range.baseMipLevel   = sub_resource.base_mip_level;
+    range.levelCount     = sub_resource.num_levels;
 
     VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     barrier.oldLayout           = GetImageLayout(resource_state);

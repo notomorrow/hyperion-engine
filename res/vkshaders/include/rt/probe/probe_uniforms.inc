@@ -12,8 +12,8 @@ layout(std430, set = 9, binding = 9) uniform ProbeSystem {
 } probe_system;
 
 struct ProbeRayData {
-    uint  color_packed;
-    float hit_distance;
+    vec4 direction_depth;
+    uint color_packed;
 };
 
 layout(std430, set = 9, binding = 10) buffer ProbeRayDataBuffer {

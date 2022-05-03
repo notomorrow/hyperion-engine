@@ -12,7 +12,7 @@
 
 #include <functional>
 #include <unordered_set>
-#include <map>
+#include <unordered_map>
 
 namespace hyperion {
 namespace renderer {
@@ -292,17 +292,14 @@ public:
 };
 
 /* images */
-struct ImageSubResource {
-    VkImageAspectFlags aspect_mask;
-    uint32_t base_array_layer;
-    uint32_t base_mip_level;
-
-    inline bool operator<(const ImageSubResource &other) const
-        { return std::tie(aspect_mask, base_array_layer, base_mip_level) < std::tie(other.aspect_mask, other.base_array_layer, other.base_mip_level); }
-};
 
 class GPUImageMemory : public GPUMemory {
 public:
+
+    enum class Aspect {
+        COLOR,
+        DEPTH
+    };
 
     GPUImageMemory(VkImageUsageFlags usage_flags);
     GPUImageMemory(const GPUImageMemory &other) = delete;
@@ -314,12 +311,18 @@ public:
 
     void SetResourceState(ResourceState new_state);
 
-    void InsertBarrier(CommandBuffer *command_buffer,
-        const VkImageSubresourceRange &range,
+    void InsertBarrier(
+        CommandBuffer *command_buffer,
         ResourceState new_state);
 
-    void InsertSubResourceBarrier(CommandBuffer *command_buffer,
-        ImageSubResource &&sub_resource,
+    void InsertBarrier(
+        CommandBuffer *command_buffer,
+        const ImageSubResource &sub_resource,
+        ResourceState new_state);
+
+    void InsertSubResourceBarrier(
+        CommandBuffer *command_buffer,
+        const ImageSubResource &sub_resource,
         ResourceState new_state);
 
     [[nodiscard]] Result Create(Device *device, size_t size, VkImageCreateInfo *image_info);
@@ -329,7 +332,7 @@ public:
 
 private:
     VkImageUsageFlags usage_flags;
-    std::map<ImageSubResource, ResourceState> sub_resources;
+    std::unordered_map<ImageSubResource, ResourceState> sub_resources;
 };
 
 } // namespace renderer

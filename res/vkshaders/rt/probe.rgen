@@ -38,27 +38,10 @@ void main()
     payload.diffuse = vec3(0.0);
     
     traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
-
-    /*for (int i = 0; i < MAX_RECURSION; i++) {
-        traceRayEXT(tlas, flags, mask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
-        vec3 hit_color = payload.color;
-
-        if (payload.distance < 0.0) {
-            color += hit_color;
-            break;
-        } else if (payload.roughness < 1.0) {
-            const vec4 hit_position = origin + direction * payload.distance;
-            origin.xyz = hit_position.xyz + payload.normal * 0.001f;
-            direction.xyz = reflect(direction.xyz, payload.normal);
-        } else {
-            color += hit_color;
-            break;
-        }
-    }*/
     
     ProbeRayData ray_data;
-    ray_data.color_packed = packUnorm4x8(vec4(payload.diffuse, 1.0));
-    ray_data.hit_distance = payload.distance;
+    ray_data.color_packed    = packUnorm4x8(vec4(payload.diffuse, 1.0));
+    ray_data.direction_depth = vec4(direction, payload.distance);
     
     SetProbeRayData(coord, ray_data);
 }

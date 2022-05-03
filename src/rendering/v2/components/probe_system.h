@@ -2,6 +2,8 @@
 #define HYPERION_V2_PROBE_SYSTEM_H
 
 #include "shader.h"
+#include "compute.h"
+
 #include <rendering/backend/rt/renderer_raytracing_pipeline.h>
 #include <rendering/backend/renderer_image.h>
 
@@ -29,19 +31,21 @@ struct alignas(256) ProbeSystemUniforms {
     uint32_t num_rays_per_probe;
 };
 
-struct ProbeRayData {
+struct alignas(16) ProbeRayData {
+    Vector4  direction_depth;
     uint32_t color_packed;
-    float    hit_distance;
 };
 
+static_assert(sizeof(ProbeRayData) == 32);
+
 struct ProbeSystemSetup {
-    static constexpr uint16_t num_rays_per_probe        = 128;
-    static constexpr uint8_t irradiance_octahedron_size = 8;
-    static constexpr uint8_t depth_octahedron_size      = 16;
+    static constexpr uint32_t num_rays_per_probe         = 128;
+    static constexpr uint32_t irradiance_octahedron_size = 8;
+    static constexpr uint32_t depth_octahedron_size      = 16;
 
     BoundingBox aabb;
     Extent3D    probe_border   = {2, 0, 2};
-    float       probe_distance = 4.0f;
+    float       probe_distance = 2.0f;
 
     const Vector3 &GetOrigin() const
         { return aabb.min; }
@@ -97,15 +101,19 @@ public:
     ProbeSystem &operator=(const ProbeSystem &other) = delete;
     ~ProbeSystem();
 
-    inline StorageBuffer *GetRadianceBuffer() const { return m_radiance_buffer.get(); }
-    inline StorageImage *GetIradianceImage() const  { return m_iradiance_image.get(); }
-    inline ImageView *GetIradianceImageView() const { return m_iradiance_image_view.get(); }
+    inline StorageBuffer *GetRadianceBuffer() const  { return m_radiance_buffer.get(); }
+    inline StorageImage *GetIrradianceImage() const  { return m_irradiance_image.get(); }
+    inline ImageView *GetIrradianceImageView() const { return m_irradiance_image_view.get(); }
 
     void Init(Engine *engine);
+    void Destroy(Engine *engine);
+
     void RenderProbes(Engine *engine, CommandBuffer *command_buffer);
+    void ComputeIrradiance(Engine *engine, CommandBuffer *command_buffer);
 
 private:
     void CreatePipeline(Engine *engine);
+    void CreateComputePipelines(Engine *engine);
     void CreateUniformBuffer(Engine *engine);
     void CreateStorageBuffers(Engine *engine);
     void AddDescriptors(Engine *engine);
@@ -114,13 +122,19 @@ private:
     ProbeSystemSetup   m_setup;
     std::vector<Probe> m_probes;
 
+    ComputePipeline::ID m_update_irradiance;
+    ComputePipeline::ID m_update_depth;
+
     std::unique_ptr<RaytracingPipeline> m_pipeline;
     std::unique_ptr<UniformBuffer>      m_uniform_buffer;
 
     std::unique_ptr<StorageBuffer>      m_radiance_buffer;
 
-    std::unique_ptr<StorageImage>       m_iradiance_image;
-    std::unique_ptr<ImageView>          m_iradiance_image_view;
+    std::unique_ptr<StorageImage>       m_irradiance_image;
+    std::unique_ptr<ImageView>          m_irradiance_image_view;
+
+    std::unique_ptr<StorageImage>       m_depth_image;
+    std::unique_ptr<ImageView>          m_depth_image_view;
 
     RotationMatrixGenerator m_random_generator;
     uint32_t                m_time;

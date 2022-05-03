@@ -720,6 +720,7 @@ int main()
 
         
         probe_system.RenderProbes(&engine, frame->GetCommandBuffer());
+        probe_system.ComputeIrradiance(&engine, frame->GetCommandBuffer());
 #endif
         engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
@@ -729,7 +730,6 @@ int main()
 #if HYPERION_VK_TEST_IMAGE_STORE
         image_storage->GetGPUImage()->InsertBarrier(
             frame->GetCommandBuffer(),
-            { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
             GPUMemory::ResourceState::UNORDERED_ACCESS
         );
 #endif

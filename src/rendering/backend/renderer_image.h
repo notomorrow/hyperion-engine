@@ -54,6 +54,8 @@ public:
         TEXTURE_INTERNAL_FORMAT_RG32F,
         TEXTURE_INTERNAL_FORMAT_RGB32F,
         TEXTURE_INTERNAL_FORMAT_RGBA32F,
+        
+        TEXTURE_INTERNAL_FORMAT_R10G10B10A2,
 
         TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM,
         TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB,
@@ -116,7 +118,7 @@ public:
     /* Create the image and transfer the provided texture data into it if given.
      * The image is transitioned into the given state.
      */
-    Result Create(Device *device, Instance *renderer, GPUMemory::ResourceState state);
+    Result Create(Device *device, Instance *instance, GPUMemory::ResourceState state);
 
     Result Destroy(Device *device);
 

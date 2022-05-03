@@ -83,6 +83,6 @@ void main()
     float dot_product   = max(dot(lightVector, normal), 0.6);
     
     payload.diffuse   = vec3(1.0, 0.0, 0.0);//vec3(dot_product); /* TODO material albedo */
-    payload.distance  = gl_RayTmaxEXT;
+    payload.distance  = gl_RayTminEXT + gl_HitTEXT;
     payload.normal    = normal;
 }

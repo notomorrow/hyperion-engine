@@ -52,6 +52,29 @@ void ProbeSystem::Init(Engine *engine)
     engine->callbacks.Once(EngineCallback::CREATE_RAYTRACING_PIPELINES, [this](Engine *engine) {
         CreatePipeline(engine);
     });
+    
+    CreateComputePipelines(engine);
+}
+
+void ProbeSystem::Destroy(Engine *engine)
+{
+    auto result = renderer::Result::OK;
+
+    Device *device = engine->GetDevice();
+
+    HYPERION_PASS_ERRORS(m_uniform_buffer->Destroy(device), result);
+    
+    HYPERION_PASS_ERRORS(m_radiance_buffer->Destroy(device), result);
+
+    HYPERION_PASS_ERRORS(m_irradiance_image->Destroy(device), result);
+    HYPERION_PASS_ERRORS(m_irradiance_image_view->Destroy(device), result);
+    
+    HYPERION_PASS_ERRORS(m_depth_image->Destroy(device), result);
+    HYPERION_PASS_ERRORS(m_depth_image_view->Destroy(device), result);
+
+    HYPERION_PASS_ERRORS(m_pipeline->Destroy(device), result);
+
+    HYPERION_ASSERT_RESULT(result);
 }
 
 void ProbeSystem::CreatePipeline(Engine *engine)
@@ -70,6 +93,25 @@ void ProbeSystem::CreatePipeline(Engine *engine)
 
     m_pipeline = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
     HYPERION_ASSERT_RESULT(m_pipeline->Create(engine->GetDevice(), &engine->GetInstance()->GetDescriptorPool()));
+}
+
+void ProbeSystem::CreateComputePipelines(Engine *engine)
+{
+    m_update_irradiance = engine->resources.compute_pipelines.Add(engine, std::make_unique<ComputePipeline>(
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
+                { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/rt/probe_update_irradiance.comp.spv").Read()}}
+            }
+        ))
+    ));
+
+    m_update_depth = engine->resources.compute_pipelines.Add(engine, std::make_unique<ComputePipeline>(
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
+                { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/rt/probe_update_depth.comp.spv").Read()}}
+            }
+        ))
+    ));
 }
 
 void ProbeSystem::CreateUniformBuffer(Engine *engine)
@@ -92,8 +134,32 @@ void ProbeSystem::CreateUniformBuffer(Engine *engine)
 
 void ProbeSystem::CreateStorageBuffers(Engine *engine)
 {
+    const auto probe_counts = m_setup.NumProbesPerDimension();
+
     m_radiance_buffer = std::make_unique<StorageBuffer>();
     HYPERION_ASSERT_RESULT(m_radiance_buffer->Create(engine->GetDevice(), m_setup.GetImageDimensions().Size() * sizeof(ProbeRayData)));
+
+    m_irradiance_image = std::make_unique<StorageImage>(
+        Extent3D{{(m_setup.irradiance_octahedron_size + 2) * probe_counts.width * probe_counts.height + 2, (m_setup.irradiance_octahedron_size + 2) * probe_counts.depth + 2}},
+        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+        Image::Type::TEXTURE_TYPE_2D,
+        nullptr
+    );
+    HYPERION_ASSERT_RESULT(m_irradiance_image->Create(engine->GetDevice()));
+
+    m_irradiance_image_view = std::make_unique<ImageView>();
+    HYPERION_ASSERT_RESULT(m_irradiance_image_view->Create(engine->GetDevice(), m_irradiance_image.get()));
+
+    m_depth_image = std::make_unique<StorageImage>(
+        Extent3D{{(m_setup.depth_octahedron_size + 2) * probe_counts.width * probe_counts.height + 2, (m_setup.depth_octahedron_size + 2) * probe_counts.depth + 2}},
+        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F,
+        Image::Type::TEXTURE_TYPE_2D,
+        nullptr
+    );
+    HYPERION_ASSERT_RESULT(m_depth_image->Create(engine->GetDevice()));
+
+    m_depth_image_view = std::make_unique<ImageView>();
+    HYPERION_ASSERT_RESULT(m_depth_image_view->Create(engine->GetDevice(), m_depth_image.get()));
 }
 
 void ProbeSystem::AddDescriptors(Engine *engine)
@@ -107,6 +173,12 @@ void ProbeSystem::AddDescriptors(Engine *engine)
 
     auto *probe_ray_data = descriptor_set->AddDescriptor<StorageBufferDescriptor>(10);
     probe_ray_data->AddSubDescriptor({.buffer = m_radiance_buffer.get()});
+
+    auto *irradiance_image_descriptor = descriptor_set->AddDescriptor<ImageStorageDescriptor>(11);
+    irradiance_image_descriptor->AddSubDescriptor({.image_view = m_irradiance_image_view.get()});
+
+    auto *irradiance_depth_image_descriptor = descriptor_set->AddDescriptor<ImageStorageDescriptor>(12);
+    irradiance_depth_image_descriptor->AddSubDescriptor({.image_view = m_depth_image_view.get()});
 }
 
 void ProbeSystem::SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer)
@@ -159,6 +231,60 @@ void ProbeSystem::RenderProbes(Engine *engine, CommandBuffer *command_buffer)
     );
 
     m_radiance_buffer->InsertBarrier(command_buffer, GPUMemory::ResourceState::UNORDERED_ACCESS);
+}
+
+void ProbeSystem:: ComputeIrradiance(Engine *engine, CommandBuffer *command_buffer)
+{
+    const auto probe_counts = m_setup.NumProbesPerDimension();
+
+    m_irradiance_image->GetGPUImage()->InsertBarrier(
+        command_buffer,
+        GPUMemory::ResourceState::UNORDERED_ACCESS
+    );
+
+    m_depth_image->GetGPUImage()->InsertBarrier(
+        command_buffer,
+        GPUMemory::ResourceState::UNORDERED_ACCESS
+    );
+
+    auto &update_irradiance = *engine->resources.compute_pipelines[m_update_irradiance],
+         &update_depth      = *engine->resources.compute_pipelines[m_update_depth];
+
+    update_irradiance->Bind(command_buffer);
+    
+    engine->GetInstance()->GetDescriptorPool().Bind(
+        engine->GetDevice(),
+        command_buffer,
+        &update_irradiance.Get(),
+        {
+            {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING, .count = 1}
+        }
+    );
+
+    update_irradiance->Dispatch(command_buffer, Extent3D{{probe_counts.width * probe_counts.height, probe_counts.depth}});
+
+    update_depth->Bind(command_buffer);
+    
+    engine->GetInstance()->GetDescriptorPool().Bind(
+        engine->GetDevice(),
+        command_buffer,
+        &update_depth.Get(),
+        {
+            {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING, .count = 1}
+        }
+    );
+
+    update_depth->Dispatch(command_buffer, Extent3D{{probe_counts.width * probe_counts.height, probe_counts.depth}});
+
+    m_irradiance_image->GetGPUImage()->InsertBarrier(
+        command_buffer,
+        GPUMemory::ResourceState::UNORDERED_ACCESS
+    );
+
+    m_depth_image->GetGPUImage()->InsertBarrier(
+        command_buffer,
+        GPUMemory::ResourceState::UNORDERED_ACCESS
+    );
 }
 
 } // namespace hyperion::v2

@@ -51,20 +51,20 @@ public:
     
     void WaitImageReady(Frame *frame);
 
-    inline DescriptorPool &GetDescriptorPool() { return this->descriptor_pool; }
+    inline DescriptorPool &GetDescriptorPool()             { return this->descriptor_pool; }
     inline const DescriptorPool &GetDescriptorPool() const { return this->descriptor_pool; }
 
-    inline Queue &GetGraphicsQueue() { return this->queue_graphics; }
+    inline Queue &GetGraphicsQueue()             { return this->queue_graphics; }
     inline const Queue &GetGraphicsQueue() const { return this->queue_graphics; }
-    inline Queue &GetTransferQueue() { return this->queue_transfer; }
+    inline Queue &GetTransferQueue()             { return this->queue_transfer; }
     inline const Queue &GetTransferQueue() const { return this->queue_transfer; }
-    inline Queue &GetPresentQueue() { return this->queue_present; }
-    inline const Queue &GetPresentQueue() const { return this->queue_present; }
-    inline Queue &GetComputeQueue() { return this->queue_compute; }
-    inline const Queue &GetComputeQueue() const { return this->queue_compute; }
+    inline Queue &GetPresentQueue()              { return this->queue_present; }
+    inline const Queue &GetPresentQueue() const  { return this->queue_present; }
+    inline Queue &GetComputeQueue()              { return this->queue_compute; }
+    inline const Queue &GetComputeQueue() const  { return this->queue_compute; }
 
     inline VkCommandPool GetGraphicsCommandPool() const { return this->queue_graphics.command_pool; }
-    inline VkCommandPool GetComputeCommandPool() const { return this->queue_compute.command_pool; }
+    inline VkCommandPool GetComputeCommandPool() const  { return this->queue_compute.command_pool; }
     
     inline VkInstance GetInstance() const { return this->instance; }
 

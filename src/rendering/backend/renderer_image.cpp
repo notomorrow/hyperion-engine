@@ -112,11 +112,12 @@ VkFormat Image::ToVkFormat(InternalFormat fmt)
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F:       return VK_FORMAT_R32G32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F:      return VK_FORMAT_R32G32B32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F:     return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R10G10B10A2: return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB:  return VK_FORMAT_B8G8R8A8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:    return VK_FORMAT_D16_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:    return VK_FORMAT_D24_UNORM_S8_UINT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F:   return VK_FORMAT_D32_SFLOAT;
-    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
-    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB:  return VK_FORMAT_B8G8R8A8_SRGB;
     }
 
     unexpected_value_msg(format, "Unhandled texture format case");
@@ -307,7 +308,7 @@ Result Image::Create(Device *device)
     return CreateImage(device, VK_IMAGE_LAYOUT_UNDEFINED, &image_info);
 }
 
-Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceState state)
+Result Image::Create(Device *device, Instance *instance, GPUMemory::ResourceState state)
 {
     auto result = Result::OK;
 
@@ -315,14 +316,19 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
 
     HYPERION_BUBBLE_ERRORS(CreateImage(device, VK_IMAGE_LAYOUT_UNDEFINED, &image_info));
 
-    VkImageSubresourceRange range{};
+    /*VkImageSubresourceRange range{};
     range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     range.baseMipLevel = 0;
     range.levelCount = NumMipmaps();
     range.baseArrayLayer = 0;
-    range.layerCount = NumFaces();
+    range.layerCount = NumFaces();*/
 
-    auto commands = renderer->GetSingleTimeCommands();
+    const ImageSubResource sub_resource{
+        .num_layers  = NumFaces(),
+        .num_levels  = NumMipmaps()
+    };
+
+    auto commands = instance->GetSingleTimeCommands();
     StagingBuffer staging_buffer;
 
     if (m_assigned_image_data)  {
@@ -339,7 +345,11 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
         // safe to delete m_bytes here?
 
         commands.Push([&](CommandBuffer *command_buffer) {
-            m_image->InsertBarrier(command_buffer, range, GPUMemory::ResourceState::COPY_DST);
+            m_image->InsertBarrier(
+                command_buffer,
+                sub_resource,
+                GPUMemory::ResourceState::COPY_DST
+            );
 
             HYPERION_RETURN_OK;
         });
@@ -391,7 +401,7 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
     commands.Push([&](CommandBuffer *command_buffer) {
         m_image->InsertBarrier(
             command_buffer,
-            range,
+            sub_resource,
             state
         );
 
@@ -447,9 +457,8 @@ Result Image::GenerateMipmaps(Device *device,
             m_image->InsertSubResourceBarrier(
                 command_buffer,
                 ImageSubResource{
-                    .aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .base_array_layer = face,
-                    .base_mip_level = static_cast<uint32_t>(i - 1)
+                    .base_mip_level   = static_cast<uint32_t>(i - 1)
                 },
                 GPUMemory::ResourceState::COPY_SRC
             );

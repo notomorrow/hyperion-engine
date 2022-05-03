@@ -32,5 +32,7 @@ glslc --target-env=$VULKAN_TARGET rt/test.rchit -o rt/test.rchit.spv
 glslc --target-env=$VULKAN_TARGET rt/probe.rgen -o rt/probe.rgen.spv
 glslc --target-env=$VULKAN_TARGET rt/probe.rmiss -o rt/probe.rmiss.spv
 glslc --target-env=$VULKAN_TARGET rt/probe.rchit -o rt/probe.rchit.spv
+glslc --target-env=$VULKAN_TARGET rt/probe_update_irradiance.comp -o rt/probe_update_irradiance.comp.spv
+glslc --target-env=$VULKAN_TARGET rt/probe_update_depth.comp -o rt/probe_update_depth.comp.spv
 
 popd
