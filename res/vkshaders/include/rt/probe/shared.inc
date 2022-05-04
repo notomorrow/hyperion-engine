@@ -5,6 +5,11 @@
 
 #include "probe_uniforms.inc"
 
+#define PROBE_GRID_ORIGIN (probe_system.aabb_min.xyz)
+#define PROBE_GRID_STEP   (vec3(probe_system.probe_distance))
+#define PROBE_TOTAL_COUNT (probe_system.probe_counts.x * probe_system.probe_counts.y * probe_system.probe_counts.z)
+#define PROBE_NORMAL_BIAS (0.01)
+
 uvec3 ProbeIndexToGridPosition(uint index)
 {
     const uint probe_count_xy = probe_system.probe_counts.x * probe_system.probe_counts.y;
@@ -20,7 +25,9 @@ vec3 GridPositionToWorldPosition(uvec3 pos)
 {
     vec3 half_border = vec3(probe_system.probe_border) * 0.5;
     
-    return (vec3(pos) - half_border) * probe_system.probe_distance;
+    //return (vec3(pos) - half_border) * probe_system.probe_distance;
+    
+    return vec3(probe_system.probe_distance) * (vec3(pos) - half_border) + probe_system.aabb_min.xyz;
 }
 
 uint GridPositionToProbeIndex(uvec3 pos)
@@ -34,6 +41,13 @@ uint GridPositionToProbeIndex(uvec3 pos)
 vec3 ProbeIndexToWorldPosition(uint index)
 {
     return GridPositionToWorldPosition(ProbeIndexToGridPosition(index));
+}
+
+uvec3 BaseGridCoord(vec3 P)
+{   
+    return PROBE_TOTAL_COUNT == 0
+        ? uvec3(0)
+        : clamp(uvec3(max(vec3(0.0), P - PROBE_GRID_ORIGIN) / PROBE_GRID_STEP), uvec3(0), probe_system.probe_counts.xyz - uvec3(1));
 }
 
 vec3 SphericalFibonacci(uint index, uint n)

@@ -27,16 +27,20 @@ struct alignas(256) ProbeSystemUniforms {
     Extent3D probe_border;
     Extent3D probe_counts;
     Extent2D image_dimensions;
+    Extent2D irradiance_image_dimensions;
+    Extent2D depth_image_dimensions;
     float    probe_distance;
     uint32_t num_rays_per_probe;
 };
 
 struct alignas(16) ProbeRayData {
-    Vector4  direction_depth;
-    uint32_t color_packed;
+    Vector4 direction_depth;
+    Vector4 rigin;
+    Vector4 normal;
+    Vector4 color;
 };
 
-static_assert(sizeof(ProbeRayData) == 32);
+static_assert(sizeof(ProbeRayData) == 64);
 
 struct ProbeSystemSetup {
     static constexpr uint32_t num_rays_per_probe         = 128;
@@ -78,14 +82,14 @@ struct RotationMatrixGenerator {
     Matrix4                               matrix;
     std::random_device                    random_device;
     std::mt19937                          mt{random_device()};
-    std::uniform_real_distribution<float> angle{0.0f, 1.0f};
+    std::uniform_real_distribution<float> angle{0.0f, 360.0f};
     std::uniform_real_distribution<float> axis{-1.0f, 1.0f};
 
     const Matrix4 &Next()
     {
         return matrix = Matrix4::Rotation({
             Vector3{axis(mt), axis(mt), axis(mt)}.Normalize(),
-            angle(mt) * MathUtil::pi<float> * 2.0f
+            MathUtil::DegToRad(angle(mt))
         });
     }
 };

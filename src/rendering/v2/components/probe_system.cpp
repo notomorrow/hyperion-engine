@@ -117,13 +117,15 @@ void ProbeSystem::CreateComputePipelines(Engine *engine)
 void ProbeSystem::CreateUniformBuffer(Engine *engine)
 {
     ProbeSystemUniforms uniforms{
-        .aabb_max           = m_setup.aabb.max.ToVector4(),
-        .aabb_min           = m_setup.aabb.min.ToVector4(),
-        .probe_border       = m_setup.probe_border,
-        .probe_counts       = m_setup.NumProbesPerDimension(),
-        .image_dimensions   = m_setup.GetImageDimensions(),
-        .probe_distance     = m_setup.probe_distance,
-        .num_rays_per_probe = m_setup.num_rays_per_probe
+        .aabb_max                     = m_setup.aabb.max.ToVector4(),
+        .aabb_min                     = m_setup.aabb.min.ToVector4(),
+        .probe_border                 = m_setup.probe_border,
+        .probe_counts                 = m_setup.NumProbesPerDimension(),
+        .image_dimensions             = m_setup.GetImageDimensions(),
+        .irradiance_image_dimensions  = m_irradiance_image->GetExtent().ToExtent2D(),
+        .depth_image_dimensions       = m_depth_image->GetExtent().ToExtent2D(),
+        .probe_distance               = m_setup.probe_distance,
+        .num_rays_per_probe           = m_setup.num_rays_per_probe
     };
 
     m_uniform_buffer = std::make_unique<UniformBuffer>();

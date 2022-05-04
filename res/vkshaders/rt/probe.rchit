@@ -82,7 +82,7 @@ void main()
     vec3 lightVector    = normalize(scene.light_direction.xyz);
     float dot_product   = max(dot(lightVector, normal), 0.6);
     
-    payload.diffuse   = vec3(1.0, 0.0, 0.0);//vec3(dot_product); /* TODO material albedo */
+    payload.diffuse   = vec3(1.0, 0.0, 0.0) * dot_product; /* TODO material albedo */
     payload.distance  = gl_RayTminEXT + gl_HitTEXT;
     payload.normal    = normal;
 }

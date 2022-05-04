@@ -24,15 +24,12 @@ void main()
 
     vec4 albedo = vec4(0.0);
 
-    //ProbeRayData ray = GetProbeRayData(uvec2(uint(v_texcoord0.x * float(probe_system.image_dimensions.x)), uint(v_texcoord0.y * float(probe_system.image_dimensions.y))));
-    
-    //out_color = unpackUnorm4x8(ray.color_packed);
-    ivec2 size = imageSize(irradiance_image);
-    out_color = imageLoad(irradiance_image, ivec2(int(v_texcoord0.x * float(size.x)), int(v_texcoord0.y * float(size.y))));
+   // ivec2 size = imageSize(irradiance_image);
+    //out_color = imageLoad(irradiance_image, ivec2(int(v_texcoord0.x * float(size.x)), int(v_texcoord0.y * float(size.y))));
     
 
     /* render last filter in the stack */
-    //out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * float(probe_system.image_dimensions.x)), int(v_texcoord0.y * float(probe_system.image_dimensions.y))));
+    out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * float(probe_system.image_dimensions.x)), int(v_texcoord0.y * float(probe_system.image_dimensions.y))));
     
     //if (out_color.a < 0.2) {
     //    out_color = vec4(texture(deferred_result, texcoord).rgb, 1.0);

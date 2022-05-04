@@ -3,7 +3,6 @@
 #extension GL_EXT_scalar_block_layout : require
 
 layout(set = 9, binding = 0) uniform accelerationStructureEXT tlas;
-layout(set = 9, binding = 1, rgba8) uniform image2D image;
 
 #include "../include/scene.inc"
 #include "../include/rt/payload.inc"
@@ -40,7 +39,9 @@ void main()
     traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
     
     ProbeRayData ray_data;
-    ray_data.color_packed    = packUnorm4x8(vec4(payload.diffuse, 1.0));
+    ray_data.color           = vec4(payload.diffuse, 1.0);
+    ray_data.origin          = vec4(origin, 1.0);
+    ray_data.normal          = vec4(payload.normal, 0.0);
     ray_data.direction_depth = vec4(direction, payload.distance);
     
     SetProbeRayData(coord, ray_data);

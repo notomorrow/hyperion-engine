@@ -45,6 +45,49 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 #endif
 
 
+#include "include/rt/probe/shared.inc"
+
+#if 0
+
+vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
+{
+    const uvec3 base_grid_coord    = BaseGridCoord(P);
+    const vec3 base_probe_position = GridPositionToWorldPosition(base_grid_coord);
+    
+    vec3 total_irradiance = vec3(0.0);
+    float total_weight    = 0.0;
+    
+    vec3 alpha = clamp((P - base_probe_position) / PROBE_GRID_STEP, vec3(0.0), vec3(1.0));
+    
+    for (uint i = 0; i < 8; i++) {
+        uvec3 offset = uvec3(i, i >> 1, i >> 2) & uvec3(1);
+        uvec3 probe_grid_coord = clamp(base_grid_coord + offset, uvec3(0.0), probe_system.probe_counts.xyz - uvec3(1));
+        
+        uint probe_index    = GridPositionToProbeIndex(probe_grid_coord);
+        vec3 probe_position = GridPositionToWorldPosition(probe_grid_coord);
+        vec3 probe_to_point = P - probe_position + (N + 3.0 * V) * PROBE_NORMAL_BIAS;
+        vec3 dir            = normalize(-probe_to_point);
+        
+        vec3 trilinear = mix(vec3(1.0) - alpha, alpha, vec3(offset));
+        float weight   = 1.0;
+        
+        /* Backface test */
+        
+        vec3 true_direction_to_probe = normalize(probe_position - P);
+        weight *= SQR(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2;
+        
+        /* Visibility test */
+        /* TODO */
+        
+        weight = max(0.000001, weight);
+        
+        vec3 irradiance_direction = N;
+        
+    }
+}
+
+#endif
+
 void main()
 {
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);

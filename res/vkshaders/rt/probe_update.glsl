@@ -60,7 +60,13 @@ void UpdateRayCache(uvec2 coord, uint offset, uint num_rays)
         return;
     }
     
-    ray_cache[index] = PROBE_TEXEL_FETCH(uvec2(PROBE_RAY_DATA_INDEX(coord), offset + index));
+    
+    uint probes_per_side = (probe_system.irradiance_image_dimensions.x - 2) / PROBE_SIDE_LENGTH_BORDER;
+    uint probe_index = uint(coord.x / PROBE_SIDE_LENGTH_BORDER) + probes_per_side * uint(coord.y / PROBE_SIDE_LENGTH_BORDER);
+    
+    ray_cache[index] = GetProbeRayData(uvec2(probe_index, offset + index));
+    
+    //PROBE_TEXEL_FETCH(uvec2(PROBE_RAY_DATA_INDEX(coord), offset + index));
 }
 
 void GatherRays(uvec2 coord, uint num_rays, inout vec3 result, inout float total_weight)
@@ -70,7 +76,9 @@ void GatherRays(uvec2 coord, uint num_rays, inout vec3 result, inout float total
     for (uint i = 0; i < num_rays; i++) {
         ray                = ray_cache[i];
         vec3 ray_direction = ray.direction_depth.xyz;
+        vec3 ray_origin    = ray.origin.xyz;
         float ray_depth    = ray.direction_depth.w;
+        vec4 radiance;
         
 #if DEPTH
         float dist = min(MAX_DISTANCE, ray_depth - 0.01);
@@ -79,15 +87,15 @@ void GatherRays(uvec2 coord, uint num_rays, inout vec3 result, inout float total
             dist = MAX_DISTANCE;
         }
 #else
-        vec4 radiance = unpackUnorm4x8(ray.color_packed);
-
+        radiance = ray.color;
         radiance.rgb *= ENERGY_CONSERVATION;
 #endif
+
 
         vec3 texel_direction = DecodeOctahedralCoord(NormalizeOctahedralCoord(coord));
         
         float weight = max(0.0, dot(texel_direction, ray_direction));
-        
+
 #if DEPTH
         weight = pow(weight, 1.0 /* depth sharpness */);
 #endif
@@ -133,5 +141,5 @@ void main()
         result /= total_weight;
     }
     
-    imageStore(OUTPUT_IMAGE, ivec2(coord), vec4(result, 1.0));
+    imageStore(OUTPUT_IMAGE, ivec2(coord), vec4(result.rgb, 1.0));
 }
