@@ -44,7 +44,11 @@ public:
 
         m_functions.clear();
 
-        HYPERION_BUBBLE_ERRORS(End(device), result);
+        if (result) {
+            HYPERION_PASS_ERRORS(End(device), result);
+        } else {
+            HYPERION_IGNORE_ERRORS(End(device));
+        }
 
         return result;
     }

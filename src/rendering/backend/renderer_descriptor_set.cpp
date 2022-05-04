@@ -7,6 +7,8 @@
 #include "renderer_image_view.h"
 #include "renderer_sampler.h"
 
+#include <math/math_util.h>
+
 namespace hyperion {
 namespace renderer {
 DescriptorSet::DescriptorSet(bool bindless)
