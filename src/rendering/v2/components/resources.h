@@ -9,8 +9,8 @@
 #include "material.h"
 #include "texture.h"
 #include "mesh.h"
-#include "skeleton.h"
-#include "scene.h"
+#include "../animation/skeleton.h"
+#include "../scene/scene.h"
 #include "../rt/blas.h"
 #include "../rt/tlas.h"
 

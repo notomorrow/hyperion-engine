@@ -2,7 +2,7 @@
 #define HYPERION_V2_SHADOWS_H
 
 #include "post_fx.h"
-#include "scene.h"
+#include "../scene/scene.h"
 #include "renderer.h"
 
 #include <rendering/camera/camera.h>

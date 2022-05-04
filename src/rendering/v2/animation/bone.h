@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_BONE_H
 #define HYPERION_V2_BONE_H
 
-#include "node.h"
+#include "../scene/node.h"
 #include <math/transform.h>
 
 namespace hyperion::v2 {

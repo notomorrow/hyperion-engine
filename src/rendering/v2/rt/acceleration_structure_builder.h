@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_ACCELERATION_STRUCTURE_BUILDER_H
 #define HYPERION_V2_ACCELERATION_STRUCTURE_BUILDER_H
 
-#include "../components/spatial.h"
+#include "../scene/spatial.h"
 
 #include <rendering/backend/rt/renderer_acceleration_structure.h>
 

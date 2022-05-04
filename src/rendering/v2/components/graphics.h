@@ -2,8 +2,8 @@
 #define HYPERION_V2_GRAPHICS_H
 
 #include "shader.h"
-#include "spatial.h"
-#include "scene.h"
+#include "../scene/spatial.h"
+#include "../scene/scene.h"
 #include "texture.h"
 #include "framebuffer.h"
 #include "render_pass.h"

@@ -1,8 +1,8 @@
 #ifndef HYPERION_V2_SKELETON_H
 #define HYPERION_V2_SKELETON_H
 
-#include "base.h"
-#include "shader.h"
+#include "../components/base.h"
+#include "../components/shader.h"
 
 namespace hyperion::v2 {
 

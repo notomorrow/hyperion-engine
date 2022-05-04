@@ -30,7 +30,7 @@ public:
     static constexpr T pi = T(3.14159265358979);
 
     template <class T>
-    static constexpr T epsilon;
+    static constexpr T epsilon = T(FLT_EPSILON);
 
     template<>
     static constexpr float epsilon<float> = FLT_EPSILON;

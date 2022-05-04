@@ -1,6 +1,7 @@
 #include "ogre_xml_skeleton_loader.h"
 #include <rendering/v2/engine.h>
-#include <rendering/v2/components/bone.h>
+#include <rendering/v2/animation/skeleton.h>
+#include <rendering/v2/animation/bone.h>
 
 #include <util/xml/sax_parser.h>
 

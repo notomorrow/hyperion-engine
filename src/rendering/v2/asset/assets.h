@@ -6,7 +6,7 @@
 #include "model_loaders/ogre_xml_model_loader.h"
 #include "skeleton_loaders/ogre_xml_skeleton_loader.h"
 #include "texture_loaders/texture_loader.h"
-#include "../components/node.h"
+#include "../scene/node.h"
 
 #include <util/static_map.h>
 

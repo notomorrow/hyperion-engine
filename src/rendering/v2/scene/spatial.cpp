@@ -1,5 +1,5 @@
 #include "spatial.h"
-#include "graphics.h"
+#include "../components/graphics.h"
 #include "../engine.h"
 
 namespace hyperion::v2 {

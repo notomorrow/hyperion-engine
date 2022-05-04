@@ -1,10 +1,10 @@
 #ifndef HYPERION_V2_SPATIAL_H
 #define HYPERION_V2_SPATIAL_H
 
-#include "base.h"
-#include "material.h"
-#include "mesh.h"
-#include "skeleton.h"
+#include "../components/base.h"
+#include "../components/material.h"
+#include "../components/mesh.h"
+#include "../animation/skeleton.h"
 #include "octree.h"
 
 #include <rendering/backend/renderer_structs.h>

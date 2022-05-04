@@ -7,8 +7,8 @@
 #include "components/render_list.h"
 #include "components/deferred.h"
 #include "components/shadows.h"
-#include "components/octree.h"
 #include "components/resources.h"
+#include "scene/octree.h"
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>

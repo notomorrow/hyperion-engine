@@ -2,9 +2,7 @@
 #define HYPERION_V2_OCTREE_H
 
 #include "scene.h"
-#include "containers.h"
-
-#include <rendering/backend/renderer_swapchain.h>
+#include "../components/containers.h"
 
 #include <math/vector3.h>
 #include <math/bounding_box.h>
@@ -18,8 +16,6 @@ class Camera;
 } // namespace hyperion
 
 namespace hyperion::v2 {
-
-using renderer::Swapchain;
 
 class Spatial;
 
@@ -54,9 +50,9 @@ public:
 
         HYP_FORCE_INLINE bool Get(Scene::ID scene) const
         {
-            AssertThrow(scene.value - 1 < max_scenes);
+            AssertThrow(scene.value - 1ull < max_scenes);
             
-            return scene_visibility & (1 << (scene.value - 1));
+            return scene_visibility & 1ull << static_cast<uint64_t>(scene.value - 1);
         }
 
         HYP_FORCE_INLINE void Set(Scene::ID scene, bool visible)
@@ -64,9 +60,9 @@ public:
             AssertThrow(scene.value - 1 < max_scenes);
 
             if (visible) {
-                scene_visibility |= (1 << (scene.value - 1));
+                scene_visibility |= 1ull << static_cast<uint64_t>(scene.value - 1);
             } else {
-                scene_visibility &= ~(1 << (scene.value - 1));
+                scene_visibility &= ~(1ull << (scene.value - 1));
             }
         }
     };

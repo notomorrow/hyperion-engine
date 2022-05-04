@@ -1,8 +1,8 @@
 #include "node.h"
 #include <system/debug.h>
 
-#include "bone.h"
-#include "rendering/v2/engine.h"
+#include <rendering/v2/animation/bone.h>
+#include <rendering/v2/engine.h>
 
 namespace hyperion::v2 {
 

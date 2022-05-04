@@ -1,6 +1,5 @@
 #include "octree.h"
 #include "spatial.h"
-#include "scene/octree.h"
 
 namespace hyperion::v2 {
 

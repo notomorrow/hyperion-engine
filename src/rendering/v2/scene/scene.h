@@ -1,9 +1,9 @@
 #ifndef HYPERION_V2_SCENE_H
 #define HYPERION_V2_SCENE_H
 
-#include "base.h"
-#include "texture.h"
-#include "shader.h"
+#include "../components/base.h"
+#include "../components/texture.h"
+#include "../components/shader.h"
 #include <rendering/camera/camera.h>
 
 namespace hyperion::v2 {

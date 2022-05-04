@@ -2,8 +2,9 @@
 #define HYPERION_V2_NODE_H
 
 #include "spatial.h"
-#include "containers.h"
-#include "mixins.h"
+#include "../components/containers.h"
+#include "../components/mixins.h"
+
 #include <math/transform.h>
 
 #include <vector>

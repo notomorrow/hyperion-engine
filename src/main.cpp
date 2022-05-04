@@ -30,9 +30,9 @@
 #include "rendering/backend/rt/renderer_raytracing_pipeline.h"
 
 #include <rendering/v2/engine.h>
-#include <rendering/v2/components/node.h>
+#include <rendering/v2/scene/node.h>
 #include <rendering/v2/components/atomics.h>
-#include <rendering/v2/components/bone.h>
+#include <rendering/v2/animation/bone.h>
 #include <rendering/v2/asset/model_loaders/obj_model_loader.h>
 #include <rendering/v2/rt/acceleration_structure_builder.h>
 #include <rendering/v2/components/probe_system.h>
@@ -691,7 +691,7 @@ int main()
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
 
 #if HYPERION_VK_TEST_RAYTRACING
-        /*rt->Bind(frame->GetCommandBuffer());
+        rt->Bind(frame->GetCommandBuffer());
         engine.GetInstance()->GetDescriptorPool().Bind(
             engine.GetDevice(),
             frame->GetCommandBuffer(),
@@ -714,9 +714,8 @@ int main()
         rt->TraceRays(engine.GetDevice(), frame->GetCommandBuffer(), rt_image_storage->GetExtent());
         rt_image_storage->GetGPUImage()->InsertBarrier(
             frame->GetCommandBuffer(),
-            { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
             GPUMemory::ResourceState::UNORDERED_ACCESS
-        );*/
+        );
 
         
         probe_system.RenderProbes(&engine, frame->GetCommandBuffer());
