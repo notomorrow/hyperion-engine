@@ -53,6 +53,7 @@ void Skeleton::UpdateShaderData(Engine *engine) const
     const size_t num_bones = MathUtil::Min(SkeletonShaderData::max_bones, NumBones());
 
     if (num_bones != 0) {
+        std::lock_guard guard(engine->m_buffer_mutex);
         SkeletonShaderData &shader_data = engine->shader_globals->skeletons.At(m_id.value - 1);
 
         shader_data.bones[0] = m_root_bone->GetBoneMatrix();

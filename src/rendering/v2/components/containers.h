@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <functional>
 #include <tuple>
+#include <atomic>
 
 namespace hyperion::v2 {
 
@@ -831,7 +832,7 @@ class RefCounter {
     using ArgsTuple = typename CallbacksClass::ArgsTuple;
 
     struct RefCount {
-        uint32_t count = 0;
+        std::atomic_uint32_t count;
     };
 
     ObjectVector<T, CallbacksClass>   m_holder;
@@ -840,29 +841,28 @@ class RefCounter {
     ArgsTuple                         m_init_args{};
 
 public:
-    class RefWrapper {
+    class Ref {
     public:
-        RefWrapper()
-            : RefWrapper(nullptr)
+        Ref() : Ref(nullptr)
         {
         }
 
-        RefWrapper(std::nullptr_t)
+        Ref(std::nullptr_t)
             : ptr(nullptr),
               m_ref_counter(nullptr)
         {
         }
 
-        RefWrapper(T *ptr, RefCounter *ref_counter)
+        Ref(T *ptr, RefCounter *ref_counter)
             : ptr(ptr),
               m_ref_counter(ref_counter)
         {
         }
 
-        RefWrapper(const RefWrapper &other) = delete;
-        RefWrapper &operator=(const RefWrapper &other) = delete;
+        Ref(const Ref &other) = delete;
+        Ref &operator=(const Ref &other) = delete;
 
-        RefWrapper(RefWrapper &&other) noexcept
+        Ref(Ref &&other) noexcept
             : ptr(other.ptr),
               m_ref_counter(other.m_ref_counter)
         {
@@ -870,7 +870,7 @@ public:
             other.m_ref_counter = nullptr;
         }
 
-        RefWrapper &operator=(RefWrapper &&other)
+        Ref &operator=(Ref &&other)
         {
             if (std::addressof(other) == this) {
                 return *this;
@@ -886,15 +886,15 @@ public:
             return *this;
         }
 
-        ~RefWrapper()
+        ~Ref()
         {
             if (ptr != nullptr) {
                 Release();
             }
         }
 
-        operator T const * () const { return ptr; }
-        operator bool() const       { return Valid(); }
+        operator T const * () const    { return ptr; }
+        explicit operator bool() const { return Valid(); }
 
         T *operator->()             { return ptr; }
         const T *operator->() const { return ptr; }
@@ -908,10 +908,10 @@ public:
         bool operator!=(std::nullptr_t) const
             { return ptr != nullptr; }
 
-        bool operator==(const RefWrapper &other) const
+        bool operator==(const Ref &other) const
             { return &other == this || (ptr == other.ptr && m_ref_counter == other.m_ref_counter); }
 
-        bool operator!=(const RefWrapper &other) const
+        bool operator!=(const Ref &other) const
             { return !operator==(other); }
         
         /*! \brief _If_ ptr has not had Init() performed yet (checked via IsInit()), call it, using
@@ -1023,28 +1023,33 @@ public:
         m_init_args = std::move(args);
     }
     
-    [[nodiscard]] RefWrapper Add(std::unique_ptr<T> &&object)
+    [[nodiscard]] Ref Add(std::unique_ptr<T> &&object)
     {
         if (object == nullptr) {
             return nullptr;
         }
 
         T *ptr = m_holder.Add(std::move(object));
-        m_ref_map[ptr->GetId()] = {.count = 1};
+        m_ref_map[ptr->GetId()].count = 1;
         
-        return RefWrapper(ptr, this);
+        return Ref(ptr, this);
     }
     
-    [[nodiscard]] RefWrapper Acquire(T *ptr)
+    [[nodiscard]] Ref Acquire(T *ptr)
     {
         AssertThrow(ptr != nullptr);
 
         ++m_ref_map[ptr->GetId()].count;
         
-        return RefWrapper(ptr, this);
+        return Ref(ptr, this);
+    }
+    
+    [[nodiscard]] Ref Get(T *ptr)
+    {
+       return this->Acquire(ptr);
     }
 
-    [[nodiscard]] RefWrapper Get(typename T::ID id)
+    [[nodiscard]] Ref Get(typename T::ID id)
     {
         T *ptr = m_holder.Get(id);
 
@@ -1052,12 +1057,13 @@ public:
             return nullptr;
         }
 
-        ++m_ref_map[ptr->GetId()].count;
-
-        return RefWrapper(ptr, this);
+        return this->Acquire(ptr);
     }
 
-    [[nodiscard]] RefWrapper Get(typename T::ID id) const
+    [[nodiscard]] Ref Get(T *ptr) const
+        { return const_cast<const RefCounter *>(this)->Get(ptr); }
+
+    [[nodiscard]] Ref Get(typename T::ID id) const
         { return const_cast<const RefCounter *>(this)->Get(id); }
     
     void Release(const T *ptr)
@@ -1099,7 +1105,7 @@ public:
 };
 
 template <class T>
-using Ref = typename RefCounter<T, EngineCallbacks>::RefWrapper;
+using Ref = typename RefCounter<T, EngineCallbacks>::Ref;
 
 } // namespace hyperion::v2
 

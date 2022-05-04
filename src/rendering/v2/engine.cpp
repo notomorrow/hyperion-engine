@@ -382,17 +382,14 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
 }
 
-void Engine::UpdateDescriptorData(uint32_t frame_index)
+void Engine::UpdateRendererBuffersAndDescriptors(uint32_t frame_index)
 {
+    std::lock_guard guard(m_buffer_mutex);
+
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->skeletons.UpdateBuffer(m_instance->GetDevice(), frame_index);
-
-    static constexpr DescriptorSet::Index bindless_descriptor_set_index[] = { DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS, DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1 };
-
-    m_instance->GetDescriptorPool().GetDescriptorSet(bindless_descriptor_set_index[frame_index])
-        ->ApplyUpdates(m_instance->GetDevice());
 
     shader_globals->textures.ApplyUpdates(this, frame_index);
 }

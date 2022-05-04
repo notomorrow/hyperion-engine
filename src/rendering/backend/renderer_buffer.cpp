@@ -680,7 +680,7 @@ void GPUBuffer::DebugLogBuffer(Device *device) const
         const auto data = DebugReadBytes<uint32_t>(device);
 
         for (size_t i = 0; i < data.size();) {
-            const size_t dist = MathUtil::Min(data.size() - i, 4ull);
+            const size_t dist = MathUtil::Min(data.size() - i, size_t(4));
 
             if (dist == 4) {
                 DebugLog(LogType::Debug, "%lu\t%lu\t%lu\t%lu\n", data[i], data[i + 1], data[i + 2], data[i + 3]);

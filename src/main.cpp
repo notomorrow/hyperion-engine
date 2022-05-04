@@ -110,7 +110,7 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
-#define HYPERION_VK_TEST_RAYTRACING 1
+#define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
 int main()
@@ -264,7 +264,7 @@ int main()
 
     float timer = 0.0;
 
-    bool running = true;
+    std::atomic_bool running{true};
 
     Frame *frame = nullptr;
 
@@ -586,10 +586,32 @@ int main()
         .light_direction = Vector4(Vector3(0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
     });
 
+    std::thread game_thread([&]() {
+        while (running) {
+            tick_last = tick_now;
+            tick_now = SDL_GetPerformanceCounter();
+            delta_time = (double(tick_now)-double(tick_last)) / double(SDL_GetPerformanceFrequency());
+            timer += delta_time;
+
+            scene->Update(&engine, delta_time);
+
+            engine.GetOctree().CalculateVisibility(scene.ptr);
+
+            sponza->SetLocalTranslation(Vector3(std::sin(timer * 5.0f) * 10.0f, 0, -std::sin(timer * 5.0f) * 20.0f));
+            sponza->Update(&engine);
+            
+            zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
+            zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
+            zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
+            zombie->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
+            zombie->Update(&engine);
+            
+            cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
+            cube_obj->Update(&engine);
+        }
+    });
+
     while (running) {
-        tick_last = tick_now;
-        tick_now = SDL_GetPerformanceCounter();
-        delta_time = (double(tick_now)-double(tick_last)) / double(SDL_GetPerformanceFrequency());
 
         while (SystemSDL::PollEvent(&event)) {
             input_manager->CheckEvent(&event);
@@ -602,23 +624,6 @@ int main()
             }
         }
 
-        timer += delta_time;
-
-        if (MathUtil::Approximately(std::fmod(timer, 1.0f), 0.0f)) {
-            if (auto *tex = mat1->GetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP)) {
-                if (tex->GetId() == texture->GetId()) {
-                    mat1->SetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, texture2.Acquire());
-                } else {
-                    mat1->SetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
-                }
-            } else {
-                mat1->SetTexture(v2::Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
-            }
-
-            DebugLog(LogType::Info, "Switch textures\n");
-        }
-
-        scene->Update(&engine, delta_time);
 
         HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
             engine.GetInstance()->GetDevice(),
@@ -668,24 +673,14 @@ int main()
             &compute_semaphore_chain
         ));
 #endif
-        engine.GetOctree().CalculateVisibility(scene.ptr);
 
-        sponza->Update(&engine);
         
-        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
-        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
-        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
-        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
-        zombie->Update(&engine);
-        
-        cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
-        cube_obj->Update(&engine);
 
 
         /* Only update sets that are double - buffered so we don't
          * end up updating data that is in use by the gpu
          */
-        engine.UpdateDescriptorData(frame_index);
+        engine.UpdateRendererBuffersAndDescriptors(frame_index);
 
         /* === rendering === */
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
@@ -780,7 +775,10 @@ int main()
     rt->Destroy(engine.GetDevice());
 #endif
 
+    game_thread.join();
+
     engine.Destroy();
+
 
     delete window;
 

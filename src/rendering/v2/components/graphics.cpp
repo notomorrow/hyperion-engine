@@ -243,10 +243,16 @@ void GraphicsPipeline::Render(Engine *engine,
                 }
 
                 if (m_scene != nullptr && BucketSupportsCulling(m_bucket)) {
-                    auto &visibility_state = spatial->GetVisibilityState();
+                    if (auto *octant = spatial->GetOctree()) {
+                        const auto &visibility_state = octant->GetVisibilityState();
 
-                    if (!visibility_state.Get(m_scene->GetId())) {
-                        continue;
+                        if (!visibility_state.ValidToParent(engine->GetOctree().GetVisibilityState())) {
+                            continue;
+                        }
+
+                        if (!visibility_state.Get(m_scene->GetId())) {
+                            continue;
+                        }
                     }
                 }
 
@@ -277,12 +283,6 @@ void GraphicsPipeline::Render(Engine *engine,
                 );
 
                 spatial->GetMesh()->Render(engine, secondary);
-
-                if (m_scene != nullptr) {
-                    if (auto *octree = spatial->GetOctree()) {
-                        octree->GetVisibilityState().Set(m_scene->GetId(), false);
-                    }
-                }
             }
 
             HYPERION_RETURN_OK;

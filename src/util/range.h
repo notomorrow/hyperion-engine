@@ -4,15 +4,18 @@
 #include <math/math_util.h>
 #include <util/test/htest.h>
 
+#include <atomic>
+
 namespace hyperion {
 
-template <class T>
+template <class T, class U = T>
 class Range {
 public:
     using iterator = T;
 
-    Range() : m_start{}, m_end{} {}
+    Range()                             : m_start{}, m_end{} {}
     Range(const T &start, const T &end) : m_start(start), m_end(end) {}
+    Range(T &&start, T &&end)           : m_start(std::move(start)), m_end(std::move(end)) {}
     Range(const Range &other) = default;
     Range &operator=(const Range &other) = default;
     Range(Range &&other) = default;
@@ -96,7 +99,7 @@ public:
     iterator end() const { return m_end; }
 
 private:
-    T m_start, m_end;
+    U m_start, m_end;
 };
 
 namespace test {

@@ -5,18 +5,14 @@
 #include "../components/material.h"
 #include "../components/mesh.h"
 #include "../animation/skeleton.h"
-#include "octree.h"
+#include "visibility_state.h"
 
 #include <rendering/backend/renderer_structs.h>
 
 #include <math/transform.h>
 #include <math/bounding_box.h>
 
-//#include <rendering/mesh.h>
-
 #include <vector>
-
-#include "octree.h"
 
 namespace hyperion::v2 {
 
@@ -47,8 +43,8 @@ public:
     ShaderDataState GetShaderDataState() const { return m_shader_data_state; }
     void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
     
-    Octree::VisibilityState &GetVisibilityState() { return m_visibility_state; }
-    const Octree::VisibilityState &GetVisibilityState() const { return m_visibility_state; }
+    VisibilityState &GetVisibilityState() { return m_visibility_state; }
+    const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
     
     Mesh *GetMesh() const { return m_mesh.ptr; }
     void SetMesh(Ref<Mesh> &&mesh);
@@ -95,7 +91,7 @@ private:
     Ref<Skeleton> m_skeleton;
 
     Octree *m_octree;
-    Octree::VisibilityState m_visibility_state;
+    VisibilityState m_visibility_state;
 
     /* Retains a list of pointers to pipelines that this Spatial is used by,
      * for easy removal when RemoveSpatial() is called.

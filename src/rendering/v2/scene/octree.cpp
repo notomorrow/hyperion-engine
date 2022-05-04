@@ -1,7 +1,13 @@
 #include "octree.h"
 #include "spatial.h"
+#include "../engine.h"
 
 namespace hyperion::v2 {
+
+bool Octree::IsVisible(const Octree *root, const Octree *child)
+{
+    return child->m_visibility_state.ValidToParent(root->m_visibility_state);
+}
 
 Octree::Octree(const BoundingBox &aabb)
     : m_aabb(aabb),
@@ -151,7 +157,7 @@ void Octree::Clear(Engine *engine)
         node.spatial->OnRemovedFromOctree(this);
 
         if (m_root != nullptr) {
-            auto it = m_root->node_to_octree.find(node.spatial);
+            auto it = m_root->node_to_octree.find(node.spatial.ptr);
 
             if (it != m_root->node_to_octree.end()) {
                 m_root->node_to_octree.erase(it);
@@ -194,8 +200,8 @@ bool Octree::Insert(Engine *engine, Spatial *spatial)
 bool Octree::InsertInternal(Engine *engine, Spatial *spatial)
 {
     m_nodes.push_back(Node{
-        .spatial = spatial,
-        .aabb = spatial->GetWorldAabb(),
+        .spatial          = engine->resources.spatials.Acquire(spatial),
+        .aabb             = spatial->GetWorldAabb(),
         .visibility_state = &m_visibility_state
     });
 
@@ -375,7 +381,7 @@ void Octree::CalculateVisibility(Scene *scene)
         return;
     }
 
-    if (scene->GetId().value - 1 >= max_scenes) {
+    if (scene->GetId().value - 1 >= VisibilityState::max_scenes) {
         DebugLog(
             LogType::Error,
             "Scene #%lu out of bounds of octree scene visibility array. Cannot update visibility state.\n",
@@ -388,6 +394,8 @@ void Octree::CalculateVisibility(Scene *scene)
     const auto &frustum = scene->GetCamera()->GetFrustum();
      
     if (frustum.ContainsAabb(m_aabb)) {
+        ++m_visibility_state.nonce;
+
         UpdateVisibilityState(scene);
     }
 }
@@ -407,6 +415,8 @@ void Octree::UpdateVisibilityState(Scene *scene)
         if (!frustum.ContainsAabb(octant.aabb)) {
             continue;
         }
+
+        octant.octree->m_visibility_state.nonce = m_visibility_state.nonce;
 
         octant.octree->UpdateVisibilityState(scene);
     }

@@ -2,6 +2,8 @@
 #define HYPERION_V2_OCTREE_H
 
 #include "scene.h"
+#include "spatial.h"
+#include "visibility_state.h"
 #include "../components/containers.h"
 
 #include <math/vector3.h>
@@ -33,42 +35,13 @@ class Octree {
     };
 
 public:
-    static constexpr uint32_t max_scenes = sizeof(uint64_t) * CHAR_BIT;
-
     struct Octant {
         std::unique_ptr<Octree> octree;
         BoundingBox             aabb;
     };
 
-    struct VisibilityState {
-        /* map from scene index (id - 1) -> visibility boolean for each frame in flight.
-         * when visiblity is scanned, both values per frame in flight are set accordingly,
-         * but are only set to false after the corresponding frame is rendered.
-         */
-        
-        uint64_t scene_visibility = 0;
-
-        HYP_FORCE_INLINE bool Get(Scene::ID scene) const
-        {
-            AssertThrow(scene.value - 1ull < max_scenes);
-            
-            return scene_visibility & 1ull << static_cast<uint64_t>(scene.value - 1);
-        }
-
-        HYP_FORCE_INLINE void Set(Scene::ID scene, bool visible)
-        {
-            AssertThrow(scene.value - 1 < max_scenes);
-
-            if (visible) {
-                scene_visibility |= 1ull << static_cast<uint64_t>(scene.value - 1);
-            } else {
-                scene_visibility &= ~(1ull << (scene.value - 1));
-            }
-        }
-    };
-
     struct Node {
-        Spatial     *spatial;
+        Ref<Spatial> spatial;
         BoundingBox  aabb;
 
         VisibilityState *visibility_state = nullptr;
@@ -83,6 +56,8 @@ public:
         } events;
         std::unordered_map<Spatial *, Octree *> node_to_octree;
     };
+
+    static bool IsVisible(const Octree *parent, const Octree *child);
 
     Octree(const BoundingBox &aabb);
     ~Octree();

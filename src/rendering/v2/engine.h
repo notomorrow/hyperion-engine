@@ -17,6 +17,7 @@
 #include <util/enum_options.h>
 
 #include <memory>
+#include <mutex>
 
 namespace hyperion::v2 {
 
@@ -102,7 +103,7 @@ public:
     void Destroy();
     void PrepareSwapchain();
     void Compile();
-    void UpdateDescriptorData(uint32_t frame_index);
+    void UpdateRendererBuffersAndDescriptors(uint32_t frame_index);
 
     void RenderShadows(CommandBuffer *primary, uint32_t frame_index);
     void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
@@ -114,6 +115,8 @@ public:
     EngineCallbacks         callbacks;
     Resources               resources;
     Assets                  assets;
+
+    std::mutex m_buffer_mutex;
 
 private:
     void FindTextureFormatDefaults();

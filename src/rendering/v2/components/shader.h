@@ -181,6 +181,8 @@ protected:
 
 template <class Buffer, class StructType, size_t Size>
 class ShaderData : public BufferRangeUpdater<StructType> {
+    using BufferRange = BufferRangeUpdater<StructType>;
+
 public:
     ShaderData(size_t num_buffers)
     {
@@ -189,7 +191,7 @@ public:
 
         for (size_t i = 0; i < num_buffers; i++) {
             m_buffers[i] = std::make_unique<Buffer>();
-            this->m_dirty[i] = {0, Size};
+            BufferRange::m_dirty[i] = Range<size_t>(0, Size);
         }
     }
 
@@ -215,7 +217,7 @@ public:
 
     void UpdateBuffer(Device *device, size_t buffer_index)
     {
-        this->PerformUpdate(device, m_buffers, buffer_index, m_objects.Data());
+        BufferRange::PerformUpdate(device, m_buffers, buffer_index, m_objects.Data());
     }
 
     void Set(size_t index, StructType &&value)
@@ -224,14 +226,14 @@ public:
 
         m_objects[index] = std::move(value);
 
-        this->MarkDirty(index);
+        BufferRange::MarkDirty(index);
     }
 
     StructType &At(size_t index)
     {
         AssertThrowMsg(index < m_objects.Size(), "Cannot set shader data out of bounds");
         
-        this->MarkDirty(index);
+        BufferRange::MarkDirty(index);
 
         return m_objects[index];
     }

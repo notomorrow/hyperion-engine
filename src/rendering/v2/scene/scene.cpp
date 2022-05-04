@@ -53,6 +53,7 @@ void Scene::Update(Engine *engine, double delta_time)
 
 void Scene::UpdateShaderData(Engine *engine) const
 {
+    std::lock_guard guard(engine->m_buffer_mutex);
     SceneShaderData shader_data{
         .aabb_max = aabb.max.ToVector4(),
         .aabb_min = aabb.min.ToVector4()
