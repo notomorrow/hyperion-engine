@@ -1,5 +1,7 @@
 #include "renderer_frame_handler.h"
 
+#include <math/math_util.h>
+
 namespace hyperion {
 namespace renderer {
 

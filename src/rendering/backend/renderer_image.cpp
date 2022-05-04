@@ -327,7 +327,13 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
 
     if (m_assigned_image_data)  {
         /* transition from 'undefined' layout state into one optimal for transfer */
-        HYPERION_BUBBLE_ERRORS(staging_buffer.Create(device, m_size), result);
+        HYPERION_PASS_ERRORS(staging_buffer.Create(device, m_size), result);
+
+        if (!result) {
+            HYPERION_IGNORE_ERRORS(Destroy(device));
+
+            return result;
+        }
 
         staging_buffer.Copy(device, m_size, m_bytes);
         // safe to delete m_bytes here?

@@ -6,16 +6,16 @@
 #include "renderer_command_buffer.h"
 #include "renderer_device.h"
 #include "renderer_helpers.h"
-
-#include "../../system/debug.h"
-
 #include "renderer_features.h"
+#include "renderer_instance.h"
+
+#include <math/math_util.h>
+
+#include <system/debug.h>
 
 #include <vector>
 #include <queue>
 #include <cstring>
-
-#include "renderer_instance.h"
 
 namespace hyperion {
 namespace renderer {
