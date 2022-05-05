@@ -10,8 +10,8 @@
 #include <rendering/backend/renderer_swapchain.h>
 
 #include <math/transform.h>
-#include <util/heap_array.h>
-#include <util/range.h>
+#include <rendering/v2/core/lib/heap_array.h>
+#include <rendering/v2/core/lib/range.h>
 
 #include <memory>
 

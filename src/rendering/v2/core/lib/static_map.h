@@ -12,7 +12,9 @@ struct StaticMap {
         const auto it = std::find_if(
             pairs.begin(),
             pairs.end(),
-            [&key](const auto &v) { return v.first == key; });
+            [&key](const auto &v) {
+                return v.first == key;
+            });
 
         if (it != pairs.end()) {
             return it->second;

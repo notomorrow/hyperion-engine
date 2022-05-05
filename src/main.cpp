@@ -452,64 +452,6 @@ int main()
         
         engine.AddGraphicsPipeline(std::move(pipeline));
     }
-
-#if HYPERION_VK_TEST_VISUALIZE_OCTREE
-    v2::GraphicsPipeline::ID wire_pipeline_id{};
-
-    auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-        mirror_shader.Acquire(),
-        engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass_id,
-        v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
-    );
-    pipeline->SetBlendEnabled(false);
-    pipeline->SetFillMode(FillMode::LINE);
-    pipeline->SetCullMode(CullMode::NONE);
-    pipeline->SetTopology(Topology::TRIANGLES);
-    pipeline->SetDepthTest(false);
-    pipeline->SetDepthWrite(false);
-
-    pipeline->GetVertexAttributes() |= MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES /* until we have dynamic shader compilation based on vertex attribs */
-      | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS;
-
-    std::unordered_map<v2::Octree *, v2::Spatial::ID> octree_debug_nodes;
-
-    engine.GetOctree().GetCallbacks().on_insert_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
-        auto *pl = engine->GetGraphicsPipeline(wire_pipeline_id);
-
-        auto mesh = MeshFactory::CreateCube(octree->GetAabb());
-
-        auto spat = engine->resources.spatials.Add(std::make_unique<v2::Spatial>(
-            engine->resources.meshes.Add(std::make_unique<v2::Mesh>(
-                mesh->GetVertices(),
-                mesh->GetIndices()
-            )),
-            pl->GetVertexAttributes(),
-            Transform(),
-            mesh->GetAABB(),
-            engine->resources.materials.Get(v2::Material::ID{3})
-        ));
-
-        octree_debug_nodes[octree] = spat->GetId();
-
-        pl->AddSpatial(std::move(spat));
-    };
-
-    engine.GetOctree().GetCallbacks().on_remove_octant += [&](v2::Engine *engine, v2::Octree *octree, v2::Spatial *) {
-        auto *pl = engine->GetGraphicsPipeline(wire_pipeline_id);
-
-        auto it = octree_debug_nodes.find(octree);
-
-        if (it != octree_debug_nodes.end()) {
-            vkQueueWaitIdle(engine->GetInstance()->GetGraphicsQueue().queue);
-            pl->RemoveSpatial(it->second);
-
-            octree_debug_nodes.erase(it);
-        }
-    };
-
-    wire_pipeline_id = engine.AddGraphicsPipeline(std::move(pipeline));
-        
-#endif
     
 #if HYPERION_VK_TEST_RAYTRACING
     auto rt_shader = std::make_unique<ShaderProgram>();

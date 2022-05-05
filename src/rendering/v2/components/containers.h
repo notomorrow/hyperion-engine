@@ -2,7 +2,6 @@
 #define HYPERION_V2_CONTAINERS_H
 
 #include <math/math_util.h>
-#include <util/range.h>
 
 #include <vector>
 #include <memory>

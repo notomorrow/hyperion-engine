@@ -8,7 +8,7 @@
 #include "texture_loaders/texture_loader.h"
 #include "../scene/node.h"
 
-#include <util/static_map.h>
+#include <rendering/v2/core/lib/static_map.h>
 
 #include <string>
 #include <unordered_map>
