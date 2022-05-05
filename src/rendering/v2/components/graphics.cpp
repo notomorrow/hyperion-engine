@@ -222,20 +222,6 @@ void GraphicsPipeline::Render(Engine *engine,
                     {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
                 }
             );
-
-            /* TODO: move elsewhere, we don't want to be binding > 4 sets */
-            if (m_bucket == BUCKET_VOXELIZER) {
-                /* Voxelizer data */
-                instance->GetDescriptorPool().Bind(
-                    device,
-                    secondary,
-                    &m_wrapped,
-                    {
-                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1},
-                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER}
-                    }
-                );
-            }
             
             for (auto &spatial : m_spatials) {
                 if (spatial->GetMesh() == nullptr) {

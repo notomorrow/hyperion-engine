@@ -73,14 +73,6 @@ void Spatial::Update(Engine *engine)
         m_material->Update(engine);
     }
 
-    if (!m_shader_data_state.IsDirty()) {
-        if (m_octree != nullptr) {
-            m_visibility_state = m_octree->GetVisibilityState();
-        }
-
-        return;
-    }
-
     UpdateShaderData(engine);
 
     if (m_octree != nullptr) {
@@ -118,10 +110,6 @@ void Spatial::UpdateOctree(Engine *engine)
             "Could not update Spatial #%lu in octree\n",
             m_id.value
         );
-    }
-
-    if (m_octree != nullptr) {
-        m_visibility_state = m_octree->GetVisibilityState();
     }
 }
 

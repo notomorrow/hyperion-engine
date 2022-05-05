@@ -21,8 +21,8 @@ struct Stub {
     Stub() = default;
     ~Stub() = default;
 
-    renderer::Result Create(Engine *engine) { return renderer::Result::OK; }
-    renderer::Result Destroy(Engine *engine) { return renderer::Result::OK; }
+    renderer::Result Create(Engine *)  { return renderer::Result::OK; }
+    renderer::Result Destroy(Engine *) { return renderer::Result::OK; }
 };
 
 #define STUB_CLASS(name) ::hyperion::v2::Stub<name>

@@ -43,9 +43,6 @@ public:
     ShaderDataState GetShaderDataState() const { return m_shader_data_state; }
     void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
     
-    VisibilityState &GetVisibilityState() { return m_visibility_state; }
-    const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
-    
     Mesh *GetMesh() const { return m_mesh.ptr; }
     void SetMesh(Ref<Mesh> &&mesh);
 
@@ -91,7 +88,6 @@ private:
     Ref<Skeleton> m_skeleton;
 
     Octree *m_octree;
-    VisibilityState m_visibility_state;
 
     /* Retains a list of pointers to pipelines that this Spatial is used by,
      * for easy removal when RemoveSpatial() is called.

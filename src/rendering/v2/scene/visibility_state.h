@@ -5,6 +5,7 @@
 
 #include <util.h>
 
+#include <atomic>
 #include <cstdint>
 
 namespace hyperion::v2 {
@@ -19,9 +20,14 @@ struct VisibilityState {
      * when visiblity is scanned, both values per frame in flight are set accordingly,
      * but are only set to false after the corresponding frame is rendered.
      */
-    
-    Bitmask bits  = 0;
-    Nonce nonce   = 0;
+    std::atomic<Bitmask> bits{0};
+
+    /* nonce is used to validate that the VisibilityState is still valid relative to
+     * some parent VisibilityState. While the parent's nonce may have been set to a new
+     * value, if ours has not, the state is considered to be invalid and thus not be
+     * used as if it is in a "visible" state.
+     */
+    std::atomic<Nonce> nonce{Nonce(~0)};
 
     HYP_FORCE_INLINE bool Get(Scene::ID scene) const
     {

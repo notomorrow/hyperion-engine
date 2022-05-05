@@ -110,7 +110,7 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
-#define HYPERION_VK_TEST_RAYTRACING 0
+#define HYPERION_VK_TEST_RAYTRACING 1
 #define HYPERION_RUN_TESTS 1
 
 int main()
@@ -213,10 +213,6 @@ int main()
     );
 
     sponza->Translate({0, 0, 5});
-
-    //sponza->Scale(0.02f);
-    //sponza->Scale(0.45f);
-    //sponza->Rotate(Quaternion({1, 0, 0}, MathUtil::DegToRad(90.0f)));
     sponza->Update(&engine);
 
     Device *device = engine.GetInstance()->GetDevice();
@@ -471,16 +467,6 @@ int main()
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
-
-    /*std::unique_ptr<v2::Node> blas_node = std::make_unique<v2::Node>(
-        "blasnode",
-        Transform()
-    );
-
-    blas_node->SetSpatial(engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial()));
-    blas_node->AddChild()->SetSpatial(engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));*/
-
-
     monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 5, 0 }});
 
 
@@ -488,12 +474,6 @@ int main()
         .aabb = {{-20.0f, -5.0f, -20.0f}, {20.0f, 5.0f, 20.0f}}
     });
     probe_system.Init(&engine);
-
-
-   // blas_node->CreateAccelerationStructure(&engine);
-    //v2::AccelerationStructureBuilder blas_builder;
-    //blas_builder.AddSpatial(engine.resources.spatials.Acquire(monkey_obj->GetChild(0)->GetSpatial()));
-    //blas_builder.AddSpatial(engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial()));
 
     auto my_tlas = std::make_unique<v2::Tlas>();
 
@@ -508,8 +488,6 @@ int main()
     )));
 
     my_tlas->Init(&engine);
-
-    //HYPERION_ASSERT_RESULT(tlas->Create(engine.GetInstance(), blas_builder.Build(&engine)));
     
     Image *rt_image_storage = new StorageImage(
         Extent3D{1024, 1024, 1},
@@ -528,7 +506,6 @@ int main()
     
     auto rt_storage_buffer = rt_descriptor_set->AddDescriptor<StorageBufferDescriptor>(3);
     rt_storage_buffer->AddSubDescriptor({.buffer = my_tlas->Get().GetMeshDescriptionsBuffer()});
-   // rt_storage_buffer->AddSubDescriptor({.buffer = blas[1]->GetMeshDescriptionsBuffer()});
 
     HYPERION_ASSERT_RESULT(rt_image_storage->Create(
         device,
@@ -536,15 +513,6 @@ int main()
         GPUMemory::ResourceState::UNORDERED_ACCESS
     ));
     HYPERION_ASSERT_RESULT(rt_image_storage_view.Create(engine.GetDevice(), rt_image_storage));
-
-    //monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{5, 2, 0}});
-    //tlas->GetBlas()[0]->SetTransform(monkey_obj->GetChild(0)->GetSpatial()->GetTransform().GetMatrix());
-    //tlas->SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
-    //tlas->UpdateStructure(engine.GetInstance());
-    //rt_storage_buffer->RemoveSubDescriptor(0);
-    //rt_storage_buffer->AddSubDescriptor({.buffer = tlas->GetMeshDescriptionsBuffer()});
-
-    //rt_descriptor_set->AddDescriptor<Im>()
 #endif
 
     engine.Compile();
@@ -597,7 +565,7 @@ int main()
 
             engine.GetOctree().CalculateVisibility(scene.ptr);
 
-            sponza->SetLocalTranslation(Vector3(std::sin(timer * 5.0f) * 10.0f, 0, -std::sin(timer * 5.0f) * 20.0f));
+            sponza->SetLocalTranslation(Vector3(std::sin(timer * 5.0f) * 10.0f, 0, -std::sin(timer *0.05f) * 300.0f));
             sponza->Update(&engine);
             
             zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
@@ -612,7 +580,6 @@ int main()
     });
 
     while (running) {
-
         while (SystemSDL::PollEvent(&event)) {
             input_manager->CheckEvent(&event);
             switch (event.GetType()) {

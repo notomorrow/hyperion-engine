@@ -3,7 +3,6 @@
 
 #include "spatial.h"
 #include "../components/containers.h"
-#include "../components/mixins.h"
 
 #include <math/transform.h>
 

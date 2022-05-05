@@ -416,7 +416,7 @@ void Octree::UpdateVisibilityState(Scene *scene)
             continue;
         }
 
-        octant.octree->m_visibility_state.nonce = m_visibility_state.nonce;
+        octant.octree->m_visibility_state.nonce = m_visibility_state.nonce.load();
 
         octant.octree->UpdateVisibilityState(scene);
     }
@@ -432,7 +432,5 @@ void Octree::OnSpatialRemoved(Engine *engine, Spatial *spatial)
         DebugLog(LogType::Error, "Failed to find Spatial #%lu in octree\n", spatial->GetId().value);
     }
 }
-
-
 
 } // namespace hyperion::v2
