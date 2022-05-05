@@ -126,7 +126,7 @@ struct CallbackRef {
         }
 
         /* expand bound_args tuple into Trigger() function args */
-        return std::apply([this]<class ...Args>(Args ... args) -> bool {
+        return std::apply([this]<class ...Args> (Args ... args) -> bool {
             return group->Trigger(id, std::forward<Args>(args)...);
         }, bound_args);
     }

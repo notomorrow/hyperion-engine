@@ -299,6 +299,8 @@ void Engine::Initialize()
     callbacks.TriggerPersisted(EngineCallback::CREATE_SPATIALS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_ACCELERATION_STRUCTURES, this);
+
+    m_running = true;
 }
 
 void Engine::Destroy()
@@ -306,6 +308,8 @@ void Engine::Destroy()
     AssertThrow(m_instance != nullptr);
 
     (void)m_instance->GetDevice()->Wait();
+
+    m_running = false;
     
     callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);

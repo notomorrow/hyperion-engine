@@ -1,0 +1,21 @@
+#ifndef HYPERION_V2_GAME_THREAD_H
+#define HYPERION_V2_GAME_THREAD_H
+
+#include "core/thread.h"
+
+namespace hyperion::v2 {
+
+class Engine;
+class Game;
+
+class GameThread : public Thread<Engine *, Game *> {
+public:
+    GameThread();
+
+private:
+    virtual void operator()(Engine *engine, Game *game) override;
+};
+
+} // namespace hyperion::v2
+
+#endif

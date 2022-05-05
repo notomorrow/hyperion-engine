@@ -28,7 +28,6 @@ using renderer::SemaphoreChain;
 using renderer::Image;
 using renderer::StorageBuffer;
 
-
 /* Current descriptor / attachment layout */
 
 /*
@@ -117,6 +116,7 @@ public:
     Assets                  assets;
 
     std::mutex m_buffer_mutex;
+    std::atomic_bool m_running{false};
 
 private:
     void FindTextureFormatDefaults();

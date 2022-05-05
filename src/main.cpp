@@ -36,6 +36,8 @@
 #include <rendering/v2/asset/model_loaders/obj_model_loader.h>
 #include <rendering/v2/rt/acceleration_structure_builder.h>
 #include <rendering/v2/components/probe_system.h>
+#include <rendering/v2/game_thread.h>
+#include <rendering/v2/game.h>
 
 #include "rendering/probe/envmap/envmap_probe_control.h"
 
@@ -113,13 +115,92 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_RAYTRACING 1
 #define HYPERION_RUN_TESTS 1
 
+
+class MyGame : public v2::Game {
+
+public:
+    MyGame()
+        : Game()
+    {
+    }
+
+    virtual void Init(v2::Engine *engine, SystemWindow *window) override
+    {
+        Game::Init(engine, window);
+
+        input_manager = new InputManager(window);
+        input_manager->SetWindow(window);
+
+        scene = engine->resources.scenes.Add(std::make_unique<v2::Scene>(
+            std::make_unique<FpsCamera>(
+                input_manager,
+                window,
+                1024,
+                768,
+                70.0f,
+                0.05f,
+                250.0f
+            )
+        ));
+
+
+        auto base_path = AssetManager::GetInstance()->GetRootDir();
+
+        auto loaded_assets = engine->assets.Load<v2::Node>(
+            base_path + "models/ogrexml/dragger_Body.mesh.xml",
+            base_path + "models/material_sphere/material_sphere.obj",
+            base_path + "models/cube.obj",
+            base_path + "models/monkey/monkey.obj"
+        );
+
+        zombie = std::move(loaded_assets[0]);
+        sponza = std::move(loaded_assets[1]);
+        cube_obj = std::move(loaded_assets[2]);
+        monkey_obj = std::move(loaded_assets[3]);
+    }
+
+    virtual void Teardown(v2::Engine *engine) override
+    {
+        delete input_manager;
+
+        Game::Teardown(engine);
+    }
+
+    virtual void Logic(v2::Engine *engine, v2::GameCounter::TickUnit delta) override
+    {
+        timer += delta;
+
+        engine->GetOctree().CalculateVisibility(scene.ptr);
+        scene->Update(engine, delta);
+
+        sponza->SetLocalTranslation(Vector3(std::sin(timer * 5.0f) * 10.0f, 0, -std::sin(timer *0.05f) * 300.0f));
+        sponza->Update(engine);
+        
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
+        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
+        zombie->Update(engine);
+        
+        cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
+        cube_obj->Update(engine);
+    }
+
+    
+    InputManager *input_manager;
+
+    v2::Ref<v2::Scene> scene;
+    std::unique_ptr<v2::Node> sponza, zombie, cube_obj, monkey_obj;
+    double timer = 0.0;
+
+};
+
 int main()
 {
     using namespace hyperion::renderer;
     
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
-    
     
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
@@ -128,6 +209,8 @@ int main()
     SystemEvent event;
 
     v2::Engine engine(system, "My app");
+
+    MyGame my_game;
     
     
     std::vector<std::shared_ptr<Texture2D>> cubemap_faces;
@@ -181,39 +264,20 @@ int main()
     ImageView image_storage_view;
 #endif
 
-    auto *input_manager = new InputManager(window);
-    input_manager->SetWindow(window);
-
-    auto scene = engine.resources.scenes.Add(std::make_unique<v2::Scene>(
-        std::make_unique<FpsCamera>(
-            input_manager,
-            window,
-            1024,
-            768,
-            70.0f,
-            0.05f,
-            250.0f
-        )
-    ));
 
     engine.Initialize();
+
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.6f }));
     mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
     mat1.Init();
 
-    scene->SetEnvironmentTexture(0, cubemap.Acquire());
+    my_game.Init(&engine, window);
 
-    auto [zombie, sponza, cube_obj, monkey_obj] = engine.assets.Load<v2::Node>(
-        base_path + "/res/models/ogrexml/dragger_Body.mesh.xml",
-        base_path + "/res/models/material_sphere/material_sphere.obj", //San_Miguel/san-miguel-low-poly.obj", //,//"
-        base_path + "/res/models/cube.obj",
-        base_path + "/res/models/monkey/monkey.obj"
-    );
-
-    sponza->Translate({0, 0, 5});
-    sponza->Update(&engine);
+    my_game.scene->SetEnvironmentTexture(0, cubemap.Acquire());
+    my_game.sponza->Translate({0, 0, 5});
+    my_game.sponza->Update(&engine);
 
     Device *device = engine.GetInstance()->GetDevice();
 
@@ -260,13 +324,7 @@ int main()
 
     float timer = 0.0;
 
-    std::atomic_bool running{true};
-
     Frame *frame = nullptr;
-
-    uint64_t tick_now = SDL_GetPerformanceCounter();
-    uint64_t tick_last = 0;
-    double delta_time = 0;
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     /* Compute */
@@ -323,13 +381,13 @@ int main()
    // mat1.Init();
 
     //v2::Spatial *cube_spatial{};
-    auto cube_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
-    auto zombie_spatial = engine.resources.spatials.Acquire(zombie->GetChild(0)->GetSpatial());
+    auto cube_spatial = engine.resources.spatials.Acquire(my_game.cube_obj->GetChild(0)->GetSpatial());
+    auto zombie_spatial = engine.resources.spatials.Acquire(my_game.zombie->GetChild(0)->GetSpatial());
     
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
-            scene.Acquire(),
+            my_game.scene.Acquire(),
             engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass.Acquire(),
             v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
         );
@@ -346,7 +404,7 @@ int main()
             }
         };
 
-        find_spatials(sponza.get());
+        find_spatials(my_game.sponza.get());
         
         engine.AddGraphicsPipeline(std::move(pipeline));
     }
@@ -362,7 +420,7 @@ int main()
 
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             std::move(shader),
-            scene.Acquire(),
+            my_game.scene.Acquire(),
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass.Acquire(),
             v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX
         );
@@ -370,7 +428,7 @@ int main()
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
 
-        auto skybox_spatial = engine.resources.spatials.Acquire(cube_obj->GetChild(0)->GetSpatial());
+        auto skybox_spatial = engine.resources.spatials.Acquire(my_game.cube_obj->GetChild(0)->GetSpatial());
         skybox_spatial->SetMaterial(std::move(skybox_material));
         pipeline->AddSpatial(std::move(skybox_spatial));
         
@@ -380,7 +438,7 @@ int main()
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
-            scene.Acquire(),
+            my_game.scene.Acquire(),
             engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass.Acquire(),
             v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
         );
@@ -467,7 +525,7 @@ int main()
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
-    monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 5, 0 }});
+    my_game.monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 5, 0 }});
 
 
     v2::ProbeSystem probe_system({
@@ -478,13 +536,13 @@ int main()
     auto my_tlas = std::make_unique<v2::Tlas>();
 
     my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
-        engine.resources.meshes.Acquire(monkey_obj->GetChild(0)->GetSpatial()->GetMesh()),
-        monkey_obj->GetChild(0)->GetSpatial()->GetTransform()
+        engine.resources.meshes.Acquire(my_game.monkey_obj->GetChild(0)->GetSpatial()->GetMesh()),
+        my_game.monkey_obj->GetChild(0)->GetSpatial()->GetTransform()
     )));
 
     my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
-        engine.resources.meshes.Acquire(cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
-        cube_obj->GetChild(0)->GetSpatial()->GetTransform()
+        engine.resources.meshes.Acquire(my_game.cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
+        my_game.cube_obj->GetChild(0)->GetSpatial()->GetTransform()
     )));
 
     my_tlas->Init(&engine);
@@ -554,37 +612,15 @@ int main()
         .light_direction = Vector4(Vector3(0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
     });
 
-    std::thread game_thread([&]() {
-        while (running) {
-            tick_last = tick_now;
-            tick_now = SDL_GetPerformanceCounter();
-            delta_time = (double(tick_now)-double(tick_last)) / double(SDL_GetPerformanceFrequency());
-            timer += delta_time;
+    v2::GameThread game_thread;
+    game_thread.Start(&engine, &my_game);
 
-            scene->Update(&engine, delta_time);
-
-            engine.GetOctree().CalculateVisibility(scene.ptr);
-
-            sponza->SetLocalTranslation(Vector3(std::sin(timer * 5.0f) * 10.0f, 0, -std::sin(timer *0.05f) * 300.0f));
-            sponza->Update(&engine);
-            
-            zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
-            zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
-            zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
-            zombie->GetChild(0)->GetSpatial()->GetSkeleton()->SetShaderDataState(v2::ShaderDataState::DIRTY);
-            zombie->Update(&engine);
-            
-            cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
-            cube_obj->Update(&engine);
-        }
-    });
-
-    while (running) {
+    while (engine.m_running) {
         while (SystemSDL::PollEvent(&event)) {
-            input_manager->CheckEvent(&event);
+            my_game.input_manager->CheckEvent(&event);
             switch (event.GetType()) {
                 case SystemEventType::EVENT_SHUTDOWN:
-                    running = false;
+                    engine.m_running = false;
                     break;
                 default:
                     break;
@@ -711,9 +747,6 @@ int main()
 
     v2::PostEffect::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
 
-    zombie.reset();
-    cube_obj.reset();
-
 #if HYPERION_VK_TEST_IMAGE_STORE
     HYPERION_ASSERT_RESULT(image_storage_view.Destroy(device));
     HYPERION_ASSERT_RESULT(image_storage->Destroy(device));
@@ -742,7 +775,7 @@ int main()
     rt->Destroy(engine.GetDevice());
 #endif
 
-    game_thread.join();
+    game_thread.Join();
 
     engine.Destroy();
 
