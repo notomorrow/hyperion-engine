@@ -123,7 +123,7 @@ void PostEffect::CreatePipeline(Engine *engine)
         std::move(m_shader),
         nullptr,
         m_render_pass.Acquire(),
-        GraphicsPipeline::Bucket::BUCKET_PREPASS
+        Bucket::BUCKET_PREPASS
     );
 
     pipeline->AddFramebuffer(m_framebuffer.Acquire());

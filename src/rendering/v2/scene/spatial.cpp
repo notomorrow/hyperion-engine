@@ -7,11 +7,13 @@ namespace hyperion::v2 {
 Spatial::Spatial(
     Ref<Mesh> &&mesh,
     const MeshInputAttributeSet &attributes,
-    Ref<Material> &&material)
+    Ref<Material> &&material,
+    Bucket bucket)
     : EngineComponentBase(),
       m_mesh(std::move(mesh)),
       m_attributes(attributes),
       m_material(std::move(material)),
+      m_bucket(bucket),
       m_octree(nullptr),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
@@ -45,6 +47,10 @@ void Spatial::Init(Engine *engine)
 
         if (m_skeleton) {
             m_skeleton.Init();
+        }
+
+        if (m_pipelines.empty()) {
+            AddToOptimalPipeline(engine);
         }
 
         if (m_octree == nullptr) {
@@ -174,6 +180,11 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
     if (it != m_pipelines.end()) {
         m_pipelines.erase(it);
     }
+}
+
+void Spatial::AddToOptimalPipeline(Engine *engine)
+{
+
 }
 
 void Spatial::RemoveFromPipelines()

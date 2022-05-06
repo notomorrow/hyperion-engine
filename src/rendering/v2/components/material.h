@@ -249,6 +249,8 @@ public:
     typename std::enable_if_t<std::is_same_v<std::decay_t<decltype(T::values[0])>, float>, std::decay_t<T>>
     GetParameter(MaterialKey key) const
     {
+        static_assert(sizeof(T::values) <= sizeof(Parameter::values));
+
         T result;
         std::memcpy(&result.values[0], &m_parameters.Get(key).values.float_values[0], sizeof(float) * std::size(result.values));
         return result;

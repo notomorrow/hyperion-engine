@@ -84,6 +84,8 @@ public:
     static InternalFormat FormatChangeNumComponents(InternalFormat, uint8_t new_num_components);
 
     /* Get number of components (bytes-per-pixel) of a texture format */
+    static size_t NumComponents(InternalFormat format);
+    /* Get number of components (bytes-per-pixel) of a texture format */
     static size_t NumComponents(BaseFormat format);
 
     static bool IsDepthTexture(InternalFormat fmt);
@@ -121,6 +123,18 @@ public:
     Result Create(Device *device, Instance *instance, GPUMemory::ResourceState state);
 
     Result Destroy(Device *device);
+    
+    inline const unsigned char *GetBytes() const { return m_bytes; }
+
+    inline void CopyImageData(const unsigned char *data, size_t count, size_t offset = 0)
+    {
+        AssertThrow(m_bytes != nullptr);
+        AssertThrow(offset + count <= m_size);
+
+        std::memcpy(&m_bytes[offset], data, count);
+
+        m_assigned_image_data = true;
+    }
 
     bool IsDepthStencilImage() const;
 

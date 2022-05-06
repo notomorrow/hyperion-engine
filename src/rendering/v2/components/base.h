@@ -131,7 +131,7 @@ public:
     {
         const char *type_name = typeid(WrappedType).name();
 
-#if HYP_DEBUG_MODE
+#if 0 // HYP_DEBUG_MODE
         AssertThrowMsg(
             m_wrapped_destroyed,
             "Expected wrapepd object of type %s to have been destroyed before destructor",

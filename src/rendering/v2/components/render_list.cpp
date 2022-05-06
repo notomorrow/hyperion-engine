@@ -8,7 +8,7 @@ RenderList::RenderList()
 {
     for (size_t i = 0; i < m_buckets.size(); i++) {
         m_buckets[i] = {
-            .bucket = GraphicsPipeline::Bucket(i)
+            .bucket = Bucket(i)
         };
     }
 }
@@ -36,7 +36,7 @@ void RenderList::Destroy(Engine *engine)
     }
 }
 
-void RenderList::Bucket::AddFramebuffersToPipelines(Engine *engine)
+void RenderList::RenderListBucket::AddFramebuffersToPipelines(Engine *engine)
 {
     for (auto &pipeline : m_graphics_pipelines) {
         for (auto &framebuffer : framebuffers) {
@@ -45,13 +45,13 @@ void RenderList::Bucket::AddFramebuffersToPipelines(Engine *engine)
     }
 }
 
-void RenderList::Bucket::CreateRenderPass(Engine *engine)
+void RenderList::RenderListBucket::CreateRenderPass(Engine *engine)
 {
     AssertThrow(render_pass == nullptr);
 
     auto mode = renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER;
 
-    if (bucket == GraphicsPipeline::BUCKET_SWAPCHAIN) {
+    if (bucket == BUCKET_SWAPCHAIN) {
         mode = renderer::RenderPass::Mode::RENDER_PASS_INLINE;
     }
     
@@ -101,8 +101,8 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
         render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
     }
 
-    if (bucket == GraphicsPipeline::BUCKET_TRANSLUCENT) {
-        auto &forward_fbo = engine->GetRenderList()[GraphicsPipeline::Bucket::BUCKET_OPAQUE].framebuffers[0];
+    if (bucket == BUCKET_TRANSLUCENT) {
+        auto &forward_fbo = engine->GetRenderList()[BUCKET_OPAQUE].framebuffers[0];
         AssertThrow(forward_fbo != nullptr);
 
         renderer::AttachmentRef *depth_attachment;
@@ -144,7 +144,7 @@ void RenderList::Bucket::CreateRenderPass(Engine *engine)
     this->render_pass.Init();
 }
 
-void RenderList::Bucket::CreateFramebuffers(Engine *engine)
+void RenderList::RenderListBucket::CreateFramebuffers(Engine *engine)
 {
     AssertThrow(framebuffers.empty());
 
@@ -165,7 +165,7 @@ void RenderList::Bucket::CreateFramebuffers(Engine *engine)
     }
 }
 
-void RenderList::Bucket::Destroy(Engine *engine)
+void RenderList::RenderListBucket::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
 

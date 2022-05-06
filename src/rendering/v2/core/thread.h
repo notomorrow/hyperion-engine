@@ -18,7 +18,7 @@ public:
     Thread &operator=(Thread &&other) noexcept;
     virtual ~Thread();
 
-    bool Start(Args &&... args);
+    bool Start(Args ...args);
     bool Detach();
     bool Join();
     bool CanJoin() const;
@@ -70,13 +70,13 @@ Thread<Args...>::~Thread()
 }
 
 template <class ...Args>
-bool Thread<Args...>::Start(Args &&... args)
+bool Thread<Args...>::Start(Args ...args)
 {
     if (m_thread != nullptr) {
         return false;
     }
 
-    std::tuple<Args...> tuple_args(std::move(args)...);
+    std::tuple<Args...> tuple_args(std::forward<Args>(args)...);
 
     m_thread = new std::thread([&self = *this, tuple_args] {
         self(std::get<Args>(tuple_args)...);

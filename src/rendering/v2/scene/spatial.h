@@ -4,8 +4,8 @@
 #include "../components/base.h"
 #include "../components/material.h"
 #include "../components/mesh.h"
+#include "../components/render_bucket.h"
 #include "../animation/skeleton.h"
-#include "visibility_state.h"
 
 #include <rendering/backend/renderer_structs.h>
 
@@ -33,7 +33,8 @@ public:
     Spatial(
         Ref<Mesh> &&mesh,
         const MeshInputAttributeSet &attributes,
-        Ref<Material> &&material
+        Ref<Material> &&material,
+        Bucket bucket = Bucket::BUCKET_OPAQUE
     );
 
     Spatial(const Spatial &other) = delete;
@@ -53,6 +54,8 @@ public:
 
     Skeleton *GetSkeleton() const { return m_skeleton.ptr; }
     void SetSkeleton(Ref<Skeleton> &&skeleton);
+
+    Bucket GetBucket() const { return m_bucket; }
     
     const MeshInputAttributeSet &GetVertexAttributes() const { return m_attributes; }
 
@@ -71,11 +74,14 @@ private:
     
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
+
+    void AddToOptimalPipeline(Engine *engine);
     void RemoveFromPipelines();
     void RemoveFromPipeline(GraphicsPipeline *pipeline);
     
     void OnAddedToOctree(Octree *octree);
     void OnRemovedFromOctree(Octree *octree);
+
     void AddToOctree(Engine *engine);
     void RemoveFromOctree(Engine *engine);
 
@@ -86,6 +92,7 @@ private:
     BoundingBox m_world_aabb;
     Ref<Material> m_material;
     Ref<Skeleton> m_skeleton;
+    Bucket m_bucket;
 
     Octree *m_octree;
 

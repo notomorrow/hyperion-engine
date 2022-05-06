@@ -103,7 +103,7 @@ void Voxelizer::CreatePipeline(Engine *engine)
         std::move(m_shader),
         m_scene.Acquire(),
         m_render_pass.Acquire(),
-        GraphicsPipeline::Bucket::BUCKET_VOXELIZER
+        Bucket::BUCKET_VOXELIZER
     );
 
     pipeline->SetDepthWrite(false);
@@ -114,7 +114,7 @@ void Voxelizer::CreatePipeline(Engine *engine)
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
-    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_OPAQUE).m_graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderList().Get(Bucket::BUCKET_OPAQUE).m_graphics_pipelines) {
         for (auto &spatial : pipeline->GetSpatials()) {
             if (spatial != nullptr) {
                 m_pipeline->AddSpatial(spatial.Acquire());

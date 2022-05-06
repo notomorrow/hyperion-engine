@@ -63,9 +63,14 @@ Image::InternalFormat Image::FormatChangeNumComponents(InternalFormat fmt, uint8
 
     new_num_components = MathUtil::Clamp(new_num_components, uint8_t(1), uint8_t(4));
 
-    int current_num_components = int(NumComponents(GetBaseFormat(fmt)));
+    int current_num_components = int(NumComponents(fmt));
 
     return InternalFormat(int(fmt) + int(new_num_components) - current_num_components);
+}
+
+size_t Image::NumComponents(InternalFormat format)
+{
+    return NumComponents(GetBaseFormat(format));
 }
 
 size_t Image::NumComponents(BaseFormat format)
@@ -177,6 +182,8 @@ Image::Image(Extent3D extent,
 
     if (bytes != nullptr) {
         std::memcpy(m_bytes, bytes, m_size);
+    } else {
+        std::memset(m_bytes, 0, m_size);
     }
 }
 

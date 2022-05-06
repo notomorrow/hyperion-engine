@@ -112,10 +112,10 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
-#define HYPERION_VK_TEST_RAYTRACING 1
+#define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
-
+namespace hyperion::v2 {
 class MyGame : public v2::Game {
 
 public:
@@ -126,6 +126,8 @@ public:
 
     virtual void Init(v2::Engine *engine, SystemWindow *window) override
     {
+        using namespace v2;
+
         Game::Init(engine, window);
 
         input_manager = new InputManager(window);
@@ -157,6 +159,9 @@ public:
         sponza = std::move(loaded_assets[1]);
         cube_obj = std::move(loaded_assets[2]);
         monkey_obj = std::move(loaded_assets[3]);
+
+        
+
     }
 
     virtual void Teardown(v2::Engine *engine) override
@@ -194,6 +199,7 @@ public:
     double timer = 0.0;
 
 };
+} // namespace hyperion::v2
 
 int main()
 {
@@ -210,40 +216,18 @@ int main()
 
     v2::Engine engine(system, "My app");
 
-    MyGame my_game;
-    
-    
-    std::vector<std::shared_ptr<Texture2D>> cubemap_faces;
-    cubemap_faces.resize(6);
-
-    cubemap_faces[0] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/posx.jpg");
-    cubemap_faces[1] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/negx.jpg");
-    cubemap_faces[2] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/posy.jpg");
-    cubemap_faces[3] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/negy.jpg");
-    cubemap_faces[4] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/posz.jpg");
-    cubemap_faces[5] = AssetManager::GetInstance()->LoadFromFile<Texture2D>("textures/Lycksele3/negz.jpg");
-
-    size_t cubemap_face_bytesize = cubemap_faces[0]->GetWidth() * cubemap_faces[0]->GetHeight() * Texture::NumComponents(cubemap_faces[0]->GetFormat());
-
-    unsigned char *bytes = new unsigned char[cubemap_face_bytesize * 6];
-
-    for (int i = 0; i < cubemap_faces.size(); i++) {
-        std::memcpy(&bytes[i * cubemap_face_bytesize], cubemap_faces[i]->GetBytes(), cubemap_face_bytesize);
-    }
+    v2::MyGame my_game;
 
     auto cubemap = engine.resources.textures.Add(std::make_unique<v2::TextureCube>(
-        Extent2D{
-            uint32_t(cubemap_faces[0]->GetWidth()),
-            uint32_t(cubemap_faces[0]->GetHeight())
-        },
-        Image::InternalFormat(cubemap_faces[0]->GetInternalFormat()),
-        Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-        Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
-        bytes
+       engine.assets.Load<v2::Texture>(
+           base_path + "/res/textures/Lycksele3/posx.jpg",
+           base_path + "/res/textures/Lycksele3/negx.jpg",
+           base_path + "/res/textures/Lycksele3/posy.jpg",
+           base_path + "/res/textures/Lycksele3/negy.jpg",
+           base_path + "/res/textures/Lycksele3/posz.jpg",
+           base_path + "/res/textures/Lycksele3/negz.jpg"
+        )
     ));
-
-    delete[] bytes;
-
 
     auto texture = engine.resources.textures.Add(
         engine.assets.Load<v2::Texture>(base_path + "/res/textures/dirt.jpg")
@@ -266,7 +250,6 @@ int main()
 
 
     engine.Initialize();
-
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.6f }));
@@ -274,7 +257,7 @@ int main()
     mat1.Init();
 
     my_game.Init(&engine, window);
-
+    
     my_game.scene->SetEnvironmentTexture(0, cubemap.Acquire());
     my_game.sponza->Translate({0, 0, 5});
     my_game.sponza->Update(&engine);
@@ -363,8 +346,6 @@ int main()
 
         per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
     }
-
-    v2::Node new_root("root");
     
     auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
@@ -388,8 +369,8 @@ int main()
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
             my_game.scene.Acquire(),
-            engine.GetRenderList()[v2::GraphicsPipeline::BUCKET_OPAQUE].render_pass.Acquire(),
-            v2::GraphicsPipeline::Bucket::BUCKET_OPAQUE
+            engine.GetRenderList()[v2::BUCKET_OPAQUE].render_pass.Acquire(),
+            v2::Bucket::BUCKET_OPAQUE
         );
         
         pipeline->AddSpatial(cube_spatial.Acquire());
@@ -421,8 +402,8 @@ int main()
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             std::move(shader),
             my_game.scene.Acquire(),
-            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_SKYBOX).render_pass.Acquire(),
-            v2::GraphicsPipeline::Bucket::BUCKET_SKYBOX
+            engine.GetRenderList().Get(v2::BUCKET_SKYBOX).render_pass.Acquire(),
+            v2::Bucket::BUCKET_SKYBOX
         );
         pipeline->SetCullMode(CullMode::FRONT);
         pipeline->SetDepthTest(false);
@@ -439,8 +420,8 @@ int main()
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             mirror_shader.Acquire(),
             my_game.scene.Acquire(),
-            engine.GetRenderList().Get(v2::GraphicsPipeline::BUCKET_TRANSLUCENT).render_pass.Acquire(),
-            v2::GraphicsPipeline::Bucket::BUCKET_TRANSLUCENT
+            engine.GetRenderList().Get(v2::BUCKET_TRANSLUCENT).render_pass.Acquire(),
+            v2::Bucket::BUCKET_TRANSLUCENT
         );
         pipeline->SetBlendEnabled(true);
 
@@ -555,7 +536,7 @@ int main()
     });
 
     v2::GameThread game_thread;
-    game_thread.Start(&engine, &my_game);
+    game_thread.Start(&engine, &my_game, window);
 
     while (engine.m_running) {
         while (SystemSDL::PollEvent(&event)) {

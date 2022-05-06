@@ -6,6 +6,7 @@ namespace hyperion::v2 {
 Scene::Scene(std::unique_ptr<Camera> &&camera)
     : EngineComponentBase(),
       m_camera(std::move(camera)),
+      m_root_node(std::make_unique<Node>("root")), 
       m_shader_data_state(ShaderDataState::DIRTY)
 {
 }
@@ -45,6 +46,8 @@ void Scene::Update(Engine *engine, double delta_time)
 
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
+
+    m_root_node->Update(engine);
 
     if (m_shader_data_state.IsDirty()) {
         UpdateShaderData(engine);

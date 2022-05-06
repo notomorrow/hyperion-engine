@@ -10,15 +10,19 @@ GameThread::GameThread()
 {
 }
 
-void GameThread::operator()(Engine *engine, Game *game)
+void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
 {
     GameCounter counter;
+
+    //game->Init(engine, window);
 
     while (engine->m_running) {
         counter.NextTick();
 
         game->Logic(engine, counter.delta);
     }
+
+    game->Teardown(engine);
 }
 
 } // namespace hyperion::v2

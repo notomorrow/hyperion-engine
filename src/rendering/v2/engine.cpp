@@ -174,7 +174,7 @@ void Engine::PrepareSwapchain()
                 shader.Acquire(),
                 nullptr,
                 render_pass.Acquire(),
-                GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN
+                Bucket::BUCKET_SWAPCHAIN
             );
         }
 

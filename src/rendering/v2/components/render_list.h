@@ -10,8 +10,8 @@ class Engine;
 
 class RenderList {
 public:
-    struct Bucket {
-        GraphicsPipeline::Bucket bucket;
+    struct RenderListBucket {
+        Bucket bucket;
         Ref<RenderPass> render_pass;
         std::vector<Ref<Framebuffer>> framebuffers;
         std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
@@ -40,15 +40,15 @@ public:
     inline const auto &GetBuckets() const
         { return m_buckets; }
 
-    inline Bucket &Get(GraphicsPipeline::Bucket bucket)
+    inline RenderListBucket &Get(Bucket bucket)
         { return m_buckets[int(bucket)]; }
-    inline const Bucket &Get(GraphicsPipeline::Bucket bucket) const
+    inline const RenderListBucket &Get(Bucket bucket) const
         { return m_buckets[int(bucket)]; }
 
-    inline Bucket &operator[](GraphicsPipeline::Bucket bucket)
+    inline RenderListBucket &operator[](Bucket bucket)
         { return Get(bucket); }
 
-    inline const Bucket &operator[](GraphicsPipeline::Bucket bucket) const
+    inline const RenderListBucket &operator[](Bucket bucket) const
         { return Get(bucket); }
 
     void AddFramebuffersToPipelines(Engine *engine);
@@ -56,7 +56,7 @@ public:
     void Destroy(Engine *engine);
 
 private:
-    std::array<Bucket, GraphicsPipeline::BUCKET_MAX> m_buckets;
+    std::array<RenderListBucket, Bucket::BUCKET_MAX> m_buckets;
 };
 
 } // namespace hyperion::v2

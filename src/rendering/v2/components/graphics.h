@@ -8,6 +8,7 @@
 #include "framebuffer.h"
 #include "render_pass.h"
 #include "containers.h"
+#include "render_bucket.h"
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
 
@@ -34,18 +35,6 @@ class GraphicsPipeline : public EngineComponent<renderer::GraphicsPipeline> {
     friend class Spatial;
 
 public:
-    enum Bucket {
-        BUCKET_SWAPCHAIN = 0, /* Main swapchain */
-        BUCKET_PREPASS,       /* Pre-pass / buffer items */
-        BUCKET_VOXELIZER,
-        /* === Scene objects === */
-        BUCKET_OPAQUE,        /* Opaque items */
-        BUCKET_TRANSLUCENT,   /* Transparent - rendering on top of opaque objects */
-        BUCKET_PARTICLE,      /* Specialized particle bucket */
-        BUCKET_SKYBOX,        /* Rendered without depth testing/writing, and rendered first */
-        BUCKET_MAX
-    };
-
     GraphicsPipeline(Ref<Shader> &&shader,
         Ref<Scene> &&scene,
         Ref<RenderPass> &&render_pass,
