@@ -431,8 +431,6 @@ void Engine::ResetRenderBindings()
 
 void Engine::UpdateRendererBuffersAndDescriptors(uint32_t frame_index)
 {
-    std::lock_guard guard(render_mutex);
-
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);

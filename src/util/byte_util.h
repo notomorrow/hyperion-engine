@@ -16,10 +16,10 @@ public:
             uint32_t result;
         };
 
-        bytes[0] = MathUtil::Round(vec.values[0], 0.0f, 1.0f) * 255.0f;
-        bytes[1] = MathUtil::Round(vec.values[1], 0.0f, 1.0f) * 255.0f;
-        bytes[2] = MathUtil::Round(vec.values[2], 0.0f, 1.0f) * 255.0f;
-        bytes[3] = MathUtil::Round(vec.values[3], 0.0f, 1.0f) * 255.0f;
+        bytes[0] = MathUtil::Round<float, uint8_t>(MathUtil::Clamp(vec.values[0], 0.0f, 1.0f) * 255.0f);
+        bytes[1] = MathUtil::Round<float, uint8_t>(MathUtil::Clamp(vec.values[1], 0.0f, 1.0f) * 255.0f);
+        bytes[2] = MathUtil::Round<float, uint8_t>(MathUtil::Clamp(vec.values[2], 0.0f, 1.0f) * 255.0f);
+        bytes[3] = MathUtil::Round<float, uint8_t>(MathUtil::Clamp(vec.values[3], 0.0f, 1.0f) * 255.0f);
 
         return result;
     }

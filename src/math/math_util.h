@@ -185,8 +185,8 @@ public:
     template <typename T>
     static constexpr HYP_ENABLE_IF(std::is_floating_point_v) Abs(T a) { return std::fabs(a); }
 
-    template <typename T>
-    static T Round(T a) { return std::round(a); }
+    template <typename T, typename U = T>
+    static U Round(T a) { return U(std::round(a)); }
 
     template <typename T, typename U = T, typename V = U>
     static constexpr bool InRange(T value, const std::pair<U, V> &range)

@@ -144,8 +144,7 @@ public:
     ShaderManager           shader_manager;
 
     RenderBindings          render_bindings;
-
-    std::mutex render_mutex;
+    
     std::atomic_bool m_running{false};
 
 private:

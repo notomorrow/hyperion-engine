@@ -5,6 +5,7 @@
 #include "../components/base.h"
 #include "../components/texture.h"
 #include "../components/shader.h"
+#include "../components/light.h"
 #include <rendering/camera/camera.h>
 
 namespace hyperion::v2 {
@@ -22,6 +23,13 @@ public:
     void SetCamera(std::unique_ptr<Camera> &&camera) { m_camera = std::move(camera); }
 
     Node *GetRootNode() const { return m_root_node.get(); }
+    
+    Ref<Light> &GetLight(size_t index)               { return m_lights[index]; }
+    const Ref<Light> &GetLight(size_t index) const   { return m_lights[index]; }
+    void AddLight(Ref<Light> &&light);
+
+    size_t NumLights() const                         { return m_lights.size(); }
+    const std::vector<Ref<Light>> &GetLights() const { return m_lights; }
 
     Texture *GetEnvironmentTexture(uint32_t index) const
         { return m_environment_textures[index].ptr; }
@@ -38,6 +46,7 @@ private:
 
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<Node>   m_root_node;
+    std::vector<Ref<Light>> m_lights;
     std::array<Ref<Texture>, max_environment_textures> m_environment_textures;
     mutable ShaderDataState m_shader_data_state;
 };

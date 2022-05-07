@@ -53,8 +53,7 @@ void Skeleton::UpdateShaderData(Engine *engine) const
     const size_t num_bones = MathUtil::Min(SkeletonShaderData::max_bones, NumBones());
 
     if (num_bones != 0) {
-        std::lock_guard guard(engine->render_mutex);
-        SkeletonShaderData &shader_data = engine->shader_globals->skeletons.At(m_id.value - 1);
+        SkeletonShaderData &shader_data = engine->shader_globals->skeletons.Get(m_id.value - 1);
 
         shader_data.bones[0] = m_root_bone->GetBoneMatrix();
 
@@ -67,6 +66,8 @@ void Skeleton::UpdateShaderData(Engine *engine) const
                 shader_data.bones[i] = static_cast<Bone *>(descendent)->GetBoneMatrix();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
             }
         }
+
+        engine->shader_globals->skeletons.Set(m_id.value - 1, shader_data);
     }
     
     m_shader_data_state = ShaderDataState::CLEAN;

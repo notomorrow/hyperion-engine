@@ -1,5 +1,5 @@
-#ifndef HYPERION_UTIL_HEAP_ARRAY_H
-#define HYPERION_UTIL_HEAP_ARRAY_H
+#ifndef HYPERION_V2_LIB_HEAP_ARRAY_H
+#define HYPERION_V2_LIB_HEAP_ARRAY_H
 
 #include <cstring>
 
@@ -53,15 +53,24 @@ public:
         }
     }
 
-    inline T &operator[](size_t index) { return ptr[index]; }
+    inline T &operator[](size_t index)             { return ptr[index]; }
     inline const T &operator[](size_t index) const { return ptr[index]; }
 
     inline T *Data() { return ptr; }
     inline const T *Data() const { return ptr; }
 
-    inline size_t Size() const { return ArraySize; }
+    constexpr size_t Size() const     { return ArraySize; }
+    constexpr size_t ByteSize() const { return ArraySize * sizeof(T); }
 
-    inline size_t ByteSize() const { return ArraySize * sizeof(T); }
+    void MemCpy(const void *src, size_t count)
+    {
+        std::memcpy(ptr, src, count);
+    }
+
+    void MemCpy(const void *src, size_t count, size_t dst_offset)
+    {
+        std::memcpy((void *)intptr_t(ptr + dst_offset), src, count);
+    }
 
     iterator begin() const { return ptr; }
     iterator end() const { return &ptr[ArraySize - 1]; }

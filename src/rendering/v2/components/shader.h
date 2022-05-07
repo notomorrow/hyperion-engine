@@ -2,6 +2,7 @@
 #define HYPERION_V2_SHADER_H
 
 #include "base.h"
+#include "atomics.h"
 #include "bindless.h"
 
 #include <rendering/backend/renderer_shader.h>
@@ -14,6 +15,7 @@
 #include <rendering/v2/core/lib/range.h>
 
 #include <memory>
+#include <mutex>
 
 namespace hyperion::v2 {
 
@@ -153,17 +155,15 @@ static_assert(sizeof(LightShaderData) == 32);
 
 template <class StructType>
 class BufferRangeUpdater {
-protected:
+public:
     template <class BufferContainer>
     void PerformUpdate(Device *device, BufferContainer &buffer_container, size_t buffer_index, StructType *ptr)
     {
         auto &dirty = m_dirty[buffer_index];
 
-        if (dirty.GetEnd() == 0) {
+        if (dirty.GetEnd() <= dirty.GetStart()) {
             return;
         }
-
-        AssertThrow(dirty.GetEnd() > dirty.GetStart());
 
         buffer_container[buffer_index]->Copy(
             device,
@@ -172,35 +172,36 @@ protected:
             &ptr[dirty.GetStart()]
         );
 
-        dirty = {0, 0};
+        dirty.SetStart(UINT32_MAX);
+        dirty.SetEnd(0);
+
+        //dirty = {0, 0};
     }
 
     void MarkDirty(size_t index)
     {
         for (size_t i = 0; i < m_dirty.size(); i++) {
-            m_dirty[i] = {
-                MathUtil::Min(m_dirty[i].GetStart(), index),
-                MathUtil::Max(m_dirty[i].GetEnd(), index + 1)
-            };
+            m_dirty[i].SetStart(MathUtil::Min(m_dirty[i].GetStart(), index));
+            m_dirty[i].SetEnd(MathUtil::Max(m_dirty[i].GetEnd(), index + 1));
         }
     }
 
-    std::vector<Range<size_t>> m_dirty;
+protected:
+    std::vector<AtomicRange<size_t>> m_dirty;
 };
 
 template <class Buffer, class StructType, size_t Size>
-class ShaderData : public BufferRangeUpdater<StructType> {
-    using BufferRange = BufferRangeUpdater<StructType>;
-
+class ShaderData {
 public:
     ShaderData(size_t num_buffers)
     {
         m_buffers.resize(num_buffers);
-        BufferRange::m_dirty.resize(num_buffers);
+//        BufferRange::m_dirty.resize(num_buffers);
 
         for (size_t i = 0; i < num_buffers; i++) {
             m_buffers[i] = std::make_unique<Buffer>();
-            BufferRange::m_dirty[i] = Range<size_t>(0, Size);
+            //BufferRange::m_dirty[i].SetStart(0);// = Range<size_t>(0, Size);
+            //BufferRange::m_dirty[i].SetEnd(0);
         }
     }
 
@@ -213,7 +214,7 @@ public:
     void Create(Device *device)
     {
         for (size_t i = 0; i < m_buffers.size(); i++) {
-            m_buffers[i]->Create(device, m_objects.ByteSize());
+            m_buffers[i]->Create(device, sizeof(StructType) * Size);
         }
     }
 
@@ -226,30 +227,93 @@ public:
 
     void UpdateBuffer(Device *device, size_t buffer_index)
     {
-        BufferRange::PerformUpdate(device, m_buffers, buffer_index, m_objects.Data());
-    }
+        static constexpr uint32_t max_spins = 2;
 
-    void Set(size_t index, StructType &&value)
-    {
-        AssertThrowMsg(index < m_objects.Size(), "Cannot set shader data out of bounds");
+        for (uint32_t spin_count = 0; spin_count < max_spins; spin_count++) {
+            auto &current = m_staging_objects_pool.Current();
 
-        m_objects[index] = std::move(value);
+            if (!current.locked) {
+                current.PerformUpdate(device, m_buffers, buffer_index, current.objects.Data());
+                
+                m_staging_objects_pool.Next();
 
-        BufferRange::MarkDirty(index);
-    }
+                return;
+            }
 
-    StructType &At(size_t index)
-    {
-        AssertThrowMsg(index < m_objects.Size(), "Cannot set shader data out of bounds");
+            m_staging_objects_pool.Next();
+        }
         
-        BufferRange::MarkDirty(index);
+        DebugLog(
+            LogType::Warn,
+            "Buffer update spinlock exceeded maximum of %lu -- for %s\n",
+            max_spins,
+            typeid(StructType).name()
+        );
+    }
 
-        return m_objects[index];
+    void Set(size_t index, const StructType &value)
+    {
+        m_staging_objects_pool.Set(index, value);
+    }
+
+    /*! \brief Get a reference to an object in the _current_ staging buffer,
+     * use when it is preferable to fetch the object, update the struct, and then
+     * call Set. This is usually when the object would have a large stack size
+     */
+    StructType &Get(size_t index)
+    {
+        return m_staging_objects_pool.Current().objects[index];
     }
     
 private:
+    struct StagingObjectsPool {
+        static constexpr uint32_t num_staging_buffers = 2;
+
+        struct StagingObjects : BufferRangeUpdater<StructType> {
+            std::atomic_bool            locked{false};
+            HeapArray<StructType, Size> objects;
+
+            StagingObjects()
+            {
+                this->m_dirty.resize(2);
+
+                for (auto &dirty : this->m_dirty) {
+                    dirty.SetStart(0);
+                    dirty.SetEnd(Size);
+                }
+            }
+        } buffers[num_staging_buffers];
+        
+        std::atomic_uint32_t current_index{0};
+
+        StagingObjects &Current()
+        {
+            return buffers[current_index];
+        }
+
+        void Next()
+        {
+            current_index = (current_index + 1) % num_staging_buffers;
+        }
+
+        void Set(size_t index, const StructType &value)
+        {
+            AssertThrowMsg(index < buffers[0].objects.Size(), "Cannot set shader data out of bounds");
+            
+            for (uint32_t i = 0; i < num_staging_buffers; i++) {
+                const auto staging_object_index = (current_index + i + 1) % num_staging_buffers;
+                auto &staging_object = buffers[staging_object_index];
+
+                staging_object.locked = true;
+                staging_object.objects[index] = value;
+                staging_object.MarkDirty(index);
+                staging_object.locked = false;
+            }
+        }
+    };
+
     std::vector<std::unique_ptr<Buffer>> m_buffers;
-    HeapArray<StructType, Size> m_objects;
+    StagingObjectsPool m_staging_objects_pool;
 };
 
 struct ShaderGlobals {
@@ -277,6 +341,9 @@ struct ShaderGlobals {
           skeletons(num_buffers)
     {
     }
+
+    ShaderGlobals(const ShaderGlobals &other) = delete;
+    ShaderGlobals &operator=(const ShaderGlobals &other) = delete;
 
     ShaderData<StorageBuffer, SceneShaderData, max_scenes>        scenes;
     ShaderData<StorageBuffer, LightShaderData, max_lights>        lights;

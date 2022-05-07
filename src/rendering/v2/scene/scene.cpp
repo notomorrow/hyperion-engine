@@ -31,6 +31,12 @@ void Scene::Init(Engine *engine)
             }
         }
 
+        for (auto &light : m_lights) {
+            if (light != nullptr) {
+                light.Init();
+            }
+        }
+
         UpdateShaderData(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](Engine *engine) {
@@ -56,7 +62,6 @@ void Scene::Update(Engine *engine, double delta_time)
 
 void Scene::UpdateShaderData(Engine *engine) const
 {
-    std::lock_guard guard(engine->render_mutex);
     SceneShaderData shader_data{
         .aabb_max = aabb.max.ToVector4(),
         .aabb_min = aabb.min.ToVector4()
@@ -82,9 +87,18 @@ void Scene::UpdateShaderData(Engine *engine) const
         }
     }
     
-    engine->shader_globals->scenes.Set(m_id.value - 1, std::move(shader_data));
+    engine->shader_globals->scenes.Set(m_id.value - 1, shader_data);
 
     m_shader_data_state = ShaderDataState::CLEAN;
+}
+
+void Scene::AddLight(Ref<Light> &&light)
+{
+    if (light != nullptr && IsInit()) {
+        light.Init();
+    }
+
+    m_lights.push_back(std::move(light));
 }
 
 void Scene::SetEnvironmentTexture(uint32_t index, Ref<Texture> &&texture)

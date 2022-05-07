@@ -9,6 +9,7 @@
 #include "material.h"
 #include "texture.h"
 #include "mesh.h"
+#include "light.h"
 #include "../animation/skeleton.h"
 #include "../scene/scene.h"
 #include "../rt/blas.h"
@@ -29,6 +30,7 @@ struct Resources {
     RefCounter<Framebuffer, Callbacks>      framebuffers;
     RefCounter<RenderPass,  Callbacks>      render_passes;
     RefCounter<Material,    Callbacks>      materials;
+    RefCounter<Light,       Callbacks>      lights;
 
     RefCounter<GraphicsPipeline, Callbacks> graphics_pipelines;
     ObjectHolder<ComputePipeline>           compute_pipelines{.defer_create = true};

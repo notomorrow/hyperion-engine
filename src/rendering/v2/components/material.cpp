@@ -56,8 +56,6 @@ void Material::Update(Engine *engine)
 
 void Material::UpdateShaderData(Engine *engine) const
 {
-    std::lock_guard guard(engine->render_mutex);
-
     MaterialShaderData shader_data{
         .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
         .metalness       = GetParameter<float>(MATERIAL_KEY_METALNESS),
@@ -109,7 +107,7 @@ void Material::UpdateShaderData(Engine *engine) const
         }
     }
 
-    engine->shader_globals->materials.Set(m_id.value - 1, std::move(shader_data));
+    engine->shader_globals->materials.Set(m_id.value - 1, shader_data);
 
     m_shader_data_state = ShaderDataState::CLEAN;
 }

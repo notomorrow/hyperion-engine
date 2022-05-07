@@ -97,8 +97,6 @@ void Spatial::Update(Engine *engine)
 
 void Spatial::UpdateShaderData(Engine *engine) const
 {
-    std::lock_guard guard(engine->render_mutex);
-
     engine->shader_globals->objects.Set(
         m_id.value - 1,
         {

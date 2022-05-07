@@ -631,7 +631,7 @@ struct ObjectHolder {
         return const_cast<ObjectHolder<T> *>(this)->Get(id);
     }
 
-    constexpr T *operator[](typename T::ID id) { return Get(id); }
+    constexpr T *operator[](typename T::ID id)             { return Get(id); }
     constexpr const T *operator[](typename T::ID id) const { return Get(id); }
 
     template <class LambdaFunction>
