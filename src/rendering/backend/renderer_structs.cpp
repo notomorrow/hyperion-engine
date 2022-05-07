@@ -4,15 +4,29 @@
 
 namespace hyperion::renderer {
 
-const decltype(MeshInputAttribute::mapping) MeshInputAttribute::mapping({
-    std::make_pair(MESH_INPUT_ATTRIBUTE_POSITION,     MeshInputAttribute{.location = 0, .binding = 0, .size = 3 * sizeof(float)}),
-    std::make_pair(MESH_INPUT_ATTRIBUTE_NORMAL,       MeshInputAttribute{.location = 1, .binding = 0, .size = 3 * sizeof(float)}),
-    std::make_pair(MESH_INPUT_ATTRIBUTE_TEXCOORD0,    MeshInputAttribute{.location = 2, .binding = 0, .size = 2 * sizeof(float)}),
-    std::make_pair(MESH_INPUT_ATTRIBUTE_TEXCOORD1,    MeshInputAttribute{.location = 3, .binding = 0, .size = 2 * sizeof(float)}),
-    std::make_pair(MESH_INPUT_ATTRIBUTE_TANGENT,      MeshInputAttribute{.location = 4, .binding = 0, .size = 3 * sizeof(float)}),
-    std::make_pair(MESH_INPUT_ATTRIBUTE_BITANGENT,    MeshInputAttribute{.location = 5, .binding = 0, .size = 3 * sizeof(float)}),
-    std::make_pair(MESH_INPUT_ATTRIBUTE_BONE_INDICES, MeshInputAttribute{.location = 6, .binding = 0, .size = 4 * sizeof(float)}),
-    std::make_pair(MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS, MeshInputAttribute{.location = 7, .binding = 0, .size = 4 * sizeof(float)})
+const VertexAttributeSet VertexAttributeSet::static_mesh = {
+    VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION
+    | VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
+    | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
+    | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
+    | VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
+    | VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
+};
+
+const VertexAttributeSet VertexAttributeSet::skeleton = {
+    VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS
+    | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES
+};
+
+const decltype(VertexAttribute::mapping) VertexAttribute::mapping({
+    std::make_pair(MESH_INPUT_ATTRIBUTE_POSITION,     VertexAttribute{.location = 0, .binding = 0, .size = 3 * sizeof(float)}),
+    std::make_pair(MESH_INPUT_ATTRIBUTE_NORMAL,       VertexAttribute{.location = 1, .binding = 0, .size = 3 * sizeof(float)}),
+    std::make_pair(MESH_INPUT_ATTRIBUTE_TEXCOORD0,    VertexAttribute{.location = 2, .binding = 0, .size = 2 * sizeof(float)}),
+    std::make_pair(MESH_INPUT_ATTRIBUTE_TEXCOORD1,    VertexAttribute{.location = 3, .binding = 0, .size = 2 * sizeof(float)}),
+    std::make_pair(MESH_INPUT_ATTRIBUTE_TANGENT,      VertexAttribute{.location = 4, .binding = 0, .size = 3 * sizeof(float)}),
+    std::make_pair(MESH_INPUT_ATTRIBUTE_BITANGENT,    VertexAttribute{.location = 5, .binding = 0, .size = 3 * sizeof(float)}),
+    std::make_pair(MESH_INPUT_ATTRIBUTE_BONE_INDICES, VertexAttribute{.location = 6, .binding = 0, .size = 4 * sizeof(float)}),
+    std::make_pair(MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS, VertexAttribute{.location = 7, .binding = 0, .size = 4 * sizeof(float)})
 });
 
 } // hyperion::renderer

@@ -78,7 +78,7 @@ struct MeshBindingDescription {
     }
 };
 
-struct MeshInputAttribute {
+struct VertexAttribute {
     enum Type {
         MESH_INPUT_ATTRIBUTE_UNDEFINED    = 0,
         MESH_INPUT_ATTRIBUTE_POSITION     = 1,
@@ -91,14 +91,14 @@ struct MeshInputAttribute {
         MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS = 128,
     };
 
-    static const EnumOptions<Type, MeshInputAttribute, 16> mapping;
+    static const EnumOptions<Type, VertexAttribute, 16> mapping;
 
     uint32_t    location;
     uint32_t    binding;
     // total size -- num elements * sizeof(float)
     size_t      size;
 
-    inline bool operator<(const MeshInputAttribute &other) const
+    inline bool operator<(const VertexAttribute &other) const
         { return location < other.location; }
 
     inline VkFormat GetFormat() const
@@ -132,34 +132,45 @@ struct MeshInputAttribute {
     }
 };
 
-struct MeshInputAttributeSet {
+struct VertexAttributeSet {
+    static const VertexAttributeSet static_mesh,
+                                       skeleton;
+
     uint64_t flag_mask;
 
-    MeshInputAttributeSet()
+    VertexAttributeSet()
         : flag_mask(0) {}
-    MeshInputAttributeSet(uint64_t flag_mask)
+    VertexAttributeSet(uint64_t flag_mask)
         : flag_mask(flag_mask) {}
-    MeshInputAttributeSet(const MeshInputAttributeSet &other)
+    VertexAttributeSet(const VertexAttributeSet &other)
         : flag_mask(other.flag_mask) {}
 
-    MeshInputAttributeSet &operator=(const MeshInputAttributeSet &other)
+    VertexAttributeSet &operator=(const VertexAttributeSet &other)
     {
         flag_mask = other.flag_mask;
 
         return *this;
     }
 
-    ~MeshInputAttributeSet() = default;
+    ~VertexAttributeSet() = default;
 
     explicit operator bool() const { return bool(flag_mask); }
 
-    MeshInputAttributeSet operator~() const { return ~flag_mask; }
-    MeshInputAttributeSet operator&(uint64_t flags) const { return {flag_mask & flags}; }
-    MeshInputAttributeSet &operator&=(uint64_t flags) { flag_mask &= flags; return *this; }
-    MeshInputAttributeSet operator|(uint64_t flags) const { return {flag_mask | flags}; }
-    MeshInputAttributeSet &operator|=(uint64_t flags) { flag_mask |= flags; return *this; }
+    bool operator==(const VertexAttributeSet &other) const { return flag_mask == other.flag_mask; }
 
-    bool Has(MeshInputAttribute::Type type) const { return bool(operator&(uint64_t(type))); }
+    VertexAttributeSet operator~() const { return ~flag_mask; }
+
+    VertexAttributeSet operator&(const VertexAttributeSet &other) const { return {flag_mask & other.flag_mask}; }
+    VertexAttributeSet &operator&=(const VertexAttributeSet &other)     { flag_mask &= other.flag_mask; return *this; }
+    VertexAttributeSet operator&(uint64_t flags) const { return {flag_mask & flags}; }
+    VertexAttributeSet &operator&=(uint64_t flags)     { flag_mask &= flags; return *this; }
+    
+    VertexAttributeSet operator|(const VertexAttributeSet &other) const { return {flag_mask | other.flag_mask}; }
+    VertexAttributeSet &operator|=(const VertexAttributeSet &other)     { flag_mask |= other.flag_mask; return *this; }
+    VertexAttributeSet operator|(uint64_t flags) const { return {flag_mask | flags}; }
+    VertexAttributeSet &operator|=(uint64_t flags)     { flag_mask |= flags; return *this; }
+
+    bool Has(VertexAttribute::Type type) const { return bool(operator&(uint64_t(type))); }
 
     void Set(uint64_t flags, bool enable = true)
     {
@@ -170,26 +181,26 @@ struct MeshInputAttributeSet {
         }
     }
 
-    void Set(MeshInputAttribute::Type type, bool enable = true)
+    void Set(VertexAttribute::Type type, bool enable = true)
     {
         Set(uint64_t(type), enable);
     }
 
-    void Merge(const MeshInputAttributeSet &other)
+    void Merge(const VertexAttributeSet &other)
     {
         flag_mask |= other.flag_mask;
     }
 
-    std::vector<MeshInputAttribute> BuildAttributes() const
+    std::vector<VertexAttribute> BuildAttributes() const
     {
-        std::vector<MeshInputAttribute> attributes;
-        attributes.reserve(MeshInputAttribute::mapping.Size());
+        std::vector<VertexAttribute> attributes;
+        attributes.reserve(VertexAttribute::mapping.Size());
 
-        for (size_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
-            const uint64_t iter_flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
+        for (size_t i = 0; i < VertexAttribute::mapping.Size(); i++) {
+            const uint64_t iter_flag_mask = VertexAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
 
             if (flag_mask & iter_flag_mask) {
-                attributes.push_back(MeshInputAttribute::mapping[MeshInputAttribute::Type(iter_flag_mask)]);
+                attributes.push_back(VertexAttribute::mapping[VertexAttribute::Type(iter_flag_mask)]);
             }
         }
 
@@ -200,11 +211,11 @@ struct MeshInputAttributeSet {
     {
         size_t size = 0;
 
-        for (size_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
-            const uint64_t iter_flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
+        for (size_t i = 0; i < VertexAttribute::mapping.Size(); i++) {
+            const uint64_t iter_flag_mask = VertexAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
 
             if (flag_mask & iter_flag_mask) {
-                size += MeshInputAttribute::mapping[MeshInputAttribute::Type(iter_flag_mask)].size;
+                size += VertexAttribute::mapping[VertexAttribute::Type(iter_flag_mask)].size;
             }
         }
 

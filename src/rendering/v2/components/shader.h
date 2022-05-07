@@ -290,6 +290,24 @@ private:
     std::vector<SubShader> m_sub_shaders;
 };
 
+class ShaderManager {
+public:
+    enum class Key {
+        BASIC_FORWARD,
+        BASIC_SKYBOX
+    };
+
+    void SetShader(Key key, Ref<Shader> &&shader)
+    {
+        m_shaders[key] = std::move(shader);
+    }
+
+    Ref<Shader> &GetShader(Key key) { return m_shaders[key]; }
+
+private:
+    std::unordered_map<Key, Ref<Shader>> m_shaders;
+};
+
 } // namespace hyperion::v2
 
 #endif // !HYPERION_V2_SHADER_H

@@ -101,8 +101,8 @@ void Voxelizer::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
-        m_scene.Acquire(),
         m_render_pass.Acquire(),
+        VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
         Bucket::BUCKET_VOXELIZER
     );
 
@@ -114,7 +114,7 @@ void Voxelizer::CreatePipeline(Engine *engine)
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
-    for (auto &pipeline : engine->GetRenderList().Get(Bucket::BUCKET_OPAQUE).m_graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
         for (auto &spatial : pipeline->GetSpatials()) {
             if (spatial != nullptr) {
                 m_pipeline->AddSpatial(spatial.Acquire());
@@ -218,6 +218,8 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
 
     /* count number of fragments */
     commands.Push([this, engine, count_mode](CommandBuffer *command_buffer) {
+        engine->render_bindings.BindScene(m_scene);
+
         m_pipeline->Get().push_constants.voxelizer_data = {
             .grid_size = voxel_map_size,
             .count_mode = count_mode
@@ -226,6 +228,8 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
         m_framebuffer->BeginCapture(command_buffer);
         m_pipeline->Render(engine, command_buffer, 0);
         m_framebuffer->EndCapture(command_buffer);
+
+        engine->render_bindings.UnbindScene();
 
         HYPERION_RETURN_OK;
     });

@@ -384,7 +384,7 @@ void Octree::CalculateVisibility(Scene *scene)
     if (scene->GetId().value - 1 >= VisibilityState::max_scenes) {
         DebugLog(
             LogType::Error,
-            "Scene #%lu out of bounds of octree scene visibility array. Cannot update visibility state.\n",
+            "Scene #%lu out of bounds of octree scene visibility bitset. Cannot update visibility state.\n",
             scene->GetId().value
         );
 

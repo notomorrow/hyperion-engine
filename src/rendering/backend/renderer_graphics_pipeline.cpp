@@ -49,7 +49,7 @@ void GraphicsPipeline::UpdateDynamicStates(VkCommandBuffer cmd)
     vkCmdSetScissor(cmd, 0, 1, &this->scissor);
 }
 
-std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttributes(const MeshInputAttributeSet &attribute_set)
+std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttributes(const VertexAttributeSet &attribute_set)
 {
     std::unordered_map<uint32_t, uint32_t> binding_sizes{};
 

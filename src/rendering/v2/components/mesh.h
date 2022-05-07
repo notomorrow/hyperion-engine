@@ -17,8 +17,8 @@
 
 namespace hyperion::v2 {
 
-using renderer::MeshInputAttribute;
-using renderer::MeshInputAttributeSet;
+using renderer::VertexAttribute;
+using renderer::VertexAttributeSet;
 using renderer::CommandBuffer;
 using renderer::Device;
 using renderer::VertexBuffer;
@@ -52,7 +52,7 @@ public:
     inline const std::vector<Vertex> &GetVertices() const        { return m_vertices; }
     inline const std::vector<Index> &GetIndices() const          { return m_indices; }
 
-    const MeshInputAttributeSet &GetVertexAttributes() const     { return m_vertex_attributes; }
+    const VertexAttributeSet &GetVertexAttributes() const     { return m_vertex_attributes; }
 
     Flags GetFlags() const                                       { return m_flags; }
     inline void SetFlags(Flags flags)                            { m_flags = flags; }
@@ -76,7 +76,7 @@ private:
     std::unique_ptr<VertexBuffer>         m_vbo;
     std::unique_ptr<IndexBuffer>          m_ibo;
 
-    MeshInputAttributeSet m_vertex_attributes;
+    VertexAttributeSet m_vertex_attributes;
 
     std::vector<Vertex> m_vertices;
     std::vector<Index>  m_indices;

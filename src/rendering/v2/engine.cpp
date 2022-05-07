@@ -13,7 +13,7 @@
 namespace hyperion::v2 {
 
 using renderer::MeshInputAttribute;
-using renderer::MeshInputAttributeSet;
+using renderer::VertexAttributeSet;
 using renderer::Attachment;
 using renderer::ImageView;
 using renderer::FramebufferObject;
@@ -172,8 +172,8 @@ void Engine::PrepareSwapchain()
 
             m_root_pipeline = std::make_unique<GraphicsPipeline>(
                 shader.Acquire(),
-                nullptr,
                 render_pass.Acquire(),
+                VertexAttributeSet::static_mesh,
                 Bucket::BUCKET_SWAPCHAIN
             );
         }
@@ -186,7 +186,7 @@ void Engine::PrepareSwapchain()
     m_root_pipeline->SetTopology(Topology::TRIANGLE_FAN);
 
     callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
-        m_render_list.AddFramebuffersToPipelines(this);
+        m_render_list_container.AddFramebuffersToPipelines(this);
         m_root_pipeline->Init(this);
     });
     
@@ -222,14 +222,14 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
         ->AddSubDescriptor({
             .buffer = shader_globals->scenes.GetBuffers()[0].get(),
-            .range = sizeof(SceneShaderData)
+            .range = static_cast<uint32_t>(sizeof(SceneShaderData))
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
             .buffer = shader_globals->materials.GetBuffers()[0].get(),
-            .range = sizeof(MaterialShaderData)
+            .range = static_cast<uint32_t>(sizeof(MaterialShaderData))
         });
 
 
@@ -237,14 +237,14 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
             .buffer = shader_globals->objects.GetBuffers()[0].get(),
-            .range = sizeof(ObjectShaderData)
+            .range = static_cast<uint32_t>(sizeof(ObjectShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
         ->AddSubDescriptor({
             .buffer = shader_globals->skeletons.GetBuffers()[0].get(),
-            .range = sizeof(SkeletonShaderData)
+            .range = static_cast<uint32_t>(sizeof(SkeletonShaderData))
         });
 
 
@@ -253,28 +253,28 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
         ->AddSubDescriptor({
             .buffer = shader_globals->scenes.GetBuffers()[1].get(),
-            .range = sizeof(SceneShaderData)
+            .range = static_cast<uint32_t>(sizeof(SceneShaderData))
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
             .buffer = shader_globals->materials.GetBuffers()[1].get(),
-            .range = sizeof(MaterialShaderData)
+            .range = static_cast<uint32_t>(sizeof(MaterialShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
             .buffer = shader_globals->objects.GetBuffers()[1].get(),
-            .range = sizeof(ObjectShaderData)
+            .range = static_cast<uint32_t>(sizeof(ObjectShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
         ->AddSubDescriptor({
             .buffer = shader_globals->skeletons.GetBuffers()[1].get(),
-            .range = sizeof(SkeletonShaderData)
+            .range = static_cast<uint32_t>(sizeof(SkeletonShaderData))
         });
 
     m_instance->GetDescriptorPool()
@@ -291,7 +291,7 @@ void Engine::Initialize()
     callbacks.TriggerPersisted(EngineCallback::CREATE_FRAMEBUFFERS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RENDER_PASSES, this);
 
-    m_render_list.Create(this);
+    m_render_list_container.Create(this);
     
     callbacks.TriggerPersisted(EngineCallback::CREATE_SCENES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_TEXTURES, this);
@@ -321,7 +321,7 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_VOXELIZER, this);
     callbacks.Trigger(EngineCallback::DESTROY_DESCRIPTOR_SETS, this);
     
-    m_render_list.Destroy(this);
+    m_render_list_container.Destroy(this);
 
     callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
@@ -386,9 +386,51 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
 }
 
+Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
+    Ref<Shader> &&shader,
+    const VertexAttributeSet &vertex_attributes,
+    Bucket bucket
+)
+{
+    auto &render_list_bucket = m_render_list_container.Get(bucket);
+
+    Ref<GraphicsPipeline> found_pipeline;
+    
+    for (auto &graphics_pipeline : render_list_bucket.graphics_pipelines) {
+        if (graphics_pipeline->GetShader() != shader) {
+            continue;
+        }
+
+        if (!(graphics_pipeline->GetVertexAttributes() & vertex_attributes)) {
+            continue;
+        }
+
+        found_pipeline = graphics_pipeline.Acquire();
+
+        break;
+    }
+
+    if (found_pipeline != nullptr) {
+        return std::move(found_pipeline);
+    }
+
+    // create a pipeline with the given params
+    return AddGraphicsPipeline(std::make_unique<GraphicsPipeline>(
+        std::move(shader),
+        render_list_bucket.render_pass.Acquire(),
+        vertex_attributes,
+        bucket
+    ));
+}
+
+void Engine::ResetRenderBindings()
+{
+    render_bindings.scene_ids = {};
+}
+
 void Engine::UpdateRendererBuffersAndDescriptors(uint32_t frame_index)
 {
-    std::lock_guard guard(m_buffer_mutex);
+    std::lock_guard guard(render_mutex);
 
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);

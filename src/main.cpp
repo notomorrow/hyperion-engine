@@ -112,7 +112,7 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
-#define HYPERION_VK_TEST_RAYTRACING 0
+#define HYPERION_VK_TEST_RAYTRACING 1
 #define HYPERION_RUN_TESTS 1
 
 namespace hyperion::v2 {
@@ -124,7 +124,7 @@ public:
     {
     }
 
-    virtual void Init(v2::Engine *engine, SystemWindow *window) override
+    virtual void Init(Engine *engine, SystemWindow *window) override
     {
         using namespace v2;
 
@@ -148,7 +148,7 @@ public:
 
         auto base_path = AssetManager::GetInstance()->GetRootDir();
 
-        auto loaded_assets = engine->assets.Load<v2::Node>(
+        auto loaded_assets = engine->assets.Load<Node>(
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
             base_path + "models/material_sphere/material_sphere.obj",
             base_path + "models/cube.obj",
@@ -161,7 +161,30 @@ public:
         monkey_obj = std::move(loaded_assets[3]);
 
         
+        auto cubemap = engine->resources.textures.Add(std::make_unique<v2::TextureCube>(
+           engine->assets.Load<v2::Texture>(
+               base_path + "textures/Lycksele3/posx.jpg",
+               base_path + "textures/Lycksele3/negx.jpg",
+               base_path + "textures/Lycksele3/posy.jpg",
+               base_path + "textures/Lycksele3/negy.jpg",
+               base_path + "textures/Lycksele3/posz.jpg",
+               base_path + "textures/Lycksele3/negz.jpg"
+            )
+        ));
+    
+        scene->SetEnvironmentTexture(0, cubemap.Acquire());
+        sponza->Translate({0, 0, 5});
+        sponza->Update(engine);
 
+        auto skybox_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
+        skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
+        skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.Acquire());
+        skybox_material.Init();
+
+        auto *skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
+        skybox_spatial->SetMaterial(std::move(skybox_material));
+        skybox_spatial->SetBucket(v2::Bucket::BUCKET_SKYBOX);
+        skybox_spatial->SetShader(engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).Acquire());
     }
 
     virtual void Teardown(v2::Engine *engine) override
@@ -171,15 +194,15 @@ public:
         Game::Teardown(engine);
     }
 
-    virtual void Logic(v2::Engine *engine, v2::GameCounter::TickUnit delta) override
+    virtual void Logic(Engine *engine, GameCounter::TickUnit delta) override
     {
         timer += delta;
 
         engine->GetOctree().CalculateVisibility(scene.ptr);
         scene->Update(engine, delta);
 
-        sponza->SetLocalTranslation(Vector3(std::sin(timer * 5.0f) * 10.0f, 0, -std::sin(timer *0.05f) * 300.0f));
-        sponza->Update(engine);
+        //sponza->SetLocalTranslation(Vector3(std::sin(timer * 5.0f) * 10.0f, 0, -std::sin(timer * 0.05f) * 300.0f));
+        //sponza->Update(engine);
         
         zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
         zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
@@ -218,16 +241,6 @@ int main()
 
     v2::MyGame my_game;
 
-    auto cubemap = engine.resources.textures.Add(std::make_unique<v2::TextureCube>(
-       engine.assets.Load<v2::Texture>(
-           base_path + "/res/textures/Lycksele3/posx.jpg",
-           base_path + "/res/textures/Lycksele3/negx.jpg",
-           base_path + "/res/textures/Lycksele3/posy.jpg",
-           base_path + "/res/textures/Lycksele3/negy.jpg",
-           base_path + "/res/textures/Lycksele3/posz.jpg",
-           base_path + "/res/textures/Lycksele3/negz.jpg"
-        )
-    ));
 
     auto texture = engine.resources.textures.Add(
         engine.assets.Load<v2::Texture>(base_path + "/res/textures/dirt.jpg")
@@ -256,12 +269,6 @@ int main()
     mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
     mat1.Init();
 
-    my_game.Init(&engine, window);
-    
-    my_game.scene->SetEnvironmentTexture(0, cubemap.Acquire());
-    my_game.sponza->Translate({0, 0, 5});
-    my_game.sponza->Update(&engine);
-
     Device *device = engine.GetInstance()->GetDevice();
 
     auto *descriptor_set_globals = engine.GetInstance()->GetDescriptorPool()
@@ -288,22 +295,25 @@ int main()
 
     engine.PrepareSwapchain();
     
-    auto mirror_shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
-        std::vector<v2::SubShader>{
-            {
-                ShaderModule::Type::VERTEX, {
-                    FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read(),
-                    {.name = "main vert"}
-                }
-            },
-            {
-                ShaderModule::Type::FRAGMENT, {
-                    FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read(),
-                    {.name = "forward frag"}
+    engine.shader_manager.SetShader(
+        v2::ShaderManager::Key::BASIC_FORWARD,
+        engine.resources.shaders.Add(std::make_unique<v2::Shader>(
+            std::vector<v2::SubShader>{
+                {
+                    ShaderModule::Type::VERTEX, {
+                        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read(),
+                        {.name = "main vert"}
+                    }
+                },
+                {
+                    ShaderModule::Type::FRAGMENT, {
+                        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read(),
+                        {.name = "forward frag"}
+                    }
                 }
             }
-        }
-    ));
+        ))
+    );
 
     float timer = 0.0;
 
@@ -347,93 +357,58 @@ int main()
         per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
     }
     
-    auto mat2 = engine.resources.materials.Add(std::make_unique<v2::Material>());
-    mat2->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f }));
-    mat2->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture2.Acquire());
-    mat2.Init();
-
-    auto skybox_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
-    skybox_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-    skybox_material->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.Acquire());
-    skybox_material.Init();
-
-    auto translucent_material = engine.resources.materials.Add(std::make_unique<v2::Material>());
-    translucent_material->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 0.0f, 1.0f, 0.0f, 0.2f }));
-   // mat1.Init();
-
-    //v2::Spatial *cube_spatial{};
-    auto cube_spatial = engine.resources.spatials.Acquire(my_game.cube_obj->GetChild(0)->GetSpatial());
-    auto zombie_spatial = engine.resources.spatials.Acquire(my_game.zombie->GetChild(0)->GetSpatial());
-    
-    {
+    /*{
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            mirror_shader.Acquire(),
-            my_game.scene.Acquire(),
-            engine.GetRenderList()[v2::BUCKET_OPAQUE].render_pass.Acquire(),
+            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).Acquire(),
+            engine.GetRenderListContainer()[v2::BUCKET_OPAQUE].render_pass.Acquire(),
+            VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
             v2::Bucket::BUCKET_OPAQUE
         );
         
-        pipeline->AddSpatial(cube_spatial.Acquire());
-
-        std::function<void(v2::Node *)> find_spatials = [&](v2::Node *node) {
-            if (auto *spatial = node->GetSpatial()) {
-                pipeline->AddSpatial(engine.resources.spatials.Acquire(spatial));
-            }
-
-            for (auto &child : node->GetChildren()) {
-                find_spatials(child.get());
-            }
-        };
-
-        find_spatials(my_game.sponza.get());
-        
         engine.AddGraphicsPipeline(std::move(pipeline));
-    }
+    }*/
 
 
     {
-        auto shader = engine.resources.shaders.Add(std::make_unique<v2::Shader>(
-            std::vector<v2::SubShader>{
-                {ShaderModule::Type::VERTEX, { FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
-                {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
-            }
-        ));
+        engine.shader_manager.SetShader(
+            v2::ShaderManager::Key::BASIC_SKYBOX,
+            engine.resources.shaders.Add(std::make_unique<v2::Shader>(
+                std::vector<v2::SubShader>{
+                    {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
+                    {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
+                }
+            ))
+        );
 
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            std::move(shader),
-            my_game.scene.Acquire(),
-            engine.GetRenderList().Get(v2::BUCKET_SKYBOX).render_pass.Acquire(),
+            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).Acquire(),
+            engine.GetRenderListContainer().Get(v2::BUCKET_SKYBOX).render_pass.Acquire(),
+            VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
             v2::Bucket::BUCKET_SKYBOX
         );
         pipeline->SetCullMode(CullMode::FRONT);
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
-
-        auto skybox_spatial = engine.resources.spatials.Acquire(my_game.cube_obj->GetChild(0)->GetSpatial());
-        skybox_spatial->SetMaterial(std::move(skybox_material));
-        pipeline->AddSpatial(std::move(skybox_spatial));
         
         engine.AddGraphicsPipeline(std::move(pipeline));
     }
     
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            mirror_shader.Acquire(),
-            my_game.scene.Acquire(),
-            engine.GetRenderList().Get(v2::BUCKET_TRANSLUCENT).render_pass.Acquire(),
+            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).Acquire(),
+            engine.GetRenderListContainer().Get(v2::BUCKET_TRANSLUCENT).render_pass.Acquire(),
+            VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
             v2::Bucket::BUCKET_TRANSLUCENT
         );
         pipeline->SetBlendEnabled(true);
-
-        auto zombie_node = std::make_unique<v2::Node>("monkey");
-        zombie_node->SetSpatial(zombie_spatial.Acquire());
-        zombie_node->Scale(0.15f);
-
-        pipeline->AddSpatial(zombie_spatial.Acquire());
         
         engine.AddGraphicsPipeline(std::move(pipeline));
     }
     
+
+    my_game.Init(&engine, window);
+
+
 #if HYPERION_VK_TEST_RAYTRACING
     auto rt_shader = std::make_unique<ShaderProgram>();
     rt_shader->AttachShader(engine.GetDevice(), ShaderModule::Type::RAY_GEN, {
@@ -505,7 +480,7 @@ int main()
 #if HYPERION_RUN_TESTS
     AssertThrow(test::GlobalTestManager::PrintReport(test::GlobalTestManager::Instance()->RunAll()));
 #endif
-    //blas->AddGeometry()
+
 
 #if HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE
     svo.Build(&engine);
@@ -608,8 +583,12 @@ int main()
          */
         engine.UpdateRendererBuffersAndDescriptors(frame_index);
 
+        engine.ResetRenderBindings();
+
         /* === rendering === */
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
+
+        engine.render_bindings.BindScene(my_game.scene);
 
 #if HYPERION_VK_TEST_RAYTRACING
         rt->Bind(frame->GetCommandBuffer());
@@ -659,7 +638,9 @@ int main()
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));
 
-        
+
+        engine.render_bindings.UnbindScene();
+
         
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
         engine.GetInstance()->GetFrameHandler()->NextFrame();

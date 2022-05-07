@@ -67,8 +67,8 @@ void ShadowEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
-        m_scene.Acquire(),
         m_render_pass.Acquire(),
+        VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
         Bucket::BUCKET_PREPASS
     );
 
@@ -77,7 +77,7 @@ void ShadowEffect::CreatePipeline(Engine *engine)
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
-    for (auto &pipeline : engine->GetRenderList().Get(Bucket::BUCKET_OPAQUE).m_graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
         for (auto &spatial : pipeline->GetSpatials()) {
             if (spatial != nullptr) {
                 m_pipeline->AddSpatial(spatial.Acquire());
@@ -147,11 +147,17 @@ void ShadowRenderer::Destroy(Engine *engine)
     m_effect.Destroy(engine);
 }
 
-void ShadowRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+void ShadowRenderer::Render(Engine *engine,
+    CommandBuffer *primary,
+    uint32_t frame_index)
 {
+    engine->render_bindings.BindScene(m_effect.GetScene());
+
     m_effect.GetFramebuffer()->BeginCapture(primary);
     m_effect.GetGraphicsPipeline()->Render(engine, primary, frame_index);
     m_effect.GetFramebuffer()->EndCapture(primary);
+
+    engine->render_bindings.UnbindScene();
 }
 
 } // namespace hyperion::v2

@@ -7,8 +7,8 @@
 
 namespace hyperion::v2 {
 
-using renderer::MeshInputAttribute;
-using renderer::MeshInputAttributeSet;
+using renderer::VertexAttribute;
+using renderer::VertexAttributeSet;
 using renderer::Descriptor;
 using renderer::DescriptorSet;
 using renderer::ImageSamplerDescriptor;
@@ -121,8 +121,8 @@ void PostEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
-        nullptr,
         m_render_pass.Acquire(),
+        VertexAttributeSet::static_mesh,
         Bucket::BUCKET_PREPASS
     );
 

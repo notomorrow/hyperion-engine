@@ -4,6 +4,7 @@
 #include "../components/base.h"
 #include "../components/material.h"
 #include "../components/mesh.h"
+#include "../components/shader.h"
 #include "../components/render_bucket.h"
 #include "../animation/skeleton.h"
 
@@ -18,7 +19,7 @@ namespace hyperion::v2 {
 
 class Octree;
 
-using renderer::MeshInputAttributeSet;
+using renderer::VertexAttributeSet;
 using renderer::AccelerationStructure;
 using renderer::AccelerationGeometry;
 
@@ -32,7 +33,8 @@ class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
 public:
     Spatial(
         Ref<Mesh> &&mesh,
-        const MeshInputAttributeSet &attributes,
+        Ref<Shader> &&shader,
+        const VertexAttributeSet &attributes,
         Ref<Material> &&material,
         Bucket bucket = Bucket::BUCKET_OPAQUE
     );
@@ -41,23 +43,27 @@ public:
     Spatial &operator=(const Spatial &other) = delete;
     ~Spatial();
 
+    Octree *GetOctree() const { return m_octree; }
+
     ShaderDataState GetShaderDataState() const { return m_shader_data_state; }
     void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
     
     Mesh *GetMesh() const { return m_mesh.ptr; }
     void SetMesh(Ref<Mesh> &&mesh);
 
-    Octree *GetOctree() const { return m_octree; }
+    Skeleton *GetSkeleton() const { return m_skeleton.ptr; }
+    void SetSkeleton(Ref<Skeleton> &&skeleton);
+
+    Shader *GetShader() const { return m_shader.ptr; }
+    void SetShader(Ref<Shader> &&shader);
 
     Material *GetMaterial() const { return m_material.ptr; }
     void SetMaterial(Ref<Material> &&material);
 
-    Skeleton *GetSkeleton() const { return m_skeleton.ptr; }
-    void SetSkeleton(Ref<Skeleton> &&skeleton);
-
-    Bucket GetBucket() const { return m_bucket; }
+    Bucket GetBucket() const      { return m_bucket; }
+    void SetBucket(Bucket bucket);
     
-    const MeshInputAttributeSet &GetVertexAttributes() const { return m_attributes; }
+    const VertexAttributeSet &GetVertexAttributes() const { return m_attributes; }
 
     const Transform &GetTransform() const { return m_transform; }
     void SetTransform(const Transform &transform);
@@ -74,10 +80,12 @@ private:
     
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
-
-    void AddToOptimalPipeline(Engine *engine);
-    void RemoveFromPipelines();
-    void RemoveFromPipeline(GraphicsPipeline *pipeline);
+    
+    void AddToDefaultPipeline(Engine *engine);
+    void AddToPipeline(Engine *engine, GraphicsPipeline *pipeline);
+    GraphicsPipeline *FindOptimalPipeline(Engine *engine) const;
+    void RemoveFromPipelines(Engine *engine);
+    void RemoveFromPipeline(Engine *engine, GraphicsPipeline *pipeline);
     
     void OnAddedToOctree(Octree *octree);
     void OnRemovedFromOctree(Octree *octree);
@@ -86,7 +94,8 @@ private:
     void RemoveFromOctree(Engine *engine);
 
     Ref<Mesh> m_mesh;
-    MeshInputAttributeSet m_attributes;
+    Ref<Shader> m_shader;
+    VertexAttributeSet m_attributes;
     Transform m_transform;
     BoundingBox m_local_aabb;
     BoundingBox m_world_aabb;
@@ -95,6 +104,11 @@ private:
     Bucket m_bucket;
 
     Octree *m_octree;
+
+    struct {
+        GraphicsPipeline *pipeline = nullptr;
+        bool changed = false;
+    } m_primary_pipeline;
 
     /* Retains a list of pointers to pipelines that this Spatial is used by,
      * for easy removal when RemoveSpatial() is called.

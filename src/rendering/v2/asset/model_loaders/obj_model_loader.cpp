@@ -349,8 +349,10 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
                     std::move(mesh),
+                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).Acquire(),
                     vertex_attributes,
-                    std::move(material)
+                    std::move(material),
+                    Bucket::BUCKET_OPAQUE
                 )
             );
             

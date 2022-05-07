@@ -141,7 +141,7 @@ class Callbacks {
         uint32_t num_calls = 0;
 
         bool Valid() const         { return id != 0; }
-        bool HasBeenCalled() const { return bool(num_calls); }
+        uint32_t NumCalls() const { return num_calls; }
 
         template <class ...OtherArgs>
         void Call(OtherArgs &&... args)
@@ -226,7 +226,7 @@ public:
             auto once_it = Find(id, once_callbacks);
 
             if (once_it != once_callbacks.end()) {
-                AssertThrowMsg(!once_it->HasBeenCalled(), "'once' callback has already been called!");
+                AssertThrowMsg(once_it->NumCalls() == 0, "'once' callback has already been called!");
 
                 once_it->Call(std::forward<Args>(args)...);
 
