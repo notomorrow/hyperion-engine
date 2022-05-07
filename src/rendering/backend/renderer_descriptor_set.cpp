@@ -444,7 +444,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
     
     uint32_t iteration = 0;
 
-    Range<uint32_t> changed;
+    Range<uint32_t> changed{UINT32_MAX, 0};
         
     while (!m_sub_descriptor_update_indices.empty()) {
         if (iteration == DescriptorSet::max_sub_descriptor_updates_per_frame) {
@@ -488,6 +488,10 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
 
     if (m_sub_descriptor_update_indices.empty()) {
         m_dirty_sub_descriptors = {};
+    }
+
+    if (changed.GetEnd() <= changed.GetStart()) {
+        return;
     }
 
     if (!m_descriptor_set->IsBindless()) {

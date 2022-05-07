@@ -3,6 +3,7 @@
 
 #include "containers.h"
 #include <rendering/backend/renderer_instance.h>
+#include <hash_code.h>
 
 #include <memory>
 
@@ -54,6 +55,8 @@ protected:
     struct IdWrapper {
         using ValueType = InnerType;
 
+        ValueType value{};
+
         explicit constexpr operator ValueType() const { return value; }
         explicit constexpr operator bool() const { return !!value; }
 
@@ -68,7 +71,13 @@ protected:
         inline constexpr bool operator<(const IdWrapper &other) const
             { return value < other.value; }
 
-        ValueType value{};
+        HashCode GetHashCode() const
+        {
+            HashCode hc;
+            hc.Add(value);
+
+            return hc;
+        }
     };
 
 public:
@@ -86,8 +95,19 @@ public:
     EngineComponentBase &operator=(const EngineComponentBase &other) = delete;
     ~EngineComponentBase() = default;
 
-    inline const ID &GetId() const
-        { return m_id; }
+    inline ID GetId() const
+    {
+        if (this == nullptr) {
+            DebugLog(
+                LogType::Warn,
+                "Called GetId() on nullptr\n"
+            );
+
+            return bad_id;
+        }
+
+        return m_id;
+    }
 
     /* To be called from ObjectHolder<Type> */
     inline void SetId(const ID &id)

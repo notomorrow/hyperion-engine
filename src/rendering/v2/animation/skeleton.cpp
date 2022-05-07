@@ -53,7 +53,7 @@ void Skeleton::UpdateShaderData(Engine *engine) const
     const size_t num_bones = MathUtil::Min(SkeletonShaderData::max_bones, NumBones());
 
     if (num_bones != 0) {
-        SkeletonShaderData &shader_data = engine->shader_globals->skeletons.Get(m_id.value - 1);
+        SkeletonShaderData &shader_data = engine->shader_globals->skeletons.Get(m_id.value - 1); /* TODO: is this fully thread safe? */
 
         shader_data.bones[0] = m_root_bone->GetBoneMatrix();
 

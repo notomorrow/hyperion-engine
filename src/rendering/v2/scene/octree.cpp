@@ -407,6 +407,12 @@ void Octree::UpdateVisibilityState(Scene *scene)
 
     m_visibility_state.Set(scene->GetId(), true);
 
+    const auto nonce = m_visibility_state.nonce.load();
+
+    if (m_parent != nullptr) {
+        m_parent->m_visibility_state.last_nonce = nonce;
+    }
+
     if (!m_is_divided) {
         return;
     }
@@ -416,7 +422,7 @@ void Octree::UpdateVisibilityState(Scene *scene)
             continue;
         }
 
-        octant.octree->m_visibility_state.nonce = m_visibility_state.nonce.load();
+        octant.octree->m_visibility_state.nonce = nonce;
 
         octant.octree->UpdateVisibilityState(scene);
     }

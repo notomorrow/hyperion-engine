@@ -29,6 +29,8 @@ struct VisibilityState {
      */
     std::atomic<Nonce> nonce{Nonce(~0)};
 
+    std::atomic<Nonce> last_nonce{Nonce(~0)};
+
     HYP_FORCE_INLINE bool Get(Scene::ID scene) const
     {
         AssertThrow(scene.value - 1ull < max_scenes);
@@ -48,7 +50,7 @@ struct VisibilityState {
     }
 
     HYP_FORCE_INLINE bool ValidToParent(const VisibilityState &parent) const
-        { return nonce == parent.nonce; }
+        { return last_nonce == parent.last_nonce; }
 };
 
 } // namespace hyperion::v2

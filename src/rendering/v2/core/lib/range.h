@@ -137,34 +137,38 @@ public:
     inline int64_t Step() const                { return MathUtil::Sign(Distance()); }
     inline bool Includes(const T &value) const { return value >= m_start && value < m_end; }
 
-    AtomicRange operator|(const AtomicRange &other) const
+    template <class OtherRange>
+    AtomicRange operator|(const OtherRange &other) const
     {
         return {
-            MathUtil::Min(m_start.load(), other.m_start.load()),
-            MathUtil::Max(m_end.load(), other.m_end.load())
+            MathUtil::Min(m_start.load(), other.GetStart()),
+            MathUtil::Max(m_end.load(), other.GetEnd())
         };
     }
-
-    AtomicRange &operator|=(const AtomicRange &other)
+    
+    template <class OtherRange>
+    AtomicRange &operator|=(const OtherRange &other)
     {
-        m_start = MathUtil::Min(m_start.load(), other.m_start.load());
-        m_end   = MathUtil::Max(m_end.load(), other.m_end.load());
+        m_start = MathUtil::Min(m_start.load(), other.GetStart());
+        m_end   = MathUtil::Max(m_end.load(), other.GetEnd());
 
         return *this;
     }
-
-    AtomicRange operator&(const AtomicRange &other) const
+    
+    template <class OtherRange>
+    AtomicRange operator&(const OtherRange &other) const
     {
         return {
-            MathUtil::Max(m_start.load(), other.m_start.load()),
-            MathUtil::Min(m_end.load(), other.m_end.load())
+            MathUtil::Max(m_start.load(), other.GetStart()),
+            MathUtil::Min(m_end.load(), other.GetEnd())
         };
     }
-
-    AtomicRange &operator&=(const AtomicRange &other)
+    
+    template <class OtherRange>
+    AtomicRange &operator&=(const OtherRange &other)
     {
-        m_start = MathUtil::Max(m_start.load(), other.m_start.load());
-        m_end   = MathUtil::Min(m_end.load(), other.m_end.load());
+        m_start = MathUtil::Max(m_start.load(), other.GetStart());
+        m_end   = MathUtil::Min(m_end.load(), other.GetEnd());
 
         return *this;
     }

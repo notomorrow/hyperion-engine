@@ -77,7 +77,7 @@ public:
     inline const auto &GetCallbacks() const
         { return const_cast<Octree *>(this)->GetCallbacks(); }
 
-    inline VisibilityState &GetVisibilityState() { return m_visibility_state; }
+    inline VisibilityState &GetVisibilityState()             { return m_visibility_state; }
     inline const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
 
     void Clear(Engine *engine);

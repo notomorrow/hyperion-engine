@@ -39,7 +39,9 @@ public:
     Result Begin(Device *device, const RenderPass *render_pass = nullptr);
     Result End(Device *device);
     Result Reset(Device *device);
-    Result SubmitPrimary(VkQueue queue, VkFence fence, SemaphoreChain *semaphore_chain);
+    Result SubmitPrimary(VkQueue queue,
+        VkFence fence,
+        SemaphoreChain *semaphore_chain);
     Result SubmitSecondary(VkCommandBuffer primary);
     inline Result SubmitSecondary(CommandBuffer *primary)
         { return SubmitSecondary(primary->GetCommandBuffer()); }
