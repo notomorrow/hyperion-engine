@@ -1,4 +1,4 @@
-layout(std430, set = 2, binding = 0, row_major) uniform SceneDataBlock {
+layout(std430, set = 2, binding = 0, row_major) readonly buffer SceneDataBlock {
     mat4 view;
     mat4 projection;
     vec4 camera_position;

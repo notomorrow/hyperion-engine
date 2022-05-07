@@ -7,8 +7,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::MeshInputAttribute;
-
 bool GraphicsPipeline::BucketSupportsCulling(Bucket bucket)
 {
     return bucket != BUCKET_SKYBOX
@@ -52,6 +50,7 @@ void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
     spatial->OnAddedToPipeline(this);
     
     std::lock_guard guard(m_enqueued_spatials_mutex);
+
     m_spatials_pending_addition.push_back(std::move(spatial));
 }
 

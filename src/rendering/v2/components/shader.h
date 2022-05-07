@@ -142,6 +142,15 @@ struct alignas(256) SceneShaderData {
 
 static_assert(sizeof(SceneShaderData) == 256);
 
+struct alignas(16) LightShaderData {
+    Vector4  position; //direction for directional lights
+    uint32_t color;
+    uint32_t light_type;
+    float    intensity;
+};
+
+static_assert(sizeof(LightShaderData) == 32);
+
 template <class StructType>
 class BufferRangeUpdater {
 protected:
@@ -187,7 +196,7 @@ public:
     ShaderData(size_t num_buffers)
     {
         m_buffers.resize(num_buffers);
-        this->m_dirty.resize(num_buffers);
+        BufferRange::m_dirty.resize(num_buffers);
 
         for (size_t i = 0; i < num_buffers; i++) {
             m_buffers[i] = std::make_unique<Buffer>();
@@ -199,7 +208,7 @@ public:
     ShaderData &operator=(const ShaderData &other) = delete;
     ~ShaderData() = default;
 
-    inline const auto &GetBuffers() const { return m_buffers; }
+    const auto &GetBuffers() const { return m_buffers; }
     
     void Create(Device *device)
     {
@@ -254,18 +263,23 @@ struct ShaderGlobals {
     static constexpr size_t max_objects = (8ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
     static constexpr size_t max_objects_bytes = max_materials * sizeof(ObjectShaderData);
     /* max number of scenes (cameras, essentially), based on size in kb */
-    static constexpr size_t max_scenes = (16ull * 1024ull) / sizeof(SceneShaderData);
+    static constexpr size_t max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
     static constexpr size_t max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
+    /* max number of lights, based on size in kb */
+    static constexpr size_t max_lights = (16ull * 1024ull) / sizeof(LightShaderData);
+    static constexpr size_t max_lights_bytes = max_lights * sizeof(LightShaderData);
 
     ShaderGlobals(size_t num_buffers)
         : scenes(num_buffers),
+          lights(num_buffers),
           objects(num_buffers),
           materials(num_buffers),
           skeletons(num_buffers)
     {
     }
 
-    ShaderData<UniformBuffer, SceneShaderData, max_scenes>        scenes;
+    ShaderData<StorageBuffer, SceneShaderData, max_scenes>        scenes;
+    ShaderData<StorageBuffer, LightShaderData, max_lights>        lights;
     ShaderData<StorageBuffer, ObjectShaderData, max_objects>      objects;
     ShaderData<StorageBuffer, MaterialShaderData, max_materials>  materials;
     ShaderData<StorageBuffer, SkeletonShaderData, max_skeletons>  skeletons;

@@ -137,11 +137,9 @@ public:
             std::make_unique<FpsCamera>(
                 input_manager,
                 window,
-                1024,
-                768,
+                1024, 768,
                 70.0f,
-                0.05f,
-                250.0f
+                0.05f, 250.0f
             )
         ));
 
@@ -171,6 +169,8 @@ public:
                base_path + "textures/Lycksele3/negz.jpg"
             )
         ));
+
+        zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
     
         scene->SetEnvironmentTexture(0, cubemap.Acquire());
         sponza->Translate({0, 0, 5});
@@ -217,8 +217,8 @@ public:
     
     InputManager *input_manager;
 
-    v2::Ref<v2::Scene> scene;
-    std::unique_ptr<v2::Node> sponza, zombie, cube_obj, monkey_obj;
+    Ref<Scene> scene;
+    std::unique_ptr<Node> sponza, zombie, cube_obj, monkey_obj;
     double timer = 0.0;
 
 };

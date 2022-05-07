@@ -12,7 +12,6 @@
 
 namespace hyperion::v2 {
 
-using renderer::MeshInputAttribute;
 using renderer::VertexAttributeSet;
 using renderer::Attachment;
 using renderer::ImageView;
@@ -219,7 +218,7 @@ void Engine::Initialize()
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
-        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
             .buffer = shader_globals->scenes.GetBuffers()[0].get(),
             .range = static_cast<uint32_t>(sizeof(SceneShaderData))
@@ -250,7 +249,7 @@ void Engine::Initialize()
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
-        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
             .buffer = shader_globals->scenes.GetBuffers()[1].get(),
             .range = static_cast<uint32_t>(sizeof(SceneShaderData))
@@ -314,6 +313,7 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MATERIALS, this);
+    callbacks.Trigger(EngineCallback::DESTROY_LIGHTS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SKELETONS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SPATIALS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SHADERS, this);
@@ -360,6 +360,7 @@ void Engine::Compile()
 
     callbacks.TriggerPersisted(EngineCallback::CREATE_SKELETONS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_LIGHTS, this);
 
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
         /* Finalize skeletons */
