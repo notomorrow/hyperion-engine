@@ -33,11 +33,11 @@ void BindlessStorage::Destroy(Engine *engine)
 
 void BindlessStorage::ApplyUpdates(Engine *engine, uint32_t frame_index)
 {    
-    //engine->texture_mutex.lock();
+    engine->texture_mutex.lock();
     auto *descriptor_set = m_descriptor_sets[frame_index % m_descriptor_sets.size()];
 
     descriptor_set->ApplyUpdates(engine->GetInstance()->GetDevice());
-    //engine->texture_mutex.unlock();
+    engine->texture_mutex.unlock();
 }
 
 void BindlessStorage::AddResource(const Texture *texture)

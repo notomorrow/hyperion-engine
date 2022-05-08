@@ -6,7 +6,10 @@ namespace hyperion::v2 {
 
 bool Octree::IsVisible(const Octree *root, const Octree *child)
 {
-    return child->m_visibility_state.ValidToParent(root->m_visibility_state);
+    return child->m_visibility_state.ValidToParent(
+        root->m_visibility_state,
+        (root->GetRoot()->visibility_cursor + VisibilityState::cursor_size - 1) % VisibilityState::cursor_size
+    );
 }
 
 Octree::Octree(const BoundingBox &aabb)
@@ -394,7 +397,9 @@ void Octree::CalculateVisibility(Scene *scene)
     const auto &frustum = scene->GetCamera()->GetFrustum();
      
     if (frustum.ContainsAabb(m_aabb)) {
-        ++m_visibility_state.nonce;
+        m_root->visibility_cursor = (m_root->visibility_cursor + 1) % VisibilityState::cursor_size;
+
+        ++m_visibility_state.nonces[m_root->visibility_cursor];
 
         UpdateVisibilityState(scene);
     }
@@ -407,23 +412,20 @@ void Octree::UpdateVisibilityState(Scene *scene)
 
     m_visibility_state.Set(scene->GetId(), true);
 
-    const auto nonce = m_visibility_state.nonce.load();
-
-    if (m_parent != nullptr) {
-        m_parent->m_visibility_state.last_nonce = nonce;
-    }
-
     if (!m_is_divided) {
         return;
     }
+
+    const auto cursor = m_root->visibility_cursor.load();
+
+    const auto nonce = m_visibility_state.nonces[cursor].load();
 
     for (auto &octant : m_octants) {
         if (!frustum.ContainsAabb(octant.aabb)) {
             continue;
         }
 
-        octant.octree->m_visibility_state.nonce = nonce;
-
+        octant.octree->m_visibility_state.nonces[cursor] = nonce;
         octant.octree->UpdateVisibilityState(scene);
     }
 }

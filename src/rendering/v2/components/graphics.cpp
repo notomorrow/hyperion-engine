@@ -311,7 +311,7 @@ void GraphicsPipeline::Render(
                     if (auto *octant = spatial->GetOctree()) {
                         const auto &visibility_state = octant->GetVisibilityState();
 
-                        if (!visibility_state.ValidToParent(engine->GetOctree().GetVisibilityState())) {
+                        if (!Octree::IsVisible(&engine->GetOctree(), octant)) {
                             continue;
                         }
 

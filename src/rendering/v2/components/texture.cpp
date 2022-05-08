@@ -28,7 +28,7 @@ void Texture::Init(Engine *engine)
     }
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_TEXTURES, [this](Engine *engine) {
-        //engine->texture_mutex.lock();
+        engine->texture_mutex.lock();
         EngineComponent::Create(
             engine,
             engine->GetInstance(),
@@ -39,13 +39,13 @@ void Texture::Init(Engine *engine)
         HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetInstance()->GetDevice(), m_image_view.get()));
 
         engine->shader_globals->textures.AddResource(this);
-        //engine->texture_mutex.unlock();
+        engine->texture_mutex.unlock();
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_TEXTURES, [this](Engine *engine) {
             AssertThrow(m_image_view != nullptr);
             AssertThrow(m_sampler != nullptr);
             
-            //engine->texture_mutex.lock();
+            engine->texture_mutex.lock();
             engine->shader_globals->textures.RemoveResource(this);
 
             HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetInstance()->GetDevice()));
@@ -55,7 +55,7 @@ void Texture::Init(Engine *engine)
             m_image_view.reset();
 
             EngineComponent::Destroy(engine);
-            //engine->texture_mutex.unlock();
+            engine->texture_mutex.unlock();
         }), engine);
     }));
 }

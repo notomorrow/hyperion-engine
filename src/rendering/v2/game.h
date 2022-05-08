@@ -23,7 +23,8 @@ public:
     virtual void Init(Engine *engine, SystemWindow *window);
     virtual void Teardown(Engine *engine);
 
-    virtual void PreRender(Engine *engine) = 0;
+    virtual void OnFrameBegin(Engine *engine) = 0;
+    virtual void OnFrameEnd(Engine *engine) = 0;
     virtual void Logic(Engine *engine, GameCounter::TickUnit delta) = 0;
 
 protected:

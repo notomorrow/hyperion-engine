@@ -185,10 +185,10 @@ public:
             engine->assets.Load<Texture>(base_path + "textures/dummy.jpg")
         );
 
-        /*auto metal_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
+        auto metal_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
         metal_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 0.5f, 0.2f, 1.0f }));
         metal_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
-        metal_material.Init();*/
+        metal_material.Init();
         
         auto skybox_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
@@ -208,8 +208,14 @@ public:
         Game::Teardown(engine);
     }
 
-    virtual void PreRender(Engine *engine) override
+    virtual void OnFrameBegin(Engine *engine) override
     {
+        engine->render_bindings.BindScene(scene);
+    }
+
+    virtual void OnFrameEnd(Engine *engine) override
+    {
+        engine->render_bindings.UnbindScene();
     }
 
     virtual void Logic(Engine *engine, GameCounter::TickUnit delta) override
@@ -229,9 +235,9 @@ public:
         zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
 
         if (uint32_t(timer) % 12 == 0) {
-            zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
-        } else if (uint32_t(timer) % 13 == 0) {
             zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.Acquire());
+        } else if (uint32_t(timer) % 13 == 0) {
+            zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
             
             //monkey_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
 
@@ -541,8 +547,10 @@ int main()
         .light_direction = Vector4(Vector3(0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
     });
 
+#if HYP_GAME_THREAD
     v2::GameThread game_thread;
     game_thread.Start(&engine, &my_game, window);
+#endif
 
     while (engine.m_running) {
         while (SystemSDL::PollEvent(&event)) {
@@ -618,9 +626,10 @@ int main()
         /* === rendering === */
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
 
-        my_game.PreRender(&engine);
-
-        engine.render_bindings.BindScene(my_game.scene);
+        my_game.OnFrameBegin(&engine);
+#if !HYP_GAME_THREAD
+        my_game.Logic(&engine, 0.01f);
+#endif
 
 #if HYPERION_VK_TEST_RAYTRACING
         rt->Bind(frame->GetCommandBuffer());
@@ -669,11 +678,9 @@ int main()
 
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));
-
-
-        engine.render_bindings.UnbindScene();
-
         
+        my_game.OnFrameEnd(&engine);
+
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
         engine.GetInstance()->GetFrameHandler()->NextFrame();
 
@@ -711,7 +718,9 @@ int main()
     rt->Destroy(engine.GetDevice());
 #endif
 
+#if HYP_GAME_THREAD
     game_thread.Join();
+#endif
 
     engine.Destroy();
 

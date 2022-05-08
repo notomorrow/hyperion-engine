@@ -54,7 +54,9 @@ public:
                           on_insert_node,
                           on_remove_node;
         } events;
+
         std::unordered_map<Spatial *, Octree *> node_to_octree;
+        std::atomic_uint32_t                    visibility_cursor;
     };
 
     static bool IsVisible(const Octree *parent, const Octree *child);

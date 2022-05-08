@@ -3,6 +3,8 @@
 
 #include "core/thread.h"
 
+#define HYP_GAME_THREAD 1
+
 namespace hyperion {
 
 class SystemWindow;
