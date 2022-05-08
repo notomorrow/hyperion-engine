@@ -3,6 +3,7 @@
 
 #include "../components/base.h"
 #include "../components/shader.h"
+#include "../animation/animation.h"
 
 namespace hyperion::v2 {
 
@@ -41,13 +42,22 @@ public:
      */
     //Bone *FindBone(const char *tag) const;
 
+    auto &GetAnimations()                                     { return m_animations; }
+    const auto &GetAnimations() const                         { return m_animations; }
+    size_t NumAnimations() const                              { return m_animations.size(); }
+    void AddAnimation(std::unique_ptr<Animation> &&animation);
+
+    Animation *GetAnimation(size_t index) const               { return m_animations[index].get(); }
+    Animation *FindAnimation(const std::string &name, size_t *out_index) const;
+    
     void Init(Engine *engine);
     void UpdateShaderData(Engine *engine) const;
 
 private:
     size_t NumBones() const;
-
+    
     std::unique_ptr<Bone> m_root_bone;
+    std::vector<std::unique_ptr<Animation>> m_animations;
 
     mutable ShaderDataState m_shader_data_state;
 };

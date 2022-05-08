@@ -156,16 +156,14 @@ float Vector4::Distance(const Vector4 &other) const
     return sqrt(DistanceSquared(other));
 }
 
+Vector4 Vector4::Normalized() const
+{
+    return *this / MathUtil::Max(Length(), MathUtil::epsilon<float>);
+}
+
 Vector4 &Vector4::Normalize()
 {
-    float len = Length();
-    float len_sqr = len * len;
-    if (len_sqr == 0 || len_sqr == 1) {
-        return *this;
-    }
-
-    (*this) *= (1.0f / len);
-    return *this;
+    return *this /= MathUtil::Max(Length(), MathUtil::epsilon<float>);
 }
 
 Vector4 &Vector4::Rotate(const Vector3 &axis, float radians)

@@ -72,6 +72,8 @@ void Spatial::Init(Engine *engine)
 
 void Spatial::Update(Engine *engine)
 {
+    AssertThrow(IsInit());
+
     if (m_skeleton != nullptr) {
         m_skeleton->UpdateShaderData(engine);
     }

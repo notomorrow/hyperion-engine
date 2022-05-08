@@ -1,0 +1,23 @@
+#include "controller.h"
+
+namespace hyperion::v2 {
+
+Controller::Controller(const char *name)
+    : m_name(nullptr)
+{
+    if (name != nullptr) {
+        size_t len = std::strlen(name);
+
+        m_name = new char[len + 1];
+        std::strcpy(m_name, name);
+    }
+}
+
+Controller::~Controller()
+{
+    if (m_name != nullptr) {
+        delete[] m_name;
+    }
+}
+
+} // namespace hyperion::v2

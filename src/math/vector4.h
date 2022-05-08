@@ -66,7 +66,8 @@ public:
 
     float DistanceSquared(const Vector4 &other) const;
     float Distance(const Vector4 &other) const;
-
+    
+    Vector4 Normalized() const;
     Vector4 &Normalize();
     Vector4 &Rotate(const Vector3 &axis, float radians);
     Vector4 &Lerp(const Vector4 &to, float amt);

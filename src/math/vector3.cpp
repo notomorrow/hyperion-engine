@@ -185,6 +185,16 @@ float Vector3::Distance(const Vector3 &other) const
     return sqrt(DistanceSquared(other));
 }
 
+Vector3 Vector3::Normalized() const
+{
+    return *this / MathUtil::Max(Length(), MathUtil::epsilon<float>);
+}
+
+Vector3 &Vector3::Normalize()
+{
+    return *this /= MathUtil::Max(Length(), MathUtil::epsilon<float>);
+}
+
 Vector3 Vector3::Cross(const Vector3 &other) const
 {
     return {

@@ -274,7 +274,7 @@ public:
     Texture *GetTexture(TextureKey key) const;
 
     void Init(Engine *engine);
-    void Update(Engine *engine); /* TODO: call from Engine? */
+    void Update(Engine *engine);
 
     inline HashCode GetHashCode() const
     {

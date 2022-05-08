@@ -59,22 +59,21 @@ Mesh::Mesh(
     const std::vector<Vertex> &vertices,
     const std::vector<Index> &indices,
     Flags flags
-)
-    : EngineComponentBase(),
-      m_vbo(std::make_unique<VertexBuffer>()),
-      m_ibo(std::make_unique<IndexBuffer>()),
-      m_vertices(std::move(vertices)),
-      m_indices(std::move(indices)),
-      m_vertex_attributes(
-          VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION
-          | VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
-          | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
-          | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
-          | VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
-          | VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
-          | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES
-          | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS),
-      m_flags(flags)
+) : EngineComponentBase(),
+    m_vbo(std::make_unique<VertexBuffer>()),
+    m_ibo(std::make_unique<IndexBuffer>()),
+    m_vertices(std::move(vertices)),
+    m_indices(std::move(indices)),
+    m_vertex_attributes(
+        VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS),
+    m_flags(flags)
 {
 }
 

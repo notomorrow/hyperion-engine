@@ -54,6 +54,14 @@ Node::~Node()
 void Node::OnNestedNodeAdded(Node *node)
 {
     m_descendents.push_back(node);
+
+    for (auto &controller : m_controllers) {
+        if (controller == nullptr) {
+            continue;
+        }
+
+        controller->OnDescendentAdded(node);
+    }
     
     if (m_parent_node != nullptr) {
         m_parent_node->OnNestedNodeAdded(node);
@@ -65,6 +73,14 @@ void Node::OnNestedNodeRemoved(Node *node)
     const auto it = std::find(m_descendents.begin(), m_descendents.end(), node);
 
     if (it != m_descendents.end()) {
+        for (auto &controller : m_controllers) {
+            if (controller == nullptr) {
+                continue;
+            }
+
+            controller->OnDescendentRemoved(node);
+        }
+
         m_descendents.erase(it);
     }
 
@@ -208,10 +224,20 @@ void Node::UpdateWorldTransform()
     }
 }
 
+
 void Node::UpdateInternal(Engine *engine)
 {
     if (m_spatial != nullptr) {
         m_spatial->Update(engine);
+    }
+
+    UpdateControllers(engine);
+}
+
+void Node::UpdateControllers(Engine *engine)
+{
+    for (auto &controller : m_controllers) {
+        controller->OnUpdate(0.1f /* TODO */);
     }
 }
 

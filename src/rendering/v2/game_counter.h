@@ -4,7 +4,7 @@
 namespace hyperion::v2 {
 
 struct GameCounter {
-    using TickUnit = double;
+    using TickUnit = float;
 
     TickUnit last_tick{};
     TickUnit tick{};

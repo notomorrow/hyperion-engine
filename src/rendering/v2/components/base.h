@@ -6,6 +6,7 @@
 #include <hash_code.h>
 
 #include <memory>
+#include <atomic>
 
 
 namespace hyperion::v2 {
@@ -127,7 +128,7 @@ protected:
     }
 
     ID m_id;
-    bool m_init_called;
+    std::atomic_bool m_init_called;
 };
 
 template <class WrappedType>

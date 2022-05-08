@@ -2,23 +2,6 @@
 
 namespace hyperion::v2 {
 
-Keyframe::Keyframe()
-    : m_time(0.0f)
-{
-}
-
-Keyframe::Keyframe(const Keyframe &other)
-    : m_time(other.m_time),
-      m_transform(other.m_transform)
-{
-}
-
-Keyframe::Keyframe(float time, const Transform &transform)
-    : m_time(time),
-      m_transform(transform)
-{
-}
-
 Bone::Bone(const char *tag)
     : Node(Type::BONE, tag, nullptr, Transform()),
       m_skeleton(nullptr)
@@ -159,6 +142,5 @@ void Bone::SetSkeleton(Skeleton *skeleton)
         static_cast<Bone *>(child.get())->SetSkeleton(skeleton);  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }
 }
-
 
 } // namespace hyperion::v2

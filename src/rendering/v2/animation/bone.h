@@ -2,28 +2,11 @@
 #define HYPERION_V2_BONE_H
 
 #include "../scene/node.h"
+#include "keyframe.h"
+
 #include <math/transform.h>
 
 namespace hyperion::v2 {
-
-class Keyframe {
-public:
-    Keyframe();
-    Keyframe(const Keyframe &other);
-    Keyframe(float time, const Transform &transform);
-
-    float GetTime() const { return m_time; }
-    void SetTime(float time) { m_time = time; }
-   
-    const Transform &GetTransform() const { return m_transform; }
-    void SetTransform(const Transform &transform) { m_transform = transform; }
-
-    Keyframe Blend(const Keyframe &to, float blend) const;
-
-private:
-    float m_time;
-    Transform m_transform;
-};
 
 class Bone : public Node {
     friend class Skeleton;
@@ -53,11 +36,11 @@ public:
 
     void UpdateBoneTransform();
 
-    Transform m_binding_transform,
-              m_pose_transform;
+    Transform  m_binding_transform,
+               m_pose_transform;
 
-    Vector3 m_world_bone_translation,
-            m_inv_binding_translation;
+    Vector3    m_world_bone_translation,
+               m_inv_binding_translation;
 
     Quaternion m_world_bone_rotation,
                m_inv_binding_rotation;

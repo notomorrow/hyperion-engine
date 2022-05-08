@@ -17,13 +17,12 @@
 
 namespace hyperion::v2 {
 
-class Octree;
-
 using renderer::VertexAttributeSet;
 using renderer::AccelerationStructure;
 using renderer::AccelerationGeometry;
 
 class GraphicsPipeline;
+class Octree;
 
 class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
     friend class Engine;
@@ -45,16 +44,17 @@ public:
 
     Octree *GetOctree() const { return m_octree; }
 
-    ShaderDataState GetShaderDataState() const { return m_shader_data_state; }
+    ShaderDataState GetShaderDataState() const     { return m_shader_data_state; }
     void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
     
     Mesh *GetMesh() const { return m_mesh.ptr; }
     void SetMesh(Ref<Mesh> &&mesh);
 
-    Skeleton *GetSkeleton() const { return m_skeleton.ptr; }
+    Ref<Skeleton> &GetSkeleton()             { return m_skeleton; }
+    const Ref<Skeleton> &GetSkeleton() const { return m_skeleton; }
     void SetSkeleton(Ref<Skeleton> &&skeleton);
 
-    Shader *GetShader() const { return m_shader.ptr; }
+    Shader *GetShader() const     { return m_shader.ptr; }
     void SetShader(Ref<Shader> &&shader);
 
     Material *GetMaterial() const { return m_material.ptr; }
@@ -83,7 +83,6 @@ private:
     
     void AddToDefaultPipeline(Engine *engine);
     void AddToPipeline(Engine *engine, GraphicsPipeline *pipeline);
-    GraphicsPipeline *FindOptimalPipeline(Engine *engine) const;
     void RemoveFromPipelines(Engine *engine);
     void RemoveFromPipeline(Engine *engine, GraphicsPipeline *pipeline);
     

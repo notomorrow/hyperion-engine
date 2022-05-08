@@ -15,6 +15,9 @@ Skeleton::Skeleton(std::unique_ptr<Bone> &&root_bone)
     : EngineComponentBase(),
       m_root_bone(std::move(root_bone))
 {
+    if (m_root_bone != nullptr) {
+        m_root_bone->SetSkeleton(this);
+    }
 }
 
 Skeleton::~Skeleton()
@@ -31,11 +34,6 @@ void Skeleton::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SKELETONS, [this](Engine *engine) {
-        /* Set all bone's skeletons to be this. */
-        if (m_root_bone != nullptr) {
-            m_root_bone->SetSkeleton(this);
-        }
-
         UpdateShaderData(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SKELETONS, [this](Engine *engine) {
@@ -101,6 +99,10 @@ Bone *Skeleton::FindBone(const char *name) const
 void Skeleton::SetRootBone(std::unique_ptr<Bone> &&root_bone)
 {
     m_root_bone = std::move(root_bone);
+
+    if (m_root_bone != nullptr) {
+        m_root_bone->SetSkeleton(this);
+    }
 }
 
 size_t Skeleton::NumBones() const
@@ -110,6 +112,54 @@ size_t Skeleton::NumBones() const
     }
 
     return 1 + m_root_bone->GetDescendents().size();
+}
+
+void Skeleton::AddAnimation(std::unique_ptr<Animation> &&animation)
+{
+    if (animation == nullptr) {
+        return;
+    }
+
+    for (auto &track : animation->GetTracks()) {
+        track.bone = nullptr;
+
+        if (track.bone_name.empty()) {
+            continue;
+        }
+
+        track.bone = FindBone(track.bone_name.c_str());
+
+        if (track.bone == nullptr) {
+            DebugLog(
+                LogType::Warn,
+                "Skeleton could not find bone with name \"%s\"\n",
+                track.bone_name.c_str()
+            );
+        }
+    }
+
+    m_animations.push_back(std::move(animation));
+}
+
+Animation *Skeleton::FindAnimation(const std::string &name, size_t *out_index) const
+{
+    const auto it = std::find_if(
+        m_animations.begin(),
+        m_animations.end(),
+        [&name](const auto &item) {
+            return item->GetName() == name;
+        }
+    );
+
+    if (it == m_animations.end()) {
+        return nullptr;
+    }
+
+    if (out_index != nullptr) {
+        *out_index = std::distance(m_animations.begin(), it);
+    }
+
+    return it->get();
 }
 
 } // namespace hyperion::v2

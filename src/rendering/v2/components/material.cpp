@@ -82,7 +82,6 @@ void Material::UpdateShaderData(Engine *engine) const
 
     if (num_bound_textures != 0) {
         /* TODO: only update this for each texture that has changed. */
-        std::lock_guard guard(engine->texture_mutex);
 
         for (size_t i = 0; i < num_bound_textures; i++) {
             if (const auto &texture = m_textures.ValueAt(i)) {
@@ -114,7 +113,7 @@ void Material::UpdateShaderData(Engine *engine) const
 
     engine->shader_globals->materials.Set(m_id.value - 1, shader_data);
 
-    m_shader_data_state = ShaderDataState::CLEAN;
+    //m_shader_data_state = ShaderDataState::CLEAN;
 }
 
 void Material::SetParameter(MaterialKey key, const Parameter &value)

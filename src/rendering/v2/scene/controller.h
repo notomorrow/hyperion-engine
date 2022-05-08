@@ -2,54 +2,38 @@
 #define HYPERION_V2_CONTROLLER_H
 
 #include "../components/base.h"
+#include "../game_counter.h"
 
 #include <type_traits>
 
 namespace hyperion::v2 {
 
 class Node;
+class Engine;
 
-struct ControllerInstanceData {
-    using ControllerFunction       = std::add_pointer_t<void(Node *this_node)>;
-    using ControllerUpdateFunction = std::add_pointer_t<void(Node *this_node, float delta)>;
-
-    ControllerFunction       on_added;
-    ControllerFunction       on_removed;
-    ControllerUpdateFunction on_update;
-};
-
-template <class T>
-class Controller : public EngineComponentBase<STUB_CLASS(Controller<T>)> {
-    static_assert(std::is_base_of_v<ControllerInstanceData, T>);
-
+class Controller {
     friend class Node;
 
 public:
-    Controller(const char *name, T &&instance_data)
-        : m_name(nullptr),
-          m_instance_data(std::move(instance_data))
-    {
-        if (name != nullptr) {
-            size_t len = std::strlen(name);
-
-            m_name = new char[len + 1];
-            std::strncpy(m_name, name, len);
-        }
-    }
-
+    Controller(const char *name);
     Controller(const Controller &other) = delete;
     Controller &operator=(const Controller &other) = delete;
+    virtual ~Controller();
 
-    ~Controller()
-    {
-        if (m_name != nullptr) {
-            delete[] m_name;
-        }
-    }
+    const char *GetName() const { return m_name; }
+    Node *GetParent() const     { return m_parent; }
+
+protected:
+    virtual void OnAdded() = 0;
+    virtual void OnRemoved() = 0;
+    virtual void OnUpdate(GameCounter::TickUnit delta) = 0;
+
+    virtual void OnDescendentAdded(Node *descendent) {}
+    virtual void OnDescendentRemoved(Node *descendent) {}
 
 private:
     char *m_name;
-    T m_instance_data;
+    Node *m_parent;
 };
 
 } // namespace hyperion::v2

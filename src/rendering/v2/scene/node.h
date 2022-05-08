@@ -2,6 +2,7 @@
 #define HYPERION_V2_NODE_H
 
 #include "spatial.h"
+#include "controller.h"
 #include "../components/containers.h"
 
 #include <math/transform.h>
@@ -164,9 +165,25 @@ public:
      * parent nodes.
      */
     inline const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
-
     
+    void AddController(std::unique_ptr<Controller> &&controller)
+    {
+        if (controller->m_parent != nullptr) {
+            controller->OnRemoved();
+        }
+
+        controller->m_parent = this;
+        controller->OnAdded();
+
+        m_controllers.push_back(std::move(controller));
+    }
+
+    template <class ControllerClass, class ...Args>
+    void AddController(Args &&... args)
+        { AddController(std::make_unique<ControllerClass>(std::forward<Args>(args)...)); }
+
     void UpdateWorldTransform();
+
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
     void Update(Engine *engine);
 
@@ -179,6 +196,7 @@ protected:
     );
 
     void UpdateInternal(Engine *engine);
+    void UpdateControllers(Engine *engine);
     void OnNestedNodeAdded(Node *node);
     void OnNestedNodeRemoved(Node *node);
 
@@ -194,6 +212,8 @@ protected:
     Ref<Spatial> m_spatial;
 
     std::vector<Node *> m_descendents;
+
+    std::vector<std::unique_ptr<Controller>> m_controllers;
 };
 
 } // namespace hyperion::v2

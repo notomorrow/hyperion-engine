@@ -18,6 +18,7 @@
 #include "math/bounding_box.h"
 
 #include "rendering/camera/fps_camera.h"
+#include "animation/skeleton.h"
 
 #include "util/mesh_factory.h"
 
@@ -148,7 +149,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
-            base_path + "models/sponza/sponza.obj",
+            base_path + "models/material_sphere/material_sphere.obj", //sponza/sponza.obj", //San_Miguel/san-miguel-low-poly.obj",
             base_path + "models/cube.obj",
             base_path + "models/monkey/monkey.obj"
         );
@@ -171,7 +172,9 @@ public:
         ));
 
         zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-    
+        //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
+        //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
+
         scene->SetEnvironmentTexture(0, cubemap.Acquire());
         sponza->Translate({0, 0, 5});
         sponza->Scale(0.025f);
@@ -190,6 +193,8 @@ public:
         metal_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
         metal_material.Init();
         
+        monkey_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
+
         auto skybox_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
         skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.Acquire());
@@ -224,28 +229,19 @@ public:
         ++counter;
 
         scene->Update(engine, delta);
+        sponza->Update(engine);
     
         engine->GetOctree().CalculateVisibility(scene.ptr);
-
-        //sponza->SetLocalTranslation(Vector3(std::sin(timer * 5.0f) * 10.0f, 0, -std::sin(timer * 0.05f) * 300.0f));
-        //sponza->Update(engine);
         
-        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
-        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
-        zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("head")->UpdateWorldTransform();
+        //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
+       // zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
+        //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
-        if (uint32_t(timer) % 12 == 0) {
+        if (uint32_t(timer) % 3 == 0) {
             zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.Acquire());
-        } else if (uint32_t(timer) % 13 == 0) {
+        } else if (uint32_t(timer) % 4 == 0) {
             zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
-            
-            //monkey_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
-
         }
-        //if (timer > 1.0f) {
-        //    tex1.Init();
-        //    tex2.Init();
-        //}
 
         zombie->Update(engine);
         
@@ -271,7 +267,7 @@ int main()
     
     std::string base_path = HYP_ROOT_DIR;
     AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
-    
+
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
     system.SetCurrentWindow(window);

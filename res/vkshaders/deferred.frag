@@ -126,8 +126,8 @@ void main()
     
 #if PBR_ENABLED
     if (perform_lighting) {
-        float metallic = 0.9;
-        float roughness = 0.1;
+        float metallic = 0.2;
+        float roughness = 0.7;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));

@@ -135,7 +135,7 @@ public:
                 if (m_keyframe_angles.empty()) {
                     DebugLog(LogType::Warn, "Ogre XML skeleton loader: Attempt to set keyframe rotation axis but no angle was set prior\n");
                 } else {
-                    LastKeyframe().rotation = Quaternion(axis, m_keyframe_angles.top());
+                    LastKeyframe().rotation = Quaternion(axis, m_keyframe_angles.top()).Invert();
 
                     m_keyframe_angles.pop();
                 }
@@ -219,6 +219,27 @@ std::unique_ptr<Skeleton> OgreXmlSkeletonLoader::BuildFn(Engine *engine, const O
         } else {
             skeleton->SetRootBone(std::move(bone));
         }
+    }
+
+    for (const auto &animation_it : object.animations) {
+        auto animation = std::make_unique<v2::Animation>(animation_it.name);
+
+        for (const auto &track_it : animation_it.tracks) {
+            v2::AnimationTrack animation_track;
+            animation_track.bone_name = track_it.bone_name;
+            animation_track.keyframes.reserve(track_it.keyframes.size());
+            
+            for (const auto &keyframe_it : track_it.keyframes) {
+                animation_track.keyframes.emplace_back(
+                    keyframe_it.time,
+                    Transform(keyframe_it.translation, Vector3::One(), keyframe_it.rotation)
+                );
+            }
+
+            animation->AddTrack(animation_track);
+        }
+
+        skeleton->AddAnimation(std::move(animation));
     }
 
     if (auto *root_bone = skeleton->GetRootBone()) {

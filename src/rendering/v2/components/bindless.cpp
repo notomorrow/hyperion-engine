@@ -19,86 +19,137 @@ void BindlessStorage::Create(Engine *engine)
 
 void BindlessStorage::Destroy(Engine *engine)
 {
+    m_textures_pending_addition.clear();
+
+    RemoveEnqueued();
+
     /* Remove all texture sub-descriptors */
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
 
-        for (const auto &it : m_texture_sub_descriptors) {
-            descriptor->RemoveSubDescriptor(it.second);
+        for (const auto &it : m_texture_resources) {
+            descriptor->RemoveSubDescriptor(it.second.resource_index);
         }
     }
 
-    m_texture_sub_descriptors.Clear();
+    m_texture_resources.clear();
 }
 
 void BindlessStorage::ApplyUpdates(Engine *engine, uint32_t frame_index)
-{    
-    engine->texture_mutex.lock();
+{
+    if (m_is_pending_changes) {
+        std::lock_guard guard(m_enqueued_resources_mutex);
+
+        if (!m_textures_pending_addition.empty()) {
+            AddEnqueued();
+        }
+
+        if (!m_textures_pending_removal.empty()) {
+            RemoveEnqueued();
+        }
+
+        m_is_pending_changes = false;
+    }
+
     auto *descriptor_set = m_descriptor_sets[frame_index % m_descriptor_sets.size()];
 
     descriptor_set->ApplyUpdates(engine->GetInstance()->GetDevice());
-    engine->texture_mutex.unlock();
 }
 
-void BindlessStorage::AddResource(const Texture *texture)
+void BindlessStorage::AddEnqueued()
+{
+    for (size_t j = 0; j < m_textures_pending_addition.size(); j++) {
+        auto &texture = m_textures_pending_addition[j];
+        uint32_t indices[2] = {};
+
+        for (size_t i = 0; i < m_descriptor_sets.size(); i++) {
+            auto *descriptor_set = m_descriptor_sets[i];
+            auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
+
+
+            indices[i] = descriptor->AddSubDescriptor({
+                .image_view = texture->GetImageView(),
+                .sampler    = texture->GetSampler()
+            });
+        }
+
+        AssertThrow(indices[0] == indices[1]);
+
+        m_texture_resources[texture->GetId().value] = {texture.ptr, indices[0]};
+    }
+
+    m_textures_pending_addition.clear();
+}
+
+void BindlessStorage::RemoveEnqueued()
+{
+    for (size_t i = 0; i < m_textures_pending_removal.size(); i++) {
+        auto &pending_removal = m_textures_pending_removal[i];
+
+        const auto it = m_texture_resources.find(pending_removal.value);
+
+        if (it == m_texture_resources.end()) {
+            DebugLog(
+                LogType::Warn,
+                "Attempt to remove texture with id #%lu but could not be found\n",
+                pending_removal.value
+            );
+
+            continue;
+        }
+
+        const auto resource_index = it->second.resource_index;
+
+        for (auto *descriptor_set : m_descriptor_sets) {
+            auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
+
+            descriptor->RemoveSubDescriptor(resource_index);
+        }
+
+        m_texture_resources.erase(it);
+        
+        /* Have to update indices of all other known subdescriptor indices that are
+         * greater than `sub_descriptor_index`, as the indices would have changed
+         * TODO: Use a sorted vector or something, maintained with upper_bound
+         */
+
+        for (auto &res : m_texture_resources) {
+            if (res.second.resource_index > resource_index && res.second.resource_index != UINT32_MAX) {
+                --res.second.resource_index;
+            }
+        }
+    }
+
+    m_textures_pending_removal.clear();
+}
+
+void BindlessStorage::AddResource(Ref<Texture> &&texture)
 {
     AssertThrow(texture != nullptr);
     AssertThrow(texture->GetImageView() != nullptr);
     AssertThrow(texture->GetSampler() != nullptr);
 
-    AssertThrowMsg(
+    /*AssertThrowMsg(
         m_texture_sub_descriptors.Size() < DescriptorSet::max_bindless_resources,
         "Number of bound textures must not exceed limit of %ul",
         DescriptorSet::max_bindless_resources
-    );
+    );*/
 
-    uint32_t indices[2] = {};
-    
-    for (size_t i = 0; i < m_descriptor_sets.size(); i++) {
-        auto *descriptor_set = m_descriptor_sets[i];
-        auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
-
-        indices[i] = descriptor->AddSubDescriptor({
-            .image_view = texture->GetImageView(),
-            .sampler    = texture->GetSampler()
-        });
-    }
-
-    AssertThrow(indices[0] == indices[1]);
-
-    m_texture_sub_descriptors.Set(texture->GetId(), std::move(indices[0]));
+    std::lock_guard guard(m_enqueued_resources_mutex);
+    m_textures_pending_addition.push_back(std::move(texture));
+    m_is_pending_changes = true;
 }
 
-void BindlessStorage::RemoveResource(const Texture *texture)
+void BindlessStorage::RemoveResource(Texture::ID id)
 {
-    AssertThrow(texture != nullptr);
-    AssertThrow(m_texture_sub_descriptors.Has(texture->GetId()));
-
-    const auto sub_descriptor_index = m_texture_sub_descriptors[texture->GetId()];
-    
-    for (auto *descriptor_set : m_descriptor_sets) {
-        auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
-
-        descriptor->RemoveSubDescriptor(sub_descriptor_index);
-    }
-
-    m_texture_sub_descriptors.Remove(texture->GetId());
-
-    /* Have to update indices of all other known subdescriptor indices that are
-     * greater than `sub_descriptor_index`, as the indices would have changed
-     * TODO: Use a sorted vector or something, maintained with upper_bound
-     */
-
-    for (auto &it : m_texture_sub_descriptors) {
-        if (it.second > sub_descriptor_index) {
-            --it.second;
-        }
-    }
+    std::lock_guard guard(m_enqueued_resources_mutex);
+    m_textures_pending_removal.push_back(id);
+    m_is_pending_changes = true;
 }
 
 void BindlessStorage::MarkResourceChanged(const Texture *texture)
 {
-    const auto sub_descriptor_index = m_texture_sub_descriptors[texture->GetId()];
+    const auto sub_descriptor_index = m_texture_resources[texture->GetId().value].resource_index;
 
     for (auto *descriptor_set : m_descriptor_sets) {
         descriptor_set->GetDescriptor(bindless_descriptor_index)->MarkDirty(sub_descriptor_index);
@@ -112,11 +163,13 @@ bool BindlessStorage::GetResourceIndex(const Texture *texture, uint32_t *out_ind
 
 bool BindlessStorage::GetResourceIndex(Texture::ID id, uint32_t *out_index) const
 {
-    if (!m_texture_sub_descriptors.Has(id)) {
+    auto it = m_texture_resources.find(id.value);
+
+    if (it == m_texture_resources.end()) {
         return false;
     }
 
-    *out_index = m_texture_sub_descriptors.Get(id);
+    *out_index = it->second.resource_index;
 
     return true;
 }

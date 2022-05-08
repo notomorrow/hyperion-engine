@@ -73,8 +73,8 @@ public:
     float DistanceSquared(const Vector3 &other) const;
     float Distance(const Vector3 &other) const;
     
-    inline Vector3 Normalized() const { return *this / Length(); }
-    inline Vector3 &Normalize()       { return *this /= Length(); }
+    Vector3 Normalized() const;
+    Vector3 &Normalize();
 
     Vector3 Cross(const Vector3 &other) const;
 
