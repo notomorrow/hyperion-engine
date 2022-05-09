@@ -52,18 +52,12 @@ public:
     bool GetResourceIndex(Texture::ID id, uint32_t *out_index) const;
 
 private:
-    void AddEnqueued();
-    void RemoveEnqueued();
-
     struct TextureResource {
         Texture *    texture;
         uint32_t     resource_index;
     };
 
     std::unordered_map<Texture::ID::ValueType, TextureResource> m_texture_resources;
-    std::vector<Ref<Texture>> m_textures_pending_addition;
-    std::vector<Texture::ID>  m_textures_pending_removal;
-    std::atomic_bool          m_is_pending_changes;
 
     //ObjectMap<Texture, uint32_t> m_texture_sub_descriptors;
     std::array<DescriptorSet *, Swapchain::max_frames_in_flight> m_descriptor_sets;

@@ -56,7 +56,7 @@ public:
         } events;
 
         std::unordered_map<Spatial *, Octree *> node_to_octree;
-        std::atomic_uint32_t                    visibility_cursor;
+        std::atomic_uint32_t                    visibility_cursor{0};
     };
 
     static bool IsVisible(const Octree *parent, const Octree *child);

@@ -46,7 +46,7 @@ public:
     Scheduler &operator=(Scheduler &&other) = default;
     ~Scheduler() = default;
 
-    HYP_FORCE_INLINE bool HasEnqueued() const { return m_has_enqueued.load(); }
+    HYP_FORCE_INLINE uint32_t NumEnqueued() const { return m_num_enqueued.load(); }
     
     typename ScheduledFunction::ID Enqueue(typename ScheduledFunction::Function &&fn)
     {
@@ -105,7 +105,7 @@ public:
         AssertThrow(std::this_thread::get_id() != m_creation_thread);
 
         std::unique_lock lock(m_mutex);
-        m_is_flushed.wait(lock, [this] { return !m_has_enqueued; });
+        m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
     }
 
     /*! If the current thread is the creation thread, the scheduler will be flushed and immediately return.
@@ -128,7 +128,7 @@ public:
         }
 
         std::unique_lock lock(m_mutex);
-        m_is_flushed.wait(lock, [this] { return !m_has_enqueued; });
+        m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
     }
 
     /*! Execute all scheduled tasks. May only be called from the creation thread.
@@ -152,7 +152,7 @@ public:
             m_scheduled_functions.pop_front();
         }
 
-        m_has_enqueued = false;
+        m_num_enqueued = 0;
 
         lock.unlock();
 
@@ -167,7 +167,7 @@ private:
             .fn = std::move(fn)
         });
 
-        m_has_enqueued = true;
+        ++m_num_enqueued;
 
         return m_scheduled_functions.back().id;
     }
@@ -189,14 +189,14 @@ private:
         m_scheduled_functions.erase(it);
 
         if (m_scheduled_functions.empty()) {
-            m_has_enqueued = false;
+            m_num_enqueued = 0;
         }
 
         return true;
     }
 
     uint32_t                       m_id_counter = 0;
-    std::atomic_bool               m_has_enqueued;
+    std::atomic_uint32_t           m_num_enqueued{0};
     std::mutex                     m_mutex;
     std::deque<ScheduledFunction>  m_scheduled_functions;
     std::condition_variable        m_is_flushed;

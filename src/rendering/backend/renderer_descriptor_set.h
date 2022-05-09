@@ -247,8 +247,8 @@ public:
             };
 
             struct /* ImageData */ {
-                ImageView *image_view;
-                Sampler *sampler;
+                const ImageView *image_view;
+                const Sampler *sampler;
             };
 
             struct /* AccelerationStructureData */ {
