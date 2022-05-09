@@ -21,8 +21,8 @@
 #endif
 
 #if defined(__GNUC__) || defined(__GNUG__) || defined(__clang__)
-#define HYP_DEBUG_FUNC_SHORT (__FUNCTION__)
-#define HYP_DEBUG_FUNC       (__PRETTY_FUNCTION__)
+#define HYP_DEBUG_FUNC_SHORT __FUNCTION__
+#define HYP_DEBUG_FUNC       __PRETTY_FUNCTION__
 #define HYP_DEBUG_LINE       (__LINE__)
 #ifdef HYP_ENABLE_BREAKPOINTS
 #define HYP_BREAKPOINT       (raise(SIGTERM))
