@@ -1,7 +1,7 @@
 #ifndef HYPERION_V2_RESOURCES_H
 #define HYPERION_V2_RESOURCES_H
 
-#include "containers.h"
+#include <rendering/v2/core/containers.h>
 #include "shader.h"
 #include "framebuffer.h"
 #include "compute.h"

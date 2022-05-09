@@ -1,8 +1,8 @@
 #ifndef HYPERION_V2_GAME_THREAD_H
 #define HYPERION_V2_GAME_THREAD_H
 
+#include <rendering/v2/core/containers.h>
 #include "core/thread.h"
-#include "components/containers.h"
 
 #define HYP_GAME_THREAD 1
 

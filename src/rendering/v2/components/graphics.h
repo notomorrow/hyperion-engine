@@ -1,13 +1,11 @@
 #ifndef HYPERION_V2_GRAPHICS_H
 #define HYPERION_V2_GRAPHICS_H
 
+#include <rendering/v2/core/containers.h>
 #include "shader.h"
 #include "../scene/spatial.h"
-#include "../scene/scene.h"
-#include "texture.h"
 #include "framebuffer.h"
 #include "render_pass.h"
-#include "containers.h"
 #include "render_bucket.h"
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
