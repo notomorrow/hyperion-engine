@@ -105,17 +105,65 @@ void Mesh::Init(Engine *engine)
             m_indices  = {0};
         }
 
-        Upload(engine->GetInstance());
+        engine->render_scheduler.Enqueue([this, engine] {
+            using renderer::StagingBuffer;
+
+            auto *instance = engine->GetInstance();
+            auto *device = engine->GetDevice();
+
+            std::vector<float> packed_buffer = BuildVertexBuffer();
+            const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
+            const size_t packed_indices_size = m_indices.size() * sizeof(Index);
+
+            HYPERION_BUBBLE_ERRORS(m_vbo->Create(device, packed_buffer_size));
+            HYPERION_BUBBLE_ERRORS(m_ibo->Create(device, packed_indices_size));
+
+            return instance->GetStagingBufferPool().Use(
+                device,
+                [&](renderer::StagingBufferPool::Context &holder) {
+                    auto commands = instance->GetSingleTimeCommands();
+
+                    auto *staging_buffer_vertices = holder.Acquire(packed_buffer_size);
+                    /* Create and upload the VBO */
+                    staging_buffer_vertices->Copy(device, packed_buffer_size, packed_buffer.data());
+
+                    auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
+                    staging_buffer_indices->Copy(device, packed_indices_size, m_indices.data());
+
+
+                    commands.Push([&](CommandBuffer *cmd) {
+                        m_vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
+
+                        HYPERION_RETURN_OK;
+                    });
+                
+                    commands.Push([&](CommandBuffer *cmd) {
+                        m_ibo->CopyFrom(cmd, staging_buffer_indices, packed_indices_size);
+
+                        HYPERION_RETURN_OK;
+                    });
+                
+                    HYPERION_BUBBLE_ERRORS(commands.Execute(device));
+
+                    HYPERION_RETURN_OK;
+                });
+        });
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
-            auto result = renderer::Result::OK;
+            engine->render_scheduler.Enqueue([this, engine] {
+                auto result = renderer::Result::OK;
 
-            Device *device = engine->GetInstance()->GetDevice();
+                Device *device = engine->GetInstance()->GetDevice();
+                
+                HYPERION_PASS_ERRORS(m_vbo->Destroy(device), result);
+                HYPERION_PASS_ERRORS(m_ibo->Destroy(device), result);
+
+                return result;
+            });
             
-            HYPERION_PASS_ERRORS(m_vbo->Destroy(device), result);
-            HYPERION_PASS_ERRORS(m_ibo->Destroy(device), result);
-
-            HYPERION_ASSERT_RESULT(result);
+            engine->render_scheduler.FlushOrWait([](auto &fn) {
+                HYPERION_ASSERT_RESULT(fn());
+            });
         }), engine);
     }));
 }
@@ -175,48 +223,6 @@ std::vector<float> Mesh::BuildVertexBuffer()
 }
 
 #undef PACKED_SET_ATTR
-
-void Mesh::Upload(Instance *instance)
-{
-    using renderer::StagingBuffer;
-
-    auto *device = instance->GetDevice();
-
-    std::vector<float> packed_buffer = BuildVertexBuffer();
-    const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
-    const size_t packed_indices_size = m_indices.size() * sizeof(Index);
-
-    HYPERION_ASSERT_RESULT(m_vbo->Create(device, packed_buffer_size));
-    HYPERION_ASSERT_RESULT(m_ibo->Create(device, packed_indices_size));
-
-    HYPERION_ASSERT_RESULT(instance->GetStagingBufferPool().Use(device, [&](renderer::StagingBufferPool::Context &holder) {
-        auto commands = instance->GetSingleTimeCommands();
-
-        auto *staging_buffer_vertices = holder.Acquire(packed_buffer_size);
-        /* Create and upload the VBO */
-        staging_buffer_vertices->Copy(device, packed_buffer_size, packed_buffer.data());
-
-        auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
-        staging_buffer_indices->Copy(device, packed_indices_size, m_indices.data());
-
-
-        commands.Push([&](CommandBuffer *cmd) {
-            m_vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
-
-            HYPERION_RETURN_OK;
-        });
-    
-        commands.Push([&](CommandBuffer *cmd) {
-            m_ibo->CopyFrom(cmd, staging_buffer_indices, packed_indices_size);
-
-            HYPERION_RETURN_OK;
-        });
-    
-        HYPERION_BUBBLE_ERRORS(commands.Execute(device));
-
-        HYPERION_RETURN_OK;
-    }));
-}
 
 void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
 {

@@ -163,6 +163,7 @@ void GraphicsPipeline::Init(Engine *engine)
         m_shader.Init();
 
         for (auto &fbo : m_fbos) {
+            AssertThrow(fbo != nullptr);
             fbo.Init();
         }
 
@@ -176,11 +177,11 @@ void GraphicsPipeline::Init(Engine *engine)
                 .depth_write       = m_depth_write,
                 .blend_enabled     = m_blend_enabled,
                 .shader            = m_shader->GetShaderProgram(),
-                .render_pass       = &m_render_pass->Get()
+                .render_pass       = &m_render_pass->GetRenderPass()
             };
 
             for (auto &fbo : m_fbos) {
-                construction_info.fbos.push_back(&fbo->Get());
+                construction_info.fbos.push_back(&fbo->GetFramebuffer());
             }
 
             AssertThrow(m_per_frame_data == nullptr);

@@ -34,15 +34,15 @@ public:
     inline RenderPassStage GetStage() const
         { return m_stage; }
 
-    void AddRenderPassAttachmentRef(AttachmentRef *attachment_ref)
+    void AddAttachmentRef(AttachmentRef *attachment_ref)
     {
         attachment_ref->IncRef();
 
         m_render_pass_attachment_refs.push_back(attachment_ref);
     }
 
-    inline auto &GetRenderPassAttachmentRefs() { return m_render_pass_attachment_refs; }
-    inline const auto &GetRenderPassAttachmentRefs() const { return m_render_pass_attachment_refs; }
+    inline auto &GetAttachmentRefs()             { return m_render_pass_attachment_refs; }
+    inline const auto &GetAttachmentRefs() const { return m_render_pass_attachment_refs; }
 
     inline VkRenderPass GetRenderPass() const { return m_render_pass; }
 

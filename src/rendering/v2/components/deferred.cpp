@@ -77,32 +77,32 @@ void DeferredRenderer::Create(Engine *engine)
     descriptor_set_pass
         ->AddDescriptor<ImageSamplerDescriptor>(0)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetImageView(),
-            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[0]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[0]->GetSampler()
         });
 
     /* Normals texture*/
     descriptor_set_pass
         ->AddDescriptor<ImageSamplerDescriptor>(1)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetImageView(),
-            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetSampler()
         });
 
     /* Position texture */
     descriptor_set_pass
         ->AddDescriptor<ImageSamplerDescriptor>(2)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetImageView(),
-            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetSampler()
         });
 
     /* Depth texture */
     descriptor_set_pass
         ->AddDescriptor<ImageSamplerDescriptor>(3)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetImageView(),
-            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetSampler()
         });
 
     uint32_t binding_index = 4; /* TMP */

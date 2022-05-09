@@ -53,7 +53,7 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
         &attachment_ref
     ));
 
-    render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 
     for (auto &attachment : m_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
@@ -99,9 +99,9 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
     );
 
     /* Add all attachments from the renderpass */
-    for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
-        attachment_ref->SetBinding(12);
-        framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+    for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
+     //   attachment_ref->SetBinding(12);
+        framebuffer->GetFramebuffer().AddRenderPassAttachmentRef(attachment_ref);
     }
 
     m_framebuffer = engine->resources.framebuffers.Add(

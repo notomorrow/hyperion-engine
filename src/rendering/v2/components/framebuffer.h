@@ -12,12 +12,15 @@ namespace hyperion::v2 {
 using renderer::CommandBuffer;
 using renderer::Extent2D;
 
-class Framebuffer : public EngineComponent<renderer::FramebufferObject> {
+class Framebuffer : public EngineComponentBase<STUB_CLASS(Framebuffer)> {
 public:
     Framebuffer(Extent2D extent, Ref<RenderPass> &&render_pass);
     Framebuffer(const Framebuffer &other) = delete;
     Framebuffer &operator=(const Framebuffer &other) = delete;
     ~Framebuffer();
+
+    renderer::FramebufferObject &GetFramebuffer()             { return m_framebuffer; }
+    const renderer::FramebufferObject &GetFramebuffer() const { return m_framebuffer; }
 
     RenderPass *GetRenderPass() const { return m_render_pass.ptr; }
 
@@ -27,7 +30,8 @@ public:
     void EndCapture(CommandBuffer *command_buffer);
 
 private:
-    Ref<RenderPass> m_render_pass;
+    renderer::FramebufferObject m_framebuffer;
+    Ref<RenderPass>             m_render_pass;
 };
 
 } // namespace hyperion::v2

@@ -246,9 +246,9 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     /* TODO: enable multisampling and the GPU feature required for it.  */
     std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;
-    color_blend_attachments.reserve(m_construction_info.render_pass->GetRenderPassAttachmentRefs().size());
+    color_blend_attachments.reserve(m_construction_info.render_pass->GetAttachmentRefs().size());
 
-    for (const auto *attachment_ref : m_construction_info.render_pass->GetRenderPassAttachmentRefs()) {
+    for (const auto *attachment_ref : m_construction_info.render_pass->GetAttachmentRefs()) {
         if (attachment_ref->IsDepthAttachment()) {
             continue;
         }

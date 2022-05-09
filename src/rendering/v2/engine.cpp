@@ -136,7 +136,8 @@ void Engine::PrepareSwapchain()
             render_pass.Acquire()
         );
 
-        renderer::AttachmentRef *attachment_ref[2];
+        renderer::AttachmentRef *color_attachment_ref,
+                                *depth_attachment_ref;
 
         HYPERION_ASSERT_RESULT(m_render_pass_attachments[0]->AddAttachmentRef(
             m_instance->GetDevice(),
@@ -146,27 +147,27 @@ void Engine::PrepareSwapchain()
             1, 1,
             renderer::LoadOperation::CLEAR,
             renderer::StoreOperation::STORE,
-            &attachment_ref[0]
+            &color_attachment_ref
         ));
 
-        attachment_ref[0]->SetBinding(0);
+        color_attachment_ref->SetBinding(0);
 
-        fbo->Get().AddRenderPassAttachmentRef(attachment_ref[0]);
+        fbo->GetFramebuffer().AddRenderPassAttachmentRef(color_attachment_ref);
 
         HYPERION_ASSERT_RESULT(m_render_pass_attachments[1]->AddAttachmentRef(
             m_instance->GetDevice(),
             renderer::LoadOperation::CLEAR,
             renderer::StoreOperation::STORE,
-            &attachment_ref[1]
+            &depth_attachment_ref
         ));
 
-        fbo->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
+        fbo->GetFramebuffer().AddRenderPassAttachmentRef(depth_attachment_ref);
 
-        attachment_ref[1]->SetBinding(1);
+        depth_attachment_ref->SetBinding(1);
 
         if (iteration == 0) {
-            render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[0]);
-            render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
+            render_pass->GetRenderPass().AddAttachmentRef(color_attachment_ref);
+            render_pass->GetRenderPass().AddAttachmentRef(depth_attachment_ref);
 
             render_pass.Init();
 
@@ -280,8 +281,8 @@ void Engine::Initialize()
     /* for textures */
     shader_globals->textures.Create(this);
     
-    callbacks.TriggerPersisted(EngineCallback::CREATE_FRAMEBUFFERS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RENDER_PASSES, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_FRAMEBUFFERS, this);
 
     m_render_list_container.Create(this);
     

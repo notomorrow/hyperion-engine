@@ -53,7 +53,7 @@ void PostEffect::CreateRenderPass(Engine *engine)
         &attachment_ref
     ));
 
-    render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 
     for (auto &attachment : m_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
@@ -73,8 +73,8 @@ void PostEffect::Create(Engine *engine)
     ));
 
     /* Add all attachments from the renderpass */
-    for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
-        m_framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+    for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
+        m_framebuffer->GetFramebuffer().AddRenderPassAttachmentRef(attachment_ref);
     }
     
     m_framebuffer.Init();
@@ -104,7 +104,7 @@ void PostEffect::CreatePerFrameData(Engine *engine)
 void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
-    auto &framebuffer = m_framebuffer->Get();
+    auto &framebuffer = m_framebuffer->GetFramebuffer();
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
     
     for (auto *attachment_ref : framebuffer.GetRenderPassAttachmentRefs()) {

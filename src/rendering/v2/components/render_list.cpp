@@ -79,7 +79,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         &attachment_ref
     ));
 
-    render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 
     for (int i = 0; i < 2; i++) {
         attachments.push_back(std::make_unique<renderer::Attachment>(
@@ -98,7 +98,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
             &attachment_ref
         ));
 
-        render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+        render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
     }
 
     if (bucket == BUCKET_TRANSLUCENT) {
@@ -107,7 +107,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
         renderer::AttachmentRef *depth_attachment;
 
-        HYPERION_ASSERT_RESULT(forward_fbo->Get().GetRenderPassAttachmentRefs().at(3)->AddAttachmentRef(
+        HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetRenderPassAttachmentRefs().at(3)->AddAttachmentRef(
             engine->GetInstance()->GetDevice(),
             renderer::StoreOperation::STORE,
             &depth_attachment
@@ -115,7 +115,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
         depth_attachment->SetBinding(3);
 
-        render_pass->Get().AddRenderPassAttachmentRef(depth_attachment);
+        render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
     } else {
         attachments.push_back(std::make_unique<renderer::Attachment>(
             std::make_unique<renderer::FramebufferImage2D>(
@@ -133,7 +133,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
             &attachment_ref
         ));
 
-        render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+        render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
     }
 
     for (auto &attachment : attachments) {
@@ -153,8 +153,8 @@ void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
     for (uint32_t i = 0; i < 1/*num_frames*/; i++) {
         auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.Acquire());
 
-        for (auto *attachment_ref : render_pass->Get().GetRenderPassAttachmentRefs()) {
-            framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+        for (auto *attachment_ref : render_pass->GetRenderPass().GetAttachmentRefs()) {
+            framebuffer->GetFramebuffer().AddRenderPassAttachmentRef(attachment_ref);
         }
 
         framebuffers.push_back(engine->resources.framebuffers.Add(

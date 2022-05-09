@@ -71,7 +71,6 @@ public:
 
 private:
     std::vector<float> BuildVertexBuffer();
-    void Upload(Instance *instance);
 
     std::unique_ptr<VertexBuffer>         m_vbo;
     std::unique_ptr<IndexBuffer>          m_ibo;
