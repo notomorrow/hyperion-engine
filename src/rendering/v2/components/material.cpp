@@ -36,11 +36,19 @@ void Material::Init(Engine *engine)
                 texture.Init();
             }
         }
+        
+        engine->render_scheduler.FlushOrWait([](auto &fn) {
+            HYPERION_ASSERT_RESULT(fn());
+        });
 
         UpdateShaderData(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
             m_textures.Clear();
+
+            engine->render_scheduler.FlushOrWait([](auto &fn) {
+                HYPERION_ASSERT_RESULT(fn());
+            });
         }), engine);
     }));
 }
@@ -54,73 +62,76 @@ void Material::Update(Engine *engine)
     UpdateShaderData(engine);
 }
 
-void Material::UpdateShaderData(Engine *engine) const
+void Material::UpdateShaderData(Engine *engine)
 {
-    MaterialShaderData shader_data{
-        .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
-        .metalness       = GetParameter<float>(MATERIAL_KEY_METALNESS),
-        .roughness       = GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
-        .subsurface      = GetParameter<float>(MATERIAL_KEY_SUBSURFACE),
-        .specular        = GetParameter<float>(MATERIAL_KEY_SPECULAR),
-        .specular_tint   = GetParameter<float>(MATERIAL_KEY_SPECULAR_TINT),
-        .anisotropic     = GetParameter<float>(MATERIAL_KEY_ANISOTROPIC),
-        .sheen           = GetParameter<float>(MATERIAL_KEY_SHEEN),
-        .sheen_tint      = GetParameter<float>(MATERIAL_KEY_SHEEN_TINT),
-        .clearcoat       = GetParameter<float>(MATERIAL_KEY_CLEARCOAT),
-        .clearcoat_gloss = GetParameter<float>(MATERIAL_KEY_CLEARCOAT_GLOSS),
-        .emissiveness    = GetParameter<float>(MATERIAL_KEY_EMISSIVENESS),
-        .uv_scale        = GetParameter<float>(MATERIAL_KEY_UV_SCALE),
-        .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
-    };
+    engine->render_scheduler.Enqueue([this, engine] {
+        MaterialShaderData shader_data{
+            .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
+            .metalness       = GetParameter<float>(MATERIAL_KEY_METALNESS),
+            .roughness       = GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
+            .subsurface      = GetParameter<float>(MATERIAL_KEY_SUBSURFACE),
+            .specular        = GetParameter<float>(MATERIAL_KEY_SPECULAR),
+            .specular_tint   = GetParameter<float>(MATERIAL_KEY_SPECULAR_TINT),
+            .anisotropic     = GetParameter<float>(MATERIAL_KEY_ANISOTROPIC),
+            .sheen           = GetParameter<float>(MATERIAL_KEY_SHEEN),
+            .sheen_tint      = GetParameter<float>(MATERIAL_KEY_SHEEN_TINT),
+            .clearcoat       = GetParameter<float>(MATERIAL_KEY_CLEARCOAT),
+            .clearcoat_gloss = GetParameter<float>(MATERIAL_KEY_CLEARCOAT_GLOSS),
+            .emissiveness    = GetParameter<float>(MATERIAL_KEY_EMISSIVENESS),
+            .uv_scale        = GetParameter<float>(MATERIAL_KEY_UV_SCALE),
+            .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
+        };
 
-    shader_data.texture_usage = 0;
+        shader_data.texture_usage = 0;
 
-    const size_t num_bound_textures = MathUtil::Min(
-        m_textures.Size(),
-        MaterialShaderData::max_bound_textures
-    );
+        const size_t num_bound_textures = MathUtil::Min(
+            m_textures.Size(),
+            MaterialShaderData::max_bound_textures
+        );
 
-    if (num_bound_textures != 0) {
-        /* TODO: only update this for each texture that has changed. */
+        if (num_bound_textures != 0) {
+            for (size_t i = 0; i < num_bound_textures; i++) {
+                if (const auto &texture = m_textures.ValueAt(i)) {
+                    if (texture == nullptr) {
+                        DebugLog(
+                            LogType::Warn,
+                            "Texture could not be bound for Material %d because it is null\n",
+                            m_id.value
+                        );
 
-        for (size_t i = 0; i < num_bound_textures; i++) {
-            if (const auto &texture = m_textures.ValueAt(i)) {
-                if (texture == nullptr) {
+                        continue;
+                    }
+                    
+                    if (engine->shader_globals->textures.GetResourceIndex(texture->GetId(), &shader_data.texture_index[i])) {
+                        shader_data.texture_usage |= 1 << i;
+
+                        continue;
+                    }
+
                     DebugLog(
                         LogType::Warn,
-                        "Texture could not be bound for Material %d because it is null\n",
+                        "Texture #%d could not be bound for Material %d because it is not found in the bindless texture store\n",
+                        texture->GetId().value,
                         m_id.value
                     );
-
-                    continue;
                 }
-
-                /* TODO: Fix threading issue here -- if m_texture_resources grows in render thread while this is being accessed
-                 * we might have invalidaiton
-                 */
-                if (engine->shader_globals->textures.GetResourceIndex(texture->GetId(), &shader_data.texture_index[i])) {
-                    shader_data.texture_usage |= 1 << i;
-
-                    continue;
-                }
-
-                DebugLog(
-                    LogType::Warn,
-                    "Texture #%d could not be bound for Material %d because it is not found in the bindless texture store\n",
-                    texture->GetId().value,
-                    m_id.value
-                );
             }
         }
-    }
 
-    engine->shader_globals->materials.Set(m_id.value - 1, shader_data);
+        engine->shader_globals->materials.Set(m_id.value - 1, shader_data);
 
-    //m_shader_data_state = ShaderDataState::CLEAN;
+        m_shader_data_state = ShaderDataState::CLEAN;
+
+        HYPERION_RETURN_OK;
+    });
 }
 
 void Material::SetParameter(MaterialKey key, const Parameter &value)
 {
+    if (m_parameters[key] == value) {
+        return;
+    }
+
     m_parameters.Set(key, value);
 
     m_shader_data_state |= ShaderDataState::DIRTY;
@@ -128,6 +139,10 @@ void Material::SetParameter(MaterialKey key, const Parameter &value)
 
 void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
 {
+    if (m_textures[key] == texture) {
+        return;
+    }
+
     if (texture && IsInit()) {
         texture.Init();
     }

@@ -835,7 +835,7 @@ class RefCounter {
     using ArgsTuple = typename CallbacksClass::ArgsTuple;
 
     struct RefCount {
-        std::atomic_uint32_t count;
+        std::atomic_uint32_t count{0};
     };
 
     ObjectVector<T, CallbacksClass>   m_holder;

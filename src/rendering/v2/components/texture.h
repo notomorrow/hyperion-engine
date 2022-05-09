@@ -34,40 +34,24 @@ public:
     Texture &operator=(const Texture &other) = delete;
     ~Texture();
 
-    inline TextureImage *GetImage() const  { return m_image.get(); }
-    inline ImageView *GetImageView() const { return m_image_view.get(); }
-    inline Sampler *GetSampler() const { return m_sampler.get(); }
+    inline const TextureImage &GetImage() const       { return m_image; }
+    inline const ImageView &GetImageView() const      { return m_image_view; }
+    inline const Sampler &GetSampler() const          { return m_sampler; }
 
-    inline const Extent3D &GetExtent() const
-    {
-        return m_image->GetExtent();
-    }
-
-    inline Image::InternalFormat GetFormat() const
-    {
-        return m_image->GetTextureFormat();
-    }
-
-    inline Image::FilterMode GetFilterMode() const
-    {
-        return m_sampler != nullptr
-            ? m_sampler->GetFilterMode()
-            : Image::FilterMode::TEXTURE_FILTER_NEAREST;
-    }
-
-    inline Image::WrapMode GetWrapMode() const
-    {
-        return m_sampler != nullptr
-            ? m_sampler->GetWrapMode()
-            : Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE;
-    }
+    inline Image::Type GetType() const                { return m_image.GetType(); }
+    inline uint32_t NumFaces() const                  { return m_image.NumFaces(); }
+    inline bool IsCubemap() const                     { return m_image.IsCubemap(); }
+    inline const Extent3D &GetExtent() const          { return m_image.GetExtent(); }
+    inline Image::InternalFormat GetFormat() const    { return m_image.GetTextureFormat(); }
+    inline Image::FilterMode GetFilterMode() const    { return m_sampler.GetFilterMode(); }
+    inline Image::WrapMode GetWrapMode() const        { return m_sampler.GetWrapMode(); }
 
     void Init(Engine *engine);
 
 protected:
-    std::unique_ptr<TextureImage> m_image;
-    std::unique_ptr<ImageView> m_image_view;
-    std::unique_ptr<Sampler> m_sampler;
+    TextureImage m_image;
+    ImageView    m_image_view;
+    Sampler      m_sampler;
 };
 
 class Texture2D : public Texture {
@@ -134,7 +118,7 @@ public:
         nullptr
     )
     {
-        if (m_image->GetBytes() != nullptr) {
+        if (m_image.GetBytes() != nullptr) {
             size_t offset = 0,
                    face_size = 0;
 
@@ -142,7 +126,7 @@ public:
                 if (texture != nullptr) {
                     face_size = texture->GetExtent().Size() * Image::NumComponents(texture->GetFormat());
 
-                    m_image->CopyImageData(texture->GetImage()->GetBytes(), face_size, offset);
+                    m_image.CopyImageData(texture->GetImage().GetBytes(), face_size, offset);
                 }
 
                 offset += face_size;

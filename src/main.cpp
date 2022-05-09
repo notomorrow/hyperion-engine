@@ -149,7 +149,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
-            base_path + "models/sphere_hq.obj",
+            base_path + "models/sponza/sponza.obj", //"sphere_hq.obj",
             base_path + "models/cube.obj",
             base_path + "models/monkey/monkey.obj"
         );
@@ -178,7 +178,7 @@ public:
 
         scene->SetEnvironmentTexture(0, cubemap.Acquire());
         test_model->Translate({0, 0, 5});
-        //test_model->Scale(0.025f);
+        test_model->Scale(0.025f);
         test_model->Update(engine);
         
         tex1 = engine->resources.textures.Add(
@@ -193,8 +193,6 @@ public:
         metal_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 0.5f, 0.2f, 1.0f }));
         metal_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
         metal_material.Init();
-        
-        monkey_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
 
         auto skybox_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
@@ -569,10 +567,16 @@ int main()
             engine.GetInstance()->GetSwapchain()
         ));
 
-        if (engine.render_scheduler.HasEnqueued()) {
+        if (auto num_enqueued = engine.render_scheduler.NumEnqueued()) {
             engine.render_scheduler.Flush([](auto &fn) {
                 HYPERION_ASSERT_RESULT(fn());
             });
+
+            DebugLog(
+                LogType::Debug,
+                "[Renderer] Execute %lu enqueued tasks\n",
+                num_enqueued
+            );
         }
 
 

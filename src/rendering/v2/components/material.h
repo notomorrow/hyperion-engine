@@ -55,7 +55,8 @@ public:
     struct Parameter {
         union {
             float float_values[4];
-            int int_values[4];
+            int   int_values[4];
+            void *ptr;
         } values;
 
         enum Type {
@@ -162,6 +163,12 @@ public:
         inline void Copy(unsigned char dst[4]) const
         {
             std::memcpy(dst, &values, Size());
+        }
+
+        inline bool operator==(const Parameter &other) const
+        {
+            return values.ptr == other.values.ptr
+                || !std::memcmp(&values, &other.values, sizeof(values));
         }
 
         inline HashCode GetHashCode() const
@@ -285,12 +292,14 @@ public:
     }
 
 private:
-    void UpdateShaderData(Engine *engine) const;
+    void UpdateShaderData(Engine *engine);
 
     char *m_tag;
 
     ParameterTable  m_parameters;
     TextureSet      m_textures;
+
+    MaterialShaderData      m_shader_data;
     mutable ShaderDataState m_shader_data_state;
 };
 
