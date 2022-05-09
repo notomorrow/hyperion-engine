@@ -9,14 +9,20 @@ namespace hyperion::v2 {
 
 using renderer::RenderPassStage;
 
-class RenderPass : public EngineComponent<renderer::RenderPass> {
+class RenderPass : public EngineComponentBase<STUB_CLASS(RenderPass)> {
 public:
     RenderPass(RenderPassStage stage, renderer::RenderPass::Mode mode);
     RenderPass(const RenderPass &other) = delete;
     RenderPass &operator=(const RenderPass &other) = delete;
     ~RenderPass();
 
+    renderer::RenderPass &GetRenderPass()             { return m_render_pass; }
+    const renderer::RenderPass &GetRenderPass() const { return m_render_pass; }
+
     void Init(Engine *engine);
+
+private:
+    renderer::RenderPass m_render_pass;
 };
 
 } // namespace hyperion::v2

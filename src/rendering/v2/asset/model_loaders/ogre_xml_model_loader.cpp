@@ -1,4 +1,5 @@
 #include "ogre_xml_model_loader.h"
+#include <rendering/v2/scene/controllers/animation_controller.h>
 #include <rendering/v2/engine.h>
 
 #include <util/xml/sax_parser.h>
@@ -223,6 +224,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
             auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
                     std::move(mesh),
+                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).Acquire(),
                     vertex_attributes,
                     engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
                 )
@@ -233,10 +235,13 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
             }
             
             auto node = std::make_unique<Node>();
-
             node->SetSpatial(std::move(spatial));
 
             top->AddChild(std::move(node));
+        }
+        
+        if (skeleton_ref != nullptr) {
+            top->AddController<AnimationController>();
         }
     });
 

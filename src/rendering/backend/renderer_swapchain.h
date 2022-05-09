@@ -1,7 +1,3 @@
-//
-// Created by emd22 on 2022-02-20.
-//
-
 #ifndef HYPERION_RENDERER_SWAPCHAIN_H
 #define HYPERION_RENDERER_SWAPCHAIN_H
 
@@ -12,6 +8,8 @@
 #include "renderer_fbo.h"
 
 #include <vector>
+
+#define HYP_ENABLE_VSYNC 0
 
 namespace hyperion {
 namespace renderer {

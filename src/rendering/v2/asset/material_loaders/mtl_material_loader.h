@@ -12,10 +12,10 @@
 namespace hyperion::v2 {
 
 template <>
-struct LoaderObject<MaterialLibrary, LoaderFormat::MTL_MATERIAL_LIBRARY> {
-    class Loader : public LoaderBase<MaterialLibrary, LoaderFormat::MTL_MATERIAL_LIBRARY> {
+struct LoaderObject<MaterialGroup, LoaderFormat::MTL_MATERIAL_LIBRARY> {
+    class Loader : public LoaderBase<MaterialGroup, LoaderFormat::MTL_MATERIAL_LIBRARY> {
         static LoaderResult LoadFn(LoaderState *state, Object &);
-        static std::unique_ptr<MaterialLibrary> BuildFn(Engine *engine, const Object &);
+        static std::unique_ptr<MaterialGroup> BuildFn(Engine *engine, const Object &);
 
     public:
         Loader()

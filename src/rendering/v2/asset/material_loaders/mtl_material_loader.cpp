@@ -4,7 +4,7 @@
 namespace hyperion::v2 {
 
 using Tokens = std::vector<std::string>;
-using MtlMaterialLoader = LoaderObject<MaterialLibrary, LoaderFormat::MTL_MATERIAL_LIBRARY>::Loader;
+using MtlMaterialLoader = LoaderObject<MaterialGroup, LoaderFormat::MTL_MATERIAL_LIBRARY>::Loader;
 
 enum IlluminationModel {
     ILLUM_COLOR,
@@ -204,9 +204,9 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
     return {};
 }
 
-std::unique_ptr<MaterialLibrary> MtlMaterialLoader::BuildFn(Engine *engine, const Object &object)
+std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const Object &object)
 {
-    auto material_library = std::make_unique<MaterialLibrary>();
+    auto material_library = std::make_unique<MaterialGroup>();
     
     std::unordered_map<std::string, std::string> texture_names_to_path;
 

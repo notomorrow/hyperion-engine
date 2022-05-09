@@ -6,6 +6,8 @@
 #include "renderer_features.h"
 #include "renderer_image_view.h"
 #include "renderer_sampler.h"
+#include "rt/renderer_raytracing_pipeline.h"
+#include "rt/renderer_acceleration_structure.h"
 
 #include <math/math_util.h>
 
@@ -80,7 +82,7 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
         }
     }
     
-    for (VkWriteDescriptorSet &write : m_descriptor_writes) {
+    for (auto &write : m_descriptor_writes) {
         write.dstSet = m_set;
     }
 
@@ -124,12 +126,13 @@ void DescriptorSet::ApplyUpdates(Device *device)
 }
 
 const std::unordered_map<VkDescriptorType, size_t> DescriptorPool::items_per_set{
-    { VK_DESCRIPTOR_TYPE_SAMPLER, 20 },
-    { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 40 }, /* sampling imageviews in shader */
-    { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 20 },          /* imageStore, imageLoad etc */
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 20 },         /* standard uniform buffer */
-    { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 20 },
-    { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 20 }
+    {VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1},
+    {VK_DESCRIPTOR_TYPE_SAMPLER, 20},
+    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 40}, /* sampling imageviews in shader */
+    {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 20},          /* imageStore, imageLoad etc */
+    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 20},         /* standard uniform buffer */
+    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 20},
+    {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 20}
 };
 
 DescriptorPool::DescriptorPool()
@@ -208,10 +211,10 @@ Result DescriptorPool::Destroy(Device *device)
         ),
         result
     );
-
+    
+    // set all to nullptr
     m_descriptor_sets = {};
 
-    // set all to nullptr
     m_descriptor_sets_view.clear();
 
     /* Destroy pool */
@@ -221,7 +224,59 @@ Result DescriptorPool::Destroy(Device *device)
     return result;
 }
 
-Result DescriptorPool::Bind(Device *device, CommandBuffer *cmd, GraphicsPipeline *pipeline, DescriptorSetBinding &&binding) const
+Result DescriptorPool::Bind(Device *device,
+    CommandBuffer *cmd,
+    GraphicsPipeline *pipeline,
+    const DescriptorSetBinding &binding) const
+{
+    BindDescriptorSets(
+        device,
+        cmd,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipeline,
+        binding
+    );
+
+    HYPERION_RETURN_OK;
+}
+
+Result DescriptorPool::Bind(Device *device,
+    CommandBuffer *cmd,
+    ComputePipeline *pipeline,
+    const DescriptorSetBinding &binding) const
+{
+    BindDescriptorSets(
+        device,
+        cmd,
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        pipeline,
+        binding
+    );
+
+    HYPERION_RETURN_OK;
+}
+
+Result DescriptorPool::Bind(Device *device,
+    CommandBuffer *cmd,
+    RaytracingPipeline *pipeline,
+    const DescriptorSetBinding &binding) const
+{
+    BindDescriptorSets(
+        device,
+        cmd,
+        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+        pipeline,
+        binding
+    );
+
+    HYPERION_RETURN_OK;
+}
+
+void DescriptorPool::BindDescriptorSets(Device *device,
+    CommandBuffer *cmd,
+    VkPipelineBindPoint bind_point,
+    Pipeline *pipeline,
+    const DescriptorSetBinding &binding) const
 {
     const auto device_max_bound_descriptor_sets = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
 
@@ -241,47 +296,20 @@ Result DescriptorPool::Bind(Device *device, CommandBuffer *cmd, GraphicsPipeline
 
     vkCmdBindDescriptorSets(
         cmd->GetCommandBuffer(),
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        bind_point,
         pipeline->layout,
         binding.locations.binding,
         binding.declaration.count,
         &m_descriptor_sets_view[binding.declaration.set],
-        uint32_t(binding.offsets.offsets.size()),
+        static_cast<uint32_t>(binding.offsets.offsets.size()),
         binding.offsets.offsets.data()
     );
-
-    HYPERION_RETURN_OK;
-}
-
-Result DescriptorPool::Bind(Device *device, CommandBuffer *cmd, ComputePipeline *pipeline, DescriptorSetBinding &&binding) const
-{
-    AssertThrowMsg(
-        binding.declaration.count <= device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets,
-        "Requested binding of %d descriptor sets, but maximum bound is %d",
-        binding.declaration.count,
-        device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets
-    );
-
-    /* TODO:::: BIND should be moved to ComputePipeline & GraphicsPipeline classes -- we can get rid of private access to `layout` */
-
-    vkCmdBindDescriptorSets(
-        cmd->GetCommandBuffer(),
-        VK_PIPELINE_BIND_POINT_COMPUTE,
-        pipeline->layout,
-        binding.locations.binding,
-        binding.declaration.count,
-        &m_descriptor_sets_view[binding.declaration.set],
-        uint32_t(binding.offsets.offsets.size()),
-        binding.offsets.offsets.data()
-    );
-
-    HYPERION_RETURN_OK;
 }
 
 Result DescriptorPool::CreateDescriptorSetLayout(Device *device, VkDescriptorSetLayoutCreateInfo *layout_create_info, VkDescriptorSetLayout *out)
 {
     if (vkCreateDescriptorSetLayout(device->GetDevice(), layout_create_info, nullptr, out) != VK_SUCCESS) {
-        return Result(Result::RENDERER_ERR, "Could not create descriptor set layout");
+        return {Result::RENDERER_ERR, "Could not create descriptor set layout"};
     }
     
     m_descriptor_set_layouts.push_back(*out);
@@ -294,7 +322,7 @@ Result DescriptorPool::DestroyDescriptorSetLayout(Device *device, VkDescriptorSe
     auto it = std::find(m_descriptor_set_layouts.begin(), m_descriptor_set_layouts.end(), *layout);
 
     if (it == m_descriptor_set_layouts.end()) {
-        return Result(Result::RENDERER_ERR, "Could not destroy descriptor set layout; not found in list");
+        return {Result::RENDERER_ERR, "Could not destroy descriptor set layout; not found in list"};
     }
 
     vkDestroyDescriptorSetLayout(device->GetDevice(), *layout, nullptr);
@@ -304,18 +332,21 @@ Result DescriptorPool::DestroyDescriptorSetLayout(Device *device, VkDescriptorSe
     HYPERION_RETURN_OK;
 }
 
-Result DescriptorPool::AllocateDescriptorSet(Device *device, VkDescriptorSetLayout *layout, DescriptorSet *out)
+Result DescriptorPool::AllocateDescriptorSet(Device *device,
+    VkDescriptorSetLayout *layout,
+    DescriptorSet *out)
 {
     VkDescriptorSetAllocateInfo alloc_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-    alloc_info.pSetLayouts = layout;
-    alloc_info.descriptorPool = m_descriptor_pool;
+    alloc_info.pSetLayouts        = layout;
+    alloc_info.descriptorPool     = m_descriptor_pool;
     alloc_info.descriptorSetCount = 1;
 
+    constexpr uint32_t max_bindings = DescriptorSet::max_bindless_resources - 1;
+
     VkDescriptorSetVariableDescriptorCountAllocateInfoEXT count_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO};
-    constexpr uint32_t max_binding = DescriptorSet::max_bindless_resources - 1;
     count_info.descriptorSetCount = 1;
     // This number is the max allocatable count
-    count_info.pDescriptorCounts = &max_binding;
+    count_info.pDescriptorCounts = &max_bindings;
 
     if (out->IsBindless()) {
         alloc_info.pNext = &count_info;
@@ -326,12 +357,11 @@ Result DescriptorPool::AllocateDescriptorSet(Device *device, VkDescriptorSetLayo
     switch (alloc_result) {
     case VK_SUCCESS: return Result::OK;
     case VK_ERROR_FRAGMENTED_POOL:
-        return Result(Result::RENDERER_ERR_NEEDS_REALLOCATION, "Fragmented pool");
+        return {Result::RENDERER_ERR_NEEDS_REALLOCATION, "Fragmented pool", alloc_result};
     case VK_ERROR_OUT_OF_POOL_MEMORY:
-        // TODO: re-allocation
-        return Result(Result::RENDERER_ERR_NEEDS_REALLOCATION, "Out of pool memory");
+        return {Result::RENDERER_ERR_NEEDS_REALLOCATION, "Out of pool memory", alloc_result};
     default:
-        return Result(Result::RENDERER_ERR, "Unknown error");
+        return {Result::RENDERER_ERR, "Unknown error (check error code)", alloc_result};
     }
 }
 
@@ -344,7 +374,9 @@ Descriptor::Descriptor(uint32_t binding, Mode mode)
 
 Descriptor::~Descriptor() = default;
 
-void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, std::vector<VkWriteDescriptorSet> &writes)
+void Descriptor::Create(Device *device,
+    VkDescriptorSetLayoutBinding &binding,
+    std::vector<VkWriteDescriptorSet> &writes)
 {
     AssertThrow(m_descriptor_set != nullptr);
 
@@ -354,6 +386,7 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
 
     m_sub_descriptors_raw.buffers.resize(m_sub_descriptors.size());
     m_sub_descriptors_raw.images.resize(m_sub_descriptors.size());
+    m_sub_descriptors_raw.acceleration_structures.resize(m_sub_descriptors.size());
     
     binding.descriptorCount    = m_descriptor_set->IsBindless() ? DescriptorSet::max_bindless_resources : uint32_t(m_sub_descriptors.size());
     binding.descriptorType     = descriptor_type;
@@ -365,7 +398,8 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
         UpdateSubDescriptorBuffer(
             m_sub_descriptors[i],
             m_sub_descriptors_raw.buffers[i],
-            m_sub_descriptors_raw.images[i]
+            m_sub_descriptors_raw.images[i],
+            m_sub_descriptors_raw.acceleration_structures[i]
         );
 
         if (m_descriptor_set->IsBindless()) {
@@ -377,6 +411,10 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
             write.descriptorType  = descriptor_type;
             write.pBufferInfo     = &m_sub_descriptors_raw.buffers[i];
             write.pImageInfo      = &m_sub_descriptors_raw.images[i];
+            
+            if (m_mode == Mode::ACCELERATION_STRUCTURE) {
+                write.pNext = &m_sub_descriptors_raw.acceleration_structures[i];
+            }
 
             writes.push_back(write);
         }
@@ -386,12 +424,15 @@ void Descriptor::Create(Device *device, VkDescriptorSetLayoutBinding &binding, s
         VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
         write.pNext           = nullptr;
         write.dstBinding      = m_binding;
-
         write.dstArrayElement = 0;
         write.descriptorCount = uint32_t(m_sub_descriptors.size());
         write.descriptorType  = descriptor_type;
         write.pBufferInfo     = m_sub_descriptors_raw.buffers.data();
         write.pImageInfo      = m_sub_descriptors_raw.images.data();
+            
+        if (m_mode == Mode::ACCELERATION_STRUCTURE) {
+            write.pNext = m_sub_descriptors_raw.acceleration_structures.data();
+        }
 
         writes.push_back(write);
     }
@@ -403,7 +444,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
     
     uint32_t iteration = 0;
 
-    Range<uint32_t> changed;
+    Range<uint32_t> changed{UINT32_MAX, 0};
         
     while (!m_sub_descriptor_update_indices.empty()) {
         if (iteration == DescriptorSet::max_sub_descriptor_updates_per_frame) {
@@ -415,7 +456,8 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
         UpdateSubDescriptorBuffer(
             m_sub_descriptors[sub_descriptor_index],
             m_sub_descriptors_raw.buffers[sub_descriptor_index],
-            m_sub_descriptors_raw.images[sub_descriptor_index]
+            m_sub_descriptors_raw.images[sub_descriptor_index],
+            m_sub_descriptors_raw.acceleration_structures[sub_descriptor_index]
         );
 
         if (m_descriptor_set->IsBindless()) {
@@ -428,12 +470,16 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
             write.pBufferInfo     = &m_sub_descriptors_raw.buffers[sub_descriptor_index];
             write.pImageInfo      = &m_sub_descriptors_raw.images[sub_descriptor_index];
 
+            if (m_mode == Mode::ACCELERATION_STRUCTURE) {
+                write.pNext = &m_sub_descriptors_raw.acceleration_structures[sub_descriptor_index];
+            }
+
             writes.push_back(write);
         }
 
         changed |= {static_cast<uint32_t>(sub_descriptor_index), static_cast<uint32_t>(sub_descriptor_index) + 1};
 
-        m_dirty_sub_descriptors = m_dirty_sub_descriptors.Without(sub_descriptor_index);
+        m_dirty_sub_descriptors = m_dirty_sub_descriptors.Excluding(sub_descriptor_index);
 
         m_sub_descriptor_update_indices.pop();
 
@@ -444,36 +490,47 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
         m_dirty_sub_descriptors = {};
     }
 
+    if (changed.GetEnd() <= changed.GetStart()) {
+        return;
+    }
+
     if (!m_descriptor_set->IsBindless()) {
         VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
         write.pNext           = nullptr;
         write.dstBinding      = m_binding;
         write.dstArrayElement = 0;
-        write.descriptorCount = changed.GetDistance();
+        write.descriptorCount = static_cast<uint32_t>(changed.Distance());
         write.descriptorType  = descriptor_type;
         write.pBufferInfo     = &m_sub_descriptors_raw.buffers[changed.GetStart()];
         write.pImageInfo      = &m_sub_descriptors_raw.images[changed.GetStart()];
+
+        if (m_mode == Mode::ACCELERATION_STRUCTURE) {
+            write.pNext = &m_sub_descriptors_raw.acceleration_structures[changed.GetStart()];
+        }
 
         writes.push_back(write);
     }
 }
 
-void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, VkDescriptorBufferInfo &out_buffer, VkDescriptorImageInfo &out_image) const
+void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor,
+    VkDescriptorBufferInfo &out_buffer,
+    VkDescriptorImageInfo &out_image,
+    VkWriteDescriptorSetAccelerationStructureKHR &out_acceleration_structure) const
 {
     switch (m_mode) {
     case Mode::UNIFORM_BUFFER: /* fallthrough */
     case Mode::UNIFORM_BUFFER_DYNAMIC:
     case Mode::STORAGE_BUFFER:
     case Mode::STORAGE_BUFFER_DYNAMIC:
-        AssertThrow(sub_descriptor.gpu_buffer != nullptr);
-        AssertThrow(sub_descriptor.gpu_buffer->buffer != nullptr);
+        AssertThrow(sub_descriptor.buffer != nullptr);
+        AssertThrow(sub_descriptor.buffer->buffer != nullptr);
 
         out_buffer = {
-            .buffer = sub_descriptor.gpu_buffer->buffer,
+            .buffer = sub_descriptor.buffer->buffer,
             .offset = 0,
             .range = sub_descriptor.range != 0
                 ? sub_descriptor.range
-                : sub_descriptor.gpu_buffer->size
+                : sub_descriptor.buffer->size
         };
 
         break;
@@ -485,8 +542,8 @@ void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, 
         AssertThrow(sub_descriptor.sampler->GetSampler() != nullptr);
 
         out_image = {
-            .sampler = sub_descriptor.sampler->GetSampler(),
-            .imageView = sub_descriptor.image_view->GetImageView(),
+            .sampler     = sub_descriptor.sampler->GetSampler(),
+            .imageView   = sub_descriptor.image_view->GetImageView(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
 
@@ -496,9 +553,20 @@ void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor, 
         AssertThrow(sub_descriptor.image_view->GetImageView() != nullptr);
 
         out_image = {
-            .sampler = nullptr,
-            .imageView = sub_descriptor.image_view->GetImageView(),
+            .sampler     = VK_NULL_HANDLE,
+            .imageView   = sub_descriptor.image_view->GetImageView(),
             .imageLayout = VK_IMAGE_LAYOUT_GENERAL
+        };
+
+        break;
+    case Mode::ACCELERATION_STRUCTURE:
+        AssertThrow(sub_descriptor.acceleration_structure != nullptr);
+        AssertThrow(sub_descriptor.acceleration_structure->GetAccelerationStructure() != nullptr);
+
+        out_acceleration_structure = {
+            .sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
+            .accelerationStructureCount = 1,
+            .pAccelerationStructures    = &sub_descriptor.acceleration_structure->GetAccelerationStructure()
         };
 
         break;
@@ -516,6 +584,7 @@ uint32_t Descriptor::AddSubDescriptor(SubDescriptor &&sub_descriptor)
     m_sub_descriptors.push_back(sub_descriptor);
     m_sub_descriptors_raw.buffers.emplace_back();
     m_sub_descriptors_raw.images.emplace_back();
+    m_sub_descriptors_raw.acceleration_structures.emplace_back();
 
     MarkDirty(index);
 
@@ -549,6 +618,7 @@ void Descriptor::RemoveSubDescriptor(uint32_t index)
     m_sub_descriptors.erase(m_sub_descriptors.begin() + index);
     m_sub_descriptors_raw.buffers.erase(m_sub_descriptors_raw.buffers.begin() + index);
     m_sub_descriptors_raw.images.erase(m_sub_descriptors_raw.images.begin() + index);
+    m_sub_descriptors_raw.acceleration_structures.erase(m_sub_descriptors_raw.acceleration_structures.begin() + index);
 }
 
 void Descriptor::MarkDirty(uint32_t sub_descriptor_index)
@@ -571,6 +641,7 @@ VkDescriptorType Descriptor::GetDescriptorType(Mode mode)
     case Mode::STORAGE_BUFFER_DYNAMIC: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
     case Mode::IMAGE_SAMPLER:          return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     case Mode::IMAGE_STORAGE:          return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case Mode::ACCELERATION_STRUCTURE: return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
     default:
         AssertThrowMsg(false, "Unsupported descriptor type");
     }

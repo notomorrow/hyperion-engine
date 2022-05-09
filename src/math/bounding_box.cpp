@@ -128,7 +128,7 @@ bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const
     Vector3 hit_min(std::numeric_limits<float>::lowest());
     Vector3 hit_max(std::numeric_limits<float>::max());
 
-    if (std::fabs(ray.m_direction.x) < MathUtil::epsilon) {
+    if (std::fabs(ray.m_direction.x) < MathUtil::epsilon<float>) {
         if (ray.m_position.x < min.x || ray.m_position.x > max.x) {
             return false; // no collision
         }
@@ -140,7 +140,7 @@ bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const
         }
     }
 
-    if (std::fabs(ray.m_direction.y) < MathUtil::epsilon) {
+    if (std::fabs(ray.m_direction.y) < MathUtil::epsilon<float>) {
         if (ray.m_position.y < min.y ||
             ray.m_position.y > max.y) {
             return false; // no collision
@@ -161,7 +161,7 @@ bool BoundingBox::IntersectRay(const Ray &ray, RaytestHit &out) const
         if (hit_max.y < hit_max.x) hit_max.x = hit_max.y;
     }
 
-    if (std::fabs(ray.m_direction.z) < MathUtil::epsilon) {
+    if (std::fabs(ray.m_direction.z) < MathUtil::epsilon<float>) {
         if (ray.m_position.z < min.z || ray.m_position.z > max.z) {
             return false; // no collision
         }

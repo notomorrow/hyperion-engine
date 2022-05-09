@@ -101,9 +101,9 @@ void Voxelizer::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
-        m_scene.Acquire(),
         m_render_pass.Acquire(),
-        GraphicsPipeline::Bucket::BUCKET_VOXELIZER
+        VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
+        Bucket::BUCKET_VOXELIZER
     );
 
     pipeline->SetDepthWrite(false);
@@ -114,7 +114,7 @@ void Voxelizer::CreatePipeline(Engine *engine)
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
-    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_OPAQUE).m_graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
         for (auto &spatial : pipeline->GetSpatials()) {
             if (spatial != nullptr) {
                 m_pipeline->AddSpatial(spatial.Acquire());
@@ -165,11 +165,11 @@ void Voxelizer::CreateDescriptors(Engine *engine)
 
     descriptor_set
         ->AddDescriptor<renderer::StorageBufferDescriptor>(0)
-        ->AddSubDescriptor({.gpu_buffer = m_counter->GetBuffer()});
+        ->AddSubDescriptor({.buffer = m_counter->GetBuffer()});
 
     descriptor_set
         ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
-        ->AddSubDescriptor({.gpu_buffer = m_fragment_list_buffer.get()});
+        ->AddSubDescriptor({.buffer = m_fragment_list_buffer.get()});
 }
 
 /* We only reconstruct the buffer if the number of rendered fragments is
@@ -207,7 +207,7 @@ void Voxelizer::ResizeFragmentListBuffer(Engine *engine)
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER);
 
     descriptor_set->GetDescriptor(1)->RemoveSubDescriptor(0);
-    descriptor_set->GetDescriptor(1)->AddSubDescriptor({.gpu_buffer = m_fragment_list_buffer.get()});
+    descriptor_set->GetDescriptor(1)->AddSubDescriptor({.buffer = m_fragment_list_buffer.get()});
 
     descriptor_set->ApplyUpdates(engine->GetInstance()->GetDevice());
 }
@@ -218,7 +218,9 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
 
     /* count number of fragments */
     commands.Push([this, engine, count_mode](CommandBuffer *command_buffer) {
-        m_pipeline->Get().push_constants.voxelizer_data = {
+        engine->render_bindings.BindScene(m_scene);
+
+        m_pipeline->GetPipeline()->push_constants.voxelizer_data = {
             .grid_size = voxel_map_size,
             .count_mode = count_mode
         };
@@ -226,6 +228,8 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
         m_framebuffer->BeginCapture(command_buffer);
         m_pipeline->Render(engine, command_buffer, 0);
         m_framebuffer->EndCapture(command_buffer);
+
+        engine->render_bindings.UnbindScene();
 
         HYPERION_RETURN_OK;
     });

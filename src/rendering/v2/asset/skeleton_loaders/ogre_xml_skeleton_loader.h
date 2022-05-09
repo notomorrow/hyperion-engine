@@ -3,7 +3,7 @@
 
 #include <rendering/v2/asset/loader_object.h>
 #include <rendering/v2/asset/loader.h>
-#include <rendering/v2/components/skeleton.h>
+#include <rendering/v2/animation/skeleton.h>
 
 #include <math/quaternion.h>
 

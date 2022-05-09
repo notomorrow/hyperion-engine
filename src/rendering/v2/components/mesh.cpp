@@ -20,168 +20,6 @@
 
 namespace hyperion::v2 {
 
-Mesh::Mesh(const std::vector<Vertex> &vertices,
-    const std::vector<Index> &indices)
-    : EngineComponentBase(),
-      m_vertices(std::move(vertices)),
-      m_indices(std::move(indices)),
-      m_vertex_attributes(
-          MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES
-          | MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS)
-{
-}
-
-Mesh::~Mesh()
-{
-    Teardown();
-}
-
-void Mesh::Init(Engine *engine)
-{
-    if (IsInit()) {
-        return;
-    }
-
-    EngineComponentBase::Init();
-
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](Engine *engine) {
-
-        DebugLog(LogType::Info, "Init mesh with %llu vertices and %llu indices\n", m_vertices.size(), m_indices.size());
-
-        if (m_vertices.empty() || m_indices.empty()) {
-            DebugLog(LogType::Warn, "Attempt to create Mesh #%lu with empty vertices or indices list\n", m_id.value);
-
-            /* set to 1 vertex / index */
-            m_vertices = {Vertex()};
-            m_indices  = {0};
-        }
-
-        Upload(engine->GetInstance());
-
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
-            AssertThrow(m_vbo != nullptr);
-            AssertThrow(m_ibo != nullptr);
-
-            Device *device = engine->GetInstance()->GetDevice();
-
-            m_vbo->Destroy(device);
-            m_vbo.reset();
-
-            m_ibo->Destroy(device);
-            m_ibo.reset();
-        }), engine);
-    }));
-}
-
-/* Copy our values into the packed vertex buffer, and increase the index for the next possible
- * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
-#define PACKED_SET_ATTR(raw_values, arg_size)                                                    \
-    do {                                                                                         \
-        memcpy((void *)(raw_buffer + current_offset), (raw_values), (arg_size) * sizeof(float)); \
-        current_offset += (arg_size);                                                            \
-    } while (0)
-
-std::vector<float> Mesh::CreatePackedBuffer() {
-    const size_t vertex_size = m_vertex_attributes.VertexSize();
-
-    std::vector<float> packed_buffer(vertex_size * m_vertices.size());
-
-    /* Raw buffer that is used with our helper macro. */
-    float *raw_buffer = packed_buffer.data();
-    size_t current_offset = 0;
-
-    for (size_t i = 0; i < m_vertices.size(); i++) {
-        auto &vertex = m_vertices[i];
-        /* Offset aligned to the current vertex */
-        //current_offset = i * vertex_size;
-
-        /* Position and normals */
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_POSITION)  PACKED_SET_ATTR(vertex.GetPosition().values, 3);
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_NORMAL)    PACKED_SET_ATTR(vertex.GetNormal().values,   3);
-        /* Texture coordinates */
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0) PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2);
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2);
-        /* Tangents and Bitangents */
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_TANGENT)   PACKED_SET_ATTR(vertex.GetTangent().values,   3);
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT) PACKED_SET_ATTR(vertex.GetBitangent().values, 3);
-
-        /* TODO: modify GetBoneIndex/GetBoneWeight to return a Vector4. */
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS) {
-            float weights[4] = {
-                vertex.GetBoneWeight(0), vertex.GetBoneWeight(1),
-                vertex.GetBoneWeight(2), vertex.GetBoneWeight(3)
-            };
-            PACKED_SET_ATTR(weights, std::size(weights));
-        }
-
-        if (m_vertex_attributes & MeshInputAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES) {
-            float indices[4] = {
-                    (float)vertex.GetBoneIndex(0), (float)vertex.GetBoneIndex(1),
-                    (float)vertex.GetBoneIndex(2), (float)vertex.GetBoneIndex(3)
-            };
-            PACKED_SET_ATTR(indices, std::size(indices));
-        }
-    }
-
-    return packed_buffer;
-}
-
-#undef PACKED_SET_ATTR
-
-void Mesh::Upload(Instance *instance)
-{
-    using renderer::StagingBuffer;
-
-    auto *device = instance->GetDevice();
-
-    AssertThrow(m_vbo == nullptr);
-    AssertThrow(m_ibo == nullptr);
-    
-    m_vbo = std::make_unique<VertexBuffer>();
-    m_ibo = std::make_unique<IndexBuffer>();
-
-    std::vector<float> packed_buffer = CreatePackedBuffer();
-    const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
-    const size_t packed_indices_size = m_indices.size() * sizeof(Index);
-
-    HYPERION_ASSERT_RESULT(m_vbo->Create(device, packed_buffer_size));
-    HYPERION_ASSERT_RESULT(m_ibo->Create(device, packed_indices_size));
-
-    HYPERION_ASSERT_RESULT(instance->GetStagingBufferPool().Use(device, [&](renderer::StagingBufferPool::Context &holder) {
-        auto commands = instance->GetSingleTimeCommands();
-
-        auto *staging_buffer_vertices = holder.Acquire(packed_buffer_size);
-        /* Create and upload the VBO */
-        staging_buffer_vertices->Copy(device, packed_buffer_size, packed_buffer.data());
-
-        auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
-        staging_buffer_indices->Copy(device, packed_indices_size, m_indices.data());
-
-
-        commands.Push([&](CommandBuffer *cmd) {
-            m_vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
-
-            HYPERION_RETURN_OK;
-        });
-    
-        commands.Push([&](CommandBuffer *cmd) {
-            m_ibo->CopyFrom(cmd, staging_buffer_indices, packed_indices_size);
-
-            HYPERION_RETURN_OK;
-        });
-    
-        HYPERION_BUBBLE_ERRORS(commands.Execute(device));
-
-        HYPERION_RETURN_OK;
-    }));
-}
-
 std::pair<std::vector<Vertex>, std::vector<Mesh::Index>>
 Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
 {
@@ -217,6 +55,175 @@ Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
     return std::make_pair(new_vertices, indices);
 }
 
+Mesh::Mesh(
+    const std::vector<Vertex> &vertices,
+    const std::vector<Index> &indices,
+    Flags flags
+) : EngineComponentBase(),
+    m_vbo(std::make_unique<VertexBuffer>()),
+    m_ibo(std::make_unique<IndexBuffer>()),
+    m_vertices(std::move(vertices)),
+    m_indices(std::move(indices)),
+    m_vertex_attributes(
+        VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES
+        | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS),
+    m_flags(flags)
+{
+}
+
+Mesh::~Mesh()
+{
+    Teardown();
+}
+
+void Mesh::Init(Engine *engine)
+{
+    if (IsInit()) {
+        return;
+    }
+
+    EngineComponentBase::Init();
+
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](Engine *engine) {
+        DebugLog(LogType::Info, "Init mesh with %llu vertices and %llu indices\n", m_vertices.size(), m_indices.size());
+
+        if (m_vertices.empty() || m_indices.empty()) {
+            DebugLog(
+                LogType::Warn,
+                "Attempt to create Mesh #%lu with empty vertices or indices list; setting vertices to be 1 empty vertex\n",
+                m_id.value
+            );
+
+            /* set to 1 vertex / index to prevent explosions */
+            m_vertices = {Vertex()};
+            m_indices  = {0};
+        }
+
+        engine->render_scheduler.Enqueue([this, engine] {
+            using renderer::StagingBuffer;
+
+            auto *instance = engine->GetInstance();
+            auto *device = engine->GetDevice();
+
+            std::vector<float> packed_buffer = BuildVertexBuffer();
+            const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
+            const size_t packed_indices_size = m_indices.size() * sizeof(Index);
+
+            HYPERION_BUBBLE_ERRORS(m_vbo->Create(device, packed_buffer_size));
+            HYPERION_BUBBLE_ERRORS(m_ibo->Create(device, packed_indices_size));
+
+            return instance->GetStagingBufferPool().Use(
+                device,
+                [&](renderer::StagingBufferPool::Context &holder) {
+                    auto commands = instance->GetSingleTimeCommands();
+
+                    auto *staging_buffer_vertices = holder.Acquire(packed_buffer_size);
+                    /* Create and upload the VBO */
+                    staging_buffer_vertices->Copy(device, packed_buffer_size, packed_buffer.data());
+
+                    auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
+                    staging_buffer_indices->Copy(device, packed_indices_size, m_indices.data());
+
+
+                    commands.Push([&](CommandBuffer *cmd) {
+                        m_vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
+
+                        HYPERION_RETURN_OK;
+                    });
+                
+                    commands.Push([&](CommandBuffer *cmd) {
+                        m_ibo->CopyFrom(cmd, staging_buffer_indices, packed_indices_size);
+
+                        HYPERION_RETURN_OK;
+                    });
+                
+                    HYPERION_BUBBLE_ERRORS(commands.Execute(device));
+
+                    HYPERION_RETURN_OK;
+                });
+        });
+
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
+            engine->render_scheduler.Enqueue([this, engine] {
+                auto result = renderer::Result::OK;
+
+                Device *device = engine->GetInstance()->GetDevice();
+                
+                HYPERION_PASS_ERRORS(m_vbo->Destroy(device), result);
+                HYPERION_PASS_ERRORS(m_ibo->Destroy(device), result);
+
+                return result;
+            });
+            
+            engine->render_scheduler.FlushOrWait([](auto &fn) {
+                HYPERION_ASSERT_RESULT(fn());
+            });
+        }), engine);
+    }));
+}
+
+/* Copy our values into the packed vertex buffer, and increase the index for the next possible
+ * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
+#define PACKED_SET_ATTR(raw_values, arg_size)                                                    \
+    do {                                                                                         \
+        memcpy((void *)(raw_buffer + current_offset), (raw_values), (arg_size) * sizeof(float)); \
+        current_offset += (arg_size);                                                            \
+    } while (0)
+
+std::vector<float> Mesh::BuildVertexBuffer()
+{
+    const size_t vertex_size = m_vertex_attributes.CalculateVertexSize();
+
+    std::vector<float> packed_buffer(vertex_size * m_vertices.size());
+
+    /* Raw buffer that is used with our helper macro. */
+    float *raw_buffer = packed_buffer.data();
+    size_t current_offset = 0;
+
+    for (size_t i = 0; i < m_vertices.size(); i++) {
+        auto &vertex = m_vertices[i];
+        /* Offset aligned to the current vertex */
+        //current_offset = i * vertex_size;
+
+        /* Position and normals */
+        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION)  PACKED_SET_ATTR(vertex.GetPosition().values, 3);
+        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL)    PACKED_SET_ATTR(vertex.GetNormal().values,   3);
+        /* Texture coordinates */
+        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0) PACKED_SET_ATTR(vertex.GetTexCoord0().values, 2);
+        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1) PACKED_SET_ATTR(vertex.GetTexCoord1().values, 2);
+        /* Tangents and Bitangents */
+        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT)   PACKED_SET_ATTR(vertex.GetTangent().values,   3);
+        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT) PACKED_SET_ATTR(vertex.GetBitangent().values, 3);
+
+        /* TODO: modify GetBoneIndex/GetBoneWeight to return a Vector4. */
+        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS) {
+            float weights[4] = {
+                vertex.GetBoneWeight(0), vertex.GetBoneWeight(1),
+                vertex.GetBoneWeight(2), vertex.GetBoneWeight(3)
+            };
+            PACKED_SET_ATTR(weights, std::size(weights));
+        }
+
+        if (m_vertex_attributes & VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES) {
+            float indices[4] = {
+                    (float)vertex.GetBoneIndex(0), (float)vertex.GetBoneIndex(1),
+                    (float)vertex.GetBoneIndex(2), (float)vertex.GetBoneIndex(3)
+            };
+            PACKED_SET_ATTR(indices, std::size(indices));
+        }
+    }
+
+    return packed_buffer;
+}
+
+#undef PACKED_SET_ATTR
+
 void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
 {
     AssertThrow(m_vbo != nullptr && m_ibo != nullptr);
@@ -227,11 +234,36 @@ void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
     vkCmdDrawIndexed(
         cmd->GetCommandBuffer(),
         uint32_t(m_indices.size()),
-        1,
-        0,
-        0,
-        0
+        1, 0, 0, 0
     );
+}
+
+std::vector<PackedVertex> Mesh::BuildPackedVertices() const
+{
+    std::vector<PackedVertex> packed_vertices;
+    packed_vertices.resize(m_vertices.size());
+
+    for (size_t i = 0; i < m_vertices.size(); i++) {
+        const auto &vertex = m_vertices[i];
+
+        packed_vertices[i] = PackedVertex{
+            .position_x  = vertex.GetPosition().x,
+            .position_y  = vertex.GetPosition().y,
+            .position_z  = vertex.GetPosition().z,
+            .normal_x    = vertex.GetNormal().x,
+            .normal_y    = vertex.GetNormal().y,
+            .normal_z    = vertex.GetNormal().z,
+            .texcoord0_x = vertex.GetTexCoord0().x,
+            .texcoord0_y = vertex.GetTexCoord0().y
+        };
+    }
+
+    return packed_vertices;
+}
+
+std::vector<PackedIndex> Mesh::BuildPackedIndices() const
+{
+    return std::vector<PackedIndex>(m_indices.begin(), m_indices.end());
 }
 
 void Mesh::CalculateNormals()

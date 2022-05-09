@@ -242,7 +242,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 {
     auto top = std::make_unique<Node>(object.tag.c_str());
 
-    std::unique_ptr<MaterialLibrary> material_library;
+    std::unique_ptr<MaterialGroup> material_library;
     
     if (!object.material_library.empty()) {
         auto material_library_path = StringUtil::BasePath(object.filepath) + "/" + object.material_library;
@@ -251,7 +251,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             material_library_path += ".mtl";
         }
 
-        material_library = engine->assets.Load<MaterialLibrary>(material_library_path);
+        material_library = engine->assets.Load<MaterialGroup>(material_library_path);
 
         if (material_library == nullptr) {
             DebugLog(LogType::Warn, "Obj model loader: Could not load material library at %s\n", material_library_path.c_str());
@@ -349,8 +349,10 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
                     std::move(mesh),
+                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).Acquire(),
                     vertex_attributes,
-                    std::move(material)
+                    std::move(material),
+                    Bucket::BUCKET_OPAQUE
                 )
             );
             

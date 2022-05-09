@@ -73,43 +73,47 @@ void Material::UpdateShaderData(Engine *engine) const
         .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
     };
 
+    shader_data.texture_usage = 0;
+
     const size_t num_bound_textures = MathUtil::Min(
         m_textures.Size(),
         MaterialShaderData::max_bound_textures
     );
 
-    shader_data.texture_usage = 0;
+    if (num_bound_textures != 0) {
+        /* TODO: only update this for each texture that has changed. */
 
-    for (size_t i = 0; i < num_bound_textures; i++) {
-        if (const auto &texture = m_textures.ValueAt(i)) {
-            if (texture == nullptr) {
+        for (size_t i = 0; i < num_bound_textures; i++) {
+            if (const auto &texture = m_textures.ValueAt(i)) {
+                if (texture == nullptr) {
+                    DebugLog(
+                        LogType::Warn,
+                        "Texture could not be bound for Material %d because it is null\n",
+                        m_id.value
+                    );
+
+                    continue;
+                }
+
+                if (engine->shader_globals->textures.GetResourceIndex(texture->GetId(), &shader_data.texture_index[i])) {
+                    shader_data.texture_usage |= 1 << i;
+
+                    continue;
+                }
+
                 DebugLog(
                     LogType::Warn,
-                    "Texture could not be bound for Material %d because it is null\n",
+                    "Texture #%d could not be bound for Material %d because it is not found in the bindless texture store\n",
+                    texture->GetId().value,
                     m_id.value
                 );
-
-                continue;
             }
-
-            if (engine->shader_globals->textures.GetResourceIndex(texture->GetId(), &shader_data.texture_index[i])) {
-                shader_data.texture_usage |= 1 << i;
-
-                continue;
-            }
-
-            DebugLog(
-                LogType::Warn,
-                "Texture #%d could not be bound for Material %d because it is not found in the bindless texture store\n",
-                texture->GetId().value,
-                m_id.value
-            );
         }
     }
 
-    engine->shader_globals->materials.Set(m_id.value - 1, std::move(shader_data));
+    engine->shader_globals->materials.Set(m_id.value - 1, shader_data);
 
-    m_shader_data_state = ShaderDataState::CLEAN;
+    //m_shader_data_state = ShaderDataState::CLEAN;
 }
 
 void Material::SetParameter(MaterialKey key, const Parameter &value)
@@ -135,7 +139,7 @@ Texture *Material::GetTexture(TextureKey key) const
     return m_textures.Get(key).ptr;
 }
 
-MaterialLibrary::MaterialLibrary() = default;
-MaterialLibrary::~MaterialLibrary() = default;
+MaterialGroup::MaterialGroup() = default;
+MaterialGroup::~MaterialGroup() = default;
 
 } // namespace hyperion::v2

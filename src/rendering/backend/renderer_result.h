@@ -16,11 +16,12 @@ struct Result {
     } result;
 
     const char *message;
+    int error_code = 0;
     
-    Result(decltype(result) result, const char *message = "")
-        : result(result), message(message) {}
+    Result(decltype(result) result, const char *message = "", int error_code = 0)
+        : result(result), message(message), error_code(error_code) {}
     Result(const Result &other)
-        : result(other.result), message(other.message) {}
+        : result(other.result), message(other.message), error_code(other.error_code) {}
 
     HYP_FORCE_INLINE
     operator bool() const { return result == RENDERER_OK; }
@@ -52,24 +53,31 @@ struct Result {
 #define HYPERION_ASSERT_RESULT(result) \
     do { \
         auto _result = (result); \
-        AssertThrowMsg(_result == ::hyperion::renderer::Result::OK, _result.message); \
+        AssertThrowMsg(_result == ::hyperion::renderer::Result::OK, "[Error Code: %d]  %s", _result.error_code, _result.message); \
     } while (0)
 
 #define HYPERION_VK_CHECK(vk_result) \
     do { \
         if ((vk_result) != VK_SUCCESS) \
-            return ::hyperion::renderer::Result(::hyperion::renderer::Result::RENDERER_ERR, #vk_result " != VK_SUCCESS"); \
-    } while (0)
-
-#define HYPERION_VK_PASS_ERRORS(vk_result, out_result) \
-    do { \
-        if ((vk_result) != VK_SUCCESS) (out_result) = ::hyperion::renderer::Result(::hyperion::renderer::Result::RENDERER_ERR, #vk_result " != VK_SUCCESS"); \
+            return ::hyperion::renderer::Result(::hyperion::renderer::Result::RENDERER_ERR, HYP_DEBUG_FUNC_SHORT ": " #vk_result " != VK_SUCCESS", int(vk_result)); \
     } while (0)
 
 #define HYPERION_VK_CHECK_MSG(vk_result, msg) \
     do { \
         if ((vk_result) != VK_SUCCESS) \
-            return ::hyperion::renderer::Result(::hyperion::renderer::Result::RENDERER_ERR, msg ":\t" #vk_result " != VK_SUCCESS"); \
+            return ::hyperion::renderer::Result(::hyperion::renderer::Result::RENDERER_ERR, HYP_DEBUG_FUNC_SHORT ": " msg, int(vk_result)); \
+    } while (0)
+
+#define HYPERION_VK_PASS_ERRORS(vk_result, out_result) \
+    do { \
+        if ((vk_result) != VK_SUCCESS) \
+            (out_result) = ::hyperion::renderer::Result(::hyperion::renderer::Result::RENDERER_ERR, HYP_DEBUG_FUNC_SHORT ": " #vk_result " != VK_SUCCESS", int(vk_result)); \
+    } while (0)
+
+#define HYPERION_VK_PASS_ERRORS_MSG(vk_result, msg, out_result) \
+    do { \
+        if ((vk_result) != VK_SUCCESS) \
+            (out_result) = ::hyperion::renderer::Result(::hyperion::renderer::Result::RENDERER_ERR, HYP_DEBUG_FUNC_SHORT ": " msg, int(vk_result)); \
     } while (0)
 
 } // namespace renderer

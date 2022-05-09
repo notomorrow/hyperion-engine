@@ -85,9 +85,14 @@ StagingBuffer *StagingBufferPool::Context::CreateStagingBuffer(size_t size)
 StagingBuffer *StagingBufferPool::FindStagingBuffer(size_t size)
 {
     /* do a binary search to find one with the closest size (never less than required) */
-    const auto bound = std::upper_bound(m_staging_buffers.begin(), m_staging_buffers.end(), size, [](const size_t &sz, const auto &it) {
-        return sz < it.size;
-    });
+    const auto bound = std::upper_bound(
+        m_staging_buffers.begin(),
+        m_staging_buffers.end(),
+        size,
+        [](const size_t &sz, const auto &it) {
+            return sz < it.size;
+        }
+    );
 
     if (bound != m_staging_buffers.end()) {
         /* Update the time so that frequently used buffers will stay in the pool longer */
@@ -108,9 +113,14 @@ Result StagingBufferPool::Use(Device *device, UseFunction &&fn)
     HYPERION_PASS_ERRORS(fn(context), result);
 
     for (auto &record : context.m_staging_buffers) {
-        const auto bound = std::upper_bound(m_staging_buffers.begin(), m_staging_buffers.end(), record, [](const auto &record, const auto &it) {
-            return record.size < it.size;
-        });
+        const auto bound = std::upper_bound(
+            m_staging_buffers.begin(),
+            m_staging_buffers.end(),
+            record,
+            [](const auto &record, const auto &it) {
+                return record.size < it.size;
+            }
+        );
 
         m_staging_buffers.insert(bound, std::move(record));
     }
@@ -411,9 +421,9 @@ VkBufferCreateInfo GPUBuffer::GetBufferCreateInfo(Device *device) const
     const uint32_t buffer_family_indices[] = { qf_indices.graphics_family.value(), qf_indices.compute_family.value() };
 
     VkBufferCreateInfo vk_buffer_info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    vk_buffer_info.size  = size;
-    vk_buffer_info.usage = usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    vk_buffer_info.pQueueFamilyIndices = buffer_family_indices;
+    vk_buffer_info.size                  = size;
+    vk_buffer_info.usage                 = usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    vk_buffer_info.pQueueFamilyIndices   = buffer_family_indices;
     vk_buffer_info.queueFamilyIndexCount = uint32_t(std::size(buffer_family_indices));
 
     return vk_buffer_info;
@@ -435,6 +445,24 @@ Result GPUBuffer::CheckCanAllocate(Device *device, size_t size) const
     const auto alloc_info = GetAllocationCreateInfo(device);
 
     return CheckCanAllocate(device, create_info, alloc_info, this->size);
+}
+
+uint64_t GPUBuffer::GetBufferDeviceAddress(Device *device) const
+{
+    AssertThrowMsg(
+        device->GetFeatures().GetBufferDeviceAddressFeatures().bufferDeviceAddress,
+        "Called GetBufferDeviceAddress() but the buffer device address extension feature is not supported or enabled!"
+    );
+
+    AssertThrow(buffer != VK_NULL_HANDLE);
+
+	VkBufferDeviceAddressInfoKHR info{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
+	info.buffer = buffer;
+
+	return device->GetFeatures().dyn_functions.vkGetBufferDeviceAddressKHR(
+        device->GetDevice(),
+        &info
+    );
 }
 
 Result GPUBuffer::CheckCanAllocate(Device *device,
@@ -507,7 +535,9 @@ void GPUBuffer::InsertBarrier(CommandBuffer *command_buffer, ResourceState new_s
     resource_state = new_state;
 }
 
-void GPUBuffer::CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buffer, size_t count)
+void GPUBuffer::CopyFrom(CommandBuffer *command_buffer,
+    const GPUBuffer *src_buffer,
+    size_t count)
 {
     InsertBarrier(command_buffer, ResourceState::COPY_DST);
     src_buffer->InsertBarrier(command_buffer, ResourceState::COPY_SRC);
@@ -522,6 +552,30 @@ void GPUBuffer::CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buf
         1,
         &region
     );
+}
+
+Result GPUBuffer::CopyStaged(
+    Instance *instance,
+    const void *ptr,
+    size_t count
+)
+{
+    Device *device = instance->GetDevice();
+
+    return instance->GetStagingBufferPool().Use(device, [&](StagingBufferPool::Context &holder) {
+        auto commands = instance->GetSingleTimeCommands();
+
+        auto *staging_buffer = holder.Acquire(count);
+        staging_buffer->Copy(device, count, ptr);
+        
+        commands.Push([&](CommandBuffer *cmd) {
+            CopyFrom(cmd, staging_buffer, count);
+
+            HYPERION_RETURN_OK;
+        });
+    
+        return commands.Execute(device);
+    });
 }
 
 Result GPUBuffer::Create(Device *device, size_t size)
@@ -563,14 +617,17 @@ Result GPUBuffer::Create(Device *device, size_t size)
 
     HYPERION_BUBBLE_ERRORS(CheckCanAllocate(device, create_info, alloc_info, this->size));
 
-    HYPERION_VK_CHECK_MSG(vmaCreateBuffer(
-        device->GetAllocator(),
-        &create_info,
-        &alloc_info,
-        &buffer,
-        &allocation,
-        nullptr
-    ), "Failed to create gpu buffer");
+    HYPERION_VK_CHECK_MSG(
+        vmaCreateBuffer(
+            device->GetAllocator(),
+            &create_info,
+            &alloc_info,
+            &buffer,
+            &allocation,
+            nullptr
+        ),
+        "Failed to create gpu buffer!"
+    );
 
     HYPERION_RETURN_OK;
 }
@@ -590,6 +647,41 @@ Result GPUBuffer::Destroy(Device *device)
     HYPERION_RETURN_OK;
 }
 
+Result GPUBuffer::EnsureCapacity(Device *device,
+    size_t minimum_size,
+    bool *out_size_changed)
+{
+    auto result = Result::OK;
+
+    if (minimum_size <= size) {
+        if (out_size_changed != nullptr) {
+            *out_size_changed = false;
+        }
+
+        HYPERION_RETURN_OK;
+    }
+
+    if (buffer != VK_NULL_HANDLE) {
+        HYPERION_PASS_ERRORS(Destroy(device), result);
+
+        if (!result) {
+            if (out_size_changed != nullptr) {
+                *out_size_changed = false;
+            }
+
+            return result;
+        }
+    }
+
+    HYPERION_PASS_ERRORS(Create(device, minimum_size), result);
+
+    if (out_size_changed != nullptr) {
+        *out_size_changed = bool(result);
+    }
+
+    return result;
+}
+
 #if HYP_DEBUG_MODE
 
 void GPUBuffer::DebugLogBuffer(Device *device) const
@@ -598,7 +690,7 @@ void GPUBuffer::DebugLogBuffer(Device *device) const
         const auto data = DebugReadBytes<uint32_t>(device);
 
         for (size_t i = 0; i < data.size();) {
-            const size_t dist = MathUtil::Min(data.size() - i, 4ull);
+            const size_t dist = MathUtil::Min(data.size() - i, size_t(4));
 
             if (dist == 4) {
                 DebugLog(LogType::Debug, "%lu\t%lu\t%lu\t%lu\n", data[i], data[i + 1], data[i + 2], data[i + 3]);
@@ -625,7 +717,10 @@ void GPUBuffer::DebugLogBuffer(Device *device) const
 
 
 VertexBuffer::VertexBuffer()
-    : GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY)
+    : GPUBuffer(
+          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+          VMA_MEMORY_USAGE_GPU_ONLY
+      )
 {
 }
 
@@ -638,13 +733,21 @@ void VertexBuffer::Bind(CommandBuffer *cmd)
 }
 
 IndexBuffer::IndexBuffer()
-    : GPUBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY)
+    : GPUBuffer(
+          VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+          VMA_MEMORY_USAGE_GPU_ONLY
+      )
 {
 }
 
 void IndexBuffer::Bind(CommandBuffer *cmd)
 {
-    vkCmdBindIndexBuffer(cmd->GetCommandBuffer(), this->buffer, 0, helpers::ToVkIndexType(GetDatumType()));
+    vkCmdBindIndexBuffer(
+        cmd->GetCommandBuffer(),
+        buffer,
+        0,
+        helpers::ToVkIndexType(GetDatumType())
+    );
 }
 
 UniformBuffer::UniformBuffer()
@@ -690,6 +793,59 @@ void IndirectBuffer::DispatchIndirect(CommandBuffer *command_buffer, size_t offs
     );
 }
 
+ShaderBindingTableBuffer::ShaderBindingTableBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+      ),
+      region{}
+{
+}
+
+AccelerationStructureBuffer::AccelerationStructureBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+      )
+{
+}
+
+AccelerationStructureInstancesBuffer::AccelerationStructureInstancesBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+      )
+{
+}
+
+PackedVertexStorageBuffer::PackedVertexStorageBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* for rt */
+            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* for rt */
+            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* for rt */
+          VMA_MEMORY_USAGE_GPU_ONLY
+      )
+{
+}
+
+PackedIndexStorageBuffer::PackedIndexStorageBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* for rt */
+            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* for rt */
+            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* for rt */
+          VMA_MEMORY_USAGE_GPU_ONLY
+      )
+{
+}
+
+ScratchBuffer::ScratchBuffer()
+    : GPUBuffer(
+          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+      )
+{
+}
+
+
+
 GPUImageMemory::GPUImageMemory(VkImageUsageFlags usage_flags)
     : GPUMemory(),
       image(nullptr),
@@ -710,8 +866,20 @@ void GPUImageMemory::SetResourceState(ResourceState new_state)
     sub_resources.clear();
 }
 
-void GPUImageMemory::InsertBarrier(CommandBuffer *command_buffer,
-    const VkImageSubresourceRange &range,
+void GPUImageMemory::InsertBarrier(
+    CommandBuffer *command_buffer,
+    ResourceState new_state)
+{
+    InsertBarrier(
+        command_buffer,
+        ImageSubResource{},
+        new_state
+    );
+}
+
+void GPUImageMemory::InsertBarrier(
+    CommandBuffer *command_buffer,
+    const ImageSubResource &sub_resource,
     ResourceState new_state)
 {
     /* Clear any sub-resources that are in a separate state */
@@ -727,6 +895,13 @@ void GPUImageMemory::InsertBarrier(CommandBuffer *command_buffer,
 
         return;
     }
+
+    VkImageSubresourceRange range{};
+    range.aspectMask     = sub_resource.aspect_mask;
+    range.baseArrayLayer = sub_resource.base_array_layer;
+    range.layerCount     = sub_resource.num_layers;
+    range.baseMipLevel   = sub_resource.base_mip_level;
+    range.levelCount     = sub_resource.num_levels;
 
     VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     barrier.oldLayout           = GetImageLayout(resource_state);
@@ -751,8 +926,9 @@ void GPUImageMemory::InsertBarrier(CommandBuffer *command_buffer,
     resource_state = new_state;
 }
 
-void GPUImageMemory::InsertSubResourceBarrier(CommandBuffer *command_buffer,
-    ImageSubResource &&sub_resource,
+void GPUImageMemory::InsertSubResourceBarrier(
+    CommandBuffer *command_buffer,
+    const ImageSubResource &sub_resource,
     ResourceState new_state)
 {
     if (image == nullptr) {
@@ -765,11 +941,11 @@ void GPUImageMemory::InsertSubResourceBarrier(CommandBuffer *command_buffer,
     }
 
     VkImageSubresourceRange range{};
-    range.aspectMask = sub_resource.aspect_mask;
+    range.aspectMask     = sub_resource.aspect_mask;
     range.baseArrayLayer = sub_resource.base_array_layer;
-    range.layerCount = 1;
-    range.levelCount = 1;
-    range.baseMipLevel = sub_resource.base_mip_level;
+    range.layerCount     = sub_resource.num_layers;
+    range.baseMipLevel   = sub_resource.base_mip_level;
+    range.levelCount     = sub_resource.num_levels;
 
     VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     barrier.oldLayout           = GetImageLayout(resource_state);
@@ -836,7 +1012,17 @@ Result GPUImageMemory::Create(Device *device, size_t size, VkImageCreateInfo *im
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     alloc_info.pUserData = reinterpret_cast<void *>(index);
 
-    HYPERION_VK_CHECK(vmaCreateImage(device->GetAllocator(), image_info, &alloc_info, &this->image, &this->allocation, nullptr));
+    HYPERION_VK_CHECK_MSG(
+        vmaCreateImage(
+            device->GetAllocator(),
+            image_info,
+            &alloc_info,
+            &image,
+            &allocation,
+            nullptr
+        ),
+        "Failed to create gpu image!"
+    );
 
     HYPERION_RETURN_OK;
 }
@@ -850,6 +1036,7 @@ Result GPUImageMemory::Destroy(Device *device)
     }
 
     vmaDestroyImage(device->GetAllocator(), image, allocation);
+
     image = nullptr;
     allocation = nullptr;
 

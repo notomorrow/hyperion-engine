@@ -8,6 +8,7 @@
 
 #include <cstring>
 #include <algorithm>
+#include <iterator>
 
 #include "../../system/debug.h"
 
@@ -43,7 +44,7 @@ void Device::SetRenderSurface(const VkSurfaceKHR &surface)
     this->surface = surface;
 }
 
-void Device::SetRequiredExtensions(const std::vector<const char *> &extensions)
+void Device::SetRequiredExtensions(const ExtensionMap &extensions)
 {
     this->required_extensions = extensions;
 }
@@ -66,11 +67,6 @@ VkSurfaceKHR Device::GetRenderSurface()
         throw std::runtime_error("Device render surface not set");
     }
     return this->surface;
-}
-
-std::vector<const char *> Device::GetRequiredExtensions()
-{
-    return this->required_extensions;
 }
 
 QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
@@ -216,54 +212,62 @@ std::vector<VkExtensionProperties> Device::GetSupportedExtensions()
     return supported_extensions;
 }
 
-std::vector<const char *> Device::CheckExtensionSupport(const std::vector<const char *> &required_extensions)
+ExtensionMap Device::CheckExtensionSupport()
 {
-    const auto extensions_supported = this->GetSupportedExtensions();
-    std::vector<const char *> unsupported_extensions = required_extensions;
+    const auto extensions_supported = GetSupportedExtensions();
+    ExtensionMap unsupported_extensions;
 
-    for (const char *required_ext_name : required_extensions) {
-        /* For each extension required, check */
-        for (auto &supported : extensions_supported) {
-            if (!strcmp(supported.extensionName, required_ext_name)) {
-                unsupported_extensions.erase(std::find(unsupported_extensions.begin(), unsupported_extensions.end(), required_ext_name));
+    for (const auto &required_ext : required_extensions) {
+        auto supported_it = std::find_if(
+            extensions_supported.begin(),
+            extensions_supported.end(),
+            [&required_ext](const auto &it) {
+                return required_ext.first == it.extensionName;
             }
+        );
+
+        if (supported_it == extensions_supported.end()) {
+            unsupported_extensions[required_ext.first] = required_ext.second;
         }
     }
-    return unsupported_extensions;
-}
 
-std::vector<const char *> Device::CheckExtensionSupport()
-{
-    return this->CheckExtensionSupport(this->GetRequiredExtensions());
+    return unsupported_extensions;
 }
 
 Result Device::CheckDeviceSuitable()
 {
-    const std::vector<const char *> unsupported_extensions = this->CheckExtensionSupport();
+    const auto unsupported_extensions = CheckExtensionSupport();
 
     if (!unsupported_extensions.empty()) {
         DebugLog(LogType::Warn, "--- Unsupported Extensions ---\n");
+        
+        bool any_required = false;
+
         for (const auto &extension : unsupported_extensions) {
-            DebugLog(LogType::Warn, "\t%s\n", extension);
+            if (extension.second) {
+                DebugLog(LogType::Error, "\t%s [REQUIRED]\n", extension.first.c_str());
+
+                any_required = true;
+            } else {
+                DebugLog(LogType::Warn, "\t%s\n", extension.first.c_str());
+            }
         }
-        DebugLog(LogType::Error, "Vulkan: Device does not support required extensions\n");
-        /* TODO: try different device(s) before exploding  */
-        //throw std::runtime_error("Device does not support required extensions");
-        return Result(Result::RENDERER_ERR, "Device does not support required extensions");
+
+        if (any_required) {
+            return {Result::RENDERER_ERR, "Device does not support required extensions"};
+        }
     }
-    bool extensions_available = unsupported_extensions.empty();
 
     const SwapchainSupportDetails swapchain_support = features->QuerySwapchainSupport(surface);
-    bool swapchains_available = (!swapchain_support.formats.empty() && !swapchain_support.present_modes.empty());
+    const bool swapchains_available = !swapchain_support.formats.empty() && !swapchain_support.present_modes.empty();
 
-    if (!this->queue_family_indices.IsComplete())
-        return Result(Result::RENDERER_ERR, "Device not supported -- indices setup was not complete.");
+    if (!this->queue_family_indices.IsComplete()) {
+        return {Result::RENDERER_ERR, "Device not supported -- indices setup was not complete."};
+    }
 
-    if (!extensions_available)
-        return Result(Result::RENDERER_ERR, "Device not supported -- required extensions were not available.");
-
-    if (!swapchains_available)
-        return Result(Result::RENDERER_ERR, "Device not supported -- swapchains not available.");
+    if (!swapchains_available) {
+        return {Result::RENDERER_ERR, "Device not supported -- swapchains not available."};
+    }
 
     HYPERION_RETURN_OK;
 }
@@ -280,6 +284,7 @@ Result Device::SetupAllocator(Instance *instance)
     create_info.device           = this->GetDevice();
     create_info.instance         = instance->GetInstance();
     create_info.pVulkanFunctions = &vkfuncs;
+    create_info.flags            = 0 | (features->SupportsRaytracing() ? VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT : 0);
 
     vmaCreateAllocator(&create_info, &allocator);
 
@@ -309,7 +314,7 @@ Result Device::Wait() const
     HYPERION_RETURN_OK;
 }
 
-Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions)
+Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_families)
 {
     DebugLog(LogType::Debug, "Memory properties:\n");
     const auto &memory_properties = features->GetPhysicalDeviceMemoryProperties();
@@ -340,14 +345,24 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
         queue_create_info_vec.push_back(queue_info);
     }
 
-    HYPERION_BUBBLE_ERRORS(this->CheckDeviceSuitable());
+    HYPERION_BUBBLE_ERRORS(CheckDeviceSuitable());
+
+    std::vector<const char *> required_extensions_linear;
+    required_extensions_linear.reserve(required_extensions.size());
+
+    std::transform( 
+        required_extensions.begin(), 
+        required_extensions.end(),
+        std::back_inserter(required_extensions_linear),
+        [](const auto &it) { return it.first.c_str(); }
+    );
 
     VkDeviceCreateInfo create_info{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
     create_info.pQueueCreateInfos       = queue_create_info_vec.data();
-    create_info.queueCreateInfoCount    = (uint32_t)(queue_create_info_vec.size());
+    create_info.queueCreateInfoCount    = uint32_t(queue_create_info_vec.size());
     // Setup Device extensions
-    create_info.enabledExtensionCount   = (uint32_t)(required_extensions.size());
-    create_info.ppEnabledExtensionNames = required_extensions.data();
+    create_info.enabledExtensionCount   = uint32_t(required_extensions_linear.size());
+    create_info.ppEnabledExtensionNames = required_extensions_linear.data();
     // Setup Device Features
     create_info.pEnabledFeatures        = &features->GetPhysicalDeviceFeatures();
     create_info.pNext                   = &features->GetPhysicalDeviceFeatures2();
@@ -356,6 +371,10 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
         vkCreateDevice(this->physical, &create_info, nullptr, &this->device),
         "Could not create Device!"
     );
+    
+    DebugLog(LogType::Debug, "Loading dynamic functions\n");
+    features->LoadDynamicFunctions(this);
+    DebugLog(LogType::Info, "Raytracing supported? : %d\n", features->SupportsRaytracing());
 
     HYPERION_RETURN_OK;
 }

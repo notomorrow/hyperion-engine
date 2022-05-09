@@ -19,7 +19,7 @@ namespace hyperion::v2 {
 using renderer::Frame;
 using renderer::CommandBuffer;
 using renderer::PerFrameData;
-using renderer::MeshInputAttributeSet;
+using renderer::VertexAttributeSet;
 
 class Engine;
 

@@ -229,7 +229,7 @@ Attachment::~Attachment()
 
         AssertThrowMsg(
             m_ref_counts[i]->count == 0,
-            "Expected ref count at %ull to be zero after decrement -- object still in use somewhere else.",
+            "Expected ref count at %llu to be zero after decrement -- object still in use somewhere else.",
             i
         );
     }

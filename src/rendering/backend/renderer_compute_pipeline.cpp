@@ -1,4 +1,5 @@
 #include "renderer_compute_pipeline.h"
+#include "renderer_command_buffer.h"
 
 #include "../../system/debug.h"
 #include "../../math/math_util.h"

@@ -7,8 +7,12 @@
 #include "components/render_list.h"
 #include "components/deferred.h"
 #include "components/shadows.h"
-#include "components/octree.h"
 #include "components/resources.h"
+#include "scene/octree.h"
+
+#include "game_thread.h"
+
+#include "core/scheduler.h"
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
@@ -17,6 +21,8 @@
 #include <util/enum_options.h>
 
 #include <memory>
+#include <mutex>
+#include <stack>
 
 namespace hyperion::v2 {
 
@@ -26,7 +32,6 @@ using renderer::Semaphore;
 using renderer::SemaphoreChain;
 using renderer::Image;
 using renderer::StorageBuffer;
-
 
 /* Current descriptor / attachment layout */
 
@@ -51,6 +56,24 @@ using renderer::StorageBuffer;
  * |                     | Image storage test  | empty               | empty               | empty               |
  */
 
+struct RenderBindings {
+    std::stack<Scene::ID> scene_ids;
+
+    void BindScene(const Scene *scene)
+    {
+        scene_ids.push(scene == nullptr ? Scene::ID{0} : scene->GetId());
+    }
+
+    void UnbindScene()
+    {
+        scene_ids.pop();
+    }
+
+    Scene::ID GetScene() const
+    {
+        return scene_ids.empty() ? Scene::ID{0} : scene_ids.top();
+    }
+};
 
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
@@ -75,8 +98,8 @@ public:
     inline DeferredRenderer &GetDeferredRenderer() { return m_deferred_renderer; }
     inline const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_renderer; }
 
-    inline RenderList &GetRenderList() { return m_render_list; }
-    inline const RenderList &GetRenderList() const { return m_render_list; }
+    inline RenderListContainer &GetRenderListContainer() { return m_render_list_container; }
+    inline const RenderListContainer &GetRenderListContainer() const { return m_render_list_container; }
 
     inline Octree &GetOctree() { return m_octree; }
     inline const Octree &GetOctree() const { return m_octree; }
@@ -84,7 +107,11 @@ public:
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
 
-
+    Ref<GraphicsPipeline> FindOrCreateGraphicsPipeline(
+        Ref<Shader> &&shader,
+        const VertexAttributeSet &vertex_attributes,
+        Bucket bucket
+    );
     
     Ref<GraphicsPipeline> AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline)
     {
@@ -92,9 +119,9 @@ public:
 
         auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
 
-        m_render_list.Get(bucket).AddGraphicsPipeline(graphics_pipeline.Acquire());
+        m_render_list_container.Get(bucket).AddGraphicsPipeline(graphics_pipeline.Acquire());
 
-        return std::move(graphics_pipeline);
+        return graphics_pipeline;
     }
 
     void SetSpatialTransform(Spatial *spatial, const Transform &transform);
@@ -104,7 +131,10 @@ public:
     void Destroy();
     void PrepareSwapchain();
     void Compile();
-    void UpdateDescriptorData(uint32_t frame_index);
+    void Stop();
+
+    void ResetRenderBindings();
+    void UpdateRendererBuffersAndDescriptors(uint32_t frame_index);
 
     void RenderShadows(CommandBuffer *primary, uint32_t frame_index);
     void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
@@ -116,6 +146,18 @@ public:
     EngineCallbacks         callbacks;
     Resources               resources;
     Assets                  assets;
+    ShaderManager           shader_manager;
+
+    RenderBindings          render_bindings;
+
+    std::mutex texture_mutex; /* tmp */
+    
+    std::atomic_bool m_running{false};
+    size_t           render_thread_id;
+
+    Scheduler<renderer::Result> render_scheduler;
+
+    GameThread game_thread;
 
 private:
     void FindTextureFormatDefaults();
@@ -127,7 +169,7 @@ private:
 
     DeferredRenderer m_deferred_renderer;
     ShadowRenderer   m_shadow_renderer;
-    RenderList       m_render_list;
+    RenderListContainer       m_render_list_container;
 
 
     Octree::Root m_octree_root;

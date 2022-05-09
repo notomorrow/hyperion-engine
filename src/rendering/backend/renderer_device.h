@@ -7,6 +7,8 @@
 
 #include <vector>
 #include <set>
+#include <unordered_map>
+#include <string>
 
 #include "renderer_result.h"
 #include "renderer_structs.h"
@@ -20,6 +22,8 @@ class Features;
 
 class Instance;
 
+using ExtensionMap = std::unordered_map<std::string, bool>;
+
 class Device {
     static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
 
@@ -31,12 +35,11 @@ public:
     
     void SetPhysicalDevice(VkPhysicalDevice);
     void SetRenderSurface(const VkSurfaceKHR &surface);
-    void SetRequiredExtensions(const std::vector<const char *> &extensions);
+    void SetRequiredExtensions(const ExtensionMap &extensions);
 
     VkDevice         GetDevice();
     VkSurfaceKHR     GetRenderSurface();
     VkPhysicalDevice GetPhysicalDevice();
-    std::vector<const char *> GetRequiredExtensions();
 
     Result SetupAllocator(Instance *instance);
     Result DestroyAllocator();
@@ -47,15 +50,15 @@ public:
 
     VkQueue GetQueue(QueueFamilyIndices::Index queue_family_index, uint32_t queue_index = 0);
 
-    Result CreateLogicalDevice(const std::set<uint32_t> &required_queue_families, const std::vector<const char *> &required_extensions);
+    Result CreateLogicalDevice(const std::set<uint32_t> &required_queue_families);
     Result CheckDeviceSuitable();
 
     /*  Wait for the device to be idle */
     Result Wait() const;
 
 
-    std::vector<const char *> CheckExtensionSupport(const std::vector<const char *> &extensions);
-    std::vector<const char *> CheckExtensionSupport();
+    /* \brief Check if the set required extensions extensions are supported. Any unsupported extensions are returned. */
+    ExtensionMap CheckExtensionSupport();
 
     std::vector<VkExtensionProperties> GetSupportedExtensions();
 
@@ -68,7 +71,7 @@ private:
     Features           *features;
     QueueFamilyIndices queue_family_indices;
 
-    std::vector<const char *> required_extensions;
+    ExtensionMap required_extensions;
 };
 
 } // namespace renderer

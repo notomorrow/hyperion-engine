@@ -13,34 +13,19 @@ namespace hyperion::v2 {
 using renderer::CommandBuffer;
 using renderer::IndirectBuffer;
 
-class ComputePipeline : public EngineComponent<renderer::ComputePipeline> {
+class ComputePipeline : public EngineComponentBase<STUB_CLASS(ComputePipeline)> {
 public:
     explicit ComputePipeline(Ref<Shader> &&shader);
     ComputePipeline(const ComputePipeline &) = delete;
     ComputePipeline &operator=(const ComputePipeline &) = delete;
     ~ComputePipeline();
 
-    ENGINE_COMPONENT_DELEGATE_METHODS
+    renderer::ComputePipeline *GetPipeline() const { return m_pipeline.get(); }
 
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
-
-    /*void Dispatch(
-        Engine *engine,
-        CommandBuffer *command_buffer,
-        Extent3D group_size);
-
-    void DispatchIndirect(
-        Engine *engine,
-        CommandBuffer *command_buffer,
-        IndirectBuffer *indirect,
-        size_t offset = 0);*/
+    void Init(Engine *engine);
 
 private:
-    /*void BindDescriptorSets(
-        Engine *engine,
-        CommandBuffer *command_buffer);*/
-
+    std::unique_ptr<renderer::ComputePipeline> m_pipeline;
     Ref<Shader> m_shader;
 };
 

@@ -26,7 +26,7 @@ public:
     static constexpr uint32_t max_dynamic_textures = 8;
 
     struct ConstructionInfo {
-        MeshInputAttributeSet vertex_attributes;
+        VertexAttributeSet vertex_attributes;
 
         Topology topology = Topology::TRIANGLES;
         CullMode cull_mode = CullMode::BACK;
@@ -67,7 +67,7 @@ public:
 private:
     Result Rebuild(Device *device, DescriptorPool *descriptor_pool);
     void UpdateDynamicStates(VkCommandBuffer cmd);
-    std::vector<VkVertexInputAttributeDescription> BuildVertexAttributes(const MeshInputAttributeSet &attribute_set);
+    std::vector<VkVertexInputAttributeDescription> BuildVertexAttributes(const VertexAttributeSet &attribute_set);
 
     std::vector<VkDynamicState> dynamic_states;
 

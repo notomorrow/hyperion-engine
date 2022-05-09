@@ -63,9 +63,14 @@ Image::InternalFormat Image::FormatChangeNumComponents(InternalFormat fmt, uint8
 
     new_num_components = MathUtil::Clamp(new_num_components, uint8_t(1), uint8_t(4));
 
-    int current_num_components = int(NumComponents(GetBaseFormat(fmt)));
+    int current_num_components = int(NumComponents(fmt));
 
     return InternalFormat(int(fmt) + int(new_num_components) - current_num_components);
+}
+
+size_t Image::NumComponents(InternalFormat format)
+{
+    return NumComponents(GetBaseFormat(format));
 }
 
 size_t Image::NumComponents(BaseFormat format)
@@ -112,11 +117,12 @@ VkFormat Image::ToVkFormat(InternalFormat fmt)
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F:       return VK_FORMAT_R32G32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F:      return VK_FORMAT_R32G32B32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F:     return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R10G10B10A2: return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB:  return VK_FORMAT_B8G8R8A8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:    return VK_FORMAT_D16_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:    return VK_FORMAT_D24_UNORM_S8_UINT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F:   return VK_FORMAT_D32_SFLOAT;
-    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
-    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB:  return VK_FORMAT_B8G8R8A8_SRGB;
     }
 
     unexpected_value_msg(format, "Unhandled texture format case");
@@ -176,6 +182,8 @@ Image::Image(Extent3D extent,
 
     if (bytes != nullptr) {
         std::memcpy(m_bytes, bytes, m_size);
+    } else {
+        std::memset(m_bytes, 0, m_size);
     }
 }
 
@@ -307,7 +315,7 @@ Result Image::Create(Device *device)
     return CreateImage(device, VK_IMAGE_LAYOUT_UNDEFINED, &image_info);
 }
 
-Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceState state)
+Result Image::Create(Device *device, Instance *instance, GPUMemory::ResourceState state)
 {
     auto result = Result::OK;
 
@@ -315,14 +323,19 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
 
     HYPERION_BUBBLE_ERRORS(CreateImage(device, VK_IMAGE_LAYOUT_UNDEFINED, &image_info));
 
-    VkImageSubresourceRange range{};
+    /*VkImageSubresourceRange range{};
     range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     range.baseMipLevel = 0;
     range.levelCount = NumMipmaps();
     range.baseArrayLayer = 0;
-    range.layerCount = NumFaces();
+    range.layerCount = NumFaces();*/
 
-    auto commands = renderer->GetSingleTimeCommands();
+    const ImageSubResource sub_resource{
+        .num_layers  = NumFaces(),
+        .num_levels  = NumMipmaps()
+    };
+
+    auto commands = instance->GetSingleTimeCommands();
     StagingBuffer staging_buffer;
 
     if (m_assigned_image_data)  {
@@ -332,21 +345,24 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
         if (!result) {
             HYPERION_IGNORE_ERRORS(Destroy(device));
 
-            return result;
+            return result;            
         }
 
         staging_buffer.Copy(device, m_size, m_bytes);
         // safe to delete m_bytes here?
 
         commands.Push([&](CommandBuffer *command_buffer) {
-            m_image->InsertBarrier(command_buffer, range, GPUMemory::ResourceState::COPY_DST);
+            m_image->InsertBarrier(
+                command_buffer,
+                sub_resource,
+                GPUMemory::ResourceState::COPY_DST
+            );
 
             HYPERION_RETURN_OK;
         });
 
         // copy from staging to image
         const auto num_faces = NumFaces();
-        const auto num_mipmaps = NumMipmaps();
 
         size_t buffer_offset_step = m_size / num_faces;
 
@@ -392,7 +408,7 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
     commands.Push([&](CommandBuffer *command_buffer) {
         m_image->InsertBarrier(
             command_buffer,
-            range,
+            sub_resource,
             state
         );
 
@@ -403,8 +419,12 @@ Result Image::Create(Device *device, Instance *renderer, GPUMemory::ResourceStat
     HYPERION_PASS_ERRORS(commands.Execute(device), result);
 
     if (m_assigned_image_data) {
-        // destroy staging buffer
-        HYPERION_PASS_ERRORS(staging_buffer.Destroy(device), result);
+        if (result) {
+            // destroy staging buffer
+            HYPERION_PASS_ERRORS(staging_buffer.Destroy(device), result);
+        } else {
+            HYPERION_IGNORE_ERRORS(staging_buffer.Destroy(device));
+        }
 
         m_assigned_image_data = false;
     }
@@ -416,10 +436,12 @@ Result Image::Destroy(Device *device)
 {
     auto result = Result::OK;
 
-    HYPERION_PASS_ERRORS(m_image->Destroy(device), result);
+    if (m_image != nullptr) {
+        HYPERION_PASS_ERRORS(m_image->Destroy(device), result);
 
-    delete m_image;
-    m_image = nullptr;
+        delete m_image;
+        m_image = nullptr;
+    }
 
     return result;
 }
@@ -442,9 +464,8 @@ Result Image::GenerateMipmaps(Device *device,
             m_image->InsertSubResourceBarrier(
                 command_buffer,
                 ImageSubResource{
-                    .aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .base_array_layer = face,
-                    .base_mip_level = static_cast<uint32_t>(i - 1)
+                    .base_mip_level   = static_cast<uint32_t>(i - 1)
                 },
                 GPUMemory::ResourceState::COPY_SRC
             );

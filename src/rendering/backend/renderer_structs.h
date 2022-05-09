@@ -78,7 +78,7 @@ struct MeshBindingDescription {
     }
 };
 
-struct MeshInputAttribute {
+struct VertexAttribute {
     enum Type {
         MESH_INPUT_ATTRIBUTE_UNDEFINED    = 0,
         MESH_INPUT_ATTRIBUTE_POSITION     = 1,
@@ -91,14 +91,14 @@ struct MeshInputAttribute {
         MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS = 128,
     };
 
-    static const EnumOptions<Type, MeshInputAttribute, 16> mapping;
+    static const EnumOptions<Type, VertexAttribute, 16> mapping;
 
     uint32_t    location;
     uint32_t    binding;
     // total size -- num elements * sizeof(float)
     size_t      size;
 
-    inline bool operator<(const MeshInputAttribute &other) const
+    inline bool operator<(const VertexAttribute &other) const
         { return location < other.location; }
 
     inline VkFormat GetFormat() const
@@ -132,34 +132,45 @@ struct MeshInputAttribute {
     }
 };
 
-struct MeshInputAttributeSet {
+struct VertexAttributeSet {
+    static const VertexAttributeSet static_mesh,
+                                       skeleton;
+
     uint64_t flag_mask;
 
-    MeshInputAttributeSet()
+    VertexAttributeSet()
         : flag_mask(0) {}
-    MeshInputAttributeSet(uint64_t flag_mask)
+    VertexAttributeSet(uint64_t flag_mask)
         : flag_mask(flag_mask) {}
-    MeshInputAttributeSet(const MeshInputAttributeSet &other)
+    VertexAttributeSet(const VertexAttributeSet &other)
         : flag_mask(other.flag_mask) {}
 
-    MeshInputAttributeSet &operator=(const MeshInputAttributeSet &other)
+    VertexAttributeSet &operator=(const VertexAttributeSet &other)
     {
         flag_mask = other.flag_mask;
 
         return *this;
     }
 
-    ~MeshInputAttributeSet() = default;
+    ~VertexAttributeSet() = default;
 
     explicit operator bool() const { return bool(flag_mask); }
 
-    MeshInputAttributeSet operator~() const { return ~flag_mask; }
-    MeshInputAttributeSet operator&(uint64_t flags) const { return {flag_mask & flags}; }
-    MeshInputAttributeSet &operator&=(uint64_t flags) { flag_mask &= flags; return *this; }
-    MeshInputAttributeSet operator|(uint64_t flags) const { return {flag_mask | flags}; }
-    MeshInputAttributeSet &operator|=(uint64_t flags) { flag_mask |= flags; return *this; }
+    bool operator==(const VertexAttributeSet &other) const { return flag_mask == other.flag_mask; }
 
-    bool Has(MeshInputAttribute::Type type) const { return bool(operator&(uint64_t(type))); }
+    VertexAttributeSet operator~() const { return ~flag_mask; }
+
+    VertexAttributeSet operator&(const VertexAttributeSet &other) const { return {flag_mask & other.flag_mask}; }
+    VertexAttributeSet &operator&=(const VertexAttributeSet &other)     { flag_mask &= other.flag_mask; return *this; }
+    VertexAttributeSet operator&(uint64_t flags) const { return {flag_mask & flags}; }
+    VertexAttributeSet &operator&=(uint64_t flags)     { flag_mask &= flags; return *this; }
+    
+    VertexAttributeSet operator|(const VertexAttributeSet &other) const { return {flag_mask | other.flag_mask}; }
+    VertexAttributeSet &operator|=(const VertexAttributeSet &other)     { flag_mask |= other.flag_mask; return *this; }
+    VertexAttributeSet operator|(uint64_t flags) const { return {flag_mask | flags}; }
+    VertexAttributeSet &operator|=(uint64_t flags)     { flag_mask |= flags; return *this; }
+
+    bool Has(VertexAttribute::Type type) const { return bool(operator&(uint64_t(type))); }
 
     void Set(uint64_t flags, bool enable = true)
     {
@@ -170,41 +181,41 @@ struct MeshInputAttributeSet {
         }
     }
 
-    void Set(MeshInputAttribute::Type type, bool enable = true)
+    void Set(VertexAttribute::Type type, bool enable = true)
     {
         Set(uint64_t(type), enable);
     }
 
-    void Merge(const MeshInputAttributeSet &other)
+    void Merge(const VertexAttributeSet &other)
     {
         flag_mask |= other.flag_mask;
     }
 
-    std::vector<MeshInputAttribute> BuildAttributes() const
+    std::vector<VertexAttribute> BuildAttributes() const
     {
-        std::vector<MeshInputAttribute> attributes;
-        attributes.reserve(MeshInputAttribute::mapping.Size());
+        std::vector<VertexAttribute> attributes;
+        attributes.reserve(VertexAttribute::mapping.Size());
 
-        for (size_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
-            const uint64_t iter_flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
+        for (size_t i = 0; i < VertexAttribute::mapping.Size(); i++) {
+            const uint64_t iter_flag_mask = VertexAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
 
             if (flag_mask & iter_flag_mask) {
-                attributes.push_back(MeshInputAttribute::mapping[MeshInputAttribute::Type(iter_flag_mask)]);
+                attributes.push_back(VertexAttribute::mapping[VertexAttribute::Type(iter_flag_mask)]);
             }
         }
 
         return attributes;
     }
 
-    inline size_t VertexSize() const
+    inline size_t CalculateVertexSize() const
     {
         size_t size = 0;
 
-        for (size_t i = 0; i < MeshInputAttribute::mapping.Size(); i++) {
-            const uint64_t iter_flag_mask = MeshInputAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
+        for (size_t i = 0; i < VertexAttribute::mapping.Size(); i++) {
+            const uint64_t iter_flag_mask = VertexAttribute::mapping.OrdinalToEnum(i);  // NOLINT(readability-static-accessed-through-instance)
 
             if (flag_mask & iter_flag_mask) {
-                size += MeshInputAttribute::mapping[MeshInputAttribute::Type(iter_flag_mask)].size;
+                size += VertexAttribute::mapping[VertexAttribute::Type(iter_flag_mask)].size;
             }
         }
 
@@ -243,7 +254,7 @@ struct SwapchainSupportDetails {
     std::vector<VkPresentModeKHR> present_modes;
 };
 
-struct Extent2D {
+struct alignas(8) Extent2D {
     uint32_t width, height;
 
     Extent2D()
@@ -272,9 +283,13 @@ struct Extent2D {
 
     bool operator!=(const Extent2D &other) const
         { return !operator==(other); }
+
+    Vector2 ToVector2() const { return Vector2(static_cast<float>(width), static_cast<float>(height)); }
+
+    uint32_t Size() const { return width * height; }
 };
 
-struct Extent3D {
+struct alignas(16) Extent3D {
     uint32_t width, height, depth;
 
     Extent3D()
@@ -313,6 +328,51 @@ struct Extent3D {
 
     bool operator!=(const Extent3D &other) const
         { return !operator==(other); }
+
+    Extent2D ToExtent2D() const { return Extent2D(width, height); }
+    Vector3 ToVector3() const   { return Vector3(static_cast<float>(width), static_cast<float>(height), static_cast<float>(depth)); }
+
+    uint32_t Size() const { return width * height * depth; }
+};
+
+struct PackedVertex {
+    float position_x,
+          position_y,
+          position_z,
+          normal_x,
+          normal_y,
+          normal_z,
+          texcoord0_x,
+          texcoord0_y;
+};
+
+static_assert(sizeof(PackedVertex) % 16 == 0);
+
+struct MeshDescription {
+    uint64_t vertex_buffer_address;
+    uint64_t index_buffer_address;
+};
+
+static_assert(sizeof(MeshDescription) % 16 == 0);
+
+using PackedIndex = uint32_t;
+
+/* images */
+struct ImageSubResource {
+    VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    uint32_t base_array_layer      = 0;
+    uint32_t base_mip_level        = 0;
+    uint32_t num_layers            = 1;
+    uint32_t num_levels            = 1;
+
+    bool operator==(const ImageSubResource &other) const
+    {
+        return aspect_mask == other.aspect_mask
+            && base_array_layer == other.base_array_layer
+            && num_layers == other.num_layers
+            && base_mip_level == other.base_mip_level
+            && num_levels == other.num_levels;
+    }
 };
 
 template<class ...Args>
@@ -374,5 +434,20 @@ protected:
 
 } // namespace renderer
 } // namespace hyperion
+
+template <>
+struct ::std::hash<hyperion::renderer::ImageSubResource> {
+    inline size_t operator()(const hyperion::renderer::ImageSubResource &sub_resource) const
+    {
+        hyperion::HashCode hc;
+        hc.Add(sub_resource.aspect_mask);
+        hc.Add(sub_resource.base_array_layer);
+        hc.Add(sub_resource.num_layers);
+        hc.Add(sub_resource.base_mip_level);
+        hc.Add(sub_resource.num_levels);
+
+        return hc.Value();
+    }
+};
 
 #endif //HYPERION_RENDERER_STRUCTS_H

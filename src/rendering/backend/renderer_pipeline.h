@@ -28,6 +28,11 @@ public:
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 uint32_t x, y;
             } counter;
+
+            struct {
+                float    matrix[16];
+                uint32_t time;
+            } probe_data;
         };
     } push_constants;
 

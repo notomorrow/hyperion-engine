@@ -5,6 +5,8 @@
 #include <rendering/backend/renderer_fence.h>
 #include <rendering/backend/renderer_buffer.h>
 
+#include <atomic>
+
 namespace hyperion::v2 {
 
 using renderer::Fence;

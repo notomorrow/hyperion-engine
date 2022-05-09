@@ -34,12 +34,12 @@ void DeferredRenderingEffect::CreateShader(Engine *engine)
 
 void DeferredRenderingEffect::CreateRenderPass(Engine *engine)
 {
-    m_render_pass = engine->GetRenderList()[GraphicsPipeline::BUCKET_TRANSLUCENT].render_pass.Acquire();
+    m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].render_pass.Acquire();
 }
 
 void DeferredRenderingEffect::Create(Engine *engine)
 {
-    m_framebuffer = engine->GetRenderList()[GraphicsPipeline::BUCKET_TRANSLUCENT].framebuffers[0].Acquire();
+    m_framebuffer = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].framebuffers[0].Acquire();
 
     CreatePerFrameData(engine);
     CreatePipeline(engine);
@@ -67,7 +67,7 @@ void DeferredRenderer::Create(Engine *engine)
     m_effect.CreateRenderPass(engine);
     m_effect.Create(engine);
 
-    auto &opaque_fbo = engine->GetRenderList()[GraphicsPipeline::BUCKET_OPAQUE].framebuffers[0];
+    auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].framebuffers[0];
 
     /* Add our gbuffer textures */
     auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()
@@ -77,32 +77,32 @@ void DeferredRenderer::Create(Engine *engine)
     descriptor_set_pass
         ->AddDescriptor<ImageSamplerDescriptor>(0)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetImageView(),
-            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[0]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[0]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[0]->GetSampler()
         });
 
     /* Normals texture*/
     descriptor_set_pass
         ->AddDescriptor<ImageSamplerDescriptor>(1)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetImageView(),
-            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[1]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetSampler()
         });
 
     /* Position texture */
     descriptor_set_pass
         ->AddDescriptor<ImageSamplerDescriptor>(2)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetImageView(),
-            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[2]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetSampler()
         });
 
     /* Depth texture */
     descriptor_set_pass
         ->AddDescriptor<ImageSamplerDescriptor>(3)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetImageView(),
-            .sampler    = opaque_fbo->Get().GetRenderPassAttachmentRefs()[3]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetSampler()
         });
 
     uint32_t binding_index = 4; /* TMP */
@@ -119,8 +119,8 @@ void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t f
 {
     m_effect.Record(engine, frame_index);
 
-    auto &render_list = engine->GetRenderList();
-    auto &bucket = render_list.Get(GraphicsPipeline::Bucket::BUCKET_OPAQUE);
+    auto &render_list = engine->GetRenderListContainer();
+    auto &bucket = render_list.Get(Bucket::BUCKET_OPAQUE);
 
     bucket.framebuffers[0]->BeginCapture(primary); /* TODO: frame index? */
     RenderOpaqueObjects(engine, primary, frame_index);
@@ -143,18 +143,18 @@ void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t f
 
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_SKYBOX).m_graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).graphics_pipelines) {
         pipeline->Render(engine, primary, frame_index);
     }
     
-    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_OPAQUE).m_graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
         pipeline->Render(engine, primary, frame_index);
     }
 }
 
 void DeferredRenderer::RenderTranslucentObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
-    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_TRANSLUCENT).m_graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).graphics_pipelines) {
         pipeline->Render(engine, primary, frame_index);
     }
 }

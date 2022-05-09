@@ -70,8 +70,8 @@ public:
         {
         }
 
-        renderer::MeshInputAttribute GetAttributeDescription(uint32_t location, uint32_t binding = 0) const {
-            return renderer::MeshInputAttribute{location, binding, this->size * sizeof(float)};
+        renderer::VertexAttribute GetAttributeDescription(uint32_t location, uint32_t binding = 0) const {
+            return renderer::VertexAttribute{location, binding, this->size * sizeof(float)};
         }
 
         bool operator==(const MeshAttribute &other) const

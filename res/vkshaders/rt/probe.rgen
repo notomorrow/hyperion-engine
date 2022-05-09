@@ -1,0 +1,48 @@
+#version 460
+#extension GL_EXT_ray_tracing         : require
+#extension GL_EXT_scalar_block_layout : require
+
+layout(set = 9, binding = 0) uniform accelerationStructureEXT tlas;
+
+#include "../include/scene.inc"
+#include "../include/rt/payload.inc"
+
+layout(location = 0) rayPayloadEXT RayProbePayload payload;
+#define MAX_RECURSION 3
+
+#include "../include/rt/probe/shared.inc"
+#include "../include/random.inc"
+
+layout(push_constant) uniform constants {
+    mat4 rotation;
+    uint time;
+} push_constants;
+
+void main() 
+{
+    const uvec2 coord = uvec2(gl_LaunchIDEXT.xy);
+    
+    const uint probe_index = coord.x;
+    const uint ray_index   = coord.y;
+    
+    vec3 origin    = ProbeIndexToWorldPosition(probe_index);
+    vec3 direction = normalize(mat3(push_constants.rotation) * SphericalFibonacci(ray_index, probe_system.num_rays_per_probe));
+    
+    uint flags = gl_RayFlagsOpaqueEXT;
+    uint mask = 0xff;
+    float tmin = 0.001;
+    float tmax = 10000.0;
+    
+    //payload.rand    = hash(push_constants.time);
+    payload.diffuse = vec3(0.0);
+    
+    traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+    
+    ProbeRayData ray_data;
+    ray_data.color           = vec4(payload.diffuse, 1.0);
+    ray_data.origin          = vec4(origin, 1.0);
+    ray_data.normal          = vec4(payload.normal, 0.0);
+    ray_data.direction_depth = vec4(direction, payload.distance);
+    
+    SetProbeRayData(coord, ray_data);
+}

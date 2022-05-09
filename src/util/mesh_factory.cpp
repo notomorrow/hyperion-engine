@@ -298,10 +298,10 @@ std::shared_ptr<Mesh> MeshFactory::CreateSphere(float radius, int num_slices, in
     MeshIndex v0 = indices.back(); 
 
     for (int i = 0; i < num_stacks - 1; i++) {
-        auto phi = MathUtil::pi * double(i + 1) / double(num_stacks);
+        auto phi = MathUtil::pi<double> * double(i + 1) / double(num_stacks);
 
         for (int j = 0; j < num_slices; j++) {
-            double theta = 2.0 * MathUtil::pi * double(j) / double(num_slices);
+            double theta = 2.0 * MathUtil::pi<double> * double(j) / double(num_slices);
             double x = std::sin(phi) * std::cos(theta);
             double y = std::cos(phi);
             double z = std::sin(phi) * std::sin(theta);

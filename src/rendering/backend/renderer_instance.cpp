@@ -57,6 +57,20 @@ Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &re
     HYPERION_RETURN_OK;
 }
 
+ExtensionMap Instance::GetExtensionMap()
+{
+    return{
+        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, true},
+        {VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, false},
+        {VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, false},
+        {VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, false},
+        {VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, false},
+        {VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, true},
+        {VK_KHR_SPIRV_1_4_EXTENSION_NAME, false},
+        {VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME, false}
+    };
+}
+
 void Instance::SetValidationLayers(std::vector<const char *> _layers)
 {
     this->validation_layers = _layers;
@@ -213,9 +227,15 @@ Result Instance::Initialize(bool load_debug_layers)
     // Setup validation layers
     create_info.enabledLayerCount   = uint32_t(this->validation_layers.size());
     create_info.ppEnabledLayerNames = this->validation_layers.data();
+
     // Setup Vulkan extensions
-    std::vector<const char *> extension_names;
-    extension_names = this->system.GetVulkanExtensionNames();
+    std::vector<const char *> extension_names = this->system.GetVulkanExtensionNames();
+
+    DebugLog(LogType::Debug, "Got %llu extensions:\n", extension_names.size());
+
+    for (const char *ext : extension_names) {
+        DebugLog(LogType::Debug, "\t%s\n", ext);
+    }
 
     //extension_names.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 
@@ -234,9 +254,6 @@ Result Instance::Initialize(bool load_debug_layers)
     );
 
     this->surface = nullptr;
-    this->requested_device_extensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    };
 
     /* Create our renderable surface from SDL */
     CreateSurface();
@@ -266,6 +283,7 @@ Result Instance::Initialize(bool load_debug_layers)
     this->descriptor_pool.AddDescriptorSet(false);
     this->descriptor_pool.AddDescriptorSet(true);
     this->descriptor_pool.AddDescriptorSet(true);
+    this->descriptor_pool.AddDescriptorSet(false);
     this->descriptor_pool.AddDescriptorSet(false);
 
     AssertThrow(descriptor_pool.NumDescriptorSets() == DescriptorSet::max_descriptor_sets);
@@ -414,7 +432,7 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
         this->device = new Device(physical_device, this->surface);
     }
 
-    this->device->SetRequiredExtensions(this->requested_device_extensions);
+    this->device->SetRequiredExtensions(GetExtensionMap());
 
     const QueueFamilyIndices &family_indices = this->device->GetQueueFamilyIndices();
 
@@ -427,13 +445,9 @@ Result Instance::InitializeDevice(VkPhysicalDevice physical_device)
     };
     
     /* Create a logical device to operate on */
-    HYPERION_BUBBLE_ERRORS(
-        this->device->CreateLogicalDevice(required_queue_family_indices, this->requested_device_extensions)
-    );
+    HYPERION_BUBBLE_ERRORS(device->CreateLogicalDevice(required_queue_family_indices));
 
     /* Get the internal queues from our device */
-
-
     this->queue_graphics = {
         .family = family_indices.graphics_family.value(),
         .queue = device->GetQueue(family_indices.graphics_family.value()),

@@ -1,0 +1,5 @@
+#version 460
+
+#define DEPTH 1
+
+#include "probe_update.glsl"

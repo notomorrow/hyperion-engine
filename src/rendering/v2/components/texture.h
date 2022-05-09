@@ -19,7 +19,7 @@ using renderer::Sampler;
 using renderer::Extent2D;
 using renderer::Extent3D;
 
-class Texture : public EngineComponent<TextureImage> {
+class Texture : public EngineComponentBase<STUB_CLASS(Texture)> {
 public:
     Texture(
         Extent3D extent,
@@ -27,18 +27,45 @@ public:
         Image::Type type,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        const unsigned char *bytes);
+        const unsigned char *bytes
+    );
 
     Texture(const Texture &other) = delete;
     Texture &operator=(const Texture &other) = delete;
     ~Texture();
 
+    inline TextureImage *GetImage() const  { return m_image.get(); }
     inline ImageView *GetImageView() const { return m_image_view.get(); }
     inline Sampler *GetSampler() const { return m_sampler.get(); }
 
+    inline const Extent3D &GetExtent() const
+    {
+        return m_image->GetExtent();
+    }
+
+    inline Image::InternalFormat GetFormat() const
+    {
+        return m_image->GetTextureFormat();
+    }
+
+    inline Image::FilterMode GetFilterMode() const
+    {
+        return m_sampler != nullptr
+            ? m_sampler->GetFilterMode()
+            : Image::FilterMode::TEXTURE_FILTER_NEAREST;
+    }
+
+    inline Image::WrapMode GetWrapMode() const
+    {
+        return m_sampler != nullptr
+            ? m_sampler->GetWrapMode()
+            : Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE;
+    }
+
     void Init(Engine *engine);
 
-private:
+protected:
+    std::unique_ptr<TextureImage> m_image;
     std::unique_ptr<ImageView> m_image_view;
     std::unique_ptr<Sampler> m_sampler;
 };
@@ -95,6 +122,33 @@ public:
         wrap_mode,
         bytes
     ) {}
+
+    TextureCube(
+        std::array<std::unique_ptr<Texture>, 6> &&texture_faces
+    ) : Texture(
+        texture_faces[0] ? texture_faces[0]->GetExtent() : Extent3D{},
+        texture_faces[0] ? texture_faces[0]->GetFormat() : Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+        Image::Type::TEXTURE_TYPE_CUBEMAP,
+        texture_faces[0] ? texture_faces[0]->GetFilterMode() : Image::FilterMode::TEXTURE_FILTER_NEAREST,
+        texture_faces[0] ?  texture_faces[0]->GetWrapMode()  : Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+        nullptr
+    )
+    {
+        if (m_image->GetBytes() != nullptr) {
+            size_t offset = 0,
+                   face_size = 0;
+
+            for (auto &texture : texture_faces) {
+                if (texture != nullptr) {
+                    face_size = texture->GetExtent().Size() * Image::NumComponents(texture->GetFormat());
+
+                    m_image->CopyImageData(texture->GetImage()->GetBytes(), face_size, offset);
+                }
+
+                offset += face_size;
+            }
+        }
+    }
 };
 
 } // namespace hyperion::v2

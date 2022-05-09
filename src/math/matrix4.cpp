@@ -137,12 +137,18 @@ Matrix4 Matrix4::LookAt(const Vector3 &pos, const Vector3 &target, const Vector3
 }
 
 Matrix4::Matrix4()
+    : rows{
+          {1.0f, 0.0f, 0.0f, 0.0f},
+          {0.0f, 1.0f, 0.0f, 0.0f},
+          {0.0f, 0.0f, 1.0f, 0.0f},
+          {0.0f, 0.0f, 0.0f, 1.0f}
+      }
 {
-    for (int i = 0; i < 4; i++) {
+    /*for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             values[i * 4 + j] = !(j - i);
         }
-    }
+    }*/
 }
 
 Matrix4::Matrix4(float *v)
@@ -170,15 +176,19 @@ float Matrix4::Determinant() const
 
 Matrix4 &Matrix4::Transpose()
 {
-    Matrix4 transposed;
+    return *this = Transposed();
+}
 
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            transposed[j][i] = rows[i][j];
-        }
-    }
+Matrix4 Matrix4::Transposed() const
+{
+    float v[4][4] = {
+        { rows[0][0], rows[1][0], rows[2][0], rows[3][0] },
+        { rows[0][1], rows[1][1], rows[2][1], rows[3][1] },
+        { rows[0][2], rows[1][2], rows[2][2], rows[3][2] },
+        { rows[0][3], rows[1][3], rows[2][3], rows[3][3] }
+    };
 
-    return operator=(transposed);
+    return Matrix4(reinterpret_cast<float *>(v));
 }
 
 Matrix4 &Matrix4::Invert()
@@ -308,21 +318,16 @@ Matrix4 &Matrix4::operator*=(float scalar)
     return *this;
 }
 
-bool Matrix4::operator==(const Matrix4 &other) const
-{
-    return values == other.values;
-}
-
 Matrix4 Matrix4::Zeroes()
 {
-    float zero_array[sizeof(values)] = {0.0f};
+    float zero_array[sizeof(values) / sizeof(values[0])] = {0.0f};
 
     return Matrix4(zero_array);
 }
 
 Matrix4 Matrix4::Ones()
 {
-    float ones_array[sizeof(values)] = {1.0f};
+    float ones_array[sizeof(values) / sizeof(values[0])] = {1.0f};
 
     return Matrix4(ones_array);
 }

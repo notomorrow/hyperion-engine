@@ -37,6 +37,7 @@ public:
 
     float Determinant() const;
     Matrix4 &Transpose();
+    Matrix4 Transposed() const;
     Matrix4 &Invert();
 
     Matrix4 &operator=(const Matrix4 &other);
@@ -46,13 +47,19 @@ public:
     Matrix4 &operator*=(const Matrix4 &other);
     Matrix4 operator*(float scalar) const;
     Matrix4 &operator*=(float scalar);
-    bool operator==(const Matrix4 &other) const;
 
+    inline bool operator==(const Matrix4 &other) const
+    {  return &values[0] == &other.values[0] || !std::memcmp(values, other.values, std::size(values) * sizeof(values[0])); }
+
+    inline bool operator!=(const Matrix4 &other) const { return !operator==(other); }
+
+#pragma region deprecated
     constexpr float operator()(int i, int j) const { return values[i * 4 + j]; }
     constexpr float &operator()(int i, int j) { return values[i * 4 + j]; }
 
     constexpr float At(int i, int j) const { return rows[i][j]; }
     constexpr float &At(int i, int j) { return rows[i][j]; }
+#pragma endregion
 
     constexpr Vector4 &operator[](uint32_t row) { return rows[row]; }
     constexpr const Vector4 &operator[](uint32_t row) const { return rows[row]; }
