@@ -6,6 +6,7 @@
 #include <functional>
 #include <atomic>
 #include <mutex>
+#include <thread>
 #include <tuple>
 #include <utility>
 #include <deque>

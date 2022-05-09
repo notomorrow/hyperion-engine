@@ -150,7 +150,10 @@ AccelerationStructure::AccelerationStructure()
 
 AccelerationStructure::~AccelerationStructure()
 {
-    AssertThrow(m_acceleration_structure == VK_NULL_HANDLE, "Expected acceleration structure to have been destroyed before destructor call");
+    AssertThrowMsg(
+		m_acceleration_structure == VK_NULL_HANDLE,
+		"Expected acceleration structure to have been destroyed before destructor call"
+	);
 }
 
 Result AccelerationStructure::CreateAccelerationStructure(

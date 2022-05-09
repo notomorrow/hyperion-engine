@@ -85,7 +85,7 @@ void Features::LoadDynamicFunctions(Device *device)
         dyn_functions.##name = reinterpret_cast<PFN_##name>(proc_addr); \
     } while (0)
     
-    HYP_LOAD_FN(vkGetBufferDeviceAddressKHR);
+    //HYP_LOAD_FN(vkGetBufferDeviceAddressKHR);
     
 #if HYP_FEATURES_ENABLE_RAYTRACING
     HYP_LOAD_FN(vkCmdBuildAccelerationStructuresKHR);

@@ -12,10 +12,10 @@
 #include <type_traits>
 
 #define HYP_ENABLE_IF(cond) \
-    typename std::enable_if_t<cond##<T>, T>
+    typename std::enable_if_t<cond<T>, T>
 
 #define HYP_ENABLE_IF_R(cond, return_type) \
-    typename std::enable_if_t<cond##<T>, return_type>
+    typename std::enable_if_t<cond<T>, return_type>
 
 namespace hyperion {
 
@@ -198,7 +198,13 @@ public:
     /* Fast log2 for power-of-2 numbers */
     static uint64_t FastLog2_Pow2(uint64_t value)
     {
-#ifdef _MSC_VER
+#if defined(__clang__) || defined(__GNUC__)
+    #if defined(_MSC_VER)
+        return FastLog2(value); // fallback :/
+    #else
+        return __builtin_ctzll(value);
+    #endif
+#elif defined(_MSC_VER)
         return _tzcnt_u64(value);
 #else
         return __builtin_ctzll(value);

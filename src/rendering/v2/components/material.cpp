@@ -95,6 +95,9 @@ void Material::UpdateShaderData(Engine *engine) const
                     continue;
                 }
 
+                /* TODO: Fix threading issue here -- if m_texture_resources grows in render thread while this is being accessed
+                 * we might have invalidaiton
+                 */
                 if (engine->shader_globals->textures.GetResourceIndex(texture->GetId(), &shader_data.texture_index[i])) {
                     shader_data.texture_usage |= 1 << i;
 
