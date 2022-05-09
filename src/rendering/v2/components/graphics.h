@@ -2,16 +2,18 @@
 #define HYPERION_V2_GRAPHICS_H
 
 #include "shader.h"
-#include "spatial.h"
-#include "scene.h"
+#include "../scene/spatial.h"
+#include "../scene/scene.h"
 #include "texture.h"
 #include "framebuffer.h"
 #include "render_pass.h"
 #include "containers.h"
+#include "render_bucket.h"
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
 
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace hyperion::v2 {
@@ -21,7 +23,7 @@ using renderer::DescriptorSet;
 using renderer::DescriptorSetBinding;
 using renderer::GPUBuffer;
 using renderer::UniformBuffer;
-using renderer::MeshInputAttributeSet;
+using renderer::VertexAttributeSet;
 using renderer::PerFrameData;
 using renderer::Topology;
 using renderer::FillMode;
@@ -29,39 +31,29 @@ using renderer::CullMode;
 
 class Engine;
 
-class GraphicsPipeline : public EngineComponent<renderer::GraphicsPipeline> {
+class GraphicsPipeline : public EngineComponentBase<STUB_CLASS(GraphicsPipeline)> {
     friend class Engine;
     friend class Spatial;
 
 public:
-    enum Bucket {
-        BUCKET_SWAPCHAIN = 0, /* Main swapchain */
-        BUCKET_PREPASS,       /* Pre-pass / buffer items */
-        BUCKET_VOXELIZER,
-        /* === Scene objects === */
-        BUCKET_OPAQUE,        /* Opaque items */
-        BUCKET_TRANSLUCENT,   /* Transparent - rendering on top of opaque objects */
-        BUCKET_PARTICLE,      /* Specialized particle bucket */
-        BUCKET_SKYBOX,        /* Rendered without depth testing/writing, and rendered first */
-        BUCKET_MAX
-    };
-
-    GraphicsPipeline(Ref<Shader> &&shader,
-        Ref<Scene> &&scene,
+    GraphicsPipeline(
+        Ref<Shader> &&shader,
         Ref<RenderPass> &&render_pass,
-        Bucket bucket);
+        const VertexAttributeSet &vertex_attributes,
+        Bucket bucket
+    );
 
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();
 
-    inline Shader *GetShader() const { return m_shader.ptr; }
-    inline Scene *GetScene() const { return m_scene.ptr; }
-    inline RenderPass *GetRenderPassID() const { return m_render_pass.ptr; }
-    inline Bucket GetBucket() const { return m_bucket; }
+    inline renderer::GraphicsPipeline *GetPipeline() const { return m_pipeline.get(); }
+    inline Shader *GetShader() const                       { return m_shader.ptr; }
+    inline RenderPass *GetRenderPassID() const             { return m_render_pass.ptr; }
+    inline Bucket GetBucket() const                        { return m_bucket; }
 
-    inline MeshInputAttributeSet &GetVertexAttributes() { return m_vertex_attributes; }
-    inline const MeshInputAttributeSet &GetVertexAttributes() const { return m_vertex_attributes; }
+    inline VertexAttributeSet &GetVertexAttributes() { return m_vertex_attributes; }
+    inline const VertexAttributeSet &GetVertexAttributes() const { return m_vertex_attributes; }
 
     inline Topology GetTopology() const
         { return m_topology; }
@@ -95,7 +87,7 @@ public:
 
     void AddSpatial(Ref<Spatial> &&spatial);
     void RemoveSpatial(Spatial::ID id);
-    inline auto &GetSpatials() { return m_spatials; }
+    inline auto &GetSpatials()             { return m_spatials; }
     inline const auto &GetSpatials() const { return m_spatials; }
 
     /* Non-owned objects - owned by `engine`, used by the pipeline */
@@ -103,21 +95,30 @@ public:
     inline void AddFramebuffer(Ref<Framebuffer> &&fbo)
         { m_fbos.push_back(std::move(fbo)); }
 
-    inline auto &GetFramebuffers() { return m_fbos; } 
+    inline auto &GetFramebuffers()             { return m_fbos; } 
     inline const auto &GetFramebuffers() const { return m_fbos; }
     
     /* Build pipeline */
     void Init(Engine *engine);
-    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
+    void Render(
+        Engine *engine,
+        CommandBuffer *primary,
+        uint32_t frame_index
+    );
 
 private:
     static bool BucketSupportsCulling(Bucket bucket);
+    
+    bool RemoveFromSpatialList(Spatial::ID id, std::vector<Ref<Spatial>> &spatials, bool call_on_removed, bool remove_immediately);
 
     /* Called from Spatial - remove the pointer */
     void OnSpatialRemoved(Spatial *spatial);
 
+    void PerformEnqueuedSpatialUpdates(Engine *engine);
+
+    std::unique_ptr<renderer::GraphicsPipeline> m_pipeline;
+
     Ref<Shader> m_shader;
-    Ref<Scene> m_scene;
     Ref<RenderPass> m_render_pass;
     Bucket m_bucket;
     Topology m_topology;
@@ -126,13 +127,17 @@ private:
     bool m_depth_test;
     bool m_depth_write;
     bool m_blend_enabled;
-    MeshInputAttributeSet m_vertex_attributes;
+    VertexAttributeSet m_vertex_attributes;
     
     std::vector<Ref<Framebuffer>> m_fbos;
 
     std::vector<Ref<Spatial>> m_spatials;
+    std::vector<Ref<Spatial>> m_spatials_pending_addition;
+    std::vector<Ref<Spatial>> m_spatials_pending_removal;
 
     PerFrameData<CommandBuffer> *m_per_frame_data;
+
+    std::mutex m_enqueued_spatials_mutex;
 };
 
 } // namespace hyperion::v2

@@ -2,7 +2,7 @@
 #define HYPERION_V2_VOXELIZER_H
 
 #include "base.h"
-#include "scene.h"
+#include "../scene/scene.h"
 #include "render_pass.h"
 #include "framebuffer.h"
 #include "shader.h"

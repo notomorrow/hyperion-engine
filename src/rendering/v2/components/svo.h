@@ -47,11 +47,11 @@ private:
     std::unique_ptr<StorageBuffer> m_build_info_buffer;
     std::unique_ptr<StorageBuffer> m_octree_buffer;
     
-    ComputePipeline::ID m_init_nodes,
-                        m_tag_nodes,
-                        m_alloc_nodes,
-                        m_modify_args,
-                        m_write_mipmaps;
+    Ref<ComputePipeline> m_init_nodes,
+                         m_tag_nodes,
+                         m_alloc_nodes,
+                         m_modify_args,
+                         m_write_mipmaps;
 };
 
 } // namespace hyperion::v2

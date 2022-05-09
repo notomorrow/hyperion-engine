@@ -12,8 +12,7 @@
 
 namespace hyperion::v2 {
 
-using renderer::MeshInputAttribute;
-using renderer::MeshInputAttributeSet;
+using renderer::VertexAttributeSet;
 using renderer::Attachment;
 using renderer::ImageView;
 using renderer::FramebufferObject;
@@ -24,7 +23,8 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
       m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
       resources(this),
       assets(this),
-      m_shadow_renderer(std::make_unique<OrthoCamera>(-50, 50, -50, 50, -50, 50))
+      m_shadow_renderer(std::make_unique<OrthoCamera>(-50, 50, -50, 50, -50, 50)),
+      render_thread_id(std::hash<std::thread::id>{}(std::this_thread::get_id()))
 {
     m_octree.m_root = &m_octree_root;
 }
@@ -136,7 +136,8 @@ void Engine::PrepareSwapchain()
             render_pass.Acquire()
         );
 
-        renderer::AttachmentRef *attachment_ref[2];
+        renderer::AttachmentRef *color_attachment_ref,
+                                *depth_attachment_ref;
 
         HYPERION_ASSERT_RESULT(m_render_pass_attachments[0]->AddAttachmentRef(
             m_instance->GetDevice(),
@@ -146,35 +147,35 @@ void Engine::PrepareSwapchain()
             1, 1,
             renderer::LoadOperation::CLEAR,
             renderer::StoreOperation::STORE,
-            &attachment_ref[0]
+            &color_attachment_ref
         ));
 
-        attachment_ref[0]->SetBinding(0);
+        color_attachment_ref->SetBinding(0);
 
-        fbo->Get().AddRenderPassAttachmentRef(attachment_ref[0]);
+        fbo->GetFramebuffer().AddRenderPassAttachmentRef(color_attachment_ref);
 
         HYPERION_ASSERT_RESULT(m_render_pass_attachments[1]->AddAttachmentRef(
             m_instance->GetDevice(),
             renderer::LoadOperation::CLEAR,
             renderer::StoreOperation::STORE,
-            &attachment_ref[1]
+            &depth_attachment_ref
         ));
 
-        fbo->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
+        fbo->GetFramebuffer().AddRenderPassAttachmentRef(depth_attachment_ref);
 
-        attachment_ref[1]->SetBinding(1);
+        depth_attachment_ref->SetBinding(1);
 
         if (iteration == 0) {
-            render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[0]);
-            render_pass->Get().AddRenderPassAttachmentRef(attachment_ref[1]);
+            render_pass->GetRenderPass().AddAttachmentRef(color_attachment_ref);
+            render_pass->GetRenderPass().AddAttachmentRef(depth_attachment_ref);
 
             render_pass.Init();
 
             m_root_pipeline = std::make_unique<GraphicsPipeline>(
                 shader.Acquire(),
-                nullptr,
                 render_pass.Acquire(),
-                GraphicsPipeline::Bucket::BUCKET_SWAPCHAIN
+                VertexAttributeSet::static_mesh,
+                Bucket::BUCKET_SWAPCHAIN
             );
         }
 
@@ -186,16 +187,8 @@ void Engine::PrepareSwapchain()
     m_root_pipeline->SetTopology(Topology::TRIANGLE_FAN);
 
     callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
-        m_render_list.AddFramebuffersToPipelines(this);
+        m_render_list_container.AddFramebuffersToPipelines(this);
         m_root_pipeline->Init(this);
-    });
-    
-    callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](...) {
-        resources.compute_pipelines.CreateAll(this);
-    });
-
-    callbacks.Once(EngineCallback::DESTROY_COMPUTE_PIPELINES, [this](...) {
-        resources.compute_pipelines.RemoveAll(this);
     });
 }
 
@@ -219,62 +212,62 @@ void Engine::Initialize()
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
-        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->scenes.GetBuffers()[0].get(),
-            .range = sizeof(SceneShaderData)
+            .buffer = shader_globals->scenes.GetBuffers()[0].get(),
+            .range = static_cast<uint32_t>(sizeof(SceneShaderData))
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->materials.GetBuffers()[0].get(),
-            .range = sizeof(MaterialShaderData)
+            .buffer = shader_globals->materials.GetBuffers()[0].get(),
+            .range = static_cast<uint32_t>(sizeof(MaterialShaderData))
         });
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->objects.GetBuffers()[0].get(),
-            .range = sizeof(ObjectShaderData)
+            .buffer = shader_globals->objects.GetBuffers()[0].get(),
+            .range = static_cast<uint32_t>(sizeof(ObjectShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->skeletons.GetBuffers()[0].get(),
-            .range = sizeof(SkeletonShaderData)
+            .buffer = shader_globals->skeletons.GetBuffers()[0].get(),
+            .range = static_cast<uint32_t>(sizeof(SkeletonShaderData))
         });
 
 
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
-        ->AddDescriptor<renderer::DynamicUniformBufferDescriptor>(0)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->scenes.GetBuffers()[1].get(),
-            .range = sizeof(SceneShaderData)
+            .buffer = shader_globals->scenes.GetBuffers()[1].get(),
+            .range = static_cast<uint32_t>(sizeof(SceneShaderData))
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->materials.GetBuffers()[1].get(),
-            .range = sizeof(MaterialShaderData)
+            .buffer = shader_globals->materials.GetBuffers()[1].get(),
+            .range = static_cast<uint32_t>(sizeof(MaterialShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->objects.GetBuffers()[1].get(),
-            .range = sizeof(ObjectShaderData)
+            .buffer = shader_globals->objects.GetBuffers()[1].get(),
+            .range = static_cast<uint32_t>(sizeof(ObjectShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
         ->AddSubDescriptor({
-            .gpu_buffer = shader_globals->skeletons.GetBuffers()[1].get(),
-            .range = sizeof(SkeletonShaderData)
+            .buffer = shader_globals->skeletons.GetBuffers()[1].get(),
+            .range = static_cast<uint32_t>(sizeof(SkeletonShaderData))
         });
 
     m_instance->GetDescriptorPool()
@@ -288,50 +281,60 @@ void Engine::Initialize()
     /* for textures */
     shader_globals->textures.Create(this);
     
-    callbacks.TriggerPersisted(EngineCallback::CREATE_FRAMEBUFFERS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RENDER_PASSES, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_FRAMEBUFFERS, this);
 
-    m_render_list.Create(this);
+    m_render_list_container.Create(this);
     
     callbacks.TriggerPersisted(EngineCallback::CREATE_SCENES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_TEXTURES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SHADERS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SPATIALS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_ACCELERATION_STRUCTURES, this);
+
+    m_running = true;
 }
 
 void Engine::Destroy()
 {
-    AssertThrow(m_instance != nullptr);
-
-    (void)m_instance->GetDevice()->Wait();
-
+    callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MATERIALS, this);
+    callbacks.Trigger(EngineCallback::DESTROY_LIGHTS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SKELETONS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SPATIALS, this);
     callbacks.Trigger(EngineCallback::DESTROY_SHADERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_TEXTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_VOXELIZER, this);
     callbacks.Trigger(EngineCallback::DESTROY_DESCRIPTOR_SETS, this);
-    
-    m_render_list.Destroy(this);
-
     callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_RAYTRACING_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
 
+    m_running = false;
+    render_scheduler.Flush();
+    game_thread.Join();
+    AssertThrow(m_instance != nullptr);
+    (void)m_instance->GetDevice()->Wait();
+    
+    m_render_list_container.Destroy(this);
+    
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
 
     for (auto &attachment : m_render_pass_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
     }
+
     
     callbacks.Trigger(EngineCallback::DESTROY_FRAMEBUFFERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
 
     resources.Destroy(this);
+
+    
 
     if (shader_globals != nullptr) {
         shader_globals->scenes.Destroy(m_instance->GetDevice());
@@ -353,6 +356,7 @@ void Engine::Compile()
 
     callbacks.TriggerPersisted(EngineCallback::CREATE_SKELETONS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_LIGHTS, this);
 
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
         /* Finalize skeletons */
@@ -376,19 +380,62 @@ void Engine::Compile()
     
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
 }
 
-void Engine::UpdateDescriptorData(uint32_t frame_index)
+void Engine::Stop()
+{
+    
+}
+
+Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
+    Ref<Shader> &&shader,
+    const VertexAttributeSet &vertex_attributes,
+    Bucket bucket
+)
+{
+    auto &render_list_bucket = m_render_list_container.Get(bucket);
+
+    Ref<GraphicsPipeline> found_pipeline;
+    
+    for (auto &graphics_pipeline : render_list_bucket.graphics_pipelines) {
+        if (graphics_pipeline->GetShader() != shader) {
+            continue;
+        }
+
+        if (!(graphics_pipeline->GetVertexAttributes() & vertex_attributes)) {
+            continue;
+        }
+
+        found_pipeline = graphics_pipeline.Acquire();
+
+        break;
+    }
+
+    if (found_pipeline != nullptr) {
+        return std::move(found_pipeline);
+    }
+
+    // create a pipeline with the given params
+    return AddGraphicsPipeline(std::make_unique<GraphicsPipeline>(
+        std::move(shader),
+        render_list_bucket.render_pass.Acquire(),
+        vertex_attributes,
+        bucket
+    ));
+}
+
+void Engine::ResetRenderBindings()
+{
+    render_bindings.scene_ids = {};
+}
+
+void Engine::UpdateRendererBuffersAndDescriptors(uint32_t frame_index)
 {
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->skeletons.UpdateBuffer(m_instance->GetDevice(), frame_index);
-
-    static constexpr DescriptorSet::Index bindless_descriptor_set_index[] = { DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS, DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1 };
-
-    m_instance->GetDescriptorPool().GetDescriptorSet(bindless_descriptor_set_index[frame_index])
-        ->ApplyUpdates(m_instance->GetDevice());
 
     shader_globals->textures.ApplyUpdates(this, frame_index);
 }
@@ -405,19 +452,30 @@ void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
 
 void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
 {
-    auto &pipeline = m_root_pipeline->Get();
+    auto *pipeline = m_root_pipeline->GetPipeline();
     const uint32_t acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 
     m_root_pipeline->GetFramebuffers()[acquired_image_index]->BeginCapture(command_buffer);
     
-    pipeline.Bind(command_buffer);
+    pipeline->Bind(command_buffer);
 
     m_instance->GetDescriptorPool().Bind(
         m_instance->GetDevice(),
         command_buffer,
-        &pipeline,
+        pipeline,
         {{
             .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
+            .count = 1
+        }}
+    );
+
+    /* TMP */
+    m_instance->GetDescriptorPool().Bind(
+        m_instance->GetDevice(),
+        command_buffer,
+        pipeline,
+        {{
+            .set = DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING,
             .count = 1
         }}
     );

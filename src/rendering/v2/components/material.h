@@ -249,6 +249,8 @@ public:
     typename std::enable_if_t<std::is_same_v<std::decay_t<decltype(T::values[0])>, float>, std::decay_t<T>>
     GetParameter(MaterialKey key) const
     {
+        static_assert(sizeof(T::values) <= sizeof(Parameter::values));
+
         T result;
         std::memcpy(&result.values[0], &m_parameters.Get(key).values.float_values[0], sizeof(float) * std::size(result.values));
         return result;
@@ -272,7 +274,7 @@ public:
     Texture *GetTexture(TextureKey key) const;
 
     void Init(Engine *engine);
-    void Update(Engine *engine); /* TODO: call from Engine? */
+    void Update(Engine *engine);
 
     inline HashCode GetHashCode() const
     {
@@ -292,12 +294,12 @@ private:
     mutable ShaderDataState m_shader_data_state;
 };
 
-class MaterialLibrary {
+class MaterialGroup {
 public:
-    MaterialLibrary();
-    MaterialLibrary(const MaterialLibrary &other) = delete;
-    MaterialLibrary &operator=(const MaterialLibrary &other) = delete;
-    ~MaterialLibrary();
+    MaterialGroup();
+    MaterialGroup(const MaterialGroup &other) = delete;
+    MaterialGroup &operator=(const MaterialGroup &other) = delete;
+    ~MaterialGroup();
 
     void Add(const std::string &name, Ref<Material> &&material)
         { m_materials[name] = std::move(material); }

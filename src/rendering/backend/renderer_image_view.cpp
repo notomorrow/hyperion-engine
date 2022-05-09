@@ -47,7 +47,10 @@ Result ImageView::Create(
     view_info.subresourceRange.baseArrayLayer = 0;
     view_info.subresourceRange.layerCount = uint32_t(num_faces);
 
-    HYPERION_VK_CHECK_MSG(vkCreateImageView(device->GetDevice(), &view_info, nullptr, &m_image_view), "Failed to create image view");
+    HYPERION_VK_CHECK_MSG(
+        vkCreateImageView(device->GetDevice(), &view_info, nullptr, &m_image_view),
+        "Failed to create image view"
+    );
 
     HYPERION_RETURN_OK;
 }

@@ -9,8 +9,11 @@
 #include "material.h"
 #include "texture.h"
 #include "mesh.h"
-#include "skeleton.h"
-#include "scene.h"
+#include "light.h"
+#include "../animation/skeleton.h"
+#include "../scene/scene.h"
+#include "../rt/blas.h"
+#include "../rt/tlas.h"
 
 #include <mutex>
 #include <thread>
@@ -27,15 +30,18 @@ struct Resources {
     RefCounter<Framebuffer, Callbacks>      framebuffers;
     RefCounter<RenderPass,  Callbacks>      render_passes;
     RefCounter<Material,    Callbacks>      materials;
+    RefCounter<Light,       Callbacks>      lights;
 
     RefCounter<GraphicsPipeline, Callbacks> graphics_pipelines;
-    ObjectHolder<ComputePipeline>           compute_pipelines{.defer_create = true};
+    RefCounter<ComputePipeline, Callbacks>  compute_pipelines;
     
     RefCounter<Spatial,     Callbacks>      spatials;
     RefCounter<Mesh,        Callbacks>      meshes;
     RefCounter<Skeleton,    Callbacks>      skeletons;
 
     RefCounter<Scene,       Callbacks>      scenes;
+
+    RefCounter<Blas,        Callbacks>      blas;
 
     Resources(Engine *);
     Resources(const Resources &other) = delete;

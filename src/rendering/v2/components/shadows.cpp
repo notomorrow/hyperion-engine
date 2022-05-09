@@ -53,7 +53,7 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
         &attachment_ref
     ));
 
-    render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 
     for (auto &attachment : m_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
@@ -67,9 +67,9 @@ void ShadowEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
-        m_scene.Acquire(),
         m_render_pass.Acquire(),
-        GraphicsPipeline::Bucket::BUCKET_PREPASS
+        VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
+        Bucket::BUCKET_PREPASS
     );
 
     pipeline->SetCullMode(CullMode::FRONT);
@@ -77,7 +77,7 @@ void ShadowEffect::CreatePipeline(Engine *engine)
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
-    for (auto &pipeline : engine->GetRenderList().Get(GraphicsPipeline::BUCKET_OPAQUE).m_graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
         for (auto &spatial : pipeline->GetSpatials()) {
             if (spatial != nullptr) {
                 m_pipeline->AddSpatial(spatial.Acquire());
@@ -99,9 +99,9 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
     );
 
     /* Add all attachments from the renderpass */
-    for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
-        attachment_ref->SetBinding(12);
-        framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+    for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
+     //   attachment_ref->SetBinding(12);
+        framebuffer->GetFramebuffer().AddRenderPassAttachmentRef(attachment_ref);
     }
 
     m_framebuffer = engine->resources.framebuffers.Add(
@@ -147,11 +147,17 @@ void ShadowRenderer::Destroy(Engine *engine)
     m_effect.Destroy(engine);
 }
 
-void ShadowRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+void ShadowRenderer::Render(Engine *engine,
+    CommandBuffer *primary,
+    uint32_t frame_index)
 {
+    engine->render_bindings.BindScene(m_effect.GetScene());
+
     m_effect.GetFramebuffer()->BeginCapture(primary);
     m_effect.GetGraphicsPipeline()->Render(engine, primary, frame_index);
     m_effect.GetFramebuffer()->EndCapture(primary);
+
+    engine->render_bindings.UnbindScene();
 }
 
 } // namespace hyperion::v2

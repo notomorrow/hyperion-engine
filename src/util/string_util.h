@@ -13,25 +13,29 @@ namespace hyperion {
 
 class StringUtil {
 public:
-    static constexpr std::string ToLower(const std::string &str)
+    static inline std::string ToLower(const std::string &str)
     {
         std::string result(str);
 
-        std::transform(result.begin(), result.end(), result.begin(), std::tolower);
+        std::transform(result.begin(), result.end(), result.begin(), [](char ch) {
+            return std::tolower(ch);
+        });
 
         return result;
     }
 
-    static constexpr std::string ToUpper(const std::string &str)
+    static inline std::string ToUpper(const std::string &str)
     {
         std::string result(str);
 
-        std::transform(result.begin(), result.end(), result.begin(), std::toupper);
+        std::transform(result.begin(), result.end(), result.begin(), [](char ch) {
+            return std::toupper(ch);
+        });
 
         return result;
     }
 
-    static constexpr bool StartsWith(const std::string &text, const std::string &token)
+    static inline bool StartsWith(const std::string &text, const std::string &token)
     {
         if (text.length() < token.length()) {
             return false;
@@ -39,11 +43,12 @@ public:
         return (text.compare(0, token.length(), token) == 0);
     }
 
-    static constexpr bool EndsWith(const std::string &text, const std::string &token)
+    static inline bool EndsWith(const std::string &text, const std::string &token)
     {
         if (text.length() < token.length()) {
             return false;
         }
+
         return std::equal(text.begin() + text.size() - token.size(),
             text.end(), token.begin());
     }

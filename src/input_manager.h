@@ -8,6 +8,7 @@
 #include "system/sdl_system.h"
 
 #include <functional>
+#include <mutex>
 
 namespace hyperion {
 
@@ -76,6 +77,8 @@ private:
     double mouse_x, mouse_y;
 
     SystemWindow *window = nullptr;
+
+    std::mutex key_mutex;
 
     void SetKey(int key, bool pressed);
     void SetMouseButton(int btn, bool pressed);

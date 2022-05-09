@@ -81,6 +81,8 @@ void InputManager::SetKey(int key, bool pressed)
             key = 'A' + (key - 'a');
         }
 
+        key_mutex.lock();
+
         InputEvent &handler = key_events[key];
 
         if (!handler.IsEmpty()) {
@@ -88,6 +90,8 @@ void InputManager::SetKey(int key, bool pressed)
         }
 
         key_states[key] = pressed;
+
+        key_mutex.unlock();
     }
 }
 

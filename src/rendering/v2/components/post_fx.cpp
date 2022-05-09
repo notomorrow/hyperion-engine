@@ -7,8 +7,8 @@
 
 namespace hyperion::v2 {
 
-using renderer::MeshInputAttribute;
-using renderer::MeshInputAttributeSet;
+using renderer::VertexAttribute;
+using renderer::VertexAttributeSet;
 using renderer::Descriptor;
 using renderer::DescriptorSet;
 using renderer::ImageSamplerDescriptor;
@@ -53,7 +53,7 @@ void PostEffect::CreateRenderPass(Engine *engine)
         &attachment_ref
     ));
 
-    render_pass->Get().AddRenderPassAttachmentRef(attachment_ref);
+    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 
     for (auto &attachment : m_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
@@ -73,8 +73,8 @@ void PostEffect::Create(Engine *engine)
     ));
 
     /* Add all attachments from the renderpass */
-    for (auto *attachment_ref : m_render_pass->Get().GetRenderPassAttachmentRefs()) {
-        m_framebuffer->Get().AddRenderPassAttachmentRef(attachment_ref);
+    for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
+        m_framebuffer->GetFramebuffer().AddRenderPassAttachmentRef(attachment_ref);
     }
     
     m_framebuffer.Init();
@@ -104,7 +104,7 @@ void PostEffect::CreatePerFrameData(Engine *engine)
 void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
-    auto &framebuffer = m_framebuffer->Get();
+    auto &framebuffer = m_framebuffer->GetFramebuffer();
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
     
     for (auto *attachment_ref : framebuffer.GetRenderPassAttachmentRefs()) {
@@ -121,9 +121,9 @@ void PostEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
-        nullptr,
         m_render_pass.Acquire(),
-        GraphicsPipeline::Bucket::BUCKET_PREPASS
+        VertexAttributeSet::static_mesh,
+        Bucket::BUCKET_PREPASS
     );
 
     pipeline->AddFramebuffer(m_framebuffer.Acquire());
@@ -176,14 +176,14 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
             engine->GetInstance()->GetDevice(),
-            m_pipeline->Get().GetConstructionInfo().render_pass,
+            m_pipeline->GetPipeline()->GetConstructionInfo().render_pass,
             [this, engine, frame_index](CommandBuffer *cmd) {
-                m_pipeline->Get().Bind(cmd);
+                m_pipeline->GetPipeline()->Bind(cmd);
                 
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &m_pipeline->Get(),
+                    m_pipeline->GetPipeline(),
                     {
                         {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
@@ -193,7 +193,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &m_pipeline->Get(),
+                    m_pipeline->GetPipeline(),
                     {
                         {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
@@ -204,22 +204,22 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &m_pipeline->Get(),
+                    m_pipeline->GetPipeline(),
                     {
                         {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
                     }
                 ));
 
-                /* TMP */
-                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+
+                /*HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
                     &m_pipeline->Get(),
                     {
                         {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1}
                     }
-                ));
+                ));*/
 
                 full_screen_quad->RenderVk(cmd, engine->GetInstance(), nullptr);
 

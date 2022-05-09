@@ -240,7 +240,7 @@ float Quaternion::Pitch() const
 
     return pole == 0 ?
         std::asin(MathUtil::Clamp(2.0f * (w * x - z * y), -1.0f, 1.0f)) :
-        pole * MathUtil::pi * 0.5f;
+        pole * MathUtil::pi<float> * 0.5f;
 }
 
 float Quaternion::Yaw() const

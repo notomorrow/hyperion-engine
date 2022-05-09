@@ -4,7 +4,10 @@
 #include "octree.h"
 
 namespace hyperion {
+
 class Node;
+class Octree;
+
 class SceneManager {
 public:
     static SceneManager *instance;

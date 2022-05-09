@@ -1,6 +1,7 @@
 #include "frustum.h"
 
 namespace hyperion {
+
 Frustum::Frustum()
 {
 }
@@ -15,15 +16,15 @@ Frustum::Frustum(const Matrix4 &view_proj)
     SetViewProjectionMatrix(view_proj);
 }
 
-bool Frustum::BoundingBoxInFrustum(const BoundingBox &bounding_box) const
+bool Frustum::ContainsAabb(const BoundingBox &aabb) const
 {
-    const auto &corners = bounding_box.GetCorners();
+    const auto &corners = aabb.GetCorners();
 
     for (const auto &plane : m_planes) {
         bool pass = false;
 
         for (const auto &corner : corners) {
-            if (plane.Dot(Vector4(corner.x, corner.y, corner.z, 1.0f)) >= 0.0f) {
+            if (plane.Dot(corner.ToVector4()) >= 0.0f) {
                 pass = true;
                 break;
             }
@@ -41,16 +42,7 @@ bool Frustum::BoundingBoxInFrustum(const BoundingBox &bounding_box) const
 
 void Frustum::SetViewProjectionMatrix(const Matrix4 &view_proj)
 {
-    Matrix4 mat = view_proj;
-
-    m_planes[0] = (mat.rows[3] + mat.rows[0]).Normalize();
-    m_planes[1] = (mat.rows[3] - mat.rows[0]).Normalize();
-    m_planes[2] = (mat.rows[3] + mat.rows[1]).Normalize();
-    m_planes[3] = (mat.rows[3] - mat.rows[1]).Normalize();
-    m_planes[4] = (mat.rows[3] + mat.rows[2]).Normalize();
-    m_planes[5] = (mat.rows[3] - mat.rows[2]).Normalize();
-
-    mat.Transpose();
+    const Matrix4 mat = view_proj.Transposed();
     
     m_planes[0].x = mat.values[3] - mat.values[0];
     m_planes[0].y = mat.values[7] - mat.values[4];
@@ -88,4 +80,5 @@ void Frustum::SetViewProjectionMatrix(const Matrix4 &view_proj)
     m_planes[5].w = mat.values[15] + mat.values[14];
     m_planes[5].Normalize();
 }
+
 } // namespace hyperion

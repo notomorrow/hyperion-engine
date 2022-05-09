@@ -12,7 +12,7 @@
 
 #include <functional>
 #include <unordered_set>
-#include <map>
+#include <unordered_map>
 
 namespace hyperion {
 namespace renderer {
@@ -118,16 +118,26 @@ public:
     inline void SetResourceState(ResourceState new_state)
         { resource_state = new_state; }
 
-    void Map(Device *device, void **ptr) const;
-    void Unmap(Device *device) const;
+    inline void *GetMapping(Device *device) const
+    {
+        if (!map) {
+            Map(device, &map);
+        }
+
+        return map;
+    }
+
     void Copy(Device *device, size_t count, const void *ptr);
     void Copy(Device *device, size_t offset, size_t count, const void *ptr);
+
     void Read(Device *device, size_t count, void *out_ptr) const;
     
     VmaAllocation allocation;
     VkDeviceSize size;
 
 protected:
+    void Map(Device *device, void **ptr) const;
+    void Unmap(Device *device) const;
     void Create();
     void Destroy();
 
@@ -151,12 +161,25 @@ public:
     ~GPUBuffer();
 
     void InsertBarrier(CommandBuffer *command_buffer, ResourceState new_state) const;
-    void CopyFrom(CommandBuffer *command_buffer, const GPUBuffer *src_buffer, size_t count);
+
+    void CopyFrom(CommandBuffer *command_buffer,
+        const GPUBuffer *src_buffer,
+        size_t count);
+
+    [[nodiscard]] Result CopyStaged(Instance *instance,
+        const void *ptr,
+        size_t count);
 
     Result CheckCanAllocate(Device *device, size_t size) const;
 
+    /* \brief Calls vkGetBufferDeviceAddressKHR. Only use this if the extension is enabled */
+    uint64_t GetBufferDeviceAddress(Device *device) const;
+
     [[nodiscard]] Result Create(Device *device, size_t buffer_size);
     [[nodiscard]] Result Destroy(Device *device);
+    [[nodiscard]] Result EnsureCapacity(Device *device,
+        size_t minimum_size,
+        bool *out_size_changed = nullptr);
 
 #if HYP_DEBUG_MODE
     void DebugLogBuffer(Device *device) const;
@@ -236,18 +259,47 @@ public:
     void DispatchIndirect(CommandBuffer *command_buffer, size_t offset = 0) const;
 };
 
-/* images */
-struct ImageSubResource {
-    VkImageAspectFlags aspect_mask;
-    uint32_t base_array_layer;
-    uint32_t base_mip_level;
+class ShaderBindingTableBuffer : public GPUBuffer {
+public:
+    ShaderBindingTableBuffer();
 
-    inline bool operator<(const ImageSubResource &other) const
-        { return std::tie(aspect_mask, base_array_layer, base_mip_level) < std::tie(other.aspect_mask, other.base_array_layer, other.base_mip_level); }
+    VkStridedDeviceAddressRegionKHR region;
 };
+
+class AccelerationStructureBuffer : public GPUBuffer {
+public:
+    AccelerationStructureBuffer();
+};
+
+class AccelerationStructureInstancesBuffer : public GPUBuffer {
+public:
+    AccelerationStructureInstancesBuffer();
+};
+
+class PackedVertexStorageBuffer : public GPUBuffer {
+public:
+    PackedVertexStorageBuffer();
+};
+
+class PackedIndexStorageBuffer : public GPUBuffer {
+public:
+    PackedIndexStorageBuffer();
+};
+
+class ScratchBuffer : public GPUBuffer {
+public:
+    ScratchBuffer();
+};
+
+/* images */
 
 class GPUImageMemory : public GPUMemory {
 public:
+
+    enum class Aspect {
+        COLOR,
+        DEPTH
+    };
 
     GPUImageMemory(VkImageUsageFlags usage_flags);
     GPUImageMemory(const GPUImageMemory &other) = delete;
@@ -259,12 +311,18 @@ public:
 
     void SetResourceState(ResourceState new_state);
 
-    void InsertBarrier(CommandBuffer *command_buffer,
-        const VkImageSubresourceRange &range,
+    void InsertBarrier(
+        CommandBuffer *command_buffer,
         ResourceState new_state);
 
-    void InsertSubResourceBarrier(CommandBuffer *command_buffer,
-        ImageSubResource &&sub_resource,
+    void InsertBarrier(
+        CommandBuffer *command_buffer,
+        const ImageSubResource &sub_resource,
+        ResourceState new_state);
+
+    void InsertSubResourceBarrier(
+        CommandBuffer *command_buffer,
+        const ImageSubResource &sub_resource,
         ResourceState new_state);
 
     [[nodiscard]] Result Create(Device *device, size_t size, VkImageCreateInfo *image_info);
@@ -274,7 +332,7 @@ public:
 
 private:
     VkImageUsageFlags usage_flags;
-    std::map<ImageSubResource, ResourceState> sub_resources;
+    std::unordered_map<ImageSubResource, ResourceState> sub_resources;
 };
 
 } // namespace renderer

@@ -28,8 +28,13 @@ public:
 
     inline Bytes Read()
     {
-        Bytes data;
-        data.resize(Max());
+        if (Eof()) {
+            return {};
+        }
+
+        const size_t max(Max());
+
+        Bytes data(max);
 
         Read(data.data(), data.size());
 

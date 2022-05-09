@@ -1,7 +1,3 @@
-//
-// Created by emd22 on 2022-02-20.
-//
-
 #include "renderer_swapchain.h"
 #include "renderer_device.h"
 #include "renderer_features.h"
@@ -74,7 +70,7 @@ VkSurfaceFormatKHR Swapchain::ChooseSurfaceFormat(Device *device)
 
 VkPresentModeKHR Swapchain::GetPresentMode()
 {
-    return VK_PRESENT_MODE_IMMEDIATE_KHR;
+    return HYP_ENABLE_VSYNC ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
 void Swapchain::RetrieveSupportDetails(Device *device)

@@ -475,7 +475,7 @@ private:
 
         if (m_is_divided) {
             for (auto &octant : m_octants) {
-                if (!frustum.BoundingBoxInFrustum(octant.m_aabb)) {
+                if (!frustum.ContainsAabb(octant.m_aabb)) {
                     continue;
                 }
 

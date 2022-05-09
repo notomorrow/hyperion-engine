@@ -49,7 +49,7 @@ void GraphicsPipeline::UpdateDynamicStates(VkCommandBuffer cmd)
     vkCmdSetScissor(cmd, 0, 1, &this->scissor);
 }
 
-std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttributes(const MeshInputAttributeSet &attribute_set)
+std::vector<VkVertexInputAttributeDescription> GraphicsPipeline::BuildVertexAttributes(const VertexAttributeSet &attribute_set)
 {
     std::unordered_map<uint32_t, uint32_t> binding_sizes{};
 
@@ -88,7 +88,7 @@ void GraphicsPipeline::SubmitPushConstants(CommandBuffer *cmd) const
     vkCmdPushConstants(
         cmd->GetCommandBuffer(),
         layout,
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_SHADER_STAGE_ALL_GRAPHICS,
         0, sizeof(push_constants),
         &push_constants
     );
@@ -246,9 +246,9 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     /* TODO: enable multisampling and the GPU feature required for it.  */
     std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;
-    color_blend_attachments.reserve(m_construction_info.render_pass->GetRenderPassAttachmentRefs().size());
+    color_blend_attachments.reserve(m_construction_info.render_pass->GetAttachmentRefs().size());
 
-    for (const auto *attachment_ref : m_construction_info.render_pass->GetRenderPassAttachmentRefs()) {
+    for (const auto *attachment_ref : m_construction_info.render_pass->GetAttachmentRefs()) {
         if (attachment_ref->IsDepthAttachment()) {
             continue;
         }
@@ -293,7 +293,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     /* Push constants */
     const VkPushConstantRange push_constant_ranges[] = {
         {
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS,
             .offset     = 0,
             .size       = uint32_t(device->GetFeatures().PaddedSize<PushConstantData>())
         }
