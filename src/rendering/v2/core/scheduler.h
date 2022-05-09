@@ -10,6 +10,7 @@
 #include <tuple>
 #include <utility>
 #include <deque>
+#include <condition_variable>
 
 namespace hyperion::v2 {
 
