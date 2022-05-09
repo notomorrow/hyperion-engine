@@ -11,6 +11,7 @@
 #include <functional>
 #include <tuple>
 #include <atomic>
+#include <mutex>
 
 namespace hyperion::v2 {
 
@@ -146,6 +147,7 @@ class Callbacks {
         template <class ...OtherArgs>
         void Call(OtherArgs &&... args)
         {
+            DebugLog(LogType::Warn, "Trigger callback in thread %llu\n", std::hash<std::thread::id>{}(std::this_thread::get_id()));
             fn(std::forward<OtherArgs>(args)...);
 
             ++num_calls;
@@ -257,6 +259,8 @@ public:
     CallbackRef<CallbackGroup>
     Once(Enum key, typename CallbackInstance::Function &&function)
     {
+        std::lock_guard guard(rw_callbacks_mutex);
+
         auto &holder = m_holders[key];
 
         const auto id = ++m_id_counter;
@@ -280,6 +284,8 @@ public:
     CallbackRef<CallbackGroup>
     On(Enum key, typename CallbackInstance::Function &&function)
     {
+        std::lock_guard guard(rw_callbacks_mutex);
+
         auto &holder = m_holders[key];
 
         const auto id = ++m_id_counter;
@@ -312,23 +318,17 @@ public:
         TriggerCallbacks(true, key, std::move(args)...);
     }
 
-    /*! \brief Trigger a specific callback (by the given ID).
-     * The callback can either be a `once` or `on` callback.
-     * @returns A boolean stating whether the callback was executed or not
-     */
-    bool TriggerSpecific(Enum key, uint32_t id, Args &&... args)
-    {
-        auto &holder = m_holders[key];
-
-        return holder.Trigger(id, std::forward<Args>(args)...);
-    }
 
 private:
     uint32_t m_id_counter = 0;
     std::unordered_map<Enum, CallbackGroup> m_holders;
+
+    std::recursive_mutex rw_callbacks_mutex; // tmp
     
     void TriggerCallbacks(bool persist, Enum key, Args &&... args)
     {
+        std::lock_guard guard(rw_callbacks_mutex);
+
         auto &holder = m_holders[key];
 
         /* make copies so that callbacks can call Remove() without invalidation... */

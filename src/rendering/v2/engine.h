@@ -10,6 +10,10 @@
 #include "components/resources.h"
 #include "scene/octree.h"
 
+#include "game_thread.h"
+
+#include "core/scheduler.h"
+
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
 #include <rendering/backend/renderer_command_buffer.h>
@@ -148,6 +152,11 @@ public:
     std::mutex texture_mutex; /* tmp */
     
     std::atomic_bool m_running{false};
+    size_t           render_thread_id;
+
+    Scheduler<renderer::Result> render_scheduler;
+
+    GameThread game_thread;
 
 private:
     void FindTextureFormatDefaults();

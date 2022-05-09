@@ -85,9 +85,14 @@ StagingBuffer *StagingBufferPool::Context::CreateStagingBuffer(size_t size)
 StagingBuffer *StagingBufferPool::FindStagingBuffer(size_t size)
 {
     /* do a binary search to find one with the closest size (never less than required) */
-    const auto bound = std::upper_bound(m_staging_buffers.begin(), m_staging_buffers.end(), size, [](const size_t &sz, const auto &it) {
-        return sz < it.size;
-    });
+    const auto bound = std::upper_bound(
+        m_staging_buffers.begin(),
+        m_staging_buffers.end(),
+        size,
+        [](const size_t &sz, const auto &it) {
+            return sz < it.size;
+        }
+    );
 
     if (bound != m_staging_buffers.end()) {
         /* Update the time so that frequently used buffers will stay in the pool longer */
@@ -108,9 +113,14 @@ Result StagingBufferPool::Use(Device *device, UseFunction &&fn)
     HYPERION_PASS_ERRORS(fn(context), result);
 
     for (auto &record : context.m_staging_buffers) {
-        const auto bound = std::upper_bound(m_staging_buffers.begin(), m_staging_buffers.end(), record, [](const auto &record, const auto &it) {
-            return record.size < it.size;
-        });
+        const auto bound = std::upper_bound(
+            m_staging_buffers.begin(),
+            m_staging_buffers.end(),
+            record,
+            [](const auto &record, const auto &it) {
+                return record.size < it.size;
+            }
+        );
 
         m_staging_buffers.insert(bound, std::move(record));
     }

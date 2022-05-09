@@ -23,7 +23,8 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
       m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
       resources(this),
       assets(this),
-      m_shadow_renderer(std::make_unique<OrthoCamera>(-50, 50, -50, 50, -50, 50))
+      m_shadow_renderer(std::make_unique<OrthoCamera>(-50, 50, -50, 50, -50, 50)),
+      render_thread_id(std::hash<std::thread::id>{}(std::this_thread::get_id()))
 {
     m_octree.m_root = &m_octree_root;
 }
@@ -304,6 +305,10 @@ void Engine::Initialize()
 
 void Engine::Destroy()
 {
+    render_scheduler.Flush();
+
+    game_thread.Join();
+
     AssertThrow(m_instance != nullptr);
 
     (void)m_instance->GetDevice()->Wait();

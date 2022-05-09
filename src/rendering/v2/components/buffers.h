@@ -302,6 +302,25 @@ private:
     StagingObjectsPool m_staging_objects_pool;
 };
 
+/*struct RendererUpdateDataCommand {
+    union {
+        SkeletonShaderData skeleton;
+        ObjectShaderData   object;
+        SceneShaderData    scene;
+        MaterialShaderData material;
+        LightShaderData    light;
+    } data;
+
+    enum class DataType {
+        NONE,
+        SKELETON,
+        OBJECT,
+        SCENE,
+        MATERIAL,
+        LIGHT
+    } data_type;
+};*/
+
 } // namespace hyperion::v2
 
 #endif

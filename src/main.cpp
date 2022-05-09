@@ -237,9 +237,9 @@ public:
        // zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
-        if (uint32_t(timer) % 3 == 0) {
+        if (uint32_t(timer) % 2 == 0) {
             zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.Acquire());
-        } else if (uint32_t(timer) % 4 == 0) {
+        } else {
             zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
         }
 
@@ -544,8 +544,7 @@ int main()
     });
 
 #if HYP_GAME_THREAD
-    v2::GameThread game_thread;
-    game_thread.Start(&engine, &my_game, window);
+    engine.game_thread.Start(&engine, &my_game, window);
 #endif
 
     while (engine.m_running) {
@@ -565,6 +564,10 @@ int main()
             engine.GetInstance()->GetDevice(),
             engine.GetInstance()->GetSwapchain()
         ));
+
+        if (engine.render_scheduler.HasEnqueued()) {
+            engine.render_scheduler.Flush();
+        }
 
 
         frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
@@ -712,10 +715,6 @@ int main()
     rt_image_storage_view.Destroy(engine.GetDevice());
     //tlas->Destroy(engine.GetInstance());
     rt->Destroy(engine.GetDevice());
-#endif
-
-#if HYP_GAME_THREAD
-    game_thread.Join();
 #endif
 
     engine.Destroy();

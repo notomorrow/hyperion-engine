@@ -2,6 +2,7 @@
 #define HYPERION_V2_GAME_THREAD_H
 
 #include "core/thread.h"
+#include "components/containers.h"
 
 #define HYP_GAME_THREAD 1
 

@@ -19,7 +19,7 @@ using renderer::Sampler;
 using renderer::Extent2D;
 using renderer::Extent3D;
 
-class Texture : public EngineComponent<TextureImage> {
+class Texture : public EngineComponentBase<STUB_CLASS(Texture)> {
 public:
     Texture(
         Extent3D extent,
@@ -27,23 +27,25 @@ public:
         Image::Type type,
         Image::FilterMode filter_mode,
         Image::WrapMode wrap_mode,
-        const unsigned char *bytes);
+        const unsigned char *bytes
+    );
 
     Texture(const Texture &other) = delete;
     Texture &operator=(const Texture &other) = delete;
     ~Texture();
 
+    inline TextureImage *GetImage() const  { return m_image.get(); }
     inline ImageView *GetImageView() const { return m_image_view.get(); }
     inline Sampler *GetSampler() const { return m_sampler.get(); }
 
     inline const Extent3D &GetExtent() const
     {
-        return m_wrapped.GetExtent();
+        return m_image->GetExtent();
     }
 
     inline Image::InternalFormat GetFormat() const
     {
-        return m_wrapped.GetTextureFormat();
+        return m_image->GetTextureFormat();
     }
 
     inline Image::FilterMode GetFilterMode() const
@@ -62,7 +64,8 @@ public:
 
     void Init(Engine *engine);
 
-private:
+protected:
+    std::unique_ptr<TextureImage> m_image;
     std::unique_ptr<ImageView> m_image_view;
     std::unique_ptr<Sampler> m_sampler;
 };
@@ -131,7 +134,7 @@ public:
         nullptr
     )
     {
-        if (m_wrapped.GetBytes() != nullptr) {
+        if (m_image->GetBytes() != nullptr) {
             size_t offset = 0,
                    face_size = 0;
 
@@ -139,7 +142,7 @@ public:
                 if (texture != nullptr) {
                     face_size = texture->GetExtent().Size() * Image::NumComponents(texture->GetFormat());
 
-                    m_wrapped.CopyImageData(texture->Get().GetBytes(), face_size, offset);
+                    m_image->CopyImageData(texture->GetImage()->GetBytes(), face_size, offset);
                 }
 
                 offset += face_size;

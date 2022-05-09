@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_THREAD_H
-#define HYPERION_V2_THREAD_H
+#ifndef HYPERION_V2_CORE_THREAD_H
+#define HYPERION_V2_CORE_THREAD_H
 
 #include "lib/fixed_string.h"
 
