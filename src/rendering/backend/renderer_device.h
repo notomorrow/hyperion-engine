@@ -51,22 +51,21 @@ public:
     VkQueue GetQueue(QueueFamilyIndices::Index queue_family_index, uint32_t queue_index = 0);
 
     Result CreateLogicalDevice(const std::set<uint32_t> &required_queue_families);
-    Result CheckDeviceSuitable();
+    Result CheckDeviceSuitable(const ExtensionMap &unsupported_extensions);
 
     /*  Wait for the device to be idle */
     Result Wait() const;
-
-
+    
     /* \brief Check if the set required extensions extensions are supported. Any unsupported extensions are returned. */
-    ExtensionMap CheckExtensionSupport();
+    ExtensionMap GetUnsupportedExtensions();
 
     std::vector<VkExtensionProperties> GetSupportedExtensions();
 
 private:
-    VkDevice                   device;
-    VkPhysicalDevice           physical;
-    VkSurfaceKHR               surface;
-    VmaAllocator               allocator;
+    VkDevice           device;
+    VkPhysicalDevice   physical;
+    VkSurfaceKHR       surface;
+    VmaAllocator       allocator;
 
     Features           *features;
     QueueFamilyIndices queue_family_indices;

@@ -51,7 +51,7 @@ void Device::SetRequiredExtensions(const ExtensionMap &extensions)
 
 VkDevice Device::GetDevice()
 {
-    AssertThrow(this->device != nullptr);
+    AssertThrow(this->device != VK_NULL_HANDLE);
     return this->device;
 }
 
@@ -62,7 +62,7 @@ VkPhysicalDevice Device::GetPhysicalDevice()
 
 VkSurfaceKHR Device::GetRenderSurface()
 {
-    if (this->surface == nullptr) {
+    if (this->surface == VK_NULL_HANDLE) {
         DebugLog(LogType::Fatal, "Device render surface is null!\n");
         throw std::runtime_error("Device render surface not set");
     }
@@ -71,7 +71,7 @@ VkSurfaceKHR Device::GetRenderSurface()
 
 QueueFamilyIndices Device::FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
 {
-    QueueFamilyIndices indices;
+    QueueFamilyIndices indices{};
 
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
@@ -212,7 +212,7 @@ std::vector<VkExtensionProperties> Device::GetSupportedExtensions()
     return supported_extensions;
 }
 
-ExtensionMap Device::CheckExtensionSupport()
+ExtensionMap Device::GetUnsupportedExtensions()
 {
     const auto extensions_supported = GetSupportedExtensions();
     ExtensionMap unsupported_extensions;
@@ -227,17 +227,15 @@ ExtensionMap Device::CheckExtensionSupport()
         );
 
         if (supported_it == extensions_supported.end()) {
-            unsupported_extensions[required_ext.first] = required_ext.second;
+            unsupported_extensions.emplace(required_ext);
         }
     }
 
     return unsupported_extensions;
 }
 
-Result Device::CheckDeviceSuitable()
+Result Device::CheckDeviceSuitable(const ExtensionMap &unsupported_extensions)
 {
-    const auto unsupported_extensions = CheckExtensionSupport();
-
     if (!unsupported_extensions.empty()) {
         DebugLog(LogType::Warn, "--- Unsupported Extensions ---\n");
         
@@ -293,7 +291,7 @@ Result Device::SetupAllocator(Instance *instance)
 
 Result Device::DestroyAllocator()
 {
-    if (this->allocator != nullptr) {
+    if (this->allocator != VK_NULL_HANDLE) {
         char *stats_string;
         vmaBuildStatsString(this->allocator, &stats_string, true);
 
@@ -302,7 +300,7 @@ Result Device::DestroyAllocator()
         vmaFreeStatsString(this->allocator, stats_string);
 
         vmaDestroyAllocator(this->allocator);
-        this->allocator = nullptr;
+        this->allocator = VK_NULL_HANDLE;
     }
 
     HYPERION_RETURN_OK;
@@ -330,8 +328,6 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
         DebugLog(LogType::Debug, "\tHeap:\t\t(size: %llu, flags: %lu)\n", heap.size, heap.flags);
     }
 
-    this->SetRequiredExtensions(required_extensions);
-
     std::vector<VkDeviceQueueCreateInfo> queue_create_info_vec;
     const float priorities[] = { 1.0f };
     // for each queue family(for separate threads) we add them to
@@ -344,8 +340,19 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
 
         queue_create_info_vec.push_back(queue_info);
     }
+    
+    const auto unsupported_extensions = GetUnsupportedExtensions();
 
-    HYPERION_BUBBLE_ERRORS(CheckDeviceSuitable());
+
+    HYPERION_BUBBLE_ERRORS(CheckDeviceSuitable(unsupported_extensions));
+
+    // no _required_ extensions were missing (otherwise would have caused an error)
+    // so for each unsupported extension, remove it from out list of extensions
+    for (auto &it : unsupported_extensions) {
+        AssertThrowMsg(!it.second, "Unsupported extension should not be 'required', should have failed earlier check");
+
+        required_extensions.erase(it.first);
+    }
 
     std::vector<const char *> required_extensions_linear;
     required_extensions_linear.reserve(required_extensions.size());
@@ -354,7 +361,9 @@ Result Device::CreateLogicalDevice(const std::set<uint32_t> &required_queue_fami
         required_extensions.begin(), 
         required_extensions.end(),
         std::back_inserter(required_extensions_linear),
-        [](const auto &it) { return it.first.c_str(); }
+        [](const auto &it) {
+            return it.first.c_str();
+        }
     );
 
     VkDeviceCreateInfo create_info{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
