@@ -126,8 +126,8 @@ void main()
     
 #if PBR_ENABLED
     if (perform_lighting) {
-        float metallic = 0.2;
-        float roughness = 0.7;
+        float metallic = 0.0;
+        float roughness = 0.1;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -143,7 +143,7 @@ void main()
         
         vec3 energy_compensation = vec3(1.0);
         float perceptual_roughness = sqrt(roughness);
-        float lod = 12.0 * perceptual_roughness * (2.0 - perceptual_roughness);
+        float lod = 7.0 * perceptual_roughness * (2.0 - perceptual_roughness);
         
         vec2 AB = vec2(1.0, 1.0) - BRDFMap(NdotV, perceptual_roughness);
         

@@ -12,6 +12,7 @@
 #include <tuple>
 #include <atomic>
 #include <mutex>
+#include <thread>
 
 namespace hyperion::v2 {
 

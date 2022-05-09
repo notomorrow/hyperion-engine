@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <mutex>
+#include <cstring>
 
 namespace hyperion {
 

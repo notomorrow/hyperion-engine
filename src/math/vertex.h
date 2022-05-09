@@ -111,11 +111,15 @@ public:
     inline bool operator<(const Vertex &other) const { return position < other.position; }
 
 private:
+    Vector3 position;
+    Vector3 normal;
+    Vector2 texcoord0;
+    Vector2 texcoord1;
+    Vector3 tangent;
+    Vector3 bitangent;
+
     int nboneindices,
         nboneweights;
-
-    Vector3 position, normal, tangent, bitangent;
-    Vector2 texcoord0, texcoord1;
 
     std::array<float, MAX_BONE_WEIGHTS> bone_weights;
     std::array<int, MAX_BONE_INDICES> bone_indices;

@@ -59,15 +59,17 @@ Result Instance::CheckValidationLayerSupport(const std::vector<const char *> &re
 
 ExtensionMap Instance::GetExtensionMap()
 {
-    return{
-        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, true},
+    return {
+#if HYP_FEATURES_ENABLE_RAYTRACING
         {VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, false},
         {VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, false},
         {VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, false},
         {VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, false},
+#endif
         {VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, true},
         {VK_KHR_SPIRV_1_4_EXTENSION_NAME, false},
-        {VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME, false}
+        {VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME, false},
+        {VK_KHR_SWAPCHAIN_EXTENSION_NAME, true}
     };
 }
 
@@ -236,8 +238,6 @@ Result Instance::Initialize(bool load_debug_layers)
     for (const char *ext : extension_names) {
         DebugLog(LogType::Debug, "\t%s\n", ext);
     }
-
-    //extension_names.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 
 #ifndef HYPERION_BUILD_RELEASE
     extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);

@@ -298,6 +298,8 @@ void Engine::Initialize()
 
 void Engine::Destroy()
 {
+    m_running = false;
+
     callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MATERIALS, this);
@@ -313,9 +315,9 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_RAYTRACING_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
 
-    m_running = false;
-    render_scheduler.Flush();
     game_thread.Join();
+    render_scheduler.Flush();
+
     AssertThrow(m_instance != nullptr);
     (void)m_instance->GetDevice()->Wait();
     

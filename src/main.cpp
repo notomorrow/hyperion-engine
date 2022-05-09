@@ -149,13 +149,13 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
-            base_path + "models/sponza/sponza.obj", //San_Miguel/san-miguel-low-poly.obj",
+            base_path + "models/sphere_hq.obj",
             base_path + "models/cube.obj",
             base_path + "models/monkey/monkey.obj"
         );
 
         zombie = std::move(loaded_assets[0]);
-        sponza = std::move(loaded_assets[1]);
+        test_model = std::move(loaded_assets[1]);
         cube_obj = std::move(loaded_assets[2]);
         monkey_obj = std::move(loaded_assets[3]);
 
@@ -172,13 +172,14 @@ public:
         ));
 
         zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+        zombie->Scale(0.1f);
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
         scene->SetEnvironmentTexture(0, cubemap.Acquire());
-        sponza->Translate({0, 0, 5});
-        sponza->Scale(0.025f);
-        sponza->Update(engine);
+        test_model->Translate({0, 0, 5});
+        //test_model->Scale(0.025f);
+        test_model->Update(engine);
         
         tex1 = engine->resources.textures.Add(
             engine->assets.Load<Texture>(base_path + "textures/dirt.jpg")
@@ -229,7 +230,7 @@ public:
         ++counter;
 
         scene->Update(engine, delta);
-        sponza->Update(engine);
+        test_model->Update(engine);
     
         engine->GetOctree().CalculateVisibility(scene.ptr);
         
@@ -254,7 +255,7 @@ public:
 
     Ref<Scene> scene;
     Ref<Texture> tex1, tex2;
-    std::unique_ptr<Node> sponza, zombie, cube_obj, monkey_obj;
+    std::unique_ptr<Node> test_model, zombie, cube_obj, monkey_obj;
     double timer = 0.0;
     int counter = 0;
 
