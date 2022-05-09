@@ -97,7 +97,7 @@ void ProbeSystem::CreatePipeline(Engine *engine)
 
 void ProbeSystem::CreateComputePipelines(Engine *engine)
 {
-    m_update_irradiance = engine->resources.compute_pipelines.Add(engine, std::make_unique<ComputePipeline>(
+    m_update_irradiance = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
         engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/rt/probe_update_irradiance.comp.spv").Read()}}
@@ -105,7 +105,7 @@ void ProbeSystem::CreateComputePipelines(Engine *engine)
         ))
     ));
 
-    m_update_depth = engine->resources.compute_pipelines.Add(engine, std::make_unique<ComputePipeline>(
+    m_update_depth = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
         engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
                 { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/rt/probe_update_depth.comp.spv").Read()}}
@@ -248,35 +248,32 @@ void ProbeSystem:: ComputeIrradiance(Engine *engine, CommandBuffer *command_buff
         command_buffer,
         GPUMemory::ResourceState::UNORDERED_ACCESS
     );
-
-    auto &update_irradiance = *engine->resources.compute_pipelines[m_update_irradiance],
-         &update_depth      = *engine->resources.compute_pipelines[m_update_depth];
-
-    update_irradiance->Bind(command_buffer);
+    
+    m_update_irradiance->GetPipeline()->Bind(command_buffer);
     
     engine->GetInstance()->GetDescriptorPool().Bind(
         engine->GetDevice(),
         command_buffer,
-        &update_irradiance.Get(),
+        m_update_irradiance->GetPipeline(),
         {
             {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING, .count = 1}
         }
     );
 
-    update_irradiance->Dispatch(command_buffer, Extent3D{{probe_counts.width * probe_counts.height, probe_counts.depth}});
+    m_update_irradiance->GetPipeline()->Dispatch(command_buffer, Extent3D{{probe_counts.width * probe_counts.height, probe_counts.depth}});
 
-    update_depth->Bind(command_buffer);
+    m_update_depth->GetPipeline()->Bind(command_buffer);
     
     engine->GetInstance()->GetDescriptorPool().Bind(
         engine->GetDevice(),
         command_buffer,
-        &update_depth.Get(),
+        m_update_depth->GetPipeline(),
         {
             {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING, .count = 1}
         }
     );
 
-    update_depth->Dispatch(command_buffer, Extent3D{{probe_counts.width * probe_counts.height, probe_counts.depth}});
+    m_update_depth->GetPipeline()->Dispatch(command_buffer, Extent3D{{probe_counts.width * probe_counts.height, probe_counts.depth}});
 
     m_irradiance_image->GetGPUImage()->InsertBarrier(
         command_buffer,

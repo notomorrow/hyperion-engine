@@ -126,8 +126,8 @@ private:
     ProbeSystemSetup   m_setup;
     std::vector<Probe> m_probes;
 
-    ComputePipeline::ID m_update_irradiance;
-    ComputePipeline::ID m_update_depth;
+    Ref<ComputePipeline> m_update_irradiance,
+                         m_update_depth;
 
     std::unique_ptr<RaytracingPipeline> m_pipeline;
     std::unique_ptr<UniformBuffer>      m_uniform_buffer;

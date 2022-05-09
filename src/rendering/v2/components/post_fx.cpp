@@ -176,14 +176,14 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
     HYPERION_PASS_ERRORS(
         command_buffer->Record(
             engine->GetInstance()->GetDevice(),
-            m_pipeline->Get().GetConstructionInfo().render_pass,
+            m_pipeline->GetPipeline()->GetConstructionInfo().render_pass,
             [this, engine, frame_index](CommandBuffer *cmd) {
-                m_pipeline->Get().Bind(cmd);
+                m_pipeline->GetPipeline()->Bind(cmd);
                 
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &m_pipeline->Get(),
+                    m_pipeline->GetPipeline(),
                     {
                         {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
@@ -193,7 +193,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &m_pipeline->Get(),
+                    m_pipeline->GetPipeline(),
                     {
                         {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
@@ -204,7 +204,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &m_pipeline->Get(),
+                    m_pipeline->GetPipeline(),
                     {
                         {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}

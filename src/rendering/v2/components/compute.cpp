@@ -3,28 +3,47 @@
 
 namespace hyperion::v2 {
 ComputePipeline::ComputePipeline(Ref<Shader> &&shader)
-    : EngineComponent(),
+    : EngineComponentBase(),
+      m_pipeline(std::make_unique<renderer::ComputePipeline>()),
       m_shader(std::move(shader))
 {
 }
 
-ComputePipeline::~ComputePipeline() = default;
+ComputePipeline::~ComputePipeline()
+{
+    Teardown();
+}
 
-void ComputePipeline::Create(Engine *engine)
+void ComputePipeline::Init(Engine *engine)
 {
     if (IsInit()) {
         return;
     }
 
-    AssertThrow(m_shader != nullptr);
-    m_shader->Init(engine);
+    EngineComponentBase::Init();
 
-    EngineComponent::Create(engine, m_shader->GetShaderProgram(), &engine->GetInstance()->GetDescriptorPool());
-}
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](Engine *engine) {
+        AssertThrow(m_shader != nullptr);
+        m_shader->Init(engine);
 
-void ComputePipeline::Destroy(Engine *engine)
-{
-    EngineComponent::Destroy(engine);
+        engine->render_scheduler.Enqueue([this, engine] {
+           return m_pipeline->Create(
+               engine->GetDevice(),
+               m_shader->GetShaderProgram(),
+               &engine->GetInstance()->GetDescriptorPool()
+           ); 
+        });
+
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_COMPUTE_PIPELINES, [this](Engine *engine) {
+            engine->render_scheduler.Enqueue([this, engine] {
+               return m_pipeline->Destroy(engine->GetDevice()); 
+            });
+            
+            engine->render_scheduler.FlushOrWait([](auto &fn) {
+                HYPERION_ASSERT_RESULT(fn());
+            });
+        }), engine);
+    }));
 }
 
 } // namespace hyperion::v2

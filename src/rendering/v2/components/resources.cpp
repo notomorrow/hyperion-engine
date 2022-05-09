@@ -15,6 +15,7 @@ Resources::Resources(Engine *engine)
       render_passes(engine->callbacks,      {engine}),
       framebuffers(engine->callbacks,       {engine}),
       graphics_pipelines(engine->callbacks, {engine}),
+      compute_pipelines(engine->callbacks,  {engine}),
       blas(engine->callbacks,               {engine})
 {
 }
@@ -29,7 +30,6 @@ void Resources::Create(Engine *engine)
 
 void Resources::Destroy(Engine *engine)
 {
-    compute_pipelines.RemoveAll(engine);
 }
 
 } // namespace hyperion::v2

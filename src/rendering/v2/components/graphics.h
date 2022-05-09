@@ -31,7 +31,7 @@ using renderer::CullMode;
 
 class Engine;
 
-class GraphicsPipeline : public EngineComponent<renderer::GraphicsPipeline> {
+class GraphicsPipeline : public EngineComponentBase<STUB_CLASS(GraphicsPipeline)> {
     friend class Engine;
     friend class Spatial;
 
@@ -47,9 +47,10 @@ public:
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();
 
-    inline Shader *GetShader() const { return m_shader.ptr; }
-    inline RenderPass *GetRenderPassID() const { return m_render_pass.ptr; }
-    inline Bucket GetBucket() const { return m_bucket; }
+    inline renderer::GraphicsPipeline *GetPipeline() const { return m_pipeline.get(); }
+    inline Shader *GetShader() const                       { return m_shader.ptr; }
+    inline RenderPass *GetRenderPassID() const             { return m_render_pass.ptr; }
+    inline Bucket GetBucket() const                        { return m_bucket; }
 
     inline VertexAttributeSet &GetVertexAttributes() { return m_vertex_attributes; }
     inline const VertexAttributeSet &GetVertexAttributes() const { return m_vertex_attributes; }
@@ -114,6 +115,8 @@ private:
     void OnSpatialRemoved(Spatial *spatial);
 
     void PerformEnqueuedSpatialUpdates(Engine *engine);
+
+    std::unique_ptr<renderer::GraphicsPipeline> m_pipeline;
 
     Ref<Shader> m_shader;
     Ref<RenderPass> m_render_pass;

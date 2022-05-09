@@ -358,8 +358,7 @@ int main()
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     /* Compute */
-    v2::ComputePipeline::ID compute_pipeline_id = engine.resources.compute_pipelines.Add(
-        &engine,
+    auto compute_pipeline = engine.resources.compute_pipelines.Add(
         std::make_unique<v2::ComputePipeline>(
             engine.resources.shaders.Add(std::make_unique<v2::Shader>(
                 std::vector<v2::SubShader>{
@@ -368,6 +367,8 @@ int main()
             ))
         )
     );
+
+    compute_pipeline.Init();
 
     auto compute_command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_PRIMARY);
 
@@ -578,8 +579,7 @@ int main()
         const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
 #if HYPERION_VK_TEST_IMAGE_STORE
-        auto &compute_pipeline = *engine.resources.compute_pipelines[compute_pipeline_id];
-        compute_pipeline->push_constants = {
+        compute_pipeline->GetPipeline()->push_constants = {
             .counter = {
                 .x = static_cast<uint32_t>(std::sin(timer) * 20.0f),
                 .y = static_cast<uint32_t>(std::cos(timer) * 20.0f)
@@ -592,19 +592,19 @@ int main()
         
         HYPERION_ASSERT_RESULT(compute_command_buffer->Reset(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(compute_command_buffer->Record(engine.GetInstance()->GetDevice(), nullptr, [&](CommandBuffer *cmd) {
-            compute_pipeline->Bind(cmd);
+            compute_pipeline->GetPipeline()->Bind(cmd);
 
             engine.GetInstance()->GetDescriptorPool().Bind(
                 engine.GetInstance()->GetDevice(),
                 cmd,
-                &compute_pipeline.Get(),
+                compute_pipeline->GetPipeline(),
                 {{
                     .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
                     .count = 1
                 }}
             );
 
-            compute_pipeline->Dispatch(cmd, {8, 8, 1});
+            compute_pipeline->GetPipeline()->Dispatch(cmd, {8, 8, 1});
 
             HYPERION_RETURN_OK;
         }));

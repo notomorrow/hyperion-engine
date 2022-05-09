@@ -220,7 +220,7 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
     commands.Push([this, engine, count_mode](CommandBuffer *command_buffer) {
         engine->render_bindings.BindScene(m_scene);
 
-        m_pipeline->Get().push_constants.voxelizer_data = {
+        m_pipeline->GetPipeline()->push_constants.voxelizer_data = {
             .grid_size = voxel_map_size,
             .count_mode = count_mode
         };

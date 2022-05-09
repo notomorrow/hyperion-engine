@@ -33,7 +33,7 @@ struct Resources {
     RefCounter<Light,       Callbacks>      lights;
 
     RefCounter<GraphicsPipeline, Callbacks> graphics_pipelines;
-    ObjectHolder<ComputePipeline>           compute_pipelines{.defer_create = true};
+    RefCounter<ComputePipeline, Callbacks>  compute_pipelines;
     
     RefCounter<Spatial,     Callbacks>      spatials;
     RefCounter<Mesh,        Callbacks>      meshes;

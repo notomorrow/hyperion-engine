@@ -189,14 +189,6 @@ void Engine::PrepareSwapchain()
         m_render_list_container.AddFramebuffersToPipelines(this);
         m_root_pipeline->Init(this);
     });
-    
-    callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](...) {
-        resources.compute_pipelines.CreateAll(this);
-    });
-
-    callbacks.Once(EngineCallback::DESTROY_COMPUTE_PIPELINES, [this](...) {
-        resources.compute_pipelines.RemoveAll(this);
-    });
 }
 
 void Engine::Initialize()
@@ -459,17 +451,17 @@ void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
 
 void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
 {
-    auto &pipeline = m_root_pipeline->Get();
+    auto *pipeline = m_root_pipeline->GetPipeline();
     const uint32_t acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 
     m_root_pipeline->GetFramebuffers()[acquired_image_index]->BeginCapture(command_buffer);
     
-    pipeline.Bind(command_buffer);
+    pipeline->Bind(command_buffer);
 
     m_instance->GetDescriptorPool().Bind(
         m_instance->GetDevice(),
         command_buffer,
-        &pipeline,
+        pipeline,
         {{
             .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
             .count = 1
@@ -480,7 +472,7 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
     m_instance->GetDescriptorPool().Bind(
         m_instance->GetDevice(),
         command_buffer,
-        &pipeline,
+        pipeline,
         {{
             .set = DescriptorSet::DESCRIPTOR_SET_INDEX_RAYTRACING,
             .count = 1
