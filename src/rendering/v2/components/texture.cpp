@@ -31,7 +31,7 @@ void Texture::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_TEXTURES, [this](Engine *engine) {
-        auto queued_id = engine->render_scheduler.Enqueue([this, engine] {
+        engine->render_scheduler.Enqueue([this, engine] {
             HYPERION_ASSERT_RESULT(m_image->Create(engine->GetDevice(), engine->GetInstance(), renderer::GPUMemory::ResourceState::SHADER_RESOURCE));
             HYPERION_ASSERT_RESULT(m_image_view->Create(engine->GetInstance()->GetDevice(), m_image.get()));
             HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetInstance()->GetDevice(), m_image_view.get()));
@@ -41,8 +41,8 @@ void Texture::Init(Engine *engine)
             HYPERION_RETURN_OK;
         });
         
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_TEXTURES, [this, queued_id](Engine *engine) {
-            engine->render_scheduler.DequeueOrEnqueue(queued_id, [this, engine] {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_TEXTURES, [this](Engine *engine) {
+            engine->render_scheduler.Enqueue([this, engine] {
                 AssertThrow(m_image != nullptr);
                 AssertThrow(m_image_view != nullptr);
                 AssertThrow(m_sampler != nullptr);
@@ -58,11 +58,9 @@ void Texture::Init(Engine *engine)
                 HYPERION_RETURN_OK;
             });
 
-            engine->render_scheduler.WaitForFlush();
-            
-            m_sampler.reset();
-            m_image_view.reset();
-            m_image.reset();
+            engine->render_scheduler.FlushOrWait([](auto &fn) {
+                HYPERION_ASSERT_RESULT(fn());
+            });
         }), engine);
     }));
 }

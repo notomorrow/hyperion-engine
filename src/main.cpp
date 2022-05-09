@@ -547,12 +547,14 @@ int main()
     engine.game_thread.Start(&engine, &my_game, window);
 #endif
 
-    while (engine.m_running) {
+    bool running = true;
+
+    while (running) {
         while (SystemSDL::PollEvent(&event)) {
             my_game.input_manager->CheckEvent(&event);
             switch (event.GetType()) {
                 case SystemEventType::EVENT_SHUTDOWN:
-                    engine.m_running = false;
+                    running = false;
                     break;
                 default:
                     break;
@@ -566,7 +568,9 @@ int main()
         ));
 
         if (engine.render_scheduler.HasEnqueued()) {
-            engine.render_scheduler.Flush();
+            engine.render_scheduler.Flush([](auto &fn) {
+                HYPERION_ASSERT_RESULT(fn());
+            });
         }
 
 
@@ -684,6 +688,8 @@ int main()
         engine.GetInstance()->GetFrameHandler()->NextFrame();
 
     }
+
+    engine.render_scheduler.Flush();
 
     AssertThrow(engine.GetInstance()->GetDevice()->Wait());
 

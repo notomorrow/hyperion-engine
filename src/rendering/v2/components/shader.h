@@ -17,6 +17,7 @@
 
 namespace hyperion::v2 {
 
+using renderer::ShaderProgram;
 using renderer::ShaderObject;
 using renderer::ShaderModule;
 using renderer::GPUBuffer;
@@ -68,17 +69,20 @@ struct SubShader {
     ShaderObject       spirv;
 };
 
-class Shader : public EngineComponent<renderer::ShaderProgram> {
+class Shader : public EngineComponentBase<STUB_CLASS(Shader)> {
 public:
     Shader(const std::vector<SubShader> &sub_shaders);
     Shader(const Shader &) = delete;
     Shader &operator=(const Shader &) = delete;
     ~Shader();
 
+    ShaderProgram *GetShaderProgram() const { return m_shader_program.get(); }
+
     void Init(Engine *engine);
 
 private:
-    std::vector<SubShader> m_sub_shaders;
+    std::unique_ptr<ShaderProgram> m_shader_program;
+    std::vector<SubShader>         m_sub_shaders;
 };
 
 class ShaderManager {

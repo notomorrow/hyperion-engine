@@ -19,7 +19,7 @@ void ComputePipeline::Create(Engine *engine)
     AssertThrow(m_shader != nullptr);
     m_shader->Init(engine);
 
-    EngineComponent::Create(engine, &m_shader->Get(), &engine->GetInstance()->GetDescriptorPool());
+    EngineComponent::Create(engine, m_shader->GetShaderProgram(), &engine->GetInstance()->GetDescriptorPool());
 }
 
 void ComputePipeline::Destroy(Engine *engine)

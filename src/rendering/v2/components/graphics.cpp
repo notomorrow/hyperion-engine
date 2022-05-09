@@ -167,7 +167,7 @@ void GraphicsPipeline::Init(Engine *engine)
             .depth_test        = m_depth_test,
             .depth_write       = m_depth_write,
             .blend_enabled     = m_blend_enabled,
-            .shader            = &m_shader->Get(),
+            .shader            = m_shader->GetShaderProgram(),
             .render_pass       = &m_render_pass->Get()
         };
 

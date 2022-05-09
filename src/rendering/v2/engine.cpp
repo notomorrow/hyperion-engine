@@ -305,16 +305,6 @@ void Engine::Initialize()
 
 void Engine::Destroy()
 {
-    render_scheduler.Flush();
-
-    game_thread.Join();
-
-    AssertThrow(m_instance != nullptr);
-
-    (void)m_instance->GetDevice()->Wait();
-
-    m_running = false;
-    
     callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MATERIALS, this);
@@ -325,25 +315,33 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_TEXTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_VOXELIZER, this);
     callbacks.Trigger(EngineCallback::DESTROY_DESCRIPTOR_SETS, this);
-    
-    m_render_list_container.Destroy(this);
-
     callbacks.Trigger(EngineCallback::DESTROY_GRAPHICS_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_RAYTRACING_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
 
+    m_running = false;
+    render_scheduler.Flush();
+    game_thread.Join();
+    AssertThrow(m_instance != nullptr);
+    (void)m_instance->GetDevice()->Wait();
+    
+    m_render_list_container.Destroy(this);
+    
     m_deferred_renderer.Destroy(this);
     m_shadow_renderer.Destroy(this);
 
     for (auto &attachment : m_render_pass_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
     }
+
     
     callbacks.Trigger(EngineCallback::DESTROY_FRAMEBUFFERS, this);
     callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
 
     resources.Destroy(this);
+
+    
 
     if (shader_globals != nullptr) {
         shader_globals->scenes.Destroy(m_instance->GetDevice());
@@ -390,6 +388,11 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
+}
+
+void Engine::Stop()
+{
+    
 }
 
 Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(

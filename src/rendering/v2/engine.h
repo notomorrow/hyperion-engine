@@ -131,6 +131,7 @@ public:
     void Destroy();
     void PrepareSwapchain();
     void Compile();
+    void Stop();
 
     void ResetRenderBindings();
     void UpdateRendererBuffersAndDescriptors(uint32_t frame_index);
