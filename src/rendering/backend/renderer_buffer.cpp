@@ -818,9 +818,9 @@ AccelerationStructureInstancesBuffer::AccelerationStructureInstancesBuffer()
 PackedVertexStorageBuffer::PackedVertexStorageBuffer()
     : GPUBuffer(
           VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* } for rt */
-            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* } for rt */
-            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* } for rt */
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* for rt */
+            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* for rt */
+            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* for rt */
           VMA_MEMORY_USAGE_GPU_ONLY
       )
 {
@@ -829,9 +829,9 @@ PackedVertexStorageBuffer::PackedVertexStorageBuffer()
 PackedIndexStorageBuffer::PackedIndexStorageBuffer()
     : GPUBuffer(
           VK_BUFFER_USAGE_INDEX_BUFFER_BIT
-            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* } for rt */
-            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* } for rt */
-            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* } for rt */
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT                            /* for rt */
+            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR /* for rt */
+            | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,                                  /* for rt */
           VMA_MEMORY_USAGE_GPU_ONLY
       )
 {

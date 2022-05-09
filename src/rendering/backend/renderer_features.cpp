@@ -22,6 +22,7 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
         vkGetPhysicalDeviceFeatures(physical_device, &m_features);
         vkGetPhysicalDeviceMemoryProperties(physical_device, &m_memory_properties);
 
+#if HYP_FEATURES_ENABLE_RAYTRACING
         m_buffer_device_address_features = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = VK_NULL_HANDLE
@@ -41,6 +42,12 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
             .pNext = &m_acceleration_structure_features
         };
+#else
+        m_indexing_features = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
+            .pNext = VK_NULL_HANDLE
+        };
+#endif
 
         m_features2 = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -48,7 +55,8 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
         };
 
         vkGetPhysicalDeviceFeatures2(m_physical_device, &m_features2);
-
+        
+#if HYP_FEATURES_ENABLE_RAYTRACING
         m_raytracing_pipeline_properties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
             .pNext = VK_NULL_HANDLE
@@ -58,6 +66,12 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
             .pNext = &m_raytracing_pipeline_properties
         };
+#else
+        m_properties2 = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+            .pNext = VK_NULL_HANDLE
+        };
+#endif
 
         vkGetPhysicalDeviceProperties2(m_physical_device, &m_properties2);
     }
@@ -70,8 +84,10 @@ void Features::LoadDynamicFunctions(Device *device)
         AssertThrowMsg(proc_addr != nullptr, "Failed to load dynamic function " #name "\n"); \
         dyn_functions.##name = reinterpret_cast<PFN_##name>(proc_addr); \
     } while (0)
-
+    
     HYP_LOAD_FN(vkGetBufferDeviceAddressKHR);
+    
+#if HYP_FEATURES_ENABLE_RAYTRACING
     HYP_LOAD_FN(vkCmdBuildAccelerationStructuresKHR);
     HYP_LOAD_FN(vkBuildAccelerationStructuresKHR);
     HYP_LOAD_FN(vkCreateAccelerationStructureKHR);
@@ -81,6 +97,7 @@ void Features::LoadDynamicFunctions(Device *device)
     HYP_LOAD_FN(vkCmdTraceRaysKHR);
     HYP_LOAD_FN(vkGetRayTracingShaderGroupHandlesKHR);
     HYP_LOAD_FN(vkCreateRayTracingPipelinesKHR);
+#endif
 
 #undef HYP_LOAD_FN
 }
