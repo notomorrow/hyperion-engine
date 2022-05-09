@@ -1,9 +1,9 @@
 #ifndef HYPERION_V2_NODE_H
 #define HYPERION_V2_NODE_H
 
+#include <rendering/v2/core/containers.h>
 #include "spatial.h"
 #include "controller.h"
-#include "../components/containers.h"
 
 #include <math/transform.h>
 

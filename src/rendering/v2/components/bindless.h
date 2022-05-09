@@ -2,8 +2,8 @@
 #define HYPERION_V2_BINDLESS_H
 
 #include "texture.h"
-#include "containers.h"
 
+#include <rendering/v2/core/containers.h>
 #include <rendering/backend/renderer_descriptor_set.h>
 #include <rendering/backend/renderer_swapchain.h>
 

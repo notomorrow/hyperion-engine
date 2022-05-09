@@ -1,10 +1,10 @@
 #ifndef HYPERION_V2_OCTREE_H
 #define HYPERION_V2_OCTREE_H
 
+#include <rendering/v2/core/containers.h>
 #include "scene.h"
 #include "spatial.h"
 #include "visibility_state.h"
-#include "../components/containers.h"
 
 #include <math/vector3.h>
 #include <math/bounding_box.h>
