@@ -90,7 +90,8 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
         std::make_pair("map_ka",     Material::MATERIAL_TEXTURE_METALNESS_MAP),
         std::make_pair("map_ks",     Material::MATERIAL_TEXTURE_METALNESS_MAP),
         std::make_pair("map_ns",     Material::MATERIAL_TEXTURE_ROUGHNESS_MAP),
-        std::make_pair("map_height", Material::MATERIAL_TEXTURE_PARALLAX_MAP) /* custom */
+        std::make_pair("map_height", Material::MATERIAL_TEXTURE_PARALLAX_MAP) /* custom */,
+        std::make_pair("map_ao",     Material::MATERIAL_TEXTURE_AO_MAP)       /* custom */
     };
 
     Tokens tokens;

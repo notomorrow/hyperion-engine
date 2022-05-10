@@ -82,12 +82,11 @@ void Features::LoadDynamicFunctions(Device *device)
 #define HYP_LOAD_FN(name) do { \
         auto proc_addr = vkGetDeviceProcAddr(device->GetDevice(), #name); \
         AssertThrowMsg(proc_addr != nullptr, "Failed to load dynamic function " #name "\n"); \
-        dyn_functions.##name = reinterpret_cast<PFN_##name>(proc_addr); \
+        dyn_functions.name = reinterpret_cast<PFN_##name>(proc_addr); \
     } while (0)
-    
-    //HYP_LOAD_FN(vkGetBufferDeviceAddressKHR);
-    
+
 #if HYP_FEATURES_ENABLE_RAYTRACING
+    HYP_LOAD_FN(vkGetBufferDeviceAddressKHR);
     HYP_LOAD_FN(vkCmdBuildAccelerationStructuresKHR);
     HYP_LOAD_FN(vkBuildAccelerationStructuresKHR);
     HYP_LOAD_FN(vkCreateAccelerationStructureKHR);

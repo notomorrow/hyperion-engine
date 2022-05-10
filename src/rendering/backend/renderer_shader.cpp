@@ -1,7 +1,3 @@
-//
-// Created by emd22 on 2022-02-20.
-//
-
 #include "renderer_shader.h"
 
 #include "../../system/debug.h"

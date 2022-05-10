@@ -36,10 +36,6 @@ void Material::Init(Engine *engine)
                 texture.Init();
             }
         }
-        
-        engine->render_scheduler.FlushOrWait([](auto &fn) {
-            HYPERION_ASSERT_RESULT(fn());
-        });
 
         UpdateShaderData(engine);
 
@@ -120,10 +116,10 @@ void Material::UpdateShaderData(Engine *engine)
 
         engine->shader_globals->materials.Set(m_id.value - 1, shader_data);
 
-        m_shader_data_state = ShaderDataState::CLEAN;
-
         HYPERION_RETURN_OK;
     });
+
+    m_shader_data_state = ShaderDataState::CLEAN;
 }
 
 void Material::SetParameter(MaterialKey key, const Parameter &value)

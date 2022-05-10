@@ -1,7 +1,3 @@
-//
-// Created by emd22 on 2022-02-20.
-//
-
 #ifndef HYPERION_RENDERER_SHADER_H
 #define HYPERION_RENDERER_SHADER_H
 

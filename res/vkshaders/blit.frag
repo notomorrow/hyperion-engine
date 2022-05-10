@@ -30,9 +30,8 @@ void main()
     
 
     //out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
-    //out_color = imageLoad(irradiance_image, ivec2(int(v_texcoord0.x * float(probe_system.image_dimensions.x)), int(v_texcoord0.y * float(probe_system.image_dimensions.y))));
-    
+
     //if (out_color.a < 0.2) {
-        out_color = vec4(texture(deferred_result, texcoord).rgb, 1.0);
+        out_color = vec4(pow(texture(deferred_result, texcoord).rgb, vec3(1.0) / vec3(2.2)), 1.0);
     //}
 }

@@ -15,7 +15,7 @@ struct VisibilityState {
     using Nonce   = uint16_t;
 
     static constexpr uint32_t max_scenes = sizeof(Bitmask) * CHAR_BIT;
-    static constexpr uint32_t cursor_size = 2;
+    static constexpr uint32_t cursor_size = 8;
 
     /* map from scene index (id - 1) -> visibility boolean for each frame in flight.
      * when visiblity is scanned, both values per frame in flight are set accordingly,
@@ -29,6 +29,19 @@ struct VisibilityState {
      * used as if it is in a "visible" state.
      */
     std::array<std::atomic<Nonce>, cursor_size> nonces{};
+
+    VisibilityState()
+    {
+        for (auto &nonce : nonces) {
+            nonce.store(0);
+        }
+    }
+
+    VisibilityState(const VisibilityState &other) = delete;
+    VisibilityState &operator=(const VisibilityState &other) = delete;
+    VisibilityState(VisibilityState &&other) noexcept = default;
+    VisibilityState &operator=(VisibilityState &&other) noexcept = default;
+    ~VisibilityState() = default;
 
     HYP_FORCE_INLINE bool Get(Scene::ID scene) const
     {

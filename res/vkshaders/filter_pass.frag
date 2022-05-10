@@ -14,7 +14,7 @@ layout(location=0) out vec4 color_output;
 #include "include/gbuffer.inc"
 #include "include/scene.inc"
 
-const float diffarea = 0.3; //self-shadowing reduction
+const float diffarea = 0.2; //self-shadowing reduction
 const float gdisplace = 0.4; //gauss bell center //0.4
 
 vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
@@ -30,7 +30,7 @@ vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 #define SSAO_SAMPLES 35
 #define SSAO_STRENGTH 1.0
 #define SSAO_CLAMP_AMOUNT 0.125
-#define SSAO_RADIUS 6.0
+#define SSAO_RADIUS 5.0
 #define SSAO_ENABLED 1
 
 vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering

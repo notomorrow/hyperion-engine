@@ -1,7 +1,3 @@
-//
-// Created by emd22 on 2022-02-22.
-//
-
 #ifndef HYPERION_RENDERER_BUFFER_H
 #define HYPERION_RENDERER_BUFFER_H
 
