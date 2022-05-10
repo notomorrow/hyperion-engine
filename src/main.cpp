@@ -149,7 +149,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
-            base_path + "models/sponza/sponza.obj", //"sphere_hq.obj",
+            base_path + "models/sponza/sponza.obj",//"material_sphere/material_sphere.obj",
             base_path + "models/cube.obj",
             base_path + "models/monkey/monkey.obj"
         );
@@ -158,21 +158,22 @@ public:
         test_model = std::move(loaded_assets[1]);
         cube_obj = std::move(loaded_assets[2]);
         monkey_obj = std::move(loaded_assets[3]);
-
+        monkey_obj->Scale(2.0f);
         
         auto cubemap = engine->resources.textures.Add(std::make_unique<TextureCube>(
            engine->assets.Load<Texture>(
-               base_path + "textures/Lycksele3/posx.jpg",
-               base_path + "textures/Lycksele3/negx.jpg",
-               base_path + "textures/Lycksele3/posy.jpg",
-               base_path + "textures/Lycksele3/negy.jpg",
-               base_path + "textures/Lycksele3/posz.jpg",
-               base_path + "textures/Lycksele3/negz.jpg"
+               base_path + "textures/IceRiver/posx.jpg",
+               base_path + "textures/IceRiver/negx.jpg",
+               base_path + "textures/IceRiver/posy.jpg",
+               base_path + "textures/IceRiver/negy.jpg",
+               base_path + "textures/IceRiver/posz.jpg",
+               base_path + "textures/IceRiver/negz.jpg"
             )
         ));
 
         zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
         zombie->Scale(0.1f);
+        zombie->Translate({0, 0, -5});
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
@@ -228,9 +229,9 @@ public:
         ++counter;
 
         scene->Update(engine, delta);
-        test_model->Update(engine);
     
         engine->GetOctree().CalculateVisibility(scene.ptr);
+        test_model->Update(engine);
         
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
        // zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
@@ -572,11 +573,11 @@ int main()
                 HYPERION_ASSERT_RESULT(fn());
             });
 
-            DebugLog(
+            /*DebugLog(
                 LogType::Debug,
                 "[Renderer] Execute %lu enqueued tasks\n",
                 num_enqueued
-            );
+            );*/
         }
 
 

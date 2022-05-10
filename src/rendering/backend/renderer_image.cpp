@@ -217,7 +217,7 @@ Result Image::CreateImage(Device *device,
         m_internal_info.usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
 
-    if (IsCubemap()) {
+    if (IsTextureCube()) {
         DebugLog(LogType::Debug, "Creating cubemap , enabling VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT flag.\n");
 
         image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;

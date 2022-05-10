@@ -148,11 +148,11 @@ public:
             : 1;
     }
 
-    inline bool IsCubemap() const
+    inline bool IsTextureCube() const
         { return m_type == TEXTURE_TYPE_CUBEMAP; }
 
     inline uint32_t NumFaces() const
-        { return IsCubemap() ? 6 : 1; }
+        { return IsTextureCube() ? 6 : 1; }
 
     inline const Extent3D &GetExtent() const { return m_extent; }
 

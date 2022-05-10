@@ -9,7 +9,7 @@
 
 #include <array>
 
-#define HYP_FEATURES_ENABLE_RAYTRACING 0
+#define HYP_FEATURES_ENABLE_RAYTRACING 1
 
 namespace hyperion {
 namespace renderer {

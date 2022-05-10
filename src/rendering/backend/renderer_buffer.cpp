@@ -1,7 +1,3 @@
-//
-// Created by emd22 on 2022-02-22.
-//
-
 #include "renderer_buffer.h"
 #include "renderer_command_buffer.h"
 #include "renderer_device.h"
@@ -335,8 +331,8 @@ VkPipelineStageFlags GPUMemory::GetShaderStageMask(ResourceState state, bool src
 
 GPUMemory::GPUMemory()
     : sharing_mode(VK_SHARING_MODE_EXCLUSIVE),
-      index(0),
       size(0),
+      index(0),
       map(nullptr),
       resource_state(ResourceState::UNDEFINED)
 {
@@ -375,7 +371,7 @@ void GPUMemory::Copy(Device *device, size_t offset, size_t count, const void *pt
         Map(device, &map);
     }
 
-    std::memcpy((void *)(intptr_t(map) + offset), ptr, count);
+    std::memcpy(reinterpret_cast<void *>(intptr_t(map) + offset), ptr, count);
 }
 
 void GPUMemory::Read(Device *device, size_t count, void *out_ptr) const
@@ -465,10 +461,12 @@ uint64_t GPUBuffer::GetBufferDeviceAddress(Device *device) const
     );
 }
 
-Result GPUBuffer::CheckCanAllocate(Device *device,
+Result GPUBuffer::CheckCanAllocate(
+    Device *device,
     const VkBufferCreateInfo &buffer_create_info,
     const VmaAllocationCreateInfo &allocation_create_info,
-    size_t size) const
+    size_t size
+) const
 {
     const Features &features = device->GetFeatures();
 
@@ -492,11 +490,11 @@ Result GPUBuffer::CheckCanAllocate(Device *device,
     AssertThrow(memory_type_index < memory_properties.memoryTypeCount);
 
     const auto heap_index = memory_properties.memoryTypes[memory_type_index].heapIndex;
-    const auto &heap = memory_properties.memoryHeaps[heap_index];
+    const auto &heap      = memory_properties.memoryHeaps[heap_index];
 
     if (heap.size < size) {
         return {Result::RENDERER_ERR, "Heap size is less than requested size. "
-            "Maybe the wrong memory type is being used, or the device is simply out of memory."};
+            "Maybe the wrong memory type has been requested, or the device is out of memory."};
     }
 
     return result;

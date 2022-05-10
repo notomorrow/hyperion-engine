@@ -39,7 +39,7 @@ public:
     void Init(Engine *engine);
     void Update(Engine *engine, double delta_time);
 
-    BoundingBox aabb;
+    BoundingBox m_aabb;
 
 private:
     void UpdateShaderData(Engine *engine) const;
@@ -48,6 +48,9 @@ private:
     std::unique_ptr<Node>   m_root_node;
     std::vector<Ref<Light>> m_lights;
     std::array<Ref<Texture>, max_environment_textures> m_environment_textures;
+
+    Matrix4 m_last_view_projection_matrix;
+
     mutable ShaderDataState m_shader_data_state;
 };
 

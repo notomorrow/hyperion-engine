@@ -296,8 +296,8 @@ private:
 
     char *m_tag;
 
-    ParameterTable  m_parameters;
-    TextureSet      m_textures;
+    ParameterTable          m_parameters;
+    TextureSet              m_textures;
 
     MaterialShaderData      m_shader_data;
     mutable ShaderDataState m_shader_data_state;

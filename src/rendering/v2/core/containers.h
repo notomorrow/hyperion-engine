@@ -510,7 +510,7 @@ enum class AssetCallback {
 template <class Result, class T>
 using AssetCallbacks = Callbacks<AssetCallback, Result, T *>;
 
-/* v1 callback utility still used by octree */
+/* v1 callback utility used by octree */
 template <class CallbacksClass>
 struct ComponentEvents {
     struct CallbackGroup {

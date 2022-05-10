@@ -25,7 +25,6 @@ void Framebuffer::Init(Engine *engine)
     
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_FRAMEBUFFERS, [this](Engine *engine) {
         AssertThrowMsg(m_render_pass != nullptr, "Render pass must be set on framebuffer.");
-        
         m_render_pass.Init();
 
         engine->render_scheduler.Enqueue([this, engine] {

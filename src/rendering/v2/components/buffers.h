@@ -186,10 +186,10 @@ public:
     {
         static constexpr uint32_t max_spins = 2;
 
-        for (uint32_t spin_count = 0; spin_count < max_spins; spin_count++) {
+        //for (uint32_t spin_count = 0; spin_count < max_spins; spin_count++) {
             auto &current = m_staging_objects_pool.Current();
 
-            if (!current.locked) {
+         //   if (!current.locked) {
                 current.PerformUpdate(
                     device,
                     m_buffers,
@@ -197,13 +197,13 @@ public:
                     current.objects.Data()
                 );
                 
-                m_staging_objects_pool.Next();
+          //      m_staging_objects_pool.Next();
 
                 return;
-            }
+          //  }
 
-            m_staging_objects_pool.Next();
-        }
+        //    m_staging_objects_pool.Next();
+        //}
         
         DebugLog(
             LogType::Warn,
@@ -286,40 +286,21 @@ private:
         {
             AssertThrowMsg(index < buffers[0].objects.Size(), "Cannot set shader data out of bounds");
             
-            for (uint32_t i = 0; i < num_staging_buffers; i++) {
-                const auto staging_object_index = (current_index + i + 1) % num_staging_buffers;
+            //for (uint32_t i = 0; i < num_staging_buffers; i++) {
+                const auto staging_object_index = current_index.load();//(current_index + i + 1) % num_staging_buffers;
                 auto &staging_object = buffers[staging_object_index];
 
-                staging_object.locked = true;
+                //staging_object.locked = true;
                 staging_object.objects[index] = value;
                 staging_object.MarkDirty(index);
-                staging_object.locked = false;
-            }
+                //staging_object.locked = false;
+           // }
         }
     };
 
     std::vector<std::unique_ptr<Buffer>> m_buffers;
     StagingObjectsPool m_staging_objects_pool;
 };
-
-/*struct RendererUpdateDataCommand {
-    union {
-        SkeletonShaderData skeleton;
-        ObjectShaderData   object;
-        SceneShaderData    scene;
-        MaterialShaderData material;
-        LightShaderData    light;
-    } data;
-
-    enum class DataType {
-        NONE,
-        SKELETON,
-        OBJECT,
-        SCENE,
-        MATERIAL,
-        LIGHT
-    } data_type;
-};*/
 
 } // namespace hyperion::v2
 

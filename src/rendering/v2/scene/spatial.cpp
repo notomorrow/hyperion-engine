@@ -90,7 +90,9 @@ void Spatial::Update(Engine *engine)
         AddToDefaultPipeline(engine);
     }
 
-    UpdateShaderData(engine);
+    if (m_shader_data_state.IsDirty()) {
+        UpdateShaderData(engine);
+    }
 
     if (m_octree != nullptr) {
         UpdateOctree(engine);
@@ -99,20 +101,24 @@ void Spatial::Update(Engine *engine)
 
 void Spatial::UpdateShaderData(Engine *engine) const
 {
-    engine->shader_globals->objects.Set(
-        m_id.value - 1,
-        {
-            .model_matrix   = m_transform.GetMatrix(),
-            .has_skinning   = m_skeleton != nullptr,
-            .material_index = m_material != nullptr
-                ? m_material->GetId().value - 1
-                : 0,
-            .local_aabb_max         = Vector4(m_local_aabb.max, 1.0f),
-            .local_aabb_min         = Vector4(m_local_aabb.min, 1.0f),
-            .world_aabb_max         = Vector4(m_world_aabb.max, 1.0f),
-            .world_aabb_min         = Vector4(m_world_aabb.min, 1.0f)
-        }
-    );
+    engine->render_scheduler.Enqueue([this, engine, transform = m_transform] {
+        engine->shader_globals->objects.Set(
+            m_id.value - 1,
+            {
+                .model_matrix   = transform.GetMatrix(),
+                .has_skinning   = m_skeleton != nullptr,
+                .material_index = m_material != nullptr
+                    ? m_material->GetId().value - 1
+                    : 0,
+                .local_aabb_max         = Vector4(m_local_aabb.max, 1.0f),
+                .local_aabb_min         = Vector4(m_local_aabb.min, 1.0f),
+                .world_aabb_max         = Vector4(m_world_aabb.max, 1.0f),
+                .world_aabb_min         = Vector4(m_world_aabb.min, 1.0f)
+            }
+        );
+
+        HYPERION_RETURN_OK;
+    });
 
     m_shader_data_state = ShaderDataState::CLEAN;
 }

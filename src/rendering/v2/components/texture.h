@@ -40,7 +40,7 @@ public:
 
     inline Image::Type GetType() const                { return m_image.GetType(); }
     inline uint32_t NumFaces() const                  { return m_image.NumFaces(); }
-    inline bool IsCubemap() const                     { return m_image.IsCubemap(); }
+    inline bool IsTextureCube() const                 { return m_image.IsTextureCube(); }
     inline const Extent3D &GetExtent() const          { return m_image.GetExtent(); }
     inline Image::InternalFormat GetFormat() const    { return m_image.GetTextureFormat(); }
     inline Image::FilterMode GetFilterMode() const    { return m_sampler.GetFilterMode(); }
