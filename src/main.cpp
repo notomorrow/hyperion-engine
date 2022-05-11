@@ -162,12 +162,12 @@ public:
         
         auto cubemap = engine->resources.textures.Add(std::make_unique<TextureCube>(
            engine->assets.Load<Texture>(
-               base_path + "textures/IceRiver/posx.jpg",
-               base_path + "textures/IceRiver/negx.jpg",
-               base_path + "textures/IceRiver/posy.jpg",
-               base_path + "textures/IceRiver/negy.jpg",
-               base_path + "textures/IceRiver/posz.jpg",
-               base_path + "textures/IceRiver/negz.jpg"
+               base_path + "textures/Lycksele3/posx.jpg",
+               base_path + "textures/Lycksele3/negx.jpg",
+               base_path + "textures/Lycksele3/posy.jpg",
+               base_path + "textures/Lycksele3/negy.jpg",
+               base_path + "textures/Lycksele3/posz.jpg",
+               base_path + "textures/Lycksele3/negz.jpg"
             )
         ));
         cubemap->GetImage().SetIsSRGB(true);
@@ -478,6 +478,7 @@ int main()
     )));
 
     my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
+    my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
         engine.resources.meshes.Acquire(my_game.cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
         my_game.cube_obj->GetChild(0)->GetSpatial()->GetTransform()
     )));
@@ -637,9 +638,6 @@ int main()
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
 
         my_game.OnFrameBegin(&engine);
-#if !HYP_GAME_THREAD
-        my_game.Logic(&engine, 0.01f);
-#endif
 
 #if HYPERION_VK_TEST_RAYTRACING
         rt->Bind(frame->GetCommandBuffer());

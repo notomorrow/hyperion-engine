@@ -139,7 +139,7 @@ void main()
     
     if (perform_lighting) {
         float metallic = 0.0;
-        float roughness = 0.5;
+        float roughness = 0.8;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));

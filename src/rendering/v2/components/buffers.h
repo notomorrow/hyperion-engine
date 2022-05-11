@@ -234,7 +234,7 @@ private:
         struct StagingObjects {
             std::atomic_bool                 locked{false};
             HeapArray<StructType, Size>      objects;
-            std::vector<AtomicRange<size_t>> dirty;
+            std::vector<Range<size_t>> dirty;
 
             template <class BufferContainer>
             void PerformUpdate(Device *device, BufferContainer &buffer_container, size_t buffer_index, StructType *ptr)
