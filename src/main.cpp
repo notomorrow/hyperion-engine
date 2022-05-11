@@ -149,7 +149,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
-            base_path + "models/sponza/sponza.obj",//"material_sphere/material_sphere.obj",
+            base_path + "models/sponza/sponza.obj", //"material_sphere/material_sphere.obj",
             base_path + "models/cube.obj",
             base_path + "models/monkey/monkey.obj"
         );
@@ -170,6 +170,7 @@ public:
                base_path + "textures/IceRiver/negz.jpg"
             )
         ));
+        cubemap->GetImage().SetIsSRGB(true);
 
         zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
         zombie->Scale(0.1f);

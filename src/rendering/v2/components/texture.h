@@ -33,11 +33,13 @@ public:
     Texture(const Texture &other) = delete;
     Texture &operator=(const Texture &other) = delete;
     ~Texture();
-
+    
+    inline TextureImage &GetImage()                   { return m_image; }
     inline const TextureImage &GetImage() const       { return m_image; }
+    inline ImageView &GetImageView()                  { return m_image_view; }
     inline const ImageView &GetImageView() const      { return m_image_view; }
+    inline Sampler &GetSampler()                      { return m_sampler; }
     inline const Sampler &GetSampler() const          { return m_sampler; }
-
     inline Image::Type GetType() const                { return m_image.GetType(); }
     inline uint32_t NumFaces() const                  { return m_image.NumFaces(); }
     inline bool IsTextureCube() const                 { return m_image.IsTextureCube(); }

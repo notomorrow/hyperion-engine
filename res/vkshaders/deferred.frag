@@ -33,11 +33,10 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 7000.0
+#define IBL_INTENSITY 15000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 150000.0
 #define GI_INTENSITY 20.0
 #define VCT_ENABLED 0
-#define PBR_ENABLED 1
 #define SSAO_DEBUG 0
 
 #if VCT_ENABLED
@@ -116,8 +115,8 @@ void main()
     
     bool perform_lighting = albedo.a > 0.0;
     
-    vec3 albedo_linear = albedo.rgb;//mon2lin(albedo.rgb);
-	vec3 result;
+    vec3 albedo_linear = mon2lin(albedo.rgb);
+	vec3 result = vec3(0.0);
 
     /* Physical camera */
     float aperture = 16.0;
@@ -138,10 +137,9 @@ void main()
     
     float ao = 1.0;
     
-#if PBR_ENABLED
     if (perform_lighting) {
-        float metallic = 0.9;
-        float roughness = 0.3;
+        float metallic = 0.0;
+        float roughness = 0.5;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -157,9 +155,9 @@ void main()
         
         vec3 energy_compensation = vec3(1.0);
         float perceptual_roughness = sqrt(roughness);
-        float lod = 11.0 * perceptual_roughness * (2.0 - perceptual_roughness);
+        float lod = 9.0 * perceptual_roughness * (2.0 - perceptual_roughness);
         
-        vec3 dfg = BRDFMap(albedo.rgb, roughness, NdotV);
+        vec3 AB = BRDFMap(albedo.rgb, roughness, NdotV);
         
         vec3 irradiance = vec3(1.0);
         vec3 ibl = HasEnvironmentTexture(0)
@@ -178,51 +176,47 @@ void main()
         vec3 light_color = vec3(1.0);
         
         // ibl
-        /*vec3 dfg = mix(vec3(AB.x), vec3(AB.y), F0);
-        vec3 specular_ao = vec3(SpecularAO_Cones(N, ao, roughness, R));
+        vec3 dfg = mix(vec3(AB.x), vec3(AB.y), F0);
+        vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
         vec3 radiance = dfg * ibl * specular_ao;
         result = (albedo_linear * irradiance * (1.0 - dfg) * ao) + radiance;
-        result *= exposure * IBL_INTENSITY;*/
+        result *= exposure * IBL_INTENSITY;
 
-        /*// surface
+        // surface
         vec3 F90 = vec3(0.5 + 2.0 * roughness * LdotH * LdotH);//vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
         float D = DistributionGGX(N, H, roughness);
         float G = CookTorranceG(NdotL, NdotV, LdotH, NdotH);
         vec3 F = SchlickFresnel(F0, F90, LdotH);
         vec3 specular = D * G * F;
-        vec3 fresnel = (F * G * D) / (4.0 * NdotL * NdotV);
+        //vec3 fresnel = (F * G * D) / (4.0 * NdotL * NdotV);
         
         vec3 light_scatter = SchlickFresnel(vec3(1.0), F90, NdotL);
         vec3 view_scatter  = SchlickFresnel(vec3(1.0), F90, NdotV);
-        vec3 diffuse = albedo_linear.rgb / PI; //albedo_linear * (1.0 - metallic) * (light_scatter * view_scatter * (1.0 / PI));*/
+        vec3 diffuse = albedo_linear * (1.0 - metallic) * (light_scatter * view_scatter * (1.0 / PI));
         
-        vec3 E = dfg;//SpecularDFG(AB, F0);
+        /*vec3 E = dfg;//SpecularDFG(AB, F0);
         
         vec3 Fr = E * ibl;
         float specular_ao = SpecularAO_Lagarde(NdotV, ao, roughness);
         Fr *= vec3(specular_ao) * energy_compensation;
         
         vec3 Fd = albedo_linear.rgb * irradiance * (1.0 - E) * ao;
-        /* todo: subsurface */
         //Fd *= GtaoMultiBounce(ao, albedo_linear.rgb);
         //Fd *= GtaoMultiBounce(specular_ao.r, albedo_linear.rgb);
-        /*  todo: sheen */
-        /* todo:  clearcoat */
         const float ibl_lum = IBL_INTENSITY * exposure;
         Fd *= ibl_lum;
         Fr *= ibl_lum;
 
-        //vec3 surface = diffuse + specular * energy_compensation;
-        //surface *= light_color * (/*light.attenuation*/1.0 * NdotL * ao * shadow);
-        //surface *= exposure * DIRECTIONAL_LIGHT_INTENSITY;
         
-        result = Fd + Fr;
+        result =  Fd + Fr;*/
+        
+        vec3 surface = diffuse + specular * energy_compensation;
+        surface *= light_color * (1.0 * NdotL * ao * shadow);
+        surface *= exposure * DIRECTIONAL_LIGHT_INTENSITY;
+        result += surface;
     } else {
         result = albedo.rgb;
     }
-#else
-    result = albedo.rgb * max(0.0001, dot(N, L));
-#endif
 
 #if SSAO_DEBUG
     result = vec3(ao);

@@ -26,7 +26,8 @@ public:
         TEXTURE_FORMAT_RG,
         TEXTURE_FORMAT_RGB,
         TEXTURE_FORMAT_RGBA,
-
+        
+        TEXTURE_FORMAT_BGR,
         TEXTURE_FORMAT_BGRA,
 
         TEXTURE_FORMAT_DEPTH
@@ -34,31 +35,50 @@ public:
 
     enum class InternalFormat {
         TEXTURE_INTERNAL_FORMAT_NONE,
+
         TEXTURE_INTERNAL_FORMAT_R8,
         TEXTURE_INTERNAL_FORMAT_RG8,
         TEXTURE_INTERNAL_FORMAT_RGB8,
         TEXTURE_INTERNAL_FORMAT_RGBA8,
+        
+        TEXTURE_INTERNAL_FORMAT_B8,
+        TEXTURE_INTERNAL_FORMAT_BG8,
+        TEXTURE_INTERNAL_FORMAT_BGR8,
+        TEXTURE_INTERNAL_FORMAT_BGRA8,
+
         TEXTURE_INTERNAL_FORMAT_R16,
         TEXTURE_INTERNAL_FORMAT_RG16,
         TEXTURE_INTERNAL_FORMAT_RGB16,
         TEXTURE_INTERNAL_FORMAT_RGBA16,
+
         TEXTURE_INTERNAL_FORMAT_R32,
         TEXTURE_INTERNAL_FORMAT_RG32,
         TEXTURE_INTERNAL_FORMAT_RGB32,
         TEXTURE_INTERNAL_FORMAT_RGBA32,
+
         TEXTURE_INTERNAL_FORMAT_R16F,
         TEXTURE_INTERNAL_FORMAT_RG16F,
         TEXTURE_INTERNAL_FORMAT_RGB16F,
         TEXTURE_INTERNAL_FORMAT_RGBA16F,
+
         TEXTURE_INTERNAL_FORMAT_R32F,
         TEXTURE_INTERNAL_FORMAT_RG32F,
         TEXTURE_INTERNAL_FORMAT_RGB32F,
         TEXTURE_INTERNAL_FORMAT_RGBA32F,
-        
-        TEXTURE_INTERNAL_FORMAT_R10G10B10A2,
 
-        TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM,
+        TEXTURE_INTERNAL_FORMAT_SRGB, /* begin srgb */
+
+        TEXTURE_INTERNAL_FORMAT_R8_SRGB,
+        TEXTURE_INTERNAL_FORMAT_RG8_SRGB,
+        TEXTURE_INTERNAL_FORMAT_RGB8_SRGB,
+        TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB,
+        
+        TEXTURE_INTERNAL_FORMAT_B8_SRGB,
+        TEXTURE_INTERNAL_FORMAT_BG8_SRGB,
+        TEXTURE_INTERNAL_FORMAT_BGR8_SRGB,
         TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB,
+        
+        TEXTURE_INTERNAL_FORMAT_DEPTH, /* begin depth */
 
         TEXTURE_INTERNAL_FORMAT_DEPTH_16,
         TEXTURE_INTERNAL_FORMAT_DEPTH_24,
@@ -88,8 +108,9 @@ public:
     /* Get number of components (bytes-per-pixel) of a texture format */
     static size_t NumComponents(BaseFormat format);
 
-    static bool IsDepthTexture(InternalFormat fmt);
-    static bool IsDepthTexture(BaseFormat fmt);
+    static bool IsDepthFormat(InternalFormat fmt);
+    static bool IsDepthFormat(BaseFormat fmt);
+    static bool IsSRGBFormat(InternalFormat fmt);
 
     static VkFormat ToVkFormat(InternalFormat fmt);
     static VkImageType ToVkType(Type type);
@@ -136,7 +157,9 @@ public:
         m_assigned_image_data = true;
     }
 
-    bool IsDepthStencilImage() const;
+    bool IsDepthStencil() const;
+    bool IsSRGB() const;
+    void SetIsSRGB(bool srgb);
 
     inline bool HasMipmaps() const
         { return m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
@@ -154,13 +177,13 @@ public:
     inline uint32_t NumFaces() const
         { return IsTextureCube() ? 6 : 1; }
 
-    inline const Extent3D &GetExtent() const { return m_extent; }
+    inline const Extent3D &GetExtent() const            { return m_extent; }
+    inline GPUImageMemory *GetGPUImage()                { return m_image; }
+    inline const GPUImageMemory *GetGPUImage() const    { return m_image; }
 
-    inline GPUImageMemory *GetGPUImage() { return m_image; }
-    inline const GPUImageMemory *GetGPUImage() const { return m_image; }
-
-    inline InternalFormat GetTextureFormat() const { return m_format; }
-    inline Type GetType() const { return m_type; }
+    inline InternalFormat GetTextureFormat() const      { return m_format; }
+    inline void SetTextureFormat(InternalFormat format) { m_format = format; }
+    inline Type GetType() const                         { return m_type; }
 
     VkFormat GetImageFormat() const;
     VkImageType GetImageType() const;

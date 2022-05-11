@@ -6,6 +6,7 @@
 #include "../components/texture.h"
 #include "../components/shader.h"
 #include "../components/light.h"
+#include <rendering/v2/core/scheduler.h>
 #include <rendering/camera/camera.h>
 
 namespace hyperion::v2 {
@@ -42,7 +43,7 @@ public:
     BoundingBox m_aabb;
 
 private:
-    void UpdateShaderData(Engine *engine) const;
+    void UpdateShaderData(Engine *engine);
 
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<Node>   m_root_node;
@@ -50,6 +51,8 @@ private:
     std::array<Ref<Texture>, max_environment_textures> m_environment_textures;
 
     Matrix4 m_last_view_projection_matrix;
+
+    ScheduledFunction<renderer::Result>::ID m_camera_update_id{0};
 
     mutable ShaderDataState m_shader_data_state;
 };

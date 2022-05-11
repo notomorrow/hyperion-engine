@@ -1,3 +1,4 @@
+
 #include "renderer_image.h"
 #include "renderer_graphics_pipeline.h"
 #include "renderer_instance.h"
@@ -31,18 +32,22 @@ Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F:
         return BaseFormat::TEXTURE_FORMAT_RG;
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16F:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F:
         return BaseFormat::TEXTURE_FORMAT_RGB;
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F:
         return BaseFormat::TEXTURE_FORMAT_RGBA;
-    case InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_BGR8_SRGB:
+        return BaseFormat::TEXTURE_FORMAT_BGR;
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB:
         return BaseFormat::TEXTURE_FORMAT_BGRA;
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:
@@ -80,22 +85,29 @@ size_t Image::NumComponents(BaseFormat format)
     case BaseFormat::TEXTURE_FORMAT_R:     return 1;
     case BaseFormat::TEXTURE_FORMAT_RG:    return 2;
     case BaseFormat::TEXTURE_FORMAT_RGB:   return 3;
+    case BaseFormat::TEXTURE_FORMAT_BGR:   return 3;
     case BaseFormat::TEXTURE_FORMAT_RGBA:  return 4;
     case BaseFormat::TEXTURE_FORMAT_BGRA:  return 4;
     case BaseFormat::TEXTURE_FORMAT_DEPTH: return 1;
     }
 
-    unexpected_value_msg(format, "Unknown number of components for format");
+    unexpected_value_msg(format, "Unhandled base image type");
 }
 
-bool Image::IsDepthTexture(InternalFormat fmt)
+bool Image::IsDepthFormat(InternalFormat fmt)
 {
-    return IsDepthTexture(GetBaseFormat(fmt));
+    return IsDepthFormat(GetBaseFormat(fmt));
 }
 
-bool Image::IsDepthTexture(BaseFormat fmt)
+bool Image::IsDepthFormat(BaseFormat fmt)
 {
     return fmt == BaseFormat::TEXTURE_FORMAT_DEPTH;
+}
+
+bool Image::IsSRGBFormat(InternalFormat fmt)
+{
+    return fmt >= InternalFormat::TEXTURE_INTERNAL_FORMAT_SRGB
+        && fmt < InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH;
 }
 
 VkFormat Image::ToVkFormat(InternalFormat fmt)
@@ -105,6 +117,8 @@ VkFormat Image::ToVkFormat(InternalFormat fmt)
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8:         return VK_FORMAT_R8G8_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8:        return VK_FORMAT_R8G8B8_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8:       return VK_FORMAT_R8G8B8A8_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB:   return VK_FORMAT_R8G8B8_SRGB;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB:  return VK_FORMAT_R8G8B8A8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16:         return VK_FORMAT_R16_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16:        return VK_FORMAT_R16G16_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16:       return VK_FORMAT_R16G16B16_UNORM;
@@ -117,8 +131,9 @@ VkFormat Image::ToVkFormat(InternalFormat fmt)
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F:       return VK_FORMAT_R32G32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32F:      return VK_FORMAT_R32G32B32_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F:     return VK_FORMAT_R32G32B32A32_SFLOAT;
-    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R10G10B10A2: return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
-    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_UNORM: return VK_FORMAT_B8G8R8A8_UNORM;
+        
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8: return VK_FORMAT_B8G8R8A8_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGR8_SRGB: return VK_FORMAT_B8G8R8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB:  return VK_FORMAT_B8G8R8A8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:    return VK_FORMAT_D16_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:    return VK_FORMAT_D24_UNORM_S8_UINT;
@@ -194,8 +209,39 @@ Image::~Image()
     delete[] m_bytes;
 }
 
-bool Image::IsDepthStencilImage() const { return IsDepthTexture(m_format); }
-VkFormat Image::GetImageFormat() const { return ToVkFormat(m_format); }
+bool Image::IsDepthStencil() const      { return IsDepthFormat(m_format); }
+bool Image::IsSRGB() const              { return IsSRGBFormat(m_format); }
+
+void Image::SetIsSRGB(bool srgb)
+{
+    const bool is_srgb = IsSRGB();
+
+    if (srgb == is_srgb) {
+        return;
+    }
+
+    const auto internal_format = m_format;
+
+    if (is_srgb) {
+        m_format = InternalFormat(int(internal_format) - int(InternalFormat::TEXTURE_INTERNAL_FORMAT_SRGB));
+
+        return;
+    }
+
+    const auto to_srgb_format = InternalFormat(int(InternalFormat::TEXTURE_INTERNAL_FORMAT_SRGB) + int(internal_format));
+
+    if (!IsSRGBFormat(to_srgb_format)) {
+        DebugLog(
+            LogType::Warn,
+            "No SRGB counterpart for image type (%d)\n",
+            int(internal_format)
+        );
+    }
+
+    m_format = to_srgb_format;
+}
+
+VkFormat Image::GetImageFormat() const  { return ToVkFormat(m_format); }
 VkImageType Image::GetImageType() const { return ToVkType(m_type); }
 
 Result Image::CreateImage(Device *device,

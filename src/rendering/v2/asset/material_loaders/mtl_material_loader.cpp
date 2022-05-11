@@ -83,15 +83,15 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
 {
     object.filepath = state->filepath;
 
-    const std::unordered_map<std::string, Material::TextureKey> texture_keys{
-        std::make_pair("map_kd",     Material::MATERIAL_TEXTURE_ALBEDO_MAP),
-        std::make_pair("map_bump",   Material::MATERIAL_TEXTURE_NORMAL_MAP),
-        std::make_pair("bump",       Material::MATERIAL_TEXTURE_NORMAL_MAP),
-        std::make_pair("map_ka",     Material::MATERIAL_TEXTURE_METALNESS_MAP),
-        std::make_pair("map_ks",     Material::MATERIAL_TEXTURE_METALNESS_MAP),
-        std::make_pair("map_ns",     Material::MATERIAL_TEXTURE_ROUGHNESS_MAP),
-        std::make_pair("map_height", Material::MATERIAL_TEXTURE_PARALLAX_MAP) /* custom */,
-        std::make_pair("map_ao",     Material::MATERIAL_TEXTURE_AO_MAP)       /* custom */
+    const std::unordered_map<std::string, TextureMapping> texture_keys{
+        std::make_pair("map_kd",     TextureMapping{.key = Material::MATERIAL_TEXTURE_ALBEDO_MAP, .srgb = true}),
+        std::make_pair("map_bump",   TextureMapping{.key = Material::MATERIAL_TEXTURE_NORMAL_MAP}),
+        std::make_pair("bump",       TextureMapping{.key = Material::MATERIAL_TEXTURE_NORMAL_MAP}),
+        std::make_pair("map_ka",     TextureMapping{.key = Material::MATERIAL_TEXTURE_METALNESS_MAP}),
+        std::make_pair("map_ks",     TextureMapping{.key = Material::MATERIAL_TEXTURE_METALNESS_MAP}),
+        std::make_pair("map_ns",     TextureMapping{.key = Material::MATERIAL_TEXTURE_ROUGHNESS_MAP}),
+        std::make_pair("map_height", TextureMapping{.key = Material::MATERIAL_TEXTURE_PARALLAX_MAP}) /* custom */,
+        std::make_pair("map_ao",     TextureMapping{.key = Material::MATERIAL_TEXTURE_AO_MAP})       /* custom */
     };
 
     Tokens tokens;
@@ -192,7 +192,7 @@ LoaderResult MtlMaterialLoader::LoadFn(LoaderState *state, Object &object)
             }
 
             LastMaterial(object).textures.push_back({
-                .key = texture_it->second,
+                .mapping = texture_it->second,
                 .name = name
             });
 
@@ -251,7 +251,9 @@ std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const 
             }
 
             for (auto &it : item.textures) {
-                if (texture_refs[texture_names_to_path[it.name]] == nullptr) {
+                auto &texture = texture_refs[texture_names_to_path[it.name]];
+
+                if (texture == nullptr) {
                     DebugLog(
                         LogType::Warn,
                         "Obj Mtl loader: Texture %s could not be used because it could not be loaded\n",
@@ -260,8 +262,10 @@ std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const 
 
                     continue;
                 }
-                
-                material->SetTexture(it.key, texture_refs[texture_names_to_path[it.name]].Acquire());
+
+                texture->GetImage().SetIsSRGB(it.mapping.srgb);
+
+                material->SetTexture(it.mapping.key, texture.Acquire());
             }
 
             material_library->Add(item.tag, resources.materials.Add(std::move(material)));

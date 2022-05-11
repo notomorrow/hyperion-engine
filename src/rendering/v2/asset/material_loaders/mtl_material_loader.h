@@ -26,10 +26,15 @@ struct LoaderObject<MaterialGroup, LoaderFormat::MTL_MATERIAL_LIBRARY> {
         {
         }
     };
-
-    struct TextureDef {
+    
+    struct TextureMapping {
         Material::TextureKey key;
-        std::string name;
+        bool                 srgb = false;
+    };
+    
+    struct TextureDef {
+        TextureMapping mapping;
+        std::string    name;
     };
 
     struct ParameterDef {

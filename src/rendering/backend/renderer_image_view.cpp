@@ -81,7 +81,7 @@ Result ImageView::Destroy(Device *device)
 
 VkImageAspectFlags ImageView::ToVkImageAspect(Image::InternalFormat internal_format)
 {
-    return Image::IsDepthTexture(internal_format)
+    return Image::IsDepthFormat(internal_format)
         ? VK_IMAGE_ASPECT_DEPTH_BIT
         : VK_IMAGE_ASPECT_COLOR_BIT;
 }
