@@ -61,6 +61,9 @@ public:
     bool operator!=(const Vector4 &other) const;
     inline Vector4 operator-() const { return operator*(-1.0f); }
 
+    inline bool operator<(const Vector4 &other) const
+        { return x < other.x && y < other.y && z < other.z && w < other.w; }
+
     constexpr inline float LengthSquared() const { return x * x + y * y + z * z + w * w; }
     inline float Length() const { return sqrt(LengthSquared()); }
 

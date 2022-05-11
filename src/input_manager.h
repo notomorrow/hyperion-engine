@@ -4,7 +4,6 @@
 #define NUM_KEYBOARD_KEYS 350
 #define NUM_MOUSE_BUTTONS 3
 
-#include "core_engine.h"
 #include "system/sdl_system.h"
 
 #include <functional>

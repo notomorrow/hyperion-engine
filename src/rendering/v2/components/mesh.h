@@ -39,9 +39,19 @@ public:
 
     static std::pair<std::vector<Vertex>, std::vector<Index>> CalculateIndices(const std::vector<Vertex> &vertices);
 
-    Mesh(const std::vector<Vertex> &vertices,
+    Mesh(
+        const std::vector<Vertex> &vertices,
         const std::vector<Index> &indices,
-        Flags flags = MESH_FLAGS_NONE);
+        const VertexAttributeSet &vertex_attributes,
+        Flags flags = MESH_FLAGS_NONE
+    );
+
+    Mesh(
+        const std::vector<Vertex> &vertices,
+        const std::vector<Index> &indices,
+        Flags flags = MESH_FLAGS_NONE
+    );
+
     Mesh(const Mesh &other) = delete;
     Mesh &operator=(const Mesh &other) = delete;
     ~Mesh();

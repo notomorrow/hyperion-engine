@@ -5,8 +5,8 @@
 #include "framebuffer.h"
 #include "shader.h"
 #include "graphics.h"
+#include "mesh.h"
 
-#include <rendering/mesh.h>
 #include <rendering/backend/renderer_frame.h>
 #include <rendering/backend/renderer_structs.h>
 #include <rendering/backend/renderer_command_buffer.h>
@@ -25,7 +25,7 @@ class Engine;
 
 class PostEffect {
 public:
-    static std::shared_ptr<hyperion::Mesh> full_screen_quad;
+    static std::unique_ptr<Mesh> full_screen_quad;
     
     PostEffect();
     PostEffect(Ref<Shader> &&shader);

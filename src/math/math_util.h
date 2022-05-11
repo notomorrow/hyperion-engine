@@ -125,20 +125,24 @@ public:
     static constexpr T Lerp(const T &from, const T &to, const T &amt)
         { return from + amt * (to - from); }
 
-    template <typename T>
-    static constexpr T Min(const T &a, const T &b)
+    template <typename T, typename U, typename V = std::common_type_t<T, U>>
+    static constexpr V Min(T a, U b)
         { return (a < b) ? a : b; }
 
-    template <typename T>
-    static constexpr T Max(T a, T b)
+    template <typename T, typename U, typename V = std::common_type_t<T, U>, typename... Args>
+    static constexpr V Min(T a, U b, Args... args)
+        { return Min(Min(a, b), args...); }
+    
+    template <typename T, typename U, typename V = std::common_type_t<T, U>>
+    static constexpr V Max(T a, U b)
         { return (a > b) ? a : b; }
 
-    template <typename T, typename... Args>
-    static constexpr T Max(T a, T b, Args... args)
+    template <typename T, typename U, typename V = std::common_type_t<T, U>, typename... Args>
+    static constexpr V Max(T a, U b, Args... args)
         { return Max(Max(a, b), args...); }
 
     template <typename T, typename IntegralType = int>
-    static constexpr IntegralType Sign(const T &value)
+    static constexpr IntegralType Sign(T value)
         { return IntegralType(T(0) < value) - IntegralType(value < T(0)); }
 
     template <typename T, typename IntegralType = int>

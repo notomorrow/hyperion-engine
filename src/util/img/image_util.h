@@ -2,7 +2,6 @@
 #define HYPERION_IMAGE_UTIL_H
 
 #include <math/math_util.h>
-#include <rendering/texture_2D.h>
 #include <types.h>
 
 namespace hyperion {

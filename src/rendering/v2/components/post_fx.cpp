@@ -3,7 +3,7 @@
 
 #include <asset/byte_reader.h>
 #include <asset/asset_manager.h>
-#include <util/mesh_factory.h>
+#include <rendering/v2/builders/mesh_builder.h>
 
 namespace hyperion::v2 {
 
@@ -13,7 +13,7 @@ using renderer::Descriptor;
 using renderer::DescriptorSet;
 using renderer::ImageSamplerDescriptor;
 
-std::shared_ptr<hyperion::Mesh> PostEffect::full_screen_quad = MeshFactory::CreateQuad();
+std::unique_ptr<Mesh> PostEffect::full_screen_quad = MeshBuilder::Quad(Topology::TRIANGLE_FAN);
 
 PostEffect::PostEffect()
     : PostEffect(nullptr)
@@ -65,6 +65,9 @@ void PostEffect::CreateRenderPass(Engine *engine)
 
 void PostEffect::Create(Engine *engine)
 {
+    /* will only init once */
+    full_screen_quad->Init(engine);
+
     CreateRenderPass(engine);
 
     m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
@@ -221,7 +224,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
                     }
                 ));*/
 
-                full_screen_quad->RenderVk(cmd, engine->GetInstance(), nullptr);
+                full_screen_quad->Render(engine, cmd);
 
                 HYPERION_RETURN_OK;
             }),

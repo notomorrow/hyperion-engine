@@ -1,11 +1,10 @@
 #ifndef AUDIO_SOURCE_H
 #define AUDIO_SOURCE_H
 
-#include "../asset/loadable.h"
 #include "../math/vector3.h"
 
 namespace hyperion {
-class AudioSource : public Loadable {
+class AudioSource {
 public:
     AudioSource(int format, unsigned char *data, size_t size, size_t freq);
     ~AudioSource();

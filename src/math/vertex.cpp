@@ -1,7 +1,35 @@
 #include "vertex.h"
 
 namespace hyperion {
-/*bool Vertex::operator==(const Vertex &other) const
+bool Vertex::operator<(const Vertex &other) const
+{
+    return std::tie(
+        position,
+        normal,
+        texcoord0,
+        texcoord1,
+        tangent,
+        bitangent,
+        nboneindices,
+        nboneweights,
+        bone_indices,
+        bone_weights
+    ) < std::tie(
+        other.position,
+        other.normal,
+        other.texcoord0,
+        other.texcoord1,
+        other.tangent,
+        other.bitangent,
+        other.nboneindices,
+        other.nboneweights,
+        other.bone_indices,
+        other.bone_weights
+    );
+}
+
+
+bool Vertex::operator==(const Vertex &other) const
 {
     return position == other.position
         && normal == other.normal
@@ -12,7 +40,7 @@ namespace hyperion {
         && nboneweights == other.nboneweights
         && bone_weights == other.bone_weights
         && bone_indices == other.bone_indices;
-}*/
+}
 
 Vertex &Vertex::operator=(const Vertex &other)
 {

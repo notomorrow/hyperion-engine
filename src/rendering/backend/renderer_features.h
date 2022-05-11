@@ -9,7 +9,7 @@
 
 #include <array>
 
-#define HYP_FEATURES_ENABLE_RAYTRACING 1
+#define HYP_FEATURES_ENABLE_RAYTRACING 0
 
 namespace hyperion {
 namespace renderer {
@@ -357,7 +357,10 @@ public:
             : size;
     }
 
-    inline bool SupportsRaytracing() const
+    bool IsRaytracingDisabled() const                         { return !IsRaytracingSupported() || m_is_raytracing_disabled; }
+    bool SetIsRaytracingDisabled(bool is_raytracing_disabled) { m_is_raytracing_disabled = is_raytracing_disabled; }
+
+    bool IsRaytracingSupported() const
     {
 #if HYP_FEATURES_ENABLE_RAYTRACING
         return m_raytracing_pipeline_features.rayTracingPipeline
@@ -382,6 +385,8 @@ private:
     VkPhysicalDeviceProperties2                      m_properties2;
 
     VkPhysicalDeviceMemoryProperties m_memory_properties;
+
+    bool m_is_raytracing_disabled{false};
 };
 
 } // namespace renderer

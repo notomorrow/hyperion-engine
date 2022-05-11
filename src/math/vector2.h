@@ -50,6 +50,9 @@ public:
     bool operator!=(const Vector2 &other) const;
     inline Vector2 operator-() const { return operator*(-1.0f); }
 
+    inline bool operator<(const Vector2 &other) const
+        { return x < other.x && y < other.y; }
+
     constexpr inline float LengthSquared() const { return x * x + y * y; }
     inline float Length() const { return sqrt(LengthSquared()); }
 

@@ -1,26 +1,3 @@
-#include "glfw_engine.h"
-#include "game.h"
-#include "scene/node.h"
-#include "util.h"
-#include "asset/asset_manager.h"
-#include "asset/text_loader.h"
-#include "asset/byte_reader.h"
-#include "rendering/shader.h"
-#include "rendering/environment.h"
-#include "rendering/texture.h"
-#include "rendering/framebuffer_2d.h"
-#include "rendering/framebuffer_cube.h"
-#include "rendering/shaders/lighting_shader.h"
-#include "rendering/shader_manager.h"
-#include "rendering/shadow/pssm_shadow_mapping.h"
-#include "audio/audio_manager.h"
-#include "animation/skeleton_control.h"
-#include "math/bounding_box.h"
-
-#include "rendering/camera/fps_camera.h"
-#include "animation/skeleton.h"
-
-#include "util/mesh_factory.h"
 
 #include "system/sdl_system.h"
 #include "system/debug.h"
@@ -40,60 +17,9 @@
 #include <rendering/v2/game_thread.h>
 #include <rendering/v2/game.h>
 
-#include "rendering/probe/envmap/envmap_probe_control.h"
-
-#include "terrain/terrain_shader.h"
-
-/* Post */
-#include "rendering/postprocess/filters/gamma_correction_filter.h"
-#include "rendering/postprocess/filters/ssao_filter.h"
-#include "rendering/postprocess/filters/deferred_rendering_filter.h"
-#include "rendering/postprocess/filters/bloom_filter.h"
-#include "rendering/postprocess/filters/depth_of_field_filter.h"
-#include "rendering/postprocess/filters/fxaa_filter.h"
-#include "rendering/postprocess/filters/default_filter.h"
-
-/* Extra */
-#include "rendering/skydome/skydome.h"
-#include "rendering/skybox/skybox.h"
-#include "terrain/noise_terrain/noise_terrain_control.h"
-
-/* Physics */
-#include "physics/physics_manager.h"
-#include "physics/rigid_body.h"
-#include "physics/box_physics_shape.h"
-#include "physics/sphere_physics_shape.h"
-#include "physics/plane_physics_shape.h"
-
-/* Particles */
-#include "particles/particle_renderer.h"
-#include "particles/particle_emitter_control.h"
-
-/* Misc. Controls */
-#include "controls/bounding_box_control.h"
-#include "controls/camera_follow_control.h"
-// #include "rendering/renderers/bounding_box_renderer.h"
-
-/* UI */
-#include "rendering/ui/ui_object.h"
-#include "rendering/ui/ui_button.h"
-#include "rendering/ui/ui_text.h"
-
-/* Populators */
-#include "terrain/populators/populator.h"
-
-#include "util/noise_factory.h"
-#include "util/img/write_bitmap.h"
-#include "util/enum_options.h"
-#include "util/mesh_factory.h"
-
-#include "rendering/probe/gi/gi_probe_control.h"
-#include "rendering/probe/spherical_harmonics/spherical_harmonics_control.h"
-#include "rendering/shaders/gi/gi_voxel_debug_shader.h"
-#include "rendering/shadow/shadow_map_control.h"
-
-#include "asset/fbom/fbom.h"
-#include "asset/byte_writer.h"
+#include "input_manager.h"
+#include "asset/asset_manager.h"
+#include "rendering/camera/fps_camera.h"
 
 #include "util/profile.h"
 
@@ -149,7 +75,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
-            base_path + "models/sponza/sponza.obj", //"material_sphere/material_sphere.obj",
+            base_path + "models/material_sphere/material_sphere.obj",
             base_path + "models/cube.obj",
             base_path + "models/monkey/monkey.obj"
         );
@@ -180,7 +106,7 @@ public:
 
         scene->SetEnvironmentTexture(0, cubemap.Acquire());
         test_model->Translate({0, 0, 5});
-        test_model->Scale(0.025f);
+        //test_model->Scale(0.025f);
         test_model->Update(engine);
         
         tex1 = engine->resources.textures.Add(
