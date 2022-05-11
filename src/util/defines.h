@@ -6,4 +6,13 @@
         return !std::memcmp(this, &other, sizeof(*this)); \
     }
 
+#define HYP_DEF_STL_HASH(hyp_class) \
+    template<> \
+    struct std::hash<hyp_class> { \
+        size_t operator()(const hyp_class &obj) const \
+        { \
+            return obj.GetHashCode().Value(); \
+        } \
+    }
+
 #endif

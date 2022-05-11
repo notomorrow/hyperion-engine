@@ -48,7 +48,7 @@ Result AccelerationGeometry::Create(Device *device, Instance *instance)
 	    return {Result::RENDERER_ERR, "An acceleration geometry must have nonzero vertex count, index count, and vertex size."};
 	}
 
-	if (!device->GetFeatures().SupportsRaytracing()) {
+	if (!device->GetFeatures().IsRaytracingSupported()) {
 	    return {Result::RENDERER_ERR, "Device does not support raytracing"};
 	}
 
@@ -169,7 +169,7 @@ Result AccelerationStructure::CreateAccelerationStructure(
         AssertThrow(m_acceleration_structure == VK_NULL_HANDLE);
 	}
 
-	if (!instance->GetDevice()->GetFeatures().SupportsRaytracing()) {
+	if (!instance->GetDevice()->GetFeatures().IsRaytracingSupported()) {
 	    return {Result::RENDERER_ERR, "Device does not support raytracing"};
 	}
 

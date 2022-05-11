@@ -5,7 +5,7 @@
 #include <rendering/backend/renderer_command_buffer.h>
 
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <cstring>
 
 #define HYP_MESH_AABB_USE_MULTITHREADING 1
@@ -19,7 +19,7 @@ namespace hyperion::v2 {
 std::pair<std::vector<Vertex>, std::vector<Mesh::Index>>
 Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
 {
-    std::map<Vertex, Index> index_map;
+    std::unordered_map<Vertex, Index> index_map;
 
     std::vector<Index> indices;
     indices.reserve(vertices.size());
@@ -42,10 +42,10 @@ Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
         const auto mesh_index = static_cast<Index>(new_vertices.size());
 
         /* The vertex is unique, so we push it. */
-        index_map[vertex] = mesh_index;
         new_vertices.push_back(vertex);
-
         indices.push_back(mesh_index);
+
+        index_map[vertex] = mesh_index;
     }
 
     return std::make_pair(new_vertices, indices);
@@ -54,22 +54,29 @@ Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
 Mesh::Mesh(
     const std::vector<Vertex> &vertices,
     const std::vector<Index> &indices,
+    const VertexAttributeSet &vertex_attributes,
     Flags flags
 ) : EngineComponentBase(),
     m_vbo(std::make_unique<VertexBuffer>()),
     m_ibo(std::make_unique<IndexBuffer>()),
-    m_vertices(std::move(vertices)),
-    m_indices(std::move(indices)),
-    m_vertex_attributes(
-        VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION
-        | VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
-        | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
-        | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD1
-        | VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
-        | VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT
-        | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES
-        | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS),
+    m_vertices(vertices),
+    m_indices(indices),
+    m_vertex_attributes(vertex_attributes),
     m_flags(flags)
+{
+    
+}
+
+Mesh::Mesh(
+    const std::vector<Vertex> &vertices,
+    const std::vector<Index> &indices,
+    Flags flags
+) : Mesh(
+        vertices,
+        indices,
+        VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
+        flags
+    )
 {
 }
 
@@ -220,7 +227,7 @@ std::vector<float> Mesh::BuildVertexBuffer()
 
 #undef PACKED_SET_ATTR
 
-void Mesh::Render(Engine *engine, CommandBuffer *cmd) const
+void Mesh::Render(Engine *, CommandBuffer *cmd) const
 {
     AssertThrow(m_vbo != nullptr && m_ibo != nullptr);
 
@@ -270,7 +277,7 @@ void Mesh::CalculateNormals()
         return;
     }
 
-    std::unordered_map<MeshIndex, std::vector<Vector3>> normals;
+    std::unordered_map<Index, std::vector<Vector3>> normals;
     //std::vector<Vector3> normals(m_indices.size());
 
     for (size_t i = 0; i < m_indices.size(); i += 3) {
@@ -307,7 +314,7 @@ void Mesh::CalculateNormals()
 
 void Mesh::CalculateTangents()
 {
-    Vertex *v[3];
+    Vertex v[3];
     Vector2 uv[3];
 
     for (auto &vertex : m_vertices) {
@@ -315,34 +322,33 @@ void Mesh::CalculateTangents()
         vertex.SetBitangent(Vector3(0.0f));
     }
 
-    std::vector<Vector3> new_tangents(m_vertices.size(), Vector3());
-    std::vector<Vector3> new_bitangents(m_vertices.size(), Vector3());
+    std::vector<Vector3> new_tangents(m_vertices.size());
+    std::vector<Vector3> new_bitangents(m_vertices.size());
 
-    for (size_t i = 0; i < m_indices.size(); i += 3) {
-        for (int j = 0; j < 3; j++) {
-            v[j] = &m_vertices[m_indices[i + j]];
-            uv[j] = v[j]->GetTexCoord0();
+    for (size_t i = 0; i < m_indices.size();) {
+        const auto count = MathUtil::Min(3, m_indices.size() - i);
+
+        for (int j = 0; j < count; j++) {
+            v[j]  = m_vertices[m_indices[i + j]];
+            uv[j] = v[j].GetTexCoord0();
         }
 
-        Vector3 edge1 = v[1]->GetPosition() - v[0]->GetPosition();
-        Vector3 edge2 = v[2]->GetPosition() - v[0]->GetPosition();
+        const Vector3 edge1   = v[1].GetPosition() - v[0].GetPosition();
+        const Vector3 edge2   = v[2].GetPosition() - v[0].GetPosition();
+        const Vector2 edge1uv = uv[1] - uv[0];
+        const Vector2 edge2uv = uv[2] - uv[0];
+        
+        const float mul = 1.0f / (edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x);
 
-        Vector2 edge1uv = uv[1] - uv[0];
-        Vector2 edge2uv = uv[2] - uv[0];
+        const Vector3 tangent   = (edge1 * edge2uv.y - edge2 * edge1uv.y) * mul;
+        const Vector3 bitangent = (edge1 * edge2uv.x - edge2 * edge1uv.x) * mul;
 
-        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
-        const float mul = 1.0f / cp;
+        for (uint32_t j = 0; j < count; j++) {
+            new_tangents[m_indices[i + j]]   += tangent;
+            new_bitangents[m_indices[i + j]] += bitangent;
+        }
 
-        Vector3 tangent = ((edge1 * edge2uv.y) - (edge2 * edge1uv.y)) * mul;
-        Vector3 bitangent = ((edge1 * edge2uv.x) - (edge2 * edge1uv.x)) * mul;
-
-        new_tangents[m_indices[i]] += tangent;
-        new_tangents[m_indices[i + 1]] += tangent;
-        new_tangents[m_indices[i + 2]] += tangent;
-
-        new_bitangents[m_indices[i]] += bitangent;
-        new_bitangents[m_indices[i + 1]] += bitangent;
-        new_bitangents[m_indices[i + 2]] += bitangent;
+        i += count;
     }
 
     for (size_t i = 0; i < m_vertices.size(); i++) {

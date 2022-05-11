@@ -4,8 +4,8 @@
 
 #include <iostream>
 #include <fstream>
-
 namespace hyperion {
+#if 0
 struct RiffHeader {
     char chunk_id[4];
     long chunk_size;
@@ -116,4 +116,5 @@ AssetLoader::Result WavLoader::LoadFromFile(const std::string &path)
         return AssetLoader::Result(AssetLoader::Result::ASSET_ERR, error);
     }
 }
+#endif
 } // namespace hyperion

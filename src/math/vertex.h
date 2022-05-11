@@ -8,6 +8,8 @@
 #include "vector3.h"
 #include "transform.h"
 #include "matrix4.h"
+#include <hash_code.h>
+#include <util/defines.h>
 
 #include <array>
 #include <cstring>
@@ -75,10 +77,9 @@ public:
           bone_indices(other.bone_indices)
     {
     }
-
-    inline bool operator==(const Vertex &other) const
-        { return std::memcmp(this, &other, sizeof(Vertex)) == 0; }
-
+    
+    bool operator<(const Vertex &other) const;
+    bool operator==(const Vertex &other) const;
     Vertex &operator=(const Vertex &other);
     Vertex operator*(float scalar) const;
     Vertex operator*(const Matrix4 &mat) const;
@@ -106,9 +107,30 @@ public:
     inline int GetBoneIndex(int i) const { return bone_indices[i]; }
 
     inline void AddBoneWeight(float val) { if (nboneweights < MAX_BONE_WEIGHTS) bone_weights[nboneweights++] = val; }
-    inline void AddBoneIndex(int val) { if (nboneindices < MAX_BONE_INDICES) bone_indices[nboneindices++] = val; }
+    inline void AddBoneIndex(int val)    { if (nboneindices < MAX_BONE_INDICES) bone_indices[nboneindices++] = val; }
 
-    inline bool operator<(const Vertex &other) const { return position < other.position; }
+    inline HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(position.GetHashCode());
+        hc.Add(normal.GetHashCode());
+        hc.Add(texcoord0.GetHashCode());
+        hc.Add(texcoord1.GetHashCode());
+        hc.Add(tangent.GetHashCode());
+        hc.Add(bitangent.GetHashCode());
+        hc.Add(nboneindices);
+        hc.Add(nboneweights);
+
+        for (uint32_t i = 0; i < MAX_BONE_INDICES; i++) {
+            hc.Add(bone_indices[i]);
+        }
+
+        for (uint32_t i = 0; i < MAX_BONE_WEIGHTS; i++) {
+            hc.Add(bone_weights[i]);
+        }
+
+        return hc;
+    }
 
 private:
     Vector3 position;
@@ -126,5 +148,7 @@ private:
 };
 
 } // namespace hyperion
+
+HYP_DEF_STL_HASH(hyperion::Vertex);
 
 #endif
