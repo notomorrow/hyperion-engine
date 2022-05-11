@@ -134,7 +134,7 @@ public:
         { return m_image ? m_image->GetTextureFormat() : Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_NONE; }
 
     inline bool IsDepthAttachment() const
-        { return m_image ? m_image->IsDepthStencilImage() : false; }
+        { return m_image ? m_image->IsDepthStencil() : false; }
 
     Result AddAttachmentRef(
         Device *device,

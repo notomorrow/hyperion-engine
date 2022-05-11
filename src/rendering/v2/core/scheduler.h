@@ -34,6 +34,9 @@ class Scheduler {
     using ScheduledFunction = ScheduledFunction<ReturnType, Args...>;
     using Executor          = std::add_pointer_t<void(typename ScheduledFunction::Function &)>;
 
+    using ScheduledFunctionQueue = std::deque<ScheduledFunction>;
+    using Iterator               = typename ScheduledFunctionQueue::iterator;
+
 public:
     Scheduler()
         : m_creation_thread(std::this_thread::get_id())
@@ -76,22 +79,21 @@ public:
      *  else, remove the item with the given ID
      *  This is a helper function for create/destroy functions
      */
-    typename ScheduledFunction::ID DequeueOrEnqueue(typename ScheduledFunction::ID dequeue_id, typename ScheduledFunction::Function &&enqueue_fn)
+    typename ScheduledFunction::ID Replace(typename ScheduledFunction::ID dequeue_id, typename ScheduledFunction::Function &&enqueue_fn)
     {
-        if (dequeue_id == ScheduledFunction::empty_id) {
-            return ScheduledFunction::empty_id;
-        }
-
         std::unique_lock lock(m_mutex);
 
-        if (DequeueInternal(dequeue_id)) {
-            lock.unlock();
+        if (dequeue_id != ScheduledFunction::empty_id) {
+            auto it = Find(dequeue_id);
 
-            if (m_scheduled_functions.empty()) {
-                m_is_flushed.notify_all();
+            if (it != m_scheduled_functions.end()) {
+                (*it) = {
+                    .id = {dequeue_id},
+                    .fn = std::move(enqueue_fn)
+                };
+
+                return dequeue_id;
             }
-
-            return ScheduledFunction::empty_id;
         }
 
         return EnqueueInternal(std::move(enqueue_fn));
@@ -172,15 +174,20 @@ private:
         return m_scheduled_functions.back().id;
     }
 
-    bool DequeueInternal(typename ScheduledFunction::ID id)
+    Iterator Find(typename ScheduledFunction::ID id)
     {
-        const auto it = std::find_if(
+        return std::find_if(
             m_scheduled_functions.begin(),
             m_scheduled_functions.end(),
             [&id](const auto &item) {
                 return item.id == id;
             }
         );
+    }
+
+    bool DequeueInternal(typename ScheduledFunction::ID id)
+    {
+        const auto it = Find(it);
 
         if (it == m_scheduled_functions.end()) {
             return false;
@@ -198,7 +205,7 @@ private:
     uint32_t                       m_id_counter = 0;
     std::atomic_uint32_t           m_num_enqueued{0};
     std::mutex                     m_mutex;
-    std::deque<ScheduledFunction>  m_scheduled_functions;
+    ScheduledFunctionQueue         m_scheduled_functions;
     std::condition_variable        m_is_flushed;
 
     std::thread::id                m_creation_thread;
