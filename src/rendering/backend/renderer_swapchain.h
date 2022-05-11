@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#define HYP_ENABLE_VSYNC 0
+#define HYP_ENABLE_VSYNC 1
 
 namespace hyperion {
 namespace renderer {
@@ -44,7 +44,7 @@ private:
 };
 
 } // namespace renderer
-}; // namespace hyperion
+} // namespace hyperion
 
 #endif //HYPERION_RENDERER_SWAPCHAIN_H
 
