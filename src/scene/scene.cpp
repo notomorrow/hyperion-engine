@@ -40,7 +40,9 @@ void Scene::Init(Engine *engine)
         UpdateShaderData(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](Engine *engine) {
-            /* no-op */
+            engine->render_scheduler.FlushOrWait([](auto &fn) {
+                HYPERION_ASSERT_RESULT(fn());
+            });
         }), engine);
     }));
 }
