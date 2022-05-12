@@ -28,11 +28,13 @@ void Voxelizer::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_VOXELIZER, [this](Engine *engine) {
+        const auto voxel_map_size_signed = static_cast<int64_t>(voxel_map_size);
+
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
             std::make_unique<OrthoCamera>(
-                -voxel_map_size, voxel_map_size,
-                -voxel_map_size, voxel_map_size,
-                -voxel_map_size, voxel_map_size
+                -voxel_map_size_signed, voxel_map_size_signed,
+                -voxel_map_size_signed, voxel_map_size_signed,
+                -voxel_map_size_signed, voxel_map_size_signed
             )
         ));
 
