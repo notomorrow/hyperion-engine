@@ -5,6 +5,8 @@
 
 namespace hyperion::v2 {
 
+static constexpr float game_thread_target_ticks_per_second = 50.0f;
+
 GameThread::GameThread()
     : Thread("GameThread")
 {
@@ -12,11 +14,15 @@ GameThread::GameThread()
 
 void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
 {
-    GameCounter counter;
+    LockstepGameCounter counter(1.0f / game_thread_target_ticks_per_second);
 
     //game->Init(engine, window);
 
     while (engine->m_running) {
+        while (counter.Waiting()) {
+            /* wait */
+        }
+
         counter.NextTick();
 
         game->Logic(engine, counter.delta);
