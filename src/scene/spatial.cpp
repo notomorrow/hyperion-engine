@@ -66,6 +66,10 @@ void Spatial::Init(Engine *engine)
             if (m_octree != nullptr) {
                 RemoveFromOctree(engine);
             }
+
+            engine->render_scheduler.FlushOrWait([](auto &fn) {
+                HYPERION_ASSERT_RESULT(fn());
+            });
         }), engine);
     }));
 }
