@@ -1,6 +1,6 @@
 #include "htest.h"
 
-#include <rendering/v2/core/lib/range.h>
+#include <core/lib/range.h>
 
 #include <thread>
 

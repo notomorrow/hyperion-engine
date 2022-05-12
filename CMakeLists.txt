@@ -20,10 +20,8 @@ set(OpenGL_GL_PREFERENCE GLVND)
 link_directories(${CMAKE_SOURCE_DIR}/lib /usr/local/lib)
 
 find_package(Threads REQUIRED)
-find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 find_package(Bullet REQUIRED)
-find_package(GLEW REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(SDL2 REQUIRED)
@@ -41,7 +39,6 @@ file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp")
 set(CMAKE_CXX_STANDARD 20)
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
-    ${OPENGL_INCLUDE_DIRS}
     ${OPENAL_INCLUDE_DIR}
     ${BULLET_INCLUDE_DIR}
     ${Vulkan_INCLUDE_DIRS}
@@ -53,8 +50,6 @@ add_executable(${BUILD_NAME} ${SOURCES} ${HEADERS})
 set(COMMON_LIBRARIES
     ${CMAKE_THREADS_LIBS_INIT}
     ${OPENAL_LIBRARY}
-    ${GLEW_LIBRARIES}
-    ${OPENGL_LIBRARIES}
     ${Vulkan_LIBRARIES}
     ${BULLET_LIBRARIES}
     glfw

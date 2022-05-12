@@ -7,19 +7,19 @@
 #include "rendering/backend/renderer_render_pass.h"
 #include "rendering/backend/rt/renderer_raytracing_pipeline.h"
 
-#include <rendering/v2/engine.h>
-#include <rendering/v2/scene/node.h>
-#include <rendering/v2/components/atomics.h>
-#include <rendering/v2/animation/bone.h>
-#include <rendering/v2/asset/model_loaders/obj_model_loader.h>
-#include <rendering/v2/rt/acceleration_structure_builder.h>
-#include <rendering/v2/components/probe_system.h>
-#include <rendering/v2/game_thread.h>
-#include <rendering/v2/game.h>
+#include <engine.h>
+#include <scene/node.h>
+#include <rendering/atomics.h>
+#include <animation/bone.h>
+#include <asset/model_loaders/obj_model_loader.h>
+#include <rendering/rt/acceleration_structure_builder.h>
+#include <rendering/probe_system.h>
+#include <game_thread.h>
+#include <game.h>
 
 #include "input_manager.h"
 #include "asset/asset_manager.h"
-#include "rendering/camera/fps_camera.h"
+#include <camera/fps_camera.h>
 
 #include "util/profile.h"
 
