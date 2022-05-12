@@ -224,14 +224,14 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
             auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
                     std::move(mesh),
-                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).Acquire(),
+                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef(),
                     vertex_attributes,
                     engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
                 )
             );
 
             if (skeleton_ref != nullptr) {
-                spatial->SetSkeleton(skeleton_ref.Acquire());
+                spatial->SetSkeleton(skeleton_ref.IncRef());
             }
             
             auto node = std::make_unique<Node>();

@@ -78,7 +78,7 @@ void Scene::UpdateShaderData(Engine *engine)
         Vector3     light_direction;
     } params = {
         .aabb        = m_aabb,
-        .light_direction = Vector3(0.5f, 0.5f, 0.0f).Normalize()
+        .light_direction = Vector3(-0.5f, 0.5f, 0.0f).Normalize()
     };
 
     if (m_camera != nullptr) {
@@ -90,7 +90,7 @@ void Scene::UpdateShaderData(Engine *engine)
         params.height      = m_camera->GetHeight();
     }
 
-    m_camera_update_id = engine->render_scheduler.Replace(m_camera_update_id, [this, engine, params] {
+    engine->render_scheduler.Enqueue([this, engine, params] {
         SceneShaderData shader_data{
             .view             = params.view,
             .projection       = params.projection,

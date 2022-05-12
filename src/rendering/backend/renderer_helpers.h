@@ -78,7 +78,7 @@ private:
         // Submit to the queue
         auto queue_graphics = device->GetQueue(family_indices.graphics_family.value(), 0);
 
-        HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(queue_graphics, m_fence->GetFence(), nullptr), result);
+        HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(queue_graphics, m_fence.get(), nullptr), result);
         
         HYPERION_PASS_ERRORS(m_fence->WaitForGpu(device), result);
         HYPERION_PASS_ERRORS(m_fence->Destroy(device), result);

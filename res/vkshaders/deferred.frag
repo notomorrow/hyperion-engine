@@ -115,7 +115,7 @@ void main()
     
     bool perform_lighting = albedo.a > 0.0;
     
-    vec3 albedo_linear = mon2lin(albedo.rgb);
+    vec3 albedo_linear = albedo.rgb;
 	vec3 result = vec3(0.0);
 
     /* Physical camera */
@@ -138,8 +138,8 @@ void main()
     float ao = 1.0;
     
     if (perform_lighting) {
-        float metallic = 0.9;
-        float roughness = 0.9;
+        float metallic = 0.5;
+        float roughness = 0.3;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));

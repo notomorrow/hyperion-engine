@@ -119,7 +119,7 @@ public:
 
         auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
 
-        m_render_list_container.Get(bucket).AddGraphicsPipeline(graphics_pipeline.Acquire());
+        m_render_list_container.Get(bucket).AddGraphicsPipeline(graphics_pipeline.IncRef());
 
         return graphics_pipeline;
     }

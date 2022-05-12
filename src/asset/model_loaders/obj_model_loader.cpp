@@ -320,7 +320,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
         if (!obj_mesh.material.empty() && material_library != nullptr) {
             if (material_library->Has(obj_mesh.material)) {
-                material = material_library->Get(obj_mesh.material).Acquire();
+                material = material_library->Get(obj_mesh.material).IncRef();
             } else {
                 DebugLog(
                     LogType::Warn,
@@ -349,7 +349,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
                     std::move(mesh),
-                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).Acquire(),
+                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef(),
                     vertex_attributes,
                     std::move(material),
                     Bucket::BUCKET_OPAQUE

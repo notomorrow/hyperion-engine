@@ -98,26 +98,27 @@ Result CommandBuffer::Reset(Device *device)
     HYPERION_RETURN_OK;
 }
 
-Result CommandBuffer::SubmitSecondary(CommandBuffer *primary,
-    const std::vector<std::unique_ptr<CommandBuffer>> &command_buffers)
+Result CommandBuffer::SubmitSecondary(
+    CommandBuffer *primary,
+    const std::vector<std::unique_ptr<CommandBuffer>> &command_buffers
+)
 {
-    for (auto &command_buffer : command_buffers) {
-        vkCmdExecuteCommands(primary->GetCommandBuffer(), 1, &command_buffer->GetCommandBuffer());
-    }
+    VkCommandBuffer *vk_command_buffers = (VkCommandBuffer *)alloca(sizeof(VkCommandBuffer) * command_buffers.size());
 
+    vkCmdExecuteCommands(
+        primary->GetCommandBuffer(),
+        uint32_t(command_buffers.size()),
+        vk_command_buffers
+    );
+    
     HYPERION_RETURN_OK;
 }
 
-Result CommandBuffer::SubmitSecondary(VkCommandBuffer primary,
-    VkCommandBuffer *command_buffers,
-    size_t num_command_buffers)
-{
-    vkCmdExecuteCommands(primary, uint32_t(num_command_buffers), command_buffers);
-
-    HYPERION_RETURN_OK;
-}
-
-Result CommandBuffer::SubmitPrimary(VkQueue queue, VkFence fence, SemaphoreChain *semaphore_chain)
+Result CommandBuffer::SubmitPrimary(
+    VkQueue queue,
+    Fence *fence,
+    SemaphoreChain *semaphore_chain
+)
 {
     VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
 
@@ -139,18 +140,38 @@ Result CommandBuffer::SubmitPrimary(VkQueue queue, VkFence fence, SemaphoreChain
     submit_info.pCommandBuffers = &m_command_buffer;
 
     HYPERION_VK_CHECK_MSG(
-        vkQueueSubmit(queue, 1, &submit_info, fence),
+        vkQueueSubmit(queue, 1, &submit_info, fence->GetFence()),
         "Failed to submit command"
     );
 
     HYPERION_RETURN_OK;
 }
 
-Result CommandBuffer::SubmitSecondary(VkCommandBuffer primary)
+Result CommandBuffer::SubmitSecondary(CommandBuffer *primary)
 {
-    vkCmdExecuteCommands(primary, 1, &m_command_buffer);
+    vkCmdExecuteCommands(
+        primary->GetCommandBuffer(),
+        1,
+        &m_command_buffer
+    );
 
     HYPERION_RETURN_OK;
+}
+
+void CommandBuffer::DrawIndexed(
+    uint32_t num_indices,
+    uint32_t num_instances,
+    uint32_t instance_index
+) const
+{
+    vkCmdDrawIndexed(
+        m_command_buffer,
+        num_indices,
+        num_instances,
+        0,
+        0,
+        instance_index
+    );
 }
 
 } // namespace renderer

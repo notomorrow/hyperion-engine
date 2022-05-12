@@ -234,7 +234,7 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
 
 void Spatial::AddToDefaultPipeline(Engine *engine)
 {
-    if (const auto pipeline = engine->FindOrCreateGraphicsPipeline(m_shader.Acquire(), m_mesh->GetVertexAttributes(), m_bucket)) {
+    if (const auto pipeline = engine->FindOrCreateGraphicsPipeline(m_shader.IncRef(), m_mesh->GetVertexAttributes(), m_bucket)) {
         AddToPipeline(engine, pipeline.ptr);
 
         if (!m_pipelines.empty()) {
@@ -252,7 +252,7 @@ void Spatial::AddToDefaultPipeline(Engine *engine)
 
 void Spatial::AddToPipeline(Engine *engine, GraphicsPipeline *pipeline)
 {
-    pipeline->AddSpatial(engine->resources.spatials.Acquire(this));
+    pipeline->AddSpatial(engine->resources.spatials.IncRef(this));
 }
 
 void Spatial::RemoveFromPipelines(Engine *)
