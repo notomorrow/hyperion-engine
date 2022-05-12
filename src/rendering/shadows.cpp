@@ -67,20 +67,20 @@ void ShadowEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
-        m_render_pass.Acquire(),
+        m_render_pass.IncRef(),
         VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
         Bucket::BUCKET_PREPASS
     );
 
     pipeline->SetCullMode(CullMode::FRONT);
-    pipeline->AddFramebuffer(m_framebuffer.Acquire());
+    pipeline->AddFramebuffer(m_framebuffer.IncRef());
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
     for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
         for (auto &spatial : pipeline->GetSpatials()) {
             if (spatial != nullptr) {
-                m_pipeline->AddSpatial(spatial.Acquire());
+                m_pipeline->AddSpatial(spatial.IncRef());
             }
         }
     }
@@ -95,7 +95,7 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
 
     auto framebuffer = std::make_unique<Framebuffer>(
         engine->GetInstance()->swapchain->extent,
-        m_render_pass.Acquire()
+        m_render_pass.IncRef()
     );
 
     /* Add all attachments from the renderpass */

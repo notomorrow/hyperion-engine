@@ -103,7 +103,7 @@ void Voxelizer::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
-        m_render_pass.Acquire(),
+        m_render_pass.IncRef(),
         VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
         Bucket::BUCKET_VOXELIZER
     );
@@ -112,14 +112,14 @@ void Voxelizer::CreatePipeline(Engine *engine)
     pipeline->SetDepthTest(false);
     pipeline->SetCullMode(CullMode::NONE);
     
-    pipeline->AddFramebuffer(m_framebuffer.Acquire());
+    pipeline->AddFramebuffer(m_framebuffer.IncRef());
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
     for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
         for (auto &spatial : pipeline->GetSpatials()) {
             if (spatial != nullptr) {
-                m_pipeline->AddSpatial(spatial.Acquire());
+                m_pipeline->AddSpatial(spatial.IncRef());
             }
         }
     }
@@ -154,7 +154,7 @@ void Voxelizer::CreateFramebuffer(Engine *engine)
 {
     m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
         Extent2D{voxel_map_size, voxel_map_size},
-        m_render_pass.Acquire()
+        m_render_pass.IncRef()
     ));
     
     m_framebuffer.Init();

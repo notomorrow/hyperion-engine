@@ -45,7 +45,7 @@ bool AnimationController::FindSkeleton(Node *node)
 {
     if (auto *spatial = node->GetSpatial()) {
         if (auto &skeleton = spatial->GetSkeleton()) {
-            m_skeleton = skeleton.Acquire();
+            m_skeleton = skeleton.IncRef();
 
             return true;
         }

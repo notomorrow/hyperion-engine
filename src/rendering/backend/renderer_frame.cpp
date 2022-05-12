@@ -58,7 +58,7 @@ Result Frame::EndCapture(Device *device)
 
 Result Frame::Submit(Queue *queue)
 {
-    return command_buffer->SubmitPrimary(queue->queue, fc_queue_submit->GetFence(), &present_semaphores);
+    return command_buffer->SubmitPrimary(queue->queue, fc_queue_submit.get(), &present_semaphores);
 }
 
 } // namespace renderer

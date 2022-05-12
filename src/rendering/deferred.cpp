@@ -34,12 +34,12 @@ void DeferredRenderingEffect::CreateShader(Engine *engine)
 
 void DeferredRenderingEffect::CreateRenderPass(Engine *engine)
 {
-    m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].render_pass.Acquire();
+    m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].render_pass.IncRef();
 }
 
 void DeferredRenderingEffect::Create(Engine *engine)
 {
-    m_framebuffer = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].framebuffers[0].Acquire();
+    m_framebuffer = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].framebuffers[0].IncRef();
 
     CreatePerFrameData(engine);
     CreatePipeline(engine);

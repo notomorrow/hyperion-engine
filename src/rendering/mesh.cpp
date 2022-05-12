@@ -234,11 +234,7 @@ void Mesh::Render(Engine *, CommandBuffer *cmd) const
     m_vbo->Bind(cmd);
     m_ibo->Bind(cmd);
 
-    vkCmdDrawIndexed(
-        cmd->GetCommandBuffer(),
-        uint32_t(m_indices.size()),
-        1, 0, 0, 0
-    );
+    cmd->DrawIndexed(static_cast<uint32_t>(m_indices.size()));
 }
 
 std::vector<PackedVertex> Mesh::BuildPackedVertices() const

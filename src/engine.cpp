@@ -134,7 +134,7 @@ void Engine::PrepareSwapchain()
     for (VkImage img : m_instance->swapchain->images) {
         auto fbo = std::make_unique<Framebuffer>(
             m_instance->swapchain->extent,
-            render_pass.Acquire()
+            render_pass.IncRef()
         );
 
         renderer::AttachmentRef *color_attachment_ref,
@@ -173,8 +173,8 @@ void Engine::PrepareSwapchain()
             render_pass.Init();
 
             m_root_pipeline = std::make_unique<GraphicsPipeline>(
-                shader.Acquire(),
-                render_pass.Acquire(),
+                shader.IncRef(),
+                render_pass.IncRef(),
                 VertexAttributeSet::static_mesh,
                 Bucket::BUCKET_SWAPCHAIN
             );
@@ -410,7 +410,7 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
             continue;
         }
 
-        found_pipeline = graphics_pipeline.Acquire();
+        found_pipeline = graphics_pipeline.IncRef();
 
         break;
     }
@@ -422,7 +422,7 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
     // create a pipeline with the given params
     return AddGraphicsPipeline(std::make_unique<GraphicsPipeline>(
         std::move(shader),
-        render_list_bucket.render_pass.Acquire(),
+        render_list_bucket.render_pass.IncRef(),
         vertex_attributes,
         bucket
     ));

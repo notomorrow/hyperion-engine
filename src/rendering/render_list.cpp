@@ -40,7 +40,7 @@ void RenderListContainer::RenderListBucket::AddFramebuffersToPipelines(Engine *e
 {
     for (auto &pipeline : graphics_pipelines) {
         for (auto &framebuffer : framebuffers) {
-            pipeline->AddFramebuffer(framebuffer.Acquire());
+            pipeline->AddFramebuffer(framebuffer.IncRef());
         }
     }
 }
@@ -151,7 +151,7 @@ void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
     const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
 
     for (uint32_t i = 0; i < 1/*num_frames*/; i++) {
-        auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.Acquire());
+        auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.IncRef());
 
         for (auto *attachment_ref : render_pass->GetRenderPass().GetAttachmentRefs()) {
             framebuffer->GetFramebuffer().AddRenderPassAttachmentRef(attachment_ref);

@@ -104,10 +104,13 @@ public:
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
-        scene->SetEnvironmentTexture(0, cubemap.Acquire());
+        scene->SetEnvironmentTexture(0, cubemap.IncRef());
         test_model->Translate({0, 0, 5});
-       // test_model->Scale(0.025f);
+        //test_model->Scale(0.025f);
         test_model->Update(engine);
+
+        monkey_obj->Translate({0, 2, 0});
+        monkey_obj->Update(engine);
         
         tex1 = engine->resources.textures.Add(
             engine->assets.Load<Texture>(base_path + "textures/dirt.jpg")
@@ -119,18 +122,18 @@ public:
 
         auto metal_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
         metal_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 0.5f, 0.2f, 1.0f }));
-        metal_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
+        metal_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
         metal_material.Init();
 
         auto skybox_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-        skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.Acquire());
+        skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
         skybox_material.Init();
 
         auto *skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetBucket(v2::Bucket::BUCKET_SKYBOX);
-        skybox_spatial->SetShader(engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).Acquire());
+        skybox_spatial->SetShader(engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef());
     }
 
     virtual void Teardown(v2::Engine *engine) override
@@ -165,9 +168,9 @@ public:
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
         if (uint32_t(timer) % 2 == 0) {
-            zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.Acquire());
+            zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
         } else {
-            zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.Acquire());
+            zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
         }
 
         zombie->Update(engine);
@@ -230,7 +233,7 @@ int main()
     
     auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
     mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.6f }));
-    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.Acquire());
+    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.IncRef());
     mat1.Init();
 
     Device *device = engine.GetInstance()->GetDevice();
@@ -324,8 +327,8 @@ int main()
     
     /*{
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).Acquire(),
-            engine.GetRenderListContainer()[v2::BUCKET_OPAQUE].render_pass.Acquire(),
+            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).IncRef(),
+            engine.GetRenderListContainer()[v2::BUCKET_OPAQUE].render_pass.IncRef(),
             VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
             v2::Bucket::BUCKET_OPAQUE
         );
@@ -346,8 +349,8 @@ int main()
         );
 
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).Acquire(),
-            engine.GetRenderListContainer().Get(v2::BUCKET_SKYBOX).render_pass.Acquire(),
+            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef(),
+            engine.GetRenderListContainer().Get(v2::BUCKET_SKYBOX).render_pass.IncRef(),
             VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
             v2::Bucket::BUCKET_SKYBOX
         );
@@ -360,8 +363,8 @@ int main()
     
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).Acquire(),
-            engine.GetRenderListContainer().Get(v2::BUCKET_TRANSLUCENT).render_pass.Acquire(),
+            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).IncRef(),
+            engine.GetRenderListContainer().Get(v2::BUCKET_TRANSLUCENT).render_pass.IncRef(),
             VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
             v2::Bucket::BUCKET_TRANSLUCENT
         );
@@ -399,13 +402,13 @@ int main()
     auto my_tlas = std::make_unique<v2::Tlas>();
 
     my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
-        engine.resources.meshes.Acquire(my_game.monkey_obj->GetChild(0)->GetSpatial()->GetMesh()),
+        engine.resources.meshes.IncRef(my_game.monkey_obj->GetChild(0)->GetSpatial()->GetMesh()),
         my_game.monkey_obj->GetChild(0)->GetSpatial()->GetTransform()
     )));
 
     my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
     my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
-        engine.resources.meshes.Acquire(my_game.cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
+        engine.resources.meshes.IncRef(my_game.cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
         my_game.cube_obj->GetChild(0)->GetSpatial()->GetTransform()
     )));
 
@@ -545,7 +548,7 @@ int main()
 
         HYPERION_ASSERT_RESULT(compute_command_buffer->SubmitPrimary(
             engine.GetInstance()->GetComputeQueue().queue,
-            compute_fc->GetFence(),
+            compute_fc.get(),
             &compute_semaphore_chain
         ));
 #endif

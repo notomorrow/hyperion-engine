@@ -947,11 +947,11 @@ public:
         }
 
         /*! \brief Acquire a new reference from this one. Increments the reference counter. */
-        auto Acquire()
+        auto IncRef()
         {
             AssertState();
 
-            return m_ref_counter->Acquire(ptr);
+            return m_ref_counter->IncRef(ptr);
         }
 
         size_t GetRefCount() const
@@ -1038,7 +1038,7 @@ public:
         return Ref(ptr, this);
     }
     
-    [[nodiscard]] Ref Acquire(T *ptr)
+    [[nodiscard]] Ref IncRef(T *ptr)
     {
         AssertThrow(ptr != nullptr);
 
@@ -1049,7 +1049,7 @@ public:
     
     [[nodiscard]] Ref Get(T *ptr)
     {
-       return this->Acquire(ptr);
+       return this->IncRef(ptr);
     }
 
     [[nodiscard]] Ref Get(typename T::ID id)
@@ -1060,7 +1060,7 @@ public:
             return nullptr;
         }
 
-        return this->Acquire(ptr);
+        return this->IncRef(ptr);
     }
 
     [[nodiscard]] Ref Get(T *ptr) const

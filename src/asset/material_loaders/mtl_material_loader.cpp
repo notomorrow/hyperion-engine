@@ -265,7 +265,7 @@ std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const 
 
                 texture->GetImage().SetIsSRGB(it.mapping.srgb);
 
-                material->SetTexture(it.mapping.key, texture.Acquire());
+                material->SetTexture(it.mapping.key, texture.IncRef());
             }
 
             material_library->Add(item.tag, resources.materials.Add(std::move(material)));

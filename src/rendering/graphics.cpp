@@ -85,7 +85,7 @@ bool GraphicsPipeline::RemoveFromSpatialList(
     } else {
         std::lock_guard guard(m_enqueued_spatials_mutex);
 
-        m_spatials_pending_removal.push_back(it->Acquire());
+        m_spatials_pending_removal.push_back(it->IncRef());
     }
     
     return true;

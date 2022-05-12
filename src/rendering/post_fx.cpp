@@ -72,7 +72,7 @@ void PostEffect::Create(Engine *engine)
 
     m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
         engine->GetInstance()->swapchain->extent,
-        m_render_pass.Acquire()
+        m_render_pass.IncRef()
     ));
 
     /* Add all attachments from the renderpass */
@@ -124,12 +124,12 @@ void PostEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
-        m_render_pass.Acquire(),
+        m_render_pass.IncRef(),
         VertexAttributeSet::static_mesh,
         Bucket::BUCKET_PREPASS
     );
 
-    pipeline->AddFramebuffer(m_framebuffer.Acquire());
+    pipeline->AddFramebuffer(m_framebuffer.IncRef());
     pipeline->SetDepthWrite(false);
     pipeline->SetDepthTest(false);
     pipeline->SetTopology(Topology::TRIANGLE_FAN);
