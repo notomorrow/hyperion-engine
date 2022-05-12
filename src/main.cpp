@@ -106,7 +106,7 @@ public:
 
         scene->SetEnvironmentTexture(0, cubemap.Acquire());
         test_model->Translate({0, 0, 5});
-        //test_model->Scale(0.025f);
+       // test_model->Scale(0.025f);
         test_model->Update(engine);
         
         tex1 = engine->resources.textures.Add(

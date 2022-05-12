@@ -13,6 +13,27 @@ struct GameCounter {
     TickUnit  delta{};
 
     void NextTick();
+    static TimePoint Now();
+
+    TickUnit Interval(TimePoint end_time_point) const
+    {
+        return std::chrono::duration_cast<std::chrono::duration<TickUnit, std::ratio<1>>>(end_time_point - last_time_point).count();
+    }
+};
+
+struct LockstepGameCounter : GameCounter {
+    TickUnit target_interval;
+
+    LockstepGameCounter(TickUnit target_interval)
+        : GameCounter(),
+          target_interval(target_interval)
+    {
+    }
+
+    bool Waiting()
+    {
+        return Interval(Now()) < target_interval;
+    }
 };
 
 } // namespace hyperion::v2

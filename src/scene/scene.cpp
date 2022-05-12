@@ -88,7 +88,7 @@ void Scene::UpdateShaderData(Engine *engine)
         params.height      = m_camera->GetHeight();
     }
 
-    engine->render_scheduler.Enqueue([this, engine, params] {
+    m_camera_update_id = engine->render_scheduler.Replace(m_camera_update_id, [this, engine, params] {
         SceneShaderData shader_data{
             .view             = params.view,
             .projection       = params.projection,
