@@ -9,7 +9,7 @@
 
 namespace hyperion::v2 {
 
-class ShadowEffect : public PostEffect {
+class ShadowEffect : public FullScreenPass {
 public:
     ShadowEffect();
     ShadowEffect(const ShadowEffect &other) = delete;

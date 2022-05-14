@@ -6,7 +6,7 @@
 
 namespace hyperion::v2 {
 
-class DeferredRenderingEffect : public PostEffect {
+class DeferredRenderingEffect : public FullScreenPass {
 public:
     DeferredRenderingEffect();
     DeferredRenderingEffect(const DeferredRenderingEffect &other) = delete;

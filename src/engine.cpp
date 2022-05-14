@@ -484,7 +484,7 @@ void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
     );
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
-    PostEffect::full_screen_quad->Render(const_cast<Engine *>(this), command_buffer);
+    FullScreenPass::full_screen_quad->Render(const_cast<Engine *>(this), command_buffer);
     
     m_root_pipeline->GetFramebuffers()[acquired_image_index]->EndCapture(command_buffer);
 }

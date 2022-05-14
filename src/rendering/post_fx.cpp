@@ -13,21 +13,21 @@ using renderer::Descriptor;
 using renderer::DescriptorSet;
 using renderer::ImageSamplerDescriptor;
 
-std::unique_ptr<Mesh> PostEffect::full_screen_quad = MeshBuilder::Quad(Topology::TRIANGLE_FAN);
+std::unique_ptr<Mesh> FullScreenPass::full_screen_quad = MeshBuilder::Quad(Topology::TRIANGLE_FAN);
 
-PostEffect::PostEffect()
-    : PostEffect(nullptr)
+FullScreenPass::FullScreenPass()
+    : FullScreenPass(nullptr)
 {
 }
 
-PostEffect::PostEffect(Ref<Shader> &&shader)
+FullScreenPass::FullScreenPass(Ref<Shader> &&shader)
     : m_shader(std::move(shader))
 {
 }
 
-PostEffect::~PostEffect() = default;
+FullScreenPass::~FullScreenPass() = default;
 
-void PostEffect::CreateRenderPass(Engine *engine)
+void FullScreenPass::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
     auto render_pass = std::make_unique<RenderPass>(
@@ -63,7 +63,7 @@ void PostEffect::CreateRenderPass(Engine *engine)
     m_render_pass.Init();
 }
 
-void PostEffect::Create(Engine *engine)
+void FullScreenPass::Create(Engine *engine)
 {
     /* will only init once */
     full_screen_quad->Init(engine);
@@ -86,7 +86,7 @@ void PostEffect::Create(Engine *engine)
     CreatePipeline(engine);
 }
 
-void PostEffect::CreatePerFrameData(Engine *engine)
+void FullScreenPass::CreatePerFrameData(Engine *engine)
 {
     const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
 
@@ -104,7 +104,7 @@ void PostEffect::CreatePerFrameData(Engine *engine)
     }
 }
 
-void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
+void FullScreenPass::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
     auto &framebuffer = m_framebuffer->GetFramebuffer();
@@ -120,7 +120,7 @@ void PostEffect::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
    }
 }
 
-void PostEffect::CreatePipeline(Engine *engine)
+void FullScreenPass::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
@@ -138,7 +138,7 @@ void PostEffect::CreatePipeline(Engine *engine)
     m_pipeline.Init();
 }
 
-void PostEffect::Destroy(Engine *engine)
+void FullScreenPass::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
 
@@ -168,7 +168,7 @@ void PostEffect::Destroy(Engine *engine)
     HYPERION_ASSERT_RESULT(result);
 }
 
-void PostEffect::Record(Engine *engine, uint32_t frame_index)
+void FullScreenPass::Record(Engine *engine, uint32_t frame_index)
 {
     using renderer::Result;
 
@@ -234,7 +234,7 @@ void PostEffect::Record(Engine *engine, uint32_t frame_index)
     AssertThrowMsg(result, "Failed to record command buffer. Message: %s", result.message);
 }
 
-void PostEffect::Render(Engine * engine, CommandBuffer *primary, uint32_t frame_index)
+void FullScreenPass::Render(Engine * engine, CommandBuffer *primary, uint32_t frame_index)
 {
     m_framebuffer->BeginCapture(primary);
 
@@ -264,7 +264,7 @@ void PostProcessing::Create(Engine *engine)
     /* TODO: use subpasses for gbuffer so we only have num_filters * num_frames descriptors */
 
     for (int i = 0; i < filter_shader_names.size(); i++) {
-        m_filters[i] = std::make_unique<PostEffect>(engine->resources.shaders.Add(std::make_unique<Shader>(
+        m_filters[i] = std::make_unique<FullScreenPass>(engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {
                     FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read(),
