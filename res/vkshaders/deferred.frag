@@ -33,10 +33,9 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 15000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 150000.0
-#define GI_INTENSITY 20.0
-#define VCT_ENABLED 0
+#define IBL_INTENSITY 10000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 200000.0
+#define GI_INTENSITY 2.0
 #define SSAO_DEBUG 0
 
 #if VCT_ENABLED
@@ -138,6 +137,8 @@ void main()
     float ao = 1.0;
     
     if (perform_lighting) {
+        ao = texture(filter_ssao, texcoord).r;
+
         float metallic = 0.5;
         float roughness = 0.3;
         

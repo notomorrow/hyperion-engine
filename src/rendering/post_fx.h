@@ -23,15 +23,15 @@ using renderer::VertexAttributeSet;
 
 class Engine;
 
-class PostEffect {
+class FullScreenPass {
 public:
     static std::unique_ptr<Mesh> full_screen_quad;
     
-    PostEffect();
-    PostEffect(Ref<Shader> &&shader);
-    PostEffect(const PostEffect &) = delete;
-    PostEffect &operator=(const PostEffect &) = delete;
-    ~PostEffect();
+    FullScreenPass();
+    FullScreenPass(Ref<Shader> &&shader);
+    FullScreenPass(const FullScreenPass &) = delete;
+    FullScreenPass &operator=(const FullScreenPass &) = delete;
+    ~FullScreenPass();
 
     inline auto &GetFrameData()
         { return m_frame_data; }
@@ -79,15 +79,15 @@ public:
     PostProcessing &operator=(const PostProcessing &) = delete;
     ~PostProcessing();
 
-    void AddFilter(std::unique_ptr<PostEffect> &&filter);
-    inline PostEffect *GetFilter(size_t index) const { return m_filters[index].get(); }
+    void AddFilter(std::unique_ptr<FullScreenPass> &&filter);
+    inline FullScreenPass *GetFilter(size_t index) const { return m_filters[index].get(); }
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
     void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index) const;
 
 private:
-    std::vector<std::unique_ptr<PostEffect>> m_filters;
+    std::vector<std::unique_ptr<FullScreenPass>> m_filters;
 };
 
 } // namespace hyperion::v2

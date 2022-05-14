@@ -7,7 +7,7 @@
 namespace hyperion::v2 {
 
 DeferredRenderingEffect::DeferredRenderingEffect()
-    : PostEffect()
+    : FullScreenPass()
 {
     
 }
@@ -47,7 +47,7 @@ void DeferredRenderingEffect::Create(Engine *engine)
 
 void DeferredRenderingEffect::Destroy(Engine *engine)
 {
-    PostEffect::Destroy(engine);
+    FullScreenPass::Destroy(engine);
 }
 
 void DeferredRenderingEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)

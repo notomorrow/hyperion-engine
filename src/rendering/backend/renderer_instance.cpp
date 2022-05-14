@@ -493,11 +493,9 @@ std::vector<VkPhysicalDevice> Instance::EnumeratePhysicalDevices()
     uint32_t device_count = 0;
 
     vkEnumeratePhysicalDevices(this->instance, &device_count, nullptr);
-    if (device_count == 0) {
-        DebugLog(LogType::Fatal, "No devices with Vulkan support found! " \
-                                 "Please update your graphics drivers or install a Vulkan compatible device.\n");
-        throw std::runtime_error("No GPUs with Vulkan support found!");
-    }
+
+    AssertThrowMsg(device_count != 0, "No devices with Vulkan support found! " \
+                                      "Please update your graphics drivers or install a Vulkan compatible device.\n");
 
     std::vector<VkPhysicalDevice> devices(device_count);
     vkEnumeratePhysicalDevices(this->instance, &device_count, devices.data());

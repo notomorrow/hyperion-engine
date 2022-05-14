@@ -5,6 +5,8 @@
 #ifndef HYPERION_DEBUG_H
 #define HYPERION_DEBUG_H
 
+#include <util/defines.h>
+
 #include <ostream>
 #include <string>
 #include <iostream>
@@ -20,7 +22,7 @@
 #define HYP_ENABLE_BREAKPOINTS 1
 #endif
 
-#if defined(__GNUC__) || defined(__GNUG__) || defined(__clang__)
+#if HYP_CLANG_OR_GCC
 #define HYP_DEBUG_FUNC_SHORT __FUNCTION__
 #define HYP_DEBUG_FUNC       __PRETTY_FUNCTION__
 #define HYP_DEBUG_LINE       (__LINE__)
@@ -28,7 +30,7 @@
 #define HYP_BREAKPOINT       (raise(SIGTERM))
 #endif
 
-#elif defined(_MSC_VER)
+#elif HYP_MSVC
 #define HYP_DEBUG_FUNC_SHORT (__FUNCTION__)
 #define HYP_DEBUG_FUNC       (__FUNCSIG__)
 #define HYP_DEBUG_LINE       (__LINE__)
@@ -108,23 +110,30 @@ void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt,
         } \
     } while (0)
 
-#define AssertThrow(cond) AssertOrElse(LogType::Error, cond, throw ::std::runtime_error("Assertion failed"))
-#define AssertThrowMsg(cond, msg, ...) AssertOrElseMsg(LogType::Error, cond, throw ::std::runtime_error("Assertion failed"), msg, __VA_ARGS__)
-#define AssertSoft(cond) AssertOrElse(LogType::Warn, cond, return)
-#define AssertSoftMsg(cond, msg, ...) AssertOrElseMsg(LogType::Warn, cond, return, msg, __VA_ARGS__)
-#define AssertReturn(cond, value) AssertOrElse(LogType::Warn, cond, return (value))
+#define AssertThrow(cond)                      AssertOrElse(LogType::Error, cond, HYP_THROW("Assertion failed"))
+#define AssertSoft(cond)                       AssertOrElse(LogType::Warn, cond, return)
+#define AssertReturn(cond, value)              AssertOrElse(LogType::Warn, cond, return (value))
+#define AssertBreak(cond)                      AssertOrElse(LogType::Warn, cond, break)
+#define AssertContinue(cond)                   AssertOrElse(LogType::Warn, cond, continue)
+#define AssertExit(cond)                       AssertOrElse(LogType::Fatal, cond, exit(1))
+
+#if defined(HYP_MSVC) && HYP_MSVC
+#define AssertThrowMsg(cond, msg, ...)         AssertOrElseMsg(LogType::Error, cond, HYP_THROW("Assertion failed"), msg, __VA_ARGS__)
+#define AssertSoftMsg(cond, msg, ...)          AssertOrElseMsg(LogType::Warn, cond, return, msg, __VA_ARGS__)
 #define AssertReturnMsg(cond, value, msg, ...) AssertOrElseMsg(LogType::Warn, cond, return value, msg, __VA_ARGS__)
-#define AssertBreak(cond) AssertOrElse(LogType::Warn, cond, break)
-#define AssertBreakMsg(cond, msg, ...) AssertOrElseMsg(LogType::Warn, cond, break, msg, __VA_ARGS__)
-#define AssertContinue(cond) AssertOrElse(LogType::Warn, cond, continue)
-#define AssertContinueMsg(cond, msg, ...) AssertOrElseMsg(LogType::Warn, cond, continue, msg, __VA_ARGS__)
-#define AssertExit(cond) AssertOrElse(LogType::Fatal, cond, exit(1))
-#define AssertExitMsg(cond, msg, ...) AssertOrElseMsg(LogType::Fatal, cond, exit(1), msg, __VA_ARGS__)
+#define AssertBreakMsg(cond, msg, ...)         AssertOrElseMsg(LogType::Warn, cond, break, msg, __VA_ARGS__)
+#define AssertContinueMsg(cond, msg, ...)      AssertOrElseMsg(LogType::Warn, cond, continue, msg, __VA_ARGS__)
+#define AssertExitMsg(cond, msg, ...)          AssertOrElseMsg(LogType::Fatal, cond, exit(1), msg, __VA_ARGS__)
+#else
+#define AssertThrowMsg(cond, ...)              AssertOrElseMsg(LogType::Error, cond, HYP_THROW("Assertion failed"), __VA_ARGS__)
+#define AssertSoftMsg(cond, ...)               AssertOrElseMsg(LogType::Warn, cond, return, __VA_ARGS__)
+#define AssertReturnMsg(cond, value, ...)      AssertOrElseMsg(LogType::Warn, cond, return value, __VA_ARGS__)
+#define AssertBreakMsg(cond, ...)              AssertOrElseMsg(LogType::Warn, cond, break, __VA_ARGS__)
+#define AssertContinueMsg(cond, ...)           AssertOrElseMsg(LogType::Warn, cond, continue, __VA_ARGS__)
+#define AssertExitMsg(cond, ...)               AssertOrElseMsg(LogType::Fatal, cond, exit(1), __VA_ARGS__)
+#endif
 
 /* Deprecated */
-#define not_implemented AssertExitMsg(0, "Not implemented")
-#define function_body_not_implemented { not_implemented; }
-#define unexpected_value(value) AssertExitMsg(0, "%s", #value ": unexpected value")
 #define unexpected_value_msg(value, msg) AssertExitMsg(0, "%s", #value ": " #msg)
 
 #endif //HYPERION_DEBUG_H

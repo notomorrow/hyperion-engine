@@ -80,7 +80,7 @@ ShaderProgram::CreateShaderStage(const ShaderModule &shader_module)
         create_info.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
         break;
     default:
-        throw std::runtime_error("Shader type " + std::to_string(int(shader_module.type)) + " is currently unimplemented!");
+        HYP_THROW("Shader type " + std::to_string(int(shader_module.type)) + " is currently unimplemented!");
     }
 
     return create_info;

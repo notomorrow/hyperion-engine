@@ -9,7 +9,7 @@
 namespace hyperion::v2 {
 
 ShadowEffect::ShadowEffect()
-    : PostEffect()
+    : FullScreenPass()
 {
 }
 
@@ -116,7 +116,7 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
 
 void ShadowEffect::Destroy(Engine *engine)
 {
-    PostEffect::Destroy(engine);
+    FullScreenPass::Destroy(engine);
 }
 
 void ShadowEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)

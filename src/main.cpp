@@ -627,7 +627,7 @@ int main()
 
     AssertThrow(engine.GetInstance()->GetDevice()->Wait());
 
-    v2::PostEffect::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
+    v2::FullScreenPass::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     HYPERION_ASSERT_RESULT(image_storage_view.Destroy(device));
