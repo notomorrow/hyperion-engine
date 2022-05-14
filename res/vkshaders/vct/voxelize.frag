@@ -33,7 +33,8 @@ void main()
     
     float NdotL = max(0.0001, dot(N, L));
 
-    frag_color *= max(0.1, NdotL);
+    //frag_color.rgb *= vec3(max(0.1, NdotL));
+    frag_color.a = 1.0;
 
 	imageStore(voxel_image, ivec3(VctStoragePosition(g_position)), frag_color);
 }

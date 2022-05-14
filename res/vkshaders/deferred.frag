@@ -36,9 +36,9 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 8000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
-#define GI_INTENSITY 25.0
+#define IBL_INTENSITY 10000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 200000.0
+#define GI_INTENSITY 15.0
 #define SSAO_DEBUG 0
 
 #include "include/rt/probe/shared.inc"
@@ -135,8 +135,10 @@ void main()
     float ao = 1.0;
     
     if (perform_lighting) {
+        ao = texture(filter_ssao, texcoord).r;
+
         float metallic = 0.1;
-        float roughness = 0.6;
+        float roughness = 0.7;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -167,7 +169,6 @@ void main()
         irradiance = vct_diffuse.rgb * GI_INTENSITY;
 
 
-        ao = texture(filter_ssao, texcoord).r;
         vec3 shadow = vec3(1.0);
         vec3 light_color = vec3(1.0);
         
@@ -193,21 +194,12 @@ void main()
         vec3 view_scatter  = SchlickFresnel(vec3(1.0), F90, NdotV);
         vec3 diffuse = albedo_linear * (1.0 - metallic) * (light_scatter * view_scatter * (1.0 / PI));
 
-        
-        vec3 surface = diffuse + specular * (exposure * IBL_INTENSITY);
-        //surface *= light_color * (1.0 * NdotL * ao * shadow);
-        //surface *= exposure * IBL_INTENSITY;
-        result += surface;
-        
-        vec3 specular_lobe = (D * G) * F;
-        vec3 diffuse_lobe = albedo_linear.rgb * (1.0 / PI);
-    
         // Chan 2018, "Material Advances in Call of Duty: WWII"
         //float micro_shadow_aperture = inversesqrt(1.0 - ao);
         //float micro_shadow = clamp(NdotL * micro_shadow_aperture, 0.0, 1.0);
         //float micro_shadow_sqr = micro_shadow * micro_shadow;
 
-        result += (diffuse_lobe + specular_lobe * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao);
+        result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao);
     } else {
         result = albedo.rgb;
     }
