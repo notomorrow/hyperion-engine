@@ -70,7 +70,7 @@ private:
     Ref<Texture>                   m_voxel_image;
     UniformBuffer                  m_uniform_buffer;
 
-    std::vector<Observer<Ref<Spatial>>::Ref> m_observers;
+    std::vector<ObserverRef<Ref<Spatial>>> m_observers;
 
 };
 

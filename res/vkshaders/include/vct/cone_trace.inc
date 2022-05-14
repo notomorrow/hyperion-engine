@@ -12,7 +12,7 @@ layout(set = 1, binding = 25) uniform sampler3D voxel_image;
 
 #define VCT_SPECULAR_MAX_DIST         2.5
 #define VCT_SPECULAR_RATIO_MIN        0.035
-#define VCT_SPECULAR_RATIO_MULTIPLIER 1.0
+#define VCT_SPECULAR_RATIO_MULTIPLIER 0.35
 #define VCT_SPECULAR_RATIO(roughness) ((roughness) * VCT_SPECULAR_RATIO_MULTIPLIER + VCT_SPECULAR_RATIO_MIN)
 
 #define VCT_OFFSET_ORIGIN(normal)     (normal * 0.15)

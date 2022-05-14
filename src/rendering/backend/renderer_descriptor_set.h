@@ -26,7 +26,8 @@ class ImageView;
 class Sampler;
 class GPUBuffer;
 class AccelerationStructure;
-class Descriptor;
+
+class DescriptorSet;
 class DescriptorPool;
 
 enum class DescriptorSetState {
@@ -34,6 +35,107 @@ enum class DescriptorSetState {
     DESCRIPTOR_DIRTY = 1
 };
 
+
+class Descriptor {
+    friend class DescriptorSet;
+public:
+
+    enum class Mode {
+        UNSET,
+        UNIFORM_BUFFER,
+        UNIFORM_BUFFER_DYNAMIC,
+        STORAGE_BUFFER,
+        STORAGE_BUFFER_DYNAMIC,
+        IMAGE_SAMPLER,
+        IMAGE_STORAGE,
+        ACCELERATION_STRUCTURE
+    };
+
+    struct SubDescriptor {
+        union {
+            struct /* BufferData */ {
+                GPUBuffer *buffer;
+                uint32_t range; /* if 0 then it is set to buffer->size */
+            };
+
+            struct /* ImageData */ {
+                const ImageView *image_view;
+                const Sampler *sampler;
+            };
+
+            struct /* AccelerationStructureData */ {
+                AccelerationStructure *acceleration_structure;
+            };
+        };
+
+        bool valid = false; /* set internally to mark objects ready to be popped */
+    };
+
+    Descriptor(uint32_t binding, Mode mode);
+    Descriptor(const Descriptor &other) = delete;
+    Descriptor &operator=(const Descriptor &other) = delete;
+    ~Descriptor();
+
+    inline uint32_t GetBinding() const       { return m_binding; }
+    inline void SetBinding(uint32_t binding) { m_binding = binding; }
+    
+    /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
+    inline std::vector<SubDescriptor> &GetSubDescriptors()
+        { return m_sub_descriptors; }
+
+    /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
+    inline const std::vector<SubDescriptor> &GetSubDescriptors() const
+        { return m_sub_descriptors; }
+
+    inline SubDescriptor &GetSubDescriptor(size_t index)
+        { return m_sub_descriptors[index]; }
+
+    inline const SubDescriptor &GetSubDescriptor(size_t index) const
+        { return m_sub_descriptors[index]; }
+
+    /*! \brief Add a sub-descriptor to this descriptor.
+     *  Records that a sub-descriptor at the index has been changed,
+     *  so you can call this after the descriptor has been initialized.
+     * @param sub_descriptor An object containing buffer or image info about the sub descriptor to be added.
+     * @returns index of descriptor
+     */
+    uint32_t AddSubDescriptor(SubDescriptor &&sub_descriptor);
+    /*! \brief Remove the sub-descriptor at the given index. */
+    void RemoveSubDescriptor(uint32_t index);
+    /*! \brief Mark a sub-descriptor as dirty */
+    void MarkDirty(uint32_t sub_descriptor_index);
+
+    void Create(Device *device,
+        VkDescriptorSetLayoutBinding &binding,
+        std::vector<VkWriteDescriptorSet> &writes);
+
+protected:
+    struct BufferInfo {
+        std::vector<VkDescriptorBufferInfo> buffers;
+        std::vector<VkDescriptorImageInfo>  images;
+        std::vector<VkWriteDescriptorSetAccelerationStructureKHR> acceleration_structures;
+    };
+
+    static VkDescriptorType GetDescriptorType(Mode mode);
+
+    void BuildUpdates(Device *device, std::vector<VkWriteDescriptorSet> &writes);
+    void UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor,
+        VkDescriptorBufferInfo &out_buffer,
+        VkDescriptorImageInfo &out_image,
+        VkWriteDescriptorSetAccelerationStructureKHR &out_acceleration_structure) const;
+
+    Range<uint32_t> m_dirty_sub_descriptors;
+    std::vector<SubDescriptor> m_sub_descriptors;
+    std::queue<size_t> m_sub_descriptor_update_indices;
+
+    BufferInfo m_sub_descriptors_raw;
+
+    uint32_t m_binding;
+    Mode m_mode;
+
+private:
+    DescriptorSet *m_descriptor_set;
+};
 
 class DescriptorSet {
     friend class Descriptor;
@@ -84,7 +186,7 @@ public:
     ~DescriptorSet();
 
     inline DescriptorSetState GetState() const { return m_state; }
-    inline bool IsBindless() const { return m_bindless; }
+    inline bool IsBindless() const             { return m_bindless; }
 
     template <class DescriptorType, class ...Args>
     Descriptor *AddDescriptor(Args &&... args)
@@ -95,8 +197,23 @@ public:
         return m_descriptors.back().get();
     }
 
-    inline Descriptor *GetDescriptor(size_t index) { return m_descriptors[index].get(); }
-    inline const Descriptor *GetDescriptor(size_t index) const { return m_descriptors[index].get(); }
+    inline Descriptor *GetDescriptor(size_t binding) const
+    {
+        const auto it = std::find_if(
+            m_descriptors.begin(),
+            m_descriptors.end(),
+            [&](const auto &item) {
+                return item->GetBinding() == binding;
+            }
+        );
+
+        if (it == m_descriptors.end()) {
+            return nullptr;
+        }
+
+        return it->get();
+    }
+
     inline std::vector<std::unique_ptr<Descriptor>> &GetDescriptors() { return m_descriptors; }
     inline const std::vector<std::unique_ptr<Descriptor>> &GetDescriptors() const { return m_descriptors; }
 
@@ -222,107 +339,6 @@ private:
     std::vector<VkDescriptorSetLayout> m_descriptor_set_layouts;
     VkDescriptorPool m_descriptor_pool;
     std::vector<VkDescriptorSet> m_descriptor_sets_view;
-};
-
-class Descriptor {
-    friend class DescriptorSet;
-public:
-
-    enum class Mode {
-        UNSET,
-        UNIFORM_BUFFER,
-        UNIFORM_BUFFER_DYNAMIC,
-        STORAGE_BUFFER,
-        STORAGE_BUFFER_DYNAMIC,
-        IMAGE_SAMPLER,
-        IMAGE_STORAGE,
-        ACCELERATION_STRUCTURE
-    };
-
-    struct SubDescriptor {
-        union {
-            struct /* BufferData */ {
-                GPUBuffer *buffer;
-                uint32_t range; /* if 0 then it is set to buffer->size */
-            };
-
-            struct /* ImageData */ {
-                const ImageView *image_view;
-                const Sampler *sampler;
-            };
-
-            struct /* AccelerationStructureData */ {
-                AccelerationStructure *acceleration_structure;
-            };
-        };
-
-        bool valid = false; /* set internally to mark objects ready to be popped */
-    };
-
-    Descriptor(uint32_t binding, Mode mode);
-    Descriptor(const Descriptor &other) = delete;
-    Descriptor &operator=(const Descriptor &other) = delete;
-    ~Descriptor();
-
-    inline uint32_t GetBinding() const       { return m_binding; }
-    inline void SetBinding(uint32_t binding) { m_binding = binding; }
-    
-    /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
-    inline std::vector<SubDescriptor> &GetSubDescriptors()
-        { return m_sub_descriptors; }
-
-    /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
-    inline const std::vector<SubDescriptor> &GetSubDescriptors() const
-        { return m_sub_descriptors; }
-
-    inline SubDescriptor &GetSubDescriptor(size_t index)
-        { return m_sub_descriptors[index]; }
-
-    inline const SubDescriptor &GetSubDescriptor(size_t index) const
-        { return m_sub_descriptors[index]; }
-
-    /*! \brief Add a sub-descriptor to this descriptor.
-     *  Records that a sub-descriptor at the index has been changed,
-     *  so you can call this after the descriptor has been initialized.
-     * @param sub_descriptor An object containing buffer or image info about the sub descriptor to be added.
-     * @returns index of descriptor
-     */
-    uint32_t AddSubDescriptor(SubDescriptor &&sub_descriptor);
-    /*! \brief Remove the sub-descriptor at the given index. */
-    void RemoveSubDescriptor(uint32_t index);
-    /*! \brief Mark a sub-descriptor as dirty */
-    void MarkDirty(uint32_t sub_descriptor_index);
-
-    void Create(Device *device,
-        VkDescriptorSetLayoutBinding &binding,
-        std::vector<VkWriteDescriptorSet> &writes);
-
-protected:
-    struct BufferInfo {
-        std::vector<VkDescriptorBufferInfo> buffers;
-        std::vector<VkDescriptorImageInfo>  images;
-        std::vector<VkWriteDescriptorSetAccelerationStructureKHR> acceleration_structures;
-    };
-
-    static VkDescriptorType GetDescriptorType(Mode mode);
-
-    void BuildUpdates(Device *device, std::vector<VkWriteDescriptorSet> &writes);
-    void UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor,
-        VkDescriptorBufferInfo &out_buffer,
-        VkDescriptorImageInfo &out_image,
-        VkWriteDescriptorSetAccelerationStructureKHR &out_acceleration_structure) const;
-
-    Range<uint32_t> m_dirty_sub_descriptors;
-    std::vector<SubDescriptor> m_sub_descriptors;
-    std::queue<size_t> m_sub_descriptor_update_indices;
-
-    BufferInfo m_sub_descriptors_raw;
-
-    uint32_t m_binding;
-    Mode m_mode;
-
-private:
-    DescriptorSet *m_descriptor_set;
 };
 
 /* Convenience descriptor classes */

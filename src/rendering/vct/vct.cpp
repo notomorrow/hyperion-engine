@@ -162,12 +162,12 @@ void VoxelConeTracing::CreatePipeline(Engine *engine)
     
     for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
         m_observers.push_back(pipeline->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
-            [&](Ref<Spatial> *items, size_t count) {
+            [this](Ref<Spatial> *items, size_t count) {
                 for (size_t i = 0; i < count; i++) {
                     m_pipeline->AddSpatial(items[i].IncRef());
                 }
             },
-            [&](Ref<Spatial> *items, size_t count) {
+            [this](Ref<Spatial> *items, size_t count) {
                 for (size_t i = 0; i < count; i++) {
                     m_pipeline->RemoveSpatial(items[i]->GetId());
                 }

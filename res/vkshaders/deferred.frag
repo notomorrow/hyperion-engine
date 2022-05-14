@@ -38,7 +38,7 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 #define IBL_INTENSITY 10000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 200000.0
-#define GI_INTENSITY 15.0
+#define GI_INTENSITY 2.0
 #define SSAO_DEBUG 0
 
 #include "include/rt/probe/shared.inc"
@@ -137,8 +137,8 @@ void main()
     if (perform_lighting) {
         ao = texture(filter_ssao, texcoord).r;
 
-        float metallic = 0.1;
-        float roughness = 0.7;
+        float metallic = 0.05;
+        float roughness = 0.5;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));

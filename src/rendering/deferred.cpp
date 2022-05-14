@@ -83,7 +83,7 @@ void DeferredRenderer::Create(Engine *engine)
 
     /* Normals texture*/
     descriptor_set_pass
-        ->AddDescriptor<SamplerDescriptor>(1)
+        ->GetDescriptor(0)
         ->AddSubDescriptor({
             .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetImageView(),
             .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetSampler()
@@ -91,7 +91,7 @@ void DeferredRenderer::Create(Engine *engine)
 
     /* Position texture */
     descriptor_set_pass
-        ->AddDescriptor<SamplerDescriptor>(2)
+        ->GetDescriptor(0)
         ->AddSubDescriptor({
             .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetImageView(),
             .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetSampler()
@@ -99,7 +99,7 @@ void DeferredRenderer::Create(Engine *engine)
 
     /* Depth texture */
     descriptor_set_pass
-        ->AddDescriptor<SamplerDescriptor>(3)
+        ->AddDescriptor<SamplerDescriptor>(1)
         ->AddSubDescriptor({
             .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetImageView(),
             .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetSampler()

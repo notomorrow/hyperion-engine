@@ -332,9 +332,11 @@ Result DescriptorPool::DestroyDescriptorSetLayout(Device *device, VkDescriptorSe
     HYPERION_RETURN_OK;
 }
 
-Result DescriptorPool::AllocateDescriptorSet(Device *device,
+Result DescriptorPool::AllocateDescriptorSet(
+    Device *device,
     VkDescriptorSetLayout *layout,
-    DescriptorSet *out)
+    DescriptorSet *out
+)
 {
     VkDescriptorSetAllocateInfo alloc_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
     alloc_info.pSetLayouts        = layout;
