@@ -11,6 +11,8 @@ Material::Material(const char *tag)
     size_t len = std::strlen(tag);
     m_tag = new char[len + 1];
     std::strcpy(m_tag, tag);
+
+    ResetParameters();
 }
 
 Material::~Material()
@@ -130,6 +132,25 @@ void Material::SetParameter(MaterialKey key, const Parameter &value)
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
+
+void Material::ResetParameters()
+{
+    m_parameters.Set(MATERIAL_KEY_ALBEDO,          Vector4(1.0f));
+    m_parameters.Set(MATERIAL_KEY_METALNESS,       0.0f);
+    m_parameters.Set(MATERIAL_KEY_ROUGHNESS,       0.65f);
+    m_parameters.Set(MATERIAL_KEY_SUBSURFACE,      0.0f);
+    m_parameters.Set(MATERIAL_KEY_SPECULAR,        0.0f);
+    m_parameters.Set(MATERIAL_KEY_SPECULAR_TINT,   0.0f);
+    m_parameters.Set(MATERIAL_KEY_ANISOTROPIC,     0.0f);
+    m_parameters.Set(MATERIAL_KEY_SHEEN,           0.0f);
+    m_parameters.Set(MATERIAL_KEY_SHEEN_TINT,      0.0f);
+    m_parameters.Set(MATERIAL_KEY_CLEARCOAT,       0.0f);
+    m_parameters.Set(MATERIAL_KEY_CLEARCOAT_GLOSS, 0.0f);
+    m_parameters.Set(MATERIAL_KEY_EMISSIVENESS,    0.0f);
+    m_parameters.Set(MATERIAL_KEY_UV_SCALE,        Vector2(1.0f));
+    m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.08f);
+}
+
 
 void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
 {

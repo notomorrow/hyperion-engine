@@ -5,17 +5,17 @@
 
 layout(set = 1, binding = 25) uniform sampler3D voxel_image;
 
-#define VCT_DIFFUSE_MAX_DIST          1.0
-#define VCT_DIFFUSE_RATIO_MIN         0.25
+#define VCT_DIFFUSE_MAX_DIST          0.3
+#define VCT_DIFFUSE_RATIO_MIN         3.5
 #define VCT_DIFFUSE_RATIO_MULTIPLIER  1.0
 #define VCT_DIFFUSE_RATIO(roughness)  ((roughness) * VCT_DIFFUSE_RATIO_MULTIPLIER + VCT_DIFFUSE_RATIO_MIN)
 
-#define VCT_SPECULAR_MAX_DIST         2.5
-#define VCT_SPECULAR_RATIO_MIN        0.035
-#define VCT_SPECULAR_RATIO_MULTIPLIER 0.35
+#define VCT_SPECULAR_MAX_DIST         1.5
+#define VCT_SPECULAR_RATIO_MIN        0.1
+#define VCT_SPECULAR_RATIO_MULTIPLIER 2.0
 #define VCT_SPECULAR_RATIO(roughness) ((roughness) * VCT_SPECULAR_RATIO_MULTIPLIER + VCT_SPECULAR_RATIO_MIN)
 
-#define VCT_OFFSET_ORIGIN(normal)     (normal * 0.15)
+#define VCT_OFFSET_ORIGIN(normal)     (normal * 0.35)
 
 vec4 FetchVoxel(vec3 position, float lod)
 {

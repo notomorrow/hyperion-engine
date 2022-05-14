@@ -16,12 +16,14 @@ layout(location=12) in vec3 v_view_space_position;
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
+layout(location=3) out vec4 gbuffer_material;
 
 
 #define PARALLAX_ENABLED 0
 
 #include "include/scene.inc"
 #include "include/material.inc"
+#include "include/object.inc"
 
 #if PARALLAX_ENABLED
 #include "include/parallax.inc"
@@ -46,12 +48,16 @@ void main()
     
     gbuffer_albedo = material.albedo;
     
+    float ao        = 1.0;
+    float metalness = material.metalness;
+    float roughness = material.roughness;
+    
     vec2 texcoord = v_texcoord0;
     
 #if PARALLAX_ENABLED
-    if (HasMaterialTexture(3)) {
+    if (HasMaterialTexture(MATERIAL_TEXTURE_PARALLAX_MAP)) {
         vec2 parallax_texcoord = ParallaxMappedTexCoords(
-            textures[material.texture_index[3]],
+            textures[material.texture_index[MATERIAL_TEXTURE_PARALLAX_MAP]],
             0.025, //material.parallax_height,
             texcoord,
             normalize(tangent_view)
@@ -60,9 +66,9 @@ void main()
         texcoord = parallax_texcoord;
     }
 #endif
-    
-    if (HasMaterialTexture(0)) {
-        vec4 albedo_texture = texture(textures[material.texture_index[0]], texcoord);
+
+    if (HasMaterialTexture(MATERIAL_TEXTURE_ALBEDO_map)) {
+        vec4 albedo_texture = texture(textures[material.texture_index[MATERIAL_TEXTURE_ALBEDO_map]], texcoord);
         
         if (albedo_texture.a < 0.2) {
             discard;
@@ -70,13 +76,29 @@ void main()
         
         gbuffer_albedo *= albedo_texture;
     }
-        
-    
-    if (HasMaterialTexture(1)) {
-        vec4 normals_texture = texture(textures[material.texture_index[1]], texcoord) * 2.0 - 1.0;
+
+    if (HasMaterialTexture(MATERIAL_TEXTURE_NORMAL_MAP)) {
+        vec4 normals_texture = texture(textures[material.texture_index[MATERIAL_TEXTURE_NORMAL_MAP]], texcoord) * 2.0 - 1.0;
         normal = normalize(v_tbn_matrix * normals_texture.rgb);
     }
+
+    if (HasMaterialTexture(MATERIAL_TEXTURE_METALNESS_MAP)) {
+        float metalness_sample = texture(textures[material.texture_index[MATERIAL_TEXTURE_METALNESS_MAP]], texcoord).r;
+        
+        metalness = metalness_sample;//mix(metalness, metalness_sample, metalness_sample);
+    }
     
-    gbuffer_normals = vec4(normal, 1.0);
+    if (HasMaterialTexture(MATERIAL_TEXTURE_ROUGHNESS_MAP)) {
+        float roughness_sample = texture(textures[material.texture_index[MATERIAL_TEXTURE_ROUGHNESS_MAP]], texcoord).r;
+        
+        roughness = roughness_sample;//mix(roughness, roughness_sample, roughness_sample);
+    }
+    
+    if (HasMaterialTexture(MATERIAL_TEXTURE_AO_MAP)) {
+        ao = texture(textures[material.texture_index[MATERIAL_TEXTURE_AO_MAP]], texcoord).r;
+    }
+    
+    gbuffer_normals   = vec4(normal, 1.0);
     gbuffer_positions = vec4(v_position, 1.0);
+    gbuffer_material  = vec4(roughness, metalness, 0.0, ao);
 }

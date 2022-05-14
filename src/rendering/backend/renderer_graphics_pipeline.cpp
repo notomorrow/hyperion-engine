@@ -160,10 +160,10 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     BuildVertexAttributes(m_construction_info.vertex_attributes);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-    vertex_input_info.vertexBindingDescriptionCount   = uint32_t(this->vertex_binding_descriptions.size());
-    vertex_input_info.pVertexBindingDescriptions      = this->vertex_binding_descriptions.data();
-    vertex_input_info.vertexAttributeDescriptionCount = uint32_t(this->vertex_attributes.size());
-    vertex_input_info.pVertexAttributeDescriptions    = this->vertex_attributes.data();
+    vertex_input_info.vertexBindingDescriptionCount   = static_cast<uint32_t>(vertex_binding_descriptions.size());
+    vertex_input_info.pVertexBindingDescriptions      = vertex_binding_descriptions.data();
+    vertex_input_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertex_attributes.size());
+    vertex_input_info.pVertexAttributeDescriptions    = vertex_attributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo input_asm_info{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
     input_asm_info.primitiveRestartEnable = VK_FALSE;
@@ -189,23 +189,19 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
         break;
     }
 
-
-
     VkPipelineViewportStateCreateInfo viewport_state{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
-    VkViewport viewports[] = { this->viewport };
+    VkViewport viewports[] = {viewport};
     viewport_state.viewportCount = 1;
     viewport_state.pViewports    = viewports;
 
-    VkRect2D scissors[] = { this->scissor };
+    VkRect2D scissors[] = {scissor};
     viewport_state.scissorCount = 1;
     viewport_state.pScissors    = scissors;
 
     VkPipelineRasterizationStateCreateInfo rasterizer{VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-    /* TODO: Revisit this for shadow maps! */
-    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.depthClampEnable        = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    /* Backface culling */
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     switch (m_construction_info.cull_mode) {
     case FaceCullMode::BACK:
@@ -215,7 +211,6 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
         rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
         break;
     case FaceCullMode::NONE:
-    default:
         rasterizer.cullMode = VK_CULL_MODE_NONE;
         break;
     }
@@ -267,7 +262,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     }
 
     VkPipelineColorBlendStateCreateInfo color_blending{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-    color_blending.logicOpEnable     = false;
+    color_blending.logicOpEnable     = VK_FALSE;
     color_blending.attachmentCount   = uint32_t(color_blend_attachments.size());
     color_blending.pAttachments      = color_blend_attachments.data();
     color_blending.blendConstants[0] = 0.0f;
@@ -280,14 +275,14 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     VkPipelineDynamicStateCreateInfo dynamic_state{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
     const auto &states = GetDynamicStates();
 
-    dynamic_state.dynamicStateCount = uint32_t(states.size());
+    dynamic_state.dynamicStateCount = static_cast<uint32_t>(states.size());
     dynamic_state.pDynamicStates    = states.data();
     DebugLog(LogType::Info, "Enabling [%d] dynamic states\n", dynamic_state.dynamicStateCount);
 
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
 
-    layout_info.setLayoutCount = uint32_t(descriptor_pool->GetDescriptorSetLayouts().size());
+    layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_pool->GetDescriptorSetLayouts().size());
     layout_info.pSetLayouts    = descriptor_pool->GetDescriptorSetLayouts().data();
 
     /* Push constants */
@@ -295,11 +290,11 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
         {
             .stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS,
             .offset     = 0,
-            .size       = uint32_t(device->GetFeatures().PaddedSize<PushConstantData>())
+            .size       = static_cast<uint32_t>(device->GetFeatures().PaddedSize<PushConstantData>())
         }
     };
 
-    layout_info.pushConstantRangeCount = uint32_t(std::size(push_constant_ranges));
+    layout_info.pushConstantRangeCount = static_cast<uint32_t>(std::size(push_constant_ranges));
     layout_info.pPushConstantRanges    = push_constant_ranges;
 
     HYPERION_VK_CHECK_MSG(

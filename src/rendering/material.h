@@ -87,25 +87,25 @@ public:
             std::memcpy(values.float_values, v, count * sizeof(float));
         }
         
-        explicit Parameter(float value)
+        Parameter(float value)
             : type(MATERIAL_PARAMETER_TYPE_FLOAT)
         {
             std::memcpy(values.float_values, &value, sizeof(float));
         }
 
-        explicit Parameter(const Vector2 &xy)
+        Parameter(const Vector2 &xy)
             : type(MATERIAL_PARAMETER_TYPE_FLOAT2)
         {
             std::memcpy(values.float_values, &xy.values, 2 * sizeof(float));
         }
 
-        explicit Parameter(const Vector3 &xyz)
+        Parameter(const Vector3 &xyz)
             : type(MATERIAL_PARAMETER_TYPE_FLOAT3)
         {
             std::memcpy(values.float_values, &xyz.values, 3 * sizeof(float));
         }
 
-        explicit Parameter(const Vector4 &xyzw)
+        Parameter(const Vector4 &xyzw)
             : type(MATERIAL_PARAMETER_TYPE_FLOAT4)
         {
             std::memcpy(values.float_values, &xyzw.values, 4 * sizeof(float));
@@ -236,7 +236,7 @@ public:
     Material &operator=(const Material &other) = delete;
     ~Material();
 
-    ShaderDataState GetShaderDataState() const { return m_shader_data_state; }
+    ShaderDataState GetShaderDataState() const     { return m_shader_data_state; }
     void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
 
     inline const Parameter &GetParameter(MaterialKey key) const
@@ -263,7 +263,14 @@ public:
         return result;
     }
 
+    /* \brief Set a parameter on this material with the given key and value
+     * @param key The key of the parameter to be set
+     * @param value The value of the parameter to be set
+     */
     void SetParameter(MaterialKey key, const Parameter &value);
+
+    /* \brief Set all parameters back to their default values. */
+    void ResetParameters();
 
     /* \brief Sets the texture with the given key on this Material.
      * If the Material has already been initialized, the Texture is initialized.

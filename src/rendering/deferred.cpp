@@ -97,12 +97,20 @@ void DeferredRenderer::Create(Engine *engine)
             .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetSampler()
         });
 
+    /* Material ID */
+    descriptor_set_pass
+        ->GetDescriptor(0)
+        ->AddSubDescriptor({
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetSampler()
+        });
+
     /* Depth texture */
     descriptor_set_pass
         ->AddDescriptor<SamplerDescriptor>(1)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[4]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[4]->GetSampler()
         });
 
     uint32_t binding_index = 4; /* TMP */

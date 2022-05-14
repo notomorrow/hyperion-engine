@@ -55,11 +55,10 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         mode = renderer::RenderPass::Mode::RENDER_PASS_INLINE;
     }
     
-    auto render_pass = std::make_unique<RenderPass>(
-        renderer::RenderPassStage::SHADER,
+    render_pass = engine->resources.render_passes.Add(std::make_unique<RenderPass>(
+        RenderPassStage::SHADER,
         mode
-    );
-
+    ));
 
     renderer::AttachmentRef *attachment_ref;
 
@@ -69,7 +68,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
             engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
             nullptr
         ),
-        renderer::RenderPassStage::SHADER
+        RenderPassStage::SHADER
     ));
 
     HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
@@ -81,14 +80,14 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
     render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
         attachments.push_back(std::make_unique<renderer::Attachment>(
             std::make_unique<renderer::FramebufferImage2D>(
                 engine->GetInstance()->swapchain->extent,
-                engine->GetDefaultFormat(v2::Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER),
+                engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER),
                 nullptr
             ),
-            renderer::RenderPassStage::SHADER
+            RenderPassStage::SHADER
         ));
 
         HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
@@ -101,19 +100,20 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
     }
 
+    /* Add depth attachment */
     if (bucket == BUCKET_TRANSLUCENT) {
         auto &forward_fbo = engine->GetRenderListContainer()[BUCKET_OPAQUE].framebuffers[0];
         AssertThrow(forward_fbo != nullptr);
 
         renderer::AttachmentRef *depth_attachment;
 
-        HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetRenderPassAttachmentRefs().at(3)->AddAttachmentRef(
+        HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetRenderPassAttachmentRefs().at(4)->AddAttachmentRef(
             engine->GetInstance()->GetDevice(),
             renderer::StoreOperation::STORE,
             &depth_attachment
         ));
 
-        depth_attachment->SetBinding(3);
+        depth_attachment->SetBinding(4);
 
         render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
     } else {
@@ -123,7 +123,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
                 engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
                 nullptr
             ),
-            renderer::RenderPassStage::SHADER
+            RenderPassStage::SHADER
         ));
 
         HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
@@ -139,9 +139,8 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
     for (auto &attachment : attachments) {
         HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
     }
-
-    this->render_pass = engine->resources.render_passes.Add(std::move(render_pass));
-    this->render_pass.Init();
+    
+    render_pass.Init();
 }
 
 void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
@@ -172,8 +171,11 @@ void RenderListContainer::RenderListBucket::Destroy(Engine *engine)
     graphics_pipelines.clear();
     framebuffers.clear();
 
-    for (auto &attachment : attachments) {
-        HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
+    for (const auto &attachment : attachments) {
+        HYPERION_PASS_ERRORS(
+            attachment->Destroy(engine->GetInstance()->GetDevice()),
+            result
+        );
     }
 
     HYPERION_ASSERT_RESULT(result);

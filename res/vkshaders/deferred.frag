@@ -12,7 +12,7 @@ layout(location=2) out vec4 output_positions;
 
 #include "include/gbuffer.inc"
 
-layout(set = 1, binding = 8) uniform sampler2D filter_ssao;
+layout(set = 1, binding = 8) uniform sampler2D filter_ssao[1];
 layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 
 //layout(set = 8, binding = 0, rgba16f) readonly uniform image3D voxel_image;
@@ -37,8 +37,7 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 /* Begin main shader program */
 
 #define IBL_INTENSITY 10000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 200000.0
-#define GI_INTENSITY 2.0
+#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
 #define SSAO_DEBUG 0
 
 #include "include/rt/probe/shared.inc"
@@ -102,13 +101,10 @@ void main()
 {
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
-    vec4 albedo;
-    vec4 normal;
-    vec4 position;
-    
-    albedo = texture(gbuffer_albedo_texture, texcoord);
-    normal = texture(gbuffer_normals_texture, texcoord);
-    position = texture(gbuffer_positions_texture, texcoord);
+    vec4 albedo   = texture(gbuffer_albedo_texture, texcoord);
+    vec4 normal   = texture(gbuffer_normals_texture, texcoord);
+    vec4 position = texture(gbuffer_positions_texture, texcoord);
+    vec4 material = texture(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
     
     bool perform_lighting = albedo.a > 0.0;
     
@@ -135,10 +131,10 @@ void main()
     float ao = 1.0;
     
     if (perform_lighting) {
-        ao = texture(filter_ssao, texcoord).r;
+        ao = texture(filter_ssao[0], texcoord).r * material.a;
 
-        float metallic = 0.05;
-        float roughness = 0.5;
+        const float roughness = material.r;
+        const float metalness = material.g;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -149,8 +145,8 @@ void main()
 
         
         const float material_reflectance = 0.5;
-        float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
-        vec3 F0 = albedo_linear.rgb * metallic + (reflectance * (1.0 - metallic));
+        const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
+        vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness));
         
         vec3 energy_compensation = vec3(1.0);
         float perceptual_roughness = sqrt(roughness);
@@ -166,8 +162,7 @@ void main()
         
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
         vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, vec3(0.0), vec3(0.0), roughness);
-        irradiance = vct_diffuse.rgb * GI_INTENSITY;
-
+        irradiance = vct_diffuse.rgb;
 
         vec3 shadow = vec3(1.0);
         vec3 light_color = vec3(1.0);
@@ -183,7 +178,7 @@ void main()
 
 
         // surface
-        vec3 F90 = vec3(0.5 + 2.0 * roughness * LdotH * LdotH);//vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
+        vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
         float D = DistributionGGX(N, H, roughness);
         float G = CookTorranceG(NdotL, NdotV, LdotH, NdotH);
         vec3 F = SchlickFresnel(F0, F90, LdotH);
@@ -192,7 +187,7 @@ void main()
         
         vec3 light_scatter = SchlickFresnel(vec3(1.0), F90, NdotL);
         vec3 view_scatter  = SchlickFresnel(vec3(1.0), F90, NdotV);
-        vec3 diffuse = albedo_linear * (1.0 - metallic) * (light_scatter * view_scatter * (1.0 / PI));
+        vec3 diffuse = albedo_linear * (1.0 - metalness) * (light_scatter * view_scatter * (1.0 / PI));
 
         // Chan 2018, "Material Advances in Call of Duty: WWII"
         //float micro_shadow_aperture = inversesqrt(1.0 - ao);
@@ -200,6 +195,7 @@ void main()
         //float micro_shadow_sqr = micro_shadow * micro_shadow;
 
         result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao);
+        
     } else {
         result = albedo.rgb;
     }
@@ -208,7 +204,7 @@ void main()
     result = vec3(ao);
 #endif
 
-    output_color = vec4(Tonemap(result), 1.0);
-    output_normals = normal;
+    output_color     = vec4(Tonemap(result), 1.0);
+    output_normals   = normal;
     output_positions = position;
 }

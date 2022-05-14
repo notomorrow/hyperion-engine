@@ -80,7 +80,7 @@ public:
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
             base_path + "models/sponza/sponza.obj",//"material_sphere/material_sphere.obj",
             base_path + "models/cube.obj",
-            base_path + "models/monkey/monkey.obj"
+            base_path + "models/material_sphere/material_sphere.obj" //"monkey/monkey.obj"
         );
 
         zombie = std::move(loaded_assets[0]);
@@ -381,7 +381,7 @@ int main()
 
 #if HYPERION_VK_TEST_VCT
     v2::VoxelConeTracing vct({
-        .aabb = BoundingBox(Vector3(-16), Vector3(16))
+        .aabb = BoundingBox(Vector3(-64), Vector3(64))
     }, engine.resources.spatials.IncRef(my_game.monkey_obj->GetChild(0)->GetSpatial()));
 
     vct.Init(&engine);
