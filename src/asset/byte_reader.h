@@ -66,8 +66,8 @@ protected:
 class MemoryByteReader : public ByteReader {
 public:
     MemoryByteReader(size_t size, const char *data)
-        : m_size(size),
-          m_data(data),
+        : m_data(data),
+          m_size(size),
           m_pos(0)
     {
     }

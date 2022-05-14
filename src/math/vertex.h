@@ -53,8 +53,8 @@ public:
 
     Vertex(const Vector3 &position, const Vector2 &texcoord0, const Vector3 &normal)
         : position(position),
-          texcoord0(texcoord0),
           normal(normal),
+          texcoord0(texcoord0),
           nboneindices(0),
           nboneweights(0)
     {

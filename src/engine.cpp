@@ -18,8 +18,8 @@ using renderer::ImageView;
 using renderer::FramebufferObject;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
-    : m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      shader_globals(nullptr),
+    : shader_globals(nullptr),
+      m_instance(new Instance(_system, app_name, "HyperionEngine")),
       m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
       resources(this),
       assets(this),

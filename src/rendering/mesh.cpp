@@ -59,9 +59,9 @@ Mesh::Mesh(
 ) : EngineComponentBase(),
     m_vbo(std::make_unique<VertexBuffer>()),
     m_ibo(std::make_unique<IndexBuffer>()),
+    m_vertex_attributes(vertex_attributes),
     m_vertices(vertices),
     m_indices(indices),
-    m_vertex_attributes(vertex_attributes),
     m_flags(flags)
 {
     

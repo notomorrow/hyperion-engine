@@ -7,12 +7,19 @@
 #include <memory>
 #include <atomic>
 
+namespace hyperion::renderer {
+
+class Device;
+
+} // namespace hyperion::renderer
+
 namespace hyperion::v2 {
 
 using renderer::GPUBuffer;
 using renderer::UniformBuffer;
 using renderer::StorageBuffer;
 using renderer::PerFrameData;
+using renderer::Device;
 
 struct ShaderDataState {
     enum State {
@@ -171,14 +178,14 @@ public:
     void Create(Device *device)
     {
         for (size_t i = 0; i < m_buffers.size(); i++) {
-            m_buffers[i]->Create(device, sizeof(StructType) * Size);
+            HYPERION_ASSERT_RESULT(m_buffers[i]->Create(device, sizeof(StructType) * Size));
         }
     }
 
     void Destroy(Device *device)
     {
         for (size_t i = 0; i < m_buffers.size(); i++) {
-            m_buffers[i]->Destroy(device);
+            HYPERION_ASSERT_RESULT(m_buffers[i]->Destroy(device));
         }
     }
 

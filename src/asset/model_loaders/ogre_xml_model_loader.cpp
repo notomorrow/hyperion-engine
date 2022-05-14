@@ -13,8 +13,7 @@ using OgreXmlModelLoader = LoaderObject<Node, LoaderFormat::OGRE_XML_MODEL>::Loa
 class OgreXmlSaxHandler : public xml::SaxHandler {
 public:
     OgreXmlSaxHandler(LoaderState *state, OgreXmlModelLoader::Object &object)
-        : m_state(state),
-          m_object(object)
+        : m_object(object)
     {
     }
 
@@ -81,7 +80,6 @@ public:
     virtual void Comment(const std::string &comment) override {}
 
 private:
-    LoaderState *m_state;
     OgreXmlModelLoader::Object &m_object;
 };
 

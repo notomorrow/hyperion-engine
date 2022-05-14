@@ -148,7 +148,7 @@ public:
     template <typename T, typename IntegralType = int>
     static HYP_ENABLE_IF(is_math_vector_v) Floor(T a)
     {
-        T result;
+        T result{}; /* doesn't need initialization but gets rid of annoying warnings */
 
         for (int i = 0; i < std::size(result.values); i++) {
             result.values[i] = Floor<decltype(T::values[0]), IntegralType>(a.values[i]);
@@ -160,7 +160,7 @@ public:
     template <typename T, typename IntegralType = int>
     static HYP_ENABLE_IF(is_math_vector_v) Ceil(T a)
     {
-        T result;
+        T result{}; /* doesn't need initialization but gets rid of annoying warnings */
 
         for (int i = 0; i < std::size(result.values); i++) {
             result.values[i] = Ceil<decltype(T::values[0]), IntegralType>(a.values[i]);

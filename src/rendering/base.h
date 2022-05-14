@@ -98,7 +98,7 @@ public:
 
     inline ID GetId() const
     {
-        if (this == nullptr) {
+        if (this == nullptr) {  // NOLINT(clang-diagnostic-tautological-undefined-compare)
             DebugLog(
                 LogType::Warn,
                 "Called GetId() on nullptr\n"
