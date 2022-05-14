@@ -37,10 +37,10 @@ struct VisibilityState {
         }
     }
 
-    VisibilityState(const VisibilityState &other) = delete;
-    VisibilityState &operator=(const VisibilityState &other) = delete;
-    VisibilityState(VisibilityState &&other) noexcept = default;
-    VisibilityState &operator=(VisibilityState &&other) noexcept = default;
+    VisibilityState(const VisibilityState &other)                = delete;
+    VisibilityState &operator=(const VisibilityState &other)     = delete;
+    VisibilityState(VisibilityState &&other) noexcept            = delete; /* deleted because atomics have no move constructor*/
+    VisibilityState &operator=(VisibilityState &&other) noexcept = delete;
     ~VisibilityState() = default;
 
     HYP_FORCE_INLINE bool Get(Scene::ID scene) const
