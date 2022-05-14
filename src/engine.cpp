@@ -273,11 +273,11 @@ void Engine::Initialize()
 
     m_instance->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
-        ->AddDescriptor<renderer::ImageSamplerDescriptor>(0);
+        ->AddDescriptor<renderer::SamplerDescriptor>(0);
 
     m_instance->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1)
-        ->AddDescriptor<renderer::ImageSamplerDescriptor>(0);
+        ->AddDescriptor<renderer::SamplerDescriptor>(0);
 
     /* for textures */
     shader_globals->textures.Create(this);
@@ -378,6 +378,9 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_DESCRIPTOR_SETS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_VOXELIZER, this);
 
+    /* Flush render queue before finalizing descriptors */
+    HYP_FLUSH_RENDER_QUEUE(this);
+
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
     
@@ -428,12 +431,12 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
     ));
 }
 
-void Engine::ResetRenderBindings()
+void Engine::ResetRenderState()
 {
-    render_bindings.scene_ids = {};
+    render_state.scene_ids = {};
 }
 
-void Engine::UpdateRendererBuffersAndDescriptors(uint32_t frame_index)
+void Engine::UpdateBuffersAndDescriptors(uint32_t frame_index)
 {
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);

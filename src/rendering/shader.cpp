@@ -43,9 +43,7 @@ void Shader::Init(Engine *engine)
                 return m_shader_program->Destroy(engine->GetDevice());
             });
             
-            engine->render_scheduler.FlushOrWait([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
-            });
+            HYP_FLUSH_RENDER_QUEUE(engine);
         }), engine);
     }));
 }

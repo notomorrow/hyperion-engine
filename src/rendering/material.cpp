@@ -41,10 +41,8 @@ void Material::Init(Engine *engine)
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
             m_textures.Clear();
-
-            engine->render_scheduler.FlushOrWait([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
-            });
+            
+            HYP_FLUSH_RENDER_QUEUE(engine);
         }), engine);
     }));
 }

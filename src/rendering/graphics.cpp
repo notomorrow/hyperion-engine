@@ -24,13 +24,19 @@ GraphicsPipeline::GraphicsPipeline(
     m_render_pass(std::move(render_pass)),
     m_bucket(bucket),
     m_topology(Topology::TRIANGLES),
-    m_cull_mode(CullMode::BACK),
+    m_cull_mode(FaceCullMode::BACK),
     m_fill_mode(FillMode::FILL),
     m_depth_test(true),
     m_depth_write(true),
     m_blend_enabled(false),
     m_vertex_attributes(vertex_attributes),
-    m_per_frame_data(nullptr)
+    m_per_frame_data(nullptr),
+    m_spatial_notifier([this]() -> std::vector<std::pair<Ref<Spatial> *, size_t>> {
+        return {
+            std::make_pair(m_spatials.data(), m_spatials.size()),
+            std::make_pair(m_spatials_pending_addition.data(), m_spatials_pending_addition.size())
+        };
+    })
 {
 }
 
@@ -51,7 +57,8 @@ void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
     spatial->OnAddedToPipeline(this);
     
     std::lock_guard guard(m_enqueued_spatials_mutex);
-
+    
+    m_spatial_notifier.ItemAdded(spatial);
     m_spatials_pending_addition.push_back(std::move(spatial));
 }
 
@@ -77,6 +84,8 @@ bool GraphicsPipeline::RemoveFromSpatialList(
     auto &found_spatial = *it;
 
     if (call_on_removed && found_spatial != nullptr) {
+        m_spatial_notifier.ItemRemoved(found_spatial);
+
         found_spatial->OnRemovedFromPipeline(this);
     }
 
@@ -212,6 +221,8 @@ void GraphicsPipeline::Init(Engine *engine)
                     continue;
                 }
 
+                m_spatial_notifier.ItemRemoved(spatial);
+
                 spatial->OnRemovedFromPipeline(this);
             }
 
@@ -223,6 +234,8 @@ void GraphicsPipeline::Init(Engine *engine)
                 if (spatial == nullptr) {
                     continue;
                 }
+
+                m_spatial_notifier.ItemRemoved(spatial);
 
                 spatial->OnRemovedFromPipeline(this);
             }
@@ -248,9 +261,7 @@ void GraphicsPipeline::Init(Engine *engine)
                 return m_pipeline->Destroy(engine->GetDevice());
             });
             
-            engine->render_scheduler.FlushOrWait([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
-            });
+            HYP_FLUSH_RENDER_QUEUE(engine);
         }), engine);
     }));
 }
@@ -290,7 +301,7 @@ void GraphicsPipeline::Render(
 
             static_assert(std::size(DescriptorSet::object_buffer_mapping) == Swapchain::max_frames_in_flight);
 
-            const auto scene_id = engine->render_bindings.GetScene();
+            const auto scene_id = engine->render_state.GetScene();
 
             const auto scene_index = scene_id != Scene::bad_id
                 ? scene_id.value - 1
@@ -316,6 +327,14 @@ void GraphicsPipeline::Render(
                 {
                     {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
                     {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
+                }
+            );
+            instance->GetDescriptorPool().Bind(
+                device,
+                secondary,
+                m_pipeline.get(),
+                {
+                    {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1},
                 }
             );
 
@@ -360,7 +379,7 @@ void GraphicsPipeline::Render(
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT},
                         {.offsets = {
                             uint32_t(material_index * sizeof(MaterialShaderData)),
-                            uint32_t(spatial_index * sizeof(ObjectShaderData)),
+                            uint32_t(spatial_index  * sizeof(ObjectShaderData)),
                             uint32_t(skeleton_index * sizeof(SkeletonShaderData))
                         }}
                     }

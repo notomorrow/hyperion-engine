@@ -28,10 +28,9 @@ public:
     CommandBuffer &operator=(const CommandBuffer &other) = delete;
     ~CommandBuffer();
 
-    inline Type GetType() const { return m_type; }
+    Type GetType() const { return m_type; }
 
-    inline VkCommandBuffer &GetCommandBuffer() { return m_command_buffer; }
-    inline const VkCommandBuffer &GetCommandBuffer() const { return m_command_buffer; }
+    VkCommandBuffer GetCommandBuffer() const { return m_command_buffer; }
 
     Result Create(Device *device, VkCommandPool command_pool);
     Result Destroy(Device *device, VkCommandPool command_pool);
@@ -53,7 +52,7 @@ public:
     ) const;
 
     template <class LambdaFunction>
-    inline Result Record(Device *device, const RenderPass *render_pass, const LambdaFunction &fn)
+    Result Record(Device *device, const RenderPass *render_pass, const LambdaFunction &fn)
     {
         HYPERION_BUBBLE_ERRORS(Begin(device, render_pass));
 

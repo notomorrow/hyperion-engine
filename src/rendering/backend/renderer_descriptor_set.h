@@ -342,8 +342,8 @@ HYP_DEFINE_DESCRIPTOR(UniformBufferDescriptor,        Mode::UNIFORM_BUFFER);
 HYP_DEFINE_DESCRIPTOR(DynamicUniformBufferDescriptor, Mode::UNIFORM_BUFFER_DYNAMIC);
 HYP_DEFINE_DESCRIPTOR(StorageBufferDescriptor,        Mode::STORAGE_BUFFER);
 HYP_DEFINE_DESCRIPTOR(DynamicStorageBufferDescriptor, Mode::STORAGE_BUFFER_DYNAMIC);
-HYP_DEFINE_DESCRIPTOR(ImageSamplerDescriptor,         Mode::IMAGE_SAMPLER);
-HYP_DEFINE_DESCRIPTOR(ImageStorageDescriptor,         Mode::IMAGE_STORAGE);
+HYP_DEFINE_DESCRIPTOR(SamplerDescriptor,              Mode::IMAGE_SAMPLER);
+HYP_DEFINE_DESCRIPTOR(StorageImageDescriptor,         Mode::IMAGE_STORAGE);
 HYP_DEFINE_DESCRIPTOR(TlasDescriptor,                 Mode::ACCELERATION_STRUCTURE);
 
 #undef HYP_DEFINE_DESCRIPTOR

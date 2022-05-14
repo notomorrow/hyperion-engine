@@ -1,6 +1,10 @@
 #ifndef HYPERION_RENDERER_PIPELINE_H
 #define HYPERION_RENDERER_PIPELINE_H
 
+#include "renderer_structs.h"
+
+#include <math/vector4.h>
+
 #include <vulkan/vulkan.h>
 
 #include <cstdint>
@@ -12,7 +16,7 @@ class Pipeline {
     friend class DescriptorPool;
 
 public:
-    struct PushConstantData {
+    struct alignas(16) PushConstantData {
         union {
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 uint32_t grid_size,
@@ -29,10 +33,16 @@ public:
                 uint32_t x, y;
             } counter;
 
-            struct {
+            struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 float    matrix[16];
                 uint32_t time;
             } probe_data;
+
+            struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+                uint32_t extent[4];
+                float    aabb_max[4];
+                float    aabb_min[4];
+            } vct_data;
         };
     } push_constants;
 

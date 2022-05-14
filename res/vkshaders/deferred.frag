@@ -13,12 +13,15 @@ layout(location=2) out vec4 output_positions;
 #include "include/gbuffer.inc"
 
 layout(set = 1, binding = 8) uniform sampler2D filter_ssao;
-
 layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
+
+//layout(set = 8, binding = 0, rgba16f) readonly uniform image3D voxel_image;
 
 #include "include/scene.inc"
 #include "include/brdf.inc"
 #include "include/tonemap.inc"
+
+#include "include/vct/cone_trace.inc"
 
 vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 {
@@ -33,15 +36,10 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 10000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 200000.0
-#define GI_INTENSITY 2.0
+#define IBL_INTENSITY 8000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
+#define GI_INTENSITY 25.0
 #define SSAO_DEBUG 0
-
-#if VCT_ENABLED
-#include "include/voxel/vct.inc"
-#endif
-
 
 #include "include/rt/probe/shared.inc"
 
@@ -137,10 +135,8 @@ void main()
     float ao = 1.0;
     
     if (perform_lighting) {
-        ao = texture(filter_ssao, texcoord).r;
-
-        float metallic = 0.5;
-        float roughness = 0.3;
+        float metallic = 0.1;
+        float roughness = 0.6;
         
         float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
@@ -150,8 +146,8 @@ void main()
         float HdotV = max(0.0001, dot(H, V));
 
         
-        float materialReflectance = 0.5;
-        float reflectance = 0.16 * materialReflectance * materialReflectance; // dielectric reflectance
+        const float material_reflectance = 0.5;
+        float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
         vec3 F0 = albedo_linear.rgb * metallic + (reflectance * (1.0 - metallic));
         
         vec3 energy_compensation = vec3(1.0);
@@ -160,17 +156,16 @@ void main()
         
         vec3 AB = BRDFMap(albedo.rgb, roughness, NdotV);
         
-        vec3 irradiance = vec3(1.0);
+        vec3 irradiance = vec3(0.0);
+
         vec3 ibl = HasEnvironmentTexture(0)
             ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
             : vec3(0.0);
         
-#if VCT_ENABLED
-        vec3 aabb_max = vec3(64.0) + vec3(0.0, 0.0, 5.0);
-        vec3 aabb_min = vec3(-64.0) + vec3(0.0, 0.0, 5.0);
-        irradiance += voxelTraceCone(position.xyz, N, aabb_max, aabb_min, lod, 1.0).rgb;
-        ibl += voxelTraceCone(position.xyz, R, aabb_max, aabb_min, 0.25 + roughness, 2.0).rgb;
-#endif
+        vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
+        vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, vec3(0.0), vec3(0.0), roughness);
+        irradiance = vct_diffuse.rgb * GI_INTENSITY;
+
 
         ao = texture(filter_ssao, texcoord).r;
         vec3 shadow = vec3(1.0);
@@ -183,6 +178,9 @@ void main()
         result = (albedo_linear * irradiance * (1.0 - dfg) * ao) + radiance;
         result *= exposure * IBL_INTENSITY;
 
+        result = (result * (1.0 - vct_specular.a)) + (dfg * vct_specular.rgb);
+
+
         // surface
         vec3 F90 = vec3(0.5 + 2.0 * roughness * LdotH * LdotH);//vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
         float D = DistributionGGX(N, H, roughness);
@@ -194,27 +192,22 @@ void main()
         vec3 light_scatter = SchlickFresnel(vec3(1.0), F90, NdotL);
         vec3 view_scatter  = SchlickFresnel(vec3(1.0), F90, NdotV);
         vec3 diffuse = albedo_linear * (1.0 - metallic) * (light_scatter * view_scatter * (1.0 / PI));
-        
-        /*vec3 E = dfg;//SpecularDFG(AB, F0);
-        
-        vec3 Fr = E * ibl;
-        float specular_ao = SpecularAO_Lagarde(NdotV, ao, roughness);
-        Fr *= vec3(specular_ao) * energy_compensation;
-        
-        vec3 Fd = albedo_linear.rgb * irradiance * (1.0 - E) * ao;
-        //Fd *= GtaoMultiBounce(ao, albedo_linear.rgb);
-        //Fd *= GtaoMultiBounce(specular_ao.r, albedo_linear.rgb);
-        const float ibl_lum = IBL_INTENSITY * exposure;
-        Fd *= ibl_lum;
-        Fr *= ibl_lum;
 
         
-        result =  Fd + Fr;*/
-        
-        vec3 surface = diffuse + specular * energy_compensation;
-        surface *= light_color * (1.0 * NdotL * ao * shadow);
-        surface *= exposure * DIRECTIONAL_LIGHT_INTENSITY;
+        vec3 surface = diffuse + specular * (exposure * IBL_INTENSITY);
+        //surface *= light_color * (1.0 * NdotL * ao * shadow);
+        //surface *= exposure * IBL_INTENSITY;
         result += surface;
+        
+        vec3 specular_lobe = (D * G) * F;
+        vec3 diffuse_lobe = albedo_linear.rgb * (1.0 / PI);
+    
+        // Chan 2018, "Material Advances in Call of Duty: WWII"
+        //float micro_shadow_aperture = inversesqrt(1.0 - ao);
+        //float micro_shadow = clamp(NdotL * micro_shadow_aperture, 0.0, 1.0);
+        //float micro_shadow_sqr = micro_shadow * micro_shadow;
+
+        result += (diffuse_lobe + specular_lobe * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao);
     } else {
         result = albedo.rgb;
     }

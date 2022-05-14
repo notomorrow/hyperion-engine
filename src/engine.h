@@ -24,6 +24,13 @@
 #include <mutex>
 #include <stack>
 
+#define HYP_FLUSH_RENDER_QUEUE(engine) \
+    do { \
+        (engine)->render_scheduler.FlushOrWait([](auto &fn) { \
+            HYPERION_ASSERT_RESULT(fn()); \
+        }); \
+    } while (0)
+
 namespace hyperion::v2 {
 
 using renderer::Instance;
@@ -56,7 +63,7 @@ using renderer::StorageBuffer;
  * |                     | Image storage test  | empty               | empty               | empty               |
  */
 
-struct RenderBindings {
+struct RenderState {
     std::stack<Scene::ID> scene_ids;
 
     void BindScene(const Scene *scene)
@@ -133,8 +140,8 @@ public:
     void Compile();
     void Stop();
 
-    void ResetRenderBindings();
-    void UpdateRendererBuffersAndDescriptors(uint32_t frame_index);
+    void ResetRenderState();
+    void UpdateBuffersAndDescriptors(uint32_t frame_index);
 
     void RenderShadows(CommandBuffer *primary, uint32_t frame_index);
     void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
@@ -148,7 +155,7 @@ public:
     Assets                  assets;
     ShaderManager           shader_manager;
 
-    RenderBindings          render_bindings;
+    RenderState             render_state;
 
     std::mutex texture_mutex; /* tmp */
     

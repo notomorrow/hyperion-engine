@@ -208,13 +208,13 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     switch (m_construction_info.cull_mode) {
-    case CullMode::BACK:
+    case FaceCullMode::BACK:
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
         break;
-    case CullMode::FRONT:
+    case FaceCullMode::FRONT:
         rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
         break;
-    case CullMode::NONE:
+    case FaceCullMode::NONE:
     default:
         rasterizer.cullMode = VK_CULL_MODE_NONE;
         break;

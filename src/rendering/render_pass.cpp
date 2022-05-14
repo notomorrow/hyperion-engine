@@ -34,11 +34,7 @@ void RenderPass::Init(Engine *engine)
                 return m_render_pass.Destroy(engine->GetDevice());
             });
             
-            engine->render_scheduler.FlushOrWait([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
-            });
-
-            //HYPERION_ASSERT_RESULT(m_render_pass.Destroy(engine->GetDevice()));
+            HYP_FLUSH_RENDER_QUEUE(engine);
         }), engine);
     }));
 }

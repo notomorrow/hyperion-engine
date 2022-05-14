@@ -10,10 +10,28 @@ Texture::Texture(
     Image::FilterMode filter_mode,
     Image::WrapMode wrap_mode,
     const unsigned char *bytes)
-    : EngineComponentBase(),
-      m_image(extent, format, type, filter_mode, bytes),
-      m_image_view(),
-      m_sampler(filter_mode, wrap_mode)
+    : Texture(
+        TextureImage(
+            extent,
+            format,
+            type,
+            filter_mode,
+            bytes
+        ),
+        filter_mode,
+        wrap_mode
+    )
+{
+}
+
+Texture::Texture(
+    Image &&image,
+    Image::FilterMode filter_mode,
+    Image::WrapMode wrap_mode
+) : EngineComponentBase(),
+    m_image(std::move(image)),
+    m_image_view(),
+    m_sampler(filter_mode, wrap_mode)
 {
 }
 
@@ -32,7 +50,9 @@ void Texture::Init(Engine *engine)
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_TEXTURES, [this](Engine *engine) {
         engine->render_scheduler.Enqueue([this, engine] {
-            HYPERION_BUBBLE_ERRORS(m_image.Create(engine->GetDevice(), engine->GetInstance(), renderer::GPUMemory::ResourceState::SHADER_RESOURCE));
+            auto initial_state = renderer::GPUMemory::ResourceState::SHADER_RESOURCE;
+
+            HYPERION_BUBBLE_ERRORS(m_image.Create(engine->GetDevice(), engine->GetInstance(), initial_state));
             HYPERION_BUBBLE_ERRORS(m_image_view.Create(engine->GetInstance()->GetDevice(), &m_image));
             HYPERION_BUBBLE_ERRORS(m_sampler.Create(engine->GetInstance()->GetDevice(), &m_image_view));
 
@@ -51,10 +71,8 @@ void Texture::Init(Engine *engine)
 
                 HYPERION_RETURN_OK;
             });
-
-            engine->render_scheduler.FlushOrWait([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
-            });
+            
+            HYP_FLUSH_RENDER_QUEUE(engine);
         }), engine);
     }));
 }

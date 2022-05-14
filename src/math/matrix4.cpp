@@ -144,11 +144,6 @@ Matrix4::Matrix4()
           {0.0f, 0.0f, 0.0f, 1.0f}
       }
 {
-    /*for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            values[i * 4 + j] = !(j - i);
-        }
-    }*/
 }
 
 Matrix4::Matrix4(float *v)

@@ -72,7 +72,7 @@ void ShadowEffect::CreatePipeline(Engine *engine)
         Bucket::BUCKET_PREPASS
     );
 
-    pipeline->SetCullMode(CullMode::FRONT);
+    pipeline->SetFaceCullMode(FaceCullMode::FRONT);
     pipeline->AddFramebuffer(m_framebuffer.IncRef());
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
@@ -151,13 +151,13 @@ void ShadowRenderer::Render(Engine *engine,
     CommandBuffer *primary,
     uint32_t frame_index)
 {
-    engine->render_bindings.BindScene(m_effect.GetScene());
+    engine->render_state.BindScene(m_effect.GetScene());
 
     m_effect.GetFramebuffer()->BeginCapture(primary);
     m_effect.GetGraphicsPipeline()->Render(engine, primary, frame_index);
     m_effect.GetFramebuffer()->EndCapture(primary);
 
-    engine->render_bindings.UnbindScene();
+    engine->render_state.UnbindScene();
 }
 
 } // namespace hyperion::v2

@@ -36,9 +36,7 @@ void Framebuffer::Init(Engine *engine)
                return m_framebuffer.Destroy(engine->GetDevice());
             });
             
-            engine->render_scheduler.FlushOrWait([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
-            });
+            HYP_FLUSH_RENDER_QUEUE(engine);
         }), engine);
     }));
 }
