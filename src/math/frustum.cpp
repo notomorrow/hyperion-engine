@@ -13,7 +13,7 @@ Frustum::Frustum(const Frustum &other)
 
 Frustum::Frustum(const Matrix4 &view_proj)
 {
-    SetViewProjectionMatrix(view_proj);
+    SetFromViewProjectionMatrix(view_proj);
 }
 
 bool Frustum::ContainsAabb(const BoundingBox &aabb) const
@@ -40,7 +40,7 @@ bool Frustum::ContainsAabb(const BoundingBox &aabb) const
     return true;
 }
 
-void Frustum::SetViewProjectionMatrix(const Matrix4 &view_proj)
+Frustum &Frustum::SetFromViewProjectionMatrix(const Matrix4 &view_proj)
 {
     const Matrix4 mat = view_proj.Transposed();
     
@@ -79,6 +79,8 @@ void Frustum::SetViewProjectionMatrix(const Matrix4 &view_proj)
     m_planes[5].z = mat.values[11] + mat.values[10];
     m_planes[5].w = mat.values[15] + mat.values[14];
     m_planes[5].Normalize();
+
+    return *this;
 }
 
 } // namespace hyperion

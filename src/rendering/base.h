@@ -59,7 +59,7 @@ protected:
         ValueType value{};
 
         explicit constexpr operator ValueType() const { return value; }
-        explicit constexpr operator bool() const { return !!value; }
+        explicit constexpr operator bool() const      { return bool(value); }
 
         inline constexpr ValueType Value() const { return value; }
 
@@ -84,11 +84,12 @@ protected:
 public:
     using ID = IdWrapper<Type, uint32_t>;
 
-    static constexpr ID bad_id = ID{0};
+    static constexpr ID empty_id = ID{0};
 
     EngineComponentBase()
         : CallbackTrackable(),
-          m_init_called(false)
+          m_init_called(false),
+          m_is_ready(false)
     {
     }
 
@@ -96,7 +97,7 @@ public:
     EngineComponentBase &operator=(const EngineComponentBase &other) = delete;
     ~EngineComponentBase() = default;
 
-    inline ID GetId() const
+    ID GetId() const
     {
         if (this == nullptr) {  // NOLINT(clang-diagnostic-tautological-undefined-compare)
             DebugLog(
@@ -104,17 +105,17 @@ public:
                 "Called GetId() on nullptr\n"
             );
 
-            return bad_id;
+            return empty_id;
         }
 
         return m_id;
     }
 
     /* To be called from ObjectHolder<Type> */
-    inline void SetId(const ID &id)
+    void SetId(const ID &id)
         { m_id = id; }
 
-    inline bool IsInit() const { return m_init_called; }
+    bool IsInitCalled() const { return m_init_called; }
 
     void Init()
     {
@@ -129,6 +130,7 @@ protected:
 
     ID m_id;
     std::atomic_bool m_init_called;
+    bool             m_is_ready;
 };
 
 template <class WrappedType>

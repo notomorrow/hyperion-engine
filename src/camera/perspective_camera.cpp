@@ -3,7 +3,7 @@
 
 namespace hyperion {
 PerspectiveCamera::PerspectiveCamera(float fov, int width, int height, float _near, float _far)
-    : Camera(width, height, _near, _far)
+    : Camera(CameraType::PERSPECTIVE, width, height, _near, _far)
 {
     m_fov = fov;
 }
@@ -12,9 +12,13 @@ void PerspectiveCamera::UpdateLogic(double dt)
 {
 }
 
-void PerspectiveCamera::UpdateMatrices()
+void PerspectiveCamera::UpdateViewMatrix()
 {
     MatrixUtil::ToLookAt(m_view_mat, m_translation, GetTarget(), m_up);
+}
+
+void PerspectiveCamera::UpdateProjectionMatrix()
+{
     MatrixUtil::ToPerspective(m_proj_mat, m_fov, m_width, m_height, m_near, m_far);
 }
 } // namespace hyperion

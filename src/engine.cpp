@@ -22,9 +22,7 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
       m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
       resources(this),
-      assets(this),
-      m_shadow_renderer(std::make_unique<OrthoCamera>(-50, 50, -50, 50, -50, 50)),
-      render_thread_id(std::hash<std::thread::id>{}(std::this_thread::get_id()))
+      assets(this)
 {
     m_octree.m_root = &m_octree_root;
 }
@@ -38,7 +36,7 @@ void Engine::SetSpatialTransform(Spatial *spatial, const Transform &transform)
 {
     AssertThrow(spatial != nullptr);
     
-    spatial->UpdateShaderData(this);
+    spatial->EnqueueRenderUpdates(this);
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -273,11 +271,11 @@ void Engine::Initialize()
 
     m_instance->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS)
-        ->AddDescriptor<renderer::ImageSamplerDescriptor>(0);
+        ->AddDescriptor<renderer::SamplerDescriptor>(0);
 
     m_instance->GetDescriptorPool()
         .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1)
-        ->AddDescriptor<renderer::ImageSamplerDescriptor>(0);
+        ->AddDescriptor<renderer::SamplerDescriptor>(0);
 
     /* for textures */
     shader_globals->textures.Create(this);
@@ -287,12 +285,14 @@ void Engine::Initialize()
 
     m_render_list_container.Create(this);
     
+    callbacks.TriggerPersisted(EngineCallback::CREATE_ENVIRONMENTS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SCENES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_TEXTURES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SHADERS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SPATIALS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_ACCELERATION_STRUCTURES, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_ANY, this);
 
     m_running = true;
 }
@@ -300,7 +300,8 @@ void Engine::Initialize()
 void Engine::Destroy()
 {
     m_running = false;
-
+    
+    callbacks.Trigger(EngineCallback::DESTROY_ANY, this);
     callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MESHES, this);
     callbacks.Trigger(EngineCallback::DESTROY_MATERIALS, this);
@@ -315,9 +316,11 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_COMPUTE_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_RAYTRACING_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
+    callbacks.Trigger(EngineCallback::DESTROY_ENVIRONMENTS, this);
 
     game_thread.Join();
-    render_scheduler.Flush();
+
+    HYP_FLUSH_RENDER_QUEUE(this);
 
     AssertThrow(m_instance != nullptr);
     (void)m_instance->GetDevice()->Wait();
@@ -325,7 +328,6 @@ void Engine::Destroy()
     m_render_list_container.Destroy(this);
     
     m_deferred_renderer.Destroy(this);
-    m_shadow_renderer.Destroy(this);
 
     for (auto &attachment : m_render_pass_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
@@ -355,7 +357,6 @@ void Engine::Destroy()
 void Engine::Compile()
 {
     m_deferred_renderer.Create(this);
-    m_shadow_renderer.Create(this);
 
     callbacks.TriggerPersisted(EngineCallback::CREATE_SKELETONS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
@@ -377,6 +378,9 @@ void Engine::Compile()
 
     callbacks.TriggerPersisted(EngineCallback::CREATE_DESCRIPTOR_SETS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_VOXELIZER, this);
+
+    /* Flush render queue before finalizing descriptors */
+    HYP_FLUSH_RENDER_QUEUE(this);
 
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
@@ -428,12 +432,12 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
     ));
 }
 
-void Engine::ResetRenderBindings()
+void Engine::ResetRenderState()
 {
-    render_bindings.scene_ids = {};
+    render_state.scene_ids = {};
 }
 
-void Engine::UpdateRendererBuffersAndDescriptors(uint32_t frame_index)
+void Engine::UpdateBuffersAndDescriptors(uint32_t frame_index)
 {
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
@@ -441,11 +445,6 @@ void Engine::UpdateRendererBuffersAndDescriptors(uint32_t frame_index)
     shader_globals->skeletons.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
     shader_globals->textures.ApplyUpdates(this, frame_index);
-}
-
-void Engine::RenderShadows(CommandBuffer *primary, uint32_t frame_index)
-{
-    m_shadow_renderer.Render(this, primary, frame_index);
 }
 
 void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)

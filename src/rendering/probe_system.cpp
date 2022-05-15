@@ -9,26 +9,26 @@
 namespace hyperion::v2 {
 
 using renderer::ShaderProgram;
-using renderer::ImageStorageDescriptor;
+using renderer::StorageImageDescriptor;
 using renderer::StorageBufferDescriptor;
 using renderer::UniformBufferDescriptor;
 using renderer::GPUMemory;
 
-ProbeSystem::ProbeSystem(ProbeSystemSetup &&setup)
-    : m_setup(std::move(setup)),
+ProbeGrid::ProbeGrid(ProbeGridInfo &&grid_info)
+    : m_grid_info(std::move(grid_info)),
       m_time(0)
 {
 }
 
-ProbeSystem::~ProbeSystem()
+ProbeGrid::~ProbeGrid()
 {
 }
 
-void ProbeSystem::Init(Engine *engine)
+void ProbeGrid::Init(Engine *engine)
 {
-    const auto grid = m_setup.NumProbesPerDimension();
+    const auto grid = m_grid_info.NumProbesPerDimension();
     
-    m_probes.resize(m_setup.NumProbes());
+    m_probes.resize(m_grid_info.NumProbes());
 
     for (uint32_t x = 0; x < grid.width; x++) {
         for (uint32_t y = 0; y < grid.height; y++) {
@@ -38,7 +38,7 @@ void ProbeSystem::Init(Engine *engine)
                                      + z;
 
                 m_probes[index] = Probe{
-                    .position = (Vector3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)) - (m_setup.probe_border.ToVector3() * 0.5f)) * m_setup.probe_distance
+                    .position = (Vector3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)) - (m_grid_info.probe_border.ToVector3() * 0.5f)) * m_grid_info.probe_distance
                 };
             }
         }
@@ -56,7 +56,7 @@ void ProbeSystem::Init(Engine *engine)
     CreateComputePipelines(engine);
 }
 
-void ProbeSystem::Destroy(Engine *engine)
+void ProbeGrid::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
 
@@ -77,7 +77,7 @@ void ProbeSystem::Destroy(Engine *engine)
     HYPERION_ASSERT_RESULT(result);
 }
 
-void ProbeSystem::CreatePipeline(Engine *engine)
+void ProbeGrid::CreatePipeline(Engine *engine)
 {
     auto rt_shader = std::make_unique<ShaderProgram>();
 
@@ -95,7 +95,7 @@ void ProbeSystem::CreatePipeline(Engine *engine)
     HYPERION_ASSERT_RESULT(m_pipeline->Create(engine->GetDevice(), &engine->GetInstance()->GetDescriptorPool()));
 }
 
-void ProbeSystem::CreateComputePipelines(Engine *engine)
+void ProbeGrid::CreateComputePipelines(Engine *engine)
 {
     m_update_irradiance = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
         engine->resources.shaders.Add(std::make_unique<Shader>(
@@ -118,18 +118,18 @@ void ProbeSystem::CreateComputePipelines(Engine *engine)
     m_update_depth.Init();
 }
 
-void ProbeSystem::CreateUniformBuffer(Engine *engine)
+void ProbeGrid::CreateUniformBuffer(Engine *engine)
 {
     ProbeSystemUniforms uniforms{
-        .aabb_max                     = m_setup.aabb.max.ToVector4(),
-        .aabb_min                     = m_setup.aabb.min.ToVector4(),
-        .probe_border                 = m_setup.probe_border,
-        .probe_counts                 = m_setup.NumProbesPerDimension(),
-        .image_dimensions             = m_setup.GetImageDimensions(),
+        .aabb_max                     = m_grid_info.aabb.max.ToVector4(),
+        .aabb_min                     = m_grid_info.aabb.min.ToVector4(),
+        .probe_border                 = m_grid_info.probe_border,
+        .probe_counts                 = m_grid_info.NumProbesPerDimension(),
+        .image_dimensions             = m_grid_info.GetImageDimensions(),
         .irradiance_image_dimensions  = m_irradiance_image->GetExtent().ToExtent2D(),
         .depth_image_dimensions       = m_depth_image->GetExtent().ToExtent2D(),
-        .probe_distance               = m_setup.probe_distance,
-        .num_rays_per_probe           = m_setup.num_rays_per_probe
+        .probe_distance               = m_grid_info.probe_distance,
+        .num_rays_per_probe           = m_grid_info.num_rays_per_probe
     };
 
     m_uniform_buffer = std::make_unique<UniformBuffer>();
@@ -138,15 +138,15 @@ void ProbeSystem::CreateUniformBuffer(Engine *engine)
     m_uniform_buffer->Copy(engine->GetDevice(), sizeof(ProbeSystemUniforms), &uniforms);
 }
 
-void ProbeSystem::CreateStorageBuffers(Engine *engine)
+void ProbeGrid::CreateStorageBuffers(Engine *engine)
 {
-    const auto probe_counts = m_setup.NumProbesPerDimension();
+    const auto probe_counts = m_grid_info.NumProbesPerDimension();
 
     m_radiance_buffer = std::make_unique<StorageBuffer>();
-    HYPERION_ASSERT_RESULT(m_radiance_buffer->Create(engine->GetDevice(), m_setup.GetImageDimensions().Size() * sizeof(ProbeRayData)));
+    HYPERION_ASSERT_RESULT(m_radiance_buffer->Create(engine->GetDevice(), m_grid_info.GetImageDimensions().Size() * sizeof(ProbeRayData)));
 
     m_irradiance_image = std::make_unique<StorageImage>(
-        Extent3D{{(m_setup.irradiance_octahedron_size + 2) * probe_counts.width * probe_counts.height + 2, (m_setup.irradiance_octahedron_size + 2) * probe_counts.depth + 2}},
+        Extent3D{{(m_grid_info.irradiance_octahedron_size + 2) * probe_counts.width * probe_counts.height + 2, (m_grid_info.irradiance_octahedron_size + 2) * probe_counts.depth + 2}},
         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
         Image::Type::TEXTURE_TYPE_2D,
         nullptr
@@ -157,7 +157,7 @@ void ProbeSystem::CreateStorageBuffers(Engine *engine)
     HYPERION_ASSERT_RESULT(m_irradiance_image_view->Create(engine->GetDevice(), m_irradiance_image.get()));
 
     m_depth_image = std::make_unique<StorageImage>(
-        Extent3D{{(m_setup.depth_octahedron_size + 2) * probe_counts.width * probe_counts.height + 2, (m_setup.depth_octahedron_size + 2) * probe_counts.depth + 2}},
+        Extent3D{{(m_grid_info.depth_octahedron_size + 2) * probe_counts.width * probe_counts.height + 2, (m_grid_info.depth_octahedron_size + 2) * probe_counts.depth + 2}},
         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F,
         Image::Type::TEXTURE_TYPE_2D,
         nullptr
@@ -168,7 +168,7 @@ void ProbeSystem::CreateStorageBuffers(Engine *engine)
     HYPERION_ASSERT_RESULT(m_depth_image_view->Create(engine->GetDevice(), m_depth_image.get()));
 }
 
-void ProbeSystem::AddDescriptors(Engine *engine)
+void ProbeGrid::AddDescriptors(Engine *engine)
 {
     /* TMP, have to set this up in a way such that it's not relying on something else to populate the other RT stuff */
 
@@ -180,14 +180,14 @@ void ProbeSystem::AddDescriptors(Engine *engine)
     auto *probe_ray_data = descriptor_set->AddDescriptor<StorageBufferDescriptor>(10);
     probe_ray_data->AddSubDescriptor({.buffer = m_radiance_buffer.get()});
 
-    auto *irradiance_image_descriptor = descriptor_set->AddDescriptor<ImageStorageDescriptor>(11);
+    auto *irradiance_image_descriptor = descriptor_set->AddDescriptor<StorageImageDescriptor>(11);
     irradiance_image_descriptor->AddSubDescriptor({.image_view = m_irradiance_image_view.get()});
 
-    auto *irradiance_depth_image_descriptor = descriptor_set->AddDescriptor<ImageStorageDescriptor>(12);
+    auto *irradiance_depth_image_descriptor = descriptor_set->AddDescriptor<StorageImageDescriptor>(12);
     irradiance_depth_image_descriptor->AddSubDescriptor({.image_view = m_depth_image_view.get()});
 }
 
-void ProbeSystem::SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer)
+void ProbeGrid::SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer)
 {
     m_random_generator.Next();
 
@@ -202,7 +202,7 @@ void ProbeSystem::SubmitPushConstants(Engine *engine, CommandBuffer *command_buf
     m_pipeline->SubmitPushConstants(command_buffer);
 }
 
-void ProbeSystem::RenderProbes(Engine *engine, CommandBuffer *command_buffer)
+void ProbeGrid::RenderProbes(Engine *engine, CommandBuffer *command_buffer)
 {
     m_radiance_buffer->InsertBarrier(command_buffer, GPUMemory::ResourceState::UNORDERED_ACCESS);
 
@@ -233,15 +233,15 @@ void ProbeSystem::RenderProbes(Engine *engine, CommandBuffer *command_buffer)
     m_pipeline->TraceRays(
         engine->GetDevice(),
         command_buffer,
-        Extent3D(m_setup.GetImageDimensions())
+        Extent3D(m_grid_info.GetImageDimensions())
     );
 
     m_radiance_buffer->InsertBarrier(command_buffer, GPUMemory::ResourceState::UNORDERED_ACCESS);
 }
 
-void ProbeSystem::ComputeIrradiance(Engine *engine, CommandBuffer *command_buffer)
+void ProbeGrid::ComputeIrradiance(Engine *engine, CommandBuffer *command_buffer)
 {
-    const auto probe_counts = m_setup.NumProbesPerDimension();
+    const auto probe_counts = m_grid_info.NumProbesPerDimension();
 
     m_irradiance_image->GetGPUImage()->InsertBarrier(
         command_buffer,

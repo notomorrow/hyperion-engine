@@ -131,6 +131,7 @@ public:
 
     Image(const Image &other) = delete;
     Image &operator=(const Image &other) = delete;
+    Image(Image &&other) noexcept;
     ~Image();
 
     /*
@@ -142,8 +143,12 @@ public:
      * The image is transitioned into the given state.
      */
     Result Create(Device *device, Instance *instance, GPUMemory::ResourceState state);
-
     Result Destroy(Device *device);
+
+    Result GenerateMipmaps(
+        Device *device,
+        CommandBuffer *command_buffer
+    );
     
     inline const unsigned char *GetBytes() const { return m_bytes; }
 
@@ -194,9 +199,6 @@ private:
         VkImageLayout initial_layout,
         VkImageCreateInfo *out_image_info);
 
-    Result GenerateMipmaps(Device *device,
-        CommandBuffer *command_buffer);
-
     Result ConvertTo32Bpp(Device *device,
         VkImageType image_type,
         VkImageCreateFlags image_create_flags,
@@ -223,15 +225,33 @@ public:
         Extent3D extent,
         InternalFormat format,
         Type type,
-        const unsigned char *bytes
+        const unsigned char *bytes = nullptr
+    ) : StorageImage(
+            extent,
+            format,
+            type,
+            FilterMode::TEXTURE_FILTER_NEAREST,
+            bytes
+        )
+    {
+        
+    }
+
+    StorageImage(
+        Extent3D extent,
+        InternalFormat format,
+        Type type,
+        FilterMode filter_mode,
+        const unsigned char *bytes = nullptr
     ) : Image(
         extent,
         format,
         type,
-        FilterMode::TEXTURE_FILTER_NEAREST,
+        filter_mode,
         Image::InternalInfo{
             .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage_flags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+            .usage_flags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT /*i guess?*/
+                         | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
         },
         bytes
     ) {}

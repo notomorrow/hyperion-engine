@@ -11,11 +11,9 @@
 #include <limits>
 #include <type_traits>
 
-#define HYP_ENABLE_IF(cond) \
-    typename std::enable_if_t<cond<T>, T>
 
-#define HYP_ENABLE_IF_R(cond, return_type) \
-    typename std::enable_if_t<cond<T>, return_type>
+#define HYP_ENABLE_IF(cond, return_type) \
+    typename std::enable_if_t<cond, return_type>
 
 namespace hyperion {
 
@@ -37,21 +35,29 @@ public:
 
     template<>
     static constexpr float epsilon<double> = DBL_EPSILON;
+
+    template <typename T>
+    static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, T) MaxSafeValue()
+        { return T(MaxSafeValue<std::remove_all_extents_t<decltype(T::values)>>()); }
+
+    template <typename T>
+    static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, T) MinSafeValue()
+        { return T(MinSafeValue<std::remove_all_extents_t<decltype(T::values)>>()); }
     
     template <typename T>
-    static constexpr HYP_ENABLE_IF_R(std::is_enum_v, std::underlying_type_t<T>) MaxSafeValue()
+    static constexpr HYP_ENABLE_IF(std::is_enum_v<T> && !is_math_vector_v<T>, std::underlying_type_t<T>) MaxSafeValue()
         { return std::numeric_limits<std::underlying_type_t<T>>::max(); }
 
     template <typename T>
-    static constexpr HYP_ENABLE_IF_R(std::is_enum_v, std::underlying_type_t<T>) MinSafeValue()
+    static constexpr HYP_ENABLE_IF(std::is_enum_v<T> && !is_math_vector_v<T>, std::underlying_type_t<T>) MinSafeValue()
         { return std::numeric_limits<std::underlying_type_t<T>>::lowest(); }
 
     template <typename T>
-    static constexpr HYP_ENABLE_IF(!std::is_enum_v) MaxSafeValue()
+    static constexpr HYP_ENABLE_IF(!std::is_enum_v<T> && !is_math_vector_v<T>, T) MaxSafeValue()
         { return std::numeric_limits<T>::max(); }
 
     template <typename T>
-    static constexpr HYP_ENABLE_IF(!std::is_enum_v) MinSafeValue()
+    static constexpr HYP_ENABLE_IF(!std::is_enum_v<T> && !is_math_vector_v<T>, T) MinSafeValue()
         { return std::numeric_limits<T>::lowest(); }
     
     static Vector2 SafeValue(const Vector2 &value)
@@ -72,15 +78,15 @@ public:
         { return std::numeric_limits<T>::quiet_NaN(); }
 
     template <typename T>
-    static constexpr HYP_ENABLE_IF_R(is_math_vector_v, bool) Approximately(const T &a, const T &b)
-        { return Abs(a.Distance(b)) <= epsilon<decltype(T::values[0])>; }
+    static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, bool) Approximately(const T &a, const T &b)
+        { return Abs(a.Distance(b)) <= epsilon<std::remove_all_extents_t<decltype(T::values)>>; }
 
     template <typename T>
-    static constexpr HYP_ENABLE_IF_R(!is_math_vector_v, bool) Approximately(const T &a, const T &b)
+    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, bool) Approximately(const T &a, const T &b)
         { return Abs(a - b) <= epsilon<T>; }
 
     template <typename T>
-    static HYP_ENABLE_IF(is_math_vector_v) Random(const T &a, const T &b)
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Random(const T &a, const T &b)
     {
         T result;
 
@@ -92,7 +98,7 @@ public:
     }
 
     template <typename T>
-    static HYP_ENABLE_IF(!is_math_vector_v) Random(const T &a, const T &b)
+    static HYP_ENABLE_IF(!is_math_vector_v<T>, T) Random(const T &a, const T &b)
     {
         T random = T(rand()) / T(RAND_MAX);
         T diff = b - a;
@@ -125,6 +131,14 @@ public:
     static constexpr T Lerp(const T &from, const T &to, const T &amt)
         { return from + amt * (to - from); }
 
+    template <typename T>
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Min(const T &a, const T &b)
+        { return T::Min(a, b); }
+
+    template <typename T>
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Max(const T &a, const T &b)
+        { return T::Max(a, b); }
+
     template <typename T, typename U, typename V = std::common_type_t<T, U>>
     static constexpr V Min(T a, U b)
         { return (a < b) ? a : b; }
@@ -146,7 +160,7 @@ public:
         { return IntegralType(T(0) < value) - IntegralType(value < T(0)); }
 
     template <typename T, typename IntegralType = int>
-    static HYP_ENABLE_IF(is_math_vector_v) Floor(T a)
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Floor(T a)
     {
         T result{}; /* doesn't need initialization but gets rid of annoying warnings */
 
@@ -158,7 +172,7 @@ public:
     }
 
     template <typename T, typename IntegralType = int>
-    static HYP_ENABLE_IF(is_math_vector_v) Ceil(T a)
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Ceil(T a)
     {
         T result{}; /* doesn't need initialization but gets rid of annoying warnings */
 
@@ -170,11 +184,11 @@ public:
     }
 
     template <typename T, typename IntegralType = int>
-    static HYP_ENABLE_IF_R(!is_math_vector_v, IntegralType) Floor(T a)
+    static HYP_ENABLE_IF(!is_math_vector_v<T>, IntegralType) Floor(T a)
         { return IntegralType(std::floor(a)); }
 
     template <typename T, typename IntegralType = int>
-    static HYP_ENABLE_IF_R(!is_math_vector_v, IntegralType) Ceil(T a)
+    static HYP_ENABLE_IF(!is_math_vector_v<T>, IntegralType) Ceil(T a)
         { return IntegralType(std::ceil(a)); }
 
     template <typename T>
@@ -184,10 +198,10 @@ public:
     static T Exp(T a) { std::exp(a); }
     
     template <typename T>
-    static constexpr HYP_ENABLE_IF(!std::is_floating_point_v) Abs(T a) { return std::abs(a); }
+    static constexpr HYP_ENABLE_IF(!std::is_floating_point_v<T>, T) Abs(T a) { return std::abs(a); }
     
     template <typename T>
-    static constexpr HYP_ENABLE_IF(std::is_floating_point_v) Abs(T a) { return std::fabs(a); }
+    static constexpr HYP_ENABLE_IF(std::is_floating_point_v<T>, T) Abs(T a) { return std::fabs(a); }
 
     template <typename T, typename U = T>
     static U Round(T a) { return U(std::round(a)); }

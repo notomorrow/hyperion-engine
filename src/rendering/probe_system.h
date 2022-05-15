@@ -42,7 +42,7 @@ struct alignas(16) ProbeRayData {
 
 static_assert(sizeof(ProbeRayData) == 64);
 
-struct ProbeSystemSetup {
+struct ProbeGridInfo {
     static constexpr uint32_t num_rays_per_probe         = 128;
     static constexpr uint32_t irradiance_octahedron_size = 8;
     static constexpr uint32_t depth_octahedron_size      = 16;
@@ -98,12 +98,12 @@ struct Probe {
     Vector3 position;
 };
 
-class ProbeSystem {
+class ProbeGrid {
 public:
-    ProbeSystem(ProbeSystemSetup &&setup);
-    ProbeSystem(const ProbeSystem &other) = delete;
-    ProbeSystem &operator=(const ProbeSystem &other) = delete;
-    ~ProbeSystem();
+    ProbeGrid(ProbeGridInfo &&grid_info);
+    ProbeGrid(const ProbeGrid &other) = delete;
+    ProbeGrid &operator=(const ProbeGrid &other) = delete;
+    ~ProbeGrid();
 
     inline StorageBuffer *GetRadianceBuffer() const  { return m_radiance_buffer.get(); }
     inline StorageImage *GetIrradianceImage() const  { return m_irradiance_image.get(); }
@@ -123,7 +123,7 @@ private:
     void AddDescriptors(Engine *engine);
     void SubmitPushConstants(Engine *engine, CommandBuffer *command_buffer);
 
-    ProbeSystemSetup   m_setup;
+    ProbeGridInfo      m_grid_info;
     std::vector<Probe> m_probes;
 
     Ref<ComputePipeline> m_update_irradiance,

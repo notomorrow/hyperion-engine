@@ -2,8 +2,9 @@
 
 namespace hyperion {
 
-Camera::Camera(int width, int height, float _near, float _far)
-    : m_width(width),
+Camera::Camera(CameraType camera_type, int width, int height, float _near, float _far)
+    : m_camera_type(camera_type),
+      m_width(width),
       m_height(height),
       m_near(_near),
       m_far(_far),
@@ -38,5 +39,12 @@ void Camera::Update(double dt)
 
     UpdateFrustum();
 }
+
+void Camera::UpdateMatrices()
+{
+    UpdateViewMatrix();
+    UpdateProjectionMatrix();
+}
+
 
 } // namespace hyperion

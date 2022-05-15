@@ -2,6 +2,7 @@
 #define HYPERION_V2_GRAPHICS_H
 
 #include <core/containers.h>
+#include <core/observer.h>
 #include "shader.h"
 #include "../scene/spatial.h"
 #include "framebuffer.h"
@@ -25,7 +26,7 @@ using renderer::VertexAttributeSet;
 using renderer::PerFrameData;
 using renderer::Topology;
 using renderer::FillMode;
-using renderer::CullMode;
+using renderer::FaceCullMode;
 
 class Engine;
 
@@ -65,7 +66,7 @@ public:
 
     inline auto GetCullMode() const
         { return m_cull_mode; }
-    inline void SetCullMode(CullMode cull_mode)
+    inline void SetFaceCullMode(FaceCullMode cull_mode)
         { m_cull_mode = cull_mode; }
 
     inline bool GetDepthTest() const
@@ -85,8 +86,10 @@ public:
 
     void AddSpatial(Ref<Spatial> &&spatial);
     void RemoveSpatial(Spatial::ID id);
-    inline auto &GetSpatials()             { return m_spatials; }
-    inline const auto &GetSpatials() const { return m_spatials; }
+    auto &GetSpatials()                                              { return m_spatials; }
+    const auto &GetSpatials() const                                  { return m_spatials; }
+    ObserverNotifier<Ref<Spatial>> &GetSpatialNotifier()             { return m_spatial_notifier; }
+    const ObserverNotifier<Ref<Spatial>> &GetSpatialNotifier() const { return m_spatial_notifier; }
 
     /* Non-owned objects - owned by `engine`, used by the pipeline */
 
@@ -120,7 +123,7 @@ private:
     Ref<RenderPass> m_render_pass;
     Bucket m_bucket;
     Topology m_topology;
-    CullMode m_cull_mode;
+    FaceCullMode m_cull_mode;
     FillMode m_fill_mode;
     bool m_depth_test;
     bool m_depth_write;
@@ -129,13 +132,15 @@ private:
     
     std::vector<Ref<Framebuffer>> m_fbos;
 
-    std::vector<Ref<Spatial>> m_spatials;
-    std::vector<Ref<Spatial>> m_spatials_pending_addition;
-    std::vector<Ref<Spatial>> m_spatials_pending_removal;
+    std::vector<Ref<Spatial>>      m_spatials;
+    std::vector<Ref<Spatial>>      m_spatials_pending_addition;
+    std::vector<Ref<Spatial>>      m_spatials_pending_removal;
+    ObserverNotifier<Ref<Spatial>> m_spatial_notifier;
 
     PerFrameData<CommandBuffer> *m_per_frame_data;
 
     std::mutex m_enqueued_spatials_mutex;
+
 };
 
 } // namespace hyperion::v2

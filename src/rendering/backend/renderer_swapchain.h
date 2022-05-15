@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#define HYP_ENABLE_VSYNC 0
+#define HYP_ENABLE_VSYNC 1
 
 namespace hyperion {
 namespace renderer {
@@ -30,13 +30,13 @@ public:
     Result Create(Device *device, const VkSurfaceKHR &surface);
     Result Destroy(Device *device);
 
-    inline size_t NumImages() const { return this->images.size(); }
+    inline size_t NumImages() const { return images.size(); }
 
-    VkSwapchainKHR swapchain;
-    Extent2D extent;
-    VkSurfaceFormatKHR surface_format;
-    Image::InternalFormat image_format;
-    std::vector<VkImage> images;
+    VkSwapchainKHR          swapchain;
+    Extent2D                extent;
+    VkSurfaceFormatKHR      surface_format;
+    Image::InternalFormat   image_format;
+    std::vector<VkImage>    images;
 
 private:
     SwapchainSupportDetails support_details;

@@ -202,6 +202,22 @@ Image::Image(Extent3D extent,
     }
 }
 
+Image::Image(Image &&other) noexcept
+    : m_extent(other.m_extent),
+      m_format(other.m_format),
+      m_type(other.m_type),
+      m_filter_mode(other.m_filter_mode),
+      m_internal_info(other.m_internal_info),
+      m_image(other.m_image),
+      m_size(other.m_size),
+      m_bpp(other.m_bpp),
+      m_assigned_image_data(other.m_assigned_image_data),
+      m_bytes(other.m_bytes)
+{
+    other.m_image = nullptr;
+    other.m_bytes = nullptr;
+}
+
 Image::~Image()
 {
     AssertExit(m_image == nullptr);
@@ -492,10 +508,16 @@ Result Image::Destroy(Device *device)
     return result;
 }
 
-Result Image::GenerateMipmaps(Device *device,
-    CommandBuffer *command_buffer)
+Result Image::GenerateMipmaps(
+    Device *device,
+    CommandBuffer *command_buffer
+)
 {
-    const auto num_faces = NumFaces();
+    if (m_image == nullptr) {
+        return {Result::RENDERER_ERR, "Cannot generate mipmaps on uninitialized image"};
+    }
+
+    const auto num_faces   = NumFaces();
     const auto num_mipmaps = NumMipmaps();
 
     for (uint32_t face = 0; face < num_faces; face++) {
@@ -506,53 +528,71 @@ Result Image::GenerateMipmaps(Device *device,
 
             /* Memory barrier for transfer - note that after generating the mipmaps,
                 we'll still need to transfer into a layout primed for reading from shaders. */
+
+            const ImageSubResource src{
+                .base_array_layer = face,
+                .base_mip_level   = static_cast<uint32_t>(i - 1)
+            };
+
+            const ImageSubResource dst{
+                .base_array_layer = face,
+                .base_mip_level   = static_cast<uint32_t>(i)
+            };
             
             m_image->InsertSubResourceBarrier(
                 command_buffer,
-                ImageSubResource{
-                    .base_array_layer = face,
-                    .base_mip_level   = static_cast<uint32_t>(i - 1)
-                },
+                src,
                 GPUMemory::ResourceState::COPY_SRC
             );
 
             if (i == static_cast<int32_t>(num_mipmaps)) {
                 if (face == num_faces - 1) {
+                    /* all individual subresources have been set so we mark the whole
+                     * resource as being int his state */
                     m_image->SetResourceState(GPUMemory::ResourceState::COPY_SRC);
                 }
 
                 break;
             }
-
-            /* Blit the image into the subresource */
-            VkImageBlit blit{};
-            blit.srcOffsets[0] = {0, 0, 0};
-            blit.srcOffsets[1] = {
-                static_cast<int32_t>(helpers::MipmapSize(m_extent.width, i - 1)),
-                static_cast<int32_t>(helpers::MipmapSize(m_extent.height, i - 1)),
-                static_cast<int32_t>(helpers::MipmapSize(m_extent.depth, i - 1))
+            
+            /* Blit src -> dst */
+            const VkImageBlit blit{
+                .srcSubresource = {
+                    .aspectMask     = src.aspect_mask,
+                    .mipLevel       = src.base_mip_level,
+                    .baseArrayLayer = src.base_array_layer,
+                    .layerCount     = src.num_layers
+                },
+                .srcOffsets     = {
+                    {0, 0, 0},
+                    {
+                        static_cast<int32_t>(helpers::MipmapSize(m_extent.width, i - 1)),
+                        static_cast<int32_t>(helpers::MipmapSize(m_extent.height, i - 1)),
+                        static_cast<int32_t>(helpers::MipmapSize(m_extent.depth, i - 1))
+                    }
+                },
+                .dstSubresource = {
+                    .aspectMask     = dst.aspect_mask,
+                    .mipLevel       = dst.base_mip_level,
+                    .baseArrayLayer = dst.base_array_layer,
+                    .layerCount     = dst.num_layers
+                },
+                .dstOffsets     = {
+                    {0, 0, 0},
+                    {
+                        mip_width,
+                        mip_height,
+                        mip_depth
+                    }
+                }
             };
-            blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            blit.srcSubresource.mipLevel = i - 1; /* Read from previous mip level */
-            blit.srcSubresource.baseArrayLayer = face;
-            blit.srcSubresource.layerCount = 1;
-            blit.dstOffsets[0] = {0, 0, 0};
-            blit.dstOffsets[1] = {
-                mip_width,
-                mip_height,
-                mip_depth
-            };
 
-            blit.dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-            blit.dstSubresource.mipLevel       = i;
-            blit.dstSubresource.baseArrayLayer = face;
-            blit.dstSubresource.layerCount     = 1;
-
-            vkCmdBlitImage(command_buffer->GetCommandBuffer(),
+            vkCmdBlitImage(
+                command_buffer->GetCommandBuffer(),
                 m_image->image,
-                GPUMemory::GetImageLayout(GPUMemory::ResourceState::COPY_SRC),
+                GPUMemory::GetImageLayout(GPUMemory::ResourceState::COPY_SRC),//m_image->GetSubResourceState(src)),
                 m_image->image,
-                GPUMemory::GetImageLayout(GPUMemory::ResourceState::COPY_DST),
+                GPUMemory::GetImageLayout(GPUMemory::ResourceState::COPY_DST),//m_image->GetSubResourceState(dst)),
                 1, &blit,
                 VK_FILTER_LINEAR
             );

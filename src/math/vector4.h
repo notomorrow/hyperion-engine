@@ -16,7 +16,7 @@ class Vector4 {
     friend std::ostream &operator<<(std::ostream &out, const Vector4 &vec);
 public:
     union {
-        struct { float x, y, z, w; };
+        struct alignas(8) { float x, y, z, w; };
         float values[4];
     };
 
@@ -65,7 +65,7 @@ public:
         { return x < other.x && y < other.y && z < other.z && w < other.w; }
 
     constexpr inline float LengthSquared() const { return x * x + y * y + z * z + w * w; }
-    inline float Length() const { return sqrt(LengthSquared()); }
+    inline float Length() const                  { return sqrt(LengthSquared()); }
 
     float DistanceSquared(const Vector4 &other) const;
     float Distance(const Vector4 &other) const;

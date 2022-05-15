@@ -8,8 +8,11 @@
 #include <rendering/light.h>
 #include <core/scheduler.h>
 #include <camera/camera.h>
+#include <game_counter.h>
 
 namespace hyperion::v2 {
+
+class Environment;
 
 class Scene : public EngineComponentBase<STUB_CLASS(Scene)> {
 public:
@@ -20,39 +23,37 @@ public:
     Scene &operator=(const Scene &other) = delete;
     ~Scene();
 
-    Camera *GetCamera() const { return m_camera.get(); }
+    Camera *GetCamera() const                        { return m_camera.get(); }
     void SetCamera(std::unique_ptr<Camera> &&camera) { m_camera = std::move(camera); }
 
-    Node *GetRootNode() const { return m_root_node.get(); }
-    
-    Ref<Light> &GetLight(size_t index)               { return m_lights[index]; }
-    const Ref<Light> &GetLight(size_t index) const   { return m_lights[index]; }
-    void AddLight(Ref<Light> &&light);
+    Node *GetRootNode() const                        { return m_root_node.get(); }
 
-    size_t NumLights() const                         { return m_lights.size(); }
-    const std::vector<Ref<Light>> &GetLights() const { return m_lights; }
+    Environment *GetEnvironment() const              { return m_environment; }
 
-    Texture *GetEnvironmentTexture(uint32_t index) const
-        { return m_environment_textures[index].ptr; }
-
+    Texture *GetEnvironmentTexture(uint32_t index) const { return m_environment_textures[index].ptr; }
     void SetEnvironmentTexture(uint32_t index, Ref<Texture> &&texture);
+
+    Scene::ID GetParentId() const  { return m_parent_id; }
+    void SetParentId(Scene::ID id) { m_parent_id = id; }
     
     void Init(Engine *engine);
-    void Update(Engine *engine, double delta_time);
+    void Update(Engine *engine, GameCounter::TickUnit delta);
+    void EnqueueRenderUpdates(Engine *engine);
 
     BoundingBox m_aabb;
 
 private:
-    void UpdateShaderData(Engine *engine);
 
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<Node>   m_root_node;
-    std::vector<Ref<Light>> m_lights;
+    Environment            *m_environment;
     std::array<Ref<Texture>, max_environment_textures> m_environment_textures;
 
     Matrix4 m_last_view_projection_matrix;
 
-    ScheduledFunction<renderer::Result>::ID m_camera_update_id{0};
+    ScheduledFunctionId     m_render_update_id;
+
+    Scene::ID               m_parent_id;
 
     mutable ShaderDataState m_shader_data_state;
 };

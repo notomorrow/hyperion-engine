@@ -55,7 +55,7 @@ Result CommandBuffer::Destroy(Device *device, VkCommandPool command_pool)
 Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
 {
     VkCommandBufferInheritanceInfo inheritance_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
-    inheritance_info.subpass = 0;
+    inheritance_info.subpass     = 0;
     inheritance_info.framebuffer = VK_NULL_HANDLE;
 
     VkCommandBufferBeginInfo begin_info{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
@@ -65,8 +65,6 @@ Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
         inheritance_info.renderPass = render_pass->GetRenderPass();
 
         begin_info.pInheritanceInfo = &inheritance_info;
-
-        /* todo: make another flag */
         begin_info.flags |= VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     }
 
@@ -103,7 +101,7 @@ Result CommandBuffer::SubmitSecondary(
     const std::vector<std::unique_ptr<CommandBuffer>> &command_buffers
 )
 {
-    VkCommandBuffer *vk_command_buffers = (VkCommandBuffer *)alloca(sizeof(VkCommandBuffer) * command_buffers.size());
+    const VkCommandBuffer *vk_command_buffers = static_cast<VkCommandBuffer *>(alloca(sizeof(VkCommandBuffer) * command_buffers.size()));
 
     vkCmdExecuteCommands(
         primary->GetCommandBuffer(),

@@ -11,7 +11,7 @@ using renderer::VertexAttribute;
 using renderer::VertexAttributeSet;
 using renderer::Descriptor;
 using renderer::DescriptorSet;
-using renderer::ImageSamplerDescriptor;
+using renderer::SamplerDescriptor;
 
 std::unique_ptr<Mesh> FullScreenPass::full_screen_quad = MeshBuilder::Quad(Topology::TRIANGLE_FAN);
 
@@ -108,15 +108,19 @@ void FullScreenPass::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
 {
     /* set descriptor */
     auto &framebuffer = m_framebuffer->GetFramebuffer();
+
+    if (framebuffer.GetRenderPassAttachmentRefs().empty()) {
+        return;
+    }
+
     auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
-    
+    auto *descriptor = descriptor_set->AddDescriptor<SamplerDescriptor>(binding_offset++);
+
     for (auto *attachment_ref : framebuffer.GetRenderPassAttachmentRefs()) {
-        descriptor_set
-            ->AddDescriptor<ImageSamplerDescriptor>(binding_offset++)
-            ->AddSubDescriptor({
-                .image_view = attachment_ref->GetImageView(),
-                .sampler    = attachment_ref->GetSampler()
-            });
+        descriptor->AddSubDescriptor({
+            .image_view = attachment_ref->GetImageView(),
+            .sampler    = attachment_ref->GetSampler()
+        });
    }
 }
 
@@ -159,7 +163,7 @@ void FullScreenPass::Destroy(Engine *engine)
     m_frame_data->Reset();
 
     m_framebuffer = nullptr;
-    m_pipeline = nullptr;
+    m_pipeline    = nullptr;
 
     for (auto &attachment : m_attachments) {
         HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
@@ -215,14 +219,14 @@ void FullScreenPass::Record(Engine *engine, uint32_t frame_index)
                 ));
 
 
-                /*HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
+                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
                     engine->GetInstance()->GetDevice(),
                     cmd,
-                    &m_pipeline->Get(),
+                    m_pipeline->GetPipeline(),
                     {
                         {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1}
                     }
-                ));*/
+                ));
 
                 full_screen_quad->Render(engine, cmd);
 

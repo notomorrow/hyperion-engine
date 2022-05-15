@@ -59,7 +59,7 @@ DeferredRenderer::~DeferredRenderer() = default;
 
 void DeferredRenderer::Create(Engine *engine)
 {
-    using renderer::ImageSamplerDescriptor;
+    using renderer::SamplerDescriptor;
 
     m_post_processing.Create(engine);
 
@@ -75,7 +75,7 @@ void DeferredRenderer::Create(Engine *engine)
 
     /* Albedo texture */
     descriptor_set_pass
-        ->AddDescriptor<ImageSamplerDescriptor>(0)
+        ->AddDescriptor<SamplerDescriptor>(0)
         ->AddSubDescriptor({
             .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[0]->GetImageView(),
             .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[0]->GetSampler()
@@ -83,7 +83,7 @@ void DeferredRenderer::Create(Engine *engine)
 
     /* Normals texture*/
     descriptor_set_pass
-        ->AddDescriptor<ImageSamplerDescriptor>(1)
+        ->GetDescriptor(0)
         ->AddSubDescriptor({
             .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetImageView(),
             .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetSampler()
@@ -91,18 +91,26 @@ void DeferredRenderer::Create(Engine *engine)
 
     /* Position texture */
     descriptor_set_pass
-        ->AddDescriptor<ImageSamplerDescriptor>(2)
+        ->GetDescriptor(0)
         ->AddSubDescriptor({
             .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetImageView(),
             .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetSampler()
         });
 
-    /* Depth texture */
+    /* Material ID */
     descriptor_set_pass
-        ->AddDescriptor<ImageSamplerDescriptor>(3)
+        ->GetDescriptor(0)
         ->AddSubDescriptor({
             .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetImageView(),
             .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetSampler()
+        });
+
+    /* Depth texture */
+    descriptor_set_pass
+        ->AddDescriptor<SamplerDescriptor>(1)
+        ->AddSubDescriptor({
+            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[4]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[4]->GetSampler()
         });
 
     uint32_t binding_index = 4; /* TMP */
@@ -125,16 +133,13 @@ void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t f
     bucket.framebuffers[0]->BeginCapture(primary); /* TODO: frame index? */
     RenderOpaqueObjects(engine, primary, frame_index);
     bucket.framebuffers[0]->EndCapture(primary); /* TODO: frame index? */
-
-    /* TODO: render SSAO here? */
     
     m_post_processing.Render(engine, primary, frame_index);
     
     m_effect.GetFramebuffer()->BeginCapture(primary);
 
     /* Render deferred shading onto full screen quad */
-    auto *secondary_command_buffer = m_effect.GetFrameData()->At(frame_index).Get<CommandBuffer>();
-    HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(primary));
+    HYPERION_ASSERT_RESULT(m_effect.GetFrameData()->At(frame_index).Get<CommandBuffer>()->SubmitSecondary(primary));
 
     RenderTranslucentObjects(engine, primary, frame_index);
     

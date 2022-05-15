@@ -24,8 +24,10 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
         }
 
         counter.NextTick();
-
+        
+        engine->render_scheduler.GetSemaphore().Inc();
         game->Logic(engine, counter.delta);
+        engine->render_scheduler.GetSemaphore().Dec();
     }
 
     game->Teardown(engine);

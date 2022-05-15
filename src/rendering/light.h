@@ -42,6 +42,7 @@ public:
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
+
     const Vector4 &GetColor() const
         { return m_color; }
 
@@ -69,7 +70,7 @@ protected:
     float     m_intensity;
 
 private:
-    void UpdateShaderData(Engine *engine) const;
+    void EnqueueRenderUpdates(Engine *engine) const;
 
     mutable ShaderDataState m_shader_data_state;
 };

@@ -870,7 +870,10 @@ void GPUImageMemory::InsertBarrier(
 {
     InsertBarrier(
         command_buffer,
-        ImageSubResource{},
+        ImageSubResource{
+            .num_layers = VK_REMAINING_ARRAY_LAYERS,
+            .num_levels = VK_REMAINING_MIP_LEVELS
+        },
         new_state
     );
 }
@@ -972,11 +975,11 @@ auto GPUImageMemory::GetSubResourceState(const ImageSubResource &sub_resource) c
 {
     const auto it = sub_resources.find(sub_resource);
 
-    if (it != sub_resources.end()) {
-        return it->second;
+    if (it == sub_resources.end()) {
+        return resource_state;
     }
 
-    return ResourceState::UNDEFINED;
+    return it->second;
 }
 
 void GPUImageMemory::SetSubResourceState(const ImageSubResource &sub_resource, ResourceState new_state)
@@ -1007,8 +1010,8 @@ Result GPUImageMemory::Create(Device *device, size_t size, VkImageCreateInfo *im
     this->size = size;
 
     VmaAllocationCreateInfo alloc_info{};
-    alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    alloc_info.pUserData = reinterpret_cast<void *>(index);
+    alloc_info.usage     = VMA_MEMORY_USAGE_GPU_ONLY;
+    alloc_info.pUserData = reinterpret_cast<void *>(intptr_t(index));
 
     HYPERION_VK_CHECK_MSG(
         vmaCreateImage(

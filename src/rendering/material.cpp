@@ -11,6 +11,8 @@ Material::Material(const char *tag)
     size_t len = std::strlen(tag);
     m_tag = new char[len + 1];
     std::strcpy(m_tag, tag);
+
+    ResetParameters();
 }
 
 Material::~Material()
@@ -20,7 +22,7 @@ Material::~Material()
 
 void Material::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -37,14 +39,12 @@ void Material::Init(Engine *engine)
             }
         }
 
-        UpdateShaderData(engine);
+        EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
             m_textures.Clear();
-
-            engine->render_scheduler.FlushOrWait([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
-            });
+            
+            HYP_FLUSH_RENDER_QUEUE(engine);
         }), engine);
     }));
 }
@@ -55,12 +55,12 @@ void Material::Update(Engine *engine)
         return;
     }
 
-    UpdateShaderData(engine);
+    EnqueueRenderUpdates(engine);
 }
 
-void Material::UpdateShaderData(Engine *engine)
+void Material::EnqueueRenderUpdates(Engine *engine)
 {
-    engine->render_scheduler.Enqueue([this, engine] {
+    engine->render_scheduler.Enqueue([this, engine](...) {
         MaterialShaderData shader_data{
             .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
             .metalness       = GetParameter<float>(MATERIAL_KEY_METALNESS),
@@ -133,13 +133,32 @@ void Material::SetParameter(MaterialKey key, const Parameter &value)
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
+void Material::ResetParameters()
+{
+    m_parameters.Set(MATERIAL_KEY_ALBEDO,          Vector4(1.0f));
+    m_parameters.Set(MATERIAL_KEY_METALNESS,       0.0f);
+    m_parameters.Set(MATERIAL_KEY_ROUGHNESS,       0.65f);
+    m_parameters.Set(MATERIAL_KEY_SUBSURFACE,      0.0f);
+    m_parameters.Set(MATERIAL_KEY_SPECULAR,        0.0f);
+    m_parameters.Set(MATERIAL_KEY_SPECULAR_TINT,   0.0f);
+    m_parameters.Set(MATERIAL_KEY_ANISOTROPIC,     0.0f);
+    m_parameters.Set(MATERIAL_KEY_SHEEN,           0.0f);
+    m_parameters.Set(MATERIAL_KEY_SHEEN_TINT,      0.0f);
+    m_parameters.Set(MATERIAL_KEY_CLEARCOAT,       0.0f);
+    m_parameters.Set(MATERIAL_KEY_CLEARCOAT_GLOSS, 0.0f);
+    m_parameters.Set(MATERIAL_KEY_EMISSIVENESS,    0.0f);
+    m_parameters.Set(MATERIAL_KEY_UV_SCALE,        Vector2(1.0f));
+    m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.085f);
+}
+
+
 void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
 {
     if (m_textures[key] == texture) {
         return;
     }
 
-    if (texture && IsInit()) {
+    if (texture && IsInitCalled()) {
         texture.Init();
     }
 
