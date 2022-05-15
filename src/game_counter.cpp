@@ -6,7 +6,7 @@ namespace hyperion::v2 {
 
 GameCounter::TimePoint GameCounter::Now()
 {
-    return std::chrono::steady_clock::now();
+    return Clock::now();
 }
 
 void GameCounter::NextTick()

@@ -148,7 +148,6 @@ class Callbacks {
         template <class ...OtherArgs>
         void Call(OtherArgs &&... args)
         {
-            DebugLog(LogType::Warn, "Trigger callback in thread %llu\n", std::hash<std::thread::id>{}(std::this_thread::get_id()));
             fn(std::forward<OtherArgs>(args)...);
 
             ++num_calls;
@@ -446,8 +445,14 @@ private:
 enum class EngineCallback {
     NONE,
 
+    CREATE_ANY,
+    DESTROY_ANY,
+
     CREATE_SCENES,
     DESTROY_SCENES,
+
+    CREATE_ENVIRONMENTS,
+    DESTROY_ENVIRONMENTS,
 
     CREATE_SPATIALS,
     DESTROY_SPATIALS,
@@ -644,7 +649,7 @@ struct ObjectHolder {
             return typename T::ID{typename T::ID::ValueType(it - objects.begin() + 1)};
         }
 
-        return T::bad_id;
+        return T::empty_id;
     }
     
     T *Allot(std::unique_ptr<T> &&object)
@@ -793,7 +798,7 @@ struct ObjectVector {
     T *Add(std::unique_ptr<T> &&object)
     {
         AssertThrow(object != nullptr);
-        AssertThrowMsg(object->GetId() == T::bad_id, "Adding object that already has id set");
+        AssertThrowMsg(object->GetId() == T::empty_id, "Adding object that already has id set");
 
         typename T::ID next_id;
 
@@ -925,7 +930,7 @@ public:
         {
             AssertState();
             
-            if (!ptr->IsInit()) {
+            if (!ptr->IsInitCalled()) {
                 /* Call ptr->Init() with the ref counter's pre-bound args */
                 std::apply(&T::Init, std::tuple_cat(std::make_tuple(ptr), m_ref_counter->m_init_args));
             }
@@ -940,7 +945,7 @@ public:
         {
             AssertState();
             
-            if (!ptr->IsInit()) {
+            if (!ptr->IsInitCalled()) {
                 /* Call ptr->Init() with the provided args */
                 ptr->Init(std::forward<Args>(args)...);
             }

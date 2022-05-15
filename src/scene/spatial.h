@@ -7,6 +7,7 @@
 #include <rendering/shader.h>
 #include <rendering/render_bucket.h>
 #include <animation/skeleton.h>
+#include <core/scheduler.h>
 
 #include <rendering/backend/renderer_structs.h>
 
@@ -75,8 +76,8 @@ public:
     void Update(Engine *engine);
 
 private:
-    void UpdateShaderData(Engine *engine) const;
-    void UpdateOctree(Engine *engine);
+    void EnqueueRenderUpdates(Engine *engine);
+    void UpdateOctree(Engine *engine, Octree *octree);
     
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
@@ -88,6 +89,7 @@ private:
     
     void OnAddedToOctree(Octree *octree);
     void OnRemovedFromOctree(Octree *octree);
+    void OnMovedToOctant(Octree *octree);
 
     void AddToOctree(Engine *engine);
     void RemoveFromOctree(Engine *engine);
@@ -102,7 +104,7 @@ private:
     Ref<Skeleton> m_skeleton;
     Bucket m_bucket;
 
-    Octree *m_octree;
+    std::atomic<Octree *> m_octree;
 
     struct {
         GraphicsPipeline *pipeline = nullptr;
@@ -115,6 +117,7 @@ private:
     std::vector<GraphicsPipeline *> m_pipelines;
 
     mutable ShaderDataState m_shader_data_state;
+    ScheduledFunctionId     m_render_update_id;
 };
 
 } // namespace hyperion::v2

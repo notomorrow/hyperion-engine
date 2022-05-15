@@ -27,6 +27,15 @@ void ShadowEffect::CreateShader(Engine *engine)
     m_shader->Init(engine);
 }
 
+void ShadowEffect::SetParentScene(Scene::ID id)
+{
+    m_parent_scene_id = id;
+
+    if (m_scene != nullptr) {
+        m_scene->SetParentId(m_parent_scene_id);
+    }
+}
+
 void ShadowEffect::CreateRenderPass(Engine *engine)
 {
     /* Add the filters' renderpass */
@@ -72,25 +81,41 @@ void ShadowEffect::CreatePipeline(Engine *engine)
         Bucket::BUCKET_PREPASS
     );
 
-    pipeline->SetCullMode(CullMode::FRONT);
+    pipeline->SetFaceCullMode(FaceCullMode::FRONT);
     pipeline->AddFramebuffer(m_framebuffer.IncRef());
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
     for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
-        for (auto &spatial : pipeline->GetSpatials()) {
-            if (spatial != nullptr) {
-                m_pipeline->AddSpatial(spatial.IncRef());
+        m_observers.push_back(pipeline->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
+            [this](Ref<Spatial> *items, size_t count) {
+                for (size_t i = 0; i < count; i++) {
+                    m_pipeline->AddSpatial(items[i].IncRef());
+                }
+            },
+            [this](Ref<Spatial> *items, size_t count) {
+                for (size_t i = 0; i < count; i++) {
+                    m_pipeline->RemoveSpatial(items[i]->GetId());
+                }
             }
-        }
+        )));
     }
 
     m_pipeline.Init();
 }
 
-void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
+void ShadowEffect::Create(Engine *engine)
 {
-    m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(std::move(camera)));
+    m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
+        std::make_unique<OrthoCamera>(
+            2048, 2048,
+            -1, 1,
+            -1, 1,
+            -1, 1
+        )
+    ));
+
+    m_scene->SetParentId(m_parent_scene_id);
     m_scene.Init();
 
     auto framebuffer = std::make_unique<Framebuffer>(
@@ -117,47 +142,123 @@ void ShadowEffect::Create(Engine *engine, std::unique_ptr<Camera> &&camera)
 void ShadowEffect::Destroy(Engine *engine)
 {
     FullScreenPass::Destroy(engine);
+
+    m_observers.clear();
 }
 
 void ShadowEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
 }
 
-ShadowRenderer::ShadowRenderer(std::unique_ptr<Camera> &&camera)
-    : m_camera(std::move(camera))
+ShadowRenderer::ShadowRenderer(Ref<Light> &&light)
+    : ShadowRenderer(std::move(light), Vector3::Zero(), 25.0f)
 {
 }
 
-ShadowRenderer::~ShadowRenderer() = default;
-
-void ShadowRenderer::Create(Engine *engine)
+ShadowRenderer::ShadowRenderer(Ref<Light> &&light, const Vector3 &origin, float max_distance)
+    : EngineComponentBase()
 {
-    AssertThrow(m_camera != nullptr);
-
-    m_effect.CreateShader(engine);
-    m_effect.CreateRenderPass(engine);
-    m_effect.Create(engine, std::move(m_camera));
-
-    uint32_t binding_index = 12; /* TMP */
-    m_effect.CreateDescriptors(engine, binding_index);
+    m_effect.SetLight(std::move(light));
+    m_effect.SetOrigin(origin);
+    m_effect.SetMaxDistance(max_distance);
 }
 
-void ShadowRenderer::Destroy(Engine *engine)
+ShadowRenderer::~ShadowRenderer()
 {
-    m_effect.Destroy(engine);
+    Teardown();
 }
 
-void ShadowRenderer::Render(Engine *engine,
-    CommandBuffer *primary,
-    uint32_t frame_index)
+void ShadowRenderer::Init(Engine *engine)
 {
-    engine->render_bindings.BindScene(m_effect.GetScene());
+    if (IsInitCalled()) {
+        return;
+    }
 
-    m_effect.GetFramebuffer()->BeginCapture(primary);
-    m_effect.GetGraphicsPipeline()->Render(engine, primary, frame_index);
-    m_effect.GetFramebuffer()->EndCapture(primary);
+    EngineComponentBase::Init();
 
-    engine->render_bindings.UnbindScene();
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](Engine *engine) {
+        engine->render_scheduler.Enqueue([this, engine](...) {
+            m_effect.CreateShader(engine);
+            m_effect.CreateRenderPass(engine);
+            m_effect.Create(engine);
+
+            uint32_t binding_index = 12; /* TMP */
+            m_effect.CreateDescriptors(engine, binding_index);
+
+            HYPERION_RETURN_OK;
+        });
+
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](Engine *engine) {
+            engine->render_scheduler.Enqueue([this, engine](...) {
+                m_effect.Destroy(engine);
+
+                HYPERION_RETURN_OK;
+            });
+
+            HYP_FLUSH_RENDER_QUEUE(engine);
+        }), engine);
+    }));
+}
+
+void ShadowRenderer::Render(Engine *engine)
+{
+    UpdateSceneCamera();
+
+    engine->render_scheduler.Enqueue([this, engine](CommandBuffer *command_buffer, uint32_t frame_index) {
+        engine->render_state.BindScene(m_effect.GetScene());
+
+        m_effect.GetFramebuffer()->BeginCapture(command_buffer);
+        m_effect.GetGraphicsPipeline()->Render(engine, command_buffer, frame_index);
+        m_effect.GetFramebuffer()->EndCapture(command_buffer);
+
+        engine->render_state.UnbindScene();
+
+        HYPERION_RETURN_OK;
+    });
+}
+
+void ShadowRenderer::UpdateSceneCamera()
+{
+    const auto aabb = m_effect.GetAabb();
+    const auto center = aabb.GetCenter();
+
+    const auto light_direction = m_effect.GetLight() != nullptr
+        ? m_effect.GetLight()->GetPosition()
+        : Vector3::Zero();
+
+    auto *camera = m_effect.GetScene()->GetCamera();
+
+    camera->SetTranslation(center - light_direction);
+    camera->SetTarget(center);
+    camera->UpdateViewMatrix();
+
+    switch (camera->GetCameraType()) {
+    case CameraType::ORTHOGRAPHIC: {
+        auto corners = aabb.GetCorners();
+
+        auto maxes = MathUtil::MinSafeValue<Vector3>(),
+             mins  = MathUtil::MaxSafeValue<Vector3>();
+
+        for (auto &corner : corners) {
+            corner *= camera->GetViewMatrix();
+
+            maxes = MathUtil::Max(maxes, corner);
+            mins  = MathUtil::Max(mins, corner);
+        }
+
+        static_cast<OrthoCamera *>(camera)->Set(  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+            mins.x, maxes.x,
+            mins.y, maxes.y,
+            mins.z, maxes.z
+        );
+
+        break;
+    }
+    default:
+        AssertThrowMsg(false, "Unhandled camera type");
+    }
+
+    camera->UpdateProjectionMatrix();
 }
 
 } // namespace hyperion::v2

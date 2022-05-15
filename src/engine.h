@@ -24,6 +24,13 @@
 #include <mutex>
 #include <stack>
 
+#define HYP_FLUSH_RENDER_QUEUE(engine) \
+    do { \
+        (engine)->render_scheduler.FlushOrWait([](auto &fn) { \
+            HYPERION_ASSERT_RESULT(fn(nullptr, 0)); \
+        }); \
+    } while (0)
+
 namespace hyperion::v2 {
 
 using renderer::Instance;
@@ -56,12 +63,23 @@ using renderer::StorageBuffer;
  * |                     | Image storage test  | empty               | empty               | empty               |
  */
 
-struct RenderBindings {
-    std::stack<Scene::ID> scene_ids;
+struct RenderState {
+    struct SceneBinding {
+        Scene::ID id;
+        Scene::ID parent_id;
+
+        explicit operator bool() const { return bool(id); }
+    };
+
+    std::stack<SceneBinding> scene_ids;
 
     void BindScene(const Scene *scene)
     {
-        scene_ids.push(scene == nullptr ? Scene::ID{0} : scene->GetId());
+        scene_ids.push(
+            scene == nullptr
+                ? SceneBinding{}
+                : SceneBinding{scene->GetId(), scene->GetParentId()}
+        );
     }
 
     void UnbindScene()
@@ -69,9 +87,9 @@ struct RenderBindings {
         scene_ids.pop();
     }
 
-    Scene::ID GetScene() const
+    SceneBinding GetScene() const
     {
-        return scene_ids.empty() ? Scene::ID{0} : scene_ids.top();
+        return scene_ids.empty() ? SceneBinding{} : scene_ids.top();
     }
 };
 
@@ -133,10 +151,9 @@ public:
     void Compile();
     void Stop();
 
-    void ResetRenderBindings();
-    void UpdateRendererBuffersAndDescriptors(uint32_t frame_index);
-
-    void RenderShadows(CommandBuffer *primary, uint32_t frame_index);
+    void ResetRenderState();
+    void UpdateBuffersAndDescriptors(uint32_t frame_index);
+    
     void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
@@ -148,14 +165,15 @@ public:
     Assets                  assets;
     ShaderManager           shader_manager;
 
-    RenderBindings          render_bindings;
-
-    std::mutex texture_mutex; /* tmp */
+    RenderState             render_state;
     
     std::atomic_bool m_running{false};
-    size_t           render_thread_id;
 
-    Scheduler<renderer::Result> render_scheduler;
+    Scheduler<
+        renderer::Result,
+        CommandBuffer * /* command_buffer */,
+        uint32_t /* frame_index */
+    > render_scheduler;
 
     GameThread game_thread;
 
@@ -167,9 +185,8 @@ private:
 
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
-    DeferredRenderer m_deferred_renderer;
-    ShadowRenderer   m_shadow_renderer;
-    RenderListContainer       m_render_list_container;
+    DeferredRenderer    m_deferred_renderer;
+    RenderListContainer m_render_list_container;
 
 
     Octree::Root m_octree_root;

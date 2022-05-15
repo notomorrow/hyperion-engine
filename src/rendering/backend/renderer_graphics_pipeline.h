@@ -29,7 +29,7 @@ public:
         VertexAttributeSet vertex_attributes;
 
         Topology topology = Topology::TRIANGLES;
-        CullMode cull_mode = CullMode::BACK;
+        FaceCullMode cull_mode = FaceCullMode::BACK;
         FillMode fill_mode = FillMode::FILL;
 
         bool depth_test = true,

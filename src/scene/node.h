@@ -2,6 +2,7 @@
 #define HYPERION_V2_NODE_H
 
 #include <core/containers.h>
+#include <game_counter.h>
 #include "spatial.h"
 #include "controller.h"
 
@@ -185,7 +186,7 @@ public:
     void UpdateWorldTransform();
 
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
-    void Update(Engine *engine);
+    void Update(Engine *engine, GameCounter::TickUnit delta);
 
 protected:
     Node(
@@ -195,8 +196,8 @@ protected:
         const Transform &local_transform = Transform()
     );
 
-    void UpdateInternal(Engine *engine);
-    void UpdateControllers(Engine *engine);
+    void UpdateInternal(Engine *engine, GameCounter::TickUnit delta);
+    void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
     void OnNestedNodeAdded(Node *node);
     void OnNestedNodeRemoved(Node *node);
 

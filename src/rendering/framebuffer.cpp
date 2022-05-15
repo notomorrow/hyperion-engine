@@ -17,7 +17,7 @@ Framebuffer::~Framebuffer()
 
 void Framebuffer::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -27,18 +27,16 @@ void Framebuffer::Init(Engine *engine)
         AssertThrowMsg(m_render_pass != nullptr, "Render pass must be set on framebuffer.");
         m_render_pass.Init();
 
-        engine->render_scheduler.Enqueue([this, engine] {
+        engine->render_scheduler.Enqueue([this, engine](...) {
             return m_framebuffer.Create(engine->GetDevice(), &m_render_pass->GetRenderPass());
         });
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_FRAMEBUFFERS, [this](Engine *engine) {
-            engine->render_scheduler.Enqueue([this, engine] {
+            engine->render_scheduler.Enqueue([this, engine](...) {
                return m_framebuffer.Destroy(engine->GetDevice());
             });
             
-            engine->render_scheduler.FlushOrWait([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
-            });
+            HYP_FLUSH_RENDER_QUEUE(engine);
         }), engine);
     }));
 }

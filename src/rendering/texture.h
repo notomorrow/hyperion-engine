@@ -14,10 +14,12 @@ namespace hyperion::v2 {
 
 using renderer::Image;
 using renderer::TextureImage;
+using renderer::StorageImage;
 using renderer::ImageView;
 using renderer::Sampler;
 using renderer::Extent2D;
 using renderer::Extent3D;
+using renderer::CommandBuffer;
 
 class Texture : public EngineComponentBase<STUB_CLASS(Texture)> {
 public:
@@ -30,28 +32,34 @@ public:
         const unsigned char *bytes
     );
 
+    Texture(
+        Image &&image,
+        Image::FilterMode filter_mode,
+        Image::WrapMode wrap_mode
+    );
+
     Texture(const Texture &other) = delete;
     Texture &operator=(const Texture &other) = delete;
     ~Texture();
     
-    inline TextureImage &GetImage()                   { return m_image; }
-    inline const TextureImage &GetImage() const       { return m_image; }
-    inline ImageView &GetImageView()                  { return m_image_view; }
-    inline const ImageView &GetImageView() const      { return m_image_view; }
-    inline Sampler &GetSampler()                      { return m_sampler; }
-    inline const Sampler &GetSampler() const          { return m_sampler; }
-    inline Image::Type GetType() const                { return m_image.GetType(); }
-    inline uint32_t NumFaces() const                  { return m_image.NumFaces(); }
-    inline bool IsTextureCube() const                 { return m_image.IsTextureCube(); }
-    inline const Extent3D &GetExtent() const          { return m_image.GetExtent(); }
-    inline Image::InternalFormat GetFormat() const    { return m_image.GetTextureFormat(); }
-    inline Image::FilterMode GetFilterMode() const    { return m_sampler.GetFilterMode(); }
-    inline Image::WrapMode GetWrapMode() const        { return m_sampler.GetWrapMode(); }
-
+    Image &GetImage()                          { return m_image; }
+    const Image &GetImage() const              { return m_image; }
+    ImageView &GetImageView()                  { return m_image_view; }
+    const ImageView &GetImageView() const      { return m_image_view; }
+    Sampler &GetSampler()                      { return m_sampler; }
+    const Sampler &GetSampler() const          { return m_sampler; }
+    Image::Type GetType() const                { return m_image.GetType(); }
+    uint32_t NumFaces() const                  { return m_image.NumFaces(); }
+    bool IsTextureCube() const                 { return m_image.IsTextureCube(); }
+    const Extent3D &GetExtent() const          { return m_image.GetExtent(); }
+    Image::InternalFormat GetFormat() const    { return m_image.GetTextureFormat(); }
+    Image::FilterMode GetFilterMode() const    { return m_sampler.GetFilterMode(); }
+    Image::WrapMode GetWrapMode() const        { return m_sampler.GetWrapMode(); }
+    
     void Init(Engine *engine);
 
 protected:
-    TextureImage m_image;
+    Image        m_image;
     ImageView    m_image_view;
     Sampler      m_sampler;
 };
@@ -71,7 +79,9 @@ public:
         filter_mode,
         wrap_mode,
         bytes
-    ) {}
+    )
+    {
+    }
 };
 
 class Texture3D : public Texture {
@@ -89,7 +99,9 @@ public:
         filter_mode,
         wrap_mode,
         bytes
-    ) {}
+    )
+    {
+    }
 };
 
 class TextureCube : public Texture {
@@ -107,7 +119,9 @@ public:
         filter_mode,
         wrap_mode,
         bytes
-    ) {}
+    )
+    {
+    }
 
     TextureCube(
         std::array<std::unique_ptr<Texture>, 6> &&texture_faces

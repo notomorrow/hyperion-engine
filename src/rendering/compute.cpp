@@ -16,7 +16,7 @@ ComputePipeline::~ComputePipeline()
 
 void ComputePipeline::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -26,7 +26,7 @@ void ComputePipeline::Init(Engine *engine)
         AssertThrow(m_shader != nullptr);
         m_shader->Init(engine);
 
-        engine->render_scheduler.Enqueue([this, engine] {
+        engine->render_scheduler.Enqueue([this, engine](...) {
            return m_pipeline->Create(
                engine->GetDevice(),
                m_shader->GetShaderProgram(),
@@ -35,13 +35,11 @@ void ComputePipeline::Init(Engine *engine)
         });
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_COMPUTE_PIPELINES, [this](Engine *engine) {
-            engine->render_scheduler.Enqueue([this, engine] {
+            engine->render_scheduler.Enqueue([this, engine](...) {
                return m_pipeline->Destroy(engine->GetDevice()); 
             });
             
-            engine->render_scheduler.FlushOrWait([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
-            });
+            HYP_FLUSH_RENDER_QUEUE(engine);
         }), engine);
     }));
 }

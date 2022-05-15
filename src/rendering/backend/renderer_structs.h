@@ -28,7 +28,7 @@ enum class DatumType {
     FLOAT
 };
 
-enum class CullMode {
+enum class FaceCullMode {
     NONE,
     BACK,
     FRONT
@@ -251,7 +251,13 @@ struct SwapchainSupportDetails {
 };
 
 struct alignas(8) Extent2D {
-    uint32_t width, height;
+    union {
+        struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+            uint32_t width, height;
+        };
+
+        uint32_t v[2];
+    };
 
     Extent2D()
         : width(0),
@@ -279,19 +285,36 @@ struct alignas(8) Extent2D {
 
     bool operator!=(const Extent2D &other) const
         { return !operator==(other); }
+    
+    constexpr uint32_t &operator[](uint32_t index)      { return v[index]; }
+    constexpr uint32_t operator[](uint32_t index) const { return v[index]; }
 
     Vector2 ToVector2() const { return Vector2(static_cast<float>(width), static_cast<float>(height)); }
-
     uint32_t Size() const { return width * height; }
 };
 
+static_assert(sizeof(Extent2D) == 8);
+
 struct alignas(16) Extent3D {
-    uint32_t width, height, depth;
+    union {
+        struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+            uint32_t width, height, depth;
+        };
+
+        uint32_t v[3];
+    };
 
     Extent3D()
         : width(0),
           height(0),
           depth(0)
+    {
+    }
+
+    explicit Extent3D(uint32_t extent)
+        : width(extent),
+          height(extent),
+          depth(extent)
     {
     }
 
@@ -324,12 +347,37 @@ struct alignas(16) Extent3D {
 
     bool operator!=(const Extent3D &other) const
         { return !operator==(other); }
+    
+    Extent3D operator*(const Extent3D &other) const { return Extent3D(width * other.width, height * other.height, depth * other.depth); }
+    Extent3D &operator*=(const Extent3D &other)
+    {
+        width *= other.width;
+        height *= other.height;
+        depth *= other.depth;
+
+        return *this;
+    }
+
+    Extent3D operator/(const Extent3D &other) const { return Extent3D(width / other.width, height / other.height, depth / other.depth); }
+    Extent3D &operator/=(const Extent3D &other)
+    {
+        width /= other.width;
+        height /= other.height;
+        depth /= other.depth;
+
+        return *this;
+    }
+    
+    constexpr uint32_t &operator[](uint32_t index)         { return v[index]; }
+    constexpr uint32_t operator[](uint32_t index) const    { return v[index]; }
 
     Extent2D ToExtent2D() const { return Extent2D(width, height); }
     Vector3 ToVector3() const   { return Vector3(static_cast<float>(width), static_cast<float>(height), static_cast<float>(depth)); }
 
     uint32_t Size() const { return width * height * depth; }
 };
+
+static_assert(sizeof(Extent3D) == 16);
 
 struct PackedVertex {
     float position_x,

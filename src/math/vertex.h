@@ -78,7 +78,6 @@ public:
     {
     }
     
-    bool operator<(const Vertex &other) const;
     bool operator==(const Vertex &other) const;
     Vertex &operator=(const Vertex &other);
     Vertex operator*(float scalar) const;

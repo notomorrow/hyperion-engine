@@ -13,10 +13,10 @@ namespace hyperion {
 template <typename EnumType, typename ValueType, size_t Sz>
 class EnumOptions {
 public:
-    using EnumOption_t = EnumType;
-    using Ordinal_t = uint64_t;
+    using EnumOption_t     = EnumType;
+    using Ordinal_t        = uint64_t;
     using EnumValueArray_t = std::array<ValueType, Sz>;
-    using EnumValuePair_t = std::pair<EnumType, ValueType>;
+    using EnumValuePair_t  = std::pair<EnumType, ValueType>;
 
     // convert from attachment (2^x) into ordinal (0-5) for use as an array index
     static constexpr uint64_t EnumToOrdinal(uint64_t option)

@@ -1,38 +1,67 @@
 #ifndef HYPERION_V2_CORE_SCHEDULER_H
 #define HYPERION_V2_CORE_SCHEDULER_H
 
+#define HYP_SCHEDULER_USE_ATOMIC_LOCK 0
+
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+#include "lib/atomic_lock.h"
+#endif
+
+#include "lib/atomic_semaphore.h"
+
 #include <util.h>
 
 #include <functional>
 #include <atomic>
-#include <mutex>
 #include <thread>
 #include <tuple>
 #include <utility>
 #include <deque>
+
+#if !HYP_SCHEDULER_USE_ATOMIC_LOCK
+#include <mutex>
 #include <condition_variable>
+#endif
 
 namespace hyperion::v2 {
+
+struct ScheduledFunctionId {
+    uint32_t value = 0;
+    
+    ScheduledFunctionId &operator=(uint32_t id)
+    {
+        value = id;
+
+        return *this;
+    }
+    
+    ScheduledFunctionId &operator=(const ScheduledFunctionId &other)
+    {
+        value = other.value;
+
+        return *this;
+    }
+
+    bool operator==(uint32_t id) const                      { return value == id; }
+    bool operator==(const ScheduledFunctionId &other) const { return value == other.value; }
+
+    explicit operator bool() const { return value != 0; }
+};
 
 template <class ReturnType, class ...Args>
 struct ScheduledFunction {
     using Function = std::function<ReturnType(Args...)>;
 
-    struct ID {
-        uint32_t value;
+    ScheduledFunctionId id;
+    Function            fn;
 
-        bool operator==(const ID &other) const { return value == other.value; }
-    } id;
-
-    Function fn;
-
-    constexpr static ID empty_id = ID{0};
+    constexpr static ScheduledFunctionId empty_id = ScheduledFunctionId{0};
 };
 
 template <class ReturnType, class ...Args>
 class Scheduler {
     using ScheduledFunction = ScheduledFunction<ReturnType, Args...>;
-    using Executor          = std::add_pointer_t<void(typename ScheduledFunction::Function &)>;
+    //using Executor          = std::add_pointer_t<void(typename ScheduledFunction::Function &)>;
 
     using ScheduledFunctionQueue = std::deque<ScheduledFunction>;
     using Iterator               = typename ScheduledFunctionQueue::iterator;
@@ -48,40 +77,65 @@ public:
     Scheduler(Scheduler &&other) = default;
     Scheduler &operator=(Scheduler &&other) = default;
     ~Scheduler() = default;
+    
+    AtomicSemaphore<> &GetSemaphore()               { return m_sp; }
+    const AtomicSemaphore<> &GetSemaphore() const   { return m_sp; }
 
     HYP_FORCE_INLINE uint32_t NumEnqueued() const { return m_num_enqueued.load(); }
-    
-    typename ScheduledFunction::ID Enqueue(typename ScheduledFunction::Function &&fn)
+
+    /*! \brief Enqueue a function to be executed on the owner thread. This is to be
+     * called from a non-owner thread. */
+    ScheduledFunctionId Enqueue(typename ScheduledFunction::Function &&fn)
     {
-        std::lock_guard guard(m_mutex);
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        AwaitExecution();
+#else
+        std::unique_lock lock(m_mutex);
+#endif
 
         return EnqueueInternal(std::move(fn));
     }
-
-    void Dequeue(typename ScheduledFunction::ID id)
+    
+    /*! \brief Remove a function from the owner thread's queue, if it exists
+     * @returns a boolean value indicating whether or not the function was successfully dequeued */
+    bool Dequeue(ScheduledFunctionId id)
     {
         if (id == ScheduledFunction::empty_id) {
-            return;
+            return false;
         }
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        AwaitExecution();
+#else 
         std::unique_lock lock(m_mutex);
+#endif
 
         if (DequeueInternal(id)) {
+#if !HYP_SCHEDULER_USE_ATOMIC_LOCK
             lock.unlock();
 
             if (m_scheduled_functions.empty()) {
                 m_is_flushed.notify_all();
             }
+#endif
+
+            return true;
         }
+
+        return false;
     }
 
     /*! If the enqueued with the given ID does _not_ exist, schedule the given function.
      *  else, remove the item with the given ID
      *  This is a helper function for create/destroy functions
      */
-    typename ScheduledFunction::ID Replace(typename ScheduledFunction::ID dequeue_id, typename ScheduledFunction::Function &&enqueue_fn)
+    ScheduledFunctionId EnqueueReplace(ScheduledFunctionId dequeue_id, typename ScheduledFunction::Function &&enqueue_fn)
     {
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        AwaitExecution();
+#else
         std::unique_lock lock(m_mutex);
+#endif
 
         if (dequeue_id != ScheduledFunction::empty_id) {
             auto it = Find(dequeue_id);
@@ -98,16 +152,20 @@ public:
 
         return EnqueueInternal(std::move(enqueue_fn));
     }
-    
+
     /*! Wait for all tasks to be completed in another thread.
      * Must only be called from a different thread than the creation thread.
      */
-    void Wait()
+    void AwaitExecution()
     {
         AssertThrow(std::this_thread::get_id() != m_creation_thread);
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_execution_lock.Wait();
+#else
         std::unique_lock lock(m_mutex);
         m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
+#endif
     }
 
     /*! If the current thread is the creation thread, the scheduler will be flushed and immediately return.
@@ -121,32 +179,38 @@ public:
     /*! If the current thread is the creation thread, the scheduler will be flushed and immediately return.
      * Otherwise, the thread will block until all tasks have been executed.
      */
+    template <class Executor>
     void FlushOrWait(Executor &&executor)
     {
         if (std::this_thread::get_id() == m_creation_thread) {
-            Flush(std::move(executor));
+            Flush(std::forward<Executor>(executor));
 
             return;
         }
 
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_execution_lock.Wait();
+#else
+
         std::unique_lock lock(m_mutex);
         m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
-    }
-
-    /*! Execute all scheduled tasks. May only be called from the creation thread.
-     */
-    HYP_FORCE_INLINE void Flush()
-    {
-        Flush([](auto &fn) { fn(); });
+#endif
     }
     
     /*! Execute all scheduled tasks. May only be called from the creation thread.
      */
+    template <class Executor>
     void Flush(Executor &&executor)
     {
         AssertThrow(std::this_thread::get_id() == m_creation_thread);
         
+        m_sp.WaitUntilValue(0);
+
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_execution_lock.Lock();
+#else
         std::unique_lock lock(m_mutex);
+#endif
 
         while (!m_scheduled_functions.empty()) {
             executor(m_scheduled_functions.front().fn);
@@ -155,14 +219,19 @@ public:
         }
 
         m_num_enqueued = 0;
+        
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+        m_execution_lock.Unlock();
+#else
 
         lock.unlock();
 
         m_is_flushed.notify_all();
+#endif
     }
     
 private:
-    typename ScheduledFunction::ID EnqueueInternal(typename ScheduledFunction::Function &&fn)
+    ScheduledFunctionId EnqueueInternal(typename ScheduledFunction::Function &&fn)
     {
         m_scheduled_functions.push_back({
             .id = {{++m_id_counter}},
@@ -174,7 +243,7 @@ private:
         return m_scheduled_functions.back().id;
     }
 
-    Iterator Find(typename ScheduledFunction::ID id)
+    Iterator Find(ScheduledFunctionId id)
     {
         return std::find_if(
             m_scheduled_functions.begin(),
@@ -185,9 +254,9 @@ private:
         );
     }
 
-    bool DequeueInternal(typename ScheduledFunction::ID id)
+    bool DequeueInternal(ScheduledFunctionId id)
     {
-        const auto it = Find(it);
+        const auto it = Find(id);
 
         if (it == m_scheduled_functions.end()) {
             return false;
@@ -204,9 +273,14 @@ private:
 
     uint32_t                       m_id_counter = 0;
     std::atomic_uint32_t           m_num_enqueued{0};
-    std::mutex                     m_mutex;
     ScheduledFunctionQueue         m_scheduled_functions;
+    AtomicSemaphore<>              m_sp;
+#if HYP_SCHEDULER_USE_ATOMIC_LOCK
+    AtomicLock                     m_execution_lock;
+#else
+    std::mutex                     m_mutex;
     std::condition_variable        m_is_flushed;
+#endif
 
     std::thread::id                m_creation_thread;
 };

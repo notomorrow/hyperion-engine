@@ -6,10 +6,12 @@
 namespace hyperion::v2 {
 
 struct GameCounter {
-    using TickUnit   = float;
-    using TimePoint  = std::chrono::steady_clock::time_point;
+    using Clock      = std::chrono::high_resolution_clock;
 
-    TimePoint last_time_point;
+    using TickUnit   = float;
+    using TimePoint  = Clock::time_point;
+
+    TimePoint last_time_point = Now();
     TickUnit  delta{};
 
     void NextTick();
@@ -17,22 +19,26 @@ struct GameCounter {
 
     TickUnit Interval(TimePoint end_time_point) const
     {
-        return std::chrono::duration_cast<std::chrono::duration<TickUnit, std::ratio<1>>>(end_time_point - last_time_point).count();
+        using namespace std::chrono;
+
+        return duration_cast<duration<TickUnit, std::ratio<1>>>(end_time_point - last_time_point).count();
     }
 };
 
 struct LockstepGameCounter : GameCounter {
     TickUnit target_interval;
+    TickUnit padding;
 
-    LockstepGameCounter(TickUnit target_interval)
+    LockstepGameCounter(TickUnit target_interval, TickUnit padding = TickUnit(0.00015))
         : GameCounter(),
-          target_interval(target_interval)
+          target_interval(target_interval),
+          padding(padding)
     {
     }
 
-    bool Waiting()
+    bool Waiting() const
     {
-        return Interval(Now()) < target_interval;
+        return Interval(Now()) < target_interval - padding;
     }
 };
 

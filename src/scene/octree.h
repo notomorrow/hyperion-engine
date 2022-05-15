@@ -11,6 +11,8 @@
 
 #include <array>
 
+#define HYP_OCTREE_DEBUG 0
+
 namespace hyperion {
 
 class Camera;
@@ -89,6 +91,8 @@ public:
     void CalculateVisibility(Scene *scene);
 
 private:
+    bool Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it = nullptr);
+
     inline auto FindNode(Spatial *spatial)
     {
         return std::find_if(m_nodes.begin(), m_nodes.end(), [spatial](const Node &node) {

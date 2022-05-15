@@ -27,14 +27,14 @@ Skeleton::~Skeleton()
 
 void Skeleton::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SKELETONS, [this](Engine *engine) {
-        UpdateShaderData(engine);
+        EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SKELETONS, [this](Engine *engine) {
             /* no-op */
@@ -42,7 +42,7 @@ void Skeleton::Init(Engine *engine)
     }));
 }
 
-void Skeleton::UpdateShaderData(Engine *engine) const
+void Skeleton::EnqueueRenderUpdates(Engine *engine) const
 {
     if (!m_shader_data_state.IsDirty()) {
         return;

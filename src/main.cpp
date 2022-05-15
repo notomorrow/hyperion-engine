@@ -17,6 +17,8 @@
 #include <game_thread.h>
 #include <game.h>
 
+#include <rendering/vct/vct.h>
+
 #include "input_manager.h"
 #include "asset/asset_manager.h"
 #include <camera/fps_camera.h>
@@ -39,6 +41,7 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
+#define HYPERION_VK_TEST_VCT 1
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
@@ -75,16 +78,21 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
-            base_path + "models/material_sphere/material_sphere.obj",
+            base_path + "models/sponza/sponza.obj",
             base_path + "models/cube.obj",
-            base_path + "models/monkey/monkey.obj"
+            base_path + "models/material_sphere/material_sphere.obj"
         );
 
         zombie = std::move(loaded_assets[0]);
         test_model = std::move(loaded_assets[1]);
         cube_obj = std::move(loaded_assets[2]);
-        monkey_obj = std::move(loaded_assets[3]);
-        monkey_obj->Scale(2.0f);
+        material_test_obj = std::move(loaded_assets[3]);
+
+        // remove textures so we can manipulate the material and see our changes easier
+        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
+        //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP, nullptr);
+        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ROUGHNESS_MAP, nullptr);
+        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP, nullptr);
         
         auto cubemap = engine->resources.textures.Add(std::make_unique<TextureCube>(
            engine->assets.Load<Texture>(
@@ -104,13 +112,10 @@ public:
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
+
         scene->SetEnvironmentTexture(0, cubemap.IncRef());
         test_model->Translate({0, 0, 5});
-        //test_model->Scale(0.025f);
-        test_model->Update(engine);
-
-        monkey_obj->Translate({0, 2, 0});
-        monkey_obj->Update(engine);
+        test_model->Scale(0.025f);
         
         tex1 = engine->resources.textures.Add(
             engine->assets.Load<Texture>(base_path + "textures/dirt.jpg")
@@ -136,7 +141,7 @@ public:
         skybox_spatial->SetShader(engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef());
     }
 
-    virtual void Teardown(v2::Engine *engine) override
+    virtual void Teardown(Engine *engine) override
     {
         delete input_manager;
 
@@ -145,12 +150,12 @@ public:
 
     virtual void OnFrameBegin(Engine *engine) override
     {
-        engine->render_bindings.BindScene(scene);
+        engine->render_state.BindScene(scene);
     }
 
     virtual void OnFrameEnd(Engine *engine) override
     {
-        engine->render_bindings.UnbindScene();
+        engine->render_state.UnbindScene();
     }
 
     virtual void Logic(Engine *engine, GameCounter::TickUnit delta) override
@@ -160,8 +165,7 @@ public:
 
         scene->Update(engine, delta);
     
-        engine->GetOctree().CalculateVisibility(scene.ptr);
-        test_model->Update(engine);
+        test_model->Update(engine, delta);
         
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
        // zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
@@ -172,11 +176,29 @@ public:
         } else {
             zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
         }
+        
+        material_test_obj->SetLocalScale(2.45f);
+        //material_test_obj->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.25f));
+        material_test_obj->SetLocalTranslation({7, 1.25f, 0});
+        //material_test_obj->SetLocalTranslation(Vector3(std::sin(timer * 0.5f) * 5.0f, 0, std::cos(timer * 0.5f) * 5.0f) + Vector3(7, 3, 0));
 
-        zombie->Update(engine);
+        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(
+            std::sin(timer) * 0.5f + 0.5f,
+            std::cos(timer) * 0.5f + 0.5f,
+            ((std::sin(timer) * 0.5f + 0.5f) + (std::cos(timer) * 0.5f + 0.5f)) * 0.5f,
+            1.0f
+        ));
+
+        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer) * 0.5f + 0.5f);
+        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, std::cos(timer) * 0.5f + 0.5f);
+        material_test_obj->Update(engine, delta);
+
+        zombie->Update(engine, delta);
         
         cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
-        cube_obj->Update(engine);
+        cube_obj->Update(engine, delta);
+
+        engine->GetOctree().CalculateVisibility(scene.ptr);
     }
 
     
@@ -184,7 +206,7 @@ public:
 
     Ref<Scene> scene;
     Ref<Texture> tex1, tex2;
-    std::unique_ptr<Node> test_model, zombie, cube_obj, monkey_obj;
+    std::unique_ptr<Node> test_model, zombie, cube_obj, material_test_obj;
     double timer = 0.0;
     int counter = 0;
 
@@ -243,7 +265,7 @@ int main()
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     descriptor_set_globals
-        ->AddDescriptor<ImageStorageDescriptor>(16)
+        ->AddDescriptor<StorageImageDescriptor>(16)
         ->AddSubDescriptor({ .image_view = &image_storage_view });
 
     HYPERION_ASSERT_RESULT(image_storage->Create(
@@ -354,7 +376,7 @@ int main()
             VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
             v2::Bucket::BUCKET_SKYBOX
         );
-        pipeline->SetCullMode(CullMode::FRONT);
+        pipeline->SetFaceCullMode(FaceCullMode::FRONT);
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
         
@@ -376,6 +398,15 @@ int main()
 
     my_game.Init(&engine, window);
 
+#if HYPERION_VK_TEST_VCT
+    v2::VoxelConeTracing vct({
+        /* scene bounds for vct to capture */
+        .aabb = BoundingBox(Vector3(-128), Vector3(128))
+    });
+
+    vct.Init(&engine);
+#endif
+
 
 #if HYPERION_VK_TEST_RAYTRACING
     auto rt_shader = std::make_unique<ShaderProgram>();
@@ -391,10 +422,10 @@ int main()
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
-    my_game.monkey_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 5, 0 }});
+    my_game.material_test_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 5, 0 }});
 
 
-    v2::ProbeSystem probe_system({
+    v2::ProbeGrid probe_system({
         .aabb = {{-20.0f, -5.0f, -20.0f}, {20.0f, 5.0f, 20.0f}}
     });
     probe_system.Init(&engine);
@@ -402,11 +433,10 @@ int main()
     auto my_tlas = std::make_unique<v2::Tlas>();
 
     my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
-        engine.resources.meshes.IncRef(my_game.monkey_obj->GetChild(0)->GetSpatial()->GetMesh()),
-        my_game.monkey_obj->GetChild(0)->GetSpatial()->GetTransform()
+        engine.resources.meshes.IncRef(my_game.material_test_obj->GetChild(0)->GetSpatial()->GetMesh()),
+        my_game.material_test_obj->GetChild(0)->GetSpatial()->GetTransform()
     )));
-
-    my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
+    
     my_tlas->AddBlas(engine.resources.blas.Add(std::make_unique<v2::Blas>(
         engine.resources.meshes.IncRef(my_game.cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
         my_game.cube_obj->GetChild(0)->GetSpatial()->GetTransform()
@@ -426,7 +456,7 @@ int main()
     auto *rt_descriptor_set = engine.GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_RAYTRACING);
     rt_descriptor_set->AddDescriptor<TlasDescriptor>(0)
         ->AddSubDescriptor({.acceleration_structure = &my_tlas->Get()});
-    rt_descriptor_set->AddDescriptor<ImageStorageDescriptor>(1)
+    rt_descriptor_set->AddDescriptor<StorageImageDescriptor>(1)
         ->AddSubDescriptor({.image_view = &rt_image_storage_view});
     
     auto rt_storage_buffer = rt_descriptor_set->AddDescriptor<StorageBufferDescriptor>(3);
@@ -460,24 +490,7 @@ int main()
     HYPERION_ASSERT_RESULT(compute_fc->Create(engine.GetDevice()));
 #endif
 
-
-    /* Shadow cam test */
-
-    Matrix4 shadow_view;
-    MatrixUtil::ToLookAt(shadow_view, {5, 5, 5}, {0, 0, 0}, {0, 1, 0});
-    Matrix4 shadow_proj;
-    MatrixUtil::ToOrtho(shadow_proj, -5, 5, -5, 5, -5, 5);
-
-    engine.shader_globals->scenes.Set(1, {
-        .view = shadow_view,
-        .projection = shadow_proj,
-        .camera_position = {5, 5, 5, 1},
-        .light_direction = Vector4(Vector3(0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
-    });
-
-#if HYP_GAME_THREAD
     engine.game_thread.Start(&engine, &my_game, window);
-#endif
 
     bool running = true;
 
@@ -499,9 +512,14 @@ int main()
             engine.GetInstance()->GetSwapchain()
         ));
 
+
+        frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
+        auto *command_buffer = frame->GetCommandBuffer();
+        const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
+
         if (auto num_enqueued = engine.render_scheduler.NumEnqueued()) {
-            engine.render_scheduler.Flush([](auto &fn) {
-                HYPERION_ASSERT_RESULT(fn());
+            engine.render_scheduler.Flush([command_buffer, frame_index](auto &fn) {
+                HYPERION_ASSERT_RESULT(fn(command_buffer, frame_index));
             });
 
             /*DebugLog(
@@ -510,10 +528,6 @@ int main()
                 num_enqueued
             );*/
         }
-
-
-        frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
-        const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
 #if HYPERION_VK_TEST_IMAGE_STORE
         compute_pipeline->GetPipeline()->push_constants = {
@@ -559,9 +573,9 @@ int main()
         /* Only update sets that are double - buffered so we don't
          * end up updating data that is in use by the gpu
          */
-        engine.UpdateRendererBuffersAndDescriptors(frame_index);
+        engine.UpdateBuffersAndDescriptors(frame_index);
 
-        engine.ResetRenderBindings();
+        engine.ResetRenderState();
 
         /* === rendering === */
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
@@ -599,7 +613,27 @@ int main()
         probe_system.RenderProbes(&engine, frame->GetCommandBuffer());
         probe_system.ComputeIrradiance(&engine, frame->GetCommandBuffer());
 #endif
-        engine.RenderShadows(frame->GetCommandBuffer(), frame_index);
+
+#if HYPERION_VK_TEST_VCT
+        vct.RenderVoxels(&engine, frame->GetCommandBuffer(), frame_index);
+#endif
+
+            
+        /* Shadow cam test */
+
+        Matrix4 shadow_view;
+        MatrixUtil::ToLookAt(shadow_view, {5, 5, 5}, {0, 0, 0}, {0, 1, 0});
+        Matrix4 shadow_proj;
+        MatrixUtil::ToOrtho(shadow_proj, -50, 50, -50, 50, -50, 50);
+
+        engine.shader_globals->scenes.Set(1, {
+            .view       = shadow_view,
+            .projection = shadow_proj,
+            .camera_position = {5, 5, 5, 1},
+            .light_direction = Vector4(Vector3(-0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
+        });
+
+        
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
 
         
@@ -622,8 +656,6 @@ int main()
         engine.GetInstance()->GetFrameHandler()->NextFrame();
 
     }
-
-    engine.render_scheduler.Flush();
 
     AssertThrow(engine.GetInstance()->GetDevice()->Wait());
 

@@ -242,16 +242,20 @@ Vector3 Vector3::Clamp(const Vector3 &vec, float min_value, float max_value)
 
 Vector3 Vector3::Min(const Vector3 &a, const Vector3 &b)
 {
-    return Vector3(MathUtil::Min(a.x, b.x),
+    return Vector3(
+        MathUtil::Min(a.x, b.x),
         MathUtil::Min(a.y, b.y),
-        MathUtil::Min(a.z, b.z));
+        MathUtil::Min(a.z, b.z)
+    );
 }
 
 Vector3 Vector3::Max(const Vector3 &a, const Vector3 &b)
 {
-    return Vector3(MathUtil::Max(a.x, b.x),
+    return Vector3(
+        MathUtil::Max(a.x, b.x),
         MathUtil::Max(a.y, b.y),
-        MathUtil::Max(a.z, b.z));
+        MathUtil::Max(a.z, b.z)
+    );
 }
 
 Vector3 Vector3::Zero()

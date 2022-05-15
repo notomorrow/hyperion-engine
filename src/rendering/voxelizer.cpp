@@ -21,7 +21,7 @@ Voxelizer::~Voxelizer()
 
 void Voxelizer::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -32,6 +32,7 @@ void Voxelizer::Init(Engine *engine)
 
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
             std::make_unique<OrthoCamera>(
+                voxel_map_size, voxel_map_size,
                 -voxel_map_size_signed, voxel_map_size_signed,
                 -voxel_map_size_signed, voxel_map_size_signed,
                 -voxel_map_size_signed, voxel_map_size_signed
@@ -110,7 +111,7 @@ void Voxelizer::CreatePipeline(Engine *engine)
 
     pipeline->SetDepthWrite(false);
     pipeline->SetDepthTest(false);
-    pipeline->SetCullMode(CullMode::NONE);
+    pipeline->SetFaceCullMode(FaceCullMode::NONE);
     
     pipeline->AddFramebuffer(m_framebuffer.IncRef());
     
@@ -220,7 +221,7 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
 
     /* count number of fragments */
     commands.Push([this, engine, count_mode](CommandBuffer *command_buffer) {
-        engine->render_bindings.BindScene(m_scene);
+        engine->render_state.BindScene(m_scene);
 
         m_pipeline->GetPipeline()->push_constants.voxelizer_data = {
             .grid_size = voxel_map_size,
@@ -231,7 +232,7 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
         m_pipeline->Render(engine, command_buffer, 0);
         m_framebuffer->EndCapture(command_buffer);
 
-        engine->render_bindings.UnbindScene();
+        engine->render_state.UnbindScene();
 
         HYPERION_RETURN_OK;
     });

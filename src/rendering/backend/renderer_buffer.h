@@ -68,7 +68,7 @@ private:
     StagingBuffer *FindStagingBuffer(size_t size);
 
     std::vector<StagingBufferRecord> m_staging_buffers;
-    uint32_t use_calls = 0;
+    uint32_t                         use_calls = 0;
 };
 
 class GPUMemory {
@@ -156,15 +156,22 @@ public:
     GPUBuffer &operator=(const GPUBuffer &other) = delete;
     ~GPUBuffer();
 
-    void InsertBarrier(CommandBuffer *command_buffer, ResourceState new_state) const;
+    void InsertBarrier(
+        CommandBuffer *command_buffer,
+        ResourceState new_state
+    ) const;
 
-    void CopyFrom(CommandBuffer *command_buffer,
+    void CopyFrom(
+        CommandBuffer *command_buffer,
         const GPUBuffer *src_buffer,
-        size_t count);
+        size_t count
+    );
 
-    [[nodiscard]] Result CopyStaged(Instance *instance,
+    [[nodiscard]] Result CopyStaged(
+        Instance *instance,
         const void *ptr,
-        size_t count);
+        size_t count
+    );
 
     Result CheckCanAllocate(Device *device, size_t size) const;
 
