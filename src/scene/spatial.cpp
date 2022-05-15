@@ -32,7 +32,7 @@ Spatial::~Spatial()
 
 void Spatial::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -58,7 +58,7 @@ void Spatial::Init(Engine *engine)
             AddToOctree(engine);
         }
 
-        UpdateShaderData(engine);
+        EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
             RemoveFromPipelines(engine);
@@ -74,10 +74,10 @@ void Spatial::Init(Engine *engine)
 
 void Spatial::Update(Engine *engine)
 {
-    AssertThrow(IsInit());
+    AssertThrow(IsInitCalled());
 
     if (m_skeleton != nullptr) {
-        m_skeleton->UpdateShaderData(engine);
+        m_skeleton->EnqueueRenderUpdates(engine);
     }
 
     if (m_material != nullptr) {
@@ -93,17 +93,17 @@ void Spatial::Update(Engine *engine)
     }
 
     if (m_shader_data_state.IsDirty()) {
-        UpdateShaderData(engine);
-    }
+        if (Octree *octree = m_octree.load()) {
+            UpdateOctree(engine, octree);
+        }
 
-    if (m_octree != nullptr) {
-        UpdateOctree(engine);
+        EnqueueRenderUpdates(engine);
     }
 }
 
-void Spatial::UpdateShaderData(Engine *engine) const
+void Spatial::EnqueueRenderUpdates(Engine *engine)
 {
-    engine->render_scheduler.Enqueue([this, engine, transform = m_transform] {
+    m_render_update_id = engine->render_scheduler.EnqueueReplace(m_render_update_id, [this, engine, transform = m_transform](...) {
         engine->shader_globals->objects.Set(
             m_id.value - 1,
             {
@@ -125,9 +125,9 @@ void Spatial::UpdateShaderData(Engine *engine) const
     m_shader_data_state = ShaderDataState::CLEAN;
 }
 
-void Spatial::UpdateOctree(Engine *engine)
+void Spatial::UpdateOctree(Engine *engine, Octree *octree)
 {
-    if (!m_octree->Update(engine, this)) {
+    if (!octree->Update(engine, this)) {
         DebugLog(
             LogType::Warn,
             "Could not update Spatial #%lu in octree\n",
@@ -144,7 +144,7 @@ void Spatial::SetMesh(Ref<Mesh> &&mesh)
 
     m_mesh = std::move(mesh);
 
-    if (m_mesh != nullptr && IsInit()) {
+    if (m_mesh != nullptr && IsInitCalled()) {
         m_mesh.Init();
     }
 }
@@ -157,7 +157,7 @@ void Spatial::SetSkeleton(Ref<Skeleton> &&skeleton)
 
     m_skeleton = std::move(skeleton);
 
-    if (m_skeleton != nullptr && IsInit()) {
+    if (m_skeleton != nullptr && IsInitCalled()) {
         m_skeleton.Init();
     }
 }
@@ -171,7 +171,7 @@ void Spatial::SetShader(Ref<Shader> &&shader)
     m_shader = std::move(shader);
     m_primary_pipeline.changed = true;
 
-    if (m_shader != nullptr && IsInit()) {
+    if (m_shader != nullptr && IsInitCalled()) {
         m_shader.Init();
     }
 }
@@ -185,7 +185,7 @@ void Spatial::SetMaterial(Ref<Material> &&material)
     m_material = std::move(material);
     m_primary_pipeline.changed = true;
 
-    if (m_material != nullptr && IsInit()) {
+    if (m_material != nullptr && IsInitCalled()) {
         m_material.Init();
     }
 }
@@ -278,16 +278,39 @@ void Spatial::RemoveFromPipeline(Engine *, GraphicsPipeline *pipeline)
 void Spatial::OnAddedToOctree(Octree *octree)
 {
     AssertThrow(m_octree == nullptr);
+    
+#if HYP_OCTREE_DEBUG
+    DebugLog(LogType::Info, "Spatial #%lu added to octree\n", m_id.value);
+#endif
 
     m_octree = octree;
+    m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 void Spatial::OnRemovedFromOctree(Octree *octree)
 {
-    AssertThrow(m_octree != nullptr);
+    AssertThrow(octree == m_octree);
+    
+#if HYP_OCTREE_DEBUG
+    DebugLog(LogType::Info, "Spatial #%lu removed from octree\n", m_id.value);
+#endif
 
     m_octree = nullptr;
+    m_shader_data_state |= ShaderDataState::DIRTY;
 }
+
+void Spatial::OnMovedToOctant(Octree *octree)
+{
+    AssertThrow(m_octree != nullptr);
+    
+#if HYP_OCTREE_DEBUG
+    DebugLog(LogType::Info, "Spatial #%lu moved to new octant\n", m_id.value);
+#endif
+
+    m_octree = octree;
+    m_shader_data_state |= ShaderDataState::DIRTY;
+}
+
 
 void Spatial::AddToOctree(Engine *engine)
 {
@@ -300,9 +323,10 @@ void Spatial::AddToOctree(Engine *engine)
 
 void Spatial::RemoveFromOctree(Engine *engine)
 {
-    AssertThrow(m_octree != nullptr);
+    auto *octree = m_octree.load();
+    AssertThrow(octree != nullptr);
 
-    m_octree->OnSpatialRemoved(engine, this);
+    octree->OnSpatialRemoved(engine, this);
 }
 
 } // namespace hyperion::v2

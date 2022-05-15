@@ -19,7 +19,7 @@ void Tlas::AddBlas(Ref<Blas> &&blas)
         return;
     }
 
-    if (IsInit()) {
+    if (IsInitCalled()) {
         blas.Init();
     }
 
@@ -28,7 +28,7 @@ void Tlas::AddBlas(Ref<Blas> &&blas)
 
 void Tlas::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 

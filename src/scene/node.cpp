@@ -224,29 +224,28 @@ void Node::UpdateWorldTransform()
     }
 }
 
-
-void Node::UpdateInternal(Engine *engine)
+void Node::UpdateInternal(Engine *engine, GameCounter::TickUnit delta)
 {
     if (m_spatial != nullptr) {
         m_spatial->Update(engine);
     }
 
-    UpdateControllers(engine);
+    UpdateControllers(engine, delta);
 }
 
-void Node::UpdateControllers(Engine *engine)
+void Node::UpdateControllers(Engine *engine, GameCounter::TickUnit delta)
 {
     for (auto &controller : m_controllers) {
-        controller->OnUpdate(0.1f /* TODO */);
+        controller->OnUpdate(delta);
     }
 }
 
-void Node::Update(Engine *engine)
+void Node::Update(Engine *engine, GameCounter::TickUnit delta)
 {
-    UpdateInternal(engine);
+    UpdateInternal(engine, delta);
 
     for (auto *node : m_descendents) {
-        node->UpdateInternal(engine);
+        node->UpdateInternal(engine, delta);
     }
 }
 

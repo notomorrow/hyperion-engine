@@ -16,7 +16,7 @@ Shader::~Shader()
 
 void Shader::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -24,7 +24,7 @@ void Shader::Init(Engine *engine)
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SHADERS, [this](Engine *engine) {
 
-        engine->render_scheduler.Enqueue([this, engine] {
+        engine->render_scheduler.Enqueue([this, engine](...) {
             for (const auto &sub_shader : m_sub_shaders) {
                 HYPERION_BUBBLE_ERRORS(
                     m_shader_program->AttachShader(
@@ -39,7 +39,7 @@ void Shader::Init(Engine *engine)
         });
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SHADERS, [this](Engine *engine) {
-            engine->render_scheduler.Enqueue([this, engine] {
+            engine->render_scheduler.Enqueue([this, engine](...) {
                 return m_shader_program->Destroy(engine->GetDevice());
             });
             

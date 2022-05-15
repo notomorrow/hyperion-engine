@@ -22,7 +22,7 @@ Material::~Material()
 
 void Material::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -39,7 +39,7 @@ void Material::Init(Engine *engine)
             }
         }
 
-        UpdateShaderData(engine);
+        EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
             m_textures.Clear();
@@ -55,12 +55,12 @@ void Material::Update(Engine *engine)
         return;
     }
 
-    UpdateShaderData(engine);
+    EnqueueRenderUpdates(engine);
 }
 
-void Material::UpdateShaderData(Engine *engine)
+void Material::EnqueueRenderUpdates(Engine *engine)
 {
-    engine->render_scheduler.Enqueue([this, engine] {
+    engine->render_scheduler.Enqueue([this, engine](...) {
         MaterialShaderData shader_data{
             .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
             .metalness       = GetParameter<float>(MATERIAL_KEY_METALNESS),
@@ -158,7 +158,7 @@ void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
         return;
     }
 
-    if (texture && IsInit()) {
+    if (texture && IsInitCalled()) {
         texture.Init();
     }
 

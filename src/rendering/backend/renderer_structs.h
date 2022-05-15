@@ -348,8 +348,28 @@ struct alignas(16) Extent3D {
     bool operator!=(const Extent3D &other) const
         { return !operator==(other); }
     
-    constexpr uint32_t &operator[](uint32_t index)      { return v[index]; }
-    constexpr uint32_t operator[](uint32_t index) const { return v[index]; }
+    Extent3D operator*(const Extent3D &other) const { return Extent3D(width * other.width, height * other.height, depth * other.depth); }
+    Extent3D &operator*=(const Extent3D &other)
+    {
+        width *= other.width;
+        height *= other.height;
+        depth *= other.depth;
+
+        return *this;
+    }
+
+    Extent3D operator/(const Extent3D &other) const { return Extent3D(width / other.width, height / other.height, depth / other.depth); }
+    Extent3D &operator/=(const Extent3D &other)
+    {
+        width /= other.width;
+        height /= other.height;
+        depth /= other.depth;
+
+        return *this;
+    }
+    
+    constexpr uint32_t &operator[](uint32_t index)         { return v[index]; }
+    constexpr uint32_t operator[](uint32_t index) const    { return v[index]; }
 
     Extent2D ToExtent2D() const { return Extent2D(width, height); }
     Vector3 ToVector3() const   { return Vector3(static_cast<float>(width), static_cast<float>(height), static_cast<float>(depth)); }

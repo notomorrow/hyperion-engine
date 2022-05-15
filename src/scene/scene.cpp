@@ -1,12 +1,14 @@
 #include "scene.h"
-#include "../engine.h"
+#include <engine.h>
+#include <rendering/environment.h>
 
 namespace hyperion::v2 {
 
 Scene::Scene(std::unique_ptr<Camera> &&camera)
     : EngineComponentBase(),
       m_camera(std::move(camera)),
-      m_root_node(std::make_unique<Node>("root")), 
+      m_root_node(std::make_unique<Node>("root")),
+      m_environment(new Environment),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
 }
@@ -14,11 +16,13 @@ Scene::Scene(std::unique_ptr<Camera> &&camera)
 Scene::~Scene()
 {
     Teardown();
+
+    delete m_environment;
 }
     
 void Scene::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
     
@@ -31,13 +35,9 @@ void Scene::Init(Engine *engine)
             }
         }
 
-        for (auto &light : m_lights) {
-            if (light != nullptr) {
-                light.Init();
-            }
-        }
+        m_environment->Init(engine);
 
-        UpdateShaderData(engine);
+        EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](Engine *engine) {
             HYP_FLUSH_RENDER_QUEUE(engine);
@@ -45,10 +45,10 @@ void Scene::Init(Engine *engine)
     }));
 }
 
-void Scene::Update(Engine *engine, double delta_time)
+void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
 {
     if (m_camera != nullptr) {
-        m_camera->Update(delta_time);
+        m_camera->Update(delta);
 
         if (m_camera->GetViewProjectionMatrix() != m_last_view_projection_matrix) {
             m_last_view_projection_matrix = m_camera->GetViewProjectionMatrix();
@@ -56,14 +56,14 @@ void Scene::Update(Engine *engine, double delta_time)
         }
     }
 
-    m_root_node->Update(engine);
-
     if (m_shader_data_state.IsDirty()) {
-        UpdateShaderData(engine);
+        EnqueueRenderUpdates(engine);
     }
+
+    m_root_node->Update(engine, delta);
 }
 
-void Scene::UpdateShaderData(Engine *engine)
+void Scene::EnqueueRenderUpdates(Engine *engine)
 {
     struct {
         BoundingBox aabb;
@@ -88,7 +88,7 @@ void Scene::UpdateShaderData(Engine *engine)
         params.height      = m_camera->GetHeight();
     }
 
-    engine->render_scheduler.Enqueue([this, engine, params] {
+    m_render_update_id = engine->render_scheduler.EnqueueReplace(m_render_update_id, [this, engine, params](...) {
         SceneShaderData shader_data{
             .view             = params.view,
             .projection       = params.projection,
@@ -105,7 +105,6 @@ void Scene::UpdateShaderData(Engine *engine)
 
         for (uint32_t i = 0; i < static_cast<uint32_t>(m_environment_textures.size()); i++) {
             if (auto &texture = m_environment_textures[i]) {
-                /* should we use an enqueued task for this? */
                 if (engine->shader_globals->textures.GetResourceIndex(texture.ptr, &shader_data.environment_texture_index)) {
                     shader_data.environment_texture_usage |= 1 << i;
                 }
@@ -120,18 +119,9 @@ void Scene::UpdateShaderData(Engine *engine)
     m_shader_data_state = ShaderDataState::CLEAN;
 }
 
-void Scene::AddLight(Ref<Light> &&light)
-{
-    if (light != nullptr && IsInit()) {
-        light.Init();
-    }
-
-    m_lights.push_back(std::move(light));
-}
-
 void Scene::SetEnvironmentTexture(uint32_t index, Ref<Texture> &&texture)
 {
-    if (texture && IsInit()) {
+    if (texture && IsInitCalled()) {
         texture.Init();
     }
 

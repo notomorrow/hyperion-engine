@@ -21,13 +21,6 @@ public:
     Triangle operator*(const Transform &transform) const;
     Triangle &operator*=(const Transform &transform);
 
-    inline bool operator<(const Triangle &other) const
-    {
-        return m_points[0] < other.m_points[0]
-            && m_points[1] < other.m_points[1]
-            && m_points[2] < other.m_points[2];
-    }
-
     inline Vertex &operator[](int index) { return m_points[index]; }
     inline const Vertex &operator[](int index) const { return m_points[index]; }
     inline Vertex &GetPoint(int index) { return operator[](index); }

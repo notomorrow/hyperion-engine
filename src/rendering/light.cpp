@@ -25,14 +25,14 @@ Light::~Light()
 
 void Light::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_LIGHTS, [this](Engine *engine) {
-        UpdateShaderData(engine);
+        EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_LIGHTS, [this](Engine *engine) {
             /* no-op */
@@ -40,7 +40,7 @@ void Light::Init(Engine *engine)
     }));
 }
 
-void Light::UpdateShaderData(Engine *engine) const
+void Light::EnqueueRenderUpdates(Engine *engine) const
 {
     LightShaderData shader_data{
         .position   = Vector4(m_position, 1.0f),

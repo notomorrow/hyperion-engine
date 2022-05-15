@@ -299,7 +299,7 @@ public:
     }
 
 private:
-    void UpdateShaderData(Engine *engine);
+    void EnqueueRenderUpdates(Engine *engine);
 
     char *m_tag;
 

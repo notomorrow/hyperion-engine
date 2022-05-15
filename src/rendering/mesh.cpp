@@ -87,7 +87,7 @@ Mesh::~Mesh()
 
 void Mesh::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -108,7 +108,7 @@ void Mesh::Init(Engine *engine)
             m_indices  = {0};
         }
 
-        engine->render_scheduler.Enqueue([this, engine] {
+        engine->render_scheduler.Enqueue([this, engine](...) {
             using renderer::StagingBuffer;
 
             auto *instance = engine->GetInstance();
@@ -153,7 +153,7 @@ void Mesh::Init(Engine *engine)
         });
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
-            engine->render_scheduler.Enqueue([this, engine] {
+            engine->render_scheduler.Enqueue([this, engine](...) {
                 auto result = renderer::Result::OK;
 
                 Device *device = engine->GetInstance()->GetDevice();

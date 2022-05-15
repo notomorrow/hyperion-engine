@@ -10,7 +10,8 @@ public:
     virtual ~PerspectiveCamera() = default;
 
     virtual void UpdateLogic(double dt) override;
-    virtual void UpdateMatrices() override;
+    virtual void UpdateViewMatrix() override;
+    virtual void UpdateProjectionMatrix() override;
 };
 } // namespace hyperion
 

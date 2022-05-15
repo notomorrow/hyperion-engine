@@ -7,6 +7,8 @@
 #include <memory>
 #include <atomic>
 
+#define HYP_BUFFERS_USE_SPINLOCK 0
+
 namespace hyperion::renderer {
 
 class Device;
@@ -191,12 +193,13 @@ public:
 
     void UpdateBuffer(Device *device, size_t buffer_index)
     {
+#if HYP_BUFFERS_USE_SPINLOCK
         static constexpr uint32_t max_spins = 2;
 
-        //for (uint32_t spin_count = 0; spin_count < max_spins; spin_count++) {
+        for (uint32_t spin_count = 0; spin_count < max_spins; spin_count++) {
             auto &current = m_staging_objects_pool.Current();
 
-         //   if (!current.locked) {
+            if (!current.locked) {
                 current.PerformUpdate(
                     device,
                     m_buffers,
@@ -204,13 +207,13 @@ public:
                     current.objects.Data()
                 );
                 
-          //      m_staging_objects_pool.Next();
+                m_staging_objects_pool.Next();
 
                 return;
-          //  }
+            }
 
-        //    m_staging_objects_pool.Next();
-        //}
+            m_staging_objects_pool.Next();
+        }
         
         DebugLog(
             LogType::Warn,
@@ -218,6 +221,16 @@ public:
             max_spins,
             typeid(StructType).name()
         );
+#else
+        auto &current = m_staging_objects_pool.Current();
+
+        current.PerformUpdate(
+            device,
+            m_buffers,
+            buffer_index,
+            current.objects.Data()
+        );
+#endif
     }
 
     void Set(size_t index, const StructType &value)
@@ -236,7 +249,7 @@ public:
     
 private:
     struct StagingObjectsPool {
-        static constexpr uint32_t num_staging_buffers = 2;
+        static constexpr uint32_t num_staging_buffers = HYP_BUFFERS_USE_SPINLOCK ? 2 : 1;
 
         struct StagingObjects {
             std::atomic_bool                 locked{false};
@@ -292,16 +305,23 @@ private:
         void Set(size_t index, const StructType &value)
         {
             AssertThrowMsg(index < buffers[0].objects.Size(), "Cannot set shader data out of bounds");
-            
-            //for (uint32_t i = 0; i < num_staging_buffers; i++) {
-                const auto staging_object_index = current_index.load();//(current_index + i + 1) % num_staging_buffers;
+
+#if HYP_BUFFERS_USE_SPINLOCK
+            for (uint32_t i = 0; i < num_staging_buffers; i++) {
+                const auto staging_object_index = (current_index + i) % num_staging_buffers;
                 auto &staging_object = buffers[staging_object_index];
 
-                //staging_object.locked = true;
+                staging_object.locked = true;
                 staging_object.objects[index] = value;
                 staging_object.MarkDirty(index);
-                //staging_object.locked = false;
-           // }
+                staging_object.locked = false;
+            }
+#else
+            auto &staging_object = buffers[0];
+            
+            staging_object.objects[index] = value;
+            staging_object.MarkDirty(index);
+#endif
         }
     };
 

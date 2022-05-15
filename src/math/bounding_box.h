@@ -43,7 +43,7 @@ public:
     inline bool Empty() const 
     { 
         return MathUtil::Approximately(min, MathUtil::MaxSafeValue<Vector3>()) && 
-               max == Vector3(std::numeric_limits<float>::lowest());
+               MathUtil::Approximately(max, MathUtil::MinSafeValue<Vector3>());
     }
 
     BoundingBox &Extend(const Vector3 &vec);

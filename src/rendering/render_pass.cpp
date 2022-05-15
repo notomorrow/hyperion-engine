@@ -17,20 +17,20 @@ RenderPass::~RenderPass()
 
 void RenderPass::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_RENDER_PASSES, [this](Engine *engine) {
-        engine->render_scheduler.Enqueue([this, engine] {
+        engine->render_scheduler.Enqueue([this, engine](...) {
             return m_render_pass.Create(engine->GetDevice());
         });
         //HYPERION_ASSERT_RESULT(m_render_pass.Create(engine->GetDevice()));
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_RENDER_PASSES, [this](Engine *engine) {
-            engine->render_scheduler.Enqueue([this, engine] {
+            engine->render_scheduler.Enqueue([this, engine](...) {
                 return m_render_pass.Destroy(engine->GetDevice());
             });
             

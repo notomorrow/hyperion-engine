@@ -21,7 +21,7 @@ Voxelizer::~Voxelizer()
 
 void Voxelizer::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -32,6 +32,7 @@ void Voxelizer::Init(Engine *engine)
 
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
             std::make_unique<OrthoCamera>(
+                voxel_map_size, voxel_map_size,
                 -voxel_map_size_signed, voxel_map_size_signed,
                 -voxel_map_size_signed, voxel_map_size_signed,
                 -voxel_map_size_signed, voxel_map_size_signed

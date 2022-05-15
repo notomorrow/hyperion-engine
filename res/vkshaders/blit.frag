@@ -31,6 +31,8 @@ void main()
 
     //out_color = imageLoad(rt_image, ivec2(int(v_texcoord0.x * float(imageSize(rt_image).x)), int(v_texcoord0.y * float(imageSize(rt_image).y))));
 
+    //out_color = texture(shadow_map, texcoord);
+
     //if (out_color.a < 0.2) {
         out_color = texture(deferred_result, texcoord);
     //}

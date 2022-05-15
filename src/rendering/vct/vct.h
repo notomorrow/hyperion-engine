@@ -3,6 +3,7 @@
 
 #include <rendering/texture.h>
 #include <rendering/graphics.h>
+#include <rendering/compute.h>
 #include <rendering/framebuffer.h>
 #include <rendering/shader.h>
 #include <rendering/render_pass.h>
@@ -36,7 +37,7 @@ public:
         BoundingBox aabb;
     };
 
-    VoxelConeTracing(Params &&params, Ref<Spatial> &&tmp_spatial);
+    VoxelConeTracing(Params &&params);
     VoxelConeTracing(const VoxelConeTracing &other) = delete;
     VoxelConeTracing &operator=(const VoxelConeTracing &other) = delete;
     ~VoxelConeTracing();
@@ -53,7 +54,8 @@ public:
 
 private:
     void CreateImagesAndBuffers(Engine *engine);
-    void CreatePipeline(Engine *engine);
+    void CreateGraphicsPipeline(Engine *engine);
+    void CreateComputePipelines(Engine *engine);
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
     void CreateFramebuffer(Engine *engine);
@@ -66,6 +68,7 @@ private:
     Ref<Shader>           m_shader;
     Ref<RenderPass>       m_render_pass;
     Ref<GraphicsPipeline> m_pipeline;
+    Ref<ComputePipeline>  m_clear_voxels;
 
     Ref<Texture>                   m_voxel_image;
     UniformBuffer                  m_uniform_buffer;

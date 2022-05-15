@@ -24,7 +24,7 @@ SparseVoxelOctree::~SparseVoxelOctree()
 
 void SparseVoxelOctree::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 

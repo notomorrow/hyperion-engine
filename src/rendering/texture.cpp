@@ -42,15 +42,15 @@ Texture::~Texture()
 
 void Texture::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_TEXTURES, [this](Engine *engine) {
-        engine->render_scheduler.Enqueue([this, engine] {
-            auto initial_state = renderer::GPUMemory::ResourceState::SHADER_RESOURCE;
+        engine->render_scheduler.Enqueue([this, engine](...) {
+            const auto initial_state = renderer::GPUMemory::ResourceState::SHADER_RESOURCE;
 
             HYPERION_BUBBLE_ERRORS(m_image.Create(engine->GetDevice(), engine->GetInstance(), initial_state));
             HYPERION_BUBBLE_ERRORS(m_image_view.Create(engine->GetInstance()->GetDevice(), &m_image));
@@ -62,7 +62,7 @@ void Texture::Init(Engine *engine)
         });
         
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_TEXTURES, [this](Engine *engine) {
-            engine->render_scheduler.Enqueue([this, engine] {
+            engine->render_scheduler.Enqueue([this, engine](...) {
                 engine->shader_globals->textures.RemoveResource(m_id);
 
                 HYPERION_BUBBLE_ERRORS(m_sampler.Destroy(engine->GetInstance()->GetDevice()));

@@ -294,6 +294,134 @@ bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
     return true;
 }
 
+bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it)
+{
+    const auto &new_aabb = spatial->GetWorldAabb();
+
+    const bool is_root = IsRoot();
+    const bool contains = m_aabb.Contains(new_aabb);
+
+#if HYP_OCTREE_DEBUG
+    if (is_root) {
+        DebugLog(
+            LogType::Debug,
+            "In root, checking to see if any child ones can take this %lu\n",
+            spatial->GetId().value
+        );
+    } else if (contains) {
+        DebugLog(
+            LogType::Debug,
+            "Not root but aabb still contains spatial %lu, checking child octants\n",
+            spatial->GetId().value
+        );
+    }
+#endif
+
+    if (!is_root && !contains) {
+#if HYP_OCTREE_DEBUG
+        DebugLog(
+            LogType::Debug,
+            "Moving spatial #%lu into the closest fitting (or root) parent\n",
+            spatial->GetId().value
+        );
+#endif
+
+        if (it != nullptr) {
+            if (m_root != nullptr) {
+                m_root->events.on_remove_node(engine, this, spatial);
+                m_root->node_to_octree[spatial] = nullptr;
+            }
+            
+            m_nodes.erase(*it);
+        }
+        
+        bool inserted = false;
+    
+        /* Contains is false at this point */
+        Octree *parent = m_parent;
+
+        while (parent != nullptr) {
+            if (parent->m_aabb.Contains(new_aabb)) {
+                inserted = parent->Move(engine, spatial);
+
+                break;
+            }
+
+            parent = parent->m_parent;
+        }
+
+        /* Node has now been added to it's appropriate octant -- remove any potential empty octants */
+        CollapseParents(engine);
+
+        return inserted;
+    }
+
+    for (Octant &octant : m_octants) {
+        if (octant.aabb.Contains(new_aabb)) {
+            /* we /can/ go a level deeper than current, so no matter what we dispatch the
+             * event that the spatial was 'removed' from this octant, as it will be added
+             * deeper regardless.
+             * note: we don't call OnRemovedFromOctree() on the spatial, we don't want the Spatial's
+             * m_octree ptr to be nullptr at any point, which could cause flickering when we go to render
+             * stuff. that's the purpose for this whole method, to set it in one pass
+             */
+            if (it != nullptr) {
+                if (m_root != nullptr) {
+                    m_root->events.on_remove_node(engine, this, spatial);
+                    m_root->node_to_octree[spatial] = nullptr;
+                }
+
+                m_nodes.erase(*it);
+            }
+
+            if (!m_is_divided) {
+                Divide(engine);
+            }
+            
+            AssertThrow(octant.octree != nullptr);
+
+            return octant.octree->Move(engine, spatial, nullptr);
+        }
+    }
+
+    if (it != nullptr) { /* Not moved */
+        auto &spatial_it = *it;
+
+        spatial_it->aabb             = new_aabb;
+        spatial_it->visibility_state = &m_visibility_state;
+    } else { /* Moved into new octant */
+        /* HACK to prevent objects having no visibility state and flicking when switching octants.
+         * We set the visibility state to be the most up to date it can be, and in the next visibility
+         * state check, the proper state will be applied
+         */
+        if (auto *current_octant = spatial->GetOctree()) {
+            if (m_root != nullptr) {
+                const uint32_t curr = m_root->visibility_cursor.load();
+
+                m_visibility_state.nonces[curr] = engine->GetOctree().GetVisibilityState().nonces[curr].load();
+                //m_visibility_state.bits         |= current_octant->GetVisibilityState().bits.load();
+            }
+        }
+
+        m_nodes.push_back(Node{
+            .spatial          = engine->resources.spatials.IncRef(spatial),
+            .aabb             = spatial->GetWorldAabb(),
+            .visibility_state = &m_visibility_state
+        });
+
+        spatial->OnMovedToOctant(this);
+
+        if (m_root != nullptr) {
+            AssertThrowMsg(m_root->node_to_octree[spatial] == nullptr, "Spatial must not already be in octree hierarchy.");
+
+            m_root->node_to_octree[spatial] = this;
+            m_root->events.on_insert_node(engine, this, spatial);
+        }
+    }
+
+    return true;
+}
+
 bool Octree::Update(Engine *engine, Spatial *spatial)
 {
     if (m_root != nullptr) {
@@ -344,38 +472,7 @@ bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
      * If we do still contain it - we will remove it from this octree and re-insert it to find the deepest child octant
      */
 
-    spatial->OnRemovedFromOctree(this);
-
-    if (m_root != nullptr) {
-        m_root->events.on_remove_node(engine, this, spatial);
-        m_root->node_to_octree[spatial] = nullptr;
-    }
-
-    m_nodes.erase(it);
-
-    if (IsRoot() || m_aabb.Contains(new_aabb)) {
-        return Insert(engine, spatial);
-    }
-
-    bool inserted = false;
-    
-    /* Contains is false at this point */
-    Octree *parent = m_parent;
-
-    while (parent != nullptr) {
-        if (parent->m_aabb.Contains(new_aabb)) {
-            inserted = parent->Insert(engine, spatial);
-
-            break;
-        }
-
-        parent = parent->m_parent;
-    }
-
-    /* Node has now been added to it's appropriate octant -- remove any potential empty octants */
-    CollapseParents(engine);
-
-    return inserted;
+    return Move(engine, spatial, &it);
 }
 
 void Octree::CalculateVisibility(Scene *scene)

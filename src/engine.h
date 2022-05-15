@@ -27,7 +27,7 @@
 #define HYP_FLUSH_RENDER_QUEUE(engine) \
     do { \
         (engine)->render_scheduler.FlushOrWait([](auto &fn) { \
-            HYPERION_ASSERT_RESULT(fn()); \
+            HYPERION_ASSERT_RESULT(fn(nullptr, 0)); \
         }); \
     } while (0)
 
@@ -64,11 +64,22 @@ using renderer::StorageBuffer;
  */
 
 struct RenderState {
-    std::stack<Scene::ID> scene_ids;
+    struct SceneBinding {
+        Scene::ID id;
+        Scene::ID parent_id;
+
+        explicit operator bool() const { return bool(id); }
+    };
+
+    std::stack<SceneBinding> scene_ids;
 
     void BindScene(const Scene *scene)
     {
-        scene_ids.push(scene == nullptr ? Scene::ID{0} : scene->GetId());
+        scene_ids.push(
+            scene == nullptr
+                ? SceneBinding{}
+                : SceneBinding{scene->GetId(), scene->GetParentId()}
+        );
     }
 
     void UnbindScene()
@@ -76,9 +87,9 @@ struct RenderState {
         scene_ids.pop();
     }
 
-    Scene::ID GetScene() const
+    SceneBinding GetScene() const
     {
-        return scene_ids.empty() ? Scene::ID{0} : scene_ids.top();
+        return scene_ids.empty() ? SceneBinding{} : scene_ids.top();
     }
 };
 
@@ -142,8 +153,7 @@ public:
 
     void ResetRenderState();
     void UpdateBuffersAndDescriptors(uint32_t frame_index);
-
-    void RenderShadows(CommandBuffer *primary, uint32_t frame_index);
+    
     void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
@@ -156,13 +166,14 @@ public:
     ShaderManager           shader_manager;
 
     RenderState             render_state;
-
-    std::mutex texture_mutex; /* tmp */
     
     std::atomic_bool m_running{false};
-    size_t           render_thread_id;
 
-    Scheduler<renderer::Result> render_scheduler;
+    Scheduler<
+        renderer::Result,
+        CommandBuffer * /* command_buffer */,
+        uint32_t /* frame_index */
+    > render_scheduler;
 
     GameThread game_thread;
 
@@ -174,9 +185,8 @@ private:
 
     EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
 
-    DeferredRenderer m_deferred_renderer;
-    ShadowRenderer   m_shadow_renderer;
-    RenderListContainer       m_render_list_container;
+    DeferredRenderer    m_deferred_renderer;
+    RenderListContainer m_render_list_container;
 
 
     Octree::Root m_octree_root;

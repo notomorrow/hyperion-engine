@@ -38,6 +38,7 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 #define IBL_INTENSITY 10000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 100000.0
+#define IRRADIANCE_MULTIPLIER 5.0
 #define SSAO_DEBUG 0
 
 #include "include/rt/probe/shared.inc"
@@ -162,7 +163,7 @@ void main()
         
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
         vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, vec3(0.0), vec3(0.0), roughness);
-        irradiance = vct_diffuse.rgb;
+        irradiance = vct_diffuse.rgb * IRRADIANCE_MULTIPLIER;
 
         vec3 shadow = vec3(1.0);
         vec3 light_color = vec3(1.0);
@@ -195,7 +196,6 @@ void main()
         //float micro_shadow_sqr = micro_shadow * micro_shadow;
 
         result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao);
-        
     } else {
         result = albedo.rgb;
     }

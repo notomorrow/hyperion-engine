@@ -131,6 +131,14 @@ public:
     static constexpr T Lerp(const T &from, const T &to, const T &amt)
         { return from + amt * (to - from); }
 
+    template <typename T>
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Min(const T &a, const T &b)
+        { return T::Min(a, b); }
+
+    template <typename T>
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Max(const T &a, const T &b)
+        { return T::Max(a, b); }
+
     template <typename T, typename U, typename V = std::common_type_t<T, U>>
     static constexpr V Min(T a, U b)
         { return (a < b) ? a : b; }

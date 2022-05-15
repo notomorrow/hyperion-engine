@@ -88,17 +88,17 @@ void FpsCamera::HandleKeyboardInput(double dt)
         m_next_translation += m_dir_cross_y * speed;
     }
 
-    constexpr float blending = (movement_blending > 0.0f)
-        ? 1.0f / movement_blending
-        : 1.0f;
-
-    m_translation.Lerp(
-        m_next_translation,
-        MathUtil::Clamp(
-            blending * static_cast<float>(dt),
-            0.0f,
-            1.0f
-        )
-    );
+    if constexpr(movement_blending > 0.0f) {
+        m_translation.Lerp(
+            m_next_translation,
+            MathUtil::Clamp(
+                (1.0f / movement_blending) * static_cast<float>(dt),
+                0.0f,
+                1.0f
+            )
+        );
+    } else {
+        m_translation = m_next_translation;
+    }
 }
 } // namespace hyperion

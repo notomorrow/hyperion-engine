@@ -161,7 +161,7 @@ void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine)
 
 void GraphicsPipeline::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -176,7 +176,7 @@ void GraphicsPipeline::Init(Engine *engine)
             fbo.Init();
         }
 
-        engine->render_scheduler.Enqueue([this, engine] {
+        engine->render_scheduler.Enqueue([this, engine](...) {
             renderer::GraphicsPipeline::ConstructionInfo construction_info{
                 .vertex_attributes = m_vertex_attributes,
                 .topology          = m_topology,
@@ -243,7 +243,7 @@ void GraphicsPipeline::Init(Engine *engine)
             m_spatials_pending_addition.clear();
             m_spatials_pending_removal.clear();
 
-            engine->render_scheduler.Enqueue([this, engine] {
+            engine->render_scheduler.Enqueue([this, engine](...) {
                 if (m_per_frame_data != nullptr) {
                     auto &per_frame_data = *m_per_frame_data;
 
@@ -301,11 +301,9 @@ void GraphicsPipeline::Render(
 
             static_assert(std::size(DescriptorSet::object_buffer_mapping) == Swapchain::max_frames_in_flight);
 
-            const auto scene_id = engine->render_state.GetScene();
-
-            const auto scene_index = scene_id != Scene::bad_id
-                ? scene_id.value - 1
-                : 0;
+            const auto scene_binding = engine->render_state.GetScene();
+            const auto scene_cull_id = scene_binding.parent_id ? scene_binding.parent_id : scene_binding.id;
+            const auto scene_index = scene_binding ? scene_binding.id.value - 1 : 0;
 
             /* Bind scene data - */
             instance->GetDescriptorPool().Bind(
@@ -338,7 +336,7 @@ void GraphicsPipeline::Render(
                 }
             );
 
-            const bool perform_culling = scene_id != Scene::bad_id && BucketSupportsCulling(m_bucket);
+            const bool perform_culling = scene_cull_id != Scene::empty_id && BucketSupportsCulling(m_bucket);
             
             for (auto &spatial : m_spatials) {
                 if (spatial->GetMesh() == nullptr) {
@@ -353,9 +351,15 @@ void GraphicsPipeline::Render(
                             continue;
                         }
 
-                        if (!visibility_state.Get(scene_id)) {
+                        if (!visibility_state.Get(scene_cull_id)) {
                             continue;
                         }
+                    } else {
+                        DebugLog(
+                            LogType::Warn,
+                            "Spatial #%lu not in octree!\n",
+                            spatial->GetId().value
+                        );
                     }
                 }
 

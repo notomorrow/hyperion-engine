@@ -27,7 +27,7 @@ void Blas::SetMesh(Ref<Mesh> &&mesh)
         }
     }
 
-    if (m_mesh != nullptr && IsInit()) {
+    if (m_mesh != nullptr && IsInitCalled()) {
         m_mesh.Init();
         
         m_wrapped.AddGeometry(std::make_unique<AccelerationGeometry>(
@@ -41,14 +41,14 @@ void Blas::SetTransform(const Transform &transform)
 {
     m_transform = transform;
 
-    if (IsInit()) {
+    if (IsInitCalled()) {
         m_wrapped.SetTransform(m_transform.GetMatrix());
     }
 }
 
 void Blas::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -78,7 +78,7 @@ void Blas::Init(Engine *engine)
 
 void Blas::Update(Engine *engine)
 {
-    if (!IsInit()) {
+    if (!IsInitCalled()) {
         return;
     }
 

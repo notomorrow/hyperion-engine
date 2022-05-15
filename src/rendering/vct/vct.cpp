@@ -9,7 +9,7 @@ namespace hyperion::v2 {
 
 const Extent3D VoxelConeTracing::voxel_map_size{256};
 
-VoxelConeTracing::VoxelConeTracing(Params &&params, Ref<Spatial> &&tmp_spatial)
+VoxelConeTracing::VoxelConeTracing(Params &&params)
     : EngineComponentBase(),
       m_params(std::move(params))
 {
@@ -22,7 +22,7 @@ VoxelConeTracing::~VoxelConeTracing()
 
 void VoxelConeTracing::Init(Engine *engine)
 {
-    if (IsInit()) {
+    if (IsInitCalled()) {
         return;
     }
 
@@ -31,6 +31,7 @@ void VoxelConeTracing::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_VOXELIZER, [this](Engine *engine) {
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
             std::make_unique<OrthoCamera>(
+                voxel_map_size.width, voxel_map_size.height,
                 -static_cast<float>(voxel_map_size[0]) * 0.5f, static_cast<float>(voxel_map_size[0]) * 0.5f,
                 -static_cast<float>(voxel_map_size[1]) * 0.5f, static_cast<float>(voxel_map_size[1]) * 0.5f,
                 -static_cast<float>(voxel_map_size[2]) * 0.5f, static_cast<float>(voxel_map_size[2]) * 0.5f
@@ -42,19 +43,20 @@ void VoxelConeTracing::Init(Engine *engine)
         CreateRenderPass(engine);
         CreateFramebuffer(engine);
         CreateDescriptors(engine);
-        CreatePipeline(engine);
+        CreateGraphicsPipeline(engine);
+        CreateComputePipelines(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](Engine *engine) {
             m_observers.clear();
 
-            m_shader      = nullptr;
-            m_framebuffer = nullptr;
-            m_render_pass = nullptr;
-            m_pipeline    = nullptr;
+            m_shader       = nullptr;
+            m_framebuffer  = nullptr;
+            m_render_pass  = nullptr;
+            m_pipeline     = nullptr;
+            m_clear_voxels = nullptr;
+            m_voxel_image  = nullptr;
 
-            m_voxel_image = nullptr;
-
-            engine->render_scheduler.Enqueue([this, engine] {
+            engine->render_scheduler.Enqueue([this, engine](...) {
                 return m_uniform_buffer.Destroy(engine->GetDevice());
             });
             
@@ -69,6 +71,21 @@ void VoxelConeTracing::RenderVoxels(Engine *engine, CommandBuffer *command_buffe
 
     /* put our voxel map in an optimal state to be written to */
     m_voxel_image->GetImage().GetGPUImage()->InsertBarrier(command_buffer, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
+
+    /* clear the voxels */
+    m_clear_voxels->GetPipeline()->Bind(command_buffer);
+
+    HYPERION_PASS_ERRORS(
+        engine->GetInstance()->GetDescriptorPool().Bind(
+            engine->GetDevice(),
+            command_buffer,
+            m_clear_voxels->GetPipeline(),
+            {{.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1}}
+        ),
+        result
+    );
+
+    m_clear_voxels->GetPipeline()->Dispatch(command_buffer, m_voxel_image->GetExtent() / Extent3D{8, 8, 8});
 
     engine->render_state.BindScene(m_scene);
 
@@ -123,7 +140,7 @@ void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
 
     m_voxel_image.Init();
 
-    engine->render_scheduler.Enqueue([this, engine] {
+    engine->render_scheduler.Enqueue([this, engine](...) {
         HYPERION_BUBBLE_ERRORS(m_uniform_buffer.Create(engine->GetDevice(), sizeof(VoxelUniforms)));
 
         const VoxelUniforms uniforms{
@@ -143,7 +160,7 @@ void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
     });
 }
 
-void VoxelConeTracing::CreatePipeline(Engine *engine)
+void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
@@ -176,6 +193,19 @@ void VoxelConeTracing::CreatePipeline(Engine *engine)
     }
 
     m_pipeline.Init();
+}
+
+void VoxelConeTracing::CreateComputePipelines(Engine *engine)
+{
+    m_clear_voxels = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
+                { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vct/clear_voxels.comp.spv").Read()}}
+            }
+        ))
+    ));
+
+    m_clear_voxels.Init();
 }
 
 void VoxelConeTracing::CreateShader(Engine *engine)

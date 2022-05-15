@@ -64,8 +64,8 @@ public:
     bool operator!=(const Vector3 &other) const;
     inline Vector3 operator-() const { return operator*(-1.0f); }
 
-    inline bool operator<(const Vector3 &other) const
-        { return x < other.x && y < other.y && z < other.z; }
+    //inline bool operator<(const Vector3 &other) const
+    //    { return x < other.x && y < other.y && z < other.z; }
 
     constexpr inline float LengthSquared() const { return x * x + y * y + z * z; }
     inline float Length() const { return std::sqrt(LengthSquared()); }

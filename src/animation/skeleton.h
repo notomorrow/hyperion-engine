@@ -51,7 +51,7 @@ public:
     Animation *FindAnimation(const std::string &name, size_t *out_index) const;
     
     void Init(Engine *engine);
-    void UpdateShaderData(Engine *engine) const;
+    void EnqueueRenderUpdates(Engine *engine) const;
 
 private:
     size_t NumBones() const;
