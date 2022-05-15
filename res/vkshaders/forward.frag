@@ -40,7 +40,7 @@ void main()
     float NdotV = dot(normal, view_vector);
     float NdotL = dot(normal, L);
     
-    vec3 tangent_view = transpose(v_tbn_matrix) * -v_view_space_position;
+    vec3 tangent_view = transpose(v_tbn_matrix) * view_vector;
     vec3 tangent_light = v_tbn_matrix * L;
     vec3 tangent_position = v_tbn_matrix * v_position;
 
@@ -58,12 +58,16 @@ void main()
     if (HasMaterialTexture(MATERIAL_TEXTURE_PARALLAX_MAP)) {
         vec2 parallax_texcoord = ParallaxMappedTexCoords(
             textures[material.texture_index[MATERIAL_TEXTURE_PARALLAX_MAP]],
-            0.025, //material.parallax_height,
+            material.parallax_height,
             texcoord,
             normalize(tangent_view)
         );
         
         texcoord = parallax_texcoord;
+        
+        //if (texcoord.x < 0.0 || texcoord.x > 1.0 || texcoord.y < 0.0 || texcoord.y > 1.0) {
+        //    discard;
+        //}
     }
 #endif
 
