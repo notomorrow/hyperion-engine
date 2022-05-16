@@ -14,6 +14,18 @@ layout(std430, set = 2, binding = 0, row_major) readonly buffer SceneDataBlock {
     vec4 aabb_min;
 } scene;
 
+struct Light {
+    vec4 position; // or direction for directional lights
+    uint color_encoded;
+    uint type;
+    float intensity;
+    float _pad0;
+};
+
+layout(std430, set = 2, binding = 1) readonly buffer LightDataBlock {
+    Light lights[];
+};
+
 bool HasEnvironmentTexture(uint index)
 {
     return bool(scene.environment_texture_usage & (1 << index));

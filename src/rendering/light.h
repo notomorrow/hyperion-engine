@@ -18,13 +18,11 @@ enum class LightType {
 
 class Light : public EngineComponentBase<STUB_CLASS(Light)> {
 public:
-    static constexpr float default_intensity = 100.0f;
-
     Light(
         LightType type,
         const Vector3 &position,
-        const Vector4 &color = Vector4::One(),
-        float intensity = default_intensity
+        const Vector4 &color,
+        float intensity
     );
 
     Light(const Light &other) = delete;
@@ -41,7 +39,6 @@ public:
         m_position = position;
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
-
 
     const Vector4 &GetColor() const
         { return m_color; }
@@ -77,6 +74,8 @@ private:
 
 class DirectionalLight : public Light {
 public:
+    static constexpr float default_intensity = 100000.0f;
+
     DirectionalLight(
         const Vector3 &direction,
         const Vector4 &color = Vector4::One(),
@@ -92,6 +91,24 @@ public:
 
     const Vector3 &GetDirection() const         { return GetPosition(); }
     void SetDirection(const Vector3 &direction) { SetPosition(direction); }
+};
+
+class PointLight : public Light {
+public:
+    static constexpr float default_intensity = 25.0f;
+
+    PointLight(
+        const Vector3 &position,
+        const Vector4 &color = Vector4::One(),
+        float intensity = default_intensity
+    ) : Light(
+        LightType::POINT,
+        position,
+        color,
+        intensity
+    )
+    {
+    }
 };
 
 } // namespace hyperion::v2
