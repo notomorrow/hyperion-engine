@@ -39,9 +39,6 @@ public:
 private:
     std::vector<Ref<Light>>                      m_lights;
     std::vector<ShadowRendererPtr>               m_shadow_renderers;
-    std::vector<ShadowRendererPtr>               m_shadow_renderers_pending_addition;
-    std::vector<ShadowRenderer::ID>              m_shadow_renderers_pending_removal;
-    std::mutex                                   m_shadow_renderer_mutex;
     bool                                         m_ready;
 };
 

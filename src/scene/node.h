@@ -176,12 +176,24 @@ public:
         controller->m_parent = this;
         controller->OnAdded();
 
-        m_controllers.push_back(std::move(controller));
+        m_controllers.Set(std::move(controller));
     }
 
     template <class ControllerClass, class ...Args>
     void AddController(Args &&... args)
         { AddController(std::make_unique<ControllerClass>(std::forward<Args>(args)...)); }
+
+    template <class ControllerType>
+    ControllerType *GetController()             { return m_controllers.Get<ControllerType>(); }
+
+    template <class ControllerType>
+    bool HasController() const                  { return m_controllers.Has<ControllerType>(); }
+
+    template <class ControllerType>
+    bool RemoveController()                     { return m_controllers.Remove<ControllerType>(); }
+    
+    ControllerSet &GetControllers()             { return m_controllers; }
+    const ControllerSet &GetControllers() const { return m_controllers; }
 
     void UpdateWorldTransform();
 
@@ -214,7 +226,7 @@ protected:
 
     std::vector<Node *> m_descendents;
 
-    std::vector<std::unique_ptr<Controller>> m_controllers;
+    ControllerSet m_controllers;
 };
 
 } // namespace hyperion::v2

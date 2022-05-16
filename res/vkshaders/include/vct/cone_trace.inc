@@ -10,7 +10,7 @@ layout(set = 1, binding = 25) uniform sampler3D voxel_image;
 #define VCT_DIFFUSE_RATIO_MULTIPLIER  1.0
 #define VCT_DIFFUSE_RATIO(roughness)  ((roughness) * VCT_DIFFUSE_RATIO_MULTIPLIER + VCT_DIFFUSE_RATIO_MIN)
 
-#define VCT_SPECULAR_MAX_DIST         2.75
+#define VCT_SPECULAR_MAX_DIST         0.8
 #define VCT_SPECULAR_RATIO_MIN        0.15
 #define VCT_SPECULAR_RATIO_MULTIPLIER 2.0
 #define VCT_SPECULAR_RATIO(roughness) ((roughness) * VCT_SPECULAR_RATIO_MULTIPLIER + VCT_SPECULAR_RATIO_MIN)
@@ -31,7 +31,7 @@ vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max
     vec3 sample_pos  = origin;
     float dist       = min_diameter;
 
-    while (dist < max_dist && accum.a < 1.0) {
+    while (dist < max_dist) {
         float diameter = max(min_diameter, ratio * dist);
         float lod      = log2(diameter * min_diameter_inv);
 

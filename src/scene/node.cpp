@@ -236,7 +236,7 @@ void Node::UpdateInternal(Engine *engine, GameCounter::TickUnit delta)
 void Node::UpdateControllers(Engine *engine, GameCounter::TickUnit delta)
 {
     for (auto &controller : m_controllers) {
-        controller->OnUpdate(delta);
+        controller.second->OnUpdate(delta);
     }
 }
 
