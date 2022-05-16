@@ -2,6 +2,8 @@
 
 namespace hyperion::v2 {
 
+std::atomic<ControllerId> controller_id_counter{0};
+
 Controller::Controller(const char *name)
     : m_name(nullptr)
 {
