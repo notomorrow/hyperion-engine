@@ -65,7 +65,7 @@
     #define HYP_BREAKPOINT           (void(0))
 #endif
 
-#define HYP_USE_EXCEPTIONS 1
+#define HYP_USE_EXCEPTIONS 0
 
 #if HYP_USE_EXCEPTIONS
     #define HYP_THROW(msg) throw ::std::runtime_error(msg)

@@ -148,7 +148,7 @@ void Material::ResetParameters()
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT_GLOSS, 0.0f);
     m_parameters.Set(MATERIAL_KEY_EMISSIVENESS,    0.0f);
     m_parameters.Set(MATERIAL_KEY_UV_SCALE,        Vector2(1.0f));
-    m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.085f);
+    m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.08f);
 }
 
 

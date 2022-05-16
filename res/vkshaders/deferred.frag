@@ -36,9 +36,9 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 10000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
-#define IRRADIANCE_MULTIPLIER 5.0
+#define IBL_INTENSITY 5000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 40000.0
+#define IRRADIANCE_MULTIPLIER 8.0
 #define SSAO_DEBUG 0
 
 #include "include/rt/probe/shared.inc"
@@ -151,7 +151,7 @@ void main()
         
         vec3 energy_compensation = vec3(1.0);
         float perceptual_roughness = sqrt(roughness);
-        float lod = 9.0 * perceptual_roughness * (2.0 - perceptual_roughness);
+        float lod = 12.0 * perceptual_roughness * (2.0 - perceptual_roughness);
         
         vec3 AB = BRDFMap(albedo.rgb, roughness, NdotV);
         

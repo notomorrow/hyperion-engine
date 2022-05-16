@@ -8,9 +8,9 @@ Kd 1.0 1.0 1.0
 Ks 0.500000 0.500000 0.500000
 Ni 1.000000
 d 1.000000
-map_kD ornate-celtic-gold-ue/ornate-celtic-gold-albedo.png
-map_bump ornate-celtic-gold-ue/ornate-celtic-gold-normal-dx.png
-map_kS ornate-celtic-gold-ue/ornate-celtic-gold-metallic.png
-map_nS ornate-celtic-gold-ue/ornate-celtic-gold-roughness.png
-map_height ornate-celtic-gold-ue/ornate-celtic-gold-height.png
+map_kD harshbricks-Unreal-Engine/harshbricks-albedo.png
+map_bump harshbricks-Unreal-Engine/harshbricks-normal.png
+map_kS harshbricks-Unreal-Engine/harshbricks-metalness.png
+map_nS harshbricks-Unreal-Engine/harshbricks-roughness.png
+map_height harshbricks-Unreal-Engine/harshbricks-height5-16.png
 illum 2

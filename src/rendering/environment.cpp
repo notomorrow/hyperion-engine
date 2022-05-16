@@ -81,8 +81,12 @@ void Environment::RemoveShadowRenderer(Engine *engine, size_t index)
 
 void Environment::RenderShadows(Engine *engine)
 {
-    for (auto &shadow_renderer : m_shadow_renderers) {
-        
+    /* TODO: have observer on octrees, only update shadow renderers
+     * who's lights have had objects move within their octant
+     */
+
+    for (const auto &shadow_renderer : m_shadow_renderers) {
+        shadow_renderer->Render(engine);
     }
 }
 
