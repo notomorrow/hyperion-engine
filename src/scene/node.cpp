@@ -56,11 +56,16 @@ void Node::OnNestedNodeAdded(Node *node)
     m_descendents.push_back(node);
 
     for (auto &controller : m_controllers) {
-        if (controller == nullptr) {
+        if (controller.second == nullptr) {
+            DebugLog(
+                LogType::Warn,
+                "Controller was nullptr\n"
+            );
+
             continue;
         }
 
-        controller->OnDescendentAdded(node);
+        controller.second->OnDescendentAdded(node);
     }
     
     if (m_parent_node != nullptr) {
@@ -74,11 +79,16 @@ void Node::OnNestedNodeRemoved(Node *node)
 
     if (it != m_descendents.end()) {
         for (auto &controller : m_controllers) {
-            if (controller == nullptr) {
+            if (controller.second == nullptr) {
+                DebugLog(
+                    LogType::Warn,
+                    "Controller was nullptr\n"
+                );
+
                 continue;
             }
 
-            controller->OnDescendentRemoved(node);
+            controller.second->OnDescendentRemoved(node);
         }
 
         m_descendents.erase(it);

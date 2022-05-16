@@ -207,14 +207,20 @@ void Engine::Initialize()
     shader_globals->objects.Create(m_instance->GetDevice());
     /* for skeletons */
     shader_globals->skeletons.Create(m_instance->GetDevice());
-
-
+    /* for lights */
+    shader_globals->lights.Create(m_instance->GetDevice());
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
             .buffer = shader_globals->scenes.GetBuffers()[0].get(),
             .range = static_cast<uint32_t>(sizeof(SceneShaderData))
+        });
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
+        ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
+        ->AddSubDescriptor({
+            .buffer = shader_globals->lights.GetBuffers()[0].get()
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
@@ -246,6 +252,12 @@ void Engine::Initialize()
         ->AddSubDescriptor({
             .buffer = shader_globals->scenes.GetBuffers()[1].get(),
             .range = static_cast<uint32_t>(sizeof(SceneShaderData))
+        });
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
+        ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
+        ->AddSubDescriptor({
+            .buffer = shader_globals->lights.GetBuffers()[1].get()
         });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
@@ -346,6 +358,7 @@ void Engine::Destroy()
         shader_globals->objects.Destroy(m_instance->GetDevice());
         shader_globals->materials.Destroy(m_instance->GetDevice());
         shader_globals->skeletons.Destroy(m_instance->GetDevice());
+        shader_globals->lights.Destroy(m_instance->GetDevice());
 
         delete shader_globals;
     }
@@ -443,6 +456,7 @@ void Engine::UpdateBuffersAndDescriptors(uint32_t frame_index)
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->skeletons.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    shader_globals->lights.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
     shader_globals->textures.ApplyUpdates(this, frame_index);
 }

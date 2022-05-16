@@ -21,7 +21,11 @@ layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 #include "include/brdf.inc"
 #include "include/tonemap.inc"
 
+#define HYP_VCT_ENABLED 1
+
+#if HYP_VCT_ENABLED
 #include "include/vct/cone_trace.inc"
+#endif
 
 vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 {
@@ -156,14 +160,21 @@ void main()
         vec3 AB = BRDFMap(albedo.rgb, roughness, NdotV);
         
         vec3 irradiance = vec3(0.0);
+        vec4 reflections = vec4(0.0);
 
         vec3 ibl = HasEnvironmentTexture(0)
             ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
             : vec3(0.0);
         
+#if HYP_VCT_ENABLED
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
         vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, vec3(0.0), vec3(0.0), roughness);
-        irradiance = vct_diffuse.rgb * IRRADIANCE_MULTIPLIER;
+
+        irradiance  = vct_diffuse.rgb;
+        reflections = vct_specular;
+#endif
+
+        irradiance *= IRRADIANCE_MULTIPLIER;
 
         vec3 shadow = vec3(1.0);
         vec3 light_color = vec3(1.0);
@@ -175,7 +186,7 @@ void main()
         result = (albedo_linear * irradiance * (1.0 - dfg) * ao) + radiance;
         result *= exposure * IBL_INTENSITY;
 
-        result = (result * (1.0 - vct_specular.a)) + (dfg * vct_specular.rgb);
+        result = (result * (1.0 - reflections.a)) + (dfg * reflections.rgb);
 
 
         // surface
