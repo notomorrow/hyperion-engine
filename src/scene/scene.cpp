@@ -39,14 +39,20 @@ void Scene::Init(Engine *engine)
 
         EnqueueRenderUpdates(engine);
 
+        SetReady(true);
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](Engine *engine) {
             HYP_FLUSH_RENDER_QUEUE(engine);
+
+            SetReady(false);
         }), engine);
     }));
 }
 
 void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
 {
+    AssertReady();
+
     if (m_camera != nullptr) {
         m_camera->Update(delta);
 
@@ -121,7 +127,7 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
 
 void Scene::SetEnvironmentTexture(uint32_t index, Ref<Texture> &&texture)
 {
-    if (texture && IsInitCalled()) {
+    if (texture && IsReady()) {
         texture.Init();
     }
 

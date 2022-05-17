@@ -58,6 +58,8 @@ void Spatial::Init(Engine *engine)
             AddToOctree(engine);
         }
 
+        SetReady(true);
+
         EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
@@ -68,13 +70,15 @@ void Spatial::Init(Engine *engine)
             }
             
             HYP_FLUSH_RENDER_QUEUE(engine);
+
+            SetReady(false);
         }), engine);
     }));
 }
 
 void Spatial::Update(Engine *engine)
 {
-    AssertThrow(IsInitCalled());
+    AssertReady();
 
     if (m_skeleton != nullptr) {
         m_skeleton->EnqueueRenderUpdates(engine);
@@ -103,6 +107,8 @@ void Spatial::Update(Engine *engine)
 
 void Spatial::EnqueueRenderUpdates(Engine *engine)
 {
+    AssertReady();
+
     m_render_update_id = engine->render_scheduler.EnqueueReplace(m_render_update_id, [this, engine, transform = m_transform](...) {
         engine->shader_globals->objects.Set(
             m_id.value - 1,

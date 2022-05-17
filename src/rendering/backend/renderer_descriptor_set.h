@@ -11,7 +11,9 @@
 #include <array>
 #include <memory>
 #include <unordered_map>
+#include <map>
 #include <queue>
+#include <type_traits>
 
 namespace hyperion {
 namespace renderer {
@@ -76,21 +78,21 @@ public:
     Descriptor &operator=(const Descriptor &other) = delete;
     ~Descriptor();
 
-    inline uint32_t GetBinding() const       { return m_binding; }
-    inline void SetBinding(uint32_t binding) { m_binding = binding; }
+    uint32_t GetBinding() const       { return m_binding; }
+    void SetBinding(uint32_t binding) { m_binding = binding; }
     
     /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
-    inline std::vector<SubDescriptor> &GetSubDescriptors()
+    std::vector<SubDescriptor> &GetSubDescriptors()
         { return m_sub_descriptors; }
 
     /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
-    inline const std::vector<SubDescriptor> &GetSubDescriptors() const
+    const std::vector<SubDescriptor> &GetSubDescriptors() const
         { return m_sub_descriptors; }
 
-    inline SubDescriptor &GetSubDescriptor(size_t index)
+    SubDescriptor &GetSubDescriptor(size_t index)
         { return m_sub_descriptors[index]; }
 
-    inline const SubDescriptor &GetSubDescriptor(size_t index) const
+    const SubDescriptor &GetSubDescriptor(size_t index) const
         { return m_sub_descriptors[index]; }
 
     /*! \brief Add a sub-descriptor to this descriptor.
@@ -137,6 +139,29 @@ private:
     DescriptorSet *m_descriptor_set;
 };
 
+enum class DescriptorKey {
+    UNUSED = 0,
+
+    GBUFFER_TEXTURES,
+    GBUFFER_DEPTH,
+    DEFERRED_RESULT,
+    POST_FX,
+
+
+    SCENE_BUFFER,
+    LIGHTS_BUFFER,
+    SHADOW_MAPS,
+
+    MATERIAL_BUFFER,
+    OBJECT_BUFFER,
+    SKELETON_BUFFER,
+
+    TEXTURES
+
+    // ... 
+
+};
+
 class DescriptorSet {
     friend class Descriptor;
 public:
@@ -180,24 +205,42 @@ public:
     static constexpr uint32_t max_sub_descriptor_updates_per_frame = 16;
     static constexpr uint32_t max_bound_descriptor_sets = 4; /* 0 = no cap */
 
-    DescriptorSet(bool bindless);
+    static const std::map<Index, std::map<DescriptorKey, uint32_t>> mappings;
+    static Index GetBaseIndex(Index index); // map index to the real index used (this is per-frame stuff)
+    static Index GetPerFrameIndex(Index index, uint32_t frame_index);
+
+    DescriptorSet(Index index, bool bindless);
     DescriptorSet(const DescriptorSet &other) = delete;
     DescriptorSet &operator=(const DescriptorSet &other) = delete;
     ~DescriptorSet();
 
-    inline DescriptorSetState GetState() const { return m_state; }
-    inline bool IsBindless() const             { return m_bindless; }
+    DescriptorSetState GetState() const { return m_state; }
+    Index GetIndex() const              { return m_index; }
+    bool IsBindless() const             { return m_bindless; }
 
-    template <class DescriptorType, class ...Args>
-    Descriptor *AddDescriptor(Args &&... args)
+    template <class DescriptorType>
+    Descriptor *AddDescriptor(DescriptorKey key)
     {
-        m_descriptors.push_back(std::make_unique<DescriptorType>(std::move(args)...));
+        return AddDescriptor<DescriptorType>(DescriptorKeyToIndex(key));
+    }
+
+    template <class DescriptorType>
+    Descriptor *AddDescriptor(uint32_t binding)
+    {
+        static_assert(std::is_base_of_v<Descriptor, DescriptorType>, "DescriptorType must be a derived class of Descriptor");
+
+        m_descriptors.push_back(std::make_unique<DescriptorType>(binding));
         m_descriptor_bindings.push_back({});
 
         return m_descriptors.back().get();
     }
 
-    inline Descriptor *GetDescriptor(size_t binding) const
+    Descriptor *GetDescriptor(DescriptorKey key) const
+    {
+        return GetDescriptor(DescriptorKeyToIndex(key));
+    }
+
+    Descriptor *GetDescriptor(uint32_t binding) const
     {
         const auto it = std::find_if(
             m_descriptors.begin(),
@@ -214,8 +257,26 @@ public:
         return it->get();
     }
 
-    inline std::vector<std::unique_ptr<Descriptor>> &GetDescriptors() { return m_descriptors; }
-    inline const std::vector<std::unique_ptr<Descriptor>> &GetDescriptors() const { return m_descriptors; }
+    template <class DescriptorType>
+    Descriptor *GetOrAddDescriptor(DescriptorKey key)
+    {
+        return GetOrAddDescriptor<DescriptorType>(DescriptorKeyToIndex(key));
+    }
+
+    template <class DescriptorType>
+    Descriptor *GetOrAddDescriptor(uint32_t binding)
+    {
+        static_assert(std::is_base_of_v<Descriptor, DescriptorType>, "DescriptorType must be a derived class of Descriptor");
+
+        if (auto *descriptor = GetDescriptor(binding)) {
+            return descriptor;
+        }
+
+        return AddDescriptor<DescriptorType>(binding);
+    }
+
+    std::vector<std::unique_ptr<Descriptor>> &GetDescriptors()             { return m_descriptors; }
+    const std::vector<std::unique_ptr<Descriptor>> &GetDescriptors() const { return m_descriptors; }
 
     Result Create(Device *device, DescriptorPool *pool);
     Result Destroy(Device *device);
@@ -225,10 +286,22 @@ public:
     VkDescriptorSet m_set;
 
 private:
+    uint32_t DescriptorKeyToIndex(DescriptorKey key) const
+    {
+        auto index_it = mappings.find(m_index);
+        AssertThrowMsg(index_it != mappings.end(), "Cannot add descriptor by key: descriptor set key has no mapping");
+
+        auto key_it = index_it->second.find(key);
+        AssertThrowMsg(key_it != index_it->second.end(), "Cannot add descriptor by key: descriptor key has no mapping");
+
+        return key_it->second;
+    }
+
     std::vector<std::unique_ptr<Descriptor>> m_descriptors;
     std::vector<VkDescriptorSetLayoutBinding> m_descriptor_bindings; /* one per each descriptor */
     std::vector<VkWriteDescriptorSet> m_descriptor_writes; /* any number of per descriptor - reset after each update */
     DescriptorSetState m_state;
+    Index m_index;
     bool m_bindless;
 };
 
@@ -300,9 +373,9 @@ public:
     DescriptorPool &operator=(const DescriptorPool &other) = delete;
     ~DescriptorPool();
 
-    inline size_t NumDescriptorSets() const { return m_num_descriptor_sets; }
+    size_t NumDescriptorSets() const { return m_num_descriptor_sets; }
 
-    inline const std::vector<VkDescriptorSetLayout> &GetDescriptorSetLayouts() const
+    const std::vector<VkDescriptorSetLayout> &GetDescriptorSetLayouts() const
         { return m_descriptor_set_layouts; }
 
     // return new descriptor set
@@ -318,7 +391,7 @@ public:
         return *m_descriptor_sets[index];
     }
 
-    inline DescriptorSet *GetDescriptorSet(DescriptorSet::Index index) const
+    DescriptorSet *GetDescriptorSet(DescriptorSet::Index index) const
         { return m_descriptor_sets[index].get(); }
 
     Result Create(Device *device);

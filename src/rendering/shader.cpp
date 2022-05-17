@@ -2,6 +2,30 @@
 #include "../engine.h"
 
 namespace hyperion::v2 {
+
+void ShaderGlobals::Create(Engine *engine)
+{
+    auto *device = engine->GetDevice();
+
+    scenes.Create(device);
+    materials.Create(device);
+    objects.Create(device);
+    skeletons.Create(device);
+    lights.Create(device);
+    textures.Create(engine);
+}
+
+void ShaderGlobals::Destroy(Engine *engine)
+{
+    auto *device = engine->GetDevice();
+
+    scenes.Destroy(device);
+    objects.Destroy(device);
+    materials.Destroy(device);
+    skeletons.Destroy(device);
+    lights.Destroy(device);
+}
+
 Shader::Shader(const std::vector<SubShader> &sub_shaders)
     : EngineComponentBase(),
       m_shader_program(std::make_unique<ShaderProgram>()),

@@ -43,10 +43,11 @@ void Light::Init(Engine *engine)
 void Light::EnqueueRenderUpdates(Engine *engine) const
 {
     LightShaderData shader_data{
-        .position   = Vector4(m_position, 1.0f),
-        .color      = ByteUtil::PackColorU32(m_color),
-        .light_type = static_cast<uint32_t>(m_type),
-        .intensity  = m_intensity
+        .position         = Vector4(m_position, m_type == LightType::DIRECTIONAL ? 0.0f : 1.0f),
+        .color            = ByteUtil::PackColorU32(m_color),
+        .light_type       = static_cast<uint32_t>(m_type),
+        .intensity        = m_intensity,
+        .shadow_map_index = ~0u
     };
     
     engine->shader_globals->lights.Set(m_id.value - 1, shader_data);

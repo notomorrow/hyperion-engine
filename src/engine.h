@@ -19,6 +19,7 @@
 #include <rendering/backend/renderer_command_buffer.h>
 
 #include <util/enum_options.h>
+#include <builders/shader_compiler/shader_compiler.h>
 
 #include <memory>
 #include <mutex>
@@ -44,10 +45,10 @@ using renderer::StorageBuffer;
 
 /*
  * | ====== Set 0 ====== | ====== Set 1 ====== | ====== Set 2 ====== | ====== Set 3 ====== | ====== Set 4 ====== |
- * | (UNUSED)            | GBuffer: color      | Scene data SSBO     | Material data SSBO  | Bindless textures   |
- * |                     | Gbuffer: normals    | empty               | Object data SSBO    | empty               |
- * |                     | Gbuffer: position   | empty               | Skeleton data SSBO  | empty               |
- * |                     | Gbuffer: depth      | empty               | empty               | empty               |
+ * | (UNUSED)            | GBuffer: textures[] | Scene data SSBO     | Material data SSBO  | Bindless textures   |
+ * |                     | Gbuffer: depth      | empty               | Object data SSBO    | empty               |
+ * |                     |                     | empty               | Skeleton data SSBO  | empty               |
+ * |                     |                     | empty               | empty               | empty               |
  * |                     | Deferred result     | empty               | empty               | empty               |
  * |                     | empty               | empty               | empty               | empty               |
  * |                     | empty               | empty               | empty               | empty               |

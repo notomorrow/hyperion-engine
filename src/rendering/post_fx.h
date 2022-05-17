@@ -52,7 +52,7 @@ public:
 
     void CreateRenderPass(Engine *engine);
     void Create(Engine *engine);
-    void CreateDescriptors(Engine *engine, uint32_t &binding_offset);
+    void CreateDescriptors(Engine *engine);
     void CreatePipeline(Engine *engine);
 
     void Destroy(Engine *engine);

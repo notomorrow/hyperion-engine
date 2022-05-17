@@ -4,6 +4,7 @@
 #include <core/containers.h>
 #include <rendering/backend/renderer_instance.h>
 #include <hash_code.h>
+#include <util/defines.h>
 
 #include <memory>
 #include <atomic>
@@ -117,6 +118,9 @@ public:
 
     bool IsInitCalled() const { return m_init_called; }
 
+    /*! \brief Just a function to store that Init() has been called from a derived class
+     * for book-keeping. Use to prevent adding OnInit() callbacks multiple times.
+     */
     void Init()
     {
         m_init_called = true;
@@ -128,9 +132,22 @@ protected:
         m_init_called = false;
     }
 
+    bool IsReady()               { return m_is_ready; }
+    void SetReady(bool is_ready) { m_is_ready = is_ready; }
+
+    HYP_FORCE_INLINE void AssertReady() const
+    {
+        AssertThrowMsg(
+            m_is_ready,
+            "Component is not in ready state; maybe Init() has not been called on it, "
+            "or the component requires an event to be sent from the Engine instance to determine that "
+            "it is ready to be constructed, and this event has not yet been sent.\n"
+        );
+    }
+
     ID m_id;
     std::atomic_bool m_init_called;
-    bool             m_is_ready;
+    std::atomic_bool m_is_ready;
 };
 
 template <class WrappedType>
@@ -169,7 +186,7 @@ public:
         );
     }
 
-    inline WrappedType &Get() { return m_wrapped; }
+    inline WrappedType &Get()             { return m_wrapped; }
     inline const WrappedType &Get() const { return m_wrapped; }
 
     /* Standard non-specialized initialization function */

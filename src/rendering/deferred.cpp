@@ -6,6 +6,9 @@
 
 namespace hyperion::v2 {
 
+using renderer::SamplerDescriptor;
+using renderer::DescriptorKey;
+
 DeferredRenderingEffect::DeferredRenderingEffect()
     : FullScreenPass()
 {
@@ -37,6 +40,25 @@ void DeferredRenderingEffect::CreateRenderPass(Engine *engine)
     m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].render_pass.IncRef();
 }
 
+void DeferredRenderingEffect::CreateDescriptors(Engine *engine)
+{
+    engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
+        if (!framebuffer.GetAttachmentRefs().empty()) {
+            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
+            auto *descriptor = descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(DescriptorKey::DEFERRED_RESULT);
+
+            for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
+                descriptor->AddSubDescriptor({
+                    .image_view = attachment_ref->GetImageView(),
+                    .sampler    = attachment_ref->GetSampler()
+                });
+            }
+        }
+
+        HYPERION_RETURN_OK;
+    });
+}
+
 void DeferredRenderingEffect::Create(Engine *engine)
 {
     m_framebuffer = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].framebuffers[0].IncRef();
@@ -47,7 +69,7 @@ void DeferredRenderingEffect::Create(Engine *engine)
 
 void DeferredRenderingEffect::Destroy(Engine *engine)
 {
-    FullScreenPass::Destroy(engine);
+    FullScreenPass::Destroy(engine); // flushes render queue
 }
 
 void DeferredRenderingEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
@@ -77,50 +99,51 @@ void DeferredRenderer::Create(Engine *engine)
     descriptor_set_pass
         ->AddDescriptor<SamplerDescriptor>(0)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[0]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[0]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[0]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[0]->GetSampler()
         });
 
     /* Normals texture*/
     descriptor_set_pass
         ->GetDescriptor(0)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[1]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[1]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[1]->GetSampler()
         });
 
     /* Position texture */
     descriptor_set_pass
         ->GetDescriptor(0)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[2]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[2]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[2]->GetSampler()
         });
 
     /* Material ID */
     descriptor_set_pass
         ->GetDescriptor(0)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[3]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[3]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[3]->GetSampler()
         });
 
     /* Depth texture */
     descriptor_set_pass
         ->AddDescriptor<SamplerDescriptor>(1)
         ->AddSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[4]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetRenderPassAttachmentRefs()[4]->GetSampler()
+            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[4]->GetImageView(),
+            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[4]->GetSampler()
         });
+    
+    m_effect.CreateDescriptors(engine);
 
-    uint32_t binding_index = 4; /* TMP */
-    m_effect.CreateDescriptors(engine, binding_index);
+    HYP_FLUSH_RENDER_QUEUE(engine);
 }
 
 void DeferredRenderer::Destroy(Engine *engine)
 {
     m_post_processing.Destroy(engine);
-    m_effect.Destroy(engine);
+    m_effect.Destroy(engine);  // flushes render queue
 }
 
 void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)

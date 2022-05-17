@@ -104,7 +104,7 @@ private:
     Ref<Skeleton> m_skeleton;
     Bucket m_bucket;
 
-    std::atomic<Octree *> m_octree;
+    std::atomic<Octree *> m_octree{nullptr};
 
     struct {
         GraphicsPipeline *pipeline = nullptr;

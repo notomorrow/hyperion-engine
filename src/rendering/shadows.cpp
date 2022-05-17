@@ -8,6 +8,9 @@
 
 namespace hyperion::v2 {
 
+using renderer::DescriptorKey;
+using renderer::SamplerDescriptor;
+
 ShadowEffect::ShadowEffect()
     : FullScreenPass()
 {
@@ -24,7 +27,7 @@ void ShadowEffect::CreateShader(Engine *engine)
         }
     ));
 
-    m_shader->Init(engine);
+    m_shader.Init();
 }
 
 void ShadowEffect::SetParentScene(Scene::ID id)
@@ -72,6 +75,32 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
     m_render_pass.Init();
 }
 
+void ShadowEffect::CreateDescriptors(Engine *engine)
+{
+    /* set descriptor */
+    engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
+        if (!framebuffer.GetAttachmentRefs().empty()) {
+            /* TODO: dual fbos*/
+            /* TODO: Removal of these descriptors */
+
+            for (DescriptorSet::Index scene_descriptor_set : DescriptorSet::scene_buffer_mapping) {
+                auto *descriptor = engine->GetInstance()->GetDescriptorPool()
+                    .GetDescriptorSet(scene_descriptor_set)
+                    ->GetOrAddDescriptor<SamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
+
+                for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
+                    descriptor->AddSubDescriptor({
+                        .image_view = attachment_ref->GetImageView(),
+                        .sampler    = attachment_ref->GetSampler()
+                    });
+                }
+            }
+        }
+
+        HYPERION_RETURN_OK;
+    });
+}
+
 void ShadowEffect::CreatePipeline(Engine *engine)
 {
     auto pipeline = std::make_unique<GraphicsPipeline>(
@@ -106,6 +135,9 @@ void ShadowEffect::CreatePipeline(Engine *engine)
 
 void ShadowEffect::Create(Engine *engine)
 {
+    CreateShader(engine);
+    CreateRenderPass(engine);
+
     m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
         std::make_unique<OrthoCamera>(
             2048, 2048,
@@ -117,33 +149,33 @@ void ShadowEffect::Create(Engine *engine)
 
     m_scene->SetParentId(m_parent_scene_id);
     m_scene.Init();
-
-    auto framebuffer = std::make_unique<Framebuffer>(
+    
+    m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
         engine->GetInstance()->swapchain->extent,
         m_render_pass.IncRef()
-    );
+    ));
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
      //   attachment_ref->SetBinding(12);
-        framebuffer->GetFramebuffer().AddRenderPassAttachmentRef(attachment_ref);
+        m_framebuffer->GetFramebuffer().AddAttachmentRef(attachment_ref);
     }
 
-    m_framebuffer = engine->resources.framebuffers.Add(
-        std::move(framebuffer)
-    );
 
     m_framebuffer.Init();
 
     CreatePerFrameData(engine);
     CreatePipeline(engine);
+    CreateDescriptors(engine);
+
+    HYP_FLUSH_RENDER_QUEUE(engine);
 }
 
 void ShadowEffect::Destroy(Engine *engine)
 {
-    FullScreenPass::Destroy(engine);
-
     m_observers.clear();
+
+    FullScreenPass::Destroy(engine); // flushes render queue
 }
 
 void ShadowEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
@@ -177,44 +209,31 @@ void ShadowRenderer::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](Engine *engine) {
-        engine->render_scheduler.Enqueue([this, engine](...) {
-            m_effect.CreateShader(engine);
-            m_effect.CreateRenderPass(engine);
-            m_effect.Create(engine);
+        m_effect.Create(engine);
 
-            uint32_t binding_index = 12; /* TMP */
-            m_effect.CreateDescriptors(engine, binding_index);
-
-            HYPERION_RETURN_OK;
-        });
+        SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](Engine *engine) {
-            engine->render_scheduler.Enqueue([this, engine](...) {
-                m_effect.Destroy(engine);
+            m_effect.Destroy(engine); // flushes render queue
 
-                HYPERION_RETURN_OK;
-            });
-
-            HYP_FLUSH_RENDER_QUEUE(engine);
+            SetReady(false);
         }), engine);
     }));
 }
 
-void ShadowRenderer::Render(Engine *engine)
+void ShadowRenderer::Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
 {
+    AssertReady();
+
     UpdateSceneCamera();
 
-    engine->render_scheduler.Enqueue([this, engine](CommandBuffer *command_buffer, uint32_t frame_index) {
-        engine->render_state.BindScene(m_effect.GetScene());
+    engine->render_state.BindScene(m_effect.GetScene());
 
-        m_effect.GetFramebuffer()->BeginCapture(command_buffer);
-        m_effect.GetGraphicsPipeline()->Render(engine, command_buffer, frame_index);
-        m_effect.GetFramebuffer()->EndCapture(command_buffer);
+    m_effect.GetFramebuffer()->BeginCapture(command_buffer);
+    m_effect.GetGraphicsPipeline()->Render(engine, command_buffer, frame_index);
+    m_effect.GetFramebuffer()->EndCapture(command_buffer);
 
-        engine->render_state.UnbindScene();
-
-        HYPERION_RETURN_OK;
-    });
+    engine->render_state.UnbindScene();
 }
 
 void ShadowRenderer::UpdateSceneCamera()

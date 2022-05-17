@@ -19,9 +19,9 @@ FramebufferObject::~FramebufferObject()
 Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
 {
     std::vector<VkImageView> attachment_image_views;
-    attachment_image_views.reserve(m_render_pass_attachment_refs.size());
+    attachment_image_views.reserve(m_attachment_refs.size());
     
-    for (auto *attachment_ref : m_render_pass_attachment_refs) {
+    for (auto *attachment_ref : m_attachment_refs) {
         AssertThrow(attachment_ref != nullptr);
         AssertThrow(attachment_ref->GetImageView() != nullptr);
         AssertThrow(attachment_ref->GetImageView()->GetImageView() != nullptr);
@@ -49,11 +49,11 @@ Result FramebufferObject::Destroy(Device *device)
     vkDestroyFramebuffer(device->GetDevice(), m_framebuffer, nullptr);
     m_framebuffer = nullptr;
     
-    for (auto *attachment_ref : m_render_pass_attachment_refs) {
+    for (auto *attachment_ref : m_attachment_refs) {
         attachment_ref->DecRef();
     }
 
-    m_render_pass_attachment_refs.clear();
+    m_attachment_refs.clear();
 
     return result;
 }

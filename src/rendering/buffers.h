@@ -144,6 +144,7 @@ struct alignas(16) LightShaderData {
     uint32_t color;
     uint32_t light_type;
     float    intensity;
+    uint32_t shadow_map_index; // ~0 == no shadow map
 };
 
 static_assert(sizeof(LightShaderData) == 32);
@@ -251,10 +252,24 @@ private:
     struct StagingObjectsPool {
         static constexpr uint32_t num_staging_buffers = HYP_BUFFERS_USE_SPINLOCK ? 2 : 1;
 
+        StagingObjectsPool() = default;
+        StagingObjectsPool(const StagingObjectsPool &other) = delete;
+        StagingObjectsPool &operator=(const StagingObjectsPool &other) = delete;
+        StagingObjectsPool(StagingObjectsPool &other) = delete;
+        StagingObjectsPool &operator=(StagingObjectsPool &&other) = delete;
+        ~StagingObjectsPool() = default;
+
         struct StagingObjects {
-            std::atomic_bool                 locked{false};
-            HeapArray<StructType, Size>      objects;
-            std::vector<Range<size_t>> dirty;
+            std::atomic_bool            locked{false};
+            HeapArray<StructType, Size> objects;
+            std::vector<Range<size_t>>  dirty;
+
+            StagingObjects() = default;
+            StagingObjects(const StagingObjects &other) = delete;
+            StagingObjects &operator=(const StagingObjects &other) = delete;
+            StagingObjects(StagingObjects &other) = delete;
+            StagingObjects &operator=(StagingObjects &&other) = delete;
+            ~StagingObjects() = default;
 
             template <class BufferContainer>
             void PerformUpdate(Device *device, BufferContainer &buffer_container, size_t buffer_index, StructType *ptr)
@@ -304,7 +319,7 @@ private:
 
         void Set(size_t index, const StructType &value)
         {
-            AssertThrowMsg(index < buffers[0].objects.Size(), "Cannot set shader data out of bounds");
+            AssertThrowMsg(index < buffers[0].objects.Size(), "Cannot set shader data at %llu in buffer: out of bounds", index);
 
 #if HYP_BUFFERS_USE_SPINLOCK
             for (uint32_t i = 0; i < num_staging_buffers; i++) {

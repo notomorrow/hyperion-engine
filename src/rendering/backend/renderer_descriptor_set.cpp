@@ -13,10 +13,79 @@
 
 namespace hyperion {
 namespace renderer {
-DescriptorSet::DescriptorSet(bool bindless)
-    : m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
-      m_bindless(bindless),
-      m_set(nullptr)
+
+const decltype(DescriptorSet::mappings) DescriptorSet::mappings{
+    {
+        DESCRIPTOR_SET_INDEX_GLOBAL,
+        {
+            {DescriptorKey::GBUFFER_TEXTURES, 0},
+            {DescriptorKey::GBUFFER_DEPTH,    1},
+            {DescriptorKey::DEFERRED_RESULT,  4},
+            {DescriptorKey::POST_FX,          8},
+        }
+    },
+    {
+        DESCRIPTOR_SET_INDEX_SCENE,
+        {
+            {DescriptorKey::SCENE_BUFFER,  0},
+            {DescriptorKey::LIGHTS_BUFFER, 1},
+            {DescriptorKey::SHADOW_MAPS,  12}
+        }
+    },
+    {
+        DESCRIPTOR_SET_INDEX_OBJECT,
+        {
+            {DescriptorKey::MATERIAL_BUFFER,  0},
+            {DescriptorKey::OBJECT_BUFFER,    1},
+            {DescriptorKey::SKELETON_BUFFER,  2}
+        }
+    },
+    {
+        DESCRIPTOR_SET_INDEX_BINDLESS,
+        {
+            {DescriptorKey::TEXTURES, 0}
+        }
+    }
+};
+
+DescriptorSet::Index DescriptorSet::GetBaseIndex(Index index)
+{
+    switch (index) {
+    case DESCRIPTOR_SET_INDEX_SCENE_FRAME_1:
+        return DESCRIPTOR_SET_INDEX_SCENE;
+    case DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1:
+        return DESCRIPTOR_SET_INDEX_OBJECT;
+    case DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1:
+        return DESCRIPTOR_SET_INDEX_BINDLESS;
+    }
+
+    return index;
+}
+
+DescriptorSet::Index DescriptorSet::GetPerFrameIndex(Index index, uint32_t frame_index)
+{
+    if (frame_index == 0) {
+        return GetBaseIndex(index);
+    }
+
+    switch (index) {
+    case DESCRIPTOR_SET_INDEX_SCENE:
+        return DESCRIPTOR_SET_INDEX_SCENE_FRAME_1;
+    case DESCRIPTOR_SET_INDEX_OBJECT:
+        return DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1;
+    case DESCRIPTOR_SET_INDEX_BINDLESS:
+        return DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1;
+    }
+
+    return index;
+}
+
+DescriptorSet::DescriptorSet(Index index, bool bindless)
+    : m_set(VK_NULL_HANDLE),
+      m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
+      m_index(index),
+      m_bindless(bindless)
+      
 {
 }
 
@@ -376,9 +445,11 @@ Descriptor::Descriptor(uint32_t binding, Mode mode)
 
 Descriptor::~Descriptor() = default;
 
-void Descriptor::Create(Device *device,
+void Descriptor::Create(
+    Device *device,
     VkDescriptorSetLayoutBinding &binding,
-    std::vector<VkWriteDescriptorSet> &writes)
+    std::vector<VkWriteDescriptorSet> &writes
+)
 {
     AssertThrow(m_descriptor_set != nullptr);
 
@@ -389,12 +460,23 @@ void Descriptor::Create(Device *device,
     m_sub_descriptors_raw.buffers.resize(m_sub_descriptors.size());
     m_sub_descriptors_raw.images.resize(m_sub_descriptors.size());
     m_sub_descriptors_raw.acceleration_structures.resize(m_sub_descriptors.size());
+
+    const auto descriptor_count = m_descriptor_set->IsBindless() ? DescriptorSet::max_bindless_resources : uint32_t(m_sub_descriptors.size());
     
-    binding.descriptorCount    = m_descriptor_set->IsBindless() ? DescriptorSet::max_bindless_resources : uint32_t(m_sub_descriptors.size());
+    binding.descriptorCount    = descriptor_count;
     binding.descriptorType     = descriptor_type;
     binding.pImmutableSamplers = nullptr;
     binding.stageFlags         = VK_SHADER_STAGE_ALL;
     binding.binding            = m_binding;
+
+    if (descriptor_count == 0) {
+        DebugLog(
+            LogType::Debug,
+            "Descriptor has 0 subdescriptors, returning from Create() without pushing any writes\n"
+        );
+
+        return;
+    }
 
     for (size_t i = 0; i < m_sub_descriptors.size(); i++) {
         UpdateSubDescriptorBuffer(

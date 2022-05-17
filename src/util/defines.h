@@ -1,7 +1,9 @@
 #ifndef HYPERION_DEFINES_H
 #define HYPERION_DEFINES_H
 
-
+#if defined(HYPERION_BUILD_RELEASE_FINAL) && HYPERION_BUILD_RELEASE_FINAL
+    #define HYPERION_BUILD_RELEASE 1 // just to ensure
+#endif
 
 #define HYP_DEF_STRUCT_COMPARATOR \
     bool operator==(const decltype(*this) &other) const { \
@@ -26,16 +28,31 @@
     #error Unknown compiler
 #endif
 
+#if defined(HYP_CLANG_OR_GCC) && HYP_CLANG_OR_GCC
+    #define HYP_PACK_BEGIN __attribute__((__packed__))
+    #define HYP_PACK_END
+    #define HYP_FORCE_INLINE __attribute__((always_inline))
+#endif
 
-#ifndef HYPERION_BUILD_RELEASE
+#if defined(HYP_MSVC) && HYP_MSVC
+    #define HYP_PACK_BEGIN __pragma(pack(push, 1))
+    #define HYP_PACK_END __pragma(pack(pop))
+    #define HYP_FORCE_INLINE __forceinline
+#endif
+
+#if defined(_WIN32) && _WIN32
+    #define HYP_WINDOWS 1
+#endif
+
+#define HYP_USE_EXCEPTIONS 0
+
+#if !defined(HYPERION_BUILD_RELEASE) || !HYPERION_BUILD_RELEASE
     #define HYP_DEBUG_MODE 1
+#endif
 
-    #if HYP_DEBUG_MODE
-        #define HYP_ENABLE_BREAKPOINTS 1
-    #endif
-#endif /* HYPERION_BUILD_RELEASE */
-
-
+#if !defined(HYPERION_BUILD_RELEASE_FINAL) || !HYPERION_BUILD_RELEASE_FINAL
+    #define HYP_ENABLE_BREAKPOINTS 0
+#endif
 
 #if HYP_CLANG_OR_GCC
     #define HYP_DEBUG_FUNC_SHORT __FUNCTION__
@@ -65,9 +82,7 @@
     #define HYP_BREAKPOINT           (void(0))
 #endif
 
-#define HYP_USE_EXCEPTIONS 0
-
-#if HYP_USE_EXCEPTIONS
+#if defined(HYP_USE_EXCEPTIONS) && HYP_USE_EXCEPTIONS
     #define HYP_THROW(msg) throw ::std::runtime_error(msg)
 #else
     #if HYP_DEBUG_MODE

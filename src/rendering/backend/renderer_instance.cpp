@@ -274,17 +274,14 @@ Result Instance::Initialize(bool load_debug_layers)
 
     /* init descriptor sets */
 
-    /* TMP */
-    this->descriptor_pool.AddDescriptorSet(false);
-    this->descriptor_pool.AddDescriptorSet(false);
-    this->descriptor_pool.AddDescriptorSet(false);
-    this->descriptor_pool.AddDescriptorSet(false);
-    this->descriptor_pool.AddDescriptorSet(false);
-    this->descriptor_pool.AddDescriptorSet(false);
-    this->descriptor_pool.AddDescriptorSet(true);
-    this->descriptor_pool.AddDescriptorSet(true);
-    this->descriptor_pool.AddDescriptorSet(false);
-    this->descriptor_pool.AddDescriptorSet(false);
+    for (int index = DescriptorSet::Index::DESCRIPTOR_SET_INDEX_UNUSED; index != DescriptorSet::Index::DESCRIPTOR_SET_INDEX_MAX; index++) {
+        const auto parent_index = DescriptorSet::GetBaseIndex(DescriptorSet::Index(index));
+
+        descriptor_pool.AddDescriptorSet(
+            parent_index,
+            parent_index == DescriptorSet::Index::DESCRIPTOR_SET_INDEX_BINDLESS
+        );
+    }
 
     AssertThrow(descriptor_pool.NumDescriptorSets() == DescriptorSet::max_descriptor_sets);
 

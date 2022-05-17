@@ -15,6 +15,7 @@ public:
 
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
+    void CreateDescriptors(Engine *engine);
     void Create(Engine *engine);
 
     void Destroy(Engine *engine);
