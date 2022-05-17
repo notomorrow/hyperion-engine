@@ -38,6 +38,7 @@ public:
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
     void CreatePipeline(Engine *engine);
+    void CreateDescriptors(Engine *engine);
     void Create(Engine *engine);
 
     void Destroy(Engine *engine);
@@ -75,7 +76,7 @@ public:
     }
 
     void Init(Engine *engine);
-    void Render(Engine *engine);
+    void Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
 
 private:
     void UpdateSceneCamera();

@@ -107,7 +107,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
         renderer::AttachmentRef *depth_attachment;
 
-        HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetRenderPassAttachmentRefs().at(4)->AddAttachmentRef(
+        HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetAttachmentRefs().at(4)->AddAttachmentRef(
             engine->GetInstance()->GetDevice(),
             renderer::StoreOperation::STORE,
             &depth_attachment
@@ -153,7 +153,7 @@ void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
         auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.IncRef());
 
         for (auto *attachment_ref : render_pass->GetRenderPass().GetAttachmentRefs()) {
-            framebuffer->GetFramebuffer().AddRenderPassAttachmentRef(attachment_ref);
+            framebuffer->GetFramebuffer().AddAttachmentRef(attachment_ref);
         }
 
         framebuffers.push_back(engine->resources.framebuffers.Add(

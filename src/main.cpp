@@ -34,6 +34,8 @@
 #include <cmath>
 #include <thread>
 
+#include "rendering/environment.h"
+
 using namespace hyperion;
 
 
@@ -72,13 +74,14 @@ public:
                 0.05f, 250.0f
             )
         ));
+        scene.Init();
 
 
         auto base_path = AssetManager::GetInstance()->GetRootDir();
 
         auto loaded_assets = engine->assets.Load<Node>(
             base_path + "models/ogrexml/dragger_Body.mesh.xml",
-            base_path + "models/sponza/sponza.obj",
+            base_path + "models/tmp_terrain.obj", //"sponza/sponza.obj",
             base_path + "models/cube.obj",
             base_path + "models/material_sphere/material_sphere.obj"
         );
@@ -87,6 +90,15 @@ public:
         test_model = std::move(loaded_assets[1]);
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
+
+        test_model->Update(engine, 0.0f);
+        auto terrain_mat = engine->resources.materials.Add(std::make_unique<Material>());
+        terrain_mat->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));
+        terrain_mat.Init();
+        test_model->GetChild(0)->GetSpatial()->SetMaterial(terrain_mat.IncRef());
+
+        auto suzanne = engine->assets.Load<Node>(base_path + "models/suzanne.obj");
+        scene->GetRootNode()->AddChild(std::move(suzanne));
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
@@ -114,8 +126,24 @@ public:
 
 
         scene->SetEnvironmentTexture(0, cubemap.IncRef());
-        test_model->Translate({0, 0, 5});
-        test_model->Scale(0.025f);
+
+        auto my_light = engine->resources.lights.Add(std::make_unique<Light>(
+            LightType::DIRECTIONAL,
+            Vector3(-0.7f, 0.8f, 0.0f).Normalize(),
+            Vector4::One(),
+            10000.0f
+        ));
+        scene->GetEnvironment()->AddLight(my_light.IncRef());
+
+        /*scene->GetEnvironment()->AddShadowRenderer(engine, std::make_unique<ShadowRenderer>(
+            my_light.IncRef(),
+            Vector3::Zero(),
+            10.0f
+        ));*/
+
+        test_model->Translate({0, 0, 0});
+        test_model->Scale(600.025f);
+        test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         
         tex1 = engine->resources.textures.Add(
             engine->assets.Load<Texture>(base_path + "textures/dirt.jpg")
@@ -148,12 +176,13 @@ public:
         Game::Teardown(engine);
     }
 
-    virtual void OnFrameBegin(Engine *engine) override
+    virtual void OnFrameBegin(Engine *engine, Frame *frame, uint32_t frame_index) override
     {
+        //scene->GetEnvironment()->RenderShadows(engine, frame->GetCommandBuffer(), frame_index);
         engine->render_state.BindScene(scene);
     }
 
-    virtual void OnFrameEnd(Engine *engine) override
+    virtual void OnFrameEnd(Engine *engine, Frame *, uint32_t) override
     {
         engine->render_state.UnbindScene();
     }
@@ -567,20 +596,17 @@ int main()
         ));
 #endif
 
-        
 
-
-        /* Only update sets that are double - buffered so we don't
-         * end up updating data that is in use by the gpu
-         */
         engine.UpdateBuffersAndDescriptors(frame_index);
 
         engine.ResetRenderState();
 
         /* === rendering === */
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
+        
+        //my_game.scene->GetEnvironment()->RenderShadows(&engine, command_buffer, frame_index);
 
-        my_game.OnFrameBegin(&engine);
+        my_game.OnFrameBegin(&engine, frame, frame_index);
 
 #if HYPERION_VK_TEST_RAYTRACING
         rt->Bind(frame->GetCommandBuffer());
@@ -650,7 +676,7 @@ int main()
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));
         
-        my_game.OnFrameEnd(&engine);
+        my_game.OnFrameEnd(&engine, frame, frame_index);
 
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
         engine.GetInstance()->GetFrameHandler()->NextFrame();

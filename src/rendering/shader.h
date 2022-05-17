@@ -25,6 +25,8 @@ using renderer::UniformBuffer;
 using renderer::StorageBuffer;
 using renderer::PerFrameData;
 
+class Engine;
+
 constexpr uint32_t max_frames_in_flight = Swapchain::max_frames_in_flight;
 
 struct ShaderGlobals {
@@ -55,6 +57,9 @@ struct ShaderGlobals {
 
     ShaderGlobals(const ShaderGlobals &other) = delete;
     ShaderGlobals &operator=(const ShaderGlobals &other) = delete;
+
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
 
     ShaderData<StorageBuffer, SceneShaderData, max_scenes>        scenes;
     ShaderData<StorageBuffer, LightShaderData, max_lights>        lights;

@@ -4,8 +4,7 @@
 namespace hyperion::v2 {
 
 Environment::Environment()
-    : EngineComponentBase(),
-      m_ready(false)
+    : EngineComponentBase()
 {
 }
 
@@ -41,21 +40,21 @@ void Environment::Init(Engine *engine)
             shadow_renderer->Init(engine);
         }
 
-        m_ready = true;
+        SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ENVIRONMENTS, [this](Engine *engine) {
             m_shadow_renderers.clear();
 
-            m_ready = false;
-
             HYP_FLUSH_RENDER_QUEUE(engine);
+
+            SetReady(false);
         }), engine);
     }));
 }
 
 void Environment::AddLight(Ref<Light> &&light)
 {
-    if (light != nullptr && IsInitCalled() && m_ready) {
+    if (light != nullptr && IsReady()) {
         light.Init();
     }
 
@@ -67,7 +66,7 @@ void Environment::AddShadowRenderer(Engine *engine, std::unique_ptr<ShadowRender
 {
     AssertThrow(shadow_renderer != nullptr);
 
-    if (IsInitCalled() && m_ready) {
+    if (IsReady()) {
         shadow_renderer->Init(engine);
     }
 
@@ -79,14 +78,16 @@ void Environment::RemoveShadowRenderer(Engine *engine, size_t index)
     m_shadow_renderers.erase(m_shadow_renderers.begin() + index);
 }
 
-void Environment::RenderShadows(Engine *engine)
+void Environment::RenderShadows(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
 {
+    AssertReady();
+
     /* TODO: have observer on octrees, only update shadow renderers
      * who's lights have had objects move within their octant
      */
 
     for (const auto &shadow_renderer : m_shadow_renderers) {
-        shadow_renderer->Render(engine);
+        shadow_renderer->Render(engine, command_buffer, frame_index);
     }
 }
 

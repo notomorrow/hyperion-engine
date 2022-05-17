@@ -39,18 +39,24 @@ void Material::Init(Engine *engine)
             }
         }
 
+        SetReady(true);
+
         EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
             m_textures.Clear();
             
             HYP_FLUSH_RENDER_QUEUE(engine);
+
+            SetReady(false);
         }), engine);
     }));
 }
 
 void Material::Update(Engine *engine)
 {
+    AssertReady();
+
     if (!m_shader_data_state.IsDirty()) {
         return;
     }
@@ -60,6 +66,8 @@ void Material::Update(Engine *engine)
 
 void Material::EnqueueRenderUpdates(Engine *engine)
 {
+    AssertReady();
+
     engine->render_scheduler.Enqueue([this, engine](...) {
         MaterialShaderData shader_data{
             .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),

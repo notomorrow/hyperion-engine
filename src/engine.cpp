@@ -16,6 +16,7 @@ using renderer::VertexAttributeSet;
 using renderer::Attachment;
 using renderer::ImageView;
 using renderer::FramebufferObject;
+using renderer::DescriptorKey;
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : shader_globals(nullptr),
@@ -151,7 +152,7 @@ void Engine::PrepareSwapchain()
 
         color_attachment_ref->SetBinding(0);
 
-        fbo->GetFramebuffer().AddRenderPassAttachmentRef(color_attachment_ref);
+        fbo->GetFramebuffer().AddAttachmentRef(color_attachment_ref);
 
         HYPERION_ASSERT_RESULT(m_render_pass_attachments[1]->AddAttachmentRef(
             m_instance->GetDevice(),
@@ -160,7 +161,7 @@ void Engine::PrepareSwapchain()
             &depth_attachment_ref
         ));
 
-        fbo->GetFramebuffer().AddRenderPassAttachmentRef(depth_attachment_ref);
+        fbo->GetFramebuffer().AddAttachmentRef(depth_attachment_ref);
 
         depth_attachment_ref->SetBinding(1);
 
@@ -198,18 +199,8 @@ void Engine::Initialize()
     FindTextureFormatDefaults();
 
     shader_globals = new ShaderGlobals(m_instance->GetFrameHandler()->NumFrames());
+    shader_globals->Create(this);
     
-    /* for scene data */
-    shader_globals->scenes.Create(m_instance->GetDevice());
-    /* for materials */
-    shader_globals->materials.Create(m_instance->GetDevice());
-    /* for objects */
-    shader_globals->objects.Create(m_instance->GetDevice());
-    /* for skeletons */
-    shader_globals->skeletons.Create(m_instance->GetDevice());
-    /* for lights */
-    shader_globals->lights.Create(m_instance->GetDevice());
-
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
@@ -222,6 +213,9 @@ void Engine::Initialize()
         ->AddSubDescriptor({
             .buffer = shader_globals->lights.GetBuffers()[0].get()
         });
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
+        ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
@@ -246,7 +240,6 @@ void Engine::Initialize()
         });
 
 
-
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->AddSubDescriptor({
@@ -259,6 +252,9 @@ void Engine::Initialize()
         ->AddSubDescriptor({
             .buffer = shader_globals->lights.GetBuffers()[1].get()
         });
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
+        ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
@@ -290,8 +286,9 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::SamplerDescriptor>(0);
 
     /* for textures */
-    shader_globals->textures.Create(this);
+    //shader_globals->textures.Create(this);
     
+    callbacks.TriggerPersisted(EngineCallback::CREATE_ANY, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RENDER_PASSES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_FRAMEBUFFERS, this);
 
@@ -304,7 +301,10 @@ void Engine::Initialize()
     callbacks.TriggerPersisted(EngineCallback::CREATE_SPATIALS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_ACCELERATION_STRUCTURES, this);
-    callbacks.TriggerPersisted(EngineCallback::CREATE_ANY, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_SKELETONS, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_LIGHTS, this);
+
 
     m_running = true;
 }
@@ -312,6 +312,8 @@ void Engine::Initialize()
 void Engine::Destroy()
 {
     m_running = false;
+
+    game_thread.Join(); // stop looping in game thread
     
     callbacks.Trigger(EngineCallback::DESTROY_ANY, this);
     callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);
@@ -330,9 +332,7 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
     callbacks.Trigger(EngineCallback::DESTROY_ENVIRONMENTS, this);
 
-    game_thread.Join();
-
-    HYP_FLUSH_RENDER_QUEUE(this);
+    HYP_FLUSH_RENDER_QUEUE(this); // just to clear anything remaining up 
 
     AssertThrow(m_instance != nullptr);
     (void)m_instance->GetDevice()->Wait();
@@ -351,14 +351,8 @@ void Engine::Destroy()
 
     resources.Destroy(this);
 
-    
-
     if (shader_globals != nullptr) {
-        shader_globals->scenes.Destroy(m_instance->GetDevice());
-        shader_globals->objects.Destroy(m_instance->GetDevice());
-        shader_globals->materials.Destroy(m_instance->GetDevice());
-        shader_globals->skeletons.Destroy(m_instance->GetDevice());
-        shader_globals->lights.Destroy(m_instance->GetDevice());
+        shader_globals->Destroy(this);
 
         delete shader_globals;
     }
@@ -370,10 +364,6 @@ void Engine::Destroy()
 void Engine::Compile()
 {
     m_deferred_renderer.Create(this);
-
-    callbacks.TriggerPersisted(EngineCallback::CREATE_SKELETONS, this);
-    callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
-    callbacks.TriggerPersisted(EngineCallback::CREATE_LIGHTS, this);
 
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
         /* Finalize skeletons */

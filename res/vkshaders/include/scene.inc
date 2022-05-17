@@ -19,12 +19,14 @@ struct Light {
     uint color_encoded;
     uint type;
     float intensity;
-    float _pad0;
+    uint shadow_map_index; // ~0 == no shadow map
 };
 
 layout(std430, set = 2, binding = 1) readonly buffer LightDataBlock {
     Light lights[];
 };
+
+layout(set = 2, binding = 12) uniform sampler2D shadow_maps[];
 
 bool HasEnvironmentTexture(uint index)
 {

@@ -216,6 +216,7 @@ void main()
 #endif
 
     output_color     = vec4(Tonemap(result), 1.0);
+    //output_color     = texture(shadow_maps[0], texcoord);
     output_normals   = normal;
     output_positions = position;
 }

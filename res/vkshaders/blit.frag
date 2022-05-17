@@ -10,7 +10,6 @@ layout(location=1) in vec2 v_texcoord0;
 #include "include/rt/probe/probe_uniforms.inc"
 
 layout(set = 1, binding = 4) uniform sampler2D deferred_result;
-layout(set = 1, binding = 12) uniform sampler2D shadow_map;
 layout(set = 1, binding = 16, rgba8) uniform image2D image_storage_test;
 
 layout(set = 9, binding = 1, rgba16f)  uniform image2D rt_image;

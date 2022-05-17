@@ -34,12 +34,11 @@ public:
     void RemoveShadowRenderer(Engine *engine, size_t index);
 
     void Init(Engine *engine);
-    void RenderShadows(Engine *engine);
+    void RenderShadows(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
 
 private:
     std::vector<Ref<Light>>                      m_lights;
     std::vector<ShadowRendererPtr>               m_shadow_renderers;
-    bool                                         m_ready;
 };
 
 } // namespace hyperion::v2

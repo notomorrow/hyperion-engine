@@ -47,7 +47,7 @@ private:
 template <class T>
 ControllerId GetControllerId()
 {
-    static_assert(std::is_base_of_v<T, Controller>, "Object must be a derived class of Controller");
+    static_assert(std::is_base_of_v<Controller, T>, "Object must be a derived class of Controller");
 
     static ControllerId id = ++controller_id_counter;
 

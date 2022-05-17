@@ -20,7 +20,7 @@ public:
         }
     }
 
-    inline HeapArray &operator=(const HeapArray &other)
+    HeapArray &operator=(const HeapArray &other)
     {
         if (this == &other) {
             return *this;
@@ -37,11 +37,17 @@ public:
         : ptr(nullptr)
     {
         std::swap(other.ptr, ptr);
+        other.ptr = nullptr;
     }
 
-    inline HeapArray &operator=(const HeapArray &&other) noexcept
+    HeapArray &operator=(const HeapArray &&other) noexcept
     {
         std::swap(other.ptr, ptr);
+
+        if (other.ptr != nullptr) {
+            delete other.ptr;
+            other.ptr = nullptr;
+        }
 
         return *this;
     }

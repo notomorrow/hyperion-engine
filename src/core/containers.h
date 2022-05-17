@@ -976,8 +976,8 @@ public:
 
         void AssertState()
         {
-            AssertThrowMsg(ptr != nullptr,           "invalid state -- underlying pointer was null");
-            AssertThrowMsg(m_ref_counter != nullptr, "invalid state -- ref counter not set");
+            AssertThrowMsg(ptr != nullptr,           "underlying pointer was null");
+            AssertThrowMsg(m_ref_counter != nullptr, "ref counter not set");
         }
 
         void Release()

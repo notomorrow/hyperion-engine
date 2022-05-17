@@ -22,15 +22,15 @@ public:
 
     inline VkFramebuffer GetFramebuffer() const { return m_framebuffer; }
 
-    void AddRenderPassAttachmentRef(AttachmentRef *attachment_ref)
+    void AddAttachmentRef(AttachmentRef *attachment_ref)
     {
         attachment_ref->IncRef();
 
-        m_render_pass_attachment_refs.push_back(attachment_ref);
+        m_attachment_refs.push_back(attachment_ref);
     }
 
-    inline auto &GetRenderPassAttachmentRefs() { return m_render_pass_attachment_refs; }
-    inline const auto &GetRenderPassAttachmentRefs() const { return m_render_pass_attachment_refs; }
+    inline auto &GetAttachmentRefs()             { return m_attachment_refs; }
+    inline const auto &GetAttachmentRefs() const { return m_attachment_refs; }
 
     inline uint32_t GetWidth()  const { return m_extent.width; }
     inline uint32_t GetHeight() const { return m_extent.height; }
@@ -41,7 +41,7 @@ public:
 private:
     Extent2D m_extent;
 
-    std::vector<AttachmentRef *> m_render_pass_attachment_refs;
+    std::vector<AttachmentRef *> m_attachment_refs;
 
     VkFramebuffer m_framebuffer;
 };

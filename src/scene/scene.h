@@ -38,11 +38,11 @@ public:
     
     void Init(Engine *engine);
     void Update(Engine *engine, GameCounter::TickUnit delta);
-    void EnqueueRenderUpdates(Engine *engine);
 
     BoundingBox m_aabb;
 
 private:
+    void EnqueueRenderUpdates(Engine *engine);
 
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<Node>   m_root_node;

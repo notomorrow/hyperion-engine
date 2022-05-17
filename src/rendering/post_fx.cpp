@@ -11,6 +11,7 @@ using renderer::VertexAttribute;
 using renderer::VertexAttributeSet;
 using renderer::Descriptor;
 using renderer::DescriptorSet;
+using renderer::DescriptorKey;
 using renderer::SamplerDescriptor;
 
 std::unique_ptr<Mesh> FullScreenPass::full_screen_quad = MeshBuilder::Quad(Topology::TRIANGLE_FAN);
@@ -77,13 +78,16 @@ void FullScreenPass::Create(Engine *engine)
 
     /* Add all attachments from the renderpass */
     for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
-        m_framebuffer->GetFramebuffer().AddRenderPassAttachmentRef(attachment_ref);
+        m_framebuffer->GetFramebuffer().AddAttachmentRef(attachment_ref);
     }
     
     m_framebuffer.Init();
 
     CreatePerFrameData(engine);
     CreatePipeline(engine);
+    CreateDescriptors(engine);
+    
+    HYP_FLUSH_RENDER_QUEUE(engine);
 }
 
 void FullScreenPass::CreatePerFrameData(Engine *engine)
@@ -92,36 +96,39 @@ void FullScreenPass::CreatePerFrameData(Engine *engine)
 
     m_frame_data = std::make_unique<PerFrameData<CommandBuffer>>(num_frames);
 
-    for (uint32_t i = 0; i < num_frames; i++) {
-        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+    engine->render_scheduler.Enqueue([this, engine, num_frames](...) {
+        for (uint32_t i = 0; i < num_frames; i++) {
+            auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
 
-        HYPERION_ASSERT_RESULT(command_buffer->Create(
-            engine->GetInstance()->GetDevice(),
-            engine->GetInstance()->GetGraphicsCommandPool()
-        ));
+            HYPERION_BUBBLE_ERRORS(command_buffer->Create(
+                engine->GetInstance()->GetDevice(),
+                engine->GetInstance()->GetGraphicsCommandPool()
+            ));
 
-        m_frame_data->At(i).Set<CommandBuffer>(std::move(command_buffer));
-    }
+            m_frame_data->At(i).Set<CommandBuffer>(std::move(command_buffer));
+        }
+
+        HYPERION_RETURN_OK;
+    });
 }
 
-void FullScreenPass::CreateDescriptors(Engine *engine, uint32_t &binding_offset)
+void FullScreenPass::CreateDescriptors(Engine *engine)
 {
-    /* set descriptor */
-    auto &framebuffer = m_framebuffer->GetFramebuffer();
+    engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
+        if (!framebuffer.GetAttachmentRefs().empty()) {
+            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
+            auto *descriptor = descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(DescriptorKey::POST_FX);
 
-    if (framebuffer.GetRenderPassAttachmentRefs().empty()) {
-        return;
-    }
+            for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
+                descriptor->AddSubDescriptor({
+                    .image_view = attachment_ref->GetImageView(),
+                    .sampler    = attachment_ref->GetSampler()
+                });
+            }
+        }
 
-    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
-    auto *descriptor = descriptor_set->AddDescriptor<SamplerDescriptor>(binding_offset++);
-
-    for (auto *attachment_ref : framebuffer.GetRenderPassAttachmentRefs()) {
-        descriptor->AddSubDescriptor({
-            .image_view = attachment_ref->GetImageView(),
-            .sampler    = attachment_ref->GetSampler()
-        });
-   }
+        HYPERION_RETURN_OK;
+    });
 }
 
 void FullScreenPass::CreatePipeline(Engine *engine)
@@ -144,32 +151,37 @@ void FullScreenPass::CreatePipeline(Engine *engine)
 
 void FullScreenPass::Destroy(Engine *engine)
 {
-    auto result = renderer::Result::OK;
-
     AssertThrow(m_frame_data != nullptr);
 
-    auto &frame_data = *m_frame_data;
-
-    for (uint32_t i = 0; i < frame_data.NumFrames(); i++) {
-        HYPERION_PASS_ERRORS(
-            frame_data[i].Get<CommandBuffer>()->Destroy(
-                engine->GetInstance()->GetDevice(),
-                engine->GetInstance()->GetGraphicsCommandPool()
-            ),
-            result
-        );
-    }
-
-    m_frame_data->Reset();
-
+    m_render_pass = nullptr;
     m_framebuffer = nullptr;
     m_pipeline    = nullptr;
 
-    for (auto &attachment : m_attachments) {
-        HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
-    }
+    engine->render_scheduler.Enqueue([this, engine, &frame_data = *m_frame_data](...) {
+        auto result = renderer::Result::OK;
 
-    HYPERION_ASSERT_RESULT(result);
+        for (uint32_t i = 0; i < frame_data.NumFrames(); i++) {
+            HYPERION_PASS_ERRORS(
+                frame_data[i].Get<CommandBuffer>()->Destroy(
+                    engine->GetInstance()->GetDevice(),
+                    engine->GetInstance()->GetGraphicsCommandPool()
+                ),
+                result
+            );
+        }
+
+        m_frame_data->Reset();
+
+        for (auto &attachment : m_attachments) {
+            HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
+        }
+
+        m_attachments.clear();
+
+        return result;
+    });
+
+    HYP_FLUSH_RENDER_QUEUE(engine);
 }
 
 void FullScreenPass::Record(Engine *engine, uint32_t frame_index)
@@ -263,10 +275,6 @@ void PostProcessing::Create(Engine *engine)
     static const std::array<std::string, 1> filter_shader_names = {  "filter_pass" };
     m_filters.resize(filter_shader_names.size());
 
-    uint32_t binding_index = 8; /* hardcoded for now - start filters at this binding */
-
-    /* TODO: use subpasses for gbuffer so we only have num_filters * num_frames descriptors */
-
     for (int i = 0; i < filter_shader_names.size(); i++) {
         m_filters[i] = std::make_unique<FullScreenPass>(engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
@@ -282,7 +290,6 @@ void PostProcessing::Create(Engine *engine)
         )));
         
         m_filters[i]->Create(engine);
-        m_filters[i]->CreateDescriptors(engine, binding_index);
     }
 }
 
