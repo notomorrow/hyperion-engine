@@ -14,8 +14,6 @@ namespace hyperion::v2 {
 
 using ControllerId = uint32_t;
 
-extern std::atomic<ControllerId> controller_id_counter;
-
 class Node;
 class Engine;
 
@@ -44,18 +42,20 @@ private:
     Node *m_parent;
 };
 
-template <class T>
-ControllerId GetControllerId()
-{
-    static_assert(std::is_base_of_v<Controller, T>, "Object must be a derived class of Controller");
-
-    static ControllerId id = ++controller_id_counter;
-
-    return id;
-}
-
 class ControllerSet {
     using Map = tsl::sparse_map<ControllerId, std::unique_ptr<Controller>>;
+
+    static std::atomic<ControllerId> controller_id_counter;
+
+    template <class T>
+    static ControllerId GetControllerId()
+    {
+        static_assert(std::is_base_of_v<Controller, T>, "Object must be a derived class of Controller");
+
+        static ControllerId id = ++controller_id_counter;
+
+        return id;
+    }
 
 public:
     ControllerSet() = default;

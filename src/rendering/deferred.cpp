@@ -2,7 +2,7 @@
 #include "../engine.h"
 
 #include <asset/byte_reader.h>
-#include <asset/asset_manager.h>
+#include <util/fs/fs_util.h>
 
 namespace hyperion::v2 {
 
@@ -22,11 +22,11 @@ void DeferredRenderingEffect::CreateShader(Engine *engine)
     m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
             SubShader{ShaderModule::Type::VERTEX, {
-                FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_vert.spv").Read(),
+                FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred_vert.spv")).Read(),
                 {.name = "deferred vert"}
             }},
             SubShader{ShaderModule::Type::FRAGMENT, {
-                FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/deferred_frag.spv").Read(),
+                FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred_frag.spv")).Read(),
                 {.name = "deferred frag"}
             }}
         }

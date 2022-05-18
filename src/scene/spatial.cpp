@@ -46,6 +46,7 @@ void Spatial::Init(Engine *engine)
         if (m_skeleton) {
             m_skeleton.Init();
         }
+
         if (m_mesh) {
             m_mesh.Init();
 
@@ -60,7 +61,7 @@ void Spatial::Init(Engine *engine)
 
         SetReady(true);
 
-        EnqueueRenderUpdates(engine);
+        //EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
             RemoveFromPipelines(engine);
@@ -150,7 +151,7 @@ void Spatial::SetMesh(Ref<Mesh> &&mesh)
 
     m_mesh = std::move(mesh);
 
-    if (m_mesh != nullptr && IsInitCalled()) {
+    if (m_mesh != nullptr && IsReady()) {
         m_mesh.Init();
     }
 }
@@ -163,7 +164,7 @@ void Spatial::SetSkeleton(Ref<Skeleton> &&skeleton)
 
     m_skeleton = std::move(skeleton);
 
-    if (m_skeleton != nullptr && IsInitCalled()) {
+    if (m_skeleton != nullptr && IsReady()) {
         m_skeleton.Init();
     }
 }
@@ -177,7 +178,7 @@ void Spatial::SetShader(Ref<Shader> &&shader)
     m_shader = std::move(shader);
     m_primary_pipeline.changed = true;
 
-    if (m_shader != nullptr && IsInitCalled()) {
+    if (m_shader != nullptr && IsReady()) {
         m_shader.Init();
     }
 }
@@ -191,9 +192,11 @@ void Spatial::SetMaterial(Ref<Material> &&material)
     m_material = std::move(material);
     m_primary_pipeline.changed = true;
 
-    if (m_material != nullptr && IsInitCalled()) {
+    if (m_material != nullptr && IsReady()) {
         m_material.Init();
     }
+
+    m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 void Spatial::SetBucket(Bucket bucket)

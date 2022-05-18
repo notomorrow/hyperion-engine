@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(BUILD_NAME hyperion)
+set(BUILD_NAME hyperion-sample)
 
 project(${BUILD_NAME} CXX C)
 
@@ -33,12 +33,10 @@ add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYP_ROOT_DIR=\\\"${CMAKE_CURRENT_LIST_DIR}\\\"")
 
-file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
-file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp")
+file(GLOB_RECURSE SOURCES "*.cpp" "*.c")
+file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to be used")
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${OPENAL_INCLUDE_DIR}
@@ -46,10 +44,11 @@ include_directories(
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/src
 )
-add_library(${BUILD_NAME} STATIC ${SOURCES} ${HEADERS})
+add_executable(${BUILD_NAME} ${SOURCES} ${HEADERS})
 
 
 set(COMMON_LIBRARIES
+    hyperion
     ${CMAKE_THREADS_LIBS_INIT}
     ${OPENAL_LIBRARY}
     ${Vulkan_LIBRARIES}
@@ -62,7 +61,4 @@ target_link_libraries(${BUILD_NAME} ${COMMON_LIBRARIES})
 
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
-
-# sample subdir
-add_subdirectory(samples)
 

@@ -41,7 +41,7 @@ void Material::Init(Engine *engine)
 
         SetReady(true);
 
-        EnqueueRenderUpdates(engine);
+        //EnqueueRenderUpdates(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
             m_textures.Clear();
@@ -106,11 +106,12 @@ void Material::EnqueueRenderUpdates(Engine *engine)
                         continue;
                     }
                     
-                    if (engine->shader_globals->textures.GetResourceIndex(texture->GetId(), &shader_data.texture_index[i])) {
-                        shader_data.texture_usage |= 1 << i;
+                    //if (engine->shader_globals->textures.GetResourceIndex(texture->GetId(), &shader_data.texture_index[i])) {
+                    shader_data.texture_index[i] = texture->GetId().value - 1;
+                    shader_data.texture_usage |= 1 << i;
 
-                        continue;
-                    }
+                    continue;
+                    //}
 
                     DebugLog(
                         LogType::Warn,

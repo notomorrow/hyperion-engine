@@ -1,6 +1,6 @@
 #include "vct.h"
 
-#include <asset/asset_manager.h>
+#include <util/fs/fs_util.h>
 
 #include <engine.h>
 #include <camera/ortho_camera.h>
@@ -200,7 +200,7 @@ void VoxelConeTracing::CreateComputePipelines(Engine *engine)
     m_clear_voxels = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
         engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vct/clear_voxels.comp.spv").Read()}}
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vct/clear_voxels.comp.spv")).Read()}}
             }
         ))
     ));
@@ -212,9 +212,9 @@ void VoxelConeTracing::CreateShader(Engine *engine)
 {
     m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
-            {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/vct/voxelize.vert.spv").Read()}},
-            {ShaderModule::Type::GEOMETRY, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/vct/voxelize.geom.spv").Read()}},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/vct/voxelize.frag.spv").Read()}}
+            {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/vct/voxelize.vert.spv")).Read()}},
+            {ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/vct/voxelize.geom.spv")).Read()}},
+            {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/vct/voxelize.frag.spv")).Read()}}
         }
     ));
 
