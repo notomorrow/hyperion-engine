@@ -19,8 +19,9 @@
 
 #include <rendering/vct/vct.h>
 
+#include <util/fs/fs_util.h>
+
 #include "input_manager.h"
-#include "asset/asset_manager.h"
 #include <camera/fps_camera.h>
 
 #include "util/profile.h"
@@ -76,14 +77,11 @@ public:
         ));
         scene.Init();
 
-
-        auto base_path = AssetManager::GetInstance()->GetRootDir();
-
         auto loaded_assets = engine->assets.Load<Node>(
-            base_path + "models/ogrexml/dragger_Body.mesh.xml",
-            base_path + "models/tmp_terrain.obj", //"sponza/sponza.obj",
-            base_path + "models/cube.obj",
-            base_path + "models/material_sphere/material_sphere.obj"
+            "models/ogrexml/dragger_Body.mesh.xml",
+            "models/sponza/sponza.obj",
+            "models/cube.obj",
+            "models/material_sphere/material_sphere.obj"
         );
 
         zombie = std::move(loaded_assets[0]);
@@ -95,9 +93,9 @@ public:
         auto terrain_mat = engine->resources.materials.Add(std::make_unique<Material>());
         terrain_mat->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));
         terrain_mat.Init();
-        test_model->GetChild(0)->GetSpatial()->SetMaterial(terrain_mat.IncRef());
+        //test_model->GetChild(0)->GetSpatial()->SetMaterial(terrain_mat.IncRef());
 
-        auto suzanne = engine->assets.Load<Node>(base_path + "models/suzanne.obj");
+        auto suzanne = engine->assets.Load<Node>("models/suzanne.obj");
         scene->GetRootNode()->AddChild(std::move(suzanne));
 
         // remove textures so we can manipulate the material and see our changes easier
@@ -108,12 +106,12 @@ public:
         
         auto cubemap = engine->resources.textures.Add(std::make_unique<TextureCube>(
            engine->assets.Load<Texture>(
-               base_path + "textures/Lycksele3/posx.jpg",
-               base_path + "textures/Lycksele3/negx.jpg",
-               base_path + "textures/Lycksele3/posy.jpg",
-               base_path + "textures/Lycksele3/negy.jpg",
-               base_path + "textures/Lycksele3/posz.jpg",
-               base_path + "textures/Lycksele3/negz.jpg"
+               "textures/Lycksele3/posx.jpg",
+               "textures/Lycksele3/negx.jpg",
+               "textures/Lycksele3/posy.jpg",
+               "textures/Lycksele3/negy.jpg",
+               "textures/Lycksele3/posz.jpg",
+               "textures/Lycksele3/negz.jpg"
             )
         ));
         cubemap->GetImage().SetIsSRGB(true);
@@ -134,6 +132,7 @@ public:
             10000.0f
         ));
         scene->GetEnvironment()->AddLight(my_light.IncRef());
+        
 
         /*scene->GetEnvironment()->AddShadowRenderer(engine, std::make_unique<ShadowRenderer>(
             my_light.IncRef(),
@@ -141,16 +140,16 @@ public:
             10.0f
         ));*/
 
-        test_model->Translate({0, 0, 0});
-        test_model->Scale(600.025f);
-        test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
+        test_model->Translate({0, 0, 5});
+        test_model->Scale(0.025f);
+        //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         
         tex1 = engine->resources.textures.Add(
-            engine->assets.Load<Texture>(base_path + "textures/dirt.jpg")
+            engine->assets.Load<Texture>("textures/dirt.jpg")
         );
 
         tex2 = engine->resources.textures.Add(
-            engine->assets.Load<Texture>(base_path + "textures/dummy.jpg")
+            engine->assets.Load<Texture>("textures/dummy.jpg")
         );
 
         auto metal_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
@@ -167,6 +166,8 @@ public:
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetBucket(v2::Bucket::BUCKET_SKYBOX);
         skybox_spatial->SetShader(engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef());
+
+        material_test_obj->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
     }
 
     virtual void Teardown(Engine *engine) override
@@ -176,13 +177,13 @@ public:
         Game::Teardown(engine);
     }
 
-    virtual void OnFrameBegin(Engine *engine, Frame *frame, uint32_t frame_index) override
+    virtual void OnFrameBegin(Engine *engine, Frame *frame) override
     {
-        //scene->GetEnvironment()->RenderShadows(engine, frame->GetCommandBuffer(), frame_index);
+        scene->GetEnvironment()->RenderShadows(engine, frame);
         engine->render_state.BindScene(scene);
     }
 
-    virtual void OnFrameEnd(Engine *engine, Frame *, uint32_t) override
+    virtual void OnFrameEnd(Engine *engine, Frame *) override
     {
         engine->render_state.UnbindScene();
     }
@@ -245,9 +246,6 @@ public:
 int main()
 {
     using namespace hyperion::renderer;
-    
-    std::string base_path = HYP_ROOT_DIR;
-    AssetManager::GetInstance()->SetRootDir(base_path + "/res/");
 
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
@@ -257,15 +255,17 @@ int main()
 
     v2::Engine engine(system, "My app");
 
+    engine.assets.SetBasePath(v2::FileSystem::Join(HYP_ROOT_DIR, "../res"));
+
     v2::MyGame my_game;
 
-
+    
     auto texture = engine.resources.textures.Add(
-        engine.assets.Load<v2::Texture>(base_path + "/res/textures/dirt.jpg")
+        engine.assets.Load<v2::Texture>("textures/dirt.jpg")
     );
 
     auto texture2 = engine.resources.textures.Add(
-        engine.assets.Load<v2::Texture>(base_path + "/res/textures/dummy.jpg")
+        engine.assets.Load<v2::Texture>("textures/dummy.jpg")
     );
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -295,7 +295,7 @@ int main()
 #if HYPERION_VK_TEST_IMAGE_STORE
     descriptor_set_globals
         ->AddDescriptor<StorageImageDescriptor>(16)
-        ->AddSubDescriptor({ .image_view = &image_storage_view });
+        ->AddSubDescriptor({.image_view = &image_storage_view});
 
     HYPERION_ASSERT_RESULT(image_storage->Create(
         device,
@@ -319,13 +319,13 @@ int main()
             std::vector<v2::SubShader>{
                 {
                     ShaderModule::Type::VERTEX, {
-                        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/vert.spv").Read(),
+                        FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/vert.spv")).Read(),
                         {.name = "main vert"}
                     }
                 },
                 {
                     ShaderModule::Type::FRAGMENT, {
-                        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/forward_frag.spv").Read(),
+                        FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
                         {.name = "forward frag"}
                     }
                 }
@@ -343,7 +343,7 @@ int main()
         std::make_unique<v2::ComputePipeline>(
             engine.resources.shaders.Add(std::make_unique<v2::Shader>(
                 std::vector<v2::SubShader>{
-                    { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/imagestore.comp.spv").Read()}}
+                    { ShaderModule::Type::COMPUTE, {FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/imagestore.comp.spv")).Read()}}
                 }
             ))
         )
@@ -375,26 +375,14 @@ int main()
 
         per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
     }
-    
-    /*{
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).IncRef(),
-            engine.GetRenderListContainer()[v2::BUCKET_OPAQUE].render_pass.IncRef(),
-            VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
-            v2::Bucket::BUCKET_OPAQUE
-        );
-        
-        engine.AddGraphicsPipeline(std::move(pipeline));
-    }*/
-
 
     {
         engine.shader_manager.SetShader(
             v2::ShaderManager::Key::BASIC_SKYBOX,
             engine.resources.shaders.Add(std::make_unique<v2::Shader>(
                 std::vector<v2::SubShader>{
-                    {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_vert.spv").Read()}},
-                    {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/skybox_frag.spv").Read()}}
+                    {ShaderModule::Type::VERTEX, {FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/skybox_vert.spv")).Read()}},
+                    {ShaderModule::Type::FRAGMENT, {FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/skybox_frag.spv")).Read()}}
                 }
             ))
         );
@@ -440,13 +428,13 @@ int main()
 #if HYPERION_VK_TEST_RAYTRACING
     auto rt_shader = std::make_unique<ShaderProgram>();
     rt_shader->AttachShader(engine.GetDevice(), ShaderModule::Type::RAY_GEN, {
-        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/rt/test.rgen.spv").Read()
+        FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/rt/test.rgen.spv")).Read()
     });
     rt_shader->AttachShader(engine.GetDevice(), ShaderModule::Type::RAY_MISS, {
-        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/rt/test.rmiss.spv").Read()
+        FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/rt/test.rmiss.spv")).Read()
     });
     rt_shader->AttachShader(engine.GetDevice(), ShaderModule::Type::RAY_CLOSEST_HIT, {
-        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/rt/test.rchit.spv").Read()
+        FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/rt/test.rchit.spv")).Read()
     });
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
@@ -606,7 +594,7 @@ int main()
         
         //my_game.scene->GetEnvironment()->RenderShadows(&engine, command_buffer, frame_index);
 
-        my_game.OnFrameBegin(&engine, frame, frame_index);
+        my_game.OnFrameBegin(&engine, frame);
 
 #if HYPERION_VK_TEST_RAYTRACING
         rt->Bind(frame->GetCommandBuffer());
@@ -676,7 +664,7 @@ int main()
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));
         
-        my_game.OnFrameEnd(&engine, frame, frame_index);
+        my_game.OnFrameEnd(&engine, frame);
 
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
         engine.GetInstance()->GetFrameHandler()->NextFrame();

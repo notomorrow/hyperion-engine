@@ -37,9 +37,10 @@ void Scene::Init(Engine *engine)
 
         m_environment->Init(engine);
 
-        EnqueueRenderUpdates(engine);
-
         SetReady(true);
+
+        //EnqueueRenderUpdates(engine);
+
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](Engine *engine) {
             HYP_FLUSH_RENDER_QUEUE(engine);

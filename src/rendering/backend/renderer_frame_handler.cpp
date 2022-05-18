@@ -20,9 +20,12 @@ Result FrameHandler::CreateFrames(Device *device)
     AssertThrow(m_per_frame_data.NumFrames() >= 1);
     
     for (uint32_t i = 0; i < m_per_frame_data.NumFrames(); i++) {
-        auto frame = std::make_unique<Frame>();
+        auto frame = std::make_unique<Frame>(i);
 
-        HYPERION_BUBBLE_ERRORS(frame->Create(device, non_owning_ptr(m_per_frame_data[i].Get<CommandBuffer>())));
+        HYPERION_BUBBLE_ERRORS(frame->Create(
+            device,
+            non_owning_ptr(m_per_frame_data[i].Get<CommandBuffer>())
+        ));
 
         m_per_frame_data[i].Set<Frame>(std::move(frame));
     }

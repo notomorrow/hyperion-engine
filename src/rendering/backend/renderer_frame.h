@@ -23,7 +23,7 @@ class Frame {
     Result CreateSyncObjects();
     Result DestroySyncObjects();
 public:
-    Frame();
+    Frame(uint32_t frame_index);
     Frame(const Frame &other) = delete;
     Frame &operator=(const Frame &other) = delete;
     ~Frame();
@@ -31,11 +31,13 @@ public:
     Result Create(Device *device, const non_owning_ptr<CommandBuffer> &cmd);
     Result Destroy(Device *device);
 
-    inline CommandBuffer *GetCommandBuffer() { return command_buffer.get(); }
+    uint32_t GetFrameIndex() const                       { return m_frame_index; }
+
+    inline CommandBuffer *GetCommandBuffer()             { return command_buffer.get(); }
     inline const CommandBuffer *GetCommandBuffer() const { return command_buffer.get(); }
 
-    inline SemaphoreChain &GetPresentSemaphores() { return present_semaphores; }
-    inline const SemaphoreChain &GetPresentSemaphores() const { return present_semaphores; }
+    inline SemaphoreChain &GetPresentSemaphores()             { return m_present_semaphores; }
+    inline const SemaphoreChain &GetPresentSemaphores() const { return m_present_semaphores; }
 
     /* Start recording into the command buffer */
     Result BeginCapture(Device *device);
@@ -46,7 +48,10 @@ public:
     
     non_owning_ptr<CommandBuffer> command_buffer;
     std::unique_ptr<Fence>        fc_queue_submit;
-    SemaphoreChain present_semaphores;
+
+private:
+    uint32_t       m_frame_index;
+    SemaphoreChain m_present_semaphores;
 };
 
 } // namespace renderer

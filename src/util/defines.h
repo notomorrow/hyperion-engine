@@ -42,16 +42,22 @@
 
 #if defined(_WIN32) && _WIN32
     #define HYP_WINDOWS 1
+
+    #define HYP_FILESYSTEM_SEPARATOR "\\"
+#else
+    #define HYP_FILESYSTEM_SEPARATOR "/"
 #endif
 
-#define HYP_USE_EXCEPTIONS 0
+#define HYP_USE_EXCEPTIONS     0
 
 #if !defined(HYPERION_BUILD_RELEASE) || !HYPERION_BUILD_RELEASE
     #define HYP_DEBUG_MODE 1
 #endif
 
-#if !defined(HYPERION_BUILD_RELEASE_FINAL) || !HYPERION_BUILD_RELEASE_FINAL
+#if defined(HYPERION_BUILD_RELEASE_FINAL) && HYPERION_BUILD_RELEASE_FINAL
     #define HYP_ENABLE_BREAKPOINTS 0
+#else
+    #define HYP_ENABLE_BREAKPOINTS 1
 #endif
 
 #if HYP_CLANG_OR_GCC
@@ -76,6 +82,12 @@
     #if HYP_ENABLE_BREAKPOINTS
         #define HYP_BREAKPOINT       (void(0))
     #endif
+#endif
+
+#if HYP_DEBUG_MODE
+    #define HYP_BREAKPOINT_DEBUG_MODE HYP_BREAKPOINT
+#else
+    #define HYP_BREAK_IF_DEBUG_MODE  (void(0))
 #endif
 
 #if !HYP_ENABLE_BREAKPOINTS

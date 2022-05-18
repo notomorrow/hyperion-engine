@@ -9,6 +9,7 @@
 #include "../scene/node.h"
 
 #include <core/lib/static_map.h>
+#include <util/fs/fs_util.h>
 
 #include <string>
 #include <unordered_map>
@@ -69,7 +70,7 @@ class Assets {
             });
 
             if (result.first) {
-                /* TODO: deal with cache here */
+                /* TODO: Cache here */
 
                 DebugLog(LogType::Info, "Constructing loaded asset %s...\n", filepath.c_str());
 
@@ -136,25 +137,60 @@ class Assets {
         }
     };
 
+    static inline auto GetTryFilepaths(const std::string &filepath, const std::string &original_filepath)
+    {
+        const auto current_path = FileSystem::CurrentPath();
+
+        return std::array<std::string, 2>{
+            FileSystem::RelativePath(filepath, current_path),
+            FileSystem::Join(current_path, FileSystem::RelativePath(original_filepath, current_path))
+        };
+    }
+
     template <class Type, class ...Args>
     auto LoadAsync(Args &&... paths)
     {
-        const std::array<std::string,     sizeof...(paths)> filepaths{paths...};
+        const std::array<std::string,     sizeof...(paths)> original_filepaths{paths...};
+        std::array<std::string,           sizeof...(paths)> filepaths{paths...};
         std::array<std::unique_ptr<Type>, sizeof...(paths)> results{};
-
+        
+        if (!m_base_path.empty()) {
+            for (auto &path : filepaths) {
+                path = FileSystem::Join(m_base_path, path);
+            }
+        }
+        
         std::vector<std::thread> threads;
         threads.reserve(results.size());
         
         for (size_t i = 0; i < filepaths.size(); i++) {
-            threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
+            threads.emplace_back([index = i, engine = m_engine, &filepaths, &original_filepaths, &results] {
                 DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
 
-                auto functor = HandleAssetFunctor<Type>{};
-                functor.filepath = filepaths[index];
+                for (auto &try_filepath : GetTryFilepaths(filepaths[index], original_filepaths[index])) {
+                    auto functor = HandleAssetFunctor<Type>{};
+                    functor.filepath = try_filepath;
 
-                if (!(results[index] = functor(engine))) {
-                    DebugLog(LogType::Warn, "%s: The asset could not be loaded and will be returned as null.\n\t"
-                        "Any usages or indirection may result in the application crashing!\n", functor.filepath.c_str());
+                    if ((results[index] = functor(engine))) {
+                        break;
+                    }
+
+                    DebugLog(
+                        LogType::Info,
+                        "%s not found, trying next\n",
+                        try_filepath.c_str()
+                    );
+                }
+
+                if (!results[index]) {
+                    DebugLog(
+                        LogType::Warn,
+                        "%s: The asset could not be loaded and will be returned as null.\n\t"
+                        "Any usages or indirection may result in the application crashing!\n",
+                        filepaths[index].c_str()
+                    );
+
+                    HYP_BREAKPOINT;
                 }
             });
         }
@@ -169,6 +205,14 @@ class Assets {
     template <class Type>
     auto LoadAsyncVector(std::vector<std::string> filepaths) -> std::vector<std::unique_ptr<Type>>
     {
+        const std::vector<std::string> original_filepaths(filepaths);
+        
+        if (!m_base_path.empty()) {
+            for (auto &path : filepaths) {
+                path = FileSystem::Join(m_base_path, path);
+            }
+        }
+
         std::vector<std::unique_ptr<Type>> results{};
         results.resize(filepaths.size());
 
@@ -176,13 +220,28 @@ class Assets {
         threads.reserve(results.size());
         
         for (size_t i = 0; i < filepaths.size(); i++) {
-            threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
+            threads.emplace_back([index = i, engine = m_engine, &filepaths, &original_filepaths, &results] {
                 DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
+                
+                for (auto &try_filepath : GetTryFilepaths(filepaths[index], original_filepaths[index])) {
+                    auto functor = HandleAssetFunctor<Type>{};
+                    functor.filepath = try_filepath;
 
-                auto functor = HandleAssetFunctor<Type>{};
-                functor.filepath = filepaths[index];
+                    if ((results[index] = functor(engine))) {
+                        break;
+                    }
+                }
 
-                results[index] = functor(engine);
+                if (!results[index]) {
+                    DebugLog(
+                        LogType::Warn,
+                        "%s: The asset could not be loaded and will be returned as null.\n\t"
+                        "Any usages or indirection may result in the application crashing!\n",
+                        filepaths[index].c_str()
+                    );
+
+                    HYP_BREAKPOINT;
+                }
             });
         }
 
@@ -198,6 +257,12 @@ public:
     Assets(const Assets &other) = delete;
     Assets &operator=(const Assets &other) = delete;
     ~Assets();
+
+    /*! \brief Set the path to prefix all assets with.
+     * @param base_path A string equal to the base path
+     */
+    void SetBasePath(const std::string &base_path) { m_base_path = base_path; }
+    const std::string &GetBasePath() const         { return m_base_path; }
 
     /*! \brief Load a single asset from the given path. If no asset could be loaded, nullptr is returned.
      * @param filepath The path of the asset
@@ -235,8 +300,8 @@ public:
     }
 
 private:
-    Engine *m_engine;
-    
+    Engine     *m_engine;
+    std::string m_base_path;
 };
 
 } // namespace hyperion::v2

@@ -3,8 +3,8 @@
 
 #include <math/math_util.h>
 #include <asset/byte_reader.h>
-#include <asset/asset_manager.h> /* TMP */
 #include <camera/ortho_camera.h>
+#include <util/fs/fs_util.h>
 
 namespace hyperion::v2 {
 
@@ -132,9 +132,9 @@ void Voxelizer::CreateShader(Engine *engine)
 {
     m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
-            {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/voxel/voxelize.vert.spv").Read()}},
-            {ShaderModule::Type::GEOMETRY, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/voxel/voxelize.geom.spv").Read()}},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/voxel/voxelize.frag.spv").Read()}}
+            {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.vert.spv")).Read()}},
+            {ShaderModule::Type::GEOMETRY, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.geom.spv")).Read()}},
+            {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/voxel/voxelize.frag.spv")).Read()}}
         }
     ));
 

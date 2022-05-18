@@ -2,7 +2,7 @@
 #include "../engine.h"
 
 #include <asset/byte_reader.h>
-#include <asset/asset_manager.h>
+#include <util/fs/fs_util.h>
 #include <builders/mesh_builder.h>
 
 namespace hyperion::v2 {
@@ -279,11 +279,11 @@ void PostProcessing::Create(Engine *engine)
         m_filters[i] = std::make_unique<FullScreenPass>(engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
                 SubShader{ShaderModule::Type::VERTEX, {
-                    FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_vert.spv").Read(),
+                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/" + filter_shader_names[i] + "_vert.spv")).Read(),
                     {.name = "filter vert"}
                 }},
                 SubShader{ShaderModule::Type::FRAGMENT, {
-                    FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/" + filter_shader_names[i] + "_frag.spv").Read(),
+                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/" + filter_shader_names[i] + "_frag.spv")).Read(),
                     {.name = "filter frag"}
                 }}
             }

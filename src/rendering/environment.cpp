@@ -1,6 +1,8 @@
 #include "environment.h"
 #include <engine.h>
 
+#include <rendering/backend/renderer_frame.h>
+
 namespace hyperion::v2 {
 
 Environment::Environment()
@@ -78,7 +80,7 @@ void Environment::RemoveShadowRenderer(Engine *engine, size_t index)
     m_shadow_renderers.erase(m_shadow_renderers.begin() + index);
 }
 
-void Environment::RenderShadows(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
+void Environment::RenderShadows(Engine *engine, Frame *frame)
 {
     AssertReady();
 
@@ -87,7 +89,11 @@ void Environment::RenderShadows(Engine *engine, CommandBuffer *command_buffer, u
      */
 
     for (const auto &shadow_renderer : m_shadow_renderers) {
-        shadow_renderer->Render(engine, command_buffer, frame_index);
+        shadow_renderer->Render(
+            engine,
+            frame->GetCommandBuffer(),
+            frame->GetFrameIndex()
+        );
     }
 }
 
