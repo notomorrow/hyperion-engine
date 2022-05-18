@@ -393,11 +393,6 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
 }
 
-void Engine::Stop()
-{
-    
-}
-
 Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
     Ref<Shader> &&shader,
     const VertexAttributeSet &vertex_attributes,

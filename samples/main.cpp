@@ -177,13 +177,13 @@ public:
         Game::Teardown(engine);
     }
 
-    virtual void OnFrameBegin(Engine *engine, Frame *frame, uint32_t frame_index) override
+    virtual void OnFrameBegin(Engine *engine, Frame *frame) override
     {
-        //scene->GetEnvironment()->RenderShadows(engine, frame->GetCommandBuffer(), frame_index);
+        scene->GetEnvironment()->RenderShadows(engine, frame);
         engine->render_state.BindScene(scene);
     }
 
-    virtual void OnFrameEnd(Engine *engine, Frame *, uint32_t) override
+    virtual void OnFrameEnd(Engine *engine, Frame *) override
     {
         engine->render_state.UnbindScene();
     }
@@ -375,18 +375,6 @@ int main()
 
         per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
     }
-    
-    /*{
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(
-            engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).IncRef(),
-            engine.GetRenderListContainer()[v2::BUCKET_OPAQUE].render_pass.IncRef(),
-            VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
-            v2::Bucket::BUCKET_OPAQUE
-        );
-        
-        engine.AddGraphicsPipeline(std::move(pipeline));
-    }*/
-
 
     {
         engine.shader_manager.SetShader(
@@ -606,7 +594,7 @@ int main()
         
         //my_game.scene->GetEnvironment()->RenderShadows(&engine, command_buffer, frame_index);
 
-        my_game.OnFrameBegin(&engine, frame, frame_index);
+        my_game.OnFrameBegin(&engine, frame);
 
 #if HYPERION_VK_TEST_RAYTRACING
         rt->Bind(frame->GetCommandBuffer());
@@ -676,7 +664,7 @@ int main()
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));
         
-        my_game.OnFrameEnd(&engine, frame, frame_index);
+        my_game.OnFrameEnd(&engine, frame);
 
         engine.GetInstance()->GetFrameHandler()->PresentFrame(&engine.GetInstance()->GetGraphicsQueue(), engine.GetInstance()->GetSwapchain());
         engine.GetInstance()->GetFrameHandler()->NextFrame();
