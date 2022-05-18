@@ -67,8 +67,33 @@ void Material::Update(Engine *engine)
 void Material::EnqueueRenderUpdates(Engine *engine)
 {
     AssertReady();
+    
+    std::array<Texture::ID, MaterialShaderData::max_bound_textures> bound_texture_ids{};
 
-    engine->render_scheduler.Enqueue([this, engine](...) {
+    const size_t num_bound_textures = MathUtil::Min(
+        m_textures.Size(),
+        MaterialShaderData::max_bound_textures
+    );
+
+    if (num_bound_textures != 0) {
+        for (size_t i = 0; i < num_bound_textures; i++) {
+            if (const auto &texture = m_textures.ValueAt(i)) {
+                if (texture == nullptr) {
+                    DebugLog(
+                        LogType::Warn,
+                        "Texture could not be bound for Material %d because it is null\n",
+                        m_id.value
+                    );
+
+                    continue;
+                }
+                
+                bound_texture_ids[i] = texture->GetId();
+            }
+        }
+    }
+
+    engine->render_scheduler.Enqueue([this, engine, bound_texture_ids](...) {
         MaterialShaderData shader_data{
             .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
             .metalness       = GetParameter<float>(MATERIAL_KEY_METALNESS),
@@ -88,38 +113,10 @@ void Material::EnqueueRenderUpdates(Engine *engine)
 
         shader_data.texture_usage = 0;
 
-        const size_t num_bound_textures = MathUtil::Min(
-            m_textures.Size(),
-            MaterialShaderData::max_bound_textures
-        );
-
-        if (num_bound_textures != 0) {
-            for (size_t i = 0; i < num_bound_textures; i++) {
-                if (const auto &texture = m_textures.ValueAt(i)) {
-                    if (texture == nullptr) {
-                        DebugLog(
-                            LogType::Warn,
-                            "Texture could not be bound for Material %d because it is null\n",
-                            m_id.value
-                        );
-
-                        continue;
-                    }
-                    
-                    //if (engine->shader_globals->textures.GetResourceIndex(texture->GetId(), &shader_data.texture_index[i])) {
-                    shader_data.texture_index[i] = texture->GetId().value - 1;
-                    shader_data.texture_usage |= 1 << i;
-
-                    continue;
-                    //}
-
-                    DebugLog(
-                        LogType::Warn,
-                        "Texture #%d could not be bound for Material %d because it is not found in the bindless texture store\n",
-                        texture->GetId().value,
-                        m_id.value
-                    );
-                }
+        for (size_t i = 0; i < bound_texture_ids.size(); i++) {
+            if (bound_texture_ids[i] != Texture::empty_id) {
+                shader_data.texture_index[i] = bound_texture_ids[i].value - 1;
+                shader_data.texture_usage |= 1 << i;
             }
         }
 

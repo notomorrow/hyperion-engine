@@ -50,6 +50,7 @@ void BindlessStorage::AddResource(Ref<Texture> &&texture)
 
 
         indices[i] = descriptor->AddSubDescriptor({
+            .index      = texture->GetId().value - 1,
             .image_view = &texture->GetImageView(),
             .sampler    = &texture->GetSampler()
         });
