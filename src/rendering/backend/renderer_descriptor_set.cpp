@@ -479,8 +479,10 @@ void Descriptor::Create(
     }
 
     for (size_t i = 0; i < m_sub_descriptors.size(); i++) {
+        const auto &sub_descriptor = m_sub_descriptors[i];
+
         UpdateSubDescriptorBuffer(
-            m_sub_descriptors[i],
+            sub_descriptor,
             m_sub_descriptors_raw.buffers[i],
             m_sub_descriptors_raw.images[i],
             m_sub_descriptors_raw.acceleration_structures[i]
@@ -490,7 +492,7 @@ void Descriptor::Create(
             VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
             write.pNext           = nullptr;
             write.dstBinding      = m_binding;
-            write.dstArrayElement = uint32_t(i);
+            write.dstArrayElement = sub_descriptor.index == ~0u ? uint32_t(i) : sub_descriptor.index;
             write.descriptorCount = 1;
             write.descriptorType  = descriptor_type;
             write.pBufferInfo     = &m_sub_descriptors_raw.buffers[i];
@@ -503,6 +505,8 @@ void Descriptor::Create(
             writes.push_back(write);
         }
     }
+
+    /*** TODO!!!! for non-bindless, use upper_bound to find index! */
 
     if (!m_descriptor_set->IsBindless()) {
         VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
@@ -544,7 +548,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
             m_sub_descriptors_raw.acceleration_structures[sub_descriptor_index]
         );
 
-        if (m_descriptor_set->IsBindless()) {
+        //if (m_descriptor_set->IsBindless()) {
             VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
             write.pNext           = nullptr;
             write.dstBinding      = m_binding;
@@ -559,7 +563,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
             }
 
             writes.push_back(write);
-        }
+        //}
 
         changed |= {static_cast<uint32_t>(sub_descriptor_index), static_cast<uint32_t>(sub_descriptor_index) + 1};
 
@@ -574,7 +578,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
         m_dirty_sub_descriptors = {};
     }
 
-    if (changed.GetEnd() <= changed.GetStart()) {
+    /*if (changed.GetEnd() <= changed.GetStart()) {
         return;
     }
 
@@ -593,7 +597,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
         }
 
         writes.push_back(write);
-    }
+    }*/
 }
 
 void Descriptor::UpdateSubDescriptorBuffer(const SubDescriptor &sub_descriptor,

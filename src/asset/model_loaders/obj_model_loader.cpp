@@ -331,6 +331,10 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
         }
 
         engine->resources.Lock([&](Resources &resources) {
+            if (material == nullptr) {
+                material = resources.materials.Add(std::make_unique<Material>());
+            }
+
             auto mesh = resources.meshes.Add(
                 std::make_unique<Mesh>(
                     vertices, 

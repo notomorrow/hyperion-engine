@@ -1,7 +1,7 @@
 #include "engine.h"
 
 #include <asset/byte_reader.h>
-#include <asset/asset_manager.h>
+#include <util/fs/fs_util.h>
 
 #include <rendering/post_fx.h>
 #include <rendering/compute.h>
@@ -94,8 +94,8 @@ void Engine::PrepareSwapchain()
 
     auto shader = resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
-            {ShaderModule::Type::VERTEX, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_vert.spv").Read()}},
-            {ShaderModule::Type::FRAGMENT, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/blit_frag.spv").Read()}}
+            {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_vert.spv")).Read()}},
+            {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_frag.spv")).Read()}}
         }
     ));
 
@@ -302,8 +302,8 @@ void Engine::Initialize()
     callbacks.TriggerPersisted(EngineCallback::CREATE_MESHES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_ACCELERATION_STRUCTURES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_SKELETONS, this);
-    callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_LIGHTS, this);
+    callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
 
 
     m_running = true;
@@ -391,11 +391,6 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
-}
-
-void Engine::Stop()
-{
-    
 }
 
 Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(

@@ -8,6 +8,12 @@
 #include <mutex>
 #include <vector>
 
+namespace hyperion::renderer {
+
+class Frame;
+
+} // namespace hyperion::renderer
+
 namespace hyperion::v2 {
 
 class Engine;
@@ -34,7 +40,7 @@ public:
     void RemoveShadowRenderer(Engine *engine, size_t index);
 
     void Init(Engine *engine);
-    void RenderShadows(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
+    void RenderShadows(Engine *engine, Frame *frame);
 
 private:
     std::vector<Ref<Light>>                      m_lights;

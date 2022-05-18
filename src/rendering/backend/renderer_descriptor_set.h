@@ -54,6 +54,8 @@ public:
     };
 
     struct SubDescriptor {
+        uint32_t index = ~0u; /* ~0 == just use index of item added */
+
         union {
             struct /* BufferData */ {
                 GPUBuffer *buffer;

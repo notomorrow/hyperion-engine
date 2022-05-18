@@ -3,8 +3,7 @@
 
 #include <rendering/backend/renderer_shader.h>
 
-/* TMP */
-#include <asset/asset_manager.h>
+#include <util/fs/fs_util.h>
 
 namespace hyperion::v2 {
 
@@ -82,13 +81,13 @@ void ProbeGrid::CreatePipeline(Engine *engine)
     auto rt_shader = std::make_unique<ShaderProgram>();
 
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_GEN, {
-        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/rt/probe.rgen.spv").Read()
+        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/rt/probe.rgen.spv")).Read()
     });
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_MISS, {
-        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/rt/probe.rmiss.spv").Read()
+        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/rt/probe.rmiss.spv")).Read()
     });
     rt_shader->AttachShader(engine->GetDevice(), ShaderModule::Type::RAY_CLOSEST_HIT, {
-        FileByteReader(AssetManager::GetInstance()->GetRootDir() + "/vkshaders/rt/probe.rchit.spv").Read()
+        FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/rt/probe.rchit.spv")).Read()
     });
 
     m_pipeline = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
@@ -100,7 +99,7 @@ void ProbeGrid::CreateComputePipelines(Engine *engine)
     m_update_irradiance = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
         engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/rt/probe_update_irradiance.comp.spv").Read()}}
+                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/probe_update_irradiance.comp.spv")).Read()}}
             }
         ))
     ));
@@ -110,7 +109,7 @@ void ProbeGrid::CreateComputePipelines(Engine *engine)
     m_update_depth = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
         engine->resources.shaders.Add(std::make_unique<Shader>(
             std::vector<SubShader>{
-                { ShaderModule::Type::COMPUTE, {FileByteReader(AssetManager::GetInstance()->GetRootDir() + "vkshaders/rt/probe_update_depth.comp.spv").Read()}}
+                {ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/rt/probe_update_depth.comp.spv")).Read()}}
             }
         ))
     ));

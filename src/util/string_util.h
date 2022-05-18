@@ -138,6 +138,27 @@ public:
         return TrimLeft(TrimRight(s));
     }
 
+    template <size_t Size>
+    static inline std::string Join(const std::array<std::string, Size> &args, const std::string &join_by)
+    {
+        const size_t count = args.size();
+
+        std::stringstream ss;
+        size_t i = 0;
+
+        for (auto &str :args) {
+            ss << str;
+
+            if (i != count - 1 && !EndsWith(str, join_by)) {
+                ss << join_by;
+            }
+
+            i++;
+        }
+
+        return ss.str();
+    }
+
     static inline std::string ReplaceAll(const std::string &text,
         const std::string &from, const std::string &to)
     {
