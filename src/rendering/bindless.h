@@ -38,7 +38,7 @@ public:
     void ApplyUpdates(Engine *engine, uint32_t frame_index);
 
     /*! \brief Add a texture to the bindless descriptor set. */
-    void AddResource(Ref<Texture> &&texture);
+    void AddResource(const Texture *texture);
     /*! \brief Remove the given texture from the bindless descriptor set. */
     void RemoveResource(Texture::ID id);
     /*! \brief Mark a resource as having changed, to be queued for update. */
@@ -53,8 +53,8 @@ public:
 
 private:
     struct TextureResource {
-        Texture *    texture;
-        uint32_t     resource_index;
+        const Texture *texture;
+        uint32_t       resource_index;
     };
 
     std::unordered_map<Texture::ID::ValueType, TextureResource> m_texture_resources;

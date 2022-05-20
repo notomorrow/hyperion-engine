@@ -6,6 +6,7 @@
 layout(location=0) out vec3 v_position;
 layout(location=1) out vec3 v_normal;
 layout(location=2) out vec2 v_texcoord0;
+layout(location=3) out float v_lighting;
 
 layout (location = 0) in vec3 a_position;
 layout (location = 1) in vec3 a_normal;
@@ -26,6 +27,12 @@ void main()
     v_position = position.xyz;
     v_normal = (transpose(inverse(object.model_matrix)) * vec4(a_normal, 0.0)).xyz;
     v_texcoord0 = a_texcoord0;
+
+    /* basic n•l */
+    vec3 L = normalize(scene.light_direction.xyz);
+    vec3 N = normalize(v_normal);
+    float NdotL = max(0.0001, dot(N, L));
+    v_lighting = NdotL;
     
     gl_Position = vec4(VctWorldToAabb(v_position), 1.0);
 }

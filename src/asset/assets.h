@@ -24,6 +24,12 @@ template <class ...T>
 constexpr bool resolution_failure = false;
 
 class Assets {
+    template <class T>
+    struct ConstructedAsset {
+        std::unique_ptr<T> object;
+        LoaderResult       result;
+    };
+
     struct HandleAssetFunctorBase {
         std::string filepath;
 
@@ -61,25 +67,29 @@ class Assets {
             { return typename LoaderObject<T, Format>::Loader(); }
         
         template <class Loader>
-        auto LoadResource(Engine *engine, const Loader &loader) -> std::unique_ptr<typename Loader::FinalType>
+        auto LoadResource(Engine *engine, const Loader &loader) -> ConstructedAsset<typename Loader::FinalType>
         {
-            auto result = loader.Instance().Load(LoaderState{
+            auto [result, object] = loader.Instance().Load(LoaderState{
                 .filepath = filepath,
                 .stream = {filepath},
                 .engine = engine
             });
 
-            if (result.first) {
+            if (result) {
                 /* TODO: Cache here */
 
                 DebugLog(LogType::Info, "Constructing loaded asset %s...\n", filepath.c_str());
 
-                return loader.Build(engine, result.second);
-            } else {
-                DebugLog(LogType::Error, "Failed to load asset %s: %s\n", filepath.c_str(), result.first.message.c_str());
-
-                return nullptr;
+                return {
+                    .object = loader.Build(engine, object),
+                    .result = result
+                };
             }
+
+            return {
+                .object = nullptr,
+                .result = result
+            };
         }
     };
 
@@ -95,7 +105,7 @@ class Assets {
 
     template <>
     struct HandleAssetFunctor<Node> : HandleAssetFunctorBase {
-        std::unique_ptr<Node> operator()(Engine *engine)
+        ConstructedAsset<Node> operator()(Engine *engine)
         {
             switch (GetResourceFormat()) {
             case LoaderFormat::OBJ_MODEL:
@@ -103,27 +113,27 @@ class Assets {
             case LoaderFormat::OGRE_XML_MODEL:
                 return LoadResource(engine, GetLoader<Node, LoaderFormat::OGRE_XML_MODEL>());
             default:
-                return nullptr;
+                return {.result = {LoaderResult::Status::ERR, "Unexpected file format"}};
             }
         }
     };
 
     template <>
     struct HandleAssetFunctor<Skeleton> : HandleAssetFunctorBase {
-        std::unique_ptr<Skeleton> operator()(Engine *engine)
+        ConstructedAsset<Skeleton> operator()(Engine *engine)
         {
             switch (GetResourceFormat()) {
             case LoaderFormat::OGRE_XML_SKELETON:
                 return LoadResource(engine, GetLoader<Skeleton, LoaderFormat::OGRE_XML_SKELETON>());
             default:
-                return nullptr;
+                return {.result = {LoaderResult::Status::ERR, "Unexpected file format"}};
             }
         }
     };
 
     template <>
     struct HandleAssetFunctor<Texture> : HandleAssetFunctorBase {
-        std::unique_ptr<Texture> operator()(Engine *engine)
+        ConstructedAsset<Texture> operator()(Engine *engine)
         {
             return LoadResource(engine, GetLoader<Texture, LoaderFormat::TEXTURE_2D>());
         }
@@ -131,7 +141,7 @@ class Assets {
 
     template <>
     struct HandleAssetFunctor<MaterialGroup> : HandleAssetFunctorBase {
-        std::unique_ptr<MaterialGroup> operator()(Engine *engine)
+        ConstructedAsset<MaterialGroup> operator()(Engine *engine)
         {
             return LoadResource(engine, GetLoader<MaterialGroup, LoaderFormat::MTL_MATERIAL_LIBRARY>());
         }
@@ -141,23 +151,57 @@ class Assets {
     {
         const auto current_path = FileSystem::CurrentPath();
 
-        return std::array<std::string, 2>{
+        auto paths = std::array<std::string, 2>{
             FileSystem::RelativePath(filepath, current_path),
-            FileSystem::Join(current_path, FileSystem::RelativePath(original_filepath, current_path))
+            FileSystem::RelativePath(original_filepath, current_path)
         };
+
+        return paths;
+    }
+
+    inline auto GetRebasedFilepath(std::string filepath)
+    {
+        filepath = FileSystem::RelativePath(filepath, FileSystem::CurrentPath());
+
+        if (!m_base_path.empty()) {
+            return FileSystem::Join(
+                m_base_path,
+                filepath
+            );
+        }
+
+        return filepath;
+    }
+
+    static inline void DisplayAssetLoadError(const std::string &filepath, const std::string &error_message)
+    {
+        DebugLog(
+            LogType::Warn,
+            "[%s]: The asset could not be loaded and will be returned as null.\n\t"
+            "Any usages or indirection may result in the application crashing!\n"
+            "The message was: %s\n",
+            filepath.c_str(),
+            error_message.c_str()
+        );
+    }
+
+    template <class InContainer, class OutContainer>
+    void ExtractConstructedAssets(InContainer &&constructed_assets, OutContainer &out)
+    {
+        for (size_t i = 0; i < constructed_assets.size(); i++) {
+            out[i] = std::move(constructed_assets[i].object);
+        }
     }
 
     template <class Type, class ...Args>
     auto LoadAsync(Args &&... paths)
     {
-        const std::array<std::string,     sizeof...(paths)> original_filepaths{paths...};
-        std::array<std::string,           sizeof...(paths)> filepaths{paths...};
-        std::array<std::unique_ptr<Type>, sizeof...(paths)> results{};
+        const std::array<std::string,      sizeof...(paths)> original_filepaths{paths...};
+        std::array<std::string,            sizeof...(paths)> filepaths{paths...};
+        std::array<ConstructedAsset<Type>, sizeof...(paths)> results{};
         
-        if (!m_base_path.empty()) {
-            for (auto &path : filepaths) {
-                path = FileSystem::Join(m_base_path, path);
-            }
+        for (auto &path : filepaths) {
+            path = GetRebasedFilepath(path);
         }
         
         std::vector<std::thread> threads;
@@ -170,27 +214,20 @@ class Assets {
                 for (auto &try_filepath : GetTryFilepaths(filepaths[index], original_filepaths[index])) {
                     auto functor = HandleAssetFunctor<Type>{};
                     functor.filepath = try_filepath;
+                    results[index] = functor(engine);
 
-                    if ((results[index] = functor(engine))) {
+                    if (results[index].result) {
+                        AssertThrowMsg(
+                            results[index].object != nullptr,
+                            "Loader failure -- the loader returned OK status but the constructed object was nullptr!"
+                        );
+
                         break;
                     }
-
-                    DebugLog(
-                        LogType::Info,
-                        "%s not found, trying next\n",
-                        try_filepath.c_str()
-                    );
                 }
 
-                if (!results[index]) {
-                    DebugLog(
-                        LogType::Warn,
-                        "%s: The asset could not be loaded and will be returned as null.\n\t"
-                        "Any usages or indirection may result in the application crashing!\n",
-                        filepaths[index].c_str()
-                    );
-
-                    HYP_BREAKPOINT;
+                if (!results[index].result) {
+                    DisplayAssetLoadError(filepaths[index], results[index].result.message);
                 }
             });
         }
@@ -198,8 +235,11 @@ class Assets {
         for (auto &thread : threads) {
             thread.join();
         }
+        
+        std::array<std::unique_ptr<Type>, sizeof...(paths)> extracted_objects;
+        ExtractConstructedAssets(std::move(results), extracted_objects);
 
-        return std::move(results);
+        return std::move(extracted_objects);
     }
 
     template <class Type>
@@ -207,17 +247,14 @@ class Assets {
     {
         const std::vector<std::string> original_filepaths(filepaths);
         
-        if (!m_base_path.empty()) {
-            for (auto &path : filepaths) {
-                path = FileSystem::Join(m_base_path, path);
-            }
+        for (auto &path : filepaths) {
+            path = GetRebasedFilepath(path);
         }
 
-        std::vector<std::unique_ptr<Type>> results{};
-        results.resize(filepaths.size());
+        std::vector<ConstructedAsset<Type>> results(filepaths.size());
 
         std::vector<std::thread> threads;
-        threads.reserve(results.size());
+        threads.reserve(filepaths.size());
         
         for (size_t i = 0; i < filepaths.size(); i++) {
             threads.emplace_back([index = i, engine = m_engine, &filepaths, &original_filepaths, &results] {
@@ -226,21 +263,15 @@ class Assets {
                 for (auto &try_filepath : GetTryFilepaths(filepaths[index], original_filepaths[index])) {
                     auto functor = HandleAssetFunctor<Type>{};
                     functor.filepath = try_filepath;
+                    results[index] = functor(engine);
 
-                    if ((results[index] = functor(engine))) {
+                    if (results[index].result) {
                         break;
                     }
                 }
 
-                if (!results[index]) {
-                    DebugLog(
-                        LogType::Warn,
-                        "%s: The asset could not be loaded and will be returned as null.\n\t"
-                        "Any usages or indirection may result in the application crashing!\n",
-                        filepaths[index].c_str()
-                    );
-
-                    HYP_BREAKPOINT;
+                if (!results[index].result) {
+                    DisplayAssetLoadError(filepaths[index], results[index].result.message);
                 }
             });
         }
@@ -248,8 +279,11 @@ class Assets {
         for (auto &thread : threads) {
             thread.join();
         }
+        
+        std::vector<std::unique_ptr<Type>> extracted_objects(results.size());
+        ExtractConstructedAssets(std::move(results), extracted_objects);
 
-        return results;
+        return std::move(extracted_objects);
     }
 
 public:

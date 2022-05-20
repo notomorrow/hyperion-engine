@@ -113,21 +113,19 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
     layout_info.bindingCount = uint32_t(m_descriptor_bindings.size());
     layout_info.flags        = 0;
 
-    const std::vector<VkDescriptorBindingFlags> bindless_flags(
+    constexpr VkDescriptorBindingFlags bindless_flags = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+
+    const std::vector<VkDescriptorBindingFlags> binding_flags(
         m_descriptor_bindings.size(),
-        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
-        | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
-        | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | (m_bindless ? bindless_flags : 0)
     );
 
-    VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO};
-    extended_info.bindingCount  = uint32_t(bindless_flags.size());
-    extended_info.pBindingFlags = bindless_flags.data();
-
-    if (m_bindless) {
-        layout_info.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-        layout_info.pNext = &extended_info;
-    }
+    VkDescriptorSetLayoutBindingFlagsCreateInfo extended_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO};
+    extended_info.bindingCount  = uint32_t(binding_flags.size());
+    extended_info.pBindingFlags = binding_flags.data();
+    
+    layout_info.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+    layout_info.pNext = &extended_info;
 
     VkDescriptorSetLayout layout;
 
@@ -492,7 +490,7 @@ void Descriptor::Create(
             VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
             write.pNext           = nullptr;
             write.dstBinding      = m_binding;
-            write.dstArrayElement = sub_descriptor.index == ~0u ? uint32_t(i) : sub_descriptor.index;
+            write.dstArrayElement = sub_descriptor.element_index;
             write.descriptorCount = 1;
             write.descriptorType  = descriptor_type;
             write.pBufferInfo     = &m_sub_descriptors_raw.buffers[i];
@@ -552,7 +550,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
             VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
             write.pNext           = nullptr;
             write.dstBinding      = m_binding;
-            write.dstArrayElement = uint32_t(sub_descriptor_index);
+            write.dstArrayElement = m_sub_descriptors[sub_descriptor_index].element_index;
             write.descriptorCount = 1;
             write.descriptorType  = descriptor_type;
             write.pBufferInfo     = &m_sub_descriptors_raw.buffers[sub_descriptor_index];
@@ -569,7 +567,7 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
 
         m_dirty_sub_descriptors = m_dirty_sub_descriptors.Excluding(sub_descriptor_index);
 
-        m_sub_descriptor_update_indices.pop();
+        m_sub_descriptor_update_indices.pop_back();
 
         ++iteration;
     }
@@ -669,6 +667,12 @@ uint32_t Descriptor::AddSubDescriptor(SubDescriptor &&sub_descriptor)
 
     sub_descriptor.valid = true;
 
+    if (sub_descriptor.element_index == ~0u) {
+        sub_descriptor.element_index = index;
+    }
+
+    const auto element_index = sub_descriptor.element_index;
+
     m_sub_descriptors.push_back(sub_descriptor);
     m_sub_descriptors_raw.buffers.emplace_back();
     m_sub_descriptors_raw.images.emplace_back();
@@ -676,42 +680,43 @@ uint32_t Descriptor::AddSubDescriptor(SubDescriptor &&sub_descriptor)
 
     MarkDirty(index);
 
-    return index;
+    return element_index;
 }
 
 void Descriptor::RemoveSubDescriptor(uint32_t index)
 {
-    /*m_sub_descriptors[index] = {.valid = false};
-    m_sub_descriptors_raw.buffers[index] = {};
-    m_sub_descriptors_raw.images[index] = {};
-
-    if (index == m_sub_descriptors.size() - 1) {
-        const auto *sub_descriptor = &m_sub_descriptors[index];
-        
-        while (!sub_descriptor->valid) {
-            m_sub_descriptors.pop_back();
-            m_sub_descriptors_raw.buffers.pop_back();
-            m_sub_descriptors_raw.images.pop_back();
-
-            if (index == 0) {
-                break;
-            }
-            
-            sub_descriptor = &m_sub_descriptors[--index];
+    /* TODO!! use upper_range / stored vec */
+    const auto it = std::find_if(
+        m_sub_descriptors.begin(),
+        m_sub_descriptors.end(),
+        [index](const auto &item) {
+            return item.element_index == index;
         }
-    }*/
+    );
 
-    AssertThrow(index < m_sub_descriptors.size());
+    AssertThrow(it != m_sub_descriptors.end());
 
-    m_sub_descriptors.erase(m_sub_descriptors.begin() + index);
-    m_sub_descriptors_raw.buffers.erase(m_sub_descriptors_raw.buffers.begin() + index);
-    m_sub_descriptors_raw.images.erase(m_sub_descriptors_raw.images.begin() + index);
-    m_sub_descriptors_raw.acceleration_structures.erase(m_sub_descriptors_raw.acceleration_structures.begin() + index);
+    const auto found_index = std::distance(m_sub_descriptors.begin(), it);
+    
+    m_sub_descriptors.erase(m_sub_descriptors.begin() + found_index);
+    m_sub_descriptors_raw.buffers.erase(m_sub_descriptors_raw.buffers.begin() + found_index);
+    m_sub_descriptors_raw.images.erase(m_sub_descriptors_raw.images.begin() + found_index);
+    m_sub_descriptors_raw.acceleration_structures.erase(m_sub_descriptors_raw.acceleration_structures.begin() + found_index);
+
+    const auto update_it = std::find(
+        m_sub_descriptor_update_indices.begin(),
+        m_sub_descriptor_update_indices.end(),
+        found_index
+    );
+
+    if (update_it != m_sub_descriptor_update_indices.end()) {
+        m_sub_descriptor_update_indices.erase(update_it);
+    }
 }
 
 void Descriptor::MarkDirty(uint32_t sub_descriptor_index)
 {
-    m_sub_descriptor_update_indices.push(sub_descriptor_index);
+    m_sub_descriptor_update_indices.push_back(sub_descriptor_index);
 
     m_dirty_sub_descriptors |= {sub_descriptor_index, sub_descriptor_index + 1};
 

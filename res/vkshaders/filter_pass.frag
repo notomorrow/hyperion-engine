@@ -14,7 +14,7 @@ layout(location=0) out vec4 color_output;
 #include "include/gbuffer.inc"
 #include "include/scene.inc"
 
-const float diffarea = 0.2; //self-shadowing reduction
+const float diffarea = 0.3; //self-shadowing reduction
 const float gdisplace = 0.4; //gauss bell center //0.4
 
 vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
@@ -22,15 +22,15 @@ vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 #define PI 3.14159265359
 #define SSAO_NOISE 1
 #define SSAO_NOISE_AMOUNT 0.0002
-#define SSAO_MIST 1
+#define SSAO_MIST 0
 #define SSAO_MIST_START 0.0
 #define SSAO_MIST_END 0.01
 #define CAP_MIN_DISTANCE 0.0001
 #define CAP_MAX_DISTANCE 0.01
-#define SSAO_SAMPLES 25 // NOTE: Even numbers breaking on linux nvidia drivers ??
-#define SSAO_STRENGTH 2.0
+#define SSAO_SAMPLES 55 // NOTE: Even numbers breaking on linux nvidia drivers ??
+#define SSAO_STRENGTH 1.0
 #define SSAO_CLAMP_AMOUNT 0.125
-#define SSAO_RADIUS 7.0
+#define SSAO_RADIUS 8.0
 #define SSAO_ENABLED 1
 
 vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering

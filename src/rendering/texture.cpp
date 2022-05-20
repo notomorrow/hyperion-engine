@@ -56,7 +56,7 @@ void Texture::Init(Engine *engine)
             HYPERION_BUBBLE_ERRORS(m_image_view.Create(engine->GetInstance()->GetDevice(), &m_image));
             HYPERION_BUBBLE_ERRORS(m_sampler.Create(engine->GetInstance()->GetDevice(), &m_image_view));
 
-            engine->shader_globals->textures.AddResource(engine->resources.textures.IncRef(this));
+            engine->shader_globals->textures.AddResource(this);
 
             HYPERION_RETURN_OK;
         });

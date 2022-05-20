@@ -149,6 +149,22 @@ struct alignas(16) LightShaderData {
 
 static_assert(sizeof(LightShaderData) == 32);
 
+/* max number of skeletons, based on size in mb */
+constexpr size_t max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
+constexpr size_t max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
+/* max number of materials, based on size in mb */
+constexpr size_t max_materials = (8ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
+constexpr size_t max_materials_bytes = max_materials * sizeof(MaterialShaderData);
+/* max number of objects, based on size in mb */
+constexpr size_t max_objects = (32ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
+constexpr size_t max_objects_bytes = max_materials * sizeof(ObjectShaderData);
+/* max number of scenes (cameras, essentially), based on size in kb */
+constexpr size_t max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
+constexpr size_t max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
+/* max number of lights, based on size in kb */
+constexpr size_t max_lights = (16ull * 1024ull) / sizeof(LightShaderData);
+constexpr size_t max_lights_bytes = max_lights * sizeof(LightShaderData);
+
 template <class Buffer, class StructType, size_t Size>
 class ShaderData {
 public:

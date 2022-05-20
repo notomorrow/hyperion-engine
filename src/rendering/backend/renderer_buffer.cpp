@@ -329,6 +329,8 @@ VkPipelineStageFlags GPUMemory::GetShaderStageMask(ResourceState state, bool src
     }
 }
 
+GPUMemory::Stats GPUMemory::stats{};
+
 GPUMemory::GPUMemory()
     : sharing_mode(VK_SHARING_MODE_EXCLUSIVE),
       size(0),
@@ -387,11 +389,15 @@ void GPUMemory::Read(Device *device, size_t count, void *out_ptr) const
 void GPUMemory::Create()
 {
     DebugLog(LogType::Debug, "Allocate GPUMemory %u\n", index);
+
+    stats.IncMemoryUsage(size);
 }
 
 void GPUMemory::Destroy()
 {
     DebugLog(LogType::Debug, "Destroy GPUMemory %u\n", index);
+
+    stats.DecMemoryUsage(size);
 }
 
 
@@ -594,10 +600,10 @@ Result GPUBuffer::Create(Device *device, size_t size)
         HYPERION_BUBBLE_ERRORS(Destroy(device));
     }
 
-    GPUMemory::Create();
-
     this->size = size;
 
+    GPUMemory::Create();
+    
     if (size == 0) {
         return {Result::RENDERER_ERR, "Creating empty gpu buffer will result in errors \n"};
     }
@@ -1005,9 +1011,9 @@ Result GPUImageMemory::Create(Device *device, size_t size, VkImageCreateInfo *im
         HYPERION_BUBBLE_ERRORS(Destroy(device));
     }
 
-    GPUMemory::Create();
-
     this->size = size;
+
+    GPUMemory::Create();
 
     VmaAllocationCreateInfo alloc_info{};
     alloc_info.usage     = VMA_MEMORY_USAGE_GPU_ONLY;

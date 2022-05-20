@@ -2,14 +2,17 @@
 #include <engine.h>
 #include <rendering/mesh.h>
 #include <rendering/material.h>
+#include <util/fs/fs_util.h>
 
 #include <algorithm>
 #include <stack>
 #include <string>
 
+
 namespace hyperion::v2 {
 
 constexpr bool create_obj_indices = true;
+constexpr bool mesh_per_material = true; // set true to create a new mesh on each instance of 'use <mtllib>'
 
 using Tokens = std::vector<std::string>;
 using ObjModelLoader = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::Loader;
@@ -229,6 +232,10 @@ LoaderResult ObjModelLoader::LoadFn(LoaderState *state, Object &object)
 
             active_material = tokens[1];
 
+            if constexpr (mesh_per_material) {
+                AddMesh(object, active_material, active_material);
+            }
+
             return;
         }
 
@@ -245,7 +252,10 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
     std::unique_ptr<MaterialGroup> material_library;
     
     if (!object.material_library.empty()) {
-        auto material_library_path = StringUtil::BasePath(object.filepath) + "/" + object.material_library;
+        auto material_library_path = FileSystem::RelativePath(
+            StringUtil::BasePath(object.filepath) + "/" + object.material_library,
+            FileSystem::CurrentPath()
+        );
 
         if (!StringUtil::EndsWith(material_library_path, ".mtl")) {
             material_library_path += ".mtl";

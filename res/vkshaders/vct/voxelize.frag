@@ -6,7 +6,7 @@
 layout(location=0) in vec3 g_position;
 layout(location=1) in vec3 g_normal;
 layout(location=2) in vec2 g_texcoord;
-layout(location=3) in vec3 g_voxel_pos;
+layout(location=3) in float g_lighting;
 
 #include "../include/scene.inc"
 #include "../include/object.inc"
@@ -26,14 +26,8 @@ void main()
         
         frag_color *= albedo_texture;
     }
-    
-    /* basic n•l */
-    vec3 L = normalize(scene.light_direction.xyz);
-    vec3 N = normalize(g_normal);
-    
-    float NdotL = max(0.0001, dot(N, L));
 
-    //frag_color.rgb *= mix(vec3(1.0), vec3(max(0.5, NdotL)), material.roughness);
+    frag_color.rgb *= vec3(max(0.25, g_lighting));
     frag_color.a = 1.0;
 
 	imageStore(voxel_image, ivec3(VctStoragePosition(g_position)), frag_color);

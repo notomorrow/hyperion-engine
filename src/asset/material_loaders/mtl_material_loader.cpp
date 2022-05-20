@@ -1,6 +1,8 @@
 #include "mtl_material_loader.h"
 #include "../../engine.h"
 
+#include <util/fs/fs_util.h>
+
 namespace hyperion::v2 {
 
 using Tokens = std::vector<std::string>;
@@ -213,7 +215,7 @@ std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const 
 
     for (const auto &item : object.materials) {
         for (const auto &it : item.textures) {
-            const auto texture_path = StringUtil::BasePath(object.filepath) + "/" + it.name;
+            const auto texture_path = FileSystem::Join(StringUtil::BasePath(object.filepath), it.name);
 
             texture_names_to_path[it.name] = texture_path;
         }

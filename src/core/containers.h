@@ -131,6 +131,29 @@ struct CallbackRef {
             return group->Trigger(id, std::forward<Args>(args)...);
         }, bound_args);
     }
+
+    bool TriggerRemove()
+    {
+        if (!Valid()) {
+            return false;
+        }
+
+        const auto id_before = id;
+
+        id = 0; // invalidate
+
+        /* expand bound_args tuple into Trigger() function args */
+        const bool result = std::apply([&]<class ...Args> (Args ... args) -> bool {
+            return group->Trigger(id_before, std::forward<Args>(args)...);
+        }, bound_args);
+
+        group->Remove(id_before);
+
+        group = nullptr;
+        bound_args = {};
+
+        return result;
+    }
 };
 
 template <class Enum, class ...Args>
@@ -383,8 +406,7 @@ protected:
         }
 
         if (m_destroy_callback.Valid()) {
-            m_destroy_callback.Trigger();
-            m_destroy_callback.Remove();
+            m_destroy_callback.TriggerRemove();
         }
     }
 
@@ -587,7 +609,7 @@ public:
 
     void Set(typename ObjectType::ID id, ValueType &&value)
     {
-        m_map[id.value] = value;
+        m_map[id.value] = std::move(value);
     }
 
     void Remove(typename ObjectType::ID id)
@@ -615,135 +637,6 @@ private:
     std::unordered_map<typename ObjectType::ID::ValueType, ValueType> m_map;
 };
 
-template <class T>
-struct ObjectHolder {
-    bool defer_create = false;
-    std::vector<std::unique_ptr<T>> objects;
-    
-    std::queue<size_t> free_slots;
-
-    constexpr size_t Size() const
-        { return objects.size(); }
-
-    constexpr T *Get(typename T::ID id)
-    {
-        return MathUtil::InRange(id.value, {1, objects.size() + 1})
-            ? objects[id.value - 1].get()
-            : nullptr;
-    }
-
-    constexpr const T *Get(const typename T::ID &id) const
-    {
-        return const_cast<ObjectHolder<T> *>(this)->Get(id);
-    }
-
-    constexpr T *operator[](typename T::ID id)             { return Get(id); }
-    constexpr const T *operator[](typename T::ID id) const { return Get(id); }
-
-    template <class LambdaFunction>
-    constexpr typename T::ID Find(LambdaFunction lambda) const
-    {
-        const auto it = std::find_if(objects.begin(), objects.end(), lambda);
-
-        if (it != objects.end()) {
-            return typename T::ID{typename T::ID::ValueType(it - objects.begin() + 1)};
-        }
-
-        return T::empty_id;
-    }
-    
-    T *Allot(std::unique_ptr<T> &&object)
-    {
-        if (!free_slots.empty()) {
-            const auto next_id = typename T::ID{typename T::ID::ValueType(free_slots.front() + 1)};
-
-            object->SetId(next_id);
-
-            objects[free_slots.front()] = std::move(object);
-
-            free_slots.pop();
-
-            return objects[next_id.value - 1].get();
-        }
-
-        const auto next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
-
-        object->SetId(next_id);
-
-        objects.push_back(std::move(object));
-
-        return objects[next_id.value - 1].get();
-    }
-    
-    template <class ...Args>
-    auto Add(Engine *engine, std::unique_ptr<T> &&object, Args &&... args) -> typename T::ID
-    {
-        if (!free_slots.empty()) {
-            const auto next_id = typename T::ID{typename T::ID::ValueType(free_slots.front() + 1)};
-
-            object->SetId(next_id);
-
-            if (!defer_create) {
-                object->Create(engine, std::move(args)...);
-            }
-
-            objects[free_slots.front()] = std::move(object);
-
-            free_slots.pop();
-
-            return next_id;
-        }
-
-        const auto next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
-
-        object->SetId(next_id);
-
-        if (!defer_create) {
-            object->Create(engine, std::move(args)...);
-        }
-
-        objects.push_back(std::move(object));
-            
-        return next_id;
-    }
-
-    template<class ...Args>
-    inline void Remove(Engine *engine, typename T::ID id, Args &&... args)
-    {
-        if (T *object = Get(id)) {
-            object->Destroy(engine, std::move(args)...);
-
-            /* Cannot simply erase from vector, as that would invalidate existing IDs */
-            objects[id.value - 1].reset();
-            
-            free_slots.push(id.value - 1);
-        }
-    }
-
-    template<class ...Args>
-    void RemoveAll(Engine *engine, Args &&...args)
-    {
-        for (auto &object : objects) {
-            if (object == nullptr) {
-                continue;
-            }
-
-            object->Destroy(engine, std::move(args)...);
-            object.reset();
-        }
-    }
-
-    template <class ...Args>
-    void CreateAll(Engine *engine, Args &&... args)
-    {
-        AssertThrowMsg(defer_create, "Expected defer_create to be true, "
-            "otherwise objects are automatically have Create() called when added.");
-
-        for (auto &object : objects) {
-            object->Create(engine, std::move(args)...);
-        }
-    }
-};
 
 /* New ObjectHolder class that does not call Destroy,
  * as new component types will not have Destroy() rather using
@@ -803,10 +696,12 @@ struct ObjectVector {
         typename T::ID next_id;
 
         if (!free_slots.empty()) {
-            next_id = typename T::ID{typename T::ID::ValueType(free_slots.front() + 1)};
+            auto front = free_slots.front();
+
+            next_id = typename T::ID{typename T::ID::ValueType(front + 1)};
             object->SetId(next_id);
 
-            objects[free_slots.front()] = std::move(object);
+            objects[front] = std::move(object);
             free_slots.pop();
         } else {
             next_id = typename T::ID{typename T::ID::ValueType(objects.size() + 1)};
@@ -820,19 +715,24 @@ struct ObjectVector {
     
     void Remove(typename T::ID id)
     {
+        objects[id.value - 1].reset();
+
         if (id.value == objects.size()) {
             objects.pop_back();
-
-            return;
+        } else {
+            /* Cannot simply erase from vector, as that would invalidate existing IDs */
+            
+            free_slots.push(id.value - 1);
         }
-        
-        /* Cannot simply erase from vector, as that would invalidate existing IDs */
+    }
+
+    void Destroy(typename T::ID id)
+    {
         objects[id.value - 1].reset();
-        
-        free_slots.push(id.value - 1);
     }
     
     void RemoveAll() { objects.clear(); }
+
 };
 
 template <class T, class CallbacksClass>
@@ -855,9 +755,7 @@ public:
         {
         }
 
-        Ref(std::nullptr_t)
-            : ptr(nullptr),
-              m_ref_counter(nullptr)
+        Ref(std::nullptr_t) : Ref(nullptr, nullptr)
         {
         }
 
@@ -878,18 +776,21 @@ public:
             other.m_ref_counter = nullptr;
         }
 
-        Ref &operator=(Ref &&other)
+        Ref &operator=(Ref &&other) noexcept
         {
-            if (std::addressof(other) == this) {
+            if (std::addressof(other) == this || *this == other) {
                 return *this;
             }
 
-            std::swap(ptr, other.ptr);
-            std::swap(m_ref_counter, other.m_ref_counter);
-
-            if (other.Valid() && !operator==(other)) {
-                other.Release();
+            if (Valid()) {
+                Release();
             }
+
+            ptr = other.ptr;
+            m_ref_counter = other.m_ref_counter;
+
+            other.ptr           = nullptr;
+            other.m_ref_counter = nullptr;
 
             return *this;
         }
@@ -1037,7 +938,10 @@ public:
             return nullptr;
         }
 
+        //std::lock_guard guard(m_mutex);
+
         T *ptr = m_holder.Add(std::move(object));
+        DebugLog(LogType::Debug, "Set at %s    #%lu\n", typeid(*this).name(), ptr->GetId().value);
         m_ref_map[ptr->GetId()].count = 1;
         
         return Ref(ptr, this);
@@ -1047,7 +951,7 @@ public:
     {
         AssertThrow(ptr != nullptr);
 
-        ++m_ref_map[ptr->GetId()].count;
+        ++m_ref_map.Get(ptr->GetId()).count;
         
         return Ref(ptr, this);
     }
@@ -1073,28 +977,6 @@ public:
 
     [[nodiscard]] Ref Get(typename T::ID id) const
         { return const_cast<const RefCounter *>(this)->Get(id); }
-    
-    void Release(const T *ptr)
-    {
-        AssertThrow(ptr != nullptr);
-
-        const auto id = ptr->GetId();
-        
-        AssertThrowMsg(m_ref_map.Has(id), "Refcount not set");
-
-        auto &counter = m_ref_map[id];
-        AssertThrowMsg(counter.count != 0, "Cannot decrement refcount when already at zero");
-        
-        if (!--counter.count) {
-            m_holder.Remove(id);
-            m_ref_map.Remove(id);
-        }
-    }
-
-    void Release(typename T::ID id)
-    {
-        Release(Get(id));
-    }
 
     constexpr T *operator[](typename T::ID id)             { return m_holder.Get(id); }
     constexpr const T *operator[](typename T::ID id) const { return m_holder.Get(id); }
@@ -1110,6 +992,29 @@ public:
 
     auto &Objects() { return m_holder.objects; }
     const auto &Objects() const { return m_holder.objects; }
+
+private:
+    friend class Ref;
+
+    void Release(const T *ptr)
+    {
+        AssertThrow(ptr != nullptr);
+        const auto id = ptr->GetId();
+
+        //std::lock_guard guard(m_mutex);
+        
+        AssertThrowMsg(m_ref_map.Has(id), "Refcount not set");
+
+        auto &counter = m_ref_map.Get(id);
+        AssertThrowMsg(counter.count != 0, "Cannot decrement refcount when already at zero");
+        
+        if (!--counter.count) {
+            m_ref_map.Remove(id);
+            m_holder.Remove(id);
+        }
+    }
+
+    std::mutex m_mutex;
 };
 
 template <class T>

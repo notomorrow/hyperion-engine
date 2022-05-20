@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#define HYP_ENABLE_VSYNC 1
+#define HYP_ENABLE_VSYNC 0
 
 namespace hyperion {
 namespace renderer {
