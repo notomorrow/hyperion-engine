@@ -39,21 +39,7 @@ int FileSystem::Mkdir(const std::string &path)
 
 std::string FileSystem::CurrentPath()
 {
-    std::string dir;
-    char *buffer;
-#ifdef WIN32
-    buffer = _getcwd(nullptr, 0);
-#else
-    buffer = getcwd(nullptr, MAXPATHLEN);
-#endif
-
-	if (buffer != nullptr) {
-        dir = buffer;
-
-        std::free(buffer);
-	}
-
-	return dir;
+    return std::filesystem::current_path().string();
 }
 
 std::string FileSystem::RelativePath(const std::string &path, const std::string &base)

@@ -4,6 +4,8 @@
 #include <animation/bone.h>
 #include <engine.h>
 
+#include <cstring>
+
 namespace hyperion::v2 {
 
 Node::Node(
@@ -41,7 +43,7 @@ Node::Node(
 {
     SetSpatial(std::move(spatial));
 
-    size_t len = std::strlen(tag);
+    const size_t len = std::strlen(tag);
     m_tag = new char[len + 1];
     std::strcpy(m_tag, tag);
 }
@@ -49,6 +51,19 @@ Node::Node(
 Node::~Node()
 {
     delete[] m_tag;
+}
+
+void Node::SetTag(const char *tag)
+{
+    if (tag == m_tag || !std::strcmp(tag, m_tag)) {
+        return;
+    }
+
+    delete[] m_tag;
+
+    const size_t len = std::strlen(tag);
+    m_tag = new char[len + 1];
+    std::strcpy(m_tag, tag);
 }
 
 void Node::OnNestedNodeAdded(Node *node)
@@ -172,6 +187,74 @@ Node *Node::GetChild(size_t index) const
     return m_child_nodes[index].get();
 }
 
+Node *Node::Select(const char *selector)
+{
+    if (selector == nullptr) {
+        return nullptr;
+    }
+
+    char ch;
+
+    char buffer[256];
+    uint32_t buffer_index = 0;
+    uint32_t selector_index = 0;
+
+    Node *search_node = this;
+
+    while ((ch = selector[selector_index]) != '\0') {
+        const char prev_selector_char = selector_index == 0
+            ? '\0'
+            : selector[selector_index - 1];
+
+        ++selector_index;
+
+        if (ch == '/' && prev_selector_char != '\\') {
+            const auto it = search_node->FindChild(buffer);
+
+            if (it == search_node->GetChildren().end()) {
+                return nullptr;
+            }
+
+            search_node = it->get();
+
+            if (search_node == nullptr) {
+                return nullptr;
+            }
+
+            buffer_index = 0;
+        } else if (ch != '\\') {
+            buffer[buffer_index] = ch;
+
+            ++buffer_index;
+
+            if (buffer_index == std::size(buffer)) {
+                DebugLog(
+                    LogType::Warn,
+                    "Node search string too long, must be within buffer size limit of %llu\n",
+                    std::size(buffer)
+                );
+
+                return nullptr;
+            }
+        }
+
+        buffer[buffer_index] = '\0';
+    }
+
+    // find remaining
+    if (buffer_index != 0) {
+        const auto it = search_node->FindChild(buffer);
+
+        if (it == search_node->GetChildren().end()) {
+            return nullptr;
+        }
+
+        search_node = it->get();
+    }
+
+    return search_node;
+}
+
 Node::NodeList::iterator Node::FindChild(Node *node)
 {
     return std::find_if(
@@ -179,7 +262,19 @@ Node::NodeList::iterator Node::FindChild(Node *node)
         m_child_nodes.end(),
         [node](const auto &it) {
             return it.get() == node;
-        });
+        }
+    );
+}
+
+Node::NodeList::iterator Node::FindChild(const char *tag)
+{
+    return std::find_if(
+        m_child_nodes.begin(),
+        m_child_nodes.end(),
+        [tag](const auto &it) {
+            return !std::strcmp(tag, it->GetTag());
+        }
+    );
 }
 
 void Node::SetLocalTransform(const Transform &transform)

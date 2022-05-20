@@ -50,12 +50,14 @@ public:
 
     /*! @returns The string tag that was given to the Node on creation. */
     const char *GetTag() const { return m_tag; }
+    /*! \brief Set the string tag of this Node. Used for nested lookups. */
+    void SetTag(const char *tag);
     /*! @returns The type of the node. By default, it will just be NODE. */
     Type GetType() const { return m_type; }
     /*! @returns A pointer to the parent Node of this Node. May be null. */
-    inline Node *GetParent() const { return m_parent_node; }
+    Node *GetParent() const { return m_parent_node; }
 
-    inline Spatial *GetSpatial() const { return m_spatial.ptr; }
+    Spatial *GetSpatial() const { return m_spatial.ptr; }
     void SetSpatial(Ref<Spatial> &&spatial);
 
     /*! \brief Add a new child Node to this object
@@ -91,81 +93,146 @@ public:
      */
     Node *GetChild(size_t index) const;
 
+    /*! \brief Search for a (potentially nested) node using the syntax `some/child/node`.
+     * Each `/` indicates searching a level deeper, so first a child node with the tag "some"
+     * is found, after which a child node with the tag "child" is searched for on the previous "some" node,
+     * and finally a node with the tag "node" is searched for from the above "child" node.
+     * If any level fails to find a node, nullptr is returned.
+     *
+     * The string is case-sensitive.
+     * The '/' can be escaped by using a '\' char.
+     */
+    Node *Select(const char *selector);
+
     /*! \brief Get an iterator for the given child Node from this Node's child list
-     * @param index The node to find in this Node's child list
+     * @param node The node to find in this Node's child list
      * @returns The resulting iterator
      */
     NodeList::iterator FindChild(Node *node);
 
-    inline NodeList &GetChildren() { return m_child_nodes; }
-    inline const NodeList &GetChildren() const { return m_child_nodes; }
+    /*! \brief Get an iterator for a node by finding it by its string tag
+     * @param tag The string tag to compare with the child Node's string tag
+     * @returns The resulting iterator
+     */
+    NodeList::iterator FindChild(const char *tag);
+
+    NodeList &GetChildren()             { return m_child_nodes; }
+    const NodeList &GetChildren() const { return m_child_nodes; }
 
     /*! \brief Get all descendent child Nodes from this Node. This vector is pre-calculated,
      * so no calculation happens when calling this method.
      * @returns A vector of raw pointers to descendent Nodes
      */
-    inline const std::vector<Node *> &GetDescendents() const { return m_descendents; }
+    const std::vector<Node *> &GetDescendents() const { return m_descendents; }
 
     /*! \brief Set the local-space translation, scale, rotation of this Node (not influenced by the parent Node) */
     void SetLocalTransform(const Transform &);
 
     /*! @returns The local-space translation, scale, rotation of this Node. */
     const Transform &GetLocalTransform() const { return m_local_transform; }
-
-    /*! @returns The world-space translation, scale, rotation of this Node. Influenced by accumulative transformation of all ancestor Nodes. */
-    const Transform &GetWorldTransform() const { return m_world_transform; }
     
     /*! @returns The local-space translation of this Node. */
-    inline const Vector3 &GetLocalTranslation() const
+    const Vector3 &GetLocalTranslation() const
         { return m_local_transform.GetTranslation(); }
     
     /*! \brief Set the local-space translation of this Node (not influenced by the parent Node) */
-    inline void SetLocalTranslation(const Vector3 &translation)
+    void SetLocalTranslation(const Vector3 &translation)
         { SetLocalTransform({translation, m_local_transform.GetScale(), m_local_transform.GetRotation()}); }
 
     /*! \brief Move the Node in local-space by adding the given vector to the current local-space translation.
      * @param translation The vector to translate this Node by
      */
-    inline void Translate(const Vector3 &translation)
+    void Translate(const Vector3 &translation)
         { SetLocalTranslation(m_local_transform.GetTranslation() + translation); }
     
     /*! @returns The local-space scale of this Node. */
-    inline const Vector3 &GetLocalScale() const
+    const Vector3 &GetLocalScale() const
         { return m_local_transform.GetScale(); }
     
     /*! \brief Set the local-space scale of this Node (not influenced by the parent Node) */
-    inline void SetLocalScale(const Vector3 &scale)
+    void SetLocalScale(const Vector3 &scale)
         { SetLocalTransform({m_local_transform.GetTranslation(), scale, m_local_transform.GetRotation()}); }
 
     /*! \brief Scale the Node in local-space by multiplying the current local-space scale by the given scale vector.
      * @param scale The vector to scale this Node by
      */
-    inline void Scale(const Vector3 &scale)
+    void Scale(const Vector3 &scale)
         { SetLocalScale(m_local_transform.GetScale() * scale); }
     
     /*! @returns The local-space rotation of this Node. */
-    inline const Quaternion &GetLocalRotation() const
+    const Quaternion &GetLocalRotation() const
         { return m_local_transform.GetRotation(); }
     
     /*! \brief Set the local-space rotation of this Node (not influenced by the parent Node) */
-    inline void SetLocalRotation(const Quaternion &rotation)
+    void SetLocalRotation(const Quaternion &rotation)
         { SetLocalTransform({m_local_transform.GetTranslation(), m_local_transform.GetScale(), rotation}); }
 
     /*! \brief Rotate the Node by multiplying the current local-space rotation by the given quaternion.
      * @param rotation The quaternion to rotate this Node by
      */
-    inline void Rotate(const Quaternion &rotation)
+    void Rotate(const Quaternion &rotation)
         { SetLocalRotation(m_local_transform.GetRotation() * rotation); }
+
+    /*! @returns The world-space translation, scale, rotation of this Node. Influenced by accumulative transformation of all ancestor Nodes. */
+    const Transform &GetWorldTransform() const { return m_world_transform; }
+    
+    /*! @returns The world-space translation of this Node. */
+    const Vector3 &GetWorldTranslation() const
+        { return m_world_transform.GetTranslation(); }
+    
+    /*! \brief Set the world-space translation of this Node by offsetting the local-space translation */
+    void SetWorldTranslation(const Vector3 &translation)
+    {
+        if (m_parent_node == nullptr) {
+            SetLocalTranslation(translation);
+
+            return;
+        }
+
+        SetLocalTranslation(translation - m_parent_node->GetWorldTranslation());
+    }
+    
+    /*! @returns The local-space scale of this Node. */
+    const Vector3 &GetWorldScale() const
+        { return m_world_transform.GetScale(); }
+    
+    /*! \brief Set the local-space scale of this Node by offsetting the local-space scale */
+    void SetWorldScale(const Vector3 &scale)
+    {
+        if (m_parent_node == nullptr) {
+            SetLocalScale(scale);
+
+            return;
+        }
+
+        SetLocalScale(scale / m_parent_node->GetWorldScale());
+    }
+    
+    /*! @returns The world-space rotation of this Node. */
+    const Quaternion &GetWorldRotation() const
+        { return m_world_transform.GetRotation(); }
+    
+    /*! \brief Set the world-space rotation of this Node by offsetting the local-space rotation */
+    void SetWorldRotation(const Quaternion &rotation)
+    {
+        if (m_parent_node == nullptr) {
+            SetLocalRotation(rotation);
+
+            return;
+        }
+
+        SetLocalRotation(rotation * Quaternion(m_parent_node->GetWorldRotation()).Invert());
+    }
 
     /*! @returns The local-space (model) of the node's aabb. Only includes
      * the Spatial's aabb.
      */
-    inline const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
+    const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
 
     /*! @returns The world-space aabb of the node. Includes the transforms of all
      * parent nodes.
      */
-    inline const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
+    const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
     
     void AddController(std::unique_ptr<Controller> &&controller)
     {

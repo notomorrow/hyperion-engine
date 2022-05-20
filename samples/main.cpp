@@ -40,7 +40,7 @@
 using namespace hyperion;
 
 
-#define HYPERION_VK_TEST_IMAGE_STORE 1
+#define HYPERION_VK_TEST_IMAGE_STORE 0
 #define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
@@ -79,7 +79,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj",
+            "models/sponza/sponza.obj",//"models/television/Television_01_4k.obj", //"sponza/sponza.obj",
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj"
         );
@@ -88,15 +88,45 @@ public:
         test_model = std::move(loaded_assets[1]);
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
+        
+        scene->GetRootNode()->AddChild(engine->assets.Load<Node>("models/monkey/monkey.obj"));
 
-        test_model->Update(engine, 0.0f);
-        auto terrain_mat = engine->resources.materials.Add(std::make_unique<Material>());
-        terrain_mat->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));
-        terrain_mat.Init();
-        //test_model->GetChild(0)->GetSpatial()->SetMaterial(terrain_mat.IncRef());
+        if (auto *suzanne = scene->GetRootNode()->Select("Suzanne/None")) {
+            auto suzanne_mat = engine->resources.materials.Add(std::make_unique<Material>());
 
-        auto suzanne = engine->assets.Load<Node>("models/suzanne.obj");
-        scene->GetRootNode()->AddChild(std::move(suzanne));
+            /*suzanne_mat->SetTexture(
+                Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP,
+                engine->resources.textures.Add(
+                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_albedo.png")
+                )
+            );
+            suzanne_mat->SetTexture(
+                Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP,
+                engine->resources.textures.Add(
+                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_normal-ogl.png")
+                )
+            );
+            suzanne_mat->SetTexture(
+                Material::TextureKey::MATERIAL_TEXTURE_AO_MAP,
+                engine->resources.textures.Add(
+                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_ao.png")
+                )
+            );
+            suzanne_mat->SetTexture(
+                Material::TextureKey::MATERIAL_TEXTURE_PARALLAX_MAP,
+                engine->resources.textures.Add(
+                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_height.png")
+                )
+            );
+            suzanne_mat->SetTexture(
+                Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP,
+                engine->resources.textures.Add(
+                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_metallic.psd")
+                )
+            );*/
+            suzanne->GetSpatial()->SetMaterial(std::move(suzanne_mat));
+            suzanne->GetParent()->Translate({7, 3, 5});
+        }
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
@@ -115,6 +145,7 @@ public:
             )
         ));
         cubemap->GetImage().SetIsSRGB(true);
+        cubemap.Init();
 
         zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
         zombie->Scale(0.1f);
@@ -167,7 +198,7 @@ public:
         skybox_spatial->SetBucket(v2::Bucket::BUCKET_SKYBOX);
         skybox_spatial->SetShader(engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef());
 
-        material_test_obj->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
+        //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
     }
 
     virtual void Teardown(Engine *engine) override
@@ -180,12 +211,17 @@ public:
     virtual void OnFrameBegin(Engine *engine, Frame *frame) override
     {
         scene->GetEnvironment()->RenderShadows(engine, frame);
+
         engine->render_state.BindScene(scene);
     }
 
     virtual void OnFrameEnd(Engine *engine, Frame *) override
     {
         engine->render_state.UnbindScene();
+
+        if (counter % 200 == 0) {
+            DebugLog(LogType::Debug, "GPU memory used: %llu MB\n", renderer::GPUMemory::stats.gpu_memory_used / 1000000);
+        }
     }
 
     virtual void Logic(Engine *engine, GameCounter::TickUnit delta) override
@@ -237,8 +273,8 @@ public:
     Ref<Scene> scene;
     Ref<Texture> tex1, tex2;
     std::unique_ptr<Node> test_model, zombie, cube_obj, material_test_obj;
-    double timer = 0.0;
-    int counter = 0;
+    GameCounter::TickUnit timer{};
+    std::atomic_uint32_t counter{0};
 
 };
 } // namespace hyperion::v2
@@ -278,14 +314,8 @@ int main()
 
     ImageView image_storage_view;
 #endif
-
-
-    engine.Initialize();
     
-    auto mat1 = engine.resources.materials.Add(std::make_unique<v2::Material>());
-    mat1->SetParameter(v2::Material::MATERIAL_KEY_ALBEDO, v2::Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 0.6f }));
-    mat1->SetTexture(v2::Material::MATERIAL_TEXTURE_ALBEDO_MAP, texture.IncRef());
-    mat1.Init();
+    engine.Initialize();
 
     Device *device = engine.GetInstance()->GetDevice();
 
@@ -332,9 +362,7 @@ int main()
             }
         ))
     );
-
-    float timer = 0.0;
-
+    
     Frame *frame = nullptr;
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -549,8 +577,8 @@ int main()
 #if HYPERION_VK_TEST_IMAGE_STORE
         compute_pipeline->GetPipeline()->push_constants = {
             .counter = {
-                .x = static_cast<uint32_t>(std::sin(timer) * 20.0f),
-                .y = static_cast<uint32_t>(std::cos(timer) * 20.0f)
+                .x = static_cast<uint32_t>(std::sin(0.0f) * 20.0f),
+                .y = static_cast<uint32_t>(std::cos(0.0f) * 20.0f)
             }
         };
 

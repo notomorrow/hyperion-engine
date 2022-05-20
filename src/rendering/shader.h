@@ -30,22 +30,6 @@ class Engine;
 constexpr uint32_t max_frames_in_flight = Swapchain::max_frames_in_flight;
 
 struct ShaderGlobals {
-    /* max number of skeletons, based on size in mb */
-    static constexpr size_t max_skeletons = (1ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
-    static constexpr size_t max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
-    /* max number of materials, based on size in mb */
-    static constexpr size_t max_materials = (1ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
-    static constexpr size_t max_materials_bytes = max_materials * sizeof(MaterialShaderData);
-    /* max number of objects, based on size in mb */
-    static constexpr size_t max_objects = (8ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
-    static constexpr size_t max_objects_bytes = max_materials * sizeof(ObjectShaderData);
-    /* max number of scenes (cameras, essentially), based on size in kb */
-    static constexpr size_t max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
-    static constexpr size_t max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
-    /* max number of lights, based on size in kb */
-    static constexpr size_t max_lights = (16ull * 1024ull) / sizeof(LightShaderData);
-    static constexpr size_t max_lights_bytes = max_lights * sizeof(LightShaderData);
-
     ShaderGlobals(size_t num_buffers)
         : scenes(num_buffers),
           lights(num_buffers),

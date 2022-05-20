@@ -123,7 +123,7 @@ public:
     inline void Clear()
     {
         for (auto &value : m_values) {
-            value = std::move(ValueType{});
+            value = ValueType{};
         }
     }
 

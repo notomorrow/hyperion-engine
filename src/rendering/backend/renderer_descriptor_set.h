@@ -12,7 +12,7 @@
 #include <memory>
 #include <unordered_map>
 #include <map>
-#include <queue>
+#include <deque>
 #include <type_traits>
 
 namespace hyperion {
@@ -54,7 +54,7 @@ public:
     };
 
     struct SubDescriptor {
-        uint32_t index = ~0u; /* ~0 == just use index of item added */
+        uint32_t element_index = ~0u; /* ~0 == just use index of item added */
 
         union {
             struct /* BufferData */ {
@@ -130,7 +130,7 @@ protected:
 
     Range<uint32_t> m_dirty_sub_descriptors;
     std::vector<SubDescriptor> m_sub_descriptors;
-    std::queue<size_t> m_sub_descriptor_update_indices;
+    std::deque<size_t> m_sub_descriptor_update_indices;
 
     BufferInfo m_sub_descriptors_raw;
 

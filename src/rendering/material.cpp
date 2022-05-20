@@ -164,7 +164,7 @@ void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
         return;
     }
 
-    if (texture && IsInitCalled()) {
+    if (texture && IsReady()) {
         texture.Init();
     }
 

@@ -112,9 +112,8 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
 
         for (uint32_t i = 0; i < static_cast<uint32_t>(m_environment_textures.size()); i++) {
             if (auto &texture = m_environment_textures[i]) {
-                if (engine->shader_globals->textures.GetResourceIndex(texture.ptr, &shader_data.environment_texture_index)) {
-                    shader_data.environment_texture_usage |= 1 << i;
-                }
+                shader_data.environment_texture_index = texture->GetId().value - 1;
+                shader_data.environment_texture_usage |= 1 << i;
             }
         }
         

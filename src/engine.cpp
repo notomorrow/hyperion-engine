@@ -331,6 +331,8 @@ void Engine::Destroy()
     callbacks.Trigger(EngineCallback::DESTROY_RAYTRACING_PIPELINES, this);
     callbacks.Trigger(EngineCallback::DESTROY_SCENES, this);
     callbacks.Trigger(EngineCallback::DESTROY_ENVIRONMENTS, this);
+    callbacks.Trigger(EngineCallback::DESTROY_FRAMEBUFFERS, this);
+    callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
 
     HYP_FLUSH_RENDER_QUEUE(this); // just to clear anything remaining up 
 
@@ -344,11 +346,7 @@ void Engine::Destroy()
     for (auto &attachment : m_render_pass_attachments) {
         HYPERION_ASSERT_RESULT(attachment->Destroy(m_instance->GetDevice()));
     }
-
     
-    callbacks.Trigger(EngineCallback::DESTROY_FRAMEBUFFERS, this);
-    callbacks.Trigger(EngineCallback::DESTROY_RENDER_PASSES, this);
-
     resources.Destroy(this);
 
     if (shader_globals != nullptr) {

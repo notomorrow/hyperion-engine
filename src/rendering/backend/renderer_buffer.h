@@ -73,6 +73,46 @@ private:
 
 class GPUMemory {
 public:
+    struct Stats {
+        size_t gpu_memory_used = 0;
+        size_t last_gpu_memory_used = 0;
+        int64_t last_diff = 0;
+        std::time_t last_timestamp = 0;
+        const int64_t time_diff = 10000;
+
+        HYP_FORCE_INLINE void IncMemoryUsage(size_t amount)
+        {
+            gpu_memory_used += amount;
+
+            UpdateStats();
+        }
+
+        HYP_FORCE_INLINE void DecMemoryUsage(size_t amount)
+        {
+            AssertThrow(gpu_memory_used >= amount);
+
+            gpu_memory_used -= amount;
+
+            UpdateStats();
+        }
+
+        HYP_FORCE_INLINE void UpdateStats()
+        {
+            const std::time_t now = std::time(nullptr);
+
+            if (last_timestamp == 0 || now - last_timestamp >= time_diff) {
+                if (gpu_memory_used > last_gpu_memory_used) {
+                    last_diff = gpu_memory_used - last_gpu_memory_used;
+                } else {
+                    last_diff = last_gpu_memory_used - gpu_memory_used;
+                }
+
+                last_timestamp = now;
+                last_gpu_memory_used = gpu_memory_used;
+            }
+        }
+    };
+
     enum class ResourceState : uint32_t {
         UNDEFINED,
         PRE_INITIALIZED,
@@ -101,7 +141,8 @@ public:
     static VkPipelineStageFlags GetShaderStageMask(
         ResourceState state,
         bool src,
-        ShaderModule::Type shader_type = ShaderModule::Type::UNSET);
+        ShaderModule::Type shader_type = ShaderModule::Type::UNSET
+    );
 
     GPUMemory();
     GPUMemory(const GPUMemory &other) = delete;
@@ -130,6 +171,8 @@ public:
     
     VmaAllocation allocation;
     VkDeviceSize size;
+    
+    static Stats stats;
 
 protected:
     void Map(Device *device, void **ptr) const;
