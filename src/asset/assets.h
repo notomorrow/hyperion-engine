@@ -24,37 +24,6 @@ class Engine;
 template <class ...T>
 constexpr bool resolution_failure = false;
 
-
-template <class Type, class ...Args>
-auto LoadAsync(Args &&... paths)
-{
-    const std::array<std::string,     sizeof...(paths)> filepaths{paths...};
-    std::array<std::unique_ptr<Type>, sizeof...(paths)> results{};
-
-    std::vector<std::thread> threads;
-    threads.reserve(results.size());
-        
-    for (size_t i = 0; i < filepaths.size(); i++) {
-        threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
-            DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
-
-            auto functor = HandleAssetFunctor<Type>{};
-            functor.filepath = filepaths[index];
-
-            if (!(results[index] = functor(engine))) {
-                DebugLog(LogType::Warn, "%s: The asset could not be loaded and will be returned as null.\n\t"
-                    "Any usages or indirection may result in the application crashing!\n", functor.filepath.c_str());
-            }
-        });
-    }
-
-    for (auto &thread : threads) {
-        thread.join();
-    }
-
-    return std::move(results);
-}
-
 class QueuedAsset {
 public:
     enum Priority {
