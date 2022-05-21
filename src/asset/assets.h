@@ -24,6 +24,79 @@ class Engine;
 template <class ...T>
 constexpr bool resolution_failure = false;
 
+
+template <class Type, class ...Args>
+auto LoadAsync(Args &&... paths)
+{
+    const std::array<std::string,     sizeof...(paths)> filepaths{paths...};
+    std::array<std::unique_ptr<Type>, sizeof...(paths)> results{};
+
+    std::vector<std::thread> threads;
+    threads.reserve(results.size());
+        
+    for (size_t i = 0; i < filepaths.size(); i++) {
+        threads.emplace_back([index = i, engine = m_engine, &filepaths, &results] {
+            DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
+
+            auto functor = HandleAssetFunctor<Type>{};
+            functor.filepath = filepaths[index];
+
+            if (!(results[index] = functor(engine))) {
+                DebugLog(LogType::Warn, "%s: The asset could not be loaded and will be returned as null.\n\t"
+                    "Any usages or indirection may result in the application crashing!\n", functor.filepath.c_str());
+            }
+        });
+    }
+
+    for (auto &thread : threads) {
+        thread.join();
+    }
+
+    return std::move(results);
+}
+
+class QueuedAsset {
+public:
+    enum Priority {
+        LOWEST,
+        LOW,
+        MEDIUM,
+        HIGH,
+        HIGHEST,
+    };
+
+    QueuedAsset(const std::string &filename, const Priority priority)
+    { 
+        m_filename = filename;
+        m_priority = priority;
+
+
+    };
+
+    void SetPriority(const Priority priority) { m_priority = priority; }
+    float GetNiceness() { 
+        float niceness = (float)m_data_size / 100.0f;
+        uint8_t pr = Priority::HIGHEST - m_priority;
+        /* The lower the niceness, the higher the priority! */
+        return niceness + pr;
+    }
+
+private:
+    Priority m_priority;
+    std::string m_filename;
+    uint64_t m_data_size = 0;
+};
+
+class AssetPool {
+public:
+    AssetPool() { }
+    ~AssetPool() { }
+private:
+
+    std::vector<QueuedAsset> enqueued_assets;
+    std::thread pool_thread;
+};
+
 class Assets {
     template <class T>
     struct ConstructedAsset {

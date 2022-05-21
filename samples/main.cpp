@@ -22,6 +22,8 @@
 
 #include <util/fs/fs_util.h>
 
+#include <editor/window.h>
+
 #include "input_manager.h"
 #include <camera/fps_camera.h>
 

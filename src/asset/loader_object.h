@@ -19,9 +19,7 @@ enum class LoaderFormat {
 
     MTL_MATERIAL_LIBRARY,
 
-    TEXTURE_2D,
-
-    WAV_AUDIO
+    TEXTURE_2D
 };
 
 /* Raw data representing a deserialized form of the resource
