@@ -48,11 +48,11 @@ class ControllerSet {
     static std::atomic<ControllerId> controller_id_counter;
 
     template <class T>
-    static ControllerId GetControllerId()
+    inline static ControllerId GetControllerId()
     {
         static_assert(std::is_base_of_v<Controller, T>, "Object must be a derived class of Controller");
 
-        static ControllerId id = ++controller_id_counter;
+        static const ControllerId id = ++controller_id_counter;
 
         return id;
     }
@@ -79,9 +79,7 @@ public:
     template <class T>
     void Set(std::unique_ptr<T> &&controller)
     {
-        if (controller == nullptr) {
-            return;
-        }
+        AssertThrow(controller != nullptr);
 
         const auto id = GetControllerId<T>();
 
@@ -89,7 +87,7 @@ public:
     }
 
     template <class T>
-    T *Get()
+    T *Get() const
     {
         const auto id = GetControllerId<T>();
 
@@ -99,7 +97,7 @@ public:
             return nullptr;
         }
 
-        return it->second.get();
+        return static_cast<T *>(it->second.get());
     }
 
     template <class T>

@@ -14,6 +14,7 @@
 #include <asset/model_loaders/obj_model_loader.h>
 #include <rendering/rt/acceleration_structure_builder.h>
 #include <rendering/probe_system.h>
+#include <scene/controllers/audio_controller.h>
 #include <game_thread.h>
 #include <game.h>
 
@@ -94,7 +95,7 @@ public:
         if (auto *suzanne = scene->GetRootNode()->Select("Suzanne/None")) {
             auto suzanne_mat = engine->resources.materials.Add(std::make_unique<Material>());
 
-            /*suzanne_mat->SetTexture(
+            suzanne_mat->SetTexture(
                 Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP,
                 engine->resources.textures.Add(
                     engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_albedo.png")
@@ -123,7 +124,7 @@ public:
                 engine->resources.textures.Add(
                     engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_metallic.psd")
                 )
-            );*/
+            );
             suzanne->GetSpatial()->SetMaterial(std::move(suzanne_mat));
             suzanne->GetParent()->Translate({7, 3, 5});
         }
@@ -199,6 +200,9 @@ public:
         skybox_spatial->SetShader(engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef());
 
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
+
+        zombie->AddController<AudioController>(engine->assets.Load<AudioSource>("sounds/taunt.wav"));
+        zombie->GetController<AudioController>()->Play(1.0f, LoopMode::ONCE);
     }
 
     virtual void Teardown(Engine *engine) override

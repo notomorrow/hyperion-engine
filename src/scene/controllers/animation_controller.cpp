@@ -5,8 +5,7 @@
 namespace hyperion::v2 {
 
 AnimationController::AnimationController()
-    : Controller("AnimationController"),
-      m_state{}
+    : PlaybackController("AnimationController")
 {
 }
 
@@ -60,11 +59,6 @@ bool AnimationController::FindSkeleton(Node *node)
     );
 }
 
-void AnimationController::Play(LoopMode loop_mode)
-{
-    Play(m_state.speed, loop_mode);
-}
-
 void AnimationController::Play(float speed, LoopMode loop_mode)
 {
     if (m_skeleton == nullptr || m_skeleton->NumAnimations() == 0) {
@@ -73,14 +67,11 @@ void AnimationController::Play(float speed, LoopMode loop_mode)
         return;
     }
 
-    if (!MathUtil::InRange(m_state.animation_index, {0u, static_cast<uint32_t>(m_skeleton->NumAnimations())})) {
-        m_state.animation_index = 0;
+    if (!MathUtil::InRange(m_animation_index, {0u, static_cast<uint32_t>(m_skeleton->NumAnimations())})) {
+        m_animation_index = 0;
     }
-
-    m_state.speed     = speed;
-    m_state.loop_mode = loop_mode;
-
-    SetPlaybackState(PlaybackState::PLAYING);
+    
+    PlaybackController::Play(speed, loop_mode);
 }
 
 void AnimationController::Play(const std::string &animation_name, float speed, LoopMode loop_mode)
@@ -97,23 +88,16 @@ void AnimationController::Play(const std::string &animation_name, float speed, L
         return;
     }
 
-    m_state.animation_index = static_cast<uint32_t>(index);
-    m_state.speed           = speed;
-    m_state.loop_mode       = loop_mode;
-
-    SetPlaybackState(PlaybackState::PLAYING);
-}
-
-void AnimationController::Pause()
-{
-    SetPlaybackState(PlaybackState::PAUSED);    
+    m_animation_index = static_cast<uint32_t>(index);
+    
+    PlaybackController::Play(speed, loop_mode);
 }
 
 void AnimationController::Stop()
 {
-    m_state = {};
+    PlaybackController::Stop();
 
-    SetPlaybackState(PlaybackState::STOPPED);
+    m_animation_index = ~0;
 }
 
 }

@@ -1,5 +1,5 @@
-#ifndef AUDIO_MANAGER_H
-#define AUDIO_MANAGER_H
+#ifndef HYPERION_AUDIO_MANAGER_H
+#define HYPERION_AUDIO_MANAGER_H
 
 #include <AL/al.h>
 #include <AL/alc.h>

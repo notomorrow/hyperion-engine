@@ -6,6 +6,7 @@
 #include "model_loaders/ogre_xml_model_loader.h"
 #include "skeleton_loaders/ogre_xml_skeleton_loader.h"
 #include "texture_loaders/texture_loader.h"
+#include "audio_loaders/wav_audio_loader.h"
 #include "../scene/node.h"
 
 #include <core/lib/static_map.h>
@@ -35,7 +36,7 @@ class Assets {
 
         LoaderFormat GetResourceFormat() const
         {
-            constexpr StaticMap<const char *, LoaderFormat, 12> extensions{
+            constexpr StaticMap<const char *, LoaderFormat, 13> extensions{
                 std::make_pair(".obj",          LoaderFormat::OBJ_MODEL),
                 std::make_pair(".mtl",          LoaderFormat::MTL_MATERIAL_LIBRARY),
                 std::make_pair(".mesh.xml",     LoaderFormat::OGRE_XML_MODEL),
@@ -47,7 +48,8 @@ class Assets {
                 std::make_pair(".bmp",          LoaderFormat::TEXTURE_2D),
                 std::make_pair(".psd",          LoaderFormat::TEXTURE_2D),
                 std::make_pair(".gif",          LoaderFormat::TEXTURE_2D),
-                std::make_pair(".hdr",          LoaderFormat::TEXTURE_2D)
+                std::make_pair(".hdr",          LoaderFormat::TEXTURE_2D),
+                std::make_pair(".wav",          LoaderFormat::WAV_AUDIO)
             };
 
             std::string path_lower(filepath);
@@ -119,6 +121,14 @@ class Assets {
     };
 
     template <>
+    struct HandleAssetFunctor<MaterialGroup> : HandleAssetFunctorBase {
+        ConstructedAsset<MaterialGroup> operator()(Engine *engine)
+        {
+            return LoadResource(engine, GetLoader<MaterialGroup, LoaderFormat::MTL_MATERIAL_LIBRARY>());
+        }
+    };
+
+    template <>
     struct HandleAssetFunctor<Skeleton> : HandleAssetFunctorBase {
         ConstructedAsset<Skeleton> operator()(Engine *engine)
         {
@@ -140,10 +150,15 @@ class Assets {
     };
 
     template <>
-    struct HandleAssetFunctor<MaterialGroup> : HandleAssetFunctorBase {
-        ConstructedAsset<MaterialGroup> operator()(Engine *engine)
+    struct HandleAssetFunctor<AudioSource> : HandleAssetFunctorBase {
+        ConstructedAsset<AudioSource> operator()(Engine *engine)
         {
-            return LoadResource(engine, GetLoader<MaterialGroup, LoaderFormat::MTL_MATERIAL_LIBRARY>());
+            switch (GetResourceFormat()) {
+            case LoaderFormat::WAV_AUDIO:
+                return LoadResource(engine, GetLoader<AudioSource, LoaderFormat::WAV_AUDIO>());
+            default:
+                return {.result = {LoaderResult::Status::ERR, "Unexpected file format"}};
+            }
         }
     };
 
@@ -151,7 +166,8 @@ class Assets {
     {
         const auto current_path = FileSystem::CurrentPath();
 
-        auto paths = std::array<std::string, 2>{
+        std::array paths{
+            filepath,
             FileSystem::RelativePath(filepath, current_path),
             FileSystem::RelativePath(original_filepath, current_path)
         };
@@ -209,9 +225,11 @@ class Assets {
         
         for (size_t i = 0; i < filepaths.size(); i++) {
             threads.emplace_back([index = i, engine = m_engine, &filepaths, &original_filepaths, &results] {
-                DebugLog(LogType::Info, "Loading asset %s...\n", filepaths[index].c_str());
+                const auto try_filepaths = GetTryFilepaths(filepaths[index], original_filepaths[index]);
 
-                for (auto &try_filepath : GetTryFilepaths(filepaths[index], original_filepaths[index])) {
+                for (auto &try_filepath : try_filepaths) {
+                    DebugLog(LogType::Info, "Loading asset %s...\n", try_filepath.c_str());
+
                     auto functor = HandleAssetFunctor<Type>{};
                     functor.filepath = try_filepath;
                     results[index] = functor(engine);
@@ -224,6 +242,13 @@ class Assets {
 
                         break;
                     }
+
+                    if (results[index].result.status != LoaderResult::Status::ERR_NOT_FOUND) {
+                        // error result returned
+                        break;
+                    }
+
+                    // status == ERR_NOT_FOUND; continue trying
                 }
 
                 if (!results[index].result) {

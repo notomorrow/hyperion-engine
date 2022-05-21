@@ -21,14 +21,16 @@ struct LoaderState {
 struct LoaderResult {
     enum class Status {
         OK,
-        ERR
+        ERR,
+        ERR_NOT_FOUND,
+        ERR_EOF
     };
 
     Status status = Status::OK;
     std::string message;
 
-    operator bool() const
-        { return status == Status::OK; }
+    operator bool() const { return status == Status::OK; }
+    bool operator==(Status status) const { return this->status == status; }
 };
 
 template <class Object, class Handler>
@@ -43,14 +45,14 @@ public:
     {
         if (!state.stream.IsOpen()) {
             return std::make_pair(
-                LoaderResult{LoaderResult::Status::ERR, "Failed to open file"},
+                LoaderResult{LoaderResult::Status::ERR_NOT_FOUND, "Byte stream error -- failed to open file"},
                 Object{}
             );
         }
 
         if (state.stream.Eof()) {
             return std::make_pair(
-                LoaderResult{LoaderResult::Status::ERR, "Byte stream in EOF state"},
+                LoaderResult{LoaderResult::Status::ERR_EOF, "Byte stream error -- eof"},
                 Object{}
             );
         }
