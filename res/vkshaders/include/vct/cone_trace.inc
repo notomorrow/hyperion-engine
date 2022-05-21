@@ -10,7 +10,7 @@ layout(set = 1, binding = 25) uniform sampler3D voxel_image;
 #define VCT_DIFFUSE_RATIO_MULTIPLIER  2.0
 #define VCT_DIFFUSE_RATIO(roughness)  ((roughness) * VCT_DIFFUSE_RATIO_MULTIPLIER + VCT_DIFFUSE_RATIO_MIN)
 
-#define VCT_SPECULAR_MAX_DIST         0.3
+#define VCT_SPECULAR_MAX_DIST         0.5
 #define VCT_SPECULAR_RATIO_MIN        0.025
 #define VCT_SPECULAR_RATIO_MULTIPLIER 8.0
 #define VCT_SPECULAR_RATIO(roughness) ((roughness) * VCT_SPECULAR_RATIO_MULTIPLIER + VCT_SPECULAR_RATIO_MIN)

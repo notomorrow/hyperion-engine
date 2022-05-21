@@ -332,10 +332,7 @@ void Spatial::AddToOctree(Engine *engine)
 
 void Spatial::RemoveFromOctree(Engine *engine)
 {
-    auto *octree = m_octree.load();
-    AssertThrow(octree != nullptr);
-
-    octree->OnSpatialRemoved(engine, this);
+    m_octree.load()->OnSpatialRemoved(engine, this);
 }
 
 } // namespace hyperion::v2

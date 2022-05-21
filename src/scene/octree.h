@@ -36,6 +36,8 @@ class Octree {
         using CallbackFunction = std::function<void(Engine *, Octree *, Spatial *)>;
     };
 
+    Octree(Octree *parent, const BoundingBox &aabb, uint32_t index);
+
 public:
     struct Octant {
         std::unique_ptr<Octree> octree;
@@ -101,10 +103,10 @@ private:
     }
 
     inline bool IsRoot() const { return m_parent == nullptr; }
-    inline bool Empty() const { return m_nodes.empty(); }
+    inline bool Empty() const  { return m_nodes.empty(); }
     
     void SetParent(Octree *parent);
-    bool EmptyDeep(int depth = -1) const;
+    bool EmptyDeep(int depth = DEPTH_SEARCH_INF, uint32_t mask = 0) const;
 
     void InitOctants();
     void Divide(Engine *engine);
@@ -127,6 +129,7 @@ private:
     bool m_is_divided;
     Root *m_root;
     VisibilityState m_visibility_state;
+    uint32_t m_index;
 };
 
 } // namespace hyperion::v2

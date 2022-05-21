@@ -58,8 +58,6 @@ private:
     };
 
     std::unordered_map<Texture::ID::ValueType, TextureResource> m_texture_resources;
-
-    //ObjectMap<Texture, uint32_t> m_texture_sub_descriptors;
     std::array<DescriptorSet *, Swapchain::max_frames_in_flight> m_descriptor_sets;
     std::mutex m_enqueued_resources_mutex;
 };

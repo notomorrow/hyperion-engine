@@ -49,9 +49,9 @@ void BindlessStorage::AddResource(const Texture *texture)
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
         
         indices[i] = descriptor->AddSubDescriptor({
-            .element_index      = texture->GetId().value - 1,
-            .image_view = &texture->GetImageView(),
-            .sampler    = &texture->GetSampler()
+            .element_index = texture->GetId().value - 1,
+            .image_view    = &texture->GetImageView(),
+            .sampler       = &texture->GetSampler()
         });
     }
 

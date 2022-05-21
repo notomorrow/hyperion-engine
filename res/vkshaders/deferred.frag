@@ -40,9 +40,9 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 10000.0
+#define IBL_INTENSITY 7000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 15000.0
-#define IRRADIANCE_MULTIPLIER 8.0
+#define IRRADIANCE_MULTIPLIER 28.0
 #define ROUGHNESS_LOD_MULTIPLIER 16.0
 #define SSAO_DEBUG 0
 
