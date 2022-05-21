@@ -13,12 +13,22 @@ bool Octree::IsVisible(const Octree *root, const Octree *child)
 }
 
 Octree::Octree(const BoundingBox &aabb)
-    : m_aabb(aabb),
-      m_parent(nullptr),
+    : Octree(nullptr, aabb, 0)
+{
+}
+
+Octree::Octree(Octree *parent, const BoundingBox &aabb, uint32_t index)
+    : m_parent(nullptr),
+      m_aabb(aabb),
       m_is_divided(false),
       m_root(nullptr),
-      m_visibility_state{}
+      m_visibility_state{},
+      m_index(index)
 {
+    if (parent != nullptr) {
+        SetParent(parent); // call explicitly to set root ptr
+    }
+
     InitOctants();
 }
 
@@ -38,7 +48,7 @@ void Octree::SetParent(Octree *parent)
     }
 }
 
-bool Octree::EmptyDeep(int depth) const
+bool Octree::EmptyDeep(int depth, uint32_t mask) const
 {
     if (!Empty()) {
         return false;
@@ -49,8 +59,12 @@ bool Octree::EmptyDeep(int depth) const
     }
 
     if (depth != 0) {
-        return std::all_of(m_octants.begin(), m_octants.end(), [depth](const Octant &octant) {
-            return octant.octree->EmptyDeep(depth - 1);
+        return std::all_of(m_octants.begin(), m_octants.end(), [depth, mask](const Octant &octant) {
+            if (mask == 0u || mask & (1u << octant.octree->m_index)) {
+                return octant.octree->EmptyDeep(depth - 1);
+            }
+
+            return true;
         });
     }
 
@@ -81,11 +95,12 @@ void Octree::Divide(Engine *engine)
 {
     AssertThrow(!m_is_divided);
 
-    for (auto &octant : m_octants) {
+    for (size_t i = 0; i < m_octants.size(); i++) {
+        auto &octant = m_octants[i];
+
         AssertThrow(octant.octree == nullptr);
 
-        octant.octree = std::make_unique<Octree>(octant.aabb);
-        octant.octree->SetParent(this);
+        octant.octree.reset(new Octree(this, octant.aabb, static_cast<uint32_t>(i)));
 
         if (m_root != nullptr) {
             m_root->events.on_insert_octant(engine, octant.octree.get(), nullptr);
@@ -267,29 +282,35 @@ bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
 
     if (m_root != nullptr) {
         m_root->events.on_remove_node(engine, this, spatial);
+        m_root->node_to_octree[spatial] = nullptr;
     }
 
     m_nodes.erase(it);
 
+    spatial->OnRemovedFromOctree(this);
+
     if (!m_is_divided && m_nodes.empty()) {
+        Octree *last_empty_parent = nullptr;
+
         if (Octree *parent = m_parent) {
-            int depth = DEPTH_SEARCH_INF; /* first time, bite the bullet and search all nested octants. after that we only search the next layer */
+            while (parent->EmptyDeep(DEPTH_SEARCH_INF, 0xff & ~(1 << m_index))) { // do not search this branch of the tree again
+                last_empty_parent = parent;
 
-            while (parent->EmptyDeep(depth)) {
                 if (parent->m_parent == nullptr) {
-                    /* At root, call Undivide() to collapse nodes */
-                    parent->Undivide(engine);
-
                     break;
                 }
 
                 parent = parent->m_parent;
-                depth = 1; /* only search next layer */
             }
         }
-    }
 
-    spatial->OnRemovedFromOctree(this);
+        if (last_empty_parent != nullptr) {
+            AssertThrow(last_empty_parent->EmptyDeep(DEPTH_SEARCH_INF));
+
+            /* At highest empty parent octant, call Undivide() to collapse nodes */
+            last_empty_parent->Undivide(engine);
+        }
+    }
 
     return true;
 }
@@ -504,6 +525,8 @@ void Octree::CalculateVisibility(Scene *scene)
 
 void Octree::UpdateVisibilityState(Scene *scene)
 {
+    AssertThrow(m_root != nullptr);
+
     /* assume we are already visible from CalculateVisibility() check */
     const auto &frustum = scene->GetCamera()->GetFrustum();
 

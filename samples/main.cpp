@@ -79,7 +79,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj",//"models/television/Television_01_4k.obj", //"sponza/sponza.obj",
+            "models/fireplace_room/fireplace_room.obj",//"models/television/Television_01_4k.obj", //"sponza/sponza.obj",
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj"
         );
@@ -172,7 +172,7 @@ public:
         ));*/
 
         test_model->Translate({0, 0, 5});
-        test_model->Scale(0.025f);
+        //test_model->Scale(0.025f);
         //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         
         tex1 = engine->resources.textures.Add(
@@ -446,7 +446,7 @@ int main()
 #if HYPERION_VK_TEST_VCT
     v2::VoxelConeTracing vct({
         /* scene bounds for vct to capture */
-        .aabb = BoundingBox(Vector3(-128), Vector3(128))
+        .aabb = BoundingBox(Vector3(-8), Vector3(8))
     });
 
     vct.Init(&engine);
