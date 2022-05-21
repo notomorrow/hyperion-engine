@@ -7,10 +7,10 @@ namespace hyperion {
 class OrthoCamera : public Camera {
 public:
     OrthoCamera(
-        int width, int height,
-        float left, float right,
+        int width,    int height,
+        float left,   float right,
         float bottom, float top,
-        float _near, float _far
+        float _near,  float _far
     );
     virtual ~OrthoCamera() = default;
 

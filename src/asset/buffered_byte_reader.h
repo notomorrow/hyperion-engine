@@ -11,6 +11,8 @@
 
 #include <fstream>
 #include <type_traits>
+#include <thread>
+#include <mutex>
 #include <cstring>
 
 namespace hyperion {
@@ -164,9 +166,82 @@ public:
         return Read(sizeof(T), static_cast<void *>(ptr));
     }
 
-    template <class LambdaFunction>
-    void ReadLines(LambdaFunction func)
+    template <class Functor, class ...Args>
+    auto ReadLinesParallel(int num_threads, Args &&... args)
     {
+        constexpr int use_threading_threshold = 8; // num lines has to be x*num_threads to qualify
+
+        std::vector<std::string> all_lines;
+
+        ReadLines([&all_lines](const std::string &line) {
+            all_lines.push_back(line);
+        }, false);
+
+        if (num_threads * use_threading_threshold > all_lines.size()) {
+            num_threads = 1; // do not use threading
+        }
+
+        const size_t num_lines_per_thread = all_lines.size() / num_threads;
+
+        size_t lines_remaining = all_lines.size();
+        size_t offset = 0;
+
+        std::vector<std::thread> threads;
+        std::mutex mutex;
+
+        std::vector<Functor> functors(num_threads);
+
+        for (int i = 0; i < num_threads; i++) {
+            const size_t num_lines_this_thread = i == num_threads - 1
+                ? lines_remaining
+                : num_lines_per_thread;
+
+            threads.emplace_back([i, offset, num_lines_this_thread, &all_lines, &functors, &mutex, &args...]() mutable { // perfect capture, c++20 feature
+                functors[i] = Functor{};
+
+                for (size_t j = offset; j < offset + num_lines_this_thread; j++) {
+                    functors[i].HandleLine(all_lines[j], mutex, args...);
+                }
+            });
+            
+            offset += num_lines_this_thread;
+            lines_remaining -= num_lines_this_thread;
+        }
+
+        for (auto &th : threads) {
+            th.join();
+        }
+
+        return functors;
+    }
+
+    template <class LambdaFunction>
+    void ReadLines(LambdaFunction func, bool buffered = true)
+    {
+        if (!buffered) {
+            auto all_bytes = ReadAll();
+
+            std::string accum;
+            accum.reserve(BufferSize);
+            
+            for (size_t i = 0; i < all_bytes.size(); i++) {
+                if (all_bytes[i] == '\n') {
+                    func(accum);
+                    accum.clear();
+                    
+                    continue;
+                }
+
+                accum += all_bytes[i];
+            }
+
+            if (accum.length() != 0) {
+                func(accum);
+            }
+
+            return;
+        }
+
         // if there is no newline in buffer:
         // accumulate chars until a newline is found, then
         // call func with the accumulated line

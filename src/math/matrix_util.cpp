@@ -124,8 +124,8 @@ void MatrixUtil::ToLookAt(Matrix4 &mat, const Vector3 &pos, const Vector3 &targe
 }
 
 void MatrixUtil::ToOrtho(Matrix4 &mat, 
-    float left, float right, 
-    float bottom, float top, 
+    float left,      float right, 
+    float bottom,    float top, 
     float near_clip, float far_clip)
 {
     float x_orth = 2.0f / (right - left);

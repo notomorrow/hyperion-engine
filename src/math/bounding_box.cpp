@@ -72,6 +72,23 @@ BoundingBox BoundingBox::operator*(float scalar) const
     return other;
 }
 
+BoundingBox BoundingBox::operator/(float scalar) const
+{
+    BoundingBox other(*this);
+    other.min /= scalar;
+    other.max /= scalar;
+
+    return other;
+}
+
+BoundingBox &BoundingBox::operator/=(float scalar)
+{
+    min /= scalar;
+    max /= scalar;
+
+    return *this;
+}
+
 BoundingBox &BoundingBox::operator*=(const Transform &transform)
 {
     min *= transform.GetScale();

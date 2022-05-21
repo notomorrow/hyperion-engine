@@ -21,18 +21,19 @@ void OrthoCamera::UpdateLogic(double dt)
 
 void OrthoCamera::UpdateViewMatrix()
 {
-    MatrixUtil::ToLookAt(m_view_mat, m_translation, GetTarget(), m_up);
+    m_view_mat = Matrix4::LookAt(
+        m_translation,
+        GetTarget(),
+        m_up
+    );
 }
 
 void OrthoCamera::UpdateProjectionMatrix()
 {
-    MatrixUtil::ToOrtho(m_proj_mat,
-        m_left,
-        m_right,
-        m_bottom,
-        m_top,
-        m_near,
-        m_far
+    m_proj_mat = Matrix4::Orthographic(
+        m_left,   m_right,
+        m_bottom, m_top,
+        m_near,   m_far
     );
 }
 }

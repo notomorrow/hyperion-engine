@@ -77,7 +77,7 @@ public:
 
 private:
     void EnqueueRenderUpdates(Engine *engine);
-    void UpdateOctree(Engine *engine, Octree *octree);
+    void UpdateOctree(Engine *engine);
     
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);

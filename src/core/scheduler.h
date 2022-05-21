@@ -35,15 +35,12 @@ struct ScheduledFunctionId {
         return *this;
     }
     
-    ScheduledFunctionId &operator=(const ScheduledFunctionId &other)
-    {
-        value = other.value;
-
-        return *this;
-    }
+    ScheduledFunctionId &operator=(const ScheduledFunctionId &other) = default;
 
     bool operator==(uint32_t id) const                      { return value == id; }
+    bool operator!=(uint32_t id) const                      { return value != id; }
     bool operator==(const ScheduledFunctionId &other) const { return value == other.value; }
+    bool operator!=(const ScheduledFunctionId &other) const { return value != other.value; }
 
     explicit operator bool() const { return value != 0; }
 };

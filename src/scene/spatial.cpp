@@ -98,9 +98,7 @@ void Spatial::Update(Engine *engine)
     }
 
     if (m_shader_data_state.IsDirty()) {
-        if (Octree *octree = m_octree.load()) {
-            UpdateOctree(engine, octree);
-        }
+        UpdateOctree(engine);
 
         EnqueueRenderUpdates(engine);
     }
@@ -132,14 +130,16 @@ void Spatial::EnqueueRenderUpdates(Engine *engine)
     m_shader_data_state = ShaderDataState::CLEAN;
 }
 
-void Spatial::UpdateOctree(Engine *engine, Octree *octree)
+void Spatial::UpdateOctree(Engine *engine)
 {
-    if (!octree->Update(engine, this)) {
-        DebugLog(
-            LogType::Warn,
-            "Could not update Spatial #%lu in octree\n",
-            m_id.value
-        );
+    if (Octree *octree = m_octree.load()) {
+        if (!octree->Update(engine, this)) {
+            DebugLog(
+                LogType::Warn,
+                "Could not update Spatial #%lu in octree\n",
+                m_id.value
+            );
+        }
     }
 }
 

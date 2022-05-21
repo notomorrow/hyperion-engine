@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <atomic>
+#include <climits>
 
 #define HYP_BUFFERS_USE_SPINLOCK 0
 
