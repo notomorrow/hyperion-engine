@@ -5,15 +5,14 @@
 #include "vector3.h"
 #include "vector4.h"
 
+#include <util/defines.h>
+
 #include <cstdlib>
 #include <cstddef>
 #include <cmath>
 #include <limits>
 #include <type_traits>
 
-
-#define HYP_ENABLE_IF(cond, return_type) \
-    typename std::enable_if_t<cond, return_type>
 
 namespace hyperion {
 

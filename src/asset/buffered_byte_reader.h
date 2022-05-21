@@ -4,10 +4,13 @@
 #include <math/math_util.h>
 
 #include "../types.h"
-#include "../util.h"
-#include "../util/string_util.h"
+
+#include <util.h>
+#include <util/defines.h>
+#include <util/string_util.h>
 
 #include <fstream>
+#include <type_traits>
 #include <cstring>
 
 namespace hyperion {
@@ -118,9 +121,16 @@ public:
         return lines;
     }
 
+    size_t Read(size_t count, void *ptr)
+    {
+        return Read(count, ptr, [](void *ptr, const Byte *buffer, size_t chunk_size) {
+           std::memcpy(ptr, buffer, chunk_size);
+        });
+    }
+
     /*! @returns The total number of bytes read */
-    template <class LambdaFunction>
-    size_t ReadChunked(size_t count, LambdaFunction func)
+    template <class Lambda = std::add_pointer_t<void(void *, const Byte *, size_t)>>
+    size_t Read(size_t count, void *ptr, Lambda &&func)
     {
         if (Eof()) {
             return 0;
@@ -131,8 +141,9 @@ public:
         while (count) {
             const size_t chunk_requested = MathUtil::Min(count, BufferSize);
             const size_t chunk_returned = Read(chunk_requested);
+            const size_t offset = total_read;
 
-            func(&buffer[0], chunk_returned);
+            func(reinterpret_cast<void *>(uintptr_t(ptr) + offset), &buffer[0], chunk_returned);
 
             total_read += chunk_returned;
 
@@ -145,6 +156,12 @@ public:
         }
 
         return total_read;
+    }
+
+    template <class T>
+    size_t Read(T *ptr)
+    {
+        return Read(sizeof(T), static_cast<void *>(ptr));
     }
 
     template <class LambdaFunction>

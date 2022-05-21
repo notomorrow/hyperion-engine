@@ -233,9 +233,12 @@ public:
      * parent nodes.
      */
     const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
-    
-    void AddController(std::unique_ptr<Controller> &&controller)
+
+    template <class ControllerClass>
+    void AddController(std::unique_ptr<ControllerClass> &&controller)
     {
+        static_assert(std::is_base_of_v<Controller, ControllerClass>, "Object must be a derived class of Controller");
+
         if (controller->m_parent != nullptr) {
             controller->OnRemoved();
         }
@@ -248,7 +251,7 @@ public:
 
     template <class ControllerClass, class ...Args>
     void AddController(Args &&... args)
-        { AddController(std::make_unique<ControllerClass>(std::forward<Args>(args)...)); }
+        { AddController<ControllerClass>(std::make_unique<ControllerClass>(std::forward<Args>(args)...)); }
 
     template <class ControllerType>
     ControllerType *GetController()             { return m_controllers.Get<ControllerType>(); }

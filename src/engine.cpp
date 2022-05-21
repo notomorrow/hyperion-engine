@@ -8,7 +8,7 @@
 
 #include <rendering/backend/renderer_features.h>
 
-#include <camera/ortho_camera.h>
+#include <audio/audio_manager.h>
 
 namespace hyperion::v2 {
 
@@ -305,6 +305,7 @@ void Engine::Initialize()
     callbacks.TriggerPersisted(EngineCallback::CREATE_LIGHTS, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_MATERIALS, this);
 
+    AssertThrowMsg(AudioManager::GetInstance()->Initialize(), "Failed to initialize audio device");
 
     m_running = true;
 }

@@ -49,7 +49,7 @@ struct SemaphoreRef {
     }
 
     inline bool operator<(const SemaphoreRef &other) const
-        { return intptr_t(semaphore.GetSemaphore()) < intptr_t(other.semaphore.GetSemaphore()); }
+        { return uintptr_t(semaphore.GetSemaphore()) < uintptr_t(other.semaphore.GetSemaphore()); }
 };
 
 enum class SemaphoreType {

@@ -1,9 +1,7 @@
 #ifndef HYPERION_DEFINES_H
 #define HYPERION_DEFINES_H
 
-#if defined(HYPERION_BUILD_RELEASE_FINAL) && HYPERION_BUILD_RELEASE_FINAL
-    #define HYPERION_BUILD_RELEASE 1 // just to ensure
-#endif
+// stl helpers and such
 
 #define HYP_DEF_STRUCT_COMPARATOR \
     bool operator==(const decltype(*this) &other) const { \
@@ -19,6 +17,14 @@
         } \
     }
 
+#define HYP_ENABLE_IF(cond, return_type) \
+    typename std::enable_if_t<cond, return_type>
+
+// switches
+
+#if defined(HYPERION_BUILD_RELEASE_FINAL) && HYPERION_BUILD_RELEASE_FINAL
+    #define HYPERION_BUILD_RELEASE 1 // just to ensure
+#endif
 
 #if defined(__GNUC__) || defined(__GNUG__) || defined(__clang__)
     #define HYP_CLANG_OR_GCC 1

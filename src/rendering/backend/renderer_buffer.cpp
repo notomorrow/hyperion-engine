@@ -373,7 +373,7 @@ void GPUMemory::Copy(Device *device, size_t offset, size_t count, const void *pt
         Map(device, &map);
     }
 
-    std::memcpy(reinterpret_cast<void *>(intptr_t(map) + offset), ptr, count);
+    std::memcpy(reinterpret_cast<void *>(uintptr_t(map) + offset), ptr, count);
 }
 
 void GPUMemory::Read(Device *device, size_t count, void *out_ptr) const
@@ -1017,7 +1017,7 @@ Result GPUImageMemory::Create(Device *device, size_t size, VkImageCreateInfo *im
 
     VmaAllocationCreateInfo alloc_info{};
     alloc_info.usage     = VMA_MEMORY_USAGE_GPU_ONLY;
-    alloc_info.pUserData = reinterpret_cast<void *>(intptr_t(index));
+    alloc_info.pUserData = reinterpret_cast<void *>(uintptr_t(index));
 
     HYPERION_VK_CHECK_MSG(
         vmaCreateImage(

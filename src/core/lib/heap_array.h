@@ -75,7 +75,7 @@ public:
 
     void MemCpy(const void *src, size_t count, size_t dst_offset)
     {
-        std::memcpy((void *)intptr_t(ptr + dst_offset), src, count);
+        std::memcpy((void *)uintptr_t(ptr + dst_offset), src, count);
     }
 
     iterator begin() const { return ptr; }
