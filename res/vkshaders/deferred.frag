@@ -40,9 +40,9 @@ vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 7000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 15000.0
-#define IRRADIANCE_MULTIPLIER 28.0
+#define IBL_INTENSITY 5000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 20000.0
+#define IRRADIANCE_MULTIPLIER 8.0
 #define ROUGHNESS_LOD_MULTIPLIER 16.0
 #define SSAO_DEBUG 0
 
@@ -150,15 +150,18 @@ void main()
         float HdotV = max(0.0001, dot(H, V));
 
         
+        const vec3 diffuse_color = albedo_linear * (1.0 - metalness);
+
         const float material_reflectance = 0.5;
         const float reflectance = 0.16 * material_reflectance * material_reflectance; // dielectric reflectance
-        vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness));
+        const vec3 F0 = albedo_linear.rgb * metalness + (reflectance * (1.0 - metalness));
         
-        vec3 energy_compensation = vec3(1.0);
-        float perceptual_roughness = sqrt(roughness);
-        float lod = ROUGHNESS_LOD_MULTIPLIER * perceptual_roughness * (2.0 - perceptual_roughness);
+        const vec2 AB = BRDFMap(roughness, NdotV);
+        const vec3 dfg = albedo_linear.rgb * AB.x + AB.y;
         
-        vec3 AB = BRDFMap(albedo.rgb, roughness, NdotV);
+        const vec3 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
+        const float perceptual_roughness = sqrt(roughness);
+        const float lod = ROUGHNESS_LOD_MULTIPLIER * perceptual_roughness * (2.0 - perceptual_roughness);
         
         vec3 irradiance = vec3(0.0);
         vec4 reflections = vec4(0.0);
@@ -181,10 +184,10 @@ void main()
         vec3 light_color = vec3(1.0);
         
         // ibl
-        vec3 dfg = mix(vec3(AB.x), vec3(AB.y), F0);
+        //vec3 dfg =  AB;// mix(vec3(AB.x), vec3(AB.y), vec3(1.0) - F0);
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
         vec3 radiance = dfg * ibl * specular_ao;
-        result = (albedo_linear * irradiance * (1.0 - dfg) * ao) + radiance;
+        result = (diffuse_color * irradiance * (1.0 - dfg) * ao) + radiance;
         result *= exposure * IBL_INTENSITY;
 
         result = (result * (1.0 - reflections.a)) + (dfg * reflections.rgb);
@@ -200,7 +203,7 @@ void main()
         
         vec3 light_scatter = SchlickFresnel(vec3(1.0), F90, NdotL);
         vec3 view_scatter  = SchlickFresnel(vec3(1.0), F90, NdotV);
-        vec3 diffuse = albedo_linear * (1.0 - metalness) * (light_scatter * view_scatter * (1.0 / PI));
+        vec3 diffuse = diffuse_color * (light_scatter * view_scatter * (1.0 / PI));
 
         // Chan 2018, "Material Advances in Call of Duty: WWII"
         //float micro_shadow_aperture = inversesqrt(1.0 - ao);

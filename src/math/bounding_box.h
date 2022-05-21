@@ -31,6 +31,8 @@ public:
 
     BoundingBox operator*(float scalar) const;
     BoundingBox &operator*=(float scalar);
+    BoundingBox operator/(float scalar) const;
+    BoundingBox &operator/=(float scalar);
     BoundingBox operator*(const Transform &transform) const;
     BoundingBox &operator*=(const Transform &transform);
     inline bool operator==(const BoundingBox &other) const

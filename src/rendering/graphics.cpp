@@ -344,6 +344,8 @@ void GraphicsPipeline::Render(
                 }
 
                 if (perform_culling) {
+                    auto *octant = spatial->GetOctree();
+
                     if (auto *octant = spatial->GetOctree()) {
                         const auto &visibility_state = octant->GetVisibilityState();
 
@@ -360,6 +362,8 @@ void GraphicsPipeline::Render(
                             "Spatial #%lu not in octree!\n",
                             spatial->GetId().value
                         );
+
+                        continue;
                     }
                 }
 

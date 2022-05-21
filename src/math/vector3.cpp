@@ -206,10 +206,7 @@ Vector3 Vector3::Cross(const Vector3 &other) const
 
 Vector3 &Vector3::Rotate(const Vector3 &axis, float radians)
 {
-    Matrix4 rotation;
-    MatrixUtil::ToRotation(rotation, axis, radians);
-    (*this) *= rotation;
-    return *this;
+    return (*this) *= Matrix4::Rotation(axis, radians);
 }
 
 Vector3 &Vector3::Lerp(const Vector3 &to, const float amt)

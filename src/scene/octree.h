@@ -36,7 +36,9 @@ class Octree {
         using CallbackFunction = std::function<void(Engine *, Octree *, Spatial *)>;
     };
 
-    Octree(Octree *parent, const BoundingBox &aabb, uint32_t index);
+    static constexpr float growth_factor = 1.5f;
+
+    Octree(Octree *parent, const BoundingBox &aabb, uint8_t index);
 
 public:
     struct Octant {
@@ -90,9 +92,12 @@ public:
     bool Insert(Engine *engine, Spatial *spatial);
     bool Remove(Engine *engine, Spatial *spatial);
     bool Update(Engine *engine, Spatial *spatial);
+    bool Rebuild(Engine *engine, const BoundingBox &new_aabb);
     void CalculateVisibility(Scene *scene);
 
 private:
+    void ClearInternal(Engine *engine, std::vector<Node> &out_nodes);
+    void Clear(Engine *engine, std::vector<Node> &out_nodes);
     bool Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it = nullptr);
 
     inline auto FindNode(Spatial *spatial)
@@ -106,7 +111,7 @@ private:
     inline bool Empty() const  { return m_nodes.empty(); }
     
     void SetParent(Octree *parent);
-    bool EmptyDeep(int depth = DEPTH_SEARCH_INF, uint32_t mask = 0) const;
+    bool EmptyDeep(int depth = DEPTH_SEARCH_INF, uint8_t octant_mask = 0xff) const;
 
     void InitOctants();
     void Divide(Engine *engine);
@@ -117,6 +122,7 @@ private:
     bool InsertInternal(Engine *engine, Spatial *spatial);
     bool UpdateInternal(Engine *engine, Spatial *spatial);
     bool RemoveInternal(Engine *engine, Spatial *spatial);
+    bool RebuildExtendInternal(Engine *engine, const BoundingBox &extend_include_aabb);
     void UpdateVisibilityState(Scene *scene);
 
     /* Called from Spatial - remove the pointer */
@@ -129,7 +135,7 @@ private:
     bool m_is_divided;
     Root *m_root;
     VisibilityState m_visibility_state;
-    uint32_t m_index;
+    uint8_t m_index;
 };
 
 } // namespace hyperion::v2

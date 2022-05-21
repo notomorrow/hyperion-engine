@@ -35,11 +35,9 @@ Transform::Transform(const Transform &other)
 
 void Transform::UpdateMatrix()
 {
-    Matrix4 s, r, t;
-
-    MatrixUtil::ToTranslation(t, m_translation);
-    MatrixUtil::ToRotation(r, m_rotation);
-    MatrixUtil::ToScaling(s, m_scale);
+    const auto s = Matrix4::Scaling(m_scale);
+    const auto r = Matrix4::Rotation(m_rotation);
+    const auto t = Matrix4::Translation(m_translation);
 
     m_matrix = s * r * t;
 }

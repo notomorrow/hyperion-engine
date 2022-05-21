@@ -14,11 +14,19 @@ void PerspectiveCamera::UpdateLogic(double dt)
 
 void PerspectiveCamera::UpdateViewMatrix()
 {
-    MatrixUtil::ToLookAt(m_view_mat, m_translation, GetTarget(), m_up);
+    m_view_mat = Matrix4::LookAt(
+        m_translation,
+        GetTarget(),
+        m_up
+    );
 }
 
 void PerspectiveCamera::UpdateProjectionMatrix()
 {
-    MatrixUtil::ToPerspective(m_proj_mat, m_fov, m_width, m_height, m_near, m_far);
+    m_proj_mat = Matrix4::Perspective(
+        m_fov,
+        m_width, m_height,
+        m_near,  m_far
+    );
 }
 } // namespace hyperion

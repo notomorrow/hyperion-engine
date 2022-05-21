@@ -82,7 +82,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/fireplace_room/fireplace_room.obj",//"models/television/Television_01_4k.obj", //"sponza/sponza.obj",
+            "models/sponza/sponza.obj", //"living_room/living_room.obj",
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj"
         );
@@ -91,11 +91,13 @@ public:
         test_model = std::move(loaded_assets[1]);
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
+
+        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         
         scene->GetRootNode()->AddChild(engine->assets.Load<Node>("models/monkey/monkey.obj"));
 
         if (auto *suzanne = scene->GetRootNode()->Select("Suzanne/None")) {
-            auto suzanne_mat = engine->resources.materials.Add(std::make_unique<Material>());
+            /*auto suzanne_mat = engine->resources.materials.Add(std::make_unique<Material>());
 
             suzanne_mat->SetTexture(
                 Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP,
@@ -127,7 +129,7 @@ public:
                     engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_metallic.psd")
                 )
             );
-            suzanne->GetSpatial()->SetMaterial(std::move(suzanne_mat));
+            suzanne->GetSpatial()->SetMaterial(std::move(suzanne_mat));*/
             suzanne->GetParent()->Translate({7, 3, 5});
         }
 
@@ -175,7 +177,7 @@ public:
         ));*/
 
         test_model->Translate({0, 0, 5});
-        //test_model->Scale(0.025f);
+        test_model->Scale(0.025f);
         //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         
         tex1 = engine->resources.textures.Add(
@@ -203,8 +205,8 @@ public:
 
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
 
-        zombie->AddController<AudioController>(engine->assets.Load<AudioSource>("sounds/taunt.wav"));
-        zombie->GetController<AudioController>()->Play(1.0f, LoopMode::ONCE);
+        //zombie->AddController<AudioController>(engine->assets.Load<AudioSource>("sounds/taunt.wav"));
+        //zombie->GetController<AudioController>()->Play(1.0f, LoopMode::ONCE);
     }
 
     virtual void Teardown(Engine *engine) override
@@ -249,10 +251,10 @@ public:
             zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
         }
         
-        material_test_obj->SetLocalScale(2.45f);
+        material_test_obj->SetLocalScale(3.45f);
         //material_test_obj->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.25f));
-        material_test_obj->SetLocalTranslation({7, 1.25f, 0});
-        //material_test_obj->SetLocalTranslation(Vector3(std::sin(timer * 0.5f) * 5.0f, 0, std::cos(timer * 0.5f) * 5.0f) + Vector3(7, 3, 0));
+        material_test_obj->SetLocalTranslation({16, 5.25f,5});
+        material_test_obj->SetLocalTranslation(Vector3(std::sin(timer * 0.5f) * 270, 0, std::cos(timer * 0.5f) * 270.0f) + Vector3(7, 3, 0));
 
         /*material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(
             std::sin(timer) * 0.5f + 0.5f,
@@ -452,7 +454,7 @@ int main()
 #if HYPERION_VK_TEST_VCT
     v2::VoxelConeTracing vct({
         /* scene bounds for vct to capture */
-        .aabb = BoundingBox(Vector3(-8), Vector3(8))
+        .aabb = BoundingBox(Vector3(-128), Vector3(128))
     });
 
     vct.Init(&engine);
@@ -545,6 +547,8 @@ int main()
 
     bool running = true;
 
+    float tmp_render_timer = 0.0f;
+
     while (running) {
         while (SystemSDL::PollEvent(&event)) {
             my_game.input_manager->CheckEvent(&event);
@@ -556,7 +560,6 @@ int main()
                     break;
             }
         }
-
 
         HYPERION_ASSERT_RESULT(engine.GetInstance()->GetFrameHandler()->PrepareFrame(
             engine.GetInstance()->GetDevice(),
@@ -663,7 +666,10 @@ int main()
 #endif
 
 #if HYPERION_VK_TEST_VCT
-        vct.RenderVoxels(&engine, frame->GetCommandBuffer(), frame_index);
+        if (tmp_render_timer == 0.0f || std::fmodf(tmp_render_timer, 2.0f) == 0.0f) {
+            vct.RenderVoxels(&engine, frame->GetCommandBuffer(), frame_index);
+        }
+        tmp_render_timer += 0.001f;
 #endif
 
             

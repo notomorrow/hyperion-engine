@@ -168,10 +168,7 @@ Vector4 &Vector4::Normalize()
 
 Vector4 &Vector4::Rotate(const Vector3 &axis, float radians)
 {
-    Matrix4 rotation;
-    MatrixUtil::ToRotation(rotation, axis, radians);
-    (*this) *= rotation;
-    return *this;
+    return (*this) *= Matrix4::Rotation(axis, radians);
 }
 
 Vector4 &Vector4::Lerp(const Vector4 &to, float amt)

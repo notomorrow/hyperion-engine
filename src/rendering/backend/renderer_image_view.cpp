@@ -94,7 +94,7 @@ VkImageViewType ImageView::ToVkImageViewType(Image::Type type)
     case Image::Type::TEXTURE_TYPE_CUBEMAP: return VK_IMAGE_VIEW_TYPE_CUBE;
     }
 
-    unexpected_value_msg(format, "Unhandled texture type case");
+    AssertThrowMsg(false, "Unhandled texture type case %d", int(type));
 }
 
 } // namespace renderer
