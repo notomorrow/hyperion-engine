@@ -15,6 +15,7 @@
 #include <rendering/rt/acceleration_structure_builder.h>
 #include <rendering/probe_system.h>
 #include <scene/controllers/audio_controller.h>
+#include <scene/controllers/animation_controller.h>
 #include <game_thread.h>
 #include <game.h>
 
@@ -205,6 +206,8 @@ public:
 
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
 
+        zombie->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+
         //zombie->AddController<AudioController>(engine->assets.Load<AudioSource>("sounds/taunt.wav"));
         //zombie->GetController<AudioController>()->Play(1.0f, LoopMode::ONCE);
     }
@@ -226,10 +229,6 @@ public:
     virtual void OnFrameEnd(Engine *engine, Frame *) override
     {
         engine->render_state.UnbindScene();
-
-        if (counter % 200 == 0) {
-            DebugLog(LogType::Debug, "GPU memory used: %llu MB\n", renderer::GPUMemory::stats.gpu_memory_used / 1000000);
-        }
     }
 
     virtual void Logic(Engine *engine, GameCounter::TickUnit delta) override
