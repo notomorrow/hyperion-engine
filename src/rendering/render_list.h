@@ -19,6 +19,14 @@ public:
         std::vector<std::unique_ptr<renderer::Attachment>> attachments;
         std::vector<Ref<GraphicsPipeline>> graphics_pipelines;
 
+        bool IsRenderableBucket() const
+        {
+            return bucket == Bucket::BUCKET_OPAQUE
+                || bucket == Bucket::BUCKET_TRANSLUCENT
+                || bucket == Bucket::BUCKET_SKYBOX
+                || bucket == Bucket::BUCKET_PARTICLE;
+        }
+
         inline void AddGraphicsPipeline(Ref<GraphicsPipeline> &&graphics_pipeline)
         {
             graphics_pipeline.Init();

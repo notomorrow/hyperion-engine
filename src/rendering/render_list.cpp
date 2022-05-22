@@ -60,31 +60,13 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         mode
     ));
 
-    renderer::AttachmentRef *attachment_ref;
+    if (IsRenderableBucket()) { // add gbuffer attachments
+        renderer::AttachmentRef *attachment_ref;
 
-    attachments.push_back(std::make_unique<renderer::Attachment>(
-        std::make_unique<renderer::FramebufferImage2D>(
-            engine->GetInstance()->swapchain->extent,
-            engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
-            nullptr
-        ),
-        RenderPassStage::SHADER
-    ));
-
-    HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
-        engine->GetInstance()->GetDevice(),
-        renderer::LoadOperation::CLEAR,
-        renderer::StoreOperation::STORE,
-        &attachment_ref
-    ));
-
-    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
-
-    for (int i = 0; i < 3; i++) {
         attachments.push_back(std::make_unique<renderer::Attachment>(
             std::make_unique<renderer::FramebufferImage2D>(
                 engine->GetInstance()->swapchain->extent,
-                engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER),
+                engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
                 nullptr
             ),
             RenderPassStage::SHADER
@@ -98,42 +80,62 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         ));
 
         render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
-    }
 
-    /* Add depth attachment */
-    if (bucket == BUCKET_TRANSLUCENT) {
-        auto &forward_fbo = engine->GetRenderListContainer()[BUCKET_OPAQUE].framebuffers[0];
-        AssertThrow(forward_fbo != nullptr);
+        for (int i = 0; i < 3; i++) {
+            attachments.push_back(std::make_unique<renderer::Attachment>(
+                std::make_unique<renderer::FramebufferImage2D>(
+                    engine->GetInstance()->swapchain->extent,
+                    engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER),
+                    nullptr
+                ),
+                RenderPassStage::SHADER
+            ));
 
-        renderer::AttachmentRef *depth_attachment;
+            HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
+                engine->GetInstance()->GetDevice(),
+                renderer::LoadOperation::CLEAR,
+                renderer::StoreOperation::STORE,
+                &attachment_ref
+            ));
 
-        HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetAttachmentRefs().at(4)->AddAttachmentRef(
-            engine->GetInstance()->GetDevice(),
-            renderer::StoreOperation::STORE,
-            &depth_attachment
-        ));
+            render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
+        }
 
-        depth_attachment->SetBinding(4);
+        /* Add depth attachment */
+        if (bucket == BUCKET_TRANSLUCENT) {
+            auto &forward_fbo = engine->GetRenderListContainer()[BUCKET_OPAQUE].framebuffers[0];
+            AssertThrow(forward_fbo != nullptr);
 
-        render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
-    } else {
-        attachments.push_back(std::make_unique<renderer::Attachment>(
-            std::make_unique<renderer::FramebufferImage2D>(
-                engine->GetInstance()->swapchain->extent,
-                engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
-                nullptr
-            ),
-            RenderPassStage::SHADER
-        ));
+            renderer::AttachmentRef *depth_attachment;
 
-        HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
-            engine->GetInstance()->GetDevice(),
-            renderer::LoadOperation::CLEAR,
-            renderer::StoreOperation::STORE,
-            &attachment_ref
-        ));
+            HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetAttachmentRefs().at(4)->AddAttachmentRef(
+                engine->GetInstance()->GetDevice(),
+                renderer::StoreOperation::STORE,
+                &depth_attachment
+            ));
 
-        render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
+            depth_attachment->SetBinding(4);
+
+            render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
+        } else {
+            attachments.push_back(std::make_unique<renderer::Attachment>(
+                std::make_unique<renderer::FramebufferImage2D>(
+                    engine->GetInstance()->swapchain->extent,
+                    engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
+                    nullptr
+                ),
+                RenderPassStage::SHADER
+            ));
+
+            HYPERION_ASSERT_RESULT(attachments.back()->AddAttachmentRef(
+                engine->GetInstance()->GetDevice(),
+                renderer::LoadOperation::CLEAR,
+                renderer::StoreOperation::STORE,
+                &attachment_ref
+            ));
+
+            render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
+        }
     }
 
     for (auto &attachment : attachments) {
