@@ -27,22 +27,74 @@ layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 #include "include/vct/cone_trace.inc"
 #endif
 
-vec3 GetShadowCoord(mat4 shadow_matrix, vec3 pos)
+#define HYP_SHADOW_BIAS 0.0015
+#define HYP_SHADOW_VARIABLE_BIAS 1
+#define HYP_SHADOW_PCF 1
+
+const mat4 shadow_bias_matrix = mat4( 
+    0.5, 0.0, 0.0, 0.0,
+    0.0, 0.5, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.5, 0.5, 0.0, 1.0
+);
+
+vec3 GetShadowCoord(int index, vec3 pos)
 {
+    mat4 shadow_matrix = shadow_bias_matrix * shadow_data.matrices[index].projection * shadow_data.matrices[index].view;
     vec4 shadow_position = shadow_matrix * vec4(pos, 1.0);
-  
-    shadow_position *= vec4(0.5);
-    shadow_position += vec4(0.5);
     shadow_position.xyz /= shadow_position.w;
   
     return shadow_position.xyz;
 }
 
+float GetShadow(int index, vec3 pos, vec2 offset, float NdotL)
+{
+    vec3 coord = GetShadowCoord(index, pos);
+    vec4 shadow_sample = texture(shadow_maps[index], vec2(coord.x, 1.0 - coord.y) + offset);
+    float shadow_depth = shadow_sample.r;
+
+    float bias = HYP_SHADOW_BIAS;
+
+#if HYP_SHADOW_VARIABLE_BIAS
+    bias *= tan(acos(NdotL));
+    bias = clamp(bias, 0.0, 0.01);
+#endif
+
+    return max(step(coord.z - bias, shadow_depth), 0.0);
+}
+
+float GetShadowFiltered(int index, vec3 pos, float NdotL)
+{
+    ivec2 dim = textureSize(shadow_maps[index], 0);
+    float scale = 1.05;
+    
+    float dx = 0.0005;//scale * (1.0 / float(dim.x));
+    float dy = 0.0005;//scale * (1.0 / float(dim.y));
+
+    float shadow = 0.0;
+
+    shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * -1.0), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * 0.0), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * 1.0), NdotL);
+
+    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * -1.0), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * 0.0), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * 1.0), NdotL);
+
+    shadow += GetShadow(index, pos, vec2(dx * 1.0, dy * -1.0), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * 1.0, dy * 0.0), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * 1.0, dy * 1.0), NdotL);
+
+    shadow /= 9.0;
+    
+    return shadow;
+}
+
 /* Begin main shader program */
 
-#define IBL_INTENSITY 5000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 20000.0
-#define IRRADIANCE_MULTIPLIER 64.0
+#define IBL_INTENSITY 2000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
+#define IRRADIANCE_MULTIPLIER 16.0
 #define ROUGHNESS_LOD_MULTIPLIER 16.0
 #define SSAO_DEBUG 0
 
@@ -149,7 +201,14 @@ void main()
         float VdotH = max(0.0001, dot(V, H));
         float HdotV = max(0.0001, dot(H, V));
 
-        
+        float shadow = 1.0;
+
+#if HYP_SHADOW_PCF
+        shadow = GetShadowFiltered(0, position.xyz, NdotL);
+#else
+        shadow = GetShadow(0, position.xyz, vec2(0.0), NdotL);
+#endif
+
         const vec3 diffuse_color = albedo_linear * (1.0 - metalness);
 
         const float material_reflectance = 0.5;
@@ -180,7 +239,6 @@ void main()
 
         irradiance *= IRRADIANCE_MULTIPLIER;
 
-        vec3 shadow = vec3(1.0);
         vec3 light_color = vec3(1.0);
         
         // ibl
@@ -191,7 +249,6 @@ void main()
         result *= exposure * IBL_INTENSITY;
 
         result = (result * (1.0 - reflections.a)) + (dfg * reflections.rgb);
-
 
         // surface
         vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
@@ -210,7 +267,7 @@ void main()
         //float micro_shadow = clamp(NdotL * micro_shadow_aperture, 0.0, 1.0);
         //float micro_shadow_sqr = micro_shadow * micro_shadow;
 
-        result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao);
+        result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao * shadow);
     } else {
         result = albedo.rgb;
     }

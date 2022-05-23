@@ -43,6 +43,10 @@ public:
                 float    aabb_max[4];
                 float    aabb_min[4];
             } vct_data;
+
+            struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+                float view_proj[16];
+            } shadow_map_data;
         };
     } push_constants;
 

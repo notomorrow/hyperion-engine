@@ -9,6 +9,7 @@
 #include <math/bounding_box.h>
 #include <scene/scene.h>
 #include <camera/camera.h>
+#include <types.h>
 
 namespace hyperion::v2 {
 
@@ -33,7 +34,15 @@ public:
     float GetMaxDistance() const            { return m_max_distance; }
     void SetMaxDistance(float max_distance) { m_max_distance = max_distance; }
 
-    BoundingBox GetAabb() const             { return {m_origin - m_max_distance * 0.5f, m_origin + m_max_distance * 0.5f}; }
+    BoundingBox GetAabb() const
+    {
+        return {
+            MathUtil::Round(m_origin - m_max_distance * 0.5f),
+            MathUtil::Round(m_origin + m_max_distance * 0.5f)
+        };
+    }
+
+    uint GetShadowMapIndex() const          { return m_shadow_map_index; }
 
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
@@ -51,6 +60,7 @@ private:
     Scene::ID                              m_parent_scene_id;
     Vector3                                m_origin;
     float                                  m_max_distance;
+    uint                                   m_shadow_map_index;
 };
 
 class ShadowRenderer : public EngineComponentBase<STUB_CLASS(ShadowRenderer)> {
@@ -76,10 +86,11 @@ public:
     }
 
     void Init(Engine *engine);
+    void Update(Engine *engine, GameCounter::TickUnit delta);
     void Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
 
 private:
-    void UpdateSceneCamera();
+    void UpdateSceneCamera(Engine *engine);
 
     ShadowEffect m_effect;
 };

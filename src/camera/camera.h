@@ -34,35 +34,40 @@ public:
     virtual void SetTranslation(const Vector3 &translation);
 
     const Vector3 &GetDirection() const               { return m_direction; }
-    void SetDirection(const Vector3 &direction)       { m_direction = direction; }
+    virtual void SetDirection(const Vector3 &direction);
 
     const Vector3 &GetUpVector() const                { return m_up; }
-    void SetUpVector(const Vector3 &up)               { m_up = up; }
+    virtual void SetUpVector(const Vector3 &up);
 
     Vector3 GetSideVector() const                     { return m_up.Cross(m_direction); }
 
     Vector3 GetTarget() const                         { return m_translation + m_direction; }
-    void SetTarget(const Vector3 &target)             { m_direction = target - m_translation; }
+    void SetTarget(const Vector3 &target)             { SetDirection(target - m_translation); }
+
+    void Rotate(const Vector3 &axis, float radians);
 
     const Frustum &GetFrustum() const                 { return m_frustum; }
 
     const Matrix4 &GetViewMatrix() const              { return m_view_mat; }
-    void SetViewMatrix(const Matrix4 &view_mat)       { m_view_mat = view_mat; }
+    void SetViewMatrix(const Matrix4 &view_mat);
 
     const Matrix4 &GetProjectionMatrix() const        { return m_proj_mat; }
-    void SetProjectionMatrix(const Matrix4 &proj_mat) { m_proj_mat = proj_mat; }
+    void SetProjectionMatrix(const Matrix4 &proj_mat);
 
     const Matrix4 &GetViewProjectionMatrix() const    { return m_view_proj_mat; }
+    void SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &proj_mat);
 
-    void Rotate(const Vector3 &axis, float radians);
     void Update(double dt);
 
     virtual void UpdateLogic(double dt) = 0;
+
     virtual void UpdateViewMatrix() = 0;
     virtual void UpdateProjectionMatrix() = 0;
     void UpdateMatrices();
 
 protected:
+    void UpdateViewProjectionMatrix();
+
     CameraType m_camera_type;
 
     Vector3 m_translation, m_direction, m_up;
@@ -75,8 +80,6 @@ protected:
 
 private:
     Matrix4 m_view_proj_mat;
-
-    void UpdateFrustum();
 };
 }
 

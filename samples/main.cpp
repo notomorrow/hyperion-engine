@@ -83,7 +83,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj", //"living_room/living_room.obj",
+            "models/street/street.obj", //"sponza/sponza.obj", //"living_room/living_room.obj",
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj"
         );
@@ -164,21 +164,21 @@ public:
 
         auto my_light = engine->resources.lights.Add(std::make_unique<Light>(
             LightType::DIRECTIONAL,
-            Vector3(-0.7f, 0.8f, 0.0f).Normalize(),
+            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
             10000.0f
         ));
         scene->GetEnvironment()->AddLight(my_light.IncRef());
         
 
-        /*scene->GetEnvironment()->AddShadowRenderer(engine, std::make_unique<ShadowRenderer>(
+        scene->GetEnvironment()->AddShadowRenderer(engine, std::make_unique<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
-            10.0f
-        ));*/
+            70.0f
+        ));
 
-        test_model->Translate({0, 0, 5});
-        test_model->Scale(0.025f);
+        //test_model->Translate({0, 0, 5});
+        //test_model->Scale(0.025f);
         //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         
         tex1 = engine->resources.textures.Add(
@@ -236,6 +236,8 @@ public:
         timer += delta;
         ++counter;
 
+        scene->GetEnvironment()->UpdateShadows(engine, delta);
+
         scene->Update(engine, delta);
     
         test_model->Update(engine, delta);
@@ -253,7 +255,7 @@ public:
         material_test_obj->SetLocalScale(3.45f);
         //material_test_obj->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.25f));
         material_test_obj->SetLocalTranslation({16, 5.25f,5});
-        material_test_obj->SetLocalTranslation(Vector3(std::sin(timer * 0.5f) * 270, 0, std::cos(timer * 0.5f) * 270.0f) + Vector3(7, 3, 0));
+        //material_test_obj->SetLocalTranslation(Vector3(std::sin(timer * 0.5f) * 270, 0, std::cos(timer * 0.5f) * 270.0f) + Vector3(7, 3, 0));
 
         /*material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(
             std::sin(timer) * 0.5f + 0.5f,
@@ -627,8 +629,6 @@ int main()
 
         /* === rendering === */
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine.GetInstance()->GetDevice()));
-        
-        //my_game.scene->GetEnvironment()->RenderShadows(&engine, command_buffer, frame_index);
 
         my_game.OnFrameBegin(&engine, frame);
 
@@ -671,24 +671,7 @@ int main()
         tmp_render_timer += 0.001f;
 #endif
 
-            
-        /* Shadow cam test */
-
-        Matrix4 shadow_view;
-        MatrixUtil::ToLookAt(shadow_view, {5, 5, 5}, {0, 0, 0}, {0, 1, 0});
-        Matrix4 shadow_proj;
-        MatrixUtil::ToOrtho(shadow_proj, -50, 50, -50, 50, -50, 50);
-
-        engine.shader_globals->scenes.Set(1, {
-            .view       = shadow_view,
-            .projection = shadow_proj,
-            .camera_position = {5, 5, 5, 1},
-            .light_direction = Vector4(Vector3(-0.5f, 0.5f, 0.0f).Normalize(), 1.0f)
-        });
-
-        
         engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
-
         
 
 #if HYPERION_VK_TEST_IMAGE_STORE

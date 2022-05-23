@@ -44,6 +44,13 @@ layout(std140, set = 3, binding = 2, row_major) readonly buffer SkeletonBuffer {
     Skeleton skeleton;
 };
 
+
+//push constants block
+layout( push_constant, row_major ) uniform constants
+{
+    mat4 shadow_view_proj;
+};
+
 mat4 CreateSkinningMatrix()
 {
 	mat4 skinning = mat4(0.0);
@@ -60,7 +67,8 @@ mat4 CreateSkinningMatrix()
 	return skinning;
 }
 
-void main() {
+void main()
+{
     vec4 position;
     mat4 normal_matrix;
     
@@ -83,8 +91,6 @@ void main() {
     v_tangent   = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
 	v_bitangent = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
 	v_tbn_matrix   = mat3(v_tangent, v_bitangent, v_normal);
-    
-    v_view_space_position = (scene.view * position).xyz;
 
-    gl_Position = scene.projection * scene.view * position;
+    gl_Position = shadow_data.matrices[0].projection * shadow_data.matrices[0].view * position;
 } 

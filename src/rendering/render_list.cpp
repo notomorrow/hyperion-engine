@@ -20,7 +20,6 @@ void RenderListContainer::AddFramebuffersToPipelines(Engine *engine)
     }
 }
 
-
 void RenderListContainer::Create(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
@@ -81,7 +80,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
         render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 
-        for (int i = 0; i < 3; i++) {
+        for (uint i = 0; i < num_gbuffer_attachments - 2 /* -2 because color and depth already accounted for*/; i++) {
             attachments.push_back(std::make_unique<renderer::Attachment>(
                 std::make_unique<renderer::FramebufferImage2D>(
                     engine->GetInstance()->swapchain->extent,
@@ -102,19 +101,19 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         }
 
         /* Add depth attachment */
-        if (bucket == BUCKET_TRANSLUCENT) {
+        if (bucket == BUCKET_TRANSLUCENT) { // translucent reuses the opaque bucket's depth buffer.
             auto &forward_fbo = engine->GetRenderListContainer()[BUCKET_OPAQUE].framebuffers[0];
             AssertThrow(forward_fbo != nullptr);
 
             renderer::AttachmentRef *depth_attachment;
 
-            HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetAttachmentRefs().at(4)->AddAttachmentRef(
+            HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetAttachmentRefs().at(num_gbuffer_attachments - 1)->AddAttachmentRef(
                 engine->GetInstance()->GetDevice(),
                 renderer::StoreOperation::STORE,
                 &depth_attachment
             ));
 
-            depth_attachment->SetBinding(4);
+            depth_attachment->SetBinding(num_gbuffer_attachments - 1);
 
             render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
         } else {
@@ -149,9 +148,9 @@ void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
 {
     AssertThrow(framebuffers.empty());
 
-    const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
+    const uint num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
 
-    for (uint32_t i = 0; i < 1/*num_frames*/; i++) {
+    for (uint i = 0; i < 1/*num_frames*/; i++) {
         auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.IncRef());
 
         for (auto *attachment_ref : render_pass->GetRenderPass().GetAttachmentRefs()) {

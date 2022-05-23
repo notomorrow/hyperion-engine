@@ -94,6 +94,12 @@ public:
 
         return Range{m_start, m_end};
     }
+
+    void Reset()
+    {
+        m_start = MathUtil::MaxSafeValue<T>();
+        m_end   = MathUtil::MinSafeValue<T>();
+    }
     
     iterator begin() const { return m_start; }
     iterator end() const { return m_end; }

@@ -12,9 +12,13 @@ glslc --target-env=$VULKAN_TARGET filter_pass.vert -o filter_pass_vert.spv
 glslc --target-env=$VULKAN_TARGET forward.frag -o forward_frag.spv
 glslc --target-env=$VULKAN_TARGET main.vert -o vert.spv
 glslc --target-env=$VULKAN_TARGET imagestore.comp -o imagestore.comp.spv
-glslc --target-env=$VULKAN_TARGET shadow.frag -o shadow_frag.spv
+
+
 glslc --target-env=$VULKAN_TARGET skybox.frag -o skybox_frag.spv
 glslc --target-env=$VULKAN_TARGET skybox.vert -o skybox_vert.spv
+
+glslc --target-env=$VULKAN_TARGET shadow.frag -o shadow_frag.spv
+glslc --target-env=$VULKAN_TARGET shadow.vert -o shadow_vert.spv
 
 glslc --target-env=$VULKAN_TARGET voxel/octree_alloc_nodes.comp -o voxel/octree_alloc_nodes.comp.spv
 glslc --target-env=$VULKAN_TARGET voxel/octree_init_nodes.comp -o voxel/octree_init_nodes.comp.spv

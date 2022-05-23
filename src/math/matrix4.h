@@ -26,8 +26,7 @@ public:
     static Matrix4 Orthographic(float l, float r, float b, float t, float n, float f);
     static Matrix4 LookAt(const Vector3 &dir, const Vector3 &up);
     static Matrix4 LookAt(const Vector3 &pos, const Vector3 &target, const Vector3 &up);
-
-
+    
     union {
         Vector4 rows[4];
         float values[16];

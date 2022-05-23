@@ -153,6 +153,7 @@ enum class DescriptorKey {
     SCENE_BUFFER,
     LIGHTS_BUFFER,
     SHADOW_MAPS,
+    SHADOW_MATRICES,
 
     MATERIAL_BUFFER,
     OBJECT_BUFFER,

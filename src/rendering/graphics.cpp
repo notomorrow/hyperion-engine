@@ -9,6 +9,7 @@ namespace hyperion::v2 {
 
 bool GraphicsPipeline::BucketSupportsCulling(Bucket bucket)
 {
+    return false;
     return bucket != BUCKET_SKYBOX
         && bucket != BUCKET_VOXELIZER;
 }
