@@ -2,16 +2,18 @@
 #define HYPERION_V2_RENDER_LIST_H
 
 #include <core/containers.h>
-#include "graphics.h"
-#include "../scene/scene.h"
+#include <rendering/graphics.h>
+#include <scene/scene.h>
+#include <types.h>
 
 namespace hyperion::v2 {
 
 class Engine;
 
-
 class RenderListContainer {
 public:
+    static constexpr uint num_gbuffer_attachments = 5;
+
     struct RenderListBucket {
         Bucket bucket;
         Ref<RenderPass> render_pass;

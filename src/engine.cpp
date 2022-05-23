@@ -216,6 +216,10 @@ void Engine::Initialize()
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
+        ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::SHADOW_MATRICES)
+        ->AddSubDescriptor({ .buffer = shader_globals->shadow_maps.GetBuffers()[0].get() });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
@@ -255,6 +259,10 @@ void Engine::Initialize()
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
         ->GetOrAddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
+
+    m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
+        ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::SHADOW_MATRICES)
+        ->AddSubDescriptor({ .buffer = shader_globals->shadow_maps.GetBuffers()[1].get() });
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
@@ -365,6 +373,12 @@ void Engine::Compile()
     m_deferred_renderer.Create(this);
 
     for (uint32_t i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
+        /* Finalize shadow maps */
+        shader_globals->shadow_maps.UpdateBuffer(m_instance->GetDevice(), i);
+
+        /* Finalize lights */
+        shader_globals->lights.UpdateBuffer(m_instance->GetDevice(), i);
+
         /* Finalize skeletons */
         shader_globals->skeletons.UpdateBuffer(m_instance->GetDevice(), i);
 
@@ -374,7 +388,7 @@ void Engine::Compile()
         /* Finalize per-object data */
         shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), i);
 
-        /* Finalize per-object data */
+        /* Finalize scene data */
         shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), i);
     }
 
@@ -441,6 +455,7 @@ void Engine::UpdateBuffersAndDescriptors(uint32_t frame_index)
     shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->skeletons.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->lights.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    shader_globals->shadow_maps.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
     shader_globals->textures.ApplyUpdates(this, frame_index);
 }

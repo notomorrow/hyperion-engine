@@ -1,3 +1,5 @@
+#define HYP_MAX_SHADOW_MAPS 128
+
 layout(std430, set = 2, binding = 0, row_major) readonly buffer SceneDataBlock {
     mat4 view;
     mat4 projection;
@@ -12,6 +14,8 @@ layout(std430, set = 2, binding = 0, row_major) readonly buffer SceneDataBlock {
     
     vec4 aabb_max;
     vec4 aabb_min;
+
+    vec4 _padding;
 } scene;
 
 struct Light {
@@ -27,6 +31,16 @@ layout(std430, set = 2, binding = 1) readonly buffer LightDataBlock {
 };
 
 layout(set = 2, binding = 12) uniform sampler2D shadow_maps[];
+
+struct ShadowMap {
+    mat4 projection;
+    mat4 view;
+    uint scene_index;
+};
+
+layout(std430, set = 2, binding = 13, row_major) uniform ShadowData {
+    ShadowMap matrices[113];
+} shadow_data;
 
 bool HasEnvironmentTexture(uint index)
 {

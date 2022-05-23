@@ -80,11 +80,27 @@ void Environment::RemoveShadowRenderer(Engine *engine, size_t index)
     m_shadow_renderers.erase(m_shadow_renderers.begin() + index);
 }
 
-void Environment::RenderShadows(Engine *engine, Frame *frame)
+void Environment::UpdateShadows(Engine *engine, GameCounter::TickUnit delta)
 {
     AssertReady();
 
     /* TODO: have observer on octrees, only update shadow renderers
+     * who's lights have had objects move within their octant
+     */
+
+    for (const auto &shadow_renderer : m_shadow_renderers) {
+        shadow_renderer->Update(
+            engine,
+            delta
+        );
+    }
+}
+
+void Environment::RenderShadows(Engine *engine, Frame *frame)
+{
+    AssertReady();
+
+    /* TODO: have observer on octrees, only render shadow renderers
      * who's lights have had objects move within their octant
      */
 

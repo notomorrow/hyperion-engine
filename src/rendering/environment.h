@@ -40,6 +40,7 @@ public:
     void RemoveShadowRenderer(Engine *engine, size_t index);
 
     void Init(Engine *engine);
+    void UpdateShadows(Engine *engine, GameCounter::TickUnit delta);
     void RenderShadows(Engine *engine, Frame *frame);
 
 private:

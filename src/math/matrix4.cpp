@@ -102,15 +102,11 @@ Matrix4 Matrix4::Orthographic(float l, float r, float b, float t, float n, float
     float tx = -1.0f * ((r + l) / (r - l));
     float ty = -1.0f * ((t + b) / (t - b));
     float tz = -1.0f * ((f + n) / (f - n));
-
-    mat[0][0] = x_orth;
-    mat[0][3] = tx;
     
-    mat[1][1] = y_orth;
-    mat[1][3] = ty;
-    
-    mat[2][2] = z_orth;
-    mat[2][3] = tz;
+    mat[0] = {x_orth, 0, 0, tx};
+    mat[1] = {0, y_orth, 0, ty};
+    mat[2] = {0, 0, z_orth, tz};
+    mat[3] = {0, 0, 0, 1};
 
     return mat;
 }

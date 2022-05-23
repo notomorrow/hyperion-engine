@@ -114,8 +114,6 @@ struct alignas(256) MaterialShaderData {
 
     uint32_t texture_index[max_bound_textures];
     uint32_t texture_usage;
-    uint32_t _padding1;
-    uint32_t _padding2;
 };
 
 static_assert(sizeof(MaterialShaderData) == 256);
@@ -150,6 +148,14 @@ struct alignas(16) LightShaderData {
 
 static_assert(sizeof(LightShaderData) == 32);
 
+struct alignas(16) ShadowShaderData {
+    Matrix4 projection;
+    Matrix4 view;
+    uint scene_index;
+};
+
+//static_assert(sizeof(ShadowShaderData) == 128);
+
 /* max number of skeletons, based on size in mb */
 constexpr size_t max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
 constexpr size_t max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
@@ -165,6 +171,9 @@ constexpr size_t max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
 /* max number of lights, based on size in kb */
 constexpr size_t max_lights = (16ull * 1024ull) / sizeof(LightShaderData);
 constexpr size_t max_lights_bytes = max_lights * sizeof(LightShaderData);
+/* max number of shadow maps, based on size in kb */
+constexpr size_t max_shadow_maps = (16ull * 1024ull) / sizeof(ShadowShaderData);
+constexpr size_t max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
 
 template <class Buffer, class StructType, size_t Size>
 class ShaderData {
@@ -309,8 +318,7 @@ private:
                     &ptr[dirty_start]
                 );
 
-                current_dirty.SetStart(UINT32_MAX);
-                current_dirty.SetEnd(0);
+                current_dirty.Reset();
             }
 
             void MarkDirty(size_t index)

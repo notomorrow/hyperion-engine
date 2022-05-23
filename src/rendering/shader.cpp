@@ -12,6 +12,7 @@ void ShaderGlobals::Create(Engine *engine)
     objects.Create(device);
     skeletons.Create(device);
     lights.Create(device);
+    shadow_maps.Create(device);
     textures.Create(engine);
 }
 
@@ -24,6 +25,7 @@ void ShaderGlobals::Destroy(Engine *engine)
     materials.Destroy(device);
     skeletons.Destroy(device);
     lights.Destroy(device);
+    shadow_maps.Destroy(device);
 }
 
 Shader::Shader(const std::vector<SubShader> &sub_shaders)
@@ -47,6 +49,9 @@ void Shader::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SHADERS, [this](Engine *engine) {
+        for (const auto &sub_shader : m_sub_shaders) {
+            AssertThrowMsg(!sub_shader.spirv.bytes.empty(), "Shader data missing");
+        }
 
         engine->render_scheduler.Enqueue([this, engine](...) {
             for (const auto &sub_shader : m_sub_shaders) {

@@ -31,6 +31,12 @@ public:
         m_top    = top;
         m_near   = _near;
         m_far    = _far;
+
+        SetProjectionMatrix(Matrix4::Orthographic(
+            m_left,   m_right,
+            m_bottom, m_top,
+            m_near,   m_far
+        ));
     }
 
     virtual void UpdateLogic(double dt) override;

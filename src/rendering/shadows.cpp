@@ -12,7 +12,8 @@ using renderer::DescriptorKey;
 using renderer::SamplerDescriptor;
 
 ShadowEffect::ShadowEffect()
-    : FullScreenPass()
+    : FullScreenPass(),
+      m_shadow_map_index(0)
 {
 }
 
@@ -22,7 +23,7 @@ void ShadowEffect::CreateShader(Engine *engine)
 {
     m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
-            SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read()} },
+            SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/shadow_vert.spv")).Read()} },
             SubShader{ ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/shadow_frag.spv")).Read()} }
         }
     ));
@@ -80,16 +81,19 @@ void ShadowEffect::CreateDescriptors(Engine *engine)
     /* set descriptor */
     engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
         if (!framebuffer.GetAttachmentRefs().empty()) {
-            /* TODO: dual fbos*/
             /* TODO: Removal of these descriptors */
 
-            for (DescriptorSet::Index scene_descriptor_set : DescriptorSet::scene_buffer_mapping) {
-                auto *descriptor = engine->GetInstance()->GetDescriptorPool()
-                    .GetDescriptorSet(scene_descriptor_set)
+            for (DescriptorSet::Index descriptor_set_index : DescriptorSet::scene_buffer_mapping) {
+                auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
+                    .GetDescriptorSet(descriptor_set_index);
+
+                auto *shadow_map_descriptor = descriptor_set
                     ->GetOrAddDescriptor<SamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
 
+                m_shadow_map_index = shadow_map_descriptor->GetSubDescriptors().size();
+
                 for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
-                    descriptor->AddSubDescriptor({
+                    shadow_map_descriptor->AddSubDescriptor({
                         .image_view = attachment_ref->GetImageView(),
                         .sampler    = attachment_ref->GetSampler()
                     });
@@ -141,9 +145,9 @@ void ShadowEffect::Create(Engine *engine)
     m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
         std::make_unique<OrthoCamera>(
             2048, 2048,
-            -1.0f, 1.0f,
-            -1.0f, 1.0f,
-            -1.0f, 1.0f
+            -100.0f, 100.0f,
+            -100.0f, 100.0f,
+            -100.0f, 100.0f
         )
     ));
 
@@ -180,6 +184,13 @@ void ShadowEffect::Destroy(Engine *engine)
 
 void ShadowEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
 {
+    engine->render_state.BindScene(m_scene);
+
+    m_framebuffer->BeginCapture(primary);
+    m_pipeline->Render(engine, primary, frame_index);
+    m_framebuffer->EndCapture(primary);
+
+    engine->render_state.UnbindScene();
 }
 
 ShadowRenderer::ShadowRenderer(Ref<Light> &&light)
@@ -221,22 +232,40 @@ void ShadowRenderer::Init(Engine *engine)
     }));
 }
 
+void ShadowRenderer::Update(Engine *engine, GameCounter::TickUnit delta)
+{
+    AssertReady();
+    
+    UpdateSceneCamera(engine);
+
+    m_effect.GetScene()->Update(engine, delta);
+}
+
 void ShadowRenderer::Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
 {
     AssertReady();
 
-    UpdateSceneCamera();
+    auto *camera = m_effect.GetScene()->GetCamera();
+    
+    engine->shader_globals->shadow_maps.Set(
+        m_effect.GetShadowMapIndex(),
+        {
+            .projection = camera->GetProjectionMatrix(),
+            .view       = camera->GetViewMatrix(),
+            .scene_index = m_effect.GetScene()->GetId().value - 1
+        }
+    );
 
-    engine->render_state.BindScene(m_effect.GetScene());
+    std::memcpy(
+        &m_effect.GetGraphicsPipeline()->GetPipeline()->push_constants.shadow_map_data.view_proj[0],
+        &camera->GetViewProjectionMatrix(),
+        sizeof(Matrix4)
+    );
 
-    m_effect.GetFramebuffer()->BeginCapture(command_buffer);
-    m_effect.GetGraphicsPipeline()->Render(engine, command_buffer, frame_index);
-    m_effect.GetFramebuffer()->EndCapture(command_buffer);
-
-    engine->render_state.UnbindScene();
+    m_effect.Render(engine, command_buffer, frame_index);
 }
 
-void ShadowRenderer::UpdateSceneCamera()
+void ShadowRenderer::UpdateSceneCamera(Engine *engine)
 {
     const auto aabb = m_effect.GetAabb();
     const auto center = aabb.GetCenter();
@@ -247,9 +276,8 @@ void ShadowRenderer::UpdateSceneCamera()
 
     auto *camera = m_effect.GetScene()->GetCamera();
 
-    camera->SetTranslation(center - light_direction);
+    camera->SetTranslation(center + light_direction);
     camera->SetTarget(center);
-    camera->UpdateViewMatrix();
 
     switch (camera->GetCameraType()) {
     case CameraType::ORTHOGRAPHIC: {
@@ -262,13 +290,14 @@ void ShadowRenderer::UpdateSceneCamera()
             corner *= camera->GetViewMatrix();
 
             maxes = MathUtil::Max(maxes, corner);
-            mins  = MathUtil::Max(mins, corner);
+            mins  = MathUtil::Min(mins, corner);
         }
 
         static_cast<OrthoCamera *>(camera)->Set(  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
             mins.x, maxes.x,
             mins.y, maxes.y,
-            mins.z, maxes.z
+            -m_effect.GetMaxDistance(),
+            m_effect.GetMaxDistance()
         );
 
         break;
@@ -276,8 +305,6 @@ void ShadowRenderer::UpdateSceneCamera()
     default:
         AssertThrowMsg(false, "Unhandled camera type");
     }
-
-    camera->UpdateProjectionMatrix();
 }
 
 } // namespace hyperion::v2
