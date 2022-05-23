@@ -15,7 +15,7 @@ layout(std430, set = 2, binding = 0, row_major) readonly buffer SceneDataBlock {
     vec4 aabb_max;
     vec4 aabb_min;
 
-    vec4 _padding;
+    float global_timer;
 } scene;
 
 struct Light {

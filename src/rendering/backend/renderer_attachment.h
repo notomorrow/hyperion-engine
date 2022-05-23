@@ -6,6 +6,8 @@
 #include "renderer_image_view.h"
 #include "renderer_sampler.h"
 
+#include <types.h>
+
 #include <vulkan/vulkan.h>
 
 #include <optional>
@@ -64,20 +66,19 @@ public:
     inline LoadOperation GetLoadOperation() const { return m_load_operation; }
     inline StoreOperation GetStoreOperation() const { return m_store_operation; }
 
-    inline uint32_t GetBinding() const { return m_binding.value_or(UINT32_MAX); }
-    inline void SetBinding(uint32_t binding) { m_binding = binding; }
-    inline bool HasBinding() const { return m_binding.has_value(); }
+    inline uint GetBinding() const       { return m_binding.value_or(UINT32_MAX); }
+    inline void SetBinding(uint binding) { m_binding = binding; }
+    inline bool HasBinding() const       { return m_binding.has_value(); }
 
     Image::InternalFormat GetFormat() const;
     bool IsDepthAttachment() const;
 
     VkAttachmentDescription GetAttachmentDescription() const;
-    VkAttachmentReference GetAttachmentReference() const;
+    VkAttachmentReference GetHandle() const;
 
     void IncRef() const;
     void DecRef() const;
-
-
+    
     Result Create(Device *device);
     Result Create(
         Device *device,
@@ -86,7 +87,9 @@ public:
         VkImageAspectFlags aspect_flags,
         VkImageViewType view_type,
         size_t num_mipmaps,
-        size_t num_faces);
+        size_t num_faces
+    );
+
     Result Destroy(Device *device);
 
     Result AddAttachmentRef(Device *device, StoreOperation store_operation, AttachmentRef **out = nullptr);
@@ -95,7 +98,7 @@ public:
 
 private:
     struct RefCount {
-        size_t count = 0;
+        uint count = 0;
     };
 
     static VkAttachmentLoadOp ToVkLoadOp(LoadOperation);
@@ -109,12 +112,13 @@ private:
     
     LoadOperation m_load_operation;
     StoreOperation m_store_operation;
-    std::optional<uint32_t> m_binding{};
+    std::optional<uint> m_binding{};
 
     VkImageLayout m_initial_layout, m_final_layout;
 
-    RefCount *m_ref_count = nullptr;
-    bool m_is_created     = false;
+    RefCount *m_ref_count  = nullptr;
+    mutable uint m_owned_ref_count = 0;
+    bool m_is_created      = false;
 };
 
 class Attachment {

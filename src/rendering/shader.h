@@ -13,7 +13,11 @@
 
 #include <math/transform.h>
 
+#include <hash_code.h>
+
 #include <memory>
+#include <utility>
+#include <string>
 
 namespace hyperion::v2 {
 
@@ -76,25 +80,33 @@ private:
     std::vector<SubShader>         m_sub_shaders;
 };
 
-class ShaderManager {
-public:
-    enum class Key {
-        BASIC_FORWARD,
-        BASIC_SKYBOX
-    };
+enum class ShaderKey {
+    BASIC_FORWARD,
+    BASIC_VEGETATION,
+    BASIC_SKYBOX,
+    CUSTOM
+};
 
-    void SetShader(Key key, Ref<Shader> &&shader)
+struct ShaderMapKey {
+    ShaderKey   key;
+    std::string name;
+
+    bool operator==(const ShaderMapKey &other) const
+        { return key == other.key && name == other.name; }
+
+    HashCode GetHashCode() const
     {
-        m_shaders[key] = std::move(shader);
+        HashCode hc;
+        hc.Add(int(key));
+        hc.Add(name);
+
+        return hc;
     }
-
-    Ref<Shader> &GetShader(Key key) { return m_shaders[key]; }
-
-private:
-    std::unordered_map<Key, Ref<Shader>> m_shaders;
 };
 
 } // namespace hyperion::v2
+
+HYP_DEF_STL_HASH(hyperion::v2::ShaderMapKey);
 
 #endif // !HYPERION_V2_SHADER_H
 

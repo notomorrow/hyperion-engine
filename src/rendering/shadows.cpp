@@ -23,7 +23,7 @@ void ShadowEffect::CreateShader(Engine *engine)
 {
     m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
-            SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/shadow_vert.spv")).Read()} },
+            SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read()} },
             SubShader{ ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/shadow_frag.spv")).Read()} }
         }
     ));
@@ -56,7 +56,7 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
             engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
         ),
-        renderer::RenderPassStage::SHADER
+        RenderPassStage::SHADER
     ));
 
     HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
@@ -120,6 +120,21 @@ void ShadowEffect::CreatePipeline(Engine *engine)
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
     for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
+        m_observers.push_back(pipeline->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
+            [this](Ref<Spatial> *items, size_t count) {
+                for (size_t i = 0; i < count; i++) {
+                    m_pipeline->AddSpatial(items[i].IncRef());
+                }
+            },
+            [this](Ref<Spatial> *items, size_t count) {
+                for (size_t i = 0; i < count; i++) {
+                    m_pipeline->RemoveSpatial(items[i]->GetId());
+                }
+            }
+        )));
+    }
+    
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).graphics_pipelines) {
         m_observers.push_back(pipeline->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
             [this](Ref<Spatial> *items, size_t count) {
                 for (size_t i = 0; i < count; i++) {

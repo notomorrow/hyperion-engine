@@ -3,14 +3,6 @@
 namespace hyperion {
 namespace renderer {
 
-AttachmentRef::~AttachmentRef()
-{
-    AssertThrowMsg(
-        !m_is_created,
-        "Expected render pass attachment reference to not be in `created` state on destructor call"
-    );
-}
-
 AttachmentRef::AttachmentRef(
     Attachment *attachment,
     LoadOperation load_operation,
@@ -38,8 +30,23 @@ AttachmentRef::AttachmentRef(
     m_initial_layout(attachment->GetInitialLayout()),
     m_final_layout(attachment->GetFinalLayout()),
     m_image_view(std::move(image_view)),
-    m_sampler(std::move(sampler))
+    m_sampler(std::move(sampler)),
+    m_owned_ref_count(0)
 {
+}
+
+AttachmentRef::~AttachmentRef()
+{
+    AssertThrowMsg(
+        m_owned_ref_count == 0,
+        "Expected attachment ref to no longer be holding any ref but value is %lu",
+        m_owned_ref_count
+    );
+
+    AssertThrowMsg(
+        !m_is_created,
+        "Expected render pass attachment reference to not be in `created` state on destructor call"
+    );
 }
 
 VkAttachmentLoadOp AttachmentRef::ToVkLoadOp(LoadOperation load_operation)
@@ -110,16 +117,15 @@ VkAttachmentDescription AttachmentRef::GetAttachmentDescription() const
         .storeOp        = ToVkStoreOp(m_store_operation),
         .stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        /* TODO: Image should hold initial and final layouts */
         .initialLayout  = m_initial_layout,
         .finalLayout    = m_final_layout
     };
 }
 
-VkAttachmentReference AttachmentRef::GetAttachmentReference() const
+VkAttachmentReference AttachmentRef::GetHandle() const
 {
     if (!HasBinding()) {
-        DebugLog(LogType::Warn, "Calling GetAttachmentReference() without a binding set on attachment ref -- binding will be set to %ul\n", GetBinding());
+        DebugLog(LogType::Warn, "Calling GetHandle() without a binding set on attachment ref -- binding will be set to %ul\n", GetBinding());
     }
 
     return VkAttachmentReference{
@@ -133,14 +139,17 @@ void AttachmentRef::IncRef() const
     AssertThrow(m_ref_count != nullptr);
 
     ++m_ref_count->count;
+    ++m_owned_ref_count;
 }
 
 void AttachmentRef::DecRef() const
 {
+    AssertThrow(m_owned_ref_count != 0);
     AssertThrow(m_ref_count != nullptr);
     AssertThrow(m_ref_count->count != 0);
 
     --m_ref_count->count;
+    --m_owned_ref_count;
 }
 
 Result AttachmentRef::Create(Device *device)
@@ -163,7 +172,8 @@ Result AttachmentRef::Create(
     VkImageAspectFlags aspect_flags,
     VkImageViewType view_type,
     size_t num_mipmaps,
-    size_t num_faces)
+    size_t num_faces
+)
 {
     AssertThrow(!m_is_created);
     
@@ -229,8 +239,9 @@ Attachment::~Attachment()
 
         AssertThrowMsg(
             m_ref_counts[i]->count == 0,
-            "Expected ref count at %llu to be zero after decrement -- object still in use somewhere else.",
-            i
+            "Expected ref count at %llu to be zero after decrement but was %lu -- object still in use somewhere else.",
+            i,
+            m_ref_counts[i]->count
         );
     }
 }

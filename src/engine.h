@@ -8,6 +8,7 @@
 #include <rendering/deferred.h>
 #include <rendering/shadows.h>
 #include <rendering/resources.h>
+#include <rendering/shader_manager.h>
 #include <scene/octree.h>
 
 #include "game_thread.h"

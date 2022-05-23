@@ -3,20 +3,19 @@
 #extension GL_EXT_scalar_block_layout     : require
 #extension GL_EXT_nonuniform_qualifier : enable
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
-layout(location=6) in vec3 v_light_direction;
-layout(location=7) in vec3 v_camera_position;
 
-#include "include/scene.inc"
+layout(set = 6, binding = 0) uniform sampler2D textures[];
+
+#include "include/material.inc"
 
 void main()
 {
-    mat4 v = scene.view;
-    mat4 p = scene.projection;
-    mat4 vp = p * v;
-    mat4 v2 = shadow_data.matrices[0].view;
-    mat4 p2 = shadow_data.matrices[0].projection;
-    mat4 vp2 = p2 * v2;
+    if (HasMaterialTexture(MATERIAL_TEXTURE_ALBEDO_map)) {
+        vec4 albedo_texture = texture(textures[material.texture_index[MATERIAL_TEXTURE_ALBEDO_map]], v_texcoord0);
+        
+        if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
+            discard;
+        }
+    }
 }

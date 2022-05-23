@@ -31,12 +31,15 @@ public:
 
         inline void AddGraphicsPipeline(Ref<GraphicsPipeline> &&graphics_pipeline)
         {
+            AddFramebuffersToPipeline(graphics_pipeline);
+
             graphics_pipeline.Init();
 
             graphics_pipelines.push_back(std::move(graphics_pipeline));
         }
 
-        void AddFramebuffersToPipelines(Engine *engine);
+        void AddFramebuffersToPipelines();
+        void AddFramebuffersToPipeline(Ref<GraphicsPipeline> &pipeline);
         void CreateRenderPass(Engine *engine);
         void CreateFramebuffers(Engine *engine);
         void Destroy(Engine *engine);

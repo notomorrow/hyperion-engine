@@ -80,13 +80,13 @@ Result RenderPass::Create(Device *device)
     std::vector<VkAttachmentReference> color_attachment_refs;
 
     VkSubpassDescription subpass_description{};
-    subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass_description.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass_description.pDepthStencilAttachment = nullptr;
     
     uint32_t next_binding = 0;
 
     for (auto *attachment_ref : m_render_pass_attachment_refs) {
-        if (!attachment_ref->HasBinding()) {
+        if (!attachment_ref->HasBinding()) { // no binding has manually been set so we make one
             attachment_ref->SetBinding(next_binding);
         }
 
@@ -95,14 +95,14 @@ Result RenderPass::Create(Device *device)
         attachment_descriptions.push_back(attachment_ref->GetAttachmentDescription());
 
         if (attachment_ref->IsDepthAttachment()) {
-            depth_attachment_ref = attachment_ref->GetAttachmentReference();
+            depth_attachment_ref = attachment_ref->GetHandle();
             subpass_description.pDepthStencilAttachment = &depth_attachment_ref;
 
             m_clear_values.push_back(VkClearValue{
                 .depthStencil = {1.0f, 0}
             });
         } else {
-            color_attachment_refs.push_back(attachment_ref->GetAttachmentReference());
+            color_attachment_refs.push_back(attachment_ref->GetHandle());
 
             m_clear_values.push_back(VkClearValue{
                 .color = {
@@ -139,6 +139,8 @@ Result RenderPass::Destroy(Device *device)
     for (const auto *attachment_ref : m_render_pass_attachment_refs) {
         attachment_ref->DecRef();
     }
+
+    m_render_pass_attachment_refs.clear();
 
     return result;
 }

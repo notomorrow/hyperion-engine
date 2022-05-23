@@ -46,6 +46,23 @@ GraphicsPipeline::~GraphicsPipeline()
     Teardown();
 }
 
+void GraphicsPipeline::RemoveFramebuffer(Framebuffer::ID id)
+{
+    const auto it = std::find_if(
+        m_fbos.begin(),
+        m_fbos.end(),
+        [&](const auto &item) {
+            return item->GetId() == id;
+        }
+    );
+
+    if (it == m_fbos.end()) {
+        return;
+    }
+
+    m_fbos.erase(it);
+}
+
 void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
 {
     AssertThrow(spatial != nullptr);
@@ -169,13 +186,15 @@ void GraphicsPipeline::Init(Engine *engine)
     EngineComponentBase::Init();
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](Engine *engine) {
-        AssertThrow(m_shader != nullptr);
-        m_shader.Init();
+        AssertThrow(!m_fbos.empty());
 
         for (auto &fbo : m_fbos) {
             AssertThrow(fbo != nullptr);
             fbo.Init();
         }
+
+        AssertThrow(m_shader != nullptr);
+        m_shader.Init();
 
         engine->render_scheduler.Enqueue([this, engine](...) {
             renderer::GraphicsPipeline::ConstructionInfo construction_info{

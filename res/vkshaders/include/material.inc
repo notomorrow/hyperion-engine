@@ -56,6 +56,8 @@ layout(std430, set = 3, binding = 0) readonly buffer MaterialBuffer {
 #define MATERIAL_TEXTURE_BITANGENT_MAP 12
 #define MATERIAL_TEXTURE_DEPTH_MAP     13
 
+#define MATERIAL_ALPHA_DISCARD         0.2
+
 bool HasMaterialTexture(uint index)
 {
     return bool(material.texture_usage & (1 << index));

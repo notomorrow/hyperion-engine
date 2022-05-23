@@ -82,7 +82,7 @@ private:
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
     
-    void AddToDefaultPipeline(Engine *engine);
+    void AddToPipeline(Engine *engine);
     void AddToPipeline(Engine *engine, GraphicsPipeline *pipeline);
     void RemoveFromPipelines(Engine *engine);
     void RemoveFromPipeline(Engine *engine, GraphicsPipeline *pipeline);

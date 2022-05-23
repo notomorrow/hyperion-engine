@@ -51,7 +51,7 @@ void Spatial::Init(Engine *engine)
             m_mesh.Init();
 
             if (m_primary_pipeline.pipeline == nullptr) {
-                AddToDefaultPipeline(engine);
+                AddToPipeline(engine);
             }
         }
 
@@ -94,7 +94,7 @@ void Spatial::Update(Engine *engine)
             RemoveFromPipeline(engine, m_primary_pipeline.pipeline);
         }
 
-        AddToDefaultPipeline(engine);
+        AddToPipeline(engine);
     }
 
     if (m_shader_data_state.IsDirty()) {
@@ -239,13 +239,16 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
     }
 }
 
-void Spatial::AddToDefaultPipeline(Engine *engine)
+void Spatial::AddToPipeline(Engine *engine)
 {
     if (const auto pipeline = engine->FindOrCreateGraphicsPipeline(m_shader.IncRef(), m_mesh->GetVertexAttributes(), m_bucket)) {
         AddToPipeline(engine, pipeline.ptr);
 
         if (!m_pipelines.empty()) {
-            m_primary_pipeline = {.pipeline = m_pipelines.front(), .changed = false};
+            m_primary_pipeline = {
+                .pipeline = m_pipelines.front(),
+                .changed = false
+            };
         }
     } else {
         DebugLog(
