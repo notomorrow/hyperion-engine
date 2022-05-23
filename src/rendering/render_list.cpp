@@ -16,7 +16,7 @@ RenderListContainer::RenderListContainer()
 void RenderListContainer::AddFramebuffersToPipelines(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
-        bucket.AddFramebuffersToPipelines(engine);
+        bucket.AddFramebuffersToPipelines();
     }
 }
 
@@ -35,12 +35,17 @@ void RenderListContainer::Destroy(Engine *engine)
     }
 }
 
-void RenderListContainer::RenderListBucket::AddFramebuffersToPipelines(Engine *engine)
+void RenderListContainer::RenderListBucket::AddFramebuffersToPipelines()
 {
     for (auto &pipeline : graphics_pipelines) {
-        for (auto &framebuffer : framebuffers) {
-            pipeline->AddFramebuffer(framebuffer.IncRef());
-        }
+        AddFramebuffersToPipeline(pipeline);
+    }
+}
+
+void RenderListContainer::RenderListBucket::AddFramebuffersToPipeline(Ref<GraphicsPipeline> &pipeline)
+{
+    for (auto &framebuffer : framebuffers) {
+        pipeline->AddFramebuffer(framebuffer.IncRef());
     }
 }
 

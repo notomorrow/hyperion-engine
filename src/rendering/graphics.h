@@ -46,43 +46,31 @@ public:
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();
 
-    inline renderer::GraphicsPipeline *GetPipeline() const { return m_pipeline.get(); }
-    inline Shader *GetShader() const                       { return m_shader.ptr; }
-    inline RenderPass *GetRenderPassID() const             { return m_render_pass.ptr; }
-    inline Bucket GetBucket() const                        { return m_bucket; }
+    renderer::GraphicsPipeline *GetPipeline() const       { return m_pipeline.get(); }
+    Shader *GetShader() const                             { return m_shader.ptr; }
+    RenderPass *GetRenderPassID() const                   { return m_render_pass.ptr; }
+    Bucket GetBucket() const                              { return m_bucket; }
 
-    inline VertexAttributeSet &GetVertexAttributes() { return m_vertex_attributes; }
-    inline const VertexAttributeSet &GetVertexAttributes() const { return m_vertex_attributes; }
+    VertexAttributeSet &GetVertexAttributes()             { return m_vertex_attributes; }
+    const VertexAttributeSet &GetVertexAttributes() const { return m_vertex_attributes; }
 
-    inline Topology GetTopology() const
-        { return m_topology; }
-    inline void SetTopology(Topology topology)
-        { m_topology = topology; }
+    Topology GetTopology() const                          { return m_topology; }
+    void SetTopology(Topology topology)                   { m_topology = topology; }
 
-    inline auto GetFillMode() const
-        { return m_fill_mode; }
-    inline void SetFillMode(FillMode fill_mode)
-        { m_fill_mode = fill_mode; }
+    auto GetFillMode() const                              { return m_fill_mode; }
+    void SetFillMode(FillMode fill_mode)                  { m_fill_mode = fill_mode; }
 
-    inline auto GetCullMode() const
-        { return m_cull_mode; }
-    inline void SetFaceCullMode(FaceCullMode cull_mode)
-        { m_cull_mode = cull_mode; }
+    auto GetCullMode() const                              { return m_cull_mode; }
+    void SetFaceCullMode(FaceCullMode cull_mode)          { m_cull_mode = cull_mode; }
 
-    inline bool GetDepthTest() const
-        { return m_depth_test; }
-    inline void SetDepthTest(bool depth_test)
-        { m_depth_test = depth_test; }
+    bool GetDepthTest() const                             { return m_depth_test; }
+    void SetDepthTest(bool depth_test)                    { m_depth_test = depth_test; }
 
-    inline bool GetDepthWrite() const
-        { return m_depth_write; }
-    inline void SetDepthWrite(bool depth_write)
-        { m_depth_write = depth_write; }
+    bool GetDepthWrite() const                            { return m_depth_write; }
+    void SetDepthWrite(bool depth_write)                  { m_depth_write = depth_write; }
 
-    inline bool GetBlendEnabled() const
-        { return m_blend_enabled; }
-    inline void SetBlendEnabled(bool blend_enabled)
-        { m_blend_enabled = blend_enabled; }
+    bool GetBlendEnabled() const                          { return m_blend_enabled; }
+    void SetBlendEnabled(bool blend_enabled)              { m_blend_enabled = blend_enabled; }
 
     void AddSpatial(Ref<Spatial> &&spatial);
     void RemoveSpatial(Spatial::ID id);
@@ -91,13 +79,11 @@ public:
     ObserverNotifier<Ref<Spatial>> &GetSpatialNotifier()             { return m_spatial_notifier; }
     const ObserverNotifier<Ref<Spatial>> &GetSpatialNotifier() const { return m_spatial_notifier; }
 
-    /* Non-owned objects - owned by `engine`, used by the pipeline */
+    void AddFramebuffer(Ref<Framebuffer> &&fbo) { m_fbos.push_back(std::move(fbo)); }
+    void RemoveFramebuffer(Framebuffer::ID id);
 
-    inline void AddFramebuffer(Ref<Framebuffer> &&fbo)
-        { m_fbos.push_back(std::move(fbo)); }
-
-    inline auto &GetFramebuffers()             { return m_fbos; } 
-    inline const auto &GetFramebuffers() const { return m_fbos; }
+    auto &GetFramebuffers()             { return m_fbos; } 
+    const auto &GetFramebuffers() const { return m_fbos; }
     
     /* Build pipeline */
     void Init(Engine *engine);

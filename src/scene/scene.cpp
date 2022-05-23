@@ -54,6 +54,8 @@ void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
 {
     AssertReady();
 
+    m_environment->Update(engine, delta);
+
     if (m_camera != nullptr) {
         m_camera->Update(delta);
 
@@ -63,9 +65,9 @@ void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
         }
     }
 
-    if (m_shader_data_state.IsDirty()) {
+    //if (m_shader_data_state.IsDirty()) {
         EnqueueRenderUpdates(engine);
-    }
+    //}
 
     m_root_node->Update(engine, delta);
 }
@@ -81,9 +83,11 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
         int         width;
         int         height;
         Vector3     light_direction;
+        float       global_timer;
     } params = {
-        .aabb        = m_aabb,
-        .light_direction = Vector3(-0.5f, 0.5f, 0.0f).Normalize()
+        .aabb            = m_aabb,
+        .light_direction = Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
+        .global_timer    = m_environment->GetGlobalTimer()
     };
 
     if (m_camera != nullptr) {
@@ -105,7 +109,8 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
             .resolution_x     = static_cast<uint32_t>(params.width),
             .resolution_y     = static_cast<uint32_t>(params.height),
             .aabb_max         = params.aabb.max.ToVector4(),
-            .aabb_min         = params.aabb.min.ToVector4()
+            .aabb_min         = params.aabb.min.ToVector4(),
+            .global_timer     = params.global_timer
         };
 
         shader_data.environment_texture_usage = 0;

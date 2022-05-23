@@ -62,15 +62,15 @@ protected:
         explicit constexpr operator ValueType() const { return value; }
         explicit constexpr operator bool() const      { return bool(value); }
 
-        inline constexpr ValueType Value() const { return value; }
+        constexpr ValueType Value() const { return value; }
 
-        inline constexpr bool operator==(const IdWrapper &other) const
+        constexpr bool operator==(const IdWrapper &other) const
             { return value == other.value; }
 
-        inline constexpr bool operator!=(const IdWrapper &other) const
+        constexpr bool operator!=(const IdWrapper &other) const
             { return value != other.value; }
 
-        inline constexpr bool operator<(const IdWrapper &other) const
+        constexpr bool operator<(const IdWrapper &other) const
             { return value < other.value; }
 
         HashCode GetHashCode() const
@@ -113,9 +113,7 @@ public:
     }
 
     /* To be called from ObjectHolder<Type> */
-    void SetId(const ID &id)
-        { m_id = id; }
-
+    void SetId(const ID &id)  { m_id = id; }
     bool IsInitCalled() const { return m_init_called; }
 
     /*! \brief Just a function to store that Init() has been called from a derived class

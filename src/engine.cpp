@@ -431,7 +431,7 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
     }
 
     if (found_pipeline != nullptr) {
-        return std::move(found_pipeline);
+        return found_pipeline;
     }
 
     // create a pipeline with the given params

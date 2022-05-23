@@ -39,13 +39,19 @@ public:
     void AddShadowRenderer(Engine *engine, std::unique_ptr<ShadowRenderer> &&shadow_renderer);
     void RemoveShadowRenderer(Engine *engine, size_t index);
 
+    float GetGlobalTimer() const { return m_global_timer; }
+
     void Init(Engine *engine);
-    void UpdateShadows(Engine *engine, GameCounter::TickUnit delta);
+    void Update(Engine *engine, GameCounter::TickUnit delta);
     void RenderShadows(Engine *engine, Frame *frame);
 
 private:
+    void UpdateShadows(Engine *engine, GameCounter::TickUnit delta);
+
     std::vector<Ref<Light>>                      m_lights;
     std::vector<ShadowRendererPtr>               m_shadow_renderers;
+
+    float                                        m_global_timer;
 };
 
 } // namespace hyperion::v2

@@ -74,7 +74,7 @@ void main()
     if (HasMaterialTexture(MATERIAL_TEXTURE_ALBEDO_map)) {
         vec4 albedo_texture = texture(textures[material.texture_index[MATERIAL_TEXTURE_ALBEDO_map]], texcoord);
         
-        if (albedo_texture.a < 0.2) {
+        if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
             discard;
         }
         

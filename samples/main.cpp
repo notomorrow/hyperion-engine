@@ -85,13 +85,21 @@ public:
             "models/ogrexml/dragger_Body.mesh.xml",
             "models/street/street.obj", //"sponza/sponza.obj", //"living_room/living_room.obj",
             "models/cube.obj",
-            "models/material_sphere/material_sphere.obj"
+            "models/material_sphere/material_sphere.obj",
+            "models/grass/grass.obj"
         );
 
         zombie = std::move(loaded_assets[0]);
         test_model = std::move(loaded_assets[1]);
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
+        
+        auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
+        grass->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
+        grass->GetChild(0)->GetSpatial()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
+        grass->Scale(1.0f);
+        grass->Translate({0, 1, 0});
+
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         
@@ -154,7 +162,7 @@ public:
         cubemap.Init();
 
         zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
-        zombie->Scale(0.1f);
+        zombie->Scale(0.25f);
         zombie->Translate({0, 0, -5});
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -202,7 +210,7 @@ public:
         auto *skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetBucket(v2::Bucket::BUCKET_SKYBOX);
-        skybox_spatial->SetShader(engine->shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef());
+        skybox_spatial->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef());
 
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
 
@@ -235,9 +243,6 @@ public:
     {
         timer += delta;
         ++counter;
-
-        scene->GetEnvironment()->UpdateShadows(engine, delta);
-
         scene->Update(engine, delta);
     
         test_model->Update(engine, delta);
@@ -351,9 +356,29 @@ int main()
 #endif
 
     engine.PrepareSwapchain();
-    
+
     engine.shader_manager.SetShader(
-        v2::ShaderManager::Key::BASIC_FORWARD,
+        v2::ShaderKey::BASIC_VEGETATION,
+        engine.resources.shaders.Add(std::make_unique<v2::Shader>(
+            std::vector<v2::SubShader>{
+                {
+                    ShaderModule::Type::VERTEX, {
+                        FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/vegetation.vert.spv")).Read(),
+                        {.name = "vegetation vert"}
+                    }
+                },
+                {
+                    ShaderModule::Type::FRAGMENT, {
+                        FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
+                        {.name = "forward frag"}
+                    }
+                }
+            }
+        ))
+    );
+
+    engine.shader_manager.SetShader(
+        v2::ShaderKey::BASIC_FORWARD,
         engine.resources.shaders.Add(std::make_unique<v2::Shader>(
             std::vector<v2::SubShader>{
                 {

@@ -153,6 +153,10 @@ void FullScreenPass::Destroy(Engine *engine)
 {
     AssertThrow(m_frame_data != nullptr);
 
+    if (m_pipeline != nullptr && m_framebuffer != nullptr) {
+        m_pipeline->RemoveFramebuffer(m_framebuffer->GetId());
+    }
+
     m_render_pass = nullptr;
     m_framebuffer = nullptr;
     m_pipeline    = nullptr;

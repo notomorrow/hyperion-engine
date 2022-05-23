@@ -115,8 +115,8 @@ Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_
 {
     m_construction_info = std::move(construction_info);
 
-    AssertExit(m_construction_info.shader != nullptr);
-    AssertExit(!m_construction_info.fbos.empty());
+    AssertThrow(m_construction_info.shader != nullptr);
+    AssertThrow(!m_construction_info.fbos.empty());
 
     const uint32_t width = m_construction_info.fbos[0]->GetWidth();
     const uint32_t height = m_construction_info.fbos[0]->GetHeight();
@@ -232,12 +232,12 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     rasterizer.depthBiasEnable = VK_FALSE;
 
     VkPipelineMultisampleStateCreateInfo multisampling{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-    multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    multisampling.minSampleShading = 1.0f;
-    multisampling.pSampleMask = nullptr;
+    multisampling.sampleShadingEnable   = VK_FALSE;
+    multisampling.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
+    multisampling.minSampleShading      = 1.0f;
+    multisampling.pSampleMask           = nullptr;
     multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
-    multisampling.alphaToOneEnable = VK_FALSE; // Optional
+    multisampling.alphaToOneEnable      = VK_FALSE; // Optional
 
     /* TODO: enable multisampling and the GPU feature required for it.  */
     std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;

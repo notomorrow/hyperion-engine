@@ -6,7 +6,8 @@
 namespace hyperion::v2 {
 
 Environment::Environment()
-    : EngineComponentBase()
+    : EngineComponentBase(),
+      m_global_timer(0.0f)
 {
 }
 
@@ -80,10 +81,17 @@ void Environment::RemoveShadowRenderer(Engine *engine, size_t index)
     m_shadow_renderers.erase(m_shadow_renderers.begin() + index);
 }
 
-void Environment::UpdateShadows(Engine *engine, GameCounter::TickUnit delta)
+void Environment::Update(Engine *engine, GameCounter::TickUnit delta)
 {
     AssertReady();
 
+    m_global_timer += delta;
+
+    UpdateShadows(engine, delta);
+}
+
+void Environment::UpdateShadows(Engine *engine, GameCounter::TickUnit delta)
+{
     /* TODO: have observer on octrees, only update shadow renderers
      * who's lights have had objects move within their octant
      */
