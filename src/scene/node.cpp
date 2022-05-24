@@ -39,7 +39,8 @@ Node::Node(
     const Transform &local_transform
 ) : m_type(type),
     m_parent_node(nullptr),
-    m_local_transform(local_transform)
+    m_local_transform(local_transform),
+    m_scene(nullptr)
 {
     SetSpatial(std::move(spatial));
 
@@ -64,6 +65,19 @@ void Node::SetTag(const char *tag)
     const size_t len = std::strlen(tag);
     m_tag = new char[len + 1];
     std::strcpy(m_tag, tag);
+}
+
+void Node::SetScene(Scene *scene)
+{
+    m_scene = scene;
+
+    for (auto &child : m_child_nodes) {
+        if (child == nullptr) {
+            continue;
+        }
+
+        child->SetScene(scene);
+    }
 }
 
 void Node::OnNestedNodeAdded(Node *node)
@@ -125,6 +139,7 @@ Node *Node::AddChild(std::unique_ptr<Node> &&node)
     AssertThrow(node->m_parent_node == nullptr);
 
     node->m_parent_node = this;
+    node->SetScene(m_scene);
 
     OnNestedNodeAdded(node.get());
 
@@ -153,6 +168,7 @@ bool Node::RemoveChild(NodeList::iterator iter)
         OnNestedNodeRemoved(node);
 
         node->m_parent_node = nullptr;
+        node->SetScene(nullptr);
     }
 
     m_child_nodes.erase(iter);

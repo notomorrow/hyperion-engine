@@ -16,6 +16,7 @@
 #include <rendering/probe_system.h>
 #include <scene/controllers/audio_controller.h>
 #include <scene/controllers/animation_controller.h>
+#include <scene/controllers/paging/basic_paging_controller.h>
 #include <game_thread.h>
 #include <game.h>
 
@@ -83,7 +84,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/street/street.obj", //"sponza/sponza.obj", //"living_room/living_room.obj",
+            "models/sponza/sponza.obj", //"living_room/living_room.obj",
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -186,7 +187,7 @@ public:
         ));
 
         //test_model->Translate({0, 0, 5});
-        //test_model->Scale(0.025f);
+        test_model->Scale(0.05f);
         //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         
         tex1 = engine->resources.textures.Add(
@@ -218,6 +219,8 @@ public:
 
         //zombie->AddController<AudioController>(engine->assets.Load<AudioSource>("sounds/taunt.wav"));
         //zombie->GetController<AudioController>()->Play(1.0f, LoopMode::ONCE);
+
+        scene->GetRootNode()->AddController<BasicPagingController>(Extent3D{8, 8, 8}, Vector3::One());
     }
 
     virtual void Teardown(Engine *engine) override

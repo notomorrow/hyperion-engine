@@ -66,10 +66,10 @@ float GetShadow(int index, vec3 pos, vec2 offset, float NdotL)
 float GetShadowFiltered(int index, vec3 pos, float NdotL)
 {
     ivec2 dim = textureSize(shadow_maps[index], 0);
-    float scale = 1.05;
+    float scale = 1.15;
     
-    float dx = 0.0005;//scale * (1.0 / float(dim.x));
-    float dy = 0.0005;//scale * (1.0 / float(dim.y));
+    float dx = scale * (1.0 / float(dim.x));
+    float dy = scale * (1.0 / float(dim.y));
 
     float shadow = 0.0;
 
@@ -85,7 +85,19 @@ float GetShadowFiltered(int index, vec3 pos, float NdotL)
     shadow += GetShadow(index, pos, vec2(dx * 1.0, dy * 0.0), NdotL);
     shadow += GetShadow(index, pos, vec2(dx * 1.0, dy * 1.0), NdotL);
 
-    shadow /= 9.0;
+
+    shadow += GetShadow(index, pos, vec2(dx * -1.15, dy * -1.15), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * -1.15, dy * 0.0), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * -1.15, dy * 1.15), NdotL);
+
+    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * -1.15), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * 1.15), NdotL);
+
+    shadow += GetShadow(index, pos, vec2(dx * 1.15, dy * -1.15), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * 1.15, dy * 0.0), NdotL);
+    shadow += GetShadow(index, pos, vec2(dx * 1.15, dy * 1.15), NdotL);
+
+    shadow /= 17.0;
     
     return shadow;
 }
@@ -237,15 +249,13 @@ void main()
         reflections = vct_specular;
 #endif
 
-        irradiance *= IRRADIANCE_MULTIPLIER;
-
         vec3 light_color = vec3(1.0);
         
         // ibl
         //vec3 dfg =  AB;// mix(vec3(AB.x), vec3(AB.y), vec3(1.0) - F0);
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
         vec3 radiance = dfg * ibl * specular_ao;
-        result = (diffuse_color * irradiance * (1.0 - dfg) * ao) + radiance;
+        result = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao) + radiance;
         result *= exposure * IBL_INTENSITY;
 
         result = (result * (1.0 - reflections.a)) + (dfg * reflections.rgb);
@@ -268,6 +278,7 @@ void main()
         //float micro_shadow_sqr = micro_shadow * micro_shadow;
 
         result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao * shadow);
+    
     } else {
         result = albedo.rgb;
     }

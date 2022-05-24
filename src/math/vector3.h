@@ -10,6 +10,8 @@
 #include "../hash_code.h"
 #include "../util.h"
 
+#include <util/defines.h>
+
 namespace hyperion {
 
 class Quaternion;
@@ -111,5 +113,7 @@ public:
 static_assert(sizeof(Vector3) == sizeof(float) * 3, "sizeof(Vector3) must be equal to sizeof(float) * 3");
 
 } // namespace hyperion
+
+HYP_DEF_STL_HASH(hyperion::Vector3);
 
 #endif
