@@ -8,7 +8,7 @@ Kd 1.0 1.0 1.0
 Ks 0.500000 0.500000 0.500000
 Ni 1.000000
 d 1.000000
-map_kD gold-scuffed-Unreal-Engine/gold-scuffed_basecolor-boosted.png
+map_kD gold-scuffed-Unreal-Engine/gold-scuffed_basecolor.png
 map_bump gold-scuffed-Unreal-Engine/gold-scuffed_normal.png
 map_kS gold-scuffed-Unreal-Engine/gold-scuffed_metallic.png
 map_nS gold-scuffed-Unreal-Engine/gold-scuffed_roughness.png

@@ -14,8 +14,10 @@
 namespace hyperion::v2 {
 
 class Engine;
+class Scene;
 
 class Node {
+    friend class Scene;
 public:
     using NodeList = std::vector<std::unique_ptr<Node>>;
 
@@ -56,6 +58,8 @@ public:
     Type GetType() const { return m_type; }
     /*! @returns A pointer to the parent Node of this Node. May be null. */
     Node *GetParent() const { return m_parent_node; }
+    /*! @returns A pointer to the Scene this Node and its children are attached to. May be null. */
+    Scene *GetScene() const { return m_scene; }
 
     Spatial *GetSpatial() const { return m_spatial.ptr; }
     void SetSpatial(Ref<Spatial> &&spatial);
@@ -278,6 +282,8 @@ protected:
         const Transform &local_transform = Transform()
     );
 
+    void SetScene(Scene *scene);
+
     void UpdateInternal(Engine *engine, GameCounter::TickUnit delta);
     void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
     void OnNestedNodeAdded(Node *node);
@@ -295,6 +301,8 @@ protected:
     Ref<Spatial> m_spatial;
 
     std::vector<Node *> m_descendents;
+
+    Scene *m_scene;
 
     ControllerSet m_controllers;
 };

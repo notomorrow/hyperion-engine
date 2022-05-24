@@ -3,6 +3,8 @@
 #include "../hash_code.h"
 #include "../util.h"
 
+#include <util/defines.h>
+
 #include <cmath>
 #include <iostream>
 
@@ -105,5 +107,7 @@ public:
 static_assert(sizeof(Vector4) == sizeof(float) * 4, "sizeof(Vector4) must be equal to sizeof(float) * 4");
 
 } // namespace hyperion
+
+HYP_DEF_STL_HASH(hyperion::Vector4);
 
 #endif

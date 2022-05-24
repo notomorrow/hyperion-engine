@@ -11,10 +11,13 @@ Scene::Scene(std::unique_ptr<Camera> &&camera)
       m_environment(new Environment),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
+    m_root_node->SetScene(this);
 }
 
 Scene::~Scene()
 {
+    m_root_node->SetScene(nullptr);
+
     Teardown();
 
     delete m_environment;

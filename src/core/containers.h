@@ -805,11 +805,11 @@ public:
         operator T const * () const    { return ptr; }
         explicit operator bool() const { return Valid(); }
 
-        T *operator->()             { return ptr; }
-        const T *operator->() const { return ptr; }
+        T *operator->()                { return ptr; }
+        const T *operator->() const    { return ptr; }
 
-        T &operator*()              { return *ptr; }
-        const T &operator*() const  { return *ptr; }
+        T &operator*()                 { return *ptr; }
+        const T &operator*() const     { return *ptr; }
         
         bool operator==(std::nullptr_t) const
             { return ptr == nullptr; }
@@ -941,7 +941,6 @@ public:
         //std::lock_guard guard(m_mutex);
 
         T *ptr = m_holder.Add(std::move(object));
-        DebugLog(LogType::Debug, "Set at %s    #%lu\n", typeid(*this).name(), ptr->GetId().value);
         m_ref_map[ptr->GetId()].count = 1;
         
         return Ref(ptr, this);

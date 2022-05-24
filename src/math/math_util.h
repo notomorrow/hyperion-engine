@@ -159,24 +159,24 @@ public:
         { return IntegralType(T(0) < value) - IntegralType(value < T(0)); }
 
     template <typename T, typename IntegralType = int>
-    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Floor(T a)
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Floor(const T &a)
     {
         T result{}; /* doesn't need initialization but gets rid of annoying warnings */
 
         for (int i = 0; i < std::size(result.values); i++) {
-            result.values[i] = Floor<decltype(T::values[0]), IntegralType>(a.values[i]);
+            result.values[i] = Floor<std::decay_t<decltype(T::values[0])>, IntegralType>(a.values[i]);
         }
 
         return result;
     }
 
     template <typename T, typename IntegralType = int>
-    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Ceil(T a)
+    static HYP_ENABLE_IF(is_math_vector_v<T>, T) Ceil(const T &a)
     {
         T result{}; /* doesn't need initialization but gets rid of annoying warnings */
 
         for (int i = 0; i < std::size(result.values); i++) {
-            result.values[i] = Ceil<decltype(T::values[0]), IntegralType>(a.values[i]);
+            result.values[i] = Ceil<std::decay_t<decltype(T::values[0])>, IntegralType>(a.values[i]);
         }
 
         return result;
