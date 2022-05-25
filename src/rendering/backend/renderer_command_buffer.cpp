@@ -62,7 +62,7 @@ Result CommandBuffer::Begin(Device *device, const RenderPass *render_pass)
 
     if (m_type == COMMAND_BUFFER_SECONDARY) {
         AssertThrowMsg(render_pass != nullptr, "Render pass not provided for secondary command buffer!");
-        inheritance_info.renderPass = render_pass->GetRenderPass();
+        inheritance_info.renderPass = render_pass->GetHandle();
 
         begin_info.pInheritanceInfo = &inheritance_info;
         begin_info.flags |= VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;

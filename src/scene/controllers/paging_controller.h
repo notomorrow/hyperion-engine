@@ -26,7 +26,7 @@ enum class PageState {
 class PagingController : public Controller {
     static constexpr GameCounter::TickUnit update_max{1.0f};
     static constexpr GameCounter::TickUnit queue_max{1.0f};
-    static constexpr GameCounter::TickUnit patch_unload_time{0.0f};
+    static constexpr GameCounter::TickUnit patch_unload_time{2.0f};
     static constexpr float                 max_distance{1.0f};
 
     using Coord = Vector2;

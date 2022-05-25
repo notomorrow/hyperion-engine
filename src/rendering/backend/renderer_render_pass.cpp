@@ -8,13 +8,13 @@ namespace renderer {
 RenderPass::RenderPass(RenderPassStage stage, Mode mode)
     : m_stage(stage),
       m_mode(mode),
-      m_render_pass{}
+      m_handle(VK_NULL_HANDLE)
 {
 }
 
 RenderPass::~RenderPass()
 {
-    AssertThrowMsg(m_render_pass == nullptr, "render pass should have been destroyed");
+    AssertThrowMsg(m_handle == VK_NULL_HANDLE, "handle should have been destroyed");
 }
 
 void RenderPass::CreateDependencies()
@@ -124,7 +124,7 @@ Result RenderPass::Create(Device *device)
     render_pass_info.dependencyCount = uint32_t(m_dependencies.size());
     render_pass_info.pDependencies   = m_dependencies.data();
 
-    HYPERION_VK_CHECK(vkCreateRenderPass(device->GetDevice(), &render_pass_info, nullptr, &m_render_pass));
+    HYPERION_VK_CHECK(vkCreateRenderPass(device->GetDevice(), &render_pass_info, nullptr, &m_handle));
 
     HYPERION_RETURN_OK;
 }
@@ -133,11 +133,11 @@ Result RenderPass::Destroy(Device *device)
 {
     auto result = Result::OK;
 
-    vkDestroyRenderPass(device->GetDevice(), m_render_pass, nullptr);
-    m_render_pass = nullptr;
+    vkDestroyRenderPass(device->GetDevice(), m_handle, nullptr);
+    m_handle = nullptr;
 
     for (const auto *attachment_ref : m_render_pass_attachment_refs) {
-        attachment_ref->DecRef();
+        attachment_ref->DecRef(HYP_ATTACHMENT_REF_INSTANCE);
     }
 
     m_render_pass_attachment_refs.clear();
@@ -147,11 +147,11 @@ Result RenderPass::Destroy(Device *device)
 
 void RenderPass::Begin(CommandBuffer *cmd, FramebufferObject *framebuffer)
 {
-    AssertThrow(framebuffer != nullptr && framebuffer->GetFramebuffer() != nullptr);
+    AssertThrow(framebuffer != nullptr && framebuffer->GetHandle() != nullptr);
 
     VkRenderPassBeginInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-    render_pass_info.renderPass          = m_render_pass;
-    render_pass_info.framebuffer         = framebuffer->GetFramebuffer();
+    render_pass_info.renderPass          = m_handle;
+    render_pass_info.framebuffer         = framebuffer->GetHandle();
     render_pass_info.renderArea.offset   = {0, 0};
     render_pass_info.renderArea.extent   = VkExtent2D{framebuffer->GetWidth(), framebuffer->GetHeight()};
     render_pass_info.clearValueCount     = uint32_t(m_clear_values.size());

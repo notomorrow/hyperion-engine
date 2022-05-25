@@ -161,16 +161,23 @@ class Callbacks {
     struct CallbackInstance {
         using Function = std::function<void(Args...)>;
 
-        uint32_t id;
+        using Id = uint32_t;
+        static constexpr Id empty_id = 0;
+
+        Id id{empty_id};
         Function fn;
-        uint32_t num_calls = 0;
+        uint32_t num_calls{0};
 
-        bool Valid() const         { return id != 0; }
+        bool Valid() const        { return id != empty_id; }
+        void Reset()              { id = empty_id; }
+
         uint32_t NumCalls() const { return num_calls; }
-
+        
         template <class ...OtherArgs>
         void Call(OtherArgs &&... args)
         {
+            AssertThrow(Valid());
+
             fn(std::forward<OtherArgs>(args)...);
 
             ++num_calls;
@@ -185,20 +192,22 @@ public:
         std::vector<CallbackInstance> on_callbacks;
 
         struct TriggerState {
-            bool triggered = false;
+            bool triggered{false};
             ArgsTuple args;
         } trigger_state = {};
 
-        auto Find(uint32_t id, std::vector<CallbackInstance> &callbacks) -> typename std::vector<CallbackInstance>::iterator
+        auto Find(typename CallbackInstance::Id id, std::vector<CallbackInstance> &callbacks) -> typename std::vector<CallbackInstance>::iterator
         {
             return std::find_if(
                 callbacks.begin(),
                 callbacks.end(),
-                [id](const auto &other) { return other.id == id; }
+                [id](const auto &other) {
+                    return other.id == id;
+                }
             );
         }
 
-        CallbackInstance *GetCallbackInstance(uint32_t id)
+        CallbackInstance *GetCallbackInstance(typename CallbackInstance::Id id)
         {
             auto once_it = Find(id, once_callbacks);
 
@@ -215,7 +224,7 @@ public:
             return nullptr;
         }
 
-        bool CheckValid(uint32_t id)
+        bool CheckValid(typename CallbackInstance::Id id)
         {
             if (CallbackInstance *instance = GetCallbackInstance(id)) {
                 return instance->Valid();
@@ -224,12 +233,12 @@ public:
             return false;
         }
 
-        bool Remove(uint32_t id)
+        bool Remove(typename CallbackInstance::Id id)
         {
             auto once_it = Find(id, once_callbacks);
 
             if (once_it != once_callbacks.end()) {
-                once_callbacks.erase(once_it);
+                once_it->Reset(); // invalidate; remove later
 
                 return true;
             }
@@ -237,7 +246,7 @@ public:
             auto on_it = Find(id, on_callbacks);
 
             if (on_it != on_callbacks.end()) {
-                on_callbacks.erase(on_it);
+                on_it->Reset(); // invalidate; remove later
 
                 return true;
             }
@@ -251,11 +260,14 @@ public:
             auto once_it = Find(id, once_callbacks);
 
             if (once_it != once_callbacks.end()) {
+                if (!once_it->Valid()) {
+                    return false;
+                }
+
                 AssertThrowMsg(once_it->NumCalls() == 0, "'once' callback has already been called!");
 
                 once_it->Call(std::forward<Args>(args)...);
-
-                once_callbacks.erase(once_it);
+                once_it->Reset();
 
                 return true;
             }
@@ -263,12 +275,33 @@ public:
             auto on_it = Find(id, on_callbacks);
 
             if (on_it != on_callbacks.end()) {
+                if (!on_it->Valid()) {
+                    return false;
+                }
+
                 on_it->Call(std::forward<Args>(args)...);
 
                 return true;
             }
 
             return false;
+        }
+
+        void ClearInvalidatedCallbacks()
+        {
+            once_callbacks.erase(
+                std::remove_if(once_callbacks.begin(), once_callbacks.end(), [](const auto &item) {
+                    return !item.Valid();
+                }),
+                once_callbacks.end()
+            );
+
+            on_callbacks.erase(
+                std::remove_if(on_callbacks.begin(), on_callbacks.end(), [](const auto &item) {
+                    return !item.Valid();
+                }),
+                on_callbacks.end()
+            );
         }
     };
 
@@ -343,37 +376,41 @@ public:
 
 
 private:
-    uint32_t m_id_counter = 0;
+    uint32_t m_id_counter{0};
     std::unordered_map<Enum, CallbackGroup> m_holders;
 
-    std::recursive_mutex rw_callbacks_mutex; // tmp
+    std::recursive_mutex rw_callbacks_mutex;
     
     void TriggerCallbacks(bool persist, Enum key, Args &&... args)
     {
         std::lock_guard guard(rw_callbacks_mutex);
 
         auto &holder = m_holders[key];
-
-        /* make copies so that callbacks can call Remove() without invalidation... */
-        auto once_callbacks = holder.once_callbacks;
-        auto on_callbacks   = holder.on_callbacks;
+        
+        auto &once_callbacks = holder.once_callbacks;
+        auto &on_callbacks   = holder.on_callbacks;
 
         const bool previous_triggered_state = holder.trigger_state.triggered;
 
         holder.trigger_state.triggered = true;
-        holder.trigger_state.args = std::tie(args...);
+        holder.trigger_state.args      = std::tie(args...);
 
         for (CallbackInstance &callback_instance : once_callbacks) {
-            callback_instance.Call(std::forward<Args>(args)...);
+            if (callback_instance.Valid()) {
+                callback_instance.Call(std::forward<Args>(args)...);
+                callback_instance.Reset();
+            }
         }
 
-        holder.once_callbacks.clear();
-
         for (CallbackInstance &callback_instance : on_callbacks) {
-            callback_instance.Call(std::forward<Args>(args)...);
+            if (callback_instance.Valid()) {
+                callback_instance.Call(std::forward<Args>(args)...);
+            }
         }
         
         holder.trigger_state.triggered = previous_triggered_state || persist;
+
+        holder.ClearInvalidatedCallbacks();
     }
 };
 

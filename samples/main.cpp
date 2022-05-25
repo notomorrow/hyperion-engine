@@ -17,6 +17,7 @@
 #include <scene/controllers/audio_controller.h>
 #include <scene/controllers/animation_controller.h>
 #include <scene/controllers/paging/basic_paging_controller.h>
+#include <core/lib/flat_set.h>
 #include <game_thread.h>
 #include <game.h>
 
@@ -311,7 +312,6 @@ int main()
     engine.assets.SetBasePath(v2::FileSystem::Join(HYP_ROOT_DIR, "../res"));
 
     v2::MyGame my_game;
-
     
     auto texture = engine.resources.textures.Add(
         engine.assets.Load<v2::Texture>("textures/dirt.jpg")

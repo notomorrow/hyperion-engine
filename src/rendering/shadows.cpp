@@ -260,21 +260,15 @@ void ShadowRenderer::Render(Engine *engine, CommandBuffer *command_buffer, uint3
 {
     AssertReady();
 
-    auto *camera = m_effect.GetScene()->GetCamera();
+    const auto *camera = m_effect.GetScene()->GetCamera();
     
     engine->shader_globals->shadow_maps.Set(
         m_effect.GetShadowMapIndex(),
         {
-            .projection = camera->GetProjectionMatrix(),
-            .view       = camera->GetViewMatrix(),
+            .projection  = camera->GetProjectionMatrix(),
+            .view        = camera->GetViewMatrix(),
             .scene_index = m_effect.GetScene()->GetId().value - 1
         }
-    );
-
-    std::memcpy(
-        &m_effect.GetGraphicsPipeline()->GetPipeline()->push_constants.shadow_map_data.view_proj[0],
-        &camera->GetViewProjectionMatrix(),
-        sizeof(Matrix4)
     );
 
     m_effect.Render(engine, command_buffer, frame_index);

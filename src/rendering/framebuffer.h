@@ -11,6 +11,8 @@ namespace hyperion::v2 {
 
 using renderer::CommandBuffer;
 using renderer::Extent2D;
+using renderer::AttachmentRef;
+using renderer::Attachment;
 
 class Framebuffer : public EngineComponentBase<STUB_CLASS(Framebuffer)> {
 public:
@@ -18,6 +20,9 @@ public:
     Framebuffer(const Framebuffer &other) = delete;
     Framebuffer &operator=(const Framebuffer &other) = delete;
     ~Framebuffer();
+
+    void AddAttachmentRef(AttachmentRef *attachment_ref);
+    void RemoveAttachmentRef(const Attachment *attachment);
 
     renderer::FramebufferObject &GetFramebuffer()             { return m_framebuffer; }
     const renderer::FramebufferObject &GetFramebuffer() const { return m_framebuffer; }

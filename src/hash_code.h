@@ -21,24 +21,23 @@ struct HashCode {
     {
     }
 
-    inline constexpr bool operator==(const HashCode &other) const
-        { return hash == other.hash; }
+    constexpr bool operator==(const HashCode &other) const { return hash == other.hash; }
 
     template<class T>
-    typename std::enable_if<std::is_same<T, HashCode>::value || std::is_base_of<HashCode, T>::value>::type
+    typename std::enable_if_t<std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>>
     Add(const T &hash_code)
     {
         HashCombine(hash_code.Value());
     }
 
     template<class T>
-    typename std::enable_if<std::is_fundamental<T>::value || std::is_same<T, std::string>::value>::type
+    typename std::enable_if_t<std::is_fundamental_v<T> || std::is_pointer_v<T> || std::is_same_v<T, std::string>>
     Add(const T &value)
     {
         HashCombine(std::hash<T>()(value));
     }
 
-    inline constexpr Value_t Value() const
+    constexpr Value_t Value() const
         { return hash; }
 
 private:

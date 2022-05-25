@@ -153,8 +153,20 @@ void FullScreenPass::Destroy(Engine *engine)
 {
     AssertThrow(m_frame_data != nullptr);
 
-    if (m_pipeline != nullptr && m_framebuffer != nullptr) {
-        m_pipeline->RemoveFramebuffer(m_framebuffer->GetId());
+    if (m_framebuffer != nullptr) {
+        for (auto &attachment : m_attachments) {
+            m_framebuffer->RemoveAttachmentRef(attachment.get());
+        }
+
+        if (m_pipeline != nullptr) {
+            m_pipeline->RemoveFramebuffer(m_framebuffer->GetId());
+        }
+    }
+
+    if (m_render_pass != nullptr) {
+        for (auto &attachment : m_attachments) {
+            m_render_pass->GetRenderPass().RemoveAttachmentRef(attachment.get());
+        }
     }
 
     m_render_pass = nullptr;

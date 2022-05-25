@@ -60,6 +60,18 @@ void GraphicsPipeline::RemoveFramebuffer(Framebuffer::ID id)
         return;
     }
 
+    /*auto backend_fbo_it = std::find_if(
+        m_pipeline->GetConstructionInfo().fbos.begin(),
+        m_pipeline->GetConstructionInfo().fbos.end(),
+        [&it](const auto *fbo) {
+            return fbo == it.get();
+        }
+    );
+
+    AssertThrow(backend_fbo_it != m_pipeline->GetConstructionInfo().fbos.end());
+
+    m_pipeline->GetConstructionInfo().fbos.erase(backend_fbo_it);*/
+
     m_fbos.erase(it);
 }
 
@@ -235,6 +247,8 @@ void GraphicsPipeline::Init(Engine *engine)
             );
         });
 
+        SetReady(true);
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](Engine *engine) {
             for (auto &spatial : m_spatials) {
                 if (spatial == nullptr) {
@@ -282,6 +296,8 @@ void GraphicsPipeline::Init(Engine *engine)
             });
             
             HYP_FLUSH_RENDER_QUEUE(engine);
+
+            SetReady(false);
         }), engine);
     }));
 }
@@ -292,6 +308,8 @@ void GraphicsPipeline::Render(
     uint32_t frame_index
 )
 {
+    AssertReady();
+
     AssertThrow(m_per_frame_data != nullptr);
 
     if (!m_spatials_pending_addition.empty() || !m_spatials_pending_removal.empty()) {
