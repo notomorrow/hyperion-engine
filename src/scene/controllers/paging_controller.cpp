@@ -148,7 +148,7 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
                         .new_state = PageState::LOADED
                     });
                 } else {
-                    patch->info.unload_timer += delta;
+                    patch->info.unload_timer += m_update_timer;
 
                     if (patch->info.unload_timer >= patch_unload_time) {
                         PushUpdate({

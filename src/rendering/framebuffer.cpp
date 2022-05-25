@@ -41,6 +41,16 @@ void Framebuffer::Init(Engine *engine)
     }));
 }
 
+void Framebuffer::AddAttachmentRef(AttachmentRef *attachment_ref)
+{
+    m_framebuffer.AddAttachmentRef(attachment_ref);    
+}
+
+void Framebuffer::RemoveAttachmentRef(const Attachment *attachment)
+{
+    m_framebuffer.RemoveAttachmentRef(attachment);
+}
+
 void Framebuffer::BeginCapture(CommandBuffer *command_buffer)
 {
     m_render_pass->GetRenderPass().Begin(command_buffer, &m_framebuffer);

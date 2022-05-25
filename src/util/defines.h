@@ -3,6 +3,9 @@
 
 // stl helpers and such
 
+#define HYP_STR(x) #x
+#define HYP_METHOD(method) HYP_STR(method)
+
 #define HYP_DEF_STRUCT_COMPARATOR \
     bool operator==(const decltype(*this) &other) const { \
         return !std::memcmp(this, &other, sizeof(*this)); \

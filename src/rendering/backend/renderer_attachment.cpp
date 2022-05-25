@@ -30,19 +30,12 @@ AttachmentRef::AttachmentRef(
     m_initial_layout(attachment->GetInitialLayout()),
     m_final_layout(attachment->GetFinalLayout()),
     m_image_view(std::move(image_view)),
-    m_sampler(std::move(sampler)),
-    m_owned_ref_count(0)
+    m_sampler(std::move(sampler))
 {
 }
 
 AttachmentRef::~AttachmentRef()
 {
-    AssertThrowMsg(
-        m_owned_ref_count == 0,
-        "Expected attachment ref to no longer be holding any ref but value is %lu",
-        m_owned_ref_count
-    );
-
     AssertThrowMsg(
         !m_is_created,
         "Expected render pass attachment reference to not be in `created` state on destructor call"
@@ -134,22 +127,27 @@ VkAttachmentReference AttachmentRef::GetHandle() const
     };
 }
 
-void AttachmentRef::IncRef() const
+void AttachmentRef::IncRef(AttachmentRefInstance &&ins) const
 {
     AssertThrow(m_ref_count != nullptr);
 
-    ++m_ref_count->count;
-    ++m_owned_ref_count;
+    m_ref_count->m_holder_instances.insert(std::move(ins));
+
+    //++m_ref_count->count;
+    //++m_owned_ref_count;
 }
 
-void AttachmentRef::DecRef() const
+void AttachmentRef::DecRef(AttachmentRefInstance &&ins) const
 {
-    AssertThrow(m_owned_ref_count != 0);
+    //AssertThrow(m_owned_ref_count != 0);
     AssertThrow(m_ref_count != nullptr);
-    AssertThrow(m_ref_count->count != 0);
+    
+    m_ref_count->m_holder_instances.erase(ins);
 
-    --m_ref_count->count;
-    --m_owned_ref_count;
+    //AssertThrow(m_ref_count->count != 0);
+
+    //--m_ref_count->count;
+    //--m_owned_ref_count;
 }
 
 Result AttachmentRef::Create(Device *device)
@@ -235,13 +233,11 @@ Attachment::~Attachment()
     AssertThrowMsg(!m_is_created, "Attachment must not be in `created` state on destructor call");
 
     for (size_t i = 0; i < m_ref_counts.size(); i++) {
-        --m_ref_counts[i]->count;
-
         AssertThrowMsg(
-            m_ref_counts[i]->count == 0,
-            "Expected ref count at %llu to be zero after decrement but was %lu -- object still in use somewhere else.",
+            m_ref_counts[i]->m_holder_instances.empty(),
+            "Expected ref count at %llu to be zero after decrement but was %llu -- object still in use somewhere else.",
             i,
-            m_ref_counts[i]->count
+            m_ref_counts[i]->m_holder_instances.size()
         );
     }
 }
@@ -263,7 +259,7 @@ Result Attachment::AddAttachmentRef(
         HYPERION_BUBBLE_ERRORS(attachment_ref->Create(device));
     }
     
-    m_ref_counts.push_back(new AttachmentRef::RefCount{1});
+    m_ref_counts.push_back(new AttachmentRef::RefCount);
     attachment_ref->m_ref_count = m_ref_counts.back();
     m_attachment_refs.push_back(std::move(attachment_ref));
 
@@ -305,7 +301,7 @@ Result Attachment::AddAttachmentRef(
         ));
     }
     
-    m_ref_counts.push_back(new AttachmentRef::RefCount{1});
+    m_ref_counts.push_back(new AttachmentRef::RefCount);
     attachment_ref->m_ref_count = m_ref_counts.back();
     m_attachment_refs.push_back(std::move(attachment_ref));
 
@@ -329,8 +325,8 @@ Result Attachment::RemoveAttachmentRef(Device *device, AttachmentRef *attachment
     }
 
     AssertThrowMsg(
-        attachment_ref->m_ref_count->count == 1,
-        "Expected ref count to be 1 before explicit removal -- still in use somewhere else."
+        attachment_ref->m_ref_count->m_holder_instances.empty(),
+        "Expected ref count to be empty before explicit removal -- still in use somewhere else."
     );
 
     const auto ref_count_index = it - m_attachment_refs.begin();

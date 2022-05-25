@@ -46,6 +46,11 @@ void Scene::Init(Engine *engine)
 
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](Engine *engine) {
+            DebugLog(LogType::Debug, "Destroy scene #%lu\t%p\n", m_id.value, (void *)this);
+
+            delete m_environment;
+            m_environment = nullptr;
+
             HYP_FLUSH_RENDER_QUEUE(engine);
 
             SetReady(false);

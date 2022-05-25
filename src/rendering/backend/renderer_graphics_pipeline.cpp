@@ -329,7 +329,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     pipeline_info.pColorBlendState    = &color_blending;
     pipeline_info.pDynamicState       = &dynamic_state;
     pipeline_info.layout              = layout;
-    pipeline_info.renderPass          = m_construction_info.render_pass->GetRenderPass();
+    pipeline_info.renderPass          = m_construction_info.render_pass->GetHandle();
     pipeline_info.subpass             = 0; /* Index of the subpass */
     pipeline_info.basePipelineHandle  = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex   = -1;

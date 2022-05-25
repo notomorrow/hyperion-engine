@@ -1,15 +1,14 @@
 #ifndef HYPERION_HTEST_H
 #define HYPERION_HTEST_H
 
+#include <util/defines.h>
+
 #include <memory>
 #include <vector>
 #include <string>
 #include <functional>
 #include <unordered_map>
 #include <type_traits>
-
-#define HYP_STR(x) #x
-#define HYP_METHOD(method) HYP_STR(method)
 
 namespace hyperion::test {
 

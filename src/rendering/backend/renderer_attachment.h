@@ -6,11 +6,40 @@
 #include "renderer_image_view.h"
 #include "renderer_sampler.h"
 
+#include <hash_code.h>
 #include <types.h>
 
 #include <vulkan/vulkan.h>
 
 #include <optional>
+#include <unordered_set>
+
+namespace hyperion {
+namespace renderer {
+
+struct AttachmentRefInstance {
+    const char *cls;
+    void       *ptr;
+
+    bool operator==(const AttachmentRefInstance &other) const
+    {
+        return ptr == other.ptr;
+    }
+
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(cls);
+        hc.Add(ptr);
+
+        return hc;
+    }
+};
+
+} // namespace renderer
+} // namespace hyperion
+
+HYP_DEF_STL_HASH(hyperion::renderer::AttachmentRefInstance);
 
 namespace hyperion {
 namespace renderer {
@@ -37,9 +66,16 @@ enum class StoreOperation {
     STORE
 };
 
+#define HYP_ATTACHMENT_REF_INSTANCE \
+    ::hyperion::renderer::AttachmentRefInstance{ \
+        .cls = typeid(*this).name(),     \
+        .ptr = static_cast<void *>(this) \
+    }
+
 class AttachmentRef {
     friend class Attachment;
 public:
+
     AttachmentRef(
         Attachment *attachment,
         LoadOperation load_operation = LoadOperation::CLEAR,
@@ -76,8 +112,8 @@ public:
     VkAttachmentDescription GetAttachmentDescription() const;
     VkAttachmentReference GetHandle() const;
 
-    void IncRef() const;
-    void DecRef() const;
+    void IncRef(AttachmentRefInstance &&ins) const;
+    void DecRef(AttachmentRefInstance &&ins) const;
     
     Result Create(Device *device);
     Result Create(
@@ -98,7 +134,9 @@ public:
 
 private:
     struct RefCount {
-        uint count = 0;
+        //uint count = 0;
+
+        std::unordered_set<AttachmentRefInstance> m_holder_instances;
     };
 
     static VkAttachmentLoadOp ToVkLoadOp(LoadOperation);
@@ -117,12 +155,12 @@ private:
     VkImageLayout m_initial_layout, m_final_layout;
 
     RefCount *m_ref_count  = nullptr;
-    mutable uint m_owned_ref_count = 0;
     bool m_is_created      = false;
 };
 
 class Attachment {
     friend class AttachmentRef;
+
 public:
     Attachment(std::unique_ptr<Image> &&image, RenderPassStage stage);
     Attachment(const Attachment &other) = delete;
@@ -131,7 +169,7 @@ public:
 
     inline Image *GetImage() const { return m_image.get(); }
 
-    inline auto &GetAttachmentRefs() { return m_attachment_refs; }
+    inline auto &GetAttachmentRefs()             { return m_attachment_refs; }
     inline const auto &GetAttachmentRefs() const { return m_attachment_refs; }
 
     inline Image::InternalFormat GetFormat() const

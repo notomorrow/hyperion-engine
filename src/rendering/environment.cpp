@@ -46,6 +46,7 @@ void Environment::Init(Engine *engine)
         SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ENVIRONMENTS, [this](Engine *engine) {
+            m_lights.clear();
             m_shadow_renderers.clear();
 
             HYP_FLUSH_RENDER_QUEUE(engine);
