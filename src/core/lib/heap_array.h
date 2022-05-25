@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_LIB_HEAP_ARRAY_H
 #define HYPERION_V2_LIB_HEAP_ARRAY_H
 
+#include <util/defines.h>
+
 #include <cstring>
 
 namespace hyperion {
@@ -8,7 +10,8 @@ namespace hyperion {
 template <class T, size_t ArraySize>
 class HeapArray {
 public:
-    using iterator = T *;
+    using Iterator      = T *;
+    using ConstIterator = const T *;
 
     HeapArray() : ptr(new T[ArraySize]) {}
 
@@ -40,7 +43,7 @@ public:
         other.ptr = nullptr;
     }
 
-    HeapArray &operator=(const HeapArray &&other) noexcept
+    HeapArray &operator=(HeapArray &&other) noexcept
     {
         std::swap(other.ptr, ptr);
 
@@ -59,11 +62,11 @@ public:
         }
     }
 
-    inline T &operator[](size_t index)             { return ptr[index]; }
-    inline const T &operator[](size_t index) const { return ptr[index]; }
+    T &operator[](size_t index)             { return ptr[index]; }
+    const T &operator[](size_t index) const { return ptr[index]; }
 
-    inline T *Data() { return ptr; }
-    inline const T *Data() const { return ptr; }
+    T *Data() { return ptr; }
+    const T *Data() const { return ptr; }
 
     constexpr size_t Size() const     { return ArraySize; }
     constexpr size_t ByteSize() const { return ArraySize * sizeof(T); }
@@ -78,8 +81,7 @@ public:
         std::memcpy((void *)uintptr_t(ptr + dst_offset), src, count);
     }
 
-    iterator begin() const { return ptr; }
-    iterator end() const { return &ptr[ArraySize - 1]; }
+    HYP_DEF_STL_BEGIN_END(ptr, &ptr[ArraySize - 1])
 
 private:
     T *ptr;

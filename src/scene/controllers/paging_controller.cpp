@@ -207,10 +207,10 @@ void PagingController::AddPatch(const Coord &coord)
     
     m_patches.push_back(std::move(patch));
 
-    const auto neighbor_it = m_queued_neighbors.find(coord);
+    const auto neighbor_it = m_queued_neighbors.Find(coord);
 
     if (neighbor_it != m_queued_neighbors.end()) {
-        m_queued_neighbors.erase(neighbor_it);
+        m_queued_neighbors.Erase(neighbor_it);
     }
 }
 
@@ -224,22 +224,22 @@ void PagingController::RemovePatch(const Coord &coord)
 
     m_patches.erase(it);
 
-    const auto neighbor_it = m_queued_neighbors.find(coord);
+    const auto neighbor_it = m_queued_neighbors.Find(coord);
 
     if (neighbor_it != m_queued_neighbors.end()) {
-        m_queued_neighbors.erase(neighbor_it);
+        m_queued_neighbors.Erase(neighbor_it);
     }
 }
 
 void PagingController::EnqueuePatch(const Coord &coord)
 {
-    if (m_queued_neighbors.find(coord) == m_queued_neighbors.end()) {
+    if (m_queued_neighbors.Find(coord) == m_queued_neighbors.End()) {
         PushUpdate({
             .coord     = coord,
             .new_state = PageState::WAITING
         });
 
-        m_queued_neighbors.insert(coord);
+        m_queued_neighbors.Insert(coord);
     }
 }
 

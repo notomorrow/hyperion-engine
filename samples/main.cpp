@@ -18,6 +18,7 @@
 #include <scene/controllers/animation_controller.h>
 #include <scene/controllers/paging/basic_paging_controller.h>
 #include <core/lib/flat_set.h>
+#include <core/lib/flat_map.h>
 #include <game_thread.h>
 #include <game.h>
 
@@ -300,7 +301,7 @@ public:
 int main()
 {
     using namespace hyperion::renderer;
-
+    
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
     system.SetCurrentWindow(window);

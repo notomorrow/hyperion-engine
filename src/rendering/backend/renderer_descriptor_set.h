@@ -4,6 +4,7 @@
 #include "renderer_result.h"
 
 #include <core/lib/range.h>
+#include <core/lib/flat_set.h>
 
 #include <vulkan/vulkan.h>
 

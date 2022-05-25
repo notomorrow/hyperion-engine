@@ -5,18 +5,23 @@
 #include <vector>
 #include <utility>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 template <class T>
 class FlatSet {
     std::vector<T> m_vector;
 
+public:
     using Iterator      = typename std::vector<T>::iterator;
     using ConstIterator = typename std::vector<T>::const_iterator;
     using InsertResult  = std::pair<Iterator, bool>; // iterator, was inserted
 
-public:
     FlatSet();
+    FlatSet(std::initializer_list<T> initializer_list)
+        : m_vector(initializer_list)
+    {
+    }
+
     FlatSet(const FlatSet &other);
     FlatSet &operator=(const FlatSet &other);
     FlatSet(FlatSet &&other) noexcept;
@@ -29,28 +34,25 @@ public:
     InsertResult Insert(const T &value);
     InsertResult Insert(T &&value);
 
+    template <class ...Args>
+    InsertResult Emplace(Args &&... args)
+        { return Insert(T(std::forward<Args>(args)...)); }
+
     void Erase(Iterator iter);
     void Erase(const T &value);
 
     [[nodiscard]] size_t Size() const                     { return m_vector.size(); }
     [[nodiscard]] T *Data() const                         { return m_vector.data(); }
     [[nodiscard]] bool Empty() const                      { return m_vector.empty(); }
-    void Clear() const                                    { m_vector.clear(); }
+    void Clear()                                          { m_vector.clear(); }
 
     [[nodiscard]] T &At(size_t index)                     { return m_vector.at(index); }
     [[nodiscard]] const T &At(size_t index) const         { return m_vector.at(index); }
 
     [[nodiscard]] T &operator[](size_t index)             { return m_vector[index]; }
     [[nodiscard]] const T &operator[](size_t index) const { return m_vector[index]; }
-    
-    [[nodiscard]] Iterator Begin() { return m_vector.begin(); }
-    [[nodiscard]] Iterator End()   { return m_vector.end(); }
 
-    [[nodiscard]] Iterator begin() { return m_vector.begin(); }
-    [[nodiscard]] Iterator end()   { return m_vector.end(); }
-
-    [[nodiscard]] ConstIterator cbegin() const { return m_vector.cbegin(); }
-    [[nodiscard]] ConstIterator cend() const   { return m_vector.cend(); }
+    HYP_DEF_STL_ITERATOR(m_vector)
 
 private:
     Iterator GetIterator(const T &value)
@@ -124,7 +126,7 @@ auto FlatSet<T>::Insert(const T &value) -> InsertResult
     Iterator it = GetIterator(value);
 
     if (it == End() || *it != value) {
-        m_vector.insert(it, value);
+        it = m_vector.insert(it, value);
 
         return {it, true};
     }
@@ -138,7 +140,7 @@ auto FlatSet<T>::Insert(T &&value) -> InsertResult
     Iterator it = GetIterator(value);
 
     if (it == End() || *it != value) {
-        m_vector.insert(it, std::move(value));
+        it = m_vector.insert(it, std::forward<T>(value));
 
         return {it, true};
     }
@@ -162,6 +164,6 @@ void FlatSet<T>::Erase(const T &value)
     Erase(iter);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif
