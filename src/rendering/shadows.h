@@ -11,7 +11,11 @@
 #include <camera/camera.h>
 #include <types.h>
 
+#include <rendering/backend/renderer_frame.h>
+
 namespace hyperion::v2 {
+
+using renderer::Frame;
 
 class ShadowEffect : public FullScreenPass {
 public:
@@ -51,7 +55,7 @@ public:
     void Create(Engine *engine);
 
     void Destroy(Engine *engine);
-    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
+    void Render(Engine *engine, Frame *frame);
 
 private:
     Ref<Scene>                             m_scene;
@@ -87,7 +91,7 @@ public:
 
     void Init(Engine *engine);
     void Update(Engine *engine, GameCounter::TickUnit delta);
-    void Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
+    void Render(Engine *engine, Frame *frame);
 
 private:
     void UpdateSceneCamera(Engine *engine);

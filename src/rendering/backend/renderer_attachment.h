@@ -94,17 +94,17 @@ public:
     AttachmentRef &operator=(const AttachmentRef &other) = delete;
     ~AttachmentRef();
 
-    inline Attachment *GetAttachment() const { return m_attachment; }
+    inline Attachment *GetAttachment() const        { return m_attachment; }
 
-    inline ImageView *GetImageView() const { return m_image_view.get(); }
-    inline Sampler *GetSampler() const { return m_sampler.get(); }
+    inline ImageView *GetImageView() const          { return m_image_view.get(); }
+    inline Sampler *GetSampler() const              { return m_sampler.get(); }
 
-    inline LoadOperation GetLoadOperation() const { return m_load_operation; }
+    inline LoadOperation GetLoadOperation() const   { return m_load_operation; }
     inline StoreOperation GetStoreOperation() const { return m_store_operation; }
 
-    inline uint GetBinding() const       { return m_binding.value_or(UINT32_MAX); }
-    inline void SetBinding(uint binding) { m_binding = binding; }
-    inline bool HasBinding() const       { return m_binding.has_value(); }
+    inline uint GetBinding() const                  { return m_binding.value_or(UINT32_MAX); }
+    inline void SetBinding(uint binding)            { m_binding = binding; }
+    inline bool HasBinding() const                  { return m_binding.has_value(); }
 
     Image::InternalFormat GetFormat() const;
     bool IsDepthAttachment() const;
@@ -128,7 +128,11 @@ public:
 
     Result Destroy(Device *device);
 
-    Result AddAttachmentRef(Device *device, StoreOperation store_operation, AttachmentRef **out = nullptr);
+    Result AddAttachmentRef(
+        Device *device,
+        StoreOperation store_operation,
+        AttachmentRef **out = nullptr
+    );
 
     Result RemoveSelf(Device *device);
 
@@ -154,8 +158,8 @@ private:
 
     VkImageLayout m_initial_layout, m_final_layout;
 
-    RefCount *m_ref_count  = nullptr;
-    bool m_is_created      = false;
+    RefCount *m_ref_count = nullptr;
+    bool m_is_created     = false;
 };
 
 class Attachment {

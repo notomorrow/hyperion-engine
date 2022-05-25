@@ -17,8 +17,8 @@ public:
     Fence &operator=(const Fence &other) = delete;
     ~Fence();
 
-    inline VkFence &GetFence() { return m_fence; }
-    inline const VkFence &GetFence() const { return m_fence; }
+    inline VkFence &GetHandle()             { return m_handle; }
+    inline const VkFence &GetHandle() const { return m_handle; }
 
     Result Create(Device *device);
     Result Destroy(Device *device);
@@ -26,7 +26,7 @@ public:
     Result Reset(Device *device);
 
 private:
-    VkFence m_fence;
+    VkFence m_handle;
     bool m_create_signaled;
 };
 

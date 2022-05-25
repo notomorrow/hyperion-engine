@@ -20,12 +20,13 @@ class Swapchain;
 using ::hyperion::non_owning_ptr;
 
 class Frame {
-    Result CreateSyncObjects();
-    Result DestroySyncObjects();
 public:
+    static Frame TemporaryFrame(CommandBuffer *command_buffer, uint32_t frame_index);
+
     Frame(uint32_t frame_index);
     Frame(const Frame &other) = delete;
     Frame &operator=(const Frame &other) = delete;
+    Frame(Frame &&other) noexcept;
     ~Frame();
 
     Result Create(Device *device, const non_owning_ptr<CommandBuffer> &cmd);

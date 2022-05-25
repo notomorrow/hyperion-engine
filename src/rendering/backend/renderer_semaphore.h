@@ -139,8 +139,9 @@ public:
     SemaphoreChain(const std::vector<VkPipelineStageFlags> &wait_stage_flags,
         const std::vector<VkPipelineStageFlags> &signal_stage_flags);
     SemaphoreChain(const SemaphoreChain &other) = delete;
-    SemaphoreChain(SemaphoreChain &&other) = delete;
     SemaphoreChain &operator=(const SemaphoreChain &other) = delete;
+    SemaphoreChain(SemaphoreChain &&other) noexcept = default;
+    SemaphoreChain &operator=(SemaphoreChain &&other) noexcept = default;
     ~SemaphoreChain();
 
     inline auto &GetWaitSemaphores() { return m_wait_semaphores; }
@@ -198,7 +199,7 @@ private:
     void UpdateViews();
     
     std::vector<SignalSemaphore> m_signal_semaphores;
-    std::vector<WaitSemaphore> m_wait_semaphores;
+    std::vector<WaitSemaphore>   m_wait_semaphores;
 
     /* Views, for on the fly linear memory access: */
     SemaphoreView m_signal_semaphores_view;

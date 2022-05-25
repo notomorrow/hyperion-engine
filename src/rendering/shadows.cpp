@@ -197,13 +197,13 @@ void ShadowEffect::Destroy(Engine *engine)
     FullScreenPass::Destroy(engine); // flushes render queue
 }
 
-void ShadowEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+void ShadowEffect::Render(Engine *engine, Frame *frame)
 {
     engine->render_state.BindScene(m_scene);
 
-    m_framebuffer->BeginCapture(primary);
-    m_pipeline->Render(engine, primary, frame_index);
-    m_framebuffer->EndCapture(primary);
+    m_framebuffer->BeginCapture(frame->GetCommandBuffer());
+    m_pipeline->Render(engine, frame);
+    m_framebuffer->EndCapture(frame->GetCommandBuffer());
 
     engine->render_state.UnbindScene();
 }
@@ -256,7 +256,7 @@ void ShadowRenderer::Update(Engine *engine, GameCounter::TickUnit delta)
     m_effect.GetScene()->Update(engine, delta);
 }
 
-void ShadowRenderer::Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
+void ShadowRenderer::Render(Engine *engine, Frame *frame)
 {
     AssertReady();
 
@@ -271,7 +271,7 @@ void ShadowRenderer::Render(Engine *engine, CommandBuffer *command_buffer, uint3
         }
     );
 
-    m_effect.Render(engine, command_buffer, frame_index);
+    m_effect.Render(engine, frame);
 }
 
 void ShadowRenderer::UpdateSceneCamera(Engine *engine)

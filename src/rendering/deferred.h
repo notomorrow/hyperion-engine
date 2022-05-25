@@ -4,7 +4,11 @@
 #include "post_fx.h"
 #include "renderer.h"
 
+#include <rendering/backend/renderer_frame.h>
+
 namespace hyperion::v2 {
+
+using renderer::Frame;
 
 class DeferredRenderingEffect : public FullScreenPass {
 public:
@@ -19,7 +23,7 @@ public:
     void Create(Engine *engine);
 
     void Destroy(Engine *engine);
-    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
+    void Render(Engine *engine, Frame *frame);
 };
 
 class DeferredRenderer : public Renderer {
@@ -34,11 +38,11 @@ public:
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
+    void Render(Engine *engine, Frame *frame);
 
 private:
-    void RenderOpaqueObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
-    void RenderTranslucentObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
+    void RenderOpaqueObjects(Engine *engine, Frame *frame);
+    void RenderTranslucentObjects(Engine *engine, Frame *frame);
 
     DeferredRenderingEffect m_effect;
     PostProcessing          m_post_processing;

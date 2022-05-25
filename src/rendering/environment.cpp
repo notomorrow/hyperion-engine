@@ -98,10 +98,7 @@ void Environment::UpdateShadows(Engine *engine, GameCounter::TickUnit delta)
      */
 
     for (const auto &shadow_renderer : m_shadow_renderers) {
-        shadow_renderer->Update(
-            engine,
-            delta
-        );
+        shadow_renderer->Update(engine, delta);
     }
 }
 
@@ -114,11 +111,7 @@ void Environment::RenderShadows(Engine *engine, Frame *frame)
      */
 
     for (const auto &shadow_renderer : m_shadow_renderers) {
-        shadow_renderer->Render(
-            engine,
-            frame->GetCommandBuffer(),
-            frame->GetFrameIndex()
-        );
+        shadow_renderer->Render(engine, frame);
     }
 }
 

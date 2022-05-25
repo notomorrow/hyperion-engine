@@ -695,14 +695,13 @@ int main()
 
 #if HYPERION_VK_TEST_VCT
         if (tmp_render_timer == 0.0f || std::fmodf(tmp_render_timer, 2.0f) == 0.0f) {
-            vct.RenderVoxels(&engine, frame->GetCommandBuffer(), frame_index);
+            vct.RenderVoxels(&engine, frame);
         }
         tmp_render_timer += 0.001f;
 #endif
 
-        engine.RenderDeferred(frame->GetCommandBuffer(), frame_index);
+        engine.RenderDeferred(frame);
         
-
 #if HYPERION_VK_TEST_IMAGE_STORE
         image_storage->GetGPUImage()->InsertBarrier(
             frame->GetCommandBuffer(),

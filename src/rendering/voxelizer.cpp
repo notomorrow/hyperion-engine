@@ -221,6 +221,8 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
 
     /* count number of fragments */
     commands.Push([this, engine, count_mode](CommandBuffer *command_buffer) {
+        Frame frame = Frame::TemporaryFrame(command_buffer, 0);
+
         engine->render_state.BindScene(m_scene);
 
         m_pipeline->GetPipeline()->push_constants.voxelizer_data = {
@@ -229,7 +231,7 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
         };
 
         m_framebuffer->BeginCapture(command_buffer);
-        m_pipeline->Render(engine, command_buffer, 0);
+        m_pipeline->Render(engine, &frame);
         m_framebuffer->EndCapture(command_buffer);
 
         engine->render_state.UnbindScene();

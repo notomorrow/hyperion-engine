@@ -65,8 +65,11 @@ void VoxelConeTracing::Init(Engine *engine)
     }));
 }
 
-void VoxelConeTracing::RenderVoxels(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index)
+void VoxelConeTracing::RenderVoxels(Engine *engine, Frame *frame)
 {
+    auto *command_buffer = frame->GetCommandBuffer();
+    const auto frame_index = frame->GetFrameIndex();
+
     auto result = renderer::Result::OK;
 
     /* put our voxel map in an optimal state to be written to */
@@ -100,11 +103,7 @@ void VoxelConeTracing::RenderVoxels(Engine *engine, CommandBuffer *command_buffe
     );
 
     m_framebuffer->BeginCapture(command_buffer);
-    m_pipeline->Render(
-        engine,
-        command_buffer,
-        frame_index
-    );
+    m_pipeline->Render(engine, frame);
     m_framebuffer->EndCapture(command_buffer);
 
     engine->render_state.UnbindScene();

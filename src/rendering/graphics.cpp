@@ -302,11 +302,7 @@ void GraphicsPipeline::Init(Engine *engine)
     }));
 }
 
-void GraphicsPipeline::Render(
-    Engine *engine,
-    CommandBuffer *primary,
-    uint32_t frame_index
-)
+void GraphicsPipeline::Render(Engine *engine, Frame *frame)
 {
     AssertReady();
 
@@ -318,12 +314,12 @@ void GraphicsPipeline::Render(
 
     auto *instance = engine->GetInstance();
     auto *device = instance->GetDevice();
-    auto *secondary_command_buffer = m_per_frame_data->At(frame_index).Get<CommandBuffer>();
+    auto *secondary_command_buffer = m_per_frame_data->At(frame->GetFrameIndex()).Get<CommandBuffer>();
 
     secondary_command_buffer->Record(
         device,
         m_pipeline->GetConstructionInfo().render_pass,
-        [this, engine, instance, device, frame_index](CommandBuffer *secondary) {
+        [this, engine, instance, device, frame_index = frame->GetFrameIndex()](CommandBuffer *secondary) {
             m_pipeline->Bind(secondary);
 
             /* Bind global data */
@@ -437,7 +433,7 @@ void GraphicsPipeline::Render(
             HYPERION_RETURN_OK;
         });
     
-    secondary_command_buffer->SubmitSecondary(primary);
+    secondary_command_buffer->SubmitSecondary(frame->GetCommandBuffer());
 }
 
 } // namespace hyperion::v2

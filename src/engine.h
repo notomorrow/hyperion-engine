@@ -155,7 +155,7 @@ public:
     void ResetRenderState();
     void UpdateBuffersAndDescriptors(uint32_t frame_index);
     
-    void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
+    void RenderDeferred(Frame *frame);
     void RenderSwapchain(CommandBuffer *command_buffer) const;
 
 

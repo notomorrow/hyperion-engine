@@ -10,6 +10,7 @@
 #include "render_bucket.h"
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
+#include <rendering/backend/renderer_frame.h>
 
 #include <memory>
 #include <mutex>
@@ -27,6 +28,7 @@ using renderer::PerFrameData;
 using renderer::Topology;
 using renderer::FillMode;
 using renderer::FaceCullMode;
+using renderer::Frame;
 
 class Engine;
 
@@ -87,11 +89,7 @@ public:
     
     /* Build pipeline */
     void Init(Engine *engine);
-    void Render(
-        Engine *engine,
-        CommandBuffer *primary,
-        uint32_t frame_index
-    );
+    void Render(Engine *engine, Frame *frame);
 
 private:
     static bool BucketSupportsCulling(Bucket bucket);

@@ -12,11 +12,13 @@
 #include <rendering/backend/renderer_command_buffer.h>
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_structs.h>
+#include <rendering/backend/renderer_frame.h>
 
 namespace hyperion::v2 {
 
 using renderer::CommandBuffer;
 using renderer::StorageBuffer;
+using renderer::Frame;
 
 class Engine;
 
@@ -46,11 +48,7 @@ public:
     const Ref<Texture> &GetVoxelImage() const { return m_voxel_image; }
 
     void Init(Engine *engine);
-    void RenderVoxels(
-        Engine *engine,
-        CommandBuffer *command_buffer,
-        uint32_t frame_index
-    );
+    void RenderVoxels(Engine *engine, Frame *frame);
 
 private:
     void CreateImagesAndBuffers(Engine *engine);

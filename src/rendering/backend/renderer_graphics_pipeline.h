@@ -46,10 +46,10 @@ public:
     GraphicsPipeline &operator=(const GraphicsPipeline &other) = delete;
     ~GraphicsPipeline();
 
-    inline const std::vector<VkDynamicState> &GetDynamicStates() const
+    const std::vector<VkDynamicState> &GetDynamicStates() const
         { return dynamic_states; }
 
-    inline void SetDynamicStates(const std::vector<VkDynamicState> &states)
+    void SetDynamicStates(const std::vector<VkDynamicState> &states)
         { dynamic_states = states; }
 
     void SetViewport(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
@@ -62,7 +62,7 @@ public:
     void Bind(CommandBuffer *cmd);
     void SubmitPushConstants(CommandBuffer *cmd) const;
 
-    inline const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
+    const ConstructionInfo &GetConstructionInfo() const { return m_construction_info; }
 
 private:
     Result Rebuild(Device *device, DescriptorPool *descriptor_pool);

@@ -72,7 +72,7 @@ void DeferredRenderingEffect::Destroy(Engine *engine)
     FullScreenPass::Destroy(engine); // flushes render queue
 }
 
-void DeferredRenderingEffect::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+void DeferredRenderingEffect::Render(Engine *engine, Frame *frame)
 {
 }
 
@@ -146,15 +146,18 @@ void DeferredRenderer::Destroy(Engine *engine)
     m_effect.Destroy(engine);  // flushes render queue
 }
 
-void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+void DeferredRenderer::Render(Engine *engine, Frame *frame)
 {
+    auto *primary = frame->GetCommandBuffer();
+    const auto frame_index = frame->GetFrameIndex();
+
     m_effect.Record(engine, frame_index);
 
     auto &render_list = engine->GetRenderListContainer();
     auto &bucket = render_list.Get(Bucket::BUCKET_OPAQUE);
 
     bucket.framebuffers[0]->BeginCapture(primary); /* TODO: frame index? */
-    RenderOpaqueObjects(engine, primary, frame_index);
+    RenderOpaqueObjects(engine, frame);
     bucket.framebuffers[0]->EndCapture(primary); /* TODO: frame index? */
     
     m_post_processing.Render(engine, primary, frame_index);
@@ -164,26 +167,26 @@ void DeferredRenderer::Render(Engine *engine, CommandBuffer *primary, uint32_t f
     /* Render deferred shading onto full screen quad */
     HYPERION_ASSERT_RESULT(m_effect.GetFrameData()->At(frame_index).Get<CommandBuffer>()->SubmitSecondary(primary));
 
-    RenderTranslucentObjects(engine, primary, frame_index);
+    RenderTranslucentObjects(engine, frame);
     
     m_effect.GetFramebuffer()->EndCapture(primary);
 }
 
-void DeferredRenderer::RenderOpaqueObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
 {
     for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).graphics_pipelines) {
-        pipeline->Render(engine, primary, frame_index);
+        pipeline->Render(engine, frame);
     }
     
     for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
-        pipeline->Render(engine, primary, frame_index);
+        pipeline->Render(engine, frame);
     }
 }
 
-void DeferredRenderer::RenderTranslucentObjects(Engine *engine, CommandBuffer *primary, uint32_t frame_index)
+void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame)
 {
     for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).graphics_pipelines) {
-        pipeline->Render(engine, primary, frame_index);
+        pipeline->Render(engine, frame);
     }
 }
 

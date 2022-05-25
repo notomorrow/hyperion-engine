@@ -460,9 +460,9 @@ void Engine::UpdateBuffersAndDescriptors(uint32_t frame_index)
     shader_globals->textures.ApplyUpdates(this, frame_index);
 }
 
-void Engine::RenderDeferred(CommandBuffer *primary, uint32_t frame_index)
+void Engine::RenderDeferred(Frame *frame)
 {
-    m_deferred_renderer.Render(this, primary, frame_index);
+    m_deferred_renderer.Render(this, frame);
 }
 
 void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
