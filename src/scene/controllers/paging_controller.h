@@ -4,6 +4,7 @@
 #include "../controller.h"
 
 #include <rendering/backend/renderer_structs.h>
+#include <core/lib/flat_set.h>
 
 #include <math/vector2.h>
 #include <math/vector3.h>
@@ -113,7 +114,7 @@ protected:
 
     PatchList                           m_patches;
     std::queue<PatchUpdate>             m_queue;
-    std::unordered_set<Coord>           m_queued_neighbors; // neighbors queued for addition, so we don't add duplicates
+    FlatSet<Coord>                      m_queued_neighbors; // neighbors queued for addition, so we don't add duplicates
     Extent3D                            m_patch_size;
     Vector3                             m_scale;
     GameCounter::TickUnit               m_update_timer;

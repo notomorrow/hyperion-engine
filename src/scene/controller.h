@@ -4,7 +4,7 @@
 #include <rendering/base.h>
 #include "../game_counter.h"
 
-#include <util/sparse_map/sparse_map.h>
+#include <core/lib/flat_map.h>
 
 #include <atomic>
 #include <unordered_map>
@@ -43,7 +43,7 @@ private:
 };
 
 class ControllerSet {
-    using Map = tsl::sparse_map<ControllerId, std::unique_ptr<Controller>>;
+    using Map = FlatMap<ControllerId, std::unique_ptr<Controller>>;
 
     static std::atomic<ControllerId> controller_id_counter;
 
@@ -91,9 +91,9 @@ public:
     {
         const auto id = GetControllerId<T>();
 
-        const auto it = m_map.find(id);
+        const auto it = m_map.Find(id);
 
-        if (it == m_map.end()) {
+        if (it == m_map.End()) {
             return nullptr;
         }
 
@@ -105,7 +105,7 @@ public:
     {
         const auto id = GetControllerId<T>();
 
-        return m_map.find(id) != m_map.end();
+        return m_map.Find(id) != m_map.End();
     }
     
     template <class T>
@@ -113,21 +113,21 @@ public:
     {
         const auto id = GetControllerId<T>();
 
-        const auto it = m_map.find(id);
+        const auto it = m_map.Find(id);
 
-        if (it == m_map.end()) {
+        if (it == m_map.End()) {
             return false;
         }
 
-        m_map.erase(it);
+        m_map.Erase(it);
 
         return true;
     }
 
-    Map::iterator begin() { return m_map.begin(); }
-    Map::iterator end()   { return m_map.end(); }
-    Map::const_iterator cbegin() const { return m_map.cbegin(); }
-    Map::const_iterator cend() const   { return m_map.cend(); }
+    Map::Iterator begin()             { return m_map.begin(); }
+    Map::Iterator end()               { return m_map.end(); }
+    Map::ConstIterator cbegin() const { return m_map.cbegin(); }
+    Map::ConstIterator cend() const   { return m_map.cend(); }
 
 private:
     Map m_map;

@@ -20,6 +20,28 @@
         } \
     }
 
+#define HYP_DEF_STL_ITERATOR(container) \
+    [[nodiscard]] Iterator Begin()             { return container.begin(); }  \
+    [[nodiscard]] Iterator End()               { return container.end(); }    \
+    [[nodiscard]] ConstIterator Begin() const  { return container.begin(); }  \
+    [[nodiscard]] ConstIterator End() const    { return container.end(); }    \
+    [[nodiscard]] Iterator begin()             { return container.begin(); }  \
+    [[nodiscard]] Iterator end()               { return container.end(); }    \
+    [[nodiscard]] ConstIterator begin() const  { return container.begin(); }  \
+    [[nodiscard]] ConstIterator end() const    { return container.end(); }    \
+    [[nodiscard]] ConstIterator cbegin() const { return container.cbegin(); } \
+    [[nodiscard]] ConstIterator cend() const   { return container.cend(); }
+
+#define HYP_DEF_STL_BEGIN_END(_begin, _end) \
+    [[nodiscard]] Iterator Begin()             { return _begin; } \
+    [[nodiscard]] Iterator End()               { return _end; }   \
+    [[nodiscard]] ConstIterator Begin() const  { return _begin; } \
+    [[nodiscard]] ConstIterator End() const    { return _end; }   \
+    [[nodiscard]] Iterator begin()             { return _begin; } \
+    [[nodiscard]] Iterator end()               { return _end; }   \
+    [[nodiscard]] ConstIterator begin() const  { return _begin; } \
+    [[nodiscard]] ConstIterator end() const    { return _end; }
+
 #define HYP_ENABLE_IF(cond, return_type) \
     typename std::enable_if_t<cond, return_type>
 
