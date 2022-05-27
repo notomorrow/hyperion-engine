@@ -7,9 +7,9 @@
 #include "renderer_render_pass.h"
 #include "renderer_fbo.h"
 
-#include "../../system/debug.h"
-#include "../../math/math_util.h"
-#include "../../math/transform.h"
+#include <system/debug.h>
+#include <math/math_util.h>
+#include <math/transform.h>
 
 #include <cstring>
 

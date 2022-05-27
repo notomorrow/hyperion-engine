@@ -1,6 +1,8 @@
 #ifndef HYPERION_DEFINES_H
 #define HYPERION_DEFINES_H
 
+#define HYP_VULKAN 1
+
 // stl helpers and such
 
 #define HYP_STR(x) #x

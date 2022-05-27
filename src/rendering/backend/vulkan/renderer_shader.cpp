@@ -1,6 +1,6 @@
 #include "renderer_shader.h"
 
-#include "../../system/debug.h"
+#include <system/debug.h>
 
 #include <algorithm>
 

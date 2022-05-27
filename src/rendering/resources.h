@@ -58,17 +58,9 @@ struct Resources {
     template <class LambdaFunction>
     void Lock(LambdaFunction lambda)
     {
-        const auto thread_id = std::hash<std::thread::id>{}(std::this_thread::get_id());
+        std::lock_guard guard(m_mtx);
 
-        DebugLog(LogType::Debug, "Locking resource mutex in thread %llu\n", thread_id);
-        m_mtx.lock();
-        DebugLog(LogType::Debug, "Locked resource mutex in thread %llu\n", thread_id);
-        
         lambda(*this);
-
-        DebugLog(LogType::Debug, "Unlocking resource mutex in thread %llu\n", thread_id);
-        m_mtx.unlock();
-        DebugLog(LogType::Debug, "Unlocked resource mutex in thread %llu\n", thread_id);
     }
 
 private:

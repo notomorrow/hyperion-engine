@@ -1,13 +1,12 @@
 #include "renderer_raytracing_pipeline.h"
 #include "../renderer_command_buffer.h"
+#include "../renderer_features.h"
 
 #include <system/debug.h>
 #include <math/math_util.h>
 #include <math/transform.h>
 
 #include <cstring>
-
-#include "../renderer_features.h"
 
 namespace hyperion {
 namespace renderer {
