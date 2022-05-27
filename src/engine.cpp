@@ -18,6 +18,26 @@ using renderer::ImageView;
 using renderer::FramebufferObject;
 using renderer::DescriptorKey;
 
+const FlatMap<EngineThread, ThreadId> Engine::thread_ids{
+    std::make_pair(THREAD_MAIN, ThreadId{uint(THREAD_MAIN), "MainThread"}),
+    std::make_pair(THREAD_GAME, ThreadId{uint(THREAD_GAME), "GameThread"})
+};
+
+thread_local ThreadId current_thread_id = Engine::thread_ids.At(THREAD_MAIN);
+
+void Engine::AssertOnThread(EngineThreadMask mask)
+{
+    const auto &current = current_thread_id;
+
+    AssertThrowMsg(
+        (mask & current.value),
+        "Expected current thread to be in mask %u\nBut got \"%s\" (%u)",
+        mask,
+        current.name.CString(),
+        current.value
+    );
+}
+
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : shader_globals(nullptr),
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
@@ -71,7 +91,30 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_GBUFFER,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+            std::array{ //Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R10G10B10A2,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
+        )
+    );
+
+    m_texture_format_defaults.Set(
+        TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_NORMALS,
+        device->GetFeatures().FindSupportedFormat(
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R10G10B10A2,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
+        )
+    );
+
+    m_texture_format_defaults.Set(
+        TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_UV,
+        device->GetFeatures().FindSupportedFormat(
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16G16,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
@@ -174,8 +217,10 @@ void Engine::PrepareSwapchain()
             m_root_pipeline = std::make_unique<GraphicsPipeline>(
                 shader.IncRef(),
                 render_pass.IncRef(),
-                VertexAttributeSet::static_mesh,
-                Bucket::BUCKET_SWAPCHAIN
+                RenderableAttributeSet{
+                    .bucket            = BUCKET_SWAPCHAIN,
+                    .vertex_attributes = VertexAttributeSet::static_mesh
+                }
             );
         }
 
@@ -406,22 +451,25 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
 }
 
-Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
-    Ref<Shader> &&shader,
-    const VertexAttributeSet &vertex_attributes,
-    Bucket bucket
-)
+Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(const RenderableAttributeSet &renderable_attributes)
 {
-    auto &render_list_bucket = m_render_list_container.Get(bucket);
+    const auto it = m_graphics_pipeline_mapping.Find(renderable_attributes);
 
-    Ref<GraphicsPipeline> found_pipeline;
+    if (it != m_graphics_pipeline_mapping.End()) {
+        return resources.graphics_pipelines.Get(it->second);
+    }
+
+
+    auto &render_list_bucket = m_render_list_container.Get(renderable_attributes.bucket);
+
+    /*Ref<GraphicsPipeline> found_pipeline;
     
-    for (auto &graphics_pipeline : render_list_bucket.graphics_pipelines) {
-        if (graphics_pipeline->GetShader() != shader) {
+    for (auto &graphics_pipeline : render_list_bucket.GetGraphicsPipelines()) {
+        if (graphics_pipeline->GetShader()->GetId() != renderable_attributes.shader_id) {
             continue;
         }
 
-        if (!(graphics_pipeline->GetVertexAttributes() & vertex_attributes)) {
+        if (!(graphics_pipeline->GetVertexAttributes() & renderable_attributes.vertex_attributes)) {
             continue;
         }
 
@@ -432,24 +480,41 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(
 
     if (found_pipeline != nullptr) {
         return found_pipeline;
-    }
+    }*/
 
     // create a pipeline with the given params
     return AddGraphicsPipeline(std::make_unique<GraphicsPipeline>(
-        std::move(shader),
-        render_list_bucket.render_pass.IncRef(),
-        vertex_attributes,
-        bucket
+        resources.shaders.Get(renderable_attributes.shader_id),
+        render_list_bucket.GetRenderPass().IncRef(),
+        renderable_attributes
     ));
+}
+    
+Ref<GraphicsPipeline> Engine::AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline)
+{
+    auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
+    
+    std::pair<RenderableAttributeSet, GraphicsPipeline::ID> pair{graphics_pipeline->GetRenderableAttributes(), graphics_pipeline->GetId()};
+    m_graphics_pipeline_mapping.Insert(std::move(pair));
+
+    m_render_list_container
+        .Get(graphics_pipeline->GetRenderableAttributes().bucket)
+        .AddGraphicsPipeline(graphics_pipeline.IncRef());
+
+    return graphics_pipeline;
 }
 
 void Engine::ResetRenderState()
 {
+    AssertOnThread(THREAD_RENDER);
+
     render_state.scene_ids = {};
 }
 
 void Engine::UpdateBuffersAndDescriptors(uint32_t frame_index)
 {
+    AssertOnThread(THREAD_RENDER);
+
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
@@ -458,15 +523,21 @@ void Engine::UpdateBuffersAndDescriptors(uint32_t frame_index)
     shader_globals->shadow_maps.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
     shader_globals->textures.ApplyUpdates(this, frame_index);
+
+    m_render_list_container.AddPendingGraphicsPipelines(this);
 }
 
 void Engine::RenderDeferred(Frame *frame)
 {
+    AssertOnThread(THREAD_RENDER);
+
     m_deferred_renderer.Render(this, frame);
 }
 
-void Engine::RenderSwapchain(CommandBuffer *command_buffer) const
+void Engine::RenderFinalPass(CommandBuffer *command_buffer) const
 {
+    AssertOnThread(THREAD_RENDER);
+
     auto *pipeline = m_root_pipeline->GetPipeline();
     const uint32_t acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 

@@ -7,17 +7,15 @@ namespace hyperion::v2 {
 Spatial::Spatial(
     Ref<Mesh> &&mesh,
     Ref<Shader> &&shader,
-    const VertexAttributeSet &attributes,
     Ref<Material> &&material,
-    Bucket bucket)
-    : EngineComponentBase(),
-      m_mesh(std::move(mesh)),
-      m_shader(std::move(shader)),
-      m_attributes(attributes),
-      m_material(std::move(material)),
-      m_bucket(bucket),
-      m_octree(nullptr),
-      m_shader_data_state(ShaderDataState::DIRTY)
+    const RenderableAttributeSet &renderable_attributes
+) : EngineComponentBase(),
+    m_mesh(std::move(mesh)),
+    m_shader(std::move(shader)),
+    m_material(std::move(material)),
+    m_renderable_attributes(renderable_attributes),
+    m_octree(nullptr),
+    m_shader_data_state(ShaderDataState::DIRTY)
 {
     if (m_mesh) {
         m_local_aabb = m_mesh->CalculateAabb();
@@ -108,19 +106,17 @@ void Spatial::EnqueueRenderUpdates(Engine *engine)
 {
     AssertReady();
 
-    m_render_update_id = engine->render_scheduler.EnqueueReplace(m_render_update_id, [this, engine, transform = m_transform](...) {
+    engine->render_scheduler.Enqueue([this, engine, transform = m_transform](...) {
         engine->shader_globals->objects.Set(
             m_id.value - 1,
             {
                 .model_matrix   = transform.GetMatrix(),
                 .has_skinning   = m_skeleton != nullptr,
-                .material_index = m_material != nullptr
-                    ? m_material->GetId().value - 1
-                    : 0,
-                .local_aabb_max         = Vector4(m_local_aabb.max, 1.0f),
-                .local_aabb_min         = Vector4(m_local_aabb.min, 1.0f),
-                .world_aabb_max         = Vector4(m_world_aabb.max, 1.0f),
-                .world_aabb_min         = Vector4(m_world_aabb.min, 1.0f)
+                .material_index = m_material != nullptr ? m_material->GetId().value - 1 : 0,
+                .local_aabb_max = Vector4(m_local_aabb.max, 1.0f),
+                .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),
+                .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),
+                .world_aabb_min = Vector4(m_world_aabb.min, 1.0f)
             }
         );
 
@@ -176,7 +172,11 @@ void Spatial::SetShader(Ref<Shader> &&shader)
     }
 
     m_shader = std::move(shader);
-    m_primary_pipeline.changed = true;
+    
+    RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
+    new_renderable_attributes.shader_id = m_shader->GetId();
+
+    SetRenderableAttributes(new_renderable_attributes);
 
     if (m_shader != nullptr && IsReady()) {
         m_shader.Init();
@@ -190,7 +190,6 @@ void Spatial::SetMaterial(Ref<Material> &&material)
     }
 
     m_material = std::move(material);
-    m_primary_pipeline.changed = true;
 
     if (m_material != nullptr && IsReady()) {
         m_material.Init();
@@ -199,14 +198,52 @@ void Spatial::SetMaterial(Ref<Material> &&material)
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Spatial::SetBucket(Bucket bucket)
+void Spatial::SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes)
 {
-    if (m_bucket == bucket) {
+    if (m_renderable_attributes == renderable_attributes) {
         return;
     }
 
-    m_bucket = bucket;
+    m_renderable_attributes    = renderable_attributes;
     m_primary_pipeline.changed = true;
+}
+
+void Spatial::SetMeshAttributes(
+    VertexAttributeSet vertex_attributes,
+    FaceCullMode face_cull_mode,
+    bool depth_write,
+    bool depth_test
+)
+{
+    RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
+    new_renderable_attributes.vertex_attributes = vertex_attributes;
+    new_renderable_attributes.cull_faces        = face_cull_mode;
+    new_renderable_attributes.depth_write       = depth_write;
+    new_renderable_attributes.depth_test        = depth_test;
+
+    SetRenderableAttributes(new_renderable_attributes);
+}
+
+void Spatial::SetMeshAttributes(
+    FaceCullMode face_cull_mode,
+    bool depth_write,
+    bool depth_test
+)
+{
+    SetMeshAttributes(
+        m_renderable_attributes.vertex_attributes,
+        face_cull_mode,
+        depth_write,
+        depth_test
+    );
+}
+
+void Spatial::SetBucket(Bucket bucket)
+{
+    RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
+    new_renderable_attributes.bucket = bucket;
+
+    SetRenderableAttributes(new_renderable_attributes);
 }
 
 void Spatial::SetTransform(const Transform &transform)
@@ -229,7 +266,10 @@ void Spatial::OnAddedToPipeline(GraphicsPipeline *pipeline)
 void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
 {
     if (pipeline == m_primary_pipeline.pipeline) {
-        m_primary_pipeline = {.pipeline = nullptr, .changed = true};
+        m_primary_pipeline = {
+            .pipeline = nullptr,
+            .changed  = true
+        };
     }
 
     const auto it = std::find(m_pipelines.begin(), m_pipelines.end(), pipeline);
@@ -241,7 +281,7 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
 
 void Spatial::AddToPipeline(Engine *engine)
 {
-    if (const auto pipeline = engine->FindOrCreateGraphicsPipeline(m_shader.IncRef(), m_mesh->GetVertexAttributes(), m_bucket)) {
+    if (const auto pipeline = engine->FindOrCreateGraphicsPipeline(m_renderable_attributes)) {
         AddToPipeline(engine, pipeline.ptr);
 
         if (!m_pipelines.empty()) {
@@ -253,9 +293,8 @@ void Spatial::AddToPipeline(Engine *engine)
     } else {
         DebugLog(
             LogType::Error,
-            "Could not find optimal graphics pipeline for Spatial #%lu! Bucket index: %d\n",
-            m_id.value,
-            int(m_bucket)
+            "Could not find or create optimal graphics pipeline for Spatial #%lu!\n",
+            m_id.value
         );
     }
 }
@@ -273,13 +312,19 @@ void Spatial::RemoveFromPipelines(Engine *)
 
     m_pipelines.clear();
     
-    m_primary_pipeline = {.pipeline = nullptr, .changed = true};
+    m_primary_pipeline = {
+        .pipeline = nullptr,
+        .changed = true
+    };
 }
 
 void Spatial::RemoveFromPipeline(Engine *, GraphicsPipeline *pipeline)
 {
     if (pipeline == m_primary_pipeline.pipeline) {
-        m_primary_pipeline = {.pipeline = nullptr, .changed = true};
+        m_primary_pipeline = {
+            .pipeline = nullptr,
+            .changed  = true
+        };
     }
 
     pipeline->OnSpatialRemoved(this);

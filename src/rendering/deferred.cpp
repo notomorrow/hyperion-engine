@@ -37,7 +37,7 @@ void DeferredRenderingEffect::CreateShader(Engine *engine)
 
 void DeferredRenderingEffect::CreateRenderPass(Engine *engine)
 {
-    m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].render_pass.IncRef();
+    m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass().IncRef();
 }
 
 void DeferredRenderingEffect::CreateDescriptors(Engine *engine)
@@ -61,7 +61,7 @@ void DeferredRenderingEffect::CreateDescriptors(Engine *engine)
 
 void DeferredRenderingEffect::Create(Engine *engine)
 {
-    m_framebuffer = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].framebuffers[0].IncRef();
+    m_framebuffer = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[0].IncRef();
 
     CreatePerFrameData(engine);
     CreatePipeline(engine);
@@ -89,7 +89,7 @@ void DeferredRenderer::Create(Engine *engine)
     m_effect.CreateRenderPass(engine);
     m_effect.Create(engine);
 
-    auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].framebuffers[0];
+    auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[0];
 
     /* Add our gbuffer textures */
     auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()
@@ -148,6 +148,8 @@ void DeferredRenderer::Destroy(Engine *engine)
 
 void DeferredRenderer::Render(Engine *engine, Frame *frame)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
 
@@ -156,9 +158,9 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     auto &render_list = engine->GetRenderListContainer();
     auto &bucket = render_list.Get(Bucket::BUCKET_OPAQUE);
 
-    bucket.framebuffers[0]->BeginCapture(primary); /* TODO: frame index? */
+    bucket.GetFramebuffers()[0]->BeginCapture(primary); /* TODO: frame index? */
     RenderOpaqueObjects(engine, frame);
-    bucket.framebuffers[0]->EndCapture(primary); /* TODO: frame index? */
+    bucket.GetFramebuffers()[0]->EndCapture(primary); /* TODO: frame index? */
     
     m_post_processing.Render(engine, primary, frame_index);
     
@@ -174,18 +176,18 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
 {
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetGraphicsPipelines()) {
         pipeline->Render(engine, frame);
     }
     
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelines()) {
         pipeline->Render(engine, frame);
     }
 }
 
 void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame)
 {
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetGraphicsPipelines()) {
         pipeline->Render(engine, frame);
     }
 }

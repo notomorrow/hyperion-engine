@@ -37,6 +37,7 @@ class Octree {
     };
 
     static constexpr float growth_factor = 1.5f;
+    static const BoundingBox default_bounds;
 
     Octree(Octree *parent, const BoundingBox &aabb, uint8_t index);
 
@@ -67,7 +68,7 @@ public:
 
     static bool IsVisible(const Octree *parent, const Octree *child);
 
-    Octree(const BoundingBox &aabb);
+    Octree(const BoundingBox &aabb = default_bounds);
     ~Octree();
 
     inline Root *GetRoot() const { return m_root; }

@@ -34,7 +34,11 @@ void Light::Init(Engine *engine)
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_LIGHTS, [this](Engine *engine) {
         EnqueueRenderUpdates(engine);
 
+        SetReady(true);
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_LIGHTS, [this](Engine *engine) {
+            SetReady(false);
+
             /* no-op */
         }), engine);
     }));

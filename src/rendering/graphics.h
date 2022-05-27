@@ -8,6 +8,7 @@
 #include "framebuffer.h"
 #include "render_pass.h"
 #include "render_bucket.h"
+#include "renderable_attributes.h"
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
 #include <rendering/backend/renderer_frame.h>
@@ -40,8 +41,7 @@ public:
     GraphicsPipeline(
         Ref<Shader> &&shader,
         Ref<RenderPass> &&render_pass,
-        const VertexAttributeSet &vertex_attributes,
-        Bucket bucket
+        const RenderableAttributeSet &renderable_attributes
     );
 
     GraphicsPipeline(const GraphicsPipeline &other) = delete;
@@ -50,29 +50,26 @@ public:
 
     renderer::GraphicsPipeline *GetPipeline() const       { return m_pipeline.get(); }
     Shader *GetShader() const                             { return m_shader.ptr; }
-    RenderPass *GetRenderPassID() const                   { return m_render_pass.ptr; }
-    Bucket GetBucket() const                              { return m_bucket; }
+    
+    const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
+    
+    Topology GetTopology() const                          { return m_renderable_attributes.topology; }
+    void SetTopology(Topology topology)                   { m_renderable_attributes.topology = topology; }
 
-    VertexAttributeSet &GetVertexAttributes()             { return m_vertex_attributes; }
-    const VertexAttributeSet &GetVertexAttributes() const { return m_vertex_attributes; }
+    auto GetFillMode() const                              { return m_renderable_attributes.fill_mode; }
+    void SetFillMode(FillMode fill_mode)                  { m_renderable_attributes.fill_mode = fill_mode; }
 
-    Topology GetTopology() const                          { return m_topology; }
-    void SetTopology(Topology topology)                   { m_topology = topology; }
+    auto GetCullMode() const                              { return m_renderable_attributes.cull_faces; }
+    void SetFaceCullMode(FaceCullMode cull_mode)          { m_renderable_attributes.cull_faces = cull_mode; }
 
-    auto GetFillMode() const                              { return m_fill_mode; }
-    void SetFillMode(FillMode fill_mode)                  { m_fill_mode = fill_mode; }
+    bool GetDepthTest() const                             { return m_renderable_attributes.depth_test; }
+    void SetDepthTest(bool depth_test)                    { m_renderable_attributes.depth_test = depth_test; }
 
-    auto GetCullMode() const                              { return m_cull_mode; }
-    void SetFaceCullMode(FaceCullMode cull_mode)          { m_cull_mode = cull_mode; }
+    bool GetDepthWrite() const                            { return m_renderable_attributes.depth_write; }
+    void SetDepthWrite(bool depth_write)                  { m_renderable_attributes.depth_write = depth_write; }
 
-    bool GetDepthTest() const                             { return m_depth_test; }
-    void SetDepthTest(bool depth_test)                    { m_depth_test = depth_test; }
-
-    bool GetDepthWrite() const                            { return m_depth_write; }
-    void SetDepthWrite(bool depth_write)                  { m_depth_write = depth_write; }
-
-    bool GetBlendEnabled() const                          { return m_blend_enabled; }
-    void SetBlendEnabled(bool blend_enabled)              { m_blend_enabled = blend_enabled; }
+    bool GetBlendEnabled() const                          { return m_renderable_attributes.alpha_blending; }
+    void SetBlendEnabled(bool blend_enabled)              { m_renderable_attributes.alpha_blending = blend_enabled; }
 
     void AddSpatial(Ref<Spatial> &&spatial);
     void RemoveSpatial(Spatial::ID id);
@@ -105,14 +102,7 @@ private:
 
     Ref<Shader> m_shader;
     Ref<RenderPass> m_render_pass;
-    Bucket m_bucket;
-    Topology m_topology;
-    FaceCullMode m_cull_mode;
-    FillMode m_fill_mode;
-    bool m_depth_test;
-    bool m_depth_write;
-    bool m_blend_enabled;
-    VertexAttributeSet m_vertex_attributes;
+    RenderableAttributeSet m_renderable_attributes;
     
     std::vector<Ref<Framebuffer>> m_fbos;
 

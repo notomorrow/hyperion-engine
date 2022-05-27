@@ -67,7 +67,11 @@ void Shader::Init(Engine *engine)
             return m_shader_program->Create(engine->GetDevice());
         });
 
+        SetReady(true);
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SHADERS, [this](Engine *engine) {
+            SetReady(false);
+
             engine->render_scheduler.Enqueue([this, engine](...) {
                 return m_shader_program->Destroy(engine->GetDevice());
             });

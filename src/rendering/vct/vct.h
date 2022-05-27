@@ -14,6 +14,8 @@
 #include <rendering/backend/renderer_structs.h>
 #include <rendering/backend/renderer_frame.h>
 
+#include <core/lib/flat_map.h>
+
 namespace hyperion::v2 {
 
 using renderer::CommandBuffer;
@@ -70,8 +72,9 @@ private:
 
     Ref<Texture>                   m_voxel_image;
     UniformBuffer                  m_uniform_buffer;
-
-    std::vector<ObserverRef<Ref<Spatial>>> m_observers;
+    
+    std::vector<ObserverRef<Ref<GraphicsPipeline>>>          m_pipeline_observers;
+    FlatMap<GraphicsPipeline::ID, ObserverRef<Ref<Spatial>>> m_spatial_observers;
 
 };
 

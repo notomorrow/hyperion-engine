@@ -166,6 +166,8 @@ struct VertexAttributeSet {
     VertexAttributeSet operator|(uint64_t flags) const { return {flag_mask | flags}; }
     VertexAttributeSet &operator|=(uint64_t flags)     { flag_mask |= flags; return *this; }
 
+    bool operator<(const VertexAttributeSet &other) const { return flag_mask < other.flag_mask; }
+
     bool Has(VertexAttribute::Type type) const { return bool(operator&(uint64_t(type))); }
 
     void Set(uint64_t flags, bool enable = true)

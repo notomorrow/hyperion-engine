@@ -136,8 +136,10 @@ void FullScreenPass::CreatePipeline(Engine *engine)
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
         m_render_pass.IncRef(),
-        VertexAttributeSet::static_mesh,
-        Bucket::BUCKET_PREPASS
+        RenderableAttributeSet{
+            .bucket            = BUCKET_PREPASS,
+            .vertex_attributes = VertexAttributeSet::static_mesh
+        }
     );
 
     pipeline->AddFramebuffer(m_framebuffer.IncRef());

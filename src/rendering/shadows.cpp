@@ -110,46 +110,53 @@ void ShadowEffect::CreatePipeline(Engine *engine)
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
         m_render_pass.IncRef(),
-        VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
-        Bucket::BUCKET_PREPASS
+        RenderableAttributeSet{
+            .bucket            = BUCKET_PREPASS,
+            .vertex_attributes = VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton
+        }
     );
 
     pipeline->SetFaceCullMode(FaceCullMode::FRONT);
     pipeline->AddFramebuffer(m_framebuffer.IncRef());
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
-    
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
-        m_observers.push_back(pipeline->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
-            [this](Ref<Spatial> *items, size_t count) {
-                for (size_t i = 0; i < count; i++) {
-                    m_pipeline->AddSpatial(items[i].IncRef());
-                }
-            },
-            [this](Ref<Spatial> *items, size_t count) {
-                for (size_t i = 0; i < count; i++) {
-                    m_pipeline->RemoveSpatial(items[i]->GetId());
-                }
-            }
-        )));
-    }
-    
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).graphics_pipelines) {
-        m_observers.push_back(pipeline->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
-            [this](Ref<Spatial> *items, size_t count) {
-                for (size_t i = 0; i < count; i++) {
-                    m_pipeline->AddSpatial(items[i].IncRef());
-                }
-            },
-            [this](Ref<Spatial> *items, size_t count) {
-                for (size_t i = 0; i < count; i++) {
-                    m_pipeline->RemoveSpatial(items[i]->GetId());
-                }
-            }
-        )));
-    }
-
     m_pipeline.Init();
+
+    const std::array<Bucket, 2> buckets = {BUCKET_OPAQUE, BUCKET_TRANSLUCENT};
+
+    for (const Bucket bucket : buckets) {
+        m_pipeline_observers.push_back(engine->GetRenderListContainer().Get(bucket).GetGraphicsPipelineNotifier().Add(Observer<Ref<GraphicsPipeline>>(
+            [this](Ref<GraphicsPipeline> *pipelines, size_t count) {
+                for (size_t i = 0; i < count; i++) {
+                    if (pipelines[i] == m_pipeline.ptr) {
+                        continue;
+                    }
+
+                    m_spatial_observers.Insert(pipelines[i]->GetId(), pipelines[i]->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
+                        [this](Ref<Spatial> *items, size_t count) {
+                            for (size_t i = 0; i < count; i++) {
+                                m_pipeline->AddSpatial(items[i].IncRef());
+                            }
+                        },
+                        [this](Ref<Spatial> *items, size_t count) {
+                            for (size_t i = 0; i < count; i++) {
+                                m_pipeline->RemoveSpatial(items[i]->GetId());
+                            }
+                        }
+                    )));
+                }
+            },
+            [this](Ref<GraphicsPipeline> *pipelines, size_t count) {
+                for (size_t i = 0; i < count; i++) {
+                    if (pipelines[i] == m_pipeline.ptr) {
+                        continue;
+                    }
+
+                    m_spatial_observers.Erase(pipelines[i]->GetId());
+                }
+            }
+        )));
+    }
 }
 
 void ShadowEffect::Create(Engine *engine)
@@ -192,13 +199,16 @@ void ShadowEffect::Create(Engine *engine)
 
 void ShadowEffect::Destroy(Engine *engine)
 {
-    m_observers.clear();
+    m_spatial_observers.Clear();
+    m_pipeline_observers.clear();
 
     FullScreenPass::Destroy(engine); // flushes render queue
 }
 
 void ShadowEffect::Render(Engine *engine, Frame *frame)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     engine->render_state.BindScene(m_scene);
 
     m_framebuffer->BeginCapture(frame->GetCommandBuffer());
@@ -249,6 +259,8 @@ void ShadowRenderer::Init(Engine *engine)
 
 void ShadowRenderer::Update(Engine *engine, GameCounter::TickUnit delta)
 {
+    Engine::AssertOnThread(THREAD_GAME);
+
     AssertReady();
     
     UpdateSceneCamera(engine);
@@ -258,6 +270,8 @@ void ShadowRenderer::Update(Engine *engine, GameCounter::TickUnit delta)
 
 void ShadowRenderer::Render(Engine *engine, Frame *frame)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     AssertReady();
 
     const auto *camera = m_effect.GetScene()->GetCamera();

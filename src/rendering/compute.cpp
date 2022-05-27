@@ -34,7 +34,11 @@ void ComputePipeline::Init(Engine *engine)
            ); 
         });
 
+        SetReady(true);
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_COMPUTE_PIPELINES, [this](Engine *engine) {
+            SetReady(false);
+
             engine->render_scheduler.Enqueue([this, engine](...) {
                return m_pipeline->Destroy(engine->GetDevice()); 
             });

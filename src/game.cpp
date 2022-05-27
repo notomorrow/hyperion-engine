@@ -23,6 +23,10 @@ void Game::Init(Engine *engine, SystemWindow *window)
     m_is_init = true;
 }
 
+void Game::OnPostInit(Engine *engine)
+{
+}
+
 void Game::Teardown(Engine *engine)
 {
     m_is_init = false;

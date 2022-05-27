@@ -106,44 +106,7 @@ public:
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         
-        scene->GetRootNode()->AddChild(engine->assets.Load<Node>("models/monkey/monkey.obj"));
-
-        if (auto *suzanne = scene->GetRootNode()->Select("Suzanne/None")) {
-            /*auto suzanne_mat = engine->resources.materials.Add(std::make_unique<Material>());
-
-            suzanne_mat->SetTexture(
-                Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP,
-                engine->resources.textures.Add(
-                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_albedo.png")
-                )
-            );
-            suzanne_mat->SetTexture(
-                Material::TextureKey::MATERIAL_TEXTURE_NORMAL_MAP,
-                engine->resources.textures.Add(
-                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_normal-ogl.png")
-                )
-            );
-            suzanne_mat->SetTexture(
-                Material::TextureKey::MATERIAL_TEXTURE_AO_MAP,
-                engine->resources.textures.Add(
-                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_ao.png")
-                )
-            );
-            suzanne_mat->SetTexture(
-                Material::TextureKey::MATERIAL_TEXTURE_PARALLAX_MAP,
-                engine->resources.textures.Add(
-                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_height.png")
-                )
-            );
-            suzanne_mat->SetTexture(
-                Material::TextureKey::MATERIAL_TEXTURE_METALNESS_MAP,
-                engine->resources.textures.Add(
-                    engine->assets.Load<Texture>("textures/columned-lava-rock-unity/columned-lava-rock_metallic.psd")
-                )
-            );
-            suzanne->GetSpatial()->SetMaterial(std::move(suzanne_mat));*/
-            suzanne->GetParent()->Translate({7, 3, 5});
-        }
+        
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
@@ -200,6 +163,8 @@ public:
             engine->assets.Load<Texture>("textures/dummy.jpg")
         );
 
+        cube_obj->Scale(5.0f);
+
         auto metal_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
         metal_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 0.5f, 0.2f, 1.0f }));
         metal_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
@@ -212,8 +177,13 @@ public:
 
         auto *skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
         skybox_spatial->SetMaterial(std::move(skybox_material));
-        skybox_spatial->SetBucket(v2::Bucket::BUCKET_SKYBOX);
+        skybox_spatial->SetBucket(BUCKET_SKYBOX);
         skybox_spatial->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef());
+        skybox_spatial->SetMeshAttributes(
+            FaceCullMode::FRONT,
+            false,
+            false
+        );
 
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
 
@@ -223,6 +193,15 @@ public:
         //zombie->GetController<AudioController>()->Play(1.0f, LoopMode::ONCE);
 
         scene->GetRootNode()->AddController<BasicPagingController>(Extent3D{8, 8, 8}, Vector3::One());
+    }
+
+    virtual void OnPostInit(Engine *engine) override
+    {
+        scene->GetRootNode()->AddChild(engine->assets.Load<Node>("models/monkey/monkey.obj"));
+
+        if (auto *suzanne = scene->GetRootNode()->Select("Suzanne")) {
+            suzanne->Translate({7, 3, 5});
+        }
     }
 
     virtual void Teardown(Engine *engine) override
@@ -279,7 +258,7 @@ public:
         material_test_obj->Update(engine, delta);
 
         zombie->Update(engine, delta);
-        
+
         cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         cube_obj->Update(engine, delta);
 
@@ -453,9 +432,9 @@ int main()
             ))
         );
 
-        auto pipeline = std::make_unique<v2::GraphicsPipeline>(
+        /*auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_SKYBOX).IncRef(),
-            engine.GetRenderListContainer().Get(v2::BUCKET_SKYBOX).render_pass.IncRef(),
+            engine.GetRenderListContainer().Get(v2::BUCKET_SKYBOX).GetRenderPass().IncRef(),
             VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
             v2::Bucket::BUCKET_SKYBOX
         );
@@ -463,15 +442,17 @@ int main()
         pipeline->SetDepthTest(false);
         pipeline->SetDepthWrite(false);
         
-        engine.AddGraphicsPipeline(std::move(pipeline));
+        engine.AddGraphicsPipeline(std::move(pipeline));*/
     }
     
     {
         auto pipeline = std::make_unique<v2::GraphicsPipeline>(
             engine.shader_manager.GetShader(v2::ShaderManager::Key::BASIC_FORWARD).IncRef(),
-            engine.GetRenderListContainer().Get(v2::BUCKET_TRANSLUCENT).render_pass.IncRef(),
-            VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
-            v2::Bucket::BUCKET_TRANSLUCENT
+            engine.GetRenderListContainer().Get(v2::BUCKET_TRANSLUCENT).GetRenderPass().IncRef(),
+            v2::RenderableAttributeSet{
+                .bucket            = v2::Bucket::BUCKET_TRANSLUCENT,
+                .vertex_attributes = VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton
+            }
         );
         pipeline->SetBlendEnabled(true);
         
@@ -694,8 +675,9 @@ int main()
 #endif
 
 #if HYPERION_VK_TEST_VCT
-        if (tmp_render_timer == 0.0f || std::fmodf(tmp_render_timer, 2.0f) == 0.0f) {
+        if (tmp_render_timer == 0.0f || tmp_render_timer > 0.01f) {
             vct.RenderVoxels(&engine, frame);
+            tmp_render_timer = 0.0f;
         }
         tmp_render_timer += 0.001f;
 #endif
@@ -709,7 +691,7 @@ int main()
         );
 #endif
 
-        engine.RenderSwapchain(frame->GetCommandBuffer());
+        engine.RenderFinalPass(frame->GetCommandBuffer());
 
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine.GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine.GetInstance()->GetGraphicsQueue()));

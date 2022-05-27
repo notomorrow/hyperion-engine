@@ -47,7 +47,8 @@ void VoxelConeTracing::Init(Engine *engine)
         CreateComputePipelines(engine);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](Engine *engine) {
-            m_observers.clear();
+            m_spatial_observers.Clear();
+            m_pipeline_observers.clear();
 
             m_shader       = nullptr;
             m_framebuffer  = nullptr;
@@ -67,6 +68,8 @@ void VoxelConeTracing::Init(Engine *engine)
 
 void VoxelConeTracing::RenderVoxels(Engine *engine, Frame *frame)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     auto *command_buffer = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
 
@@ -164,8 +167,10 @@ void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
         m_render_pass.IncRef(),
-        VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
-        Bucket::BUCKET_VOXELIZER
+        RenderableAttributeSet{
+            .bucket            = BUCKET_VOXELIZER,
+            .vertex_attributes = VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton
+        }
     );
 
     pipeline->SetDepthWrite(false);
@@ -175,23 +180,39 @@ void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
     pipeline->AddFramebuffer(m_framebuffer.IncRef());
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
-    
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
-        m_observers.push_back(pipeline->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
-            [this](Ref<Spatial> *items, size_t count) {
-                for (size_t i = 0; i < count; i++) {
-                    m_pipeline->AddSpatial(items[i].IncRef());
-                }
-            },
-            [this](Ref<Spatial> *items, size_t count) {
-                for (size_t i = 0; i < count; i++) {
-                    m_pipeline->RemoveSpatial(items[i]->GetId());
-                }
-            }
-        )));
-    }
-
     m_pipeline.Init();
+
+    m_pipeline_observers.push_back(engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelineNotifier().Add(Observer<Ref<GraphicsPipeline>>(
+        [this](Ref<GraphicsPipeline> *pipelines, size_t count) {
+            for (size_t i = 0; i < count; i++) {
+                if (pipelines[i] == m_pipeline.ptr) {
+                    continue;
+                }
+
+                m_spatial_observers.Insert(pipelines[i]->GetId(), pipelines[i]->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
+                    [this](Ref<Spatial> *items, size_t count) {
+                        for (size_t i = 0; i < count; i++) {
+                            m_pipeline->AddSpatial(items[i].IncRef());
+                        }
+                    },
+                    [this](Ref<Spatial> *items, size_t count) {
+                        for (size_t i = 0; i < count; i++) {
+                            m_pipeline->RemoveSpatial(items[i]->GetId());
+                        }
+                    }
+                )));
+            }
+        },
+        [this](Ref<GraphicsPipeline> *pipelines, size_t count) {
+            for (size_t i = 0; i < count; i++) {
+                if (pipelines[i] == m_pipeline.ptr) {
+                    continue;
+                }
+
+                m_spatial_observers.Erase(pipelines[i]->GetId());
+            }
+        }
+    )));
 }
 
 void VoxelConeTracing::CreateComputePipelines(Engine *engine)

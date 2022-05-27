@@ -219,12 +219,19 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
 
             auto vertex_attributes = mesh->GetVertexAttributes();
 
+            auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef();
+            const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
+
             auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
                     std::move(mesh),
-                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef(),
-                    vertex_attributes,
-                    engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
+                    std::move(shader),
+                    resources.materials.Get(Material::ID{1}),
+                    RenderableAttributeSet{
+                        .bucket            = Bucket::BUCKET_OPAQUE,
+                        .shader_id         = shader_id,
+                        .vertex_attributes = vertex_attributes
+                    }
                 )
             );
 

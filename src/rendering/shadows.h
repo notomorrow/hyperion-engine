@@ -58,13 +58,14 @@ public:
     void Render(Engine *engine, Frame *frame);
 
 private:
-    Ref<Scene>                             m_scene;
-    Ref<Light>                             m_light;
-    std::vector<ObserverRef<Ref<Spatial>>> m_observers;
-    Scene::ID                              m_parent_scene_id;
-    Vector3                                m_origin;
-    float                                  m_max_distance;
-    uint                                   m_shadow_map_index;
+    Ref<Scene>                                               m_scene;
+    Ref<Light>                                               m_light;
+    std::vector<ObserverRef<Ref<GraphicsPipeline>>>          m_pipeline_observers;
+    FlatMap<GraphicsPipeline::ID, ObserverRef<Ref<Spatial>>> m_spatial_observers;
+    Scene::ID                                                m_parent_scene_id;
+    Vector3                                                  m_origin;
+    float                                                    m_max_distance;
+    uint                                                     m_shadow_map_index;
 };
 
 class ShadowRenderer : public EngineComponentBase<STUB_CLASS(ShadowRenderer)> {
