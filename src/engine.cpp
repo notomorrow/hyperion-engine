@@ -102,9 +102,8 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_NORMALS,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R10G10B10A2,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F},
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )
@@ -113,9 +112,8 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_UV,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16G16,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32F },
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32F},
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT
         )

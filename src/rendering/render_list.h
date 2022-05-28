@@ -3,10 +3,12 @@
 
 #include <core/containers.h>
 #include <rendering/graphics.h>
+#include <rendering/default_formats.h>
 #include <scene/scene.h>
 #include <types.h>
 
 #include <mutex>
+#include <array>
 
 namespace hyperion::v2 {
 
@@ -14,8 +16,8 @@ class Engine;
 
 class RenderListContainer {
 public:
-    static constexpr uint num_gbuffer_attachments = 5;
-
+    static const std::array<TextureFormatDefault, 5> gbuffer_textures;
+    
     class RenderListBucket {
         Bucket                                   bucket{BUCKET_OPAQUE};
         Ref<RenderPass>                          render_pass;

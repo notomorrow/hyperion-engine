@@ -1,16 +1,17 @@
 cmake_minimum_required(VERSION 3.5)
+cmake_policy(SET CMP0091 NEW)
 
 set(BUILD_NAME hyperion-sample)
 
 project(${BUILD_NAME} CXX C)
 
 if(MSVC)
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2")
+    #set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2")
+    #set(CMAKE_CXX_FLAGS_DEBUG "/MDd")
+
     # set to path of vcpkg
     set(CMAKE_TOOLCHAIN_FILE, "${VCPKG_INSTALLED_DIR}/../scripts/buildsystems/vcpkg.cmake")
-
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2")
-    endif()
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fpermissive")
 endif()

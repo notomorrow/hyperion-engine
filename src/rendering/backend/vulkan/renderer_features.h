@@ -9,8 +9,6 @@
 
 #include <array>
 
-#define HYP_FEATURES_ENABLE_RAYTRACING 1
-
 namespace hyperion {
 namespace renderer {
 
@@ -362,7 +360,7 @@ public:
 
     bool IsRaytracingSupported() const
     {
-#if HYP_FEATURES_ENABLE_RAYTRACING
+#if defined(HYP_FEATURES_ENABLE_RAYTRACING) && HYP_FEATURES_ENABLE_RAYTRACING
         return m_raytracing_pipeline_features.rayTracingPipeline
             && m_acceleration_structure_features.accelerationStructure
             && m_buffer_device_address_features.bufferDeviceAddress;

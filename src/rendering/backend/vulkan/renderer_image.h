@@ -57,7 +57,7 @@ public:
         TEXTURE_INTERNAL_FORMAT_RGBA32,
 
         TEXTURE_INTERNAL_FORMAT_R32_,
-        TEXTURE_INTERNAL_FORMAT_R16G16,
+        TEXTURE_INTERNAL_FORMAT_RG16_,
         TEXTURE_INTERNAL_FORMAT_R11G11B10F,
         TEXTURE_INTERNAL_FORMAT_R10G10B10A2,
 
@@ -155,9 +155,9 @@ public:
         CommandBuffer *command_buffer
     );
     
-    inline const unsigned char *GetBytes() const { return m_bytes; }
+    const unsigned char *GetBytes() const { return m_bytes; }
 
-    inline void CopyImageData(const unsigned char *data, size_t count, size_t offset = 0)
+    void CopyImageData(const unsigned char *data, size_t count, size_t offset = 0)
     {
         AssertThrow(m_bytes != nullptr);
         AssertThrow(offset + count <= m_size);
@@ -171,33 +171,36 @@ public:
     bool IsSRGB() const;
     void SetIsSRGB(bool srgb);
 
-    inline bool HasMipmaps() const
+    bool IsBlended() const             { return m_is_blended; }
+    void SetIsBlended(bool is_blended) { m_is_blended = is_blended; }
+
+    bool HasMipmaps() const
         { return m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
 
-    inline uint32_t NumMipmaps() const
+    uint32_t NumMipmaps() const
     {
         return HasMipmaps()
             ? static_cast<uint32_t>(MathUtil::FastLog2(MathUtil::Max(m_extent.width, m_extent.height, m_extent.depth))) + 1
             : 1;
     }
 
-    inline bool IsTextureCube() const
+    bool IsTextureCube() const
         { return m_type == TEXTURE_TYPE_CUBEMAP; }
 
-    inline uint32_t NumFaces() const
+    uint32_t NumFaces() const
         { return IsTextureCube() ? 6 : 1; }
 
-    inline const Extent3D &GetExtent() const            { return m_extent; }
-    inline GPUImageMemory *GetGPUImage()                { return m_image; }
-    inline const GPUImageMemory *GetGPUImage() const    { return m_image; }
+    const Extent3D &GetExtent() const            { return m_extent; }
+    GPUImageMemory *GetGPUImage()                { return m_image; }
+    const GPUImageMemory *GetGPUImage() const    { return m_image; }
 
-    inline InternalFormat GetTextureFormat() const      { return m_format; }
-    inline void SetTextureFormat(InternalFormat format) { m_format = format; }
-    inline Type GetType() const                         { return m_type; }
+    InternalFormat GetTextureFormat() const      { return m_format; }
+    void SetTextureFormat(InternalFormat format) { m_format = format; }
+    Type GetType() const                         { return m_type; }
 
     VkFormat GetImageFormat() const;
     VkImageType GetImageType() const;
-    inline VkImageUsageFlags GetImageUsageFlags() const { return m_internal_info.usage_flags; }
+    VkImageUsageFlags GetImageUsageFlags() const { return m_internal_info.usage_flags; }
     
 private:
     Result CreateImage(Device *device,
@@ -216,6 +219,8 @@ private:
     FilterMode m_filter_mode;
     unsigned char *m_bytes;
     bool m_assigned_image_data;
+
+    bool m_is_blended;
 
     InternalInfo m_internal_info;
 
@@ -365,7 +370,9 @@ public:
         format,
         Type::TEXTURE_TYPE_2D,
         bytes
-    ) {}
+    )
+    {
+    }
 };
 
 

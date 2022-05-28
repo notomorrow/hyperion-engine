@@ -10,6 +10,7 @@
 #include <rendering/resources.h>
 #include <rendering/shader_manager.h>
 #include <rendering/renderable_attributes.h>
+#include <rendering/default_formats.h>
 #include <scene/octree.h>
 
 #include "game_thread.h"
@@ -137,16 +138,6 @@ struct GraphicsPipelineAttributeSet {
  */
 class Engine {
 public:
-    enum TextureFormatDefault {
-        TEXTURE_FORMAT_DEFAULT_NONE    = 0,
-        TEXTURE_FORMAT_DEFAULT_COLOR   = 1 << 0,
-        TEXTURE_FORMAT_DEFAULT_DEPTH   = 1 << 1,
-        TEXTURE_FORMAT_DEFAULT_GBUFFER = 1 << 2,
-        TEXTURE_FORMAT_DEFAULT_NORMALS = 1 << 3,
-        TEXTURE_FORMAT_DEFAULT_UV      = 1 << 4,
-        TEXTURE_FORMAT_DEFAULT_STORAGE = 1 << 5
-    };
-
     static const FlatMap<EngineThread, ThreadId> thread_ids;
 
     static void AssertOnThread(EngineThreadMask mask);

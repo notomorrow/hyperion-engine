@@ -24,6 +24,7 @@ layout(location=3) out vec4 gbuffer_material;
 #include "include/scene.inc"
 #include "include/material.inc"
 #include "include/object.inc"
+#include "include/packing.inc"
 
 #if PARALLAX_ENABLED
 #include "include/parallax.inc"
@@ -102,7 +103,7 @@ void main()
         ao = texture(textures[material.texture_index[MATERIAL_TEXTURE_AO_MAP]], texcoord).r;
     }
     
-    gbuffer_normals   = vec4(normal, 1.0);
+    gbuffer_normals   = EncodeNormal(normal);
     gbuffer_positions = vec4(v_position, 1.0);
     gbuffer_material  = vec4(roughness, metalness, 0.0, ao);
 }

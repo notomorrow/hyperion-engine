@@ -29,7 +29,7 @@ Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
         return BaseFormat::TEXTURE_FORMAT_R;
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8_SRGB:
-    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R16G16:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16_:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F:
@@ -128,7 +128,7 @@ VkFormat Image::ToVkFormat(InternalFormat fmt)
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB:   return VK_FORMAT_R8G8B8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB:  return VK_FORMAT_R8G8B8A8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R32_:        return VK_FORMAT_R32_UINT;
-    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16G16:      return VK_FORMAT_R16G16_SNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16_:       return VK_FORMAT_R16G16_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R11G11B10F:  return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R10G10B10A2: return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16:         return VK_FORMAT_R16_UNORM;
@@ -204,6 +204,7 @@ Image::Image(Extent3D extent,
       m_filter_mode(filter_mode),
       m_internal_info(internal_info),
       m_image(nullptr),
+      m_is_blended(false),
       m_bpp(NumComponents(GetBaseFormat(format))),
       m_assigned_image_data(bytes != nullptr)
 {
@@ -276,9 +277,11 @@ void Image::SetIsSRGB(bool srgb)
 VkFormat Image::GetImageFormat() const  { return ToVkFormat(m_format); }
 VkImageType Image::GetImageType() const { return ToVkType(m_type); }
 
-Result Image::CreateImage(Device *device,
+Result Image::CreateImage(
+    Device *device,
     VkImageLayout initial_layout,
-    VkImageCreateInfo *out_image_info)
+    VkImageCreateInfo *out_image_info
+)
 {
     VkFormat format = GetImageFormat();
     VkImageType image_type = GetImageType();
@@ -288,13 +291,19 @@ Result Image::CreateImage(Device *device,
 
     if (HasMipmaps()) {
         /* Mipmapped image needs linear blitting. */
-        DebugLog(LogType::Debug, "Mipmapped image needs linear blitting support. Checking...\n");
+        DebugLog(LogType::Debug, "Mipmapped image needs linear blitting support. Enabling...\n");
 
         format_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT
                         |  VK_FORMAT_FEATURE_BLIT_DST_BIT
                         |  VK_FORMAT_FEATURE_BLIT_SRC_BIT;
 
         m_internal_info.usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if (IsBlended()) {
+        DebugLog(LogType::Debug, "Image requires blending, enabling format flag...\n");
+
+        format_features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
     }
 
     if (IsTextureCube()) {
