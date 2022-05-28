@@ -64,7 +64,6 @@ Mesh::Mesh(
     m_indices(indices),
     m_flags(flags)
 {
-    
 }
 
 Mesh::Mesh(

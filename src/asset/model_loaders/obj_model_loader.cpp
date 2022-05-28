@@ -250,10 +250,6 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 {
     auto top = std::make_unique<Node>(object.tag.c_str());
 
-    if (StringUtil::EndsWith(object.filepath, "monkey.obj")) { // wtf?
-        return std::move(top);
-    }
-
     std::unique_ptr<MaterialGroup> material_library;
     
     if (load_materials && !object.material_library.empty()) {
@@ -367,7 +363,6 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
             auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef();
             const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
-
             auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
                     std::move(mesh),
@@ -383,6 +378,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             
             auto node = std::make_unique<Node>(obj_mesh.tag.c_str());
             node->SetSpatial(std::move(spatial));
+
             top->AddChild(std::move(node));
         });
     }

@@ -2,9 +2,10 @@
 #define HYPERION_RENDERER_STRUCTS_H
 
 #include <util/enum_options.h>
+#include <hash_code.h>
+#include <types.h>
 
 #include <vulkan/vulkan.h>
-#include <hash_code.h>
 
 #include <cstdint>
 #include <vector>
@@ -47,6 +48,24 @@ enum class Topology {
     LINES,
 
     POINTS
+};
+
+enum class StencilMode {
+    NONE,
+    FILL,
+    OUTLINE
+};
+
+struct StencilState {
+    uint        id   = 0;
+    StencilMode mode = StencilMode::NONE;
+
+    HYP_DEF_STRUCT_COMPARE_EQL(StencilState);
+
+    bool operator<(const StencilState &other) const
+    {
+        return std::tie(id, mode) < std::tie(other.id, other.mode);
+    }
 };
 
 struct MeshBindingDescription {

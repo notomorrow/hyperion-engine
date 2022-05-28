@@ -238,6 +238,14 @@ void Spatial::SetMeshAttributes(
     );
 }
 
+void Spatial::SetStencilAttributes(const StencilState &stencil_state)
+{
+    RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
+    new_renderable_attributes.stencil_state = stencil_state;
+
+    SetRenderableAttributes(new_renderable_attributes);
+}
+
 void Spatial::SetBucket(Bucket bucket)
 {
     RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);

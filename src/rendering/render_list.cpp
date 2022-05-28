@@ -100,9 +100,6 @@ void RenderListContainer::RenderListBucket::AddPendingGraphicsPipelines(Engine *
 
     graphics_pipelines_pending_addition.clear();
 
-    // FORCE INIT ALL
-    HYP_FLUSH_RENDER_QUEUE(engine);
-
     graphics_pipelines_changed = false;
 }
 

@@ -200,7 +200,8 @@ void GraphicsPipeline::Init(Engine *engine)
                 .depth_write       = m_renderable_attributes.depth_write,
                 .blend_enabled     = m_renderable_attributes.alpha_blending,
                 .shader            = m_shader->GetShaderProgram(),
-                .render_pass       = &m_render_pass->GetRenderPass()
+                .render_pass       = &m_render_pass->GetRenderPass(),
+                .stencil_state     = m_renderable_attributes.stencil_state
             };
 
             for (auto &fbo : m_fbos) {

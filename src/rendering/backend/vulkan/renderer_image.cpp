@@ -58,7 +58,6 @@ Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
         return BaseFormat::TEXTURE_FORMAT_BGRA;
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:
-    case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F:
         return BaseFormat::TEXTURE_FORMAT_DEPTH;
     }
@@ -151,9 +150,9 @@ VkFormat Image::ToVkFormat(InternalFormat fmt)
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8:       return VK_FORMAT_B8G8R8A8_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGR8_SRGB:   return VK_FORMAT_B8G8R8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB:  return VK_FORMAT_B8G8R8A8_SRGB;
-    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:    return VK_FORMAT_D16_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16:    return VK_FORMAT_D16_UNORM_S8_UINT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24:    return VK_FORMAT_D24_UNORM_S8_UINT;
-    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F:   return VK_FORMAT_D32_SFLOAT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F:   return VK_FORMAT_D32_SFLOAT_S8_UINT;
     }
 
     AssertThrowMsg(false, "Unhandled texture format case %d", int(fmt));

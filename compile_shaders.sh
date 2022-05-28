@@ -20,6 +20,9 @@ glslc --target-env=$VULKAN_TARGET skybox.vert -o skybox_vert.spv
 glslc --target-env=$VULKAN_TARGET shadow.frag -o shadow_frag.spv
 glslc --target-env=$VULKAN_TARGET shadow.vert -o shadow_vert.spv
 
+glslc --target-env=$VULKAN_TARGET outline.frag -o outline.frag.spv
+glslc --target-env=$VULKAN_TARGET outline.vert -o outline.vert.spv
+
 glslc --target-env=$VULKAN_TARGET vegetation.vert -o vegetation.vert.spv
 
 glslc --target-env=$VULKAN_TARGET voxel/octree_alloc_nodes.comp -o voxel/octree_alloc_nodes.comp.spv
