@@ -70,8 +70,8 @@ private:
     Ref<GraphicsPipeline> m_pipeline;
     Ref<ComputePipeline>  m_clear_voxels;
 
-    Ref<Texture>                   m_voxel_image;
-    UniformBuffer                  m_uniform_buffer;
+    Ref<Texture>          m_voxel_image;
+    UniformBuffer         m_uniform_buffer;
     
     std::vector<ObserverRef<Ref<GraphicsPipeline>>>          m_pipeline_observers;
     FlatMap<GraphicsPipeline::ID, ObserverRef<Ref<Spatial>>> m_spatial_observers;

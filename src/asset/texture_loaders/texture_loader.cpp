@@ -10,7 +10,7 @@ static const stbi_io_callbacks callbacks{
     .read = [](void *user, char *data, int size) -> int {
         auto *state = static_cast<LoaderState *>(user);
 
-        return int(state->stream.Read(size_t(size), data, [](void *ptr, const unsigned char *buffer, size_t chunk_size) {
+        return int(state->stream.Read(data, static_cast<size_t>(size), [](void *ptr, const unsigned char *buffer, size_t chunk_size) {
             std::memcpy(ptr, buffer, chunk_size);
         }));
     },

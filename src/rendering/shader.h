@@ -94,6 +94,9 @@ struct ShaderMapKey {
     bool operator==(const ShaderMapKey &other) const
         { return key == other.key && name == other.name; }
 
+    bool operator<(const ShaderMapKey &other) const
+        { return std::tie(key, name) < std::tie(other.key, other.name); }
+
     HashCode GetHashCode() const
     {
         HashCode hc;

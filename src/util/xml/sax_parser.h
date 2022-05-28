@@ -12,7 +12,7 @@
 namespace hyperion {
 namespace xml {
 
-typedef std::map<std::string, std::string> AttributeMap;
+using AttributeMap = std::map<std::string, std::string>;
 
 class SaxHandler {
 public:
@@ -35,17 +35,16 @@ public:
 
         std::string message;
 
-        Result(decltype(result) result = SAX_OK, std::string message = "") : result(result), message(message) {}
-        Result(const Result &other) : result(other.result), message(other.message) {}
-        inline Result &operator=(const Result &other)
+        Result(decltype(result) result = SAX_OK, const std::string &message = "")
+            : result(result),
+              message(message)
         {
-            result = other.result;
-            message = other.message;
-
-            return *this;
         }
 
-        inline operator bool() const { return result == SAX_OK; }
+        Result(const Result &other) = default;
+        Result &operator=(const Result &other) = default;
+
+        operator bool() const { return result == SAX_OK; }
     };
 
     SaxParser(SaxHandler *handler);

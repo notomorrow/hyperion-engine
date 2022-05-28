@@ -14,6 +14,7 @@
 #include <asset/model_loaders/obj_model_loader.h>
 #include <rendering/rt/acceleration_structure_builder.h>
 #include <rendering/probe_system.h>
+#include <rendering/post_fx/ssao.h>
 #include <scene/controllers/audio_controller.h>
 #include <scene/controllers/animation_controller.h>
 #include <scene/controllers/paging/basic_paging_controller.h>
@@ -106,7 +107,7 @@ public:
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         
-        
+        engine->GetDeferredRenderer().GetPostProcessing().AddFilter<SsaoEffect>();
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
@@ -165,12 +166,12 @@ public:
 
         cube_obj->Scale(5.0f);
 
-        auto metal_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
+        auto metal_material = engine->resources.materials.Add(std::make_unique<Material>());
         metal_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 0.5f, 0.2f, 1.0f }));
         metal_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
         metal_material.Init();
 
-        auto skybox_material = engine->resources.materials.Add(std::make_unique<v2::Material>());
+        auto skybox_material = engine->resources.materials.Add(std::make_unique<Material>());
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
         skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
         skybox_material.Init();
@@ -486,7 +487,7 @@ int main()
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
-    my_game.material_test_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 5, 0 }});
+    my_game.material_test_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 7, 0 }});
 
 
     v2::ProbeGrid probe_system({

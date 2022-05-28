@@ -9,15 +9,15 @@ namespace hyperion::v2 {
 using renderer::SamplerDescriptor;
 using renderer::DescriptorKey;
 
-DeferredRenderingEffect::DeferredRenderingEffect()
+DeferredPass::DeferredPass()
     : FullScreenPass()
 {
     
 }
 
-DeferredRenderingEffect::~DeferredRenderingEffect() = default;
+DeferredPass::~DeferredPass() = default;
 
-void DeferredRenderingEffect::CreateShader(Engine *engine)
+void DeferredPass::CreateShader(Engine *engine)
 {
     m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
@@ -35,12 +35,12 @@ void DeferredRenderingEffect::CreateShader(Engine *engine)
     m_shader->Init(engine);
 }
 
-void DeferredRenderingEffect::CreateRenderPass(Engine *engine)
+void DeferredPass::CreateRenderPass(Engine *engine)
 {
     m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass().IncRef();
 }
 
-void DeferredRenderingEffect::CreateDescriptors(Engine *engine)
+void DeferredPass::CreateDescriptors(Engine *engine)
 {
     engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
         if (!framebuffer.GetAttachmentRefs().empty()) {
@@ -59,7 +59,7 @@ void DeferredRenderingEffect::CreateDescriptors(Engine *engine)
     });
 }
 
-void DeferredRenderingEffect::Create(Engine *engine)
+void DeferredPass::Create(Engine *engine)
 {
     m_framebuffer = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[0].IncRef();
 
@@ -67,12 +67,12 @@ void DeferredRenderingEffect::Create(Engine *engine)
     CreatePipeline(engine);
 }
 
-void DeferredRenderingEffect::Destroy(Engine *engine)
+void DeferredPass::Destroy(Engine *engine)
 {
     FullScreenPass::Destroy(engine); // flushes render queue
 }
 
-void DeferredRenderingEffect::Render(Engine *engine, Frame *frame)
+void DeferredPass::Render(Engine *engine, Frame *frame)
 {
 }
 
@@ -85,9 +85,9 @@ void DeferredRenderer::Create(Engine *engine)
 
     m_post_processing.Create(engine);
 
-    m_effect.CreateShader(engine);
-    m_effect.CreateRenderPass(engine);
-    m_effect.Create(engine);
+    m_pass.CreateShader(engine);
+    m_pass.CreateRenderPass(engine);
+    m_pass.Create(engine);
 
     auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[0];
 
@@ -135,7 +135,7 @@ void DeferredRenderer::Create(Engine *engine)
             .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[4]->GetSampler()
         });
     
-    m_effect.CreateDescriptors(engine);
+    m_pass.CreateDescriptors(engine);
 
     HYP_FLUSH_RENDER_QUEUE(engine);
 }
@@ -143,7 +143,7 @@ void DeferredRenderer::Create(Engine *engine)
 void DeferredRenderer::Destroy(Engine *engine)
 {
     m_post_processing.Destroy(engine);
-    m_effect.Destroy(engine);  // flushes render queue
+    m_pass.Destroy(engine);  // flushes render queue
 }
 
 void DeferredRenderer::Render(Engine *engine, Frame *frame)
@@ -153,25 +153,25 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
 
-    m_effect.Record(engine, frame_index);
+    m_pass.Record(engine, frame_index);
 
     auto &render_list = engine->GetRenderListContainer();
-    auto &bucket = render_list.Get(Bucket::BUCKET_OPAQUE);
+    auto &bucket = render_list.Get(BUCKET_OPAQUE);
 
     bucket.GetFramebuffers()[0]->BeginCapture(primary); /* TODO: frame index? */
     RenderOpaqueObjects(engine, frame);
     bucket.GetFramebuffers()[0]->EndCapture(primary); /* TODO: frame index? */
     
-    m_post_processing.Render(engine, primary, frame_index);
+    m_post_processing.Render(engine, frame);
     
-    m_effect.GetFramebuffer()->BeginCapture(primary);
+    m_pass.GetFramebuffer()->BeginCapture(primary);
 
     /* Render deferred shading onto full screen quad */
-    HYPERION_ASSERT_RESULT(m_effect.GetFrameData()->At(frame_index).Get<CommandBuffer>()->SubmitSecondary(primary));
+    HYPERION_ASSERT_RESULT(m_pass.GetFrameData()->At(frame_index).Get<CommandBuffer>()->SubmitSecondary(primary));
 
     RenderTranslucentObjects(engine, frame);
     
-    m_effect.GetFramebuffer()->EndCapture(primary);
+    m_pass.GetFramebuffer()->EndCapture(primary);
 }
 
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)

@@ -25,23 +25,24 @@ class Engine;
 struct Resources {
     using Callbacks = EngineCallbacks;
 
-    RefCounter<Shader,      Callbacks>      shaders;
-    RefCounter<Texture,     Callbacks>      textures;
-    RefCounter<Framebuffer, Callbacks>      framebuffers;
-    RefCounter<RenderPass,  Callbacks>      render_passes;
-    RefCounter<Material,    Callbacks>      materials;
-    RefCounter<Light,       Callbacks>      lights;
+#define HYP_DEF_REF_COUNTED(class_name, member_name) \
+    RefCounter<class_name, Callbacks> member_name
 
-    RefCounter<GraphicsPipeline, Callbacks> graphics_pipelines;
-    RefCounter<ComputePipeline, Callbacks>  compute_pipelines;
-    
-    RefCounter<Spatial,     Callbacks>      spatials;
-    RefCounter<Mesh,        Callbacks>      meshes;
-    RefCounter<Skeleton,    Callbacks>      skeletons;
+    HYP_DEF_REF_COUNTED(Shader,            shaders);
+    HYP_DEF_REF_COUNTED(Texture,           textures);
+    HYP_DEF_REF_COUNTED(Framebuffer,       framebuffers);
+    HYP_DEF_REF_COUNTED(RenderPass,        render_passes);
+    HYP_DEF_REF_COUNTED(Material,          materials);
+    HYP_DEF_REF_COUNTED(Light,             lights);
+    HYP_DEF_REF_COUNTED(GraphicsPipeline,  graphics_pipelines);
+    HYP_DEF_REF_COUNTED(ComputePipeline,   compute_pipelines);
+    HYP_DEF_REF_COUNTED(Spatial,           spatials);
+    HYP_DEF_REF_COUNTED(Mesh,              meshes);
+    HYP_DEF_REF_COUNTED(Skeleton,          skeletons);
+    HYP_DEF_REF_COUNTED(Scene,             scenes);
+    HYP_DEF_REF_COUNTED(Blas,              blas);
 
-    RefCounter<Scene,       Callbacks>      scenes;
-
-    RefCounter<Blas,        Callbacks>      blas;
+#undef HYP_DEF_REF_COUNTED
 
     Resources(Engine *);
     Resources(const Resources &other) = delete;
