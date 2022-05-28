@@ -1,16 +1,12 @@
-#ifndef HYPERION_RENDERER_QUEUE_H
-#define HYPERION_RENDERER_QUEUE_H
+#ifndef HYPERION_V2_BACKEND_RENDERER_QUEUE_H
+#define HYPERION_V2_BACKEND_RENDERER_QUEUE_H
 
-namespace hyperion {
-namespace renderer {
+#include <util/defines.h>
 
-struct Queue {
-    uint32_t family;
-    VkQueue queue;
-    VkCommandPool command_pool;
-};
-
-} // namespace renderer
-} // namespace hyperion
+#if HYP_VULKAN
+#include <rendering/backend/vulkan/renderer_queue.h>
+#else
+#error Unsupported rendering backend
+#endif
 
 #endif

@@ -7,9 +7,7 @@ namespace hyperion::v2 {
 RenderListContainer::RenderListContainer()
 {
     for (size_t i = 0; i < m_buckets.size(); i++) {
-        m_buckets[i] = {
-            .bucket = Bucket(i)
-        };
+        m_buckets[i].SetBucket(Bucket(i));
     }
 }
 
@@ -17,6 +15,13 @@ void RenderListContainer::AddFramebuffersToPipelines(Engine *engine)
 {
     for (auto &bucket : m_buckets) {
         bucket.AddFramebuffersToPipelines();
+    }
+}
+
+void RenderListContainer::AddPendingGraphicsPipelines(Engine *engine)
+{
+    for (auto &bucket : m_buckets) {
+        bucket.AddPendingGraphicsPipelines(engine);
     }
 }
 
@@ -33,6 +38,64 @@ void RenderListContainer::Destroy(Engine *engine)
     for (auto &bucket : m_buckets) {
         bucket.Destroy(engine);
     }
+}
+
+RenderListContainer::RenderListBucket::RenderListBucket()
+    : m_graphics_pipeline_notifier([this]() -> std::vector<std::pair<Ref<GraphicsPipeline> *, size_t>> {
+          //std::lock_guard guard(graphics_pipelines_mutex);
+
+          return {
+              std::make_pair(graphics_pipelines.data(), graphics_pipelines.size()),
+              std::make_pair(graphics_pipelines_pending_addition.data(), graphics_pipelines_pending_addition.size())
+          };
+      })
+{
+}
+
+RenderListContainer::RenderListBucket::~RenderListBucket()
+{
+}
+
+void RenderListContainer::RenderListBucket::AddGraphicsPipeline(Ref<GraphicsPipeline> &&graphics_pipeline)
+{
+    AddFramebuffersToPipeline(graphics_pipeline);
+
+    graphics_pipeline.Init();
+
+    std::lock_guard guard(graphics_pipelines_mutex);
+
+    graphics_pipelines_pending_addition.push_back(std::move(graphics_pipeline));
+    graphics_pipelines_changed = true;
+}
+
+void RenderListContainer::RenderListBucket::AddPendingGraphicsPipelines(Engine *engine)
+{
+    Engine::AssertOnThread(THREAD_RENDER);
+
+    if (!graphics_pipelines_changed) {
+        return;
+    }
+
+    DebugLog(LogType::Debug, "Adding %llu pending graphics pipelines\n", graphics_pipelines_pending_addition.size());
+
+    std::lock_guard guard(graphics_pipelines_mutex);
+
+    graphics_pipelines.reserve(graphics_pipelines.size() + graphics_pipelines_pending_addition.size());
+    
+    m_graphics_pipeline_notifier.ItemsAdded(graphics_pipelines_pending_addition.data(), graphics_pipelines_pending_addition.size());
+
+    graphics_pipelines.insert(
+        graphics_pipelines.end(),
+        std::make_move_iterator(graphics_pipelines_pending_addition.begin()),
+        std::make_move_iterator(graphics_pipelines_pending_addition.end())
+    );
+
+    graphics_pipelines_pending_addition.clear();
+
+    // FORCE INIT ALL
+    HYP_FLUSH_RENDER_QUEUE(engine);
+
+    graphics_pipelines_changed = false;
 }
 
 void RenderListContainer::RenderListBucket::AddFramebuffersToPipelines()
@@ -65,7 +128,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
     ));
 
     if (IsRenderableBucket()) { // add gbuffer attachments
-        renderer::AttachmentRef *attachment_ref;
+        AttachmentRef *attachment_ref;
 
         attachments.push_back(std::make_unique<renderer::Attachment>(
             std::make_unique<renderer::FramebufferImage2D>(
@@ -174,7 +237,22 @@ void RenderListContainer::RenderListBucket::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
 
+    for (auto &pipeline : graphics_pipelines) {
+        m_graphics_pipeline_notifier.ItemRemoved(pipeline);
+    }
+
     graphics_pipelines.clear();
+
+    graphics_pipelines_mutex.lock();
+
+    for (auto &pipeline : graphics_pipelines_pending_addition) {
+        m_graphics_pipeline_notifier.ItemRemoved(pipeline);
+    }
+
+    graphics_pipelines_pending_addition.clear();
+
+    graphics_pipelines_mutex.unlock();
+
     framebuffers.clear();
 
     for (const auto &attachment : attachments) {

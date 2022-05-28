@@ -138,7 +138,7 @@ Result CommandBuffer::SubmitPrimary(
     submit_info.pCommandBuffers = &m_command_buffer;
 
     HYPERION_VK_CHECK_MSG(
-        vkQueueSubmit(queue, 1, &submit_info, fence->GetFence()),
+        vkQueueSubmit(queue, 1, &submit_info, fence->GetHandle()),
         "Failed to submit command"
     );
 

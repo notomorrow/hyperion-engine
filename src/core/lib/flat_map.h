@@ -39,13 +39,14 @@ public:
 
     InsertResult Insert(const Key &key, const Value &value);
     InsertResult Insert(const Key &key, Value &&value);
+    InsertResult Insert(std::pair<Key, Value> &&pair);
 
     template <class ...Args>
     InsertResult Emplace(const Key &key, Args &&... args)
         { return Insert(key, Value(std::forward<Args>(args)...)); }
 
-    void Erase(Iterator iter);
-    void Erase(const Key &key);
+    bool Erase(Iterator it);
+    bool Erase(const Key &key);
 
     [[nodiscard]] size_t Size() const { return m_set.Size(); }
     [[nodiscard]] Pair *Data() const  { return m_set.Data(); }
@@ -57,12 +58,16 @@ public:
 
     [[nodiscard]] Value &operator[](const Key &key)
     {
-        const auto iter = Insert(key, {}).first;
+        const auto iter = Insert(key, Value{}).first;
 
         return iter->second;
     }
 
     HYP_DEF_STL_ITERATOR(m_set)
+
+private:
+    [[nodiscard]] Iterator LowerBound(const Key &key);
+    [[nodiscard]] ConstIterator LowerBound(const Key &key) const;
 };
 
 template <class Key, class Value>
@@ -100,7 +105,7 @@ template <class Key, class Value>
 FlatMap<Key, Value>::~FlatMap() = default;
 
 template <class Key, class Value>
-auto FlatMap<Key, Value>::Find(const Key &key) -> Iterator
+auto FlatMap<Key, Value>::LowerBound(const Key &key) -> Iterator
 {
     return std::lower_bound(
         m_set.begin(),
@@ -113,7 +118,7 @@ auto FlatMap<Key, Value>::Find(const Key &key) -> Iterator
 }
 
 template <class Key, class Value>
-auto FlatMap<Key, Value>::Find(const Key &key) const -> ConstIterator
+auto FlatMap<Key, Value>::LowerBound(const Key &key) const -> ConstIterator
 {
     return std::lower_bound(
         m_set.cbegin(),
@@ -126,6 +131,30 @@ auto FlatMap<Key, Value>::Find(const Key &key) const -> ConstIterator
 }
 
 template <class Key, class Value>
+auto FlatMap<Key, Value>::Find(const Key &key) -> Iterator
+{
+    const auto it = LowerBound(key);
+
+    if (it == End()) {
+        return it;
+    }
+
+    return (it->first == key) ? it : End();
+}
+
+template <class Key, class Value>
+auto FlatMap<Key, Value>::Find(const Key &key) const -> ConstIterator
+{
+    const auto it = LowerBound(key);
+
+    if (it == End()) {
+        return it;
+    }
+
+    return (it->first == key) ? it : End();
+}
+
+template <class Key, class Value>
 bool FlatMap<Key, Value>::Contains(const Key &key) const
 {
     return Find(key) != End();
@@ -134,41 +163,53 @@ bool FlatMap<Key, Value>::Contains(const Key &key) const
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertResult
 {
-    const auto iter = Find(key);
+    const auto lower_bound = LowerBound(key);
 
-    if (iter == End() || iter->first != key) {
+    if (lower_bound == End() || !(lower_bound->first == key)) {
         return m_set.Insert(std::make_pair(key, value));
     }
 
-    return {iter, false};
+    return {lower_bound, false};
 }
 
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
 {
-    const auto iter = Find(key);
+    const auto lower_bound = LowerBound(key);
 
-    if (iter == End() || iter->first != key) {
-        return m_set.Insert(std::make_pair(key, std::move(value)));
+    if (lower_bound == End() || !(lower_bound->first == key)) {
+        return m_set.Insert(std::make_pair(key, std::forward<Value>(value)));
     }
 
-    return {iter, false};
+    return {lower_bound, false};
 }
 
 template <class Key, class Value>
-void FlatMap<Key, Value>::Erase(Iterator iter)
+auto FlatMap<Key, Value>::Insert(std::pair<Key, Value> &&pair) -> InsertResult
 {
-    m_set.Erase(iter);
+    const auto lower_bound = LowerBound(pair.first);
+
+    if (lower_bound == End() || !(lower_bound->first == pair.first)) {
+        return m_set.Insert(std::move(pair));
+    }
+
+    return {lower_bound, false};
 }
 
 template <class Key, class Value>
-void FlatMap<Key, Value>::Erase(const Key &value)
+bool FlatMap<Key, Value>::Erase(Iterator it)
 {
-    const auto iter = Find(value);
+    if (it == End()) {
+        return false;
+    }
 
-    AssertThrow(iter != End());
+    return m_set.Erase(it);
+}
 
-    Erase(iter);
+template <class Key, class Value>
+bool FlatMap<Key, Value>::Erase(const Key &value)
+{
+    return Erase(Find(value));
 }
 
 } // namespace hyperion

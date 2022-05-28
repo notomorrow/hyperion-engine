@@ -152,7 +152,11 @@ void Mesh::Init(Engine *engine)
                 });
         });
 
+        SetReady(true);
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
+            SetReady(false);
+
             engine->render_scheduler.Enqueue([this, engine](...) {
                 auto result = renderer::Result::OK;
 
@@ -227,6 +231,8 @@ std::vector<float> Mesh::BuildVertexBuffer()
 
 void Mesh::Render(Engine *, CommandBuffer *cmd) const
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     AssertThrow(m_vbo != nullptr && m_ibo != nullptr);
 
     m_vbo->Bind(cmd);

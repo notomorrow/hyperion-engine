@@ -10,7 +10,7 @@ namespace hyperion::v2 {
 static constexpr float game_thread_target_ticks_per_second = 60.0f;
 
 GameThread::GameThread()
-    : Thread("GameThread")
+    : Thread(Engine::thread_ids.At(THREAD_GAME))
 {
 }
 
@@ -23,6 +23,10 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
 #endif
 
     //game->Init(engine, window);
+    
+    engine->render_scheduler.GetSemaphore().Inc();
+    game->OnPostInit(engine);
+    engine->render_scheduler.GetSemaphore().Dec();
 
     while (engine->m_running) {
 #if HYP_GAME_THREAD_LOCKED

@@ -38,8 +38,8 @@ public:
     InsertResult Emplace(Args &&... args)
         { return Insert(T(std::forward<Args>(args)...)); }
 
-    void Erase(Iterator iter);
-    void Erase(const T &value);
+    bool Erase(Iterator it);
+    bool Erase(const T &value);
 
     [[nodiscard]] size_t Size() const                     { return m_vector.size(); }
     [[nodiscard]] T *Data() const                         { return m_vector.data(); }
@@ -55,7 +55,7 @@ public:
     HYP_DEF_STL_ITERATOR(m_vector)
 
 private:
-    Iterator GetIterator(const T &value)
+    Iterator LowerBound(const T &value)
     {
         return std::lower_bound(
             m_vector.begin(),
@@ -64,7 +64,7 @@ private:
         );
     }
 
-    ConstIterator GetIterator(const T &value) const
+    ConstIterator LowerBound(const T &value) const
     {
         return std::lower_bound(
             m_vector.cbegin(),
@@ -111,21 +111,33 @@ FlatSet<T>::~FlatSet() = default;
 template <class T>
 auto FlatSet<T>::Find(const T &value) -> Iterator
 {
-    return GetIterator(value);
+    const auto it = LowerBound(value);
+
+    if (it == End()) {
+        return it;
+    }
+
+    return (*it == value) ? it : End();
 }
 
 template <class T>
 auto FlatSet<T>::Find(const T &value) const -> ConstIterator
 {
-    return GetIterator(value);
+    const auto it = LowerBound(value);
+
+    if (it == End()) {
+        return it;
+    }
+
+    return (*it == value) ? it : End();
 }
 
 template <class T>
 auto FlatSet<T>::Insert(const T &value) -> InsertResult
 {
-    Iterator it = GetIterator(value);
+    Iterator it = LowerBound(value);
 
-    if (it == End() || *it != value) {
+    if (it == End() || !(*it == value)) {
         it = m_vector.insert(it, value);
 
         return {it, true};
@@ -137,9 +149,9 @@ auto FlatSet<T>::Insert(const T &value) -> InsertResult
 template <class T>
 auto FlatSet<T>::Insert(T &&value) -> InsertResult
 {
-    Iterator it = GetIterator(value);
+    Iterator it = LowerBound(value);
 
-    if (it == End() || *it != value) {
+    if (it == End() || !(*it == value)) {
         it = m_vector.insert(it, std::forward<T>(value));
 
         return {it, true};
@@ -149,19 +161,21 @@ auto FlatSet<T>::Insert(T &&value) -> InsertResult
 }
 
 template <class T>
-void FlatSet<T>::Erase(Iterator iter)
+bool FlatSet<T>::Erase(Iterator it)
 {
-    m_vector.erase(iter);
+    if (it == End()) {
+        return false;
+    }
+
+    m_vector.erase(it);
+
+    return true;
 }
 
 template <class T>
-void FlatSet<T>::Erase(const T &value)
+bool FlatSet<T>::Erase(const T &value)
 {
-    const auto iter = Find(value);
-
-    AssertThrow(iter != End());
-
-    Erase(iter);
+    return Erase(Find(value));
 }
 
 } // namespace hyperion

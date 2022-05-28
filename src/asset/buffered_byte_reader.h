@@ -35,18 +35,55 @@ public:
     BufferedReader(const BufferedReader &other) = delete;
     BufferedReader &operator=(const BufferedReader &other) = delete;
 
+    BufferedReader(BufferedReader &&other) noexcept
+        : filepath(std::move(other.filepath)),
+          max_pos(std::move(other.max_pos)),
+          pos(std::move(other.pos)),
+          file(std::move(other.file)),
+          buffer(std::move(other.buffer))
+    {
+        other.file = nullptr;
+    }
+
+    BufferedReader &operator=(BufferedReader &&other) noexcept
+    {
+        if (&other == this) {
+            return *this;
+        }
+
+        Close();
+
+        if (file != nullptr) {
+            delete file;
+        }
+
+        filepath = std::move(other.filepath);
+        max_pos = std::move(other.max_pos),
+        pos = std::move(other.max_pos);
+        file = std::move(other.file);
+        buffer = std::move(other.buffer);
+
+        other.file    = nullptr;
+        other.pos     = 0;
+        other.max_pos = 0;
+
+        return *this;
+    }
+
     ~BufferedReader()
     {
+        Close();
+
         delete file;
     }
 
-    inline const std::string &GetFilepath() const
+    const std::string &GetFilepath() const
         { return filepath; }
 
-    inline bool IsOpen() const
+    bool IsOpen() const
         { return file->good(); }
 
-    inline std::streampos Position() const
+    std::streampos Position() const
         { return pos; }
 
     bool Eof() const
@@ -83,10 +120,21 @@ public:
         }
     }
 
+    void Close()
+    {
+        if (file == nullptr) {
+            return;
+        }
+
+        file->close();
+
+        pos = max_pos; // eof
+    }
+
     /*! \brief Reads the entirety of the remaining bytes in file and returns a vector of
      * unsigned bytes. Note that using this method to read the whole file in one call bypasses
      * the intention of having a buffered reader. */
-    std::vector<Byte> ReadAll()
+    std::vector<Byte> ReadBytes()
     {
         if (Eof()) {
             return {};
@@ -123,16 +171,16 @@ public:
         return lines;
     }
 
-    size_t Read(size_t count, void *ptr)
+    size_t Read(void *ptr, size_t count)
     {
-        return Read(count, ptr, [](void *ptr, const Byte *buffer, size_t chunk_size) {
+        return Read(ptr, count, [](void *ptr, const Byte *buffer, size_t chunk_size) {
            std::memcpy(ptr, buffer, chunk_size);
         });
     }
 
     /*! @returns The total number of bytes read */
     template <class Lambda = std::add_pointer_t<void(void *, const Byte *, size_t)>>
-    size_t Read(size_t count, void *ptr, Lambda &&func)
+    size_t Read(void *ptr, size_t count, Lambda &&func)
     {
         if (Eof()) {
             return 0;
@@ -160,10 +208,14 @@ public:
         return total_read;
     }
 
+    /*! \brief Read one instance of the given template type, using sizeof(T).
+     * @param ptr The pointer to T, where the read memory will be written.
+     * @returns The number of bytes read
+     */
     template <class T>
     size_t Read(T *ptr)
     {
-        return Read(sizeof(T), static_cast<void *>(ptr));
+        return Read(static_cast<void *>(ptr), sizeof(T));
     }
 
     template <class Functor, class ...Args>
@@ -219,7 +271,7 @@ public:
     void ReadLines(LambdaFunction func, bool buffered = true)
     {
         if (!buffered) {
-            auto all_bytes = ReadAll();
+            auto all_bytes = ReadBytes();
 
             std::string accum;
             accum.reserve(BufferSize);
@@ -326,6 +378,9 @@ private:
         pos += size;
     }
 };
-}
+
+using Reader = BufferedReader<2048>;
+
+} // namespace hyperion
 
 #endif

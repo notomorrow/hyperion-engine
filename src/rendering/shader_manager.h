@@ -2,6 +2,7 @@
 #define HYPERION_V2_SHADER_MANAGER_H
 
 #include "shader.h"
+#include <core/lib/flat_map.h>
 
 namespace hyperion::v2 {
 
@@ -28,14 +29,14 @@ public:
 
 private:
     Ref<Shader> &GetShader(Key key, const std::string &name)
-        { return m_shaders[{key, name}]; }
+        { return m_shaders[ShaderMapKey{key, name}]; }
 
     void SetShader(Key key, const std::string &name, Ref<Shader> &&shader)
     {
-        m_shaders[{key, name}] = std::move(shader);
+        m_shaders[ShaderMapKey{key, name}] = std::move(shader);
     }
 
-    std::unordered_map<ShaderMapKey, Ref<Shader>> m_shaders;
+    FlatMap<ShaderMapKey, Ref<Shader>> m_shaders;
 };
 
 } // namespace hyperion::v2

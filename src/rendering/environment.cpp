@@ -84,6 +84,8 @@ void Environment::RemoveShadowRenderer(Engine *engine, size_t index)
 
 void Environment::Update(Engine *engine, GameCounter::TickUnit delta)
 {
+    Engine::AssertOnThread(THREAD_GAME);
+
     AssertReady();
 
     m_global_timer += delta;
@@ -98,15 +100,14 @@ void Environment::UpdateShadows(Engine *engine, GameCounter::TickUnit delta)
      */
 
     for (const auto &shadow_renderer : m_shadow_renderers) {
-        shadow_renderer->Update(
-            engine,
-            delta
-        );
+        shadow_renderer->Update(engine, delta);
     }
 }
 
 void Environment::RenderShadows(Engine *engine, Frame *frame)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     AssertReady();
 
     /* TODO: have observer on octrees, only render shadow renderers
@@ -114,11 +115,7 @@ void Environment::RenderShadows(Engine *engine, Frame *frame)
      */
 
     for (const auto &shadow_renderer : m_shadow_renderers) {
-        shadow_renderer->Render(
-            engine,
-            frame->GetCommandBuffer(),
-            frame->GetFrameIndex()
-        );
+        shadow_renderer->Render(engine, frame);
     }
 }
 

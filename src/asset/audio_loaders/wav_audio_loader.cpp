@@ -7,11 +7,7 @@ using AudioLoader = LoaderObject<AudioSource, LoaderFormat::WAV_AUDIO>::Loader;
 
 LoaderResult AudioLoader::LoadFn(LoaderState *state, Object &object)
 {
-    //state->stream.Read(sizeof(RiffHeader), [&object](unsigned char *buffer, size_t offset, size_t chunk_size) {
-   //    std::memcpy(&object.riff_header + offset, buffer, chunk_size);
-    //});
-
-    state->stream.Read(sizeof(RiffHeader), &object.riff_header);
+    state->stream.Read(&object.riff_header);
 
     if (std::strncmp(object.riff_header.chunk_id, "RIFF", 4) != 0) {
         return {LoaderResult::Status::ERR, "invalid RIFF header"};
@@ -21,7 +17,7 @@ LoaderResult AudioLoader::LoadFn(LoaderState *state, Object &object)
         return {LoaderResult::Status::ERR, "invalid WAVE header"};
     }
     
-    state->stream.Read(sizeof(WaveFormat), &object.wave_format);
+    state->stream.Read(&object.wave_format);
 
     if (std::strncmp(object.wave_format.sub_chunk_id, "fmt ", 4) != 0) {
         return {LoaderResult::Status::ERR, "invalid wave sub chunk id"};
@@ -31,7 +27,7 @@ LoaderResult AudioLoader::LoadFn(LoaderState *state, Object &object)
         state->stream.Skip(sizeof(uint16_t));
     }
 
-    state->stream.Read(sizeof(WaveData), &object.wave_data);
+    state->stream.Read(&object.wave_data);
 
     if (std::strncmp(object.wave_data.sub_chunk_id, "data", 4) != 0) {
         return {LoaderResult::Status::ERR, "invalid data header"};
@@ -39,7 +35,7 @@ LoaderResult AudioLoader::LoadFn(LoaderState *state, Object &object)
     
     object.wave_bytes.resize(object.wave_data.sub_chunk_2_size);
 
-    state->stream.Read(object.wave_data.sub_chunk_2_size, &object.wave_bytes[0]);
+    state->stream.Read(&object.wave_bytes[0], object.wave_data.sub_chunk_2_size);
 
     object.size      = object.wave_data.sub_chunk_2_size;
     object.frequency = object.wave_format.sample_rate;

@@ -105,8 +105,10 @@ void Voxelizer::CreatePipeline(Engine *engine)
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
         m_render_pass.IncRef(),
-        VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
-        Bucket::BUCKET_VOXELIZER
+        RenderableAttributeSet{
+            .bucket            = BUCKET_VOXELIZER,
+            .vertex_attributes = VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton
+        }
     );
 
     pipeline->SetDepthWrite(false);
@@ -117,7 +119,7 @@ void Voxelizer::CreatePipeline(Engine *engine)
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).graphics_pipelines) {
+    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelines()) {
         for (auto &spatial : pipeline->GetSpatials()) {
             if (spatial != nullptr) {
                 m_pipeline->AddSpatial(spatial.IncRef());
@@ -221,6 +223,8 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
 
     /* count number of fragments */
     commands.Push([this, engine, count_mode](CommandBuffer *command_buffer) {
+        Frame frame = Frame::TemporaryFrame(command_buffer, 0);
+
         engine->render_state.BindScene(m_scene);
 
         m_pipeline->GetPipeline()->push_constants.voxelizer_data = {
@@ -229,7 +233,7 @@ void Voxelizer::RenderFragmentList(Engine *engine, bool count_mode)
         };
 
         m_framebuffer->BeginCapture(command_buffer);
-        m_pipeline->Render(engine, command_buffer, 0);
+        m_pipeline->Render(engine, &frame);
         m_framebuffer->EndCapture(command_buffer);
 
         engine->render_state.UnbindScene();

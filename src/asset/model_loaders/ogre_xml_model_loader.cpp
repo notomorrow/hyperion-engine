@@ -34,20 +34,20 @@ public:
     virtual void Begin(const std::string &name, const xml::AttributeMap &attributes) override
     {
         if (name == "position") {
-            float x = StringUtil::Parse<float>(attributes.at("x"));
-            float y = StringUtil::Parse<float>(attributes.at("y"));
-            float z = StringUtil::Parse<float>(attributes.at("z"));
+            const auto x = StringUtil::Parse<float>(attributes.at("x"));
+            const auto y = StringUtil::Parse<float>(attributes.at("y"));
+            const auto z = StringUtil::Parse<float>(attributes.at("z"));
 
             m_object.positions.emplace_back(x, y, z);
         } else if (name == "normal") {
-            float x = StringUtil::Parse<float>(attributes.at("x"));
-            float y = StringUtil::Parse<float>(attributes.at("y"));
-            float z = StringUtil::Parse<float>(attributes.at("z"));
+            const auto x = StringUtil::Parse<float>(attributes.at("x"));
+            const auto y = StringUtil::Parse<float>(attributes.at("y"));
+            const auto z = StringUtil::Parse<float>(attributes.at("z"));
 
             m_object.normals.emplace_back(x, y, z);
         } else if (name == "texcoord") {
-            float x = StringUtil::Parse<float>(attributes.at("u"));
-            float y = StringUtil::Parse<float>(attributes.at("v"));
+            const auto x = StringUtil::Parse<float>(attributes.at("u"));
+            const auto y = StringUtil::Parse<float>(attributes.at("v"));
 
             m_object.texcoords.emplace_back(x, y);
         } else if (name == "face") {
@@ -62,8 +62,8 @@ public:
             m_object.skeleton_name = attributes.at("name");
         } else if (name == "vertexboneassignment") {
             const auto vertex_index = StringUtil::Parse<uint32_t>(attributes.at("vertexindex"));
-            const auto bone_index = StringUtil::Parse<uint32_t>(attributes.at("boneindex"));
-            const auto bone_weight = StringUtil::Parse<float>(attributes.at("weight"));
+            const auto bone_index   = StringUtil::Parse<uint32_t>(attributes.at("boneindex"));
+            const auto bone_weight  = StringUtil::Parse<float>(attributes.at("weight"));
 
             AddBoneAssignment(vertex_index, {bone_index, bone_weight});
         } else if (name == "submesh") {
@@ -219,12 +219,19 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
 
             auto vertex_attributes = mesh->GetVertexAttributes();
 
+            auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef();
+            const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
+
             auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
                     std::move(mesh),
-                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef(),
-                    vertex_attributes,
-                    engine->resources.materials.Get(Material::ID{Material::ID::ValueType{1}})
+                    std::move(shader),
+                    resources.materials.Get(Material::ID{1}),
+                    RenderableAttributeSet{
+                        .bucket            = Bucket::BUCKET_OPAQUE,
+                        .shader_id         = shader_id,
+                        .vertex_attributes = vertex_attributes
+                    }
                 )
             );
 

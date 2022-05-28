@@ -203,6 +203,8 @@ void ProbeGrid::SubmitPushConstants(Engine *engine, CommandBuffer *command_buffe
 
 void ProbeGrid::RenderProbes(Engine *engine, CommandBuffer *command_buffer)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     m_radiance_buffer->InsertBarrier(command_buffer, GPUMemory::ResourceState::UNORDERED_ACCESS);
 
     SubmitPushConstants(engine, command_buffer);
@@ -240,6 +242,8 @@ void ProbeGrid::RenderProbes(Engine *engine, CommandBuffer *command_buffer)
 
 void ProbeGrid::ComputeIrradiance(Engine *engine, CommandBuffer *command_buffer)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     const auto probe_counts = m_grid_info.NumProbesPerDimension();
 
     m_irradiance_image->GetGPUImage()->InsertBarrier(

@@ -9,28 +9,20 @@ namespace hyperion::v2 {
 
 bool GraphicsPipeline::BucketSupportsCulling(Bucket bucket)
 {
-    return false;
-    return bucket != BUCKET_SKYBOX
-        && bucket != BUCKET_VOXELIZER;
+    return bucket == BUCKET_OPAQUE
+        || bucket == BUCKET_TRANSLUCENT
+        || bucket == BUCKET_PARTICLE;
 }
 
 GraphicsPipeline::GraphicsPipeline(
     Ref<Shader> &&shader,
     Ref<RenderPass> &&render_pass,
-    const VertexAttributeSet &vertex_attributes,
-    Bucket bucket
+    const RenderableAttributeSet &renderable_attributes
 ) : EngineComponentBase(),
     m_pipeline(std::make_unique<renderer::GraphicsPipeline>()),
     m_shader(std::move(shader)),
     m_render_pass(std::move(render_pass)),
-    m_bucket(bucket),
-    m_topology(Topology::TRIANGLES),
-    m_cull_mode(FaceCullMode::BACK),
-    m_fill_mode(FillMode::FILL),
-    m_depth_test(true),
-    m_depth_write(true),
-    m_blend_enabled(false),
-    m_vertex_attributes(vertex_attributes),
+    m_renderable_attributes(renderable_attributes),
     m_per_frame_data(nullptr),
     m_spatial_notifier([this]() -> std::vector<std::pair<Ref<Spatial> *, size_t>> {
         return {
@@ -59,19 +51,7 @@ void GraphicsPipeline::RemoveFramebuffer(Framebuffer::ID id)
     if (it == m_fbos.end()) {
         return;
     }
-
-    /*auto backend_fbo_it = std::find_if(
-        m_pipeline->GetConstructionInfo().fbos.begin(),
-        m_pipeline->GetConstructionInfo().fbos.end(),
-        [&it](const auto *fbo) {
-            return fbo == it.get();
-        }
-    );
-
-    AssertThrow(backend_fbo_it != m_pipeline->GetConstructionInfo().fbos.end());
-
-    m_pipeline->GetConstructionInfo().fbos.erase(backend_fbo_it);*/
-
+    
     m_fbos.erase(it);
 }
 
@@ -79,7 +59,7 @@ void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
 {
     AssertThrow(spatial != nullptr);
     AssertThrowMsg(
-        m_vertex_attributes & spatial->GetVertexAttributes() == spatial->GetVertexAttributes(),
+        (m_renderable_attributes.vertex_attributes & spatial->GetRenderableAttributes().vertex_attributes) == spatial->GetRenderableAttributes().vertex_attributes,
         "Pipeline vertex attributes does not satisfy the required vertex attributes of the spatial."
     );
 
@@ -164,6 +144,8 @@ void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
 
 void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     std::lock_guard guard(m_enqueued_spatials_mutex);
 
     if (!m_spatials_pending_removal.empty()) {
@@ -210,13 +192,13 @@ void GraphicsPipeline::Init(Engine *engine)
 
         engine->render_scheduler.Enqueue([this, engine](...) {
             renderer::GraphicsPipeline::ConstructionInfo construction_info{
-                .vertex_attributes = m_vertex_attributes,
-                .topology          = m_topology,
-                .cull_mode         = m_cull_mode,
-                .fill_mode         = m_fill_mode,
-                .depth_test        = m_depth_test,
-                .depth_write       = m_depth_write,
-                .blend_enabled     = m_blend_enabled,
+                .vertex_attributes = m_renderable_attributes.vertex_attributes,
+                .topology          = m_renderable_attributes.topology,
+                .cull_mode         = m_renderable_attributes.cull_faces,
+                .fill_mode         = m_renderable_attributes.fill_mode,
+                .depth_test        = m_renderable_attributes.depth_test,
+                .depth_write       = m_renderable_attributes.depth_write,
+                .blend_enabled     = m_renderable_attributes.alpha_blending,
                 .shader            = m_shader->GetShaderProgram(),
                 .render_pass       = &m_render_pass->GetRenderPass()
             };
@@ -302,12 +284,10 @@ void GraphicsPipeline::Init(Engine *engine)
     }));
 }
 
-void GraphicsPipeline::Render(
-    Engine *engine,
-    CommandBuffer *primary,
-    uint32_t frame_index
-)
+void GraphicsPipeline::Render(Engine *engine, Frame *frame)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     AssertReady();
 
     AssertThrow(m_per_frame_data != nullptr);
@@ -318,12 +298,12 @@ void GraphicsPipeline::Render(
 
     auto *instance = engine->GetInstance();
     auto *device = instance->GetDevice();
-    auto *secondary_command_buffer = m_per_frame_data->At(frame_index).Get<CommandBuffer>();
+    auto *secondary_command_buffer = m_per_frame_data->At(frame->GetFrameIndex()).Get<CommandBuffer>();
 
     secondary_command_buffer->Record(
         device,
         m_pipeline->GetConstructionInfo().render_pass,
-        [this, engine, instance, device, frame_index](CommandBuffer *secondary) {
+        [this, engine, instance, device, frame_index = frame->GetFrameIndex()](CommandBuffer *secondary) {
             m_pipeline->Bind(secondary);
 
             /* Bind global data */
@@ -341,7 +321,7 @@ void GraphicsPipeline::Render(
 
             const auto scene_binding = engine->render_state.GetScene();
             const auto scene_cull_id = scene_binding.parent_id ? scene_binding.parent_id : scene_binding.id;
-            const auto scene_index = scene_binding ? scene_binding.id.value - 1 : 0;
+            const auto scene_index   = scene_binding ? scene_binding.id.value - 1 : 0;
 
             /* Bind scene data - */
             instance->GetDescriptorPool().Bind(
@@ -374,7 +354,8 @@ void GraphicsPipeline::Render(
                 }
             );
 
-            const bool perform_culling = scene_cull_id != Scene::empty_id && BucketSupportsCulling(m_bucket);
+            // check visibility state
+            const bool perform_culling = scene_cull_id != Scene::empty_id && BucketSupportsCulling(m_renderable_attributes.bucket);
             
             for (auto &spatial : m_spatials) {
                 if (spatial->GetMesh() == nullptr) {
@@ -437,7 +418,7 @@ void GraphicsPipeline::Render(
             HYPERION_RETURN_OK;
         });
     
-    secondary_command_buffer->SubmitSecondary(primary);
+    secondary_command_buffer->SubmitSecondary(frame->GetCommandBuffer());
 }
 
 } // namespace hyperion::v2

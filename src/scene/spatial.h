@@ -6,6 +6,7 @@
 #include <rendering/mesh.h>
 #include <rendering/shader.h>
 #include <rendering/render_bucket.h>
+#include <rendering/renderable_attributes.h>
 #include <animation/skeleton.h>
 #include <core/scheduler.h>
 
@@ -14,6 +15,8 @@
 #include <math/transform.h>
 #include <math/bounding_box.h>
 
+#include <util/defines.h>
+
 #include <vector>
 
 namespace hyperion::v2 {
@@ -21,6 +24,7 @@ namespace hyperion::v2 {
 using renderer::VertexAttributeSet;
 using renderer::AccelerationStructure;
 using renderer::AccelerationGeometry;
+using renderer::FaceCullMode;
 
 class GraphicsPipeline;
 class Octree;
@@ -34,9 +38,8 @@ public:
     Spatial(
         Ref<Mesh> &&mesh,
         Ref<Shader> &&shader,
-        const VertexAttributeSet &attributes,
         Ref<Material> &&material,
-        Bucket bucket = Bucket::BUCKET_OPAQUE
+        const RenderableAttributeSet &renderable_attributes = RenderableAttributeSet{}
     );
 
     Spatial(const Spatial &other) = delete;
@@ -61,10 +64,24 @@ public:
     Material *GetMaterial() const { return m_material.ptr; }
     void SetMaterial(Ref<Material> &&material);
 
-    Bucket GetBucket() const      { return m_bucket; }
+    const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
+    void SetRenderableAttributes(const RenderableAttributeSet &render_options);
+
+    void SetMeshAttributes(
+        VertexAttributeSet vertex_attributes,
+        FaceCullMode face_cull_mode = FaceCullMode::BACK,
+        bool depth_write            = true,
+        bool depth_test             = true
+    );
+
+    void SetMeshAttributes(
+        FaceCullMode face_cull_mode = FaceCullMode::BACK,
+        bool depth_write            = true,
+        bool depth_test             = true
+    );
+
+    Bucket GetBucket() const { return m_renderable_attributes.bucket; }
     void SetBucket(Bucket bucket);
-    
-    const VertexAttributeSet &GetVertexAttributes() const { return m_attributes; }
 
     const Transform &GetTransform() const { return m_transform; }
     void SetTransform(const Transform &transform);
@@ -96,13 +113,12 @@ private:
 
     Ref<Mesh> m_mesh;
     Ref<Shader> m_shader;
-    VertexAttributeSet m_attributes;
     Transform m_transform;
     BoundingBox m_local_aabb;
     BoundingBox m_world_aabb;
     Ref<Material> m_material;
     Ref<Skeleton> m_skeleton;
-    Bucket m_bucket;
+    RenderableAttributeSet m_renderable_attributes;
 
     std::atomic<Octree *> m_octree{nullptr};
 
@@ -117,7 +133,8 @@ private:
     std::vector<GraphicsPipeline *> m_pipelines;
 
     mutable ShaderDataState m_shader_data_state;
-    ScheduledFunctionId     m_render_update_id;
+    ScheduledFunctionId     m_render_update_id,
+                            m_change_pipeline_id;
 };
 
 } // namespace hyperion::v2

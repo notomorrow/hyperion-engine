@@ -11,7 +11,11 @@
 #include <camera/camera.h>
 #include <types.h>
 
+#include <rendering/backend/renderer_frame.h>
+
 namespace hyperion::v2 {
+
+using renderer::Frame;
 
 class ShadowEffect : public FullScreenPass {
 public:
@@ -51,16 +55,17 @@ public:
     void Create(Engine *engine);
 
     void Destroy(Engine *engine);
-    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
+    void Render(Engine *engine, Frame *frame);
 
 private:
-    Ref<Scene>                             m_scene;
-    Ref<Light>                             m_light;
-    std::vector<ObserverRef<Ref<Spatial>>> m_observers;
-    Scene::ID                              m_parent_scene_id;
-    Vector3                                m_origin;
-    float                                  m_max_distance;
-    uint                                   m_shadow_map_index;
+    Ref<Scene>                                               m_scene;
+    Ref<Light>                                               m_light;
+    std::vector<ObserverRef<Ref<GraphicsPipeline>>>          m_pipeline_observers;
+    FlatMap<GraphicsPipeline::ID, ObserverRef<Ref<Spatial>>> m_spatial_observers;
+    Scene::ID                                                m_parent_scene_id;
+    Vector3                                                  m_origin;
+    float                                                    m_max_distance;
+    uint                                                     m_shadow_map_index;
 };
 
 class ShadowRenderer : public EngineComponentBase<STUB_CLASS(ShadowRenderer)> {
@@ -87,7 +92,7 @@ public:
 
     void Init(Engine *engine);
     void Update(Engine *engine, GameCounter::TickUnit delta);
-    void Render(Engine *engine, CommandBuffer *command_buffer, uint32_t frame_index);
+    void Render(Engine *engine, Frame *frame);
 
 private:
     void UpdateSceneCamera(Engine *engine);

@@ -107,7 +107,7 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
         params.height      = m_camera->GetHeight();
     }
 
-    m_render_update_id = engine->render_scheduler.EnqueueReplace(m_render_update_id, [this, engine, params](...) {
+    engine->render_scheduler.EnqueueReplace(m_render_update_id, [this, engine, params](...) {
         SceneShaderData shader_data{
             .view             = params.view,
             .projection       = params.projection,

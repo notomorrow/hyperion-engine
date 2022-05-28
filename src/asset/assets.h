@@ -243,16 +243,65 @@ class Assets {
         );
     }
 
+    template <class In, class Out>
+    void ExtractConstructedAsset(In &&constructed_asset, Out &out)
+    {
+        out = std::move(constructed_asset.object);
+    }
+
     template <class InContainer, class OutContainer>
     void ExtractConstructedAssets(InContainer &&constructed_assets, OutContainer &out)
     {
         for (size_t i = 0; i < constructed_assets.size(); i++) {
-            out[i] = std::move(constructed_assets[i].object);
+            ExtractConstructedAsset(std::move(constructed_assets[i]), out[i]);
         }
     }
 
     template <class Type, class ...Args>
-    auto LoadAsync(Args &&... paths)
+    std::unique_ptr<Type> LoadSync(const std::string &path)
+    {
+        const std::string original_filepath = path;
+        const std::string filepath          = GetRebasedFilepath(path);
+        const auto try_filepaths            = GetTryFilepaths(filepath, original_filepath);
+
+        ConstructedAsset<Type> result{};
+        
+        for (auto &try_filepath : try_filepaths) {
+            DebugLog(LogType::Info, "Loading asset %s...\n", try_filepath.c_str());
+
+            auto functor = HandleAssetFunctor<Type>{};
+            functor.filepath = try_filepath;
+            result = functor(m_engine);
+
+            if (result.result) {
+                AssertThrowMsg(
+                    result.object != nullptr,
+                    "Loader failure -- the loader returned OK status but the constructed object was nullptr!"
+                );
+
+                break;
+            }
+
+            if (result.result.status != LoaderResult::Status::ERR_NOT_FOUND) {
+                // error result returned
+                break;
+            }
+
+            // status == ERR_NOT_FOUND; continue trying
+        }
+
+        if (!result.result) {
+            DisplayAssetLoadError(filepath, result.result.message);
+        }
+        
+        std::unique_ptr<Type> extracted_object;
+        ExtractConstructedAsset(std::move(result), extracted_object);
+
+        return extracted_object;
+    }
+
+    template <class Type, class ...Args>
+    auto LoadAsync(Args &&... paths) -> std::array<std::unique_ptr<Type>, sizeof...(paths)>
     {
         const std::array<std::string,      sizeof...(paths)> original_filepaths{paths...};
         std::array<std::string,            sizeof...(paths)> filepaths{paths...};
@@ -306,7 +355,7 @@ class Assets {
         std::array<std::unique_ptr<Type>, sizeof...(paths)> extracted_objects;
         ExtractConstructedAssets(std::move(results), extracted_objects);
 
-        return std::move(extracted_objects);
+        return extracted_objects;
     }
 
     template <class Type>
@@ -372,7 +421,7 @@ public:
     template <class Type>
     auto Load(const std::string &filepath) -> std::unique_ptr<Type>
     {
-        return std::move(LoadAsync<Type>(filepath).front());
+        return std::move(LoadSync<Type>(filepath));
     }
 
     /*! \brief Loads a collection of assets asynchronously from one another (the function returns when all have
