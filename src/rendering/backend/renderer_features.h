@@ -3,6 +3,8 @@
 
 #include <util/defines.h>
 
+//#define HYP_FEATURES_ENABLE_RAYTRACING 1
+
 #if HYP_VULKAN
 #include <rendering/backend/vulkan/renderer_features.h>
 #else

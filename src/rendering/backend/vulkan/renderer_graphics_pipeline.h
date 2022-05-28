@@ -23,20 +23,18 @@ class FramebufferObject;
 
 class GraphicsPipeline : public Pipeline {
 public:
-    static constexpr uint32_t max_dynamic_textures = 8;
-
     struct ConstructionInfo {
         VertexAttributeSet vertex_attributes;
 
-        Topology topology = Topology::TRIANGLES;
-        FaceCullMode cull_mode = FaceCullMode::BACK;
-        FillMode fill_mode = FillMode::FILL;
+        Topology topology       = Topology::TRIANGLES;
+        FaceCullMode cull_mode  = FaceCullMode::BACK;
+        FillMode fill_mode      = FillMode::FILL;
 
-        bool depth_test = true,
-             depth_write = true,
-             blend_enabled = false;
+        bool depth_test         = true,
+             depth_write        = true,
+             blend_enabled      = false;
 
-        ShaderProgram *shader = nullptr;
+        ShaderProgram *shader   = nullptr;
         RenderPass *render_pass = nullptr;
         std::vector<FramebufferObject *> fbos;
     };

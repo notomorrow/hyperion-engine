@@ -53,7 +53,7 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
     m_attachments.push_back(std::make_unique<renderer::Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
             engine->GetInstance()->swapchain->extent,
-            engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
+            engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
         ),
         RenderPassStage::SHADER

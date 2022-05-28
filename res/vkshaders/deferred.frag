@@ -11,6 +11,7 @@ layout(location=1) out vec4 output_normals;
 layout(location=2) out vec4 output_positions;
 
 #include "include/gbuffer.inc"
+#include "include/packing.inc"
 
 layout(set = 1, binding = 8) uniform sampler2D filter_ssao[1];
 layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
@@ -172,7 +173,7 @@ void main()
     vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
     vec4 albedo   = texture(gbuffer_albedo_texture, texcoord);
-    vec4 normal   = texture(gbuffer_normals_texture, texcoord);
+    vec4 normal   = vec4(DecodeNormal(texture(gbuffer_normals_texture, texcoord)), 1.0);
     vec4 position = texture(gbuffer_positions_texture, texcoord);
     vec4 material = texture(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
     
@@ -289,6 +290,6 @@ void main()
 
     output_color     = vec4(Tonemap(result), 1.0);
     //output_color     = texture(shadow_maps[0], texcoord);
-    output_normals   = normal;
+    output_normals   = EncodeNormal(normal.xyz);
     output_positions = position;
 }

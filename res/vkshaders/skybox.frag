@@ -12,13 +12,14 @@ layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 
 #include "include/material.inc"
+#include "include/packing.inc"
 
 layout(set = 6, binding = 0) uniform samplerCube textures[];
 
 void main() {
     vec3 normal = normalize(v_normal);
     
-    gbuffer_albedo = vec4(textureLod(textures[material.texture_index[0]], v_position, 0.0).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
-    gbuffer_normals = vec4(normal, 1.0);
+    gbuffer_albedo    = vec4(textureLod(textures[material.texture_index[0]], v_position, 0.0).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
+    gbuffer_normals   = EncodeNormal(normal);
     gbuffer_positions = vec4(v_position, 1.0);
 }
