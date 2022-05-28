@@ -263,7 +263,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     VkPipelineColorBlendStateCreateInfo color_blending{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
     color_blending.logicOpEnable     = VK_FALSE;
-    color_blending.attachmentCount   = uint32_t(color_blend_attachments.size());
+    color_blending.attachmentCount   = static_cast<uint32_t>(color_blend_attachments.size());
     color_blending.pAttachments      = color_blend_attachments.data();
     color_blending.blendConstants[0] = 0.0f;
     color_blending.blendConstants[1] = 0.0f;
@@ -314,11 +314,39 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     depth_stencil.front                 = {}; // Optional
     depth_stencil.back                  = {}; // Optional
 
-    VkGraphicsPipelineCreateInfo pipeline_info{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    if (m_construction_info.stencil_state.mode != StencilMode::NONE) {
+        depth_stencil.stencilTestEnable = VK_TRUE;
+
+        switch (m_construction_info.stencil_state.mode) {
+        case StencilMode::FILL:
+            depth_stencil.back = {
+                .failOp      = VK_STENCIL_OP_REPLACE,
+                .passOp      = VK_STENCIL_OP_REPLACE,
+                .depthFailOp = VK_STENCIL_OP_REPLACE,
+                .compareOp   = VK_COMPARE_OP_ALWAYS
+            };
+
+            break;
+        case StencilMode::OUTLINE:
+            depth_stencil.back = {
+                .failOp      = VK_STENCIL_OP_KEEP,
+                .passOp      = VK_STENCIL_OP_KEEP,
+                .depthFailOp = VK_STENCIL_OP_KEEP,
+                .compareOp   = VK_COMPARE_OP_NOT_EQUAL
+            };
+
+            break;
+        }
+
+        depth_stencil.back.reference = m_construction_info.stencil_state.id;
+        depth_stencil.front          = depth_stencil.back;
+    }
+
+    VkGraphicsPipelineCreateInfo pipeline_info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
 
     const auto &stages = m_construction_info.shader->GetShaderStages();
 
-    pipeline_info.stageCount          = uint32_t(stages.size());
+    pipeline_info.stageCount          = static_cast<uint32_t>(stages.size());
     pipeline_info.pStages             = stages.data();
     pipeline_info.pVertexInputState   = &vertex_input_info;
     pipeline_info.pInputAssemblyState = &input_asm_info;

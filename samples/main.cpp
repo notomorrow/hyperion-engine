@@ -187,6 +187,7 @@ public:
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
 
         zombie->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+        //zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
 
         //zombie->AddController<AudioController>(engine->assets.Load<AudioSource>("sounds/taunt.wav"));
         //zombie->GetController<AudioController>()->Play(1.0f, LoopMode::ONCE);
@@ -198,9 +199,27 @@ public:
     {
         scene->GetRootNode()->AddChild(engine->assets.Load<Node>("models/monkey/monkey.obj"));
 
+        auto outline_pipeline = std::make_unique<GraphicsPipeline>(
+            engine->shader_manager.GetShader(ShaderKey::STENCIL_OUTLINE).IncRef(),
+            engine->GetRenderListContainer().Get(BUCKET_TRANSLUCENT).GetRenderPass().IncRef(),
+            RenderableAttributeSet{
+                .bucket            = BUCKET_TRANSLUCENT,
+                .vertex_attributes = VertexAttributeSet::static_mesh | VertexAttributeSet::skeleton,
+                .stencil_state     = {1, renderer::StencilMode::OUTLINE}
+            }
+        );
+        outline_pipeline->SetBlendEnabled(true);
+        auto outline_pipeline_ref = engine->AddGraphicsPipeline(std::move(outline_pipeline));
+
         if (auto *suzanne = scene->GetRootNode()->Select("Suzanne")) {
+            //suzanne->GetChild(0)->GetSpatial()->SetStencilAttributes(StencilState{ 1, renderer::StencilMode::FILL });
+
+            //outline_pipeline_ref->AddSpatial(engine->resources.spatials.IncRef(suzanne->GetChild(0)->GetSpatial()));
+
             suzanne->Translate({7, 3, 5});
         }
+
+        outline_pipeline_ref.Init();
     }
 
     virtual void Teardown(Engine *engine) override
@@ -239,6 +258,7 @@ public:
         } else {
             zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
         }
+        
         
         material_test_obj->SetLocalScale(3.45f);
         //material_test_obj->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.25f));
@@ -420,6 +440,18 @@ int main()
         per_frame_data[i].Set<CommandBuffer>(std::move(cmd_buffer));
     }
 
+    
+    engine.shader_manager.SetShader(
+        v2::ShaderManager::Key::STENCIL_OUTLINE,
+        engine.resources.shaders.Add(std::make_unique<v2::Shader>(
+            std::vector<v2::SubShader>{
+                {ShaderModule::Type::VERTEX, {FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/outline.vert.spv")).Read()}},
+                {ShaderModule::Type::FRAGMENT, {FileByteReader(v2::FileSystem::Join(engine.assets.GetBasePath(), "vkshaders/outline.frag.spv")).Read()}}
+            }
+        ))
+    );
+
+
     {
         engine.shader_manager.SetShader(
             v2::ShaderManager::Key::BASIC_SKYBOX,
@@ -580,6 +612,8 @@ int main()
         frame = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
         auto *command_buffer = frame->GetCommandBuffer();
         const uint32_t frame_index = engine.GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
+
+        engine.GetRenderListContainer().AddPendingGraphicsPipelines(&engine);
 
         if (auto num_enqueued = engine.render_scheduler.NumEnqueued()) {
             engine.render_scheduler.Flush([command_buffer, frame_index](auto &fn) {

@@ -204,6 +204,8 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
                 continue;
             }
 
+            auto material = resources.materials.Add(std::make_unique<Material>());
+
             auto mesh = resources.meshes.Add(
                 std::make_unique<Mesh>(
                     object.vertices, 
@@ -226,7 +228,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
                 std::make_unique<Spatial>(
                     std::move(mesh),
                     std::move(shader),
-                    resources.materials.Get(Material::ID{1}),
+                    std::move(material),
                     RenderableAttributeSet{
                         .bucket            = Bucket::BUCKET_OPAQUE,
                         .shader_id         = shader_id,

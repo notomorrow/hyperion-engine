@@ -521,8 +521,6 @@ void Engine::UpdateBuffersAndDescriptors(uint32_t frame_index)
     shader_globals->shadow_maps.UpdateBuffer(m_instance->GetDevice(), frame_index);
 
     shader_globals->textures.ApplyUpdates(this, frame_index);
-
-    m_render_list_container.AddPendingGraphicsPipelines(this);
 }
 
 void Engine::RenderDeferred(Frame *frame)

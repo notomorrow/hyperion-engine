@@ -80,6 +80,8 @@ public:
         bool depth_test             = true
     );
 
+    void SetStencilAttributes(const StencilState &stencil_state);
+
     Bucket GetBucket() const { return m_renderable_attributes.bucket; }
     void SetBucket(Bucket bucket);
 
