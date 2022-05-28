@@ -13,11 +13,6 @@
 
 #include <csignal>
 
-
-
-
-
-
 enum class LogType : int {
     Info,
     Warn,

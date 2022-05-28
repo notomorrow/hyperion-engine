@@ -4,6 +4,14 @@
 
 namespace hyperion::v2 {
 
+const std::array<TextureFormatDefault, 5> RenderListContainer::gbuffer_textures = {
+    TEXTURE_FORMAT_DEFAULT_COLOR,
+    TEXTURE_FORMAT_DEFAULT_NORMALS,
+    TEXTURE_FORMAT_DEFAULT_GBUFFER,
+    TEXTURE_FORMAT_DEFAULT_GBUFFER,
+    TEXTURE_FORMAT_DEFAULT_DEPTH
+};
+
 RenderListContainer::RenderListContainer()
 {
     for (size_t i = 0; i < m_buckets.size(); i++) {
@@ -133,7 +141,7 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         attachments.push_back(std::make_unique<renderer::Attachment>(
             std::make_unique<renderer::FramebufferImage2D>(
                 engine->GetInstance()->swapchain->extent,
-                engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_COLOR),
+                engine->GetDefaultFormat(gbuffer_textures[0]),
                 nullptr
             ),
             RenderPassStage::SHADER
@@ -148,11 +156,11 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
         render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 
-        for (uint i = 0; i < num_gbuffer_attachments - 2 /* -2 because color and depth already accounted for*/; i++) {
+        for (uint i = 1; i < gbuffer_textures.size() - 1 /* because color and depth already accounted for*/; i++) {
             attachments.push_back(std::make_unique<renderer::Attachment>(
                 std::make_unique<renderer::FramebufferImage2D>(
                     engine->GetInstance()->swapchain->extent,
-                    engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_GBUFFER),
+                    engine->GetDefaultFormat(gbuffer_textures[i]),
                     nullptr
                 ),
                 RenderPassStage::SHADER
@@ -168,6 +176,8 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
             render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
         }
 
+        constexpr size_t depth_texture_index = gbuffer_textures.size() - 1;
+
         /* Add depth attachment */
         if (bucket == BUCKET_TRANSLUCENT) { // translucent reuses the opaque bucket's depth buffer.
             auto &forward_fbo = engine->GetRenderListContainer()[BUCKET_OPAQUE].framebuffers[0];
@@ -175,20 +185,20 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 
             renderer::AttachmentRef *depth_attachment;
 
-            HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetAttachmentRefs().at(num_gbuffer_attachments - 1)->AddAttachmentRef(
+            HYPERION_ASSERT_RESULT(forward_fbo->GetFramebuffer().GetAttachmentRefs().at(depth_texture_index)->AddAttachmentRef(
                 engine->GetInstance()->GetDevice(),
                 renderer::StoreOperation::STORE,
                 &depth_attachment
             ));
 
-            depth_attachment->SetBinding(num_gbuffer_attachments - 1);
+            depth_attachment->SetBinding(depth_texture_index);
 
             render_pass->GetRenderPass().AddAttachmentRef(depth_attachment);
         } else {
             attachments.push_back(std::make_unique<renderer::Attachment>(
                 std::make_unique<renderer::FramebufferImage2D>(
                     engine->GetInstance()->swapchain->extent,
-                    engine->GetDefaultFormat(Engine::TEXTURE_FORMAT_DEFAULT_DEPTH),
+                    engine->GetDefaultFormat(gbuffer_textures[depth_texture_index]),
                     nullptr
                 ),
                 RenderPassStage::SHADER
