@@ -9,11 +9,13 @@
 #include <rendering/shadows.h>
 #include <rendering/resources.h>
 #include <rendering/shader_manager.h>
+#include <rendering/renderable_attributes.h>
 #include <scene/octree.h>
 
 #include "game_thread.h"
 
-#include "core/scheduler.h"
+#include <core/scheduler.h>
+#include <core/lib/flat_map.h>
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_semaphore.h>
@@ -21,6 +23,8 @@
 
 #include <util/enum_options.h>
 #include <builders/shader_compiler/shader_compiler.h>
+
+#include <types.h>
 
 #include <memory>
 #include <mutex>
@@ -65,6 +69,14 @@ using renderer::StorageBuffer;
  * |                     | Image storage test  | empty               | empty               | empty               |
  */
 
+using EngineThreadMask = uint;
+
+enum EngineThread : EngineThreadMask {
+    THREAD_MAIN   = 0x01,
+    THREAD_RENDER = 0x01, // for now
+    THREAD_GAME   = 0x02
+};
+
 struct RenderState {
     struct SceneBinding {
         Scene::ID id;
@@ -95,6 +107,30 @@ struct RenderState {
     }
 };
 
+
+
+struct GraphicsPipelineAttributeSet {
+    Ref<Shader>        shader;
+    VertexAttributeSet vertex_attributes;
+    Bucket             bucket;
+
+    bool operator<(const GraphicsPipelineAttributeSet &other) const
+    {
+        const auto shader_id = shader ? shader->GetId() : Shader::ID{0};
+        const auto other_shader_id = other.shader ? other.shader->GetId() : Shader::ID{0};
+
+        return std::tie(shader_id, vertex_attributes, bucket) <
+            std::tie(other_shader_id, other.vertex_attributes, other.bucket);
+    }
+
+    bool operator==(const GraphicsPipelineAttributeSet &other) const
+    {
+        return shader == other.shader
+            && vertex_attributes == other.vertex_attributes
+            && bucket == other.bucket;
+    }
+};
+
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
  *
@@ -103,11 +139,17 @@ class Engine {
 public:
     enum TextureFormatDefault {
         TEXTURE_FORMAT_DEFAULT_NONE    = 0,
-        TEXTURE_FORMAT_DEFAULT_COLOR   = 1,
-        TEXTURE_FORMAT_DEFAULT_DEPTH   = 2,
-        TEXTURE_FORMAT_DEFAULT_GBUFFER = 4,
-        TEXTURE_FORMAT_DEFAULT_STORAGE = 8
+        TEXTURE_FORMAT_DEFAULT_COLOR   = 1 << 0,
+        TEXTURE_FORMAT_DEFAULT_DEPTH   = 1 << 1,
+        TEXTURE_FORMAT_DEFAULT_GBUFFER = 1 << 2,
+        TEXTURE_FORMAT_DEFAULT_NORMALS = 1 << 3,
+        TEXTURE_FORMAT_DEFAULT_UV      = 1 << 4,
+        TEXTURE_FORMAT_DEFAULT_STORAGE = 1 << 5
     };
+
+    static const FlatMap<EngineThread, ThreadId> thread_ids;
+
+    static void AssertOnThread(EngineThreadMask mask);
 
     Engine(SystemSDL &, const char *app_name);
     ~Engine();
@@ -115,10 +157,10 @@ public:
     inline Instance *GetInstance() const { return m_instance.get(); }
     inline Device   *GetDevice() const { return m_instance ? m_instance->GetDevice() : nullptr; }
 
-    inline DeferredRenderer &GetDeferredRenderer() { return m_deferred_renderer; }
+    inline DeferredRenderer &GetDeferredRenderer()             { return m_deferred_renderer; }
     inline const DeferredRenderer &GetDeferredRenderer() const { return m_deferred_renderer; }
 
-    inline RenderListContainer &GetRenderListContainer() { return m_render_list_container; }
+    inline RenderListContainer &GetRenderListContainer()             { return m_render_list_container; }
     inline const RenderListContainer &GetRenderListContainer() const { return m_render_list_container; }
 
     inline Octree &GetOctree() { return m_octree; }
@@ -127,22 +169,8 @@ public:
     inline Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
 
-    Ref<GraphicsPipeline> FindOrCreateGraphicsPipeline(
-        Ref<Shader> &&shader,
-        const VertexAttributeSet &vertex_attributes,
-        Bucket bucket
-    );
-    
-    Ref<GraphicsPipeline> AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline)
-    {
-        const auto bucket = pipeline->GetBucket();
-
-        auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
-
-        m_render_list_container.Get(bucket).AddGraphicsPipeline(graphics_pipeline.IncRef());
-
-        return graphics_pipeline;
-    }
+    Ref<GraphicsPipeline> FindOrCreateGraphicsPipeline(const RenderableAttributeSet &renderable_attributes);
+    Ref<GraphicsPipeline> AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline);
 
     void SetSpatialTransform(Spatial *spatial, const Transform &transform);
     
@@ -155,8 +183,8 @@ public:
     void ResetRenderState();
     void UpdateBuffersAndDescriptors(uint32_t frame_index);
     
-    void RenderDeferred(CommandBuffer *primary, uint32_t frame_index);
-    void RenderSwapchain(CommandBuffer *command_buffer) const;
+    void RenderDeferred(Frame *frame);
+    void RenderFinalPass(CommandBuffer *command_buffer) const;
 
 
     ShaderGlobals          *shader_globals;
@@ -184,7 +212,7 @@ private:
     std::unique_ptr<Instance>         m_instance;
     std::unique_ptr<GraphicsPipeline> m_root_pipeline;
 
-    EnumOptions<TextureFormatDefault, Image::InternalFormat, 5> m_texture_format_defaults;
+    EnumOptions<TextureFormatDefault, Image::InternalFormat, 16> m_texture_format_defaults;
 
     DeferredRenderer    m_deferred_renderer;
     RenderListContainer m_render_list_container;
@@ -195,6 +223,8 @@ private:
 
     /* TMP */
     std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;
+
+    FlatMap<RenderableAttributeSet, GraphicsPipeline::ID> m_graphics_pipeline_mapping;
 };
 
 } // namespace hyperion::v2

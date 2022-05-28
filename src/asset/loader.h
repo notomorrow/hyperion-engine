@@ -13,9 +13,9 @@ namespace hyperion::v2 {
 class Engine;
 
 struct LoaderState {
-    std::string filepath;
+    std::string                               filepath;
     BufferedReader<HYP_V2_LOADER_BUFFER_SIZE> stream;
-    Engine *engine;
+    Engine                                   *engine;
 };
 
 struct LoaderResult {

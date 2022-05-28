@@ -2,6 +2,14 @@
 
 namespace hyperion {
 namespace renderer {
+
+Frame Frame::TemporaryFrame(CommandBuffer *command_buffer, uint32_t frame_index)
+{
+    Frame frame(frame_index);
+    frame.command_buffer = non_owning_ptr(command_buffer);
+    return frame;
+}
+
 Frame::Frame(uint32_t frame_index)
     : m_frame_index(frame_index),
       command_buffer(nullptr),
@@ -11,6 +19,16 @@ Frame::Frame(uint32_t frame_index)
           { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }
       )
 {
+}
+
+Frame::Frame(Frame &&other) noexcept
+    : m_frame_index(other.m_frame_index),
+      command_buffer(other.command_buffer),
+      fc_queue_submit(std::move(other.fc_queue_submit)),
+      m_present_semaphores(std::move(other.m_present_semaphores))
+{
+    other.m_frame_index = 0;
+    other.command_buffer = nullptr;
 }
 
 Frame::~Frame()

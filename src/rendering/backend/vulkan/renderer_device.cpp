@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include "../../system/debug.h"
+#include <system/debug.h>
 
 namespace hyperion {
 namespace renderer {

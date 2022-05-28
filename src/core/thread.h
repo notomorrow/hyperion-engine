@@ -2,21 +2,36 @@
 #define HYPERION_V2_CORE_THREAD_H
 
 #include "lib/fixed_string.h"
+#include <types.h>
 
 #include <thread>
 #include <tuple>
 
 namespace hyperion::v2 {
 
+struct ThreadId {
+    uint        value;
+    FixedString name;
+
+    bool operator==(const ThreadId &other) const { return value == other.value; }
+    bool operator!=(const ThreadId &other) const { return value != other.value; }
+};
+
+extern thread_local ThreadId current_thread_id;
+
+void SetThreadId(const ThreadId &id);
+
 template <class ...Args>
 class Thread {
 public:
-    Thread(const FixedString &name);
+    Thread(const ThreadId &id);
     Thread(const Thread &other) = delete;
     Thread &operator=(const Thread &other) = delete;
     Thread(Thread &&other) noexcept;
     Thread &operator=(Thread &&other) noexcept;
     virtual ~Thread();
+
+    const ThreadId &GetId() const { return m_id; }
 
     bool Start(Args ...args);
     bool Detach();
@@ -26,21 +41,22 @@ public:
 protected:
     virtual void operator()(Args ...args) = 0;
 
+    const ThreadId m_id;
+
 private:
-    FixedString m_name;
     std::thread *m_thread;
 };
 
 template <class ...Args>
-Thread<Args...>::Thread(const FixedString &name)
-    : m_name(name),
+Thread<Args...>::Thread(const ThreadId &id)
+    : m_id(id),
       m_thread(nullptr)
 {
 }
 
 template <class ...Args>
 Thread<Args...>::Thread(Thread &&other) noexcept
-    : m_name(std::move(other.m_name)),
+    : m_id(std::move(other.m_id)),
       m_thread(other.m_thread)
 {
     other.m_thread = nullptr;
@@ -49,7 +65,7 @@ Thread<Args...>::Thread(Thread &&other) noexcept
 template <class ...Args>
 Thread<Args...> &Thread<Args...>::operator=(Thread &&other) noexcept
 {
-    m_name = std::move(other.m_name);
+    m_id = std::move(other.m_id);
     m_thread = other.m_thread;
     other.m_thread = nullptr;
 
@@ -79,6 +95,8 @@ bool Thread<Args...>::Start(Args ...args)
     std::tuple<Args...> tuple_args(std::forward<Args>(args)...);
 
     m_thread = new std::thread([&self = *this, tuple_args] {
+        SetThreadId(self.GetId());
+
         self(std::get<Args>(tuple_args)...);
     });
 

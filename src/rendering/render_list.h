@@ -6,6 +6,8 @@
 #include <scene/scene.h>
 #include <types.h>
 
+#include <mutex>
+
 namespace hyperion::v2 {
 
 class Engine;
@@ -14,12 +16,35 @@ class RenderListContainer {
 public:
     static constexpr uint num_gbuffer_attachments = 5;
 
-    struct RenderListBucket {
-        Bucket bucket;
-        Ref<RenderPass> render_pass;
-        std::vector<Ref<Framebuffer>> framebuffers;
-        std::vector<std::unique_ptr<renderer::Attachment>> attachments;
-        std::vector<Ref<GraphicsPipeline>> graphics_pipelines;
+    class RenderListBucket {
+        Bucket                                   bucket{BUCKET_OPAQUE};
+        Ref<RenderPass>                          render_pass;
+        std::vector<Ref<Framebuffer>>            framebuffers;
+        std::vector<std::unique_ptr<Attachment>> attachments;
+        std::vector<Ref<GraphicsPipeline>>       graphics_pipelines;
+        std::vector<Ref<GraphicsPipeline>>       graphics_pipelines_pending_addition;
+        std::atomic_bool                         graphics_pipelines_changed{false};
+        std::mutex                               graphics_pipelines_mutex;
+        ObserverNotifier<Ref<GraphicsPipeline>>  m_graphics_pipeline_notifier;
+
+    public:
+        RenderListBucket();
+        ~RenderListBucket();
+
+        Bucket GetBucket() const                                                           { return bucket; }
+        void SetBucket(Bucket bucket)                                                      { this->bucket = bucket; }
+                                                                                           
+        Ref<RenderPass> &GetRenderPass()                                                   { return render_pass; }
+        const Ref<RenderPass> &GetRenderPass() const                                       { return render_pass; }
+                                                                                           
+        std::vector<Ref<Framebuffer>> &GetFramebuffers()                                   { return framebuffers; }
+        const std::vector<Ref<Framebuffer>> &GetFramebuffers() const                       { return framebuffers; }
+                                                                                           
+        std::vector<Ref<GraphicsPipeline>> &GetGraphicsPipelines()                         { return graphics_pipelines; }
+        const std::vector<Ref<GraphicsPipeline>> &GetGraphicsPipelines() const             { return graphics_pipelines; }
+
+        ObserverNotifier<Ref<GraphicsPipeline>> &GetGraphicsPipelineNotifier()             { return m_graphics_pipeline_notifier; }
+        const ObserverNotifier<Ref<GraphicsPipeline>> &GetGraphicsPipelineNotifier() const { return m_graphics_pipeline_notifier; }
 
         bool IsRenderableBucket() const
         {
@@ -29,15 +54,8 @@ public:
                 || bucket == Bucket::BUCKET_PARTICLE;
         }
 
-        inline void AddGraphicsPipeline(Ref<GraphicsPipeline> &&graphics_pipeline)
-        {
-            AddFramebuffersToPipeline(graphics_pipeline);
-
-            graphics_pipeline.Init();
-
-            graphics_pipelines.push_back(std::move(graphics_pipeline));
-        }
-
+        void AddGraphicsPipeline(Ref<GraphicsPipeline> &&graphics_pipeline);
+        void AddPendingGraphicsPipelines(Engine *engine);
         void AddFramebuffersToPipelines();
         void AddFramebuffersToPipeline(Ref<GraphicsPipeline> &pipeline);
         void CreateRenderPass(Engine *engine);
@@ -66,9 +84,11 @@ public:
     inline const RenderListBucket &operator[](Bucket bucket) const
         { return Get(bucket); }
 
-    void AddFramebuffersToPipelines(Engine *engine);
     void Create(Engine *engine);
     void Destroy(Engine *engine);
+
+    void AddPendingGraphicsPipelines(Engine *engine);
+    void AddFramebuffersToPipelines(Engine *engine);
 
 private:
     std::array<RenderListBucket, Bucket::BUCKET_MAX> m_buckets;

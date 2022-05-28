@@ -6,10 +6,13 @@
 #include "shader.h"
 #include "graphics.h"
 #include "mesh.h"
+#include "full_screen_pass.h"
 
 #include <rendering/backend/renderer_frame.h>
 #include <rendering/backend/renderer_structs.h>
 #include <rendering/backend/renderer_command_buffer.h>
+
+#include <core/lib/type_map.h>
 
 #include <memory>
 #include <utility>
@@ -23,53 +26,28 @@ using renderer::VertexAttributeSet;
 
 class Engine;
 
-class FullScreenPass {
+class PostProcessingEffect : public EngineComponentBase<STUB_CLASS(PostProcessingEffect)> {
 public:
-    static std::unique_ptr<Mesh> full_screen_quad;
-    
-    FullScreenPass();
-    FullScreenPass(Ref<Shader> &&shader);
-    FullScreenPass(const FullScreenPass &) = delete;
-    FullScreenPass &operator=(const FullScreenPass &) = delete;
-    ~FullScreenPass();
+    PostProcessingEffect();
+    PostProcessingEffect(const PostProcessingEffect &other) = delete;
+    PostProcessingEffect &operator=(const PostProcessingEffect &other) = delete;
+    virtual ~PostProcessingEffect();
 
-    inline auto &GetFrameData()
-        { return m_frame_data; }
-    inline const auto &GetFrameData() const
-        { return m_frame_data; }
+    FullScreenPass &GetFullScreenPass()             { return m_full_screen_pass; }
+    const FullScreenPass &GetFullScreenPass() const { return m_full_screen_pass; }
 
-    inline Framebuffer *GetFramebuffer() const
-        { return m_framebuffer.ptr; }
+    Ref<Shader> &GetShader()                        { return m_shader; }
+    const Ref<Shader> &GetShader() const            { return m_shader; }
 
-    inline Shader *GetShader() const
-        { return m_shader.ptr; }
-
-    inline RenderPass *GetRenderPass() const
-        { return m_render_pass.ptr; }
-
-    inline GraphicsPipeline *GetGraphicsPipeline() const
-        { return m_pipeline.ptr; }
-
-    void CreateRenderPass(Engine *engine);
-    void Create(Engine *engine);
-    void CreateDescriptors(Engine *engine);
-    void CreatePipeline(Engine *engine);
-
-    void Destroy(Engine *engine);
-
-    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index);
-    void Record(Engine *engine, uint32_t frame_index);
+    void Init(Engine *engine);
 
 protected:
-    void CreatePerFrameData(Engine *engine);
+    virtual Ref<Shader> CreateShader(Engine *engine) = 0;
 
-    std::unique_ptr<PerFrameData<CommandBuffer>> m_frame_data;
-    Ref<Framebuffer> m_framebuffer;
-    Ref<Shader> m_shader;
-    Ref<RenderPass> m_render_pass;
-    Ref<GraphicsPipeline> m_pipeline;
+    FullScreenPass m_full_screen_pass;
 
-    std::vector<std::unique_ptr<renderer::Attachment>> m_attachments;
+private:
+    Ref<Shader>    m_shader;
 };
 
 class PostProcessing {
@@ -79,15 +57,49 @@ public:
     PostProcessing &operator=(const PostProcessing &) = delete;
     ~PostProcessing();
 
-    void AddFilter(std::unique_ptr<FullScreenPass> &&filter);
-    inline FullScreenPass *GetFilter(size_t index) const { return m_filters[index].get(); }
+    /*! \brief Add an effect to the stack.
+    * Note, cannot add new filters after pipeline construction, currently
+     * @param effect A unique_ptr to the class, derived from PostProcessingEffect.
+     */
+    template <class EffectClass>
+    void AddFilter(std::unique_ptr<EffectClass> &&effect)
+    {
+        static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
+
+        m_effects.Set<EffectClass>(std::move(effect));
+    }
+
+    /*! \brief Add an effect to the stack, constructed by the given arguments.
+     * Note, cannot add new filters after pipeline construction, currently
+     */
+    template <class EffectClass, class ...Args>
+    void AddFilter(Args &&... args)
+    {
+        static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
+
+        AddFilter(std::make_unique<EffectClass>(std::forward<Args>(args)...));
+    }
+
+    template <class EffectClass>
+    EffectClass *GetFilter() const
+    {
+        static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
+
+        auto it = m_effects.Find<EffectClass>();
+
+        if (it == m_effects.End()) {
+            return nullptr;
+        }
+
+        return static_cast<EffectClass *>(it->second.get());
+    }
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
-    void Render(Engine *engine, CommandBuffer *primary, uint32_t frame_index) const;
+    void Render(Engine *engine, Frame *frame) const;
 
 private:
-    std::vector<std::unique_ptr<FullScreenPass>> m_filters;
+    TypeMap<std::unique_ptr<PostProcessingEffect>> m_effects;
 };
 
 } // namespace hyperion::v2

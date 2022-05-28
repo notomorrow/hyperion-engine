@@ -12,7 +12,8 @@
 namespace hyperion::v2 {
 
 constexpr bool create_obj_indices = true;
-constexpr bool mesh_per_material = true; // set true to create a new mesh on each instance of 'use <mtllib>'
+constexpr bool mesh_per_material  = true; // set true to create a new mesh on each instance of 'use <mtllib>'
+constexpr bool load_materials     = true;
 
 using Tokens = std::vector<std::string>;
 using ObjModelLoader = LoaderObject<Node, LoaderFormat::OBJ_MODEL>::Loader;
@@ -249,9 +250,13 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 {
     auto top = std::make_unique<Node>(object.tag.c_str());
 
+    if (StringUtil::EndsWith(object.filepath, "monkey.obj")) { // wtf?
+        return std::move(top);
+    }
+
     std::unique_ptr<MaterialGroup> material_library;
     
-    if (!object.material_library.empty()) {
+    if (load_materials && !object.material_library.empty()) {
         auto material_library_path = FileSystem::RelativePath(
             StringUtil::BasePath(object.filepath) + "/" + object.material_library,
             FileSystem::CurrentPath()
@@ -360,13 +365,19 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
 
             auto vertex_attributes = mesh->GetVertexAttributes();
 
+            auto shader = engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef();
+            const auto shader_id = shader != nullptr ? shader->GetId() : Shader::empty_id;
+
             auto spatial = resources.spatials.Add(
                 std::make_unique<Spatial>(
                     std::move(mesh),
-                    engine->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD).IncRef(),
-                    vertex_attributes,
+                    std::move(shader),
                     std::move(material),
-                    Bucket::BUCKET_OPAQUE
+                    RenderableAttributeSet{
+                        .bucket            = Bucket::BUCKET_OPAQUE,
+                        .shader_id         = shader_id,
+                        .vertex_attributes = vertex_attributes
+                    }
                 )
             );
             

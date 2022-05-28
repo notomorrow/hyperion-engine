@@ -26,7 +26,7 @@
 namespace hyperion::v2 {
 
 struct ScheduledFunctionId {
-    uint32_t value = 0;
+    uint32_t value{0};
     
     ScheduledFunctionId &operator=(uint32_t id)
     {
@@ -41,6 +41,7 @@ struct ScheduledFunctionId {
     bool operator!=(uint32_t id) const                      { return value != id; }
     bool operator==(const ScheduledFunctionId &other) const { return value == other.value; }
     bool operator!=(const ScheduledFunctionId &other) const { return value != other.value; }
+    bool operator<(const ScheduledFunctionId &other) const  { return value < other.value; }
 
     explicit operator bool() const { return value != 0; }
 };
@@ -126,7 +127,7 @@ public:
      *  else, remove the item with the given ID
      *  This is a helper function for create/destroy functions
      */
-    ScheduledFunctionId EnqueueReplace(ScheduledFunctionId dequeue_id, typename ScheduledFunction::Function &&enqueue_fn)
+    ScheduledFunctionId EnqueueReplace(ScheduledFunctionId &dequeue_id, typename ScheduledFunction::Function &&enqueue_fn)
     {
 #if HYP_SCHEDULER_USE_ATOMIC_LOCK
         AwaitExecution();
@@ -147,7 +148,7 @@ public:
             }
         }
 
-        return EnqueueInternal(std::move(enqueue_fn));
+        return (dequeue_id = EnqueueInternal(std::move(enqueue_fn)));
     }
 
     /*! Wait for all tasks to be completed in another thread.

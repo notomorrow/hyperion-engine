@@ -31,7 +31,11 @@ void Framebuffer::Init(Engine *engine)
             return m_framebuffer.Create(engine->GetDevice(), &m_render_pass->GetRenderPass());
         });
 
+        SetReady(true);
+
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_FRAMEBUFFERS, [this](Engine *engine) {
+            SetReady(false);
+
             engine->render_scheduler.Enqueue([this, engine](...) {
                return m_framebuffer.Destroy(engine->GetDevice());
             });

@@ -21,6 +21,7 @@ Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
     switch (fmt) {
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_R8:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_R8_SRGB:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R32_:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_R16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_R32:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_R16F:
@@ -28,6 +29,7 @@ Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
         return BaseFormat::TEXTURE_FORMAT_R;
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8_SRGB:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R16G16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F:
@@ -35,6 +37,7 @@ Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
         return BaseFormat::TEXTURE_FORMAT_RG;
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R11G11B10F:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16F:
@@ -42,6 +45,7 @@ Image::BaseFormat Image::GetBaseFormat(InternalFormat fmt)
         return BaseFormat::TEXTURE_FORMAT_RGB;
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB:
+    case InternalFormat::TEXTURE_INTERNAL_FORMAT_R10G10B10A2:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32:
     case InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F:
@@ -123,10 +127,18 @@ VkFormat Image::ToVkFormat(InternalFormat fmt)
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG8_SRGB:    return VK_FORMAT_R8G8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB:   return VK_FORMAT_R8G8B8_SRGB;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB:  return VK_FORMAT_R8G8B8A8_SRGB;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R32_:        return VK_FORMAT_R32_UINT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16G16:      return VK_FORMAT_R16G16_SNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R11G11B10F:  return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R10G10B10A2: return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16:         return VK_FORMAT_R16_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16:        return VK_FORMAT_R16G16_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16:       return VK_FORMAT_R16G16B16_UNORM;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16:      return VK_FORMAT_R16G16B16A16_UNORM;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R32:         return VK_FORMAT_R32_UINT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG32:        return VK_FORMAT_R32G32_UINT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB32:       return VK_FORMAT_R32G32B32_UINT;
+    case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA32:      return VK_FORMAT_R32G32B32A32_UINT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16F:        return VK_FORMAT_R16_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RG16F:       return VK_FORMAT_R16G16_SFLOAT;
     case Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB16F:      return VK_FORMAT_R16G16B16_SFLOAT;

@@ -3,7 +3,7 @@
 #include "renderer_features.h"
 #include "renderer_image.h"
 
-#include "../../system/debug.h"
+#include <system/debug.h>
 
 namespace hyperion {
 namespace renderer {
