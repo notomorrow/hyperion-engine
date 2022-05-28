@@ -84,6 +84,7 @@ enum class ShaderKey {
     BASIC_FORWARD,
     BASIC_VEGETATION,
     BASIC_SKYBOX,
+    STENCIL_OUTLINE,
     CUSTOM
 };
 

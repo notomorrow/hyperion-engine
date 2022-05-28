@@ -540,6 +540,8 @@ void Descriptor::BuildUpdates(Device *, std::vector<VkWriteDescriptorSet> &write
 
         const size_t sub_descriptor_index = m_sub_descriptor_update_indices.front();
 
+        AssertThrow(sub_descriptor_index < m_sub_descriptors.size());
+
         UpdateSubDescriptorBuffer(
             m_sub_descriptors[sub_descriptor_index],
             m_sub_descriptors_raw.buffers[sub_descriptor_index],
@@ -713,10 +715,19 @@ void Descriptor::RemoveSubDescriptor(uint32_t index)
     if (update_it != m_sub_descriptor_update_indices.end()) {
         m_sub_descriptor_update_indices.erase(update_it);
     }
+
+    // have to update all update indices to be -1 for any that are above this index
+    for (auto &it : m_sub_descriptor_update_indices) {
+        if (it > found_index) {
+            --it;
+        }
+    }
 }
 
 void Descriptor::MarkDirty(uint32_t sub_descriptor_index)
 {
+    AssertThrow(sub_descriptor_index < m_sub_descriptors.size());
+
     m_sub_descriptor_update_indices.push_back(sub_descriptor_index);
 
     m_dirty_sub_descriptors |= {sub_descriptor_index, sub_descriptor_index + 1};

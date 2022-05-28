@@ -12,6 +12,7 @@ namespace hyperion::v2 {
 using renderer::FaceCullMode;
 using renderer::Topology;
 using renderer::FillMode;
+using renderer::StencilState;
 
 struct RenderableAttributeSet {
     Bucket             bucket{Bucket::BUCKET_OPAQUE};
@@ -23,6 +24,7 @@ struct RenderableAttributeSet {
     bool               alpha_blending{false};
     bool               depth_write{true};
     bool               depth_test{true};
+    StencilState       stencil_state{};
 
     auto ToTuple() const
     {
@@ -35,7 +37,8 @@ struct RenderableAttributeSet {
             cull_faces,
             alpha_blending,
             depth_write,
-            depth_test
+            depth_test,
+            stencil_state
         );
     }
 

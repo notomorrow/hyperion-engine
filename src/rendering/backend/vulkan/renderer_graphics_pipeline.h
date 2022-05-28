@@ -15,6 +15,7 @@
 #include "renderer_helpers.h"
 
 #include <hash_code.h>
+#include <types.h>
 
 namespace hyperion {
 namespace renderer {
@@ -37,6 +38,9 @@ public:
         ShaderProgram *shader   = nullptr;
         RenderPass *render_pass = nullptr;
         std::vector<FramebufferObject *> fbos;
+
+        // stencil
+        StencilState stencil_state{};
     };
 
     GraphicsPipeline();
