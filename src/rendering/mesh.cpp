@@ -107,13 +107,12 @@ void Mesh::Init(Engine *engine)
             m_indices  = {0};
         }
 
-        engine->render_scheduler.Enqueue([this, engine](...) {
+        engine->render_scheduler.Enqueue([this, engine, packed_buffer = BuildVertexBuffer()](...) {
             using renderer::StagingBuffer;
 
             auto *instance = engine->GetInstance();
             auto *device = engine->GetDevice();
 
-            std::vector<float> packed_buffer = BuildVertexBuffer();
             const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
             const size_t packed_indices_size = m_indices.size() * sizeof(Index);
 
@@ -126,7 +125,6 @@ void Mesh::Init(Engine *engine)
                     auto commands = instance->GetSingleTimeCommands();
 
                     auto *staging_buffer_vertices = holder.Acquire(packed_buffer_size);
-                    /* Create and upload the VBO */
                     staging_buffer_vertices->Copy(device, packed_buffer_size, packed_buffer.data());
 
                     auto *staging_buffer_indices = holder.Acquire(packed_indices_size);

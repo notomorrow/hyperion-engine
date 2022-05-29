@@ -48,9 +48,9 @@ void ShadowEffect::CreateRenderPass(Engine *engine)
         renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
     );
 
-    renderer::AttachmentRef *attachment_ref;
+    AttachmentRef *attachment_ref;
 
-    m_attachments.push_back(std::make_unique<renderer::Attachment>(
+    m_attachments.push_back(std::make_unique<Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
             engine->GetInstance()->swapchain->extent,
             engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
@@ -89,11 +89,9 @@ void ShadowEffect::CreateDescriptors(Engine *engine)
 
                 auto *shadow_map_descriptor = descriptor_set
                     ->GetOrAddDescriptor<SamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
-
-                m_shadow_map_index = shadow_map_descriptor->GetSubDescriptors().size();
-
+                
                 for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
-                    shadow_map_descriptor->AddSubDescriptor({
+                    m_shadow_map_index = shadow_map_descriptor->AddSubDescriptor({
                         .image_view = attachment_ref->GetImageView(),
                         .sampler    = attachment_ref->GetSampler()
                     });

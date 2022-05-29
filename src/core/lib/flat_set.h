@@ -30,7 +30,7 @@ public:
     
     [[nodiscard]] Iterator Find(const T &value);
     [[nodiscard]] ConstIterator Find(const T &value) const;
-
+    
     InsertResult Insert(const T &value);
     InsertResult Insert(T &&value);
 
@@ -44,7 +44,13 @@ public:
     [[nodiscard]] size_t Size() const                     { return m_vector.size(); }
     [[nodiscard]] T *Data() const                         { return m_vector.data(); }
     [[nodiscard]] bool Empty() const                      { return m_vector.empty(); }
+    [[nodiscard]] bool Contains(const T &value) const     { return Find(value) != End(); }
     void Clear()                                          { m_vector.clear(); }
+    
+    [[nodiscard]] T &Front()                              { return m_vector.front(); }
+    [[nodiscard]] const T &Front() const                  { return m_vector.front(); }
+    [[nodiscard]] T &Back()                               { return m_vector.back(); }
+    [[nodiscard]] const T &Back() const                   { return m_vector.back(); }
 
     [[nodiscard]] T &At(size_t index)                     { return m_vector.at(index); }
     [[nodiscard]] const T &At(size_t index) const         { return m_vector.at(index); }

@@ -23,12 +23,12 @@ void BindlessStorage::Destroy(Engine *engine)
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
 
-        for (const auto &it : m_texture_resources) {
-            descriptor->RemoveSubDescriptor(it.second.resource_index);
+        for (const auto &it : m_texture_ids) {
+            descriptor->RemoveSubDescriptor(it.value - 1);
         }
     }
 
-    m_texture_resources.clear();
+    m_texture_ids.Clear();
 }
 
 void BindlessStorage::ApplyUpdates(Engine *engine, uint32_t frame_index)
@@ -55,42 +55,26 @@ void BindlessStorage::AddResource(const Texture *texture)
         });
     }
 
-    AssertThrow(indices[0] == indices[1]);
+    AssertThrow(indices[0] == indices[1] && indices[0] == (texture->GetId().value - 1));
 
-    m_texture_resources[texture->GetId().value] = {texture, indices[0]};
+    m_texture_ids.Insert(texture->GetId());
 }
 
 void BindlessStorage::RemoveResource(Texture::ID id)
 {
-    const auto it = m_texture_resources.find(id.value);
-
-    if (it == m_texture_resources.end()) {
-        DebugLog(
-            LogType::Warn,
-            "Attempt to remove texture with id #%lu but could not be found\n",
-            id.value
-        );
-
-        return;
-    }
-
-    const auto resource_index = it->second.resource_index;
-
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);
 
-        descriptor->RemoveSubDescriptor(resource_index);
+        descriptor->RemoveSubDescriptor(id.value - 1);
     }
 
-    m_texture_resources.erase(it);
+    m_texture_ids.Erase(id);
 }
 
 void BindlessStorage::MarkResourceChanged(const Texture *texture)
 {
-    const auto sub_descriptor_index = m_texture_resources[texture->GetId().value].resource_index;
-
     for (auto *descriptor_set : m_descriptor_sets) {
-        descriptor_set->GetDescriptor(bindless_descriptor_index)->MarkDirty(sub_descriptor_index);
+        descriptor_set->GetDescriptor(bindless_descriptor_index)->MarkDirty(texture->GetId().value - 1);
     }
 }
 
@@ -101,15 +85,9 @@ bool BindlessStorage::GetResourceIndex(const Texture *texture, uint32_t *out_ind
 
 bool BindlessStorage::GetResourceIndex(Texture::ID id, uint32_t *out_index) const
 {
-    const auto it = m_texture_resources.find(id.value);
+    *out_index = id.value - 1;
 
-    if (it == m_texture_resources.end()) {
-        return false;
-    }
-
-    *out_index = it->second.resource_index;
-
-    return true;
+    return m_texture_ids.Contains(id);
 }
 
 } // namespace hyperion::v2

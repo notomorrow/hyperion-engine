@@ -4,6 +4,7 @@
 #include "texture.h"
 
 #include <core/containers.h>
+#include <core/lib/flat_set.h>
 #include <rendering/backend/renderer_descriptor_set.h>
 #include <rendering/backend/renderer_swapchain.h>
 
@@ -57,7 +58,9 @@ private:
         uint32_t       resource_index;
     };
 
-    std::unordered_map<Texture::ID::ValueType, TextureResource> m_texture_resources;
+    FlatSet<Texture::ID> m_texture_ids;
+
+    //std::unordered_map<Texture::ID::ValueType, TextureResource> m_texture_resources;
     std::array<DescriptorSet *, Swapchain::max_frames_in_flight> m_descriptor_sets;
     std::mutex m_enqueued_resources_mutex;
 };

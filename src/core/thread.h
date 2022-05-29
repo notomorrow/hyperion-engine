@@ -2,6 +2,7 @@
 #define HYPERION_V2_CORE_THREAD_H
 
 #include "lib/fixed_string.h"
+#include <util/defines.h>
 #include <types.h>
 
 #include <thread>
@@ -17,7 +18,9 @@ struct ThreadId {
     bool operator!=(const ThreadId &other) const { return value != other.value; }
 };
 
+#if HYP_ENABLE_THREAD_ASSERTION
 extern thread_local ThreadId current_thread_id;
+#endif
 
 void SetThreadId(const ThreadId &id);
 

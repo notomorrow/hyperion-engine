@@ -74,22 +74,10 @@ void Material::EnqueueRenderUpdates(Engine *engine)
         m_textures.Size(),
         MaterialShaderData::max_bound_textures
     );
-
-    if (num_bound_textures != 0) {
-        for (size_t i = 0; i < num_bound_textures; i++) {
-            if (const auto &texture = m_textures.ValueAt(i)) {
-                if (texture == nullptr) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Texture could not be bound for Material %d because it is null\n",
-                        m_id.value
-                    );
-
-                    continue;
-                }
-                
-                bound_texture_ids[i] = texture->GetId();
-            }
+    
+    for (size_t i = 0; i < num_bound_textures; i++) {
+        if (const auto &texture = m_textures.ValueAt(i)) {
+            bound_texture_ids[i] = texture->GetId();
         }
     }
 
@@ -110,6 +98,9 @@ void Material::EnqueueRenderUpdates(Engine *engine)
             .uv_scale        = GetParameter<float>(MATERIAL_KEY_UV_SCALE),
             .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
         };
+
+        std::cout << "SET TEXTURE " << m_id.value << ", " << bound_texture_ids[0].value << "\n";
+
 
         shader_data.texture_usage = 0;
 
@@ -167,7 +158,7 @@ void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
         texture.Init();
     }
 
-    m_textures.Set(key, std::move(texture));
+    m_textures.Set(key, std::forward<Ref<Texture>>(texture));
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
