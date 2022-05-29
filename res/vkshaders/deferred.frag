@@ -22,11 +22,16 @@ layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 #include "include/brdf.inc"
 #include "include/tonemap.inc"
 
+vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
+
+
 #define HYP_VCT_ENABLED 1
 
 #if HYP_VCT_ENABLED
 #include "include/vct/cone_trace.inc"
 #endif
+
+#include "include/noise.inc"
 
 #define HYP_SHADOW_BIAS 0.0015
 #define HYP_SHADOW_VARIABLE_BIAS 1
@@ -74,7 +79,7 @@ float GetShadowFiltered(int index, vec3 pos, float NdotL)
 
     float shadow = 0.0;
 
-    shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * -1.0), NdotL);
+    /*shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * -1.0), NdotL);
     shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * 0.0), NdotL);
     shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * 1.0), NdotL);
 
@@ -98,9 +103,20 @@ float GetShadowFiltered(int index, vec3 pos, float NdotL)
     shadow += GetShadow(index, pos, vec2(dx * 1.15, dy * 0.0), NdotL);
     shadow += GetShadow(index, pos, vec2(dx * 1.15, dy * 1.15), NdotL);
 
-    shadow /= 17.0;
-    
-    return shadow;
+    shadow /= 17.0;*/
+
+    const int num_samples = 16;
+    const float filter_size = 0.005;
+
+    float gradient_noise = InterleavedGradientNoise(texcoord * vec2(uvec2(scene.resolution_x, scene.resolution_y)));
+
+
+    for (int i = 0; i < num_samples; i++) {
+        vec2 filter_uv = VogelDisk(i, num_samples, gradient_noise);
+        shadow += GetShadow(index, pos, filter_uv * filter_size, NdotL);
+    }
+
+    return shadow / float(num_samples);
 }
 
 /* Begin main shader program */
@@ -170,8 +186,6 @@ vec3 GtaoMultiBounce(float visibility, const vec3 albedo) {
 
 void main()
 {
-    vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
-
     vec4 albedo   = texture(gbuffer_albedo_texture, texcoord);
     vec4 normal   = vec4(DecodeNormal(texture(gbuffer_normals_texture, texcoord)), 1.0);
     vec4 position = texture(gbuffer_positions_texture, texcoord);
