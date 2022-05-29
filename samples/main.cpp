@@ -157,12 +157,14 @@ public:
         tex1 = engine->resources.textures.Add(
             engine->assets.Load<Texture>("textures/dirt.jpg")
         );
+        //tex1.Init();
 
         tex2 = engine->resources.textures.Add(
             engine->assets.Load<Texture>("textures/dummy.jpg")
         );
+        //tex2.Init();
 
-        cube_obj->Scale(5.0f);
+        cube_obj->Scale(2.0f);
 
         auto metal_material = engine->resources.materials.Add(std::make_unique<Material>());
         metal_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 0.5f, 0.2f, 1.0f }));
@@ -197,7 +199,7 @@ public:
 
     virtual void OnPostInit(Engine *engine) override
     {
-        scene->GetRootNode()->AddChild(engine->assets.Load<Node>("models/monkey/monkey.obj"));
+        scene->GetRootNode()->AddChild(engine->assets.Load<v2::Node>("models/monkey/monkey.obj"));
 
         auto outline_pipeline = std::make_unique<GraphicsPipeline>(
             engine->shader_manager.GetShader(ShaderKey::STENCIL_OUTLINE).IncRef(),
@@ -664,7 +666,6 @@ int main()
             &compute_semaphore_chain
         ));
 #endif
-
 
         engine.UpdateBuffersAndDescriptors(frame_index);
 

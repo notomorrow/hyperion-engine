@@ -76,6 +76,7 @@ bool GraphicsPipeline::RemoveFromSpatialList(
     Spatial::ID id,
     std::vector<Ref<Spatial>> &spatials,
     bool call_on_removed,
+    bool dispatch_item_removed,
     bool remove_immediately
 )
 {
@@ -93,10 +94,14 @@ bool GraphicsPipeline::RemoveFromSpatialList(
 
     auto &found_spatial = *it;
 
-    if (call_on_removed && found_spatial != nullptr) {
-        m_spatial_notifier.ItemRemoved(found_spatial);
+    if (found_spatial != nullptr) {
+        if (dispatch_item_removed) {
+            m_spatial_notifier.ItemRemoved(found_spatial);
+        }
 
-        found_spatial->OnRemovedFromPipeline(this);
+        if (call_on_removed) {
+            found_spatial->OnRemovedFromPipeline(this);
+        }
     }
 
     if (remove_immediately) {
@@ -112,34 +117,34 @@ bool GraphicsPipeline::RemoveFromSpatialList(
 
 void GraphicsPipeline::RemoveSpatial(Spatial::ID id)
 {
-    if (RemoveFromSpatialList(id, m_spatials, true, false)) {
+    if (RemoveFromSpatialList(id, m_spatials, true, true, false)) {
         return;
     }
 
     std::lock_guard guard(m_enqueued_spatials_mutex);
 
-    if (RemoveFromSpatialList(id, m_spatials_pending_addition, true, true)) {
+    if (RemoveFromSpatialList(id, m_spatials_pending_addition, true, true, true)) {
         return;
     }
 
-    RemoveFromSpatialList(id, m_spatials_pending_removal, false, true);
+    RemoveFromSpatialList(id, m_spatials_pending_removal, false, false, true);
 }
 
 void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
 {
     const auto id = spatial->GetId();
 
-    if (RemoveFromSpatialList(id, m_spatials, false, false)) {
+    if (RemoveFromSpatialList(id, m_spatials, false, true, false)) {
         return;
     }
 
     std::lock_guard guard(m_enqueued_spatials_mutex);
 
-    if (RemoveFromSpatialList(id, m_spatials_pending_addition, true, true)) {
+    if (RemoveFromSpatialList(id, m_spatials_pending_addition, false, true, true)) {
         return;
     }
 
-    RemoveFromSpatialList(id, m_spatials_pending_removal, false, true);
+    RemoveFromSpatialList(id, m_spatials_pending_removal, false, false, true);
 }
 
 void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine)

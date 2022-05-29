@@ -204,7 +204,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
                 continue;
             }
 
-            auto material = resources.materials.Add(std::make_unique<Material>());
+            auto material = resources.materials.Add(std::make_unique<Material>("ogrexml_material"));
 
             auto mesh = resources.meshes.Add(
                 std::make_unique<Mesh>(

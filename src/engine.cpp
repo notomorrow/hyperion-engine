@@ -23,10 +23,13 @@ const FlatMap<EngineThread, ThreadId> Engine::thread_ids{
     std::make_pair(THREAD_GAME, ThreadId{uint(THREAD_GAME), "GameThread"})
 };
 
+#if HYP_ENABLE_THREAD_ASSERTION
 thread_local ThreadId current_thread_id = Engine::thread_ids.At(THREAD_MAIN);
+#endif
 
 void Engine::AssertOnThread(EngineThreadMask mask)
 {
+#if HYP_ENABLE_THREAD_ASSERTION
     const auto &current = current_thread_id;
 
     AssertThrowMsg(
@@ -36,6 +39,7 @@ void Engine::AssertOnThread(EngineThreadMask mask)
         current.name.CString(),
         current.value
     );
+#endif
 }
 
 Engine::Engine(SystemSDL &_system, const char *app_name)
