@@ -48,10 +48,15 @@ public:
     bool Erase(Iterator it);
     bool Erase(const Key &key);
 
-    [[nodiscard]] size_t Size() const { return m_set.Size(); }
-    [[nodiscard]] Pair *Data() const  { return m_set.Data(); }
-    [[nodiscard]] bool Empty() const  { return m_set.Empty(); }
-    void Clear()                      { m_set.Clear(); }
+    [[nodiscard]] size_t Size() const                   { return m_set.Size(); }
+    [[nodiscard]] Pair *Data() const                    { return m_set.Data(); }
+    [[nodiscard]] bool Empty() const                    { return m_set.Empty(); }
+    void Clear()                                        { m_set.Clear(); }
+    
+    [[nodiscard]] Pair &Front()                         { return m_set.Front(); }
+    [[nodiscard]] const Pair &Front() const             { return m_set.Front(); }
+    [[nodiscard]] Pair &Back()                          { return m_set.Back(); }
+    [[nodiscard]] const Pair &Back() const              { return m_set.Back(); }
 
     [[nodiscard]] Value &At(const Key &key)             { return Find(key)->second; }
     [[nodiscard]] const Value &At(const Key &key) const { return Find(key)->second; }

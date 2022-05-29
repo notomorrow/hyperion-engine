@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_CONTAINERS_H
-#define HYPERION_V2_CONTAINERS_H
+#ifndef HYPERION_V2_CORE_CONTAINERS_H
+#define HYPERION_V2_CORE_CONTAINERS_H
 
 #include <math/math_util.h>
 

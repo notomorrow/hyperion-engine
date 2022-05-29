@@ -106,13 +106,15 @@ void Spatial::EnqueueRenderUpdates(Engine *engine)
 {
     AssertReady();
 
-    engine->render_scheduler.Enqueue([this, engine, transform = m_transform](...) {
+    const auto material_index = m_material != nullptr ? m_material->GetId().value - 1 : 0;
+
+    engine->render_scheduler.EnqueueReplace(m_render_update_id, [this, engine, transform = m_transform, material_index](...) {
         engine->shader_globals->objects.Set(
             m_id.value - 1,
             {
                 .model_matrix   = transform.GetMatrix(),
                 .has_skinning   = m_skeleton != nullptr,
-                .material_index = m_material != nullptr ? m_material->GetId().value - 1 : 0,
+                .material_index = material_index,
                 .local_aabb_max = Vector4(m_local_aabb.max, 1.0f),
                 .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),
                 .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),
@@ -268,7 +270,7 @@ void Spatial::SetTransform(const Transform &transform)
 
 void Spatial::OnAddedToPipeline(GraphicsPipeline *pipeline)
 {
-    m_pipelines.push_back(pipeline);
+    m_pipelines.Insert(pipeline);
 }
 
 void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
@@ -280,24 +282,18 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
         };
     }
 
-    const auto it = std::find(m_pipelines.begin(), m_pipelines.end(), pipeline);
-
-    if (it != m_pipelines.end()) {
-        m_pipelines.erase(it);
-    }
+    m_pipelines.Erase(pipeline);
 }
 
 void Spatial::AddToPipeline(Engine *engine)
 {
     if (const auto pipeline = engine->FindOrCreateGraphicsPipeline(m_renderable_attributes)) {
         AddToPipeline(engine, pipeline.ptr);
-
-        if (!m_pipelines.empty()) {
-            m_primary_pipeline = {
-                .pipeline = m_pipelines.front(),
-                .changed = false
-            };
-        }
+        
+        m_primary_pipeline = {
+            .pipeline = pipeline.ptr,
+            .changed  = false
+        };
     } else {
         DebugLog(
             LogType::Error,
@@ -309,20 +305,28 @@ void Spatial::AddToPipeline(Engine *engine)
 
 void Spatial::AddToPipeline(Engine *engine, GraphicsPipeline *pipeline)
 {
-    pipeline->AddSpatial(engine->resources.spatials.IncRef(this));
+    if (!m_pipelines.Contains(pipeline)) {
+        pipeline->AddSpatial(engine->resources.spatials.IncRef(this));
+    }
 }
 
 void Spatial::RemoveFromPipelines(Engine *)
 {
-    for (auto *pipeline : m_pipelines) {
+    auto pipelines = m_pipelines;
+
+    for (auto *pipeline : pipelines) {
+        if (pipeline == nullptr) {
+            continue;
+        }
+
         pipeline->OnSpatialRemoved(this);
     }
 
-    m_pipelines.clear();
+    m_pipelines.Clear();
     
     m_primary_pipeline = {
         .pipeline = nullptr,
-        .changed = true
+        .changed  = true
     };
 }
 

@@ -60,8 +60,12 @@ void Texture::Init(Engine *engine)
 
             HYPERION_RETURN_OK;
         });
+
+        SetReady(true);
         
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_TEXTURES, [this](Engine *engine) {
+            SetReady(false);
+
             engine->render_scheduler.Enqueue([this, engine](...) {
                 engine->shader_globals->textures.RemoveResource(m_id);
 

@@ -5,6 +5,9 @@
 
 #include <core/lib/range.h>
 #include <core/lib/flat_set.h>
+#include <core/lib/flat_map.h>
+
+#include <util/defines.h>
 
 #include <vulkan/vulkan.h>
 
@@ -61,19 +64,36 @@ public:
             struct /* BufferData */ {
                 GPUBuffer *buffer;
                 uint32_t range; /* if 0 then it is set to buffer->size */
+
+                VkDescriptorBufferInfo buffer_info;
             };
 
             struct /* ImageData */ {
                 const ImageView *image_view;
                 const Sampler *sampler;
+
+                VkDescriptorImageInfo image_info;
             };
 
             struct /* AccelerationStructureData */ {
                 AccelerationStructure *acceleration_structure;
+
+                VkWriteDescriptorSetAccelerationStructureKHR acceleration_structure_info;
+            };
+
+            struct {
+                uint64_t raw;
             };
         };
 
         bool valid = false; /* set internally to mark objects ready to be popped */
+
+        HYP_DEF_STRUCT_COMPARE_EQL(SubDescriptor);
+
+        bool operator<(const SubDescriptor &other) const
+        {
+            return std::tie(element_index, raw, valid) < std::tie(other.element_index, other.raw, other.valid);
+        }
     };
 
     Descriptor(uint32_t binding, Mode mode);
@@ -81,22 +101,20 @@ public:
     Descriptor &operator=(const Descriptor &other) = delete;
     ~Descriptor();
 
-    uint32_t GetBinding() const       { return m_binding; }
-    void SetBinding(uint32_t binding) { m_binding = binding; }
-    
+    uint32_t GetBinding() const           { return m_binding; }
+    void SetBinding(uint32_t binding)     { m_binding = binding; }
+                                          
     /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
-    std::vector<SubDescriptor> &GetSubDescriptors()
-        { return m_sub_descriptors; }
+    auto &GetSubDescriptors()             { return m_sub_descriptors; }
 
     /* Sub descriptor --> ... uniform Thing { ... } things[5]; */
-    const std::vector<SubDescriptor> &GetSubDescriptors() const
-        { return m_sub_descriptors; }
+    const auto &GetSubDescriptors() const { return m_sub_descriptors; }
 
     SubDescriptor &GetSubDescriptor(size_t index)
-        { return m_sub_descriptors[index]; }
+        { return m_sub_descriptors.At(index); }
 
     const SubDescriptor &GetSubDescriptor(size_t index) const
-        { return m_sub_descriptors[index]; }
+        { return m_sub_descriptors.At(index); }
 
     /*! \brief Add a sub-descriptor to this descriptor.
      *  Records that a sub-descriptor at the index has been changed,
@@ -130,10 +148,11 @@ protected:
         VkWriteDescriptorSetAccelerationStructureKHR &out_acceleration_structure) const;
 
     Range<uint32_t> m_dirty_sub_descriptors;
-    std::vector<SubDescriptor> m_sub_descriptors;
+    //FlatSet<SubDescriptor> m_sub_descriptors;
+    FlatMap<uint32_t, SubDescriptor> m_sub_descriptors;
     std::deque<size_t> m_sub_descriptor_update_indices;
 
-    BufferInfo m_sub_descriptors_raw;
+    //BufferInfo m_sub_descriptors_raw;
 
     uint32_t m_binding;
     Mode m_mode;

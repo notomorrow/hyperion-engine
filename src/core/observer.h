@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <vector>
+#include <mutex>
 
 namespace hyperion::v2 {
 
@@ -35,6 +36,8 @@ public:
 
     ObserverRef<T> Add(Observer &&observer)
     {
+        std::lock_guard guard(m_mutex);
+
         observer.m_data = {++m_id_counter, this};
 
         /* call with all current items. */
@@ -51,6 +54,8 @@ public:
 
     bool Remove(uint32_t value)
     {
+        std::lock_guard guard(m_mutex);
+
         auto it = std::find_if(
             m_observers.begin(),
             m_observers.end(),
@@ -81,6 +86,8 @@ public:
 
     void ItemAdded(T &item)
     {
+        std::lock_guard guard(m_mutex);
+
         for (auto &observer : m_observers) {
             observer.m_on_items_added(&item, 1);
         }
@@ -88,6 +95,8 @@ public:
 
     void ItemRemoved(T &item)
     {
+        std::lock_guard guard(m_mutex);
+
         for (auto &observer : m_observers) {
             observer.m_on_items_removed(&item, 1);
         }
@@ -95,6 +104,8 @@ public:
 
     void ItemsAdded(T *ptr, size_t count)
     {
+        std::lock_guard guard(m_mutex);
+
         for (auto &observer : m_observers) {
             observer.m_on_items_added(ptr, count);
         }
@@ -102,6 +113,8 @@ public:
 
     void ItemsRemoved(T *ptr, size_t count)
     {
+        std::lock_guard guard(m_mutex);
+
         for (auto &observer : m_observers) {
             observer.m_on_items_removed(ptr, count);
         }
@@ -111,6 +124,7 @@ private:
     std::vector<Observer>   m_observers;
     GetCurrentItemsFunction m_get_current_items;
     uint32_t                m_id_counter;
+    std::mutex              m_mutex;
 };
 
 template <class ObserverNotifier>

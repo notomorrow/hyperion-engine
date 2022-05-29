@@ -9,6 +9,7 @@
 #include <rendering/renderable_attributes.h>
 #include <animation/skeleton.h>
 #include <core/scheduler.h>
+#include <core/lib/flat_set.h>
 
 #include <rendering/backend/renderer_structs.h>
 
@@ -132,7 +133,7 @@ private:
     /* Retains a list of pointers to pipelines that this Spatial is used by,
      * for easy removal when RemoveSpatial() is called.
      */
-    std::vector<GraphicsPipeline *> m_pipelines;
+    FlatSet<GraphicsPipeline *> m_pipelines;
 
     mutable ShaderDataState m_shader_data_state;
     ScheduledFunctionId     m_render_update_id,

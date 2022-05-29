@@ -26,7 +26,7 @@ StagingBuffer *StagingBufferPool::Context::Acquire(size_t required_size)
     
     const size_t new_size = MathUtil::NextPowerOf2(required_size);
 
-    StagingBuffer *staging_buffer = staging_buffer = m_pool->FindStagingBuffer(required_size - 1);
+    StagingBuffer *staging_buffer = m_pool->FindStagingBuffer(required_size - 1);
 
     if (staging_buffer != nullptr && m_used.find(staging_buffer) == m_used.end()) {
         DebugLog(

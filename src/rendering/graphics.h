@@ -95,7 +95,13 @@ public:
 private:
     static bool BucketSupportsCulling(Bucket bucket);
     
-    bool RemoveFromSpatialList(Spatial::ID id, std::vector<Ref<Spatial>> &spatials, bool call_on_removed, bool remove_immediately);
+    bool RemoveFromSpatialList(
+        Spatial::ID id,
+        std::vector<Ref<Spatial>> &spatials,
+        bool call_on_removed,
+        bool dispatch_item_removed,
+        bool remove_immediately
+    );
 
     /* Called from Spatial - remove the pointer */
     void OnSpatialRemoved(Spatial *spatial);
