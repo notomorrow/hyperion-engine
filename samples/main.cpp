@@ -78,7 +78,7 @@ public:
                 window,
                 1024, 768,
                 70.0f,
-                0.05f, 250.0f
+                0.05f, 550.0f
             )
         ));
         scene.Init();
@@ -137,7 +137,7 @@ public:
 
         auto my_light = engine->resources.lights.Add(std::make_unique<Light>(
             LightType::DIRECTIONAL,
-            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
+            Vector3(-0.5f, 0.5f, 0.2f).Normalize(),
             Vector4::One(),
             10000.0f
         ));
@@ -147,11 +147,11 @@ public:
         scene->GetEnvironment()->AddShadowRenderer(engine, std::make_unique<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
-            70.0f
+            160.0f
         ));
 
         //test_model->Translate({0, 0, 5});
-        test_model->Scale(0.05f);
+        test_model->Scale(0.075f);
         //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         
         tex1 = engine->resources.textures.Add(
@@ -213,13 +213,7 @@ public:
         outline_pipeline->SetBlendEnabled(true);
         auto outline_pipeline_ref = engine->AddGraphicsPipeline(std::move(outline_pipeline));
 
-        if (auto *suzanne = scene->GetRootNode()->Select("Suzanne")) {
-            //suzanne->GetChild(0)->GetSpatial()->SetStencilAttributes(StencilState{ 1, renderer::StencilMode::FILL });
-
-            //outline_pipeline_ref->AddSpatial(engine->resources.spatials.IncRef(suzanne->GetChild(0)->GetSpatial()));
-
-            suzanne->Translate({7, 3, 5});
-        }
+        
 
         outline_pipeline_ref.Init();
     }
@@ -260,11 +254,18 @@ public:
         } else {
             zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
         }
-        
+
+        if (auto *suzanne = scene->GetRootNode()->Select("Suzanne")) {
+            //suzanne->GetChild(0)->GetSpatial()->SetStencilAttributes(StencilState{ 1, renderer::StencilMode::FILL });
+
+            //outline_pipeline_ref->AddSpatial(engine->resources.spatials.IncRef(suzanne->GetChild(0)->GetSpatial()));
+
+            suzanne->SetLocalTranslation({7, std::sin(timer * 0.35f) * 7.0f + 7.0f, 5});
+        }
         
         material_test_obj->SetLocalScale(3.45f);
         //material_test_obj->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.25f));
-        material_test_obj->SetLocalTranslation({16, 5.25f,5});
+        material_test_obj->SetLocalTranslation({16, 5.25f,12});
         //material_test_obj->SetLocalTranslation(Vector3(std::sin(timer * 0.5f) * 270, 0, std::cos(timer * 0.5f) * 270.0f) + Vector3(7, 3, 0));
 
         /*material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(
