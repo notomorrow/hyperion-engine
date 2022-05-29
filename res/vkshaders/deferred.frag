@@ -12,8 +12,8 @@ layout(location=2) out vec4 output_positions;
 
 #include "include/gbuffer.inc"
 #include "include/packing.inc"
+#include "include/post_fx.inc"
 
-layout(set = 1, binding = 8) uniform sampler2D effects_pre_stack[1];
 layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
 
 //layout(set = 8, binding = 0, rgba16f) readonly uniform image3D voxel_image;
@@ -216,7 +216,7 @@ void main()
     float ao = 1.0;
     
     if (perform_lighting) {
-        ao = texture(effects_pre_stack[0], texcoord).r * material.a;
+        ao = SampleEffectPre(0, v_texcoord0, vec4(1.0)).r * material.a;
 
         const float roughness = material.r;
         const float metalness = material.g;

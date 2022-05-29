@@ -31,12 +31,9 @@ using renderer::UniformBuffer;
 class Engine;
 
 struct alignas(16) PostProcessingUniforms {
-    uint num_pre_effects;
-    uint last_enabled_pre_effect_index;
-    uint num_post_effects;
-    uint last_enabled_post_effect_index;
-    uint pre_effect_enabled_mask;
-    uint post_effect_enabled_mask;
+    uint effect_counts[2]; // pre, post
+    uint last_enabled_indices[2]; // pre, post
+    uint masks[2]; // pre, post
 };
 
 class PostProcessingEffect : public EngineComponentBase<STUB_CLASS(PostProcessingEffect)> {
@@ -78,6 +75,8 @@ private:
 
 class PostProcessing {
 public:
+    static constexpr uint max_effects_per_stage = sizeof(uint) * 8;
+
     enum DefaultEffectIndices {
         DEFAULT_EFFECT_INDEX_SSAO,
         DEFAULT_EFFECT_INDEX_FXAA
@@ -144,6 +143,10 @@ private:
     void AddEffectInternal(std::unique_ptr<EffectClass> &&effect, TypeMap<std::unique_ptr<PostProcessingEffect>> &effects)
     {
         static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
+
+        if (!effects.Contains<EffectClass>()) {
+            AssertThrowMsg(effects.Size() < max_effects_per_stage, "Maximum number of effects in stage");
+        }
 
         effects.Set<EffectClass>(std::move(effect));
     }
