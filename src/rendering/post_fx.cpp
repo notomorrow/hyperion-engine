@@ -90,32 +90,30 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
     
     HYPERION_ASSERT_RESULT(m_uniform_buffer.Create(engine->GetDevice(), sizeof(PostProcessingUniforms)));
 
-    PostProcessingUniforms post_processing_uniforms{
-        .num_pre_effects  = static_cast<uint>(m_pre_effects.Size()),
-        .num_post_effects = static_cast<uint>(m_post_effects.Size())
+    PostProcessingUniforms post_processing_uniforms{};
+
+    TypeMap<std::unique_ptr<PostProcessingEffect>> *effect_passes[2] = {
+        &m_pre_effects,
+        &m_post_effects
     };
-    
-    for (auto &it : m_pre_effects) {
-        if (it.second != nullptr && it.second->IsEnabled()) {
-            AssertThrowMsg(it.second->GetIndex() != ~0u, "Not yet initialized - index not set yet");
 
-            post_processing_uniforms.pre_effect_enabled_mask |= 1u << it.second->GetIndex();
-            post_processing_uniforms.last_enabled_pre_effect_index = MathUtil::Max(
-                post_processing_uniforms.last_enabled_pre_effect_index,
-                it.second->GetIndex()
-            );
-        }
-    }
+    for (uint i = 0; i < static_cast<uint>(std::size(effect_passes)); i++) {
+        auto &effects = effect_passes[i];
 
-    for (auto &it : m_post_effects) {
-        if (it.second != nullptr && it.second->IsEnabled()) {
-            AssertThrowMsg(it.second->GetIndex() != ~0u, "Not yet initialized - index not set yet");
+        post_processing_uniforms.effect_counts[i]        = effects->Size();
+        post_processing_uniforms.masks[i]                = 0;
+        post_processing_uniforms.last_enabled_indices[i] = 0;
 
-            post_processing_uniforms.post_effect_enabled_mask |= 1u << it.second->GetIndex();
-            post_processing_uniforms.last_enabled_post_effect_index = MathUtil::Max(
-                post_processing_uniforms.last_enabled_post_effect_index,
-                it.second->GetIndex()
-            );
+        for (auto &it : *effects) {
+            if (it.second != nullptr && it.second->IsEnabled()) {
+                AssertThrowMsg(it.second->GetIndex() != ~0u, "Not yet initialized - index not set yet");
+
+                post_processing_uniforms.masks[i] |= 1u << it.second->GetIndex();
+                post_processing_uniforms.last_enabled_indices[i] = MathUtil::Max(
+                    post_processing_uniforms.last_enabled_indices[i],
+                    it.second->GetIndex()
+                );
+            }
         }
     }
 
