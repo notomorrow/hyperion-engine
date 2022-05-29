@@ -33,9 +33,13 @@ vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 #include "include/noise.inc"
 
-#define HYP_SHADOW_BIAS 0.0015
+#define HYP_SHADOW_BIAS 0.005
 #define HYP_SHADOW_VARIABLE_BIAS 1
-#define HYP_SHADOW_PCF 1
+#define HYP_SHADOW_PENUMBRA 1
+#define HYP_SHADOW_NUM_SAMPLES 16
+#define HYP_SHADOW_PENUMBRA_NUM_SAMPLES 8
+#define HYP_SHADOW_PENUMBRA_MIN 0.3
+#define HYP_SHADOW_PENUMBRA_MAX 1.0
 
 const mat4 shadow_bias_matrix = mat4( 
     0.5, 0.0, 0.0, 0.0,
@@ -69,60 +73,56 @@ float GetShadow(int index, vec3 pos, vec2 offset, float NdotL)
     return max(step(coord.z - bias, shadow_depth), 0.0);
 }
 
-float GetShadowFiltered(int index, vec3 pos, float NdotL)
+float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float shadow_map_coord_z)
 {
-    ivec2 dim = textureSize(shadow_maps[index], 0);
-    float scale = 1.15;
+    float penumbra = (shadow_map_coord_z - avg_blocker_depth) * light_size / avg_blocker_depth;
+    penumbra += HYP_SHADOW_PENUMBRA_MIN;
+    penumbra = min(HYP_SHADOW_PENUMBRA_MAX, penumbra);
+    return penumbra;
+}
+
+float GetShadowContactHardened(int index, vec3 pos, float NdotL)
+{
+    const vec3 coord = GetShadowCoord(index, pos);
+
+    const float shadow_map_depth = coord.z;
+
+    const float shadow_filter_size = 0.005;
+    const float penumbra_filter_size = 0.002;
+    const float light_size = 0.25; // affects how quickly shadows become soft
+
+    const float gradient_noise = InterleavedGradientNoise(texcoord * vec2(uvec2(scene.resolution_x, scene.resolution_y)));
+
+    float total_blocker_depth = 0.0;
+    float num_blockers = 0.0;
+
+    for (int i = 0; i < HYP_SHADOW_PENUMBRA_NUM_SAMPLES; i++) {
+        vec2 filter_uv = VogelDisk(i, HYP_SHADOW_PENUMBRA_NUM_SAMPLES, gradient_noise);
+        float blocker_sample = texture(shadow_maps[index], vec2(coord.x, 1.0 - coord.y) + (filter_uv * penumbra_filter_size)).r;
+
+        float is_blocking = float(blocker_sample < shadow_map_depth);
+
+        total_blocker_depth += blocker_sample * is_blocking;
+        num_blockers        += is_blocking;
+    }
     
-    float dx = scale * (1.0 / float(dim.x));
-    float dy = scale * (1.0 / float(dim.y));
+    float penumbra_mask = num_blockers > 0.0 ? AvgBlockerDepthToPenumbra(light_size, total_blocker_depth / num_blockers, shadow_map_depth) : 0.0;
+    float shadowness = 0.0;
 
-    float shadow = 0.0;
-
-    /*shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * -1.0), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * 0.0), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * -1.0, dy * 1.0), NdotL);
-
-    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * -1.0), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * 0.0), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * 1.0), NdotL);
-
-    shadow += GetShadow(index, pos, vec2(dx * 1.0, dy * -1.0), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * 1.0, dy * 0.0), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * 1.0, dy * 1.0), NdotL);
-
-
-    shadow += GetShadow(index, pos, vec2(dx * -1.15, dy * -1.15), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * -1.15, dy * 0.0), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * -1.15, dy * 1.15), NdotL);
-
-    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * -1.15), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * 0.0, dy * 1.15), NdotL);
-
-    shadow += GetShadow(index, pos, vec2(dx * 1.15, dy * -1.15), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * 1.15, dy * 0.0), NdotL);
-    shadow += GetShadow(index, pos, vec2(dx * 1.15, dy * 1.15), NdotL);
-
-    shadow /= 17.0;*/
-
-    const int num_samples = 16;
-    const float filter_size = 0.005;
-
-    float gradient_noise = InterleavedGradientNoise(texcoord * vec2(uvec2(scene.resolution_x, scene.resolution_y)));
-
-
-    for (int i = 0; i < num_samples; i++) {
-        vec2 filter_uv = VogelDisk(i, num_samples, gradient_noise);
-        shadow += GetShadow(index, pos, filter_uv * filter_size, NdotL);
+    for (int i = 0; i < HYP_SHADOW_NUM_SAMPLES; i++) {
+        vec2 filter_uv = VogelDisk(i, HYP_SHADOW_NUM_SAMPLES, gradient_noise);
+        shadowness += GetShadow(index, pos, filter_uv * penumbra_mask * shadow_filter_size, NdotL);
     }
 
-    return shadow / float(num_samples);
+    shadowness /= float(HYP_SHADOW_NUM_SAMPLES);
+
+    return shadowness;
 }
 
 /* Begin main shader program */
 
 #define IBL_INTENSITY 2000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 200000.0
 #define IRRADIANCE_MULTIPLIER 16.0
 #define ROUGHNESS_LOD_MULTIPLIER 16.0
 #define SSAO_DEBUG 0
@@ -230,8 +230,8 @@ void main()
 
         float shadow = 1.0;
 
-#if HYP_SHADOW_PCF
-        shadow = GetShadowFiltered(0, position.xyz, NdotL);
+#if HYP_SHADOW_PENUMBRA
+        shadow = GetShadowContactHardened(0, position.xyz, NdotL);
 #else
         shadow = GetShadow(0, position.xyz, vec2(0.0), NdotL);
 #endif
