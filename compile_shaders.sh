@@ -7,11 +7,13 @@ glslc --target-env=$VULKAN_TARGET deferred.frag -o deferred_frag.spv
 glslc --target-env=$VULKAN_TARGET deferred.vert -o deferred_vert.spv
 glslc --target-env=$VULKAN_TARGET blit.frag -o blit_frag.spv
 glslc --target-env=$VULKAN_TARGET blit.vert -o blit_vert.spv
-glslc --target-env=$VULKAN_TARGET filter_pass.frag -o filter_pass_frag.spv
-glslc --target-env=$VULKAN_TARGET filter_pass.vert -o filter_pass_vert.spv
 glslc --target-env=$VULKAN_TARGET forward.frag -o forward_frag.spv
 glslc --target-env=$VULKAN_TARGET main.vert -o vert.spv
 glslc --target-env=$VULKAN_TARGET imagestore.comp -o imagestore.comp.spv
+
+glslc --target-env=$VULKAN_TARGET filter_pass.frag -o filter_pass_frag.spv
+glslc --target-env=$VULKAN_TARGET filter_pass.vert -o filter_pass_vert.spv
+glslc --target-env=$VULKAN_TARGET fxaa.frag -o fxaa.frag.spv
 
 
 glslc --target-env=$VULKAN_TARGET skybox.frag -o skybox_frag.spv

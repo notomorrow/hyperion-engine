@@ -11,7 +11,6 @@ using renderer::VertexAttribute;
 using renderer::VertexAttributeSet;
 using renderer::Descriptor;
 using renderer::DescriptorSet;
-using renderer::DescriptorKey;
 using renderer::SamplerDescriptor;
 
 std::unique_ptr<Mesh> FullScreenPass::full_screen_quad = MeshBuilder::Quad(Topology::TRIANGLE_FAN);
@@ -22,59 +21,18 @@ FullScreenPass::FullScreenPass()
 }
 
 FullScreenPass::FullScreenPass(Ref<Shader> &&shader)
-    : m_shader(std::move(shader))
+    : FullScreenPass(std::move(shader), DescriptorKey::POST_FX_PRE_STACK, ~0)
+{
+}
+
+FullScreenPass::FullScreenPass(Ref<Shader> &&shader, DescriptorKey descriptor_key, uint sub_descriptor_index)
+    : m_shader(std::move(shader)),
+      m_descriptor_key(descriptor_key),
+      m_sub_descriptor_index(sub_descriptor_index)
 {
 }
 
 FullScreenPass::~FullScreenPass() = default;
-
-
-void FullScreenPass::SetShader(Ref<Shader> &&shader)
-{
-    if (m_shader == shader) {
-        return;
-    }
-
-    m_shader = std::move(shader);
-
-    m_shader.Init();
-}
-
-void FullScreenPass::CreateRenderPass(Engine *engine)
-{
-    /* Add the filters' renderpass */
-    auto render_pass = std::make_unique<RenderPass>(
-        renderer::RenderPassStage::SHADER,
-        renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
-    );
-
-    renderer::AttachmentRef *attachment_ref;
-
-    m_attachments.push_back(std::make_unique<renderer::Attachment>(
-        std::make_unique<renderer::FramebufferImage2D>(
-            engine->GetInstance()->swapchain->extent,
-            engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_COLOR),
-            nullptr
-        ),
-        renderer::RenderPassStage::SHADER
-    ));
-
-    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
-        engine->GetInstance()->GetDevice(),
-        renderer::LoadOperation::CLEAR,
-        renderer::StoreOperation::STORE,
-        &attachment_ref
-    ));
-
-    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
-
-    for (auto &attachment : m_attachments) {
-        HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
-    }
-
-    m_render_pass = engine->resources.render_passes.Add(std::move(render_pass));
-    m_render_pass.Init();
-}
 
 void FullScreenPass::Create(Engine *engine)
 {
@@ -102,17 +60,66 @@ void FullScreenPass::Create(Engine *engine)
     HYP_FLUSH_RENDER_QUEUE(engine);
 }
 
+void FullScreenPass::SetShader(Ref<Shader> &&shader)
+{
+    if (m_shader == shader) {
+        return;
+    }
+
+    m_shader = std::move(shader);
+
+    m_shader.Init();
+}
+
+void FullScreenPass::CreateRenderPass(Engine *engine)
+{
+    /* Add the filters' renderpass */
+    auto render_pass = std::make_unique<RenderPass>(
+        renderer::RenderPassStage::SHADER,
+        renderer::RenderPass::Mode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
+    );
+
+    renderer::AttachmentRef *attachment_ref;
+
+    m_attachments.push_back(std::make_unique<Attachment>(
+        std::make_unique<renderer::FramebufferImage2D>(
+            engine->GetInstance()->swapchain->extent,
+            engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_COLOR),
+            nullptr
+        ),
+        renderer::RenderPassStage::SHADER
+    ));
+
+    HYPERION_ASSERT_RESULT(m_attachments.back()->AddAttachmentRef(
+        engine->GetInstance()->GetDevice(),
+        renderer::LoadOperation::CLEAR,
+        renderer::StoreOperation::STORE,
+        &attachment_ref
+    ));
+
+    render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
+
+    for (auto &attachment : m_attachments) {
+        HYPERION_ASSERT_RESULT(attachment->Create(engine->GetInstance()->GetDevice()));
+    }
+
+    m_render_pass = engine->resources.render_passes.Add(std::move(render_pass));
+    m_render_pass.Init();
+}
+
 void FullScreenPass::CreatePerFrameData(Engine *engine)
 {
+    Engine::AssertOnThread(THREAD_RENDER);
+
     const uint32_t num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
 
     m_frame_data = std::make_unique<PerFrameData<CommandBuffer>>(num_frames);
 
-    engine->render_scheduler.Enqueue([this, engine, num_frames](...) {
+    //engine->render_scheduler.Enqueue([this, engine, num_frames](...) {
         for (uint32_t i = 0; i < num_frames; i++) {
             auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
 
-            HYPERION_BUBBLE_ERRORS(command_buffer->Create(
+            HYPERION_ASSERT_RESULT(command_buffer->Create(
                 engine->GetInstance()->GetDevice(),
                 engine->GetInstance()->GetGraphicsCommandPool()
             ));
@@ -120,27 +127,34 @@ void FullScreenPass::CreatePerFrameData(Engine *engine)
             m_frame_data->At(i).Set<CommandBuffer>(std::move(command_buffer));
         }
 
-        HYPERION_RETURN_OK;
-    });
+    //    HYPERION_RETURN_OK;
+    //});
 }
 
 void FullScreenPass::CreateDescriptors(Engine *engine)
 {
-    engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
+    Engine::AssertOnThread(THREAD_RENDER);
+
+    auto &framebuffer = m_framebuffer->GetFramebuffer();
+
+    //engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
         if (!framebuffer.GetAttachmentRefs().empty()) {
             auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
-            auto *descriptor = descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(DescriptorKey::POST_FX);
+            auto *descriptor = descriptor_set->GetOrAddDescriptor<SamplerDescriptor>(m_descriptor_key);
+
+            AssertThrowMsg(framebuffer.GetAttachmentRefs().size() == 1, "> 1 attachments not supported currently for full screen passes");
 
             for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
-                descriptor->AddSubDescriptor({
-                    .image_view = attachment_ref->GetImageView(),
-                    .sampler    = attachment_ref->GetSampler()
+                m_sub_descriptor_index = descriptor->AddSubDescriptor({
+                    .element_index = m_sub_descriptor_index,
+                    .image_view    = attachment_ref->GetImageView(),
+                    .sampler       = attachment_ref->GetSampler()
                 });
             }
         }
 
-        HYPERION_RETURN_OK;
-    });
+    //    HYPERION_RETURN_OK;
+    //});
 }
 
 void FullScreenPass::CreatePipeline(Engine *engine)

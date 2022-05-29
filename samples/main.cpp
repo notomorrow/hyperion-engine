@@ -15,6 +15,7 @@
 #include <rendering/rt/acceleration_structure_builder.h>
 #include <rendering/probe_system.h>
 #include <rendering/post_fx/ssao.h>
+#include <rendering/post_fx/fxaa.h>
 #include <scene/controllers/audio_controller.h>
 #include <scene/controllers/animation_controller.h>
 #include <scene/controllers/paging/basic_paging_controller.h>
@@ -105,7 +106,8 @@ public:
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
         
-        engine->GetDeferredRenderer().GetPostProcessing().AddFilter<SsaoEffect>();
+        engine->GetDeferredRenderer().GetPostProcessing().AddEffect<SsaoEffect>();
+        engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FxaaEffect>();
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);

@@ -7,6 +7,9 @@ namespace hyperion::v2 {
 
 class SsaoEffect : public PostProcessingEffect {
 public:
+    static constexpr Stage stage = Stage::PRE_SHADING;
+    static constexpr uint  index = 0;
+
     SsaoEffect();
     virtual ~SsaoEffect();
 
