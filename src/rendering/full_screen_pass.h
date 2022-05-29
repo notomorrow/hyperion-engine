@@ -7,6 +7,8 @@
 #include "graphics.h"
 #include "mesh.h"
 
+#include <types.h>
+
 #include <rendering/backend/renderer_frame.h>
 #include <rendering/backend/renderer_structs.h>
 #include <rendering/backend/renderer_command_buffer.h>
@@ -20,6 +22,7 @@ using renderer::Frame;
 using renderer::CommandBuffer;
 using renderer::PerFrameData;
 using renderer::VertexAttributeSet;
+using renderer::DescriptorKey;
 
 class Engine;
 
@@ -29,6 +32,7 @@ public:
     
     FullScreenPass();
     FullScreenPass(Ref<Shader> &&shader);
+    FullScreenPass(Ref<Shader> &&shader, DescriptorKey descriptor_key, uint sub_descriptor_index);
     FullScreenPass(const FullScreenPass &) = delete;
     FullScreenPass &operator=(const FullScreenPass &) = delete;
     ~FullScreenPass();
@@ -44,6 +48,8 @@ public:
     RenderPass *GetRenderPass() const             { return m_render_pass.ptr; }
 
     GraphicsPipeline *GetGraphicsPipeline() const { return m_pipeline.ptr; }
+
+    uint GetSubDescriptorIndex() const            { return m_sub_descriptor_index; }
 
     void CreateRenderPass(Engine *engine);
     void Create(Engine *engine);
@@ -65,6 +71,10 @@ protected:
     Ref<GraphicsPipeline>                        m_pipeline;
 
     std::vector<std::unique_ptr<Attachment>>     m_attachments;
+
+private:
+    DescriptorKey                                m_descriptor_key;
+    uint                                         m_sub_descriptor_index;
 };
 } // namespace hyperion::v2
 

@@ -157,21 +157,25 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     auto &render_list = engine->GetRenderListContainer();
     auto &bucket = render_list.Get(BUCKET_OPAQUE);
-
+    
+    // begin opaque objs
     bucket.GetFramebuffers()[0]->BeginCapture(primary); /* TODO: frame index? */
     RenderOpaqueObjects(engine, frame);
     bucket.GetFramebuffers()[0]->EndCapture(primary); /* TODO: frame index? */
+    // begin opaque objs
     
-    m_post_processing.Render(engine, frame);
-    
-    m_pass.GetFramebuffer()->BeginCapture(primary);
+    m_post_processing.RenderPre(engine, frame);
 
+    // begin translucent objs
+    m_pass.GetFramebuffer()->BeginCapture(primary);
     /* Render deferred shading onto full screen quad */
     HYPERION_ASSERT_RESULT(m_pass.GetFrameData()->At(frame_index).Get<CommandBuffer>()->SubmitSecondary(primary));
 
     RenderTranslucentObjects(engine, frame);
-    
     m_pass.GetFramebuffer()->EndCapture(primary);
+    // end translucent objs
+
+    m_post_processing.RenderPost(engine, frame);
 }
 
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
