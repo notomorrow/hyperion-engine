@@ -142,6 +142,6 @@
 #endif
 
 
-#define HYP_ENABLE_THREAD_ASSERTION 0 // set to 0 if needing to debug and getting crt errors
+#define HYP_ENABLE_THREAD_ASSERTION 1 // set to 0 if needing to debug and getting crt errors
 
 #endif // !HYPERION_DEFINES_H

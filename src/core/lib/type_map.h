@@ -91,6 +91,8 @@ public:
     }
 
     ~TypeMap() = default;
+
+    size_t Size() const { return m_map.Size(); }
     
     template <class T>
     void Set(const Value &value)

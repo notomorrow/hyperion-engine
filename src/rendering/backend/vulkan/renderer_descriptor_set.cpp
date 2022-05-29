@@ -18,10 +18,12 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings{
     {
         DESCRIPTOR_SET_INDEX_GLOBAL,
         {
-            {DescriptorKey::GBUFFER_TEXTURES, 0},
-            {DescriptorKey::GBUFFER_DEPTH,    1},
-            {DescriptorKey::DEFERRED_RESULT,  4},
-            {DescriptorKey::POST_FX,          8},
+            {DescriptorKey::GBUFFER_TEXTURES,   0},
+            {DescriptorKey::GBUFFER_DEPTH,      1},
+            {DescriptorKey::DEFERRED_RESULT,    4},
+            {DescriptorKey::POST_FX_PRE_STACK,  8},
+            {DescriptorKey::POST_FX_POST_STACK, 9},
+            {DescriptorKey::POST_FX_UNIFORMS,  10}
         }
     },
     {
@@ -118,7 +120,7 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
 
     const std::vector<VkDescriptorBindingFlags> binding_flags(
         m_descriptor_bindings.size(),
-        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | (m_bindless ? bindless_flags : 0)
+        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | (IsBindless() ? bindless_flags : 0)
     );
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo extended_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO};

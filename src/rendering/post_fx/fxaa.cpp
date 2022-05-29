@@ -1,18 +1,18 @@
-#include "ssao.h"
+#include "fxaa.h"
 #include <rendering/shader.h>
 #include <rendering/post_fx.h>
 #include <engine.h>
 
 namespace hyperion::v2 {
 
-SsaoEffect::SsaoEffect()
+FxaaEffect::FxaaEffect()
     : PostProcessingEffect(stage, index)
 {
 }
 
-SsaoEffect::~SsaoEffect() = default;
+FxaaEffect::~FxaaEffect() = default;
 
-Ref<Shader> SsaoEffect::CreateShader(Engine *engine)
+Ref<Shader> FxaaEffect::CreateShader(Engine *engine)
 {
     return engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
@@ -20,7 +20,7 @@ Ref<Shader> SsaoEffect::CreateShader(Engine *engine)
                 Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/filter_pass_vert.spv")).ReadBytes()
             }},
             SubShader{ShaderModule::Type::FRAGMENT, {
-                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/filter_pass_frag.spv")).ReadBytes()
+                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/fxaa.frag.spv")).ReadBytes()
             }}
         }
     ));
