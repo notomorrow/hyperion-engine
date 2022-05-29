@@ -35,5 +35,9 @@ void main()
     //if (out_color.a < 0.2) {
     //    out_color = texture(gbuffer_deferred_result, texcoord);
     //}
-    out_color = texture(effects_post_stack[post_processing.last_enabled_post_effect_index], texcoord);
+    if (post_processing.masks[HYP_STAGE_POST] != 0) {
+        out_color = texture(effects_post_stack[post_processing.last_enabled_indices[HYP_STAGE_POST]], texcoord);
+    } else {
+        out_color = texture(gbuffer_deferred_result, texcoord);
+    }
 }
