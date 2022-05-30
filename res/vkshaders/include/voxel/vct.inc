@@ -1,4 +1,6 @@
-layout(std430, set = 8, binding = 2) readonly buffer uuOctree { uvec2 uOctree[]; };
+#include "../defines.inc"
+
+layout(std430, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 2) readonly buffer uuOctree { uvec2 uOctree[]; };
 
 #include "shared.inc"
 

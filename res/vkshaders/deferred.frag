@@ -3,6 +3,8 @@
 #extension GL_EXT_scalar_block_layout : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 
+#include "include/defines.inc"
+
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec2 v_texcoord0;
 
@@ -14,9 +16,8 @@ layout(location=2) out vec4 output_positions;
 #include "include/packing.inc"
 #include "include/post_fx.inc"
 
-layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
-
-//layout(set = 8, binding = 0, rgba16f) readonly uniform image3D voxel_image;
+// todo: fix up to work w/ material textures
+//layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform samplerCube cubemap_textures[];
 
 #include "include/scene.inc"
 #include "include/brdf.inc"
@@ -252,10 +253,9 @@ void main()
         vec3 irradiance = vec3(0.0);
         vec4 reflections = vec4(0.0);
 
-        vec3 ibl = HasEnvironmentTexture(0)
+        vec3 ibl = vec3(0.0);/*HasEnvironmentTexture(0)
             ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
-            : vec3(0.0);
-        
+            : vec3(0.0);*/
 #if HYP_VCT_ENABLED
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
         vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, vec3(0.0), vec3(0.0), roughness);
@@ -293,7 +293,6 @@ void main()
         //float micro_shadow_sqr = micro_shadow * micro_shadow;
 
         result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao * shadow);
-    
     } else {
         result = albedo.rgb;
     }

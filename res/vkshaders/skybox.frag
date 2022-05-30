@@ -3,6 +3,8 @@
 #extension GL_EXT_nonuniform_qualifier    : require
 #extension GL_EXT_scalar_block_layout     : require
 
+#include "include/defines.inc"
+
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
@@ -14,7 +16,7 @@ layout(location=2) out vec4 gbuffer_positions;
 #include "include/material.inc"
 #include "include/packing.inc"
 
-layout(set = 6, binding = 0) uniform samplerCube textures[];
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform samplerCube textures[];
 
 void main() {
     vec3 normal = normalize(v_normal);

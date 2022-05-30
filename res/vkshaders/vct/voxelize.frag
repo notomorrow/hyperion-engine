@@ -3,6 +3,8 @@
 #extension GL_EXT_nonuniform_qualifier    : enable
 #extension GL_EXT_scalar_block_layout     : enable
 
+#include "../include/defines.inc"
+
 layout(location=0) in vec3 g_position;
 layout(location=1) in vec3 g_normal;
 layout(location=2) in vec2 g_texcoord;
@@ -14,8 +16,8 @@ layout(location=3) in float g_lighting;
 
 #include "../include/vct/shared.inc"
 
-layout(set = 6, binding = 0) uniform sampler2D textures[];
-layout(set = 8, binding = 0, rgba16f) uniform image3D voxel_image;
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform sampler2D textures[];
+layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba16f) uniform image3D voxel_image;
 
 void main()
 {
