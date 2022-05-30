@@ -1,44 +1,96 @@
-#ifndef RAY_H
-#define RAY_H
+#ifndef HYPERION_RAY_H
+#define HYPERION_RAY_H
 
 #include "vector3.h"
-#include "../hash_code.h"
 
-#include <vector>
+#include <hash_code.h>
+#include <types.h>
+
+#include <core/lib/flat_set.h>
+
+#include <array>
+#include <tuple>
 
 namespace hyperion {
 
-struct Ray {
-    Vector3 m_position;
-    Vector3 m_direction;
+class BoundingBox;
+class RayTestResults;
+struct RayHit;
 
-    inline HashCode GetHashCode() const
+struct Ray {
+    Vector3 position;
+    Vector3 direction;
+
+    bool TestAabb(const BoundingBox &aabb, RayTestResults &out_results) const;
+    bool TestAabb(const BoundingBox &aabb, int hit_id, RayTestResults &out_results) const;
+    bool TestAabb(const BoundingBox &aabb, int hit_id, const void *user_data, RayTestResults &out_results) const;
+
+    HashCode GetHashCode() const
     {
         HashCode hc;
 
-        hc.Add(m_position.GetHashCode());
-        hc.Add(m_direction.GetHashCode());
+        hc.Add(position.GetHashCode());
+        hc.Add(direction.GetHashCode());
 
         return hc;
     }
 };
 
-struct RaytestHit {
-    Vector3 hitpoint;
-    Vector3 normal;
+struct RayHit {
+    static constexpr bool no_hit = false;
+    
+    Vector3     hitpoint;
+    Vector3     normal;
+    float       distance  = 0.0f;
+    int         id        = ~0;
+    const void *user_data = nullptr;
 
-    inline HashCode GetHashCode() const
+    bool operator<(const RayHit &other) const
+    {
+        return std::tie(
+            distance,
+            hitpoint,
+            normal,
+            id,
+            user_data
+        ) < std::tie(
+            other.distance,
+            other.hitpoint,
+            other.normal,
+            other.id,
+            other.user_data
+        );
+    }
+
+    bool operator==(const RayHit &other) const
+    {
+        return distance  == other.distance
+            && hitpoint  == other.hitpoint
+            && normal    == other.normal
+            && id        == other.id
+            && user_data == other.user_data;
+    }
+
+    HashCode GetHashCode() const
     {
         HashCode hc;
 
+        hc.Add(distance);
         hc.Add(hitpoint.GetHashCode());
         hc.Add(normal.GetHashCode());
+        hc.Add(id);
+        hc.Add(user_data);
 
         return hc;
     }
 };
 
-using RaytestHitList_t = std::vector<RaytestHit>;
+class RayTestResults : public FlatSet<RayHit> {
+public:
+    bool cumulative = true;
+    
+    bool AddHit(const RayHit &hit);
+};
 
 } // namespace hyperion
 

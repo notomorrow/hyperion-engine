@@ -659,4 +659,19 @@ void Octree::OnSpatialRemoved(Engine *engine, Spatial *spatial)
     }
 }
 
+bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
+{
+    if (ray.TestAabb(m_aabb, m_index, static_cast<const void *>(this), out_results)) {
+        if (m_is_divided) {
+            for (auto &octant : m_octants) {
+                octant.octree->TestRay(ray, out_results);
+            }
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 } // namespace hyperion::v2

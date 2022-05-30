@@ -50,8 +50,7 @@ public:
 
     BoundingBox &Extend(const Vector3 &vec);
     BoundingBox &Extend(const BoundingBox &bb);
-
-    bool IntersectRay(const Ray &ray, RaytestHit &out) const;
+    
     // do the AABB's intersect at all?
     bool Intersects(const BoundingBox &other) const;
     // does this AABB completely contain other?
