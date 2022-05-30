@@ -34,7 +34,7 @@ public:
 
     Vertex &Closest(const Vector3 &vec);
     const Vertex &Closest(const Vector3 &vec) const;
-    bool IntersectRay(const Ray &ray, RaytestHit &out) const;
+    bool IntersectRay(const Ray &ray, RayTestResults &out) const;
 
 private:
     std::array<Vertex, 3> m_points;

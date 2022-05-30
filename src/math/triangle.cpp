@@ -67,13 +67,13 @@ const Vertex &Triangle::Closest(const Vector3 &vec) const
     return Closest(vec);
 }
 
-bool Triangle::IntersectRay(const Ray &ray, RaytestHit &out) const
+bool Triangle::IntersectRay(const Ray &ray, RayTestResults &out) const
 {
     float t, u, v;
 
     Vector3 v0v1 = GetPoint(1).GetPosition() - GetPoint(0).GetPosition();
 	Vector3 v0v2 = GetPoint(2).GetPosition() - GetPoint(0).GetPosition();
-	Vector3 pvec = Vector3(ray.m_direction).Cross(v0v2);
+	Vector3 pvec = Vector3(ray.direction).Cross(v0v2);
 
 	float det = v0v1.Dot(pvec);
 
@@ -82,19 +82,25 @@ bool Triangle::IntersectRay(const Ray &ray, RaytestHit &out) const
 
 	float invDet = 1.0 / det;
 
-	Vector3 tvec = ray.m_position - GetPoint(0).GetPosition();
+	Vector3 tvec = ray.position - GetPoint(0).GetPosition();
 	u = tvec.Dot(pvec) * invDet;
 	if (u < 0 || u > 1) return false;
 
 	Vector3 qvec = Vector3(tvec).Cross(v0v1);
-	v = ray.m_direction.Dot(qvec) * invDet;
+	v = ray.direction.Dot(qvec) * invDet;
 	if (v < 0 || u + v > 1) return false;
 
 	t = v0v2.Dot(qvec) * invDet;
 
-    out.hitpoint = ray.m_position + (ray.m_direction * t);
-    out.normal = Vector3(v0v1).Cross(v0v2);
+    if (t > 0.0f) {
+        out.AddHit({
+            .hitpoint = ray.position + (ray.direction * t),
+            .normal   = Vector3(v0v1).Cross(v0v2)
+        });
 
-	return t > 0;
+        return true;
+    }
+
+    return false;
 }
 } // namespace

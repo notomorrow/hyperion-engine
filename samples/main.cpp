@@ -139,7 +139,7 @@ public:
 
         auto my_light = engine->resources.lights.Add(std::make_unique<Light>(
             LightType::DIRECTIONAL,
-            Vector3(-0.5f, 0.5f, 0.2f).Normalize(),
+            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
             10000.0f
         ));
@@ -149,7 +149,7 @@ public:
         scene->GetEnvironment()->AddShadowRenderer(engine, std::make_unique<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
-            160.0f
+            50.0f
         ));
 
         //test_model->Translate({0, 0, 5});
@@ -246,6 +246,19 @@ public:
         scene->Update(engine, delta);
     
         test_model->Update(engine, delta);
+
+        if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT)) {
+            Ray ray{scene->GetCamera()->GetTranslation(), scene->GetCamera()->GetDirection()};
+            RayTestResults results;
+
+            if (engine->GetOctree().TestRay(ray, results)) {
+                std::cout << "Ray hits: " << results.Size();
+
+                auto &hit = results.Front();
+
+                std::cout << "  closest hit: " << hit.distance << ",  " << hit.hitpoint << "   octant:  " << hit.user_data << "\n";
+            }
+        }
         
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
        // zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));

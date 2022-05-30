@@ -2,6 +2,7 @@
 #define VECTOR3_H
 
 #include <cmath>
+#include <tuple>
 #include <iostream>
 
 #include "matrix3.h"
@@ -65,6 +66,10 @@ public:
     bool operator==(const Vector3 &other) const;
     bool operator!=(const Vector3 &other) const;
     inline Vector3 operator-() const { return operator*(-1.0f); }
+    inline bool operator<(const Vector3 &other) const
+    {
+        return std::tie(x, y, z) < std::tie(other.x, other.y, other.z);
+    }
 
     //inline bool operator<(const Vector3 &other) const
     //    { return x < other.x && y < other.y && z < other.z; }

@@ -8,6 +8,7 @@
 
 #include <math/vector3.h>
 #include <math/bounding_box.h>
+#include <math/ray.h>
 
 #include <array>
 
@@ -71,45 +72,50 @@ public:
     Octree(const BoundingBox &aabb = default_bounds);
     ~Octree();
 
-    inline Root *GetRoot() const { return m_root; }
+    Root *GetRoot() const              { return m_root; }
 
-    inline BoundingBox &GetAabb() { return m_aabb; }
-    inline const BoundingBox &GetAabb() const { return m_aabb; }
+    BoundingBox &GetAabb()             { return m_aabb; }
+    const BoundingBox &GetAabb() const { return m_aabb; }
 
-    inline auto &GetCallbacks()
+    auto &GetCallbacks()
     {
         AssertThrow(m_root != nullptr);
 
         return m_root->events;
     }
 
-    inline const auto &GetCallbacks() const
+    const auto &GetCallbacks() const
         { return const_cast<Octree *>(this)->GetCallbacks(); }
 
-    inline VisibilityState &GetVisibilityState()             { return m_visibility_state; }
-    inline const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
+    VisibilityState &GetVisibilityState()             { return m_visibility_state; }
+    const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
 
     void Clear(Engine *engine);
     bool Insert(Engine *engine, Spatial *spatial);
     bool Remove(Engine *engine, Spatial *spatial);
     bool Update(Engine *engine, Spatial *spatial);
     bool Rebuild(Engine *engine, const BoundingBox &new_aabb);
+
     void CalculateVisibility(Scene *scene);
+
+    /*! \brief Performs a ray test on the octree, only taking into account octants (not nodes).
+     * Any RayHits have user_data set to be the pointer to the octant hit. */
+    bool TestRay(const Ray &ray, RayTestResults &out_results) const;
 
 private:
     void ClearInternal(Engine *engine, std::vector<Node> &out_nodes);
     void Clear(Engine *engine, std::vector<Node> &out_nodes);
     bool Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it = nullptr);
 
-    inline auto FindNode(Spatial *spatial)
+    auto FindNode(Spatial *spatial)
     {
         return std::find_if(m_nodes.begin(), m_nodes.end(), [spatial](const Node &node) {
             return node.spatial == spatial;
         });
     }
 
-    inline bool IsRoot() const { return m_parent == nullptr; }
-    inline bool Empty() const  { return m_nodes.empty(); }
+    bool IsRoot() const { return m_parent == nullptr; }
+    bool Empty() const  { return m_nodes.empty(); }
     
     void SetParent(Octree *parent);
     bool EmptyDeep(int depth = DEPTH_SEARCH_INF, uint8_t octant_mask = 0xff) const;
