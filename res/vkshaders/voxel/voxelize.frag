@@ -3,6 +3,8 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : enable
 
+#include "../include/defines.inc"
+
 layout(location=0) in vec3 g_position;
 layout(location=1) in vec3 g_normal;
 layout(location=2) in vec2 g_texcoord;
@@ -11,18 +13,19 @@ layout(location=3) in vec3 g_voxel_pos;
 #include "../include/scene.inc"
 #include "../include/object.inc"
 #include "../include/material.inc"
+#include "../include/defines.inc"
 
 #include "../include/voxel/shared.inc"
 
-layout(set = 6, binding = 0) uniform sampler2D textures[];
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform sampler2D textures[];
 
-layout(std140, set = 8, binding = 0) buffer AtomicCounter {
+layout(std140, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0) buffer AtomicCounter {
     uint counter;
 };
 
 struct Fragment { uint x; uint y; };
 
-layout(std430, set = 8, binding = 1) writeonly buffer FragmentListBuffer {
+layout(std430, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 1) writeonly buffer FragmentListBuffer {
     Fragment fragments[];
 };
 
