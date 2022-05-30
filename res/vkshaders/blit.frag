@@ -12,9 +12,9 @@ layout(location=1) in vec2 v_texcoord0;
 
 layout(set = 1, binding = 16, rgba8) uniform image2D image_storage_test;
 
-layout(set = 9, binding = 1, rgba16f)  uniform image2D rt_image;
-layout(set = 9, binding = 11, rgba16f) uniform image2D irradiance_image;
-layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
+//layout(set = 9, binding = 1, rgba16f)  uniform image2D rt_image;
+//layout(set = 9, binding = 11, rgba16f) uniform image2D irradiance_image;
+//layout(set = 9, binding = 12, rg16f)   uniform image2D depth_image;
 
 layout(location=0) out vec4 out_color;
 

@@ -3,9 +3,11 @@
 #extension GL_EXT_scalar_block_layout     : require
 #extension GL_EXT_nonuniform_qualifier : enable
 
+#include "include/defines.inc"
+
 layout(location=2) in vec2 v_texcoord0;
 
-layout(set = 6, binding = 0) uniform sampler2D textures[];
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform sampler2D textures[];
 
 #include "include/material.inc"
 

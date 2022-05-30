@@ -1,7 +1,9 @@
 #ifndef VCT_UNIFORMS_GLSL
 #define VCT_UNIFORMS_GLSL
 
-layout(std140, set = 8, binding = 1) uniform VctParams {
+#include "../defines.inc"
+
+layout(std140, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 1) uniform VctParams {
     uvec4 extent;
     vec4  aabb_max;
     vec4  aabb_min;
