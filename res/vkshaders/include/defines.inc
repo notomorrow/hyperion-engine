@@ -1,14 +1,34 @@
 #ifndef HYP_SHADER_DEFINES_GLSL
 #define HYP_SHADER_DEFINES_GLSL
 
+#define HYP_MOLTENVK 1 // tmp
+
+#if defined(HYP_MOLTENVK) && HYP_MOLTENVK
+
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+
+#define U32 uint32_t
+
+#else
+
+#define U32 uint // glsl
+
+#endif
+
+
 #define HYP_FEATURES_BINDLESS_TEXTURES 0
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
     #define HYP_DESCRIPTOR_SET_TEXTURES 6
     #define HYP_DESCRIPTOR_SET_VOXELIZER 8
+
+    // none
+    #define HYP_MAX_BOUND_TEXTURES
 #else
     #define HYP_DESCRIPTOR_SET_TEXTURES 7
     #define HYP_DESCRIPTOR_SET_VOXELIZER 6
+
+    #define HYP_MAX_BOUND_TEXTURES 1 //tmp 16
 #endif
 
 // TODO: make spec constant
