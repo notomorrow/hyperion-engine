@@ -1,43 +1,27 @@
+#include "defines.inc"
 
 struct Material {
     vec4 albedo;
     
     float metalness;
     float roughness;
-    float subsurface;
-    float specular;
-    
-    float specular_tint;
-    float anisotropic;
-    float sheen;
-    float sheen_tint;
-    
-    float clearcoat;
-    float clearcoat_gloss;
-    float emissiveness;
-    float _padding0;
-    
-    uint uv_flip_s;
-    uint uv_flip_t;
+    float param_0;
+    float param_1;
+
+    U32 uv_flip_s;
+    U32 uv_flip_t;
     float uv_scale;
     float parallax_height;
     
-    uint texture_index[32];
-    uint texture_usage;
-    uint _padding1;
-    uint _padding2;
+    uvec4 texture_indices[4]; // moltenvk is compiling uint32_t texture_index[16] -> uint4 texture_index[16]
     
-    /* Texture schema:
-       0 - albedo
-       1 - normals
-       2 - ao
-       3 - parallax
-       4 - metalness
-       5 - roughness
-       6 - envmap */
+    U32 texture_usage;
+    U32 _pad0;
+    U32 _pad1;
+    U32 _pad2;
 };
 
-layout(std430, set = 3, binding = 0) readonly buffer MaterialBuffer {
+layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
     Material material;
 };
 
@@ -58,7 +42,8 @@ layout(std430, set = 3, binding = 0) readonly buffer MaterialBuffer {
 
 #define MATERIAL_ALPHA_DISCARD         0.2
 
-bool HasMaterialTexture(uint index)
-{
-    return bool(material.texture_usage & (1 << index));
-}
+#define HAS_TEXTURE(index) \
+    ((material.texture_usage & (1 << index)) != 0)
+
+#define GET_TEXTURE(index) \
+    textures[material.texture_indices[(index / 4)][index % 4]]

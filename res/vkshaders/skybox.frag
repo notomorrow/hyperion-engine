@@ -21,7 +21,8 @@ layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform samplerCube textu
 void main() {
     vec3 normal = normalize(v_normal);
     
-    gbuffer_albedo    = vec4(textureLod(textures[material.texture_index[0]], v_position, 0.0).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
+    gbuffer_albedo    = vec4(0.0);
+    //gbuffer_albedo    = vec4(textureLod(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), v_position, 0.0).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
     gbuffer_normals   = EncodeNormal(normal);
     gbuffer_positions = vec4(v_position, 1.0);
 }

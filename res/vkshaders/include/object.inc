@@ -3,7 +3,7 @@ struct Object {
     uint has_skinning;
     uint material_index;
     
-    uint _padding[2];
+    uvec2 _padding;
     
     vec4 local_aabb_max;
     vec4 local_aabb_min;

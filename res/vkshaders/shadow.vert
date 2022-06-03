@@ -23,17 +23,7 @@ layout (location = 6) in vec4 a_bone_weights;
 layout (location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
-
-struct Object {
-    mat4 model_matrix;
-    uint has_skinning;
-    
-    uint _padding[3];
-};
-
-layout(std140, set = 3, binding = 1, row_major) readonly buffer ObjectBuffer {
-    Object object;
-};
+#include "include/object.inc"
 
 struct Skeleton {
     mat4 bones[128];
@@ -44,12 +34,6 @@ layout(std140, set = 3, binding = 2, row_major) readonly buffer SkeletonBuffer {
     Skeleton skeleton;
 };
 
-
-//push constants block
-layout( push_constant, row_major ) uniform constants
-{
-    mat4 shadow_view_proj;
-};
 
 mat4 CreateSkinningMatrix()
 {
