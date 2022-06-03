@@ -54,7 +54,7 @@ vec3 SphericalFibonacci(uint index, uint n)
 {
     float i = float(index);
     
-    const float PHI = sqrt(5) * 0.5 + 0.5;
+    const float PHI = sqrt(5.0) * 0.5 + 0.5;
 #define madfrac(A, B) ((A) * (B)-floor((A) * (B)))
     float phi       = 2.0 * M_PI * madfrac(i, PHI - 1);
     float cos_theta = 1.0 - (2.0 * i + 1.0) * (1.0 / float(n));

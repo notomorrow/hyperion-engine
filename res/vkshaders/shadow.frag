@@ -11,13 +11,17 @@ layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform sampler2D texture
 
 #include "include/material.inc"
 
+#define HYP_SHADOW_SAMPLE_ALBEDO 0
+
 void main()
 {
-    if (HasMaterialTexture(MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = texture(textures[material.texture_index[MATERIAL_TEXTURE_ALBEDO_map]], v_texcoord0);
+#if HYP_SHADOW_SAMPLE_ALBEDO
+    if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
+        vec4 albedo_texture = texture(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), v_texcoord0);
         
         if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
             discard;
         }
     }
+#endif
 }

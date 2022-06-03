@@ -43,8 +43,8 @@ void main()
     if (!bool(count_mode)) {
         vec4 frag_color = material.albedo;
         
-        if (HasMaterialTexture(0)) {
-            vec4 albedo_texture = texture(textures[material.texture_index[0]], g_texcoord);
+        if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
+            vec4 albedo_texture = texture(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), g_texcoord);
             
             frag_color *= albedo_texture;
         }
