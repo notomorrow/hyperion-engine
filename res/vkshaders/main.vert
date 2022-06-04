@@ -25,6 +25,8 @@ layout (location = 7) in vec4 a_bone_indices;
 #include "include/scene.inc"
 #include "include/object.inc"
 
+#define HYP_ENABLE_SKINNING 0
+
 struct Skeleton {
     mat4 bones[128];
 };
@@ -54,15 +56,19 @@ void main() {
     vec4 position;
     mat4 normal_matrix;
     
+#if HYP_ENABLE_SKINNING
     if (bool(object.has_skinning)) {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
     } else {
+#endif
         position = object.model_matrix * vec4(a_position, 1.0);
 		normal_matrix = transpose(inverse(object.model_matrix));
+#if HYP_ENABLE_SKINNING
     }
+#endif
 
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;

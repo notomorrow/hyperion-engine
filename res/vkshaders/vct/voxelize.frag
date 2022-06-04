@@ -23,11 +23,11 @@ void main()
 {
     vec4 frag_color = material.albedo;
     
-    // if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
-    //     vec4 albedo_texture = texture(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), g_texcoord);
+    if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
+        vec4 albedo_texture = texture(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), g_texcoord);
         
-    //     frag_color *= albedo_texture;
-    // }
+        frag_color *= albedo_texture;
+    }
 
     frag_color.rgb *= vec3(max(0.25, g_lighting));
     frag_color.a = 1.0;
