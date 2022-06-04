@@ -1,20 +1,27 @@
 #define HYP_MAX_SHADOW_MAPS 128
 
-layout(std430, set = 2, binding = 0, row_major) readonly buffer SceneDataBlock {
+layout(std140, set = 2, binding = 0, row_major) readonly buffer SceneDataBlock {
+    // 0
     mat4 view;
     mat4 projection;
+    // 128
     vec4 camera_position;
+    // 144
     vec4 camera_direction;
+    // 160
     vec4 light_direction;
     
+    // 176
     uint environment_texture_index;
     uint environment_texture_usage;
     uint resolution_x;
     uint resolution_y;
     
+    // 192
     vec4 aabb_max;
     vec4 aabb_min;
 
+    // 224
     float global_timer;
 } scene;
 
