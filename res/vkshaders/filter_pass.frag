@@ -17,7 +17,7 @@ layout(location=0) out vec4 color_output;
 const float diffarea = 0.3; //self-shadowing reduction
 const float gdisplace = 0.4; //gauss bell center //0.4
 
-vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
+vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 #define PI 3.14159265359
 #define SSAO_NOISE 1
