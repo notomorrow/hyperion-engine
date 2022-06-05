@@ -7,6 +7,7 @@ layout(location=0) in vec3 v_position;
 layout(location=1) in vec2 v_texcoord0;
 
 #include "include/gbuffer.inc"
+#include "include/shared.inc"
 #include "include/post_fx.inc"
 #include "include/rt/probe/probe_uniforms.inc"
 
@@ -20,8 +21,6 @@ layout(location=0) out vec4 out_color;
 
 void main()
 {
-    vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
-
     vec4 albedo = vec4(0.0);
 
     //ivec2 size = imageSize(irradiance_image);
@@ -32,12 +31,9 @@ void main()
 
     //out_color = texture(shadow_map, texcoord);
 
-    //if (out_color.a < 0.2) {
-    //    out_color = texture(gbuffer_deferred_result, texcoord);
+    // if (post_processing.masks[HYP_STAGE_POST] != 0) {
+    //     out_color = texture(effects_post_stack[post_processing.last_enabled_indices[HYP_STAGE_POST]], texcoord);
+    // } else {
+        out_color = Texture2D(gbuffer_deferred_result, v_texcoord0);
     //}
-    if (post_processing.masks[HYP_STAGE_POST] != 0) {
-        out_color = texture(effects_post_stack[post_processing.last_enabled_indices[HYP_STAGE_POST]], texcoord);
-    } else {
-        out_color = texture(gbuffer_deferred_result, texcoord);
-    }
 }

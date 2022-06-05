@@ -23,7 +23,7 @@ layout(location=2) out vec4 output_positions;
 #include "include/brdf.inc"
 #include "include/tonemap.inc"
 
-vec2 texcoord = vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
+vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
 #define HYP_VCT_ENABLED 1
@@ -61,7 +61,7 @@ vec3 GetShadowCoord(int index, vec3 pos)
 float GetShadow(int index, vec3 pos, vec2 offset, float NdotL)
 {
     vec3 coord = GetShadowCoord(index, pos);
-    vec4 shadow_sample = texture(shadow_maps[index], vec2(coord.x, 1.0 - coord.y) + offset);
+    vec4 shadow_sample = texture(shadow_maps[index], coord.xy + offset);
     float shadow_depth = shadow_sample.r;
 
     float bias = HYP_SHADOW_BIAS;
@@ -99,7 +99,7 @@ float GetShadowContactHardened(int index, vec3 pos, float NdotL)
 
     for (int i = 0; i < HYP_SHADOW_PENUMBRA_NUM_SAMPLES; i++) {
         vec2 filter_uv = VogelDisk(i, HYP_SHADOW_PENUMBRA_NUM_SAMPLES, gradient_noise);
-        float blocker_sample = texture(shadow_maps[index], vec2(coord.x, 1.0 - coord.y) + (filter_uv * penumbra_filter_size)).r;
+        float blocker_sample = texture(shadow_maps[index], coord.xy + (filter_uv * penumbra_filter_size)).r;
 
         float is_blocking = float(blocker_sample < shadow_map_depth);
 
