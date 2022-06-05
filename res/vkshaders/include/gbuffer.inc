@@ -2,7 +2,7 @@
 #define HYP_GBUFFER_GLSL
 
 #define NUM_GBUFFER_TEXTURES 4
-#define HYP_GBUFFER_FLIP_Y 1
+#define HYP_GBUFFER_FLIP_Y 0
 
 #include "shared.inc"
 
