@@ -301,5 +301,5 @@ void main()
     result = vec3(ao);
 #endif
 
-    output_color     = vec4(Tonemap(result), 1.0);
+    output_color = vec4(Tonemap(result), 1.0);
 }
