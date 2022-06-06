@@ -8,7 +8,8 @@
 layout(location=0) in vec3 g_position;
 layout(location=1) in vec3 g_normal;
 layout(location=2) in vec2 g_texcoord;
-layout(location=3) in float g_lighting;
+layout(location=3) in vec3 g_voxel;
+layout(location=4) in float g_lighting;
 
 #include "../include/scene.inc"
 #include "../include/object.inc"
@@ -19,18 +20,26 @@ layout(location=3) in float g_lighting;
 layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform sampler2D textures[];
 layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba16f) uniform image3D voxel_image;
 
+#define HYP_VCT_SAMPLE_ALBEDO_MAP 1
+#define HYP_VCT_LIGHTING 0
+
 void main()
 {
     vec4 frag_color = material.albedo;
-    
+
+#if HYP_VCT_SAMPLE_ALBEDO_MAP
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
         vec4 albedo_texture = texture(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), g_texcoord);
         
         frag_color *= albedo_texture;
     }
+#endif
 
+#if HYP_VCT_LIGHTING
     frag_color.rgb *= vec3(max(0.25, g_lighting));
+#endif
+
     frag_color.a = 1.0;
 
-	imageStore(voxel_image, ivec3(VctStoragePosition(g_position)), frag_color);
+	imageStore(voxel_image, ivec3(VctStoragePosition(g_voxel)), frag_color);
 }
