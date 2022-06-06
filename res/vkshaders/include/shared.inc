@@ -19,4 +19,22 @@ vec4 Texture2DLod(sampler2D tex, vec2 texcoord, float lod)
 #endif
 }
 
+vec4 Texture2D(sampler samp, texture2D tex, vec2 texcoord)
+{
+#if HYP_GBUFFER_FLIP_Y
+    return texture(sampler2D(tex, samp), vec2(texcoord.s, 1.0 - texcoord.t));
+#else
+    return texture(sampler2D(tex, samp), texcoord);
+#endif
+}
+
+vec4 Texture2DLod(sampler samp, texture2D tex, vec2 texcoord, float lod)
+{
+#if HYP_GBUFFER_FLIP_Y
+    return texture(sampler2D(tex, samp), vec2(texcoord.s, 1.0 - texcoord.t), lod);
+#else
+    return texture(sampler2D(tex, samp), texcoord, lod);
+#endif
+}
+
 #endif

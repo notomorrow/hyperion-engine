@@ -30,9 +30,6 @@ layout(location=3) out vec4 gbuffer_material;
 #include "include/parallax.inc"
 #endif
 
-layout(set = 6, binding = 0) uniform sampler2D textures[];
-layout(set = 6, binding = 0) uniform samplerCube cubemap_textures[];
-
 void main()
 {
     vec3 normal = normalize(v_normal);

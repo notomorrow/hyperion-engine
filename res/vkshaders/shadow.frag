@@ -7,8 +7,6 @@
 
 layout(location=2) in vec2 v_texcoord0;
 
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform sampler2D textures[];
-
 #include "include/material.inc"
 
 #define HYP_SHADOW_SAMPLE_ALBEDO 0

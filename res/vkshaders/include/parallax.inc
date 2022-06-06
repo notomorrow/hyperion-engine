@@ -1,6 +1,9 @@
 #define PARALLAX_NUM_LAYERS 20
 
-vec2 ParallaxMappedTexCoords(sampler2D parallaxTexture, float parallax_height, vec2 texCoords, vec3 viewDir)
+#define PARALLAX_SAMPLE_TEXTURE(texcoords) \
+  (1.0 - SAMPLE_TEXTURE(MATERIAL_TEXTURE_PARALLAX_MAP, texcoords).r)
+
+vec2 ParallaxMappedTexCoords(float parallax_height, vec2 texCoords, vec3 viewDir)
 {
     // calculate the size of each layer
     float layerDepth = 1.0 / PARALLAX_NUM_LAYERS;
@@ -11,14 +14,14 @@ vec2 ParallaxMappedTexCoords(sampler2D parallaxTexture, float parallax_height, v
     vec2 deltaTexCoords = P / PARALLAX_NUM_LAYERS;
     // get initial values
     vec2  currentTexCoords     = texCoords;
-    float currentDepthMapValue = 1.0-texture(parallaxTexture, currentTexCoords).r;
+    float currentDepthMapValue = PARALLAX_SAMPLE_TEXTURE(currentTexCoords);
 
     while(currentLayerDepth < currentDepthMapValue)
     {
       // shift texture coordinates along direction of P
       currentTexCoords -= deltaTexCoords;
       // get depthmap value at current texture coordinates
-      currentDepthMapValue = 1.0-texture(parallaxTexture, currentTexCoords).r;  
+      currentDepthMapValue = PARALLAX_SAMPLE_TEXTURE(currentTexCoords);  
       // get depth of next layer
       currentLayerDepth += layerDepth;  
     }
@@ -27,7 +30,7 @@ vec2 ParallaxMappedTexCoords(sampler2D parallaxTexture, float parallax_height, v
 
     // get depth after and before collision for linear interpolation
     float afterDepth  = currentDepthMapValue - currentLayerDepth;
-    float beforeDepth = (1.0-texture(parallaxTexture, prevTexCoords).r) - currentLayerDepth + layerDepth;
+    float beforeDepth = PARALLAX_SAMPLE_TEXTURE(prevTexCoords) - currentLayerDepth + layerDepth;
 
     // interpolation of texture coordinates
     float weight = afterDepth / (afterDepth - beforeDepth);

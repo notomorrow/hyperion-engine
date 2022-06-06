@@ -1,4 +1,5 @@
 #include "defines.inc"
+#include "shared.inc"
 
 struct Material {
     vec4 albedo;
@@ -25,6 +26,20 @@ layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
     Material material;
 };
 
+#ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
+
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_SAMPLER) uniform sampler texture_sampler;
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform textureCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
+
+#else
+
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[HYP_MAX_BOUND_TEXTURES];
+layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform samplerCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
+
+#endif
+
+
 #define MATERIAL_TEXTURE_ALBEDO_map    0
 #define MATERIAL_TEXTURE_NORMAL_MAP    1
 #define MATERIAL_TEXTURE_AO_MAP        2
@@ -47,3 +62,7 @@ layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
 
 #define GET_TEXTURE(index) \
     textures[material.texture_indices[(index / 4)][index % 4]]
+
+#define SAMPLE_TEXTURE(index, texcoord) \
+    Texture2D(texture_sampler, GET_TEXTURE(index), texcoord)
+

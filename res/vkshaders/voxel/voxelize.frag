@@ -17,8 +17,6 @@ layout(location=3) in vec3 g_voxel_pos;
 
 #include "../include/voxel/shared.inc"
 
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform sampler2D textures[];
-
 layout(std140, set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0) buffer AtomicCounter {
     uint counter;
 };
@@ -44,7 +42,7 @@ void main()
         vec4 frag_color = material.albedo;
         
         if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
-            vec4 albedo_texture = texture(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), g_texcoord);
+            vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, g_texcoord);
             
             frag_color *= albedo_texture;
         }

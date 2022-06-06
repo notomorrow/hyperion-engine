@@ -16,8 +16,6 @@ layout(location=2) out vec4 gbuffer_positions;
 #include "include/material.inc"
 #include "include/packing.inc"
 
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform samplerCube textures[];
-
 void main() {
     vec3 normal = normalize(v_normal);
     
