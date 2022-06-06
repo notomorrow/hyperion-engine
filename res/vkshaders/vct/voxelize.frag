@@ -17,7 +17,6 @@ layout(location=4) in float g_lighting;
 
 #include "../include/vct/shared.inc"
 
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform sampler2D textures[];
 layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba16f) uniform image3D voxel_image;
 
 #define HYP_VCT_SAMPLE_ALBEDO_MAP 1
@@ -29,7 +28,7 @@ void main()
 
 #if HYP_VCT_SAMPLE_ALBEDO_MAP
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = texture(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), g_texcoord);
+        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, g_texcoord);
         
         frag_color *= albedo_texture;
     }

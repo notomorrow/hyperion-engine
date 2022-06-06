@@ -14,10 +14,8 @@ layout(location=2) out vec4 output_positions;
 
 #include "include/gbuffer.inc"
 #include "include/packing.inc"
+#include "include/material.inc"
 #include "include/post_fx.inc"
-
-// todo: fix up to work w/ material textures
-//layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform samplerCube cubemap_textures[];
 
 #include "include/scene.inc"
 #include "include/brdf.inc"
@@ -204,10 +202,6 @@ void main()
     float ev100 = log2((aperture * aperture) / shutter * 100.0f / sensitivity);
     float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
     
-    
-	vec3 o = scene.camera_position.xyz,
-         d = (inverse(scene.projection * scene.view) * vec4(v_texcoord0 * 2.0 - 1.0, 1.0, 1.0)).xyz;
-
     vec3 N = normal.xyz;
     vec3 L = normalize(scene.light_direction.xyz);
     vec3 V = normalize(scene.camera_position.xyz - position.xyz);
@@ -253,7 +247,7 @@ void main()
         vec3 irradiance = vec3(0.0);
         vec4 reflections = vec4(0.0);
 
-        vec3 ibl = vec3(0.0);/*HasEnvironmentTexture(0)
+        vec3 ibl = vec3(1.0);/*HasEnvironmentTexture(0)
             ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
             : vec3(0.0);*/
 #if HYP_VCT_ENABLED

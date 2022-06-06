@@ -72,13 +72,13 @@ void main() {
 
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
-    v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
+    v_texcoord0 = a_texcoord0;//vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
     v_light_direction = scene.light_direction.xyz;
     v_camera_position = scene.camera_position.xyz;
     
-    v_tangent   = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
-	v_bitangent = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
-	v_tbn_matrix   = mat3(v_tangent, v_bitangent, v_normal);
+    v_tangent    = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
+	v_bitangent  = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
+	v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
     
     v_view_space_position = (scene.view * position).xyz;
 

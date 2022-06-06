@@ -31,9 +31,9 @@ void main()
 
     //out_color = texture(shadow_map, texcoord);
 
-    // if (post_processing.masks[HYP_STAGE_POST] != 0) {
-    //     out_color = texture(effects_post_stack[post_processing.last_enabled_indices[HYP_STAGE_POST]], texcoord);
-    // } else {
+    if (post_processing.masks[HYP_STAGE_POST] != 0) {
+        out_color = Texture2D(effects_post_stack[post_processing.last_enabled_indices[HYP_STAGE_POST]], v_texcoord0);
+    } else {
         out_color = Texture2D(gbuffer_deferred_result, v_texcoord0);
-    //}
+    }
 }
