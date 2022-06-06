@@ -21,7 +21,7 @@ layout(location=2) out vec4 gbuffer_positions;
 layout(location=3) out vec4 gbuffer_material;
 
 
-#define PARALLAX_ENABLED 0
+#define PARALLAX_ENABLED 1
 
 #include "include/scene.inc"
 #include "include/material.inc"
@@ -31,9 +31,6 @@ layout(location=3) out vec4 gbuffer_material;
 #if PARALLAX_ENABLED
 #include "include/parallax.inc"
 #endif
-
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform sampler2D textures[HYP_MAX_BOUND_TEXTURES];
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = 0) uniform samplerCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
 
 void main()
 {
@@ -60,48 +57,44 @@ void main()
 #if PARALLAX_ENABLED
     if (HAS_TEXTURE(MATERIAL_TEXTURE_PARALLAX_MAP)) {
         vec2 parallax_texcoord = ParallaxMappedTexCoords(
-            GET_TEXTURE(MATERIAL_TEXTURE_PARALLAX_MAP),
             material.parallax_height,
             texcoord,
             normalize(tangent_view)
         );
         
         texcoord = parallax_texcoord;
-        
-        //if (texcoord.x < 0.0 || texcoord.x > 1.0 || texcoord.y < 0.0 || texcoord.y > 1.0) {
-        //    discard;
-        //}
     }
 #endif
 
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map)) {
-        vec4 albedo_texture = texture(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), texcoord);
+        vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, texcoord);
         
-        // if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
-        //     discard;
-        // }
+        if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
+        //    discard;
+        }
+
         gbuffer_albedo *= albedo_texture;
     }
 
     if (HAS_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP)) {
-        vec4 normals_texture = texture(GET_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP), texcoord) * 2.0 - 1.0;
+        vec4 normals_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP, texcoord) * 2.0 - 1.0;
         normal = normalize(v_tbn_matrix * normals_texture.rgb);
     }
 
     if (HAS_TEXTURE(MATERIAL_TEXTURE_METALNESS_MAP)) {
-        float metalness_sample = texture(GET_TEXTURE(MATERIAL_TEXTURE_METALNESS_MAP), texcoord).r;
+        float metalness_sample = SAMPLE_TEXTURE(MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
         
         metalness = metalness_sample;//mix(metalness, metalness_sample, metalness_sample);
     }
     
     if (HAS_TEXTURE(MATERIAL_TEXTURE_ROUGHNESS_MAP)) {
-        float roughness_sample = texture(GET_TEXTURE(MATERIAL_TEXTURE_ROUGHNESS_MAP), texcoord).r;
+        float roughness_sample = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ROUGHNESS_MAP, texcoord).r;
         
         roughness = roughness_sample;//mix(roughness, roughness_sample, roughness_sample);
     }
     
     if (HAS_TEXTURE(MATERIAL_TEXTURE_AO_MAP)) {
-        ao = texture(GET_TEXTURE(MATERIAL_TEXTURE_AO_MAP), texcoord).r;
+        ao = SAMPLE_TEXTURE(MATERIAL_TEXTURE_AO_MAP, texcoord).r;
     }
     
     gbuffer_normals   = EncodeNormal(normal);
