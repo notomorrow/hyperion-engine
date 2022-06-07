@@ -16,7 +16,7 @@
 #endif
 
 
-#define HYP_FEATURES_BINDLESS_TEXTURES 0
+#define HYP_FEATURES_BINDLESS_TEXTURES 1
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
     #define HYP_DESCRIPTOR_SET_TEXTURES 6
@@ -36,8 +36,5 @@
 
     #define HYP_MAX_BOUND_TEXTURES 16
 #endif
-
-// TODO: make spec constant
-#define HYP_FEATURES_GEOMETRY_SHADER 0
 
 #endif
