@@ -1,3 +1,6 @@
+#ifndef HYP_MATERIAL_GLSL
+#define HYP_MATERIAL_GLSL
+
 #include "defines.inc"
 #include "shared.inc"
 
@@ -63,6 +66,12 @@ layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURE
 #define GET_TEXTURE(index) \
     textures[material.texture_indices[(index / 4)][index % 4]]
 
-#define SAMPLE_TEXTURE(index, texcoord) \
-    Texture2D(texture_sampler, GET_TEXTURE(index), texcoord)
+#ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
+    #define SAMPLE_TEXTURE(index, texcoord) \
+        Texture2D(texture_sampler, GET_TEXTURE(index), texcoord)
+#else
+    #define SAMPLE_TEXTURE(index, texcoord) \
+        Texture2D(GET_TEXTURE(index), texcoord)
+#endif
 
+#endif

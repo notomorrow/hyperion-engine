@@ -122,7 +122,7 @@ float GetShadowContactHardened(int index, vec3 pos, float NdotL)
 
 #define IBL_INTENSITY 2000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 200000.0
-#define IRRADIANCE_MULTIPLIER 16.0
+#define IRRADIANCE_MULTIPLIER 4.0
 #define ROUGHNESS_LOD_MULTIPLIER 16.0
 #define SSAO_DEBUG 0
 
@@ -247,9 +247,9 @@ void main()
         vec3 irradiance = vec3(0.0);
         vec4 reflections = vec4(0.0);
 
-        vec3 ibl = vec3(1.0);/*HasEnvironmentTexture(0)
+        vec3 ibl = HasEnvironmentTexture(0)
             ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
-            : vec3(0.0);*/
+            : vec3(0.0);
 #if HYP_VCT_ENABLED
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
         vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, vec3(0.0), vec3(0.0), roughness);
