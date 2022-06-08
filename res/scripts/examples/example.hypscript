@@ -1,0 +1,15 @@
+module examples {
+
+global_var: Int = 5
+
+function Inc() {
+    global_var += 1
+}
+
+print "before = ", global_var
+
+Inc()
+
+print "after = ", global_var
+
+}
