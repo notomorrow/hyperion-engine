@@ -247,9 +247,14 @@ void main()
         vec3 irradiance = vec3(0.0);
         vec4 reflections = vec4(0.0);
 
+#if HYP_FEATURES_BINDLESS_TEXTURES // for now, unitl fixed
         vec3 ibl = HasEnvironmentTexture(0)
             ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
             : vec3(0.0);
+#else
+        vec3 ibl = vec3(1.0);
+#endif
+
 #if HYP_VCT_ENABLED
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
         vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, vec3(0.0), vec3(0.0), roughness);
