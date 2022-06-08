@@ -12,4 +12,10 @@ Inc()
 
 print "after = ", global_var
 
+
+
+for x in [1,2,3,4,5] {
+    print x
+}
+
 }
