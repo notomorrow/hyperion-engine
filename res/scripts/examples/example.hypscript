@@ -12,10 +12,67 @@ Inc()
 
 print "after = ", global_var
 
+function Begin(self: Int[])
+{
+    ArraySize(self);
 
-
-for x in [1,2,3,4,5] {
-    print x
+    return self[0];
 }
+
+function End(self: Int[])
+{
+
+}
+
+/*type Iterator<T> {
+    target: T
+    index: Int
+
+    new(self, target, index) {
+        self.target = target;
+        self.index = index;
+    }
+
+    operator++(self) {
+        return new Iterator<T>(self.target, self.index + 1);
+    }
+}*/
+
+type Iterator {
+    target: Any
+    index: Int
+
+    new(self, target, index) {
+        self.target = target;
+        self.index = index;
+    }
+
+    operator++(self) {
+        return new Iterator(self.target, self.index + 1);
+    }
+}
+
+type WrappedArray {
+    ary: Int[];
+
+    Begin(self) {
+        return new Iterator(self.ary, 0);
+    }
+
+    End(self) {
+        return new Iterator(self.ary, ArraySize(self.ary));
+    }
+}
+
+ary: WrappedArray
+ary.ary = [1,2,3,4,5]
+
+print "begin = ", ary.Begin()
+
+// for x in ary {
+//     print x
+// }
+
+print ary
 
 }
