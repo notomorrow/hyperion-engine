@@ -1,22 +1,46 @@
 module types {
   // custom types
-  User := type {
+  class User {
     username: String
     password: String
 
     printUsername := (self) {
-      print self.username
+      print "hello, my name is: ", self.username
     }
   }
 
-  user := new User
+  generic MyGeneric<T> = class {
+    thing: T
+  };
+
+  class MyNonGeneric {
+    thing: String
+  }
+
+  let user = new User
   print 'user = ', user
+  user.printUsername();
 
   // create an instance of the type
   //user := new User
 
   // array of User objects
-  users: Array<User> // NOTE: same as writing Array<User>
+  let users: User[]// NOTE: same as writing Array<User>
+  print "USERS = ", users
+
+  let my_non_g: MyNonGeneric = new MyNonGeneric;
+  print "my_non_g = ", my_non_g;
+  print "my_non_g.thing = ", my_non_g.thing;
+
+  let myg : MyGeneric<Int> = new MyGeneric<Int>;
+  print typeof(myg)
+  myg.thing = 1239;
+  print "myg = ", myg;
+  print "myg.thing = ", myg.thing;
+  
+
+  //print "users[0]", users[0]
+
 
   // NOTE: a User object cannot be null by default
   // to allow null, use Maybe<User> or User? (they're the same, but different syntax)
