@@ -1,19 +1,26 @@
-module counter {
-  use library ['../library']
-  
-  import math
+module types {
+  // custom types
+  User := type {
+    username: String
+    password: String
 
-  count: Function = (from: Number, to: Number, cb: Function) {
-    i: Number = from
-    step: Number = math::sign(to - from)
-
-    while to - i {
-      cb(i)
-      i += step
+    printUsername := (self) {
+      print self.username
     }
   }
 
-  count(to: 50, from: 150, (i) {
-    print i
-  })
+  user := new User
+  print 'user = ', user
+
+  // create an instance of the type
+  //user := new User
+
+  // array of User objects
+  users: Array<User> // NOTE: same as writing Array<User>
+
+  // NOTE: a User object cannot be null by default
+  // to allow null, use Maybe<User> or User? (they're the same, but different syntax)
+
+  //maybeUser: User? // NOTE: set to null by default.
+  //maybeUser = new User // no longer null.
 }
