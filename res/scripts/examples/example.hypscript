@@ -1,78 +1,19 @@
-module examples {
+module counter {
+  use library ['../library']
+  
+  import math
 
-global_var: Int = 5
+  count: Function = (from: Number, to: Number, cb: Function) {
+    i: Number = from
+    step: Number = math::sign(to - from)
 
-function Inc() {
-    global_var += 1
-}
-
-print "before = ", global_var
-
-Inc()
-
-print "after = ", global_var
-
-function Begin(self: Int[])
-{
-    ArraySize(self);
-
-    return self[0];
-}
-
-function End(self: Int[])
-{
-
-}
-
-/*type Iterator<T> {
-    target: T
-    index: Int
-
-    new(self, target, index) {
-        self.target = target;
-        self.index = index;
+    while to - i {
+      cb(i)
+      i += step
     }
+  }
 
-    operator++(self) {
-        return new Iterator<T>(self.target, self.index + 1);
-    }
-}*/
-
-type Iterator {
-    target: Any
-    index: Int
-
-    new(self, target, index) {
-        self.target = target;
-        self.index = index;
-    }
-
-    operator++(self) {
-        return new Iterator(self.target, self.index + 1);
-    }
-}
-
-type WrappedArray {
-    ary: Int[];
-
-    Begin(self) {
-        return new Iterator(self.ary, 0);
-    }
-
-    End(self) {
-        return new Iterator(self.ary, ArraySize(self.ary));
-    }
-}
-
-ary: WrappedArray
-ary.ary = [1,2,3,4,5]
-
-print "begin = ", ary.Begin()
-
-// for x in ary {
-//     print x
-// }
-
-print ary
-
+  count(to: 50, from: 150, (i) {
+    print i
+  })
 }
