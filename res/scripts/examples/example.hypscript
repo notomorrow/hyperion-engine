@@ -1,13 +1,42 @@
 module types {
+
+  let MyEnum = enum {
+    THING,
+    FOO,
+    BAR
+  }
+
+  //print MyEnum.BAR;
+  print "MyEnum = ", MyEnum;
+
   // custom types
-  class User {
+  class UserClass {
     username: String
     password: String
 
-    printUsername := (self) {
+    function printUsername(self) : Int {
       print "hello, my name is: ", self.username
+
+      return 5;
     }
   }
+
+  class UserClass2<T> {
+    username: T
+    password: Int
+
+    function PrintName(self, id: T) {
+      print "name = ", self.username;
+      print "id = ", id;
+    }
+  }
+
+  generic DoThing<T> = function (thing: T): T
+  {
+    print "got type: ", thing, typeof(T);
+  }
+
+  generic FooBar<T> = class {};
 
   generic MyGeneric<T> = class {
     thing: T
@@ -17,15 +46,30 @@ module types {
     thing: String
   }
 
-  let user = new User
+  let user: UserClass2<Int> = new UserClass2<Int>
+  user.username = 5432;
+  let user1 = new UserClass
+  let user2 = new UserClass
+  let user3 = new UserClass
+  let user4 = new UserClass
+  let user5 = new UserClass
   print 'user = ', user
-  user.printUsername();
+  print 'user1 = ', user1
+  print 'user2 = ', user2
+  print 'user3 = ', user3
+  print 'user4 = ', user4
+  print 'user5 = ', user5
+  user.PrintName(1);
+
+  DoThing<Int>("hi");
+  print "DoThing2 = ", typeof(DoThing<Float>);
+  print "userclass = ", typeof(user.PrintName);
 
   // create an instance of the type
   //user := new User
 
   // array of User objects
-  let users: User[]// NOTE: same as writing Array<User>
+  let users: UserClass2<Int>[]// NOTE: same as writing Array<User>
   print "USERS = ", users
 
   let my_non_g: MyNonGeneric = new MyNonGeneric;
