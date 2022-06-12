@@ -1,94 +1,118 @@
 module types {
 
-  let MyEnum = enum {
-    THING,
-    FOO,
-    BAR
-  }
-
-  //print MyEnum.BAR;
-  print "MyEnum = ", MyEnum;
-
-  // custom types
-  class UserClass {
-    username: String
-    password: String
-
-    function printUsername(self) : Int {
-      print "hello, my name is: ", self.username
-
-      return 5;
+    let MyEnum = enum {
+        THING,
+        FOO,
+        BAR
     }
-  }
 
-  class UserClass2<T> {
-    username: T
-    password: Int
+    //print MyEnum.BAR;
+    print "MyEnum = ", MyEnum;
 
-    function PrintName(self, id: T) {
-      print "name = ", self.username;
-      print "id = ", id;
+    // custom types
+    class UserClass {
+        username: String
+        password: String
+
+        function printUsername(self) : Int {
+            print "hello, my name is: ", self.username
+
+            return 5;
+        }
     }
-  }
 
-  generic DoThing<T> = function (thing: T): T
-  {
-    print "got type: ", thing, typeof(T);
-  }
+    class UserClass2<T> {
+        username: T
+        password: Int
 
-  generic FooBar<T> = class {};
+        function PrintName(self, id: T) {
+            print "name = ", self.username;
+            print "id = ", id;
+        }
+    }
 
-  generic MyGeneric<T> = class {
-    thing: T
-  };
+    function DoThing<T>(thing: T): T
+    {
+        print "got type: ", thing, typeof(T);
+    }
 
-  class MyNonGeneric {
-    thing: String
-  }
+    let FooBar<T> = class {};
 
-  let user: UserClass2<Int> = new UserClass2<Int>
-  user.username = 5432;
-  let user1 = new UserClass
-  let user2 = new UserClass
-  let user3 = new UserClass
-  let user4 = new UserClass
-  let user5 = new UserClass
-  print 'user = ', user
-  print 'user1 = ', user1
-  print 'user2 = ', user2
-  print 'user3 = ', user3
-  print 'user4 = ', user4
-  print 'user5 = ', user5
-  user.PrintName(1);
+    let MyGeneric<T> = class {
+        thing: T
+        DoThing3 = function (self, t: T) {
+            return t;
+        }
 
-  DoThing<Int>("hi");
-  print "DoThing2 = ", typeof(DoThing<Float>);
-  print "userclass = ", typeof(user.PrintName);
+        // DoThing4<U> = function (self, u: U) {
+        //     return u;
+        // }
+    };
 
-  // create an instance of the type
-  //user := new User
+    class MyNonGeneric {
+        thing: String
+    }
 
-  // array of User objects
-  let users: UserClass2<Int>[]// NOTE: same as writing Array<User>
-  print "USERS = ", users
+    let user: UserClass2<Int> = new UserClass2<Int>
+    user.username = 5432;
+    let user1 = new UserClass
+    let user2 = new UserClass
+    let user3 = new UserClass
+    let user4 = new UserClass
+    let user5 = new UserClass
+    print 'user = ', user
+    print 'user1 = ', user1
+    print 'user2 = ', user2
+    print 'user3 = ', user3
+    print 'user4 = ', user4
+    print 'user5 = ', user5
+    user.PrintName(1);
 
-  let my_non_g: MyNonGeneric = new MyNonGeneric;
-  print "my_non_g = ", my_non_g;
-  print "my_non_g.thing = ", my_non_g.thing;
+    DoThing<Int>(4);
 
-  let myg : MyGeneric<Int> = new MyGeneric<Int>;
-  print typeof(myg)
-  myg.thing = 1239;
-  print "myg = ", myg;
-  print "myg.thing = ", myg.thing;
-  
-
-  //print "users[0]", users[0]
+    // for item in [1,2,3,4] {
+    //     print item
+    // }
 
 
-  // NOTE: a User object cannot be null by default
-  // to allow null, use Maybe<User> or User? (they're the same, but different syntax)
+    let GenVar<T> = T;
+    let f: Float = 2.0;
 
-  //maybeUser: User? // NOTE: set to null by default.
-  //maybeUser = new User // no longer null.
+    print "GenVar<Int> = ", GenVar<Int>, " ", typeof(GenVar<Int>);
+    print "GenVar<Float> = ", GenVar<Float>, " ", typeof(GenVar<Float>);
+    print "GenVar<String> = ", GenVar<String>, " ", typeof(GenVar<String>);
+    print "f = ", f, typeof(f);
+
+    print "DoThing2 = ", typeof(DoThing<Float>);
+    print "DoThing3 = ", typeof((new MyGeneric<Float>).DoThing3);
+    //print "DoThing4 = ", typeof((new MyGeneric<Float>).DoThing4<Int>);
+    print "userclass = ", typeof(user.PrintName);
+    print "userclass = ", typeof(user1.printUsername);
+
+    // create an instance of the type
+    //user := new User
+
+    // array of User objects
+    let users: UserClass2<Int>[]// NOTE: same as writing Array<User>
+    print "USERS = ", users
+
+    let my_non_g: MyNonGeneric = new MyNonGeneric;
+    print "my_non_g = ", my_non_g;
+    print "my_non_g.thing = ", my_non_g.thing;
+
+    let myg : MyGeneric<Int> = new MyGeneric<Int>;
+    print typeof(myg)
+    myg.thing = 1239;
+    print "myg = ", myg;
+    print "myg.thing = ", myg.thing;
+    
+
+    //print "users[0]", users[0]
+
+
+    // NOTE: a User object cannot be null by default
+    // to allow null, use Maybe<User> or User? (they're the same, but different syntax)
+
+    //maybeUser: User? // NOTE: set to null by default.
+    //maybeUser = new User // no longer null.
 }
