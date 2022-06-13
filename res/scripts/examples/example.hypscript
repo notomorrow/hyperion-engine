@@ -1,20 +1,32 @@
 module types {
 
-    let MyEnum = enum {
-        THING,
+    enum MyEnum {
         FOO,
-        BAR
+        BAR = 0x04,
+        TEST
     }
 
-    //print MyEnum.BAR;
-    print "MyEnum = ", MyEnum;
+    let ui : uint = 0;
+
+    print "ui + 5 = ", (ui + 5)
+
+    print "MyEnum.FOO = ", MyEnum.FOO;
+    print "MyEnum.BAR = ", MyEnum.BAR;
+    print "MyEnum.TEST = ", MyEnum.TEST;
+
+    function TakesEnum(e: int/*MyEnum*/)
+    {
+        print "e = ", e
+    }
+
+    TakesEnum(MyEnum.FOO);
 
     // custom types
     class UserClass {
-        username: String
-        password: String
+        username: string
+        password: string
 
-        function printUsername(self) : Int {
+        function printUsername(self) : int {
             print "hello, my name is: ", self.username
 
             return 5;
@@ -23,7 +35,7 @@ module types {
 
     class UserClass2<T> {
         username: T
-        password: Int
+        password: int
 
         function PrintName(self, id: T) {
             print "name = ", self.username;
@@ -50,10 +62,10 @@ module types {
     };
 
     class MyNonGeneric {
-        thing: String
+        thing: string
     }
 
-    let user: UserClass2<Int> = new UserClass2<Int>
+    let user: UserClass2<int> = new UserClass2<int>
     user.username = 5432;
     let user1 = new UserClass
     let user2 = new UserClass
@@ -68,7 +80,7 @@ module types {
     print 'user5 = ', user5
     user.PrintName(1);
 
-    DoThing<Int>(4);
+    DoThing<int>(4);
 
     // for item in [1,2,3,4] {
     //     print item
@@ -76,15 +88,15 @@ module types {
 
 
     let GenVar<T> = T;
-    let f: Float = 2.0;
+    let f: float = 2.0;
 
-    print "GenVar<Int> = ", GenVar<Int>, " ", typeof(GenVar<Int>);
-    print "GenVar<Float> = ", GenVar<Float>, " ", typeof(GenVar<Float>);
-    print "GenVar<String> = ", GenVar<String>, " ", typeof(GenVar<String>);
+    print "GenVar<Int> = ", GenVar<int>, " ", typeof(GenVar<int>);
+    print "GenVar<Float> = ", GenVar<float>, " ", typeof(GenVar<float>);
+    print "GenVar<String> = ", GenVar<string>, " ", typeof(GenVar<string>);
     print "f = ", f, typeof(f);
 
-    print "DoThing2 = ", typeof(DoThing<Float>);
-    print "DoThing3 = ", typeof((new MyGeneric<Float>).DoThing3);
+    print "DoThing2 = ", typeof(DoThing<float>);
+    print "DoThing3 = ", typeof((new MyGeneric<float>).DoThing3);
     //print "DoThing4 = ", typeof((new MyGeneric<Float>).DoThing4<Int>);
     print "userclass = ", typeof(user.PrintName);
     print "userclass = ", typeof(user1.printUsername);
@@ -93,14 +105,14 @@ module types {
     //user := new User
 
     // array of User objects
-    let users: UserClass2<Int>[]// NOTE: same as writing Array<User>
+    let users: UserClass2<int>[]// NOTE: same as writing Array<User>
     print "USERS = ", users
 
     let my_non_g: MyNonGeneric = new MyNonGeneric;
     print "my_non_g = ", my_non_g;
     print "my_non_g.thing = ", my_non_g.thing;
 
-    let myg : MyGeneric<Int> = new MyGeneric<Int>;
+    let myg : MyGeneric<int> = new MyGeneric<int>;
     print typeof(myg)
     myg.thing = 1239;
     print "myg = ", myg;
