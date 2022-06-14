@@ -1,5 +1,27 @@
 module types {
 
+// Vector3 class created from C++
+let myvec: Vector3 = new Vector3;
+myvec.x += 5;
+
+let myothervec = new Vector3;
+myothervec.x = 9;
+
+Print("%\n", ENGINE_VERSION);
+Print("Vector3 = %\n", Vector3);
+Print("new Vector3 = %\n", new Vector3);
+Print("myvec.x = %\n", myvec.x);
+Print("Added .x = %\n", myvec.Add(myothervec).x);
+
+// other vector3 class but instead of holding float values directly,
+// it holds an internal pointer to a c++ object.
+let myvec2: vec3 = new vec3;
+myvec2.Init();
+let othervec2: vec3 = new vec3;
+othervec2.Init();
+
+Print("Add result: %\n", myvec2.Add(othervec2).x());
+
 enum MyEnum : uint {
     FOO,
     BAR = 0x04,
@@ -14,7 +36,7 @@ Print("MyEnum.FOO = ", MyEnum.FOO, "\n");
 Print("MyEnum.BAR = ", MyEnum.BAR, "\n");
 Print("MyEnum.TEST = ", MyEnum.TEST, "\n");
 
-for (let i = 0; i != 1000.0; i += 1) {
+for (let i = 0; i != 1000.0; i += 1) { 
     Print("Hi I am number %\n", i);
 }
 
