@@ -140,8 +140,6 @@ myg.thing = 1239;
 Print("myg = ", myg, "\n");
 Print("myg.thing = ", myg.thing, "\n");
 
-
-
 //bringing back mandelbrot
 
 const width: float = 180.0;
@@ -156,7 +154,7 @@ let oldre: float = 0.0;
 let newim: float = 0.0;
 let oldim: float = 0.0;
 
-function Mandlebrot<T>(x: float, y: float)
+function Mandlebrot(x: float, y: float)
 {
     newre = 0.0;
     newim = 0.0;
