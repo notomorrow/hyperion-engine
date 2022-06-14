@@ -1,130 +1,202 @@
 module types {
 
-    enum MyEnum {
-        FOO,
-        BAR = 0x04,
-        TEST
+enum MyEnum : uint {
+    FOO,
+    BAR = 0x04,
+    TEST
+}
+
+let ui : uint = 0;
+
+Print("ui + 5 = %\n", (ui + 5));
+
+Print("MyEnum.FOO = ", MyEnum.FOO, "\n");
+Print("MyEnum.BAR = ", MyEnum.BAR, "\n");
+Print("MyEnum.TEST = ", MyEnum.TEST, "\n");
+
+for (let i = 0; i != 1000.0; i += 1) {
+    Print("Hi I am number %\n", i);
+}
+
+let counter: int;
+for (; counter != 100 ;) {
+    Print("Counter is %\n", counter);
+
+    counter += 1;
+}
+
+function TakesEnum(e: int/*MyEnum*/)
+{
+    Print("e = ", e, "\n")
+}
+
+TakesEnum(MyEnum.FOO);
+
+// custom types
+class UserClass {
+    username: string;
+    password: string;
+
+    function printUsername(self) : int {
+        Print("hello, my name is: ", self.username, "\n");
+
+        return 5;
     }
+}
 
-    let ui : uint = 0;
+class UserClass2<T> {
+    username: T
+    password: int
 
-    print "ui + 5 = ", (ui + 5)
-
-    print "MyEnum.FOO = ", MyEnum.FOO;
-    print "MyEnum.BAR = ", MyEnum.BAR;
-    print "MyEnum.TEST = ", MyEnum.TEST;
-
-    function TakesEnum(e: int/*MyEnum*/)
-    {
-        print "e = ", e
+    function PrintName(self, id: T) {
+        Print("name = ", self.username, "\n");
+        Print("id = ", id, "\n");
     }
+}
 
-    TakesEnum(MyEnum.FOO);
+function DoThing<T>(thing: T): T
+{
+    Print("got type: ", thing, typeof(T), "\n");
+}
 
-    // custom types
-    class UserClass {
-        username: string
-        password: string
+let FooBar<T> = class {};
 
-        function printUsername(self) : int {
-            print "hello, my name is: ", self.username
+let MyGeneric<T> = class {
+    thing: T;
 
-            return 5;
-        }
-    }
-
-    class UserClass2<T> {
-        username: T
-        password: int
-
-        function PrintName(self, id: T) {
-            print "name = ", self.username;
-            print "id = ", id;
-        }
-    }
-
-    function DoThing<T>(thing: T): T
-    {
-        print "got type: ", thing, typeof(T);
-    }
-
-    let FooBar<T> = class {};
-
-    let MyGeneric<T> = class {
-        thing: T
-        DoThing3 = function (self, t: T) {
-            return t;
-        }
-
-        // DoThing4<U> = function (self, u: U) {
-        //     return u;
-        // }
+    DoThing3 = function (self, t: T) {
+        return t;
     };
 
-    class MyNonGeneric {
-        thing: string
+    // DoThing4<U> = function (self, u: U) {
+    //     return u;
+    // }
+};
+
+class MyNonGeneric {
+    thing: string
+}
+
+let user: UserClass2<int> = new UserClass2<int>
+user.username = 5432;
+let user1 = new UserClass
+let user2 = new UserClass
+let user3 = new UserClass
+let user4 = new UserClass
+let user5 = new UserClass
+Print('user = ', user, "\n");
+Print('user1 = ', user1, "\n");
+Print('user2 = ', user2, "\n");
+Print('user3 = ', user3, "\n");
+Print('user4 = ', user4, "\n");
+Print('user5 = ', user5, "\n");
+user.PrintName(1);
+
+DoThing<int>(4);
+
+// for item in [1,2,3,4] {
+//     Print(item
+// }
+
+
+let GenVar<T> = T;
+let f: float = 2.0;
+
+Print("GenVar<Int> = ", GenVar<int>, " ", typeof(GenVar<int>), "\n");
+Print("GenVar<Float> = ", GenVar<float>, " ", typeof(GenVar<float>), "\n");
+Print("GenVar<String> = ", GenVar<string>, " ", typeof(GenVar<string>), "\n");
+Print("f = ", f, typeof(f), "\n");
+
+Print("DoThing2 = ", typeof(DoThing<float>), "\n");
+Print("DoThing3 = ", typeof((new MyGeneric<float>).DoThing3), "\n");
+//Print("DoThing4 = ", typeof((new MyGeneric<Float>).DoThing4<Int>);
+Print("userclass = ", typeof(user.PrintName), "\n");
+Print("userclass = ", typeof(user1.printUsername), "\n");
+
+// create an instance of the type
+//user := new User
+
+// array of User objects
+let users: UserClass2<int>[]// NOTE: same as writing Array<User>
+ArrayPush(users, new UserClass2<int>);
+ArrayPush(users, new UserClass2<int>);
+Print("USERS = ", users, "\n");
+Print("size of users = %\n", ArraySize(users));
+
+let buffer = Malloc(1000);
+Print("buffer = %\n", buffer);
+buffer[0] = 0xb;
+Print("buffer = %\n", buffer);
+buffer = null;
+Print("buffer = %\n", buffer);
+
+let my_non_g: MyNonGeneric = new MyNonGeneric;
+Print("my_non_g = ", my_non_g, "\n");
+Print("my_non_g.thing = ", my_non_g.thing, "\n");
+
+let myg : MyGeneric<int> = new MyGeneric<int>;
+Print(typeof(myg), "\n");
+myg.thing = 1239;
+Print("myg = ", myg, "\n");
+Print("myg.thing = ", myg.thing, "\n");
+
+
+
+//bringing back mandelbrot
+
+const width: float = 180.0;
+const height: float = 70.0;
+const zoom: float = 0.7;
+const movex: float = -0.5;
+const movey: float = 0.0;
+const max_iters: float = 15;
+const shades: string[] = ['.', '$', '%'];
+let newre: float = 0.0;
+let oldre: float = 0.0;
+let newim: float = 0.0;
+let oldim: float = 0.0;
+
+function Mandlebrot<T>(x: float, y: float)
+{
+    newre = 0.0;
+    newim = 0.0;
+
+    const pr: float = 1.5*(x - width/2.0)/(0.5*zoom*width)+movex;
+    const pi: float = (y - height/2.0)/(0.5*zoom*height)+movey;
+
+    for (let n: uint = 0; n < max_iters; n += 1) {
+        oldre = newre;
+        oldim = newim;
+        newre = oldre*oldre-oldim*oldim+pr;
+        newim = 2*oldre*oldim+pi;
+
+        const checkn: float = newre*newre+newim*newim;
+
+        if (checkn > 4.0) {
+            Print('%', shades[(n % 3)]);
+
+            return;
+        }
     }
 
-    let user: UserClass2<int> = new UserClass2<int>
-    user.username = 5432;
-    let user1 = new UserClass
-    let user2 = new UserClass
-    let user3 = new UserClass
-    let user4 = new UserClass
-    let user5 = new UserClass
-    print 'user = ', user
-    print 'user1 = ', user1
-    print 'user2 = ', user2
-    print 'user3 = ', user3
-    print 'user4 = ', user4
-    print 'user5 = ', user5
-    user.PrintName(1);
+    Print(' ');
+}
 
-    DoThing<int>(4);
+function MandlebrotLine() {
+    let x: float = 0.0;
+    let y: float = 0.0;
+    while (y < height) {
+        while (x < width) {
+            Mandlebrot(x, y);
+            x += 1;
+        }
+        Puts('');
+        x = 0;
+        y += 1;
+    }
+}
 
-    // for item in [1,2,3,4] {
-    //     print item
-    // }
+MandlebrotLine();
 
 
-    let GenVar<T> = T;
-    let f: float = 2.0;
-
-    print "GenVar<Int> = ", GenVar<int>, " ", typeof(GenVar<int>);
-    print "GenVar<Float> = ", GenVar<float>, " ", typeof(GenVar<float>);
-    print "GenVar<String> = ", GenVar<string>, " ", typeof(GenVar<string>);
-    print "f = ", f, typeof(f);
-
-    print "DoThing2 = ", typeof(DoThing<float>);
-    print "DoThing3 = ", typeof((new MyGeneric<float>).DoThing3);
-    //print "DoThing4 = ", typeof((new MyGeneric<Float>).DoThing4<Int>);
-    print "userclass = ", typeof(user.PrintName);
-    print "userclass = ", typeof(user1.printUsername);
-
-    // create an instance of the type
-    //user := new User
-
-    // array of User objects
-    let users: UserClass2<int>[]// NOTE: same as writing Array<User>
-    print "USERS = ", users
-
-    let my_non_g: MyNonGeneric = new MyNonGeneric;
-    print "my_non_g = ", my_non_g;
-    print "my_non_g.thing = ", my_non_g.thing;
-
-    let myg : MyGeneric<int> = new MyGeneric<int>;
-    print typeof(myg)
-    myg.thing = 1239;
-    print "myg = ", myg;
-    print "myg.thing = ", myg.thing;
-    
-
-    //print "users[0]", users[0]
-
-
-    // NOTE: a User object cannot be null by default
-    // to allow null, use Maybe<User> or User? (they're the same, but different syntax)
-
-    //maybeUser: User? // NOTE: set to null by default.
-    //maybeUser = new User // no longer null.
 }
