@@ -59,9 +59,9 @@ class UserClass {
     username: string;
     password: string;
 
-    function printUsername(self) : int {
+    function printUsername(self: Self) : int {
         Print("hello, my name is: ", self.username, "\n");
-
+        
         return 5;
     }
 }
@@ -133,7 +133,7 @@ Print("DoThing2 = ", typeof(DoThing<float>), "\n");
 Print("DoThing3 = ", typeof((new MyGeneric<float>).DoThing3), "\n");
 //Print("DoThing4 = ", typeof((new MyGeneric<Float>).DoThing4<Int>);
 Print("userclass = ", typeof(user.PrintName), "\n");
-Print("userclass = ", typeof(user1.printUsername), "\n");
+Print("userclass = ", user1.printUsername(), "\n");
 
 // create an instance of the type
 //user := new User
