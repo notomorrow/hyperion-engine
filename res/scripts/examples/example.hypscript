@@ -40,7 +40,7 @@ for (let i = 0; i != 1000.0; i += 1) {
     Print("Hi I am number %\n", i);
 }
 
-let counter: int;
+let counter: int = 0;
 for (; counter != 100 ;) {
     Print("Counter is %\n", counter);
 
@@ -56,23 +56,26 @@ TakesEnum(MyEnum.FOO);
 
 // custom types
 class UserClass {
-    username: string;
-    password: string;
-
-    function printUsername(self/*: UserClass*/)/* : UserClass*/
+public:
+    function printUsername(self: UserClass) : UserClass
     {
         Print("hello, my name is: ", self.username, "\n");
         
-        //return new UserClass;
+        return new UserClass;
     }
 
     function sayHello(self)
     {
         self.printUsername();
     }
+
+private:
+    username: string;
+    password: string;
 }
 
 class UserClass2<T> {
+public:
     username: T
     password: int
 
