@@ -59,10 +59,18 @@ class UserClass {
     username: string;
     password: string;
 
-    function printUsername(self: Self) : int {
+    //function x(self: UserClass): UserClass;
+
+    function printUsername(self: UserClass) : UserClass
+    {
         Print("hello, my name is: ", self.username, "\n");
         
-        return 5;
+        return new UserClass;
+    }
+
+    function sayHello(self: UserClass)
+    {
+        self.printUsername();
     }
 }
 
