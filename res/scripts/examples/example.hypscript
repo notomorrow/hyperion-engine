@@ -57,6 +57,13 @@ TakesEnum(MyEnum.FOO);
 // custom types
 class UserClass {
 public:
+    function construct(self: UserClass)
+    {
+        Print("CONSTRUCT %\n", self);
+
+        return self;
+    }
+
     function printUsername(self: UserClass) : UserClass
     {
         Print("hello, my name is: ", self.username, "\n");
@@ -142,6 +149,7 @@ Print("DoThing2 = ", typeof(DoThing<float>), "\n");
 Print("DoThing3 = ", typeof((new MyGeneric<float>).DoThing3), "\n");
 //Print("DoThing4 = ", typeof((new MyGeneric<Float>).DoThing4<Int>);
 Print("userclass = ", typeof(user.PrintName), "\n");
+Print("userclass = ", user1, "\n");
 Print("userclass = ", user1.printUsername(), "\n");
 
 // create an instance of the type
@@ -166,7 +174,7 @@ Print("my_non_g = ", my_non_g, "\n");
 Print("my_non_g.thing = ", my_non_g.thing, "\n");
 
 let myg : MyGeneric<int> = new MyGeneric<int>;
-Print(typeof(myg), "\n");
+Print("typeof(myg) = %\n", typeof(myg));
 myg.thing = 1239;
 Print("myg = ", myg, "\n");
 Print("myg.thing = ", myg.thing, "\n");
