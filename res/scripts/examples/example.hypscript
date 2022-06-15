@@ -59,16 +59,14 @@ class UserClass {
     username: string;
     password: string;
 
-    //function x(self: UserClass): UserClass;
-
-    function printUsername(self: UserClass) : UserClass
+    function printUsername(self/*: UserClass*/)/* : UserClass*/
     {
         Print("hello, my name is: ", self.username, "\n");
         
-        return new UserClass;
+        //return new UserClass;
     }
 
-    function sayHello(self: UserClass)
+    function sayHello(self)
     {
         self.printUsername();
     }
