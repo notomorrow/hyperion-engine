@@ -57,18 +57,19 @@ TakesEnum(MyEnum.FOO);
 // custom types
 class UserClass {
 public:
-    function construct(self: UserClass)
+    UserClass(self: UserClass, username: string, password: string)
     {
-        Print("CONSTRUCT %\n", self);
-
-        return self;
+        self.username = username;
+        self.password = password;
+        
+        return self; // needed for now
     }
 
     function printUsername(self: UserClass) : UserClass
     {
         Print("hello, my name is: ", self.username, "\n");
         
-        return new UserClass;
+        return new UserClass(self.username, self.password);
     }
 
     function sayHello(self)
@@ -117,11 +118,11 @@ class MyNonGeneric {
 
 let user: UserClass2<int> = new UserClass2<int>
 user.username = 5432;
-let user1 = new UserClass
-let user2 = new UserClass
-let user3 = new UserClass
-let user4 = new UserClass
-let user5 = new UserClass
+let user1 = new UserClass("Johnny", "12345");
+let user2 = new UserClass("foo", "34324");
+let user3 = new UserClass("balahongn", "dfsdf");
+let user4 = new UserClass("turdly", "54");
+let user5 = new UserClass("hunter", "hunter2");
 Print('user = ', user, "\n");
 Print('user1 = ', user1, "\n");
 Print('user2 = ', user2, "\n");
