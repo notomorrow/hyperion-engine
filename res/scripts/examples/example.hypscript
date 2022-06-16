@@ -16,9 +16,7 @@ Print("Added .x = %\n", myvec.Add(myothervec).x);
 // other vector3 class but instead of holding float values directly,
 // it holds an internal pointer to a c++ object.
 let myvec2: vec3 = new vec3;
-myvec2.Init();
 let othervec2: vec3 = new vec3;
-othervec2.Init();
 
 Print("Add result: %\n", myvec2.Add(othervec2).x());
 
