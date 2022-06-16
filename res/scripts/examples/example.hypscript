@@ -1,31 +1,19 @@
 module types {
 
-// Vector3 class created from C++
-let myvec: Vector3 = new Vector3;
-myvec.x += 5;
-
-let myothervec = new Vector3;
-myothervec.x = 9;
-
 Print("%\n", ENGINE_VERSION);
-Print("Vector3 = %\n", Vector3);
-Print("new Vector3 = %\n", new Vector3);
-Print("myvec.x = %\n", myvec.x);
-Print("Added .x = %\n", myvec.Add(myothervec).x);
 
-// other vector3 class but instead of holding float values directly,
-// it holds an internal pointer to a c++ object.
-let myvec2: vec3 = new vec3;
-let othervec2: vec3 = new vec3;
-
-Print("Add result: %\n", myvec2.Add(othervec2).x());
+// instead of holding float values directly,
+// this vector class holds an internal pointer to a c++ object.
+let myvec2: Vector3 = new Vector3();
+let othervec2: Vector3 = new Vector3();
+Print("Add result: %\n", (myvec2 + othervec2).ToString());
+Print("Sub result: %\n", (myvec2 - othervec2).ToString());
 
 enum MyEnum : uint {
     FOO,
     BAR = 0x04,
     TEST
 }
-
 let ui : uint = 0;
 
 Print("ui + 5 = %\n", (ui + 5));
