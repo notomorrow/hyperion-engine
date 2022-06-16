@@ -4,7 +4,7 @@ Print("%\n", ENGINE_VERSION);
 
 // instead of holding float values directly,
 // this vector class holds an internal pointer to a c++ object.
-let myvec2: Vector3 = new Vector3();
+let myvec2: Vector3    = new Vector3();
 let othervec2: Vector3 = new Vector3();
 Print("Add result: %\n", (myvec2 + othervec2).ToString());
 Print("Sub result: %\n", (myvec2 - othervec2).ToString());
@@ -107,7 +107,11 @@ class MyNonGeneric {
     thing: string
 }
 
-let user: UserClass2<int> = new UserClass2<int>
+export let MY_FOO = 12345;
+
+
+let user: UserClass2<int> = new UserClass2<int>;
+
 user.username = 5432;
 let user1 = new UserClass("Johnny", "12345");
 let user2 = new UserClass("foo", "34324");
@@ -131,12 +135,12 @@ DoThing<int>(4);
 
 
 let GenVar<T> = T;
-let f: float = 2.0;
+let f: float = GenVar<2.0>;
 
 Print("GenVar<Int> = ", GenVar<int>, " ", typeof(GenVar<int>), "\n");
 Print("GenVar<Float> = ", GenVar<float>, " ", typeof(GenVar<float>), "\n");
 Print("GenVar<String> = ", GenVar<string>, " ", typeof(GenVar<string>), "\n");
-Print("f = ", f, typeof(f), "\n");
+Print("f = ", f, " ", typeof(f), "\n");
 
 Print("DoThing2 = ", typeof(DoThing<float>), "\n");
 Print("DoThing3 = ", typeof((new MyGeneric<float>).DoThing3), "\n");
