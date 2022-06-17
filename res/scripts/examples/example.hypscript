@@ -119,10 +119,9 @@ function OnTick(count: number) {
     Print("TICK TICK TICK %\n", count);
 
     return 0;
-};
+}
 
 export OnTick;
-export new UserClass;
 
 
 let user: UserClass2<int> = new UserClass2<int>;

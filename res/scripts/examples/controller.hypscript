@@ -1,0 +1,62 @@
+
+
+
+import mandelbrot;
+
+// export class MovementController {
+// public:
+//     node: any;
+
+//     MovementController(self: MovementController) : MovementController
+//     {
+//         self.node = null;
+
+//         return self;
+//     }
+
+//     function OnAdded(self: MovementController, node: any)
+//     {
+//         self.node = node;
+
+//         Print("Added controller to node: %s\n", node);
+//     }
+
+//     function OnRemoved(self: MovementController, node: any)
+//     {
+//         Print("Removed from node: %s\n", node);
+
+//         self.node = null;
+//     }
+
+//     function OnTick(self: MovementController, node: any, delta: float)
+//     {
+
+//     }
+// };
+
+// const movement_controller = new MovementController();
+
+// export const OnAdded = movement_controller.OnAdded;
+// export const OnRemoved = movement_controller.OnRemoved;
+// export const OnTick = movement_controller.OnTick;
+
+let controller_node: any = null;
+
+export function OnAdded(node: any) {
+    Print("Added controller to node: %s\n", node);
+
+    controller_node = node;
+
+    Print("controller_node now = %\n", controller_node);
+
+    mandelbrot::MandlebrotLine();
+};
+
+export function OnRemoved(node: any) {
+    Print("Remove controller from node: %s\n", controller_node);
+    controller_node = null;
+};
+
+export function OnTick(node: any, delta: float) {
+    Print("%\n", delta);
+};
