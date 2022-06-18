@@ -58,7 +58,7 @@ export function OnRemoved(node: any) {
 };
 
 export function OnTick(node: any, delta: float) {
-    //Print("%\n", delta);
+    Print("%\n", delta);
     //let otherVec3 = new Vector3();
     //Print("%\n", (new Vector3()).operator+(otherVec3));
 };
