@@ -40,6 +40,8 @@ import mandelbrot;
 // export const OnRemoved = movement_controller.OnRemoved;
 // export const OnTick = movement_controller.OnTick;
 
+
+
 let controller_node: any = null;
 
 export function OnAdded(node: any) {
