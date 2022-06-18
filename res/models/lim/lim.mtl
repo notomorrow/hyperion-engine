@@ -10,10 +10,11 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd vintage-tile1_albedo.png
-map_bump vintage-tile1_normal-dx.png
-map_ao vintage-tile1_ao.png
-map_height vintage-tile1_height.png
+map_Kd base-white-tile_albedo.png
+map_bump base-white-tile_normal-ogl.png
+map_ao base-white-tile_ao.png
+map_height base-white-tile_height.png
+map_Ks base-white-tile_metallic.psd
 
 newmtl Material.003
 Ns 250.000000
