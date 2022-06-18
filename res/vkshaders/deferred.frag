@@ -225,11 +225,13 @@ void main()
 
         float shadow = 1.0;
 
+        if (scene.num_environment_shadow_maps != 0) {
 #if HYP_SHADOW_PENUMBRA
-        shadow = GetShadowContactHardened(0, position.xyz, NdotL);
+            shadow = GetShadowContactHardened(0, position.xyz, NdotL);
 #else
-        shadow = GetShadow(0, position.xyz, vec2(0.0), NdotL);
+            shadow = GetShadow(0, position.xyz, vec2(0.0), NdotL);
 #endif
+        }
 
         const vec3 diffuse_color = albedo_linear * (1.0 - metalness);
 
