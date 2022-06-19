@@ -38,6 +38,16 @@ void InputManager::CheckEvent(SystemEvent *event)
         case SystemEventType::EVENT_MOUSEMOTION:
             this->UpdateMousePosition();
             break;
+        case SystemEventType::EVENT_WINDOW_EVENT:
+        {
+            auto window_event_type = event->GetWindowEventType();
+
+            switch (window_event_type) {
+            case SystemWindowEventType::EVENT_WINDOW_RESIZED:
+                this->UpdateWindowSize();
+                break;
+            }
+        }
         default:
             return;
     }
@@ -51,8 +61,20 @@ void InputManager::UpdateMousePosition()
 
     GetWindow()->GetMouseState(&mx, &my);
 
-    m_mouse_position.mx.store(mx);
-    m_mouse_position.my.store(my);
+    m_mouse_position.x.store(mx);
+    m_mouse_position.y.store(my);
+}
+
+void InputManager::UpdateWindowSize()
+{
+    Threads::AssertOnThread(THREAD_INPUT);
+
+    int width, height;
+
+    GetWindow()->GetSize(&width, &height);
+
+    m_window_size.x.store(width);
+    m_window_size.y.store(height);
 }
 
 void InputManager::SetKey(int key, bool pressed)

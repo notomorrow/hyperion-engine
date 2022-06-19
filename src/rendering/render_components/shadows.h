@@ -1,11 +1,11 @@
 #ifndef HYPERION_V2_SHADOWS_H
 #define HYPERION_V2_SHADOWS_H
 
-#include "base.h"
-#include "post_fx.h"
-#include "renderer.h"
-#include "light.h"
-#include "render_component.h"
+#include "../base.h"
+#include "../post_fx.h"
+#include "../renderer.h"
+#include "../light.h"
+#include "../render_component.h"
 
 #include <rendering/backend/renderer_frame.h>
 

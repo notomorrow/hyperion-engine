@@ -100,8 +100,6 @@ public:
 
     void CalculateVisibility(Scene *scene);
 
-    /*! \brief Performs a ray test on the octree, only taking into account octants (not nodes).
-     * Any RayHits have user_data set to be the pointer to the octant hit. */
     bool TestRay(const Ray &ray, RayTestResults &out_results) const;
 
 private:

@@ -896,7 +896,13 @@ public:
         auto it = m_ref_count_holder.Find(ptr->GetId());
         AssertThrowMsg(it == m_ref_count_holder.End(), "ptr with id %u already exists!", ptr->GetId().value);
 
-        auto insert_result = m_ref_count_holder.Insert(ptr->GetId(), new RefCount{.ref_manager = this});
+        auto insert_result = m_ref_count_holder.Insert(
+            ptr->GetId(),
+            new RefCount{
+                .ref_manager = this,
+                .count       = 1
+            }
+        );
         AssertThrow(insert_result.second);
 
         auto &iterator = insert_result.first;

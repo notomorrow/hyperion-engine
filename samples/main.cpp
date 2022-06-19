@@ -159,6 +159,7 @@ public:
         ));
         scene->GetEnvironment()->AddLight(my_light.IncRef());
         
+        // scene->GetEnvironment()->AddRenderComponent<AABBRenderer>();
 
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
@@ -169,7 +170,9 @@ public:
         //test_model->Translate({0, 0, 5});
         test_model->Scale(0.075f);
         //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
-        
+        scene->GetRootNode()->AddChild(std::move(test_model));
+
+
         tex1 = engine->resources.textures.Add(
             engine->assets.Load<Texture>("textures/dirt.jpg")
         );
@@ -289,21 +292,33 @@ public:
         scene->Update(engine, delta);
 
         //scene->GetEnvironment()->GetShadowRenderer(0)->SetOrigin(scene->GetCamera()->GetTranslation());
-    
-        test_model->Update(engine, delta);
 
         if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT)) {
             const auto &mouse_position = input_manager->GetMousePosition();
-            Vector3 ray_cast_direction(mouse_position.mx.load(), mouse_position.mx.load(), -1.0f);
-            ray_cast_direction *= Matrix4(scene->GetCamera()->GetViewProjectionMatrix()).Invert();
-            ray_cast_direction *= -1.0f;
 
-            std::cout << "raycast dir: " << ray_cast_direction << "\n";
+            Vector3 ray_ndc(mouse_position.x.load(), mouse_position.y.load(), 1.0f);
+            ray_ndc.x = (2.0f * ray_ndc.x / static_cast<float>(input_manager->GetWindow()->width)) - 1.0f;
+            ray_ndc.y = (2.0f * ray_ndc.y / static_cast<float>(input_manager->GetWindow()->height)) - 1.0f;//(1.0f - (2.0f * ray_ndc.y)) / static_cast<float>(input_manager->GetWindow()->height);
+            const auto ray_clip = ray_ndc;
+            Vector3 ray_eye = ray_clip * Matrix4(scene->GetCamera()->GetProjectionMatrix()).Invert();
+            ray_eye.z = -1.0f;
 
-            Ray ray{scene->GetCamera()->GetTranslation(), ray_cast_direction};
+            Vector3 ray_direction = ray_eye * Matrix4(scene->GetCamera()->GetViewMatrix()).Invert();
+            ray_direction.Normalize();
+
+            //Vector3 ray_direction(mouse_position.x.load(), mouse_position.y.load(), 1.0f);
+            //ray_direction.x = ray_direction.x / 
+            // std::cout << "MX: " << mouse_position.x.load() << "\n";
+            // std::cout << "MY: " << mouse_position.y.load() << "\n";
+            // std::cout << "raycast dir: " << ray_direction << "\n";
+            // std::cout << "width: " << input_manager->GetWindow()->width << "\n";
+            // std::cout << "height: " << input_manager->GetWindow()->height << "\n";
+    
+            ray_direction = -scene->GetCamera()->GetDirection();
+            Ray ray{scene->GetCamera()->GetTranslation(), ray_direction};
             RayTestResults results;
 
-            if (engine->GetOctree().TestRay(ray, results)) {
+            if (scene->GetRootNode()->TestRay(ray, results)) {//engine->GetOctree().TestRay(ray, results)) {
                 std::cout << "Ray hits: " << results.Size();
 
                 auto &hit = results.Front();
@@ -315,6 +330,8 @@ public:
                         std::cout << "SPATIAL NAME:  " << material->GetName() << "\n";
                     }
                 }
+
+                scene->GetCamera()->SetTranslation(results.Front().hitpoint);
             }
         }
         
@@ -694,8 +711,8 @@ int main()
                 {
                     const auto &mouse_position = my_game.input_manager->GetMousePosition();
 
-                    int mouse_x = mouse_position.mx.load(),
-                        mouse_y = mouse_position.my.load();
+                    int mouse_x = mouse_position.x.load(),
+                        mouse_y = mouse_position.y.load();
 
                     float mx, my;
 
