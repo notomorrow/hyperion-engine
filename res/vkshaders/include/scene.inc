@@ -1,4 +1,4 @@
-#define HYP_MAX_SHADOW_MAPS 8
+#define HYP_MAX_SHADOW_MAPS 1 // tmp
 
 layout(std140, set = 2, binding = 0, row_major) readonly buffer SceneDataBlock {
     // 0
