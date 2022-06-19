@@ -85,8 +85,8 @@ public:
 
         // not sure why this needs to be in render thread atm?
         scene = engine->resources.scenes.Add(std::make_unique<v2::Scene>(
-            std::make_unique<FollowCamera>(
-                Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
+            std::make_unique<FpsCamera>(//FollowCamera>(
+                //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 1024, 768,
                 70.0f,
                 0.05f, 550.0f
@@ -293,7 +293,14 @@ public:
         test_model->Update(engine, delta);
 
         if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT)) {
-            Ray ray{scene->GetCamera()->GetTranslation(), scene->GetCamera()->GetDirection()};
+            const auto &mouse_position = input_manager->GetMousePosition();
+            Vector3 ray_cast_direction(mouse_position.mx.load(), mouse_position.mx.load(), -1.0f);
+            ray_cast_direction *= Matrix4(scene->GetCamera()->GetViewProjectionMatrix()).Invert();
+            ray_cast_direction *= -1.0f;
+
+            std::cout << "raycast dir: " << ray_cast_direction << "\n";
+
+            Ray ray{scene->GetCamera()->GetTranslation(), ray_cast_direction};
             RayTestResults results;
 
             if (engine->GetOctree().TestRay(ray, results)) {
@@ -301,7 +308,13 @@ public:
 
                 auto &hit = results.Front();
 
-                std::cout << "  closest hit: " << hit.distance << ",  " << hit.hitpoint << "   octant:  " << hit.user_data << "\n";
+                std::cout << "  closest hit: " << hit.distance << ",  " << hit.hitpoint << "   spatial ID  :  " << hit.id << "\n";
+
+                if (auto lookup_result = engine->resources.spatials.Lookup(Spatial::ID{hit.id})) {
+                    if (auto *material = lookup_result->GetMaterial()) {
+                        std::cout << "SPATIAL NAME:  " << material->GetName() << "\n";
+                    }
+                }
             }
         }
         
@@ -322,7 +335,7 @@ public:
 
             suzanne->SetLocalTranslation({7, std::sin(timer * 0.35f) * 7.0f + 7.0f, 5});
 
-            scene->GetCamera()->SetTarget(suzanne->GetWorldTranslation());
+            //scene->GetCamera()->SetTarget(suzanne->GetWorldTranslation());
         }
         
         material_test_obj->SetLocalScale(3.45f);

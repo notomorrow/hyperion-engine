@@ -17,13 +17,16 @@ class BoundingBox;
 class RayTestResults;
 struct RayHit;
 
+using RayHitID = UInt;
+
 struct Ray {
     Vector3 position;
     Vector3 direction;
 
+    bool TestAabb(const BoundingBox &aabb) const;
     bool TestAabb(const BoundingBox &aabb, RayTestResults &out_results) const;
-    bool TestAabb(const BoundingBox &aabb, int hit_id, RayTestResults &out_results) const;
-    bool TestAabb(const BoundingBox &aabb, int hit_id, const void *user_data, RayTestResults &out_results) const;
+    bool TestAabb(const BoundingBox &aabb, RayHitID hit_id, RayTestResults &out_results) const;
+    bool TestAabb(const BoundingBox &aabb, RayHitID hit_id, const void *user_data, RayTestResults &out_results) const;
 
     HashCode GetHashCode() const
     {
@@ -42,7 +45,7 @@ struct RayHit {
     Vector3     hitpoint;
     Vector3     normal;
     float       distance  = 0.0f;
-    int         id        = ~0;
+    RayHitID    id        = ~0u;
     const void *user_data = nullptr;
 
     bool operator<(const RayHit &other) const
