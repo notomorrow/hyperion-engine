@@ -14,9 +14,9 @@
 
 namespace hyperion {
 
-struct MousePosition {
-    std::atomic_int mx{0};
-    std::atomic_int my{0};
+struct AtomicScalar2D {
+    std::atomic_int x{0};
+    std::atomic_int y{0};
 };
 
 struct InputState {
@@ -39,8 +39,11 @@ public:
 
     void CheckEvent(SystemEvent *event);
 
-    MousePosition &GetMousePosition()             { return m_mouse_position; }
-    const MousePosition &GetMousePosition() const { return m_mouse_position; }
+    AtomicScalar2D &GetMousePosition()             { return m_mouse_position; }
+    const AtomicScalar2D &GetMousePosition() const { return m_mouse_position; }
+
+    AtomicScalar2D &GetWindowSize()                { return m_window_size; }
+    const AtomicScalar2D &GetWindowSize() const    { return m_window_size; }
 
     void SetMousePosition(int x,  int y)          { GetWindow()->SetMousePosition(x, y); }
 
@@ -51,6 +54,7 @@ public:
     void MouseButtonUp(int btn)                   { SetMouseButton(btn, false); }
 
     void UpdateMousePosition();
+    void UpdateWindowSize();
 
     bool IsKeyDown(int key) const;
     bool IsKeyUp(int key) const                   { return !IsKeyDown(key); }
@@ -61,8 +65,9 @@ public:
     SystemWindow *GetWindow()                     { return this->window; };
 
 private:
-    InputState    m_input_state;
-    MousePosition m_mouse_position;
+    InputState     m_input_state;
+    AtomicScalar2D m_mouse_position;
+    AtomicScalar2D m_window_size;
 
     SystemWindow *window = nullptr;
 

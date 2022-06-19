@@ -1,5 +1,5 @@
 #include "shadows.h"
-#include "../engine.h"
+#include <engine.h>
 
 #include <camera/ortho_camera.h>
 

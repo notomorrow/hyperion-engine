@@ -149,7 +149,11 @@ Node *Node::AddChild(std::unique_ptr<Node> &&node)
 
     m_child_nodes.push_back(std::move(node));
 
-    return m_child_nodes.back().get();
+    auto *child = m_child_nodes.back().get();
+
+    child->UpdateWorldTransform();
+
+    return child;
 }
 
 bool Node::RemoveChild(NodeList::iterator iter)
@@ -172,6 +176,8 @@ bool Node::RemoveChild(NodeList::iterator iter)
     }
 
     m_child_nodes.erase(iter);
+
+    UpdateWorldTransform();
 
     return true;
 }
@@ -340,6 +346,10 @@ void Node::UpdateWorldTransform()
         m_world_aabb.Extend(node->m_world_aabb);
     }
 
+    if (m_parent_node != nullptr) {
+        m_parent_node->m_world_aabb.Extend(m_world_aabb);
+    }
+
     if (m_spatial != nullptr) {
         m_spatial->SetTransform(m_world_transform);
     }
@@ -368,6 +378,29 @@ void Node::Update(Engine *engine, GameCounter::TickUnit delta)
     for (auto *node : m_descendents) {
         node->UpdateInternal(engine, delta);
     }
+}
+
+bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
+{
+    const bool has_node_hit = ray.TestAabb(m_world_aabb);
+
+    bool has_entity_hit = false;
+
+    if (has_node_hit) {
+        if (m_spatial != nullptr) {
+            has_entity_hit = ray.TestAabb(m_spatial->GetWorldAabb(), m_spatial->GetId().value, out_results);
+        }
+
+        for (auto &child_node : m_child_nodes) {
+            if (child_node == nullptr) {
+                continue;
+            }
+
+            has_entity_hit = has_entity_hit || child_node->TestRay(ray, out_results);
+        }
+    }
+
+    return has_entity_hit;
 }
 
 } // namespace hyperion::v2
