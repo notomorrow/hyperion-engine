@@ -8,8 +8,10 @@ Kd 1.0 1.0 1.0
 Ks 0.500000 0.500000 0.500000
 Ni 1.000000
 d 1.000000
-map_kD gold-scuffed-Unreal-Engine/gold-scuffed_basecolor.png
-map_bump gold-scuffed-Unreal-Engine/gold-scuffed_normal.png
-map_kS gold-scuffed-Unreal-Engine/gold-scuffed_metallic.png
-map_nS gold-scuffed-Unreal-Engine/gold-scuffed_roughness.png
+map_kD harshbricks-Unreal-Engine/harshbricks-albedo.png
+map_bump harshbricks-Unreal-Engine/harshbricks-normal.png
+map_kS harshbricks-Unreal-Engine/harshbricks-metalness.png
+map_nS harshbricks-Unreal-Engine/harshbricks-roughness.png
+map_ao harshbricks-Unreal-Engine/harshbricks-ao2.png
+map_height harshbricks-Unreal-Engine/harshbricks-height5-16.png
 illum 2
