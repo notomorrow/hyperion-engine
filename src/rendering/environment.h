@@ -2,7 +2,7 @@
 #define HYPERION_V2_ENVIRONMENT_H
 
 #include "base.h"
-#include "shadows.h"
+#include <rendering/render_components/shadows.h>
 #include "light.h"
 
 #include <core/lib/component_set.h>

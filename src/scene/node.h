@@ -7,6 +7,7 @@
 #include "controller.h"
 
 #include <math/transform.h>
+#include <math/ray.h>
 
 #include <vector>
 #include <memory>
@@ -273,6 +274,8 @@ public:
 
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
     void Update(Engine *engine, GameCounter::TickUnit delta);
+
+    bool TestRay(const Ray &ray, RayTestResults &out_results) const;
 
 protected:
     Node(
