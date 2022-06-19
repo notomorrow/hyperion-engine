@@ -273,16 +273,16 @@ public:
         return result;
     }
 
-    /* \brief Set a parameter on this material with the given key and value
+    /*! \brief Set a parameter on this material with the given key and value
      * @param key The key of the parameter to be set
      * @param value The value of the parameter to be set
      */
     void SetParameter(MaterialKey key, const Parameter &value);
 
-    /* \brief Set all parameters back to their default values. */
+    /*! \brief Set all parameters back to their default values. */
     void ResetParameters();
 
-    /* \brief Sets the texture with the given key on this Material.
+    /*! \brief Sets the texture with the given key on this Material.
      * If the Material has already been initialized, the Texture is initialized.
      * Otherwise, it will be initialized when the Material's init callback is fired off.
      * @param key The texture slot to set the texture on
@@ -290,12 +290,15 @@ public:
      */
     void SetTexture(TextureKey key, Ref<Texture> &&texture);
 
-    /* \brief Return a pointer to a Texture set on this Material by the given
+    /*! \brief Return a pointer to a Texture set on this Material by the given
      * texture key. If no Texture was set, nullptr is returned.
      * @param key The key of the texture to find
      * @returns Pointer to the found Texture, or nullptr.
      */
     Texture *GetTexture(TextureKey key) const;
+
+    /*! \brief Get assigned name of the material */
+    const char *GetName() const { return m_name; }
 
     void Init(Engine *engine);
     void Update(Engine *engine);
