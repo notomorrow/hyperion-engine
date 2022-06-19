@@ -25,7 +25,7 @@ layout (location = 7) in vec4 a_bone_indices;
 #include "include/scene.inc"
 #include "include/object.inc"
 
-#define HYP_ENABLE_SKINNING 0
+#define HYP_ENABLE_SKINNING 1
 
 struct Skeleton {
     mat4 bones[128];
