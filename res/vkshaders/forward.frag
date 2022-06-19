@@ -70,7 +70,7 @@ void main()
         vec4 albedo_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map, texcoord);
         
         if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
-        //    discard;
+            discard;
         }
 
         gbuffer_albedo *= albedo_texture;
