@@ -135,7 +135,7 @@ public:
 
         AssertThrow(it != m_map.End());
 
-        return it->second.get();
+        return it->second;
     }
 
     template <class T>
@@ -145,7 +145,7 @@ public:
 
         AssertThrow(it != m_map.End());
 
-        return it->second.get();
+        return it->second;
     }
 
     template <class T>

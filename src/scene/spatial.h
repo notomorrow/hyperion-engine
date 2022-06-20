@@ -89,19 +89,19 @@ public:
 
     void SetStencilAttributes(const StencilState &stencil_state);
 
-    Bucket GetBucket() const { return m_renderable_attributes.bucket; }
+    Bucket GetBucket() const                { return m_renderable_attributes.bucket; }
     void SetBucket(Bucket bucket);
 
-    const Vector3 &GetTranslation() const { return m_transform.GetTranslation(); }
+    const Vector3 &GetTranslation() const   { return m_transform.GetTranslation(); }
     void SetTranslation(const Vector3 &translation);
 
-    const Vector3 &GetScale() const       { return m_transform.GetScale(); }
+    const Vector3 &GetScale() const         { return m_transform.GetScale(); }
     void SetScale(const Vector3 &scale);
 
-    const Quaterion &GetRotation() const  { return m_transform.GetRotation(); }
+    const Quaterion &GetRotation() const    { return m_transform.GetRotation(); }
     void SetRotation(const Quaternion &rotation);
 
-    const Transform &GetTransform() const { return m_transform; }
+    const Transform &GetTransform() const   { return m_transform; }
     void SetTransform(const Transform &transform);
 
     const BoundingBox &GetLocalAabb() const { return m_local_aabb; }

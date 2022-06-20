@@ -6,7 +6,7 @@
 namespace hyperion::v2 {
 
 template <class Component>
-class ComponentSet {
+class ComponentSetUnique {
 public:
     using ComponentId = UInt;
     using Map         = FlatMap<ComponentId, std::unique_ptr<Component>>;
@@ -28,23 +28,23 @@ public:
     using Iterator      = typename Map::Iterator;
     using ConstIterator = typename Map::ConstIterator;
 
-    ComponentSet() = default;
-    ComponentSet(const ComponentSet &other) = delete;
-    ComponentSet &operator=(const ComponentSet &other) = delete;
+    ComponentSetUnique() = default;
+    ComponentSetUnique(const ComponentSetUnique &other) = delete;
+    ComponentSetUnique &operator=(const ComponentSetUnique &other) = delete;
 
-    ComponentSet(ComponentSet &&other) noexcept
+    ComponentSetUnique(ComponentSetUnique &&other) noexcept
         : m_map(std::move(other.m_map))
     {
     }
 
-    ComponentSet &operator=(ComponentSet &&other) noexcept
+    ComponentSetUnique &operator=(ComponentSetUnique &&other) noexcept
     {
         m_map = std::move(other.m_map);
 
         return *this;
     }
 
-    ~ComponentSet() = default;
+    ~ComponentSetUnique() = default;
     
     template <class T>
     void Set(std::unique_ptr<T> &&component)
