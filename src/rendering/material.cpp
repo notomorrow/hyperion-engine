@@ -141,6 +141,7 @@ void Material::EnqueueDescriptorSetDestroy()
         auto &descriptor_pool = engine->GetInstance()->GetDescriptorPool();
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            DebugLog(LogType::Debug, "Destroy descriptor set   %u   %u\n", m_descriptor_sets[frame_index]->GetRealIndex(), frame_index);
             descriptor_pool.RemoveDescriptorSet(m_descriptor_sets[frame_index]);
         }
         

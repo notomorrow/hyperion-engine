@@ -55,6 +55,7 @@ enum class ShaderKey {
     BASIC_VEGETATION,
     BASIC_SKYBOX,
     STENCIL_OUTLINE,
+    DEBUG_AABB,
     CUSTOM
 };
 

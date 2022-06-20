@@ -6,7 +6,7 @@
 #include <rendering/post_fx.h>
 #include <rendering/render_list.h>
 #include <rendering/deferred.h>
-#include <rendering/shadows.h>
+#include <rendering/render_components/shadows.h>
 #include <rendering/resources.h>
 #include <rendering/shader_manager.h>
 #include <rendering/renderable_attributes.h>
