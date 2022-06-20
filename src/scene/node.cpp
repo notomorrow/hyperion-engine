@@ -388,7 +388,12 @@ bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
 
     if (has_node_hit) {
         if (m_spatial != nullptr) {
-            has_entity_hit = ray.TestAabb(m_spatial->GetWorldAabb(), m_spatial->GetId().value, out_results);
+            has_entity_hit = ray.TestAabb(
+                m_spatial->GetWorldAabb(),
+                m_spatial->GetId().value,
+                m_spatial.ptr,
+                out_results
+            );
         }
 
         for (auto &child_node : m_child_nodes) {
@@ -396,7 +401,9 @@ bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
                 continue;
             }
 
-            has_entity_hit = has_entity_hit || child_node->TestRay(ray, out_results);
+            if (child_node->TestRay(ray, out_results)) {
+                has_entity_hit = true;
+            }
         }
     }
 

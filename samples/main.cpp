@@ -120,6 +120,7 @@ public:
         grass->GetChild(0)->GetSpatial()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
         grass->Scale(1.0f);
         grass->Translate({0, 1, 0});
+        grass->AddController<AabbDebugController>(engine);
 
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
@@ -146,6 +147,9 @@ public:
         zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
         zombie->Scale(0.25f);
         zombie->Translate({0, 0, -5});
+        zombie->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+        zombie->AddController<AabbDebugController>(engine);
+        scene->GetRootNode()->AddChild(std::move(zombie));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
@@ -208,8 +212,6 @@ public:
 
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
 
-        zombie->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-        zombie->AddController<AabbDebugController>(engine);
         //zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
 
         //zombie->AddController<AudioController>(engine->assets.Load<AudioSource>("sounds/taunt.wav"));
@@ -295,57 +297,92 @@ public:
 
         //scene->GetEnvironment()->GetShadowRenderer(0)->SetOrigin(scene->GetCamera()->GetTranslation());
 
-        if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT)) {
+        if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
+            ray_cast_timer = 0.0f;
             const auto &mouse_position = input_manager->GetMousePosition();
 
-            Vector3 ray_ndc(mouse_position.x.load(), mouse_position.y.load(), 1.0f);
-            ray_ndc.x = (2.0f * ray_ndc.x / static_cast<float>(input_manager->GetWindow()->width)) - 1.0f;
-            ray_ndc.y = (2.0f * ray_ndc.y / static_cast<float>(input_manager->GetWindow()->height)) - 1.0f;//(1.0f - (2.0f * ray_ndc.y)) / static_cast<float>(input_manager->GetWindow()->height);
-            const auto ray_clip = ray_ndc;
-            Vector3 ray_eye = ray_clip * Matrix4(scene->GetCamera()->GetProjectionMatrix()).Invert();
-            ray_eye.z = -1.0f;
+            const auto mouse_x = mouse_position.x.load();
+            const auto mouse_y = mouse_position.y.load();
 
-            Vector3 ray_direction = ray_eye * Matrix4(scene->GetCamera()->GetViewMatrix()).Invert();
-            ray_direction.Normalize();
+            // Vector3 ray_ndc(mouse_position.x.load(), mouse_position.y.load(), 1.0f);
+            // ray_ndc.x = (2.0f * ray_ndc.x / static_cast<float>(input_manager->GetWindow()->width)) - 1.0f;
+            // ray_ndc.y =(1.0f - (2.0f * ray_ndc.y)) / static_cast<float>(input_manager->GetWindow()->height);
+            // const auto ray_clip = ray_ndc;
+            // Vector3 ray_eye = Matrix4(scene->GetCamera()->GetProjectionMatrix()).Invert() * ray_clip;
+            // ray_eye.z = -1.0f;
 
-            //Vector3 ray_direction(mouse_position.x.load(), mouse_position.y.load(), 1.0f);
-            //ray_direction.x = ray_direction.x / 
-            // std::cout << "MX: " << mouse_position.x.load() << "\n";
-            // std::cout << "MY: " << mouse_position.y.load() << "\n";
-            // std::cout << "raycast dir: " << ray_direction << "\n";
-            // std::cout << "width: " << input_manager->GetWindow()->width << "\n";
-            // std::cout << "height: " << input_manager->GetWindow()->height << "\n";
-    
-            ray_direction = -scene->GetCamera()->GetDirection();
-            Ray ray{scene->GetCamera()->GetTranslation(), ray_direction};
+            // Vector3 ray_direction = Matrix4(scene->GetCamera()->GetViewMatrix()).Invert() * ray_eye;
+            // ray_direction.Normalize();
+
+            // screen space (viewport coordinates)
+            // float x = ( 2.0f * mouse_x ) / static_cast<float>(input_manager->GetWindow()->width) - 1.0f;
+            // float y = 1.0f - ( 2.0f * mouse_y ) / static_cast<float>(input_manager->GetWindow()->height);
+            // float z = 1.0f;
+            // // normalised device space
+            // Vector3 ray_nds = Vector3( x, y, z );
+            // // clip space
+            // Vector4 ray_clip = Vector4( ray_nds[0], ray_nds[1], -1.0, 1.0 );
+            // // eye space
+            // Vector4 ray_eye = Matrix4(scene->GetCamera()->GetProjectionMatrix()).Invert() * ray_clip;
+            // ray_eye      = Vector4( ray_eye[0], ray_eye[1], -1.0, 0.0 );
+            // // world space
+            // Vector4 ray_direction = Vector4(  Matrix4(scene->GetCamera()->GetViewMatrix()).Invert() * ray_eye );
+            const auto mouse_world = scene->GetCamera()->TransformScreenToWorld(
+                Vector2(
+                    mouse_x / static_cast<float>(input_manager->GetWindow()->width),
+                    mouse_y / static_cast<float>(input_manager->GetWindow()->height)
+                )
+            );
+
+            auto ray_direction = mouse_world.Normalized() * -1.0f;
+
+            Ray ray{scene->GetCamera()->GetTranslation(), Vector3(ray_direction)};
             RayTestResults results;
 
-            if (scene->GetRootNode()->TestRay(ray, results)) {//engine->GetOctree().TestRay(ray, results)) {
-                std::cout << "Ray hits: " << results.Size();
+            if (engine->GetOctree().TestRay(ray, results)) {//scene->GetRootNode()->TestRay(ray, results)) {//engine->GetOctree().TestRay(ray, results)) {
+                RayTestResults triangle_mesh_results;
 
-                auto &hit = results.Front();
+                for (auto &hit : results) {
+                    // now ray test each result as triangle mesh to find exact hit point
 
-                std::cout << "  closest hit: " << hit.distance << ",  " << hit.hitpoint << "   spatial ID  :  " << hit.id << "\n";
-
-                if (auto lookup_result = engine->resources.spatials.Lookup(Spatial::ID{hit.id})) {
-                    if (auto *material = lookup_result->GetMaterial()) {
-                        std::cout << "SPATIAL NAME:  " << material->GetName() << "\n";
+                    if (auto lookup_result = engine->resources.spatials.Lookup(Spatial::ID{hit.id})) {
+                        if (auto *mesh = lookup_result->GetMesh()) {
+                            ray.TestTriangleList(
+                                mesh->GetVertices(),
+                                mesh->GetIndices(),
+                                lookup_result->GetTransform(),
+                                lookup_result->GetId().value,
+                                triangle_mesh_results
+                            );
+                        }
                     }
                 }
 
-                scene->GetCamera()->SetTranslation(results.Front().hitpoint);
+                if (!triangle_mesh_results.Empty()) {
+                    auto mesh_hit = triangle_mesh_results.Front();
+                    std::cout << "  closest hit: " << mesh_hit.distance << ",  " << mesh_hit.hitpoint << "   spatial ID  :  " << mesh_hit.id << "\n";
+
+                    if (auto lookup_result = engine->resources.spatials.Lookup(Spatial::ID{mesh_hit.id})) {
+                        if (auto *material = lookup_result->GetMaterial()) {
+                            std::cout << "MATERIAL: " << material->GetName() << "\n";
+                        }
+                    }
+                    scene->GetCamera()->SetTranslation(mesh_hit.hitpoint);
+                }
             }
         }
+
+        ray_cast_timer += delta;
         
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
        // zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
-        if (uint32_t(timer) % 2 == 0) {
-            zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
-        } else {
-            zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
-        }
+        // if (uint32_t(timer) % 2 == 0) {
+        //     zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
+        // } else {
+        //     zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex2.IncRef());
+        // }
 
         if (auto *suzanne = scene->GetRootNode()->Select("Suzanne")) {
             //suzanne->GetChild(0)->GetSpatial()->SetStencilAttributes(StencilState{ 1, renderer::StencilMode::FILL });
@@ -373,7 +410,7 @@ public:
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.8f);//std::cos(timer) * 0.5f + 0.5f);
         material_test_obj->Update(engine, delta);
 
-        zombie->Update(engine, delta);
+        // zombie->Update(engine, delta);
 
         //cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         //cube_obj->Update(engine, delta);
@@ -388,6 +425,7 @@ public:
     Ref<Texture> tex1, tex2;
     std::unique_ptr<Node> test_model, zombie, cube_obj, material_test_obj;
     GameCounter::TickUnit timer{};
+    GameCounter::TickUnit ray_cast_timer{};
     std::atomic_uint32_t counter{0};
 
 };

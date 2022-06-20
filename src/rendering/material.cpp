@@ -142,6 +142,7 @@ void Material::EnqueueDescriptorSetDestroy()
 
         for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             DebugLog(LogType::Debug, "Destroy descriptor set   %u   %u\n", m_descriptor_sets[frame_index]->GetRealIndex(), frame_index);
+            // HYP_BREAKPOINT;
             descriptor_pool.RemoveDescriptorSet(m_descriptor_sets[frame_index]);
         }
         

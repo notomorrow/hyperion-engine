@@ -77,6 +77,30 @@ void Camera::UpdateViewProjectionMatrix()
     m_frustum.SetFromViewProjectionMatrix(m_view_proj_mat);
 }
 
+Vector3 Camera::TransformScreenToNDC(const Vector2 &screen) const
+{
+    return {
+        1.0f - (2.0f * screen.x),
+        1.0f - (2.0f * screen.y),
+        1.0f
+    };
+}
+
+Vector4 Camera::TransformNDCToWorld(const Vector3 &ndc) const
+{
+    Vector4 clip(ndc.x, ndc.y, -1.0f, 1.0f);
+
+    Vector4 eye = Matrix4(m_proj_mat).Invert() * clip;
+    eye         = Vector4(eye.x, eye.y, -1.0f, 0.0f);
+
+    return Matrix4(m_view_mat).Invert() * eye;
+}
+
+Vector4 Camera::TransformScreenToWorld(const Vector2 &screen) const
+{
+    return TransformNDCToWorld(TransformScreenToNDC(screen));
+}
+
 void Camera::Update(GameCounter::TickUnit dt)
 {
     UpdateCommandQueue(dt);
