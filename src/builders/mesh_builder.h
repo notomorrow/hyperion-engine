@@ -12,6 +12,7 @@ using renderer::Topology;
 class MeshBuilder {
 public:
     static std::unique_ptr<Mesh> Quad(Topology topology = Topology::TRIANGLES);
+    static std::unique_ptr<Mesh> Cube();
 };
 
 } // namespace hyperion::v2

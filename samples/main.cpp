@@ -18,6 +18,7 @@
 #include <rendering/post_fx/fxaa.h>
 #include <scene/controllers/audio_controller.h>
 #include <scene/controllers/animation_controller.h>
+#include <scene/controllers/aabb_debug_controller.h>
 #include <scene/controllers/paging/basic_paging_controller.h>
 #include <scene/controllers/scripted_controller.h>
 #include <core/lib/flat_set.h>
@@ -208,6 +209,7 @@ public:
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
 
         zombie->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+        zombie->AddController<AabbDebugController>(engine);
         //zombie->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, tex1.IncRef());
 
         //zombie->AddController<AudioController>(engine->assets.Load<AudioSource>("sounds/taunt.wav"));
@@ -465,6 +467,26 @@ int main()
                     ShaderModule::Type::FRAGMENT, {
                         FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/forward_frag.spv")).Read(),
                         {.name = "forward frag"}
+                    }
+                }
+            }
+        ))
+    );
+
+    engine->shader_manager.SetShader(
+        v2::ShaderKey::DEBUG_AABB,
+        engine->resources.shaders.Add(std::make_unique<v2::Shader>(
+            std::vector<v2::SubShader>{
+                {
+                    ShaderModule::Type::VERTEX, {
+                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/aabb.vert.spv")).Read(),
+                        {.name = "aabb vert"}
+                    }
+                },
+                {
+                    ShaderModule::Type::FRAGMENT, {
+                        FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/aabb.frag.spv")).Read(),
+                        {.name = "aabb frag"}
                     }
                 }
             }

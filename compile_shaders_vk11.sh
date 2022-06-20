@@ -15,6 +15,8 @@ glslc --target-env=$VULKAN_TARGET filter_pass.frag -o filter_pass_frag.spv
 glslc --target-env=$VULKAN_TARGET filter_pass.vert -o filter_pass_vert.spv
 glslc --target-env=$VULKAN_TARGET fxaa.frag -o fxaa.frag.spv
 
+glslc --target-env=$VULKAN_TARGET aabb.frag -o aabb.frag.spv
+glslc --target-env=$VULKAN_TARGET aabb.vert -o aabb.vert.spv
 
 glslc --target-env=$VULKAN_TARGET skybox.frag -o skybox_frag.spv
 glslc --target-env=$VULKAN_TARGET skybox.vert -o skybox_vert.spv

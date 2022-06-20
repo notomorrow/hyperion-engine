@@ -24,18 +24,18 @@ public:
     Scene &operator=(const Scene &other) = delete;
     ~Scene();
 
-    Camera *GetCamera() const                        { return m_camera.get(); }
-    void SetCamera(std::unique_ptr<Camera> &&camera) { m_camera = std::move(camera); }
+    Camera *GetCamera() const                            { return m_camera.get(); }
+    void SetCamera(std::unique_ptr<Camera> &&camera)     { m_camera = std::move(camera); }
 
-    Node *GetRootNode() const                        { return m_root_node.get(); }
+    Node *GetRootNode() const                            { return m_root_node.get(); }
 
-    Environment *GetEnvironment() const              { return m_environment; }
+    Environment *GetEnvironment() const                  { return m_environment; }
 
     Texture *GetEnvironmentTexture(uint32_t index) const { return m_environment_textures[index].ptr; }
     void SetEnvironmentTexture(uint32_t index, Ref<Texture> &&texture);
 
-    Scene::ID GetParentId() const  { return m_parent_id; }
-    void SetParentId(Scene::ID id) { m_parent_id = id; }
+    Scene::ID GetParentId() const                        { return m_parent_id; }
+    void SetParentId(Scene::ID id)                       { m_parent_id = id; }
     
     void Init(Engine *engine);
     void Update(Engine *engine, GameCounter::TickUnit delta);
