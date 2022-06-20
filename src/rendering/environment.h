@@ -95,17 +95,17 @@ public:
     void RenderComponents(Engine *engine, Frame *frame);
 
 private:
-    ComponentSet<RenderComponentBase>                           m_render_components;
-    ComponentSet<RenderComponentBase>                           m_render_components_pending_addition;
-    FlatSet<ComponentSet<RenderComponentBase>::ComponentId>     m_render_components_pending_removal;
-    std::atomic_bool                                            m_has_render_component_updates{false};
+    ComponentSetUnique<RenderComponentBase>                       m_render_components;
+    ComponentSetUnique<RenderComponentBase>                       m_render_components_pending_addition;
+    FlatSet<ComponentSetUnique<RenderComponentBase>::ComponentId> m_render_components_pending_removal;
+    std::atomic_bool                                              m_has_render_component_updates{false};
 
-    std::vector<Ref<Light>>                                     m_lights;
+    std::vector<Ref<Light>>                                       m_lights;
 
-    float                                                       m_global_timer;
+    float                                                         m_global_timer;
 
-    std::mutex                                                  m_render_component_mutex;
-    AtomicLock                                                  m_updating_render_components;
+    std::mutex                                                    m_render_component_mutex;
+    AtomicLock                                                    m_updating_render_components;
 };
 
 } // namespace hyperion::v2
