@@ -251,7 +251,7 @@ bool Octree::Insert(Engine *engine, Spatial *spatial)
 
 bool Octree::InsertInternal(Engine *engine, Spatial *spatial)
 {
-    m_nodes.push_back(Node{
+    m_nodes.push_back(Node {
         .spatial          = spatial,
         .aabb             = spatial->GetWorldAabb(),
         .visibility_state = &m_visibility_state

@@ -11,7 +11,6 @@ AnimationController::AnimationController()
 
 void AnimationController::OnAdded()
 {
-    FindSkeleton(GetParent());
 }
 
 void AnimationController::OnRemoved()
@@ -40,15 +39,27 @@ void AnimationController::OnUpdate(GameCounter::TickUnit delta)
     }
 }
 
+void AnimationController::OnAddedToNode(Node *node)
+{
+    FindSkeleton(node);
+}
+
+void AnimationController::OnRemovedFromNode(Node *node)
+{
+    m_skeleton = nullptr;
+
+    FindSkeletonDirect(GetOwner());
+}
+
 bool AnimationController::FindSkeleton(Node *node)
 {
     if (auto *spatial = node->GetSpatial()) {
-        if (auto &skeleton = spatial->GetSkeleton()) {
-            m_skeleton = skeleton.IncRef();
-
+        if (FindSkeletonDirect(node->GetSpatial())) {
             return true;
         }
     }
+
+    return false;
 
     return std::any_of(
         node->GetChildren().begin(),
@@ -57,6 +68,17 @@ bool AnimationController::FindSkeleton(Node *node)
             return child != nullptr && FindSkeleton(child.get());
         }
     );
+}
+
+bool AnimationController::FindSkeletonDirect(Spatial *spatial)
+{
+    if (auto &skeleton = spatial->GetSkeleton()) {
+        m_skeleton = skeleton.IncRef();
+
+        return true;
+    }
+
+    return false;
 }
 
 void AnimationController::Play(float speed, LoopMode loop_mode)
@@ -96,4 +118,4 @@ void AnimationController::Stop()
     m_animation_index = ~0u;
 }
 
-}
+} // namespace hyperion::v2
