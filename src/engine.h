@@ -17,6 +17,7 @@
 #include "game_thread.h"
 #include "threads.h"
 
+#include <core/ecs/component_registry.h>
 #include <core/scheduler.h>
 #include <core/lib/flat_map.h>
 
@@ -137,26 +138,29 @@ public:
     Engine(SystemSDL &, const char *app_name);
     ~Engine();
     
-    Instance *GetInstance() const                             { return m_instance.get(); }
-    Device   *GetDevice() const                               { return m_instance ? m_instance->GetDevice() : nullptr; }
+    Instance *GetInstance() const                                  { return m_instance.get(); }
+    Device   *GetDevice() const                                    { return m_instance ? m_instance->GetDevice() : nullptr; }
 
-    DeferredRenderer &GetDeferredRenderer()                   { return m_deferred_renderer; }
-    const DeferredRenderer &GetDeferredRenderer() const       { return m_deferred_renderer; }
+    DeferredRenderer &GetDeferredRenderer()                        { return m_deferred_renderer; }
+    const DeferredRenderer &GetDeferredRenderer() const            { return m_deferred_renderer; }
 
-    RenderListContainer &GetRenderListContainer()             { return m_render_list_container; }
-    const RenderListContainer &GetRenderListContainer() const { return m_render_list_container; }
+    RenderListContainer &GetRenderListContainer()                  { return m_render_list_container; }
+    const RenderListContainer &GetRenderListContainer() const      { return m_render_list_container; }
 
-    auto &GetRenderScheduler()                                { return render_scheduler; }
-    const auto &GetRenderScheduler() const                    { return render_scheduler; }
+    auto &GetRenderScheduler()                                     { return render_scheduler; }
+    const auto &GetRenderScheduler() const                         { return render_scheduler; }
 
-    auto &GetShaderData()                                     { return shader_globals; }
-    const auto &GetShaderData() const                         { return shader_globals; }
+    auto &GetShaderData()                                          { return shader_globals; }
+    const auto &GetShaderData() const                              { return shader_globals; }
     
-    auto &GetDummyData()                                      { return m_dummy_data; }
-    const auto &GetDummyData() const                          { return m_dummy_data; }
+    auto &GetDummyData()                                           { return m_dummy_data; }
+    const auto &GetDummyData() const                               { return m_dummy_data; }
 
-    Octree &GetOctree() { return m_octree; }
-    const Octree &GetOctree() const { return m_octree; }
+    Octree &GetOctree()                                            { return m_octree; }
+    const Octree &GetOctree() const                                { return m_octree; }
+
+    ComponentRegistry<Spatial> &GetComponentRegistry()             { return m_component_registry; }
+    const ComponentRegistry<Spatial> &GetComponentRegistry() const { return m_component_registry; }
 
     Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
@@ -212,6 +216,8 @@ private:
     std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;
 
     FlatMap<RenderableAttributeSet, GraphicsPipeline::ID> m_graphics_pipeline_mapping;
+
+    ComponentRegistry<Spatial> m_component_registry;
 
     DummyData m_dummy_data;
 };
