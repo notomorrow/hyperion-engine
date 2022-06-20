@@ -2,6 +2,9 @@
 #define HYPERION_RAY_H
 
 #include "vector3.h"
+#include "vertex.h"
+#include "triangle.h"
+#include "transform.h"
 
 #include <hash_code.h>
 #include <types.h>
@@ -27,6 +30,38 @@ struct Ray {
     bool TestAabb(const BoundingBox &aabb, RayTestResults &out_results) const;
     bool TestAabb(const BoundingBox &aabb, RayHitID hit_id, RayTestResults &out_results) const;
     bool TestAabb(const BoundingBox &aabb, RayHitID hit_id, const void *user_data, RayTestResults &out_results) const;
+
+    bool TestTriangle(const Triangle &triangle) const;
+    bool TestTriangle(const Triangle &triangle, RayTestResults &out_results) const;
+    bool TestTriangle(const Triangle &triangle, RayHitID hit_id, RayTestResults &out_results) const;
+    bool TestTriangle(const Triangle &triangle, RayHitID hit_id, const void *user_data, RayTestResults &out_results) const;
+    
+    bool TestTriangleList(
+        const std::vector<Vertex> &vertices,
+        const std::vector<UInt32> &indices,
+        const Transform &transform
+    ) const;
+    bool TestTriangleList(
+        const std::vector<Vertex> &vertices,
+        const std::vector<UInt32> &indices,
+        const Transform &transform,
+        RayTestResults &out_results
+    ) const;
+    bool TestTriangleList(
+        const std::vector<Vertex> &vertices,
+        const std::vector<UInt32> &indices,
+        const Transform &transform,
+        RayHitID hit_id,
+        RayTestResults &out_results
+    ) const;
+    bool TestTriangleList(
+        const std::vector<Vertex> &vertices,
+        const std::vector<UInt32> &indices,
+        const Transform &transform,
+        RayHitID hit_id,
+        const void *user_data,
+        RayTestResults &out_results
+    ) const;
 
     HashCode GetHashCode() const
     {
@@ -90,8 +125,6 @@ struct RayHit {
 
 class RayTestResults : public FlatSet<RayHit> {
 public:
-    bool cumulative = true;
-    
     bool AddHit(const RayHit &hit);
 };
 

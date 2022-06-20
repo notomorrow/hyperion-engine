@@ -364,6 +364,25 @@ Matrix4 &Matrix4::operator*=(float scalar)
     return *this;
 }
 
+Vector3 Matrix4::operator*(const Vector3 &vec) const
+{
+    return {
+        rows[0][0] * vec.x + rows[0][1] * vec.y + rows[0][2] * vec.z + rows[0][3],
+        rows[1][0] * vec.x + rows[1][1] * vec.y + rows[1][2] * vec.z + rows[1][3],
+        rows[2][0] * vec.x + rows[2][1] * vec.y + rows[2][2] * vec.z + rows[2][3]
+    };
+}
+
+Vector4 Matrix4::operator*(const Vector4 &vec) const
+{
+    return {
+        rows[0][0] * vec.x + rows[0][1] * vec.y + rows[0][2] * vec.z + rows[0][3] * vec.w,
+        rows[1][0] * vec.x + rows[1][1] * vec.y + rows[1][2] * vec.z + rows[1][3] * vec.w,
+        rows[2][0] * vec.x + rows[2][1] * vec.y + rows[2][2] * vec.z + rows[2][3] * vec.w,
+        rows[3][0] * vec.x + rows[3][1] * vec.y + rows[3][2] * vec.z + rows[3][3] * vec.w
+    };
+}
+
 Matrix4 Matrix4::Zeroes()
 {
     float zero_array[sizeof(values) / sizeof(values[0])] = {0.0f};

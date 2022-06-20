@@ -30,6 +30,7 @@ public:
     Vector3(float x, float y, float z);
     Vector3(float xyz);
     explicit Vector3(const Vector2 &xy, float z);
+    explicit Vector3(const Vector4 &vec);
     Vector3(const Vector3 &other);
 
     float GetX() const { return x; }

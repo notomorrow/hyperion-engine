@@ -33,6 +33,18 @@ Vector3::Vector3(const Vector2 &xy, float z)
 {
 }
 
+Vector3::Vector3(const Vector4 &vec)
+    : x(vec.x),
+      y(vec.y),
+      z(vec.z)
+{
+    const float mag = MathUtil::Max(vec.w, MathUtil::epsilon<float>);
+
+    x /= mag;
+    y /= mag;
+    z /= mag;
+}
+
 Vector3::Vector3(const Vector3 &other)
     : x(other.x), 
       y(other.y), 

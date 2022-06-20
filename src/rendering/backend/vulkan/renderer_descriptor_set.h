@@ -414,11 +414,12 @@ public:
     Result Bind(Device *device, CommandBuffer *cmd, RaytracingPipeline *pipeline, const DescriptorSetBinding &) const;
 
     Result CreateDescriptorSet(Device *device, UInt index);
-    Result DestroyDescriptorSet(Device *device, UInt index);
     Result DestroyPendingDescriptorSets(Device *device, UInt frame_index);
     Result UpdateDescriptorSets(Device *device, UInt frame_index);
 
 private:
+    Result DestroyDescriptorSet(Device *device, UInt index);
+    
     void BindDescriptorSets(
         Device *device,
         CommandBuffer *cmd,

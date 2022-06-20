@@ -66,41 +66,4 @@ const Vertex &Triangle::Closest(const Vector3 &vec) const
 {
     return const_cast<Triangle *>(this)->Closest(vec);
 }
-
-bool Triangle::IntersectRay(const Ray &ray, RayTestResults &out) const
-{
-    float t, u, v;
-
-    Vector3 v0v1 = GetPoint(1).GetPosition() - GetPoint(0).GetPosition();
-	Vector3 v0v2 = GetPoint(2).GetPosition() - GetPoint(0).GetPosition();
-	Vector3 pvec = Vector3(ray.direction).Cross(v0v2);
-
-	float det = v0v1.Dot(pvec);
-
-	// ray and triangle are parallel if det is close to 0
-	if (std::fabs(det) < MathUtil::epsilon<float>) return false;
-
-	float invDet = 1.0 / det;
-
-	Vector3 tvec = ray.position - GetPoint(0).GetPosition();
-	u = tvec.Dot(pvec) * invDet;
-	if (u < 0 || u > 1) return false;
-
-	Vector3 qvec = Vector3(tvec).Cross(v0v1);
-	v = ray.direction.Dot(qvec) * invDet;
-	if (v < 0 || u + v > 1) return false;
-
-	t = v0v2.Dot(qvec) * invDet;
-
-    if (t > 0.0f) {
-        out.AddHit({
-            .hitpoint = ray.position + (ray.direction * t),
-            .normal   = Vector3(v0v1).Cross(v0v2)
-        });
-
-        return true;
-    }
-
-    return false;
-}
 } // namespace
