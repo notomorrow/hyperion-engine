@@ -35,6 +35,11 @@ struct Stub {
     decltype(m_wrapped) *operator->()             { return &m_wrapped; } \
     const decltype(m_wrapped) *operator->() const { return &m_wrapped; }
 
+using ComponentFlagBits = UInt;
+
+template <class T>
+struct ComponentInitInfo {};
+
 // a non-descript ID (no type attached)
 struct IDBase {
     using ValueType = UInt32;
@@ -71,10 +76,16 @@ template <class Type>
 class EngineComponentBase : public CallbackTrackable<EngineCallbacks> {
 public:
     using ID = ID<Type>;
+    using ComponentInitInfo = ComponentInitInfo<Type>;
 
     static constexpr ID empty_id = ID{0};
 
     EngineComponentBase()
+        : EngineComponentBase(ComponentInitInfo {})
+    {
+    }
+
+    EngineComponentBase(const ComponentInitInfo &init_info)
         : CallbackTrackable(),
           m_id(empty_id),
           m_init_called(false),
@@ -139,10 +150,14 @@ protected:
         return m_engine;
     }
 
-    ID m_id;
-    std::atomic_bool m_init_called;
-    std::atomic_bool m_is_ready;
-    Engine *m_engine;
+    HYP_FORCE_INLINE ComponentInitInfo &GetInitInfo()             { return m_init_info; }
+    HYP_FORCE_INLINE const ComponentInitInfo &GetInitInfo() const { return m_init_info; }
+
+    ID                      m_id;
+    std::atomic_bool        m_init_called;
+    std::atomic_bool        m_is_ready;
+    Engine                 *m_engine;
+    ComponentInitInfo       m_init_info;
 };
 
 template <class WrappedType>

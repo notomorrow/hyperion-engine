@@ -429,14 +429,18 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                 }
                 
                 if (!spatial->GetMesh()->IsReady()) {
+                    // TODO: rather than checking each call we should just add once it's ready
                     continue;
                 }
 
                 const auto spatial_index = spatial->GetId().value - 1;
 
-                const auto material_index = spatial->GetMaterial() != nullptr
-                    ? spatial->GetMaterial()->GetId().value - 1
-                    : 0;
+                UInt material_index = 0;
+
+                if (spatial->GetMaterial() != nullptr && spatial->GetMaterial()->IsReady()) {
+                    // TODO: rather than checking each call we should just add once
+                    material_index = spatial->GetMaterial()->GetId().value - 1;
+                }
 
                 const auto skeleton_index = spatial->GetSkeleton() != nullptr
                     ? spatial->GetSkeleton()->GetId().value - 1
