@@ -6,7 +6,7 @@ std::atomic<ControllerId> ControllerSet::controller_id_counter{0};
 
 Controller::Controller(const char *name)
     : m_name(nullptr),
-      m_parent(nullptr)
+      m_owner(nullptr)
 {
     if (name != nullptr) {
         size_t len = std::strlen(name);

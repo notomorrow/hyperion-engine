@@ -4,7 +4,6 @@
 #include <core/containers.h>
 #include <game_counter.h>
 #include "spatial.h"
-#include "controller.h"
 
 #include <math/transform.h>
 #include <math/ray.h>
@@ -239,37 +238,6 @@ public:
      */
     const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
 
-    template <class ControllerClass>
-    void AddController(std::unique_ptr<ControllerClass> &&controller)
-    {
-        static_assert(std::is_base_of_v<Controller, ControllerClass>, "Object must be a derived class of Controller");
-
-        if (controller->m_parent != nullptr) {
-            controller->OnRemoved();
-        }
-
-        controller->m_parent = this;
-        controller->OnAdded();
-
-        m_controllers.Set(std::move(controller));
-    }
-
-    template <class ControllerClass, class ...Args>
-    void AddController(Args &&... args)
-        { AddController<ControllerClass>(std::make_unique<ControllerClass>(std::forward<Args>(args)...)); }
-
-    template <class ControllerType>
-    ControllerType *GetController()             { return m_controllers.Get<ControllerType>(); }
-
-    template <class ControllerType>
-    bool HasController() const                  { return m_controllers.Has<ControllerType>(); }
-
-    template <class ControllerType>
-    bool RemoveController()                     { return m_controllers.Remove<ControllerType>(); }
-    
-    ControllerSet &GetControllers()             { return m_controllers; }
-    const ControllerSet &GetControllers() const { return m_controllers; }
-
     void UpdateWorldTransform();
 
     /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
@@ -288,7 +256,6 @@ protected:
     void SetScene(Scene *scene);
 
     void UpdateInternal(Engine *engine, GameCounter::TickUnit delta);
-    void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
     void OnNestedNodeAdded(Node *node);
     void OnNestedNodeRemoved(Node *node);
 
@@ -306,8 +273,6 @@ protected:
     std::vector<Node *> m_descendents;
 
     Scene *m_scene;
-
-    ControllerSet m_controllers;
 };
 
 } // namespace hyperion::v2

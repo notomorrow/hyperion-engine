@@ -17,10 +17,11 @@ namespace hyperion::v2 {
 using ControllerId = UInt32;
 
 class Node;
+class Spatial;
 class Engine;
 
 class Controller {
-    friend class Node;
+    friend class Spatial;
 
 public:
     Controller(const char *name);
@@ -29,19 +30,19 @@ public:
     virtual ~Controller();
 
     const char *GetName() const { return m_name; }
-    Node *GetParent() const     { return m_parent; }
+    Spatial *GetOwner() const   { return m_owner; }
 
 protected:
     virtual void OnAdded() = 0;
     virtual void OnRemoved() = 0;
     virtual void OnUpdate(GameCounter::TickUnit delta) = 0;
 
-    virtual void OnDescendentAdded(Node *descendent) {}
-    virtual void OnDescendentRemoved(Node *descendent) {}
+    virtual void OnRemovedFromNode(Node *node) {}
+    virtual void OnAddedToNode(Node *node) {}
 
 private:
-    char *m_name;
-    Node *m_parent;
+    char    *m_name;
+    Spatial *m_owner;
 };
 
 class ControllerSet {

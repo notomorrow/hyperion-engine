@@ -14,7 +14,7 @@ AabbDebugController::AabbDebugController(Engine *engine)
 
 void AabbDebugController::OnAdded()
 {
-    m_aabb = GetParent()->GetWorldAabb();
+    m_aabb = GetOwner()->GetWorldAabb();
 
     AssertThrow(m_engine != nullptr);
 
@@ -55,25 +55,21 @@ void AabbDebugController::OnRemoved()
 
 void AabbDebugController::OnUpdate(GameCounter::TickUnit delta)
 {
-    if (m_aabb != GetParent()->GetWorldAabb()) {
-        m_aabb = GetParent()->GetWorldAabb();
+    if (m_aabb != GetOwner()->GetWorldAabb()) {
+        m_aabb = GetOwner()->GetWorldAabb();
     }
 
     if (m_aabb_entity == nullptr) {
         return;
     }
 
-    // m_aabb.SetCenter(Vector3::Zero());
-
     m_aabb_entity->SetTransform(Transform(
-        GetParent()->GetWorldTranslation() + Vector3(0, m_aabb.GetDimensions().y * 0.5f, 0),
+        GetOwner()->GetTranslation() + Vector3(0, m_aabb.GetDimensions().y * 0.5f, 0),
         m_aabb.GetDimensions() * 0.5f,
         Quaternion::Identity()
     ));
 
-    m_aabb_entity->Update(m_engine);
-
-    // m_aabb_entity->SetTransform(GetParent()->GetWorldTransform());
+    m_aabb_entity->Update(m_engine, delta);
 }
 
 } // namespace hyperion::v2
