@@ -665,17 +665,23 @@ bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
 
     if (ray.TestAabb(m_aabb)) {
         for (auto &node : m_nodes) {
-            has_hit = has_hit || ray.TestAabb(
+            if (ray.TestAabb(
                 node.aabb,
                 node.spatial->GetId().value,
                 static_cast<void *>(node.spatial),
                 out_results
-            );
+            )) {
+                has_hit = true;
+            }
         }
         
         if (m_is_divided) {
             for (auto &octant : m_octants) {
-                has_hit = has_hit || octant.octree->TestRay(ray, out_results);
+                AssertThrow(octant.octree != nullptr);
+
+                if (octant.octree->TestRay(ray, out_results)) {
+                    has_hit = true;
+                }
             }
         }
     }

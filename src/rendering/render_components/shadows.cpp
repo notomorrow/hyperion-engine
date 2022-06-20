@@ -81,8 +81,11 @@ void ShadowPass::CreateDescriptors(Engine *engine)
 {
     AssertThrow(m_shadow_map_index != ~0u);
 
+
+    auto &framebuffer = m_framebuffer->GetFramebuffer();
+
     /* set descriptor */
-    engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
+    // engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
         if (!framebuffer.GetAttachmentRefs().empty()) {
             /* TODO: Removal of these descriptors */
 
@@ -105,8 +108,8 @@ void ShadowPass::CreateDescriptors(Engine *engine)
             }
         }
 
-        HYPERION_RETURN_OK;
-    });
+    //     HYPERION_RETURN_OK;
+    // });
 }
 
 void ShadowPass::CreatePipeline(Engine *engine)
@@ -198,7 +201,7 @@ void ShadowPass::Create(Engine *engine)
     CreatePipeline(engine);
     CreateDescriptors(engine);
 
-    HYP_FLUSH_RENDER_QUEUE(engine);
+    HYP_FLUSH_RENDER_QUEUE(engine); // force init stuff
 }
 
 void ShadowPass::Destroy(Engine *engine)

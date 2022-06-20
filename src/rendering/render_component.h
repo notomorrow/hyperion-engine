@@ -73,7 +73,7 @@ public:
     
     virtual void ComponentInit(Engine *engine) override final
     {
-        //Threads::AssertOnThread(THREAD_RENDER);
+        Threads::AssertOnThread(THREAD_RENDER);
 
         static_cast<Derived *>(this)->Init(engine);
 

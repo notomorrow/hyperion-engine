@@ -20,6 +20,11 @@ namespace hyperion::v2 {
 
 class Engine;
 
+template <class T>
+struct RefManager {
+
+};
+
 template <class Group>
 struct CallbackRef {
     UInt id;
@@ -900,7 +905,7 @@ public:
             ptr->GetId(),
             new RefCount{
                 .ref_manager = this,
-                .count       = 1
+                .count       = 0
             }
         );
         AssertThrow(insert_result.second);

@@ -52,6 +52,8 @@ public:
     Matrix4 &operator*=(const Matrix4 &other);
     Matrix4 operator*(float scalar) const;
     Matrix4 &operator*=(float scalar);
+    Vector3 operator*(const Vector3 &vec) const;
+    Vector4 operator*(const Vector4 &vec) const;
 
     bool operator==(const Matrix4 &other) const
     {  return &values[0] == &other.values[0] || !std::memcmp(values, other.values, std::size(values) * sizeof(values[0])); }

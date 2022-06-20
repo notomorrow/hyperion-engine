@@ -44,8 +44,8 @@ public:
     
     bool Empty() const
     { 
-        return MathUtil::Approximately(min, MathUtil::MaxSafeValue<Vector3>()) && 
-               MathUtil::Approximately(max, MathUtil::MinSafeValue<Vector3>());
+        return min == MathUtil::MaxSafeValue<Vector3>() && 
+               max == MathUtil::MinSafeValue<Vector3>();
     }
 
     BoundingBox &Extend(const Vector3 &vec);
