@@ -48,7 +48,7 @@ void AudioController::Stop()
 
 void AudioController::OnAdded()
 {
-    m_last_position = GetParent()->GetWorldTranslation();
+    m_last_position = GetOwner()->GetTranslation();
 }
 
 void AudioController::OnRemoved()
@@ -61,7 +61,7 @@ void AudioController::OnRemoved()
 void AudioController::OnUpdate(GameCounter::TickUnit delta)
 {
     if (m_source != nullptr && IsPlaying()) {
-        const auto new_position = GetParent()->GetWorldTranslation();
+        const auto new_position = GetOwner()->GetTranslation();
 
         if (m_state.loop_mode == LoopMode::ONCE) {
             switch (m_source->GetState()) {

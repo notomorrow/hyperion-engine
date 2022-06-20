@@ -13,6 +13,7 @@ Spatial::Spatial(
     m_mesh(std::move(mesh)),
     m_shader(std::move(shader)),
     m_material(std::move(material)),
+    m_node(nullptr),
     m_renderable_attributes(renderable_attributes),
     m_octree(nullptr),
     m_shader_data_state(ShaderDataState::DIRTY)
@@ -77,7 +78,7 @@ void Spatial::Init(Engine *engine)
     }));
 }
 
-void Spatial::Update(Engine *engine)
+void Spatial::Update(Engine *engine, GameCounter::TickUnit delta)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -99,10 +100,19 @@ void Spatial::Update(Engine *engine)
         AddToPipeline(engine);
     }
 
+    UpdateControllers(engine, delta);
+
     if (m_shader_data_state.IsDirty()) {
         UpdateOctree(engine);
 
         EnqueueRenderUpdates(engine);
+    }
+}
+
+void Spatial::UpdateControllers(Engine *engine, GameCounter::TickUnit delta)
+{
+    for (auto &controller : m_controllers) {
+        controller.second->OnUpdate(delta);
     }
 }
 
@@ -206,6 +216,25 @@ void Spatial::SetMaterial(Ref<Material> &&material)
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
+void Spatial::SetNode(Node *node)
+{
+    if (m_node != nullptr) {
+        for (auto &controller : m_controllers) {
+            AssertThrow(controller.second != nullptr);
+
+            controller.second->OnRemovedFromNode(m_node);
+        }
+    }
+
+    m_node = node;
+
+    if (m_node != nullptr) {
+        for (auto &controller : m_controllers) {
+            controller.second->OnAddedToNode(m_node);
+        }
+    }
+}
+
 void Spatial::SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes)
 {
     if (m_renderable_attributes == renderable_attributes) {
@@ -260,6 +289,45 @@ void Spatial::SetBucket(Bucket bucket)
     new_renderable_attributes.bucket = bucket;
 
     SetRenderableAttributes(new_renderable_attributes);
+}
+
+void Spatial::SetTranslation(const Vector3 &translation)
+{
+    if (m_node != nullptr) {
+        // indirectly calls SetTransform() on this
+        m_node->SetWorldTranslation(translation);
+    } else {
+        Transform new_transform(m_transform);
+        new_transform.SetTranslation(translation);
+
+        SetTransform(new_transform);
+    }
+}
+
+void Spatial::SetScale(const Vector3 &scale)
+{
+    if (m_node != nullptr) {
+        // indirectly calls SetTransform() on this
+        m_node->SetWorldScale(scale);
+    } else {
+        Transform new_transform(m_transform);
+        new_transform.SetScale(scale);
+
+        SetTransform(new_transform);
+    }
+}
+
+void Spatial::SetRotation(const Quaternion &rotation)
+{
+    if (m_node != nullptr) {
+        // indirectly calls SetTransform() on this
+        m_node->SetWorldRotation(rotation);
+    } else {
+        Transform new_transform(m_transform);
+        new_transform.SetRotation(rotation);
+
+        SetTransform(new_transform);
+    }
 }
 
 void Spatial::SetTransform(const Transform &transform)

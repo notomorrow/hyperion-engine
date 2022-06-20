@@ -83,19 +83,6 @@ void Node::SetScene(Scene *scene)
 void Node::OnNestedNodeAdded(Node *node)
 {
     m_descendents.push_back(node);
-
-    for (auto &controller : m_controllers) {
-        if (controller.second == nullptr) {
-            DebugLog(
-                LogType::Warn,
-                "Controller was nullptr\n"
-            );
-
-            continue;
-        }
-
-        controller.second->OnDescendentAdded(node);
-    }
     
     if (m_parent_node != nullptr) {
         m_parent_node->OnNestedNodeAdded(node);
@@ -107,19 +94,6 @@ void Node::OnNestedNodeRemoved(Node *node)
     const auto it = std::find(m_descendents.begin(), m_descendents.end(), node);
 
     if (it != m_descendents.end()) {
-        for (auto &controller : m_controllers) {
-            if (controller.second == nullptr) {
-                DebugLog(
-                    LogType::Warn,
-                    "Controller was nullptr\n"
-                );
-
-                continue;
-            }
-
-            controller.second->OnDescendentRemoved(node);
-        }
-
         m_descendents.erase(it);
     }
 
@@ -312,8 +286,13 @@ void Node::SetSpatial(Ref<Spatial> &&spatial)
         return;
     }
 
+    if (m_spatial != nullptr) {
+        m_spatial->SetNode(nullptr);
+    }
+
     if (spatial != nullptr) {
         m_spatial = std::move(spatial);
+        m_spatial->SetNode(this);
         m_spatial.Init();
 
         m_local_aabb = m_spatial->GetLocalAabb();
@@ -358,16 +337,7 @@ void Node::UpdateWorldTransform()
 void Node::UpdateInternal(Engine *engine, GameCounter::TickUnit delta)
 {
     if (m_spatial != nullptr) {
-        m_spatial->Update(engine);
-    }
-
-    UpdateControllers(engine, delta);
-}
-
-void Node::UpdateControllers(Engine *engine, GameCounter::TickUnit delta)
-{
-    for (auto &controller : m_controllers) {
-        controller.second->OnUpdate(delta);
+        m_spatial->Update(engine, delta);
     }
 }
 

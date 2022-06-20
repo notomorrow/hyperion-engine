@@ -120,7 +120,7 @@ public:
         grass->GetChild(0)->GetSpatial()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
         grass->Scale(1.0f);
         grass->Translate({0, 1, 0});
-        grass->AddController<AabbDebugController>(engine);
+        grass->GetChild(0)->GetSpatial()->AddController<AabbDebugController>(engine);
 
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
@@ -147,8 +147,8 @@ public:
         zombie->GetChild(0)->GetSpatial()->SetBucket(Bucket::BUCKET_TRANSLUCENT);
         zombie->Scale(0.25f);
         zombie->Translate({0, 0, -5});
-        zombie->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-        zombie->AddController<AabbDebugController>(engine);
+        zombie->GetChild(0)->GetSpatial()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
+        zombie->GetChild(0)->GetSpatial()->AddController<AabbDebugController>(engine);
         scene->GetRootNode()->AddChild(std::move(zombie));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -249,7 +249,7 @@ public:
 
         auto monkey = engine->assets.Load<Node>("models/monkey/monkey.obj");
 
-        monkey->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
+        monkey->GetChild(0)->GetSpatial()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
 
         scene->GetRootNode()->AddChild(std::move(monkey));
 

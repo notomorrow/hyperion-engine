@@ -238,6 +238,7 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
             );
 
             if (skeleton_ref != nullptr) {
+                spatial->AddController<AnimationController>();
                 spatial->SetSkeleton(skeleton_ref.IncRef());
             }
             
@@ -245,10 +246,6 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
             node->SetSpatial(std::move(spatial));
 
             top->AddChild(std::move(node));
-        }
-        
-        if (skeleton_ref != nullptr) {
-            top->AddController<AnimationController>();
         }
     });
 

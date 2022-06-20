@@ -48,7 +48,19 @@ void PagingController::OnRemoved()
 
 void PagingController::OnUpdate(GameCounter::TickUnit delta)
 {
-    Scene *scene = GetParent()->GetScene();
+    auto *node = GetOwner()->GetNode();
+
+    if (node == nullptr) {
+        DebugLog(
+            LogType::Warn,
+            "Entity #%u not attached to any node, cannot get scene camera.\n",
+            GetOwner()->GetId().value
+        );
+
+        return;
+    }
+
+    Scene *scene = node->GetScene();
 
     if (scene == nullptr) {
         DebugLog(
@@ -168,7 +180,7 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
 
 auto PagingController::WorldSpaceToCoord(const Vector3 &position) const -> Coord
 {
-    Vector3 scaled = position - GetParent()->GetWorldTranslation();
+    Vector3 scaled = position - GetOwner()->GetTranslation();
     scaled *= Vector3::One() / (m_scale * (m_patch_size.ToVector3() - 1.0f));
     scaled = MathUtil::Floor(scaled);
 

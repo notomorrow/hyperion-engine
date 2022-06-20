@@ -26,7 +26,7 @@ void ScriptedController::OnAdded()
         
         m_script->Run();
 
-        m_script->CallFunction(init_function_name, GetParent());
+        m_script->CallFunction(init_function_name, GetOwner());
     } else {
         DebugLog(LogType::Error, "Script compilation failed!\n");
 
@@ -38,12 +38,12 @@ void ScriptedController::OnAdded()
 
 void ScriptedController::OnRemoved()
 {
-    m_script->CallFunction(removed_function_name, GetParent());
+    m_script->CallFunction(removed_function_name, GetOwner());
 }
 
 void ScriptedController::OnUpdate(GameCounter::TickUnit delta)
 {
-    m_script->CallFunction(tick_function_name, GetParent(), delta);
+    m_script->CallFunction(tick_function_name, GetOwner(), delta);
 }
 
 } // namespace hyperion::v2

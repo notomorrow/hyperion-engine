@@ -12,6 +12,8 @@
 #include <core/scheduler.h>
 #include <core/lib/flat_set.h>
 
+#include "controller.h"
+
 #include <rendering/backend/renderer_structs.h>
 
 #include <math/transform.h>
@@ -66,6 +68,9 @@ public:
     Material *GetMaterial() const { return m_material.ptr; }
     void SetMaterial(Ref<Material> &&material);
 
+    Node *GetNode() const    { return m_node; }
+    void SetNode(Node *node);
+
     const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
     void SetRenderableAttributes(const RenderableAttributeSet &render_options);
 
@@ -87,6 +92,15 @@ public:
     Bucket GetBucket() const { return m_renderable_attributes.bucket; }
     void SetBucket(Bucket bucket);
 
+    const Vector3 &GetTranslation() const { return m_transform.GetTranslation(); }
+    void SetTranslation(const Vector3 &translation);
+
+    const Vector3 &GetScale() const       { return m_transform.GetScale(); }
+    void SetScale(const Vector3 &scale);
+
+    const Quaterion &GetRotation() const  { return m_transform.GetRotation(); }
+    void SetRotation(const Quaternion &rotation);
+
     const Transform &GetTransform() const { return m_transform; }
     void SetTransform(const Transform &transform);
 
@@ -96,9 +110,42 @@ public:
     bool IsReady() const;
 
     void Init(Engine *engine);
-    void Update(Engine *engine);
+    void Update(Engine *engine, GameCounter::TickUnit delta);
+
+    template <class ControllerClass>
+    void AddController(std::unique_ptr<ControllerClass> &&controller)
+    {
+        static_assert(std::is_base_of_v<Controller, ControllerClass>, "Object must be a derived class of Controller");
+
+        if (controller->m_owner != nullptr) {
+            controller->OnRemoved();
+        }
+
+        controller->m_owner = this;
+        controller->OnAdded();
+
+        m_controllers.Set(std::move(controller));
+    }
+
+    template <class ControllerClass, class ...Args>
+    void AddController(Args &&... args)
+        { AddController<ControllerClass>(std::make_unique<ControllerClass>(std::forward<Args>(args)...)); }
+
+    template <class ControllerType>
+    ControllerType *GetController()             { return m_controllers.Get<ControllerType>(); }
+
+    template <class ControllerType>
+    bool HasController() const                  { return m_controllers.Has<ControllerType>(); }
+
+    template <class ControllerType>
+    bool RemoveController()                     { return m_controllers.Remove<ControllerType>(); }
+    
+    ControllerSet &GetControllers()             { return m_controllers; }
+    const ControllerSet &GetControllers() const { return m_controllers; }
 
 private:
+    void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
+    
     void EnqueueRenderUpdates(Engine *engine);
     void UpdateOctree(Engine *engine);
     
@@ -124,7 +171,10 @@ private:
     BoundingBox            m_world_aabb;
     Ref<Material>          m_material;
     Ref<Skeleton>          m_skeleton;
+    Node                  *m_node;
     RenderableAttributeSet m_renderable_attributes;
+
+    ControllerSet          m_controllers;
 
     std::atomic<Octree *>  m_octree{nullptr};
 
