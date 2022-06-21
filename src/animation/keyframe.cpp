@@ -24,7 +24,7 @@ Keyframe Keyframe::Blend(const Keyframe &to, float blend) const
     const float time = MathUtil::Lerp(m_time, to.GetTime(), blend);
 
     Transform transform(m_transform);
-    transform.GetTranslation().Lerp(to.GetTranslation(), blend);
+    transform.GetTranslation().Lerp(to.GetTransform().GetTranslation(), blend);
     transform.GetScale().Lerp(to.GetTransform().GetScale(), blend);
     transform.GetRotation().Slerp(to.GetTransform().GetRotation(), blend);
     transform.UpdateMatrix();

@@ -158,7 +158,18 @@ void Mesh::Init(Engine *engine)
         });
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
+            DebugLog(
+                LogType::Debug,
+                "Destroy mesh with id %u\n",
+                GetId().value
+            );
+            
             engine->render_scheduler.Enqueue([this](...) {
+                DebugLog(
+                    LogType::Debug,
+                    "REALLY Destroy mesh with id %u\n",
+                    GetId().value
+                );
                 auto result = renderer::Result::OK;
 
                 auto *device = GetEngine()->GetDevice();

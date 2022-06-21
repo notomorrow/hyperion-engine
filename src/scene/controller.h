@@ -40,6 +40,8 @@ protected:
     virtual void OnRemovedFromNode(Node *node) {}
     virtual void OnAddedToNode(Node *node) {}
 
+    Engine *GetEngine() const;
+
 private:
     char    *m_name;
     Spatial *m_owner;
@@ -61,8 +63,8 @@ class ControllerSet {
     }
 
 public:
-    using Iterator      = Map::Iterator;
-    using ConstIterator = Map::ConstIterator;
+    using Iterator      = typename Map::Iterator;
+    using ConstIterator = typename Map::ConstIterator;
 
     ControllerSet() = default;
     ControllerSet(const ControllerSet &other) = delete;

@@ -5,17 +5,17 @@
 
 namespace hyperion::v2 {
 
-auto PagingController::GetNeighbors(const Coord &coord) -> PatchNeighbors
+auto PagingController::GetNeighbors(const PatchCoord &coord) -> PatchNeighbors
 {
     return{
-        PatchNeighbor{coord + Coord{1, 0}},
-        PatchNeighbor{coord + Coord{-1, 0}},
-        PatchNeighbor{coord + Coord{0, 1}},
-        PatchNeighbor{coord + Coord{0, -1}},
-        PatchNeighbor{coord + Coord{1, -1}},
-        PatchNeighbor{coord + Coord{-1, -1}},
-        PatchNeighbor{coord + Coord{1, 1}},
-        PatchNeighbor{coord + Coord{-1, 1}}
+        PatchNeighbor{coord + PatchCoord{1, 0}},
+        PatchNeighbor{coord + PatchCoord{-1, 0}},
+        PatchNeighbor{coord + PatchCoord{0, 1}},
+        PatchNeighbor{coord + PatchCoord{0, -1}},
+        PatchNeighbor{coord + PatchCoord{1, -1}},
+        PatchNeighbor{coord + PatchCoord{-1, -1}},
+        PatchNeighbor{coord + PatchCoord{1, 1}},
+        PatchNeighbor{coord + PatchCoord{-1, 1}}
     };
 }
 
@@ -30,12 +30,12 @@ PagingController::PagingController(const char *name, Extent3D patch_size, const 
 
 void PagingController::OnAdded()
 {
-    AddPatch(Coord{0, 0});
+    AddPatch(PatchCoord{0, 0});
 }
 
 void PagingController::OnRemoved()
 {
-    std::vector<Coord> patch_coords(m_patches.size());
+    std::vector<PatchCoord> patch_coords(m_patches.size());
 
     for (size_t i = 0; i < m_patches.size(); i++) {
         patch_coords[i] = m_patches[i]->info.coord;
@@ -178,21 +178,21 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
     }
 }
 
-auto PagingController::WorldSpaceToCoord(const Vector3 &position) const -> Coord
+auto PagingController::WorldSpaceToCoord(const Vector3 &position) const -> PatchCoord
 {
     Vector3 scaled = position - GetOwner()->GetTranslation();
     scaled *= Vector3::One() / (m_scale * (m_patch_size.ToVector3() - 1.0f));
     scaled = MathUtil::Floor(scaled);
 
-    return Coord{scaled.x, scaled.z};
+    return PatchCoord{scaled.x, scaled.z};
 }
 
-bool PagingController::InRange(const Patch *patch, const Coord &camera_coord) const
+bool PagingController::InRange(const Patch *patch, const PatchCoord &camera_coord) const
 {
     return InRange(patch->GetCenter(), camera_coord);
 }
 
-bool PagingController::InRange(const Coord &patch_center, const Coord &camera_coord) const
+bool PagingController::InRange(const PatchCoord &patch_center, const PatchCoord &camera_coord) const
 {
     return camera_coord.Distance(patch_center) <= max_distance;
 }
@@ -204,7 +204,7 @@ auto PagingController::CreatePatch(const PatchInfo &info) -> std::unique_ptr<Pat
     });
 }
 
-void PagingController::AddPatch(const Coord &coord)
+void PagingController::AddPatch(const PatchCoord &coord)
 {
     const PatchInfo info{
         .extent    = m_patch_size,
@@ -226,7 +226,7 @@ void PagingController::AddPatch(const Coord &coord)
     }
 }
 
-void PagingController::RemovePatch(const Coord &coord)
+void PagingController::RemovePatch(const PatchCoord &coord)
 {
     const auto it = FindPatch(coord);
 
@@ -243,7 +243,7 @@ void PagingController::RemovePatch(const Coord &coord)
     }
 }
 
-void PagingController::EnqueuePatch(const Coord &coord)
+void PagingController::EnqueuePatch(const PatchCoord &coord)
 {
     if (m_queued_neighbors.Find(coord) == m_queued_neighbors.End()) {
         PushUpdate({

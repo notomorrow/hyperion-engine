@@ -37,6 +37,7 @@ class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
     friend class Engine;
     friend class Octree;
     friend class GraphicsPipeline;
+    friend class Controller;
 
 public:
     Spatial(
@@ -55,17 +56,20 @@ public:
     ShaderDataState GetShaderDataState() const     { return m_shader_data_state; }
     void SetShaderDataState(ShaderDataState state) { m_shader_data_state = state; }
     
-    Mesh *GetMesh() const { return m_mesh.ptr; }
+    Ref<Mesh> &GetMesh()                     { return m_mesh; }
+    const Ref<Mesh> &GetMesh() const         { return m_mesh; }
     void SetMesh(Ref<Mesh> &&mesh);
 
     Ref<Skeleton> &GetSkeleton()             { return m_skeleton; }
     const Ref<Skeleton> &GetSkeleton() const { return m_skeleton; }
     void SetSkeleton(Ref<Skeleton> &&skeleton);
 
-    Shader *GetShader() const     { return m_shader.ptr; }
+    Ref<Shader> &GetShader()                 { return m_shader; }
+    const Ref<Shader> &GetShader() const     { return m_shader; }
     void SetShader(Ref<Shader> &&shader);
 
-    Material *GetMaterial() const { return m_material.ptr; }
+    Ref<Material> &GetMaterial()             { return m_material; }
+    const Ref<Material> &GetMaterial() const { return m_material; }
     void SetMaterial(Ref<Material> &&material);
 
     Node *GetNode() const    { return m_node; }
@@ -98,7 +102,7 @@ public:
     const Vector3 &GetScale() const         { return m_transform.GetScale(); }
     void SetScale(const Vector3 &scale);
 
-    const Quaterion &GetRotation() const    { return m_transform.GetRotation(); }
+    const Quaternion &GetRotation() const   { return m_transform.GetRotation(); }
     void SetRotation(const Quaternion &rotation);
 
     const Transform &GetTransform() const   { return m_transform; }
