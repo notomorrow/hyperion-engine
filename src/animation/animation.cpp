@@ -31,7 +31,7 @@ Keyframe AnimationTrack::GetKeyframe(float time) const
 
         const float delta = (time - current.GetTime()) / (next.GetTime() - current.GetTime());
 
-        transform.GetTranslation().Lerp(next.GetTranslation(), delta);
+        transform.GetTranslation().Lerp(next.GetTransform().GetTranslation(), delta);
         transform.GetRotation().Slerp(next.GetTransform().GetRotation(), delta);
         transform.UpdateMatrix();
     }

@@ -73,6 +73,16 @@ void GraphicsPipeline::AddSpatial(Spatial *spatial)
     
     m_spatial_notifier.ItemAdded(spatial);
     m_spatials_pending_addition.push_back(std::move(spatial));
+
+    auto it = std::find(
+        m_spatials_pending_removal.begin(),
+        m_spatials_pending_removal.end(),
+        spatial
+    );
+
+    if (it != m_spatials_pending_removal.end()) {
+        m_spatials_pending_removal.erase(it);
+    }
     
     UpdateEnqueuedSpatialsFlag();
 }
@@ -96,10 +106,16 @@ bool GraphicsPipeline::RemoveFromSpatialList(
     );
 
     if (it == spatials.end()) {
+        // DebugLog(
+        //     LogType::Warn,
+        //     "Spatial with ID #%u attempted removal from pipeline, but was not found!\n",
+        //     id.value
+        // );
+
         return false;
     }
 
-    auto &found_spatial = *it;
+    auto found_spatial = *it;
 
     if (dispatch_item_removed) {
         m_spatial_notifier.ItemRemoved(found_spatial);
@@ -114,7 +130,39 @@ bool GraphicsPipeline::RemoveFromSpatialList(
     } else {
         std::lock_guard guard(m_enqueued_spatials_mutex);
 
-        m_spatials_pending_removal.push_back(*it);
+        const auto pending_removal_it = std::find(
+            m_spatials_pending_removal.begin(),
+            m_spatials_pending_removal.end(),
+            found_spatial
+        );
+
+        if (pending_removal_it == m_spatials_pending_removal.end()) {
+            m_spatials_pending_removal.push_back(found_spatial);
+
+            m_cached_render_data.push_back(CachedRenderData {
+                .spatial_id       = found_spatial->GetId(),
+                .cycles_remaining = max_frames_in_flight + 1,
+                .material = found_spatial->GetMaterial() != nullptr
+                    ? found_spatial->GetMaterial().IncRef()
+                    : nullptr,
+                .mesh     = found_spatial->GetMesh() != nullptr
+                    ? found_spatial->GetMesh().IncRef()
+                    : nullptr,
+                .skeleton = found_spatial->GetSkeleton() != nullptr
+                    ? found_spatial->GetSkeleton().IncRef()
+                    : nullptr,
+                .shader   = found_spatial->GetShader() != nullptr
+                    ? found_spatial->GetShader().IncRef()
+                    : nullptr
+            });
+        } else {
+            DebugLog(
+                LogType::Info,
+                "Spatial #%u is already pending removal from pipeline #%u\n",
+                found_spatial->GetId().value,
+                GetId().value
+            );
+        }
     }
 
     UpdateEnqueuedSpatialsFlag();
@@ -154,19 +202,18 @@ void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
     RemoveFromSpatialList(id, m_spatials_pending_removal, false, false, true);
 }
 
-void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine)
+void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_index)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     std::lock_guard guard(m_enqueued_spatials_mutex);
 
     if (!m_spatials_pending_removal.empty()) {
-        for (auto &spatial : m_spatials_pending_removal) {
+        for (auto *spatial : m_spatials_pending_removal) {
             const auto it = std::find(m_spatials.begin(), m_spatials.end(), spatial); // oof
-
-            if (it != m_spatials.end()) {
-                m_spatials.erase(it);
-            }
+            
+            AssertThrow(it != m_spatials.end());
+            m_spatials.erase(it);
         }
 
         m_spatials_pending_removal.clear();
@@ -181,6 +228,12 @@ void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine)
         
         while (it != m_spatials_pending_addition.end()) {
             if (*it == nullptr) { // just erase nullptr ones
+                it = m_spatials_pending_addition.erase(it);
+                
+                continue;
+            }
+
+            if (std::find(m_spatials.begin(), m_spatials.end(), *it) != m_spatials.end()) { // :(
                 it = m_spatials_pending_addition.erase(it);
                 
                 continue;
@@ -275,7 +328,7 @@ void GraphicsPipeline::Init(Engine *engine)
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](Engine *engine) {
             SetReady(false);
             
-            for (auto &spatial : m_spatials) {
+            for (auto *spatial : m_spatials) {
                 if (spatial == nullptr) {
                     continue;
                 }
@@ -289,7 +342,7 @@ void GraphicsPipeline::Init(Engine *engine)
             
             std::lock_guard guard(m_enqueued_spatials_mutex);
 
-            for (auto &spatial : m_spatials_pending_addition) {
+            for (auto *spatial : m_spatials_pending_addition) {
                 if (spatial == nullptr) {
                     continue;
                 }
@@ -306,7 +359,7 @@ void GraphicsPipeline::Init(Engine *engine)
                 if (m_per_frame_data != nullptr) {
                     auto &per_frame_data = *m_per_frame_data;
 
-                    for (UInt32 i = 0; i < per_frame_data.NumFrames(); i++) {
+                    for (UInt i = 0; i < per_frame_data.NumFrames(); i++) {
                         HYPERION_BUBBLE_ERRORS(per_frame_data[i].Get<CommandBuffer>()->Destroy(
                             engine->GetInstance()->GetDevice(),
                             engine->GetInstance()->GetGraphicsCommandPool()
@@ -333,8 +386,24 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
 
     AssertThrow(m_per_frame_data != nullptr);
 
+    /* Remove cache data. This data exists so that there is some buffer time
+       in between removing an entity from the pipeline and the data (potentially)
+       being destroyed. We use (max frames in flight) + 1 and count down each Render() call.
+    */
+    if (!m_cached_render_data.empty()) {
+        auto it = m_cached_render_data.begin();
+
+        while (it != m_cached_render_data.end()) {
+            if (!--it->cycles_remaining) {
+                it = m_cached_render_data.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
     if (m_enqueued_spatials_flag.load()) {
-        PerformEnqueuedSpatialUpdates(engine);
+        PerformEnqueuedSpatialUpdates(engine, frame->GetFrameIndex());
     }
 
     auto *instance = engine->GetInstance();
@@ -401,7 +470,7 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
             // check visibility state
             const bool perform_culling = scene_cull_id != Scene::empty_id && BucketSupportsCulling(m_renderable_attributes.bucket);
             
-            for (auto &spatial : m_spatials) {
+            for (auto *spatial : m_spatials) {
                 if (spatial->GetMesh() == nullptr) {
                     continue;
                 }

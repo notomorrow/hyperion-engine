@@ -18,8 +18,8 @@ template <class Entity, class Component>
 class ComponentMap : public ComponentMapBase {
 public:
     using Map           = FlatMap<typename Entity::ID, Component>;
-    using Iterator      = Map::Iterator;
-    using ConstIterator = Map::ConstIterator;
+    using Iterator      = typename Map::Iterator;
+    using ConstIterator = typename Map::ConstIterator;
 
     Component &Get(typename Entity::ID id)              { return m_components.At(id); }
     const Component &Get(typename Entity::ID id) const  { return m_components.At(id); }
@@ -33,7 +33,7 @@ public:
 
     bool Remove(typename Entity::ID id)                 { m_components.Erase(id); }
 
-    HYP_DEF_STL_ITERATOR(m_map);
+    HYP_DEF_STL_ITERATOR(m_components);
 
 private:
     Map m_components;
@@ -50,7 +50,7 @@ public:
     template <class Component>
     void Register()
     {
-        AssertThrowMsg(!m_component_maps.Contains<Component>, "Component already registered!");
+        AssertThrowMsg(!m_component_maps.Contains<Component>(), "Component already registered!");
 
         m_component_maps.Set<Component>(std::make_unique<ComponentMap<Entity, Component>>());
     }
