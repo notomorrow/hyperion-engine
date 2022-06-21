@@ -211,7 +211,7 @@ public:
         skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
         skybox_material.Init();
 
-        auto *skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
+        auto &skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetBucket(BUCKET_SKYBOX);
         skybox_spatial->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef());
@@ -261,7 +261,7 @@ public:
         auto monkey = engine->assets.Load<Node>("models/monkey/monkey.obj");
 
         monkey->GetChild(0)->GetSpatial()->AddController<ScriptedController>(engine->assets.Load<Script>("scripts/examples/controller.hypscript"));
-
+        // scene->AddSpatial(monkey->GetChild(0)->GetSpatial().IncRef());
         scene->GetRootNode()->AddChild(std::move(monkey));
 
     //     auto outline_pipeline = std::make_unique<GraphicsPipeline>(
@@ -350,7 +350,7 @@ public:
             Ray ray{scene->GetCamera()->GetTranslation(), Vector3(ray_direction)};
             RayTestResults results;
 
-            if (engine->GetOctree().TestRay(ray, results)) {//scene->GetRootNode()->TestRay(ray, results)) {//engine->GetOctree().TestRay(ray, results)) {
+            if (scene->GetOctree().TestRay(ray, results)) {
                 RayTestResults triangle_mesh_results;
 
                 for (auto &hit : results) {
@@ -419,14 +419,13 @@ public:
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.75f);//std::sin(timer) * 0.5f + 0.5f);
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.8f);//std::cos(timer) * 0.5f + 0.5f);
-        material_test_obj->Update(engine, delta);
+        material_test_obj->GetChild(0)->GetSpatial()->Update(engine, delta);
 
         // zombie->Update(engine, delta);
 
         //cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
         //cube_obj->Update(engine, delta);
 
-        engine->GetOctree().CalculateVisibility(scene.ptr);
     }
 
     
@@ -861,7 +860,6 @@ int main()
             engine->GetInstance()->GetDevice(),
             engine->GetInstance()->GetSwapchain()
         ));
-
 
         frame = engine->GetInstance()->GetFrameHandler()->GetCurrentFrameData().Get<Frame>();
         auto *command_buffer = frame->GetCommandBuffer();

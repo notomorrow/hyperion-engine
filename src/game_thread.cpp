@@ -22,11 +22,7 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
     GameCounter counter;
 #endif
 
-    //game->Init(engine, window);
-    
-    //engine->render_scheduler.GetSemaphore().Inc();
     game->OnPostInit(engine);
-    //engine->render_scheduler.GetSemaphore().Dec();
 
     while (engine->m_running) {
 #if HYP_GAME_THREAD_LOCKED
@@ -43,9 +39,7 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
             });
         }
         
-        //engine->render_scheduler.GetSemaphore().Inc();
         game->Logic(engine, counter.delta);
-        //engine->render_scheduler.GetSemaphore().Dec();
     }
 
     game->Teardown(engine);

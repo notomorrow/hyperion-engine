@@ -53,13 +53,11 @@ void AnimationController::OnRemovedFromNode(Node *node)
 
 bool AnimationController::FindSkeleton(Node *node)
 {
-    if (auto *spatial = node->GetSpatial()) {
-        if (FindSkeletonDirect(node->GetSpatial())) {
+    if (auto &spatial = node->GetSpatial()) {
+        if (FindSkeletonDirect(spatial.ptr)) {
             return true;
         }
     }
-
-    return false;
 
     return std::any_of(
         node->GetChildren().begin(),

@@ -19,6 +19,22 @@ void FpsCamera::SetTranslation(const Vector3 &vec)
 
 void FpsCamera::UpdateLogic(double dt)
 {
+    m_desired_mag = Vector2(
+        m_mouse_x - m_prev_mouse_x,
+        m_mouse_y - m_prev_mouse_y
+    );
+    
+    m_mag.Lerp(m_desired_mag, mouse_blending);
+
+    m_dir_cross_y = Vector3(m_direction).Cross(m_up);
+
+    Rotate(m_up, MathUtil::DegToRad(m_mag.x * mouse_sensitivity));
+    Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag.y * mouse_sensitivity));
+
+    if (m_direction.y > 0.98f || m_direction.y < -0.98f) {
+        Rotate(m_dir_cross_y, MathUtil::DegToRad(-m_mag.y * mouse_sensitivity));
+    }
+
     m_prev_mouse_x = m_mouse_x;
     m_prev_mouse_y = m_mouse_y;
 
@@ -32,7 +48,14 @@ void FpsCamera::UpdateLogic(double dt)
             )
         );
     } else {
-        m_translation = m_next_translation;
+        m_translation.Lerp(
+            m_next_translation,
+            MathUtil::Clamp(
+                1.0f * static_cast<float>(dt),
+                0.0f,
+                1.0f
+            )
+        );
     }
 }
 
@@ -43,22 +66,6 @@ void FpsCamera::RespondToCommand(const CameraCommand &command, GameCounter::Tick
     {
         m_mouse_x = command.mag_data.mouse_x;
         m_mouse_y = command.mag_data.mouse_y;
-
-        m_mag = {
-            m_mouse_x - m_prev_mouse_x,
-            m_mouse_y - m_prev_mouse_y
-        };
-
-        m_dir_cross_y = Vector3(m_direction).Cross(m_up);
-
-        Rotate(m_up, MathUtil::DegToRad(m_mag.x * mouse_sensitivity));
-        Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag.y * mouse_sensitivity));
-
-        if (m_direction.y > 0.97f || m_direction.y < -0.97f) {
-            m_mag.y *= -1.0f;
-
-            Rotate(m_dir_cross_y, MathUtil::DegToRad(m_mag.y * mouse_sensitivity));
-        }
     
         break;
     }
@@ -68,19 +75,19 @@ void FpsCamera::RespondToCommand(const CameraCommand &command, GameCounter::Tick
 
         switch (command.movement_data.movement_type) {
         case CameraCommand::CAMERA_MOVEMENT_FORWARD:
-            m_next_translation += m_direction * speed;
+            m_next_translation += m_direction;// * speed;
 
             break;
         case CameraCommand::CAMERA_MOVEMENT_BACKWARD:
-            m_next_translation -= m_direction * speed;
+            m_next_translation -= m_direction;// * speed;
 
             break;
         case CameraCommand::CAMERA_MOVEMENT_LEFT:
-            m_next_translation -= m_dir_cross_y * speed;
+            m_next_translation -= m_dir_cross_y;// * speed;
 
             break;
         case CameraCommand::CAMERA_MOVEMENT_RIGHT:
-            m_next_translation += m_dir_cross_y * speed;
+            m_next_translation += m_dir_cross_y;// * speed;
 
             break;
         }

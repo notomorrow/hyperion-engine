@@ -31,7 +31,7 @@ struct LockstepGameCounter : GameCounter {
     TickUnit target_interval;
     TickUnit padding;
 
-    LockstepGameCounter(TickUnit target_interval, TickUnit padding = TickUnit(0.00015))
+    LockstepGameCounter(TickUnit target_interval, TickUnit padding = TickUnit(0.0))
         : GameCounter(),
           target_interval(target_interval),
           padding(padding)

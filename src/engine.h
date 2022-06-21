@@ -155,10 +155,7 @@ public:
     
     auto &GetDummyData()                                           { return m_dummy_data; }
     const auto &GetDummyData() const                               { return m_dummy_data; }
-
-    Octree &GetOctree()                                            { return m_octree; }
-    const Octree &GetOctree() const                                { return m_octree; }
-
+    
     ComponentRegistry<Spatial> &GetComponentRegistry()             { return m_component_registry; }
     const ComponentRegistry<Spatial> &GetComponentRegistry() const { return m_component_registry; }
 
@@ -207,10 +204,6 @@ private:
 
     DeferredRenderer    m_deferred_renderer;
     RenderListContainer m_render_list_container;
-
-
-    Octree::Root m_octree_root;
-    Octree       m_octree;
 
     /* TMP */
     std::vector<std::unique_ptr<renderer::Attachment>> m_render_pass_attachments;

@@ -14,6 +14,7 @@ Spatial::Spatial(
     m_shader(std::move(shader)),
     m_material(std::move(material)),
     m_node(nullptr),
+    m_scene(nullptr),
     m_renderable_attributes(renderable_attributes),
     m_octree(nullptr),
     m_shader_data_state(ShaderDataState::DIRTY)
@@ -49,23 +50,27 @@ void Spatial::Init(Engine *engine)
         if (m_mesh) {
             m_mesh.Init();
 
-            if (m_primary_pipeline.pipeline == nullptr) {
-                AddToPipeline(engine);
-            }
+            // if (m_primary_pipeline.pipeline == nullptr) {
+            //     AddToPipeline(engine);
+            // }
         }
 
-        if (m_octree == nullptr) {
-            AddToOctree(engine);
-        }
+        // if (m_octree == nullptr) {
+        //     AddToOctree(engine);
+        // }
 
         SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
-            RemoveFromPipelines(engine);
+            RemoveFromPipelines();
+
+            // AssertThrow(m_pipelines.Empty());
 
             m_skeleton = nullptr;
             m_material = nullptr;
-            m_mesh     = nullptr;            
+            m_mesh     = nullptr;       
+
+            // AssertThrow(m_octree == nullptr);     
 
             if (m_octree != nullptr) {
                 RemoveFromOctree(engine);
@@ -92,13 +97,19 @@ void Spatial::Update(Engine *engine, GameCounter::TickUnit delta)
         m_material->Update(engine);
     }
 
-    if (m_primary_pipeline.changed) {
-        if (m_primary_pipeline.pipeline != nullptr) {
-            RemoveFromPipeline(engine, m_primary_pipeline.pipeline);
-        }
+    // if (m_primary_pipeline.changed) {
+    //     // if (m_primary_pipeline.pipeline != nullptr) {
+    //     //     RemoveFromPipeline(engine, m_primary_pipeline.pipeline);
+    //     // }
 
-        AddToPipeline(engine);
-    }
+    //     // AddToPipeline(engine);
+
+    //     if (m_scene != nullptr) {
+    //         // tmp for now, later will Update() all entities
+    //         // via scene update() and it will do the check
+    //         m_scene->RequestPipelineChanges(this);
+    //     }
+    // }
 
     UpdateControllers(engine, delta);
 
@@ -216,7 +227,7 @@ void Spatial::SetMaterial(Ref<Material> &&material)
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-void Spatial::SetNode(Node *node)
+void Spatial::SetParent(Node *node)
 {
     if (m_node != nullptr) {
         for (auto &controller : m_controllers) {
@@ -359,32 +370,7 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
     m_pipelines.Erase(pipeline);
 }
 
-void Spatial::AddToPipeline(Engine *engine)
-{
-    if (const auto pipeline = engine->FindOrCreateGraphicsPipeline(m_renderable_attributes)) {
-        AddToPipeline(engine, pipeline.ptr);
-        
-        m_primary_pipeline = {
-            .pipeline = pipeline.ptr,
-            .changed  = false
-        };
-    } else {
-        DebugLog(
-            LogType::Error,
-            "Could not find or create optimal graphics pipeline for Spatial #%lu!\n",
-            m_id.value
-        );
-    }
-}
-
-void Spatial::AddToPipeline(Engine *engine, GraphicsPipeline *pipeline)
-{
-    if (!m_pipelines.Contains(pipeline)) {
-        pipeline->AddSpatial(this);
-    }
-}
-
-void Spatial::RemoveFromPipelines(Engine *)
+void Spatial::RemoveFromPipelines()
 {
     auto pipelines = m_pipelines;
 
@@ -455,11 +441,11 @@ void Spatial::OnMovedToOctant(Octree *octree)
 }
 
 
-void Spatial::AddToOctree(Engine *engine)
+void Spatial::AddToOctree(Engine *engine, Octree &octree)
 {
     AssertThrow(m_octree == nullptr);
 
-    if (!engine->GetOctree().Insert(engine, this)) {
+    if (!octree.Insert(engine, this)) {
         DebugLog(LogType::Warn, "Spatial #%lu could not be added to octree\n", m_id.value);
     }
 }

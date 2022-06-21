@@ -18,6 +18,8 @@ class Scene;
 
 class Node {
     friend class Scene;
+    friend class Spatial;
+
 public:
     using NodeList = std::vector<std::unique_ptr<Node>>;
 
@@ -51,17 +53,18 @@ public:
     ~Node();
 
     /*! @returns The string tag that was given to the Node on creation. */
-    const char *GetName() const { return m_name; }
+    const char *GetName() const            { return m_name; }
     /*! \brief Set the string tag of this Node. Used for nested lookups. */
     void SetName(const char *name);
     /*! @returns The type of the node. By default, it will just be NODE. */
-    Type GetType() const { return m_type; }
+    Type GetType() const                   { return m_type; }
     /*! @returns A pointer to the parent Node of this Node. May be null. */
-    Node *GetParent() const { return m_parent_node; }
+    Node *GetParent() const                { return m_parent_node; }
     /*! @returns A pointer to the Scene this Node and its children are attached to. May be null. */
-    Scene *GetScene() const { return m_scene; }
+    Scene *GetScene() const                { return m_scene; }
 
-    Spatial *GetSpatial() const { return m_spatial.ptr; }
+    Ref<Spatial> &GetSpatial()             { return m_spatial; }
+    const Ref<Spatial> &GetSpatial() const { return m_spatial; }
     void SetSpatial(Ref<Spatial> &&spatial);
 
     /*! \brief Add a new child Node to this object
@@ -240,9 +243,6 @@ public:
 
     void UpdateWorldTransform();
 
-    /*! \brief Called each tick of the logic loop of the game. Updates the Spatial transform to be reflective of the Node's world-space transform. */
-    void Update(Engine *engine, GameCounter::TickUnit delta);
-
     bool TestRay(const Ray &ray, RayTestResults &out_results) const;
 
 protected:
@@ -255,7 +255,6 @@ protected:
 
     void SetScene(Scene *scene);
 
-    void UpdateInternal(Engine *engine, GameCounter::TickUnit delta);
     void OnNestedNodeAdded(Node *node);
     void OnNestedNodeRemoved(Node *node);
 
@@ -273,6 +272,11 @@ protected:
     std::vector<Node *> m_descendents;
 
     Scene *m_scene;
+
+private:
+
+    void RequestPipelineChanges();
+
 };
 
 } // namespace hyperion::v2

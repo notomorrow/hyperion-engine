@@ -8,7 +8,8 @@ namespace hyperion {
 class FpsCamera : public PerspectiveCamera {
 public:
     static constexpr float mouse_sensitivity = 1.0f;
-    static constexpr float movement_speed = 1000.0f;
+    static constexpr float mouse_blending = 0.25f;
+    static constexpr float movement_speed = 10.0f;
     static constexpr float movement_speed_2 = movement_speed * 2.0f;
     static constexpr float movement_blending = 0.3f;
 
@@ -30,6 +31,7 @@ private:
           m_prev_mouse_y;
     
     Vector2 m_mag,
+            m_desired_mag,
             m_prev_mag;
 };
 } // namespace hyperion

@@ -32,12 +32,14 @@ using renderer::FaceCullMode;
 
 class GraphicsPipeline;
 class Octree;
+class Scene;
 
 class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
-    friend class Engine;
     friend class Octree;
     friend class GraphicsPipeline;
     friend class Controller;
+    friend class Node;
+    friend class Scene;
 
 public:
     Spatial(
@@ -72,8 +74,12 @@ public:
     const Ref<Material> &GetMaterial() const { return m_material; }
     void SetMaterial(Ref<Material> &&material);
 
-    Node *GetNode() const    { return m_node; }
-    void SetNode(Node *node);
+    Node *GetParent() const                  { return m_node; }
+    void SetParent(Node *node);
+
+    Scene *GetScene() const                  { return m_scene; }
+
+    bool IsRenderable() const                { return m_mesh != nullptr && m_shader != nullptr && m_material != nullptr; }
 
     const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
     void SetRenderableAttributes(const RenderableAttributeSet &render_options);
@@ -92,6 +98,11 @@ public:
     );
 
     void SetStencilAttributes(const StencilState &stencil_state);
+
+    GraphicsPipeline *GetPrimaryPipeline() const { return m_primary_pipeline.pipeline; }
+
+    // auto &GetPipelines()                   { return m_pipelines; }
+    const auto &GetPipelines() const        { return m_pipelines; }
 
     Bucket GetBucket() const                { return m_renderable_attributes.bucket; }
     void SetBucket(Bucket bucket);
@@ -147,6 +158,9 @@ public:
     ControllerSet &GetControllers()             { return m_controllers; }
     const ControllerSet &GetControllers() const { return m_controllers; }
 
+public:
+    void AddToOctree(Engine *engine, Octree &octree);
+
 private:
     void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
     
@@ -156,16 +170,13 @@ private:
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
     
-    void AddToPipeline(Engine *engine);
-    void AddToPipeline(Engine *engine, GraphicsPipeline *pipeline);
-    void RemoveFromPipelines(Engine *engine);
+    void RemoveFromPipelines();
     void RemoveFromPipeline(Engine *engine, GraphicsPipeline *pipeline);
     
     void OnAddedToOctree(Octree *octree);
     void OnRemovedFromOctree(Octree *octree);
     void OnMovedToOctant(Octree *octree);
 
-    void AddToOctree(Engine *engine);
     void RemoveFromOctree(Engine *engine);
 
     Ref<Mesh>              m_mesh;
@@ -176,6 +187,7 @@ private:
     Ref<Material>          m_material;
     Ref<Skeleton>          m_skeleton;
     Node                  *m_node;
+    Scene                 *m_scene;
     RenderableAttributeSet m_renderable_attributes;
 
     ControllerSet          m_controllers;
