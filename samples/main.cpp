@@ -26,6 +26,8 @@
 #include <game_thread.h>
 #include <game.h>
 
+#include <terrain/controllers/terrain_paging_controller.h>
+
 #include <rendering/vct/vct.h>
 
 #include <util/fs/fs_util.h>
@@ -113,6 +115,15 @@ public:
         test_model = std::move(loaded_assets[1]);
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
+
+        auto terrain_node = scene->GetRootNode()->AddChild();
+        terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>(
+            nullptr,
+            nullptr,
+            nullptr
+        )));
+
+        terrain_node->GetSpatial()->AddController<TerrainPagingController>(Extent3D{8}, Vector3{4, 1, 4});
         
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
@@ -346,7 +357,7 @@ public:
                     // now ray test each result as triangle mesh to find exact hit point
 
                     if (auto lookup_result = engine->resources.spatials.Lookup(Spatial::ID{hit.id})) {
-                        if (auto *mesh = lookup_result->GetMesh()) {
+                        if (auto &mesh = lookup_result->GetMesh()) {
                             ray.TestTriangleList(
                                 mesh->GetVertices(),
                                 mesh->GetIndices(),
@@ -363,7 +374,7 @@ public:
                     std::cout << "  closest hit: " << mesh_hit.distance << ",  " << mesh_hit.hitpoint << "   spatial ID  :  " << mesh_hit.id << "\n";
 
                     if (auto lookup_result = engine->resources.spatials.Lookup(Spatial::ID{mesh_hit.id})) {
-                        if (auto *material = lookup_result->GetMaterial()) {
+                        if (auto &material = lookup_result->GetMaterial()) {
                             std::cout << "MATERIAL: " << material->GetName() << "\n";
                         }
                     }

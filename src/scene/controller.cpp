@@ -1,4 +1,5 @@
 #include "controller.h"
+#include <scene/spatial.h>
 
 namespace hyperion::v2 {
 
@@ -21,6 +22,13 @@ Controller::~Controller()
     if (m_name != nullptr) {
         delete[] m_name;
     }
+}
+
+Engine *Controller::GetEngine() const
+{
+    AssertThrow(m_owner != nullptr);
+
+    return m_owner->GetEngine();
 }
 
 } // namespace hyperion::v2

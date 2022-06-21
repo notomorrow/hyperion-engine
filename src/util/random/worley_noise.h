@@ -3,14 +3,15 @@
 
 #include "../../math/vector3.h"
 
+#include <types.h>
+
 #include <vector>
-
-#define OFFSET_BASIS 2166136261
-
-#define FNV_PRIME 16777619
 
 namespace hyperion {
 class WorleyNoise {
+    static constexpr UInt32 OFFSET_BASIS = 2166136261u;
+    static constexpr UInt32 FNV_PRIME    = 16777619u;
+
 public:
     WorleyNoise(int seed);
 

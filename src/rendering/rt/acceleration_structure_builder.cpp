@@ -19,7 +19,7 @@ std::vector<std::unique_ptr<BottomLevelAccelerationStructure>> AccelerationStruc
     for (auto &spatial : m_spatials) {
         std::unique_ptr<AccelerationGeometry> geometry;
 
-        if (auto *mesh = spatial->GetMesh()) {
+        if (auto &mesh = spatial->GetMesh()) {
             geometry = std::make_unique<AccelerationGeometry>(
                 mesh->BuildPackedVertices(),
                 mesh->BuildPackedIndices()

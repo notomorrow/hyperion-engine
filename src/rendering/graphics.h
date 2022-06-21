@@ -3,12 +3,14 @@
 
 #include <core/containers.h>
 #include <core/observer.h>
+#include <animation/skeleton.h>
+#include <scene/spatial.h>
 #include "shader.h"
-#include "../scene/spatial.h"
 #include "framebuffer.h"
 #include "render_pass.h"
 #include "render_bucket.h"
 #include "renderable_attributes.h"
+#include <constants.h>
 
 #include <rendering/backend/renderer_graphics_pipeline.h>
 #include <rendering/backend/renderer_frame.h>
@@ -16,6 +18,7 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <deque>
 
 namespace hyperion::v2 {
 
@@ -93,6 +96,15 @@ public:
     void Render(Engine *engine, Frame *frame);
 
 private:
+    struct CachedRenderData {
+        UInt          cycles_remaining{max_frames_in_flight + 1};
+        Spatial::ID   spatial_id;
+        Ref<Material> material;
+        Ref<Mesh>     mesh;
+        Ref<Skeleton> skeleton;
+        Ref<Shader>   shader;
+    };
+
     static bool BucketSupportsCulling(Bucket bucket);
     
     bool RemoveFromSpatialList(
@@ -106,7 +118,7 @@ private:
     /* Called from Spatial - remove the pointer */
     void OnSpatialRemoved(Spatial *spatial);
 
-    void PerformEnqueuedSpatialUpdates(Engine *engine);
+    void PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_index);
     
     void UpdateEnqueuedSpatialsFlag()
     {
@@ -123,10 +135,12 @@ private:
     
     std::vector<Ref<Framebuffer>>  m_fbos;
 
-    std::vector<Spatial *>      m_spatials;
-    std::vector<Spatial *>      m_spatials_pending_addition;
-    std::vector<Spatial *>      m_spatials_pending_removal;
-    ObserverNotifier<Spatial *> m_spatial_notifier;
+    std::vector<Spatial *>         m_spatials;
+    std::vector<Spatial *>         m_spatials_pending_addition;
+    std::vector<Spatial *>         m_spatials_pending_removal;
+    ObserverNotifier<Spatial *>    m_spatial_notifier;
+
+    std::vector<CachedRenderData>  m_cached_render_data;
 
     PerFrameData<CommandBuffer>   *m_per_frame_data;
 

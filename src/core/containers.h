@@ -779,6 +779,9 @@ public:
 
         bool operator!=(const Ref &other) const
             { return !operator==(other); }
+
+        bool operator<(const Ref &other) const
+            { return intptr_t(static_cast<const void *>(ptr)) < intptr_t(static_cast<const void *>(other.ptr)); }
         
         /*! \brief _If_ ptr has not had Init() performed yet (checked via IsInit()), call it, using
          * the pre-bound arguments from the reference counter this wrapper was acquired from.

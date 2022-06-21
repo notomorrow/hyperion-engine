@@ -8,7 +8,7 @@
 
 namespace hyperion {
 
-NoiseGenerator::NoiseGenerator(NoiseGenerationType type, Seed_t seed)
+NoiseGenerator::NoiseGenerator(NoiseGenerationType type, Seed seed)
     : m_type(type),
       m_seed(seed)
 {
@@ -16,7 +16,7 @@ NoiseGenerator::NoiseGenerator(NoiseGenerationType type, Seed_t seed)
 
 // simplex
 
-SimplexNoiseGenerator::SimplexNoiseGenerator(Seed_t seed)
+SimplexNoiseGenerator::SimplexNoiseGenerator(Seed seed)
     : NoiseGenerator(NoiseGenerationType::SIMPLEX_NOISE, seed)
 {
     for (int i = 0; i < OSN_OCTAVE_COUNT; i++) {
@@ -46,7 +46,7 @@ double SimplexNoiseGenerator::GetNoise(double x, double z) const
 
 // worley
 
-WorleyNoiseGenerator::WorleyNoiseGenerator(Seed_t seed)
+WorleyNoiseGenerator::WorleyNoiseGenerator(Seed seed)
     : NoiseGenerator(NoiseGenerationType::WORLEY_NOISE, seed)
 {
     m_worley_noise = new WorleyNoise(seed);
@@ -75,7 +75,7 @@ NoiseFactory *NoiseFactory::GetInstance()
     return instance;
 }
 
-NoiseGenerator *NoiseFactory::Capture(NoiseGenerationType type, Seed_t seed)
+NoiseGenerator *NoiseFactory::Capture(NoiseGenerationType type, Seed seed)
 {
     const auto type_and_seed = std::make_pair(type, seed);
     auto it = m_noise_generators.find(type_and_seed);
@@ -113,7 +113,7 @@ void NoiseFactory::Release(NoiseGenerator *noise)
     Release(noise->m_type, noise->m_seed);
 }
 
-void NoiseFactory::Release(NoiseGenerationType type, Seed_t seed)
+void NoiseFactory::Release(NoiseGenerationType type, Seed seed)
 {
     const auto it = m_noise_generators.find(std::make_pair(type, seed));
 
