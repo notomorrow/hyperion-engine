@@ -24,7 +24,7 @@ GraphicsPipeline::GraphicsPipeline(
     m_render_pass(std::move(render_pass)),
     m_renderable_attributes(renderable_attributes),
     m_per_frame_data(nullptr),
-    m_spatial_notifier([this]() -> std::vector<std::pair<Spatial **, size_t>> {
+    m_spatial_notifier([this]() -> std::vector<std::pair<Ref<Spatial> *, size_t>> {
         return {
             std::make_pair(m_spatials.data(), m_spatials.size()),
             std::make_pair(m_spatials_pending_addition.data(), m_spatials_pending_addition.size())
@@ -55,7 +55,7 @@ void GraphicsPipeline::RemoveFramebuffer(Framebuffer::ID id)
     m_fbos.erase(it);
 }
 
-void GraphicsPipeline::AddSpatial(Spatial *spatial)
+void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
 {
     AssertThrow(spatial != nullptr);
     AssertThrowMsg(
@@ -74,6 +74,7 @@ void GraphicsPipeline::AddSpatial(Spatial *spatial)
     m_spatial_notifier.ItemAdded(spatial);
     m_spatials_pending_addition.push_back(std::move(spatial));
 
+    // remove from 'pending removal' list
     auto it = std::find(
         m_spatials_pending_removal.begin(),
         m_spatials_pending_removal.end(),
@@ -87,47 +88,28 @@ void GraphicsPipeline::AddSpatial(Spatial *spatial)
     UpdateEnqueuedSpatialsFlag();
 }
 
-bool GraphicsPipeline::RemoveFromSpatialList(
-    Spatial::ID id,
-    std::vector<Spatial *> &spatials,
-    bool call_on_removed,
-    bool dispatch_item_removed,
-    bool remove_immediately
-)
+void GraphicsPipeline::RemoveSpatial(Spatial::ID id, bool call_on_removed)
 {
-    const auto it = std::find_if(
-        spatials.begin(),
-        spatials.end(),
+    auto spatials_it = std::find_if(
+        m_spatials.begin(),
+        m_spatials.end(),
         [&id](const auto &item) {
-            AssertThrow(item != nullptr); // if this comes up, debug it. trying to catch a threading issue
-
+            AssertThrow(item != nullptr);
             return item->GetId() == id;
         }
     );
 
-    if (it == spatials.end()) {
-        // DebugLog(
-        //     LogType::Warn,
-        //     "Spatial with ID #%u attempted removal from pipeline, but was not found!\n",
-        //     id.value
-        // );
+    if (spatials_it != m_spatials.end()) {
+        auto &&found_spatial = *spatials_it;
 
-        return false;
-    }
-
-    auto found_spatial = *it;
-
-    if (dispatch_item_removed) {
+        // dispatch
         m_spatial_notifier.ItemRemoved(found_spatial);
-    }
 
-    if (call_on_removed) {
-        found_spatial->OnRemovedFromPipeline(this);
-    }
+        if (call_on_removed) {
+            found_spatial->OnRemovedFromPipeline(this);
+        }
 
-    if (remove_immediately) {
-        spatials.erase(it);
-    } else {
+        // add it to pending removal list
         std::lock_guard guard(m_enqueued_spatials_mutex);
 
         const auto pending_removal_it = std::find(
@@ -137,7 +119,7 @@ bool GraphicsPipeline::RemoveFromSpatialList(
         );
 
         if (pending_removal_it == m_spatials_pending_removal.end()) {
-            m_spatials_pending_removal.push_back(found_spatial);
+            m_spatials_pending_removal.push_back(found_spatial.IncRef());
 
             m_cached_render_data.push_back(CachedRenderData {
                 .spatial_id       = found_spatial->GetId(),
@@ -163,43 +145,46 @@ bool GraphicsPipeline::RemoveFromSpatialList(
                 GetId().value
             );
         }
-    }
 
-    UpdateEnqueuedSpatialsFlag();
-    
-    return true;
-}
+        UpdateEnqueuedSpatialsFlag();
 
-void GraphicsPipeline::RemoveSpatial(Spatial::ID id)
-{
-    if (RemoveFromSpatialList(id, m_spatials, true, true, false)) {
         return;
     }
+
+    // not found in main spatials list, check pending addition/removal
 
     std::lock_guard guard(m_enqueued_spatials_mutex);
 
-    if (RemoveFromSpatialList(id, m_spatials_pending_addition, true, true, true)) {
-        return;
-    }
 
-    RemoveFromSpatialList(id, m_spatials_pending_removal, false, false, true);
+    auto pending_addition_it = std::find_if(
+        m_spatials_pending_addition.begin(),
+        m_spatials_pending_addition.end(),
+        [&id](const auto &item) {
+            AssertThrow(item != nullptr);
+            return item->GetId() == id;
+        }
+    );
+
+    if (pending_addition_it != m_spatials_pending_addition.end()) {
+        auto &&found_spatial = *pending_addition_it;
+
+        // dispatch
+        m_spatial_notifier.ItemRemoved(found_spatial);
+
+        if (call_on_removed) {
+            found_spatial->OnRemovedFromPipeline(this);
+        }
+
+        // directly remove from list of ones pending addition
+        m_spatials_pending_addition.erase(pending_addition_it);
+
+        UpdateEnqueuedSpatialsFlag();
+    }
 }
 
 void GraphicsPipeline::OnSpatialRemoved(Spatial *spatial)
 {
-    const auto id = spatial->GetId();
-
-    if (RemoveFromSpatialList(id, m_spatials, false, true, false)) {
-        return;
-    }
-
-    std::lock_guard guard(m_enqueued_spatials_mutex);
-
-    if (RemoveFromSpatialList(id, m_spatials_pending_addition, false, true, true)) {
-        return;
-    }
-
-    RemoveFromSpatialList(id, m_spatials_pending_removal, false, false, true);
+    RemoveSpatial(spatial->GetId(), false);
 }
 
 void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_index)
@@ -209,7 +194,7 @@ void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_
     std::lock_guard guard(m_enqueued_spatials_mutex);
 
     if (!m_spatials_pending_removal.empty()) {
-        for (auto *spatial : m_spatials_pending_removal) {
+        for (auto &&spatial : m_spatials_pending_removal) {
             const auto it = std::find(m_spatials.begin(), m_spatials.end(), spatial); // oof
             
             AssertThrow(it != m_spatials.end());
@@ -240,7 +225,7 @@ void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_
             }
             
             if ((*it)->IsReady()) {
-                m_spatials.push_back(*it);
+                m_spatials.push_back(std::move(*it));
                 it = m_spatials_pending_addition.erase(it);
                 
                 continue;
@@ -273,7 +258,7 @@ void GraphicsPipeline::Init(Engine *engine)
         AssertThrow(m_shader != nullptr);
         m_shader.Init();
 
-        for (auto *spatial : m_spatials) {
+        for (auto &&spatial : m_spatials) {
             if (spatial == nullptr) {
                 continue;
             }
@@ -328,7 +313,7 @@ void GraphicsPipeline::Init(Engine *engine)
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](Engine *engine) {
             SetReady(false);
             
-            for (auto *spatial : m_spatials) {
+            for (auto &&spatial : m_spatials) {
                 if (spatial == nullptr) {
                     continue;
                 }
@@ -342,7 +327,7 @@ void GraphicsPipeline::Init(Engine *engine)
             
             std::lock_guard guard(m_enqueued_spatials_mutex);
 
-            for (auto *spatial : m_spatials_pending_addition) {
+            for (auto &&spatial : m_spatials_pending_addition) {
                 if (spatial == nullptr) {
                     continue;
                 }
@@ -470,7 +455,7 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
             // check visibility state
             const bool perform_culling = scene_cull_id != Scene::empty_id && BucketSupportsCulling(m_renderable_attributes.bucket);
             
-            for (auto *spatial : m_spatials) {
+            for (auto &&spatial : m_spatials) {
                 if (spatial->GetMesh() == nullptr) {
                     continue;
                 }
@@ -479,7 +464,7 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                     if (auto *octant = spatial->GetOctree()) {
                         const auto &visibility_state = octant->GetVisibilityState();
 
-                        if (!Octree::IsVisible(&engine->GetOctree(), octant)) {
+                        if (!Octree::IsVisible(&spatial->GetScene()->GetOctree(), octant)) {
                             continue;
                         }
 

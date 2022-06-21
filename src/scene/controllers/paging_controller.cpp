@@ -48,7 +48,7 @@ void PagingController::OnRemoved()
 
 void PagingController::OnUpdate(GameCounter::TickUnit delta)
 {
-    auto *node = GetOwner()->GetNode();
+    auto *node = GetOwner()->GetParent();
 
     if (node == nullptr) {
         DebugLog(

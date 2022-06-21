@@ -44,6 +44,9 @@ import mandelbrot;
 
 let controller_node: any = null;
 
+let global_time: float = 0.0;
+let num_ticks: uint = 0;
+
 export function OnAdded(node: any) {
     Print("Added controller to node: %s\n", node);
 
@@ -60,7 +63,15 @@ export function OnRemoved(node: any) {
 };
 
 export function OnTick(node: any, delta: float) {
-    //Print("%\n", delta);
-    //let otherVec3 = new Vector3();
-    //Print("%\n", (new Vector3()).operator+(otherVec3));
+    global_time += delta;
+    num_ticks += 1;
+
+    if (global_time >= 1.0) {
+        let avg_time: float = global_time / num_ticks;
+
+        Print("avg time between ticks: %\n", avg_time);
+        Print("FPS: %\n", 1.0 / avg_time);
+        global_time = 0.0;
+        num_ticks = 0;
+    }
 };

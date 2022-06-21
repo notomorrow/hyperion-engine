@@ -703,29 +703,15 @@ class RefCounter {
     ArgsTuple                           m_init_args{};
 
 public:
-    class Ref {
-    public:
-        Ref() : Ref(nullptr)
-        {
-        }
-
-        Ref(std::nullptr_t) : Ref(nullptr, nullptr)
-        {
-        }
-
-        Ref(T *ptr, RefCount *ref_count)
+    class RefWrapper {
+    protected:
+        RefWrapper(T *ptr, RefCount *ref_count)
             : ptr(ptr),
               m_ref_count(ref_count)
         {
-            if (m_ref_count != nullptr) {
-                ++m_ref_count->count;
-            }
         }
 
-        Ref(const Ref &other) = delete;
-        Ref &operator=(const Ref &other) = delete;
-
-        Ref(Ref &&other) noexcept
+        RefWrapper(RefWrapper &&other) noexcept
             : ptr(other.ptr),
               m_ref_count(other.m_ref_count)
         {
@@ -733,32 +719,7 @@ public:
             other.m_ref_count = nullptr;
         }
 
-        Ref &operator=(Ref &&other) noexcept
-        {
-            if (std::addressof(other) == this || *this == other) {
-                return *this;
-            }
-
-            if (Valid()) {
-                Release();
-            }
-
-            ptr         = other.ptr;
-            m_ref_count = other.m_ref_count;
-
-            other.ptr         = nullptr;
-            other.m_ref_count = nullptr;
-
-            return *this;
-        }
-
-        ~Ref()
-        {
-            if (m_ref_count != nullptr) {
-                Release();
-            }
-        }
-
+    public:
         operator T const * () const    { return ptr; }
         explicit operator bool() const { return Valid(); }
 
@@ -774,13 +735,13 @@ public:
         bool operator!=(std::nullptr_t) const
             { return ptr != nullptr; }
 
-        bool operator==(const Ref &other) const
+        bool operator==(const RefWrapper &other) const
             { return &other == this || (ptr == other.ptr && m_ref_count == other.m_ref_count); }
 
-        bool operator!=(const Ref &other) const
+        bool operator!=(const RefWrapper &other) const
             { return !operator==(other); }
 
-        bool operator<(const Ref &other) const
+        bool operator<(const RefWrapper &other) const
             { return intptr_t(static_cast<const void *>(ptr)) < intptr_t(static_cast<const void *>(other.ptr)); }
         
         /*! \brief _If_ ptr has not had Init() performed yet (checked via IsInit()), call it, using
@@ -818,28 +779,10 @@ public:
             }
         }
 
-        /*! \brief Acquire a new reference from this one. Increments the reference counter. */
-        auto IncRef()
-        {
-            AssertState();
-
-            //return m_ref_counter->IncRef(ptr);
-
-            return Ref(ptr, m_ref_count);
-        }
-
-        size_t GetRefCount() const
-        {
-            if (!Valid()) {
-                return 0;
-            }
-
-            return m_ref_count->count.load();
-        }
-
         T *ptr;
+        RefCount *m_ref_count = nullptr;
 
-    private:
+    protected:
         bool Valid() const
             { return ptr != nullptr && m_ref_count != nullptr; }
 
@@ -848,22 +791,151 @@ public:
             AssertThrowMsg(ptr != nullptr,           "underlying pointer was null");
             AssertThrowMsg(m_ref_count != nullptr,   "ref counter not set");
         }
+    };
 
-        void Release()
+    class Ref : public RefWrapper {
+    public:
+        Ref() : Ref(nullptr)
         {
-            AssertState();
-
-            AssertThrowMsg(m_ref_count->count != 0, "Cannot decrement refcount when already at zero");
-            
-            if (!--m_ref_count->count) {
-                m_ref_count->ref_manager->Release(ptr);
-            }
-
-            ptr         = nullptr;
-            m_ref_count = nullptr;
         }
 
-        RefCount *m_ref_count = nullptr;
+        Ref(std::nullptr_t) : Ref(nullptr, nullptr)
+        {
+        }
+
+        Ref(T *ptr, RefCount *ref_count)
+            : RefWrapper(ptr, ref_count)
+        {
+            if (RefWrapper::m_ref_count != nullptr) {
+                ++RefWrapper::m_ref_count->count;
+            }
+        }
+
+        Ref(const Ref &other) = delete;
+        Ref &operator=(const Ref &other) = delete;
+
+        Ref(Ref &&other) noexcept : RefWrapper(std::move(other)) {}
+
+        Ref &operator=(Ref &&other) noexcept
+        {
+            if (std::addressof(other) == this || *this == other) {
+                return *this;
+            }
+
+            if (RefWrapper::Valid()) {
+                Release();
+            }
+
+            RefWrapper::ptr         = other.ptr;
+            RefWrapper::m_ref_count = other.m_ref_count;
+
+            other.ptr         = nullptr;
+            other.m_ref_count = nullptr;
+
+            return *this;
+        }
+
+        ~Ref()
+        {
+            if (RefWrapper::m_ref_count != nullptr) {
+                Release();
+            }
+        }
+
+        /*! \brief Acquire a new reference from this one. Increments the reference counter. */
+        auto IncRef()
+        {
+            RefWrapper::AssertState();
+
+            //return m_ref_counter->IncRef(ptr);
+
+            return Ref(RefWrapper::ptr, RefWrapper::m_ref_count);
+        }
+
+        size_t GetRefCount() const
+        {
+            if (!RefWrapper::Valid()) {
+                return 0;
+            }
+
+            return RefWrapper::m_ref_count->count.load();
+        }
+
+    private:
+        void Release()
+        {
+            RefWrapper::AssertState();
+
+            AssertThrowMsg(RefWrapper::m_ref_count->count != 0, "Cannot decrement refcount when already at zero");
+            
+            if (!--RefWrapper::m_ref_count->count) {
+                RefWrapper::m_ref_count->ref_manager->Release(RefWrapper::ptr);
+            }
+
+            RefWrapper::ptr         = nullptr;
+            RefWrapper::m_ref_count = nullptr;
+        }
+    };
+
+    class WeakRef : public RefWrapper {
+    public:
+        WeakRef()               : WeakRef(nullptr) {}
+        WeakRef(std::nullptr_t) : WeakRef(nullptr, nullptr) {}
+
+        WeakRef(const Ref &strong_ref)
+            : RefWrapper(strong_ref.ptr, strong_ref.m_ref_count)
+        {
+        }
+
+        WeakRef(T *ptr, RefCount *ref_count)
+            : RefWrapper(ptr, ref_count)
+        {
+
+        }
+
+        WeakRef(const WeakRef &other) = delete;
+        WeakRef &operator=(const WeakRef &other) = delete;
+
+        WeakRef(WeakRef &&other) noexcept : RefWrapper(std::move(other)) {}
+        WeakRef &operator=(WeakRef &&other) noexcept
+        {
+            if (std::addressof(other) == this || *this == other) {
+                return *this;
+            }
+
+            RefWrapper::ptr         = other.ptr;
+            RefWrapper::m_ref_count = other.m_ref_count;
+
+            RefWrapper::other.ptr         = nullptr;
+            RefWrapper::other.m_ref_count = nullptr;
+
+            return *this;
+        }
+
+        ~WeakRef() = default;
+
+        bool Expired() const
+        {
+            return RefWrapper::m_ref_count == nullptr
+                || RefWrapper::m_ref_count->count.load() == 0;
+        }
+
+        /*! \brief Acquire a new reference from this one. Increments the reference counter. */
+        auto IncRef()
+        {
+            RefWrapper::AssertState();
+
+            return Ref(RefWrapper::ptr, RefWrapper::m_ref_count);
+        }
+
+        size_t GetRefCount() const
+        {
+            if (!RefWrapper::Valid()) {
+                return 0;
+            }
+
+            return RefWrapper::m_ref_count->count.load();
+        }
     };
 
     RefCounter(CallbacksClass &callbacks)
@@ -918,6 +990,8 @@ public:
         return Ref(ptr, iterator->second);
     }
 
+    /*! \brief Look up an object by ID, returning a ref counted ptr to it.
+        Note, this method is expensive as it locks a mutex. Use sparingly. */
     [[nodiscard]] Ref Lookup(typename T::ID id)
     {
         std::lock_guard guard(m_mutex);
@@ -961,7 +1035,16 @@ private:
 };
 
 template <class T>
-using Ref = typename RefCounter<T, EngineCallbacks>::Ref;
+using Ref    = typename RefCounter<T, EngineCallbacks>::Ref;
+
+template <class T>
+using WeakRef = typename RefCounter<T, EngineCallbacks>::WeakRef;
+
+template <class T>
+WeakRef<T> MakeWeakRef(const Ref<T> &strong_ref)
+{
+    return WeakRef<T>(strong_ref);
+}
 
 } // namespace hyperion::v2
 

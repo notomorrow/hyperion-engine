@@ -2,11 +2,15 @@
 #define HYPERION_V2_SCENE_H
 
 #include "node.h"
+#include "spatial.h"
+#include "octree.h"
 #include <rendering/base.h>
 #include <rendering/texture.h>
 #include <rendering/shader.h>
 #include <rendering/light.h>
 #include <core/scheduler.h>
+#include <core/lib/flat_set.h>
+#include <core/lib/flat_map.h>
 #include <camera/camera.h>
 #include <game_counter.h>
 #include <types.h>
@@ -16,6 +20,7 @@ namespace hyperion::v2 {
 class Environment;
 
 class Scene : public EngineComponentBase<STUB_CLASS(Scene)> {
+    friend class Spatial; // TODO: refactor to not need as many friend classes
 public:
     static constexpr UInt32 max_environment_textures = SceneShaderData::max_environment_textures;
 
@@ -26,6 +31,14 @@ public:
 
     Camera *GetCamera() const                            { return m_camera.get(); }
     void SetCamera(std::unique_ptr<Camera> &&camera)     { m_camera = std::move(camera); }
+    Octree &GetOctree()                                  { return m_octree; }
+    const Octree &GetOctree() const                      { return m_octree; }
+
+
+    bool AddSpatial(Ref<Spatial> &&spatial);
+    bool HasSpatial(Spatial::ID id) const;
+    bool RemoveSpatial(Spatial::ID id);
+    bool RemoveSpatial(const Ref<Spatial> &spatial);
 
     Node *GetRootNode() const                            { return m_root_node.get(); }
 
@@ -43,12 +56,16 @@ public:
     BoundingBox m_aabb;
 
 private:
+    void RequestPipelineChanges(Ref<Spatial> &spatial);
     void EnqueueRenderUpdates(Engine *engine);
 
-    std::unique_ptr<Camera> m_camera;
-    std::unique_ptr<Node>   m_root_node;
-    Environment            *m_environment;
+    std::unique_ptr<Camera>  m_camera;
+    std::unique_ptr<Node>    m_root_node;
+    Octree                   m_octree;
+    Environment             *m_environment;
     std::array<Ref<Texture>, max_environment_textures> m_environment_textures;
+
+    FlatMap<Spatial::ID, Ref<Spatial>> m_spatials;
 
     Matrix4                 m_last_view_projection_matrix;
 

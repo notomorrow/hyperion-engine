@@ -17,6 +17,7 @@ bool Octree::IsVisible(const Octree *root, const Octree *child)
 Octree::Octree(const BoundingBox &aabb)
     : Octree(nullptr, aabb, 0)
 {
+    m_root = new Root;
 }
 
 Octree::Octree(Octree *parent, const BoundingBox &aabb, UInt8 index)
@@ -36,6 +37,10 @@ Octree::Octree(Octree *parent, const BoundingBox &aabb, UInt8 index)
 
 Octree::~Octree()
 {
+    if (IsRoot()) {
+        delete m_root;
+    }
+
     AssertThrowMsg(m_nodes.empty(), "Expected nodes to be emptied before octree destructor");
 }
 
@@ -482,15 +487,25 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
          * state check, the proper state will be applied
          */
         if (auto *current_octant = spatial->GetOctree()) {
+            if (spatial->GetScene() == nullptr) {
+                DebugLog(
+                    LogType::Error,
+                    "Spatial #%u was not attached to a Scene!\n",
+                    spatial->GetId().value
+                );
+
+                return false;
+            }
+
             if (m_root != nullptr) {
                 const UInt32 curr = m_root->visibility_cursor.load();
 
-                m_visibility_state.nonces[curr] = engine->GetOctree().GetVisibilityState().nonces[curr].load();
+                m_visibility_state.nonces[curr] = spatial->GetScene()->GetOctree().GetVisibilityState().nonces[curr].load();
                 //m_visibility_state.bits         |= current_octant->GetVisibilityState().bits.load();
             }
         }
 
-        m_nodes.push_back(Node{
+        m_nodes.push_back(Node {
             .spatial          = spatial,
             .aabb             = spatial->GetWorldAabb(),
             .visibility_state = &m_visibility_state

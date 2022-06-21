@@ -1,8 +1,6 @@
 #ifndef HYPERION_V2_VISIBILITY_STATE_H
 #define HYPERION_V2_VISIBILITY_STATE_H
 
-#include "scene.h"
-
 #include <util.h>
 #include <types.h>
 
@@ -44,21 +42,21 @@ struct VisibilityState {
     VisibilityState &operator=(VisibilityState &&other) noexcept = delete;
     ~VisibilityState() = default;
 
-    HYP_FORCE_INLINE bool Get(Scene::ID scene) const
+    HYP_FORCE_INLINE bool Get(IDBase scene_id) const
     {
-        AssertThrow(scene.value - 1ull < max_scenes);
+        AssertThrow(scene_id.value - 1ull < max_scenes);
         
-        return bits & 1ull << static_cast<Bitmask>(scene.value - 1);
+        return bits & 1ull << static_cast<Bitmask>(scene_id.value - 1);
     }
 
-    HYP_FORCE_INLINE void Set(Scene::ID scene, bool visible)
+    HYP_FORCE_INLINE void Set(IDBase scene_id, bool visible)
     {
-        AssertThrow(scene.value - 1 < max_scenes);
+        AssertThrow(scene_id.value - 1 < max_scenes);
         
         if (visible) {
-            bits |= 1ull << static_cast<Bitmask>(scene.value - 1);
+            bits |= 1ull << static_cast<Bitmask>(scene_id.value - 1);
         } else {
-            bits &= ~(1ull << (scene.value - 1));
+            bits &= ~(1ull << (scene_id.value - 1));
         }
     }
 
