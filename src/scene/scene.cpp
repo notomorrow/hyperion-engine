@@ -8,6 +8,7 @@ Scene::Scene(std::unique_ptr<Camera> &&camera)
     : EngineComponentBase(),
       m_camera(std::move(camera)),
       m_root_node(std::make_unique<Node>("root")),
+      m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
       m_environment(new Environment),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
@@ -55,6 +56,117 @@ void Scene::Init(Engine *engine)
     }));
 }
 
+bool Scene::AddSpatial(Ref<Spatial> &&spatial)
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    AssertReady();
+    AssertThrow(spatial != nullptr);
+
+    auto it = m_spatials.Find(spatial->GetId());
+
+    if (it != m_spatials.end()) {
+        DebugLog(
+            LogType::Warn,
+            "Spatial #%u already exists in Scene #%u\n",
+            spatial->GetId().value,
+            m_id.value
+        );
+
+        return false;
+    }
+
+    spatial->m_scene = this;
+
+    if (spatial->IsRenderable() && !spatial->GetPrimaryPipeline()) {
+        if (auto pipeline = GetEngine()->FindOrCreateGraphicsPipeline(spatial->GetRenderableAttributes())) {
+            if (!spatial->GetPipelines().Contains(pipeline.ptr)) {
+                pipeline->AddSpatial(spatial.IncRef());
+            }
+            
+            // TODO: wrapper function
+            spatial->m_primary_pipeline = {
+                .pipeline = pipeline.ptr,
+                .changed  = false
+            };
+        } else {
+            DebugLog(
+                LogType::Error,
+                "Could not find or create optimal graphics pipeline for Spatial #%lu!\n",
+                spatial->GetId().value
+            );
+
+            return false;
+        }
+    }
+
+    // just here for now, will move into this class
+    if (spatial->m_octree == nullptr) {
+        spatial->AddToOctree(GetEngine(), m_octree);
+    }
+
+    m_spatials.Insert(spatial->GetId(), std::move(spatial));
+
+    return true;
+}
+
+bool Scene::HasSpatial(Spatial::ID id) const
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    return m_spatials.Contains(id);
+}
+
+bool Scene::RemoveSpatial(Spatial::ID id)
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    AssertReady();
+
+    auto it = m_spatials.Find(id);
+    if (it == m_spatials.End()) {
+        return false;
+    }
+
+    auto &found_spatial = it->second;
+    AssertThrow(found_spatial != nullptr);
+
+    found_spatial->RemoveFromPipelines();
+
+    if (found_spatial->m_octree != nullptr) {
+        found_spatial->RemoveFromOctree(GetEngine());
+    }
+
+    m_spatials.Erase(it);
+
+    return true;
+}
+
+bool Scene::RemoveSpatial(const Ref<Spatial> &spatial)
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    AssertReady();
+    AssertThrow(spatial != nullptr);
+
+    auto it = m_spatials.Find(spatial->GetId());
+    if (it == m_spatials.End()) {
+        return false;
+    }
+
+    auto &found_spatial = it->second;
+
+    found_spatial->RemoveFromPipelines();
+
+    if (found_spatial->m_octree != nullptr) {
+        found_spatial->RemoveFromOctree(GetEngine());
+    }
+
+    m_spatials.Erase(it);
+
+    return true;
+}
+
 void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
 {
     AssertReady();
@@ -70,11 +182,49 @@ void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
         }
     }
 
-    //if (m_shader_data_state.IsDirty()) {
-        EnqueueRenderUpdates(engine);
-    //}
+    for (auto &it : m_spatials) {
+        auto &spatial = it.second;
 
-    m_root_node->Update(engine, delta);
+        spatial->Update(engine, delta);
+
+        if (spatial->m_primary_pipeline.changed) {
+            RequestPipelineChanges(spatial);
+        }
+    }
+
+    m_octree.CalculateVisibility(this);
+
+    EnqueueRenderUpdates(engine);
+}
+
+void Scene::RequestPipelineChanges(Ref<Spatial> &spatial)
+{
+    AssertThrow(spatial != nullptr);
+    AssertThrow(spatial->m_scene == this);
+
+    if (spatial->m_primary_pipeline.pipeline != nullptr) {
+        spatial->RemoveFromPipeline(GetEngine(), spatial->m_primary_pipeline.pipeline);
+    }
+
+    if (!spatial->GetPrimaryPipeline()) {
+        if (auto pipeline = GetEngine()->FindOrCreateGraphicsPipeline(spatial->GetRenderableAttributes())) {
+            if (!spatial->GetPipelines().Contains(pipeline.ptr)) {
+                pipeline->AddSpatial(spatial.IncRef());
+            }
+            
+            // TODO: wrapper function
+            spatial->m_primary_pipeline = {
+                .pipeline = pipeline.ptr,
+                .changed  = false
+            };
+        } else {
+            DebugLog(
+                LogType::Error,
+                "Could not find or create optimal graphics pipeline for Spatial #%lu!\n",
+                spatial->GetId().value
+            );
+        }
+    }
 }
 
 void Scene::EnqueueRenderUpdates(Engine *engine)

@@ -69,7 +69,15 @@ void Node::SetName(const char *name)
 
 void Node::SetScene(Scene *scene)
 {
+    if (m_scene != nullptr && m_spatial != nullptr) {
+        m_scene->RemoveSpatial(m_spatial);
+    }
+
     m_scene = scene;
+
+    if (m_scene != nullptr && m_spatial != nullptr) {
+        m_scene->AddSpatial(m_spatial.IncRef());
+    }
 
     for (auto &child : m_child_nodes) {
         if (child == nullptr) {
@@ -287,12 +295,21 @@ void Node::SetSpatial(Ref<Spatial> &&spatial)
     }
 
     if (m_spatial != nullptr) {
-        m_spatial->SetNode(nullptr);
+        if (m_scene != nullptr) {
+            m_scene->RemoveSpatial(m_spatial);
+        }
+
+        m_spatial->SetParent(nullptr);
     }
 
     if (spatial != nullptr) {
         m_spatial = std::move(spatial);
-        m_spatial->SetNode(this);
+
+        if (m_scene != nullptr) {
+            m_scene->AddSpatial(m_spatial.IncRef());
+        }
+
+        m_spatial->SetParent(this);
         m_spatial.Init();
 
         m_local_aabb = m_spatial->GetLocalAabb();
@@ -334,22 +351,6 @@ void Node::UpdateWorldTransform()
     }
 }
 
-void Node::UpdateInternal(Engine *engine, GameCounter::TickUnit delta)
-{
-    if (m_spatial != nullptr) {
-        m_spatial->Update(engine, delta);
-    }
-}
-
-void Node::Update(Engine *engine, GameCounter::TickUnit delta)
-{
-    UpdateInternal(engine, delta);
-
-    for (auto *node : m_descendents) {
-        node->UpdateInternal(engine, delta);
-    }
-}
-
 bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
 {
     const bool has_node_hit = ray.TestAabb(m_world_aabb);
@@ -378,6 +379,11 @@ bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
     }
 
     return has_entity_hit;
+}
+
+void Node::RequestPipelineChanges()
+{
+    
 }
 
 } // namespace hyperion::v2

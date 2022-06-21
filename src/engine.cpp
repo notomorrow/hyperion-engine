@@ -23,11 +23,9 @@ using renderer::FillMode;
 Engine::Engine(SystemSDL &_system, const char *app_name)
     : shader_globals(nullptr),
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
-      m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
       resources(this),
       assets(this)
 {
-    m_octree.m_root = &m_octree_root;
 }
 
 Engine::~Engine()
@@ -470,6 +468,7 @@ void Engine::Compile()
 
 Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(const RenderableAttributeSet &renderable_attributes)
 {
+    DebugLog(LogType::Debug, "FindOrCreateGraphicsPipeline ()  from thread %s\n", current_thread_id.name.CString());
     const auto it = m_graphics_pipeline_mapping.Find(renderable_attributes);
 
     if (it != m_graphics_pipeline_mapping.End()) {
@@ -478,9 +477,12 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(const RenderableAttri
 
     auto &render_list_bucket = m_render_list_container.Get(renderable_attributes.bucket);
 
+    auto shader = resources.shaders.Lookup(renderable_attributes.shader_id);
+    AssertThrow(shader != nullptr);
+
     // create a pipeline with the given params
     return AddGraphicsPipeline(std::make_unique<GraphicsPipeline>(
-        resources.shaders.Lookup(renderable_attributes.shader_id),
+        std::move(shader),
         render_list_bucket.GetRenderPass().IncRef(),
         renderable_attributes
     ));
@@ -488,6 +490,8 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(const RenderableAttri
     
 Ref<GraphicsPipeline> Engine::AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline)
 {
+    DebugLog(LogType::Debug, "AddGraphicsPipeline()  from thread %s\n", current_thread_id.name.CString());
+   
     auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
     
     std::pair<RenderableAttributeSet, GraphicsPipeline::ID> pair{graphics_pipeline->GetRenderableAttributes(), graphics_pipeline->GetId()};

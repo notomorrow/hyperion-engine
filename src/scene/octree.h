@@ -2,7 +2,6 @@
 #define HYPERION_V2_OCTREE_H
 
 #include <core/containers.h>
-#include "scene.h"
 #include "spatial.h"
 #include "visibility_state.h"
 
@@ -27,11 +26,10 @@ namespace hyperion::v2 {
 class Spatial;
 
 class Octree {
-    friend class Engine;
     friend class Spatial;
 
     enum {
-        DEPTH_SEARCH_INF = -1,
+        DEPTH_SEARCH_INF       = -1,
         DEPTH_SEARCH_ONLY_THIS = 0
     };
 
@@ -51,9 +49,8 @@ public:
     };
 
     struct Node {
-        Spatial     *spatial;
-        BoundingBox  aabb;
-
+        Spatial         *spatial;
+        BoundingBox      aabb;
         VisibilityState *visibility_state = nullptr;
     };
 
@@ -74,11 +71,6 @@ public:
     Octree(const BoundingBox &aabb = default_bounds);
     ~Octree();
 
-    Root *GetRoot() const              { return m_root; }
-
-    BoundingBox &GetAabb()             { return m_aabb; }
-    const BoundingBox &GetAabb() const { return m_aabb; }
-
     auto &GetCallbacks()
     {
         AssertThrow(m_root != nullptr);
@@ -86,11 +78,13 @@ public:
         return m_root->events;
     }
 
-    const auto &GetCallbacks() const
-        { return const_cast<Octree *>(this)->GetCallbacks(); }
+    const auto &GetCallbacks() const                  { return const_cast<Octree *>(this)->GetCallbacks(); }
 
     VisibilityState &GetVisibilityState()             { return m_visibility_state; }
     const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
+
+    BoundingBox &GetAabb()                            { return m_aabb; }
+    const BoundingBox &GetAabb() const                { return m_aabb; }
 
     void Clear(Engine *engine);
     bool Insert(Engine *engine, Spatial *spatial);
@@ -109,13 +103,18 @@ private:
 
     auto FindNode(Spatial *spatial)
     {
-        return std::find_if(m_nodes.begin(), m_nodes.end(), [spatial](const Node &node) {
-            return node.spatial == spatial;
-        });
+        return std::find_if(
+            m_nodes.begin(),
+            m_nodes.end(),
+            [spatial](const Node &node) {
+                return node.spatial == spatial;
+            }
+        );
     }
 
-    bool IsRoot() const { return m_parent == nullptr; }
-    bool Empty() const  { return m_nodes.empty(); }
+    bool IsRoot() const   { return m_parent == nullptr; }
+    bool Empty() const    { return m_nodes.empty(); }
+    Root *GetRoot() const { return m_root; }
     
     void SetParent(Octree *parent);
     bool EmptyDeep(int depth = DEPTH_SEARCH_INF, UInt8 octant_mask = 0xff) const;

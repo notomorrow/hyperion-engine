@@ -78,12 +78,12 @@ public:
     const StencilState &GetStencilMode() const              { return m_renderable_attributes.stencil_state; }
     void SetStencilState(const StencilState &stencil_state) { m_renderable_attributes.stencil_state = stencil_state; }
 
-    void AddSpatial(Spatial *spatial);
-    void RemoveSpatial(Spatial::ID id);
+    void AddSpatial(Ref<Spatial> &&spatial);
+    void RemoveSpatial(Spatial::ID id, bool call_on_removed = true);
     auto &GetSpatials()                                              { return m_spatials; }
     const auto &GetSpatials() const                                  { return m_spatials; }
-    ObserverNotifier<Spatial *> &GetSpatialNotifier()                { return m_spatial_notifier; }
-    const ObserverNotifier<Spatial *> &GetSpatialNotifier() const    { return m_spatial_notifier; }
+    ObserverNotifier<Ref<Spatial>> &GetSpatialNotifier()                { return m_spatial_notifier; }
+    const ObserverNotifier<Ref<Spatial>> &GetSpatialNotifier() const    { return m_spatial_notifier; }
 
     void AddFramebuffer(Ref<Framebuffer> &&fbo) { m_fbos.push_back(std::move(fbo)); }
     void RemoveFramebuffer(Framebuffer::ID id);
@@ -106,14 +106,6 @@ private:
     };
 
     static bool BucketSupportsCulling(Bucket bucket);
-    
-    bool RemoveFromSpatialList(
-        Spatial::ID id,
-        std::vector<Spatial *> &spatials,
-        bool call_on_removed,
-        bool dispatch_item_removed,
-        bool remove_immediately
-    );
 
     /* Called from Spatial - remove the pointer */
     void OnSpatialRemoved(Spatial *spatial);
@@ -133,12 +125,12 @@ private:
     Ref<RenderPass>                m_render_pass;
     RenderableAttributeSet         m_renderable_attributes;
     
-    std::vector<Ref<Framebuffer>>  m_fbos;
+    std::vector<Ref<Framebuffer>>     m_fbos;
 
-    std::vector<Spatial *>         m_spatials;
-    std::vector<Spatial *>         m_spatials_pending_addition;
-    std::vector<Spatial *>         m_spatials_pending_removal;
-    ObserverNotifier<Spatial *>    m_spatial_notifier;
+    std::vector<Ref<Spatial>>         m_spatials;
+    std::vector<Ref<Spatial>>         m_spatials_pending_addition;
+    std::vector<Ref<Spatial>>         m_spatials_pending_removal;
+    ObserverNotifier<Ref<Spatial>>    m_spatial_notifier;
 
     std::vector<CachedRenderData>  m_cached_render_data;
 
