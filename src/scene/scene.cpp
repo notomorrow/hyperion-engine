@@ -46,8 +46,17 @@ void Scene::Init(Engine *engine)
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](Engine *engine) {
             DebugLog(LogType::Debug, "Destroy scene #%lu\t%p\n", m_id.value, (void *)this);
 
-            delete m_environment;
-            m_environment = nullptr;
+            for (auto &spatial : m_spatials) {
+                AssertThrow(spatial.second != nullptr);
+
+                RemoveFromPipelines(spatial.second);
+
+                if (spatial.second->m_octree != nullptr) {
+                    spatial.second->RemoveFromOctree(GetEngine());
+                }
+            }
+
+            m_spatials.clear();
 
             HYP_FLUSH_RENDER_QUEUE(engine);
 
@@ -63,7 +72,7 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
     AssertReady();
     AssertThrow(spatial != nullptr);
 
-    auto it = m_spatials.Find(spatial->GetId());
+    auto it = m_spatials.find(spatial->GetId());
 
     if (it != m_spatials.end()) {
         DebugLog(
@@ -102,10 +111,18 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
 
     // just here for now, will move into this class
     if (spatial->m_octree == nullptr) {
+        DebugLog(
+            LogType::Debug,
+            "Add spatial #%u to octree\n",
+            spatial->GetId().value
+        );
         spatial->AddToOctree(GetEngine(), m_octree);
     }
 
-    m_spatials.Insert(spatial->GetId(), std::move(spatial));
+    spatial.Init();
+
+    // m_spatials.Insert(spatial->GetId(), std::move(spatial));
+    m_spatials.insert(std::make_pair(static_cast<IDBase>(spatial->GetId()), std::move(spatial)));
 
     return true;
 }
@@ -114,7 +131,7 @@ bool Scene::HasSpatial(Spatial::ID id) const
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    return m_spatials.Contains(id);
+    return m_spatials.find(id) != m_spatials.end();
 }
 
 bool Scene::RemoveSpatial(Spatial::ID id)
@@ -123,21 +140,26 @@ bool Scene::RemoveSpatial(Spatial::ID id)
 
     AssertReady();
 
-    auto it = m_spatials.Find(id);
-    if (it == m_spatials.End()) {
+    auto it = m_spatials.find(id);
+    if (it == m_spatials.end()) {
         return false;
     }
 
     auto &found_spatial = it->second;
     AssertThrow(found_spatial != nullptr);
 
-    found_spatial->RemoveFromPipelines();
+    RemoveFromPipelines(found_spatial);
 
     if (found_spatial->m_octree != nullptr) {
+        DebugLog(
+            LogType::Debug,
+            "[scene] Remove spatial #%u from octree\n",
+            found_spatial->GetId().value
+        );
         found_spatial->RemoveFromOctree(GetEngine());
     }
 
-    m_spatials.Erase(it);
+    m_spatials.erase(it);
 
     return true;
 }
@@ -149,20 +171,21 @@ bool Scene::RemoveSpatial(const Ref<Spatial> &spatial)
     AssertReady();
     AssertThrow(spatial != nullptr);
 
-    auto it = m_spatials.Find(spatial->GetId());
-    if (it == m_spatials.End()) {
+    auto it = m_spatials.find(spatial->GetId());
+    if (it == m_spatials.end()) {
         return false;
     }
 
     auto &found_spatial = it->second;
+    AssertThrow(found_spatial != nullptr);
 
-    found_spatial->RemoveFromPipelines();
+    RemoveFromPipelines(found_spatial);
 
     if (found_spatial->m_octree != nullptr) {
         found_spatial->RemoveFromOctree(GetEngine());
     }
 
-    m_spatials.Erase(it);
+    m_spatials.erase(it);
 
     return true;
 }
@@ -184,6 +207,7 @@ void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
 
     for (auto &it : m_spatials) {
         auto &spatial = it.second;
+        AssertThrowMsg(spatial != nullptr, "Spatial at ID #%u   (%p)\n", it.first.value, (void *)&it.second);
 
         spatial->Update(engine, delta);
 
@@ -203,7 +227,7 @@ void Scene::RequestPipelineChanges(Ref<Spatial> &spatial)
     AssertThrow(spatial->m_scene == this);
 
     if (spatial->m_primary_pipeline.pipeline != nullptr) {
-        spatial->RemoveFromPipeline(GetEngine(), spatial->m_primary_pipeline.pipeline);
+        RemoveFromPipeline(spatial, spatial->m_primary_pipeline.pipeline);
     }
 
     if (!spatial->GetPrimaryPipeline()) {
@@ -225,6 +249,39 @@ void Scene::RequestPipelineChanges(Ref<Spatial> &spatial)
             );
         }
     }
+}
+
+void Scene::RemoveFromPipeline(Ref<Spatial> &spatial, GraphicsPipeline *pipeline)
+{
+    // if (pipeline == spatial->m_primary_pipeline.pipeline) {
+    //     spatial->m_primary_pipeline = {
+    //         .pipeline = nullptr,
+    //         .changed  = true
+    //     };
+    // }
+
+    pipeline->RemoveSpatial(spatial.IncRef());
+    // spatial->OnRemovedFromPipeline(pipeline);
+}
+
+void Scene::RemoveFromPipelines(Ref<Spatial> &spatial)
+{
+    auto pipelines = spatial->m_pipelines;
+
+    for (auto *pipeline : pipelines) {
+        if (pipeline == nullptr) {
+            continue;
+        }
+
+        // have to inc ref so it can hold it in a temporary container
+        pipeline->RemoveSpatial(spatial.IncRef());
+    }
+
+    // spatial->m_pipelines.Clear();
+    // spatial->m_primary_pipeline = {
+    //     .pipeline = nullptr,
+    //     .changed  = true
+    // };
 }
 
 void Scene::EnqueueRenderUpdates(Engine *engine)

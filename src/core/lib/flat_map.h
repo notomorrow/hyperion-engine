@@ -13,7 +13,7 @@ template <class Key, class Value>
 class FlatMap {
     using Pair = std::pair<Key, Value>;
 
-    FlatSet<Pair> m_set;
+    std::vector<Pair> m_vector;
 
 public:
     using Iterator      = typename FlatSet<Pair>::Iterator;
@@ -22,8 +22,15 @@ public:
 
     FlatMap();
     FlatMap(std::initializer_list<Pair> initializer_list)
-        : m_set(initializer_list)
+        : m_vector(initializer_list)
     {
+        std::sort(
+            m_vector.begin(),
+            m_vector.end(),
+            [](const auto &lhs, const auto &rhs) {
+                return lhs.first < rhs.first;
+            }
+        );
     }
 
     FlatMap(const FlatMap &other);
@@ -53,17 +60,17 @@ public:
     bool Erase(Iterator it);
     bool Erase(const Key &key);
 
-    [[nodiscard]] size_t Size() const                   { return m_set.Size(); }
-    [[nodiscard]] Pair *Data()                          { return m_set.Data(); }
-    [[nodiscard]] Pair * const Data() const             { return m_set.Data(); }
-    [[nodiscard]] bool Empty() const                    { return m_set.Empty(); }
+    [[nodiscard]] size_t Size() const                   { return m_vector.size(); }
+    [[nodiscard]] Pair *Data()                          { return m_vector.data(); }
+    [[nodiscard]] Pair * const Data() const             { return m_vector.data(); }
+    [[nodiscard]] bool Empty() const                    { return m_vector.empty(); }
 
-    void Clear()                                        { m_set.Clear(); }
+    void Clear()                                        { m_vector.clear(); }
     
-    [[nodiscard]] Pair &Front()                         { return m_set.Front(); }
-    [[nodiscard]] const Pair &Front() const             { return m_set.Front(); }
-    [[nodiscard]] Pair &Back()                          { return m_set.Back(); }
-    [[nodiscard]] const Pair &Back() const              { return m_set.Back(); }
+    [[nodiscard]] Pair &Front()                         { return m_vector.front(); }
+    [[nodiscard]] const Pair &Front() const             { return m_vector.front(); }
+    [[nodiscard]] Pair &Back()                          { return m_vector.back(); }
+    [[nodiscard]] const Pair &Back() const              { return m_vector.back(); }
 
     [[nodiscard]] FlatSet<Key> Keys() const;
     [[nodiscard]] FlatSet<Value> Values() const;
@@ -82,7 +89,7 @@ public:
         return Insert(key, Value{}).first->second;
     }
 
-    HYP_DEF_STL_ITERATOR(m_set)
+    HYP_DEF_STL_ITERATOR(m_vector)
 
 private:
     [[nodiscard]] Iterator LowerBound(const Key &key);
@@ -94,28 +101,28 @@ FlatMap<Key, Value>::FlatMap() {}
 
 template <class Key, class Value>
 FlatMap<Key, Value>::FlatMap(const FlatMap &other)
-    : m_set(other.m_set)
+    : m_vector(other.m_vector)
 {
 }
 
 template <class Key, class Value>
 auto FlatMap<Key, Value>::operator=(const FlatMap &other) -> FlatMap &
 {
-    m_set = other.m_set;
+    m_vector = other.m_vector;
 
     return *this;
 }
 
 template <class Key, class Value>
 FlatMap<Key, Value>::FlatMap(FlatMap &&other) noexcept
-    : m_set(std::move(other.m_set))
+    : m_vector(std::move(other.m_vector))
 {
 }
 
 template <class Key, class Value>
 auto FlatMap<Key, Value>::operator=(FlatMap &&other) noexcept -> FlatMap&
 {
-    m_set = std::move(other.m_set);
+    m_vector = std::move(other.m_vector);
 
     return *this;
 }
@@ -126,39 +133,27 @@ FlatMap<Key, Value>::~FlatMap() = default;
 template <class Key, class Value>
 auto FlatMap<Key, Value>::LowerBound(const Key &key) -> Iterator
 {
-    auto it = std::lower_bound(
-        m_set.begin(),
-        m_set.end(),
+    return std::lower_bound(
+        m_vector.begin(),
+        m_vector.end(),
         key,
         [](const Pair &lhs, const Key &rhs) {
             return lhs.first < rhs;
         }
     );
-
-    if (it == m_set.end() || it->first != key) {
-        return m_set.end();
-    }
-
-    return it;
 }
 
 template <class Key, class Value>
 auto FlatMap<Key, Value>::LowerBound(const Key &key) const -> ConstIterator
 {
-    auto it = std::lower_bound(
-        m_set.cbegin(),
-        m_set.cend(),
+    return std::lower_bound(
+        m_vector.cbegin(),
+        m_vector.cend(),
         key,
         [](const Pair &lhs, const Key &rhs) {
             return lhs.first < rhs;
         }
     );
-
-    if (it == m_set.cend() || it->first != key) {
-        return m_set.cend();
-    }
-
-    return it;
 }
 
 template <class Key, class Value>
@@ -197,7 +192,9 @@ auto FlatMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertRe
     const auto lower_bound = LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        return m_set.Insert(std::make_pair(key, value));
+        auto it = m_vector.insert(lower_bound, std::make_pair(key, value));
+
+        return {it, true};
     }
 
     return {lower_bound, false};
@@ -209,7 +206,9 @@ auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        return m_set.Insert(std::make_pair(key, std::forward<Value>(value)));
+        auto it = m_vector.insert(lower_bound, std::make_pair(key, std::forward<Value>(value)));
+
+        return {it, true};
     }
 
     return {lower_bound, false};
@@ -221,7 +220,9 @@ auto FlatMap<Key, Value>::Insert(std::pair<Key, Value> &&pair) -> InsertResult
     const auto lower_bound = LowerBound(pair.first);
 
     if (lower_bound == End() || !(lower_bound->first == pair.first)) {
-        return m_set.Insert(std::move(pair));
+        auto it = m_vector.insert(lower_bound, std::move(pair));
+
+        return {it, true};
     }
 
     return {lower_bound, false};
@@ -233,10 +234,12 @@ auto FlatMap<Key, Value>::Set(const Key &key, const Value &value) -> InsertResul
     const auto lower_bound = LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        return m_set.Insert(std::make_pair(key, value));
+        auto it = m_vector.insert(lower_bound, std::make_pair(key, value));
+
+        return {it, true};
     }
 
-    m_set.At(lower_bound).second = value;
+    lower_bound->second = value;
 
     return InsertResult{lower_bound, true};
 }
@@ -247,10 +250,12 @@ auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
     const auto lower_bound = LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        return m_set.Insert(std::make_pair(key, std::forward<Value>(value)));
+        auto it = m_vector.insert(lower_bound, std::make_pair(key, std::forward<Value>(value)));
+
+        return {it, true};
     }
 
-    m_set.At(lower_bound).second = std::forward<Value>(value);
+    lower_bound->second = std::forward<Value>(value);
 
     return InsertResult{lower_bound, true};
 }
@@ -258,7 +263,11 @@ auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Set(Iterator iter, const Value &value) -> InsertResult
 {
-    m_set.At(iter).second = value;
+    if (iter != End()) {
+        iter->second = value;
+
+        return InsertResult{iter, false};
+    }
 
     return InsertResult{iter, true};
 }
@@ -266,7 +275,11 @@ auto FlatMap<Key, Value>::Set(Iterator iter, const Value &value) -> InsertResult
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Set(Iterator iter, Value &&value) -> InsertResult
 {
-    m_set.At(iter).second = std::forward<Value>(value);
+    if (iter != End()) {
+        iter->second = std::forward<Value>(value);
+
+        return InsertResult{iter, false};
+    }
 
     return InsertResult{iter, true};
 }
@@ -278,7 +291,9 @@ bool FlatMap<Key, Value>::Erase(Iterator it)
         return false;
     }
 
-    return m_set.Erase(it);
+    m_vector.erase(it);
+
+    return true;
 }
 
 template <class Key, class Value>

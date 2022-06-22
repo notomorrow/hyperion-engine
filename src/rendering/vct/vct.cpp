@@ -203,7 +203,7 @@ void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
                     },
                     [this](Ref<Spatial> *items, size_t count) {
                         for (size_t i = 0; i < count; i++) {
-                            m_pipeline->RemoveSpatial(items[i]->GetId());
+                            m_pipeline->RemoveSpatial(items[i].IncRef());
                         }
                     }
                 )));

@@ -49,7 +49,7 @@ std::unique_ptr<Mesh> TerrainMeshBuilder::BuildMesh() const
     auto mesh = std::make_unique<Mesh>(
         vertices,
         indices,
-        renderer::static_mesh_vertex_attributes
+        renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes // for now
     );
 
     mesh->CalculateNormals();

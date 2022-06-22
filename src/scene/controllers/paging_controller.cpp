@@ -206,6 +206,8 @@ auto PagingController::CreatePatch(const PatchInfo &info) -> std::unique_ptr<Pat
 
 void PagingController::AddPatch(const PatchCoord &coord)
 {
+    AssertThrow(GetPatch(coord) == nullptr);
+
     const PatchInfo info{
         .extent    = m_patch_size,
         .coord     = coord,
@@ -245,7 +247,9 @@ void PagingController::RemovePatch(const PatchCoord &coord)
 
 void PagingController::EnqueuePatch(const PatchCoord &coord)
 {
-    if (m_queued_neighbors.Find(coord) == m_queued_neighbors.End()) {
+    AssertThrow(GetPatch(coord) == nullptr);
+
+    if (!m_queued_neighbors.Contains(coord)) {
         PushUpdate({
             .coord     = coord,
             .new_state = PageState::WAITING

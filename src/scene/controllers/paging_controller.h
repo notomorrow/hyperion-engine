@@ -56,7 +56,7 @@ class PagingController : public Controller {
     static constexpr GameCounter::TickUnit update_max{1.0f};
     static constexpr GameCounter::TickUnit queue_max{1.0f};
     static constexpr GameCounter::TickUnit patch_unload_time{2.0f};
-    static constexpr float                 max_distance{1.0f};
+    static constexpr float                 max_distance{3.5f};
 
 public:
     PagingController(const char *name, Extent3D patch_size, const Vector3 &scale);

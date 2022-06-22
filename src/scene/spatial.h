@@ -170,8 +170,8 @@ private:
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
     
-    void RemoveFromPipelines();
-    void RemoveFromPipeline(Engine *engine, GraphicsPipeline *pipeline);
+    // void RemoveFromPipelines();
+    // void RemoveFromPipeline(Engine *engine, GraphicsPipeline *pipeline);
     
     void OnAddedToOctree(Octree *octree);
     void OnRemovedFromOctree(Octree *octree);
