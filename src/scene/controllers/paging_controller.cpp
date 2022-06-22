@@ -35,10 +35,11 @@ void PagingController::OnAdded()
 
 void PagingController::OnRemoved()
 {
-    std::vector<PatchCoord> patch_coords(m_patches.size());
+    std::vector<PatchCoord> patch_coords;
+    patch_coords.reserve(m_patches.Size());
 
-    for (size_t i = 0; i < m_patches.size(); i++) {
-        patch_coords[i] = m_patches[i]->info.coord;
+    for (auto &it : m_patches) {
+        patch_coords.push_back(it.first);
     }
 
     for (const auto &coord : patch_coords) {
@@ -131,7 +132,8 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
     }
 
     if (m_update_timer >= update_max) {
-        for (auto &patch : m_patches) {
+        for (auto &it : m_patches) {
+            auto &patch = it.second;
             AssertThrow(patch != nullptr);
 
             switch (patch->info.state) {
@@ -219,7 +221,7 @@ void PagingController::AddPatch(const PatchCoord &coord)
     auto patch = CreatePatch(info);
     InitPatch(patch.get());
     
-    m_patches.push_back(std::move(patch));
+    m_patches.Insert(coord, std::move(patch));
 
     const auto neighbor_it = m_queued_neighbors.Find(coord);
 
@@ -232,11 +234,21 @@ void PagingController::RemovePatch(const PatchCoord &coord)
 {
     const auto it = FindPatch(coord);
 
-    AssertThrow(it != m_patches.end());
+    if (it == m_patches.End()) {
+        DebugLog(
+            LogType::Warn,
+            "Cannot remove patch at [%f, %f] because it does not exist.\n",
+            coord.x, coord.y
+        );
 
-    OnPatchRemoved(it->get());
+        return;
+    }
 
-    m_patches.erase(it);
+    auto &patch = it->second;
+
+    OnPatchRemoved(patch.get());
+
+    m_patches.Erase(it);
 
     const auto neighbor_it = m_queued_neighbors.Find(coord);
 

@@ -18,17 +18,14 @@ namespace hyperion::v2 {
 class Engine;
 class Game;
 
-class GameThread : public Thread<Engine *, Game *, SystemWindow *> {
+class GameThread : public Thread<Scheduler<void, GameCounter::TickUnit>,
+                                 Engine *, Game *, SystemWindow *>
+{
 public:
     GameThread();
 
-    auto &GetScheduler()             { return m_scheduler; }
-    const auto &GetScheduler() const { return m_scheduler; }
-
 private:
     virtual void operator()(Engine *engine, Game *game, SystemWindow *window) override;
-
-    Scheduler<void, GameCounter::TickUnit> m_scheduler;
 };
 
 } // namespace hyperion::v2

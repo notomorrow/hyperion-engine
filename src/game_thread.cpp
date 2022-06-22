@@ -33,8 +33,8 @@ void GameThread::operator()(Engine *engine, Game *game, SystemWindow *window)
 
         counter.NextTick();
         
-        if (auto num_enqueued = m_scheduler.NumEnqueued()) {
-            m_scheduler.Flush([delta = counter.delta](auto &fn) {
+        if (auto num_enqueued = m_scheduler->NumEnqueued()) {
+            m_scheduler->Flush([delta = counter.delta](auto &fn) {
                 fn(delta);
             });
         }

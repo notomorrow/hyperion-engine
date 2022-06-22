@@ -24,7 +24,8 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
     : shader_globals(nullptr),
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
       resources(this),
-      assets(this)
+      assets(this),
+      terrain_thread(Threads::thread_ids.At(THREAD_TERRAIN))
 {
 }
 
@@ -464,6 +465,8 @@ void Engine::Compile()
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_RAYTRACING_PIPELINES, this);
+
+    AssertThrow(terrain_thread.Start());
 }
 
 Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(const RenderableAttributeSet &renderable_attributes)
