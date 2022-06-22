@@ -16,6 +16,7 @@
 
 #include "game_thread.h"
 #include "threads.h"
+#include "task_thread.h"
 
 #include <core/ecs/component_registry.h>
 #include <core/scheduler.h>
@@ -193,6 +194,7 @@ public:
     > render_scheduler;
 
     GameThread game_thread;
+    TaskThread terrain_thread;
 
 private:
     void FindTextureFormatDefaults();

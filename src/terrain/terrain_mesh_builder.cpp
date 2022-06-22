@@ -1,4 +1,5 @@
 #include "terrain_mesh_builder.h"
+#include <threads.h>
 #include <math/math_util.h>
 
 #define MOUNTAIN_SCALE_WIDTH 0.017
@@ -14,6 +15,8 @@ TerrainMeshBuilder::TerrainMeshBuilder(const PatchInfo &patch_info)
 
 void TerrainMeshBuilder::GenerateHeights(Seed seed)
 {
+    Threads::AssertOnThread(THREAD_TERRAIN);
+
     auto *simplex       = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, seed);
     auto *simplex_biome = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::SIMPLEX_NOISE, seed + 1);
     auto *worley        = NoiseFactory::GetInstance()->Capture(NoiseGenerationType::WORLEY_NOISE, seed);
@@ -43,6 +46,8 @@ void TerrainMeshBuilder::GenerateHeights(Seed seed)
 
 std::unique_ptr<Mesh> TerrainMeshBuilder::BuildMesh() const
 {
+    Threads::AssertOnThread(THREAD_TERRAIN);
+
     std::vector<Vertex> vertices     = BuildVertices();
     std::vector<Mesh::Index> indices = BuildIndices();
 
