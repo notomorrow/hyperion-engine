@@ -1,5 +1,6 @@
 #include "terrain_paging_controller.h"
 #include "../terrain_mesh_builder.h"
+#include <builders/mesh_builder.h>
 #include <engine.h>
 
 namespace hyperion::v2 {
@@ -36,13 +37,11 @@ void TerrainPagingController::OnPatchAdded(Patch *patch)
 
     if (patch->spatial == nullptr) {
         patch->spatial = GetEngine()->resources.spatials.Add(CreateTerrainChunk(patch->info));
-        patch->spatial.Init();
-        patch->spatial->Update(GetEngine(), 0.1f); //tmp
 
-        // if (auto *node = GetOwner()->GetNode()) {
-        //     auto *patch_node = node->AddChild();
-        //     patch_node->SetSpatial(patch->spatial.IncRef());
-        // }
+        if (auto *scene = GetOwner()->GetScene()) {
+            DebugLog(LogType::Debug, "Add terrain spatial with id #%u\n", patch->spatial->GetId().value);
+            scene->AddSpatial(patch->spatial.IncRef());
+        }
     }
 }
 
@@ -51,11 +50,10 @@ void TerrainPagingController::OnPatchRemoved(Patch *patch)
     DebugLog(LogType::Info, "Terrain patch removed %f, %f\n", patch->info.coord.x, patch->info.coord.y);
 
     if (patch->spatial != nullptr) {
-        // if (auto *node = patch->spatial->GetNode()) {
-        //     if (!patch->spatial->GetNode()->Remove()) {
-        //         DebugLog(LogType::Warn, "Failed to remove node\n");
-        //     }
-        // }
+        if (auto *scene = GetOwner()->GetScene()) {
+            DebugLog(LogType::Debug, "Remove terrain spatial with id #%u\n", patch->spatial->GetId().value);
+            scene->RemoveSpatial(patch->spatial);
+        }
 
         patch->spatial = nullptr;
     }
@@ -66,8 +64,11 @@ std::unique_ptr<Spatial> TerrainPagingController::CreateTerrainChunk(const Patch
     TerrainMeshBuilder builder(patch_info);
     builder.GenerateHeights(12345);
 
+    // DebugLog(LogType::Debug, "Create patch at x: %f, y: %f\n", patch_info.coord.x, patch_info.coord.y);
+
     auto &shader = GetEngine()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
     auto mesh = GetEngine()->resources.meshes.Add(builder.BuildMesh());
+    auto vertex_attributes = mesh->GetVertexAttributes();
 
     auto spatial = std::make_unique<Spatial>(
         std::move(mesh),
@@ -76,14 +77,14 @@ std::unique_ptr<Spatial> TerrainPagingController::CreateTerrainChunk(const Patch
         RenderableAttributeSet {
             .bucket            = Bucket::BUCKET_OPAQUE,
             .shader_id         = shader->GetId(),
-            .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
+            .vertex_attributes = vertex_attributes
         }
     );
 
     spatial->SetTranslation(Vector3(
-        (patch_info.coord.x - 0.5f) * (patch_info.extent.ToVector3().Length() - 1) * m_scale.x,
-        0,
-        (patch_info.coord.y - 0.5f) * (patch_info.extent.ToVector3().Length() - 1) * m_scale.z
+        (patch_info.coord.x - 0.5f) * (patch_info.extent.ToVector3().Avg() - 1) * m_scale.x,
+        5,
+        (patch_info.coord.y - 0.5f) * (patch_info.extent.ToVector3().Avg() - 1) * m_scale.z
     ));
 
     return spatial;

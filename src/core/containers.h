@@ -736,7 +736,7 @@ public:
             { return ptr != nullptr; }
 
         bool operator==(const RefWrapper &other) const
-            { return &other == this || (ptr == other.ptr && m_ref_count == other.m_ref_count); }
+            { return ptr == other.ptr; }
 
         bool operator!=(const RefWrapper &other) const
             { return !operator==(other); }
@@ -795,15 +795,17 @@ public:
 
     class Ref : public RefWrapper {
     public:
-        Ref() : Ref(nullptr)
+        Ref()
+            : Ref(nullptr)
         {
         }
 
-        Ref(std::nullptr_t) : Ref(nullptr, nullptr)
+        Ref(std::nullptr_t)
+            : Ref(nullptr, nullptr)
         {
         }
 
-        Ref(T *ptr, RefCount *ref_count)
+        explicit Ref(T *ptr, RefCount *ref_count)
             : RefWrapper(ptr, ref_count)
         {
             if (RefWrapper::m_ref_count != nullptr) {
@@ -818,7 +820,7 @@ public:
 
         Ref &operator=(Ref &&other) noexcept
         {
-            if (std::addressof(other) == this || *this == other) {
+            if (std::addressof(other) == this) {
                 return *this;
             }
 

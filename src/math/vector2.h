@@ -53,7 +53,7 @@ public:
     Vector2 operator-() const { return operator*(-1.0f); }
 
     bool operator<(const Vector2 &other) const
-        { return x < other.x && y < other.y; }
+        { return std::tie(x, y) < std::tie(other.x, other.y); }
 
     constexpr float LengthSquared() const { return x * x + y * y; }
     float Length() const { return sqrt(LengthSquared()); }

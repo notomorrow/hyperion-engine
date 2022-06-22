@@ -64,7 +64,7 @@ public:
     Vector4 operator-() const { return operator*(-1.0f); }
 
     bool operator<(const Vector4 &other) const
-        { return x < other.x && y < other.y && z < other.z && w < other.w; }
+        { return std::tie(x, y, z, w) < std::tie(other.x, other.y, other.z, other.w); }
 
     constexpr float LengthSquared() const { return x * x + y * y + z * z + w * w; }
     float Length() const                  { return sqrt(LengthSquared()); }

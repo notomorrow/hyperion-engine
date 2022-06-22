@@ -62,7 +62,7 @@ void Spatial::Init(Engine *engine)
         SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
-            RemoveFromPipelines();
+            // RemoveFromPipelines(); // done now by Scene
 
             // AssertThrow(m_pipelines.Empty());
 
@@ -72,9 +72,14 @@ void Spatial::Init(Engine *engine)
 
             // AssertThrow(m_octree == nullptr);     
 
-            if (m_octree != nullptr) {
-                RemoveFromOctree(engine);
-            }
+            // if (m_octree != nullptr) {
+            //     DebugLog(
+            //         LogType::Debug,
+            //         "Teardown: Remove spatial #%u from octree\n",
+            //         m_id.value
+            //     );
+            //     RemoveFromOctree(engine);
+            // }
             
             HYP_FLUSH_RENDER_QUEUE(engine);
 
@@ -370,39 +375,39 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
     m_pipelines.Erase(pipeline);
 }
 
-void Spatial::RemoveFromPipelines()
-{
-    auto pipelines = m_pipelines;
+// void Spatial::RemoveFromPipelines()
+// {
+//     auto pipelines = m_pipelines;
 
-    for (auto *pipeline : pipelines) {
-        if (pipeline == nullptr) {
-            continue;
-        }
+//     for (auto *pipeline : pipelines) {
+//         if (pipeline == nullptr) {
+//             continue;
+//         }
 
-        pipeline->OnSpatialRemoved(this);
-    }
+//         pipeline->OnSpatialRemoved(this);
+//     }
 
-    m_pipelines.Clear();
+//     m_pipelines.Clear();
     
-    m_primary_pipeline = {
-        .pipeline = nullptr,
-        .changed  = true
-    };
-}
+//     m_primary_pipeline = {
+//         .pipeline = nullptr,
+//         .changed  = true
+//     };
+// }
 
-void Spatial::RemoveFromPipeline(Engine *, GraphicsPipeline *pipeline)
-{
-    if (pipeline == m_primary_pipeline.pipeline) {
-        m_primary_pipeline = {
-            .pipeline = nullptr,
-            .changed  = true
-        };
-    }
+// void Spatial::RemoveFromPipeline(Engine *, GraphicsPipeline *pipeline)
+// {
+//     if (pipeline == m_primary_pipeline.pipeline) {
+//         m_primary_pipeline = {
+//             .pipeline = nullptr,
+//             .changed  = true
+//         };
+//     }
 
-    pipeline->OnSpatialRemoved(this);
+//     pipeline->OnSpatialRemoved(this);
 
-    OnRemovedFromPipeline(pipeline);
-}
+//     OnRemovedFromPipeline(pipeline);
+// }
 
 void Spatial::OnAddedToOctree(Octree *octree)
 {
@@ -452,6 +457,11 @@ void Spatial::AddToOctree(Engine *engine, Octree &octree)
 
 void Spatial::RemoveFromOctree(Engine *engine)
 {
+    DebugLog(
+        LogType::Debug,
+        "Remove spatial #%u from octree\n",
+        GetId().value
+    );
     m_octree.load()->OnSpatialRemoved(engine, this);
 }
 

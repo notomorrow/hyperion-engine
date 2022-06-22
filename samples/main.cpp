@@ -123,7 +123,7 @@ public:
             nullptr
         )));
 
-        terrain_node->GetSpatial()->AddController<TerrainPagingController>(Extent3D{8}, Vector3{4, 1, 4});
+        terrain_node->GetSpatial()->AddController<TerrainPagingController>(Extent3D{64}, Vector3{4, 1, 4});
         
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
