@@ -269,5 +269,7 @@ protected:
 
 } // namespace hyperion::v2
 
+HYP_DEF_STL_HASH(hyperion::v2::IDBase);
+
 #endif // !HYPERION_V2_COMPONENTS_BASE_H
 

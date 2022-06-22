@@ -2,7 +2,7 @@
 
 namespace hyperion::v2 {
 
-const FlatMap<ThreadName, ThreadId> Threads::thread_ids{
+const FlatMap<ThreadName, ThreadId> Threads::thread_ids {
     std::make_pair(THREAD_MAIN, ThreadId{static_cast<UInt>(THREAD_MAIN), "MainThread"}),
     std::make_pair(THREAD_GAME, ThreadId{static_cast<UInt>(THREAD_GAME), "GameThread"})
 };

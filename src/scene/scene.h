@@ -14,6 +14,7 @@
 #include <camera/camera.h>
 #include <game_counter.h>
 #include <types.h>
+#include <unordered_map>
 
 namespace hyperion::v2 {
 
@@ -56,8 +57,11 @@ public:
     BoundingBox m_aabb;
 
 private:
-    void RequestPipelineChanges(Ref<Spatial> &spatial);
     void EnqueueRenderUpdates(Engine *engine);
+
+    void RequestPipelineChanges(Ref<Spatial> &spatial);
+    void RemoveFromPipeline(Ref<Spatial> &spatial, GraphicsPipeline *pipeline);
+    void RemoveFromPipelines(Ref<Spatial> &spatial);
 
     std::unique_ptr<Camera>  m_camera;
     std::unique_ptr<Node>    m_root_node;
@@ -65,7 +69,8 @@ private:
     Environment             *m_environment;
     std::array<Ref<Texture>, max_environment_textures> m_environment_textures;
 
-    FlatMap<Spatial::ID, Ref<Spatial>> m_spatials;
+    // FlatMap<Spatial::ID, Ref<Spatial>> m_spatials;
+    std::unordered_map<IDBase, Ref<Spatial>> m_spatials;
 
     Matrix4                 m_last_view_projection_matrix;
 

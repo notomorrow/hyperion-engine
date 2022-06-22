@@ -67,16 +67,15 @@ public:
     bool operator==(const Vector3 &other) const;
     bool operator!=(const Vector3 &other) const;
     Vector3 operator-() const { return operator*(-1.0f); }
-    bool operator<(const Vector3 &other) const
-    {
-        return std::tie(x, y, z) < std::tie(other.x, other.y, other.z);
-    }
 
-    //bool operator<(const Vector3 &other) const
-    //    { return x < other.x && y < other.y && z < other.z; }
+    bool operator<(const Vector3 &other) const
+        { return std::tie(x, y, z) < std::tie(other.x, other.y, other.z); }
 
     constexpr float LengthSquared() const { return x * x + y * y + z * z; }
-    float Length() const { return std::sqrt(LengthSquared()); }
+    float Length() const                  { return std::sqrt(LengthSquared()); }
+
+    constexpr float Avg() const           { return (x + y + z) / 3.0f; }
+    constexpr float Sum() const           { return x + y + z; }
 
     float DistanceSquared(const Vector3 &other) const;
     float Distance(const Vector3 &other) const;

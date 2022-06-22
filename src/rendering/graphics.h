@@ -79,7 +79,7 @@ public:
     void SetStencilState(const StencilState &stencil_state) { m_renderable_attributes.stencil_state = stencil_state; }
 
     void AddSpatial(Ref<Spatial> &&spatial);
-    void RemoveSpatial(Spatial::ID id, bool call_on_removed = true);
+    void RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_removed = true);
     auto &GetSpatials()                                              { return m_spatials; }
     const auto &GetSpatials() const                                  { return m_spatials; }
     ObserverNotifier<Ref<Spatial>> &GetSpatialNotifier()                { return m_spatial_notifier; }
@@ -107,9 +107,6 @@ private:
 
     static bool BucketSupportsCulling(Bucket bucket);
 
-    /* Called from Spatial - remove the pointer */
-    void OnSpatialRemoved(Spatial *spatial);
-
     void PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_index);
     
     void UpdateEnqueuedSpatialsFlag()
@@ -121,9 +118,9 @@ private:
 
     std::unique_ptr<renderer::GraphicsPipeline> m_pipeline;
 
-    Ref<Shader>                    m_shader;
-    Ref<RenderPass>                m_render_pass;
-    RenderableAttributeSet         m_renderable_attributes;
+    Ref<Shader>                       m_shader;
+    Ref<RenderPass>                   m_render_pass;
+    RenderableAttributeSet            m_renderable_attributes;
     
     std::vector<Ref<Framebuffer>>     m_fbos;
 

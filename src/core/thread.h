@@ -16,6 +16,7 @@ struct ThreadId {
 
     bool operator==(const ThreadId &other) const { return value == other.value; }
     bool operator!=(const ThreadId &other) const { return value != other.value; }
+    bool operator<(const ThreadId &other) const { return std::tie(value, name) < std::tie(other.value, other.name); }
 };
 
 #if HYP_ENABLE_THREAD_ASSERTION
