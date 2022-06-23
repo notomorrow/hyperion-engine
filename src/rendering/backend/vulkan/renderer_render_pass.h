@@ -27,12 +27,14 @@ public:
     };
 
     RenderPass(RenderPassStage stage, Mode mode);
+    RenderPass(RenderPassStage stage, Mode mode, uint32_t num_multiview_layers);
     RenderPass(const RenderPass &other) = delete;
     RenderPass &operator=(const RenderPass &other) = delete;
     ~RenderPass();
 
-    RenderPassStage GetStage() const
-        { return m_stage; }
+    RenderPassStage GetStage() const        { return m_stage; }
+    bool IsMultiview() const                { return m_num_multiview_layers != 0; }
+    uint32_t NumMultiviewLayers() const     { return m_num_multiview_layers; }
 
     void AddAttachmentRef(AttachmentRef *attachment_ref)
     {
@@ -81,6 +83,7 @@ private:
 
     RenderPassStage m_stage;
     Mode m_mode;
+    uint32_t m_num_multiview_layers;
 
     std::vector<AttachmentRef *> m_render_pass_attachment_refs;
 

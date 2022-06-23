@@ -1,5 +1,5 @@
-#ifndef HYPERION_V2_SHADOWS_H
-#define HYPERION_V2_SHADOWS_H
+#ifndef HYPERION_V2_CUBEMAP_RENDERER_H
+#define HYPERION_V2_CUBEMAP_RENDERER_H
 
 #include "../base.h"
 #include "../post_fx.h"
@@ -18,18 +18,12 @@ namespace hyperion::v2 {
 
 using renderer::Frame;
 
-class ShadowPass : public FullScreenPass {
+class CubemapRendererPass : public FullScreenPass {
 public:
-    ShadowPass();
-    ShadowPass(const ShadowPass &other) = delete;
-    ShadowPass &operator=(const ShadowPass &other) = delete;
-    ~ShadowPass();
-
-    Scene *GetScene() const                 { return m_scene.ptr; }
-
-    Ref<Light> &GetLight()                  { return m_light; }
-    const Ref<Light> &GetLight() const      { return m_light; }
-    void SetLight(Ref<Light> &&light)       { m_light = std::move(light); }
+    CubemapRendererPass();
+    CubemapRendererPass(const CubemapRendererPass &other) = delete;
+    CubemapRendererPass &operator=(const CubemapRendererPass &other) = delete;
+    ~CubemapRendererPass();
 
     void SetParentScene(Scene::ID id);
 
@@ -47,9 +41,6 @@ public:
         };
     }
 
-    UInt GetShadowMapIndex() const          { return m_shadow_map_index; }
-    void SetShadowMapIndex(UInt index)      { m_shadow_map_index = index; }
-
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
     void CreatePipeline(Engine *engine);
@@ -61,37 +52,30 @@ public:
 
 private:
     Ref<Scene>                                               m_scene;
-    Ref<Light>                                               m_light;
-    std::vector<ObserverRef<Ref<GraphicsPipeline>>>          m_pipeline_observers;
-    FlatMap<GraphicsPipeline::ID, ObserverRef<Ref<Spatial>>>    m_spatial_observers;
     Scene::ID                                                m_parent_scene_id;
     Vector3                                                  m_origin;
     float                                                    m_max_distance;
-    UInt                                                     m_shadow_map_index;
 };
 
-class ShadowRenderer : public EngineComponentBase<STUB_CLASS(ShadowRenderer)>, public RenderComponent<ShadowRenderer> {
+class CubemapRenderer : public EngineComponentBase<STUB_CLASS(CubemapRenderer)>, public RenderComponent<CubemapRenderer> {
 public:
-    ShadowRenderer(Ref<Light> &&light);
-    ShadowRenderer(Ref<Light> &&light, const Vector3 &origin, float max_distance);
-    ShadowRenderer(const ShadowRenderer &other) = delete;
-    ShadowRenderer &operator=(const ShadowRenderer &other) = delete;
-    virtual ~ShadowRenderer();
+    CubemapRenderer();
+    CubemapRenderer(const Vector3 &origin, float max_distance);
+    CubemapRenderer(const CubemapRenderer &other) = delete;
+    CubemapRenderer &operator=(const CubemapRenderer &other) = delete;
+    virtual ~CubemapRenderer();
 
-    ShadowPass &GetEffect()               { return m_shadow_pass; }
-    const ShadowPass &GetEffect() const   { return m_shadow_pass; }
+    Scene *GetScene() const               { return m_pass.GetScene(); }
 
-    Scene *GetScene() const               { return m_shadow_pass.GetScene(); }
-
-    const Vector3 &GetOrigin() const      { return m_shadow_pass.GetOrigin(); }
-    void SetOrigin(const Vector3 &origin) { m_shadow_pass.SetOrigin(origin); }
+    const Vector3 &GetOrigin() const      { return m_pass.GetOrigin(); }
+    void SetOrigin(const Vector3 &origin) { m_pass.SetOrigin(origin); }
 
     void SetParentScene(const Ref<Scene> &parent_scene)
     {
         if (parent_scene != nullptr) {
-            m_shadow_pass.SetParentScene(parent_scene->GetId());
+            m_pass.SetParentScene(parent_scene->GetId());
         } else {
-            m_shadow_pass.SetParentScene(Scene::empty_id);
+            m_pass.SetParentScene(Scene::empty_id);
         }
     }
 
@@ -104,7 +88,7 @@ private:
     void UpdateSceneCamera(Engine *engine);
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
-    ShadowPass m_shadow_pass;
+    CubemapRendererPass m_pass;
 };
 
 

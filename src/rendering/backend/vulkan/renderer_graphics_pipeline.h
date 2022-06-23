@@ -41,6 +41,8 @@ public:
 
         // stencil
         StencilState stencil_state{};
+
+        uint32_t    multiview_index = ~0u;
     };
 
     GraphicsPipeline();

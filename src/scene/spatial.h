@@ -165,7 +165,7 @@ private:
     void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
     
     void EnqueueRenderUpdates(Engine *engine);
-    void UpdateOctree(Engine *engine);
+    void UpdateOctree();
     
     void OnAddedToPipeline(GraphicsPipeline *pipeline);
     void OnRemovedFromPipeline(GraphicsPipeline *pipeline);
@@ -193,6 +193,7 @@ private:
     ControllerSet          m_controllers;
 
     std::atomic<Octree *>  m_octree{nullptr};
+    bool                   m_needs_octree_update{false};
 
     struct {
         GraphicsPipeline *pipeline = nullptr;

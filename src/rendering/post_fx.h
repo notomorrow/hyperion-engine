@@ -75,7 +75,7 @@ private:
 
 class PostProcessing {
 public:
-    static constexpr UInt max_effects_per_stage = sizeof(UInt) * 8;
+    static constexpr UInt max_effects_per_stage = sizeof(UInt32) * CHAR_BIT;
 
     enum DefaultEffectIndices {
         DEFAULT_EFFECT_INDEX_SSAO,

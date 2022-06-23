@@ -374,6 +374,22 @@ public:
     }
 };
 
+class FramebufferImageCube : public FramebufferImage {
+public:
+    FramebufferImageCube(
+        Extent2D extent,
+        InternalFormat format,
+        const unsigned char *bytes
+    ) : FramebufferImage(
+        Extent3D(extent),
+        format,
+        Type::TEXTURE_TYPE_CUBEMAP,
+        bytes
+    )
+    {
+    }
+};
+
 
 } // namespace renderer
 } // namespace hyperion

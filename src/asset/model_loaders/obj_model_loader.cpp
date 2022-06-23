@@ -109,7 +109,8 @@ Vector GetIndexedVertexProperty(int64_t vertex_index, const std::vector<Vector> 
     AssertReturnMsg(
         vertex_absolute >= 0 && vertex_absolute < int64_t(vectors.size()),
         Vector(),
-        "Vertex index of %lld is out of bounds (%llu)\n",
+        "Vertex index of %lld (absolute: %lld) is out of bounds (%llu)\n",
+        vertex_index,
         vertex_absolute,
         vectors.size()
     );

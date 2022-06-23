@@ -40,7 +40,8 @@ private:
     std::atomic_bool                    m_terrain_generation_flag;
 
     // don't touch without mutex
-    std::queue<TerrainGenerationResult> m_terrain_mesh_queue;
+    std::queue<TerrainGenerationResult> m_shared_terrain_mesh_queue;
+    std::queue<TerrainGenerationResult> m_owned_terrain_mesh_queue;
 };
 
 } // namespace hyperion::v2

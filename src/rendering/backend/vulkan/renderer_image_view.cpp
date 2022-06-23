@@ -7,18 +7,20 @@
 namespace hyperion {
 namespace renderer {
 ImageView::ImageView()
-    : m_image_view(nullptr)
+    : m_image_view(nullptr),
+      m_num_faces(1)
 {
 }
 
 ImageView::ImageView(VkImage image)
-    : m_image(image)
+    : m_image(image),
+      m_num_faces(1)
 {
 }
 
 ImageView::~ImageView()
 {
-    AssertExitMsg(m_image_view == nullptr, "image view should have been destroyed");
+    AssertThrowMsg(m_image_view == nullptr, "image view should have been destroyed");
 }
 
 Result ImageView::Create(
@@ -27,9 +29,11 @@ Result ImageView::Create(
     VkFormat format,
     VkImageAspectFlags aspect_flags,
     VkImageViewType view_type,
-    size_t num_mipmaps,
-    size_t num_faces)
+    uint32_t num_mipmaps,
+    uint32_t num_faces
+)
 {
+    m_num_faces = num_faces;
 
     VkImageViewCreateInfo view_info{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
     view_info.image    = image;
@@ -41,11 +45,11 @@ Result ImageView::Create(
     view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
     view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-    view_info.subresourceRange.aspectMask = aspect_flags;
-    view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.levelCount = uint32_t(num_mipmaps);
+    view_info.subresourceRange.aspectMask     = aspect_flags;
+    view_info.subresourceRange.baseMipLevel   = 0;
+    view_info.subresourceRange.levelCount     = num_mipmaps;
     view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = uint32_t(num_faces);
+    view_info.subresourceRange.layerCount     = m_num_faces;
 
     HYPERION_VK_CHECK_MSG(
         vkCreateImageView(device->GetDevice(), &view_info, nullptr, &m_image_view),
@@ -89,8 +93,8 @@ VkImageAspectFlags ImageView::ToVkImageAspect(Image::InternalFormat internal_for
 VkImageViewType ImageView::ToVkImageViewType(Image::Type type)
 {
     switch (type) {
-    case Image::Type::TEXTURE_TYPE_2D: return VK_IMAGE_VIEW_TYPE_2D;
-    case Image::Type::TEXTURE_TYPE_3D: return VK_IMAGE_VIEW_TYPE_3D;
+    case Image::Type::TEXTURE_TYPE_2D:      return VK_IMAGE_VIEW_TYPE_2D;
+    case Image::Type::TEXTURE_TYPE_3D:      return VK_IMAGE_VIEW_TYPE_3D;
     case Image::Type::TEXTURE_TYPE_CUBEMAP: return VK_IMAGE_VIEW_TYPE_CUBE;
     }
 

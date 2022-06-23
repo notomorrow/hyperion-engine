@@ -378,7 +378,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
 
     VkGraphicsPipelineCreateInfo pipeline_info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
 
-    const auto &stages = m_construction_info.shader->GetShaderStages();
+    auto &stages = m_construction_info.shader->GetShaderStages();
 
     pipeline_info.stageCount          = static_cast<uint32_t>(stages.size());
     pipeline_info.pStages             = stages.data();
@@ -395,6 +395,28 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
     pipeline_info.subpass             = 0; /* Index of the subpass */
     pipeline_info.basePipelineHandle  = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex   = -1;
+
+    float specialization_info_data = 0.0f;
+
+    VkSpecializationMapEntry specialization_map_entry { 0, 0, sizeof(float) };
+
+    VkSpecializationInfo specialization_info {
+        .mapEntryCount = 1,
+        .pMapEntries   = &specialization_map_entry,
+        .dataSize      = sizeof(float),
+        .pData         = &specialization_info_data
+    };
+
+    if (m_construction_info.render_pass->IsMultiview()) {
+        AssertThrowMsg(m_construction_info.multiview_index != ~0u, "Multiview index not set but renderpass is multiview");
+
+        specialization_info_data = static_cast<float>(m_construction_info.multiview_index);
+
+        // create specialization info for each shader stage
+        for (auto &stage : stages) {
+            stage.pSpecializationInfo = &specialization_info;
+        }
+    }
 
     HYPERION_VK_CHECK_MSG(
         vkCreateGraphicsPipelines(device->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &this->pipeline),

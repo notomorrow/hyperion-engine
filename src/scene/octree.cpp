@@ -507,7 +507,7 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
                 const UInt32 curr = m_root->visibility_cursor.load();
 
                 m_visibility_state.nonces[curr] = spatial->GetScene()->GetOctree().GetVisibilityState().nonces[curr].load();
-                //m_visibility_state.bits         |= current_octant->GetVisibilityState().bits.load();
+                m_visibility_state.bits |= current_octant->GetVisibilityState().bits.load();
             }
         }
 
@@ -587,6 +587,8 @@ Octree::Result Octree::UpdateInternal(Engine *engine, Spatial *spatial)
 
 Octree::Result Octree::Rebuild(Engine *engine, const BoundingBox &new_aabb)
 {
+    DebugLog(LogType::Debug, "REBUILD OCTREE\n");
+
     std::vector<Node> new_nodes;
 
     Clear(engine, new_nodes);
@@ -615,6 +617,73 @@ Octree::Result Octree::RebuildExtendInternal(Engine *engine, const BoundingBox &
     new_aabb *= growth_factor;
 
     return Rebuild(engine, new_aabb);
+}
+
+void Octree::CollectEntities(std::vector<Spatial *> &out) const
+{
+    out.reserve(out.size() + m_nodes.size());
+
+    for (auto &node : m_nodes) {
+        out.push_back(node.spatial);
+    }
+
+    if (m_is_divided) {
+        for (auto &octant : m_octants) {
+            AssertThrow(octant.octree != nullptr);
+
+            octant.octree->CollectEntities(out);
+        }
+    }
+}
+
+void Octree::CollectEntitiesInRange(const Vector3 &position, float radius, std::vector<Spatial *> &out) const
+{
+    const BoundingBox inclusion_aabb(position - radius, position + radius);
+
+    if (!inclusion_aabb.Intersects(m_aabb)) {
+        return;
+    }
+
+    out.reserve(out.size() + m_nodes.size());
+
+    for (auto &node : m_nodes) {
+        if (inclusion_aabb.Intersects(node.aabb)) {
+            out.push_back(node.spatial);
+        }
+    }
+
+    if (m_is_divided) {
+        for (auto &octant : m_octants) {
+            AssertThrow(octant.octree != nullptr);
+
+            octant.octree->CollectEntitiesInRange(position, radius, out);
+        }
+    }
+}
+
+bool Octree::GetNearestOctants(const Vector3 &position, std::array<Octree *, 8> &out) const
+{
+    if (!m_aabb.ContainsPoint(position)) {
+        return false;
+    }
+
+    if (!m_is_divided) {
+        return false;
+    }
+
+    for (auto &octant : m_octants) {
+        AssertThrow(octant.octree != nullptr);
+
+        if (octant.octree->GetNearestOctants(position, out)) {
+            return true;
+        }
+    }
+
+    for (size_t i = 0; i < m_octants.size(); i++) {
+        out[i] = m_octants[i].octree.get();
+    }
+
+    return true;
 }
 
 void Octree::CalculateVisibility(Scene *scene)
