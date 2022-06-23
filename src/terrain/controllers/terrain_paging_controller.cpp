@@ -10,8 +10,7 @@ TerrainPagingController::TerrainPagingController(
     Extent3D patch_size,
     const Vector3 &scale
 ) : PagingController("TerrainPagingController", patch_size, scale),
-    m_seed(seed),
-    m_add_generated_chunks_timer(0.0f)
+    m_seed(seed)
 {
 }
 

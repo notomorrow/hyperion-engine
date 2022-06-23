@@ -194,6 +194,26 @@ public:
         m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
 #endif
     }
+
+    template <class Executor>
+    void ExecuteFront(Executor &&executor)
+    {
+        AssertThrow(std::this_thread::get_id() == m_creation_thread);
+
+        std::unique_lock lock(m_mutex);
+
+        if (!m_scheduled_functions.empty()) {
+            executor(m_scheduled_functions.front().fn);
+
+            m_scheduled_functions.pop_front();
+
+            --m_num_enqueued;
+        }
+
+        lock.unlock();
+
+        m_is_flushed.notify_all();
+    }
     
     /*! Execute all scheduled tasks. May only be called from the creation thread.
      */
@@ -201,14 +221,8 @@ public:
     void Flush(Executor &&executor)
     {
         AssertThrow(std::this_thread::get_id() == m_creation_thread);
-        
-        //m_sp.WaitUntilValue(0);
 
-#if HYP_SCHEDULER_USE_ATOMIC_LOCK
-        m_execution_lock.Lock();
-#else
         std::unique_lock lock(m_mutex);
-#endif
 
         while (!m_scheduled_functions.empty()) {
             executor(m_scheduled_functions.front().fn);
@@ -217,15 +231,11 @@ public:
         }
 
         m_num_enqueued = 0;
-        
-#if HYP_SCHEDULER_USE_ATOMIC_LOCK
-        m_execution_lock.Unlock();
-#else
+
 
         lock.unlock();
 
         m_is_flushed.notify_all();
-#endif
     }
     
 private:

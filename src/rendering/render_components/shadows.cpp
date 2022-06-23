@@ -173,7 +173,7 @@ void ShadowPass::Create(Engine *engine)
 
     m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
         std::make_unique<OrthoCamera>(
-            2048, 2048,
+            1024, 1024,
             -100.0f, 100.0f,
             -100.0f, 100.0f,
             -100.0f, 100.0f

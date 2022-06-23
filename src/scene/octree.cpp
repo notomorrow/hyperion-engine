@@ -1,6 +1,7 @@
 #include "octree.h"
 #include "spatial.h"
 #include "../engine.h"
+#include <threads.h>
 
 namespace hyperion::v2 {
 
@@ -144,6 +145,7 @@ void Octree::CollapseParents(Engine *engine)
     if (m_is_divided || !Empty()) {
         return;
     }
+    DebugLog(LogType::Debug, "collapse parents\n");
 
     Octree *iteration = m_parent,
            *highest_empty = nullptr;
@@ -221,21 +223,23 @@ void Octree::ClearInternal(Engine *engine, std::vector<Node> &out_nodes)
     }
 }
 
-bool Octree::Insert(Engine *engine, Spatial *spatial)
+Octree::Result Octree::Insert(Engine *engine, Spatial *spatial)
 {
     AssertThrow(spatial != nullptr);
 
     const auto &spatial_aabb = spatial->GetWorldAabb();
 
     if (!m_aabb.Contains(spatial_aabb)) {
-        if (!RebuildExtendInternal(engine, spatial_aabb)) {
+        auto rebuild_result = RebuildExtendInternal(engine, spatial_aabb);
+
+        if (!rebuild_result) {
             DebugLog(
                 LogType::Warn,
                 "Failed to rebuild octree when inserting spatial #%lu\n",
                 spatial->GetId().value
             );
 
-            return false;
+            return rebuild_result;
         }
     }
 
@@ -254,7 +258,7 @@ bool Octree::Insert(Engine *engine, Spatial *spatial)
     return InsertInternal(engine, spatial);
 }
 
-bool Octree::InsertInternal(Engine *engine, Spatial *spatial)
+Octree::Result Octree::InsertInternal(Engine *engine, Spatial *spatial)
 {
     m_nodes.push_back(Node {
         .spatial          = spatial,
@@ -265,22 +269,22 @@ bool Octree::InsertInternal(Engine *engine, Spatial *spatial)
     spatial->OnAddedToOctree(this);
 
     if (m_root != nullptr) {
-        AssertThrowMsg(m_root->node_to_octree[spatial] == nullptr, "Spatial must not already be in octree hierarchy.");
+        AssertThrowMsg(m_root->node_to_octree.find(spatial) == m_root->node_to_octree.end(), "Spatial must not already be in octree hierarchy.");
 
         m_root->node_to_octree[spatial] = this;
         m_root->events.on_insert_node(engine, this, spatial);
     }
 
-    return true;
+    return {};
 }
 
-bool Octree::Remove(Engine *engine, Spatial *spatial)
+Octree::Result Octree::Remove(Engine *engine, Spatial *spatial)
 {
     if (m_root != nullptr) {
         const auto it = m_root->node_to_octree.find(spatial);
 
         if (it == m_root->node_to_octree.end()) {
-            return false;
+            return {Result::OCTREE_ERR, "Not found in node map"};
         }
 
         if (auto *octree = it->second) {
@@ -289,17 +293,17 @@ bool Octree::Remove(Engine *engine, Spatial *spatial)
             return octree->RemoveInternal(engine, spatial);
         }
 
-        return false;
+        return {Result::OCTREE_ERR, "Could not be removed from any sub octants"};
     }
 
     if (!m_aabb.Contains(spatial->GetWorldAabb())) {
-        return false;
+        return {Result::OCTREE_ERR, "AABB does not contain object aabb"};
     }
 
     return RemoveInternal(engine, spatial);
 }
 
-bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
+Octree::Result Octree::RemoveInternal(Engine *engine, Spatial *spatial)
 {
     const auto it = FindNode(spatial);
 
@@ -309,17 +313,17 @@ bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
                 AssertThrow(octant.octree != nullptr);
 
                 if (octant.octree->RemoveInternal(engine, spatial)) {
-                    return true;
+                    return {};
                 }
             }
         }
 
-        return false;
+        return {Result::OCTREE_ERR, "Could not be removed from any sub octants"};
     }
 
     if (m_root != nullptr) {
         m_root->events.on_remove_node(engine, this, spatial);
-        m_root->node_to_octree[spatial] = nullptr;
+        m_root->node_to_octree.erase(spatial);
     }
 
     spatial->OnRemovedFromOctree(this);
@@ -352,10 +356,10 @@ bool Octree::RemoveInternal(Engine *engine, Spatial *spatial)
         }
     }
 
-    return true;
+    return {};
 }
 
-bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it)
+Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it)
 {
     const auto &new_aabb = spatial->GetWorldAabb();
 
@@ -363,6 +367,8 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
     const bool contains = m_aabb.Contains(new_aabb);
 
     if (!contains) {
+        // NO LONGER CONTAINS AABB
+
         if (is_root) {
             // have to rebuild, invalidating child octants.
             // which we have a Contains() check for child nodes walking upwards
@@ -375,17 +381,7 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
             );
 #endif
 
-            if (!RebuildExtendInternal(engine, new_aabb)) {
-                DebugLog(
-                    LogType::Warn,
-                    "Failed to rebuild octree when moving spatial #%lu\n",
-                    spatial->GetId().value
-                );
-
-                return false;
-            }
-
-            return true;
+            return RebuildExtendInternal(engine, new_aabb);
         }
 
         // not root
@@ -397,14 +393,6 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
             );
 #endif
 
-        if (it != nullptr) {
-            if (m_root != nullptr) {
-                m_root->events.on_remove_node(engine, this, spatial);
-                m_root->node_to_octree[spatial] = nullptr;
-            }
-
-            m_nodes.erase(*it);
-        }
 
         bool inserted = false;
 
@@ -416,7 +404,18 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
             last_parent = parent;
 
             if (parent->m_aabb.Contains(new_aabb)) {
-                inserted = parent->Move(engine, spatial);
+                
+                if (it != nullptr) {
+                    if (m_root != nullptr) {
+                        m_root->events.on_remove_node(engine, this, spatial);
+                        m_root->node_to_octree.erase(spatial);
+                    }
+
+                    m_nodes.erase(*it);
+                }
+
+
+                inserted = bool(parent->Move(engine, spatial));
 
                 break;
             }
@@ -428,7 +427,7 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
             /* Node has now been added to it's appropriate octant -- remove any potential empty octants */
             CollapseParents(engine);
 
-            return true;
+            return {};
         }
 
         // not inserted because no Move() was called on parents (because they don't contain AABB),
@@ -447,6 +446,8 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
 
         return last_parent->Move(engine, spatial);
     }
+
+    // CONTAINS AABB HERE
     
     for (Octant &octant : m_octants) {
         if (octant.aabb.Contains(new_aabb)) {
@@ -460,7 +461,7 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
             if (it != nullptr) {
                 if (m_root != nullptr) {
                     m_root->events.on_remove_node(engine, this, spatial);
-                    m_root->node_to_octree[spatial] = nullptr;
+                    m_root->node_to_octree.erase(spatial);
                 }
 
                 m_nodes.erase(*it);
@@ -472,7 +473,10 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
             
             AssertThrow(octant.octree != nullptr);
 
-            return octant.octree->Move(engine, spatial, nullptr);
+            const auto octant_move_result = octant.octree->Move(engine, spatial, nullptr);
+            AssertThrow(octant_move_result);
+
+            return octant_move_result;
         }
     }
 
@@ -482,6 +486,8 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
         spatial_it->aabb             = new_aabb;
         spatial_it->visibility_state = &m_visibility_state;
     } else { /* Moved into new octant */
+        
+
         /* HACK to prevent objects having no visibility state and flicking when switching octants.
          * We set the visibility state to be the most up to date it can be, and in the next visibility
          * state check, the proper state will be applied
@@ -494,7 +500,7 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
                     spatial->GetId().value
                 );
 
-                return false;
+                return {Result::OCTREE_ERR, "Object not attached to a scene!"};
             }
 
             if (m_root != nullptr) {
@@ -514,36 +520,38 @@ bool Octree::Move(Engine *engine, Spatial *spatial, const std::vector<Node>::ite
         spatial->OnMovedToOctant(this);
 
         if (m_root != nullptr) {
-            AssertThrowMsg(m_root->node_to_octree[spatial] == nullptr, "Spatial must not already be in octree hierarchy.");
+            AssertThrowMsg(m_root->node_to_octree.find(spatial) == m_root->node_to_octree.end(), "Spatial must not already be in octree hierarchy.");
 
             m_root->node_to_octree[spatial] = this;
             m_root->events.on_insert_node(engine, this, spatial);
         }
+
     }
 
-    return true;
+    
+    return {};
 }
 
-bool Octree::Update(Engine *engine, Spatial *spatial)
+Octree::Result Octree::Update(Engine *engine, Spatial *spatial)
 {
     if (m_root != nullptr) {
         const auto it = m_root->node_to_octree.find(spatial);
 
         if (it == m_root->node_to_octree.end()) {
-            return false;
+            return {Result::OCTREE_ERR, "Object not found in node map!"};
         }
 
         if (auto *octree = it->second) {
             return octree->UpdateInternal(engine, spatial);
         }
 
-        return false;
+        return {Result::OCTREE_ERR, "Object has no octree in node map!"};
     }
 
     return UpdateInternal(engine, spatial);
 }
 
-bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
+Octree::Result Octree::UpdateInternal(Engine *engine, Spatial *spatial)
 {
     const auto it = FindNode(spatial);
 
@@ -553,12 +561,12 @@ bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
                 AssertThrow(octant.octree != nullptr);
 
                 if (octant.octree->UpdateInternal(engine, spatial)) {
-                    return true;
+                    return {};
                 }
             }
         }
 
-        return false;
+        return {Result::OCTREE_ERR, "Could not update in any sub octants"};
     }
 
     const auto &new_aabb = spatial->GetWorldAabb();
@@ -566,7 +574,7 @@ bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
 
     if (new_aabb == old_aabb) {
         /* Aabb has not changed - no need to update */
-        return true;
+        return {};
     }
 
     /* Aabb has changed to we remove it from this octree and either:
@@ -577,7 +585,7 @@ bool Octree::UpdateInternal(Engine *engine, Spatial *spatial)
     return Move(engine, spatial, &it);
 }
 
-bool Octree::Rebuild(Engine *engine, const BoundingBox &new_aabb)
+Octree::Result Octree::Rebuild(Engine *engine, const BoundingBox &new_aabb)
 {
     std::vector<Node> new_nodes;
 
@@ -586,13 +594,17 @@ bool Octree::Rebuild(Engine *engine, const BoundingBox &new_aabb)
     m_aabb = new_aabb;
 
     for (auto &node : new_nodes) {
-        Insert(engine, node.spatial);
+        auto insert_result = Insert(engine, node.spatial);
+
+        if (!insert_result) {
+            return insert_result;
+        }
     }
 
-    return true;
+    return {};
 }
 
-bool Octree::RebuildExtendInternal(Engine *engine, const BoundingBox &extend_include_aabb)
+Octree::Result Octree::RebuildExtendInternal(Engine *engine, const BoundingBox &extend_include_aabb)
 {
     // have to grow the aabb by rebuilding the octree
     BoundingBox new_aabb(m_aabb);
@@ -601,10 +613,6 @@ bool Octree::RebuildExtendInternal(Engine *engine, const BoundingBox &extend_inc
     // grow our new aabb by a predetermined growth factor,
     // to keep it from constantly resizing
     new_aabb *= growth_factor;
-
-#if HYP_OCTREE_DEBUG
-    DebugLog(LogType::Info, "Grow octree when insert spatial #%lu\n", spatial->GetId().value);
-#endif
 
     return Rebuild(engine, new_aabb);
 }

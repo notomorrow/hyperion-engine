@@ -30,16 +30,12 @@ layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
 };
 
 #ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
-
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_SAMPLER) uniform sampler texture_sampler;
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform textureCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
-
+    layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_SAMPLER) uniform sampler texture_sampler;
+    layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
+    layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform textureCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
 #else
-
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[HYP_MAX_BOUND_TEXTURES];
-layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform samplerCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
-
+    layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[HYP_MAX_BOUND_TEXTURES];
+    layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform samplerCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
 #endif
 
 
@@ -66,12 +62,21 @@ layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURE
 #define GET_TEXTURE(index) \
     textures[material.texture_indices[(index / 4)][index % 4]]
 
+#define GET_TEXTURE_CUBE(index) \
+    cubemap_textures[material.texture_indices[(index / 4)][index % 4]]
+
 #ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
     #define SAMPLE_TEXTURE(index, texcoord) \
         Texture2D(texture_sampler, GET_TEXTURE(index), texcoord)
+
+    #define SAMPLE_TEXTURE_CUBE(index, texcoord) \
+        TextureCube(texture_sampler, GET_TEXTURE_CUBE(index), texcoord)
 #else
     #define SAMPLE_TEXTURE(index, texcoord) \
         Texture2D(GET_TEXTURE(index), texcoord)
+
+    #define SAMPLE_TEXTURE_CUBE(index, texcoord) \
+        TextureCube(GET_TEXTURE_CUBE(index), texcoord)
 #endif
 
 #endif
