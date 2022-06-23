@@ -25,7 +25,7 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
       resources(this),
       assets(this),
-      terrain_thread(Threads::thread_ids.At(THREAD_TERRAIN))
+      terrain_thread(Threads::thread_ids.At(THREAD_TERRAIN), 30.0f)
 {
 }
 
@@ -471,7 +471,6 @@ void Engine::Compile()
 
 Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(const RenderableAttributeSet &renderable_attributes)
 {
-    DebugLog(LogType::Debug, "FindOrCreateGraphicsPipeline ()  from thread %s\n", current_thread_id.name.CString());
     const auto it = m_graphics_pipeline_mapping.Find(renderable_attributes);
 
     if (it != m_graphics_pipeline_mapping.End()) {
@@ -493,8 +492,6 @@ Ref<GraphicsPipeline> Engine::FindOrCreateGraphicsPipeline(const RenderableAttri
     
 Ref<GraphicsPipeline> Engine::AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline)
 {
-    DebugLog(LogType::Debug, "AddGraphicsPipeline()  from thread %s\n", current_thread_id.name.CString());
-   
     auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
     
     std::pair<RenderableAttributeSet, GraphicsPipeline::ID> pair{graphics_pipeline->GetRenderableAttributes(), graphics_pipeline->GetId()};

@@ -19,8 +19,8 @@ layout(location=2) out vec4 gbuffer_positions;
 void main() {
     vec3 normal = normalize(v_normal);
     
-    gbuffer_albedo    = vec4(0.0);
-    //gbuffer_albedo    = vec4(textureLod(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), v_position, 0.0).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
+    //gbuffer_albedo    = vec4(0.0);
+    gbuffer_albedo    = vec4(SAMPLE_TEXTURE_CUBE(MATERIAL_TEXTURE_ALBEDO_map, v_position).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
     gbuffer_normals   = EncodeNormal(normal);
     gbuffer_positions = vec4(v_position, 1.0);
 }

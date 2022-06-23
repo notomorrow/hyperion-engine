@@ -19,6 +19,7 @@
 #include <scene/controllers/audio_controller.h>
 #include <scene/controllers/animation_controller.h>
 #include <scene/controllers/aabb_debug_controller.h>
+#include <scene/controllers/follow_camera_controller.h>
 #include <scene/controllers/paging/basic_paging_controller.h>
 #include <scene/controllers/scripted_controller.h>
 #include <core/lib/flat_set.h>
@@ -186,7 +187,7 @@ public:
         //test_model->Translate({0, 0, 5});
         test_model->Scale(0.075f);
         //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
-        scene->GetRootNode()->AddChild(std::move(test_model));
+        //scene->GetRootNode()->AddChild(std::move(test_model));
 
 
         tex1 = engine->resources.textures.Add(
@@ -212,6 +213,7 @@ public:
         skybox_material.Init();
 
         auto &skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
+        skybox_spatial->AddController<FollowCameraController>();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetBucket(BUCKET_SKYBOX);
         skybox_spatial->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef());
@@ -220,6 +222,8 @@ public:
             false,
             false
         );
+
+        scene->GetRootNode()->AddChild(std::move(cube_obj));
 
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
 
@@ -422,9 +426,6 @@ public:
         material_test_obj->GetChild(0)->GetSpatial()->Update(engine, delta);
 
         // zombie->Update(engine, delta);
-
-        //cube_obj->SetLocalTranslation(scene->GetCamera()->GetTranslation());
-        //cube_obj->Update(engine, delta);
 
     }
 
@@ -958,10 +959,10 @@ int main()
 #endif
 
 #if HYPERION_VK_TEST_VCT
-        //if (tmp_render_timer == 0.0f || tmp_render_timer > 0.01f) {
+        if (tmp_render_timer == 0.0f || tmp_render_timer > 0.01f) {
             vct.RenderVoxels(engine, frame);
             tmp_render_timer = 0.0f;
-       // }
+        }
         tmp_render_timer += 0.001f;
 #endif
 

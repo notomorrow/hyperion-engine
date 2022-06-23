@@ -4,11 +4,6 @@
 
 namespace hyperion::v2 {
 
-GameCounter::TimePoint GameCounter::Now()
-{
-    return Clock::now();
-}
-
 void GameCounter::NextTick()
 {
     const auto current = Now();

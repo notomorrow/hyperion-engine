@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_GAME_COUNTER_H
 #define HYPERION_V2_GAME_COUNTER_H
 
+#include <util/defines.h>
 #include <types.h>
 
 #include <chrono>
@@ -17,7 +18,8 @@ struct GameCounter {
     TickUnit  delta{};
 
     void NextTick();
-    static TimePoint Now();
+
+    HYP_FORCE_INLINE static inline TimePoint Now() { return Clock::now(); }
 
     TickUnit Interval(TimePoint end_time_point) const
     {
@@ -38,10 +40,7 @@ struct LockstepGameCounter : GameCounter {
     {
     }
 
-    bool Waiting() const
-    {
-        return Interval(Now()) < target_interval - padding;
-    }
+     HYP_FORCE_INLINE bool Waiting() const { return Interval(Now()) < target_interval - padding; }
 };
 
 } // namespace hyperion::v2

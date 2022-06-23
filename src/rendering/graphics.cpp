@@ -147,8 +147,8 @@ void GraphicsPipeline::RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_remove
                 // UpdateEnqueuedSpatialsFlag();
             } else {
                 m_cached_render_data.push_back(CachedRenderData {
-                    .spatial_id       = spatial->GetId(),
                     .cycles_remaining = max_frames_in_flight + 1,
+                    .spatial_id       = spatial->GetId(),
                     .material = spatial->GetMaterial() != nullptr
                         ? spatial->GetMaterial().IncRef()
                         : nullptr,

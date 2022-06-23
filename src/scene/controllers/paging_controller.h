@@ -53,9 +53,9 @@ struct Patch {
 };
 
 class PagingController : public Controller {
-    static constexpr GameCounter::TickUnit update_max{5.0f};
-    static constexpr GameCounter::TickUnit queue_max{10.0f};
-    static constexpr GameCounter::TickUnit patch_unload_time{15.0f};
+    static constexpr GameCounter::TickUnit update_max{2.5f};
+    static constexpr GameCounter::TickUnit queue_max{2.5f};
+    static constexpr GameCounter::TickUnit patch_unload_time{5.0f};
     static constexpr float                 max_distance{4.5f};
 
 public:

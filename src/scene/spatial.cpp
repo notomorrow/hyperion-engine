@@ -163,11 +163,14 @@ void Spatial::EnqueueRenderUpdates(Engine *engine)
 void Spatial::UpdateOctree(Engine *engine)
 {
     if (Octree *octree = m_octree.load()) {
-        if (!octree->Update(engine, this)) {
+        const auto update_result = octree->Update(engine, this);
+
+        if (!update_result) {
             DebugLog(
                 LogType::Warn,
-                "Could not update Spatial #%lu in octree\n",
-                m_id.value
+                "Could not update Spatial #%u in octree: %s\n",
+                m_id.value,
+                update_result.message
             );
         }
     }
@@ -412,6 +415,10 @@ void Spatial::OnRemovedFromPipeline(GraphicsPipeline *pipeline)
 void Spatial::OnAddedToOctree(Octree *octree)
 {
     AssertThrow(m_octree == nullptr);
+
+    if (m_id.value == 1) {
+        DebugLog(LogType::Debug, "  1 ADDED\n");
+    }
     
 #if HYP_OCTREE_DEBUG
     DebugLog(LogType::Info, "Spatial #%lu added to octree\n", m_id.value);
@@ -424,6 +431,10 @@ void Spatial::OnAddedToOctree(Octree *octree)
 void Spatial::OnRemovedFromOctree(Octree *octree)
 {
     AssertThrow(octree == m_octree);
+
+    if (m_id.value == 1) {
+        DebugLog(LogType::Debug, "  1 REMOVED\n");
+    }
     
 #if HYP_OCTREE_DEBUG
     DebugLog(LogType::Info, "Spatial #%lu removed from octree\n", m_id.value);
@@ -436,6 +447,10 @@ void Spatial::OnRemovedFromOctree(Octree *octree)
 void Spatial::OnMovedToOctant(Octree *octree)
 {
     AssertThrow(m_octree != nullptr);
+
+    if (m_id.value == 1) {
+        DebugLog(LogType::Debug, "  1 MOVED\n");
+    }
     
 #if HYP_OCTREE_DEBUG
     DebugLog(LogType::Info, "Spatial #%lu moved to new octant\n", m_id.value);
