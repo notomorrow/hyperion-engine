@@ -19,21 +19,24 @@ public:
     ImageView &operator=(const ImageView &other) = delete;
     ~ImageView();
 
-    inline VkImageView &GetImageView() { return m_image_view; }
+    inline VkImageView &GetImageView()             { return m_image_view; }
     inline const VkImageView &GetImageView() const { return m_image_view; }
 
     /* Create imageview independent of an Image */
-    Result Create(Device *device,
+    Result Create(
+        Device *device,
         VkImage image,
         VkFormat format,
         VkImageAspectFlags aspect_flags,
         VkImageViewType view_type,
-        size_t num_mipmaps = 1,
-        size_t num_faces = 1);
+        uint32_t num_mipmaps = 1,
+        uint32_t num_faces = 1
+    );
+
+    uint32_t NumFaces() const { return m_num_faces; }
 
     /* Create imageview referencing an Image */
     Result Create(Device *device, Image *image);
-
     Result Destroy(Device *device);
 
 private:
@@ -42,6 +45,8 @@ private:
     
     VkImageView m_image_view;
     std::optional<VkImage> m_image;
+
+    uint32_t m_num_faces;
 };
 
 } // namespace renderer

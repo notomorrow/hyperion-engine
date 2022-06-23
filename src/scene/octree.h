@@ -113,6 +113,10 @@ public:
     Result Update(Engine *engine, Spatial *spatial);
     Result Rebuild(Engine *engine, const BoundingBox &new_aabb);
 
+    void CollectEntities(std::vector<Spatial *> &out) const;
+    void CollectEntitiesInRange(const Vector3 &position, float radius, std::vector<Spatial *> &out) const;
+    bool GetNearestOctants(const Vector3 &position, std::array<Octree *, 8> &out) const;
+
     void CalculateVisibility(Scene *scene);
 
     bool TestRay(const Ray &ray, RayTestResults &out_results) const;

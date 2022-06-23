@@ -8,7 +8,16 @@ namespace renderer {
 RenderPass::RenderPass(RenderPassStage stage, Mode mode)
     : m_stage(stage),
       m_mode(mode),
-      m_handle(VK_NULL_HANDLE)
+      m_handle(VK_NULL_HANDLE),
+      m_num_multiview_layers(0)
+{
+}
+
+RenderPass::RenderPass(RenderPassStage stage, Mode mode, uint32_t num_multiview_layers)
+    : m_stage(stage),
+      m_mode(mode),
+      m_handle(VK_NULL_HANDLE),
+      m_num_multiview_layers(num_multiview_layers)
 {
 }
 
@@ -98,31 +107,49 @@ Result RenderPass::Create(Device *device)
             depth_attachment_ref = attachment_ref->GetHandle();
             subpass_description.pDepthStencilAttachment = &depth_attachment_ref;
 
-            m_clear_values.push_back(VkClearValue{
-                .depthStencil = {1.0f, 0}
+            m_clear_values.push_back(VkClearValue {
+                .depthStencil = { 1.0f, 0 }
             });
         } else {
             color_attachment_refs.push_back(attachment_ref->GetHandle());
 
-            m_clear_values.push_back(VkClearValue{
+            m_clear_values.push_back(VkClearValue {
                 .color = {
-                    .float32 = {0.0f, 0.0f, 0.0f, 1.0f}
+                    .float32 = { 0.0f, 0.0f, 0.0f, 1.0f }
                 }
             });
         }
     }
 
-    subpass_description.colorAttachmentCount = uint32_t(color_attachment_refs.size());
+    subpass_description.colorAttachmentCount = static_cast<uint32_t>(color_attachment_refs.size());
     subpass_description.pColorAttachments    = color_attachment_refs.data();
 
     // Create the actual renderpass
     VkRenderPassCreateInfo render_pass_info{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    render_pass_info.attachmentCount = uint32_t(attachment_descriptions.size());
+    render_pass_info.attachmentCount = static_cast<uint32_t>(attachment_descriptions.size());
     render_pass_info.pAttachments    = attachment_descriptions.data();
     render_pass_info.subpassCount    = 1;
     render_pass_info.pSubpasses      = &subpass_description;
-    render_pass_info.dependencyCount = uint32_t(m_dependencies.size());
+    render_pass_info.dependencyCount = static_cast<uint32_t>(m_dependencies.size());
     render_pass_info.pDependencies   = m_dependencies.data();
+
+    uint32_t multiview_view_mask        = 0;
+    uint32_t multiview_correlation_mask = 0;
+
+    VkRenderPassMultiviewCreateInfo multiview_info{VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO};
+    multiview_info.subpassCount         = 1;
+    multiview_info.pViewMasks           = &multiview_view_mask;
+    multiview_info.pCorrelationMasks    = &multiview_correlation_mask;
+    multiview_info.correlationMaskCount = 1;
+
+    if (IsMultiview()) {
+        for (uint32_t i = 0; i < m_num_multiview_layers; i++) {
+            multiview_view_mask        |= 1 << i;
+            multiview_correlation_mask |= 1 << i;
+        }
+
+        render_pass_info.pNext = &multiview_info;
+    }
 
     HYPERION_VK_CHECK(vkCreateRenderPass(device->GetDevice(), &render_pass_info, nullptr, &m_handle));
 
@@ -154,7 +181,7 @@ void RenderPass::Begin(CommandBuffer *cmd, FramebufferObject *framebuffer)
     render_pass_info.framebuffer         = framebuffer->GetHandle();
     render_pass_info.renderArea.offset   = {0, 0};
     render_pass_info.renderArea.extent   = VkExtent2D{framebuffer->GetWidth(), framebuffer->GetHeight()};
-    render_pass_info.clearValueCount     = uint32_t(m_clear_values.size());
+    render_pass_info.clearValueCount     = static_cast<uint32_t>(m_clear_values.size());
     render_pass_info.pClearValues        = m_clear_values.data();
 
     VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE;

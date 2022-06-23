@@ -35,8 +35,11 @@ public:
     Index GetComponentIndex() const             { return m_index; }
     virtual void SetComponentIndex(Index index) { m_index = index; }
 
+    /*! \brief Init the component. Runs in RENDER/MAIN thread. */
     virtual void ComponentInit(Engine *engine) = 0;
+    /*! \brief Update data for the component. Runs on GAME thread. */
     virtual void ComponentUpdate(Engine *engine, GameCounter::TickUnit delta) {}
+    /*! \brief Perform rendering. Runs in RENDER thread. */
     virtual void ComponentRender(Engine *engine, Frame *frame) = 0;
 
 protected:

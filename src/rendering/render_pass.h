@@ -2,6 +2,7 @@
 #define HYPERION_V2_RENDER_PASS_H
 
 #include "base.h"
+#include <types.h>
 
 #include <rendering/backend/renderer_render_pass.h>
 
@@ -12,6 +13,7 @@ using renderer::RenderPassStage;
 class RenderPass : public EngineComponentBase<STUB_CLASS(RenderPass)> {
 public:
     RenderPass(RenderPassStage stage, renderer::RenderPass::Mode mode);
+    RenderPass(RenderPassStage stage, renderer::RenderPass::Mode mode, UInt num_multiview_layers);
     RenderPass(const RenderPass &other) = delete;
     RenderPass &operator=(const RenderPass &other) = delete;
     ~RenderPass();

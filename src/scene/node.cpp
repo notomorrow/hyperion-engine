@@ -51,6 +51,8 @@ Node::Node(
 
 Node::~Node()
 {
+    SetSpatial(nullptr);
+
     delete[] m_name;
 }
 

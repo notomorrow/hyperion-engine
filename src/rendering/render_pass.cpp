@@ -10,6 +10,12 @@ RenderPass::RenderPass(RenderPassStage stage, renderer::RenderPass::Mode mode)
 {
 }
 
+RenderPass::RenderPass(RenderPassStage stage, renderer::RenderPass::Mode mode, UInt num_multiview_layers)
+    : EngineComponentBase(),
+      m_render_pass(stage, mode, num_multiview_layers)
+{
+}
+
 RenderPass::~RenderPass()
 {
     Teardown();

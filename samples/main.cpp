@@ -106,7 +106,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj", //"living_room/living_room.obj",
+            "models/living_room/living_room.obj",
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -136,6 +136,9 @@ public:
 
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
+        material_test_obj->Scale(3.45f);
+        material_test_obj->Translate(Vector3(0, 22, 0));
+        scene->GetRootNode()->AddChild(std::move(material_test_obj));
 
         // remove textures so we can manipulate the material and see our changes easier
         //material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP, nullptr);
@@ -170,7 +173,7 @@ public:
 
         auto my_light = engine->resources.lights.Add(std::make_unique<Light>(
             LightType::DIRECTIONAL,
-            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
+            Vector3(-0.9f, 0.9f, 0.5f).Normalize(),
             Vector4::One(),
             10000.0f
         ));
@@ -185,9 +188,9 @@ public:
         );
 
         //test_model->Translate({0, 0, 5});
-        test_model->Scale(0.075f);
+        test_model->Scale(15.075f);
         //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
-        //scene->GetRootNode()->AddChild(std::move(test_model));
+        scene->GetRootNode()->AddChild(std::move(test_model));
 
 
         tex1 = engine->resources.textures.Add(
@@ -200,7 +203,7 @@ public:
         );
         //tex2.Init();
 
-        cube_obj->Scale(2.0f);
+        cube_obj->Scale(50.0f);
 
         auto metal_material = engine->resources.materials.Add(std::make_unique<Material>());
         metal_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 0.5f, 0.2f, 1.0f }));
@@ -213,7 +216,6 @@ public:
         skybox_material.Init();
 
         auto &skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
-        //skybox_spatial->AddController<FollowCameraController>();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetBucket(BUCKET_SKYBOX);
         skybox_spatial->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef());
@@ -223,7 +225,7 @@ public:
             false
         );
 
-        scene->GetRootNode()->AddChild(std::move(cube_obj));
+        scene->AddSpatial(cube_obj->GetChild(0)->GetSpatial().IncRef());
 
         //test_model->GetChild(0)->GetSpatial()->SetMaterial(std::move(metal_material));
 
@@ -409,9 +411,9 @@ public:
             //scene->GetCamera()->SetTarget(suzanne->GetWorldTranslation());
         }
         
-        material_test_obj->SetLocalScale(3.45f);
+        // material_test_obj->SetLocalScale(3.45f);
         //material_test_obj->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.25f));
-        material_test_obj->SetLocalTranslation({16, 5.25f,12});
+        // material_test_obj->SetLocalTranslation({16, 5.25f,12});
         //material_test_obj->SetLocalTranslation(Vector3(std::sin(timer * 0.5f) * 270, 0, std::cos(timer * 0.5f) * 270.0f) + Vector3(7, 3, 0));
 
         /*material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(
@@ -421,9 +423,9 @@ public:
             1.0f
         ));*/
 
-        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.75f);//std::sin(timer) * 0.5f + 0.5f);
-        material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.8f);//std::cos(timer) * 0.5f + 0.5f);
-        material_test_obj->GetChild(0)->GetSpatial()->Update(engine, delta);
+        // material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.75f);//std::sin(timer) * 0.5f + 0.5f);
+        // material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.8f);//std::cos(timer) * 0.5f + 0.5f);
+        // material_test_obj->GetChild(0)->GetSpatial()->Update(engine, delta);
 
         // zombie->Update(engine, delta);
 

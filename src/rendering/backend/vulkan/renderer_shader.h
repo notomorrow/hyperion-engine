@@ -102,6 +102,9 @@ public:
     inline const std::vector<ShaderModule> &GetShaderModules() const
         { return m_shader_modules; }
 
+    inline std::vector<VkPipelineShaderStageCreateInfo> &GetShaderStages()
+        { return m_shader_stages; }
+
     inline const std::vector<VkPipelineShaderStageCreateInfo> &GetShaderStages() const
         { return m_shader_stages; }
 

@@ -49,6 +49,8 @@ void Scene::Init(Engine *engine)
             for (auto &spatial : m_spatials) {
                 AssertThrow(spatial.second != nullptr);
 
+                spatial.second->m_scene = nullptr;
+
                 RemoveFromPipelines(spatial.second);
 
                 if (spatial.second->m_octree != nullptr) {
@@ -91,7 +93,11 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
         if (auto pipeline = GetEngine()->FindOrCreateGraphicsPipeline(spatial->GetRenderableAttributes())) {
             if (!spatial->GetPipelines().Contains(pipeline.ptr)) {
                 pipeline->AddSpatial(spatial.IncRef());
+
+                spatial->EnqueueRenderUpdates(GetEngine());
             }
+
+            // spatial->SetShaderDataState(ShaderDataState::DIRTY);
             
             // TODO: wrapper function
             spatial->m_primary_pipeline = {
@@ -205,9 +211,11 @@ void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
         }
     }
 
+    EnqueueRenderUpdates(engine);
+
     for (auto &it : m_spatials) {
         auto &spatial = it.second;
-        AssertThrowMsg(spatial != nullptr, "Spatial at ID #%u   (%p)\n", it.first.value, (void *)&it.second);
+        AssertThrow(spatial != nullptr);
 
         spatial->Update(engine, delta);
 
@@ -217,8 +225,6 @@ void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
     }
 
     m_octree.CalculateVisibility(this);
-
-    EnqueueRenderUpdates(engine);
 }
 
 void Scene::RequestPipelineChanges(Ref<Spatial> &spatial)
@@ -311,7 +317,7 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
         params.height      = m_camera->GetHeight();
     }
 
-    engine->render_scheduler.EnqueueReplace(m_render_update_id, [this, engine, params](...) {
+    engine->render_scheduler.Enqueue([this, engine, params](...) {
         SceneShaderData shader_data{
             .view                        = params.view,
             .projection                  = params.projection,

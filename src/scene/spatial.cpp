@@ -17,6 +17,7 @@ Spatial::Spatial(
     m_scene(nullptr),
     m_renderable_attributes(renderable_attributes),
     m_octree(nullptr),
+    m_needs_octree_update(false),
     m_shader_data_state(ShaderDataState::DIRTY)
 {
     if (m_mesh) {
@@ -118,9 +119,11 @@ void Spatial::Update(Engine *engine, GameCounter::TickUnit delta)
 
     UpdateControllers(engine, delta);
 
-    if (m_shader_data_state.IsDirty()) {
-        UpdateOctree(engine);
+    if (m_needs_octree_update) {
+        UpdateOctree();
+    }
 
+    if (m_shader_data_state.IsDirty()) {
         EnqueueRenderUpdates(engine);
     }
 }
@@ -140,7 +143,7 @@ void Spatial::EnqueueRenderUpdates(Engine *engine)
         ? m_material->GetId().value - 1
         : 0;
 
-    engine->render_scheduler.EnqueueReplace(m_render_update_id, [this, engine, transform = m_transform, material_index](...) {
+    engine->render_scheduler.Enqueue([this, engine, transform = m_transform, material_index](...) {
         engine->shader_globals->objects.Set(
             m_id.value - 1,
             {
@@ -160,10 +163,12 @@ void Spatial::EnqueueRenderUpdates(Engine *engine)
     m_shader_data_state = ShaderDataState::CLEAN;
 }
 
-void Spatial::UpdateOctree(Engine *engine)
+void Spatial::UpdateOctree()
 {
+    AssertThrow(IsInitCalled());
+
     if (Octree *octree = m_octree.load()) {
-        const auto update_result = octree->Update(engine, this);
+        const auto update_result = octree->Update(GetEngine(), this);
 
         if (!update_result) {
             DebugLog(
@@ -174,6 +179,8 @@ void Spatial::UpdateOctree(Engine *engine)
             );
         }
     }
+
+    m_needs_octree_update = false;
 }
 
 void Spatial::SetMesh(Ref<Mesh> &&mesh)
@@ -359,6 +366,12 @@ void Spatial::SetTransform(const Transform &transform)
     m_shader_data_state |= ShaderDataState::DIRTY;
 
     m_world_aabb = m_local_aabb * transform;
+
+    if (IsInitCalled()) {
+        UpdateOctree();
+    } else {
+        m_needs_octree_update = true;
+    }
 }
 
 void Spatial::OnAddedToPipeline(GraphicsPipeline *pipeline)
@@ -425,7 +438,14 @@ void Spatial::OnAddedToOctree(Octree *octree)
 #endif
 
     m_octree = octree;
-    m_shader_data_state |= ShaderDataState::DIRTY;
+
+    if (IsInitCalled()) {
+        UpdateOctree();
+    } else {
+        m_needs_octree_update = true;
+    }
+
+    // m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 void Spatial::OnRemovedFromOctree(Octree *octree)
@@ -441,23 +461,28 @@ void Spatial::OnRemovedFromOctree(Octree *octree)
 #endif
 
     m_octree = nullptr;
-    m_shader_data_state |= ShaderDataState::DIRTY;
+    // m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 void Spatial::OnMovedToOctant(Octree *octree)
 {
     AssertThrow(m_octree != nullptr);
 
-    if (m_id.value == 1) {
-        DebugLog(LogType::Debug, "  1 MOVED\n");
-    }
+    DebugLog(LogType::Debug, "  %u MOVED\n", m_id.value);
     
 #if HYP_OCTREE_DEBUG
     DebugLog(LogType::Info, "Spatial #%lu moved to new octant\n", m_id.value);
 #endif
 
     m_octree = octree;
-    m_shader_data_state |= ShaderDataState::DIRTY;
+
+    if (IsInitCalled()) {
+        UpdateOctree();
+    } else {
+        m_needs_octree_update = true;
+    }
+
+    // m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 

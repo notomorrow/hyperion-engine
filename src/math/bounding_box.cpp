@@ -136,22 +136,32 @@ BoundingBox &BoundingBox::Extend(const BoundingBox &bb)
 
 bool BoundingBox::Intersects(const BoundingBox &other) const
 {
-    for (const auto &corner : other.GetCorners()) {
-        if (ContainsPoint(corner)) {
-            return true;
-        }
-    }
+    const auto corners = other.GetCorners();
+
+    if (ContainsPoint(corners[0])) return true;
+    if (ContainsPoint(corners[1])) return true;
+    if (ContainsPoint(corners[2])) return true;
+    if (ContainsPoint(corners[3])) return true;
+    if (ContainsPoint(corners[4])) return true;
+    if (ContainsPoint(corners[5])) return true;
+    if (ContainsPoint(corners[6])) return true;
+    if (ContainsPoint(corners[7])) return true;
 
     return false;
 }
 
 bool BoundingBox::Contains(const BoundingBox &other) const
 {
-    for (const auto &corner : other.GetCorners()) {
-        if (!ContainsPoint(corner)) {
-            return false;
-        }
-    }
+    const auto corners = other.GetCorners();
+
+    if (!ContainsPoint(corners[0])) return false;
+    if (!ContainsPoint(corners[1])) return false;
+    if (!ContainsPoint(corners[2])) return false;
+    if (!ContainsPoint(corners[3])) return false;
+    if (!ContainsPoint(corners[4])) return false;
+    if (!ContainsPoint(corners[5])) return false;
+    if (!ContainsPoint(corners[6])) return false;
+    if (!ContainsPoint(corners[7])) return false;
 
     return true;
 }
