@@ -135,7 +135,9 @@ Result Instance::SetupDebug()
 {
     static const std::vector<const char *> layers {
         "VK_LAYER_KHRONOS_validation"
-        //"VK_LAYER_LUNARG_monitor"
+#if !defined(HYP_APPLE) || !HYP_APPLE
+        , "VK_LAYER_LUNARG_monitor"
+#endif
     };
 
     HYPERION_BUBBLE_ERRORS(CheckValidationLayerSupport(layers));

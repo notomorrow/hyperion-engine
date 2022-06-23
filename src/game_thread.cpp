@@ -3,7 +3,7 @@
 #include "game.h"
 #include "game_counter.h"
 
-#define HYP_GAME_THREAD_LOCKED 0
+#define HYP_GAME_THREAD_LOCKED 1
 
 namespace hyperion::v2 {
 

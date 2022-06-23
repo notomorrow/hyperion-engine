@@ -13,7 +13,7 @@
 
 #include <array>
 
-#define HYP_OCTREE_DEBUG 0
+#define HYP_OCTREE_DEBUG 1
 
 namespace hyperion {
 
@@ -43,6 +43,27 @@ class Octree {
     Octree(Octree *parent, const BoundingBox &aabb, UInt8 index);
 
 public:
+    struct Result {
+        enum {
+            OCTREE_OK  = 0,
+            OCTREE_ERR = 1
+        } result;
+
+        const char *message;
+        int error_code = 0;
+
+        Result()
+            : Result(OCTREE_OK) {}
+        
+        Result(decltype(result) result, const char *message = "", int error_code = 0)
+            : result(result), message(message), error_code(error_code) {}
+        Result(const Result &other)
+            : result(other.result), message(other.message), error_code(other.error_code) {}
+
+        HYP_FORCE_INLINE
+        operator bool() const { return result == OCTREE_OK; }
+    };
+
     struct Octant {
         std::unique_ptr<Octree> octree;
         BoundingBox             aabb;
@@ -87,10 +108,10 @@ public:
     const BoundingBox &GetAabb() const                { return m_aabb; }
 
     void Clear(Engine *engine);
-    bool Insert(Engine *engine, Spatial *spatial);
-    bool Remove(Engine *engine, Spatial *spatial);
-    bool Update(Engine *engine, Spatial *spatial);
-    bool Rebuild(Engine *engine, const BoundingBox &new_aabb);
+    Result Insert(Engine *engine, Spatial *spatial);
+    Result Remove(Engine *engine, Spatial *spatial);
+    Result Update(Engine *engine, Spatial *spatial);
+    Result Rebuild(Engine *engine, const BoundingBox &new_aabb);
 
     void CalculateVisibility(Scene *scene);
 
@@ -99,7 +120,7 @@ public:
 private:
     void ClearInternal(Engine *engine, std::vector<Node> &out_nodes);
     void Clear(Engine *engine, std::vector<Node> &out_nodes);
-    bool Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it = nullptr);
+    Result Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it = nullptr);
 
     auto FindNode(Spatial *spatial)
     {
@@ -125,10 +146,10 @@ private:
 
     /* Remove any potentially empty octants above the node */
     void CollapseParents(Engine *engine);
-    bool InsertInternal(Engine *engine, Spatial *spatial);
-    bool UpdateInternal(Engine *engine, Spatial *spatial);
-    bool RemoveInternal(Engine *engine, Spatial *spatial);
-    bool RebuildExtendInternal(Engine *engine, const BoundingBox &extend_include_aabb);
+    Result InsertInternal(Engine *engine, Spatial *spatial);
+    Result UpdateInternal(Engine *engine, Spatial *spatial);
+    Result RemoveInternal(Engine *engine, Spatial *spatial);
+    Result RebuildExtendInternal(Engine *engine, const BoundingBox &extend_include_aabb);
     void UpdateVisibilityState(Scene *scene);
 
     /* Called from Spatial - remove the pointer */

@@ -226,6 +226,7 @@ void main()
         float shadow = 1.0;
 
         if (scene.num_environment_shadow_maps != 0) {
+
 #if HYP_SHADOW_PENUMBRA
             shadow = GetShadowContactHardened(0, position.xyz, NdotL);
 #else

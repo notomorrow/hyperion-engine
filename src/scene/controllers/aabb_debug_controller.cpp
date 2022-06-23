@@ -15,6 +15,17 @@ AabbDebugController::AabbDebugController(Engine *engine)
 void AabbDebugController::OnAdded()
 {
     m_aabb = GetOwner()->GetWorldAabb();
+    auto *scene = GetOwner()->GetScene();
+
+    if (scene == nullptr) {
+        DebugLog(
+            LogType::Error,
+            "Added aabb debug controller but Entity #%u was not in scene\n",
+            GetOwner()->GetId().value
+        );
+
+        return;
+    }
 
     AssertThrow(m_engine != nullptr);
 
@@ -42,13 +53,16 @@ void AabbDebugController::OnAdded()
 
     m_aabb_entity.Init();
 
-    // TODO: add to root node
+    scene->AddSpatial(m_aabb_entity.IncRef());
 }
 
 void AabbDebugController::OnRemoved()
 {
     if (m_aabb_entity != nullptr) {
-        // TODO remove from root
+        if (auto *scene = m_aabb_entity->GetScene()) {
+            scene->RemoveSpatial(m_aabb_entity);
+        }
+
         m_aabb_entity = nullptr;
     }
 }
@@ -68,8 +82,6 @@ void AabbDebugController::OnUpdate(GameCounter::TickUnit delta)
         m_aabb.GetDimensions() * 0.5f,
         Quaternion::Identity()
     ));
-
-    m_aabb_entity->Update(m_engine, delta);
 }
 
 } // namespace hyperion::v2
