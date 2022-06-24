@@ -188,7 +188,7 @@ public:
         );
 
         //test_model->Translate({0, 0, 5});
-        test_model->Scale(15.075f);
+        test_model->Scale(5.15f);//14.075f);
         //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
         scene->GetRootNode()->AddChild(std::move(test_model));
 
@@ -653,7 +653,7 @@ int main()
 #if HYPERION_VK_TEST_VCT
     auto *vct = new v2::VoxelConeTracing({
         /* scene bounds for vct to capture */
-        .aabb = BoundingBox(Vector3(-128), Vector3(128))
+        .aabb = BoundingBox(Vector3(-32), Vector3(32))
     });
 
     vct->Init(engine);

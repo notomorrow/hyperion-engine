@@ -7,13 +7,6 @@
 
 namespace hyperion::v2 {
 
-bool GraphicsPipeline::BucketSupportsCulling(Bucket bucket)
-{
-    return bucket == BUCKET_OPAQUE
-        || bucket == BUCKET_TRANSLUCENT
-        || bucket == BUCKET_PARTICLE;
-}
-
 GraphicsPipeline::GraphicsPipeline(
     Ref<Shader> &&shader,
     Ref<RenderPass> &&render_pass,
@@ -456,7 +449,7 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
             );
 
             // check visibility state
-            const bool perform_culling = scene_cull_id != Scene::empty_id && BucketSupportsCulling(m_renderable_attributes.bucket);
+            const bool perform_culling = scene_cull_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
             
             for (auto &&spatial : m_spatials) {
                 // if (spatial->GetMesh() == nullptr) {

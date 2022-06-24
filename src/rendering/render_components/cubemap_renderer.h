@@ -25,6 +25,9 @@ public:
     CubemapRendererPass &operator=(const CubemapRendererPass &other) = delete;
     ~CubemapRendererPass();
 
+    Ref<Scene> &GetScene()                  { return m_scene; }
+    const Ref<Scene> &GetScene() const      { return m_scene; }
+
     void SetParentScene(Scene::ID id);
 
     const Vector3 &GetOrigin() const        { return m_origin; }
@@ -65,7 +68,7 @@ public:
     CubemapRenderer &operator=(const CubemapRenderer &other) = delete;
     virtual ~CubemapRenderer();
 
-    Scene *GetScene() const               { return m_pass.GetScene(); }
+    const Ref<Scene> &GetScene() const    { return m_pass.GetScene(); }
 
     const Vector3 &GetOrigin() const      { return m_pass.GetOrigin(); }
     void SetOrigin(const Vector3 &origin) { m_pass.SetOrigin(origin); }

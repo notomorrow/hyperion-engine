@@ -757,6 +757,12 @@ bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
 
     if (ray.TestAabb(m_aabb)) {
         for (auto &node : m_nodes) {
+            AssertThrow(node.spatial != nullptr);
+
+            if (!BucketRayTestsEnabled(node.spatial->GetBucket())) {
+                continue;
+            }
+
             if (ray.TestAabb(
                 node.aabb,
                 node.spatial->GetId().value,
