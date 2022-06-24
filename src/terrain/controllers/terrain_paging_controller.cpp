@@ -20,12 +20,17 @@ void TerrainPagingController::OnAdded()
         "terrain_material"
     ));
 
-    m_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.2f, 0.99f, 0.5f, 1.0f));
-    m_material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.8f);
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/forest-floor-unity/forest_floor_albedo.png")));
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/forest-floor-unity/forest_floor_Normal-ogl.png")));
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/forest-floor-unity/forest_floor-ao.png")));
-    m_material->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/forest-floor-unity/forest_floor_Height.png")));
+    // m_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.2f, 0.99f, 0.5f, 1.0f));
+    m_material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.9f);
+    m_material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.01f);
+    // m_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
+    m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png")));
+    m_material->GetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP)->GetImage().SetIsSRGB(true);
+    m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png")));
+    // m_material->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png")));
+    // m_material->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Height.png")));
+    // m_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Roughness.png")));
+    // m_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, GetEngine()->resources.textures.Add(GetEngine()->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
 
     m_material.Init();
 

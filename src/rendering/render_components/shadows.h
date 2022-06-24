@@ -62,8 +62,6 @@ public:
 private:
     Ref<Scene>                                               m_scene;
     Ref<Light>                                               m_light;
-    std::vector<ObserverRef<Ref<GraphicsPipeline>>>          m_pipeline_observers;
-    FlatMap<GraphicsPipeline::ID, ObserverRef<Ref<Spatial>>>    m_spatial_observers;
     Scene::ID                                                m_parent_scene_id;
     Vector3                                                  m_origin;
     float                                                    m_max_distance;
@@ -95,13 +93,18 @@ public:
         }
     }
 
-    void Init(Engine *engine);
+    void Init(Engine *engine); // init on render thread
+    void InitGame(Engine *engine); // init on game thread
 
     void OnUpdate(Engine *engine, GameCounter::TickUnit delta);
     void OnRender(Engine *engine, Frame *frame);
 
 private:
     void UpdateSceneCamera(Engine *engine);
+
+    virtual void OnEntityAdded(Ref<Spatial> &spatial);
+    virtual void OnEntityRemoved(Ref<Spatial> &spatial);
+    virtual void OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial);
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     ShadowPass m_shadow_pass;

@@ -255,8 +255,8 @@ void Material::ResetParameters()
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT,       0.0f);
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT_GLOSS, 0.0f);
     m_parameters.Set(MATERIAL_KEY_EMISSIVENESS,    0.0f);
-    m_parameters.Set(MATERIAL_KEY_UV_SCALE,        Vector2(1.0f));
-    m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.08f);
+    m_parameters.Set(MATERIAL_KEY_UV_SCALE,        1.0f);
+    m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.25f);
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
@@ -270,20 +270,25 @@ void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
     if (texture && IsReady()) {
         texture.Init();
 
-        m_textures.Set(key, std::forward<Ref<Texture>>(texture));
+        m_textures.Set(key, std::move(texture));
 
 #if !HYP_FEATURES_BINDLESS_TEXTURES
         EnqueueTextureUpdate(key);
 #endif
     } else {
-        m_textures.Set(key, std::forward<Ref<Texture>>(texture));
+        m_textures.Set(key, std::move(texture));
     }
 
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
-Texture *Material::GetTexture(TextureKey key) const
+Texture *Material::GetTexture(TextureKey key)
+{
+    return m_textures.Get(key).ptr;
+}
+
+const Texture *Material::GetTexture(TextureKey key) const
 {
     return m_textures.Get(key).ptr;
 }

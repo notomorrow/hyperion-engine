@@ -1,5 +1,6 @@
 #include "shadows.h"
 #include <engine.h>
+#include <rendering/environment.h>
 
 #include <camera/ortho_camera.h>
 
@@ -130,40 +131,6 @@ void ShadowPass::CreatePipeline(Engine *engine)
     m_pipeline.Init();
 
     const std::array<Bucket, 2> buckets = {BUCKET_OPAQUE, BUCKET_TRANSLUCENT};
-
-    for (const Bucket bucket : buckets) {
-        m_pipeline_observers.push_back(engine->GetRenderListContainer().Get(bucket).GetGraphicsPipelineNotifier().Add(Observer<Ref<GraphicsPipeline>>(
-            [this](Ref<GraphicsPipeline> *pipelines, size_t count) {
-                for (size_t i = 0; i < count; i++) {
-                    if (pipelines[i] == m_pipeline.ptr) {
-                        continue;
-                    }
-
-                    m_spatial_observers.Insert(pipelines[i]->GetId(), pipelines[i]->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
-                        [this](Ref<Spatial> *items, size_t count) {
-                            for (size_t i = 0; i < count; i++) {
-                                m_pipeline->AddSpatial(items[i].IncRef());
-                            }
-                        },
-                        [this](Ref<Spatial> *items, size_t count) {
-                            for (size_t i = 0; i < count; i++) {
-                                m_pipeline->RemoveSpatial(items[i].IncRef());
-                            }
-                        }
-                    )));
-                }
-            },
-            [this](Ref<GraphicsPipeline> *pipelines, size_t count) {
-                for (size_t i = 0; i < count; i++) {
-                    if (pipelines[i] == m_pipeline.ptr) {
-                        continue;
-                    }
-
-                    m_spatial_observers.Erase(pipelines[i]->GetId());
-                }
-            }
-        )));
-    }
 }
 
 void ShadowPass::Create(Engine *engine)
@@ -206,9 +173,6 @@ void ShadowPass::Create(Engine *engine)
 
 void ShadowPass::Destroy(Engine *engine)
 {
-    m_spatial_observers.Clear();
-    m_pipeline_observers.clear();
-
     FullScreenPass::Destroy(engine); // flushes render queue
 }
 
@@ -231,7 +195,8 @@ ShadowRenderer::ShadowRenderer(Ref<Light> &&light)
 }
 
 ShadowRenderer::ShadowRenderer(Ref<Light> &&light, const Vector3 &origin, float max_distance)
-    : EngineComponentBase()
+    : EngineComponentBase(),
+      RenderComponent()
 {
     m_shadow_pass.SetLight(std::move(light));
     m_shadow_pass.SetOrigin(origin);
@@ -243,8 +208,11 @@ ShadowRenderer::~ShadowRenderer()
     Teardown();
 }
 
+// called from render thread
 void ShadowRenderer::Init(Engine *engine)
 {
+    Threads::AssertOnThread(THREAD_RENDER);
+
     if (IsInitCalled()) {
         return;
     }
@@ -267,9 +235,72 @@ void ShadowRenderer::Init(Engine *engine)
     }));
 }
 
-void ShadowRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
+// called from game thread
+void ShadowRenderer::InitGame(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_GAME);
+
+    AssertReady();
+
+    // add all entities from environment scene
+    AssertThrow(GetParent()->GetScene() != nullptr);
+
+    for (auto &it : GetParent()->GetScene()->GetSpatials()) {
+        auto &entity = it.second;
+
+        if (entity == nullptr) {
+            continue;
+        }
+
+        if (BucketRendersShadows(entity->GetBucket())
+            && (entity->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
+
+            m_shadow_pass.GetGraphicsPipeline()->AddSpatial(it.second.IncRef());
+        }
+    }
+}
+
+void ShadowRenderer::OnEntityAdded(Ref<Spatial> &spatial)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    if (BucketRendersShadows(spatial->GetBucket())
+        && (spatial->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
+        m_shadow_pass.GetGraphicsPipeline()->AddSpatial(spatial.IncRef());
+    }
+}
+
+void ShadowRenderer::OnEntityRemoved(Ref<Spatial> &spatial)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    m_shadow_pass.GetGraphicsPipeline()->RemoveSpatial(spatial.IncRef());
+}
+
+void ShadowRenderer::OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    const auto &renderable_attributes = spatial->GetRenderableAttributes();
+
+    // TODO: better handling
+    if (BucketRendersShadows(spatial->GetBucket())
+        && (spatial->GetRenderableAttributes().vertex_attributes & m_shadow_pass.GetGraphicsPipeline()->GetRenderableAttributes().vertex_attributes)) {
+        m_shadow_pass.GetGraphicsPipeline()->AddSpatial(spatial.IncRef());
+    } else {
+        m_shadow_pass.GetGraphicsPipeline()->RemoveSpatial(spatial.IncRef());
+    }
+}
+
+void ShadowRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
+{
+    // Threads::AssertOnThread(THREAD_GAME);
 
     AssertReady();
     
@@ -280,7 +311,7 @@ void ShadowRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
 
 void ShadowRenderer::OnRender(Engine *engine, Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    // Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 

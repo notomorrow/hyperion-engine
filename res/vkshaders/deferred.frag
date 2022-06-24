@@ -34,8 +34,8 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 2000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 200000.0
+#define IBL_INTENSITY 4000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
 #define IRRADIANCE_MULTIPLIER 16.0
 #define ROUGHNESS_LOD_MULTIPLIER 16.0
 #define SSAO_DEBUG 0
@@ -204,4 +204,5 @@ void main()
 #endif
 
     output_color = vec4(Tonemap(result), 1.0);
+    // output_color.rgb = albedo.rgb;
 }

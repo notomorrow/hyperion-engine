@@ -77,6 +77,7 @@ public:
 
     const Vector3 &GetTranslation() const             { return m_translation; }
     virtual void SetTranslation(const Vector3 &translation);
+    virtual void SetNextTranslation(const Vector3 &translation);
 
     const Vector3 &GetDirection() const               { return m_direction; }
     virtual void SetDirection(const Vector3 &direction);
@@ -129,7 +130,7 @@ protected:
 
     CameraType m_camera_type;
 
-    Vector3 m_translation, m_direction, m_up;
+    Vector3 m_translation, m_next_translation, m_direction, m_up;
     Matrix4 m_view_mat, m_proj_mat;
     Frustum m_frustum;
 

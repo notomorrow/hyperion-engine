@@ -36,7 +36,7 @@ public:
 
     ObserverRef<T> Add(Observer &&observer)
     {
-        std::lock_guard guard(m_mutex);
+        // std::lock_guard guard(m_mutex);
 
         observer.m_data = {++m_id_counter, this};
 
@@ -54,7 +54,7 @@ public:
 
     bool Remove(uint32_t value)
     {
-        std::lock_guard guard(m_mutex);
+        // std::lock_guard guard(m_mutex);
 
         auto it = std::find_if(
             m_observers.begin(),
@@ -86,7 +86,7 @@ public:
 
     void ItemAdded(T &item)
     {
-        std::lock_guard guard(m_mutex);
+        // std::lock_guard guard(m_mutex);
 
         for (auto &observer : m_observers) {
             observer.m_on_items_added(&item, 1);
@@ -104,7 +104,7 @@ public:
 
     void ItemsAdded(T *ptr, size_t count)
     {
-        std::lock_guard guard(m_mutex);
+        // std::lock_guard guard(m_mutex);
 
         for (auto &observer : m_observers) {
             observer.m_on_items_added(ptr, count);
@@ -113,7 +113,7 @@ public:
 
     void ItemsRemoved(T *ptr, size_t count)
     {
-        std::lock_guard guard(m_mutex);
+        // std::lock_guard guard(m_mutex);
 
         for (auto &observer : m_observers) {
             observer.m_on_items_removed(ptr, count);

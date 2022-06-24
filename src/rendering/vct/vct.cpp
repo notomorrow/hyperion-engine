@@ -5,6 +5,7 @@
 #include <engine.h>
 #include <camera/ortho_camera.h>
 
+#include <rendering/environment.h>
 #include <rendering/backend/renderer_features.h>
 
 namespace hyperion::v2 {
@@ -13,6 +14,7 @@ const Extent3D VoxelConeTracing::voxel_map_size{256};
 
 VoxelConeTracing::VoxelConeTracing(Params &&params)
     : EngineComponentBase(),
+      RenderComponent(25), // render every 25 frames
       m_params(std::move(params))
 {
 }
@@ -51,9 +53,6 @@ void VoxelConeTracing::Init(Engine *engine)
         SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](Engine *engine) {
-            m_spatial_observers.Clear();
-            m_pipeline_observers.clear();
-
             m_shader       = nullptr;
             m_framebuffer  = nullptr;
             m_render_pass  = nullptr;
@@ -72,9 +71,78 @@ void VoxelConeTracing::Init(Engine *engine)
     }));
 }
 
-void VoxelConeTracing::RenderVoxels(Engine *engine, Frame *frame)
+// called from game thread
+void VoxelConeTracing::InitGame(Engine *engine)
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    AssertReady();
+
+    // add all entities from environment scene
+    AssertThrow(GetParent()->GetScene() != nullptr);
+
+    for (auto &it : GetParent()->GetScene()->GetSpatials()) {
+        auto &entity = it.second;
+
+        if (entity == nullptr) {
+            continue;
+        }
+
+        if (BucketHasGlobalIllumination(entity->GetBucket())
+            && (entity->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
+
+            m_pipeline->AddSpatial(it.second.IncRef());
+        }
+    }
+}
+
+void VoxelConeTracing::OnEntityAdded(Ref<Spatial> &spatial)
 {
     Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    if (BucketHasGlobalIllumination(spatial->GetBucket())
+        && (spatial->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
+        m_pipeline->AddSpatial(spatial.IncRef());
+    }
+}
+
+void VoxelConeTracing::OnEntityRemoved(Ref<Spatial> &spatial)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    m_pipeline->RemoveSpatial(spatial.IncRef());
+}
+
+void VoxelConeTracing::OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    AssertReady();
+
+    const auto &renderable_attributes = spatial->GetRenderableAttributes();
+
+    // TODO: better handling
+    if (BucketHasGlobalIllumination(spatial->GetBucket())
+        && (spatial->GetRenderableAttributes().vertex_attributes & m_pipeline->GetRenderableAttributes().vertex_attributes)) {
+        m_pipeline->AddSpatial(spatial.IncRef());
+    } else {
+        m_pipeline->RemoveSpatial(spatial.IncRef());
+    }
+}
+
+void VoxelConeTracing::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
+{
+    // Threads::AssertOnThread(THREAD_GAME);
+    AssertReady();
+}
+
+void VoxelConeTracing::OnRender(Engine *engine, Frame *frame)
+{
+    // Threads::AssertOnThread(THREAD_RENDER);
 
     auto *command_buffer = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
@@ -133,6 +201,14 @@ void VoxelConeTracing::RenderVoxels(Engine *engine, Frame *frame)
     HYPERION_ASSERT_RESULT(result);
 }
 
+void VoxelConeTracing::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)
+{
+    //m_shadow_pass.SetShadowMapIndex(new_index);
+    AssertThrowMsg(false, "Not implemented");
+
+    // TODO: Remove descriptor, set new descriptor
+}
+
 void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
 {
     m_voxel_image = engine->resources.textures.Add(std::make_unique<Texture>(
@@ -187,38 +263,6 @@ void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     m_pipeline.Init();
-
-    m_pipeline_observers.push_back(engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelineNotifier().Add(Observer<Ref<GraphicsPipeline>>(
-        [this](Ref<GraphicsPipeline> *pipelines, size_t count) {
-            for (size_t i = 0; i < count; i++) {
-                if (pipelines[i] == m_pipeline.ptr) {
-                    continue;
-                }
-
-                m_spatial_observers.Insert(pipelines[i]->GetId(), pipelines[i]->GetSpatialNotifier().Add(Observer<Ref<Spatial>>(
-                    [this](Ref<Spatial> *items, size_t count) {
-                        for (size_t i = 0; i < count; i++) {
-                            m_pipeline->AddSpatial(items[i].IncRef());
-                        }
-                    },
-                    [this](Ref<Spatial> *items, size_t count) {
-                        for (size_t i = 0; i < count; i++) {
-                            m_pipeline->RemoveSpatial(items[i].IncRef());
-                        }
-                    }
-                )));
-            }
-        },
-        [this](Ref<GraphicsPipeline> *pipelines, size_t count) {
-            for (size_t i = 0; i < count; i++) {
-                if (pipelines[i] == m_pipeline.ptr) {
-                    continue;
-                }
-
-                m_spatial_observers.Erase(pipelines[i]->GetId());
-            }
-        }
-    )));
 }
 
 void VoxelConeTracing::CreateComputePipelines(Engine *engine)

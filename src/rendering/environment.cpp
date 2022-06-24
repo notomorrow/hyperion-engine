@@ -5,8 +5,9 @@
 
 namespace hyperion::v2 {
 
-Environment::Environment()
+Environment::Environment(Scene *scene)
     : EngineComponentBase(),
+      m_scene(scene),
       m_global_timer(0.0f)
 {
 }
@@ -35,12 +36,6 @@ void Environment::Init(Engine *engine)
             if (light != nullptr) {
                 light.Init();
             }
-        }
-
-        for (auto &it : m_render_components) {
-            AssertThrow(it.second != nullptr);
-
-            it.second->ComponentInit(engine);
         }
 
         SetReady(true);
@@ -118,6 +113,37 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
         m_render_components_pending_removal.Clear();
 
         m_has_render_component_updates = false;
+    }
+
+    if (m_has_spatial_updates) {
+        // perform updates to all RenderComponents in the render thread
+        std::lock_guard guard(m_spatial_update_mutex);
+
+        while (!m_spatials_pending_addition.empty()) {
+            for (auto &it : m_render_components) {
+                it.second->OnEntityAdded(m_spatials_pending_addition.front());
+            }
+
+            m_spatials_pending_addition.pop();
+        }
+
+        while (!m_spatial_renderable_attribute_updates.empty()) {
+            for (auto &it : m_render_components) {
+                it.second->OnEntityRenderableAttributesChanged(m_spatial_renderable_attribute_updates.front());
+            }
+
+            m_spatial_renderable_attribute_updates.pop();
+        }
+
+        while (!m_spatials_pending_removal.empty()) {
+            for (auto &it : m_render_components) {
+                it.second->OnEntityRemoved(m_spatials_pending_removal.front());
+            }
+
+            m_spatials_pending_removal.pop();
+        }
+
+        m_has_spatial_updates = false;
     }
 
     for (const auto &component : m_render_components) {

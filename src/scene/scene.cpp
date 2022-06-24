@@ -9,7 +9,7 @@ Scene::Scene(std::unique_ptr<Camera> &&camera)
       m_camera(std::move(camera)),
       m_root_node(std::make_unique<Node>("root")),
       m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
-      m_environment(new Environment),
+      m_environment(new Environment(this)),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
     m_root_node->SetScene(this);
@@ -88,6 +88,7 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
     }
 
     spatial->m_scene = this;
+    spatial.Init();
 
     if (spatial->IsRenderable() && !spatial->GetPrimaryPipeline()) {
         if (auto pipeline = GetEngine()->FindOrCreateGraphicsPipeline(spatial->GetRenderableAttributes())) {
@@ -125,7 +126,7 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
         spatial->AddToOctree(GetEngine(), m_octree);
     }
 
-    spatial.Init();
+    m_environment->OnEntityAdded(spatial);
 
     // m_spatials.Insert(spatial->GetId(), std::move(spatial));
     m_spatials.insert(std::make_pair(static_cast<IDBase>(spatial->GetId()), std::move(spatial)));
@@ -153,6 +154,8 @@ bool Scene::RemoveSpatial(Spatial::ID id)
 
     auto &found_spatial = it->second;
     AssertThrow(found_spatial != nullptr);
+
+    m_environment->OnEntityRemoved(found_spatial);
 
     RemoveFromPipelines(found_spatial);
 

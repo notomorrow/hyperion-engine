@@ -330,6 +330,71 @@ void Mesh::CalculateNormals()
 
 void Mesh::CalculateTangents()
 {
+#if 1
+    struct TangentBitangentPair {
+        Vector3 tangent;
+        Vector3 bitangent;
+    };
+
+    std::unordered_map<Index, std::vector<TangentBitangentPair>> data;
+
+    for (size_t i = 0; i < m_indices.size();) {
+        const auto count = MathUtil::Min(3, m_indices.size() - i);
+
+        Vertex v[3];
+        Vector2 uv[3];
+
+        for (UInt32 j = 0; j < count; j++) {
+            v[j]  = m_vertices[m_indices[i + j]];
+            uv[j] = v[j].GetTexCoord0();
+        }
+
+        Index i0 = m_indices[i];
+        Index i1 = m_indices[i + 1];
+        Index i2 = m_indices[i + 2];
+        
+        const Vector3 edge1   = v[1].GetPosition() - v[0].GetPosition();
+        const Vector3 edge2   = v[2].GetPosition() - v[0].GetPosition();
+        const Vector2 edge1uv = uv[1] - uv[0];
+        const Vector2 edge2uv = uv[2] - uv[0];
+        
+        const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
+
+        if (!MathUtil::Approximately(cp, 0.0f)) {
+            const float mul = 1.0f / cp;
+
+            const TangentBitangentPair tangent_bitangent {
+                .tangent   = ((edge1 * edge2uv.y - edge2 * edge1uv.y) * mul).Normalize(),
+                .bitangent = ((edge1 * edge2uv.x - edge2 * edge1uv.x) * mul).Normalize()
+            };
+
+            data[i0].push_back(tangent_bitangent);
+            data[i1].push_back(tangent_bitangent);
+            data[i2].push_back(tangent_bitangent);
+        }
+
+        i += count;
+    }
+
+    for (size_t i = 0; i < m_vertices.size(); i++) {
+        const auto &tangent_bitangents = data[i];
+
+        // find average
+        Vector3 average_tangent,
+                average_bitangent;
+
+        for (const auto &item : tangent_bitangents) {
+            average_tangent   += item.tangent * (1.0f / tangent_bitangents.size());
+            average_bitangent += item.bitangent * (1.0f / tangent_bitangents.size());
+        }
+
+        average_tangent.Normalize();
+        average_bitangent.Normalize();
+
+        m_vertices[i].SetTangent(average_tangent);
+        m_vertices[i].SetBitangent(average_bitangent);
+    }
+#else
     Vertex v[3];
     Vector2 uv[3];
 
@@ -344,7 +409,7 @@ void Mesh::CalculateTangents()
     for (size_t i = 0; i < m_indices.size();) {
         const auto count = MathUtil::Min(3, m_indices.size() - i);
 
-        for (int j = 0; j < count; j++) {
+        for (UInt32 j = 0; j < count; j++) {
             v[j]  = m_vertices[m_indices[i + j]];
             uv[j] = v[j].GetTexCoord0();
         }
@@ -377,6 +442,8 @@ void Mesh::CalculateTangents()
         m_vertices[i].SetTangent(tangent);
         m_vertices[i].SetBitangent(bitangent);
     }
+
+#endif
 }
 
 void Mesh::InvertNormals()

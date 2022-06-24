@@ -3,24 +3,58 @@
 
 namespace hyperion::v2 {
 
-FollowCameraController::FollowCameraController()
-    : Controller("FollowCameraController")
+BasicCharacterController::BasicCharacterController()
+    : Controller("BasicCharacterController")
 {
 }
 
-void FollowCameraController::OnAdded()
+void BasicCharacterController::OnAdded()
 {
 }
 
-void FollowCameraController::OnRemoved()
+void BasicCharacterController::OnRemoved()
 {
 }
 
-void FollowCameraController::OnUpdate(GameCounter::TickUnit)
+void BasicCharacterController::OnUpdate(GameCounter::TickUnit)
 {
-    if (const auto *scene = GetOwner()->GetScene()) {
-        if (const auto *camera = scene->GetCamera()) {
-            GetOwner()->SetTranslation(camera->GetTranslation());
+    // just a simple test case, raycast down into the world
+
+    static const float camera_height = 10.0f;
+
+    if (auto *scene = GetOwner()->GetScene()) {
+        if (auto *camera = scene->GetCamera()) {
+            Ray ray {
+                .position  = camera->GetTranslation() + Vector3(0, 1000, 0),
+                .direction = Vector3::UnitY() * -1.0f
+            };
+
+            if (scene->GetOctree().TestRay(ray, m_ray_test_results)) {
+                RayTestResults triangle_mesh_results;
+
+                auto &hit = m_ray_test_results.Front();
+                    // now ray test each result as triangle mesh to find exact hit point
+
+                if (auto lookup_result = GetEngine()->resources.spatials.Lookup(Spatial::ID{hit.id})) {
+                    if (auto &mesh = lookup_result->GetMesh()) {
+                        ray.TestTriangleList(
+                            mesh->GetVertices(),
+                            mesh->GetIndices(),
+                            lookup_result->GetTransform(),
+                            lookup_result->GetId().value,
+                            triangle_mesh_results
+                        );
+                    }
+                }
+
+                if (!triangle_mesh_results.Empty()) {
+                    auto &mesh_hit = triangle_mesh_results.Front();
+
+                    camera->SetNextTranslation(mesh_hit.hitpoint + Vector3(0, camera_height, 0));
+                }
+
+                m_ray_test_results.Clear();
+            }
         }
     }
 }

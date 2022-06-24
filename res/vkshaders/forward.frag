@@ -52,7 +52,7 @@ void main()
     float metalness = material.metalness;
     float roughness = material.roughness;
     
-    vec2 texcoord = v_texcoord0;
+    vec2 texcoord = v_texcoord0;// * material.uv_scale;
     
 #if PARALLAX_ENABLED
     if (HAS_TEXTURE(MATERIAL_TEXTURE_PARALLAX_MAP)) {
@@ -76,8 +76,10 @@ void main()
         gbuffer_albedo *= albedo_texture;
     }
 
+    vec4 normals_texture = vec4(0.0);
+
     if (HAS_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP)) {
-        vec4 normals_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP, texcoord) * 2.0 - 1.0;
+        normals_texture = SAMPLE_TEXTURE(MATERIAL_TEXTURE_NORMAL_MAP, texcoord) * 2.0 - 1.0;
         normal = normalize(v_tbn_matrix * normals_texture.rgb);
     }
 
@@ -100,4 +102,6 @@ void main()
     gbuffer_normals   = EncodeNormal(normal);
     gbuffer_positions = vec4(v_position, 1.0);
     gbuffer_material  = vec4(roughness, metalness, 0.0, ao);
+
+    // gbuffer_albedo.rgb = v_tangent.xyz * 0.5 + 0.5;
 }

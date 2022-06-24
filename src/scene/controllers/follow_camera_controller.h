@@ -1,20 +1,24 @@
-#ifndef HYPERION_V2_FOLLOW_CAMERA_CONTROLLER_H
-#define HYPERION_V2_FOLLOW_CAMERA_CONTROLLER_H
+#ifndef HYPERION_V2_BASIC_CHARACTER_CONTROLLER_H
+#define HYPERION_V2_BASIC_CHARACTER_CONTROLLER_H
 
 #include "../controller.h"
+#include <math/ray.h>
 
 namespace hyperion::v2 {
 
 class Engine;
 
-class FollowCameraController : public Controller {
+class BasicCharacterController : public Controller {
 public:
-    FollowCameraController();
-    virtual ~FollowCameraController() override = default;
+    BasicCharacterController();
+    virtual ~BasicCharacterController() override = default;
     
     virtual void OnAdded() override;
     virtual void OnRemoved() override;
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
+
+private:
+    RayTestResults m_ray_test_results;
 };
 
 } // namespace hyperion::v2
