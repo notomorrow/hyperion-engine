@@ -213,7 +213,7 @@ public:
         skybox_material.Init();
 
         auto &skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
-        skybox_spatial->AddController<FollowCameraController>();
+        //skybox_spatial->AddController<FollowCameraController>();
         skybox_spatial->SetMaterial(std::move(skybox_material));
         skybox_spatial->SetBucket(BUCKET_SKYBOX);
         skybox_spatial->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_SKYBOX).IncRef());
@@ -456,15 +456,7 @@ int main()
 
     engine->assets.SetBasePath(v2::FileSystem::Join(HYP_ROOT_DIR, "../res"));
 
-    v2::MyGame my_game;
-    
-    auto texture = engine->resources.textures.Add(
-        engine->assets.Load<v2::Texture>("textures/dirt.jpg")
-    );
-
-    auto texture2 = engine->resources.textures.Add(
-        engine->assets.Load<v2::Texture>("textures/dummy.jpg")
-    );
+    auto *my_game = new v2::MyGame;
 
 #if HYPERION_VK_TEST_IMAGE_STORE
     renderer::Image *image_storage = new renderer::StorageImage(
@@ -654,15 +646,15 @@ int main()
     }
     
 
-    my_game.Init(engine, window);
+    my_game->Init(engine, window);
 
 #if HYPERION_VK_TEST_VCT
-    v2::VoxelConeTracing vct({
+    auto *vct = new v2::VoxelConeTracing({
         /* scene bounds for vct to capture */
         .aabb = BoundingBox(Vector3(-128), Vector3(128))
     });
 
-    vct.Init(engine);
+    vct->Init(engine);
 #endif
 
 
@@ -680,7 +672,7 @@ int main()
 
     auto rt = std::make_unique<RaytracingPipeline>(std::move(rt_shader));
 
-    my_game.material_test_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 7, 0 }});
+    my_game->material_test_obj->GetChild(0)->GetSpatial()->SetTransform({{ 0, 7, 0 }});
 
 
     v2::ProbeGrid probe_system({
@@ -691,13 +683,13 @@ int main()
     auto my_tlas = std::make_unique<v2::Tlas>();
 
     my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<v2::Blas>(
-        engine->resources.meshes.IncRef(my_game.material_test_obj->GetChild(0)->GetSpatial()->GetMesh()),
-        my_game.material_test_obj->GetChild(0)->GetSpatial()->GetTransform()
+        engine->resources.meshes.IncRef(my_game->material_test_obj->GetChild(0)->GetSpatial()->GetMesh()),
+        my_game->material_test_obj->GetChild(0)->GetSpatial()->GetTransform()
     )));
     
     my_tlas->AddBlas(engine->resources.blas.Add(std::make_unique<v2::Blas>(
-        engine->resources.meshes.IncRef(my_game.cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
-        my_game.cube_obj->GetChild(0)->GetSpatial()->GetTransform()
+        engine->resources.meshes.IncRef(my_game->cube_obj->GetChild(0)->GetSpatial()->GetMesh()),
+        my_game->cube_obj->GetChild(0)->GetSpatial()->GetTransform()
     )));
 
     my_tlas->Init(engine);
@@ -748,7 +740,7 @@ int main()
     HYPERION_ASSERT_RESULT(compute_fc->Create(engine->GetDevice()));
 #endif
 
-    engine->game_thread.Start(engine, &my_game, window);
+    engine->game_thread.Start(engine, my_game, window);
 
     bool running = true;
 
@@ -756,18 +748,18 @@ int main()
 
     while (running) {
         while (SystemSDL::PollEvent(&event)) {
-            my_game.input_manager->CheckEvent(&event);
+            my_game->input_manager->CheckEvent(&event);
             switch (event.GetType()) {
                 case SystemEventType::EVENT_SHUTDOWN:
                     running = false;
                     break;
                 case SystemEventType::EVENT_MOUSESCROLL:
                 {
-                    if (my_game.scene != nullptr) {
+                    if (my_game->scene != nullptr) {
                         int wheel_x, wheel_y;
                         event.GetMouseWheel(&wheel_x, &wheel_y);
 
-                        my_game.scene->GetCamera()->PushCommand(CameraCommand {
+                        my_game->scene->GetCamera()->PushCommand(CameraCommand {
                             .command = CameraCommand::CAMERA_COMMAND_SCROLL,
                             .scroll_data = {
                                 .wheel_x = wheel_x,
@@ -780,7 +772,7 @@ int main()
                 }
                 case SystemEventType::EVENT_MOUSEMOTION:
                 {
-                    const auto &mouse_position = my_game.input_manager->GetMousePosition();
+                    const auto &mouse_position = my_game->input_manager->GetMousePosition();
 
                     int mouse_x = mouse_position.x.load(),
                         mouse_y = mouse_position.y.load();
@@ -788,13 +780,13 @@ int main()
                     float mx, my;
 
                     int window_width, window_height;
-                    my_game.input_manager->GetWindow()->GetSize(&window_width, &window_height);
+                    my_game->input_manager->GetWindow()->GetSize(&window_width, &window_height);
 
                     mx = (static_cast<float>(mouse_x) - static_cast<float>(window_width) * 0.5f) / (static_cast<float>(window_width));
                     my = (static_cast<float>(mouse_y) - static_cast<float>(window_height) * 0.5f) / (static_cast<float>(window_height));
                     
-                    if (my_game.scene != nullptr) {
-                        my_game.scene->GetCamera()->PushCommand(CameraCommand {
+                    if (my_game->scene != nullptr) {
+                        my_game->scene->GetCamera()->PushCommand(CameraCommand {
                             .command = CameraCommand::CAMERA_COMMAND_MAG,
                             .mag_data = {
                                 .mouse_x = mouse_x,
@@ -812,9 +804,9 @@ int main()
             }
         }
 
-        if (my_game.input_manager->IsKeyDown(KEY_W)) {
-            if (my_game.scene != nullptr) {
-                my_game.scene->GetCamera()->PushCommand(CameraCommand {
+        if (my_game->input_manager->IsKeyDown(KEY_W)) {
+            if (my_game->scene != nullptr) {
+                my_game->scene->GetCamera()->PushCommand(CameraCommand {
                     .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
                     .movement_data = {
                         .movement_type = CameraCommand::CAMERA_MOVEMENT_FORWARD,
@@ -823,9 +815,9 @@ int main()
                 });
             }
         }
-        if (my_game.input_manager->IsKeyDown(KEY_S)) {
-            if (my_game.scene != nullptr) {
-                my_game.scene->GetCamera()->PushCommand(CameraCommand {
+        if (my_game->input_manager->IsKeyDown(KEY_S)) {
+            if (my_game->scene != nullptr) {
+                my_game->scene->GetCamera()->PushCommand(CameraCommand {
                     .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
                     .movement_data = {
                         .movement_type = CameraCommand::CAMERA_MOVEMENT_BACKWARD,
@@ -834,9 +826,9 @@ int main()
                 });
             }
         }
-        if (my_game.input_manager->IsKeyDown(KEY_A)) {
-            if (my_game.scene != nullptr) {
-                my_game.scene->GetCamera()->PushCommand(CameraCommand {
+        if (my_game->input_manager->IsKeyDown(KEY_A)) {
+            if (my_game->scene != nullptr) {
+                my_game->scene->GetCamera()->PushCommand(CameraCommand {
                     .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
                     .movement_data = {
                         .movement_type = CameraCommand::CAMERA_MOVEMENT_LEFT,
@@ -845,9 +837,9 @@ int main()
                 });
             }
         }
-        if (my_game.input_manager->IsKeyDown(KEY_D)) {
-            if (my_game.scene != nullptr) {
-                my_game.scene->GetCamera()->PushCommand(CameraCommand {
+        if (my_game->input_manager->IsKeyDown(KEY_D)) {
+            if (my_game->scene != nullptr) {
+                my_game->scene->GetCamera()->PushCommand(CameraCommand {
                     .command = CameraCommand::CAMERA_COMMAND_MOVEMENT,
                     .movement_data = {
                         .movement_type = CameraCommand::CAMERA_MOVEMENT_RIGHT,
@@ -924,7 +916,7 @@ int main()
         /* === rendering === */
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine->GetInstance()->GetDevice()));
 
-        my_game.OnFrameBegin(engine, frame);
+        my_game->OnFrameBegin(engine, frame);
 
 #if HYPERION_VK_TEST_RAYTRACING
         rt->Bind(frame->GetCommandBuffer());
@@ -960,7 +952,7 @@ int main()
 
 #if HYPERION_VK_TEST_VCT
         if (tmp_render_timer == 0.0f || tmp_render_timer > 0.01f) {
-            vct.RenderVoxels(engine, frame);
+            vct->RenderVoxels(engine, frame);
             tmp_render_timer = 0.0f;
         }
         tmp_render_timer += 0.001f;
@@ -980,7 +972,7 @@ int main()
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine->GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine->GetInstance()->GetGraphicsQueue()));
         
-        my_game.OnFrameEnd(engine, frame);
+        my_game->OnFrameEnd(engine, frame);
 
         engine->GetInstance()->GetFrameHandler()->PresentFrame(&engine->GetInstance()->GetGraphicsQueue(), engine->GetInstance()->GetSwapchain());
         engine->GetInstance()->GetFrameHandler()->NextFrame();
@@ -1019,6 +1011,17 @@ int main()
     rt->Destroy(engine->GetDevice());
 #endif
 
+
+    engine->terrain_thread.Stop();
+    engine->terrain_thread.Join();
+
+    engine->m_running = false;
+
+    engine->game_thread.Join();
+
+    delete vct;
+
+    delete my_game;
 
     delete engine;
     delete window;

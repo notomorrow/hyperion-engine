@@ -96,7 +96,10 @@ public:
 
     EngineComponentBase(const EngineComponentBase &other) = delete;
     EngineComponentBase &operator=(const EngineComponentBase &other) = delete;
-    ~EngineComponentBase() = default;
+    ~EngineComponentBase()
+    {
+        DebugLog(LogType::Warn, "free'd resource '%s' %lu\n", typeid(*this).name(), m_id);
+    };
 
     ID GetId() const          { return m_id; }
 
@@ -181,10 +184,10 @@ public:
     {
         const char *type_name = typeid(WrappedType).name();
 
-#if 0 // HYP_DEBUG_MODE
+#if HYP_DEBUG_MODE
         AssertThrowMsg(
             m_wrapped_destroyed,
-            "Expected wrapepd object of type %s to have been destroyed before destructor",
+            "Expected wrapped object of type %s to have been destroyed before destructor",
             type_name
         );
 #endif
