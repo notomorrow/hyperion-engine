@@ -17,8 +17,6 @@ Scene::Scene(std::unique_ptr<Camera> &&camera)
 
 Scene::~Scene()
 {
-    m_root_node->SetScene(nullptr);
-
     Teardown();
 
     delete m_environment;
@@ -45,6 +43,8 @@ void Scene::Init(Engine *engine)
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](Engine *engine) {
             DebugLog(LogType::Debug, "Destroy scene #%lu\t%p\n", m_id.value, (void *)this);
+
+            m_root_node->SetScene(nullptr);
 
             for (auto &spatial : m_spatials) {
                 AssertThrow(spatial.second != nullptr);

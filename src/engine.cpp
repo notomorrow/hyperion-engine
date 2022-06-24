@@ -31,9 +31,8 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
 
 Engine::~Engine()
 {
-    m_running = false;
 
-    game_thread.Join(); // stop looping in game thread
+    //game_thread.Join(); // stop looping in game thread
     
     callbacks.Trigger(EngineCallback::DESTROY_ANY, this);
     callbacks.Trigger(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, this);

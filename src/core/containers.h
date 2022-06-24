@@ -668,6 +668,7 @@ struct ObjectVector {
     
     void Remove(typename T::ID id)
     {
+        AssertThrowMsg(id.value != 0, "Value was not initialized!\n");
         objects[id.value - 1].reset();
 
         if (id.value == objects.size()) {
@@ -985,6 +986,7 @@ public:
                 .count       = 0
             }
         );
+
         AssertThrow(insert_result.second);
 
         auto &iterator = insert_result.first;
