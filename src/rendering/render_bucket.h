@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_RENDER_BUCKET_H
 #define HYPERION_V2_RENDER_BUCKET_H
 
+#include <util/defines.h>
+
 namespace hyperion::v2 {
 
 enum Bucket {
@@ -14,6 +16,21 @@ enum Bucket {
     BUCKET_SKYBOX,        /* Rendered without depth testing/writing, and rendered first */
     BUCKET_MAX
 };
+
+HYP_FORCE_INLINE
+static inline bool BucketRayTestsEnabled(Bucket bucket)
+{
+    return bucket == BUCKET_OPAQUE
+        || bucket == BUCKET_TRANSLUCENT;
+}
+
+HYP_FORCE_INLINE
+static inline bool BucketFrustumCullingEnabled(Bucket bucket)
+{
+    return bucket == BUCKET_OPAQUE
+        || bucket == BUCKET_TRANSLUCENT
+        || bucket == BUCKET_PARTICLE;
+}
 
 } // namespace hyperion::v2
 

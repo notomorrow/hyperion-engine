@@ -43,9 +43,9 @@ class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
 
 public:
     Spatial(
-        Ref<Mesh> &&mesh,
-        Ref<Shader> &&shader,
-        Ref<Material> &&material,
+        Ref<Mesh> &&mesh = nullptr,
+        Ref<Shader> &&shader = nullptr,
+        Ref<Material> &&material = nullptr,
         const RenderableAttributeSet &renderable_attributes = RenderableAttributeSet{}
     );
 

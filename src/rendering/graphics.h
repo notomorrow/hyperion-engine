@@ -105,8 +105,6 @@ private:
         Ref<Shader>   shader;
     };
 
-    static bool BucketSupportsCulling(Bucket bucket);
-
     void PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_index);
     
     void UpdateEnqueuedSpatialsFlag()
