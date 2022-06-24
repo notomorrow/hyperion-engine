@@ -83,6 +83,7 @@ public:
     }
 
     void Init(Engine *engine);
+    void InitGame(Engine *engine);
 
     void OnUpdate(Engine *engine, GameCounter::TickUnit delta);
     void OnRender(Engine *engine, Frame *frame);

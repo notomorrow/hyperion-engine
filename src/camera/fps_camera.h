@@ -16,14 +16,16 @@ public:
     FpsCamera(int width, int height, float fov, float _near, float _far);
     virtual ~FpsCamera() = default;
 
-    virtual void SetTranslation(const Vector3 &vec) override;
+    virtual void SetTranslation(const Vector3 &translation) override;
+    virtual void SetNextTranslation(const Vector3 &translation) override;
+
     virtual void UpdateLogic(double dt) override;
 
 private:
     virtual void RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt) override;
 
-    Vector3 m_dir_cross_y;
-    Vector3 m_next_translation;
+    Vector3 m_move_deltas,
+            m_dir_cross_y;
 
     float m_mouse_x,
           m_mouse_y,

@@ -295,7 +295,14 @@ public:
      * @param key The key of the texture to find
      * @returns Pointer to the found Texture, or nullptr.
      */
-    Texture *GetTexture(TextureKey key) const;
+    Texture *GetTexture(TextureKey key);
+
+    /*! \brief Return a pointer to a Texture set on this Material by the given
+     * texture key. If no Texture was set, nullptr is returned.
+     * @param key The key of the texture to find
+     * @returns Pointer to the found Texture, or nullptr.
+     */
+    const Texture *GetTexture(TextureKey key) const;
 
     /*! \brief Get assigned name of the material */
     const char *GetName() const { return m_name; }

@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_VCT_H
 #define HYPERION_V2_VCT_H
 
+#include <rendering/render_component.h>
 #include <rendering/texture.h>
 #include <rendering/graphics.h>
 #include <rendering/compute.h>
@@ -33,7 +34,7 @@ struct alignas(16) VoxelUniforms {
 
 static_assert(MathUtil::IsPowerOfTwo(sizeof(VoxelUniforms)));
 
-class VoxelConeTracing : public EngineComponentBase<STUB_CLASS(VoxelConeTracing)> {
+class VoxelConeTracing : public EngineComponentBase<STUB_CLASS(VoxelConeTracing)>, public RenderComponent<VoxelConeTracing> {
 public:
     static const Extent3D voxel_map_size;
 
@@ -50,7 +51,12 @@ public:
     const Ref<Texture> &GetVoxelImage() const { return m_voxel_image; }
 
     void Init(Engine *engine);
-    void RenderVoxels(Engine *engine, Frame *frame);
+    void InitGame(Engine *engine); // init on game thread
+
+    void OnUpdate(Engine *engine, GameCounter::TickUnit delta);
+    void OnRender(Engine *engine, Frame *frame);
+
+    // void RenderVoxels(Engine *engine, Frame *frame);
 
 private:
     void CreateImagesAndBuffers(Engine *engine);
@@ -60,6 +66,12 @@ private:
     void CreateRenderPass(Engine *engine);
     void CreateFramebuffer(Engine *engine);
     void CreateDescriptors(Engine *engine);
+
+    virtual void OnEntityAdded(Ref<Spatial> &spatial);
+    virtual void OnEntityRemoved(Ref<Spatial> &spatial);
+    virtual void OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial);
+    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
+
 
     Params                m_params;
 
@@ -72,10 +84,6 @@ private:
 
     Ref<Texture>          m_voxel_image;
     UniformBuffer         m_uniform_buffer;
-    
-    std::vector<ObserverRef<Ref<GraphicsPipeline>>>          m_pipeline_observers;
-    FlatMap<GraphicsPipeline::ID, ObserverRef<Ref<Spatial>>>    m_spatial_observers;
-
 };
 
 } // namespace hyperion::v2

@@ -49,14 +49,6 @@ void RenderListContainer::Destroy(Engine *engine)
 }
 
 RenderListContainer::RenderListBucket::RenderListBucket()
-    : m_graphics_pipeline_notifier([this]() -> std::vector<std::pair<Ref<GraphicsPipeline> *, size_t>> {
-          //std::lock_guard guard(graphics_pipelines_mutex);
-
-          return {
-              std::make_pair(graphics_pipelines.data(), graphics_pipelines.size()),
-              std::make_pair(graphics_pipelines_pending_addition.data(), graphics_pipelines_pending_addition.size())
-          };
-      })
 {
 }
 
@@ -90,8 +82,6 @@ void RenderListContainer::RenderListBucket::AddPendingGraphicsPipelines(Engine *
 
     graphics_pipelines.reserve(graphics_pipelines.size() + graphics_pipelines_pending_addition.size());
     
-    m_graphics_pipeline_notifier.ItemsAdded(graphics_pipelines_pending_addition.data(), graphics_pipelines_pending_addition.size());
-
     graphics_pipelines.insert(
         graphics_pipelines.end(),
         std::make_move_iterator(graphics_pipelines_pending_addition.begin()),
@@ -244,20 +234,10 @@ void RenderListContainer::RenderListBucket::Destroy(Engine *engine)
 {
     auto result = renderer::Result::OK;
 
-    for (auto &pipeline : graphics_pipelines) {
-        m_graphics_pipeline_notifier.ItemRemoved(pipeline);
-    }
-
     graphics_pipelines.clear();
 
     graphics_pipelines_mutex.lock();
-
-    for (auto &pipeline : graphics_pipelines_pending_addition) {
-        m_graphics_pipeline_notifier.ItemRemoved(pipeline);
-    }
-
     graphics_pipelines_pending_addition.clear();
-
     graphics_pipelines_mutex.unlock();
 
     framebuffers.clear();

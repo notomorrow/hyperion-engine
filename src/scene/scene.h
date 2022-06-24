@@ -35,11 +35,14 @@ public:
     Octree &GetOctree()                                  { return m_octree; }
     const Octree &GetOctree() const                      { return m_octree; }
 
-
     bool AddSpatial(Ref<Spatial> &&spatial);
     bool HasSpatial(Spatial::ID id) const;
     bool RemoveSpatial(Spatial::ID id);
     bool RemoveSpatial(const Ref<Spatial> &spatial);
+
+    /*! ONLY CALL FROM GAME THREAD!!! */
+    auto &GetSpatials()                                  { return m_spatials; }
+    const auto &GetSpatials() const                      { return m_spatials; }
 
     Node *GetRootNode() const                            { return m_root_node.get(); }
 
@@ -69,7 +72,7 @@ private:
     Environment             *m_environment;
     std::array<Ref<Texture>, max_environment_textures> m_environment_textures;
 
-    // FlatMap<Spatial::ID, Ref<Spatial>> m_spatials;
+    // spatials live in GAME thread
     std::unordered_map<IDBase, Ref<Spatial>> m_spatials;
 
     Matrix4                 m_last_view_projection_matrix;

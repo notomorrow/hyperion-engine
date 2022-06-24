@@ -16,13 +16,7 @@ GraphicsPipeline::GraphicsPipeline(
     m_shader(std::move(shader)),
     m_render_pass(std::move(render_pass)),
     m_renderable_attributes(renderable_attributes),
-    m_per_frame_data(nullptr),
-    m_spatial_notifier([this]() -> std::vector<std::pair<Ref<Spatial> *, size_t>> {
-        return {
-            std::make_pair(m_spatials.data(), m_spatials.size()),
-            std::make_pair(m_spatials_pending_addition.data(), m_spatials_pending_addition.size())
-        };
-    })
+    m_per_frame_data(nullptr)
 {
 }
 
@@ -51,16 +45,19 @@ void GraphicsPipeline::RemoveFramebuffer(Framebuffer::ID id)
 void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
 {
     AssertThrow(spatial != nullptr);
-    AssertThrow(spatial->IsRenderable());
+    // AssertThrow(spatial->IsReady());
 
+    // AssertThrow(spatial->IsRenderable());
+
+    // FIXME: thread safety. this could be called from any thread
     AssertThrowMsg(
         (m_renderable_attributes.vertex_attributes & spatial->GetRenderableAttributes().vertex_attributes) == spatial->GetRenderableAttributes().vertex_attributes,
         "Pipeline vertex attributes does not satisfy the required vertex attributes of the spatial."
     );
 
-    if (IsInitCalled()) {
-        spatial->Init(GetEngine());
-    }
+    // if (IsInitCalled()) {
+    //     spatial->Init(GetEngine());
+    // }
 
     spatial->OnAddedToPipeline(this);
     
@@ -76,8 +73,7 @@ void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
     if (it != m_spatials_pending_removal.end()) {
         m_spatials_pending_removal.erase(it);
     }
-
-    m_spatial_notifier.ItemAdded(spatial);
+    
     m_spatials_pending_addition.push_back(std::move(spatial));
     
     UpdateEnqueuedSpatialsFlag();
@@ -85,6 +81,10 @@ void GraphicsPipeline::AddSpatial(Ref<Spatial> &&spatial)
 
 void GraphicsPipeline::RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_removed)
 {
+    // TODO:: Make all GraphicsPipeline operations operate in the RENDER
+    // thread. Deferred rendering will be some derived version of a RenderComponent, so
+    // it will acquire spatials that way and hand them off from the render thread here.
+
     // we cannot touch m_spatials from any thread other than the render thread
     // we'll have to assume it's here, and check later :/ 
 
@@ -112,9 +112,6 @@ void GraphicsPipeline::RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_remove
 
         if (pending_removal_it == m_spatials_pending_removal.end()) {
             if (call_on_removed) {
-                // dispatch
-                m_spatial_notifier.ItemRemoved(spatial);
-
                 spatial->OnRemovedFromPipeline(this);
             }
 
@@ -125,19 +122,9 @@ void GraphicsPipeline::RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_remove
             );
 
             if (pending_addition_it != m_spatials_pending_addition.end()) {
-                // auto &&found_spatial = *pending_addition_it;
-
-                // dispatch
-                // m_spatial_notifier.ItemRemoved(found_spatial);
-
-                // if (call_on_removed) {
-                //     found_spatial->OnRemovedFromPipeline(this);
-                // }
-
+                
                 // directly remove from list of ones pending addition
                 m_spatials_pending_addition.erase(pending_addition_it);
-
-                // UpdateEnqueuedSpatialsFlag();
             } else {
                 m_cached_render_data.push_back(CachedRenderData {
                     .cycles_remaining = max_frames_in_flight + 1,
@@ -314,8 +301,6 @@ void GraphicsPipeline::Init(Engine *engine)
             for (auto &&spatial : m_spatials) {
                 AssertThrow(spatial != nullptr);
 
-                m_spatial_notifier.ItemRemoved(spatial);
-
                 spatial->OnRemovedFromPipeline(this);
             }
 
@@ -327,8 +312,6 @@ void GraphicsPipeline::Init(Engine *engine)
                 if (spatial == nullptr) {
                     continue;
                 }
-
-                m_spatial_notifier.ItemRemoved(spatial);
 
                 spatial->OnRemovedFromPipeline(this);
             }
@@ -452,9 +435,9 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
             const bool perform_culling = scene_cull_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
             
             for (auto &&spatial : m_spatials) {
-                // if (spatial->GetMesh() == nullptr) {
-                //     continue;
-                // }
+                if (spatial->GetMesh() == nullptr) {
+                    continue;
+                }
 
                 if (perform_culling) {
                     if (auto *octant = spatial->GetOctree()) {

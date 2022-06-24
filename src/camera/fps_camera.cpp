@@ -11,10 +11,18 @@ FpsCamera::FpsCamera(int width, int height, float fov, float _near, float _far)
     m_dir_cross_y = Vector3(m_direction).Cross(m_up);
 }
 
-void FpsCamera::SetTranslation(const Vector3 &vec)
+void FpsCamera::SetTranslation(const Vector3 &translation)
 {
-    Camera::SetTranslation(vec);
-    m_next_translation = m_translation;
+    Camera::SetTranslation(translation);
+
+    // m_move_translation = translation;
+}
+
+void FpsCamera::SetNextTranslation(const Vector3 &translation)
+{
+    Camera::SetNextTranslation(translation);
+
+    // m_move_translation = translation;
 }
 
 void FpsCamera::UpdateLogic(double dt)
@@ -39,24 +47,46 @@ void FpsCamera::UpdateLogic(double dt)
     m_prev_mouse_y = m_mouse_y;
 
     if constexpr (movement_blending > 0.0f) {
-        m_translation.Lerp(
-            m_next_translation,
+        m_move_deltas.Lerp(
+            Vector3::Zero(),
             MathUtil::Clamp(
                 (1.0f / movement_blending) * static_cast<float>(dt),
                 0.0f,
                 1.0f
             )
         );
+
+
+        // m_next_translation.Lerp(
+        //     m_move_translation,
+        //     MathUtil::Clamp(
+        //         (1.0f / movement_blending) * static_cast<float>(dt),
+        //         0.0f,
+        //         1.0f
+        //     )
+        // );
     } else {
-        m_translation.Lerp(
-            m_next_translation,
+
+        m_move_deltas.Lerp(
+            Vector3::Zero(),
             MathUtil::Clamp(
                 1.0f * static_cast<float>(dt),
                 0.0f,
                 1.0f
             )
         );
+
+        // m_next_translation.Lerp(
+        //     m_move_translation,
+        //     MathUtil::Clamp(
+        //         1.0f * static_cast<float>(dt),
+        //         0.0f,
+        //         1.0f
+        //     )
+        // );
     }
+
+    m_next_translation += m_move_deltas * dt;
 }
 
 void FpsCamera::RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt)
@@ -75,19 +105,19 @@ void FpsCamera::RespondToCommand(const CameraCommand &command, GameCounter::Tick
 
         switch (command.movement_data.movement_type) {
         case CameraCommand::CAMERA_MOVEMENT_FORWARD:
-            m_next_translation += m_direction;// * speed;
+            m_move_deltas += m_direction;// * speed;
 
             break;
         case CameraCommand::CAMERA_MOVEMENT_BACKWARD:
-            m_next_translation -= m_direction;// * speed;
+            m_move_deltas -= m_direction;// * speed;
 
             break;
         case CameraCommand::CAMERA_MOVEMENT_LEFT:
-            m_next_translation -= m_dir_cross_y;// * speed;
+            m_move_deltas -= m_dir_cross_y;// * speed;
 
             break;
         case CameraCommand::CAMERA_MOVEMENT_RIGHT:
-            m_next_translation += m_dir_cross_y;// * speed;
+            m_move_deltas += m_dir_cross_y;// * speed;
 
             break;
         }

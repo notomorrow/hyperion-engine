@@ -125,6 +125,7 @@ private:
     void ClearInternal(Engine *engine, std::vector<Node> &out_nodes);
     void Clear(Engine *engine, std::vector<Node> &out_nodes);
     Result Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it = nullptr);
+    Result ForceVisibilityState(Spatial *spatial);
 
     auto FindNode(Spatial *spatial)
     {

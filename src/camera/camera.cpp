@@ -18,9 +18,15 @@ Camera::Camera(CameraType camera_type, int width, int height, float _near, float
 void Camera::SetTranslation(const Vector3 &translation)
 {
     m_translation = translation;
+    m_next_translation = translation;
 
     UpdateViewMatrix();
     UpdateViewProjectionMatrix();
+}
+
+void Camera::SetNextTranslation(const Vector3 &translation)
+{
+    m_next_translation = translation;
 }
 
 void Camera::SetDirection(const Vector3 &direction)
@@ -105,6 +111,9 @@ void Camera::Update(GameCounter::TickUnit dt)
 {
     UpdateCommandQueue(dt);
     UpdateLogic(dt);
+
+    m_translation = m_next_translation;
+
     UpdateMatrices();
 }
 

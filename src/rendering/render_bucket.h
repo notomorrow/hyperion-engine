@@ -25,6 +25,20 @@ static inline bool BucketRayTestsEnabled(Bucket bucket)
 }
 
 HYP_FORCE_INLINE
+static inline bool BucketRendersShadows(Bucket bucket)
+{
+    return bucket == BUCKET_OPAQUE
+        || bucket == BUCKET_TRANSLUCENT;
+}
+
+HYP_FORCE_INLINE
+static inline bool BucketHasGlobalIllumination(Bucket bucket)
+{
+    return bucket == BUCKET_OPAQUE
+        || bucket == BUCKET_TRANSLUCENT;
+}
+
+HYP_FORCE_INLINE
 static inline bool BucketFrustumCullingEnabled(Bucket bucket)
 {
     return bucket == BUCKET_OPAQUE

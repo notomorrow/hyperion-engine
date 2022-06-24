@@ -4,7 +4,7 @@
 
 #define MOUNTAIN_SCALE_WIDTH 0.017
 #define MOUNTAIN_SCALE_LENGTH 0.017
-#define MOUNTAIN_SCALE_HEIGHT 80.0
+#define MOUNTAIN_SCALE_HEIGHT 40.0
 
 namespace hyperion::v2 {
 
@@ -28,14 +28,14 @@ void TerrainMeshBuilder::GenerateHeights(Seed seed)
             const double x_offset = x + (m_patch_info.coord.x * (m_patch_info.extent.width - 1));
             const double z_offset = z + (m_patch_info.coord.y * (m_patch_info.extent.depth - 1));
 
-            //const double biome_height = (simplex_biome->GetNoise(x_offset * 0.6, z_offset * 0.6) + 1) * 0.5;
+            const double biome_height = simplex_biome->GetNoise(x_offset * 0.6, z_offset * 0.6);
             const double height = (simplex->GetNoise(x_offset, z_offset)) * 30 - 30;
-            //const double mountain = ((worley->GetNoise((double)x_offset * MOUNTAIN_SCALE_WIDTH, (double)z_offset * MOUNTAIN_SCALE_LENGTH))) * MOUNTAIN_SCALE_HEIGHT;
+            const double mountain = ((worley->GetNoise((double)x_offset * MOUNTAIN_SCALE_WIDTH, (double)z_offset * MOUNTAIN_SCALE_LENGTH))) * MOUNTAIN_SCALE_HEIGHT;
 
             const size_t index = ((x + m_patch_info.extent.width) % m_patch_info.extent.width)
                 + ((z + m_patch_info.extent.depth) % m_patch_info.extent.depth) * m_patch_info.extent.width;
 
-            m_heights[index] = height;//MathUtil::Lerp(height, mountain, MathUtil::Clamp(biome_height, 0.0, 1.0));
+            m_heights[index] = MathUtil::Lerp(height, mountain, biome_height);
         }
     }
 
@@ -72,10 +72,15 @@ std::vector<Vertex> TerrainMeshBuilder::BuildVertices() const
 
     for (int z = 0; z < m_patch_info.extent.depth; z++) {
         for (int x = 0; x < m_patch_info.extent.width; x++) {
-            Vector3 position(x /*- m_patch_info.m_width / 2*/, m_heights[i], z /*- m_patch_info.m_length / 2*/);
+            Vector3 position(x, m_heights[i], z);
             position *= m_patch_info.scale;
 
-            Vector2 texcoord(-x / static_cast<float>(m_patch_info.extent.width), -z / static_cast<float>(m_patch_info.extent.depth));
+            Vector2 texcoord(
+                // static_cast<float>(x % 2),
+                // static_cast<float>(z % 2)
+               static_cast<float>(x) / static_cast<float>(m_patch_info.extent.width),
+               static_cast<float>(z) / static_cast<float>(m_patch_info.extent.depth)
+            );
 
             vertices[i++] = Vertex(position, texcoord);
         }

@@ -27,7 +27,6 @@ public:
         std::vector<Ref<GraphicsPipeline>>       graphics_pipelines_pending_addition;
         std::atomic_bool                         graphics_pipelines_changed{false};
         std::mutex                               graphics_pipelines_mutex;
-        ObserverNotifier<Ref<GraphicsPipeline>>  m_graphics_pipeline_notifier;
 
     public:
         RenderListBucket();
@@ -44,9 +43,6 @@ public:
                                                                                            
         std::vector<Ref<GraphicsPipeline>> &GetGraphicsPipelines()                         { return graphics_pipelines; }
         const std::vector<Ref<GraphicsPipeline>> &GetGraphicsPipelines() const             { return graphics_pipelines; }
-
-        ObserverNotifier<Ref<GraphicsPipeline>> &GetGraphicsPipelineNotifier()             { return m_graphics_pipeline_notifier; }
-        const ObserverNotifier<Ref<GraphicsPipeline>> &GetGraphicsPipelineNotifier() const { return m_graphics_pipeline_notifier; }
 
         bool IsRenderableBucket() const
         {

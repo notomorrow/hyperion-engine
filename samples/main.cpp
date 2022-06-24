@@ -65,7 +65,10 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
+v2::VoxelConeTracing *vct = nullptr; // Have to do this for now... we need some way of statically generating descriptor sets
+
 namespace hyperion::v2 {
+    
 class MyGame : public v2::Game {
 
 public:
@@ -93,7 +96,7 @@ public:
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 1024, 768,
                 70.0f,
-                0.15f, 5000.0f
+                0.15f, 15000.0f
             )
         ));
         scene.Init();
@@ -106,7 +109,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/living_room/living_room.obj",
+            "models/sponza/sponza.obj", //living_room/living_room.obj",
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -117,14 +120,18 @@ public:
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
 
-        auto terrain_node = scene->GetRootNode()->AddChild();
-        terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>(
-            nullptr,
-            nullptr,
-            nullptr
-        )));
+        // auto character_entity = engine->resources.spatials.Add(std::make_unique<Spatial>());
+        // character_entity->AddController<BasicCharacterController>();
+        // scene->AddSpatial(std::move(character_entity));
 
-        terrain_node->GetSpatial()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{4, 5, 4});
+        // auto tmp_terrain = engine->assets.Load<Node>("models/tmp_terrain.obj");
+        // tmp_terrain->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
+        // tmp_terrain->Scale(500.0f);
+        // scene->AddSpatial(tmp_terrain->GetChild(0)->GetSpatial().IncRef());
+
+        auto terrain_node = scene->GetRootNode()->AddChild();
+        terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>()));
+        terrain_node->GetSpatial()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
         
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
@@ -173,7 +180,7 @@ public:
 
         auto my_light = engine->resources.lights.Add(std::make_unique<Light>(
             LightType::DIRECTIONAL,
-            Vector3(-0.9f, 0.9f, 0.5f).Normalize(),
+            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
             10000.0f
         ));
@@ -181,16 +188,24 @@ public:
         
         // scene->GetEnvironment()->AddRenderComponent<AABBRenderer>();
 
+
+        test_model->Scale(0.15f);//14.075f);
+        scene->GetRootNode()->AddChild(std::move(test_model));
+
+
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
             75.0f
         );
 
-        //test_model->Translate({0, 0, 5});
-        test_model->Scale(5.15f);//14.075f);
-        //test_model->Rotate(Quaternion({ 1, 0, 0 }, MathUtil::DegToRad(90.0f)));
-        scene->GetRootNode()->AddChild(std::move(test_model));
+        vct->SetParent(scene->GetEnvironment());
+        vct->InitGame(engine); // temp
+        // scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
+        //     VoxelConeTracing::Params {
+        //         BoundingBox(-64.0f, 64.0f)
+        //     }
+        // );
 
 
         tex1 = engine->resources.textures.Add(
@@ -384,7 +399,7 @@ public:
                             std::cout << "MATERIAL: " << material->GetName() << "\n";
                         }
                     }
-                    scene->GetCamera()->SetTranslation(mesh_hit.hitpoint);
+                    scene->GetCamera()->SetNextTranslation(mesh_hit.hitpoint);
                 }
             }
         }
@@ -651,9 +666,9 @@ int main()
     my_game->Init(engine, window);
 
 #if HYPERION_VK_TEST_VCT
-    auto *vct = new v2::VoxelConeTracing({
+    vct = new v2::VoxelConeTracing({
         /* scene bounds for vct to capture */
-        .aabb = BoundingBox(Vector3(-32), Vector3(32))
+        .aabb = BoundingBox(Vector3(-128), Vector3(128))
     });
 
     vct->Init(engine);
@@ -954,7 +969,7 @@ int main()
 
 #if HYPERION_VK_TEST_VCT
         if (tmp_render_timer == 0.0f || tmp_render_timer > 0.01f) {
-            vct->RenderVoxels(engine, frame);
+            vct->OnRender(engine, frame);
             tmp_render_timer = 0.0f;
         }
         tmp_render_timer += 0.001f;

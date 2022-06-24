@@ -21,17 +21,18 @@ class Frame;
 namespace hyperion::v2 {
 
 class Engine;
+class Scene;
 
 class Environment : public EngineComponentBase<STUB_CLASS(Environment)> {
-    using ShadowRendererPtr = std::unique_ptr<ShadowRenderer>;
-
 public:
     static constexpr UInt max_shadow_maps = 1; /* tmp */
 
-    Environment();
+    Environment(Scene *scene);
     Environment(const Environment &other) = delete;
     Environment &operator=(const Environment &other) = delete;
     ~Environment();
+
+    Scene *GetScene() const                               { return m_scene; }
     
     Ref<Light> &GetLight(size_t index)                    { return m_lights[index]; }
     const Ref<Light> &GetLight(size_t index) const        { return m_lights[index]; }
@@ -42,8 +43,14 @@ public:
     template <class T>
     void AddRenderComponent(std::unique_ptr<T> &&component)
     {
+        static_assert(std::is_base_of_v<RenderComponentBase, T>,
+            "Component should be a derived class of RenderComponentBase");
+
+        AssertThrow(component != nullptr);
+
         std::lock_guard guard(m_render_component_mutex);
 
+        component->SetParent(this);
         m_render_components_pending_addition.Set<T>(std::move(component));
 
         m_has_render_component_updates = true;
@@ -72,6 +79,9 @@ public:
     template <class T>
     bool HasRenderComponent() const
     {
+        static_assert(std::is_base_of_v<RenderComponentBase, T>,
+            "Component should be a derived class of RenderComponentBase");
+
         Threads::AssertOnThread(THREAD_RENDER);
 
         return m_render_components.Has<T>();
@@ -80,9 +90,40 @@ public:
     template <class T>
     void RemoveRenderComponent()
     {
+        static_assert(std::is_base_of_v<RenderComponentBase, T>,
+            "Component should be a derived class of RenderComponentBase");
+
         std::lock_guard guard(m_render_component_mutex);
 
         m_render_components_pending_removal.Insert(decltype(m_render_components)::GetComponentId<T>());
+
+        m_has_render_component_updates = true;
+    }
+
+    void OnEntityAdded(Ref<Spatial> &entity)
+    {
+        Threads::AssertOnThread(THREAD_GAME);
+
+        m_spatials_pending_addition.push(entity.IncRef());
+
+        m_has_render_component_updates = true;
+    }
+
+    void OnEntityRemoved(Ref<Spatial> &entity)
+    {
+        Threads::AssertOnThread(THREAD_GAME);
+
+        m_spatials_pending_removal.push(entity.IncRef());
+
+        m_has_render_component_updates = true;
+    }
+
+    // only called when meaningful attributes have changed
+    void OnEntityRenderableAttributesChanged(Ref<Spatial> &entity)
+    {
+        Threads::AssertOnThread(THREAD_GAME);
+
+        m_spatial_renderable_attribute_updates.push(entity.IncRef());
 
         m_has_render_component_updates = true;
     }
@@ -95,7 +136,15 @@ public:
     void RenderComponents(Engine *engine, Frame *frame);
 
 private:
-    ComponentSetUnique<RenderComponentBase>                       m_render_components;
+    Scene *m_scene;
+
+    std::queue<Ref<Spatial>>                                     m_spatials_pending_addition;
+    std::queue<Ref<Spatial>>                                     m_spatials_pending_removal;
+    std::queue<Ref<Spatial>>                                     m_spatial_renderable_attribute_updates;
+    std::atomic_bool                                             m_has_spatial_updates{false};
+    std::mutex                                                   m_spatial_update_mutex;
+
+    ComponentSetUnique<RenderComponentBase>                       m_render_components; // only touch from render thread
     ComponentSetUnique<RenderComponentBase>                       m_render_components_pending_addition;
     FlatSet<ComponentSetUnique<RenderComponentBase>::ComponentId> m_render_components_pending_removal;
     std::atomic_bool                                              m_has_render_component_updates{false};

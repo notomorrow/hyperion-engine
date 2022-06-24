@@ -2,7 +2,6 @@
 #define HYPERION_V2_GRAPHICS_H
 
 #include <core/containers.h>
-#include <core/observer.h>
 #include <animation/skeleton.h>
 #include <scene/spatial.h>
 #include "shader.h"
@@ -82,8 +81,6 @@ public:
     void RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_removed = true);
     auto &GetSpatials()                                              { return m_spatials; }
     const auto &GetSpatials() const                                  { return m_spatials; }
-    ObserverNotifier<Ref<Spatial>> &GetSpatialNotifier()                { return m_spatial_notifier; }
-    const ObserverNotifier<Ref<Spatial>> &GetSpatialNotifier() const    { return m_spatial_notifier; }
 
     void AddFramebuffer(Ref<Framebuffer> &&fbo) { m_fbos.push_back(std::move(fbo)); }
     void RemoveFramebuffer(Framebuffer::ID id);
@@ -122,17 +119,16 @@ private:
     
     std::vector<Ref<Framebuffer>>     m_fbos;
 
-    std::vector<Ref<Spatial>>         m_spatials;
-    std::vector<Ref<Spatial>>         m_spatials_pending_addition;
-    std::vector<Ref<Spatial>>         m_spatials_pending_removal;
-    ObserverNotifier<Ref<Spatial>>    m_spatial_notifier;
+    std::vector<Ref<Spatial>>         m_spatials; // lives in RENDER thread
+    std::vector<Ref<Spatial>>         m_spatials_pending_addition; // shared
+    std::vector<Ref<Spatial>>         m_spatials_pending_removal; // shared
 
-    std::vector<CachedRenderData>  m_cached_render_data;
+    std::vector<CachedRenderData>     m_cached_render_data;
 
-    PerFrameData<CommandBuffer>   *m_per_frame_data;
+    PerFrameData<CommandBuffer>      *m_per_frame_data;
 
-    std::mutex                     m_enqueued_spatials_mutex;
-    std::atomic_bool               m_enqueued_spatials_flag{false};
+    std::mutex                        m_enqueued_spatials_mutex;
+    std::atomic_bool                  m_enqueued_spatials_flag{false};
 
 };
 
