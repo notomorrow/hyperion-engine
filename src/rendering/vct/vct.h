@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_VCT_H
 #define HYPERION_V2_VCT_H
 
+#include <constants.h>
+
 #include <rendering/render_component.h>
 #include <rendering/texture.h>
 #include <rendering/graphics.h>
@@ -64,7 +66,7 @@ private:
     void CreateComputePipelines(Engine *engine);
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
-    void CreateFramebuffer(Engine *engine);
+    void CreateFramebuffers(Engine *engine);
     void CreateDescriptors(Engine *engine);
 
     virtual void OnEntityAdded(Ref<Spatial> &spatial);
@@ -73,17 +75,17 @@ private:
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
 
-    Params                m_params;
+    Params                                             m_params;
 
-    Ref<Scene>            m_scene;
-    Ref<Framebuffer>      m_framebuffer;
-    Ref<Shader>           m_shader;
-    Ref<RenderPass>       m_render_pass;
-    Ref<GraphicsPipeline> m_pipeline;
-    Ref<ComputePipeline>  m_clear_voxels;
-
-    Ref<Texture>          m_voxel_image;
-    UniformBuffer         m_uniform_buffer;
+    Ref<Scene>                                         m_scene;
+    std::array<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
+    Ref<Shader>                                        m_shader;
+    Ref<RenderPass>                                    m_render_pass;
+    Ref<GraphicsPipeline>                              m_pipeline;
+    Ref<ComputePipeline>                               m_clear_voxels;
+                                                       
+    Ref<Texture>                                       m_voxel_image;
+    UniformBuffer                                      m_uniform_buffer;
 };
 
 } // namespace hyperion::v2

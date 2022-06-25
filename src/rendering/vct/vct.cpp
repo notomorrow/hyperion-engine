@@ -45,7 +45,7 @@ void VoxelConeTracing::Init(Engine *engine)
         CreateImagesAndBuffers(engine);
         CreateShader(engine);
         CreateRenderPass(engine);
-        CreateFramebuffer(engine);
+        CreateFramebuffers(engine);
         CreateDescriptors(engine);
         CreateGraphicsPipeline(engine);
         CreateComputePipelines(engine);
@@ -54,7 +54,7 @@ void VoxelConeTracing::Init(Engine *engine)
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](Engine *engine) {
             m_shader       = nullptr;
-            m_framebuffer  = nullptr;
+            m_framebuffers = {};
             m_render_pass  = nullptr;
             m_pipeline     = nullptr;
             m_clear_voxels = nullptr;
@@ -179,9 +179,9 @@ void VoxelConeTracing::OnRender(Engine *engine, Frame *frame)
         result
     );
 
-    m_framebuffer->BeginCapture(command_buffer);
+    m_framebuffers[frame_index]->BeginCapture(command_buffer);
     m_pipeline->Render(engine, frame);
-    m_framebuffer->EndCapture(command_buffer);
+    m_framebuffers[frame_index]->EndCapture(command_buffer);
 
     engine->render_state.UnbindScene();
 
@@ -258,8 +258,10 @@ void VoxelConeTracing::CreateGraphicsPipeline(Engine *engine)
     pipeline->SetDepthWrite(false);
     pipeline->SetDepthTest(false);
     pipeline->SetFaceCullMode(FaceCullMode::NONE);
-    
-    pipeline->AddFramebuffer(m_framebuffer.IncRef());
+
+    for (auto &framebuffer : m_framebuffers) {
+        pipeline->AddFramebuffer(framebuffer.IncRef());
+    }
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     m_pipeline.Init();
@@ -308,14 +310,16 @@ void VoxelConeTracing::CreateRenderPass(Engine *engine)
     m_render_pass.Init();
 }
 
-void VoxelConeTracing::CreateFramebuffer(Engine *engine)
+void VoxelConeTracing::CreateFramebuffers(Engine *engine)
 {
-    m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
-        voxel_map_size.ToExtent2D(),
-        m_render_pass.IncRef()
-    ));
-    
-    m_framebuffer.Init();
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+            voxel_map_size.ToExtent2D(),
+            m_render_pass.IncRef()
+        ));
+        
+        m_framebuffers[i].Init();
+    }
 }
 
 void VoxelConeTracing::CreateDescriptors(Engine *engine)
@@ -332,13 +336,16 @@ void VoxelConeTracing::CreateDescriptors(Engine *engine)
     descriptor_set
         ->AddDescriptor<renderer::UniformBufferDescriptor>(1)
         ->SetSubDescriptor({.buffer = &m_uniform_buffer});
-    
-    auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL);
-    descriptor_set_globals->AddDescriptor<renderer::ImageSamplerDescriptor>(25)
-        ->SetSubDescriptor({
-            .image_view = &m_voxel_image->GetImageView(),
-            .sampler    = &m_voxel_image->GetSampler()
-        });
+
+    for (const auto index : DescriptorSet::global_buffer_mapping) {
+        auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(index);
+
+        descriptor_set_globals->AddDescriptor<renderer::ImageSamplerDescriptor>(25)
+            ->SetSubDescriptor({
+                .image_view = &m_voxel_image->GetImageView(),
+                .sampler    = &m_voxel_image->GetSampler()
+            });
+    }
 }
 
 } // namespace hyperion::v2

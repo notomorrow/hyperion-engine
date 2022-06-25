@@ -16,9 +16,7 @@ struct VisibilityState {
     static constexpr UInt32 max_scenes  = sizeof(Bitmask) * CHAR_BIT;
     static constexpr UInt32 cursor_size = 8;
 
-    /* map from scene index (id - 1) -> visibility boolean for each frame in flight.
-     * when visiblity is scanned, both values per frame in flight are set accordingly,
-     * but are only set to false after the corresponding frame is rendered.
+    /* map from scene index (id - 1) -> visibility boolean
      */
     std::atomic<Bitmask> bits{0};
 
