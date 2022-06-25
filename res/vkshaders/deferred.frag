@@ -24,7 +24,7 @@ layout(location=2) out vec4 output_positions;
 vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
-#define HYP_VCT_ENABLED 1
+#define HYP_VCT_ENABLED 0
 
 #if HYP_VCT_ENABLED
 #include "include/vct/cone_trace.inc"

@@ -129,9 +129,9 @@ public:
         // tmp_terrain->Scale(500.0f);
         // scene->AddSpatial(tmp_terrain->GetChild(0)->GetSpatial().IncRef());
 
-        auto terrain_node = scene->GetRootNode()->AddChild();
-        terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>()));
-        terrain_node->GetSpatial()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
+        //auto terrain_node = scene->GetRootNode()->AddChild();
+        //terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>()));
+        // terrain_node->GetSpatial()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
         
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
@@ -968,9 +968,9 @@ int main()
 #endif
 
 #if HYPERION_VK_TEST_VCT
-        if (tmp_render_timer == 0.0f || tmp_render_timer > 0.01f) {
+        if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.1f) {
             vct->OnRender(engine, frame);
-            tmp_render_timer = 0.0f;
+            tmp_render_timer = 0.001f;
         }
         tmp_render_timer += 0.001f;
 #endif
