@@ -20,7 +20,7 @@ InputManager::~InputManager()
 
 void InputManager::CheckEvent(SystemEvent *event)
 {
-    Threads::AssertOnThread(THREAD_INPUT);
+    //Threads::AssertOnThread(THREAD_INPUT);
 
     switch (event->GetType()) {
         case SystemEventType::EVENT_KEYDOWN:
@@ -55,7 +55,7 @@ void InputManager::CheckEvent(SystemEvent *event)
 
 void InputManager::UpdateMousePosition()
 {
-    Threads::AssertOnThread(THREAD_INPUT);
+    //Threads::AssertOnThread(THREAD_INPUT);
 
     int mx, my;
 
@@ -67,7 +67,7 @@ void InputManager::UpdateMousePosition()
 
 void InputManager::UpdateWindowSize()
 {
-    Threads::AssertOnThread(THREAD_INPUT);
+    //Threads::AssertOnThread(THREAD_INPUT);
 
     int width, height;
 
