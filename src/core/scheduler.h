@@ -85,11 +85,7 @@ public:
      * called from a non-owner thread. */
     ScheduledFunctionId Enqueue(typename ScheduledFunction::Function &&fn)
     {
-#if HYP_SCHEDULER_USE_ATOMIC_LOCK
-        AwaitExecution();
-#else
         std::unique_lock lock(m_mutex);
-#endif
 
         return EnqueueInternal(std::forward<typename ScheduledFunction::Function>(fn));
     }
@@ -101,21 +97,15 @@ public:
         if (id == ScheduledFunction::empty_id) {
             return false;
         }
-
-#if HYP_SCHEDULER_USE_ATOMIC_LOCK
-        AwaitExecution();
-#else 
+        
         std::unique_lock lock(m_mutex);
-#endif
 
         if (DequeueInternal(id)) {
-#if !HYP_SCHEDULER_USE_ATOMIC_LOCK
             lock.unlock();
 
             if (m_scheduled_functions.empty()) {
                 m_is_flushed.notify_all();
             }
-#endif
 
             return true;
         }
@@ -129,11 +119,7 @@ public:
      */
     ScheduledFunctionId EnqueueReplace(ScheduledFunctionId &dequeue_id, typename ScheduledFunction::Function &&enqueue_fn)
     {
-#if HYP_SCHEDULER_USE_ATOMIC_LOCK
-        AwaitExecution();
-#else
         std::unique_lock lock(m_mutex);
-#endif
 
         if (dequeue_id != ScheduledFunction::empty_id) {
             auto it = Find(dequeue_id);
@@ -157,13 +143,9 @@ public:
     void AwaitExecution()
     {
         AssertThrow(std::this_thread::get_id() != m_creation_thread);
-
-#if HYP_SCHEDULER_USE_ATOMIC_LOCK
-        m_execution_lock.Wait();
-#else
+        
         std::unique_lock lock(m_mutex);
         m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
-#endif
     }
 
     /*! If the current thread is the creation thread, the scheduler will be flushed and immediately return.
@@ -186,13 +168,8 @@ public:
             return;
         }
 
-#if HYP_SCHEDULER_USE_ATOMIC_LOCK
-        m_execution_lock.Wait();
-#else
-
         std::unique_lock lock(m_mutex);
         m_is_flushed.wait(lock, [this] { return m_num_enqueued == 0; });
-#endif
     }
 
     template <class Executor>
@@ -283,12 +260,9 @@ private:
     std::atomic_uint32_t           m_num_enqueued{0};
     ScheduledFunctionQueue         m_scheduled_functions;
     AtomicSemaphore<>              m_sp;
-#if HYP_SCHEDULER_USE_ATOMIC_LOCK
-    AtomicLock                     m_execution_lock;
-#else
+
     std::mutex                     m_mutex;
     std::condition_variable        m_is_flushed;
-#endif
 
     std::thread::id                m_creation_thread;
 };

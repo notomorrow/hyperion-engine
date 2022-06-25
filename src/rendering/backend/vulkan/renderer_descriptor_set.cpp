@@ -370,6 +370,10 @@ UInt DescriptorSet::DescriptorKeyToIndex(DescriptorKey key) const
 
 void DescriptorSet::ApplyUpdates(Device *device)
 {
+    if (m_state == DescriptorSetState::DESCRIPTOR_CLEAN) {
+        return;
+    }
+
     for (size_t i = 0; i < m_descriptors.size(); i++) {
         auto &descriptor = m_descriptors[i];
 

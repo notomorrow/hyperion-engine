@@ -89,7 +89,7 @@ void TerrainPagingController::OnPatchRemoved(Patch *patch)
 
 void TerrainPagingController::AddEnqueuedChunks()
 {
-    std::unique_lock guard(m_terrain_generation_mutex);
+    m_terrain_generation_mutex.lock();
     m_owned_terrain_mesh_queue = std::move(m_shared_terrain_mesh_queue);
     m_shared_terrain_mesh_queue = {};
     m_terrain_generation_mutex.unlock();
