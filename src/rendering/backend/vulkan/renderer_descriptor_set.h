@@ -196,7 +196,8 @@ public:
         DESCRIPTOR_SET_INDEX_GLOBAL,         /* global, ideally bound once at beginning of frame */
         DESCRIPTOR_SET_INDEX_SCENE,          /* bound per scene / pass */
         DESCRIPTOR_SET_INDEX_OBJECT,         /* bound per each object */
-
+        
+        DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1,         
         DESCRIPTOR_SET_INDEX_SCENE_FRAME_1,  /* per scene - frame #2 (frames in flight) */
         DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1, /* per object - frame #2 (frames in flight) */
 
@@ -210,6 +211,11 @@ public:
         DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES,
 
         DESCRIPTOR_SET_INDEX_MAX
+    };
+    
+    static constexpr Index global_buffer_mapping[] = {
+        DESCRIPTOR_SET_INDEX_GLOBAL,
+        DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1
     };
     
     static constexpr Index scene_buffer_mapping[]  = {

@@ -83,16 +83,15 @@ void ShadowPass::CreateDescriptors(Engine *engine)
     AssertThrow(m_shadow_map_index != ~0u);
 
 
-    auto &framebuffer = m_framebuffer->GetFramebuffer();
-
-    /* set descriptor */
-    // engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto &framebuffer = m_framebuffers[i]->GetFramebuffer();
+    
         if (!framebuffer.GetAttachmentRefs().empty()) {
             /* TODO: Removal of these descriptors */
 
-            for (DescriptorSet::Index descriptor_set_index : DescriptorSet::scene_buffer_mapping) {
+            //for (DescriptorSet::Index descriptor_set_index : DescriptorSet::scene_buffer_mapping) {
                 auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
-                    .GetDescriptorSet(descriptor_set_index);
+                    .GetDescriptorSet(DescriptorSet::scene_buffer_mapping[i]);
 
                 auto *shadow_map_descriptor = descriptor_set
                     ->GetOrAddDescriptor<ImageSamplerDescriptor>(DescriptorKey::SHADOW_MAPS);
@@ -106,11 +105,9 @@ void ShadowPass::CreateDescriptors(Engine *engine)
 
                     AssertThrow(sub_descriptor_index == m_shadow_map_index);
                 }
-            }
+            //}
         }
-
-    //     HYPERION_RETURN_OK;
-    // });
+    }
 }
 
 void ShadowPass::CreatePipeline(Engine *engine)
@@ -125,7 +122,8 @@ void ShadowPass::CreatePipeline(Engine *engine)
     );
 
     pipeline->SetFaceCullMode(FaceCullMode::FRONT);
-    pipeline->AddFramebuffer(m_framebuffer.IncRef());
+    pipeline->AddFramebuffer(m_framebuffers[0].IncRef());
+    pipeline->AddFramebuffer(m_framebuffers[1].IncRef());
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     m_pipeline.Init();
@@ -149,22 +147,31 @@ void ShadowPass::Create(Engine *engine)
 
     m_scene->SetParentId(m_parent_scene_id);
     m_scene.Init();
-    
-    m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
-        engine->GetInstance()->swapchain->extent,
-        m_render_pass.IncRef()
-    ));
 
-    /* Add all attachments from the renderpass */
-    for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
-     //   attachment_ref->SetBinding(12);
-        m_framebuffer->GetFramebuffer().AddAttachmentRef(attachment_ref);
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+            engine->GetInstance()->swapchain->extent,
+            m_render_pass.IncRef()
+        ));
+
+        /* Add all attachments from the renderpass */
+        for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
+         //   attachment_ref->SetBinding(12);
+            m_framebuffers[i]->GetFramebuffer().AddAttachmentRef(attachment_ref);
+        }
+
+        m_framebuffers[i].Init();
+        
+        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+
+        HYPERION_ASSERT_RESULT(command_buffer->Create(
+            engine->GetInstance()->GetDevice(),
+            engine->GetInstance()->GetGraphicsCommandPool()
+        ));
+
+        m_command_buffers[i] = std::move(command_buffer);
     }
 
-
-    m_framebuffer.Init();
-
-    CreatePerFrameData(engine);
     CreatePipeline(engine);
     CreateDescriptors(engine);
 
@@ -182,9 +189,9 @@ void ShadowPass::Render(Engine *engine, Frame *frame)
 
     engine->render_state.BindScene(m_scene);
 
-    m_framebuffer->BeginCapture(frame->GetCommandBuffer());
+    m_framebuffers[frame->GetFrameIndex()]->BeginCapture(frame->GetCommandBuffer());
     m_pipeline->Render(engine, frame);
-    m_framebuffer->EndCapture(frame->GetCommandBuffer());
+    m_framebuffers[frame->GetFrameIndex()]->EndCapture(frame->GetCommandBuffer());
 
     engine->render_state.UnbindScene();
 }
