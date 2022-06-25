@@ -486,10 +486,14 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
         spatial_it->aabb             = new_aabb;
         spatial_it->visibility_state = &m_visibility_state;
     } else { /* Moved into new octant */
-        auto force_result = ForceVisibilityState(spatial);
-
-        if (!force_result) {
-            return force_result;
+        if (spatial->GetScene() != nullptr) {
+            CopyVisibilityState(spatial->GetScene()->GetOctree().GetVisibilityState());
+        } else {
+            DebugLog(
+                LogType::Error,
+                "Spatial #%u was not attached to a Scene!\n",
+                spatial->GetId().value
+            );
         }
 
         m_nodes.push_back(Node {
@@ -508,7 +512,6 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
         }
 
     }
-
     
     return {};
 }
@@ -578,9 +581,17 @@ Octree::Result Octree::Rebuild(Engine *engine, const BoundingBox &new_aabb)
 
     for (auto &node : new_nodes) {
         if (auto *spatial = node.spatial) {
-            if (!ForceVisibilityState(spatial)) {
+            if (spatial->GetScene() == nullptr) {
+                DebugLog(
+                    LogType::Error,
+                    "Spatial #%u was not attached to a Scene!\n",
+                    spatial->GetId().value
+                );
+
                 continue;
             }
+            
+            //CopyVisibilityState(spatial->GetScene()->GetOctree().GetVisibilityState());
 
             auto insert_result = Insert(engine, node.spatial);
 
@@ -606,32 +617,20 @@ Octree::Result Octree::RebuildExtendInternal(Engine *engine, const BoundingBox &
     return Rebuild(engine, new_aabb);
 }
 
-Octree::Result Octree::ForceVisibilityState(Spatial *spatial)
+void Octree::CopyVisibilityState(const VisibilityState &visibility_state)
 {
     /* HACK to prevent objects having no visibility state and flicking when switching octants.
     * We set the visibility state to be the most up to date it can be, and in the next visibility
     * state check, the proper state will be applied
     */
-    if (auto *current_octant = spatial->GetOctree()) {
-        if (spatial->GetScene() == nullptr) {
-            DebugLog(
-                LogType::Error,
-                "Spatial #%u was not attached to a Scene!\n",
-                spatial->GetId().value
-            );
 
-            return {Result::OCTREE_ERR, "Object not attached to a scene!"};
-        }
-
-        if (m_root != nullptr) {
-            const auto curr = m_root->visibility_cursor.load();
-
-            m_visibility_state.nonces[curr] = spatial->GetScene()->GetOctree().GetVisibilityState().nonces[curr].load();
-            m_visibility_state.bits |= current_octant->GetVisibilityState().bits.load();
-        }
+    // tried having it just load from the current and next cursor. doesn't work. not sure why.
+    // but it could be a slight performance boost.
+    for (UInt i = 0; i < static_cast<UInt>(m_visibility_state.nonces.size()); i++) {
+        m_visibility_state.nonces[i].store(visibility_state.nonces[i].load());
     }
-
-    return {};
+    
+    m_visibility_state.bits |= visibility_state.bits.load();
 }
 
 void Octree::CollectEntities(std::vector<Spatial *> &out) const

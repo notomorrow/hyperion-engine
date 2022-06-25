@@ -42,7 +42,19 @@ struct RenderableAttributeSet {
         );
     }
 
-    HYP_DEF_STRUCT_COMPARE_EQL(RenderableAttributeSet);
+    bool operator==(const RenderableAttributeSet &other) const
+    {
+        return bucket == other.bucket
+            && shader_id == other.shader_id
+            && vertex_attributes == other.vertex_attributes
+            && topology == other.topology
+            && fill_mode == other.fill_mode
+            && cull_faces == other.cull_faces
+            && alpha_blending == other.alpha_blending
+            && depth_write == other.depth_write
+            && depth_test == other.depth_test
+            && stencil_state == other.stencil_state;
+    }
 
     bool operator<(const RenderableAttributeSet &other) const
     {

@@ -127,8 +127,6 @@ void ShadowPass::CreatePipeline(Engine *engine)
     
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     m_pipeline.Init();
-
-    const std::array<Bucket, 2> buckets = {BUCKET_OPAQUE, BUCKET_TRANSLUCENT};
 }
 
 void ShadowPass::Create(Engine *engine)

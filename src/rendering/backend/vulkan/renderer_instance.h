@@ -97,22 +97,22 @@ public:
 
 private:
 
-    SystemWindow *window = nullptr;
-    SystemSDL    system;
+    SystemWindow   *window = nullptr;
+    SystemSDL      system;
 
-    VkInstance instance = nullptr;
-    VkSurfaceKHR surface = nullptr;
+    VkInstance     instance = nullptr;
+    VkSurfaceKHR   surface = nullptr;
 
     DescriptorPool descriptor_pool;
 
-    VmaAllocator allocator = nullptr;
+    VmaAllocator   allocator = nullptr;
 
-    Device    *device = nullptr;
+    Device        *device = nullptr;
 
-    Queue queue_graphics,
-          queue_transfer,
-          queue_present,
-          queue_compute;
+    Queue          queue_graphics,
+                   queue_transfer,
+                   queue_present,
+                   queue_compute;
     
     std::vector<const char *> validation_layers;
 

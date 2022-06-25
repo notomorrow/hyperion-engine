@@ -120,6 +120,11 @@ public:
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
 
+        auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
+        sphere->Scale(1.0f);
+        sphere->SetName("sphere");
+        scene->GetRootNode()->AddChild(std::move(sphere));
+
         // auto character_entity = engine->resources.spatials.Add(std::make_unique<Spatial>());
         // character_entity->AddController<BasicCharacterController>();
         // scene->AddSpatial(std::move(character_entity));
@@ -180,7 +185,7 @@ public:
 
         auto my_light = engine->resources.lights.Add(std::make_unique<Light>(
             LightType::DIRECTIONAL,
-            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
+            Vector3(-0.35f, 0.9f, 0.0f).Normalize(),
             Vector4::One(),
             10000.0f
         ));
@@ -191,12 +196,11 @@ public:
 
         test_model->Scale(0.15f);//14.075f);
         scene->GetRootNode()->AddChild(std::move(test_model));
-
-
+        
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
-            75.0f
+            200.0f
         );
 
         vct->SetParent(scene->GetEnvironment());
@@ -424,6 +428,17 @@ public:
             suzanne->SetLocalTranslation({7, std::sin(timer * 0.35f) * 7.0f + 7.0f, 5});
 
             //scene->GetCamera()->SetTarget(suzanne->GetWorldTranslation());
+        }
+
+        if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
+            sphere->SetLocalScale(2.0f);
+            if (auto &material = sphere->GetChild(0)->GetSpatial()->GetMaterial()) {
+                //material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));
+                material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer * 0.5f) * 0.5f + 0.5f);
+                material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);////std::cos(timer) * 0.5f + 0.5f);
+            }
+
+            sphere->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 20.0f);
         }
         
         // material_test_obj->SetLocalScale(3.45f);
@@ -763,6 +778,10 @@ int main()
 
     float tmp_render_timer = 0.0f;
 
+    UInt num_frames = 0;
+    float delta_time_accum = 0.0f;
+    GameCounter counter;
+
     while (running) {
         while (SystemSDL::PollEvent(&event)) {
             my_game->input_manager->CheckEvent(&event);
@@ -866,6 +885,21 @@ int main()
             }
         }
 
+        counter.NextTick();
+        delta_time_accum += counter.delta;
+        num_frames++;
+
+        if (num_frames >= 1000) {
+            DebugLog(
+                LogType::Debug,
+                "Render FPS: %f\n",
+                1.0f / (delta_time_accum / static_cast<float>(num_frames))
+            );
+
+            delta_time_accum = 0.0f;
+            num_frames = 0;
+        }
+
         HYPERION_ASSERT_RESULT(engine->GetInstance()->GetFrameHandler()->PrepareFrame(
             engine->GetInstance()->GetDevice(),
             engine->GetInstance()->GetSwapchain()
@@ -876,6 +910,8 @@ int main()
         const uint32_t frame_index = engine->GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
         engine->GetRenderListContainer().AddPendingGraphicsPipelines(engine);
+
+
 
         if (auto num_enqueued = engine->render_scheduler.NumEnqueued()) {
             engine->render_scheduler.Flush([command_buffer, frame_index](auto &fn) {
@@ -967,12 +1003,12 @@ int main()
         probe_system.ComputeIrradiance(engine, frame->GetCommandBuffer());
 #endif
 
-#if 0//HYPERION_VK_TEST_VCT
-        if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.1f) {
+#if HYPERION_VK_TEST_VCT
+        //if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.1f) {
             vct->OnRender(engine, frame);
-            tmp_render_timer = 0.001f;
-        }
-        tmp_render_timer += 0.001f;
+        //    tmp_render_timer = 0.001f;
+        //}
+        //tmp_render_timer += 0.001f;
 #endif
 
         engine->RenderDeferred(frame);

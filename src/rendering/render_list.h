@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_RENDER_LIST_H
 #define HYPERION_V2_RENDER_LIST_H
 
+#include <constants.h>
 #include <core/containers.h>
 #include <rendering/graphics.h>
 #include <rendering/default_formats.h>
@@ -16,7 +17,7 @@ class Engine;
 
 class RenderListContainer {
 public:
-    static const std::array<TextureFormatDefault, 5> gbuffer_textures;
+    static const std::array<TextureFormatDefault, num_gbuffer_textures> gbuffer_textures;
     
     class RenderListBucket {
         Bucket                                   bucket{BUCKET_OPAQUE};

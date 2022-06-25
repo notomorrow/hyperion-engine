@@ -5,17 +5,17 @@
 
 layout(set = 1, binding = 25) uniform sampler3D voxel_image;
 
-#define VCT_DIFFUSE_MAX_DIST          0.3
-#define VCT_DIFFUSE_RATIO_MIN         1.0
-#define VCT_DIFFUSE_RATIO_MULTIPLIER  2.0
-#define VCT_DIFFUSE_RATIO(roughness)  ((roughness) * VCT_DIFFUSE_RATIO_MULTIPLIER + VCT_DIFFUSE_RATIO_MIN)
+#define VCT_DIFFUSE_MAX_DIST          0.5
+#define VCT_DIFFUSE_RATIO_MIN         2.0
+#define VCT_DIFFUSE_RATIO_MULTIPLIER  0.8
+#define VCT_DIFFUSE_RATIO(roughness)  ((roughness * roughness) * VCT_DIFFUSE_RATIO_MULTIPLIER + VCT_DIFFUSE_RATIO_MIN)
 
-#define VCT_SPECULAR_MAX_DIST         0.3
-#define VCT_SPECULAR_RATIO_MIN        0.1
-#define VCT_SPECULAR_RATIO_MULTIPLIER 1.0
-#define VCT_SPECULAR_RATIO(roughness) ((roughness) * VCT_SPECULAR_RATIO_MULTIPLIER + VCT_SPECULAR_RATIO_MIN)
+#define VCT_SPECULAR_MAX_DIST         0.5
+#define VCT_SPECULAR_RATIO_MIN        0.025
+#define VCT_SPECULAR_RATIO_MULTIPLIER 0.2
+#define VCT_SPECULAR_RATIO(roughness) ((roughness * roughness) * VCT_SPECULAR_RATIO_MULTIPLIER + VCT_SPECULAR_RATIO_MIN)
 
-#define VCT_OFFSET_ORIGIN(normal)     (normalize(normal) * 0.7)
+#define VCT_OFFSET_ORIGIN(normal)     (normalize(normal))
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
@@ -48,7 +48,7 @@ vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max
     return accum;
 }
 
-vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 tangent, vec3 bitangent, float roughness)
+vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 T, vec3 B, float roughness)
 {
     const vec3 storage_coord    = VctStoragePosition(VctWorldToAabb(P + VCT_OFFSET_ORIGIN(N)));
     const vec3  voxel_coord     = vec3(storage_coord) / vec3(vct_params.extent.xyz);
@@ -57,6 +57,10 @@ vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 tangent, vec3 bitangent, float roughn
     vec4 result = vec4(0.0);
 
     result += ConeTrace(1.0 / greatest_extent, voxel_coord, N, VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N + T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N - T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N + B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N - B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);
 
     return result;
 }

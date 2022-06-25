@@ -103,49 +103,30 @@ void DeferredRenderer::Create(Engine *engine)
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[i];
-
-        /* Add our gbuffer textures */
+        
         auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+        
+        descriptor_set_pass->AddDescriptor<ImageSamplerDescriptor>(0);
 
-        /* Albedo texture */
-        descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(0)
-            ->SetSubDescriptor({
-                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[0]->GetImageView(),
-                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[0]->GetSampler()
-            });
+        UInt attachment_index = 0;
 
-        /* Normals texture*/
-        descriptor_set_pass
-            ->GetDescriptor(0)
-            ->SetSubDescriptor({
-                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[1]->GetImageView(),
-                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[1]->GetSampler()
-            });
-
-        /* Position texture */
-        descriptor_set_pass
-            ->GetDescriptor(0)
-            ->SetSubDescriptor({
-                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[2]->GetImageView(),
-                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[2]->GetSampler()
-            });
-
-        /* Material ID */
-        descriptor_set_pass
-            ->GetDescriptor(0)
-            ->SetSubDescriptor({
-                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[3]->GetImageView(),
-                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[3]->GetSampler()
-            });
-
+        /* Gbuffer textures */
+        for (; attachment_index < RenderListContainer::gbuffer_textures.size() - 1; attachment_index++) {
+            descriptor_set_pass
+                ->GetDescriptor(0)
+                ->SetSubDescriptor({
+                    .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView(),
+                    .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetSampler()
+                });
+        }
+        
         /* Depth texture */
         descriptor_set_pass
             ->AddDescriptor<ImageSamplerDescriptor>(1)
             ->SetSubDescriptor({
-                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[4]->GetImageView(),
-                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[4]->GetSampler()
+                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView(),
+                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetSampler()
             });
     }
     

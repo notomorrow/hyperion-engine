@@ -101,7 +101,7 @@ public:
 
     const auto &GetCallbacks() const                  { return const_cast<Octree *>(this)->GetCallbacks(); }
 
-    VisibilityState &GetVisibilityState()             { return m_visibility_state; }
+    //VisibilityState &GetVisibilityState()             { return m_visibility_state; }
     const VisibilityState &GetVisibilityState() const { return m_visibility_state; }
 
     BoundingBox &GetAabb()                            { return m_aabb; }
@@ -125,7 +125,8 @@ private:
     void ClearInternal(Engine *engine, std::vector<Node> &out_nodes);
     void Clear(Engine *engine, std::vector<Node> &out_nodes);
     Result Move(Engine *engine, Spatial *spatial, const std::vector<Node>::iterator *it = nullptr);
-    Result ForceVisibilityState(Spatial *spatial);
+
+    void CopyVisibilityState(const VisibilityState &visibility_state);
 
     auto FindNode(Spatial *spatial)
     {

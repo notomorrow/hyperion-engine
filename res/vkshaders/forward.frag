@@ -19,6 +19,8 @@ layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_positions;
 layout(location=3) out vec4 gbuffer_material;
+layout(location=4) out vec4 gbuffer_tangents;
+layout(location=5) out vec4 gbuffer_bitangents;
 
 
 #define PARALLAX_ENABLED 1
@@ -99,9 +101,11 @@ void main()
         ao = SAMPLE_TEXTURE(MATERIAL_TEXTURE_AO_MAP, texcoord).r;
     }
     
-    gbuffer_normals   = EncodeNormal(normal);
-    gbuffer_positions = vec4(v_position, 1.0);
-    gbuffer_material  = vec4(roughness, metalness, 0.0, ao);
+    gbuffer_normals    = EncodeNormal(normal);
+    gbuffer_positions  = vec4(v_position, 1.0);
+    gbuffer_material   = vec4(roughness, metalness, 0.0, ao);
+    gbuffer_tangents   = EncodeNormal(v_tangent);
+    gbuffer_bitangents = EncodeNormal(v_bitangent);
 
     // gbuffer_albedo.rgb = v_tangent.xyz * 0.5 + 0.5;
 }

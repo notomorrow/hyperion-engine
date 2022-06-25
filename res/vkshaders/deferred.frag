@@ -24,7 +24,7 @@ layout(location=2) out vec4 output_positions;
 vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
-#define HYP_VCT_ENABLED 0
+#define HYP_VCT_ENABLED 1
 
 #if HYP_VCT_ENABLED
 #include "include/vct/cone_trace.inc"
@@ -36,7 +36,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 #define IBL_INTENSITY 4000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 100000.0
-#define IRRADIANCE_MULTIPLIER 16.0
+#define IRRADIANCE_MULTIPLIER 1.0
 #define ROUGHNESS_LOD_MULTIPLIER 16.0
 #define SSAO_DEBUG 0
 
@@ -87,6 +87,8 @@ void main()
 {
     vec4 albedo   = texture(gbuffer_albedo_texture, texcoord);
     vec4 normal   = vec4(DecodeNormal(texture(gbuffer_normals_texture, texcoord)), 1.0);
+    vec4 tangent   = vec4(DecodeNormal(texture(gbuffer_tangents_texture, texcoord)), 1.0);
+    vec4 bitangent   = vec4(DecodeNormal(texture(gbuffer_bitangents_texture, texcoord)), 1.0);
     vec4 position = texture(gbuffer_positions_texture, texcoord);
     vec4 material = texture(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
     
@@ -103,6 +105,8 @@ void main()
     float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
     
     vec3 N = normal.xyz;
+    vec3 T = tangent.xyz;
+    vec3 B = bitangent.xyz;
     vec3 L = normalize(scene.light_direction.xyz);
     vec3 V = normalize(scene.camera_position.xyz - position.xyz);
     vec3 R = normalize(reflect(-V, N));
@@ -160,7 +164,7 @@ void main()
 
 #if HYP_VCT_ENABLED
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
-        vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, vec3(0.0), vec3(0.0), roughness);
+        vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
 
         irradiance  = vct_diffuse.rgb;
         reflections = vct_specular;
