@@ -245,7 +245,7 @@ std::vector<float> Mesh::BuildVertexBuffer()
 
 void Mesh::Render(Engine *, CommandBuffer *cmd) const
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    //Threads::AssertOnThread(THREAD_RENDER);
 
     AssertReady();
 

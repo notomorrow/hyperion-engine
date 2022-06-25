@@ -101,8 +101,8 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_DEPTH,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT

@@ -31,9 +31,9 @@ public:
 
     void Set(typename Entity::ID id, Component &&value) { m_components[id] = std::move(value); }
 
-    bool Remove(typename Entity::ID id)                 { m_components.Erase(id); }
+    bool Remove(typename Entity::ID id)                 { return m_components.Erase(id); }
 
-    HYP_DEF_STL_ITERATOR(m_components);
+    HYP_DEF_STL_ITERATOR(m_components)
 
 private:
     Map m_components;
