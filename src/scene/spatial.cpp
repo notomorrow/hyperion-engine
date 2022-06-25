@@ -8,8 +8,9 @@ Spatial::Spatial(
     Ref<Mesh> &&mesh,
     Ref<Shader> &&shader,
     Ref<Material> &&material,
-    const RenderableAttributeSet &renderable_attributes
-) : EngineComponentBase(),
+    const RenderableAttributeSet &renderable_attributes,
+    const ComponentInitInfo &init_info
+) : EngineComponentBase(init_info),
     m_mesh(std::move(mesh)),
     m_shader(std::move(shader)),
     m_material(std::move(material)),

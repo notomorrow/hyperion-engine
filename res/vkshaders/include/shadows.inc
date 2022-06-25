@@ -7,9 +7,9 @@
 #define HYP_SHADOW_VARIABLE_BIAS 1
 #define HYP_SHADOW_PENUMBRA 1
 #define HYP_SHADOW_NUM_SAMPLES 16
-#define HYP_SHADOW_PENUMBRA_NUM_SAMPLES 8
-#define HYP_SHADOW_PENUMBRA_MIN 0.5
-#define HYP_SHADOW_PENUMBRA_MAX 1.0
+#define HYP_SHADOW_PENUMBRA_NUM_SAMPLES 16
+#define HYP_SHADOW_PENUMBRA_MIN 0.1
+#define HYP_SHADOW_PENUMBRA_MAX 8.0
 
 const mat4 shadow_bias_matrix = mat4( 
     0.5, 0.0, 0.0, 0.0,
@@ -57,9 +57,9 @@ float GetShadowContactHardened(int index, vec3 pos, float NdotL)
 
     const float shadow_map_depth = coord.z;
 
-    const float shadow_filter_size = 0.002;
-    const float penumbra_filter_size = 0.006;
-    const float light_size = 2.0; // affects how quickly shadows become soft
+    const float shadow_filter_size = 0.004;
+    const float penumbra_filter_size = 0.0065;
+    const float light_size = 10.0; // affects how quickly shadows become soft
 
     const float gradient_noise = InterleavedGradientNoise(texcoord * vec2(uvec2(scene.resolution_x, scene.resolution_y)));
 

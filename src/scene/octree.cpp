@@ -487,6 +487,7 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
         spatial_it->visibility_state = &m_visibility_state;
     } else { /* Moved into new octant */
         if (spatial->GetScene() != nullptr) {
+            // force this octant to be visible to prevent flickering
             CopyVisibilityState(spatial->GetScene()->GetOctree().GetVisibilityState());
         } else {
             DebugLog(
@@ -772,6 +773,10 @@ bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
     if (ray.TestAabb(m_aabb)) {
         for (auto &node : m_nodes) {
             AssertThrow(node.spatial != nullptr);
+
+            if (!(node.spatial->GetInitInfo().flags & Spatial::ComponentInitInfo::ENTITY_FLAGS_RAY_TESTS_ENABLED)) {
+                continue;
+            }
 
             if (!BucketRayTestsEnabled(node.spatial->GetBucket())) {
                 continue;

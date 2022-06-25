@@ -38,7 +38,11 @@ struct Stub {
 using ComponentFlagBits = UInt;
 
 template <class T>
-struct ComponentInitInfo {};
+struct ComponentInitInfo {
+    enum Flags : ComponentFlagBits {};
+
+    ComponentFlagBits flags = 0x0;
+};
 
 // a non-descript ID (no type attached)
 struct IDBase {
@@ -87,6 +91,7 @@ public:
 
     EngineComponentBase(const ComponentInitInfo &init_info)
         : CallbackTrackable(),
+          m_init_info(init_info),
           m_id(empty_id),
           m_init_called(false),
           m_is_ready(false),
@@ -102,6 +107,9 @@ public:
     };
 
     ID GetId() const          { return m_id; }
+
+    HYP_FORCE_INLINE ComponentInitInfo &GetInitInfo()             { return m_init_info; }
+    HYP_FORCE_INLINE const ComponentInitInfo &GetInitInfo() const { return m_init_info; }
 
     /* To be called from ObjectHolder<Type> */
     void SetId(const ID &id)  { m_id = id; }
@@ -152,9 +160,6 @@ protected:
 
         return m_engine;
     }
-
-    HYP_FORCE_INLINE ComponentInitInfo &GetInitInfo()             { return m_init_info; }
-    HYP_FORCE_INLINE const ComponentInitInfo &GetInitInfo() const { return m_init_info; }
 
     ID                      m_id;
     std::atomic_bool        m_init_called;
