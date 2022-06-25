@@ -72,11 +72,13 @@ const decltype(DescriptorSet::desired_indices) DescriptorSet::desired_indices = 
     { DESCRIPTOR_SET_INDEX_BINDLESS,          6 },
     { DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1,  7 }, 
     { DESCRIPTOR_SET_INDEX_VOXELIZER,         8 },
-    { DESCRIPTOR_SET_INDEX_RAYTRACING,        9 }
+    { DESCRIPTOR_SET_INDEX_RAYTRACING,        9 },
+    { DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1,    10 }
 #else
     { DESCRIPTOR_SET_INDEX_VOXELIZER,         6 },
     { DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, 7 },
-    { DESCRIPTOR_SET_INDEX_RAYTRACING,        8 } // todo: fix this crap up
+    { DESCRIPTOR_SET_INDEX_RAYTRACING,        8 }, // todo: fix this crap up
+    { DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1,    9 }
 #endif
 };
 
@@ -87,6 +89,8 @@ DescriptorSet::Index DescriptorSet::GetBaseIndex(UInt index)
     }
 
     switch (index) {
+    case DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1:
+        return DESCRIPTOR_SET_INDEX_GLOBAL;
     case DESCRIPTOR_SET_INDEX_SCENE_FRAME_1:
         return DESCRIPTOR_SET_INDEX_SCENE;
     case DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1:
@@ -101,6 +105,8 @@ DescriptorSet::Index DescriptorSet::GetBaseIndex(UInt index)
 DescriptorSet::Index DescriptorSet::GetPerFrameIndex(Index index, UInt frame_index)
 {
     switch (GetBaseIndex(static_cast<UInt>(index))) {
+    case DESCRIPTOR_SET_INDEX_GLOBAL:
+        return frame_index ? DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1 : DESCRIPTOR_SET_INDEX_GLOBAL;
     case DESCRIPTOR_SET_INDEX_SCENE:
         return frame_index ? DESCRIPTOR_SET_INDEX_SCENE_FRAME_1 : DESCRIPTOR_SET_INDEX_SCENE;
     case DESCRIPTOR_SET_INDEX_OBJECT:
@@ -138,6 +144,8 @@ DescriptorSet::Index DescriptorSet::GetPerFrameIndex(Index index, UInt instance_
 int DescriptorSet::GetFrameIndex(UInt real_index)
 {
     switch (GetBaseIndex(real_index)) {
+    case DESCRIPTOR_SET_INDEX_GLOBAL:
+        return real_index == DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1 ? 1 : 0;
     case DESCRIPTOR_SET_INDEX_SCENE:
         return real_index == DESCRIPTOR_SET_INDEX_SCENE_FRAME_1 ? 1 : 0;
     case DESCRIPTOR_SET_INDEX_OBJECT:

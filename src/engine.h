@@ -174,7 +174,7 @@ public:
     void UpdateBuffersAndDescriptors(UInt frame_index);
     
     void RenderDeferred(Frame *frame);
-    void RenderFinalPass(CommandBuffer *command_buffer) const;
+    void RenderFinalPass(Frame *frame) const;
 
     ShaderGlobals          *shader_globals;
 

@@ -193,7 +193,7 @@ public:
         scene->GetRootNode()->AddChild(std::move(test_model));
 
 
-        scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+       scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
             75.0f
@@ -882,11 +882,11 @@ int main()
                 HYPERION_ASSERT_RESULT(fn(command_buffer, frame_index));
             });
 
-            DebugLog(
+            /*DebugLog(
                 LogType::Debug,
                 "[Renderer] Execute %lu enqueued tasks\n",
                 num_enqueued
-            );
+            );*/
         }
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -984,7 +984,7 @@ int main()
         );
 #endif
 
-        engine->RenderFinalPass(frame->GetCommandBuffer());
+        engine->RenderFinalPass(frame);
 
         HYPERION_ASSERT_RESULT(frame->EndCapture(engine->GetInstance()->GetDevice()));
         HYPERION_ASSERT_RESULT(frame->Submit(&engine->GetInstance()->GetGraphicsQueue()));

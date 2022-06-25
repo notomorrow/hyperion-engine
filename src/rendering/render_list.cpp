@@ -213,10 +213,8 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
 void RenderListContainer::RenderListBucket::CreateFramebuffers(Engine *engine)
 {
     AssertThrow(framebuffers.empty());
-
-    const UInt num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
-
-    for (UInt i = 0; i < 1/*num_frames*/; i++) {
+    
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto framebuffer = std::make_unique<Framebuffer>(engine->GetInstance()->swapchain->extent, render_pass.IncRef());
 
         for (auto *attachment_ref : render_pass->GetRenderPass().GetAttachmentRefs()) {

@@ -385,10 +385,10 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                 device,
                 secondary,
                 m_pipeline.get(),
-                {{
-                    .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
-                    .count = 1
-                }}
+                {
+                    {.set = DescriptorSet::global_buffer_mapping[frame_index], .count = 1},
+                    {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+                }
             );
 
             static_assert(std::size(DescriptorSet::object_buffer_mapping) == max_frames_in_flight);

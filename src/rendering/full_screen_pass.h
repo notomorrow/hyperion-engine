@@ -6,6 +6,7 @@
 #include "shader.h"
 #include "graphics.h"
 #include "mesh.h"
+#include <constants.h>
 
 #include <types.h>
 
@@ -37,19 +38,18 @@ public:
     FullScreenPass &operator=(const FullScreenPass &) = delete;
     ~FullScreenPass();
 
-    auto &GetFrameData()                          { return m_frame_data; }
-    const auto &GetFrameData() const              { return m_frame_data; }
-                                                  
-    Framebuffer *GetFramebuffer() const           { return m_framebuffer.ptr; }
-                                                  
-    Shader *GetShader() const                     { return m_shader.ptr; }
-    void SetShader(Ref<Shader> &&shader);
-                                                  
-    RenderPass *GetRenderPass() const             { return m_render_pass.ptr; }
-
-    GraphicsPipeline *GetGraphicsPipeline() const { return m_pipeline.ptr; }
-
-    UInt GetSubDescriptorIndex() const            { return m_sub_descriptor_index; }
+    
+    CommandBuffer *GetCommandBuffer(UInt index) const { return m_command_buffers[index].get(); }
+    Framebuffer *GetFramebuffer(UInt index) const     { return m_framebuffers[index].ptr; }
+                                                      
+    Shader *GetShader() const                         { return m_shader.ptr; }
+    void SetShader(Ref<Shader> &&shader);             
+                                                      
+    RenderPass *GetRenderPass() const                 { return m_render_pass.ptr; }
+                                                      
+    GraphicsPipeline *GetGraphicsPipeline() const     { return m_pipeline.ptr; }
+                                                      
+    UInt GetSubDescriptorIndex() const                { return m_sub_descriptor_index; }
 
     void CreateRenderPass(Engine *engine);
     void Create(Engine *engine);
@@ -62,19 +62,18 @@ public:
     void Record(Engine *engine, UInt frame_index);
 
 protected:
-    void CreatePerFrameData(Engine *engine);
-
-    std::unique_ptr<PerFrameData<CommandBuffer>> m_frame_data;
-    Ref<Framebuffer>                             m_framebuffer;
-    Ref<Shader>                                  m_shader;
-    Ref<RenderPass>                              m_render_pass;
-    Ref<GraphicsPipeline>                        m_pipeline;
-
-    std::vector<std::unique_ptr<Attachment>>     m_attachments;
-
-private:
-    DescriptorKey                                m_descriptor_key;
-    UInt                                         m_sub_descriptor_index;
+    
+    std::array<std::unique_ptr<CommandBuffer>, max_frames_in_flight> m_command_buffers;
+    std::array<Ref<Framebuffer>, max_frames_in_flight>               m_framebuffers;
+    Ref<Shader>                                                      m_shader;
+    Ref<RenderPass>                                                  m_render_pass;
+    Ref<GraphicsPipeline>                                            m_pipeline;
+                                                                     
+    std::vector<std::unique_ptr<Attachment>>                         m_attachments;
+                                                                     
+private:                                                             
+    DescriptorKey                                                    m_descriptor_key;
+    UInt                                                             m_sub_descriptor_index;
 };
 } // namespace hyperion::v2
 

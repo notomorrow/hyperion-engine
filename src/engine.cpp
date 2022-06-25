@@ -532,25 +532,25 @@ void Engine::RenderDeferred(Frame *frame)
     m_deferred_renderer.Render(this, frame);
 }
 
-void Engine::RenderFinalPass(CommandBuffer *command_buffer) const
+void Engine::RenderFinalPass(Frame *frame) const
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
     auto *pipeline                  = m_root_pipeline->GetPipeline();
     const UInt acquired_image_index = m_instance->GetFrameHandler()->GetAcquiredImageIndex();
 
-    m_root_pipeline->GetFramebuffers()[acquired_image_index]->BeginCapture(command_buffer);
+    m_root_pipeline->GetFramebuffers()[acquired_image_index]->BeginCapture(frame->GetCommandBuffer());
     
-    pipeline->Bind(command_buffer);
+    pipeline->Bind(frame->GetCommandBuffer());
 
     m_instance->GetDescriptorPool().Bind(
         m_instance->GetDevice(),
-        command_buffer,
+        frame->GetCommandBuffer(),
         pipeline,
-        {{
-            .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
-            .count = 1
-        }}
+        {
+            {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+        }
     );
 
 #if HYP_FEATURES_ENABLE_RAYTRACING
@@ -567,8 +567,8 @@ void Engine::RenderFinalPass(CommandBuffer *command_buffer) const
 #endif
 
     /* Render full screen quad overlay to blit deferred + all post fx onto screen. */
-    FullScreenPass::full_screen_quad->Render(const_cast<Engine *>(this), command_buffer);
+    FullScreenPass::full_screen_quad->Render(const_cast<Engine *>(this), frame->GetCommandBuffer());
     
-    m_root_pipeline->GetFramebuffers()[acquired_image_index]->EndCapture(command_buffer);
+    m_root_pipeline->GetFramebuffers()[acquired_image_index]->EndCapture(frame->GetCommandBuffer());
 }
 } // namespace hyperion::v2

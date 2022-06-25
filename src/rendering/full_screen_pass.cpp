@@ -38,24 +38,37 @@ FullScreenPass::~FullScreenPass() = default;
 
 void FullScreenPass::Create(Engine *engine)
 {
+    Threads::AssertOnThread(THREAD_RENDER);
+
     /* will only init once */
     full_screen_quad->Init(engine);
 
     CreateRenderPass(engine);
 
-    m_framebuffer = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
-        engine->GetInstance()->swapchain->extent,
-        m_render_pass.IncRef()
-    ));
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
+            engine->GetInstance()->swapchain->extent,
+            m_render_pass.IncRef()
+        ));
 
-    /* Add all attachments from the renderpass */
-    for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
-        m_framebuffer->GetFramebuffer().AddAttachmentRef(attachment_ref);
+        /* Add all attachments from the renderpass */
+        for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
+            m_framebuffers[i]->GetFramebuffer().AddAttachmentRef(attachment_ref);
+        }
+        
+        m_framebuffers[i].Init();
+        
+        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+
+        HYPERION_ASSERT_RESULT(command_buffer->Create(
+            engine->GetInstance()->GetDevice(),
+            engine->GetInstance()->GetGraphicsCommandPool()
+        ));
+
+        m_command_buffers[i] = std::move(command_buffer);
     }
-    
-    m_framebuffer.Init();
 
-    CreatePerFrameData(engine);
+    
     CreatePipeline(engine);
     CreateDescriptors(engine);
     
@@ -109,39 +122,16 @@ void FullScreenPass::CreateRenderPass(Engine *engine)
     m_render_pass.Init();
 }
 
-void FullScreenPass::CreatePerFrameData(Engine *engine)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    const UInt32 num_frames = engine->GetInstance()->GetFrameHandler()->NumFrames();
-
-    m_frame_data = std::make_unique<PerFrameData<CommandBuffer>>(num_frames);
-
-    //engine->render_scheduler.Enqueue([this, engine, num_frames](...) {
-        for (UInt32 i = 0; i < num_frames; i++) {
-            auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
-
-            HYPERION_ASSERT_RESULT(command_buffer->Create(
-                engine->GetInstance()->GetDevice(),
-                engine->GetInstance()->GetGraphicsCommandPool()
-            ));
-
-            m_frame_data->At(i).Set<CommandBuffer>(std::move(command_buffer));
-        }
-
-    //    HYPERION_RETURN_OK;
-    //});
-}
-
 void FullScreenPass::CreateDescriptors(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    auto &framebuffer = m_framebuffer->GetFramebuffer();
 
-    //engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto &framebuffer = m_framebuffers[i]->GetFramebuffer();
+    
         if (!framebuffer.GetAttachmentRefs().empty()) {
-            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
+            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
             auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageSamplerDescriptor>(m_descriptor_key);
 
             AssertThrowMsg(framebuffer.GetAttachmentRefs().size() == 1, "> 1 attachments not supported currently for full screen passes");
@@ -154,9 +144,7 @@ void FullScreenPass::CreateDescriptors(Engine *engine)
                 });
             }
         }
-
-    //    HYPERION_RETURN_OK;
-    //});
+    }
 }
 
 void FullScreenPass::CreatePipeline(Engine *engine)
@@ -171,7 +159,8 @@ void FullScreenPass::CreatePipeline(Engine *engine)
         }
     );
 
-    pipeline->AddFramebuffer(m_framebuffer.IncRef());
+    pipeline->AddFramebuffer(m_framebuffers[0].IncRef());
+    pipeline->AddFramebuffer(m_framebuffers[1].IncRef());
     pipeline->SetDepthWrite(false);
     pipeline->SetDepthTest(false);
 
@@ -181,15 +170,16 @@ void FullScreenPass::CreatePipeline(Engine *engine)
 
 void FullScreenPass::Destroy(Engine *engine)
 {
-    AssertThrow(m_frame_data != nullptr);
 
-    if (m_framebuffer != nullptr) {
-        for (auto &attachment : m_attachments) {
-            m_framebuffer->RemoveAttachmentRef(attachment.get());
-        }
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        if (m_framebuffers[i] != nullptr) {
+            for (auto &attachment : m_attachments) {
+                m_framebuffers[i]->RemoveAttachmentRef(attachment.get());
+            }
 
-        if (m_pipeline != nullptr) {
-            m_pipeline->RemoveFramebuffer(m_framebuffer->GetId());
+            if (m_pipeline != nullptr) {
+                m_pipeline->RemoveFramebuffer(m_framebuffers[i]->GetId());
+            }
         }
     }
 
@@ -199,16 +189,16 @@ void FullScreenPass::Destroy(Engine *engine)
         }
     }
 
-    m_render_pass = nullptr;
-    m_framebuffer = nullptr;
-    m_pipeline    = nullptr;
+    m_framebuffers    = {};
+    m_render_pass     = nullptr;
+    m_pipeline        = nullptr;
 
-    engine->render_scheduler.Enqueue([this, engine, &frame_data = *m_frame_data](...) {
+    engine->render_scheduler.Enqueue([this, engine](...) {
         auto result = renderer::Result::OK;
 
-        for (UInt32 i = 0; i < frame_data.NumFrames(); i++) {
+        for (UInt32 i = 0; i < max_frames_in_flight; i++) {
             HYPERION_PASS_ERRORS(
-                frame_data[i].Get<CommandBuffer>()->Destroy(
+                m_command_buffers[i]->Destroy(
                     engine->GetInstance()->GetDevice(),
                     engine->GetInstance()->GetGraphicsCommandPool()
                 ),
@@ -216,7 +206,7 @@ void FullScreenPass::Destroy(Engine *engine)
             );
         }
 
-        m_frame_data->Reset();
+        m_command_buffers = {};
 
         for (auto &attachment : m_attachments) {
             HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
@@ -236,7 +226,7 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
 
     using renderer::Result;
 
-    auto *command_buffer = m_frame_data->At(frame_index).Get<CommandBuffer>();
+    auto *command_buffer = m_command_buffers[frame_index].get();
 
     auto record_result = command_buffer->Record(
             engine->GetInstance()->GetDevice(),
@@ -249,7 +239,7 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
                     cmd,
                     m_pipeline->GetPipeline(),
                     {
-                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL, .count = 1},
+                        {.set = DescriptorSet::global_buffer_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
                     }
                 ));
@@ -261,7 +251,7 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
                     {
                         {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
                         {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-                        {.offsets = {UInt32(0 * sizeof(SceneShaderData))}} /* TODO: scene index */
+                        {.offsets = {UInt32(0 * sizeof(SceneShaderData))}}
                     }
                 ));
                 
@@ -308,13 +298,12 @@ void FullScreenPass::Render(Engine * engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    m_framebuffer->BeginCapture(frame->GetCommandBuffer());
+    m_framebuffers[frame->GetFrameIndex()]->BeginCapture(frame->GetCommandBuffer());
 
-    auto *secondary_command_buffer = m_frame_data->At(frame->GetFrameIndex()).Get<CommandBuffer>();
-
+    auto *secondary_command_buffer = m_command_buffers[frame->GetFrameIndex()].get();
     HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(frame->GetCommandBuffer()));
 
-    m_framebuffer->EndCapture(frame->GetCommandBuffer());
+    m_framebuffers[frame->GetFrameIndex()]->EndCapture(frame->GetCommandBuffer());
 }
 
 } // namespace hyperion::v2

@@ -42,12 +42,10 @@ void DeferredPass::CreateRenderPass(Engine *engine)
 
 void DeferredPass::CreateDescriptors(Engine *engine)
 {
-    // TODO: this could cause invalidation issues, refactor this class into an EngineComponent and use AttachCallback
-    //engine->callbacks.Once(EngineCallback::CREATE_DESCRIPTOR_SETS, [this, engine](...) {
-    //engine->render_scheduler.Enqueue([this, engine, &framebuffer = m_framebuffer->GetFramebuffer()](...) {
-        auto &framebuffer = m_framebuffer->GetFramebuffer();
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto &framebuffer = m_framebuffers[i]->GetFramebuffer();
         if (!framebuffer.GetAttachmentRefs().empty()) {
-            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
+            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
             auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageSamplerDescriptor>(DescriptorKey::DEFERRED_RESULT);
 
             for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
@@ -58,17 +56,24 @@ void DeferredPass::CreateDescriptors(Engine *engine)
                 });
             }
         }
-    //});
-
-    //    HYPERION_RETURN_OK;
-    //});
+    }
 }
 
 void DeferredPass::Create(Engine *engine)
 {
-    m_framebuffer = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[0].IncRef();
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        m_framebuffers[i] = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[i].IncRef();
+        
+        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
 
-    CreatePerFrameData(engine);
+        HYPERION_ASSERT_RESULT(command_buffer->Create(
+            engine->GetInstance()->GetDevice(),
+            engine->GetInstance()->GetGraphicsCommandPool()
+        ));
+
+        m_command_buffers[i] = std::move(command_buffer);
+    }
+    
     CreatePipeline(engine);
 }
 
@@ -96,51 +101,53 @@ void DeferredRenderer::Create(Engine *engine)
     m_pass.CreateRenderPass(engine);
     m_pass.Create(engine);
 
-    auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[0];
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[i];
 
-    /* Add our gbuffer textures */
-    auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()
-        .GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL);
+        /* Add our gbuffer textures */
+        auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
 
-    /* Albedo texture */
-    descriptor_set_pass
-        ->AddDescriptor<ImageSamplerDescriptor>(0)
-        ->SetSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[0]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[0]->GetSampler()
-        });
+        /* Albedo texture */
+        descriptor_set_pass
+            ->AddDescriptor<ImageSamplerDescriptor>(0)
+            ->SetSubDescriptor({
+                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[0]->GetImageView(),
+                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[0]->GetSampler()
+            });
 
-    /* Normals texture*/
-    descriptor_set_pass
-        ->GetDescriptor(0)
-        ->SetSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[1]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[1]->GetSampler()
-        });
+        /* Normals texture*/
+        descriptor_set_pass
+            ->GetDescriptor(0)
+            ->SetSubDescriptor({
+                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[1]->GetImageView(),
+                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[1]->GetSampler()
+            });
 
-    /* Position texture */
-    descriptor_set_pass
-        ->GetDescriptor(0)
-        ->SetSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[2]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[2]->GetSampler()
-        });
+        /* Position texture */
+        descriptor_set_pass
+            ->GetDescriptor(0)
+            ->SetSubDescriptor({
+                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[2]->GetImageView(),
+                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[2]->GetSampler()
+            });
 
-    /* Material ID */
-    descriptor_set_pass
-        ->GetDescriptor(0)
-        ->SetSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[3]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[3]->GetSampler()
-        });
+        /* Material ID */
+        descriptor_set_pass
+            ->GetDescriptor(0)
+            ->SetSubDescriptor({
+                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[3]->GetImageView(),
+                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[3]->GetSampler()
+            });
 
-    /* Depth texture */
-    descriptor_set_pass
-        ->AddDescriptor<ImageSamplerDescriptor>(1)
-        ->SetSubDescriptor({
-            .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[4]->GetImageView(),
-            .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[4]->GetSampler()
-        });
+        /* Depth texture */
+        descriptor_set_pass
+            ->AddDescriptor<ImageSamplerDescriptor>(1)
+            ->SetSubDescriptor({
+                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[4]->GetImageView(),
+                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[4]->GetSampler()
+            });
+    }
     
     m_pass.CreateDescriptors(engine);
 
@@ -168,20 +175,20 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     auto &bucket = render_list.Get(BUCKET_OPAQUE);
     
     // begin opaque objs
-    bucket.GetFramebuffers()[0]->BeginCapture(primary); /* TODO: frame index? */
+    bucket.GetFramebuffers()[frame_index]->BeginCapture(primary); /* TODO: frame index? */
     RenderOpaqueObjects(engine, frame);
-    bucket.GetFramebuffers()[0]->EndCapture(primary); /* TODO: frame index? */
+    bucket.GetFramebuffers()[frame_index]->EndCapture(primary); /* TODO: frame index? */
     // begin opaque objs
     
     m_post_processing.RenderPre(engine, frame);
 
     // begin translucent objs
-    m_pass.GetFramebuffer()->BeginCapture(primary);
+    m_pass.GetFramebuffer(frame_index)->BeginCapture(primary);
     /* Render deferred shading onto full screen quad */
-    HYPERION_ASSERT_RESULT(m_pass.GetFrameData()->At(frame_index).Get<CommandBuffer>()->SubmitSecondary(primary));
+    HYPERION_ASSERT_RESULT(m_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary));
 
     RenderTranslucentObjects(engine, frame);
-    m_pass.GetFramebuffer()->EndCapture(primary);
+    m_pass.GetFramebuffer(frame_index)->EndCapture(primary);
     // end translucent objs
 
     m_post_processing.RenderPost(engine, frame);

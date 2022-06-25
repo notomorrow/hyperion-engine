@@ -24,11 +24,12 @@ std::vector<VkDescriptorSetLayout> Pipeline::GetDescriptorSetLayouts(Device *dev
     const auto &pool_layouts = descriptor_pool->GetDescriptorSetLayouts();
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
-    std::vector<VkDescriptorSetLayout> used_layouts{ // tmp
+    std::vector<VkDescriptorSetLayout> used_layouts { // tmp
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_UNUSED),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_SCENE),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_OBJECT),
+        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_BINDLESS),
@@ -37,11 +38,12 @@ std::vector<VkDescriptorSetLayout> Pipeline::GetDescriptorSetLayouts(Device *dev
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_RAYTRACING)
     };
 #else
-    std::vector<VkDescriptorSetLayout> used_layouts{ // tmp
+    std::vector<VkDescriptorSetLayout> used_layouts { // tmp
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_UNUSED),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_SCENE),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_OBJECT),
+        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1),
         pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_VOXELIZER),
