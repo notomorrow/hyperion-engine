@@ -193,7 +193,7 @@ public:
         scene->GetRootNode()->AddChild(std::move(test_model));
 
 
-       scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+        scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
             75.0f
