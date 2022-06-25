@@ -126,7 +126,7 @@ void GraphicsPipeline::RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_remove
                 // directly remove from list of ones pending addition
                 m_spatials_pending_addition.erase(pending_addition_it);
             } else {
-                m_cached_render_data.push_back(CachedRenderData {
+                /*m_cached_render_data.push_back(CachedRenderData{
                     .cycles_remaining = max_frames_in_flight + 1,
                     .spatial_id       = spatial->GetId(),
                     .material = spatial->GetMaterial() != nullptr
@@ -141,7 +141,7 @@ void GraphicsPipeline::RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_remove
                     .shader   = spatial->GetShader() != nullptr
                         ? spatial->GetShader().IncRef()
                         : nullptr
-                });
+                });*/
 
                 m_spatials_pending_removal.push_back(std::move(spatial));
             }
@@ -354,7 +354,8 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
        in between removing an entity from the pipeline and the data (potentially)
        being destroyed. We use (max frames in flight) + 1 and count down each Render() call.
     */
-    if (!m_cached_render_data.empty()) {
+    
+    /*if (!m_cached_render_data.empty()) {
         auto it = m_cached_render_data.begin();
 
         while (it != m_cached_render_data.end()) {
@@ -364,7 +365,7 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                 ++it;
             }
         }
-    }
+    }*/
 
     if (m_enqueued_spatials_flag.load()) {
         PerformEnqueuedSpatialUpdates(engine, frame->GetFrameIndex());
