@@ -164,13 +164,13 @@ int DescriptorSet::GetFrameIndex(UInt real_index)
 
 UInt DescriptorSet::GetDesiredIndex(Index index)
 {
-    const auto it = desired_indices.find(index);
+    const auto it = desired_indices.Find(index);
 
-    if (it == desired_indices.end()) {
+    if (it == desired_indices.End()) {
         return static_cast<UInt>(index);
     }
 
-    return it->second;
+    return *it;
 }
 
 DescriptorSet::DescriptorSet(Index index, UInt real_index, bool bindless)

@@ -9,6 +9,7 @@
 #include <core/lib/range.h>
 #include <core/lib/flat_set.h>
 #include <core/lib/flat_map.h>
+#include <core/lib/sparse_flat_map.h>
 
 #include <types.h>
 
@@ -233,7 +234,7 @@ public:
     static constexpr UInt max_material_texture_samplers        = 16;
 
     static const std::map<Index, std::map<DescriptorKey, UInt>> mappings;
-    static const std::unordered_map<Index, UInt> desired_indices;
+    static const SparseMap<Index, UInt> desired_indices;
     static Index GetBaseIndex(UInt index); // map index to the real index used (this is per-frame stuff)
     static Index GetPerFrameIndex(Index index, UInt frame_index);
     static Index GetPerFrameIndex(Index index, UInt instance_index, UInt frame_index);

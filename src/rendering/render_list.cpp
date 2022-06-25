@@ -79,6 +79,7 @@ void RenderListContainer::RenderListBucket::AddPendingGraphicsPipelines(Engine *
     DebugLog(LogType::Debug, "Adding %llu pending graphics pipelines\n", graphics_pipelines_pending_addition.size());
 
     std::lock_guard guard(graphics_pipelines_mutex);
+    DebugLog(LogType::Debug, "Adding pending graphics pipelines, locked mutex.\n");
 
     graphics_pipelines.reserve(graphics_pipelines.size() + graphics_pipelines_pending_addition.size());
     

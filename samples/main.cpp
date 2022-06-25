@@ -882,11 +882,11 @@ int main()
                 HYPERION_ASSERT_RESULT(fn(command_buffer, frame_index));
             });
 
-            /*DebugLog(
+            DebugLog(
                 LogType::Debug,
                 "[Renderer] Execute %lu enqueued tasks\n",
                 num_enqueued
-            );*/
+            );
         }
 
 #if HYPERION_VK_TEST_IMAGE_STORE
@@ -967,7 +967,7 @@ int main()
         probe_system.ComputeIrradiance(engine, frame->GetCommandBuffer());
 #endif
 
-#if HYPERION_VK_TEST_VCT
+#if 0//HYPERION_VK_TEST_VCT
         if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.1f) {
             vct->OnRender(engine, frame);
             tmp_render_timer = 0.001f;
