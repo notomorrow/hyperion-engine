@@ -34,6 +34,16 @@ class GraphicsPipeline;
 class Octree;
 class Scene;
 
+template<>
+struct ComponentInitInfo<STUB_CLASS(Spatial)> {
+    enum Flags : ComponentFlagBits {
+        ENTITY_FLAGS_NONE              = 0x0,
+        ENTITY_FLAGS_RAY_TESTS_ENABLED = 0x1
+    };
+
+    ComponentFlagBits flags = ENTITY_FLAGS_RAY_TESTS_ENABLED;
+};
+
 class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
     friend class Octree;
     friend class GraphicsPipeline;
@@ -43,10 +53,11 @@ class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
 
 public:
     Spatial(
-        Ref<Mesh> &&mesh = nullptr,
-        Ref<Shader> &&shader = nullptr,
-        Ref<Material> &&material = nullptr,
-        const RenderableAttributeSet &renderable_attributes = RenderableAttributeSet{}
+        Ref<Mesh> &&mesh                                    = nullptr,
+        Ref<Shader> &&shader                                = nullptr,
+        Ref<Material> &&material                            = nullptr,
+        const RenderableAttributeSet &renderable_attributes = {},
+        const ComponentInitInfo &init_info                  = {}
     );
 
     Spatial(const Spatial &other) = delete;

@@ -54,7 +54,7 @@ void main()
     float metalness = material.metalness;
     float roughness = material.roughness;
     
-    vec2 texcoord = v_texcoord0;// * material.uv_scale;
+    vec2 texcoord = v_texcoord0 * material.uv_scale;
     
 #if PARALLAX_ENABLED
     if (HAS_TEXTURE(MATERIAL_TEXTURE_PARALLAX_MAP)) {

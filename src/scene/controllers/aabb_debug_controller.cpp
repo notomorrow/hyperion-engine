@@ -46,7 +46,10 @@ void AabbDebugController::OnAdded()
                 .shader_id         = shader_id,
                 .vertex_attributes = vertex_attributes,
                 .fill_mode         = FillMode::LINE,
-                .cull_faces        = FaceCullMode::BACK
+                .cull_faces        = FaceCullMode::NONE
+            },
+            Spatial::ComponentInitInfo {
+                .flags = 0x0
             }
         )
     );

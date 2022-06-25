@@ -109,7 +109,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj", //living_room/living_room.obj",
+            "models/living_room/living_room.obj", //tmp_terrain.obj", //sponza/sponza.obj", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -123,6 +123,8 @@ public:
         auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
         sphere->Scale(1.0f);
         sphere->SetName("sphere");
+        //sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
+        sphere->GetChild(0)->GetSpatial()->GetInitInfo().flags &= ~Spatial::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
         scene->GetRootNode()->AddChild(std::move(sphere));
 
         // auto character_entity = engine->resources.spatials.Add(std::make_unique<Spatial>());
@@ -194,7 +196,20 @@ public:
         // scene->GetEnvironment()->AddRenderComponent<AABBRenderer>();
 
 
-        test_model->Scale(0.15f);//14.075f);
+        /*test_model->Scale(40.0f);//14.075f);
+        auto &terrain_material = test_model->GetChild(0)->GetSpatial()->GetMaterial();
+        terrain_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
+        terrain_material->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.08f);
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png")));
+        terrain_material->GetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP)->GetImage().SetIsSRGB(true);
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-normal-dx.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_AO_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-ao.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_PARALLAX_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Height.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ROUGHNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1_Roughness.png")));
+        terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
+        test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
+
+        test_model->Scale(20.15f);
         scene->GetRootNode()->AddChild(std::move(test_model));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
@@ -333,36 +348,15 @@ public:
 
         //scene->GetEnvironment()->GetShadowRenderer(0)->SetOrigin(scene->GetCamera()->GetTranslation());
 
-        if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
-            ray_cast_timer = 0.0f;
+
+        if (0) { // bad performance on large meshes. need bvh
+        //if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
+        //    ray_cast_timer = 0.0f;
             const auto &mouse_position = input_manager->GetMousePosition();
 
             const auto mouse_x = mouse_position.x.load();
             const auto mouse_y = mouse_position.y.load();
 
-            // Vector3 ray_ndc(mouse_position.x.load(), mouse_position.y.load(), 1.0f);
-            // ray_ndc.x = (2.0f * ray_ndc.x / static_cast<float>(input_manager->GetWindow()->width)) - 1.0f;
-            // ray_ndc.y =(1.0f - (2.0f * ray_ndc.y)) / static_cast<float>(input_manager->GetWindow()->height);
-            // const auto ray_clip = ray_ndc;
-            // Vector3 ray_eye = Matrix4(scene->GetCamera()->GetProjectionMatrix()).Invert() * ray_clip;
-            // ray_eye.z = -1.0f;
-
-            // Vector3 ray_direction = Matrix4(scene->GetCamera()->GetViewMatrix()).Invert() * ray_eye;
-            // ray_direction.Normalize();
-
-            // screen space (viewport coordinates)
-            // float x = ( 2.0f * mouse_x ) / static_cast<float>(input_manager->GetWindow()->width) - 1.0f;
-            // float y = 1.0f - ( 2.0f * mouse_y ) / static_cast<float>(input_manager->GetWindow()->height);
-            // float z = 1.0f;
-            // // normalised device space
-            // Vector3 ray_nds = Vector3( x, y, z );
-            // // clip space
-            // Vector4 ray_clip = Vector4( ray_nds[0], ray_nds[1], -1.0, 1.0 );
-            // // eye space
-            // Vector4 ray_eye = Matrix4(scene->GetCamera()->GetProjectionMatrix()).Invert() * ray_clip;
-            // ray_eye      = Vector4( ray_eye[0], ray_eye[1], -1.0, 0.0 );
-            // // world space
-            // Vector4 ray_direction = Vector4(  Matrix4(scene->GetCamera()->GetViewMatrix()).Invert() * ray_eye );
             const auto mouse_world = scene->GetCamera()->TransformScreenToWorld(
                 Vector2(
                     mouse_x / static_cast<float>(input_manager->GetWindow()->width),
@@ -378,7 +372,7 @@ public:
             if (scene->GetOctree().TestRay(ray, results)) {
                 RayTestResults triangle_mesh_results;
 
-                for (auto &hit : results) {
+                for (const auto &hit : results) {
                     // now ray test each result as triangle mesh to find exact hit point
 
                     if (auto lookup_result = engine->resources.spatials.Lookup(Spatial::ID{hit.id})) {
@@ -395,20 +389,16 @@ public:
                 }
 
                 if (!triangle_mesh_results.Empty()) {
-                    auto mesh_hit = triangle_mesh_results.Front();
-                    std::cout << "  closest hit: " << mesh_hit.distance << ",  " << mesh_hit.hitpoint << "   spatial ID  :  " << mesh_hit.id << "\n";
+                    const auto &mesh_hit = triangle_mesh_results.Front();
 
-                    if (auto lookup_result = engine->resources.spatials.Lookup(Spatial::ID{mesh_hit.id})) {
-                        if (auto &material = lookup_result->GetMaterial()) {
-                            std::cout << "MATERIAL: " << material->GetName() << "\n";
-                        }
+                    if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
+                        sphere->SetLocalTranslation(mesh_hit.hitpoint);
                     }
-                    scene->GetCamera()->SetNextTranslation(mesh_hit.hitpoint);
                 }
             }
         }
 
-        ray_cast_timer += delta;
+        //ray_cast_timer += delta;
         
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalTranslation(Vector3(0, std::sin(timer * 0.3f), 0));
        // zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.35f));
