@@ -51,41 +51,19 @@ void Spatial::Init(Engine *engine)
 
         if (m_mesh) {
             m_mesh.Init();
-
-            // if (m_primary_pipeline.pipeline == nullptr) {
-            //     AddToPipeline(engine);
-            // }
         }
-
-        // if (m_octree == nullptr) {
-        //     AddToOctree(engine);
-        // }
 
         SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
-            // RemoveFromPipelines(); // done now by Scene
-
-            // AssertThrow(m_pipelines.Empty());
-
-            m_skeleton = nullptr;
-            m_material = nullptr;
-            m_mesh     = nullptr;       
-
-            // AssertThrow(m_octree == nullptr);     
-
-            // if (m_octree != nullptr) {
-            //     DebugLog(
-            //         LogType::Debug,
-            //         "Teardown: Remove spatial #%u from octree\n",
-            //         m_id.value
-            //     );
-            //     RemoveFromOctree(engine);
-            // }
-            
-            HYP_FLUSH_RENDER_QUEUE(engine);
-
             SetReady(false);
+
+            m_material.Reset();
+
+            engine->SafeReleaseRenderable(std::move(m_skeleton));
+            //engine->SafeReleaseRenderable(std::move(m_material));
+            engine->SafeReleaseRenderable(std::move(m_mesh));
+            engine->SafeReleaseRenderable(std::move(m_shader));
         }), engine);
     }));
 }
@@ -190,6 +168,10 @@ void Spatial::SetMesh(Ref<Mesh> &&mesh)
         return;
     }
 
+    if (m_mesh != nullptr) {
+        GetEngine()->SafeReleaseRenderable(std::move(m_mesh));
+    }
+
     m_mesh = std::move(mesh);
 
     if (m_mesh != nullptr && IsReady()) {
@@ -203,6 +185,10 @@ void Spatial::SetSkeleton(Ref<Skeleton> &&skeleton)
         return;
     }
 
+    if (m_skeleton != nullptr) {
+        GetEngine()->SafeReleaseRenderable(std::move(m_skeleton));
+    }
+
     m_skeleton = std::move(skeleton);
 
     if (m_skeleton != nullptr && IsReady()) {
@@ -214,6 +200,10 @@ void Spatial::SetShader(Ref<Shader> &&shader)
 {
     if (m_shader == shader) {
         return;
+    }
+
+    if (m_shader != nullptr) {
+        GetEngine()->SafeReleaseRenderable(std::move(m_shader));
     }
 
     m_shader = std::move(shader);
@@ -233,6 +223,10 @@ void Spatial::SetMaterial(Ref<Material> &&material)
     if (m_material == material) {
         return;
     }
+
+    //if (m_material != nullptr) {
+    //    GetEngine()->SafeReleaseRenderable(std::move(m_material));
+    //}
 
     m_material = std::move(material);
 
@@ -508,7 +502,7 @@ void Spatial::RemoveFromOctree(Engine *engine)
 
 bool Spatial::IsReady() const
 {
-    if (!Base::IsReady()) {
+    /*if (!Base::IsReady()) {
         return false;
     }
     
@@ -528,7 +522,9 @@ bool Spatial::IsReady() const
         return false;
     }
     
-    return true;
+    return true;*/
+
+    return Base::IsReady();
 }
 
 } // namespace hyperion::v2

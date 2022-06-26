@@ -10,7 +10,10 @@ namespace hyperion::v2 {
 class Engine;
 class Bone;
 
-class Skeleton : public EngineComponentBase<STUB_CLASS(Skeleton)> {
+class Skeleton
+    : public EngineComponentBase<STUB_CLASS(Skeleton)>,
+      public RenderObject
+{
 public:
     Skeleton();
     Skeleton(std::unique_ptr<Bone> &&root_bone);

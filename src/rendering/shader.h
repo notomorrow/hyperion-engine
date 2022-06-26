@@ -34,7 +34,10 @@ struct SubShader {
     ShaderObject       spirv;
 };
 
-class Shader : public EngineComponentBase<STUB_CLASS(Shader)> {
+class Shader
+    : public EngineComponentBase<STUB_CLASS(Shader)>,
+      public RenderObject
+{
 public:
     Shader(const std::vector<SubShader> &sub_shaders);
     Shader(const Shader &) = delete;

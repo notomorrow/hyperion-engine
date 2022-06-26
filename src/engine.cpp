@@ -514,6 +514,42 @@ void Engine::UpdateBuffersAndDescriptors(UInt frame_index)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
+    if (auto deletion_flags = m_renderable_deletion_flag.load()) {
+        std::lock_guard guard(m_renderable_deletion_mutex);
+
+        if (deletion_flags & RENDERABLE_DELETION_TEXTURES) {
+            if (PerformEnqueuedDeletions<Texture>()) {
+                deletion_flags &= ~RENDERABLE_DELETION_TEXTURES;
+            }
+        }
+
+        //if (deletion_flags & RENDERABLE_DELETION_MATERIALS) {
+        //    if (PerformEnqueuedDeletions<Material>()) {
+        //        deletion_flags &= ~RENDERABLE_DELETION_MATERIALS;
+        //    }
+        //}
+
+        if (deletion_flags & RENDERABLE_DELETION_MESHES) {
+            if (PerformEnqueuedDeletions<Mesh>()) {
+                deletion_flags &= ~RENDERABLE_DELETION_MESHES;
+            }
+        }
+
+        if (deletion_flags & RENDERABLE_DELETION_SKELETONS) {
+            if (PerformEnqueuedDeletions<Skeleton>()) {
+                deletion_flags &= ~RENDERABLE_DELETION_SKELETONS;
+            }
+        }
+
+        if (deletion_flags & RENDERABLE_DELETION_SHADERS) {
+            if (PerformEnqueuedDeletions<Shader>()) {
+                deletion_flags &= ~RENDERABLE_DELETION_SHADERS;
+            }
+        }
+
+        m_renderable_deletion_flag.store(deletion_flags);
+    }
+
     shader_globals->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
     shader_globals->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);

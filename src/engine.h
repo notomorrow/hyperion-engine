@@ -21,6 +21,7 @@
 #include <core/ecs/component_registry.h>
 #include <core/scheduler.h>
 #include <core/lib/flat_map.h>
+#include <core/lib/type_map.h>
 
 #include <rendering/backend/renderer_image.h>
 #include <rendering/backend/renderer_image_view.h>
@@ -77,6 +78,17 @@ class Engine;
  * |                     | empty               | empty               | empty               | empty               |
  * |                     | Image storage test  | empty               | empty               | empty               |
  */
+
+using RenderableDeletionMaskBits = UInt;
+
+enum RenderableDeletionMask : RenderableDeletionMaskBits {
+    RENDERABLE_DELETION_NONE      = 0,
+    RENDERABLE_DELETION_TEXTURES  = 1 << 0,
+    RENDERABLE_DELETION_MATERIALS = 1 << 1,
+    RENDERABLE_DELETION_MESHES    = 1 << 2,
+    RENDERABLE_DELETION_SKELETONS = 1 << 3,
+    RENDERABLE_DELETION_SHADERS   = 1 << 4
+};
 
 struct RenderState {
     struct SceneBinding {
@@ -159,6 +171,76 @@ public:
     
     ComponentRegistry<Spatial> &GetComponentRegistry()             { return m_component_registry; }
     const ComponentRegistry<Spatial> &GetComponentRegistry() const { return m_component_registry; }
+    
+    void SafeReleaseRenderable(Ref<Texture> &&renderable)
+    {
+        std::lock_guard guard(m_renderable_deletion_mutex);
+        
+        std::get<std::vector<RenderableDeletionEntry<Texture>>>(m_renderable_deletion_queue_items).push_back({
+            .ref     = std::move(renderable),
+            .deleter = [](Ref<Texture> &&ref) {
+                ref.Reset();
+            }
+        });
+
+        m_renderable_deletion_flag |= RENDERABLE_DELETION_TEXTURES;
+    }
+    
+    /*void SafeReleaseRenderable(Ref<Material> &&renderable)
+    {
+        std::lock_guard guard(m_renderable_deletion_mutex);
+        
+        std::get<std::vector<RenderableDeletionEntry<Material>>>(m_renderable_deletion_queue_items).push_back({
+            .ref     = std::move(renderable),
+            .deleter = [](Ref<Material> &&ref) {
+                ref.Reset();
+            }
+        });
+
+        m_renderable_deletion_flag |= RENDERABLE_DELETION_MATERIALS;
+    }*/
+    
+    void SafeReleaseRenderable(Ref<Mesh> &&renderable)
+    {
+        std::lock_guard guard(m_renderable_deletion_mutex);
+        
+        std::get<std::vector<RenderableDeletionEntry<Mesh>>>(m_renderable_deletion_queue_items).push_back({
+            .ref     = std::move(renderable),
+            .deleter = [](Ref<Mesh> &&ref) {
+                ref.Reset();
+            }
+        });
+
+        m_renderable_deletion_flag |= RENDERABLE_DELETION_MESHES;
+    }
+    
+    void SafeReleaseRenderable(Ref<Skeleton> &&renderable)
+    {
+        std::lock_guard guard(m_renderable_deletion_mutex);
+        
+        std::get<std::vector<RenderableDeletionEntry<Skeleton>>>(m_renderable_deletion_queue_items).push_back({
+            .ref     = std::move(renderable),
+            .deleter = [](Ref<Skeleton> &&ref) {
+                ref.Reset();
+            }
+        });
+
+        m_renderable_deletion_flag |= RENDERABLE_DELETION_SKELETONS;
+    }
+    
+    void SafeReleaseRenderable(Ref<Shader> &&renderable)
+    {
+        std::lock_guard guard(m_renderable_deletion_mutex);
+        
+        std::get<std::vector<RenderableDeletionEntry<Shader>>>(m_renderable_deletion_queue_items).push_back({
+            .ref     = std::move(renderable),
+            .deleter = [](Ref<Shader> &&ref) {
+                ref.Reset();
+            }
+        });
+
+        m_renderable_deletion_flag |= RENDERABLE_DELETION_SHADERS;
+    }
 
     Image::InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.Get(type); }
@@ -185,7 +267,7 @@ public:
 
     RenderState             render_state;
     
-    std::atomic_bool m_running{false};
+    std::atomic_bool        m_running{false};
 
     Scheduler<
         renderer::Result,
@@ -198,7 +280,7 @@ public:
 
 private:
     void FindTextureFormatDefaults();
-
+    
     std::unique_ptr<Instance>         m_instance;
     std::unique_ptr<GraphicsPipeline> m_root_pipeline;
 
@@ -215,6 +297,48 @@ private:
     ComponentRegistry<Spatial> m_component_registry;
 
     DummyData m_dummy_data;
+
+    template <class T>
+    struct RenderableDeletionEntry {
+        static_assert(std::is_base_of_v<RenderObject, T>, "T must be a derived class of RenderObject");
+
+        using Deleter = std::add_pointer_t<void(Ref<T> &&)>;
+
+        UInt    cycles_remaining = max_frames_in_flight;
+        Ref<T>  ref;
+        Deleter deleter;
+    };
+
+    // returns true if all were completed
+    template <class T>
+    bool PerformEnqueuedDeletions()
+    {
+        auto &queue = std::get<std::vector<RenderableDeletionEntry<T>>>(m_renderable_deletion_queue_items);
+
+        for (auto it = queue.begin(); it != queue.end();) {
+            auto &front = queue.front();
+
+            if (!--front.cycles_remaining) {
+                front.deleter(std::move(front.ref));
+
+                it = queue.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
+        return queue.empty();
+    }
+
+    std::tuple<
+        std::vector<RenderableDeletionEntry<Texture>>,
+        std::vector<RenderableDeletionEntry<Mesh>>,
+        std::vector<RenderableDeletionEntry<Skeleton>>,
+        std::vector<RenderableDeletionEntry<Shader>>
+    > m_renderable_deletion_queue_items;
+
+    std::mutex                                     m_renderable_deletion_mutex;
+    std::atomic<RenderableDeletionMaskBits>        m_renderable_deletion_flag{RENDERABLE_DELETION_NONE};
 };
 
 } // namespace hyperion::v2

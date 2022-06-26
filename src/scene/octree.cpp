@@ -5,7 +5,7 @@
 
 namespace hyperion::v2 {
 
-const BoundingBox Octree::default_bounds = BoundingBox({-250.0f}, {250.0f});
+const BoundingBox Octree::default_bounds = BoundingBox({ -250.0f }, { 250.0f });
 
 bool Octree::IsVisible(const Octree *root, const Octree *child)
 {

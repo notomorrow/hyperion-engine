@@ -806,8 +806,8 @@ public:
         {
         }
 
-        explicit Ref(T *ptr, RefCount *ref_count)
-            : RefWrapper(ptr, ref_count)
+        explicit Ref(T *_ptr, RefCount *_ref_count)
+            : RefWrapper(_ptr, _ref_count)
         {
             if (RefWrapper::m_ref_count != nullptr) {
                 ++RefWrapper::m_ref_count->count;
@@ -845,6 +845,16 @@ public:
             }
         }
 
+        /*template <class Other>
+        auto Cast() const
+        {
+            static_assert(std::is_convertible_v<const T *, const Other *>, "T must be convertible to Other");
+            
+            RefWrapper::AssertState();
+
+            return RefCounter<Other, CallbacksClass>::Ref(static_cast<const Other *>(RefWrapper::ptr), RefWrapper::m_ref_count);
+        }*/
+
         /*! \brief Acquire a new reference from this one. Increments the reference counter. */
         auto IncRef()
         {
@@ -862,6 +872,13 @@ public:
             }
 
             return RefWrapper::m_ref_count->count.load();
+        }
+
+        HYP_FORCE_INLINE void Reset()
+        {
+            if (RefWrapper::Valid()) {
+                Release();
+            }
         }
 
     private:
@@ -1049,6 +1066,14 @@ WeakRef<T> MakeWeakRef(const Ref<T> &strong_ref)
 {
     return WeakRef<T>(strong_ref);
 }
+
+/*template <class To, class From>
+Ref<To> CastRef(Ref<From> &&ref)
+{
+    static_assert(std::is_convertible_v<From *, To *>, "From* must be convertible to To*");
+
+    return Ref<To>(static_cast<To *>(ref.ptr), static_cast<RefCounter<To, EngineCallbacks> *>(ref.m_ref_count));
+}*/
 
 } // namespace hyperion::v2
 
