@@ -8,11 +8,17 @@ namespace hyperion::v2 {
 
 using renderer::ImageSamplerDescriptor;
 using renderer::DescriptorKey;
+using renderer::Rect;
 
 DeferredPass::DeferredPass()
-    : FullScreenPass()
+    : FullScreenPass(),
+      m_mipmapped_result(std::make_unique<TextureImage2D>(
+          Extent2D { 512, 512 },
+          Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB,
+          Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+          nullptr
+      ))
 {
-    
 }
 
 DeferredPass::~DeferredPass() = default;
@@ -61,6 +67,12 @@ void DeferredPass::CreateDescriptors(Engine *engine)
 
 void DeferredPass::Create(Engine *engine)
 {
+    HYPERION_ASSERT_RESULT(
+        m_mipmapped_result->Create(
+            engine->GetDevice()
+        )
+    );
+
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_framebuffers[i] = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[i].IncRef();
         
@@ -79,6 +91,10 @@ void DeferredPass::Create(Engine *engine)
 
 void DeferredPass::Destroy(Engine *engine)
 {
+    HYPERION_ASSERT_RESULT(
+        m_mipmapped_result->Destroy(engine->GetDevice())
+    );
+
     FullScreenPass::Destroy(engine); // flushes render queue
 }
 
@@ -171,6 +187,39 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     RenderTranslucentObjects(engine, frame);
     m_pass.GetFramebuffer(frame_index)->EndCapture(primary);
     // end translucent objs
+
+    // mipmap chain generation
+    auto *framebuffer_image = m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
+        .GetAttachmentRefs()[0]->GetAttachment()->GetImage();
+    
+    framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::COPY_SRC);
+    m_pass.GetMipmappedResult()->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::COPY_DST);
+
+    // Blit into the mipmap chain img
+    m_pass.GetMipmappedResult()->Blit(
+        primary,
+        framebuffer_image,
+        Rect { 0, 0, framebuffer_image->GetExtent().width, framebuffer_image->GetExtent().height },
+        Rect { 0, 0, m_pass.GetMipmappedResult()->GetExtent().width, m_pass.GetMipmappedResult()->GetExtent().height }
+    );
+
+    HYPERION_ASSERT_RESULT(m_pass.GetMipmappedResult()->GenerateMipmaps(engine->GetDevice(), primary));
+
+    m_pass.GetMipmappedResult()->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+
+    framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+
+    //HYPERION_ASSERT_RESULT(m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
+    //    .GetAttachmentRefs()[0]->GetAttachment()->GetImage()
+    //        ->GenerateMipmaps(engine->GetDevice(), frame->GetCommandBuffer()));
+    
+    //m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
+    //    .GetAttachmentRefs()[0]->GetAttachment()->GetImage()
+    //        ->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+    //
+    //std::cout << "HasMips? " << m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
+    //    .GetAttachmentRefs()[0]->GetAttachment()->GetImage()->HasMipmaps() << " Num mips: " << m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
+    //    .GetAttachmentRefs()[0]->GetAttachment()->GetImage()->NumMipmaps() << "\n";
 
     m_post_processing.RenderPost(engine, frame);
 }

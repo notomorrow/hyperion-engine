@@ -874,7 +874,8 @@ void GPUImageMemory::SetResourceState(ResourceState new_state)
 
 void GPUImageMemory::InsertBarrier(
     CommandBuffer *command_buffer,
-    ResourceState new_state)
+    ResourceState new_state
+)
 {
     InsertBarrier(
         command_buffer,
@@ -889,7 +890,8 @@ void GPUImageMemory::InsertBarrier(
 void GPUImageMemory::InsertBarrier(
     CommandBuffer *command_buffer,
     const ImageSubResource &sub_resource,
-    ResourceState new_state)
+    ResourceState new_state
+)
 {
     /* Clear any sub-resources that are in a separate state */
     if (!sub_resources.empty()) {

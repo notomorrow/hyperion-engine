@@ -27,10 +27,15 @@ FullScreenPass::FullScreenPass(Ref<Shader> &&shader)
 {
 }
 
-FullScreenPass::FullScreenPass(Ref<Shader> &&shader, DescriptorKey descriptor_key, UInt sub_descriptor_index)
-    : m_shader(std::move(shader)),
-      m_descriptor_key(descriptor_key),
-      m_sub_descriptor_index(sub_descriptor_index)
+FullScreenPass::FullScreenPass(
+    Ref<Shader> &&shader,
+    DescriptorKey descriptor_key,
+    UInt sub_descriptor_index,
+    Image::FilterMode filter_mode
+) : m_shader(std::move(shader)),
+    m_descriptor_key(descriptor_key),
+    m_sub_descriptor_index(sub_descriptor_index),
+    m_filter_mode(filter_mode)
 {
 }
 
@@ -96,12 +101,16 @@ void FullScreenPass::CreateRenderPass(Engine *engine)
 
     renderer::AttachmentRef *attachment_ref;
 
+    auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
+        engine->GetInstance()->swapchain->extent,
+        engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_COLOR),
+        nullptr
+    );
+
+    //framebuffer_image->SetFilterMode(m_filter_mode);
+
     m_attachments.push_back(std::make_unique<Attachment>(
-        std::make_unique<renderer::FramebufferImage2D>(
-            engine->GetInstance()->swapchain->extent,
-            engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_COLOR),
-            nullptr
-        ),
+        std::move(framebuffer_image),
         renderer::RenderPassStage::SHADER
     ));
 
@@ -294,7 +303,7 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
     HYPERION_ASSERT_RESULT(record_result);
 }
 
-void FullScreenPass::Render(Engine * engine, Frame *frame)
+void FullScreenPass::Render(Engine *engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 

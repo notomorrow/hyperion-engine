@@ -360,17 +360,20 @@ public:
 
     void InsertBarrier(
         CommandBuffer *command_buffer,
-        ResourceState new_state);
+        ResourceState new_state
+    );
 
     void InsertBarrier(
         CommandBuffer *command_buffer,
         const ImageSubResource &sub_resource,
-        ResourceState new_state);
+        ResourceState new_state
+    );
 
     void InsertSubResourceBarrier(
         CommandBuffer *command_buffer,
         const ImageSubResource &sub_resource,
-        ResourceState new_state);
+        ResourceState new_state
+    );
 
     [[nodiscard]] Result Create(Device *device, size_t size, VkImageCreateInfo *image_info);
     [[nodiscard]] Result Destroy(Device *device);

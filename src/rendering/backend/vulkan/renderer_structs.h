@@ -414,6 +414,14 @@ struct alignas(16) Extent3D {
 
 static_assert(sizeof(Extent3D) == 16);
 
+struct alignas(8) Rect {
+    uint32_t x0, y0,
+             x1, y1;
+};
+
+static_assert(sizeof(Rect) == 16);
+
+
 struct PackedVertex {
     float position_x,
           position_y,

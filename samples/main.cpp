@@ -123,7 +123,6 @@ public:
         auto sphere = engine->assets.Load<Node>("models/monkey/monkey.obj");
         sphere->Scale(2.0f);
         sphere->SetName("sphere");
-        // BUG
         sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
         sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
         sphere->GetChild(0)->GetSpatial()->GetInitInfo().flags &= ~Spatial::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;

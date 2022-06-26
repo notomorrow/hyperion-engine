@@ -122,8 +122,8 @@ public:
     static VkSamplerAddressMode ToVkSamplerAddressMode(WrapMode);
 
     struct InternalInfo {
-        VkImageTiling tiling;
-        VkImageUsageFlags usage_flags;
+        VkImageTiling        tiling;
+        VkImageUsageFlags    usage_flags;
     };
 
     Image(Extent3D extent,
@@ -148,6 +148,13 @@ public:
      */
     Result Create(Device *device, Instance *instance, GPUMemory::ResourceState state);
     Result Destroy(Device *device);
+
+    Result Blit(
+        CommandBuffer *command_buffer,
+        Image *src,
+        Rect src_rect,
+        Rect dst_rect
+    );
 
     Result GenerateMipmaps(
         Device *device,
@@ -189,7 +196,11 @@ public:
     uint32_t NumFaces() const
         { return IsTextureCube() ? 6 : 1; }
 
+    FilterMode GetFilterMode() const             { return m_filter_mode; }
+    void SetFilterMode(FilterMode filter_mode)   { m_filter_mode = filter_mode; }
+
     const Extent3D &GetExtent() const            { return m_extent; }
+
     GPUImageMemory *GetGPUImage()                { return m_image; }
     const GPUImageMemory *GetGPUImage() const    { return m_image; }
 
@@ -257,13 +268,16 @@ public:
         format,
         type,
         filter_mode,
-        Image::InternalInfo{
+        Image::InternalInfo {
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage_flags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT /*i guess?*/
-                         | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+                         | VK_IMAGE_USAGE_STORAGE_BIT
+                         | VK_IMAGE_USAGE_SAMPLED_BIT
         },
         bytes
-    ) {}
+    )
+    {
+    }
 };
 
 class TextureImage : public Image {
@@ -280,11 +294,14 @@ public:
         type,
         filter_mode,
         Image::InternalInfo{
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+            .tiling      = VK_IMAGE_TILING_OPTIMAL,
+            .usage_flags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+                         | VK_IMAGE_USAGE_SAMPLED_BIT
         },
         bytes
-    ) {}
+    )
+    {
+    }
 };
 
 class TextureImage2D : public TextureImage {
@@ -300,7 +317,9 @@ public:
         Type::TEXTURE_TYPE_2D,
         filter_mode,
         bytes
-    ) {}
+    )
+    {
+    }
 };
 
 class TextureImage3D : public TextureImage {
@@ -316,7 +335,9 @@ public:
         Type::TEXTURE_TYPE_3D,
         filter_mode,
         bytes
-    ) {}
+    )
+    {
+    }
 };
 
 class TextureImageCubemap : public TextureImage {
@@ -332,7 +353,9 @@ public:
         Type::TEXTURE_TYPE_CUBEMAP,
         filter_mode,
         bytes
-    ) {}
+    )
+    {
+    }
 };
 
 class FramebufferImage : public Image {
@@ -347,15 +370,17 @@ public:
         format,
         type,
         FilterMode::TEXTURE_FILTER_NEAREST,
-        Image::InternalInfo{
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage_flags = VkImageUsageFlags(((GetBaseFormat(format) == BaseFormat::TEXTURE_FORMAT_DEPTH)
-                ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
-                : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-                | VK_IMAGE_USAGE_SAMPLED_BIT)
+        Image::InternalInfo {
+            .tiling      = VK_IMAGE_TILING_OPTIMAL,
+            .usage_flags = VkImageUsageFlags((GetBaseFormat(format) == BaseFormat::TEXTURE_FORMAT_DEPTH
+                ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+                | VK_IMAGE_USAGE_SAMPLED_BIT
+                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT /* for mip chain */)
         },
         bytes
-    ) {}
+    )
+    {
+    }
 };
 
 class FramebufferImage2D : public FramebufferImage {

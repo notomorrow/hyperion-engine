@@ -6,10 +6,12 @@
 #include "renderer.h"
 
 #include <rendering/backend/renderer_frame.h>
+#include <rendering/backend/renderer_image.h>
 
 namespace hyperion::v2 {
 
 using renderer::Frame;
+using renderer::Image;
 
 class DeferredPass : public FullScreenPass {
 public:
@@ -18,6 +20,8 @@ public:
     DeferredPass &operator=(const DeferredPass &other) = delete;
     ~DeferredPass();
 
+    Image *GetMipmappedResult() const { return m_mipmapped_result.get(); }
+
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
     void CreateDescriptors(Engine *engine);
@@ -25,6 +29,9 @@ public:
 
     void Destroy(Engine *engine);
     void Render(Engine *engine, Frame *frame);
+
+private:
+    std::unique_ptr<Image> m_mipmapped_result;
 };
 
 class DeferredRenderer : public Renderer {
