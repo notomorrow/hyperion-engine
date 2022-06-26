@@ -13,6 +13,7 @@
 #include <rendering/backend/renderer_frame.h>
 #include <rendering/backend/renderer_structs.h>
 #include <rendering/backend/renderer_command_buffer.h>
+#include <rendering/backend/renderer_image.h>
 
 #include <memory>
 #include <utility>
@@ -24,6 +25,7 @@ using renderer::CommandBuffer;
 using renderer::PerFrameData;
 using renderer::VertexAttributeSet;
 using renderer::DescriptorKey;
+using renderer::Image;
 
 class Engine;
 
@@ -33,7 +35,12 @@ public:
     
     FullScreenPass();
     FullScreenPass(Ref<Shader> &&shader);
-    FullScreenPass(Ref<Shader> &&shader, DescriptorKey descriptor_key, UInt sub_descriptor_index);
+    FullScreenPass(
+        Ref<Shader> &&shader,
+        DescriptorKey descriptor_key,
+        UInt sub_descriptor_index,
+        Image::FilterMode filter_mode = Image::FilterMode::TEXTURE_FILTER_NEAREST
+    );
     FullScreenPass(const FullScreenPass &) = delete;
     FullScreenPass &operator=(const FullScreenPass &) = delete;
     ~FullScreenPass();
@@ -70,6 +77,8 @@ protected:
     Ref<GraphicsPipeline>                                            m_pipeline;
                                                                      
     std::vector<std::unique_ptr<Attachment>>                         m_attachments;
+
+    Image::FilterMode                                                m_filter_mode;
                                                                      
 private:                                                             
     DescriptorKey                                                    m_descriptor_key;

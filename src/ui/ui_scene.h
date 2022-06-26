@@ -14,8 +14,8 @@ using renderer::Extent2D;
 
 class UIObject : public EngineComponentBase<STUB_CLASS(UIObject)> {
 public:
-    UIObject();
-    virtual ~UIObject();
+    UIObject() : m_position{}, m_dimensions{} {}
+    virtual ~UIObject() = default;
 
     const Extent2D &GetPosition() const   { return m_position; }
     const Extent2D &GetDimensions() const { return m_dimensions; }

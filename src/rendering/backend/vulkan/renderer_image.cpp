@@ -191,7 +191,8 @@ VkSamplerAddressMode Image::ToVkSamplerAddressMode(WrapMode texture_wrap_mode)
     AssertThrowMsg(false, "Unhandled texture wrap mode case %d", int(texture_wrap_mode));
 }
 
-Image::Image(Extent3D extent,
+Image::Image(
+    Extent3D extent,
     Image::InternalFormat format,
     Image::Type type,
     Image::FilterMode filter_mode,
@@ -532,6 +533,41 @@ Result Image::Destroy(Device *device)
     }
 
     return result;
+}
+
+Result Image::Blit(
+    CommandBuffer *command_buffer,
+    Image *src,
+    Rect src_rect,
+    Rect dst_rect
+)
+{
+    VkImageSubresourceLayers input_layer{};
+    input_layer.aspectMask = (VK_IMAGE_ASPECT_COLOR_BIT); // TODO
+    input_layer.layerCount = 1;
+
+    VkImageBlit region{};
+    region.srcSubresource = input_layer;
+    region.dstSubresource = input_layer;
+
+    region.srcOffsets[0] = { (int32_t)src_rect.x0, (int32_t)src_rect.y0, 0 };
+    region.srcOffsets[1] = { (int32_t)src_rect.x1, (int32_t)src_rect.y1, 1 };
+
+    region.dstOffsets[0] = { (int32_t)dst_rect.x0, (int32_t)dst_rect.y0, 0 };
+    region.dstOffsets[1] = { (int32_t)dst_rect.x1, (int32_t)dst_rect.y1, 1 };
+
+    vkCmdBlitImage(
+        command_buffer->GetCommandBuffer(),
+        src->GetGPUImage()->image,
+        GPUMemory::GetImageLayout(src->GetGPUImage()->GetResourceState()),
+        this->GetGPUImage()->image,
+        GPUMemory::GetImageLayout(this->GetGPUImage()->GetResourceState()),
+        1,
+        &region,
+        ToVkFilter(this->GetFilterMode())
+    );
+
+    HYPERION_RETURN_OK;
 }
 
 Result Image::GenerateMipmaps(

@@ -128,12 +128,16 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
     if (IsRenderableBucket()) { // add gbuffer attachments
         AttachmentRef *attachment_ref;
 
+        auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
+            engine->GetInstance()->swapchain->extent,
+            engine->GetDefaultFormat(gbuffer_textures[0]),
+            nullptr
+        );
+        
+        //framebuffer_image->SetFilterMode(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
+
         attachments.push_back(std::make_unique<renderer::Attachment>(
-            std::make_unique<renderer::FramebufferImage2D>(
-                engine->GetInstance()->swapchain->extent,
-                engine->GetDefaultFormat(gbuffer_textures[0]),
-                nullptr
-            ),
+            std::move(framebuffer_image),
             RenderPassStage::SHADER
         ));
 
@@ -147,12 +151,14 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
         render_pass->GetRenderPass().AddAttachmentRef(attachment_ref);
 
         for (UInt i = 1; i < gbuffer_textures.size() - 1 /* because color and depth already accounted for*/; i++) {
+            auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
+                engine->GetInstance()->swapchain->extent,
+                engine->GetDefaultFormat(gbuffer_textures[i]),
+                nullptr
+            );
+
             attachments.push_back(std::make_unique<renderer::Attachment>(
-                std::make_unique<renderer::FramebufferImage2D>(
-                    engine->GetInstance()->swapchain->extent,
-                    engine->GetDefaultFormat(gbuffer_textures[i]),
-                    nullptr
-                ),
+                std::move(framebuffer_image),
                 RenderPassStage::SHADER
             ));
 
