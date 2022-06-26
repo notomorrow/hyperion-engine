@@ -74,12 +74,15 @@ struct IDBase {
 };
 
 template <class Type>
-struct ID : IDBase {};
+struct ComponentID : IDBase {};
+
+class RenderObject {};
 
 template <class Type>
-class EngineComponentBase : public CallbackTrackable<EngineCallbacks> {
+class EngineComponentBase : public CallbackTrackable<EngineCallbacks>
+{
 public:
-    using ID = ID<Type>;
+    using ID                = ComponentID<Type>;
     using ComponentInitInfo = ComponentInitInfo<Type>;
 
     static constexpr ID empty_id = ID{0};

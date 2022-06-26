@@ -14,7 +14,10 @@ using renderer::Extent2D;
 using renderer::AttachmentRef;
 using renderer::Attachment;
 
-class Framebuffer : public EngineComponentBase<STUB_CLASS(Framebuffer)> {
+class Framebuffer
+    : public EngineComponentBase<STUB_CLASS(Framebuffer)>,
+      public RenderObject
+{
 public:
     Framebuffer(Extent2D extent, Ref<RenderPass> &&render_pass);
     Framebuffer(const Framebuffer &other) = delete;

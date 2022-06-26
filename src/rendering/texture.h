@@ -21,7 +21,10 @@ using renderer::Extent2D;
 using renderer::Extent3D;
 using renderer::CommandBuffer;
 
-class Texture : public EngineComponentBase<STUB_CLASS(Texture)> {
+class Texture
+    : public EngineComponentBase<STUB_CLASS(Texture)>,
+      public RenderObject
+{
 public:
     Texture(
         Extent3D extent,

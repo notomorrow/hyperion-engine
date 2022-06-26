@@ -10,6 +10,7 @@
 #include "texture.h"
 #include "mesh.h"
 #include "light.h"
+#include <ui/ui_scene.h>
 #include "../animation/skeleton.h"
 #include "../scene/scene.h"
 #include <rendering/rt/blas.h>
@@ -41,6 +42,7 @@ struct Resources {
     HYP_DEF_REF_COUNTED(Skeleton,          skeletons);
     HYP_DEF_REF_COUNTED(Scene,             scenes);
     HYP_DEF_REF_COUNTED(Blas,              blas);
+    HYP_DEF_REF_COUNTED(UIObject,          ui_objects);
 
 #undef HYP_DEF_REF_COUNTED
 

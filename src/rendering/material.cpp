@@ -54,8 +54,11 @@ void Material::Init(Engine *engine)
 #endif
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
-            m_textures.Clear();
-
+            for (size_t i = 0; i < m_textures.Size(); i++) {
+                if (auto &texture = m_textures.ValueAt(i)) {
+                    engine->SafeReleaseRenderable(std::move(texture));
+                }
+            }
 
 #if !HYP_FEATURES_BINDLESS_TEXTURES
             EnqueueDescriptorSetDestroy();
@@ -265,6 +268,10 @@ void Material::SetTexture(TextureKey key, Ref<Texture> &&texture)
 {
     if (m_textures[key] == texture) {
         return;
+    }
+
+    if (m_textures[key] != nullptr) {
+        GetEngine()->SafeReleaseRenderable(std::move(m_textures[key]));
     }
 
     if (texture && IsReady()) {

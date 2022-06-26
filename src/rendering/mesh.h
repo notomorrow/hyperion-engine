@@ -28,7 +28,10 @@ using renderer::PackedIndex;
 using renderer::AccelerationStructure;
 using renderer::AccelerationGeometry;
 
-class Mesh : public EngineComponentBase<STUB_CLASS(Mesh)> {
+class Mesh
+    : public EngineComponentBase<STUB_CLASS(Mesh)>,
+      public RenderObject
+{
 public:
     using Index = UInt32;
 

@@ -58,15 +58,13 @@ void BindlessStorage::AddResource(const Texture *texture)
     m_texture_ids.Insert(texture->GetId());
 }
 
-void BindlessStorage::RemoveResource(const Texture *texture)
+void BindlessStorage::RemoveResource(IDBase id)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    if (texture == nullptr) {
+    if (id == Texture::empty_id) {
         return;
     }
-
-    const auto id = texture->GetId();
 
     for (auto *descriptor_set : m_descriptor_sets) {
         auto *descriptor = descriptor_set->GetDescriptor(bindless_descriptor_index);

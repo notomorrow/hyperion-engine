@@ -38,7 +38,7 @@ public:
     /*! \brief Add a texture to the bindless descriptor set. */
     void AddResource(const Texture *texture);
     /*! \brief Remove the given texture from the bindless descriptor set. */
-    void RemoveResource(const Texture *texture);
+    void RemoveResource(IDBase id);
     /*! \brief Mark a resource as having changed, to be queued for update. */
     void MarkResourceChanged(const Texture *texture);
 
