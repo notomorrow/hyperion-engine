@@ -41,8 +41,7 @@ public:
     FullScreenPass(
         Ref<Shader> &&shader,
         DescriptorKey descriptor_key,
-        UInt sub_descriptor_index,
-        Image::FilterMode filter_mode = Image::FilterMode::TEXTURE_FILTER_NEAREST
+        UInt sub_descriptor_index
     );
     FullScreenPass(const FullScreenPass &) = delete;
     FullScreenPass &operator=(const FullScreenPass &) = delete;
@@ -84,10 +83,8 @@ protected:
                                                                      
     std::vector<std::unique_ptr<Attachment>>                         m_attachments;
 
-    Image::FilterMode                                                m_filter_mode;
-    
     PushConstantData                                                 m_push_constant_data;
-                                                                     
+
 private:                                                             
     DescriptorKey                                                    m_descriptor_key;
     UInt                                                             m_sub_descriptor_index;

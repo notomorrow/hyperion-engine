@@ -111,7 +111,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/living_room/living_room.obj", //"sponza/sponza.obj", //
+            "models/sponza/sponza.obj", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -125,7 +125,7 @@ public:
         auto sphere = engine->assets.Load<Node>("models/material_sphere/material_sphere.obj");
         sphere->Scale(2.0f);
         sphere->SetName("sphere");
-        sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
+        // sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
         sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
         sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
         sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
@@ -214,7 +214,7 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        test_model->Scale(10.15f);
+        test_model->Scale(0.15f);
         scene->GetRootNode()->AddChild(std::move(test_model));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
@@ -425,14 +425,14 @@ public:
             //scene->GetCamera()->SetTarget(suzanne->GetWorldTranslation());
         }
 
-        if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
+        // if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
             //if (auto &material = sphere->GetChild(0)->GetSpatial()->GetMaterial()) {
             //    material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer * 0.5f) * 0.5f + 0.5f);
             //    material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);////std::cos(timer) * 0.5f + 0.5f);
             //}
             //sphere->SetLocalTranslation(Vector3(7, 7, 3));
-            sphere->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 6.0f);
-        }
+            // sphere->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 6.0f);
+        // }
         
         // material_test_obj->SetLocalScale(3.45f);
         //material_test_obj->SetLocalRotation(Quaternion({0, 1, 0}, timer * 0.25f));
@@ -907,7 +907,7 @@ int main()
 
 
         if (auto num_enqueued = engine->render_scheduler.NumEnqueued()) {
-            engine->render_scheduler.Flush([command_buffer, frame_index](auto &fn) {
+            engine->render_scheduler.Flush([command_buffer, frame_index](v2::RenderFunctor &fn) {
                 HYPERION_ASSERT_RESULT(fn(command_buffer, frame_index));
             });
 
@@ -997,11 +997,11 @@ int main()
 #endif
 
 #if HYPERION_VK_TEST_VCT
-        //if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.1f) {
+        if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.1f) {
             vct->OnRender(engine, frame);
-        //    tmp_render_timer = 0.001f;
-        //}
-        //tmp_render_timer += 0.001f;
+           tmp_render_timer = 0.001f;
+        }
+        tmp_render_timer += 0.001f;
 #endif
 
         engine->RenderDeferred(frame);

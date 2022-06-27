@@ -10,6 +10,7 @@
 #include "lib/atomic_semaphore.h"
 
 #include <util.h>
+#include <util/defines.h>
 
 #include <functional>
 #include <atomic>
@@ -17,6 +18,7 @@
 #include <tuple>
 #include <utility>
 #include <deque>
+#include <type_traits>
 
 #if !HYP_SCHEDULER_USE_ATOMIC_LOCK
 #include <mutex>
@@ -54,11 +56,30 @@ struct ScheduledFunction {
     Function            fn;
 
     constexpr static ScheduledFunctionId empty_id = ScheduledFunctionId{0};
+
+
+    template <class Lambda>
+    ScheduledFunction(Lambda &&lambda)
+    {
+        fn = std::forward<Lambda>(lambda);
+    }
+
+    ScheduledFunction() = default;
+    ScheduledFunction(const ScheduledFunction &other) = default;
+    ScheduledFunction &operator=(const ScheduledFunction &other) = default;
+    ScheduledFunction(ScheduledFunction &&other) noexcept = default;
+    ScheduledFunction &operator=(ScheduledFunction &&other) = default;
+    ~ScheduledFunction() = default;
+
+    template <class ...Param>
+    HYP_FORCE_INLINE ReturnType operator()(Param &&... args)
+    {
+        return fn(std::forward<Param>(args)...);
+    }
 };
 
-template <class ReturnType, class ...Args>
+template <class ScheduledFunction>
 class Scheduler {
-    using ScheduledFunction = ScheduledFunction<ReturnType, Args...>;
     //using Executor          = std::add_pointer_t<void(typename ScheduledFunction::Function &)>;
 
     using ScheduledFunctionQueue = std::deque<ScheduledFunction>;
@@ -83,11 +104,11 @@ public:
 
     /*! \brief Enqueue a function to be executed on the owner thread. This is to be
      * called from a non-owner thread. */
-    ScheduledFunctionId Enqueue(typename ScheduledFunction::Function &&fn)
+    ScheduledFunctionId Enqueue(ScheduledFunction &&fn)
     {
         std::unique_lock lock(m_mutex);
 
-        return EnqueueInternal(std::forward<typename ScheduledFunction::Function>(fn));
+        return EnqueueInternal(std::forward<ScheduledFunction>(fn));
     }
     
     /*! \brief Remove a function from the owner thread's queue, if it exists
@@ -117,7 +138,7 @@ public:
      *  else, remove the item with the given ID
      *  This is a helper function for create/destroy functions
      */
-    ScheduledFunctionId EnqueueReplace(ScheduledFunctionId &dequeue_id, typename ScheduledFunction::Function &&enqueue_fn)
+    ScheduledFunctionId EnqueueReplace(ScheduledFunctionId &dequeue_id, ScheduledFunction &&enqueue_fn)
     {
         std::unique_lock lock(m_mutex);
 
@@ -134,7 +155,7 @@ public:
             }
         }
 
-        return (dequeue_id = EnqueueInternal(std::forward<typename ScheduledFunction::Function>(enqueue_fn)));
+        return (dequeue_id = EnqueueInternal(std::forward<ScheduledFunction>(enqueue_fn)));
     }
 
     /*! Wait for all tasks to be completed in another thread.
@@ -180,7 +201,7 @@ public:
         std::unique_lock lock(m_mutex);
 
         if (!m_scheduled_functions.empty()) {
-            executor(m_scheduled_functions.front().fn);
+            executor(m_scheduled_functions.front());
 
             m_scheduled_functions.pop_front();
 
@@ -202,7 +223,7 @@ public:
         std::unique_lock lock(m_mutex);
 
         while (!m_scheduled_functions.empty()) {
-            executor(m_scheduled_functions.front().fn);
+            executor(m_scheduled_functions.front());
 
             m_scheduled_functions.pop_front();
         }
@@ -216,12 +237,11 @@ public:
     }
     
 private:
-    ScheduledFunctionId EnqueueInternal(typename ScheduledFunction::Function &&fn)
+    ScheduledFunctionId EnqueueInternal(ScheduledFunction &&fn)
     {
-        m_scheduled_functions.push_back({
-            .id = {{++m_id_counter}},
-            .fn = std::move(fn)
-        });
+        fn.id = ++m_id_counter;
+
+        m_scheduled_functions.push_back(std::forward<ScheduledFunction>(fn));
 
         ++m_num_enqueued;
 

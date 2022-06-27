@@ -155,7 +155,7 @@ Result AttachmentRef::Create(Device *device)
     AssertThrow(!m_is_created);
 
     HYPERION_BUBBLE_ERRORS(m_image_view->Create(device, m_attachment->GetImage()));
-    HYPERION_BUBBLE_ERRORS(m_sampler->Create(device, m_image_view.get()));
+    HYPERION_BUBBLE_ERRORS(m_sampler->Create(device));
 
     m_is_created = true;
 
@@ -185,7 +185,7 @@ Result AttachmentRef::Create(
         num_faces
     ));
 
-    HYPERION_BUBBLE_ERRORS(m_sampler->Create(device, m_image_view.get()));
+    HYPERION_BUBBLE_ERRORS(m_sampler->Create(device));
 
     m_is_created = true;
 

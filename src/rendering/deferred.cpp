@@ -6,6 +6,7 @@
 
 namespace hyperion::v2 {
 
+using renderer::ImageDescriptor;
 using renderer::ImageSamplerDescriptor;
 using renderer::DescriptorKey;
 using renderer::Rect;
@@ -53,7 +54,7 @@ void DeferredPass::CreateDescriptors(Engine *engine)
                 descriptor->SetSubDescriptor({
                     .element_index = ~0u,
                     .image_view    = attachment_ref->GetImageView(),
-                    .sampler       = attachment_ref->GetSampler()
+                    .sampler       = attachment_ref->GetSampler(),
                 });
             }
         }
@@ -84,6 +85,9 @@ void DeferredPass::Create(Engine *engine)
 
         m_command_buffers[i] = std::move(command_buffer);
     }
+
+    m_sampler = std::make_unique<Sampler>();
+    HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetDevice()));
     
     CreatePipeline(engine);
 }
@@ -93,6 +97,8 @@ void DeferredPass::Destroy(Engine *engine)
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         engine->SafeReleaseRenderable(std::move(m_mipmapped_results[i]));
     }
+
+    HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetDevice()));
 
     FullScreenPass::Destroy(engine); // flushes render queue
 }
@@ -108,8 +114,6 @@ void DeferredRenderer::Create(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    using renderer::ImageSamplerDescriptor;
-
     m_post_processing.Create(engine);
 
     m_pass.CreateShader(engine);
@@ -122,7 +126,7 @@ void DeferredRenderer::Create(Engine *engine)
         auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
         
-        descriptor_set_pass->AddDescriptor<ImageSamplerDescriptor>(0);
+        descriptor_set_pass->AddDescriptor<ImageDescriptor>(0);
 
         UInt attachment_index = 0;
 
@@ -131,17 +135,15 @@ void DeferredRenderer::Create(Engine *engine)
             descriptor_set_pass
                 ->GetDescriptor(0)
                 ->SetSubDescriptor({
-                    .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView(),
-                    .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetSampler()
+                    .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
                 });
         }
-        
+
         /* Depth texture */
         descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(1)
+            ->AddDescriptor<ImageDescriptor>(1)
             ->SetSubDescriptor({
-                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView(),
-                .sampler    = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetSampler()
+                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
             });
 
         /* Mip chain */
@@ -149,7 +151,14 @@ void DeferredRenderer::Create(Engine *engine)
             ->AddDescriptor<ImageSamplerDescriptor>(2)
             ->SetSubDescriptor({
                 .image_view = &m_pass.GetMipmappedResults()[i]->GetImageView(),
-                .sampler    = &m_pass.GetMipmappedResults()[i]->GetSampler() // TODO: reuse sampler
+                .sampler    = &m_pass.GetMipmappedResults()[i]->GetSampler()
+            });
+
+        /* Gbuffer sampler */
+        descriptor_set_pass
+            ->AddDescriptor<renderer::SamplerDescriptor>(3)
+            ->SetSubDescriptor({
+                .sampler = m_pass.GetSampler().get()
             });
     }
     

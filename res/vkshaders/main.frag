@@ -14,7 +14,7 @@ layout(binding = 2) uniform MaterialBlock {
     vec3 light_direction;
 } Material;
 
-layout(set = 1, binding = 0) uniform sampler2D fboTex;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 0) uniform sampler2D fboTex;
 
 void main() {
     vec3 view_vector = normalize(v_camera_position - v_position);

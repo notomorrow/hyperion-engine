@@ -49,9 +49,9 @@ void Material::Init(Engine *engine)
 
 #if !HYP_FEATURES_BINDLESS_TEXTURES
         EnqueueDescriptorSetCreate();
-#else
-        SetReady(true);
 #endif
+
+        SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
             for (size_t i = 0; i < m_textures.Size(); i++) {
@@ -61,6 +61,7 @@ void Material::Init(Engine *engine)
             }
 
 #if !HYP_FEATURES_BINDLESS_TEXTURES
+            // TODO: SafeReleaseRenderable for descriptor set
             EnqueueDescriptorSetDestroy();
 #endif
 
@@ -94,11 +95,15 @@ void Material::EnqueueDescriptorSetCreate()
 
             auto &descriptor_pool = engine->GetInstance()->GetDescriptorPool();
 
-            auto *descriptor_set = descriptor_pool.AddDescriptorSet(std::make_unique<DescriptorSet>(
-                parent_index,
-                static_cast<UInt>(index),
-                false
-            ));
+            auto *descriptor_set = descriptor_pool.AddDescriptorSet(
+                engine->GetDevice(),
+                std::make_unique<DescriptorSet>(
+                    parent_index,
+                    static_cast<UInt>(index),
+                    false
+                ),
+                false // do not create
+            );
 
             auto *sampler_descriptor = descriptor_set->AddDescriptor<SamplerDescriptor>(DescriptorKey::SAMPLER);
 
@@ -128,8 +133,6 @@ void Material::EnqueueDescriptorSetCreate()
 
             m_descriptor_sets[frame_index] = descriptor_set;
         }
-        
-        SetReady(true);
 
         HYPERION_RETURN_OK;
     });

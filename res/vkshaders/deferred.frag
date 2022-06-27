@@ -24,7 +24,7 @@ layout(location=2) out vec4 output_positions;
 vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
-#define HYP_VCT_ENABLED 1
+#define HYP_VCT_ENABLED 0
 #define HYP_SSR_ENABLED 1
 
 #if HYP_VCT_ENABLED
@@ -35,8 +35,8 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 50000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 150000.0
+#define IBL_INTENSITY 30000.0
+#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
 #define IRRADIANCE_MULTIPLIER 1.0
 #define ROUGHNESS_LOD_MULTIPLIER 12.0
 #define SSAO_DEBUG 0
@@ -88,7 +88,7 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
 
 #if HYP_SSR_ENABLED
 
-const float rayStep = 0.15f;
+const float rayStep = 0.45;
 const int iterationCount = 100;
 const float distanceBias = 0.02f;
 const float offset = 0.01f;
@@ -100,7 +100,7 @@ const bool isBinarySearchEnabled = false;
 const bool debugDraw = false;
 const float eyeFadeStart = 0.2;
 const float eyeFadeEnd = 0.95;
-const float maxRayDistance = 32.0;
+const float maxRayDistance = 64.0;
 const float ssr_screen_edge_fade_start = 0.7;
 const float ssr_screen_edge_fade_end = 0.9;
 
@@ -187,7 +187,7 @@ vec4 ConeTraceSSR(vec2 raySS, vec2 positionSS, float roughness)
 
     // convert to cone angle (maximum extent of the specular lobe aperture)
     // only want half the full cone angle since we're slicing the isosceles triangle in half to get a right triangle
-    float coneTheta = VCT_SPECULAR_RATIO(roughness * 2.0);// * 0.5;
+    float coneTheta = 0.01;// * 0.5;
 
     // P1 = positionSS, P2 = raySS, adjacent length = ||P2 - P1||
     vec2 deltaP = raySS.xy - positionSS.xy;
@@ -248,7 +248,7 @@ vec4 SSR(vec3 position, vec3 reflection, float roughness) {
 	for (; i < iterationCount && distance(marchingPosition, position) < maxRayDistance; i++) {
 		screenPosition = generateProjectedPosition(marchingPosition);
 
-		depthFromScreen = abs(generatePositionFromDepth(screenPosition, texture(gbuffer_depth_texture, screenPosition).x).z);
+		depthFromScreen = abs(generatePositionFromDepth(screenPosition, SampleGBuffer(gbuffer_depth_texture, screenPosition).x).z);
 		delta = abs(marchingPosition.z) - depthFromScreen;
 
         //if (depthFromScreen >= maxRayDistance) {
@@ -265,12 +265,12 @@ vec4 SSR(vec3 position, vec3 reflection, float roughness) {
             alpha = clamp(alpha, 0.0, 1.0);
 
 
-            vec4 conetrace_result = ConeTraceSSR(screenPosition, generateProjectedPosition(position), roughness);
+            // vec4 conetrace_result = ConeTraceSSR(screenPosition, generateProjectedPosition(position), roughness);
 
-            conetrace_result *= alpha;
+            // conetrace_result *= alpha;
 
-            return conetrace_result;
-            //return vec4(textureLod(gbuffer_mip_chain, screenPosition, 0.0).xyz * alpha, alpha);
+            // return conetrace_result;
+            return vec4(textureLod(gbuffer_mip_chain, screenPosition, 0.0));
 		}
 		if (isBinarySearchEnabled && delta > 0) {
 			break;
@@ -347,13 +347,13 @@ vec4 SSR(vec3 position, vec3 reflection, float roughness) {
 vec4 ScreenSpaceReflection2(float roughness)
 {
 	vec2 UV = texcoord / vec2(float(scene.resolution_x), float(scene.resolution_y));
-    float depth = texture(gbuffer_depth_texture, texcoord).r;
+    float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
     vec4 position = vec4(generatePositionFromDepth(texcoord, depth), 1.0);
-	vec4 normal = scene.view * vec4(DecodeNormal(texture(gbuffer_normals_texture, texcoord)), 0.0);
+	vec4 normal = scene.view * vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 0.0);
 
-	if (roughness > 0.99) {
-		return vec4(0.0);
-	}
+	// if (roughness > 0.99) {
+	// 	return vec4(0.0);
+	// }
 
 	vec3 reflectionDirection = normalize(reflect(position.xyz, normalize(normal.xyz)));
 	
@@ -371,12 +371,12 @@ vec4 ScreenSpaceReflection2(float roughness)
 
 void main()
 {
-    vec4 albedo   = texture(gbuffer_albedo_texture, texcoord);
-    vec4 normal   = vec4(DecodeNormal(texture(gbuffer_normals_texture, texcoord)), 1.0);
-    vec4 tangent   = vec4(DecodeNormal(texture(gbuffer_tangents_texture, texcoord)), 1.0);
-    vec4 bitangent   = vec4(DecodeNormal(texture(gbuffer_bitangents_texture, texcoord)), 1.0);
-    vec4 position = texture(gbuffer_positions_texture, texcoord);
-    vec4 material = texture(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
+    vec4 albedo    = SampleGBuffer(gbuffer_albedo_texture, texcoord);
+    vec4 normal    = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
+    vec4 tangent   = vec4(DecodeNormal(SampleGBuffer(gbuffer_tangents_texture, texcoord)), 1.0);
+    vec4 bitangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_bitangents_texture, texcoord)), 1.0);
+    vec4 position  = SampleGBuffer(gbuffer_positions_texture, texcoord);
+    vec4 material  = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
     
     bool perform_lighting = albedo.a > 0.0;
     
@@ -390,9 +390,9 @@ void main()
     float ev100 = log2((aperture * aperture) / shutter * 100.0f / sensitivity);
     float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
     
-    vec3 N = normal.xyz;
-    vec3 T = tangent.xyz;
-    vec3 B = bitangent.xyz;
+    vec3 N = normalize(normal.xyz);
+    vec3 T = normalize(tangent.xyz);
+    vec3 B = normalize(bitangent.xyz);
     vec3 L = normalize(scene.light_direction.xyz);
     vec3 V = normalize(scene.camera_position.xyz - position.xyz);
     vec3 R = normalize(reflect(-V, N));
@@ -491,6 +491,7 @@ void main()
         //float micro_shadow_sqr = micro_shadow * micro_shadow;
 
         result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao * shadow);
+        result = reflections.rgb;
     } else {
         result = albedo.rgb;
     }
@@ -500,7 +501,5 @@ void main()
 #endif
 
     output_color = vec4(result, 1.0);
-
-    output_color.rgb = Tonemap(output_color.rgb);
-
+    // output_color.rgb = Tonemap(output_color.rgb);
 }

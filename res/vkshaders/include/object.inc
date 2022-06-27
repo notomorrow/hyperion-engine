@@ -1,3 +1,5 @@
+#include "defines.inc"
+
 struct Object {
     mat4 model_matrix;
     uint has_skinning;
@@ -11,6 +13,6 @@ struct Object {
     vec4 world_aabb_min;
 };
 
-layout(std430, set = 3, binding = 1, row_major) readonly buffer ObjectBuffer {
+layout(std430, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 1, row_major) readonly buffer ObjectBuffer {
     Object object;
 };

@@ -21,6 +21,7 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::GBUFFER_TEXTURES,   0},
             {DescriptorKey::GBUFFER_DEPTH,      1},
             {DescriptorKey::GBUFFER_MIP_CHAIN,  2},
+            {DescriptorKey::GBUFFER_SAMPLER,    3},
             {DescriptorKey::DEFERRED_RESULT,    4},
             {DescriptorKey::POST_FX_PRE_STACK,  8},
             {DescriptorKey::POST_FX_POST_STACK, 9},
@@ -67,8 +68,8 @@ const decltype(DescriptorSet::desired_indices) DescriptorSet::desired_indices = 
     { DESCRIPTOR_SET_INDEX_GLOBAL,            1 },
     { DESCRIPTOR_SET_INDEX_SCENE,             2 },
     { DESCRIPTOR_SET_INDEX_OBJECT,            3 },
-    { DESCRIPTOR_SET_INDEX_SCENE_FRAME_1,     4 },
-    { DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1,    5 },
+    { DESCRIPTOR_SET_INDEX_SCENE_FRAME_1,     6 },
+    { DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1,    7 },
 #if HYP_FEATURES_BINDLESS_TEXTURES
     { DESCRIPTOR_SET_INDEX_BINDLESS,          6 },
     { DESCRIPTOR_SET_INDEX_BINDLESS_FRAME_1,  7 }, 
@@ -76,10 +77,10 @@ const decltype(DescriptorSet::desired_indices) DescriptorSet::desired_indices = 
     { DESCRIPTOR_SET_INDEX_RAYTRACING,        9 },
     { DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1,    10 }
 #else
-    { DESCRIPTOR_SET_INDEX_VOXELIZER,         6 },
-    { DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, 7 },
-    { DESCRIPTOR_SET_INDEX_RAYTRACING,        8 }, // todo: fix this crap up
-    { DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1,    9 }
+    { DESCRIPTOR_SET_INDEX_VOXELIZER,         4 },
+    { DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, 5 },
+    { DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1,    8 }
+    //{ DESCRIPTOR_SET_INDEX_RAYTRACING,        8 } // todo: fix this crap up
 #endif
 };
 
@@ -179,7 +180,7 @@ UInt DescriptorSet::GetDesiredIndex(Index index)
         return static_cast<UInt>(index);
     }
 
-    return *it;
+    return it->second;
 }
 
 DescriptorSet::DescriptorSet(Index index, UInt real_index, bool bindless)
@@ -195,6 +196,7 @@ DescriptorSet::DescriptorSet(Index index, UInt real_index, bool bindless)
 
 DescriptorSet::~DescriptorSet()
 {
+    AssertThrowMsg(m_set == VK_NULL_HANDLE, "Set not destroyed!");
 }
 
 Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
@@ -309,6 +311,7 @@ Result DescriptorSet::Destroy(Device *device)
     ));
     
     m_descriptor_pool = nullptr;
+    m_set = VK_NULL_HANDLE;
     
     HYPERION_RETURN_OK;
 }
@@ -579,24 +582,46 @@ Result DescriptorPool::Destroy(Device *device)
     return result;
 }
 
-DescriptorSet *DescriptorPool::AddDescriptorSet(std::unique_ptr<DescriptorSet> &&descriptor_set)
+DescriptorSet *DescriptorPool::AddDescriptorSet(
+    Device *device,
+    std::unique_ptr<DescriptorSet> &&descriptor_set,
+    bool should_create
+)
 {
     AssertThrow(descriptor_set != nullptr);
 
     const UInt index = descriptor_set->GetRealIndex();
     
     // remove from any 'pending removal' queues so it doesn't get removed directly after adding
-    for (auto &pending_removal_queue : m_descriptor_sets_pending_destruction) {
-        auto it = std::find(
-            pending_removal_queue.begin(),
-            pending_removal_queue.end(),
-            index
-        );
+    // for (auto &pending_removal_queue : m_descriptor_sets_pending_destruction) {
+    //     auto it = std::find(
+    //         pending_removal_queue.begin(),
+    //         pending_removal_queue.end(),
+    //         index
+    //     );
         
-        if (it != pending_removal_queue.end()) {
-            pending_removal_queue.erase(it);
-        }
-    }
+    //     if (it != pending_removal_queue.end()) {
+    //         pending_removal_queue.erase(it);
+    //     }
+    // }
+
+    // if (IsCreated()) { // already created, dynamically adding descriptor sets
+    //     if (index < m_descriptor_sets.size()) {
+    //         AssertThrowMsg(
+    //             m_descriptor_sets[index] == nullptr,
+    //             "Descriptor set at index %u not nullptr! This would cause it to be overwritten.",
+    //             index
+    //         );
+    //     }
+
+
+    //     m_descriptor_sets_pending_addition.push_back(DescriptorSetPendingEntry {
+    //         .index          = index,
+    //         .descriptor_set = std::move(descriptor_set)
+    //     });
+
+    //     return m_descriptor_sets_pending_addition.back().descriptor_set.get();
+    // }
     
     if (index >= m_descriptor_sets.size()) {
         if (index == m_descriptor_sets.size()) {
@@ -606,7 +631,19 @@ DescriptorSet *DescriptorPool::AddDescriptorSet(std::unique_ptr<DescriptorSet> &
         }
     }
 
+    if (index < m_descriptor_sets.size()) {
+        AssertThrowMsg(
+            m_descriptor_sets[index] == nullptr,
+            "Descriptor set at index %u not nullptr! This would cause it to be overwritten.",
+            index
+        );
+    }
+
     m_descriptor_sets[index] = std::move(descriptor_set);
+
+    if (should_create && IsCreated()) {
+        HYPERION_ASSERT_RESULT(CreateDescriptorSet(device, index));
+    }
 
     return m_descriptor_sets[index].get();
 }
@@ -624,6 +661,15 @@ void DescriptorPool::RemoveDescriptorSet(UInt index)
     const UInt queue_index = DescriptorSet::GetFrameIndex(index);
 
     m_descriptor_sets_pending_destruction[queue_index].push_back(index);
+
+    // look through the list of items pending addition, remove from there
+    for (auto it = m_descriptor_sets_pending_addition.begin(); it != m_descriptor_sets_pending_addition.end();) {
+        if (it->index == index) {
+            it = m_descriptor_sets_pending_addition.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 Result DescriptorPool::DestroyPendingDescriptorSets(Device *device, UInt frame_index)
@@ -636,6 +682,43 @@ Result DescriptorPool::DestroyPendingDescriptorSets(Device *device, UInt frame_i
         HYPERION_BUBBLE_ERRORS(DestroyDescriptorSet(device, index));
 
         descriptor_set_queue.pop_front();
+    }
+
+    HYPERION_RETURN_OK;
+}
+
+Result DescriptorPool::AddPendingDescriptorSets(Device *device)
+{
+    for (auto it = m_descriptor_sets_pending_addition.begin(); it != m_descriptor_sets_pending_addition.end();) {
+        auto &front = m_descriptor_sets_pending_addition.front();
+
+        if (!--front.num_cycles_remaining) {
+            auto index = front.index;
+
+            if (index > m_descriptor_sets.size()) {
+                m_descriptor_sets.resize(index + 1);
+                m_descriptor_sets[index] = std::move(front.descriptor_set);
+            } else if (index == m_descriptor_sets.size()) {
+                m_descriptor_sets.push_back(std::move(front.descriptor_set));
+            } else {
+                AssertThrowMsg(
+                    m_descriptor_sets[index] == nullptr,
+                    "Descriptor set at index %u not nullptr! This would cause it to be overwritten.",
+                    index
+                );
+
+                m_descriptor_sets[index] = std::move(front.descriptor_set);
+            }
+
+            it = m_descriptor_sets_pending_addition.erase(it);
+
+            if (IsCreated()) {
+                // if already created, create the descriptor set here
+                HYPERION_BUBBLE_ERRORS(CreateDescriptorSet(device, index));
+            }
+        } else {
+            ++it;
+        }
     }
 
     HYPERION_RETURN_OK;
@@ -705,6 +788,8 @@ Result DescriptorPool::DestroyDescriptorSet(Device *device, UInt index)
             --iteration_index;
         } while (m_descriptor_sets_view[iteration_index] == VK_NULL_HANDLE);
     }
+
+    HYPERION_BUBBLE_ERRORS(descriptor_set->Destroy(device));
 
     descriptor_set.reset();
 
