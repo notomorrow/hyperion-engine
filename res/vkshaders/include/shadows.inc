@@ -57,9 +57,9 @@ float GetShadowContactHardened(int index, vec3 pos, float NdotL)
 
     const float shadow_map_depth = coord.z;
 
-    const float shadow_filter_size = 0.004;
+    const float shadow_filter_size = 0.0045;
     const float penumbra_filter_size = 0.0065;
-    const float light_size = 10.0; // affects how quickly shadows become soft
+    const float light_size = 1.0; // affects how quickly shadows become soft
 
     const float gradient_noise = InterleavedGradientNoise(texcoord * vec2(uvec2(scene.resolution_x, scene.resolution_y)));
 

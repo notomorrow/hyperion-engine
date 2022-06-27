@@ -4,14 +4,19 @@
 #include "full_screen_pass.h"
 #include "post_fx.h"
 #include "renderer.h"
+#include "texture.h"
 
 #include <rendering/backend/renderer_frame.h>
 #include <rendering/backend/renderer_image.h>
+#include <rendering/backend/renderer_image_view.h>
+#include <rendering/backend/renderer_sampler.h>
 
 namespace hyperion::v2 {
 
 using renderer::Frame;
 using renderer::Image;
+using renderer::ImageView;
+using renderer::Sampler;
 
 class DeferredPass : public FullScreenPass {
 public:
@@ -20,7 +25,7 @@ public:
     DeferredPass &operator=(const DeferredPass &other) = delete;
     ~DeferredPass();
 
-    Image *GetMipmappedResult() const { return m_mipmapped_result.get(); }
+    auto &GetMipmappedResults() { return m_mipmapped_results; }
 
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
@@ -31,7 +36,7 @@ public:
     void Render(Engine *engine, Frame *frame);
 
 private:
-    std::unique_ptr<Image> m_mipmapped_result;
+    std::array<Ref<Texture>, max_frames_in_flight>        m_mipmapped_results;
 };
 
 class DeferredRenderer : public Renderer {
