@@ -27,7 +27,7 @@ public:
     inline Image::FilterMode GetFilterMode() const { return m_filter_mode; }
     inline Image::WrapMode GetWrapMode() const { return m_wrap_mode; }
 
-    Result Create(Device *device, ImageView *image_view);
+    Result Create(Device *device);
     Result Destroy(Device *device);
 
 private:

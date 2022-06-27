@@ -54,7 +54,7 @@ void Texture::Init(Engine *engine)
 
             HYPERION_BUBBLE_ERRORS(m_image.Create(engine->GetDevice(), engine->GetInstance(), initial_state));
             HYPERION_BUBBLE_ERRORS(m_image_view.Create(engine->GetInstance()->GetDevice(), &m_image));
-            HYPERION_BUBBLE_ERRORS(m_sampler.Create(engine->GetInstance()->GetDevice(), &m_image_view));
+            HYPERION_BUBBLE_ERRORS(m_sampler.Create(engine->GetInstance()->GetDevice()));
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
             engine->shader_globals->textures.AddResource(this);

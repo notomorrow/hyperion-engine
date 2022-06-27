@@ -292,11 +292,14 @@ Result Instance::Initialize(bool load_debug_layers)
         }
 #endif
 
-        descriptor_pool.AddDescriptorSet(std::make_unique<DescriptorSet>(
-            slot,
-            i,
-            slot == DescriptorSet::Index::DESCRIPTOR_SET_INDEX_BINDLESS
-        ));
+        descriptor_pool.AddDescriptorSet(
+            GetDevice(),
+            std::make_unique<DescriptorSet>(
+                slot,
+                i,
+                slot == DescriptorSet::Index::DESCRIPTOR_SET_INDEX_BINDLESS
+            )
+        );
     }
 
     //AssertThrow(descriptor_pool.NumDescriptorSets() <= DescriptorSet::max_descriptor_sets);

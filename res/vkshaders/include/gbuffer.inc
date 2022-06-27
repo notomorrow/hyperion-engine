@@ -1,14 +1,17 @@
 #ifndef HYP_GBUFFER_GLSL
 #define HYP_GBUFFER_GLSL
 
-#define NUM_GBUFFER_TEXTURES 7
+#include "defines.inc"
+
+#define NUM_GBUFFER_TEXTURES 6
 #define HYP_GBUFFER_FLIP_Y 0
 
 #include "shared.inc"
 
-layout(set = 1, binding = 0) uniform sampler2D gbuffer_textures[NUM_GBUFFER_TEXTURES - 1];
-layout(set = 1, binding = 1) uniform sampler2D gbuffer_depth_texture;
-layout(set = 1, binding = 2) uniform sampler2D gbuffer_mip_chain;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 0) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 1) uniform texture2D gbuffer_depth_texture;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 2) uniform sampler2D gbuffer_mip_chain;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 3) uniform sampler   gbuffer_sampler;
 
 #define gbuffer_albedo_texture     (gbuffer_textures[0])
 #define gbuffer_normals_texture    (gbuffer_textures[1])
@@ -17,6 +20,11 @@ layout(set = 1, binding = 2) uniform sampler2D gbuffer_mip_chain;
 #define gbuffer_tangents_texture   (gbuffer_textures[4])
 #define gbuffer_bitangents_texture (gbuffer_textures[5])
 
-layout(set = 1, binding = 4) uniform sampler2D gbuffer_deferred_result;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 4) uniform sampler2D gbuffer_deferred_result;
+
+vec4 SampleGBuffer(texture2D tex, vec2 texcoord)
+{
+    return Texture2D(gbuffer_sampler, tex, texcoord);
+}
 
 #endif

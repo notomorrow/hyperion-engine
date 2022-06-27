@@ -21,7 +21,7 @@ namespace hyperion::v2 {
 
 struct ThreadId;
 
-class TaskThread : public Thread<Scheduler<void>>
+class TaskThread : public Thread<Scheduler<ScheduledFunction<void>>>
 {
 public:
     TaskThread(const ThreadId &thread_id, UInt target_ticks_per_second = 0)

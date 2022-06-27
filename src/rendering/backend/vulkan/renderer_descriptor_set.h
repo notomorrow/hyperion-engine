@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <map>
 #include <deque>
+#include <queue>
 #include <type_traits>
 
 namespace hyperion {
@@ -167,6 +168,7 @@ enum class DescriptorKey {
     GBUFFER_TEXTURES,
     GBUFFER_DEPTH,
     GBUFFER_MIP_CHAIN,
+    GBUFFER_SAMPLER,
     DEFERRED_RESULT,
     POST_FX_PRE_STACK,
     POST_FX_POST_STACK,
@@ -241,7 +243,7 @@ public:
     static constexpr UInt max_material_texture_samplers        = 16;
 
     static const std::map<Index, std::map<DescriptorKey, UInt>> mappings;
-    static const SparseMap<Index, UInt> desired_indices;
+    static const FlatMap<Index, UInt> desired_indices;
     static Index GetBaseIndex(UInt index); // map index to the real index used (this is per-frame stuff)
     static Index GetPerFrameIndex(Index index, UInt frame_index);
     static Index GetPerFrameIndex(Index index, UInt instance_index, UInt frame_index);
@@ -408,7 +410,11 @@ public:
     void SetDescriptorSetLayout(UInt index, VkDescriptorSetLayout layout);
 
     // return new descriptor set
-    DescriptorSet *AddDescriptorSet(std::unique_ptr<DescriptorSet> &&descriptor_set);
+    DescriptorSet *AddDescriptorSet(
+        Device *device,
+        std::unique_ptr<DescriptorSet> &&descriptor_set,
+        bool should_create = false
+    );
     DescriptorSet *GetDescriptorSet(DescriptorSet::Index index) const
         { return m_descriptor_sets[index].get(); }
 
@@ -423,6 +429,7 @@ public:
 
     Result CreateDescriptorSet(Device *device, UInt index);
     Result DestroyPendingDescriptorSets(Device *device, UInt frame_index);
+    Result AddPendingDescriptorSets(Device *device);
     Result UpdateDescriptorSets(Device *device, UInt frame_index);
 
 private:
@@ -441,7 +448,14 @@ private:
     VkDescriptorPool m_descriptor_pool;
     std::vector<VkDescriptorSet> m_descriptor_sets_view;
 
+    struct DescriptorSetPendingEntry {
+        UInt num_cycles_remaining = max_frames_in_flight;
+        UInt index;
+        std::unique_ptr<DescriptorSet> descriptor_set;
+    };
+
     // 1 for each frame in flight
+    std::vector<DescriptorSetPendingEntry> m_descriptor_sets_pending_addition;
     std::array<std::deque<UInt>, max_frames_in_flight> m_descriptor_sets_pending_destruction;
 
     bool m_is_created;
