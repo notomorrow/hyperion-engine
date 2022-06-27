@@ -27,7 +27,7 @@ layout(set = 1, binding = 25) uniform sampler3D voxel_image;
 
 // rough 0 = 0.025
 // rough 1.0 = 
-#define VCT_SPECULAR_RATIO(roughness) (mix(0.01, 2.0, roughness * roughness))//((roughness * roughness) * VCT_SPECULAR_RATIO_MULTIPLIER + VCT_SPECULAR_RATIO_MIN)
+#define VCT_SPECULAR_RATIO(roughness) (mix(0.08, 1.0, roughness))//((roughness * roughness) * VCT_SPECULAR_RATIO_MULTIPLIER + VCT_SPECULAR_RATIO_MIN)
 
 #define VCT_OFFSET_ORIGIN(normal)     (normalize(normal) * 1.5)
 
@@ -83,6 +83,10 @@ vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 T, vec3 B, float roughness)
 
 vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness)
 {
+    if (roughness >= 1.0) {
+        return vec4(0.0);
+    }
+
     const vec3 storage_coord    = VctStoragePosition(VctWorldToAabb(P + VCT_OFFSET_ORIGIN(N)));
     const vec3  voxel_coord     = vec3(storage_coord) / vec3(vct_params.extent.xyz);
     const float greatest_extent = float(vct_greatest_extent);
@@ -91,7 +95,7 @@ vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness)
 
     result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(R), VCT_SPECULAR_RATIO(roughness), VCT_SPECULAR_MAX_DIST);
 
-    return result;
+    return result * (1.0 - roughness);
 }
 
 #endif
