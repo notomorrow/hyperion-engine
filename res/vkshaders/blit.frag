@@ -36,6 +36,4 @@ void main()
     } else {
         out_color = Texture2D(gbuffer_deferred_result, v_texcoord0);
     }
-
-    out_color = textureLod(gbuffer_deferred_result, v_texcoord0, 4.0);
 }

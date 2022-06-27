@@ -141,6 +141,9 @@ struct alignas(256) SceneShaderData {
 
     float   global_timer;
     UInt32  num_environment_shadow_maps;
+
+    float camera_near;
+    float camera_far;
 };
 
 static_assert(sizeof(SceneShaderData) == 256);

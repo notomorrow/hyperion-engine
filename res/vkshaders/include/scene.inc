@@ -26,6 +26,11 @@ layout(std140, set = 2, binding = 0, row_major) readonly buffer SceneDataBlock {
 
     // 228
     uint num_environment_shadow_maps;
+
+    // 232
+    float camera_near;
+    // 236
+    float camera_far;
 } scene;
 
 struct Light {

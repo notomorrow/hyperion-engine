@@ -305,6 +305,8 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
         Int32       height;
         Vector3     light_direction;
         Float32     global_timer;
+        Float32     camera_near;
+        Float32     camera_far;
     } params = {
         .aabb            = m_aabb,
         .light_direction = Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
@@ -318,6 +320,8 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
         params.direction   = m_camera->GetDirection();
         params.width       = m_camera->GetWidth();
         params.height      = m_camera->GetHeight();
+        params.camera_near = m_camera->GetNear();
+        params.camera_far  = m_camera->GetFar();
     }
 
     engine->render_scheduler.Enqueue([this, engine, params](...) {
@@ -332,7 +336,9 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
             .aabb_max                    = params.aabb.max.ToVector4(),
             .aabb_min                    = params.aabb.min.ToVector4(),
             .global_timer                = params.global_timer,
-            .num_environment_shadow_maps = static_cast<UInt32>(m_environment->HasRenderComponent<ShadowRenderer>()) // callable on render thread only
+            .num_environment_shadow_maps = static_cast<UInt32>(m_environment->HasRenderComponent<ShadowRenderer>()), // callable on render thread only
+            .camera_near                 = params.camera_near,
+            .camera_far                  = params.camera_far
         };
 
         shader_data.environment_texture_usage = 0;

@@ -427,8 +427,8 @@ public:
                 material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer * 0.5f) * 0.5f + 0.5f);
                 material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);////std::cos(timer) * 0.5f + 0.5f);
             }
-
-            sphere->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 10.0f);
+            sphere->SetLocalTranslation(Vector3(7, 7, 3));
+            //sphere->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 6.0f);
         }
         
         // material_test_obj->SetLocalScale(3.45f);
