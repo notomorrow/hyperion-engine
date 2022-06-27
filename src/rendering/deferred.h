@@ -26,6 +26,7 @@ public:
     ~DeferredPass();
 
     auto &GetMipmappedResults() { return m_mipmapped_results; }
+    auto &GetSampler()          { return m_sampler; }
 
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);
@@ -37,6 +38,7 @@ public:
 
 private:
     std::array<Ref<Texture>, max_frames_in_flight>        m_mipmapped_results;
+    std::unique_ptr<Sampler>                              m_sampler;
 };
 
 class DeferredRenderer : public Renderer {

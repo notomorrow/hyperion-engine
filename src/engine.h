@@ -142,6 +142,31 @@ struct GraphicsPipelineAttributeSet {
     }
 };
 
+struct RenderFunctor : public ScheduledFunction<renderer::Result, CommandBuffer * /* command_buffer */, UInt /* frame_index */>
+{
+    static constexpr UInt data_buffer_size = 256;
+
+    UByte data_buffer[data_buffer_size];
+
+    RenderFunctor() = default;
+
+    template <class Lambda>
+    RenderFunctor(Lambda &&lambda)
+        : ScheduledFunction(std::forward<Lambda>(lambda))
+    {
+    }
+
+    template <class DataStruct, class Lambda>
+    RenderFunctor(DataStruct &&data_struct, Lambda &&lambda)
+        : ScheduledFunction(std::forward<Lambda>(lambda))
+    {
+        static_assert(sizeof(data_struct) <= data_buffer_size, "DataStruct does not fit into buffer!");
+        static_assert(std::is_pod_v<DataStruct>, "DataStruct must be a POD object!");
+
+        std::memcpy(&data_buffer[0], &data_struct, sizeof(data_struct));
+    }
+};
+
 /*
  * This class holds all shaders, descriptor sets, framebuffers etc. needed for pipeline generation (which it hands off to Instance)
  *
@@ -269,11 +294,7 @@ public:
     
     std::atomic_bool        m_running{false};
 
-    Scheduler<
-        renderer::Result,
-        CommandBuffer * /* command_buffer */,
-        UInt            /* frame_index */
-    > render_scheduler;
+    Scheduler<RenderFunctor> render_scheduler;
 
     GameThread game_thread;
     TaskThread terrain_thread;

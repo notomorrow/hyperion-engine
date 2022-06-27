@@ -23,7 +23,7 @@ void DummyData::Create(Engine *engine)
 
     HYPERION_ASSERT_RESULT(m_image_2d_1x1_r8.Create(device));
     HYPERION_ASSERT_RESULT(m_image_view_2d_1x1_r8.Create(device, &m_image_2d_1x1_r8));
-    HYPERION_ASSERT_RESULT(m_sampler.Create(device, &m_image_view_2d_1x1_r8));
+    HYPERION_ASSERT_RESULT(m_sampler.Create(device));
 }
 
 void DummyData::Destroy(Engine *engine)

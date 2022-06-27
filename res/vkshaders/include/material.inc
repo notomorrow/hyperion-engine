@@ -25,7 +25,7 @@ struct Material {
     U32 _pad2;
 };
 
-layout(std140, set = 3, binding = 0) readonly buffer MaterialBuffer {
+layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer MaterialBuffer {
     Material material;
 };
 

@@ -18,7 +18,7 @@ namespace hyperion::v2 {
 class Engine;
 class Game;
 
-class GameThread : public Thread<Scheduler<void, GameCounter::TickUnit>,
+class GameThread : public Thread<Scheduler<ScheduledFunction<void, GameCounter::TickUnit>>,
                                  Engine *, Game *, SystemWindow *>
 {
 public:

@@ -32,7 +32,7 @@ struct Skeleton {
 };
 
 
-layout(std140, set = 3, binding = 2, row_major) readonly buffer SkeletonBuffer {
+layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly buffer SkeletonBuffer {
     Skeleton skeleton;
 };
 

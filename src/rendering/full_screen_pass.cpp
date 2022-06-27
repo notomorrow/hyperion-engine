@@ -30,12 +30,10 @@ FullScreenPass::FullScreenPass(Ref<Shader> &&shader)
 FullScreenPass::FullScreenPass(
     Ref<Shader> &&shader,
     DescriptorKey descriptor_key,
-    UInt sub_descriptor_index,
-    Image::FilterMode filter_mode
+    UInt sub_descriptor_index
 ) : m_shader(std::move(shader)),
     m_descriptor_key(descriptor_key),
-    m_sub_descriptor_index(sub_descriptor_index),
-    m_filter_mode(filter_mode)
+    m_sub_descriptor_index(sub_descriptor_index)
 {
 }
 
@@ -133,7 +131,6 @@ void FullScreenPass::CreateDescriptors(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto &framebuffer = m_framebuffers[i]->GetFramebuffer();
     
@@ -177,7 +174,6 @@ void FullScreenPass::CreatePipeline(Engine *engine)
 
 void FullScreenPass::Destroy(Engine *engine)
 {
-
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         if (m_framebuffers[i] != nullptr) {
             for (auto &attachment : m_attachments) {
@@ -307,12 +303,14 @@ void FullScreenPass::Render(Engine *engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    m_framebuffers[frame->GetFrameIndex()]->BeginCapture(frame->GetCommandBuffer());
+    const auto frame_index = frame->GetFrameIndex();
 
-    auto *secondary_command_buffer = m_command_buffers[frame->GetFrameIndex()].get();
+    m_framebuffers[frame_index]->BeginCapture(frame->GetCommandBuffer());
+
+    auto *secondary_command_buffer = m_command_buffers[frame_index].get();
     HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(frame->GetCommandBuffer()));
 
-    m_framebuffers[frame->GetFrameIndex()]->EndCapture(frame->GetCommandBuffer());
+    m_framebuffers[frame_index]->EndCapture(frame->GetCommandBuffer());
 }
 
 } // namespace hyperion::v2

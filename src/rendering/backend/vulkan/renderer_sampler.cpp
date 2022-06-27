@@ -1,7 +1,6 @@
 #include "renderer_sampler.h"
 #include "renderer_device.h"
 #include "renderer_features.h"
-#include "renderer_image_view.h"
 
 #include <system/debug.h>
 
@@ -19,7 +18,7 @@ Sampler::~Sampler()
     AssertExitMsg(m_sampler == nullptr, "sampler should have been destroyed");
 }
 
-Result Sampler::Create(Device *device, ImageView *image_view)
+Result Sampler::Create(Device *device)
 {
     VkSamplerCreateInfo sampler_info{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     sampler_info.magFilter    = Image::ToVkFilter(m_filter_mode);
