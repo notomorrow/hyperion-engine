@@ -426,12 +426,11 @@ float SSRAlpha(vec3 dir, vec3 origin, vec3 hitPosition)
 
 vec4 ConeTraceSSR(vec2 raySS, vec2 positionSS, float roughness)
 {
-    float gloss = 1.0 - 0.0;// - specularAll.a;
-    float specularPower = 400.0;//roughnessToSpecularPower(0.5);
+    float gloss = 1.0 - roughness;// - specularAll.a;
 
     // convert to cone angle (maximum extent of the specular lobe aperture)
     // only want half the full cone angle since we're slicing the isosceles triangle in half to get a right triangle
-    float coneTheta = 0.001; //specularPowerToConeAngle(specularPower) * 0.5f;
+    float coneTheta = mix(0.01, 1.0, roughness);//VCT_SPECULAR_RATIO(roughness); //specularPowerToConeAngle(specularPower) * 0.5f;
 
     // P1 = positionSS, P2 = raySS, adjacent length = ||P2 - P1||
     vec2 deltaP = raySS.xy - positionSS.xy;
@@ -511,7 +510,11 @@ vec4 SSR(vec3 position, vec3 reflection, float roughness) {
             alpha = clamp(alpha, 0.0, 1.0);
 
 
-            return ConeTraceSSR(screenPosition, generateProjectedPosition(position), 0.0);
+            vec4 conetrace_result = ConeTraceSSR(screenPosition, generateProjectedPosition(position), roughness);
+
+            conetrace_result *= alpha;
+
+            return conetrace_result;
             //return vec4(textureLod(gbuffer_mip_chain, screenPosition, 0.0).xyz * alpha, alpha);
 		}
 		if (isBinarySearchEnabled && delta > 0) {
