@@ -52,7 +52,7 @@ vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
 #if SSAO_MIST
 float CalculateMist()
 {
-    float depth = texture(gbuffer_depth_texture, texcoord).r;
+    float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
     float depth_mist = -CAP_MAX_DISTANCE * CAP_MIN_DISTANCE / (depth * (CAP_MAX_DISTANCE - CAP_MIN_DISTANCE) - CAP_MAX_DISTANCE);
     
     return clamp((depth_mist - SSAO_MIST_START) / SSAO_MIST_END, 0.0, 1.0);
@@ -61,7 +61,7 @@ float CalculateMist()
 
 float ReadDepth(vec2 coord)
 {
-    float depth = texture(gbuffer_depth_texture, coord).r;
+    float depth = SampleGBuffer(gbuffer_depth_texture, coord).r;
     
     if (coord.x < 0.0 || coord.y < 0.0) {
         return 1.0;

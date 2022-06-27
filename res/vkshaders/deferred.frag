@@ -85,10 +85,10 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
 
 void main()
 {
-    vec4 albedo   = texture(gbuffer_albedo_texture, texcoord);
-    vec4 normal   = vec4(DecodeNormal(texture(gbuffer_normals_texture, texcoord)), 1.0);
-    vec4 position = texture(gbuffer_positions_texture, texcoord);
-    vec4 material = texture(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
+    vec4 albedo   = SampleGBuffer(gbuffer_albedo_texture, texcoord);
+    vec4 normal   = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
+    vec4 position = SampleGBuffer(gbuffer_positions_texture, texcoord);
+    vec4 material = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
     
     bool perform_lighting = albedo.a > 0.0;
     
