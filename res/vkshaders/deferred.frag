@@ -19,7 +19,6 @@ layout(location=2) out vec4 output_positions;
 
 #include "include/scene.inc"
 #include "include/brdf.inc"
-#include "include/tonemap.inc"
 
 vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
@@ -430,7 +429,7 @@ vec4 ConeTraceSSR(vec2 raySS, vec2 positionSS, float roughness)
 
     // convert to cone angle (maximum extent of the specular lobe aperture)
     // only want half the full cone angle since we're slicing the isosceles triangle in half to get a right triangle
-    float coneTheta = mix(0.01, 1.0, roughness);//VCT_SPECULAR_RATIO(roughness); //specularPowerToConeAngle(specularPower) * 0.5f;
+    float coneTheta = VCT_SPECULAR_RATIO(roughness);//mix(0.01, 1.0, roughness * roughness);//VCT_SPECULAR_RATIO(roughness); //specularPowerToConeAngle(specularPower) * 0.5f;
 
     // P1 = positionSS, P2 = raySS, adjacent length = ||P2 - P1||
     vec2 deltaP = raySS.xy - positionSS.xy;
@@ -738,8 +737,6 @@ void main()
         result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao * shadow);
         //result = (irradiance * IRRADIANCE_MULTIPLIER) * (exposure * IBL_INTENSITY);
 
-        //result = screen_space_reflections.rgb;
-
     } else {
         result = albedo.rgb;
     }
@@ -748,8 +745,5 @@ void main()
     result = vec3(ao);
 #endif
 
-    output_color = vec4(Tonemap(result), 1.0);
-
-   // output_color.rgb = result;
-
+    output_color = vec4(result, 1.0);
 }
