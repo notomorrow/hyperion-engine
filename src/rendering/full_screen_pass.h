@@ -26,10 +26,13 @@ using renderer::PerFrameData;
 using renderer::VertexAttributeSet;
 using renderer::DescriptorKey;
 using renderer::Image;
+using renderer::Pipeline;
 
 class Engine;
 
 class FullScreenPass {
+    using PushConstantData = Pipeline::PushConstantData;
+
 public:
     static std::unique_ptr<Mesh> full_screen_quad;
     
@@ -58,6 +61,10 @@ public:
                                                       
     UInt GetSubDescriptorIndex() const                { return m_sub_descriptor_index; }
 
+    PushConstantData &GetPushConstants()              { return m_push_constant_data; }
+    const PushConstantData &GetPushConstants() const  { return m_push_constant_data; }
+    void SetPushConstants(const PushConstantData &pc) { m_push_constant_data = pc; }
+
     void CreateRenderPass(Engine *engine);
     void Create(Engine *engine);
     void CreateDescriptors(Engine *engine);
@@ -69,7 +76,6 @@ public:
     void Record(Engine *engine, UInt frame_index);
 
 protected:
-    
     std::array<std::unique_ptr<CommandBuffer>, max_frames_in_flight> m_command_buffers;
     std::array<Ref<Framebuffer>, max_frames_in_flight>               m_framebuffers;
     Ref<Shader>                                                      m_shader;
@@ -79,6 +85,8 @@ protected:
     std::vector<std::unique_ptr<Attachment>>                         m_attachments;
 
     Image::FilterMode                                                m_filter_mode;
+    
+    PushConstantData                                                 m_push_constant_data;
                                                                      
 private:                                                             
     DescriptorKey                                                    m_descriptor_key;

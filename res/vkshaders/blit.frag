@@ -38,5 +38,5 @@ void main()
         out_color = Texture2D(gbuffer_deferred_result, v_texcoord0);
     }
 
-    out_color = vec4(Tonemap(out_color.rgb), 1.0);
+    //out_color = vec4(Tonemap(out_color.rgb), 1.0);
 }

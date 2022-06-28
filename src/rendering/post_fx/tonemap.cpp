@@ -1,18 +1,18 @@
-#include "ssao.h"
+#include "tonemap.h"
 #include <rendering/shader.h>
 #include <rendering/post_fx.h>
 #include <engine.h>
 
 namespace hyperion::v2 {
 
-SSAOEffect::SSAOEffect()
+TonemapEffect::TonemapEffect()
     : PostProcessingEffect(stage, index)
 {
 }
 
-SSAOEffect::~SSAOEffect() = default;
+TonemapEffect::~TonemapEffect() = default;
 
-Ref<Shader> SSAOEffect::CreateShader(Engine *engine)
+Ref<Shader> TonemapEffect::CreateShader(Engine *engine)
 {
     return engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
@@ -20,7 +20,7 @@ Ref<Shader> SSAOEffect::CreateShader(Engine *engine)
                 Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/filter_pass_vert.spv")).ReadBytes()
             }},
             SubShader{ShaderModule::Type::FRAGMENT, {
-                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/filter_pass_frag.spv")).ReadBytes()
+                Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/tonemap.frag.spv")).ReadBytes()
             }}
         }
     ));

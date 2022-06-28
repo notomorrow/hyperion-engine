@@ -5,14 +5,14 @@
 
 namespace hyperion::v2 {
 
-FxaaEffect::FxaaEffect()
+FXAAEffect::FXAAEffect()
     : PostProcessingEffect(stage, index)
 {
 }
 
-FxaaEffect::~FxaaEffect() = default;
+FXAAEffect::~FXAAEffect() = default;
 
-Ref<Shader> FxaaEffect::CreateShader(Engine *engine)
+Ref<Shader> FXAAEffect::CreateShader(Engine *engine)
 {
     return engine->resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{

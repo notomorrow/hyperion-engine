@@ -73,9 +73,11 @@ void PostProcessing::Create(Engine *engine)
 
 void PostProcessing::Destroy(Engine *engine)
 {
-    auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL);
-    descriptor_set_globals->GetDescriptor(DescriptorKey::POST_FX_UNIFORMS)
-        ->RemoveSubDescriptor(0);
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+        descriptor_set_globals->GetDescriptor(DescriptorKey::POST_FX_UNIFORMS)
+            ->RemoveSubDescriptor(0);
+    }
 
     HYPERION_ASSERT_RESULT(m_uniform_buffer.Destroy(engine->GetDevice()));
 
@@ -99,7 +101,7 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
     for (UInt i = 0; i < static_cast<UInt>(std::size(effect_passes)); i++) {
         auto &effects = effect_passes[i];
 
-        post_processing_uniforms.effect_counts[i]        = effects->Size();
+        post_processing_uniforms.effect_counts[i]        = static_cast<UInt32>(effects->Size());
         post_processing_uniforms.masks[i]                = 0;
         post_processing_uniforms.last_enabled_indices[i] = 0;
 
@@ -122,23 +124,33 @@ void PostProcessing::CreateUniformBuffer(Engine *engine)
         &post_processing_uniforms
     );
 
-    auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL);
-    descriptor_set_globals->AddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::POST_FX_UNIFORMS)
-        ->SetSubDescriptor({
-            .element_index = 0,
-            .buffer        = &m_uniform_buffer
-        });
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+        descriptor_set_globals->AddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::POST_FX_UNIFORMS)
+            ->SetSubDescriptor({
+                .element_index = 0,
+                .buffer        = &m_uniform_buffer
+            });
+    }
 }
 
 void PostProcessing::RenderPre(Engine *engine, Frame *frame) const
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
+    UInt index = 0;
+
     for (auto &it : m_pre_effects) {
         auto &effect = it.second;
 
+        effect->GetFullScreenPass().SetPushConstants({
+            .post_fx_data = { index << 1 }
+        });
+
         effect->GetFullScreenPass().Record(engine, frame->GetFrameIndex());
         effect->GetFullScreenPass().Render(engine, frame);
+
+        ++index;
     }
 }
 
@@ -146,11 +158,19 @@ void PostProcessing::RenderPost(Engine *engine, Frame *frame) const
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
+    UInt index = 0;
+
     for (auto &it : m_post_effects) {
         auto &effect = it.second;
+        
+        effect->GetFullScreenPass().SetPushConstants({
+            .post_fx_data = { (index << 1) | 1 }
+        });
 
         effect->GetFullScreenPass().Record(engine, frame->GetFrameIndex());
         effect->GetFullScreenPass().Render(engine, frame);
+
+        ++index;
     }
 }
 } // namespace hyperion

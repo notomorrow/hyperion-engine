@@ -9,8 +9,8 @@ layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
 layout(location=0) out vec4 color_output;
 
-#include "include/gbuffer.inc"
 #include "include/scene.inc"
+#include "include/post_fx.inc"
 
 #define HYP_FFXA_IMPL 1
 
@@ -70,6 +70,8 @@ void main()
 #endif
 
 #if (HYP_FFXA_IMPL == 1)
+    
+#include "include/post_fx.inc"
 
 
 #define TextureSize vec2(scene.resolution_x, scene.resolution_y)
@@ -80,7 +82,7 @@ void main()
 #define vTexCoord v_texcoord0.xy
 #define SourceSize vec4(TextureSize, 1.0 / TextureSize)
 #define outsize vec4(OutputSize, 1.0 / OutputSize)
-
+#define FXAA_SAMPLE(pos) SamplePrevEffectInChain(pos, vec4(0.0))
 
 
 /*
@@ -160,22 +162,22 @@ vec3 FxaaLerp3(vec3 a, vec3 b, float amountOfA) {
     return (vec3(-amountOfA) * b) + ((a * vec3(amountOfA)) + b);
 }
 
-vec4 FxaaTexOff(sampler2D tex, vec2 pos, ivec2 off, vec2 rcpFrame) {
+vec4 FxaaTexOff(vec2 pos, ivec2 off, vec2 rcpFrame) {
     float x = pos.x + float(off.x) * rcpFrame.x;
     float y = pos.y + float(off.y) * rcpFrame.y;
-    return Texture2D(tex, vec2(x, y));
+    return FXAA_SAMPLE(vec2(x, y));
 }
 
 // pos is the output of FxaaVertexShader interpolated across screen.
 // xy -> actual texture position {0.0 to 1.0}
 // rcpFrame should be a uniform equal to  {1.0/frameWidth, 1.0/frameHeight}
-vec3 FxaaPixelShader(vec2 pos, sampler2D tex, vec2 rcpFrame)
+vec3 FxaaPixelShader(vec2 pos, vec2 rcpFrame)
 {
-    vec3 rgbN = FxaaTexOff(tex, pos.xy, ivec2( 0,-1), rcpFrame).xyz;
-    vec3 rgbW = FxaaTexOff(tex, pos.xy, ivec2(-1, 0), rcpFrame).xyz;
-    vec3 rgbM = FxaaTexOff(tex, pos.xy, ivec2( 0, 0), rcpFrame).xyz;
-    vec3 rgbE = FxaaTexOff(tex, pos.xy, ivec2( 1, 0), rcpFrame).xyz;
-    vec3 rgbS = FxaaTexOff(tex, pos.xy, ivec2( 0, 1), rcpFrame).xyz;
+    vec3 rgbN = FxaaTexOff(pos.xy, ivec2( 0,-1), rcpFrame).xyz;
+    vec3 rgbW = FxaaTexOff(pos.xy, ivec2(-1, 0), rcpFrame).xyz;
+    vec3 rgbM = FxaaTexOff(pos.xy, ivec2( 0, 0), rcpFrame).xyz;
+    vec3 rgbE = FxaaTexOff(pos.xy, ivec2( 1, 0), rcpFrame).xyz;
+    vec3 rgbS = FxaaTexOff(pos.xy, ivec2( 0, 1), rcpFrame).xyz;
     
     float lumaN = FxaaLuma(rgbN);
     float lumaW = FxaaLuma(rgbW);
@@ -198,10 +200,10 @@ vec3 FxaaPixelShader(vec2 pos, sampler2D tex, vec2 rcpFrame)
     float blendL = max(0.0, (rangeL / range) - FXAA_SUBPIX_TRIM) * FXAA_SUBPIX_TRIM_SCALE; 
     blendL = min(FXAA_SUBPIX_CAP, blendL);
     
-    vec3 rgbNW = FxaaTexOff(tex, pos.xy, ivec2(-1,-1), rcpFrame).xyz;
-    vec3 rgbNE = FxaaTexOff(tex, pos.xy, ivec2( 1,-1), rcpFrame).xyz;
-    vec3 rgbSW = FxaaTexOff(tex, pos.xy, ivec2(-1, 1), rcpFrame).xyz;
-    vec3 rgbSE = FxaaTexOff(tex, pos.xy, ivec2( 1, 1), rcpFrame).xyz;
+    vec3 rgbNW = FxaaTexOff(pos.xy, ivec2(-1,-1), rcpFrame).xyz;
+    vec3 rgbNE = FxaaTexOff(pos.xy, ivec2( 1,-1), rcpFrame).xyz;
+    vec3 rgbSW = FxaaTexOff(pos.xy, ivec2(-1, 1), rcpFrame).xyz;
+    vec3 rgbSE = FxaaTexOff(pos.xy, ivec2( 1, 1), rcpFrame).xyz;
     rgbL += (rgbNW + rgbNE + rgbSW + rgbSE);
     rgbL *= vec3(1.0/9.0);
     
@@ -259,11 +261,11 @@ vec3 FxaaPixelShader(vec2 pos, sampler2D tex, vec2 rcpFrame)
     for(int i = 0; i < FXAA_SEARCH_STEPS; i++) {
         if(!doneN)
         {
-            lumaEndN = FxaaLuma(Texture2D(tex, posN.xy).xyz);
+            lumaEndN = FxaaLuma(FXAA_SAMPLE(posN.xy).xyz);
         }
         if(!doneP)
         {
-            lumaEndP = FxaaLuma(Texture2D(tex, posP.xy).xyz);
+            lumaEndP = FxaaLuma(FXAA_SAMPLE(posP.xy).xyz);
         }
         
         doneN = doneN || (abs(lumaEndN - lumaN) >= gradientN);
@@ -297,7 +299,7 @@ vec3 FxaaPixelShader(vec2 pos, sampler2D tex, vec2 rcpFrame)
     float spanLength = (dstP + dstN);
     dstN = directionN ? dstN : dstP;
     float subPixelOffset = (0.5 + (dstN * (-1.0/spanLength))) * lengthSign;
-    vec3 rgbF = Texture2D(tex, vec2(
+    vec3 rgbF = FXAA_SAMPLE(vec2(
         pos.x + (horzSpan ? 0.0 : subPixelOffset),
         pos.y + (horzSpan ? subPixelOffset : 0.0))).xyz;
     return FxaaLerp3(rgbL, rgbF, blendL); 
@@ -305,7 +307,7 @@ vec3 FxaaPixelShader(vec2 pos, sampler2D tex, vec2 rcpFrame)
 
 void main()
 {
-   color_output = vec4(FxaaPixelShader(vTexCoord, Source, vec2(SourceSize.z, SourceSize.w)), 1.0) * 1.0;
+   color_output = vec4(FxaaPixelShader(vTexCoord, vec2(SourceSize.z, SourceSize.w)), 1.0) * 1.0;
 }
 
 #endif

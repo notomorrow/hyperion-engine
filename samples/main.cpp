@@ -16,6 +16,7 @@
 #include <rendering/probe_system.h>
 #include <rendering/post_fx/ssao.h>
 #include <rendering/post_fx/fxaa.h>
+#include <rendering/post_fx/tonemap.h>
 #include <scene/controllers/audio_controller.h>
 #include <scene/controllers/animation_controller.h>
 #include <scene/controllers/aabb_debug_controller.h>
@@ -87,8 +88,9 @@ public:
         input_manager = new InputManager(window);
         input_manager->SetWindow(window);
         
-        engine->GetDeferredRenderer().GetPostProcessing().AddEffect<SsaoEffect>();
-        engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FxaaEffect>();
+        engine->GetDeferredRenderer().GetPostProcessing().AddEffect<SSAOEffect>();
+        engine->GetDeferredRenderer().GetPostProcessing().AddEffect<FXAAEffect>();
+        //engine->GetDeferredRenderer().GetPostProcessing().AddEffect<TonemapEffect>();
 
         // not sure why this needs to be in render thread atm?
         scene = engine->resources.scenes.Add(std::make_unique<v2::Scene>(
@@ -120,11 +122,13 @@ public:
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
 
-        auto sphere = engine->assets.Load<Node>("models/monkey/monkey.obj");
+        auto sphere = engine->assets.Load<Node>("models/material_sphere/material_sphere.obj");
         sphere->Scale(2.0f);
         sphere->SetName("sphere");
         sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
-        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
+        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
         sphere->GetChild(0)->GetSpatial()->GetInitInfo().flags &= ~Spatial::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
         scene->GetRootNode()->AddChild(std::move(sphere));
 
@@ -147,7 +151,7 @@ public:
         grass->GetChild(0)->GetSpatial()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
         grass->Scale(1.0f);
         grass->Translate({0, 1, 0});
-        grass->GetChild(0)->GetSpatial()->AddController<AabbDebugController>(engine);
+        grass->GetChild(0)->GetSpatial()->AddController<AABBDebugController>(engine);
 
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
@@ -178,7 +182,7 @@ public:
         zombie->Scale(0.25f);
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0)->GetSpatial()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-        zombie->GetChild(0)->GetSpatial()->AddController<AabbDebugController>(engine);
+        zombie->GetChild(0)->GetSpatial()->AddController<AABBDebugController>(engine);
         scene->GetRootNode()->AddChild(std::move(zombie));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -188,7 +192,7 @@ public:
 
         auto my_light = engine->resources.lights.Add(std::make_unique<Light>(
             LightType::DIRECTIONAL,
-            Vector3(-0.35f, 0.9f, 0.0f).Normalize(),
+            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
             10000.0f
         ));
@@ -422,13 +426,12 @@ public:
         }
 
         if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
-            if (auto &material = sphere->GetChild(0)->GetSpatial()->GetMaterial()) {
-                //material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));
-                material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer * 0.5f) * 0.5f + 0.5f);
-                material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);////std::cos(timer) * 0.5f + 0.5f);
-            }
-            sphere->SetLocalTranslation(Vector3(7, 7, 3));
-            //sphere->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 6.0f);
+            //if (auto &material = sphere->GetChild(0)->GetSpatial()->GetMaterial()) {
+            //    material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer * 0.5f) * 0.5f + 0.5f);
+            //    material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);////std::cos(timer) * 0.5f + 0.5f);
+            //}
+            //sphere->SetLocalTranslation(Vector3(7, 7, 3));
+            sphere->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 6.0f);
         }
         
         // material_test_obj->SetLocalScale(3.45f);

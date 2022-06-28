@@ -107,8 +107,6 @@ void FullScreenPass::CreateRenderPass(Engine *engine)
         nullptr
     );
 
-    //framebuffer_image->SetFilterMode(m_filter_mode);
-
     m_attachments.push_back(std::make_unique<Attachment>(
         std::move(framebuffer_image),
         renderer::RenderPassStage::SHADER
@@ -241,6 +239,8 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
             engine->GetInstance()->GetDevice(),
             m_pipeline->GetPipeline()->GetConstructionInfo().render_pass,
             [this, engine, frame_index](CommandBuffer *cmd) {
+                m_pipeline->GetPipeline()->push_constants = m_push_constant_data;
+
                 m_pipeline->GetPipeline()->Bind(cmd);
                 
                 HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(

@@ -31,9 +31,9 @@ using renderer::UniformBuffer;
 class Engine;
 
 struct alignas(16) PostProcessingUniforms {
-    UInt effect_counts[2]; // pre, post
-    UInt last_enabled_indices[2]; // pre, post
-    UInt masks[2]; // pre, post
+    UInt32 effect_counts[2]; // pre, post
+    UInt32 last_enabled_indices[2]; // pre, post
+    UInt32 masks[2]; // pre, post
 };
 
 class PostProcessingEffect : public EngineComponentBase<STUB_CLASS(PostProcessingEffect)> {

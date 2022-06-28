@@ -7,13 +7,13 @@
 
 namespace hyperion::v2 {
 
-class SsaoEffect : public PostProcessingEffect {
+class SSAOEffect : public PostProcessingEffect {
 public:
     static constexpr Stage stage = Stage::PRE_SHADING;
     static constexpr UInt  index = 0;
 
-    SsaoEffect();
-    virtual ~SsaoEffect();
+    SSAOEffect();
+    virtual ~SSAOEffect();
 
 protected:
     virtual Ref<Shader> CreateShader(Engine *engine) override;

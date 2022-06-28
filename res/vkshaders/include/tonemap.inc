@@ -2,7 +2,7 @@
 #define HDR_TONEMAP_UNCHARTED 1
 
 #ifndef HDR_EXPOSURE
-#define HDR_EXPOSURE 12.0
+#define HDR_EXPOSURE 11.0
 #endif
 
 const float A = 0.15;
