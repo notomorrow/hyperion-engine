@@ -15,7 +15,7 @@ TonemapEffect::~TonemapEffect() = default;
 Ref<Shader> TonemapEffect::CreateShader(Engine *engine)
 {
     return engine->resources.shaders.Add(std::make_unique<Shader>(
-        std::vector<SubShader>{
+        std::vector<SubShader> {
             SubShader{ShaderModule::Type::VERTEX, {
                 Reader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/filter_pass_vert.spv")).ReadBytes()
             }},

@@ -38,7 +38,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 #define IBL_INTENSITY 50000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 150000.0
 #define IRRADIANCE_MULTIPLIER 1.0
-#define ROUGHNESS_LOD_MULTIPLIER 32.0
+#define ROUGHNESS_LOD_MULTIPLIER 12.0
 #define SSAO_DEBUG 0
 
 #include "include/rt/probe/shared.inc"
@@ -491,7 +491,6 @@ void main()
         //float micro_shadow_sqr = micro_shadow * micro_shadow;
 
         result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao * shadow);
-        //result = (irradiance * IRRADIANCE_MULTIPLIER) * (exposure * IBL_INTENSITY);
     } else {
         result = albedo.rgb;
     }
