@@ -174,32 +174,19 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     const auto frame_index = frame->GetFrameIndex();
     auto &mipmapped_result = m_pass.GetMipmappedResults()[frame_index]->GetImage();
 
-    mipmapped_result.GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
-
     m_pass.Record(engine, frame_index);
 
     auto &render_list = engine->GetRenderListContainer();
     auto &bucket = render_list.Get(BUCKET_OPAQUE);
     
     // begin opaque objs
-    bucket.GetFramebuffers()[frame_index]->BeginCapture(primary); /* TODO: frame index? */
+    bucket.GetFramebuffers()[frame_index]->BeginCapture(primary);
     RenderOpaqueObjects(engine, frame);
-    bucket.GetFramebuffers()[frame_index]->EndCapture(primary); /* TODO: frame index? */
-    // begin opaque objs
+    bucket.GetFramebuffers()[frame_index]->EndCapture(primary);
+    // end opaque objs
     
-    m_post_processing.RenderPre(engine, frame);
-
-    // begin translucent objs
-    m_pass.GetFramebuffer(frame_index)->BeginCapture(primary);
-    /* Render deferred shading onto full screen quad */
-    HYPERION_ASSERT_RESULT(m_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary));
-
-    RenderTranslucentObjects(engine, frame);
-    m_pass.GetFramebuffer(frame_index)->EndCapture(primary);
-    // end translucent objs
-
-    // mipmap chain generation
-    auto *framebuffer_image = m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
+    // mipmap chain generation of gbuffer (opaque only)
+    auto *framebuffer_image = bucket.GetFramebuffers()[frame_index]->GetFramebuffer()
         .GetAttachmentRefs()[0]->GetAttachment()->GetImage();
     
     framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::COPY_SRC);
@@ -217,17 +204,17 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
-    //HYPERION_ASSERT_RESULT(m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
-    //    .GetAttachmentRefs()[0]->GetAttachment()->GetImage()
-    //        ->GenerateMipmaps(engine->GetDevice(), frame->GetCommandBuffer()));
     
-    //m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
-    //    .GetAttachmentRefs()[0]->GetAttachment()->GetImage()
-    //        ->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
-    //
-    //std::cout << "HasMips? " << m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
-    //    .GetAttachmentRefs()[0]->GetAttachment()->GetImage()->HasMipmaps() << " Num mips: " << m_pass.GetFramebuffer(frame_index)->GetFramebuffer()
-    //    .GetAttachmentRefs()[0]->GetAttachment()->GetImage()->NumMipmaps() << "\n";
+    m_post_processing.RenderPre(engine, frame);
+
+    // begin translucent objs
+    m_pass.GetFramebuffer(frame_index)->BeginCapture(primary);
+    /* Render deferred shading onto full screen quad */
+    HYPERION_ASSERT_RESULT(m_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary));
+
+    RenderTranslucentObjects(engine, frame);
+    m_pass.GetFramebuffer(frame_index)->EndCapture(primary);
+    // end translucent objs
 
     m_post_processing.RenderPost(engine, frame);
 }

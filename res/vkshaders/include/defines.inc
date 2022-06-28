@@ -38,4 +38,7 @@
     #define HYP_MAX_BOUND_TEXTURES 16
 #endif
 
+#define HYP_FMATH_SQR(num) (num)*(num)
+#define HYP_FMATH_CUBE(num) (num)*(num)*(num)
+
 #endif

@@ -51,6 +51,10 @@ public:
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 float view_proj[16];
             } shadow_map_data;
+            
+            struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+                UInt32 current_effect_index_stage; // 31bits for index, 1 bit for stage
+            } post_fx_data;
         };
     } push_constants;
 

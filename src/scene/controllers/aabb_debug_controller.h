@@ -10,10 +10,10 @@ namespace hyperion::v2 {
 
 class Engine;
 
-class AabbDebugController : public Controller {
+class AABBDebugController : public Controller {
 public:
-    AabbDebugController(Engine *engine);
-    virtual ~AabbDebugController() override = default;
+    AABBDebugController(Engine *engine);
+    virtual ~AABBDebugController() override = default;
     
     virtual void OnAdded() override;
     virtual void OnRemoved() override;

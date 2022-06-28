@@ -6,13 +6,13 @@
 
 namespace hyperion::v2 {
 
-AabbDebugController::AabbDebugController(Engine *engine)
-    : Controller("AabbDebugController"),
+AABBDebugController::AABBDebugController(Engine *engine)
+    : Controller("AABBDebugController"),
       m_engine(engine)
 {
 }
 
-void AabbDebugController::OnAdded()
+void AABBDebugController::OnAdded()
 {
     m_aabb = GetOwner()->GetWorldAabb();
     auto *scene = GetOwner()->GetScene();
@@ -49,7 +49,7 @@ void AabbDebugController::OnAdded()
                 .cull_faces        = FaceCullMode::NONE
             },
             Spatial::ComponentInitInfo {
-                .flags = 0x0
+                .flags = 0x0 // no flags
             }
         )
     );
@@ -59,7 +59,7 @@ void AabbDebugController::OnAdded()
     scene->AddSpatial(m_aabb_entity.IncRef());
 }
 
-void AabbDebugController::OnRemoved()
+void AABBDebugController::OnRemoved()
 {
     if (m_aabb_entity != nullptr) {
         if (auto *scene = m_aabb_entity->GetScene()) {
@@ -70,7 +70,7 @@ void AabbDebugController::OnRemoved()
     }
 }
 
-void AabbDebugController::OnUpdate(GameCounter::TickUnit delta)
+void AABBDebugController::OnUpdate(GameCounter::TickUnit delta)
 {
     if (m_aabb != GetOwner()->GetWorldAabb()) {
         m_aabb = GetOwner()->GetWorldAabb();
