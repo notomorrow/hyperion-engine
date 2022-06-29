@@ -1,7 +1,9 @@
 #ifndef PROBE_UNIFORMS
 #define PROBE_UNIFORMS
 
-layout(std430, set = 9, binding = 9) uniform ProbeSystem {
+#include "../../defines.inc"
+
+layout(std430, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 9) uniform ProbeSystem {
     vec4  aabb_max;
     vec4  aabb_min;
     uvec4 probe_border;
@@ -20,7 +22,7 @@ struct ProbeRayData {
     vec4 color;
 };
 
-layout(std430, set = 9, binding = 10) buffer ProbeRayDataBuffer {
+layout(std430, set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 10) buffer ProbeRayDataBuffer {
     ProbeRayData probe_rays[];
 };
 
