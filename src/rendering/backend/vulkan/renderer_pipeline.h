@@ -38,14 +38,14 @@ public:
             } counter;
 
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
-                float    matrix[16];
+                float  matrix[16];
                 UInt32 time;
             } probe_data;
 
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 extent[4];
-                float    aabb_max[4];
-                float    aabb_min[4];
+                float  aabb_max[4];
+                float  aabb_min[4];
             } vct_data;
 
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
@@ -55,6 +55,13 @@ public:
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 current_effect_index_stage; // 31bits for index, 1 bit for stage
             } post_fx_data;
+
+            struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+                UInt32 width, height;
+                float ray_step,
+                      num_iterations,
+                      max_ray_distance;
+            } ssr_data;
         };
     } push_constants;
 

@@ -1,0 +1,29 @@
+#version 450
+
+#include "ssr_header.inc"
+
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba16f) uniform readonly image2D ssr_uvs;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform writeonly image2D ssr_blur;
+
+void main(void)
+{
+    ivec2 coord    = ivec2(gl_GlobalInvocationID.xy);
+	vec2  texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
+
+    // test
+    vec4 uv_sample = imageLoad(ssr_uvs, coord);
+    vec2 uv        = uv_sample.xy;
+    float alpha    = uv_sample.w;
+
+    vec4 reflection_sample = vec4(0.0);
+
+    
+    if (alpha > 0.01) {
+        reflection_sample = SampleGBuffer(gbuffer_albedo_texture, uv) * alpha; //texture(, uv);
+        float roughness = SampleGBuffer(gbuffer_material_texture, uv).r;
+    }
+
+    //reflection_sample.a = roughness;
+
+    imageStore(ssr_blur, coord, reflection_sample);
+}

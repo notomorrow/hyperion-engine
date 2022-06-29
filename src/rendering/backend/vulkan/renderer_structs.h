@@ -396,9 +396,9 @@ struct alignas(16) Extent3D {
     Extent3D operator/(const Extent3D &other) const { return Extent3D(width / other.width, height / other.height, depth / other.depth); }
     Extent3D &operator/=(const Extent3D &other)
     {
-        width /= other.width;
+        width  /= other.width;
         height /= other.height;
-        depth /= other.depth;
+        depth  /= other.depth;
 
         return *this;
     }

@@ -7,6 +7,7 @@
 #define HYP_GBUFFER_FLIP_Y 0
 
 #include "shared.inc"
+#include "packing.inc"
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 0) uniform texture2D gbuffer_textures[NUM_GBUFFER_TEXTURES];
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 1) uniform texture2D gbuffer_depth_texture;

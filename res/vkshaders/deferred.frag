@@ -12,8 +12,9 @@ layout(location=0) out vec4 output_color;
 layout(location=1) out vec4 output_normals;
 layout(location=2) out vec4 output_positions;
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform readonly image2D ssr_blur;
+
 #include "include/gbuffer.inc"
-#include "include/packing.inc"
 #include "include/material.inc"
 #include "include/post_fx.inc"
 #include "include/tonemap.inc"
@@ -457,8 +458,8 @@ void main()
 #endif
 
 #if HYP_SSR_ENABLED
-        vec4 screen_space_reflections = ScreenSpaceReflection2(material.r);//ScreenSpaceReflection(material.r);
-        reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
+        //vec4 screen_space_reflections = ScreenSpaceReflection2(material.r);//ScreenSpaceReflection(material.r);
+        //reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
 #endif
 
         vec3 light_color = vec3(1.0);
@@ -491,7 +492,7 @@ void main()
         //float micro_shadow_sqr = micro_shadow * micro_shadow;
 
         result += (specular + diffuse * energy_compensation) * ((exposure * DIRECTIONAL_LIGHT_INTENSITY) * NdotL * ao * shadow);
-        result = reflections.rgb;
+        //result = reflections.rgb;
     } else {
         result = albedo.rgb;
     }
@@ -502,4 +503,6 @@ void main()
 
     output_color = vec4(result, 1.0);
     // output_color.rgb = Tonemap(output_color.rgb);
+
+    output_color = imageLoad(ssr_blur, ivec2(texcoord * 512.0));
 }
