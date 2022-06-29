@@ -29,8 +29,8 @@ layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) i
 
 shared ProbeRayData ray_cache[CACHE_SIZE];
 
-layout(set = 9, binding = 11, rgba16f) uniform image2D output_irradiance;
-layout(set = 9, binding = 12, rg16f)   uniform image2D output_depth;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 11, rgba16f) uniform image2D output_irradiance;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 12, rg16f)   uniform image2D output_depth;
 
 vec2 NormalizeOctahedralCoord(uvec2 coord)
 {

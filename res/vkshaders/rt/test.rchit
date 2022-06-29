@@ -4,6 +4,7 @@
 #extension GL_EXT_scalar_block_layout  : require
 #extension GL_EXT_buffer_reference2    : require
 
+#include "../defines.inc"
 #include "../include/scene.inc"
 #include "../include/vertex.inc"
 #include "../include/rt/mesh.inc"
@@ -24,12 +25,12 @@ struct PackedVertex {
     float texcoord_t;
 };
 
-layout(set = 9, binding = 0) uniform accelerationStructureEXT topLevelAS;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT topLevelAS;
 
 layout(buffer_reference, scalar) buffer PackedVertexBuffer { PackedVertex vertices[]; };
 layout(buffer_reference, scalar) buffer IndexBuffer        { uint indices[]; };
 
-layout(set = 9, binding = 3) buffer Meshes {
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 3) buffer Meshes {
     Mesh meshes[];
 };
 

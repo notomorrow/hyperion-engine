@@ -2,8 +2,10 @@
 #extension GL_EXT_ray_tracing : enable
 #extension GL_EXT_scalar_block_layout : enable
 
-layout(set = 9, binding = 0) uniform accelerationStructureEXT tlas;
-layout(set = 9, binding = 1, rgba8) uniform image2D image;
+#include "../include/defines.inc"
+
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 0) uniform accelerationStructureEXT tlas;
+layout(set = HYP_DESCRIPTOR_SET_RAYTRACING, binding = 1, rgba8) uniform image2D image;
 
 #include "../include/scene.inc"
 #include "../include/rt/payload.inc"
