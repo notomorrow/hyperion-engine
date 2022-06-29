@@ -1,0 +1,4 @@
+#version 450
+
+#define HYP_SSR_BLUR_HORIZONTAL
+#include "ssr_blur.glsl"

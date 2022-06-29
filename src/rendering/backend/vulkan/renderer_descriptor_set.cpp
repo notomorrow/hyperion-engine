@@ -18,16 +18,22 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
     {
         DESCRIPTOR_SET_INDEX_GLOBAL,
         {
-            {DescriptorKey::GBUFFER_TEXTURES,   0},
-            {DescriptorKey::GBUFFER_DEPTH,      1},
-            {DescriptorKey::GBUFFER_MIP_CHAIN,  2},
-            {DescriptorKey::GBUFFER_SAMPLER,    3},
-            {DescriptorKey::DEFERRED_RESULT,    4},
-            {DescriptorKey::POST_FX_PRE_STACK,  8},
-            {DescriptorKey::POST_FX_POST_STACK, 9},
-            {DescriptorKey::POST_FX_UNIFORMS,  10},
-            {DescriptorKey::SSR_UV_IMAGE,      12},
-            {DescriptorKey::SSR_BLUR_IMAGE,    13}
+            {DescriptorKey::GBUFFER_TEXTURES,     0},
+            {DescriptorKey::GBUFFER_DEPTH,        1},
+            {DescriptorKey::GBUFFER_MIP_CHAIN,    2},
+            {DescriptorKey::GBUFFER_SAMPLER,      3},
+ 
+            {DescriptorKey::DEFERRED_RESULT,      4},
+ 
+            {DescriptorKey::POST_FX_PRE_STACK,    8},
+            {DescriptorKey::POST_FX_POST_STACK,   9},
+            {DescriptorKey::POST_FX_UNIFORMS,    10},
+     
+            {DescriptorKey::SSR_UV_IMAGE,        12},
+            {DescriptorKey::SSR_SAMPLE_IMAGE,    13},
+            {DescriptorKey::SSR_RADIUS_IMAGE,    14},
+            {DescriptorKey::SSR_BLUR_HOR_IMAGE,  15},
+            {DescriptorKey::SSR_BLUR_VERT_IMAGE, 16}
         }
     },
     {
@@ -82,8 +88,8 @@ const decltype(DescriptorSet::desired_indices) DescriptorSet::desired_indices = 
     { DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, 5 },
     { DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1,    8 },
     { DESCRIPTOR_SET_INDEX_SCENE_FRAME_1,     6 },
-    { DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1,    7 }
-    //{ DESCRIPTOR_SET_INDEX_RAYTRACING,        8 } // todo: fix this crap up
+    { DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1,    7 },
+    { DESCRIPTOR_SET_INDEX_RAYTRACING,        9 } // todo: fix this crap up
 #endif
 };
 

@@ -12,7 +12,9 @@ layout(location=0) out vec4 output_color;
 layout(location=1) out vec4 output_normals;
 layout(location=2) out vec4 output_positions;
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform readonly image2D ssr_blur;
+// layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12) uniform texture2D ssr_uvs;
+// layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13) uniform texture2D ssr_sample;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16) uniform texture2D ssr_blur_vert;
 
 #include "include/gbuffer.inc"
 #include "include/material.inc"
@@ -458,8 +460,8 @@ void main()
 #endif
 
 #if HYP_SSR_ENABLED
-        //vec4 screen_space_reflections = ScreenSpaceReflection2(material.r);//ScreenSpaceReflection(material.r);
-        //reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
+        // vec4 screen_space_reflections = Texture2D(gbuffer_sampler, ssr_sample, texcoord);
+        // reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
 #endif
 
         vec3 light_color = vec3(1.0);
@@ -502,7 +504,9 @@ void main()
 #endif
 
     output_color = vec4(result, 1.0);
-    // output_color.rgb = Tonemap(output_color.rgb);
+    output_color.rgb = Tonemap(output_color.rgb);
 
-    output_color = imageLoad(ssr_blur, ivec2(texcoord * 512.0));
+
+    output_color.rgb = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord).rgb;
+
 }

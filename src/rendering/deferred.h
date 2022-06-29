@@ -67,12 +67,15 @@ private:
         }
     };
 
-    std::array<Ref<Texture>, max_frames_in_flight> m_mipmapped_results;
-    std::unique_ptr<Sampler>                       m_sampler;
-    std::array<std::array<SSRImageOutput, 2>, 2>   m_ssr_image_outputs;
+    std::array<Ref<Texture>, max_frames_in_flight>                  m_mipmapped_results;
+    std::unique_ptr<Sampler>                                        m_sampler;
+    std::array<std::array<SSRImageOutput, 4>, max_frames_in_flight> m_ssr_image_outputs;
+    std::array<SSRImageOutput, max_frames_in_flight>                m_ssr_radius_output;
 
-    Ref<ComputePipeline>                           m_ssr_write_uvs;
-    Ref<ComputePipeline>                           m_ssr_blur;
+    Ref<ComputePipeline>                                            m_ssr_write_uvs;
+    Ref<ComputePipeline>                                            m_ssr_sample;
+    Ref<ComputePipeline>                                            m_ssr_blur_hor;
+    Ref<ComputePipeline>                                            m_ssr_blur_vert;
 };
 
 class DeferredRenderer : public Renderer {

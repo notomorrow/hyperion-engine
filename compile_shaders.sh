@@ -17,7 +17,9 @@ glslc --target-env=$VULKAN_TARGET fxaa.frag -o fxaa.frag.spv
 glslc --target-env=$VULKAN_TARGET tonemap.frag -o tonemap.frag.spv
 
 glslc --target-env=$VULKAN_TARGET ssr/ssr_write_uvs.comp -o ssr/ssr_write_uvs.comp.spv
-glslc --target-env=$VULKAN_TARGET ssr/ssr_blur.comp -o ssr/ssr_blur.comp.spv
+glslc --target-env=$VULKAN_TARGET ssr/ssr_sample.comp -o ssr/ssr_sample.comp.spv
+glslc --target-env=$VULKAN_TARGET ssr/ssr_blur_hor.comp -o ssr/ssr_blur_hor.comp.spv
+glslc --target-env=$VULKAN_TARGET ssr/ssr_blur_vert.comp -o ssr/ssr_blur_vert.comp.spv
 
 glslc --target-env=$VULKAN_TARGET aabb.frag -o aabb.frag.spv
 glslc --target-env=$VULKAN_TARGET aabb.vert -o aabb.vert.spv

@@ -9,8 +9,8 @@ const float offset = 0.01f;
 const bool isSamplingEnabled = false;
 const bool isExponentialStepEnabled = false;
 const bool isAdaptiveStepEnabled = true;
-const float eyeFadeStart = 0.2;
-const float eyeFadeEnd = 0.95;
+const float eyeFadeStart = 0.5;
+const float eyeFadeEnd = 0.8;
 const float ssr_screen_edge_fade_start = 0.7;
 const float ssr_screen_edge_fade_end = 0.9;
 
@@ -26,8 +26,8 @@ float SSRAlpha(vec3 dir, vec3 origin, vec3 hitPosition)
 		_eyeFadeStart = tmp;
 	}
 
-    //float eyeDirection = clamp( dir.z, eyeFadeStart, eyeFadeEnd);
-    //alpha *= ((eyeDirection - eyeFadeStart) / (eyeFadeEnd - eyeFadeStart));
+    // float eyeDirection = clamp( dir.z, eyeFadeStart, eyeFadeEnd);
+    // alpha *= ((eyeDirection - eyeFadeStart) / (eyeFadeEnd - eyeFadeStart));
 
 	float dist = distance(origin, hitPosition);
 	// Fade ray hits based on distance from ray origin
@@ -59,7 +59,6 @@ void TraceRays(vec3 position, vec3 reflection, out vec2 out_uv, out float out_ma
             vec2 hitPixelNDC = screenPosition * 2.0 - 1.0;
             float maxDimension = min(1.0, max(abs(hitPixelNDC.x), abs(hitPixelNDC.y)));
             alpha *= 1.0 - max(0.0, maxDimension - ssr_screen_edge_fade_start) / (1.0 - ssr_screen_edge_fade_start);
-
             alpha = clamp(alpha, 0.0, 1.0);
 
 			out_uv   = screenPosition;
@@ -82,6 +81,9 @@ void TraceRays(vec3 position, vec3 reflection, out vec2 out_uv, out float out_ma
 			step *= 1.05;
 		}
     }
+
+	out_uv   = vec2(0.0);
+	out_mask = 0.0;
 }
 
 void PerformSSR(ivec2 coord, out vec2 out_uv, out float out_mask)
@@ -114,5 +116,5 @@ void main(void)
 
 	//float roughness = SampleGBuffer(gbuffer_material_texture, texcoord).r;
 
-    imageStore(ssr_uvs, coord, vec4(out_uv, /*roughness*/ 0.0, out_mask));
+    imageStore(ssr_uvs, coord, vec4(out_uv, 0.0, out_mask));
 }
