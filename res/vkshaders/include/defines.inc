@@ -34,7 +34,7 @@
     // none
     #define HYP_MAX_BOUND_TEXTURES
 #else
-    //#define HYP_DESCRIPTOR_SET_TEXTURES 5
+    #define HYP_DESCRIPTOR_SET_RAYTRACING 9
 
     #define HYP_DESCRIPTOR_INDEX_SAMPLER 0
     #define HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY 1
@@ -42,7 +42,8 @@
     #define HYP_MAX_BOUND_TEXTURES 16
 #endif
 
-#define HYP_FMATH_SQR(num) (num)*(num)
+#define HYP_FMATH_SQR(num)  (num)*(num)
 #define HYP_FMATH_CUBE(num) (num)*(num)*(num)
+#define HYP_FMATH_PI        3.14159265359
 
 #endif
