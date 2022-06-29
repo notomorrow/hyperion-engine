@@ -1,0 +1,118 @@
+#version 450
+
+#include "ssr_header.inc"
+
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba16f) uniform writeonly image2D ssr_uvs;
+
+const float distanceBias = 0.02f;
+const float offset = 0.01f;
+const bool isSamplingEnabled = false;
+const bool isExponentialStepEnabled = false;
+const bool isAdaptiveStepEnabled = true;
+const float eyeFadeStart = 0.2;
+const float eyeFadeEnd = 0.95;
+const float ssr_screen_edge_fade_start = 0.7;
+const float ssr_screen_edge_fade_end = 0.9;
+
+float SSRAlpha(vec3 dir, vec3 origin, vec3 hitPosition)
+{
+	float alpha = 1.0;
+	// Fade ray hits base on how much they face the camera
+	float _eyeFadeStart = eyeFadeStart;
+	float _eyeFadeEnd = eyeFadeEnd;
+	if (_eyeFadeStart > _eyeFadeEnd) {
+		float tmp = _eyeFadeEnd;
+		_eyeFadeEnd = _eyeFadeStart;
+		_eyeFadeStart = tmp;
+	}
+
+    //float eyeDirection = clamp( dir.z, eyeFadeStart, eyeFadeEnd);
+    //alpha *= ((eyeDirection - eyeFadeStart) / (eyeFadeEnd - eyeFadeStart));
+
+	float dist = distance(origin, hitPosition);
+	// Fade ray hits based on distance from ray origin
+	alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);
+
+	return alpha;
+}
+
+// returns uvs of ray hit
+void TraceRays(vec3 position, vec3 reflection, out vec2 out_uv, out float out_mask)
+{
+	vec3 step = ssr_params.ray_step * reflection;
+	vec3 marchingPosition = position + step;
+	float delta;
+	float depthFromScreen;
+	vec2 screenPosition;
+	
+	int i = 0;
+
+	for (; i < ssr_params.num_iterations && distance(marchingPosition, position) < ssr_params.max_ray_distance; i++) {
+		screenPosition = generateProjectedPosition(marchingPosition);
+
+		depthFromScreen = abs(generatePositionFromDepth(screenPosition, SampleGBuffer(gbuffer_depth_texture, screenPosition).x).z);
+		delta = abs(marchingPosition.z) - depthFromScreen;
+
+		if (abs(delta) < distanceBias) {
+            float alpha = SSRAlpha(reflection, position, marchingPosition);
+
+            vec2 hitPixelNDC = screenPosition * 2.0 - 1.0;
+            float maxDimension = min(1.0, max(abs(hitPixelNDC.x), abs(hitPixelNDC.y)));
+            alpha *= 1.0 - max(0.0, maxDimension - ssr_screen_edge_fade_start) / (1.0 - ssr_screen_edge_fade_start);
+
+            alpha = clamp(alpha, 0.0, 1.0);
+
+			out_uv   = screenPosition;
+			out_mask = alpha;
+
+			return;
+		}
+
+		if (isAdaptiveStepEnabled){
+			float directionSign = sign(abs(marchingPosition.z) - depthFromScreen);
+			//this is sort of adapting step, should prevent lining reflection by doing sort of iterative converging
+			//some implementation doing it by binary search, but I found this idea more cheaty and way easier to implement
+			step = step * (1.0 - ssr_params.ray_step * max(directionSign, 0.0));
+			marchingPosition += step * (-directionSign);
+		} else {
+			marchingPosition += step;
+		}
+
+		if (isExponentialStepEnabled){
+			step *= 1.05;
+		}
+    }
+}
+
+void PerformSSR(ivec2 coord, out vec2 out_uv, out float out_mask)
+{
+	vec2 texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
+
+	float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
+    vec4 position = vec4(generatePositionFromDepth(texcoord, depth), 1.0);
+	vec4 normal = scene.view * vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 0.0);
+
+	vec3 reflectionDirection = normalize(reflect(position.xyz, normalize(normal.xyz)));
+	
+	TraceRays(
+		position.xyz,
+		normalize(reflectionDirection + (normal.xyz * offset)),
+		out_uv,
+		out_mask
+	);
+}
+
+void main(void)
+{
+    ivec2 coord    = ivec2(gl_GlobalInvocationID.xy);
+	vec2  texcoord = vec2(coord) / vec2(ssr_params.dimension.x, ssr_params.dimension.y);
+
+	vec2  out_uv   = vec2(0.0);
+	float out_mask = 0.0;
+
+	PerformSSR(coord, out_uv, out_mask);
+
+	//float roughness = SampleGBuffer(gbuffer_material_texture, texcoord).r;
+
+    imageStore(ssr_uvs, coord, vec4(out_uv, /*roughness*/ 0.0, out_mask));
+}

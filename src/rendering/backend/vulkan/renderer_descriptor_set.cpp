@@ -25,7 +25,9 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::DEFERRED_RESULT,    4},
             {DescriptorKey::POST_FX_PRE_STACK,  8},
             {DescriptorKey::POST_FX_POST_STACK, 9},
-            {DescriptorKey::POST_FX_UNIFORMS,  10}
+            {DescriptorKey::POST_FX_UNIFORMS,  10},
+            {DescriptorKey::SSR_UV_IMAGE,      12},
+            {DescriptorKey::SSR_BLUR_IMAGE,    13}
         }
     },
     {

@@ -36,6 +36,29 @@ void DeferredPass::CreateShader(Engine *engine)
     m_shader->Init(engine);
 }
 
+void DeferredPass::CreateComputePipelines(Engine *engine)
+{
+    m_ssr_write_uvs = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/ssr/ssr_write_uvs.comp.spv")).Read()}}
+            }
+        ))
+    ));
+
+    m_ssr_write_uvs.Init();
+
+    m_ssr_blur = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/ssr/ssr_blur.comp.spv")).Read()}}
+            }
+        ))
+    ));
+
+    m_ssr_blur.Init();
+}
+
 void DeferredPass::CreateRenderPass(Engine *engine)
 {
     m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass().IncRef();
@@ -74,6 +97,20 @@ void DeferredPass::Create(Engine *engine)
 
         m_mipmapped_results[i].Init();
 
+        for (UInt j = 0; j < static_cast<UInt>(m_ssr_image_outputs[i].size()); j++) {
+            m_ssr_image_outputs[i][j] = SSRImageOutput {
+                .image = std::make_unique<StorageImage>(
+                    m_mipmapped_results[i]->GetExtent(),
+                    Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                    Image::Type::TEXTURE_TYPE_2D,
+                    nullptr
+                ),
+                .image_view = std::make_unique<ImageView>()
+            };
+
+            m_ssr_image_outputs[i][j].Create(engine->GetDevice());
+        }
+
         m_framebuffers[i] = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[i].IncRef();
         
         auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
@@ -94,7 +131,14 @@ void DeferredPass::Create(Engine *engine)
 
 void DeferredPass::Destroy(Engine *engine)
 {
+    m_ssr_write_uvs.Reset();
+    m_ssr_blur.Reset();
+
     for (UInt i = 0; i < max_frames_in_flight; i++) {
+        for (UInt j = 0; j < static_cast<UInt>(m_ssr_image_outputs[i].size()); j++) {
+            m_ssr_image_outputs[i][j].Destroy(engine->GetDevice());
+        }
+
         engine->SafeReleaseRenderable(std::move(m_mipmapped_results[i]));
     }
 
@@ -117,6 +161,7 @@ void DeferredRenderer::Create(Engine *engine)
     m_post_processing.Create(engine);
 
     m_pass.CreateShader(engine);
+    m_pass.CreateComputePipelines(engine);
     m_pass.CreateRenderPass(engine);
     m_pass.Create(engine);
 
@@ -160,6 +205,19 @@ void DeferredRenderer::Create(Engine *engine)
             ->SetSubDescriptor({
                 .sampler = m_pass.GetSampler().get()
             });
+
+        /* SSR Data */
+        descriptor_set_pass // 1st output -- trace, write UVs
+            ->AddDescriptor<renderer::StorageImageDescriptor>(12)
+            ->SetSubDescriptor({
+                .image_view = m_pass.GetSSRImageOutputs()[i][0].image_view.get()
+            });
+
+        descriptor_set_pass // 2nd output -- blurred sample
+            ->AddDescriptor<renderer::StorageImageDescriptor>(13)
+            ->SetSubDescriptor({
+                .image_view = m_pass.GetSSRImageOutputs()[i][1].image_view.get()
+            });
     }
     
     m_pass.CreateDescriptors(engine);
@@ -170,6 +228,8 @@ void DeferredRenderer::Create(Engine *engine)
 void DeferredRenderer::Destroy(Engine *engine)
 {
     Threads::AssertOnThread(THREAD_RENDER);
+
+    //! TODO: remove all descriptors
 
     m_post_processing.Destroy(engine);
     m_pass.Destroy(engine);  // flushes render queue
@@ -194,7 +254,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     bucket.GetFramebuffers()[frame_index]->EndCapture(primary);
     // end opaque objs
     
-    // mipmap chain generation of gbuffer (opaque only)
+    /* ========== BEGIN MIP CHAIN GENERATION ========== */
     auto *framebuffer_image = bucket.GetFramebuffers()[frame_index]->GetFramebuffer()
         .GetAttachmentRefs()[0]->GetAttachment()->GetImage();
     
@@ -213,7 +273,84 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
-    
+    /* ==========  END MIP CHAIN GENERATION ========== */
+
+    /* ========== BEGIN SSR ========== */
+
+    // PASS 1 -- write UVs
+
+    // start by putting the UV image in a writeable state
+    const Pipeline::PushConstantData ssr_push_constant_data {
+        .ssr_data = {
+            .width            = mipmapped_result.GetExtent().width,
+            .height           = mipmapped_result.GetExtent().height,
+            .ray_step         = 0.35f,
+            .num_iterations   = 100.0f,
+            .max_ray_distance = 64.0f
+        }
+    };
+
+    m_pass.m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
+        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
+
+    m_pass.m_ssr_write_uvs->GetPipeline()->Bind(primary, ssr_push_constant_data);
+
+    // bind `global` descriptor set
+    engine->GetInstance()->GetDescriptorPool().Bind(
+        engine->GetDevice(), primary, m_pass.m_ssr_write_uvs->GetPipeline(),
+        {
+            {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+        }
+    );
+
+    engine->GetInstance()->GetDescriptorPool().Bind(
+        engine->GetDevice(), primary, m_pass.m_ssr_write_uvs->GetPipeline(),
+        {
+            {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE}
+        }
+    );
+
+    m_pass.m_ssr_write_uvs->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+
+    // transition the UV image back into read state
+    m_pass.m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
+        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+
+    // PASS 2 - sample textures, blur image
+
+    // put blur image in writeable state
+    m_pass.m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
+        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
+
+    m_pass.m_ssr_blur->GetPipeline()->Bind(primary, ssr_push_constant_data);
+
+    // bind `global` descriptor set
+    engine->GetInstance()->GetDescriptorPool().Bind(
+        engine->GetDevice(), primary, m_pass.m_ssr_blur->GetPipeline(),
+        {
+            {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+        }
+    );
+
+    engine->GetInstance()->GetDescriptorPool().Bind(
+        engine->GetDevice(), primary, m_pass.m_ssr_blur->GetPipeline(),
+        {
+            {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE}
+        }
+    );
+
+    m_pass.m_ssr_blur->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+
+    // transition blur image back into read state
+    m_pass.m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
+        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+
+    /* ==========  END SSR  ========== */
+
     m_post_processing.RenderPre(engine, frame);
 
     // begin translucent objs

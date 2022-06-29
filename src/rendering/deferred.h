@@ -5,6 +5,7 @@
 #include "post_fx.h"
 #include "renderer.h"
 #include "texture.h"
+#include "compute.h"
 
 #include <rendering/backend/renderer_frame.h>
 #include <rendering/backend/renderer_image.h>
@@ -17,18 +18,24 @@ using renderer::Frame;
 using renderer::Image;
 using renderer::ImageView;
 using renderer::Sampler;
+using renderer::Device;
 
 class DeferredPass : public FullScreenPass {
+    friend class DeferredRenderer;
 public:
     DeferredPass();
     DeferredPass(const DeferredPass &other) = delete;
     DeferredPass &operator=(const DeferredPass &other) = delete;
     ~DeferredPass();
 
-    auto &GetMipmappedResults() { return m_mipmapped_results; }
-    auto &GetSampler()          { return m_sampler; }
+    auto &GetMipmappedResults()            { return m_mipmapped_results; }
+    auto &GetSampler()                     { return m_sampler; }
+
+    auto &GetSSRImageOutputs()             { return m_ssr_image_outputs; }
+    const auto &GetSSRImageOutputs() const { return m_ssr_image_outputs; }
 
     void CreateShader(Engine *engine);
+    void CreateComputePipelines(Engine *engine);
     void CreateRenderPass(Engine *engine);
     void CreateDescriptors(Engine *engine);
     void Create(Engine *engine);
@@ -37,8 +44,35 @@ public:
     void Render(Engine *engine, Frame *frame);
 
 private:
-    std::array<Ref<Texture>, max_frames_in_flight>        m_mipmapped_results;
-    std::unique_ptr<Sampler>                              m_sampler;
+    struct SSRImageOutput {
+        std::unique_ptr<Image>     image;
+        std::unique_ptr<ImageView> image_view;
+
+        void Create(Device *device)
+        {
+            AssertThrow(image != nullptr);
+            AssertThrow(image_view != nullptr);
+
+            HYPERION_ASSERT_RESULT(image->Create(device));
+            HYPERION_ASSERT_RESULT(image_view->Create(device, image.get()));
+        }
+
+        void Destroy(Device *device)
+        {
+            AssertThrow(image != nullptr);
+            AssertThrow(image_view != nullptr);
+
+            HYPERION_ASSERT_RESULT(image->Destroy(device));
+            HYPERION_ASSERT_RESULT(image_view->Destroy(device));
+        }
+    };
+
+    std::array<Ref<Texture>, max_frames_in_flight> m_mipmapped_results;
+    std::unique_ptr<Sampler>                       m_sampler;
+    std::array<std::array<SSRImageOutput, 2>, 2>   m_ssr_image_outputs;
+
+    Ref<ComputePipeline>                           m_ssr_write_uvs;
+    Ref<ComputePipeline>                           m_ssr_blur;
 };
 
 class DeferredRenderer : public Renderer {

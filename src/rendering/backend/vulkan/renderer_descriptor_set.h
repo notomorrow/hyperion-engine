@@ -173,6 +173,8 @@ enum class DescriptorKey {
     POST_FX_PRE_STACK,
     POST_FX_POST_STACK,
     POST_FX_UNIFORMS,
+    SSR_UV_IMAGE,
+    SSR_BLUR_IMAGE,
 
     SCENE_BUFFER,
     LIGHTS_BUFFER,
