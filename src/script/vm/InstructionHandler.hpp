@@ -18,7 +18,8 @@
 #include <util/defines.h>
 #include <system/debug.h>
 
-#include <stdint.h>
+#include <cmath>
+#include <cstdint>
 #include <cstring>
 
 #define HYP_NUMERIC_OPERATION(a, b, oper) \
@@ -1516,19 +1517,19 @@ struct InstructionHandler {
                         state->ThrowException(thread, Exception::DivisionByZeroException());
                         break;
                     }
-                    result.m_value.f = std::fmodf(result.m_value.f, static_cast<Float32>(b.i));
+                    result.m_value.f = fmodf(result.m_value.f, static_cast<Float32>(b.i));
                 } else if (a.flags & Number::FLAG_UNSIGNED) {
                     if (b.u == 0) {
                         state->ThrowException(thread, Exception::DivisionByZeroException());
                         break;
                     }
-                    result.m_value.f = std::fmodf(result.m_value.f, static_cast<Float32>(b.u));
+                    result.m_value.f = fmodf(result.m_value.f, static_cast<Float32>(b.u));
                 } else {
                     if (b.f == 0) {
                         state->ThrowException(thread, Exception::DivisionByZeroException());
                         break;
                     }
-                    result.m_value.f = std::fmodf(result.m_value.f, a.f);
+                    result.m_value.f = fmodf(result.m_value.f, a.f);
                 }
                 break;
             case Value::F64:

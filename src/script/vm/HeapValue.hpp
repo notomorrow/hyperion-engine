@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <stdio.h>
+#include <utility>
 
 namespace hyperion {
 namespace vm {

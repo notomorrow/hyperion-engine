@@ -5,15 +5,15 @@
 #define SSR_BLUR_KERNEL_SIZE 8
 #define HYP_SSR_FILTER_AMOUNT 0.0055
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12) uniform texture2D ssr_uvs;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13) uniform texture2D ssr_sample;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14) uniform texture2D ssr_radius;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 17) uniform texture2D ssr_uvs;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 18) uniform texture2D ssr_sample;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 19) uniform texture2D ssr_radius;
 
 #if defined(HYP_SSR_BLUR_HORIZONTAL)
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba16f) uniform writeonly image2D ssr_blur;
     #define HYP_SSR_PREV_IMAGE ssr_sample
 #elif defined(HYP_SSR_BLUR_VERTICAL)
-    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15) uniform texture2D ssr_blur_hor;
+    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 20) uniform texture2D ssr_blur_hor;
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba16f) uniform writeonly image2D ssr_blur;
     #define HYP_SSR_PREV_IMAGE ssr_blur_hor
 #else

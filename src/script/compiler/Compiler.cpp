@@ -11,6 +11,7 @@
 #include <system/debug.h>
 
 #include <iostream>
+#include <limits>
 
 namespace hyperion::compiler {
 

@@ -11,6 +11,7 @@
 #include <functional>
 #include <mutex>
 #include <cstring>
+#include <atomic>
 
 namespace hyperion {
 

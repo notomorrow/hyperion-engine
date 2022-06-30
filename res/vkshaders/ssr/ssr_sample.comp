@@ -6,9 +6,9 @@
 
 #define SSR_KERNEL_SIZE 8
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12) uniform texture2D ssr_uvs;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 17) uniform texture2D ssr_uvs;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform writeonly image2D ssr_sample;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r16f) uniform writeonly image2D ssr_radius;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, rgba16f) uniform writeonly image2D ssr_radius;
 
 const vec2 ssr_offsets[SSR_KERNEL_SIZE] = vec2[SSR_KERNEL_SIZE]( 
     vec2(0, 0),

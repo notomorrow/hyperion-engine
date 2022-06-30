@@ -109,7 +109,7 @@ void DeferredPass::Create(Engine *engine)
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_mipmapped_results[i] = engine->resources.textures.Add(std::make_unique<Texture2D>(
             Extent2D { 512, 512 },
-            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_BGRA8_SRGB,
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
             Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
             Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
             nullptr
@@ -134,7 +134,7 @@ void DeferredPass::Create(Engine *engine)
         m_ssr_radius_output[i] = SSRImageOutput {
             .image = std::make_unique<StorageImage>(
                 m_mipmapped_results[i]->GetExtent(),
-                Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R16F,
+                Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
                 Image::Type::TEXTURE_TYPE_2D,
                 nullptr
             ),
@@ -272,6 +272,37 @@ void DeferredRenderer::Create(Engine *engine)
             ->SetSubDescriptor({
                 .image_view = m_pass.GetSSRImageOutputs()[i][3].image_view.get()
             });
+
+        /* SSR Data */
+        descriptor_set_pass // 1st stage -- trace, write UVs
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_UV_TEXTURE)
+            ->SetSubDescriptor({
+               .image_view = m_pass.GetSSRImageOutputs()[i][0].image_view.get()
+           });
+
+        descriptor_set_pass // 2nd stage -- sample
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_SAMPLE_TEXTURE)
+            ->SetSubDescriptor({
+                .image_view = m_pass.GetSSRImageOutputs()[i][1].image_view.get()
+           });
+
+        descriptor_set_pass // 2nd stage -- write radii
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_RADIUS_TEXTURE)
+            ->SetSubDescriptor({
+                .image_view = m_pass.m_ssr_radius_output[i].image_view.get()
+           });
+
+        descriptor_set_pass // 3rd stage -- blur horizontal
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_BLUR_HOR_TEXTURE)
+            ->SetSubDescriptor({
+                .image_view = m_pass.GetSSRImageOutputs()[i][2].image_view.get()
+            });
+
+        descriptor_set_pass // 3rd stage -- blur vertical
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_BLUR_VERT_TEXTURE)
+            ->SetSubDescriptor({
+                .image_view = m_pass.GetSSRImageOutputs()[i][3].image_view.get()
+            });
     }
     
     m_pass.CreateDescriptors(engine);
@@ -292,6 +323,10 @@ void DeferredRenderer::Destroy(Engine *engine)
 void DeferredRenderer::Render(Engine *engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
+
+    const auto scene_binding = engine->render_state.GetScene();
+    const auto scene_cull_id = scene_binding.parent_id ? scene_binding.parent_id : scene_binding.id;
+    const auto scene_index   = scene_binding ? scene_binding.id.value - 1 : 0;
 
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
@@ -362,7 +397,8 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         engine->GetDevice(), primary, m_pass.m_ssr_write_uvs->GetPipeline(),
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE}
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+            {.offsets = {UInt32(scene_index * sizeof(SceneShaderData))}}
         }
     );
 
@@ -396,7 +432,8 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         engine->GetDevice(), primary, m_pass.m_ssr_sample->GetPipeline(),
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE}
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+            {.offsets = {UInt32(scene_index * sizeof(SceneShaderData))}}
         }
     );
 
@@ -430,7 +467,8 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         engine->GetDevice(), primary, m_pass.m_ssr_blur_hor->GetPipeline(),
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE}
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+            {.offsets = {UInt32(scene_index * sizeof(SceneShaderData))}}
         }
     );
 
@@ -462,7 +500,8 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         engine->GetDevice(), primary, m_pass.m_ssr_blur_vert->GetPipeline(),
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE}
+            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+            {.offsets = {UInt32(scene_index * sizeof(SceneShaderData))}}
         }
     );
 

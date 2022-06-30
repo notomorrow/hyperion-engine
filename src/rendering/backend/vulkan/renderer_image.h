@@ -126,12 +126,14 @@ public:
         VkImageUsageFlags    usage_flags;
     };
 
-    Image(Extent3D extent,
+    Image(
+        Extent3D extent,
         InternalFormat format,
         Type type,
         FilterMode filter_mode,
         const InternalInfo &internal_info,
-        const unsigned char *bytes);
+        const unsigned char *bytes
+    );
 
     Image(const Image &other) = delete;
     Image &operator=(const Image &other) = delete;
@@ -180,8 +182,7 @@ public:
     bool IsBlended() const             { return m_is_blended; }
     void SetIsBlended(bool is_blended) { m_is_blended = is_blended; }
 
-    bool HasMipmaps() const
-        { return m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
+    bool HasMipmaps() const            { return m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
 
     uint32_t NumMipmaps() const
     {
