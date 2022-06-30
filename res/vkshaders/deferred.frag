@@ -14,7 +14,7 @@ layout(location=2) out vec4 output_positions;
 
 // layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12) uniform texture2D ssr_uvs;
 // layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13) uniform texture2D ssr_sample;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16) uniform texture2D ssr_blur_vert;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
 
 #include "include/gbuffer.inc"
 #include "include/material.inc"
@@ -28,7 +28,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
 #define HYP_VCT_ENABLED 0
-#define HYP_SSR_ENABLED 1
+#define HYP_SSR_ENABLED 0
 
 #if HYP_VCT_ENABLED
 #include "include/vct/cone_trace.inc"
@@ -507,6 +507,6 @@ void main()
     output_color.rgb = Tonemap(output_color.rgb);
 
 
-    output_color.rgb = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord).rgb;
+//    output_color.rgb = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord).rgb;
 
 }

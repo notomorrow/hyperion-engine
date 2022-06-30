@@ -225,6 +225,7 @@ Image::Image(Image &&other) noexcept
       m_type(other.m_type),
       m_filter_mode(other.m_filter_mode),
       m_internal_info(other.m_internal_info),
+      m_is_blended(other.m_is_blended),
       m_image(other.m_image),
       m_size(other.m_size),
       m_bpp(other.m_bpp),
@@ -233,6 +234,9 @@ Image::Image(Image &&other) noexcept
 {
     other.m_image = nullptr;
     other.m_bytes = nullptr;
+    other.m_is_blended = false;
+    other.m_extent = Extent3D{};
+    other.m_assigned_image_data = false;
 }
 
 Image::~Image()
@@ -364,6 +368,16 @@ Result Image::CreateImage(
 
     if (format_features != 0) {
         if (!device->GetFeatures().IsSupportedFormat(format, m_internal_info.tiling, format_features)) {
+            DebugLog(
+                LogType::Error,
+                "Device does not support the format %u with requested tiling %d and format features %d\n",
+                static_cast<uint32_t>(format),
+                static_cast<int>(m_internal_info.tiling),
+                static_cast<int>(format_features)
+            );
+
+            HYP_BREAKPOINT;
+
             return Result(Result::RENDERER_ERR, "Format does not support requested features.");
         }
     }

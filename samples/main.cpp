@@ -62,7 +62,7 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
-#define HYPERION_VK_TEST_VCT 1
+#define HYPERION_VK_TEST_VCT 0
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
@@ -223,8 +223,10 @@ public:
             50.0f
         );
 
+#if HYPERION_VK_TEST_VCT
         vct->SetParent(scene->GetEnvironment());
         vct->InitGame(engine); // temp
+#endif
         // scene->GetEnvironment()->AddRenderComponent<VoxelConeTracing>(
         //     VoxelConeTracing::Params {
         //         BoundingBox(-64.0f, 64.0f)

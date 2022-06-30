@@ -4,7 +4,7 @@
 #extension GL_EXT_scalar_block_layout  : require
 #extension GL_EXT_buffer_reference2    : require
 
-#include "../defines.inc"
+#include "../include/defines.inc"
 #include "../include/scene.inc"
 #include "../include/vertex.inc"
 #include "../include/rt/mesh.inc"
