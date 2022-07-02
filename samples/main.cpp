@@ -50,6 +50,7 @@
 #include <thread>
 
 #include "rendering/environment.h"
+#include "rendering/render_components/cubemap_renderer.h"
 
 #include <script/ScriptBindings.hpp>
 
@@ -62,7 +63,7 @@ using namespace hyperion;
 #define HYPERION_VK_TEST_ATOMICS     1
 #define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
 #define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
-#define HYPERION_VK_TEST_VCT 0
+#define HYPERION_VK_TEST_VCT 1
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
 
@@ -74,6 +75,9 @@ class MyGame : public v2::Game {
 
 public:
     Ref<Material> base_material;//hack
+
+    Ref<Light>    m_point_light;
+
     MyGame()
         : Game()
     {
@@ -190,13 +194,19 @@ public:
 
         scene->SetEnvironmentTexture(0, cubemap.IncRef());
 
-        auto my_light = engine->resources.lights.Add(std::make_unique<Light>(
-            LightType::DIRECTIONAL,
+        /*auto my_light = engine->resources.lights.Add(std::make_unique<DirectionalLight>(
             Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
             Vector4::One(),
             10000.0f
         ));
-        scene->GetEnvironment()->AddLight(my_light.IncRef());
+        scene->GetEnvironment()->AddLight(my_light.IncRef());*/
+        m_point_light = engine->resources.lights.Add(std::make_unique<PointLight>(
+            Vector3(2.0f, 4.0f, 0.0f),
+            Vector4(0.5f, 0.3f, 0.1f, 1.0f),
+            10000.0f,
+            10.0f
+        ));
+        scene->GetEnvironment()->AddLight(m_point_light.IncRef());
         
         // scene->GetEnvironment()->AddRenderComponent<AABBRenderer>();
 
@@ -217,11 +227,13 @@ public:
         test_model->Scale(0.15f);
         scene->GetRootNode()->AddChild(std::move(test_model));
         
-        scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+        /*scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
             50.0f
-        );
+        );*/
+
+        scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>();
 
 #if HYPERION_VK_TEST_VCT
         vct->SetParent(scene->GetEnvironment());
@@ -426,6 +438,8 @@ public:
 
             //scene->GetCamera()->SetTarget(suzanne->GetWorldTranslation());
         }
+
+        //m_point_light->SetPosition({ std::sin(timer * 0.5f) * 5.0f, 6.0f, std::cos(timer * 0.5f) * 5.0f });
 
         // if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
             //if (auto &material = sphere->GetChild(0)->GetSpatial()->GetMaterial()) {

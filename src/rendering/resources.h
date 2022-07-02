@@ -9,7 +9,7 @@
 #include "material.h"
 #include "texture.h"
 #include "mesh.h"
-#include "light.h"
+#include "Light.h"
 #include <ui/ui_scene.h>
 #include "../animation/skeleton.h"
 #include "../scene/scene.h"

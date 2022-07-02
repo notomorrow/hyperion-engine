@@ -4,7 +4,7 @@
 #include "../base.h"
 #include "../post_fx.h"
 #include "../renderer.h"
-#include "../light.h"
+#include "../Light.h"
 #include "../render_component.h"
 
 #include <rendering/backend/renderer_frame.h>

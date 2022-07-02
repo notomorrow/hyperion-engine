@@ -3,7 +3,7 @@
 
 #include "base.h"
 #include <rendering/render_components/shadows.h>
-#include "light.h"
+#include "Light.h"
 
 #include <core/lib/component_set.h>
 #include <core/lib/atomic_lock.h>
@@ -33,12 +33,12 @@ public:
     ~Environment();
 
     Scene *GetScene() const                               { return m_scene; }
-    
-    Ref<Light> &GetLight(size_t index)                    { return m_lights[index]; }
-    const Ref<Light> &GetLight(size_t index) const        { return m_lights[index]; }
+
     void AddLight(Ref<Light> &&light);
-    size_t NumLights() const                              { return m_lights.size(); }
-    const std::vector<Ref<Light>> &GetLights() const      { return m_lights; }
+    void RemoveLight(Ref<Light> &&light);
+
+    /*! Call from render thread only */
+    size_t NumLights() const                              { return m_lights.Size(); }
 
     template <class T>
     void AddRenderComponent(std::unique_ptr<T> &&component)
@@ -100,33 +100,10 @@ public:
         m_has_render_component_updates = true;
     }
 
-    void OnEntityAdded(Ref<Spatial> &entity)
-    {
-        Threads::AssertOnThread(THREAD_GAME);
-
-        m_spatials_pending_addition.push(entity.IncRef());
-
-        m_has_render_component_updates = true;
-    }
-
-    void OnEntityRemoved(Ref<Spatial> &entity)
-    {
-        Threads::AssertOnThread(THREAD_GAME);
-
-        m_spatials_pending_removal.push(entity.IncRef());
-
-        m_has_render_component_updates = true;
-    }
-
+    void OnEntityAdded(Ref<Spatial> &entity);
+    void OnEntityRemoved(Ref<Spatial> &entity);
     // only called when meaningful attributes have changed
-    void OnEntityRenderableAttributesChanged(Ref<Spatial> &entity)
-    {
-        Threads::AssertOnThread(THREAD_GAME);
-
-        m_spatial_renderable_attribute_updates.push(entity.IncRef());
-
-        m_has_render_component_updates = true;
-    }
+    void OnEntityRenderableAttributesChanged(Ref<Spatial> &entity);
 
     float GetGlobalTimer() const { return m_global_timer; }
 
@@ -149,7 +126,11 @@ private:
     FlatSet<ComponentSetUnique<RenderComponentBase>::ComponentId> m_render_components_pending_removal;
     std::atomic_bool                                              m_has_render_component_updates{false};
 
-    std::vector<Ref<Light>>                                       m_lights;
+    FlatMap<Light::ID, Ref<Light>>                                m_lights;
+    std::queue<Ref<Light>>                                        m_lights_pending_addition;
+    std::queue<Ref<Light>>                                        m_lights_pending_removal;
+    std::atomic_bool                                              m_has_light_updates{false};
+    std::mutex                                                    m_light_update_mutex;
 
     float                                                         m_global_timer;
 

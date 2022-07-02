@@ -2,7 +2,7 @@
 
 #define HYP_MAX_SHADOW_MAPS 1 // tmp
 
-layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneDataBlock {
+layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneDataBlock {
     // 0
     mat4 view;
     mat4 projection;
@@ -28,10 +28,12 @@ layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly 
 
     // 228
     uint num_environment_shadow_maps;
-
     // 232
-    float camera_near;
+    uint num_lights;
+
     // 236
+    float camera_near;
+    // 240
     float camera_far;
 } scene;
 
@@ -40,6 +42,7 @@ struct Light {
     uint color_encoded;
     uint type;
     float intensity;
+    float radius;
     uint shadow_map_index; // ~0 == no shadow map
 };
 

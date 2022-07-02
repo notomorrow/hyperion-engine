@@ -21,6 +21,9 @@ public:
     renderer::RenderPass &GetRenderPass()             { return m_render_pass; }
     const renderer::RenderPass &GetRenderPass() const { return m_render_pass; }
 
+    bool IsMultiview() const                          { return m_render_pass.IsMultiview(); }
+    UInt NumMultiviewLayers() const                   { return m_render_pass.NumMultiviewLayers(); }
+
     void Init(Engine *engine);
 
 private:

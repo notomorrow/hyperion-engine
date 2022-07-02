@@ -30,7 +30,7 @@ Result FramebufferObject::Create(Device *device, RenderPass *render_pass)
         AssertThrow(attachment_ref->GetImageView() != nullptr);
         AssertThrow(attachment_ref->GetImageView()->GetImageView() != nullptr);
 
-        num_layers = MathUtil::Max(num_layers, attachment_ref->GetImageView()->NumFaces());
+        //num_layers = MathUtil::Max(num_layers, attachment_ref->GetImageView()->NumFaces());
 
         attachment_image_views.push_back(attachment_ref->GetImageView()->GetImageView());
     }

@@ -141,6 +141,7 @@ struct alignas(256) SceneShaderData {
 
     float   global_timer;
     UInt32  num_environment_shadow_maps;
+    UInt32  num_lights;
 
     float camera_near;
     float camera_far;
@@ -148,15 +149,16 @@ struct alignas(256) SceneShaderData {
 
 static_assert(sizeof(SceneShaderData) == 256);
 
-struct alignas(16) LightShaderData {
+struct alignas(256) LightShaderData {
     Vector4  position; //direction for directional lights
     UInt32   color;
     UInt32   light_type;
     float    intensity;
+    float    radius;
     UInt32   shadow_map_index; // ~0 == no shadow map
 };
 
-static_assert(sizeof(LightShaderData) == 32);
+static_assert(sizeof(LightShaderData) == 256);
 
 struct alignas(16) ShadowShaderData {
     Matrix4 projection;

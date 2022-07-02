@@ -20,7 +20,7 @@ layout(location=4) in float g_lighting;
 layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba16f) uniform image3D voxel_image;
 
 #define HYP_VCT_SAMPLE_ALBEDO_MAP 1
-#define HYP_VCT_LIGHTING 0
+#define HYP_VCT_LIGHTING 1
 
 void main()
 {
