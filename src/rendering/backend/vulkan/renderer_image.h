@@ -153,6 +153,11 @@ public:
 
     Result Blit(
         CommandBuffer *command_buffer,
+        Image *src
+    );
+
+    Result Blit(
+        CommandBuffer *command_buffer,
         Image *src,
         Rect src_rect,
         Rect dst_rect

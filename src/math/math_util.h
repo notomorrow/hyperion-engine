@@ -266,13 +266,14 @@ public:
         return 1ull << (FastLog2(value) + 1);
     }
 
-    static inline uint64_t NextMultiple(uint64_t value, uint64_t multiple)
+    template <class T, class U>
+    static inline constexpr auto NextMultiple(T &&value, U &&multiple) -> std::common_type_t<T, U>
     {
         if (multiple == 0) {
             return value;
         }
 
-        uint64_t remainder = value % multiple;
+        auto remainder = value % multiple;
 
         if (remainder == 0) {
             return value;

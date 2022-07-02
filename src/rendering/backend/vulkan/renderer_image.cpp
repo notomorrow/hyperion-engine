@@ -551,24 +551,53 @@ Result Image::Destroy(Device *device)
 
 Result Image::Blit(
     CommandBuffer *command_buffer,
-    Image *src,
+    Image *src
+)
+{
+    return Blit(
+        command_buffer,
+        src,
+        Rect {
+            .x0 = 0,
+            .y0 = 0,
+            .x1 = src->GetExtent().width,
+            .y1 = src->GetExtent().height
+        },
+        Rect {
+            .x0 = 0,
+            .y0 = 0,
+            .x1 = m_extent.width,
+            .y1 = m_extent.height
+        }
+    );
+}
+
+Result Image::Blit(
+    CommandBuffer *command_buffer,
+    Image *src_image,
     Rect src_rect,
     Rect dst_rect
 )
 {
-    VkImageSubresourceLayers input_layer{};
-    input_layer.aspectMask = (VK_IMAGE_ASPECT_COLOR_BIT); // TODO
-    input_layer.layerCount = 1;
+    /*std::vector<VkImageBlit> regions;
+    regions.resize(MathUtil::Min(NumFaces(), src->NumFaces()));
 
-    VkImageBlit region{};
-    region.srcSubresource = input_layer;
-    region.dstSubresource = input_layer;
+    for (size_t i = 0; i < regions.size(); i++) {
+        VkImageSubresourceLayers input_layer{};
+        input_layer.aspectMask = (VK_IMAGE_ASPECT_COLOR_BIT); // TODO
+        input_layer.baseArrayLayer = static_cast<uint32_t>(i);
+        input_layer.layerCount     = 1;//MathUtil::Min(NumFaces(), src->NumFaces());
 
-    region.srcOffsets[0] = { (int32_t)src_rect.x0, (int32_t)src_rect.y0, 0 };
-    region.srcOffsets[1] = { (int32_t)src_rect.x1, (int32_t)src_rect.y1, 1 };
+        VkImageBlit region{};
+        region.srcSubresource = input_layer;
+        region.dstSubresource = input_layer;
+        region.srcOffsets[0] = {(int32_t) src_rect.x0, (int32_t) src_rect.y0, 0};
+        region.srcOffsets[1] = {(int32_t) src_rect.x1, (int32_t) src_rect.y1, 1};
+        region.dstOffsets[0] = {(int32_t) dst_rect.x0, (int32_t) dst_rect.y0, 0};
+        region.dstOffsets[1] = {(int32_t) dst_rect.x1, (int32_t) dst_rect.y1, 1};
 
-    region.dstOffsets[0] = { (int32_t)dst_rect.x0, (int32_t)dst_rect.y0, 0 };
-    region.dstOffsets[1] = { (int32_t)dst_rect.x1, (int32_t)dst_rect.y1, 1 };
+        regions[i] = region;
+    }
 
     vkCmdBlitImage(
         command_buffer->GetCommandBuffer(),
@@ -576,10 +605,69 @@ Result Image::Blit(
         GPUMemory::GetImageLayout(src->GetGPUImage()->GetResourceState()),
         this->GetGPUImage()->image,
         GPUMemory::GetImageLayout(this->GetGPUImage()->GetResourceState()),
-        1,
-        &region,
+        static_cast<uint32_t>(regions.size()),
+        regions.data(),
         ToVkFilter(this->GetFilterMode())
-    );
+    );*/
+
+    const auto num_faces   = MathUtil::Min(NumFaces(), src_image->NumFaces());
+    const auto num_mipmaps = MathUtil::Min(NumMipmaps(), src_image->NumMipmaps());
+
+    for (uint32_t face = 0; face < num_faces; face++) {
+
+            /* Memory barrier for transfer - note that after generating the mipmaps,
+                we'll still need to transfer into a layout primed for reading from shaders. */
+
+            const ImageSubResource src {
+                .base_array_layer = face,
+                .base_mip_level   = 0
+            };
+
+            const ImageSubResource dst {
+                .base_array_layer = face,
+                .base_mip_level   = 0
+            };
+
+            /*m_image->InsertSubResourceBarrier(
+                command_buffer,
+                src,
+                GPUMemory::ResourceState::COPY_SRC
+            );*/
+
+            /* Blit src -> dst */
+            const VkImageBlit blit {
+                .srcSubresource = {
+                    .aspectMask     = src.aspect_mask,
+                    .mipLevel       = src.base_mip_level,
+                    .baseArrayLayer = src.base_array_layer,
+                    .layerCount     = src.num_layers
+                },
+                .srcOffsets     = {
+                    { (int32_t) src_rect.x0, (int32_t) src_rect.y0, 0 },
+                    { (int32_t) src_rect.x1, (int32_t) src_rect.y1, 1 }
+                },
+                .dstSubresource = {
+                    .aspectMask     = dst.aspect_mask,
+                    .mipLevel       = dst.base_mip_level,
+                    .baseArrayLayer = dst.base_array_layer,
+                    .layerCount     = dst.num_layers
+                },
+                .dstOffsets     = {
+                    { (int32_t) dst_rect.x0, (int32_t) dst_rect.y0, 0 },
+                    { (int32_t) dst_rect.x1, (int32_t) dst_rect.y1, 1 }
+                }
+            };
+
+            vkCmdBlitImage(
+                command_buffer->GetCommandBuffer(),
+                src_image->GetGPUImage()->image,
+                GPUMemory::GetImageLayout(src_image->GetGPUImage()->GetResourceState()),
+                this->GetGPUImage()->image,
+                GPUMemory::GetImageLayout(this->GetGPUImage()->GetResourceState()),
+                1, &blit,
+                ToVkFilter(this->GetFilterMode())
+            );
+    }
 
     HYPERION_RETURN_OK;
 }

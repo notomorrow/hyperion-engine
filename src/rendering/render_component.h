@@ -9,6 +9,7 @@
 #include <rendering/backend/renderer_frame.h>
 #include <scene/spatial.h>
 #include <math/math_util.h>
+#include <constants.h>
 #include <threads.h>
 #include <types.h>
 
@@ -34,7 +35,7 @@ public:
 
     /*! @param render_frame_slicing Number of frames to wait between render calls */
     RenderComponentBase(UInt render_frame_slicing = 0)
-        : m_render_frame_slicing(render_frame_slicing),
+        : m_render_frame_slicing(MathUtil::NextMultiple(render_frame_slicing, max_frames_in_flight)),
           m_render_frame_slicing_counter(MathUtil::MaxSafeValue<UInt>()),
           m_index(~0u),
           m_parent(nullptr)
