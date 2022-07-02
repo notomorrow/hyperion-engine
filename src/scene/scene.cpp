@@ -337,6 +337,7 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
             .aabb_min                    = params.aabb.min.ToVector4(),
             .global_timer                = params.global_timer,
             .num_environment_shadow_maps = static_cast<UInt32>(m_environment->HasRenderComponent<ShadowRenderer>()), // callable on render thread only
+            .num_lights                  = static_cast<UInt32>(m_environment->NumLights()),
             .camera_near                 = params.camera_near,
             .camera_far                  = params.camera_far
         };
@@ -349,6 +350,8 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
                 shader_data.environment_texture_usage |= 1u << i;
             }
         }
+
+        //DebugLog(LogType::Debug, "set %u lights\n", shader_data.num_lights);
         
         engine->shader_globals->scenes.Set(m_id.value - 1, shader_data);
 

@@ -106,7 +106,7 @@ public:
     EngineComponentBase &operator=(const EngineComponentBase &other) = delete;
     ~EngineComponentBase()
     {
-        DebugLog(LogType::Warn, "free'd resource '%s' %lu\n", typeid(*this).name(), m_id);
+        //DebugLog(LogType::Warn, "free'd resource '%s' %lu\n", typeid(*this).name(), m_id);
     };
 
     ID GetId() const          { return m_id; }

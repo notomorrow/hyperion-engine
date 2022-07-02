@@ -17,7 +17,7 @@
 
 
 #define HYP_FEATURES_BINDLESS_TEXTURES 0
-#define HYP_FEATURES_GEOMETRY_SHADER   0
+#define HYP_FEATURES_GEOMETRY_SHADER   1
 
 #define HYP_DESCRIPTOR_SET_GLOBAL 1
 #define HYP_DESCRIPTOR_SET_SCENE  2
@@ -41,6 +41,10 @@
 
     #define HYP_MAX_BOUND_TEXTURES 16
 #endif
+
+#define HYP_LIGHT_TYPE_DIRECTIONAL 0
+#define HYP_LIGHT_TYPE_POINT       1
+#define HYP_LIGHT_TYPE_SPOT        2
 
 #define HYP_FMATH_SQR(num)  (num)*(num)
 #define HYP_FMATH_CUBE(num) (num)*(num)*(num)

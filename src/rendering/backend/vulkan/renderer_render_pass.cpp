@@ -147,6 +147,7 @@ Result RenderPass::Create(Device *device)
             multiview_view_mask        |= 1 << i;
             multiview_correlation_mask |= 1 << i;
         }
+        DebugLog(LogType::RenDebug, "Multiview layer masks:\n\tVIEW MASK: 0x%02X\n\tCORRELATION MASK 0x%02X\n", multiview_view_mask, multiview_correlation_mask);
 
         render_pass_info.pNext = &multiview_info;
     }

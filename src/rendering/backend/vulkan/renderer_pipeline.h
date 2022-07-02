@@ -24,13 +24,13 @@ public:
         union {
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 grid_size,
-                         count_mode;
+                       count_mode;
             } voxelizer_data;
 
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 num_fragments,
-                         voxel_grid_size,
-                         mipmap_level;
+                       voxel_grid_size,
+                       mipmap_level;
             } octree_data;
 
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)

@@ -16,7 +16,8 @@ GraphicsPipeline::GraphicsPipeline(
     m_shader(std::move(shader)),
     m_render_pass(std::move(render_pass)),
     m_renderable_attributes(renderable_attributes),
-    m_per_frame_data(nullptr)
+    m_per_frame_data(nullptr),
+    m_multiview_index(~0u)
 {
 }
 
@@ -252,7 +253,7 @@ void GraphicsPipeline::Init(Engine *engine)
         }
 
         engine->render_scheduler.Enqueue([this, engine](...) {
-            renderer::GraphicsPipeline::ConstructionInfo construction_info{
+            renderer::GraphicsPipeline::ConstructionInfo construction_info {
                 .vertex_attributes = m_renderable_attributes.vertex_attributes,
                 .topology          = m_renderable_attributes.topology,
                 .cull_mode         = m_renderable_attributes.cull_faces,
@@ -262,7 +263,8 @@ void GraphicsPipeline::Init(Engine *engine)
                 .blend_enabled     = m_renderable_attributes.alpha_blending,
                 .shader            = m_shader->GetShaderProgram(),
                 .render_pass       = &m_render_pass->GetRenderPass(),
-                .stencil_state     = m_renderable_attributes.stencil_state
+                .stencil_state     = m_renderable_attributes.stencil_state,
+                .multiview_index   = m_multiview_index
             };
 
             for (auto &fbo : m_fbos) {

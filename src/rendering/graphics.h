@@ -77,6 +77,9 @@ public:
     const StencilState &GetStencilMode() const              { return m_renderable_attributes.stencil_state; }
     void SetStencilState(const StencilState &stencil_state) { m_renderable_attributes.stencil_state = stencil_state; }
 
+    UInt GetMultiviewIndex() const                          { return m_multiview_index; }
+    void SetMultiviewIndex(UInt multiview_index)            { m_multiview_index = multiview_index; }
+
     void AddSpatial(Ref<Spatial> &&spatial);
     void RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_removed = true);
     auto &GetSpatials()                                              { return m_spatials; }
@@ -116,6 +119,7 @@ private:
     Ref<Shader>                       m_shader;
     Ref<RenderPass>                   m_render_pass;
     RenderableAttributeSet            m_renderable_attributes;
+    UInt                              m_multiview_index;
     
     std::vector<Ref<Framebuffer>>     m_fbos;
 

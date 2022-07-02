@@ -7,7 +7,7 @@
 #include <rendering/base.h>
 #include <rendering/texture.h>
 #include <rendering/shader.h>
-#include <rendering/light.h>
+#include <rendering/Light.h>
 #include <core/scheduler.h>
 #include <core/lib/flat_set.h>
 #include <core/lib/flat_map.h>

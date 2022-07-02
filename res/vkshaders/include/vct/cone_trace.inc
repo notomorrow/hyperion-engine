@@ -7,14 +7,14 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform sampler3D voxel_im
 
 
 #define VCT_DIFFUSE_MAX_DIST          0.3
-#define VCT_DIFFUSE_RATIO(roughness)  2.0
+#define VCT_DIFFUSE_RATIO(roughness)  (mix(8.0, 20.0, sqrt(roughness)))
 #define VCT_SPECULAR_MAX_DIST         0.5
 
 // rough 0 = 0.025
 // rough 1.0 = 
-#define VCT_SPECULAR_RATIO(roughness) (mix(0.015, 1.0, roughness))
+#define VCT_SPECULAR_RATIO(roughness) (mix(0.015, 1.0, sqrt(roughness)))
 
-#define VCT_OFFSET_ORIGIN(normal)     (normalize(normal) * 0.6)
+#define VCT_OFFSET_ORIGIN(normal)     (normalize(normal) * 1.05)
 
 vec4 FetchVoxel(vec3 position, float lod)
 {

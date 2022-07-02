@@ -1,4 +1,4 @@
-#include "light.h"
+#include "Light.h"
 #include "../engine.h"
 
 #include <util/byte_util.h>
@@ -9,12 +9,14 @@ Light::Light(
     LightType type,
     const Vector3 &position,
     const Vector4 &color,
-    float intensity
+    float intensity,
+    float radius
 ) : EngineComponentBase(),
     m_type(type),
     m_position(position),
     m_color(color),
     m_intensity(intensity),
+    m_radius(radius),
     m_shader_data_state(ShaderDataState::DIRTY)
 {
 }
@@ -45,6 +47,13 @@ void Light::Init(Engine *engine)
     }));
 }
 
+void Light::Update(Engine *engine, GameCounter::TickUnit delta)
+{
+    if (m_shader_data_state.IsDirty()) {
+        EnqueueRenderUpdates();
+    }
+}
+
 void Light::EnqueueRenderUpdates() const
 {
     LightShaderData shader_data{
@@ -52,6 +61,7 @@ void Light::EnqueueRenderUpdates() const
         .color            = ByteUtil::PackColorU32(m_color),
         .light_type       = static_cast<UInt32>(m_type),
         .intensity        = m_intensity,
+        .radius           = m_radius,
         .shadow_map_index = ~0u
     };
 

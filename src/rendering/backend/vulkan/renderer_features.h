@@ -118,6 +118,7 @@ public:
         REQUIRES_VK_FEATURE_MSG(m_features.fragmentStoresAndAtomics, "Image stores and atomics in fragment shaders"); /* for imageStore() in fragment shaders */
         REQUIRES_VK_FEATURE_MSG(m_features.shaderSampledImageArrayDynamicIndexing, "Dynamic sampler / image array indexing"); /* for accessing textures based on dynamic index (push constant) */
         REQUIRES_VK_FEATURE_MSG(m_indexing_features.descriptorBindingPartiallyBound && m_indexing_features.runtimeDescriptorArray, "Bindless descriptors"); /* bindless support */
+        REQUIRES_VK_FEATURE_MSG(m_multiview_features.multiview, "Multiview not supported");
         REQUIRES_VK_FEATURE(m_properties.limits.maxDescriptorSetSamplers >= 16);
         REQUIRES_VK_FEATURE(m_properties.limits.maxDescriptorSetUniformBuffers >= 16);
 
@@ -405,6 +406,7 @@ private:
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_acceleration_structure_features;
     VkPhysicalDeviceDescriptorIndexingFeatures       m_indexing_features;
     VkPhysicalDeviceDescriptorIndexingProperties     m_indexing_properties;
+    VkPhysicalDeviceMultiviewFeatures                m_multiview_features;
     VkPhysicalDeviceFeatures2                        m_features2;
     VkPhysicalDeviceProperties2                      m_properties2;
 

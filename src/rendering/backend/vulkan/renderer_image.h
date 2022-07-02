@@ -341,9 +341,9 @@ public:
     }
 };
 
-class TextureImageCubemap : public TextureImage {
+class TextureImageCube : public TextureImage {
 public:
-    TextureImageCubemap(
+    TextureImageCube(
         Extent2D extent,
         InternalFormat format,
         FilterMode filter_mode,
