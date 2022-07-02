@@ -88,6 +88,8 @@ private:
     std::unique_ptr<VertexBuffer>         m_vbo;
     std::unique_ptr<IndexBuffer>          m_ibo;
 
+    size_t m_indices_count = 0;
+
     VertexAttributeSet m_vertex_attributes;
 
     std::vector<Vertex> m_vertices;

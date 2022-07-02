@@ -339,7 +339,7 @@ void VoxelConeTracing::CreateDescriptors(Engine *engine)
     
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto *descriptor_set_globals = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
-        descriptor_set_globals->AddDescriptor<renderer::ImageSamplerDescriptor>(25)
+        descriptor_set_globals->AddDescriptor<renderer::ImageSamplerDescriptor>(DescriptorKey::VOXEL_IMAGE)
             ->SetSubDescriptor({
                 .image_view = &m_voxel_image->GetImageView(),
                 .sampler    = &m_voxel_image->GetSampler()

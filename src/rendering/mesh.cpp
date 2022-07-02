@@ -120,6 +120,8 @@ void Mesh::Init(Engine *engine)
             const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
             const size_t packed_indices_size = m_indices.size() * sizeof(Index);
 
+            m_indices_count = m_indices.size();
+
             HYPERION_BUBBLE_ERRORS(m_vbo->Create(device, packed_buffer_size));
             HYPERION_BUBBLE_ERRORS(m_ibo->Create(device, packed_indices_size));
 
@@ -133,7 +135,6 @@ void Mesh::Init(Engine *engine)
 
                     auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
                     staging_buffer_indices->Copy(device, packed_indices_size, m_indices.data());
-
 
                     commands.Push([&](CommandBuffer *cmd) {
                         m_vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
@@ -156,6 +157,9 @@ void Mesh::Init(Engine *engine)
         
             HYPERION_RETURN_OK;
         });
+        HYP_FLUSH_RENDER_QUEUE(engine);
+        m_vertices.clear();
+        m_indices.clear();
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
             DebugLog(
@@ -163,6 +167,8 @@ void Mesh::Init(Engine *engine)
                 "Destroy mesh with id %u\n",
                 GetId().value
             );
+
+            m_indices_count = 0;
             
             engine->render_scheduler.Enqueue([this](...) {
                 DebugLog(
@@ -254,7 +260,7 @@ void Mesh::Render(Engine *, CommandBuffer *cmd) const
     m_vbo->Bind(cmd);
     m_ibo->Bind(cmd);
 
-    cmd->DrawIndexed(static_cast<UInt32>(m_indices.size()));
+    cmd->DrawIndexed(static_cast<UInt32>(m_indices_count));
 }
 
 std::vector<PackedVertex> Mesh::BuildPackedVertices() const

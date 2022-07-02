@@ -19,10 +19,13 @@ const std::array<std::pair<Vector3, Vector3>, 6> CubemapRenderer::cubemap_direct
     std::make_pair(Vector3(0, 0, -1), Vector3(0, -1, 0))
 };
 
-CubemapRenderer::CubemapRenderer(const Extent2D &cubemap_dimensions)
-    : EngineComponentBase(),
-      RenderComponent(25),
-      m_cubemap_dimensions(cubemap_dimensions)
+CubemapRenderer::CubemapRenderer(
+    const Extent2D &cubemap_dimensions,
+    const Vector3 &origin
+) : EngineComponentBase(),
+    RenderComponent(25),
+    m_cubemap_dimensions(cubemap_dimensions),
+    m_origin(origin)
 {
 }
 
@@ -40,25 +43,25 @@ void CubemapRenderer::Init(Engine *engine)
     EngineComponentBase::Init(engine);
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](Engine *engine) {
-        for (UInt i = 0; i < 6; i++) {
+        //for (UInt i = 0; i < 6; i++) {
             auto camera = std::make_unique<PerspectiveCamera>(
                 90.0f,
                 m_cubemap_dimensions.width, m_cubemap_dimensions.height,
                 150.0f, 0.015f
             );
 
-            camera->SetDirection(cubemap_directions[i].first);
-            camera->SetUpVector(cubemap_directions[i].second);
+            //camera->SetDirection(cubemap_directions[i].first);
+            //camera->SetUpVector(cubemap_directions[i].second);
 
-            m_scenes[i] = engine->resources.scenes.Add(std::make_unique<Scene>(
+            m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
                 std::move(camera)
             ));
-        }
+        //}
 
-        CreateImagesAndBuffers(engine);
         CreateShader(engine);
         CreateRenderPass(engine);
         CreateFramebuffers(engine);
+        CreateImagesAndBuffers(engine);
         CreateGraphicsPipelines(engine);
 
         HYP_FLUSH_RENDER_QUEUE(engine);
@@ -66,12 +69,53 @@ void CubemapRenderer::Init(Engine *engine)
         SetReady(true);
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](Engine *engine) {
+            // destroy descriptors
+
+            for (UInt i = 0; i < max_frames_in_flight; i++) {
+                if (m_framebuffers[i] != nullptr) {
+                    for (auto &attachment : m_attachments) {
+                        m_framebuffers[i]->RemoveAttachmentRef(attachment.get());
+                    }
+
+                    if (m_pipeline != nullptr) {
+                        m_pipeline->RemoveFramebuffer(m_framebuffers[i]->GetId());
+                    }
+                }
+            }
+
+            if (m_render_pass != nullptr) {
+                for (auto &attachment : m_attachments) {
+                    m_render_pass->GetRenderPass().RemoveAttachmentRef(attachment.get());
+                }
+            }
+
+            engine->render_scheduler.Enqueue([this, engine](...) {
+                auto result = renderer::Result::OK;
+
+                for (UInt i = 0; i < max_frames_in_flight; i++) {
+                    auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
+                        .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+
+                    descriptor_set->RemoveDescriptor(DescriptorKey::CUBEMAP_UNIFORMS);
+                }
+                for (auto &attachment : m_attachments) {
+                    HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
+                }
+
+                m_attachments.clear();
+
+                return m_uniform_buffer.Destroy(engine->GetDevice());
+            });
+
+
             m_shader       = nullptr;
             m_framebuffers = {};
             m_render_pass  = nullptr;
             m_cubemap      = nullptr;
-            m_pipelines    = {};
-            m_scenes       = {};
+            m_pipeline     = nullptr;
+            m_scene        = nullptr;
+
+            HYP_FLUSH_RENDER_QUEUE(engine);
 
             SetReady(false);
         }), engine);
@@ -95,13 +139,13 @@ void CubemapRenderer::InitGame(Engine *engine)
             continue;
         }
 
-        for (auto &pipeline : m_pipelines) {
+       // for (auto &pipeline : m_pipelines) {
             if (entity->GetRenderableAttributes().vertex_attributes &
-                pipeline->GetRenderableAttributes().vertex_attributes) {
+                m_pipeline->GetRenderableAttributes().vertex_attributes) {
 
-                pipeline->AddSpatial(it.second.IncRef());
+                m_pipeline->AddSpatial(it.second.IncRef());
             }
-        }
+       // }
     }
 }
 
@@ -111,13 +155,12 @@ void CubemapRenderer::OnEntityAdded(Ref<Spatial> &spatial)
 
     AssertReady();
 
-    for (auto &pipeline : m_pipelines) {
-        if (BucketHasGlobalIllumination(spatial->GetBucket())
-            && (spatial->GetRenderableAttributes().vertex_attributes &
-                pipeline->GetRenderableAttributes().vertex_attributes)) {
-            pipeline->AddSpatial(spatial.IncRef());
+    //for (auto &pipeline : m_pipelines) {
+        if (spatial->GetRenderableAttributes().vertex_attributes &
+            m_pipeline->GetRenderableAttributes().vertex_attributes) {
+            m_pipeline->AddSpatial(spatial.IncRef());
         }
-    }
+    //}
 }
 
 void CubemapRenderer::OnEntityRemoved(Ref<Spatial> &spatial)
@@ -126,9 +169,9 @@ void CubemapRenderer::OnEntityRemoved(Ref<Spatial> &spatial)
 
     AssertReady();
 
-    for (auto &pipeline : m_pipelines) {
-        pipeline->RemoveSpatial(spatial.IncRef());
-    }
+    //for (auto &pipeline : m_pipelines) {
+        m_pipeline->RemoveSpatial(spatial.IncRef());
+    //}
 }
 
 void CubemapRenderer::OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial)
@@ -137,16 +180,14 @@ void CubemapRenderer::OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial)
 
     AssertReady();
 
-    const auto &renderable_attributes = spatial->GetRenderableAttributes();
-
-    for (auto &pipeline : m_pipelines) {
+    //for (auto &pipeline : m_pipelines) {
         if (spatial->GetRenderableAttributes().vertex_attributes &
-            pipeline->GetRenderableAttributes().vertex_attributes) {
-            pipeline->AddSpatial(spatial.IncRef());
+            m_pipeline->GetRenderableAttributes().vertex_attributes) {
+            m_pipeline->AddSpatial(spatial.IncRef());
         } else {
-            pipeline->RemoveSpatial(spatial.IncRef());
+            m_pipeline->RemoveSpatial(spatial.IncRef());
         }
-    }
+    //}
 }
 
 void CubemapRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
@@ -164,14 +205,17 @@ void CubemapRenderer::OnRender(Engine *engine, Frame *frame)
 
     auto result = renderer::Result::OK;
 
-
     m_framebuffers[frame_index]->BeginCapture(command_buffer);
 
-    for (UInt i = 0; i < 6; i++) {
-        engine->render_state.BindScene(m_scenes[i]);
-        m_pipelines[i]->Render(engine, frame);
-        engine->render_state.UnbindScene();
-    }
+    m_pipeline->GetPipeline()->push_constants = {
+        .render_component_data = {
+            .index = GetComponentIndex()
+        }
+    };
+
+    engine->render_state.BindScene(m_scene);
+    m_pipeline->Render(engine, frame);
+    engine->render_state.UnbindScene();
 
     m_framebuffers[frame_index]->EndCapture(command_buffer);
 
@@ -191,18 +235,62 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
 {
     m_cubemap = engine->resources.textures.Add(std::make_unique<TextureCube>(
         m_cubemap_dimensions,
-        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8,
         Image::FilterMode::TEXTURE_FILTER_LINEAR,
         Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
         nullptr
     ));
 
     m_cubemap.Init();
+
+    CubemapUniforms cubemap_uniforms{};
+
+    for (UInt i = 0; i < 6; i++) {
+        cubemap_uniforms.projection_matrices[i] = Matrix4::Perspective(
+            90.0f,
+            m_cubemap_dimensions.width, m_cubemap_dimensions.height,
+            0.015f, 150.0f
+        );
+
+        cubemap_uniforms.view_matrices[i] = Matrix4::LookAt(
+            m_origin,
+            cubemap_directions[i].first,
+            cubemap_directions[i].second
+        );
+    }
+
+    m_uniform_buffer.Create(engine->GetDevice(), sizeof(CubemapUniforms));
+    m_uniform_buffer.Copy(engine->GetDevice(), sizeof(CubemapUniforms), &cubemap_uniforms);
+
+    // create descriptors
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto *descriptor_set = engine->GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::CUBEMAP_UNIFORMS)
+            ->SetSubDescriptor({
+                .element_index = GetComponentIndex(),
+                .buffer        = &m_uniform_buffer
+            });
+
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::CUBEMAP_TEST)
+            ->SetSubDescriptor({
+                .element_index = GetComponentIndex(),
+                .image_view    = GetCubemapImageView(i)
+            });
+    }
+
+    DebugLog(
+        LogType::Debug,
+        "Added cubemap uniform buffers\n"
+    );
 }
 
 void CubemapRenderer::CreateGraphicsPipelines(Engine *engine)
 {
-    for (UInt i = 0; i < 6; i++) {
+    //for (UInt i = 0; i < 6; i++) {
         auto pipeline = std::make_unique<GraphicsPipeline>(
             m_shader.IncRef(),
             m_render_pass.IncRef(),
@@ -216,22 +304,23 @@ void CubemapRenderer::CreateGraphicsPipelines(Engine *engine)
         pipeline->SetDepthWrite(true);
         pipeline->SetDepthTest(true);
         pipeline->SetFaceCullMode(FaceCullMode::BACK);
-        pipeline->SetMultiviewIndex(i);
+        pipeline->SetMultiviewIndex(0);
 
         for (auto &framebuffer: m_framebuffers) {
             pipeline->AddFramebuffer(framebuffer.IncRef());
         }
 
-        m_pipelines[i] = engine->AddGraphicsPipeline(std::move(pipeline));
-        m_pipelines[i].Init();
-    }
+        m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+        DebugLog(LogType::Debug, "Create cubemap pipeline\n");
+        m_pipeline.Init();
+   // }
 }
 
 void CubemapRenderer::CreateShader(Engine *engine)
 {
     std::vector<SubShader> sub_shaders = {
-        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/vert.spv")).Read()}},
-        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/forward_frag.spv")).Read()}}
+        {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/cubemap_renderer.vert.spv")).Read()}},
+        {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "/vkshaders/cubemap_renderer.frag.spv")).Read()}}
     };
 
     m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(sub_shaders));

@@ -6,6 +6,7 @@
 #include "../renderer.h"
 #include "../Light.h"
 #include "../render_component.h"
+#include "../buffers.h"
 
 #include <rendering/backend/renderer_frame.h>
 
@@ -23,13 +24,16 @@ using renderer::Extent2D;
 
 class CubemapRenderer : public EngineComponentBase<STUB_CLASS(CubemapRenderer)>, public RenderComponent<CubemapRenderer> {
 public:
-    CubemapRenderer(const Extent2D &cubemap_dimensions = Extent2D { 512, 512 });
+    CubemapRenderer(
+        const Extent2D &cubemap_dimensions = Extent2D { 512, 512 },
+        const Vector3 &origin              = Vector3::Zero()
+    );
     CubemapRenderer(const CubemapRenderer &other) = delete;
     CubemapRenderer &operator=(const CubemapRenderer &other) = delete;
     ~CubemapRenderer();
 
-    Ref<Texture> &GetCubemap()             { return m_cubemap; }
-    const Ref<Texture> &GetCubemap() const { return m_cubemap; }
+    const Vector3 &GetOrigin() const      { return m_origin; }
+    void SetOrigin(const Vector3 &origin) { m_origin = origin; }
 
     void Init(Engine *engine);
     void InitGame(Engine *engine); // init on game thread
@@ -37,10 +41,13 @@ public:
     void OnUpdate(Engine *engine, GameCounter::TickUnit delta);
     void OnRender(Engine *engine, Frame *frame);
 
-    // void RenderVoxels(Engine *engine, Frame *frame);
-
 private:
     static const std::array<std::pair<Vector3, Vector3>, 6> cubemap_directions;
+
+    renderer::ImageView *GetCubemapImageView(UInt frame_index) const
+    {
+        return m_framebuffers[frame_index]->GetFramebuffer().GetAttachmentRefs()[0]->GetImageView();
+    }
 
     void CreateImagesAndBuffers(Engine *engine);
     void CreateGraphicsPipelines(Engine *engine);
@@ -54,15 +61,15 @@ private:
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     Extent2D                                           m_cubemap_dimensions;
-    std::array<Ref<Scene>, 6>                          m_scenes;
+    Vector3                                            m_origin;
+    Ref<Scene>                                         m_scene;
     std::array<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
     Ref<Shader>                                        m_shader;
     Ref<RenderPass>                                    m_render_pass;
-    std::array<Ref<GraphicsPipeline>, 6>               m_pipelines;
+    Ref<GraphicsPipeline>                              m_pipeline;
     std::vector<std::unique_ptr<Attachment>>           m_attachments;
-
-
     Ref<Texture>                                       m_cubemap;
+    UniformBuffer                                      m_uniform_buffer;
 };
 
 

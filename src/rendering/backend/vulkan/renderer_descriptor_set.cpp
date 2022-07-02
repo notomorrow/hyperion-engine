@@ -22,13 +22,13 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::GBUFFER_DEPTH,        1},
             {DescriptorKey::GBUFFER_MIP_CHAIN,    2},
             {DescriptorKey::GBUFFER_SAMPLER,      3},
- 
+
             {DescriptorKey::DEFERRED_RESULT,      4},
- 
+
             {DescriptorKey::POST_FX_PRE_STACK,    8},
             {DescriptorKey::POST_FX_POST_STACK,   9},
             {DescriptorKey::POST_FX_UNIFORMS,    10},
-     
+
             {DescriptorKey::SSR_UV_IMAGE,        12},
             {DescriptorKey::SSR_SAMPLE_IMAGE,    13},
             {DescriptorKey::SSR_RADIUS_IMAGE,    14},
@@ -39,7 +39,12 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::SSR_SAMPLE_TEXTURE,    18},
             {DescriptorKey::SSR_RADIUS_TEXTURE,    19},
             {DescriptorKey::SSR_BLUR_HOR_TEXTURE,  20},
-            {DescriptorKey::SSR_BLUR_VERT_TEXTURE, 21}
+            {DescriptorKey::SSR_BLUR_VERT_TEXTURE, 21},
+
+            {DescriptorKey::CUBEMAP_UNIFORMS,      24},
+            {DescriptorKey::CUBEMAP_TEST,          25},
+
+            {DescriptorKey::VOXEL_IMAGE,           30}
         }
     },
     {
@@ -1152,7 +1157,7 @@ void Descriptor::UpdateSubDescriptorBuffer(
         out_buffer = {
             .buffer = sub_descriptor.buffer->buffer,
             .offset = 0,
-            .range = sub_descriptor.range != 0
+            .range  = sub_descriptor.range != 0
                 ? sub_descriptor.range
                 : sub_descriptor.buffer->size
         };

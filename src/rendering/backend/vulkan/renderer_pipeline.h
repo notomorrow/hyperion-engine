@@ -57,6 +57,10 @@ public:
             } post_fx_data;
 
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+                UInt32 index;
+            } render_component_data;
+
+            struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 width, height;
                 float ray_step,
                       num_iterations,

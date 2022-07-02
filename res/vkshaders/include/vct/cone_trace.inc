@@ -3,7 +3,7 @@
 
 #include "shared.inc"
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform sampler3D voxel_image;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
 
 
 #define VCT_DIFFUSE_MAX_DIST          0.3
