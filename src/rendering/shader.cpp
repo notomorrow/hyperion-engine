@@ -14,11 +14,15 @@ void ShaderGlobals::Create(Engine *engine)
     lights.Create(device);
     shadow_maps.Create(device);
     textures.Create(engine);
+
+    cubemap_uniforms.Create(device, sizeof(CubemapUniforms));
 }
 
 void ShaderGlobals::Destroy(Engine *engine)
 {
     auto *device = engine->GetDevice();
+
+    cubemap_uniforms.Destroy(device);
 
     scenes.Destroy(device);
     objects.Destroy(device);

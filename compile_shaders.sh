@@ -9,6 +9,9 @@ glslc --target-env=$VULKAN_TARGET blit.frag -o blit_frag.spv
 glslc --target-env=$VULKAN_TARGET blit.vert -o blit_vert.spv
 glslc --target-env=$VULKAN_TARGET forward.frag -o forward_frag.spv
 glslc --target-env=$VULKAN_TARGET main.vert -o vert.spv
+glslc --target-env=$VULKAN_TARGET cubemap_renderer.frag -o cubemap_renderer.frag.spv
+glslc --target-env=$VULKAN_TARGET cubemap_renderer.vert -o cubemap_renderer.vert.spv
+
 glslc --target-env=$VULKAN_TARGET imagestore.comp -o imagestore.comp.spv
 
 glslc --target-env=$VULKAN_TARGET filter_pass.frag -o filter_pass_frag.spv

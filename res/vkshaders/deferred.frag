@@ -15,6 +15,7 @@ layout(location=2) out vec4 output_positions;
 // layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12) uniform texture2D ssr_uvs;
 // layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13) uniform texture2D ssr_sample;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube rendered_cubemaps[];
 
 #include "include/gbuffer.inc"
 #include "include/material.inc"
@@ -225,6 +226,8 @@ void main()
             result += (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * NdotL * ao * shadow * light_color_rgb) * attenuation;
 
         }
+
+        result = TextureCubeLod(gbuffer_sampler, rendered_cubemaps[0], R, 0.0).rgb;
         //result = reflections.rgb;
     } else {
         result = albedo.rgb;

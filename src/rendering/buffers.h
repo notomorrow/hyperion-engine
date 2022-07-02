@@ -71,6 +71,11 @@ private:
     UInt32 state;
 };
 
+struct alignas(256) CubemapUniforms {
+    Matrix4 projection_matrices[6];
+    Matrix4 view_matrices[6];
+};
+
 struct alignas(256) SkeletonShaderData {
     static constexpr size_t max_bones = 128;
 

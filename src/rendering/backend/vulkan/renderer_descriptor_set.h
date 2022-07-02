@@ -183,6 +183,9 @@ enum class DescriptorKey {
     SSR_RADIUS_TEXTURE,
     SSR_BLUR_HOR_TEXTURE,
     SSR_BLUR_VERT_TEXTURE,
+    CUBEMAP_UNIFORMS,
+    CUBEMAP_TEST, // removeme
+    VOXEL_IMAGE,
 
     SCENE_BUFFER,
     LIGHTS_BUFFER,
@@ -286,8 +289,18 @@ public:
     {
         static_assert(std::is_base_of_v<Descriptor, DescriptorType>, "DescriptorType must be a derived class of Descriptor");
 
+        auto it = std::find_if(
+            m_descriptors.begin(),
+            m_descriptors.end(),
+            [binding](const auto &item) {
+                return item->GetBinding() == binding;
+            }
+        );
+
+        AssertThrowMsg(it == m_descriptors.end(), "Descriptor with binding %u already exists", binding);
+
         m_descriptors.push_back(std::make_unique<DescriptorType>(binding));
-        m_descriptor_bindings.push_back({});
+        m_descriptor_bindings.emplace_back();
 
         return m_descriptors.back().get();
     }

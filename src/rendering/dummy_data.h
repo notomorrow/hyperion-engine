@@ -10,6 +10,7 @@
 namespace hyperion::v2 {
 
 using renderer::TextureImage2D;
+using renderer::TextureImageCube;
 using renderer::ImageView;
 using renderer::Sampler;
 
@@ -28,6 +29,8 @@ public:
 
     HYP_DEF_DUMMY_DATA(TextureImage2D, Image2D1x1R8, m_image_2d_1x1_r8);
     HYP_DEF_DUMMY_DATA(ImageView, ImageView2D1x1R8, m_image_view_2d_1x1_r8);
+    HYP_DEF_DUMMY_DATA(TextureImageCube, ImageCube1x1R8, m_image_cube_1x1_r8);
+    HYP_DEF_DUMMY_DATA(ImageView, ImageViewCube1x1R8, m_image_view_cube_1x1_r8);
     HYP_DEF_DUMMY_DATA(Sampler, Sampler, m_sampler);
 
 #undef HYP_DEF_DUMMY_DATA

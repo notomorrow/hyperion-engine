@@ -384,6 +384,27 @@ void Engine::Initialize()
     }
 #endif
 
+    for (DescriptorSet::Index descriptor_set_index : DescriptorSet::global_buffer_mapping) {
+        auto *descriptor_set = GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(descriptor_set_index);
+
+        auto *cubemap_descriptor = descriptor_set
+            ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::CUBEMAP_UNIFORMS);
+
+        cubemap_descriptor->SetSubDescriptor({
+            .element_index = 0,
+            .buffer        = &shader_globals->cubemap_uniforms
+        });
+
+        auto *cubemap_test_descriptor = descriptor_set
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::CUBEMAP_TEST);
+
+        cubemap_test_descriptor->SetSubDescriptor({
+            .element_index = 0,
+            .image_view    = &GetDummyData().GetImageViewCube1x1R8()
+        });
+    }
+
     // add placeholder shadowmaps
     for (DescriptorSet::Index descriptor_set_index : DescriptorSet::scene_buffer_mapping) {
         auto *descriptor_set = GetInstance()->GetDescriptorPool()
@@ -460,6 +481,10 @@ void Engine::Compile()
 
     /* Finalize descriptor pool */
     HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
+    DebugLog(
+        LogType::Debug,
+        "Finalized descriptor pool\n"
+    );
     
     callbacks.TriggerPersisted(EngineCallback::CREATE_GRAPHICS_PIPELINES, this);
     callbacks.TriggerPersisted(EngineCallback::CREATE_COMPUTE_PIPELINES, this);

@@ -47,6 +47,8 @@ struct ShaderGlobals {
     ShaderData<StorageBuffer, SkeletonShaderData, max_skeletons>  skeletons;
     ShaderData<UniformBuffer, ShadowShaderData, max_shadow_maps>  shadow_maps;
     BindlessStorage                                               textures;
+
+    UniformBuffer                                                 cubemap_uniforms;
 };
 
 } // namespace hyperion::v2
