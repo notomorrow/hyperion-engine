@@ -447,9 +447,9 @@ using PackedIndex = UInt32;
 /* images */
 struct ImageSubResource {
     VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
-    UInt32 base_array_layer      = 0;
-    UInt32 base_mip_level        = 0;
-    UInt32 num_layers            = 1;
+    UInt32 base_array_layer        = 0;
+    UInt32 base_mip_level          = 0;
+    UInt32 num_layers              = 1;
     UInt32 num_levels            = 1;
 
     bool operator==(const ImageSubResource &other) const

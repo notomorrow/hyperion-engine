@@ -11,21 +11,23 @@
 namespace hyperion::v2 {
 
 const std::array<std::pair<Vector3, Vector3>, 6> CubemapRenderer::cubemap_directions = {
-    std::make_pair(Vector3(1, 0, 0), Vector3(0, -1, 0)),
-    std::make_pair(Vector3(-1, 0, 0), Vector3(0, -1, 0)),
-    std::make_pair(Vector3(0, 1, 0), Vector3(0, 0, 1)),
-    std::make_pair(Vector3(0, -1, 0), Vector3(0, 0, -1)),
-    std::make_pair(Vector3(0, 0, 1), Vector3(0, -1, 0)),
-    std::make_pair(Vector3(0, 0, -1), Vector3(0, -1, 0))
+    std::make_pair(Vector3(-1, 0, 0), Vector3(0, 1, 0)),
+    std::make_pair(Vector3(1, 0, 0),  Vector3(0, 1, 0)),
+    std::make_pair(Vector3(0, 1, 0),  Vector3(0, 0, -1)),
+    std::make_pair(Vector3(0, -1, 0), Vector3(0, 0, 1)),
+    std::make_pair(Vector3(0, 0, 1),  Vector3(0, 1, 0)),
+    std::make_pair(Vector3(0, 0, -1), Vector3(0, 1, 0)),
 };
 
 CubemapRenderer::CubemapRenderer(
     const Extent2D &cubemap_dimensions,
-    const Vector3 &origin
+    const Vector3 &origin,
+    Image::FilterMode filter_mode
 ) : EngineComponentBase(),
-    RenderComponent(25),
+    RenderComponent(5),
     m_cubemap_dimensions(cubemap_dimensions),
-    m_origin(origin)
+    m_origin(origin),
+    m_filter_mode(filter_mode)
 {
 }
 
@@ -47,7 +49,7 @@ void CubemapRenderer::Init(Engine *engine)
             auto camera = std::make_unique<PerspectiveCamera>(
                 90.0f,
                 m_cubemap_dimensions.width, m_cubemap_dimensions.height,
-                150.0f, 0.015f
+                0.015f, 1000.0f
             );
 
             //camera->SetDirection(cubemap_directions[i].first);
@@ -56,7 +58,8 @@ void CubemapRenderer::Init(Engine *engine)
             m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
                 std::move(camera)
             ));
-        //}
+        //}\'?
+
 
         CreateShader(engine);
         CreateRenderPass(engine);
@@ -97,7 +100,9 @@ void CubemapRenderer::Init(Engine *engine)
                         .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
 
                     descriptor_set->RemoveDescriptor(DescriptorKey::CUBEMAP_UNIFORMS);
+                    descriptor_set->RemoveDescriptor(DescriptorKey::CUBEMAP_TEST);
                 }
+
                 for (auto &attachment : m_attachments) {
                     HYPERION_PASS_ERRORS(attachment->Destroy(engine->GetInstance()->GetDevice()), result);
                 }
@@ -111,7 +116,7 @@ void CubemapRenderer::Init(Engine *engine)
             m_shader       = nullptr;
             m_framebuffers = {};
             m_render_pass  = nullptr;
-            m_cubemap      = nullptr;
+            m_cubemaps     = {};
             m_pipeline     = nullptr;
             m_scene        = nullptr;
 
@@ -219,6 +224,21 @@ void CubemapRenderer::OnRender(Engine *engine, Frame *frame)
 
     m_framebuffers[frame_index]->EndCapture(command_buffer);
 
+    auto *framebuffer_image = m_framebuffers[frame_index]->GetFramebuffer().GetAttachmentRefs()[0]->GetAttachment()->GetImage();
+
+    framebuffer_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::GPUMemory::ResourceState::COPY_SRC);
+    m_cubemaps[frame_index]->GetImage().GetGPUImage()->InsertBarrier(command_buffer, renderer::GPUMemory::ResourceState::COPY_DST);
+    m_cubemaps[frame_index]->GetImage().Blit(command_buffer, framebuffer_image);
+
+    if (m_filter_mode == Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP) {
+        HYPERION_PASS_ERRORS(
+            m_cubemaps[frame_index]->GetImage().GenerateMipmaps(engine->GetDevice(), command_buffer),
+            result
+        );
+    }
+
+    framebuffer_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+    m_cubemaps[frame_index]->GetImage().GetGPUImage()->InsertBarrier(command_buffer, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
     HYPERION_ASSERT_RESULT(result);
 }
@@ -233,34 +253,36 @@ void CubemapRenderer::OnComponentIndexChanged(RenderComponentBase::Index new_ind
 
 void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
 {
-    m_cubemap = engine->resources.textures.Add(std::make_unique<TextureCube>(
-        m_cubemap_dimensions,
-        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8,
-        Image::FilterMode::TEXTURE_FILTER_LINEAR,
-        Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
-        nullptr
-    ));
-
-    m_cubemap.Init();
-
     CubemapUniforms cubemap_uniforms{};
 
     for (UInt i = 0; i < 6; i++) {
         cubemap_uniforms.projection_matrices[i] = Matrix4::Perspective(
             90.0f,
             m_cubemap_dimensions.width, m_cubemap_dimensions.height,
-            0.015f, 150.0f
+            0.015f, 1000.0f
         );
 
         cubemap_uniforms.view_matrices[i] = Matrix4::LookAt(
             m_origin,
-            cubemap_directions[i].first,
+            (m_origin + cubemap_directions[i].first),
             cubemap_directions[i].second
         );
     }
 
     m_uniform_buffer.Create(engine->GetDevice(), sizeof(CubemapUniforms));
     m_uniform_buffer.Copy(engine->GetDevice(), sizeof(CubemapUniforms), &cubemap_uniforms);
+
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        m_cubemaps[i] = engine->resources.textures.Add(std::make_unique<TextureCube>(
+            m_cubemap_dimensions,
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+            m_filter_mode,
+            Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
+            nullptr
+        ));
+
+        m_cubemaps[i].Init();
+    }
 
     // create descriptors
     for (UInt i = 0; i < max_frames_in_flight; i++) {
@@ -278,7 +300,7 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
             ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::CUBEMAP_TEST)
             ->SetSubDescriptor({
                 .element_index = GetComponentIndex(),
-                .image_view    = GetCubemapImageView(i)
+                .image_view    = &m_cubemaps[i]->GetImageView()
             });
     }
 

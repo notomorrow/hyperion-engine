@@ -16,14 +16,15 @@ layout(location=3) out vec4 gbuffer_material;
 layout(location=4) out vec4 gbuffer_tangents;
 layout(location=5) out vec4 gbuffer_bitangents;
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube rendered_cubemaps[];
 
+#include "include/gbuffer.inc"
 #include "include/material.inc"
 #include "include/packing.inc"
 
 void main() {
     vec3 normal = normalize(v_normal);
-    
-    //gbuffer_albedo    = vec4(0.0);
+
     gbuffer_albedo     = vec4(SAMPLE_TEXTURE_CUBE(MATERIAL_TEXTURE_ALBEDO_map, v_position).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
     gbuffer_normals    = vec4(0.0);  // not needed
     gbuffer_positions  = vec4(0.0);  // not needed

@@ -48,9 +48,6 @@ public:
 
     Environment *GetEnvironment() const                  { return m_environment; }
 
-    Texture *GetEnvironmentTexture(uint32_t index) const { return m_environment_textures[index].ptr; }
-    void SetEnvironmentTexture(uint32_t index, Ref<Texture> &&texture);
-
     Scene::ID GetParentId() const                        { return m_parent_id; }
     void SetParentId(Scene::ID id)                       { m_parent_id = id; }
     

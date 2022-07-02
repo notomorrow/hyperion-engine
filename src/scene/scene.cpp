@@ -1,6 +1,7 @@
 #include "scene.h"
 #include <engine.h>
 #include <rendering/environment.h>
+#include <rendering/render_components/cubemap_renderer.h>
 
 namespace hyperion::v2 {
 
@@ -31,12 +32,6 @@ void Scene::Init(Engine *engine)
     EngineComponentBase::Init(engine);
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SCENES, [this](Engine *engine) {
-        for (auto &texture : m_environment_textures) {
-            if (texture != nullptr) {
-                texture.Init();
-            }
-        }
-
         m_environment->Init(engine);
 
         SetReady(true);
@@ -344,11 +339,10 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
 
         shader_data.environment_texture_usage = 0;
 
-        for (UInt i = 0; i < static_cast<UInt>(m_environment_textures.size()); i++) {
-            if (auto &texture = m_environment_textures[i]) {
-                shader_data.environment_texture_index = texture->GetId().value - 1;
-                shader_data.environment_texture_usage |= 1u << i;
-            }
+        //! TODO: allow any cubemap to be set on env
+        if (const auto *cubemap_renderer = m_environment->GetRenderComponent<CubemapRenderer>()) {
+            shader_data.environment_texture_index = cubemap_renderer->GetComponentIndex();
+            shader_data.environment_texture_usage |= 1u << cubemap_renderer->GetComponentIndex();
         }
 
         //DebugLog(LogType::Debug, "set %u lights\n", shader_data.num_lights);
@@ -359,17 +353,6 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
     });
 
     m_shader_data_state = ShaderDataState::CLEAN;
-}
-
-void Scene::SetEnvironmentTexture(UInt32 index, Ref<Texture> &&texture)
-{
-    if (texture && IsReady()) {
-        texture.Init();
-    }
-
-    m_environment_textures[index] = std::move(texture);
-
-    m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 } // namespace hyperion::v2

@@ -160,13 +160,11 @@ void main()
         vec3 irradiance = vec3(0.0);
         vec4 reflections = vec4(0.0);
 
-#if HYP_FEATURES_BINDLESS_TEXTURES // for now, unitl fixed
-        vec3 ibl = HasEnvironmentTexture(0)
-            ? textureLod(cubemap_textures[scene.environment_texture_index], R, lod).rgb
-            : vec3(0.0);
-#else
         vec3 ibl = vec3(0.0);
-#endif
+
+        if (scene.environment_texture_usage != 0) {
+            ibl = TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
+        }
 
 #if HYP_VCT_ENABLED
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
@@ -226,8 +224,6 @@ void main()
             result += (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * NdotL * ao * shadow * light_color_rgb) * attenuation;
 
         }
-
-        result = TextureCubeLod(gbuffer_sampler, rendered_cubemaps[0], R, 0.0).rgb;
         //result = reflections.rgb;
     } else {
         result = albedo.rgb;
@@ -238,7 +234,7 @@ void main()
 #endif
 
     output_color = vec4(result, 1.0);
-    //output_color.rgb = Tonemap(output_color.rgb);
+    output_color.rgb = Tonemap(output_color.rgb);
 
 
 //    output_color.rgb = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord).rgb;
