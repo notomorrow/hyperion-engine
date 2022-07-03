@@ -31,12 +31,16 @@ public:
         const Vector3 &origin              = Vector3::Zero(),
         Image::FilterMode filter_mode      = Image::FilterMode::TEXTURE_FILTER_LINEAR
     );
+
+    CubemapRenderer(
+        const Extent2D &cubemap_dimensions = Extent2D { 512, 512 },
+        const BoundingBox &aabb            = BoundingBox(-100.0f, 100.0f),
+        Image::FilterMode filter_mode      = Image::FilterMode::TEXTURE_FILTER_LINEAR
+    );
+
     CubemapRenderer(const CubemapRenderer &other) = delete;
     CubemapRenderer &operator=(const CubemapRenderer &other) = delete;
     ~CubemapRenderer();
-
-    const Vector3 &GetOrigin() const                       { return m_origin; }
-    void SetOrigin(const Vector3 &origin)                  { m_origin = origin; }
 
     Ref<Texture> &GetCubemap(UInt frame_index)             { return m_cubemaps[frame_index]; }
     const Ref<Texture> &GetCubemap(UInt frame_index) const { return m_cubemaps[frame_index]; }
@@ -72,7 +76,7 @@ private:
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     Extent2D                                           m_cubemap_dimensions;
-    Vector3                                            m_origin;
+    BoundingBox                                        m_aabb;
     Image::FilterMode                                  m_filter_mode;
     Ref<Scene>                                         m_scene;
     std::array<Ref<Framebuffer>, max_frames_in_flight> m_framebuffers;
@@ -81,7 +85,8 @@ private:
     Ref<GraphicsPipeline>                              m_pipeline;
     std::vector<std::unique_ptr<Attachment>>           m_attachments;
     std::array<Ref<Texture>, max_frames_in_flight>     m_cubemaps;
-    UniformBuffer                                      m_uniform_buffer;
+    UniformBuffer                                      m_cubemap_render_uniform_buffer;
+    UniformBuffer                                      m_env_probe_uniform_buffer;
 };
 
 

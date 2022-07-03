@@ -34,6 +34,11 @@ layout(location=5) out vec4 gbuffer_bitangents;
 #include "include/parallax.inc"
 #endif
 
+//tmp
+
+#include "include/env_probe.inc"
+#include "include/gbuffer.inc"
+
 void main()
 {
     vec3 L = normalize(v_light_direction);
@@ -100,6 +105,15 @@ void main()
     if (HAS_TEXTURE(MATERIAL_TEXTURE_AO_MAP)) {
         ao = SAMPLE_TEXTURE(MATERIAL_TEXTURE_AO_MAP, texcoord).r;
     }
+
+
+
+    /*if (scene.environment_texture_usage != 0) {
+        uint probe_index = scene.environment_texture_index;
+        vec3 V = normalize(scene.camera_position.xyz - v_position.xyz);
+        vec3 R = normalize(reflect(-V, normal.xyz));
+        gbuffer_albedo.rgb = SampleProbeParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], v_position.xyz, R, 7.0).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
+    }*/
     
     gbuffer_normals    = EncodeNormal(normal);
     gbuffer_positions  = vec4(v_position, 1.0);

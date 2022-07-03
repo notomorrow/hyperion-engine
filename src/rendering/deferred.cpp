@@ -155,7 +155,7 @@ void DeferredPass::Create(Engine *engine)
         m_command_buffers[i] = std::move(command_buffer);
     }
 
-    m_sampler = std::make_unique<Sampler>();
+    m_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
     HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetDevice()));
     
     CreatePipeline(engine);

@@ -665,7 +665,7 @@ Result Image::Blit(
                 this->GetGPUImage()->image,
                 GPUMemory::GetImageLayout(this->GetGPUImage()->GetResourceState()),
                 1, &blit,
-                ToVkFilter(this->GetFilterMode())
+                VK_FILTER_LINEAR
             );
     }
 

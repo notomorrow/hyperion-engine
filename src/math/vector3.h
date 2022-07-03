@@ -76,6 +76,8 @@ public:
 
     constexpr float Avg() const           { return (x + y + z) / 3.0f; }
     constexpr float Sum() const           { return x + y + z; }
+    float Max() const;
+    float Min() const;
 
     float DistanceSquared(const Vector3 &other) const;
     float Distance(const Vector3 &other) const;

@@ -7,7 +7,7 @@
 namespace hyperion {
 namespace renderer {
 Sampler::Sampler(Image::FilterMode filter_mode, Image::WrapMode wrap_mode)
-    : m_sampler(nullptr),
+    : m_sampler(VK_NULL_HANDLE),
       m_filter_mode(filter_mode),
       m_wrap_mode(wrap_mode)
 {
@@ -15,7 +15,7 @@ Sampler::Sampler(Image::FilterMode filter_mode, Image::WrapMode wrap_mode)
 
 Sampler::~Sampler()
 {
-    AssertExitMsg(m_sampler == nullptr, "sampler should have been destroyed");
+    AssertExitMsg(m_sampler == VK_NULL_HANDLE, "sampler should have been destroyed");
 }
 
 Result Sampler::Create(Device *device)
@@ -28,12 +28,12 @@ Result Sampler::Create(Device *device)
     sampler_info.addressModeV = Image::ToVkSamplerAddressMode(m_wrap_mode);
     sampler_info.addressModeW = Image::ToVkSamplerAddressMode(m_wrap_mode);
 
-    sampler_info.anisotropyEnable = true;
+    sampler_info.anisotropyEnable = VK_FALSE;
     sampler_info.maxAnisotropy    = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
 
     sampler_info.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_info.unnormalizedCoordinates = false;
-    sampler_info.compareEnable           = false;
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.compareEnable           = VK_FALSE;
     sampler_info.compareOp               = VK_COMPARE_OP_ALWAYS;
 
     if (m_filter_mode == Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP) {
@@ -42,7 +42,7 @@ Result Sampler::Create(Device *device)
         sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
     }
 
-    sampler_info.mipLodBias = 0.0f;
+    sampler_info.mipLodBias = 0.0001f;
     sampler_info.minLod     = 0.0f;
     sampler_info.maxLod     = 12.0f;
 
@@ -57,7 +57,7 @@ Result Sampler::Destroy(Device *device)
 {
     vkDestroySampler(device->GetDevice(), m_sampler, nullptr);
 
-    m_sampler = nullptr;
+    m_sampler = VK_NULL_HANDLE;
 
     HYPERION_RETURN_OK;
 }

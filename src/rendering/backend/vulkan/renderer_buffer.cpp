@@ -29,13 +29,16 @@ StagingBuffer *StagingBufferPool::Context::Acquire(size_t required_size)
     StagingBuffer *staging_buffer = m_pool->FindStagingBuffer(required_size - 1);
 
     if (staging_buffer != nullptr && m_used.find(staging_buffer) == m_used.end()) {
+#ifdef HYP_LOG_MEMORY_OPERATIONS
         DebugLog(
             LogType::Debug,
             "Requested staging buffer of size %llu, reusing existing staging buffer of size %llu\n",
             required_size,
             staging_buffer->size
         );
+#endif
     } else {
+#ifdef HYP_LOG_MEMORY_OPERATIONS
         DebugLog(
             LogType::Debug,
             "Staging buffer of size >= %llu not found, creating one of size %llu at time %lld\n",
@@ -43,7 +46,7 @@ StagingBuffer *StagingBufferPool::Context::Acquire(size_t required_size)
             new_size,
             std::time(nullptr)
         );
-
+#endif
         staging_buffer = CreateStagingBuffer(new_size);
     }
 

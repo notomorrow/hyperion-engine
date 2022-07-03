@@ -101,8 +101,8 @@ void Engine::FindTextureFormatDefaults()
     m_texture_format_defaults.Set(
         TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_DEPTH,
         device->GetFeatures().FindSupportedFormat(
-            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
-                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24,
+            std::array{ Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_24,
+                        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_16,
                         Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_DEPTH_32F },
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
@@ -388,21 +388,26 @@ void Engine::Initialize()
         auto *descriptor_set = GetInstance()->GetDescriptorPool()
             .GetDescriptorSet(descriptor_set_index);
 
-        auto *cubemap_descriptor = descriptor_set
-            ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::CUBEMAP_UNIFORMS);
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::CUBEMAP_UNIFORMS)
+            ->SetSubDescriptor({
+                .element_index = 0,
+                .buffer        = &shader_globals->cubemap_uniforms
+            });
 
-        cubemap_descriptor->SetSubDescriptor({
-            .element_index = 0,
-            .buffer        = &shader_globals->cubemap_uniforms
-        });
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::CUBEMAP_TEST)
+            ->SetSubDescriptor({
+                .element_index = 0,
+                .image_view    = &GetDummyData().GetImageViewCube1x1R8()
+            });
 
-        auto *cubemap_test_descriptor = descriptor_set
-            ->GetOrAddDescriptor<renderer::ImageDescriptor>(DescriptorKey::CUBEMAP_TEST);
-
-        cubemap_test_descriptor->SetSubDescriptor({
-            .element_index = 0,
-            .image_view    = &GetDummyData().GetImageViewCube1x1R8()
-        });
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::ENV_PROBES)
+            ->SetSubDescriptor({
+                .element_index = 0,
+                .buffer        = &shader_globals->env_probes
+            });
     }
 
     // add placeholder shadowmaps

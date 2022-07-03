@@ -15,8 +15,8 @@ layout(location=2) out vec4 output_positions;
 // layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12) uniform texture2D ssr_uvs;
 // layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13) uniform texture2D ssr_sample;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube rendered_cubemaps[];
 
+#include "include/env_probe.inc"
 #include "include/gbuffer.inc"
 #include "include/material.inc"
 #include "include/post_fx.inc"
@@ -88,6 +88,9 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
 
 #endif
 
+vec3 badboy_roundin(vec3 vec) {
+    return ceil(vec*100.0)/100.0;
+}
 
 void main()
 {
@@ -163,7 +166,8 @@ void main()
         vec3 ibl = vec3(0.0);
 
         if (scene.environment_texture_usage != 0) {
-            ibl = TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
+            uint probe_index = scene.environment_texture_index;
+            ibl = SampleProbeParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], badboy_roundin(position.xyz), R, lod).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
         }
 
 #if HYP_VCT_ENABLED
@@ -234,7 +238,7 @@ void main()
 #endif
 
     output_color = vec4(result, 1.0);
-    output_color.rgb = Tonemap(output_color.rgb);
+//    output_color.rgb = Tonemap(output_color.rgb);
 
 
 //    output_color.rgb = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord).rgb;
