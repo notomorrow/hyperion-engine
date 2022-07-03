@@ -173,6 +173,13 @@ struct alignas(16) ShadowShaderData {
 
 //static_assert(sizeof(ShadowShaderData) == 128);
 
+struct alignas(16) EnvProbeShaderData {
+    Vector4 aabb_max;
+    Vector4 aabb_min;
+    Vector4 world_position;
+    UInt32  texture_index;
+};
+
 /* max number of skeletons, based on size in mb */
 constexpr size_t max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
 constexpr size_t max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);

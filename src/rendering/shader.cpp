@@ -16,6 +16,7 @@ void ShaderGlobals::Create(Engine *engine)
     textures.Create(engine);
 
     cubemap_uniforms.Create(device, sizeof(CubemapUniforms));
+    env_probes.Create(device, sizeof(EnvProbeShaderData));
 }
 
 void ShaderGlobals::Destroy(Engine *engine)
@@ -23,6 +24,7 @@ void ShaderGlobals::Destroy(Engine *engine)
     auto *device = engine->GetDevice();
 
     cubemap_uniforms.Destroy(device);
+    env_probes.Destroy(device);
 
     scenes.Destroy(device);
     objects.Destroy(device);

@@ -26,10 +26,23 @@ CubemapRenderer::CubemapRenderer(
 ) : EngineComponentBase(),
     RenderComponent(5),
     m_cubemap_dimensions(cubemap_dimensions),
-    m_origin(origin),
+    m_aabb(BoundingBox(origin - 150.0f, origin + 150.0f)),
     m_filter_mode(filter_mode)
 {
 }
+
+CubemapRenderer::CubemapRenderer(
+    const Extent2D &cubemap_dimensions,
+    const BoundingBox &aabb,
+    Image::FilterMode filter_mode
+) : EngineComponentBase(),
+    RenderComponent(5),
+    m_cubemap_dimensions(cubemap_dimensions),
+    m_aabb(aabb),
+    m_filter_mode(filter_mode)
+{
+}
+
 
 CubemapRenderer::~CubemapRenderer()
 {
@@ -45,21 +58,7 @@ void CubemapRenderer::Init(Engine *engine)
     EngineComponentBase::Init(engine);
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](Engine *engine) {
-        //for (UInt i = 0; i < 6; i++) {
-            auto camera = std::make_unique<PerspectiveCamera>(
-                90.0f,
-                m_cubemap_dimensions.width, m_cubemap_dimensions.height,
-                0.015f, 1000.0f
-            );
-
-            //camera->SetDirection(cubemap_directions[i].first);
-            //camera->SetUpVector(cubemap_directions[i].second);
-
-            m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
-                std::move(camera)
-            ));
-        //}\'?
-
+        m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(nullptr));
 
         CreateShader(engine);
         CreateRenderPass(engine);
@@ -109,7 +108,10 @@ void CubemapRenderer::Init(Engine *engine)
 
                 m_attachments.clear();
 
-                return m_uniform_buffer.Destroy(engine->GetDevice());
+                HYPERION_PASS_ERRORS(m_cubemap_render_uniform_buffer.Destroy(engine->GetDevice()), result);
+                HYPERION_PASS_ERRORS(m_env_probe_uniform_buffer.Destroy(engine->GetDevice()), result);
+
+                HYPERION_RETURN_OK;
             });
 
 
@@ -144,13 +146,11 @@ void CubemapRenderer::InitGame(Engine *engine)
             continue;
         }
 
-       // for (auto &pipeline : m_pipelines) {
-            if (entity->GetRenderableAttributes().vertex_attributes &
-                m_pipeline->GetRenderableAttributes().vertex_attributes) {
+        if (entity->GetRenderableAttributes().vertex_attributes &
+            m_pipeline->GetRenderableAttributes().vertex_attributes) {
 
-                m_pipeline->AddSpatial(it.second.IncRef());
-            }
-       // }
+            m_pipeline->AddSpatial(it.second.IncRef());
+        }
     }
 }
 
@@ -160,12 +160,10 @@ void CubemapRenderer::OnEntityAdded(Ref<Spatial> &spatial)
 
     AssertReady();
 
-    //for (auto &pipeline : m_pipelines) {
-        if (spatial->GetRenderableAttributes().vertex_attributes &
-            m_pipeline->GetRenderableAttributes().vertex_attributes) {
-            m_pipeline->AddSpatial(spatial.IncRef());
-        }
-    //}
+    if (spatial->GetRenderableAttributes().vertex_attributes &
+        m_pipeline->GetRenderableAttributes().vertex_attributes) {
+        m_pipeline->AddSpatial(spatial.IncRef());
+    }
 }
 
 void CubemapRenderer::OnEntityRemoved(Ref<Spatial> &spatial)
@@ -174,9 +172,7 @@ void CubemapRenderer::OnEntityRemoved(Ref<Spatial> &spatial)
 
     AssertReady();
 
-    //for (auto &pipeline : m_pipelines) {
-        m_pipeline->RemoveSpatial(spatial.IncRef());
-    //}
+    m_pipeline->RemoveSpatial(spatial.IncRef());
 }
 
 void CubemapRenderer::OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial)
@@ -185,14 +181,12 @@ void CubemapRenderer::OnEntityRenderableAttributesChanged(Ref<Spatial> &spatial)
 
     AssertReady();
 
-    //for (auto &pipeline : m_pipelines) {
-        if (spatial->GetRenderableAttributes().vertex_attributes &
-            m_pipeline->GetRenderableAttributes().vertex_attributes) {
-            m_pipeline->AddSpatial(spatial.IncRef());
-        } else {
-            m_pipeline->RemoveSpatial(spatial.IncRef());
-        }
-    //}
+    if (spatial->GetRenderableAttributes().vertex_attributes &
+        m_pipeline->GetRenderableAttributes().vertex_attributes) {
+        m_pipeline->AddSpatial(spatial.IncRef());
+    } else {
+        m_pipeline->RemoveSpatial(spatial.IncRef());
+    }
 }
 
 void CubemapRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
@@ -253,31 +247,43 @@ void CubemapRenderer::OnComponentIndexChanged(RenderComponentBase::Index new_ind
 
 void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
 {
+    const auto origin = m_aabb.GetCenter();
+
     CubemapUniforms cubemap_uniforms{};
 
     for (UInt i = 0; i < 6; i++) {
         cubemap_uniforms.projection_matrices[i] = Matrix4::Perspective(
             90.0f,
             m_cubemap_dimensions.width, m_cubemap_dimensions.height,
-            0.015f, 1000.0f
+            0.015f, m_aabb.GetDimensions().Max()
         );
 
         cubemap_uniforms.view_matrices[i] = Matrix4::LookAt(
-            m_origin,
-            (m_origin + cubemap_directions[i].first),
+            origin,
+            origin + cubemap_directions[i].first,
             cubemap_directions[i].second
         );
     }
 
-    m_uniform_buffer.Create(engine->GetDevice(), sizeof(CubemapUniforms));
-    m_uniform_buffer.Copy(engine->GetDevice(), sizeof(CubemapUniforms), &cubemap_uniforms);
+    HYPERION_ASSERT_RESULT(m_cubemap_render_uniform_buffer.Create(engine->GetDevice(), sizeof(CubemapUniforms)));
+    m_cubemap_render_uniform_buffer.Copy(engine->GetDevice(), sizeof(CubemapUniforms), &cubemap_uniforms);
+
+    EnvProbeShaderData env_probe {
+        .aabb_max       = m_aabb.max.ToVector4(),
+        .aabb_min       = m_aabb.min.ToVector4(),
+        .world_position = origin.ToVector4(),
+        .texture_index  = GetComponentIndex()
+    };
+
+    HYPERION_ASSERT_RESULT(m_env_probe_uniform_buffer.Create(engine->GetDevice(), sizeof(EnvProbeShaderData)));
+    m_env_probe_uniform_buffer.Copy(engine->GetDevice(), sizeof(EnvProbeShaderData), &env_probe);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_cubemaps[i] = engine->resources.textures.Add(std::make_unique<TextureCube>(
             m_cubemap_dimensions,
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
             m_filter_mode,
-            Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
+            Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
             nullptr
         ));
 
@@ -293,7 +299,7 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
             ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::CUBEMAP_UNIFORMS)
             ->SetSubDescriptor({
                 .element_index = GetComponentIndex(),
-                .buffer        = &m_uniform_buffer
+                .buffer        = &m_cubemap_render_uniform_buffer
             });
 
         descriptor_set
@@ -302,6 +308,13 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
                 .element_index = GetComponentIndex(),
                 .image_view    = &m_cubemaps[i]->GetImageView()
             });
+
+        descriptor_set
+            ->GetOrAddDescriptor<renderer::UniformBufferDescriptor>(DescriptorKey::ENV_PROBES)
+            ->SetSubDescriptor({
+               .element_index = GetComponentIndex(),
+               .buffer        = &m_env_probe_uniform_buffer
+           });
     }
 
     DebugLog(
@@ -312,30 +325,27 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
 
 void CubemapRenderer::CreateGraphicsPipelines(Engine *engine)
 {
-    //for (UInt i = 0; i < 6; i++) {
-        auto pipeline = std::make_unique<GraphicsPipeline>(
-            m_shader.IncRef(),
-            m_render_pass.IncRef(),
-            RenderableAttributeSet{
-                .bucket            = BUCKET_PREPASS,
-                .vertex_attributes = renderer::static_mesh_vertex_attributes |
-                                     renderer::skeleton_vertex_attributes
-            }
-        );
-
-        pipeline->SetDepthWrite(true);
-        pipeline->SetDepthTest(true);
-        pipeline->SetFaceCullMode(FaceCullMode::BACK);
-        pipeline->SetMultiviewIndex(0);
-
-        for (auto &framebuffer: m_framebuffers) {
-            pipeline->AddFramebuffer(framebuffer.IncRef());
+    auto pipeline = std::make_unique<GraphicsPipeline>(
+        m_shader.IncRef(),
+        m_render_pass.IncRef(),
+        RenderableAttributeSet{
+            .bucket            = BUCKET_PREPASS,
+            .vertex_attributes = renderer::static_mesh_vertex_attributes |
+                                 renderer::skeleton_vertex_attributes
         }
+    );
 
-        m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
-        DebugLog(LogType::Debug, "Create cubemap pipeline\n");
-        m_pipeline.Init();
-   // }
+    pipeline->SetDepthWrite(true);
+    pipeline->SetDepthTest(true);
+    pipeline->SetFaceCullMode(FaceCullMode::BACK);
+    pipeline->SetMultiviewIndex(0);
+
+    for (auto &framebuffer: m_framebuffers) {
+        pipeline->AddFramebuffer(framebuffer.IncRef());
+    }
+
+    m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
+    m_pipeline.Init();
 }
 
 void CubemapRenderer::CreateShader(Engine *engine)
@@ -362,7 +372,7 @@ void CubemapRenderer::CreateRenderPass(Engine *engine)
     m_attachments.push_back(std::make_unique<Attachment>(
         std::make_unique<renderer::FramebufferImageCube>(
             m_cubemap_dimensions,
-            engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_COLOR),
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
             nullptr
         ),
         RenderPassStage::SHADER

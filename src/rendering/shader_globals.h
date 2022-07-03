@@ -49,6 +49,7 @@ struct ShaderGlobals {
     BindlessStorage                                               textures;
 
     UniformBuffer                                                 cubemap_uniforms;
+    UniformBuffer                                                 env_probes;
 };
 
 } // namespace hyperion::v2

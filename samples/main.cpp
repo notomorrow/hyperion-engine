@@ -231,7 +231,7 @@ public:
         );*/
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
-            renderer::Extent2D {256, 256},
+            renderer::Extent2D {128, 128},
             Vector3 {5, 8, 5},
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );

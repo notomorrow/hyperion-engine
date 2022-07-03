@@ -72,4 +72,5 @@ add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
 # sample subdir
 add_subdirectory(samples)
+add_subdirectory(res)
 

@@ -185,6 +185,7 @@ enum class DescriptorKey {
     SSR_BLUR_VERT_TEXTURE,
     CUBEMAP_UNIFORMS,
     CUBEMAP_TEST, // removeme
+    ENV_PROBES,
     VOXEL_IMAGE,
 
     SCENE_BUFFER,

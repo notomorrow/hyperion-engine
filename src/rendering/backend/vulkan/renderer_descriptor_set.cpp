@@ -43,6 +43,7 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
 
             {DescriptorKey::CUBEMAP_UNIFORMS,      24},
             {DescriptorKey::CUBEMAP_TEST,          25},
+            {DescriptorKey::ENV_PROBES,            26},
 
             {DescriptorKey::VOXEL_IMAGE,           30}
         }
