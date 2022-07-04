@@ -11,8 +11,9 @@ using renderer::ImageSamplerDescriptor;
 using renderer::DescriptorKey;
 using renderer::Rect;
 
-DeferredPass::DeferredPass()
-    : FullScreenPass()
+DeferredPass::DeferredPass(bool is_indirect_pass)
+    : FullScreenPass(),
+      m_is_indirect_pass(is_indirect_pass)
 {
 }
 
@@ -20,23 +21,280 @@ DeferredPass::~DeferredPass() = default;
 
 void DeferredPass::CreateShader(Engine *engine)
 {
-    m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
-        std::vector<SubShader>{
-            SubShader{ShaderModule::Type::VERTEX, {
-                FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred_vert.spv")).Read(),
-                {.name = "deferred vert"}
-            }},
-            SubShader{ShaderModule::Type::FRAGMENT, {
-                FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred_frag.spv")).Read(),
-                {.name = "deferred frag"}
-            }}
-        }
-    ));
+    if (m_is_indirect_pass) {
+        m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
+                SubShader{ShaderModule::Type::VERTEX, {
+                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred.vert.spv")).Read(),
+                    {.name = "deferred indirect vert"}
+                }},
+                SubShader{ShaderModule::Type::FRAGMENT, {
+                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred_indirect.frag.spv")).Read(),
+                    {.name = "deferred indirect frag"}
+                }}
+            }
+        ));
+    } else {
+        m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
+                SubShader{ShaderModule::Type::VERTEX, {
+                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred.vert.spv")).Read(),
+                    {.name = "deferred direct vert"}
+                }},
+                SubShader{ShaderModule::Type::FRAGMENT, {
+                    FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/deferred_direct.frag.spv")).Read(),
+                    {.name = "deferred direct frag"}
+                }}
+            }
+        ));
+    }
 
     m_shader->Init(engine);
 }
 
-void DeferredPass::CreateComputePipelines(Engine *engine)
+void DeferredPass::CreateRenderPass(Engine *engine)
+{
+    m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass().IncRef();
+}
+
+void DeferredPass::CreateDescriptors(Engine *engine)
+{
+    if (m_is_indirect_pass) {
+        return;
+    }
+
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto &framebuffer = m_framebuffers[i]->GetFramebuffer();
+
+        if (!framebuffer.GetAttachmentRefs().empty()) {
+            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+            auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageSamplerDescriptor>(DescriptorKey::DEFERRED_RESULT);
+
+            for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
+                descriptor->SetSubDescriptor({
+                    .element_index = ~0u,
+                    .image_view    = attachment_ref->GetImageView(),
+                    .sampler       = attachment_ref->GetSampler(),
+                });
+            }
+        }
+    }
+}
+
+void DeferredPass::Create(Engine *engine)
+{
+    CreateShader(engine);
+    CreateRenderPass(engine);
+
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        m_framebuffers[i] = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[i].IncRef();
+        
+        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
+
+        HYPERION_ASSERT_RESULT(command_buffer->Create(
+            engine->GetInstance()->GetDevice(),
+            engine->GetInstance()->GetGraphicsCommandPool()
+        ));
+
+        m_command_buffers[i] = std::move(command_buffer);
+    }
+
+    RenderableAttributeSet renderable_attributes {
+        .bucket            = BUCKET_PREPASS,
+        .vertex_attributes = renderer::static_mesh_vertex_attributes,
+        .fill_mode         = FillMode::FILL,
+        .depth_write       = false,
+        .depth_test        = false
+    };
+
+    if (!m_is_indirect_pass) {
+        renderable_attributes.alpha_blending = true;
+    }
+
+    CreatePipeline(engine, renderable_attributes);
+}
+
+void DeferredPass::Destroy(Engine *engine)
+{
+    FullScreenPass::Destroy(engine); // flushes render queue
+}
+
+void DeferredPass::Render(Engine *engine, Frame *frame)
+{
+}
+
+DeferredRenderer::DeferredRenderer()
+    : Renderer(),
+      m_indirect_pass(true),
+      m_direct_pass(false)
+{
+}
+
+DeferredRenderer::~DeferredRenderer() = default;
+
+void DeferredRenderer::Create(Engine *engine)
+{
+    Threads::AssertOnThread(THREAD_RENDER);
+
+    m_post_processing.Create(engine);
+    
+    CreateComputePipelines(engine);
+
+    m_indirect_pass.Create(engine);
+    m_direct_pass.Create(engine);
+
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        m_mipmapped_results[i] = engine->resources.textures.Add(std::make_unique<Texture2D>(
+            Extent2D { 512, 512 },
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
+            Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
+            Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
+            nullptr
+        ));
+
+        m_mipmapped_results[i].Init();
+
+        for (UInt j = 0; j < static_cast<UInt>(m_ssr_image_outputs[i].size()); j++) {
+            m_ssr_image_outputs[i][j] = SSRImageOutput {
+                .image = std::make_unique<StorageImage>(
+                    m_mipmapped_results[i]->GetExtent(),
+                    Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                    Image::Type::TEXTURE_TYPE_2D,
+                    nullptr
+                ),
+                .image_view = std::make_unique<ImageView>()
+            };
+
+            m_ssr_image_outputs[i][j].Create(engine->GetDevice());
+        }
+
+        m_ssr_radius_output[i] = SSRImageOutput {
+            .image = std::make_unique<StorageImage>(
+                m_mipmapped_results[i]->GetExtent(),
+                Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                Image::Type::TEXTURE_TYPE_2D,
+                nullptr
+            ),
+            .image_view = std::make_unique<ImageView>()
+        };
+
+        m_ssr_radius_output[i].Create(engine->GetDevice());
+    }
+
+    m_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
+    HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetDevice()));
+
+    for (UInt i = 0; i < max_frames_in_flight; i++) {
+        auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[i];
+        
+        auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()
+            .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
+        
+        descriptor_set_pass->AddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_TEXTURES);
+
+        UInt attachment_index = 0;
+
+        /* Gbuffer textures */
+        for (; attachment_index < RenderListContainer::gbuffer_textures.size() - 1; attachment_index++) {
+            descriptor_set_pass
+                ->GetDescriptor(DescriptorKey::GBUFFER_TEXTURES)
+                ->SetSubDescriptor({
+                    .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
+                });
+        }
+
+        /* Depth texture */
+        descriptor_set_pass
+            ->AddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_DEPTH)
+            ->SetSubDescriptor({
+                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
+            });
+
+        /* Mip chain */
+        descriptor_set_pass
+            ->AddDescriptor<ImageSamplerDescriptor>(DescriptorKey::GBUFFER_MIP_CHAIN)
+            ->SetSubDescriptor({
+                .image_view = &m_mipmapped_results[i]->GetImageView(),
+                .sampler    = &m_mipmapped_results[i]->GetSampler()
+            });
+
+        /* Gbuffer sampler */
+        descriptor_set_pass
+            ->AddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_SAMPLER)
+            ->SetSubDescriptor({
+                .sampler = m_sampler.get()
+            });
+
+        /* SSR Data */
+        descriptor_set_pass // 1st stage -- trace, write UVs
+            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_UV_IMAGE)
+            ->SetSubDescriptor({
+                .image_view = m_ssr_image_outputs[i][0].image_view.get()
+            });
+
+        descriptor_set_pass // 2nd stage -- sample
+            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_SAMPLE_IMAGE)
+            ->SetSubDescriptor({
+                .image_view = m_ssr_image_outputs[i][1].image_view.get()
+            });
+
+        descriptor_set_pass // 2nd stage -- write radii
+            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_RADIUS_IMAGE)
+            ->SetSubDescriptor({
+                .image_view = m_ssr_radius_output[i].image_view.get()
+            });
+
+        descriptor_set_pass // 3rd stage -- blur horizontal
+            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_BLUR_HOR_IMAGE)
+            ->SetSubDescriptor({
+                .image_view = m_ssr_image_outputs[i][2].image_view.get()
+            });
+
+        descriptor_set_pass // 3rd stage -- blur vertical
+            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_BLUR_VERT_IMAGE)
+            ->SetSubDescriptor({
+                .image_view = m_ssr_image_outputs[i][3].image_view.get()
+            });
+
+        /* SSR Data */
+        descriptor_set_pass // 1st stage -- trace, write UVs
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_UV_TEXTURE)
+            ->SetSubDescriptor({
+               .image_view = m_ssr_image_outputs[i][0].image_view.get()
+           });
+
+        descriptor_set_pass // 2nd stage -- sample
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_SAMPLE_TEXTURE)
+            ->SetSubDescriptor({
+                .image_view = m_ssr_image_outputs[i][1].image_view.get()
+           });
+
+        descriptor_set_pass // 2nd stage -- write radii
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_RADIUS_TEXTURE)
+            ->SetSubDescriptor({
+                .image_view = m_ssr_radius_output[i].image_view.get()
+           });
+
+        descriptor_set_pass // 3rd stage -- blur horizontal
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_BLUR_HOR_TEXTURE)
+            ->SetSubDescriptor({
+                .image_view = m_ssr_image_outputs[i][2].image_view.get()
+            });
+
+        descriptor_set_pass // 3rd stage -- blur vertical
+            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_BLUR_VERT_TEXTURE)
+            ->SetSubDescriptor({
+                .image_view = m_ssr_image_outputs[i][3].image_view.get()
+            });
+    }
+    
+    m_indirect_pass.CreateDescriptors(engine); // no-op
+    m_direct_pass.CreateDescriptors(engine);
+
+    HYP_FLUSH_RENDER_QUEUE(engine);
+}
+
+void DeferredRenderer::CreateComputePipelines(Engine *engine)
 {
     m_ssr_write_uvs = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
         engine->resources.shaders.Add(std::make_unique<Shader>(
@@ -79,90 +337,14 @@ void DeferredPass::CreateComputePipelines(Engine *engine)
     m_ssr_blur_vert.Init();
 }
 
-void DeferredPass::CreateRenderPass(Engine *engine)
+void DeferredRenderer::Destroy(Engine *engine)
 {
-    m_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetRenderPass().IncRef();
-}
+    Threads::AssertOnThread(THREAD_RENDER);
 
-void DeferredPass::CreateDescriptors(Engine *engine)
-{
-    for (UInt i = 0; i < max_frames_in_flight; i++) {
-        auto &framebuffer = m_framebuffers[i]->GetFramebuffer();
+    //! TODO: remove all descriptors
 
-        if (!framebuffer.GetAttachmentRefs().empty()) {
-            auto *descriptor_set = engine->GetInstance()->GetDescriptorPool().GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
-            auto *descriptor = descriptor_set->GetOrAddDescriptor<ImageSamplerDescriptor>(DescriptorKey::DEFERRED_RESULT);
+    m_post_processing.Destroy(engine);
 
-            for (auto *attachment_ref : framebuffer.GetAttachmentRefs()) {
-                descriptor->SetSubDescriptor({
-                    .element_index = ~0u,
-                    .image_view    = attachment_ref->GetImageView(),
-                    .sampler       = attachment_ref->GetSampler(),
-                });
-            }
-        }
-    }
-}
-
-void DeferredPass::Create(Engine *engine)
-{
-    for (UInt i = 0; i < max_frames_in_flight; i++) {
-        m_mipmapped_results[i] = engine->resources.textures.Add(std::make_unique<Texture2D>(
-            Extent2D { 512, 512 },
-            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
-            Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-            Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER,
-            nullptr
-        ));
-
-        m_mipmapped_results[i].Init();
-
-        for (UInt j = 0; j < static_cast<UInt>(m_ssr_image_outputs[i].size()); j++) {
-            m_ssr_image_outputs[i][j] = SSRImageOutput {
-                .image = std::make_unique<StorageImage>(
-                    m_mipmapped_results[i]->GetExtent(),
-                    Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-                    Image::Type::TEXTURE_TYPE_2D,
-                    nullptr
-                ),
-                .image_view = std::make_unique<ImageView>()
-            };
-
-            m_ssr_image_outputs[i][j].Create(engine->GetDevice());
-        }
-
-        m_ssr_radius_output[i] = SSRImageOutput {
-            .image = std::make_unique<StorageImage>(
-                m_mipmapped_results[i]->GetExtent(),
-                Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
-                Image::Type::TEXTURE_TYPE_2D,
-                nullptr
-            ),
-            .image_view = std::make_unique<ImageView>()
-        };
-
-        m_ssr_radius_output[i].Create(engine->GetDevice());
-
-        m_framebuffers[i] = engine->GetRenderListContainer()[Bucket::BUCKET_TRANSLUCENT].GetFramebuffers()[i].IncRef();
-        
-        auto command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::COMMAND_BUFFER_SECONDARY);
-
-        HYPERION_ASSERT_RESULT(command_buffer->Create(
-            engine->GetInstance()->GetDevice(),
-            engine->GetInstance()->GetGraphicsCommandPool()
-        ));
-
-        m_command_buffers[i] = std::move(command_buffer);
-    }
-
-    m_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
-    HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetDevice()));
-    
-    CreatePipeline(engine);
-}
-
-void DeferredPass::Destroy(Engine *engine)
-{
     m_ssr_write_uvs.Reset();
     m_ssr_sample.Reset();
     m_ssr_blur_hor.Reset();
@@ -180,144 +362,8 @@ void DeferredPass::Destroy(Engine *engine)
 
     HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetDevice()));
 
-    FullScreenPass::Destroy(engine); // flushes render queue
-}
-
-void DeferredPass::Render(Engine *engine, Frame *frame)
-{
-}
-
-DeferredRenderer::DeferredRenderer() = default;
-DeferredRenderer::~DeferredRenderer() = default;
-
-void DeferredRenderer::Create(Engine *engine)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    m_post_processing.Create(engine);
-
-    m_pass.CreateShader(engine);
-    m_pass.CreateComputePipelines(engine);
-    m_pass.CreateRenderPass(engine);
-    m_pass.Create(engine);
-
-    for (UInt i = 0; i < max_frames_in_flight; i++) {
-        auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[i];
-        
-        auto *descriptor_set_pass = engine->GetInstance()->GetDescriptorPool()
-            .GetDescriptorSet(DescriptorSet::global_buffer_mapping[i]);
-        
-        descriptor_set_pass->AddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_TEXTURES);
-
-        UInt attachment_index = 0;
-
-        /* Gbuffer textures */
-        for (; attachment_index < RenderListContainer::gbuffer_textures.size() - 1; attachment_index++) {
-            descriptor_set_pass
-                ->GetDescriptor(DescriptorKey::GBUFFER_TEXTURES)
-                ->SetSubDescriptor({
-                    .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
-                });
-        }
-
-        /* Depth texture */
-        descriptor_set_pass
-            ->AddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_DEPTH)
-            ->SetSubDescriptor({
-                .image_view = opaque_fbo->GetFramebuffer().GetAttachmentRefs()[attachment_index]->GetImageView()
-            });
-
-        /* Mip chain */
-        descriptor_set_pass
-            ->AddDescriptor<ImageSamplerDescriptor>(DescriptorKey::GBUFFER_MIP_CHAIN)
-            ->SetSubDescriptor({
-                .image_view = &m_pass.GetMipmappedResults()[i]->GetImageView(),
-                .sampler    = &m_pass.GetMipmappedResults()[i]->GetSampler()
-            });
-
-        /* Gbuffer sampler */
-        descriptor_set_pass
-            ->AddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_SAMPLER)
-            ->SetSubDescriptor({
-                .sampler = m_pass.GetSampler().get()
-            });
-
-        /* SSR Data */
-        descriptor_set_pass // 1st stage -- trace, write UVs
-            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_UV_IMAGE)
-            ->SetSubDescriptor({
-                .image_view = m_pass.GetSSRImageOutputs()[i][0].image_view.get()
-            });
-
-        descriptor_set_pass // 2nd stage -- sample
-            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_SAMPLE_IMAGE)
-            ->SetSubDescriptor({
-                .image_view = m_pass.GetSSRImageOutputs()[i][1].image_view.get()
-            });
-
-        descriptor_set_pass // 2nd stage -- write radii
-            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_RADIUS_IMAGE)
-            ->SetSubDescriptor({
-                .image_view = m_pass.m_ssr_radius_output[i].image_view.get()
-            });
-
-        descriptor_set_pass // 3rd stage -- blur horizontal
-            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_BLUR_HOR_IMAGE)
-            ->SetSubDescriptor({
-                .image_view = m_pass.GetSSRImageOutputs()[i][2].image_view.get()
-            });
-
-        descriptor_set_pass // 3rd stage -- blur vertical
-            ->AddDescriptor<renderer::StorageImageDescriptor>(DescriptorKey::SSR_BLUR_VERT_IMAGE)
-            ->SetSubDescriptor({
-                .image_view = m_pass.GetSSRImageOutputs()[i][3].image_view.get()
-            });
-
-        /* SSR Data */
-        descriptor_set_pass // 1st stage -- trace, write UVs
-            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_UV_TEXTURE)
-            ->SetSubDescriptor({
-               .image_view = m_pass.GetSSRImageOutputs()[i][0].image_view.get()
-           });
-
-        descriptor_set_pass // 2nd stage -- sample
-            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_SAMPLE_TEXTURE)
-            ->SetSubDescriptor({
-                .image_view = m_pass.GetSSRImageOutputs()[i][1].image_view.get()
-           });
-
-        descriptor_set_pass // 2nd stage -- write radii
-            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_RADIUS_TEXTURE)
-            ->SetSubDescriptor({
-                .image_view = m_pass.m_ssr_radius_output[i].image_view.get()
-           });
-
-        descriptor_set_pass // 3rd stage -- blur horizontal
-            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_BLUR_HOR_TEXTURE)
-            ->SetSubDescriptor({
-                .image_view = m_pass.GetSSRImageOutputs()[i][2].image_view.get()
-            });
-
-        descriptor_set_pass // 3rd stage -- blur vertical
-            ->AddDescriptor<renderer::ImageDescriptor>(DescriptorKey::SSR_BLUR_VERT_TEXTURE)
-            ->SetSubDescriptor({
-                .image_view = m_pass.GetSSRImageOutputs()[i][3].image_view.get()
-            });
-    }
-    
-    m_pass.CreateDescriptors(engine);
-
-    HYP_FLUSH_RENDER_QUEUE(engine);
-}
-
-void DeferredRenderer::Destroy(Engine *engine)
-{
-    Threads::AssertOnThread(THREAD_RENDER);
-
-    //! TODO: remove all descriptors
-
-    m_post_processing.Destroy(engine);
-    m_pass.Destroy(engine);  // flushes render queue
+    m_indirect_pass.Destroy(engine);  // flushes render queue
+    m_direct_pass.Destroy(engine);    // flushes render queue
 }
 
 void DeferredRenderer::Render(Engine *engine, Frame *frame)
@@ -330,9 +376,10 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
-    auto &mipmapped_result = m_pass.GetMipmappedResults()[frame_index]->GetImage();
+    auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
-    m_pass.Record(engine, frame_index);
+    m_indirect_pass.Record(engine, frame_index); // could be moved to only do once
+    m_direct_pass.Record(engine, frame_index);   // could be moved to only do once
 
     auto &render_list = engine->GetRenderListContainer();
     auto &bucket = render_list.Get(BUCKET_OPAQUE);
@@ -379,14 +426,14 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         }
     };
 
-    m_pass.m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
+    m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
 
-    m_pass.m_ssr_write_uvs->GetPipeline()->Bind(primary, ssr_push_constant_data);
+    m_ssr_write_uvs->GetPipeline()->Bind(primary, ssr_push_constant_data);
 
     // bind `global` descriptor set
     engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_pass.m_ssr_write_uvs->GetPipeline(),
+        engine->GetDevice(), primary, m_ssr_write_uvs->GetPipeline(),
         {
             {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
@@ -394,7 +441,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     );
 
     engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_pass.m_ssr_write_uvs->GetPipeline(),
+        engine->GetDevice(), primary, m_ssr_write_uvs->GetPipeline(),
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
@@ -402,26 +449,26 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         }
     );
 
-    m_pass.m_ssr_write_uvs->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+    m_ssr_write_uvs->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
 
     // transition the UV image back into read state
-    m_pass.m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
+    m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
     // PASS 2 - sample textures
 
     // put sample image in writeable state
-    m_pass.m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
+    m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
     // put radius image in writeable state
-    m_pass.m_ssr_radius_output[frame_index].image->GetGPUImage()
+    m_ssr_radius_output[frame_index].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
 
-    m_pass.m_ssr_sample->GetPipeline()->Bind(primary, ssr_push_constant_data);
+    m_ssr_sample->GetPipeline()->Bind(primary, ssr_push_constant_data);
 
     // bind `global` descriptor set
     engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_pass.m_ssr_sample->GetPipeline(),
+        engine->GetDevice(), primary, m_ssr_sample->GetPipeline(),
         {
             {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
@@ -429,7 +476,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     );
 
     engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_pass.m_ssr_sample->GetPipeline(),
+        engine->GetDevice(), primary, m_ssr_sample->GetPipeline(),
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
@@ -437,26 +484,26 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         }
     );
 
-    m_pass.m_ssr_sample->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+    m_ssr_sample->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
 
     // transition sample image back into read state
-    m_pass.m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
+    m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
     // transition radius image back into read state
-    m_pass.m_ssr_radius_output[frame_index].image->GetGPUImage()
+    m_ssr_radius_output[frame_index].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
     // PASS 3 - blur image using radii in output from previous stage
 
     //put blur image in writeable state
-    m_pass.m_ssr_image_outputs[frame_index][2].image->GetGPUImage()
+    m_ssr_image_outputs[frame_index][2].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
 
-    m_pass.m_ssr_blur_hor->GetPipeline()->Bind(primary, ssr_push_constant_data);
+    m_ssr_blur_hor->GetPipeline()->Bind(primary, ssr_push_constant_data);
 
     // bind `global` descriptor set
     engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_pass.m_ssr_blur_hor->GetPipeline(),
+        engine->GetDevice(), primary, m_ssr_blur_hor->GetPipeline(),
         {
             {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
@@ -464,7 +511,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     );
 
     engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_pass.m_ssr_blur_hor->GetPipeline(),
+        engine->GetDevice(), primary, m_ssr_blur_hor->GetPipeline(),
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
@@ -472,24 +519,24 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         }
     );
 
-    m_pass.m_ssr_blur_hor->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+    m_ssr_blur_hor->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
 
     // transition blur image back into read state
-    m_pass.m_ssr_image_outputs[frame_index][2].image->GetGPUImage()
+    m_ssr_image_outputs[frame_index][2].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
 
     // PASS 4 - blur image vertically
 
     //put blur image in writeable state
-    m_pass.m_ssr_image_outputs[frame_index][3].image->GetGPUImage()
+    m_ssr_image_outputs[frame_index][3].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
 
-    m_pass.m_ssr_blur_vert->GetPipeline()->Bind(primary, ssr_push_constant_data);
+    m_ssr_blur_vert->GetPipeline()->Bind(primary, ssr_push_constant_data);
 
     // bind `global` descriptor set
     engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_pass.m_ssr_blur_vert->GetPipeline(),
+        engine->GetDevice(), primary, m_ssr_blur_vert->GetPipeline(),
         {
             {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
@@ -497,7 +544,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     );
 
     engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_pass.m_ssr_blur_vert->GetPipeline(),
+        engine->GetDevice(), primary, m_ssr_blur_vert->GetPipeline(),
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
@@ -505,10 +552,10 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         }
     );
 
-    m_pass.m_ssr_blur_vert->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+    m_ssr_blur_vert->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
 
     // transition blur image back into read state
-    m_pass.m_ssr_image_outputs[frame_index][3].image->GetGPUImage()
+    m_ssr_image_outputs[frame_index][3].image->GetGPUImage()
         ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
 
@@ -516,14 +563,20 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     m_post_processing.RenderPre(engine, frame);
 
-    // begin translucent objs
-    m_pass.GetFramebuffer(frame_index)->BeginCapture(primary);
-    /* Render deferred shading onto full screen quad */
-    HYPERION_ASSERT_RESULT(m_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary));
+    // begin shading
+    m_direct_pass.GetFramebuffer(frame_index)->BeginCapture(primary);
 
+    // indirect shading
+    HYPERION_ASSERT_RESULT(m_indirect_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary));
+
+    // direct shading
+    HYPERION_ASSERT_RESULT(m_direct_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary));
+
+    // begin translucent with forward rendering
     RenderTranslucentObjects(engine, frame);
-    m_pass.GetFramebuffer(frame_index)->EndCapture(primary);
-    // end translucent objs
+
+    // end shading
+    m_direct_pass.GetFramebuffer(frame_index)->EndCapture(primary);
 
     m_post_processing.RenderPost(engine, frame);
 }

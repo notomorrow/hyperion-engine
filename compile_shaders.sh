@@ -3,8 +3,9 @@
 pushd res/vkshaders
 
 VULKAN_TARGET="vulkan1.2"
-glslc --target-env=$VULKAN_TARGET deferred.frag -o deferred_frag.spv
-glslc --target-env=$VULKAN_TARGET deferred.vert -o deferred_vert.spv
+glslc --target-env=$VULKAN_TARGET deferred_direct.frag -o deferred_direct.frag.spv
+glslc --target-env=$VULKAN_TARGET deferred_indirect.frag -o deferred_indirect.frag.spv
+glslc --target-env=$VULKAN_TARGET deferred.vert -o deferred.vert.spv
 glslc --target-env=$VULKAN_TARGET blit.frag -o blit_frag.spv
 glslc --target-env=$VULKAN_TARGET blit.vert -o blit_vert.spv
 glslc --target-env=$VULKAN_TARGET forward.frag -o forward_frag.spv

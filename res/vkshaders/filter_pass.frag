@@ -31,7 +31,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 #define SSAO_STRENGTH 0.65
 #define SSAO_CLAMP_AMOUNT 0.125
 #define SSAO_RADIUS 5.0
-#define SSAO_ENABLED 0
+#define SSAO_ENABLED 1
 
 vec2 GetNoise(vec2 coord) //generating noise/pattern texture for dithering
 {
@@ -160,5 +160,5 @@ void main()
     float ao = 1.0;
 #endif
     
-    color_output = vec4(ao, 0.0, 0.0, 1.0);
+    color_output = vec4(ao);
 }

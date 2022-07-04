@@ -6,7 +6,11 @@
 namespace hyperion::v2 {
 
 SSAOEffect::SSAOEffect()
-    : PostProcessingEffect(stage, index)
+    : PostProcessingEffect(
+          stage,
+          index,
+          Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8
+      )
 {
 }
 

@@ -30,10 +30,12 @@ FullScreenPass::FullScreenPass(Ref<Shader> &&shader)
 FullScreenPass::FullScreenPass(
     Ref<Shader> &&shader,
     DescriptorKey descriptor_key,
-    UInt sub_descriptor_index
+    UInt sub_descriptor_index,
+    Image::InternalFormat image_format
 ) : m_shader(std::move(shader)),
     m_descriptor_key(descriptor_key),
-    m_sub_descriptor_index(sub_descriptor_index)
+    m_sub_descriptor_index(sub_descriptor_index),
+    m_image_format(image_format)
 {
 }
 
@@ -101,7 +103,7 @@ void FullScreenPass::CreateRenderPass(Engine *engine)
 
     auto framebuffer_image = std::make_unique<renderer::FramebufferImage2D>(
         engine->GetInstance()->swapchain->extent,
-        engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_COLOR),
+        m_image_format,
         nullptr
     );
 
@@ -153,20 +155,26 @@ void FullScreenPass::CreateDescriptors(Engine *engine)
 
 void FullScreenPass::CreatePipeline(Engine *engine)
 {
+    CreatePipeline(engine, RenderableAttributeSet {
+        .bucket            = BUCKET_PREPASS,
+        .vertex_attributes = renderer::static_mesh_vertex_attributes,
+        .fill_mode         = FillMode::FILL,
+        .depth_write       = false,
+        .depth_test        = false
+    });
+}
+
+void FullScreenPass::CreatePipeline(Engine *engine, const RenderableAttributeSet &renderable_attributes)
+{
     auto pipeline = std::make_unique<GraphicsPipeline>(
         std::move(m_shader),
         m_render_pass.IncRef(),
-        RenderableAttributeSet{
-            .bucket            = BUCKET_PREPASS,
-            .vertex_attributes = renderer::static_mesh_vertex_attributes,
-            .fill_mode         = FillMode::FILL
-        }
+        renderable_attributes
     );
 
-    pipeline->AddFramebuffer(m_framebuffers[0].IncRef());
-    pipeline->AddFramebuffer(m_framebuffers[1].IncRef());
-    pipeline->SetDepthWrite(false);
-    pipeline->SetDepthTest(false);
+    for (auto &framebuffer : m_framebuffers) {
+        pipeline->AddFramebuffer(framebuffer.IncRef());
+    }
 
     m_pipeline = engine->AddGraphicsPipeline(std::move(pipeline));
     m_pipeline.Init();

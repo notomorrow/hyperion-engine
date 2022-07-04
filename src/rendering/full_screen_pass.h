@@ -41,7 +41,8 @@ public:
     FullScreenPass(
         Ref<Shader> &&shader,
         DescriptorKey descriptor_key,
-        UInt sub_descriptor_index
+        UInt sub_descriptor_index,
+        Image::InternalFormat image_format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB
     );
     FullScreenPass(const FullScreenPass &) = delete;
     FullScreenPass &operator=(const FullScreenPass &) = delete;
@@ -67,6 +68,7 @@ public:
     void CreateRenderPass(Engine *engine);
     void Create(Engine *engine);
     void CreateDescriptors(Engine *engine);
+    void CreatePipeline(Engine *engine, const RenderableAttributeSet &renderable_attributes);
     void CreatePipeline(Engine *engine);
 
     void Destroy(Engine *engine);
@@ -85,7 +87,8 @@ protected:
 
     PushConstantData                                                 m_push_constant_data;
 
-private:                                                             
+private:                         
+    Image::InternalFormat                                            m_image_format;                                    
     DescriptorKey                                                    m_descriptor_key;
     UInt                                                             m_sub_descriptor_index;
 };
