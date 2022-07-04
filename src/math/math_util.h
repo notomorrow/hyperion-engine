@@ -6,6 +6,7 @@
 #include "vector4.h"
 
 #include <util/defines.h>
+#include <types.h>
 
 #include <cstdlib>
 #include <cstddef>
@@ -22,6 +23,8 @@ constexpr bool is_math_vector_v = std::is_base_of_v<T, Vector2>
                                || std::is_base_of_v<T, Vector4>;
 
 class MathUtil {
+    static UInt64 g_seed;
+
 public:
     template <class T>
     static constexpr T pi = T(3.14159265358979);
@@ -35,27 +38,27 @@ public:
     template<>
     static constexpr float epsilon<double> = DBL_EPSILON;
 
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, T) MaxSafeValue()
         { return T(MaxSafeValue<std::remove_all_extents_t<decltype(T::values)>>()); }
 
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, T) MinSafeValue()
         { return T(MinSafeValue<std::remove_all_extents_t<decltype(T::values)>>()); }
     
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(std::is_enum_v<T> && !is_math_vector_v<T>, std::underlying_type_t<T>) MaxSafeValue()
         { return std::numeric_limits<std::underlying_type_t<T>>::max(); }
 
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(std::is_enum_v<T> && !is_math_vector_v<T>, std::underlying_type_t<T>) MinSafeValue()
         { return std::numeric_limits<std::underlying_type_t<T>>::lowest(); }
 
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(!std::is_enum_v<T> && !is_math_vector_v<T>, T) MaxSafeValue()
         { return std::numeric_limits<T>::max(); }
 
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(!std::is_enum_v<T> && !is_math_vector_v<T>, T) MinSafeValue()
         { return std::numeric_limits<T>::lowest(); }
     
@@ -68,23 +71,23 @@ public:
     static Vector4 SafeValue(const Vector4 &value)
         { return Vector4::Max(Vector4::Min(value, MaxSafeValue<decltype(value[0])>()), MinSafeValue<decltype(value[0])>()); }
 
-    template <typename T>
+    template <class T>
     static T SafeValue(const T &value)
         { return MathUtil::Max(MathUtil::Min(value, MathUtil::MaxSafeValue<T>()), MathUtil::MinSafeValue<T>()); }
 
-    template <typename T>
+    template <class T>
     static constexpr T NaN()
         { return std::numeric_limits<T>::quiet_NaN(); }
 
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, bool) Approximately(const T &a, const T &b)
         { return Abs(a.Distance(b)) <= epsilon<std::remove_all_extents_t<decltype(T::values)>>; }
 
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, bool) Approximately(const T &a, const T &b)
         { return Abs(a - b) <= epsilon<T>; }
 
-    template <typename T>
+    template <class T>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Random(const T &a, const T &b)
     {
         T result;
@@ -96,7 +99,7 @@ public:
         return result;
     }
 
-    template <typename T>
+    template <class T>
     static HYP_ENABLE_IF(!is_math_vector_v<T>, T) Random(const T &a, const T &b)
     {
         T random = T(rand()) / T(RAND_MAX);
@@ -106,15 +109,15 @@ public:
         return a + r;
     }
 
-    template <typename T>
+    template <class T>
     static constexpr T RadToDeg(const T &rad)
         { return rad * T(180) / pi<T>; }
 
-    template <typename T>
+    template <class T>
     static constexpr T DegToRad(const T &deg)
         { return deg * pi<T> / T(180); }
 
-    template <typename T>
+    template <class T>
     static constexpr T Clamp(const T &val, const T &min, const T &max)
     {
         if (val > max) {
@@ -126,39 +129,39 @@ public:
         }
     }
 
-    template <typename T>
+    template <class T>
     static constexpr T Lerp(const T &from, const T &to, const T &amt)
         { return from + amt * (to - from); }
 
-    template <typename T>
+    template <class T>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Min(const T &a, const T &b)
         { return T::Min(a, b); }
 
-    template <typename T>
+    template <class T>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Max(const T &a, const T &b)
         { return T::Max(a, b); }
 
-    template <typename T, typename U, typename V = std::common_type_t<T, U>>
+    template <class T, class U, class V = std::common_type_t<T, U>>
     static constexpr V Min(T a, U b)
         { return (a < b) ? a : b; }
 
-    template <typename T, typename U, typename V = std::common_type_t<T, U>, typename... Args>
+    template <class T, class U, class V = std::common_type_t<T, U>, class ...Args>
     static constexpr V Min(T a, U b, Args... args)
         { return Min(Min(a, b), args...); }
     
-    template <typename T, typename U, typename V = std::common_type_t<T, U>>
+    template <class T, class U, class V = std::common_type_t<T, U>>
     static constexpr V Max(T a, U b)
         { return (a > b) ? a : b; }
 
-    template <typename T, typename U, typename V = std::common_type_t<T, U>, typename... Args>
+    template <class T, class U, class V = std::common_type_t<T, U>, class ...Args>
     static constexpr V Max(T a, U b, Args... args)
         { return Max(Max(a, b), args...); }
 
-    template <typename T, typename IntegralType = int>
+    template <class T, class IntegralType = int>
     static constexpr IntegralType Sign(T value)
         { return IntegralType(T(0) < value) - IntegralType(value < T(0)); }
 
-    template <typename T, typename IntegralType = int>
+    template <class T, class IntegralType = int>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Floor(const T &a)
     {
         T result{}; /* doesn't need initialization but gets rid of annoying warnings */
@@ -170,7 +173,7 @@ public:
         return result;
     }
 
-    template <typename T, typename IntegralType = int>
+    template <class T, class IntegralType = int>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Ceil(const T &a)
     {
         T result{}; /* doesn't need initialization but gets rid of annoying warnings */
@@ -182,41 +185,42 @@ public:
         return result;
     }
 
-    template <typename T, typename IntegralType = int>
+    template <class T, class IntegralType = int>
     static HYP_ENABLE_IF(!is_math_vector_v<T>, IntegralType) Floor(T a)
         { return IntegralType(std::floor(a)); }
 
-    template <typename T, typename IntegralType = int>
+    template <class T, class IntegralType = int>
     static HYP_ENABLE_IF(!is_math_vector_v<T>, IntegralType) Ceil(T a)
         { return IntegralType(std::ceil(a)); }
 
-    template <typename T>
+    template <class T>
     static T Fract(T a) { return a - Floor<T, T>(a); }
 
-    template <typename T>
+    template <class T>
     static T Exp(T a) { std::exp(a); }
     
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(!std::is_floating_point_v<T>, T) Abs(T a) { return std::abs(a); }
     
-    template <typename T>
+    template <class T>
     static constexpr HYP_ENABLE_IF(std::is_floating_point_v<T>, T) Abs(T a) { return std::fabs(a); }
 
-    template <typename T, typename U = T>
+    template <class T, class U = T>
     static HYP_ENABLE_IF(!is_math_vector_v<T>, U) Round(T a) { return U(std::round(a)); }
 
-    template <typename T>
+    template <class T>
     static HYP_ENABLE_IF(is_math_vector_v<T>, T) Round(const T &a) { return T::Round(a); }
 
-    template <typename T, typename U = T, typename V = U>
+    template <class T, class U = T, class V = U>
     static constexpr bool InRange(T value, const std::pair<U, V> &range)
         { return value >= range.first && value < range.second; }
 
-    static constexpr bool IsPowerOfTwo(uint64_t value)
+    template <class T>
+    static constexpr bool IsPowerOfTwo(T value)
         { return (value & (value - 1)) == 0; }
 
     /* Fast log2 for power-of-2 numbers */
-    static uint64_t FastLog2_Pow2(uint64_t value)
+    static UInt64 FastLog2_Pow2(UInt64 value)
     {
 #if defined(__clang__) || defined(__GNUC__)
     #if defined(_MSC_VER)
@@ -232,7 +236,7 @@ public:
     }
 
     // https://stackoverflow.com/questions/11376288/fast-computing-of-log2-for-64-bit-integers
-    static inline constexpr uint64_t FastLog2(uint64_t value)
+    static inline constexpr UInt64 FastLog2(UInt64 value)
     {
         const int tab64[64] = {
             63,  0, 58,  1, 59, 47, 53,  2,
@@ -252,11 +256,11 @@ public:
         value |= value >> 16;
         value |= value >> 32;
 
-        return tab64[(((static_cast<uint64_t>(value) - (value >> 1)) * 0x07EDD5E59A4E28C2)) >> 58];
+        return tab64[(((static_cast<UInt64>(value) - (value >> 1)) * 0x07EDD5E59A4E28C2)) >> 58];
     }
 
     // https://www.techiedelight.com/round-next-highest-power-2/
-    static inline constexpr uint64_t NextPowerOf2(uint64_t value)
+    static inline constexpr UInt64 NextPowerOf2(UInt64 value)
     {
         // decrement `n` (to handle the case when `n` itself
         // is a power of 2)
@@ -280,6 +284,14 @@ public:
         }
 
         return value + multiple - remainder;
+    }
+
+    template <class T>
+    static inline auto FastRand()
+    {
+        g_seed = (214013 * g_seed + 2531011); 
+
+        return (g_seed >> 16) & 0x7FFF; 
     }
 };
 
