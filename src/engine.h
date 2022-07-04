@@ -12,7 +12,7 @@
 #include <rendering/renderable_attributes.h>
 #include <rendering/default_formats.h>
 #include <rendering/dummy_data.h>
-#include <scene/octree.h>
+#include <scene/World.h>
 
 #include "game_thread.h"
 #include "threads.h"
@@ -208,6 +208,9 @@ public:
     ComponentRegistry<Spatial> &GetComponentRegistry()             { return m_component_registry; }
     const ComponentRegistry<Spatial> &GetComponentRegistry() const { return m_component_registry; }
     
+    World &GetWorld()                                              { return m_world; }
+    const World &GetWorld() const                                  { return m_world; }
+
     void SafeReleaseRenderable(Ref<Texture> &&renderable)
     {
         std::lock_guard guard(m_renderable_deletion_mutex);
@@ -371,6 +374,8 @@ private:
 
     std::mutex                                     m_renderable_deletion_mutex;
     std::atomic<RenderableDeletionMaskBits>        m_renderable_deletion_flag{RENDERABLE_DELETION_NONE};
+
+    World                                          m_world;
 };
 
 } // namespace hyperion::v2

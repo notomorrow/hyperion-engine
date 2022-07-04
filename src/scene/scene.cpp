@@ -9,8 +9,8 @@ Scene::Scene(std::unique_ptr<Camera> &&camera)
     : EngineComponentBase(),
       m_camera(std::move(camera)),
       m_root_node(std::make_unique<Node>("root")),
-      m_octree(BoundingBox(Vector3(-250.0f), Vector3(250.0f))),
       m_environment(new Environment(this)),
+      m_world(nullptr),
       m_shader_data_state(ShaderDataState::DIRTY)
 {
     m_root_node->SetScene(this);
@@ -62,6 +62,51 @@ void Scene::Init(Engine *engine)
     }));
 }
 
+void Scene::SetWorld(World *world)
+{
+    Threads::AssertOnThread(THREAD_GAME);
+
+    for (auto &it : m_spatials) {
+        auto &entity = it.second;
+
+        if (entity == nullptr) {
+            continue;
+        }
+
+        if (entity->m_octree != nullptr) {
+            DebugLog(
+                LogType::Debug,
+                "[scene] Remove spatial #%u from octree\n",
+                entity->GetId().value
+            );
+            entity->RemoveFromOctree(GetEngine());
+        }
+    }
+
+    m_world = world;
+
+    if (m_world == nullptr) {
+        return;
+    }
+
+    for (auto &it : m_spatials) {
+        auto &entity = it.second;
+
+        if (entity == nullptr) {
+            continue;
+        }
+
+        AssertThrow(entity->m_octree == nullptr);
+        
+        DebugLog(
+            LogType::Debug,
+            "Add spatial #%u to octree\n",
+            entity->GetId().value
+        );
+        entity->AddToOctree(GetEngine(), m_world->GetOctree());
+    }
+}
+
 bool Scene::AddSpatial(Ref<Spatial> &&spatial)
 {
     Threads::AssertOnThread(THREAD_GAME);
@@ -111,14 +156,15 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
         }
     }
 
-    // just here for now, will move into this class
     if (spatial->m_octree == nullptr) {
-        DebugLog(
-            LogType::Debug,
-            "Add spatial #%u to octree\n",
-            spatial->GetId().value
-        );
-        spatial->AddToOctree(GetEngine(), m_octree);
+        if (m_world != nullptr) {
+            DebugLog(
+                LogType::Debug,
+                "Add spatial #%u to octree\n",
+                spatial->GetId().value
+            );
+            spatial->AddToOctree(GetEngine(), m_world->GetOctree());
+        }
     }
 
     m_environment->OnEntityAdded(spatial);
@@ -194,7 +240,11 @@ bool Scene::RemoveSpatial(const Ref<Spatial> &spatial)
     return true;
 }
 
-void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
+void Scene::Update(
+    Engine *engine,
+    GameCounter::TickUnit delta,
+    bool update_octree_visibility
+)
 {
     AssertReady();
 
@@ -222,7 +272,10 @@ void Scene::Update(Engine *engine, GameCounter::TickUnit delta)
         }
     }
 
-    m_octree.CalculateVisibility(this);
+    if (m_world != nullptr && update_octree_visibility) {
+        // m_octree.NextVisibilityState();
+        m_world->GetOctree().CalculateVisibility(this);
+    }
 }
 
 void Scene::RequestPipelineChanges(Ref<Spatial> &spatial)

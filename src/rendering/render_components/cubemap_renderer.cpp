@@ -115,12 +115,12 @@ void CubemapRenderer::Init(Engine *engine)
             });
 
 
-            m_shader       = nullptr;
             m_framebuffers = {};
-            m_render_pass  = nullptr;
-            m_cubemaps     = {};
-            m_pipeline     = nullptr;
-            m_scene        = nullptr;
+            m_cubemaps = {};
+            m_shader.Reset();
+            m_render_pass.Reset();
+            m_pipeline.Reset();
+            m_scene.Reset();
 
             HYP_FLUSH_RENDER_QUEUE(engine);
 
@@ -193,6 +193,11 @@ void CubemapRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
 {
     // Threads::AssertOnThread(THREAD_GAME);
     AssertReady();
+
+    // Scene is owned by World, don't Update() it.
+    // we need to make Camera be a component so we can use Camera ID
+    // in bit flags for octree visibility.
+    // m_scene->Update(engine, delta);
 }
 
 void CubemapRenderer::OnRender(Engine *engine, Frame *frame)
@@ -329,7 +334,7 @@ void CubemapRenderer::CreateGraphicsPipelines(Engine *engine)
         m_shader.IncRef(),
         m_render_pass.IncRef(),
         RenderableAttributeSet{
-            .bucket            = BUCKET_PREPASS,
+            .bucket            = BUCKET_INTERNAL,
             .vertex_attributes = renderer::static_mesh_vertex_attributes |
                                  renderer::skeleton_vertex_attributes
         }

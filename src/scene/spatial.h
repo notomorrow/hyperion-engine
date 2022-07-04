@@ -204,6 +204,7 @@ private:
     ControllerSet          m_controllers;
 
     std::atomic<Octree *>  m_octree{nullptr};
+    // std::atomic_bool       m_is_visible{false};
     bool                   m_needs_octree_update{false};
 
     struct {

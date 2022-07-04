@@ -105,7 +105,7 @@ public:
                 0.15f, 15000.0f
             )
         ));
-        scene.Init();
+        engine->GetWorld().AddScene(scene.IncRef());
     }
 
     virtual void OnPostInit(Engine *engine) override
@@ -130,8 +130,9 @@ public:
         sphere->Scale(2.0f);
         sphere->SetName("sphere");
         // sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
-        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.65f);
+        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.9f);
+        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 1.0f);
         //sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
         sphere->GetChild(0)->GetSpatial()->GetInitInfo().flags &= ~Spatial::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
         scene->GetRootNode()->AddChild(std::move(sphere));
@@ -202,9 +203,24 @@ public:
             Vector3(2.0f, 4.0f, 0.0f),
             Vector4(1.0f, 0.3f, 0.1f, 1.0f),
             10000.0f,
-            3.0f
+            25.0f
         ));
+
         scene->GetEnvironment()->AddLight(m_point_light.IncRef());
+
+
+        scene->GetEnvironment()->AddLight(engine->resources.lights.Add(std::make_unique<PointLight>(
+            Vector3(-6.0f, 4.0f, 3.0f),
+            Vector4(0.2f, 0.3f, 1.0f, 1.0f),
+            4000.0f,
+            5.0f
+        )));
+        scene->GetEnvironment()->AddLight(engine->resources.lights.Add(std::make_unique<PointLight>(
+            Vector3(-3.0f, 12.0f, -4.0f),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+            2000.0f,
+            25.0f
+        )));
 
         
         // scene->GetEnvironment()->AddRenderComponent<AABBRenderer>();
@@ -366,7 +382,10 @@ public:
     {
         timer += delta;
         ++counter;
-        scene->Update(engine, delta);
+
+        engine->GetWorld().Update(engine, delta);
+
+        //scene->Update(engine, delta);
 
         //scene->GetEnvironment()->GetShadowRenderer(0)->SetOrigin(scene->GetCamera()->GetTranslation());
 
@@ -391,7 +410,7 @@ public:
             Ray ray{scene->GetCamera()->GetTranslation(), Vector3(ray_direction)};
             RayTestResults results;
 
-            if (scene->GetOctree().TestRay(ray, results)) {
+            if (engine->GetWorld().GetOctree().TestRay(ray, results)) {
                 RayTestResults triangle_mesh_results;
 
                 for (const auto &hit : results) {

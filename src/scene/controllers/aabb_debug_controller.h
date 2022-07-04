@@ -17,7 +17,7 @@ public:
     
     virtual void OnAdded() override;
     virtual void OnRemoved() override;
-    virtual void OnUpdate(GameCounter::TickUnit delta) override;
+    virtual void OnTransformUpdate(const Transform &transform) override;
 
 protected:
     Engine      *m_engine;

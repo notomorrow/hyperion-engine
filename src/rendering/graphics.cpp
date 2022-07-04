@@ -380,7 +380,9 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
     secondary_command_buffer->Record(
         device,
         m_pipeline->GetConstructionInfo().render_pass,
-        [this, engine, instance, device, frame_index = frame->GetFrameIndex()](CommandBuffer *secondary) {
+        [this, engine, instance, device, frame_index = frame->GetFrameIndex()](CommandBuffer *secondary) {    
+            UInt num_culled_objects = 0;
+   
             m_pipeline->Bind(secondary);
 
             /* Bind global data */
@@ -397,7 +399,7 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
             static_assert(std::size(DescriptorSet::object_buffer_mapping) == max_frames_in_flight);
 
             const auto scene_binding = engine->render_state.GetScene();
-            const auto scene_cull_id = scene_binding.parent_id ? scene_binding.parent_id : scene_binding.id;
+            const auto scene_cull_id = scene_binding.id; //scene_binding.parent_id ? scene_binding.parent_id : scene_binding.id;
             const auto scene_index   = scene_binding ? scene_binding.id.value - 1 : 0;
 
             /* Bind scene data - */
@@ -451,7 +453,8 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                     if (auto *octant = spatial->GetOctree()) {
                         const auto &visibility_state = octant->GetVisibilityState();
 
-                        if (!Octree::IsVisible(&spatial->GetScene()->GetOctree(), octant)) {
+                        if (!Octree::IsVisible(&engine->GetWorld().GetOctree(), octant)) {
+                            ++num_culled_objects;
                             continue;
                         }
 
