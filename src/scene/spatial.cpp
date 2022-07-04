@@ -82,20 +82,6 @@ void Spatial::Update(Engine *engine, GameCounter::TickUnit delta)
         m_material->Update(engine);
     }
 
-    // if (m_primary_pipeline.changed) {
-    //     // if (m_primary_pipeline.pipeline != nullptr) {
-    //     //     RemoveFromPipeline(engine, m_primary_pipeline.pipeline);
-    //     // }
-
-    //     // AddToPipeline(engine);
-
-    //     if (m_scene != nullptr) {
-    //         // tmp for now, later will Update() all entities
-    //         // via scene update() and it will do the check
-    //         m_scene->RequestPipelineChanges(this);
-    //     }
-    // }
-
     UpdateControllers(engine, delta);
 
     if (m_needs_octree_update) {
@@ -109,8 +95,12 @@ void Spatial::Update(Engine *engine, GameCounter::TickUnit delta)
 
 void Spatial::UpdateControllers(Engine *engine, GameCounter::TickUnit delta)
 {
-    for (auto &controller : m_controllers) {
-        controller.second->OnUpdate(delta);
+    for (auto &it : m_controllers) {
+        if (!it.second->ReceivesUpdate()) {
+            continue;
+        }
+
+        it.second->OnUpdate(delta);
     }
 }
 
@@ -361,6 +351,10 @@ void Spatial::SetTransform(const Transform &transform)
     m_shader_data_state |= ShaderDataState::DIRTY;
 
     m_world_aabb = m_local_aabb * transform;
+
+    for (auto &it : m_controllers) {
+        it.second->OnTransformUpdate(m_transform);
+    }
 
     if (IsInitCalled()) {
         UpdateOctree();

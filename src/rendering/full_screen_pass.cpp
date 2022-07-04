@@ -156,7 +156,7 @@ void FullScreenPass::CreateDescriptors(Engine *engine)
 void FullScreenPass::CreatePipeline(Engine *engine)
 {
     CreatePipeline(engine, RenderableAttributeSet {
-        .bucket            = BUCKET_PREPASS,
+        .bucket            = BUCKET_INTERNAL,
         .vertex_attributes = renderer::static_mesh_vertex_attributes,
         .fill_mode         = FillMode::FILL,
         .depth_write       = false,

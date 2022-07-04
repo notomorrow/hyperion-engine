@@ -7,7 +7,7 @@
 namespace hyperion::v2 {
 
 AABBDebugController::AABBDebugController(Engine *engine)
-    : Controller("AABBDebugController"),
+    : Controller("AABBDebugController", false),
       m_engine(engine)
 {
 }
@@ -73,7 +73,7 @@ void AABBDebugController::OnRemoved()
     }
 }
 
-void AABBDebugController::OnUpdate(GameCounter::TickUnit delta)
+void AABBDebugController::OnTransformUpdate(const Transform &transform)
 {
     if (m_aabb != GetOwner()->GetWorldAabb()) {
         m_aabb = GetOwner()->GetWorldAabb();

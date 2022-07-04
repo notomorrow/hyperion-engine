@@ -278,6 +278,8 @@ void Engine::Initialize()
     shader_globals->Create(this);
 
     m_dummy_data.Create(this);
+
+    m_world.Init(this);
     
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)

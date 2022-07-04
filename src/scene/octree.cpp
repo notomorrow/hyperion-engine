@@ -266,14 +266,14 @@ Octree::Result Octree::InsertInternal(Engine *engine, Spatial *spatial)
         .visibility_state = &m_visibility_state
     });
 
-    spatial->OnAddedToOctree(this);
-
     if (m_root != nullptr) {
         AssertThrowMsg(m_root->node_to_octree.find(spatial) == m_root->node_to_octree.end(), "Spatial must not already be in octree hierarchy.");
 
         m_root->node_to_octree[spatial] = this;
         m_root->events.on_insert_node(engine, this, spatial);
     }
+
+    spatial->OnAddedToOctree(this);
 
     return {};
 }
@@ -488,7 +488,7 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
     } else { /* Moved into new octant */
         if (spatial->GetScene() != nullptr) {
             // force this octant to be visible to prevent flickering
-            CopyVisibilityState(spatial->GetScene()->GetOctree().GetVisibilityState());
+            CopyVisibilityState(engine->GetWorld().GetOctree().GetVisibilityState());
         } else {
             DebugLog(
                 LogType::Error,
@@ -503,8 +503,6 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
             .visibility_state = &m_visibility_state
         });
 
-        spatial->OnMovedToOctant(this);
-
         if (m_root != nullptr) {
             AssertThrowMsg(m_root->node_to_octree.find(spatial) == m_root->node_to_octree.end(), "Spatial must not already be in octree hierarchy.");
 
@@ -512,6 +510,7 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
             m_root->events.on_insert_node(engine, this, spatial);
         }
 
+        spatial->OnMovedToOctant(this);
     }
     
     return {};
@@ -701,6 +700,13 @@ bool Octree::GetNearestOctants(const Vector3 &position, std::array<Octree *, 8> 
     return true;
 }
 
+void Octree::NextVisibilityState()
+{
+    m_root->visibility_cursor = (m_root->visibility_cursor + 1) % VisibilityState::cursor_size;
+
+    ++m_visibility_state.nonces[m_root->visibility_cursor];
+}
+
 void Octree::CalculateVisibility(Scene *scene)
 {
     if (scene == nullptr) {
@@ -720,9 +726,7 @@ void Octree::CalculateVisibility(Scene *scene)
     const auto &frustum = scene->GetCamera()->GetFrustum();
      
     if (frustum.ContainsAabb(m_aabb)) {
-        m_root->visibility_cursor = (m_root->visibility_cursor + 1) % VisibilityState::cursor_size;
-
-        ++m_visibility_state.nonces[m_root->visibility_cursor];
+        // NextVisibilityState();
 
         UpdateVisibilityState(scene);
     }

@@ -48,18 +48,18 @@ struct ComponentInitInfo {
 struct IDBase {
     using ValueType = UInt32;
     
-    explicit constexpr operator ValueType() const { return value; }
-    constexpr ValueType Value() const             { return value; }
+    HYP_FORCE_INLINE explicit constexpr operator ValueType() const { return value; }
+    HYP_FORCE_INLINE constexpr ValueType Value() const             { return value; }
     
-    explicit constexpr operator bool() const      { return bool(value); }
+    HYP_FORCE_INLINE explicit constexpr operator bool() const      { return bool(value); }
 
-    constexpr bool operator==(const IDBase &other) const
+    HYP_FORCE_INLINE constexpr bool operator==(const IDBase &other) const
         { return value == other.value; }
 
-    constexpr bool operator!=(const IDBase &other) const
+    HYP_FORCE_INLINE constexpr bool operator!=(const IDBase &other) const
         { return value != other.value; }
 
-    constexpr bool operator<(const IDBase &other) const
+    HYP_FORCE_INLINE constexpr bool operator<(const IDBase &other) const
         { return value < other.value; }
 
     HashCode GetHashCode() const
@@ -109,7 +109,7 @@ public:
         //DebugLog(LogType::Warn, "free'd resource '%s' %lu\n", typeid(*this).name(), m_id);
     };
 
-    ID GetId() const          { return m_id; }
+    HYP_FORCE_INLINE ID GetId() const                             { return m_id; }
 
     HYP_FORCE_INLINE ComponentInitInfo &GetInitInfo()             { return m_init_info; }
     HYP_FORCE_INLINE const ComponentInitInfo &GetInitInfo() const { return m_init_info; }
