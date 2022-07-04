@@ -58,6 +58,14 @@ public:
         m_shader_data_state |= ShaderDataState::DIRTY;
     }
 
+    UInt GetShadowMapIndex() const     { return m_shadow_map_index; }
+
+    void SetShadowMapIndex(UInt shadow_map_index)
+    {
+        m_shadow_map_index = shadow_map_index;
+        m_shader_data_state |= ShaderDataState::DIRTY;
+    }
+
     void Init(Engine *engine);
     void Update(Engine *engine, GameCounter::TickUnit delta);
 
@@ -68,6 +76,8 @@ protected:
     float     m_intensity;
     /* Point, spot lights */
     float     m_radius;
+
+    UInt      m_shadow_map_index;
 
 private:
     void EnqueueRenderUpdates() const;

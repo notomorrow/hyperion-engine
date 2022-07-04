@@ -29,7 +29,15 @@ public:
 
     Ref<Light> &GetLight()                  { return m_light; }
     const Ref<Light> &GetLight() const      { return m_light; }
-    void SetLight(Ref<Light> &&light)       { m_light = std::move(light); }
+
+    void SetLight(Ref<Light> &&light)
+    {
+        m_light = std::move(light);
+
+        if (m_light != nullptr) {
+            m_light->SetShadowMapIndex(m_shadow_map_index);
+        }
+    }
 
     void SetParentScene(Scene::ID id);
 
@@ -48,7 +56,15 @@ public:
     }
 
     UInt GetShadowMapIndex() const          { return m_shadow_map_index; }
-    void SetShadowMapIndex(UInt index)      { m_shadow_map_index = index; }
+
+    void SetShadowMapIndex(UInt index)
+    {
+        m_shadow_map_index = index;
+
+        if (m_light != nullptr) {
+            m_light->SetShadowMapIndex(index);
+        }
+    }
 
     void CreateShader(Engine *engine);
     void CreateRenderPass(Engine *engine);

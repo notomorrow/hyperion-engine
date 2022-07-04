@@ -17,6 +17,7 @@ Light::Light(
     m_color(color),
     m_intensity(intensity),
     m_radius(radius),
+    m_shadow_map_index(~0u),
     m_shader_data_state(ShaderDataState::DIRTY)
 {
 }
@@ -62,7 +63,7 @@ void Light::EnqueueRenderUpdates() const
         .light_type       = static_cast<UInt32>(m_type),
         .intensity        = m_intensity,
         .radius           = m_radius,
-        .shadow_map_index = ~0u
+        .shadow_map_index = m_shadow_map_index
     };
 
     GetEngine()->GetRenderScheduler().Enqueue([this, shader_data](...) {
