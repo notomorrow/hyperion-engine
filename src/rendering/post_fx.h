@@ -43,7 +43,11 @@ public:
         POST_SHADING
     };
 
-    PostProcessingEffect(Stage stage, UInt index);
+    PostProcessingEffect(
+        Stage stage,
+        UInt index,
+        Image::InternalFormat image_format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB
+    );
     PostProcessingEffect(const PostProcessingEffect &other) = delete;
     PostProcessingEffect &operator=(const PostProcessingEffect &other) = delete;
     virtual ~PostProcessingEffect();

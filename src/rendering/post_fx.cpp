@@ -14,11 +14,21 @@ using renderer::DescriptorSet;
 using renderer::DescriptorKey;
 using renderer::ImageSamplerDescriptor;
 
-PostProcessingEffect::PostProcessingEffect(Stage stage, UInt index)
-    : EngineComponentBase(),
-      m_full_screen_pass(nullptr, stage == Stage::PRE_SHADING ? DescriptorKey::POST_FX_PRE_STACK : DescriptorKey::POST_FX_POST_STACK, index),
-      m_stage(stage),
-      m_is_enabled(true)
+PostProcessingEffect::PostProcessingEffect(
+    Stage stage,
+    UInt index,
+    Image::InternalFormat image_format
+) : EngineComponentBase(),
+    m_full_screen_pass(
+        nullptr,
+        stage == Stage::PRE_SHADING
+            ? DescriptorKey::POST_FX_PRE_STACK
+            : DescriptorKey::POST_FX_POST_STACK,
+        index,
+        image_format
+    ),
+    m_stage(stage),
+    m_is_enabled(true)
 {
 }
 

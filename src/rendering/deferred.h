@@ -23,19 +23,12 @@ using renderer::Device;
 class DeferredPass : public FullScreenPass {
     friend class DeferredRenderer;
 public:
-    DeferredPass();
+    DeferredPass(bool is_indirect_pass);
     DeferredPass(const DeferredPass &other) = delete;
     DeferredPass &operator=(const DeferredPass &other) = delete;
     ~DeferredPass();
 
-    auto &GetMipmappedResults()            { return m_mipmapped_results; }
-    auto &GetSampler()                     { return m_sampler; }
-
-    auto &GetSSRImageOutputs()             { return m_ssr_image_outputs; }
-    const auto &GetSSRImageOutputs() const { return m_ssr_image_outputs; }
-
     void CreateShader(Engine *engine);
-    void CreateComputePipelines(Engine *engine);
     void CreateRenderPass(Engine *engine);
     void CreateDescriptors(Engine *engine);
     void Create(Engine *engine);
@@ -44,6 +37,26 @@ public:
     void Render(Engine *engine, Frame *frame);
 
 private:
+    const bool m_is_indirect_pass;
+};
+
+class DeferredRenderer : public Renderer {
+public:
+    DeferredRenderer();
+    DeferredRenderer(const DeferredRenderer &other) = delete;
+    DeferredRenderer &operator=(const DeferredRenderer &other) = delete;
+    ~DeferredRenderer();
+
+    PostProcessing &GetPostProcessing()              { return m_post_processing; }
+    const PostProcessing &GetPostProcessing() const  { return m_post_processing; }
+
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
+    void Render(Engine *engine, Frame *frame);
+
+private:
+    void CreateComputePipelines(Engine *engine);
+    
     struct SSRImageOutput {
         std::unique_ptr<Image>     image;
         std::unique_ptr<ImageView> image_view;
@@ -67,6 +80,13 @@ private:
         }
     };
 
+    void RenderOpaqueObjects(Engine *engine, Frame *frame);
+    void RenderTranslucentObjects(Engine *engine, Frame *frame);
+
+    DeferredPass   m_indirect_pass;
+    DeferredPass   m_direct_pass;
+    PostProcessing m_post_processing;
+
     std::array<Ref<Texture>, max_frames_in_flight>                  m_mipmapped_results;
     std::unique_ptr<Sampler>                                        m_sampler;
     std::array<std::array<SSRImageOutput, 4>, max_frames_in_flight> m_ssr_image_outputs;
@@ -76,31 +96,6 @@ private:
     Ref<ComputePipeline>                                            m_ssr_sample;
     Ref<ComputePipeline>                                            m_ssr_blur_hor;
     Ref<ComputePipeline>                                            m_ssr_blur_vert;
-};
-
-class DeferredRenderer : public Renderer {
-public:
-    DeferredRenderer();
-    DeferredRenderer(const DeferredRenderer &other) = delete;
-    DeferredRenderer &operator=(const DeferredRenderer &other) = delete;
-    ~DeferredRenderer();
-
-    DeferredPass &GetPass()                          { return m_pass; }
-    const DeferredPass &GetPass() const              { return m_pass; }
-
-    PostProcessing &GetPostProcessing()              { return m_post_processing; }
-    const PostProcessing &GetPostProcessing() const  { return m_post_processing; }
-
-    void Create(Engine *engine);
-    void Destroy(Engine *engine);
-    void Render(Engine *engine, Frame *frame);
-
-private:
-    void RenderOpaqueObjects(Engine *engine, Frame *frame);
-    void RenderTranslucentObjects(Engine *engine, Frame *frame);
-
-    DeferredPass   m_pass;
-    PostProcessing m_post_processing;
 };
 
 } // namespace hyperion::v2

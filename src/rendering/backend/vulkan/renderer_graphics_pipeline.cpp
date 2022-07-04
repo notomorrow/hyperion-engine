@@ -253,7 +253,7 @@ Result GraphicsPipeline::Rebuild(Device *device, DescriptorPool *descriptor_pool
             continue;
         }
 
-        color_blend_attachments.push_back(VkPipelineColorBlendAttachmentState{
+        color_blend_attachments.push_back(VkPipelineColorBlendAttachmentState {
             .blendEnable         = m_construction_info.blend_enabled,
             .srcColorBlendFactor = m_construction_info.blend_enabled ? VK_BLEND_FACTOR_SRC_ALPHA : VK_BLEND_FACTOR_ONE,
             .dstColorBlendFactor = m_construction_info.blend_enabled ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VK_BLEND_FACTOR_ZERO,

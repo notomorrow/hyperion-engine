@@ -26,6 +26,11 @@ vec3 SchlickFresnel(vec3 f0, vec3 f90, float u)
     return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
+vec4 SchlickFresnel(vec4 f0, vec4 f90, float u)
+{
+    return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
+}
+
 vec3 mon2lin(vec3 x)
 {
     return vec3(pow(x[0], 2.2), pow(x[1], 2.2), pow(x[2], 2.2));
