@@ -98,7 +98,8 @@ void main()
     vec4 normal    = vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 1.0);
     vec4 tangent   = vec4(DecodeNormal(SampleGBuffer(gbuffer_tangents_texture, texcoord)), 1.0);
     vec4 bitangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_bitangents_texture, texcoord)), 1.0);
-    vec4 position  = SampleGBuffer(gbuffer_positions_texture, texcoord);
+    float depth    = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
+    vec4 position  = ReconstructPositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
     vec4 material  = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
     
     bool perform_lighting = albedo.a > 0.0;
@@ -167,7 +168,7 @@ void main()
 
         if (scene.environment_texture_usage != 0) {
             uint probe_index = scene.environment_texture_index;
-            ibl = SampleProbeParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], badboy_roundin(position.xyz), R, lod).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
+            ibl = SampleProbeParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], position.xyz, R, lod).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
         }
 
 #if HYP_VCT_ENABLED
@@ -179,8 +180,8 @@ void main()
 #endif
 
 #if HYP_SSR_ENABLED
-        // vec4 screen_space_reflections = Texture2D(gbuffer_sampler, ssr_sample, texcoord);
-        // reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
+        vec4 screen_space_reflections = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord);
+        reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
 #endif
 
         vec3 light_color = vec3(1.0);
@@ -189,9 +190,9 @@ void main()
         //vec3 dfg =  AB;// mix(vec3(AB.x), vec3(AB.y), vec3(1.0) - F0);
         vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
         vec3 radiance = dfg * ibl * specular_ao;
-        result = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao) + radiance;
-        result *= exposure * IBL_INTENSITY;
-        result = (result * (1.0 - reflections.a)) + (dfg * reflections.rgb);
+        // result = (diffuse_color * (irradiance * IRRADIANCE_MULTIPLIER) * (1.0 - dfg) * ao) + radiance;
+        // result *= exposure * IBL_INTENSITY;
+        // result = (result * (1.0 - reflections.a)) + (dfg * reflections.rgb);
         //end ibl
 
         // surface
@@ -199,16 +200,16 @@ void main()
         for (int i = 0; i < min(scene.num_lights, 8); i++) {
             Light light = lights[i];
 
-            L = light.position.xyz;
+            vec3 L = light.position.xyz;
             L -= position.xyz * float(min(light.type, 1));
             L = normalize(L);
 
-            H = normalize(L + V);
+            vec3 H = normalize(L + V);
 
-            NdotL = max(0.0001, dot(N, L));
-            NdotV = max(0.0001, dot(N, V));
-            NdotH = max(0.0001, dot(N, H));
-            LdotH = max(0.0001, dot(L, H));
+            float NdotL = max(0.0001, dot(N, L));
+            float NdotV = max(0.0001, dot(N, V));
+            float NdotH = max(0.0001, dot(N, H));
+            float LdotH = max(0.0001, dot(L, H));
 
             vec4 light_color = unpackUnorm4x8(light.color_encoded);
             vec3 light_color_rgb = light_color.rgb * light_color.a;
@@ -219,16 +220,15 @@ void main()
             vec3 F = SchlickFresnel(F0, F90, LdotH);
             vec3 specular = D * G * F;
 
-            float distance = max(length(light.position.xyz - position.xyz), light.radius);
+            float dist = max(length(light.position.xyz - position.xyz), light.radius);
             float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
-                (light.intensity/(distance*distance)) : 1.0;
+                (light.intensity/(dist*dist)) : 1.0;
+
             vec3 light_scatter = SchlickFresnel(vec3(1.0), F90, NdotL);
             vec3 view_scatter  = SchlickFresnel(vec3(1.0), F90, NdotV);
             vec3 diffuse = diffuse_color * (light_scatter * view_scatter * (1.0 / PI));
             result += (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * NdotL * ao * shadow * light_color_rgb) * attenuation;
-
         }
-        //result = reflections.rgb;
     } else {
         result = albedo.rgb;
     }
@@ -238,7 +238,7 @@ void main()
 #endif
 
     output_color = vec4(result, 1.0);
-//    output_color.rgb = Tonemap(output_color.rgb);
+    // output_color.rgb = Tonemap(output_color.rgb);
 
 
 //    output_color.rgb = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord).rgb;

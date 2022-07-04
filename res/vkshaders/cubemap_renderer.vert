@@ -24,6 +24,7 @@ layout (location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
 #include "include/object.inc"
+#include "include/env_probe.inc"
 
 #define HYP_ENABLE_SKINNING 1
 
@@ -39,7 +40,7 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 2, row_major) readonly
 layout(std140, set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 24, row_major) uniform CubemapUniforms {
     mat4 projection_matrices[6];
     mat4 view_matrices[6];
-} cubemap_uniforms[];
+} cubemap_uniforms[HYP_MAX_ENV_PROBES];
 
 layout(push_constant) uniform PushConstant {
     uint render_component_index;

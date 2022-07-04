@@ -29,10 +29,10 @@ vec4 SampleProbeParallaxCorrected(sampler samp, textureCube tex,
 
     float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
 
-    vec3 box = world + R * correction + vec3(0.001);
+    vec3 box = world + R * correction;
     vec3 coord = box - env_probe.world_position.xyz;
 
-    return texture(samplerCube(tex, samp), coord, 3);
+    return textureLod(samplerCube(tex, samp), coord, lod);
 }
 
 vec4 SampleProbeParallaxCorrected(samplerCube tex,
@@ -46,15 +46,15 @@ vec4 SampleProbeParallaxCorrected(samplerCube tex,
 
     float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
 
-    vec3 box = world + R * correction + vec3(0.001);
+    vec3 box = world + R * correction;
     vec3 coord = box - env_probe.world_position.xyz;
 
-    return texture(tex, coord, lod);
+    return textureLod(tex, coord, lod);
 }
 
 vec4 SampleProbe(sampler samp, textureCube tex, vec3 R, float lod)
 {
-    return texture(samplerCube(tex, samp), R, lod);
+    return textureLod(samplerCube(tex, samp), R, lod);
 }
 
 #endif

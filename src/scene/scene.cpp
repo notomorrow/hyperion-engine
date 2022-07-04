@@ -345,7 +345,7 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
             shader_data.environment_texture_usage |= 1u << cubemap_renderer->GetComponentIndex();
         }
 
-        //DebugLog(LogType::Debug, "set %u lights\n", shader_data.num_lights);
+        // DebugLog(LogType::Debug, "set %u lights\n", shader_data.num_lights);
         
         engine->shader_globals->scenes.Set(m_id.value - 1, shader_data);
 

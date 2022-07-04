@@ -46,7 +46,10 @@ void AABBDebugController::OnAdded()
                 .shader_id         = shader_id,
                 .vertex_attributes = vertex_attributes,
                 .fill_mode         = FillMode::LINE,
-                .cull_faces        = FaceCullMode::NONE
+                .cull_faces        = FaceCullMode::NONE,
+                .alpha_blending    = true,
+                .depth_write       = false,
+                .depth_test        = false
             },
             Spatial::ComponentInitInfo {
                 .flags = 0x0 // no flags
