@@ -76,11 +76,12 @@ public:
     Pipeline &operator=(const Pipeline &other) = delete;
     ~Pipeline();
 
+    VkPipelineLayout layout;
+
 protected:
     std::vector<VkDescriptorSetLayout> GetDescriptorSetLayouts(Device *device, DescriptorPool *descriptor_pool) const;
 
     VkPipeline pipeline;
-    VkPipelineLayout layout;
 };
 
 } // namespace renderer

@@ -425,6 +425,9 @@ public:
     
     VkDescriptorPool GetHandle() const          { return m_descriptor_pool; }
 
+    auto &GetVkDescriptorSets()                 { return m_descriptor_sets_view; }
+    const auto &GetVkDescriptorSets() const     { return m_descriptor_sets_view; }
+
     size_t NumDescriptorSets() const            { return m_descriptor_sets.size(); }
     bool IsCreated() const                      { return m_is_created; }
 

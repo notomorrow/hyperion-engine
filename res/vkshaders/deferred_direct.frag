@@ -9,35 +9,17 @@ layout(location=0) in vec3 v_position;
 layout(location=1) in vec2 v_texcoord0;
 
 layout(location=0) out vec4 output_color;
-layout(location=1) out vec4 output_normals;
-layout(location=2) out vec4 output_positions;
-
-// layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12) uniform texture2D ssr_uvs;
-// layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13) uniform texture2D ssr_sample;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
 
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
 #include "include/material.inc"
 #include "include/post_fx.inc"
-#include "include/tonemap.inc"
-
 #include "include/scene.inc"
 #include "include/brdf.inc"
 
-vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
+vec2 texcoord = v_texcoord0;
 
 #include "include/shadows.inc"
-
-/* Begin main shader program */
-
-#define IBL_INTENSITY 10000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
-#define IRRADIANCE_MULTIPLIER 1.0
-#define ROUGHNESS_LOD_MULTIPLIER 12.0
-#define SSAO_DEBUG 0
-
-#include "include/rt/probe/shared.inc"
 
 void main()
 {
@@ -80,10 +62,8 @@ void main()
     
     const vec4 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
     const float perceptual_roughness = sqrt(roughness);
-    const float lod = ROUGHNESS_LOD_MULTIPLIER * perceptual_roughness * (2.0 - perceptual_roughness);
-    
+ 
     vec4 result = vec4(0.0);
-
     
     float ao = 1.0;
     
@@ -93,45 +73,41 @@ void main()
 
         float shadow = 1.0;
 
-        for (int i = 0; i < min(scene.num_lights, 8); i++) {
-            Light light = lights[i];
+        vec3 L = light.position.xyz;
+        L -= position.xyz * float(min(light.type, 1));
+        L = normalize(L);
 
-            vec3 L = light.position.xyz;
-            L -= position.xyz * float(min(light.type, 1));
-            L = normalize(L);
+        vec3 H = normalize(L + V);
 
-            vec3 H = normalize(L + V);
+        float NdotL = max(0.0001, dot(N, L));
+        float NdotH = max(0.0001, dot(N, H));
+        float LdotH = max(0.0001, dot(L, H));
 
-            float NdotL = max(0.0001, dot(N, L));
-            float NdotH = max(0.0001, dot(N, H));
-            float LdotH = max(0.0001, dot(L, H));
-
-            //! TODO: Shadow needs to be moved into a post effect?
-            if (scene.num_environment_shadow_maps != 0) {
+        //! TODO: Shadow needs to be moved into a post effect?
+        if (light.shadow_map_index != ~0u) {
 #if HYP_SHADOW_PENUMBRA
-                shadow = GetShadowContactHardened(0, position.xyz, NdotL);
+            shadow = GetShadowContactHardened(light.shadow_map_index, position.xyz, NdotL);
 #else
-                shadow = GetShadow(0, position.xyz, vec2(0.0), NdotL);
+            shadow = GetShadow(light.shadow_map_index, position.xyz, vec2(0.0), NdotL);
 #endif
-            }
-
-            vec4 light_color = unpackUnorm4x8(light.color_encoded);
-
-            vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
-            float D = DistributionGGX(N, H, roughness);
-            float G = CookTorranceG(NdotL, NdotV, LdotH, NdotH);
-            vec4 F = SchlickFresnel(F0, F90, LdotH);
-            vec4 specular = D * G * F;
-
-            float dist = max(length(light.position.xyz - position.xyz), light.radius);
-            float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
-                (light.intensity/(dist*dist)) : 1.0;
-
-            vec4 light_scatter = SchlickFresnel(vec4(1.0), F90, NdotL);
-            vec4 view_scatter  = SchlickFresnel(vec4(1.0), F90, NdotV);
-            vec4 diffuse = diffuse_color * (light_scatter * view_scatter * (1.0 / PI));
-            result += (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * NdotL * ao * shadow * light_color) * attenuation;
         }
+
+        vec4 light_color = unpackUnorm4x8(light.color_encoded);
+
+        vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
+        float D = DistributionGGX(N, H, roughness);
+        float G = CookTorranceG(NdotL, NdotV, LdotH, NdotH);
+        vec4 F = SchlickFresnel(F0, F90, LdotH);
+        vec4 specular = D * G * F;
+
+        float dist = max(length(light.position.xyz - position.xyz), light.radius);
+        float attenuation = (light.type == HYP_LIGHT_TYPE_POINT) ?
+            (light.intensity/(dist*dist)) : 1.0;
+
+        vec4 light_scatter = SchlickFresnel(vec4(1.0), F90, NdotL);
+        vec4 view_scatter  = SchlickFresnel(vec4(1.0), F90, NdotV);
+        vec4 diffuse = diffuse_color * (light_scatter * view_scatter * (1.0 / PI));
+        result += (specular + diffuse * energy_compensation) * ((exposure * light.intensity) * NdotL * ao * shadow * light_color) * attenuation;
     } else {
         result = albedo;
     }

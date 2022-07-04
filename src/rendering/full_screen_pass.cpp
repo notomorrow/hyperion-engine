@@ -17,13 +17,13 @@ using renderer::FillMode;
 
 std::unique_ptr<Mesh> FullScreenPass::full_screen_quad = MeshBuilder::Quad();
 
-FullScreenPass::FullScreenPass()
-    : FullScreenPass(nullptr)
+FullScreenPass::FullScreenPass(Image::InternalFormat image_format)
+    : FullScreenPass(nullptr, image_format)
 {
 }
 
-FullScreenPass::FullScreenPass(Ref<Shader> &&shader)
-    : FullScreenPass(std::move(shader), DescriptorKey::POST_FX_PRE_STACK, ~0u)
+FullScreenPass::FullScreenPass(Ref<Shader> &&shader, Image::InternalFormat image_format)
+    : FullScreenPass(std::move(shader), DescriptorKey::POST_FX_PRE_STACK, ~0u, image_format)
 {
 }
 
@@ -240,69 +240,54 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
     auto *command_buffer = m_command_buffers[frame_index].get();
 
     auto record_result = command_buffer->Record(
-            engine->GetInstance()->GetDevice(),
-            m_pipeline->GetPipeline()->GetConstructionInfo().render_pass,
-            [this, engine, frame_index](CommandBuffer *cmd) {
-                m_pipeline->GetPipeline()->push_constants = m_push_constant_data;
+        engine->GetInstance()->GetDevice(),
+        m_pipeline->GetPipeline()->GetConstructionInfo().render_pass,
+        [this, engine, frame_index](CommandBuffer *cmd) {
+            m_pipeline->GetPipeline()->push_constants = m_push_constant_data;
+            m_pipeline->GetPipeline()->Bind(cmd);
 
-                m_pipeline->GetPipeline()->Bind(cmd);
-                
-                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
-                    engine->GetInstance()->GetDevice(),
-                    cmd,
-                    m_pipeline->GetPipeline(),
-                    {
-                        {.set = DescriptorSet::global_buffer_mapping[frame_index], .count = 1},
-                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
-                    }
-                ));
-                
-                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
-                    engine->GetInstance()->GetDevice(),
-                    cmd,
-                    m_pipeline->GetPipeline(),
-                    {
-                        {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
-                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-                        {.offsets = {UInt32(0 * sizeof(SceneShaderData))}}
-                    }
-                ));
-                
+            cmd->BindDescriptorSet(
+                engine->GetInstance()->GetDescriptorPool(),
+                m_pipeline->GetPipeline(),
+                DescriptorSet::global_buffer_mapping[frame_index],
+                DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL
+            );
+
+            cmd->BindDescriptorSet(
+                engine->GetInstance()->GetDescriptorPool(),
+                m_pipeline->GetPipeline(),
+                DescriptorSet::scene_buffer_mapping[frame_index],
+                DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
+                std::array {
+                    UInt32(sizeof(SceneShaderData) * 0),
+                    UInt32(sizeof(LightShaderData) * 0)
+                }
+            );
+            
 #if HYP_FEATURES_BINDLESS_TEXTURES
-                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
-                    engine->GetInstance()->GetDevice(),
-                    cmd,
-                    m_pipeline->GetPipeline(),
-                    {
-                        {.set = DescriptorSet::bindless_textures_mapping[frame_index], .count = 1},
-                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS}
-                    }
-                ));
+            cmd->BindDescriptorSet(
+                engine->GetInstance()->GetDescriptorPool(),
+                m_pipeline->GetPipeline(),
+                DescriptorSet::bindless_textures_mapping[frame_index],
+                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS
+            );
 #else
-                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
-                    engine->GetInstance()->GetDevice(),
-                    cmd,
-                    m_pipeline->GetPipeline(),
-                    {
-                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, .count = 1},
-                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES}
-                    }
-                ));
+            cmd->BindDescriptorSet(
+                engine->GetInstance()->GetDescriptorPool(),
+                m_pipeline->GetPipeline(),
+                DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES
+            );
 #endif
+            cmd->BindDescriptorSet(
+                engine->GetInstance()->GetDescriptorPool(),
+                m_pipeline->GetPipeline(),
+                DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER
+            );
 
-                HYPERION_BUBBLE_ERRORS(engine->GetInstance()->GetDescriptorPool().Bind(
-                    engine->GetInstance()->GetDevice(),
-                    cmd,
-                    m_pipeline->GetPipeline(),
-                    {
-                        {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER, .count = 1}
-                    }
-                ));
+            full_screen_quad->Render(engine, cmd);
 
-                full_screen_quad->Render(engine, cmd);
-
-                HYPERION_RETURN_OK;
-            });
+            HYPERION_RETURN_OK;
+        });
 
     HYPERION_ASSERT_RESULT(record_result);
 }

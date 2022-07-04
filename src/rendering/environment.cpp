@@ -188,6 +188,8 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
             if (front != nullptr) {
                 const auto id = front->GetId();
 
+                GetEngine()->render_state.BindLight(id);
+
                 m_lights.Insert(id, std::move(front));
             }
 
@@ -199,6 +201,9 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
 
             if (front != nullptr) {
                 const auto id = front->GetId();
+
+                // TODO: scene switch wouldnt unbind light
+                GetEngine()->render_state.UnbindLight(id);
 
                 m_lights.Erase(id);
             }

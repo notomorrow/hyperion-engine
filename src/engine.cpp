@@ -287,9 +287,10 @@ void Engine::Initialize()
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
-        ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->SetSubDescriptor({
-            .buffer = shader_globals->lights.GetBuffers()[0].get()
+            .buffer = shader_globals->lights.GetBuffers()[0].get(),
+            .range  = static_cast<UInt>(sizeof(LightShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE)
@@ -330,9 +331,10 @@ void Engine::Initialize()
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
-        ->AddDescriptor<renderer::StorageBufferDescriptor>(1)
+        ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->SetSubDescriptor({
-            .buffer = shader_globals->lights.GetBuffers()[1].get()
+            .buffer = shader_globals->lights.GetBuffers()[1].get(),
+            .range  = static_cast<UInt>(sizeof(LightShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)

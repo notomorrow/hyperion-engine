@@ -408,7 +408,12 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                 {
                     {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
                     {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-                    {.offsets = {UInt32(scene_index * sizeof(SceneShaderData))}}
+                    {
+                        .offsets = {
+                            UInt32(scene_index * sizeof(SceneShaderData)),
+                            UInt32(0           * sizeof(LightShaderData))
+                        }
+                    }
                 }
             );
 

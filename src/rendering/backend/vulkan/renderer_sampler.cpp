@@ -28,7 +28,7 @@ Result Sampler::Create(Device *device)
     sampler_info.addressModeV = Image::ToVkSamplerAddressMode(m_wrap_mode);
     sampler_info.addressModeW = Image::ToVkSamplerAddressMode(m_wrap_mode);
 
-    sampler_info.anisotropyEnable = VK_FALSE;
+    sampler_info.anisotropyEnable = VK_TRUE;
     sampler_info.maxAnisotropy    = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
 
     sampler_info.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -42,7 +42,7 @@ Result Sampler::Create(Device *device)
         sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
     }
 
-    sampler_info.mipLodBias = 0.0001f;
+    sampler_info.mipLodBias = 0.0f;
     sampler_info.minLod     = 0.0f;
     sampler_info.maxLod     = 12.0f;
 

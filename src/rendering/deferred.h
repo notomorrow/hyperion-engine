@@ -34,6 +34,7 @@ public:
     void Create(Engine *engine);
 
     void Destroy(Engine *engine);
+    void Record(Engine *engine, UInt frame_index);
     void Render(Engine *engine, Frame *frame);
 
 private:

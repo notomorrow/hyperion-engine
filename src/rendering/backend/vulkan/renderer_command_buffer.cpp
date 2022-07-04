@@ -1,4 +1,6 @@
 #include "renderer_command_buffer.h"
+#include "renderer_compute_pipeline.h"
+#include "renderer_graphics_pipeline.h"
 
 namespace hyperion {
 namespace renderer {
@@ -169,6 +171,160 @@ void CommandBuffer::DrawIndexed(
         0,
         0,
         instance_index
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const GraphicsPipeline *pipeline,
+    DescriptorSet::Index set
+) const
+{
+    BindDescriptorSet(
+        pool,
+        static_cast<const Pipeline *>(pipeline),
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        set,
+        set,
+        nullptr,
+        0
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const GraphicsPipeline *pipeline,
+    DescriptorSet::Index set,
+    DescriptorSet::Index binding
+) const
+{
+    BindDescriptorSet(
+        pool,
+        static_cast<const Pipeline *>(pipeline),
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        set,
+        binding,
+        nullptr,
+        0
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const GraphicsPipeline *pipeline,
+    DescriptorSet::Index set,
+    DescriptorSet::Index binding,
+    const uint32_t *offsets,
+    size_t num_offsets
+) const
+{
+    BindDescriptorSet(
+        pool,
+        static_cast<const Pipeline *>(pipeline),
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        set,
+        binding,
+        offsets,
+        num_offsets
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const ComputePipeline *pipeline,
+    DescriptorSet::Index set
+) const
+{
+    BindDescriptorSet(
+        pool,
+        static_cast<const Pipeline *>(pipeline),
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        set,
+        set,
+        nullptr,
+        0
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const ComputePipeline *pipeline,
+    DescriptorSet::Index set,
+    DescriptorSet::Index binding
+) const
+{
+    BindDescriptorSet(
+        pool,
+        static_cast<const Pipeline *>(pipeline),
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        set,
+        binding,
+        nullptr,
+        0
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const ComputePipeline *pipeline,
+    DescriptorSet::Index set,
+    DescriptorSet::Index binding,
+    const uint32_t *offsets,
+    size_t num_offsets
+) const
+{
+    BindDescriptorSet(
+        pool,
+        static_cast<const Pipeline *>(pipeline),
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        set,
+        binding,
+        offsets,
+        num_offsets
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const Pipeline *pipeline,
+    VkPipelineBindPoint bind_point,
+    DescriptorSet::Index set,
+    DescriptorSet::Index binding,
+    const uint32_t *offsets,
+    size_t num_offsets
+) const
+{
+    const auto set_index     = DescriptorSet::GetDesiredIndex(set);
+    const auto binding_index = DescriptorSet::GetDesiredIndex(binding);
+
+    const auto &descriptor_sets_view = pool.GetVkDescriptorSets();
+
+    AssertThrowMsg(
+        set_index < descriptor_sets_view.size(),
+        "Attempt to bind invalid descriptor set (%u) (at index %u) -- out of bounds (max is %llu)\n",
+        static_cast<UInt>(set),
+        set_index,
+        descriptor_sets_view.size()
+    );
+
+    const auto &bind_set = descriptor_sets_view[set_index];
+
+    AssertThrowMsg(
+        bind_set != nullptr,
+        "Attempt to bind invalid descriptor set %u (at index %u) -- set is null\n",
+        static_cast<UInt>(set),
+        set_index
+    );
+
+    vkCmdBindDescriptorSets(
+        m_command_buffer,
+        bind_point,
+        pipeline->layout,
+        binding_index,
+        1,
+        &bind_set,
+        static_cast<uint32_t>(num_offsets),
+        offsets
     );
 }
 
