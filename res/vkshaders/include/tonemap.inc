@@ -3,7 +3,7 @@
 //#define HDR_TONEMAP_FILMIC 1
 
 #ifndef HDR_EXPOSURE
-#define HDR_EXPOSURE 11.0
+#define HDR_EXPOSURE 8.0
 #endif
 
 const float A = 0.15;

@@ -37,8 +37,6 @@ vec4 Texture2DLod(sampler samp, texture2D tex, vec2 texcoord, float lod)
 #endif
 }
 
-
-
 vec4 TextureCube(samplerCube tex, vec3 texcoord)
 {
     return texture(tex, texcoord);
@@ -57,6 +55,22 @@ vec4 TextureCube(sampler samp, textureCube tex, vec3 texcoord)
 vec4 TextureCubeLod(sampler samp, textureCube tex, vec3 texcoord, float lod)
 {
     return texture(samplerCube(tex, samp), texcoord, lod);
+}
+
+float LinearDepth(mat4 projection, float depth)
+{
+    return projection[3][2] / (depth * projection[2][3] - projection[2][2]);
+}
+
+vec4 ReconstructPositionFromDepth(mat4 inverse_view_projection, vec2 coord, float depth)
+{
+    vec4 ndc = vec4(coord * 2.0 - 1.0, depth, 1.0);
+
+    vec4 inversed = inverse_view_projection * ndc;
+    inversed /= inversed.w;
+    inversed.w = 1.0;
+
+    return inversed;
 }
 
 

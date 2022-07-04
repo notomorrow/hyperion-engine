@@ -191,19 +191,21 @@ public:
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
 
-        /*auto my_light = engine->resources.lights.Add(std::make_unique<DirectionalLight>(
-            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
-            Vector4::One(),
-            10000.0f
-        ));
-        scene->GetEnvironment()->AddLight(my_light.IncRef());*/
+
         m_point_light = engine->resources.lights.Add(std::make_unique<PointLight>(
             Vector3(2.0f, 4.0f, 0.0f),
-            Vector4(0.5f, 0.3f, 0.1f, 1.0f),
+            Vector4(1.0f, 0.3f, 0.1f, 1.0f),
             10000.0f,
             10.0f
         ));
         scene->GetEnvironment()->AddLight(m_point_light.IncRef());
+
+        auto my_light = engine->resources.lights.Add(std::make_unique<DirectionalLight>(
+            Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
+            Vector4::One(),
+            100000.0f
+        ));
+        scene->GetEnvironment()->AddLight(my_light.IncRef());
         
         // scene->GetEnvironment()->AddRenderComponent<AABBRenderer>();
 
@@ -224,11 +226,11 @@ public:
         test_model->Scale(0.15f);
         scene->GetRootNode()->AddChild(std::move(test_model));
         
-        /*scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
-            my_light.IncRef(),
-            Vector3::Zero(),
-            50.0f
-        );*/
+        // scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+        //     my_light.IncRef(),
+        //     Vector3::Zero(),
+        //     50.0f
+        // );
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
