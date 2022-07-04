@@ -5,12 +5,13 @@
 #include <engine.h>
 #include <camera/perspective_camera.h>
 
+
 #include <rendering/environment.h>
 #include <rendering/backend/renderer_features.h>
 
 namespace hyperion::v2 {
 
-const std::array<std::pair<Vector3, Vector3>, 6> CubemapRenderer::cubemap_directions = {
+const FixedArray<std::pair<Vector3, Vector3>, 6> CubemapRenderer::cubemap_directions = {
     std::make_pair(Vector3(-1, 0, 0), Vector3(0, 1, 0)),
     std::make_pair(Vector3(1, 0, 0),  Vector3(0, 1, 0)),
     std::make_pair(Vector3(0, 1, 0),  Vector3(0, 0, -1)),
