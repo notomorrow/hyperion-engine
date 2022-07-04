@@ -8,6 +8,8 @@
 #include "../render_component.h"
 #include "../buffers.h"
 
+#include <core/lib/fixed_array.h>
+
 #include <rendering/backend/renderer_frame.h>
 
 #include <math/bounding_box.h>
@@ -52,7 +54,7 @@ public:
     void OnRender(Engine *engine, Frame *frame);
 
 private:
-    static const std::array<std::pair<Vector3, Vector3>, 6> cubemap_directions;
+    static const FixedArray<std::pair<Vector3, Vector3>, 6> cubemap_directions;
 
     Image *GetCubemapImage(UInt frame_index) const
     {

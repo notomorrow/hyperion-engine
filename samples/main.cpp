@@ -105,11 +105,12 @@ public:
                 0.15f, 15000.0f
             )
         ));
-        engine->GetWorld().AddScene(scene.IncRef());
     }
 
     virtual void OnPostInit(Engine *engine) override
     {
+        engine->GetWorld().AddScene(scene.IncRef());
+
         base_material = engine->resources.materials.Add(std::make_unique<Material>());
         base_material.Init();
 
