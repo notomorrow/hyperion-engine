@@ -99,6 +99,17 @@ struct RenderState {
     };
 
     std::stack<SceneBinding> scene_ids;
+    FlatSet<Light::ID>       light_ids;
+
+    void BindLight(Light::ID light)
+    {
+        light_ids.Insert(light);
+    }
+
+    void UnbindLight(Light::ID light)
+    {
+        light_ids.Erase(light);
+    }
 
     void BindScene(const Scene *scene)
     {

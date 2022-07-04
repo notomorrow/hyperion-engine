@@ -18,7 +18,7 @@ const mat4 shadow_bias_matrix = mat4(
     0.5, 0.5, 0.0, 1.0
 );
 
-vec3 GetShadowCoord(int index, vec3 pos)
+vec3 GetShadowCoord(uint index, vec3 pos)
 {
     mat4 shadow_matrix = shadow_bias_matrix * shadow_data.matrices[index].projection * shadow_data.matrices[index].view;
     vec4 shadow_position = shadow_matrix * vec4(pos, 1.0);
@@ -27,7 +27,7 @@ vec3 GetShadowCoord(int index, vec3 pos)
     return shadow_position.xyz;
 }
 
-float GetShadow(int index, vec3 pos, vec2 offset, float NdotL)
+float GetShadow(uint index, vec3 pos, vec2 offset, float NdotL)
 {
     vec3 coord = GetShadowCoord(index, pos);
     vec4 shadow_sample = texture(shadow_maps[index], coord.xy + offset);
@@ -51,7 +51,7 @@ float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float
     return penumbra;
 }
 
-float GetShadowContactHardened(int index, vec3 pos, float NdotL)
+float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
 {
     const vec3 coord = GetShadowCoord(index, pos);
 

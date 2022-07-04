@@ -5,11 +5,17 @@
 #include "renderer_render_pass.h"
 #include "renderer_semaphore.h"
 #include "renderer_fence.h"
+#include "renderer_descriptor_set.h"
 
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
 namespace renderer {
+
+class Pipeline;
+class GraphicsPipeline;
+class ComputePipeline;
+class RaytracingPipeline;
 
 class CommandBuffer {
 public:
@@ -51,6 +57,88 @@ public:
         uint32_t instance_index = 0
     ) const;
 
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const GraphicsPipeline *pipeline,
+        DescriptorSet::Index set
+    ) const;
+
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const GraphicsPipeline *pipeline,
+        DescriptorSet::Index set,
+        DescriptorSet::Index binding
+    ) const;
+
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const GraphicsPipeline *pipeline,
+        DescriptorSet::Index set,
+        DescriptorSet::Index binding,
+        const uint32_t *offsets,
+        size_t num_offsets
+    ) const;
+
+    template <size_t Size>
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const GraphicsPipeline *pipeline,
+        DescriptorSet::Index set,
+        DescriptorSet::Index binding,
+        const std::array<uint32_t, Size> &offsets
+    ) const
+    {
+        BindDescriptorSet(
+            pool,
+            pipeline,
+            set,
+            binding,
+            offsets.data(),
+            offsets.size()
+        );
+    }
+
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const ComputePipeline *pipeline,
+        DescriptorSet::Index set
+    ) const;
+
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const ComputePipeline *pipeline,
+        DescriptorSet::Index set,
+        DescriptorSet::Index binding
+    ) const;
+
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const ComputePipeline *pipeline,
+        DescriptorSet::Index set,
+        DescriptorSet::Index binding,
+        const uint32_t *offsets,
+        size_t num_offsets
+    ) const;
+
+    template <size_t Size>
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const ComputePipeline *pipeline,
+        DescriptorSet::Index set,
+        DescriptorSet::Index binding,
+        const std::array<uint32_t, Size> &offsets
+    ) const
+    {
+        BindDescriptorSet(
+            pool,
+            pipeline,
+            set,
+            binding,
+            offsets.data(),
+            offsets.size()
+        );
+    }
+
     template <class LambdaFunction>
     Result Record(Device *device, const RenderPass *render_pass, const LambdaFunction &fn)
     {
@@ -64,6 +152,16 @@ public:
     }
 
 private:
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const Pipeline *pipeline,
+        VkPipelineBindPoint bind_point,
+        DescriptorSet::Index set,
+        DescriptorSet::Index binding,
+        const uint32_t *offsets,
+        size_t num_offsets
+    ) const;
+
     Type m_type;
     VkCommandBuffer m_command_buffer;
 };

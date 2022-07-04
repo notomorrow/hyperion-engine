@@ -131,7 +131,7 @@ public:
         sphere->SetName("sphere");
         // sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
         sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.05f);
+        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.65f);
         //sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
         sphere->GetChild(0)->GetSpatial()->GetInitInfo().flags &= ~Spatial::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
         scene->GetRootNode()->AddChild(std::move(sphere));
@@ -202,7 +202,7 @@ public:
             Vector3(2.0f, 4.0f, 0.0f),
             Vector4(1.0f, 0.3f, 0.1f, 1.0f),
             10000.0f,
-            10.0f
+            3.0f
         ));
         scene->GetEnvironment()->AddLight(m_point_light.IncRef());
 
@@ -992,7 +992,7 @@ int main()
             {
                 {.set = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE, .count = 1},
                 {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-                {.offsets = {0}}
+                {.offsets = {0, 0}}
             }
         );
         engine->GetInstance()->GetDescriptorPool().Bind(

@@ -37,18 +37,14 @@ layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly 
     float camera_far;
 } scene;
 
-struct Light {
+layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightDataBlock {
     vec4 position; // or direction for directional lights
     uint color_encoded;
     uint type;
     float intensity;
     float radius;
     uint shadow_map_index; // ~0 == no shadow map
-};
-
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightDataBlock {
-    Light lights[];
-};
+} light;
 
 layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform sampler2D shadow_maps[];
 

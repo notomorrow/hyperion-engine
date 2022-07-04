@@ -614,59 +614,49 @@ Result Image::Blit(
     const auto num_mipmaps = MathUtil::Min(NumMipmaps(), src_image->NumMipmaps());
 
     for (uint32_t face = 0; face < num_faces; face++) {
+        const ImageSubResource src {
+            .base_array_layer = face,
+            .base_mip_level   = 0
+        };
 
-            /* Memory barrier for transfer - note that after generating the mipmaps,
-                we'll still need to transfer into a layout primed for reading from shaders. */
+        const ImageSubResource dst {
+            .base_array_layer = face,
+            .base_mip_level   = 0
+        };
 
-            const ImageSubResource src {
-                .base_array_layer = face,
-                .base_mip_level   = 0
-            };
+        /* Blit src -> dst */
+        const VkImageBlit blit {
+            .srcSubresource = {
+                .aspectMask     = src.aspect_mask,
+                .mipLevel       = src.base_mip_level,
+                .baseArrayLayer = src.base_array_layer,
+                .layerCount     = src.num_layers
+            },
+            .srcOffsets     = {
+                { (int32_t) src_rect.x0, (int32_t) src_rect.y0, 0 },
+                { (int32_t) src_rect.x1, (int32_t) src_rect.y1, 1 }
+            },
+            .dstSubresource = {
+                .aspectMask     = dst.aspect_mask,
+                .mipLevel       = dst.base_mip_level,
+                .baseArrayLayer = dst.base_array_layer,
+                .layerCount     = dst.num_layers
+            },
+            .dstOffsets     = {
+                { (int32_t) dst_rect.x0, (int32_t) dst_rect.y0, 0 },
+                { (int32_t) dst_rect.x1, (int32_t) dst_rect.y1, 1 }
+            }
+        };
 
-            const ImageSubResource dst {
-                .base_array_layer = face,
-                .base_mip_level   = 0
-            };
-
-            /*m_image->InsertSubResourceBarrier(
-                command_buffer,
-                src,
-                GPUMemory::ResourceState::COPY_SRC
-            );*/
-
-            /* Blit src -> dst */
-            const VkImageBlit blit {
-                .srcSubresource = {
-                    .aspectMask     = src.aspect_mask,
-                    .mipLevel       = src.base_mip_level,
-                    .baseArrayLayer = src.base_array_layer,
-                    .layerCount     = src.num_layers
-                },
-                .srcOffsets     = {
-                    { (int32_t) src_rect.x0, (int32_t) src_rect.y0, 0 },
-                    { (int32_t) src_rect.x1, (int32_t) src_rect.y1, 1 }
-                },
-                .dstSubresource = {
-                    .aspectMask     = dst.aspect_mask,
-                    .mipLevel       = dst.base_mip_level,
-                    .baseArrayLayer = dst.base_array_layer,
-                    .layerCount     = dst.num_layers
-                },
-                .dstOffsets     = {
-                    { (int32_t) dst_rect.x0, (int32_t) dst_rect.y0, 0 },
-                    { (int32_t) dst_rect.x1, (int32_t) dst_rect.y1, 1 }
-                }
-            };
-
-            vkCmdBlitImage(
-                command_buffer->GetCommandBuffer(),
-                src_image->GetGPUImage()->image,
-                GPUMemory::GetImageLayout(src_image->GetGPUImage()->GetResourceState()),
-                this->GetGPUImage()->image,
-                GPUMemory::GetImageLayout(this->GetGPUImage()->GetResourceState()),
-                1, &blit,
-                VK_FILTER_LINEAR
-            );
+        vkCmdBlitImage(
+            command_buffer->GetCommandBuffer(),
+            src_image->GetGPUImage()->image,
+            GPUMemory::GetImageLayout(src_image->GetGPUImage()->GetResourceState()),
+            this->GetGPUImage()->image,
+            GPUMemory::GetImageLayout(this->GetGPUImage()->GetResourceState()),
+            1, &blit,
+            VK_FILTER_LINEAR
+        );
     }
 
     HYPERION_RETURN_OK;

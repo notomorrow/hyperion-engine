@@ -12,8 +12,6 @@ layout(location=0) out vec4 output_color;
 layout(location=1) out vec4 output_normals;
 layout(location=2) out vec4 output_positions;
 
-// layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12) uniform texture2D ssr_uvs;
-// layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13) uniform texture2D ssr_sample;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
 
 #include "include/env_probe.inc"
@@ -35,14 +33,11 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 #include "include/vct/cone_trace.inc"
 #endif
 
-#include "include/shadows.inc"
-
 /* Begin main shader program */
 
 #define IBL_INTENSITY 10000.0
 #define DIRECTIONAL_LIGHT_INTENSITY 100000.0
 #define IRRADIANCE_MULTIPLIER 1.0
-#define ROUGHNESS_LOD_MULTIPLIER 12.0
 #define SSAO_DEBUG 0
 
 #include "include/rt/probe/shared.inc"
@@ -148,7 +143,7 @@ void main()
         
         const vec3 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
         const float perceptual_roughness = sqrt(roughness);
-        const float lod = ROUGHNESS_LOD_MULTIPLIER * perceptual_roughness * (2.0 - perceptual_roughness);
+        const float lod = 7.0 * perceptual_roughness * (2.0 - perceptual_roughness);
         
         vec3 irradiance = vec3(0.0);
         vec4 reflections = vec4(0.0);
@@ -183,8 +178,6 @@ void main()
         result *= exposure * IBL_INTENSITY;
         result = (result * (1.0 - reflections.a)) + (dfg * reflections.rgb);
         //end ibl
-
-        
     } else {
         result = albedo.rgb;
     }

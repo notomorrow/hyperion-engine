@@ -36,8 +36,13 @@ class FullScreenPass {
 public:
     static std::unique_ptr<Mesh> full_screen_quad;
     
-    FullScreenPass();
-    FullScreenPass(Ref<Shader> &&shader);
+    FullScreenPass(
+        Image::InternalFormat image_format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB
+    );
+    FullScreenPass(
+        Ref<Shader> &&shader,
+        Image::InternalFormat image_format = Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGB8_SRGB
+    );
     FullScreenPass(
         Ref<Shader> &&shader,
         DescriptorKey descriptor_key,

@@ -12,7 +12,7 @@ using renderer::DescriptorKey;
 using renderer::Rect;
 
 DeferredPass::DeferredPass(bool is_indirect_pass)
-    : FullScreenPass(),
+    : FullScreenPass(Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB),
       m_is_indirect_pass(is_indirect_pass)
 {
 }
@@ -117,6 +117,79 @@ void DeferredPass::Create(Engine *engine)
 void DeferredPass::Destroy(Engine *engine)
 {
     FullScreenPass::Destroy(engine); // flushes render queue
+}
+
+void DeferredPass::Record(Engine *engine, UInt frame_index)
+{
+    if (m_is_indirect_pass) {
+        FullScreenPass::Record(engine, frame_index);
+        
+        return;
+    }
+
+    // no lights bound, do not render direct shading at all
+    if (engine->render_state.light_ids.Empty()) {
+        return;
+    }
+
+    using renderer::Result;
+
+    auto *command_buffer = m_command_buffers[frame_index].get();
+
+    auto record_result = command_buffer->Record(
+        engine->GetInstance()->GetDevice(),
+        m_pipeline->GetPipeline()->GetConstructionInfo().render_pass,
+        [this, engine, frame_index](CommandBuffer *cmd) {
+            m_pipeline->GetPipeline()->push_constants = m_push_constant_data;
+            m_pipeline->GetPipeline()->Bind(cmd);
+
+            cmd->BindDescriptorSet(
+                engine->GetInstance()->GetDescriptorPool(),
+                m_pipeline->GetPipeline(),
+                DescriptorSet::global_buffer_mapping[frame_index],
+                DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL
+            );
+            
+#if HYP_FEATURES_BINDLESS_TEXTURES
+            cmd->BindDescriptorSet(
+                engine->GetInstance()->GetDescriptorPool(),
+                m_pipeline->GetPipeline(),
+                DescriptorSet::bindless_textures_mapping[frame_index],
+                DescriptorSet::DESCRIPTOR_SET_INDEX_BINDLESS
+            );
+#else
+            cmd->BindDescriptorSet(
+                engine->GetInstance()->GetDescriptorPool(),
+                m_pipeline->GetPipeline(),
+                DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES
+            );
+#endif
+            cmd->BindDescriptorSet(
+                engine->GetInstance()->GetDescriptorPool(),
+                m_pipeline->GetPipeline(),
+                DescriptorSet::DESCRIPTOR_SET_INDEX_VOXELIZER
+            );
+
+            // render with each light
+            for (auto &light_id : engine->render_state.light_ids) {
+                cmd->BindDescriptorSet(
+                    engine->GetInstance()->GetDescriptorPool(),
+                    m_pipeline->GetPipeline(),
+                    DescriptorSet::scene_buffer_mapping[frame_index],
+                    DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
+                    std::array {
+                        UInt32(sizeof(SceneShaderData) * 0),
+                        UInt32(sizeof(LightShaderData) * (light_id.value - 1))
+                    }
+                );
+
+                full_screen_quad->Render(engine, cmd);
+            }
+
+            HYPERION_RETURN_OK;
+        });
+
+    HYPERION_ASSERT_RESULT(record_result);
 }
 
 void DeferredPass::Render(Engine *engine, Frame *frame)
@@ -379,7 +452,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
     m_indirect_pass.Record(engine, frame_index); // could be moved to only do once
-    m_direct_pass.Record(engine, frame_index);   // could be moved to only do once
+    m_direct_pass.Record(engine, frame_index);
 
     auto &render_list = engine->GetRenderListContainer();
     auto &bucket = render_list.Get(BUCKET_OPAQUE);
@@ -445,7 +518,12 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-            {.offsets = {UInt32(scene_index * sizeof(SceneShaderData))}}
+            {
+                .offsets = {
+                    UInt32(scene_index * sizeof(SceneShaderData)),
+                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                }
+            }
         }
     );
 
@@ -480,7 +558,12 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-            {.offsets = {UInt32(scene_index * sizeof(SceneShaderData))}}
+            {
+                .offsets = {
+                    UInt32(scene_index * sizeof(SceneShaderData)),
+                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                }
+            }
         }
     );
 
@@ -515,7 +598,12 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-            {.offsets = {UInt32(scene_index * sizeof(SceneShaderData))}}
+            {
+                .offsets = {
+                    UInt32(scene_index * sizeof(SceneShaderData)),
+                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                }
+            }
         }
     );
 
@@ -548,7 +636,12 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         {
             {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
             {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-            {.offsets = {UInt32(scene_index * sizeof(SceneShaderData))}}
+            {
+                .offsets = {
+                    UInt32(scene_index * sizeof(SceneShaderData)),
+                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                }
+            }
         }
     );
 
@@ -570,7 +663,9 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     HYPERION_ASSERT_RESULT(m_indirect_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary));
 
     // direct shading
-    HYPERION_ASSERT_RESULT(m_direct_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary));
+    if (!engine->render_state.light_ids.Empty()) {
+        HYPERION_ASSERT_RESULT(m_direct_pass.GetCommandBuffer(frame_index)->SubmitSecondary(primary));
+    }
 
     // begin translucent with forward rendering
     RenderTranslucentObjects(engine, frame);
