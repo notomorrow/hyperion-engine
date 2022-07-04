@@ -357,7 +357,6 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
         Float32     camera_far;
     } params = {
         .aabb            = m_aabb,
-        .light_direction = Vector3(-0.5f, 0.5f, 0.0f).Normalize(),
         .global_timer    = m_environment->GetGlobalTimer()
     };
 

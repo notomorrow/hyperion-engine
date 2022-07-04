@@ -14,7 +14,7 @@ struct VisibilityState {
     using Nonce   = UInt16;
 
     static constexpr UInt32 max_scenes  = sizeof(Bitmask) * CHAR_BIT;
-    static constexpr UInt32 cursor_size = 8;
+    static constexpr UInt32 cursor_size = 4;
 
     /* map from scene index (id - 1) -> visibility boolean
      */
