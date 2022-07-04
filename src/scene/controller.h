@@ -2,6 +2,7 @@
 #define HYPERION_V2_CONTROLLER_H
 
 #include <rendering/base.h>
+#include <math/transform.h>
 #include "../game_counter.h"
 
 #include <core/lib/flat_map.h>
@@ -24,18 +25,20 @@ class Controller {
     friend class Spatial;
 
 public:
-    Controller(const char *name);
+    Controller(const char *name, bool received_update = true);
     Controller(const Controller &other) = delete;
     Controller &operator=(const Controller &other) = delete;
     virtual ~Controller();
 
     const char *GetName() const { return m_name; }
     Spatial *GetOwner() const   { return m_owner; }
+    bool ReceivesUpdate() const { return m_receives_update; }
 
 protected:
     virtual void OnAdded() = 0;
     virtual void OnRemoved() = 0;
-    virtual void OnUpdate(GameCounter::TickUnit delta) = 0;
+    virtual void OnUpdate(GameCounter::TickUnit delta) {};
+    virtual void OnTransformUpdate(const Transform &transform) {}
 
     virtual void OnRemovedFromNode(Node *node) {}
     virtual void OnAddedToNode(Node *node) {}
@@ -45,6 +48,7 @@ protected:
 private:
     char    *m_name;
     Spatial *m_owner;
+    bool     m_receives_update;
 };
 
 class ControllerSet {

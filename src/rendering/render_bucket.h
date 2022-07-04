@@ -7,7 +7,8 @@ namespace hyperion::v2 {
 
 enum Bucket {
     BUCKET_SWAPCHAIN = 0, /* Main swapchain */
-    BUCKET_PREPASS,       /* Pre-pass / buffer items */
+    BUCKET_INTERNAL,      /* Pre-pass / buffer items */
+    BUCKET_SHADOW,
     BUCKET_VOXELIZER,
     /* === Scene objects === */
     BUCKET_OPAQUE,        /* Opaque items */
@@ -41,7 +42,8 @@ static inline bool BucketHasGlobalIllumination(Bucket bucket)
 HYP_FORCE_INLINE
 static inline bool BucketFrustumCullingEnabled(Bucket bucket)
 {
-    return bucket == BUCKET_OPAQUE
+    return bucket == BUCKET_SHADOW
+        || bucket == BUCKET_OPAQUE
         || bucket == BUCKET_TRANSLUCENT
         || bucket == BUCKET_PARTICLE;
 }

@@ -116,7 +116,7 @@ void ShadowPass::CreatePipeline(Engine *engine)
         std::move(m_shader),
         m_render_pass.IncRef(),
         RenderableAttributeSet{
-            .bucket            = BUCKET_PREPASS,
+            .bucket            = BUCKET_SHADOW,
             .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
         }
     );
@@ -144,7 +144,7 @@ void ShadowPass::Create(Engine *engine)
     ));
 
     m_scene->SetParentId(m_parent_scene_id);
-    m_scene.Init();
+    engine->GetWorld().AddScene(m_scene.IncRef());
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
@@ -178,6 +178,9 @@ void ShadowPass::Create(Engine *engine)
 
 void ShadowPass::Destroy(Engine *engine)
 {
+    engine->GetWorld().RemoveScene(m_scene->GetId());
+    m_scene.Reset();
+
     FullScreenPass::Destroy(engine); // flushes render queue
 }
 
@@ -310,8 +313,6 @@ void ShadowRenderer::OnUpdate(Engine *engine, GameCounter::TickUnit delta)
     AssertReady();
     
     UpdateSceneCamera(engine);
-
-    m_shadow_pass.GetScene()->Update(engine, delta);
 }
 
 void ShadowRenderer::OnRender(Engine *engine, Frame *frame)

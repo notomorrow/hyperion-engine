@@ -19,9 +19,11 @@
 namespace hyperion::v2 {
 
 class Environment;
+class World;
 
 class Scene : public EngineComponentBase<STUB_CLASS(Scene)> {
     friend class Spatial; // TODO: refactor to not need as many friend classes
+    friend class World;
 public:
     static constexpr UInt32 max_environment_textures = SceneShaderData::max_environment_textures;
 
@@ -32,8 +34,6 @@ public:
 
     Camera *GetCamera() const                            { return m_camera.get(); }
     void SetCamera(std::unique_ptr<Camera> &&camera)     { m_camera = std::move(camera); }
-    Octree &GetOctree()                                  { return m_octree; }
-    const Octree &GetOctree() const                      { return m_octree; }
 
     bool AddSpatial(Ref<Spatial> &&spatial);
     bool HasSpatial(Spatial::ID id) const;
@@ -48,15 +48,24 @@ public:
 
     Environment *GetEnvironment() const                  { return m_environment; }
 
+    World *GetWorld() const                              { return m_world; }
+    void SetWorld(World *world);
+
     Scene::ID GetParentId() const                        { return m_parent_id; }
     void SetParentId(Scene::ID id)                       { m_parent_id = id; }
     
     void Init(Engine *engine);
-    void Update(Engine *engine, GameCounter::TickUnit delta);
 
     BoundingBox m_aabb;
 
 private:
+    // World only calls
+    void Update(
+        Engine *engine,
+        GameCounter::TickUnit delta,
+        bool update_octree_visiblity = true
+    );
+
     void EnqueueRenderUpdates(Engine *engine);
 
     void RequestPipelineChanges(Ref<Spatial> &spatial);
@@ -65,8 +74,8 @@ private:
 
     std::unique_ptr<Camera>  m_camera;
     std::unique_ptr<Node>    m_root_node;
-    Octree                   m_octree;
     Environment             *m_environment;
+    World                   *m_world;
     std::array<Ref<Texture>, max_environment_textures> m_environment_textures;
 
     // spatials live in GAME thread
