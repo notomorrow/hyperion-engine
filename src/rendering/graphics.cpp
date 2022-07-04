@@ -523,6 +523,13 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                 spatial->GetMesh()->Render(engine, secondary);
             }
 
+            // DebugLog(
+            //     LogType::Debug,
+            //     "Scene %u: Culled %u objects\n",
+            //     scene_cull_id.value,
+            //     num_culled_objects
+            // );
+
             HYPERION_RETURN_OK;
         });
     
