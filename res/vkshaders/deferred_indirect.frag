@@ -27,7 +27,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
 #define HYP_VCT_ENABLED 0
-#define HYP_SSR_ENABLED 0
+#define HYP_SSR_ENABLED 1
 
 #if HYP_VCT_ENABLED
 #include "include/vct/cone_trace.inc"
@@ -187,8 +187,5 @@ void main()
 #endif
 
     output_color = vec4(result, 1.0);
-    // output_color.rgb = Tonemap(output_color.rgb);
-
-//    output_color.rgb = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord).rgb;
 
 }

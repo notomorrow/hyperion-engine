@@ -349,12 +349,12 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
         Matrix4     projection;
         Vector3     translation;
         Vector3     direction;
-        Int32       width;
-        Int32       height;
+        Int         width;
+        Int         height;
         Vector3     light_direction;
-        Float32     global_timer;
-        Float32     camera_near;
-        Float32     camera_far;
+        Float       global_timer;
+        Float       camera_near;
+        Float       camera_far;
     } params = {
         .aabb            = m_aabb,
         .global_timer    = m_environment->GetGlobalTimer()

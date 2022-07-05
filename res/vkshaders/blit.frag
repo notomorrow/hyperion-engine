@@ -13,6 +13,7 @@ layout(location=1) in vec2 v_texcoord0;
 #include "include/rt/probe/probe_uniforms.inc"
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba8) uniform image2D image_storage_test;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
 
 //layout(set = 9, binding = 1, rgba16f)  uniform image2D rt_image;
 //layout(set = 9, binding = 11, rgba16f) uniform image2D irradiance_image;
