@@ -6,7 +6,9 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #include "../include/defines.inc"
 #include "../include/gbuffer.inc"
 #include "../include/scene.inc"
+#include "../include/shared.inc"
 
+#define HYP_SSR_ROUGHNESS_MAX      0.4
 
 layout(push_constant) uniform PushConstant
 {

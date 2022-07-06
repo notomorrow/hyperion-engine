@@ -27,7 +27,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
 #define HYP_VCT_ENABLED 0
-#define HYP_SSR_ENABLED 0
+#define HYP_SSR_ENABLED 1
 
 #if HYP_VCT_ENABLED
 #include "include/vct/cone_trace.inc"
@@ -86,6 +86,250 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
 vec3 badboy_roundin(vec3 vec) {
     return ceil(vec*100.0)/100.0;
 }
+
+#define SSR_MAX_ITERATIONS 20
+#define SSR_MAX_BINARY_SEARCH_ITERATIONS 5
+#define SSR_PIXEL_STRIDE 8
+#define SSR_PIXEL_STRIDE_CUTOFF 4
+#define SSR_MAX_RAY_DISTANCE 32
+#define SSR_SCREEN_EDGE_FADE_START 0.9
+#define SSR_EYE_FADE_START 0.8
+#define SSR_EYE_FADE_END 0.995
+#define SSR_Z_THICKNESS_THRESHOLD 0.1
+#define SSR_JITTER_OFFSET 0.0
+
+float linearDepth(float depth)
+{
+    //return scene.camera_near * scene.camera_far / (scene.camera_far + depth * (scene.camera_near - scene.camera_far));//
+    return scene.projection[3][2] / (depth * scene.projection[2][3] - scene.projection[2][2]);
+}
+
+float fetchDepth(vec2 uv)
+{
+    vec4 depthTexel = SampleGBuffer(gbuffer_depth_texture, uv);
+
+    return depthTexel.r * 2.0 - 1.0;
+}
+
+bool rayIntersectDepth(float rayZNear, float rayZFar, vec2 hitPixel)
+{
+    // Swap if bigger
+    if (rayZFar > rayZNear)
+    {
+        float t = rayZFar; rayZFar = rayZNear; rayZNear = t;
+    }
+    float cameraZ = linearDepth(fetchDepth(hitPixel));
+    // float cameraBackZ = linearDepth(fetchDepth(backDepthTex, hitPixel));
+    // Cross z
+    return rayZFar <= cameraZ && rayZNear >= cameraZ - SSR_Z_THICKNESS_THRESHOLD;
+}
+
+// Trace a ray in screenspace from rayOrigin (in camera space) pointing in rayDir (in camera space)
+//
+// With perspective correct interpolation
+//
+// Returns true if the ray hits a pixel in the depth buffer
+// and outputs the hitPixel (in UV space), the hitPoint (in camera space) and the number
+// of iterations it took to get there.
+//
+// Based on Morgan McGuire & Mike Mara's GLSL implementation:
+// http://casual-effects.blogspot.com/2014/08/screen-space-ray-tracing.html
+
+vec2 scene_resolution = vec2(float(scene.resolution_x), float(scene.resolution_y));
+
+bool traceScreenSpaceRay(
+    vec3 rayOrigin, vec3 rayDir, float jitter,
+    out vec2 hitPixel, out vec3 hitPoint, out float iterationCount
+)
+{
+    // Clip to the near plane
+    float rayLength = ((rayOrigin.z + rayDir.z * SSR_MAX_RAY_DISTANCE) > -0.5)
+        ? (-0.5 - rayOrigin.z) / rayDir.z : SSR_MAX_RAY_DISTANCE;
+
+    vec3 rayEnd = rayOrigin + rayDir * rayLength;
+
+    // Project into homogeneous clip space
+    vec4 H0 = scene.projection * vec4(rayOrigin, 1.0);
+    vec4 H1 = scene.projection * vec4(rayEnd, 1.0);
+
+    float k0 = 1.0 / H0.w, k1 = 1.0 / H1.w;
+
+    // The interpolated homogeneous version of the camera space points
+    vec3 Q0 = rayOrigin * k0, Q1 = rayEnd * k1;
+
+    // Screen space endpoints
+    // PENDING viewportSize ?
+    vec2 P0 = (H0.xy * k0 * 0.5 + 0.5) * scene_resolution;
+    vec2 P1 = (H1.xy * k1 * 0.5 + 0.5) * scene_resolution;
+
+    // If the line is degenerate, make it cover at least one pixel to avoid handling
+    // zero-pixel extent as a special case later
+    P1 += dot(P1 - P0, P1 - P0) < 0.0001 ? 0.01 : 0.0;
+    vec2 delta = P1 - P0;
+
+    // Permute so that the primary iteration is in x to collapse
+    // all quadrant-specific DDA case later
+    bool permute = false;
+    if (abs(delta.x) < abs(delta.y)) {
+        // More vertical line
+        permute = true;
+        delta = delta.yx;
+        P0 = P0.yx;
+        P1 = P1.yx;
+    }
+    float stepDir = sign(delta.x);
+    float invdx = stepDir / delta.x;
+
+    // Track the derivatives of Q and K
+    vec3 dQ = (Q1 - Q0) * invdx;
+    float dk = (k1 - k0) * invdx;
+
+    vec2 dP = vec2(stepDir, delta.y * invdx);
+
+    // Calculate pixel stride based on distance of ray origin from camera.
+    // Since perspective means distant objects will be smaller in screen space
+    // we can use this to have higher quality reflections for far away objects
+    // while still using a large pixel stride for near objects (and increase performance)
+    // this also helps mitigate artifacts on distant reflections when we use a large
+    // pixel stride.
+    float strideScaler = 1.0 - min(1.0, -rayOrigin.z / SSR_PIXEL_STRIDE_CUTOFF);
+    float pixStride = 1.0 + strideScaler * SSR_PIXEL_STRIDE;
+
+    // Scale derivatives by the desired pixel stride and the offset the starting values by the jitter fraction
+    dP *= pixStride; dQ *= pixStride; dk *= pixStride;
+
+    // Track ray step and derivatives in a vec4 to parallelize
+    vec4 pqk = vec4(P0, Q0.z, k0);
+    vec4 dPQK = vec4(dP, dQ.z, dk);
+
+    pqk += dPQK * jitter;
+    float rayZFar = (dPQK.z * 0.5 + pqk.z) / (dPQK.w * 0.5 + pqk.w);
+    float rayZNear;
+
+    bool intersect = false;
+
+    vec2 texelSize = 1.0 / scene_resolution;
+
+    iterationCount = 0.0;
+
+    for (int i = 0; i < SSR_MAX_ITERATIONS; i++)
+    {
+        pqk += dPQK;
+
+        rayZNear = rayZFar;
+        rayZFar = (dPQK.z * 0.5 + pqk.z) / (dPQK.w * 0.5 + pqk.w);
+
+        hitPixel = permute ? pqk.yx : pqk.xy;
+        hitPixel *= texelSize;
+
+        intersect = rayIntersectDepth(rayZNear, rayZFar, hitPixel);
+
+        iterationCount += 1.0;
+
+        // PENDING Right on all platforms?
+        if (intersect) {
+            break;
+        }
+    }
+
+    // Binary search refinement
+    // FIXME If intersect in first iteration binary search may easily lead to the pixel of reflect object it self
+    if (pixStride > 1.0 && intersect && iterationCount > 1.0)
+    {
+        // Roll back
+        pqk -= dPQK;
+        dPQK /= pixStride;
+
+        float originalStride = pixStride * 0.5;
+        float stride = originalStride;
+
+        rayZNear = pqk.z / pqk.w;
+        rayZFar = rayZNear;
+
+        for (int j = 0; j < SSR_MAX_BINARY_SEARCH_ITERATIONS; j++)
+        {
+            pqk += dPQK * stride;
+            rayZNear = rayZFar;
+            rayZFar = (dPQK.z * -0.5 + pqk.z) / (dPQK.w * -0.5 + pqk.w);
+            hitPixel = permute ? pqk.yx : pqk.xy;
+            hitPixel *= texelSize;
+
+            originalStride *= 0.5;
+            stride = rayIntersectDepth(rayZNear, rayZFar, hitPixel) ? -originalStride : originalStride;
+        }
+    }
+
+    Q0.xy += dQ.xy * iterationCount;
+    Q0.z = pqk.z;
+    hitPoint = Q0 / pqk.w;
+
+    return intersect;
+}
+
+float calculateAlpha(
+    float iterationCount, float reflectivity,
+    vec2 hitPixel, vec3 hitPoint, float dist, vec3 rayDir
+)
+{
+    float alpha = 1.0;
+    // Fade ray hits that approach the maximum iterations
+    alpha *= 1.0 - (iterationCount / float(SSR_MAX_ITERATIONS));
+    // Fade ray hits that approach the screen edge
+    vec2 hitPixelNDC = hitPixel * 2.0 - 1.0;
+    float maxDimension = min(1.0, max(abs(hitPixelNDC.x), abs(hitPixelNDC.y)));
+    alpha *= 1.0 - max(0.0, maxDimension - SSR_SCREEN_EDGE_FADE_START) / (1.0 - SSR_SCREEN_EDGE_FADE_START);
+
+    // Fade ray hits base on how much they face the camera
+    //float eyeDir = clamp(rayDir.z, $SSR_EYE_FADE_START, $SSR_EYE_FADE_END);
+    //alpha *= 1.0 - (eyeDir - $SSR_EYE_FADE_START) / ($SSR_EYE_FADE_END - $SSR_EYE_FADE_START);
+
+    // Fade ray hits based on distance from ray origin
+    alpha *= 1.0 - clamp(dist / SSR_MAX_RAY_DISTANCE, 0.0, 1.0);
+
+    return alpha;
+}
+
+vec4 ScreenSpaceReflection(float roughness)
+{
+	vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord));
+    vec3 viewSpaceN = normalize((scene.view * vec4(N, 0.0)).xyz);
+
+    // Position in view
+    vec4 projectedPos = vec4(texcoord * 2.0 - 1.0, fetchDepth(texcoord), 1.0);
+    vec4 pos = inverse(scene.projection) * projectedPos;
+    vec3 rayOrigin = pos.xyz / pos.w;
+
+    vec3 rayDir = normalize(reflect(normalize(rayOrigin), viewSpaceN));
+
+
+	vec2 hitPixel;
+    vec3 hitPoint;
+    float iterationCount;
+
+    vec2 uv2 = texcoord * scene_resolution;
+    float jitter = fract((texcoord.x + texcoord.y) * 0.25 + SSR_JITTER_OFFSET);
+
+    bool intersect = traceScreenSpaceRay(rayOrigin, rayDir, jitter, hitPixel, hitPoint, iterationCount);
+
+    float dist = distance(rayOrigin, hitPoint);
+
+    float alpha = calculateAlpha(iterationCount, 1.0 /* reflectivity */, hitPixel, hitPoint, dist, rayDir) * float(intersect);
+
+    vec3 hitNormal = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, hitPixel));
+    hitNormal = normalize((scene.view * vec4(hitNormal, 0.0)).xyz);
+
+
+    if (dot(hitNormal, rayDir) >= 0.0) {
+        return vec4(0.0);
+    }
+    if (!intersect) {
+        return vec4(0.0);
+    }
+
+	return Texture2DLod(gbuffer_mip_chain, hitPixel, mix(0.0, 9.0, roughness)) * alpha;
+}
+
+
 
 void main()
 {
@@ -188,4 +432,5 @@ void main()
 
     output_color = vec4(result, 1.0);
 
+    // output_color = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord);
 }

@@ -9,7 +9,7 @@
 
 namespace hyperion {
 
-template <class T, UInt Sz>
+template <class T, size_t Sz>
 class FixedArray {
     T m_data[Sz];
 
@@ -19,16 +19,16 @@ public:
 
     FixedArray();
 
-    FixedArray(const T items[Sz])
+    FixedArray(T const (&items)[Sz])
     {
-        for (UInt i = 0; i < Sz; i++) {
+        for (size_t i = 0; i < Sz; i++) {
             m_data[i] = items[i];
         }
     }
 
-    FixedArray &operator=(const T items[Sz])
+    FixedArray &operator=(T const (&items)[Sz])
     {
-        for (UInt i = 0; i < Sz; i++) {
+        for (size_t i = 0; i < Sz; i++) {
             m_data[i] = items[i];
         }
 
@@ -65,7 +65,7 @@ public:
     const T &operator[](UInt index) const   { return m_data[index]; }
 
     HYP_FORCE_INLINE
-    UInt Size() const                       { return Sz; }
+    size_t Size() const                     { return Sz; }
 
     HYP_FORCE_INLINE
     bool Empty() const                      { return Sz == 0; }
@@ -82,50 +82,54 @@ public:
     HYP_DEF_STL_BEGIN_END(&m_data[0], &m_data[Sz])
 };
 
-template <class T, UInt Sz>
+template <class T, size_t Sz>
 FixedArray<T, Sz>::FixedArray()
     : m_data{}
 {
 }
 
-template <class T, UInt Sz>
+template <class T, size_t Sz>
 FixedArray<T, Sz>::FixedArray(const FixedArray &other)
 {
-    for (UInt i = 0; i < Sz; i++) {
+    for (size_t i = 0; i < Sz; i++) {
         m_data[i] = other.m_data[i];
     }
 }
 
-template <class T, UInt Sz>
+template <class T, size_t Sz>
 auto FixedArray<T, Sz>::operator=(const FixedArray &other) -> FixedArray&
 {
-    for (UInt i = 0; i < Sz; i++) {
+    for (size_t i = 0; i < Sz; i++) {
         m_data[i] = other.m_data[i];
     }
 
     return *this;
 }
 
-template <class T, UInt Sz>
+template <class T, size_t Sz>
 FixedArray<T, Sz>::FixedArray(FixedArray &&other) noexcept
 {
-    for (UInt i = 0; i < Sz; i++) {
+    for (size_t i = 0; i < Sz; i++) {
         m_data[i] = std::move(other.m_data[i]);
     }
 }
 
-template <class T, UInt Sz>
+template <class T, size_t Sz>
 auto FixedArray<T, Sz>::operator=(FixedArray &&other) noexcept -> FixedArray&
 {
-    for (UInt i = 0; i < Sz; i++) {
+    for (size_t i = 0; i < Sz; i++) {
         m_data[i] = std::move(other.m_data[i]);
     }
 
     return *this;
 }
 
-template <class T, UInt Sz>
+template <class T, size_t Sz>
 FixedArray<T, Sz>::~FixedArray() = default;
+
+// deduction guide
+template <typename Tp, typename ...Args>
+FixedArray(Tp, Args...) -> FixedArray<std::enable_if_t<(std::is_same_v<Tp, Args> && ...), Tp>, 1 + sizeof...(Args)>;
 
 } // namespace hyperion
 

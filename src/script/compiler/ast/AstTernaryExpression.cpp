@@ -112,6 +112,8 @@ Tribool AstTernaryExpression::IsTrue() const
     case Tribool::TRI_TRUE:
         return m_left->IsTrue();
     }
+
+    return Tribool::Indeterminate();
 }
 
 bool AstTernaryExpression::MayHaveSideEffects() const

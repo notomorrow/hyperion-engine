@@ -4,13 +4,12 @@
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba16f) uniform writeonly image2D ssr_uvs;
 
-const float distanceBias = 0.02f;
-const float offset = 0.01f;
-const bool isSamplingEnabled = false;
+const float distanceBias = 0.0001f;
+const float offset = 0.2f;
 const bool isExponentialStepEnabled = false;
 const bool isAdaptiveStepEnabled = true;
-const float eyeFadeStart = 0.5;
-const float eyeFadeEnd = 0.8;
+const float eyeFadeStart = 0.7;
+const float eyeFadeEnd = 0.9;
 const float ssr_screen_edge_fade_start = 0.7;
 const float ssr_screen_edge_fade_end = 0.9;
 
@@ -26,8 +25,8 @@ float SSRAlpha(vec3 dir, vec3 origin, vec3 hitPosition)
 		_eyeFadeStart = tmp;
 	}
 
-    // float eyeDirection = clamp( dir.z, eyeFadeStart, eyeFadeEnd);
-    // alpha *= ((eyeDirection - eyeFadeStart) / (eyeFadeEnd - eyeFadeStart));
+    float eyeDirection = clamp( dir.z, eyeFadeStart, eyeFadeEnd);
+    alpha *= ((eyeDirection - eyeFadeStart) / (eyeFadeEnd - eyeFadeStart));
 
 	float dist = distance(origin, hitPosition);
 	// Fade ray hits based on distance from ray origin
@@ -50,10 +49,16 @@ void TraceRays(vec3 position, vec3 reflection, out vec2 out_uv, out float out_ma
 	for (; i < ssr_params.num_iterations && distance(marchingPosition, position) < ssr_params.max_ray_distance; i++) {
 		screenPosition = generateProjectedPosition(marchingPosition);
 
-		depthFromScreen = abs(generatePositionFromDepth(screenPosition, SampleGBuffer(gbuffer_depth_texture, screenPosition).x).z);
+		float depth = SampleGBuffer(gbuffer_depth_texture, screenPosition).x;
+
+		depthFromScreen = abs(generatePositionFromDepth(screenPosition, depth).z);
 		delta = abs(marchingPosition.z) - depthFromScreen;
 
-		if (abs(delta) < distanceBias) {
+		// float camera_z = LinearDepth(scene.projection, depth)
+
+		if (delta > 0.0 && delta < distanceBias) {
+			// if (marchingPosition.z + 0.03)
+
             float alpha = SSRAlpha(reflection, position, marchingPosition);
 
             vec2 hitPixelNDC = screenPosition * 2.0 - 1.0;
@@ -93,12 +98,20 @@ void PerformSSR(ivec2 coord, out vec2 out_uv, out float out_mask)
 	float depth = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
     vec4 position = vec4(generatePositionFromDepth(texcoord, depth), 1.0);
 	vec4 normal = scene.view * vec4(DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord)), 0.0);
+	vec3 V = normalize(scene.camera_position.xyz - position.xyz);
+	vec3 N = normalize(normal.xyz);
 
-	vec3 reflectionDirection = normalize(reflect(position.xyz, normalize(normal.xyz)));
+	// if (dot(normalize(reflect(-V, N)), N) < 0.001) {
+	// 	out_uv = vec2(0.0);
+	// 	out_mask = 0.0;
+	// 	return;
+	// }
+
+	vec3 reflectionDirection = normalize(reflect(position.xyz, N));
 	
 	TraceRays(
 		position.xyz,
-		normalize(reflectionDirection + (normal.xyz * offset)),
+		normalize(reflectionDirection + (N * offset)),
 		out_uv,
 		out_mask
 	);

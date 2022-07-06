@@ -120,7 +120,7 @@ Result GraphicsPipeline::Create(Device *device, ConstructionInfo &&construction_
     AssertThrow(m_construction_info.shader != nullptr);
     AssertThrow(!m_construction_info.fbos.empty());
 
-    const uint32_t width = m_construction_info.fbos[0]->GetWidth();
+    const uint32_t width  = m_construction_info.fbos[0]->GetWidth();
     const uint32_t height = m_construction_info.fbos[0]->GetHeight();
 
     SetScissor(0, 0, width, height);
