@@ -200,9 +200,9 @@ void FullScreenPass::Destroy(Engine *engine)
         }
     }
 
-    m_framebuffers    = {};
-    m_render_pass     = nullptr;
-    m_pipeline        = nullptr;
+    m_framebuffers = {};
+    m_render_pass.Reset();
+    m_pipeline.Reset();
 
     engine->render_scheduler.Enqueue([this, engine](...) {
         auto result = renderer::Result::OK;
@@ -258,7 +258,7 @@ void FullScreenPass::Record(Engine *engine, UInt frame_index)
                 m_pipeline->GetPipeline(),
                 DescriptorSet::scene_buffer_mapping[frame_index],
                 DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-                std::array {
+                FixedArray {
                     UInt32(sizeof(SceneShaderData) * 0),
                     UInt32(sizeof(LightShaderData) * 0)
                 }

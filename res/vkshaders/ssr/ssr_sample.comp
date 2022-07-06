@@ -6,9 +6,10 @@
 
 #define SSR_KERNEL_SIZE 8
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba16f) uniform readonly image2D ssr_uv_image;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 17) uniform texture2D ssr_uvs;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform writeonly image2D ssr_sample;
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, rgba16f) uniform writeonly image2D ssr_radius;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r8) uniform writeonly image2D ssr_radius;
 
 const vec2 ssr_offsets[SSR_KERNEL_SIZE] = vec2[SSR_KERNEL_SIZE]( 
     vec2(0, 0),
@@ -29,22 +30,24 @@ void main(void)
     const float gradient_noise = InterleavedGradientNoise(vec2(coord));
 
     // test
-    const vec4 uv_sample = Texture2D(gbuffer_sampler, ssr_uvs, texcoord);//imageLoad(ssr_uvs, coord);
+    const vec4 uv_sample = imageLoad(ssr_uv_image, coord);
     const vec2 uv        = uv_sample.xy;
     const float alpha    = uv_sample.w;
 
     vec4 reflection_sample = vec4(0.0);
 
-    vec3 P = SampleGBuffer(gbuffer_positions_texture, uv).xyz;
-    vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, uv));
+    vec3 P = SampleGBuffer(gbuffer_positions_texture, texcoord).xyz;
+    vec3 N = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, texcoord));
     vec3 V = normalize(scene.camera_position.xyz - P);
+    float roughness = 0.0;
 
-    float out_radius = 0.0;
+    float out_radius   = 0.0;
+    float accum_radius = 0.0;
 
     const vec2 ssr_image_dimensions = vec2(ssr_params.dimension.x, ssr_params.dimension.y);
 
-    if (alpha > 0.001) {
-        const float roughness = clamp(1.0, 0.001, 0.999);
+    // if (alpha > 0.001) {
+        roughness = clamp(SampleGBuffer(gbuffer_material_texture, texcoord).r, 0.001, 0.999);
 
         // if (roughness > 0.65) {
         //     imageStore(ssr_sample, coord, vec4(0.0));
@@ -56,25 +59,25 @@ void main(void)
         const float NdotV = clamp(dot(N, V), 0.0, 1.0);
         // const float max_cone_angle = roughness * 5.0;
         // const float cone_angle     = mix(0.0, max_cone_angle, pow(NdotV, 1.5) * sqrt(roughness));
-        const float cone_angle = (roughness) * HYP_FMATH_PI * 0.5; //mix(0.0, max_cone_angle, roughness);
+        const float cone_angle = roughness * HYP_FMATH_PI * 0.5; 
 
         const float trace_size    = float(max(ssr_params.dimension.x, ssr_params.dimension.y));
         const float max_mip_level = 7.0;
 
-        float accum_radius = 0.0;
 
-        for (int i = 0; i < SSR_KERNEL_SIZE; i++) {
+        // for (int i = 0; i < SSR_KERNEL_SIZE; i++) {
             const float filter_size = 1.0 / trace_size;
 
-            vec2 offset = VogelDisk(i, SSR_KERNEL_SIZE, gradient_noise);
+            // vec2 offset = VogelDisk(i, SSR_KERNEL_SIZE, gradient_noise);
             
-            vec2 sample_texcoord = texcoord + (offset * filter_size);
+            vec2 sample_texcoord = texcoord;// + (offset * filter_size);
+            ivec2 sample_coord   = ivec2(sample_texcoord * vec2(ssr_params.dimension));
 
-            vec4  hit_data = Texture2D(gbuffer_sampler, ssr_uvs, sample_texcoord);//imageLoad(ssr_uvs, ivec2(sample_texcoord * ssr_image_dimensions));
+            vec4  hit_data = imageLoad(ssr_uv_image, sample_coord);
             vec2  hit_uv   = hit_data.xy;
             float hit_mask = hit_data.w;
 
-            const float cone_length = length(hit_uv - texcoord);
+            const float cone_length = length((hit_uv - sample_texcoord) * ssr_params.dimension);
             const float op_length   = 2.0 * tan(cone_angle) * cone_length;
 
             // sphere in cone
@@ -82,10 +85,9 @@ void main(void)
             float h = cone_length;
             float a2 = HYP_FMATH_SQR(a);
             float fh2 = 4.0 * h * h;
-            float current_radius = (a * (sqrt(a2 + fh2) - a)) / max(4.0 * h, 0.0001);
+            float current_radius = (a * (sqrt(a2 + fh2) - a)) / 4.0 * h;
 
-            // float intersection_circle_radius = cone_angle * length(hit_uv - uv);
-            float mip_level = clamp(log2(current_radius * trace_size), 0.0, max_mip_level);
+            float mip_level = 0;//clamp(log2(current_radius * trace_size), 0.0, max_mip_level);
 
             vec4 current_reflection_sample = textureLod(gbuffer_mip_chain, hit_uv, mip_level);
 
@@ -93,18 +95,22 @@ void main(void)
             reflection_sample.a   += hit_mask; // hit mask
 
             accum_radius += current_radius;
+        // }
 
-            // reflection_sample += vec4(vec3(intersection_circle_radius), 1.0);
-        }
+        // reflection_sample /= float(SSR_KERNEL_SIZE);
+        // accum_radius      /= float(SSR_KERNEL_SIZE);
+    // }
 
-        reflection_sample /= float(SSR_KERNEL_SIZE);
-        accum_radius      /= float(SSR_KERNEL_SIZE);
+    out_radius = accum_radius;
 
-        out_radius = accum_radius;
-    }
+    reflection_sample.a *= alpha;
 
     //reflection_sample.a = roughness;
-
-    imageStore(ssr_sample, coord, reflection_sample);
-    imageStore(ssr_radius, coord, vec4(out_radius, 0.0, 0.0, 0.0));
+    // if (alpha > 0.01) {
+        imageStore(ssr_sample, coord, reflection_sample);
+        imageStore(ssr_radius, coord, vec4(roughness / HYP_SSR_ROUGHNESS_MAX));//vec4(out_radius / 255.0));
+    // } else {
+        // imageStore(ssr_sample, coord, vec4(0.0));
+        // imageStore(ssr_radius, coord, vec4(0.0));
+    // }
 }

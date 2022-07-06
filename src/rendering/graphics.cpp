@@ -385,37 +385,20 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
    
             m_pipeline->Bind(secondary);
 
-            /* Bind global data */
-            instance->GetDescriptorPool().Bind(
-                device,
-                secondary,
-                m_pipeline.get(),
-                {
-                    {.set = DescriptorSet::global_buffer_mapping[frame_index], .count = 1},
-                    {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
-                }
-            );
-
             static_assert(std::size(DescriptorSet::object_buffer_mapping) == max_frames_in_flight);
 
             const auto scene_binding = engine->render_state.GetScene();
             const auto scene_cull_id = scene_binding.id; //scene_binding.parent_id ? scene_binding.parent_id : scene_binding.id;
             const auto scene_index   = scene_binding ? scene_binding.id.value - 1 : 0;
 
-            /* Bind scene data - */
-            instance->GetDescriptorPool().Bind(
-                device,
-                secondary,
+            secondary->BindDescriptorSets(
+                instance->GetDescriptorPool(),
                 m_pipeline.get(),
-                {
-                    {.set = DescriptorSet::scene_buffer_mapping[frame_index], .count = 1},
-                    {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
-                    {
-                        .offsets = {
-                            UInt32(scene_index * sizeof(SceneShaderData)),
-                            UInt32(0           * sizeof(LightShaderData))
-                        }
-                    }
+                FixedArray { DescriptorSet::global_buffer_mapping[frame_index], DescriptorSet::scene_buffer_mapping[frame_index] },
+                FixedArray { DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,        DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE },
+                FixedArray {
+                    UInt32(scene_index * sizeof(SceneShaderData)),
+                    UInt32(0           * sizeof(LightShaderData))
                 }
             );
 
@@ -491,31 +474,28 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                     ? spatial->GetSkeleton()->GetId().value - 1
                     : 0;
 
-                /* Bind per-object / material data separately */
-                instance->GetDescriptorPool().Bind(
-                    device,
-                    secondary,
+#if HYP_FEATURES_BINDLESS_TEXTURES
+                secondary->BindDescriptorSets(
+                    instance->GetDescriptorPool(),
                     m_pipeline.get(),
-                    {
-                        {.set = DescriptorSet::object_buffer_mapping[frame_index], .count = 1},
-                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT},
-                        {.offsets = {
-                            UInt32(material_index * sizeof(MaterialShaderData)),
-                            UInt32(spatial_index  * sizeof(ObjectShaderData)),
-                            UInt32(skeleton_index * sizeof(SkeletonShaderData))
-                        }}
+                    FixedArray { DescriptorSet::object_buffer_mapping[frame_index] },
+                    FixedArray { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT },
+                    FixedArray {
+                        UInt32(material_index * sizeof(MaterialShaderData)),
+                        UInt32(spatial_index  * sizeof(ObjectShaderData)),
+                        UInt32(skeleton_index * sizeof(SkeletonShaderData))
                     }
                 );
-
-#if !HYP_FEATURES_BINDLESS_TEXTURES
-                /* Per-material texture set */
-                instance->GetDescriptorPool().Bind(
-                    device,
-                    secondary,
+#else
+                secondary->BindDescriptorSets(
+                    instance->GetDescriptorPool(),
                     m_pipeline.get(),
-                    {
-                        {.set = DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, material_index, frame_index), .count = 1},
-                        {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES}
+                    FixedArray { DescriptorSet::object_buffer_mapping[frame_index], DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, material_index, frame_index) },
+                    FixedArray { DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT,        DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES },
+                    FixedArray {
+                        UInt32(material_index * sizeof(MaterialShaderData)),
+                        UInt32(spatial_index  * sizeof(ObjectShaderData)),
+                        UInt32(skeleton_index * sizeof(SkeletonShaderData))
                     }
                 );
 #endif

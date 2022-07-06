@@ -116,7 +116,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj", //
+            "models/living_room/living_room.obj",   //sponza/sponza.obj", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -127,16 +127,23 @@ public:
         cube_obj = std::move(loaded_assets[2]);
         material_test_obj = std::move(loaded_assets[3]);
 
-        auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
-        sphere->Scale(2.0f);
-        sphere->SetName("sphere");
-        // sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
-        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.4f, 0.2f, 1.0f));
-        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.5f);
-        sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
-        //sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
-        sphere->GetChild(0)->GetSpatial()->GetInitInfo().flags &= ~Spatial::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
-        scene->GetRootNode()->AddChild(std::move(sphere));
+        for (int i = 0; i < 8; i++) {
+
+            auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
+            sphere->Scale(1.0f);
+            // sphere->SetName("sphere");
+            // sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
+            sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.0f, 1.0f, 1.0f));
+            sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, (float(i) / 8.0f));
+            sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
+            //sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
+            sphere->GetChild(0)->GetSpatial()->GetInitInfo().flags &= ~Spatial::ComponentInitInfo::Flags::ENTITY_FLAGS_RAY_TESTS_ENABLED;
+            sphere->SetLocalTranslation(Vector3(0 + (i * 6.0f), 30.0f, 50.0f));
+            scene->GetRootNode()->AddChild(std::move(sphere));
+
+        }
+
+
 
         // auto character_entity = engine->resources.spatials.Add(std::make_unique<Spatial>());
         // character_entity->AddController<BasicCharacterController>();
@@ -208,9 +215,6 @@ public:
         ));
 
         scene->GetEnvironment()->AddLight(m_point_light.IncRef());
-        
-        // scene->GetEnvironment()->AddRenderComponent<AABBRenderer>();
-
 
         /*test_model->Scale(40.0f);//14.075f);
         auto &terrain_material = test_model->GetChild(0)->GetSpatial()->GetMaterial();
@@ -225,7 +229,7 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        test_model->Scale(0.15f);
+        test_model->Scale(20.15f);
         scene->GetRootNode()->AddChild(std::move(test_model));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
@@ -455,7 +459,7 @@ public:
             //    material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);////std::cos(timer) * 0.5f + 0.5f);
             //}
             //sphere->SetLocalTranslation(Vector3(7, 7, 3));
-             sphere->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 15.0f);
+            //  sphere->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 15.0f);
          }
         
         // material_test_obj->SetLocalScale(3.45f);

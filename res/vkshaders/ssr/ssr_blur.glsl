@@ -2,20 +2,21 @@
 #include "../include/noise.inc"
 #include "../include/shared.inc"
 
-#define SSR_BLUR_KERNEL_SIZE 8
-#define HYP_SSR_FILTER_AMOUNT 0.0055
+#define HYP_SSR_MAX_BLUR_INCREMENT 5
 
-layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 17) uniform texture2D ssr_uvs;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r8) uniform image2D ssr_radius_image;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform readonly image2D ssr_sample_image;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 18) uniform texture2D ssr_sample;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 19) uniform texture2D ssr_radius;
 
 #if defined(HYP_SSR_BLUR_HORIZONTAL)
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba16f) uniform writeonly image2D ssr_blur;
-    #define HYP_SSR_PREV_IMAGE ssr_sample
+    #define HYP_SSR_PREV_IMAGE ssr_sample_image
 #elif defined(HYP_SSR_BLUR_VERTICAL)
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 20) uniform texture2D ssr_blur_hor;
+    layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 15, rgba16f) uniform readonly image2D ssr_blur_hor_image;
     layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba16f) uniform writeonly image2D ssr_blur;
-    #define HYP_SSR_PREV_IMAGE ssr_blur_hor
+    #define HYP_SSR_PREV_IMAGE ssr_blur_hor_image
 #else
     #error No blur direction defined
 #endif
@@ -55,47 +56,75 @@ float GaussianWeight(float value)
 
 void GaussianBlurAccum(
     vec2 texcoord,
-    float direction,
+    int direction,
     inout vec4 reflection_sample,
     inout float accum_radius,
     inout float divisor
 )
 {
-    for (int i = 1; i < SSR_BLUR_KERNEL_SIZE; i++) {
-        const float d = float(i * HYP_SSR_FILTER_AMOUNT);
+    // #if defined(HYP_SSR_BLUR_HORIZONTAL)
+    //     const ivec2 blur_step = ivec2(1, 0);
+    // #elif defined(HYP_SSR_BLUR_VERTICAL)
+    //     const ivec2 blur_step = ivec2(0, 1);
+    // #else
+    //     #error No direction defined
+    // #endif
 
-#if defined(HYP_SSR_BLUR_HORIZONTAL)
-        const vec2 blur_step = vec2(d, 0);
-#elif defined(HYP_SSR_BLUR_VERTICAL)
-        const vec2 blur_step = vec2(0, d);
-#else
-    #error No direction defined
-#endif
+    // vec4 result = vec4(0.0);
+
+    // float r = imageLoad(ssr_radius_image, ivec2(texcoord * vec2(ssr_params.dimension))).r * 255.0;
+
+    // for (int i = -1; i < 1; i++) {
+    //     ivec2 tc = ivec2(texcoord * vec2(ssr_params.dimension)) + blur_step * r;
+
+    //     reflection_sample += imageLoad(HYP_SSR_PREV_IMAGE, tc);
+    //     divisor += 1.0;
+    // }
+
+
+#if 1
+    for (int i = 1; i < GAUSS_TABLE_SIZE; i++) {
+        const float d = float(i * HYP_SSR_MAX_BLUR_INCREMENT);
+
+    #if defined(HYP_SSR_BLUR_HORIZONTAL)
+        const ivec2 blur_step = ivec2(d, 0);
+    #elif defined(HYP_SSR_BLUR_VERTICAL)
+        const ivec2 blur_step = ivec2(0, d);
+    #else
+        #error No direction defined
+    #endif
 
 
 #ifdef HYP_SSR_BLUR_VERTICAL
         const float inv_aspect = float(ssr_params.dimension.y) / float(ssr_params.dimension.x);
 #endif
 
-        vec2 tc = texcoord + blur_step * direction;
+        ivec2 tc = ivec2(texcoord * vec2(ssr_params.dimension)) + blur_step * direction;//ivec2(blur_step * direction);
 
 #ifdef HYP_SSR_BLUR_VERTICAL
         //tc *= inv_aspect;
 #endif
 
-        const float sample_radius = Texture2D(gbuffer_sampler, ssr_radius, tc).r;
+        float r = accum_radius;//imageLoad(ssr_radius_image, tc).r;
+        const float depth = SampleGBuffer(gbuffer_depth_texture, vec2(tc) / vec2(ssr_params.dimension)).r;
+        // r *= LinearDepth(scene.projection, depth);
+        const float sample_radius = r * 255.0;
 
         if (d < sample_radius) {
             float weight = GaussianWeight(d / sample_radius);
 
-            reflection_sample += Texture2D(gbuffer_sampler, HYP_SSR_PREV_IMAGE, tc) * weight;
+            reflection_sample += imageLoad(HYP_SSR_PREV_IMAGE, tc) * weight;//Texture2D(gbuffer_sampler, HYP_SSR_PREV_IMAGE, tc) * weight;
 
 
-            divisor += d;
+            divisor += weight;
 
-            accum_radius += sample_radius;
+#ifdef HYP_SSR_BLUR_HORIZONTAL
+            accum_radius += r * weight;
+#endif
         }
     }
+
+    #endif
 }
 
 void main(void)
@@ -105,29 +134,31 @@ void main(void)
 
     const float gradient_noise = InterleavedGradientNoise(vec2(coord));
 
-    vec4 reflection_sample = Texture2D(gbuffer_sampler, HYP_SSR_PREV_IMAGE, texcoord);
+    const float roughness = SampleGBuffer(gbuffer_material_texture, texcoord).r;
 
-    float accum_radius = Texture2D(gbuffer_sampler, ssr_radius, texcoord).r;
+    vec4 reflection_sample = vec4(0.0);
+    float accum_radius     = 0.0;
 
-    float divisor = gauss_table[0];
-    reflection_sample *= divisor;
-    accum_radius      *= divisor;
+    if (roughness < HYP_SSR_ROUGHNESS_MAX) {
+        float divisor = gauss_table[0];
 
-    GaussianBlurAccum(texcoord, 1.0, reflection_sample, accum_radius, divisor);
-    GaussianBlurAccum(texcoord, -1.0, reflection_sample, accum_radius, divisor);
-    
-    if (divisor > 0.0) {
-        reflection_sample /= divisor;
-        accum_radius      /= divisor;
-    } else {
-        reflection_sample = vec4(0.0);
-        accum_radius      = 0.0;
+        reflection_sample = imageLoad(HYP_SSR_PREV_IMAGE, coord) * divisor;
+        accum_radius      = imageLoad(ssr_radius_image, coord).r * divisor;
+
+        GaussianBlurAccum(texcoord, 1, reflection_sample, accum_radius, divisor);
+        GaussianBlurAccum(texcoord, -1, reflection_sample, accum_radius, divisor);
+        
+        if (divisor > 0.0) {
+            reflection_sample /= divisor;
+            accum_radius      /= divisor;
+        }
+
+        reflection_sample *= 1.0 - (roughness / HYP_SSR_ROUGHNESS_MAX);
     }
 
-
-    // reflection_sample /= float(SSR_BLUR_KERNEL_SIZE);
-
-    // imageStore(ssr_blur, coord, vec4(blur_radius, 0.0, 0.0, 1.0));
+#ifdef HYP_SSR_BLUR_HORIZONTAL
+    //imageStore(ssr_radius_image, coord, vec4(accum_radius / 255.0));
+#endif
 
     imageStore(ssr_blur, coord, reflection_sample);
 }

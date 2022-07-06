@@ -87,8 +87,8 @@ const decltype(DescriptorSet::desired_indices) DescriptorSet::desired_indices = 
     { DESCRIPTOR_SET_INDEX_UNUSED,            0 },
     { DESCRIPTOR_SET_INDEX_GLOBAL,            1 },
     { DESCRIPTOR_SET_INDEX_SCENE,             2 },
-    { DESCRIPTOR_SET_INDEX_OBJECT,            3 },
-    { DESCRIPTOR_SET_INDEX_VOXELIZER,         4 },
+    { DESCRIPTOR_SET_INDEX_VOXELIZER,         3 },
+    { DESCRIPTOR_SET_INDEX_OBJECT,            4 },
 #if HYP_FEATURES_BINDLESS_TEXTURES
     { DESCRIPTOR_SET_INDEX_BINDLESS,          5 },
     { DESCRIPTOR_SET_INDEX_GLOBAL_FRAME_1,    6 },

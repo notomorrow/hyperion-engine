@@ -13,6 +13,10 @@ layout(location=1) in vec2 v_texcoord0;
 #include "include/rt/probe/probe_uniforms.inc"
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba8) uniform image2D image_storage_test;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 17) uniform texture2D ssr_uvs;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 18) uniform texture2D ssr_sample;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 19) uniform texture2D ssr_radius;
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 20) uniform texture2D ssr_blur_hor;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
 
 //layout(set = 9, binding = 1, rgba16f)  uniform image2D rt_image;
@@ -40,4 +44,6 @@ void main()
     }
 
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
+
+    out_color = Texture2D(gbuffer_sampler, ssr_blur_vert, v_texcoord0);
 }

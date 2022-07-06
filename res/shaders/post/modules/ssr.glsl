@@ -8,7 +8,7 @@
 #define $SSR_SCREEN_EDGE_FADE_START 0.9
 #define $SSR_EYE_FADE_START 0.7
 #define $SSR_EYE_FADE_END 0.8
-#define $SSR_Z_THICKNESS_THRESHOLD 0.1
+#define $SSR_Z_THICKNESS_THRESHOLD 0.8
 #define $SSR_JITTER_OFFSET 0
 
 uniform float CamFar;

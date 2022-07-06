@@ -177,7 +177,7 @@ void DeferredPass::Record(Engine *engine, UInt frame_index)
                     m_pipeline->GetPipeline(),
                     DescriptorSet::scene_buffer_mapping[frame_index],
                     DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE,
-                    std::array {
+                    FixedArray {
                         UInt32(sizeof(SceneShaderData) * 0),
                         UInt32(sizeof(LightShaderData) * (light_id.value - 1))
                     }
@@ -244,7 +244,7 @@ void DeferredRenderer::Create(Engine *engine)
         m_ssr_radius_output[i] = SSRImageOutput {
             .image = std::make_unique<StorageImage>(
                 m_mipmapped_results[i]->GetExtent(),
-                Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+                Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8,
                 Image::Type::TEXTURE_TYPE_2D,
                 nullptr
             ),
@@ -493,9 +493,9 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         .ssr_data = {
             .width            = mipmapped_result.GetExtent().width,
             .height           = mipmapped_result.GetExtent().height,
-            .ray_step         = 0.35f,
+            .ray_step         = 0.1f,
             .num_iterations   = 100.0f,
-            .max_ray_distance = 64.0f
+            .max_ray_distance = 128.0f
         }
     };
 
