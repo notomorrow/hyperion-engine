@@ -4,21 +4,12 @@
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 12, rgba16f) uniform writeonly image2D ssr_uvs;
 
-const float distanceBias = 0.0008;
-const float offset = 0.01;
-const bool isExponentialStepEnabled = false;
-const bool isAdaptiveStepEnabled = false;
-const float eyeFadeStart = 0.95;
-const float eyeFadeEnd = 0.99;
-const float ssr_screen_edge_fade_start = 0.5;
-const float ssr_screen_edge_fade_end = 0.9;
-
 float SSRAlpha(vec3 dir, vec3 origin, vec3 hitPosition)
 {
 	float alpha = 1.0;
 	// fade based on direction relative to camera
-    // float eyeDirection = clamp( dir.z, eyeFadeStart, eyeFadeEnd);
-    // alpha *= 1.0 - ((eyeDirection - eyeFadeStart) / (eyeFadeEnd - eyeFadeStart));
+    // float eyeDirection = clamp( dir.z, ssr_params.eye_fade_start, ssr_params.eye_fade_end);
+    // alpha *= ((eyeDirection - ssr_params.eye_fade_start) / (ssr_params.eye_fade_end - ssr_params.eye_fade_start));
 
 	// Fade ray hits based on distance from ray origin
 	// float dist = distance(origin, hitPosition);
@@ -37,8 +28,9 @@ void TraceRays(vec3 position, vec3 reflection, out vec2 out_uv, out float out_ma
 	vec2 screenPosition;
 	
 	int i = 0;
+	bool do_binary_search = false;
 
-	for (; i < ssr_params.num_iterations && distance(marchingPosition, position) < ssr_params.max_ray_distance; i++) {
+	for (; i < ssr_params.num_iterations; i++) {
 		screenPosition = generateProjectedPosition(marchingPosition);
 
 		float depth = SampleGBuffer(gbuffer_depth_texture, screenPosition).x;
@@ -49,33 +41,39 @@ void TraceRays(vec3 position, vec3 reflection, out vec2 out_uv, out float out_ma
 		// float camera_z = LinearDepth(scene.projection, depth)
 
 		if (delta > 0.0) {
+			do_binary_search = true;
+
 			break;
 		}
 		
 		marchingPosition += step;
     }
 
-	// binary search
-	for(; i < ssr_params.num_iterations; i++){
-		step *= 0.5;
-		marchingPosition = marchingPosition - step * sign(delta);
-		
-		screenPosition = generateProjectedPosition(marchingPosition);
-		depthFromScreen = abs(generatePositionFromDepth(screenPosition, SampleGBuffer(gbuffer_depth_texture, screenPosition).x).z);
-		delta = abs(marchingPosition.z) - depthFromScreen;
-		
-		if (abs(delta) < distanceBias) {
-			float alpha = SSRAlpha(reflection, position, marchingPosition);
+	const int max_binary_search_steps = 10;
 
-			vec2 hitPixelNDC = screenPosition * 2.0 - 1.0;
-			float maxDimension = min(1.0, max(abs(hitPixelNDC.x), abs(hitPixelNDC.y)));
-			alpha *= 1.0 - max(0.0, maxDimension - ssr_screen_edge_fade_start) / (1.0 - ssr_screen_edge_fade_start);
-			alpha = clamp(alpha, 0.0, 1.0);
+	if (do_binary_search) {
+		// binary search
+		for(i = 0; i < max_binary_search_steps; i++) {
+			step *= 0.5;
+			marchingPosition = marchingPosition - step * sign(delta);
+			
+			screenPosition = generateProjectedPosition(marchingPosition);
+			depthFromScreen = abs(generatePositionFromDepth(screenPosition, SampleGBuffer(gbuffer_depth_texture, screenPosition).x).z);
+			delta = abs(marchingPosition.z) - depthFromScreen;
+			
+			if (abs(delta) < ssr_params.distance_bias) {
+				float alpha = SSRAlpha(reflection, position, marchingPosition);
 
-			out_uv   = screenPosition;
-			out_mask = alpha;
+				vec2 hitPixelNDC = screenPosition * 2.0 - 1.0;
+				float maxDimension = min(1.0, max(abs(hitPixelNDC.x), abs(hitPixelNDC.y)));
+				alpha *= 1.0 - max(0.0, maxDimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_start);
+				alpha = clamp(alpha, 0.0, 1.0);
 
-			return;
+				out_uv   = screenPosition;
+				out_mask = 1.0;//alpha;
+
+				return;
+			}
 		}
 	}
 
@@ -104,7 +102,7 @@ void PerformSSR(ivec2 coord, out vec2 out_uv, out float out_mask)
 	
 	TraceRays(
 		position.xyz,
-		normalize(R + (N * offset)),
+		normalize(R + (N * ssr_params.offset)),
 		out_uv,
 		out_mask
 	);

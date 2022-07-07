@@ -14,22 +14,21 @@ layout(location=6) in flat vec3 v_light_direction;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
 
-layout(location=0) out vec4 gbuffer_albedo;
+layout(location=0) out vec4 output_color;
 
 #include "include/scene.inc"
 #include "include/material.inc"
 #include "include/object.inc"
 #include "include/packing.inc"
 
+#define HYP_CUBEMAP_AMBIENT 0.3
+
 void main()
 {
-    vec3 L = normalize(v_light_direction);
     vec3 view_vector = normalize(v_camera_position - v_position);
-    vec3 normal = normalize(v_normal);
-    float NdotV = dot(normal, view_vector);
-    float NdotL = dot(normal, L);
+    vec3 N = normalize(v_normal);
 
-    gbuffer_albedo = material.albedo;
+    output_color = material.albedo;
 
     vec2 texcoord = v_texcoord0 * material.uv_scale;
 
@@ -40,6 +39,14 @@ void main()
             discard;
         }
 
-        gbuffer_albedo *= albedo_texture;
+        output_color *= albedo_texture;
     }
+
+    vec3 L = light.position.xyz;
+    L -= v_position.xyz * float(min(light.type, 1));
+    L = normalize(L);
+
+    float NdotL = max(0.0001, dot(N, L));
+
+    output_color *= clamp(NdotL + HYP_CUBEMAP_AMBIENT, 0.0, 1.0);
 }
