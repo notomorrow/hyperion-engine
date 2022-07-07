@@ -24,8 +24,8 @@ Feel free to contribute anything - We'd love to have some more eyes on this proj
 
 ## Screenshots
 
-![Apex engine screenshot](/screenshots/screenshot1-ogl.png)
-![Apex engine screenshot](/screenshots/screenshot2-vk.png)
+![Apex engine screenshot](/screenshots/screenshot1-ogl.PNG)
+![Apex engine screenshot](/screenshots/sponza-vk.png)
 
 ## Building
 
