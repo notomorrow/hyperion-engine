@@ -7,14 +7,12 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_im
 
 
 #define VCT_DIFFUSE_MAX_DIST          0.3
-#define VCT_DIFFUSE_RATIO(roughness)  (mix(8.0, 20.0, sqrt(roughness)))
+#define VCT_DIFFUSE_RATIO(roughness)  0.75  //(mix(8.0, 20.0, sqrt(roughness)))
 #define VCT_SPECULAR_MAX_DIST         0.5
 
-// rough 0 = 0.025
-// rough 1.0 = 
 #define VCT_SPECULAR_RATIO(roughness) (mix(0.015, 1.0, sqrt(roughness)))
 
-#define VCT_OFFSET_ORIGIN(normal)     (normalize(normal) * 1.05)
+#define VCT_OFFSET_ORIGIN(normal)     (normalize(normal) * 1.1)
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
@@ -39,7 +37,7 @@ vec4 ConeTrace(float min_diameter, vec3 origin, vec3 dir, float ratio, float max
         sample_pos = origin + dir * dist;
 
         vec4 voxel_color = FetchVoxel(sample_pos, lod);
-        voxel_color *= 1.0 - clamp(dist / max_dist, 0.0, 1.0);
+        voxel_color.rgb *= 1.0 - clamp(dist / max_dist, 0.0, 1.0);
 
         float weight = (1.0 - accum.a);
         accum += voxel_color * weight;

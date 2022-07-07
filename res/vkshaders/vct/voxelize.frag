@@ -21,6 +21,7 @@ layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba16f) uniform image3D
 
 #define HYP_VCT_SAMPLE_ALBEDO_MAP 1
 #define HYP_VCT_LIGHTING 1
+#define HYP_VCT_LIGHTING_AMBIENT 0.1
 
 void main()
 {
@@ -35,7 +36,7 @@ void main()
 #endif
 
 #if HYP_VCT_LIGHTING
-    frag_color.rgb *= vec3(max(0.5, g_lighting));
+    frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, g_lighting));
 #endif
 
     frag_color.a = 1.0;

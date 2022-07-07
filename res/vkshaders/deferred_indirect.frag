@@ -12,6 +12,7 @@ layout(location=0) out vec4 output_color;
 layout(location=1) out vec4 output_normals;
 layout(location=2) out vec4 output_positions;
 
+layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 18) uniform texture2D ssr_sample;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur_vert;
 
 #include "include/env_probe.inc"
@@ -26,7 +27,8 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
-#define HYP_VCT_ENABLED 0
+#define HYP_VCT_ENABLED 1
+#define HYP_ENV_PROBE_ENABLED 1
 #define HYP_SSR_ENABLED 1
 
 #if HYP_VCT_ENABLED
@@ -35,8 +37,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 10000.0
-#define DIRECTIONAL_LIGHT_INTENSITY 100000.0
+#define IBL_INTENSITY 15000.0
 #define IRRADIANCE_MULTIPLIER 1.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.035
@@ -363,6 +364,9 @@ void main()
     vec3 H = normalize(L + V);
     
     float ao = 1.0;
+    vec3 irradiance = vec3(0.0);
+    vec4 reflections = vec4(0.0);
+    vec3 ibl = vec3(0.0);
     
     if (perform_lighting) {
         ao = SampleEffectPre(0, v_texcoord0, vec4(1.0)).r * material.a;
@@ -389,16 +393,13 @@ void main()
         const vec3 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
         const float perceptual_roughness = sqrt(roughness + HYP_CUBEMAP_MIN_ROUGHNESS);
         const float lod = 7.0 * perceptual_roughness * (2.0 - perceptual_roughness);
-        
-        vec3 irradiance = vec3(0.0);
-        vec4 reflections = vec4(0.0);
 
-        vec3 ibl = vec3(0.0);
-
+#if HYP_ENV_PROBE_ENABLED
         if (scene.environment_texture_usage != 0) {
             uint probe_index = scene.environment_texture_index;
             ibl = SampleProbeParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], position.xyz, R, lod).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
         }
+#endif
 
 #if HYP_VCT_ENABLED
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
@@ -410,6 +411,7 @@ void main()
 
 #if HYP_SSR_ENABLED
         vec4 screen_space_reflections = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord);
+        screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
         reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
 #endif
 
@@ -432,6 +434,5 @@ void main()
 #endif
 
     output_color = vec4(result, 1.0);
-
     // output_color = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord);
 }

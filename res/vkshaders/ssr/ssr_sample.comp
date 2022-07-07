@@ -46,28 +46,32 @@ void main(void)
 
     const vec2 ssr_image_dimensions = vec2(ssr_params.dimension.x, ssr_params.dimension.y);
 
-    // if (alpha > 0.001) {
-    roughness = clamp(SampleGBuffer(gbuffer_material_texture, texcoord).r, 0.001, 0.999);
+    if (alpha > 0.9) {
+        roughness = SampleGBuffer(gbuffer_material_texture, texcoord).r;
 
-    if (roughness < HYP_SSR_ROUGHNESS_MAX) {
-        // if (roughness > 0.65) {
-        //     imageStore(ssr_sample, coord, vec4(0.0));
-        //     imageStore(ssr_radius, coord, vec4(0.0));
-
-        //     return;
-        // }
-
-        const float NdotV = clamp(dot(N, V), 0.0, 1.0);
-        const float max_cone_angle = roughness * 5.0;
-        const float cone_angle     = mix(0.0, max_cone_angle, pow(NdotV, 1.5) * sqrt(roughness));
+        roughness = clamp(roughness, 0.001, 0.999);
+    // if (roughness < HYP_SSR_ROUGHNESS_MAX) {
+        const float cone_angle     = RoughnessToConeAngle(roughness); // mix(0.0, max_cone_angle, pow(NdotV, 1.5) * sqrt(roughness));
         // const float cone_angle = roughness * HYP_FMATH_PI * 0.5; 
 
         const float trace_size    = float(max(ssr_params.dimension.x, ssr_params.dimension.y));
         const float max_mip_level = 7.0;
 
+        const vec2 delta_p = (uv - texcoord) * ssr_params.dimension;
+        float adj_length   = length(delta_p);
+        const vec2 adj_dir = normalize(delta_p);
 
         for (int i = 0; i < SSR_KERNEL_SIZE; i++) {
-            const float filter_size = 1.0 / trace_size;
+            /*float op_length      = isoscelesTriangleOpposite(adj_length, cone_angle);
+            float current_radius = isoscelesTriangleInRadius(op_length, adj_length);
+
+            ivec2 sample_coord  = ivec2((texcoord * vec2(ssr_params.dimension)) + adj_dir * (adj_length - current_radius));
+
+            vec4  hit_data = imageLoad(ssr_uv_image, sample_coord);
+            vec2  hit_uv   = hit_data.xy;
+            float hit_mask = hit_data.w;*/
+
+            const float filter_size = 0.0065;//1.0 / trace_size;
 
             vec2 offset = VogelDisk(i, SSR_KERNEL_SIZE, gradient_noise);
             
@@ -78,36 +82,45 @@ void main(void)
             vec2  hit_uv   = hit_data.xy;
             float hit_mask = hit_data.w;
 
-            const float cone_length = length((hit_uv - sample_texcoord) * ssr_params.dimension);
-            const float op_length   = 2.0 * tan(cone_angle) * cone_length;
+            if (hit_mask < 0.01) {
+                continue;
+            }
 
-            // sphere in cone
-            float a = op_length;
-            float h = cone_length;
-            float a2 = HYP_FMATH_SQR(a);
-            float fh2 = 4.0 * h * h;
-            float current_radius = (a * (sqrt(a2 + fh2) - a)) / 4.0 * h;
+            const float current_radius = length((hit_uv - texcoord) * ssr_params.dimension) * cone_angle;//);
+            
 
-            float mip_level = clamp(log2(current_radius * trace_size), 0.0, max_mip_level);
+
+
+            // const float current_radius = length((hit_uv - texcoord) * ssr_params.dimension) * cone_angle;//);
+            
+            // const float op_length   = 2.0 * tan(cone_angle) * cone_length;
+
+            // // sphere in cone
+            // float a = op_length;
+            // float h = cone_length;
+            // float a2 = HYP_FMATH_SQR(a);
+            // float fh2 = 4.0 * h * h;
+            // float current_radius = (a * (sqrt(a2 + fh2) - a)) / 4.0 * h;
+
+            float mip_level = 0;//clamp(log2(current_radius), 0.0, max_mip_level);
 
             vec4 current_reflection_sample = textureLod(gbuffer_mip_chain, hit_uv, mip_level);
 
-            reflection_sample.rgb += current_reflection_sample.rgb;
-            reflection_sample.a   += hit_mask; // hit mask
+            reflection_sample += current_reflection_sample;
+
+            adj_length = isoscelesTriangleNextAdjacent(adj_length, current_radius);
 
             accum_radius += current_radius;
         }
 
         reflection_sample /= float(SSR_KERNEL_SIZE);
         accum_radius      /= float(SSR_KERNEL_SIZE);
+
+        // reflection_sample.a *= clamp(1.0 - (roughness / HYP_SSR_ROUGHNESS_MAX), 0.0, 1.0);
+        // reflection_sample.a *= alpha;
     }
 
-    // }
-
     out_radius = accum_radius;
-
-    reflection_sample.a *= 1.0 - (roughness / HYP_SSR_ROUGHNESS_MAX);
-    reflection_sample.a *= alpha;
 
     //reflection_sample.a = roughness;
     // if (alpha > 0.01) {
