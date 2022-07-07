@@ -39,6 +39,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 #define DIRECTIONAL_LIGHT_INTENSITY 100000.0
 #define IRRADIANCE_MULTIPLIER 1.0
 #define SSAO_DEBUG 0
+#define HYP_CUBEMAP_MIN_ROUGHNESS 0.035
 
 #include "include/rt/probe/shared.inc"
 
@@ -386,7 +387,7 @@ void main()
         const vec3 dfg = albedo_linear.rgb * AB.x + AB.y;
         
         const vec3 energy_compensation = 1.0 + F0 * (AB.y - 1.0);
-        const float perceptual_roughness = sqrt(roughness);
+        const float perceptual_roughness = sqrt(roughness + HYP_CUBEMAP_MIN_ROUGHNESS);
         const float lod = 7.0 * perceptual_roughness * (2.0 - perceptual_roughness);
         
         vec3 irradiance = vec3(0.0);

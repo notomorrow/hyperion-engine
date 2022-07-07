@@ -463,26 +463,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     bucket.GetFramebuffers()[frame_index]->EndCapture(primary);
     // end opaque objs
     
-    /* ========== BEGIN MIP CHAIN GENERATION ========== */
-    auto *framebuffer_image = bucket.GetFramebuffers()[frame_index]->GetFramebuffer()
-        .GetAttachmentRefs()[0]->GetAttachment()->GetImage();
     
-    framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::COPY_SRC);
-    mipmapped_result.GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::COPY_DST);
-
-    // Blit into the mipmap chain img
-    mipmapped_result.Blit(
-        primary,
-        framebuffer_image,
-        Rect { 0, 0, framebuffer_image->GetExtent().width, framebuffer_image->GetExtent().height },
-        Rect { 0, 0, mipmapped_result.GetExtent().width, mipmapped_result.GetExtent().height }
-    );
-
-    HYPERION_ASSERT_RESULT(mipmapped_result.GenerateMipmaps(engine->GetDevice(), primary));
-
-    framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
-
-    /* ==========  END MIP CHAIN GENERATION ========== */
 
     /* ========== BEGIN SSR ========== */
 
@@ -493,7 +474,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         .ssr_data = {
             .width            = mipmapped_result.GetExtent().width,
             .height           = mipmapped_result.GetExtent().height,
-            .ray_step         = 0.1f,
+            .ray_step         = 0.45f,
             .num_iterations   = 100.0f,
             .max_ray_distance = 128.0f
         }
@@ -672,6 +653,27 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     // end shading
     m_direct_pass.GetFramebuffer(frame_index)->EndCapture(primary);
+
+    /* ========== BEGIN MIP CHAIN GENERATION ========== */
+    auto *framebuffer_image = m_direct_pass.GetFramebuffer(frame_index)->GetFramebuffer()//bucket.GetFramebuffers()[frame_index]->GetFramebuffer()
+        .GetAttachmentRefs()[0]->GetAttachment()->GetImage();
+    
+    framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::COPY_SRC);
+    mipmapped_result.GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::COPY_DST);
+
+    // Blit into the mipmap chain img
+    mipmapped_result.Blit(
+        primary,
+        framebuffer_image,
+        Rect { 0, 0, framebuffer_image->GetExtent().width, framebuffer_image->GetExtent().height },
+        Rect { 0, 0, mipmapped_result.GetExtent().width, mipmapped_result.GetExtent().height }
+    );
+
+    HYPERION_ASSERT_RESULT(mipmapped_result.GenerateMipmaps(engine->GetDevice(), primary));
+
+    framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+
+    /* ==========  END MIP CHAIN GENERATION ========== */
 
     m_post_processing.RenderPost(engine, frame);
 }

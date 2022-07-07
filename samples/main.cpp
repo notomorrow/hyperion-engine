@@ -133,7 +133,7 @@ public:
             sphere->Scale(1.0f);
             // sphere->SetName("sphere");
             // sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
-            sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.0f, 0.0f, 1.0f, 1.0f));
+            sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
             sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, (float(i) / 8.0f));
             sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
             //sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/plastic/plasticpattern1-normal2-unity2b.png")));
@@ -240,7 +240,7 @@ public:
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
-            Vector3 {5, 8, 5},
+            Vector3 {0, 40, 50},
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );
 

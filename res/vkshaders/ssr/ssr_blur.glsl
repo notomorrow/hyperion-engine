@@ -2,7 +2,7 @@
 #include "../include/noise.inc"
 #include "../include/shared.inc"
 
-#define HYP_SSR_MAX_BLUR_INCREMENT 5
+#define HYP_SSR_MAX_BLUR_INCREMENT 3
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r8) uniform image2D ssr_radius_image;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform readonly image2D ssr_sample_image;
@@ -106,7 +106,7 @@ void GaussianBlurAccum(
 #endif
 
         float r = accum_radius;//imageLoad(ssr_radius_image, tc).r;
-        const float depth = SampleGBuffer(gbuffer_depth_texture, vec2(tc) / vec2(ssr_params.dimension)).r;
+        // const float depth = SampleGBuffer(gbuffer_depth_texture, vec2(tc) / vec2(ssr_params.dimension)).r;
         // r *= LinearDepth(scene.projection, depth);
         const float sample_radius = r * 255.0;
 
@@ -152,8 +152,6 @@ void main(void)
             reflection_sample /= divisor;
             accum_radius      /= divisor;
         }
-
-        reflection_sample *= 1.0 - (roughness / HYP_SSR_ROUGHNESS_MAX);
     }
 
 #ifdef HYP_SSR_BLUR_HORIZONTAL
