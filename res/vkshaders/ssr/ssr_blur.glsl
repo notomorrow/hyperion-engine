@@ -2,7 +2,7 @@
 #include "../include/noise.inc"
 #include "../include/shared.inc"
 
-#define HYP_SSR_MAX_BLUR_INCREMENT 3
+#define HYP_SSR_MAX_BLUR_INCREMENT 1
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r8) uniform image2D ssr_radius_image;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform readonly image2D ssr_sample_image;
@@ -134,12 +134,12 @@ void main(void)
 
     const float gradient_noise = InterleavedGradientNoise(vec2(coord));
 
-    const float roughness = SampleGBuffer(gbuffer_material_texture, texcoord).r;
+    // const float roughness = SampleGBuffer(gbuffer_material_texture, texcoord).r;
 
     vec4 reflection_sample = vec4(0.0);
     float accum_radius     = 0.0;
 
-    if (roughness < HYP_SSR_ROUGHNESS_MAX) {
+    // if (roughness < HYP_SSR_ROUGHNESS_MAX) {
         float divisor = gauss_table[0];
 
         reflection_sample = imageLoad(HYP_SSR_PREV_IMAGE, coord) * divisor;
@@ -152,10 +152,14 @@ void main(void)
             reflection_sample /= divisor;
             accum_radius      /= divisor;
         }
-    }
+    // }
 
 #ifdef HYP_SSR_BLUR_HORIZONTAL
     //imageStore(ssr_radius_image, coord, vec4(accum_radius / 255.0));
+#endif
+
+#ifdef HYP_SSR_BLUR_VERTICAL
+    reflection_sample.rgb = pow(reflection_sample.rgb, vec3(1.0 / 2.2));
 #endif
 
     imageStore(ssr_blur, coord, reflection_sample);

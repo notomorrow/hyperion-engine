@@ -30,7 +30,9 @@ void main()
     v_texcoord0 = a_texcoord0;
 
     /* basic n•l */
-    vec3 L = normalize(scene.light_direction.xyz);
+    vec3 L = light.position.xyz;
+    L -= v_position.xyz * float(min(light.type, 1));
+    L = normalize(L);
     vec3 N = normalize(v_normal);
     float NdotL = max(0.0001, dot(N, L));
     v_lighting = NdotL;
