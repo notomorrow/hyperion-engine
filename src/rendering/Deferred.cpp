@@ -467,182 +467,183 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     // end opaque objs
     
     
+    if (ssr_enabled) {
+        /* ========== BEGIN SSR ========== */
 
-    /* ========== BEGIN SSR ========== */
+        // PASS 1 -- write UVs
 
-    // PASS 1 -- write UVs
+        // start by putting the UV image in a writeable state
+        const Pipeline::PushConstantData ssr_push_constant_data {
+            .ssr_data = {
+                .width                  = mipmapped_result.GetExtent().width,
+                .height                 = mipmapped_result.GetExtent().height,
+                .ray_step               = 0.65f,
+                .num_iterations         = 100.0f,
+                .max_ray_distance       = 128.0f,
+                .distance_bias          = 0.005f,
+                .offset                 = 0.01f,
+                .eye_fade_start         = 0.45f,
+                .eye_fade_end           = 0.75f,
+                .screen_edge_fade_start = 0.45f,
+                .screen_edge_fade_end   = 0.75f
+            }
+        };
 
-    // start by putting the UV image in a writeable state
-    const Pipeline::PushConstantData ssr_push_constant_data {
-        .ssr_data = {
-            .width                  = mipmapped_result.GetExtent().width,
-            .height                 = mipmapped_result.GetExtent().height,
-            .ray_step               = 0.65f,
-            .num_iterations         = 100.0f,
-            .max_ray_distance       = 128.0f,
-            .distance_bias          = 0.001f,
-            .offset                 = 0.01f,
-            .eye_fade_start         = 0.75f,
-            .eye_fade_end           = 0.95f,
-            .screen_edge_fade_start = 0.75f,
-            .screen_edge_fade_end   = 0.9f
-        }
-    };
+        m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
 
-    m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
+        m_ssr_write_uvs->GetPipeline()->Bind(primary, ssr_push_constant_data);
 
-    m_ssr_write_uvs->GetPipeline()->Bind(primary, ssr_push_constant_data);
-
-    // bind `global` descriptor set
-    engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_ssr_write_uvs->GetPipeline(),
-        {
-            {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
-        }
-    );
-
-    engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_ssr_write_uvs->GetPipeline(),
-        {
-            {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+        // bind `global` descriptor set
+        engine->GetInstance()->GetDescriptorPool().Bind(
+            engine->GetDevice(), primary, m_ssr_write_uvs->GetPipeline(),
             {
-                .offsets = {
-                    UInt32(scene_index * sizeof(SceneShaderData)),
-                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+            }
+        );
+
+        engine->GetInstance()->GetDescriptorPool().Bind(
+            engine->GetDevice(), primary, m_ssr_write_uvs->GetPipeline(),
+            {
+                {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+                {
+                    .offsets = {
+                        UInt32(scene_index * sizeof(SceneShaderData)),
+                        UInt32(0 * sizeof(LightShaderData)) // light unused here
+                    }
                 }
             }
-        }
-    );
+        );
 
-    m_ssr_write_uvs->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+        m_ssr_write_uvs->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
 
-    // transition the UV image back into read state
-    m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+        // transition the UV image back into read state
+        m_ssr_image_outputs[frame_index][0].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
-    // PASS 2 - sample textures
+        // PASS 2 - sample textures
 
-    // put sample image in writeable state
-    m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
-    // put radius image in writeable state
-    m_ssr_radius_output[frame_index].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
+        // put sample image in writeable state
+        m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
+        // put radius image in writeable state
+        m_ssr_radius_output[frame_index].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
 
-    m_ssr_sample->GetPipeline()->Bind(primary, ssr_push_constant_data);
+        m_ssr_sample->GetPipeline()->Bind(primary, ssr_push_constant_data);
 
-    // bind `global` descriptor set
-    engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_ssr_sample->GetPipeline(),
-        {
-            {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
-        }
-    );
-
-    engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_ssr_sample->GetPipeline(),
-        {
-            {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+        // bind `global` descriptor set
+        engine->GetInstance()->GetDescriptorPool().Bind(
+            engine->GetDevice(), primary, m_ssr_sample->GetPipeline(),
             {
-                .offsets = {
-                    UInt32(scene_index * sizeof(SceneShaderData)),
-                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+            }
+        );
+
+        engine->GetInstance()->GetDescriptorPool().Bind(
+            engine->GetDevice(), primary, m_ssr_sample->GetPipeline(),
+            {
+                {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+                {
+                    .offsets = {
+                        UInt32(scene_index * sizeof(SceneShaderData)),
+                        UInt32(0 * sizeof(LightShaderData)) // light unused here
+                    }
                 }
             }
-        }
-    );
+        );
 
-    m_ssr_sample->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+        m_ssr_sample->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
 
-    // transition sample image back into read state
-    m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
-    // transition radius image back into read state
-    m_ssr_radius_output[frame_index].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+        // transition sample image back into read state
+        m_ssr_image_outputs[frame_index][1].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+        // transition radius image back into read state
+        m_ssr_radius_output[frame_index].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
-    // PASS 3 - blur image using radii in output from previous stage
+        // PASS 3 - blur image using radii in output from previous stage
 
-    //put blur image in writeable state
-    m_ssr_image_outputs[frame_index][2].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
+        //put blur image in writeable state
+        m_ssr_image_outputs[frame_index][2].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
 
-    m_ssr_blur_hor->GetPipeline()->Bind(primary, ssr_push_constant_data);
+        m_ssr_blur_hor->GetPipeline()->Bind(primary, ssr_push_constant_data);
 
-    // bind `global` descriptor set
-    engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_ssr_blur_hor->GetPipeline(),
-        {
-            {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
-        }
-    );
-
-    engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_ssr_blur_hor->GetPipeline(),
-        {
-            {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+        // bind `global` descriptor set
+        engine->GetInstance()->GetDescriptorPool().Bind(
+            engine->GetDevice(), primary, m_ssr_blur_hor->GetPipeline(),
             {
-                .offsets = {
-                    UInt32(scene_index * sizeof(SceneShaderData)),
-                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+            }
+        );
+
+        engine->GetInstance()->GetDescriptorPool().Bind(
+            engine->GetDevice(), primary, m_ssr_blur_hor->GetPipeline(),
+            {
+                {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+                {
+                    .offsets = {
+                        UInt32(scene_index * sizeof(SceneShaderData)),
+                        UInt32(0 * sizeof(LightShaderData)) // light unused here
+                    }
                 }
             }
-        }
-    );
+        );
 
-    m_ssr_blur_hor->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+        m_ssr_blur_hor->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
 
-    // transition blur image back into read state
-    m_ssr_image_outputs[frame_index][2].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+        // transition blur image back into read state
+        m_ssr_image_outputs[frame_index][2].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
 
-    // PASS 4 - blur image vertically
+        // PASS 4 - blur image vertically
 
-    //put blur image in writeable state
-    m_ssr_image_outputs[frame_index][3].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
+        //put blur image in writeable state
+        m_ssr_image_outputs[frame_index][3].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::UNORDERED_ACCESS);
 
-    m_ssr_blur_vert->GetPipeline()->Bind(primary, ssr_push_constant_data);
+        m_ssr_blur_vert->GetPipeline()->Bind(primary, ssr_push_constant_data);
 
-    // bind `global` descriptor set
-    engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_ssr_blur_vert->GetPipeline(),
-        {
-            {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
-        }
-    );
-
-    engine->GetInstance()->GetDescriptorPool().Bind(
-        engine->GetDevice(), primary, m_ssr_blur_vert->GetPipeline(),
-        {
-            {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
-            {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+        // bind `global` descriptor set
+        engine->GetInstance()->GetDescriptorPool().Bind(
+            engine->GetDevice(), primary, m_ssr_blur_vert->GetPipeline(),
             {
-                .offsets = {
-                    UInt32(scene_index * sizeof(SceneShaderData)),
-                    UInt32(0 * sizeof(LightShaderData)) // light unused here
+                {.set = DescriptorSet::global_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL}
+            }
+        );
+
+        engine->GetInstance()->GetDescriptorPool().Bind(
+            engine->GetDevice(), primary, m_ssr_blur_vert->GetPipeline(),
+            {
+                {.set = DescriptorSet::scene_buffer_mapping[frame->GetFrameIndex()], .count = 1},
+                {.binding = DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE},
+                {
+                    .offsets = {
+                        UInt32(scene_index * sizeof(SceneShaderData)),
+                        UInt32(0 * sizeof(LightShaderData)) // light unused here
+                    }
                 }
             }
-        }
-    );
+        );
 
-    m_ssr_blur_vert->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
+        m_ssr_blur_vert->GetPipeline()->Dispatch(primary, mipmapped_result.GetExtent() / Extent3D{8, 8, 1});
 
-    // transition blur image back into read state
-    m_ssr_image_outputs[frame_index][3].image->GetGPUImage()
-        ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+        // transition blur image back into read state
+        m_ssr_image_outputs[frame_index][3].image->GetGPUImage()
+            ->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
 
-    /* ==========  END SSR  ========== */
+        /* ==========  END SSR  ========== */
+    }
 
     m_post_processing.RenderPre(engine, frame);
 

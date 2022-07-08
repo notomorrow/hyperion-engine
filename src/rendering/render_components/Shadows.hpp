@@ -82,6 +82,7 @@ private:
     Vector3                                                  m_origin;
     float                                                    m_max_distance;
     UInt                                                     m_shadow_map_index;
+    Extent2D                                                 m_dimensions;
 };
 
 class ShadowRenderer : public EngineComponentBase<STUB_CLASS(ShadowRenderer)>, public RenderComponent<ShadowRenderer> {
