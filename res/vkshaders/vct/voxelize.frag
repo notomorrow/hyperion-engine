@@ -17,7 +17,7 @@ layout(location=4) in float g_lighting;
 
 #include "../include/vct/shared.inc"
 
-layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba16f) uniform image3D voxel_image;
+layout(set = HYP_DESCRIPTOR_SET_VOXELIZER, binding = 0, rgba8) uniform image3D voxel_image;
 
 #define HYP_VCT_SAMPLE_ALBEDO_MAP 1
 #define HYP_VCT_LIGHTING 1
@@ -36,7 +36,10 @@ void main()
 #endif
 
 #if HYP_VCT_LIGHTING
-    frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, g_lighting));
+    vec3 L = light.position.xyz;
+    L -= g_position.xyz * float(min(light.type, 1));
+    L = normalize(L);
+    frag_color.rgb *= vec3(max(HYP_VCT_LIGHTING_AMBIENT, dot(g_normal, L)));//vec3(max(HYP_VCT_LIGHTING_AMBIENT, g_lighting));
 #endif
 
     frag_color.a = 1.0;

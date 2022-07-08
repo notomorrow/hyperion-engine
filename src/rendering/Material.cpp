@@ -262,7 +262,7 @@ void Material::ResetParameters()
     m_parameters.Set(MATERIAL_KEY_CLEARCOAT_GLOSS, 0.0f);
     m_parameters.Set(MATERIAL_KEY_EMISSIVENESS,    0.0f);
     m_parameters.Set(MATERIAL_KEY_UV_SCALE,        1.0f);
-    m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.25f);
+    m_parameters.Set(MATERIAL_KEY_PARALLAX_HEIGHT, 0.005f);
 
     m_shader_data_state |= ShaderDataState::DIRTY;
 }

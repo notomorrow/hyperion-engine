@@ -15,7 +15,8 @@ using renderer::ImageSamplerDescriptor;
 ShadowPass::ShadowPass()
     : FullScreenPass(),
       m_max_distance(100.0f),
-      m_shadow_map_index(~0u)
+      m_shadow_map_index(~0u),
+      m_dimensions{ 512, 512 }
 {
 }
 
@@ -24,9 +25,9 @@ ShadowPass::~ShadowPass() = default;
 void ShadowPass::CreateShader(Engine *engine)
 {
     m_shader = engine->resources.shaders.Add(std::make_unique<Shader>(
-        std::vector<SubShader>{
-            SubShader{ ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read()} },
-            SubShader{ ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/shadow_frag.spv")).Read()} }
+        std::vector<SubShader> {
+            SubShader { ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/vert.spv")).Read()} },
+            SubShader { ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/shadow_frag.spv")).Read()} }
         }
     ));
 
@@ -54,7 +55,7 @@ void ShadowPass::CreateRenderPass(Engine *engine)
 
     m_attachments.push_back(std::make_unique<Attachment>(
         std::make_unique<renderer::FramebufferImage2D>(
-            engine->GetInstance()->swapchain->extent,
+            m_dimensions,
             engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
             nullptr
         ),
@@ -136,7 +137,7 @@ void ShadowPass::Create(Engine *engine)
 
     m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
         std::make_unique<OrthoCamera>(
-            1024, 1024,
+            m_dimensions.width, m_dimensions.height,
             -100.0f, 100.0f,
             -100.0f, 100.0f,
             -100.0f, 100.0f
@@ -148,13 +149,12 @@ void ShadowPass::Create(Engine *engine)
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
-            engine->GetInstance()->swapchain->extent,
+            m_dimensions,
             m_render_pass.IncRef()
         ));
 
         /* Add all attachments from the renderpass */
         for (auto *attachment_ref : m_render_pass->GetRenderPass().GetAttachmentRefs()) {
-         //   attachment_ref->SetBinding(12);
             m_framebuffers[i]->GetFramebuffer().AddAttachmentRef(attachment_ref);
         }
 

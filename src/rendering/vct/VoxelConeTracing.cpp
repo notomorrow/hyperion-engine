@@ -214,7 +214,7 @@ void VoxelConeTracing::CreateImagesAndBuffers(Engine *engine)
     m_voxel_image = engine->resources.textures.Add(std::make_unique<Texture>(
         StorageImage(
             voxel_map_size,
-            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F,
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
             Image::Type::TEXTURE_TYPE_3D,
             Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         ),

@@ -113,7 +113,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj", //
+            "models/testbed/testbed.obj", //"living_room/living_room.obj", //"sponza/sponza.obj", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -226,14 +226,14 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        test_model->Scale(0.15f);
+        test_model->Scale(5.0f);
         scene->GetRootNode()->AddChild(std::move(test_model));
         
-        scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+        /*scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
-            150.0f
-        );
+            65.0f
+        );*/
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
@@ -701,7 +701,7 @@ int main()
 #if HYPERION_VK_TEST_VCT
     vct = new v2::VoxelConeTracing({
         /* scene bounds for vct to capture */
-        .aabb = BoundingBox(Vector3(-64), Vector3(64))
+        .aabb = BoundingBox(Vector3(-32), Vector3(32))
     });
 
     vct->Init(engine);
@@ -1022,7 +1022,7 @@ int main()
 #endif
 
 #if HYPERION_VK_TEST_VCT
-        if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.002f) {
+        if (tmp_render_timer <= 0.0f || tmp_render_timer > 0.005f) {
             vct->OnRender(engine, frame);
            tmp_render_timer = 0.001f;
         }

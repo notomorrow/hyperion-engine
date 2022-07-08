@@ -42,6 +42,8 @@ private:
 };
 
 class DeferredRenderer : public Renderer {
+    static constexpr bool ssr_enabled = true;
+
 public:
     DeferredRenderer();
     DeferredRenderer(const DeferredRenderer &other) = delete;

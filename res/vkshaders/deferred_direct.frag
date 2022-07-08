@@ -83,7 +83,6 @@ void main()
         float NdotH = max(0.0001, dot(N, H));
         float LdotH = max(0.0001, dot(L, H));
 
-        //! TODO: Shadow needs to be moved into a post effect?
         if (light.shadow_map_index != ~0u) {
 #if HYP_SHADOW_PENUMBRA
             shadow = GetShadowContactHardened(light.shadow_map_index, position.xyz, NdotL);

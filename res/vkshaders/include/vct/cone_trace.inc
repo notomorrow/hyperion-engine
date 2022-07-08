@@ -5,14 +5,13 @@
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
 
+#define VCT_DIFFUSE_MAX_DIST          0.2
+#define VCT_DIFFUSE_RATIO(roughness)  (mix(8.0, 20.0, sqrt(roughness)))
+#define VCT_SPECULAR_MAX_DIST         0.75
 
-#define VCT_DIFFUSE_MAX_DIST          0.3
-#define VCT_DIFFUSE_RATIO(roughness)  0.75  //(mix(8.0, 20.0, sqrt(roughness)))
-#define VCT_SPECULAR_MAX_DIST         0.5
+#define VCT_SPECULAR_RATIO(roughness) (mix(0.015, 1.0, roughness))
 
-#define VCT_SPECULAR_RATIO(roughness) (mix(0.015, 1.0, sqrt(roughness)))
-
-#define VCT_OFFSET_ORIGIN(normal)     (normalize(normal) * 1.1)
+#define VCT_OFFSET_ORIGIN(normal)     (normalize(normal) * 0.75)
 
 vec4 FetchVoxel(vec3 position, float lod)
 {
@@ -56,12 +55,12 @@ vec4 ConeTraceDiffuse(vec3 P, vec3 N, vec3 T, vec3 B, float roughness)
     vec4 result = vec4(0.0);
 
     result += ConeTrace(1.0 / greatest_extent, voxel_coord, N, VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N + T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);// * 0.707;
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N - T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);// * 0.707;
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N + B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);// * 0.707;
-    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N - B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST);// * 0.707;
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N + T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N - T), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N + B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
+    result += ConeTrace(1.0 / greatest_extent, voxel_coord, normalize(N - B), VCT_DIFFUSE_RATIO(roughness), VCT_DIFFUSE_MAX_DIST) * 0.707;
 
-    return result / 5.0;
+    return result / 4.0;
 }
 
 vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, float roughness)

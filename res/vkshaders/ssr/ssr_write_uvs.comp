@@ -8,8 +8,8 @@ float SSRAlpha(vec3 dir, vec3 origin, vec3 hitPosition)
 {
 	float alpha = 1.0;
 	// fade based on direction relative to camera
-    // float eyeDirection = clamp( dir.z, ssr_params.eye_fade_start, ssr_params.eye_fade_end);
-    // alpha *= ((eyeDirection - ssr_params.eye_fade_start) / (ssr_params.eye_fade_end - ssr_params.eye_fade_start));
+    //float eyeDirection = clamp( dir.z, ssr_params.eye_fade_start, ssr_params.eye_fade_end);
+    //alpha *= ((eyeDirection - ssr_params.eye_fade_start) / (ssr_params.eye_fade_end - ssr_params.eye_fade_start));
 
 	// Fade ray hits based on distance from ray origin
 	// float dist = distance(origin, hitPosition);
@@ -37,8 +37,6 @@ void TraceRays(vec3 position, vec3 reflection, out vec2 out_uv, out float out_ma
 
 		depthFromScreen = generatePositionFromDepth(screenPosition, depth).z;
 		delta = marchingPosition.z - depthFromScreen;
-
-		// float camera_z = LinearDepth(scene.projection, depth)
 
 		if (delta > 0.0) {
 			do_binary_search = true;
@@ -70,7 +68,7 @@ void TraceRays(vec3 position, vec3 reflection, out vec2 out_uv, out float out_ma
 				alpha = clamp(alpha, 0.0, 1.0);
 
 				out_uv   = screenPosition;
-				out_mask = 1.0;//alpha;
+				out_mask = alpha;
 
 				return;
 			}

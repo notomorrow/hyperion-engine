@@ -73,13 +73,11 @@ Result ComputePipeline::Create(Device *device,
             .size = uint32_t(device->GetFeatures().PaddedSize<PushConstantData>())
         }
     };
-
-    auto result = Result::OK;
-   
+    
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
 
-    auto used_layouts = GetDescriptorSetLayouts(device, descriptor_pool);
+    const auto used_layouts    = GetDescriptorSetLayouts(device, descriptor_pool);
     const auto max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
 
     DebugLog(
@@ -115,10 +113,10 @@ Result ComputePipeline::Create(Device *device,
     const auto &stages = shader->GetShaderStages();
     AssertThrowMsg(stages.size() == 1, "Compute pipelines must have only one shader stage");
 
-    pipeline_info.stage = stages.front();
-    pipeline_info.layout = layout;
+    pipeline_info.stage              = stages.front();
+    pipeline_info.layout             = layout;
     pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
-    pipeline_info.basePipelineIndex = -1;
+    pipeline_info.basePipelineIndex  = -1;
 
     HYPERION_VK_CHECK_MSG(
         vkCreateComputePipelines(device->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &this->pipeline),
