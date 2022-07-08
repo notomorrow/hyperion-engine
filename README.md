@@ -19,6 +19,7 @@ The goal of Hyperion is to be easy to understand and build games with, while sti
 * HDR tone mapping
 * Skeletal animation
 * Scene graph + octree
+* Ray tracing - DDGI implementation in development
 
 Feel free to contribute anything - We'd love to have some more eyes on this project! Submit an issue if you run into anything, as well.
 
