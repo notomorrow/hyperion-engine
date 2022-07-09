@@ -40,6 +40,8 @@
 #include <camera/FirstPersonCamera.hpp>
 #include <camera/FollowCamera.hpp>
 
+#include <builders/MeshBuilder.hpp>
+
 #include "util/Profile.hpp"
 
 /* Standard library */
@@ -111,7 +113,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj",//, //, //", //
+            "models/sibenik/sibenik.obj",//, //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -224,8 +226,28 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        test_model->Scale(0.15f);
+        test_model->Scale(2.15f);
         scene->GetRootNode()->AddChild(std::move(test_model));
+
+        auto quad = engine->resources.meshes.Add(MeshBuilder::Quad());
+        quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
+        auto quad_spatial = engine->resources.spatials.Add(std::make_unique<Spatial>(
+            std::move(quad),
+            engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD).IncRef(),
+            engine->resources.materials.Add(std::make_unique<Material>()),
+            RenderableAttributeSet{
+                .bucket            = Bucket::BUCKET_OPAQUE,
+                .shader_id         = engine->shader_manager.GetShader(ShaderKey::BASIC_FORWARD)->GetId(),
+                .vertex_attributes = renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes
+            }
+        ));
+        quad_spatial.Init();
+        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.00f, 0.4f, 0.9f, 1.0f));
+        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.01f);
+        quad_spatial->SetScale(Vector3(150.0f));
+        quad_spatial->SetRotation(Quaternion(Vector3(1, 0, 0), MathUtil::DegToRad(-90.0f)));
+        quad_spatial->SetTranslation(Vector3(0, -28.0f, 0));
+        scene->AddSpatial(std::move(quad_spatial));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
@@ -235,7 +257,7 @@ public:
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
-            Vector3 {0, 40, 50},
+            Vector3 {0, 8, 50},
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );
 

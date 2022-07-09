@@ -2,7 +2,7 @@
 #include "../include/noise.inc"
 #include "../include/shared.inc"
 
-#define HYP_SSR_MAX_BLUR_INCREMENT 2
+#define HYP_SSR_MAX_BLUR_INCREMENT 3
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 14, r8) uniform image2D ssr_radius_image;
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 13, rgba16f) uniform readonly image2D ssr_sample_image;

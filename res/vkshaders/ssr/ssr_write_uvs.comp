@@ -119,7 +119,7 @@ float CalculateAlpha(
     //alpha *= 1.0 - (eyeDir - SSR_EYE_FADE_START) / (SSR_EYE_FADE_END - SSR_EYE_FADE_START);
 
     // Fade ray hits based on distance from ray origin
-    //alpha *= 1.0 - clamp(dist / SSR_MAX_RAY_DISTANCE, 0.0, 1.0);
+    alpha *= 1.0 - clamp(dist / ssr_params.max_ray_distance, 0.0, 1.0);
 
     return alpha;
 }
@@ -153,11 +153,11 @@ void main(void)
     vec3 hitNormal = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, hitPixel));
     hitNormal = normalize((scene.view * vec4(hitNormal, 0.0)).xyz);
 
-    if (dot(hitNormal, rayDir) >= 0.0) {
+    /*if (dot(hitNormal, rayDir) >= 0.0) {
         imageStore(ssr_uvs, coord, vec4(0.0));
 
         return;
-    }
+    }*/
 
     if (!intersect) {
         imageStore(ssr_uvs, coord, vec4(0.0));
