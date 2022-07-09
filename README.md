@@ -27,6 +27,10 @@ Feel free to contribute anything - We'd love to have some more eyes on this proj
 
 ![screenshot](/screenshots/sponza-vk.png)
 *The new Vulkan renderer*
+![screenshot](/screenshots/ssr.png)
+*Screenspace reflections*
+![screenshot](/screenshots/parallax.png)
+*Parallax occlusion mapping*
 ![screenshot](/screenshots/screenshot1-ogl.PNG)
 *Old OpenGL renderer*
 
