@@ -9,7 +9,7 @@ layout(location=1) in vec2 v_texcoord0;
 #include "include/gbuffer.inc"
 #include "include/shared.inc"
 #include "include/tonemap.inc"
-#include "include/post_fx.inc"
+#include "include/PostFXSample.inc"
 #include "include/rt/probe/probe_uniforms.inc"
 
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 16, rgba8) uniform image2D image_storage_test;

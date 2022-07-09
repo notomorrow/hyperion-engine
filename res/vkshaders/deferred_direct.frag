@@ -13,13 +13,14 @@ layout(location=0) out vec4 output_color;
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
 #include "include/material.inc"
-#include "include/post_fx.inc"
+#include "include/PostFXSample.inc"
 #include "include/scene.inc"
 #include "include/brdf.inc"
 
 vec2 texcoord = v_texcoord0;
 
 #include "include/shadows.inc"
+#include "include/PhysicalCamera.inc"
 
 void main()
 {
@@ -28,20 +29,14 @@ void main()
     vec4 tangent   = vec4(DecodeNormal(SampleGBuffer(gbuffer_tangents_texture, texcoord)), 1.0);
     vec4 bitangent = vec4(DecodeNormal(SampleGBuffer(gbuffer_bitangents_texture, texcoord)), 1.0);
     float depth    = SampleGBuffer(gbuffer_depth_texture, texcoord).r;
-    vec4 position  = ReconstructPositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
+    // reconstructing pos from depth has an issue with transparent objects
+    vec4 position  = SampleGBuffer(gbuffer_positions_texture, texcoord);  ///ReconstructPositionFromDepth(inverse(scene.projection * scene.view), texcoord, depth);
     vec4 material  = SampleGBuffer(gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
 
     const float roughness = material.r;
     const float metalness = material.g;    
 
     bool perform_lighting = albedo.a > 0.0;
-    
-    /* Physical camera */
-    float aperture = 16.0;
-    float shutter = 1.0/125.0;
-    float sensitivity = 100.0;
-    float ev100 = log2((aperture * aperture) / shutter * 100.0f / sensitivity);
-    float exposure = 1.0f / (1.2f * pow(2.0f, ev100));
 
     const vec4 diffuse_color = albedo * (1.0 - metalness);
 

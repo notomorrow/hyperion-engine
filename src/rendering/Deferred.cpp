@@ -210,7 +210,8 @@ DeferredRenderer::DeferredRenderer()
 DeferredRenderer::~DeferredRenderer() = default;
 
 ScreenspaceReflectionRenderer::ScreenspaceReflectionRenderer(const Extent2D &extent)
-    : m_extent(extent)
+    : m_extent(extent),
+      m_is_rendered(false)
 {
 }
 
@@ -255,6 +256,8 @@ void ScreenspaceReflectionRenderer::Create(Engine *engine)
 
 void ScreenspaceReflectionRenderer::Destroy(Engine *engine)
 {
+    m_is_rendered = false;
+
     m_ssr_write_uvs.Reset();
     m_ssr_sample.Reset();
     m_ssr_blur_hor.Reset();
@@ -361,7 +364,7 @@ void ScreenspaceReflectionRenderer::Render(
             .width                  = m_extent.width,
             .height                 = m_extent.height,
             .ray_step               = 0.75f,
-            .num_iterations         = 30.0f,
+            .num_iterations         = 80.0f,
             .max_ray_distance       = 128.0f,
             .distance_bias          = 0.1f,
             .offset                 = 0.01f,
@@ -525,6 +528,7 @@ void ScreenspaceReflectionRenderer::Render(
         ->InsertBarrier(command_buffer, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
 
 
+    m_is_rendered = true;
     /* ==========  END SSR  ========== */
 }
 
@@ -679,18 +683,25 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
     auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
     {
         DebugMarker marker(primary, "Record deferred indirect lighting pass");
+
+        m_indirect_pass.m_push_constant_data.deferred_data = {
+            .flags = (DeferredRenderer::ssr_enabled && m_ssr.IsRendered() ? DEFERRED_FLAGS_SSR_ENABLED : 0)
+        };
+
         m_indirect_pass.Record(engine, frame_index); // could be moved to only do once
     }
 
     {
         DebugMarker marker(primary, "Record deferred direct lighting pass");
+
+        m_direct_pass.m_push_constant_data = m_indirect_pass.m_push_constant_data;
+
         m_direct_pass.Record(engine, frame_index);
     }
 
@@ -707,10 +718,6 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     }
     // end opaque objs
     
-    
-    if (ssr_enabled) {
-        m_ssr.Render(engine, frame);
-    }
 
     m_post_processing.RenderPre(engine, frame);
 
@@ -752,6 +759,10 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         HYPERION_ASSERT_RESULT(mipmapped_result.GenerateMipmaps(engine->GetDevice(), primary));
 
         framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
+    }
+
+    if (ssr_enabled) {
+        m_ssr.Render(engine, frame);
     }
 
     /* ==========  END MIP CHAIN GENERATION ========== */
