@@ -119,7 +119,7 @@ private:
     PostProcessing                                                  m_post_processing;
 
     std::array<Ref<Texture>, max_frames_in_flight>                  m_mipmapped_results;
-    std::array<Ref<Texture>, max_frames_in_flight>                  m_depth_pyramids;
+    std::unique_ptr<Sampler>                                        m_depth_sampler;
     std::unique_ptr<Sampler>                                        m_sampler;
 };
 

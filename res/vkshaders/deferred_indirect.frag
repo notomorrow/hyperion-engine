@@ -196,6 +196,6 @@ void main()
 
     output_color = vec4(result, 1.0);
 
-
+    // output_color.rgb = irradiance.rgb;
     //output_color = ScreenSpaceReflection(material.r);
 }

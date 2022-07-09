@@ -201,7 +201,7 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 
 DeferredRenderer::DeferredRenderer()
     : Renderer(),
-      m_ssr(Extent2D { 1024, 1024 }),
+      m_ssr(Extent2D { 512, 512 }),
       m_indirect_pass(true),
       m_direct_pass(false)
 {
@@ -541,7 +541,7 @@ void DeferredRenderer::Create(Engine *engine)
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_mipmapped_results[i] = engine->resources.textures.Add(std::make_unique<Texture2D>(
-            Extent2D { 1024, 1024 },
+            Extent2D { 512, 512 },
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB,
             Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
             Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
@@ -551,8 +551,11 @@ void DeferredRenderer::Create(Engine *engine)
         m_mipmapped_results[i].Init();
     }
 
-    m_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_NEAREST);//TEXTURE_FILTER_LINEAR_MIPMAP);
+    m_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
     HYPERION_ASSERT_RESULT(m_sampler->Create(engine->GetDevice()));
+
+    m_depth_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_NEAREST);
+    HYPERION_ASSERT_RESULT(m_depth_sampler->Create(engine->GetDevice()));
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         auto &opaque_fbo = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetFramebuffers()[i];
@@ -585,6 +588,13 @@ void DeferredRenderer::Create(Engine *engine)
             ->AddDescriptor<ImageDescriptor>(DescriptorKey::GBUFFER_MIP_CHAIN)
             ->SetSubDescriptor({
                 .image_view = &m_mipmapped_results[i]->GetImageView()
+            });
+
+        /* Gbuffer depth sampler */
+        descriptor_set_pass
+            ->AddDescriptor<renderer::SamplerDescriptor>(DescriptorKey::GBUFFER_DEPTH_SAMPLER)
+            ->SetSubDescriptor({
+                .sampler = m_depth_sampler.get()
             });
 
         /* Gbuffer sampler */
@@ -657,7 +667,8 @@ void DeferredRenderer::Destroy(Engine *engine)
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         engine->SafeReleaseRenderable(std::move(m_mipmapped_results[i]));
     }
-
+    
+    HYPERION_ASSERT_RESULT(m_depth_sampler->Destroy(engine->GetDevice()));
     HYPERION_ASSERT_RESULT(m_sampler->Destroy(engine->GetDevice()));
 
     m_indirect_pass.Destroy(engine);  // flushes render queue
@@ -719,42 +730,6 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     // end shading
     m_direct_pass.GetFramebuffer(frame_index)->EndCapture(primary);
-
-    
-    /* ========== DEPTH PYRAMID GENERATION ========== */
-    /*{
-        DebugMarker marker(primary, "Depth pyramid generation");
-
-        const auto &attachment_refs = m_direct_pass.GetFramebuffer(frame_index)->GetFramebuffer().GetAttachmentRefs();
-
-        // depth texture is the last attachment in the chain
-        auto *framebuffer_image = attachment_refs.back()->GetAttachment()->GetImage();
-        
-        framebuffer_image->GetGPUImage()->InsertBarrier(
-            primary,
-            renderer::GPUMemory::ResourceState::COPY_SRC,
-            renderer::IMAGE_SUB_RESOURCE_FLAGS_DEPTH | renderer::IMAGE_SUB_RESOURCE_FLAGS_STENCIL
-        );
-
-        depth_pyramid.GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::COPY_DST);
-        
-        depth_pyramid.Blit(
-            primary,
-            framebuffer_image,
-            Rect { 0, 0, framebuffer_image->GetExtent().width, framebuffer_image->GetExtent().height },
-            Rect { 0, 0, depth_pyramid.GetExtent().width, depth_pyramid.GetExtent().height }
-        );
-
-        HYPERION_ASSERT_RESULT(depth_pyramid.GenerateMipmaps(engine->GetDevice(), primary));
-
-        framebuffer_image->GetGPUImage()->InsertBarrier(
-            primary,
-            renderer::GPUMemory::ResourceState::SHADER_RESOURCE,
-            renderer::IMAGE_SUB_RESOURCE_FLAGS_DEPTH | renderer::IMAGE_SUB_RESOURCE_FLAGS_STENCIL
-        );
-    }*/
-    
-    /* ==========  END DEPTH PYRAMID GENERATION ========== */
 
     /* ========== BEGIN MIP CHAIN GENERATION ========== */
     {
