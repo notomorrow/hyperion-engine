@@ -21,7 +21,7 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::GBUFFER_TEXTURES,       0},
             {DescriptorKey::GBUFFER_DEPTH,          1},
             {DescriptorKey::GBUFFER_MIP_CHAIN,      2},
-            {DescriptorKey::GBUFFER_DEPTH_PYRAMID,  3},
+            {DescriptorKey::GBUFFER_DEPTH_SAMPLER,  3},
             {DescriptorKey::GBUFFER_SAMPLER,        4},
 
             {DescriptorKey::DEFERRED_RESULT,        5},

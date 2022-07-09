@@ -44,6 +44,4 @@ void main()
     }
 
     out_color = vec4(Tonemap(out_color.rgb), 1.0);
-
-    //out_color = Texture2D(gbuffer_sampler, ssr_radius, v_texcoord0);
 }

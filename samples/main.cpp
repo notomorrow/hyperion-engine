@@ -111,7 +111,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/living_room/living_room.obj", //sponza/sponza.obj",//, //, //", //
+            "models/sponza/sponza.obj",//, //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -224,7 +224,7 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        test_model->Scale(20.15f);
+        test_model->Scale(0.15f);
         scene->GetRootNode()->AddChild(std::move(test_model));
         
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
@@ -701,7 +701,7 @@ int main()
 
 #if HYPERION_VK_TEST_VCT
     vct = new v2::VoxelConeTracing({
-        .aabb = BoundingBox(Vector3(-32), Vector3(32))
+        .aabb = BoundingBox(Vector3(-128), Vector3(128))
     });
 
     vct->Init(engine);
