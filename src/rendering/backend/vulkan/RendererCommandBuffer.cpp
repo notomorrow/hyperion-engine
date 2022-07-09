@@ -4,6 +4,8 @@
 
 #include <Types.hpp>
 
+#include "RendererFeatures.hpp"
+
 namespace hyperion {
 namespace renderer {
 
@@ -440,6 +442,28 @@ void CommandBuffer::BindDescriptorSets(
         static_cast<UInt32>(num_offsets),
         offsets
     );
+}
+
+
+
+void CommandBuffer::DebugMarkerBegin(const char *marker_name) const
+{
+    if (Features::dyn_functions.vkCmdDebugMarkerBeginEXT) {
+        const VkDebugMarkerMarkerInfoEXT marker {
+            .sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+            .pNext       = nullptr,
+            .pMarkerName = marker_name
+        };
+
+        Features::dyn_functions.vkCmdDebugMarkerBeginEXT(m_command_buffer, &marker);
+    }
+}
+
+void CommandBuffer::DebugMarkerEnd() const
+{
+    if (Features::dyn_functions.vkCmdDebugMarkerEndEXT) {
+        Features::dyn_functions.vkCmdDebugMarkerEndEXT(m_command_buffer);
+    }
 }
 
 } // namespace renderer

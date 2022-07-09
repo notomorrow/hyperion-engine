@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_LIB_FLAT_SET_H
 #define HYPERION_V2_LIB_FLAT_SET_H
 
+#include "ContainerBase.hpp"
 #include <util/Defines.hpp>
 
 #include <algorithm>
@@ -10,7 +11,7 @@
 namespace hyperion {
 
 template <class T>
-class FlatSet {
+class FlatSet : public ContainerBase<FlatSet<T>, T> {
     std::vector<T> m_vector;
 
 public:
@@ -64,7 +65,7 @@ public:
     HYP_DEF_STL_ITERATOR(m_vector)
 
 private:
-    Iterator LowerBound(const T &value)
+    /*Iterator LowerBound(const T &value)
     {
         return std::lower_bound(
             m_vector.begin(),
@@ -80,7 +81,7 @@ private:
             m_vector.cend(),
             value
         );
-    }
+    }*/
 };
 
 template <class T>
@@ -120,7 +121,7 @@ FlatSet<T>::~FlatSet() = default;
 template <class T>
 auto FlatSet<T>::Find(const T &value) -> Iterator
 {
-    const auto it = LowerBound(value);
+    const auto it = typename FlatSet<T>::Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -132,7 +133,7 @@ auto FlatSet<T>::Find(const T &value) -> Iterator
 template <class T>
 auto FlatSet<T>::Find(const T &value) const -> ConstIterator
 {
-    const auto it = LowerBound(value);
+    const auto it = typename FlatSet<T>::Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -144,7 +145,7 @@ auto FlatSet<T>::Find(const T &value) const -> ConstIterator
 template <class T>
 auto FlatSet<T>::Insert(const T &value) -> InsertResult
 {
-    Iterator it = LowerBound(value);
+    Iterator it = typename FlatSet<T>::Base::LowerBound(value);
 
     if (it == End() || !(*it == value)) {
         it = m_vector.insert(it, value);
@@ -158,7 +159,7 @@ auto FlatSet<T>::Insert(const T &value) -> InsertResult
 template <class T>
 auto FlatSet<T>::Insert(T &&value) -> InsertResult
 {
-    Iterator it = LowerBound(value);
+    Iterator it = typename FlatSet<T>::Base::LowerBound(value);
 
     if (it == End() || !(*it == value)) {
         it = m_vector.insert(it, std::forward<T>(value));

@@ -173,7 +173,7 @@ void Material::EnqueueRenderUpdates()
     }
 
     GetEngine()->GetRenderScheduler().Enqueue([this, bound_texture_ids](...) {
-        MaterialShaderData shader_data{
+        MaterialShaderData shader_data {
             .albedo          = GetParameter<Vector4>(MATERIAL_KEY_ALBEDO),
             .metalness       = GetParameter<float>(MATERIAL_KEY_METALNESS),
             .roughness       = GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
@@ -224,9 +224,9 @@ void Material::EnqueueTextureUpdate(TextureKey key)
         const auto *engine              = GetEngine();
         const auto descriptor_set_index = DescriptorSet::GetPerFrameIndex(DescriptorSet::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES, m_id.value - 1, frame_index);
 
-        const auto &descriptor_pool = engine->GetInstance()->GetDescriptorPool();
-        const auto *descriptor_set  = descriptor_pool.GetDescriptorSet(descriptor_set_index);
-        auto       *descriptor      = descriptor_set->GetDescriptor(DescriptorKey::TEXTURES);
+        const auto &descriptor_pool     = engine->GetInstance()->GetDescriptorPool();
+        const auto *descriptor_set      = descriptor_pool.GetDescriptorSet(descriptor_set_index);
+        auto       *descriptor          = descriptor_set->GetDescriptor(DescriptorKey::TEXTURES);
 
         descriptor->SetSubDescriptor({
             .element_index = static_cast<UInt>(texture_index),

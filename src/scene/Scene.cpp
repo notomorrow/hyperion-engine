@@ -41,19 +41,19 @@ void Scene::Init(Engine *engine)
 
             m_root_node->SetScene(nullptr);
 
-            for (auto &spatial : m_spatials) {
-                AssertThrow(spatial.second != nullptr);
+            for (auto &it : m_spatials) {
+                AssertThrow(it.second != nullptr);
 
-                spatial.second->m_scene = nullptr;
+                it.second->m_scene = nullptr;
 
-                RemoveFromPipelines(spatial.second);
+                RemoveFromPipelines(it.second);
 
-                if (spatial.second->m_octree != nullptr) {
-                    spatial.second->RemoveFromOctree(GetEngine());
+                if (it.second->m_octree != nullptr) {
+                    it.second->RemoveFromOctree(GetEngine());
                 }
             }
 
-            m_spatials.clear();
+            m_spatials.Clear();
 
             HYP_FLUSH_RENDER_QUEUE(engine);
 
@@ -79,6 +79,7 @@ void Scene::SetWorld(World *world)
                 "[scene] Remove spatial #%u from octree\n",
                 entity->GetId().value
             );
+
             entity->RemoveFromOctree(GetEngine());
         }
     }
@@ -103,6 +104,7 @@ void Scene::SetWorld(World *world)
             "Add spatial #%u to octree\n",
             entity->GetId().value
         );
+
         entity->AddToOctree(GetEngine(), m_world->GetOctree());
     }
 }
@@ -114,9 +116,9 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
     AssertReady();
     AssertThrow(spatial != nullptr);
 
-    auto it = m_spatials.find(spatial->GetId());
+    auto it = m_spatials.Find(spatial->GetId());
 
-    if (it != m_spatials.end()) {
+    if (it != m_spatials.End()) {
         DebugLog(
             LogType::Warn,
             "Spatial #%u already exists in Scene #%u\n",
@@ -170,7 +172,7 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
     m_environment->OnEntityAdded(spatial);
 
     // m_spatials.Insert(spatial->GetId(), std::move(spatial));
-    m_spatials.insert(std::make_pair(static_cast<IDBase>(spatial->GetId()), std::move(spatial)));
+    m_spatials.Insert(static_cast<IDBase>(spatial->GetId()), std::move(spatial));
 
     return true;
 }
@@ -179,7 +181,7 @@ bool Scene::HasSpatial(Spatial::ID id) const
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    return m_spatials.find(id) != m_spatials.end();
+    return m_spatials.Find(id) != m_spatials.End();
 }
 
 bool Scene::RemoveSpatial(Spatial::ID id)
@@ -188,8 +190,9 @@ bool Scene::RemoveSpatial(Spatial::ID id)
 
     AssertReady();
 
-    auto it = m_spatials.find(id);
-    if (it == m_spatials.end()) {
+    auto it = m_spatials.Find(id);
+
+    if (it == m_spatials.End()) {
         return false;
     }
 
@@ -209,7 +212,7 @@ bool Scene::RemoveSpatial(Spatial::ID id)
         found_spatial->RemoveFromOctree(GetEngine());
     }
 
-    m_spatials.erase(it);
+    m_spatials.Erase(it);
 
     return true;
 }
@@ -221,8 +224,8 @@ bool Scene::RemoveSpatial(const Ref<Spatial> &spatial)
     AssertReady();
     AssertThrow(spatial != nullptr);
 
-    auto it = m_spatials.find(spatial->GetId());
-    if (it == m_spatials.end()) {
+    auto it = m_spatials.Find(spatial->GetId());
+    if (it == m_spatials.End()) {
         return false;
     }
 
@@ -235,7 +238,7 @@ bool Scene::RemoveSpatial(const Ref<Spatial> &spatial)
         found_spatial->RemoveFromOctree(GetEngine());
     }
 
-    m_spatials.erase(it);
+    m_spatials.Erase(it);
 
     return true;
 }
@@ -262,13 +265,13 @@ void Scene::Update(
     EnqueueRenderUpdates(engine);
 
     for (auto &it : m_spatials) {
-        auto &spatial = it.second;
-        AssertThrow(spatial != nullptr);
+        auto &entity = it.second;
+        AssertThrow(entity != nullptr);
 
-        spatial->Update(engine, delta);
+        entity->Update(engine, delta);
 
-        if (spatial->m_primary_pipeline.changed) {
-            RequestPipelineChanges(spatial);
+        if (entity->m_primary_pipeline.changed) {
+            RequestPipelineChanges(entity);
         }
     }
 

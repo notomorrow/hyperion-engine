@@ -579,55 +579,38 @@ Result Image::Blit(
     Rect dst_rect
 )
 {
-    /*std::vector<VkImageBlit> regions;
-    regions.resize(MathUtil::Min(NumFaces(), src->NumFaces()));
-
-    for (size_t i = 0; i < regions.size(); i++) {
-        VkImageSubresourceLayers input_layer{};
-        input_layer.aspectMask = (VK_IMAGE_ASPECT_COLOR_BIT); // TODO
-        input_layer.baseArrayLayer = static_cast<uint32_t>(i);
-        input_layer.layerCount     = 1;//MathUtil::Min(NumFaces(), src->NumFaces());
-
-        VkImageBlit region{};
-        region.srcSubresource = input_layer;
-        region.dstSubresource = input_layer;
-        region.srcOffsets[0] = {(int32_t) src_rect.x0, (int32_t) src_rect.y0, 0};
-        region.srcOffsets[1] = {(int32_t) src_rect.x1, (int32_t) src_rect.y1, 1};
-        region.dstOffsets[0] = {(int32_t) dst_rect.x0, (int32_t) dst_rect.y0, 0};
-        region.dstOffsets[1] = {(int32_t) dst_rect.x1, (int32_t) dst_rect.y1, 1};
-
-        regions[i] = region;
-    }
-
-    vkCmdBlitImage(
-        command_buffer->GetCommandBuffer(),
-        src->GetGPUImage()->image,
-        GPUMemory::GetImageLayout(src->GetGPUImage()->GetResourceState()),
-        this->GetGPUImage()->image,
-        GPUMemory::GetImageLayout(this->GetGPUImage()->GetResourceState()),
-        static_cast<uint32_t>(regions.size()),
-        regions.data(),
-        ToVkFilter(this->GetFilterMode())
-    );*/
-
     const auto num_faces   = MathUtil::Min(NumFaces(), src_image->NumFaces());
     const auto num_mipmaps = MathUtil::Min(NumMipmaps(), src_image->NumMipmaps());
 
     for (uint32_t face = 0; face < num_faces; face++) {
         const ImageSubResource src {
+            .flags            = src_image->IsDepthStencil()
+                              ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
+                              : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
             .base_array_layer = face,
             .base_mip_level   = 0
         };
 
         const ImageSubResource dst {
+            .flags            = IsDepthStencil()
+                              ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
+                              : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
             .base_array_layer = face,
             .base_mip_level   = 0
         };
 
+        const VkImageAspectFlags aspect_flag_bits = 
+            (src.flags & IMAGE_SUB_RESOURCE_FLAGS_COLOR ? VK_IMAGE_ASPECT_COLOR_BIT : 0)
+            | (src.flags & IMAGE_SUB_RESOURCE_FLAGS_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : 0)
+            | (src.flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0)
+            | (dst.flags & IMAGE_SUB_RESOURCE_FLAGS_COLOR ? VK_IMAGE_ASPECT_COLOR_BIT : 0)
+            | (dst.flags & IMAGE_SUB_RESOURCE_FLAGS_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : 0)
+            | (dst.flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+        
         /* Blit src -> dst */
         const VkImageBlit blit {
             .srcSubresource = {
-                .aspectMask     = src.aspect_mask,
+                .aspectMask     = aspect_flag_bits,
                 .mipLevel       = src.base_mip_level,
                 .baseArrayLayer = src.base_array_layer,
                 .layerCount     = src.num_layers
@@ -637,7 +620,7 @@ Result Image::Blit(
                 { (int32_t) src_rect.x1, (int32_t) src_rect.y1, 1 }
             },
             .dstSubresource = {
-                .aspectMask     = dst.aspect_mask,
+                .aspectMask     = aspect_flag_bits,
                 .mipLevel       = dst.base_mip_level,
                 .baseArrayLayer = dst.base_array_layer,
                 .layerCount     = dst.num_layers
@@ -655,7 +638,7 @@ Result Image::Blit(
             this->GetGPUImage()->image,
             GPUMemory::GetImageLayout(this->GetGPUImage()->GetResourceState()),
             1, &blit,
-            VK_FILTER_LINEAR
+            IsDepthStencil() || src_image->IsDepthStencil() ? VK_FILTER_NEAREST : VK_FILTER_LINEAR // TODO: base on filter mode
         );
     }
 
@@ -683,13 +666,15 @@ Result Image::GenerateMipmaps(
             /* Memory barrier for transfer - note that after generating the mipmaps,
                 we'll still need to transfer into a layout primed for reading from shaders. */
 
-            const ImageSubResource src{
+            const ImageSubResource src {
+                .flags            = IsDepthStencil() ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
                 .base_array_layer = face,
                 .base_mip_level   = static_cast<uint32_t>(i - 1)
             };
 
-            const ImageSubResource dst{
-                .base_array_layer = face,
+            const ImageSubResource dst {
+                .flags            = src.flags,
+                .base_array_layer = src.base_array_layer,
                 .base_mip_level   = static_cast<uint32_t>(i)
             };
             
@@ -708,11 +693,19 @@ Result Image::GenerateMipmaps(
 
                 break;
             }
+
+            const VkImageAspectFlags aspect_flag_bits = 
+                (src.flags & IMAGE_SUB_RESOURCE_FLAGS_COLOR ? VK_IMAGE_ASPECT_COLOR_BIT : 0)
+                | (src.flags & IMAGE_SUB_RESOURCE_FLAGS_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : 0)
+                | (src.flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0)
+                | (dst.flags & IMAGE_SUB_RESOURCE_FLAGS_COLOR ? VK_IMAGE_ASPECT_COLOR_BIT : 0)
+                | (dst.flags & IMAGE_SUB_RESOURCE_FLAGS_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : 0)
+                | (dst.flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
             
             /* Blit src -> dst */
             const VkImageBlit blit{
                 .srcSubresource = {
-                    .aspectMask     = src.aspect_mask,
+                    .aspectMask     = aspect_flag_bits,
                     .mipLevel       = src.base_mip_level,
                     .baseArrayLayer = src.base_array_layer,
                     .layerCount     = src.num_layers
@@ -726,7 +719,7 @@ Result Image::GenerateMipmaps(
                     }
                 },
                 .dstSubresource = {
-                    .aspectMask     = dst.aspect_mask,
+                    .aspectMask     = aspect_flag_bits,
                     .mipLevel       = dst.base_mip_level,
                     .baseArrayLayer = dst.base_array_layer,
                     .layerCount     = dst.num_layers
@@ -748,13 +741,96 @@ Result Image::GenerateMipmaps(
                 m_image->image,
                 GPUMemory::GetImageLayout(GPUMemory::ResourceState::COPY_DST),//m_image->GetSubResourceState(dst)),
                 1, &blit,
-                VK_FILTER_LINEAR
+                IsDepthStencil() ? VK_FILTER_NEAREST : VK_FILTER_LINEAR // TODO: base on filter mode
             );
         }
     }
 
     HYPERION_RETURN_OK;
 }
+
+void Image::CopyFromBuffer(
+    CommandBuffer *command_buffer,
+    const GPUBuffer *src_buffer
+) const
+{
+    const auto flags = IsDepthStencil()
+        ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
+        : IMAGE_SUB_RESOURCE_FLAGS_COLOR;
+
+    const VkImageAspectFlags aspect_flag_bits = 
+        (flags & IMAGE_SUB_RESOURCE_FLAGS_COLOR ? VK_IMAGE_ASPECT_COLOR_BIT : 0)
+        | (flags & IMAGE_SUB_RESOURCE_FLAGS_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : 0)
+        | (flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+            
+    // copy from staging to image
+    const auto num_faces            = NumFaces();
+    const size_t buffer_offset_step = m_size / num_faces;
+
+    for (uint32_t i = 0; i < num_faces; i++) {
+        VkBufferImageCopy region{};
+        region.bufferOffset                    = i * buffer_offset_step;
+        region.bufferRowLength                 = 0;
+        region.bufferImageHeight               = 0;
+        region.imageSubresource.aspectMask     = aspect_flag_bits;
+        region.imageSubresource.mipLevel       = 0;
+        region.imageSubresource.baseArrayLayer = i;
+        region.imageSubresource.layerCount     = 1;
+        region.imageOffset                     = { 0, 0, 0 };
+        region.imageExtent                     = VkExtent3D { m_extent.width, m_extent.height, m_extent.depth };
+
+        vkCmdCopyBufferToImage(
+            command_buffer->GetCommandBuffer(),
+            src_buffer->buffer,
+            m_image->image,
+            GPUMemory::GetImageLayout(m_image->GetResourceState()),
+            1,
+            &region
+        );
+    }
+}
+
+void Image::CopyToBuffer(
+    CommandBuffer *command_buffer,
+    GPUBuffer *dst_buffer
+) const
+{
+    const auto flags = IsDepthStencil()
+        ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
+        : IMAGE_SUB_RESOURCE_FLAGS_COLOR;
+
+    const VkImageAspectFlags aspect_flag_bits = 
+        (flags & IMAGE_SUB_RESOURCE_FLAGS_COLOR ? VK_IMAGE_ASPECT_COLOR_BIT : 0)
+        | (flags & IMAGE_SUB_RESOURCE_FLAGS_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : 0)
+        | (flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+            
+    // copy from staging to image
+    const auto num_faces            = NumFaces();
+    const size_t buffer_offset_step = m_size / num_faces;
+
+    for (uint32_t i = 0; i < num_faces; i++) {
+        VkBufferImageCopy region{};
+        region.bufferOffset                    = i * buffer_offset_step;
+        region.bufferRowLength                 = 0;
+        region.bufferImageHeight               = 0;
+        region.imageSubresource.aspectMask     = aspect_flag_bits;
+        region.imageSubresource.mipLevel       = 0;
+        region.imageSubresource.baseArrayLayer = i;
+        region.imageSubresource.layerCount     = 1;
+        region.imageOffset                     = { 0, 0, 0 };
+        region.imageExtent                     = VkExtent3D { m_extent.width, m_extent.height, m_extent.depth };
+
+        vkCmdCopyImageToBuffer(
+            command_buffer->GetCommandBuffer(),
+            m_image->image,
+            GPUMemory::GetImageLayout(m_image->GetResourceState()),
+            dst_buffer->buffer,
+            1,
+            &region
+        );
+    }
+}
+
 
 Result Image::ConvertTo32Bpp(
     Device *device,

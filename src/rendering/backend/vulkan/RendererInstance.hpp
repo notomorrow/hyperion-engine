@@ -46,22 +46,35 @@ public:
     
     void WaitImageReady(Frame *frame);
 
-    inline DescriptorPool &GetDescriptorPool()             { return this->descriptor_pool; }
-    inline const DescriptorPool &GetDescriptorPool() const { return this->descriptor_pool; }
-
-    inline Queue &GetGraphicsQueue()             { return this->queue_graphics; }
-    inline const Queue &GetGraphicsQueue() const { return this->queue_graphics; }
-    inline Queue &GetTransferQueue()             { return this->queue_transfer; }
-    inline const Queue &GetTransferQueue() const { return this->queue_transfer; }
-    inline Queue &GetPresentQueue()              { return this->queue_present; }
-    inline const Queue &GetPresentQueue() const  { return this->queue_present; }
-    inline Queue &GetComputeQueue()              { return this->queue_compute; }
-    inline const Queue &GetComputeQueue() const  { return this->queue_compute; }
-
-    inline VkCommandPool GetGraphicsCommandPool() const { return this->queue_graphics.command_pool; }
-    inline VkCommandPool GetComputeCommandPool() const  { return this->queue_compute.command_pool; }
+    DescriptorPool &GetDescriptorPool()                   { return this->descriptor_pool; }
+    const DescriptorPool &GetDescriptorPool() const       { return this->descriptor_pool; }
+                                                          
+    Queue &GetGraphicsQueue()                             { return this->queue_graphics; }
+    const Queue &GetGraphicsQueue() const                 { return this->queue_graphics; }
+    Queue &GetTransferQueue()                             { return this->queue_transfer; }
+    const Queue &GetTransferQueue() const                 { return this->queue_transfer; }
+    Queue &GetPresentQueue()                              { return this->queue_present; }
+    const Queue &GetPresentQueue() const                  { return this->queue_present; }
+    Queue &GetComputeQueue()                              { return this->queue_compute; }
+    const Queue &GetComputeQueue() const                  { return this->queue_compute; }
+                                                          
+    VkCommandPool GetGraphicsCommandPool() const          { return this->queue_graphics.command_pool; }
+    VkCommandPool GetComputeCommandPool() const           { return this->queue_compute.command_pool; }
     
-    inline VkInstance GetInstance() const { return this->instance; }
+    VkInstance GetInstance() const                        { return this->instance; }
+
+    Swapchain *GetSwapchain()                             { return swapchain; }
+    const Swapchain *GetSwapchain() const                 { return swapchain; }
+                                                          
+    FrameHandler *GetFrameHandler()                       { return frame_handler; }
+    const FrameHandler *GetFrameHandler() const           { return frame_handler; }
+
+    StagingBufferPool &GetStagingBufferPool()             { return m_staging_buffer_pool; }
+    const StagingBufferPool &GetStagingBufferPool() const { return m_staging_buffer_pool; }
+
+    VmaAllocator GetAllocator() const                     { return allocator; }
+
+    helpers::SingleTimeCommands GetSingleTimeCommands();
 
     void SetValidationLayers(std::vector<const char *> _layers);
 
@@ -71,21 +84,8 @@ public:
 
     void SetCurrentWindow(SystemWindow *window);
 
-    inline Swapchain *GetSwapchain() { return swapchain; }
-    inline const Swapchain *GetSwapchain() const { return swapchain; }
-    
-    inline FrameHandler *GetFrameHandler() { return frame_handler; }
-    inline const FrameHandler *GetFrameHandler() const { return frame_handler; }
-
-    inline VmaAllocator GetAllocator() const { return allocator; }
-
     SystemWindow *GetCurrentWindow();
     Result Destroy();
-
-    helpers::SingleTimeCommands GetSingleTimeCommands();
-
-    inline StagingBufferPool &GetStagingBufferPool() { return m_staging_buffer_pool; }
-    inline const StagingBufferPool &GetStagingBufferPool() const { return m_staging_buffer_pool; }
 
     const char *app_name;
     const char *engine_name;

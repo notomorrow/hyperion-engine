@@ -542,9 +542,11 @@ void GPUBuffer::InsertBarrier(CommandBuffer *command_buffer, ResourceState new_s
     resource_state = new_state;
 }
 
-void GPUBuffer::CopyFrom(CommandBuffer *command_buffer,
+void GPUBuffer::CopyFrom(
+    CommandBuffer *command_buffer,
     const GPUBuffer *src_buffer,
-    size_t count)
+    size_t count
+)
 {
     InsertBarrier(command_buffer, ResourceState::COPY_DST);
     src_buffer->InsertBarrier(command_buffer, ResourceState::COPY_SRC);
@@ -877,14 +879,16 @@ void GPUImageMemory::SetResourceState(ResourceState new_state)
 
 void GPUImageMemory::InsertBarrier(
     CommandBuffer *command_buffer,
-    ResourceState new_state
+    ResourceState new_state,
+    ImageSubResourceFlagBits flags
 )
 {
     InsertBarrier(
         command_buffer,
-        ImageSubResource{
-            .num_layers = VK_REMAINING_ARRAY_LAYERS,
-            .num_levels = VK_REMAINING_MIP_LEVELS
+        ImageSubResource {
+            .flags           = flags,
+            .num_layers      = VK_REMAINING_ARRAY_LAYERS,
+            .num_levels      = VK_REMAINING_MIP_LEVELS
         },
         new_state
     );
@@ -910,8 +914,13 @@ void GPUImageMemory::InsertBarrier(
         return;
     }
 
+    const VkImageAspectFlags aspect_flag_bits = 
+        (sub_resource.flags & IMAGE_SUB_RESOURCE_FLAGS_COLOR ? VK_IMAGE_ASPECT_COLOR_BIT : 0)
+        | (sub_resource.flags & IMAGE_SUB_RESOURCE_FLAGS_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : 0)
+        | (sub_resource.flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+
     VkImageSubresourceRange range{};
-    range.aspectMask     = sub_resource.aspect_mask;
+    range.aspectMask     = aspect_flag_bits;
     range.baseArrayLayer = sub_resource.base_array_layer;
     range.layerCount     = sub_resource.num_layers;
     range.baseMipLevel   = sub_resource.base_mip_level;
@@ -954,8 +963,13 @@ void GPUImageMemory::InsertSubResourceBarrier(
         return;
     }
 
+    const VkImageAspectFlags aspect_flag_bits = 
+        (sub_resource.flags & IMAGE_SUB_RESOURCE_FLAGS_COLOR ? VK_IMAGE_ASPECT_COLOR_BIT : 0)
+        | (sub_resource.flags & IMAGE_SUB_RESOURCE_FLAGS_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : 0)
+        | (sub_resource.flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+
     VkImageSubresourceRange range{};
-    range.aspectMask     = sub_resource.aspect_mask;
+    range.aspectMask     = aspect_flag_bits;
     range.baseArrayLayer = sub_resource.base_array_layer;
     range.layerCount     = sub_resource.num_layers;
     range.baseMipLevel   = sub_resource.base_mip_level;

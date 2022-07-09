@@ -171,18 +171,22 @@ struct VertexAttributeSet {
     explicit operator bool() const { return bool(flag_mask); }
 
     bool operator==(const VertexAttributeSet &other) const              { return flag_mask == other.flag_mask; }
+    bool operator!=(const VertexAttributeSet &other) const              { return flag_mask != other.flag_mask; }
+
+    bool operator==(UInt64 flags) const                                 { return flag_mask == flags; }
+    bool operator!=(UInt64 flags) const                                 { return flag_mask != flags; }
 
     VertexAttributeSet operator~() const                                { return ~flag_mask; }
 
     VertexAttributeSet operator&(const VertexAttributeSet &other) const { return {flag_mask & other.flag_mask}; }
     VertexAttributeSet &operator&=(const VertexAttributeSet &other)     { flag_mask &= other.flag_mask; return *this; }
-    VertexAttributeSet operator&(UInt64 flags) const                  { return {flag_mask & flags}; }
-    VertexAttributeSet &operator&=(UInt64 flags)                      { flag_mask &= flags; return *this; }
+    VertexAttributeSet operator&(UInt64 flags) const                    { return {flag_mask & flags}; }
+    VertexAttributeSet &operator&=(UInt64 flags)                        { flag_mask &= flags; return *this; }
     
     VertexAttributeSet operator|(const VertexAttributeSet &other) const { return {flag_mask | other.flag_mask}; }
     VertexAttributeSet &operator|=(const VertexAttributeSet &other)     { flag_mask |= other.flag_mask; return *this; }
-    VertexAttributeSet operator|(UInt64 flags) const                  { return {flag_mask | flags}; }
-    VertexAttributeSet &operator|=(UInt64 flags)                      { flag_mask |= flags; return *this; }
+    VertexAttributeSet operator|(UInt64 flags) const                    { return {flag_mask | flags}; }
+    VertexAttributeSet &operator|=(UInt64 flags)                        { flag_mask |= flags; return *this; }
 
     bool operator<(const VertexAttributeSet &other) const               { return flag_mask < other.flag_mask; }
 
@@ -444,17 +448,26 @@ static_assert(sizeof(MeshDescription) % 16 == 0);
 
 using PackedIndex = UInt32;
 
+using ImageSubResourceFlagBits = UInt;
+
+enum ImageSubResourceFlags : ImageSubResourceFlagBits {
+    IMAGE_SUB_RESOURCE_FLAGS_NONE    = 0,
+    IMAGE_SUB_RESOURCE_FLAGS_COLOR   = 1 << 0,
+    IMAGE_SUB_RESOURCE_FLAGS_DEPTH   = 1 << 1,
+    IMAGE_SUB_RESOURCE_FLAGS_STENCIL = 1 << 2
+};
+
 /* images */
 struct ImageSubResource {
-    VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+    ImageSubResourceFlagBits flags = IMAGE_SUB_RESOURCE_FLAGS_COLOR;
     UInt32 base_array_layer        = 0;
     UInt32 base_mip_level          = 0;
     UInt32 num_layers              = 1;
-    UInt32 num_levels            = 1;
+    UInt32 num_levels              = 1;
 
     bool operator==(const ImageSubResource &other) const
     {
-        return aspect_mask == other.aspect_mask
+        return flags == other.flags
             && base_array_layer == other.base_array_layer
             && num_layers == other.num_layers
             && base_mip_level == other.base_mip_level
@@ -527,7 +540,7 @@ struct ::std::hash<hyperion::renderer::ImageSubResource> {
     inline size_t operator()(const hyperion::renderer::ImageSubResource &sub_resource) const
     {
         hyperion::HashCode hc;
-        hc.Add(sub_resource.aspect_mask);
+        hc.Add(sub_resource.flags);
         hc.Add(sub_resource.base_array_layer);
         hc.Add(sub_resource.num_layers);
         hc.Add(sub_resource.base_mip_level);

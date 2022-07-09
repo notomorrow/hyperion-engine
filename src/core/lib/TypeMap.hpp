@@ -1,6 +1,7 @@
 #ifndef HYPERION_TYPE_MAP_H
 #define HYPERION_TYPE_MAP_H
 
+#include "ContainerBase.hpp"
 #include "FlatMap.hpp"
 #include "FlatSet.hpp"
 
@@ -58,7 +59,7 @@ struct TypeId {
 };
 
 template <class Value>
-class TypeMap {
+class TypeMap : public ContainerBase<TypeMap<Value>, TypeId> {
 protected:
     using Map = FlatMap<TypeId, Value>;
 

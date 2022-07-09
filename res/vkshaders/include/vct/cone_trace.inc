@@ -6,8 +6,8 @@
 layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 30) uniform sampler3D voxel_image;
 
 #define VCT_DIFFUSE_MAX_DIST          0.2
-#define VCT_DIFFUSE_RATIO(roughness)  (mix(8.0, 20.0, sqrt(roughness)))
-#define VCT_SPECULAR_MAX_DIST         0.75
+#define VCT_DIFFUSE_RATIO(roughness)  (mix(8.0, 20.0, roughness))
+#define VCT_SPECULAR_MAX_DIST         0.5
 
 #define VCT_SPECULAR_RATIO(roughness) (mix(0.015, 1.0, roughness))
 

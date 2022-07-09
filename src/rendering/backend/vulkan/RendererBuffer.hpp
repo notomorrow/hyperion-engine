@@ -360,7 +360,8 @@ public:
 
     void InsertBarrier(
         CommandBuffer *command_buffer,
-        ResourceState new_state
+        ResourceState new_state,
+        ImageSubResourceFlagBits flags = ImageSubResourceFlags::IMAGE_SUB_RESOURCE_FLAGS_COLOR
     );
 
     void InsertBarrier(

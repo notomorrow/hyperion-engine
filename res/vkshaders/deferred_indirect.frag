@@ -28,7 +28,9 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
 #define HYP_VCT_ENABLED 1
-#define HYP_ENV_PROBE_ENABLED 1
+#define HYP_VCT_REFLECTIONS_ENABLED 0
+#define HYP_VCT_INDIRECT_ENABLED 1
+#define HYP_ENV_PROBE_ENABLED 0
 #define HYP_SSR_ENABLED 1
 
 #if HYP_VCT_ENABLED
@@ -37,7 +39,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 30000.0
+#define IBL_INTENSITY 20000.0
 #define IRRADIANCE_MULTIPLIER 1.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
@@ -84,6 +86,8 @@ vec4 SampleIrradiance(vec3 P, vec3 N, vec3 V)
 }
 
 #endif
+
+
 
 void main()
 {
@@ -157,8 +161,13 @@ void main()
         vec4 vct_specular = ConeTraceSpecular(position.xyz, N, R, roughness);
         vec4 vct_diffuse  = ConeTraceDiffuse(position.xyz, N, T, B, roughness);
 
+#if HYP_VCT_INDIRECT_ENABLED
         irradiance  = vct_diffuse.rgb;
+#endif
+
+#if HYP_VCT_REFLECTIONS_ENABLED
         reflections = vct_specular;
+#endif
 #endif
 
 #if HYP_SSR_ENABLED
@@ -186,4 +195,7 @@ void main()
 #endif
 
     output_color = vec4(result, 1.0);
+
+
+    //output_color = ScreenSpaceReflection(material.r);
 }

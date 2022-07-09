@@ -167,6 +167,16 @@ public:
         Device *device,
         CommandBuffer *command_buffer
     );
+
+    void CopyFromBuffer(
+        CommandBuffer *command_buffer,
+        const GPUBuffer *src_buffer
+    ) const;
+
+    void CopyToBuffer(
+        CommandBuffer *command_buffer,
+        GPUBuffer *dst_buffer
+    ) const;
     
     const unsigned char *GetBytes() const { return m_bytes; }
 

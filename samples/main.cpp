@@ -25,6 +25,8 @@
 #include <scene/controllers/ScriptedController.hpp>
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/FlatMap.hpp>
+#include <core/lib/Pair.hpp>
+#include <core/lib/DynArray.hpp>
 #include <GameThread.hpp>
 #include <Game.hpp>
 
@@ -59,10 +61,6 @@
 using namespace hyperion;
 
 
-#define HYPERION_VK_TEST_IMAGE_STORE 0
-#define HYPERION_VK_TEST_ATOMICS     1
-#define HYPERION_VK_TEST_VISUALIZE_OCTREE 0
-#define HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE 0
 #define HYPERION_VK_TEST_VCT 1
 #define HYPERION_VK_TEST_RAYTRACING 0
 #define HYPERION_RUN_TESTS 1
@@ -101,7 +99,7 @@ public:
         scene = engine->resources.scenes.Add(std::make_unique<v2::Scene>(
             std::make_unique<FpsCamera>(//FollowCamera>(
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
-                1024, 768,
+                1024, 1024,//2048, 1080,
                 70.0f,
                 0.15f, 15000.0f
             )
@@ -113,7 +111,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/testbed/testbed.obj", //"living_room/living_room.obj", //"sponza/sponza.obj", //
+            "models/living_room/living_room.obj", //sponza/sponza.obj",//testbed/testbed.obj", //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -226,14 +224,14 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        test_model->Scale(5.0f);
+        test_model->Scale(20.15f);
         scene->GetRootNode()->AddChild(std::move(test_model));
         
-        /*scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
+        scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
-            65.0f
-        );*/
+            150.0f
+        );
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
@@ -492,55 +490,88 @@ public:
 };
 } // namespace hyperion::v2
 
+struct TestStruct {
+    int id = 0;
+
+    TestStruct(int id = -1)
+        : id(id)
+    {
+        std::cout << "Create TestStruct " << id << "\n";
+    }
+    TestStruct(const TestStruct &other)
+        : id(other.id)
+    {
+        std::cout << "Copy TestStruct " << id << "\n";
+    }
+    /*TestStruct &operator=(const TestStruct &other)
+    {
+        id = other.id;
+        std::cout << "Copy-assign TestStruct " << id << "\n";
+
+        return *this;
+    }*/
+    ~TestStruct()
+    {
+        std::cout << "Destroy TestStruct " << id << "\n";
+    }
+};
+
 int main()
 {
     using namespace hyperion::renderer;
     
     SystemSDL system;
-    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 768);
+    SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 1024);//2048, 1080);
     system.SetCurrentWindow(window);
 
     SystemEvent event;
 
     auto *engine = new v2::Engine(system, "My app");
 
+    /*DynArray<TestStruct> test_dyn_array;
+    test_dyn_array.PushBack(TestStruct(1));
+    test_dyn_array.PushBack(TestStruct(2));
+    test_dyn_array.PushBack(TestStruct(3));
+    test_dyn_array.PushBack(TestStruct(4));
+    test_dyn_array.EmplaceBack(1);
+
+    auto it = test_dyn_array.FindIf([](const TestStruct &item) {
+        return item.id == 3;
+    });
+    if (it != test_dyn_array.End()) {
+        test_dyn_array.Erase(it);
+    }
+
+    test_dyn_array.Resize(25);
+
+    test_dyn_array.Reserve(20);
+
+    test_dyn_array[test_dyn_array.Size() - 1] = 999;
+
+    //test_dyn_array.Pop();
+    //test_dyn_array.Refit();
+
+    for (auto it = test_dyn_array.Begin(); it != test_dyn_array.End();) {
+        //std::cout << "item : " << item.id << "\n";
+
+        if (it->id == 4) {
+            it = test_dyn_array.Erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    for (auto &it : test_dyn_array) {
+        std::cout << "item : " << it.id << "\n";
+    }*/
+
     engine->assets.SetBasePath(v2::FileSystem::Join(HYP_ROOT_DIR, "../res"));
 
     auto *my_game = new v2::MyGame;
-
-#if HYPERION_VK_TEST_IMAGE_STORE
-    renderer::Image *image_storage = new renderer::StorageImage(
-        Extent3D{512, 512, 1},
-        Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8,
-        Image::Type::TEXTURE_TYPE_2D,
-        nullptr
-    );
-
-    ImageView image_storage_view;
-#endif
-    
+;
     engine->Initialize();
 
     Device *device = engine->GetInstance()->GetDevice();
-
-#if HYPERION_VK_TEST_IMAGE_STORE
-    descriptor_set_globals
-        ->AddDescriptor<StorageImageDescriptor>(16)
-        ->SetSubDescriptor({.image_view = &image_storage_view});
-
-    HYPERION_ASSERT_RESULT(image_storage->Create(
-        device,
-        engine->GetInstance(),
-        GPUMemory::ResourceState::UNORDERED_ACCESS
-    ));
-
-    HYPERION_ASSERT_RESULT(image_storage_view.Create(device, image_storage));
-#endif
-
-#if HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE
-    v2::SparseVoxelOctree svo;
-    svo.Init(engine);
-#endif
 
     engine->PrepareSwapchain();
 
@@ -605,37 +636,7 @@ int main()
     );
     
     Frame *frame = nullptr;
-
-#if HYPERION_VK_TEST_IMAGE_STORE
-    /* Compute */
-    auto compute_pipeline = engine->resources.compute_pipelines.Add(
-        std::make_unique<v2::ComputePipeline>(
-            engine->resources.shaders.Add(std::make_unique<v2::Shader>(
-                std::vector<v2::SubShader>{
-                    { ShaderModule::Type::COMPUTE, {FileByteReader(v2::FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/imagestore.comp.spv")).Read()}}
-                }
-            ))
-        )
-    );
-
-    compute_pipeline.Init();
-
-    auto compute_command_buffer = std::make_unique<CommandBuffer>(CommandBuffer::Type::COMMAND_BUFFER_PRIMARY);
-
-    SemaphoreChain compute_semaphore_chain({}, { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT });
-    AssertThrow(compute_semaphore_chain.Create(engine->GetInstance()->GetDevice()));
-
-    HYPERION_ASSERT_RESULT(compute_command_buffer->Create(engine->GetInstance()->GetDevice(), engine->GetInstance()->GetComputeCommandPool()));
     
-    for (size_t i = 0; i < engine->GetInstance()->GetFrameHandler()->NumFrames(); i++) {
-        /* Wait for compute to finish */
-        compute_semaphore_chain.SignalsTo(engine->GetInstance()->GetFrameHandler()
-            ->GetPerFrameData()[i].Get<Frame>()
-            ->GetPresentSemaphores());
-    }
-#endif
-    
-
     PerFrameData<CommandBuffer, Semaphore> per_frame_data(engine->GetInstance()->GetFrameHandler()->NumFrames());
 
     for (uint32_t i = 0; i < per_frame_data.NumFrames(); i++) {
@@ -700,7 +701,6 @@ int main()
 
 #if HYPERION_VK_TEST_VCT
     vct = new v2::VoxelConeTracing({
-        /* scene bounds for vct to capture */
         .aabb = BoundingBox(Vector3(-32), Vector3(32))
     });
 
@@ -778,16 +778,6 @@ int main()
 
 #if HYPERION_RUN_TESTS
     AssertThrow(test::GlobalTestManager::PrintReport(test::GlobalTestManager::Instance()->RunAll()));
-#endif
-
-
-#if HYPERION_VK_TEST_SPARSE_VOXEL_OCTREE
-    svo.Build(engine);
-#endif
-
-#if HYPERION_VK_TEST_IMAGE_STORE
-    auto compute_fc = std::make_unique<Fence>(true);
-    HYPERION_ASSERT_RESULT(compute_fc->Create(engine->GetDevice()));
 #endif
 
     engine->game_thread.Start(engine, my_game, window);
@@ -943,44 +933,6 @@ int main()
             );*/
         }
 
-#if HYPERION_VK_TEST_IMAGE_STORE
-        compute_pipeline->GetPipeline()->push_constants = {
-            .counter = {
-                .x = static_cast<uint32_t>(std::sin(0.0f) * 20.0f),
-                .y = static_cast<uint32_t>(std::cos(0.0f) * 20.0f)
-            }
-        };
-
-        /* Compute */
-        HYPERION_ASSERT_RESULT(compute_fc->WaitForGpu(engine->GetDevice()));
-        HYPERION_ASSERT_RESULT(compute_fc->Reset(engine->GetDevice()));
-        
-        HYPERION_ASSERT_RESULT(compute_command_buffer->Reset(engine->GetInstance()->GetDevice()));
-        HYPERION_ASSERT_RESULT(compute_command_buffer->Record(engine->GetInstance()->GetDevice(), nullptr, [&](CommandBuffer *cmd) {
-            compute_pipeline->GetPipeline()->Bind(cmd);
-
-            engine->GetInstance()->GetDescriptorPool().Bind(
-                engine->GetInstance()->GetDevice(),
-                cmd,
-                compute_pipeline->GetPipeline(),
-                {{
-                    .set = DescriptorSet::DESCRIPTOR_SET_INDEX_GLOBAL,
-                    .count = 1
-                }}
-            );
-
-            compute_pipeline->GetPipeline()->Dispatch(cmd, {8, 8, 1});
-
-            HYPERION_RETURN_OK;
-        }));
-
-        HYPERION_ASSERT_RESULT(compute_command_buffer->SubmitPrimary(
-            engine->GetInstance()->GetComputeQueue().queue,
-            compute_fc.get(),
-            &compute_semaphore_chain
-        ));
-#endif
-
         engine->UpdateBuffersAndDescriptors(frame_index);
         engine->ResetRenderState();
 
@@ -1031,12 +983,6 @@ int main()
 
         engine->RenderDeferred(frame);
         
-#if HYPERION_VK_TEST_IMAGE_STORE
-        image_storage->GetGPUImage()->InsertBarrier(
-            frame->GetCommandBuffer(),
-            GPUMemory::ResourceState::UNORDERED_ACCESS
-        );
-#endif
 
         engine->RenderFinalPass(frame);
 
@@ -1053,27 +999,13 @@ int main()
     AssertThrow(engine->GetInstance()->GetDevice()->Wait());
 
     v2::FullScreenPass::full_screen_quad.reset();// have to do this here for now or else buffer does not get cleared before device is deleted
-
-#if HYPERION_VK_TEST_IMAGE_STORE
-    HYPERION_ASSERT_RESULT(image_storage_view.Destroy(device));
-    HYPERION_ASSERT_RESULT(image_storage->Destroy(device));
-
-    delete image_storage;
-
-#endif
+    
 
     for (size_t i = 0; i < per_frame_data.NumFrames(); i++) {
         per_frame_data[i].Get<CommandBuffer>()->Destroy(engine->GetInstance()->GetDevice(), engine->GetInstance()->GetGraphicsCommandPool());
     }
     per_frame_data.Reset();
-
-#if HYPERION_VK_TEST_IMAGE_STORE
-    compute_command_buffer->Destroy(device, engine->GetInstance()->GetComputeCommandPool());
-    compute_semaphore_chain.Destroy(engine->GetInstance()->GetDevice());
-
-    compute_fc->Destroy(engine->GetDevice());
-#endif
-
+    
 #if HYPERION_VK_TEST_RAYTRACING
 
     rt_image_storage->Destroy(engine->GetDevice());

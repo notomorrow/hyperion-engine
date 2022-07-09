@@ -20,7 +20,7 @@ namespace renderer {
 
 class Features {
 public:
-    struct {
+    struct DynamicFunctions {
 #define HYP_DECL_FN(name) PFN_##name name = nullptr
 
         HYP_DECL_FN(vkGetBufferDeviceAddressKHR);
@@ -34,13 +34,21 @@ public:
         HYP_DECL_FN(vkGetRayTracingShaderGroupHandlesKHR);
         HYP_DECL_FN(vkCreateRayTracingPipelinesKHR);
 
+        //debugging
+        HYP_DECL_FN(vkCmdDebugMarkerBeginEXT);
+        HYP_DECL_FN(vkCmdDebugMarkerEndEXT);
+        HYP_DECL_FN(vkCmdDebugMarkerInsertEXT);
+        HYP_DECL_FN(vkDebugMarkerSetObjectNameEXT);
+
 #if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
         HYP_DECL_FN(vkGetMoltenVKConfigurationMVK);
         HYP_DECL_FN(vkSetMoltenVKConfigurationMVK);
 #endif
 
 #undef HYP_DECL_FN
-    } dyn_functions;
+    };
+
+    static DynamicFunctions dyn_functions;
 
     Features();
     Features(VkPhysicalDevice);

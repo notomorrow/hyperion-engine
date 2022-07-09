@@ -62,27 +62,6 @@ void GaussianBlurAccum(
     inout float divisor
 )
 {
-    // #if defined(HYP_SSR_BLUR_HORIZONTAL)
-    //     const ivec2 blur_step = ivec2(1, 0);
-    // #elif defined(HYP_SSR_BLUR_VERTICAL)
-    //     const ivec2 blur_step = ivec2(0, 1);
-    // #else
-    //     #error No direction defined
-    // #endif
-
-    // vec4 result = vec4(0.0);
-
-    // float r = imageLoad(ssr_radius_image, ivec2(texcoord * vec2(ssr_params.dimension))).r * 255.0;
-
-    // for (int i = -1; i < 1; i++) {
-    //     ivec2 tc = ivec2(texcoord * vec2(ssr_params.dimension)) + blur_step * r;
-
-    //     reflection_sample += imageLoad(HYP_SSR_PREV_IMAGE, tc);
-    //     divisor += 1.0;
-    // }
-
-
-#if 1
     for (int i = 1; i < GAUSS_TABLE_SIZE; i++) {
         const float d = float(i * HYP_SSR_MAX_BLUR_INCREMENT);
 
@@ -105,9 +84,7 @@ void GaussianBlurAccum(
         //tc *= inv_aspect;
 #endif
 
-        float r = accum_radius;//imageLoad(ssr_radius_image, tc).r;
-        // const float depth = SampleGBuffer(gbuffer_depth_texture, vec2(tc) / vec2(ssr_params.dimension)).r;
-        // r *= LinearDepth(scene.projection, depth);
+        float r = accum_radius;
         const float sample_radius = r * 255.0;
 
         if (d < sample_radius) {
@@ -117,14 +94,8 @@ void GaussianBlurAccum(
 
 
             divisor += weight;
-
-#ifdef HYP_SSR_BLUR_HORIZONTAL
-            accum_radius += r * weight;
-#endif
         }
     }
-
-    #endif
 }
 
 void main(void)
@@ -153,10 +124,6 @@ void main(void)
             accum_radius      /= divisor;
         }
     // }
-
-#ifdef HYP_SSR_BLUR_HORIZONTAL
-    //imageStore(ssr_radius_image, coord, vec4(accum_radius / 255.0));
-#endif
 
 #ifdef HYP_SSR_BLUR_VERTICAL
     reflection_sample.rgb = pow(reflection_sample.rgb, vec3(1.0 / 2.2));

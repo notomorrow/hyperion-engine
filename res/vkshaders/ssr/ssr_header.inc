@@ -53,7 +53,7 @@ float isoscelesTriangleInRadius(float a, float h)
 
 vec4 coneSampleWeightedColor(vec2 samplePos, float mipChannel, float gloss)
 {
-    vec4 sampleColor = textureLod(gbuffer_mip_chain, samplePos, mipChannel);//colorBuffer.SampleLevel(sampTrilinearClamp, samplePos, mipChannel).rgb;
+    vec4 sampleColor = Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, samplePos, mipChannel);
     return sampleColor * gloss;
 }
 
