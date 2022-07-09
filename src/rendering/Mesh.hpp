@@ -59,16 +59,17 @@ public:
     Mesh &operator=(const Mesh &other) = delete;
     ~Mesh();
 
-    inline VertexBuffer *GetVertexBuffer() const                 { return m_vbo.get(); }
-    inline IndexBuffer *GetIndexBuffer() const                   { return m_ibo.get(); }
+    inline VertexBuffer *GetVertexBuffer() const                   { return m_vbo.get(); }
+    inline IndexBuffer *GetIndexBuffer() const                     { return m_ibo.get(); }
 
-    inline const std::vector<Vertex> &GetVertices() const        { return m_vertices; }
-    inline const std::vector<Index> &GetIndices() const          { return m_indices; }
+    inline const std::vector<Vertex> &GetVertices() const          { return m_vertices; }
+    inline const std::vector<Index> &GetIndices() const            { return m_indices; }
 
-    const VertexAttributeSet &GetVertexAttributes() const        { return m_vertex_attributes; }
+    const VertexAttributeSet &GetVertexAttributes() const          { return m_vertex_attributes; }
+    void SetVertexAttributes(const VertexAttributeSet &attributes) { m_vertex_attributes = attributes; }
 
-    Flags GetFlags() const                                       { return m_flags; }
-    inline void SetFlags(Flags flags)                            { m_flags = flags; }
+    Flags GetFlags() const                                         { return m_flags; }
+    inline void SetFlags(Flags flags)                              { m_flags = flags; }
 
     std::vector<PackedVertex> BuildPackedVertices() const;
     std::vector<PackedIndex> BuildPackedIndices() const;

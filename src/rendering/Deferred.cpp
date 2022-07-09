@@ -12,7 +12,7 @@ using renderer::DescriptorKey;
 using renderer::Rect;
 
 DeferredPass::DeferredPass(bool is_indirect_pass)
-    : FullScreenPass(Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB),
+    : FullScreenPass(Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA16F),
       m_is_indirect_pass(is_indirect_pass)
 {
 }
@@ -362,7 +362,7 @@ void ScreenspaceReflectionRenderer::Render(
             .height                 = m_extent.height,
             .ray_step               = 0.75f,
             .num_iterations         = 30.0f,
-            .max_ray_distance       = 64.0f,
+            .max_ray_distance       = 128.0f,
             .distance_bias          = 0.1f,
             .offset                 = 0.01f,
             .eye_fade_start         = 0.45f,

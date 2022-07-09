@@ -54,7 +54,7 @@ void main(void)
         const float cone_angle     = RoughnessToConeAngle(roughness);
 
         const float trace_size    = float(max(ssr_params.dimension.x, ssr_params.dimension.y));
-        const float max_mip_level = 5.0;
+        const float max_mip_level = 7.0;
 
         const vec2 delta_p = (uv - texcoord) * ssr_params.dimension;
         float adj_length   = length(delta_p);
