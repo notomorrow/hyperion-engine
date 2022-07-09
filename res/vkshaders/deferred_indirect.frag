@@ -39,7 +39,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 20000.0
+#define IBL_INTENSITY 30000.0
 #define IRRADIANCE_MULTIPLIER 1.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0

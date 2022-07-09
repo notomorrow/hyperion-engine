@@ -45,142 +45,63 @@ bool rayIntersectDepth(float rayZNear, float rayZFar, vec2 hitPixel)
 
 vec2 scene_resolution = vec2(ssr_params.dimension);
 
-bool traceScreenSpaceRay(
+bool TraceRays(
     vec3 rayOrigin, vec3 rayDir, float jitter,
     out vec2 hitPixel, out vec3 hitPoint, out float iterationCount
 )
 {
-#define HYP_SSR_NEAR_PLANE -0.9
-
-    // Clip to the near plane
-    float rayLength = ((rayOrigin.z + rayDir.z * SSR_MAX_RAY_DISTANCE) > HYP_SSR_NEAR_PLANE)
-        ? (HYP_SSR_NEAR_PLANE - rayOrigin.z) / rayDir.z : SSR_MAX_RAY_DISTANCE;
-
-    vec3 rayEnd = rayOrigin + rayDir * rayLength;
-
-    // Project into homogeneous clip space
-    vec4 H0 = scene.projection * vec4(rayOrigin, 1.0);
-    vec4 H1 = scene.projection * vec4(rayEnd, 1.0);
-
-    float k0 = 1.0 / H0.w, k1 = 1.0 / H1.w;
-
-    // The interpolated homogeneous version of the camera space points
-    vec3 Q0 = rayOrigin * k0, Q1 = rayEnd * k1;
-
-    // Screen space endpoints
-    // PENDING viewportSize ?
-    vec2 P0 = (H0.xy * k0 * 0.5 + 0.5) * scene_resolution;
-    vec2 P1 = (H1.xy * k1 * 0.5 + 0.5) * scene_resolution;
-
-    // If the line is degenerate, make it cover at least one pixel to avoid handling
-    // zero-pixel extent as a special case later
-    P1 += dot(P1 - P0, P1 - P0) < 0.0001 ? 0.01 : 0.0;
-    vec2 delta = P1 - P0;
-
-    // Permute so that the primary iteration is in x to collapse
-    // all quadrant-specific DDA case later
-    bool permute = false;
-    if (abs(delta.x) < abs(delta.y)) {
-        // More vertical line
-        permute = true;
-        delta = delta.yx;
-        P0 = P0.yx;
-        P1 = P1.yx;
-    }
-    float stepDir = sign(delta.x);
-    float invdx = stepDir / delta.x;
-
-    // Track the derivatives of Q and K
-    vec3 dQ = (Q1 - Q0) * invdx;
-    float dk = (k1 - k0) * invdx;
-    vec2 dP = vec2(stepDir, delta.y * invdx);
-
-    // Calculate pixel stride based on distance of ray origin from camera.
-    // Since perspective means distant objects will be smaller in screen space
-    // we can use this to have higher quality reflections for far away objects
-    // while still using a large pixel stride for near objects (and increase performance)
-    // this also helps mitigate artifacts on distant reflections when we use a large
-    // pixel stride.
-
-    // Disabled for now: causing some bad artifacting.
-    float strideScaler = 1.0;// - min(1.0, -rayOrigin.z / SSR_PIXEL_STRIDE_CUTOFF);
-    float pixStride = 1.0 + strideScaler * SSR_PIXEL_STRIDE;
-
-    // Scale derivatives by the desired pixel stride and the offset the starting values by the jitter fraction
-    dP *= pixStride; dQ *= pixStride; dk *= pixStride;
-
-    // Track ray step and derivatives in a vec4 to parallelize
-    vec4 pqk = vec4(P0, Q0.z, k0);
-    vec4 dPQK = vec4(dP, dQ.z, dk);
-
-    pqk += dPQK * jitter;
-
-    float prev_z_max_estimate = rayOrigin.z;
-    float rayZFar = prev_z_max_estimate ;// = (dPQK.z * 0.5 + pqk.z) / (dPQK.w * 0.5 + pqk.w);
-    float rayZNear = prev_z_max_estimate;
-
     bool intersect = false;
-
-    vec2 texelSize = 1.0 / scene_resolution;
-
     iterationCount = 0.0;
 
-    for (int i = 0; i < SSR_MAX_ITERATIONS; i++)
-    {
-        pqk += dPQK;
+    vec3 step = ssr_params.ray_step * normalize(rayDir);
+    vec3 marchingPosition = rayOrigin;
+    float depthFromScreen;
+    vec2 screenPosition;
+    float step_delta;
 
-        rayZNear = prev_z_max_estimate;
-        rayZFar = (dPQK.z * 0.5 + pqk.z) / (dPQK.w * 0.5 + pqk.w);
-        prev_z_max_estimate = rayZFar;
+    int i = 0;
 
-        hitPixel = permute ? pqk.yx : pqk.xy;
-        hitPixel *= texelSize;
+	for (; i < ssr_params.num_iterations; i++) {
+        marchingPosition += step;
 
-        intersect = rayIntersectDepth(rayZNear, rayZFar, hitPixel);
+        hitPixel = generateProjectedPosition(marchingPosition);
 
+        float depth = SampleGBuffer(gbuffer_depth_texture, hitPixel).x;
+
+        depthFromScreen = generatePositionFromDepth(hitPixel, depth).z;
+
+        step_delta = marchingPosition.z - depthFromScreen;
+
+        intersect = step_delta > 0.0;
         iterationCount += 1.0;
 
-        // PENDING Right on all platforms?
         if (intersect) {
             break;
         }
     }
 
-    // Binary search refinement
-    // FIXME If intersect in first iteration binary search may easily lead to the pixel of reflect object it self
-    if (pixStride > 1.0 && intersect && iterationCount > 1.0)
-    {
-        // Roll back
-        pqk -= dPQK;
-        dPQK /= pixStride;
+    const int max_binary_search_steps = 8;
 
-        float originalStride = pixStride * 0.5;
-        float stride = originalStride;
+	if (intersect) {
+		// binary search
+		for (i = 0; i < max_binary_search_steps; i++) {
+            step *= 0.5;
+            marchingPosition = marchingPosition - step * sign(step_delta);
 
-        rayZNear = pqk.z / pqk.w;
-        rayZFar = rayZNear;
+            hitPixel = generateProjectedPosition(marchingPosition);
+            depthFromScreen = abs(generatePositionFromDepth(hitPixel, SampleGBuffer(gbuffer_depth_texture, hitPixel).x).z);
+            step_delta = abs(marchingPosition.z) - depthFromScreen;
 
-        for (int j = 0; j < SSR_MAX_BINARY_SEARCH_ITERATIONS; j++)
-        {
-            pqk += dPQK * stride;
-            rayZNear = rayZFar;
-            rayZFar = (dPQK.z * -0.5 + pqk.z) / (dPQK.w * -0.5 + pqk.w);
-            hitPixel = permute ? pqk.yx : pqk.xy;
-            hitPixel *= texelSize;
-
-            originalStride *= 0.5;
-            stride = rayIntersectDepth(rayZNear, rayZFar, hitPixel) ? -originalStride : originalStride;
+            if (abs(step_delta) < ssr_params.distance_bias) {
+                return true;
+            }
         }
     }
 
-    Q0.xy += dQ.xy * iterationCount;
-    Q0.z = pqk.z;
-    hitPoint = Q0 / pqk.w;
-
-    return intersect;
+    return false;
 }
 
-float calculateAlpha(
+float CalculateAlpha(
     float iterationCount, float reflectivity,
     vec2 hitPixel, vec3 hitPoint, float dist, vec3 rayDir
 )
@@ -198,7 +119,7 @@ float calculateAlpha(
     //alpha *= 1.0 - (eyeDir - SSR_EYE_FADE_START) / (SSR_EYE_FADE_END - SSR_EYE_FADE_START);
 
     // Fade ray hits based on distance from ray origin
-    alpha *= 1.0 - clamp(dist / SSR_MAX_RAY_DISTANCE, 0.0, 1.0);
+    //alpha *= 1.0 - clamp(dist / SSR_MAX_RAY_DISTANCE, 0.0, 1.0);
 
     return alpha;
 }
@@ -223,11 +144,11 @@ void main(void)
     vec2 uv2 = texcoord * scene_resolution;
     float jitter = fract((texcoord.x + texcoord.y) * 0.25 + SSR_JITTER_OFFSET);
 
-    bool intersect = traceScreenSpaceRay(rayOrigin, rayDir, jitter, hitPixel, hitPoint, iterationCount);
+    bool intersect = TraceRays(rayOrigin, rayDir, jitter, hitPixel, hitPoint, iterationCount);
 
     float dist = distance(rayOrigin, hitPoint);
 
-    float alpha = calculateAlpha(iterationCount, 1.0 /* reflectivity */, hitPixel, hitPoint, dist, rayDir) * float(intersect);
+    float alpha = CalculateAlpha(iterationCount, 1.0 /* reflectivity */, hitPixel, hitPoint, dist, rayDir) * float(intersect);
 
     vec3 hitNormal = DecodeNormal(SampleGBuffer(gbuffer_normals_texture, hitPixel));
     hitNormal = normalize((scene.view * vec4(hitNormal, 0.0)).xyz);
@@ -244,5 +165,5 @@ void main(void)
         return;
     }
 
-    imageStore(ssr_uvs, coord, vec4(hitPixel.xy, 0.0, 1.0));//vec4(hitPixel, 0.0, alpha));
+    imageStore(ssr_uvs, coord, vec4(hitPixel, 0.0, alpha));
 }
