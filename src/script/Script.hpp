@@ -35,7 +35,7 @@ public:
 
     const ErrorList &GetErrors() const { return m_errors; }
 
-    ExportedSymbolTable &GetExportedSymbols() { return m_vm.GetState().GetExportedSymbols(); }
+    ExportedSymbolTable &GetExportedSymbols()             { return m_vm.GetState().GetExportedSymbols(); }
     const ExportedSymbolTable &GetExportedSymbols() const { return m_vm.GetState().GetExportedSymbols(); }
 
     VM &GetVM() { return m_vm; }

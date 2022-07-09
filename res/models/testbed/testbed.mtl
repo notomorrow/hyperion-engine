@@ -238,12 +238,11 @@ Kd 0.800000 0.800000 0.800000
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 
-map_kD carpet1-ue/carpet1-albedo.png
-map_bump carpet1-ue/carpet1-Normal-dx.png
-map_kS carpet1-ue/carpet1-Metallic.png
-map_nS carpet1-ue/carpet1-Roughness.png
-map_ao carpet1-ue/carpet1-ao.png
-map_height carpet1-ue/carpet1-Height.png
+map_kD mahogfloor_basecolor.png
+map_bump mahogfloor_normal.png
+map_nS mahogfloor_roughness.png
+map_ao mahogfloor_AO.png
+map_height mahogfloor_Height.png
 Ni 1.450000
 d 1.000000
 illum 2

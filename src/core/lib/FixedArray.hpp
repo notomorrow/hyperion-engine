@@ -1,6 +1,7 @@
 #ifndef HYPERION_V2_LIB_FIXED_ARRAY_H
 #define HYPERION_V2_LIB_FIXED_ARRAY_H
 
+#include "ContainerBase.hpp"
 #include <util/Defines.hpp>
 #include <Types.hpp>
 
@@ -10,7 +11,7 @@
 namespace hyperion {
 
 template <class T, size_t Sz>
-class FixedArray {
+class FixedArray : public ContainerBase<FixedArray<T, Sz>, UInt> {
     T m_data[Sz];
 
 public:
@@ -59,25 +60,25 @@ public:
     ~FixedArray();
 
     HYP_FORCE_INLINE
-    T &operator[](UInt index)               { return m_data[index]; }
+    T &operator[](typename FixedArray::Base::KeyType index)               { return m_data[index]; }
 
     HYP_FORCE_INLINE
-    const T &operator[](UInt index) const   { return m_data[index]; }
+    const T &operator[](typename FixedArray::Base::KeyType index) const   { return m_data[index]; }
 
     HYP_FORCE_INLINE
-    size_t Size() const                     { return Sz; }
+    size_t Size() const                                                   { return Sz; }
 
     HYP_FORCE_INLINE
-    bool Empty() const                      { return Sz == 0; }
+    bool Empty() const                                                    { return Sz == 0; }
 
     HYP_FORCE_INLINE
-    bool Any() const                        { return Sz != 0; }
+    bool Any() const                                                      { return Sz != 0; }
 
     HYP_FORCE_INLINE
-    T *Data()                               { return static_cast<T *>(m_data); }
+    T *Data()                                                             { return static_cast<T *>(m_data); }
 
     HYP_FORCE_INLINE
-    const T *Data() const                   { return static_cast<const T *>(m_data); }
+    const T *Data() const                                                 { return static_cast<const T *>(m_data); }
 
     HYP_DEF_STL_BEGIN_END(&m_data[0], &m_data[Sz])
 };

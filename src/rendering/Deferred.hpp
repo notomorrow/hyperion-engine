@@ -20,6 +20,57 @@ using renderer::ImageView;
 using renderer::Sampler;
 using renderer::Device;
 
+class ScreenspaceReflectionRenderer {
+public:
+    ScreenspaceReflectionRenderer(const Extent2D &extent);
+    ~ScreenspaceReflectionRenderer();
+
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
+
+    void Render(
+        Engine *engine,
+        Frame *frame
+    );
+
+private:
+    void CreateDescriptors(Engine *engine);
+    void CreateComputePipelines(Engine *engine);
+    
+    struct SSRImageOutput {
+        std::unique_ptr<Image>     image;
+        std::unique_ptr<ImageView> image_view;
+
+        void Create(Device *device)
+        {
+            AssertThrow(image != nullptr);
+            AssertThrow(image_view != nullptr);
+
+            HYPERION_ASSERT_RESULT(image->Create(device));
+            HYPERION_ASSERT_RESULT(image_view->Create(device, image.get()));
+        }
+
+        void Destroy(Device *device)
+        {
+            AssertThrow(image != nullptr);
+            AssertThrow(image_view != nullptr);
+
+            HYPERION_ASSERT_RESULT(image->Destroy(device));
+            HYPERION_ASSERT_RESULT(image_view->Destroy(device));
+        }
+    };
+
+    Extent2D                                                        m_extent;
+
+    std::array<std::array<SSRImageOutput, 4>, max_frames_in_flight> m_ssr_image_outputs;
+    std::array<SSRImageOutput, max_frames_in_flight>                m_ssr_radius_output;
+
+    Ref<ComputePipeline>                                            m_ssr_write_uvs;
+    Ref<ComputePipeline>                                            m_ssr_sample;
+    Ref<ComputePipeline>                                            m_ssr_blur_hor;
+    Ref<ComputePipeline>                                            m_ssr_blur_vert;
+};
+
 class DeferredPass : public FullScreenPass {
     friend class DeferredRenderer;
 public:
@@ -58,47 +109,18 @@ public:
     void Render(Engine *engine, Frame *frame);
 
 private:
-    void CreateComputePipelines(Engine *engine);
-    
-    struct SSRImageOutput {
-        std::unique_ptr<Image>     image;
-        std::unique_ptr<ImageView> image_view;
-
-        void Create(Device *device)
-        {
-            AssertThrow(image != nullptr);
-            AssertThrow(image_view != nullptr);
-
-            HYPERION_ASSERT_RESULT(image->Create(device));
-            HYPERION_ASSERT_RESULT(image_view->Create(device, image.get()));
-        }
-
-        void Destroy(Device *device)
-        {
-            AssertThrow(image != nullptr);
-            AssertThrow(image_view != nullptr);
-
-            HYPERION_ASSERT_RESULT(image->Destroy(device));
-            HYPERION_ASSERT_RESULT(image_view->Destroy(device));
-        }
-    };
+    ScreenspaceReflectionRenderer                                  m_ssr;
 
     void RenderOpaqueObjects(Engine *engine, Frame *frame);
     void RenderTranslucentObjects(Engine *engine, Frame *frame);
 
-    DeferredPass   m_indirect_pass;
-    DeferredPass   m_direct_pass;
-    PostProcessing m_post_processing;
+    DeferredPass                                                    m_indirect_pass;
+    DeferredPass                                                    m_direct_pass;
+    PostProcessing                                                  m_post_processing;
 
     std::array<Ref<Texture>, max_frames_in_flight>                  m_mipmapped_results;
+    std::array<Ref<Texture>, max_frames_in_flight>                  m_depth_pyramids;
     std::unique_ptr<Sampler>                                        m_sampler;
-    std::array<std::array<SSRImageOutput, 4>, max_frames_in_flight> m_ssr_image_outputs;
-    std::array<SSRImageOutput, max_frames_in_flight>                m_ssr_radius_output;
-
-    Ref<ComputePipeline>                                            m_ssr_write_uvs;
-    Ref<ComputePipeline>                                            m_ssr_sample;
-    Ref<ComputePipeline>                                            m_ssr_blur_hor;
-    Ref<ComputePipeline>                                            m_ssr_blur_vert;
 };
 
 } // namespace hyperion::v2

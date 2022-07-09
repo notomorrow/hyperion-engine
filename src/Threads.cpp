@@ -3,9 +3,9 @@
 namespace hyperion::v2 {
 
 const FlatMap<ThreadName, ThreadId> Threads::thread_ids {
-    std::make_pair(THREAD_MAIN,    ThreadId{static_cast<UInt>(THREAD_MAIN),    "MainThread"}),
-    std::make_pair(THREAD_GAME,    ThreadId{static_cast<UInt>(THREAD_GAME),    "GameThread"}),
-    std::make_pair(THREAD_TERRAIN, ThreadId{static_cast<UInt>(THREAD_TERRAIN), "TerrainGenerationThread"})
+    decltype(thread_ids)::Pair { THREAD_MAIN,    ThreadId { static_cast<UInt>(THREAD_MAIN),    "MainThread" } },
+    decltype(thread_ids)::Pair { THREAD_GAME,    ThreadId { static_cast<UInt>(THREAD_GAME),    "GameThread" } },
+    decltype(thread_ids)::Pair { THREAD_TERRAIN, ThreadId { static_cast<UInt>(THREAD_TERRAIN), "TerrainGenerationThread" } }
 };
 
 #if HYP_ENABLE_THREAD_ASSERTION

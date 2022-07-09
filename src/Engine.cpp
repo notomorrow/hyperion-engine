@@ -535,8 +535,10 @@ Ref<GraphicsPipeline> Engine::AddGraphicsPipeline(std::unique_ptr<GraphicsPipeli
 {
     auto graphics_pipeline = resources.graphics_pipelines.Add(std::move(pipeline));
     
-    std::pair<RenderableAttributeSet, GraphicsPipeline::ID> pair{graphics_pipeline->GetRenderableAttributes(), graphics_pipeline->GetId()};
-    m_graphics_pipeline_mapping.Insert(std::move(pair));
+    m_graphics_pipeline_mapping.Insert(
+        graphics_pipeline->GetRenderableAttributes(),
+        graphics_pipeline->GetId()
+    );
 
     m_render_list_container
         .Get(graphics_pipeline->GetRenderableAttributes().bucket)

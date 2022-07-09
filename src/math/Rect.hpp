@@ -8,14 +8,14 @@ namespace hyperion {
 
 struct Rect {
     union {
-        struct {
+        struct {  // NOLINT(clang-diagnostic-nested-anon-types)
             float left,
-                right,
-                top,
-                bottom;
+                  right,
+                  top,
+                  bottom;
         };
 
-        struct {
+        struct {  // NOLINT(clang-diagnostic-nested-anon-types)
             Vector2 coord;
             Vector2 dimension;
         };
@@ -23,7 +23,7 @@ struct Rect {
 
     Vector4 ToVector4() const
     {
-        return {left, right, top, bottom};
+        return { left, right, top, bottom };
     }
 };
 

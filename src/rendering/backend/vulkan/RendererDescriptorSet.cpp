@@ -18,22 +18,23 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
     {
         DESCRIPTOR_SET_INDEX_GLOBAL,
         {
-            {DescriptorKey::GBUFFER_TEXTURES,     0},
-            {DescriptorKey::GBUFFER_DEPTH,        1},
-            {DescriptorKey::GBUFFER_MIP_CHAIN,    2},
-            {DescriptorKey::GBUFFER_SAMPLER,      3},
+            {DescriptorKey::GBUFFER_TEXTURES,       0},
+            {DescriptorKey::GBUFFER_DEPTH,          1},
+            {DescriptorKey::GBUFFER_MIP_CHAIN,      2},
+            {DescriptorKey::GBUFFER_DEPTH_PYRAMID,  3},
+            {DescriptorKey::GBUFFER_SAMPLER,        4},
 
-            {DescriptorKey::DEFERRED_RESULT,      4},
+            {DescriptorKey::DEFERRED_RESULT,        5},
 
-            {DescriptorKey::POST_FX_PRE_STACK,    8},
-            {DescriptorKey::POST_FX_POST_STACK,   9},
-            {DescriptorKey::POST_FX_UNIFORMS,    10},
+            {DescriptorKey::POST_FX_PRE_STACK,      8},
+            {DescriptorKey::POST_FX_POST_STACK,     9},
+            {DescriptorKey::POST_FX_UNIFORMS,      10},
 
-            {DescriptorKey::SSR_UV_IMAGE,        12},
-            {DescriptorKey::SSR_SAMPLE_IMAGE,    13},
-            {DescriptorKey::SSR_RADIUS_IMAGE,    14},
-            {DescriptorKey::SSR_BLUR_HOR_IMAGE,  15},
-            {DescriptorKey::SSR_BLUR_VERT_IMAGE, 16},
+            {DescriptorKey::SSR_UV_IMAGE,          12},
+            {DescriptorKey::SSR_SAMPLE_IMAGE,      13},
+            {DescriptorKey::SSR_RADIUS_IMAGE,      14},
+            {DescriptorKey::SSR_BLUR_HOR_IMAGE,    15},
+            {DescriptorKey::SSR_BLUR_VERT_IMAGE,   16},
 
             {DescriptorKey::SSR_UV_TEXTURE,        17},
             {DescriptorKey::SSR_SAMPLE_TEXTURE,    18},

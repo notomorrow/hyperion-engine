@@ -203,6 +203,9 @@ public:
         );
     }
 
+    void DebugMarkerBegin(const char *marker_name) const;
+    void DebugMarkerEnd() const;
+
     template <class LambdaFunction>
     Result Record(Device *device, const RenderPass *render_pass, const LambdaFunction &fn)
     {

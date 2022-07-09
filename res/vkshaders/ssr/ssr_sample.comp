@@ -61,7 +61,7 @@ void main(void)
         float adj_length   = length(delta_p);
         const vec2 adj_dir = normalize(delta_p);
 
-        for (int i = 0; i < SSR_KERNEL_SIZE; i++) {
+        // for (int i = 0; i < SSR_KERNEL_SIZE; i++) {
             /*float op_length      = isoscelesTriangleOpposite(adj_length, cone_angle);
             float current_radius = isoscelesTriangleInRadius(op_length, adj_length);
 
@@ -71,51 +71,49 @@ void main(void)
             vec2  hit_uv   = hit_data.xy;
             float hit_mask = hit_data.w;*/
 
-            const float filter_size = 0.0025;//1.0 / trace_size;
+            //const float filter_size = 0.0025;//1.0 / trace_size;
 
-            vec2 offset = VogelDisk(i, SSR_KERNEL_SIZE, gradient_noise);
+            //vec2 offset = VogelDisk(i, SSR_KERNEL_SIZE, gradient_noise);
             
-            vec2 sample_texcoord = texcoord + (offset * filter_size);
+            vec2 sample_texcoord = texcoord;//+ (offset * filter_size);
             ivec2 sample_coord   = ivec2(sample_texcoord * vec2(ssr_params.dimension));
 
             vec4  hit_data = imageLoad(ssr_uv_image, sample_coord);
             vec2  hit_uv   = hit_data.xy;
             float hit_mask = hit_data.w;
 
-            if (hit_mask < 0.001) {
-                continue;
+            if (hit_mask >= 0.001) {
+                const float current_radius = length((hit_uv - texcoord) * ssr_params.dimension) * cone_angle;//);
+                
+
+
+
+                // const float current_radius = length((hit_uv - texcoord) * ssr_params.dimension) * cone_angle;//);
+                
+                // const float op_length   = 2.0 * tan(cone_angle) * cone_length;
+
+                // // sphere in cone
+                // float a = op_length;
+                // float h = cone_length;
+                // float a2 = HYP_FMATH_SQR(a);
+                // float fh2 = 4.0 * h * h;
+                // float current_radius = (a * (sqrt(a2 + fh2) - a)) / 4.0 * h;
+
+                float mip_level = 0;//clamp(log2(current_radius), 0.0, max_mip_level);
+
+                vec4 current_reflection_sample = Texture2DLod(gbuffer_sampler, gbuffer_mip_chain, hit_uv, mip_level);
+                current_reflection_sample.a = hit_mask;
+
+                reflection_sample += current_reflection_sample;
+
+                adj_length = isoscelesTriangleNextAdjacent(adj_length, current_radius);
+
+                accum_radius += current_radius;
             }
+        //}
 
-            const float current_radius = length((hit_uv - texcoord) * ssr_params.dimension) * cone_angle;//);
-            
-
-
-
-            // const float current_radius = length((hit_uv - texcoord) * ssr_params.dimension) * cone_angle;//);
-            
-            // const float op_length   = 2.0 * tan(cone_angle) * cone_length;
-
-            // // sphere in cone
-            // float a = op_length;
-            // float h = cone_length;
-            // float a2 = HYP_FMATH_SQR(a);
-            // float fh2 = 4.0 * h * h;
-            // float current_radius = (a * (sqrt(a2 + fh2) - a)) / 4.0 * h;
-
-            float mip_level = 0;//clamp(log2(current_radius), 0.0, max_mip_level);
-
-            vec4 current_reflection_sample = textureLod(gbuffer_mip_chain, hit_uv, mip_level);
-            current_reflection_sample.a = hit_mask;
-
-            reflection_sample += current_reflection_sample;
-
-            adj_length = isoscelesTriangleNextAdjacent(adj_length, current_radius);
-
-            accum_radius += current_radius;
-        }
-
-        reflection_sample /= float(SSR_KERNEL_SIZE);
-        accum_radius      /= float(SSR_KERNEL_SIZE);
+        //reflection_sample /= float(SSR_KERNEL_SIZE);
+        //accum_radius      /= float(SSR_KERNEL_SIZE);
 
         reflection_sample.a *= clamp(1.0 - (roughness / HYP_SSR_ROUGHNESS_MAX), 0.0, 1.0);
         reflection_sample.a *= alpha;

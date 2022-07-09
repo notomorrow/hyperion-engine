@@ -89,50 +89,13 @@ Matrix4 Matrix4::Perspective(float fov, int w, int h, float n, float f)
     
     mat[3][2] = 1.0f;
     mat[3][3] = 0.0f;
-
-    /*const float aspect_ratio = static_cast<float>(w) / static_cast<float>(h);
-
-    const float scale_y = 1.0f / std::tan(fov / 2.0f);
-    const float scale_x = scale_y / aspect_ratio;
-
-    const float half_width = n / scale_x;
-    const float half_height = n / scale_y;
-
-    const Rect rect = {
-        .left   = -half_width,
-        .right  = half_width,
-        .top    = half_height,
-        .bottom = -half_height
-    };
-
-    const float range = f / (f - n);
-
-    mat[0][0] = 2.0f * n / (rect.right - rect.left);
-    mat[1][1] = 2.0f * n / (rect.top - rect.bottom);
-    mat[2][0] = (rect.left + rect.right) / (rect.left - rect.right);
-    mat[2][1] = (rect.top + rect.bottom) / (rect.bottom - rect.top);
-    mat[2][2] = range;
-    mat[2][3] = 1.0f;
-    mat[3][2] = -n * range;
-*/
+    
     return mat;
 }
 
 Matrix4 Matrix4::Orthographic(float l, float r, float b, float t, float n, float f)
 {
     Matrix4 mat;
-
-    /*float x_orth = 2.0f / (r - l);
-    float y_orth = 2.0f / (t - b);
-    float z_orth = 2.0f / (f - n);
-    float tx = -1.0f * ((r + l) / (r - l));
-    float ty = -1.0f * ((t + b) / (t - b));
-    float tz = -1.0f * ((f + n) / (f - n));
-    
-    mat[0] = {x_orth, 0, 0, tx};
-    mat[1] = {0, y_orth, 0, ty};
-    mat[2] = {0, 0, z_orth, tz};
-    mat[3] = {0, 0, 0, 1};*/
     
     float x_orth = 2.0f / (r - l);
     float y_orth = 2.0f / (t - b);

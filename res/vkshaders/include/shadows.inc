@@ -4,10 +4,9 @@
 #include "noise.inc"
 
 #define HYP_SHADOW_BIAS 0.005
-#define HYP_SHADOW_VARIABLE_BIAS 1
+#define HYP_SHADOW_VARIABLE_BIAS 0
 #define HYP_SHADOW_PENUMBRA 1
-#define HYP_SHADOW_NUM_SAMPLES 16
-#define HYP_SHADOW_PENUMBRA_NUM_SAMPLES 16
+#define HYP_SHADOW_NUM_SAMPLES 8
 #define HYP_SHADOW_PENUMBRA_MIN 0.1
 #define HYP_SHADOW_PENUMBRA_MAX 8.0
 
@@ -66,7 +65,21 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
     float total_blocker_depth = 0.0;
     float num_blockers = 0.0;
 
-    for (int i = 0; i < HYP_SHADOW_PENUMBRA_NUM_SAMPLES; i++) {
+#define HYP_DEF_VOGEL_DISK(iter_index) \
+    vec2 vogel_##iter_index = VogelDisk(iter_index, HYP_SHADOW_NUM_SAMPLES, gradient_noise)
+
+    HYP_DEF_VOGEL_DISK(0);
+    HYP_DEF_VOGEL_DISK(1);
+    HYP_DEF_VOGEL_DISK(2);
+    HYP_DEF_VOGEL_DISK(3);
+    HYP_DEF_VOGEL_DISK(4);
+    HYP_DEF_VOGEL_DISK(5);
+    HYP_DEF_VOGEL_DISK(6);
+    HYP_DEF_VOGEL_DISK(7);
+
+#undef HYP_DEF_VOGEL_DISK
+
+    /*for (int i = 0; i < HYP_SHADOW_PENUMBRA_NUM_SAMPLES; i++) {
         vec2 filter_uv = VogelDisk(i, HYP_SHADOW_PENUMBRA_NUM_SAMPLES, gradient_noise);
         float blocker_sample = texture(shadow_maps[index], coord.xy + (filter_uv * penumbra_filter_size)).r;
 
@@ -74,15 +87,52 @@ float GetShadowContactHardened(uint index, vec3 pos, float NdotL)
 
         total_blocker_depth += blocker_sample * is_blocking;
         num_blockers        += is_blocking;
+    }*/
+
+#define HYP_DO_SHADOW_PENUMBRA(iter_index) \
+    { \
+        float blocker_sample = texture(shadow_maps[index], coord.xy + (vogel_##iter_index * penumbra_filter_size)).r; \
+        float is_blocking    = float(blocker_sample < shadow_map_depth); \
+        total_blocker_depth += blocker_sample * is_blocking; \
+        num_blockers        += is_blocking; \
     }
-    
+
+    HYP_DO_SHADOW_PENUMBRA(0)
+    HYP_DO_SHADOW_PENUMBRA(1)
+    HYP_DO_SHADOW_PENUMBRA(2)
+    HYP_DO_SHADOW_PENUMBRA(3)
+    HYP_DO_SHADOW_PENUMBRA(4)
+    HYP_DO_SHADOW_PENUMBRA(5)
+    HYP_DO_SHADOW_PENUMBRA(6)
+    HYP_DO_SHADOW_PENUMBRA(7)
+
+#undef HYP_DO_SHADOW_PENUMBRA
+
     float penumbra_mask = num_blockers > 0.0 ? AvgBlockerDepthToPenumbra(light_size, total_blocker_depth / num_blockers, shadow_map_depth) : 0.0;
     float shadowness = 0.0;
 
-    for (int i = 0; i < HYP_SHADOW_NUM_SAMPLES; i++) {
+    /*for (int i = 0; i < HYP_SHADOW_NUM_SAMPLES; i++) {
         vec2 filter_uv = VogelDisk(i, HYP_SHADOW_NUM_SAMPLES, gradient_noise);
         shadowness += GetShadow(index, pos, filter_uv * penumbra_mask * shadow_filter_size, NdotL);
     }
+
+    shadowness /= float(HYP_SHADOW_NUM_SAMPLES);*/
+
+#define HYP_DO_SHADOW(iter_index) \
+    { \
+        shadowness += GetShadow(index, pos, vogel_##iter_index * penumbra_mask * shadow_filter_size, NdotL); \
+    }
+
+    HYP_DO_SHADOW(0)
+    HYP_DO_SHADOW(1)
+    HYP_DO_SHADOW(2)
+    HYP_DO_SHADOW(3)
+    HYP_DO_SHADOW(4)
+    HYP_DO_SHADOW(5)
+    HYP_DO_SHADOW(6)
+    HYP_DO_SHADOW(7)
+
+#undef HYP_DO_SHADOW
 
     shadowness /= float(HYP_SHADOW_NUM_SAMPLES);
 

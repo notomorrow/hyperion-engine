@@ -2,6 +2,7 @@
 #define HYPERION_V2_LIB_FLAT_MAP_H
 
 #include "FlatSet.hpp"
+#include "ContainerBase.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -10,12 +11,39 @@
 namespace hyperion {
 
 template <class Key, class Value>
-class FlatMap {
-    using Pair = std::pair<Key, Value>;
+struct KeyValuePair {
+    Key   first;
+    Value second;
 
+    bool operator<(const Key &key) const
+    {
+        return first < key;
+    }
+
+    bool operator<(const KeyValuePair &other) const
+    {
+        return first < other.first;
+    }
+
+    bool operator==(const KeyValuePair &other) const
+    {
+        return first == other.first
+            && second == other.second;
+    }
+};
+
+template <class Key, class Value>
+class FlatMap : public ContainerBase<FlatMap<Key, Value>, Key> {
+public:
+    using Pair = KeyValuePair<Key, Value>;
+
+private:
     std::vector<Pair> m_vector;
 
 public:
+    using KeyType       = Key;
+    using ValueType     = Value;
+
     using Iterator      = typename FlatSet<Pair>::Iterator;
     using ConstIterator = typename FlatSet<Pair>::ConstIterator;
     using InsertResult  = std::pair<Iterator, bool>; // iterator, was inserted
@@ -46,7 +74,7 @@ public:
 
     InsertResult Insert(const Key &key, const Value &value);
     InsertResult Insert(const Key &key, Value &&value);
-    InsertResult Insert(std::pair<Key, Value> &&pair);
+    InsertResult Insert(KeyValuePair<Key, Value> &&pair);
 
     InsertResult Set(const Key &key, const Value &value);
     InsertResult Set(const Key &key, Value &&value);
@@ -90,10 +118,6 @@ public:
     }
 
     HYP_DEF_STL_ITERATOR(m_vector)
-
-private:
-    [[nodiscard]] Iterator LowerBound(const Key &key);
-    [[nodiscard]] ConstIterator LowerBound(const Key &key) const;
 };
 
 template <class Key, class Value>
@@ -131,35 +155,9 @@ template <class Key, class Value>
 FlatMap<Key, Value>::~FlatMap() = default;
 
 template <class Key, class Value>
-auto FlatMap<Key, Value>::LowerBound(const Key &key) -> Iterator
-{
-    return std::lower_bound(
-        m_vector.begin(),
-        m_vector.end(),
-        key,
-        [](const Pair &lhs, const Key &rhs) {
-            return lhs.first < rhs;
-        }
-    );
-}
-
-template <class Key, class Value>
-auto FlatMap<Key, Value>::LowerBound(const Key &key) const -> ConstIterator
-{
-    return std::lower_bound(
-        m_vector.cbegin(),
-        m_vector.cend(),
-        key,
-        [](const Pair &lhs, const Key &rhs) {
-            return lhs.first < rhs;
-        }
-    );
-}
-
-template <class Key, class Value>
 auto FlatMap<Key, Value>::Find(const Key &key) -> Iterator
 {
-    const auto it = LowerBound(key);
+    const auto it = typename FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (it == End()) {
         return it;
@@ -171,7 +169,7 @@ auto FlatMap<Key, Value>::Find(const Key &key) -> Iterator
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Find(const Key &key) const -> ConstIterator
 {
-    const auto it = LowerBound(key);
+    const auto it = typename FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (it == End()) {
         return it;
@@ -189,10 +187,10 @@ bool FlatMap<Key, Value>::Contains(const Key &key) const
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertResult
 {
-    const auto lower_bound = LowerBound(key);
+    const auto lower_bound = typename FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.insert(lower_bound, std::make_pair(key, value));
+        auto it = m_vector.insert(lower_bound, Pair { key, value });
 
         return {it, true};
     }
@@ -203,10 +201,10 @@ auto FlatMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertRe
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
 {
-    const auto lower_bound = LowerBound(key);
+    const auto lower_bound = typename FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.insert(lower_bound, std::make_pair(key, std::forward<Value>(value)));
+        auto it = m_vector.insert(lower_bound, Pair { key, std::forward<Value>(value) });
 
         return {it, true};
     }
@@ -215,9 +213,9 @@ auto FlatMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
 }
 
 template <class Key, class Value>
-auto FlatMap<Key, Value>::Insert(std::pair<Key, Value> &&pair) -> InsertResult
+auto FlatMap<Key, Value>::Insert(KeyValuePair<Key, Value> &&pair) -> InsertResult
 {
-    const auto lower_bound = LowerBound(pair.first);
+    const auto lower_bound = typename FlatMap<Key, Value>::Base::LowerBound(pair.first);
 
     if (lower_bound == End() || !(lower_bound->first == pair.first)) {
         auto it = m_vector.insert(lower_bound, std::move(pair));
@@ -231,10 +229,10 @@ auto FlatMap<Key, Value>::Insert(std::pair<Key, Value> &&pair) -> InsertResult
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Set(const Key &key, const Value &value) -> InsertResult
 {
-    const auto lower_bound = LowerBound(key);
+    const auto lower_bound = typename FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.insert(lower_bound, std::make_pair(key, value));
+        auto it = m_vector.insert(lower_bound, Pair { key, value });
 
         return {it, true};
     }
@@ -247,10 +245,10 @@ auto FlatMap<Key, Value>::Set(const Key &key, const Value &value) -> InsertResul
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
 {
-    const auto lower_bound = LowerBound(key);
+    const auto lower_bound = typename FlatMap<Key, Value>::Base::LowerBound(key);
 
     if (lower_bound == End() || !(lower_bound->first == key)) {
-        auto it = m_vector.insert(lower_bound, std::make_pair(key, std::forward<Value>(value)));
+        auto it = m_vector.insert(lower_bound, Pair { key, std::forward<Value>(value) });
 
         return {it, true};
     }

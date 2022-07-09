@@ -79,7 +79,7 @@ private:
     std::array<Ref<Texture>, max_environment_textures> m_environment_textures;
 
     // spatials live in GAME thread
-    std::unordered_map<IDBase, Ref<Spatial>> m_spatials;
+    FlatMap<IDBase, Ref<Spatial>> m_spatials;
 
     Matrix4                 m_last_view_projection_matrix;
 

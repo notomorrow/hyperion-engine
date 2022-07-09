@@ -90,6 +90,45 @@ enum RenderableDeletionMask : RenderableDeletionMaskBits {
     RENDERABLE_DELETION_SHADERS   = 1 << 4
 };
 
+struct DebugMarker {
+    CommandBuffer     *command_buffer = nullptr;
+    const char * const name           = "<Unnamed debug marker>";
+    bool               is_ended       = false;
+
+    DebugMarker(CommandBuffer *command_buffer, const char *marker_name)
+        : command_buffer(command_buffer),
+          name(marker_name)
+    {
+        if (command_buffer != nullptr) {
+            command_buffer->DebugMarkerBegin(name);
+        }
+    }
+
+    DebugMarker(const DebugMarker &other) = delete;
+    DebugMarker &operator=(const DebugMarker &other) = delete;
+
+    DebugMarker(DebugMarker &&other) noexcept = delete;
+    DebugMarker &operator=(DebugMarker &&other) noexcept = delete;
+
+    ~DebugMarker()
+    {
+        MarkEnd();
+    }
+
+    void MarkEnd()
+    {
+        if (is_ended) {
+            return;
+        }
+
+        if (command_buffer != nullptr) {
+            command_buffer->DebugMarkerEnd();
+        }
+
+        is_ended = true;
+    }
+};
+
 struct RenderState {
     struct SceneBinding {
         Scene::ID id;

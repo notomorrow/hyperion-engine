@@ -2,6 +2,9 @@
 
 namespace hyperion {
 namespace renderer {
+
+Features::DynamicFunctions Features::dyn_functions = {};
+
 Features::Features()
     : m_physical_device(nullptr),
       m_properties({}),
@@ -114,6 +117,11 @@ void Features::LoadDynamicFunctions(Device *device)
         HYP_LOAD_FN(vkCreateRayTracingPipelinesKHR);
     }
 #endif
+
+    //HYP_LOAD_FN(vkCmdDebugMarkerBeginEXT);
+    //HYP_LOAD_FN(vkCmdDebugMarkerEndEXT);
+    //HYP_LOAD_FN(vkCmdDebugMarkerInsertEXT);
+    //HYP_LOAD_FN(vkDebugMarkerSetObjectNameEXT);
 
 #if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
     HYP_LOAD_FN(vkGetMoltenVKConfigurationMVK);
