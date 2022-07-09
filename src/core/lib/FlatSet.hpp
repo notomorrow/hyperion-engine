@@ -121,7 +121,7 @@ FlatSet<T>::~FlatSet() = default;
 template <class T>
 auto FlatSet<T>::Find(const T &value) -> Iterator
 {
-    const auto it = typename FlatSet<T>::Base::LowerBound(value);
+    const auto it = FlatSet<T>::Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -133,7 +133,7 @@ auto FlatSet<T>::Find(const T &value) -> Iterator
 template <class T>
 auto FlatSet<T>::Find(const T &value) const -> ConstIterator
 {
-    const auto it = typename FlatSet<T>::Base::LowerBound(value);
+    const auto it = FlatSet<T>::Base::LowerBound(value);
 
     if (it == End()) {
         return it;
@@ -145,7 +145,7 @@ auto FlatSet<T>::Find(const T &value) const -> ConstIterator
 template <class T>
 auto FlatSet<T>::Insert(const T &value) -> InsertResult
 {
-    Iterator it = typename FlatSet<T>::Base::LowerBound(value);
+    Iterator it = FlatSet<T>::Base::LowerBound(value);
 
     if (it == End() || !(*it == value)) {
         it = m_vector.insert(it, value);
@@ -159,7 +159,7 @@ auto FlatSet<T>::Insert(const T &value) -> InsertResult
 template <class T>
 auto FlatSet<T>::Insert(T &&value) -> InsertResult
 {
-    Iterator it = typename FlatSet<T>::Base::LowerBound(value);
+    Iterator it = FlatSet<T>::Base::LowerBound(value);
 
     if (it == End() || !(*it == value)) {
         it = m_vector.insert(it, std::forward<T>(value));
