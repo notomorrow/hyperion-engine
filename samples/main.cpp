@@ -111,7 +111,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/living_room/living_room.obj", //sponza/sponza.obj",//testbed/testbed.obj", //, //", //
+            "models/living_room/living_room.obj", //sponza/sponza.obj",//, //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
