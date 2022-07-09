@@ -10,7 +10,7 @@ layout(location=2) in vec2 v_texcoord0;
 layout(location=0) out vec4 color_output;
 
 #include "include/scene.inc"
-#include "include/post_fx.inc"
+#include "include/PostFXInstance.inc"
 
 #define HYP_FFXA_IMPL 1
 
@@ -71,7 +71,7 @@ void main()
 
 #if (HYP_FFXA_IMPL == 1)
     
-#include "include/post_fx.inc"
+#include "include/PostFXInstance.inc"
 
 
 #define TextureSize vec2(scene.resolution_x, scene.resolution_y)

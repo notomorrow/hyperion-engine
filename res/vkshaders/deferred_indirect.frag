@@ -18,7 +18,7 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
 #include "include/material.inc"
-#include "include/post_fx.inc"
+#include "include/PostFXSample.inc"
 #include "include/tonemap.inc"
 
 #include "include/scene.inc"
@@ -27,8 +27,8 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 21) uniform texture2D ssr_blur
 vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 
-#define HYP_VCT_ENABLED 1
-#define HYP_VCT_REFLECTIONS_ENABLED 1
+#define HYP_VCT_ENABLED 0
+#define HYP_VCT_REFLECTIONS_ENABLED 0
 #define HYP_VCT_INDIRECT_ENABLED 1
 #define HYP_ENV_PROBE_ENABLED 1
 #define HYP_SSR_ENABLED 1
@@ -39,12 +39,18 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 20000.0
-#define IRRADIANCE_MULTIPLIER 4.0
+#define IBL_INTENSITY 7000.0
+#define IRRADIANCE_MULTIPLIER 16.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
 
 #include "include/rt/probe/shared.inc"
+
+#define DEFERRED_FLAG_SSR_ENABLED 0x1
+
+layout(push_constant) uniform DeferredParams {
+    uint flags;
+} deferred_params;
 
 #if 0
 
@@ -171,9 +177,11 @@ void main()
 #endif
 
 #if HYP_SSR_ENABLED
-        vec4 screen_space_reflections = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord);
-        screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
-        reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
+        if (bool(deferred_params.flags & DEFERRED_FLAG_SSR_ENABLED)) {
+            vec4 screen_space_reflections = Texture2D(gbuffer_sampler, ssr_blur_vert, texcoord);
+            screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
+            reflections = mix(reflections, screen_space_reflections, screen_space_reflections.a);
+        }
 #endif
 
         vec3 light_color = vec3(1.0);

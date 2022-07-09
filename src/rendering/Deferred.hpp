@@ -20,10 +20,21 @@ using renderer::ImageView;
 using renderer::Sampler;
 using renderer::Device;
 
+using DeferredFlagBits = UInt;
+
+enum DeferredFlags : DeferredFlagBits {
+    DEFERRED_FLAGS_NONE              = 0,
+    DEFERRED_FLAGS_SSR_ENABLED       = 1 << 0,
+    DEFERRED_FLAGS_VCT_ENABLED       = 1 << 1,
+    DEFERRED_FLAGS_ENV_PROBE_ENABLED = 1 << 2
+};
+
 class ScreenspaceReflectionRenderer {
 public:
     ScreenspaceReflectionRenderer(const Extent2D &extent);
     ~ScreenspaceReflectionRenderer();
+
+    bool IsRendered() const { return m_is_rendered; }
 
     void Create(Engine *engine);
     void Destroy(Engine *engine);
@@ -69,6 +80,8 @@ private:
     Ref<ComputePipeline>                                            m_ssr_sample;
     Ref<ComputePipeline>                                            m_ssr_blur_hor;
     Ref<ComputePipeline>                                            m_ssr_blur_vert;
+
+    bool                                                            m_is_rendered;
 };
 
 class DeferredPass : public FullScreenPass {

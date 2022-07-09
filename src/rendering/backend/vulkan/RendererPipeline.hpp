@@ -72,6 +72,10 @@ public:
                       screen_edge_fade_start,
                       screen_edge_fade_end;
             } ssr_data;
+
+            struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+                UInt32 flags;
+            } deferred_data;
         };
     } push_constants;
 

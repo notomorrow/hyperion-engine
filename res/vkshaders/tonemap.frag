@@ -4,7 +4,7 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 #include "include/defines.inc"
-#include "include/post_fx.inc"
+#include "include/PostFXInstance.inc"
 #include "include/tonemap.inc"
 
 layout(location=0) in vec3 v_position;
