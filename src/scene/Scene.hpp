@@ -35,9 +35,12 @@ public:
     Camera *GetCamera() const                            { return m_camera.get(); }
     void SetCamera(std::unique_ptr<Camera> &&camera)     { m_camera = std::move(camera); }
 
+    /*! Add an Entity to the queue. On Update(), it will be added to the scene. */
     bool AddSpatial(Ref<Spatial> &&spatial);
     bool HasSpatial(Spatial::ID id) const;
+    /*! Add an Remove to the from the Scene in an enqueued way. On Update(), it will be removed from the scene. */
     bool RemoveSpatial(Spatial::ID id);
+    /*! Add an Remove to the from the Scene in an enqueued way. On Update(), it will be removed from the scene. */
     bool RemoveSpatial(const Ref<Spatial> &spatial);
 
     /*! ONLY CALL FROM GAME THREAD!!! */
@@ -67,6 +70,9 @@ private:
     );
 
     void EnqueueRenderUpdates(Engine *engine);
+    
+    void AddPendingEntities();
+    void RemovePendingEntities();
 
     void RequestPipelineChanges(Ref<Spatial> &spatial);
     void RemoveFromPipeline(Ref<Spatial> &spatial, GraphicsPipeline *pipeline);
@@ -80,6 +86,10 @@ private:
 
     // spatials live in GAME thread
     FlatMap<IDBase, Ref<Spatial>> m_spatials;
+    // NOTE: not for thread safety, it's to defer updates so we don't
+    // remove in the update loop.
+    FlatSet<Spatial::ID>          m_spatials_pending_removal;
+    FlatSet<Ref<Spatial>>         m_spatials_pending_addition;
 
     Matrix4                 m_last_view_projection_matrix;
 

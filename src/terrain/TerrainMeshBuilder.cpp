@@ -76,8 +76,6 @@ std::vector<Vertex> TerrainMeshBuilder::BuildVertices() const
             position *= m_patch_info.scale;
 
             Vector2 texcoord(
-                // static_cast<float>(x % 2),
-                // static_cast<float>(z % 2)
                static_cast<float>(x) / static_cast<float>(m_patch_info.extent.width),
                static_cast<float>(z) / static_cast<float>(m_patch_info.extent.depth)
             );

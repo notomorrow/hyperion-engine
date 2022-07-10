@@ -151,9 +151,9 @@ public:
         // tmp_terrain->Scale(500.0f);
         // scene->AddSpatial(tmp_terrain->GetChild(0)->GetSpatial().IncRef());
 
-        //auto terrain_node = scene->GetRootNode()->AddChild();
-        //terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>()));
-        // terrain_node->GetSpatial()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
+        auto terrain_node = scene->GetRootNode()->AddChild();
+        terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>()));
+        terrain_node->GetSpatial()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
         
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
@@ -227,7 +227,7 @@ public:
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
         test_model->Scale(2.15f);
-        scene->GetRootNode()->AddChild(std::move(test_model));
+        //scene->GetRootNode()->AddChild(std::move(test_model));
 
         auto quad = engine->resources.meshes.Add(MeshBuilder::Quad());
         quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);

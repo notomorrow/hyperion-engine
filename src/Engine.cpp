@@ -25,7 +25,7 @@ Engine::Engine(SystemSDL &_system, const char *app_name)
       m_instance(new Instance(_system, app_name, "HyperionEngine")),
       resources(this),
       assets(this),
-      terrain_thread(Threads::thread_ids.At(THREAD_TERRAIN), 30.0f)
+      terrain_thread(Threads::thread_ids.At(THREAD_TERRAIN), 10.0f)
 {
 }
 

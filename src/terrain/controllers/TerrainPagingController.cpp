@@ -76,14 +76,14 @@ void TerrainPagingController::OnPatchRemoved(Patch *patch)
 {
     DebugLog(LogType::Info, "Terrain patch removed %f, %f\n", patch->info.coord.x, patch->info.coord.y);
 
-    if (patch->spatial != nullptr) {
+    if (patch->entity != nullptr) {
         if (auto *scene = GetOwner()->GetScene()) {
-            DebugLog(LogType::Debug, "Remove terrain spatial with id #%u\n", patch->spatial->GetId().value);
+            DebugLog(LogType::Debug, "Remove terrain Entity with id #%u\n", patch->entity->GetId().value);
 
-            scene->RemoveSpatial(patch->spatial);
+            scene->RemoveSpatial(patch->entity);
         }
 
-        patch->spatial = nullptr;
+        patch->entity = nullptr;
     }
 }
 
@@ -105,7 +105,7 @@ void TerrainPagingController::AddEnqueuedChunks()
 
         auto &shader = GetEngine()->shader_manager.GetShader(ShaderManager::Key::BASIC_FORWARD);
         
-        auto spatial = std::make_unique<Spatial>(
+        auto entity = std::make_unique<Spatial>(
             std::move(mesh),
             shader.IncRef(),
             m_material.IncRef(),
@@ -116,21 +116,21 @@ void TerrainPagingController::AddEnqueuedChunks()
             }
         );
 
-        spatial->SetTranslation({
+        entity->SetTranslation({
             (patch_info.coord.x - 0.5f) * (patch_info.extent.ToVector3().Avg() - 1) * m_scale.x,
             GetOwner()->GetTranslation().y,
             (patch_info.coord.y - 0.5f) * (patch_info.extent.ToVector3().Avg() - 1) * m_scale.z
         });
 
         if (auto *patch = GetPatch(patch_info.coord)) {
-            if (patch->spatial == nullptr) {
-                patch->spatial = GetEngine()->resources.spatials.Add(std::move(spatial));
+            if (patch->entity == nullptr) {
+                patch->entity = GetEngine()->resources.spatials.Add(std::move(entity));
 
                 ++num_chunks_added;
 
                 if (auto *scene = GetOwner()->GetScene()) {
-                    DebugLog(LogType::Debug, "Add terrain spatial with id #%u\n", patch->spatial->GetId().value);
-                    scene->AddSpatial(patch->spatial.IncRef());
+                    DebugLog(LogType::Debug, "Add terrain Entity with id #%u\n", patch->entity->GetId().value);
+                    scene->AddSpatial(patch->entity.IncRef());
                 }
             } else {
                 DebugLog(
