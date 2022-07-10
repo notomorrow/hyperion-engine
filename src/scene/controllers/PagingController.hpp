@@ -47,7 +47,7 @@ struct PatchInfo {
 
 struct Patch {
     PatchInfo    info;
-    Ref<Spatial> spatial;
+    Ref<Spatial> entity;
 
     Vector2 GetCenter() const { return info.coord - 0.5f; }
 };
@@ -79,14 +79,6 @@ protected:
 
     auto FindPatch(const PatchCoord &coord) -> FlatMap<PatchCoord, std::unique_ptr<Patch>>::Iterator
     {
-        // return std::find_if(
-        //     m_patches.begin(),
-        //     m_patches.end(),
-        //     [&coord](const auto &item) {
-        //         return item->info.coord == coord;
-        //     }
-        // );
-
         return m_patches.Find(coord);
     }
 
