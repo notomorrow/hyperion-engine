@@ -3,19 +3,19 @@
 namespace hyperion {
 namespace xml {
 
-SaxParser::SaxParser(SaxHandler *handler)
+SAXParser::SAXParser(SaxHandler *handler)
     : handler(handler)
 {
 }
 
-SaxParser::Result SaxParser::Parse(const std::string &filepath)
+SAXParser::Result SAXParser::Parse(const std::string &filepath)
 {
     BufferedReader<2048> reader(filepath);
 
     return Parse(&reader);
 }
 
-SaxParser::Result SaxParser::Parse(BufferedReader<2048> *reader)
+SAXParser::Result SAXParser::Parse(BufferedReader<2048> *reader)
 {
     if (reader == nullptr) {
         return Result(Result::SAX_ERR, "Reader was null");
