@@ -8,6 +8,22 @@ Spatial::Spatial(
     Ref<Mesh> &&mesh,
     Ref<Shader> &&shader,
     Ref<Material> &&material,
+    const ComponentInitInfo &init_info
+) : Spatial(
+      std::move(mesh),
+      std::move(shader),
+      std::move(material),
+      {},
+      init_info
+    )
+{
+    // RebuildRenderableAttributes();
+}
+
+Spatial::Spatial(
+    Ref<Mesh> &&mesh,
+    Ref<Shader> &&shader,
+    Ref<Material> &&material,
     const RenderableAttributeSet &renderable_attributes,
     const ComponentInitInfo &init_info
 ) : EngineComponentBase(init_info),
@@ -254,6 +270,36 @@ void Spatial::SetRenderableAttributes(const RenderableAttributeSet &renderable_a
 
     m_renderable_attributes    = renderable_attributes;
     m_primary_pipeline.changed = true;
+}
+
+void Spatial::RebuildRenderableAttributes()
+{
+    RenderableAttributeSet new_renderable_attributes(m_renderable_attributes);
+
+    if (m_mesh != nullptr) {
+        new_renderable_attributes.vertex_attributes = m_mesh->GetVertexAttributes();
+        new_renderable_attributes.topology          = m_mesh->GetTopology();
+    } else {
+        new_renderable_attributes.vertex_attributes = {};
+        new_renderable_attributes.topology          = Topology::TRIANGLES;
+    }
+
+    if (m_skeleton != nullptr) {
+        new_renderable_attributes.vertex_attributes = new_renderable_attributes.vertex_attributes | renderer::skeleton_vertex_attributes;
+    }
+
+    new_renderable_attributes.shader_id = m_shader != nullptr
+        ? m_shader->GetId()
+        : Shader::empty_id;
+    
+
+    // if (m_material != nullptr) {
+    //     new_renderable_attributes.cull_faces        = face_cull_mode;
+    //     new_renderable_attributes.depth_write       = depth_write;
+    //     new_renderable_attributes.depth_test        = depth_test;
+    // }
+
+    SetRenderableAttributes(new_renderable_attributes);
 }
 
 void Spatial::SetMeshAttributes(

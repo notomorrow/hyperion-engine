@@ -8,6 +8,7 @@
 #endif
 
 #include "lib/AtomicSemaphore.hpp"
+#include "lib/DynArray.hpp"
 
 #include <Util.hpp>
 #include <util/Defines.hpp>
@@ -57,7 +58,6 @@ struct ScheduledFunction {
 
     constexpr static ScheduledFunctionId empty_id = ScheduledFunctionId{0};
 
-
     template <class Lambda>
     ScheduledFunction(Lambda &&lambda)
     {
@@ -67,14 +67,37 @@ struct ScheduledFunction {
     ScheduledFunction() = default;
     ScheduledFunction(const ScheduledFunction &other) = default;
     ScheduledFunction &operator=(const ScheduledFunction &other) = default;
-    ScheduledFunction(ScheduledFunction &&other) noexcept = default;
-    ScheduledFunction &operator=(ScheduledFunction &&other) = default;
+    ScheduledFunction(ScheduledFunction &&other) noexcept
+        : id(other.id),
+          fn(std::move(other.fn))
+    {
+        other.id = 0;
+        other.fn = nullptr;
+    }
+
+    ScheduledFunction &operator=(ScheduledFunction &&other)
+    {
+        id = other.id;
+        fn = std::move(other.fn);
+
+        other.id = 0;
+        other.fn = nullptr;
+
+        return *this;
+    }
+    
     ~ScheduledFunction() = default;
+
+    template <class ...Param>
+    HYP_FORCE_INLINE ReturnType Execute(Param &&... args)
+    {
+        return fn(std::forward<Param>(args)...);
+    }
 
     template <class ...Param>
     HYP_FORCE_INLINE ReturnType operator()(Param &&... args)
     {
-        return fn(std::forward<Param>(args)...);
+        return Execute(std::forward<Param>(args)...);
     }
 };
 
@@ -82,10 +105,12 @@ template <class ScheduledFunction>
 class Scheduler {
     //using Executor          = std::add_pointer_t<void(typename ScheduledFunction::Function &)>;
 
-    using ScheduledFunctionQueue = std::deque<ScheduledFunction>;
-    using Iterator               = typename ScheduledFunctionQueue::iterator;
+    using ScheduledFunctionQueue = DynArray<ScheduledFunction>;
+    using Iterator               = typename ScheduledFunctionQueue::Iterator;
 
 public:
+    using Task = ScheduledFunction;
+
     Scheduler()
         : m_creation_thread(std::this_thread::get_id())
     {
@@ -113,50 +138,50 @@ public:
     
     /*! \brief Remove a function from the owner thread's queue, if it exists
      * @returns a boolean value indicating whether or not the function was successfully dequeued */
-    bool Dequeue(ScheduledFunctionId id)
-    {
-        if (id == ScheduledFunction::empty_id) {
-            return false;
-        }
+    // bool Dequeue(ScheduledFunctionId id)
+    // {
+    //     if (id == ScheduledFunction::empty_id) {
+    //         return false;
+    //     }
         
-        std::unique_lock lock(m_mutex);
+    //     std::unique_lock lock(m_mutex);
 
-        if (DequeueInternal(id)) {
-            lock.unlock();
+    //     if (DequeueInternal(id)) {
+    //         lock.unlock();
 
-            if (m_scheduled_functions.empty()) {
-                m_is_flushed.notify_all();
-            }
+    //         if (m_scheduled_functions.Empty()) {
+    //             m_is_flushed.notify_all();
+    //         }
 
-            return true;
-        }
+    //         return true;
+    //     }
 
-        return false;
-    }
+    //     return false;
+    // }
 
     /*! If the enqueued with the given ID does _not_ exist, schedule the given function.
      *  else, remove the item with the given ID
      *  This is a helper function for create/destroy functions
      */
-    ScheduledFunctionId EnqueueReplace(ScheduledFunctionId &dequeue_id, ScheduledFunction &&enqueue_fn)
-    {
-        std::unique_lock lock(m_mutex);
+    // ScheduledFunctionId EnqueueReplace(ScheduledFunctionId &dequeue_id, ScheduledFunction &&enqueue_fn)
+    // {
+    //     std::unique_lock lock(m_mutex);
 
-        if (dequeue_id != ScheduledFunction::empty_id) {
-            auto it = Find(dequeue_id);
+    //     if (dequeue_id != ScheduledFunction::empty_id) {
+    //         auto it = Find(dequeue_id);
 
-            if (it != m_scheduled_functions.end()) {
-                (*it) = {
-                    .id = {dequeue_id},
-                    .fn = std::move(enqueue_fn)
-                };
+    //         if (it != m_scheduled_functions.End()) {
+    //             (*it) = {
+    //                 .id = {dequeue_id},
+    //                 .fn = std::move(enqueue_fn)
+    //             };
 
-                return dequeue_id;
-            }
-        }
+    //             return dequeue_id;
+    //         }
+    //     }
 
-        return (dequeue_id = EnqueueInternal(std::forward<ScheduledFunction>(enqueue_fn)));
-    }
+    //     return (dequeue_id = EnqueueInternal(std::forward<ScheduledFunction>(enqueue_fn)));
+    // }
 
     /*! Wait for all tasks to be completed in another thread.
      * Must only be called from a different thread than the creation thread.
@@ -200,10 +225,31 @@ public:
 
         std::unique_lock lock(m_mutex);
 
-        if (!m_scheduled_functions.empty()) {
-            executor(m_scheduled_functions.front());
+        if (m_scheduled_functions.Any()) {
+            executor(m_scheduled_functions.Front());
 
-            m_scheduled_functions.pop_front();
+            m_scheduled_functions.PopFront();
+
+            --m_num_enqueued;
+        }
+
+        lock.unlock();
+
+        m_is_flushed.notify_all();
+    }
+
+    /* Move all tasks in the queue to an external container. */
+    template <class Container>
+    void AcceptNext(Container &out_container)
+    {
+        AssertThrow(std::this_thread::get_id() == m_creation_thread);
+
+        std::unique_lock lock(m_mutex);
+
+        if (m_scheduled_functions.Any()) {
+            out_container.Push(std::move(m_scheduled_functions.Front()));
+
+            m_scheduled_functions.PopFront();
 
             --m_num_enqueued;
         }
@@ -222,10 +268,10 @@ public:
 
         std::unique_lock lock(m_mutex);
 
-        while (!m_scheduled_functions.empty()) {
-            executor(m_scheduled_functions.front());
+        while (m_scheduled_functions.Any()) {
+            executor(m_scheduled_functions.Front());
 
-            m_scheduled_functions.pop_front();
+            m_scheduled_functions.PopFront();
         }
 
         m_num_enqueued = 0;
@@ -241,40 +287,36 @@ private:
     {
         fn.id = ++m_id_counter;
 
-        m_scheduled_functions.push_back(std::forward<ScheduledFunction>(fn));
+        m_scheduled_functions.PushBack(std::forward<ScheduledFunction>(fn));
 
         ++m_num_enqueued;
 
-        return m_scheduled_functions.back().id;
+        return m_scheduled_functions.Back().id;
     }
 
     Iterator Find(ScheduledFunctionId id)
     {
-        return std::find_if(
-            m_scheduled_functions.begin(),
-            m_scheduled_functions.end(),
-            [&id](const auto &item) {
-                return item.id == id;
-            }
-        );
+        return m_scheduled_functions.FindIf([&id](const auto &item) {
+            return item.id == id;
+        });
     }
 
-    bool DequeueInternal(ScheduledFunctionId id)
-    {
-        const auto it = Find(id);
+    // bool DequeueInternal(ScheduledFunctionId id)
+    // {
+    //     const auto it = Find(id);
 
-        if (it == m_scheduled_functions.end()) {
-            return false;
-        }
+    //     if (it == m_scheduled_functions.End()) {
+    //         return false;
+    //     }
 
-        m_scheduled_functions.erase(it);
+    //     m_scheduled_functions.Erase(it);
 
-        if (m_scheduled_functions.empty()) {
-            m_num_enqueued = 0;
-        }
+    //     if (m_scheduled_functions.Empty()) {
+    //         m_num_enqueued = 0;
+    //     }
 
-        return true;
-    }
+    //     return true;
+    // }
 
     uint32_t                       m_id_counter = 0;
     std::atomic_uint32_t           m_num_enqueued{0};

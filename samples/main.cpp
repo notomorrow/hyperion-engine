@@ -52,6 +52,7 @@
 #include <string>
 #include <cmath>
 #include <thread>
+#include <list>
 
 #include "rendering/Environment.hpp"
 #include "rendering/render_components/CubemapRenderer.hpp"
@@ -113,7 +114,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sibenik/sibenik.obj",//, //, //", //
+            "models/sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -226,8 +227,8 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        test_model->Scale(2.15f);
-        //scene->GetRootNode()->AddChild(std::move(test_model));
+        test_model->Scale(0.15f);
+        scene->GetRootNode()->AddChild(std::move(test_model));
 
         auto quad = engine->resources.meshes.Add(MeshBuilder::Quad());
         quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
@@ -242,8 +243,8 @@ public:
             }
         ));
         quad_spatial.Init();
-        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(0.00f, 0.4f, 0.9f, 1.0f));
-        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.3f);
+        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f));//0.00f, 0.4f, 0.9f, 1.0f));
+        quad_spatial->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, 0.2f);
         quad_spatial->SetScale(Vector3(150.0f));
         quad_spatial->SetRotation(Quaternion(Vector3(1, 0, 0), MathUtil::DegToRad(-90.0f)));
         quad_spatial->SetTranslation(Vector3(0, -28.0f, 0));
@@ -257,7 +258,7 @@ public:
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
             renderer::Extent2D {128, 128},
-            Vector3 {0, 10, 0},
+            Vector3 {0, 15, 0},
             renderer::Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
         );
 
@@ -518,29 +519,141 @@ struct TestStruct {
     TestStruct(int id = -1)
         : id(id)
     {
-        std::cout << "Create TestStruct " << id << "\n";
+        // std::cout << "Create TestStruct " << id << "\n";
     }
     TestStruct(const TestStruct &other)
         : id(other.id)
     {
-        std::cout << "Copy TestStruct " << id << "\n";
+        // std::cout << "Copy TestStruct " << id << "\n";
     }
-    /*TestStruct &operator=(const TestStruct &other)
+    TestStruct &operator=(const TestStruct &other)
     {
         id = other.id;
-        std::cout << "Copy-assign TestStruct " << id << "\n";
+        // std::cout << "Copy-assign TestStruct " << id << "\n";
 
         return *this;
-    }*/
+    }
     ~TestStruct()
     {
-        std::cout << "Destroy TestStruct " << id << "\n";
+        // std::cout << "Destroy TestStruct " << id << "\n";
     }
 };
 
 int main()
 {
     using namespace hyperion::renderer;
+
+#if 0
+    Profile control([]() {
+        std::queue<TestStruct> test_queue;
+        for (int i = 0; i < 1000; i++) {
+            test_queue.push(TestStruct{i});
+        }
+
+        // std::cout << "Size: " << test_queue.size() << "\n";
+
+        while (!test_queue.empty()) {
+            test_queue.pop();
+        }
+    });
+    // Profile profile_1([]() {
+    //     std::queue<TestStruct> test_queue;
+    //     for (int i = 0; i < 500; i++) {
+    //         test_queue.push(TestStruct{i});
+    //     }
+
+    //     std::queue<TestStruct> test_queue_copy = test_queue;
+
+    //     for (int i = 0; i < 5; i++) {
+    //         while (!test_queue.empty()) {
+    //             std::cout << "Front: " << test_queue.front().id << "\n";
+    //             test_queue.pop();
+    //         }
+    //     }
+    //     std::cout << "Size: " << test_queue_copy.size() << "\n";
+
+    //     while (!test_queue_copy.empty()) {
+    //         test_queue_copy.pop();
+    //     }
+    // });
+
+    // Profile profile_2([]() {
+    //     hyperion::Queue<TestStruct> test_queue;
+    //     test_queue.Reserve(1000);
+    //     for (int i = 0; i < 500; i++) {
+    //         test_queue.Push(TestStruct{i});
+    //     }
+
+    //     hyperion::Queue<TestStruct> test_queue_copy = test_queue;
+
+    //     for (int i = 0; i < 5; i++) {
+    //         while (!test_queue.Empty()) {
+    //             std::cout << "Front: " << test_queue.Front().id << "\n";
+    //             test_queue.Pop();
+    //         }
+    //     }
+
+    //     std::cout << "Size: " << test_queue_copy.Size() << "\n";
+
+    //     while (!test_queue_copy.Empty()) {
+    //         test_queue_copy.Pop();
+    //     }
+    // });
+
+
+    
+    Profile profile_1([]() {
+        std::vector<TestStruct> test_queue;
+        // test_queue.reserve(1000);
+        for (int i = 0; i < 256; i++) {
+            test_queue.push_back(TestStruct{i});
+        }
+
+        std::vector<TestStruct> test_queue_copy = test_queue;
+
+        // for (int i = 0; i < 5; i++) {
+            while (!test_queue.empty()) {
+                // std::cout << "Back: " << test_queue.front().id << "\n";
+                test_queue.pop_back();
+            }
+        // }
+        // std::cout << "Size: " << test_queue_copy.size() << "\n";
+
+        while (!test_queue_copy.empty()) {
+            test_queue_copy.pop_back();
+        }
+    });
+
+    Profile profile_2([]() {
+        hyperion::DynArray<TestStruct> test_queue;
+        // test_queue.Reserve(1000);
+        for (int i = 0; i < 256; i++) {
+            test_queue.PushBack(TestStruct{i});
+        }
+        // std::cout << "Size after pushing: " << test_queue.Size() << "\n";
+
+        hyperion::DynArray<TestStruct> test_queue_copy = test_queue;
+
+        // for (int i = 0; i < 5; i++) {
+            while (!test_queue.Empty()) {
+                // std::cout << "Back: " << test_queue.Front().id << "\n";
+                test_queue.PopBack();
+            }
+        // }
+        // std::cout << "back: " << test_queue_copy.Back().id << "\n";
+
+
+        while (!test_queue_copy.Empty()) {
+            test_queue_copy.PopBack();
+        }
+    });
+
+    // profile_2.Run(10, 10);
+
+    auto results = Profile::RunInterleved({ control, profile_1, profile_2 }, 5, 10, 1000);
+
+    HYP_BREAKPOINT;
+#endif
     
     SystemSDL system;
     SystemWindow *window = SystemSDL::CreateSystemWindow("Hyperion Engine", 1024, 1024);//2048, 1080);

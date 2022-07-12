@@ -75,7 +75,7 @@ Result Frame::EndCapture(Device *device)
     return command_buffer->End(device);
 }
 
-Result Frame::Submit(Queue *queue)
+Result Frame::Submit(DeviceQueue *queue)
 {
     return command_buffer->SubmitPrimary(
         queue->queue,

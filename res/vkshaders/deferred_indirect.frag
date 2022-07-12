@@ -39,7 +39,7 @@ vec2 texcoord = v_texcoord0;//vec2(v_texcoord0.x, 1.0 - v_texcoord0.y);
 
 /* Begin main shader program */
 
-#define IBL_INTENSITY 7000.0
+#define IBL_INTENSITY 10000.0
 #define IRRADIANCE_MULTIPLIER 16.0
 #define SSAO_DEBUG 0
 #define HYP_CUBEMAP_MIN_ROUGHNESS 0.0
@@ -207,5 +207,5 @@ void main()
     // output_color.rgb = irradiance.rgb;
     //output_color = ScreenSpaceReflection(material.r);
 
-    //output_color.rgb; = ibl.rgb;
+    // output_color.rgb = ibl.rgb;
 }

@@ -4,7 +4,7 @@
 namespace hyperion {
 namespace renderer {
 
-struct Queue {
+struct DeviceQueue {
     uint32_t      family;
     VkQueue       queue;
     VkCommandPool command_pool;

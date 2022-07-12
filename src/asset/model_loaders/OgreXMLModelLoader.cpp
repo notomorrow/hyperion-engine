@@ -208,8 +208,9 @@ std::unique_ptr<Node> OgreXmlModelLoader::BuildFn(Engine *engine, const Object &
 
             auto mesh = resources.meshes.Add(
                 std::make_unique<Mesh>(
-                    object.vertices, 
-                    sub_mesh.indices
+                    object.vertices,
+                    sub_mesh.indices,
+                    Topology::TRIANGLES
                 )
             );
 

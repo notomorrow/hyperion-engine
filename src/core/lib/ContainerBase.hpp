@@ -12,8 +12,8 @@ namespace hyperion {
 template <class Container, class Key>
 class ContainerBase {
 protected:
-    using Base    = ContainerBase;
-    using KeyType = Key;
+    using Base     = ContainerBase;
+    using KeyType  = Key;
 
 public:
     ContainerBase() {}
@@ -25,7 +25,7 @@ public:
         auto _begin     = static_cast<Container *>(this)->Begin();
         const auto _end = static_cast<Container *>(this)->End();
 
-        for (; _end; ++_begin) {
+        for (; _begin != _end; ++_begin) {
             if (*_begin == value) {
                 return _begin;
             }
@@ -40,7 +40,7 @@ public:
         auto _begin     = static_cast<const Container *>(this)->Begin();
         const auto _end = static_cast<const Container *>(this)->End();
 
-        for (; _end; ++_begin) {
+        for (; _begin != _end; ++_begin) {
             if (*_begin == value) {
                 return _begin;
             }
@@ -52,10 +52,10 @@ public:
     template <class Function>
     [[nodiscard]] auto FindIf(Function &&pred)
     {
-        auto _begin     = static_cast<Container *>(this)->Begin();
-        const auto _end = static_cast<Container *>(this)->End();
+        typename Container::Iterator _begin     = static_cast<Container *>(this)->Begin();
+        const typename Container::Iterator _end = static_cast<Container *>(this)->End();
 
-        for (; _end; ++_begin) {
+        for (; _begin != _end; ++_begin) {
             if (pred(*_begin)) {
                 return _begin;
             }

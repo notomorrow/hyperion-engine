@@ -866,7 +866,6 @@ GPUImageMemory::GPUImageMemory()
 
 GPUImageMemory::~GPUImageMemory()
 {
-    std::cout << "Dealloc image\n";
     AssertThrowMsg(image == nullptr, "image should have been destroyed!");
 }
 

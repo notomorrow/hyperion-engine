@@ -28,6 +28,7 @@ std::unique_ptr<Mesh> MeshBuilder::Quad(Topology topology)
         mesh = std::make_unique<Mesh>(
             new_vertices,
             new_indices,
+            topology,
             vertex_attributes
         );
 
@@ -37,7 +38,8 @@ std::unique_ptr<Mesh> MeshBuilder::Quad(Topology topology)
 #endif
         mesh = std::make_unique<Mesh>(
             vertices,
-            indices, 
+            indices,
+            topology,
             vertex_attributes
         );
 
@@ -111,7 +113,8 @@ std::unique_ptr<Mesh> MeshBuilder::Cube()
 
     mesh = std::make_unique<Mesh>(
         mesh_data.first,
-        mesh_data.second, 
+        mesh_data.second,
+        Topology::TRIANGLES,
         vertex_attributes
     );
 

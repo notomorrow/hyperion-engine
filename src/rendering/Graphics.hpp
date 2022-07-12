@@ -17,7 +17,6 @@
 #include <memory>
 #include <mutex>
 #include <vector>
-#include <deque>
 
 namespace hyperion::v2 {
 

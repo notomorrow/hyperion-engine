@@ -65,7 +65,7 @@ void FrameHandler::NextFrame()
     m_current_frame_index = (m_current_frame_index + 1) % NumFrames();
 }
 
-Result FrameHandler::PresentFrame(Queue *queue, Swapchain *swapchain) const
+Result FrameHandler::PresentFrame(DeviceQueue *queue, Swapchain *swapchain) const
 {
     auto *frame = GetCurrentFrameData().Get<Frame>();
 
