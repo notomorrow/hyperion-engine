@@ -25,8 +25,11 @@ extern thread_local ThreadId current_thread_id;
 
 void SetThreadId(const ThreadId &id);
 
-template <class Scheduler, class ...Args>
+template <class SchedulerType, class ...Args>
 class Thread {
+protected:
+    using Scheduler = SchedulerType;
+
 public:
     Thread(const ThreadId &id);
     Thread(const Thread &other) = delete;
@@ -62,16 +65,16 @@ private:
     std::thread   *m_thread;
 };
 
-template <class Scheduler, class ...Args>
-Thread<Scheduler, Args...>::Thread(const ThreadId &id)
+template <class SchedulerType, class ...Args>
+Thread<SchedulerType, Args...>::Thread(const ThreadId &id)
     : m_id(id),
       m_thread(nullptr),
       m_scheduler(nullptr)
 {
 }
 
-template <class Scheduler, class ...Args>
-Thread<Scheduler, Args...>::Thread(Thread &&other) noexcept
+template <class SchedulerType, class ...Args>
+Thread<SchedulerType, Args...>::Thread(Thread &&other) noexcept
     : m_id(std::move(other.m_id)),
       m_thread(other.m_thread),
       m_scheduler(other.m_scheduler)
@@ -80,8 +83,8 @@ Thread<Scheduler, Args...>::Thread(Thread &&other) noexcept
     other.m_scheduler = nullptr;
 }
 
-template <class Scheduler, class ...Args>
-Thread<Scheduler, Args...> &Thread<Scheduler, Args...>::operator=(Thread &&other) noexcept
+template <class SchedulerType, class ...Args>
+Thread<SchedulerType, Args...> &Thread<SchedulerType, Args...>::operator=(Thread &&other) noexcept
 {
     m_id = std::move(other.m_id);
     m_thread = other.m_thread;
@@ -93,8 +96,8 @@ Thread<Scheduler, Args...> &Thread<Scheduler, Args...>::operator=(Thread &&other
     return *this;
 }
 
-template <class Scheduler, class ...Args>
-Thread<Scheduler, Args...>::~Thread()
+template <class SchedulerType, class ...Args>
+Thread<SchedulerType, Args...>::~Thread()
 {
     if (m_scheduler != nullptr) {
         delete m_scheduler;
@@ -111,8 +114,8 @@ Thread<Scheduler, Args...>::~Thread()
     }
 }
 
-template <class Scheduler, class ...Args>
-bool Thread<Scheduler, Args...>::Start(Args ...args)
+template <class SchedulerType, class ...Args>
+bool Thread<SchedulerType, Args...>::Start(Args ...args)
 {
     if (m_thread != nullptr) {
         return false;
@@ -124,7 +127,7 @@ bool Thread<Scheduler, Args...>::Start(Args ...args)
         SetThreadId(self.GetId());
 
         AssertThrow(self.m_scheduler == nullptr);
-        self.m_scheduler = new Scheduler();
+        self.m_scheduler = new SchedulerType();
 
         self(std::get<Args>(tuple_args)...);
     });
@@ -132,8 +135,8 @@ bool Thread<Scheduler, Args...>::Start(Args ...args)
     return true;
 }
 
-template <class Scheduler, class ...Args>
-bool Thread<Scheduler, Args...>::Detach()
+template <class SchedulerType, class ...Args>
+bool Thread<SchedulerType, Args...>::Detach()
 {
     if (m_thread == nullptr) {
         return false;
@@ -148,8 +151,8 @@ bool Thread<Scheduler, Args...>::Detach()
     return true;
 }
 
-template <class Scheduler, class ...Args>
-bool Thread<Scheduler, Args...>::Join()
+template <class SchedulerType, class ...Args>
+bool Thread<SchedulerType, Args...>::Join()
 {
     if (m_thread == nullptr) {
         return false;
@@ -164,8 +167,8 @@ bool Thread<Scheduler, Args...>::Join()
     return true;
 }
 
-template <class Scheduler, class ...Args>
-bool Thread<Scheduler, Args...>::CanJoin() const
+template <class SchedulerType, class ...Args>
+bool Thread<SchedulerType, Args...>::CanJoin() const
 {
     if (m_thread == nullptr) {
         return false;

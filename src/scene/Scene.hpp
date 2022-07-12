@@ -39,8 +39,6 @@ public:
     bool AddSpatial(Ref<Spatial> &&spatial);
     bool HasSpatial(Spatial::ID id) const;
     /*! Add an Remove to the from the Scene in an enqueued way. On Update(), it will be removed from the scene. */
-    bool RemoveSpatial(Spatial::ID id);
-    /*! Add an Remove to the from the Scene in an enqueued way. On Update(), it will be removed from the scene. */
     bool RemoveSpatial(const Ref<Spatial> &spatial);
 
     /*! ONLY CALL FROM GAME THREAD!!! */

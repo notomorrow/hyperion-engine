@@ -8,6 +8,7 @@
 
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
+#include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/rt/RendererAccelerationStructure.hpp>
 
 #include <math/Vertex.hpp>
@@ -27,6 +28,7 @@ using renderer::PackedVertex;
 using renderer::PackedIndex;
 using renderer::AccelerationStructure;
 using renderer::AccelerationGeometry;
+using renderer::Topology;
 
 class Mesh
     : public EngineComponentBase<STUB_CLASS(Mesh)>,
@@ -45,6 +47,7 @@ public:
     Mesh(
         const std::vector<Vertex> &vertices,
         const std::vector<Index> &indices,
+        Topology topology,
         const VertexAttributeSet &vertex_attributes,
         Flags flags = MESH_FLAGS_NONE
     );
@@ -52,6 +55,7 @@ public:
     Mesh(
         const std::vector<Vertex> &vertices,
         const std::vector<Index> &indices,
+        Topology topology = Topology::TRIANGLES,
         Flags flags = MESH_FLAGS_NONE
     );
 
@@ -70,6 +74,8 @@ public:
 
     Flags GetFlags() const                                         { return m_flags; }
     inline void SetFlags(Flags flags)                              { m_flags = flags; }
+
+    Topology GetTopology() const                                   { return m_topology; }
 
     std::vector<PackedVertex> BuildPackedVertices() const;
     std::vector<PackedIndex> BuildPackedIndices() const;
@@ -91,7 +97,8 @@ private:
 
     size_t m_indices_count = 0;
 
-    VertexAttributeSet m_vertex_attributes;
+    VertexAttributeSet  m_vertex_attributes;
+    Topology            m_topology;
 
     std::vector<Vertex> m_vertices;
     std::vector<Index>  m_indices;

@@ -167,7 +167,7 @@ Instance::Instance(SystemSDL &_system, const char *app_name, const char *engine_
     this->device = nullptr;
 }
 
-Result Instance::CreateCommandPool(Queue &queue)
+Result Instance::CreateCommandPool(DeviceQueue &queue)
 {
     VkCommandPoolCreateInfo pool_info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
     pool_info.queueFamilyIndex = queue.family;

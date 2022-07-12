@@ -54,6 +54,7 @@ std::unique_ptr<Mesh> TerrainMeshBuilder::BuildMesh() const
     auto mesh = std::make_unique<Mesh>(
         vertices,
         indices,
+        Topology::TRIANGLES,
         renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes // for now
     );
 

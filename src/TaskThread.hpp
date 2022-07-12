@@ -4,6 +4,7 @@
 #include <core/Thread.hpp>
 #include <core/Scheduler.hpp>
 #include <core/Containers.hpp>
+#include <core/lib/Queue.hpp>
 #include <math/MathUtil.hpp>
 #include <GameCounter.hpp>
 
@@ -54,15 +55,18 @@ protected:
             counter.NextTick();
 
             if (m_scheduler->NumEnqueued()) {
-                m_scheduler->ExecuteFront([](auto &fn) {
-                    fn();
-                });
+                m_scheduler->AcceptNext(m_task_queue);
+
+                // do not execute within lock
+                m_task_queue.Pop().Execute();
             }
         }
     }
 
-    std::atomic_bool m_is_running;
-    UInt             m_target_ticks_per_second;
+    std::atomic_bool                m_is_running;
+    UInt                            m_target_ticks_per_second;
+
+    Queue<typename Scheduler::Task> m_task_queue;
 };
 
 } // namespace hyperion::v2

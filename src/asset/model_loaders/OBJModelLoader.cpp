@@ -350,7 +350,8 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
             auto mesh = resources.meshes.Add(
                 std::make_unique<Mesh>(
                     vertices, 
-                    indices
+                    indices,
+                    Topology::TRIANGLES
                 )
             );
 
@@ -369,7 +370,7 @@ std::unique_ptr<Node> ObjModelLoader::BuildFn(Engine *engine, const Object &obje
                     std::move(mesh),
                     std::move(shader),
                     std::move(material),
-                    RenderableAttributeSet{
+                    RenderableAttributeSet {
                         .bucket            = Bucket::BUCKET_OPAQUE,
                         .shader_id         = shader_id,
                         .vertex_attributes = vertex_attributes

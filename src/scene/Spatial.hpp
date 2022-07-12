@@ -56,7 +56,14 @@ public:
         Ref<Mesh> &&mesh                                    = nullptr,
         Ref<Shader> &&shader                                = nullptr,
         Ref<Material> &&material                            = nullptr,
-        const RenderableAttributeSet &renderable_attributes = {},
+        const ComponentInitInfo &init_info                  = {}
+    );
+
+    Spatial(
+        Ref<Mesh> &&mesh,
+        Ref<Shader> &&shader,
+        Ref<Material> &&material,
+        const RenderableAttributeSet &renderable_attributes,
         const ComponentInitInfo &init_info                  = {}
     );
 
@@ -93,7 +100,6 @@ public:
     bool IsRenderable() const                { return m_mesh != nullptr && m_shader != nullptr && m_material != nullptr; }
 
     const RenderableAttributeSet &GetRenderableAttributes() const { return m_renderable_attributes; }
-    void SetRenderableAttributes(const RenderableAttributeSet &render_options);
 
     void SetMeshAttributes(
         VertexAttributeSet vertex_attributes,
@@ -173,6 +179,9 @@ public:
     void AddToOctree(Engine *engine, Octree &octree);
 
 private:
+    void SetRenderableAttributes(const RenderableAttributeSet &render_options);
+    void RebuildRenderableAttributes();
+
     void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
     
     void EnqueueRenderUpdates(Engine *engine);

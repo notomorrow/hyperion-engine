@@ -91,6 +91,7 @@ void PostProcessing::Destroy(Engine *engine)
 
     HYPERION_ASSERT_RESULT(m_uniform_buffer.Destroy(engine->GetDevice()));
 
+    HYP_BREAKPOINT;
     m_pre_effects.Clear();
     m_post_effects.Clear();
 }

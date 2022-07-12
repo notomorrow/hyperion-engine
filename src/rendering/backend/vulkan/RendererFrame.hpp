@@ -45,7 +45,7 @@ public:
     /* Stop recording into the command buffer */
     Result EndCapture(Device *device);
     /* Submit command buffer to the given queue */
-    Result Submit(Queue *queue);
+    Result Submit(DeviceQueue *queue);
     
     non_owning_ptr<CommandBuffer> command_buffer;
     std::unique_ptr<Fence>        fc_queue_submit;

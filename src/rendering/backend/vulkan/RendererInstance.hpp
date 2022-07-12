@@ -37,7 +37,7 @@ class Instance {
     Result SetupDebug();
     Result SetupDebugMessenger();
 
-    Result CreateCommandPool(Queue &queue);
+    Result CreateCommandPool(DeviceQueue &queue);
 
 public:
     Instance(SystemSDL &_system, const char *app_name, const char *engine_name);
@@ -49,14 +49,14 @@ public:
     DescriptorPool &GetDescriptorPool()                   { return this->descriptor_pool; }
     const DescriptorPool &GetDescriptorPool() const       { return this->descriptor_pool; }
                                                           
-    Queue &GetGraphicsQueue()                             { return this->queue_graphics; }
-    const Queue &GetGraphicsQueue() const                 { return this->queue_graphics; }
-    Queue &GetTransferQueue()                             { return this->queue_transfer; }
-    const Queue &GetTransferQueue() const                 { return this->queue_transfer; }
-    Queue &GetPresentQueue()                              { return this->queue_present; }
-    const Queue &GetPresentQueue() const                  { return this->queue_present; }
-    Queue &GetComputeQueue()                              { return this->queue_compute; }
-    const Queue &GetComputeQueue() const                  { return this->queue_compute; }
+    DeviceQueue &GetGraphicsQueue()                       { return this->queue_graphics; }
+    const DeviceQueue &GetGraphicsQueue() const           { return this->queue_graphics; }
+    DeviceQueue &GetTransferQueue()                       { return this->queue_transfer; }
+    const DeviceQueue &GetTransferQueue() const           { return this->queue_transfer; }
+    DeviceQueue &GetPresentQueue()                        { return this->queue_present; }
+    const DeviceQueue &GetPresentQueue() const            { return this->queue_present; }
+    DeviceQueue &GetComputeQueue()                        { return this->queue_compute; }
+    const DeviceQueue &GetComputeQueue() const            { return this->queue_compute; }
                                                           
     VkCommandPool GetGraphicsCommandPool() const          { return this->queue_graphics.command_pool; }
     VkCommandPool GetComputeCommandPool() const           { return this->queue_compute.command_pool; }
@@ -109,7 +109,7 @@ private:
 
     Device        *device = nullptr;
 
-    Queue          queue_graphics,
+    DeviceQueue    queue_graphics,
                    queue_transfer,
                    queue_present,
                    queue_compute;

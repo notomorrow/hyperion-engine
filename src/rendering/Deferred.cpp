@@ -201,7 +201,7 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 
 DeferredRenderer::DeferredRenderer()
     : Renderer(),
-      m_ssr(Extent2D { 512, 512 }),
+      m_ssr(Extent2D { 1024, 1024 }),
       m_indirect_pass(true),
       m_direct_pass(false)
 {
@@ -545,7 +545,7 @@ void DeferredRenderer::Create(Engine *engine)
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_mipmapped_results[i] = engine->resources.textures.Add(std::make_unique<Texture2D>(
-            Extent2D { 512, 512 },
+            Extent2D { 1024, 1024 },
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_RGBA8_SRGB,
             Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
             Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
@@ -687,6 +687,10 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     const auto frame_index = frame->GetFrameIndex();
     auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
+    if (ssr_enabled && mipmapped_result.GetGPUImage()->GetResourceState() != renderer::GPUMemory::ResourceState::UNDEFINED) {
+        m_ssr.Render(engine, frame);
+    }
+
     {
         DebugMarker marker(primary, "Record deferred indirect lighting pass");
 
@@ -759,10 +763,6 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         HYPERION_ASSERT_RESULT(mipmapped_result.GenerateMipmaps(engine->GetDevice(), primary));
 
         framebuffer_image->GetGPUImage()->InsertBarrier(primary, renderer::GPUMemory::ResourceState::SHADER_RESOURCE);
-    }
-
-    if (ssr_enabled) {
-        m_ssr.Render(engine, frame);
     }
 
     /* ==========  END MIP CHAIN GENERATION ========== */

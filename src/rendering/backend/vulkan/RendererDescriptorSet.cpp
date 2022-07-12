@@ -682,7 +682,7 @@ void DescriptorPool::RemoveDescriptorSet(UInt index)
     // equals means that the descriptor set is for frame 0
     const UInt queue_index = DescriptorSet::GetFrameIndex(index);
 
-    m_descriptor_sets_pending_destruction[queue_index].push_back(index);
+    m_descriptor_sets_pending_destruction[queue_index].Push(index);
 
     // look through the list of items pending addition, remove from there
     for (auto it = m_descriptor_sets_pending_addition.begin(); it != m_descriptor_sets_pending_addition.end();) {
@@ -698,12 +698,12 @@ Result DescriptorPool::DestroyPendingDescriptorSets(Device *device, UInt frame_i
 {
     auto &descriptor_set_queue = m_descriptor_sets_pending_destruction[frame_index];
 
-    while (!descriptor_set_queue.empty()) {
-        const auto index = descriptor_set_queue.front();
+    while (!descriptor_set_queue.Empty()) {
+        const auto index = descriptor_set_queue.Front();
 
         HYPERION_BUBBLE_ERRORS(DestroyDescriptorSet(device, index));
 
-        descriptor_set_queue.pop_front();
+        descriptor_set_queue.Pop();
     }
 
     HYPERION_RETURN_OK;
@@ -1054,7 +1054,7 @@ void Descriptor::Create(
 
     const auto descriptor_type = ToVkDescriptorType(m_descriptor_type);
 
-    m_sub_descriptor_update_indices = {};
+    m_sub_descriptor_update_indices.Clear();
 
     auto descriptor_count = static_cast<UInt>(m_sub_descriptors.Size());
 
@@ -1252,20 +1252,16 @@ void Descriptor::RemoveSubDescriptor(UInt index)
     
     m_sub_descriptors.Erase(it);
 
-    const auto update_it = std::find(
-        m_sub_descriptor_update_indices.begin(),
-        m_sub_descriptor_update_indices.end(),
-        index
-    );
+    const auto update_it = m_sub_descriptor_update_indices.Find(index);
 
-    if (update_it != m_sub_descriptor_update_indices.end()) {
-        m_sub_descriptor_update_indices.erase(update_it);
+    if (update_it != m_sub_descriptor_update_indices.End()) {
+        m_sub_descriptor_update_indices.Erase(update_it);
     }
 }
 
 void Descriptor::MarkDirty(UInt sub_descriptor_index)
 {
-    m_sub_descriptor_update_indices.push_back(sub_descriptor_index);
+    m_sub_descriptor_update_indices.PushBack(sub_descriptor_index);
 
     m_dirty_sub_descriptors |= {sub_descriptor_index, sub_descriptor_index + 1};
 

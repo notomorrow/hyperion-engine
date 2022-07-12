@@ -9,6 +9,9 @@
 #include <core/lib/Range.hpp>
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/FlatMap.hpp>
+#include <core/lib/DynArray.hpp>
+#include <core/lib/FixedArray.hpp>
+#include <core/lib/Queue.hpp>
 #include <core/lib/SparseFlatMap.hpp>
 
 #include <Types.hpp>
@@ -20,7 +23,6 @@
 #include <memory>
 #include <unordered_map>
 #include <map>
-#include <deque>
 #include <queue>
 #include <type_traits>
 
@@ -153,10 +155,10 @@ protected:
     Range<UInt> m_dirty_sub_descriptors;
 
     FlatMap<UInt, SubDescriptor> m_sub_descriptors;
-    std::deque<size_t> m_sub_descriptor_update_indices;
+    DynArray<UInt>               m_sub_descriptor_update_indices;
 
-    UInt m_binding;
-    DescriptorType m_descriptor_type;
+    UInt                         m_binding;
+    DescriptorType               m_descriptor_type;
 
 private:
     DescriptorSet *m_descriptor_set;
@@ -483,8 +485,8 @@ private:
     };
 
     // 1 for each frame in flight
-    std::vector<DescriptorSetPendingEntry> m_descriptor_sets_pending_addition;
-    std::array<std::deque<UInt>, max_frames_in_flight> m_descriptor_sets_pending_destruction;
+    std::vector<DescriptorSetPendingEntry>        m_descriptor_sets_pending_addition;
+    FixedArray<Queue<UInt>, max_frames_in_flight> m_descriptor_sets_pending_destruction;
 
     bool m_is_created;
 };

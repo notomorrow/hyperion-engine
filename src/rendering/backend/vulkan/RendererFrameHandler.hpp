@@ -35,7 +35,7 @@ public:
      * Really only useful for our main swapchain surface */
     Result PrepareFrame(Device *device, Swapchain *swapchain);
     /* Submit the frame for presentation */
-    Result PresentFrame(Queue *queue, Swapchain *swapchain) const;
+    Result PresentFrame(DeviceQueue *queue, Swapchain *swapchain) const;
     /* Advance the current frame index; call at the end of a render loop. */
     void NextFrame();
     /* Create our Frame objects (count is same as num_frames) */

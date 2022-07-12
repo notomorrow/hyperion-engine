@@ -54,11 +54,13 @@ Mesh::CalculateIndices(const std::vector<Vertex> &vertices)
 Mesh::Mesh(
     const std::vector<Vertex> &vertices,
     const std::vector<Index> &indices,
+    Topology topology,
     const VertexAttributeSet &vertex_attributes,
     Flags flags
 ) : EngineComponentBase(),
     m_vbo(std::make_unique<VertexBuffer>()),
     m_ibo(std::make_unique<IndexBuffer>()),
+    m_topology(topology),
     m_vertex_attributes(vertex_attributes),
     m_vertices(vertices),
     m_indices(indices),
@@ -69,12 +71,14 @@ Mesh::Mesh(
 Mesh::Mesh(
     const std::vector<Vertex> &vertices,
     const std::vector<Index> &indices,
+    Topology topology,
     Flags flags
 ) : Mesh(
-        vertices,
-        indices,
-        renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
-        flags
+      vertices,
+      indices,
+      topology,
+      renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes,
+      flags
     )
 {
 }

@@ -116,6 +116,24 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
     AssertReady();
     AssertThrow(spatial != nullptr);
 
+    if (m_spatials.Contains(spatial->GetId())) {
+        DebugLog(
+            LogType::Warn,
+            "Spatial #%u already exists in Scene #%u\n",
+            spatial->GetId().value,
+            m_id.value
+        );
+
+        return false;
+    }
+
+    spatial->m_scene = this;
+    spatial.Init();
+    m_environment->OnEntityAdded(spatial);
+
+    // // m_spatials.Insert(spatial->GetId(), std::move(spatial));
+    // m_spatials.Insert(static_cast<IDBase>(spatial->GetId()), std::move(spatial));
+
     m_spatials_pending_addition.Insert(std::move(spatial));
 
     return true;
@@ -128,17 +146,6 @@ bool Scene::HasSpatial(Spatial::ID id) const
     return m_spatials.Find(id) != m_spatials.End();
 }
 
-bool Scene::RemoveSpatial(Spatial::ID id)
-{
-    Threads::AssertOnThread(THREAD_GAME);
-
-    AssertReady();
-
-    m_spatials_pending_removal.Insert(id);
-
-    return true;
-}
-
 bool Scene::RemoveSpatial(const Ref<Spatial> &spatial)
 {
     Threads::AssertOnThread(THREAD_GAME);
@@ -146,23 +153,31 @@ bool Scene::RemoveSpatial(const Ref<Spatial> &spatial)
     AssertReady();
     AssertThrow(spatial != nullptr);
 
-    m_spatials_pending_removal.Insert(spatial->GetId());
+    auto it = m_spatials.Find(spatial->GetId());
 
-    /*auto it = m_spatials.Find(spatial->GetId());
     if (it == m_spatials.End()) {
+        DebugLog(
+            LogType::Warn,
+            "Could not remove entity with id #%u: not found\n",
+            spatial->GetId().value
+        );
+
         return false;
     }
 
-    auto &found_spatial = it->second;
-    AssertThrow(found_spatial != nullptr);
+    if (m_spatials_pending_removal.Contains(spatial->GetId())) {
+        DebugLog(
+            LogType::Warn,
+            "Could not remove entity with id #%u: already pending removal\n",
+            spatial->GetId().value
+        );
 
-    RemoveFromPipelines(found_spatial);
-
-    if (found_spatial->m_octree != nullptr) {
-        found_spatial->RemoveFromOctree(GetEngine());
+        return false;
     }
 
-    m_spatials.Erase(it);*/
+    m_environment->OnEntityRemoved(it->second);
+
+    m_spatials_pending_removal.Insert(spatial->GetId());
 
     return true;
 }
@@ -174,19 +189,7 @@ void Scene::AddPendingEntities()
     }
 
     for (auto &spatial : m_spatials_pending_addition) {
-        if (m_spatials.Contains(spatial->GetId())) {
-            DebugLog(
-                LogType::Warn,
-                "Spatial #%u already exists in Scene #%u\n",
-                spatial->GetId().value,
-                m_id.value
-            );
-
-            continue;
-        }
-
-        spatial->m_scene = this;
-        spatial.Init();
+        const auto id = spatial->GetId();
 
         if (spatial->IsRenderable() && !spatial->GetPrimaryPipeline()) {
             if (auto pipeline = GetEngine()->FindOrCreateGraphicsPipeline(spatial->GetRenderableAttributes())) {
@@ -196,9 +199,6 @@ void Scene::AddPendingEntities()
                     spatial->EnqueueRenderUpdates(GetEngine());
                 }
 
-                // spatial->SetShaderDataState(ShaderDataState::DIRTY);
-                
-                // TODO: wrapper function
                 spatial->m_primary_pipeline = {
                     .pipeline = pipeline.ptr,
                     .changed  = false
@@ -225,10 +225,7 @@ void Scene::AddPendingEntities()
             }
         }
 
-        m_environment->OnEntityAdded(spatial);
-
-        // m_spatials.Insert(spatial->GetId(), std::move(spatial));
-        m_spatials.Insert(static_cast<IDBase>(spatial->GetId()), std::move(spatial));
+        m_spatials.Insert(static_cast<IDBase>(id), std::move(spatial));
     }
 
     m_spatials_pending_addition.Clear();
@@ -243,20 +240,8 @@ void Scene::RemovePendingEntities()
     for (auto &id : m_spatials_pending_removal) {
         auto it = m_spatials.Find(id);
 
-        if (it == m_spatials.End()) {
-            DebugLog(
-                LogType::Warn,
-                "Could not remove entity with id #%u: not found\n",
-                id.value
-            );
-
-            continue;
-        }
-
         auto &found_spatial = it->second;
         AssertThrow(found_spatial != nullptr);
-
-        m_environment->OnEntityRemoved(found_spatial);
 
         RemoveFromPipelines(found_spatial);
 
@@ -284,6 +269,14 @@ void Scene::Update(
 {
     AssertReady();
 
+    if (!m_spatials_pending_addition.Empty()) {
+        AddPendingEntities();
+    }
+
+    if (!m_spatials_pending_removal.Empty()) {
+        RemovePendingEntities();
+    }
+
     m_environment->Update(engine, delta);
 
     if (m_camera != nullptr) {
@@ -296,14 +289,6 @@ void Scene::Update(
     }
 
     EnqueueRenderUpdates(engine);
-
-    if (!m_spatials_pending_addition.Empty()) {
-        AddPendingEntities();
-    }
-
-    if (!m_spatials_pending_removal.Empty()) {
-        RemovePendingEntities();
-    }
 
     for (auto &it : m_spatials) {
         auto &entity = it.second;
@@ -318,7 +303,6 @@ void Scene::Update(
     }
 
     if (m_world != nullptr && update_octree_visibility) {
-        // m_octree.NextVisibilityState();
         m_world->GetOctree().CalculateVisibility(this);
     }
 }
@@ -361,6 +345,7 @@ void Scene::RemoveFromPipeline(Ref<Spatial> &spatial, GraphicsPipeline *pipeline
     //         .changed  = true
     //     };
     // }
+    
 
     pipeline->RemoveSpatial(spatial.IncRef());
     // spatial->OnRemovedFromPipeline(pipeline);

@@ -3,15 +3,19 @@
 
 #include <vector>
 #include <functional>
+#include <type_traits>
 
 namespace hyperion {
 
+
 class Profile {
 public:
+    using ProfileFunction = std::add_pointer_t<void()>;
+
     static std::vector<double> RunInterleved(std::vector<Profile> &&, size_t runs_per = 5, size_t num_iterations = 100, size_t runs_per_iteration = 100);
     
-    Profile(std::function<void()> &&lambda)
-        : m_lambda(std::move(lambda)),
+    Profile(ProfileFunction &&lambda)
+        : m_lambda(std::forward<ProfileFunction>(lambda)),
           m_result(0.0),
           m_iteration(0)
     {
@@ -26,7 +30,7 @@ public:
     
     Profile &Run(size_t num_iterations = 100, size_t runs_per_iteration = 100);
 
-    double GetResult() const { return m_result; }
+    double GetResult() const { return m_iteration == 0 ? 0.0 : m_result / static_cast<double>(m_iteration); }
 
     Profile &Reset()
     {
@@ -37,9 +41,9 @@ public:
     }
 
 private:
-    std::function<void()> m_lambda;
-    double m_result;
-    size_t m_iteration;
+    ProfileFunction m_lambda;
+    double          m_result;
+    size_t          m_iteration;
 };
 
 } // namespace hyperion

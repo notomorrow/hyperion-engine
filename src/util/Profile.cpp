@@ -10,6 +10,8 @@ std::vector<double> Profile::RunInterleved(std::vector<Profile> &&profiles, size
     results.resize(profiles.size());
 
     for (size_t i = 0; i < runs_per; i++) {
+
+        // size_t index = 0;
         size_t index = std::rand() % profiles.size();
         size_t counter = 0;
 
@@ -56,7 +58,7 @@ Profile &Profile::Run(size_t num_iterations, size_t runs_per_iteration)
 
     result /= double(num_iterations);
 
-    m_result = (m_result + result) * (1.0 / (m_iteration + 1));
+    m_result += result;//= (m_result + result) * (1.0 / (m_iteration + 1));
     m_iteration++;
 
     delete[] times;
