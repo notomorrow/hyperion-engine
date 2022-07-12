@@ -1,5 +1,5 @@
-#ifndef SAXPARSER_H
-#define SAXPARSER_H
+#ifndef SAXParser_H
+#define SAXParser_H
 
 #include <asset/BufferedByteReader.hpp>
 
@@ -25,7 +25,7 @@ public:
     virtual void Comment(const std::string &comment) = 0;
 };
 
-class SaxParser {
+class SAXParser {
 public:
     struct Result {
         enum {
@@ -47,7 +47,7 @@ public:
         operator bool() const { return result == SAX_OK; }
     };
 
-    SaxParser(SaxHandler *handler);
+    SAXParser(SaxHandler *handler);
     Result Parse(const std::string &filepath);
     Result Parse(BufferedReader<2048> *reader);
 
