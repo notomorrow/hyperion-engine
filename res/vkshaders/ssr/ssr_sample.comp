@@ -80,8 +80,8 @@ void main(void)
                 accum_radius = current_radius;
             }
 
-            // reflection_sample *= clamp(1.0 - (roughness / HYP_SSR_ROUGHNESS_MAX), 0.0, 1.0);
-            reflection_sample.a *= 1.0 - clamp(accum_radius / 255.0, 0.0, 1.0);
+            reflection_sample *= clamp(1.0 - (roughness / HYP_SSR_ROUGHNESS_MAX), 0.0, 1.0);
+            // reflection_sample.a *= 1.0 - clamp(accum_radius / 255.0, 0.0, 1.0);
             reflection_sample.a *= alpha;
         }
     }

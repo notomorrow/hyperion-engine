@@ -181,7 +181,7 @@ LoaderResult OgreXmlSkeletonLoader::LoadFn(LoaderState *state, Object &object)
 {
     OgreXmlSkeletonSaxHandler handler(state, object);
 
-    xml::SaxParser parser(&handler);
+    xml::SAXParser parser(&handler);
     auto sax_result = parser.Parse(&state->stream);
 
     if (!sax_result) {
