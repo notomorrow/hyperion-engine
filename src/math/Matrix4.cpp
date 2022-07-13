@@ -3,7 +3,7 @@
 #include "Quaternion.hpp"
 #include "Rect.hpp"
 
-#include <string.h>
+#include <core/Core.hpp>
 
 namespace hyperion {
 
@@ -147,12 +147,12 @@ Matrix4::Matrix4()
 
 Matrix4::Matrix4(float *v)
 {
-    std::memcpy(values, v, sizeof(values));
+    hyperion::Memory::Copy(values, v, sizeof(values));
 }
 
 Matrix4::Matrix4(const Matrix4 &other)
 {
-    std::memcpy(values, other.values, sizeof(values));
+    hyperion::Memory::Copy(values, other.values, sizeof(values));
 }
 
 float Matrix4::Determinant() const
@@ -266,7 +266,7 @@ float Matrix4::GetRoll() const
 
 Matrix4 &Matrix4::operator=(const Matrix4 &other)
 {
-    std::memcpy(values, other.values, sizeof(values));
+    hyperion::Memory::Copy(values, other.values, sizeof(values));
 
     return *this;
 }

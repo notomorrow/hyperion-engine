@@ -1,6 +1,6 @@
 #include "Matrix3.hpp"
 #include <cassert>
-#include <string.h>
+#include <core/Core.hpp>
 
 namespace hyperion {
 Matrix3::Matrix3()
@@ -15,7 +15,7 @@ Matrix3::Matrix3()
 
 Matrix3::Matrix3(float *v)
 {
-    memcpy(&values[0], v, sizeof(float) * values.size());
+    hyperion::Memory::Copy(&values[0], v, sizeof(float) * values.size());
 }
 
 Matrix3::Matrix3(const Matrix3 &other)

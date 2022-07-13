@@ -213,9 +213,9 @@ Image::Image(
     m_bytes = new unsigned char[m_size];
 
     if (bytes != nullptr) {
-        std::memcpy(m_bytes, bytes, m_size);
+        Memory::Copy(m_bytes, bytes, m_size);
     } else {
-        std::memset(m_bytes, 0, m_size);
+        Memory::Set(m_bytes, 0, m_size);
     }
 }
 

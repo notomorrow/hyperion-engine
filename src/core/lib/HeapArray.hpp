@@ -3,7 +3,7 @@
 
 #include <util/Defines.hpp>
 
-#include <cstring>
+#include <core/Core.hpp>
 
 namespace hyperion {
 
@@ -73,12 +73,12 @@ public:
 
     void MemCpy(const void *src, size_t count)
     {
-        std::memcpy(ptr, src, count);
+        Memory::Copy(ptr, src, count);
     }
 
     void MemCpy(const void *src, size_t count, size_t dst_offset)
     {
-        std::memcpy((void *)uintptr_t(ptr + dst_offset), src, count);
+        Memory::Copy((void *)uintptr_t(ptr + dst_offset), src, count);
     }
 
     HYP_DEF_STL_BEGIN_END(ptr, &ptr[ArraySize - 1])

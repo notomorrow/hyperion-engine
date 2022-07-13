@@ -1,4 +1,5 @@
 #include <script/vm/TypeInfo.hpp>
+#include <core/Core.hpp>
 #include <cstring>
 
 namespace hyperion {
@@ -13,14 +14,14 @@ TypeInfo::TypeInfo(const char *name,
     size_t name_len = std::strlen(name);
     m_name = new char[name_len + 1];
     m_name[name_len] = '\0';
-    std::memcpy(m_name, name, name_len);
+    Memory::Copy(m_name, name, name_len);
 
     // copy all names
     for (size_t i = 0; i < m_size; i++) {
         size_t len = std::strlen(names[i]);
         m_names[i] = new char[len + 1];
         m_names[i][len] = '\0';
-        std::memcpy(m_names[i], names[i], len);
+        Memory::Copy(m_names[i], names[i], len);
     }
 }
 
@@ -31,14 +32,14 @@ TypeInfo::TypeInfo(const TypeInfo &other)
     size_t name_len = std::strlen(other.m_name);
     m_name = new char[name_len + 1];
     m_name[name_len] = '\0';
-    std::memcpy(m_name, other.m_name, name_len);
+    Memory::Copy(m_name, other.m_name, name_len);
 
     // copy all names
     for (size_t i = 0; i < m_size; i++) {
         size_t len = std::strlen(other.m_names[i]);
         m_names[i] = new char[len + 1];
         m_names[i][len] = '\0';
-        std::memcpy(m_names[i], other.m_names[i], len);
+        Memory::Copy(m_names[i], other.m_names[i], len);
     }
 }
 
@@ -60,14 +61,14 @@ TypeInfo &TypeInfo::operator=(const TypeInfo &other)
     size_t name_len = std::strlen(other.m_name);
     m_name = new char[name_len + 1];
     m_name[name_len] = '\0';
-    std::memcpy(m_name, other.m_name, name_len);
+    Memory::Copy(m_name, other.m_name, name_len);
 
     // copy all names
     for (size_t i = 0; i < m_size; i++) {
         size_t len = std::strlen(other.m_names[i]);
         m_names[i] = new char[len + 1];
         m_names[i][len] = '\0';
-        std::memcpy(m_names[i], other.m_names[i], len);
+        Memory::Copy(m_names[i], other.m_names[i], len);
     }
 
     return *this;

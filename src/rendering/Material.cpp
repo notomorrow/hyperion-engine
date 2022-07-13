@@ -20,7 +20,7 @@ Material::Material(const char *name)
 {
     size_t len = std::strlen(name);
     m_name = new char[len + 1];
-    std::strcpy(m_name, name);
+    Memory::CopyString(m_name, name);
 
     ResetParameters();
 }

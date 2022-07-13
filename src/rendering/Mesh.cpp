@@ -115,7 +115,7 @@ void Mesh::Init(Engine *engine)
             m_indices  = {0};
         }
 
-        engine->render_scheduler.Enqueue([this, packed_buffer = BuildVertexBuffer()](...) {
+        engine->render_scheduler.Enqueue([this, packed_buffer = BuildVertexBuffer(), indices = m_indices](...) {
             using renderer::StagingBuffer;
 
             auto *engine = GetEngine();
@@ -124,9 +124,9 @@ void Mesh::Init(Engine *engine)
             auto *device   = engine->GetDevice();
 
             const size_t packed_buffer_size  = packed_buffer.size() * sizeof(float);
-            const size_t packed_indices_size = m_indices.size() * sizeof(Index);
+            const size_t packed_indices_size = indices.size() * sizeof(Index);
 
-            m_indices_count = m_indices.size();
+            m_indices_count = indices.size();
 
             HYPERION_BUBBLE_ERRORS(m_vbo->Create(device, packed_buffer_size));
             HYPERION_BUBBLE_ERRORS(m_ibo->Create(device, packed_indices_size));
@@ -140,7 +140,7 @@ void Mesh::Init(Engine *engine)
                     staging_buffer_vertices->Copy(device, packed_buffer_size, packed_buffer.data());
 
                     auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
-                    staging_buffer_indices->Copy(device, packed_indices_size, m_indices.data());
+                    staging_buffer_indices->Copy(device, packed_indices_size, indices.data());
 
                     commands.Push([&](CommandBuffer *cmd) {
                         m_vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
@@ -163,7 +163,7 @@ void Mesh::Init(Engine *engine)
         
             HYPERION_RETURN_OK;
         });
-        HYP_FLUSH_RENDER_QUEUE(engine);
+
         m_vertices.clear();
         m_indices.clear();
 
@@ -205,7 +205,7 @@ void Mesh::Init(Engine *engine)
  * mesh attribute. This macro helps keep the code cleaner and easier to maintain. */
 #define PACKED_SET_ATTR(raw_values, arg_size)                                                    \
     do {                                                                                         \
-        memcpy((void *)(raw_buffer + current_offset), (raw_values), (arg_size) * sizeof(float)); \
+        Memory::Copy((void *)(raw_buffer + current_offset), (raw_values), (arg_size) * sizeof(float)); \
         current_offset += (arg_size);                                                            \
     } while (0)
 

@@ -2,8 +2,7 @@
 
 #include <system/Debug.hpp>
 
-#include <cmath>
-#include <cstring>
+#include <core/Core.hpp>
 #include <sstream>
 
 namespace hyperion {
@@ -19,7 +18,7 @@ MemoryBuffer::MemoryBuffer(const MemoryBuffer &other)
     : m_size(other.m_size),
       m_buffer(std::malloc(other.m_size))
 {
-    std::memcpy(m_buffer, other.m_buffer, m_size);
+    hyperion::Memory::Copy(m_buffer, other.m_buffer, m_size);
 }
 
 MemoryBuffer::~MemoryBuffer()
@@ -43,7 +42,7 @@ MemoryBuffer &MemoryBuffer::operator=(const MemoryBuffer &other)
     }
 
     // copy all objects
-    std::memcpy(m_buffer, other.m_buffer, m_size);
+    hyperion::Memory::Copy(m_buffer, other.m_buffer, m_size);
 
     return *this;
 }

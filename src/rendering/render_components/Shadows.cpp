@@ -144,6 +144,8 @@ void ShadowPass::Create(Engine *engine)
         )
     ));
 
+    engine->GetWorld().AddScene(m_scene.IncRef());
+
     m_scene->SetParentId(m_parent_scene_id);
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
@@ -251,7 +253,6 @@ void ShadowRenderer::InitGame(Engine *engine)
 
     AssertReady();
 
-    engine->GetWorld().AddScene(m_shadow_pass.GetScene().IncRef());
 
     for (auto &it : GetParent()->GetScene()->GetSpatials()) {
         auto &entity = it.second;

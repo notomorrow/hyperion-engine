@@ -1136,6 +1136,8 @@ int main()
 
     engine->m_running = false;
 
+    HYP_FLUSH_RENDER_QUEUE(engine);
+
     engine->game_thread.Join();
 
     delete vct;

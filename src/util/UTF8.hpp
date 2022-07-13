@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <cstring>
 
+#include <core/Core.hpp>
+
 // #ifdef __MINGW32__
 // #undef _WIN32
 // #endif
@@ -408,7 +410,7 @@ public:
           m_size(size + 1),
           m_length(0)
     {
-        std::memset(m_data, 0, m_size);
+        hyperion::Memory::Set(m_data, 0, m_size);
     }
 
     Utf8String(const char *str)
@@ -422,7 +424,7 @@ public:
             // copy raw bytes
             m_size = std::strlen(str) + 1;
             m_data = new char[m_size];
-            std::strcpy(m_data, str);
+            hyperion::Memory::CopyString(m_data, str);
             // recalculate length
             m_length = utf8_strlen(m_data);
         }
@@ -439,7 +441,7 @@ public:
             // copy raw bytes
             m_size = std::max(std::strlen(str), size) + 1;
             m_data = new char[m_size];
-            std::strcpy(m_data, str);
+            hyperion::Memory::CopyString(m_data, str);
             // recalculate length
             m_length = utf8_strlen(m_data);
         }
@@ -450,7 +452,7 @@ public:
         // copy raw bytes
         m_size = other.m_size;
         m_data = new char[m_size];
-        std::strcpy(m_data, other.m_data);
+        hyperion::Memory::CopyString(m_data, other.m_data);
         m_length = other.m_length;
     }
 
@@ -471,7 +473,7 @@ public:
         // check if there is enough space to not have to delete the data
         size_t len = std::strlen(str) + 1;
         if (m_data != nullptr && m_size >= len) {
-            std::strcpy(m_data, str);
+            hyperion::Memory::CopyString(m_data, str);
             m_length = utf8_strlen(m_data);
         } else {
             // must delete the data if not null
@@ -488,7 +490,7 @@ public:
                 // copy raw bytes
                 m_size = len;
                 m_data = new char[m_size];
-                std::strcpy(m_data, str);
+                hyperion::Memory::CopyString(m_data, str);
                 // recalculate length
                 m_length = utf8_strlen(m_data);
             }
@@ -508,7 +510,7 @@ public:
             // copy raw bytes
             m_size = std::strlen(str) + 1;
             m_data = new char[m_size];
-            std::strcpy(m_data, str);
+            Memory::CopyString(m_data, str);
             // recalculate length
             m_length = utf8_strlen(m_data);
         }*/
@@ -525,7 +527,7 @@ public:
         // copy raw bytes
         m_size = std::strlen(other.m_data) + 1;
         m_data = new char[m_size];
-        std::strcpy(m_data, other.m_data);
+        Memory::CopyString(m_data, other.m_data);
         m_length = other.m_length;
 
         return *this;*/
@@ -609,7 +611,7 @@ public:
             m_size = new_size;
 
             char *new_data = new char[m_size];
-            std::strcpy(new_data, m_data);
+            hyperion::Memory::CopyString(new_data, m_data);
             std::strcat(new_data, str);
             delete[] m_data;
             m_data = new_data;
