@@ -1,5 +1,4 @@
 #include "Game.hpp"
-#include <core/lib/SmallVector.hpp>
 
 #include <system/Debug.hpp>
 

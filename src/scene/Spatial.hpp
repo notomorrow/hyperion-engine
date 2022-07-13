@@ -184,7 +184,7 @@ private:
 
     void UpdateControllers(Engine *engine, GameCounter::TickUnit delta);
     
-    void EnqueueRenderUpdates(Engine *engine);
+    void EnqueueRenderUpdates();
     void UpdateOctree();
     
     void OnAddedToPipeline(GraphicsPipeline *pipeline);

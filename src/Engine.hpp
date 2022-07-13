@@ -327,11 +327,9 @@ public:
     Ref<GraphicsPipeline> AddGraphicsPipeline(std::unique_ptr<GraphicsPipeline> &&pipeline);
 
     void Initialize();
-    void PrepareSwapchain();
     void Compile();
 
-    void ResetRenderState();
-    void UpdateBuffersAndDescriptors(UInt frame_index);
+    void PreFrameUpdate(Frame *frame);
     
     void RenderDeferred(Frame *frame);
     void RenderFinalPass(Frame *frame) const;
@@ -353,6 +351,11 @@ public:
     TaskThread terrain_thread;
 
 private:
+    void ResetRenderState();
+    void UpdateBuffersAndDescriptors(UInt frame_index);
+
+    void PrepareSwapchain();
+
     void FindTextureFormatDefaults();
     
     std::unique_ptr<Instance>         m_instance;

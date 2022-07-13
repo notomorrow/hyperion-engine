@@ -25,19 +25,15 @@ void Environment::Init(Engine *engine)
     
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ENVIRONMENTS, [this](Engine *engine) {
-        /*for (auto &texture : m_environment_textures) {
-            if (texture != nullptr) {
-                texture.Init();
-            }
-        }*/
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ENVIRONMENTS, [this](...) {
+        auto *engine = GetEngine();
 
-        {
+        { // lights
             if (m_has_light_updates.load()) {
                 std::lock_guard guard(m_light_update_mutex);
 
-                while (!m_lights_pending_addition.empty()) {
-                    auto &front = m_lights_pending_addition.front();
+                while (m_lights_pending_addition.Any()) {
+                    auto &front = m_lights_pending_addition.Front();
 
                     if (front != nullptr) {
                         const auto id = front->GetId();
@@ -45,11 +41,11 @@ void Environment::Init(Engine *engine)
                         m_lights.Insert(id, std::move(front));
                     }
 
-                    m_lights_pending_addition.pop();
+                    m_lights_pending_addition.Pop();
                 }
 
-                while (!m_lights_pending_removal.empty()) {
-                    auto &front = m_lights_pending_removal.front();
+                while (m_lights_pending_removal.Any()) {
+                    auto &front = m_lights_pending_removal.Front();
 
                     if (front != nullptr) {
                         const auto id = front->GetId();
@@ -57,7 +53,7 @@ void Environment::Init(Engine *engine)
                         m_lights.Erase(id);
                     }
 
-                    m_lights_pending_removal.pop();
+                    m_lights_pending_removal.Pop();
                 }
 
                 m_has_light_updates.store(false);
@@ -74,14 +70,16 @@ void Environment::Init(Engine *engine)
 
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ENVIRONMENTS, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ENVIRONMENTS, [this](...) {
+            auto *engine = GetEngine();
+
             m_lights.Clear();
 
             if (m_has_light_updates.load()) {
                 std::lock_guard guard(m_light_update_mutex);
 
-                m_lights_pending_addition = {};
-                m_lights_pending_removal  = {};
+                m_lights_pending_addition.Clear();
+                m_lights_pending_removal.Clear();
 
                 m_has_light_updates.store(false);
             }
@@ -100,7 +98,7 @@ void Environment::Init(Engine *engine)
             HYP_FLUSH_RENDER_QUEUE(engine);
 
             SetReady(false);
-        }), engine);
+        }));
     }));
 }
 
@@ -112,7 +110,7 @@ void Environment::AddLight(Ref<Light> &&light)
 
     std::lock_guard guard(m_light_update_mutex);
 
-    m_lights_pending_addition.push(std::move(light));
+    m_lights_pending_addition.Push(std::move(light));
 
     m_has_light_updates.store(true);
 }
@@ -121,7 +119,7 @@ void Environment::RemoveLight(Ref<Light> &&light)
 {
     std::lock_guard guard(m_light_update_mutex);
 
-    m_lights_pending_removal.push(std::move(light));
+    m_lights_pending_removal.Push(std::move(light));
 
     m_has_light_updates.store(true);
 }
@@ -149,7 +147,7 @@ void Environment::OnEntityAdded(Ref<Spatial> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    m_spatials_pending_addition.push(entity.IncRef());
+    m_spatials_pending_addition.Push(entity.IncRef());
 
     m_has_render_component_updates.store(true);
 }
@@ -158,7 +156,7 @@ void Environment::OnEntityRemoved(Ref<Spatial> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    m_spatials_pending_removal.push(entity.IncRef());
+    m_spatials_pending_removal.Push(entity.IncRef());
 
     m_has_render_component_updates.store(true);
 }
@@ -168,7 +166,7 @@ void Environment::OnEntityRenderableAttributesChanged(Ref<Spatial> &entity)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    m_spatial_renderable_attribute_updates.push(entity.IncRef());
+    m_spatial_renderable_attribute_updates.Push(entity.IncRef());
 
     m_has_render_component_updates.store(true);
 }
@@ -182,8 +180,8 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
     if (m_has_light_updates.load()) {
         std::lock_guard guard(m_light_update_mutex);
 
-        while (!m_lights_pending_addition.empty()) {
-            auto &front = m_lights_pending_addition.front();
+        while (m_lights_pending_addition.Any()) {
+            auto &front = m_lights_pending_addition.Front();
 
             if (front != nullptr) {
                 const auto id = front->GetId();
@@ -193,11 +191,11 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
                 m_lights.Insert(id, std::move(front));
             }
 
-            m_lights_pending_addition.pop();
+            m_lights_pending_addition.Pop();
         }
 
-        while (!m_lights_pending_removal.empty()) {
-            const auto &front = m_lights_pending_removal.front();
+        while (m_lights_pending_removal.Any()) {
+            const auto &front = m_lights_pending_removal.Front();
 
             if (front != nullptr) {
                 const auto id = front->GetId();
@@ -208,7 +206,7 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
                 m_lights.Erase(id);
             }
 
-            m_lights_pending_removal.pop();
+            m_lights_pending_removal.Pop();
         }
 
         m_has_light_updates.store(false);
@@ -243,28 +241,28 @@ void Environment::RenderComponents(Engine *engine, Frame *frame)
         // perform updates to all RenderComponents in the render thread
         std::lock_guard guard(m_spatial_update_mutex);
 
-        while (!m_spatials_pending_addition.empty()) {
+        while (m_spatials_pending_addition.Any()) {
             for (auto &it : m_render_components) {
-                it.second->OnEntityAdded(m_spatials_pending_addition.front());
+                it.second->OnEntityAdded(m_spatials_pending_addition.Front());
             }
 
-            m_spatials_pending_addition.pop();
+            m_spatials_pending_addition.Pop();
         }
 
-        while (!m_spatial_renderable_attribute_updates.empty()) {
+        while (m_spatial_renderable_attribute_updates.Any()) {
             for (auto &it : m_render_components) {
-                it.second->OnEntityRenderableAttributesChanged(m_spatial_renderable_attribute_updates.front());
+                it.second->OnEntityRenderableAttributesChanged(m_spatial_renderable_attribute_updates.Front());
             }
 
-            m_spatial_renderable_attribute_updates.pop();
+            m_spatial_renderable_attribute_updates.Pop();
         }
 
-        while (!m_spatials_pending_removal.empty()) {
+        while (m_spatials_pending_removal.Any()) {
             for (auto &it : m_render_components) {
-                it.second->OnEntityRemoved(m_spatials_pending_removal.front());
+                it.second->OnEntityRemoved(m_spatials_pending_removal.Front());
             }
 
-            m_spatials_pending_removal.pop();
+            m_spatials_pending_removal.Pop();
         }
 
         m_has_spatial_updates = false;

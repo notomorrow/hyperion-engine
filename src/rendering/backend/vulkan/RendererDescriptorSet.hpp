@@ -12,7 +12,6 @@
 #include <core/lib/DynArray.hpp>
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/Queue.hpp>
-#include <core/lib/SparseFlatMap.hpp>
 
 #include <Types.hpp>
 

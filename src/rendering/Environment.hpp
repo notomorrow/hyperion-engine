@@ -7,6 +7,7 @@
 
 #include <core/lib/ComponentSet.hpp>
 #include <core/lib/AtomicLock.hpp>
+#include <core/lib/Queue.hpp>
 #include <Types.hpp>
 
 #include <mutex>
@@ -115,11 +116,11 @@ public:
 private:
     Scene *m_scene;
 
-    std::queue<Ref<Spatial>>                                     m_spatials_pending_addition;
-    std::queue<Ref<Spatial>>                                     m_spatials_pending_removal;
-    std::queue<Ref<Spatial>>                                     m_spatial_renderable_attribute_updates;
-    std::atomic_bool                                             m_has_spatial_updates{false};
-    std::mutex                                                   m_spatial_update_mutex;
+    Queue<Ref<Spatial>>                                           m_spatials_pending_addition;
+    Queue<Ref<Spatial>>                                           m_spatials_pending_removal;
+    Queue<Ref<Spatial>>                                           m_spatial_renderable_attribute_updates;
+    std::atomic_bool                                              m_has_spatial_updates{false};
+    std::mutex                                                    m_spatial_update_mutex;
 
     ComponentSetUnique<RenderComponentBase>                       m_render_components; // only touch from render thread
     ComponentSetUnique<RenderComponentBase>                       m_render_components_pending_addition;
@@ -127,8 +128,8 @@ private:
     std::atomic_bool                                              m_has_render_component_updates{false};
 
     FlatMap<Light::ID, Ref<Light>>                                m_lights;
-    std::queue<Ref<Light>>                                        m_lights_pending_addition;
-    std::queue<Ref<Light>>                                        m_lights_pending_removal;
+    Queue<Ref<Light>>                                             m_lights_pending_addition;
+    Queue<Ref<Light>>                                             m_lights_pending_removal;
     std::atomic_bool                                              m_has_light_updates{false};
     std::mutex                                                    m_light_update_mutex;
 

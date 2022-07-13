@@ -30,7 +30,9 @@ void SparseVoxelOctree::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_VOXELIZER, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_VOXELIZER, [this](...) {
+        auto *engine = GetEngine();
+
         if (m_voxelizer == nullptr) {
             m_voxelizer = std::make_unique<Voxelizer>();
             m_voxelizer->Init(engine);
@@ -48,7 +50,9 @@ void SparseVoxelOctree::Init(Engine *engine)
         CreateDescriptors(engine);
         CreateComputePipelines(engine);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](...) {
+            auto *engine = GetEngine();
+
             auto result = Result::OK;
 
             m_voxelizer.reset(nullptr);
@@ -90,7 +94,7 @@ void SparseVoxelOctree::Init(Engine *engine)
             m_write_mipmaps = nullptr;
 
             HYPERION_ASSERT_RESULT(result);
-        }), engine);
+        }));
     }));
 }
 

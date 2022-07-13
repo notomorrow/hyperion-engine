@@ -22,7 +22,9 @@ void ComputePipeline::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_COMPUTE_PIPELINES, [this](...) {
+        auto *engine = GetEngine();
+
         AssertThrow(m_shader != nullptr);
         m_shader->Init(engine);
 
@@ -36,7 +38,9 @@ void ComputePipeline::Init(Engine *engine)
 
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_COMPUTE_PIPELINES, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_COMPUTE_PIPELINES, [this](...) {
+            auto *engine = GetEngine();
+
             SetReady(false);
 
             engine->render_scheduler.Enqueue([this, engine](...) {
@@ -44,7 +48,7 @@ void ComputePipeline::Init(Engine *engine)
             });
             
             HYP_FLUSH_RENDER_QUEUE(engine);
-        }), engine);
+        }));
     }));
 }
 

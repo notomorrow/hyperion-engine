@@ -29,18 +29,22 @@ void RenderPass::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_RENDER_PASSES, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_RENDER_PASSES, [this](...) {
+        auto *engine = GetEngine();
+
         engine->render_scheduler.Enqueue([this, engine](...) {
             return m_render_pass.Create(engine->GetDevice());
         });
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_RENDER_PASSES, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_RENDER_PASSES, [this](...) {
+            auto *engine = GetEngine();
+
             engine->render_scheduler.Enqueue([this, engine](...) {
                 return m_render_pass.Destroy(engine->GetDevice());
             });
             
             HYP_FLUSH_RENDER_QUEUE(engine);
-        }), engine);
+        }));
     }));
 }
 

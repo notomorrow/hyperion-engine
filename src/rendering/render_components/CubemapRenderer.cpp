@@ -58,7 +58,9 @@ void CubemapRenderer::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](...) {
+        auto *engine = GetEngine();
+
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(nullptr));
 
         CreateShader(engine);
@@ -71,7 +73,9 @@ void CubemapRenderer::Init(Engine *engine)
 
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](...) {
+            auto *engine = GetEngine();
+
             // destroy descriptors
 
             for (UInt i = 0; i < max_frames_in_flight; i++) {
@@ -126,7 +130,7 @@ void CubemapRenderer::Init(Engine *engine)
             HYP_FLUSH_RENDER_QUEUE(engine);
 
             SetReady(false);
-        }), engine);
+        }));
     }));
 }
 

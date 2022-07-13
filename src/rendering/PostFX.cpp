@@ -53,12 +53,16 @@ void PostProcessingEffect::Init(Engine *engine)
 
     SetReady(true);
 
-    OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](Engine *engine) {
+    OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](...) {
+        auto *engine = GetEngine();
+
         SetReady(false);
 
         m_full_screen_pass.Destroy(engine);
-        m_shader = nullptr;
-    }), engine);
+        m_shader.Reset();
+
+        HYP_FLUSH_RENDER_QUEUE(engine);
+    }));
 }
 
 PostProcessing::PostProcessing()  = default;
@@ -91,7 +95,6 @@ void PostProcessing::Destroy(Engine *engine)
 
     HYPERION_ASSERT_RESULT(m_uniform_buffer.Destroy(engine->GetDevice()));
 
-    HYP_BREAKPOINT;
     m_pre_effects.Clear();
     m_post_effects.Clear();
 }

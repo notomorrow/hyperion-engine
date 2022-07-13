@@ -121,9 +121,6 @@ public:
     Scheduler(Scheduler &&other) = default;
     Scheduler &operator=(Scheduler &&other) = default;
     ~Scheduler() = default;
-    
-    AtomicSemaphore<> &GetSemaphore()               { return m_sp; }
-    const AtomicSemaphore<> &GetSemaphore() const   { return m_sp; }
 
     HYP_FORCE_INLINE uint32_t NumEnqueued() const { return m_num_enqueued.load(); }
 
@@ -321,7 +318,6 @@ private:
     uint32_t                       m_id_counter = 0;
     std::atomic_uint32_t           m_num_enqueued{0};
     ScheduledFunctionQueue         m_scheduled_functions;
-    AtomicSemaphore<>              m_sp;
 
     std::mutex                     m_mutex;
     std::condition_variable        m_is_flushed;

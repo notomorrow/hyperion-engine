@@ -23,7 +23,9 @@ void Framebuffer::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
     
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_FRAMEBUFFERS, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_FRAMEBUFFERS, [this](...) {
+        auto *engine = GetEngine();
+
         AssertThrowMsg(m_render_pass != nullptr, "Render pass must be set on framebuffer.");
         m_render_pass.Init();
 
@@ -33,7 +35,9 @@ void Framebuffer::Init(Engine *engine)
 
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_FRAMEBUFFERS, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_FRAMEBUFFERS, [this](...) {
+            auto *engine = GetEngine();
+
             SetReady(false);
 
             engine->render_scheduler.Enqueue([this, engine](...) {
@@ -41,7 +45,7 @@ void Framebuffer::Init(Engine *engine)
             });
             
             HYP_FLUSH_RENDER_QUEUE(engine);
-        }), engine);
+        }));
     }));
 }
 

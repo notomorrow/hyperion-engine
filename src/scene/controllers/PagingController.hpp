@@ -7,6 +7,7 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/FlatMap.hpp>
+#include <core/lib/Queue.hpp>
 
 #include <math/Vector2.hpp>
 #include <math/Vector3.hpp>
@@ -105,7 +106,7 @@ protected:
     void InitPatch(Patch *patch);
 
     FlatMap<PatchCoord, std::unique_ptr<Patch>> m_patches;
-    std::queue<PatchUpdate>                     m_queue;
+    Queue<PatchUpdate>                          m_queue;
     FlatSet<PatchCoord>                         m_queued_neighbors; // neighbors queued for addition, so we don't add duplicates
     Extent3D                                    m_patch_size;
     Vector3                                     m_scale;

@@ -59,6 +59,9 @@ public:
     [[nodiscard]] bool Empty() const                                          { return Size() == 0; }
     [[nodiscard]] bool Any() const                                            { return Size() != 0; }
 
+    ValueType &operator[](SizeType index)                                     { return m_buffer[m_start_offset + index].Get(); }
+    [[nodiscard]] const ValueType &operator[](SizeType index) const           { return m_buffer[m_start_offset + index].Get(); }
+
     void Reserve(SizeType capacity);
     void Refit();
     void PushBack(const ValueType &value);
@@ -250,11 +253,11 @@ auto DynArray<T>::operator=(const DynArray &other) -> DynArray&
 template <class T>
 auto DynArray<T>::operator=(DynArray &&other) noexcept -> DynArray&
 {
-    if (m_is_dynamic) {
-        for (Int64 i = m_size - 1; i >= m_start_offset; --i) {
-            m_buffer[i].Get().~T();
-        }
+    for (Int64 i = m_size - 1; i >= m_start_offset; --i) {
+        m_buffer[i].Get().~T();
+    }
 
+    if (m_is_dynamic) {
         std::free(m_buffer);
     }
 
@@ -271,16 +274,17 @@ auto DynArray<T>::operator=(DynArray &&other) noexcept -> DynArray&
         m_is_dynamic   = false;
 
         // move items individually
-        for (SizeType i = m_start_offset, j = other.m_start_offset; j < other.m_size; i++, j++) {
-            m_buffer[i].Get() = std::move(other.m_buffer[j].Get());
+        for (SizeType i = 0; i < other.Size(); i++) {
+            new (&m_buffer[i].data_buffer) T(std::move(other.m_buffer[other.m_start_offset + i].Get()));
         }
+
+        m_size         = other.Size();
+        m_start_offset = 0;
 
         // manually call destructors
         for (Int64 i = other.m_size - 1; i >= other.m_start_offset; --i) {
             other.m_buffer[i].Get().~T();
         }
-
-        m_size = other.Size() + m_start_offset;
     }
 
     other.m_size        = 0;

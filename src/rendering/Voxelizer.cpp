@@ -27,7 +27,9 @@ void Voxelizer::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_VOXELIZER, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_VOXELIZER, [this](...) {
+        auto *engine = GetEngine();
+
         const auto voxel_map_size_signed = static_cast<Int64>(voxel_map_size);
 
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
@@ -61,7 +63,9 @@ void Voxelizer::Init(Engine *engine)
         
         CreatePipeline(engine);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](...) {
+            auto *engine = GetEngine();
+
             auto result = renderer::Result::OK;
 
             if (m_counter != nullptr) {
@@ -78,9 +82,9 @@ void Voxelizer::Init(Engine *engine)
                 m_fragment_list_buffer.reset();
             }
 
-            m_shader      = nullptr;
-            m_framebuffer = nullptr;
-            m_render_pass = nullptr;
+            m_shader.Reset();
+            m_framebuffer.Reset();
+            m_render_pass.Reset();
 
             for (auto &attachment : m_attachments) {
                 HYPERION_PASS_ERRORS(
@@ -91,12 +95,12 @@ void Voxelizer::Init(Engine *engine)
 
             m_attachments.clear();
 
-            m_pipeline = nullptr;
+            m_pipeline.Reset();
 
             m_num_fragments = 0;
 
             HYPERION_ASSERT_RESULT(result);
-        }), engine);
+        }));
     }));
 }
 

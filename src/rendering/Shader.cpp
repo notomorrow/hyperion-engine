@@ -54,7 +54,9 @@ void Shader::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SHADERS, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SHADERS, [this](...) {
+        auto *engine = GetEngine();
+
         for (const auto &sub_shader : m_sub_shaders) {
             AssertThrowMsg(!sub_shader.spirv.bytes.empty(), "Shader data missing");
         }
@@ -77,15 +79,17 @@ void Shader::Init(Engine *engine)
             HYPERION_RETURN_OK;
         });
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SHADERS, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SHADERS, [this](...) {
+            auto *engine = GetEngine();
+
+            SetReady(false);
+
             engine->render_scheduler.Enqueue([this, engine](...) {
                 return m_shader_program->Destroy(engine->GetDevice());
             });
             
             HYP_FLUSH_RENDER_QUEUE(engine);
-
-            SetReady(false);
-        }), engine);
+        }));
     }));
 }
 

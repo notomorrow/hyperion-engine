@@ -33,20 +33,24 @@ void Skeleton::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SKELETONS, [this](Engine *engine) {
-        EnqueueRenderUpdates(engine);
-        
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SKELETONS, [this](...) {
+        auto *engine = GetEngine();
+
+        EnqueueRenderUpdates();
+
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SKELETONS, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SKELETONS, [this](...) {
+            auto *engine = GetEngine();
+
             HYP_FLUSH_RENDER_QUEUE(engine);
             
             SetReady(false);
-        }), engine);
+        }));
     }));
 }
 
-void Skeleton::EnqueueRenderUpdates(Engine *engine) const
+void Skeleton::EnqueueRenderUpdates() const
 {
     if (!m_shader_data_state.IsDirty()) {
         return;
@@ -55,7 +59,7 @@ void Skeleton::EnqueueRenderUpdates(Engine *engine) const
     const size_t num_bones = MathUtil::Min(SkeletonShaderData::max_bones, NumBones());
 
     if (num_bones != 0) {
-        SkeletonShaderData &shader_data = engine->shader_globals->skeletons.Get(m_id.value - 1); /* TODO: is this fully thread safe? */
+        SkeletonShaderData &shader_data = GetEngine()->shader_globals->skeletons.Get(m_id.value - 1); /* TODO: is this fully thread safe? */
 
         shader_data.bones[0] = m_root_bone->GetBoneMatrix();
 
@@ -69,7 +73,7 @@ void Skeleton::EnqueueRenderUpdates(Engine *engine) const
             }
         }
 
-        engine->shader_globals->skeletons.Set(m_id.value - 1, shader_data);
+        GetEngine()->shader_globals->skeletons.Set(m_id.value - 1, shader_data);
     }
     
     m_shader_data_state = ShaderDataState::CLEAN;

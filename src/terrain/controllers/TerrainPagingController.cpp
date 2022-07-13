@@ -63,7 +63,7 @@ void TerrainPagingController::OnPatchAdded(Patch *patch)
 
         std::lock_guard guard(m_terrain_generation_mutex);
 
-        m_shared_terrain_mesh_queue.push(TerrainGenerationResult {
+        m_shared_terrain_mesh_queue.Push(TerrainGenerationResult {
             .patch_info = patch_info,
             .mesh       = std::move(mesh)
         });
@@ -90,15 +90,14 @@ void TerrainPagingController::OnPatchRemoved(Patch *patch)
 void TerrainPagingController::AddEnqueuedChunks()
 {
     m_terrain_generation_mutex.lock();
-    m_owned_terrain_mesh_queue = std::move(m_shared_terrain_mesh_queue);
-    m_shared_terrain_mesh_queue = {};
+    m_owned_terrain_mesh_queue  = std::move(m_shared_terrain_mesh_queue);
     m_terrain_generation_mutex.unlock();
 
     size_t num_chunks_added = 0;
 
-    while (!m_owned_terrain_mesh_queue.empty()) {
-        auto &terrain_generation_result = m_owned_terrain_mesh_queue.front();
-        const auto &patch_info          = terrain_generation_result.patch_info;
+    while (m_owned_terrain_mesh_queue.Any()) {
+        auto terrain_generation_result = m_owned_terrain_mesh_queue.Pop();
+        const auto &patch_info         = terrain_generation_result.patch_info;
 
         auto mesh = GetEngine()->resources.meshes.Add(std::move(terrain_generation_result.mesh));
         auto vertex_attributes = mesh->GetVertexAttributes();
@@ -146,8 +145,6 @@ void TerrainPagingController::AddEnqueuedChunks()
                 patch_info.coord.x, patch_info.coord.y
             );
         }
-
-        m_owned_terrain_mesh_queue.pop();
     }
 
     DebugLog(LogType::Debug, "Added %llu chunks\n", num_chunks_added);

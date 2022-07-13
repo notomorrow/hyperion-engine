@@ -56,7 +56,9 @@ void Spatial::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SPATIALS, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SPATIALS, [this](...) {
+        auto *engine = GetEngine();
+
         if (m_material) {
             m_material.Init();
         }
@@ -71,7 +73,9 @@ void Spatial::Init(Engine *engine)
 
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SPATIALS, [this](...) {
+            auto *engine = GetEngine();
+
             SetReady(false);
 
             m_material.Reset();
@@ -80,7 +84,7 @@ void Spatial::Init(Engine *engine)
             //engine->SafeReleaseRenderable(std::move(m_material));
             engine->SafeReleaseRenderable(std::move(m_mesh));
             engine->SafeReleaseRenderable(std::move(m_shader));
-        }), engine);
+        }));
     }));
 }
 
@@ -91,7 +95,7 @@ void Spatial::Update(Engine *engine, GameCounter::TickUnit delta)
     AssertReady();
 
     if (m_skeleton != nullptr && m_skeleton->IsReady()) {
-        m_skeleton->EnqueueRenderUpdates(engine);
+        m_skeleton->EnqueueRenderUpdates();
     }
 
     if (m_material != nullptr && m_material->IsReady()) {
@@ -105,7 +109,7 @@ void Spatial::Update(Engine *engine, GameCounter::TickUnit delta)
     }
 
     if (m_shader_data_state.IsDirty()) {
-        EnqueueRenderUpdates(engine);
+        EnqueueRenderUpdates();
     }
 }
 
@@ -120,7 +124,7 @@ void Spatial::UpdateControllers(Engine *engine, GameCounter::TickUnit delta)
     }
 }
 
-void Spatial::EnqueueRenderUpdates(Engine *engine)
+void Spatial::EnqueueRenderUpdates()
 {
     AssertReady();
 
@@ -128,8 +132,8 @@ void Spatial::EnqueueRenderUpdates(Engine *engine)
         ? m_material->GetId().value - 1
         : 0;
 
-    engine->render_scheduler.Enqueue([this, engine, transform = m_transform, material_index](...) {
-        engine->shader_globals->objects.Set(
+    GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, material_index](...) {
+        GetEngine()->shader_globals->objects.Set(
             m_id.value - 1,
             {
                 .model_matrix   = transform.GetMatrix(),

@@ -708,8 +708,6 @@ int main()
 
     Device *device = engine->GetInstance()->GetDevice();
 
-    engine->PrepareSwapchain();
-
     engine->shader_manager.SetShader(
         v2::ShaderKey::BASIC_VEGETATION,
         engine->resources.shaders.Add(std::make_unique<v2::Shader>(
@@ -1052,24 +1050,7 @@ int main()
         auto *command_buffer = frame->GetCommandBuffer();
         const uint32_t frame_index = engine->GetInstance()->GetFrameHandler()->GetCurrentFrameIndex();
 
-        engine->GetRenderListContainer().AddPendingGraphicsPipelines(engine);
-
-
-
-        if (auto num_enqueued = engine->render_scheduler.NumEnqueued()) {
-            engine->render_scheduler.Flush([command_buffer, frame_index](v2::RenderFunctor &fn) {
-                HYPERION_ASSERT_RESULT(fn(command_buffer, frame_index));
-            });
-
-            /*DebugLog(
-                LogType::Debug,
-                "[Renderer] Execute %lu enqueued tasks\n",
-                num_enqueued
-            );*/
-        }
-
-        engine->UpdateBuffersAndDescriptors(frame_index);
-        engine->ResetRenderState();
+        engine->PreFrameUpdate(frame);
 
         /* === rendering === */
         HYPERION_ASSERT_RESULT(frame->BeginCapture(engine->GetInstance()->GetDevice()));

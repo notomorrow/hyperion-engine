@@ -145,7 +145,6 @@ void ShadowPass::Create(Engine *engine)
     ));
 
     m_scene->SetParentId(m_parent_scene_id);
-    engine->GetWorld().AddScene(m_scene.IncRef());
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
@@ -230,16 +229,18 @@ void ShadowRenderer::Init(Engine *engine)
     AssertThrow(IsValidComponent());
     m_shadow_pass.SetShadowMapIndex(GetComponentIndex());
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](...) {
+        auto *engine = GetEngine();
+
         m_shadow_pass.Create(engine);
 
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](Engine *engine) {
-            m_shadow_pass.Destroy(engine); // flushes render queue
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](...) {
+            m_shadow_pass.Destroy(GetEngine()); // flushes render queue
 
             SetReady(false);
-        }), engine);
+        }));
     }));
 }
 
@@ -250,8 +251,7 @@ void ShadowRenderer::InitGame(Engine *engine)
 
     AssertReady();
 
-    // add all entities from environment scene
-    AssertThrow(GetParent()->GetScene() != nullptr);
+    engine->GetWorld().AddScene(m_shadow_pass.GetScene().IncRef());
 
     for (auto &it : GetParent()->GetScene()->GetSpatials()) {
         auto &entity = it.second;

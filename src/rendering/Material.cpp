@@ -40,7 +40,9 @@ void Material::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_MATERIALS, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_MATERIALS, [this](...) {
+        auto *engine = GetEngine();
+
         for (size_t i = 0; i < m_textures.Size(); i++) {
             if (auto &texture = m_textures.ValueAt(i)) {
                 texture.Init();
@@ -53,7 +55,9 @@ void Material::Init(Engine *engine)
 
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MATERIALS, [this](...) {
+            auto *engine = GetEngine();
+
             for (size_t i = 0; i < m_textures.Size(); i++) {
                 if (auto &texture = m_textures.ValueAt(i)) {
                     engine->SafeReleaseRenderable(std::move(texture));
@@ -68,7 +72,7 @@ void Material::Init(Engine *engine)
             HYP_FLUSH_RENDER_QUEUE(engine);
 
             SetReady(false);
-        }), engine);
+        }));
     }));
 }
 

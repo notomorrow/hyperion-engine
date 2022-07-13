@@ -14,10 +14,10 @@ using ThreadMask = UInt;
 
 enum ThreadName : ThreadMask {
     THREAD_MAIN    = 0x01,
+    THREAD_INPUT   = 0x01,
     THREAD_RENDER  = 0x01, // for now
-    THREAD_INPUT   = 0x01, // for now
-    THREAD_GAME    = 0x02,
-    THREAD_TERRAIN = 0x04
+    THREAD_GAME    = 0x04,
+    THREAD_TERRAIN = 0x08
 };
 
 class Threads {

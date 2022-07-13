@@ -161,8 +161,6 @@ void Engine::FindTextureFormatDefaults()
 
 void Engine::PrepareSwapchain()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
-
     auto shader = resources.shaders.Add(std::make_unique<Shader>(
         std::vector<SubShader>{
             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_vert.spv")).Read()}},
@@ -462,6 +460,8 @@ void Engine::Initialize()
     AssertThrowMsg(AudioManager::GetInstance()->Initialize(), "Failed to initialize audio device");
 
     m_running = true;
+
+    PrepareSwapchain();
 }
 
 void Engine::Compile()
@@ -547,17 +547,29 @@ Ref<GraphicsPipeline> Engine::AddGraphicsPipeline(std::unique_ptr<GraphicsPipeli
     return graphics_pipeline;
 }
 
-void Engine::ResetRenderState()
+void Engine::PreFrameUpdate(Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
+    m_render_list_container.AddPendingGraphicsPipelines(this);
+
+    if (auto num_enqueued = render_scheduler.NumEnqueued()) {
+        render_scheduler.Flush([frame](RenderFunctor &fn) {
+            HYPERION_ASSERT_RESULT(fn(frame->GetCommandBuffer(), frame->GetFrameIndex()));
+        });
+    }
+
+    UpdateBuffersAndDescriptors(frame->GetFrameIndex());
+    ResetRenderState();
+}
+
+void Engine::ResetRenderState()
+{
     render_state.scene_ids = {};
 }
 
 void Engine::UpdateBuffersAndDescriptors(UInt frame_index)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
-
     if (auto deletion_flags = m_renderable_deletion_flag.load()) {
         std::lock_guard guard(m_renderable_deletion_mutex);
 

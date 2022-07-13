@@ -32,7 +32,9 @@ void Tlas::Init(Engine *engine)
         return;
     }
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ACCELERATION_STRUCTURES, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ACCELERATION_STRUCTURES, [this](...) {
+        auto *engine = GetEngine();
+
         std::vector<BottomLevelAccelerationStructure *> blas(m_blas.size());
 
         for (size_t i = 0; i < m_blas.size(); i++) {
@@ -48,11 +50,11 @@ void Tlas::Init(Engine *engine)
             std::move(blas)
         );
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, [this](...) {
             m_blas.clear();
 
-            EngineComponent::Destroy(engine);
-        }), engine);
+            EngineComponent::Destroy(GetEngine());
+        }));
     }));
 }
 

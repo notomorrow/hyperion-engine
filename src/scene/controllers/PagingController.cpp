@@ -95,8 +95,8 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
     m_queue_timer  += delta;
 
     if (m_queue_timer >= queue_max) {
-        while (!m_queue.empty()) {
-            const auto &top = m_queue.front();
+        while (m_queue.Any()) {
+            const auto top = m_queue.Pop();
             Patch *patch = nullptr;
 
             switch (top.new_state) {
@@ -124,8 +124,6 @@ void PagingController::OnUpdate(GameCounter::TickUnit delta)
 
                 break;
             }
-
-            m_queue.pop();
         }
 
         m_queue_timer = 0.0f;
@@ -252,7 +250,7 @@ void PagingController::RemovePatch(const PatchCoord &coord)
 
     const auto neighbor_it = m_queued_neighbors.Find(coord);
 
-    if (neighbor_it != m_queued_neighbors.end()) {
+    if (neighbor_it != m_queued_neighbors.End()) {
         m_queued_neighbors.Erase(neighbor_it);
     }
 }
@@ -273,7 +271,7 @@ void PagingController::EnqueuePatch(const PatchCoord &coord)
 
 void PagingController::PushUpdate(const PatchUpdate &update)
 {
-    m_queue.push(update);
+    m_queue.Push(update);
 }
 
 void PagingController::InitPatch(Patch *patch)
