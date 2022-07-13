@@ -111,9 +111,7 @@ protected:
     SizeType     m_capacity;
     
     struct Storage {
-        using StorageType = std::aligned_storage_t<sizeof(T), alignof(T)>;
-
-        StorageType data_buffer;
+        alignas(T) std::byte data_buffer[sizeof(T)];
 
         ValueType &Get()
         {

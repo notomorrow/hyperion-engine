@@ -5,7 +5,7 @@
 #include "../Util.hpp"
 
 #include <fstream>
-#include <cstring>
+#include <core/Core.hpp>
 
 namespace hyperion {
 class ByteReader {
@@ -108,7 +108,7 @@ private:
 
     void ReadBytes(char *ptr, size_t size)
     {
-        memcpy(ptr, m_data + m_pos, size);
+        Memory::Copy(ptr, m_data + m_pos, size);
         m_pos += size;
     }
 };

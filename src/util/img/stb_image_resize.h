@@ -391,7 +391,7 @@ STBIRDEF int stbir_resize_region(const void *input_pixels, int input_w, int inpu
 #define STBIR_ASSERT(x) assert(x)
 #endif
 
-// For memset
+// For Memory::Set
 #include <string.h>
 
 #include <math.h>
@@ -1438,7 +1438,7 @@ static float *stbir__add_empty_ring_buffer_entry(stbir__info *stbir_info, int n)
     }
 
     ring_buffer = stbir__get_ring_buffer_entry(stbir_info->ring_buffer, ring_buffer_index, stbir_info->ring_buffer_length_bytes / sizeof(float));
-    memset(ring_buffer, 0, stbir_info->ring_buffer_length_bytes);
+    Memory::Set(ring_buffer, 0, stbir_info->ring_buffer_length_bytes);
 
     return ring_buffer;
 }
@@ -1671,7 +1671,7 @@ static void stbir__decode_and_resample_downsample(stbir__info *stbir_info, int n
     // Decode the nth scanline from the source image into the decode buffer.
     stbir__decode_scanline(stbir_info, n);
 
-    memset(stbir_info->horizontal_buffer, 0, stbir_info->output_w * stbir_info->channels * sizeof(float));
+    Memory::Set(stbir_info->horizontal_buffer, 0, stbir_info->output_w * stbir_info->channels * sizeof(float));
 
     // Now resample it into the horizontal buffer.
     if (stbir__use_width_upsampling(stbir_info))
@@ -1897,7 +1897,7 @@ static void stbir__resample_vertical_upsample(stbir__info *stbir_info, int n)
 
     STBIR_ASSERT(stbir__use_height_upsampling(stbir_info));
 
-    memset(encode_buffer, 0, output_w * sizeof(float) * channels);
+    Memory::Set(encode_buffer, 0, output_w * sizeof(float) * channels);
 
     // I tried reblocking this for better cache usage of encode_buffer
     // (using x_outer, k, x_inner), but it lost speed. -- stb
@@ -2301,10 +2301,10 @@ static int stbir__resize_allocated(stbir__info *info,
     unsigned char overwrite_tempmem_after_pre[OVERWRITE_ARRAY_SIZE];
 
     size_t begin_forbidden = width_stride_output * (info->output_h - 1) + info->output_w * info->channels * stbir__type_size[type];
-    memcpy(overwrite_output_before_pre, &((unsigned char *)output_data)[-OVERWRITE_ARRAY_SIZE], OVERWRITE_ARRAY_SIZE);
-    memcpy(overwrite_output_after_pre, &((unsigned char *)output_data)[begin_forbidden], OVERWRITE_ARRAY_SIZE);
-    memcpy(overwrite_tempmem_before_pre, &((unsigned char *)tempmem)[-OVERWRITE_ARRAY_SIZE], OVERWRITE_ARRAY_SIZE);
-    memcpy(overwrite_tempmem_after_pre, &((unsigned char *)tempmem)[tempmem_size_in_bytes], OVERWRITE_ARRAY_SIZE);
+    Memory::Copy(overwrite_output_before_pre, &((unsigned char *)output_data)[-OVERWRITE_ARRAY_SIZE], OVERWRITE_ARRAY_SIZE);
+    Memory::Copy(overwrite_output_after_pre, &((unsigned char *)output_data)[begin_forbidden], OVERWRITE_ARRAY_SIZE);
+    Memory::Copy(overwrite_tempmem_before_pre, &((unsigned char *)tempmem)[-OVERWRITE_ARRAY_SIZE], OVERWRITE_ARRAY_SIZE);
+    Memory::Copy(overwrite_tempmem_after_pre, &((unsigned char *)tempmem)[tempmem_size_in_bytes], OVERWRITE_ARRAY_SIZE);
 #endif
 
     STBIR_ASSERT(info->channels >= 0);
@@ -2341,7 +2341,7 @@ static int stbir__resize_allocated(stbir__info *info,
     if (tempmem_size_in_bytes < memory_required)
         return 0;
 
-    memset(tempmem, 0, tempmem_size_in_bytes);
+    Memory::Set(tempmem, 0, tempmem_size_in_bytes);
 
     info->input_data = input_data;
     info->input_stride_bytes = width_stride_input;

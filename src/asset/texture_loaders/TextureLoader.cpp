@@ -11,7 +11,7 @@ static const stbi_io_callbacks callbacks{
         auto *state = static_cast<LoaderState *>(user);
 
         return int(state->stream.Read(data, static_cast<size_t>(size), [](void *ptr, const unsigned char *buffer, size_t chunk_size) {
-            std::memcpy(ptr, buffer, chunk_size);
+            Memory::Copy(ptr, buffer, chunk_size);
         }));
     },
     .skip = [](void *user, int n) {
@@ -61,7 +61,7 @@ LoaderResult TextureLoader::LoadFn(LoaderState *state, Object &object)
     const size_t image_bytes_count = object.width * object.height * object.num_components;
 
     object.data.resize(image_bytes_count);
-    std::memcpy(&object.data[0], image_bytes, image_bytes_count);
+    Memory::Copy(&object.data[0], image_bytes, image_bytes_count);
 
     stbi_image_free(image_bytes);
 

@@ -4,7 +4,8 @@
 #include <system/Debug.hpp>
 #include <script/Hasher.hpp>
 
-#include <cstring>
+#include <core/Core.hpp>
+
 #include <cmath>
 
 namespace hyperion {
@@ -24,7 +25,7 @@ ObjectMap::ObjectBucket::ObjectBucket(const ObjectBucket &other)
       m_capacity(other.m_capacity),
       m_size(other.m_size)
 {
-    std::memcpy(
+    Memory::Copy(
         m_data,
         other.m_data,
         sizeof(Member *) * other.m_size
@@ -46,7 +47,7 @@ ObjectMap::ObjectBucket &ObjectMap::ObjectBucket::operator=(const ObjectBucket &
     }
 
     // copy members
-    std::memcpy(
+    Memory::Copy(
         m_data,
         other.m_data,
         sizeof(Member*) * other.m_size
@@ -61,7 +62,7 @@ void ObjectMap::ObjectBucket::Resize(size_t capacity)
         const size_t new_capacity = COMPUTE_CAPACITY(capacity);
         // create new bucket and copy
         Member **new_data = new Member*[new_capacity];
-        std::memcpy(
+        Memory::Copy(
             new_data,
             m_data,
             sizeof(Member*) * m_size
@@ -163,7 +164,7 @@ Object::Object(HeapValue *proto)
     // AssertThrow(names != nullptr);
 
     m_members = new Member[size];
-    std::memcpy(m_members, proto_obj->GetMembers(), sizeof(Member) * size);
+    Memory::Copy(m_members, proto_obj->GetMembers(), sizeof(Member) * size);
 
     m_object_map = new ObjectMap(size);
     for (size_t i = 0; i < size; i++) {
@@ -184,7 +185,7 @@ Object::Object(const Member *members, size_t size, HeapValue *proto)
     AssertThrow(members != nullptr);
 
     m_members = new Member[size];
-    std::memcpy(m_members, members, sizeof(Member) * size);
+    Memory::Copy(m_members, members, sizeof(Member) * size);
 
     m_object_map = new ObjectMap(size);
     for (size_t i = 0; i < size; i++) {
@@ -202,7 +203,7 @@ Object::Object(const Object &other)
     AssertThrow(other.GetObjectMap() != nullptr);
     m_object_map = new ObjectMap(*other.GetObjectMap());
 
-    std::memcpy(m_members, other.m_members, sizeof(Member) * size);
+    Memory::Copy(m_members, other.m_members, sizeof(Member) * size);
 
     for (size_t i = 0; i < size; i++) {
         m_object_map->Push(m_members[i].hash, &m_members[i]);

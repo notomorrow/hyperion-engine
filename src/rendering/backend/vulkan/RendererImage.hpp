@@ -185,7 +185,7 @@ public:
         AssertThrow(m_bytes != nullptr);
         AssertThrow(offset + count <= m_size);
 
-        std::memcpy(&m_bytes[offset], data, count);
+        Memory::Copy(&m_bytes[offset], data, count);
 
         m_assigned_image_data = true;
     }

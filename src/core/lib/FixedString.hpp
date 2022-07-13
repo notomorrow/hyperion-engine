@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cstring>
 
+#include <core/Core.hpp>
+
 namespace hyperion::v2 {
 
 class FixedString {
@@ -15,7 +17,7 @@ public:
         if (str != nullptr) {
             m_length = std::strlen(str);
             m_str = new char[m_length + 1];
-            std::strcpy(m_str, str);
+            Memory::CopyString(m_str, str);
         }
     }
 
@@ -25,7 +27,7 @@ public:
     {
         if (other.m_str != nullptr) {
             m_str = new char[m_length + 1];
-            std::strcpy(m_str, other.m_str);
+            Memory::CopyString(m_str, other.m_str);
         }
     }
 
@@ -40,7 +42,7 @@ public:
 
         if (other.m_str != nullptr) {
             m_str = new char[m_length + 1];
-            std::strcpy(m_str, other.m_str);
+            Memory::CopyString(m_str, other.m_str);
         }
 
         return *this;

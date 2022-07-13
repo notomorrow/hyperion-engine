@@ -13,7 +13,7 @@
 #include <type_traits>
 #include <thread>
 #include <mutex>
-#include <cstring>
+#include <core/Core.hpp>
 
 namespace hyperion {
 template <size_t BufferSize, class Byte = UByte>
@@ -175,7 +175,7 @@ public:
     size_t Read(void *ptr, size_t count)
     {
         return Read(ptr, count, [](void *ptr, const Byte *buffer, size_t chunk_size) {
-           std::memcpy(ptr, buffer, chunk_size);
+           Memory::Copy(ptr, buffer, chunk_size);
         });
     }
 

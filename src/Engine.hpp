@@ -213,7 +213,7 @@ struct RenderFunctor : public ScheduledFunction<renderer::Result, CommandBuffer 
         static_assert(sizeof(data_struct) <= data_buffer_size, "DataStruct does not fit into buffer!");
         static_assert(std::is_pod_v<DataStruct>, "DataStruct must be a POD object!");
 
-        std::memcpy(&data_buffer[0], &data_struct, sizeof(data_struct));
+        Memory::Copy(&data_buffer[0], &data_struct, sizeof(data_struct));
     }
 };
 

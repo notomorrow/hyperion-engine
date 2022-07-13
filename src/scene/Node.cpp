@@ -46,7 +46,7 @@ Node::Node(
 
     const size_t len = std::strlen(name);
     m_name = new char[len + 1];
-    std::strcpy(m_name, name);
+    Memory::CopyString(m_name, name);
 }
 
 Node::~Node()
@@ -66,7 +66,7 @@ void Node::SetName(const char *name)
 
     const size_t len = std::strlen(name);
     m_name = new char[len + 1];
-    std::strcpy(m_name, name);
+    Memory::CopyString(m_name, name);
 }
 
 void Node::SetScene(Scene *scene)

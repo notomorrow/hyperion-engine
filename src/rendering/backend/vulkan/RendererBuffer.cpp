@@ -367,7 +367,7 @@ void GPUMemory::Copy(Device *device, size_t count, const void *ptr)
         Map(device, &map);
     }
 
-    std::memcpy(map, ptr, count);
+    Memory::Copy(map, ptr, count);
 }
 
 void GPUMemory::Copy(Device *device, size_t offset, size_t count, const void *ptr)
@@ -376,7 +376,7 @@ void GPUMemory::Copy(Device *device, size_t offset, size_t count, const void *pt
         Map(device, &map);
     }
 
-    std::memcpy(reinterpret_cast<void *>(uintptr_t(map) + offset), ptr, count);
+    Memory::Copy(reinterpret_cast<void *>(uintptr_t(map) + offset), ptr, count);
 }
 
 void GPUMemory::Read(Device *device, size_t count, void *out_ptr) const
@@ -386,20 +386,16 @@ void GPUMemory::Read(Device *device, size_t count, void *out_ptr) const
         DebugLog(LogType::Warn, "Attempt to Read() from buffer but data has not been mapped previously\n");
     }
 
-    std::memcpy(out_ptr, map, count);
+    Memory::Copy(out_ptr, map, count);
 }
 
 void GPUMemory::Create()
 {
-    DebugLog(LogType::Debug, "Allocate GPUMemory %u\n", index);
-
     stats.IncMemoryUsage(size);
 }
 
 void GPUMemory::Destroy()
 {
-    DebugLog(LogType::Debug, "Destroy GPUMemory %u\n", index);
-
     stats.DecMemoryUsage(size);
 }
 
