@@ -23,10 +23,14 @@ void World::Init(Engine *engine)
     
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ANY, [this](...) {
+        auto *engine = GetEngine();
+
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ANY, [this](...) {
+            auto *engine = GetEngine();
+
             for (auto &it : m_scenes) {
                 auto &scene = it.second;
 
@@ -42,7 +46,7 @@ void World::Init(Engine *engine)
             HYP_FLUSH_RENDER_QUEUE(engine);
 
             SetReady(false);
-        }), engine);
+        }));
     }));
 }
 

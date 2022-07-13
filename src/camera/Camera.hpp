@@ -3,12 +3,13 @@
 
 #include <GameCounter.hpp>
 
+#include <core/lib/Queue.hpp>
+
 #include <math/Vector3.hpp>
 #include <math/Vector4.hpp>
 #include <math/Matrix4.hpp>
 #include <math/Frustum.hpp>
 
-#include <queue>
 #include <atomic>
 #include <mutex>
 
@@ -145,7 +146,7 @@ private:
 
     std::mutex                m_command_queue_mutex;
     std::atomic_uint32_t      m_command_queue_count;
-    std::queue<CameraCommand> m_command_queue;
+    Queue<CameraCommand>      m_command_queue;
 };
 }
 

@@ -17,7 +17,7 @@ Camera::Camera(CameraType camera_type, int width, int height, float _near, float
 
 void Camera::SetTranslation(const Vector3 &translation)
 {
-    m_translation = translation;
+    m_translation      = translation;
     m_next_translation = translation;
 
     UpdateViewMatrix();
@@ -130,7 +130,7 @@ void Camera::PushCommand(const CameraCommand &command)
 
     ++m_command_queue_count;
 
-    m_command_queue.push(command);
+    m_command_queue.Push(command);
 }
 
 void Camera::UpdateCommandQueue(GameCounter::TickUnit dt)
@@ -141,10 +141,10 @@ void Camera::UpdateCommandQueue(GameCounter::TickUnit dt)
 
     std::lock_guard guard(m_command_queue_mutex);
 
-    while (!m_command_queue.empty()) {
-        RespondToCommand(m_command_queue.front(), dt);
+    while (m_command_queue.Any()) {
+        RespondToCommand(m_command_queue.Front(), dt);
 
-        m_command_queue.pop();
+        m_command_queue.Pop();
     }
 
     m_command_queue_count = 0;

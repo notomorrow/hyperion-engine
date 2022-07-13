@@ -25,7 +25,8 @@ public:
     ShadowPass &operator=(const ShadowPass &other) = delete;
     ~ShadowPass();
 
-    Scene *GetScene() const                 { return m_scene.ptr; }
+    Ref<Scene> &GetScene()                  { return m_scene; }
+    const Ref<Scene> &GetScene() const      { return m_scene; }
 
     Ref<Light> &GetLight()                  { return m_light; }
     const Ref<Light> &GetLight() const      { return m_light; }
@@ -96,8 +97,6 @@ public:
     ShadowPass &GetEffect()               { return m_shadow_pass; }
     const ShadowPass &GetEffect() const   { return m_shadow_pass; }
 
-    Scene *GetScene() const               { return m_shadow_pass.GetScene(); }
-
     const Vector3 &GetOrigin() const      { return m_shadow_pass.GetOrigin(); }
     void SetOrigin(const Vector3 &origin) { m_shadow_pass.SetOrigin(origin); }
 
@@ -110,7 +109,7 @@ public:
         }
     }
 
-    void Init(Engine *engine); // init on render thread
+    void Init(Engine *engine);     // init on render thread
     void InitGame(Engine *engine); // init on game thread
 
     void OnUpdate(Engine *engine, GameCounter::TickUnit delta);

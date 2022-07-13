@@ -32,7 +32,9 @@ void VoxelConeTracing::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_VOXELIZER, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_VOXELIZER, [this](...) {
+        auto *engine = GetEngine();
+
         m_scene = engine->resources.scenes.Add(std::make_unique<Scene>(
             std::make_unique<OrthoCamera>(
                 voxel_map_size.width, voxel_map_size.height,
@@ -52,13 +54,15 @@ void VoxelConeTracing::Init(Engine *engine)
         
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](Engine *engine) {
-            m_shader       = nullptr;
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_VOXELIZER, [this](...) {
+            auto *engine = GetEngine();
+
+            m_shader.Reset();
             m_framebuffers = {};
-            m_render_pass  = nullptr;
-            m_pipeline     = nullptr;
-            m_clear_voxels = nullptr;
-            m_voxel_image  = nullptr;
+            m_render_pass.Reset();
+            m_pipeline.Reset();
+            m_clear_voxels.Reset();
+            m_voxel_image.Reset();
 
             engine->render_scheduler.Enqueue([this, engine](...) {
                 return m_uniform_buffer.Destroy(engine->GetDevice());
@@ -67,7 +71,7 @@ void VoxelConeTracing::Init(Engine *engine)
             HYP_FLUSH_RENDER_QUEUE(engine);
             
             SetReady(false);
-        }), engine);
+        }));
     }));
 }
 

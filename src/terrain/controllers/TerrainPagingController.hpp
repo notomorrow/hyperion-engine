@@ -2,12 +2,12 @@
 #define HYPERION_V2_TERRAIN_PAGING_CONTROLLER_H
 
 #include "../TerrainMeshBuilder.hpp"
+#include <core/lib/Queue.hpp>
 #include <scene/controllers/PagingController.hpp>
 #include <rendering/Material.hpp>
 
 #include <mutex>
 #include <atomic>
-#include <queue>
 
 namespace hyperion::v2 {
 
@@ -40,8 +40,8 @@ private:
     std::atomic_bool                    m_terrain_generation_flag;
 
     // don't touch without mutex
-    std::queue<TerrainGenerationResult> m_shared_terrain_mesh_queue;
-    std::queue<TerrainGenerationResult> m_owned_terrain_mesh_queue;
+    Queue<TerrainGenerationResult>      m_shared_terrain_mesh_queue;
+    Queue<TerrainGenerationResult>      m_owned_terrain_mesh_queue;
 };
 
 } // namespace hyperion::v2

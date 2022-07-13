@@ -235,7 +235,9 @@ void GraphicsPipeline::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_GRAPHICS_PIPELINES, [this](...) {
+        auto *engine = GetEngine();
+
         AssertThrow(!m_fbos.empty());
 
         for (auto &fbo : m_fbos) {
@@ -297,7 +299,9 @@ void GraphicsPipeline::Init(Engine *engine)
             HYPERION_RETURN_OK;
         });
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_GRAPHICS_PIPELINES, [this](...) {
+            auto *engine = GetEngine();
+
             SetReady(false);
             
             for (auto &&spatial : m_spatials) {
@@ -340,7 +344,7 @@ void GraphicsPipeline::Init(Engine *engine)
             });
             
             HYP_FLUSH_RENDER_QUEUE(engine);
-        }), engine);
+        }));
     }));
 }
 

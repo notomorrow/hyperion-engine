@@ -67,7 +67,7 @@ private:
         bool update_octree_visiblity = true
     );
 
-    void EnqueueRenderUpdates(Engine *engine);
+    void EnqueueRenderUpdates();
     
     void AddPendingEntities();
     void RemovePendingEntities();

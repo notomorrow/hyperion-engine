@@ -35,16 +35,18 @@ void Light::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_LIGHTS, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_LIGHTS, [this](...) {
+        auto *engine = GetEngine();
+
         EnqueueRenderUpdates();
 
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_LIGHTS, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_LIGHTS, [this](...) {
             SetReady(false);
 
-            HYP_FLUSH_RENDER_QUEUE(engine);
-        }), engine);
+            HYP_FLUSH_RENDER_QUEUE(GetEngine());
+        }));
     }));
 }
 

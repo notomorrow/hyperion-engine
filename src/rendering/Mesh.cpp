@@ -96,7 +96,9 @@ void Mesh::Init(Engine *engine)
 
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_MESHES, [this](...) {
+        auto *engine = GetEngine();
+
         DebugLog(LogType::Info, "Init mesh with %llu vertices and %llu indices\n", m_vertices.size(), m_indices.size());
 
         AssertThrowMsg(m_vertex_attributes != 0, "No vertex attributes set on mesh");
@@ -165,7 +167,9 @@ void Mesh::Init(Engine *engine)
         m_vertices.clear();
         m_indices.clear();
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](Engine *engine) {
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](...) {
+            auto *engine = GetEngine();
+
             DebugLog(
                 LogType::Debug,
                 "Destroy mesh with id %u\n",
@@ -174,7 +178,7 @@ void Mesh::Init(Engine *engine)
 
             m_indices_count = 0;
             
-            engine->render_scheduler.Enqueue([this](...) {
+            engine->render_scheduler.Enqueue([this, engine](...) {
                 DebugLog(
                     LogType::Debug,
                     "REALLY Destroy mesh with id %u\n",
@@ -182,7 +186,7 @@ void Mesh::Init(Engine *engine)
                 );
                 auto result = renderer::Result::OK;
 
-                auto *device = GetEngine()->GetDevice();
+                auto *device = engine->GetDevice();
                 
                 HYPERION_PASS_ERRORS(m_vbo->Destroy(device), result);
                 HYPERION_PASS_ERRORS(m_ibo->Destroy(device), result);
@@ -193,7 +197,7 @@ void Mesh::Init(Engine *engine)
             HYP_FLUSH_RENDER_QUEUE(engine);
 
             SetReady(false);
-        }), engine);
+        }));
     }));
 }
 

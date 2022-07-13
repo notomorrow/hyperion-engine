@@ -52,7 +52,9 @@ void Blas::Init(Engine *engine)
         return;
     }
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ACCELERATION_STRUCTURES, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_ACCELERATION_STRUCTURES, [this](...) {
+        auto *engine = GetEngine();
+
         if (m_mesh != nullptr) {
             m_mesh.Init();
 
@@ -68,11 +70,11 @@ void Blas::Init(Engine *engine)
             engine->GetInstance()
         );
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, [this](Engine *engine) {
-            EngineComponent::Destroy(engine);
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_ACCELERATION_STRUCTURES, [this](...) {
+            EngineComponent::Destroy(GetEngine());
 
-            m_mesh = nullptr;
-        }), engine);
+            m_mesh.Reset();
+        }));
     }));
 }
 

@@ -460,7 +460,7 @@ protected:
      * @param bind_args Arguments to bind to the call
      */
     template <class ...Args>
-    void OnTeardown(CallbackRef &&callback_ref, Args &&... bind_args)
+    void OnTeardown(CallbackRef &&callback_ref)
     {
         if (m_destroy_callback.Valid()) {
             DebugLog(LogType::Warn, "OnTeardown callback overwritten! This may be unintentional and ideally should not happen.\n");
@@ -471,8 +471,6 @@ protected:
 
             AssertThrow(m_destroy_callback.Remove());
         }
-
-        callback_ref.Bind(std::tie(std::forward<Args>(bind_args)...));
 
         m_destroy_callback = std::move(callback_ref);
     }
@@ -599,13 +597,8 @@ template <class T, class CallbacksClass>
 struct ObjectVector {
     std::vector<std::unique_ptr<T>> objects;
     std::queue<size_t> free_slots;
-    CallbacksClass &callbacks;
 
-    ObjectVector(CallbacksClass &callbacks)
-        : callbacks(callbacks)
-    {
-    }
-
+    ObjectVector() = default;
     ObjectVector(const ObjectVector &other) = delete;
     ObjectVector &operator=(const ObjectVector &other) = delete;
     ~ObjectVector() {}
@@ -959,13 +952,11 @@ public:
     };
 
     RefCounter(CallbacksClass &callbacks)
-        : m_holder(callbacks)
     {
     }
 
     RefCounter(CallbacksClass &callbacks, ArgsTuple &&bind_init_args)
-        : m_holder(callbacks),
-          m_init_args(std::move(bind_init_args))
+        : m_init_args(std::move(bind_init_args))
     {
     }
 

@@ -31,13 +31,15 @@ void Scene::Init(Engine *engine)
     
     EngineComponentBase::Init(engine);
 
-    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SCENES, [this](Engine *engine) {
+    OnInit(engine->callbacks.Once(EngineCallback::CREATE_SCENES, [this](...) {
+        auto *engine = GetEngine();
+
         m_environment->Init(engine);
 
         SetReady(true);
 
-        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](Engine *engine) {
-            DebugLog(LogType::Debug, "Destroy scene #%lu\t%p\n", m_id.value, (void *)this);
+        OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_SCENES, [this](...) {
+            auto *engine = GetEngine();
 
             m_root_node->SetScene(nullptr);
 
@@ -58,7 +60,7 @@ void Scene::Init(Engine *engine)
             HYP_FLUSH_RENDER_QUEUE(engine);
 
             SetReady(false);
-        }), engine);
+        }));
     }));
 }
 
@@ -196,7 +198,7 @@ void Scene::AddPendingEntities()
                 if (!spatial->GetPipelines().Contains(pipeline.ptr)) {
                     pipeline->AddSpatial(spatial.IncRef());
 
-                    spatial->EnqueueRenderUpdates(GetEngine());
+                    spatial->EnqueueRenderUpdates();
                 }
 
                 spatial->m_primary_pipeline = {
@@ -288,7 +290,7 @@ void Scene::Update(
         }
     }
 
-    EnqueueRenderUpdates(engine);
+    EnqueueRenderUpdates();
 
     for (auto &it : m_spatials) {
         auto &entity = it.second;
@@ -339,16 +341,7 @@ void Scene::RequestPipelineChanges(Ref<Spatial> &spatial)
 
 void Scene::RemoveFromPipeline(Ref<Spatial> &spatial, GraphicsPipeline *pipeline)
 {
-    // if (pipeline == spatial->m_primary_pipeline.pipeline) {
-    //     spatial->m_primary_pipeline = {
-    //         .pipeline = nullptr,
-    //         .changed  = true
-    //     };
-    // }
-    
-
     pipeline->RemoveSpatial(spatial.IncRef());
-    // spatial->OnRemovedFromPipeline(pipeline);
 }
 
 void Scene::RemoveFromPipelines(Ref<Spatial> &spatial)
@@ -363,15 +356,9 @@ void Scene::RemoveFromPipelines(Ref<Spatial> &spatial)
         // have to inc ref so it can hold it in a temporary container
         pipeline->RemoveSpatial(spatial.IncRef());
     }
-
-    // spatial->m_pipelines.Clear();
-    // spatial->m_primary_pipeline = {
-    //     .pipeline = nullptr,
-    //     .changed  = true
-    // };
 }
 
-void Scene::EnqueueRenderUpdates(Engine *engine)
+void Scene::EnqueueRenderUpdates()
 {
     struct {
         BoundingBox aabb;
@@ -401,7 +388,7 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
         params.camera_far  = m_camera->GetFar();
     }
 
-    engine->render_scheduler.Enqueue([this, engine, params](...) {
+    GetEngine()->render_scheduler.Enqueue([this, params](...) {
         SceneShaderData shader_data{
             .view                        = params.view,
             .projection                  = params.projection,
@@ -429,7 +416,7 @@ void Scene::EnqueueRenderUpdates(Engine *engine)
 
         // DebugLog(LogType::Debug, "set %u lights\n", shader_data.num_lights);
         
-        engine->shader_globals->scenes.Set(m_id.value - 1, shader_data);
+        GetEngine()->shader_globals->scenes.Set(m_id.value - 1, shader_data);
 
         HYPERION_RETURN_OK;
     });
