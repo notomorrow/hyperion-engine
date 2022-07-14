@@ -10,9 +10,9 @@
 namespace hyperion::v2 {
 
 class ScriptedController : public Controller {
-    static constexpr const char *init_function_name    = "OnAdded";
-    static constexpr const char *removed_function_name = "OnRemoved";
-    static constexpr const char *tick_function_name    = "OnTick";
+    Script::FunctionHandle m_onadded;
+    Script::FunctionHandle m_onremoved;
+    Script::FunctionHandle m_ontick;
 
 public:
     ScriptedController(std::unique_ptr<Script> &&script);

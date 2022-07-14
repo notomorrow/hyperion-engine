@@ -30,6 +30,9 @@ class Script {
 public:
     using Bytes = std::vector<UByte>;
 
+    using ArgCount = uint16_t;
+    using FunctionHandle = Value;
+
     Script(const SourceFile &source_file);
     ~Script() = default;
 
@@ -97,10 +100,22 @@ public:
         };
     }
 
+    void CallFunction(FunctionHandle handle);
     void CallFunction(const char *name);
-    void CallFunction(const char *name, Value *args, size_t num_args);
+    void CallFunction(const char *name, Value *args, ArgCount num_args);
     void CallFunction(HashFnv1 hash);
-    void CallFunction(HashFnv1 hash, Value *args, size_t num_args);
+    void CallFunction(HashFnv1 hash, Value *args, ArgCount num_args);
+    void CallFunctionFromHandle(FunctionHandle handle, Value *args, ArgCount num_args);
+
+    bool GetExportedValue(const char *name, Value *value)
+    {
+        return GetExportedSymbols().Find(hash_fnv_1(name), value);
+    }
+
+    bool GetFunctionHandle(const char *name, FunctionHandle *handle)
+    {
+        return GetExportedValue(name, handle);
+    }
 
     template <class ...Args>
     void CallFunction(const char *name, Args &&... args)
@@ -108,6 +123,14 @@ public:
         auto arguments = CreateArguments(std::forward<Args>(args)...);
 
         CallFunction(name, arguments.data(), arguments.size());
+    }
+
+    template <class ...Args>
+    void CallFunction(FunctionHandle handle, Args &&... args)
+    {
+        auto arguments = CreateArguments(std::forward<Args>(args)...);
+
+        CallFunctionFromHandle(handle, arguments.data(), arguments.size());
     }
 
     template <class ...Args>
