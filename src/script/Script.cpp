@@ -137,9 +137,14 @@ void Script::CallFunction(const char *name)
     CallFunction(name, (Value *)nullptr, 0);
 }
 
-void Script::CallFunction(const char *name, Value *args, size_t num_args)
+void Script::CallFunction(const char *name, Value *args, ArgCount num_args)
 {
     CallFunction(hash_fnv_1(name), args, num_args);    
+}
+
+void Script::CallFunction(FunctionHandle handle)
+{
+    CallFunctionFromHandle(handle, (Value *)nullptr, 0);
 }
 
 void Script::CallFunction(HashFnv1 hash)
@@ -147,14 +152,19 @@ void Script::CallFunction(HashFnv1 hash)
     CallFunction(hash, (Value *)nullptr, 0);
 }
 
-void Script::CallFunction(HashFnv1 hash, Value *args, size_t num_args)
+
+void Script::CallFunction(HashFnv1 hash, Value *args, ArgCount num_args)
+{
+    Value handle;
+    AssertThrow(GetExportedSymbols().Find(hash, &handle));
+    CallFunctionFromHandle(handle, args, num_args);
+}
+
+void Script::CallFunctionFromHandle(FunctionHandle handle, Value *args, ArgCount num_args)
 {
     AssertThrow(IsCompiled() && IsBaked());
 
     auto *main_thread = m_vm.GetState().GetMainThread();
-
-    Value function_value;
-    AssertThrow(GetExportedSymbols().Find(hash, &function_value));
 
     if (num_args != 0) {
         AssertThrow(args != nullptr);
@@ -166,7 +176,7 @@ void Script::CallFunction(HashFnv1 hash, Value *args, size_t num_args)
 
     m_vm.InvokeNow(
         &m_bs,
-        function_value,
+        handle,
         num_args
     );
 
