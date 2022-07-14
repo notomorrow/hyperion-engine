@@ -72,21 +72,26 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
             .pNext = VK_NULL_HANDLE
         };
 
-        m_properties2 = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+        m_sampler_minmax_properties = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES_EXT,
             .pNext = &m_raytracing_pipeline_properties
         };
 #else
+        m_sampler_minmax_properties = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES_EXT,
+            .pNext = VK_NULL_HANDLE
+        };
+#endif
+
         m_indexing_properties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT,
-            .pNext = VK_NULL_HANDLE
+            .pNext = &m_sampler_minmax_properties
         };
 
         m_properties2 = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
             .pNext = &m_indexing_properties
         };
-#endif
 
         vkGetPhysicalDeviceProperties2(m_physical_device, &m_properties2);
     }

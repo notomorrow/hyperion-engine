@@ -298,7 +298,8 @@ Result Instance::Initialize(bool load_debug_layers)
                 slot,
                 i,
                 slot == DescriptorSet::Index::DESCRIPTOR_SET_INDEX_BINDLESS
-            )
+            ),
+            false
         );
     }
 

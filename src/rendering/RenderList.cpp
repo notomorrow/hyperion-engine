@@ -134,8 +134,6 @@ void RenderListContainer::RenderListBucket::CreateRenderPass(Engine *engine)
             nullptr
         );
         
-        //framebuffer_image->SetFilterMode(Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP);
-
         attachments.push_back(std::make_unique<renderer::Attachment>(
             std::move(framebuffer_image),
             RenderPassStage::SHADER

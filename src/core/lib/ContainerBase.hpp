@@ -89,6 +89,13 @@ public:
             key
         );
     }
+
+    template <class T>
+    [[nodiscard]] bool Contains(const T &value) const
+    {
+        return static_cast<const Container *>(this)->Find(value)
+            != static_cast<const Container *>(this)->End();
+    }
 };
 
 

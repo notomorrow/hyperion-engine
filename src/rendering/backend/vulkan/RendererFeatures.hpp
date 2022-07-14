@@ -92,6 +92,9 @@ public:
     inline const VkPhysicalDeviceBufferDeviceAddressFeatures &GetBufferDeviceAddressFeatures() const
         { return m_buffer_device_address_features; }
 
+    inline const VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT &GetSamplerMinMaxProperties() const
+        { return m_sampler_minmax_properties; }
+
     struct DeviceRequirementsResult {
         enum {
             DEVICE_REQUIREMENTS_OK = 0,
@@ -411,6 +414,7 @@ private:
     VkPhysicalDeviceBufferDeviceAddressFeatures      m_buffer_device_address_features;
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR    m_raytracing_pipeline_features;
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR  m_raytracing_pipeline_properties;
+    VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT m_sampler_minmax_properties;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR m_acceleration_structure_features;
     VkPhysicalDeviceDescriptorIndexingFeatures       m_indexing_features;
     VkPhysicalDeviceDescriptorIndexingProperties     m_indexing_properties;

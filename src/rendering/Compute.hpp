@@ -12,10 +12,12 @@ namespace hyperion::v2 {
 
 using renderer::CommandBuffer;
 using renderer::IndirectBuffer;
+using renderer::DescriptorSet;
 
 class ComputePipeline : public EngineComponentBase<STUB_CLASS(ComputePipeline)> {
 public:
     ComputePipeline(Ref<Shader> &&shader);
+    ComputePipeline(Ref<Shader> &&shader, const DynArray<const DescriptorSet *> &used_descriptor_sets);
     ComputePipeline(const ComputePipeline &) = delete;
     ComputePipeline &operator=(const ComputePipeline &) = delete;
     ~ComputePipeline();

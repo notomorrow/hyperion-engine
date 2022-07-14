@@ -29,7 +29,9 @@ Result ImageView::Create(
     VkFormat format,
     VkImageAspectFlags aspect_flags,
     VkImageViewType view_type,
+    uint32_t mipmap_layer,
     uint32_t num_mipmaps,
+    uint32_t face_layer,
     uint32_t num_faces
 )
 {
@@ -46,9 +48,9 @@ Result ImageView::Create(
     view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
     view_info.subresourceRange.aspectMask     = aspect_flags;
-    view_info.subresourceRange.baseMipLevel   = 0;
+    view_info.subresourceRange.baseMipLevel   = mipmap_layer;
     view_info.subresourceRange.levelCount     = num_mipmaps;
-    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.baseArrayLayer = face_layer;
     view_info.subresourceRange.layerCount     = m_num_faces;
 
     HYPERION_VK_CHECK_MSG(
@@ -59,7 +61,14 @@ Result ImageView::Create(
     HYPERION_RETURN_OK;
 }
 
-Result ImageView::Create(Device *device, Image *image)
+Result ImageView::Create(
+    Device *device,
+    const Image *image,
+    uint32_t mipmap_layer,
+    uint32_t num_mipmaps,
+    uint32_t face_layer,
+    uint32_t num_faces
+)
 {
     AssertThrow(image != nullptr);
     AssertThrow(image->GetGPUImage() != nullptr);
@@ -70,7 +79,27 @@ Result ImageView::Create(Device *device, Image *image)
         image->GetImageFormat(),
         ToVkImageAspect(image->GetTextureFormat()),
         ToVkImageViewType(image->GetType()),
+        mipmap_layer,
+        num_mipmaps,
+        face_layer,
+        num_faces
+    );
+}
+
+Result ImageView::Create(Device *device, const Image *image)
+{
+    AssertThrow(image != nullptr);
+    AssertThrow(image->GetGPUImage() != nullptr);
+
+    return Create(
+        device,
+        image->GetGPUImage()->image,
+        image->GetImageFormat(),
+        ToVkImageAspect(image->GetTextureFormat()),
+        ToVkImageViewType(image->GetType()),
+        0,
         image->NumMipmaps(),
+        0,
         image->NumFaces()
     );
 }

@@ -947,7 +947,8 @@ void GPUImageMemory::InsertBarrier(
 void GPUImageMemory::InsertSubResourceBarrier(
     CommandBuffer *command_buffer,
     const ImageSubResource &sub_resource,
-    ResourceState new_state)
+    ResourceState new_state
+)
 {
     if (image == nullptr) {
         DebugLog(
@@ -956,6 +957,14 @@ void GPUImageMemory::InsertSubResourceBarrier(
         );
 
         return;
+    }
+
+    ResourceState prev_resource_state = resource_state;
+
+    auto it = sub_resources.find(sub_resource);
+
+    if (it != sub_resources.end()) {
+        prev_resource_state = it->second;
     }
 
     const VkImageAspectFlags aspect_flag_bits = 
@@ -971,9 +980,9 @@ void GPUImageMemory::InsertSubResourceBarrier(
     range.levelCount     = sub_resource.num_levels;
 
     VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-    barrier.oldLayout           = GetImageLayout(resource_state);
+    barrier.oldLayout           = GetImageLayout(prev_resource_state);
     barrier.newLayout           = GetImageLayout(new_state);
-    barrier.srcAccessMask       = GetAccessMask(resource_state);
+    barrier.srcAccessMask       = GetAccessMask(prev_resource_state);
     barrier.dstAccessMask       = GetAccessMask(new_state);
     barrier.image               = image;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -982,7 +991,7 @@ void GPUImageMemory::InsertSubResourceBarrier(
 
     vkCmdPipelineBarrier(
         command_buffer->GetCommandBuffer(),
-        GetShaderStageMask(resource_state, true),
+        GetShaderStageMask(prev_resource_state, true),
         GetShaderStageMask(new_state, false),
         0,
         0, nullptr,

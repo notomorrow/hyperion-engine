@@ -46,7 +46,10 @@ const decltype(DescriptorSet::mappings) DescriptorSet::mappings = {
             {DescriptorKey::CUBEMAP_TEST,          25},
             {DescriptorKey::ENV_PROBES,            26},
 
-            {DescriptorKey::VOXEL_IMAGE,           30}
+            {DescriptorKey::VOXEL_IMAGE,           30},
+
+            // result from depth pyramid generation
+            {DescriptorKey::DEPTH_PYRAMID_RESULT,  36}
         }
     },
     {
@@ -205,25 +208,45 @@ UInt DescriptorSet::GetDesiredIndex(Index index)
     return it->second;
 }
 
+DescriptorSet::DescriptorSet()
+    : m_set(VK_NULL_HANDLE),
+      m_layout(VK_NULL_HANDLE),
+      m_descriptor_pool(nullptr),
+      m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
+      m_index(static_cast<Index>(-1)),
+      m_real_index(static_cast<Index>(-1)),
+      m_bindless(false),
+      m_is_created(false),
+      m_is_standalone(true)
+{
+}
+
 DescriptorSet::DescriptorSet(Index index, UInt real_index, bool bindless)
     : m_set(VK_NULL_HANDLE),
+      m_layout(VK_NULL_HANDLE),
       m_descriptor_pool(nullptr),
       m_state(DescriptorSetState::DESCRIPTOR_DIRTY),
       m_index(index),
       m_real_index(real_index),
-      m_bindless(bindless)
-      
+      m_bindless(bindless),
+      m_is_created(false),
+      m_is_standalone(false)
 {
 }
 
 DescriptorSet::~DescriptorSet()
 {
+    if (m_is_standalone) {
+        AssertThrowMsg(m_layout == VK_NULL_HANDLE, "Layout not destroyed!");
+    }
+
     AssertThrowMsg(m_set == VK_NULL_HANDLE, "Set not destroyed!");
 }
 
 Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
 {
     AssertThrow(pool != nullptr);
+    AssertThrow(!m_is_created);
     AssertThrow(m_descriptor_bindings.size() == m_descriptors.size());
     
     m_descriptor_pool = pool;
@@ -258,31 +281,34 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
     layout_info.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
     layout_info.pNext = &extended_info;
 
-    VkDescriptorSetLayout layout{};
+    if (m_is_standalone) {
+        // TODO: create/store descriptor layout based on the hash of the descriptors.
 
-    if (m_real_index == m_index) { // otherwise no need to create layout
-        auto layout_result = pool->CreateDescriptorSetLayout(device, static_cast<UInt>(m_index), &layout_info, &layout);
-
-        if (!layout_result) {
-            DebugLog(LogType::Error, "Failed to create descriptor set layout! Message was: %s\n", layout_result.message);
-
-            return layout_result;
+        // 'standalone' means we create our own descriptor set layout and manage it.
+        if (vkCreateDescriptorSetLayout(device->GetDevice(), &layout_info, nullptr, &m_layout) != VK_SUCCESS) {
+            return {Result::RENDERER_ERR, "Could not create descriptor set layout"};
         }
-    
-        //if (IsTemplate()) {
-        //    HYPERION_RETURN_OK;
-        //}
-    } else { // reuse from template or base
-        layout = pool->GetDescriptorSetLayout(static_cast<UInt>(GetIndex()));
+    } else {
+        if (m_real_index == m_index) { // create a descriptor layout for the 'root' one aka not a template/copy of other.
+            auto layout_result = pool->CreateDescriptorSetLayout(device, static_cast<UInt>(m_index), &layout_info, &m_layout);
 
-        pool->SetDescriptorSetLayout(GetRealIndex(), layout);
+            if (!layout_result) {
+                DebugLog(LogType::Error, "Failed to create descriptor set layout! Message was: %s\n", layout_result.message);
 
-        DebugLog(
-            LogType::Debug,
-            "Reuse descriptor set layout for descriptor set with index %u because base differs (%u)\n",
-            static_cast<UInt>(GetRealIndex()),
-            static_cast<UInt>(GetIndex())
-        );
+                return layout_result;
+            }
+        } else { // reuse from template or base
+            m_layout = pool->GetDescriptorSetLayout(static_cast<UInt>(GetIndex()));
+
+            pool->SetDescriptorSetLayout(GetRealIndex(), m_layout);
+
+            DebugLog(
+                LogType::Debug,
+                "Reuse descriptor set layout for descriptor set with index %u because base differs (%u)\n",
+                static_cast<UInt>(GetRealIndex()),
+                static_cast<UInt>(GetIndex())
+            );
+        }
     }
 
 #if !HYP_FEATURES_BINDLESS_TEXTURES
@@ -293,7 +319,7 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
 #endif
 
     {
-        auto allocate_result = pool->AllocateDescriptorSet(device, &layout, this);
+        auto allocate_result = pool->AllocateDescriptorSet(device, &m_layout, this);
 
         if (!allocate_result) {
             DebugLog(LogType::Error, "Failed to allocate descriptor set %lu! Message was: %s\n", static_cast<UInt>(m_index), allocate_result.message);
@@ -318,24 +344,44 @@ Result DescriptorSet::Create(Device *device, DescriptorPool *pool)
         descriptor->m_dirty_sub_descriptors = {};
     }
 
+    m_is_created = true;
+
     HYPERION_RETURN_OK;
 }
 
 Result DescriptorSet::Destroy(Device *device)
 {
     AssertThrow(m_descriptor_pool != nullptr);
+
+    auto result = Result::OK;
     
-    HYPERION_VK_CHECK(vkFreeDescriptorSets(
-        device->GetDevice(),
-        m_descriptor_pool->GetHandle(),
-        1,
-        &m_set
-    ));
+    HYPERION_VK_PASS_ERRORS(
+        vkFreeDescriptorSets(
+            device->GetDevice(),
+            m_descriptor_pool->GetHandle(),
+            1,
+            &m_set
+        ),
+        result
+    );
+
+    m_set = VK_NULL_HANDLE;
+
+    if (m_is_standalone) {
+        vkDestroyDescriptorSetLayout(
+            device->GetDevice(),
+            m_layout,
+            nullptr
+        );
+
+        m_layout = VK_NULL_HANDLE;
+    }
     
     m_descriptor_pool = nullptr;
-    m_set = VK_NULL_HANDLE;
+
+    m_is_created = false;
     
-    HYPERION_RETURN_OK;
+    return result;
 }
 
 bool DescriptorSet::RemoveDescriptor(Descriptor *descriptor)
@@ -443,7 +489,6 @@ const std::unordered_map<VkDescriptorType, size_t> DescriptorPool::items_per_set
 
 DescriptorPool::DescriptorPool()
     : m_descriptor_pool(nullptr),
-      m_descriptor_sets_view{},
       m_is_created(false)
 {
 }
@@ -499,74 +544,35 @@ Result DescriptorPool::Create(Device *device)
 
 #undef HYP_DEBUG_LOG_LIMIT
 
-    std::vector<std::pair<UInt, VkDescriptorSet>> descriptor_set_views_indices;
-    descriptor_set_views_indices.reserve(m_descriptor_sets.size());
+    // UInt descriptor_set_index = 0;
 
-    UInt descriptor_set_index = 0;
+    // for (auto &descriptor_set : m_descriptor_sets) {
+    //     if (descriptor_set == nullptr) {
+    //         DebugLog(LogType::Warn, "Descriptor set %u null, skipping...\n", descriptor_set_index);
 
-    for (auto &descriptor_set : m_descriptor_sets) {
-        if (descriptor_set == nullptr) {
-            DebugLog(LogType::Warn, "Descriptor set %u null, skipping...\n", descriptor_set_index);
+    //         descriptor_set_index++;
 
-            descriptor_set_index++;
+    //         continue;
+    //     }
 
-            continue;
-        }
+    //     auto allocate_result = descriptor_set->Create(device, this);
 
-        auto allocate_result = descriptor_set->Create(device, this);
+    //     if (!allocate_result) {
+    //         device->DebugLogAllocatorStats();
 
-        if (!allocate_result) {
-            device->DebugLogAllocatorStats();
+    //         DebugLog(
+    //             LogType::Error,
+    //             "Failed to allocate descriptor set %llu!\n",
+    //             descriptor_set_index
+    //         );
 
-            DebugLog(
-                LogType::Error,
-                "Failed to allocate descriptor set %llu!\n",
-                descriptor_set_index
-            );
+    //         return allocate_result;
+    //     }
 
-            return allocate_result;
-        }
-
-        auto it = std::find_if(
-            descriptor_set_views_indices.begin(),
-            descriptor_set_views_indices.end(),
-            [&](const auto &item) {
-                return item.first == descriptor_set->GetDesiredIndex();
-            }
-        );
-
-        AssertThrowMsg(it == descriptor_set_views_indices.end(), "Duplicate descriptor set index");
-
-        descriptor_set_views_indices.push_back(std::make_pair(
-            descriptor_set->GetDesiredIndex(),
-            descriptor_set->m_set
-        ));
-
-        descriptor_set_index++;
-    }
-
-    m_descriptor_sets_view.clear();
-
-    for (auto &it : descriptor_set_views_indices) {
-        AssertThrowMsg(
-            it.second != nullptr,
-            "Descriptor set at index %u is missing",
-            it.first
-        );
-
-        if (m_descriptor_sets_view.size() <= it.first) {
-            m_descriptor_sets_view.resize(it.first + 1);
-        }
-
-        m_descriptor_sets_view[it.first] = it.second;
-    }
+    //     descriptor_set_index++;
+    // }
 
     m_is_created = true;
-
-    DebugLog(
-        LogType::Debug,
-        "All main descriptor sets created\n"
-    );
 
     HYPERION_RETURN_OK;
 }
@@ -593,8 +599,6 @@ Result DescriptorPool::Destroy(Device *device)
     // set all to nullptr
     m_descriptor_sets.clear();
 
-    m_descriptor_sets_view.clear();
-
     /* Destroy pool */
     vkDestroyDescriptorPool(device->GetDevice(), m_descriptor_pool, nullptr);
     m_descriptor_pool = nullptr;
@@ -613,37 +617,6 @@ DescriptorSet *DescriptorPool::AddDescriptorSet(
     AssertThrow(descriptor_set != nullptr);
 
     const UInt index = descriptor_set->GetRealIndex();
-    
-    // remove from any 'pending removal' queues so it doesn't get removed directly after adding
-    // for (auto &pending_removal_queue : m_descriptor_sets_pending_destruction) {
-    //     auto it = std::find(
-    //         pending_removal_queue.begin(),
-    //         pending_removal_queue.end(),
-    //         index
-    //     );
-        
-    //     if (it != pending_removal_queue.end()) {
-    //         pending_removal_queue.erase(it);
-    //     }
-    // }
-
-    // if (IsCreated()) { // already created, dynamically adding descriptor sets
-    //     if (index < m_descriptor_sets.size()) {
-    //         AssertThrowMsg(
-    //             m_descriptor_sets[index] == nullptr,
-    //             "Descriptor set at index %u not nullptr! This would cause it to be overwritten.",
-    //             index
-    //         );
-    //     }
-
-
-    //     m_descriptor_sets_pending_addition.push_back(DescriptorSetPendingEntry {
-    //         .index          = index,
-    //         .descriptor_set = std::move(descriptor_set)
-    //     });
-
-    //     return m_descriptor_sets_pending_addition.back().descriptor_set.get();
-    // }
     
     if (index >= m_descriptor_sets.size()) {
         if (index == m_descriptor_sets.size()) {
@@ -797,20 +770,6 @@ Result DescriptorPool::DestroyDescriptorSet(Device *device, UInt index)
         return {Result::RENDERER_ERR, "Descriptor set is nullptr"};
     }
 
-    const auto desired_index = descriptor_set->GetDesiredIndex();
-    AssertThrowMsg(desired_index < m_descriptor_sets_view.size(), "Bookkeeping incorrect");
-
-    m_descriptor_sets_view[desired_index] = VK_NULL_HANDLE;
-
-    if (desired_index == m_descriptor_sets_view.size() - 1) {
-        UInt iteration_index = desired_index;
-
-        do {
-            m_descriptor_sets_view.pop_back();
-            --iteration_index;
-        } while (m_descriptor_sets_view[iteration_index] == VK_NULL_HANDLE);
-    }
-
     HYPERION_BUBBLE_ERRORS(descriptor_set->Destroy(device));
 
     descriptor_set.reset();
@@ -834,23 +793,45 @@ Result DescriptorPool::CreateDescriptorSet(Device *device, UInt index)
     auto *descriptor_set = m_descriptor_sets[index].get();
     AssertThrow(descriptor_set != nullptr);
 
-    const auto desired_index = descriptor_set->GetDesiredIndex();
-
     DebugLog(
         LogType::Debug,
         "Allocate descriptor set %u\n",
         index
     );
 
-    auto allocate_result = descriptor_set->Create(device, this);
+    return descriptor_set->Create(device, this);
+}
 
-    if (m_descriptor_sets_view.size() <= desired_index) {
-        m_descriptor_sets_view.resize(desired_index + 1);
+Result DescriptorPool::CreateDescriptorSets(Device *device)
+{
+    AssertThrow(m_is_created);
+
+    auto result = Result::OK;
+
+    UInt descriptor_set_index = 0;
+
+    for (auto &descriptor_set : m_descriptor_sets) {
+        if (descriptor_set == nullptr) {
+            DebugLog(LogType::Warn, "Descriptor set %u null, skipping...\n", descriptor_set_index);
+
+            descriptor_set_index++;
+
+            continue;
+        }
+
+        if (descriptor_set->IsCreated()) {
+            continue;
+        }
+
+        HYPERION_PASS_ERRORS(
+            descriptor_set->Create(device, this),
+            result
+        );
+
+        descriptor_set_index++;
     }
 
-    m_descriptor_sets_view[desired_index] = descriptor_set->m_set;
-
-    return allocate_result;
+    return result;
 }
 
 Result DescriptorPool::Bind(
@@ -924,7 +905,7 @@ void DescriptorPool::BindDescriptorSets(
         )
         : device_max_bound_descriptor_sets;
 
-    const auto set_index     = DescriptorSet::GetDesiredIndex(binding.declaration.set);
+    const auto set_index     = static_cast<UInt>(binding.declaration.set);
     const auto binding_index = DescriptorSet::GetDesiredIndex(binding.locations.binding);
 
     AssertThrowMsg(
@@ -935,14 +916,14 @@ void DescriptorPool::BindDescriptorSets(
     );
 
     AssertThrowMsg(
-        set_index < m_descriptor_sets_view.size(),
+        set_index < m_descriptor_sets.size(),
         "Attempt to bind invalid descriptor set (%u) (at index %u) -- out of bounds (max is %llu)\n",
         static_cast<UInt>(binding.declaration.set),
         set_index,
-        m_descriptor_sets_view.size()
+        m_descriptor_sets.size()
     );
 
-    auto &bind_set = m_descriptor_sets_view[set_index];
+    auto &bind_set = m_descriptor_sets[set_index];
 
     AssertThrowMsg(
         bind_set != nullptr,
@@ -951,13 +932,15 @@ void DescriptorPool::BindDescriptorSets(
         set_index
     );
 
+    const auto handle = bind_set->m_set;
+
     vkCmdBindDescriptorSets(
         cmd->GetCommandBuffer(),
         bind_point,
         pipeline->layout,
         binding_index,
         binding.declaration.count,
-        &bind_set,
+        &handle,
         static_cast<UInt>(binding.offsets.offsets.size()),
         binding.offsets.offsets.data()
     );
