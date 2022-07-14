@@ -135,6 +135,22 @@ public:
     void BindDescriptorSet(
         const DescriptorPool &pool,
         const ComputePipeline *pipeline,
+        const DescriptorSet *descriptor_set,
+        DescriptorSet::Index binding
+    ) const;
+
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const ComputePipeline *pipeline,
+        const DescriptorSet *descriptor_set,
+        DescriptorSet::Index binding,
+        const UInt32 *offsets,
+        size_t num_offsets
+    ) const;
+
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const ComputePipeline *pipeline,
         DescriptorSet::Index set
     ) const;
 
@@ -229,11 +245,32 @@ private:
         size_t num_offsets
     ) const;
 
+    void BindDescriptorSet(
+        const DescriptorPool &pool,
+        const Pipeline *pipeline,
+        VkPipelineBindPoint bind_point,
+        const DescriptorSet *descriptor_set,
+        DescriptorSet::Index binding,
+        const UInt32 *offsets,
+        size_t num_offsets
+    ) const;
+
     void BindDescriptorSets(
         const DescriptorPool &pool,
         const Pipeline *pipeline,
         VkPipelineBindPoint bind_point,
         const DescriptorSet::Index *sets,
+        const DescriptorSet::Index *bindings,
+        size_t num_descriptor_sets,
+        const UInt32 *offsets,
+        size_t num_offsets
+    ) const;
+
+    void BindDescriptorSets(
+        const DescriptorPool &pool,
+        const Pipeline *pipeline,
+        VkPipelineBindPoint bind_point,
+        const DescriptorSet *descriptor_sets,
         const DescriptorSet::Index *bindings,
         size_t num_descriptor_sets,
         const UInt32 *offsets,

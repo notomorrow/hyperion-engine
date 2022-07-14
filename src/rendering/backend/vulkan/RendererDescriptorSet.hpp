@@ -189,6 +189,7 @@ enum class DescriptorKey {
     CUBEMAP_TEST, // removeme
     ENV_PROBES,
     VOXEL_IMAGE,
+    DEPTH_PYRAMID_RESULT,
 
     SCENE_BUFFER,
     LIGHTS_BUFFER,
@@ -267,6 +268,12 @@ public:
     static int GetFrameIndex(UInt real_index);
     static UInt GetDesiredIndex(Index index);
 
+    /*! \brief Create a 'standalone' descriptor set.
+        This is a newer way of creating them that will let us create descriptor sets that own their own
+        resources such as layout. You would hold the DescriptorSet as a class member manually Create()/Destroy() it. */
+    DescriptorSet();
+    /*! \brief Create a descriptor set the older way. The descriptor set will be held in the DescriptorPool and managed
+        indirectly by going through methods on DescriptorPool etc. */
     DescriptorSet(Index index, UInt real_index, bool bindless);
     DescriptorSet(const DescriptorSet &other) = delete;
     DescriptorSet &operator=(const DescriptorSet &other) = delete;
@@ -276,7 +283,7 @@ public:
     Index GetIndex() const              { return m_index; }
     UInt GetRealIndex() const           { return m_real_index; }
     bool IsBindless() const             { return m_bindless; }
-    UInt GetDesiredIndex() const        { return GetDesiredIndex(DescriptorSet::Index(GetRealIndex())); }
+    bool IsCreated() const              { return m_is_created; }
 
     /* doesn't allocate a descriptor set, just a template for other material textures to follow. Creates a layout. */
     bool IsTemplate() const             { return GetRealIndex() == static_cast<UInt>(Index::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES); }
@@ -341,7 +348,8 @@ public:
 
     void ApplyUpdates(Device *device);
 
-    VkDescriptorSet m_set;
+    VkDescriptorSet       m_set;
+    VkDescriptorSetLayout m_layout;
 
 private:
     UInt DescriptorKeyToIndex(DescriptorKey key) const;
@@ -354,6 +362,9 @@ private:
     Index m_index;
     UInt m_real_index;
     bool m_bindless;
+    bool m_is_created;
+    bool m_is_standalone; // a descriptor set is 'standalone' if it is not created as part of the DescriptorPool.
+                          // it it manages its own layout resource, as well.
 };
 
 struct DescriptorSetBinding {
@@ -427,8 +438,8 @@ public:
     
     VkDescriptorPool GetHandle() const          { return m_descriptor_pool; }
 
-    auto &GetVkDescriptorSets()                 { return m_descriptor_sets_view; }
-    const auto &GetVkDescriptorSets() const     { return m_descriptor_sets_view; }
+    auto &GetDescriptorSets()                   { return m_descriptor_sets; }
+    const auto &GetDescriptorSets() const       { return m_descriptor_sets; }
 
     size_t NumDescriptorSets() const            { return m_descriptor_sets.size(); }
     bool IsCreated() const                      { return m_is_created; }
@@ -457,6 +468,7 @@ public:
     Result Bind(Device *device, CommandBuffer *cmd, RaytracingPipeline *pipeline, const DescriptorSetBinding &) const;
 
     Result CreateDescriptorSet(Device *device, UInt index);
+    Result CreateDescriptorSets(Device *device);
     Result DestroyPendingDescriptorSets(Device *device, UInt frame_index);
     Result AddPendingDescriptorSets(Device *device);
     Result UpdateDescriptorSets(Device *device, UInt frame_index);
@@ -475,7 +487,6 @@ private:
     std::vector<std::unique_ptr<DescriptorSet>> m_descriptor_sets;
     FlatMap<UInt, VkDescriptorSetLayout> m_descriptor_set_layouts;
     VkDescriptorPool m_descriptor_pool;
-    std::vector<VkDescriptorSet> m_descriptor_sets_view;
 
     struct DescriptorSetPendingEntry {
         UInt num_cycles_remaining = max_frames_in_flight;

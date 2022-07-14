@@ -270,6 +270,11 @@ public:
         return 1ull << (FastLog2(value) + 1);
     }
 
+    static inline constexpr UInt64 PreviousPowerOf2(UInt64 value)
+    {
+        return NextPowerOf2(value) / 2;
+    }
+
     template <class T, class U>
     static inline constexpr auto NextMultiple(T &&value, U &&multiple) -> std::common_type_t<T, U>
     {

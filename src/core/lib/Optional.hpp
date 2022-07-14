@@ -17,7 +17,7 @@ public:
     Optional(const T &value)
         : m_has_value(true)
     {
-        new (m_storage.data_buffer) T(value);
+        new (&m_storage.data_buffer) T(value);
     }
 
     Optional &operator=(const T &value)
@@ -26,7 +26,7 @@ public:
             Get() = value;
         } else {
             m_has_value = true;
-            new (m_storage.data_buffer) T(value);
+            new (&m_storage.data_buffer) T(value);
         }
         return *this;
     }
@@ -34,7 +34,7 @@ public:
     Optional(T &&value) noexcept
         : m_has_value(true)
     {
-        new (m_storage.data_buffer) T(std::forward<T>(value));
+        new (&m_storage.data_buffer) T(std::forward<T>(value));
     }
 
     Optional &operator=(T &&value)
@@ -43,17 +43,17 @@ public:
             Get() = std::forward<T>(value);
         } else {
             m_has_value = true;
-            new (m_storage.data_buffer) T(std::forward<T>(value));
+            new (&m_storage.data_buffer) T(std::forward<T>(value));
         }
 
         return *this;
     }
 
     Optional(const Optional &other)
-        : has_value(other.has_value)
+        : m_has_value(other.m_has_value)
     {
         if (m_has_value) {
-            new (m_storage.data_buffer) T(other.Get());
+            new (&m_storage.data_buffer) T(other.Get());
         }
     }
 
@@ -72,7 +72,7 @@ public:
             }
         } else {
             if (other.m_has_value) {
-                new (m_storage.data_buffer) T(other.Get());
+                new (&m_storage.data_buffer) T(other.Get());
                 m_has_value = true;
             }
         }
@@ -81,10 +81,10 @@ public:
     }
 
     Optional(Optional &&other) noexcept
-        : has_value(other.has_value)
+        : m_has_value(other.m_has_value)
     {
         if (m_has_value) {
-            new (m_storage.data_buffer) T(std::move(other.Get()));
+            new (&m_storage.data_buffer) T(std::move(other.Get()));
         }
     }
 
@@ -103,7 +103,7 @@ public:
             }
         } else {
             if (other.m_has_value) {
-                new (m_storage.data_buffer) T(std::move(other.Get()));
+                new (&m_storage.data_buffer) T(std::move(other.Get()));
                 m_has_value = true;
             }
         }
@@ -122,19 +122,21 @@ public:
 
     T &Get()
     {
-        AssertThrow(has_value);
+        AssertThrow(m_has_value);
 
         return *reinterpret_cast<T *>(&m_storage.data_buffer);
     }
 
     const T &Get() const
     {
-        AssertThrow(has_value);
+        AssertThrow(m_has_value);
 
         return *reinterpret_cast<const T *>(&m_storage.data_buffer);
     }
 
-    bool Any() const { return m_hsa_value; }
+    bool HasValue() const { return m_has_value; }
+
+    
 
 private:
     struct Storage {
