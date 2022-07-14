@@ -180,6 +180,44 @@ void CommandBuffer::DrawIndexed(
 
 void CommandBuffer::BindDescriptorSet(
     const DescriptorPool &pool,
+    const ComputePipeline *pipeline,
+    const DescriptorSet *descriptor_set,
+    DescriptorSet::Index binding
+) const
+{
+    BindDescriptorSet(
+        pool,
+        static_cast<const Pipeline *>(pipeline),
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        descriptor_set,
+        binding,
+        nullptr,
+        0
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const ComputePipeline *pipeline,
+    const DescriptorSet *descriptor_set,
+    DescriptorSet::Index binding,
+        const UInt32 *offsets,
+    size_t num_offsets
+) const
+{
+    BindDescriptorSet(
+        pool,
+        static_cast<const Pipeline *>(pipeline),
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        descriptor_set,
+        binding,
+        nullptr,
+        0
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
     const GraphicsPipeline *pipeline,
     DescriptorSet::Index set
 ) const
@@ -342,20 +380,20 @@ void CommandBuffer::BindDescriptorSet(
     size_t num_offsets
 ) const
 {
-    const auto set_index     = DescriptorSet::GetDesiredIndex(set);
+    const auto set_index     = static_cast<UInt>(set);
     const auto binding_index = DescriptorSet::GetDesiredIndex(binding);
 
-    const auto &descriptor_sets_view = pool.GetVkDescriptorSets();
+    const auto &descriptor_sets = pool.GetDescriptorSets();
 
     AssertThrowMsg(
-        set_index < descriptor_sets_view.size(),
+        set_index < descriptor_sets.size(),
         "Attempt to bind invalid descriptor set (%u) (at index %u) -- out of bounds (max is %llu)\n",
         static_cast<UInt>(set),
         set_index,
-        descriptor_sets_view.size()
+        descriptor_sets.size()
     );
 
-    const auto &bind_set = descriptor_sets_view[set_index];
+    const auto &bind_set = descriptor_sets[set_index];
 
     AssertThrowMsg(
         bind_set != nullptr,
@@ -364,13 +402,37 @@ void CommandBuffer::BindDescriptorSet(
         set_index
     );
 
+    BindDescriptorSet(
+        pool,
+        pipeline,
+        bind_point,
+        bind_set.get(),
+        binding,
+        offsets,
+        num_offsets
+    );
+}
+
+void CommandBuffer::BindDescriptorSet(
+    const DescriptorPool &pool,
+    const Pipeline *pipeline,
+    VkPipelineBindPoint bind_point,
+    const DescriptorSet *descriptor_set,
+    DescriptorSet::Index binding,
+    const UInt32 *offsets,
+    size_t num_offsets
+) const
+{
+    const auto binding_index = DescriptorSet::GetDesiredIndex(binding);
+    const auto handle        = descriptor_set->m_set;
+
     vkCmdBindDescriptorSets(
         m_command_buffer,
         bind_point,
         pipeline->layout,
         binding_index,
         1,
-        &bind_set,
+        &handle,
         static_cast<UInt32>(num_offsets),
         offsets
     );
@@ -392,12 +454,12 @@ void CommandBuffer::BindDescriptorSets(
 
     AssertThrow(num_descriptor_sets <= max_bound_descriptor_sets);
 
-    const auto &descriptor_sets_view = pool.GetVkDescriptorSets();
+    const auto &descriptor_sets = pool.GetDescriptorSets();
 
     UInt32 binding_index = 0;
 
     for (UInt i = 0; i < num_descriptor_sets; i++) {
-        const auto set_index             = DescriptorSet::GetDesiredIndex(sets[i]);
+        const auto set_index             = static_cast<UInt>(sets[i]);
         const auto current_binding_index = DescriptorSet::GetDesiredIndex(bindings[i]);
 
         if (i == 0) {
@@ -413,14 +475,14 @@ void CommandBuffer::BindDescriptorSets(
         }
 
         AssertThrowMsg(
-            set_index < descriptor_sets_view.size(),
+            set_index < descriptor_sets.size(),
             "Attempt to bind invalid descriptor set (%u) (at index %u) -- out of bounds (max is %llu)\n",
             static_cast<UInt>(sets[i]),
             set_index,
-            descriptor_sets_view.size()
+            descriptor_sets.size()
         );
 
-        const auto &bind_set = descriptor_sets_view[set_index];
+        const auto &bind_set = descriptor_sets[set_index];
 
         AssertThrowMsg(
             bind_set != nullptr,
@@ -429,7 +491,54 @@ void CommandBuffer::BindDescriptorSets(
             set_index
         );
 
-        descriptor_sets_buffer[i] = bind_set;
+        descriptor_sets_buffer[i] = bind_set->m_set;
+    }
+
+    vkCmdBindDescriptorSets(
+        m_command_buffer,
+        bind_point,
+        pipeline->layout,
+        binding_index,
+        static_cast<UInt32>(num_descriptor_sets),
+        descriptor_sets_buffer,
+        static_cast<UInt32>(num_offsets),
+        offsets
+    );
+}
+
+void CommandBuffer::BindDescriptorSets(
+    const DescriptorPool &pool,
+    const Pipeline *pipeline,
+    VkPipelineBindPoint bind_point,
+    const DescriptorSet *descriptor_sets,
+    const DescriptorSet::Index *bindings,
+    size_t num_descriptor_sets,
+    const UInt32 *offsets,
+    size_t num_offsets
+) const
+{
+    constexpr UInt max_bound_descriptor_sets = 8;
+    VkDescriptorSet descriptor_sets_buffer[max_bound_descriptor_sets];
+
+    AssertThrow(num_descriptor_sets <= max_bound_descriptor_sets);
+
+    UInt32 binding_index = 0;
+
+    for (UInt i = 0; i < num_descriptor_sets; i++) {
+        const auto current_binding_index = DescriptorSet::GetDesiredIndex(bindings[i]);
+
+        if (i == 0) {
+            binding_index = current_binding_index;
+        } else {
+            AssertThrowMsg(
+                current_binding_index == binding_index + i,
+                "Cannot bind multiple descriptor sets: binding for set is %u, but must fall into the pattern [firstSet..firstSet+descriptorSetCount-1], where firstSet is %u.",
+                current_binding_index,
+                binding_index
+            );
+        }
+
+        descriptor_sets_buffer[i] = descriptor_sets[i].m_set;
     }
 
     vkCmdBindDescriptorSets(

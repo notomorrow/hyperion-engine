@@ -38,6 +38,28 @@ public:
     using ConstIterator = const T *;
 
     DynArray();
+
+    template <SizeType Sz>
+    DynArray(T const (&items)[Sz])
+        : DynArray()
+    {
+        Reserve(Sz);
+
+        for (SizeType i = 0; i < Sz; i++) {
+            PushBack(items[i]);
+        }
+    }
+
+    DynArray(const std::initializer_list<T> &items)
+        : DynArray()
+    {
+        Reserve(items.size());
+
+        for (auto it = items.begin(); it != items.end(); ++it) {
+            PushBack(*it);
+        }
+    }
+
     DynArray(const DynArray &other);
     DynArray(DynArray &&other) noexcept;
     ~DynArray();
@@ -656,6 +678,10 @@ void DynArray<T>::Clear()
     m_size = 0;
     m_start_offset = 0;
 }
+
+// deduction guide
+// template <typename Tp, typename ...Args>
+// DynArray(Tp, Args...) -> DynArray<std::enable_if_t<(std::is_same_v<Tp, Args> && ...), Tp>, 1 + sizeof...(Args)>;
 
 } // namespace hyperion
 

@@ -22,6 +22,7 @@ public:
     inline VkImageView &GetImageView()             { return m_image_view; }
     inline const VkImageView &GetImageView() const { return m_image_view; }
 
+
     /* Create imageview independent of an Image */
     Result Create(
         Device *device,
@@ -29,21 +30,37 @@ public:
         VkFormat format,
         VkImageAspectFlags aspect_flags,
         VkImageViewType view_type,
-        uint32_t num_mipmaps = 1,
-        uint32_t num_faces = 1
+        uint32_t mipmap_layer,
+        uint32_t num_mipmaps,
+        uint32_t face_layer,
+        uint32_t num_faces
     );
 
     uint32_t NumFaces() const { return m_num_faces; }
 
     /* Create imageview referencing an Image */
-    Result Create(Device *device, Image *image);
+    Result Create(
+        Device *device,
+        const Image *image,
+        uint32_t mipmap_layer,
+        uint32_t num_mipmaps,
+        uint32_t face_layer,
+        uint32_t num_faces
+    );
+
+    /* Create imageview referencing an Image */
+    Result Create(
+        Device *device,
+        const Image *image
+    );
+
     Result Destroy(Device *device);
 
 private:
     static VkImageAspectFlags ToVkImageAspect(Image::InternalFormat);
     static VkImageViewType ToVkImageViewType(Image::Type);
     
-    VkImageView m_image_view;
+    VkImageView            m_image_view;
     std::optional<VkImage> m_image;
 
     uint32_t m_num_faces;

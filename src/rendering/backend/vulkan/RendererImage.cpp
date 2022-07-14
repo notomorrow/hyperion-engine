@@ -172,7 +172,9 @@ VkImageType Image::ToVkType(Type type)
 VkFilter Image::ToVkFilter(FilterMode filter_mode)
 {
     switch (filter_mode) {
-    case FilterMode::TEXTURE_FILTER_NEAREST: return VK_FILTER_NEAREST;
+    case FilterMode::TEXTURE_FILTER_NEAREST: // fallthrough
+    case FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP: return VK_FILTER_NEAREST;
+    case FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP: // fallthrough
     case FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP: // fallthrough
     case FilterMode::TEXTURE_FILTER_LINEAR: return VK_FILTER_LINEAR;
     }
@@ -295,13 +297,22 @@ Result Image::CreateImage(
 
     if (HasMipmaps()) {
         /* Mipmapped image needs linear blitting. */
-        DebugLog(LogType::Debug, "Mipmapped image needs linear blitting support. Enabling...\n");
+        DebugLog(LogType::Debug, "Mipmapped image needs blitting support. Enabling...\n");
 
-        format_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT
-                        |  VK_FORMAT_FEATURE_BLIT_DST_BIT
+        format_features |= VK_FORMAT_FEATURE_BLIT_DST_BIT
                         |  VK_FORMAT_FEATURE_BLIT_SRC_BIT;
 
         m_internal_info.usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+        switch (m_filter_mode) {
+        case FilterMode::TEXTURE_FILTER_LINEAR: // fallthrough
+        case FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP:
+            format_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+            break;
+        case FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP:
+            format_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT;
+            break;
+        }
     }
 
     if (IsBlended()) {

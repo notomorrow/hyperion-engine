@@ -15,7 +15,7 @@ Sampler::Sampler(Image::FilterMode filter_mode, Image::WrapMode wrap_mode)
 
 Sampler::~Sampler()
 {
-    AssertExitMsg(m_sampler == VK_NULL_HANDLE, "sampler should have been destroyed");
+    AssertThrowMsg(m_sampler == VK_NULL_HANDLE, "sampler should have been destroyed");
 }
 
 Result Sampler::Create(Device *device)
@@ -35,19 +35,39 @@ Result Sampler::Create(Device *device)
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     sampler_info.compareEnable           = VK_FALSE;
     sampler_info.compareOp               = VK_COMPARE_OP_ALWAYS;
-
-    if (m_filter_mode == Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP) {
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    } else {
+    
+    switch (m_filter_mode) {
+    case Image::FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP:
         sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        break;
+    case Image::FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP:
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        break;
+    case Image::FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP:
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        break;
+    default:
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        break;
     }
 
     sampler_info.mipLodBias = 0.0f;
     sampler_info.minLod     = 0.0f;
     sampler_info.maxLod     = 12.0f;
 
+    VkSamplerReductionModeCreateInfoEXT reduction_info{VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT};
+
+    if (m_filter_mode == Image::FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP) {
+        if (!device->GetFeatures().GetSamplerMinMaxProperties().filterMinmaxSingleComponentFormats) {
+            return { Result::RENDERER_ERR, "Device does not support min/max sampler formats" };
+        }
+
+        reduction_info.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
+        sampler_info.pNext           = &reduction_info;
+    }
+
     if (vkCreateSampler(device->GetDevice(), &sampler_info, nullptr, &m_sampler) != VK_SUCCESS) {
-        return Result(Result::RENDERER_ERR, "Failed to create sampler!");
+        return { Result::RENDERER_ERR, "Failed to create sampler!" };
     }
 
     HYPERION_RETURN_OK;

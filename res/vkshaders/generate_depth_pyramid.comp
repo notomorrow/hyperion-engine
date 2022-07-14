@@ -1,0 +1,45 @@
+#version 450
+
+#extension GL_EXT_scalar_block_layout  : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+#include "include/defines.inc"
+#include "include/shared.inc"
+
+layout(set = 0, binding = 0) uniform texture2D depth_pyramid_in[];
+layout(set = 0, binding = 1, r8) uniform writeonly image2D depth_pyramid_out[];
+layout(set = 0, binding = 2) uniform sampler depth_pyramid_sampler;
+
+layout(push_constant) uniform DepthPyramidData {
+    uvec2 mip_dimensions;
+    uvec2 prev_mip_dimensions;
+    uint mip_level;
+};
+
+float GetDepthAtTexel(ivec2 coord, ivec2 offset)
+{
+    if (coord.x + offset.x >= prev_mip_dimensions.x || coord.y + offset.y >= prev_mip_dimensions.y) {
+        return 1.0;
+    }
+
+    return Texture2DTexel(depth_pyramid_sampler, depth_pyramid_in[mip_level], coord + offset).r;
+}
+
+void main()
+{
+    uvec2 coord    = gl_GlobalInvocationID.xy;
+    vec2  texcoord = (vec2(coord) + vec2(0.5)) / vec2(mip_dimensions);
+
+    // sample 4 nearest neighbours and get MIN result... workaround for lack of min/max support on moltenvk
+    ivec2 texel_coord = ivec2(texcoord * vec2(prev_mip_dimensions));
+    float i0j0 = GetDepthAtTexel(texel_coord, ivec2(0, 0));
+    float i1j0 = GetDepthAtTexel(texel_coord, ivec2(1, 0));
+    float i0j1 = GetDepthAtTexel(texel_coord, ivec2(0, 1));
+    float i1j1 = GetDepthAtTexel(texel_coord, ivec2(1, 1));
+
+    float depth = min(i0j0, min(i1j0, min(i0j1, i1j1)));
+
+    imageStore(depth_pyramid_out[mip_level], ivec2(coord), vec4(depth));
+}

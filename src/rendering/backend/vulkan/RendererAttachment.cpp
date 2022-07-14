@@ -127,7 +127,7 @@ VkAttachmentReference AttachmentRef::GetHandle() const
     };
 }
 
-void AttachmentRef::IncRef(AttachmentRefInstance &&ins) const
+const AttachmentRef *AttachmentRef::IncRef(AttachmentRefInstance &&ins) const
 {
     AssertThrow(m_ref_count != nullptr);
 
@@ -135,9 +135,11 @@ void AttachmentRef::IncRef(AttachmentRefInstance &&ins) const
 
     //++m_ref_count->count;
     //++m_owned_ref_count;
+
+    return this;
 }
 
-void AttachmentRef::DecRef(AttachmentRefInstance &&ins) const
+const AttachmentRef *AttachmentRef::DecRef(AttachmentRefInstance &&ins) const
 {
     //AssertThrow(m_owned_ref_count != 0);
     AssertThrow(m_ref_count != nullptr);
@@ -148,6 +150,8 @@ void AttachmentRef::DecRef(AttachmentRefInstance &&ins) const
 
     //--m_ref_count->count;
     //--m_owned_ref_count;
+
+    return this;
 }
 
 Result AttachmentRef::Create(Device *device)
@@ -181,7 +185,9 @@ Result AttachmentRef::Create(
         format,
         aspect_flags,
         view_type,
+        0,
         num_mipmaps,
+        0,
         num_faces
     ));
 

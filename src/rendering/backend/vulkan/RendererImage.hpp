@@ -93,7 +93,9 @@ public:
     enum class FilterMode {
         TEXTURE_FILTER_NEAREST,
         TEXTURE_FILTER_LINEAR,
-        TEXTURE_FILTER_LINEAR_MIPMAP
+        TEXTURE_FILTER_NEAREST_MIPMAP,
+        TEXTURE_FILTER_LINEAR_MIPMAP,
+        TEXTURE_FILTER_MINMAX_MIPMAP
     };
 
     enum class WrapMode {
@@ -197,7 +199,12 @@ public:
     bool IsBlended() const             { return m_is_blended; }
     void SetIsBlended(bool is_blended) { m_is_blended = is_blended; }
 
-    bool HasMipmaps() const            { return m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP; }
+    bool HasMipmaps() const
+    {
+        return m_filter_mode == FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP
+            || m_filter_mode == FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP
+            || m_filter_mode == FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP;
+    }
 
     uint32_t NumMipmaps() const
     {

@@ -468,6 +468,8 @@ void Engine::Compile()
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
+    HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
+    
     m_deferred_renderer.Create(this);
 
     for (UInt i = 0; i < m_instance->GetFrameHandler()->NumFrames(); i++) {
@@ -497,7 +499,7 @@ void Engine::Compile()
     HYP_FLUSH_RENDER_QUEUE(this);
 
     /* Finalize descriptor pool */
-    HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().Create(m_instance->GetDevice()));
+    HYPERION_ASSERT_RESULT(m_instance->GetDescriptorPool().CreateDescriptorSets(m_instance->GetDevice()));
     DebugLog(
         LogType::Debug,
         "Finalized descriptor pool\n"

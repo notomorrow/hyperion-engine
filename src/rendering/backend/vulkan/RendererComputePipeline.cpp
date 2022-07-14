@@ -18,6 +18,13 @@ ComputePipeline::ComputePipeline()
     DebugLog(LogType::Debug, "Create Compute Pipeline [%d]\n", x++);
 }
 
+ComputePipeline::ComputePipeline(const DynArray<const DescriptorSet *> &used_descriptor_sets)
+    : Pipeline(used_descriptor_sets)
+{
+    static int x = 0;
+    DebugLog(LogType::Debug, "Create Compute Pipeline [%d]\n", x++);
+}
+
 ComputePipeline::~ComputePipeline() = default;
 
 void ComputePipeline::Bind(CommandBuffer *command_buffer) const

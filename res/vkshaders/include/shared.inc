@@ -57,6 +57,16 @@ vec4 TextureCubeLod(sampler samp, textureCube tex, vec3 texcoord, float lod)
     return texture(samplerCube(tex, samp), texcoord, lod);
 }
 
+vec4 Texture2DTexel(sampler2D tex, ivec2 coord)
+{
+    return texelFetch(tex, coord, 0);
+}
+
+vec4 Texture2DTexel(sampler samp, texture2D tex, ivec2 coord)
+{
+    return texelFetch(sampler2D(tex, samp), coord, 0);
+}
+
 float LinearDepth(mat4 projection, float depth)
 {
     return projection[3][2] / (depth * projection[2][3] - projection[2][2]);

@@ -2,6 +2,9 @@
 #define HYPERION_RENDERER_PIPELINE_H
 
 #include "RendererStructs.hpp"
+#include "RendererDescriptorSet.hpp"
+#include <core/lib/DynArray.hpp>
+#include <core/lib/Optional.hpp>
 
 #include <math/Vector4.hpp>
 #include <Types.hpp>
@@ -75,16 +78,30 @@ public:
 
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 flags;
+                UInt32 depth_pyramid_num_mips;
             } deferred_data;
+
+            struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+                UInt32 mip_width,
+                       mip_height,
+                       prev_mip_width,
+                       prev_mip_height,
+                       mip_level;
+            } depth_pyramid_data;
         };
     } push_constants;
 
     static_assert(sizeof(PushConstantData) <= 128);
 
     Pipeline();
+    /*! \brief Construct a pipeline using the given \ref used_descriptor_set as the descriptor sets to be
+        used with this pipeline.  */
+    Pipeline(const DynArray<const DescriptorSet *> &used_descriptor_sets);
     Pipeline(const Pipeline &other) = delete;
     Pipeline &operator=(const Pipeline &other) = delete;
     ~Pipeline();
+
+    void SetPushConstants(const PushConstantData &push_constants) { this->push_constants = push_constants; }
 
     VkPipelineLayout layout;
 
@@ -92,6 +109,9 @@ protected:
     std::vector<VkDescriptorSetLayout> GetDescriptorSetLayouts(Device *device, DescriptorPool *descriptor_pool) const;
 
     VkPipeline pipeline;
+
+private:
+    Optional<DynArray<const DescriptorSet *>> m_used_descriptor_sets;
 };
 
 } // namespace renderer

@@ -1,5 +1,5 @@
 #include "RendererPipeline.hpp"
-#include "RendererDescriptorSet.hpp"
+#include <core/lib/FlatSet.hpp>
 
 #include <system/Debug.hpp>
 
@@ -7,43 +7,85 @@ namespace hyperion {
 namespace renderer {
 
 Pipeline::Pipeline()
-    : pipeline{},
-      layout{},
+    : pipeline(VK_NULL_HANDLE),
+      layout(VK_NULL_HANDLE),
       push_constants{}
 {
 }
 
+Pipeline::Pipeline(const DynArray<const DescriptorSet *> &used_descriptor_sets)
+    : m_used_descriptor_sets(used_descriptor_sets),
+      pipeline(VK_NULL_HANDLE),
+      layout(VK_NULL_HANDLE),
+      push_constants{}
+{
+
+}
+
 Pipeline::~Pipeline()
 {
-    AssertThrowMsg(pipeline == nullptr, "Expected pipeline to have been destroyed");
-    AssertThrowMsg(layout == nullptr, "Expected layout to have been destroyed");
+    AssertThrowMsg(pipeline == VK_NULL_HANDLE, "Expected pipeline to have been destroyed");
+    AssertThrowMsg(layout == VK_NULL_HANDLE, "Expected layout to have been destroyed");
 }
 
 std::vector<VkDescriptorSetLayout> Pipeline::GetDescriptorSetLayouts(Device *device, DescriptorPool *descriptor_pool) const
 {
-    const auto &pool_layouts = descriptor_pool->GetDescriptorSetLayouts();
+    // TODO: set specialization constants based on these values so the indices all match up
+
+    std::vector<VkDescriptorSetLayout> used_layouts;
+
+    if (m_used_descriptor_sets.HasValue()) {
+        for (auto *descriptor_set : m_used_descriptor_sets.Get()) {
+            used_layouts.push_back(descriptor_set->m_layout);
+        }
+    } else {
+        DynArray<DescriptorSet::Index> all_layouts;
+        const auto &pool_layouts = descriptor_pool->GetDescriptorSetLayouts();
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
-    std::vector<VkDescriptorSetLayout> used_layouts {
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_UNUSED),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_SCENE),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_VOXELIZER),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_OBJECT),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_BINDLESS),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_RAYTRACING)
-    };
+        all_layouts = DynArray<DescriptorSet::Index> {
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_UNUSED,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_SCENE,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_VOXELIZER,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_OBJECT,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_BINDLESS,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_RAYTRACING
+        };
 #else
-    std::vector<VkDescriptorSetLayout> used_layouts {
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_UNUSED),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_SCENE),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_VOXELIZER),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_OBJECT),
-        pool_layouts.At(DescriptorSet::Index::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES)
-    };
+        all_layouts = DynArray<DescriptorSet::Index> {
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_UNUSED,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_GLOBAL,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_SCENE,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_VOXELIZER,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_OBJECT,
+            DescriptorSet::Index::DESCRIPTOR_SET_INDEX_MATERIAL_TEXTURES
+        };
 #endif
-    
+
+        // if (m_used_descriptor_set_layouts.Any()) {
+        //     const auto &used_descriptor_sets = m_used_descriptor_set_layouts.Get();
+
+        //     // all_layouts.Reserve(all_layouts.Size() + used_descriptor_sets.Size());
+
+        //     for (const auto index : used_descriptor_sets) {
+        //         const auto base_index = DescriptorSet::GetBaseIndex(index);
+
+        //         if (all_layouts.Contains(base_index)) {
+        //             continue;
+        //         }
+
+        //         all_layouts.PushBack(base_index);
+        //     }
+        // }
+
+        used_layouts.reserve(all_layouts.Size());
+
+        for (auto item : all_layouts) {
+            used_layouts.push_back(pool_layouts.At(item));
+        }
+    }
+
     return used_layouts;
 }
 

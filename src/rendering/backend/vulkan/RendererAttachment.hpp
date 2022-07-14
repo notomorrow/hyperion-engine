@@ -113,8 +113,8 @@ public:
     VkAttachmentDescription GetAttachmentDescription() const;
     VkAttachmentReference GetHandle() const;
 
-    void IncRef(AttachmentRefInstance &&ins) const;
-    void DecRef(AttachmentRefInstance &&ins) const;
+    const AttachmentRef *IncRef(AttachmentRefInstance &&ins) const;
+    const AttachmentRef *DecRef(AttachmentRefInstance &&ins) const;
     
     Result Create(Device *device);
     Result Create(
