@@ -4,7 +4,7 @@
 #include "RenderPass.hpp"
 #include "Framebuffer.hpp"
 #include "Shader.hpp"
-#include "Graphics.hpp"
+#include "Renderer.hpp"
 #include "Mesh.hpp"
 #include <Constants.hpp>
 

@@ -33,6 +33,8 @@ using renderer::FaceCullMode;
 class GraphicsPipeline;
 class Octree;
 class Scene;
+class Spatial;
+class Mesh;
 
 template<>
 struct ComponentInitInfo<STUB_CLASS(Spatial)> {

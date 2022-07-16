@@ -5,7 +5,7 @@
 #include "Shader.hpp"
 #include "Framebuffer.hpp"
 #include "Compute.hpp"
-#include "Graphics.hpp"
+#include "Renderer.hpp"
 #include "Material.hpp"
 #include "Texture.hpp"
 #include "Mesh.hpp"

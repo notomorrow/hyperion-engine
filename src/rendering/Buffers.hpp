@@ -85,8 +85,9 @@ struct alignas(256) SkeletonShaderData {
 struct alignas(256) ObjectShaderData {
     Matrix4 model_matrix;
     UInt32 has_skinning;
-    UInt32 material_index;
-    UInt32 _padding[2];
+    UInt32 entity_id;
+    UInt32 mesh_id;
+    UInt32 material_id;
 
     Vector4 local_aabb_max;
     Vector4 local_aabb_min;

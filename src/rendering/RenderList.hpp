@@ -3,7 +3,7 @@
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
-#include <rendering/Graphics.hpp>
+#include <rendering/Renderer.hpp>
 #include <rendering/DefaultFormats.hpp>
 #include <scene/Scene.hpp>
 #include <Types.hpp>
