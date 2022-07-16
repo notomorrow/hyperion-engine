@@ -129,6 +129,8 @@ struct DebugMarker {
     }
 };
 
+struct IndirectDrawState;
+
 struct RenderState {
     struct SceneBinding {
         Scene::ID id;
@@ -139,6 +141,7 @@ struct RenderState {
 
     std::stack<SceneBinding> scene_ids;
     FlatSet<Light::ID>       light_ids;
+    IndirectDrawState       *indirect_draw_state = nullptr;
 
     void BindLight(Light::ID light)
     {

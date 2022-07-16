@@ -1,6 +1,7 @@
 #include "RendererCommandBuffer.hpp"
 #include "RendererComputePipeline.hpp"
 #include "RendererGraphicsPipeline.hpp"
+#include "RendererStructs.hpp"
 
 #include <Types.hpp>
 
@@ -178,11 +179,25 @@ void CommandBuffer::DrawIndexed(
     );
 }
 
+void CommandBuffer::DrawIndexedIndirect(
+    const GPUBuffer *buffer,
+    UInt             first_index
+) const
+{
+    vkCmdDrawIndexedIndirect(
+        m_command_buffer,
+        buffer->buffer,
+        first_index * static_cast<UInt32>(sizeof(IndirectDrawCommand)),
+        1,
+        static_cast<UInt32>(sizeof(IndirectDrawCommand))
+    );
+}
+
 void CommandBuffer::BindDescriptorSet(
-    const DescriptorPool &pool,
+    const DescriptorPool  &pool,
     const ComputePipeline *pipeline,
-    const DescriptorSet *descriptor_set,
-    DescriptorSet::Index binding
+    const DescriptorSet   *descriptor_set,
+    DescriptorSet::Index   binding
 ) const
 {
     BindDescriptorSet(
@@ -197,12 +212,12 @@ void CommandBuffer::BindDescriptorSet(
 }
 
 void CommandBuffer::BindDescriptorSet(
-    const DescriptorPool &pool,
+    const DescriptorPool  &pool,
     const ComputePipeline *pipeline,
-    const DescriptorSet *descriptor_set,
-    DescriptorSet::Index binding,
-        const UInt32 *offsets,
-    size_t num_offsets
+    const DescriptorSet   *descriptor_set,
+    DescriptorSet::Index   binding,
+    const UInt32          *offsets,
+    size_t                 num_offsets
 ) const
 {
     BindDescriptorSet(

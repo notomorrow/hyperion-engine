@@ -6,6 +6,7 @@
 #include "RendererSemaphore.hpp"
 #include "RendererFence.hpp"
 #include "RendererDescriptorSet.hpp"
+#include "RendererBuffer.hpp"
 
 #include <core/lib/FixedArray.hpp>
 
@@ -56,39 +57,44 @@ public:
     Result SubmitSecondary(CommandBuffer *primary);
 
     void DrawIndexed(
-        UInt32 num_indices,
-        UInt32 num_instances  = 1,
-        UInt32 instance_index = 0
+        UInt32                          num_indices,
+        UInt32                          num_instances  = 1,
+        UInt32                          instance_index = 0
+    ) const;
+
+    void DrawIndexedIndirect(
+        const GPUBuffer                *buffer,
+        UInt                            first_index
     ) const;
 
     void BindDescriptorSet(
-        const DescriptorPool &pool,
-        const GraphicsPipeline *pipeline,
-        DescriptorSet::Index set
+        const DescriptorPool           &pool,
+        const GraphicsPipeline         *pipeline,
+        DescriptorSet::Index            set
     ) const;
 
     void BindDescriptorSet(
-        const DescriptorPool &pool,
-        const GraphicsPipeline *pipeline,
-        DescriptorSet::Index set,
-        DescriptorSet::Index binding
+        const DescriptorPool           &pool,
+        const GraphicsPipeline         *pipeline,
+        DescriptorSet::Index            set,
+        DescriptorSet::Index            binding
     ) const;
 
     void BindDescriptorSet(
-        const DescriptorPool &pool,
-        const GraphicsPipeline *pipeline,
-        DescriptorSet::Index set,
-        DescriptorSet::Index binding,
-        const UInt32 *offsets,
-        size_t num_offsets
+        const DescriptorPool           &pool,
+        const GraphicsPipeline         *pipeline,
+        DescriptorSet::Index            set,
+        DescriptorSet::Index            binding,
+        const UInt32                   *offsets,
+        size_t                          num_offsets
     ) const;
 
     template <size_t Size>
     void BindDescriptorSet(
-        const DescriptorPool &pool,
-        const GraphicsPipeline *pipeline,
-        DescriptorSet::Index set,
-        DescriptorSet::Index binding,
+        const DescriptorPool           &pool,
+        const GraphicsPipeline         *pipeline,
+        DescriptorSet::Index            set,
+        DescriptorSet::Index            binding,
         const FixedArray<UInt32, Size> &offsets
     ) const
     {
@@ -103,22 +109,22 @@ public:
     }
 
     void BindDescriptorSets(
-        const DescriptorPool &pool,
-        const GraphicsPipeline *pipeline,
-        const DescriptorSet::Index *sets,
-        const DescriptorSet::Index *bindings,
-        size_t num_descriptor_sets,
-        const UInt32 *offsets,
-        size_t num_offsets
+        const DescriptorPool            &pool,
+        const GraphicsPipeline          *pipeline,
+        const DescriptorSet::Index      *sets,
+        const DescriptorSet::Index      *bindings,
+        size_t                           num_descriptor_sets,
+        const UInt32                    *offsets,
+        size_t                           num_offsets
     ) const;
 
     template <size_t NumDescriptorSets, size_t NumOffsets>
     void BindDescriptorSets(
-        const DescriptorPool &pool,
-        const GraphicsPipeline *pipeline,
+        const DescriptorPool                                      &pool,
+        const GraphicsPipeline                                    *pipeline,
         const FixedArray<DescriptorSet::Index, NumDescriptorSets> &sets,
         const FixedArray<DescriptorSet::Index, NumDescriptorSets> &bindings,
-        const FixedArray<UInt32, NumOffsets> &offsets
+        const FixedArray<UInt32, NumOffsets>                      &offsets
     ) const
     {
         BindDescriptorSets(

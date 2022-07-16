@@ -734,8 +734,8 @@ VertexBuffer::VertexBuffer()
 
 void VertexBuffer::Bind(CommandBuffer *cmd)
 {
-    const VkBuffer vertex_buffers[] = {buffer};
-    const VkDeviceSize offsets[] = {0};
+    const VkBuffer vertex_buffers[] = { buffer };
+    const VkDeviceSize offsets[]    = { 0 };
 
     vkCmdBindVertexBuffers(cmd->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
 }

@@ -87,7 +87,16 @@ public:
     BoundingBox CalculateAabb() const;
 
     void Init(Engine *engine);
-    void Render(Engine *engine, CommandBuffer *cmd) const;
+
+    void Render(
+        Engine *engine,
+        CommandBuffer *cmd
+    ) const;
+
+    void RenderIndirect(
+        Engine *engine,
+        CommandBuffer *cmd
+    ) const;
 
 private:
     std::vector<float> BuildVertexBuffer();

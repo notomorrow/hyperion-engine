@@ -20,6 +20,7 @@ using renderer::ShaderModule;
 using renderer::GPUBuffer;
 using renderer::UniformBuffer;
 using renderer::StorageBuffer;
+using renderer::IndirectBuffer;
 
 class Engine;
 
@@ -46,6 +47,7 @@ struct ShaderGlobals {
     ShaderData<StorageBuffer, MaterialShaderData, max_materials>  materials;
     ShaderData<StorageBuffer, SkeletonShaderData, max_skeletons>  skeletons;
     ShaderData<UniformBuffer, ShadowShaderData, max_shadow_maps>  shadow_maps;
+    // ShaderData<IndirectBuffer, IndirectDrawCommand, max_objects>  indirect_objects;
     BindlessStorage                                               textures;
 
     UniformBuffer                                                 cubemap_uniforms;

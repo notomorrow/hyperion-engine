@@ -5,7 +5,7 @@
 
 #include <rendering/RenderComponent.hpp>
 #include <rendering/Texture.hpp>
-#include <rendering/Graphics.hpp>
+#include <rendering/Renderer.hpp>
 #include <rendering/Compute.hpp>
 #include <rendering/Framebuffer.hpp>
 #include <rendering/Shader.hpp>
