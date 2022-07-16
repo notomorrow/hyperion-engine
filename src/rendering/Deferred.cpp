@@ -784,8 +784,7 @@ void DeferredPass::Render(Engine *engine, Frame *frame)
 }
 
 DeferredRenderer::DeferredRenderer()
-    : Renderer(),
-      m_ssr(Extent2D { 1024, 1024 }),
+    : m_ssr(Extent2D { 1024, 1024 }),
       m_indirect_pass(true),
       m_direct_pass(false)
 {
@@ -917,6 +916,8 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
+    engine->render_state.indirect_draw_state = &m_indirect_draw_state;
+
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
     auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
@@ -1010,6 +1011,9 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     /* ==========  END MIP CHAIN GENERATION ========== */
 
     m_post_processing.RenderPost(engine, frame);
+
+    m_indirect_draw_state.commands.Clear();
+    engine->render_state.indirect_draw_state = nullptr;
 }
 
 void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)

@@ -3,9 +3,9 @@
 
 #include "FullScreenPass.hpp"
 #include "PostFX.hpp"
-#include "Renderer.hpp"
 #include "Texture.hpp"
 #include "Compute.hpp"
+#include "IndirectDraw.hpp"
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererImage.hpp>
@@ -23,6 +23,8 @@ using renderer::DescriptorSet;
 using renderer::AttachmentRef;
 
 using DeferredFlagBits = UInt;
+
+struct IndirectDrawState;
 
 enum DeferredFlags : DeferredFlagBits {
     DEFERRED_FLAGS_NONE              = 0,
@@ -142,7 +144,7 @@ private:
     const bool m_is_indirect_pass;
 };
 
-class DeferredRenderer : public Renderer {
+class DeferredRenderer {
     static constexpr bool ssr_enabled = true;
 
 public:
@@ -173,6 +175,8 @@ private:
     FixedArray<Ref<Texture>, max_frames_in_flight>                             m_mipmapped_results;
     std::unique_ptr<Sampler>                                                   m_sampler;
     std::unique_ptr<Sampler>                                                   m_depth_sampler;
+
+    IndirectDrawState                                                          m_indirect_draw_state;
 };
 
 } // namespace hyperion::v2

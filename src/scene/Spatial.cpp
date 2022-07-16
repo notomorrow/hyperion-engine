@@ -1,5 +1,5 @@
 #include "Spatial.hpp"
-#include <rendering/Graphics.hpp>
+#include <rendering/Renderer.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
@@ -128,17 +128,22 @@ void Spatial::EnqueueRenderUpdates()
 {
     AssertReady();
 
-    const UInt32 material_index = m_material != nullptr
-        ? m_material->GetId().value - 1
+    const UInt32 material_id = m_material != nullptr
+        ? m_material->GetId().value
+        : 0;
+    const UInt32 mesh_id = m_mesh != nullptr
+        ? m_mesh->GetId().value
         : 0;
 
-    GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, material_index](...) {
+    GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, material_id, mesh_id](...) {
         GetEngine()->shader_globals->objects.Set(
             m_id.value - 1,
             {
                 .model_matrix   = transform.GetMatrix(),
                 .has_skinning   = m_skeleton != nullptr,
-                .material_index = material_index,
+                .entity_id      = m_id.value,
+                .mesh_id        = mesh_id,
+                .material_id    = material_id,
                 .local_aabb_max = Vector4(m_local_aabb.max, 1.0f),
                 .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),
                 .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),

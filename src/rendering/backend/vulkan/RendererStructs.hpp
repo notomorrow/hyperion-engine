@@ -532,6 +532,22 @@ protected:
     std::vector<FrameDataWrapper> m_data;
 };
 
+struct IndirectObjectInstance {
+    UInt32 mesh_id;
+    UInt32 material_id;
+    UInt32 flags;
+};
+
+struct alignas(4) IndirectDrawCommand {
+    // native vk object
+    VkDrawIndexedIndirectCommand command;
+    // additional data
+    IndirectObjectInstance       instance;
+};
+
+static_assert(std::is_pod_v<IndirectDrawCommand>, "IndirectDrawCommand must be POD");
+static_assert(sizeof(IndirectDrawCommand) % 4 == 0, "IndirectDrawCommand must have a sizeof multiple of 4");
+
 } // namespace renderer
 } // namespace hyperion
 

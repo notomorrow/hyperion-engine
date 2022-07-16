@@ -1,0 +1,49 @@
+#version 450
+
+#extension GL_EXT_scalar_block_layout  : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(local_size_x = 256) in;
+
+#include "../include/defines.inc"
+#include "../include/shared.inc"
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/object.inc"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+// layout(std140, set = 0, binding = 0) readonly buffer ObjectBuffer {
+//     Object objects[];
+// };
+
+layout(std430, set = 0, binding = 0, row_major) readonly buffer ObjectBuffer {
+    Object object;
+};
+
+struct DrawIndirectCommand {
+    // VkDrawIndexedIndirectCommand
+    uint index_count;
+    uint instance_count;
+    uint first_index;
+    int  vertex_offset;
+    uint first_instance;
+
+    // custom data
+    uint mesh_id;
+    uint material_id;
+    uint flags;
+};
+
+layout(std140, set = 0, binding = 4) writeonly buffer DrawIndirectCommandBuffer {
+    DrawIndirectCommand draw_indirect_commands[];
+};
+
+void main()
+{
+    // const uint id = gl_GlobalInvocationID.x;
+    const uint entity_id = object.entity_id;
+
+    draw_indirect_commands[entity_id].instance_count = 1;
+    draw_indirect_commands[entity_id].mesh_id        = object.mesh_id;
+    draw_indirect_commands[entity_id].material_id    = object.material_id;
+}

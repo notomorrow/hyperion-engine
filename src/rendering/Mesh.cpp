@@ -273,6 +273,14 @@ void Mesh::Render(Engine *, CommandBuffer *cmd) const
     cmd->DrawIndexed(static_cast<UInt32>(m_indices_count));
 }
 
+void Mesh::RenderIndirect(Engine *engine, CommandBuffer *cmd) const
+{
+    // engine->render_state.indirect_draw_state->PushDrawCall(DrawCall {
+    //     .mesh     = this,
+    //     .material = 
+    // })
+}
+
 std::vector<PackedVertex> Mesh::BuildPackedVertices() const
 {
     std::vector<PackedVertex> packed_vertices;
