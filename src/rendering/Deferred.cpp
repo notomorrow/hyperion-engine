@@ -398,9 +398,6 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
     HYPERION_ASSERT_RESULT(m_depth_pyramid_sampler->Create(engine->GetDevice()));
 
     for (UInt i = 0; i < max_frames_in_flight; i++) {
-        // create descriptor sets for depth pyramid generation.
-        auto depth_pyramid_descriptor_set = std::make_unique<DescriptorSet>();
-
         const auto *depth_attachment = m_depth_attachment_ref->GetAttachment();
         AssertThrow(depth_attachment != nullptr);
 
@@ -410,8 +407,8 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
         // create depth pyramid image
         m_depth_pyramid[i] = std::make_unique<StorageImage>(
             Extent3D {
-                128,//static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().width)),
-                128,//static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().height)),
+                static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().width)),
+                static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().height)),
                 1
             },
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8,
@@ -440,44 +437,49 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
             ));
 
             m_depth_pyramid_mips[i].PushBack(std::move(mip_image_view));
-        }
+        // }
 
-        /* Depth pyramid - generated w/ compute shader */
-        auto *depth_pyramid_in = depth_pyramid_descriptor_set
-            ->AddDescriptor<renderer::ImageDescriptor>(0);
+            // create descriptor sets for depth pyramid generation.
+            auto depth_pyramid_descriptor_set = std::make_unique<DescriptorSet>();
 
-        depth_pyramid_in->SetSubDescriptor({
-            .element_index = 0,
-            .image_view    = depth_attachment_ref->GetImageView()
-        });
+            /* Depth pyramid - generated w/ compute shader */
+            auto *depth_pyramid_in = depth_pyramid_descriptor_set
+                ->AddDescriptor<renderer::ImageDescriptor>(0);
 
-        auto *depth_pyramid_out = depth_pyramid_descriptor_set
-            ->AddDescriptor<renderer::StorageImageDescriptor>(1);
+            if (mip_level == 0) {
+                // first mip level -- input is the actual depth image
+                depth_pyramid_in->SetSubDescriptor({
+                    .element_index = 0,
+                    .image_view    = depth_attachment_ref->GetImageView()
+                });
+            } else {
+                depth_pyramid_in->SetSubDescriptor({
+                    .element_index = 0,
+                    .image_view    = m_depth_pyramid_mips[i][mip_level - 1].get()
+                });
+            }
 
-        for (UInt mip_level = 0; mip_level < m_depth_pyramid_mips[i].Size(); mip_level++) {
-            depth_pyramid_in->SetSubDescriptor({
-                .element_index = mip_level + 1,
-                .image_view    = m_depth_pyramid_mips[i][mip_level].get()
-            });
+            auto *depth_pyramid_out = depth_pyramid_descriptor_set
+                ->AddDescriptor<renderer::StorageImageDescriptor>(1);
 
             depth_pyramid_out->SetSubDescriptor({
-                .element_index = mip_level,
+                .element_index = 0,
                 .image_view    = m_depth_pyramid_mips[i][mip_level].get()
             });
+
+            depth_pyramid_descriptor_set
+                ->AddDescriptor<renderer::SamplerDescriptor>(2)
+                ->SetSubDescriptor({
+                    .sampler = m_depth_pyramid_sampler.get()
+                });
+
+            HYPERION_ASSERT_RESULT(depth_pyramid_descriptor_set->Create(
+                engine->GetDevice(),
+                &engine->GetInstance()->GetDescriptorPool()
+            ));
+
+            m_depth_pyramid_descriptor_sets[i].PushBack(std::move(depth_pyramid_descriptor_set));
         }
-
-        depth_pyramid_descriptor_set
-            ->AddDescriptor<renderer::SamplerDescriptor>(2)
-            ->SetSubDescriptor({
-                .sampler = m_depth_pyramid_sampler.get()
-            });
-
-        HYPERION_ASSERT_RESULT(depth_pyramid_descriptor_set->Create(
-            engine->GetDevice(),
-            &engine->GetInstance()->GetDescriptorPool()
-        ));
-
-        m_depth_pyramid_descriptor_sets[i].PushBack(std::move(depth_pyramid_descriptor_set));
     }
     // create compute pipeline for rendering depth image
     m_generate_depth_pyramid = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
@@ -556,7 +558,7 @@ void DepthPyramidRenderer::Render(Engine *engine, Frame *frame)
         primary->BindDescriptorSet(
             engine->GetInstance()->GetDescriptorPool(),
             m_generate_depth_pyramid->GetPipeline(),
-            m_depth_pyramid_descriptor_sets[frame_index].Front().get(), // for now.. could go with 1 per mip level
+            m_depth_pyramid_descriptor_sets[frame_index][mip_level].get(), // for now.. could go with 1 per mip level
             static_cast<DescriptorSet::Index>(0)
         );
 
