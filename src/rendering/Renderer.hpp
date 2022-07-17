@@ -40,6 +40,11 @@ using renderer::StorageBuffer;
 
 class Engine;
 
+struct alignas(16) IndirectParams {
+    Matrix4 view;
+    Matrix4 projection;
+};
+
 class IndirectRenderer {
 public:
     IndirectRenderer();
@@ -58,6 +63,7 @@ private:
     IndirectDrawState                                                m_indirect_draw_state;
     Ref<ComputePipeline>                                             m_object_visibility;
     FixedArray<std::unique_ptr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+    FixedArray<UniformBuffer, max_frames_in_flight>                  m_indirect_params_buffers;
 };
 
 // TODO: rename to Renderer

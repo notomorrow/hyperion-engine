@@ -92,6 +92,7 @@ public:
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 batch_offset;
                 UInt32 num_drawables;
+                UInt32 scene_id;
             } object_visibility_data;
         };
     } push_constants;

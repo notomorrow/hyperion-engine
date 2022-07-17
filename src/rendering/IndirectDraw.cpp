@@ -124,9 +124,6 @@ void IndirectDrawState::PushDrawable(Drawable &&drawable)
         return;
     }
 
-    IndirectDrawCommand indirect_command;
-    drawable.mesh->PopulateIndirectDrawCommand(indirect_command);
-
     drawable.object_instance = ObjectInstance {
         .entity_id          = drawable.entity_id.value,
         .draw_command_index = static_cast<UInt32>(m_drawables.Size()),

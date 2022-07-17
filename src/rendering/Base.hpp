@@ -76,7 +76,7 @@ struct IDBase {
 template <class Type>
 struct ComponentID : IDBase {};
 
-class RenderObject {};
+class RenderResource {};
 
 template <class Type>
 class EngineComponentBase : public CallbackTrackable<EngineCallbacks>

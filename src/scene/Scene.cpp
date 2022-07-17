@@ -46,7 +46,7 @@ void Scene::Init(Engine *engine)
             for (auto &it : m_spatials) {
                 AssertThrow(it.second != nullptr);
 
-                it.second->m_scene = nullptr;
+                it.second->SetScene(nullptr);
 
                 RemoveFromPipelines(it.second);
 
@@ -129,7 +129,7 @@ bool Scene::AddSpatial(Ref<Spatial> &&spatial)
         return false;
     }
 
-    spatial->m_scene = this;
+    spatial->SetScene(this);
     spatial.Init();
     m_environment->OnEntityAdded(spatial);
 
@@ -312,7 +312,7 @@ void Scene::Update(
 void Scene::RequestPipelineChanges(Ref<Spatial> &spatial)
 {
     AssertThrow(spatial != nullptr);
-    AssertThrow(spatial->m_scene == this);
+    AssertThrow(spatial->GetScene() == this);
 
     if (spatial->m_primary_pipeline.pipeline != nullptr) {
         RemoveFromPipeline(spatial, spatial->m_primary_pipeline.pipeline);

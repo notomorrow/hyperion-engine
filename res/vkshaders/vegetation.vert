@@ -59,7 +59,7 @@ void main() {
     displaced_position += vec3(sin(scene.global_timer * 2.0) * 0.1, 0.0, cos(scene.global_timer * 2.0) * 0.1) * movement;
     displaced_position += vec3(sin(scene.global_timer * 0.5) * 0.4, 0.0, cos(scene.global_timer * 0.5) * 0.4) * movement;
     
-    if (bool(object.has_skinning)) {
+    if (bool(object.skeleton_id)) {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * vec4(displaced_position, 1.0);

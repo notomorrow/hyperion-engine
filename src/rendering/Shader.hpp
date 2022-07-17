@@ -36,7 +36,7 @@ struct SubShader {
 
 class Shader
     : public EngineComponentBase<STUB_CLASS(Shader)>,
-      public RenderObject
+      public RenderResource
 {
 public:
     Shader(const std::vector<SubShader> &sub_shaders);

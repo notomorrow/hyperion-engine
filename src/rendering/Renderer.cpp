@@ -21,8 +21,8 @@ void IndirectRenderer::RebuildDescriptors(Engine *engine, Frame *frame)
 
     auto &descriptor_set = m_descriptor_sets[frame_index];
 
-    descriptor_set->GetDescriptor(1)->RemoveSubDescriptor(0);
-    descriptor_set->GetDescriptor(1)->SetSubDescriptor({
+    descriptor_set->GetDescriptor(3)->RemoveSubDescriptor(0);
+    descriptor_set->GetDescriptor(3)->SetSubDescriptor({
         .element_index = 0,
         .buffer        = m_indirect_draw_state.GetInstanceBuffer(frame_index)
     });
@@ -40,7 +40,20 @@ void IndirectRenderer::Create(Engine *engine)
 {
     HYPERION_ASSERT_RESULT(m_indirect_draw_state.Create(engine));
 
+    const IndirectParams initial_params{};
+
     for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        HYPERION_ASSERT_RESULT(m_indirect_params_buffers[frame_index].Create(
+            engine->GetDevice(),
+            sizeof(IndirectParams)
+        ));
+
+        m_indirect_params_buffers[frame_index].Copy(
+            engine->GetDevice(),
+            sizeof(IndirectParams),
+            &initial_params
+        );
+
         m_descriptor_sets[frame_index] = std::make_unique<DescriptorSet>();
 
         // global object data
@@ -49,8 +62,20 @@ void IndirectRenderer::Create(Engine *engine)
                 .buffer = engine->shader_globals->objects.GetBuffers()[frame_index].get()
             });
 
-        // instances buffer
+        // global scene data
         m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(1)
+            ->SetSubDescriptor({
+                .buffer = engine->shader_globals->scenes.GetBuffers()[frame_index].get()
+            });
+
+        // params buffer
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::UniformBufferDescriptor>(2)
+            ->SetSubDescriptor({
+                .buffer = &m_indirect_params_buffers[frame_index]
+            });
+
+        // instances buffer
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(3)
             ->SetSubDescriptor({
                 .buffer = m_indirect_draw_state.GetInstanceBuffer(frame_index)
             });
@@ -83,6 +108,10 @@ void IndirectRenderer::Create(Engine *engine)
 
 void IndirectRenderer::Destroy(Engine *engine)
 {
+    for (auto &params_buffer : m_indirect_params_buffers) {
+        HYPERION_ASSERT_RESULT(params_buffer.Destroy(engine->GetDevice()));
+    }
+
     for (auto &descriptor_set : m_descriptor_sets) {
         HYPERION_ASSERT_RESULT(descriptor_set->Destroy(engine->GetDevice()));
     }
@@ -111,9 +140,9 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Engine *engine, Frame *frame)
 
     if (was_buffer_resized) {
         RebuildDescriptors(engine, frame);
-
-        DebugLog(LogType::Warn, "A BUFFER WAS RESIZED\n");
     }
+
+    const auto scene_id = engine->render_state.GetScene().id;
 
     // bind our descriptor set to binding point 0
     command_buffer->BindDescriptorSet(
@@ -131,7 +160,8 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Engine *engine, Frame *frame)
         m_object_visibility->GetPipeline()->Bind(command_buffer, Pipeline::PushConstantData {
             .object_visibility_data = {
                 .batch_offset  = batch_index * batch_size,
-                .num_drawables = num_drawables_in_batch
+                .num_drawables = num_drawables_in_batch,
+                .scene_id      = static_cast<UInt32>(scene_id.value)
             }
         });
 
@@ -338,19 +368,15 @@ void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_
         
         while (it != m_spatials_pending_addition.end()) {
             AssertThrow(*it != nullptr);
-            // if (*it == nullptr) { // just erase nullptr ones
-            //     it = m_spatials_pending_addition.erase(it);
-                
-            //     continue;
-            // }
 
-            if (std::find(m_spatials.begin(), m_spatials.end(), *it) != m_spatials.end()) { // :(
+            if ((*it)->GetMesh() == nullptr // TODO: I don't believe it's threadsafe to just check if this is null like this
+                || std::find(m_spatials.begin(), m_spatials.end(), *it) != m_spatials.end()) { // :(
                 it = m_spatials_pending_addition.erase(it);
                 
                 continue;
             }
             
-            if ((*it)->IsReady()) {
+            if ((*it)->IsReady() && (*it)->GetMesh()->IsReady()) {
                 m_spatials.push_back(std::move(*it));
                 it = m_spatials_pending_addition.erase(it);
                 
@@ -531,28 +557,8 @@ void GraphicsPipeline::CollectDrawCalls(Engine *engine, Frame *frame)
                 continue;
             }
         }
-        
-        if (!spatial->GetMesh()->IsReady()) {
-            // TODO: rather than checking each call we should just add once it's ready
-            continue;
-        }
 
-        /* TODO: Drawable will hold a Ref<> but will be static until it needs to be modified */
-        m_indirect_renderer.GetDrawState().PushDrawable(Drawable {
-            .mesh            = spatial->GetMesh().ptr,
-            .material        = spatial->GetMaterial().ptr,
-            .scene_id        = scene_id,
-            .entity_id       = spatial->GetId(),
-            .material_id = spatial->GetMaterial() != nullptr
-                ? spatial->GetMaterial()->GetId()
-                : Material::empty_id,
-            .skeleton_id = spatial->GetSkeleton() != nullptr
-                ? spatial->GetSkeleton()->GetId()
-                : Skeleton::empty_id,
-            .object_instance = ObjectInstance {
-                .entity_id   = spatial->GetId().value
-            }
-        });
+        m_indirect_renderer.GetDrawState().PushDrawable(Drawable(spatial->GetDrawable()));
     }
 
     m_indirect_renderer.ExecuteCullShaderInBatches(engine, frame);
@@ -578,8 +584,6 @@ void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
             UInt num_culled_objects = 0;
    
             m_pipeline->Bind(secondary);
-
-            static_assert(std::size(DescriptorSet::object_buffer_mapping) == max_frames_in_flight);
 
             secondary->BindDescriptorSets(
                 instance->GetDescriptorPool(),
@@ -752,10 +756,6 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
             const bool perform_culling = scene_cull_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
             
             for (auto &&spatial : m_spatials) {
-                if (spatial->GetMesh() == nullptr) {
-                    continue;
-                }
-
                 if (perform_culling) {
                     if (auto *octant = spatial->GetOctree()) {
                         const auto &visibility_state = octant->GetVisibilityState();
@@ -778,11 +778,6 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
 
                         continue;
                     }
-                }
-                
-                if (!spatial->GetMesh()->IsReady()) {
-                    // TODO: rather than checking each call we should just add once it's ready
-                    continue;
                 }
 
                 const auto spatial_index = spatial->GetId().value - 1;

@@ -464,7 +464,13 @@ public:
 
             //outline_pipeline_ref->AddSpatial(engine->resources.spatials.IncRef(suzanne->GetChild(0)->GetSpatial()));
 
-            suzanne->SetLocalTranslation({7, std::sin(timer * 0.35f) * 7.0f + 7.0f, 5});
+            // suzanne->SetLocalTranslation({7, std::sin(timer * 0.35f) * 7.0f + 7.0f, 5});
+            // const auto &aabb = suzanne->GetWorldAabb();
+
+            // Vector3 max_ss = scene->GetCamera()->GetProjectionMatrix() * scene->GetCamera()->GetViewMatrix() * aabb.max;
+            // Vector3 min_ss = scene->GetCamera()->GetProjectionMatrix() * scene->GetCamera()->GetViewMatrix() * aabb.min;
+
+            // std::cout << "min, max in screenspace: " << min_ss << ",   " << max_ss << "\n";
 
             //scene->GetCamera()->SetTarget(suzanne->GetWorldTranslation());
         }
@@ -472,6 +478,7 @@ public:
         //m_point_light->SetPosition({ std::sin(timer * 0.5f) * 5.0f, 6.0f, std::cos(timer * 0.5f) * 5.0f });
 
          if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
+
             //if (auto &material = sphere->GetChild(0)->GetSpatial()->GetMaterial()) {
             //    material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer * 0.5f) * 0.5f + 0.5f);
             //    material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);////std::cos(timer) * 0.5f + 0.5f);

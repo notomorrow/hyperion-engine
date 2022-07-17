@@ -34,7 +34,7 @@ using renderer::IndirectDrawCommand;
 
 class Mesh
     : public EngineComponentBase<STUB_CLASS(Mesh)>,
-      public RenderObject
+      public RenderResource
 {
 public:
     using Index = UInt32;

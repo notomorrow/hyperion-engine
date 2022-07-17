@@ -85,15 +85,17 @@ struct alignas(256) SkeletonShaderData {
 
 struct alignas(256) ObjectShaderData {
     Matrix4 model_matrix;
-    UInt32 has_skinning;
-    UInt32 entity_id;
-    UInt32 mesh_id;
-    UInt32 material_id;
 
     Vector4 local_aabb_max;
     Vector4 local_aabb_min;
     Vector4 world_aabb_max;
     Vector4 world_aabb_min;
+
+    UInt32 entity_id;
+    UInt32 scene_id;
+    UInt32 mesh_id;
+    UInt32 material_id;
+    UInt32 skeleton_id;
 };
 
 static_assert(sizeof(ObjectShaderData) == 256);
