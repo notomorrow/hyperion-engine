@@ -5,6 +5,8 @@
 #include "RendererStructs.hpp"
 #include "RendererShader.hpp"
 
+#include <Types.hpp>
+
 #include <system/vma/VmaUsage.hpp>
 
 #include <functional>
@@ -165,10 +167,12 @@ public:
         return map;
     }
 
-    void Copy(Device *device, size_t count, const void *ptr);
-    void Copy(Device *device, size_t offset, size_t count, const void *ptr);
+    void Memset(Device *device, SizeType count, UByte value);
 
-    void Read(Device *device, size_t count, void *out_ptr) const;
+    void Copy(Device *device, SizeType count, const void *ptr);
+    void Copy(Device *device, SizeType offset, SizeType count, const void *ptr);
+
+    void Read(Device *device, SizeType count, void *out_ptr) const;
     
     VmaAllocation allocation;
     VkDeviceSize size;

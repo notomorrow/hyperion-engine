@@ -916,10 +916,12 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
-    engine->render_state.indirect_draw_state = &m_indirect_draw_state;
-
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
+
+    RenderOpaqueObjects(engine, frame, true);
+    RenderTranslucentObjects(engine, frame, true);
+
     auto &mipmapped_result = m_mipmapped_results[frame_index]->GetImage();
 
     if (ssr_enabled && mipmapped_result.GetGPUImage()->GetResourceState() != renderer::GPUMemory::ResourceState::UNDEFINED) {
@@ -957,7 +959,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
         DebugMarker marker(primary, "Render opaque objects");
 
         bucket.GetFramebuffers()[frame_index]->BeginCapture(primary);
-        RenderOpaqueObjects(engine, frame);
+        RenderOpaqueObjects(engine, frame, false);
         bucket.GetFramebuffers()[frame_index]->EndCapture(primary);
     }
     // end opaque objs
@@ -977,7 +979,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     }
 
     // begin translucent with forward rendering
-    RenderTranslucentObjects(engine, frame);
+    RenderTranslucentObjects(engine, frame, false);
 
     // end shading
     m_direct_pass.GetFramebuffer(frame_index)->EndCapture(primary);
@@ -1011,26 +1013,39 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     /* ==========  END MIP CHAIN GENERATION ========== */
 
     m_post_processing.RenderPost(engine, frame);
-
-    m_indirect_draw_state.commands.Clear();
-    engine->render_state.indirect_draw_state = nullptr;
 }
 
-void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame)
+void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame, bool collect)
 {
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetGraphicsPipelines()) {
-        pipeline->Render(engine, frame);
-    }
-    
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelines()) {
-        pipeline->Render(engine, frame);
+    if (collect) {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetGraphicsPipelines()) {
+            pipeline->CollectDrawCalls(engine, frame);
+        }
+        
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelines()) {
+            pipeline->CollectDrawCalls(engine, frame);
+        }
+    } else {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetGraphicsPipelines()) {
+            pipeline->PerformRendering(engine, frame);
+        }
+        
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelines()) {
+            pipeline->PerformRendering(engine, frame);
+        }
     }
 }
 
-void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame)
+void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame, bool collect)
 {
-    for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetGraphicsPipelines()) {
-        pipeline->Render(engine, frame);
+    if (collect) {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetGraphicsPipelines()) {
+            pipeline->CollectDrawCalls(engine, frame);
+        }
+    } else {
+        for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetGraphicsPipelines()) {
+            pipeline->PerformRendering(engine, frame);
+        }
     }
 }
 

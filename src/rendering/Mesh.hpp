@@ -29,6 +29,8 @@ using renderer::PackedIndex;
 using renderer::AccelerationStructure;
 using renderer::AccelerationGeometry;
 using renderer::Topology;
+using renderer::IndirectBuffer;
+using renderer::IndirectDrawCommand;
 
 class Mesh
     : public EngineComponentBase<STUB_CLASS(Mesh)>,
@@ -69,6 +71,8 @@ public:
     inline const std::vector<Vertex> &GetVertices() const          { return m_vertices; }
     inline const std::vector<Index> &GetIndices() const            { return m_indices; }
 
+    SizeType NumIndices() const                                    { return m_indices_count; }
+
     const VertexAttributeSet &GetVertexAttributes() const          { return m_vertex_attributes; }
     void SetVertexAttributes(const VertexAttributeSet &attributes) { m_vertex_attributes = attributes; }
 
@@ -89,14 +93,18 @@ public:
     void Init(Engine *engine);
 
     void Render(
-        Engine *engine,
+        Engine        *engine,
         CommandBuffer *cmd
     ) const;
 
     void RenderIndirect(
-        Engine *engine,
-        CommandBuffer *cmd
+        Engine               *engine,
+        CommandBuffer        *cmd,
+        const IndirectBuffer *indirect_buffer,
+        UInt                  buffer_offset
     ) const;
+
+    void PopulateIndirectDrawCommand(IndirectDrawCommand &out);
 
 private:
     std::vector<float> BuildVertexBuffer();

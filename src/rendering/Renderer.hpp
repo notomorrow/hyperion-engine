@@ -10,6 +10,7 @@
 #include "RenderBucket.hpp"
 #include "RenderableAttributes.hpp"
 #include "IndirectDraw.hpp"
+#include "Compute.hpp"
 #include <Constants.hpp>
 
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
@@ -33,8 +34,31 @@ using renderer::FillMode;
 using renderer::FaceCullMode;
 using renderer::StencilState;
 using renderer::Frame;
+using renderer::Pipeline;
+using renderer::Extent3D;
+using renderer::StorageBuffer;
 
 class Engine;
+
+class IndirectRenderer {
+public:
+    IndirectRenderer();
+    ~IndirectRenderer();
+
+    IndirectDrawState &GetDrawState()             { return m_indirect_draw_state; }
+    const IndirectDrawState &GetDrawState() const { return m_indirect_draw_state; }
+
+    void Create(Engine *engine);
+    void Destroy(Engine *engine);
+
+    void RebuildDescriptors(Engine *engine, Frame *frame);
+    void ExecuteCullShaderInBatches(Engine *engine, Frame *frame);
+
+private:
+    IndirectDrawState                                                m_indirect_draw_state;
+    Ref<ComputePipeline>                                             m_object_visibility;
+    FixedArray<std::unique_ptr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
+};
 
 // TODO: rename to Renderer
 class GraphicsPipeline : public EngineComponentBase<STUB_CLASS(GraphicsPipeline)> {
@@ -110,6 +134,8 @@ private:
         Ref<Shader>   shader;
     };
 
+    void BuildDrawCommandsBuffer(Engine *engine, UInt frame_index);
+
     void PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_index);
     
     void UpdateEnqueuedSpatialsFlag()
@@ -125,6 +151,8 @@ private:
     Ref<RenderPass>                   m_render_pass;
     RenderableAttributeSet            m_renderable_attributes;
     UInt                              m_multiview_index;
+
+    IndirectRenderer                  m_indirect_renderer;
     
     std::vector<Ref<Framebuffer>>     m_fbos;
 

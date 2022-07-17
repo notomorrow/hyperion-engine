@@ -273,12 +273,39 @@ void Mesh::Render(Engine *, CommandBuffer *cmd) const
     cmd->DrawIndexed(static_cast<UInt32>(m_indices_count));
 }
 
-void Mesh::RenderIndirect(Engine *engine, CommandBuffer *cmd) const
+void Mesh::RenderIndirect(
+    Engine               *engine,
+    CommandBuffer        *cmd,
+    const IndirectBuffer *indirect_buffer,
+    UInt                  buffer_offset
+) const
 {
-    // engine->render_state.indirect_draw_state->PushDrawCall(DrawCall {
-    //     .mesh     = this,
-    //     .material = 
-    // })
+    AssertReady();
+
+    AssertThrow(m_vbo != nullptr && m_ibo != nullptr);
+
+    m_vbo->Bind(cmd);
+    m_ibo->Bind(cmd);
+
+    cmd->DrawIndexedIndirect(
+        indirect_buffer,
+        buffer_offset
+    );
+}
+
+void Mesh::PopulateIndirectDrawCommand(IndirectDrawCommand &out)
+{
+#if HYP_VULKAN
+    out.command = VkDrawIndexedIndirectCommand {
+        .indexCount    = 0,//static_cast<UInt32>(m_indices_count),
+        .instanceCount = 0, // rendering 0 by default
+        .firstIndex    = 0,
+        .vertexOffset  = 0,
+        .firstInstance = 0
+    };
+#else
+#error Unsupported rendering backend
+#endif
 }
 
 std::vector<PackedVertex> Mesh::BuildPackedVertices() const
