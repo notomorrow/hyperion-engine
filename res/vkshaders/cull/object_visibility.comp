@@ -10,6 +10,7 @@ layout(local_size_x = 256) in;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/object.inc"
+#include "../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 // layout(std140, set = 0, binding = 0) readonly buffer ObjectBuffer {
@@ -18,6 +19,10 @@ layout(local_size_x = 256) in;
 
 layout(std430, set = 0, binding = 0, row_major) readonly buffer ObjectBuffer {
     Object objects[];
+};
+
+layout(std430, set = 0, binding = 1, row_major) readonly buffer SceneBuffer {
+    Scene scenes[];
 };
 
 struct IndirectDrawCommand {
@@ -36,7 +41,7 @@ struct ObjectInstance {
     uint num_indices;
 };
 
-layout(std140, set = 0, binding = 1) readonly buffer InstancesBuffer {
+layout(std140, set = 0, binding = 3) readonly buffer InstancesBuffer {
     ObjectInstance instances[];
 };
 
@@ -47,6 +52,7 @@ layout(set = 0, binding = 4) writeonly buffer IndirectDrawCommandsBuffer {
 layout(push_constant) uniform ObjectVisibilityData {
     uint batch_offset;
     uint num_drawables;
+    uint scene_id;
 } push_constants;
 
 void main()
@@ -62,14 +68,29 @@ void main()
     const uint entity_id           = object_instance.entity_id;
     const uint draw_command_index  = object_instance.draw_command_index;
 
+    uint num_instances = 0;
+
+    // entity id should not ever be zero/unset
+    if (all(bvec2(entity_id, push_constants.scene_id))) {
+        Object object = objects[entity_id - 1];
+        Scene scene   = scenes[push_constants.scene_id - 1];
+
+        // get view/proj matrices from scene.
+        mat4 view = scene.view;
+        mat4 proj = scene.projection;
+
+        // convert worldspace aabb into screenspace aabb.
+
+        // get optimal mip level of depth pyramid
+
+        // compare depths
+
+        ++num_instances;
+    }
+
     indirect_draw_commands[draw_command_index].index_count    = object_instance.num_indices;
-    indirect_draw_commands[draw_command_index].instance_count = 1;
+    indirect_draw_commands[draw_command_index].instance_count = num_instances;
     indirect_draw_commands[draw_command_index].first_index    = 0;
     indirect_draw_commands[draw_command_index].vertex_offset  = 0;
     indirect_draw_commands[draw_command_index].first_instance = 0;
-
-    // Object object = objects[entity_id - 1];
-    // indirect_draw_commands[drawable_index].mesh_id        = object.mesh_id;
-    // indirect_draw_commands[drawable_index].material_id    = object.material_id;
-    // indirect_draw_commands[drawable_index].flags          = 0x00;
 }

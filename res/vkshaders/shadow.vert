@@ -56,7 +56,7 @@ void main()
     vec4 position;
     mat4 normal_matrix;
     
-    if (bool(object.has_skinning)) {
+    if (bool(object.skeleton_id)) {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);

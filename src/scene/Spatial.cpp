@@ -1,5 +1,6 @@
 #include "Spatial.hpp"
 #include <rendering/Renderer.hpp>
+#include <scene/Scene.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::v2 {
@@ -33,6 +34,7 @@ Spatial::Spatial(
     m_node(nullptr),
     m_scene(nullptr),
     m_renderable_attributes(renderable_attributes),
+    m_drawable{},
     m_octree(nullptr),
     m_needs_octree_update(false),
     m_shader_data_state(ShaderDataState::DIRTY)
@@ -128,26 +130,51 @@ void Spatial::EnqueueRenderUpdates()
 {
     AssertReady();
 
-    const UInt32 material_id = m_material != nullptr
-        ? m_material->GetId().value
-        : 0;
-    const UInt32 mesh_id = m_mesh != nullptr
-        ? m_mesh->GetId().value
-        : 0;
+    const Skeleton::ID skeleton_id = m_skeleton != nullptr
+        ? m_skeleton->GetId()
+        : Skeleton::empty_id;
 
-    GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, material_id, mesh_id](...) {
+    const Material::ID material_id = m_material != nullptr
+        ? m_material->GetId()
+        : Material::empty_id;
+
+    const Mesh::ID mesh_id = m_mesh != nullptr
+        ? m_mesh->GetId()
+        : Mesh::empty_id;
+
+    const Scene::ID scene_id = m_scene != nullptr
+        ? m_scene->GetId()
+        : Scene::empty_id;
+
+    const Drawable drawable {
+        .mesh            = m_mesh.ptr,
+        .material        = m_material.ptr,
+        .entity_id       = m_id,
+        .scene_id        = scene_id,
+        .mesh_id         = mesh_id,
+        .material_id     = material_id,
+        .skeleton_id     = skeleton_id
+    };
+
+    GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, drawable](...) {
+        // update m_drawable on render thread.
+        m_drawable = drawable;
+
         GetEngine()->shader_globals->objects.Set(
             m_id.value - 1,
             {
                 .model_matrix   = transform.GetMatrix(),
-                .has_skinning   = m_skeleton != nullptr,
-                .entity_id      = m_id.value,
-                .mesh_id        = mesh_id,
-                .material_id    = material_id,
+
                 .local_aabb_max = Vector4(m_local_aabb.max, 1.0f),
                 .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),
                 .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),
-                .world_aabb_min = Vector4(m_world_aabb.min, 1.0f)
+                .world_aabb_min = Vector4(m_world_aabb.min, 1.0f),
+
+                .entity_id      = drawable.entity_id.value,
+                .scene_id       = drawable.scene_id.value,
+                .mesh_id        = drawable.mesh_id.value,
+                .material_id    = drawable.material_id.value,
+                .skeleton_id    = drawable.skeleton_id.value
             }
         );
 
@@ -192,6 +219,9 @@ void Spatial::SetMesh(Ref<Mesh> &&mesh)
     if (m_mesh != nullptr && IsReady()) {
         m_mesh.Init();
     }
+
+    m_shader_data_state |= ShaderDataState::DIRTY;
+    m_primary_pipeline.changed = true;
 }
 
 void Spatial::SetSkeleton(Ref<Skeleton> &&skeleton)
@@ -209,6 +239,9 @@ void Spatial::SetSkeleton(Ref<Skeleton> &&skeleton)
     if (m_skeleton != nullptr && IsReady()) {
         m_skeleton.Init();
     }
+
+    m_shader_data_state |= ShaderDataState::DIRTY;
+    m_primary_pipeline.changed = true;
 }
 
 void Spatial::SetShader(Ref<Shader> &&shader)
@@ -231,6 +264,8 @@ void Spatial::SetShader(Ref<Shader> &&shader)
     if (m_shader != nullptr && IsReady()) {
         m_shader.Init();
     }
+
+    m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 void Spatial::SetMaterial(Ref<Material> &&material)
@@ -269,6 +304,13 @@ void Spatial::SetParent(Node *node)
             controller.second->OnAddedToNode(m_node);
         }
     }
+}
+
+void Spatial::SetScene(Scene *scene)
+{
+    m_scene = scene;
+
+    m_shader_data_state |= ShaderDataState::DIRTY;
 }
 
 void Spatial::SetRenderableAttributes(const RenderableAttributeSet &renderable_attributes)

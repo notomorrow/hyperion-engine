@@ -57,7 +57,7 @@ void main() {
     mat4 normal_matrix;
     
 #if HYP_ENABLE_SKINNING
-    if (bool(object.has_skinning)) {
+    if (bool(object.skeleton_id)) {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);

@@ -486,16 +486,8 @@ Octree::Result Octree::Move(Engine *engine, Spatial *spatial, const std::vector<
         spatial_it->aabb             = new_aabb;
         spatial_it->visibility_state = &m_visibility_state;
     } else { /* Moved into new octant */
-        if (spatial->GetScene() != nullptr) {
-            // force this octant to be visible to prevent flickering
-            CopyVisibilityState(engine->GetWorld().GetOctree().GetVisibilityState());
-        } else {
-            DebugLog(
-                LogType::Error,
-                "Spatial #%u was not attached to a Scene!\n",
-                spatial->GetId().value
-            );
-        }
+        // force this octant to be visible to prevent flickering
+        CopyVisibilityState(engine->GetWorld().GetOctree().GetVisibilityState());
 
         m_nodes.push_back(Node {
             .spatial          = spatial,

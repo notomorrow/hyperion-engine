@@ -12,7 +12,7 @@ class Bone;
 
 class Skeleton
     : public EngineComponentBase<STUB_CLASS(Skeleton)>,
-      public RenderObject
+      public RenderResource
 {
 public:
     Skeleton();

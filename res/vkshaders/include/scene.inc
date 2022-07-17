@@ -2,7 +2,7 @@
 
 #define HYP_MAX_SHADOW_MAPS 1 // tmp
 
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneDataBlock {
+struct Scene {
     // 0
     mat4 view;
     mat4 projection;
@@ -35,18 +35,16 @@ layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly 
     float camera_near;
     // 240
     float camera_far;
-} scene;
+};
 
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightDataBlock {
+struct Light {
     vec4 position; // or direction for directional lights
     uint color_encoded;
     uint type;
     float intensity;
     float radius;
     uint shadow_map_index; // ~0 == no shadow map
-} light;
-
-layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform sampler2D shadow_maps[];
+};
 
 struct ShadowMap {
     mat4 projection;
@@ -54,11 +52,19 @@ struct ShadowMap {
     uint scene_index;
 };
 
+#ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneDataBlock {
+    Scene scene;
+};
+
+layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 1) readonly buffer LightDataBlock {
+    Light light;
+};
+
+layout(set = HYP_DESCRIPTOR_SET_SCENE, binding = 12) uniform sampler2D shadow_maps[];
+
 layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 13, row_major) uniform ShadowData {
     ShadowMap matrices[113];
 } shadow_data;
 
-bool HasEnvironmentTexture(uint index)
-{
-    return bool(scene.environment_texture_usage & (1 << index));
-}
+#endif

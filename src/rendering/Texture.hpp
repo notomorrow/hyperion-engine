@@ -23,7 +23,7 @@ using renderer::CommandBuffer;
 
 class Texture
     : public EngineComponentBase<STUB_CLASS(Texture)>,
-      public RenderObject
+      public RenderResource
 {
 public:
     Texture(

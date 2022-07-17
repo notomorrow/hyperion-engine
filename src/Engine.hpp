@@ -382,7 +382,7 @@ private:
 
     template <class T>
     struct RenderableDeletionEntry {
-        static_assert(std::is_base_of_v<RenderObject, T>, "T must be a derived class of RenderObject");
+        static_assert(std::is_base_of_v<RenderResource, T>, "T must be a derived class of RenderResource");
 
         using Deleter = std::add_pointer_t<void(Ref<T> &&)>;
 

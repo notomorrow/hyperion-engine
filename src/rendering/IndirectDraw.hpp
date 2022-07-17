@@ -37,14 +37,21 @@ struct alignas(16) ObjectInstance {
 };
 
 struct Drawable {
+    // rendering objects (sent from game thread to
+    // rendering thread when updates are enqueued)
+    // engine will hold onto RenderResources like Mesh and Material
+    // for at least {max_frames_in_flight} frames, so we will have
+    // rendered the Drawable before the ptr is invalidated.
     Mesh           *mesh     = nullptr;
     Material       *material = nullptr;
 
-    IDBase         scene_id,
-                   entity_id,
+    IDBase         entity_id,
+                   scene_id,
+                   mesh_id,
                    material_id,
                    skeleton_id;
 
+    // object instance in GPU
     ObjectInstance object_instance;
 };
 

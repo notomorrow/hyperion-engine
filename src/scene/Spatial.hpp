@@ -8,6 +8,7 @@
 #include <rendering/RenderBucket.hpp>
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderableAttributes.hpp>
+#include <rendering/IndirectDraw.hpp>
 #include <animation/Skeleton.hpp>
 #include <core/Scheduler.hpp>
 #include <core/lib/FlatSet.hpp>
@@ -98,6 +99,8 @@ public:
     void SetParent(Node *node);
 
     Scene *GetScene() const                  { return m_scene; }
+    // only call from Scene. Don't call manually.
+    void SetScene(Scene *scene);
 
     bool IsRenderable() const                { return m_mesh != nullptr && m_shader != nullptr && m_material != nullptr; }
 
@@ -137,6 +140,8 @@ public:
 
     const Transform &GetTransform() const   { return m_transform; }
     void SetTransform(const Transform &transform);
+
+    const Drawable &GetDrawable() const     { return m_drawable; }
 
     const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
     const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
@@ -210,7 +215,13 @@ private:
     Ref<Skeleton>          m_skeleton;
     Node                  *m_node;
     Scene                 *m_scene;
+
     RenderableAttributeSet m_renderable_attributes;
+
+    // only touch from render thread.
+    // we update this when updates are enqueued, so just update
+    // the shader data state to dirty to refresh this.
+    Drawable               m_drawable;
 
     ControllerSet          m_controllers;
 

@@ -61,7 +61,7 @@ void main()
     // extrude along normal
     vec4 extendedPosition = vec4(a_position + a_normal * OUTLINE_WIDTH, 1.0);
     
-    if (bool(object.has_skinning)) {
+    if (bool(object.skeleton_id)) {
         mat4 skinning_matrix = CreateSkinningMatrix();
 
         position = object.model_matrix * skinning_matrix * extendedPosition;

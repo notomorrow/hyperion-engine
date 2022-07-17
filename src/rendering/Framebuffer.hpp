@@ -16,7 +16,7 @@ using renderer::Attachment;
 
 class Framebuffer
     : public EngineComponentBase<STUB_CLASS(Framebuffer)>,
-      public RenderObject
+      public RenderResource
 {
 public:
     Framebuffer(Extent2D extent, Ref<RenderPass> &&render_pass);
