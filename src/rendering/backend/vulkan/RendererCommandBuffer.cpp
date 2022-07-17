@@ -181,13 +181,13 @@ void CommandBuffer::DrawIndexed(
 
 void CommandBuffer::DrawIndexedIndirect(
     const GPUBuffer *buffer,
-    UInt             first_index
+    UInt             buffer_offset
 ) const
 {
     vkCmdDrawIndexedIndirect(
         m_command_buffer,
         buffer->buffer,
-        first_index * static_cast<UInt32>(sizeof(IndirectDrawCommand)),
+        buffer_offset,
         1,
         static_cast<UInt32>(sizeof(IndirectDrawCommand))
     );

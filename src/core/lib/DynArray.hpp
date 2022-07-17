@@ -147,7 +147,10 @@ protected:
     };
 
     // dynamic memory
-    Storage *m_buffer;
+    union {
+        Storage   *m_buffer;
+        ValueType *m_buffer_values;
+    };
     Storage  m_inline_buffer[inline_storage_size];
     bool     m_is_dynamic;
 

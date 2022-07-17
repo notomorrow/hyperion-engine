@@ -4,6 +4,7 @@
 #include <util/Defines.hpp>
 
 #include <core/lib/HeapArray.hpp>
+#include <core/lib/DynArray.hpp>
 #include <core/lib/Range.hpp>
 
 #include <Types.hpp>
@@ -355,17 +356,26 @@ private:
 
         } buffers[num_staging_buffers];
         
+#if HYP_BUFFERS_USE_SPINLOCK
         std::atomic_uint32_t current_index{0};
+#endif
 
         StagingObjects &Current()
         {
+
+#if HYP_BUFFERS_USE_SPINLOCK
             return buffers[current_index];
+#else
+            return buffers[0];
+#endif
         }
 
+#if HYP_BUFFERS_USE_SPINLOCK
         void Next()
         {
             current_index = (current_index + 1) % num_staging_buffers;
         }
+#endif
 
         void Set(size_t index, const StructType &value)
         {

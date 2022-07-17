@@ -162,8 +162,8 @@ public:
 
 private:
 
-    void RenderOpaqueObjects(Engine *engine, Frame *frame);
-    void RenderTranslucentObjects(Engine *engine, Frame *frame);
+    void RenderOpaqueObjects(Engine *engine, Frame *frame, bool collect);
+    void RenderTranslucentObjects(Engine *engine, Frame *frame, bool collect);
 
     DeferredPass                                                               m_indirect_pass;
     DeferredPass                                                               m_direct_pass;

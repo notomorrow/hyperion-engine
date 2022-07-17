@@ -361,7 +361,16 @@ void GPUMemory::Unmap(Device *device) const
     map = nullptr;
 }
 
-void GPUMemory::Copy(Device *device, size_t count, const void *ptr)
+void GPUMemory::Memset(Device *device, SizeType count, UByte value)
+{    
+    if (map == nullptr) {
+        Map(device, &map);
+    }
+
+    std::memset(map, value, count);
+}
+
+void GPUMemory::Copy(Device *device, SizeType count, const void *ptr)
 {
     if (map == nullptr) {
         Map(device, &map);
@@ -370,7 +379,7 @@ void GPUMemory::Copy(Device *device, size_t count, const void *ptr)
     Memory::Copy(map, ptr, count);
 }
 
-void GPUMemory::Copy(Device *device, size_t offset, size_t count, const void *ptr)
+void GPUMemory::Copy(Device *device, SizeType offset, SizeType count, const void *ptr)
 {
     if (map == nullptr) {
         Map(device, &map);
@@ -379,7 +388,7 @@ void GPUMemory::Copy(Device *device, size_t offset, size_t count, const void *pt
     Memory::Copy(reinterpret_cast<void *>(uintptr_t(map) + offset), ptr, count);
 }
 
-void GPUMemory::Read(Device *device, size_t count, void *out_ptr) const
+void GPUMemory::Read(Device *device, SizeType count, void *out_ptr) const
 {
     if (map == nullptr) {
         Map(device, &map);

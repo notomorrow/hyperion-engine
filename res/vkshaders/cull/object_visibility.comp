@@ -17,33 +17,59 @@ layout(local_size_x = 256) in;
 // };
 
 layout(std430, set = 0, binding = 0, row_major) readonly buffer ObjectBuffer {
-    Object object;
+    Object objects[];
 };
 
-struct DrawIndirectCommand {
+struct IndirectDrawCommand {
     // VkDrawIndexedIndirectCommand
     uint index_count;
     uint instance_count;
     uint first_index;
     int  vertex_offset;
     uint first_instance;
-
-    // custom data
-    uint mesh_id;
-    uint material_id;
-    uint flags;
 };
 
-layout(std140, set = 0, binding = 4) writeonly buffer DrawIndirectCommandBuffer {
-    DrawIndirectCommand draw_indirect_commands[];
+struct ObjectInstance {
+    uint entity_id;
+    uint draw_command_index;
+    uint batch_index;
+    uint num_indices;
 };
+
+layout(std140, set = 0, binding = 1) readonly buffer InstancesBuffer {
+    ObjectInstance instances[];
+};
+
+layout(set = 0, binding = 4) writeonly buffer IndirectDrawCommandsBuffer {
+    IndirectDrawCommand indirect_draw_commands[];
+};
+
+layout(push_constant) uniform ObjectVisibilityData {
+    uint batch_offset;
+    uint num_drawables;
+} push_constants;
 
 void main()
 {
-    // const uint id = gl_GlobalInvocationID.x;
-    const uint entity_id = object.entity_id;
+    const uint id    = gl_GlobalInvocationID.x;
+    const uint index = push_constants.batch_offset + id;
 
-    draw_indirect_commands[entity_id].instance_count = 1;
-    draw_indirect_commands[entity_id].mesh_id        = object.mesh_id;
-    draw_indirect_commands[entity_id].material_id    = object.material_id;
+    if (id >= push_constants.num_drawables) {
+        return;
+    }
+
+    ObjectInstance object_instance = instances[index];
+    const uint entity_id           = object_instance.entity_id;
+    const uint draw_command_index  = object_instance.draw_command_index;
+
+    indirect_draw_commands[draw_command_index].index_count    = object_instance.num_indices;
+    indirect_draw_commands[draw_command_index].instance_count = 1;
+    indirect_draw_commands[draw_command_index].first_index    = 0;
+    indirect_draw_commands[draw_command_index].vertex_offset  = 0;
+    indirect_draw_commands[draw_command_index].first_instance = 0;
+
+    // Object object = objects[entity_id - 1];
+    // indirect_draw_commands[drawable_index].mesh_id        = object.mesh_id;
+    // indirect_draw_commands[drawable_index].material_id    = object.material_id;
+    // indirect_draw_commands[drawable_index].flags          = 0x00;
 }
