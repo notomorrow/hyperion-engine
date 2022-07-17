@@ -152,9 +152,9 @@ public:
         // tmp_terrain->Scale(500.0f);
         // scene->AddSpatial(tmp_terrain->GetChild(0)->GetSpatial().IncRef());
 
-        auto terrain_node = scene->GetRootNode()->AddChild();
-        terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>()));
-        terrain_node->GetSpatial()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
+        // auto terrain_node = scene->GetRootNode()->AddChild();
+        // terrain_node->SetSpatial(engine->resources.spatials.Add(std::make_unique<Spatial>()));
+        // terrain_node->GetSpatial()->AddController<TerrainPagingController>(888, Extent3D{128}, Vector3{12, 12, 12});
         
         
         auto *grass = scene->GetRootNode()->AddChild(std::move(loaded_assets[4]));
@@ -1030,7 +1030,7 @@ int main()
         delta_time_accum += counter.delta;
         num_frames++;
 
-        if (num_frames >= 1000) {
+        if (num_frames >= 250) {
             DebugLog(
                 LogType::Debug,
                 "Render FPS: %f\n",

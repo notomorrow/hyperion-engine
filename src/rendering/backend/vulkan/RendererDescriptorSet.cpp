@@ -462,6 +462,8 @@ void DescriptorSet::ApplyUpdates(Device *device)
         }
 
         descriptor->BuildUpdates(device, m_descriptor_writes);
+        descriptor->m_dirty_sub_descriptors = {};
+        descriptor->m_sub_descriptor_update_indices.Clear();
     }
 
     if (!m_descriptor_writes.empty()) {
@@ -469,10 +471,17 @@ void DescriptorSet::ApplyUpdates(Device *device)
             write.dstSet = m_set;
         }
 
+        DebugLog(
+            LogType::Debug,
+            "Update descriptor set: %llu writes\n",
+            m_descriptor_writes.size()
+        );
         vkUpdateDescriptorSets(device->GetDevice(), static_cast<UInt>(m_descriptor_writes.size()), m_descriptor_writes.data(), 0, nullptr);
 
         m_descriptor_writes.clear();
     }
+
+    m_state = DescriptorSetState::DESCRIPTOR_CLEAN;
 }
 
 const std::unordered_map<VkDescriptorType, size_t> DescriptorPool::items_per_set{

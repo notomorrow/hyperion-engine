@@ -88,6 +88,11 @@ public:
                        prev_mip_height,
                        mip_level;
             } depth_pyramid_data;
+            
+            struct {  // NOLINT(clang-diagnostic-nested-anon-types)
+                UInt32 batch_offset;
+                UInt32 num_drawables;
+            } object_visibility_data;
         };
     } push_constants;
 

@@ -7,6 +7,140 @@
 
 namespace hyperion::v2 {
 
+IndirectRenderer::IndirectRenderer()
+{
+}
+
+IndirectRenderer::~IndirectRenderer()
+{
+}
+
+void IndirectRenderer::RebuildDescriptors(Engine *engine, Frame *frame)
+{
+    const auto frame_index = frame->GetFrameIndex();
+
+    auto &descriptor_set = m_descriptor_sets[frame_index];
+
+    descriptor_set->GetDescriptor(1)->RemoveSubDescriptor(0);
+    descriptor_set->GetDescriptor(1)->SetSubDescriptor({
+        .element_index = 0,
+        .buffer        = m_indirect_draw_state.GetInstanceBuffer(frame_index)
+    });
+
+    descriptor_set->GetDescriptor(4)->RemoveSubDescriptor(0);
+    descriptor_set->GetDescriptor(4)->SetSubDescriptor({
+        .element_index = 0,
+        .buffer        = m_indirect_draw_state.GetIndirectBuffer(frame_index)
+    });
+
+    descriptor_set->ApplyUpdates(engine->GetDevice());
+}
+
+void IndirectRenderer::Create(Engine *engine)
+{
+    HYPERION_ASSERT_RESULT(m_indirect_draw_state.Create(engine));
+
+    for (UInt frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        m_descriptor_sets[frame_index] = std::make_unique<DescriptorSet>();
+
+        // global object data
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(0)
+            ->SetSubDescriptor({
+                .buffer = engine->shader_globals->objects.GetBuffers()[frame_index].get()
+            });
+
+        // instances buffer
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(1)
+            ->SetSubDescriptor({
+                .buffer = m_indirect_draw_state.GetInstanceBuffer(frame_index)
+            });
+
+        // indirect commands
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(4)
+            ->SetSubDescriptor({
+                .buffer = m_indirect_draw_state.GetIndirectBuffer(frame_index)
+            });
+
+        HYPERION_ASSERT_RESULT(m_descriptor_sets[frame_index]->Create(
+            engine->GetDevice(),
+            &engine->GetInstance()->GetDescriptorPool()
+        ));
+    }
+
+    // create compute pipeline for object visibility (for indirect render)
+    // TODO: cache pipelines: re-use this
+    m_object_visibility = engine->resources.compute_pipelines.Add(std::make_unique<ComputePipeline>(
+        engine->resources.shaders.Add(std::make_unique<Shader>(
+            std::vector<SubShader>{
+                { ShaderModule::Type::COMPUTE, {FileByteReader(FileSystem::Join(engine->assets.GetBasePath(), "vkshaders/cull/object_visibility.comp.spv")).Read()}}
+            }
+        )),
+        DynArray<const DescriptorSet *> { m_descriptor_sets[0].get() }
+    ));
+
+    m_object_visibility.Init();
+}
+
+void IndirectRenderer::Destroy(Engine *engine)
+{
+    for (auto &descriptor_set : m_descriptor_sets) {
+        HYPERION_ASSERT_RESULT(descriptor_set->Destroy(engine->GetDevice()));
+    }
+
+    m_object_visibility.Reset();
+
+    HYPERION_ASSERT_RESULT(m_indirect_draw_state.Destroy(engine));
+}
+
+void IndirectRenderer::ExecuteCullShaderInBatches(Engine *engine, Frame *frame)
+{
+    static constexpr UInt batch_size = 256u;
+
+    auto *command_buffer     = frame->GetCommandBuffer();
+    const auto frame_index   = frame->GetFrameIndex();
+
+    const UInt num_drawables = static_cast<UInt>(m_indirect_draw_state.GetDrawables().Size());
+    const UInt num_batches   = (num_drawables / batch_size) + 1;
+
+    if (num_drawables == 0) {
+        return;
+    }
+
+    bool was_buffer_resized = false;
+    m_indirect_draw_state.UpdateBufferData(engine, frame, &was_buffer_resized);
+
+    if (was_buffer_resized) {
+        RebuildDescriptors(engine, frame);
+
+        DebugLog(LogType::Warn, "A BUFFER WAS RESIZED\n");
+    }
+
+    // bind our descriptor set to binding point 0
+    command_buffer->BindDescriptorSet(
+        engine->GetInstance()->GetDescriptorPool(),
+        m_object_visibility->GetPipeline(),
+        m_descriptor_sets[frame_index].get(),
+        static_cast<DescriptorSet::Index>(0)
+    );
+
+    UInt count_remaining = static_cast<UInt>(num_drawables);
+
+    for (UInt batch_index = 0; batch_index < num_batches; batch_index++) {
+        const UInt num_drawables_in_batch = MathUtil::Min(count_remaining, batch_size);
+
+        m_object_visibility->GetPipeline()->Bind(command_buffer, Pipeline::PushConstantData {
+            .object_visibility_data = {
+                .batch_offset  = batch_index * batch_size,
+                .num_drawables = num_drawables_in_batch
+            }
+        });
+
+        m_object_visibility->GetPipeline()->Dispatch(command_buffer, Extent3D { 1, 1, 1 });
+
+        count_remaining -= num_drawables_in_batch;
+    }
+}
+
 GraphicsPipeline::GraphicsPipeline(
     Ref<Shader> &&shader,
     Ref<RenderPass> &&render_pass,
@@ -173,6 +307,10 @@ void GraphicsPipeline::RemoveSpatial(Ref<Spatial> &&spatial, bool call_on_remove
 //     RemoveSpatial(spatial->GetId(), false);
 // }
 
+void GraphicsPipeline::BuildDrawCommandsBuffer(Engine *engine, UInt frame_index)
+{
+}
+
 void GraphicsPipeline::PerformEnqueuedSpatialUpdates(Engine *engine, UInt frame_index)
 {
     Threads::AssertOnThread(THREAD_RENDER);
@@ -254,6 +392,8 @@ void GraphicsPipeline::Init(Engine *engine)
             spatial->Init(engine);
         }
 
+        m_indirect_renderer.Create(engine);
+
         engine->render_scheduler.Enqueue([this, engine](...) {
             renderer::GraphicsPipeline::ConstructionInfo construction_info {
                 .vertex_attributes = m_renderable_attributes.vertex_attributes,
@@ -303,7 +443,9 @@ void GraphicsPipeline::Init(Engine *engine)
             auto *engine = GetEngine();
 
             SetReady(false);
-            
+
+            m_indirect_renderer.Destroy(engine);
+
             for (auto &&spatial : m_spatials) {
                 AssertThrow(spatial != nullptr);
 
@@ -324,6 +466,8 @@ void GraphicsPipeline::Init(Engine *engine)
 
             m_spatials_pending_addition.clear();
             m_spatials_pending_removal.clear();
+
+            m_shader.Reset();
 
             engine->render_scheduler.Enqueue([this, engine](...) {
                 if (m_per_frame_data != nullptr) {
@@ -365,6 +509,8 @@ void GraphicsPipeline::CollectDrawCalls(Engine *engine, Frame *frame)
     // check visibility state
     const bool perform_culling = scene_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
 
+    m_indirect_renderer.GetDrawState().ResetDrawables();
+
     for (auto &&spatial : m_spatials) {
         if (spatial->GetMesh() == nullptr) {
             continue;
@@ -391,20 +537,25 @@ void GraphicsPipeline::CollectDrawCalls(Engine *engine, Frame *frame)
             continue;
         }
 
-        /* TODO: DrawCall will hold a Ref<> but will be static until it needs to be modified */
-        engine->render_state.indirect_draw_state->PushDrawCall(DrawCall {
-            .mesh        = spatial->GetMesh().ptr,
-            .material    = spatial->GetMaterial().ptr,
-            .scene_id    = scene_id,
-            .entity_id   = spatial->GetId(),
+        /* TODO: Drawable will hold a Ref<> but will be static until it needs to be modified */
+        m_indirect_renderer.GetDrawState().PushDrawable(Drawable {
+            .mesh            = spatial->GetMesh().ptr,
+            .material        = spatial->GetMaterial().ptr,
+            .scene_id        = scene_id,
+            .entity_id       = spatial->GetId(),
             .material_id = spatial->GetMaterial() != nullptr
                 ? spatial->GetMaterial()->GetId()
                 : Material::empty_id,
             .skeleton_id = spatial->GetSkeleton() != nullptr
                 ? spatial->GetSkeleton()->GetId()
-                : Skeleton::empty_id
+                : Skeleton::empty_id,
+            .object_instance = ObjectInstance {
+                .entity_id   = spatial->GetId().value
+            }
         });
     }
+
+    m_indirect_renderer.ExecuteCullShaderInBatches(engine, frame);
 }
 
 void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
@@ -463,17 +614,17 @@ void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
                 }
             );
 
-            for (DrawCall &draw_call : engine->render_state.indirect_draw_state->commands) {
-                const UInt entity_index = draw_call.entity_id != Spatial::empty_id
-                    ? draw_call.entity_id.value - 1
+            for (Drawable &drawable : m_indirect_renderer.GetDrawState().GetDrawables()) {
+                const UInt entity_index = drawable.entity_id != Spatial::empty_id
+                    ? drawable.entity_id.value - 1
                     : 0;
 
-                const UInt skeleton_index = draw_call.skeleton_id != Skeleton::empty_id
-                    ? draw_call.skeleton_id.value - 1
+                const UInt skeleton_index = drawable.skeleton_id != Skeleton::empty_id
+                    ? drawable.skeleton_id.value - 1
                     : 0;
 
-                const UInt material_index = draw_call.material_id != Material::empty_id
-                    ? draw_call.material_id.value - 1
+                const UInt material_index = drawable.material_id != Material::empty_id
+                    ? drawable.material_id.value - 1
                     : 0;
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
@@ -502,7 +653,12 @@ void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
                 );
 #endif
 
-                draw_call.mesh->Render(engine, secondary);
+                drawable.mesh->RenderIndirect(
+                    engine,
+                    secondary,
+                    m_indirect_renderer.GetDrawState().GetIndirectBuffer(frame_index),
+                    drawable.object_instance.draw_command_index * sizeof(IndirectDrawCommand)
+                );
             }
 
             HYPERION_RETURN_OK;

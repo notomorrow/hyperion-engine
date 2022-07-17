@@ -64,7 +64,7 @@ public:
 
     void DrawIndexedIndirect(
         const GPUBuffer                *buffer,
-        UInt                            first_index
+        UInt                            buffer_offset
     ) const;
 
     void BindDescriptorSet(

@@ -532,17 +532,10 @@ protected:
     std::vector<FrameDataWrapper> m_data;
 };
 
-struct IndirectObjectInstance {
-    UInt32 mesh_id;
-    UInt32 material_id;
-    UInt32 flags;
-};
-
 struct alignas(4) IndirectDrawCommand {
     // native vk object
     VkDrawIndexedIndirectCommand command;
-    // additional data
-    IndirectObjectInstance       instance;
+    // additional data...
 };
 
 static_assert(std::is_pod_v<IndirectDrawCommand>, "IndirectDrawCommand must be POD");

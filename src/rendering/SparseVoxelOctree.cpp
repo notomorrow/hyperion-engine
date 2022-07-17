@@ -286,7 +286,11 @@ void SparseVoxelOctree::Build(Engine *engine)
         HYPERION_ASSERT_RESULT(m_octree_buffer->Create(engine->GetDevice(), num_nodes * sizeof(OctreeNode)));
 
         descriptor_set->GetDescriptor(2)->RemoveSubDescriptor(0);
-        descriptor_set->GetDescriptor(2)->SetSubDescriptor({.buffer = m_octree_buffer.get()});
+        descriptor_set->GetDescriptor(2)->SetSubDescriptor({
+            .element_index = 0,
+            .buffer        = m_octree_buffer.get()
+        });
+    
         descriptor_set->ApplyUpdates(engine->GetInstance()->GetDevice());
     }
     
