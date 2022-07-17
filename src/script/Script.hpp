@@ -102,10 +102,10 @@ public:
 
     void CallFunction(FunctionHandle handle);
     void CallFunction(const char *name);
-    void CallFunction(const char *name, Value *args, ArgCount num_args);
     void CallFunction(HashFnv1 hash);
-    void CallFunction(HashFnv1 hash, Value *args, ArgCount num_args);
-    void CallFunctionFromHandle(FunctionHandle handle, Value *args, ArgCount num_args);
+    void CallFunctionArgV(const char *name, Value *args, ArgCount num_args);
+    void CallFunctionArgV(HashFnv1 hash, Value *args, ArgCount num_args);
+    void CallFunctionArgV(FunctionHandle handle, Value *args, ArgCount num_args);
 
     bool GetExportedValue(const char *name, Value *value)
     {
@@ -122,7 +122,7 @@ public:
     {
         auto arguments = CreateArguments(std::forward<Args>(args)...);
 
-        CallFunction(name, arguments.data(), arguments.size());
+        CallFunctionArgV(name, arguments.data(), arguments.size());
     }
 
     template <class ...Args>
@@ -130,7 +130,7 @@ public:
     {
         auto arguments = CreateArguments(std::forward<Args>(args)...);
 
-        CallFunctionFromHandle(handle, arguments.data(), arguments.size());
+        CallFunctionArgV(handle, arguments.data(), arguments.size());
     }
 
     template <class ...Args>
@@ -138,7 +138,7 @@ public:
     {
         auto arguments = CreateArguments(std::forward<Args>(args)...);
 
-        CallFunction(hash, arguments.data(), arguments.size());
+        CallFunctionArgV(hash, arguments.data(), arguments.size());
     }
 
 private:

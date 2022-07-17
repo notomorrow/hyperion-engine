@@ -134,33 +134,32 @@ void Script::Run()
 
 void Script::CallFunction(const char *name)
 {
-    CallFunction(name, (Value *)nullptr, 0);
+    CallFunctionArgV(name, (Value *)nullptr, 0);
 }
 
-void Script::CallFunction(const char *name, Value *args, ArgCount num_args)
+void Script::CallFunctionArgV(const char *name, Value *args, ArgCount num_args)
 {
-    CallFunction(hash_fnv_1(name), args, num_args);    
+    CallFunctionArgV(hash_fnv_1(name), args, num_args);    
 }
 
 void Script::CallFunction(FunctionHandle handle)
 {
-    CallFunctionFromHandle(handle, (Value *)nullptr, 0);
+    CallFunctionArgV(handle, (Value *)nullptr, 0);
 }
 
 void Script::CallFunction(HashFnv1 hash)
 {
-    CallFunction(hash, (Value *)nullptr, 0);
+    CallFunctionArgV(hash, (Value *)nullptr, 0);
 }
 
-
-void Script::CallFunction(HashFnv1 hash, Value *args, ArgCount num_args)
+void Script::CallFunctionArgV(HashFnv1 hash, Value *args, ArgCount num_args)
 {
     Value handle;
     AssertThrow(GetExportedSymbols().Find(hash, &handle));
-    CallFunctionFromHandle(handle, args, num_args);
+    CallFunctionArgV(handle, args, num_args);
 }
 
-void Script::CallFunctionFromHandle(FunctionHandle handle, Value *args, ArgCount num_args)
+void Script::CallFunctionArgV(FunctionHandle handle, Value *args, ArgCount num_args)
 {
     AssertThrow(IsCompiled() && IsBaked());
 
