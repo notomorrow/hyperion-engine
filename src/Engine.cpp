@@ -379,7 +379,7 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::SamplerDescriptor>(renderer::DescriptorKey::SAMPLER);
 
     material_sampler_descriptor->SetSubDescriptor({
-        .sampler = &GetDummyData().GetSampler()
+        .sampler = &GetDummyData().GetSamplerLinear()
     });
 
     auto *material_textures_descriptor = m_instance->GetDescriptorPool()
@@ -432,7 +432,7 @@ void Engine::Initialize()
             shadow_map_descriptor->SetSubDescriptor({
                 .element_index = i,
                 .image_view    = &GetDummyData().GetImageView2D1x1R8(),
-                .sampler       = &GetDummyData().GetSampler()
+                .sampler       = &GetDummyData().GetSamplerNearest()
             });
         }
     }

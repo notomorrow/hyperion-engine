@@ -7,6 +7,7 @@ layout(local_size_x = 256) in;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
+#include "../include/aabb.inc"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/object.inc"
@@ -49,6 +50,9 @@ layout(set = 0, binding = 4) writeonly buffer IndirectDrawCommandsBuffer {
     IndirectDrawCommand indirect_draw_commands[];
 };
 
+layout(set = 0, binding = 5) uniform texture2D depth_pyramid;
+layout(set = 0, binding = 6) uniform sampler   depth_pyramid_sampler;
+
 layout(push_constant) uniform ObjectVisibilityData {
     uint batch_offset;
     uint num_drawables;
@@ -75,6 +79,14 @@ void main()
         Object object = objects[entity_id - 1];
         Scene scene   = scenes[push_constants.scene_id - 1];
 
+        AABB aabb;
+        aabb.max = object.world_aabb_max.xyz;
+        aabb.min = object.world_aabb_min.xyz;
+
+        vec3  sphere_center;
+        float sphere_radius;
+        AABBToSphere(aabb, sphere_center, sphere_radius);
+
         // get view/proj matrices from scene.
         mat4 view = scene.view;
         mat4 proj = scene.projection;
@@ -83,7 +95,8 @@ void main()
 
         // get optimal mip level of depth pyramid
 
-        // compare depths
+        // compare depths from sampled depth pyramid.
+        // if 
 
         ++num_instances;
     }

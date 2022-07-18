@@ -112,7 +112,7 @@ void Material::EnqueueDescriptorSetCreate()
             auto *sampler_descriptor = descriptor_set->AddDescriptor<SamplerDescriptor>(DescriptorKey::SAMPLER);
 
             sampler_descriptor->SetSubDescriptor({
-                .sampler = &engine->GetDummyData().GetSampler() // TODO: get proper sampler based on req's of image
+                .sampler = &engine->GetDummyData().GetSamplerLinear() // TODO: get proper sampler based on req's of image
             });
             
             auto *image_descriptor = descriptor_set->AddDescriptor<ImageDescriptor>(DescriptorKey::TEXTURES);
