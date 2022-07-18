@@ -8,14 +8,14 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 #include "include/defines.inc"
 #include "include/shared.inc"
 
-layout(set = 0, binding = 0) uniform texture2D depth_pyramid_in;
-layout(set = 0, binding = 1, r8) uniform writeonly image2D depth_pyramid_out;
-layout(set = 0, binding = 2) uniform sampler depth_pyramid_sampler;
+layout(set = 0, binding = 0) uniform texture2D             mip_in;
+layout(set = 0, binding = 1, r8) uniform writeonly image2D mip_out;
+layout(set = 0, binding = 2) uniform sampler               depth_pyramid_sampler;
 
 layout(push_constant) uniform DepthPyramidData {
     uvec2 mip_dimensions;
     uvec2 prev_mip_dimensions;
-    uint mip_level;
+    uint  mip_level;
 };
 
 float GetDepthAtTexel(ivec2 coord, ivec2 offset)
@@ -24,7 +24,7 @@ float GetDepthAtTexel(ivec2 coord, ivec2 offset)
         return 1.0;
     }
 
-    return Texture2DTexel(depth_pyramid_sampler, depth_pyramid_in, coord + offset).r;
+    return Texture2DTexel(depth_pyramid_sampler, mip_in, coord + offset).r;
 }
 
 void main()
@@ -41,5 +41,5 @@ void main()
 
     float depth = min(i0j0, min(i1j0, min(i0j1, i1j1)));
 
-    imageStore(depth_pyramid_out, ivec2(coord), vec4(depth));
+    imageStore(mip_out, ivec2(coord), vec4(depth));
 }

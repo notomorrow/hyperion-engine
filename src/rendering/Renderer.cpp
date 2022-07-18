@@ -15,27 +15,6 @@ IndirectRenderer::~IndirectRenderer()
 {
 }
 
-void IndirectRenderer::RebuildDescriptors(Engine *engine, Frame *frame)
-{
-    const auto frame_index = frame->GetFrameIndex();
-
-    auto &descriptor_set = m_descriptor_sets[frame_index];
-
-    descriptor_set->GetDescriptor(3)->RemoveSubDescriptor(0);
-    descriptor_set->GetDescriptor(3)->SetSubDescriptor({
-        .element_index = 0,
-        .buffer        = m_indirect_draw_state.GetInstanceBuffer(frame_index)
-    });
-
-    descriptor_set->GetDescriptor(4)->RemoveSubDescriptor(0);
-    descriptor_set->GetDescriptor(4)->SetSubDescriptor({
-        .element_index = 0,
-        .buffer        = m_indirect_draw_state.GetIndirectBuffer(frame_index)
-    });
-
-    descriptor_set->ApplyUpdates(engine->GetDevice());
-}
-
 void IndirectRenderer::Create(Engine *engine)
 {
     HYPERION_ASSERT_RESULT(m_indirect_draw_state.Create(engine));
@@ -86,6 +65,18 @@ void IndirectRenderer::Create(Engine *engine)
                 .buffer = m_indirect_draw_state.GetIndirectBuffer(frame_index)
             });
 
+        // depth pyramid image (set to placeholder)
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::ImageDescriptor>(5)
+            ->SetSubDescriptor({
+                .image_view = &engine->GetDummyData().GetImageView2D1x1R8()
+            });
+
+        // sampler
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::SamplerDescriptor>(6)
+            ->SetSubDescriptor({
+                .sampler = &engine->GetDummyData().GetSamplerNearest()
+            });
+
         HYPERION_ASSERT_RESULT(m_descriptor_sets[frame_index]->Create(
             engine->GetDevice(),
             &engine->GetInstance()->GetDescriptorPool()
@@ -121,7 +112,11 @@ void IndirectRenderer::Destroy(Engine *engine)
     HYPERION_ASSERT_RESULT(m_indirect_draw_state.Destroy(engine));
 }
 
-void IndirectRenderer::ExecuteCullShaderInBatches(Engine *engine, Frame *frame)
+void IndirectRenderer::ExecuteCullShaderInBatches(
+    Engine *engine,
+    Frame *frame,
+    const CullData &cull_data
+)
 {
     static constexpr UInt batch_size = 256u;
 
@@ -140,6 +135,19 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Engine *engine, Frame *frame)
 
     if (was_buffer_resized) {
         RebuildDescriptors(engine, frame);
+    }
+
+    if (m_cached_cull_data != cull_data) {
+        if (m_cached_cull_data.depth_pyramid_image_views[frame_index] != cull_data.depth_pyramid_image_views[frame_index]) {
+            m_descriptor_sets[frame_index]->GetDescriptor(5)->SetSubDescriptor({
+                .element_index = 0,
+                .image_view    = cull_data.depth_pyramid_image_views[frame_index]
+            });
+
+            m_descriptor_sets[frame_index]->ApplyUpdates(engine->GetDevice());
+        }
+
+        m_cached_cull_data = cull_data;
     }
 
     const auto scene_id = engine->render_state.GetScene().id;
@@ -169,6 +177,27 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Engine *engine, Frame *frame)
 
         count_remaining -= num_drawables_in_batch;
     }
+}
+
+void IndirectRenderer::RebuildDescriptors(Engine *engine, Frame *frame)
+{
+    const auto frame_index = frame->GetFrameIndex();
+
+    auto &descriptor_set = m_descriptor_sets[frame_index];
+
+    descriptor_set->GetDescriptor(3)->RemoveSubDescriptor(0);
+    descriptor_set->GetDescriptor(3)->SetSubDescriptor({
+        .element_index = 0,
+        .buffer        = m_indirect_draw_state.GetInstanceBuffer(frame_index)
+    });
+
+    descriptor_set->GetDescriptor(4)->RemoveSubDescriptor(0);
+    descriptor_set->GetDescriptor(4)->SetSubDescriptor({
+        .element_index = 0,
+        .buffer        = m_indirect_draw_state.GetIndirectBuffer(frame_index)
+    });
+
+    descriptor_set->ApplyUpdates(engine->GetDevice());
 }
 
 GraphicsPipeline::GraphicsPipeline(
@@ -518,7 +547,11 @@ void GraphicsPipeline::Init(Engine *engine)
     }));
 }
 
-void GraphicsPipeline::CollectDrawCalls(Engine *engine, Frame *frame)
+void GraphicsPipeline::CollectDrawCalls(
+    Engine *engine,
+    Frame *frame,
+    const CullData &cull_data
+)
 {
     Threads::AssertOnThread(THREAD_RENDER);
 
@@ -561,7 +594,11 @@ void GraphicsPipeline::CollectDrawCalls(Engine *engine, Frame *frame)
         m_indirect_renderer.GetDrawState().PushDrawable(Drawable(spatial->GetDrawable()));
     }
 
-    m_indirect_renderer.ExecuteCullShaderInBatches(engine, frame);
+    m_indirect_renderer.ExecuteCullShaderInBatches(
+        engine,
+        frame,
+        cull_data
+    );
 }
 
 void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)

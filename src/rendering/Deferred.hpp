@@ -6,6 +6,7 @@
 #include "Texture.hpp"
 #include "Compute.hpp"
 #include "IndirectDraw.hpp"
+#include "CullData.hpp"
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererImage.hpp>
@@ -93,13 +94,15 @@ public:
     DepthPyramidRenderer();
     ~DepthPyramidRenderer();
 
-    auto &GetResults()             { return m_depth_pyramid_results; }
-    const auto &GetResults() const { return m_depth_pyramid; }
+    auto &GetResults()                { return m_depth_pyramid_results; }
+    const auto &GetResults() const    { return m_depth_pyramid; }
 
-    auto &GetMips()                { return m_depth_pyramid_mips; }
-    const auto &GetMips() const    { return m_depth_pyramid_mips; }
+    auto &GetMips()                   { return m_depth_pyramid_mips; }
+    const auto &GetMips() const       { return m_depth_pyramid_mips; }
 
-    bool IsRendered() const        { return m_is_rendered; }
+    const Extent3D &GetExtent() const { return m_depth_pyramid[0]->GetExtent(); }
+
+    bool IsRendered() const           { return m_is_rendered; }
 
     void Create(Engine *engine, const AttachmentRef *depth_attachment_ref);
     void Destroy(Engine *engine);
@@ -161,7 +164,6 @@ public:
     void Render(Engine *engine, Frame *frame);
 
 private:
-
     void RenderOpaqueObjects(Engine *engine, Frame *frame, bool collect);
     void RenderTranslucentObjects(Engine *engine, Frame *frame, bool collect);
 
@@ -177,6 +179,7 @@ private:
     std::unique_ptr<Sampler>                                                   m_depth_sampler;
 
     IndirectDrawState                                                          m_indirect_draw_state;
+    CullData                                                                   m_cull_data;
 };
 
 } // namespace hyperion::v2

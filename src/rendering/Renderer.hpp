@@ -10,6 +10,7 @@
 #include "RenderBucket.hpp"
 #include "RenderableAttributes.hpp"
 #include "IndirectDraw.hpp"
+#include "CullData.hpp"
 #include "Compute.hpp"
 #include <Constants.hpp>
 
@@ -41,8 +42,6 @@ using renderer::StorageBuffer;
 class Engine;
 
 struct alignas(16) IndirectParams {
-    Matrix4 view;
-    Matrix4 projection;
 };
 
 class IndirectRenderer {
@@ -56,14 +55,20 @@ public:
     void Create(Engine *engine);
     void Destroy(Engine *engine);
 
-    void RebuildDescriptors(Engine *engine, Frame *frame);
-    void ExecuteCullShaderInBatches(Engine *engine, Frame *frame);
+    void ExecuteCullShaderInBatches(
+        Engine *engine,
+        Frame *frame,
+        const CullData &cull_data
+    );
 
 private:
+    void RebuildDescriptors(Engine *engine, Frame *frame);
+
     IndirectDrawState                                                m_indirect_draw_state;
     Ref<ComputePipeline>                                             m_object_visibility;
     FixedArray<std::unique_ptr<DescriptorSet>, max_frames_in_flight> m_descriptor_sets;
     FixedArray<UniformBuffer, max_frames_in_flight>                  m_indirect_params_buffers;
+    CullData                                                         m_cached_cull_data;
 };
 
 // TODO: rename to Renderer
@@ -124,11 +129,23 @@ public:
     
     /* Build pipeline */
     void Init(Engine *engine);
-    void CollectDrawCalls(Engine *engine, Frame *frame);
-    void PerformRendering(Engine *engine, Frame *frame);
+    
+    void CollectDrawCalls(
+        Engine *engine,
+        Frame *frame,
+        const CullData &cull_data
+    );
+
+    void PerformRendering(
+        Engine *engine,
+        Frame *frame
+    );
 
     // render non-indirect
-    void Render(Engine *engine, Frame *frame);
+    void Render(
+        Engine *engine,
+        Frame *frame
+    );
 
 private:
     struct CachedRenderData {

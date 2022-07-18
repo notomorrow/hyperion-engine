@@ -921,6 +921,7 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     auto *primary = frame->GetCommandBuffer();
     const auto frame_index = frame->GetFrameIndex();
 
+    // collect draw calls - not actually rendering yet.
     RenderOpaqueObjects(engine, frame, true);
     RenderTranslucentObjects(engine, frame, true);
 
@@ -966,7 +967,6 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
     }
     // end opaque objs
     
-
     m_post_processing.RenderPre(engine, frame);
 
     // begin shading
@@ -988,6 +988,10 @@ void DeferredRenderer::Render(Engine *engine, Frame *frame)
 
     // render depth pyramid
     m_dpr.Render(engine, frame);
+
+    // update culling info now that depth pyramid has been rendered
+    m_cull_data.depth_pyramid_image_views[frame_index] = m_dpr.GetResults()[frame_index].get();
+    m_cull_data.depth_pyramid_dimensions               = m_dpr.GetExtent();
 
     /* ========== BEGIN MIP CHAIN GENERATION ========== */
     {
@@ -1021,11 +1025,11 @@ void DeferredRenderer::RenderOpaqueObjects(Engine *engine, Frame *frame, bool co
 {
     if (collect) {
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetGraphicsPipelines()) {
-            pipeline->CollectDrawCalls(engine, frame);
+            pipeline->CollectDrawCalls(engine, frame, m_cull_data);
         }
         
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_OPAQUE).GetGraphicsPipelines()) {
-            pipeline->CollectDrawCalls(engine, frame);
+            pipeline->CollectDrawCalls(engine, frame, m_cull_data);
         }
     } else {
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_SKYBOX).GetGraphicsPipelines()) {
@@ -1042,7 +1046,7 @@ void DeferredRenderer::RenderTranslucentObjects(Engine *engine, Frame *frame, bo
 {
     if (collect) {
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetGraphicsPipelines()) {
-            pipeline->CollectDrawCalls(engine, frame);
+            pipeline->CollectDrawCalls(engine, frame, m_cull_data);
         }
     } else {
         for (auto &pipeline : engine->GetRenderListContainer().Get(Bucket::BUCKET_TRANSLUCENT).GetGraphicsPipelines()) {
