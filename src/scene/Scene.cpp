@@ -364,14 +364,12 @@ void Scene::EnqueueRenderUpdates()
         BoundingBox aabb;
         Matrix4     view;
         Matrix4     projection;
-        Vector3     translation;
-        Vector3     direction;
-        Int         width;
-        Int         height;
-        Vector3     light_direction;
-        Float       global_timer;
         Float       camera_near;
         Float       camera_far;
+        Vector3     translation;
+        Int         width;
+        Int         height;
+        Float       global_timer;
     } params = {
         .aabb            = m_aabb,
         .global_timer    = m_environment->GetGlobalTimer()
@@ -380,12 +378,11 @@ void Scene::EnqueueRenderUpdates()
     if (m_camera != nullptr) {
         params.view        = m_camera->GetViewMatrix();
         params.projection  = m_camera->GetProjectionMatrix();
-        params.translation = m_camera->GetTranslation();
-        params.direction   = m_camera->GetDirection();
-        params.width       = m_camera->GetWidth();
-        params.height      = m_camera->GetHeight();
         params.camera_near = m_camera->GetNear();
         params.camera_far  = m_camera->GetFar();
+        params.translation = m_camera->GetTranslation();
+        params.width       = m_camera->GetWidth();
+        params.height      = m_camera->GetHeight();
     }
 
     GetEngine()->render_scheduler.Enqueue([this, params](...) {
@@ -393,17 +390,15 @@ void Scene::EnqueueRenderUpdates()
             .view                        = params.view,
             .projection                  = params.projection,
             .camera_position             = params.translation.ToVector4(),
-            .camera_direction            = params.direction.ToVector4(),
-            .light_direction             = params.light_direction.ToVector4(),
+            .camera_near                 = params.camera_near,
+            .camera_far                  = params.camera_far,
             .resolution_x                = static_cast<UInt32>(params.width),
             .resolution_y                = static_cast<UInt32>(params.height),
             .aabb_max                    = params.aabb.max.ToVector4(),
             .aabb_min                    = params.aabb.min.ToVector4(),
             .global_timer                = params.global_timer,
             .num_environment_shadow_maps = static_cast<UInt32>(m_environment->HasRenderComponent<ShadowRenderer>()), // callable on render thread only
-            .num_lights                  = static_cast<UInt32>(m_environment->NumLights()),
-            .camera_near                 = params.camera_near,
-            .camera_far                  = params.camera_far
+            .num_lights                  = static_cast<UInt32>(m_environment->NumLights())
         };
 
         shader_data.environment_texture_usage = 0;

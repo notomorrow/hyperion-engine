@@ -48,10 +48,10 @@ void main()
         }
         
         /* basic n•l */
-        vec3 L = normalize(scene.light_direction.xyz);
-        vec3 N = normalize(g_normal);
+        // vec3 L = normalize(scene.light_direction.xyz);
+        // vec3 N = normalize(g_normal);
         
-        float NdotL = max(0.0001, dot(N, L));
+        // float NdotL = max(0.0001, dot(N, L));
         
         //frag_color.rgb *= NdotL;
 

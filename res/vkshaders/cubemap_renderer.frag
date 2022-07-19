@@ -10,7 +10,6 @@ layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
 layout(location=4) in vec3 v_tangent;
 layout(location=5) in vec3 v_bitangent;
-layout(location=6) in flat vec3 v_light_direction;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
 

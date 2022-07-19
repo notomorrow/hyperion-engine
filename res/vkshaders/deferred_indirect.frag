@@ -120,10 +120,8 @@ void main()
     vec3 N = normalize(normal.xyz);
     vec3 T = normalize(tangent.xyz);
     vec3 B = normalize(bitangent.xyz);
-    vec3 L = normalize(scene.light_direction.xyz);
     vec3 V = normalize(scene.camera_position.xyz - position.xyz);
     vec3 R = normalize(reflect(-V, N));
-    vec3 H = normalize(L + V);
     
     float ao = 1.0;
     vec3 irradiance = vec3(0.0);
@@ -136,12 +134,7 @@ void main()
         const float roughness = material.r;
         const float metalness = material.g;
         
-        float NdotL = max(0.0001, dot(N, L));
         float NdotV = max(0.0001, dot(N, V));
-        float NdotH = max(0.0001, dot(N, H));
-        float LdotH = max(0.0001, dot(L, H));
-        float VdotH = max(0.0001, dot(V, H));
-        float HdotV = max(0.0001, dot(H, V));
 
         const vec3 diffuse_color = albedo_linear * (1.0 - metalness);
 
@@ -201,7 +194,6 @@ void main()
 #if SSAO_DEBUG
     result = vec3(ao);
 #endif
-
     output_color = vec4(result, 1.0);
 
     // output_color.rgb = irradiance.rgb;

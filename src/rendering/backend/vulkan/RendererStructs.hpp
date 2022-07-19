@@ -418,6 +418,68 @@ struct alignas(16) Extent3D {
 
 static_assert(sizeof(Extent3D) == 16);
 
+template <class T>
+struct alignas(4) ShaderVec2 {
+    T x, y;
+
+    ShaderVec2() = default;
+    ShaderVec2(const ShaderVec2 &other) = default;
+    ShaderVec2(const Vector2 &vec)
+        : x(vec.x),
+          y(vec.y)
+    {
+    }
+    ShaderVec2(const Extent2D &extent)
+        : x(extent.width),
+          y(extent.height)
+    {
+    }
+};
+
+static_assert(sizeof(ShaderVec2<float>) == 8);
+static_assert(sizeof(ShaderVec2<UInt32>) == 8);
+
+template <class T>
+struct alignas(4) ShaderVec3 {
+    T x, y, z;
+
+    ShaderVec3() = default;
+    ShaderVec3(const ShaderVec3 &other) = default;
+    ShaderVec3(const Vector3 &vec)
+        : x(vec.x),
+          y(vec.y),
+          z(vec.z)
+    {
+    }
+    ShaderVec3(const Extent3D &extent)
+        : x(extent.width),
+          y(extent.height),
+          z(extent.depth)
+    {
+    }
+};
+
+static_assert(sizeof(ShaderVec3<float>)  == 12);
+static_assert(sizeof(ShaderVec3<UInt32>) == 12);
+
+template <class T>
+struct alignas(4) ShaderVec4 {
+    T x, y, z, w;
+
+    ShaderVec4() = default;
+    ShaderVec4(const ShaderVec4 &other) = default;
+    ShaderVec4(const Vector4 &vec)
+        : x(vec.x),
+          y(vec.y),
+          z(vec.z),
+          w(vec.w)
+    {
+    }
+};
+
+static_assert(sizeof(ShaderVec4<float>)  == 16);
+static_assert(sizeof(ShaderVec4<UInt32>) == 16);
+
 struct alignas(8) Rect {
     uint32_t x0, y0,
              x1, y1;

@@ -10,10 +10,10 @@ layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
 layout(location=4) in vec3 v_tangent;
 layout(location=5) in vec3 v_bitangent;
-layout(location=6) in flat vec3 v_light_direction;
 layout(location=7) in flat vec3 v_camera_position;
 layout(location=8) in mat3 v_tbn_matrix;
 layout(location=12) in vec3 v_view_space_position;
+// layout(location=13) in vec3 v_fragment_position;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
@@ -41,14 +41,11 @@ layout(location=5) out vec4 gbuffer_bitangents;
 
 void main()
 {
-    vec3 L = normalize(v_light_direction);
     vec3 view_vector = normalize(v_camera_position - v_position);
     vec3 normal = normalize(v_normal);
     float NdotV = dot(normal, view_vector);
-    float NdotL = dot(normal, L);
     
     vec3 tangent_view = transpose(v_tbn_matrix) * view_vector;
-    vec3 tangent_light = v_tbn_matrix * L;
     vec3 tangent_position = v_tbn_matrix * v_position;
 
     vec3 reflection_vector = reflect(view_vector, normal);
@@ -114,6 +111,14 @@ void main()
         vec3 R = normalize(reflect(-V, normal.xyz));
         gbuffer_albedo.rgb = SampleProbeParallaxCorrected(gbuffer_sampler, env_probe_textures[probe_index], env_probes[probe_index], v_position.xyz, R, 7.0).rgb;   //TextureCubeLod(gbuffer_sampler, rendered_cubemaps[scene.environment_texture_index], R, lod).rgb;
     }*/
+
+
+    // if (v_fragment_position.x >= object.screenspace_aabb.x && v_fragment_position.x < object.screenspace_aabb.z
+    //     && v_fragment_position.y >= object.screenspace_aabb.y && v_fragment_position.y < object.screenspace_aabb.w)
+    // {
+    //     gbuffer_albedo = vec4(1.0, 0.0, 0.0, 1.0);
+    // }
+
     
     gbuffer_normals    = EncodeNormal(normal);
     gbuffer_positions  = vec4(v_position, 1.0);

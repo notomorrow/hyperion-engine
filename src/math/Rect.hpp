@@ -14,11 +14,6 @@ struct Rect {
                   top,
                   bottom;
         };
-
-        struct {  // NOLINT(clang-diagnostic-nested-anon-types)
-            Vector2 coord;
-            Vector2 dimension;
-        };
     };
 
     Vector4 ToVector4() const

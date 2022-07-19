@@ -116,7 +116,14 @@ private:
 class FileByteReader : public ByteReader {
 public:
     FileByteReader(const std::string &filepath, std::streampos begin = 0)
+        : filepath(filepath)
     {
+        DebugLog(
+            LogType::Debug,
+            "Create FileByteReader instance with path %s\n",
+            filepath.c_str()
+        );
+
         file = new std::ifstream(filepath, std::ifstream::in |
             std::ifstream::binary |
             std::ifstream::ate);
@@ -124,11 +131,24 @@ public:
         max_pos = file->tellg();
         file->seekg(begin);
         pos = file->tellg();
+
+        if (Eof()) {
+            DebugLog(
+                LogType::Warn,
+                "File could not be opened at path %s\n",
+                filepath.c_str()
+            );
+        }
     }
 
     ~FileByteReader()
     {
         delete file;
+    }
+    
+    const std::string &GetFilepath() const
+    {
+        return filepath;
     }
 
     std::streampos Position() const
@@ -157,9 +177,10 @@ public:
     }
 
 private:
-    std::istream *file;
+    std::istream  *file;
     std::streampos pos;
     std::streampos max_pos;
+    std::string    filepath;
 
     void ReadBytes(char *ptr, size_t size)
     {
