@@ -10,7 +10,7 @@
 
 namespace hyperion {
 
-template <class T, size_t Sz>
+template <class T, SizeType Sz>
 class FixedArray : public ContainerBase<FixedArray<T, Sz>, UInt> {
     T m_data[Sz];
 
@@ -22,14 +22,14 @@ public:
 
     FixedArray(T const (&items)[Sz])
     {
-        for (size_t i = 0; i < Sz; i++) {
+        for (SizeType i = 0; i < Sz; i++) {
             m_data[i] = items[i];
         }
     }
 
     FixedArray &operator=(T const (&items)[Sz])
     {
-        for (size_t i = 0; i < Sz; i++) {
+        for (SizeType i = 0; i < Sz; i++) {
             m_data[i] = items[i];
         }
 
@@ -66,7 +66,7 @@ public:
     const T &operator[](typename FixedArray::Base::KeyType index) const   { return m_data[index]; }
 
     HYP_FORCE_INLINE
-    size_t Size() const                                                   { return Sz; }
+    constexpr SizeType Size() const                                         { return Sz; }
 
     HYP_FORCE_INLINE
     bool Empty() const                                                    { return Sz == 0; }
@@ -83,49 +83,52 @@ public:
     HYP_DEF_STL_BEGIN_END(&m_data[0], &m_data[Sz])
 };
 
-template <class T, size_t Sz>
+template <class T, SizeType Sz>
 FixedArray<T, Sz>::FixedArray()
     : m_data{}
 {
+    for (SizeType i = 0; i < Sz; i++) {
+        m_data[i] = {};
+    }
 }
 
-template <class T, size_t Sz>
+template <class T, SizeType Sz>
 FixedArray<T, Sz>::FixedArray(const FixedArray &other)
 {
-    for (size_t i = 0; i < Sz; i++) {
+    for (SizeType i = 0; i < Sz; i++) {
         m_data[i] = other.m_data[i];
     }
 }
 
-template <class T, size_t Sz>
+template <class T, SizeType Sz>
 auto FixedArray<T, Sz>::operator=(const FixedArray &other) -> FixedArray&
 {
-    for (size_t i = 0; i < Sz; i++) {
+    for (SizeType i = 0; i < Sz; i++) {
         m_data[i] = other.m_data[i];
     }
 
     return *this;
 }
 
-template <class T, size_t Sz>
+template <class T, SizeType Sz>
 FixedArray<T, Sz>::FixedArray(FixedArray &&other) noexcept
 {
-    for (size_t i = 0; i < Sz; i++) {
+    for (SizeType i = 0; i < Sz; i++) {
         m_data[i] = std::move(other.m_data[i]);
     }
 }
 
-template <class T, size_t Sz>
+template <class T, SizeType Sz>
 auto FixedArray<T, Sz>::operator=(FixedArray &&other) noexcept -> FixedArray&
 {
-    for (size_t i = 0; i < Sz; i++) {
+    for (SizeType i = 0; i < Sz; i++) {
         m_data[i] = std::move(other.m_data[i]);
     }
 
     return *this;
 }
 
-template <class T, size_t Sz>
+template <class T, SizeType Sz>
 FixedArray<T, Sz>::~FixedArray() = default;
 
 // deduction guide

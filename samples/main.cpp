@@ -11,7 +11,7 @@
 #include <scene/Node.hpp>
 #include <rendering/Atomics.hpp>
 #include <animation/Bone.hpp>
-#include <asset/model_loaders/ObjModelLoader.hpp>
+#include <asset/model_loaders/OBJModelLoader.hpp>
 #include <rendering/rt/AccelerationStructureBuilder.hpp>
 #include <rendering/ProbeSystem.hpp>
 #include <rendering/post_fx/SSAO.hpp>
@@ -292,7 +292,7 @@ public:
 
         auto skybox_material = engine->resources.materials.Add(std::make_unique<Material>());
         skybox_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Material::Parameter(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f }));
-        skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
+        // skybox_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, cubemap.IncRef());
         skybox_material.Init();
 
         auto &skybox_spatial = cube_obj->GetChild(0)->GetSpatial();
@@ -707,7 +707,7 @@ int main()
         std::cout << "item : " << it.id << "\n";
     }*/
 
-    engine->assets.SetBasePath(v2::FileSystem::Join(HYP_ROOT_DIR, "../res"));
+    engine->assets.SetBasePath(v2::FileSystem::Join(HYP_ROOT_DIR, "..", "res"));
 
     auto *my_game = new v2::MyGame;
 ;

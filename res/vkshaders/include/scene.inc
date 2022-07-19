@@ -8,33 +8,29 @@ struct Scene {
     mat4 projection;
     // 128
     vec4 camera_position;
+
     // 144
-    vec4 camera_direction;
-    // 160
-    vec4 light_direction;
+    float camera_near;
+    // 148
+    float camera_far;
     
-    // 176
+    // 152
     uint environment_texture_index;
     uint environment_texture_usage;
     uint resolution_x;
     uint resolution_y;
     
-    // 192
+    // 168
     vec4 aabb_max;
     vec4 aabb_min;
 
-    // 224
+    // 200
     float global_timer;
 
-    // 228
+    // 204
     uint num_environment_shadow_maps;
-    // 232
+    // 208
     uint num_lights;
-
-    // 236
-    float camera_near;
-    // 240
-    float camera_far;
 };
 
 struct Light {

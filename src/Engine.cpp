@@ -162,7 +162,7 @@ void Engine::FindTextureFormatDefaults()
 void Engine::PrepareSwapchain()
 {
     auto shader = resources.shaders.Add(std::make_unique<Shader>(
-        std::vector<SubShader>{
+        std::vector<SubShader> {
             {ShaderModule::Type::VERTEX, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_vert.spv")).Read()}},
             {ShaderModule::Type::FRAGMENT, {FileByteReader(FileSystem::Join(assets.GetBasePath(), "vkshaders/blit_frag.spv")).Read()}}
         }

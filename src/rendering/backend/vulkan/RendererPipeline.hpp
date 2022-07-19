@@ -93,6 +93,7 @@ public:
                 UInt32 batch_offset;
                 UInt32 num_drawables;
                 UInt32 scene_id;
+                ShaderVec2<UInt32> depth_pyramid_dimensions;
             } object_visibility_data;
         };
     } push_constants;

@@ -80,7 +80,7 @@ void main()
     vec3 normal = normalize(v0.normal * barycentric_coords.x + v1.normal * barycentric_coords.y + v2.normal * barycentric_coords.z);
 
     // Basic lighting
-    vec3 lightVector    = normalize(scene.light_direction.xyz);
+    vec3 lightVector    = normalize(vec3(-0.5));
     float dot_product   = max(dot(lightVector, normal), 0.6);
     
     payload.diffuse   = vec3(1.0, 0.0, 0.0) * dot_product; /* TODO material albedo */

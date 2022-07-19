@@ -12,6 +12,7 @@
 
 #include <core/lib/StaticMap.hpp>
 #include <util/fs/FsUtil.hpp>
+#include <util/Defines.hpp>
 #include <Constants.hpp>
 
 #include <string>
@@ -254,6 +255,17 @@ class Assets {
             filepath.c_str(),
             error_message.c_str()
         );
+        
+//#if HYP_DEBUG_MODE
+        // AssertThrowMsg(
+        //     false,
+        //    "[%s]: The asset could not be loaded and will be returned as null.\n\t"
+        //    "Any usages or indirection may result in the application crashing!\n"
+        //    "The message was: %s\n",
+        //    filepath.c_str(),
+        //    error_message.c_str()
+        // );
+//#endif
     }
 
     template <class In, class Out>

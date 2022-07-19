@@ -162,7 +162,7 @@ void Spatial::EnqueueRenderUpdates()
 
         GetEngine()->shader_globals->objects.Set(
             m_id.value - 1,
-            {
+            ObjectShaderData {
                 .model_matrix   = transform.GetMatrix(),
 
                 .local_aabb_max = Vector4(m_local_aabb.max, 1.0f),

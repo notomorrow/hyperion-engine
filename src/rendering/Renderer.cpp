@@ -145,9 +145,21 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
             });
 
             m_descriptor_sets[frame_index]->ApplyUpdates(engine->GetDevice());
+
+            m_cached_cull_data_updated[frame_index] = false;
         }
 
         m_cached_cull_data = cull_data;
+
+    if (m_cached_cull_data_updated[frame_index]) {
+        m_descriptor_sets[frame_index]->GetDescriptor(5)->SetSubDescriptor({
+            .element_index = 0,
+            .image_view    = m_cached_cull_data.depth_pyramid_image_views[frame_index]
+        });
+
+        m_descriptor_sets[frame_index]->ApplyUpdates(engine->GetDevice());
+
+        m_cached_cull_data_updated[frame_index] = false;
     }
 
     const auto scene_id = engine->render_state.GetScene().id;
@@ -167,9 +179,10 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
 
         m_object_visibility->GetPipeline()->Bind(command_buffer, Pipeline::PushConstantData {
             .object_visibility_data = {
-                .batch_offset  = batch_index * batch_size,
-                .num_drawables = num_drawables_in_batch,
-                .scene_id      = static_cast<UInt32>(scene_id.value)
+                .batch_offset             = batch_index * batch_size,
+                .num_drawables            = num_drawables_in_batch,
+                .scene_id                 = static_cast<UInt32>(scene_id.value),
+                .depth_pyramid_dimensions = m_cached_cull_data.depth_pyramid_dimensions.ToExtent2D()
             }
         });
 

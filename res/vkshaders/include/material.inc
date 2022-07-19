@@ -32,10 +32,14 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer Mat
 #ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
     layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_SAMPLER) uniform sampler texture_sampler;
     layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
-    layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform textureCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
+    #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
+        layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform textureCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
+    #endif
 #else
     layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform sampler2D textures[HYP_MAX_BOUND_TEXTURES];
-    layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform samplerCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
+    #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
+        layout(set = HYP_DESCRIPTOR_SET_TEXTURES, binding = HYP_DESCRIPTOR_INDEX_TEXTURES_ARRAY) uniform samplerCube cubemap_textures[HYP_MAX_BOUND_TEXTURES];
+    #endif
 #endif
 
 
@@ -62,8 +66,10 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer Mat
 #define GET_TEXTURE(index) \
     textures[material.texture_indices[(index / 4)][index % 4]]
 
-#define GET_TEXTURE_CUBE(index) \
-    cubemap_textures[material.texture_indices[(index / 4)][index % 4]]
+#if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
+    #define GET_TEXTURE_CUBE(index) \
+        cubemap_textures[material.texture_indices[(index / 4)][index % 4]]
+#endif
 
 #ifdef HYP_DESCRIPTOR_INDEX_SAMPLER
     #define SAMPLE_TEXTURE(index, texcoord) \
@@ -75,8 +81,10 @@ layout(std140, set = HYP_DESCRIPTOR_SET_OBJECT, binding = 0) readonly buffer Mat
     #define SAMPLE_TEXTURE(index, texcoord) \
         Texture2D(GET_TEXTURE(index), texcoord)
 
-    #define SAMPLE_TEXTURE_CUBE(index, texcoord) \
-        TextureCube(GET_TEXTURE_CUBE(index), texcoord)
+    #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
+        #define SAMPLE_TEXTURE_CUBE(index, texcoord) \
+            TextureCube(GET_TEXTURE_CUBE(index), texcoord)
+    #endif
 #endif
 
 #endif

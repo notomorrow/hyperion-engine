@@ -215,7 +215,13 @@ std::unique_ptr<MaterialGroup> MtlMaterialLoader::BuildFn(Engine *engine, const 
 
     for (const auto &item : object.materials) {
         for (const auto &it : item.textures) {
-            const auto texture_path = FileSystem::Join(StringUtil::BasePath(object.filepath), it.name);
+            const auto texture_path = FileSystem::Join(
+                FileSystem::RelativePath(
+                    StringUtil::BasePath(object.filepath),
+                    FileSystem::CurrentPath()
+                ),
+                it.name
+            );
 
             texture_names_to_path[it.name] = texture_path;
         }

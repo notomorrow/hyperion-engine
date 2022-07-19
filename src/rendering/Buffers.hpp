@@ -1,6 +1,8 @@
 #ifndef HYPERION_V2_BUFFERS_H
 #define HYPERION_V2_BUFFERS_H
 
+#include <math/Rect.hpp>
+
 #include <util/Defines.hpp>
 
 #include <core/lib/HeapArray.hpp>
@@ -84,18 +86,34 @@ struct alignas(256) SkeletonShaderData {
 };
 
 struct alignas(256) ObjectShaderData {
+    // 0
     Matrix4 model_matrix;
 
+    // 64
     Vector4 local_aabb_max;
+    // 80
     Vector4 local_aabb_min;
+    // 96
     Vector4 world_aabb_max;
+    // 112
     Vector4 world_aabb_min;
 
+    // 128
     UInt32 entity_id;
+    // 132
     UInt32 scene_id;
+    // 136
     UInt32 mesh_id;
+    // 140
     UInt32 material_id;
+    // 144
     UInt32 skeleton_id;
+
+    // 148
+    // HYP_PAD_STRUCT_HERE(UInt32, 3);
+
+    // // 160
+    // Vector4 screenspace_aabb;
 };
 
 static_assert(sizeof(ObjectShaderData) == 256);
@@ -137,8 +155,9 @@ struct alignas(256) SceneShaderData {
     Matrix4 view;
     Matrix4 projection;
     Vector4 camera_position;
-    Vector4 camera_direction;
-    Vector4 light_direction;
+
+    float camera_near;
+    float camera_far;
 
     UInt32 environment_texture_index;
     UInt32 environment_texture_usage;
@@ -151,9 +170,6 @@ struct alignas(256) SceneShaderData {
     float   global_timer;
     UInt32  num_environment_shadow_maps;
     UInt32  num_lights;
-
-    float camera_near;
-    float camera_far;
 };
 
 static_assert(sizeof(SceneShaderData) == 256);

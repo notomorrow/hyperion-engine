@@ -18,6 +18,7 @@
 
 #define HYP_FEATURES_BINDLESS_TEXTURES 0
 #define HYP_FEATURES_GEOMETRY_SHADER   0
+#define HYP_MATERIAL_CUBEMAP_TEXTURES  0
 
 #define HYP_DESCRIPTOR_SET_GLOBAL 1
 #define HYP_DESCRIPTOR_SET_SCENE  2
@@ -51,5 +52,16 @@
 #define HYP_FMATH_SQR(num)  (num)*(num)
 #define HYP_FMATH_CUBE(num) (num)*(num)*(num)
 #define HYP_FMATH_PI        3.14159265359
+
+#ifdef __COUNTER__
+    #define HYP_UNIQUE_NAME(prefix) \
+        HYP_CONCAT(prefix, __COUNTER__)
+#else
+    #define HYP_UNIQUE_NAME(prefix) \
+        prefix
+#endif
+
+#define HYP_PAD_STRUCT_HERE(type, count) \
+    type HYP_UNIQUE_NAME(_padding)[count]
 
 #endif

@@ -8,6 +8,9 @@
 #define HYP_STR(x) #x
 #define HYP_METHOD(method) HYP_STR(method)
 
+#define HYP_CONCAT(a, b) HYP_CONCAT_INNER(a, b)
+#define HYP_CONCAT_INNER(a, b) a ## b
+
 #define HYP_DEF_STRUCT_COMPARE_EQL(hyp_class) \
     bool operator==(const hyp_class &other) const { \
         return !std::memcmp(this, &other, sizeof(*this)); \
@@ -201,6 +204,17 @@
         #define HYP_VULKAN_API_VERSION VK_API_VERSION_1_2
     #endif
 #endif
+
+#ifdef __COUNTER__
+    #define HYP_UNIQUE_NAME(prefix) \
+        HYP_CONCAT(prefix, __COUNTER__)
+#else
+    #define HYP_UNIQUE_NAME(prefix) \
+        prefix
+#endif
+
+#define HYP_PAD_STRUCT_HERE(type, count) \
+    type HYP_UNIQUE_NAME(_padding)[count]
 
 
 //testing, to remove

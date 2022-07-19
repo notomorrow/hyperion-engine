@@ -12,6 +12,9 @@ layout(set = 0, binding = 0) uniform texture2D             mip_in;
 layout(set = 0, binding = 1, r8) uniform writeonly image2D mip_out;
 layout(set = 0, binding = 2) uniform sampler               depth_pyramid_sampler;
 
+#define HYP_DEPTH_PYRAMID_SAMPLE_MAX
+//#define HYP_DEPTH_PYRAMID_SAMPLE_MIN
+
 layout(push_constant) uniform DepthPyramidData {
     uvec2 mip_dimensions;
     uvec2 prev_mip_dimensions;
@@ -21,7 +24,11 @@ layout(push_constant) uniform DepthPyramidData {
 float GetDepthAtTexel(ivec2 coord, ivec2 offset)
 {
     if (coord.x + offset.x >= prev_mip_dimensions.x || coord.y + offset.y >= prev_mip_dimensions.y) {
+#ifdef HYP_DEPTH_PYRAMID_SAMPLE_MAX
+        return 0.0;
+#else
         return 1.0;
+#endif
     }
 
     return Texture2DTexel(depth_pyramid_sampler, mip_in, coord + offset).r;
@@ -39,7 +46,11 @@ void main()
     float i0j1 = GetDepthAtTexel(texel_coord, ivec2(0, 1));
     float i1j1 = GetDepthAtTexel(texel_coord, ivec2(1, 1));
 
+#ifdef HYP_DEPTH_PYRAMID_SAMPLE_MAX
+    float depth = max(i0j0, max(i1j0, max(i0j1, i1j1)));
+#else
     float depth = min(i0j0, min(i1j0, min(i0j1, i1j1)));
+#endif
 
     imageStore(mip_out, ivec2(coord), vec4(depth));
 }

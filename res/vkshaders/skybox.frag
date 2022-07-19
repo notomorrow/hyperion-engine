@@ -25,7 +25,12 @@ layout(set = HYP_DESCRIPTOR_SET_GLOBAL, binding = 25) uniform textureCube render
 void main() {
     vec3 normal = normalize(v_normal);
 
+#if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
     gbuffer_albedo     = vec4(SAMPLE_TEXTURE_CUBE(MATERIAL_TEXTURE_ALBEDO_map, v_position).rgb, 0.0 /* just for now to tell deferred to not perform lighting */);
+#else
+    gbuffer_albedo     = vec4(0.0);
+#endif
+
     gbuffer_normals    = vec4(0.0);  // not needed
     gbuffer_positions  = vec4(0.0);  // not needed
     gbuffer_material   = vec4(0.0);

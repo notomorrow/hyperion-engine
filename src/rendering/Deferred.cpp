@@ -411,7 +411,7 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
                 static_cast<UInt>(MathUtil::PreviousPowerOf2(depth_image->GetExtent().height)),
                 1
             },
-            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R8,
+            Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R32F,
             Image::Type::TEXTURE_TYPE_2D,
             Image::FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP,//Image::FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP,
             nullptr
@@ -558,7 +558,7 @@ void DepthPyramidRenderer::Render(Engine *engine, Frame *frame)
         primary->BindDescriptorSet(
             engine->GetInstance()->GetDescriptorPool(),
             m_generate_depth_pyramid->GetPipeline(),
-            m_depth_pyramid_descriptor_sets[frame_index][mip_level].get(), // for now.. could go with 1 per mip level
+            m_depth_pyramid_descriptor_sets[frame_index][mip_level].get(),
             static_cast<DescriptorSet::Index>(0)
         );
 
@@ -567,10 +567,10 @@ void DepthPyramidRenderer::Render(Engine *engine, Frame *frame)
             primary,
             Pipeline::PushConstantData {
                 .depth_pyramid_data = {
-                    .mip_width       = mip_width,
-                    .mip_height      = mip_height,
-                    .prev_mip_width  = prev_mip_width,
-                    .prev_mip_height = prev_mip_height,
+                    .mip_width        = mip_width,
+                    .mip_height       = mip_height,
+                    .prev_mip_width   = prev_mip_width,
+                    .prev_mip_height  = prev_mip_height,
                     .mip_level        = mip_level
                 }
             }
