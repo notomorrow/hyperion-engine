@@ -18,6 +18,8 @@
 namespace hyperion {
 
 class Vertex {
+    friend Vertex operator*(const Matrix4 &mat, const Vertex &vertex);
+    friend Vertex operator*(const Transform &transform, const Vertex &vertex);
 public:
     Vertex()
         : num_indices(0),
@@ -29,7 +31,7 @@ public:
         }
     }
 
-    Vertex(const Vector3 &position)
+    explicit Vertex(const Vector3 &position)
         : position(position),
           num_indices(0),
           num_weights(0)
@@ -40,7 +42,7 @@ public:
         }
     }
 
-    Vertex(const Vector3 &position, const Vector2 &texcoord0)
+    explicit Vertex(const Vector3 &position, const Vector2 &texcoord0)
         : position(position),
           texcoord0(texcoord0),
           num_indices(0),
@@ -52,7 +54,7 @@ public:
         }
     }
 
-    Vertex(const Vector3 &position, const Vector2 &texcoord0, const Vector3 &normal)
+    explicit Vertex(const Vector3 &position, const Vector2 &texcoord0, const Vector3 &normal)
         : position(position),
           normal(normal),
           texcoord0(texcoord0),
@@ -82,11 +84,7 @@ public:
     bool operator==(const Vertex &other) const;
     Vertex &operator=(const Vertex &other);
     Vertex operator*(float scalar) const;
-    Vertex operator*(const Matrix4 &mat) const;
-    Vertex operator*(const Transform &transform) const;
     Vertex &operator*=(float scalar);
-    Vertex &operator*=(const Matrix4 &mat);
-    Vertex &operator*=(const Transform &transform);
 
     void SetPosition(const Vector3 &vec)  { position = vec; }
     const Vector3 &GetPosition() const    { return position; }
@@ -146,6 +144,9 @@ private:
     std::array<Float, MAX_BONE_WEIGHTS> bone_weights;
     std::array<UInt,  MAX_BONE_INDICES> bone_indices;
 };
+
+Vertex operator*(const Matrix4 &mat, const Vertex &vertex);
+Vertex operator*(const Transform &transform, const Vertex &vertex);
 
 } // namespace hyperion
 

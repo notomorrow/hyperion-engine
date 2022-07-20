@@ -116,12 +116,12 @@ void Bone::CalculateBoneRotation()
 void Bone::UpdateBoneTransform()
 {
     m_bone_matrix = Matrix4::Translation(m_world_bone_translation * -1.0f);
-    m_bone_matrix *= Matrix4::Rotation(m_world_bone_rotation * m_pose_transform.GetRotation() * GetOffsetRotation() * m_inv_binding_rotation);
-    m_bone_matrix *= Matrix4::Translation(m_world_bone_translation + m_pose_transform.GetTranslation() + GetOffsetTranslation());
+    m_bone_matrix = Matrix4::Rotation(m_world_bone_rotation * m_pose_transform.GetRotation() * GetOffsetRotation() * m_inv_binding_rotation) * m_bone_matrix;
+    m_bone_matrix = Matrix4::Translation(m_world_bone_translation + m_pose_transform.GetTranslation() + GetOffsetTranslation()) * m_bone_matrix;
 
     if (m_parent_node != nullptr) {
         if (m_parent_node->GetType() == Type::BONE) {
-            m_bone_matrix *= static_cast<Bone *>(m_parent_node)->GetBoneMatrix();  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+            m_bone_matrix = static_cast<Bone *>(m_parent_node)->GetBoneMatrix() * m_bone_matrix;  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
         }
     }
 

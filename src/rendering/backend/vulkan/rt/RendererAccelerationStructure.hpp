@@ -1,14 +1,14 @@
 #ifndef RENDERER_ACCELERATION_STRUCTURE_H
 #define RENDERER_ACCELERATION_STRUCTURE_H
 
+#include <math/Matrix4.hpp>
+
 #include "../RendererResult.hpp"
 #include "../RendererBuffer.hpp"
 #include "../RendererStructs.hpp"
 
 #include <vector>
 #include <memory>
-
-#include "RendererAccelerationStructure.hpp"
 
 namespace hyperion {
 namespace renderer {

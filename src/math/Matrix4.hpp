@@ -5,6 +5,7 @@
 #include "Vector4.hpp"
 #include "../HashCode.hpp"
 #include "../Util.hpp"
+#include <Types.hpp>
 
 #include <iostream>
 #include <array>
@@ -29,17 +30,18 @@ public:
     
     union {
         Vector4 rows[4];
-        float values[16];
+        float   values[16];
     };
 
     Matrix4();
-    explicit Matrix4(float *v);
+    explicit Matrix4(const float *v);
     Matrix4(const Matrix4 &other);
 
     float Determinant() const;
     Matrix4 &Transpose();
     Matrix4 Transposed() const;
     Matrix4 &Invert();
+    Matrix4 Inverted() const;
 
     float GetYaw() const;
     float GetPitch() const;
@@ -68,10 +70,10 @@ public:
     constexpr float &At(int i, int j) { return rows[i][j]; }
 #pragma endregion
 
-    constexpr Vector4 &operator[](uint32_t row) { return rows[row]; }
-    constexpr const Vector4 &operator[](uint32_t row) const { return rows[row]; }
+    constexpr Vector4 &operator[](UInt row)             { return rows[row]; }
+    constexpr const Vector4 &operator[](UInt row) const { return rows[row]; }
 
-    static Matrix4 Zeroes();
+    static Matrix4 Zeros();
     static Matrix4 Ones();
     static Matrix4 Identity();
 

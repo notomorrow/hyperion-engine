@@ -265,7 +265,7 @@ void CubemapRenderer::CreateImagesAndBuffers(Engine *engine)
         cubemap_uniforms.projection_matrices[i] = Matrix4::Perspective(
             90.0f,
             m_cubemap_dimensions.width, m_cubemap_dimensions.height,
-            0.015f, m_aabb.GetDimensions().Max()
+            0.015f, m_aabb.GetExtent().Max()
         );
 
         cubemap_uniforms.view_matrices[i] = Matrix4::LookAt(

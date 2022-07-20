@@ -38,31 +38,22 @@ Vertex Vertex::operator*(float scalar) const
     return other;
 }
 
-Vertex Vertex::operator*(const Matrix4 &mat) const
-{
-    Vertex other(*this);
-    other.SetPosition(GetPosition() * mat);
-
-    return other;
-}
-
-Vertex Vertex::operator*(const Transform &transform) const
-{
-    return operator*(transform.GetMatrix());
-}
-
 Vertex &Vertex::operator*=(float scalar)
 {
     return *this = operator*(scalar);
 }
 
-Vertex &Vertex::operator*=(const Matrix4 &mat)
+Vertex operator*(const Matrix4 &mat, const Vertex &vertex)
 {
-    return *this = operator*(mat);
+    Vertex other(vertex);
+    other.SetPosition(mat * vertex.GetPosition());
+
+    return other;
 }
 
-Vertex &Vertex::operator*=(const Transform &transform)
+Vertex operator*(const Transform &transform, const Vertex &vertex)
 {
-    return *this = operator*(transform);
+    return transform.GetMatrix() * vertex;
 }
+
 } // namespace hyperion

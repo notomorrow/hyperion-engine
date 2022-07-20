@@ -23,7 +23,7 @@ class Pipeline {
     friend class DescriptorPool;
 
 public:
-    struct alignas(16) PushConstantData {
+    struct alignas(128) PushConstantData {
         union {
             struct {  // NOLINT(clang-diagnostic-nested-anon-types)
                 UInt32 grid_size,

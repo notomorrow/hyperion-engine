@@ -5,6 +5,8 @@
 #include "Vector4.hpp"
 #include "BoundingBox.hpp"
 
+#include <core/lib/FixedArray.hpp>
+
 #include <array>
 
 namespace hyperion {
@@ -23,7 +25,7 @@ public:
     //Frustum &SetFromAabb(const BoundingBox &aabb);
     //Frustum &SetFromCorners(const std::array<Vector3, 8> &corners);
 
-    std::array<Vector4, 6> m_planes;
+    FixedArray<Vector4, 6> m_planes;
 };
 } // namespace hyperion
 

@@ -7,6 +7,8 @@
 #include <core/lib/FixedArray.hpp>
 #include <core/lib/DynArray.hpp>
 
+#include <math/BoundingSphere.hpp>
+
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererFrame.hpp>
@@ -30,10 +32,13 @@ class Material;
 class Engine;
 
 struct alignas(16) ObjectInstance {
-    UInt32 entity_id;
-    UInt32 draw_command_index;
-    UInt32 batch_index;
-    UInt32 num_indices;
+    UInt32  entity_id;
+    UInt32  draw_command_index;
+    UInt32  batch_index;
+    UInt32  num_indices;
+    Vector4 aabb_max;
+    Vector4 aabb_min;
+    Vector4 bounding_sphere;
 };
 
 struct Drawable {
@@ -50,6 +55,9 @@ struct Drawable {
                    mesh_id,
                    material_id,
                    skeleton_id;
+
+    BoundingBox    bounding_box;
+    BoundingSphere bounding_sphere;
 
     // object instance in GPU
     ObjectInstance object_instance;

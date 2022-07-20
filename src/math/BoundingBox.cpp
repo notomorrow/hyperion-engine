@@ -39,18 +39,29 @@ std::array<Vector3, 8> BoundingBox::GetCorners() const
 
 void BoundingBox::SetCenter(const Vector3 &center)
 {
-    Vector3 dimensions = GetDimensions();
+    Vector3 dimensions = GetExtent();
 
     max = center + dimensions * 0.5f;
     min = center - dimensions * 0.5f;
 }
 
-void BoundingBox::SetDimensions(const Vector3 &dimensions)
+void BoundingBox::SetExtent(const Vector3 &dimensions)
 {
     Vector3 center = GetCenter();
 
     max = center + dimensions * 0.5f;
     min = center - dimensions * 0.5f;
+}
+
+// https://github.com/openscenegraph/OpenSceneGraph/blob/master/include/osg/BoundingBox
+float BoundingBox::GetRadiusSquared() const
+{
+    return 0.25f * GetExtent().LengthSquared();
+}
+
+float BoundingBox::GetRadius() const
+{
+    return MathUtil::Sqrt(GetRadiusSquared());
 }
 
 BoundingBox &BoundingBox::operator*=(float scalar)
@@ -105,12 +116,7 @@ BoundingBox &BoundingBox::operator*=(const Transform &transform)
 
 BoundingBox BoundingBox::operator*(const Transform &transform) const
 {
-    BoundingBox other(*this);
-
-    other.max *= transform.GetMatrix();
-    other.min *= transform.GetMatrix();
-
-    return other;
+    return BoundingBox(*this) *= transform;
 }
 
 BoundingBox &BoundingBox::Clear()

@@ -8,12 +8,13 @@
 #include <Util.hpp>
 #include <util/Defines.hpp>
 #include <util/StringUtil.hpp>
+#include <core/Core.hpp>
 
+#include <array>
 #include <fstream>
 #include <type_traits>
 #include <thread>
 #include <mutex>
-#include <core/Core.hpp>
 
 namespace hyperion {
 template <size_t BufferSize, class Byte = UByte>

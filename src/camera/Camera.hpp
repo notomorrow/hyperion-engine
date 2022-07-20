@@ -110,6 +110,12 @@ public:
     /*! \brief Transform a 3D vector in NDC space into world coordinates */
     Vector4 TransformNDCToWorld(const Vector3 &ndc) const;
 
+    /*! \brief Transform a 3D vector in world space into NDC space */
+    Vector3 TransformWorldToNDC(const Vector3 &world) const;
+
+    /*! \brief Transform a 3D vector in NDC into screen space */
+    Vector2 TransformNDCToScreen(const Vector3 &ndc) const;
+
     /*! \brief Transform a 2D vector of x,y ranging from [0, 1] into world coordinates */
     Vector4 TransformScreenToWorld(const Vector2 &screen) const;
 

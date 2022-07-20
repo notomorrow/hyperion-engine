@@ -5,18 +5,19 @@
 #include <tuple>
 #include <iostream>
 
-#include "Matrix3.hpp"
-#include "Matrix4.hpp"
 #include "Vector4.hpp"
 #include "../HashCode.hpp"
 #include "../Util.hpp"
 
 #include <util/Defines.hpp>
+#include <Types.hpp>
 
 namespace hyperion {
 
 class Quaternion;
 class Vector2;
+class Matrix3;
+class Matrix4;
 
 class Vector3 {
     friend std::ostream &operator<<(std::ostream &out, const Vector3 &vec);
@@ -30,23 +31,24 @@ public:
     Vector3(float x, float y, float z);
     Vector3(float xyz);
     explicit Vector3(const Vector2 &xy, float z);
+    /*! \brief Convert a Vector4 to Vector3, discarding w component. */
     explicit Vector3(const Vector4 &vec);
     Vector3(const Vector3 &other);
 
-    float GetX() const { return x; }
-    float &GetX() { return x; }
+    float GetX() const     { return x; }
+    float &GetX()          { return x; }
     Vector3 &SetX(float x) { this->x = x; return *this; }
-    float GetY() const { return y; }
-    float &GetY() { return y; }
+    float GetY() const     { return y; }
+    float &GetY()          { return y; }
     Vector3 &SetY(float y) { this->y = y; return *this; }
-    float GetZ() const { return z; }
-    float &GetZ() { return z; }
+    float GetZ() const     { return z; }
+    float &GetZ()          { return z; }
     Vector3 &SetZ(float z) { this->z = z; return *this; }
 
-    constexpr float operator[](size_t index) const
+    constexpr float operator[](UInt index) const
         { return values[index]; }
 
-    constexpr float &operator[](size_t index)
+    constexpr float &operator[](UInt index)
         { return values[index]; }
 
     Vector3 &operator=(const Vector3 &other);

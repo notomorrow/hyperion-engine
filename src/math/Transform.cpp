@@ -35,11 +35,11 @@ Transform::Transform(const Transform &other)
 
 void Transform::UpdateMatrix()
 {
-    const auto s = Matrix4::Scaling(m_scale);
-    const auto r = Matrix4::Rotation(m_rotation);
     const auto t = Matrix4::Translation(m_translation);
+    const auto r = Matrix4::Rotation(m_rotation);
+    const auto s = Matrix4::Scaling(m_scale);
 
-    m_matrix = s * r * t;
+    m_matrix = t * r * s;
 }
 
 Transform Transform::operator*(const Transform &other) const
