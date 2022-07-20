@@ -215,6 +215,18 @@ public:
     static constexpr bool InRange(T value, const std::pair<U, V> &range)
         { return value >= range.first && value < range.second; }
 
+    template <class T, class U = T>
+    static constexpr U Sqrt(T value)
+    {
+        if constexpr (std::is_same_v<U, double>) {
+            return std::sqrt(static_cast<double>(value));
+        } else if constexpr (std::is_same_v<U, float>) {
+            return std::sqrtf(static_cast<float>(value));
+        } else {
+            return static_cast<U>(std::sqrtf(static_cast<float>(value)));
+        }
+    }
+
     template <class T>
     static constexpr bool IsPowerOfTwo(T value)
         { return (value & (value - 1)) == 0; }

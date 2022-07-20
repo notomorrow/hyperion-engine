@@ -26,8 +26,10 @@ public:
     std::array<Vector3, 8> GetCorners() const;
     Vector3 GetCenter() const           { return (max + min) / 2.0f; }
     void SetCenter(const Vector3 &center);
-    Vector3 GetDimensions() const       { return max - min; }
-    void SetDimensions(const Vector3 &dimensions);
+    Vector3 GetExtent() const           { return max - min; }
+    void SetExtent(const Vector3 &dimensions);
+    float GetRadiusSquared() const;
+    float GetRadius() const;
 
     BoundingBox operator*(float scalar) const;
     BoundingBox &operator*=(float scalar);

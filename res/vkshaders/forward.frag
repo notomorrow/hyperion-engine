@@ -119,6 +119,8 @@ void main()
     //     gbuffer_albedo = vec4(1.0, 0.0, 0.0, 1.0);
     // }
 
+    // gbuffer_albedo.rgb = vec3(distance(object.world_bounding_sphere.xyz, scene.camera_position.xyz) * 0.01);
+
     
     gbuffer_normals    = EncodeNormal(normal);
     gbuffer_positions  = vec4(v_position, 1.0);

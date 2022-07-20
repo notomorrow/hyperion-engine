@@ -2,6 +2,7 @@
 #define HYPERION_V2_BUFFERS_H
 
 #include <math/Rect.hpp>
+#include <math/Matrix4.hpp>
 
 #include <util/Defines.hpp>
 
@@ -80,7 +81,7 @@ struct alignas(256) CubemapUniforms {
 };
 
 struct alignas(256) SkeletonShaderData {
-    static constexpr size_t max_bones = 128;
+    static constexpr SizeType max_bones = 128;
 
     Matrix4 bones[max_bones];
 };
@@ -97,29 +98,20 @@ struct alignas(256) ObjectShaderData {
     Vector4 world_aabb_max;
     // 112
     Vector4 world_aabb_min;
-
     // 128
+    Vector4 world_bounding_sphere;
+
     UInt32 entity_id;
-    // 132
     UInt32 scene_id;
-    // 136
     UInt32 mesh_id;
-    // 140
     UInt32 material_id;
-    // 144
     UInt32 skeleton_id;
-
-    // 148
-    // HYP_PAD_STRUCT_HERE(UInt32, 3);
-
-    // // 160
-    // Vector4 screenspace_aabb;
 };
 
 static_assert(sizeof(ObjectShaderData) == 256);
 
 struct MaterialShaderData {
-    static constexpr size_t max_bound_textures = 16u;
+    static constexpr SizeType max_bound_textures = 16u;
 
     // 0
     Vector4 albedo;
@@ -158,6 +150,8 @@ struct alignas(256) SceneShaderData {
 
     float camera_near;
     float camera_far;
+
+    HYP_PAD_STRUCT_HERE(float, 2);
 
     UInt32 environment_texture_index;
     UInt32 environment_texture_usage;
@@ -201,36 +195,36 @@ struct alignas(16) EnvProbeShaderData {
 };
 
 /* max number of skeletons, based on size in mb */
-constexpr size_t max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
-constexpr size_t max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
+constexpr SizeType max_skeletons         = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
+constexpr SizeType max_skeletons_bytes   = max_skeletons * sizeof(SkeletonShaderData);
 /* max number of materials, based on size in mb */
-constexpr size_t max_materials = (8ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
-constexpr size_t max_materials_bytes = max_materials * sizeof(MaterialShaderData);
+constexpr SizeType max_materials         = (8ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
+constexpr SizeType max_materials_bytes   = max_materials * sizeof(MaterialShaderData);
 /* max number of objects, based on size in mb */
-constexpr size_t max_objects = (32ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
-constexpr size_t max_objects_bytes = max_materials * sizeof(ObjectShaderData);
+constexpr SizeType max_objects           = (32ull * 1024ull * 1024ull) / sizeof(ObjectShaderData);
+constexpr SizeType max_objects_bytes     = max_materials * sizeof(ObjectShaderData);
 /* max number of scenes (cameras, essentially), based on size in kb */
-constexpr size_t max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
-constexpr size_t max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
+constexpr SizeType max_scenes            = (32ull * 1024ull) / sizeof(SceneShaderData);
+constexpr SizeType max_scenes_bytes      = max_scenes * sizeof(SceneShaderData);
 /* max number of lights, based on size in kb */
-constexpr size_t max_lights = (16ull * 1024ull) / sizeof(LightShaderData);
-constexpr size_t max_lights_bytes = max_lights * sizeof(LightShaderData);
+constexpr SizeType max_lights            = (16ull * 1024ull) / sizeof(LightShaderData);
+constexpr SizeType max_lights_bytes      = max_lights * sizeof(LightShaderData);
 /* max number of shadow maps, based on size in kb */
-constexpr size_t max_shadow_maps = (16ull * 1024ull) / sizeof(ShadowShaderData);
-constexpr size_t max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
+constexpr SizeType max_shadow_maps       = (16ull * 1024ull) / sizeof(ShadowShaderData);
+constexpr SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
 
-template <class Buffer, class StructType, size_t Size>
+template <class Buffer, class StructType, SizeType Size>
 class ShaderData {
 public:
-    ShaderData(size_t num_buffers)
+    ShaderData(SizeType num_buffers)
     {
         m_buffers.resize(num_buffers);
 
-        for (size_t i = 0; i < num_buffers; i++) {
+        for (SizeType i = 0; i < num_buffers; i++) {
             m_buffers[i] = std::make_unique<Buffer>();
         }
 
-        for (size_t i = 0; i < m_staging_objects_pool.num_staging_buffers; i++) {
+        for (SizeType i = 0; i < m_staging_objects_pool.num_staging_buffers; i++) {
             auto &buffer = m_staging_objects_pool.buffers[i];
 
             buffer.dirty.resize(num_buffers);
@@ -250,19 +244,19 @@ public:
     
     void Create(Device *device)
     {
-        for (size_t i = 0; i < m_buffers.size(); i++) {
+        for (SizeType i = 0; i < m_buffers.size(); i++) {
             HYPERION_ASSERT_RESULT(m_buffers[i]->Create(device, sizeof(StructType) * Size));
         }
     }
 
     void Destroy(Device *device)
     {
-        for (size_t i = 0; i < m_buffers.size(); i++) {
+        for (SizeType i = 0; i < m_buffers.size(); i++) {
             HYPERION_ASSERT_RESULT(m_buffers[i]->Destroy(device));
         }
     }
 
-    void UpdateBuffer(Device *device, size_t buffer_index)
+    void UpdateBuffer(Device *device, SizeType buffer_index)
     {
 #if HYP_BUFFERS_USE_SPINLOCK
         static constexpr UInt32 max_spins = 2;
@@ -304,7 +298,7 @@ public:
 #endif
     }
 
-    void Set(size_t index, const StructType &value)
+    void Set(SizeType index, const StructType &value)
     {
         m_staging_objects_pool.Set(index, value);
     }
@@ -313,7 +307,7 @@ public:
      * use when it is preferable to fetch the object, update the struct, and then
      * call Set. This is usually when the object would have a large stack size
      */
-    StructType &Get(size_t index)
+    StructType &Get(SizeType index)
     {
         return m_staging_objects_pool.Current().objects[index];
     }
@@ -330,9 +324,9 @@ private:
         ~StagingObjectsPool() = default;
 
         struct StagingObjects {
-            std::atomic_bool            locked{false};
-            HeapArray<StructType, Size> objects;
-            std::vector<Range<size_t>>  dirty;
+            std::atomic_bool             locked{false};
+            HeapArray<StructType, Size>  objects;
+            std::vector<Range<SizeType>> dirty;
 
             StagingObjects() = default;
             StagingObjects(const StagingObjects &other) = delete;
@@ -342,7 +336,7 @@ private:
             ~StagingObjects() = default;
 
             template <class BufferContainer>
-            void PerformUpdate(Device *device, BufferContainer &buffer_container, size_t buffer_index, StructType *ptr)
+            void PerformUpdate(Device *device, BufferContainer &buffer_container, SizeType buffer_index, StructType *ptr)
             {
                 auto &current_dirty = dirty[buffer_index];
 
@@ -365,10 +359,10 @@ private:
                 current_dirty.Reset();
             }
 
-            void MarkDirty(size_t index)
+            void MarkDirty(SizeType index)
             {
                 for (auto &d : dirty) {
-                    d |= Range<size_t>{index, index + 1};
+                    d |= Range<SizeType>{index, index + 1};
                 }
             }
 
@@ -395,7 +389,7 @@ private:
         }
 #endif
 
-        void Set(size_t index, const StructType &value)
+        void Set(SizeType index, const StructType &value)
         {
             AssertThrowMsg(index < buffers[0].objects.Size(), "Cannot set shader data at %llu in buffer: out of bounds", index);
 

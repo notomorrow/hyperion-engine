@@ -3,6 +3,7 @@
 
 namespace hyperion {
 Triangle::Triangle()
+    : m_points{}
 {
 }
 
@@ -11,37 +12,14 @@ Triangle::Triangle(const Vertex &v0, const Vertex &v1, const Vertex &v2)
 {
 }
 
+Triangle::Triangle(const Vector3 &v0, const Vector3 &v1, const Vector3 &v2)
+    : m_points({ Vertex(v0), Vertex(v1), Vertex(v2) })
+{
+}
+
 Triangle::Triangle(const Triangle &other)
     : m_points(other.m_points)
 {
-}
-
-Triangle Triangle::operator*(const Matrix4 &mat) const
-{
-    return Triangle(
-        GetPoint(0) * mat,
-        GetPoint(1) * mat,
-        GetPoint(2) * mat
-    );
-}
-
-Triangle &Triangle::operator*=(const Matrix4 &mat)
-{
-    for (auto &pt : m_points) {
-        pt *= mat;
-    }
-
-    return *this;
-}
-
-Triangle Triangle::operator*(const Transform &transform) const
-{
-    return operator*(transform.GetMatrix());
-}
-
-Triangle &Triangle::operator*=(const Transform &transform)
-{
-    return operator*=(transform.GetMatrix());
 }
 
 Vertex &Triangle::Closest(const Vector3 &vec)

@@ -2,6 +2,7 @@
 #include "MathUtil.hpp"
 #include "Vector3.hpp"
 #include "Vector2.hpp"
+#include "Matrix4.hpp"
 
 namespace hyperion {
 
@@ -106,10 +107,12 @@ Vector4 &Vector4::operator*=(const Vector4 &other)
 
 Vector4 Vector4::operator*(const Matrix4 &mat) const
 {
-    return Vector4(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + w * mat(0, 3),
-        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + w * mat(1, 3),
-        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + w * mat(2, 3),
-        x * mat(3, 0) + y * mat(3, 1) + z * mat(3, 2) + w * mat(3, 3));
+    return {
+        x * mat.values[0]  + y * mat.values[1]  + z * mat.values[2]  + w * mat.values[3],
+        x * mat.values[4]  + y * mat.values[5]  + z * mat.values[6]  + w * mat.values[7],
+        x * mat.values[8]  + y * mat.values[9]  + z * mat.values[10] + w * mat.values[11],
+        x * mat.values[12] + y * mat.values[13] + z * mat.values[14] + w * mat.values[15]
+    };
 }
 
 Vector4 &Vector4::operator*=(const Matrix4 &mat)
@@ -152,7 +155,7 @@ float Vector4::DistanceSquared(const Vector4 &other) const
 
 float Vector4::Distance(const Vector4 &other) const
 {
-    return sqrt(DistanceSquared(other));
+    return MathUtil::Sqrt(DistanceSquared(other));
 }
 
 Vector4 Vector4::Normalized() const

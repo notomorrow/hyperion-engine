@@ -2357,7 +2357,7 @@ static void stbi__idct_block(stbi_uc *out, int out_stride, short data[64])
 
    // columns
    for (i=0; i < 8; ++i,++d, ++v) {
-      // if all zeroes, shortcut -- this avoids dequantizing 0s and IDCTing
+      // if all Zeros, shortcut -- this avoids dequantizing 0s and IDCTing
       if (d[ 8]==0 && d[16]==0 && d[24]==0 && d[32]==0
            && d[40]==0 && d[48]==0 && d[56]==0) {
          //    no shortcut                 0     seconds

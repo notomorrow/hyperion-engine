@@ -13,6 +13,9 @@ struct Scene {
     float camera_near;
     // 148
     float camera_far;
+
+    float _pad0;
+    float _pad1;
     
     // 152
     uint environment_texture_index;
@@ -49,7 +52,7 @@ struct ShadowMap {
 };
 
 #ifndef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-layout(std430, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneDataBlock {
+layout(std140, set = HYP_DESCRIPTOR_SET_SCENE, binding = 0, row_major) readonly buffer SceneDataBlock {
     Scene scene;
 };
 

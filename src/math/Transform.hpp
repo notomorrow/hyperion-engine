@@ -12,7 +12,7 @@ public:
     static const Transform identity;
 
     Transform();
-    Transform(const Vector3 &translation);
+    explicit Transform(const Vector3 &translation);
     Transform(const Vector3 &translation, const Vector3 &scale, const Quaternion &rotation);
     Transform(const Transform &other);
 

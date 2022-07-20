@@ -18,7 +18,7 @@ public:
     virtual ~UIObject() = default;
 
     const Extent2D &GetPosition() const   { return m_position; }
-    const Extent2D &GetDimensions() const { return m_dimensions; }
+    const Extent2D &GetExtent() const { return m_dimensions; }
 
 protected:
     Extent2D m_position,

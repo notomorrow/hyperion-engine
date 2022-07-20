@@ -104,7 +104,7 @@ public:
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 1024, 1024,//2048, 1080,
                 70.0f,
-                0.8f, 15000.0f
+                0.15f, 1500.0f
             )
         ));
         engine->GetWorld().AddScene(scene.IncRef());
@@ -129,7 +129,7 @@ public:
 
             auto sphere = engine->assets.Load<Node>("models/sphere_hq.obj");
             sphere->Scale(1.0f);
-            // sphere->SetName("sphere");
+            sphere->SetName("sphere");
             // sphere->GetChild(0)->GetSpatial()->SetMaterial(engine->resources.materials.Add(std::make_unique<Material>()));
             sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
             sphere->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, (float(i) / 8.0f));
@@ -398,7 +398,7 @@ public:
         //scene->GetEnvironment()->GetShadowRenderer(0)->SetOrigin(scene->GetCamera()->GetTranslation());
 
 
-        if (0) { // bad performance on large meshes. need bvh
+        if (1) { // bad performance on large meshes. need bvh
         //if (input_manager->IsButtonDown(MOUSE_BUTTON_LEFT) && ray_cast_timer > 1.0f) {
         //    ray_cast_timer = 0.0f;
             const auto &mouse_position = input_manager->GetMousePosition();
@@ -415,10 +415,13 @@ public:
 
             auto ray_direction = mouse_world.Normalized() * -1.0f;
 
+            // std::cout << "ray direction: " << ray_direction << "\n";
+
             Ray ray{scene->GetCamera()->GetTranslation(), Vector3(ray_direction)};
             RayTestResults results;
 
             if (engine->GetWorld().GetOctree().TestRay(ray, results)) {
+                // std::cout << "hit with aabb : " << results.Front().hitpoint << "\n";
                 RayTestResults triangle_mesh_results;
 
                 for (const auto &hit : results) {
@@ -472,7 +475,9 @@ public:
 
             // std::cout << "min, max in screenspace: " << min_ss << ",   " << max_ss << "\n";
 
-             suzanne->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 0.17f);
+            //  suzanne->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 5.0f);
+            // std::cout << scene->GetCamera()->TransformNDCToScreen(scene->GetCamera()->TransformWorldToNDC(suzanne->GetWorldTranslation())) << "\n";
+
         }
 
         //m_point_light->SetPosition({ std::sin(timer * 0.5f) * 5.0f, 6.0f, std::cos(timer * 0.5f) * 5.0f });

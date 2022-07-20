@@ -22,7 +22,7 @@ uint hash( uvec4 v ) { return hash( v.x ^ hash(v.y) ^ hash(v.z) ^ hash(v.w) ); }
 
 
 // Construct a float with half-open range [0:1] using low 23 bits.
-// All zeroes yields 0.0, all ones yields the next smallest representable value below 1.0.
+// All Zeros yields 0.0, all ones yields the next smallest representable value below 1.0.
 float floatConstruct( uint m ) {
     const uint ieeeMantissa = 0x007FFFFFu; // binary32 mantissa bitmask
     const uint ieeeOne      = 0x3F800000u; // 1.0 in IEEE binary32

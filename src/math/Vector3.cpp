@@ -1,5 +1,7 @@
 #include "Vector3.hpp"
 #include "Quaternion.hpp"
+#include "Matrix3.hpp"
+#include "Matrix4.hpp"
 
 #include <cmath>
 
@@ -38,11 +40,6 @@ Vector3::Vector3(const Vector4 &vec)
       y(vec.y),
       z(vec.z)
 {
-    const float mag = MathUtil::Max(vec.w, MathUtil::epsilon<float>);
-
-    x /= mag;
-    y /= mag;
-    z /= mag;
 }
 
 Vector3::Vector3(const Vector3 &other)
@@ -101,9 +98,11 @@ Vector3 &Vector3::operator*=(const Vector3 &other)
 
 Vector3 Vector3::operator*(const Matrix3 &mat) const
 {
-    return Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2),
-        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2),
-        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2));
+    return {
+        x * mat.values[0] + y * mat.values[1] + z * mat.values[2],
+        x * mat.values[3] + y * mat.values[4] + z * mat.values[5],
+        x * mat.values[6] + y * mat.values[7] + z * mat.values[8]
+    };
 }
 
 Vector3 &Vector3::operator*=(const Matrix3 &mat)
@@ -113,9 +112,14 @@ Vector3 &Vector3::operator*=(const Matrix3 &mat)
 
 Vector3 Vector3::operator*(const Matrix4 &mat) const
 {
-    return Vector3(x * mat(0, 0) + y * mat(0, 1) + z * mat(0, 2) + 1.0f * mat(0, 3),
-        x * mat(1, 0) + y * mat(1, 1) + z * mat(1, 2) + 1.0f * mat(1, 3),
-        x * mat(2, 0) + y * mat(2, 1) + z * mat(2, 2) + 1.0f * mat(2, 3));
+    const Vector4 product {
+        x * mat.values[0]  + y * mat.values[1]  + z * mat.values[2]  + mat.values[3],
+        x * mat.values[4]  + y * mat.values[5]  + z * mat.values[6]  + mat.values[7],
+        x * mat.values[8]  + y * mat.values[9]  + z * mat.values[10] + mat.values[11],
+        x * mat.values[12] + y * mat.values[13] + z * mat.values[14] + mat.values[15]
+    };
+
+    return Vector3(product / product.w);
 }
 
 Vector3 &Vector3::operator*=(const Matrix4 &mat)
@@ -203,7 +207,7 @@ float Vector3::DistanceSquared(const Vector3 &other) const
 /* Euclidean distance */
 float Vector3::Distance(const Vector3 &other) const
 {
-    return sqrt(DistanceSquared(other));
+    return MathUtil::Sqrt(DistanceSquared(other));
 }
 
 Vector3 Vector3::Normalized() const
@@ -245,12 +249,12 @@ float Vector3::Dot(const Vector3 &other) const
 
 Vector3 Vector3::Abs(const Vector3 &vec)
 {
-    return Vector3(std::fabs(vec.x), std::fabs(vec.y), std::fabs(vec.z));
+    return Vector3(MathUtil::Abs(vec.x), MathUtil::Abs(vec.y), MathUtil::Abs(vec.z));
 }
 
 Vector3 Vector3::Round(const Vector3 &vec)
 {
-    return Vector3(std::round(vec.x), std::round(vec.y), std::round(vec.z));
+    return Vector3(MathUtil::Round(vec.x), MathUtil::Round(vec.y), MathUtil::Round(vec.z));
 }
 
 Vector3 Vector3::Clamp(const Vector3 &vec, float min_value, float max_value)

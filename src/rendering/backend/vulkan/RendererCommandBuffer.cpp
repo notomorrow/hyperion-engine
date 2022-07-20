@@ -226,8 +226,8 @@ void CommandBuffer::BindDescriptorSet(
         VK_PIPELINE_BIND_POINT_COMPUTE,
         descriptor_set,
         binding,
-        nullptr,
-        0
+        offsets,
+        num_offsets
     );
 }
 

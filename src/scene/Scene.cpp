@@ -386,7 +386,7 @@ void Scene::EnqueueRenderUpdates()
     }
 
     GetEngine()->render_scheduler.Enqueue([this, params](...) {
-        SceneShaderData shader_data{
+        SceneShaderData shader_data {
             .view                        = params.view,
             .projection                  = params.projection,
             .camera_position             = params.translation.ToVector4(),

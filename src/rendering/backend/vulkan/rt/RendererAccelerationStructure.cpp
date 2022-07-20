@@ -263,7 +263,7 @@ Result AccelerationStructure::CreateAccelerationStructure(
 
     geometry_info.dstAccelerationStructure = m_acceleration_structure;
 	geometry_info.srcAccelerationStructure = is_newly_created ? VK_NULL_HANDLE : m_acceleration_structure;
-	geometry_info.scratchData              = {.deviceAddress = {scratch_buffer->GetBufferDeviceAddress(device)}};
+	geometry_info.scratchData              = { .deviceAddress = scratch_buffer->GetBufferDeviceAddress(device) };
 
     std::vector<VkAccelerationStructureBuildRangeInfoKHR *> range_infos;
     range_infos.resize(geometries.size());

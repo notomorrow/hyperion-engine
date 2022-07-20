@@ -4,6 +4,7 @@
 #include "../Util.hpp"
 
 #include <util/Defines.hpp>
+#include <Types.hpp>
 
 #include <cmath>
 #include <iostream>
@@ -42,10 +43,10 @@ public:
     float &GetW() { return w; }
     Vector4 &SetW(float w) { this->w = w; return *this; }
     
-    constexpr float operator[](size_t index) const
+    constexpr float operator[](UInt index) const
         { return values[index]; }
 
-    constexpr float &operator[](size_t index)
+    constexpr float &operator[](UInt index)
         { return values[index]; }
 
     Vector4 &operator=(const Vector4 &other);

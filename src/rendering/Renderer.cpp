@@ -8,6 +8,7 @@
 namespace hyperion::v2 {
 
 IndirectRenderer::IndirectRenderer()
+    : m_cached_cull_data_updated({ false })
 {
 }
 
@@ -38,13 +39,15 @@ void IndirectRenderer::Create(Engine *engine)
         // global object data
         m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(0)
             ->SetSubDescriptor({
-                .buffer = engine->shader_globals->objects.GetBuffers()[frame_index].get()
+                .buffer = engine->shader_globals->objects.GetBuffers()[frame_index].get(),
+                .range  = static_cast<UInt>(sizeof(ObjectShaderData))
             });
 
         // global scene data
-        m_descriptor_sets[frame_index]->AddDescriptor<renderer::StorageBufferDescriptor>(1)
+        m_descriptor_sets[frame_index]->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
             ->SetSubDescriptor({
-                .buffer = engine->shader_globals->scenes.GetBuffers()[frame_index].get()
+                .buffer = engine->shader_globals->scenes.GetBuffers()[frame_index].get(),
+                .range  = static_cast<UInt>(sizeof(SceneShaderData))
             });
 
         // params buffer
@@ -138,18 +141,8 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
     }
 
     if (m_cached_cull_data != cull_data) {
-        if (m_cached_cull_data.depth_pyramid_image_views[frame_index] != cull_data.depth_pyramid_image_views[frame_index]) {
-            m_descriptor_sets[frame_index]->GetDescriptor(5)->SetSubDescriptor({
-                .element_index = 0,
-                .image_view    = cull_data.depth_pyramid_image_views[frame_index]
-            });
-
-            m_descriptor_sets[frame_index]->ApplyUpdates(engine->GetDevice());
-
-            m_cached_cull_data_updated[frame_index] = false;
-        }
-
         m_cached_cull_data = cull_data;
+        m_cached_cull_data_updated = { true, true };
     }
 
     if (m_cached_cull_data_updated[frame_index]) {
@@ -163,14 +156,16 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
         m_cached_cull_data_updated[frame_index] = false;
     }
 
-    const auto scene_id = engine->render_state.GetScene().id;
+    const auto scene_id    = engine->render_state.GetScene().id;
+    const UInt scene_index = scene_id ? scene_id.value - 1 : 0;
 
     // bind our descriptor set to binding point 0
     command_buffer->BindDescriptorSet(
         engine->GetInstance()->GetDescriptorPool(),
         m_object_visibility->GetPipeline(),
         m_descriptor_sets[frame_index].get(),
-        static_cast<DescriptorSet::Index>(0)
+        static_cast<DescriptorSet::Index>(0),
+        FixedArray { static_cast<UInt32>(scene_index * sizeof(SceneShaderData)) }
     );
 
     UInt count_remaining = static_cast<UInt>(num_drawables);

@@ -11,14 +11,10 @@ namespace hyperion {
 class Triangle {
 public:
     Triangle();
+    Triangle(const Vector3 &v0, const Vector3 &v1, const Vector3 &v2);
     Triangle(const Vertex &v0, const Vertex &v1, const Vertex &v2);
     Triangle(const Triangle &other);
     ~Triangle() = default;
-
-    Triangle operator*(const Matrix4 &mat) const;
-    Triangle &operator*=(const Matrix4 &mat);
-    Triangle operator*(const Transform &transform) const;
-    Triangle &operator*=(const Transform &transform);
 
     Vertex &operator[](int index) { return m_points[index]; }
     const Vertex &operator[](int index) const { return m_points[index]; }

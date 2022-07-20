@@ -12,8 +12,8 @@ layout(set = 0, binding = 0) uniform texture2D               mip_in;
 layout(set = 0, binding = 1, r32f) uniform writeonly image2D mip_out;
 layout(set = 0, binding = 2) uniform sampler                 depth_pyramid_sampler;
 
-// #define HYP_DEPTH_PYRAMID_SAMPLE_MAX
-#define HYP_DEPTH_PYRAMID_SAMPLE_MIN
+#define HYP_DEPTH_PYRAMID_SAMPLE_MAX
+// #define HYP_DEPTH_PYRAMID_SAMPLE_MIN
 
 layout(push_constant) uniform DepthPyramidData {
     uvec2 mip_dimensions;

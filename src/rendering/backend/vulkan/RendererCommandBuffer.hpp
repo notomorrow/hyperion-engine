@@ -139,49 +139,68 @@ public:
     }
 
     void BindDescriptorSet(
-        const DescriptorPool &pool,
+        const DescriptorPool  &pool,
         const ComputePipeline *pipeline,
-        const DescriptorSet *descriptor_set,
-        DescriptorSet::Index binding
+        const DescriptorSet   *descriptor_set,
+        DescriptorSet::Index   binding
     ) const;
 
     void BindDescriptorSet(
-        const DescriptorPool &pool,
+        const DescriptorPool  &pool,
         const ComputePipeline *pipeline,
-        const DescriptorSet *descriptor_set,
-        DescriptorSet::Index binding,
-        const UInt32 *offsets,
-        size_t num_offsets
-    ) const;
-
-    void BindDescriptorSet(
-        const DescriptorPool &pool,
-        const ComputePipeline *pipeline,
-        DescriptorSet::Index set
-    ) const;
-
-    void BindDescriptorSet(
-        const DescriptorPool &pool,
-        const ComputePipeline *pipeline,
-        DescriptorSet::Index set,
-        DescriptorSet::Index binding
-    ) const;
-
-    void BindDescriptorSet(
-        const DescriptorPool &pool,
-        const ComputePipeline *pipeline,
-        DescriptorSet::Index set,
-        DescriptorSet::Index binding,
-        const UInt32 *offsets,
-        size_t num_offsets
+        const DescriptorSet   *descriptor_set,
+        DescriptorSet::Index   binding,
+        const UInt32          *offsets,
+        size_t                 num_offsets
     ) const;
 
     template <size_t NumOffsets>
     void BindDescriptorSet(
-        const DescriptorPool &pool,
+        const DescriptorPool                 &pool,
+        const ComputePipeline                *pipeline,
+        const DescriptorSet                  *descriptor_set,
+        DescriptorSet::Index                  binding,
+        const FixedArray<UInt32, NumOffsets> &offsets
+    ) const
+    {
+        BindDescriptorSet(
+            pool,
+            pipeline,
+            descriptor_set,
+            binding,
+            offsets.Data(),
+            NumOffsets
+        );
+    }
+
+    void BindDescriptorSet(
+        const DescriptorPool  &pool,
         const ComputePipeline *pipeline,
-        DescriptorSet::Index set,
-        DescriptorSet::Index binding,
+        DescriptorSet::Index   set
+    ) const;
+
+    void BindDescriptorSet(
+        const DescriptorPool  &pool,
+        const ComputePipeline *pipeline,
+        DescriptorSet::Index   set,
+        DescriptorSet::Index   binding
+    ) const;
+
+    void BindDescriptorSet(
+        const DescriptorPool  &pool,
+        const ComputePipeline *pipeline,
+        DescriptorSet::Index   set,
+        DescriptorSet::Index   binding,
+        const UInt32          *offsets,
+        size_t                 num_offsets
+    ) const;
+
+    template <size_t NumOffsets>
+    void BindDescriptorSet(
+        const DescriptorPool                 &pool,
+        const ComputePipeline                *pipeline,
+        DescriptorSet::Index                  set,
+        DescriptorSet::Index                  binding,
         const FixedArray<UInt32, NumOffsets> &offsets
     ) const
     {

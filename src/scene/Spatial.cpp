@@ -1,4 +1,5 @@
 #include "Spatial.hpp"
+#include <math/BoundingSphere.hpp>
 #include <rendering/Renderer.hpp>
 #include <scene/Scene.hpp>
 #include <Engine.hpp>
@@ -57,6 +58,8 @@ void Spatial::Init(Engine *engine)
     }
 
     EngineComponentBase::Init(engine);
+
+    m_drawable.entity_id = m_id;
 
     OnInit(engine->callbacks.Once(EngineCallback::CREATE_SPATIALS, [this](...) {
         auto *engine = GetEngine();
@@ -153,7 +156,9 @@ void Spatial::EnqueueRenderUpdates()
         .scene_id        = scene_id,
         .mesh_id         = mesh_id,
         .material_id     = material_id,
-        .skeleton_id     = skeleton_id
+        .skeleton_id     = skeleton_id,
+        .bounding_box    = m_world_aabb,
+        .bounding_sphere = BoundingSphere(m_world_aabb)
     };
 
     GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, drawable](...) {
@@ -169,6 +174,8 @@ void Spatial::EnqueueRenderUpdates()
                 .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),
                 .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),
                 .world_aabb_min = Vector4(m_world_aabb.min, 1.0f),
+
+                .world_bounding_sphere = m_drawable.bounding_sphere.ToVector4(),
 
                 .entity_id      = drawable.entity_id.value,
                 .scene_id       = drawable.scene_id.value,

@@ -35,7 +35,7 @@ struct Result {
 #define HYPERION_PASS_ERRORS(result, out_result) \
     do { \
         ::hyperion::renderer::Result _result = (result); \
-        if (!_result) (out_result) = _result; \
+        if ((out_result) && !_result) (out_result) = _result; \
     } while (0)
 
 #define HYPERION_BUBBLE_ERRORS(result) \

@@ -5,6 +5,7 @@
 #include "../Util.hpp"
 
 #include <util/Defines.hpp>
+#include <Types.hpp>
 
 #include <ostream>
 #include <cmath>
@@ -26,17 +27,17 @@ public:
     Vector2(float xy);
     Vector2(const Vector2 &other);
 
-    float GetX() const { return x; }
-    float &GetX() { return x; }
+    float GetX() const     { return x; }
+    float &GetX()          { return x; }
     Vector2 &SetX(float x) { this->x = x; return *this; }
-    float GetY() const { return y; }
-    float &GetY() { return y; }
+    float GetY() const     { return y; }
+    float &GetY()          { return y; }
     Vector2 &SetY(float y) { this->y = y; return *this; }
     
-    constexpr float operator[](size_t index) const
+    constexpr float operator[](UInt index) const
         { return values[index]; }
 
-    constexpr float &operator[](size_t index)
+    constexpr float &operator[](UInt index)
         { return values[index]; }
 
     Vector2 &operator=(const Vector2 &other);

@@ -187,13 +187,11 @@ bool Ray::TestTriangleList(
     RayTestResults tmp_results;
 
     for (size_t i = 0; i < indices.size(); i += 3) {
-        Triangle triangle(
-            vertices[indices[i]].GetPosition(),
-            vertices[indices[i + 1]].GetPosition(),
-            vertices[indices[i + 2]].GetPosition()
+        const Triangle triangle(
+            transform * vertices[indices[i]],
+            transform * vertices[indices[i + 1]],
+            transform * vertices[indices[i + 2]]
         );
-
-        triangle *= transform;
 
         if (TestTriangle(triangle, static_cast<RayHitID>(i), tmp_results)) {
             intersected = true;
@@ -203,8 +201,8 @@ bool Ray::TestTriangleList(
     if (intersected) {
         AssertThrow(!tmp_results.Empty());
 
-        auto &first_result = tmp_results.Front();
-        first_result.id = hit_id;
+        auto &first_result     = tmp_results.Front();
+        first_result.id        = hit_id;
         first_result.user_data = user_data;
 
         out_results.AddHit(first_result);

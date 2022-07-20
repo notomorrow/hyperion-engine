@@ -84,8 +84,8 @@ void AABBDebugController::OnTransformUpdate(const Transform &transform)
     }
 
     m_aabb_entity->SetTransform(Transform(
-        GetOwner()->GetTranslation() + Vector3(0, m_aabb.GetDimensions().y * 0.5f, 0),
-        m_aabb.GetDimensions() * 0.5f,
+        GetOwner()->GetTranslation() + Vector3(0, m_aabb.GetExtent().y * 0.5f, 0),
+        m_aabb.GetExtent() * 0.5f,
         Quaternion::Identity()
     ));
 }

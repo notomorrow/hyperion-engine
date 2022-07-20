@@ -166,8 +166,8 @@ void Mesh::Init(Engine *engine)
             HYPERION_RETURN_OK;
         });
 
-        m_vertices.clear();
-        m_indices.clear();
+        // m_vertices.clear();
+        // m_indices.clear();
 
         OnTeardown(engine->callbacks.Once(EngineCallback::DESTROY_MESHES, [this](...) {
             auto *engine = GetEngine();
