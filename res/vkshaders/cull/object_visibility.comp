@@ -103,14 +103,6 @@ void main()
         Object object = objects[entity_id - 1];
         Scene scene   = scenes[push_constants.scene_id - 1];
 
-        AABB aabb;
-        aabb.max = object.world_aabb_max.xyz;
-        aabb.min = object.world_aabb_min.xyz;
-
-        vec3  sphere_center;
-        float sphere_radius;
-        AABBToSphere(aabb, sphere_center, sphere_radius);
-
         // get view/proj matrices from scene.
         mat4 view = scene.view;
         mat4 proj = scene.projection;
@@ -141,8 +133,8 @@ void main()
             clip_pos.z = max(clip_pos.z, 0.0);
             clip_pos.xyz /= clip_pos.w;
             clip_pos.xy = clamp(clip_pos.xy, -1, 1);
-            clip_pos.xy = clip_pos.xy * vec2(0.5, -0.5) + vec2(0.5);
-            //clip_pos.y *= -1.0;
+            clip_pos.y *= -1.0;
+            clip_pos.xy = clip_pos.xy * vec2(0.5, 0.5) + vec2(0.5);
 
             min_xy = min(clip_pos.xy, min_xy);
             max_xy = max(clip_pos.xy, max_xy);
@@ -152,13 +144,13 @@ void main()
 
 
         vec4 screenspace_aabb = vec4(min_xy, max_xy);
-        float width  = (screenspace_aabb.z - screenspace_aabb.x) * float(push_constants.depth_pyramid_dimensions.x);
-        float height = (screenspace_aabb.w - screenspace_aabb.y) * float(push_constants.depth_pyramid_dimensions.y);
-        float mip = 0;//floor(log2(max(width, height)));
+        // float width  = (screenspace_aabb.z - screenspace_aabb.x) * float(push_constants.depth_pyramid_dimensions.x);
+        // float height = (screenspace_aabb.w - screenspace_aabb.y) * float(push_constants.depth_pyramid_dimensions.y);
+        // float mip = floor(log2(max(width, height)));
 
         // Calculate hi-Z buffer mip
-        // uvec2 size = uvec2((max_xy - min_xy) * push_constants.depth_pyramid_dimensions);
-        // float mip = ceil(log2(max(size.x, size.y)));
+        uvec2 size = uvec2((max_xy - min_xy) * push_constants.depth_pyramid_dimensions);
+        float mip = ceil(log2(max(size.x, size.y)));
  
         //mip = clamp(mip, 0, 12.0);
  
@@ -181,11 +173,13 @@ void main()
             Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.xw, mip).r,
             Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.zw, mip).r
         };
+
+        const float depth_value = Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(0.0), 1.0).r;
  
         //find the max depth
         const float max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);
         // objects[entity_id - 1].depth = 1.0;//Texture2DLod(depth_pyramid_sampler, depth_pyramid, screenspace_aabb.xy, 0.0).r;
-        num_instances += 1;//int(max_depth < 1.0);//<= max_depth);
+        num_instances += 1;//int(depth_value < 1.0);//<= max_depth);
 
 
         // vec3  sphere_center;

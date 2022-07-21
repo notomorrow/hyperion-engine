@@ -150,6 +150,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
         }
 
         m_cached_cull_data = cull_data;
+    }
 
     if (m_cached_cull_data_updated[frame_index]) {
         m_descriptor_sets[frame_index]->GetDescriptor(5)->SetSubDescriptor({
