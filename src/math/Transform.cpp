@@ -54,8 +54,8 @@ Transform Transform::operator*(const Transform &other) const
 Transform &Transform::operator*=(const Transform &other)
 {
     m_translation += other.m_translation;
-    m_scale *= other.m_scale;
-    m_rotation *= other.m_rotation;
+    m_scale       *= other.m_scale;
+    m_rotation    *= other.m_rotation;
 
     UpdateMatrix();
 

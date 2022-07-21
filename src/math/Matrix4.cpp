@@ -120,7 +120,6 @@ Matrix4 Matrix4::LookAt(const Vector3 &dir, const Vector3 &up)
 
     const Vector3 z = Vector3(dir).Normalize();
     const Vector3 x = Vector3(dir).Normalize().Cross(up).Normalize();
-
     const Vector3 y = x.Cross(z).Normalize();
 
     mat[0] = Vector4(x, 0.0f);
@@ -354,11 +353,11 @@ Matrix4 &Matrix4::operator*=(float scalar)
 
 Vector3 Matrix4::operator*(const Vector3 &vec) const
 {
-    Vector4 product {
-        vec[0] * values[0] + vec[1] * values[4] + vec[2] * values[8]  + values[12],
-        vec[0] * values[1] + vec[1] * values[5] + vec[2] * values[9]  + values[13],
-        vec[0] * values[2] + vec[1] * values[6] + vec[2] * values[10] + values[14],
-        vec[0] * values[3] + vec[1] * values[7] + vec[2] * values[11] + values[15]
+    const Vector4 product {
+        vec.x * values[0]  + vec.y * values[1]  + vec.z * values[2]  + values[3],
+        vec.x * values[4]  + vec.y * values[5]  + vec.z * values[6]  + values[7],
+        vec.x * values[8]  + vec.y * values[9]  + vec.z * values[10] + values[11],
+        vec.x * values[12] + vec.y * values[13] + vec.z * values[14] + values[15]
     };
 
     return Vector3(product / product.w);
@@ -367,10 +366,10 @@ Vector3 Matrix4::operator*(const Vector3 &vec) const
 Vector4 Matrix4::operator*(const Vector4 &vec) const
 {
     return {
-        vec[0] * values[0] + vec[1] * values[4] + vec[2] * values[8]  + vec[3] * values[12],
-        vec[0] * values[1] + vec[1] * values[5] + vec[2] * values[9]  + vec[3] * values[13],
-        vec[0] * values[2] + vec[1] * values[6] + vec[2] * values[10] + vec[3] * values[14],
-        vec[0] * values[3] + vec[1] * values[7] + vec[2] * values[11] + vec[3] * values[15]
+        vec.x * values[0]  + vec.y * values[1]  + vec.z * values[2]  + vec.w * values[3],
+        vec.x * values[4]  + vec.y * values[5]  + vec.z * values[6]  + vec.w * values[7],
+        vec.x * values[8]  + vec.y * values[9]  + vec.z * values[10] + vec.w * values[11],
+        vec.x * values[12] + vec.y * values[13] + vec.z * values[14] + vec.w * values[15]
     };
 }
 

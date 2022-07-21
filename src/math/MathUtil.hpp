@@ -80,11 +80,11 @@ public:
         { return std::numeric_limits<T>::quiet_NaN(); }
 
     template <class T>
-    static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, bool) Approximately(const T &a, const T &b)
+    static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, bool) ApproxEqual(const T &a, const T &b)
         { return Abs(a.Distance(b)) <= epsilon<std::remove_all_extents_t<decltype(T::values)>>; }
 
     template <class T>
-    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, bool) Approximately(const T &a, const T &b)
+    static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, bool) ApproxEqual(const T &a, const T &b)
         { return Abs(a - b) <= epsilon<T>; }
 
     template <class T>

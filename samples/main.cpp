@@ -476,13 +476,13 @@ public:
             // std::cout << "min, max in screenspace: " << min_ss << ",   " << max_ss << "\n";
 
             //  suzanne->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 5.0f);
-            // std::cout << scene->GetCamera()->TransformNDCToScreen(scene->GetCamera()->TransformWorldToNDC(suzanne->GetWorldTranslation())) << "\n";
 
         }
 
         //m_point_light->SetPosition({ std::sin(timer * 0.5f) * 5.0f, 6.0f, std::cos(timer * 0.5f) * 5.0f });
 
          if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
+            std::cout << scene->GetCamera()->TransformWorldToNDC(sphere->GetWorldTranslation()) << "\n";
 
             //if (auto &material = sphere->GetChild(0)->GetSpatial()->GetMaterial()) {
             //    material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer * 0.5f) * 0.5f + 0.5f);
@@ -674,43 +674,6 @@ int main()
     SystemEvent event;
 
     auto *engine = new v2::Engine(system, "My app");
-
-    /*DynArray<TestStruct> test_dyn_array;
-    test_dyn_array.PushBack(TestStruct(1));
-    test_dyn_array.PushBack(TestStruct(2));
-    test_dyn_array.PushBack(TestStruct(3));
-    test_dyn_array.PushBack(TestStruct(4));
-    test_dyn_array.EmplaceBack(1);
-
-    auto it = test_dyn_array.FindIf([](const TestStruct &item) {
-        return item.id == 3;
-    });
-    if (it != test_dyn_array.End()) {
-        test_dyn_array.Erase(it);
-    }
-
-    test_dyn_array.Resize(25);
-
-    test_dyn_array.Reserve(20);
-
-    test_dyn_array[test_dyn_array.Size() - 1] = 999;
-
-    //test_dyn_array.Pop();
-    //test_dyn_array.Refit();
-
-    for (auto it = test_dyn_array.Begin(); it != test_dyn_array.End();) {
-        //std::cout << "item : " << item.id << "\n";
-
-        if (it->id == 4) {
-            it = test_dyn_array.Erase(it);
-        } else {
-            ++it;
-        }
-    }
-
-    for (auto &it : test_dyn_array) {
-        std::cout << "item : " << it.id << "\n";
-    }*/
 
     engine->assets.SetBasePath(v2::FileSystem::Join(HYP_ROOT_DIR, "..", "res"));
 
