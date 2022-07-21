@@ -15,6 +15,12 @@ layout(set = 0, binding = 2) uniform sampler                 depth_pyramid_sampl
 #define HYP_DEPTH_PYRAMID_SAMPLE_MAX
 // #define HYP_DEPTH_PYRAMID_SAMPLE_MIN
 
+#ifdef HYP_DEPTH_PYRAMID_SAMPLE_MAX
+    #define HYP_DEPTH_CMP max    
+#else
+    #define HYP_DEPTH_CMP min
+#endif
+
 layout(push_constant) uniform DepthPyramidData {
     uvec2 mip_dimensions;
     uvec2 prev_mip_dimensions;
@@ -23,34 +29,45 @@ layout(push_constant) uniform DepthPyramidData {
 
 float GetDepthAtTexel(ivec2 coord, ivec2 offset)
 {
-    if (coord.x + offset.x >= prev_mip_dimensions.x || coord.y + offset.y >= prev_mip_dimensions.y) {
-#ifdef HYP_DEPTH_PYRAMID_SAMPLE_MAX
-        return 0.0;
-#else
-        return 1.0;
-#endif
-    }
+//     if (coord.x + offset.x >= prev_mip_dimensions.x || coord.y + offset.y >= prev_mip_dimensions.y) {
+// #ifdef HYP_DEPTH_PYRAMID_SAMPLE_MAX
+//         return 0.0;
+// #else
+//         return 1.0;
+// #endif
+//     }
 
-    return Texture2DTexel(depth_pyramid_sampler, mip_in, coord + offset).r;
+    vec2 inv_dimension = vec2(1.0) / vec2(prev_mip_dimensions);
+
+    return Texture2D(depth_pyramid_sampler, mip_in, vec2(coord) * inv_dimension + (vec2(offset) * 0.5 * inv_dimension)).r;
 }
+
+const ivec2 offsets[8] = {
+    ivec2(1, 0),
+    ivec2(0, 1),
+    ivec2(1, 1),
+    ivec2(-1, 0),
+    ivec2(0, -1),
+    ivec2(-1, -1),
+    ivec2(-1, 1),
+    ivec2(1, -1)
+};
 
 void main()
 {
     uvec2 coord    = gl_GlobalInvocationID.xy;
-    vec2  texcoord = (vec2(coord) + vec2(0.5)) / vec2(mip_dimensions);
+    vec2  texcoord = vec2(coord) / vec2(mip_dimensions);
 
     // sample 4 nearest neighbours and get MIN result... workaround for lack of min/max support on moltenvk
     ivec2 texel_coord = ivec2(texcoord * vec2(prev_mip_dimensions));
-    float i0j0 = GetDepthAtTexel(texel_coord, ivec2(0, 0));
-    float i1j0 = GetDepthAtTexel(texel_coord, ivec2(1, 0));
-    float i0j1 = GetDepthAtTexel(texel_coord, ivec2(0, 1));
-    float i1j1 = GetDepthAtTexel(texel_coord, ivec2(1, 1));
 
-#ifdef HYP_DEPTH_PYRAMID_SAMPLE_MAX
-    float depth = max(i0j0, max(i1j0, max(i0j1, i1j1)));
-#else
-    float depth = min(i0j0, min(i1j0, min(i0j1, i1j1)));
-#endif
+    float depth = GetDepthAtTexel(texel_coord, ivec2(0, 0));
+
+    for (int i = 0; i < 8; i++) {
+        depth = HYP_DEPTH_CMP(depth, GetDepthAtTexel(texel_coord, offsets[i]));
+    }
 
     imageStore(mip_out, ivec2(coord), vec4(depth));
 }
+
+#undef HYP_DEPTH_CMP

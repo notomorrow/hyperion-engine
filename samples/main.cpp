@@ -482,7 +482,7 @@ public:
         //m_point_light->SetPosition({ std::sin(timer * 0.5f) * 5.0f, 6.0f, std::cos(timer * 0.5f) * 5.0f });
 
          if (auto *sphere = scene->GetRootNode()->Select("sphere")) {
-            std::cout << scene->GetCamera()->TransformWorldToNDC(sphere->GetWorldTranslation()) << "\n";
+            // std::cout << scene->GetCamera()->TransformNDCToScreen(scene->GetCamera()->TransformWorldToNDC(sphere->GetWorldTranslation())) << "\n";
 
             //if (auto &material = sphere->GetChild(0)->GetSpatial()->GetMaterial()) {
             //    material->SetParameter(Material::MATERIAL_KEY_ROUGHNESS, std::sin(timer * 0.5f) * 0.5f + 0.5f);

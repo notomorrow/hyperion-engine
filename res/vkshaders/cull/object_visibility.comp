@@ -138,8 +138,8 @@ void main()
             clip_pos.z = max(clip_pos.z, 0.0);
             clip_pos.xyz /= clip_pos.w;
             clip_pos.xy = clamp(clip_pos.xy, -1.0, 1.0);
-            clip_pos.xy = clip_pos.xy * vec2(0.5, -0.5) + vec2(0.5);
             // clip_pos.y *= -1.0;
+            clip_pos.xy = clip_pos.xy * vec2(0.5) + vec2(0.5);
 
             min_xy = min(clip_pos.xy, min_xy);
             max_xy = max(clip_pos.xy, max_xy);
@@ -183,9 +183,7 @@ void main()
  
         // //find the max depth
         const float max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);
-
-        // const float dist = distance(aabb_center, scene.camera_position.xyz);
-        num_instances += 1;//int(min_z <= 0.98);//max_depth);
+        num_instances += int(min_z <= max_depth);
 
         /*vec3 sphere_center  = object_instance.bounding_sphere.xyz;
         float sphere_radius = object_instance.bounding_sphere.w;
@@ -226,11 +224,11 @@ void main()
 
             float depth_sphere = scene.camera_near / (sphere_center.z - sphere_radius);
 
-            num_instances += int(depth_sphere > 0.05);//int(depth_sphere >= max_depth);*/
+            num_instances += int(depth_sphere <= max_depth);
             // num_instances++;
-        // } else {
-        //     num_instances++;
-        // }
+        } else {
+            num_instances++;
+        }*/
 
         // convert worldspace aabb into screenspace aabb.
 

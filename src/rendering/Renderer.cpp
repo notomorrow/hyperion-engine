@@ -186,6 +186,29 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
 
         count_remaining -= num_drawables_in_batch;
     }
+
+    ++m_indirect_debug_counter;
+
+    if (m_indirect_debug_counter >= 1000) {
+        // print out # of objects etc
+        auto debug_result = m_indirect_draw_state.GetIndirectBuffer(frame_index)->DebugReadBytes<IndirectDrawCommand>(
+            engine->GetInstance(),
+            engine->GetDevice(),
+            true
+        );
+
+        UInt num_instances_rendered = 0,
+             num_issued_commands = 0;
+
+        for (auto &item : debug_result) {
+            num_instances_rendered += item.command.instanceCount;
+            ++num_issued_commands;
+        }
+
+        DebugLog(LogType::Debug, "NOTICE: %u instances rendered total from %u issued commands.\n", num_instances_rendered, num_issued_commands);
+
+        m_indirect_debug_counter = 0;
+    }
 }
 
 void IndirectRenderer::RebuildDescriptors(Engine *engine, Frame *frame)
@@ -575,7 +598,7 @@ void GraphicsPipeline::CollectDrawCalls(
     const auto scene_index   = scene_binding ? scene_binding.id.value - 1 : 0;
 
     // check visibility state
-    const bool perform_culling = scene_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
+    const bool perform_culling = false;//scene_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
     UInt num_culled_objects = 0;
 
     m_indirect_renderer.GetDrawState().ResetDrawables();
@@ -878,12 +901,12 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                 spatial->GetMesh()->Render(engine, secondary);
             }
 
-            DebugLog(
-                LogType::Debug,
-                "Scene %u: Culled %u objects\n",
-                scene_cull_id.value,
-                num_culled_objects
-            );
+            // DebugLog(
+            //     LogType::Debug,
+            //     "Scene %u: Culled %u objects\n",
+            //     scene_cull_id.value,
+            //     num_culled_objects
+            // );
 
             HYPERION_RETURN_OK;
         });

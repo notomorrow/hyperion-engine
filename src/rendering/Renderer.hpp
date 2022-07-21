@@ -70,6 +70,8 @@ private:
     FixedArray<UniformBuffer, max_frames_in_flight>                  m_indirect_params_buffers;
     CullData                                                         m_cached_cull_data;
     FixedArray<bool, max_frames_in_flight>                           m_cached_cull_data_updated;
+
+    UInt m_indirect_debug_counter = 0;
 };
 
 // TODO: rename to Renderer

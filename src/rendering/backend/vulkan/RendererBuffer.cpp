@@ -592,6 +592,43 @@ Result GPUBuffer::CopyStaged(
     });
 }
 
+Result GPUBuffer::ReadStaged(
+    Instance *instance,
+    SizeType count,
+    void *out_ptr
+) const
+{
+    Device *device = instance->GetDevice();
+
+    return instance->GetStagingBufferPool().Use(device, [&](StagingBufferPool::Context &holder) {
+        auto commands = instance->GetSingleTimeCommands();
+
+        auto *staging_buffer = holder.Acquire(count);
+        
+        commands.Push([&](CommandBuffer *cmd) {
+            staging_buffer->CopyFrom(
+                cmd,
+                this,
+                count
+            );
+
+            HYPERION_RETURN_OK;
+        });
+    
+        auto result = commands.Execute(device);
+
+        if (result) {
+            staging_buffer->Read(
+                device,
+                count,
+                out_ptr
+            );
+        }
+
+        return result;
+    });
+}
+
 Result GPUBuffer::Create(Device *device, size_t size)
 {
     if (buffer != nullptr) {
@@ -701,13 +738,15 @@ Result GPUBuffer::EnsureCapacity(Device *device,
 
 #if HYP_DEBUG_MODE
 
-void GPUBuffer::DebugLogBuffer(Device *device) const
+void GPUBuffer::DebugLogBuffer(Instance *instance) const
 {
-    if (size % sizeof(uint32_t) == 0) {
-        const auto data = DebugReadBytes<uint32_t>(device);
+    auto *device = instance->GetDevice();
 
-        for (size_t i = 0; i < data.size();) {
-            const size_t dist = MathUtil::Min(data.size() - i, size_t(4));
+    if (size % sizeof(UInt32) == 0) {
+        const auto data = DebugReadBytes<UInt32>(instance, device);
+
+        for (SizeType i = 0; i < data.size();) {
+            const auto dist = MathUtil::Min(data.size() - i, SizeType(4));
 
             if (dist == 4) {
                 DebugLog(LogType::Debug, "%lu\t%lu\t%lu\t%lu\n", data[i], data[i + 1], data[i + 2], data[i + 3]);
@@ -722,7 +761,7 @@ void GPUBuffer::DebugLogBuffer(Device *device) const
             i += dist;
         }
     } else {
-        const auto data = DebugReadBytes(device);
+        const auto data = DebugReadBytes(instance, device);
 
         for (const auto byte : data) {
             DebugLog(LogType::Debug, "0x%.12\n", byte);
@@ -779,7 +818,9 @@ StorageBuffer::StorageBuffer()
 
 AtomicCounterBuffer::AtomicCounterBuffer()
     : GPUBuffer(
-          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+          | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+          | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
           VMA_MEMORY_USAGE_GPU_ONLY
       )
 {
@@ -795,7 +836,10 @@ StagingBuffer::StagingBuffer()
 
 IndirectBuffer::IndirectBuffer()
     : GPUBuffer(
-          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+          | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
+          | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+          | VK_BUFFER_USAGE_TRANSFER_SRC_BIT /* for debug */,
           VMA_MEMORY_USAGE_GPU_ONLY
       )
 {
