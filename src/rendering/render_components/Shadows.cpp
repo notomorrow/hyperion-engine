@@ -358,7 +358,7 @@ void ShadowRenderer::UpdateSceneCamera(Engine *engine)
              mins  = MathUtil::MaxSafeValue<Vector3>();
 
         for (auto &corner : corners) {
-            corner *= camera->GetViewMatrix();
+            corner = camera->GetViewMatrix() * corner;
 
             maxes = MathUtil::Max(maxes, corner);
             mins  = MathUtil::Min(mins, corner);

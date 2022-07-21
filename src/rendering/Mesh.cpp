@@ -411,7 +411,7 @@ void Mesh::CalculateTangents()
         
         const float cp = edge1uv.x * edge2uv.y - edge1uv.y * edge2uv.x;
 
-        if (!MathUtil::Approximately(cp, 0.0f)) {
+        if (!MathUtil::ApproxEqual(cp, 0.0f)) {
             const float mul = 1.0f / cp;
 
             const TangentBitangentPair tangent_bitangent {

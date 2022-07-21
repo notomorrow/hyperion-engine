@@ -22,8 +22,8 @@ public:
     void SetTranslation(const Vector3 &translation) { m_translation = translation; UpdateMatrix(); }
 
     const Vector3 &GetScale() const { return m_scale; }
-    Vector3 &GetScale() { return m_scale; }
     /** returns a reference to the scale - if modified, you must call UpdateMatrix(). */
+    Vector3 &GetScale() { return m_scale; }
     void SetScale(const Vector3 &scale) { m_scale = scale; UpdateMatrix(); }
 
     const Quaternion &GetRotation() const { return m_rotation; }

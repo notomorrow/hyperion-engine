@@ -188,9 +188,9 @@ bool Ray::TestTriangleList(
 
     for (size_t i = 0; i < indices.size(); i += 3) {
         const Triangle triangle(
-            transform * vertices[indices[i]],
-            transform * vertices[indices[i + 1]],
-            transform * vertices[indices[i + 2]]
+            vertices[indices[i]].GetPosition()     * transform.GetMatrix(),
+            vertices[indices[i + 1]].GetPosition() * transform.GetMatrix(),
+            vertices[indices[i + 2]].GetPosition() * transform.GetMatrix()
         );
 
         if (TestTriangle(triangle, static_cast<RayHitID>(i), tmp_results)) {

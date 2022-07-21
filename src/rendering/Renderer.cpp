@@ -576,6 +576,7 @@ void GraphicsPipeline::CollectDrawCalls(
 
     // check visibility state
     const bool perform_culling = scene_id != Scene::empty_id && BucketFrustumCullingEnabled(m_renderable_attributes.bucket);
+    UInt num_culled_objects = 0;
 
     m_indirect_renderer.GetDrawState().ResetDrawables();
 
@@ -589,13 +590,16 @@ void GraphicsPipeline::CollectDrawCalls(
                 const auto &visibility_state = octant->GetVisibilityState();
 
                 if (!Octree::IsVisible(&engine->GetWorld().GetOctree(), octant)) {
+                    ++num_culled_objects;
                     continue;
                 }
 
                 if (!visibility_state.Get(scene_id)) {
+                    ++num_culled_objects;
                     continue;
                 }
             } else {
+                ++num_culled_objects;
                 continue;
             }
         }
@@ -608,6 +612,13 @@ void GraphicsPipeline::CollectDrawCalls(
         frame,
         cull_data
     );
+
+    // DebugLog(
+    //     LogType::Debug,
+    //     "Render indirect for scene #%u: %u culled objects\n",
+    //     scene_id.value,
+    //     num_culled_objects
+    // );
 }
 
 void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
@@ -627,8 +638,6 @@ void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
         device,
         m_pipeline->GetConstructionInfo().render_pass,
         [this, engine, instance, device, scene_id, frame_index = frame->GetFrameIndex()](CommandBuffer *secondary) {    
-            UInt num_culled_objects = 0;
-   
             m_pipeline->Bind(secondary);
 
             secondary->BindDescriptorSets(
@@ -812,6 +821,7 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                         }
 
                         if (!visibility_state.Get(scene_cull_id)) {
+                            ++num_culled_objects;
                             continue;
                         }
                     } else {
@@ -868,12 +878,12 @@ void GraphicsPipeline::Render(Engine *engine, Frame *frame)
                 spatial->GetMesh()->Render(engine, secondary);
             }
 
-            // DebugLog(
-            //     LogType::Debug,
-            //     "Scene %u: Culled %u objects\n",
-            //     scene_cull_id.value,
-            //     num_culled_objects
-            // );
+            DebugLog(
+                LogType::Debug,
+                "Scene %u: Culled %u objects\n",
+                scene_cull_id.value,
+                num_culled_objects
+            );
 
             HYPERION_RETURN_OK;
         });

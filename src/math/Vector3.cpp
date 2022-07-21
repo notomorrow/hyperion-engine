@@ -99,9 +99,9 @@ Vector3 &Vector3::operator*=(const Vector3 &other)
 Vector3 Vector3::operator*(const Matrix3 &mat) const
 {
     return {
-        x * mat.values[0] + y * mat.values[1] + z * mat.values[2],
-        x * mat.values[3] + y * mat.values[4] + z * mat.values[5],
-        x * mat.values[6] + y * mat.values[7] + z * mat.values[8]
+        x * mat.values[0] + y * mat.values[3] + z * mat.values[6],
+        x * mat.values[1] + y * mat.values[4] + z * mat.values[7],
+        x * mat.values[2] + y * mat.values[5] + z * mat.values[8]
     };
 }
 
@@ -112,11 +112,11 @@ Vector3 &Vector3::operator*=(const Matrix3 &mat)
 
 Vector3 Vector3::operator*(const Matrix4 &mat) const
 {
-    const Vector4 product {
-        x * mat.values[0]  + y * mat.values[1]  + z * mat.values[2]  + mat.values[3],
-        x * mat.values[4]  + y * mat.values[5]  + z * mat.values[6]  + mat.values[7],
-        x * mat.values[8]  + y * mat.values[9]  + z * mat.values[10] + mat.values[11],
-        x * mat.values[12] + y * mat.values[13] + z * mat.values[14] + mat.values[15]
+    Vector4 product {
+        x * mat.values[0] + y * mat.values[4] + z * mat.values[8]  + mat.values[12],
+        x * mat.values[1] + y * mat.values[5] + z * mat.values[9]  + mat.values[13],
+        x * mat.values[2] + y * mat.values[6] + z * mat.values[10] + mat.values[14],
+        x * mat.values[3] + y * mat.values[7] + z * mat.values[11] + mat.values[15]
     };
 
     return Vector3(product / product.w);
@@ -231,7 +231,7 @@ Vector3 Vector3::Cross(const Vector3 &other) const
 
 Vector3 &Vector3::Rotate(const Vector3 &axis, float radians)
 {
-    return (*this) *= Matrix4::Rotation(axis, radians);
+    return (*this) = Matrix4::Rotation(axis, radians) * (*this);
 }
 
 Vector3 &Vector3::Lerp(const Vector3 &to, const float amt)

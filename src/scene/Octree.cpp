@@ -738,8 +738,7 @@ void Octree::UpdateVisibilityState(Scene *scene)
     }
 
     const auto cursor = m_root->visibility_cursor.load();
-
-    const auto nonce = m_visibility_state.nonces[cursor].load();
+    const auto nonce  = m_visibility_state.nonces[cursor].load();
 
     for (auto &octant : m_octants) {
         if (!frustum.ContainsAabb(octant.aabb)) {

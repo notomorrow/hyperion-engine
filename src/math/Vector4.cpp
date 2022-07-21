@@ -108,10 +108,10 @@ Vector4 &Vector4::operator*=(const Vector4 &other)
 Vector4 Vector4::operator*(const Matrix4 &mat) const
 {
     return {
-        x * mat.values[0]  + y * mat.values[1]  + z * mat.values[2]  + w * mat.values[3],
-        x * mat.values[4]  + y * mat.values[5]  + z * mat.values[6]  + w * mat.values[7],
-        x * mat.values[8]  + y * mat.values[9]  + z * mat.values[10] + w * mat.values[11],
-        x * mat.values[12] + y * mat.values[13] + z * mat.values[14] + w * mat.values[15]
+        x * mat.values[0] + y * mat.values[4] + z * mat.values[8]  + w * mat.values[12],
+        x * mat.values[1] + y * mat.values[5] + z * mat.values[9]  + w * mat.values[13],
+        x * mat.values[2] + y * mat.values[6] + z * mat.values[10] + w * mat.values[14],
+        x * mat.values[3] + y * mat.values[7] + z * mat.values[11] + w * mat.values[15]
     };
 }
 

@@ -79,6 +79,7 @@ void Camera::SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &pro
 void Camera::UpdateViewProjectionMatrix()
 {
     m_view_proj_mat = m_proj_mat * m_view_mat;
+
     m_frustum.SetFromViewProjectionMatrix(m_view_proj_mat);
 }
 
@@ -95,10 +96,10 @@ Vector4 Camera::TransformNDCToWorld(const Vector3 &ndc) const
 {
     Vector4 clip(ndc.x, ndc.y, -1.0f, 1.0f);
 
-    Vector4 eye = clip * Matrix4(m_proj_mat).Invert();
+    Vector4 eye = m_proj_mat.Inverted() * clip;
     eye         = Vector4(eye.x, eye.y, -1.0f, 0.0f);
 
-    return eye * Matrix4(m_view_mat).Invert();
+    return m_view_mat.Inverted() * eye;
 }
 
 Vector3 Camera::TransformWorldToNDC(const Vector3 &world) const
@@ -109,7 +110,8 @@ Vector3 Camera::TransformWorldToNDC(const Vector3 &world) const
 Vector2 Camera::TransformNDCToScreen(const Vector3 &ndc) const
 {
     return {
-        1.0f - (0.5f * ndc.x)
+        1.0f - (0.5f * ndc.x),
+        1.0f - (0.5f * ndc.y)
     };
 }
 

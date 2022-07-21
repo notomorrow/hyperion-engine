@@ -75,7 +75,7 @@ void AudioController::OnUpdate(GameCounter::TickUnit delta)
             }
         }
 
-        if (!MathUtil::Approximately(new_position, m_last_position)) {
+        if (!MathUtil::ApproxEqual(new_position, m_last_position)) {
             const auto position_change = new_position - m_last_position;
             const auto time_change = (m_timer + delta) - m_timer;
             const auto velocity = position_change / time_change;
