@@ -110,8 +110,8 @@ Vector3 Camera::TransformWorldToNDC(const Vector3 &world) const
 Vector2 Camera::TransformNDCToScreen(const Vector3 &ndc) const
 {
     return {
-        1.0f - (0.5f * ndc.x),
-        1.0f - (0.5f * ndc.y)
+        (0.5f * ndc.x) + 0.5f,
+        (0.5f * ndc.y) + 0.5f
     };
 }
 

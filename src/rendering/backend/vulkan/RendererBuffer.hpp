@@ -16,6 +16,7 @@
 namespace hyperion {
 namespace renderer {
 
+class Instance;
 class Device;
 class CommandBuffer;
 class StagingBuffer;
@@ -221,6 +222,12 @@ public:
         size_t count
     );
 
+    [[nodiscard]] Result ReadStaged(
+        Instance *instance,
+        SizeType count,
+        void *out_ptr
+    ) const;
+
     Result CheckCanAllocate(Device *device, size_t size) const;
 
     /* \brief Calls vkGetBufferDeviceAddressKHR. Only use this if the extension is enabled */
@@ -233,15 +240,23 @@ public:
         bool *out_size_changed = nullptr);
 
 #if HYP_DEBUG_MODE
-    void DebugLogBuffer(Device *device) const;
+    void DebugLogBuffer(Instance *instance) const;
 
-    template <class T = uint8_t>
-    std::vector<T> DebugReadBytes(Device *device) const
+    template <class T = UByte>
+    std::vector<T> DebugReadBytes(
+        Instance *instance,
+        Device *device,
+        bool staged = false
+    ) const
     {
         std::vector<T> data;
         data.resize(size / sizeof(T));
 
-        Read(device, size, &data[0]);
+        if (staged) {
+            HYPERION_ASSERT_RESULT(ReadStaged(instance, size, &data[0]));
+        } else {
+            Read(device, size, &data[0]);
+        }
 
         return data;
     }
@@ -250,10 +265,12 @@ public:
     VkBuffer buffer;
 
 private:
-    Result CheckCanAllocate(Device *device,
+    Result CheckCanAllocate(
+        Device *device,
         const VkBufferCreateInfo &buffer_create_info,
         const VmaAllocationCreateInfo &allocation_create_info,
-        size_t size) const;
+        size_t size
+    ) const;
 
     VmaAllocationCreateInfo GetAllocationCreateInfo(Device *device) const;
     VkBufferCreateInfo GetBufferCreateInfo(Device *device) const;
