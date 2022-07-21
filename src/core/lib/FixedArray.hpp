@@ -87,9 +87,6 @@ template <class T, SizeType Sz>
 FixedArray<T, Sz>::FixedArray()
     : m_data{}
 {
-    for (SizeType i = 0; i < Sz; i++) {
-        m_data[i] = {};
-    }
 }
 
 template <class T, SizeType Sz>

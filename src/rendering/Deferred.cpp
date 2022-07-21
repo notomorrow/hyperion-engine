@@ -390,10 +390,9 @@ DepthPyramidRenderer::~DepthPyramidRenderer()
 void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_attachment_ref)
 {
     AssertThrow(m_depth_attachment_ref == nullptr);
-    AssertThrow(depth_attachment_ref->IsDepthAttachment());
+    // AssertThrow(depth_attachment_ref->IsDepthAttachment());
     m_depth_attachment_ref = depth_attachment_ref->IncRef(HYP_ATTACHMENT_REF_INSTANCE);
 
-    // nearest for now -- will use 4x4 min sampler
     m_depth_pyramid_sampler = std::make_unique<Sampler>(Image::FilterMode::TEXTURE_FILTER_NEAREST);
     HYPERION_ASSERT_RESULT(m_depth_pyramid_sampler->Create(engine->GetDevice()));
 
@@ -803,9 +802,11 @@ void DeferredRenderer::Create(Engine *engine)
     m_indirect_pass.Create(engine);
     m_direct_pass.Create(engine);
 
-    const auto &attachment_refs = m_indirect_pass.GetRenderPass()->GetRenderPass().GetAttachmentRefs();
+    // const auto &attachment_refs = m_indirect_pass.GetRenderPass()->GetRenderPass().GetAttachmentRefs();
 
-    const auto *depth_attachment_ref = attachment_refs.back();
+    // auto &opaque_render_pass = engine->GetRenderListContainer()[Bucket::BUCKET_OPAQUE].GetRenderPass();
+    
+    const auto *depth_attachment_ref = m_indirect_pass.GetRenderPass()->GetRenderPass().GetAttachmentRefs().back();//opaque_render_pass->GetRenderPass().GetAttachmentRefs().back();//.back();
     AssertThrow(depth_attachment_ref != nullptr);
 
     m_dpr.Create(engine, depth_attachment_ref);

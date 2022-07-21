@@ -196,6 +196,9 @@ void main()
 #endif
     output_color = vec4(result, 1.0);
 
+
+    output_color.rgb = vec3(ao);//vec3(float(depth < 1.0)); //vec3(LinearDepth(scene.projection, SampleGBuffer(gbuffer_depth_texture, v_texcoord0).r));
+
     // output_color.rgb = irradiance.rgb;
     //output_color = ScreenSpaceReflection(material.r);
 

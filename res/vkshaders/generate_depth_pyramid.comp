@@ -8,12 +8,12 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 #include "include/defines.inc"
 #include "include/shared.inc"
 
-layout(set = 0, binding = 0) uniform texture2D             mip_in;
-layout(set = 0, binding = 1, r8) uniform writeonly image2D mip_out;
-layout(set = 0, binding = 2) uniform sampler               depth_pyramid_sampler;
+layout(set = 0, binding = 0) uniform texture2D               mip_in;
+layout(set = 0, binding = 1, r32f) uniform writeonly image2D mip_out;
+layout(set = 0, binding = 2) uniform sampler                 depth_pyramid_sampler;
 
-#define HYP_DEPTH_PYRAMID_SAMPLE_MAX
-//#define HYP_DEPTH_PYRAMID_SAMPLE_MIN
+// #define HYP_DEPTH_PYRAMID_SAMPLE_MAX
+#define HYP_DEPTH_PYRAMID_SAMPLE_MIN
 
 layout(push_constant) uniform DepthPyramidData {
     uvec2 mip_dimensions;

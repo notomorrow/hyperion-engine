@@ -104,7 +104,7 @@ public:
                 //Vector3(0, 0, 0), Vector3(0, 0.5f, -2),
                 1024, 1024,//2048, 1080,
                 70.0f,
-                0.15f, 15000.0f
+                0.8f, 15000.0f
             )
         ));
         engine->GetWorld().AddScene(scene.IncRef());
@@ -472,7 +472,7 @@ public:
 
             // std::cout << "min, max in screenspace: " << min_ss << ",   " << max_ss << "\n";
 
-            //scene->GetCamera()->SetTarget(suzanne->GetWorldTranslation());
+             suzanne->SetLocalTranslation(scene->GetCamera()->GetTranslation() + scene->GetCamera()->GetDirection() * 0.17f);
         }
 
         //m_point_light->SetPosition({ std::sin(timer * 0.5f) * 5.0f, 6.0f, std::cos(timer * 0.5f) * 5.0f });
