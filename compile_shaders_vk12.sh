@@ -15,7 +15,7 @@ glslc --target-env=$VULKAN_TARGET cubemap_renderer.vert -o cubemap_renderer.vert
 
 glslc --target-env=$VULKAN_TARGET imagestore.comp -o imagestore.comp.spv
 
-glslc --target-env=$VULKAN_TARGET generate_depth_pyramid.comp -o generate_depth_pyramid.comp.spv
+glslc --target-env=$VULKAN_TARGET cull/generate_depth_pyramid.comp -o cull/generate_depth_pyramid.comp.spv
 glslc --target-env=$VULKAN_TARGET cull/object_visibility.comp -o cull/object_visibility.comp.spv
 
 glslc --target-env=$VULKAN_TARGET filter_pass.frag -o filter_pass_frag.spv
