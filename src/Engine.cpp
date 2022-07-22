@@ -304,7 +304,7 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->SetSubDescriptor({
             .buffer = shader_globals->materials.GetBuffers()[0].get(),
-            .range = static_cast<UInt>(sizeof(MaterialShaderData))
+            .range  = static_cast<UInt>(sizeof(MaterialShaderData))
         });
 
 
@@ -312,14 +312,14 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->SetSubDescriptor({
             .buffer = shader_globals->objects.GetBuffers()[0].get(),
-            .range = static_cast<UInt>(sizeof(ObjectShaderData))
+            .range  = static_cast<UInt>(sizeof(ObjectShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
         ->SetSubDescriptor({
             .buffer = shader_globals->skeletons.GetBuffers()[0].get(),
-            .range = static_cast<UInt>(sizeof(SkeletonShaderData))
+            .range  = static_cast<UInt>(sizeof(SkeletonShaderData))
         });
 
 
@@ -327,7 +327,7 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->SetSubDescriptor({
             .buffer = shader_globals->scenes.GetBuffers()[1].get(),
-            .range = static_cast<UInt>(sizeof(SceneShaderData))
+            .range  = static_cast<UInt>(sizeof(SceneShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_SCENE_FRAME_1)
@@ -348,21 +348,21 @@ void Engine::Initialize()
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(0)
         ->SetSubDescriptor({
             .buffer = shader_globals->materials.GetBuffers()[1].get(),
-            .range = static_cast<UInt>(sizeof(MaterialShaderData))
+            .range  = static_cast<UInt>(sizeof(MaterialShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(1)
         ->SetSubDescriptor({
             .buffer = shader_globals->objects.GetBuffers()[1].get(),
-            .range = static_cast<UInt>(sizeof(ObjectShaderData))
+            .range  = static_cast<UInt>(sizeof(ObjectShaderData))
         });
 
     m_instance->GetDescriptorPool().GetDescriptorSet(DescriptorSet::DESCRIPTOR_SET_INDEX_OBJECT_FRAME_1)
         ->AddDescriptor<renderer::DynamicStorageBufferDescriptor>(2)
         ->SetSubDescriptor({
             .buffer = shader_globals->skeletons.GetBuffers()[1].get(),
-            .range = static_cast<UInt>(sizeof(SkeletonShaderData))
+            .range  = static_cast<UInt>(sizeof(SkeletonShaderData))
         });
 
 #if HYP_FEATURES_BINDLESS_TEXTURES
