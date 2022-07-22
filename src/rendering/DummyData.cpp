@@ -21,7 +21,8 @@ DummyData::DummyData()
           renderer::Image::WrapMode::TEXTURE_WRAP_REPEAT
       ),
       m_sampler_nearest(
-          renderer::Image::FilterMode::TEXTURE_FILTER_NEAREST
+          renderer::Image::FilterMode::TEXTURE_FILTER_NEAREST,
+          renderer::Image::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
       )
 {
 }

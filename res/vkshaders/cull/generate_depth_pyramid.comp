@@ -5,21 +5,13 @@
 
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-#include "include/defines.inc"
-#include "include/shared.inc"
+#include "../include/defines.inc"
+#include "../include/shared.inc"
+#include "./shared.inc"
 
 layout(set = 0, binding = 0) uniform texture2D               mip_in;
 layout(set = 0, binding = 1, r32f) uniform writeonly image2D mip_out;
 layout(set = 0, binding = 2) uniform sampler                 depth_pyramid_sampler;
-
-#define HYP_DEPTH_PYRAMID_SAMPLE_MAX
-// #define HYP_DEPTH_PYRAMID_SAMPLE_MIN
-
-#ifdef HYP_DEPTH_PYRAMID_SAMPLE_MAX
-    #define HYP_DEPTH_CMP max    
-#else
-    #define HYP_DEPTH_CMP min
-#endif
 
 layout(push_constant) uniform DepthPyramidData {
     uvec2 mip_dimensions;
@@ -34,13 +26,6 @@ float GetDepthAtTexel(ivec2 coord, ivec2 offset)
     return Texture2DTexel(depth_pyramid_sampler, mip_in, texel_coord).r;
 }
 
-const ivec2 offsets[4] = {
-    ivec2(0, 0),
-    ivec2(0, 1),
-    ivec2(1, 1),
-    ivec2(1, 0)
-};
-
 void main()
 {
     uvec2 coord    = gl_GlobalInvocationID.xy;
@@ -50,8 +35,8 @@ void main()
 
     float depth = 0.0;
 
-    for (int i = 0; i < 4; i++) {
-        depth = HYP_DEPTH_CMP(depth, GetDepthAtTexel(texel_coord, offsets[i]));
+    for (int i = 0; i < HYP_NUM_DEPTH_PYRAMID_OFFSETS; i++) {
+        depth = HYP_DEPTH_CMP(depth, GetDepthAtTexel(texel_coord, depth_pyramid_offsets[i]));
     }
 
     imageStore(mip_out, ivec2(coord), vec4(depth));

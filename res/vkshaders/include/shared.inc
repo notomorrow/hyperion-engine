@@ -67,6 +67,11 @@ vec4 Texture2DTexel(sampler samp, texture2D tex, ivec2 coord)
     return texelFetch(sampler2D(tex, samp), coord, 0);
 }
 
+vec4 Texture2DTexelLod(sampler samp, texture2D tex, ivec2 coord, int lod)
+{
+    return texelFetch(sampler2D(tex, samp), coord, lod);
+}
+
 float LinearDepth(mat4 projection, float depth)
 {
     return projection[3][2] / (depth * projection[2][3] - projection[2][2]);
