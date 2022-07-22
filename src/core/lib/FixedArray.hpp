@@ -66,7 +66,7 @@ public:
     const T &operator[](typename FixedArray::Base::KeyType index) const   { return m_data[index]; }
 
     HYP_FORCE_INLINE
-    constexpr SizeType Size() const                                         { return Sz; }
+    constexpr SizeType Size() const                                       { return Sz; }
 
     HYP_FORCE_INLINE
     bool Empty() const                                                    { return Sz == 0; }

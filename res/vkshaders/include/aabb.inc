@@ -22,6 +22,15 @@ float AABBGetGreatestExtent(AABB aabb)
 
     return max(extent.x, max(extent.y, extent.z));
 }
+// https://github.com/nvpro-samples/gl_occlusion_culling/blob/master/cull-common.h
+vec3 AABBGetCorner(AABB aabb, int index)
+{
+    int mask = 1 << index;
+
+    bvec3 use_max = bvec3((mask & 1) != 0, (mask & 2) != 0, (mask & 4) != 0);
+
+    return mix(aabb.min, aabb.max, use_max);
+}
 
 void AABBToSphere(AABB aabb, out vec3 center, out float radius)
 {
