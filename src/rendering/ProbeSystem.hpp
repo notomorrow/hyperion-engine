@@ -60,7 +60,7 @@ struct ProbeGridInfo {
 
     Extent3D NumProbesPerDimension() const
     {
-        const auto probes_per_dimension = MathUtil::Ceil((aabb.GetExtent() / probe_distance) + probe_border.ToVector3());
+        const auto probes_per_dimension = MathUtil::Ceil((aabb.GetExtent() / probe_distance) + Vector(probe_border));
 
         return {
             static_cast<decltype(Extent3D::width)>(probes_per_dimension.x),

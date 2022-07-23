@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <cstring>
 
-#define HYP_MESH_AABB_USE_MULTITHREADING 1
+#define HYP_MESH_AABB_USE_MULTITHREADING 0
 
 #if HYP_MESH_AABB_USE_MULTITHREADING
 #include <thread>

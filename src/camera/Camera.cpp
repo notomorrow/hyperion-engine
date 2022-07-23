@@ -1,9 +1,12 @@
 #include "Camera.hpp"
 
+#include <Engine.hpp>
+
 namespace hyperion {
 
 Camera::Camera(CameraType camera_type, int width, int height, float _near, float _far)
-    : m_camera_type(camera_type),
+    : HasDrawProxy(),
+      m_camera_type(camera_type),
       m_width(width),
       m_height(height),
       m_near(_near),
@@ -13,6 +16,11 @@ Camera::Camera(CameraType camera_type, int width, int height, float _near, float
       m_up(Vector3::UnitY()),
       m_command_queue_count{0}
 {
+}
+
+Camera::~Camera()
+{
+    // TODO: make it be an engine component, flush render queue before closing.
 }
 
 void Camera::SetTranslation(const Vector3 &translation)
@@ -120,7 +128,7 @@ Vector4 Camera::TransformScreenToWorld(const Vector2 &screen) const
     return TransformNDCToWorld(TransformScreenToNDC(screen));
 }
 
-void Camera::Update(GameCounter::TickUnit dt)
+void Camera::Update(Engine *engine, GameCounter::TickUnit dt)
 {
     UpdateCommandQueue(dt);
     UpdateLogic(dt);
@@ -128,6 +136,18 @@ void Camera::Update(GameCounter::TickUnit dt)
     m_translation = m_next_translation;
 
     UpdateMatrices();
+
+    // enqueue render update to update the drawable proxy object
+    EnqueueDrawProxyUpdate(engine, CameraDrawProxy {
+        .view       = m_view_mat,
+        .projection = m_proj_mat,
+        .position   = m_translation,
+        .direction  = m_direction,
+        .dimensions = { static_cast<UInt>(m_width), static_cast<UInt>(m_height) },
+        .clip_near  = m_near,
+        .clip_far   = m_far,
+        .fov        = m_fov
+    });
 }
 
 void Camera::UpdateMatrices()

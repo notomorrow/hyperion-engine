@@ -118,7 +118,7 @@ static bool ResizeBuffer(
     return false;
 }
 
-void IndirectDrawState::PushDrawable(Drawable &&drawable)
+void IndirectDrawState::PushDrawable(EntityDrawProxy &&drawable)
 {
     if (drawable.mesh == nullptr) {
         return;
@@ -130,8 +130,7 @@ void IndirectDrawState::PushDrawable(Drawable &&drawable)
         .batch_index        = static_cast<UInt32>(m_object_instances.Size() / 256u),
         .num_indices        = static_cast<UInt32>(drawable.mesh->NumIndices()),
         .aabb_max           = drawable.bounding_box.max.ToVector4(),
-        .aabb_min           = drawable.bounding_box.min.ToVector4(),
-        .bounding_sphere    = drawable.bounding_sphere.ToVector4()
+        .aabb_min           = drawable.bounding_box.min.ToVector4()
     };
 
     m_object_instances.PushBack(std::move(drawable.object_instance));

@@ -6,8 +6,8 @@
 namespace hyperion {
 
 BoundingBox::BoundingBox()
-    : min(std::numeric_limits<float>::max()), 
-      max(std::numeric_limits<float>::lowest())
+    : min(MathUtil::MaxSafeValue<Float>()), 
+      max(MathUtil::MinSafeValue<Float>())
 {
 }
 
@@ -34,6 +34,17 @@ std::array<Vector3, 8> BoundingBox::GetCorners() const
         Vector3(min.x, max.y, max.z),
         Vector3(max.x, max.y, max.z),
         Vector3(max.x, min.y, max.z)
+    };
+}
+
+Vector3 BoundingBox::GetCorner(UInt index) const
+{
+    const UInt mask = 1u << index;
+
+    return {
+        MathUtil::Lerp(min.x, max.x, Int((mask & 1) != 0)),
+        MathUtil::Lerp(min.y, max.y, Int((mask & 2) != 0)),
+        MathUtil::Lerp(min.z, max.z, Int((mask & 4) != 0))
     };
 }
 
@@ -102,14 +113,8 @@ BoundingBox &BoundingBox::operator/=(float scalar)
 
 BoundingBox &BoundingBox::operator*=(const Transform &transform)
 {
-    min *= transform.GetScale();
-    max *= transform.GetScale();
-
-    min *= transform.GetRotation();
-    max *= transform.GetRotation();
-
-    min += transform.GetTranslation();
-    max += transform.GetTranslation();
+    min = transform.GetMatrix() * min;
+    max = transform.GetMatrix() * max;
 
     return *this;
 }
@@ -121,8 +126,9 @@ BoundingBox BoundingBox::operator*(const Transform &transform) const
 
 BoundingBox &BoundingBox::Clear()
 {
-    min = Vector3(std::numeric_limits<float>::max());
-    max = Vector3(std::numeric_limits<float>::lowest());
+    min = Vector3(MathUtil::MaxSafeValue<Float>());
+    max = Vector3(MathUtil::MinSafeValue<Float>());
+
     return *this;
 }
 

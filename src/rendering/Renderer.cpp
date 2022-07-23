@@ -7,6 +7,17 @@
 
 namespace hyperion::v2 {
 
+static UInt GetCullBits(const Vector4 &pos)
+{
+    return UInt(pos.x < -pos.w)
+        | (UInt(pos.x > pos.w)  * 2)
+        | (UInt(pos.y < -pos.w) * 4)
+        | (UInt(pos.y > pos.w)  * 8)
+        | (UInt(pos.z < -pos.w) * 16)
+        | (UInt(pos.z > pos.w)  * 32)
+        | (UInt(pos.w <= 0)     * 64);
+}
+
 IndirectRenderer::IndirectRenderer()
     : m_cached_cull_data_updated({ false })
 {
@@ -178,7 +189,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
                 .batch_offset             = batch_index * batch_size,
                 .num_drawables            = num_drawables_in_batch,
                 .scene_id                 = static_cast<UInt32>(scene_id.value),
-                .depth_pyramid_dimensions = m_cached_cull_data.depth_pyramid_dimensions.ToExtent2D()
+                .depth_pyramid_dimensions = Extent2D(m_cached_cull_data.depth_pyramid_dimensions)
             }
         });
 
@@ -189,7 +200,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
 
     ++m_indirect_debug_counter;
 
-    if (m_indirect_debug_counter >= 1000) {
+    if (m_indirect_debug_counter >= 250) {
         // print out # of objects etc
         auto debug_result = m_indirect_draw_state.GetIndirectBuffer(frame_index)->DebugReadBytes<IndirectDrawCommand>(
             engine->GetInstance(),
@@ -197,13 +208,101 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
             true
         );
 
+        std::unordered_map<UInt, IndirectDrawCommand> entity_distances;
+
         UInt num_instances_rendered = 0,
              num_issued_commands = 0;
 
         for (auto &item : debug_result) {
             num_instances_rendered += item.command.instanceCount;
             ++num_issued_commands;
+
+            if (item.command.instanceCount) {
+                entity_distances[item.entity_id] = item;
+            }
         }
+
+#if 1
+        const auto scene_ref = engine->resources.scenes.Lookup(scene_id);
+
+        for (auto &it : entity_distances) {
+            if (auto ent = engine->resources.spatials.Lookup(Spatial::ID{it.first})) {
+                if (auto &mat = ent->GetMaterial()) {
+                std::cout << " " << ent->GetMaterial()->GetName() << "  (" << ent->GetMaterial()->GetParameter<Vector4>(Material::MATERIAL_KEY_ALBEDO) << ")  ";
+                }
+
+                Vector4 screenspace_aabb = Vector4(it.second.aabb_max);
+
+                const auto &world_aabb = ent->GetDrawProxy().bounding_box;
+
+                const auto *camera = scene_ref->GetCamera();
+
+                // now create on cpu to compare
+                const auto corners = world_aabb.GetCorners();
+
+                Vector3 clip_min, clip_max;
+
+                UInt cull_bits = ~0u;
+
+                auto projected_corner = camera->GetDrawProxy().projection * camera->GetDrawProxy().view * Vector4(world_aabb.GetCorner(0), 1.0f);
+                cull_bits = GetCullBits(projected_corner);
+                auto clip_pos = Vector3(projected_corner);
+                clip_pos.z = MathUtil::Max(clip_pos.z, 0.0f);
+                // clip_pos /= clip_pos.w;
+                clip_pos.x = MathUtil::Clamp(clip_pos.x, -1.0f, 1.0f);
+                clip_pos.y = MathUtil::Clamp(clip_pos.y, -1.0f, 1.0f);
+
+                clip_min = Vector3(clip_pos);
+                clip_max = clip_min;
+
+                // transform worldspace aabb to screenspace
+                for (int i = 1; i < 8; i++) {
+                    projected_corner = camera->GetDrawProxy().projection * camera->GetDrawProxy().view * Vector4(world_aabb.GetCorner(i), 1.0f);
+                    cull_bits &= GetCullBits(projected_corner);
+
+                    clip_pos = Vector3(projected_corner);
+                    clip_pos.z = MathUtil::Max(clip_pos.z, 0.0f);
+                    // clip_pos /= clip_pos.w;
+                    clip_pos.x = MathUtil::Clamp(clip_pos.x, -1.0f, 1.0f);
+                    clip_pos.y = MathUtil::Clamp(clip_pos.y, -1.0f, 1.0f);
+
+
+                    clip_min = MathUtil::Min(Vector3(clip_pos), clip_min);
+                    clip_max = MathUtil::Max(Vector3(clip_pos), clip_max);
+                }
+
+                auto reconstructed_screenspace_aabb = Vector4(clip_min.x * 0.5f + 0.5f, clip_min.y * 0.5f + 0.5f, clip_max.x * 0.5f + 0.5f, clip_max.y * 0.5f + 0.5f);
+
+
+                // std::cout << "\t Shader cull bits: " << it.second.aabb_max.x << "\n";
+                // std::cout << "\t C++ cull bits: " << /*cull_bits*/ projected_corner << "\n";
+
+                // AssertThrow(UInt(it.second.aabb_max.x) == cull_bits);
+                if (!MathUtil::ApproxEqual(Vector(it.second.aabb_max), projected_corner))
+                {
+                    DebugLog(
+                        LogType::Error,
+                        "NOT EQUAL!!! "
+                    );
+                    std::cout << "\t Shader Projection: " << Vector(it.second.aabb_max) << "\n";
+                    std::cout << "\t C++ Projection: " << projected_corner << "\n";
+                }
+                // std::cout << "\t  SHADER MAX: " << Vector4(it.second.aabb_max) << "\n";
+                // std::cout << "\t  SHADER MIN: " << Vector4(it.second.aabb_min) << "\n";
+                // std::cout << "\t  CPP MAX: " << projected_corner << "\n";
+                // std::cout << "\t  CPP MIN: " << world_aabb.min << "\n";
+                // std::cout << "\t  reconstructed: " << projected_corner << "\n";
+                // std::cout << "\t  world: " << world_aabb << "\n";
+                // std::cout << "\t  reconstructed: " << reconstructed_screenspace_aabb << "\n";
+                // std::cout << "  clip_min_z : " << it.second.clip_min_z << "\n";
+
+                // std::cout << "REAL PROJ:\n\t" << camera->GetViewMatrix() << "\n\n";
+                // std::cout << "SHADER PROJ:\n\t" << Matrix4(it.second.proj) << "\n";
+            } else {
+                std::cout << " " << it.first << " NOT FOUND \n";
+            }
+        }
+#endif
 
         DebugLog(LogType::Debug, "NOTICE: %u instances rendered total from %u issued commands.\n", num_instances_rendered, num_issued_commands);
 
@@ -627,7 +726,7 @@ void GraphicsPipeline::CollectDrawCalls(
             }
         }
 
-        m_indirect_renderer.GetDrawState().PushDrawable(Drawable(spatial->GetDrawable()));
+        m_indirect_renderer.GetDrawState().PushDrawable(EntityDrawProxy(spatial->GetDrawProxy()));
     }
 
     m_indirect_renderer.ExecuteCullShaderInBatches(
@@ -696,7 +795,7 @@ void GraphicsPipeline::PerformRendering(Engine *engine, Frame *frame)
                 }
             );
 
-            for (Drawable &drawable : m_indirect_renderer.GetDrawState().GetDrawables()) {
+            for (auto &drawable : m_indirect_renderer.GetDrawState().GetDrawables()) {
                 const UInt entity_index = drawable.entity_id != Spatial::empty_id
                     ? drawable.entity_id.value - 1
                     : 0;

@@ -6,6 +6,14 @@ struct AABB {
     vec3 max;
 };
 
+bool AABBContainsPoint(AABB aabb, vec3 vec)
+{
+    return (
+        vec.x >= aabb.min.x && vec.y >= aabb.min.y && vec.z >= aabb.min.z
+        && vec.x <= aabb.max.x && vec.y <= aabb.max.y && vec.z <= aabb.max.z
+    );
+}
+
 vec3 AABBGetCenter(AABB aabb)
 {
     return (aabb.max + aabb.min) * 0.5;

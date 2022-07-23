@@ -93,7 +93,8 @@ public:
     Vector3 &Lerp(const Vector3 &to, const float amt);
     float Dot(const Vector3 &other) const;
 
-    Vector4 ToVector4() const { return Vector4(*this, 1.0f); }
+    Vector4 ToVector4(float w = 1.0f) const
+        { return Vector4(*this, w); }
 
     static Vector3 Abs(const Vector3 &);
     static Vector3 Round(const Vector3 &);

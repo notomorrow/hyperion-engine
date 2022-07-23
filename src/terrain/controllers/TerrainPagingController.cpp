@@ -116,9 +116,9 @@ void TerrainPagingController::AddEnqueuedChunks()
         );
 
         entity->SetTranslation({
-            (patch_info.coord.x - 0.5f) * (patch_info.extent.ToVector3().Avg() - 1) * m_scale.x,
+            (patch_info.coord.x - 0.5f) * (Vector(patch_info.extent).Avg() - 1) * m_scale.x,
             GetOwner()->GetTranslation().y,
-            (patch_info.coord.y - 0.5f) * (patch_info.extent.ToVector3().Avg() - 1) * m_scale.z
+            (patch_info.coord.y - 0.5f) * (Vector(patch_info.extent).Avg() - 1) * m_scale.z
         });
 
         if (auto *patch = GetPatch(patch_info.coord)) {

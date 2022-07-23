@@ -98,9 +98,8 @@ struct alignas(256) ObjectShaderData {
     Vector4 world_aabb_max;
     // 112
     Vector4 world_aabb_min;
-    // 128
-    Vector4 world_bounding_sphere;
 
+    // 128
     UInt32 entity_id;
     UInt32 scene_id;
     UInt32 mesh_id;
