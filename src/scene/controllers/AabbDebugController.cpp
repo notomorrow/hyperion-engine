@@ -14,8 +14,8 @@ AABBDebugController::AABBDebugController(Engine *engine)
 
 void AABBDebugController::OnAdded()
 {
-    m_aabb = GetOwner()->GetWorldAabb();
     auto *scene = GetOwner()->GetScene();
+    m_aabb      = GetOwner()->GetWorldAabb();
 
     if (scene == nullptr) {
         DebugLog(
@@ -75,16 +75,19 @@ void AABBDebugController::OnRemoved()
 
 void AABBDebugController::OnTransformUpdate(const Transform &transform)
 {
-    if (m_aabb != GetOwner()->GetWorldAabb()) {
-        m_aabb = GetOwner()->GetWorldAabb();
-    }
+    m_aabb = GetOwner()->GetWorldAabb();
 
     if (m_aabb_entity == nullptr) {
+        DebugLog(
+            LogType::Warn,
+            "No AABB entity set!\n"
+        );
+
         return;
     }
 
     m_aabb_entity->SetTransform(Transform(
-        GetOwner()->GetTranslation() + Vector3(0, m_aabb.GetExtent().y * 0.5f, 0),
+        m_aabb.GetCenter(),
         m_aabb.GetExtent() * 0.5f,
         Quaternion::Identity()
     ));

@@ -10,12 +10,20 @@
 #include <math/Matrix4.hpp>
 #include <math/Frustum.hpp>
 
+#include <rendering/DrawProxy.hpp>
+
 #include <atomic>
 #include <mutex>
 
 namespace hyperion {
+namespace v2 {
+class Engine;
+} // namespace v2
 
-using GameCounter = v2::GameCounter;
+using v2::GameCounter;
+using v2::CameraDrawProxy;
+using v2::HasDrawProxy;
+using v2::Engine;
 
 enum class CameraType {
     PERSPECTIVE,
@@ -59,10 +67,10 @@ struct CameraCommand {
     };
 };
 
-class Camera {
+class Camera : public HasDrawProxy<STUB_CLASS(Camera)> {
 public:
     Camera(CameraType camera_type, int width, int height, float _near, float _far);
-    virtual ~Camera() = default;
+    virtual ~Camera();
 
     CameraType GetCameraType() const { return m_camera_type; }
 
@@ -119,7 +127,7 @@ public:
     /*! \brief Transform a 2D vector of x,y ranging from [0, 1] into world coordinates */
     Vector4 TransformScreenToWorld(const Vector2 &screen) const;
 
-    void Update(GameCounter::TickUnit dt);
+    void Update(Engine *engine, GameCounter::TickUnit dt);
 
     virtual void UpdateLogic(double dt) = 0;
 
@@ -150,9 +158,9 @@ private:
 
     Matrix4 m_view_proj_mat;
 
-    std::mutex                m_command_queue_mutex;
-    std::atomic_uint32_t      m_command_queue_count;
-    Queue<CameraCommand>      m_command_queue;
+    std::mutex           m_command_queue_mutex;
+    std::atomic_uint32_t m_command_queue_count;
+    Queue<CameraCommand> m_command_queue;
 };
 }
 

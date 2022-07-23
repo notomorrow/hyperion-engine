@@ -47,7 +47,9 @@ struct ComponentInitInfo<STUB_CLASS(Spatial)> {
     ComponentFlagBits flags = ENTITY_FLAGS_RAY_TESTS_ENABLED;
 };
 
-class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)> {
+class Spatial : public EngineComponentBase<STUB_CLASS(Spatial)>,
+                public HasDrawProxy<STUB_CLASS(Spatial)>
+{
     friend class Octree;
     friend class GraphicsPipeline;
     friend class Controller;
@@ -121,30 +123,29 @@ public:
 
     void SetStencilAttributes(const StencilState &stencil_state);
 
-    GraphicsPipeline *GetPrimaryPipeline() const { return m_primary_pipeline.pipeline; }
+    GraphicsPipeline *GetPrimaryRendererInstance() const
+        { return m_primary_pipeline.pipeline; }
 
-    // auto &GetPipelines()                   { return m_pipelines; }
-    const auto &GetPipelines() const        { return m_pipelines; }
+    const auto &GetRendererInstances() const
+        { return m_pipelines; }
 
-    Bucket GetBucket() const                { return m_renderable_attributes.bucket; }
+    Bucket GetBucket() const                     { return m_renderable_attributes.bucket; }
     void SetBucket(Bucket bucket);
 
-    const Vector3 &GetTranslation() const   { return m_transform.GetTranslation(); }
+    const Vector3 &GetTranslation() const        { return m_transform.GetTranslation(); }
     void SetTranslation(const Vector3 &translation);
 
-    const Vector3 &GetScale() const         { return m_transform.GetScale(); }
+    const Vector3 &GetScale() const              { return m_transform.GetScale(); }
     void SetScale(const Vector3 &scale);
 
-    const Quaternion &GetRotation() const   { return m_transform.GetRotation(); }
+    const Quaternion &GetRotation() const        { return m_transform.GetRotation(); }
     void SetRotation(const Quaternion &rotation);
 
-    const Transform &GetTransform() const   { return m_transform; }
+    const Transform &GetTransform() const        { return m_transform; }
     void SetTransform(const Transform &transform);
 
-    const Drawable &GetDrawable() const     { return m_drawable; }
-
-    const BoundingBox &GetLocalAabb() const { return m_local_aabb; }
-    const BoundingBox &GetWorldAabb() const { return m_world_aabb; }
+    const BoundingBox &GetLocalAabb() const      { return m_local_aabb; }
+    const BoundingBox &GetWorldAabb() const      { return m_world_aabb; }
     
     bool IsReady() const;
 
@@ -162,6 +163,7 @@ public:
 
         controller->m_owner = this;
         controller->OnAdded();
+        controller->OnTransformUpdate(m_transform);
 
         m_controllers.Set(std::move(controller));
     }
@@ -217,11 +219,6 @@ private:
     Scene                 *m_scene;
 
     RenderableAttributeSet m_renderable_attributes;
-
-    // only touch from render thread.
-    // we update this when updates are enqueued, so just update
-    // the shader data state to dirty to refresh this.
-    Drawable               m_drawable;
 
     ControllerSet          m_controllers;
 

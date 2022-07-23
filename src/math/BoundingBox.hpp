@@ -6,6 +6,7 @@
 #include "Transform.hpp"
 #include "Ray.hpp"
 #include "../HashCode.hpp"
+#include <Types.hpp>
 
 #include <array>
 #include <limits>
@@ -24,6 +25,7 @@ public:
     const Vector3 &GetMax() const       { return max; }
     void SetMax(const Vector3 &max)     { this->max = max; }
     std::array<Vector3, 8> GetCorners() const;
+    Vector3 GetCorner(UInt index) const;
     Vector3 GetCenter() const           { return (max + min) / 2.0f; }
     void SetCenter(const Vector3 &center);
     Vector3 GetExtent() const           { return max - min; }

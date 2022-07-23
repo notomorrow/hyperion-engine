@@ -29,13 +29,13 @@ Spatial::Spatial(
     const RenderableAttributeSet &renderable_attributes,
     const ComponentInitInfo &init_info
 ) : EngineComponentBase(init_info),
+    HasDrawProxy(),
     m_mesh(std::move(mesh)),
     m_shader(std::move(shader)),
     m_material(std::move(material)),
     m_node(nullptr),
     m_scene(nullptr),
     m_renderable_attributes(renderable_attributes),
-    m_drawable{},
     m_octree(nullptr),
     m_needs_octree_update(false),
     m_shader_data_state(ShaderDataState::DIRTY)
@@ -149,16 +149,15 @@ void Spatial::EnqueueRenderUpdates()
         ? m_scene->GetId()
         : Scene::empty_id;
 
-    const Drawable drawable {
-        .mesh            = m_mesh.ptr,
-        .material        = m_material.ptr,
-        .entity_id       = m_id,
-        .scene_id        = scene_id,
-        .mesh_id         = mesh_id,
-        .material_id     = material_id,
-        .skeleton_id     = skeleton_id,
-        .bounding_box    = m_world_aabb,
-        .bounding_sphere = BoundingSphere(m_world_aabb)
+    const EntityDrawProxy drawable {
+        .mesh         = m_mesh.ptr,
+        .material     = m_material.ptr,
+        .entity_id    = m_id,
+        .scene_id     = scene_id,
+        .mesh_id      = mesh_id,
+        .material_id  = material_id,
+        .skeleton_id  = skeleton_id,
+        .bounding_box = m_world_aabb
     };
 
     GetEngine()->render_scheduler.Enqueue([this, transform = m_transform, drawable](...) {
@@ -174,8 +173,6 @@ void Spatial::EnqueueRenderUpdates()
                 .local_aabb_min = Vector4(m_local_aabb.min, 1.0f),
                 .world_aabb_max = Vector4(m_world_aabb.max, 1.0f),
                 .world_aabb_min = Vector4(m_world_aabb.min, 1.0f),
-
-                .world_bounding_sphere = m_drawable.bounding_sphere.ToVector4(),
 
                 .entity_id      = drawable.entity_id.value,
                 .scene_id       = drawable.scene_id.value,

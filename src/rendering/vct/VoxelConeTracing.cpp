@@ -318,7 +318,7 @@ void VoxelConeTracing::CreateFramebuffers(Engine *engine)
 {
     for (UInt i = 0; i < max_frames_in_flight; i++) {
         m_framebuffers[i] = engine->resources.framebuffers.Add(std::make_unique<Framebuffer>(
-            voxel_map_size.ToExtent2D(),
+            Extent2D(voxel_map_size),
             m_render_pass.IncRef()
         ));
         

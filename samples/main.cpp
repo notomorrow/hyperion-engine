@@ -114,7 +114,7 @@ public:
 
         auto loaded_assets = engine->assets.Load<Node>(
             "models/ogrexml/dragger_Body.mesh.xml",
-            "models/sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
+            "models/testbed/testbed.obj",  //sponza/sponza.obj",//sibenik/sibenik.obj",//, //, //", //
             "models/cube.obj",
             "models/material_sphere/material_sphere.obj",
             "models/grass/grass.obj"
@@ -162,7 +162,7 @@ public:
         grass->GetChild(0)->GetSpatial()->SetShader(engine->shader_manager.GetShader(ShaderManager::Key::BASIC_VEGETATION).IncRef());
         grass->Scale(1.0f);
         grass->Translate({0, 1, 0});
-        grass->GetChild(0)->GetSpatial()->AddController<AABBDebugController>(engine);
+        // grass->GetChild(0)->GetSpatial()->AddController<AABBDebugController>(engine);
 
 
         material_test_obj->GetChild(0)->GetSpatial()->GetMaterial()->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.1f);
@@ -193,7 +193,7 @@ public:
         zombie->Scale(0.25f);
         zombie->Translate({0, 0, -5});
         zombie->GetChild(0)->GetSpatial()->GetController<AnimationController>()->Play(1.0f, LoopMode::REPEAT);
-        zombie->GetChild(0)->GetSpatial()->AddController<AABBDebugController>(engine);
+        // zombie->GetChild(0)->GetSpatial()->AddController<AABBDebugController>(engine);
         scene->GetRootNode()->AddChild(std::move(zombie));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->FindBone("thigh.L")->SetLocalRotation(Quaternion({1.0f, 0.0f, 0.0f}, MathUtil::DegToRad(90.0f)));
         //zombie->GetChild(0)->GetSpatial()->GetSkeleton()->GetRootBone()->UpdateWorldTransform();
@@ -214,8 +214,10 @@ public:
 
         scene->GetEnvironment()->AddLight(m_point_light.IncRef());
 
-        /*test_model->Scale(40.0f);//14.075f);
-        auto &terrain_material = test_model->GetChild(0)->GetSpatial()->GetMaterial();
+        test_model->Scale(10.0f);
+        // test_model->Scale(0.15f);//14.075f);
+
+        /*auto &terrain_material = test_model->GetChild(0)->GetSpatial()->GetMaterial();
         terrain_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 50.0f);
         terrain_material->SetParameter(Material::MATERIAL_KEY_PARALLAX_HEIGHT, 0.08f);
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-albedo.png")));
@@ -227,8 +229,15 @@ public:
         terrain_material->SetTexture(Material::MATERIAL_TEXTURE_METALNESS_MAP, engine->resources.textures.Add(engine->assets.Load<Texture>("textures/rocky_dirt1-ue/rocky_dirt1-metallic.png")));
         test_model->Rotate(Quaternion(Vector3::UnitX(), MathUtil::DegToRad(90.0f)));*/
 
-        test_model->Scale(0.15f);
-        scene->GetRootNode()->AddChild(std::move(test_model));
+        // test_model->Scale(0.15f);
+        if (auto *test = scene->GetRootNode()->AddChild(std::move(test_model))) {
+            for (auto &child : test->GetChildren()) {
+                if (auto &ent = child->GetSpatial()) {
+                    std::cout << "Adding debug controller to  " << child->GetName() << "\n";
+                    ent->AddController<AABBDebugController>(engine);
+                }
+            }
+        }
 
         auto quad = engine->resources.meshes.Add(MeshBuilder::Quad());
         quad->SetVertexAttributes(renderer::static_mesh_vertex_attributes | renderer::skeleton_vertex_attributes);
@@ -253,7 +262,7 @@ public:
         scene->GetEnvironment()->AddRenderComponent<ShadowRenderer>(
             my_light.IncRef(),
             Vector3::Zero(),
-            150.0f
+            80.0f
         );
 
         scene->GetEnvironment()->AddRenderComponent<CubemapRenderer>(
@@ -467,7 +476,7 @@ public:
 
             //outline_pipeline_ref->AddSpatial(engine->resources.spatials.IncRef(suzanne->GetChild(0)->GetSpatial()));
 
-            // suzanne->SetLocalTranslation({7, std::sin(timer * 0.35f) * 7.0f + 7.0f, 5});
+            suzanne->SetLocalTranslation({7, std::sin(timer * 0.35f) * 7.0f + 7.0f, 5});
             // const auto &aabb = suzanne->GetWorldAabb();
 
             // Vector3 max_ss = scene->GetCamera()->GetProjectionMatrix() * scene->GetCamera()->GetViewMatrix() * aabb.max;

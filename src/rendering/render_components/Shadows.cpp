@@ -16,7 +16,7 @@ ShadowPass::ShadowPass()
     : FullScreenPass(),
       m_max_distance(100.0f),
       m_shadow_map_index(~0u),
-      m_dimensions{ 512, 512 }
+      m_dimensions{ 1024, 1024 }
 {
 }
 

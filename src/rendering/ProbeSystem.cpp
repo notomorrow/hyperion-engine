@@ -38,7 +38,7 @@ void ProbeGrid::Init(Engine *engine)
                                      + z;
 
                 m_probes[index] = Probe{
-                    .position = (Vector3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)) - (m_grid_info.probe_border.ToVector3() * 0.5f)) * m_grid_info.probe_distance
+                    .position = (Vector3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)) - (Vector(m_grid_info.probe_border) * 0.5f)) * m_grid_info.probe_distance
                 };
             }
         }
@@ -126,8 +126,8 @@ void ProbeGrid::CreateUniformBuffer(Engine *engine)
         .probe_border                 = m_grid_info.probe_border,
         .probe_counts                 = m_grid_info.NumProbesPerDimension(),
         .image_dimensions             = m_grid_info.GetImageDimensions(),
-        .irradiance_image_dimensions  = m_irradiance_image->GetExtent().ToExtent2D(),
-        .depth_image_dimensions       = m_depth_image->GetExtent().ToExtent2D(),
+        .irradiance_image_dimensions  = Extent2D(m_irradiance_image->GetExtent()),
+        .depth_image_dimensions       = Extent2D(m_depth_image->GetExtent()),
         .probe_distance               = m_grid_info.probe_distance,
         .num_rays_per_probe           = m_grid_info.num_rays_per_probe
     };

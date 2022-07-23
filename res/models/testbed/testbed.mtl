@@ -1,7 +1,7 @@
 # Blender MTL File: 'testbed.blend'
 # Material Count: 25
 
-newmtl Material.001
+newmtl white
 Ns 900.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.800000 0.800000 0.800000
@@ -61,7 +61,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl Material.008
+newmtl blue
 Ns 225.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.000000 0.022015 0.800000

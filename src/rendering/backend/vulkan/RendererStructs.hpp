@@ -5,6 +5,11 @@
 #include <HashCode.hpp>
 #include <Types.hpp>
 
+#include <math/Vector2.hpp>
+#include <math/Vector3.hpp>
+#include <math/Vector4.hpp>
+#include <math/Matrix4.hpp>
+
 #include <vulkan/vulkan.h>
 
 #include <cstdint>
@@ -283,10 +288,10 @@ struct QueueFamilyIndices {
 };
 
 struct SwapchainSupportDetails {
-    VkSurfaceCapabilitiesKHR capabilities;
+    VkSurfaceCapabilitiesKHR             capabilities;
     std::vector<VkQueueFamilyProperties> queue_family_properties;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> present_modes;
+    std::vector<VkSurfaceFormatKHR>      formats;
+    std::vector<VkPresentModeKHR>        present_modes;
 };
 
 struct alignas(8) Extent2D {
@@ -328,8 +333,15 @@ struct alignas(8) Extent2D {
     constexpr UInt32 &operator[](UInt32 index)      { return v[index]; }
     constexpr UInt32 operator[](UInt32 index) const { return v[index]; }
 
-    Vector2 ToVector2() const { return Vector2(static_cast<float>(width), static_cast<float>(height)); }
     UInt32 Size() const { return width * height; }
+
+    operator Vector2() const
+    {
+        return {
+            static_cast<Float>(width),
+            static_cast<Float>(height)
+        };
+    }
 };
 
 static_assert(sizeof(Extent2D) == 8);
@@ -410,8 +422,22 @@ struct alignas(16) Extent3D {
     constexpr UInt32 &operator[](UInt32 index)         { return v[index]; }
     constexpr UInt32 operator[](UInt32 index) const    { return v[index]; }
 
-    Extent2D ToExtent2D() const { return Extent2D(width, height); }
-    Vector3 ToVector3() const   { return Vector3(static_cast<float>(width), static_cast<float>(height), static_cast<float>(depth)); }
+    operator Extent2D() const
+    {
+        return {
+            width,
+            height
+        };
+    }
+    
+    operator Vector3() const
+    {
+        return {
+            static_cast<Float>(width),
+            static_cast<Float>(height),
+            static_cast<Float>(depth)
+        };
+    }
 
     UInt32 Size() const { return width * height * depth; }
 };
@@ -434,9 +460,11 @@ struct alignas(4) ShaderVec2 {
           y(extent.height)
     {
     }
+
+    operator Vector2() const { return Vector2(x, y); }
 };
 
-static_assert(sizeof(ShaderVec2<float>) == 8);
+static_assert(sizeof(ShaderVec2<Float>) == 8);
 static_assert(sizeof(ShaderVec2<UInt32>) == 8);
 
 template <class T>
@@ -457,6 +485,8 @@ struct alignas(4) ShaderVec3 {
           z(extent.depth)
     {
     }
+
+    operator Vector3() const { return Vector3(x, y, z); }
 };
 
 static_assert(sizeof(ShaderVec3<float>)  == 12);
@@ -475,10 +505,43 @@ struct alignas(4) ShaderVec4 {
           w(vec.w)
     {
     }
+
+    operator Vector4() const { return Vector4(x, y, z, w); }
 };
 
-static_assert(sizeof(ShaderVec4<float>)  == 16);
+static_assert(sizeof(ShaderVec4<Float>)  == 16);
 static_assert(sizeof(ShaderVec4<UInt32>) == 16);
+
+struct alignas(4) ShaderMat4 {
+    Float m00, m01, m02, m03,
+          m10, m11, m12, m13,
+          m20, m21, m22, m23,
+          m30, m31, m32, m33;
+
+    ShaderMat4() = default;
+    ShaderMat4(const ShaderMat4 &other) = default;
+    ShaderMat4(const Matrix4 &mat)
+        : m00(mat[0][0]), m01(mat[0][1]), m02(mat[0][2]), m03(mat[0][3]),
+          m10(mat[1][0]), m11(mat[1][1]), m12(mat[1][2]), m13(mat[1][3]),
+          m20(mat[2][0]), m21(mat[2][1]), m22(mat[2][2]), m23(mat[2][3]),
+          m30(mat[3][0]), m31(mat[3][1]), m32(mat[3][2]), m33(mat[3][3])
+    {
+    }
+
+    operator Matrix4() const
+    {
+        const Float values[16] = {
+            m00, m01, m02, m03,
+            m10, m11, m12, m13,
+            m20, m21, m22, m23,
+            m30, m31, m32, m33
+        };
+
+        return Matrix4(&values[0]);
+    }
+};
+
+static_assert(sizeof(ShaderMat4) == 64);
 
 struct alignas(8) Rect {
     uint32_t x0, y0,
@@ -598,9 +661,15 @@ struct alignas(4) IndirectDrawCommand {
     // native vk object
     VkDrawIndexedIndirectCommand command;
     // additional data...
+
+    UInt32  entity_id;
+    Float   max_depth;
+    Float   clip_min_z;
+    ShaderVec4<Float> aabb_max;
+    ShaderVec4<Float> aabb_min;
 };
 
-static_assert(std::is_pod_v<IndirectDrawCommand>, "IndirectDrawCommand must be POD");
+static_assert(std::is_standard_layout_v<IndirectDrawCommand>, "IndirectDrawCommand must be POD");
 static_assert(sizeof(IndirectDrawCommand) % 4 == 0, "IndirectDrawCommand must have a sizeof multiple of 4");
 
 } // namespace renderer

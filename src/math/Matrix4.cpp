@@ -146,7 +146,10 @@ Matrix4::Matrix4()
 
 Matrix4::Matrix4(const float *v)
 {
-    hyperion::Memory::Copy(values, v, sizeof(values));
+    rows[0] = { v[0],  v[1],  v[2],  v[3] };
+    rows[1] = { v[4],  v[5],  v[6],  v[7] };
+    rows[2] = { v[8],  v[9],  v[10], v[11] };
+    rows[3] = { v[12], v[13], v[14], v[15] };
 }
 
 Matrix4::Matrix4(const Matrix4 &other)

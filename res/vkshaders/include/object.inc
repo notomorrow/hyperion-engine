@@ -12,17 +12,14 @@ struct Object {
     vec4 world_aabb_max;
     // 112
     vec4 world_aabb_min;
-    // 128
-    vec4 world_bounding_sphere;
 
-    // 144
+    // 128
     uint entity_id;
     uint scene_id;
     uint mesh_id;
     uint material_id;
     uint skeleton_id;
 
-    // 164
     /*vec4 _pad0;
     vec4 _pad1;
     vec4 _pad2;
