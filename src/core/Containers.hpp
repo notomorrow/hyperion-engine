@@ -1006,7 +1006,7 @@ public:
         Note, this method is expensive as it locks a mutex. Use sparingly. */
     [[nodiscard]] Ref Lookup(typename T::ID id)
     {
-        m_mutex.lock();
+        std::lock_guard guard(m_mutex);
 
         T *ptr = m_holder.Get(id);
 
@@ -1015,8 +1015,6 @@ public:
         }
 
         auto it = m_ref_count_holder.Find(id);
-
-        m_mutex.unlock();
 
         if (it == m_ref_count_holder.End()) {
             return nullptr;

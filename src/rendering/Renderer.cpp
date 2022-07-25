@@ -217,9 +217,9 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
             num_instances_rendered += item.command.instanceCount;
             ++num_issued_commands;
 
-            if (item.command.instanceCount) {
+            //if (item.command.instanceCount) {
                 entity_distances[item.entity_id] = item;
-            }
+            //}
         }
 
 #if 1
@@ -228,7 +228,13 @@ void IndirectRenderer::ExecuteCullShaderInBatches(
         for (auto &it : entity_distances) {
             if (auto ent = engine->resources.spatials.Lookup(Spatial::ID{it.first})) {
                 if (auto &mat = ent->GetMaterial()) {
-                std::cout << " " << ent->GetMaterial()->GetName() << "  (" << ent->GetMaterial()->GetParameter<Vector4>(Material::MATERIAL_KEY_ALBEDO) << ")  ";
+                //std::cout << " " << ent->GetMaterial()->GetName() << "  (" << ent->GetMaterial()->GetParameter<Vector4>(Material::MATERIAL_KEY_ALBEDO) << ")  ";
+                    if (!std::strcmp(mat->GetName(), "floor")) {
+                        std::cout << "[frame " << frame_index << "]  Floor visible? : " << !!it.second.command.instanceCount << "\n";
+                    }
+                    continue;
+                } else {
+                    continue;
                 }
 
                 Vector4 screenspace_aabb = Vector4(it.second.aabb_max);

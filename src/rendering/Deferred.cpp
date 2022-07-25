@@ -412,7 +412,7 @@ void DepthPyramidRenderer::Create(Engine *engine, const AttachmentRef *depth_att
             },
             Image::InternalFormat::TEXTURE_INTERNAL_FORMAT_R32F,
             Image::Type::TEXTURE_TYPE_2D,
-            Image::FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP,//Image::FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP,
+            Image::FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP,
             nullptr
         );
 
