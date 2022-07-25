@@ -21,24 +21,34 @@ layout(push_constant) uniform DepthPyramidData {
 
 float GetDepthAtTexel(vec2 texcoord, ivec2 offset)
 {
-    const ivec2 texel_coord = clamp(ivec2((texcoord * vec2(prev_mip_dimensions - uvec2(1))) + vec2(offset) + vec2(0.5)), ivec2(0), ivec2(prev_mip_dimensions) - ivec2(1));
+    //const ivec2 texel_coord = clamp(ivec2((texcoord * vec2(prev_mip_dimensions - uvec2(1))) + vec2(offset) + vec2(0.5)), ivec2(0), ivec2(prev_mip_dimensions) - ivec2(1));
     // const ivec2 texel_coord = clamp(ivec2((texcoord * vec2(prev_mip_dimensions)) + vec2(offset)), ivec2(0), ivec2(prev_mip_dimensions) - ivec2(1));
 
-    return Texture2DTexelLod(depth_pyramid_sampler, mip_in, texel_coord, 0).r;
+    //return Texture2DTexelLod(depth_pyramid_sampler, mip_in, texel_coord, 0).r;
+
+    const vec2 coord = texcoord + (vec2(offset) * (vec2(1.0) / vec2(prev_mip_dimensions)));
+
+    return Texture2DLod(depth_pyramid_sampler, mip_in, coord, 0.0).r;
 }
 
 void main()
 {
-    uvec2 coord    = gl_GlobalInvocationID.xy;
-    vec2  texcoord = vec2(coord) / vec2(mip_dimensions);
-
+    const uvec2 coord = gl_GlobalInvocationID.xy;
     // ivec2 texel_coord = ivec2(texcoord * vec2(prev_mip_dimensions));
+
+#if HYP_FEATURES_MINMAX_SAMPLER
+    vec2  texcoord = (vec2(coord) + vec2(0.5)) / vec2(mip_dimensions);
+
+    float depth = Texture2DLod(depth_pyramid_sampler, mip_in, texcoord, 0.0).r;
+#else
+    vec2  texcoord = vec2(coord) / vec2(mip_dimensions);
 
     float depth = 0.0;
 
     for (int i = 0; i < HYP_NUM_DEPTH_PYRAMID_OFFSETS; i++) {
         depth = HYP_DEPTH_CMP(depth, GetDepthAtTexel(texcoord, depth_pyramid_offsets[i]));
     }
+#endif
 
     imageStore(mip_out, ivec2(coord), vec4(depth));
 }

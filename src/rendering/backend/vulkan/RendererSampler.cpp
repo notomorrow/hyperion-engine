@@ -62,7 +62,7 @@ Result Sampler::Create(Device *device)
             return { Result::RENDERER_ERR, "Device does not support min/max sampler formats" };
         }
 
-        reduction_info.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
+        reduction_info.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
         sampler_info.pNext           = &reduction_info;
     }
 

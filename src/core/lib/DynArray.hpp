@@ -643,8 +643,9 @@ auto DynArray<T>::Erase(ConstIterator iter) -> Iterator
         }
     }
 
-    PopBack();
-
+    m_buffer[m_size - 1].Get().~T();
+    --m_size;
+    
     return Begin() + dist;
 }
 
@@ -657,16 +658,24 @@ auto DynArray<T>::EraseAt(typename DynArray::Base::KeyType index) -> Iterator
 template <class T>
 auto DynArray<T>::PopFront() -> ValueType&&
 {
-    // AssertThrow(Size() != 0);
-    return std::move(m_buffer[m_start_offset++].Get());
+    AssertThrow(Size() != 0);
+    auto &&front = std::move(m_buffer[m_start_offset].Get());
+    m_buffer[m_start_offset].Get().~T();
+    ++m_start_offset;
+
+    return std::move(front);
 }
 
 
 template <class T>
 auto DynArray<T>::PopBack() -> ValueType&&
 {
-    // AssertThrow(m_size != 0);
-    return std::move(m_buffer[--m_size].Get());
+    AssertThrow(m_size != 0);
+    auto &&back = std::move(m_buffer[m_size - 1].Get());
+    m_buffer[m_size - 1].Get().~T();
+    --m_size;
+
+    return std::move(back);
 }
 
 template <class T>
@@ -680,6 +689,8 @@ void DynArray<T>::Clear()
 
     m_size = 0;
     m_start_offset = 0;
+
+    Refit();
 }
 
 // deduction guide

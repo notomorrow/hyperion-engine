@@ -149,9 +149,9 @@ void main()
             clip_max = max(clip_pos.xyz, clip_max);
         }
 
-        if (AABBContainsPoint(aabb, scene.camera_position.xyz)) {
-            ++num_instances;
-        } else {
+        // if (AABBContainsPoint(aabb, scene.camera_position.xyz)) {
+        //     ++num_instances;
+        // } else {
         // else if (IsPixelVisible(clip_min, clip_max) && cull_bits == 0)
 
             // num_instances += int(cull_bits == 0);
@@ -160,6 +160,9 @@ void main()
 
                 clip_min.xy = clip_min.xy * vec2(0.5) + vec2(0.5);
                 clip_max.xy = clip_max.xy * vec2(0.5) + vec2(0.5);
+
+                //clip_min.y = 1.0 - clip_min.y;
+                //clip_max.y = 1.0 - clip_max.y;
 
                 screenspace_aabb = vec4(clip_min.xy, clip_max.xy);
 
@@ -170,7 +173,7 @@ void main()
                 // mip = clamp(mip, 0, 9.0);
         
                 // Texel footprint for the lower (finer-grained) level
-                /*float level_lower = max(mip - 1, 0);
+                float level_lower = max(mip - 1, 0);
                 float scale = exp2(-level_lower);
                 vec2 a = floor(screenspace_aabb.xy * scale);
                 vec2 b = ceil(screenspace_aabb.zw * scale);
@@ -179,42 +182,31 @@ void main()
                 // Use the lower level if we only touch <= 2 texels in both dimensions
                 if (dims.x <= 2 && dims.y <= 2) {
                     mip = level_lower;
-                }*/
+                }
 
                 vec2 mip_image_size = textureSize(sampler2D(depth_pyramid, depth_pyramid_sampler), int(mip));
                 vec2 sample_coord = (screenspace_aabb.xy + screenspace_aabb.zw) * 0.5;
                 ivec2 sample_texel_coord = ivec2(sample_coord * mip_image_size);//ivec2(sample_coord * (mip_image_size - vec2(1.0)) + vec2(0.5));
 
+#if HYP_FEATURES_MINMAX_SAMPLER
+                max_depth = Texture2DLod(depth_pyramid_sampler, depth_pyramid, sample_coord, mip).r;
+#else
                 const vec4 depths = {
-                    // Texture2DTexelLod(depth_pyramid_sampler, depth_pyramid, clamp(sample_texel_coord + depth_pyramid_offsets[0], ivec2(0), ivec2(mip_image_size) - ivec2(1)), int(mip)).r,
-                    // Texture2DTexelLod(depth_pyramid_sampler, depth_pyramid, clamp(sample_texel_coord + depth_pyramid_offsets[1], ivec2(0), ivec2(mip_image_size) - ivec2(1)), int(mip)).r,
-                    // Texture2DTexelLod(depth_pyramid_sampler, depth_pyramid, clamp(sample_texel_coord + depth_pyramid_offsets[2], ivec2(0), ivec2(mip_image_size) - ivec2(1)), int(mip)).r,
-                    // Texture2DTexelLod(depth_pyramid_sampler, depth_pyramid, clamp(sample_texel_coord + depth_pyramid_offsets[3], ivec2(0), ivec2(mip_image_size) - ivec2(1)), int(mip)).r
-
-
-                    Texture2DTexelLod(depth_pyramid_sampler, depth_pyramid, clamp(ivec2(clip_min.xy * vec2(mip_image_size - vec2(1.0)) + vec2(0.5)), ivec2(0), ivec2(mip_image_size) - ivec2(1)), int(mip)).r,
-                    Texture2DTexelLod(depth_pyramid_sampler, depth_pyramid, clamp(ivec2(vec2(clip_max.x, clip_min.y) * vec2(mip_image_size - vec2(1.0)) + vec2(0.5)), ivec2(0), ivec2(mip_image_size) - ivec2(1)), int(mip)).r,
-                    Texture2DTexelLod(depth_pyramid_sampler, depth_pyramid, clamp(ivec2(clip_max.xy * vec2(mip_image_size - vec2(1.0)) + vec2(0.5)), ivec2(0), ivec2(mip_image_size) - ivec2(1)), int(mip)).r,
-                    Texture2DTexelLod(depth_pyramid_sampler, depth_pyramid, clamp(ivec2(vec2(clip_min.x, clip_max.y) * vec2(mip_image_size - vec2(1.0)) + vec2(0.5)), ivec2(0), ivec2(mip_image_size) - ivec2(1)), int(mip)).r
-
-                    // Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_min.xy, (mip)).r,
-                    // Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_max.x, clip_min.y), (mip)).r,
-                    // Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_max.xy, (mip)).r,
-                    // Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_min.x, clip_max.y), (mip)).r,
-
-                    // Texture2DLod(depth_pyramid_sampler, depth_pyramid, sample_coord + (vec2(depth_pyramid_offsets[0]) * (vec2(1.0) / mip_image_size)), int(floor(mip))).r,
-                    // Texture2DLod(depth_pyramid_sampler, depth_pyramid, sample_coord + (vec2(depth_pyramid_offsets[1]) * (vec2(1.0) / mip_image_size)), int(floor(mip))).r,
-                    // Texture2DLod(depth_pyramid_sampler, depth_pyramid, sample_coord + (vec2(depth_pyramid_offsets[2]) * (vec2(1.0) / mip_image_size)), int(floor(mip))).r,
-                    // Texture2DLod(depth_pyramid_sampler, depth_pyramid, sample_coord + (vec2(depth_pyramid_offsets[3]) * (vec2(1.0) / mip_image_size)), int(floor(mip))).r
+                    Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_min.xy, mip).r,
+                    Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_max.x, clip_min.y), mip).r,
+                    Texture2DLod(depth_pyramid_sampler, depth_pyramid, clip_max.xy, mip).r,
+                    Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(clip_min.x, clip_max.y), mip).r
                 };
 
                 // const float depth_value = Texture2DLod(depth_pyramid_sampler, depth_pyramid, vec2(0.0), 0.0).r;
         
                 // //find the max depth
                 max_depth = max(max(max(depths.x, depths.y), depths.z), depths.w);
-                num_instances += int(clip_min.z <= max_depth);
+#endif
+
+                num_instances += 1;//int(clip_min.z <= max_depth);
             }
-        }
+        // }
 
         /*vec3 sphere_center  = object_instance.bounding_sphere.xyz;
         float sphere_radius = object_instance.bounding_sphere.w;
